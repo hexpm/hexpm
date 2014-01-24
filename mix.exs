@@ -10,7 +10,8 @@ defmodule ExplexWeb.Mixfile do
 
   # Configuration for the OTP application
   def application do
-    [mod: { ExplexWeb, [] }]
+    [ applications: [:cowboy, :plug],
+      mod: { ExplexWeb, [] } ]
   end
 
   # Returns the list of dependencies in the format:
@@ -19,6 +20,9 @@ defmodule ExplexWeb.Mixfile do
   # To specify particular versions, regardless of the tag, do:
   # { :barbat, "~> 0.1", github: "elixir-lang/barbat" }
   defp deps do
-    []
+    [ { :plug, github: "elixir-lang/plug" },
+      { :cowboy, github: "extend/cowboy" },
+      { :ecto, github: "elixir-lang/ecto" },
+      { :postgrex, github: "ericmj/postgrex" } ]
   end
 end

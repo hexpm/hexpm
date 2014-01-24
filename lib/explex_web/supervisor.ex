@@ -6,13 +6,7 @@ defmodule ExplexWeb.Supervisor do
   end
 
   def init([]) do
-    children = [
-      # Define workers and child supervisors to be supervised
-      # worker(ExplexWeb.Worker, [])
-    ]
-
-    # See http://elixir-lang.org/docs/stable/Supervisor.Behaviour.html
-    # for other strategies and supported options
-    supervise(children, strategy: :one_for_one)
+    tree = [ worker(ExplexWeb.Repo, []) ]
+    supervise(tree, strategy: :one_for_all)
   end
 end

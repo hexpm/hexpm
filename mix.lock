@@ -1,0 +1,8 @@
+[ "cowboy": {:git, "git://github.com/extend/cowboy.git", "b09f3a570d702be7a55c36e5f5b4b63b26198637", []},
+  "cowlib": {:git, "git://github.com/extend/cowlib.git", "63298e8e160031a70efff86a1acde7e7db1fcda6", [ref: "0.4.0"]},
+  "decimal": {:git, "git://github.com/ericmj/decimal.git", "eef08ae02496d7c9d6bed2b06342d7be0e791223", []},
+  "ecto": {:git, "git://github.com/elixir-lang/ecto.git", "d16a47ff4f6a4fc5161e1d7fb20524c633b14d73", []},
+  "plug": {:git, "git://github.com/elixir-lang/plug.git", "052e0d45c98b6b0e0a3bcde13043057a6d832698", []},
+  "poolboy": {:git, "git://github.com/devinus/poolboy.git", "d47df5df57b22eb183b0c48c8dcc5f9827fad71b", []},
+  "postgrex": {:git, "git://github.com/ericmj/postgrex.git", "06e7e567e13bb3c96f6842d370556443eaf41b13", []},
+  "ranch": {:git, "git://github.com/extend/ranch.git", "5df1f222f94e08abdcab7084f5e13027143cc222", [ref: "0.9.0"]} ]
