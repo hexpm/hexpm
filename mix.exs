@@ -10,7 +10,7 @@ defmodule ExplexWeb.Mixfile do
 
   # Configuration for the OTP application
   def application do
-    [ applications: [:cowboy, :plug],
+    [ applications: [:cowboy, :plug, :bcrypt],
       mod: { ExplexWeb, [] } ]
   end
 
@@ -23,6 +23,7 @@ defmodule ExplexWeb.Mixfile do
     [ { :plug, github: "elixir-lang/plug" },
       { :cowboy, github: "extend/cowboy" },
       { :ecto, github: "elixir-lang/ecto" },
-      { :postgrex, github: "ericmj/postgrex" } ]
+      { :postgrex, github: "ericmj/postgrex" },
+      { :bcrypt, github: "opscode/erlang-bcrypt" } ]
   end
 end
