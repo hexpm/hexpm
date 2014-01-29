@@ -1,4 +1,4 @@
-defmodule User do
+defmodule ExplexWeb.User do
   use Ecto.Model
 
   import Ecto.Query, only: [from: 2]
@@ -6,8 +6,12 @@ defmodule User do
   queryable "users" do
     field :username, :string
     field :password, :string
+    has_many :packages, ExplexWeb.Package
     field :created, :datetime
   end
+
+  validate user,
+    username: present()
 
   def create(username, password) do
     password = String.to_char_list!(password)
@@ -15,24 +19,26 @@ defmodule User do
     { :ok, hash } = :bcrypt.hashpw(password, salt)
     hash = :erlang.list_to_binary(hash)
 
-    User.new(username: username, password: hash)
-    |> ExplexWeb.Repo.create
+    user = ExplexWeb.User.new(username: username, password: hash)
+    case validate(user) do
+      [] -> { :ok, ExplexWeb.Repo.create(user) }
+      errors -> { :error, errors }
+    end
   end
 
-  def auth?(username, password) do
-    stored_hash = ExplexWeb.Repo.all(
-      from(u in User,
-      where: u.username == ^username,
-      select: u.password))
+  def get(username) do
+    from(u in ExplexWeb.User, where: u.username == ^username)
+    |> ExplexWeb.Repo.all
+    |> List.first
+  end
 
-    case stored_hash do
-      [stored_hash] ->
-        password = String.to_char_list!(password)
-        stored_hash = :erlang.binary_to_list(stored_hash)
-        { :ok, hash } = :bcrypt.hashpw(password, stored_hash)
-        hash == stored_hash
-      [] ->
-        false
-    end
+  def auth?(nil, _password), do: false
+
+  def auth?(user, password) do
+    stored_hash = user.password
+    password = String.to_char_list!(password)
+    stored_hash = :erlang.binary_to_list(stored_hash)
+    { :ok, hash } = :bcrypt.hashpw(password, stored_hash)
+    hash == stored_hash
   end
 end

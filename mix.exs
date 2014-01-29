@@ -24,6 +24,7 @@ defmodule ExplexWeb.Mixfile do
       { :cowboy, github: "extend/cowboy" },
       { :ecto, github: "elixir-lang/ecto" },
       { :postgrex, github: "ericmj/postgrex" },
-      { :bcrypt, github: "opscode/erlang-bcrypt" } ]
+      { :bcrypt, github: "opscode/erlang-bcrypt" },
+      { :jazz, github: "meh/jazz" } ]
   end
 end
