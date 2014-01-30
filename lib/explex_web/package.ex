@@ -42,28 +42,47 @@ defmodule ExplexWeb.Package do
   end
 
   defp dict_of_strings?(arg) do
-    nil?(arg) or (is_list(arg) and
-                  Enum.all?(arg, fn { k, v } -> is_binary(k) and is_binary(v) end))
+    cond do
+      nil?(arg) ->
+        true
+      is_list(arg) ->
+        Enum.all?(arg, fn
+          { k, v } -> is_binary(k) and is_binary(v)
+          _ -> false
+        end)
+      true ->
+        false
+    end
   end
 
   @meta_fields ["contributors", "description", "links", "licenses"]
 
   def create(name, owner, meta) do
-    meta = Dict.take(meta, @meta_fields)
+    meta = decode(meta) |> Dict.take(@meta_fields)
     package = owner.packages.new(name: name, meta: meta)
 
     case validate(package) do
       [] ->
-        package = package.update_meta(&JSON.encode!(&1))
-        { :ok, ExplexWeb.Repo.create(package) }
+        package = package.meta(JSON.encode!(meta))
+        { :ok, ExplexWeb.Repo.create(package).update_meta(&JSON.decode!(&1)) }
       errors ->
         { :error, errors }
     end
   end
 
   def get(name) do
-    from(p in ExplexWeb.Package, where: p.name == ^name)
-    |> ExplexWeb.Repo.all
-    |> List.first
+    package =
+      from(p in ExplexWeb.Package, where: p.name == ^name)
+      |> ExplexWeb.Repo.all
+      |> List.first
+
+    if package do
+      package.update_meta(&JSON.decode!(&1))
+    end
   end
+
+  def decode(arg) when is_binary(arg),
+    do: JSON.decode!(arg)
+  def decode(arg),
+    do: arg
 end

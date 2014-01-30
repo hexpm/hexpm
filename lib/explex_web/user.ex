@@ -6,7 +6,7 @@ defmodule ExplexWeb.User do
   queryable "users" do
     field :username, :string
     field :password, :string
-    has_many :packages, ExplexWeb.Package
+    has_many :packages, ExplexWeb.Package, foreign_key: :owner_id
     field :created, :datetime
   end
 
