@@ -5,14 +5,14 @@ defmodule ExplexWeb.Mixfile do
     [ app: :explex_web,
       version: "0.0.1",
       elixir: "~> 0.12.3-dev",
-      deps: deps,
-      build_per_environment: true ]
+      deps: deps ]
   end
 
   # Configuration for the OTP application
   def application do
     [ applications: [:cowboy, :plug, :bcrypt],
-      mod: { ExplexWeb, [] } ]
+      mod: { ExplexWeb, [] },
+      env: [password_work_factor: 12] ]
   end
 
   # Returns the list of dependencies in the format:

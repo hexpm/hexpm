@@ -1,6 +1,7 @@
 ExUnit.start
 
 Mix.Task.run "ecto.migrate", ["ExplexWeb.Repo"]
+:application.set_env(:explex_web, :password_work_factor, 4)
 
 defmodule ExplexWebTest.Case do
   use ExUnit.CaseTemplate

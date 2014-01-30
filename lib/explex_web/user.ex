@@ -13,18 +13,10 @@ defmodule ExplexWeb.User do
   validate user,
     username: present()
 
-  # Improves test running time
-  # This depends on :build_per_environment
-  # When we get :application.change_config_data we can remove this
-  if Mix.env == :test do
-    @work_factor 4
-  else
-    @work_factor 12
-  end
-
   def create(username, password) do
     password = String.to_char_list!(password)
-    { :ok, salt } = :bcrypt.gen_salt(@work_factor)
+    { :ok, factor } = :application.get_env(:explex_web, :password_work_factor)
+    { :ok, salt } = :bcrypt.gen_salt(factor)
     { :ok, hash } = :bcrypt.hashpw(password, salt)
     hash = :erlang.list_to_binary(hash)
 
