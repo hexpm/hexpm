@@ -2,6 +2,7 @@ defmodule ExplexWeb.User do
   use Ecto.Model
 
   import Ecto.Query, only: [from: 2]
+  import ExplexWeb.Util.Validation
 
   queryable "users" do
     field :username, :string
@@ -11,7 +12,7 @@ defmodule ExplexWeb.User do
   end
 
   validate user,
-    username: present()
+    username: type(:string) and present()
 
   def create(username, password) do
     password = String.to_char_list!(password)

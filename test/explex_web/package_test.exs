@@ -51,6 +51,7 @@ defmodule ExplexWeb.PackageTest do
 
     user = User.get("eric")
     assert { :error, errors } = Package.create("ecto", user, meta)
-    assert length(errors) == 4
+    assert length(errors) == 1
+    assert length(errors[:meta]) == 4
   end
 end
