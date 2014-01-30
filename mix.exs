@@ -5,7 +5,8 @@ defmodule ExplexWeb.Mixfile do
     [ app: :explex_web,
       version: "0.0.1",
       elixir: "~> 0.12.3-dev",
-      deps: deps ]
+      deps: deps,
+      build_per_environment: true ]
   end
 
   # Configuration for the OTP application
