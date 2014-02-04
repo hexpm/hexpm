@@ -1,6 +1,15 @@
 defmodule ExplexWeb.Util.Validation do
   alias Ecto.Query.Util
 
+  def valid_version(attr, version, opts // []) do
+    case Version.parse(version) do
+      { :ok, _ } ->
+        []
+      :error ->
+        [{ attr, opts[:message] || "invalid version: #{version}" }]
+    end
+  end
+
   def type(attr, value, expected, opts // []) do
     if Util.type_castable_to?(expected) do
       value = Util.try_cast(value, expected)

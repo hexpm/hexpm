@@ -5,6 +5,7 @@ defmodule ExplexWeb.Mixfile do
     [ app: :explex_web,
       version: "0.0.1",
       elixir: "~> 0.12.3-dev",
+      build_per_environment: false,
       deps: deps ]
   end
 

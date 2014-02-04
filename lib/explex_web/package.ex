@@ -9,11 +9,12 @@ defmodule ExplexWeb.Package do
     field :name, :string
     belongs_to :owner, ExplexWeb.User
     field :meta, :string
+    has_many :releases, ExplexWeb.Release
     field :created, :datetime
   end
 
   validate package,
-    name: type(:string) and present(),
+    name: present() and type(:string),
     meta: validate_meta()
 
   defp validate_meta(field, arg) do
@@ -23,7 +24,7 @@ defmodule ExplexWeb.Package do
         licenses:     type({ :array, :string }),
         links:        type({ :dict, :string, :string }),
         description:  type(:string))
-    if errors == [], do: [], else: [meta: errors]
+    if errors == [], do: [], else: [{ field, errors }]
   end
 
   @meta_fields ["contributors", "description", "links", "licenses"]
