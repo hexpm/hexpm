@@ -5,7 +5,7 @@ defmodule ExplexWeb.PackageTest do
   alias ExplexWeb.Package
 
   setup do
-    { :ok, _ } = User.create("eric", "eric")
+    { :ok, _ } = User.create("eric", "eric", "eric")
     :ok
   end
 

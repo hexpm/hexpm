@@ -5,6 +5,7 @@ defmodule ExplexWeb.Repo.Migrations.AddUsersTable do
     "CREATE TABLE users (
       id serial PRIMARY KEY,
       username text UNIQUE,
+      email text UNIQUE,
       password text,
       created timestamp DEFAULT now())"
   end

@@ -7,7 +7,7 @@ defmodule ExplexWeb.ReleaseTest do
   alias ExplexWeb.Requirement
 
   setup do
-    { :ok, user } = User.create("eric", "eric")
+    { :ok, user } = User.create("eric", "eric", "eric")
     { :ok, _ } = Package.create("ecto", user, [])
     { :ok, _ } = Package.create("postgrex", user, [])
     { :ok, _ } = Package.create("decimal", user, [])
@@ -45,8 +45,11 @@ defmodule ExplexWeb.ReleaseTest do
            = release.requirements.to_list
   end
 
-  test "validate release version" do
+  test "validate release" do
     package = Package.get("ecto")
+
     assert { :error, [version: "invalid version: 0.1"] } = Release.create(package, "0.1", [])
+
+    assert { :error, [deps: [{ "decimal", "invalid requirement: \"fail\"" }]] } = Release.create(package, "0.1.0", [{ "decimal", "fail" }])
   end
 end

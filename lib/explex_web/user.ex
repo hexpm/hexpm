@@ -6,22 +6,24 @@ defmodule ExplexWeb.User do
 
   queryable "users" do
     field :username, :string
+    field :email, :string
     field :password, :string
     has_many :packages, ExplexWeb.Package, foreign_key: :owner_id
     field :created, :datetime
   end
 
   validate user,
-    username: type(:string) and present()
+    username: type(:string) and present(),
+    email: type(:string) and present()
 
-  def create(username, password) do
+  def create(username, email, password) do
     password = String.to_char_list!(password)
     { :ok, factor } = :application.get_env(:explex_web, :password_work_factor)
     { :ok, salt } = :bcrypt.gen_salt(factor)
     { :ok, hash } = :bcrypt.hashpw(password, salt)
     hash = :erlang.list_to_binary(hash)
 
-    user = ExplexWeb.User.new(username: username, password: hash)
+    user = ExplexWeb.User.new(username: username, email: email, password: hash)
     case validate(user) do
       [] -> { :ok, ExplexWeb.Repo.create(user) }
       errors -> { :error, errors }
