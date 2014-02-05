@@ -14,6 +14,8 @@ defmodule ExplexWeb.Release do
   validate release,
     version: present() and type(:string) and valid_version()
 
+  # TODO: Extract validation of requirements
+
   def create(package, version, requirements) do
     release = package.releases.new(version: version)
 
@@ -21,7 +23,7 @@ defmodule ExplexWeb.Release do
       [] ->
         ExplexWeb.Repo.transaction(fn ->
           release = ExplexWeb.Repo.create(release)
-          deps = Dict.keys(requirements)
+          deps = Dict.keys(requirements) |> Enum.filter(&is_binary/1)
 
           deps_query =
                from p in ExplexWeb.Package,
@@ -49,7 +51,7 @@ defmodule ExplexWeb.Release do
             release
             release.requirements(requirements)
           else
-            throw { :ecto_rollback, { :error, [deps: errors] } }
+            ExplexWeb.Repo.rollback(deps: errors)
           end
         end)
       errors ->

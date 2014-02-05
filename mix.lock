@@ -2,7 +2,7 @@
   "cowboy": {:git, "git://github.com/extend/cowboy.git", "b09f3a570d702be7a55c36e5f5b4b63b26198637", []},
   "cowlib": {:git, "git://github.com/extend/cowlib.git", "63298e8e160031a70efff86a1acde7e7db1fcda6", [ref: "0.4.0"]},
   "decimal": {:git, "git://github.com/ericmj/decimal.git", "33b52b6d8fec1e18245fbd7f1312a43103e25f5b", []},
-  "ecto": {:git, "git://github.com/elixir-lang/ecto.git", "132ce75a5cc3509b77c744b41996a4869d9c3b4d", []},
+  "ecto": {:git, "git://github.com/elixir-lang/ecto.git", "3f4cda4e7756797ecb39d62b7234f35e8822088e", []},
   "jazz": {:git, "git://github.com/meh/jazz.git", "c2857aa8c5337890e8effa69899be6ab64b9a677", []},
   "plug": {:git, "git://github.com/elixir-lang/plug.git", "c86ee91fd8316da6f4ef2a7ab9f471b93a80857b", []},
   "poolboy": {:git, "git://github.com/devinus/poolboy.git", "d47df5df57b22eb183b0c48c8dcc5f9827fad71b", []},
