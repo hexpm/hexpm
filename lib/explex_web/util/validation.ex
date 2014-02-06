@@ -20,9 +20,8 @@ defmodule ExplexWeb.Util.Validation do
         if Util.type_eq?(expected, type) do
           []
         else
-          str = type_to_ast(type) |> Macro.to_string
           expected_str = type_to_ast(expected) |> Macro.to_string
-          [{ attr, opts[:message] || "wrong type: #{str}, expected: #{expected_str}" }]
+          [{ attr, opts[:message] || "wrong type, expected: #{expected_str}" }]
         end
 
       { :error, _ } ->

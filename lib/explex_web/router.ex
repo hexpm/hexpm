@@ -66,8 +66,51 @@ defmodule ExplexWeb.Router.API do
     end
   end
 
+  post "package" do
+    case authorize(conn) do
+      { :ok, conn } ->
+        case Package.create(conn.params["name"], conn.assigns[:user], conn.params["meta"]) do
+          { :ok, _ } ->
+            { :ok, send_resp(conn, 201, "") }
+          { :error, errors } ->
+            { :halt, send_validation_failed(conn, errors) }
+        end
+
+      :error ->
+        { :halt, send_unauthorized(conn) }
+    end
+  end
+
   match _ do
-    { :ok, send_resp(conn, 404, "") }
+    { :halt, send_resp(conn, 404, "") }
+  end
+
+  defp authorize(conn) do
+    case conn.req_headers["authorization"] do
+      "Basic " <> credentials ->
+        case String.split(:base64.decode(credentials), ":", global: false) do
+          [username, password] ->
+            user = User.get(username)
+            if User.auth?(user, password) do
+              { :ok, assign(conn, :user, user) }
+            else
+              :error
+            end
+          _ ->
+            :error
+        end
+
+      _ ->
+        :error
+    end
+  end
+
+  defp send_unauthorized(conn) do
+    conn
+    |> put_resp_header("www-authenticate", "Basic realm=explex")
+    |> send_resp(401, "")
+  end
+
   defp send_validation_failed(conn, errors) do
     body = [message: "Validation failed", errors: errors]
     send_resp(conn, 422, JSON.encode!(body))
