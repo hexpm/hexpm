@@ -1,7 +1,8 @@
 defmodule ExplexWeb.Util.Validation do
   alias Ecto.Query.Util
+  require Ecto.Query
 
-  def valid_version(attr, version, opts // []) do
+  def valid_version(attr, version, opts \\ []) do
     case Version.parse(version) do
       { :ok, _ } ->
         []
@@ -10,7 +11,39 @@ defmodule ExplexWeb.Util.Validation do
     end
   end
 
-  def type(attr, value, expected, opts // []) do
+  def unique(entity, fields, opts \\ []) when is_list(opts) do
+    module  = elem(entity, 0)
+    model   = module.model
+    repo    = opts[:on]
+    message = opts[:message] || "already taken"
+
+    where =
+      Enum.reduce(fields, true, fn field, acc ->
+        quote(do: unquote(acc) or field(var, ^unquote(field)))
+      end)
+
+    select = Enum.map(fields, fn field -> quote(do: var.unquote(field)) end)
+
+    query = Ecto.Query.from(var in model, limit: 1)
+                      .select(Ecto.Query.QueryExpr[expr: select])
+                      .where(Ecto.Query.QueryExpr[expr: [where]])
+
+    case repo.all(query) do
+      [values] ->
+        zipped = Enum.zip(fields, values)
+        Enum.flat_map(zipped, fn { field, value } ->
+          if apply(entity, field, []) == value do
+            [{ field, message }]
+          else
+            []
+          end
+        end)
+      _ ->
+        []
+    end
+  end
+
+  def type(attr, value, expected, opts \\ []) do
     if Util.type_castable_to?(expected) do
       value = Util.try_cast(value, expected)
     end
