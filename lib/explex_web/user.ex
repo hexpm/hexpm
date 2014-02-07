@@ -15,7 +15,8 @@ defmodule ExplexWeb.User do
   validate user,
     username: type(:string) and present(),
     email: type(:string) and present(),
-    password: type(:string) and present()
+    password: type(:string) and present(),
+    also: unique([:username, :email], on: ExplexWeb.Repo)
 
   def create(username, email, password) do
     user = ExplexWeb.User.new(username: username, email: email, password: password)

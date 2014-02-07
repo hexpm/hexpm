@@ -12,21 +12,28 @@ defmodule ExplexWeb.Util.Validation do
   end
 
   def unique(entity, fields, opts \\ []) when is_list(opts) do
-    module  = elem(entity, 0)
-    model   = module.model
-    repo    = opts[:on]
+    model   = entity.model
+    repo    = Keyword.fetch!(opts, :on)
+    scope   = opts[:scope] || []
     message = opts[:message] || "already taken"
 
     where =
       Enum.reduce(fields, true, fn field, acc ->
-        quote(do: unquote(acc) or field(var, ^unquote(field)))
+        value = apply(entity, field, [])
+        quote(do: unquote(acc) or &0.unquote(field) == unquote(value))
       end)
 
-    select = Enum.map(fields, fn field -> quote(do: var.unquote(field)) end)
+    where =
+      Enum.reduce(scope, where, fn field, acc ->
+        value = apply(entity, field, [])
+        quote(do: unquote(acc) and &0.unquote(field) == unquote(value))
+      end)
 
-    query = Ecto.Query.from(var in model, limit: 1)
+    select = Enum.map(fields, fn field -> quote(do: &0.unquote(field)) end)
+
+    query = Ecto.Query.from(model, limit: 1)
                       .select(Ecto.Query.QueryExpr[expr: select])
-                      .where(Ecto.Query.QueryExpr[expr: [where]])
+                      .wheres([Ecto.Query.QueryExpr[expr: where]])
 
     case repo.all(query) do
       [values] ->

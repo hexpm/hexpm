@@ -15,7 +15,8 @@ defmodule ExplexWeb.Package do
 
   validate package,
     name: present() and type(:string),
-    meta: validate_meta()
+    meta: validate_meta(),
+    also: unique([:name], on: ExplexWeb.Repo)
 
   defp validate_meta(field, arg) do
     errors =

@@ -54,4 +54,10 @@ defmodule ExplexWeb.PackageTest do
     assert length(errors) == 1
     assert length(errors[:meta]) == 4
   end
+
+  test "packages are unique" do
+    user = User.get("eric")
+    assert { :ok, Package.Entity[] } = Package.create("ecto", user, [])
+    assert { :error, _ } = Package.create("ecto", user, [])
+  end
 end

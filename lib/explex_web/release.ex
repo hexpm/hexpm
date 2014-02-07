@@ -12,7 +12,8 @@ defmodule ExplexWeb.Release do
   end
 
   validate release,
-    version: present() and type(:string) and valid_version()
+    version: present() and type(:string) and valid_version(),
+    also: unique([:version], scope: [:package_id], on: ExplexWeb.Repo)
 
   # TODO: Extract validation of requirements
 

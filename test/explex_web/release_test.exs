@@ -52,4 +52,12 @@ defmodule ExplexWeb.ReleaseTest do
 
     assert { :error, [deps: [{ "decimal", "invalid requirement: \"fail\"" }]] } = Release.create(package, "0.1.0", [{ "decimal", "fail" }])
   end
+
+  test "release version is unique" do
+    ecto = Package.get("ecto")
+    postgrex = Package.get("postgrex")
+    assert { :ok, Release.Entity[] } = Release.create(ecto, "0.0.1", [])
+    assert { :ok, Release.Entity[] } = Release.create(postgrex, "0.0.1", [])
+    assert { :error, _ } = Release.create(ecto, "0.0.1", [])
+  end
 end
