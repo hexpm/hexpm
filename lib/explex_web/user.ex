@@ -14,19 +14,24 @@ defmodule ExplexWeb.User do
 
   validate user,
     username: type(:string) and present(),
-    email: type(:string) and present()
+    email: type(:string) and present(),
+    password: type(:string) and present()
 
   def create(username, email, password) do
-    password = String.to_char_list!(password)
-    { :ok, factor } = :application.get_env(:explex_web, :password_work_factor)
-    { :ok, salt } = :bcrypt.gen_salt(factor)
-    { :ok, hash } = :bcrypt.hashpw(password, salt)
-    hash = :erlang.list_to_binary(hash)
+    user = ExplexWeb.User.new(username: username, email: email, password: password)
 
-    user = ExplexWeb.User.new(username: username, email: email, password: hash)
     case validate(user) do
-      [] -> { :ok, ExplexWeb.Repo.create(user) }
-      errors -> { :error, errors }
+      [] ->
+        password = String.to_char_list!(password)
+        { :ok, factor } = :application.get_env(:explex_web, :password_work_factor)
+        { :ok, salt } = :bcrypt.gen_salt(factor)
+        { :ok, hash } = :bcrypt.hashpw(password, salt)
+        hash = :erlang.list_to_binary(hash)
+        user = user.password(hash)
+
+        { :ok, ExplexWeb.Repo.create(user) }
+      errors ->
+        { :error, errors }
     end
   end
 

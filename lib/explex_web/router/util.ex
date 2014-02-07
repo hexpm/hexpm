@@ -2,6 +2,10 @@ defmodule ExplexWeb.Router.Util do
   import Plug.Connection
   alias ExplexWeb.User
 
+  def send_resp(conn, status) do
+    conn.status(status).state(:set) |> send_resp
+  end
+
   def exception_send_resp(conn, fun) do
     if IEx.started? do
       try do
@@ -83,6 +87,14 @@ defmodule ExplexWeb.Router.Util do
   end
 
   def send_creation_resp({ :error, errors }, conn) do
+    { :ok, send_validation_failed(conn, errors) }
+  end
+
+  def send_update_resp({ :ok, _ }, conn) do
+    { :ok, send_resp(conn, 204) }
+  end
+
+  def send_update_resp({ :error, errors }, conn) do
     { :ok, send_validation_failed(conn, errors) }
   end
 

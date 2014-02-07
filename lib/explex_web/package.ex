@@ -36,7 +36,19 @@ defmodule ExplexWeb.Package do
     case validate(package) do
       [] ->
         package = package.meta(JSON.encode!(meta))
-        { :ok, ExplexWeb.Repo.create(package).update_meta(&JSON.decode!(&1)) }
+        { :ok, ExplexWeb.Repo.create(package).meta(meta) }
+      errors ->
+        { :error, errors }
+    end
+  end
+
+  def update(package) do
+    meta = Dict.take(package.meta, @meta_fields)
+
+    case validate(package) do
+      [] ->
+        ExplexWeb.Repo.update(package.meta(JSON.encode!(meta)))
+        { :ok, package.meta(meta) }
       errors ->
         { :error, errors }
     end

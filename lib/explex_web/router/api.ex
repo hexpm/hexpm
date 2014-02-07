@@ -6,11 +6,15 @@ defmodule ExplexWeb.Router.API do
   alias ExplexWeb.Package
 
   def call(conn, _opts) do
-    case Plug.Parsers.call(conn, parsers: [ExplexWeb.Util.JsonDecoder]) do
-      { :ok, conn } ->
-        dispatch(conn.method, conn.path_info, conn)
-      error ->
-        error
+    if conn.method in ["POST", "PUT"] do
+      case Plug.Parsers.call(conn, parsers: [ExplexWeb.Util.JsonDecoder]) do
+        { :ok, conn } ->
+          dispatch(conn.method, conn.path_info, conn)
+        error ->
+          error
+      end
+    else
+      dispatch(conn.method, conn.path_info, conn)
     end
   end
 
@@ -19,10 +23,16 @@ defmodule ExplexWeb.Router.API do
     |> send_creation_resp(conn)
   end
 
-  post "package" do
+  put "package/:name" do
     with_authorized do
-      Package.create(conn.params["name"], user, conn.params["meta"])
-      |> send_creation_resp(conn)
+      if package = Package.get(name) do
+        package.meta(conn.params["meta"])
+        |> Package.update
+        |> send_update_resp(conn)
+      else
+        Package.create(name, user, conn.params["meta"])
+        |> send_creation_resp(conn)
+      end
     end
   end
 

@@ -35,8 +35,8 @@ defmodule ExplexWeb.RouterTest do
   test "create package" do
     headers = [ { "content-type", "application/json" },
                 { "authorization", "Basic " <> :base64.encode("eric:eric") }]
-    body = [name: "ecto", meta: []]
-    conn = conn("POST", "/api/beta/package", JSON.encode!(body), headers: headers)
+    body = [meta: []]
+    conn = conn("PUT", "/api/beta/package/ecto", JSON.encode!(body), headers: headers)
     { _, conn } = Router.call(conn, [])
 
     user_id = User.get("eric").id
@@ -46,11 +46,24 @@ defmodule ExplexWeb.RouterTest do
     assert package.owner_id == user_id
   end
 
+  test "update package" do
+    Package.create("ecto", User.get("eric"), [])
+
+    headers = [ { "content-type", "application/json" },
+                { "authorization", "Basic " <> :base64.encode("eric:eric") }]
+    body = [meta: [description: "awesomeness"]]
+    conn = conn("PUT", "/api/beta/package/ecto", JSON.encode!(body), headers: headers)
+    { _, conn } = Router.call(conn, [])
+
+    assert conn.status == 204
+    assert Package.get("ecto").meta["description"] == "awesomeness"
+  end
+
   test "create package authorizes" do
     headers = [ { "content-type", "application/json" },
                 { "authorization", "Basic " <> :base64.encode("eric:wrong") }]
-    body = [name: "ecto", meta: []]
-    conn = conn("POST", "/api/beta/package", JSON.encode!(body), headers: headers)
+    body = [meta: []]
+    conn = conn("PUT", "/api/beta/package/ecto", JSON.encode!(body), headers: headers)
     { _, conn } = Router.call(conn, [])
 
     assert conn.status == 401
@@ -60,8 +73,8 @@ defmodule ExplexWeb.RouterTest do
   test "create package validates" do
     headers = [ { "content-type", "application/json" },
                 { "authorization", "Basic " <> :base64.encode("eric:eric") }]
-    body = [name: "ecto", meta: [links: "invalid"]]
-    conn = conn("POST", "/api/beta/package", JSON.encode!(body), headers: headers)
+    body = [meta: [links: "invalid"]]
+    conn = conn("PUT", "/api/beta/package/ecto", JSON.encode!(body), headers: headers)
     { _, conn } = Router.call(conn, [])
 
     assert conn.status == 422
