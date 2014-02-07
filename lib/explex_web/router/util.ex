@@ -45,10 +45,10 @@ defmodule ExplexWeb.Router.Util do
     end
   end
 
-  defmacro with_authorized(opts) do
+  defmacro with_authorized(user \\ { :_, [], nil }, opts) do
     quote do
       case ExplexWeb.Router.Util.authorize(var!(conn)) do
-        { :ok, var!(user) } ->
+        { :ok, unquote(user) } ->
           unquote(Keyword.fetch!(opts, :do))
         :error ->
           { :halt, ExplexWeb.Router.Util.send_unauthorized(var!(conn)) }

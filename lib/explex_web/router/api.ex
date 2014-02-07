@@ -4,6 +4,7 @@ defmodule ExplexWeb.Router.API do
   import ExplexWeb.Router.Util
   alias ExplexWeb.User
   alias ExplexWeb.Package
+  alias ExplexWeb.Release
 
   def call(conn, _opts) do
     if conn.method in ["POST", "PUT"] do
@@ -24,7 +25,7 @@ defmodule ExplexWeb.Router.API do
   end
 
   put "package/:name" do
-    with_authorized do
+    with_authorized user do
       if package = Package.get(name) do
         package.meta(conn.params["meta"])
         |> Package.update
@@ -32,6 +33,17 @@ defmodule ExplexWeb.Router.API do
       else
         Package.create(name, user, conn.params["meta"])
         |> send_creation_resp(conn)
+      end
+    end
+  end
+
+  post "package/:name/release" do
+    with_authorized do
+      if package = Package.get(name) do
+        Release.create(package, conn.params["version"], conn.params["requirements"])
+        |> send_creation_resp(conn)
+      else
+        { :ok, send_resp(conn, 404, "") }
       end
     end
   end
