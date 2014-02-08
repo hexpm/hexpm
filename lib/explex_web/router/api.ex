@@ -54,6 +54,10 @@ defmodule ExplexWeb.Router.API do
     end
   end
 
+  get "registry.dets" do
+    { :ok, send_file(conn, 200, RegistryBuilder.filename )}
+  end
+
   match _ do
     { :halt, send_resp(conn, 404, "") }
   end

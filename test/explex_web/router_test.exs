@@ -146,4 +146,17 @@ defmodule ExplexWeb.RouterTest do
   after
     RegistryBuilder.stop
   end
+
+  test "fetch registry.dets" do
+    { :ok, _ } = RegistryBuilder.start_link
+    RegistryBuilder.rebuild
+    RegistryBuilder.wait_for_build
+
+    conn = conn("GET", "/api/beta/registry.dets")
+    { _, conn } = Router.call(conn, [])
+
+    assert conn.status == 200
+  after
+    RegistryBuilder.stop
+  end
 end
