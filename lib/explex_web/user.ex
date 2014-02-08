@@ -4,6 +4,12 @@ defmodule ExplexWeb.User do
   import Ecto.Query, only: [from: 2]
   import ExplexWeb.Util.Validation
 
+  if Mix.env == :test do
+    @password_work_factor 4
+  else
+    @password_work_factor 12
+  end
+
   queryable "users" do
     field :username, :string
     field :email, :string
@@ -24,8 +30,7 @@ defmodule ExplexWeb.User do
     case validate(user) do
       [] ->
         password = String.to_char_list!(password)
-        { :ok, factor } = :application.get_env(:explex_web, :password_work_factor)
-        { :ok, salt } = :bcrypt.gen_salt(factor)
+        { :ok, salt } = :bcrypt.gen_salt(@password_work_factor)
         { :ok, hash } = :bcrypt.hashpw(password, salt)
         hash = :erlang.list_to_binary(hash)
         user = user.password(hash)
