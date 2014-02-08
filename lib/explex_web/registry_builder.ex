@@ -11,8 +11,8 @@ defmodule ExplexWeb.RegistryBuilder do
   alias ExplexWeb.Release
   alias ExplexWeb.Requirement
 
-  @reg_file   Path.join(:code.priv_dir(:explex_web), "registry.dets")
-  @temp_file  Path.join(:code.priv_dir(:explex_web), "registry-temp.dets")
+  @reg_file   Path.join("tmp", "registry.dets")
+  @temp_file  Path.join("tmp", "registry-temp.dets")
   @dets_table :explex_registry
   @version    1
 
