@@ -13,10 +13,13 @@ defmodule ExplexWeb.Package do
     field :created, :datetime
   end
 
-  validate package,
-    name: present() and type(:string),
-    meta: validate_meta(),
+  validatep validate_create(package),
+    also: validate(),
     also: unique([:name], on: ExplexWeb.Repo)
+
+  validatep validate(package),
+    name: present() and type(:string),
+    meta: validate_meta()
 
   defp validate_meta(field, arg) do
     errors =
@@ -34,7 +37,7 @@ defmodule ExplexWeb.Package do
     meta = Dict.take(meta, @meta_fields)
     package = owner.packages.new(name: name, meta: meta)
 
-    case validate(package) do
+    case validate_create(package) do
       [] ->
         package = package.meta(JSON.encode!(meta))
         { :ok, ExplexWeb.Repo.create(package).meta(meta) }

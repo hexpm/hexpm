@@ -18,7 +18,7 @@ defmodule ExplexWeb.Util.Validation do
     message = opts[:message] || "already taken"
 
     where =
-      Enum.reduce(fields, true, fn field, acc ->
+      Enum.reduce(fields, false, fn field, acc ->
         value = apply(entity, field, [])
         quote(do: unquote(acc) or &0.unquote(field) == unquote(value))
       end)
