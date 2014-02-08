@@ -6,6 +6,7 @@ defmodule ExplexWeb.RouterTest do
   alias ExplexWeb.Package
   alias ExplexWeb.Release
   alias ExplexWeb.Requirement
+  alias ExplexWeb.RegistryBuilder
 
   setup do
     { :ok, user } = User.create("eric", "eric", "eric")
@@ -123,5 +124,26 @@ defmodule ExplexWeb.RouterTest do
     decimal_id = decimal.id
     assert [Requirement.Entity[dependency_id: ^decimal_id, requirement: "~> 0.0.1"]] =
            Release.get(postgrex, "0.0.1").requirements.to_list
+  end
+
+  test "create release updates registry" do
+    { :ok, _ } = RegistryBuilder.start_link
+    RegistryBuilder.rebuild
+    RegistryBuilder.wait_for_build
+
+    File.touch!(RegistryBuilder.filename, {{2000,1,1,},{1,1,1}})
+    File.Stat[mtime: mtime] = File.stat!(RegistryBuilder.filename)
+
+    headers = [ { "content-type", "application/json" },
+                { "authorization", "Basic " <> :base64.encode("eric:eric") }]
+    body = [git_url: "url", git_ref: "ref", version: "0.0.1", requirements: [decimal: "~> 0.0.1"]]
+    conn = conn("POST", "/api/beta/package/postgrex/release", JSON.encode!(body), headers: headers)
+    { _, conn } = Router.call(conn, [])
+    assert conn.status == 201
+
+    :ok = RegistryBuilder.wait_for_build
+    refute File.Stat[mtime: {{2000,1,1,},{1,1,1}}] = File.stat!(RegistryBuilder.filename)
+  after
+    RegistryBuilder.stop
   end
 end

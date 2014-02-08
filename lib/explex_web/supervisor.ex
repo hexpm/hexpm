@@ -5,8 +5,16 @@ defmodule ExplexWeb.Supervisor do
     :supervisor.start_link(__MODULE__, [])
   end
 
-  def init([]) do
-    tree = [ worker(ExplexWeb.Repo, []) ]
-    supervise(tree, strategy: :one_for_all)
+  if Mix.env == :test do
+    def init([]) do
+      tree = [ worker(ExplexWeb.Repo, []) ]
+      supervise(tree, strategy: :one_for_one)
+    end
+  else
+    def init([]) do
+      tree = [ worker(ExplexWeb.RegistryBuilder, []),
+               worker(ExplexWeb.Repo, []) ]
+      supervise(tree, strategy: :one_for_one)
+    end
   end
 end

@@ -5,6 +5,7 @@ defmodule ExplexWeb.Router.API do
   alias ExplexWeb.User
   alias ExplexWeb.Package
   alias ExplexWeb.Release
+  alias ExplexWeb.RegistryBuilder
 
   def call(conn, _opts) do
     if conn.method in ["POST", "PUT"] do
@@ -40,8 +41,13 @@ defmodule ExplexWeb.Router.API do
   post "package/:name/release" do
     with_authorized do
       if package = Package.get(name) do
-        Release.create(package, conn.params["version"], conn.params["requirements"])
-        |> send_creation_resp(conn)
+        result =
+          Release.create(package, conn.params["version"], conn.params["git_url"],
+                         conn.params["git_ref"], conn.params["requirements"])
+          |> send_creation_resp(conn)
+
+        RegistryBuilder.rebuild
+        result
       else
         { :ok, send_resp(conn, 404, "") }
       end
