@@ -7,18 +7,22 @@ defmodule ExplexWeb.Release do
   queryable "releases" do
     belongs_to :package, ExplexWeb.Package
     field :version, :string
+    field :git_url, :string
+    field :git_ref, :string
     has_many :requirements, ExplexWeb.Requirement
     field :created, :datetime
   end
 
   validate release,
     version: present() and type(:string) and valid_version(),
+    git_url: present() and type(:string),
+    git_ref: present() and type(:string),
     also: unique([:version], scope: [:package_id], on: ExplexWeb.Repo)
 
   # TODO: Extract validation of requirements
 
-  def create(package, version, requirements) do
-    release = package.releases.new(version: version)
+  def create(package, version, url, ref, requirements) do
+    release = package.releases.new(version: version, git_url: url, git_ref: ref)
 
     case validate(release) do
       [] ->

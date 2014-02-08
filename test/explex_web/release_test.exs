@@ -18,11 +18,12 @@ defmodule ExplexWeb.ReleaseTest do
     package = Package.get("ecto")
     package_id = package.id
     assert { :ok, Release.Entity[package_id: ^package_id, version: "0.0.1"] } =
-           Release.create(package, "0.0.1", [])
+           Release.create(package, "0.0.1", "url", "ref", [])
     assert Release.Entity[package_id: ^package_id, version: "0.0.1"] = Release.get(package, "0.0.1")
 
-    assert { :ok, _ } = Release.create(package, "0.0.2", [])
-    assert [Release.Entity[version: "0.0.1"], Release.Entity[version: "0.0.2"]] =
+    assert { :ok, _ } = Release.create(package, "0.0.2", "url", "ref", [])
+    assert [ Release.Entity[git_url: "url", git_ref: "ref", version: "0.0.1"],
+             Release.Entity[git_url: "url", git_ref: "ref", version: "0.0.2"] ] =
            Release.all(package)
   end
 
@@ -31,10 +32,10 @@ defmodule ExplexWeb.ReleaseTest do
     postgrex = Package.get("postgrex")
     decimal = Package.get("decimal")
 
-    assert { :ok, _ } = Release.create(decimal, "0.0.1", [])
-    assert { :ok, _ } = Release.create(decimal, "0.0.2", [])
-    assert { :ok, _ } = Release.create(postgrex, "0.0.1", [{ "decimal", "~> 0.0.1" }])
-    assert { :ok, r } = Release.create(ecto, "0.0.1", [{ "decimal", "~> 0.0.2" }, { "postgrex", "== 0.0.1" }])
+    assert { :ok, _ } = Release.create(decimal, "0.0.1", "url", "ref", [])
+    assert { :ok, _ } = Release.create(decimal, "0.0.2", "url", "ref", [])
+    assert { :ok, _ } = Release.create(postgrex, "0.0.1", "url", "ref", [{ "decimal", "~> 0.0.1" }])
+    assert { :ok, r } = Release.create(ecto, "0.0.1", "url", "ref", [{ "decimal", "~> 0.0.2" }, { "postgrex", "== 0.0.1" }])
 
     postgrex_id = postgrex.id
     decimal_id = decimal.id
@@ -48,16 +49,18 @@ defmodule ExplexWeb.ReleaseTest do
   test "validate release" do
     package = Package.get("ecto")
 
-    assert { :error, [version: "invalid version: 0.1"] } = Release.create(package, "0.1", [])
+    assert { :error, [version: "invalid version: 0.1"] } =
+           Release.create(package, "0.1", "url", "ref", [])
 
-    assert { :error, [deps: [{ "decimal", "invalid requirement: \"fail\"" }]] } = Release.create(package, "0.1.0", [{ "decimal", "fail" }])
+    assert { :error, [deps: [{ "decimal", "invalid requirement: \"fail\"" }]] } =
+           Release.create(package, "0.1.0", "url", "ref", [{ "decimal", "fail" }])
   end
 
   test "release version is unique" do
     ecto = Package.get("ecto")
     postgrex = Package.get("postgrex")
-    assert { :ok, Release.Entity[] } = Release.create(ecto, "0.0.1", [])
-    assert { :ok, Release.Entity[] } = Release.create(postgrex, "0.0.1", [])
-    assert { :error, _ } = Release.create(ecto, "0.0.1", [])
+    assert { :ok, Release.Entity[] } = Release.create(ecto, "0.0.1", "url", "ref", [])
+    assert { :ok, Release.Entity[] } = Release.create(postgrex, "0.0.1", "url", "ref", [])
+    assert { :error, _ } = Release.create(ecto, "0.0.1", "url", "ref", [])
   end
 end

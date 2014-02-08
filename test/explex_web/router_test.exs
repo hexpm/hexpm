@@ -90,13 +90,13 @@ defmodule ExplexWeb.RouterTest do
   test "create releases" do
     headers = [ { "content-type", "application/json" },
                 { "authorization", "Basic " <> :base64.encode("eric:eric") }]
-    body = [version: "0.0.1", requirements: []]
+    body = [git_url: "url", git_ref: "ref", version: "0.0.1", requirements: []]
     conn = conn("POST", "/api/beta/package/postgrex/release", JSON.encode!(body), headers: headers)
     { _, conn } = Router.call(conn, [])
 
     assert conn.status == 201
 
-    body = [version: "0.0.2", requirements: []]
+    body = [git_url: "url", git_ref: "ref", version: "0.0.2", requirements: []]
     conn = conn("POST", "/api/beta/package/postgrex/release", JSON.encode!(body), headers: headers)
     { _, conn } = Router.call(conn, [])
 
@@ -112,7 +112,7 @@ defmodule ExplexWeb.RouterTest do
   test "create releases with requirements" do
     headers = [ { "content-type", "application/json" },
                 { "authorization", "Basic " <> :base64.encode("eric:eric") }]
-    body = [version: "0.0.1", requirements: [decimal: "~> 0.0.1"]]
+    body = [git_url: "url", git_ref: "ref", version: "0.0.1", requirements: [decimal: "~> 0.0.1"]]
     conn = conn("POST", "/api/beta/package/postgrex/release", JSON.encode!(body), headers: headers)
     { _, conn } = Router.call(conn, [])
 

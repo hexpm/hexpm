@@ -6,6 +6,8 @@ defmodule ExplexWeb.Repo.Migrations.AddReleasesTable do
         id serial PRIMARY KEY,
         package_id integer REFERENCES packages,
         version text,
+        git_url text,
+        git_ref text,
         created timestamp DEFAULT now())",
 
       "CREATE INDEX ON releases (package_id)" ]
