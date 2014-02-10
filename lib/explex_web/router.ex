@@ -9,7 +9,7 @@ defmodule ExplexWeb.Router do
     end
   end
 
-  forward "/api/beta", ExplexWeb.Router.API
+  forward "/api", ExplexWeb.Router.API
 
   match _ do
     { :halt, send_resp(conn, 404, "") }
