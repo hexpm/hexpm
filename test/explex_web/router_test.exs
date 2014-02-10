@@ -18,7 +18,7 @@ defmodule ExplexWeb.RouterTest do
   test "create user" do
     body = [username: "name", email: "email", password: "pass"]
     conn = conn("POST", "/api/user", JSON.encode!(body), headers: [{ "content-type", "application/json" }])
-    { _, conn } = Router.call(conn, [])
+    conn = Router.call(conn, [])
 
     assert conn.status == 201
     user = assert User.get("name")
@@ -28,7 +28,7 @@ defmodule ExplexWeb.RouterTest do
   test "create user validates" do
     body = [username: "name", password: "pass"]
     conn = conn("POST", "/api/user", JSON.encode!(body), headers: [{ "content-type", "application/json" }])
-    { _, conn } = Router.call(conn, [])
+    conn = Router.call(conn, [])
 
     assert conn.status == 422
     body = JSON.decode!(conn.resp_body)
@@ -42,7 +42,7 @@ defmodule ExplexWeb.RouterTest do
                 { "authorization", "Basic " <> :base64.encode("eric:eric") }]
     body = [meta: []]
     conn = conn("PUT", "/api/package/ecto", JSON.encode!(body), headers: headers)
-    { _, conn } = Router.call(conn, [])
+    conn = Router.call(conn, [])
 
     user_id = User.get("eric").id
     assert conn.status == 201
@@ -58,7 +58,7 @@ defmodule ExplexWeb.RouterTest do
                 { "authorization", "Basic " <> :base64.encode("eric:eric") }]
     body = [meta: [description: "awesomeness"]]
     conn = conn("PUT", "/api/package/ecto", JSON.encode!(body), headers: headers)
-    { _, conn } = Router.call(conn, [])
+    conn = Router.call(conn, [])
 
     assert conn.status == 204
     assert Package.get("ecto").meta["description"] == "awesomeness"
@@ -69,7 +69,7 @@ defmodule ExplexWeb.RouterTest do
                 { "authorization", "Basic " <> :base64.encode("eric:wrong") }]
     body = [meta: []]
     conn = conn("PUT", "/api/package/ecto", JSON.encode!(body), headers: headers)
-    { _, conn } = Router.call(conn, [])
+    conn = Router.call(conn, [])
 
     assert conn.status == 401
     assert conn.resp_headers["www-authenticate"] == "Basic realm=explex"
@@ -80,7 +80,7 @@ defmodule ExplexWeb.RouterTest do
                 { "authorization", "Basic " <> :base64.encode("eric:eric") }]
     body = [meta: [links: "invalid"]]
     conn = conn("PUT", "/api/package/ecto", JSON.encode!(body), headers: headers)
-    { _, conn } = Router.call(conn, [])
+    conn = Router.call(conn, [])
 
     assert conn.status == 422
     body = JSON.decode!(conn.resp_body)
@@ -93,13 +93,13 @@ defmodule ExplexWeb.RouterTest do
                 { "authorization", "Basic " <> :base64.encode("eric:eric") }]
     body = [git_url: "url", git_ref: "ref", version: "0.0.1", requirements: []]
     conn = conn("POST", "/api/package/postgrex/release", JSON.encode!(body), headers: headers)
-    { _, conn } = Router.call(conn, [])
+    conn = Router.call(conn, [])
 
     assert conn.status == 201
 
     body = [git_url: "url", git_ref: "ref", version: "0.0.2", requirements: []]
     conn = conn("POST", "/api/package/postgrex/release", JSON.encode!(body), headers: headers)
-    { _, conn } = Router.call(conn, [])
+    conn = Router.call(conn, [])
 
     assert conn.status == 201
 
@@ -115,7 +115,7 @@ defmodule ExplexWeb.RouterTest do
                 { "authorization", "Basic " <> :base64.encode("eric:eric") }]
     body = [git_url: "url", git_ref: "ref", version: "0.0.1", requirements: [decimal: "~> 0.0.1"]]
     conn = conn("POST", "/api/package/postgrex/release", JSON.encode!(body), headers: headers)
-    { _, conn } = Router.call(conn, [])
+    conn = Router.call(conn, [])
 
     assert conn.status == 201
 
@@ -138,7 +138,7 @@ defmodule ExplexWeb.RouterTest do
                 { "authorization", "Basic " <> :base64.encode("eric:eric") }]
     body = [git_url: "url", git_ref: "ref", version: "0.0.1", requirements: [decimal: "~> 0.0.1"]]
     conn = conn("POST", "/api/package/postgrex/release", JSON.encode!(body), headers: headers)
-    { _, conn } = Router.call(conn, [])
+    conn = Router.call(conn, [])
     assert conn.status == 201
 
     :ok = RegistryBuilder.wait_for_build
@@ -153,7 +153,7 @@ defmodule ExplexWeb.RouterTest do
     RegistryBuilder.wait_for_build
 
     conn = conn("GET", "/api/registry.dets")
-    { _, conn } = Router.call(conn, [])
+    conn = Router.call(conn, [])
 
     assert conn.status == 200
   after

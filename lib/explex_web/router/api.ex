@@ -7,16 +7,19 @@ defmodule ExplexWeb.Router.API do
   alias ExplexWeb.Release
   alias ExplexWeb.RegistryBuilder
 
-  def call(conn, _opts) do
-    if conn.method in ["POST", "PUT"] do
-      case Plug.Parsers.call(conn, parsers: [ExplexWeb.Util.JsonDecoder]) do
-        { :ok, conn } ->
-          dispatch(conn.method, conn.path_info, conn)
-        error ->
-          error
-      end
+  plug Plug.Parsers, parsers: [ExplexWeb.Util.JsonDecoder]
+  plug :match
+  plug :dispatch
+
+  get "user/:name" do
+    if user = User.get(name) do
+      body =
+        user.__entity__(:keywords)
+        |> Dict.take([:username, :email, :created])
+      body = body.update_created(&to_iso8601/1)
+      send_render(conn, body)
     else
-      dispatch(conn.method, conn.path_info, conn)
+      send_resp(conn, 404, "")
     end
   end
 
@@ -49,16 +52,16 @@ defmodule ExplexWeb.Router.API do
         RegistryBuilder.rebuild
         result
       else
-        { :ok, send_resp(conn, 404, "") }
+        send_resp(conn, 404, "")
       end
     end
   end
 
   get "registry.dets" do
-    { :ok, send_file(conn, 200, RegistryBuilder.filename )}
+    send_file(conn, 200, RegistryBuilder.filename)
   end
 
   match _ do
-    { :halt, send_resp(conn, 404, "") }
+    send_resp(conn, 404, "")
   end
 end

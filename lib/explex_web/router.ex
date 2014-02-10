@@ -3,15 +3,13 @@ defmodule ExplexWeb.Router do
   import Plug.Connection
   import ExplexWeb.Router.Util
 
-  def call(conn, _opts) do
-    exception_send_resp conn, fn ->
-      dispatch(conn.method, conn.path_info, conn)
-    end
-  end
+  plug ExplexWeb.Util.ExceptionPlug
+  plug :match
+  plug :dispatch
 
   forward "/api", ExplexWeb.Router.API
 
   match _ do
-    { :halt, send_resp(conn, 404, "") }
+    send_resp(conn, 404, "")
   end
 end

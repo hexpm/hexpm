@@ -6,35 +6,6 @@ defmodule ExplexWeb.Router.Util do
     conn.status(status).state(:set) |> send_resp
   end
 
-  def exception_send_resp(conn, fun) do
-    if IEx.started? do
-      try do
-        fun.()
-      catch
-        kind, error ->
-          print_error(kind, error, System.stacktrace)
-          if impl = Plug.Exception.impl_for(error) do
-            { :halt, send_resp(conn, impl.status(error), "") }
-          else
-            { :halt, send_resp(conn, 500, "") }
-          end
-      end
-    else
-      fun.()
-    end
-  end
-
-  defp print_error(:error, exception, stacktrace) do
-    exception = Exception.normalize(exception)
-    IO.puts IO.ANSI.escape_fragment("\n%{red}** (#{inspect exception.__record__(:name)}) #{exception.message}", true)
-    IO.puts IEx.Evaluator.format_stacktrace(stacktrace)
-  end
-
-  defp print_error(kind, reason, stacktrace) do
-    IO.puts IO.ANSI.escape_fragment("\n%{red}** (#{kind}) #{inspect(reason)}", true)
-    IO.puts IEx.Evaluator.format_stacktrace(stacktrace)
-  end
-
   defmacro forward(path, plug, opts \\ []) do
     path = Path.join(path, "*glob")
     quote do
@@ -51,7 +22,7 @@ defmodule ExplexWeb.Router.Util do
         { :ok, unquote(user) } ->
           unquote(Keyword.fetch!(opts, :do))
         :error ->
-          { :halt, ExplexWeb.Router.Util.send_unauthorized(var!(conn)) }
+          ExplexWeb.Router.Util.send_unauthorized(var!(conn))
       end
     end
   end
@@ -83,19 +54,19 @@ defmodule ExplexWeb.Router.Util do
   end
 
   def send_creation_resp({ :ok, _ }, conn) do
-    { :ok, send_resp(conn, 201, "") }
+    send_resp(conn, 201, "")
   end
 
   def send_creation_resp({ :error, errors }, conn) do
-    { :ok, send_validation_failed(conn, errors) }
+    send_validation_failed(conn, errors)
   end
 
   def send_update_resp({ :ok, _ }, conn) do
-    { :ok, send_resp(conn, 204) }
+    send_resp(conn, 204)
   end
 
   def send_update_resp({ :error, errors }, conn) do
-    { :ok, send_validation_failed(conn, errors) }
+    send_validation_failed(conn, errors)
   end
 
   defp send_validation_failed(conn, errors) do
