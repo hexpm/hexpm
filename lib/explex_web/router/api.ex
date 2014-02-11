@@ -2,12 +2,15 @@ defmodule ExplexWeb.Router.API do
   use Plug.Router
   import Plug.Connection
   import ExplexWeb.Router.Util
+  import ExplexWeb.Util.Plugs
   alias ExplexWeb.User
   alias ExplexWeb.Package
   alias ExplexWeb.Release
   alias ExplexWeb.RegistryBuilder
 
+
   plug Plug.Parsers, parsers: [ExplexWeb.Util.JsonDecoder]
+  plug :accept, vendor: "explex", allow: [{"application","json"}, "json", "elixir"]
   plug :match
   plug :dispatch
 
@@ -55,10 +58,6 @@ defmodule ExplexWeb.Router.API do
         send_resp(conn, 404, "")
       end
     end
-  end
-
-  get "registry.dets" do
-    send_file(conn, 200, RegistryBuilder.filename)
   end
 
   match _ do

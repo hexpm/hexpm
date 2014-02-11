@@ -6,20 +6,17 @@ defmodule ExplexWeb.Util.ExceptionPlug do
   def init(opts), do: opts
 
   def wrap(conn, _opts, fun) do
-    if IEx.started? do
-      try do
-        fun.(conn)
-      catch
-        kind, error ->
-          print_error(kind, error, System.stacktrace)
-          if impl = Plug.Exception.impl_for(error) do
-            send_resp(conn, impl.status(error), "")
-          else
-            send_resp(conn, 500, "")
-          end
-      end
-    else
+    try do
       fun.(conn)
+    catch
+      kind, error ->
+        if IEx.started?, do: print_error(kind, error, System.stacktrace)
+
+        if impl = Plug.Exception.impl_for(error) do
+          send_resp(conn, impl.status(error), "")
+        else
+          send_resp(conn, 500, "")
+        end
     end
   end
 
