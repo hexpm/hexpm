@@ -152,11 +152,68 @@ defmodule ExplexWeb.RouterTest do
     RegistryBuilder.rebuild
     RegistryBuilder.wait_for_build
 
-    conn = conn("GET", "/api/registry.dets")
+    conn = conn("GET", "/api/registry")
     conn = Router.call(conn, [])
 
     assert conn.status == 200
   after
     RegistryBuilder.stop
+  end
+
+  test "get user" do
+    conn = conn("GET", "/api/users/eric", [], [])
+    conn = Router.call(conn, [])
+
+    assert conn.status == 200
+    body = JSON.decode!(conn.resp_body)
+    assert body["username"] == "eric"
+    assert body["email"] == "eric"
+    refute body["password"]
+
+    headers = [ { "accept", "application/vnd.explex+elixir" } ]
+    conn = conn("GET", "/api/users/eric", [], headers: headers)
+    conn = Router.call(conn, [])
+
+    assert conn.status == 200
+    { body, [] } = Code.eval_string(conn.resp_body)
+    assert body[:username] == "eric"
+    assert body[:email] == "eric"
+  end
+
+  test "accepted formats" do
+    headers = [ { "accept", "application/xml" } ]
+    conn = conn("GET", "/api/users/eric", [], headers: headers)
+    conn = Router.call(conn, [])
+    assert conn.status == 415
+
+    headers = [ { "accept", "application/json" } ]
+    conn = conn("GET", "/api/users/eric", [], headers: headers)
+    conn = Router.call(conn, [])
+    assert conn.status == 200
+    JSON.decode!(conn.resp_body)
+
+    headers = [ { "accept", "application/vnd.explex" } ]
+    conn = conn("GET", "/api/users/eric", [], headers: headers)
+    conn = Router.call(conn, [])
+    assert conn.status == 200
+    JSON.decode!(conn.resp_body)
+
+    headers = [ { "accept", "application/vnd.explex+json" } ]
+    conn = conn("GET", "/api/users/eric", [], headers: headers)
+    conn = Router.call(conn, [])
+    assert conn.status == 200
+    JSON.decode!(conn.resp_body)
+
+    headers = [ { "accept", "application/vnd.explex.v1+json" } ]
+    conn = conn("GET", "/api/users/eric", [], headers: headers)
+    conn = Router.call(conn, [])
+    assert conn.status == 200
+    JSON.decode!(conn.resp_body)
+
+    headers = [ { "accept", "application/vnd.explex.v1" } ]
+    conn = conn("GET", "/api/users/eric", [], headers: headers)
+    conn = Router.call(conn, [])
+    assert conn.status == 200
+    JSON.decode!(conn.resp_body)
   end
 end
