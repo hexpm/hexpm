@@ -10,7 +10,8 @@ defmodule ExplexWeb.RouterTest do
   setup do
     { :ok, user } = User.create("eric", "eric", "eric")
     { :ok, _ }    = Package.create("postgrex", user, [])
-    { :ok, _ }    = Package.create("decimal", user, [])
+    { :ok, pkg }  = Package.create("decimal", user, [])
+    { :ok, _ }    = Release.create(pkg, "0.0.1", "url", "ref", [{ "postgrex", "0.0.1" }])
     :ok
   end
 
@@ -178,7 +179,9 @@ defmodule ExplexWeb.RouterTest do
     assert body["username"] == "eric"
     assert body["email"] == "eric"
     refute body["password"]
+  end
 
+  test "elixir media response" do
     headers = [ { "accept", "application/vnd.explex+elixir" } ]
     conn = conn("GET", "/api/users/eric", [], headers: headers)
     conn = Router.call(conn, [])
@@ -187,6 +190,33 @@ defmodule ExplexWeb.RouterTest do
     { body, [] } = Code.eval_string(conn.resp_body)
     assert body[:username] == "eric"
     assert body[:email] == "eric"
+  end
+
+  test "get package" do
+    conn = conn("GET", "/api/packages/decimal", [], [])
+    conn = Router.call(conn, [])
+
+    assert conn.status == 200
+    body = JSON.decode!(conn.resp_body)
+    assert body["name"] == "decimal"
+
+    release = List.first(body["releases"])
+    assert release["url"] == "http://explex.org/api/packages/decimal/releases/0.0.1"
+    assert release["version"] == "0.0.1"
+    assert release["git_url"] == "url"
+    assert release["git_ref"] == "ref"
+  end
+
+  test "get release" do
+    conn = conn("GET", "/api/packages/decimal/releases/0.0.1", [], [])
+    conn = Router.call(conn, [])
+
+    assert conn.status == 200
+    body = JSON.decode!(conn.resp_body)
+    assert body["url"] == "http://explex.org/api/packages/decimal/releases/0.0.1"
+    assert body["version"] == "0.0.1"
+    assert body["git_url"] == "url"
+    assert body["git_ref"] == "ref"
   end
 
   test "accepted formats" do

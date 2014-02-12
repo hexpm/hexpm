@@ -23,6 +23,22 @@ defmodule ExplexWeb.Router.API do
     end
   end
 
+  get "packages/:name" do
+    if package = Package.get(name) do
+      send_render(conn, 200, package)
+    else
+      send_resp(conn, 404, "")
+    end
+  end
+
+  get "packages/:name/releases/:version" do
+    if (package = Package.get(name)) && (release = Release.get(package, version)) do
+      send_render(conn, 200, release)
+    else
+      send_resp(conn, 404, "")
+    end
+  end
+
   post "user" do
     User.create(conn.params["username"], conn.params["email"], conn.params["password"])
     |> send_creation_resp(conn)
