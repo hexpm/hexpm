@@ -17,11 +17,7 @@ defmodule ExplexWeb.Router.API do
 
   get "users/:name" do
     if user = User.get(name) do
-      body =
-        user.__entity__(:keywords)
-        |> Dict.take([:username, :email, :created])
-        |> Dict.update!(:created, &to_iso8601/1)
-      send_render(conn, 200, body)
+      send_render(conn, 200, user)
     else
       send_resp(conn, 404, "")
     end

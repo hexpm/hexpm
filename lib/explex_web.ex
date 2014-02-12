@@ -6,4 +6,8 @@ defmodule ExplexWeb do
 
     ExplexWeb.Supervisor.start_link
   end
+
+  defprotocol Render do
+    def render(entity)
+  end
 end

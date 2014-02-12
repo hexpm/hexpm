@@ -5,7 +5,6 @@ defmodule ExplexWeb.RouterTest do
   alias ExplexWeb.User
   alias ExplexWeb.Package
   alias ExplexWeb.Release
-  alias ExplexWeb.Requirement
   alias ExplexWeb.RegistryBuilder
 
   setup do
@@ -21,6 +20,9 @@ defmodule ExplexWeb.RouterTest do
     conn = Router.call(conn, [])
 
     assert conn.status == 201
+    body = JSON.decode!(conn.resp_body)
+    assert body["url"] == "http://explex.org/api/users/name"
+
     user = assert User.get("name")
     assert user.email == "email"
   end
@@ -44,8 +46,11 @@ defmodule ExplexWeb.RouterTest do
     conn = conn("PUT", "/api/package/ecto", JSON.encode!(body), headers: headers)
     conn = Router.call(conn, [])
 
-    user_id = User.get("eric").id
     assert conn.status == 201
+    body = JSON.decode!(conn.resp_body)
+    assert body["url"] == "http://explex.org/api/packages/ecto"
+
+    user_id = User.get("eric").id
     package = assert Package.get("ecto")
     assert package.name == "ecto"
     assert package.owner_id == user_id
@@ -61,6 +66,9 @@ defmodule ExplexWeb.RouterTest do
     conn = Router.call(conn, [])
 
     assert conn.status == 204
+    body = JSON.decode!(conn.resp_body)
+    assert body["url"] == "http://explex.org/api/packages/ecto"
+
     assert Package.get("ecto").meta["description"] == "awesomeness"
   end
 
@@ -96,6 +104,8 @@ defmodule ExplexWeb.RouterTest do
     conn = Router.call(conn, [])
 
     assert conn.status == 201
+    body = JSON.decode!(conn.resp_body)
+    assert body["url"] == "http://explex.org/api/packages/postgrex/releases/0.0.1"
 
     body = [git_url: "url", git_ref: "ref", version: "0.0.2", requirements: []]
     conn = conn("POST", "/api/package/postgrex/release", JSON.encode!(body), headers: headers)
@@ -118,12 +128,11 @@ defmodule ExplexWeb.RouterTest do
     conn = Router.call(conn, [])
 
     assert conn.status == 201
+    body = JSON.decode!(conn.resp_body)
+    assert body["requirements"] == [{ "decimal", "~> 0.0.1" }]
 
     postgrex = Package.get("postgrex")
-    decimal = Package.get("decimal")
-    decimal_id = decimal.id
-    assert [Requirement.Entity[dependency_id: ^decimal_id, requirement: "~> 0.0.1"]] =
-           Release.get(postgrex, "0.0.1").requirements.to_list
+    assert [{ "decimal", "~> 0.0.1" }] = Release.get(postgrex, "0.0.1").requirements.to_list
   end
 
   test "create release updates registry" do

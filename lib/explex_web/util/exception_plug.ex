@@ -10,13 +10,13 @@ defmodule ExplexWeb.Util.ExceptionPlug do
       fun.(conn)
     catch
       kind, error ->
-        if IEx.started?, do: print_error(kind, error, System.stacktrace)
+        stacktrace = System.stacktrace
+        if IEx.started?, do: print_error(kind, error, stacktrace)
 
-        if impl = Plug.Exception.impl_for(error) do
-          send_resp(conn, impl.status(error), "")
-        else
-          send_resp(conn, 500, "")
-        end
+        status = Plug.Exception.status(error)
+        conn = send_resp(conn, status, "")
+        if status == 500, do: :erlang.raise(kind, error, stacktrace)
+        conn
     end
   end
 

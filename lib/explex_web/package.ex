@@ -40,7 +40,7 @@ defmodule ExplexWeb.Package do
     case validate_create(package) do
       [] ->
         package = package.meta(JSON.encode!(meta))
-        { :ok, ExplexWeb.Repo.create(package).meta(meta) }
+        { :ok, ExplexWeb.Repo.create(package).meta(meta).releases([]) }
       errors ->
         { :error, errors }
     end
@@ -60,12 +60,35 @@ defmodule ExplexWeb.Package do
 
   def get(name) do
     package =
-      from(p in ExplexWeb.Package, where: p.name == ^name)
+      from(p in ExplexWeb.Package,
+           where: p.name == ^name,
+           preload: [:releases])
       |> ExplexWeb.Repo.all
       |> List.first
 
     if package do
       package.update_meta(&JSON.decode!(&1))
+             .releases(ExplexWeb.Release.all(package))
     end
+  end
+end
+
+defimpl ExplexWeb.Render, for: ExplexWeb.Package.Entity do
+  import ExplexWeb.Util
+
+  def render(package) do
+    releases =
+      Enum.map(package.releases, fn release ->
+        release.__entity__(:keywords)
+        |> Dict.take([:version, :git_url, :git_ref, :created])
+        |> Dict.update!(:created, &to_iso8601/1)
+        |> Dict.put(:url, url(["packages", package.name, "releases", release.version]))
+      end)
+
+    package.__entity__(:keywords)
+    |> Dict.take([:name, :meta, :created])
+    |> Dict.update!(:created, &to_iso8601/1)
+    |> Dict.put(:url, url(["packages", package.name]))
+    |> Dict.put(:releases, releases)
   end
 end

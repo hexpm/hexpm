@@ -45,6 +45,7 @@ defmodule ExplexWeb.Release do
                 id = deps[dep] ->
                   release.requirements.new(requirement: req, dependency_id: id)
                   |> ExplexWeb.Repo.create()
+                  { dep, req }
 
                 true ->
                   { :error, { dep, "unknown package" } }
@@ -53,8 +54,8 @@ defmodule ExplexWeb.Release do
 
           errors = Enum.filter_map(requirements, &match?({ :error, _ }, &1), &elem(&1, 1))
           if errors == [] do
-            release
-            release.requirements(requirements)
+            release.package(package)
+                   .requirements(requirements)
           else
             ExplexWeb.Repo.rollback(deps: errors)
           end
@@ -65,16 +66,41 @@ defmodule ExplexWeb.Release do
   end
 
   def all(package) do
-    from(r in package.releases,
-         preload: [:requirements])
-    |> ExplexWeb.Repo.all
+    ExplexWeb.Repo.all(package.releases)
+    |> Enum.map(&(&1.package(package)))
   end
 
   def get(package, version) do
-    from(r in package.releases,
-         where: r.version == ^version,
-         preload: [:requirements])
-    |> ExplexWeb.Repo.all
-    |> List.first
+    release =
+      from(r in package.releases, where: r.version == ^version)
+      |> ExplexWeb.Repo.all
+      |> List.first
+
+    if release do
+      reqs =
+        from(req in release.requirements,
+             join: p in req.dependency,
+             select: { p.name, req.requirement })
+        |> ExplexWeb.Repo.all
+
+      release.package(package)
+             .requirements(reqs)
+    end
+  end
+end
+
+defimpl ExplexWeb.Render, for: ExplexWeb.Release.Entity do
+  import ExplexWeb.Util
+
+  def render(release) do
+    package = release.package.get
+    reqs    = release.requirements.to_list
+
+    release.__entity__(:keywords)
+    |> Dict.take([:version, :git_url, :git_ref, :created])
+    |> Dict.update!(:created, &to_iso8601/1)
+    |> Dict.put(:url, url(["packages", package.name, "releases", release.version]))
+    |> Dict.put(:package_url, url(["packages", package.name]))
+    |> Dict.put(:requirements, reqs)
   end
 end

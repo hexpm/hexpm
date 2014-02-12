@@ -2,21 +2,9 @@ defmodule ExplexWeb.Router.Util do
   import Plug.Connection
   alias ExplexWeb.User
 
-  def to_iso8601(Ecto.DateTime[] = dt) do
-    "#{pad(dt.year, 4)}-#{pad(dt.month, 2)}-#{pad(dt.day, 2)}T" <>
-    "#{pad(dt.hour, 2)}:#{pad(dt.min, 2)}:#{pad(dt.sec, 2)}Z"
-  end
+  def send_render(conn, status, entity) do
+    body = ExplexWeb.Render.render(entity)
 
-  defp pad(int, padding) do
-    str = to_string(int)
-    padding = max(padding-byte_size(str), 0)
-    do_pad(str, padding)
-  end
-
-  defp do_pad(str, 0), do: str
-  defp do_pad(str, n), do: do_pad("0" <> str, n-1)
-
-  def send_render(conn, status, body) do
     case conn.assigns[:format] do
       "json" ->
         body = JSON.encode!(body)
@@ -83,16 +71,16 @@ defmodule ExplexWeb.Router.Util do
     |> send_resp(401, "")
   end
 
-  def send_creation_resp({ :ok, _ }, conn) do
-    send_resp(conn, 201, "")
+  def send_creation_resp({ :ok, entity }, conn) do
+    send_render(conn, 201, entity)
   end
 
   def send_creation_resp({ :error, errors }, conn) do
     send_validation_failed(conn, errors)
   end
 
-  def send_update_resp({ :ok, _ }, conn) do
-    send_resp(conn, 204)
+  def send_update_resp({ :ok, entity }, conn) do
+    send_render(conn, 204, entity)
   end
 
   def send_update_resp({ :error, errors }, conn) do

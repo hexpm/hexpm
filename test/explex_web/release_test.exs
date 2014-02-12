@@ -4,7 +4,6 @@ defmodule ExplexWeb.ReleaseTest do
   alias ExplexWeb.User
   alias ExplexWeb.Package
   alias ExplexWeb.Release
-  alias ExplexWeb.Requirement
 
   setup do
     { :ok, user } = User.create("eric", "eric", "eric")
@@ -35,15 +34,10 @@ defmodule ExplexWeb.ReleaseTest do
     assert { :ok, _ } = Release.create(decimal, "0.0.1", "url", "ref", [])
     assert { :ok, _ } = Release.create(decimal, "0.0.2", "url", "ref", [])
     assert { :ok, _ } = Release.create(postgrex, "0.0.1", "url", "ref", [{ "decimal", "~> 0.0.1" }])
-    assert { :ok, r } = Release.create(ecto, "0.0.1", "url", "ref", [{ "decimal", "~> 0.0.2" }, { "postgrex", "== 0.0.1" }])
+    assert { :ok, _ } = Release.create(ecto, "0.0.1", "url", "ref", [{ "decimal", "~> 0.0.2" }, { "postgrex", "== 0.0.1" }])
 
-    postgrex_id = postgrex.id
-    decimal_id = decimal.id
-    release_id = r.id
     release = Release.get(ecto, "0.0.1")
-    assert [ Requirement.Entity[release_id: ^release_id, dependency_id: ^decimal_id, requirement: "~> 0.0.2"],
-             Requirement.Entity[release_id: ^release_id, dependency_id: ^postgrex_id, requirement: "== 0.0.1"]]
-           = release.requirements.to_list
+    assert [{"postgrex", "== 0.0.1" }, {"decimal", "~> 0.0.2" }] = release.requirements.to_list
   end
 
   test "validate release" do
