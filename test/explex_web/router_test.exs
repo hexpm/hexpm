@@ -188,8 +188,8 @@ defmodule ExplexWeb.RouterTest do
 
     assert conn.status == 200
     { body, [] } = Code.eval_string(conn.resp_body)
-    assert body[:username] == "eric"
-    assert body[:email] == "eric"
+    assert body["username"] == "eric"
+    assert body["email"] == "eric"
   end
 
   test "get package" do

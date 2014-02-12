@@ -10,8 +10,9 @@ defmodule ExplexWeb.Router.Util do
         body = JSON.encode!(body)
         content_type = "application/json; charset=utf-8"
       "elixir" ->
-        # TODO: Convert atoms to strings
-        body = inspect(body, limit: :infinity, records: false, binaries: :as_strings)
+        body =
+          binarify(body)
+          |> inspect(limit: :infinity, records: false, binaries: :as_strings)
         content_type = "application/vnd.explex+elixir; charset=utf-8"
     end
 
@@ -19,6 +20,15 @@ defmodule ExplexWeb.Router.Util do
     |> put_resp_header("content-type", content_type)
     |> send_resp(status, body)
   end
+
+  defp binarify(binary) when is_binary(binary),
+    do: binary
+  defp binarify(atom) when is_atom(atom),
+    do: atom_to_binary(atom)
+  defp binarify(list) when is_list(list),
+    do: lc(elem inlist list, do: binarify(elem))
+  defp binarify({ left, right }),
+    do: { binarify(left), binarify(right) }
 
   def send_resp(conn, status) do
     conn.status(status).state(:set) |> send_resp
