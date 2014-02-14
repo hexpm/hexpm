@@ -12,7 +12,7 @@ defmodule ExplexWeb.Supervisor do
     end
   else
     def init([]) do
-      tree = [ worker(ExplexWeb.RegistryBuilder, []),
+      tree = [ worker(ExplexWeb.RegistryBuilder, [[build_on_start: true]]),
                worker(ExplexWeb.Repo, []) ]
       supervise(tree, strategy: :one_for_one)
     end

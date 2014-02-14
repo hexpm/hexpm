@@ -18,8 +18,8 @@ defmodule ExplexWeb.RegistryBuilder do
 
   defrecordp :state, [building: false, pending: false, waiter: nil]
 
-  def start_link do
-    :gen_server.start_link({ :local, __MODULE__ }, __MODULE__, [], [])
+  def start_link(opts \\ []) do
+    :gen_server.start_link({ :local, __MODULE__ }, __MODULE__, opts, [])
   end
 
   def stop do
@@ -38,7 +38,8 @@ defmodule ExplexWeb.RegistryBuilder do
     @reg_file
   end
 
-  def init([]) do
+  def init(opts) do
+    if opts[:build_on_start], do: rebuild()
     { :ok, state() }
   end
 
@@ -55,7 +56,11 @@ defmodule ExplexWeb.RegistryBuilder do
     { :stop, :normal, :ok, s }
   end
 
-  def handle_call(:wait_for_build, from, s) do
+  def handle_call(:wait_for_build, _from, state(building: false) = s) do
+    { :reply, :ok, s }
+  end
+
+  def handle_call(:wait_for_build, from, state(building: true) = s) do
     { :noreply, state(s, waiter: from) }
   end
 
