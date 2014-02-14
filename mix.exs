@@ -11,7 +11,8 @@ defmodule ExplexWeb.Mixfile do
   # Configuration for the OTP application
   def application do
     [ applications: [:cowboy, :plug, :bcrypt],
-      mod: { ExplexWeb, [] } ]
+      mod: { ExplexWeb, [] },
+      env: [api_url: "http://localhost:4000/api"] ]
   end
 
   # Returns the list of dependencies in the format:

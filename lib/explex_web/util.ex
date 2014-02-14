@@ -1,6 +1,6 @@
 defmodule ExplexWeb.Util do
   def url(path) do
-    { :ok, url } = :application.get_env(:explex, :api_url)
+    { :ok, url } = :application.get_env(:explex_web, :api_url)
     url <> "/" <> Path.join(List.wrap(path))
   end
 
