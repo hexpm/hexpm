@@ -10,15 +10,18 @@ defmodule ExplexWeb.Router.Util do
         body = JSON.encode!(body)
         content_type = "application/json; charset=utf-8"
       "elixir" ->
-        body =
-          binarify(body)
-          |> inspect(limit: :infinity, records: false, binaries: :as_strings)
+        body = safe_serialize_elixir(body)
         content_type = "application/vnd.explex+elixir; charset=utf-8"
     end
 
     conn
     |> put_resp_header("content-type", content_type)
     |> send_resp(status, body)
+  end
+
+  def safe_serialize_elixir(term) do
+    binarify(term)
+    |> inspect(limit: :infinity, records: false, binaries: :as_strings)
   end
 
   defp binarify(binary) when is_binary(binary),

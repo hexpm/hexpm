@@ -192,6 +192,20 @@ defmodule ExplexWeb.RouterTest do
     assert body["email"] == "eric"
   end
 
+  test "elixir media request" do
+    body = [username: "name", email: "email", password: "pass"]
+           |> ExplexWeb.Router.Util.safe_serialize_elixir
+    conn = conn("POST", "/api/user", body, headers: [{ "content-type", "application/vnd.explex+elixir" }])
+    conn = Router.call(conn, [])
+
+    assert conn.status == 201
+    body = JSON.decode!(conn.resp_body)
+    assert body["url"] == "http://explex.org/api/users/name"
+
+    user = assert User.get("name")
+    assert user.email == "email"
+  end
+
   test "get package" do
     conn = conn("GET", "/api/packages/decimal", [], [])
     conn = Router.call(conn, [])

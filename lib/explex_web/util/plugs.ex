@@ -12,7 +12,6 @@ defmodule ExplexWeb.Util.Plugs do
         raise Plug.Parsers.UnsupportedMediaTypeError
       end
 
-
       if types != [] do
         accepted =
           Enum.find(types, fn type ->
@@ -40,11 +39,6 @@ defmodule ExplexWeb.Util.Plugs do
     conn
   end
 
-  @vendor_regex ~r/^
-      (?:\.(?<version>[^\+]+))?
-      (?:\+(?<format>.*))?
-      $/x
-
   defp match_mime?({ "*", "*", _ }, _),
     do: true
   defp match_mime?({ first, "*", _ }, { first, _ }),
@@ -60,7 +54,7 @@ defmodule ExplexWeb.Util.Plugs do
   defp match_vendor?({ "application", second, _ }, vendor, formats) do
     case :binary.split(second, "vnd." <> vendor) do
       ["", rest] ->
-        if result = Regex.run(@vendor_regex, rest) do
+        if result = Regex.run(ExplexWeb.Util.vendor_regex, rest) do
           destructure [_, version, format], result
           if version == "", do: version = nil
           if format == "", do: format = nil

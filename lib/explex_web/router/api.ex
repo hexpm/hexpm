@@ -9,7 +9,7 @@ defmodule ExplexWeb.Router.API do
   alias ExplexWeb.RegistryBuilder
 
 
-  plug Plug.Parsers, parsers: [ExplexWeb.Util.JsonDecoder]
+  plug Plug.Parsers, parsers: [ExplexWeb.Util.JsonDecoder, ExplexWeb.Util.ElixirDecoder]
   plug :accept, vendor: "explex", allow: [{"application","json"}, "json", "elixir"]
   plug :match
   plug :dispatch
