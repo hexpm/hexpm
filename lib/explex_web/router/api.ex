@@ -39,12 +39,12 @@ defmodule ExplexWeb.Router.API do
     end
   end
 
-  post "user" do
+  post "users" do
     User.create(conn.params["username"], conn.params["email"], conn.params["password"])
     |> send_creation_resp(conn)
   end
 
-  put "package/:name" do
+  put "packages/:name" do
     with_authorized user do
       if package = Package.get(name) do
         package.meta(conn.params["meta"])
@@ -57,7 +57,7 @@ defmodule ExplexWeb.Router.API do
     end
   end
 
-  post "package/:name/release" do
+  post "packages/:name/releases" do
     with_authorized do
       if package = Package.get(name) do
         result =

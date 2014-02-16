@@ -17,7 +17,7 @@ defmodule ExplexWeb.RouterTest do
 
   test "create user" do
     body = [username: "name", email: "email", password: "pass"]
-    conn = conn("POST", "/api/user", JSON.encode!(body), headers: [{ "content-type", "application/json" }])
+    conn = conn("POST", "/api/users", JSON.encode!(body), headers: [{ "content-type", "application/json" }])
     conn = Router.call(conn, [])
 
     assert conn.status == 201
@@ -30,7 +30,7 @@ defmodule ExplexWeb.RouterTest do
 
   test "create user validates" do
     body = [username: "name", password: "pass"]
-    conn = conn("POST", "/api/user", JSON.encode!(body), headers: [{ "content-type", "application/json" }])
+    conn = conn("POST", "/api/users", JSON.encode!(body), headers: [{ "content-type", "application/json" }])
     conn = Router.call(conn, [])
 
     assert conn.status == 422
@@ -44,7 +44,7 @@ defmodule ExplexWeb.RouterTest do
     headers = [ { "content-type", "application/json" },
                 { "authorization", "Basic " <> :base64.encode("eric:eric") }]
     body = [meta: []]
-    conn = conn("PUT", "/api/package/ecto", JSON.encode!(body), headers: headers)
+    conn = conn("PUT", "/api/packages/ecto", JSON.encode!(body), headers: headers)
     conn = Router.call(conn, [])
 
     assert conn.status == 201
@@ -63,7 +63,7 @@ defmodule ExplexWeb.RouterTest do
     headers = [ { "content-type", "application/json" },
                 { "authorization", "Basic " <> :base64.encode("eric:eric") }]
     body = [meta: [description: "awesomeness"]]
-    conn = conn("PUT", "/api/package/ecto", JSON.encode!(body), headers: headers)
+    conn = conn("PUT", "/api/packages/ecto", JSON.encode!(body), headers: headers)
     conn = Router.call(conn, [])
 
     assert conn.status == 204
@@ -77,7 +77,7 @@ defmodule ExplexWeb.RouterTest do
     headers = [ { "content-type", "application/json" },
                 { "authorization", "Basic " <> :base64.encode("eric:wrong") }]
     body = [meta: []]
-    conn = conn("PUT", "/api/package/ecto", JSON.encode!(body), headers: headers)
+    conn = conn("PUT", "/api/packages/ecto", JSON.encode!(body), headers: headers)
     conn = Router.call(conn, [])
 
     assert conn.status == 401
@@ -88,7 +88,7 @@ defmodule ExplexWeb.RouterTest do
     headers = [ { "content-type", "application/json" },
                 { "authorization", "Basic " <> :base64.encode("eric:eric") }]
     body = [meta: [links: "invalid"]]
-    conn = conn("PUT", "/api/package/ecto", JSON.encode!(body), headers: headers)
+    conn = conn("PUT", "/api/packages/ecto", JSON.encode!(body), headers: headers)
     conn = Router.call(conn, [])
 
     assert conn.status == 422
@@ -101,7 +101,7 @@ defmodule ExplexWeb.RouterTest do
     headers = [ { "content-type", "application/json" },
                 { "authorization", "Basic " <> :base64.encode("eric:eric") }]
     body = [git_url: "url", git_ref: "ref", version: "0.0.1", requirements: []]
-    conn = conn("POST", "/api/package/postgrex/release", JSON.encode!(body), headers: headers)
+    conn = conn("POST", "/api/packages/postgrex/releases", JSON.encode!(body), headers: headers)
     conn = Router.call(conn, [])
 
     assert conn.status == 201
@@ -109,7 +109,7 @@ defmodule ExplexWeb.RouterTest do
     assert body["url"] == "http://explex.org/api/packages/postgrex/releases/0.0.1"
 
     body = [git_url: "url", git_ref: "ref", version: "0.0.2", requirements: []]
-    conn = conn("POST", "/api/package/postgrex/release", JSON.encode!(body), headers: headers)
+    conn = conn("POST", "/api/packages/postgrex/releases", JSON.encode!(body), headers: headers)
     conn = Router.call(conn, [])
 
     assert conn.status == 201
@@ -125,7 +125,7 @@ defmodule ExplexWeb.RouterTest do
     headers = [ { "content-type", "application/json" },
                 { "authorization", "Basic " <> :base64.encode("eric:eric") }]
     body = [git_url: "url", git_ref: "ref", version: "0.0.1", requirements: [decimal: "~> 0.0.1"]]
-    conn = conn("POST", "/api/package/postgrex/release", JSON.encode!(body), headers: headers)
+    conn = conn("POST", "/api/packages/postgrex/releases", JSON.encode!(body), headers: headers)
     conn = Router.call(conn, [])
 
     assert conn.status == 201
@@ -147,7 +147,7 @@ defmodule ExplexWeb.RouterTest do
     headers = [ { "content-type", "application/json" },
                 { "authorization", "Basic " <> :base64.encode("eric:eric") }]
     body = [git_url: "url", git_ref: "ref", version: "0.0.1", requirements: [decimal: "~> 0.0.1"]]
-    conn = conn("POST", "/api/package/postgrex/release", JSON.encode!(body), headers: headers)
+    conn = conn("POST", "/api/packages/postgrex/releases", JSON.encode!(body), headers: headers)
     conn = Router.call(conn, [])
     assert conn.status == 201
 
@@ -195,7 +195,7 @@ defmodule ExplexWeb.RouterTest do
   test "elixir media request" do
     body = [username: "name", email: "email", password: "pass"]
            |> ExplexWeb.Router.Util.safe_serialize_elixir
-    conn = conn("POST", "/api/user", body, headers: [{ "content-type", "application/vnd.explex+elixir" }])
+    conn = conn("POST", "/api/users", body, headers: [{ "content-type", "application/vnd.explex+elixir" }])
     conn = Router.call(conn, [])
 
     assert conn.status == 201
