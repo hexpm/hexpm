@@ -1,9 +1,12 @@
 defmodule ExplexWeb.Repo do
   use Ecto.Repo, adapter: Ecto.Adapters.Postgres, env: Mix.env
 
+  def url(:prod) do
+    System.get_env("EXPLEX_ECTO_URL") ||
+    "ecto://explex:explex@localhost/explex"
+  end
+
   def url(:dev) do
-    # Special case for integration testing explex client
-    System.get_env("EXPLEX_ALT_ECTO_URL") ||
     "ecto://explex:explex@localhost/explex_dev"
   end
 
