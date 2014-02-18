@@ -66,7 +66,7 @@ defmodule ExplexWeb.RouterTest do
     conn = conn("PUT", "/api/packages/ecto", JSON.encode!(body), headers: headers)
     conn = Router.call(conn, [])
 
-    assert conn.status == 204
+    assert conn.status == 200
     body = JSON.decode!(conn.resp_body)
     assert body["url"] == "http://explex.org/api/packages/ecto"
 

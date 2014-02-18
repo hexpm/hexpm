@@ -96,7 +96,7 @@ defmodule ExplexWeb.Router.Util do
   end
 
   def send_update_resp({ :ok, entity }, conn) do
-    send_render(conn, 204, entity)
+    send_render(conn, 200, entity)
   end
 
   def send_update_resp({ :error, errors }, conn) do

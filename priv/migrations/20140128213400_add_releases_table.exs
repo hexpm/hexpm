@@ -8,7 +8,8 @@ defmodule ExplexWeb.Repo.Migrations.AddReleasesTable do
         version text,
         git_url text,
         git_ref text,
-        created timestamp DEFAULT now())",
+        created timestamp DEFAULT now(),
+        UNIQUE (package_id, version))",
 
       "CREATE INDEX ON releases (package_id)" ]
   end
