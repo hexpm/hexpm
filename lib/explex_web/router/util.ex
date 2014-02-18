@@ -2,9 +2,7 @@ defmodule ExplexWeb.Router.Util do
   import Plug.Connection
   alias ExplexWeb.User
 
-  def send_render(conn, status, entity) do
-    body = ExplexWeb.Render.render(entity)
-
+  def send_render(conn, status, body) when is_list(body) do
     case conn.assigns[:format] do
       "json" ->
         body = JSON.encode!(body)
@@ -17,6 +15,11 @@ defmodule ExplexWeb.Router.Util do
     conn
     |> put_resp_header("content-type", content_type)
     |> send_resp(status, body)
+  end
+
+  def send_render(conn, status, entity) do
+    body = ExplexWeb.Render.render(entity)
+    send_render(conn, status, body)
   end
 
   def safe_serialize_elixir(term) do
@@ -102,6 +105,6 @@ defmodule ExplexWeb.Router.Util do
 
   defp send_validation_failed(conn, errors) do
     body = [message: "Validation failed", errors: errors]
-    send_resp(conn, 422, JSON.encode!(body))
+    send_render(conn, 422, body)
   end
 end

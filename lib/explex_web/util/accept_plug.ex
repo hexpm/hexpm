@@ -1,7 +1,9 @@
-defmodule ExplexWeb.Util.Plugs do
+defmodule ExplexWeb.Util.AcceptPlug do
   import Plug.Connection
 
-  def accept(conn, opts) do
+  def init(opts), do: opts
+
+  def call(conn, opts) do
     vendor = opts[:vendor]
     allow = opts[:allow]
     { mimes, formats } = Enum.partition(allow, &is_tuple/1)

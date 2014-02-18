@@ -2,7 +2,7 @@ defmodule ExplexWeb.Router.API do
   use Plug.Router
   import Plug.Connection
   import ExplexWeb.Router.Util
-  import ExplexWeb.Util.Plugs
+  alias ExplexWeb.Util.AcceptPlug
   alias ExplexWeb.User
   alias ExplexWeb.Package
   alias ExplexWeb.Release
@@ -10,7 +10,7 @@ defmodule ExplexWeb.Router.API do
 
 
   plug Plug.Parsers, parsers: [ExplexWeb.Util.JsonDecoder, ExplexWeb.Util.ElixirDecoder]
-  plug :accept, vendor: "explex", allow: [{"application","json"}, "json", "elixir"]
+  plug AcceptPlug, vendor: "explex", allow: [{"application","json"}, "json", "elixir"]
   plug :match
   plug :dispatch
 

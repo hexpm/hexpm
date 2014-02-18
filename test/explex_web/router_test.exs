@@ -157,7 +157,7 @@ defmodule ExplexWeb.RouterTest do
     RegistryBuilder.stop
   end
 
-  test "fetch registry.dets" do
+  test "fetch registry" do
     { :ok, _ } = RegistryBuilder.start_link
     RegistryBuilder.rebuild
     RegistryBuilder.wait_for_build
