@@ -11,12 +11,12 @@ defmodule ExplexWeb.RegistryBuilder do
   alias ExplexWeb.Release
   alias ExplexWeb.Requirement
 
-  @reg_file   Path.join("tmp", "registry.dets")
-  @temp_file  Path.join("tmp", "registry-temp.dets")
+  @reg_file   "registry.dets"
+  @temp_file  "registry-temp.dets"
   @dets_table :explex_registry
   @version    1
 
-  defrecordp :state, [building: false, pending: false, waiter: nil]
+  defrecordp :state, [building: false, pending: false, waiter: nil, tmp_path: nil]
 
   def start_link(opts \\ []) do
     :gen_server.start_link({ :local, __MODULE__ }, __MODULE__, opts, [])
@@ -35,16 +35,18 @@ defmodule ExplexWeb.RegistryBuilder do
   end
 
   def filename do
-    @reg_file
+    :gen_server.call(__MODULE__, :filename)
   end
 
   def init(opts) do
     if opts[:build_on_start], do: rebuild()
-    { :ok, state() }
+    # Store expanded tmp path so we dont brake if cwd changes
+    # This is used when integration testing client
+    { :ok, state(tmp_path: Path.expand("tmp")) }
   end
 
-  def handle_cast(:rebuild, state(building: false) = s) do
-    build()
+  def handle_cast(:rebuild, state(building: false, tmp_path: tmp) = s) do
+    build(tmp)
     { :noreply, state(s, building: true) }
   end
 
@@ -64,20 +66,25 @@ defmodule ExplexWeb.RegistryBuilder do
     { :noreply, state(s, waiter: from) }
   end
 
+  def handle_call(:filename, _from, state(tmp_path: tmp_path) = s) do
+    path = Path.join(tmp_path, @reg_file)
+    { :reply, path, s }
+  end
+
   def handle_info(:finished_building, state(pending: pending, waiter: waiter) = s) do
     if pending, do: rebuild()
     if waiter, do: :gen_server.reply(waiter, :ok)
     { :noreply, state(s, building: false, pending: false, waiter: nil) }
   end
 
-  defp build do
+  defp build(tmp_path) do
     pid = self()
     spawn_link(fn ->
-      builder(pid)
+      builder(pid, tmp_path)
     end)
   end
 
-  defp builder(pid) do
+  defp builder(pid, tmp_path) do
     packages     = packages()
     releases     = releases()
     requirements = requirements()
@@ -93,10 +100,12 @@ defmodule ExplexWeb.RegistryBuilder do
         { package, version, deps, git_url, git_ref }
       end)
 
-    File.rm(@temp_file)
+    temp_file = Path.join(tmp_path, @temp_file)
+    reg_file = Path.join(tmp_path, @reg_file)
+    File.rm(temp_file)
 
     dets_opts = [
-      file: @temp_file,
+      file: temp_file,
       ram_file: true,
       auto_save: :infinity,
       min_no_slots: Dict.size(packages) + 1,
@@ -106,7 +115,7 @@ defmodule ExplexWeb.RegistryBuilder do
     :ok = :dets.insert(@dets_table, { :"$$version$$", @version })
     :ok = :dets.insert(@dets_table, tuples)
     :ok = :dets.close(@dets_table)
-    :ok = :file.rename(@temp_file, @reg_file)
+    :ok = :file.rename(temp_file, reg_file)
 
     send pid, :finished_building
   end

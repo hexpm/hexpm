@@ -12,7 +12,8 @@ defmodule ExplexWeb.Mixfile do
   def application do
     [ applications: [:cowboy, :plug, :bcrypt],
       mod: { ExplexWeb, [] },
-      env: [api_url: "http://localhost:4000/api"] ]
+      env: [ api_url: "http://localhost:4000/api",
+             password_work_factor: 12 ] ]
   end
 
   # Returns the list of dependencies in the format:

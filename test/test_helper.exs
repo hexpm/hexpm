@@ -1,6 +1,7 @@
 ExUnit.start
 
 :application.set_env(:explex_web, :api_url, "http://explex.org/api")
+:application.set_env(:explex_web, :password_work_factor, 4)
 
 Mix.Task.run "ecto.migrate", ["ExplexWeb.Repo"]
 
