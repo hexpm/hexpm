@@ -1,4 +1,4 @@
-defmodule ExplexWeb.Util.AcceptPlug do
+defmodule ExplexWeb.Plugs.Accept do
   import Plug.Connection
 
   def init(opts), do: opts

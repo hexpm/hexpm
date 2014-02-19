@@ -1,7 +1,14 @@
-defmodule ExplexWeb.Util.Validation do
+defmodule ExplexWeb.Validation do
+  @doc """
+  Ecto validation helpers.
+  """
+
   alias Ecto.Query.Util
   require Ecto.Query
 
+  @doc """
+  Checks if a version is valid semver.
+  """
   def valid_version(attr, version, opts \\ []) do
     case Version.parse(version) do
       { :ok, _ } ->
@@ -11,6 +18,10 @@ defmodule ExplexWeb.Util.Validation do
     end
   end
 
+  @doc """
+  Checks if the fields on the given entity are unique
+  by querying the database.
+  """
   def unique(entity, fields, opts \\ []) when is_list(opts) do
     model   = entity.model
     repo    = Keyword.fetch!(opts, :on)
@@ -50,6 +61,12 @@ defmodule ExplexWeb.Util.Validation do
     end
   end
 
+  @doc """
+  Checks if the field value is of the specified type.
+
+  Uses ecto types but is extended with `{ :dict, key, value }` for
+  list dicts.
+  """
   def type(attr, value, expected, opts \\ []) do
     if Util.type_castable_to?(expected) do
       value = Util.try_cast(value, expected)

@@ -1,7 +1,15 @@
 defmodule ExplexWeb.Router.Util do
+  @doc """
+  Router related utility functions.
+  """
+
   import Plug.Connection
   alias ExplexWeb.User
 
+  @doc """
+  Renders an entity or dict body and sends it with a status code.
+  """
+  @spec send_render(Plug.Conn.t, non_neg_integer, term) :: Plug.Conn.t
   def send_render(conn, status, body) when is_list(body) do
     case conn.assigns[:format] do
       "json" ->
@@ -22,6 +30,10 @@ defmodule ExplexWeb.Router.Util do
     send_render(conn, status, body)
   end
 
+  @doc """
+  Encode an elixir term that can be safely deserialized on another machine.
+  """
+  @spec safe_serialize_elixir(term) :: String.t
   def safe_serialize_elixir(term) do
     binarify(term)
     |> inspect(limit: :infinity, records: false, binaries: :as_strings)
@@ -36,10 +48,18 @@ defmodule ExplexWeb.Router.Util do
   defp binarify({ left, right }),
     do: { binarify(left), binarify(right) }
 
+  @doc """
+  Send a response with a status code.
+  """
+  @spec send_resp(Plug.Conn.t, non_neg_integer) :: Plug.Conn.t
   def send_resp(conn, status) do
     conn.status(status).state(:set) |> send_resp
   end
 
+  @doc """
+  Forwards a connection matching given path to another router.
+  """
+  @spec forward(String.t, Macro.t, Plug.opts) :: Macro.t
   defmacro forward(path, plug, opts \\ []) do
     path = Path.join(path, "*glob")
     quote do
@@ -50,6 +70,11 @@ defmodule ExplexWeb.Router.Util do
     end
   end
 
+  @doc """
+  Run the given block if a user authorized, otherwise send an
+  unauthorized response.
+  """
+  @spec forward(Macro.t, Keyword.t) :: Macro.t
   defmacro with_authorized(user \\ { :_, [], nil }, opts) do
     quote do
       case ExplexWeb.Router.Util.authorize(var!(conn)) do
@@ -61,6 +86,9 @@ defmodule ExplexWeb.Router.Util do
     end
   end
 
+  # Check if a user is authorized, return `{ :ok, user }` if so,
+  # or `:error` if authorization failed
+  @doc false
   def authorize(conn) do
     case conn.req_headers["authorization"] do
       "Basic " <> credentials ->
@@ -81,12 +109,21 @@ defmodule ExplexWeb.Router.Util do
     end
   end
 
+  @doc """
+  Send an unauthorized response.
+  """
+  @spec send_unauthorized(Plug.Conn.t) :: Plug.Conn.t
   def send_unauthorized(conn) do
     conn
     |> put_resp_header("www-authenticate", "Basic realm=explex")
     |> send_resp(401, "")
   end
 
+  @doc """
+  Send a creation response if entity creation was successful,
+  otherwise send validation failure response.
+  """
+  @spec send_creation_resp({ :ok, term } | { :error, term }, Plug.Conn.t) :: Plug.Conn.t
   def send_creation_resp({ :ok, entity }, conn) do
     send_render(conn, 201, entity)
   end
@@ -95,6 +132,11 @@ defmodule ExplexWeb.Router.Util do
     send_validation_failed(conn, errors)
   end
 
+  @doc """
+  Send a creation response if entity update was successful,
+  otherwise send validation failure response.
+  """
+  @spec send_update_resp({ :ok, term } | { :error, term }, Plug.Conn.t) :: Plug.Conn.t
   def send_update_resp({ :ok, entity }, conn) do
     send_render(conn, 200, entity)
   end

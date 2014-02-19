@@ -6,9 +6,8 @@ defmodule ExplexWeb.Repo do
     "ecto://explex:explex@localhost/explex"
   end
 
-  def url(:dev) do
-    "ecto://explex:explex@localhost/explex_dev"
-  end
+  def url(:dev),
+    do: "ecto://explex:explex@localhost/explex_dev"
 
   def url(:test),
     do: "ecto://explex:explex@localhost/explex_test?size=1&max_overflow=0"

@@ -5,13 +5,13 @@ defmodule ExplexWeb.Router do
   alias ExplexWeb.RegistryBuilder
 
 
-  plug ExplexWeb.Util.ExceptionPlug
+  plug ExplexWeb.Plugs.Exception
   plug :match
   plug :dispatch
 
 
   get "api/registry" do
-    conn = ExplexWeb.Util.AcceptPlug.call(conn, vendor: "explex", allow: ["dets"])
+    conn = ExplexWeb.Plugs.Accept.call(conn, vendor: "explex", allow: ["dets"])
     send_file(conn, 200, RegistryBuilder.filename)
   end
 

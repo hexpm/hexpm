@@ -3,7 +3,7 @@ defmodule ExplexWeb.Package do
 
   import Ecto.Query, only: [from: 2]
   require Ecto.Validator
-  import ExplexWeb.Util.Validation
+  import ExplexWeb.Validation
 
   queryable "packages" do
     field :name, :string

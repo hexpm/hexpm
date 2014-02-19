@@ -5,6 +5,7 @@ defmodule ExplexWeb.Supervisor do
     :supervisor.start_link(__MODULE__, [])
   end
 
+  # Don't start RegistryBuilder during testing
   if Mix.env == :test do
     def init([]) do
       tree = [ worker(ExplexWeb.Repo, []) ]

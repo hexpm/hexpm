@@ -1,4 +1,8 @@
 defmodule ExplexWeb.Util do
+  @moduledoc """
+  Assorted utility functions.
+  """
+
   defexception BadRequest, [:message] do
     defimpl Plug.Exception do
       def status(_exception) do
@@ -7,11 +11,19 @@ defmodule ExplexWeb.Util do
     end
   end
 
+  @doc """
+  Returns a url to a resource on the server from a list of path components.
+  """
+  @spec url([String.t]) :: String.t
   def url(path) do
     { :ok, url } = :application.get_env(:explex_web, :api_url)
     url <> "/" <> Path.join(List.wrap(path))
   end
 
+  @doc """
+  Converts an ecto datetime record to ISO 8601 format.
+  """
+  @spec to_iso8601(Ecto.DateTime.t) :: String.t
   def to_iso8601(Ecto.DateTime[] = dt) do
     "#{pad(dt.year, 4)}-#{pad(dt.month, 2)}-#{pad(dt.day, 2)}T" <>
     "#{pad(dt.hour, 2)}:#{pad(dt.min, 2)}:#{pad(dt.sec, 2)}Z"
@@ -26,6 +38,11 @@ defmodule ExplexWeb.Util do
   defp do_pad(str, 0), do: str
   defp do_pad(str, n), do: do_pad("0" <> str, n-1)
 
+  @doc """
+  Read the body from a Plug connection.
+
+  Should be in Plug proper eventually and can be removed at that point.
+  """
   def read_body({ :ok, buffer, state }, acc, limit, adapter) when limit >= 0,
     do: read_body(adapter.stream_req_body(state, 1_000_000), acc <> buffer, limit - byte_size(buffer), adapter)
   def read_body({ :ok, _, state }, _acc, _limit, _adapter),
@@ -36,6 +53,11 @@ defmodule ExplexWeb.Util do
   def read_body({ :done, state }, _acc, _limit, _adapter),
     do: { :too_large, state }
 
+  @doc """
+  A regex parsing out the version and format at the end of a media type.
+  '.version+format'
+  """
+  @spec vendor_regex() :: Regex.t
   def vendor_regex do
     ~r/^
         (?:\.(?<version>[^\+]+))?

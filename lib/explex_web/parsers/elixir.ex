@@ -1,4 +1,4 @@
-defmodule ExplexWeb.Util.ElixirDecoder do
+defmodule ExplexWeb.Parsers.Elixir do
   alias Plug.Conn
 
   def parse(Conn[] = conn, "application", "vnd.explex" <> rest, _headers, opts) do

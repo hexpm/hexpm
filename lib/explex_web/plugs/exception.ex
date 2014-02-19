@@ -1,4 +1,4 @@
-defmodule ExplexWeb.Util.ExceptionPlug do
+defmodule ExplexWeb.Plugs.Exception do
   @behaviour Plug.Wrapper
 
   import Plug.Connection

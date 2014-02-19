@@ -8,6 +8,12 @@ defmodule ExplexWeb do
   end
 
   defprotocol Render do
+    @moduledoc """
+    Render entities to something that can be showed publically.
+    Used, for example, when converting entities to JSON responses.
+    """
+
+    @spec render(term) :: Dict.t
     def render(entity)
   end
 end

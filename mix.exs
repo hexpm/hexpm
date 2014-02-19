@@ -4,7 +4,7 @@ defmodule ExplexWeb.Mixfile do
   def project do
     [ app: :explex_web,
       version: "0.0.1",
-      elixir: "~> 0.12.3-dev",
+      elixir: "~> 0.12.4 or ~> 0.13.0-dev",
       deps: deps ]
   end
 

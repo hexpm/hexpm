@@ -1,4 +1,7 @@
-defmodule ExplexWeb.Util.JsonDecoder do
+defmodule ExplexWeb.Parsers.Json do
+  @doc """
+  Parses JSON.
+  """
   alias Plug.Conn
 
   def parse(Conn[] = conn, "application", "json", _headers, opts) do

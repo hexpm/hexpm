@@ -2,7 +2,7 @@ defmodule ExplexWeb.Release do
   use Ecto.Model
 
   import Ecto.Query, only: [from: 2]
-  import ExplexWeb.Util.Validation
+  import ExplexWeb.Validation
 
   queryable "releases" do
     belongs_to :package, ExplexWeb.Package
@@ -28,34 +28,11 @@ defmodule ExplexWeb.Release do
       [] ->
         ExplexWeb.Repo.transaction(fn ->
           release = ExplexWeb.Repo.create(release)
-          deps = Dict.keys(requirements) |> Enum.filter(&is_binary/1)
-
-          deps_query =
-               from p in ExplexWeb.Package,
-             where: p.name in array(^deps, ^:string),
-            select: { p.name, p.id }
-          deps = ExplexWeb.Repo.all(deps_query) |> HashDict.new
-
-          requirements =
-            Enum.map(requirements, fn { dep, req } ->
-              cond do
-                not is_binary(req) or match?(:error, Version.parse_requirement(req)) ->
-                  { :error, { dep, "invalid requirement: #{inspect req}" } }
-
-                id = deps[dep] ->
-                  release.requirements.new(requirement: req, dependency_id: id)
-                  |> ExplexWeb.Repo.create()
-                  { dep, req }
-
-                true ->
-                  { :error, { dep, "unknown package" } }
-              end
-            end)
+          requirements = create_requirements(release, requirements)
 
           errors = Enum.filter_map(requirements, &match?({ :error, _ }, &1), &elem(&1, 1))
           if errors == [] do
-            release.package(package)
-                   .requirements(requirements)
+            release.package(package).requirements(requirements)
           else
             ExplexWeb.Repo.rollback(deps: errors)
           end
@@ -63,6 +40,31 @@ defmodule ExplexWeb.Release do
       errors ->
         { :error, errors }
     end
+  end
+
+  defp create_requirements(release, requirements) do
+    deps = Dict.keys(requirements) |> Enum.filter(&is_binary/1)
+
+    deps_query =
+         from p in ExplexWeb.Package,
+       where: p.name in array(^deps, ^:string),
+      select: { p.name, p.id }
+    deps = ExplexWeb.Repo.all(deps_query) |> HashDict.new
+
+    Enum.map(requirements, fn { dep, req } ->
+      cond do
+        not is_binary(req) or match?(:error, Version.parse_requirement(req)) ->
+          { :error, { dep, "invalid requirement: #{inspect req}" } }
+
+        id = deps[dep] ->
+          release.requirements.new(requirement: req, dependency_id: id)
+          |> ExplexWeb.Repo.create()
+          { dep, req }
+
+        true ->
+          { :error, { dep, "unknown package" } }
+      end
+    end)
   end
 
   def all(package) do

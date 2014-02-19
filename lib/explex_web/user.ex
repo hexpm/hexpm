@@ -2,7 +2,7 @@ defmodule ExplexWeb.User do
   use Ecto.Model
 
   import Ecto.Query, only: [from: 2]
-  import ExplexWeb.Util.Validation
+  import ExplexWeb.Validation
 
   queryable "users" do
     field :username, :string
