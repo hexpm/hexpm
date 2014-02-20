@@ -137,12 +137,14 @@ defmodule ExplexWeb.Router.Util do
   Send a creation response if entity creation was successful,
   otherwise send validation failure response.
   """
-  @spec send_creation_resp({ :ok, term } | { :error, term }, Plug.Conn.t) :: Plug.Conn.t
-  def send_creation_resp({ :ok, entity }, conn) do
-    send_render(conn, 201, entity)
+  @spec send_creation_resp({ :ok, term } | { :error, term }, Plug.Conn.t, String.t) :: Plug.Conn.t
+  def send_creation_resp({ :ok, entity }, conn, location) do
+    conn
+    |> put_resp_header("location", location)
+    |> send_render(201, entity)
   end
 
-  def send_creation_resp({ :error, errors }, conn) do
+  def send_creation_resp({ :error, errors }, conn, _location) do
     send_validation_failed(conn, errors)
   end
 

@@ -2,6 +2,7 @@ defmodule ExplexWeb.Router.API do
   use Plug.Router
   import Plug.Connection
   import ExplexWeb.Router.Util
+  import ExplexWeb.Util, only: [url: 1  ]
   alias ExplexWeb.Plugs
   alias ExplexWeb.User
   alias ExplexWeb.Package
@@ -16,8 +17,9 @@ defmodule ExplexWeb.Router.API do
 
 
   post "users" do
-    User.create(conn.params["username"], conn.params["email"], conn.params["password"])
-    |> send_creation_resp(conn)
+    username = conn.params["username"]
+    User.create(username, conn.params["email"], conn.params["password"])
+    |> send_creation_resp(conn, url(["users", username]))
   end
 
   get "users/:name" do
@@ -50,7 +52,7 @@ defmodule ExplexWeb.Router.API do
         |> send_update_resp(conn)
       else
         Package.create(name, user, conn.params["meta"])
-        |> send_creation_resp(conn)
+        |> send_creation_resp(conn, url(["packages", name]))
       end
     end
   end
@@ -58,10 +60,11 @@ defmodule ExplexWeb.Router.API do
   post "packages/:name/releases" do
     with_authorized do
       if package = Package.get(name) do
+        version = conn.params["version"]
         result =
-          Release.create(package, conn.params["version"], conn.params["git_url"],
+          Release.create(package, version, conn.params["git_url"],
                          conn.params["git_ref"], conn.params["requirements"])
-          |> send_creation_resp(conn)
+          |> send_creation_resp(conn, url(["packages", name, "releases", version]))
 
         RegistryBuilder.rebuild
         result
