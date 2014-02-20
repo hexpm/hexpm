@@ -2,8 +2,9 @@ defmodule ExplexWeb.Package do
   use Ecto.Model
 
   import Ecto.Query, only: [from: 2]
-  require Ecto.Validator
   import ExplexWeb.Validation
+  require Ecto.Validator
+  alias ExplexWeb.Util
 
   queryable "packages" do
     field :name, :string
@@ -70,6 +71,13 @@ defmodule ExplexWeb.Package do
       package.update_meta(&JSON.decode!(&1))
              .releases(ExplexWeb.Release.all(package))
     end
+  end
+
+  def all(page, count, search \\ nil) do
+    from(p in ExplexWeb.Package, preload: [:releases])
+    |> Util.paginate(page, count)
+    |> Util.searchinate(:name, search)
+    |> ExplexWeb.Repo.all
   end
 end
 

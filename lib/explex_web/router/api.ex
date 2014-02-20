@@ -15,6 +15,11 @@ defmodule ExplexWeb.Router.API do
   plug :dispatch
 
 
+  post "users" do
+    User.create(conn.params["username"], conn.params["email"], conn.params["password"])
+    |> send_creation_resp(conn)
+  end
+
   get "users/:name" do
     if user = User.get(name) do
       send_render(conn, 200, user)
@@ -23,25 +28,18 @@ defmodule ExplexWeb.Router.API do
     end
   end
 
+  get "packages" do
+    page = parse_integer(conn.params["page"], 1)
+    packages = Package.all(page, 100, conn.params["search"])
+    send_render(conn, 200, packages)
+  end
+
   get "packages/:name" do
     if package = Package.get(name) do
       send_render(conn, 200, package)
     else
       send_resp(conn, 404, "")
     end
-  end
-
-  get "packages/:name/releases/:version" do
-    if (package = Package.get(name)) && (release = Release.get(package, version)) do
-      send_render(conn, 200, release)
-    else
-      send_resp(conn, 404, "")
-    end
-  end
-
-  post "users" do
-    User.create(conn.params["username"], conn.params["email"], conn.params["password"])
-    |> send_creation_resp(conn)
   end
 
   put "packages/:name" do
@@ -70,6 +68,14 @@ defmodule ExplexWeb.Router.API do
       else
         send_resp(conn, 404, "")
       end
+    end
+  end
+
+  get "packages/:name/releases/:version" do
+    if (package = Package.get(name)) && (release = Release.get(package, version)) do
+      send_render(conn, 200, release)
+    else
+      send_resp(conn, 404, "")
     end
   end
 

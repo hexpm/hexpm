@@ -4,12 +4,13 @@ defmodule ExplexWeb.Repo.Migrations.AddPackagesTables do
   def up do
     [ "CREATE TABLE packages (
         id serial PRIMARY KEY,
-        name text UNIQUE,
+        name text,
         owner_id integer REFERENCES users,
         meta json,
         created timestamp DEFAULT now())",
 
-      "CREATE INDEX ON packages (owner_id)" ]
+      "CREATE INDEX ON packages (owner_id)",
+      "CREATE UNIQUE INDEX ON packages (name varchar_pattern_ops)" ]
   end
 
   def down do

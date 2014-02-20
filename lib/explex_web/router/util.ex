@@ -11,18 +11,24 @@ defmodule ExplexWeb.Router.Util do
   """
   @spec send_render(Plug.Conn.t, non_neg_integer, term) :: Plug.Conn.t
   def send_render(conn, status, body) when is_list(body) do
-    case conn.assigns[:format] do
-      "json" ->
-        body = JSON.encode!(body)
-        content_type = "application/json; charset=utf-8"
-      "elixir" ->
-        body = safe_serialize_elixir(body)
-        content_type = "application/vnd.explex+elixir; charset=utf-8"
-    end
+    # Handle list of entities
+    if body != [] && (impl = ExplexWeb.Render.impl_for(List.first(body))) do
+      body = Enum.map(body, &impl.render(&1))
+      send_render(conn, status, body)
+    else
+      case conn.assigns[:format] do
+        "json" ->
+          body = JSON.encode!(body)
+          content_type = "application/json; charset=utf-8"
+        "elixir" ->
+          body = safe_serialize_elixir(body)
+          content_type = "application/vnd.explex+elixir; charset=utf-8"
+      end
 
-    conn
-    |> put_resp_header("content-type", content_type)
-    |> send_resp(status, body)
+      conn
+      |> put_resp_header("content-type", content_type)
+      |> send_resp(status, body)
+    end
   end
 
   def send_render(conn, status, entity) do
@@ -47,6 +53,14 @@ defmodule ExplexWeb.Router.Util do
     do: lc(elem inlist list, do: binarify(elem))
   defp binarify({ left, right }),
     do: { binarify(left), binarify(right) }
+
+  def parse_integer(string, default) when is_binary(string) do
+    case Integer.parse(string) do
+      { int, "" } -> int
+      _ -> default
+    end
+  end
+  def parse_integer(_, default), do: default
 
   @doc """
   Send a response with a status code.

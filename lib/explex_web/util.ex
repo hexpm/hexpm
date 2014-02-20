@@ -3,6 +3,8 @@ defmodule ExplexWeb.Util do
   Assorted utility functions.
   """
 
+  import Ecto.Query, only: [from: 2]
+
   defexception BadRequest, [:message] do
     defimpl Plug.Exception do
       def status(_exception) do
@@ -63,5 +65,23 @@ defmodule ExplexWeb.Util do
         (?:\.(?<version>[^\+]+))?
         (?:\+(?<format>.*))?
         $/x
+  end
+
+  def paginate(query, page, count) do
+    offset = (page - 1) * count
+    from(var in query,
+         offset: offset,
+         limit: count)
+  end
+
+  def searchinate(query, _field, nil), do: query
+
+  def searchinate(query, field, search) do
+    search = escape(search, ~r"(%|_)") <> "%"
+    from(var in query, where: ilike(field(var, ^field), ^search))
+  end
+
+  defp escape(string, escape) do
+    String.replace(string, escape, "\\\\\\1")
   end
 end

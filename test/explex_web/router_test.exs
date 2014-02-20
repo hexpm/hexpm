@@ -269,4 +269,34 @@ defmodule ExplexWeb.RouterTest do
     assert conn.status == 200
     JSON.decode!(conn.resp_body)
   end
+
+  test "fetch many packages" do
+    conn = conn("GET", "/api/packages", [], [])
+    conn = Router.call(conn, [])
+
+    assert conn.status == 200
+    body = JSON.decode!(conn.resp_body)
+    assert length(body) == 2
+
+    conn = conn("GET", "/api/packages?search=post", [], [])
+    conn = Router.call(conn, [])
+
+    assert conn.status == 200
+    body = JSON.decode!(conn.resp_body)
+    assert length(body) == 1
+
+    conn = conn("GET", "/api/packages?page=1", [], [])
+    conn = Router.call(conn, [])
+
+    assert conn.status == 200
+    body = JSON.decode!(conn.resp_body)
+    assert length(body) == 2
+
+    conn = conn("GET", "/api/packages?page=2", [], [])
+    conn = Router.call(conn, [])
+
+    assert conn.status == 200
+    body = JSON.decode!(conn.resp_body)
+    assert length(body) == 0
+  end
 end
