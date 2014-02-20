@@ -12,7 +12,7 @@ defmodule ExplexWeb.Router do
 
   get "api/registry" do
     conn = ExplexWeb.Plugs.Accept.call(conn, vendor: "explex", allow: ["dets"])
-    send_file(conn, 200, RegistryBuilder.filename)
+    send_file(conn, 200, RegistryBuilder.file_path)
   end
 
   forward "/api", ExplexWeb.Router.API

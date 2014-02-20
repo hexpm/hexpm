@@ -139,10 +139,10 @@ defmodule ExplexWeb.RouterTest do
   test "create release updates registry" do
     { :ok, _ } = RegistryBuilder.start_link
     RegistryBuilder.rebuild
-    RegistryBuilder.wait_for_build
+    path = RegistryBuilder.file_path
 
-    File.touch!(RegistryBuilder.filename, {{2000,1,1,},{1,1,1}})
-    File.Stat[mtime: mtime] = File.stat!(RegistryBuilder.filename)
+    File.touch!(path, {{2000,1,1,},{1,1,1}})
+    File.Stat[mtime: mtime] = File.stat!(path)
 
     headers = [ { "content-type", "application/json" },
                 { "authorization", "Basic " <> :base64.encode("eric:eric") }]
@@ -151,8 +151,8 @@ defmodule ExplexWeb.RouterTest do
     conn = Router.call(conn, [])
     assert conn.status == 201
 
-    :ok = RegistryBuilder.wait_for_build
-    refute File.Stat[mtime: {{2000,1,1,},{1,1,1}}] = File.stat!(RegistryBuilder.filename)
+    path = RegistryBuilder.file_path
+    refute File.Stat[mtime: {{2000,1,1,},{1,1,1}}] = File.stat!(path)
   after
     RegistryBuilder.stop
   end
@@ -160,7 +160,7 @@ defmodule ExplexWeb.RouterTest do
   test "fetch registry" do
     { :ok, _ } = RegistryBuilder.start_link
     RegistryBuilder.rebuild
-    RegistryBuilder.wait_for_build
+    RegistryBuilder.file_path
 
     conn = conn("GET", "/api/registry")
     conn = Router.call(conn, [])

@@ -14,6 +14,8 @@ defmodule ExplexWebTest.Case do
   alias Ecto.Adapters.Postgres
 
   setup do
+    Path.wildcard("tmp/*") |> Enum.each(&File.rm_rf!(&1))
+
     Postgres.begin_test_transaction(ExplexWeb.Repo)
   end
 

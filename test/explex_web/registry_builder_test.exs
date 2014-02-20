@@ -23,12 +23,12 @@ defmodule ExplexWeb.RegistryBuilderTest do
 
   defp build do
     RegistryBuilder.rebuild
-    RegistryBuilder.wait_for_build
+    RegistryBuilder.file_path
   end
 
   defp open_table do
     dets_opts = [
-      file: RegistryBuilder.filename,
+      file: RegistryBuilder.file_path,
       ram_file: true,
       access: :read,
       type: :duplicate_bag ]

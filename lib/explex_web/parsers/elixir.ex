@@ -1,4 +1,9 @@
 defmodule ExplexWeb.Parsers.Elixir do
+  @doc """
+  Safely parses an elixir term.
+
+  Safely means that no code evaluated or new atoms will be created.
+  """
   alias Plug.Conn
 
   def parse(Conn[] = conn, "application", "vnd.explex" <> rest, _headers, opts) do

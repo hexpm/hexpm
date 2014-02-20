@@ -11,35 +11,28 @@ defmodule ExplexWeb.RegistryBuilder do
   alias ExplexWeb.Release
   alias ExplexWeb.Requirement
 
-  @reg_file   "registry.dets"
-  @temp_file  "registry-temp.dets"
   @dets_table :explex_registry
   @version    1
 
-  defrecordp :state, [building: false, pending: false, waiter: nil, tmp_path: nil]
+  defrecordp :state, [building: false, pending: false, waiters: [], tmp_path: nil]
 
-  def start_link(opts \\ []) do
-    :gen_server.start_link({ :local, __MODULE__ }, __MODULE__, opts, [])
+  def start_link() do
+    :gen_server.start_link({ :local, __MODULE__ }, __MODULE__, [], [])
   end
 
   def stop do
     :gen_server.call(__MODULE__, :stop)
   end
 
-  def wait_for_build do
-    :gen_server.call(__MODULE__, :wait_for_build)
-  end
-
   def rebuild do
     :gen_server.cast(__MODULE__, :rebuild)
   end
 
-  def filename do
-    :gen_server.call(__MODULE__, :filename)
+  def file_path do
+    :gen_server.call(__MODULE__, :file_path)
   end
 
-  def init(opts) do
-    if opts[:build_on_start], do: rebuild()
+  def init(_) do
     # Store expanded tmp path so we dont brake if cwd changes
     # This is used when integration testing client
     { :ok, state(tmp_path: Path.expand("tmp")) }
@@ -58,23 +51,44 @@ defmodule ExplexWeb.RegistryBuilder do
     { :stop, :normal, :ok, s }
   end
 
-  def handle_call(:wait_for_build, _from, state(building: false) = s) do
-    { :reply, :ok, s }
+  def handle_call(:file_path, from, state(building: true, waiters: waiters) = s) do
+    { :noreply, state(s, waiters: [from|waiters]) }
   end
 
-  def handle_call(:wait_for_build, from, state(building: true) = s) do
-    { :noreply, state(s, waiter: from) }
+  def handle_call(:file_path, _from, state(building: false, tmp_path: tmp_path) = s) do
+    latest = file_path(s)
+
+    ["", version]  = Path.basename(latest) |> String.split("registry-")
+    { version, _ } = Integer.parse(version)
+
+    if registry = ExplexWeb.Registry.get(version) do
+      temp_file = Path.join(tmp_path, "registry-dbtemp.dets")
+      reg_file  = Path.join(tmp_path, "registry-#{version}.dets")
+
+      File.write!(temp_file, registry.data)
+      :ok = :file.rename(temp_file, reg_file)
+      latest = reg_file
+    end
+
+    { :reply, latest, s }
   end
 
-  def handle_call(:filename, _from, state(tmp_path: tmp_path) = s) do
-    path = Path.join(tmp_path, @reg_file)
-    { :reply, path, s }
-  end
-
-  def handle_info(:finished_building, state(pending: pending, waiter: waiter) = s) do
+  def handle_info(:finished_building, state(pending: pending) = s) do
     if pending, do: rebuild()
-    if waiter, do: :gen_server.reply(waiter, :ok)
-    { :noreply, state(s, building: false, pending: false, waiter: nil) }
+    s = reply_to_waiters(s)
+    { :noreply, state(s, building: false, pending: false) }
+  end
+
+  defp reply_to_waiters(state(waiters: waiters) = s) do
+    path = file_path(s)
+    Enum.each(waiters, &:gen_server.reply(&1, path))
+    state(s, waiters: [])
+  end
+
+  defp file_path(state(tmp_path: tmp_path)) do
+    Path.join(tmp_path, "registry-*.dets")
+    |> Path.wildcard
+    |> List.last
   end
 
   defp build(tmp_path) do
@@ -100,8 +114,7 @@ defmodule ExplexWeb.RegistryBuilder do
         { package, version, deps, git_url, git_ref }
       end)
 
-    temp_file = Path.join(tmp_path, @temp_file)
-    reg_file = Path.join(tmp_path, @reg_file)
+    temp_file = Path.join(tmp_path, "registry-temp.dets")
     File.rm(temp_file)
 
     dets_opts = [
@@ -115,7 +128,13 @@ defmodule ExplexWeb.RegistryBuilder do
     :ok = :dets.insert(@dets_table, { :"$$version$$", @version })
     :ok = :dets.insert(@dets_table, tuples)
     :ok = :dets.close(@dets_table)
+
+    version = Enum.reduce(releases, 1, &max(elem(&1, 0), &2))
+    reg_file = Path.join(tmp_path, "registry-#{version}.dets")
     :ok = :file.rename(temp_file, reg_file)
+    File.rm(temp_file)
+
+    ExplexWeb.Registry.create(version, File.read!(reg_file))
 
     send pid, :finished_building
   end
