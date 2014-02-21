@@ -1,5 +1,5 @@
-# ExplexWeb
+# HexWeb
 
 ## Contributing
 
-Requires a postgresql user with username `explex` and password `explex` with databases `explex_dev` and `explex_test`.
+Requires a postgresql user with username `hex` and password `hex` with databases `hex_dev` and `hex_test`.
