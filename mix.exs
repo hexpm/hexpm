@@ -1,8 +1,8 @@
-defmodule ExplexWeb.Mixfile do
+defmodule HexWeb.Mixfile do
   use Mix.Project
 
   def project do
-    [ app: :explex_web,
+    [ app: :hex_web,
       version: "0.0.1",
       elixir: "~> 0.12.4 or ~> 0.13.0-dev",
       deps: deps ]
@@ -11,7 +11,7 @@ defmodule ExplexWeb.Mixfile do
   # Configuration for the OTP application
   def application do
     [ applications: [:cowboy, :plug, :bcrypt],
-      mod: { ExplexWeb, [] },
+      mod: { HexWeb, [] },
       env: [ api_url: "http://localhost:4000/api",
              password_work_factor: 12 ] ]
   end

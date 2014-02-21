@@ -1,4 +1,4 @@
-defmodule ExplexWeb.Parsers.Elixir do
+defmodule HexWeb.Parsers.Elixir do
   @doc """
   Safely parses an elixir term.
 
@@ -6,8 +6,8 @@ defmodule ExplexWeb.Parsers.Elixir do
   """
   alias Plug.Conn
 
-  def parse(Conn[] = conn, "application", "vnd.explex" <> rest, _headers, opts) do
-    case Regex.run(ExplexWeb.Util.vendor_regex, rest) do
+  def parse(Conn[] = conn, "application", "vnd.hex" <> rest, _headers, opts) do
+    case Regex.run(HexWeb.Util.vendor_regex, rest) do
       [_, _version, "elixir"] ->
         read_body(conn, Keyword.fetch!(opts, :limit))
       _ ->
@@ -20,7 +20,7 @@ defmodule ExplexWeb.Parsers.Elixir do
   end
 
   defp read_body(Conn[adapter: { adapter, state }] = conn, limit) do
-    case ExplexWeb.Util.read_body({ :ok, "", state }, "", limit, adapter) do
+    case HexWeb.Util.read_body({ :ok, "", state }, "", limit, adapter) do
       { :too_large, state } ->
         { :too_large, conn.adapter({ adapter, state }) }
       { :ok, body, state } ->
@@ -35,10 +35,10 @@ defmodule ExplexWeb.Parsers.Elixir do
         if Macro.safe_term(ast) do
           Code.eval_quoted(ast) |> elem(0)
         else
-          raise ExplexWeb.Util.BadRequest, message: "unsafe elixir"
+          raise HexWeb.Util.BadRequest, message: "unsafe elixir"
         end
       _ ->
-        raise ExplexWeb.Util.BadRequest, message: "malformed elixir"
+        raise HexWeb.Util.BadRequest, message: "malformed elixir"
     end
   end
 end

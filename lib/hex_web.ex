@@ -1,10 +1,10 @@
-defmodule ExplexWeb do
+defmodule HexWeb do
   use Application.Behaviour
 
   def start(_type, _args) do
-    Plug.Adapters.Cowboy.http(ExplexWeb.Router, [])
+    Plug.Adapters.Cowboy.http(HexWeb.Router, [])
 
-    ExplexWeb.Supervisor.start_link
+    HexWeb.Supervisor.start_link
   end
 
   defprotocol Render do

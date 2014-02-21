@@ -1,4 +1,4 @@
-defmodule ExplexWeb.Repo.Migrations.AddUsersTable do
+defmodule HexWeb.Repo.Migrations.AddUsersTable do
   use Ecto.Migration
 
   def up do

@@ -1,9 +1,9 @@
-defmodule ExplexWeb.ReleaseTest do
-  use ExplexWebTest.Case
+defmodule HexWeb.ReleaseTest do
+  use HexWebTest.Case
 
-  alias ExplexWeb.User
-  alias ExplexWeb.Package
-  alias ExplexWeb.Release
+  alias HexWeb.User
+  alias HexWeb.Package
+  alias HexWeb.Release
 
   setup do
     { :ok, user } = User.create("eric", "eric", "eric")

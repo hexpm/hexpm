@@ -1,4 +1,4 @@
-defmodule ExplexWeb.Util do
+defmodule HexWeb.Util do
   @moduledoc """
   Assorted utility functions.
   """
@@ -18,7 +18,7 @@ defmodule ExplexWeb.Util do
   """
   @spec url([String.t]) :: String.t
   def url(path) do
-    { :ok, url } = :application.get_env(:explex_web, :api_url)
+    { :ok, url } = :application.get_env(:hex_web, :api_url)
     url <> "/" <> Path.join(List.wrap(path))
   end
 

@@ -1,15 +1,15 @@
-defmodule ExplexWeb.Release do
+defmodule HexWeb.Release do
   use Ecto.Model
 
   import Ecto.Query, only: [from: 2]
-  import ExplexWeb.Validation
+  import HexWeb.Validation
 
   queryable "releases" do
-    belongs_to :package, ExplexWeb.Package
+    belongs_to :package, HexWeb.Package
     field :version, :string
     field :git_url, :string
     field :git_ref, :string
-    has_many :requirements, ExplexWeb.Requirement
+    has_many :requirements, HexWeb.Requirement
     field :created, :datetime
   end
 
@@ -17,7 +17,7 @@ defmodule ExplexWeb.Release do
     version: present() and type(:string) and valid_version(),
     git_url: present() and type(:string),
     git_ref: present() and type(:string),
-    also: unique([:version], scope: [:package_id], on: ExplexWeb.Repo)
+    also: unique([:version], scope: [:package_id], on: HexWeb.Repo)
 
   # TODO: Extract validation of requirements
 
@@ -26,15 +26,15 @@ defmodule ExplexWeb.Release do
 
     case validate(release) do
       [] ->
-        ExplexWeb.Repo.transaction(fn ->
-          release = ExplexWeb.Repo.create(release)
+        HexWeb.Repo.transaction(fn ->
+          release = HexWeb.Repo.create(release)
           requirements = create_requirements(release, requirements)
 
           errors = Enum.filter_map(requirements, &match?({ :error, _ }, &1), &elem(&1, 1))
           if errors == [] do
             release.package(package).requirements(requirements)
           else
-            ExplexWeb.Repo.rollback(deps: errors)
+            HexWeb.Repo.rollback(deps: errors)
           end
         end)
       errors ->
@@ -46,10 +46,10 @@ defmodule ExplexWeb.Release do
     deps = Dict.keys(requirements) |> Enum.filter(&is_binary/1)
 
     deps_query =
-         from p in ExplexWeb.Package,
+         from p in HexWeb.Package,
        where: p.name in array(^deps, ^:string),
       select: { p.name, p.id }
-    deps = ExplexWeb.Repo.all(deps_query) |> HashDict.new
+    deps = HexWeb.Repo.all(deps_query) |> HashDict.new
 
     Enum.map(requirements, fn { dep, req } ->
       cond do
@@ -58,7 +58,7 @@ defmodule ExplexWeb.Release do
 
         id = deps[dep] ->
           release.requirements.new(requirement: req, dependency_id: id)
-          |> ExplexWeb.Repo.create()
+          |> HexWeb.Repo.create()
           { dep, req }
 
         true ->
@@ -68,14 +68,15 @@ defmodule ExplexWeb.Release do
   end
 
   def all(package) do
-    ExplexWeb.Repo.all(package.releases)
+    # TODO: Sort releases by Version.compare/2
+    HexWeb.Repo.all(package.releases)
     |> Enum.map(&(&1.package(package)))
   end
 
   def get(package, version) do
     release =
       from(r in package.releases, where: r.version == ^version)
-      |> ExplexWeb.Repo.all
+      |> HexWeb.Repo.all
       |> List.first
 
     if release do
@@ -83,7 +84,7 @@ defmodule ExplexWeb.Release do
         from(req in release.requirements,
              join: p in req.dependency,
              select: { p.name, req.requirement })
-        |> ExplexWeb.Repo.all
+        |> HexWeb.Repo.all
 
       release.package(package)
              .requirements(reqs)
@@ -91,8 +92,8 @@ defmodule ExplexWeb.Release do
   end
 end
 
-defimpl ExplexWeb.Render, for: ExplexWeb.Release.Entity do
-  import ExplexWeb.Util
+defimpl HexWeb.Render, for: HexWeb.Release.Entity do
+  import HexWeb.Util
 
   def render(release) do
     package = release.package.get

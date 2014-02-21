@@ -1,22 +1,22 @@
-defmodule ExplexWeb.Package do
+defmodule HexWeb.Package do
   use Ecto.Model
 
   import Ecto.Query, only: [from: 2]
-  import ExplexWeb.Validation
+  import HexWeb.Validation
   require Ecto.Validator
-  alias ExplexWeb.Util
+  alias HexWeb.Util
 
   queryable "packages" do
     field :name, :string
-    belongs_to :owner, ExplexWeb.User
+    belongs_to :owner, HexWeb.User
     field :meta, :string
-    has_many :releases, ExplexWeb.Release
+    has_many :releases, HexWeb.Release
     field :created, :datetime
   end
 
   validatep validate_create(package),
     also: validate(),
-    also: unique([:name], on: ExplexWeb.Repo)
+    also: unique([:name], on: HexWeb.Repo)
 
   validatep validate(package),
     name: present() and type(:string),
@@ -41,7 +41,7 @@ defmodule ExplexWeb.Package do
     case validate_create(package) do
       [] ->
         package = package.meta(JSON.encode!(meta))
-        { :ok, ExplexWeb.Repo.create(package).meta(meta).releases([]) }
+        { :ok, HexWeb.Repo.create(package).meta(meta).releases([]) }
       errors ->
         { :error, errors }
     end
@@ -52,7 +52,7 @@ defmodule ExplexWeb.Package do
 
     case validate(package) do
       [] ->
-        ExplexWeb.Repo.update(package.meta(JSON.encode!(meta)))
+        HexWeb.Repo.update(package.meta(JSON.encode!(meta)))
         { :ok, package.meta(meta) }
       errors ->
         { :error, errors }
@@ -61,28 +61,32 @@ defmodule ExplexWeb.Package do
 
   def get(name) do
     package =
-      from(p in ExplexWeb.Package,
+      from(p in HexWeb.Package,
            where: p.name == ^name,
            preload: [:releases])
-      |> ExplexWeb.Repo.all
+      |> HexWeb.Repo.all
       |> List.first
 
     if package do
       package.update_meta(&JSON.decode!(&1))
-             .releases(ExplexWeb.Release.all(package))
+             .releases(HexWeb.Release.all(package))
     end
   end
 
   def all(page, count, search \\ nil) do
-    from(p in ExplexWeb.Package, preload: [:releases])
+    # TODO: Sort releases by Version.compare/2
+
+    from(p in HexWeb.Package,
+         preload: [:releases],
+         order_by: p.name)
     |> Util.paginate(page, count)
     |> Util.searchinate(:name, search)
-    |> ExplexWeb.Repo.all
+    |> HexWeb.Repo.all
   end
 end
 
-defimpl ExplexWeb.Render, for: ExplexWeb.Package.Entity do
-  import ExplexWeb.Util
+defimpl HexWeb.Render, for: HexWeb.Package.Entity do
+  import HexWeb.Util
 
   def render(package) do
     releases =

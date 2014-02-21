@@ -1,7 +1,7 @@
-defmodule ExplexWeb.UserTest do
-  use ExplexWebTest.Case
+defmodule HexWeb.UserTest do
+  use HexWebTest.Case
 
-  alias ExplexWeb.User
+  alias HexWeb.User
 
   test "create user and auth" do
     assert { :ok, User.Entity[] } = User.create("eric", "eric", "hunter42")

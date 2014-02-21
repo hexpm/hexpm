@@ -1,4 +1,4 @@
-defmodule ExplexWeb.Plugs.Accept do
+defmodule HexWeb.Plugs.Accept do
   import Plug.Connection
 
   def init(opts), do: opts
@@ -56,7 +56,7 @@ defmodule ExplexWeb.Plugs.Accept do
   defp match_vendor?({ "application", second, _ }, vendor, formats) do
     case :binary.split(second, "vnd." <> vendor) do
       ["", rest] ->
-        if result = Regex.run(ExplexWeb.Util.vendor_regex, rest) do
+        if result = Regex.run(HexWeb.Util.vendor_regex, rest) do
           destructure [_, version, format], result
           if version == "", do: version = nil
           if format == "", do: format = nil

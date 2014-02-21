@@ -1,4 +1,4 @@
-defmodule ExplexWeb.Parsers.Json do
+defmodule HexWeb.Parsers.Json do
   @doc """
   Parses JSON.
   """
@@ -13,7 +13,7 @@ defmodule ExplexWeb.Parsers.Json do
   end
 
   defp read_body(Conn[adapter: { adapter, state }] = conn, limit) do
-    case ExplexWeb.Util.read_body({ :ok, "", state }, "", limit, adapter) do
+    case HexWeb.Util.read_body({ :ok, "", state }, "", limit, adapter) do
       { :too_large, state } ->
         { :too_large, conn.adapter({ adapter, state }) }
       { :ok, body, state } ->
@@ -21,7 +21,7 @@ defmodule ExplexWeb.Parsers.Json do
           { :ok, params } ->
             { :ok, params, conn.adapter({ adapter, state }) }
           _ ->
-            raise ExplexWeb.Util.BadRequest, message: "malformed JSON"
+            raise HexWeb.Util.BadRequest, message: "malformed JSON"
         end
     end
   end

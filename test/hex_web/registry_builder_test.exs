@@ -1,12 +1,12 @@
-defmodule ExplexWeb.RegistryBuilderTest do
-  use ExplexWebTest.Case
+defmodule HexWeb.RegistryBuilderTest do
+  use HexWebTest.Case
 
-  alias ExplexWeb.User
-  alias ExplexWeb.Package
-  alias ExplexWeb.Release
-  alias ExplexWeb.RegistryBuilder
+  alias HexWeb.User
+  alias HexWeb.Package
+  alias HexWeb.Release
+  alias HexWeb.RegistryBuilder
 
-  @dets_table :explex_registry_test
+  @dets_table :hex_registry_test
 
   setup do
     { :ok, _ } = RegistryBuilder.start_link

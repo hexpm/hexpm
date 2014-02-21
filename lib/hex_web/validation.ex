@@ -1,4 +1,4 @@
-defmodule ExplexWeb.Validation do
+defmodule HexWeb.Validation do
   @doc """
   Ecto validation helpers.
   """

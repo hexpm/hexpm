@@ -1,4 +1,4 @@
-defmodule ExplexWeb.Repo.Migrations.AddRequirementsTable do
+defmodule HexWeb.Repo.Migrations.AddRequirementsTable do
   use Ecto.Migration
 
   def up do

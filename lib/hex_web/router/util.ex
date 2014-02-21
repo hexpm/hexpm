@@ -1,10 +1,10 @@
-defmodule ExplexWeb.Router.Util do
+defmodule HexWeb.Router.Util do
   @doc """
   Router related utility functions.
   """
 
   import Plug.Connection
-  alias ExplexWeb.User
+  alias HexWeb.User
 
   @doc """
   Renders an entity or dict body and sends it with a status code.
@@ -12,7 +12,7 @@ defmodule ExplexWeb.Router.Util do
   @spec send_render(Plug.Conn.t, non_neg_integer, term) :: Plug.Conn.t
   def send_render(conn, status, body) when is_list(body) do
     # Handle list of entities
-    if body != [] && (impl = ExplexWeb.Render.impl_for(List.first(body))) do
+    if body != [] && (impl = HexWeb.Render.impl_for(List.first(body))) do
       body = Enum.map(body, &impl.render(&1))
       send_render(conn, status, body)
     else
@@ -22,7 +22,7 @@ defmodule ExplexWeb.Router.Util do
           content_type = "application/json; charset=utf-8"
         "elixir" ->
           body = safe_serialize_elixir(body)
-          content_type = "application/vnd.explex+elixir; charset=utf-8"
+          content_type = "application/vnd.hex+elixir; charset=utf-8"
       end
 
       conn
@@ -32,7 +32,7 @@ defmodule ExplexWeb.Router.Util do
   end
 
   def send_render(conn, status, entity) do
-    body = ExplexWeb.Render.render(entity)
+    body = HexWeb.Render.render(entity)
     send_render(conn, status, body)
   end
 
@@ -91,11 +91,11 @@ defmodule ExplexWeb.Router.Util do
   @spec forward(Macro.t, Keyword.t) :: Macro.t
   defmacro with_authorized(user \\ { :_, [], nil }, opts) do
     quote do
-      case ExplexWeb.Router.Util.authorize(var!(conn)) do
+      case HexWeb.Router.Util.authorize(var!(conn)) do
         { :ok, unquote(user) } ->
           unquote(Keyword.fetch!(opts, :do))
         :error ->
-          ExplexWeb.Router.Util.send_unauthorized(var!(conn))
+          HexWeb.Router.Util.send_unauthorized(var!(conn))
       end
     end
   end
@@ -129,7 +129,7 @@ defmodule ExplexWeb.Router.Util do
   @spec send_unauthorized(Plug.Conn.t) :: Plug.Conn.t
   def send_unauthorized(conn) do
     conn
-    |> put_resp_header("www-authenticate", "Basic realm=explex")
+    |> put_resp_header("www-authenticate", "Basic realm=hex")
     |> send_resp(401, "")
   end
 

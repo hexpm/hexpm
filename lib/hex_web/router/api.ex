@@ -1,17 +1,17 @@
-defmodule ExplexWeb.Router.API do
+defmodule HexWeb.Router.API do
   use Plug.Router
   import Plug.Connection
-  import ExplexWeb.Router.Util
-  import ExplexWeb.Util, only: [url: 1  ]
-  alias ExplexWeb.Plugs
-  alias ExplexWeb.User
-  alias ExplexWeb.Package
-  alias ExplexWeb.Release
-  alias ExplexWeb.RegistryBuilder
+  import HexWeb.Router.Util
+  import HexWeb.Util, only: [url: 1  ]
+  alias HexWeb.Plugs
+  alias HexWeb.User
+  alias HexWeb.Package
+  alias HexWeb.Release
+  alias HexWeb.RegistryBuilder
 
 
-  plug Plug.Parsers, parsers: [ExplexWeb.Parsers.Json, ExplexWeb.Parsers.Elixir]
-  plug Plugs.Accept, vendor: "explex", allow: [{"application","json"}, "json", "elixir"]
+  plug Plug.Parsers, parsers: [HexWeb.Parsers.Json, HexWeb.Parsers.Elixir]
+  plug Plugs.Accept, vendor: "hex", allow: [{"application","json"}, "json", "elixir"]
   plug :match
   plug :dispatch
 

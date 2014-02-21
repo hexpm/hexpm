@@ -1,14 +1,14 @@
 ExUnit.start
 
-:application.set_env(:explex_web, :api_url, "http://explex.org/api")
-:application.set_env(:explex_web, :password_work_factor, 4)
+:application.set_env(:hex_web, :api_url, "http://hex.org/api")
+:application.set_env(:hex_web, :password_work_factor, 4)
 
-Mix.Task.run "ecto.migrate", ["ExplexWeb.Repo"]
+Mix.Task.run "ecto.migrate", ["HexWeb.Repo"]
 
 File.rm_rf!("tmp")
 File.mkdir_p!("tmp")
 
-defmodule ExplexWebTest.Case do
+defmodule HexWebTest.Case do
   use ExUnit.CaseTemplate
 
   alias Ecto.Adapters.Postgres
@@ -16,10 +16,10 @@ defmodule ExplexWebTest.Case do
   setup do
     Path.wildcard("tmp/*") |> Enum.each(&File.rm_rf!(&1))
 
-    Postgres.begin_test_transaction(ExplexWeb.Repo)
+    Postgres.begin_test_transaction(HexWeb.Repo)
   end
 
   teardown do
-    Postgres.rollback_test_transaction(ExplexWeb.Repo)
+    Postgres.rollback_test_transaction(HexWeb.Repo)
   end
 end

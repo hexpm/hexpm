@@ -1,4 +1,4 @@
-defmodule ExplexWeb.RegistryBuilder do
+defmodule HexWeb.RegistryBuilder do
   @doc """
   Builds the dets registry file. Only one build process should run at a given
   time, but if a rebuild request comes in during building we need to rebuild
@@ -7,11 +7,11 @@ defmodule ExplexWeb.RegistryBuilder do
 
   use GenServer.Behaviour
   import Ecto.Query, only: [from: 2]
-  alias ExplexWeb.Package
-  alias ExplexWeb.Release
-  alias ExplexWeb.Requirement
+  alias HexWeb.Package
+  alias HexWeb.Release
+  alias HexWeb.Requirement
 
-  @dets_table :explex_registry
+  @dets_table :hex_registry
   @version    1
 
   defrecordp :state, [building: false, pending: false, waiters: [], tmp_path: nil]
@@ -61,7 +61,7 @@ defmodule ExplexWeb.RegistryBuilder do
     ["", version]  = Path.basename(latest) |> String.split("registry-")
     { version, _ } = Integer.parse(version)
 
-    if registry = ExplexWeb.Registry.get(version) do
+    if registry = HexWeb.Registry.get(version) do
       temp_file = Path.join(tmp_path, "registry-dbtemp.dets")
       reg_file  = Path.join(tmp_path, "registry-#{version}.dets")
 
@@ -134,28 +134,28 @@ defmodule ExplexWeb.RegistryBuilder do
     :ok = :file.rename(temp_file, reg_file)
     File.rm(temp_file)
 
-    ExplexWeb.Registry.create(version, File.read!(reg_file))
+    HexWeb.Registry.create(version, File.read!(reg_file))
 
     send pid, :finished_building
   end
 
   defp packages do
     from(p in Package, select: { p.id, p.name })
-    |> ExplexWeb.Repo.all
+    |> HexWeb.Repo.all
     |> HashDict.new
   end
 
   defp releases do
     from(r in Release,
          select: { r.id, r.version, r.git_url, r.git_ref, r.package_id })
-    |> ExplexWeb.Repo.all
+    |> HexWeb.Repo.all
   end
 
   defp requirements do
     reqs =
       from(r in Requirement,
            select: { r.release_id, r.dependency_id, r.requirement })
-      |> ExplexWeb.Repo.all
+      |> HexWeb.Repo.all
 
     Enum.reduce(reqs, HashDict.new, fn { rel_id, dep_id, req }, dict ->
       tuple = { dep_id, req }

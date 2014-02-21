@@ -1,4 +1,4 @@
-defmodule ExplexWeb.Registry do
+defmodule HexWeb.Registry do
   use Ecto.Model
 
   import Ecto.Query, only: [from: 2]
@@ -10,16 +10,16 @@ defmodule ExplexWeb.Registry do
   end
 
   def create(version, data) do
-    registry = ExplexWeb.Registry.new(data: data, version: version)
-    { :ok, ExplexWeb.Repo.create(registry) }
+    registry = HexWeb.Registry.new(data: data, version: version)
+    { :ok, HexWeb.Repo.create(registry) }
   end
 
   def get(newer_than) do
-    from(r in ExplexWeb.Registry,
+    from(r in HexWeb.Registry,
          where: r.version > ^newer_than,
          order_by: [desc: r.version],
          limit: 1)
-    |> ExplexWeb.Repo.all
+    |> HexWeb.Repo.all
     |> List.first
   end
 end

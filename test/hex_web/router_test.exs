@@ -1,11 +1,11 @@
-defmodule ExplexWeb.RouterTest do
-  use ExplexWebTest.Case
+defmodule HexWeb.RouterTest do
+  use HexWebTest.Case
   import Plug.Test
-  alias ExplexWeb.Router
-  alias ExplexWeb.User
-  alias ExplexWeb.Package
-  alias ExplexWeb.Release
-  alias ExplexWeb.RegistryBuilder
+  alias HexWeb.Router
+  alias HexWeb.User
+  alias HexWeb.Package
+  alias HexWeb.Release
+  alias HexWeb.RegistryBuilder
 
   setup do
     { :ok, user } = User.create("eric", "eric", "eric")
@@ -22,7 +22,7 @@ defmodule ExplexWeb.RouterTest do
 
     assert conn.status == 201
     body = JSON.decode!(conn.resp_body)
-    assert body["url"] == "http://explex.org/api/users/name"
+    assert body["url"] == "http://hex.org/api/users/name"
 
     user = assert User.get("name")
     assert user.email == "email"
@@ -49,7 +49,7 @@ defmodule ExplexWeb.RouterTest do
 
     assert conn.status == 201
     body = JSON.decode!(conn.resp_body)
-    assert body["url"] == "http://explex.org/api/packages/ecto"
+    assert body["url"] == "http://hex.org/api/packages/ecto"
 
     user_id = User.get("eric").id
     package = assert Package.get("ecto")
@@ -68,7 +68,7 @@ defmodule ExplexWeb.RouterTest do
 
     assert conn.status == 200
     body = JSON.decode!(conn.resp_body)
-    assert body["url"] == "http://explex.org/api/packages/ecto"
+    assert body["url"] == "http://hex.org/api/packages/ecto"
 
     assert Package.get("ecto").meta["description"] == "awesomeness"
   end
@@ -81,7 +81,7 @@ defmodule ExplexWeb.RouterTest do
     conn = Router.call(conn, [])
 
     assert conn.status == 401
-    assert conn.resp_headers["www-authenticate"] == "Basic realm=explex"
+    assert conn.resp_headers["www-authenticate"] == "Basic realm=hex"
   end
 
   test "create package validates" do
@@ -106,7 +106,7 @@ defmodule ExplexWeb.RouterTest do
 
     assert conn.status == 201
     body = JSON.decode!(conn.resp_body)
-    assert body["url"] == "http://explex.org/api/packages/postgrex/releases/0.0.1"
+    assert body["url"] == "http://hex.org/api/packages/postgrex/releases/0.0.1"
 
     body = [git_url: "url", git_ref: "ref", version: "0.0.2", requirements: []]
     conn = conn("POST", "/api/packages/postgrex/releases", JSON.encode!(body), headers: headers)
@@ -182,7 +182,7 @@ defmodule ExplexWeb.RouterTest do
   end
 
   test "elixir media response" do
-    headers = [ { "accept", "application/vnd.explex+elixir" } ]
+    headers = [ { "accept", "application/vnd.hex+elixir" } ]
     conn = conn("GET", "/api/users/eric", [], headers: headers)
     conn = Router.call(conn, [])
 
@@ -194,13 +194,13 @@ defmodule ExplexWeb.RouterTest do
 
   test "elixir media request" do
     body = [username: "name", email: "email", password: "pass"]
-           |> ExplexWeb.Router.Util.safe_serialize_elixir
-    conn = conn("POST", "/api/users", body, headers: [{ "content-type", "application/vnd.explex+elixir" }])
+           |> HexWeb.Router.Util.safe_serialize_elixir
+    conn = conn("POST", "/api/users", body, headers: [{ "content-type", "application/vnd.hex+elixir" }])
     conn = Router.call(conn, [])
 
     assert conn.status == 201
     body = JSON.decode!(conn.resp_body)
-    assert body["url"] == "http://explex.org/api/users/name"
+    assert body["url"] == "http://hex.org/api/users/name"
 
     user = assert User.get("name")
     assert user.email == "email"
@@ -215,7 +215,7 @@ defmodule ExplexWeb.RouterTest do
     assert body["name"] == "decimal"
 
     release = List.first(body["releases"])
-    assert release["url"] == "http://explex.org/api/packages/decimal/releases/0.0.1"
+    assert release["url"] == "http://hex.org/api/packages/decimal/releases/0.0.1"
     assert release["version"] == "0.0.1"
     assert release["git_url"] == "url"
     assert release["git_ref"] == "ref"
@@ -227,7 +227,7 @@ defmodule ExplexWeb.RouterTest do
 
     assert conn.status == 200
     body = JSON.decode!(conn.resp_body)
-    assert body["url"] == "http://explex.org/api/packages/decimal/releases/0.0.1"
+    assert body["url"] == "http://hex.org/api/packages/decimal/releases/0.0.1"
     assert body["version"] == "0.0.1"
     assert body["git_url"] == "url"
     assert body["git_ref"] == "ref"
@@ -245,25 +245,25 @@ defmodule ExplexWeb.RouterTest do
     assert conn.status == 200
     JSON.decode!(conn.resp_body)
 
-    headers = [ { "accept", "application/vnd.explex" } ]
+    headers = [ { "accept", "application/vnd.hex" } ]
     conn = conn("GET", "/api/users/eric", [], headers: headers)
     conn = Router.call(conn, [])
     assert conn.status == 200
     JSON.decode!(conn.resp_body)
 
-    headers = [ { "accept", "application/vnd.explex+json" } ]
+    headers = [ { "accept", "application/vnd.hex+json" } ]
     conn = conn("GET", "/api/users/eric", [], headers: headers)
     conn = Router.call(conn, [])
     assert conn.status == 200
     JSON.decode!(conn.resp_body)
 
-    headers = [ { "accept", "application/vnd.explex.v1+json" } ]
+    headers = [ { "accept", "application/vnd.hex.v1+json" } ]
     conn = conn("GET", "/api/users/eric", [], headers: headers)
     conn = Router.call(conn, [])
     assert conn.status == 200
     JSON.decode!(conn.resp_body)
 
-    headers = [ { "accept", "application/vnd.explex.v1" } ]
+    headers = [ { "accept", "application/vnd.hex.v1" } ]
     conn = conn("GET", "/api/users/eric", [], headers: headers)
     conn = Router.call(conn, [])
     assert conn.status == 200

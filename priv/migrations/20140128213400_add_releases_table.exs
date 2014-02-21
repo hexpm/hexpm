@@ -1,4 +1,4 @@
-defmodule ExplexWeb.Repo.Migrations.AddReleasesTable do
+defmodule HexWeb.Repo.Migrations.AddReleasesTable do
   use Ecto.Migration
 
   def up do

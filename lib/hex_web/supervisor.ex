@@ -1,4 +1,4 @@
-defmodule ExplexWeb.Supervisor do
+defmodule HexWeb.Supervisor do
   use Supervisor.Behaviour
 
   def start_link do
@@ -8,13 +8,13 @@ defmodule ExplexWeb.Supervisor do
   # Don't start RegistryBuilder during testing
   if Mix.env == :test do
     def init([]) do
-      tree = [ worker(ExplexWeb.Repo, []) ]
+      tree = [ worker(HexWeb.Repo, []) ]
       supervise(tree, strategy: :one_for_one)
     end
   else
     def init([]) do
-      tree = [ worker(ExplexWeb.RegistryBuilder, []),
-               worker(ExplexWeb.Repo, []) ]
+      tree = [ worker(HexWeb.RegistryBuilder, []),
+               worker(HexWeb.Repo, []) ]
       supervise(tree, strategy: :one_for_one)
     end
   end
