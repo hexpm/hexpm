@@ -1,5 +1,5 @@
 [ "bcrypt": {:git, "git://github.com/opscode/erlang-bcrypt.git", "7515e80a5e16f62aef149709f6cc09995dd480be", []},
-  "cowboy": {:git, "git://github.com/extend/cowboy.git", "a96dddd04a6d7b0356e5dcafab73ac6533245861", []},
+  "cowboy": {:git, "git://github.com/extend/cowboy.git", "e7afe1f381f93f0c4df3680ff55dae111e864c9f", []},
   "cowlib": {:git, "git://github.com/extend/cowlib.git", "0d4ece08a7cce90a07cf33d4edad29bc324c7d90", [ref: "0.5.1"]},
   "decimal": {:git, "git://github.com/ericmj/decimal.git", "ca3ca3de2425b1ee19d175eca92d80dcfe02fdb1", []},
   "ecto": {:git, "git://github.com/elixir-lang/ecto.git", "29744894030a86719dd6d50529435b96a0fc0312", []},

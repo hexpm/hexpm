@@ -14,7 +14,7 @@ defmodule HexWeb.RegistryBuilder do
   @dets_table :hex_registry
   @version    1
 
-  defrecordp :state, [building: false, pending: false, waiters: [], tmp_path: nil]
+  defrecordp :state, [building: false, pending: false, waiters: []]
 
   def start_link() do
     :gen_server.start_link({ :local, __MODULE__ }, __MODULE__, [], [])
@@ -28,18 +28,27 @@ defmodule HexWeb.RegistryBuilder do
     :gen_server.cast(__MODULE__, :rebuild)
   end
 
-  def file_path do
-    :gen_server.call(__MODULE__, :file_path)
+  def wait_for_build do
+    :gen_server.call(__MODULE__, :wait_for_build)
+  end
+
+  def latest_file do
+    latest = latest_path()
+    version = latest_version(latest)
+
+    if registry = HexWeb.Registry.get(version) do
+      :gen_server.call(__MODULE__, { :update_from_db, registry })
+    else
+      latest
+    end
   end
 
   def init(_) do
-    # Store expanded tmp path so we dont brake if cwd changes
-    # This is used when integration testing client
-    { :ok, state(tmp_path: Path.expand("tmp")) }
+    { :ok, state() }
   end
 
-  def handle_cast(:rebuild, state(building: false, tmp_path: tmp) = s) do
-    build(tmp)
+  def handle_cast(:rebuild, state(building: false) = s) do
+    build()
     { :noreply, state(s, building: true) }
   end
 
@@ -51,19 +60,24 @@ defmodule HexWeb.RegistryBuilder do
     { :stop, :normal, :ok, s }
   end
 
-  def handle_call(:file_path, from, state(building: true, waiters: waiters) = s) do
+  def handle_call(:wait_for_build, from, state(building: true, waiters: waiters) = s) do
     { :noreply, state(s, waiters: [from|waiters]) }
   end
 
-  def handle_call(:file_path, _from, state(building: false, tmp_path: tmp_path) = s) do
-    latest = file_path(s)
+  def handle_call(:wait_for_build, _from, state(building: false) = s) do
+    { :reply, latest_path(), s }
+  end
 
-    ["", version]  = Path.basename(latest) |> String.split("registry-")
-    { version, _ } = Integer.parse(version)
+  def handle_call({ :update_from_db, _ }, from, state(building: true, waiters: waiters) = s) do
+    { :noreply, state(s, waiters: [from|waiters]) }
+  end
 
-    if registry = HexWeb.Registry.get(version) do
-      temp_file = Path.join(tmp_path, "registry-dbtemp.dets")
-      reg_file  = Path.join(tmp_path, "registry-#{version}.dets")
+  def handle_call({ :update_from_db, registry }, _from, state(building: false) = s) do
+    latest = latest_path
+
+    if latest_version(latest) < registry.version do
+      temp_file = Path.expand("tmp/registry-dbtemp.dets")
+      reg_file  = Path.expand("tmp/registry-#{registry.version}.dets")
 
       File.write!(temp_file, registry.data)
       :ok = :file.rename(temp_file, reg_file)
@@ -80,25 +94,46 @@ defmodule HexWeb.RegistryBuilder do
   end
 
   defp reply_to_waiters(state(waiters: waiters) = s) do
-    path = file_path(s)
-    Enum.each(waiters, &:gen_server.reply(&1, path))
+    Enum.each(waiters, &:gen_server.reply(&1, latest_path()))
     state(s, waiters: [])
   end
 
-  defp file_path(state(tmp_path: tmp_path)) do
-    Path.join(tmp_path, "registry-*.dets")
+  defp latest_path do
+    "tmp/registry-*.dets"
     |> Path.wildcard
     |> List.last
   end
 
-  defp build(tmp_path) do
+  defp latest_version(nil), do: -1
+
+  defp latest_version(latest) do
+    destructure [_, version], Path.basename(latest) |> String.split("registry-")
+    case Integer.parse(version || "") do
+      { version, _ } -> version
+      :error         -> -1
+    end
+  end
+
+  defp build do
     pid = self()
     spawn_link(fn ->
-      builder(pid, tmp_path)
+      builder(pid)
     end)
   end
 
-  defp builder(pid, tmp_path) do
+  defp builder(pid) do
+    { temp_file, version } = build_dets()
+
+    reg_file = "tmp/registry-#{version}.dets"
+    :ok = :file.rename(temp_file, reg_file)
+    File.rm(temp_file)
+
+    HexWeb.Registry.create(version, File.read!(reg_file))
+
+    send pid, :finished_building
+  end
+
+  def build_dets do
     packages     = packages()
     releases     = releases()
     requirements = requirements()
@@ -114,7 +149,7 @@ defmodule HexWeb.RegistryBuilder do
         { package, version, deps, git_url, git_ref }
       end)
 
-    temp_file = Path.join(tmp_path, "registry-temp.dets")
+    temp_file = Path.expand("tmp/registry-temp.dets")
     File.rm(temp_file)
 
     dets_opts = [
@@ -129,14 +164,7 @@ defmodule HexWeb.RegistryBuilder do
     :ok = :dets.insert(@dets_table, tuples)
     :ok = :dets.close(@dets_table)
 
-    version = Enum.reduce(releases, 1, &max(elem(&1, 0), &2))
-    reg_file = Path.join(tmp_path, "registry-#{version}.dets")
-    :ok = :file.rename(temp_file, reg_file)
-    File.rm(temp_file)
-
-    HexWeb.Registry.create(version, File.read!(reg_file))
-
-    send pid, :finished_building
+    { temp_file, Enum.reduce(releases, 0, &max(elem(&1, 0), &2)) }
   end
 
   defp packages do

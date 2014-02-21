@@ -139,7 +139,7 @@ defmodule HexWeb.RouterTest do
   test "create release updates registry" do
     { :ok, _ } = RegistryBuilder.start_link
     RegistryBuilder.rebuild
-    path = RegistryBuilder.file_path
+    path = RegistryBuilder.wait_for_build
 
     File.touch!(path, {{2000,1,1,},{1,1,1}})
     File.Stat[mtime: mtime] = File.stat!(path)
@@ -151,7 +151,7 @@ defmodule HexWeb.RouterTest do
     conn = Router.call(conn, [])
     assert conn.status == 201
 
-    path = RegistryBuilder.file_path
+    path = RegistryBuilder.wait_for_build
     refute File.Stat[mtime: {{2000,1,1,},{1,1,1}}] = File.stat!(path)
   after
     RegistryBuilder.stop
@@ -160,7 +160,7 @@ defmodule HexWeb.RouterTest do
   test "fetch registry" do
     { :ok, _ } = RegistryBuilder.start_link
     RegistryBuilder.rebuild
-    RegistryBuilder.file_path
+    RegistryBuilder.wait_for_build
 
     conn = conn("GET", "/api/registry")
     conn = Router.call(conn, [])

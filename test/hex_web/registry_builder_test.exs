@@ -23,28 +23,28 @@ defmodule HexWeb.RegistryBuilderTest do
 
   defp build do
     RegistryBuilder.rebuild
-    RegistryBuilder.file_path
+    RegistryBuilder.wait_for_build
   end
 
   defp open_table do
     dets_opts = [
-      file: RegistryBuilder.file_path,
+      file: RegistryBuilder.latest_file,
       ram_file: true,
       access: :read,
       type: :duplicate_bag ]
     { :ok, @dets_table } = :dets.open_file(@dets_table, dets_opts)
   end
 
+  defp close_table do
+    :ok = :dets.close(@dets_table)
+  end
+
   test "registry is versioned" do
     build()
     open_table()
     assert [{ :"$$version$$", 1 }] = :dets.lookup(@dets_table, :"$$version$$")
-  end
-
-  test "empty registry only has version" do
-    build()
-    open_table()
-    assert [{ :"$$version$$", 1 }] = :dets.match_object(@dets_table, :_)
+  after
+    close_table()
   end
 
   test "registry is in correct format" do
@@ -73,6 +73,8 @@ defmodule HexWeb.RegistryBuilderTest do
     assert Enum.find(reqs, &(&1 == { "ex_doc", "0.1.0" }))
 
     assert [] = :dets.lookup(@dets_table, "ex_doc")
+  after
+    close_table()
   end
 
   test "rebuilding does not break current open files" do
@@ -84,5 +86,26 @@ defmodule HexWeb.RegistryBuilderTest do
     build()
 
     assert length(:dets.match_object(@dets_table, :_)) == 1
+  after
+    close_table()
+  end
+
+  test "fetch registry from if stale" do
+    build()
+    open_table()
+    assert length(:dets.match_object(@dets_table, :_)) == 1
+    close_table()
+
+    decimal = Package.get("decimal")
+    Release.create(decimal, "0.0.1", "dec_url1", "dec_ref1", [])
+
+    { temp_file, version } = HexWeb.RegistryBuilder.build_dets()
+    HexWeb.Registry.create(version, File.read!(temp_file))
+
+    open_table()
+
+    assert length(:dets.match_object(@dets_table, :_)) == 2
+  after
+    close_table()
   end
 end

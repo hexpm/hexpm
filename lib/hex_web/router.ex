@@ -12,7 +12,7 @@ defmodule HexWeb.Router do
 
   get "api/registry" do
     conn = HexWeb.Plugs.Accept.call(conn, vendor: "hex", allow: ["dets"])
-    send_file(conn, 200, RegistryBuilder.file_path)
+    send_file(conn, 200, RegistryBuilder.latest_file)
   end
 
   forward "/api", HexWeb.Router.API
