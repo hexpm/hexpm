@@ -255,18 +255,19 @@ defmodule HexWeb.RouterTest do
     conn = conn("GET", "/api/users/eric", [], headers: headers)
     conn = Router.call(conn, [])
     assert conn.status == 200
+    assert conn.resp_headers["x-hex-media-type"] == "hex.beta"
     JSON.decode!(conn.resp_body)
 
-    headers = [ { "accept", "application/vnd.hex.v1+json" } ]
+    headers = [ { "accept", "application/vnd.hex.vUNSUPPORTED+json" } ]
+    conn = conn("GET", "/api/users/eric", [], headers: headers)
+    conn = Router.call(conn, [])
+    assert conn.status == 415
+
+    headers = [ { "accept", "application/vnd.hex.beta" } ]
     conn = conn("GET", "/api/users/eric", [], headers: headers)
     conn = Router.call(conn, [])
     assert conn.status == 200
-    JSON.decode!(conn.resp_body)
-
-    headers = [ { "accept", "application/vnd.hex.v1" } ]
-    conn = conn("GET", "/api/users/eric", [], headers: headers)
-    conn = Router.call(conn, [])
-    assert conn.status == 200
+    assert conn.resp_headers["x-hex-media-type"] == "hex.beta"
     JSON.decode!(conn.resp_body)
   end
 

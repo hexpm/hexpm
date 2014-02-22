@@ -12,6 +12,7 @@ defmodule HexWeb.Router.API do
 
   plug Plug.Parsers, parsers: [HexWeb.Parsers.Json, HexWeb.Parsers.Elixir]
   plug Plugs.Accept, vendor: "hex", allow: [{"application","json"}, "json", "elixir"]
+  plug Plugs.Version
   plug :match
   plug :dispatch
 
