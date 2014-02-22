@@ -4,6 +4,8 @@ notifications:
     - eric.meadows.jonsson@gmail.com
 otp_release:
   - 17.0-rc1
+addons:
+  postgresql: "9.3"
 before_install:
   - git clone https://github.com/elixir-lang/elixir -b v0.13
   - cd elixir && make && cd ..
