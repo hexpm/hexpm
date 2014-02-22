@@ -6,7 +6,7 @@ defmodule HexWeb.RegistryBuilderTest do
   alias HexWeb.Release
   alias HexWeb.RegistryBuilder
 
-  @dets_table :hex_registry_test
+  @ets_table :hex_registry
 
   setup do
     { :ok, _ } = RegistryBuilder.start_link
@@ -27,24 +27,24 @@ defmodule HexWeb.RegistryBuilderTest do
   end
 
   defp open_table do
-    dets_opts = [
-      file: RegistryBuilder.latest_file,
-      ram_file: true,
-      access: :read,
-      type: :duplicate_bag ]
-    { :ok, @dets_table } = :dets.open_file(@dets_table, dets_opts)
+    file = String.to_char_list!(RegistryBuilder.latest_file)
+    { :ok, tid } = :ets.file2tab(file)
+    tid
   end
 
-  defp close_table do
-    :ok = :dets.close(@dets_table)
+  defp close_table(tid) do
+    :ets.delete(tid)
   end
 
   test "registry is versioned" do
     build()
-    open_table()
-    assert [{ :"$$version$$", 1 }] = :dets.lookup(@dets_table, :"$$version$$")
-  after
-    close_table()
+    tid = open_table()
+
+    try do
+      assert [{ :"$$version$$", 1 }] = :ets.lookup(tid, :"$$version$$")
+    after
+      close_table(tid)
+    end
   end
 
   test "registry is in correct format" do
@@ -56,56 +56,60 @@ defmodule HexWeb.RegistryBuilderTest do
     Release.create(postgrex, "0.0.2", "pg_url1", "pg_ref1", [{ "decimal", "~> 0.0.1" }, { "ex_doc", "0.1.0" }])
 
     build()
-    open_table()
+    tid = open_table()
 
-    assert length(:dets.match_object(@dets_table, :_)) == 4
+    try do
+      assert length(:ets.match_object(tid, :_)) == 6
 
-    assert [ { "decimal", "0.0.1", [], "dec_url1", "dec_ref1" },
-             { "decimal", "0.0.2", [{ "ex_doc", "0.0.0" }], "dec_url2", "dec_ref2" } ] =
-           :dets.lookup(@dets_table, "decimal")
+      assert [ { "decimal", ["0.0.1", "0.0.2"] } ] = :ets.lookup(tid, "decimal")
 
-    assert [{ "postgrex", "0.0.2", _, "pg_url1", "pg_ref1" }] =
-           :dets.lookup(@dets_table, "postgrex")
+      assert [ { { "decimal", "0.0.1" }, [], "dec_url1", "dec_ref1" } ] =
+             :ets.lookup(tid, { "decimal", "0.0.1" })
 
-    reqs = :dets.lookup(@dets_table, "postgrex") |> List.first |> elem(2)
-    assert length(reqs) == 2
-    assert Enum.find(reqs, &(&1 == { "decimal", "~> 0.0.1" }))
-    assert Enum.find(reqs, &(&1 == { "ex_doc", "0.1.0" }))
+      assert [{ "postgrex", ["0.0.2"] }] =
+             :ets.lookup(tid, "postgrex")
 
-    assert [] = :dets.lookup(@dets_table, "ex_doc")
-  after
-    close_table()
+      reqs = :ets.lookup(tid, { "postgrex", "0.0.2" }) |> List.first |> elem(1)
+      assert length(reqs) == 2
+      assert Enum.find(reqs, &(&1 == { "decimal", "~> 0.0.1" }))
+      assert Enum.find(reqs, &(&1 == { "ex_doc", "0.1.0" }))
+
+      assert [] = :ets.lookup(tid, "ex_doc")
+    after
+      close_table(tid)
+    end
   end
 
   test "rebuilding does not break current open files" do
     build()
-    open_table()
+    tid = open_table()
 
-    decimal = Package.get("decimal")
-    Release.create(decimal, "0.0.1", "dec_url1", "dec_ref1", [])
-    build()
+    try do
+      decimal = Package.get("decimal")
+      Release.create(decimal, "0.0.1", "dec_url1", "dec_ref1", [])
+      build()
 
-    assert length(:dets.match_object(@dets_table, :_)) == 1
-  after
-    close_table()
+      assert length(:ets.match_object(tid, :_)) == 1
+    after
+      close_table(tid)
+    end
   end
 
   test "fetch registry from if stale" do
     build()
-    open_table()
-    assert length(:dets.match_object(@dets_table, :_)) == 1
-    close_table()
 
     decimal = Package.get("decimal")
     Release.create(decimal, "0.0.1", "dec_url1", "dec_ref1", [])
 
-    { temp_file, version } = HexWeb.RegistryBuilder.build_dets()
+    { temp_file, version } = HexWeb.RegistryBuilder.build_ets()
     HexWeb.Registry.create(version, File.read!(temp_file))
 
-    open_table()
+    tid = open_table()
 
-    assert length(:dets.match_object(@dets_table, :_)) == 2
-  after
-    close_table()
+    try do
+      assert length(:ets.match_object(tid, :_)) == 3
+    after
+      close_table(tid)
+    end
   end
 end

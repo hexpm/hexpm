@@ -1,6 +1,6 @@
 defmodule HexWeb.RegistryBuilder do
   @doc """
-  Builds the dets registry file. Only one build process should run at a given
+  Builds the ets registry file. Only one build process should run at a given
   time, but if a rebuild request comes in during building we need to rebuild
   immediately after again.
   """
@@ -11,7 +11,7 @@ defmodule HexWeb.RegistryBuilder do
   alias HexWeb.Release
   alias HexWeb.Requirement
 
-  @dets_table :hex_registry
+  @ets_table :hex_registry
   @version    1
 
   defrecordp :state, [building: false, pending: false, waiters: []]
@@ -76,8 +76,8 @@ defmodule HexWeb.RegistryBuilder do
     latest = latest_path
 
     if latest_version(latest) < registry.version do
-      temp_file = Path.expand("tmp/registry-dbtemp.dets")
-      reg_file  = Path.expand("tmp/registry-#{registry.version}.dets")
+      temp_file = Path.expand("tmp/registry-dbtemp.ets")
+      reg_file  = Path.expand("tmp/registry-#{registry.version}.ets")
 
       File.write!(temp_file, registry.data)
       :ok = :file.rename(temp_file, reg_file)
@@ -99,7 +99,7 @@ defmodule HexWeb.RegistryBuilder do
   end
 
   defp latest_path do
-    "tmp/registry-*.dets"
+    "tmp/registry-*.ets"
     |> Path.wildcard
     |> List.last
   end
@@ -122,9 +122,9 @@ defmodule HexWeb.RegistryBuilder do
   end
 
   defp builder(pid) do
-    { temp_file, version } = build_dets()
+    { temp_file, version } = build_ets()
 
-    reg_file = "tmp/registry-#{version}.dets"
+    reg_file = "tmp/registry-#{version}.ets"
     :ok = :file.rename(temp_file, reg_file)
     File.rm(temp_file)
 
@@ -133,12 +133,22 @@ defmodule HexWeb.RegistryBuilder do
     send pid, :finished_building
   end
 
-  def build_dets do
+  def build_ets do
     packages     = packages()
     releases     = releases()
     requirements = requirements()
 
-    tuples =
+    package_tuples =
+      Enum.reduce(releases, HashDict.new, fn { _, vsn, _, _, pkg_id }, dict ->
+        Dict.update(dict, packages[pkg_id], [vsn], &[vsn|&1])
+      end)
+
+    package_tuples =
+      Enum.map(package_tuples, fn { name, vsns } ->
+        { name, Enum.sort(vsns, &(Version.compare(&1, &2) == :lt)) }
+      end)
+
+    release_tuples =
       Enum.map(releases, fn { id, version, git_url, git_ref, pkg_id } ->
         package = packages[pkg_id]
         deps =
@@ -146,23 +156,17 @@ defmodule HexWeb.RegistryBuilder do
             dep_name = packages[dep_id]
             { dep_name, req }
           end)
-        { package, version, deps, git_url, git_ref }
+        { { package, version }, deps, git_url, git_ref }
       end)
 
-    temp_file = Path.expand("tmp/registry-temp.dets")
+    temp_file = Path.expand("tmp/registry-temp.ets")
     File.rm(temp_file)
 
-    dets_opts = [
-      file: temp_file,
-      ram_file: true,
-      auto_save: :infinity,
-      min_no_slots: Dict.size(packages) + 1,
-      type: :duplicate_bag ]
-
-    { :ok, @dets_table } = :dets.open_file(@dets_table, dets_opts)
-    :ok = :dets.insert(@dets_table, { :"$$version$$", @version })
-    :ok = :dets.insert(@dets_table, tuples)
-    :ok = :dets.close(@dets_table)
+    tid = :ets.new(@ets_table, [:public])
+    :ets.insert(tid, { :"$$version$$", @version })
+    :ets.insert(tid, release_tuples ++ package_tuples)
+    :ok = :ets.tab2file(tid, String.to_char_list!(temp_file))
+    :ets.delete(tid)
 
     { temp_file, Enum.reduce(releases, 0, &max(elem(&1, 0), &2)) }
   end
