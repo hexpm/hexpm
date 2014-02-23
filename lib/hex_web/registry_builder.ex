@@ -36,10 +36,15 @@ defmodule HexWeb.RegistryBuilder do
     latest = latest_path()
     version = latest_version(latest)
 
-    if registry = HexWeb.Registry.get(version) do
-      :gen_server.call(__MODULE__, { :update_from_db, registry })
-    else
-      latest
+    cond do
+      registry = HexWeb.Registry.get(version) ->
+        :gen_server.call(__MODULE__, { :update_from_db, registry })
+      nil?(latest) ->
+        rebuild()
+        wait_for_build()
+        latest_path()
+      true ->
+        latest
     end
   end
 
