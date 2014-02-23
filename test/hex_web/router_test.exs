@@ -239,6 +239,11 @@ defmodule HexWeb.RouterTest do
     conn = Router.call(conn, [])
     assert conn.status == 415
 
+    headers = [ { "accept", "application/xml" } ]
+    conn = conn("GET", "/api/WRONGURL", [], headers: headers)
+    conn = Router.call(conn, [])
+    assert conn.status == 404
+
     headers = [ { "accept", "application/json" } ]
     conn = conn("GET", "/api/users/eric", [], headers: headers)
     conn = Router.call(conn, [])

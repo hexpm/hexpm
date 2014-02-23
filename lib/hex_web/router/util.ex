@@ -23,6 +23,8 @@ defmodule HexWeb.Router.Util do
         "elixir" ->
           body = safe_serialize_elixir(body)
           content_type = "application/vnd.hex+elixir; charset=utf-8"
+        _ ->
+          raise Plug.Parsers.UnsupportedMediaTypeError
       end
 
       conn

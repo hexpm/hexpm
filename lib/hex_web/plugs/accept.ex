@@ -5,40 +5,41 @@ defmodule HexWeb.Plugs.Accept do
 
   def call(conn, opts) do
     vendor = opts[:vendor]
-    allow = opts[:allow]
+    allow  = opts[:allow]
     { mimes, formats } = Enum.partition(allow, &is_tuple/1)
 
     if accept = conn.req_headers["accept"] do
       types = Enum.map(String.split(accept, ","), &:cowboy_http.content_type/1)
-      if Enum.find(types, &match?({ :error, _ }, &1)) do
-        raise Plug.Parsers.UnsupportedMediaTypeError
+       if Enum.find(types, &match?({ :error, _ }, &1)) do
+        conn
+      else
+        check_accept(conn, types, mimes, vendor, formats)
       end
+    else
+      assign(conn, :format, List.first(formats))
+    end
+  end
 
-      if types != [] do
-        accepted =
-          Enum.find_value(types, fn type ->
-            Enum.find_value(mimes, &match_mime?(type, &1))
-          end)
+  defp check_accept(conn, [], _mimes, _vendor, formats),
+    do: assign(conn, :format, List.first(formats))
 
-        if accepted do
-          conn = assign(conn, :format, elem(accepted, 1))
-        else
-          case Enum.find_value(types, &match_vendor?(&1, vendor, formats)) do
-            { version, format } ->
-              conn = conn
-                     |> assign(:format, format)
-                     |> assign(:version, version)
-            _ ->
-              raise Plug.Parsers.UnsupportedMediaTypeError
-          end
-        end
+  defp check_accept(conn, types, mimes, vendor, formats) do
+    accepted =
+      Enum.find_value(types, fn type ->
+        Enum.find_value(mimes, &match_mime?(type, &1))
+      end)
+    if accepted do
+      assign(conn, :format, elem(accepted, 1))
+    else
+      case Enum.find_value(types, &match_vendor?(&1, vendor, formats)) do
+        { version, format } ->
+          conn
+          |> assign(:format, format)
+          |> assign(:version, version)
+        _ ->
+          conn
       end
     end
-
-    unless conn.assigns[:format] do
-      conn = assign(conn, :format, List.first(formats))
-    end
-    conn
   end
 
   defp match_mime?({ "*", "*", _ }, media),
@@ -57,9 +58,7 @@ defmodule HexWeb.Plugs.Accept do
           destructure [_, version, format], result
           if version == "", do: version = nil
           if format == "", do: format = nil
-          if nil?(format) or format in formats do
-            { version, format }
-          end
+          { version, format || List.first(formats) }
         end
       _ ->
         nil
