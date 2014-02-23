@@ -9,14 +9,15 @@ defmodule HexWeb do
     # end
 
     # Workaround for elixir bug fixed in 0.12.5 and 0.13.0
-    opts = Enum.find_value(System.argv, fn arg ->
-      case Integer.parse(arg) do
-        { port, "" } -> [port: port]
-        :error -> nil
-      end
-    end)
+    opts =
+      Enum.find_value(System.argv, fn arg ->
+        case Integer.parse(arg) do
+          { port, "" } -> [port: port]
+          :error -> nil
+        end
+      end)
 
-    Plug.Adapters.Cowboy.http(HexWeb.Router, [], opts)
+    Plug.Adapters.Cowboy.http(HexWeb.Router, [], opts || [])
 
     HexWeb.Supervisor.start_link
   end

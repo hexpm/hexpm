@@ -16,8 +16,8 @@ defmodule HexWeb.Plugs.Accept do
 
       if types != [] do
         accepted =
-          Enum.find(types, fn type ->
-            Enum.find(mimes, &match_mime?(type, &1))
+          Enum.find_value(types, fn type ->
+            Enum.find_value(mimes, &match_mime?(type, &1))
           end)
 
         if accepted do
@@ -41,14 +41,14 @@ defmodule HexWeb.Plugs.Accept do
     conn
   end
 
-  defp match_mime?({ "*", "*", _ }, _),
-    do: true
-  defp match_mime?({ first, "*", _ }, { first, _ }),
-    do: true
-  defp match_mime?({ first, second, _ }, { first, second }),
-    do: true
+  defp match_mime?({ "*", "*", _ }, media),
+    do: media
+  defp match_mime?({ first, "*", _ }, { first, _ } = media),
+    do: media
+  defp match_mime?({ first, second, _ }, { first, second } = media),
+    do: media
   defp match_mime?(_, _),
-    do: false
+    do: nil
 
   defp match_vendor?({ "*", "*", _ }, _, formats),
     do: { nil, List.first(formats) }
