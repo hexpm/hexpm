@@ -5,3 +5,5 @@
 ## Contributing
 
 Requires a postgresql user with username `postgres` and password `postgres`.
+
+Also see the client repository: [hex](https://github.com/ericmj/hex).

@@ -3,6 +3,7 @@ defmodule HexWeb.Repo do
 
   def url(:prod) do
     System.get_env("HEX_ECTO_URL")
+    || System.get_env("DATABASE_URL")
   end
 
   def url(:dev),

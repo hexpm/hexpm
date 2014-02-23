@@ -11,23 +11,21 @@ defmodule HexWeb.Plugs.Exception do
     catch
       kind, error ->
         stacktrace = System.stacktrace
-        if IEx.started?, do: print_error(kind, error, stacktrace)
-
         status = Plug.Exception.status(error)
-        conn = send_resp(conn, status, "")
-        if status == 500, do: :erlang.raise(kind, error, stacktrace)
-        conn
+
+        if status == 500, do: print_error(kind, error, stacktrace)
+        send_resp(conn, status, "")
     end
   end
 
   defp print_error(:error, exception, stacktrace) do
     exception = Exception.normalize(exception)
-    IO.puts IO.ANSI.escape_fragment("\n%{red}** (#{inspect exception.__record__(:name)}) #{exception.message}", true)
-    IO.puts IEx.Evaluator.format_stacktrace(stacktrace)
+    IO.puts "** (#{inspect exception.__record__(:name)}) #{exception.message}"
+    IO.puts Exception.format_stacktrace(stacktrace)
   end
 
   defp print_error(kind, reason, stacktrace) do
-    IO.puts IO.ANSI.escape_fragment("\n%{red}** (#{kind}) #{inspect(reason)}", true)
-    IO.puts IEx.Evaluator.format_stacktrace(stacktrace)
+    IO.puts "** (#{kind}) #{inspect(reason)}"
+    IO.puts Exception.format_stacktrace(stacktrace)
   end
 end
