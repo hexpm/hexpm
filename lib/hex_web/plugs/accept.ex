@@ -50,9 +50,6 @@ defmodule HexWeb.Plugs.Accept do
   defp match_mime?(_, _),
     do: nil
 
-  defp match_vendor?({ "*", "*", _ }, _, formats),
-    do: { nil, List.first(formats) }
-
   defp match_vendor?({ "application", second, _ }, vendor, formats) do
     case :binary.split(second, "vnd." <> vendor) do
       ["", rest] ->
@@ -68,4 +65,10 @@ defmodule HexWeb.Plugs.Accept do
         nil
     end
   end
+
+  defp match_vendor?({ "*", "*", _ }, _, formats),
+    do: { nil, List.first(formats) }
+
+  defp match_vendor?(_, _, _),
+    do: nil
 end
