@@ -12,7 +12,7 @@ defmodule HexWeb.Mixfile do
   def application do
     [ applications: [:cowboy, :plug, :bcrypt],
       mod: { HexWeb, [] },
-      env: [ password_work_factor: 12 ] ]
+      env: [ config_password_work_factor: 12 ] ]
   end
 
   # Returns the list of dependencies in the format:

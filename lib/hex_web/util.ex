@@ -18,7 +18,7 @@ defmodule HexWeb.Util do
   """
   @spec api_url([String.t]) :: String.t
   def api_url(path) do
-    HexWeb.url <> "/api/" <> Path.join(List.wrap(path))
+    HexWeb.Config.url <> "/api/" <> Path.join(List.wrap(path))
   end
 
   @doc """
@@ -26,7 +26,7 @@ defmodule HexWeb.Util do
   """
   @spec url([String.t]) :: String.t
   def url(path) do
-    HexWeb.url <> "/" <> Path.join(List.wrap(path))
+    HexWeb.Config.url <> "/" <> Path.join(List.wrap(path))
   end
 
   @doc """

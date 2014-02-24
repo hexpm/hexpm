@@ -17,25 +17,11 @@ defmodule HexWeb do
         end
       end) || [port: 4000]
 
-    if url = System.get_env("HEX_URL") do
-      url(url)
-    else
-      url("http://localhost:#{opts[:port]}")
-    end
+    HexWeb.Config.init(opts)
 
     Plug.Adapters.Cowboy.http(HexWeb.Router, [], opts)
 
     HexWeb.Supervisor.start_link
-  end
-
-  def url do
-    { :ok, url } = :application.get_env(:hex_web, :url)
-    url
-  end
-
-  def url(url) do
-    url = String.rstrip(url, ?/)
-    :application.set_env(:hex_web, :url, url)
   end
 
   defprotocol Render do

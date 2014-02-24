@@ -23,12 +23,12 @@ defmodule HexWeb.User do
 
     case validate(user) do
       [] ->
-        password = String.to_char_list!(password)
-        { :ok, work_factor } = :application.get_env(:hex_web, :password_work_factor)
+        password      = String.to_char_list!(password)
+        work_factor   = HexWeb.Config.password_work_factor
         { :ok, salt } = :bcrypt.gen_salt(work_factor)
         { :ok, hash } = :bcrypt.hashpw(password, salt)
-        hash = :erlang.list_to_binary(hash)
-        user = user.password(hash)
+        hash          = :erlang.list_to_binary(hash)
+        user          = user.password(hash)
 
         { :ok, HexWeb.Repo.create(user) }
       errors ->

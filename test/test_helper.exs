@@ -1,7 +1,7 @@
 ExUnit.start
 
-:application.set_env(:hex_web, :url, "http://hex.pm")
-:application.set_env(:hex_web, :password_work_factor, 4)
+HexWeb.Config.url("http://hex.pm")
+HexWeb.Config.password_work_factor(4)
 
 Mix.Task.run "ecto.create", ["HexWeb.Repo"]
 Mix.Task.run "ecto.migrate", ["HexWeb.Repo"]
