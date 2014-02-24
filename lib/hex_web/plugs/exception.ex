@@ -9,17 +9,20 @@ defmodule HexWeb.Plugs.Exception do
     try do
       fun.(conn)
     catch
-      kind, error ->
+      :error, error ->
         stacktrace = System.stacktrace
+        exception = Exception.normalize(error)
         status = Plug.Exception.status(error)
 
-        if status == 500, do: print_error(kind, error, stacktrace)
+        if status == 500, do: print_error(:error, exception, stacktrace)
         send_resp(conn, status, "")
+      kind, error ->
+        print_error(kind, error, System.stacktrace)
+        send_resp(conn, 500, "")
     end
   end
 
   defp print_error(:error, exception, stacktrace) do
-    exception = Exception.normalize(exception)
     IO.puts "** (#{inspect exception.__record__(:name)}) #{exception.message}"
     IO.puts Exception.format_stacktrace(stacktrace)
   end
