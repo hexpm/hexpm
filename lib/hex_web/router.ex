@@ -11,7 +11,7 @@ defmodule HexWeb.Router do
 
   plug Plugs.Exception
   plug Plugs.Forwarded
-  plug Plugs.Redirect, ssl: &Config.ssl/0, redirect: [&Config.app_host/0], to: &Config.url/0
+  plug Plugs.Redirect, ssl: &Config.use_ssl/0, redirect: [&Config.app_host/0], to: &Config.url/0
   plug :match
   plug :dispatch
 

@@ -314,4 +314,42 @@ defmodule HexWeb.RouterTest do
     body = JSON.decode!(conn.resp_body)
     assert body["dev"]["version"] == "0.0.1-dev"
   end
+
+  test "redirect" do
+    url      = HexWeb.Config.url
+    app_host = HexWeb.Config.app_host
+    use_ssl  = HexWeb.Config.use_ssl
+
+    HexWeb.Config.url("https://hex.pm")
+    HexWeb.Config.app_host("some-host.com")
+    HexWeb.Config.use_ssl(true)
+
+    try do
+      conn = conn("GET", "/foobar", [], []).scheme(:http)
+      conn = Router.call(conn, [])
+      assert conn.status == 301
+      assert conn.resp_headers["location"] == "https://hex.pm"
+
+      conn = conn("GET", "/foobar", [], []).scheme(:https).host("some-host.com")
+      conn = Router.call(conn, [])
+      assert conn.status == 301
+      assert conn.resp_headers["location"] == "https://hex.pm"
+    after
+      HexWeb.Config.url(url)
+      HexWeb.Config.app_host(app_host)
+      HexWeb.Config.use_ssl(use_ssl)
+    end
+  end
+
+  test "forwarded" do
+    headers = [ { "x-forwarded-proto", "https" } ]
+    conn = conn("GET", "/foobar", [], headers: headers)
+    conn = Router.call(conn, [])
+    assert conn.scheme == :https
+
+    headers = [ { "x-forwarded-port", "12345" } ]
+    conn = conn("GET", "/foobar", [], headers: headers)
+    conn = Router.call(conn, [])
+    assert conn.port == 12345
+  end
 end
