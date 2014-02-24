@@ -305,4 +305,13 @@ defmodule HexWeb.RouterTest do
     body = JSON.decode!(conn.resp_body)
     assert length(body) == 0
   end
+
+  test "archives" do
+    conn = conn("GET", "/archives", [], [])
+    conn = Router.call(conn, [])
+
+    assert conn.status == 200
+    body = JSON.decode!(conn.resp_body)
+    assert body["dev"]["version"] == "0.0.1-dev"
+  end
 end
