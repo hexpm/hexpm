@@ -17,10 +17,9 @@ defmodule HexWeb do
         end
       end) || [port: 4000]
 
+    File.mkdir_p!("tmp")
     HexWeb.Config.init(opts)
-
     Plug.Adapters.Cowboy.http(HexWeb.Router, [], opts)
-
     HexWeb.Supervisor.start_link
   end
 
