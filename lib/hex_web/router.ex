@@ -9,6 +9,7 @@ defmodule HexWeb.Router do
   @archive_url "http://hexpm.s3.amazonaws.com/archives/hex.ez"
 
   plug HexWeb.Plugs.Exception
+  plug Plugs.Forwarded
   plug :match
   plug :dispatch
 
