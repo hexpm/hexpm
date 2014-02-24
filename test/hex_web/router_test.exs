@@ -328,12 +328,12 @@ defmodule HexWeb.RouterTest do
       conn = conn("GET", "/foobar", [], []).scheme(:http)
       conn = Router.call(conn, [])
       assert conn.status == 301
-      assert conn.resp_headers["location"] == "https://hex.pm"
+      assert conn.resp_headers["location"] == "https://hex.pm/foobar"
 
       conn = conn("GET", "/foobar", [], []).scheme(:https).host("some-host.com")
       conn = Router.call(conn, [])
       assert conn.status == 301
-      assert conn.resp_headers["location"] == "https://hex.pm"
+      assert conn.resp_headers["location"] == "https://hex.pm/foobar"
     after
       HexWeb.Config.url(url)
       HexWeb.Config.app_host(app_host)

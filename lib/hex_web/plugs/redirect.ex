@@ -23,7 +23,9 @@ defmodule HexWeb.Plugs.Redirect do
     if conn.state == :unset, do: fun.(conn), else: conn
   end
 
-  defp redirect(conn, url) do
+  defp redirect(Plug.Conn[] = conn, url) do
+    url = url <> "/" <> Enum.join(conn.path_info, "/")
+
     conn
     |> put_resp_header("location", url)
     |> send_resp(301, "")
