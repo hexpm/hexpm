@@ -2,7 +2,7 @@ defmodule HexWeb.Router.API do
   use Plug.Router
   import Plug.Connection
   import HexWeb.Router.Util
-  import HexWeb.Util, only: [url: 1  ]
+  import HexWeb.Util, only: [api_url: 1]
   alias HexWeb.Plugs
   alias HexWeb.User
   alias HexWeb.Package
@@ -20,7 +20,7 @@ defmodule HexWeb.Router.API do
   post "users" do
     username = conn.params["username"]
     User.create(username, conn.params["email"], conn.params["password"])
-    |> send_creation_resp(conn, url(["users", username]))
+    |> send_creation_resp(conn, api_url(["users", username]))
   end
 
   get "users/:name" do
@@ -53,7 +53,7 @@ defmodule HexWeb.Router.API do
         |> send_update_resp(conn)
       else
         Package.create(name, user, conn.params["meta"])
-        |> send_creation_resp(conn, url(["packages", name]))
+        |> send_creation_resp(conn, api_url(["packages", name]))
       end
     end
   end
@@ -65,7 +65,7 @@ defmodule HexWeb.Router.API do
         result =
           Release.create(package, version, conn.params["git_url"],
                          conn.params["git_ref"], conn.params["requirements"])
-          |> send_creation_resp(conn, url(["packages", name, "releases", version]))
+          |> send_creation_resp(conn, api_url(["packages", name, "releases", version]))
 
         RegistryBuilder.rebuild
         result

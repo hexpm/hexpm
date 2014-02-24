@@ -60,6 +60,6 @@ defimpl HexWeb.Render, for: HexWeb.User.Entity do
     user.__entity__(:keywords)
     |> Dict.take([:username, :email, :created])
     |> Dict.update!(:created, &to_iso8601/1)
-    |> Dict.put(:url, url(["users", user.username]))
+    |> Dict.put(:url, api_url(["users", user.username]))
   end
 end

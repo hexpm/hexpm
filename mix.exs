@@ -12,8 +12,7 @@ defmodule HexWeb.Mixfile do
   def application do
     [ applications: [:cowboy, :plug, :bcrypt],
       mod: { HexWeb, [] },
-      env: [ api_url: "http://localhost:4000/api",
-             password_work_factor: 12 ] ]
+      env: [ password_work_factor: 12 ] ]
   end
 
   # Returns the list of dependencies in the format:

@@ -22,7 +22,7 @@ defmodule HexWeb.RouterTest do
 
     assert conn.status == 201
     body = JSON.decode!(conn.resp_body)
-    assert body["url"] == "http://hex.org/api/users/name"
+    assert body["url"] == "http://hex.pm/api/users/name"
 
     user = assert User.get("name")
     assert user.email == "email"
@@ -49,7 +49,7 @@ defmodule HexWeb.RouterTest do
 
     assert conn.status == 201
     body = JSON.decode!(conn.resp_body)
-    assert body["url"] == "http://hex.org/api/packages/ecto"
+    assert body["url"] == "http://hex.pm/api/packages/ecto"
 
     user_id = User.get("eric").id
     package = assert Package.get("ecto")
@@ -68,7 +68,7 @@ defmodule HexWeb.RouterTest do
 
     assert conn.status == 200
     body = JSON.decode!(conn.resp_body)
-    assert body["url"] == "http://hex.org/api/packages/ecto"
+    assert body["url"] == "http://hex.pm/api/packages/ecto"
 
     assert Package.get("ecto").meta["description"] == "awesomeness"
   end
@@ -106,7 +106,7 @@ defmodule HexWeb.RouterTest do
 
     assert conn.status == 201
     body = JSON.decode!(conn.resp_body)
-    assert body["url"] == "http://hex.org/api/packages/postgrex/releases/0.0.1"
+    assert body["url"] == "http://hex.pm/api/packages/postgrex/releases/0.0.1"
 
     body = [git_url: "url", git_ref: "ref", version: "0.0.2", requirements: []]
     conn = conn("POST", "/api/packages/postgrex/releases", JSON.encode!(body), headers: headers)
@@ -200,7 +200,7 @@ defmodule HexWeb.RouterTest do
 
     assert conn.status == 201
     body = JSON.decode!(conn.resp_body)
-    assert body["url"] == "http://hex.org/api/users/name"
+    assert body["url"] == "http://hex.pm/api/users/name"
 
     user = assert User.get("name")
     assert user.email == "email"
@@ -215,7 +215,7 @@ defmodule HexWeb.RouterTest do
     assert body["name"] == "decimal"
 
     release = List.first(body["releases"])
-    assert release["url"] == "http://hex.org/api/packages/decimal/releases/0.0.1"
+    assert release["url"] == "http://hex.pm/api/packages/decimal/releases/0.0.1"
     assert release["version"] == "0.0.1"
     assert release["git_url"] == "url"
     assert release["git_ref"] == "ref"
@@ -227,7 +227,7 @@ defmodule HexWeb.RouterTest do
 
     assert conn.status == 200
     body = JSON.decode!(conn.resp_body)
-    assert body["url"] == "http://hex.org/api/packages/decimal/releases/0.0.1"
+    assert body["url"] == "http://hex.pm/api/packages/decimal/releases/0.0.1"
     assert body["version"] == "0.0.1"
     assert body["git_url"] == "url"
     assert body["git_ref"] == "ref"

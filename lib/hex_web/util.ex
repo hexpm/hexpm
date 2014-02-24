@@ -14,12 +14,19 @@ defmodule HexWeb.Util do
   end
 
   @doc """
+  Returns a url to an API resource on the server from a list of path components.
+  """
+  @spec api_url([String.t]) :: String.t
+  def api_url(path) do
+    HexWeb.url <> "/api/" <> Path.join(List.wrap(path))
+  end
+
+  @doc """
   Returns a url to a resource on the server from a list of path components.
   """
   @spec url([String.t]) :: String.t
   def url(path) do
-    { :ok, url } = :application.get_env(:hex_web, :api_url)
-    url <> "/" <> Path.join(List.wrap(path))
+    HexWeb.url <> "/" <> Path.join(List.wrap(path))
   end
 
   @doc """

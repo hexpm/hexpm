@@ -102,8 +102,8 @@ defimpl HexWeb.Render, for: HexWeb.Release.Entity do
     release.__entity__(:keywords)
     |> Dict.take([:version, :git_url, :git_ref, :created])
     |> Dict.update!(:created, &to_iso8601/1)
-    |> Dict.put(:url, url(["packages", package.name, "releases", release.version]))
-    |> Dict.put(:package_url, url(["packages", package.name]))
+    |> Dict.put(:url, api_url(["packages", package.name, "releases", release.version]))
+    |> Dict.put(:package_url, api_url(["packages", package.name]))
     |> Dict.put(:requirements, reqs)
   end
 end
