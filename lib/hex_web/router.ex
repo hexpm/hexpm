@@ -5,17 +5,19 @@ defmodule HexWeb.Router do
   import HexWeb.Router.Util
   alias HexWeb.Plugs
   alias HexWeb.RegistryBuilder
+  alias HexWeb.Config
 
   @archive_url "http://hexpm.s3.amazonaws.com/archives/hex.ez"
 
-  plug HexWeb.Plugs.Exception
+  plug Plugs.Exception
   plug Plugs.Forwarded
+  plug Plugs.Redirect, ssl: &Config.ssl/0, redirect: [&Config.app_host/0], to: &Config.url/0
   plug :match
   plug :dispatch
 
 
   get "api/registry" do
-    conn = HexWeb.Plugs.Accept.call(conn, vendor: "hex", allow: ["dets"])
+    conn = Plugs.Accept.call(conn, vendor: "hex", allow: ["dets"])
     send_file(conn, 200, RegistryBuilder.latest_file)
   end
 
