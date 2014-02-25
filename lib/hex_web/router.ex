@@ -17,7 +17,8 @@ defmodule HexWeb.Router do
 
 
   get "api/registry" do
-    conn = Plugs.Accept.call(conn, vendor: "hex", allow: ["dets"])
+    # TODO: Remove dets here when most people use updated client (2014-02-25)
+    conn = Plugs.Accept.call(conn, vendor: "hex", allow: ["dets", "ets"])
     send_file(conn, 200, RegistryBuilder.latest_file)
   end
 
