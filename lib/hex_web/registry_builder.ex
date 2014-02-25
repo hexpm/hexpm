@@ -139,9 +139,9 @@ defmodule HexWeb.RegistryBuilder do
   end
 
   def build_ets do
-    packages     = packages()
-    releases     = releases()
     requirements = requirements()
+    releases     = releases()
+    packages     = packages()
 
     package_tuples =
       Enum.reduce(releases, HashDict.new, fn { _, vsn, _, _, pkg_id }, dict ->

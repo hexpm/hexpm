@@ -13,14 +13,13 @@ defmodule HexWeb.Release do
     field :created, :datetime
   end
 
+  # TODO: Check that version is not a pre-release
+  #       Should we allow adding past releases
   validate release,
     version: present() and type(:string) and valid_version(),
     git_url: present() and type(:string),
     git_ref: present() and type(:string),
     also: unique([:version], scope: [:package_id], on: HexWeb.Repo)
-
-  # TODO: Extract validation of requirements
-
   def create(package, version, url, ref, requirements) do
     release = package.releases.new(version: version, git_url: url, git_ref: ref)
 
