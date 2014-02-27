@@ -18,6 +18,8 @@ defmodule HexWeb.Package do
     also: validate(),
     also: unique([:name], on: HexWeb.Repo)
 
+  # TODO: Only allow alphanumeric package name
+  # TODO: Case insensitve unique check on name
   validatep validate(package),
     name: present() and type(:string),
     meta: validate_meta()

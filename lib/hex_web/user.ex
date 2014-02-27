@@ -12,6 +12,8 @@ defmodule HexWeb.User do
     field :created, :datetime
   end
 
+  # TODO: Only alphanumeric + some chars username
+  # TODO: Do some simple check on email?
   validate user,
     username: type(:string) and present(),
     email: type(:string) and present(),

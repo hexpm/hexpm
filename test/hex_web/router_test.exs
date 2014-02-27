@@ -8,6 +8,7 @@ defmodule HexWeb.RouterTest do
   alias HexWeb.RegistryBuilder
 
   setup do
+    { :ok, user } = User.create("sneaky_sara", "eric", "eric")
     { :ok, user } = User.create("eric", "eric", "eric")
     { :ok, _ }    = Package.create("postgrex", user, [])
     { :ok, pkg }  = Package.create("decimal", user, [])
@@ -84,6 +85,19 @@ defmodule HexWeb.RouterTest do
     assert conn.resp_headers["www-authenticate"] == "Basic realm=hex"
   end
 
+  test "update package authorizes" do
+    Package.create("ecto", User.get("eric"), [])
+
+    headers = [ { "content-type", "application/json" },
+                { "authorization", "Basic " <> :base64.encode("eric:wrong") }]
+    body = [meta: []]
+    conn = conn("PUT", "/api/packages/ecto", JSON.encode!(body), headers: headers)
+    conn = Router.call(conn, [])
+
+    assert conn.status == 401
+    assert conn.resp_headers["www-authenticate"] == "Basic realm=hex"
+  end
+
   test "create package validates" do
     headers = [ { "content-type", "application/json" },
                 { "authorization", "Basic " <> :base64.encode("eric:eric") }]
@@ -119,6 +133,17 @@ defmodule HexWeb.RouterTest do
     assert [ Release.Entity[package_id: ^postgrex_id, version: "0.0.1"],
              Release.Entity[package_id: ^postgrex_id, version: "0.0.2"] ] =
            Release.all(postgrex)
+  end
+
+  test "create release authorizes" do
+    headers = [ { "content-type", "application/json" },
+                { "authorization", "Basic " <> :base64.encode("eric:WRONG") }]
+    body = [git_url: "url", git_ref: "ref", version: "0.0.1", requirements: []]
+    conn = conn("POST", "/api/packages/postgrex/releases", JSON.encode!(body), headers: headers)
+    conn = Router.call(conn, [])
+
+    assert conn.status == 401
+    assert conn.resp_headers["www-authenticate"] == "Basic realm=hex"
   end
 
   test "create releases with requirements" do

@@ -90,11 +90,30 @@ defmodule HexWeb.Router.Util do
   Run the given block if a user authorized, otherwise send an
   unauthorized response.
   """
-  @spec forward(Macro.t, Keyword.t) :: Macro.t
+  @spec with_authorized(Keyword.t) :: Macro.t
+  @spec with_authorized(Macro.t, Keyword.t) :: Macro.t
   defmacro with_authorized(user \\ { :_, [], nil }, opts) do
     quote do
       case HexWeb.Router.Util.authorize(var!(conn)) do
         { :ok, unquote(user) } ->
+          unquote(Keyword.fetch!(opts, :do))
+        :error ->
+          HexWeb.Router.Util.send_unauthorized(var!(conn))
+      end
+    end
+  end
+
+  @doc """
+  Run the given block if a user authorized as specified user,
+  otherwise send an unauthorized response.
+  """
+  @spec with_authorized_as(Macro.t, Keyword.t) :: Macro.t
+  @spec with_authorized_as(Macro.t, Macro.t, Keyword.t) :: Macro.t
+  defmacro with_authorized_as(as, user \\ { :_, [], nil }, opts) do
+    quote do
+      id = unquote(as)
+      case HexWeb.Router.Util.authorize(var!(conn)) do
+        { :ok, HexWeb.User.Entity[id: ^id] = unquote(user) } ->
           unquote(Keyword.fetch!(opts, :do))
         :error ->
           HexWeb.Router.Util.send_unauthorized(var!(conn))

@@ -46,12 +46,14 @@ defmodule HexWeb.Router.API do
   end
 
   put "packages/:name" do
-    with_authorized user do
-      if package = Package.get(name) do
+    if package = Package.get(name) do
+      with_authorized_as(package.owner_id) do
         package.meta(conn.params["meta"])
         |> Package.update
         |> send_update_resp(conn)
-      else
+      end
+    else
+      with_authorized(user) do
         Package.create(name, user, conn.params["meta"])
         |> send_creation_resp(conn, api_url(["packages", name]))
       end
@@ -59,8 +61,8 @@ defmodule HexWeb.Router.API do
   end
 
   post "packages/:name/releases" do
-    with_authorized do
-      if package = Package.get(name) do
+    if package = Package.get(name) do
+      with_authorized_as(package.owner_id) do
         version = conn.params["version"]
         result =
           Release.create(package, version, conn.params["git_url"],
@@ -69,9 +71,9 @@ defmodule HexWeb.Router.API do
 
         RegistryBuilder.rebuild
         result
-      else
-        send_resp(conn, 404, "")
       end
+    else
+      send_resp(conn, 404, "")
     end
   end
 
