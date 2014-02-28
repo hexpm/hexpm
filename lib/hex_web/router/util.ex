@@ -97,7 +97,7 @@ defmodule HexWeb.Router.Util do
       case HexWeb.Router.Util.authorize(var!(conn)) do
         { :ok, unquote(user) } ->
           unquote(Keyword.fetch!(opts, :do))
-        :error ->
+        _ ->
           HexWeb.Router.Util.send_unauthorized(var!(conn))
       end
     end
@@ -115,7 +115,7 @@ defmodule HexWeb.Router.Util do
       case HexWeb.Router.Util.authorize(var!(conn)) do
         { :ok, HexWeb.User.Entity[id: ^id] = unquote(user) } ->
           unquote(Keyword.fetch!(opts, :do))
-        :error ->
+        _ ->
           HexWeb.Router.Util.send_unauthorized(var!(conn))
       end
     end

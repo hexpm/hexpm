@@ -13,7 +13,7 @@ defmodule HexWeb.User do
   end
 
   # TODO: Only alphanumeric + some chars username
-  # TODO: Do some simple check on email?
+  # TODO: Do some simple check on email? (email to lower)
   validate user,
     username: type(:string) and present(),
     email: type(:string) and present(),

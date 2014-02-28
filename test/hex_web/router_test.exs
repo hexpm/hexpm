@@ -8,7 +8,7 @@ defmodule HexWeb.RouterTest do
   alias HexWeb.RegistryBuilder
 
   setup do
-    { :ok, user } = User.create("sneaky_sara", "eric", "eric")
+    User.create("other", "other", "other")
     { :ok, user } = User.create("eric", "eric", "eric")
     { :ok, _ }    = Package.create("postgrex", user, [])
     { :ok, pkg }  = Package.create("decimal", user, [])
@@ -76,7 +76,7 @@ defmodule HexWeb.RouterTest do
 
   test "create package authorizes" do
     headers = [ { "content-type", "application/json" },
-                { "authorization", "Basic " <> :base64.encode("eric:wrong") }]
+                { "authorization", "Basic " <> :base64.encode("eric:WRONG") }]
     body = [meta: []]
     conn = conn("PUT", "/api/packages/ecto", JSON.encode!(body), headers: headers)
     conn = Router.call(conn, [])
@@ -89,7 +89,7 @@ defmodule HexWeb.RouterTest do
     Package.create("ecto", User.get("eric"), [])
 
     headers = [ { "content-type", "application/json" },
-                { "authorization", "Basic " <> :base64.encode("eric:wrong") }]
+                { "authorization", "Basic " <> :base64.encode("other:other") }]
     body = [meta: []]
     conn = conn("PUT", "/api/packages/ecto", JSON.encode!(body), headers: headers)
     conn = Router.call(conn, [])
@@ -137,7 +137,7 @@ defmodule HexWeb.RouterTest do
 
   test "create release authorizes" do
     headers = [ { "content-type", "application/json" },
-                { "authorization", "Basic " <> :base64.encode("eric:WRONG") }]
+                { "authorization", "Basic " <> :base64.encode("other:other") }]
     body = [git_url: "url", git_ref: "ref", version: "0.0.1", requirements: []]
     conn = conn("POST", "/api/packages/postgrex/releases", JSON.encode!(body), headers: headers)
     conn = Router.call(conn, [])
