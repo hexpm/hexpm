@@ -10,7 +10,7 @@ defmodule HexWeb.Repo.Migrations.AddPackagesTables do
         created timestamp DEFAULT now())",
 
       "CREATE INDEX ON packages (owner_id)",
-      "CREATE UNIQUE INDEX ON packages (name varchar_pattern_ops)" ]
+      "CREATE UNIQUE INDEX ON packages (lower(name) text_pattern_ops)" ]
   end
 
   def down do

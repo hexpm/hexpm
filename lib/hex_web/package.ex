@@ -16,12 +16,10 @@ defmodule HexWeb.Package do
 
   validatep validate_create(package),
     also: validate(),
-    also: unique([:name], on: HexWeb.Repo)
+    also: unique([:name], case_sensitive: false, on: HexWeb.Repo)
 
-  # TODO: Only allow alphanumeric package name
-  # TODO: Case insensitve unique check on name
   validatep validate(package),
-    name: present() and type(:string),
+    name: present() and type(:string) and has_format(~r"^[a-z]\w*$"),
     meta: validate_meta()
 
   defp validate_meta(field, arg) do

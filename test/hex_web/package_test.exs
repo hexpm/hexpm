@@ -5,7 +5,7 @@ defmodule HexWeb.PackageTest do
   alias HexWeb.Package
 
   setup do
-    { :ok, _ } = User.create("eric", "eric", "eric")
+    { :ok, _ } = User.create("eric", "eric@mail.com", "eric")
     :ok
   end
 

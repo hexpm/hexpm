@@ -12,15 +12,16 @@ defmodule HexWeb.User do
     field :created, :datetime
   end
 
-  # TODO: Only alphanumeric + some chars username
-  # TODO: Do some simple check on email? (email to lower)
   validate user,
-    username: type(:string) and present(),
-    email: type(:string) and present(),
-    password: type(:string) and present(),
-    also: unique([:username, :email], on: HexWeb.Repo)
+    username: present() and type(:string) and has_format(~r"^[a-z0-9_\-\.!~\*'\(\)]+$", message: "illegal characters"),
+    email: present() and type(:string) and has_format(~r"^.+@.+\..+$"),
+    password: present() and type(:string) and has_format(~r"[^'!:@\"]+", message: "illegal characters: '!:@\""),
+    also: unique([:username], on: HexWeb.Repo, case_sensitive: false),
+    also: unique([:email], on: HexWeb.Repo)
 
   def create(username, email, password) do
+    username = if is_binary(username), do: String.downcase(username), else: username
+    email = if is_binary(email), do: String.downcase(email), else: email
     user = HexWeb.User.new(username: username, email: email, password: password)
 
     case validate(user) do
@@ -39,7 +40,7 @@ defmodule HexWeb.User do
   end
 
   def get(username) do
-    from(u in HexWeb.User, where: u.username == ^username)
+    from(u in HexWeb.User, where: downcase(u.username) == downcase(^username))
     |> HexWeb.Repo.all
     |> List.first
   end

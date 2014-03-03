@@ -8,8 +8,8 @@ defmodule HexWeb.RouterTest do
   alias HexWeb.RegistryBuilder
 
   setup do
-    User.create("other", "other", "other")
-    { :ok, user } = User.create("eric", "eric", "eric")
+    User.create("other", "other@mail.com", "other")
+    { :ok, user } = User.create("eric", "eric@mail.com", "eric")
     { :ok, _ }    = Package.create("postgrex", user, [])
     { :ok, pkg }  = Package.create("decimal", user, [])
     { :ok, _ }    = Release.create(pkg, "0.0.1", "url", "ref", [{ "postgrex", "0.0.1" }])
@@ -17,7 +17,7 @@ defmodule HexWeb.RouterTest do
   end
 
   test "create user" do
-    body = [username: "name", email: "email", password: "pass"]
+    body = [username: "name", email: "email@mail.com", password: "pass"]
     conn = conn("POST", "/api/users", JSON.encode!(body), headers: [{ "content-type", "application/json" }])
     conn = Router.call(conn, [])
 
@@ -26,7 +26,7 @@ defmodule HexWeb.RouterTest do
     assert body["url"] == "http://hex.pm/api/users/name"
 
     user = assert User.get("name")
-    assert user.email == "email"
+    assert user.email == "email@mail.com"
   end
 
   test "create user validates" do
@@ -202,7 +202,7 @@ defmodule HexWeb.RouterTest do
     assert conn.status == 200
     body = JSON.decode!(conn.resp_body)
     assert body["username"] == "eric"
-    assert body["email"] == "eric"
+    assert body["email"] == "eric@mail.com"
     refute body["password"]
   end
 
@@ -214,11 +214,11 @@ defmodule HexWeb.RouterTest do
     assert conn.status == 200
     { body, [] } = Code.eval_string(conn.resp_body)
     assert body["username"] == "eric"
-    assert body["email"] == "eric"
+    assert body["email"] == "eric@mail.com"
   end
 
   test "elixir media request" do
-    body = [username: "name", email: "email", password: "pass"]
+    body = [username: "name", email: "email@mail.com", password: "pass"]
            |> HexWeb.Router.Util.safe_serialize_elixir
     conn = conn("POST", "/api/users", body, headers: [{ "content-type", "application/vnd.hex+elixir" }])
     conn = Router.call(conn, [])
@@ -228,7 +228,7 @@ defmodule HexWeb.RouterTest do
     assert body["url"] == "http://hex.pm/api/users/name"
 
     user = assert User.get("name")
-    assert user.email == "email"
+    assert user.email == "email@mail.com"
   end
 
   test "get package" do

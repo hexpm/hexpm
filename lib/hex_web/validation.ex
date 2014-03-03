@@ -14,7 +14,7 @@ defmodule HexWeb.Validation do
       { :ok, _ } ->
         []
       :error ->
-        [{ attr, opts[:message] || "invalid version: #{version}" }]
+        [{ attr, opts[:message] || "invalid version" }]
     end
   end
 
@@ -27,11 +27,16 @@ defmodule HexWeb.Validation do
     repo    = Keyword.fetch!(opts, :on)
     scope   = opts[:scope] || []
     message = opts[:message] || "already taken"
+    case    = Keyword.get(opts, :case_sensitive, true)
 
     where =
       Enum.reduce(fields, false, fn field, acc ->
         value = apply(entity, field, [])
-        quote(do: unquote(acc) or &0.unquote(field) == unquote(value))
+        if case and is_binary(value) do
+          quote(do: unquote(acc) or downcase(&0.unquote(field)) == downcase(unquote(value)))
+        else
+          quote(do: unquote(acc) or &0.unquote(field) == unquote(value))
+        end
       end)
 
     where =

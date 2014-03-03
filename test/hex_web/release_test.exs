@@ -6,7 +6,7 @@ defmodule HexWeb.ReleaseTest do
   alias HexWeb.Release
 
   setup do
-    { :ok, user } = User.create("eric", "eric", "eric")
+    { :ok, user } = User.create("eric", "eric@mail.com", "eric")
     { :ok, _ } = Package.create("ecto", user, [])
     { :ok, _ } = Package.create("postgrex", user, [])
     { :ok, _ } = Package.create("decimal", user, [])
@@ -43,7 +43,7 @@ defmodule HexWeb.ReleaseTest do
   test "validate release" do
     package = Package.get("ecto")
 
-    assert { :error, [version: "invalid version: 0.1"] } =
+    assert { :error, [version: "invalid version"] } =
            Release.create(package, "0.1", "url", "ref", [])
 
     assert { :error, [deps: [{ "decimal", "invalid requirement: \"fail\"" }]] } =

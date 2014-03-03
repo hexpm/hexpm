@@ -10,7 +10,7 @@ defmodule HexWeb.RegistryBuilderTest do
 
   setup do
     { :ok, _ } = RegistryBuilder.start_link
-    { :ok, user } = User.create("eric", "eric", "eric")
+    { :ok, user } = User.create("eric", "eric@mail.com", "eric")
     { :ok, _ } = Package.create("postgrex", user, [])
     { :ok, _ } = Package.create("decimal", user, [])
     { :ok, _ } = Package.create("ex_doc", user, [])

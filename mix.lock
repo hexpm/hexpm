@@ -6,6 +6,6 @@
   "jazz": {:git, "git://github.com/meh/jazz.git", "c502fc3894249d677f0546bc02a9b866d5d32afa", []},
   "mime": {:git, "git://github.com/dynamo/mime.git", "db84370c53a67a7e58a4d0cfb026f4edc64a9367", []},
   "plug": {:git, "git://github.com/elixir-lang/plug.git", "c735ee21ab8384ab47ac27feb56cc509641fdc6d", []},
-  "poolboy": {:git, "git://github.com/devinus/poolboy.git", "3cc20d045243fe8d034a295923bd3deeb3be047a", []},
+  "poolboy": {:git, "git://github.com/devinus/poolboy.git", "64e1eaef0b1e88849c7e7ba9ff75f8cd4dba2a3b", []},
   "postgrex": {:git, "git://github.com/ericmj/postgrex.git", "a5d46bd78e4bea76f274edb7868344629795e9c3", []},
   "ranch": {:git, "git://github.com/extend/ranch.git", "5df1f222f94e08abdcab7084f5e13027143cc222", [ref: "0.9.0"]} ]
