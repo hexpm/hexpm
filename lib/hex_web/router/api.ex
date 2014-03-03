@@ -57,8 +57,7 @@ defmodule HexWeb.Router.API do
     if package = Package.get(name) do
       user_id = package.owner_id
       with_authorized_as(id: user_id) do
-        package.meta(conn.params["meta"])
-        |> Package.update
+        Package.update(package, conn.params["meta"])
         |> send_update_resp(conn)
       end
     else

@@ -17,6 +17,15 @@ defmodule HexWeb.PackageTest do
     assert nil?(Package.get("postgrex"))
   end
 
+  test "update package" do
+    user = User.get("eric")
+    assert { :ok, package } = Package.create("ecto", user, [])
+
+    Package.update(package, [{ "contributors", ["eric", "josé"] }])
+    package = Package.get("ecto")
+    assert length(package.meta["contributors"]) == 2
+  end
+
   test "validate valid meta" do
     meta = [
       { "contributors", ["eric", "josé"] },

@@ -47,10 +47,10 @@ defmodule HexWeb.Package do
     end
   end
 
-  def update(package) do
-    meta = Dict.take(package.meta, @meta_fields)
+  def update(package, meta) do
+    meta = Dict.take(meta, @meta_fields)
 
-    case validate(package) do
+    case validate(package.meta(meta)) do
       [] ->
         HexWeb.Repo.update(package.meta(JSON.encode!(meta)))
         { :ok, package.meta(meta) }
