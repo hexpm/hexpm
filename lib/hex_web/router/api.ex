@@ -31,6 +31,14 @@ defmodule HexWeb.Router.API do
     end
   end
 
+  patch "users/:name" do
+    name = String.downcase(name)
+    with_authorized_as(user, username: name) do
+      User.update(user, conn.params["email"], conn.params["password"])
+      |> send_update_resp(conn)
+    end
+  end
+
   get "packages" do
     page = parse_integer(conn.params["page"], 1)
     packages = Package.all(page, 100, conn.params["search"])
@@ -47,7 +55,8 @@ defmodule HexWeb.Router.API do
 
   put "packages/:name" do
     if package = Package.get(name) do
-      with_authorized_as(package.owner_id) do
+      user_id = package.owner_id
+      with_authorized_as(id: user_id) do
         package.meta(conn.params["meta"])
         |> Package.update
         |> send_update_resp(conn)
@@ -62,7 +71,8 @@ defmodule HexWeb.Router.API do
 
   post "packages/:name/releases" do
     if package = Package.get(name) do
-      with_authorized_as(package.owner_id) do
+      user_id = package.owner_id
+      with_authorized_as(id: user_id) do
         version = conn.params["version"]
         result =
           Release.create(package, version, conn.params["git_url"],

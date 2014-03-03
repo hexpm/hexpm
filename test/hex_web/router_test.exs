@@ -41,6 +41,32 @@ defmodule HexWeb.RouterTest do
     refute User.get("name")
   end
 
+  test "update user" do
+    headers = [ { "content-type", "application/json" },
+                { "authorization", "Basic " <> :base64.encode("other:other") }]
+    body = [email: "email@mail.com", password: "pass"]
+    conn = conn("PATCH", "/api/users/other", JSON.encode!(body), headers: headers)
+    conn = Router.call(conn, [])
+
+    assert conn.status == 200
+    body = JSON.decode!(conn.resp_body)
+    assert body["url"] == "http://hex.pm/api/users/other"
+    user = assert User.get("other")
+    assert user.email == "email@mail.com"
+
+    headers = [ { "content-type", "application/json" },
+                { "authorization", "Basic " <> :base64.encode("other:pass") }]
+    body = [username: "foo"]
+    conn = conn("PATCH", "/api/users/other", JSON.encode!(body), headers: headers)
+    conn = Router.call(conn, [])
+
+    assert conn.status == 200
+    body = JSON.decode!(conn.resp_body)
+    assert body["url"] == "http://hex.pm/api/users/other"
+    assert User.get("other")
+    refute User.get("foo")
+  end
+
   test "create package" do
     headers = [ { "content-type", "application/json" },
                 { "authorization", "Basic " <> :base64.encode("eric:eric") }]

@@ -109,11 +109,12 @@ defmodule HexWeb.Router.Util do
   """
   @spec with_authorized_as(Macro.t, Keyword.t) :: Macro.t
   @spec with_authorized_as(Macro.t, Macro.t, Keyword.t) :: Macro.t
-  defmacro with_authorized_as(as, user \\ { :_, [], nil }, opts) do
+  defmacro with_authorized_as(user \\ { :_, [], nil }, as, opts) do
+    as = Enum.map(as, fn { key, val } -> { key, { :^, [], [val] } } end)
+
     quote do
-      id = unquote(as)
       case HexWeb.Router.Util.authorize(var!(conn)) do
-        { :ok, HexWeb.User.Entity[id: ^id] = unquote(user) } ->
+        { :ok, HexWeb.User.Entity[unquote_splicing(as)] = unquote(user) } ->
           unquote(Keyword.fetch!(opts, :do))
         _ ->
           HexWeb.Router.Util.send_unauthorized(var!(conn))
