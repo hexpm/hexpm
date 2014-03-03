@@ -70,13 +70,21 @@ defmodule HexWeb.Router.API do
 
   post "packages/:name/releases" do
     if package = Package.get(name) do
+      version = conn.params["version"]
+      git_url = conn.params["git_url"]
+      git_ref = conn.params["git_ref"]
+      reqs    = conn.params["requirements"]
       user_id = package.owner_id
+
       with_authorized_as(id: user_id) do
-        version = conn.params["version"]
         result =
-          Release.create(package, version, conn.params["git_url"],
-                         conn.params["git_ref"], conn.params["requirements"])
-          |> send_creation_resp(conn, api_url(["packages", name, "releases", version]))
+          if release = Release.get(package, version) do
+            Release.update(release, git_url, git_ref, reqs)
+            |> send_update_resp(conn)
+          else
+            Release.create(package, version, git_url, git_ref, reqs)
+            |> send_creation_resp(conn, api_url(["packages", name, "releases", version]))
+          end
 
         RegistryBuilder.rebuild
         result

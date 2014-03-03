@@ -13,31 +13,59 @@ defmodule HexWeb.Release do
     field :created, :datetime
   end
 
-  # TODO: Check that version is not a pre-release
-  #       Should we allow adding past releases
-  validate release,
-    version: present() and type(:string) and valid_version(),
+  validatep validate(release),
+    version: present() and type(:string) and valid_version(pre: false),
     git_url: present() and type(:string),
-    git_ref: present() and type(:string),
+    git_ref: present() and type(:string)
+
+  validatep validate_create(release),
+    also: validate(),
     also: unique([:version], scope: [:package_id], on: HexWeb.Repo)
+
   def create(package, version, url, ref, requirements) do
     release = package.releases.new(version: version, git_url: url, git_ref: ref)
 
-    case validate(release) do
+    case validate_create(release) do
       [] ->
         HexWeb.Repo.transaction(fn ->
           release = HexWeb.Repo.create(release)
-          requirements = create_requirements(release, requirements)
-
-          errors = Enum.filter_map(requirements, &match?({ :error, _ }, &1), &elem(&1, 1))
-          if errors == [] do
-            release.package(package).requirements(requirements)
-          else
-            HexWeb.Repo.rollback(deps: errors)
-          end
+          update_requirements(release.package(package), requirements)
         end)
       errors ->
         { :error, errors }
+    end
+  end
+
+  def update(release, url, ref, requirements) do
+    created = Ecto.DateTime.to_erl(release.created) |> :calendar.datetime_to_gregorian_seconds
+    now     = :calendar.universal_time |> :calendar.datetime_to_gregorian_seconds
+
+    if now - created <= 3600 do
+      release = release.git_url(url).git_ref(ref)
+      case validate(release) do
+        [] ->
+          HexWeb.Repo.transaction(fn ->
+            HexWeb.Repo.delete_all(release.requirements)
+            HexWeb.Repo.update(release)
+            update_requirements(release, requirements)
+          end)
+        errors ->
+          { :error, errors }
+      end
+
+    else
+      { :error, [created: "can only modify a release up to one hour after creation"] }
+    end
+  end
+
+  defp update_requirements(release, requirements) do
+    requirements = create_requirements(release, requirements)
+
+    errors = Enum.filter_map(requirements, &match?({ :error, _ }, &1), &elem(&1, 1))
+    if errors == [] do
+      release.requirements(requirements)
+    else
+      HexWeb.Repo.rollback(deps: errors)
     end
   end
 

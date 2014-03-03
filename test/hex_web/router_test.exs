@@ -161,6 +161,25 @@ defmodule HexWeb.RouterTest do
            Release.all(postgrex)
   end
 
+  test "update release" do
+    headers = [ { "content-type", "application/json" },
+                { "authorization", "Basic " <> :base64.encode("eric:eric") }]
+    body = [git_url: "url", git_ref: "ref", version: "0.0.1", requirements: []]
+    conn = conn("POST", "/api/packages/postgrex/releases", JSON.encode!(body), headers: headers)
+    conn = Router.call(conn, [])
+    assert conn.status == 201
+
+    body = [git_url: "new_url", git_ref: "new_ref", version: "0.0.1", requirements: []]
+    conn = conn("POST", "/api/packages/postgrex/releases", JSON.encode!(body), headers: headers)
+    conn = Router.call(conn, [])
+    assert conn.status == 200
+
+    postgrex = Package.get("postgrex")
+    release = Release.get(postgrex, "0.0.1")
+    assert release.git_url == "new_url"
+    assert release.git_ref == "new_ref"
+  end
+
   test "create release authorizes" do
     headers = [ { "content-type", "application/json" },
                 { "authorization", "Basic " <> :base64.encode("other:other") }]
