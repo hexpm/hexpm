@@ -37,7 +37,10 @@ defmodule HexWeb.ReleaseTest do
     assert { :ok, _ } = Release.create(ecto, "0.0.1", "url", "ref", [{ "decimal", "~> 0.0.2" }, { "postgrex", "== 0.0.1" }])
 
     release = Release.get(ecto, "0.0.1")
-    assert [{"postgrex", "== 0.0.1" }, {"decimal", "~> 0.0.2" }] = release.requirements.to_list
+    reqs = release.requirements.to_list
+    assert length(reqs) == 2
+    assert {"postgrex", "== 0.0.1" } in reqs
+    assert {"decimal", "~> 0.0.2" } in reqs
   end
 
   test "validate release" do
@@ -71,5 +74,14 @@ defmodule HexWeb.ReleaseTest do
     assert release.git_url == "new_url"
     assert release.git_ref == "new_ref"
     assert [{"decimal", "~> 0.0.2" }] = release.requirements.to_list
+  end
+
+  test "delete release" do
+    decimal = Package.get("decimal")
+    postgrex = Package.get("postgrex")
+
+    assert { :ok, release } = Release.create(decimal, "0.0.1", "url", "ref", [])
+    Release.delete(release)
+    refute Release.get(postgrex, "0.0.1")
   end
 end

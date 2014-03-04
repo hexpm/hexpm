@@ -171,7 +171,7 @@ defmodule HexWeb.Router.Util do
   end
 
   @doc """
-  Send a creation response if entity update was successful,
+  Send an ok response if entity update was successful,
   otherwise send validation failure response.
   """
   @spec send_update_resp({ :ok, term } | { :error, term }, Plug.Conn.t) :: Plug.Conn.t
@@ -180,6 +180,19 @@ defmodule HexWeb.Router.Util do
   end
 
   def send_update_resp({ :error, errors }, conn) do
+    send_validation_failed(conn, errors)
+  end
+
+  @doc """
+  Send an ok response if entity delete was successful,
+  otherwise send validation failure response.
+  """
+  @spec send_delete_resp(:ok | { :error, term }, Plug.Conn.t) :: Plug.Conn.t
+  def send_delete_resp(:ok, conn) do
+    send_resp(conn, 204, "")
+  end
+
+  def send_delete_resp({ :error, errors }, conn) do
     send_validation_failed(conn, errors)
   end
 

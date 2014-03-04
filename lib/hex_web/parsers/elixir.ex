@@ -23,6 +23,8 @@ defmodule HexWeb.Parsers.Elixir do
     case HexWeb.Util.read_body({ :ok, "", state }, "", limit, adapter) do
       { :too_large, state } ->
         { :too_large, conn.adapter({ adapter, state }) }
+      { :ok, "", state } ->
+        { :ok, [], conn.adapter({ adapter, state }) }
       { :ok, body, state } ->
         params = decode(body)
         { :ok, params, conn.adapter({ adapter, state }) }

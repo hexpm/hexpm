@@ -94,6 +94,19 @@ defmodule HexWeb.Router.API do
     end
   end
 
+  delete "packages/:name/releases/:version" do
+    if (package = Package.get(name)) && (release = Release.get(package, version)) do
+      user_id = package.owner_id
+
+      with_authorized_as(id: user_id) do
+        Release.delete(release)
+        |> send_delete_resp(conn)
+      end
+    else
+      send_resp(conn, 404, "")
+    end
+  end
+
   get "packages/:name/releases/:version" do
     if (package = Package.get(name)) && (release = Release.get(package, version)) do
       send_render(conn, 200, release)

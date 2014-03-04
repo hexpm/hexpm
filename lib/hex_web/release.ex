@@ -37,18 +37,15 @@ defmodule HexWeb.Release do
   end
 
   def update(release, url, ref, requirements) do
-    created = Ecto.DateTime.to_erl(release.created) |> :calendar.datetime_to_gregorian_seconds
-    now     = :calendar.universal_time |> :calendar.datetime_to_gregorian_seconds
-
-    if now - created <= 3600 do
+    if editable?(release) do
       release = release.git_url(url).git_ref(ref)
       case validate(release) do
         [] ->
           HexWeb.Repo.transaction(fn ->
             HexWeb.Repo.delete_all(release.requirements)
-            HexWeb.Repo.update(release)
-            update_requirements(release, requirements)
-          end)
+            HexWeb.Repo.delete(release)
+            create(release.package.get, release.version, url, ref, requirements)
+          end) |> elem(1)
         errors ->
           { :error, errors }
       end
@@ -56,6 +53,32 @@ defmodule HexWeb.Release do
     else
       { :error, [created: "can only modify a release up to one hour after creation"] }
     end
+  end
+
+  # NOTE: There is a race condition here, we use the highest index in the
+  #       releases table to ensure that registry rebuilding can not race ahead
+  #       of each other. Deleting releases of course breaks the assumption that
+  #       the highest index represents the latest action on the table.
+  #       Adding an :active field and setting it to false instead of deleting
+  #       may be a solution.
+  def delete(release) do
+    if editable?(release) do
+      HexWeb.Repo.transaction(fn ->
+        HexWeb.Repo.delete_all(release.requirements)
+        HexWeb.Repo.delete(release)
+      end)
+
+      :ok
+    else
+      { :error, [created: "can only delete a release up to one hour after creation"] }
+    end
+  end
+
+  defp editable?(release) do
+    created = Ecto.DateTime.to_erl(release.created) |> :calendar.datetime_to_gregorian_seconds
+    now     = :calendar.universal_time |> :calendar.datetime_to_gregorian_seconds
+
+    now - created <= 3600
   end
 
   defp update_requirements(release, requirements) do
