@@ -9,9 +9,11 @@ defmodule HexWeb.Router do
 
   @archive_url "http://hexpm.s3.amazonaws.com/archives/hex.ez"
 
+  plug :fetch
   plug Plugs.Exception
   plug Plugs.Forwarded
   plug Plugs.Redirect, ssl: &Config.use_ssl/0, redirect: [&Config.app_host/0], to: &Config.url/0
+  plug Plug.MethodOverride
   plug :match
   plug :dispatch
 
@@ -45,5 +47,10 @@ defmodule HexWeb.Router do
 
   match _ do
     send_resp(conn, 404, "")
+  end
+
+  defp fetch(conn, _opts) do
+    # Should this be in Plug.MethodOverride ?
+    fetch_params(conn)
   end
 end
