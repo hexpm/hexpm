@@ -392,8 +392,8 @@ defmodule HexWeb.RouterTest do
     assert length(body) == 0
   end
 
-  test "archives" do
-    conn = conn("GET", "/archives", [], [])
+  test "installs" do
+    conn = conn("GET", "/installs", [], [])
     conn = Router.call(conn, [])
 
     assert conn.status == 200

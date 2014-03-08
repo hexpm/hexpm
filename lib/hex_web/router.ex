@@ -1,13 +1,10 @@
 defmodule HexWeb.Router do
   use Plug.Router
   import Plug.Connection
-  import HexWeb.Util, only: [url: 1]
   import HexWeb.Router.Util
   alias HexWeb.Plugs
   alias HexWeb.RegistryBuilder
   alias HexWeb.Config
-
-  @archive_url "http://hexpm.s3.amazonaws.com/archives/hex.ez"
 
   plug :fetch
   plug Plugs.Exception
@@ -24,17 +21,11 @@ defmodule HexWeb.Router do
     send_file(conn, 200, RegistryBuilder.latest_file)
   end
 
-  get "archives/hex.ez" do
-    conn
-    |> put_resp_header("location", @archive_url)
-    |> send_resp(302, "")
-  end
-
-  get "archives" do
+  get "installs" do
     body = [
       dev: [
         version: "0.0.1-dev",
-        url: url(["archives", "hex.ez"]) ] ]
+        url: "http://storage.hex.pm/installs/hex.ez" ] ]
 
     conn
     |> Plug.Parsers.call(parsers: [HexWeb.Parsers.Json, HexWeb.Parsers.Elixir])
