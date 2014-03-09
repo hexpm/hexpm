@@ -1,7 +1,16 @@
 defmodule HexWeb.Store.S3 do
   @behaviour HexWeb.Store
 
-  defrecordp :s3_config, :config, Record.extract(:config, from: "deps/mini_s3/src/internal.hrl")
+  # defrecordp :s3_config, :config, Record.extract(:config, from_lib: "mini_s3/src/internal.hrl")
+  defmacrop s3_config(opts) do
+    quote do
+      { :config,
+        'http://s3.amazonaws.com',
+        unquote(opts[:access_key_id]),
+        unquote(opts[:secret_access_key]),
+        :virtual_hosted }
+    end
+  end
 
   import Plug.Connection
 
