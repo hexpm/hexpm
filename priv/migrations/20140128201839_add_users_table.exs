@@ -13,6 +13,6 @@ defmodule HexWeb.Repo.Migrations.AddUsersTable do
   end
 
   def down do
-    "DROP TABLE users"
+    "DROP TABLE IF EXISTS users"
   end
 end

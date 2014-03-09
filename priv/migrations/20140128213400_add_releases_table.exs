@@ -15,6 +15,6 @@ defmodule HexWeb.Repo.Migrations.AddReleasesTable do
   end
 
   def down do
-    "DROP TABLE releases"
+    "DROP TABLE IF EXISTS releases"
   end
 end

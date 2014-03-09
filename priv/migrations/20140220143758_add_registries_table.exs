@@ -15,7 +15,7 @@ defmodule HexWeb.Repo.Migrations.AddRegistriesTable do
   end
 
   def down do
-    [ "DROP TABLE registries",
-      "DROP TYPE building_state" ]
+    [ "DROP TABLE IF EXISTS registries",
+      "DROP TYPE IF EXISTS building_state" ]
   end
 end

@@ -12,6 +12,6 @@ defmodule HexWeb.Repo.Migrations.AddRequirementsTable do
   end
 
   def down do
-    "DROP TABLE requirements"
+    "DROP TABLE IF EXISTS requirements"
   end
 end

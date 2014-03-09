@@ -14,6 +14,6 @@ defmodule HexWeb.Repo.Migrations.AddPackagesTables do
   end
 
   def down do
-    "DROP TABLE packages"
+    "DROP TABLE IF EXISTS packages"
   end
 end
