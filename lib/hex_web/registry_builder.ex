@@ -7,6 +7,8 @@ defmodule HexWeb.RegistryBuilder do
 
   use GenServer.Behaviour
   import Ecto.Query, only: [from: 2]
+  require HexWeb.Repo
+  alias Ecto.Adapters.Postgres
   alias HexWeb.Package
   alias HexWeb.Release
   alias HexWeb.Requirement
@@ -32,22 +34,6 @@ defmodule HexWeb.RegistryBuilder do
     :gen_server.call(__MODULE__, :wait_for_build)
   end
 
-  def latest_file do
-    latest = latest_path()
-    version = latest_version(latest)
-
-    cond do
-      registry = HexWeb.Registry.get(version) ->
-        :gen_server.call(__MODULE__, { :update_from_db, registry })
-      nil?(latest) ->
-        rebuild()
-        wait_for_build()
-        latest_path()
-      true ->
-        latest
-    end
-  end
-
   def init(_) do
     { :ok, state() }
   end
@@ -70,26 +56,7 @@ defmodule HexWeb.RegistryBuilder do
   end
 
   def handle_call(:wait_for_build, _from, state(building: false) = s) do
-    { :reply, latest_path(), s }
-  end
-
-  def handle_call({ :update_from_db, _ }, from, state(building: true, waiters: waiters) = s) do
-    { :noreply, state(s, waiters: [from|waiters]) }
-  end
-
-  def handle_call({ :update_from_db, registry }, _from, state(building: false) = s) do
-    latest = latest_path
-
-    if latest_version(latest) < registry.version do
-      temp_file = Path.expand("tmp/registry-dbtemp.ets")
-      reg_file  = Path.expand("tmp/registry-#{registry.version}.ets")
-
-      File.write!(temp_file, registry.data)
-      :ok = :file.rename(temp_file, reg_file)
-      latest = reg_file
-    end
-
-    { :reply, latest, s }
+    { :reply, :ok, s }
   end
 
   def handle_info(:finished_building, state(pending: pending) = s) do
@@ -99,24 +66,8 @@ defmodule HexWeb.RegistryBuilder do
   end
 
   defp reply_to_waiters(state(waiters: waiters) = s) do
-    Enum.each(waiters, &:gen_server.reply(&1, latest_path()))
+    Enum.each(waiters, &:gen_server.reply(&1, :ok))
     state(s, waiters: [])
-  end
-
-  defp latest_path do
-    "tmp/registry-*.ets"
-    |> Path.wildcard
-    |> List.last
-  end
-
-  defp latest_version(nil), do: -1
-
-  defp latest_version(latest) do
-    destructure [_, version], Path.basename(latest) |> String.split("registry-")
-    case Integer.parse(version || "") do
-      { version, _ } -> version
-      :error         -> -1
-    end
   end
 
   defp build do
@@ -127,53 +78,79 @@ defmodule HexWeb.RegistryBuilder do
   end
 
   defp builder(pid) do
-    { temp_file, version } = build_ets()
-
-    reg_file = "tmp/registry-#{version}.ets"
-    :ok = :file.rename(temp_file, reg_file)
-    File.rm(temp_file)
-
-    HexWeb.Registry.create(version, File.read!(reg_file))
+    reg_file = Path.expand("tmp/registry.ets")
+    { :ok, handle } = HexWeb.Registry.create()
+    build_ets(handle, reg_file)
 
     send pid, :finished_building
   end
 
-  def build_ets do
-    requirements = requirements()
-    releases     = releases()
-    packages     = packages()
+  def build_ets(handle, file) do
+    try do
+      HexWeb.Repo.transaction(fn ->
+        Postgres.query(HexWeb.Repo, "LOCK registries NOWAIT")
 
-    package_tuples =
-      Enum.reduce(releases, HashDict.new, fn { _, vsn, _, _, pkg_id }, dict ->
-        Dict.update(dict, packages[pkg_id], [vsn], &[vsn|&1])
+        unless skip?(handle) do
+          HexWeb.Registry.set_working(handle)
+
+          requirements = requirements()
+          releases     = releases()
+          packages     = packages()
+
+          package_tuples =
+            Enum.reduce(releases, HashDict.new, fn { _, vsn, _, _, pkg_id }, dict ->
+              Dict.update(dict, packages[pkg_id], [vsn], &[vsn|&1])
+            end)
+
+          package_tuples =
+            Enum.map(package_tuples, fn { name, vsns } ->
+              { name, Enum.sort(vsns, &(Version.compare(&1, &2) == :lt)) }
+            end)
+
+          release_tuples =
+            Enum.map(releases, fn { id, version, git_url, git_ref, pkg_id } ->
+              package = packages[pkg_id]
+              deps =
+                Enum.map(requirements[id] || [], fn { dep_id, req } ->
+                  dep_name = packages[dep_id]
+                  { dep_name, req }
+                end)
+              { { package, version }, deps, git_url, git_ref }
+            end)
+
+          File.rm(file)
+
+          tid = :ets.new(@ets_table, [:public])
+          :ets.insert(tid, { :"$$version$$", @version })
+          :ets.insert(tid, release_tuples ++ package_tuples)
+          :ok = :ets.tab2file(tid, String.to_char_list!(file))
+          :ets.delete(tid)
+
+          HexWeb.Config.store.upload_registry(file)
+          HexWeb.Registry.set_done(handle)
+        end
       end)
+    rescue
+      error in [Postgrex.Error] ->
+        if error.code == "55P03" do
+          :timer.sleep(10_000)
+          unless skip?(handle) do
+            build_ets(handle, file)
+          end
+        end
+    end
+  end
 
-    package_tuples =
-      Enum.map(package_tuples, fn { name, vsns } ->
-        { name, Enum.sort(vsns, &(Version.compare(&1, &2) == :lt)) }
-      end)
+  defp skip?(handle) do
+    # Has someone already pushed data newer than we were planning push?
+    latest_started = HexWeb.Registry.latest_started
 
-    release_tuples =
-      Enum.map(releases, fn { id, version, git_url, git_ref, pkg_id } ->
-        package = packages[pkg_id]
-        deps =
-          Enum.map(requirements[id] || [], fn { dep_id, req } ->
-            dep_name = packages[dep_id]
-            { dep_name, req }
-          end)
-        { { package, version }, deps, git_url, git_ref }
-      end)
-
-    temp_file = Path.expand("tmp/registry-temp.ets")
-    File.rm(temp_file)
-
-    tid = :ets.new(@ets_table, [:public])
-    :ets.insert(tid, { :"$$version$$", @version })
-    :ets.insert(tid, release_tuples ++ package_tuples)
-    :ok = :ets.tab2file(tid, String.to_char_list!(temp_file))
-    :ets.delete(tid)
-
-    { temp_file, Enum.reduce(releases, 0, &max(elem(&1, 0), &2)) }
+    if latest_started && time_diff(latest_started, handle.created) > 0 do
+      HexWeb.Registry.set_done(handle)
+      true
+    else
+      false
+    end
   end
 
   defp packages do
@@ -198,5 +175,11 @@ defmodule HexWeb.RegistryBuilder do
       tuple = { dep_id, req }
       Dict.update(dict, rel_id, [tuple], &[tuple|&1])
     end)
+  end
+
+  defp time_diff(time1, time2) do
+    time1 = Ecto.DateTime.to_erl(time1) |> :calendar.datetime_to_gregorian_seconds
+    time2 = Ecto.DateTime.to_erl(time2) |> :calendar.datetime_to_gregorian_seconds
+    time1 - time2
   end
 end

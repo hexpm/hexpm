@@ -27,8 +27,7 @@ defmodule HexWeb.RegistryBuilderTest do
   end
 
   defp open_table do
-    file = String.to_char_list!(RegistryBuilder.latest_file)
-    { :ok, tid } = :ets.file2tab(file)
+    { :ok, tid } = :ets.file2tab('tmp/registry.ets')
     tid
   end
 
@@ -80,36 +79,20 @@ defmodule HexWeb.RegistryBuilderTest do
     end
   end
 
-  test "rebuilding does not break current open files" do
-    build()
-    tid = open_table()
-
-    try do
-      decimal = Package.get("decimal")
-      Release.create(decimal, "0.0.1", "dec_url1", "dec_ref1", [])
-      build()
-
-      assert length(:ets.match_object(tid, :_)) == 1
-    after
-      close_table(tid)
-    end
-  end
-
-  test "fetch registry from if stale" do
-    build()
-
+  test "building is blocking" do
+    postgrex = Package.get("postgrex")
     decimal = Package.get("decimal")
-    Release.create(decimal, "0.0.1", "dec_url1", "dec_ref1", [])
 
-    { temp_file, version } = HexWeb.RegistryBuilder.build_ets()
-    HexWeb.Registry.create(version, File.read!(temp_file))
+    Release.create(decimal, "0.0.1", "dec_url1", "dec_ref1", [])
+    Release.create(decimal, "0.0.2", "dec_url2", "dec_ref2", [{ "ex_doc", "0.0.0" }])
+    Release.create(postgrex, "0.0.2", "pg_url1", "pg_ref1", [{ "decimal", "~> 0.0.1" }, { "ex_doc", "0.1.0" }])
+
+    RegistryBuilder.rebuild
+    RegistryBuilder.rebuild
+    RegistryBuilder.rebuild
+    RegistryBuilder.wait_for_build
 
     tid = open_table()
-
-    try do
-      assert length(:ets.match_object(tid, :_)) == 3
-    after
-      close_table(tid)
-    end
+    close_table(tid)
   end
 end

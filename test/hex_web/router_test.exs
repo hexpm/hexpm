@@ -223,9 +223,10 @@ defmodule HexWeb.RouterTest do
   end
 
   test "create release updates registry" do
+    path = "tmp/registry.ets"
     { :ok, _ } = RegistryBuilder.start_link
     RegistryBuilder.rebuild
-    path = RegistryBuilder.wait_for_build
+    RegistryBuilder.wait_for_build
 
     File.touch!(path, {{2000,1,1,},{1,1,1}})
     File.Stat[mtime: mtime] = File.stat!(path)
@@ -237,7 +238,7 @@ defmodule HexWeb.RouterTest do
     conn = Router.call(conn, [])
     assert conn.status == 201
 
-    path = RegistryBuilder.wait_for_build
+    RegistryBuilder.wait_for_build
     refute File.Stat[mtime: {{2000,1,1,},{1,1,1}}] = File.stat!(path)
   after
     RegistryBuilder.stop
@@ -248,12 +249,33 @@ defmodule HexWeb.RouterTest do
     RegistryBuilder.rebuild
     RegistryBuilder.wait_for_build
 
-    conn = conn("GET", "/api/registry")
+    conn = conn("GET", "/registry.ets")
     conn = Router.call(conn, [])
 
-    assert conn.status == 200
+    assert conn.status in 200..399
   after
     RegistryBuilder.stop
+  end
+
+  @tag :integration
+  test "integration fetch registry" do
+    if HexWeb.Config.s3_bucket do
+      HexWeb.Config.store(HexWeb.Store.S3)
+    end
+
+    { :ok, _ } = RegistryBuilder.start_link
+    RegistryBuilder.rebuild
+    RegistryBuilder.wait_for_build
+
+    port = HexWeb.Config.port
+    url = String.to_char_list!("http://localhost:#{port}/registry.ets")
+    :inets.start
+
+    assert { :ok, response } = :httpc.request(:head, { url, [] }, [], [])
+    assert { { _version, 200, _reason }, _headers, _body } = response
+  after
+    RegistryBuilder.stop
+    HexWeb.Config.store(HexWeb.Store.Local)
   end
 
   test "get user" do

@@ -24,13 +24,27 @@ defmodule HexWeb.Config do
       url("http://localhost:#{opts[:port]}")
     end
 
+    port      opts[:port]
     url       System.get_env("HEX_URL") || "http://localhost:#{opts[:port]}"
     app_host  System.get_env("APP_HOST")
     use_ssl   match?("https://" <> _, url())
+    store     (if System.get_env("S3_BUCKET"), do: HexWeb.Store.S3, else: HexWeb.Store.Local)
+
+    s3_bucket     System.get_env("S3_BUCKET")
+    s3_access_key System.get_env("S3_ACCESS_KEY")
+    s3_secret_key System.get_env("S3_SECRET_KEY")
+    cdn_url       System.get_env("CDN_URL")
   end
 
   var :url
+  var :port
   var :app_host
   var :use_ssl
   var :password_work_factor
+
+  var :store
+  var :s3_bucket
+  var :s3_access_key
+  var :s3_secret_key
+  var :cdn_url
 end

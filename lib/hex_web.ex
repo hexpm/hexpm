@@ -23,6 +23,10 @@ defmodule HexWeb do
     HexWeb.Supervisor.start_link
   end
 
+  def store do
+    HexWeb.Config.store
+  end
+
   defprotocol Render do
     @moduledoc """
     Render entities to something that can be showed publicly.

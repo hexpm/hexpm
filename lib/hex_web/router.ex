@@ -3,7 +3,6 @@ defmodule HexWeb.Router do
   import Plug.Connection
   import HexWeb.Router.Util
   alias HexWeb.Plugs
-  alias HexWeb.RegistryBuilder
   alias HexWeb.Config
 
   plug :fetch
@@ -11,15 +10,10 @@ defmodule HexWeb.Router do
   plug Plugs.Forwarded
   plug Plugs.Redirect, ssl: &Config.use_ssl/0, redirect: [&Config.app_host/0], to: &Config.url/0
   plug Plug.MethodOverride
+  plug Plug.Head
   plug :match
   plug :dispatch
 
-
-  get "api/registry" do
-    # TODO: Remove dets here when most people use updated client (2014-02-25)
-    conn = Plugs.Accept.call(conn, vendor: "hex", allow: ["dets", "ets"])
-    send_file(conn, 200, RegistryBuilder.latest_file)
-  end
 
   get "installs" do
     body = [
@@ -32,6 +26,10 @@ defmodule HexWeb.Router do
     |> Plugs.Accept.call(vendor: "hex", allow: [{"application","json"}, "json", "elixir"])
     |> Plugs.Version.call([])
     |> send_render(200, body)
+  end
+
+  get "registry.ets" do
+    HexWeb.Config.store.registry(conn)
   end
 
   forward "/api", HexWeb.Router.API
