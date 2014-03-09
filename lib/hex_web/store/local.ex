@@ -4,11 +4,13 @@ defmodule HexWeb.Store.Local do
   import Plug.Connection
 
   @dir "tmp/store"
-  @registry_file "tmp/store/registry.ets"
+  @registry_file "tmp/store/registry.ets.gz"
 
   def upload_registry(file) do
     File.mkdir_p!(@dir)
-    File.cp!(file, @registry_file)
+
+    data = File.read!(file)
+    File.write!(@registry_file, :zlib.gzip(data))
   end
 
   def registry(conn) do

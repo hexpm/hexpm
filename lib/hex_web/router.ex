@@ -28,7 +28,7 @@ defmodule HexWeb.Router do
     |> send_render(200, body)
   end
 
-  get "registry.ets" do
+  get "registry.ets.gz" do
     HexWeb.Config.store.registry(conn)
   end
 

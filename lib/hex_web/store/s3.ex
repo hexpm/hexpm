@@ -24,12 +24,14 @@ defmodule HexWeb.Store.S3 do
 
     # TODO: cache
 
-    :mini_s3.put_object(bucket, 'registry.ets', File.read!(file),
+    body = File.read!(file) |> :zlib.gzip
+
+    :mini_s3.put_object(bucket, 'registry.ets.gz', body,
                         opts, headers, config)
   end
 
   def registry(conn) do
-    url = HexWeb.Config.cdn_url <> "/registry.ets"
+    url = HexWeb.Config.cdn_url <> "/registry.ets.gz"
 
     conn
     |> put_resp_header("location", url)

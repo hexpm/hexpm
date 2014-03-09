@@ -19,7 +19,7 @@ defmodule HexWeb do
 
     File.mkdir_p!("tmp")
     HexWeb.Config.init(opts)
-    Plug.Adapters.Cowboy.http(HexWeb.Router, [], opts)
+    Plug.Adapters.Cowboy.http(HexWeb.Router, [], opts ++ [compress: true])
     HexWeb.Supervisor.start_link
   end
 

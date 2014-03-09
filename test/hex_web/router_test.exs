@@ -249,7 +249,7 @@ defmodule HexWeb.RouterTest do
     RegistryBuilder.rebuild
     RegistryBuilder.wait_for_build
 
-    conn = conn("GET", "/registry.ets")
+    conn = conn("GET", "/registry.ets.gz")
     conn = Router.call(conn, [])
 
     assert conn.status in 200..399
