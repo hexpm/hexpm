@@ -269,13 +269,36 @@ defmodule HexWeb.RouterTest do
     RegistryBuilder.wait_for_build
 
     port = HexWeb.Config.port
-    url = String.to_char_list!("http://localhost:#{port}/registry.ets")
+    url = String.to_char_list!("http://localhost:#{port}/registry.ets.gz")
     :inets.start
 
     assert { :ok, response } = :httpc.request(:head, { url, [] }, [], [])
     assert { { _version, 200, _reason }, _headers, _body } = response
   after
     RegistryBuilder.stop
+    HexWeb.Config.store(HexWeb.Store.Local)
+  end
+
+  @tag :integration
+  test "integration fetch tarball" do
+    if HexWeb.Config.s3_bucket do
+      HexWeb.Config.store(HexWeb.Store.S3)
+    end
+
+    headers = [ { "content-type", "application/octet-stream" },
+                { "authorization", "Basic " <> :base64.encode("eric:eric") }]
+    body = create_tar([app: :postgrex, version: "0.0.1", git_url: "url", git_ref: "ref", requirements: [decimal: "~> 0.0.1"]], [])
+    conn = conn("POST", "/api/packages/postgrex/releases", body, headers: headers)
+    conn = Router.call(conn, [])
+    assert conn.status == 201
+
+    port = HexWeb.Config.port
+    url = String.to_char_list!("http://localhost:#{port}/tarballs/postgrex-0.0.1.tar")
+    :inets.start
+
+    assert { :ok, response } = :httpc.request(:head, { url, [] }, [], [])
+    assert { { _version, 200, _reason }, _headers, _body } = response
+  after
     HexWeb.Config.store(HexWeb.Store.Local)
   end
 

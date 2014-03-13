@@ -57,18 +57,15 @@ defmodule HexWeb.Router do
             git_ref = meta["git_ref"]
             reqs    = meta["requirements"]
 
-            conn =
-              if release = Release.get(package, version) do
-                Release.update(release, git_url, git_ref, reqs)
-                |> send_update_resp(conn)
-              else
-                Release.create(package, version, git_url, git_ref, reqs)
-                |> send_creation_resp(conn, api_url(["packages", name, "releases", version]))
-              end
-
-            HexWeb.Config.store.upload_tar("#{name}-#{version}.tar", body)
-            HexWeb.RegistryBuilder.rebuild
-            conn
+            if release = Release.get(package, version) do
+              result = Release.update(release, git_url, git_ref, reqs)
+              if match?({ :ok, _ }, result), do: after_release(name, version, body)
+              send_update_resp(result, conn)
+            else
+              result = Release.create(package, version, git_url, git_ref, reqs)
+              if match?({ :ok, _ }, result), do: after_release(name, version, body)
+              send_creation_resp(result, conn, api_url(["packages", name, "releases", version]))
+            end
 
           { :error, errors } ->
             send_validation_failed(conn, errors)
@@ -85,8 +82,12 @@ defmodule HexWeb.Router do
     send_resp(conn, 404, "")
   end
 
+  defp after_release(name, version, body) do
+    HexWeb.Config.store.put_tar("#{name}-#{version}.tar", body)
+    HexWeb.RegistryBuilder.rebuild
+  end
+
   defp fetch(conn, _opts) do
-    # Should this be in Plug.MethodOverride ?
     fetch_params(conn)
   end
 end
