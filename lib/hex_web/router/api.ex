@@ -68,14 +68,18 @@ defmodule HexWeb.Router.API do
   end
 
   delete "packages/:name/releases/:version" do
-    # TODO: Remove from store
-
     if (package = Package.get(name)) && (release = Release.get(package, version)) do
       user_id = package.owner_id
 
       with_authorized_as(id: user_id) do
-        Release.delete(release)
-        |> send_delete_resp(conn)
+        result = Release.delete(release)
+
+        if result == :ok do
+          HexWeb.Config.store.delete_tar("#{name}-#{version}.tar")
+          HexWeb.RegistryBuilder.rebuild
+        end
+
+        send_delete_resp(result, conn)
       end
     else
       send_resp(conn, 404, "")

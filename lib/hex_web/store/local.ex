@@ -7,7 +7,7 @@ defmodule HexWeb.Store.Local do
 
   # only used during development (not safe)
 
-  def upload_registry(data) do
+  def put_registry(data) do
     File.mkdir_p!(@dir)
     File.write!(Path.join(@dir, "registry.ets.gz"), :zlib.gzip(data))
   end
@@ -16,9 +16,13 @@ defmodule HexWeb.Store.Local do
     send_file(conn, 200, Path.join(@dir, "registry.ets.gz"))
   end
 
-  def upload_tar(name, data) do
+  def put_tar(name, data) do
     File.mkdir_p!(@dir)
     File.write!(Path.join(@dir, name), data)
+  end
+
+  def delete_tar(name) do
+    File.rm!(Path.join(@dir, name))
   end
 
   def tar(conn, name) do

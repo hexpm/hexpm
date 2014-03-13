@@ -55,12 +55,6 @@ defmodule HexWeb.Release do
     end
   end
 
-  # NOTE: There is a race condition here, we use the highest index in the
-  #       releases table to ensure that registry rebuilding can not race ahead
-  #       of each other. Deleting releases of course breaks the assumption that
-  #       the highest index represents the latest action on the table.
-  #       Adding an :active field and setting it to false instead of deleting
-  #       may be a solution.
   def delete(release) do
     if editable?(release) do
       HexWeb.Repo.transaction(fn ->

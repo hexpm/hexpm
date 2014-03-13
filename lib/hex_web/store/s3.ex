@@ -15,7 +15,7 @@ defmodule HexWeb.Store.S3 do
 
   import Plug.Connection
 
-  def upload_registry(data) do
+  def put_registry(data) do
     upload('registry.ets.gz', :zlib.gzip(data))
   end
 
@@ -23,8 +23,17 @@ defmodule HexWeb.Store.S3 do
     redirect(conn, "registry.ets.gz")
   end
 
-  def upload_tar(name, data) do
+  def put_tar(name, data) do
     upload(Path.join("tarballs", name), data)
+  end
+
+  def delete_tar(name) do
+    bucket     = HexWeb.Config.s3_bucket     |> String.to_char_list!
+    access_key = HexWeb.Config.s3_access_key |> String.to_char_list!
+    secret_key = HexWeb.Config.s3_secret_key |> String.to_char_list!
+    config     = s3_config(access_key_id: access_key, secret_access_key: secret_key)
+
+    :mini_s3.delete_object(bucket, name, config)
   end
 
   def tar(conn, name) do
@@ -45,9 +54,9 @@ defmodule HexWeb.Store.S3 do
     bucket     = HexWeb.Config.s3_bucket     |> String.to_char_list!
     access_key = HexWeb.Config.s3_access_key |> String.to_char_list!
     secret_key = HexWeb.Config.s3_secret_key |> String.to_char_list!
-    config = s3_config(access_key_id: access_key, secret_access_key: secret_key)
-    opts = [acl: :public_read]
-    headers = []
+    config     = s3_config(access_key_id: access_key, secret_access_key: secret_key)
+    opts       = [acl: :public_read]
+    headers    = []
 
     # TODO: cache
 
