@@ -12,16 +12,16 @@ defmodule HexWeb.Parsers.Json do
     { :next, conn }
   end
 
-  defp read_body(Conn[adapter: { adapter, state }] = conn, limit) do
-    case HexWeb.Util.read_body({ :ok, "", state }, "", limit, adapter) do
-      { :too_large, state } ->
-        { :too_large, conn.adapter({ adapter, state }) }
-      { :ok, "", state } ->
-        { :ok, [], conn.adapter({ adapter, state }) }
-      { :ok, body, state } ->
+  defp read_body(conn, limit) do
+    case HexWeb.Util.read_body(conn, limit) do
+      { :too_large, conn } ->
+        { :too_large, conn }
+      { :ok, "", conn } ->
+        { :ok, [], conn }
+      { :ok, body, conn } ->
         case JSON.decode(body) do
           { :ok, params } ->
-            { :ok, params, conn.adapter({ adapter, state }) }
+            { :ok, params, conn }
           _ ->
             raise HexWeb.Util.BadRequest, message: "malformed JSON"
         end

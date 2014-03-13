@@ -21,7 +21,7 @@ defmodule HexWeb.Router.Util do
           body = JSON.encode!(body)
           content_type = "application/json; charset=utf-8"
         "elixir" ->
-          body = safe_serialize_elixir(body)
+          body = HexWeb.Util.safe_serialize_elixir(body)
           content_type = "application/vnd.hex+elixir; charset=utf-8"
         _ ->
           raise Plug.Parsers.UnsupportedMediaTypeError
@@ -37,24 +37,6 @@ defmodule HexWeb.Router.Util do
     body = HexWeb.Render.render(entity)
     send_render(conn, status, body)
   end
-
-  @doc """
-  Encode an elixir term that can be safely deserialized on another machine.
-  """
-  @spec safe_serialize_elixir(term) :: String.t
-  def safe_serialize_elixir(term) do
-    binarify(term)
-    |> inspect(limit: :infinity, records: false, binaries: :as_strings)
-  end
-
-  defp binarify(binary) when is_binary(binary),
-    do: binary
-  defp binarify(atom) when is_atom(atom),
-    do: atom_to_binary(atom)
-  defp binarify(list) when is_list(list),
-    do: lc(elem inlist list, do: binarify(elem))
-  defp binarify({ left, right }),
-    do: { binarify(left), binarify(right) }
 
   def parse_integer(string, default) when is_binary(string) do
     case Integer.parse(string) do
@@ -196,7 +178,7 @@ defmodule HexWeb.Router.Util do
     send_validation_failed(conn, errors)
   end
 
-  defp send_validation_failed(conn, errors) do
+  def send_validation_failed(conn, errors) do
     body = [message: "Validation failed", errors: errors]
     send_render(conn, 422, body)
   end

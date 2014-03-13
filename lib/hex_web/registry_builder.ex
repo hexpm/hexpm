@@ -126,7 +126,7 @@ defmodule HexWeb.RegistryBuilder do
           :ok = :ets.tab2file(tid, String.to_char_list!(file))
           :ets.delete(tid)
 
-          HexWeb.Config.store.upload_registry(file)
+          HexWeb.Config.store.upload_registry(File.read!(file))
           HexWeb.Registry.set_done(handle)
         end
       end)

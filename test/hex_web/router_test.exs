@@ -138,18 +138,18 @@ defmodule HexWeb.RouterTest do
   end
 
   test "create releases" do
-    headers = [ { "content-type", "application/json" },
+    headers = [ { "content-type", "application/octet-stream" },
                 { "authorization", "Basic " <> :base64.encode("eric:eric") }]
-    body = [git_url: "url", git_ref: "ref", version: "0.0.1", requirements: []]
-    conn = conn("POST", "/api/packages/postgrex/releases", JSON.encode!(body), headers: headers)
+    body = create_tar([app: :postgrex, version: "0.0.1", git_url: "url", git_ref: "ref", requirements: []], [])
+    conn = conn("POST", "/api/packages/postgrex/releases", body, headers: headers)
     conn = Router.call(conn, [])
 
     assert conn.status == 201
     body = JSON.decode!(conn.resp_body)
     assert body["url"] == "http://hex.pm/api/packages/postgrex/releases/0.0.1"
 
-    body = [git_url: "url", git_ref: "ref", version: "0.0.2", requirements: []]
-    conn = conn("POST", "/api/packages/postgrex/releases", JSON.encode!(body), headers: headers)
+    body = create_tar([app: :postgrex, version: "0.0.2", git_url: "url", git_ref: "ref", requirements: []], [])
+    conn = conn("POST", "/api/packages/postgrex/releases", body, headers: headers)
     conn = Router.call(conn, [])
 
     assert conn.status == 201
@@ -162,15 +162,15 @@ defmodule HexWeb.RouterTest do
   end
 
   test "update release" do
-    headers = [ { "content-type", "application/json" },
+    headers = [ { "content-type", "application/octet-stream" },
                 { "authorization", "Basic " <> :base64.encode("eric:eric") }]
-    body = [git_url: "url", git_ref: "ref", version: "0.0.1", requirements: []]
-    conn = conn("POST", "/api/packages/postgrex/releases", JSON.encode!(body), headers: headers)
+    body = create_tar([app: :postgrex, version: "0.0.1", git_url: "url", git_ref: "ref", requirements: []], [])
+    conn = conn("POST", "/api/packages/postgrex/releases", body, headers: headers)
     conn = Router.call(conn, [])
     assert conn.status == 201
 
-    body = [git_url: "new_url", git_ref: "new_ref", version: "0.0.1", requirements: []]
-    conn = conn("POST", "/api/packages/postgrex/releases", JSON.encode!(body), headers: headers)
+    body = create_tar([app: :postgrex, version: "0.0.1", git_url: "new_url", git_ref: "new_ref", requirements: []], [])
+    conn = conn("POST", "/api/packages/postgrex/releases", body, headers: headers)
     conn = Router.call(conn, [])
     assert conn.status == 200
 
@@ -181,14 +181,15 @@ defmodule HexWeb.RouterTest do
   end
 
   test "delete release" do
-    headers = [ { "content-type", "application/json" },
+    headers = [ { "content-type", "application/octet-stream" },
                 { "authorization", "Basic " <> :base64.encode("eric:eric") }]
-    body = [git_url: "url", git_ref: "ref", version: "0.0.1", requirements: []]
-    conn = conn("POST", "/api/packages/postgrex/releases", JSON.encode!(body), headers: headers)
+    body = create_tar([app: :postgrex, version: "0.0.1", git_url: "url", git_ref: "ref", requirements: []], [])
+    conn = conn("POST", "/api/packages/postgrex/releases", body, headers: headers)
     conn = Router.call(conn, [])
     assert conn.status == 201
 
-    conn = conn("DELETE", "/api/packages/postgrex/releases/0.0.1", "", headers: headers)
+    headers = [ { "authorization", "Basic " <> :base64.encode("eric:eric") }]
+    conn = conn("DELETE", "/api/packages/postgrex/releases/0.0.1", [], headers: headers)
     conn = Router.call(conn, [])
     assert conn.status == 204
 
@@ -197,10 +198,10 @@ defmodule HexWeb.RouterTest do
   end
 
   test "create release authorizes" do
-    headers = [ { "content-type", "application/json" },
+    headers = [ { "content-type", "application/octet-stream" },
                 { "authorization", "Basic " <> :base64.encode("other:other") }]
-    body = [git_url: "url", git_ref: "ref", version: "0.0.1", requirements: []]
-    conn = conn("POST", "/api/packages/postgrex/releases", JSON.encode!(body), headers: headers)
+    body = create_tar([app: :postgrex, version: "0.0.1", git_url: "url", git_ref: "ref", requirements: []], [])
+    conn = conn("POST", "/api/packages/postgrex/releases", body, headers: headers)
     conn = Router.call(conn, [])
 
     assert conn.status == 401
@@ -208,10 +209,10 @@ defmodule HexWeb.RouterTest do
   end
 
   test "create releases with requirements" do
-    headers = [ { "content-type", "application/json" },
+    headers = [ { "content-type", "application/octet-stream" },
                 { "authorization", "Basic " <> :base64.encode("eric:eric") }]
-    body = [git_url: "url", git_ref: "ref", version: "0.0.1", requirements: [decimal: "~> 0.0.1"]]
-    conn = conn("POST", "/api/packages/postgrex/releases", JSON.encode!(body), headers: headers)
+    body = create_tar([app: :postgrex, version: "0.0.1", git_url: "url", git_ref: "ref", requirements: [decimal: "~> 0.0.1"]], [])
+    conn = conn("POST", "/api/packages/postgrex/releases", body, headers: headers)
     conn = Router.call(conn, [])
 
     assert conn.status == 201
@@ -231,10 +232,10 @@ defmodule HexWeb.RouterTest do
     File.touch!(path, {{2000,1,1,},{1,1,1}})
     File.Stat[mtime: mtime] = File.stat!(path)
 
-    headers = [ { "content-type", "application/json" },
+    headers = [ { "content-type", "application/octet-stream" },
                 { "authorization", "Basic " <> :base64.encode("eric:eric") }]
-    body = [git_url: "url", git_ref: "ref", version: "0.0.1", requirements: [decimal: "~> 0.0.1"]]
-    conn = conn("POST", "/api/packages/postgrex/releases", JSON.encode!(body), headers: headers)
+    body = create_tar([app: :postgrex, version: "0.0.1", git_url: "url", git_ref: "ref", requirements: [decimal: "~> 0.0.1"]], [])
+    conn = conn("POST", "/api/packages/postgrex/releases", body, headers: headers)
     conn = Router.call(conn, [])
     assert conn.status == 201
 
@@ -302,7 +303,7 @@ defmodule HexWeb.RouterTest do
 
   test "elixir media request" do
     body = [username: "name", email: "email@mail.com", password: "pass"]
-           |> HexWeb.Router.Util.safe_serialize_elixir
+           |> HexWeb.Util.safe_serialize_elixir
     conn = conn("POST", "/api/users", body, headers: [{ "content-type", "application/vnd.hex+elixir" }])
     conn = Router.call(conn, [])
 
