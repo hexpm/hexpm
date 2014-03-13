@@ -12,7 +12,7 @@ defmodule HexWeb.RouterTest do
     { :ok, user } = User.create("eric", "eric@mail.com", "eric")
     { :ok, _ }    = Package.create("postgrex", user, [])
     { :ok, pkg }  = Package.create("decimal", user, [])
-    { :ok, _ }    = Release.create(pkg, "0.0.1", "url", "ref", [{ "postgrex", "0.0.1" }])
+    { :ok, _ }    = Release.create(pkg, "0.0.1", [{ "postgrex", "0.0.1" }])
     :ok
   end
 
@@ -175,9 +175,7 @@ defmodule HexWeb.RouterTest do
     assert conn.status == 200
 
     postgrex = Package.get("postgrex")
-    release = Release.get(postgrex, "0.0.1")
-    assert release.git_url == "new_url"
-    assert release.git_ref == "new_ref"
+    assert Release.get(postgrex, "0.0.1")
   end
 
   test "delete release" do
@@ -287,7 +285,7 @@ defmodule HexWeb.RouterTest do
 
     headers = [ { "content-type", "application/octet-stream" },
                 { "authorization", "Basic " <> :base64.encode("eric:eric") }]
-    body = create_tar([app: :postgrex, version: "0.0.1", git_url: "url", git_ref: "ref", requirements: [decimal: "~> 0.0.1"]], [])
+    body = create_tar([app: :postgrex, version: "0.0.1", requirements: [decimal: "~> 0.0.1"]], [])
     conn = conn("POST", "/api/packages/postgrex/releases", body, headers: headers)
     conn = Router.call(conn, [])
     assert conn.status == 201
@@ -349,8 +347,6 @@ defmodule HexWeb.RouterTest do
     release = List.first(body["releases"])
     assert release["url"] == "http://hex.pm/api/packages/decimal/releases/0.0.1"
     assert release["version"] == "0.0.1"
-    assert release["git_url"] == "url"
-    assert release["git_ref"] == "ref"
   end
 
   test "get release" do
@@ -361,8 +357,6 @@ defmodule HexWeb.RouterTest do
     body = JSON.decode!(conn.resp_body)
     assert body["url"] == "http://hex.pm/api/packages/decimal/releases/0.0.1"
     assert body["version"] == "0.0.1"
-    assert body["git_url"] == "url"
-    assert body["git_ref"] == "ref"
   end
 
   test "accepted formats" do

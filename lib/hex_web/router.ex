@@ -53,16 +53,14 @@ defmodule HexWeb.Router do
         case HexWeb.Tar.metadata(body) do
           { :ok, meta } ->
             version = meta["version"]
-            git_url = meta["git_url"]
-            git_ref = meta["git_ref"]
             reqs    = meta["requirements"]
 
             if release = Release.get(package, version) do
-              result = Release.update(release, git_url, git_ref, reqs)
+              result = Release.update(release, reqs)
               if match?({ :ok, _ }, result), do: after_release(name, version, body)
               send_update_resp(result, conn)
             else
-              result = Release.create(package, version, git_url, git_ref, reqs)
+              result = Release.create(package, version, reqs)
               if match?({ :ok, _ }, result), do: after_release(name, version, body)
               send_creation_resp(result, conn, api_url(["packages", name, "releases", version]))
             end

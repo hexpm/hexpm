@@ -6,8 +6,6 @@ defmodule HexWeb.Repo.Migrations.AddReleasesTable do
         id serial PRIMARY KEY,
         package_id integer REFERENCES packages,
         version text,
-        git_url text,
-        git_ref text,
         created timestamp DEFAULT now(),
         UNIQUE (package_id, version))",
 

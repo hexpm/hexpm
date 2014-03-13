@@ -110,6 +110,10 @@ defmodule HexWeb.Util do
   defp binarify({ left, right }),
     do: { binarify(left), binarify(right) }
 
+  def safe_deserialize_elixir("") do
+    nil
+  end
+
   def safe_deserialize_elixir(string) do
     case Code.string_to_quoted(string, existing_atoms_only: true) do
       { :ok, ast } ->

@@ -98,7 +98,7 @@ defmodule HexWeb.RegistryBuilder do
           packages     = packages()
 
           package_tuples =
-            Enum.reduce(releases, HashDict.new, fn { _, vsn, _, _, pkg_id }, dict ->
+            Enum.reduce(releases, HashDict.new, fn { _, vsn, pkg_id }, dict ->
               Dict.update(dict, packages[pkg_id], [vsn], &[vsn|&1])
             end)
 
@@ -108,14 +108,14 @@ defmodule HexWeb.RegistryBuilder do
             end)
 
           release_tuples =
-            Enum.map(releases, fn { id, version, git_url, git_ref, pkg_id } ->
+            Enum.map(releases, fn { id, version, pkg_id } ->
               package = packages[pkg_id]
               deps =
                 Enum.map(requirements[id] || [], fn { dep_id, req } ->
                   dep_name = packages[dep_id]
                   { dep_name, req }
                 end)
-              { { package, version }, deps, git_url, git_ref }
+              { { package, version }, deps }
             end)
 
           File.rm(file)
@@ -160,8 +160,7 @@ defmodule HexWeb.RegistryBuilder do
   end
 
   defp releases do
-    from(r in Release,
-         select: { r.id, r.version, r.git_url, r.git_ref, r.package_id })
+    from(r in Release, select: { r.id, r.version, r.package_id })
     |> HexWeb.Repo.all
   end
 
