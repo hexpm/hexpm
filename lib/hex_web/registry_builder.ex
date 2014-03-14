@@ -16,7 +16,7 @@ defmodule HexWeb.RegistryBuilder do
   @ets_table :hex_registry
   @version    1
 
-  defrecordp :state, [building: false, pending: false, waiters: []]
+  defrecordp :state, [building: false, pending: false, counter: 0, waiters: []]
 
   def start_link() do
     :gen_server.start_link({ :local, __MODULE__ }, __MODULE__, [], [])
@@ -26,12 +26,12 @@ defmodule HexWeb.RegistryBuilder do
     :gen_server.call(__MODULE__, :stop)
   end
 
-  def rebuild do
-    :gen_server.cast(__MODULE__, :rebuild)
+  def sync_rebuild do
+    :gen_server.call(__MODULE__, :rebuild)
   end
 
-  def wait_for_build do
-    :gen_server.call(__MODULE__, :wait_for_build)
+  def async_rebuild do
+    :gen_server.cast(__MODULE__, :rebuild)
   end
 
   def init(_) do
@@ -51,23 +51,25 @@ defmodule HexWeb.RegistryBuilder do
     { :stop, :normal, :ok, s }
   end
 
-  def handle_call(:wait_for_build, from, state(building: true, waiters: waiters) = s) do
-    { :noreply, state(s, waiters: [from|waiters]) }
+  def handle_call(:rebuild, from, state(building: false, waiters: waiters, counter: counter) = s) do
+    build()
+    { :noreply, state(s, building: true, waiters: [{ counter, from }|waiters]) }
   end
 
-  def handle_call(:wait_for_build, _from, state(building: false) = s) do
-    { :reply, :ok, s }
+  def handle_call(:rebuild, from, state(building: true, waiters: waiters, counter: counter) = s) do
+    { :noreply, state(s, pending: true, waiters: [{ counter+1, from }|waiters]) }
   end
 
-  def handle_info(:finished_building, state(pending: pending) = s) do
-    if pending, do: rebuild()
+  def handle_info(:finished_building, state(pending: pending, counter: counter) = s) do
+    if pending, do: async_rebuild()
     s = reply_to_waiters(s)
-    { :noreply, state(s, building: false, pending: false) }
+    { :noreply, state(s, building: false, pending: false, counter: counter + 1) }
   end
 
-  defp reply_to_waiters(state(waiters: waiters) = s) do
-    Enum.each(waiters, &:gen_server.reply(&1, :ok))
-    state(s, waiters: [])
+  defp reply_to_waiters(state(waiters: waiters, counter: counter) = s) do
+    { done, pending } = Enum.partition(waiters, fn { id, _ } -> id == counter end)
+    Enum.each(done, fn { _id, from } -> :gen_server.reply(from, :ok) end)
+    state(s, waiters: pending)
   end
 
   defp build do

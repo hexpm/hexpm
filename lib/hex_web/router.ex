@@ -53,7 +53,7 @@ defmodule HexWeb.Router do
         case HexWeb.Tar.metadata(body) do
           { :ok, meta } ->
             version = meta["version"]
-            reqs    = meta["requirements"]
+            reqs    = meta["requirements"] || []
 
             if release = Release.get(package, version) do
               result = Release.update(release, reqs)
@@ -82,7 +82,7 @@ defmodule HexWeb.Router do
 
   defp after_release(name, version, body) do
     HexWeb.Config.store.put_tar("#{name}-#{version}.tar", body)
-    HexWeb.RegistryBuilder.rebuild
+    HexWeb.RegistryBuilder.async_rebuild
   end
 
   defp fetch(conn, _opts) do

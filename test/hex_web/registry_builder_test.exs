@@ -22,8 +22,7 @@ defmodule HexWeb.RegistryBuilderTest do
   end
 
   defp build do
-    RegistryBuilder.rebuild
-    RegistryBuilder.wait_for_build
+    RegistryBuilder.sync_rebuild
   end
 
   defp open_table do
@@ -87,10 +86,9 @@ defmodule HexWeb.RegistryBuilderTest do
     Release.create(decimal, "0.0.2", [{ "ex_doc", "0.0.0" }])
     Release.create(postgrex, "0.0.2", [{ "decimal", "~> 0.0.1" }, { "ex_doc", "0.1.0" }])
 
-    RegistryBuilder.rebuild
-    RegistryBuilder.rebuild
-    RegistryBuilder.rebuild
-    RegistryBuilder.wait_for_build
+    RegistryBuilder.async_rebuild
+    RegistryBuilder.async_rebuild
+    RegistryBuilder.sync_rebuild
 
     tid = open_table()
     close_table(tid)

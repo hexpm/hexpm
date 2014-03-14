@@ -76,7 +76,7 @@ defmodule HexWeb.Router.API do
 
         if result == :ok do
           HexWeb.Config.store.delete_tar("#{name}-#{version}.tar")
-          HexWeb.RegistryBuilder.rebuild
+          HexWeb.RegistryBuilder.async_rebuild
         end
 
         send_delete_resp(result, conn)

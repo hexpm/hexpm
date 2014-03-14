@@ -224,8 +224,7 @@ defmodule HexWeb.RouterTest do
   test "create release updates registry" do
     path = "tmp/registry.ets"
     { :ok, _ } = RegistryBuilder.start_link
-    RegistryBuilder.rebuild
-    RegistryBuilder.wait_for_build
+    RegistryBuilder.sync_rebuild
 
     File.touch!(path, {{2000,1,1,},{1,1,1}})
     File.Stat[mtime: mtime] = File.stat!(path)
@@ -237,7 +236,6 @@ defmodule HexWeb.RouterTest do
     conn = Router.call(conn, [])
     assert conn.status == 201
 
-    RegistryBuilder.wait_for_build
     refute File.Stat[mtime: {{2000,1,1,},{1,1,1}}] = File.stat!(path)
   after
     RegistryBuilder.stop
@@ -245,8 +243,7 @@ defmodule HexWeb.RouterTest do
 
   test "fetch registry" do
     { :ok, _ } = RegistryBuilder.start_link
-    RegistryBuilder.rebuild
-    RegistryBuilder.wait_for_build
+    RegistryBuilder.sync_rebuild
 
     conn = conn("GET", "/registry.ets.gz")
     conn = Router.call(conn, [])
@@ -263,8 +260,7 @@ defmodule HexWeb.RouterTest do
     end
 
     { :ok, _ } = RegistryBuilder.start_link
-    RegistryBuilder.rebuild
-    RegistryBuilder.wait_for_build
+    RegistryBuilder.sync_rebuild
 
     port = HexWeb.Config.port
     url = String.to_char_list!("http://localhost:#{port}/registry.ets.gz")
