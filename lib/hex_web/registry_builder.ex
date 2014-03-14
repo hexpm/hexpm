@@ -90,7 +90,7 @@ defmodule HexWeb.RegistryBuilder do
   def build_ets(handle, file) do
     try do
       HexWeb.Repo.transaction(fn ->
-        Postgres.query(HexWeb.Repo, "LOCK registries NOWAIT")
+        Postgres.query(HexWeb.Repo, "LOCK registries NOWAIT", [])
 
         unless skip?(handle) do
           HexWeb.Registry.set_working(handle)
