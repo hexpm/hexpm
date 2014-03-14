@@ -24,8 +24,9 @@ defmodule HexWeb.Config do
       url("http://localhost:#{opts[:port]}")
     end
 
-    port      opts[:port]
+    tmp       Path.expand("tmp")
     url       System.get_env("HEX_URL") || "http://localhost:#{opts[:port]}"
+    port      opts[:port]
     app_host  System.get_env("APP_HOST")
     use_ssl   match?("https://" <> _, url())
     store     (if System.get_env("S3_BUCKET"), do: HexWeb.Store.S3, else: HexWeb.Store.Local)
@@ -36,6 +37,7 @@ defmodule HexWeb.Config do
     cdn_url       System.get_env("CDN_URL")
   end
 
+  var :tmp
   var :url
   var :port
   var :app_host

@@ -80,7 +80,7 @@ defmodule HexWeb.RegistryBuilder do
   end
 
   defp builder(pid) do
-    reg_file = Path.expand("tmp/registry.ets")
+    reg_file = Path.join(HexWeb.Config.tmp, "registry.ets")
     { :ok, handle } = HexWeb.Registry.create()
     build_ets(handle, reg_file)
 
