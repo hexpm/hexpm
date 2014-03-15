@@ -19,10 +19,10 @@ defmodule HexWeb.Router.Util do
       case conn.assigns[:format] do
         "json" ->
           body = JSON.encode!(body)
-          content_type = "application/json; charset=utf-8"
+          content_type = "application/json"
         "elixir" ->
           body = HexWeb.Util.safe_serialize_elixir(body)
-          content_type = "application/vnd.hex+elixir; charset=utf-8"
+          content_type = "application/vnd.hex+elixir"
         _ ->
           raise Plug.Parsers.UnsupportedMediaTypeError
       end
