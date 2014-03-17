@@ -1,8 +1,8 @@
-defmodule HexWeb.Router.API do
+defmodule HexWeb.API.Router do
   use Plug.Router
   import Plug.Connection
-  import HexWeb.Router.Util
-  import HexWeb.Util, only: [api_url: 1]
+  import HexWeb.API.Util
+  import HexWeb.Util, only: [api_url: 1, parse_integer: 2]
   alias HexWeb.Plugs
   alias HexWeb.User
   alias HexWeb.Package

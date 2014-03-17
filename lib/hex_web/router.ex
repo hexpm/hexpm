@@ -1,8 +1,9 @@
 defmodule HexWeb.Router do
   use Plug.Router
   import Plug.Connection
-  import HexWeb.Router.Util
+  import HexWeb.Plug
   import HexWeb.Util
+  import HexWeb.API.Util
   alias HexWeb.Plugs
   alias HexWeb.Config
   alias HexWeb.Package
@@ -74,7 +75,7 @@ defmodule HexWeb.Router do
     end
   end
 
-  forward "/api", HexWeb.Router.API
+  forward "/api", HexWeb.API.Router
 
   match _ do
     send_resp(conn, 404, "")

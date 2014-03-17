@@ -1,6 +1,6 @@
-defmodule HexWeb.Router.Util do
+defmodule HexWeb.API.Util do
   @doc """
-  Router related utility functions.
+  API related utility functions.
   """
 
   import Plug.Connection
@@ -38,36 +38,6 @@ defmodule HexWeb.Router.Util do
     send_render(conn, status, body)
   end
 
-  def parse_integer(string, default) when is_binary(string) do
-    case Integer.parse(string) do
-      { int, "" } -> int
-      _ -> default
-    end
-  end
-  def parse_integer(_, default), do: default
-
-  @doc """
-  Send a response with a status code.
-  """
-  @spec send_resp(Plug.Conn.t, non_neg_integer) :: Plug.Conn.t
-  def send_resp(conn, status) do
-    conn.status(status).state(:set) |> send_resp
-  end
-
-  @doc """
-  Forwards a connection matching given path to another router.
-  """
-  @spec forward(String.t, Macro.t, Plug.opts) :: Macro.t
-  defmacro forward(path, plug, opts \\ []) do
-    path = Path.join(path, "*glob")
-    quote do
-      match unquote(path) do
-        conn = var!(conn).path_info(var!(glob))
-        unquote(plug).call(conn, unquote(opts))
-      end
-    end
-  end
-
   @doc """
   Run the given block if a user authorized, otherwise send an
   unauthorized response.
@@ -76,11 +46,11 @@ defmodule HexWeb.Router.Util do
   @spec with_authorized(Macro.t, Keyword.t) :: Macro.t
   defmacro with_authorized(user \\ { :_, [], nil }, opts) do
     quote do
-      case HexWeb.Router.Util.authorize(var!(conn)) do
+      case HexWeb.API.Util.authorize(var!(conn)) do
         { :ok, unquote(user) } ->
           unquote(Keyword.fetch!(opts, :do))
         _ ->
-          HexWeb.Router.Util.send_unauthorized(var!(conn))
+          HexWeb.API.Util.send_unauthorized(var!(conn))
       end
     end
   end
@@ -95,11 +65,11 @@ defmodule HexWeb.Router.Util do
     as = Enum.map(as, fn { key, val } -> { key, { :^, [], [val] } } end)
 
     quote do
-      case HexWeb.Router.Util.authorize(var!(conn)) do
+      case HexWeb.API.Util.authorize(var!(conn)) do
         { :ok, HexWeb.User.Entity[unquote_splicing(as)] = unquote(user) } ->
           unquote(Keyword.fetch!(opts, :do))
         _ ->
-          HexWeb.Router.Util.send_unauthorized(var!(conn))
+          HexWeb.API.Util.send_unauthorized(var!(conn))
       end
     end
   end
