@@ -2,7 +2,7 @@ defmodule HexWeb.Web.Templates do
   require EEx
 
   def render(page, title \\ nil) do
-    template_index(page, title)
+    template_main(page, title)
   end
 
   defp inner(page) do
@@ -10,7 +10,8 @@ defmodule HexWeb.Web.Templates do
   end
 
   @templates [
-    index: [:page, :title] ]
+    main: [:page, :title],
+    index: [] ]
 
   Enum.each(@templates, fn { name, args } ->
     file = Path.join([__DIR__, "templates", "#{name}.html.eex"])

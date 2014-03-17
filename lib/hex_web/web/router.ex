@@ -8,7 +8,7 @@ defmodule HexWeb.Web.Router do
   plug :dispatch
 
   get "/" do
-    body = Templates.render(:my_page)
+    body = Templates.render(:index)
     send_resp(conn, 200, body)
   end
 
