@@ -13,6 +13,14 @@ defmodule HexWeb.Util do
     end
   end
 
+  def parse_integer(string, default) when is_binary(string) do
+    case Integer.parse(string) do
+      { int, "" } -> int
+      _ -> default
+    end
+  end
+  def parse_integer(_, default), do: default
+
   @doc """
   Returns a url to an API resource on the server from a list of path components.
   """
