@@ -6,7 +6,7 @@ defmodule HexWeb.Web.Templates do
   end
 
   defp inner(page) do
-    "#{page}"
+    apply(__MODULE__, :"template_#{page}", [])
   end
 
   @templates [
@@ -15,6 +15,6 @@ defmodule HexWeb.Web.Templates do
 
   Enum.each(@templates, fn { name, args } ->
     file = Path.join([__DIR__, "templates", "#{name}.html.eex"])
-    EEx.function_from_file(:defp, :"template_#{name}", file, args)
+    EEx.function_from_file(:def, :"template_#{name}", file, args)
   end)
 end
