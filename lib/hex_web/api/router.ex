@@ -7,6 +7,7 @@ defmodule HexWeb.API.Router do
   alias HexWeb.User
   alias HexWeb.Package
   alias HexWeb.Release
+  alias HexWeb.Key
 
 
   plug Plug.Parsers, parsers: [HexWeb.Parsers.Json, HexWeb.Parsers.Elixir]
@@ -91,6 +92,42 @@ defmodule HexWeb.API.Router do
       send_render(conn, 200, release)
     else
       send_resp(conn, 404, "")
+    end
+  end
+
+  get "keys" do
+    with_authorized(user) do
+      keys = Key.all(user)
+      send_render(conn, 200, keys)
+    end
+  end
+
+  get "keys/:name" do
+    with_authorized(user) do
+      if key = Key.get(name, user) do
+        send_render(conn, 200, key)
+      else
+        send_resp(conn, 404, "")
+      end
+    end
+  end
+
+  post "keys" do
+    with_authorized(user) do
+      name = conn.params["name"]
+      Key.create(name, user)
+      |> send_creation_resp(conn, api_url(["keys", name]))
+    end
+  end
+
+  delete "keys/:name" do
+    with_authorized(user) do
+      if key = Key.get(name, user) do
+        Key.delete(key)
+        |> send_delete_resp(conn)
+      else
+        send_resp(conn, 404, "")
+      end
     end
   end
 

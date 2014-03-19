@@ -9,6 +9,7 @@ defmodule HexWeb.User do
     field :email, :string
     field :password, :string
     has_many :packages, HexWeb.Package, foreign_key: :owner_id
+    has_many :keys, HexWeb.Key
     field :created, :datetime
   end
 
@@ -23,7 +24,7 @@ defmodule HexWeb.User do
     also: unique([:email], on: HexWeb.Repo)
 
   validatep validate_password(user),
-    password: present() and type(:string) and has_format(~r"[^'!:@\"]+", message: "illegal characters: '!:@\"")
+    password: present() and type(:string)
 
   def create(username, email, password) do
     username = if is_binary(username), do: String.downcase(username), else: username

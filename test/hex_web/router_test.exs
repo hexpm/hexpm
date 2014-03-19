@@ -5,6 +5,7 @@ defmodule HexWeb.RouterTest do
   alias HexWeb.User
   alias HexWeb.Package
   alias HexWeb.Release
+  alias HexWeb.Key
   alias HexWeb.RegistryBuilder
 
   setup do
@@ -239,6 +240,80 @@ defmodule HexWeb.RouterTest do
     refute File.Stat[mtime: {{2000,1,1,},{1,1,1}}] = File.stat!(path)
   after
     RegistryBuilder.stop
+  end
+
+  test "create key" do
+    headers = [ { "content-type", "application/json" },
+                { "authorization", "Basic " <> :base64.encode("eric:eric") }]
+    body = [name: "macbook"]
+    conn = conn("POST", "/api/keys", JSON.encode!(body), headers: headers)
+    conn = Router.call(conn, [])
+    assert conn.status == 201
+
+    assert Key.get("macbook", User.get("eric"))
+  end
+
+  test "get key" do
+    Key.create("macbook", User.get("eric"))
+
+    headers = [ { "authorization", "Basic " <> :base64.encode("eric:eric") }]
+    conn = conn("GET", "/api/keys/macbook", [], headers: headers)
+    conn = Router.call(conn, [])
+    assert conn.status == 200
+
+    body = JSON.decode!(conn.resp_body)
+    assert body["name"] == "macbook"
+    assert body["secret"]
+    assert body["url"] == "http://hex.pm/api/keys/macbook"
+  end
+
+  test "all keys" do
+    user = User.get("eric")
+    Key.create("macbook", user)
+    Key.create("computer", user)
+
+    headers = [ { "authorization", "Basic " <> :base64.encode("eric:eric") }]
+    conn = conn("GET", "/api/keys", [], headers: headers)
+    conn = Router.call(conn, [])
+    assert conn.status == 200
+
+    body = JSON.decode!(conn.resp_body)
+    assert length(body) == 2
+    first = hd(body)
+    assert first["name"] == "macbook"
+    assert first["secret"]
+    assert first["url"] == "http://hex.pm/api/keys/macbook"
+  end
+
+  test "delete key" do
+    user = User.get("eric")
+    Key.create("macbook", user)
+    Key.create("computer", user)
+
+    headers = [ { "authorization", "Basic " <> :base64.encode("eric:eric") }]
+    conn = conn("DELETE", "/api/keys/computer", [], headers: headers)
+    conn = Router.call(conn, [])
+    assert conn.status == 204
+
+    assert Key.get("macbook", user)
+    refute Key.get("computer", user)
+  end
+
+  test "key authorizes" do
+    user = User.get("eric")
+    Key.create("macbook", user)
+
+    headers = [ { "authorization", "Basic " <> :base64.encode("other:other") }]
+    conn = conn("GET", "/api/keys", [], headers: headers)
+    conn = Router.call(conn, [])
+    assert conn.status == 200
+
+    assert length(JSON.decode!(conn.resp_body)) == 0
+
+    headers = [ { "authorization", "Basic " <> :base64.encode("eric:WRONG") }]
+    conn = conn("GET", "/api/keys", [], headers: headers)
+    conn = Router.call(conn, [])
+    assert conn.status == 401
   end
 
   test "fetch registry" do
