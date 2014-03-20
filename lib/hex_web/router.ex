@@ -47,7 +47,7 @@ defmodule HexWeb.Router do
     if package = Package.get(name) do
       user_id = package.owner_id
 
-      with_authorized_as(id: user_id) do
+      with_authorized(_user, id: user_id) do
         { body, conn } = read_body!(conn, 10_000_000)
         conn = Plugs.Accept.call(conn, @accept_opts)
 

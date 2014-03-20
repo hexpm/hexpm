@@ -65,7 +65,7 @@ defmodule HexWeb.User do
   end
 
   def get(username) do
-    from(u in HexWeb.User, where: downcase(u.username) == downcase(^username))
+    from(u in HexWeb.User, where: downcase(u.username) == downcase(^username), limit: 1)
     |> HexWeb.Repo.all
     |> List.first
   end

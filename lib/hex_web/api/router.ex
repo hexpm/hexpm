@@ -33,7 +33,7 @@ defmodule HexWeb.API.Router do
 
   patch "users/:name" do
     name = String.downcase(name)
-    with_authorized_as(user, username: name) do
+    with_authorized_basic(user, username: name) do
       User.update(user, conn.params["email"], conn.params["password"])
       |> send_update_resp(conn)
     end
@@ -56,7 +56,7 @@ defmodule HexWeb.API.Router do
   put "packages/:name" do
     if package = Package.get(name) do
       user_id = package.owner_id
-      with_authorized_as(id: user_id) do
+      with_authorized(_user, id: user_id) do
         Package.update(package, conn.params["meta"])
         |> send_update_resp(conn)
       end
@@ -72,7 +72,7 @@ defmodule HexWeb.API.Router do
     if (package = Package.get(name)) && (release = Release.get(package, version)) do
       user_id = package.owner_id
 
-      with_authorized_as(id: user_id) do
+      with_authorized(_user, id: user_id) do
         result = Release.delete(release)
 
         if result == :ok do
@@ -96,14 +96,14 @@ defmodule HexWeb.API.Router do
   end
 
   get "keys" do
-    with_authorized(user) do
+    with_authorized_basic(user) do
       keys = Key.all(user)
       send_render(conn, 200, keys)
     end
   end
 
   get "keys/:name" do
-    with_authorized(user) do
+    with_authorized_basic(user) do
       if key = Key.get(name, user) do
         send_render(conn, 200, key)
       else
@@ -113,7 +113,7 @@ defmodule HexWeb.API.Router do
   end
 
   post "keys" do
-    with_authorized(user) do
+    with_authorized_basic(user) do
       name = conn.params["name"]
       Key.create(name, user)
       |> send_creation_resp(conn, api_url(["keys", name]))
@@ -121,7 +121,7 @@ defmodule HexWeb.API.Router do
   end
 
   delete "keys/:name" do
-    with_authorized(user) do
+    with_authorized_basic(user) do
       if key = Key.get(name, user) do
         Key.delete(key)
         |> send_delete_resp(conn)

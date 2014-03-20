@@ -63,7 +63,8 @@ defmodule HexWeb.Package do
     package =
       from(p in HexWeb.Package,
            where: p.name == ^name,
-           preload: [:releases])
+           preload: [:releases],
+           limit: 1)
       |> HexWeb.Repo.all
       |> List.first
 

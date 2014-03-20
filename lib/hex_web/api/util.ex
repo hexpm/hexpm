@@ -5,6 +5,7 @@ defmodule HexWeb.API.Util do
 
   import Plug.Connection
   alias HexWeb.User
+  alias HexWeb.Key
 
   @doc """
   Renders an entity or dict body and sends it with a status code.
@@ -39,35 +40,32 @@ defmodule HexWeb.API.Util do
   end
 
   @doc """
-  Run the given block if a user authorized, otherwise send an
-  unauthorized response.
+  Run the given block if a user authorized with basic authentication,
+  otherwise send an unauthorized response.
   """
-  @spec with_authorized(Keyword.t) :: Macro.t
-  @spec with_authorized(Macro.t, Keyword.t) :: Macro.t
-  defmacro with_authorized(user \\ { :_, [], nil }, opts) do
-    quote do
-      case HexWeb.API.Util.authorize(var!(conn)) do
-        { :ok, unquote(user) } ->
-          unquote(Keyword.fetch!(opts, :do))
-        _ ->
-          HexWeb.API.Util.send_unauthorized(var!(conn))
-      end
-    end
+  @spec with_authorized_basic(Macro.t, Keyword.t) :: Macro.t
+  @spec with_authorized_basic(Macro.t, Keyword.t, Keyword.t) :: Macro.t
+  defmacro with_authorized_basic(user, as \\ [], opts) do
+    do_with_authorized(user, as, [only_basic: true], Keyword.fetch!(opts, :do))
   end
 
   @doc """
   Run the given block if a user authorized as specified user,
   otherwise send an unauthorized response.
   """
-  @spec with_authorized_as(Macro.t, Keyword.t) :: Macro.t
-  @spec with_authorized_as(Macro.t, Macro.t, Keyword.t) :: Macro.t
-  defmacro with_authorized_as(user \\ { :_, [], nil }, as, opts) do
+  @spec with_authorized(Macro.t, Keyword.t) :: Macro.t
+  @spec with_authorized(Macro.t, Macro.t, Keyword.t) :: Macro.t
+  defmacro with_authorized(user, as \\ [], opts) do
+    do_with_authorized(user, as, [], Keyword.fetch!(opts, :do))
+  end
+
+  defp do_with_authorized(user, as, opts, block) do
     as = Enum.map(as, fn { key, val } -> { key, { :^, [], [val] } } end)
 
     quote do
-      case HexWeb.API.Util.authorize(var!(conn)) do
+      case HexWeb.API.Util.authorize(var!(conn), unquote(opts)) do
         { :ok, HexWeb.User.Entity[unquote_splicing(as)] = unquote(user) } ->
-          unquote(Keyword.fetch!(opts, :do))
+          unquote(block)
         _ ->
           HexWeb.API.Util.send_unauthorized(var!(conn))
       end
@@ -77,23 +75,36 @@ defmodule HexWeb.API.Util do
   # Check if a user is authorized, return `{ :ok, user }` if so,
   # or `:error` if authorization failed
   @doc false
-  def authorize(conn) do
+  def authorize(conn, opts) do
+    only_basic = !!opts[:only_basic]
     case conn.req_headers["authorization"] do
       "Basic " <> credentials ->
-        case String.split(:base64.decode(credentials), ":", global: false) do
-          [username, password] ->
-            user = User.get(username)
-            if User.auth?(user, password) do
-              { :ok, user }
-            else
-              :error
-            end
-          _ ->
-            :error
-        end
-
+        basic_auth(credentials)
+      key when not only_basic ->
+        key_auth(key)
       _ ->
         :error
+    end
+  end
+
+  defp basic_auth(credentials) do
+    case String.split(:base64.decode(credentials), ":", global: false) do
+      [username, password] ->
+        user = User.get(username)
+        if User.auth?(user, password) do
+          { :ok, user }
+        else
+          :error
+        end
+      _ ->
+        :error
+    end
+  end
+
+  defp key_auth(key) do
+    case Key.auth(key) do
+      nil  -> :error
+      user -> { :ok, user }
     end
   end
 

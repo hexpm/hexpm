@@ -68,7 +68,32 @@ defmodule HexWeb.RouterTest do
     refute User.get("foo")
   end
 
-  test "create package" do
+  test "update user only basic auth" do
+    user = User.get("other")
+    { :ok, key } = Key.create("macbook", user)
+
+    headers = [ { "content-type", "application/json" },
+                { "authorization", key.secret }]
+    body = [email: "email@mail.com", password: "pass"]
+    conn = conn("PATCH", "/api/users/other", JSON.encode!(body), headers: headers)
+    conn = Router.call(conn, [])
+    assert conn.status == 401
+  end
+
+  test "create package with key auth" do
+    user = User.get("eric")
+    { :ok, key } = Key.create("macbook", user)
+
+    headers = [ { "content-type", "application/json" },
+                { "authorization", key.secret }]
+    body = [meta: []]
+    conn = conn("PUT", "/api/packages/ecto", JSON.encode!(body), headers: headers)
+    conn = Router.call(conn, [])
+
+    assert conn.status == 201
+  end
+
+  test "create package key auth" do
     headers = [ { "content-type", "application/json" },
                 { "authorization", "Basic " <> :base64.encode("eric:eric") }]
     body = [meta: []]
@@ -311,6 +336,16 @@ defmodule HexWeb.RouterTest do
     assert length(JSON.decode!(conn.resp_body)) == 0
 
     headers = [ { "authorization", "Basic " <> :base64.encode("eric:WRONG") }]
+    conn = conn("GET", "/api/keys", [], headers: headers)
+    conn = Router.call(conn, [])
+    assert conn.status == 401
+  end
+
+  test "key authorizes only basic auth" do
+    user = User.get("eric")
+    { :ok, key } = Key.create("macbook", user)
+
+    headers = [ { "authorization", key.secret }]
     conn = conn("GET", "/api/keys", [], headers: headers)
     conn = Router.call(conn, [])
     assert conn.status == 401

@@ -6,7 +6,7 @@ defmodule HexWeb.Repo.Migrations.AddKeysTable do
       id serial PRIMARY KEY,
       user_id integer REFERENCES users,
       name text,
-      secret text,
+      secret text UNIQUE,
       created timestamp DEFAULT now(),
       UNIQUE (user_id, name))"
   end

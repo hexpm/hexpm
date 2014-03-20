@@ -41,7 +41,7 @@ defmodule HexWeb.Key do
   end
 
   def get(name, user) do
-    from(k in HexWeb.Key, where: k.user_id == ^user.id and k.name == ^name)
+    from(k in HexWeb.Key, where: k.user_id == ^user.id and k.name == ^name, limit: 1)
     |> HexWeb.Repo.all
     |> List.first
   end
@@ -49,6 +49,15 @@ defmodule HexWeb.Key do
   def delete(key) do
     HexWeb.Repo.delete(key)
     :ok
+  end
+
+  def auth(secret) do
+    from(k in HexWeb.Key,
+         where: k.secret == ^secret,
+         join: u in k.user,
+         select: u)
+    |> HexWeb.Repo.all
+    |> List.first
   end
 
   defp unique_name(name, names, counter \\ 2) do

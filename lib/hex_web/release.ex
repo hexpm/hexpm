@@ -114,7 +114,7 @@ defmodule HexWeb.Release do
 
   def get(package, version) do
     release =
-      from(r in package.releases, where: r.version == ^version)
+      from(r in package.releases, where: r.version == ^version, limit: 1)
       |> HexWeb.Repo.all
       |> List.first
 
