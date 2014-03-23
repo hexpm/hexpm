@@ -18,8 +18,11 @@ defmodule HexWeb.Router do
   plug Plugs.Redirect, ssl: &Config.use_ssl/0, redirect: [&Config.app_host/0], to: &Config.url/0
   plug Plug.MethodOverride
   plug Plug.Head
+  plug Plug.Static, at: "/static", from: :hex_web
   plug :match
   plug :dispatch
+
+  # TODO: favicon
 
 
   get "installs" do
@@ -78,7 +81,7 @@ defmodule HexWeb.Router do
   forward "/api", HexWeb.API.Router
 
   match _ do
-    send_resp(conn, 404, "")
+    HexWeb.Web.Router.call(conn, [])
   end
 
   defp after_release(name, version, body) do

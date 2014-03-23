@@ -1,0 +1,47 @@
+@media (min-width: 1200px) {
+  .container {
+    width: 750px;
+  }
+}
+
+@media (min-width: 992px) {
+  .container {
+    width: 750px;
+  }
+}
+
+html {
+  position: relative;
+  min-height: 100%;
+}
+
+body {
+  margin-bottom: 60px;
+}
+
+code, kbd {
+  font-size: 85%;
+}
+
+#footer {
+  position: absolute;
+  bottom: 0;
+  width: 100%;
+  height: 60px;
+  background-color: #f5f5f5;
+}
+
+#footer li {
+  list-style: none;
+  float: left;
+  margin: 0 10px;
+}
+
+#footer ul {
+  margin: 20px 0;
+}
+
+#footer .container {
+  padding-right: 15px;
+  padding-left: 15px;
+}
