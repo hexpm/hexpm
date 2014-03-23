@@ -1,6 +1,10 @@
 defmodule HexWeb.Store do
   use Behaviour
 
+  defcallback list(String.t) :: [String.t]
+  defcallback get(String.t) :: binary
+  defcallback put(String.t, binary) :: term
+
   defcallback put_registry(binary) :: term
   defcallback registry(Plug.Conn.t) :: Plug.Conn.t
 

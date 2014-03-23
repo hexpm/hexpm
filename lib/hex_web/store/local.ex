@@ -5,6 +5,28 @@ defmodule HexWeb.Store.Local do
 
   # only used during development (not safe)
 
+  def list(prefix) do
+    paths = Path.join(dir, "**") |> Path.wildcard
+    Enum.flat_map(paths, fn path ->
+      relative = Path.relative_to(path, dir)
+      if String.starts_with?(relative, prefix) and File.regular?(path) do
+        [relative]
+      else
+        []
+      end
+    end)
+  end
+
+  def get(key) do
+    Path.join(dir, key) |> File.read!
+  end
+
+  def put(key, blob) do
+    path = Path.join(dir, key)
+    File.mkdir_p!(Path.dirname(path))
+    File.write!(path, blob)
+  end
+
   def put_registry(data) do
     File.mkdir_p!(dir)
     File.write!(Path.join(dir, "registry.ets.gz"), :zlib.gzip(data))
