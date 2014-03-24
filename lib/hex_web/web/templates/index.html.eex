@@ -2,18 +2,6 @@
   Hex is the package manager for <a href="http://elixir-lang.org">Elixir</a>.
 </p>
 
-<p>
-  <form role="search">
-    <div class="form-group">
-      <label class="sr-only" for="inputSearchPackages">Search packages</label>
-      <div class="col-sm-5" style="padding-left: 0;">
-        <input type="search" class="form-control" id="inputSearchPackages" placeholder="Search packages">
-      </div>
-    </div>
-    <button type="submit" class="btn btn-primary">Go</button>
-  </form>
-</p>
-
 <h2 style="margin-top: 40px">Learn</h2>
 <p>
   Install with <kbd>$ mix local.install http://s3.hex.pm/installs/hex.ez && mix hex.update</kbd>.
