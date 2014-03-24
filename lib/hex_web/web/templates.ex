@@ -1,17 +1,19 @@
 defmodule HexWeb.Web.Templates do
   require EEx
 
-  def render(page, title \\ nil) do
-    template_main(page, title)
+  def render(page, config, title \\ nil) do
+    template_main(page, config, title)
   end
 
-  defp inner(page) do
-    apply(__MODULE__, :"template_#{page}", [])
+  defmacrop inner do
+    quote do
+      apply(__MODULE__, :"template_#{var!(page)}", [var!(config)])
+    end
   end
 
   @templates [
-    main: [:page, :title],
-    index: [] ]
+    main: [:page, :config, :title],
+    index: [:config] ]
 
   Enum.each(@templates, fn { name, args } ->
     file = Path.join([__DIR__, "templates", "#{name}.html.eex"])

@@ -27,19 +27,19 @@
     <h3>Statistics</h3>
     <p>
       <div class="row">
-        <div class="col-xs-3 text-right">1234</div>
+        <div class="col-xs-3 text-right"><%= config[:num_packages] %></div>
         <div class="col-xs-9">packages</div>
       </div>
       <div class="row">
-        <div class="col-xs-3 text-right">12345</div>
+        <div class="col-xs-3 text-right"><%= config[:num_releases] %></div>
         <div class="col-xs-9">releases</div>
       </div>
       <div class="row">
-        <div class="col-xs-3 text-right">42</div>
-        <div class="col-xs-9">downloads last week</div>
+        <div class="col-xs-3 text-right"><%= config[:total][:week] %></div>
+        <div class="col-xs-9">downloads last seven days</div>
       </div>
       <div class="row">
-        <div class="col-xs-3 text-right">42000</div>
+        <div class="col-xs-3 text-right"><%= config[:total][:all] %></div>
         <div class="col-xs-9">downloads all time</div>
       </div>
     </p>
@@ -47,18 +47,12 @@
   <div class="col-md-6">
     <h3>Most downloaded</h3>
     <p>
+      <%= lc { package, downloads } inlist config[:package_top] do %>
       <div class="row">
-        <div class="col-xs-3 text-right">7834</div>
-        <div class="col-xs-9"><a href="/packages/postgrex">postgrex</a></div>
+        <div class="col-xs-3 text-right"><%= downloads %></div>
+        <div class="col-xs-9"><a href="/packages/postgrex"><%= package %></a></div>
       </div>
-      <div class="row">
-        <div class="col-xs-3 text-right">5432</div>
-        <div class="col-xs-9"><a href="/packages/decimal">decimal</a></div>
-      </div>
-      <div class="row">
-        <div class="col-xs-3 text-right">956</div>
-        <div class="col-xs-9"><a href="/packages/ecto">ecto</a></div>
-      </div>
+      <% end %>
     </p>
   </div>
 </div>

@@ -129,6 +129,11 @@ defmodule HexWeb.Release do
              .requirements(reqs)
     end
   end
+
+  def count do
+    HexWeb.Repo.all(from(r in HexWeb.Release, select: count(r.id)))
+    |> List.first
+  end
 end
 
 defimpl HexWeb.Render, for: HexWeb.Release.Entity do

@@ -21,14 +21,26 @@ defmodule HexWeb.Repo.Migrations.AddPackageDownloadsView do
                   WHEN v.view='all'
                     THEN true
                 END
-          GROUP BY r.package_id, v.view",
+          GROUP BY r.package_id, v.view
+          UNION
+          SELECT NULL, 'day', SUM(d.downloads)
+          FROM downloads AS d
+          WHERE d.day = current_date - interval '1 day'
+          UNION
+          SELECT NULL, 'week', SUM(d.downloads)
+          FROM downloads AS d
+          WHERE d.day BETWEEN current_date - interval '8 days' AND
+                              current_date - interval '1 day'
+          UNION
+          SELECT NULL, 'all', SUM(d.downloads)
+          FROM downloads AS d",
 
       "CREATE INDEX ON package_downloads (package_id)",
       "CREATE INDEX ON package_downloads (view, downloads)" ]
   end
 
   def down do
-    [ "DROP TABLE IF EXISTS package_downloads",
+    [ "DROP MATERIALIZED VIEW IF EXISTS package_downloads",
       "DROP TYPE IF EXISTS calendar_view" ]
   end
 end

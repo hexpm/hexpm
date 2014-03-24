@@ -34,13 +34,13 @@
     </nav>
 
     <div class="container">
-      <%= inner(page) %>
+      <%= inner %>
     </div>
 
     <div id="footer">
       <div class="container">
         <ul>
-          <li><small class="text-muted">Copyright 2014</small></li>
+          <li><small class="text-muted">Hex.pm</small></li>
           <li><small class="text-muted"><a href="https://github.com/ericmj/hex_web">Github</a></small></li>
           <li><small class="text-muted"><a href="https://github.com/ericmj/hex_web/issues">Issues</a></small></li>
           <li><small class="text-muted"><a href="https://github.com/ericmj/hex">Client</a></small></li>

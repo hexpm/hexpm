@@ -13,6 +13,6 @@ defmodule HexWeb.Repo.Migrations.AddReleaseDownloadsView do
   end
 
   def down do
-    "DROP TABLE IF EXISTS release_downloads"
+    "DROP MATERIALIZED VIEW IF EXISTS release_downloads"
   end
 end

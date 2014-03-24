@@ -84,6 +84,11 @@ defmodule HexWeb.Package do
     |> Util.searchinate(:name, search)
     |> HexWeb.Repo.all
   end
+
+  def count do
+    HexWeb.Repo.all(from(p in HexWeb.Package, select: count(p.id)))
+    |> List.first
+  end
 end
 
 defimpl HexWeb.Render, for: HexWeb.Package.Entity do
