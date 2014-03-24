@@ -1,6 +1,8 @@
 defmodule HexWeb.Web.Templates do
   require EEx
 
+  @asset_id :calendar.datetime_to_gregorian_seconds(:calendar.universal_time)
+
   def render(page, config, title \\ nil) do
     template_main(page, config, title)
   end
@@ -14,6 +16,10 @@ defmodule HexWeb.Web.Templates do
       apply(__MODULE__, :"template_#{var!(page)}", [var!(config)])
       |> HexWeb.Web.Templates.safe
     end
+  end
+
+  defp asset_id do
+    @asset_id
   end
 
   @templates [

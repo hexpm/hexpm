@@ -5,6 +5,8 @@ defmodule HexWeb.Mixfile do
     [ app: :hex_web,
       version: "0.0.1",
       elixir: "~> 0.12.4 or ~> 0.13.0-dev",
+      elixirc_paths: ["lib", "priv/static"],
+      elixirc_watch_exts: [:ex, :eex, :exs, :css],
       deps: deps ]
   end
 
