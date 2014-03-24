@@ -8,7 +8,7 @@
   "jazz": {:git, "git://github.com/meh/jazz.git", "c502fc3894249d677f0546bc02a9b866d5d32afa", []},
   "mime": {:git, "git://github.com/dynamo/mime.git", "db84370c53a67a7e58a4d0cfb026f4edc64a9367", []},
   "mini_s3": {:git, "git://github.com/ericmj/mini_s3.git", "5e3d7aa3c198381582b01f88517fdf3dfda8e549", [branch: "hex-fixes"]},
-  "plug": {:git, "git://github.com/elixir-lang/plug.git", "3bf2d8c5548dc1b17ca4f23150c2008fe7c9230d", []},
+  "plug": {:git, "git://github.com/elixir-lang/plug.git", "12a099f475808cc1d78bdc60dc7b3156dd8daca5", []},
   "poolboy": {:git, "git://github.com/devinus/poolboy.git", "64e1eaef0b1e88849c7e7ba9ff75f8cd4dba2a3b", []},
   "postgrex": {:git, "git://github.com/ericmj/postgrex.git", "720b45b5613ef364bca3f5228e285489bb9f01d4", []},
   "ranch": {:git, "git://github.com/extend/ranch.git", "5df1f222f94e08abdcab7084f5e13027143cc222", [ref: "0.9.0"]} ]
