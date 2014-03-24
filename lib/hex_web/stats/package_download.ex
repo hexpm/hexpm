@@ -30,6 +30,6 @@ defmodule HexWeb.Stats.PackageDownload do
   def total do
     from(pd in PackageDownload, where: pd.package_id == nil)
     |> HexWeb.Repo.all
-    |> Enum.map(&{ :"&1.view", &1.downloads })
+    |> Enum.map(&{ :"#{&1.view}", &1.downloads || 0 })
   end
 end

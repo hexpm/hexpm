@@ -1,6 +1,7 @@
 defmodule HexWeb.Web.Router do
   use Plug.Router
   import Plug.Connection
+  import HexWeb.Plug
   alias HexWeb.Web.Templates
   alias HexWeb.Stats.PackageDownload
   alias HexWeb.Release
@@ -16,17 +17,17 @@ defmodule HexWeb.Web.Router do
     package_top  = PackageDownload.top(:all, 10)
     total        = PackageDownload.total
 
-    config = HashDict.new(
-      num_packages: num_packages,
-      num_releases: num_releases,
-      package_top: package_top,
-      total: total)
+    conn = assign_pun(conn, [num_packages, num_releases, package_top, total])
 
-    body = Templates.render(:index, config)
-    send_resp(conn, 200, body)
+    render(conn, :index)
   end
 
   match _ do
     send_resp(conn, 404, "404 FAIL")
+  end
+
+  defp render(conn, page, title \\ nil) do
+    body = Templates.render(page, conn.assigns, title)
+    send_resp(conn, 200, body)
   end
 end
