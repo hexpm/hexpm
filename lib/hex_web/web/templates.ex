@@ -5,9 +5,14 @@ defmodule HexWeb.Web.Templates do
     template_main(page, config, title)
   end
 
+  def safe(value) do
+    { :safe, value }
+  end
+
   defmacrop inner do
     quote do
       apply(__MODULE__, :"template_#{var!(page)}", [var!(config)])
+      |> HexWeb.Web.Templates.safe
     end
   end
 
@@ -17,6 +22,7 @@ defmodule HexWeb.Web.Templates do
 
   Enum.each(@templates, fn { name, args } ->
     file = Path.join([__DIR__, "templates", "#{name}.html.eex"])
-    EEx.function_from_file(:def, :"template_#{name}", file, args)
+    EEx.function_from_file(:def, :"template_#{name}", file, args,
+                           engine: HexWeb.Web.HTMLEngine)
   end)
 end
