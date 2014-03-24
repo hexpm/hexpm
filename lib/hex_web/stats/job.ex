@@ -3,7 +3,7 @@ defmodule HexWeb.Stats.Job do
   require HexWeb.Repo
   alias HexWeb.Package
   alias HexWeb.Release
-  alias HexWeb.Download
+  alias HexWeb.Stats.Download
 
   def run(date \\ yesterday()) do
     start()
@@ -29,6 +29,9 @@ defmodule HexWeb.Stats.Job do
           |> HexWeb.Repo.create
         end
       end)
+
+      HexWeb.Stats.PackageDownload.refresh
+      HexWeb.Stats.ReleaseDownload.refresh
     end)
   end
 

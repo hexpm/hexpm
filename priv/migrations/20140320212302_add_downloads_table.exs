@@ -8,6 +8,7 @@ defmodule HexWeb.Repo.Migrations.AddStatsTable do
         downloads integer,
         day date)",
 
+      "CREATE INDEX ON downloads (release_id)",
       "CREATE INDEX ON downloads (day)" ]
   end
 

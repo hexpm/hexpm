@@ -1,4 +1,4 @@
-defmodule HexWeb.Download do
+defmodule HexWeb.Stats.Download do
   use Ecto.Model
 
   queryable "downloads" do

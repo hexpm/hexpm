@@ -40,6 +40,7 @@ defmodule HexWeb.Stats.JobTest do
     { :ok, _ } = Release.create(bar, "0.0.1", [])
     { :ok, _ } = Release.create(bar, "0.0.2", [])
     { :ok, _ } = Release.create(other, "0.0.1", [])
+
     :ok
   end
 
@@ -55,7 +56,7 @@ defmodule HexWeb.Stats.JobTest do
     rel2 = Release.get(Package.get("foo"), "0.0.2")
     rel3 = Release.get(Package.get("bar"), "0.0.2")
 
-    downloads = HexWeb.Repo.all(HexWeb.Download)
+    downloads = HexWeb.Repo.all(HexWeb.Stats.Download)
     assert length(downloads) == 3
 
     assert Enum.find(downloads, &(&1.release_id == rel1.id)).downloads == 5
