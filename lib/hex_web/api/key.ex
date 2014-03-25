@@ -1,4 +1,4 @@
-defmodule HexWeb.Key do
+defmodule HexWeb.API.Key do
   use Ecto.Model
   import Ecto.Query, only: [from: 2]
   import HexWeb.Validation
@@ -19,7 +19,7 @@ defmodule HexWeb.Key do
     case validate(key) do
       [] ->
         names =
-          from(k in HexWeb.Key, where: k.user_id == ^user.id, select: k.name)
+          from(k in HexWeb.API.Key, where: k.user_id == ^user.id, select: k.name)
           |> HexWeb.Repo.all
           |> HashSet.new
 
@@ -36,12 +36,12 @@ defmodule HexWeb.Key do
   end
 
   def all(user) do
-    from(k in HexWeb.Key, where: k.user_id == ^user.id)
+    from(k in HexWeb.API.Key, where: k.user_id == ^user.id)
     |> HexWeb.Repo.all
   end
 
   def get(name, user) do
-    from(k in HexWeb.Key, where: k.user_id == ^user.id and k.name == ^name, limit: 1)
+    from(k in HexWeb.API.Key, where: k.user_id == ^user.id and k.name == ^name, limit: 1)
     |> HexWeb.Repo.all
     |> List.first
   end
@@ -52,7 +52,7 @@ defmodule HexWeb.Key do
   end
 
   def auth(secret) do
-    from(k in HexWeb.Key,
+    from(k in HexWeb.API.Key,
          where: k.secret == ^secret,
          join: u in k.user,
          select: u)
@@ -70,7 +70,7 @@ defmodule HexWeb.Key do
   end
 end
 
-defimpl HexWeb.Render, for: HexWeb.Key.Entity do
+defimpl HexWeb.Render, for: HexWeb.API.Key.Entity do
   import HexWeb.Util
 
   def render(key) do

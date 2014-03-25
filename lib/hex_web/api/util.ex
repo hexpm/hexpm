@@ -5,7 +5,7 @@ defmodule HexWeb.API.Util do
 
   import Plug.Connection
   alias HexWeb.User
-  alias HexWeb.Key
+  alias HexWeb.API.Key
 
   @doc """
   Renders an entity or dict body and sends it with a status code.

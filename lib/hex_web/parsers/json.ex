@@ -13,7 +13,7 @@ defmodule HexWeb.Parsers.Json do
   end
 
   defp read_body(conn, limit) do
-    case HexWeb.Util.read_body(conn, limit) do
+    case HexWeb.Plug.read_body(conn, limit) do
       { :too_large, conn } ->
         { :too_large, conn }
       { :ok, "", conn } ->
@@ -23,7 +23,7 @@ defmodule HexWeb.Parsers.Json do
           { :ok, params } ->
             { :ok, params, conn }
           _ ->
-            raise HexWeb.Util.BadRequest, message: "malformed JSON"
+            raise HexWeb.Plug.BadRequest, message: "malformed JSON"
         end
     end
   end

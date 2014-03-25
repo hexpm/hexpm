@@ -20,7 +20,7 @@ defmodule HexWeb.Parsers.Elixir do
   end
 
   defp read_body(conn, limit) do
-    case HexWeb.Util.read_body(conn, limit) do
+    case HexWeb.Plug.read_body(conn, limit) do
       { :too_large, conn } ->
         { :too_large, conn }
       { :ok, "", conn } ->

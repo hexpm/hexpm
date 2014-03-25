@@ -1,8 +1,8 @@
-defmodule HexWeb.KeyTest do
+defmodule HexWeb.API.KeyTest do
   use HexWebTest.Case
 
   alias HexWeb.User
-  alias HexWeb.Key
+  alias HexWeb.API.Key
 
   setup do
     { :ok, _ } = User.create("eric", "eric@mail.com", "eric")
