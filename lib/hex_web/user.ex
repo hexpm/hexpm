@@ -2,6 +2,7 @@ defmodule HexWeb.User do
   use Ecto.Model
 
   import Ecto.Query, only: [from: 2]
+  alias HexWeb.Util
   import HexWeb.Validation
 
   queryable "users" do
@@ -10,7 +11,8 @@ defmodule HexWeb.User do
     field :password, :string
     has_many :packages, HexWeb.Package, foreign_key: :owner_id
     has_many :keys, HexWeb.API.Key
-    field :created, :datetime
+    field :created_at, :datetime
+    field :updated_at, :datetime
   end
 
   validatep validate_create(user),
@@ -29,7 +31,9 @@ defmodule HexWeb.User do
   def create(username, email, password) do
     username = if is_binary(username), do: String.downcase(username), else: username
     email = if is_binary(email), do: String.downcase(email), else: email
-    user = HexWeb.User.new(username: username, email: email, password: password)
+    now = Util.ecto_now
+    user = HexWeb.User.new(username: username, email: email, password: password,
+                           created_at: now, updated_at: now)
 
     case validate_create(user) do
       [] ->
@@ -57,6 +61,7 @@ defmodule HexWeb.User do
     case errors do
       [] ->
         if password, do: user = user.password(gen_password(password))
+        user = user.updated_at(Util.ecto_now)
         HexWeb.Repo.update(user)
         { :ok, user }
       errors ->
@@ -94,8 +99,9 @@ defimpl HexWeb.Render, for: HexWeb.User.Entity do
 
   def render(user) do
     user.__entity__(:keywords)
-    |> Dict.take([:username, :email, :created])
-    |> Dict.update!(:created, &to_iso8601/1)
+    |> Dict.take([:username, :email, :created_at, :updated_at])
+    |> Dict.update!(:created_at, &to_iso8601/1)
+    |> Dict.update!(:updated_at, &to_iso8601/1)
     |> Dict.put(:url, api_url(["users", user.username]))
   end
 end

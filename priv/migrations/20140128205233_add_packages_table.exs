@@ -7,7 +7,8 @@ defmodule HexWeb.Repo.Migrations.AddPackagesTables do
         name text,
         owner_id integer REFERENCES users,
         meta json,
-        created timestamp DEFAULT now())",
+        created_at timestamp,
+        updated_at timestamp)",
 
       "CREATE INDEX ON packages (owner_id)",
       "CREATE UNIQUE INDEX ON packages (lower(name) text_pattern_ops)" ]

@@ -11,7 +11,8 @@ defmodule HexWeb.Package do
     belongs_to :owner, HexWeb.User
     field :meta, :string
     has_many :releases, HexWeb.Release
-    field :created, :datetime
+    field :created_at, :datetime
+    field :updated_at, :datetime
   end
 
   validatep validate_create(package),
@@ -35,8 +36,10 @@ defmodule HexWeb.Package do
   @meta_fields ["contributors", "description", "links", "licenses"]
 
   def create(name, owner, meta) do
+    now = Util.ecto_now
     meta = Dict.take(meta, @meta_fields)
-    package = owner.packages.new(name: name, meta: meta)
+    package = owner.packages.new(name: name, meta: meta, created_at: now,
+                                 updated_at: now)
 
     case validate_create(package) do
       [] ->
@@ -52,6 +55,7 @@ defmodule HexWeb.Package do
 
     case validate(package.meta(meta)) do
       [] ->
+        package = package.updated_at(Util.ecto_now)
         HexWeb.Repo.update(package.meta(JSON.encode!(meta)))
         { :ok, package.meta(meta) }
       errors ->
@@ -98,14 +102,16 @@ defimpl HexWeb.Render, for: HexWeb.Package.Entity do
     releases =
       Enum.map(package.releases, fn release ->
         release.__entity__(:keywords)
-        |> Dict.take([:version, :git_url, :git_ref, :created])
-        |> Dict.update!(:created, &to_iso8601/1)
+        |> Dict.take([:version, :git_url, :git_ref, :created_at, :updated_at])
+        |> Dict.update!(:created_at, &to_iso8601/1)
+        |> Dict.update!(:updated_at, &to_iso8601/1)
         |> Dict.put(:url, api_url(["packages", package.name, "releases", release.version]))
       end)
 
     package.__entity__(:keywords)
-    |> Dict.take([:name, :meta, :created])
-    |> Dict.update!(:created, &to_iso8601/1)
+    |> Dict.take([:name, :meta, :created_at, :updated_at])
+    |> Dict.update!(:created_at, &to_iso8601/1)
+    |> Dict.update!(:updated_at, &to_iso8601/1)
     |> Dict.put(:url, api_url(["packages", package.name]))
     |> Dict.put(:releases, releases)
   end

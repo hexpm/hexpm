@@ -6,7 +6,8 @@ defmodule HexWeb.Repo.Migrations.AddReleasesTable do
         id serial PRIMARY KEY,
         package_id integer REFERENCES packages,
         version text,
-        created timestamp DEFAULT now(),
+        created_at timestamp,
+        updated_at timestamp,
         UNIQUE (package_id, version))",
 
       "CREATE INDEX ON releases (package_id)" ]

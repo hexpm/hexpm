@@ -3,12 +3,14 @@ defmodule HexWeb.Release do
 
   import Ecto.Query, only: [from: 2]
   import HexWeb.Validation
+  alias HexWeb.Util
 
   queryable "releases" do
     belongs_to :package, HexWeb.Package
     field :version, :string
     has_many :requirements, HexWeb.Requirement
-    field :created, :datetime
+    field :created_at, :datetime
+    field :updated_at, :datetime
   end
 
   validatep validate(release),
@@ -18,8 +20,10 @@ defmodule HexWeb.Release do
     also: validate(),
     also: unique([:version], scope: [:package_id], on: HexWeb.Repo)
 
-  def create(package, version, requirements) do
-    release = package.releases.new(version: version)
+  def create(package, version, requirements, created_at \\ nil) do
+    now = Util.ecto_now
+    release = package.releases.new(version: version, updated_at: now,
+                                   created_at: created_at || now)
 
     case validate_create(release) do
       [] ->
@@ -39,14 +43,14 @@ defmodule HexWeb.Release do
           HexWeb.Repo.transaction(fn ->
             HexWeb.Repo.delete_all(release.requirements)
             HexWeb.Repo.delete(release)
-            create(release.package.get, release.version, requirements)
+            create(release.package.get, release.version, requirements, release.created_at)
           end) |> elem(1)
         errors ->
           { :error, errors }
       end
 
     else
-      { :error, [created: "can only modify a release up to one hour after creation"] }
+      { :error, [created_at: "can only modify a release up to one hour after creation"] }
     end
   end
 
@@ -59,15 +63,15 @@ defmodule HexWeb.Release do
 
       :ok
     else
-      { :error, [created: "can only delete a release up to one hour after creation"] }
+      { :error, [created_at: "can only delete a release up to one hour after creation"] }
     end
   end
 
   defp editable?(release) do
-    created = Ecto.DateTime.to_erl(release.created) |> :calendar.datetime_to_gregorian_seconds
-    now     = :calendar.universal_time |> :calendar.datetime_to_gregorian_seconds
+    created_at = Ecto.DateTime.to_erl(release.created_at) |> :calendar.datetime_to_gregorian_seconds
+    now        = :calendar.universal_time |> :calendar.datetime_to_gregorian_seconds
 
-    now - created <= 3600
+    now - created_at <= 3600
   end
 
   defp update_requirements(release, requirements) do
@@ -144,8 +148,9 @@ defimpl HexWeb.Render, for: HexWeb.Release.Entity do
     reqs    = release.requirements.to_list
 
     release.__entity__(:keywords)
-    |> Dict.take([:version, :created])
-    |> Dict.update!(:created, &to_iso8601/1)
+    |> Dict.take([:version, :created_at, :updated_at])
+    |> Dict.update!(:created_at, &to_iso8601/1)
+    |> Dict.update!(:updated_at, &to_iso8601/1)
     |> Dict.put(:url, api_url(["packages", package.name, "releases", release.version]))
     |> Dict.put(:package_url, api_url(["packages", package.name]))
     |> Dict.put(:requirements, reqs)

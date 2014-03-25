@@ -2,22 +2,23 @@ defmodule HexWeb.Registry do
   use Ecto.Model
 
   import Ecto.Query, only: [from: 2]
+  alias HexWeb.Util
   require HexWeb.Repo
 
   queryable "registries" do
     field :state, :string
-    field :created, :datetime
-    field :started, :datetime
+    field :created_at, :datetime
+    field :started_at, :datetime
   end
 
   def create() do
-    registry = HexWeb.Registry.new(state: "waiting")
+    registry = HexWeb.Registry.new(state: "waiting", created_at: Util.ecto_now)
     { :ok, HexWeb.Repo.create(registry) }
   end
 
   def set_working(registry) do
     from(r in HexWeb.Registry, where: r.id == ^registry.id)
-    |> HexWeb.Repo.update_all(state: "working", started: now())
+    |> HexWeb.Repo.update_all(state: "working", started_at: ^Util.ecto_now)
   end
 
   def set_done(registry) do
@@ -28,9 +29,9 @@ defmodule HexWeb.Registry do
   def latest_started do
     from(r in HexWeb.Registry,
          where: r.state == "working" or r.state == "done",
-         order_by: [desc: r.started],
+         order_by: [desc: r.started_at],
          limit: 1,
-         select: r.started)
+         select: r.started_at)
     |> HexWeb.Repo.all
     |> List.first
   end

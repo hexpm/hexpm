@@ -31,11 +31,11 @@ defmodule HexWeb.API.Router do
             if release = Release.get(package, version) do
               result = Release.update(release, reqs)
               if match?({ :ok, _ }, result), do: after_release(name, version, body)
-              send_update_resp(result, conn)
+              send_update_resp(conn, result)
             else
               result = Release.create(package, version, reqs)
               if match?({ :ok, _ }, result), do: after_release(name, version, body)
-              send_creation_resp(result, conn, api_url(["packages", name, "releases", version]))
+              send_creation_resp(conn, result, api_url(["packages", name, "releases", version]))
             end
 
           { :error, errors } ->
@@ -65,8 +65,8 @@ defmodule HexWeb.API.Router do
 
     post "users" do
       username = conn.params["username"]
-      User.create(username, conn.params["email"], conn.params["password"])
-      |> send_creation_resp(conn, api_url(["users", username]))
+      result = User.create(username, conn.params["email"], conn.params["password"])
+      send_creation_resp(conn, result, api_url(["users", username]))
     end
 
     get "users/:name" do
@@ -80,8 +80,8 @@ defmodule HexWeb.API.Router do
     patch "users/:name" do
       name = String.downcase(name)
       with_authorized_basic(user, username: name) do
-        User.update(user, conn.params["email"], conn.params["password"])
-        |> send_update_resp(conn)
+        result = User.update(user, conn.params["email"], conn.params["password"])
+        send_update_resp(conn, result)
       end
     end
 
@@ -103,13 +103,13 @@ defmodule HexWeb.API.Router do
       if package = Package.get(name) do
         user_id = package.owner_id
         with_authorized(_user, id: user_id) do
-          Package.update(package, conn.params["meta"])
-          |> send_update_resp(conn)
+          result = Package.update(package, conn.params["meta"])
+          send_update_resp(conn, result)
         end
       else
         with_authorized(user) do
-          Package.create(name, user, conn.params["meta"])
-          |> send_creation_resp(conn, api_url(["packages", name]))
+          result = Package.create(name, user, conn.params["meta"])
+          send_creation_resp(conn, result, api_url(["packages", name]))
         end
       end
     end
@@ -126,7 +126,7 @@ defmodule HexWeb.API.Router do
             HexWeb.RegistryBuilder.async_rebuild
           end
 
-          send_delete_resp(result, conn)
+          send_delete_resp(conn, result)
         end
       else
         send_resp(conn, 404, "")
@@ -161,16 +161,16 @@ defmodule HexWeb.API.Router do
     post "keys" do
       with_authorized_basic(user) do
         name = conn.params["name"]
-        Key.create(name, user)
-        |> send_creation_resp(conn, api_url(["keys", name]))
+        result = Key.create(name, user)
+        send_creation_resp(conn, result, api_url(["keys", name]))
       end
     end
 
     delete "keys/:name" do
       with_authorized_basic(user) do
         if key = Key.get(name, user) do
-          Key.delete(key)
-          |> send_delete_resp(conn)
+          result = Key.delete(key)
+          send_delete_resp(conn, result)
         else
           send_resp(conn, 404, "")
         end

@@ -7,7 +7,8 @@ defmodule HexWeb.Repo.Migrations.AddUsersTable do
         username text,
         email text UNIQUE,
         password text,
-        created timestamp DEFAULT now())",
+        created_at timestamp,
+        updated_at timestamp)",
 
       "CREATE UNIQUE INDEX ON users (lower(username))" ]
   end

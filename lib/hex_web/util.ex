@@ -5,6 +5,10 @@ defmodule HexWeb.Util do
 
   import Ecto.Query, only: [from: 2]
 
+  def ecto_now do
+    Ecto.DateTime.from_erl(:calendar.universal_time)
+  end
+
   def parse_integer(string, default) when is_binary(string) do
     case Integer.parse(string) do
       { int, "" } -> int

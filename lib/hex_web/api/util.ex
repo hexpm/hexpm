@@ -122,14 +122,14 @@ defmodule HexWeb.API.Util do
   Send a creation response if entity creation was successful,
   otherwise send validation failure response.
   """
-  @spec send_creation_resp({ :ok, term } | { :error, term }, Plug.Conn.t, String.t) :: Plug.Conn.t
-  def send_creation_resp({ :ok, entity }, conn, location) do
+  @spec send_creation_resp(Plug.Conn.t, { :ok, term } | { :error, term }, String.t) :: Plug.Conn.t
+  def send_creation_resp(conn, { :ok, entity }, location) do
     conn
     |> put_resp_header("location", location)
     |> send_render(201, entity)
   end
 
-  def send_creation_resp({ :error, errors }, conn, _location) do
+  def send_creation_resp(conn, { :error, errors }, _location) do
     send_validation_failed(conn, errors)
   end
 
@@ -137,12 +137,12 @@ defmodule HexWeb.API.Util do
   Send an ok response if entity update was successful,
   otherwise send validation failure response.
   """
-  @spec send_update_resp({ :ok, term } | { :error, term }, Plug.Conn.t) :: Plug.Conn.t
-  def send_update_resp({ :ok, entity }, conn) do
+  @spec send_update_resp(Plug.Conn.t, { :ok, term } | { :error, term }) :: Plug.Conn.t
+  def send_update_resp(conn, { :ok, entity }) do
     send_render(conn, 200, entity)
   end
 
-  def send_update_resp({ :error, errors }, conn) do
+  def send_update_resp(conn, { :error, errors }) do
     send_validation_failed(conn, errors)
   end
 
@@ -150,12 +150,12 @@ defmodule HexWeb.API.Util do
   Send an ok response if entity delete was successful,
   otherwise send validation failure response.
   """
-  @spec send_delete_resp(:ok | { :error, term }, Plug.Conn.t) :: Plug.Conn.t
-  def send_delete_resp(:ok, conn) do
+  @spec send_delete_resp(Plug.Conn.t, :ok | { :error, term }) :: Plug.Conn.t
+  def send_delete_resp(conn, :ok) do
     send_resp(conn, 204, "")
   end
 
-  def send_delete_resp({ :error, errors }, conn) do
+  def send_delete_resp(conn, { :error, errors }) do
     send_validation_failed(conn, errors)
   end
 

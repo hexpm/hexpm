@@ -7,11 +7,11 @@ defmodule HexWeb.Repo.Migrations.AddRegistriesTable do
       "CREATE TABLE registries (
         id serial PRIMARY KEY,
         state building_state,
-        created timestamp DEFAULT now(),
-        started timestamp)",
+        created_at timestamp DEFAULT now(),
+        started_at timestamp)",
 
       "CREATE INDEX ON registries (state)",
-      "CREATE INDEX ON registries (started)" ]
+      "CREATE INDEX ON registries (started_at)" ]
   end
 
   def down do
