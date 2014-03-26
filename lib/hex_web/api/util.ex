@@ -7,7 +7,7 @@ defmodule HexWeb.API.Util do
   alias HexWeb.User
   alias HexWeb.API.Key
 
-  @max_age 3*60
+  @max_age 60
 
   defmacro when_stale(entities, opts) do
     quote do

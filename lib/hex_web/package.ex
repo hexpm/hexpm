@@ -30,6 +30,7 @@ defmodule HexWeb.Package do
         licenses:     type({ :array, :string }),
         links:        type({ :dict, :string, :string }),
         description:  type(:string))
+
     if errors == [], do: [], else: [{ field, errors }]
   end
 
@@ -87,10 +88,13 @@ defmodule HexWeb.Package do
     |> Util.paginate(page, count)
     |> Util.searchinate(:name, search)
     |> HexWeb.Repo.all
+    |> Enum.map(fn pkg -> pkg.update_meta(&JSON.decode!(&1)) end)
   end
 
-  def count do
-    HexWeb.Repo.all(from(p in HexWeb.Package, select: count(p.id)))
+  def count(search \\ nil) do
+    from(p in HexWeb.Package, select: count(p.id))
+    |> Util.searchinate(:name, search)
+    |> HexWeb.Repo.all
     |> List.first
   end
 end

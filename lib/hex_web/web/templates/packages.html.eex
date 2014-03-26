@@ -1,0 +1,43 @@
+<table class="table table-striped packages">
+  <tbody>
+    <%= lc package inlist @packages do %>
+      <tr>
+        <td style="width: 10em;"><a href="#"><span class="glyphicon glyphicon-folder-open" style="padding-right: 0.5em;"></span><%= package.name %></a></td>
+        <td><%= package.meta["description"] %></td>
+      </tr>
+    <% end %>
+  </tbody>
+</table>
+
+<%
+count = @pkg_count
+pages = div(count, 30) + 1
+page  = @page
+
+show_pages =
+  cond do
+    page < 3 ->
+      Enum.take(1..5, pages)
+    page > pages - 3 ->
+      Enum.to_list(pages-5..pages)
+    true ->
+      Enum.to_list(page-2..page+2)
+  end
+
+disable_prev = page == 1
+disable_next = page == pages
+%>
+
+<ul class="pagination" style="float: right;">
+  <li<%= if disable_prev do %> class="disabled"<% end %>>
+    <a href="/packages?search=<%= safe(@search) %>&page=<%= page-1 %>">&laquo;</a>
+  </li>
+  <%= lc counter inlist show_pages do %>
+    <li<%= if counter == page do %> class="active"<% end %>>
+      <a href="/packages?search=<%= safe(@search) %>&page=<%= counter %>"><%= counter %></a>
+    </li>
+  <% end %>
+  <li<%= if disable_next do %> class="disabled"<% end %>>
+    <a href="/packages?search=<%= safe(@search) %>&page=<%= page+1 %>">&raquo;</a>
+  </li>
+</ul>

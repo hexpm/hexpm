@@ -45,3 +45,13 @@ code, kbd {
   padding-right: 15px;
   padding-left: 15px;
 }
+
+.packages {
+  table-layout: fixed;
+}
+
+.packages td {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}

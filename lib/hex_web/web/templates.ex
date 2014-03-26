@@ -3,8 +3,8 @@ defmodule HexWeb.Web.Templates do
 
   @asset_id :calendar.datetime_to_gregorian_seconds(:calendar.universal_time)
 
-  def render(page, assigns, title) do
-    template_main(page, assigns, title)
+  def render(page, assigns) do
+    template_main(page, assigns)
   end
 
   def safe(value) do
@@ -22,8 +22,9 @@ defmodule HexWeb.Web.Templates do
   end
 
   @templates [
-    main: [:page, :assigns, :title],
-    index: [:assigns] ]
+    main: [:page, :assigns],
+    index: [:assigns],
+    packages: [:assigns] ]
 
   Enum.each(@templates, fn { name, args } ->
     file = Path.join([__DIR__, "templates", "#{name}.html.eex"])
