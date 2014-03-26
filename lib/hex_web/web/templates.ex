@@ -28,6 +28,6 @@ defmodule HexWeb.Web.Templates do
   Enum.each(@templates, fn { name, args } ->
     file = Path.join([__DIR__, "templates", "#{name}.html.eex"])
     EEx.function_from_file(:def, :"template_#{name}", file, args,
-                           engine: HexWeb.Web.HTMLEngine)
+                           engine: HexWeb.Web.HTML.Engine)
   end)
 end
