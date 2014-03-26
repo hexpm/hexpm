@@ -14,7 +14,6 @@ defmodule HexWeb.Web.Templates do
   defmacrop inner do
     quote do
       apply(__MODULE__, :"template_#{var!(page)}", [var!(assigns)])
-      |> HexWeb.Web.Templates.safe
     end
   end
 

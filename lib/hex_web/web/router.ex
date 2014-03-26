@@ -26,8 +26,8 @@ defmodule HexWeb.Web.Router do
     send_resp(conn, 404, "404 FAIL")
   end
 
-  defp render(conn, page, title \\ nil) do
-    body = Templates.render(page, conn.assigns, title)
+  defp render(conn, page) do
+    { :safe, body } = Templates.render(page, conn.assigns)
     send_resp(conn, 200, body)
   end
 end
