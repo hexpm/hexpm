@@ -7,6 +7,69 @@ defmodule HexWeb.API.Util do
   alias HexWeb.User
   alias HexWeb.API.Key
 
+  @max_age 3*60
+
+  defmacro when_stale(entities, opts) do
+    quote do
+      entities = unquote(entities)
+      etag     = HexWeb.Util.etag(entities)
+      modified = if is_record(entities), do: Ecto.DateTime.to_erl(entities.updated_at)
+
+      var!(conn) = put_resp_header(var!(conn), "etag", etag)
+
+      if modified do
+        var!(conn) = put_resp_header(var!(conn), "last-modified", :cowboy_clock.rfc1123(modified))
+      end
+
+      unless HexWeb.API.Util.fresh?(var!(conn), etag: etag, modified: modified) do
+        unquote(opts[:do])
+      else
+        send_resp(var!(conn), 304, "")
+      end
+    end
+  end
+
+  def fresh?(conn, opts) do
+    modified_since = conn.req_headers["if-modified-since"]
+    none_match     = conn.req_headers["if-none-match"]
+
+    if modified_since || none_match do
+      success = true
+
+      if modified_since do
+        success = not_modified?(modified_since, opts[:modified])
+      end
+      if success && none_match do
+        success = etag_matches?(none_match, opts[:etag])
+      end
+
+      success
+    end
+  end
+
+  defp not_modified?(_modified_since, nil), do: false
+  defp not_modified?(modified_since, last_modified) do
+    modified_since = :cowboy_http.rfc1123_date(modified_since)
+    modified_since = :calendar.datetime_to_gregorian_seconds(modified_since)
+    last_modified  = :calendar.datetime_to_gregorian_seconds(last_modified)
+    last_modified < modified_since
+  end
+
+  defp etag_matches?(_none_match, nil), do: false
+  defp etag_matches?(none_match, etag) do
+    Plug.Util.list(none_match)
+    |> Enum.any?(&(&1 in [etag, "*"]))
+  end
+
+  defp cache_entity(conn, entity) do
+    etag     = HexWeb.Util.etag(entity)
+    modified = Ecto.DateTime.to_erl(entity.updated_at)
+
+    conn
+    |> put_resp_header("etag", etag)
+    |> put_resp_header("last-modified", :cowboy_clock.rfc1123(modified))
+  end
+
   @doc """
   Renders an entity or dict body and sends it with a status code.
   """
@@ -122,14 +185,16 @@ defmodule HexWeb.API.Util do
   Send a creation response if entity creation was successful,
   otherwise send validation failure response.
   """
-  @spec send_creation_resp(Plug.Conn.t, { :ok, term } | { :error, term }, String.t) :: Plug.Conn.t
-  def send_creation_resp(conn, { :ok, entity }, location) do
+  @spec send_creation_resp(Plug.Conn.t, { :ok, term } | { :error, term }, :public | :private, String.t) :: Plug.Conn.t
+  def send_creation_resp(conn, { :ok, entity }, privacy, location) do
     conn
     |> put_resp_header("location", location)
+    |> cache_entity(entity)
+    |> cache(privacy)
     |> send_render(201, entity)
   end
 
-  def send_creation_resp(conn, { :error, errors }, _location) do
+  def send_creation_resp(conn, { :error, errors }, _privacy, _location) do
     send_validation_failed(conn, errors)
   end
 
@@ -137,12 +202,15 @@ defmodule HexWeb.API.Util do
   Send an ok response if entity update was successful,
   otherwise send validation failure response.
   """
-  @spec send_update_resp(Plug.Conn.t, { :ok, term } | { :error, term }) :: Plug.Conn.t
-  def send_update_resp(conn, { :ok, entity }) do
-    send_render(conn, 200, entity)
+  @spec send_update_resp(Plug.Conn.t, { :ok, term } | { :error, term }, :public | :private) :: Plug.Conn.t
+  def send_update_resp(conn, { :ok, entity }, privacy) do
+    conn
+    |> cache_entity(entity)
+    |> cache(privacy)
+    |> send_render(200, entity)
   end
 
-  def send_update_resp(conn, { :error, errors }) do
+  def send_update_resp(conn, { :error, errors }, _privacy) do
     send_validation_failed(conn, errors)
   end
 
@@ -150,17 +218,24 @@ defmodule HexWeb.API.Util do
   Send an ok response if entity delete was successful,
   otherwise send validation failure response.
   """
-  @spec send_delete_resp(Plug.Conn.t, :ok | { :error, term }) :: Plug.Conn.t
-  def send_delete_resp(conn, :ok) do
-    send_resp(conn, 204, "")
+  @spec send_delete_resp(Plug.Conn.t, :ok | { :error, term }, :public | :private) :: Plug.Conn.t
+  def send_delete_resp(conn, :ok, privacy) do
+    conn
+    |> cache(privacy)
+    |> send_resp(204, "")
   end
 
-  def send_delete_resp(conn, { :error, errors }) do
+  def send_delete_resp(conn, { :error, errors }, _privacy) do
     send_validation_failed(conn, errors)
   end
 
   def send_validation_failed(conn, errors) do
     body = [message: "Validation failed", errors: errors]
     send_render(conn, 422, body)
+  end
+
+  def cache(conn, privacy) do
+    HexWeb.Plug.cache(conn, ["accept", "accept-encoding"],
+                      [privacy] ++ ["max-age": @max_age])
   end
 end

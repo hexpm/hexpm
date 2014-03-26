@@ -9,6 +9,16 @@ defmodule HexWeb.Util do
     Ecto.DateTime.from_erl(:calendar.universal_time)
   end
 
+  def etag(entities) do
+    list = Enum.map(List.wrap(entities), fn entity ->
+      [ elem(entity, 1), entity.id, entity.updated_at ]
+    end)
+
+    binary = :erlang.term_to_binary(list)
+    :crypto.hash(:md5, binary)
+    |> hexify
+  end
+
   def parse_integer(string, default) when is_binary(string) do
     case Integer.parse(string) do
       { int, "" } -> int

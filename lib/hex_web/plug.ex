@@ -17,6 +17,23 @@ defmodule HexWeb.Plug do
     end)
   end
 
+  def cache(conn, vary, control) do
+    conn
+    |> put_resp_header("vary", parse_vary(vary))
+    |> put_resp_header("cache-control", parse_control(control))
+  end
+
+  defp parse_vary(vary) do
+    Enum.map_join(vary, ", ", &"#{&1}")
+  end
+
+  defp parse_control(control) do
+    Enum.map_join(control, ", ", fn
+      atom when is_atom(atom) -> "#{atom}"
+      { key, value }          -> "#{key}=#{value}"
+    end)
+  end
+
   @doc """
   Read the body from a Plug connection.
 
