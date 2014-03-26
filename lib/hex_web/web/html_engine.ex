@@ -1,5 +1,6 @@
 defmodule HexWeb.Web.HTMLEngine do
-  @behaviour EEx.Engine
+  use EEx.TransformerEngine
+  use EEx.AssignsEngine
 
   def handle_text(buffer, text) do
     quote do
@@ -8,6 +9,7 @@ defmodule HexWeb.Web.HTMLEngine do
   end
 
   def handle_expr(buffer, "=", expr) do
+    expr   = transform(expr)
     buffer = unsafe(buffer)
 
     quote location: :keep do

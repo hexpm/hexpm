@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <link href="//netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css" rel="stylesheet">
     <link href="/static/main.css?<%= asset_id %>" rel="stylesheet">
-    <title><%= if title, do: "#{title} | " %>hex.pm</title>
+    <title><%= if @title, do: "#{@title} | " %>hex.pm</title>
   </head>
   <body>
     <nav class="navbar navbar-default navbar-static-top" role="navigation">
