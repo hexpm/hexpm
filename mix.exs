@@ -1,13 +1,24 @@
 defmodule HexWeb.Mixfile do
   use Mix.Project
 
+  if Mix.env == :prod do
+    @lager_level :notice
+  else
+    @lager_level :info
+  end
+
   def project do
     [ app: :hex_web,
       version: "0.0.1",
-      elixir: "~> 0.12.4 or ~> 0.13.0-dev",
+      elixir: "0.13.0-dev",
       elixirc_paths: ["lib", "priv/static"],
       elixirc_watch_exts: [:ex, :eex, :exs, :css],
-      deps: deps ]
+      elixirc_options: [
+        :debug_info,
+        exlager_truncation_size: 8*1024,
+        exlager_level: @lager_level ],
+      deps: deps,
+      lager_level: @lager_level ]
   end
 
   def application do
@@ -23,6 +34,7 @@ defmodule HexWeb.Mixfile do
       { :postgrex, github: "ericmj/postgrex" },
       { :bcrypt, github: "opscode/erlang-bcrypt" },
       { :jazz, github: "meh/jazz" },
-      { :mini_s3, github: "ericmj/mini_s3", branch: "hex-fixes" } ]
+      { :mini_s3, github: "ericmj/mini_s3", branch: "hex-fixes" },
+      { :exlager, github: "khia/exlager" } ]
   end
 end
