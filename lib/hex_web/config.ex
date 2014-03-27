@@ -34,7 +34,7 @@ defmodule HexWeb.Config do
     s3_bucket     System.get_env("S3_BUCKET")
     s3_access_key System.get_env("S3_ACCESS_KEY")
     s3_secret_key System.get_env("S3_SECRET_KEY")
-    cdn_url       System.get_env("CDN_URL")
+    cdn_url       System.get_env("CDN_URL") || "http://localhost:#{opts[:port]}"
   end
 
   var :tmp

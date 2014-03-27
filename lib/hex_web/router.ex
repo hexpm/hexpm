@@ -16,14 +16,12 @@ defmodule HexWeb.Router do
 
   # TODO: favicon
 
-  unless Mix.env == :prod do
-    get "registry.ets.gz" do
-      HexWeb.Config.store.registry(conn)
-    end
+  get "registry.ets.gz" do
+    HexWeb.Config.store.registry(conn)
+  end
 
-    get "tarballs/:ball" do
-      HexWeb.Config.store.tar(conn, ball)
-    end
+  get "tarballs/:ball" do
+    HexWeb.Config.store.tar(conn, ball)
   end
 
   forward "/api", to: HexWeb.API.Router

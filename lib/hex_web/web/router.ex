@@ -40,6 +40,8 @@ defmodule HexWeb.Web.Router do
     do: 1
   def safe_page(page, count) when page > div(count, @packages) + 1,
     do: div(count, @packages) + 1
+  def safe_page(page, _count),
+    do: page
 
   match _ do
     send_resp(conn, 404, "404 FAIL")
