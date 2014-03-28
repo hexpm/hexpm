@@ -29,15 +29,29 @@ disable_next = page == pages
 %>
 
 <ul class="pagination" style="float: right;">
-  <li<%= if disable_prev do %> class="disabled"<% end %>>
-    <a href="/packages?search=<%= safe(@search) %>&page=<%= page-1 %>">&laquo;</a>
-  </li>
-  <%= lc counter inlist show_pages do %>
-    <li<%= if counter == page do %> class="active"<% end %>>
-      <a href="/packages?search=<%= safe(@search) %>&page=<%= counter %>"><%= counter %></a>
-    </li>
+  <%= if disable_prev do %>
+    <li class="disabled"><span>&laquo;</span></li>
+  <% else %>
+    <li><a href="/packages?search=<%= safe(@search) %>&page=<%= page-1 %>">&laquo;</a></li>
   <% end %>
-  <li<%= if disable_next do %> class="disabled"<% end %>>
-    <a href="/packages?search=<%= safe(@search) %>&page=<%= page+1 %>">&raquo;</a>
-  </li>
+
+  <%= lc counter inlist show_pages do %>
+    <%= if counter == page do %>
+      <li class="active">
+        <span><%= counter %></span>
+      </li>
+    <% else %>
+      <li>
+        <a href="/packages?search=<%= safe(@search) %>&page=<%= counter %>">
+          <%= counter %>
+        </a>
+      </li>
+    <% end %>
+  <% end %>
+
+  <%= if disable_next do %>
+    <li class="disabled"><span>&raquo;</span></li>
+  <% else %>
+    <li><a href="/packages?search=<%= safe(@search) %>&page=<%= page+1 %>">&raquo;</a></li>
+  <% end %>
 </ul>
