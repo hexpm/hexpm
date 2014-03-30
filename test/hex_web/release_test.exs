@@ -45,11 +45,14 @@ defmodule HexWeb.ReleaseTest do
   test "validate release" do
     package = Package.get("ecto")
 
+    assert { :ok, _ } =
+           Release.create(package, "0.1.0", [{ "decimal", nil }])
+
     assert { :error, [version: "invalid version"] } =
            Release.create(package, "0.1", [])
 
     assert { :error, [deps: [{ "decimal", "invalid requirement: \"fail\"" }]] } =
-           Release.create(package, "0.1.0", [{ "decimal", "fail" }])
+           Release.create(package, "0.1.1", [{ "decimal", "fail" }])
   end
 
   test "release version is unique" do

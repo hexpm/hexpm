@@ -75,9 +75,9 @@ defmodule HexWeb.Release do
   end
 
   defp update_requirements(release, requirements) do
-    requirements = create_requirements(release, requirements)
+    results = create_requirements(release, requirements)
 
-    errors = Enum.filter_map(requirements, &match?({ :error, _ }, &1), &elem(&1, 1))
+    errors = Enum.filter_map(results, &match?({ :error, _ }, &1), &elem(&1, 1))
     if errors == [] do
       release.requirements(requirements)
     else
@@ -96,7 +96,7 @@ defmodule HexWeb.Release do
 
     Enum.map(requirements, fn { dep, req } ->
       cond do
-        not is_binary(req) or match?(:error, Version.parse_requirement(req)) ->
+        not valid_requirement?(req) ->
           { :error, { dep, "invalid requirement: #{inspect req}" } }
 
         id = deps[dep] ->
@@ -137,6 +137,10 @@ defmodule HexWeb.Release do
   def count do
     HexWeb.Repo.all(from(r in HexWeb.Release, select: count(r.id)))
     |> List.first
+  end
+
+  defp valid_requirement?(req) do
+    nil?(req) or (is_binary(req) and match?({ :ok, _ }, Version.parse_requirement(req)))
   end
 end
 

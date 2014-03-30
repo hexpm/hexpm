@@ -84,6 +84,8 @@ defmodule HexWeb.Util do
 
   defp binarify(binary) when is_binary(binary),
     do: binary
+  defp binarify(atom) when nil?(atom) or is_boolean(atom),
+    do: atom
   defp binarify(atom) when is_atom(atom),
     do: atom_to_binary(atom)
   defp binarify(list) when is_list(list),
