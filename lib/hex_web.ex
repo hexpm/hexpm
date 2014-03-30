@@ -3,10 +3,7 @@ defmodule HexWeb do
 
   def start(_type, _args) do
     { opts, _, _ } = OptionParser.parse(System.argv, aliases: [p: :port])
-
-    if opts[:port] do
-     opts = Keyword.update!(opts, :port, &binary_to_integer(&1))
-    end
+    opts = Keyword.update(opts, :port, 4000, &binary_to_integer(&1))
 
     start_lager()
 
