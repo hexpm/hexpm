@@ -23,7 +23,7 @@ defmodule HexWeb.Store.S3 do
   def get(key) do
     bucket = HexWeb.Config.s3_bucket |> String.to_char_list!
     key = String.to_char_list!(key)
-    result = :mini_s3.get_object(bucket, key, config())
+    result = :mini_s3.get_object(bucket, key, [], config())
     result[:content]
   end
 
@@ -46,12 +46,10 @@ defmodule HexWeb.Store.S3 do
   end
 
   def delete_tar(name) do
-    bucket     = HexWeb.Config.s3_bucket     |> String.to_char_list!
-    access_key = HexWeb.Config.s3_access_key |> String.to_char_list!
-    secret_key = HexWeb.Config.s3_secret_key |> String.to_char_list!
-    config     = s3_config(access_key_id: access_key, secret_access_key: secret_key)
+    bucket = HexWeb.Config.s3_bucket |> String.to_char_list!
+    name = String.to_char_list!(name)
 
-    :mini_s3.delete_object(bucket, name, config)
+    :mini_s3.delete_object(bucket, name, config())
   end
 
   def tar(conn, name) do

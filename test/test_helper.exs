@@ -1,7 +1,6 @@
 ExUnit.start exclude: [:integration]
 
 HexWeb.Config.url("http://hex.pm")
-HexWeb.Config.store(HexWeb.Store.Local)
 HexWeb.Config.password_work_factor(4)
 
 Mix.Task.run "ecto.drop", ["HexWeb.Repo"]
