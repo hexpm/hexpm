@@ -21,7 +21,7 @@ defmodule HexWeb.ReleaseTest do
     assert Release.Entity[package_id: ^package_id, version: "0.0.1"] = Release.get(package, "0.0.1")
 
     assert { :ok, _ } = Release.create(package, "0.0.2", [])
-    assert [ Release.Entity[version: "0.0.1"], Release.Entity[version: "0.0.2"] ] =
+    assert [ Release.Entity[version: "0.0.2"], Release.Entity[version: "0.0.1"] ] =
            Release.all(package)
   end
 

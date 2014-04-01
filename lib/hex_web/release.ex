@@ -67,6 +67,7 @@ defmodule HexWeb.Release do
     end
   end
 
+  # TODO: Prereleases should always be editable
   defp editable?(release) do
     created_at = Ecto.DateTime.to_erl(release.created_at) |> :calendar.datetime_to_gregorian_seconds
     now        = :calendar.universal_time |> :calendar.datetime_to_gregorian_seconds
@@ -111,9 +112,9 @@ defmodule HexWeb.Release do
   end
 
   def all(package) do
-    # TODO: Sort releases by Version.compare/2
     HexWeb.Repo.all(package.releases)
     |> Enum.map(&(&1.package(package)))
+    |> Enum.sort(&(Version.compare(&1.version, &2.version) == :gt))
   end
 
   def get(package, version) do

@@ -68,7 +68,6 @@ defmodule HexWeb.Package do
     package =
       from(p in HexWeb.Package,
            where: p.name == ^name,
-           preload: [:releases],
            limit: 1)
       |> HexWeb.Repo.all
       |> List.first
@@ -80,15 +79,18 @@ defmodule HexWeb.Package do
   end
 
   def all(page, count, search \\ nil) do
-    # TODO: Sort releases by Version.compare/2
+    packages =
+      from(p in HexWeb.Package,
+           preload: [:releases],
+           order_by: p.name)
+      |> Util.paginate(page, count)
+      |> Util.searchinate(:name, search)
+      |> HexWeb.Repo.all
 
-    from(p in HexWeb.Package,
-         preload: [:releases],
-         order_by: p.name)
-    |> Util.paginate(page, count)
-    |> Util.searchinate(:name, search)
-    |> HexWeb.Repo.all
-    |> Enum.map(fn pkg -> pkg.update_meta(&JSON.decode!(&1)) end)
+    Enum.map(packages, fn pkg ->
+      pkg.update_meta(&JSON.decode!(&1))
+         .releases(Enum.sort(pkg.releases, &(Version.compare(&1.version, &2.version) == :gt)))
+    end)
   end
 
   def count(search \\ nil) do

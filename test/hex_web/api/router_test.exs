@@ -182,8 +182,8 @@ defmodule HexWeb.API.RouterTest do
 
     postgrex = Package.get("postgrex")
     postgrex_id = postgrex.id
-    assert [ Release.Entity[package_id: ^postgrex_id, version: "0.0.1"],
-             Release.Entity[package_id: ^postgrex_id, version: "0.0.2"] ] =
+    assert [ Release.Entity[package_id: ^postgrex_id, version: "0.0.2"],
+             Release.Entity[package_id: ^postgrex_id, version: "0.0.1"] ] =
            Release.all(postgrex)
   end
 
