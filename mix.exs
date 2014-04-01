@@ -1,12 +1,6 @@
 defmodule HexWeb.Mixfile do
   use Mix.Project
 
-  if Mix.env == :prod do
-    @lager_level :notice
-  else
-    @lager_level :info
-  end
-
   def project do
     [ app: :hex_web,
       version: "0.0.1",
@@ -16,9 +10,17 @@ defmodule HexWeb.Mixfile do
       elixirc_options: [
         :debug_info,
         exlager_truncation_size: 8*1024,
-        exlager_level: @lager_level ],
+        exlager_level: lager_level ],
       deps: deps,
-      lager_level: @lager_level ]
+      lager_level: lager_level ]
+  end
+
+  defp lager_level do
+    if Mix.env in [:dev, :prod] do
+      :info
+    else
+      :notice
+    end
   end
 
   def application do

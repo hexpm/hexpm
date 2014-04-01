@@ -5,7 +5,7 @@ defmodule HexWeb.Stats.Job do
   alias HexWeb.Release
   alias HexWeb.Stats.Download
 
-  def run(date \\ yesterday()) do
+  def run(date) do
     start()
 
     prefix = "logs/#{date_string(date)}"
@@ -16,6 +16,8 @@ defmodule HexWeb.Stats.Job do
     dict = process_keys(keys)
     packages = packages()
     releases = releases()
+
+    { :memory, memory } = :erlang.process_info(self, :memory)
 
     HexWeb.Repo.transaction(fn ->
       HexWeb.Repo.delete_all(from(d in Download, where: d.day == ^date))
@@ -33,6 +35,8 @@ defmodule HexWeb.Stats.Job do
       HexWeb.Stats.PackageDownload.refresh
       HexWeb.Stats.ReleaseDownload.refresh
     end)
+
+    memory
   end
 
   defp start do
@@ -72,12 +76,6 @@ defmodule HexWeb.Stats.Job do
       [_, package, version] -> { package, version }
       nil                   -> nil
     end
-  end
-
-  defp yesterday do
-    { today, _time } = :calendar.universal_time()
-    today_days = :calendar.date_to_gregorian_days(today)
-    :calendar.gregorian_days_to_date(today_days - 1)
   end
 
   defp date_string(date) do

@@ -8,6 +8,7 @@ defmodule HexWeb.RegistryBuilder do
   use GenServer.Behaviour
   import Ecto.Query, only: [from: 2]
   require HexWeb.Repo
+  require Lager
   alias Ecto.Adapters.Postgres
   alias HexWeb.Package
   alias HexWeb.Release
@@ -74,17 +75,31 @@ defmodule HexWeb.RegistryBuilder do
 
   defp build do
     pid = self()
+
     spawn_link(fn ->
-      builder(pid)
+      try do
+        case builder(pid) do
+          { time, memory } ->
+            Lager.info "REGISTRY_BUILDER_COMPLETED (#{div time, 1000}ms, #{div memory, 1024}kb)"
+          nil ->
+            :ok
+        end
+      catch
+        kind, error ->
+          stacktrace = System.stacktrace
+          Lager.error "REGISTRY_BUILDER_FAILED"
+          HexWeb.Util.log_error(kind, error, stacktrace)
+      end
     end)
   end
 
   defp builder(pid) do
     reg_file = Path.join(HexWeb.Config.tmp, "registry.ets")
     { :ok, handle } = HexWeb.Registry.create()
-    build_ets(handle, reg_file)
+    { :ok, result } = build_ets(handle, reg_file)
 
     send pid, :finished_building
+    result
   end
 
   def build_ets(handle, file) do
@@ -93,52 +108,61 @@ defmodule HexWeb.RegistryBuilder do
         Postgres.query(HexWeb.Repo, "LOCK registries NOWAIT", [])
 
         unless skip?(handle) do
-          HexWeb.Registry.set_working(handle)
+          :timer.tc(fn ->
+            HexWeb.Registry.set_working(handle)
 
-          requirements = requirements()
-          releases     = releases()
-          packages     = packages()
+            requirements = requirements()
+            releases     = releases()
+            packages     = packages()
 
-          package_tuples =
-            Enum.reduce(releases, HashDict.new, fn { _, vsn, pkg_id }, dict ->
-              Dict.update(dict, packages[pkg_id], [vsn], &[vsn|&1])
-            end)
+            package_tuples =
+              Enum.reduce(releases, HashDict.new, fn { _, vsn, pkg_id }, dict ->
+                Dict.update(dict, packages[pkg_id], [vsn], &[vsn|&1])
+              end)
 
-          package_tuples =
-            Enum.map(package_tuples, fn { name, vsns } ->
-              { name, Enum.sort(vsns, &(Version.compare(&1, &2) == :lt)) }
-            end)
+            package_tuples =
+              Enum.map(package_tuples, fn { name, vsns } ->
+                { name, Enum.sort(vsns, &(Version.compare(&1, &2) == :lt)) }
+              end)
 
-          release_tuples =
-            Enum.map(releases, fn { id, version, pkg_id } ->
-              package = packages[pkg_id]
-              deps =
-                Enum.map(requirements[id] || [], fn { dep_id, req } ->
-                  dep_name = packages[dep_id]
-                  { dep_name, req }
-                end)
-              { { package, version }, deps }
-            end)
+            release_tuples =
+              Enum.map(releases, fn { id, version, pkg_id } ->
+                package = packages[pkg_id]
+                deps =
+                  Enum.map(requirements[id] || [], fn { dep_id, req } ->
+                    dep_name = packages[dep_id]
+                    { dep_name, req }
+                  end)
+                { { package, version }, deps }
+              end)
 
-          File.rm(file)
+            { :memory, memory } = :erlang.process_info(self, :memory)
 
-          tid = :ets.new(@ets_table, [:public])
-          :ets.insert(tid, { :"$$version$$", @version })
-          :ets.insert(tid, release_tuples ++ package_tuples)
-          :ok = :ets.tab2file(tid, String.to_char_list!(file))
-          :ets.delete(tid)
+            File.rm(file)
 
-          HexWeb.Config.store.put_registry(File.read!(file))
-          HexWeb.Registry.set_done(handle)
+            tid = :ets.new(@ets_table, [:public])
+            :ets.insert(tid, { :"$$version$$", @version })
+            :ets.insert(tid, release_tuples ++ package_tuples)
+            :ok = :ets.tab2file(tid, String.to_char_list!(file))
+            :ets.delete(tid)
+
+            HexWeb.Config.store.put_registry(File.read!(file))
+            HexWeb.Registry.set_done(handle)
+
+            memory
+          end)
         end
       end)
     rescue
       error in [Postgrex.Error] ->
+        stacktrace = System.stacktrace
         if error.code == "55P03" do
           :timer.sleep(10_000)
           unless skip?(handle) do
             build_ets(handle, file)
           end
+        else
+          raise error, [], stacktrace
         end
     end
   end

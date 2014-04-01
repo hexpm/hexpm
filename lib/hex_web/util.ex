@@ -4,6 +4,18 @@ defmodule HexWeb.Util do
   """
 
   import Ecto.Query, only: [from: 2]
+  require Lager
+
+  def log_error(:error, error, stacktrace) do
+    exception = Exception.normalize(error)
+    Lager.error "** (#{inspect exception.__record__(:name)}) #{exception.message}\n"
+                <> Exception.format_stacktrace(stacktrace)
+  end
+
+  def log_error(kind, reason, stacktrace) do
+    Lager.error "** (#{kind}) #{inspect(reason)}\n"
+                <> Exception.format_stacktrace(stacktrace)
+  end
 
   def ecto_now do
     Ecto.DateTime.from_erl(:calendar.universal_time)
