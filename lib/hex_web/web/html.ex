@@ -75,7 +75,7 @@ defmodule HexWeb.Web.HTML do
 
   def escape(buffer) do
     bc << char >> inbits buffer do
-      << escape_char(char) >>
+      << escape_char(char) :: binary >>
     end
   end
 
@@ -83,5 +83,5 @@ defmodule HexWeb.Web.HTML do
     defp escape_char(unquote(match)), do: unquote(insert)
   end)
 
-  defp escape_char(char), do: char
+  defp escape_char(char), do: << char >>
 end
