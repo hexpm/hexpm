@@ -1,0 +1,87 @@
+<div class="page-header" style="margin-top: 0;">
+  <h2>
+    <a href="/packages/<%= @package.name %>"><%= @package.name %></a>
+    <small><%= @current_release.version %></small>
+  </h2>
+</div>
+
+<div class="row">
+  <div class="col-sm-8">
+    <dl class="dl-horizontal package-meta">
+      <dt>Contributors</dt>
+      <dd><%= Enum.join @package.meta["contributors"] || [], ", " %></dd>
+      <dt>Licenses</dt>
+      <dd><%= Enum.join @package.meta["licenses"] || [], ", " %></dd>
+      <dt>Links</dt>
+      <dd>
+        <ul class="links">
+          <%= lc { name, link } inlist @package.meta["links"] || [] do %>
+            <li><a href="<%= link %>"><%= name %></a></li>
+          <% end %>
+        </ul>
+      </dd>
+    </dl>
+  </div>
+  <div class="col-sm-4">
+    <div class="panel panel-default">
+      <div class="panel-heading">
+        <h4 class="panel-title">Downloads</h3>
+      </div>
+      <div class="panel-body">
+        <div class="row">
+          <div class="col-xs-4 text-right">7624</div>
+          <div class="col-xs-8 text-muted">latest release</div>
+        </div>
+        <div class="row">
+          <div class="col-xs-4 text-right">1874</div>
+          <div class="col-xs-8 text-muted">yesterday</div>
+        </div>
+        <div class="row">
+          <div class="col-xs-4 text-right">12854</div>
+          <div class="col-xs-8 text-muted">last seven days</div>
+        </div>
+        <div class="row">
+          <div class="col-xs-4 text-right">94677</div>
+          <div class="col-xs-8 text-muted">all time</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<div style="margin: 10px 0; border-top: 1px solid #eee"></div>
+
+<div class="row">
+  <div class="col-md-6">
+    <h4>Releases</h4>
+
+    <ul class="list-unstyled">
+      <%= lc release inlist @package.releases.to_list do %>
+        <li>
+          <a href="/packages/<%= @package.name %>/<%= release.version %>"><strong><%= release.version %></strong></a>
+          <span class="text-muted"><%= pretty_date(release.created_at) %></span>
+        </li>
+      <% end %>
+    </ul>
+  </div>
+
+  <div class="col-md-6">
+    <h4>Dependencies</h4>
+
+    <ul class="list-unstyled">
+      <%= lc { name, req } inlist @current_release.requirements.to_list do %>
+        <li>
+          <a href="/packages/<%= name %>"><strong><%= name %></strong></a>
+          <%= req %>
+        </li>
+      <% end %>
+    </ul>
+  </div>
+</div>
+
+<div style="margin: 10px 0; border-top: 1px solid #eee"></div>
+
+<%= if description = @package.meta["description"] do %>
+  <pre class="description"><%= description %></pre>
+<% end %>

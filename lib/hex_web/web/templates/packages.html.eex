@@ -2,7 +2,11 @@
   <tbody>
     <%= lc package inlist @packages do %>
       <tr>
-        <td style="width: 10em;"><a href="#"><span class="glyphicon glyphicon-folder-open" style="padding-right: 0.5em;"></span><%= package.name %></a></td>
+        <td style="width: 10em;">
+          <a href="/packages/<%= package.name %>">
+            <span class="glyphicon glyphicon-folder-open" style="padding-right: 0.5em;"></span><%= package.name %>
+          </a>
+        </td>
         <td><%= package.meta["description"] %></td>
       </tr>
     <% end %>

@@ -87,7 +87,8 @@ defmodule HexWeb.Release do
   end
 
   defp create_requirements(release, requirements) do
-    deps = Dict.keys(requirements) |> Enum.filter(&is_binary/1)
+    requirements = Enum.map(requirements, fn { k, v } -> { to_string(k), v } end)
+    deps = Dict.keys(requirements)
 
     deps_query =
          from p in HexWeb.Package,
@@ -124,15 +125,17 @@ defmodule HexWeb.Release do
       |> List.first
 
     if release do
-      reqs =
-        from(req in release.requirements,
-             join: p in req.dependency,
-             select: { p.name, req.requirement })
-        |> HexWeb.Repo.all
-
+      reqs = requirements(release)
       release.package(package)
              .requirements(reqs)
     end
+  end
+
+  def requirements(release) do
+    from(req in release.requirements,
+             join: p in req.dependency,
+             select: { p.name, req.requirement })
+    |> HexWeb.Repo.all
   end
 
   def count do

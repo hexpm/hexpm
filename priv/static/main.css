@@ -55,3 +55,31 @@ code, kbd {
   overflow: hidden;
   text-overflow: ellipsis;
 }
+
+@media (min-width: 768px) {
+  .package-meta dt {
+    width: 90px;
+  }
+
+  .package-meta dd {
+    margin-left: 110px;
+  }
+}
+
+.links {
+  margin: 0;
+  padding: 0;
+}
+
+.links li {
+  list-style: none;
+  float: left;
+  margin-right: 1em;
+}
+
+.description {
+  margin: 20px 0;
+  white-space: pre-wrap;
+  word-break: normal;
+  word-wrap: normal;
+}
