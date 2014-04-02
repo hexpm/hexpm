@@ -32,4 +32,10 @@ defmodule HexWeb.Stats.PackageDownload do
     |> HexWeb.Repo.all
     |> Enum.map(&{ :"#{&1.view}", &1.downloads || 0 })
   end
+
+  def package(package) do
+    from(pd in PackageDownload, where: pd.package_id == ^package.id)
+    |> HexWeb.Repo.all
+    |> Enum.map(&{ :"#{&1.view}", &1.downloads || 0 })
+  end
 end

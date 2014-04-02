@@ -4,6 +4,7 @@ defmodule HexWeb.Web.Router do
   import HexWeb.Plug
   alias HexWeb.Web.Templates
   alias HexWeb.Stats.PackageDownload
+  alias HexWeb.Stats.ReleaseDownload
   alias HexWeb.Release
   alias HexWeb.Package
 
@@ -63,10 +64,16 @@ defmodule HexWeb.Web.Router do
   end
 
   defp package(conn, package, releases, current_release) do
-    active = :packages
-    title = package.name
+    active    = :packages
+    title     = package.name
+    downloads = PackageDownload.package(package)
 
-    conn = assign_pun(conn, [package, releases, current_release, active, title])
+    if current_release do
+      release_downloads = ReleaseDownload.release(current_release)
+    end
+
+    conn = assign_pun(conn, [package, releases, current_release, downloads,
+                             release_downloads, active, title])
     render(conn, :package)
   end
 

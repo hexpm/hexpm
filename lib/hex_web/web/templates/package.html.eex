@@ -31,19 +31,19 @@
       </div>
       <div class="panel-body">
         <div class="row">
-          <div class="col-xs-4 text-right">7624</div>
+          <div class="col-xs-4 text-right"><%= @release_downloads || 0 %></div>
           <div class="col-xs-8 text-muted">latest release</div>
         </div>
         <div class="row">
-          <div class="col-xs-4 text-right">1874</div>
+          <div class="col-xs-4 text-right"><%= @downloads[:day] || 0 %></div>
           <div class="col-xs-8 text-muted">yesterday</div>
         </div>
         <div class="row">
-          <div class="col-xs-4 text-right">12854</div>
+          <div class="col-xs-4 text-right"><%= @downloads[:week] || 0 %></div>
           <div class="col-xs-8 text-muted">last seven days</div>
         </div>
         <div class="row">
-          <div class="col-xs-4 text-right">94677</div>
+          <div class="col-xs-4 text-right"><%= @downloads[:all] || 0 %></div>
           <div class="col-xs-8 text-muted">all time</div>
         </div>
       </div>

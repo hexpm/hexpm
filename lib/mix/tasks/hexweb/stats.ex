@@ -8,7 +8,7 @@ defmodule Mix.Tasks.Hexweb.Stats do
     Mix.Task.run "app.start"
 
     try do
-      { time, memory } = :timer.tc fn -> HexWeb.Stats.Job.run(yesterday()) end
+      { time, memory } = :timer.tc fn -> HexWeb.Stats.Job.run(HexWeb.Util.yesterday()) end
       Lager.info "STATS_JOB_COMPLETED (#{div time, 1000}ms, #{div memory, 1024}kb)"
     catch
       kind, error ->
@@ -17,11 +17,5 @@ defmodule Mix.Tasks.Hexweb.Stats do
         HexWeb.Util.log_error(kind, error, stacktrace)
         System.halt(1)
     end
-  end
-
-  defp yesterday do
-    { today, _time } = :calendar.universal_time()
-    today_days = :calendar.date_to_gregorian_days(today)
-    :calendar.gregorian_days_to_date(today_days - 1)
   end
 end

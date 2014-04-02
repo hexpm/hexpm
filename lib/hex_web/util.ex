@@ -17,6 +17,12 @@ defmodule HexWeb.Util do
                 <> Exception.format_stacktrace(stacktrace)
   end
 
+  def yesterday do
+    { today, _time } = :calendar.universal_time()
+    today_days = :calendar.date_to_gregorian_days(today)
+    :calendar.gregorian_days_to_date(today_days - 1)
+  end
+
   def ecto_now do
     Ecto.DateTime.from_erl(:calendar.universal_time)
   end
