@@ -39,7 +39,11 @@ defmodule HexWeb.Web.Router do
   get "/packages/:name" do
     if package = Package.get(name) do
       releases = Release.all(package)
-      package(conn, package, releases, nil)
+      if release = List.first(releases) do
+        release = release.requirements(Release.requirements(release))
+      end
+
+      package(conn, package, releases, release)
     else
       send_resp(conn, 404, "404 FAIL")
     end
@@ -61,8 +65,6 @@ defmodule HexWeb.Web.Router do
   defp package(conn, package, releases, current_release) do
     active = :packages
     title = package.name
-    current_release = current_release || List.first(releases)
-    current_release = current_release.requirements(Release.requirements(current_release))
 
     conn = assign_pun(conn, [package, releases, current_release, active, title])
     render(conn, :package)

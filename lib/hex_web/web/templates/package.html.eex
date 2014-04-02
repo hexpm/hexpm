@@ -1,7 +1,9 @@
 <div class="page-header" style="margin-top: 0;">
   <h2>
     <a href="/packages/<%= @package.name %>"><%= @package.name %></a>
-    <small><%= @current_release.version %></small>
+    <%= if @current_release do %>
+      <small><%= @current_release.version %></small>
+    <% end %>
   </h2>
 </div>
 
@@ -70,11 +72,13 @@
     <h4>Dependencies</h4>
 
     <ul class="list-unstyled">
-      <%= lc { name, req } inlist @current_release.requirements.to_list do %>
-        <li>
-          <a href="/packages/<%= name %>"><strong><%= name %></strong></a>
-          <%= req %>
-        </li>
+      <%= if @current_release do %>
+        <%= lc { name, req } inlist @current_release.requirements.to_list do %>
+          <li>
+            <a href="/packages/<%= name %>"><strong><%= name %></strong></a>
+            <%= req %>
+          </li>
+        <% end %>
       <% end %>
     </ul>
   </div>
