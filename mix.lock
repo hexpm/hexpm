@@ -4,6 +4,7 @@
   "decimal": {:git, "git://github.com/ericmj/decimal.git", "ab1b6637aac1eabce5dc5a57290b5366878c2e84", []},
   "ecto": {:git, "git://github.com/elixir-lang/ecto.git", "4e52242cddfcfe4c44399d554d20ac2221edc02b", []},
   "envy": {:git, "git://github.com/manderson26/envy.git", "d62cb227b9000ee866c8bcc724ddf68d87621dea", [branch: "master"]},
+  "ex_doc": {:git, "git://github.com/elixir-lang/ex_doc.git", "c14203bfca186f68ff178e5ada9af4f5fb37e205", []},
   "exlager": {:git, "git://github.com/khia/exlager.git", "2a4b002dfe34abf1b03c9d26a3ebe2e101437f51", []},
   "goldrush": {:git, "git://github.com/DeadZen/goldrush.git", "71e63212f12c25827e0c1b4198d37d5d018a7fec", [tag: "0.1.6"]},
   "ibrowse": {:git, "git://github.com/opscode/ibrowse", "8f3f6a3a30730b193cc340a8885a960586dc98de", [tag: "v4.0.1.1"]},

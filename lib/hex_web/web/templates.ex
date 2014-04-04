@@ -41,11 +41,15 @@ defmodule HexWeb.Web.Templates do
   @templates [
     main: [:page, :assigns],
     index: [:assigns],
+    docs: [:assigns],
     packages: [:assigns],
-    package: [:assigns] ]
+    package: [:assigns],
+    docs_tasks: [:_] ]
 
   Enum.each(@templates, fn { name, args } ->
-    file = Path.join([__DIR__, "templates", "#{name}.html.eex"])
+    name = atom_to_binary(name)
+    path = String.replace(name, "_", "/")
+    file = Path.join([__DIR__, "templates", "#{path}.html.eex"])
     EEx.function_from_file(:def, :"template_#{name}", file, args,
                            engine: HexWeb.Web.HTML.Engine)
   end)

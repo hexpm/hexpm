@@ -1,0 +1,201 @@
+<h2>Mix tasks</h2>
+
+  <div class="panel panel-default">
+    <div class="panel-heading"><h3 class="panel-title">hex.config</h3></div>
+    <div class="panel-body">
+      <p>Reads or updates hex configuration file.</p>
+
+<p><code>mix hex.config key [value]</code></p>
+
+    </div>
+  </div>
+
+  <div class="panel panel-default">
+    <div class="panel-heading"><h3 class="panel-title">hex.info</h3></div>
+    <div class="panel-body">
+      <p>Prints hex package or system information.</p>
+
+<p><code>mix hex.info [package [version]]</code></p>
+
+<p>If <code>package</code> is not given, print system information. This includes when
+registry was last updated, current system version and if there is a new
+version available.</p>
+
+<p>If <code>package</code> is given, print information about the package. This includes all
+released versions and package metadata.</p>
+
+<p>If <code>package</code> and <code>version</code> is given print release information. This includes
+remote Git URL and Git ref, and all package dependencies.</p>
+
+    </div>
+  </div>
+
+  <div class="panel panel-default">
+    <div class="panel-heading"><h3 class="panel-title">hex.key.drop</h3></div>
+    <div class="panel-body">
+      <p>Remove given API key from account. The key can no longer be used to
+authenticate API requests.</p>
+
+<p><code>mix hex.key.drop key_name -u username -p password</code></p>
+
+<h4>Command line options</h4>
+
+<ul>
+<li><p><code>--user</code>, <code>-u</code> - Username of user (required)</p></li>
+<li><p><code>--pass</code>, <code>-p</code> - Password of user (required)</p></li>
+</ul>
+
+    </div>
+  </div>
+
+  <div class="panel panel-default">
+    <div class="panel-heading"><h3 class="panel-title">hex.key.list</h3></div>
+    <div class="panel-body">
+      <p>List all API keys associated with your account.</p>
+
+<p><code>mix hex.key.list -u username -p password</code></p>
+
+<h4>Command line options</h4>
+
+<ul>
+<li><p><code>--user</code>, <code>-u</code> - Username of user (required)</p></li>
+<li><p><code>--pass</code>, <code>-p</code> - Password of user (required)</p></li>
+</ul>
+
+    </div>
+  </div>
+
+  <div class="panel panel-default">
+    <div class="panel-heading"><h3 class="panel-title">hex.key.new</h3></div>
+    <div class="panel-body">
+      <p>Generate new API key and store on local machine.</p>
+
+<p><code>mix hex.key.new -u username -p password</code></p>
+
+<h4>Command line options</h4>
+
+<ul>
+<li><p><code>--user</code>, <code>-u</code> - Username of user (required)</p></li>
+<li><p><code>--pass</code>, <code>-p</code> - Password of user (required)</p></li>
+</ul>
+
+    </div>
+  </div>
+
+  <div class="panel panel-default">
+    <div class="panel-heading"><h3 class="panel-title">hex.release</h3></div>
+    <div class="panel-body">
+      <p>Create a new package release and update package meta data.</p>
+
+<p><code>mix hex.release -u username -p password</code></p>
+
+<p>If it is a new package being released it will be created and the user
+specified in <code>username</code> will be the package owner. Only package owners can
+create new releases.</p>
+
+<p>A release can be amended or reverted with <code>--revert</code> up to one hour after its
+creation. If you want to revert a release that is more than one hour old you
+need to contact an administrator.</p>
+
+<h4>Command line options</h4>
+
+<ul>
+<li><p><code>--user</code>, <code>-u</code> - Username of package owner (overrides user stored in config)</p></li>
+<li><p><code>--pass</code>, <code>-p</code> - Password of package owner (required if <code>--user</code> was given)</p></li>
+<li><p><code>--revert version</code> - Revert given release</p></li>
+</ul>
+
+<h4>Configuration</h4>
+
+<ul>
+<li><p><code>:app</code> - Package name (required)</p></li>
+<li><p><code>:version</code> - Release version (required)</p></li>
+<li><p><code>:deps</code> - List of package dependencies (see Dependencies below)</p></li>
+<li><p><code>:description</code> - Description of the project in a few paragraphs</p></li>
+<li><p><code>:package</code> - Hex specific configuration (see Package configuration below)</p></li>
+</ul>
+
+<h4>Dependencies</h4>
+
+<p>Dependencies are defined in mix&#39;s dependency format. But instead of using
+<code>:git</code> or <code>:path</code> as the SCM <code>:package</code> is used.</p>
+
+<pre><code>defp deps do
+  [ { :ecto, &quot;~&gt; 0.1.0&quot;, package: true },
+    { :postgrex, &quot;~&gt; 0.3.0&quot;, package: true },
+    { :cowboy, github: &quot;extend/cowboy&quot; } ]
+end
+</code></pre>
+
+<p>As can be seen package dependencies works alongside git dependencies.
+Important to note is that non-packaged dependencies will not be used during
+dependency resolution and neither will be they listed as dependencies under
+a release.</p>
+
+<h4>Package configuration</h4>
+
+<p>Additional metadata of the package can optionally be defined, but it is very
+recommended to do so.</p>
+
+<ul>
+<li><p><code>:files</code> - List of files and directories to include in the release</p></li>
+<li><p><code>:contributors</code> - List of names of contributors</p></li>
+<li><p><code>:licenses</code> - List of licenses used by the package</p></li>
+<li><p><code>:links</code> - Dictionary of links</p></li>
+</ul>
+
+    </div>
+  </div>
+
+  <div class="panel panel-default">
+    <div class="panel-heading"><h3 class="panel-title">hex.search</h3></div>
+    <div class="panel-body">
+      <p>Display packages matching the given search query.</p>
+
+<p><code>mix hex.search package</code></p>
+
+    </div>
+  </div>
+
+  <div class="panel panel-default">
+    <div class="panel-heading"><h3 class="panel-title">hex.update</h3></div>
+    <div class="panel-body">
+      <p>Update the hex installation.</p>
+
+<p><code>mix hex.update</code></p>
+
+<p>Updating the hex installation should be done periodically. The registry status can be
+checked with <code>mix hex.info</code>. The registry contains an index of all packages,
+releases and their dependencies that is used during Hex&#39;s dependency
+resolution.</p>
+
+    </div>
+  </div>
+
+  <div class="panel panel-default">
+    <div class="panel-heading"><h3 class="panel-title">hex.user.register</h3></div>
+    <div class="panel-body">
+      <p>Registers a new hex user.</p>
+
+<p><code>mix hex.user.register</code></p>
+
+    </div>
+  </div>
+
+  <div class="panel panel-default">
+    <div class="panel-heading"><h3 class="panel-title">hex.user.update</h3></div>
+    <div class="panel-body">
+      <p>Update user options.</p>
+
+<p><code>mix hex.user.update -u username -p password</code></p>
+
+<h4>Command line options</h4>
+
+<ul>
+<li><p><code>--user</code>, <code>-u</code> - Username of user (required)</p></li>
+<li><p><code>--pass</code>, <code>-p</code> - Password of user (required)</p></li>
+</ul>
+
+    </div>
+  </div>
+

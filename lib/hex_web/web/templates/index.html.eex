@@ -23,6 +23,10 @@
         <div class="col-xs-9">releases</div>
       </div>
       <div class="row">
+        <div class="col-xs-3 text-right"><%= @total[:day] %></div>
+        <div class="col-xs-9">downloads yesterday</div>
+      </div>
+      <div class="row">
         <div class="col-xs-3 text-right"><%= @total[:week] %></div>
         <div class="col-xs-9">downloads last seven days</div>
       </div>

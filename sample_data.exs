@@ -1,3 +1,6 @@
+# Run with `mix run sample_data.exs`
+# Generates some sample data for development mode
+
 alias HexWeb.User
 alias HexWeb.Package
 alias HexWeb.Release
