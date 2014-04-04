@@ -41,7 +41,6 @@ defmodule HexWeb.Web.Templates do
   @templates [
     main: [:page, :assigns],
     index: [:assigns],
-    docs: [:assigns],
     packages: [:assigns],
     package: [:assigns],
     docs_tasks: [:_] ]
