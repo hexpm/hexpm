@@ -25,7 +25,7 @@
             <li<%= if @active == :docs do %> class="active" <% end %> class="dropdown">
               <a href="#" class="dropdown-toggle" data-toggle="dropdown">Documentation <b class="caret"></b></a>
               <ul class="dropdown-menu">
-                <li><a href="#">Usage</a></li>
+                <li><a href="/docs/usage">Usage</a></li>
                 <li><a href="#">Push release</a></li>
                 <li><a href="/docs/tasks">Mix tasks</a></li>
               </ul>

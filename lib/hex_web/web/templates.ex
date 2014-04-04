@@ -43,7 +43,8 @@ defmodule HexWeb.Web.Templates do
     index: [:assigns],
     packages: [:assigns],
     package: [:assigns],
-    docs_tasks: [:_] ]
+    docs_tasks: [:_],
+    docs_usage: [:_] ]
 
   Enum.each(@templates, fn { name, args } ->
     name = atom_to_binary(name)

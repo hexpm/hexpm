@@ -24,6 +24,14 @@ defmodule HexWeb.Web.Router do
     render(conn, :index)
   end
 
+  get "/docs/usage" do
+    active    = :docs
+    title     = "Usage"
+
+    conn = assign_pun(conn, [active, title])
+    render(conn, :docs_usage)
+  end
+
   get "/docs/tasks" do
     active    = :docs
     title     = "Mix tasks"

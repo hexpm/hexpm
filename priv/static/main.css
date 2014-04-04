@@ -19,10 +19,6 @@ body {
   margin-bottom: 60px;
 }
 
-code, kbd {
-  font-size: 85%;
-}
-
 #footer {
   position: absolute;
   bottom: 0;
