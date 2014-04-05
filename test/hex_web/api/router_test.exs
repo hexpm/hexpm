@@ -482,20 +482,4 @@ defmodule HexWeb.API.RouterTest do
     body = JSON.decode!(conn.resp_body)
     assert length(body) == 0
   end
-
-  test "installs" do
-    cdn_url = HexWeb.Config.cdn_url
-    HexWeb.Config.cdn_url("http://s3.hex.pm")
-
-    try do
-      conn = conn("GET", "/api/installs", [], [])
-      conn = Router.call(conn, [])
-
-      assert conn.status == 200
-      body = JSON.decode!(conn.resp_body)
-      assert body["dev"]["version"] == "0.0.1-dev"
-    after
-      HexWeb.Config.cdn_url(cdn_url)
-    end
-  end
 end

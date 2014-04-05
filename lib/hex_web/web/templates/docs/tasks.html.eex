@@ -18,8 +18,7 @@
 <p><code>mix hex.info [package [version]]</code></p>
 
 <p>If <code>package</code> is not given, print system information. This includes when
-registry was last updated, current system version and if there is a new
-version available.</p>
+registry was last updated and current system version</p>
 
 <p>If <code>package</code> is given, print information about the package. This includes all
 released versions and package metadata.</p>
@@ -121,8 +120,8 @@ need to contact an administrator.</p>
 <code>:git</code> or <code>:path</code> as the SCM <code>:package</code> is used.</p>
 
 <pre><code>defp deps do
-  [ { :ecto, &quot;~&gt; 0.1.0&quot;, package: true },
-    { :postgrex, &quot;~&gt; 0.3.0&quot;, package: true },
+  [ { :ecto, &quot;~&gt; 0.1.0&quot; },
+    { :postgrex, &quot;~&gt; 0.3.0&quot; },
     { :cowboy, github: &quot;extend/cowboy&quot; } ]
 end
 </code></pre>
@@ -164,10 +163,12 @@ recommended to do so.</p>
 
 <p><code>mix hex.update</code></p>
 
-<p>Updating the hex installation should be done periodically. The registry status can be
-checked with <code>mix hex.info</code>. The registry contains an index of all packages,
-releases and their dependencies that is used during Hex&#39;s dependency
-resolution.</p>
+<h4>Command line options</h4>
+
+<ul>
+<li><code>--channel</code>, <code>-c</code> - Selects the channel, defaults to the currently installed
+channel (possible values: <code>stable</code> <code>dev</code>)</li>
+</ul>
 
     </div>
   </div>

@@ -34,6 +34,12 @@ defmodule HexWeb.Plug do
     end)
   end
 
+  def redirect(conn, url) do
+    conn
+    |> put_resp_header("location", url)
+    |> send_resp(302, "")
+  end
+
   @doc """
   Read the body from a Plug connection.
 

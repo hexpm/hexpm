@@ -177,17 +177,6 @@ defmodule HexWeb.API.Router do
       end
     end
 
-    get "installs" do
-      body = [
-        dev: [
-          version: "0.0.1-dev",
-          url: HexWeb.Util.cdn_url(["installs", "hex.ez"]) ] ]
-
-      # TODO: etag + last_modified
-      # move this to database?
-      conn |> cache(:public) |> send_render(200, body)
-    end
-
     match _ do
       send_resp(conn, 404, "")
     end

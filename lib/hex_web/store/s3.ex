@@ -11,8 +11,6 @@ defmodule HexWeb.Store.S3 do
     end
   end
 
-  import Plug.Connection
-
   def list(prefix) do
     prefix = String.to_char_list!(prefix)
     bucket = HexWeb.Config.s3_bucket |> String.to_char_list!
@@ -58,9 +56,7 @@ defmodule HexWeb.Store.S3 do
 
   defp redirect(conn, path) do
     url = HexWeb.Config.cdn_url <> "/" <> path
-    conn
-    |> put_resp_header("location", url)
-    |> send_resp(302, "")
+    HexWeb.Plug.redirect(conn, url)
   end
 
   defp upload(name, data) when is_binary(name),

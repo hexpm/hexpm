@@ -108,4 +108,19 @@ defmodule HexWeb.RouterTest do
     conn = Router.call(conn, [])
     assert conn.port == 12345
   end
+
+  test "installs" do
+    cdn_url = HexWeb.Config.cdn_url
+    HexWeb.Config.cdn_url("http://s3.hex.pm")
+
+    try do
+      conn = conn("GET", "/installs/hex.ez", [], [])
+      conn = Router.call(conn, [])
+
+      assert conn.status == 302
+      assert conn.resp_headers["location"] == "http://s3.hex.pm/installs/hex.ez"
+    after
+      HexWeb.Config.cdn_url(cdn_url)
+    end
+  end
 end

@@ -1,6 +1,7 @@
 defmodule HexWeb.Router do
   use Plug.Router
   import Plug.Connection
+  import HexWeb.Plug
   alias HexWeb.Plugs
   alias HexWeb.Config
 
@@ -24,6 +25,14 @@ defmodule HexWeb.Router do
     get "tarballs/:ball" do
       HexWeb.Config.store.tar(conn, ball)
     end
+  end
+
+  get "installs/hex.ez" do
+    url = HexWeb.Config.cdn_url <> "/installs/hex.ez"
+
+    conn
+    |> cache([], [:public, "max-age": 60*60])
+    |> redirect(url)
   end
 
   forward "/api", to: HexWeb.API.Router
