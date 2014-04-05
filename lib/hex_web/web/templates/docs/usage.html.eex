@@ -3,7 +3,7 @@
 <h3>Installation</h3>
 
 <p>
-  Install by running <code>mix local.install http://hex.pm/installs/hex.ez</code> in your shell . The Hex installation can later be updated with <code>mix hex.update</code>.
+  Install by running <code>$ mix local.install http://hex.pm/installs/hex.ez</code> in your shell . The Hex installation can later be updated with <code>$ mix hex.update</code>.
 </p>
 
 <h3>Defining dependencies</h3>
@@ -44,9 +44,9 @@ end</code></pre>
 <h3>Fetching dependencies</h3>
 
 <p>
-  <code>mix deps.get</code> will fetch dependencies that were not already fetched. Dependency fetching is repeatable, Mix will lock the version of a dependency in the lockfile to ensure that all developers will get the same version (always commit <code>mix.lock</code> to version control). <code>mix deps.update</code> will update the dependency and write the updated version to the lockfile.
+  <code>$ mix deps.get</code> will fetch dependencies that were not already fetched. Dependency fetching is repeatable, Mix will lock the version of a dependency in the lockfile to ensure that all developers will get the same version (always commit <code>mix.lock</code> to version control). <code>$ mix deps.update</code> will update the dependency and write the updated version to the lockfile.
 </p>
 
 <p>
-  When Mix tries to fetch Hex packages that are not locked dependency resolution will be performed to find a set of packages that satisfies all version requirements. The resolution process will always try to use the latest version of all packages. Because of the nature of dependency resolution Hex may sometimes fail to find compatible releases of all your dependencies. This can be resolved by unlocking dependencies with <code>mix deps.unlock</code>, more unlocked dependencies gives Hex a larger selection of releases to work with.
+  When Mix tries to fetch Hex packages that are not locked dependency resolution will be performed to find a set of packages that satisfies all version requirements. The resolution process will always try to use the latest version of all packages. Because of the nature of dependency resolution Hex may sometimes fail to find compatible releases of all your dependencies. This can be resolved by unlocking dependencies with <code>$ mix deps.unlock</code>, more unlocked dependencies gives Hex a larger selection of releases to work with.
 </p>

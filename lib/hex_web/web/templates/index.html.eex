@@ -4,7 +4,7 @@
 
 <h2 style="margin-top: 40px">Learn</h2>
 <p>
-  Install with <code>$ mix local.install http://s3.hex.pm/installs/hex.ez && mix hex.update</code>.
+  Install with <code>$ mix local.install http://hex.pm/installs/hex.ez</code>.
 </p>
 <p>
   Hex integrates with Elixir's bundled build tool <a href="http://elixir-lang.org/getting_started/mix/1.html">Mix</a>. Packages are configured in <code>mix.exs</code> and fetched and compiled with the existing Mix dependency tasks. Run <code>$ mix local</code> to see all available, Hex specific, tasks and <code>$ mix help TASK</code> for more information about a specific task. See the <a href="/docs">documentation</a> for more information.
