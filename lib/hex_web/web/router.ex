@@ -2,6 +2,7 @@ defmodule HexWeb.Web.Router do
   use Plug.Router
   import Plug.Connection
   import HexWeb.Plug
+  alias HexWeb.Plug.NotFound
   alias HexWeb.Web.Templates
   alias HexWeb.Stats.PackageDownload
   alias HexWeb.Stats.ReleaseDownload
@@ -21,7 +22,7 @@ defmodule HexWeb.Web.Router do
     total        = PackageDownload.total
 
     conn = assign_pun(conn, [num_packages, num_releases, package_top, total])
-    render(conn, :index)
+    send_page(conn, :index)
   end
 
   get "/docs/usage" do
@@ -29,7 +30,7 @@ defmodule HexWeb.Web.Router do
     title     = "Usage"
 
     conn = assign_pun(conn, [active, title])
-    render(conn, :docs_usage)
+    send_page(conn, :docs_usage)
   end
 
   get "/docs/tasks" do
@@ -37,7 +38,7 @@ defmodule HexWeb.Web.Router do
     title     = "Mix tasks"
 
     conn = assign_pun(conn, [active, title])
-    render(conn, :docs_tasks)
+    send_page(conn, :docs_tasks)
   end
 
   get "/packages" do
@@ -50,7 +51,7 @@ defmodule HexWeb.Web.Router do
     title     = "Packages"
 
     conn = assign_pun(conn, [search, page, packages, pkg_count, active, title])
-    render(conn, :packages)
+    send_page(conn, :packages)
   end
 
   get "/packages/:name" do
@@ -62,7 +63,7 @@ defmodule HexWeb.Web.Router do
 
       package(conn, package, releases, release)
     else
-      send_resp(conn, 404, "404 FAIL")
+      raise NotFound
     end
   end
 
@@ -72,11 +73,11 @@ defmodule HexWeb.Web.Router do
       if release = Enum.find(releases, &(&1.version == version)) do
         package(conn, package, releases, release)
       end
-    end || send_resp(conn, 404, "404 FAIL")
+    end || raise NotFound
   end
 
   match _ do
-    send_resp(conn, 404, "404 FAIL")
+    raise NotFound
   end
 
   defp package(conn, package, releases, current_release) do
@@ -90,7 +91,7 @@ defmodule HexWeb.Web.Router do
 
     conn = assign_pun(conn, [package, releases, current_release, downloads,
                              release_downloads, active, title])
-    render(conn, :package)
+    send_page(conn, :package)
   end
 
   defp safe_page(page, _count) when page < 1,
@@ -100,8 +101,11 @@ defmodule HexWeb.Web.Router do
   defp safe_page(page, _count),
     do: page
 
-  defp render(conn, page) do
+  def send_page(conn, page) do
     { :safe, body } = Templates.render(page, conn.assigns)
-    send_resp(conn, 200, body)
+
+    conn
+    |> put_resp_header("content-type", "text/html; charset=utf-8")
+    |> send_resp(200, body)
   end
 end

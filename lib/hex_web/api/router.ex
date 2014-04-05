@@ -4,6 +4,7 @@ defmodule HexWeb.API.Router do
   import HexWeb.Plug
   import HexWeb.API.Util
   import HexWeb.Util, only: [api_url: 1, parse_integer: 2]
+  alias HexWeb.Plug.NotFound
   alias HexWeb.Plugs
   alias HexWeb.User
   alias HexWeb.Package
@@ -72,7 +73,7 @@ defmodule HexWeb.API.Router do
       if user = User.get(name) do
         when_stale user, do: conn |> cache(:public) |> send_render(200, user)
       else
-        send_resp(conn, 404, "")
+        raise NotFound
       end
     end
 
@@ -94,7 +95,7 @@ defmodule HexWeb.API.Router do
       if package = Package.get(name) do
         when_stale package, do: conn |> cache(:public) |> send_render(200, package)
       else
-        send_resp(conn, 404, "")
+        raise NotFound
       end
     end
 
@@ -128,7 +129,7 @@ defmodule HexWeb.API.Router do
           send_delete_resp(conn, result, :public)
         end
       else
-        send_resp(conn, 404, "")
+        raise NotFound
       end
     end
 
@@ -136,7 +137,7 @@ defmodule HexWeb.API.Router do
       if (package = Package.get(name)) && (release = Release.get(package, version)) do
         when_stale release, do: conn |> cache(:public) |> send_render(200, release)
       else
-        send_resp(conn, 404, "")
+        raise NotFound
       end
     end
 
@@ -152,7 +153,7 @@ defmodule HexWeb.API.Router do
         if key = Key.get(name, user) do
           when_stale key, do: conn |> cache(:private) |> send_render(200, key)
         else
-          send_resp(conn, 404, "")
+          raise NotFound
         end
       end
     end
@@ -171,13 +172,13 @@ defmodule HexWeb.API.Router do
           result = Key.delete(key)
           send_delete_resp(conn, result, :private)
         else
-          send_resp(conn, 404, "")
+          raise NotFound
         end
       end
     end
 
     match _ do
-      send_resp(conn, 404, "")
+      raise NotFound
     end
   end
 end

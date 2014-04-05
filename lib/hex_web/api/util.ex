@@ -74,7 +74,10 @@ defmodule HexWeb.API.Util do
   Renders an entity or dict body and sends it with a status code.
   """
   @spec send_render(Plug.Conn.t, non_neg_integer, term) :: Plug.Conn.t
-  def send_render(conn, status, body) when is_list(body) do
+  @spec send_render(Plug.Conn.t, non_neg_integer, term, boolean) :: Plug.Conn.t
+  def send_render(conn, status, body, fallback \\ false)
+
+  def send_render(conn, status, body, fallback) when is_list(body) do
     # Handle list of entities
     if body != [] && (impl = HexWeb.Render.impl_for(List.first(body))) do
       body = Enum.map(body, &impl.render(&1))
@@ -84,7 +87,7 @@ defmodule HexWeb.API.Util do
         :elixir ->
           body = HexWeb.Util.safe_serialize_elixir(body)
           content_type = "application/vnd.hex+elixir"
-        :json ->
+        format when format == :json or fallback ->
           body = JSON.encode!(body)
           content_type = "application/json"
         _ ->
@@ -97,7 +100,7 @@ defmodule HexWeb.API.Util do
     end
   end
 
-  def send_render(conn, status, entity) do
+  def send_render(conn, status, entity, fallback) do
     body = HexWeb.Render.render(entity)
     send_render(conn, status, body)
   end

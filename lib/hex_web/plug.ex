@@ -9,6 +9,14 @@ defmodule HexWeb.Plug do
     end
   end
 
+  defexception NotFound, [:message] do
+    defimpl Plug.Exception do
+      def status(_exception) do
+        404
+      end
+    end
+  end
+
   defmacro assign_pun(conn, vars) do
     Enum.reduce(vars, conn, fn { field, _, _ } = var, ast ->
       quote do

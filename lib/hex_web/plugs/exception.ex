@@ -14,7 +14,23 @@ defmodule HexWeb.Plugs.Exception do
         status     = Plug.Exception.status(error)
 
         if status == 500, do: HexWeb.Util.log_error(kind, error, stacktrace)
-        send_resp(conn, status, "")
+
+        if List.first(conn.path_info) == "api" do
+          api_response(conn, status)
+        else
+          html_response(conn, status)
+        end
     end
+  end
+
+  defp html_response(conn, status) do
+    conn
+    |> assign(:status, status)
+    |> HexWeb.Web.Router.send_page(:error)
+  end
+
+  defp api_response(conn, status) do
+    body = [error: status]
+    HexWeb.API.Util.send_render(conn, status, body, true)
   end
 end
