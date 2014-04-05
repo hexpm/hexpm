@@ -99,12 +99,12 @@ defmodule HexWeb.RouterTest do
 
   test "forwarded" do
     headers = [ { "x-forwarded-proto", "https" } ]
-    conn = conn("GET", "/foobar", [], headers: headers)
+    conn = conn("GET", "/installs/hex.ez", [], headers: headers)
     conn = Router.call(conn, [])
     assert conn.scheme == :https
 
     headers = [ { "x-forwarded-port", "12345" } ]
-    conn = conn("GET", "/foobar", [], headers: headers)
+    conn = conn("GET", "/installs/hex.ez", [], headers: headers)
     conn = Router.call(conn, [])
     assert conn.port == 12345
   end

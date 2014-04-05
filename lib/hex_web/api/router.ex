@@ -11,8 +11,7 @@ defmodule HexWeb.API.Router do
   alias HexWeb.API.Key
 
 
-  plug Plugs.Accept, vendor: "hex", allow: [{"application","json"}, "json", "elixir"]
-  plug Plugs.Version
+  plug Plugs.Format
   plug :match
   plug :dispatch
 
