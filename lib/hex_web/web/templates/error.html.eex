@@ -1,9 +1,7 @@
-<%=
-case @status do
-  404 ->
-    { :safe, "<h2>Page Not Found</h2>" }
-  500 ->
-    { :safe, "<h2>Internal Server Error</h2>\n" <>
-             "<p>Please contact admins if issues persist</p>" }
-end
-%>
+<%= case @status do %>
+  <% 404 -> %>
+    <h2>Page Not Found</h2>
+  <% 500 -> %>
+    <h2>Internal Server Error</h2>
+    <p>Please contact admins if issues persist</p>
+<% end %>

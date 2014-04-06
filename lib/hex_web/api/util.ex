@@ -102,7 +102,7 @@ defmodule HexWeb.API.Util do
 
   def send_render(conn, status, entity, fallback) do
     body = HexWeb.Render.render(entity)
-    send_render(conn, status, body)
+    send_render(conn, status, body, fallback)
   end
 
   @doc """
