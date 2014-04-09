@@ -46,7 +46,7 @@ defmodule HexWeb.Package do
     case validate_create(package) do
       [] ->
         package = package.meta(JSON.encode!(meta))
-        { :ok, HexWeb.Repo.create(package).meta(meta).releases([]) }
+        { :ok, HexWeb.Repo.insert(package).meta(meta).releases([]) }
       errors ->
         { :error, errors }
     end

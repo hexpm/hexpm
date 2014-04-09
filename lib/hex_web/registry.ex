@@ -13,7 +13,7 @@ defmodule HexWeb.Registry do
 
   def create() do
     registry = HexWeb.Registry.new(state: "waiting", created_at: Util.ecto_now)
-    { :ok, HexWeb.Repo.create(registry) }
+    { :ok, HexWeb.Repo.insert(registry) }
   end
 
   def set_working(registry) do

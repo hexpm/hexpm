@@ -54,7 +54,7 @@ HexWeb.Repo.transaction(fn ->
 
   yesterday = HexWeb.Util.yesterday |> Ecto.Date.from_erl
   Download.new(release_id: rel.id, downloads: 42, day: yesterday)
-  |> HexWeb.Repo.create
+  |> HexWeb.Repo.insert
 
   PackageDownload.refresh
   ReleaseDownload.refresh

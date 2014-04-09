@@ -28,7 +28,7 @@ defmodule HexWeb.Stats.Job do
 
         if rel_id do
           Download.new(release_id: rel_id, downloads: count, day: date)
-          |> HexWeb.Repo.create
+          |> HexWeb.Repo.insert
         end
       end)
 

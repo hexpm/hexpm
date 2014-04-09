@@ -38,7 +38,7 @@ defmodule HexWeb.User do
     case validate_create(user) do
       [] ->
         user = user.password(gen_password(password))
-        { :ok, HexWeb.Repo.create(user) }
+        { :ok, HexWeb.Repo.insert(user) }
       errors ->
         { :error, errors }
     end

@@ -28,7 +28,7 @@ defmodule HexWeb.Release do
     case validate_create(release) do
       [] ->
         HexWeb.Repo.transaction(fn ->
-          release = HexWeb.Repo.create(release)
+          release = HexWeb.Repo.insert(release)
           update_requirements(release.package(package), requirements)
         end)
       errors ->
@@ -103,7 +103,7 @@ defmodule HexWeb.Release do
 
         id = deps[dep] ->
           release.requirements.new(requirement: req, dependency_id: id)
-          |> HexWeb.Repo.create()
+          |> HexWeb.Repo.insert()
           { dep, req }
 
         true ->
