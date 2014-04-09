@@ -262,6 +262,9 @@ defmodule HexWeb.API.RouterTest do
     conn = Router.call(conn, [])
     assert conn.status == 201
 
+    # async rebuild
+    :timer.sleep(100)
+
     refute File.Stat[mtime: {{2000,1,1,},{1,1,1}}] = File.stat!(path)
   after
     RegistryBuilder.stop
