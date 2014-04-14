@@ -57,9 +57,7 @@ defmodule HexWeb.Web.Router do
   get "/packages/:name" do
     if package = Package.get(name) do
       releases = Release.all(package)
-      if release = List.first(releases) do
-        release = release.requirements(Release.requirements(release))
-      end
+      release = List.first(releases)
 
       package(conn, package, releases, release)
     else
@@ -87,6 +85,7 @@ defmodule HexWeb.Web.Router do
 
     if current_release do
       release_downloads = ReleaseDownload.release(current_release)
+      current_release = current_release.requirements(Release.requirements(current_release))
     end
 
     conn = assign_pun(conn, [package, releases, current_release, downloads,
