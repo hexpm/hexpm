@@ -40,6 +40,8 @@ defmodule HexWeb.Web.HTML do
     use EEx.TransformerEngine
     use EEx.AssignsEngine
 
+    def handle_body(body), do: unsafe(body)
+
     def handle_text(buffer, text) do
       quote do
         { :safe, unquote(buffer) <> unquote(text) }

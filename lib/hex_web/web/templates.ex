@@ -13,7 +13,7 @@ defmodule HexWeb.Web.Templates do
 
   defmacrop inner do
     quote do
-      apply(__MODULE__, :"template_#{var!(page)}", [var!(assigns)])
+      safe apply(__MODULE__, :"template_#{var!(page)}", [var!(assigns)])
     end
   end
 
