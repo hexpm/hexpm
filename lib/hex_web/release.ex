@@ -94,7 +94,7 @@ defmodule HexWeb.Release do
          from p in HexWeb.Package,
        where: p.name in array(^deps, ^:string),
       select: { p.name, p.id }
-    deps = HexWeb.Repo.all(deps_query) |> HashDict.new
+    deps = HexWeb.Repo.all(deps_query) |> Enum.into(HashDict.new)
 
     Enum.map(requirements, fn { dep, req } ->
       cond do

@@ -24,7 +24,7 @@ defmodule HexWeb.API.Key do
         names =
           from(k in HexWeb.API.Key, where: k.user_id == ^user.id, select: k.name)
           |> HexWeb.Repo.all
-          |> HashSet.new
+          |> Enum.into(HashSet.new)
 
         if Set.member?(names, name) do
           name = unique_name(name, names)

@@ -182,7 +182,7 @@ defmodule HexWeb.RegistryBuilder do
   defp packages do
     from(p in Package, select: { p.id, p.name })
     |> HexWeb.Repo.all
-    |> HashDict.new
+    |> Enum.into(HashDict.new)
   end
 
   defp releases do

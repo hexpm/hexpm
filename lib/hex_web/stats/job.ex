@@ -87,12 +87,12 @@ defmodule HexWeb.Stats.Job do
   defp packages do
     from(p in Package, select: { p.name, p.id })
     |> HexWeb.Repo.all
-    |> HashDict.new
+    |> Enum.into(HashDict.new)
   end
 
   defp releases do
     from(r in Release, select: { { r.package_id, r.version }, r.id })
     |> HexWeb.Repo.all
-    |> HashDict.new
+    |> Enum.into(HashDict.new)
   end
 end
