@@ -33,6 +33,14 @@ defmodule HexWeb.Web.Router do
     send_page(conn, :docs_usage)
   end
 
+  get "/docs/release" do
+    active    = :docs
+    title     = "Push release"
+
+    conn = assign_pun(conn, [active, title])
+    send_page(conn, :docs_release)
+  end
+
   get "/docs/tasks" do
     active    = :docs
     title     = "Mix tasks"
@@ -75,6 +83,7 @@ defmodule HexWeb.Web.Router do
   end
 
   match _ do
+    _conn = conn
     raise NotFound
   end
 

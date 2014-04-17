@@ -1,0 +1,88 @@
+<h2>Push release</h2>
+
+<p>
+  Pushing a project release to Hex consists of creating a user, attaching some metadata to the project's <code>mix.exs</code> file and finally performing the command to push.
+</p>
+
+<h3>Register a new user</h3>
+
+<p>
+  When registering a user, a username, password, and email will be asked for. The email is used to be able to contact the maintainers in case there is an issue with their package. The email will never be shared to a third party.
+</p>
+
+<pre><code>$ mix hex.user.register
+Username: johndoe
+Email: john.doe@example.com
+Password: hunter42
+Password (confirm): hunter42
+Registering...
+Generating api key...
+</code></pre>
+
+<h3>Adding metadata</h3>
+
+<p>
+  The package is configured in Mix's project configuration. First make sure that <code>:version</code> property is correct for the new release. All Hex packages are required to follow <a href="http://semver.org/">semantic versioning</a>.
+</p>
+
+<p>
+  Secondly, fill in the <code>:description</code> property. It should be a few paragraphs describing the package.
+</p>
+
+<p>
+  Under the <code>:package</code> property are four additional configuration options.
+</p>
+
+<dl class="dl-horizontal">
+  <dt><code>:files</code></dt>
+  <dd>A list of files and directories to include in the release. Defaults to standard project directories. Has to include <code>mix.exs</code>.</dd>
+  <dt><code>:contributors</code></dt>
+  <dd>A list of names of contributors to the project.</dd>
+  <dt><code>:licenses</code></dt>
+  <dd>A list of licences the project is licensed with.</dd>
+  <dt><code>:links</code></dt>
+  <dd>A list of key-value tuples, where the key is a link name and the value is the link URL.</dd>
+</dl>
+
+<p>
+  Only the <code>:version</code> property is required to push a releases. But all other properties are highly recommended to fill in.
+</p>
+
+<h3>Dependencies</h3>
+
+<h3>Doing the push</h3>
+
+<h3>Example mixfile</h3>
+
+<pre><code>defmodule Postgrex.Mixfile do
+  use Mix.Project
+
+  def project do
+    [ app: :postgrex,
+      version: "0.1.0",
+      elixir: "0.13.0",
+      description: description,
+      package: package,
+      deps: deps ]
+  end
+
+  def application do
+    []
+  end
+
+  defp deps do
+    [ { :decimal, "~> 0.1.0",
+        :ex_doc, github: "elixir-lang/ex_doc", only: :dev } ]
+  end
+
+  defp description do
+    """
+    Here should be a few sentences or paragraphs describing the project.
+    """
+  end
+
+  defp package do
+    []
+  end
+end
+</code></pre>

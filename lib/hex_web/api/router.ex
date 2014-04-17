@@ -178,6 +178,7 @@ defmodule HexWeb.API.Router do
     end
 
     match _ do
+      _conn = conn
       raise NotFound
     end
   end

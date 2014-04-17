@@ -7,7 +7,7 @@ defmodule HexWeb.Util do
   require Lager
 
   def log_error(:error, error, stacktrace) do
-    exception = Exception.normalize(error)
+    exception = Exception.normalize(:error, error)
     Lager.error "** (#{inspect exception.__record__(:name)}) #{exception.message}\n"
                 <> Exception.format_stacktrace(stacktrace)
   end
