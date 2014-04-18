@@ -15,7 +15,9 @@ defmodule HexWeb.Validation do
     case Version.parse(version) do
       { :ok, Version.Schema[pre: pre] } when allow_pre or pre == [] ->
         []
-      :error ->
+      { :ok, Version.Schema[] } when not allow_pre ->
+        [{ attr, opts[:message] || "pre release version is not allowed" }]
+      _ ->
         [{ attr, opts[:message] || "invalid version" }]
     end
   end

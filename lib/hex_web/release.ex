@@ -13,6 +13,7 @@ defmodule HexWeb.Release do
     field :updated_at, :datetime
   end
 
+  # TODO: Prerelease support, also see TODO below
   validatep validate(release),
     version: present() and type(:string) and valid_version(pre: false)
 

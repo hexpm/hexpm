@@ -51,6 +51,9 @@ defmodule HexWeb.ReleaseTest do
     assert { :error, [version: "invalid version"] } =
            Release.create(package, "0.1", [])
 
+    assert { :error, [version: "pre release version is not allowed"] } =
+           Release.create(package, "0.1.0-dev", [])
+
     assert { :error, [deps: [{ "decimal", "invalid requirement: \"fail\"" }]] } =
            Release.create(package, "0.1.1", [{ "decimal", "fail" }])
   end
