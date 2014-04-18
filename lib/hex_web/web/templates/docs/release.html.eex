@@ -50,11 +50,41 @@ Generating api key...
 
 <h3>Dependencies</h3>
 
+<p>
+  For Mix to handle Hex packages as dependencies <code>Code.ensure_loaded?(Hex) and Hex.start</code> is required at the top of your mixfile. A dependency defined with no SCM (<code>:git</code> or <code>:path</code>) will be automatically as a Hex dependency. See the <a href="/docs/usage">Usage guide</a> for more details.
+</p>
+
+<p>
+  Only Hex packages will be included as dependencies in the release, for example Git dependencies will not be include. Additionally, only production dependencies will be included in a release, just like how Mix will only fetch production dependencies when fetching the dependencies of your dependencies. Dependencies will be treated as production dependencies when they are defined with no <code>:only</code> property or with <code>only: :prod</code>.
+</p>
+
 <h3>Doing the push</h3>
+
+<p>
+  When finally running the command to push the release Hex will create a tar file of all the files and directories listed in the <code>:files</code> property. When the tarball has been pushed to the Hex servers, it will be uploaded to a CDN for fast and easy access to users. Hex will also recompile the registry file that all clients will update to automatically when fetching dependencies.
+</p>
+
+<pre><code>$ mix hex.release
+Pushing release postgrex v0.4.0
+  Dependencies:
+    decimal ~> 0.1.0
+  Included files:
+    lib/postgrex
+    lib/postgrex/binary_utils.ex
+    lib/postgrex/connection.ex
+    lib/postgrex/protocol.ex
+    lib/postgrex/records.ex
+    lib/postgrex/types.ex
+    mix.exs
+Proceed? [Yn] Y
+Pushed postgrex v0.4.0
+</code></pre>
 
 <h3>Example mixfile</h3>
 
-<pre><code>defmodule Postgrex.Mixfile do
+<pre><code>Code.ensure_loaded?(Hex) and Hex.start
+
+defmodule Postgrex.Mixfile do
   use Mix.Project
 
   def project do
@@ -72,7 +102,7 @@ Generating api key...
 
   defp deps do
     [ { :decimal, "~> 0.1.0",
-        :ex_doc, github: "elixir-lang/ex_doc", only: :dev } ]
+        :ex_doc, github: "elixir-lang/ex_doc" } ]
   end
 
   defp description do
@@ -82,7 +112,11 @@ Generating api key...
   end
 
   defp package do
-    []
+    [ files: ["lib", "priv", "mix.exs", "README*", "readme*"], # This is the default
+      contributors: ["Eric Meadows-Jönsson", "José Valim"],
+      licenses: ["Apache 2.0"],
+      links: [ { "Github", "https://github.com/ericmj/postgrex" },
+               { "Docs", "http://ericmj.github.io/postgrex/" } ] ]
   end
 end
 </code></pre>

@@ -3,7 +3,7 @@
 <h3>Installation</h3>
 
 <p>
-  Install by running <code>$ mix local.install http://hex.pm/installs/hex.ez</code> in your shell . The Hex installation can later be updated with <code>$ mix hex.update</code>.
+  Install by running <code>$ mix local.install https://hex.pm/installs/hex.ez</code> in your shell . The Hex installation can later be updated with <code>$ mix hex.update</code>.
 </p>
 
 <h3>Defining dependencies</h3>
