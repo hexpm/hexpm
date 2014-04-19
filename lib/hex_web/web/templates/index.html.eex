@@ -1,14 +1,30 @@
 <p class="lead">
-  Hex is the package manager for <a href="http://elixir-lang.org">Elixir</a>.
+  Hex is a package manager for the Erlang VM.
 </p>
 
-<h2 style="margin-top: 40px">Learn</h2>
-<p>
-  Install with <code>$ mix local.install http://hex.pm/installs/hex.ez</code>.
-</p>
-<p>
-  Hex integrates with Elixir's bundled build tool <a href="http://elixir-lang.org/getting_started/mix/1.html">Mix</a>. Packages are configured in <code>mix.exs</code> and fetched and compiled with the existing Mix dependency tasks. Run <code>$ mix local</code> to see all available, Hex specific, tasks and <code>$ mix help TASK</code> for more information about a specific task. See the <a href="/docs">documentation</a> for more information.
-</p>
+<div class="row">
+  <div class="col-md-12">
+    <h3>Using with Elixir</h3>
+    <p>
+      You can install Hex by running <code>mix local.install http://hex.pm/installs/hex.ez</code> in your command line.
+    </p>
+    <p>
+      Hex integrates with Elixir's build tool called <a href="http://elixir-lang.org/getting_started/mix/1.html">Mix</a> and can be added to your projects in few steps, check our <a href="/docs/usage">Usage page</a> for more information.
+    </p>
+    <p>
+      You can also run <code>mix local</code> to see all available Hex tasks and <code>mix help TASK</code> for more information about a specific task.
+    </p>
+  </div>
+</div>
+
+<div class="row">
+  <div class="col-md-12">
+    <h3>Using with Erlang</h3>
+    <p>
+      Support for Erlang tools are under way. Clients for popular build tools and other languages are welcome!
+    </p>
+  </div>
+</div>
 
 <div class="row">
   <div class="col-md-6">
