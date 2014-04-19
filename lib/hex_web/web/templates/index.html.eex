@@ -6,7 +6,7 @@
   <div class="col-md-12">
     <h3>Using with Elixir</h3>
     <p>
-      You can install Hex by running <code>mix local.install http://hex.pm/installs/hex.ez</code> in your command line.
+      You can install Hex by running <code>mix local.install https://hex.pm/installs/hex.ez</code> in your command line.
     </p>
     <p>
       Hex integrates with Elixir's build tool called <a href="http://elixir-lang.org/getting_started/mix/1.html">Mix</a> and can be added to your projects in few steps, check our <a href="/docs/usage">Usage page</a> for more information.
