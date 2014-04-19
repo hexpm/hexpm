@@ -18,7 +18,7 @@
 <p><code>mix hex.info [package [version]]</code></p>
 
 <p>If <code>package</code> is not given, print system information. This includes when
-registry was last updated and current system version</p>
+registry was last updated and current system version.</p>
 
 <p>If <code>package</code> is given, print information about the package. This includes all
 released versions and package metadata.</p>
