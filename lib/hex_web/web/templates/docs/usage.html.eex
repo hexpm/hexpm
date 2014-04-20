@@ -3,17 +3,19 @@
 <h3>Installation</h3>
 
 <p>
-  Install by running <code>$ mix local.install https://hex.pm/installs/hex.ez</code> in your shell . The Hex installation can later be updated with <code>$ mix hex.update</code>.
+  Install Hex by running <code>$ mix local.install https://hex.pm/installs/hex.ez</code> in your shell. The Hex installation can later be updated with <code>$ mix hex.update</code>.
 </p>
 
 <h3>Defining dependencies</h3>
 
 <p>
-  Hex integrates with Mix's dependency handling. This means that it utilizes Mix's dependency lock file <code>mix.lock</code>, dependencies are defined in Mix's format and all the ordinary Mix dependency commands work. <code>Code.ensure_loaded?(Hex) and Hex.start</code> is required at the top of the project's mixfile <code>mix.exs</code> to ensure that Hex integrates with Mix.
+  Hex integrates with Mix's dependency handling. Dependencies are defined in Mix's format and all the ordinary Mix dependency commands work. All it is required is to add the following to the top of your <code>mix.exs</code> file:
 </p>
-
 <p>
-  Below is an example mixfile.
+  <code>Code.ensure_loaded?(Hex) and Hex.start</code>
+</p>
+<p>
+  All dependencies without a SCM (<code>:git</code> or <code>:path</code>) are automatically handled by Hex. Below is an example <code>mix.exs</code> file.
 </p>
 
 <pre><code>Code.ensure_loaded?(Hex) and Hex.start
@@ -37,9 +39,6 @@ defmodule MyProject.Mixfile do
   end
 end</code></pre>
 
-<p>
-  Dependencies without an SCM (<code>:github</code> or <code>:path</code>) will automatically be treated as Hex packages.
-</p>
 
 <h3>Fetching dependencies</h3>
 
@@ -48,5 +47,5 @@ end</code></pre>
 </p>
 
 <p>
-  When Mix tries to fetch Hex packages that are not locked dependency resolution will be performed to find a set of packages that satisfies all version requirements. The resolution process will always try to use the latest version of all packages. Because of the nature of dependency resolution Hex may sometimes fail to find compatible releases of all your dependencies. This can be resolved by unlocking dependencies with <code>$ mix deps.unlock</code>, more unlocked dependencies gives Hex a larger selection of releases to work with.
+  When Mix tries to fetch Hex packages that are not locked, dependency resolution will be performed to find a set of packages that satisfies all version requirements. The resolution process will always try to use the latest version of all packages. Because of the nature of dependency resolution Hex may sometimes fail to find compatible releases of all your dependencies. This can be resolved by unlocking dependencies with <code>$ mix deps.unlock</code>, more unlocked dependencies gives Hex a larger selection of releases to work with.
 </p>
