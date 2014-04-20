@@ -15,7 +15,13 @@
   <code>Code.ensure_loaded?(Hex) and Hex.start</code>
 </p>
 <p>
-  All dependencies without a SCM (<code>:git</code> or <code>:path</code>) are automatically handled by Hex. Below is an example <code>mix.exs</code> file.
+  All dependencies without a SCM (<code>:git</code> or <code>:path</code>) are automatically handled by Hex. Hex dependencies are defined in the following format:
+</p>
+
+<p><code>{ :package, requirement }</code></p>
+
+<p>
+  The version requirement specify which versions of the package you allow. The formats accepted for the requirement are documented in the <a href="http://elixir-lang.org/docs/stable/Version.html">Version module</a>. Below is an example <code>mix.exs</code> file.
 </p>
 
 <pre><code>Code.ensure_loaded?(Hex) and Hex.start
