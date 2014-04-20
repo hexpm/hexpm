@@ -33,12 +33,12 @@ defmodule HexWeb.Web.Router do
     send_page(conn, :docs_usage)
   end
 
-  get "/docs/release" do
+  get "/docs/publish" do
     active    = :docs
-    title     = "Push release"
+    title     = "Publish package"
 
     conn = assign_pun(conn, [active, title])
-    send_page(conn, :docs_release)
+    send_page(conn, :docs_publish)
   end
 
   get "/docs/tasks" do

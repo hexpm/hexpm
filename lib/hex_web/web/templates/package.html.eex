@@ -32,7 +32,7 @@
       <div class="panel-body">
         <div class="row">
           <div class="col-xs-4 text-right"><%= @release_downloads || 0 %></div>
-          <div class="col-xs-8 text-muted">latest release</div>
+          <div class="col-xs-8 text-muted">latest version</div>
         </div>
         <div class="row">
           <div class="col-xs-4 text-right"><%= @downloads[:day] || 0 %></div>
@@ -56,7 +56,7 @@
 
 <div class="row">
   <div class="col-md-6">
-    <h4>Releases</h4>
+    <h4>Versions</h4>
 
     <ul class="list-unstyled">
       <%= lc release inlist @package.releases.to_list do %>

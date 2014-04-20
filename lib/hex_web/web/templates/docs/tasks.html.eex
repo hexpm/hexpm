@@ -82,33 +82,33 @@ authenticate API requests.</p>
   </div>
 
   <div class="panel panel-default">
-    <div class="panel-heading"><h3 class="panel-title">hex.release</h3></div>
+    <div class="panel-heading"><h3 class="panel-title">hex.publish</h3></div>
     <div class="panel-body">
-      <p>Create a new package release and update package meta data.</p>
+      <p>Publish a new version of your package and update the package.</p>
 
-<p><code>mix hex.release -u username -p password</code></p>
+<p><code>mix hex.publish -u username -p password</code></p>
 
-<p>If it is a new package being released it will be created and the user
+<p>If it is a new package being published it will be created and the user
 specified in <code>username</code> will be the package owner. Only package owners can
-create new releases.</p>
+publish.</p>
 
-<p>A release can be amended or reverted with <code>--revert</code> up to one hour after its
-creation. If you want to revert a release that is more than one hour old you
-need to contact an administrator.</p>
+<p>A published version can be amended or reverted with <code>--revert</code> up to one hour
+after its publication. If you want to revert a publication that is more than
+one hour old you need to contact an administrator.</p>
 
 <h4>Command line options</h4>
 
 <ul>
 <li><p><code>--user</code>, <code>-u</code> - Username of package owner (overrides user stored in config)</p></li>
 <li><p><code>--pass</code>, <code>-p</code> - Password of package owner (required if <code>--user</code> was given)</p></li>
-<li><p><code>--revert version</code> - Revert given release</p></li>
+<li><p><code>--revert version</code> - Revert given version</p></li>
 </ul>
 
 <h4>Configuration</h4>
 
 <ul>
 <li><p><code>:app</code> - Package name (required)</p></li>
-<li><p><code>:version</code> - Release version (required)</p></li>
+<li><p><code>:version</code> - Package version (required)</p></li>
 <li><p><code>:deps</code> - List of package dependencies (see Dependencies below)</p></li>
 <li><p><code>:description</code> - Description of the project in a few paragraphs</p></li>
 <li><p><code>:package</code> - Hex specific configuration (see Package configuration below)</p></li>
@@ -126,10 +126,10 @@ need to contact an administrator.</p>
 end
 </code></pre>
 
-<p>As can be seen package dependencies works alongside git dependencies.
-Important to note is that non-packaged dependencies will not be used during
-dependency resolution and neither will be they listed as dependencies under
-a release.</p>
+<p>As can be seen Hex package dependencies works alongside git dependencies.
+Important to note is that non-Hex dependencies will not be used during
+dependency resolution and neither will be they listed as dependencies of the
+package.</p>
 
 <h4>Package configuration</h4>
 
@@ -137,7 +137,7 @@ a release.</p>
 recommended to do so.</p>
 
 <ul>
-<li><p><code>:files</code> - List of files and directories to include in the release</p></li>
+<li><p><code>:files</code> - List of files and directories to include in the package</p></li>
 <li><p><code>:contributors</code> - List of names of contributors</p></li>
 <li><p><code>:licenses</code> - List of licenses used by the package</p></li>
 <li><p><code>:links</code> - Dictionary of links</p></li>

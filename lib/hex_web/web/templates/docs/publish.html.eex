@@ -1,7 +1,7 @@
-<h2>Push release</h2>
+<h2>Publish a package</h2>
 
 <p>
-  Pushing a project release to Hex consists of creating a user, attaching some metadata to the project's <code>mix.exs</code> file and finally performing the command to push.
+  Publishing a package to Hex consists of creating a user, attaching some metadata to the project's <code>mix.exs</code> file and finally performing the command to push.
 </p>
 
 <h3>Register a new user</h3>
@@ -22,7 +22,7 @@ Generating api key...
 <h3>Adding metadata</h3>
 
 <p>
-  The package is configured in Mix's project configuration. First make sure that <code>:version</code> property is correct for the new release. All Hex packages are required to follow <a href="http://semver.org/">semantic versioning</a>.
+  The package is configured in Mix's project configuration. First make sure that <code>:version</code> property is correct for the new package version. All Hex packages are required to follow <a href="http://semver.org/">semantic versioning</a>.
 </p>
 
 <p>
@@ -35,7 +35,7 @@ Generating api key...
 
 <dl class="dl-horizontal">
   <dt><code>:files</code></dt>
-  <dd>A list of files and directories to include in the release. Defaults to standard project directories. Has to include <code>mix.exs</code>.</dd>
+  <dd>A list of files and directories to include in the package. Defaults to standard project directories. Has to include <code>mix.exs</code>.</dd>
   <dt><code>:contributors</code></dt>
   <dd>A list of names of contributors to the project.</dd>
   <dt><code>:licenses</code></dt>
@@ -45,7 +45,7 @@ Generating api key...
 </dl>
 
 <p>
-  Only the <code>:version</code> property is required to push a releases. But all other properties are highly recommended to fill in.
+  Only the <code>:version</code> property is required to publish a package. But all other properties are highly recommended to fill in.
 </p>
 
 <h3>Dependencies</h3>
@@ -55,19 +55,21 @@ Generating api key...
 </p>
 
 <p>
-  Only Hex packages will be included as dependencies in the release, for example Git dependencies will not be include. Additionally, only production dependencies will be included in a release, just like how Mix will only fetch production dependencies when fetching the dependencies of your dependencies. Dependencies will be treated as production dependencies when they are defined with no <code>:only</code> property or with <code>only: :prod</code>.
+  Only Hex packages will be included as dependencies of the package, for example Git dependencies will not be include. Additionally, only production dependencies will be included, just like how Mix will only fetch production dependencies when fetching the dependencies of your dependencies. Dependencies will be treated as production dependencies when they are defined with no <code>:only</code> property or with <code>only: :prod</code>.
 </p>
 
-<h3>Doing the push</h3>
+<h3>Doing the publication</h3>
 
 <p>
-  When finally running the command to push the release Hex will create a tar file of all the files and directories listed in the <code>:files</code> property. When the tarball has been pushed to the Hex servers, it will be uploaded to a CDN for fast and easy access to users. Hex will also recompile the registry file that all clients will update to automatically when fetching dependencies.
+  When finally running the command to publish a package Hex will create a tar file of all the files and directories listed in the <code>:files</code> property. When the tarball has been pushed to the Hex servers, it will be uploaded to a CDN for fast and easy access to users. Hex will also recompile the registry file that all clients will update to automatically when fetching dependencies.
 </p>
 
-<pre><code>$ mix hex.release
-Pushing release postgrex v0.4.0
+<pre><code>$ mix hex.publish
+Publishing postgrex v0.4.0
   Dependencies:
     decimal ~> 0.1.0
+  Excluded dependencies (not part of the Hex package):
+    ex_doc
   Included files:
     lib/postgrex
     lib/postgrex/binary_utils.ex
@@ -77,7 +79,7 @@ Pushing release postgrex v0.4.0
     lib/postgrex/types.ex
     mix.exs
 Proceed? [Yn] Y
-Pushed postgrex v0.4.0
+Published postgrex v0.4.0
 </code></pre>
 
 <h3>Example mixfile</h3>
@@ -112,7 +114,8 @@ defmodule Postgrex.Mixfile do
   end
 
   defp package do
-    [ files: ["lib", "priv", "mix.exs", "README*", "readme*"], # This is the default
+    [ # These are the default files included in the package
+      files: ["lib", "priv", "mix.exs", "README*", "readme*", "LICENSE*", "license*"],
       contributors: ["Eric Meadows-Jönsson", "José Valim"],
       licenses: ["Apache 2.0"],
       links: [ { "Github", "https://github.com/ericmj/postgrex" },

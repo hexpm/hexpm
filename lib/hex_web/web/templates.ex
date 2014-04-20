@@ -45,7 +45,7 @@ defmodule HexWeb.Web.Templates do
     packages: [:assigns],
     package: [:assigns],
     docs_usage: [:_],
-    docs_release: [:_],
+    docs_publish: [:_],
     docs_tasks: [:_], ]
 
   Enum.each(@templates, fn { name, args } ->

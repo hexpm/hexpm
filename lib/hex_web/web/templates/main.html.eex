@@ -26,7 +26,7 @@
               <a href="#" class="dropdown-toggle" data-toggle="dropdown">Documentation <b class="caret"></b></a>
               <ul class="dropdown-menu">
                 <li><a href="/docs/usage">Usage</a></li>
-                <li><a href="/docs/release">Push release</a></li>
+                <li><a href="/docs/publish">Publish package</a></li>
                 <li><a href="/docs/tasks">Mix tasks</a></li>
               </ul>
             </li>
@@ -53,7 +53,6 @@
           <li><small class="text-muted"><a href="https://github.com/ericmj/hex_web">Github</a></small></li>
           <li><small class="text-muted"><a href="https://github.com/ericmj/hex_web/issues">Issues</a></small></li>
           <li><small class="text-muted"><a href="https://github.com/ericmj/hex">Client</a></small></li>
-          <li><small class="text-muted"><a href="#">API</a></small></li>
         </ul>
       </div>
     </div>

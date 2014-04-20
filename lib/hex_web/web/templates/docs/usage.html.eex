@@ -47,5 +47,5 @@ end</code></pre>
 </p>
 
 <p>
-  When Mix tries to fetch Hex packages that are not locked, dependency resolution will be performed to find a set of packages that satisfies all version requirements. The resolution process will always try to use the latest version of all packages. Because of the nature of dependency resolution Hex may sometimes fail to find compatible releases of all your dependencies. This can be resolved by unlocking dependencies with <code>$ mix deps.unlock</code>, more unlocked dependencies gives Hex a larger selection of releases to work with.
+  When Mix tries to fetch Hex packages that are not locked, dependency resolution will be performed to find a set of packages that satisfies all version requirements. The resolution process will always try to use the latest version of all packages. Because of the nature of dependency resolution Hex may sometimes fail to find a compatible set of dependencies. This can be resolved by unlocking dependencies with <code>$ mix deps.unlock</code>, more unlocked dependencies give Hex a larger selection of package versions to work with.
 </p>
