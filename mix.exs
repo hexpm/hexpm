@@ -4,7 +4,7 @@ defmodule HexWeb.Mixfile do
   def project do
     [ app: :hex_web,
       version: "0.0.1",
-      elixir: "0.13.0-dev",
+      elixir: "~> 0.13.0",
       elixirc_paths: ["lib", "priv/static"],
       elixirc_watch_exts: [:ex, :eex, :exs, :css],
       elixirc_options: [
