@@ -6,10 +6,18 @@ path  = "lib/hex_web/web/templates/docs/tasks.html.eex"
 tasks = Mix.Task.all_modules
 
 template = """
+<%%# This file is auto-generated with 'mix run task_docs.exs' %>
+
 <h2>Mix tasks</h2>
 <%= lc { name, html } inlist tasks do %>
+<% id = String.replace(name, ".", "_") %>
   <div class="panel panel-default">
-    <div class="panel-heading"><h3 class="panel-title"><%= name %></h3></div>
+    <div class="panel-heading">
+      <h3 id="<%= id %>" class="panel-title">
+        <%= name %>
+        <a href="#<%= id %>"><span class="glyphicon glyphicon-link pull-right"></span></a>
+      </h3>
+    </div>
     <div class="panel-body">
       <%= html %>
     </div>
