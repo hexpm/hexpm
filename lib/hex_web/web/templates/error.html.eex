@@ -4,4 +4,7 @@
   <% 500 -> %>
     <h2>Internal Server Error</h2>
     <p>Please contact admins if issues persist</p>
+  <% status -> %>
+    <h2>Internal Server Error (<%= status %>)</h2>
+    <p>Please contact admins if issues persist</p>
 <% end %>
