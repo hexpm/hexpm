@@ -7,7 +7,8 @@ defmodule HexWeb.Plugs.Format do
   def init(opts), do: opts
 
   def call(conn, _opts) do
-    { format, version } = parse(conn)
+    accepts = parse_accepts(conn)
+    { format, version } = parse(accepts)
 
     if version in @allowed_versions do
       conn
@@ -19,9 +20,7 @@ defmodule HexWeb.Plugs.Format do
     end
   end
 
-  defp parse(conn) do
-    accepts = conn.assigns[:accepts]
-
+  defp parse(accepts) do
     { format, version } =
       Enum.find_value(accepts, { :unknown, nil }, fn
         { "*", "*" } ->
@@ -55,4 +54,15 @@ defmodule HexWeb.Plugs.Format do
 
   defp format("elixir"), do: :elixir
   defp format(_),        do: :json
+
+  defp parse_accepts(conn) do
+    if accept = conn.req_headers["accept"] do
+      Plug.Connection.Utils.list(accept)
+      |> Enum.map(&:cowboy_http.content_type/1)
+      |> Enum.reject(&match?({:error, _}, &1))
+      |> Enum.map(&{elem(&1, 0), elem(&1, 1)})
+    else
+      []
+    end
+  end
 end

@@ -10,7 +10,6 @@ defmodule HexWeb.Router do
   plug Plugs.Redirect, ssl: &Config.use_ssl/0, redirect: [&Config.app_host/0], to: &Config.url/0
 
   plug :fetch
-  plug :accept
 
   plug Plug.MethodOverride
   plug Plug.Head
@@ -47,20 +46,5 @@ defmodule HexWeb.Router do
 
   defp fetch(conn, _opts) do
     fetch_params(conn)
-  end
-
-  defp accept(conn, _opts) do
-    if accept = conn.req_headers["accept"] do
-      types = Enum.map(String.split(accept, ","), &:cowboy_http.content_type/1)
-
-       if Enum.find(types, &match?({ :error, _ }, &1)) do
-        raise HexWeb.Plug.BadRequest
-      else
-        types = Enum.map(types, &{ elem(&1, 0), elem(&1, 1) })
-        assign(conn, :accepts, types)
-      end
-    else
-      assign(conn, :accepts, [])
-    end
   end
 end
