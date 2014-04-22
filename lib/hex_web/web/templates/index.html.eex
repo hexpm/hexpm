@@ -54,7 +54,7 @@
       <%= lc { package, downloads } inlist @package_top do %>
       <div class="row">
         <div class="col-xs-3 text-right"><%= downloads %></div>
-        <div class="col-xs-9"><a href="/packages/postgrex"><%= package %></a></div>
+        <div class="col-xs-9"><a href="/packages/<%= package %>"><%= package %></a></div>
       </div>
       <% end %>
     </p>
