@@ -111,9 +111,10 @@ defmodule HexWeb.Web.Router do
 
   def send_page(conn, page) do
     body = Templates.render(page, conn.assigns)
+    status = conn.assigns[:status] || 200
 
     conn
     |> put_resp_header("content-type", "text/html; charset=utf-8")
-    |> send_resp(200, body)
+    |> send_resp(status, body)
   end
 end
