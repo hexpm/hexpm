@@ -1,7 +1,15 @@
+<%# This file is auto-generated with 'mix run task_docs.exs' %>
+
 <h2>Mix tasks</h2>
 
+
   <div class="panel panel-default">
-    <div class="panel-heading"><h3 class="panel-title">hex.config</h3></div>
+    <div class="panel-heading">
+      <h3 id="hex_config" class="panel-title">
+        hex.config
+        <a href="#hex_config"><span class="glyphicon glyphicon-link pull-right"></span></a>
+      </h3>
+    </div>
     <div class="panel-body">
       <p>Reads or updates hex configuration file.</p>
 
@@ -10,8 +18,14 @@
     </div>
   </div>
 
+
   <div class="panel panel-default">
-    <div class="panel-heading"><h3 class="panel-title">hex.info</h3></div>
+    <div class="panel-heading">
+      <h3 id="hex_info" class="panel-title">
+        hex.info
+        <a href="#hex_info"><span class="glyphicon glyphicon-link pull-right"></span></a>
+      </h3>
+    </div>
     <div class="panel-body">
       <p>Prints hex package or system information.</p>
 
@@ -29,8 +43,14 @@ remote Git URL and Git ref, and all package dependencies.</p>
     </div>
   </div>
 
+
   <div class="panel panel-default">
-    <div class="panel-heading"><h3 class="panel-title">hex.key.drop</h3></div>
+    <div class="panel-heading">
+      <h3 id="hex_key_drop" class="panel-title">
+        hex.key.drop
+        <a href="#hex_key_drop"><span class="glyphicon glyphicon-link pull-right"></span></a>
+      </h3>
+    </div>
     <div class="panel-body">
       <p>Remove given API key from account. The key can no longer be used to
 authenticate API requests.</p>
@@ -47,8 +67,14 @@ authenticate API requests.</p>
     </div>
   </div>
 
+
   <div class="panel panel-default">
-    <div class="panel-heading"><h3 class="panel-title">hex.key.list</h3></div>
+    <div class="panel-heading">
+      <h3 id="hex_key_list" class="panel-title">
+        hex.key.list
+        <a href="#hex_key_list"><span class="glyphicon glyphicon-link pull-right"></span></a>
+      </h3>
+    </div>
     <div class="panel-body">
       <p>List all API keys associated with your account.</p>
 
@@ -64,8 +90,14 @@ authenticate API requests.</p>
     </div>
   </div>
 
+
   <div class="panel panel-default">
-    <div class="panel-heading"><h3 class="panel-title">hex.key.new</h3></div>
+    <div class="panel-heading">
+      <h3 id="hex_key_new" class="panel-title">
+        hex.key.new
+        <a href="#hex_key_new"><span class="glyphicon glyphicon-link pull-right"></span></a>
+      </h3>
+    </div>
     <div class="panel-body">
       <p>Generate new API key and store on local machine.</p>
 
@@ -81,8 +113,14 @@ authenticate API requests.</p>
     </div>
   </div>
 
+
   <div class="panel panel-default">
-    <div class="panel-heading"><h3 class="panel-title">hex.publish</h3></div>
+    <div class="panel-heading">
+      <h3 id="hex_publish" class="panel-title">
+        hex.publish
+        <a href="#hex_publish"><span class="glyphicon glyphicon-link pull-right"></span></a>
+      </h3>
+    </div>
     <div class="panel-body">
       <p>Publish a new version of your package and update the package.</p>
 
@@ -146,8 +184,14 @@ recommended to do so.</p>
     </div>
   </div>
 
+
   <div class="panel panel-default">
-    <div class="panel-heading"><h3 class="panel-title">hex.search</h3></div>
+    <div class="panel-heading">
+      <h3 id="hex_search" class="panel-title">
+        hex.search
+        <a href="#hex_search"><span class="glyphicon glyphicon-link pull-right"></span></a>
+      </h3>
+    </div>
     <div class="panel-body">
       <p>Display packages matching the given search query.</p>
 
@@ -156,8 +200,14 @@ recommended to do so.</p>
     </div>
   </div>
 
+
   <div class="panel panel-default">
-    <div class="panel-heading"><h3 class="panel-title">hex.update</h3></div>
+    <div class="panel-heading">
+      <h3 id="hex_update" class="panel-title">
+        hex.update
+        <a href="#hex_update"><span class="glyphicon glyphicon-link pull-right"></span></a>
+      </h3>
+    </div>
     <div class="panel-body">
       <p>Update the hex installation.</p>
 
@@ -173,8 +223,14 @@ channel (possible values: <code>stable</code> <code>dev</code>)</li>
     </div>
   </div>
 
+
   <div class="panel panel-default">
-    <div class="panel-heading"><h3 class="panel-title">hex.user.register</h3></div>
+    <div class="panel-heading">
+      <h3 id="hex_user_register" class="panel-title">
+        hex.user.register
+        <a href="#hex_user_register"><span class="glyphicon glyphicon-link pull-right"></span></a>
+      </h3>
+    </div>
     <div class="panel-body">
       <p>Registers a new hex user.</p>
 
@@ -183,8 +239,14 @@ channel (possible values: <code>stable</code> <code>dev</code>)</li>
     </div>
   </div>
 
+
   <div class="panel panel-default">
-    <div class="panel-heading"><h3 class="panel-title">hex.user.update</h3></div>
+    <div class="panel-heading">
+      <h3 id="hex_user_update" class="panel-title">
+        hex.user.update
+        <a href="#hex_user_update"><span class="glyphicon glyphicon-link pull-right"></span></a>
+      </h3>
+    </div>
     <div class="panel-body">
       <p>Update user options.</p>
 
