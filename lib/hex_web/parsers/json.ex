@@ -19,7 +19,7 @@ defmodule HexWeb.Parsers.Json do
       { :ok, "", conn } ->
         { :ok, [], conn }
       { :ok, body, conn } ->
-        case JSON.decode(body) do
+        case Jazz.decode(body) do
           { :ok, params } ->
             { :ok, params, conn }
           _ ->

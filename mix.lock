@@ -8,7 +8,7 @@
   "exlager": {:git, "git://github.com/khia/exlager.git", "d3d73b2a3d0f7b8f3da11a02b5f9384da6c62110", []},
   "goldrush": {:git, "git://github.com/DeadZen/goldrush.git", "71e63212f12c25827e0c1b4198d37d5d018a7fec", [tag: "0.1.6"]},
   "ibrowse": {:git, "git://github.com/opscode/ibrowse", "8f3f6a3a30730b193cc340a8885a960586dc98de", [tag: "v4.0.1.1"]},
-  "jazz": {:git, "git://github.com/meh/jazz.git", "c502fc3894249d677f0546bc02a9b866d5d32afa", []},
+  "jazz": {:git, "git://github.com/meh/jazz.git", "24b6eedb87aff6e97c5116f94d48476acb46dffe", []},
   "lager": {:git, "https://github.com/basho/lager.git", "63c2ad6ba351e18d9f59f8f10cbcf7de128be95b", []},
   "mime": {:git, "git://github.com/dynamo/mime.git", "db84370c53a67a7e58a4d0cfb026f4edc64a9367", []},
   "mini_s3": {:git, "git://github.com/ericmj/mini_s3.git", "5e3d7aa3c198381582b01f88517fdf3dfda8e549", [branch: "hex-fixes"]},

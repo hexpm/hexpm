@@ -45,7 +45,7 @@ defmodule HexWeb.Package do
 
     case validate_create(package) do
       [] ->
-        package = package.meta(JSON.encode!(meta))
+        package = package.meta(Jazz.encode!(meta))
         { :ok, HexWeb.Repo.insert(package).meta(meta).releases([]) }
       errors ->
         { :error, errors }
@@ -58,7 +58,7 @@ defmodule HexWeb.Package do
     case validate(package.meta(meta)) do
       [] ->
         package = package.updated_at(Util.ecto_now)
-        HexWeb.Repo.update(package.meta(JSON.encode!(meta)))
+        HexWeb.Repo.update(package.meta(Jazz.encode!(meta)))
         { :ok, package.meta(meta) }
       errors ->
         { :error, errors }
@@ -74,7 +74,7 @@ defmodule HexWeb.Package do
       |> List.first
 
     if package do
-      package.update_meta(&JSON.decode!(&1))
+      package.update_meta(&Jazz.decode!(&1))
              .releases(HexWeb.Release.all(package))
     end
   end
@@ -89,7 +89,7 @@ defmodule HexWeb.Package do
       |> HexWeb.Repo.all
 
     Enum.map(packages, fn pkg ->
-      pkg.update_meta(&JSON.decode!(&1))
+      pkg.update_meta(&Jazz.decode!(&1))
          .releases(Enum.sort(pkg.releases, &(Version.compare(&1.version, &2.version) == :gt)))
     end)
   end
