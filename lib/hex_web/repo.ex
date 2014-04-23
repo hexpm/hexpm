@@ -2,7 +2,7 @@ defmodule HexWeb.Repo do
   use Ecto.Repo, adapter: Ecto.Adapters.Postgres, env: Mix.env
 
   def conf(:prod),
-    do: parse_url System.get_env("DATABASE_URL")
+    do: parse_url(System.get_env("DATABASE_URL")) ++ [lazy: false]
 
   def conf(:dev),
     do: parse_url "ecto://postgres:postgres@localhost/hex_dev"

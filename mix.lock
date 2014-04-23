@@ -2,7 +2,7 @@
   "cowboy": {:git, "git://github.com/extend/cowboy.git", "05024529679d1d0203b8dcd6e2932cc2a526d370", []},
   "cowlib": {:git, "git://github.com/extend/cowlib.git", "f58340a0044856bb508df03cfe94cf79308380a2", [ref: "0.6.1"]},
   "decimal": {:git, "git://github.com/ericmj/decimal.git", "626aeb1273949c9c95ef7d4f1f630fb98dccd2af", []},
-  "ecto": {:git, "git://github.com/elixir-lang/ecto.git", "f2fa516088b46b3f0c9559f76be6678dfaad9e1c", []},
+  "ecto": {:git, "git://github.com/elixir-lang/ecto.git", "e07ab7c95f33aaadbcbe8eaa86553b7343a6a39b", []},
   "envy": {:git, "git://github.com/manderson26/envy.git", "d62cb227b9000ee866c8bcc724ddf68d87621dea", [branch: "master"]},
   "ex_doc": {:git, "git://github.com/elixir-lang/ex_doc.git", "c14203bfca186f68ff178e5ada9af4f5fb37e205", []},
   "exlager": {:git, "git://github.com/khia/exlager.git", "d3d73b2a3d0f7b8f3da11a02b5f9384da6c62110", []},
