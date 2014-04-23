@@ -7,21 +7,35 @@
   </h2>
 </div>
 
+<%
+contribs = @package.meta["contributors"] || []
+licenses = @package.meta["licenses"] || []
+links = Enum.to_list(@package.meta["links"] || [])
+%>
+
 <div class="row">
   <div class="col-sm-8">
     <dl class="dl-horizontal package-meta">
-      <dt>Contributors</dt>
-      <dd><%= Enum.join @package.meta["contributors"] || [], ", " %></dd>
-      <dt>Licenses</dt>
-      <dd><%= Enum.join @package.meta["licenses"] || [], ", " %></dd>
-      <dt>Links</dt>
-      <dd>
-        <ul class="links">
-          <%= lc { name, link } inlist Enum.to_list(@package.meta["links"]) || [] do %>
-            <li><a href="<%= link %>"><%= name %></a></li>
-          <% end %>
-        </ul>
-      </dd>
+      <%= if contribs != [] do %>
+        <dt>Contributors</dt>
+        <dd><%= Enum.join(contribs, ", ") %></dd>
+      <% end %>
+
+      <%= if licenses != [] do %>
+        <dt>Licenses</dt>
+        <dd><%= Enum.join(licenses, ", ") %></dd>
+      <% end %>
+
+      <%= if links != [] do %>
+        <dt>Links</dt>
+        <dd>
+          <ul class="links">
+            <%= lc { name, link } inlist links do %>
+              <li><a href="<%= link %>"><%= name %></a></li>
+            <% end %>
+          </ul>
+        </dd>
+      <% end %>
     </dl>
   </div>
   <div class="col-sm-4">
