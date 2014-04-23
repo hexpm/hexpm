@@ -12,22 +12,22 @@ defmodule HexWeb.Store.S3 do
   end
 
   def list(prefix) do
-    prefix = String.to_char_list!(prefix)
-    bucket = HexWeb.Config.s3_bucket |> String.to_char_list!
+    prefix = List.from_char_data!(prefix)
+    bucket = HexWeb.Config.s3_bucket |> List.from_char_data!
     result = :mini_s3.list_objects(bucket, [prefix: prefix], config())
-    Enum.map(result[:contents], &String.from_char_list!(&1[:key]))
+    Enum.map(result[:contents], &String.from_char_data!(&1[:key]))
   end
 
   def get(key) do
-    bucket = HexWeb.Config.s3_bucket |> String.to_char_list!
-    key = String.to_char_list!(key)
+    bucket = HexWeb.Config.s3_bucket |> List.from_char_data!
+    key = List.from_char_data!(key)
     result = :mini_s3.get_object(bucket, key, [], config())
     result[:content]
   end
 
   def put(key, blob) do
-    bucket = HexWeb.Config.s3_bucket |> String.to_char_list!
-    key = String.to_char_list!(key)
+    bucket = HexWeb.Config.s3_bucket |> List.from_char_data!
+    key = List.from_char_data!(key)
     :mini_s3.put_object(bucket, key, blob, [], [], config())
   end
 
@@ -44,8 +44,8 @@ defmodule HexWeb.Store.S3 do
   end
 
   def delete_tar(name) do
-    bucket = HexWeb.Config.s3_bucket |> String.to_char_list!
-    name = String.to_char_list!(name)
+    bucket = HexWeb.Config.s3_bucket |> List.from_char_data!
+    name = List.from_char_data!(name)
 
     :mini_s3.delete_object(bucket, name, config())
   end
@@ -60,19 +60,19 @@ defmodule HexWeb.Store.S3 do
   end
 
   defp upload(name, data) when is_binary(name),
-    do: upload(String.to_char_list!(name), data)
+    do: upload(List.from_char_data!(name), data)
 
   defp upload(name, data) when is_list(name) do
     # TODO: cache
-    bucket     = HexWeb.Config.s3_bucket |> String.to_char_list!
+    bucket     = HexWeb.Config.s3_bucket |> List.from_char_data!
     opts       = [acl: :public_read]
     headers    = []
     :mini_s3.put_object(bucket, name, data, opts, headers, config())
   end
 
   defp config do
-    access_key = HexWeb.Config.s3_access_key |> String.to_char_list!
-    secret_key = HexWeb.Config.s3_secret_key |> String.to_char_list!
+    access_key = HexWeb.Config.s3_access_key |> List.from_char_data!
+    secret_key = HexWeb.Config.s3_secret_key |> List.from_char_data!
     s3_config(access_key_id: access_key, secret_access_key: secret_key)
   end
 end
