@@ -1,9 +1,9 @@
 defmodule HexWeb.Plugs.Redirect do
-  import Plug.Connection
+  import Plug.Conn
 
   def init(opts), do: opts
 
-  def wrap(Plug.Conn[] = conn, opts, fun) do
+  def wrap(%Plug.Conn{} = conn, opts, fun) do
     url = call Keyword.fetch!(opts, :to)
 
     case call opts[:ssl] do
@@ -23,7 +23,7 @@ defmodule HexWeb.Plugs.Redirect do
     if conn.state == :unset, do: fun.(conn), else: conn
   end
 
-  defp redirect(Plug.Conn[] = conn, url) do
+  defp redirect(%Plug.Conn{} = conn, url) do
     url = url <> "/" <> Enum.join(conn.path_info, "/")
 
     conn

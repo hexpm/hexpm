@@ -8,9 +8,9 @@ defmodule HexWeb.Web.RouterTest do
 
   setup do
     { :ok, user } = User.create("eric", "eric@mail.com", "eric")
-    { :ok, foo } = Package.create("foo", user, [])
-    { :ok, bar } = Package.create("bar", user, [])
-    { :ok, other } = Package.create("other", user, [])
+    { :ok, foo } = Package.create("foo", user, %{})
+    { :ok, bar } = Package.create("bar", user, %{})
+    { :ok, other } = Package.create("other", user, %{})
 
     { :ok, _ } = Release.create(foo, "0.0.1", [])
     { :ok, _ } = Release.create(foo, "0.0.2", [])

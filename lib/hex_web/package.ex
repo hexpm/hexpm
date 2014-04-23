@@ -45,10 +45,10 @@ defmodule HexWeb.Package do
 
     case validate_create(package) do
       [] ->
-        package = package.meta(Jazz.encode!(meta))
+        package = package.meta(Util.json_encode(meta))
         { :ok, HexWeb.Repo.insert(package).meta(meta).releases([]) }
       errors ->
-        { :error, errors }
+        { :error, errors_to_map(errors) }
     end
   end
 
@@ -58,10 +58,10 @@ defmodule HexWeb.Package do
     case validate(package.meta(meta)) do
       [] ->
         package = package.updated_at(Util.ecto_now)
-        HexWeb.Repo.update(package.meta(Jazz.encode!(meta)))
+        HexWeb.Repo.update(package.meta(Util.json_encode(meta)))
         { :ok, package.meta(meta) }
       errors ->
-        { :error, errors }
+        { :error, errors_to_map(errors) }
     end
   end
 
@@ -74,7 +74,7 @@ defmodule HexWeb.Package do
       |> List.first
 
     if package do
-      package.update_meta(&Jazz.decode!(&1))
+      package.update_meta(&Util.json_decode!/1)
              .releases(HexWeb.Release.all(package))
     end
   end
@@ -89,7 +89,7 @@ defmodule HexWeb.Package do
       |> HexWeb.Repo.all
 
     Enum.map(packages, fn pkg ->
-      pkg.update_meta(&Jazz.decode!(&1))
+      pkg.update_meta(&Util.json_decode!/1)
          .releases(Enum.sort(pkg.releases, &(Version.compare(&1.version, &2.version) == :gt)))
     end)
   end
@@ -99,6 +99,13 @@ defmodule HexWeb.Package do
     |> Util.searchinate(:name, search)
     |> HexWeb.Repo.all
     |> List.first
+  end
+
+  defp errors_to_map(errors) do
+    if meta = errors[:meta] do
+      errors = Dict.put(errors, :meta, Enum.into(meta, %{}))
+    end
+    Enum.into(errors, %{})
   end
 end
 
@@ -113,6 +120,7 @@ defimpl HexWeb.Render, for: HexWeb.Package.Entity do
         |> Dict.update!(:created_at, &to_iso8601/1)
         |> Dict.update!(:updated_at, &to_iso8601/1)
         |> Dict.put(:url, api_url(["packages", package.name, "releases", release.version]))
+        |> Enum.into(%{})
       end)
 
     package.__entity__(:keywords)
@@ -121,5 +129,6 @@ defimpl HexWeb.Render, for: HexWeb.Package.Entity do
     |> Dict.update!(:updated_at, &to_iso8601/1)
     |> Dict.put(:url, api_url(["packages", package.name]))
     |> Dict.put(:releases, releases)
+    |> Enum.into(%{})
   end
 end

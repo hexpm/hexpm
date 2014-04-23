@@ -143,7 +143,7 @@ defmodule HexWeb.RegistryBuilder do
             tid = :ets.new(@ets_table, [:public])
             :ets.insert(tid, { :"$$version$$", @version })
             :ets.insert(tid, release_tuples ++ package_tuples)
-            :ok = :ets.tab2file(tid, String.to_char_list!(file))
+            :ok = :ets.tab2file(tid, List.from_char_data!(file))
             :ets.delete(tid)
 
             HexWeb.Config.store.put_registry(File.read!(file))

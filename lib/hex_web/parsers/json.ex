@@ -4,7 +4,7 @@ defmodule HexWeb.Parsers.Json do
   """
   alias Plug.Conn
 
-  def parse(Conn[] = conn, "application", "json", _headers, opts) do
+  def parse(%Conn{} = conn, "application", "json", _headers, opts) do
     read_body(conn, Keyword.fetch!(opts, :limit))
   end
 
@@ -19,7 +19,7 @@ defmodule HexWeb.Parsers.Json do
       { :ok, "", conn } ->
         { :ok, [], conn }
       { :ok, body, conn } ->
-        case Jazz.decode(body) do
+        case HexWeb.Util.json_decode(body) do
           { :ok, params } ->
             { :ok, params, conn }
           _ ->

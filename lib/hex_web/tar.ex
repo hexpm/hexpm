@@ -10,7 +10,7 @@ defmodule HexWeb.Tar do
   defmacrop if_ok(expr, call) do
     quote do
       case unquote(expr) do
-        { :ok, var } -> unquote(Macro.pipe(quote(do: var), call))
+        { :ok, var } -> unquote(Macro.pipe(quote(do: var), call, 0))
         other -> other
       end
     end
@@ -19,7 +19,7 @@ defmodule HexWeb.Tar do
   def metadata(binary) do
     case :erl_tar.extract({ :binary, binary }, [:memory, :cooked]) do
       { :ok, files } ->
-        files = Enum.map(files, fn { name, binary } -> { String.from_char_list!(name), binary } end)
+        files = Enum.into(files, %{}, fn { name, binary } -> { String.from_char_data!(name), binary } end)
 
         missing_files(files)
         |> if_ok(unknown_files)
@@ -28,7 +28,7 @@ defmodule HexWeb.Tar do
         |> if_ok(meta)
 
       { :error, reason } ->
-        { :error, [tar: inspect reason] }
+        { :error, %{tar: inspect reason} }
     end
   end
 
@@ -37,7 +37,7 @@ defmodule HexWeb.Tar do
     if length(missing_files) == 0 do
       { :ok, files }
     else
-      { :error, [missing_files: missing_files] }
+      { :error, %{missing_files: missing_files} }
     end
   end
 
@@ -47,7 +47,7 @@ defmodule HexWeb.Tar do
       { :ok, files }
     else
       names = Enum.map(unknown_files, &elem(&1, 0))
-      { :error, [unknown_files: names] }
+      { :error, %{unknown_files: names} }
     end
   end
 
@@ -56,7 +56,7 @@ defmodule HexWeb.Tar do
     if :crypto.hash(:md5, blob) == HexWeb.Util.dehexify(files["CHECKSUM"]) do
       { :ok, files }
     else
-      { :error, [checksum: :wrong] }
+      { :error, %{checksum: :wrong} }
     end
   end
 
@@ -64,7 +64,7 @@ defmodule HexWeb.Tar do
     if files["VERSION"] == "1" do
       { :ok, files }
     else
-      { :error, [version: :wrong] }
+      { :error, %{version: :wrong} }
     end
   end
 
@@ -73,7 +73,7 @@ defmodule HexWeb.Tar do
       { :ok, HexWeb.Util.safe_deserialize_elixir(files["metadata.exs"]) }
     rescue
       err in [HexWeb.Util.BadRequest] ->
-        { :error, [metadata: err.message] }
+        { :error, %{metadata: err.message} }
     end
   end
 end

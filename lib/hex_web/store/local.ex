@@ -1,7 +1,7 @@
 defmodule HexWeb.Store.Local do
   @behaviour HexWeb.Store
 
-  import Plug.Connection
+  import Plug.Conn
 
   # only used during development (not safe)
 

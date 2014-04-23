@@ -1,6 +1,6 @@
 <table class="table table-striped packages">
   <tbody>
-    <%= lc package inlist @packages do %>
+    <%= for package <- @packages do %>
       <tr>
         <td style="width: 10em;">
           <a href="/packages/<%= package.name %>">
@@ -39,7 +39,7 @@ disable_next = page == pages
     <li><a href="/packages?search=<%= safe(@search) %>&page=<%= page-1 %>">&laquo;</a></li>
   <% end %>
 
-  <%= lc counter inlist show_pages do %>
+  <%= for counter <- show_pages do %>
     <%= if counter == page do %>
       <li class="active">
         <span><%= counter %></span>

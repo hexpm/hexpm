@@ -1,6 +1,6 @@
 defmodule HexWeb.Web.Router do
   use Plug.Router
-  import Plug.Connection
+  import Plug.Conn
   import HexWeb.Plug
   alias HexWeb.Plug.NotFound
   alias HexWeb.Web.Templates

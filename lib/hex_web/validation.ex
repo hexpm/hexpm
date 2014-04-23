@@ -96,7 +96,7 @@ defmodule HexWeb.Validation do
     end
   end
 
-  defp type_extension(dict) when is_list(dict) do
+  defp type_extension(dict) when is_map(dict) do
     try do
       { k_type, v_type } =
         Enum.reduce(dict, { :any, :any }, fn

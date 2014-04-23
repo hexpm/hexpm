@@ -33,7 +33,7 @@ defmodule HexWeb.Release do
           update_requirements(release.package(package), requirements)
         end)
       errors ->
-        { :error, errors }
+        { :error, Enum.into(errors, %{}) }
     end
   end
 
@@ -47,7 +47,7 @@ defmodule HexWeb.Release do
             create(release.package.get, release.version, requirements, release.created_at)
           end) |> elem(1)
         errors ->
-          { :error, errors }
+          { :error, Enum.into(errors, %{}) }
       end
 
     else
@@ -83,7 +83,7 @@ defmodule HexWeb.Release do
     if errors == [] do
       release.requirements(requirements)
     else
-      HexWeb.Repo.rollback(deps: errors)
+      HexWeb.Repo.rollback(%{deps: Enum.into(errors, %{})})
     end
   end
 
@@ -137,6 +137,7 @@ defmodule HexWeb.Release do
              join: p in req.dependency,
              select: { p.name, req.requirement })
     |> HexWeb.Repo.all
+    |> Enum.into(%{})
   end
 
   def count do
@@ -163,5 +164,6 @@ defimpl HexWeb.Render, for: HexWeb.Release.Entity do
     |> Dict.put(:url, api_url(["packages", package.name, "releases", release.version]))
     |> Dict.put(:package_url, api_url(["packages", package.name]))
     |> Dict.put(:requirements, reqs)
+    |> Enum.into(%{})
   end
 end

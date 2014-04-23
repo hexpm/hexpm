@@ -1,5 +1,5 @@
 defmodule HexWeb.Plugs.Format do
-  import Plug.Connection
+  import Plug.Conn
 
   @vendor "hex"
   @allowed_versions ["beta"]
@@ -56,13 +56,10 @@ defmodule HexWeb.Plugs.Format do
   defp format(_),        do: :json
 
   defp parse_accepts(conn) do
-    if accept = conn.req_headers["accept"] do
-      Plug.Connection.Utils.list(accept)
-      |> Enum.map(&:cowboy_http.content_type/1)
-      |> Enum.reject(&match?({:error, _}, &1))
-      |> Enum.map(&{elem(&1, 0), elem(&1, 1)})
-    else
-      []
-    end
+    get_req_header(conn, "accept")
+    |> Enum.flat_map(&Plug.Conn.Utils.list/1)
+    |> Enum.map(&:cowboy_http.content_type/1)
+    |> Enum.reject(&match?({:error, _}, &1))
+    |> Enum.map(&{elem(&1, 0), elem(&1, 1)})
   end
 end

@@ -1,6 +1,6 @@
 defmodule HexWeb.API.Router do
   use Plug.Router
-  import Plug.Connection
+  import Plug.Conn
   import HexWeb.Plug
   import HexWeb.API.Util
   import HexWeb.Util, only: [api_url: 1, parse_integer: 2]

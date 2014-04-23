@@ -30,12 +30,13 @@ defmodule HexWeb.Mixfile do
   end
 
   defp deps do
-    [ { :plug, github: "elixir-lang/plug" },
+    [ { :plug, github: "elixir-lang/plug", branch: "elixir-0.13.1" },
       { :cowboy, github: "extend/cowboy" },
-      { :ecto, github: "elixir-lang/ecto" },
+      { :ecto, github: "elixir-lang/ecto", branch: "elixir-0.13.1" },
       { :postgrex, github: "ericmj/postgrex" },
+      { :decimal, github: "ericmj/decimal", override: true },
       { :bcrypt, github: "opscode/erlang-bcrypt" },
-      { :jazz, github: "meh/jazz" },
+      { :jazz, github: "ericmj/jazz", branch: "elixir-0.13.1" },
       { :mini_s3, github: "ericmj/mini_s3", branch: "hex-fixes" },
       { :exlager, github: "khia/exlager" },
       { :ex_doc, github: "elixir-lang/ex_doc", only: :dev } ]

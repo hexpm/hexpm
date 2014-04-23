@@ -6,6 +6,52 @@ defmodule HexWeb.Util do
   import Ecto.Query, only: [from: 2]
   require Lager
 
+  def json_encode(map) do
+    #map_to_list(map)
+    #|> Jazz.encode!
+    #if is_list(map), do: raise inspect map
+    JSON.encode!(map)
+  end
+
+  def json_decode!(json) do
+    JSON.decode!(json)
+    #|> list_to_map
+  end
+
+  def json_decode(json) do
+    JSON.decode(json)
+    # case Jazz.decode(json) do
+    #   { :ok, result } -> { :ok, list_to_map(result) }
+    #   error -> error
+    # end
+  end
+
+  # defp map_to_list(thing) when is_map(thing) or is_list(thing) do
+  #   Enum.into(thing, [], fn
+  #     { key, map } when is_map(map) -> { key, map_to_list(map) }
+  #     elem -> map_to_list(elem)
+  #   end)
+  # end
+
+  # defp map_to_list(other) do
+  #   other
+  # end
+
+  # defp list_to_map(list) when is_list(list) do
+  #   if list == [] or is_tuple(List.first(list)) do
+  #     Enum.into(list, %{}, fn
+  #       { key, list } when is_list(list) -> { key, list_to_map(list) }
+  #       other -> other
+  #     end)
+  #   else
+  #     Enum.map(list, &list_to_map/1)
+  #   end
+  # end
+
+  # defp list_to_map(other) do
+  #   other
+  # end
+
   def log_error(:error, error, stacktrace) do
     exception = Exception.normalize(:error, error)
     Lager.error "** (#{inspect exception.__record__(:name)}) #{exception.message}\n"
@@ -76,7 +122,7 @@ defmodule HexWeb.Util do
   def to_iso8601(Ecto.DateTime[] = dt) do
     [Ecto.DateTime|list] = tuple_to_list(dt)
     :io_lib.format("~4..0B-~2..0B-~2..0BT~2..0B:~2..0B:~2..0BZ", list)
-    |> iolist_to_binary
+    |> iodata_to_binary
   end
 
   @doc """
@@ -107,7 +153,9 @@ defmodule HexWeb.Util do
   defp binarify(atom) when is_atom(atom),
     do: atom_to_binary(atom)
   defp binarify(list) when is_list(list),
-    do: lc(elem inlist list, do: binarify(elem))
+    do: for(elem <- list, do: binarify(elem))
+  defp binarify(map) when is_map(map),
+    do: for(elem <- map, into: %{}, do: binarify(elem))
   defp binarify({ left, right }),
     do: { binarify(left), binarify(right) }
 

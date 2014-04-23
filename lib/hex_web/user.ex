@@ -40,7 +40,7 @@ defmodule HexWeb.User do
         user = user.password(gen_password(password))
         { :ok, HexWeb.Repo.insert(user) }
       errors ->
-        { :error, errors }
+        { :error, Enum.into(errors, %{}) }
     end
   end
 
@@ -65,7 +65,7 @@ defmodule HexWeb.User do
         HexWeb.Repo.update(user)
         { :ok, user }
       errors ->
-        { :error, errors }
+        { :error, Enum.into(errors, %{}) }
     end
   end
 
@@ -79,14 +79,14 @@ defmodule HexWeb.User do
 
   def auth?(user, password) do
     stored_hash = user.password
-    password = String.to_char_list!(password)
+    password = List.from_char_data!(password)
     stored_hash = :erlang.binary_to_list(stored_hash)
     { :ok, hash } = :bcrypt.hashpw(password, stored_hash)
     hash == stored_hash
   end
 
   defp gen_password(password) do
-    password      = String.to_char_list!(password)
+    password      = List.from_char_data!(password)
     work_factor   = HexWeb.Config.password_work_factor
     { :ok, salt } = :bcrypt.gen_salt(work_factor)
     { :ok, hash } = :bcrypt.hashpw(password, salt)
@@ -103,5 +103,6 @@ defimpl HexWeb.Render, for: HexWeb.User.Entity do
     |> Dict.update!(:created_at, &to_iso8601/1)
     |> Dict.update!(:updated_at, &to_iso8601/1)
     |> Dict.put(:url, api_url(["users", user.username]))
+    |> Enum.into(%{})
   end
 end

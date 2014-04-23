@@ -1,17 +1,19 @@
 defmodule HexWeb.Plugs.Forwarded do
+  import Plug.Conn
+
   def init(opts), do: opts
 
-  def call(Plug.Conn[] = conn, _opts) do
+  def call(conn, _opts) do
     # if ip = conn.req_headers["x-forwarded-for"] do
       # TODO: Plug support ?
     # end
 
-    if proto = conn.req_headers["x-forwarded-proto"] do
-      conn = conn.scheme scheme(proto, conn.scheme)
+    if proto = List.first get_req_header(conn, "x-forwarded-proto") do
+      conn = %{conn | scheme: scheme(proto, conn.scheme)}
     end
 
-    if port = conn.req_headers["x-forwarded-port"] do
-      conn = conn.port port(port, conn.port)
+    if port = List.first get_req_header(conn, "x-forwarded-port") do
+      conn = %{conn | port: port(port, conn.port)}
     end
 
     conn

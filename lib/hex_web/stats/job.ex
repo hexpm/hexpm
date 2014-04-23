@@ -81,7 +81,7 @@ defmodule HexWeb.Stats.Job do
   defp date_string(date) do
     list = tuple_to_list(date)
     :io_lib.format("~4..0B-~2..0B-~2..0B", list)
-    |> iolist_to_binary
+    |> iodata_to_binary
   end
 
   defp packages do

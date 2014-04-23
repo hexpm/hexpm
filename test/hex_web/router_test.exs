@@ -1,5 +1,6 @@
 defmodule HexWeb.RouterTest do
   use HexWebTest.Case
+  import Plug.Conn
   import Plug.Test
   alias HexWeb.Router
   alias HexWeb.User
@@ -10,8 +11,8 @@ defmodule HexWeb.RouterTest do
   setup do
     User.create("other", "other@mail.com", "other")
     { :ok, user } = User.create("eric", "eric@mail.com", "eric")
-    { :ok, _ }    = Package.create("postgrex", user, [])
-    { :ok, pkg }  = Package.create("decimal", user, [])
+    { :ok, _ }    = Package.create("postgrex", user, %{})
+    { :ok, pkg }  = Package.create("decimal", user, %{})
     { :ok, _ }    = Release.create(pkg, "0.0.1", [{ "postgrex", "0.0.1" }])
     :ok
   end
@@ -38,7 +39,7 @@ defmodule HexWeb.RouterTest do
     RegistryBuilder.sync_rebuild
 
     port = HexWeb.Config.port
-    url = String.to_char_list!("http://localhost:#{port}/registry.ets.gz")
+    url = List.from_char_data!("http://localhost:#{port}/registry.ets.gz")
     :inets.start
 
     assert { :ok, response } = :httpc.request(:head, { url, [] }, [], [])
@@ -56,13 +57,13 @@ defmodule HexWeb.RouterTest do
 
     headers = [ { "content-type", "application/octet-stream" },
                 { "authorization", "Basic " <> :base64.encode("eric:eric") }]
-    body = create_tar([app: :postgrex, version: "0.0.1", requirements: [decimal: "~> 0.0.1"]], [])
+    body = create_tar(%{app: :postgrex, version: "0.0.1", requirements: %{decimal: "~> 0.0.1"}}, [])
     conn = conn("POST", "/api/packages/postgrex/releases", body, headers: headers)
     conn = Router.call(conn, [])
     assert conn.status == 201
 
     port = HexWeb.Config.port
-    url = String.to_char_list!("http://localhost:#{port}/tarballs/postgrex-0.0.1.tar")
+    url = List.from_char_data!("http://localhost:#{port}/tarballs/postgrex-0.0.1.tar")
     :inets.start
 
     assert { :ok, response } = :httpc.request(:head, { url, [] }, [], [])
@@ -81,15 +82,15 @@ defmodule HexWeb.RouterTest do
     HexWeb.Config.use_ssl(true)
 
     try do
-      conn = conn("GET", "/foobar", [], []).scheme(:http)
+      conn = %{conn("GET", "/foobar", [], []) | scheme: :http}
       conn = Router.call(conn, [])
       assert conn.status == 301
-      assert conn.resp_headers["location"] == "https://hex.pm/foobar"
+      assert get_resp_header(conn, "location") == ["https://hex.pm/foobar"]
 
-      conn = conn("GET", "/foobar", [], []).scheme(:https).host("some-host.com")
+      conn = %{conn("GET", "/foobar", [], []) | scheme: :https, host: "some-host.com"}
       conn = Router.call(conn, [])
       assert conn.status == 301
-      assert conn.resp_headers["location"] == "https://hex.pm/foobar"
+      assert get_resp_header(conn, "location") == ["https://hex.pm/foobar"]
     after
       HexWeb.Config.url(url)
       HexWeb.Config.app_host(app_host)
@@ -118,7 +119,7 @@ defmodule HexWeb.RouterTest do
       conn = Router.call(conn, [])
 
       assert conn.status == 302
-      assert conn.resp_headers["location"] == "http://s3.hex.pm/installs/hex.ez"
+      assert get_resp_header(conn, "location") == ["http://s3.hex.pm/installs/hex.ez"]
     after
       HexWeb.Config.cdn_url(cdn_url)
     end

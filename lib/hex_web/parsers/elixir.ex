@@ -6,7 +6,7 @@ defmodule HexWeb.Parsers.Elixir do
   """
   alias Plug.Conn
 
-  def parse(Conn[] = conn, "application", "vnd.hex" <> rest, _headers, opts) do
+  def parse(%Conn{} = conn, "application", "vnd.hex" <> rest, _headers, opts) do
     case Regex.run(HexWeb.Util.vendor_regex, rest) do
       [_, _version, "elixir"] ->
         read_body(conn, Keyword.fetch!(opts, :limit))

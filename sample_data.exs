@@ -15,42 +15,42 @@ HexWeb.Repo.transaction(fn ->
   { :ok, jose } = User.create("jose", "jose@example.com", "jose")
 
   { :ok, decimal } =
-    Package.create("decimal", eric,
+    Package.create("decimal", eric, %{
       contributors: ["Eric Meadows-Jönsson"],
       licenses: ["Apache 2.0", "MIT"],
-      links: [{ "Github", "http://example.com/github" },
-              { "Documentation", "http://example.com/documentation" }],
-      description: "Arbitrary precision decimal arithmetic for Elixir")
+      links: %{"Github" => "http://example.com/github",
+               "Documentation" => "http://example.com/documentation"},
+      description: "Arbitrary precision decimal arithmetic for Elixir"})
 
-  { :ok, _ } = Release.create(decimal, "0.0.1", [])
-  { :ok, _ } = Release.create(decimal, "0.0.2", [])
-  { :ok, _ } = Release.create(decimal, "0.1.0", [])
+  { :ok, _ } = Release.create(decimal, "0.0.1", %{})
+  { :ok, _ } = Release.create(decimal, "0.0.2", %{})
+  { :ok, _ } = Release.create(decimal, "0.1.0", %{})
 
   { :ok, postgrex } =
-    Package.create("postgrex", eric,
+    Package.create("postgrex", eric, %{
       contributors: ["Eric Meadows-Jönsson", "José Valim"],
       licenses: ["Apache 2.0"],
-      links: [{ "Github", "http://example.com/github" }],
-      description: lorem)
+      links: %{"Github" => "http://example.com/github"},
+      description: lorem})
 
-  { :ok, _ } = Release.create(postgrex, "0.0.1", [])
-  { :ok, _ } = Release.create(postgrex, "0.0.2", [decimal: "~> 0.0.1"])
-  { :ok, _ } = Release.create(postgrex, "0.1.0", [decimal: "0.1.0"])
+  { :ok, _ } = Release.create(postgrex, "0.0.1", %{})
+  { :ok, _ } = Release.create(postgrex, "0.0.2", %{decimal: "~> 0.0.1"})
+  { :ok, _ } = Release.create(postgrex, "0.1.0", %{decimal: "0.1.0"})
 
   { :ok, ecto } =
-    Package.create("ecto", jose,
+    Package.create("ecto", jose, %{
       contributors: ["Eric Meadows-Jönsson", "José Valim"],
       licenses: [],
-      links: [{ "Github", "http://example.com/github" }],
-      description: lorem)
+      links: %{"Github" => "http://example.com/github"},
+      description: lorem})
 
-  { :ok, _ }   = Release.create(ecto, "0.0.1", [])
-  { :ok, _ }   = Release.create(ecto, "0.0.2", [postgrex: "~> 0.0.1"])
-  { :ok, _ }   = Release.create(ecto, "0.1.0", [postgrex: "~> 0.0.2"])
-  { :ok, _ }   = Release.create(ecto, "0.1.1", [postgrex: "~> 0.1.0"])
-  { :ok, _ }   = Release.create(ecto, "0.1.2", [postgrex: "== 0.1.0", decimal: "0.0.1"])
-  { :ok, _ }   = Release.create(ecto, "0.1.3", [postgrex: "0.1.0", decimal: "0.0.2"])
-  { :ok, rel } = Release.create(ecto, "0.2.0", [postgrex: "~> 0.1.0", decimal: "~> 0.1.0"])
+  { :ok, _ }   = Release.create(ecto, "0.0.1", %{})
+  { :ok, _ }   = Release.create(ecto, "0.0.2", %{postgrex: "~> 0.0.1"})
+  { :ok, _ }   = Release.create(ecto, "0.1.0", %{postgrex: "~> 0.0.2"})
+  { :ok, _ }   = Release.create(ecto, "0.1.1", %{postgrex: "~> 0.1.0"})
+  { :ok, _ }   = Release.create(ecto, "0.1.2", %{postgrex: "== 0.1.0", decimal: "0.0.1"})
+  { :ok, _ }   = Release.create(ecto, "0.1.3", %{postgrex: "0.1.0", decimal: "0.0.2"})
+  { :ok, rel } = Release.create(ecto, "0.2.0", %{postgrex: "~> 0.1.0", decimal: "~> 0.1.0"})
 
   yesterday = HexWeb.Util.yesterday |> Ecto.Date.from_erl
   Download.new(release_id: rel.id, downloads: 42, day: yesterday)

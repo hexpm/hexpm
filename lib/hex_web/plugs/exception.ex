@@ -1,7 +1,7 @@
 defmodule HexWeb.Plugs.Exception do
   @behaviour Plug.Wrapper
 
-  import Plug.Connection
+  import Plug.Conn
 
   def init(opts), do: opts
 
@@ -30,7 +30,7 @@ defmodule HexWeb.Plugs.Exception do
   end
 
   defp api_response(conn, status) do
-    body = [error: status]
+    body = %{error: status}
     HexWeb.API.Util.send_render(conn, status, body, true)
   end
 end

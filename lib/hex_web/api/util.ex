@@ -3,7 +3,7 @@ defmodule HexWeb.API.Util do
   API related utility functions.
   """
 
-  import Plug.Connection
+  import Plug.Conn
   alias HexWeb.User
   alias HexWeb.API.Key
 
@@ -30,8 +30,8 @@ defmodule HexWeb.API.Util do
   end
 
   def fresh?(conn, opts) do
-    modified_since = conn.req_headers["if-modified-since"]
-    none_match     = conn.req_headers["if-none-match"]
+    modified_since = List.first get_req_header(conn, "if-modified-since")
+    none_match     = List.first get_req_header(conn, "if-none-match")
 
     if modified_since || none_match do
       success = true
@@ -77,32 +77,38 @@ defmodule HexWeb.API.Util do
   @spec send_render(Plug.Conn.t, non_neg_integer, term, boolean) :: Plug.Conn.t
   def send_render(conn, status, body, fallback \\ false)
 
-  def send_render(conn, status, body, fallback) when is_list(body) do
-    # Handle list of entities
-    if body != [] && (impl = HexWeb.Render.impl_for(List.first(body))) do
-      body = Enum.map(body, &impl.render(&1))
-      send_render(conn, status, body)
-    else
-      case conn.assigns[:format] do
-        :elixir ->
-          body = HexWeb.Util.safe_serialize_elixir(body)
-          content_type = "application/vnd.hex+elixir"
-        format when format == :json or fallback ->
-          body = Jazz.encode!(body)
-          content_type = "application/json"
-        _ ->
-          raise Plug.Parsers.UnsupportedMediaTypeError
-      end
-
-      conn
-      |> put_resp_header("content-type", content_type)
-      |> send_resp(status, body)
-    end
+  def send_render(conn, status, body, fallback) do
+    body = render(body)
+    send_body(conn, status, body, fallback)
   end
 
-  def send_render(conn, status, entity, fallback) do
-    body = HexWeb.Render.render(entity)
-    send_render(conn, status, body, fallback)
+  defp render(list) when is_list(list) do
+    Enum.map(list, &HexWeb.Render.render/1)
+  end
+
+  defp render(map) when is_map(map) do
+    map
+  end
+
+  defp render(entity) do
+    HexWeb.Render.render(entity)
+  end
+
+  defp send_body(conn, status, body, fallback) do
+    case conn.assigns[:format] do
+      :elixir ->
+        body = HexWeb.Util.safe_serialize_elixir(body)
+        content_type = "application/vnd.hex+elixir"
+      format when format == :json or fallback ->
+        body = HexWeb.Util.json_encode(body)
+        content_type = "application/json"
+      _ ->
+        raise Plug.Parsers.UnsupportedMediaTypeError
+    end
+
+    conn
+    |> put_resp_header("content-type", content_type)
+    |> send_resp(status, body)
   end
 
   @doc """
@@ -143,10 +149,10 @@ defmodule HexWeb.API.Util do
   @doc false
   def authorize(conn, opts) do
     only_basic = !!opts[:only_basic]
-    case conn.req_headers["authorization"] do
-      "Basic " <> credentials ->
+    case get_req_header(conn, "authorization") do
+      ["Basic " <> credentials] ->
         basic_auth(credentials)
-      key when not only_basic ->
+      [key] when not only_basic ->
         key_auth(key)
       _ ->
         :error
@@ -233,7 +239,7 @@ defmodule HexWeb.API.Util do
   end
 
   def send_validation_failed(conn, errors) do
-    body = [message: "Validation failed", errors: errors]
+    body = %{message: "Validation failed", errors: errors}
     send_render(conn, 422, body)
   end
 

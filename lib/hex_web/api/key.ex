@@ -82,5 +82,6 @@ defimpl HexWeb.Render, for: HexWeb.API.Key.Entity do
     |> Dict.update!(:created_at, &to_iso8601/1)
     |> Dict.update!(:updated_at, &to_iso8601/1)
     |> Dict.put(:url, api_url(["keys", key.name]))
+    |> Enum.into(%{})
   end
 end
