@@ -72,7 +72,7 @@ defmodule HexWeb.Plug do
   end
 
   defp read_body({ :ok, buffer, state }, acc, limit, adapter) when limit >= 0,
-    do: read_body(adapter.stream_req_body(state, 100_000), acc <> buffer, limit - byte_size(buffer), adapter)
+    do: read_body(adapter.stream_req_body(state, 10_000), acc <> buffer, limit - byte_size(buffer), adapter)
   defp read_body({ :ok, _, state }, _acc, _limit, _adapter),
     do: { :too_large, state }
 

@@ -118,7 +118,7 @@ defmodule Postgrex.Mixfile do
       files: ["lib", "priv", "mix.exs", "README*", "readme*", "LICENSE*", "license*"],
       contributors: ["Eric Meadows-Jönsson", "José Valim"],
       licenses: ["Apache 2.0"],
-      links: [ { "Github", "https://github.com/ericmj/postgrex" },
+      links: [ { "GitHub", "https://github.com/ericmj/postgrex" },
                { "Docs", "http://ericmj.github.io/postgrex/" } ] ]
   end
 end
