@@ -5,11 +5,8 @@
 <div class="row">
   <div class="col-md-12">
     <h3>Using with Elixir</h3>
-    <p>Install Hex by running the following command in your shell:</p>
-    <p><code>$ mix local.install https://hex.pm/installs/hex.ez</code></p>
-    <p>Hex integrates with Elixir's build tool called <a href="http://elixir-lang.org/getting_started/mix/1.html">Mix</a> and can be added to any project by adding the following to the top of your <code>mix.exs</code> file:</p>
-    <p><code>Code.ensure_loaded?(Hex) and Hex.start</code></p>
-    <p>Now dependencies can be specified as two item tuples like <code>{ :ecto, "~> 0.1.0" }</code>. You can also run <code>$ mix local</code> to see all available Hex tasks and <code>$ mix help TASK</code> for more information about a specific task.</p>
+    <p>Simply specify your dependencies as two item tuples like <code>{:ecto, "~> 0.1.0"}</code> and Elixir will ask if you want to install Hex if you haven't already. After installed, you can run <code>$ mix local</code> to see all available Hex tasks and <code>$ mix help TASK</code> for more information about a specific task.</p>
+    <p>Hex requires Elixir v0.13.1 or later.</p>
   </div>
 </div>
 
