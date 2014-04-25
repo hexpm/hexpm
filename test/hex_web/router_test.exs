@@ -82,12 +82,12 @@ defmodule HexWeb.RouterTest do
     HexWeb.Config.use_ssl(true)
 
     try do
-      conn = %{conn("GET", "/foobar", [], []) | scheme: :http}
+      conn = %{conn("GET", "/foobar") | scheme: :http}
       conn = Router.call(conn, [])
       assert conn.status == 301
       assert get_resp_header(conn, "location") == ["https://hex.pm/foobar"]
 
-      conn = %{conn("GET", "/foobar", [], []) | scheme: :https, host: "some-host.com"}
+      conn = %{conn("GET", "/foobar") | scheme: :https, host: "some-host.com"}
       conn = Router.call(conn, [])
       assert conn.status == 301
       assert get_resp_header(conn, "location") == ["https://hex.pm/foobar"]
@@ -100,12 +100,12 @@ defmodule HexWeb.RouterTest do
 
   test "forwarded" do
     headers = [ { "x-forwarded-proto", "https" } ]
-    conn = conn("GET", "/installs/hex.ez", [], headers: headers)
+    conn = conn("GET", "/installs/hex.ez", nil, headers: headers)
     conn = Router.call(conn, [])
     assert conn.scheme == :https
 
     headers = [ { "x-forwarded-port", "12345" } ]
-    conn = conn("GET", "/installs/hex.ez", [], headers: headers)
+    conn = conn("GET", "/installs/hex.ez", nil, headers: headers)
     conn = Router.call(conn, [])
     assert conn.port == 12345
   end
@@ -115,11 +115,28 @@ defmodule HexWeb.RouterTest do
     HexWeb.Config.cdn_url("http://s3.hex.pm")
 
     try do
-      conn = conn("GET", "/installs/hex.ez", [], [])
+      conn = conn("GET", "/installs/hex.ez")
       conn = Router.call(conn, [])
-
       assert conn.status == 302
       assert get_resp_header(conn, "location") == ["http://s3.hex.pm/installs/hex.ez"]
+
+      headers = [ { "user-agent", "Mix/0.13.0" } ]
+      conn = conn("GET", "/installs/hex.ez", nil, headers: headers)
+      conn = Router.call(conn, [])
+      assert conn.status == 302
+      assert get_resp_header(conn, "location") == ["http://s3.hex.pm/installs/hex.ez"]
+
+      headers = [ { "user-agent", "Mix/0.13.1-dev" } ]
+      conn = conn("GET", "/installs/hex.ez", nil, headers: headers)
+      conn = Router.call(conn, [])
+      assert conn.status == 302
+      assert get_resp_header(conn, "location") == ["http://s3.hex.pm/installs/0.13.1/hex.ez"]
+
+      headers = [ { "user-agent", "Mix/0.13.1" } ]
+      conn = conn("GET", "/installs/hex.ez", nil, headers: headers)
+      conn = Router.call(conn, [])
+      assert conn.status == 302
+      assert get_resp_header(conn, "location") == ["http://s3.hex.pm/installs/0.13.1/hex.ez"]
     after
       HexWeb.Config.cdn_url(cdn_url)
     end
