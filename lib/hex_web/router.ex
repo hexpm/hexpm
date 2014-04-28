@@ -59,8 +59,8 @@ defmodule HexWeb.Router do
   defp install_url(version) do
     case Version.parse(version) do
       {:ok, schema} ->
-        if Version.match?(schema, ">= 0.13.1-dev") do
-          "/installs/0.1.1/hex.ez"
+        if Version.match?(schema, "<= 0.13.0") do
+          "/installs/0.1.0/hex.ez"
         end
       :error ->
         nil
