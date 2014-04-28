@@ -30,7 +30,7 @@ links = Enum.to_list(@package.meta["links"] || [])
         <dt>Links</dt>
         <dd>
           <ul class="links">
-            <%= lc { name, link } inlist links do %>
+            <%= for { name, link } <- links do %>
               <li><a href="<%= link %>"><%= name %></a></li>
             <% end %>
           </ul>
@@ -73,7 +73,7 @@ links = Enum.to_list(@package.meta["links"] || [])
     <h4>Versions</h4>
 
     <ul class="list-unstyled">
-      <%= lc release inlist Enum.to_list(@package.releases.to_list) do %>
+      <%= for release <- Enum.to_list(@package.releases.to_list) do %>
         <li>
           <a href="/packages/<%= @package.name %>/<%= release.version %>"><strong><%= release.version %></strong></a>
           <span class="text-muted"><%= pretty_date(release.created_at) %></span>
@@ -87,7 +87,7 @@ links = Enum.to_list(@package.meta["links"] || [])
 
     <ul class="list-unstyled">
       <%= if @current_release do %>
-        <%= lc { name, req } inlist Enum.to_list(@current_release.requirements.to_list) do %>
+        <%= for { name, req } <- Enum.to_list(@current_release.requirements.to_list) do %>
           <li>
             <a href="/packages/<%= name %>"><strong><%= name %></strong></a>
             <%= req %>

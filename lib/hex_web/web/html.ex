@@ -18,7 +18,7 @@ defmodule HexWeb.Web.HTML do
 
   defimpl Safe, for: List do
     def to_string(list) do
-      bc thing inlist list, do: << Safe.to_string(thing) :: binary >>
+      for thing <- list, into: "", do: << Safe.to_string(thing) :: binary >>
     end
   end
 
@@ -76,7 +76,7 @@ defmodule HexWeb.Web.HTML do
   @escapes [{ ?<, "&lt;" }, { ?>, "&gt;" }, { ?&, "&amp;" }, { ?", "&quot;" }, { ?', "&#39;" }]
 
   def escape(buffer) do
-    bc << char >> inbits buffer do
+    for << char <- buffer >>, into: "" do
       << escape_char(char) :: binary >>
     end
   end

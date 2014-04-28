@@ -190,7 +190,7 @@ defmodule HexWeb.Util do
   end
 
   def hexify(bin) do
-    bc << high :: size(4), low :: size(4) >> inbits bin do
+    for << high :: size(4), low :: size(4) <- bin >>, into: "" do
       << hex_char(high), hex_char(low) >>
     end
   end
