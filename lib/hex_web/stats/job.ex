@@ -36,7 +36,7 @@ defmodule HexWeb.Stats.Job do
       HexWeb.Stats.ReleaseDownload.refresh
     end)
 
-    memory
+    { memory, Dict.size(dict) }
   end
 
   defp start do
