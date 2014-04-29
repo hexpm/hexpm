@@ -1,9 +1,6 @@
 language: erlang
-notifications:
-  recipients:
-    - eric.meadows.jonsson@gmail.com
 otp_release:
-  - 17.0-rc1
+  - 17.0
 addons:
   postgresql: "9.3"
 before_install:
@@ -14,3 +11,6 @@ before_script:
   - MIX_ENV=test mix do deps.get
 script:
   - mix test --include integration
+notifications:
+  recipients:
+    - eric.meadows.jonsson@gmail.com
