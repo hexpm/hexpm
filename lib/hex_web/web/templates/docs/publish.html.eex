@@ -51,7 +51,7 @@ Generating api key...
 <h3>Dependencies</h3>
 
 <p>
-  For Mix to handle Hex packages as dependencies <code>Code.ensure_loaded?(Hex) and Hex.start</code> is required at the top of your mixfile. A dependency defined with no SCM (<code>:git</code> or <code>:path</code>) will be automatically as a Hex dependency. See the <a href="/docs/usage">Usage guide</a> for more details.
+  For Mix to handle Hex packages as dependencies <code>Code.ensure_loaded?(Hex) and Hex.start</code> is required at the top of your mixfile. A dependency defined with no SCM (<code>:git</code> or <code>:path</code>) will be automatically treated as a Hex dependency. See the <a href="/docs/usage">Usage guide</a> for more details.
 </p>
 
 <p>
