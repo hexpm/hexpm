@@ -9,6 +9,7 @@ defmodule HexWeb.Release do
     belongs_to :package, HexWeb.Package
     field :version, :string
     has_many :requirements, HexWeb.Requirement
+    has_many :downloads, HexWeb.Stats.Download
     field :created_at, :datetime
     field :updated_at, :datetime
   end

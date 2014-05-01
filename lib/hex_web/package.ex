@@ -120,6 +120,7 @@ defimpl HexWeb.Render, for: HexWeb.Package.Entity do
         |> Dict.update!(:created_at, &to_iso8601/1)
         |> Dict.update!(:updated_at, &to_iso8601/1)
         |> Dict.put(:url, api_url(["packages", package.name, "releases", release.version]))
+        |> Dict.put(:downloads, Enum.into(HexWeb.Stats.PackageDownload.package(package), %{}))
         |> Enum.into(%{})
       end)
 

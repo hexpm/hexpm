@@ -6,6 +6,8 @@ defmodule HexWeb.API.RouterTest do
   alias HexWeb.User
   alias HexWeb.Package
   alias HexWeb.Release
+  alias HexWeb.Stats.Download
+  alias HexWeb.Stats.PackageDownload
   alias HexWeb.API.Key
   alias HexWeb.RegistryBuilder
   alias HexWeb.Util
@@ -15,7 +17,10 @@ defmodule HexWeb.API.RouterTest do
     { :ok, user } = User.create("eric", "eric@mail.com", "eric")
     { :ok, _ }    = Package.create("postgrex", user,%{})
     { :ok, pkg }  = Package.create("decimal", user, %{})
-    { :ok, _ }    = Release.create(pkg, "0.0.1", [{ "postgrex", "0.0.1" }])
+    { :ok, rel }  = Release.create(pkg, "0.0.1", [{ "postgrex", "0.0.1" }])
+    yesterday     = HexWeb.Util.yesterday |> Ecto.Date.from_erl
+    { :ok, _ }    = Download.create(rel, 1, yesterday)
+    PackageDownload.refresh
     :ok
   end
 
@@ -405,6 +410,7 @@ defmodule HexWeb.API.RouterTest do
     release = List.first(body["releases"])
     assert release["url"] == "http://hex.pm/api/packages/decimal/releases/0.0.1"
     assert release["version"] == "0.0.1"
+    assert release["downloads"] == %{"all" => 1, "day" => 1, "week" => 1}
   end
 
   test "get release" do

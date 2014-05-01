@@ -6,4 +6,10 @@ defmodule HexWeb.Stats.Download do
     field :downloads, :integer
     field :day, :date
   end
+
+  def create(release, count, date) do
+    download = release.downloads.new(downloads: count, day: date)
+               |> HexWeb.Repo.insert
+    {:ok, download}
+  end
 end
