@@ -13,9 +13,9 @@ defmodule HexWeb.Validation do
     allow_pre = Keyword.get(opts, :pre, true)
 
     case Version.parse(version) do
-      { :ok, Version.Schema[pre: pre] } when allow_pre or pre == [] ->
+      { :ok, %Version{pre: pre} } when allow_pre or pre == [] ->
         []
-      { :ok, Version.Schema[] } when not allow_pre ->
+      { :ok, %Version{} } when not allow_pre ->
         [{ attr, opts[:message] || "pre release version is not allowed" }]
       _ ->
         [{ attr, opts[:message] || "invalid version" }]

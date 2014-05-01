@@ -255,7 +255,7 @@ defmodule HexWeb.API.RouterTest do
     RegistryBuilder.sync_rebuild
 
     File.touch!(path, {{2000,1,1,},{1,1,1}})
-    File.Stat[mtime: mtime] = File.stat!(path)
+    %File.Stat{mtime: mtime} = File.stat!(path)
 
     headers = [ { "content-type", "application/octet-stream" },
                 { "authorization", "Basic " <> :base64.encode("eric:eric") }]
@@ -267,7 +267,7 @@ defmodule HexWeb.API.RouterTest do
     # async rebuild
     :timer.sleep(100)
 
-    refute File.Stat[mtime: {{2000,1,1,},{1,1,1}}] = File.stat!(path)
+    refute %File.Stat{mtime: {{2000,1,1,},{1,1,1}}} = File.stat!(path)
   after
     RegistryBuilder.stop
   end
