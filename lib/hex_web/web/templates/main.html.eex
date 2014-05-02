@@ -48,12 +48,24 @@
 
     <div id="footer">
       <div class="container">
-        <ul>
-          <li><small class="text-muted">Hex.pm</small></li>
-          <li><small class="text-muted"><a href="https://github.com/ericmj/hex_web">Github</a></small></li>
-          <li><small class="text-muted"><a href="https://github.com/ericmj/hex_web/issues">Issues</a></small></li>
-          <li><small class="text-muted"><a href="https://github.com/ericmj/hex">Client</a></small></li>
-        </ul>
+        <div class="row">
+          <div class="col-md-6">
+            <ul>
+              <li><small class="text-muted">Hex.pm</small></li>
+              <li><small class="text-muted"><a href="https://github.com/ericmj/hex_web">Github</a></small></li>
+              <li><small class="text-muted"><a href="https://github.com/ericmj/hex_web/issues">Issues</a></small></li>
+              <li><small class="text-muted"><a href="https://github.com/ericmj/hex">Client</a></small></li>
+            </ul>
+          </div>
+          <div class="col-md-6">
+            <div style="float: right; margin: 14px 0;">
+              <a href="https://www.heroku.com/"><img src="/static/heroku-logo-light-88x31.png"></a>
+            </div>
+            <div style="float: right; margin: 19px 0;">
+              <span class="text-muted" style="margin-right: 0.8em;">Sponsored by:</span>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
 
