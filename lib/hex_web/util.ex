@@ -108,8 +108,7 @@ defmodule HexWeb.Util do
   """
   @spec safe_serialize_elixir(term) :: String.t
   def safe_serialize_elixir(term) do
-    map_to_list(term)
-    |> binarify
+    binarify(term)
     |> inspect(limit: :infinity, records: false, binaries: :as_strings)
   end
 
@@ -136,22 +135,11 @@ defmodule HexWeb.Util do
         if safe_term?(ast) do
           Code.eval_quoted(ast)
           |> elem(0)
-          |> list_to_map
         else
           raise HexWeb.Util.BadRequest, message: "unsafe elixir"
         end
       _ ->
         raise HexWeb.Util.BadRequest, message: "malformed elixir"
-    end
-  end
-
-  def safe_eval(ast) do
-    if safe_term?(ast) do
-      Code.eval_quoted(ast)
-      |> elem(0)
-      |> list_to_map
-    else
-      raise HexWeb.Util.BadRequest, message: "unsafe elixir"
     end
   end
 
@@ -165,32 +153,6 @@ defmodule HexWeb.Util do
   def safe_term?(term) when is_list(term), do: Enum.all?(term, &safe_term?/1)
   def safe_term?(term) when is_tuple(term), do: Enum.all?(tuple_to_list(term), &safe_term?/1)
   def safe_term?(_), do: false
-
-  defp map_to_list(thing) when is_map(thing) or is_list(thing) do
-    Enum.into(thing, [], fn
-      { key, map } when is_map(map) -> { key, map_to_list(map) }
-      elem -> map_to_list(elem)
-    end)
-  end
-
-  defp map_to_list(other) do
-    other
-  end
-
-  defp list_to_map(list) when is_list(list) do
-    if list == [] or is_tuple(List.first(list)) do
-      Enum.into(list, %{}, fn
-        { key, list } when is_list(list) -> { key, list_to_map(list) }
-        other -> list_to_map(other)
-      end)
-    else
-      Enum.map(list, &list_to_map/1)
-    end
-  end
-
-  defp list_to_map(other) do
-    other
-  end
 
   def paginate(query, page, count) do
     offset = (page - 1) * count
