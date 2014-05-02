@@ -115,6 +115,8 @@ defmodule HexWeb.Util do
 
   defp binarify(binary) when is_binary(binary),
     do: binary
+  defp binarify(number) when is_number(number),
+    do: number
   defp binarify(atom) when nil?(atom) or is_boolean(atom),
     do: atom
   defp binarify(atom) when is_atom(atom),
