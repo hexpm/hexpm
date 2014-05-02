@@ -124,7 +124,7 @@ defmodule HexWeb.RouterTest do
       conn = conn("GET", "/installs/hex.ez", nil, headers: headers)
       conn = Router.call(conn, [])
       assert conn.status == 302
-      assert get_resp_header(conn, "location") == ["http://s3.hex.pm/installs/0.1.0/hex.ez"]
+      assert get_resp_header(conn, "location") == ["http://s3.hex.pm/installs/0.0.1/hex.ez"]
 
       headers = [ { "user-agent", "Mix/0.13.1" } ]
       conn = conn("GET", "/installs/hex.ez", nil, headers: headers)
