@@ -12,6 +12,6 @@
   "lager": {:git, "https://github.com/basho/lager.git", "4d8291edb72a25ac0efde907e2ecaa115108ff90", []},
   "mini_s3": {:git, "git://github.com/ericmj/mini_s3.git", "5e3d7aa3c198381582b01f88517fdf3dfda8e549", [branch: "hex-fixes"]},
   "plug": {:git, "git://github.com/elixir-lang/plug.git", "e7e26951e0966aaf8d4b23ff8cac8a44cc5586f1", []},
-  "poolboy": {:package, "1.2.1"},
-  "postgrex": {:package, "0.5.0"},
+  "poolboy": {:git, "git://github.com/devinus/poolboy.git", "5abc5f9d19bca6267740e15ee653ecca660b2b09", []},
+  "postgrex": {:git, "git://github.com/ericmj/postgrex.git", "6e93ad834e0155bced7d6439accdf8430f7aad36", []},
   "ranch": {:git, "git://github.com/extend/ranch.git", "5df1f222f94e08abdcab7084f5e13027143cc222", [ref: "0.9.0"]}}
