@@ -2,7 +2,7 @@
   "cowboy": {:git, "git://github.com/extend/cowboy.git", "1ad3aae4d5459ee991805d16a3837e1da2ba96ff", []},
   "cowlib": {:git, "git://github.com/extend/cowlib.git", "f58340a0044856bb508df03cfe94cf79308380a2", [ref: "0.6.1"]},
   "decimal": {:git, "git://github.com/ericmj/decimal.git", "2b28b9e3ee9ef67fb45ac890c04af7f614e00ba9", []},
-  "ecto": {:git, "git://github.com/elixir-lang/ecto.git", "c5c3eae8e0e4002a3d50f680b54d6f0071e23f28", []},
+  "ecto": {:git, "git://github.com/elixir-lang/ecto.git", "fba31987893d08a6b7cb89ec4be35bae8da90442", []},
   "envy": {:git, "git://github.com/manderson26/envy.git", "d62cb227b9000ee866c8bcc724ddf68d87621dea", [branch: "master"]},
   "ex_doc": {:git, "git://github.com/elixir-lang/ex_doc.git", "fc0f00d2ff3c5e20eaee519b937f6feb998aa0d0", []},
   "exlager": {:git, "git://github.com/khia/exlager.git", "d3d73b2a3d0f7b8f3da11a02b5f9384da6c62110", []},
@@ -12,6 +12,6 @@
   "lager": {:git, "https://github.com/basho/lager.git", "4d8291edb72a25ac0efde907e2ecaa115108ff90", []},
   "mini_s3": {:git, "git://github.com/ericmj/mini_s3.git", "5e3d7aa3c198381582b01f88517fdf3dfda8e549", [branch: "hex-fixes"]},
   "plug": {:git, "git://github.com/elixir-lang/plug.git", "e7e26951e0966aaf8d4b23ff8cac8a44cc5586f1", []},
-  "poolboy": {:git, "git://github.com/devinus/poolboy.git", "5abc5f9d19bca6267740e15ee653ecca660b2b09", []},
-  "postgrex": {:git, "git://github.com/ericmj/postgrex.git", "6e93ad834e0155bced7d6439accdf8430f7aad36", []},
+  "poolboy": {:git, "git://github.com/devinus/poolboy.git", "9c4b4580b0363cce91693ec6a7f1f03005955023", []},
+  "postgrex": {:git, "git://github.com/ericmj/postgrex.git", "3a1259373168d2bd5c8f9b827268504486e793f4", []},
   "ranch": {:git, "git://github.com/extend/ranch.git", "5df1f222f94e08abdcab7084f5e13027143cc222", [ref: "0.9.0"]}}

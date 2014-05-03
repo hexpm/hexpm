@@ -20,6 +20,7 @@ defmodule HexWeb do
         [@lager_level, { :lager_default_formatter, [:time, ' [', :severity, '] ', :message, '\n']}]
     ], persistent: true)
     :application.set_env(:lager, :crash_log, :undefined, persistent: true)
+    :application.set_env(:lager, :error_logger_hwm, 150, persistent: true)
 
     :application.ensure_all_started(:exlager)
   end

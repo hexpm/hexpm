@@ -15,7 +15,13 @@ defmodule Mix.Tasks.Hexweb.Stats do
         stacktrace = System.stacktrace
         Lager.error "STATS_JOB_FAILED"
         HexWeb.Util.log_error(kind, error, stacktrace)
-        System.halt(1)
+
+        System.at_exit(fn
+          0 ->
+            System.halt(1)
+          _ ->
+            :ok
+      end)
     end
   end
 end
