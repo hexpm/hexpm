@@ -36,7 +36,9 @@ defmodule HexWeb.Stats.Job do
       HexWeb.Stats.ReleaseDownload.refresh
     end)
 
-    { memory, Dict.size(dict) }
+    num = Enum.reduce(dict, 0, fn {_, count}, acc -> count + acc end)
+
+    { memory, num }
   end
 
   defp start do
