@@ -58,10 +58,10 @@
             </ul>
           </div>
           <div class="col-md-6">
-            <div style="float: right; margin: 14px 0;">
+            <div style="float: right; padding: 13px 0;">
               <a href="https://www.heroku.com/"><img src="/static/heroku-logo-light-88x31.png"></a>
             </div>
-            <div style="float: right; margin: 19px 0;">
+            <div style="float: right; padding: 20px 0;">
               <span class="text-muted" style="margin-right: 0.8em;">Sponsored by:</span>
             </div>
           </div>
