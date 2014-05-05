@@ -53,7 +53,7 @@ defmodule HexWeb.Web.Router do
     conn      = fetch_params(conn)
     search    = conn.params["search"]
     pkg_count = Package.count(search)
-    page      = safe_page(conn.params["page"] || 1, pkg_count)
+    page      = safe_page(safe_int(conn.params["page"]) || 1, pkg_count)
     packages  = Package.all(page, @packages, search)
     active    = :packages
     title     = "Packages"
@@ -108,6 +108,15 @@ defmodule HexWeb.Web.Router do
     do: div(count, @packages) + 1
   defp safe_page(page, _count),
     do: page
+
+  defp safe_int(nil), do: nil
+
+  defp safe_int(string) do
+    case Integer.parse(string) do
+      {int, ""} -> int
+      :error    -> nil
+    end
+  end
 
   def send_page(conn, page) do
     body = Templates.render(page, conn.assigns)
