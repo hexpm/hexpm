@@ -243,13 +243,16 @@ defmodule HexWeb.Util do
     "#{min} minutes ago"
   end
   defp _human_relative_time_from_now({0, {1, _, _}}) do
-    "about 1 hour ago"
+    "1 hour ago"
   end
   defp _human_relative_time_from_now({0, {hour, _, _}}) when hour < 24 do
-    "about #{hour} hours ago"
+    "#{hour} hours ago"
   end
   defp _human_relative_time_from_now({1, {_, _, _}}) do
     "1 day ago"
+  end
+  defp _human_relative_time_from_now({day, {_, _, _}}) when day < 0 do
+    "about now"
   end
   defp _human_relative_time_from_now({day, {_, _, _}}) do
     "#{day} days ago"

@@ -146,11 +146,10 @@ defmodule HexWeb.Release do
   end
 
   def recent(count) do
-    from(r in HexWeb.Release,
-           order_by: [desc: r.created_at],
-           join: p in r.package,
-           limit: count,
-           select: { r.version, p.name })
+    from(r in HexWeb.Release, order_by: [desc: r.created_at],
+                              join: p in r.package,
+                              limit: count,
+                              select: { r.version, p.name })
     |> HexWeb.Repo.all
   end
 
