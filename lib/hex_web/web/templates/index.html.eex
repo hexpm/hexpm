@@ -64,7 +64,7 @@
     <p>
       <%= for { package, created_at } <- @package_new do %>
       <div class="row">
-        <div class="col-xs-5 text-right"><%= pretty_datetime(created_at) %></div>
+        <div class="col-xs-5 text-right"><%= HexWeb.Util.human_relative_time_from_now(created_at) %></div>
         <div class="col-xs-7"><a href="/packages/<%= package %>"><%= package %></a></div>
       </div>
       <% end %>
