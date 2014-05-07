@@ -18,10 +18,13 @@ defmodule HexWeb.Web.Router do
   get "/" do
     num_packages = Package.count
     num_releases = Release.count
+    releases_new = Release.recent(10)
+    package_new  = Package.recent(10)
     package_top  = PackageDownload.top(:all, 10)
     total        = PackageDownload.total
 
-    conn = assign_pun(conn, [num_packages, num_releases, package_top, total])
+    conn = assign_pun(conn, [num_packages, num_releases, package_top,
+                             package_new, releases_new, total])
     send_page(conn, :index)
   end
 

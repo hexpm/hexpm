@@ -37,7 +37,7 @@
       </div>
       <div class="row">
         <div class="col-xs-3 text-right"><%= @total[:week] %></div>
-        <div class="col-xs-9">downloads last seven days</div>
+        <div class="col-xs-9">downloads last week</div>
       </div>
       <div class="row">
         <div class="col-xs-3 text-right"><%= @total[:all] %></div>
@@ -51,6 +51,31 @@
       <%= for { package, downloads } <- @package_top do %>
       <div class="row">
         <div class="col-xs-3 text-right"><%= downloads %></div>
+        <div class="col-xs-9"><a href="/packages/<%= package %>"><%= package %></a></div>
+      </div>
+      <% end %>
+    </p>
+  </div>
+</div>
+
+<div class="row">
+  <div class="col-md-6">
+    <h3>New packages</h3>
+    <p>
+      <%= for { package, created_at } <- @package_new do %>
+      <div class="row">
+        <div class="col-xs-5 text-right"><%= pretty_datetime(created_at) %></div>
+        <div class="col-xs-7"><a href="/packages/<%= package %>"><%= package %></a></div>
+      </div>
+      <% end %>
+    </p>
+  </div>
+  <div class="col-md-6">
+    <h3>Recently Updated</h3>
+    <p>
+      <%= for { version, package } <- @releases_new do %>
+      <div class="row">
+        <div class="col-xs-3 text-right"><%= version %></div>
         <div class="col-xs-9"><a href="/packages/<%= package %>"><%= package %></a></div>
       </div>
       <% end %>
