@@ -46,7 +46,7 @@ links = Enum.to_list(@package.meta["links"] || [])
       <div class="panel-body">
         <div class="row">
           <div class="col-xs-4 text-right"><%= @release_downloads || 0 %></div>
-          <div class="col-xs-8 text-muted">latest version</div>
+          <div class="col-xs-8 text-muted">this version</div>
         </div>
         <div class="row">
           <div class="col-xs-4 text-right"><%= @downloads[:day] || 0 %></div>
