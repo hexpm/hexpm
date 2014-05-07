@@ -160,7 +160,7 @@ defmodule HexWeb.API.Util do
   end
 
   defp basic_auth(credentials) do
-    case String.split(:base64.decode(credentials), ":", global: false) do
+    case String.split(:base64.decode(credentials), ":", parts: 2) do
       [username, password] ->
         user = User.get(username)
         if User.auth?(user, password) do
