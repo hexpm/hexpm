@@ -25,6 +25,10 @@ defmodule HexWeb.Web.Templates do
     "#{pretty_month(month)} #{day}, #{year}"
   end
 
+  defp pretty_datetime(Ecto.DateTime[year: year, month: month, day: day, hour: hour, min: min, sec: _sec]) do
+    "#{pretty_month(month)} #{day}, #{year} #{hour}:#{min}"
+  end
+
   defp pretty_month(1),  do: "January"
   defp pretty_month(2),  do: "February"
   defp pretty_month(3),  do: "March"

@@ -8,16 +8,21 @@ defmodule HexWeb.Web.RouterTest do
 
   setup do
     { :ok, user } = User.create("eric", "eric@mail.com", "eric")
-    { :ok, foo } = Package.create("foo", user, %{})
-    { :ok, bar } = Package.create("bar", user, %{})
-    { :ok, other } = Package.create("other", user, %{})
 
-    { :ok, _ } = Release.create(foo, "0.0.1", [])
-    { :ok, _ } = Release.create(foo, "0.0.2", [])
-    { :ok, _ } = Release.create(foo, "0.1.0", [])
-    { :ok, _ } = Release.create(bar, "0.0.1", [])
-    { :ok, _ } = Release.create(bar, "0.0.2", [])
-    { :ok, _ } = Release.create(other, "0.0.1", [])
+    first_date = Ecto.DateTime.from_erl({{2014, 5, 1}, {10, 11, 12}})
+    second_date = Ecto.DateTime.from_erl({{2014, 5, 2}, {10, 11, 12}})
+    last_date = Ecto.DateTime.from_erl({{2014, 5, 3}, {10, 11, 12}})
+
+    foo = HexWeb.Repo.insert(user.packages.new(name: "foo", meta: "{}", created_at: first_date, updated_at: first_date))
+    bar = HexWeb.Repo.insert(user.packages.new(name: "bar", meta: "{}", created_at: second_date, updated_at: second_date))
+    other = HexWeb.Repo.insert(user.packages.new(name: "other", meta: "{}", created_at: last_date, updated_at: last_date))
+
+    { :ok, _ } = Release.create(foo, "0.0.1", [], Ecto.DateTime.from_erl({{2014, 5, 3}, {10, 11, 1}}))
+    { :ok, _ } = Release.create(foo, "0.0.2", [], Ecto.DateTime.from_erl({{2014, 5, 3}, {10, 11, 2}}))
+    { :ok, _ } = Release.create(foo, "0.1.0", [], Ecto.DateTime.from_erl({{2014, 5, 3}, {10, 11, 3}}))
+    { :ok, _ } = Release.create(bar, "0.0.1", [], Ecto.DateTime.from_erl({{2014, 5, 3}, {10, 11, 4}}))
+    { :ok, _ } = Release.create(bar, "0.0.2", [], Ecto.DateTime.from_erl({{2014, 5, 3}, {10, 11, 5}}))
+    { :ok, _ } = Release.create(other, "0.0.1", [], Ecto.DateTime.from_erl({{2014, 5, 3}, {10, 11, 6}}))
     :ok
   end
 
@@ -39,5 +44,9 @@ defmodule HexWeb.Web.RouterTest do
     assert conn.assigns[:package_top] == [{"foo", 7}, {"bar", 2}]
     assert conn.assigns[:num_packages] == 3
     assert conn.assigns[:num_releases] == 6
+    assert conn.assigns[:releases_new] == [{"0.0.1", "other"}, {"0.0.2", "bar"}, {"0.0.1", "bar"}, {"0.1.0", "foo"}, {"0.0.2", "foo"}, {"0.0.1", "foo"} ]
+    assert conn.assigns[:package_new] == [{"other", Ecto.DateTime[year: 2014, month: 5, day: 3, hour: 10, min: 11, sec: 12]},
+                                          {"bar", Ecto.DateTime[year: 2014, month: 5, day: 2, hour: 10, min: 11, sec: 12]},
+                                          {"foo", Ecto.DateTime[year: 2014, month: 5, day: 1, hour: 10, min: 11, sec: 12]}]
   end
 end

@@ -226,4 +226,35 @@ defmodule HexWeb.Util do
     size = byte_size(bin)
     << int :: [integer, unit(4), size(size)] >>
   end
+
+  def human_relative_time_from_now(date) do
+    ts = date |> Ecto.DateTime.to_erl |> :calendar.datetime_to_gregorian_seconds
+    diff = :calendar.datetime_to_gregorian_seconds(:calendar.universal_time) - ts
+    _human_relative_time_from_now(:calendar.seconds_to_daystime(diff))
+  end
+
+  defp _human_relative_time_from_now({0, {0, 0, sec}}) when sec < 30 do
+    "about now"
+  end
+  defp _human_relative_time_from_now({0, {0, min, _}}) when min < 2 do
+    "1 minute ago"
+  end
+  defp _human_relative_time_from_now({0, {0, min, _}}) do
+    "#{min} minutes ago"
+  end
+  defp _human_relative_time_from_now({0, {1, _, _}}) do
+    "1 hour ago"
+  end
+  defp _human_relative_time_from_now({0, {hour, _, _}}) when hour < 24 do
+    "#{hour} hours ago"
+  end
+  defp _human_relative_time_from_now({1, {_, _, _}}) do
+    "1 day ago"
+  end
+  defp _human_relative_time_from_now({day, {_, _, _}}) when day < 0 do
+    "about now"
+  end
+  defp _human_relative_time_from_now({day, {_, _, _}}) do
+    "#{day} days ago"
+  end
 end

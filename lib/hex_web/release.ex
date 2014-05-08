@@ -145,6 +145,14 @@ defmodule HexWeb.Release do
     |> List.first
   end
 
+  def recent(count) do
+    from(r in HexWeb.Release, order_by: [desc: r.created_at],
+                              join: p in r.package,
+                              limit: count,
+                              select: { r.version, p.name })
+    |> HexWeb.Repo.all
+  end
+
   defp valid_requirement?(req) do
     nil?(req) or (is_binary(req) and match?({ :ok, _ }, Version.parse_requirement(req)))
   end
