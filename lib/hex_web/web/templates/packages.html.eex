@@ -28,15 +28,21 @@ show_pages =
       Enum.to_list(page-2..page+2)
   end
 
-disable_prev = page == 1
-disable_next = page == pages
+disable_prev = false && page == 1
+disable_next = false && page == pages
+
+if @search in [nil, ""] do
+  safe_query = ""
+else
+  safe_query = "search=#{@search}&"
+end
 %>
 
 <ul class="pagination" style="float: right;">
   <%= if disable_prev do %>
     <li class="disabled"><span>&laquo;</span></li>
   <% else %>
-    <li><a href="/packages?search=<%= safe(@search) %>&page=<%= page-1 %>">&laquo;</a></li>
+    <li><a href="/packages?<%= safe(safe_query) %>page=<%= page-1 %>">&laquo;</a></li>
   <% end %>
 
   <%= for counter <- show_pages do %>
@@ -46,7 +52,7 @@ disable_next = page == pages
       </li>
     <% else %>
       <li>
-        <a href="/packages?search=<%= safe(@search) %>&page=<%= counter %>">
+        <a href="/packages?<%= safe(safe_query) %>page=<%= counter %>">
           <%= counter %>
         </a>
       </li>
@@ -56,6 +62,6 @@ disable_next = page == pages
   <%= if disable_next do %>
     <li class="disabled"><span>&raquo;</span></li>
   <% else %>
-    <li><a href="/packages?search=<%= safe(@search) %>&page=<%= page+1 %>">&raquo;</a></li>
+    <li><a href="/packages?<%= safe(safe_query) %>page=<%= page+1 %>">&raquo;</a></li>
   <% end %>
 </ul>
