@@ -63,10 +63,10 @@
     <h3>New packages</h3>
     <p>
       <%= for { package, created_at } <- @package_new do %>
-      <div class="row">
-        <div class="col-xs-5 text-right"><%= HexWeb.Util.human_relative_time_from_now(created_at) %></div>
-        <div class="col-xs-7"><a href="/packages/<%= package %>"><%= package %></a></div>
-      </div>
+        <div class="row">
+          <div class="col-xs-5 text-right"><%= human_relative_time_from_now(created_at) %></div>
+          <div class="col-xs-7"><a href="/packages/<%= package %>"><%= package %></a></div>
+        </div>
       <% end %>
     </p>
   </div>
@@ -74,10 +74,10 @@
     <h3>Recently Updated</h3>
     <p>
       <%= for { version, package } <- @releases_new do %>
-      <div class="row">
-        <div class="col-xs-3 text-right"><%= version %></div>
-        <div class="col-xs-9"><a href="/packages/<%= package %>"><%= package %></a></div>
-      </div>
+        <div class="row">
+          <div class="col-xs-3 text-right"><%= version %></div>
+          <div class="col-xs-9"><a href="/packages/<%= package %>"><%= package %></a></div>
+        </div>
       <% end %>
     </p>
   </div>

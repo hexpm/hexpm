@@ -95,9 +95,10 @@ defmodule HexWeb.Package do
   end
 
   def recent(count) do
-    from(p in HexWeb.Package, order_by: [desc: p.created_at],
-                              limit: count,
-                              select: { p.name, p.created_at })
+    from(p in HexWeb.Package,
+         order_by: [desc: p.created_at],
+         limit: count,
+         select: { p.name, p.created_at })
     |> HexWeb.Repo.all
   end
 

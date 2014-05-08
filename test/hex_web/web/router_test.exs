@@ -3,7 +3,6 @@ defmodule HexWeb.Web.RouterTest do
   import Plug.Test
   alias HexWeb.Router
   alias HexWeb.User
-  alias HexWeb.Package
   alias HexWeb.Release
 
   setup do
