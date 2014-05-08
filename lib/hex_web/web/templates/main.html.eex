@@ -42,7 +42,7 @@
       </div>
     </nav>
 
-    <div class="container" style="padding-bottom=30px">
+    <div class="container" style="padding-bottom: 30px;">
       <%= inner %>
     </div>
 
