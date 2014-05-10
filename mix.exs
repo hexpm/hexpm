@@ -24,7 +24,21 @@ defmodule HexWeb.Mixfile do
   def application do
     [ applications: [:cowboy, :plug, :bcrypt, :mini_s3],
       mod: { HexWeb, [] },
-      env: [ config_password_work_factor: 12 ] ]
+      env: config(Mix.env) ]
+  end
+
+  defp config(:prod) do
+    [
+      config_password_work_factor: 12,
+      config_packages_per_page: 30
+    ]
+  end
+
+  defp config(_) do
+    [
+      config_password_work_factor: 4,
+      config_packages_per_page: 10
+    ]
   end
 
   defp deps do

@@ -27,6 +27,7 @@ defmodule HexWeb.Web.Templates do
     index: [:assigns],
     packages: [:assigns],
     package: [:assigns],
+    searchnotfound: [:_],
     docs_usage: [:_],
     docs_publish: [:_],
     docs_tasks: [:_], ]
