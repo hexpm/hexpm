@@ -13,6 +13,7 @@ defmodule HexWeb.RegistryBuilder do
   alias HexWeb.Package
   alias HexWeb.Release
   alias HexWeb.Requirement
+  alias HexWeb.Install
 
   @ets_table :hex_registry
   @version    1
@@ -111,6 +112,7 @@ defmodule HexWeb.RegistryBuilder do
           :timer.tc(fn ->
             HexWeb.Registry.set_working(handle)
 
+            installs     = installs()
             requirements = requirements()
             releases     = releases()
             packages     = packages()
@@ -142,6 +144,7 @@ defmodule HexWeb.RegistryBuilder do
 
             tid = :ets.new(@ets_table, [:public])
             :ets.insert(tid, { :"$$version$$", @version })
+            :ets.insert(tid, { :"$$installs$$", installs })
             :ets.insert(tid, release_tuples ++ package_tuples)
             :ok = :ets.tab2file(tid, List.from_char_data!(file))
             :ets.delete(tid)
@@ -199,6 +202,12 @@ defmodule HexWeb.RegistryBuilder do
     Enum.reduce(reqs, HashDict.new, fn { rel_id, dep_id, req }, dict ->
       tuple = { dep_id, req }
       Dict.update(dict, rel_id, [tuple], &[tuple|&1])
+    end)
+  end
+
+  defp installs do
+    Enum.map(Install.all, fn Install.Entity[hex: hex, elixir: elixir] ->
+      { hex, elixir }
     end)
   end
 

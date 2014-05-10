@@ -26,7 +26,7 @@ defmodule HexWeb.Install do
   end
 
   def create(hex, elixir) do
-    HexWeb.Install.new(hex: hex, elixir: elixir)
-    |> HexWeb.Repo.insert
+    { :ok, HexWeb.Install.new(hex: hex, elixir: elixir)
+           |> HexWeb.Repo.insert }
   end
 end
