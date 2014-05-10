@@ -33,12 +33,17 @@ defmodule HexWeb.Router do
   get "installs/hex.ez" do
     case List.first get_req_header(conn, "user-agent") do
       "Mix/" <> version ->
-        url = install_url(version)
+        latest = HexWeb.Install.latest(version)
       _ ->
-        url = nil
+        latest = nil
     end
 
-    url = url || "/installs/hex.ez"
+    if latest do
+      url = "/installs/#{latest}/hex.ez"
+    else
+      url = "/installs/hex.ez"
+    end
+
     url = HexWeb.Config.cdn_url <> url
 
     conn
@@ -54,16 +59,5 @@ defmodule HexWeb.Router do
 
   defp fetch(conn, _opts) do
     fetch_params(conn)
-  end
-
-  defp install_url(version) do
-    case Version.parse(version) do
-      {:ok, schema} ->
-        if Version.match?(schema, "<= 0.13.0") do
-          "/installs/0.0.1/hex.ez"
-        end
-      :error ->
-        nil
-    end
   end
 end

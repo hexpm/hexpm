@@ -114,8 +114,19 @@ defmodule HexWeb.RouterTest do
     cdn_url = HexWeb.Config.cdn_url
     HexWeb.Config.cdn_url("http://s3.hex.pm")
 
+    versions = [{"0.0.1", "0.13.0-dev"}, {"0.1.0", "0.13.1-dev"},
+                {"0.1.1", "0.13.1-dev"}, {"0.1.2", "0.13.1-dev"}]
+
+    Enum.each(versions, fn {hex, elixir} -> HexWeb.Install.create(hex, elixir) end)
+
     try do
       conn = conn("GET", "/installs/hex.ez")
+      conn = Router.call(conn, [])
+      assert conn.status == 302
+      assert get_resp_header(conn, "location") == ["http://s3.hex.pm/installs/hex.ez"]
+
+      headers = [ { "user-agent", "Mix/0.0.1" } ]
+      conn = conn("GET", "/installs/hex.ez", nil, headers: headers)
       conn = Router.call(conn, [])
       assert conn.status == 302
       assert get_resp_header(conn, "location") == ["http://s3.hex.pm/installs/hex.ez"]
@@ -130,7 +141,7 @@ defmodule HexWeb.RouterTest do
       conn = conn("GET", "/installs/hex.ez", nil, headers: headers)
       conn = Router.call(conn, [])
       assert conn.status == 302
-      assert get_resp_header(conn, "location") == ["http://s3.hex.pm/installs/hex.ez"]
+      assert get_resp_header(conn, "location") == ["http://s3.hex.pm/installs/0.1.2/hex.ez"]
     after
       HexWeb.Config.cdn_url(cdn_url)
     end
