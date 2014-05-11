@@ -28,7 +28,7 @@ defmodule HexWeb.Web.HTML do
 
   defimpl Safe, for: Float do
     def to_string(thing) do
-      iolist_to_binary(:io_lib_format.fwrite_g(thing))
+      iodata_to_binary(:io_lib_format.fwrite_g(thing))
     end
   end
 
