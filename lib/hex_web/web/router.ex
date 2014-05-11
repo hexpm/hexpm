@@ -56,12 +56,14 @@ defmodule HexWeb.Web.Router do
     conn      = fetch_params(conn)
     search    = conn.params["search"]
     pkg_count = Package.count(search)
+    packages_per_page = @packages
     page      = safe_page(safe_int(conn.params["page"]) || 1, pkg_count)
-    packages  = Package.all(page, @packages, search)
+    packages  = Package.all(page, packages_per_page, search)
     active    = :packages
     title     = "Packages"
 
-    conn = assign_pun(conn, [search, page, packages, pkg_count, active, title])
+    conn = assign_pun(conn, [search, page, packages, pkg_count, active, title,
+                             packages_per_page])
     send_page(conn, :packages)
   end
 
