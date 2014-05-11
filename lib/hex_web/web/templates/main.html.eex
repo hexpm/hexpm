@@ -49,7 +49,7 @@
     <div id="footer">
       <div class="container">
         <div class="row">
-          <div class="col-md-6">
+          <div class="xs-collapse col-xs-6">
             <ul>
               <li><small class="text-muted">Hex.pm</small></li>
               <li><small class="text-muted"><a href="https://github.com/ericmj/hex_web">Github</a></small></li>
@@ -57,7 +57,7 @@
               <li><small class="text-muted"><a href="https://github.com/ericmj/hex">Client</a></small></li>
             </ul>
           </div>
-          <div class="col-md-6">
+          <div class="col-xs-6">
             <div style="float: right; padding: 13px 0;">
               <a href="https://www.heroku.com/"><img src="/static/heroku-logo-light-88x31.png"></a>
             </div>

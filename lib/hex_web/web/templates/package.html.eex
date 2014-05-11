@@ -69,7 +69,7 @@ links = Enum.to_list(@package.meta["links"] || [])
 <div style="margin: 10px 0; border-top: 1px solid #eee"></div>
 
 <div class="row">
-  <div class="col-md-6">
+  <div class="col-sm-6">
     <h4>Versions</h4>
 
     <ul class="list-unstyled">
@@ -82,7 +82,7 @@ links = Enum.to_list(@package.meta["links"] || [])
     </ul>
   </div>
 
-  <div class="col-md-6">
+  <div class="col-sm-6">
     <h4>Dependencies</h4>
 
     <ul class="list-unstyled">
