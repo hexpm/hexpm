@@ -35,7 +35,7 @@ defmodule HexWeb.Mixfile do
       { :postgrex, github: "ericmj/postgrex", override: true },
       { :decimal, github: "ericmj/decimal", override: true },
       { :bcrypt, github: "opscode/erlang-bcrypt" },
-      { :jazz, github: "ericmj/jazz", branch: "elixir-0.13.1" },
+      { :jazz, github: "meh/jazz" },
       { :mini_s3, github: "ericmj/mini_s3", branch: "hex-fixes" },
       { :exlager, github: "khia/exlager" },
       { :ex_doc, github: "elixir-lang/ex_doc", only: :dev } ]

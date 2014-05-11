@@ -7,15 +7,15 @@ defmodule HexWeb.Util do
   require Lager
 
   def json_encode(map) do
-    JSON.encode!(map)
+    Jazz.encode!(map)
   end
 
   def json_decode!(json) do
-    JSON.decode!(json)
+    Jazz.decode!(json)
   end
 
   def json_decode(json) do
-    JSON.decode(json)
+    Jazz.decode(json)
   end
 
   def log_error(:error, error, stacktrace) do
