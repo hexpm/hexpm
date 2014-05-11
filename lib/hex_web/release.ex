@@ -97,19 +97,11 @@ defmodule HexWeb.Release do
       select: { p.name, p.id }
     deps = HexWeb.Repo.all(deps_query) |> Enum.into(HashDict.new)
 
-    Enum.map(requirements, fn { dep, req } ->
-      cond do
-        not valid_requirement?(req) ->
-          { :error, { dep, "invalid requirement: #{inspect req}" } }
-
-        id = deps[dep] ->
-          release.requirements.new(requirement: req, dependency_id: id)
-          |> HexWeb.Repo.insert()
-          { dep, req }
-
-        true ->
-          { :error, { dep, "unknown package" } }
-      end
+    Enum.map(requirements, fn
+      { dep, %{"requirement" => req, "optional" => optional} } ->
+        add_requirement(release, deps, dep, req, optional)
+      { dep, req } ->
+        add_requirement(release, deps, dep, req, false)
     end)
   end
 
@@ -152,6 +144,21 @@ defmodule HexWeb.Release do
          limit: count,
          select: { r.version, p.name })
     |> HexWeb.Repo.all
+  end
+
+  defp add_requirement(release, deps, dep, req, optional) do
+    cond do
+      not valid_requirement?(req) ->
+        { :error, { dep, "invalid requirement: #{inspect req}" } }
+
+      id = deps[dep] ->
+        release.requirements.new(requirement: req, optional: optional, dependency_id: id)
+        |> HexWeb.Repo.insert()
+        { dep, %{requirement: req, optional: optional} }
+
+      true ->
+        { :error, { dep, "unknown package" } }
+    end
   end
 
   defp valid_requirement?(req) do

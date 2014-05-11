@@ -161,6 +161,7 @@ defmodule HexWeb.Util do
     Enum.all?(terms, &safe_term?/1)
   end
 
+  def safe_term?(nil), do: true
   def safe_term?(term) when is_number(term), do: true
   def safe_term?(term) when is_binary(term), do: true
   def safe_term?(term) when is_boolean(term), do: true

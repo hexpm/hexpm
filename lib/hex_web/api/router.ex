@@ -26,7 +26,7 @@ defmodule HexWeb.API.Router do
         case HexWeb.Tar.metadata(body) do
           { :ok, meta } ->
             version = meta["version"]
-            reqs    = meta["requirements"] || []
+            reqs    = meta["requirements"] || %{}
 
             if release = Release.get(package, version) do
               result = Release.update(release, reqs)
