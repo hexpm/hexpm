@@ -30,6 +30,13 @@ defmodule HexWeb.Plugs.Exception do
   end
 
   defp api_response(conn, status) do
+    conn =
+      try do
+        HexWeb.Plugs.Format.call(conn, [])
+      catch
+        _, _ -> conn
+      end
+
     body = %{error: status}
     HexWeb.API.Util.send_render(conn, status, body, true)
   end
