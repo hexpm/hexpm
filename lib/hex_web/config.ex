@@ -43,7 +43,6 @@ defmodule HexWeb.Config do
   var :app_host
   var :use_ssl
   var :password_work_factor
-  var :packages_per_page
 
   var :store
   var :s3_bucket

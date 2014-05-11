@@ -22,7 +22,8 @@ count = @pkg_count
   </table>
 
   <%
-  pages = div(count - 1, HexWeb.Config.packages_per_page) + 1
+  packages_per_page = @packages_per_page
+  pages = div(count - 1, packages_per_page) + 1
   page  = @page
 
   show_pages =
@@ -54,7 +55,12 @@ count = @pkg_count
   %>
 
   <p class="pagination pull-left" style="height: 30px; line-height: 30px; margin-left: 8px;">
-    Showing <%= showed_packages %> package<%= if showed_packages > 1, do: "s" %> of <%= count %> total
+    <%= if showed_packages == 1 do %>
+      Showing last package of <%= count %> total
+    <% else %>
+      <% left = 1 + (page - 1) * packages_per_page %>
+      Showing <%= left %>&ndash;<%= left + showed_packages - 1 %> packages of <%= count %> total
+    <% end %>
   </p>
 
   <ul class="pagination pull-right">

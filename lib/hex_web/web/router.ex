@@ -8,7 +8,9 @@ defmodule HexWeb.Web.Router do
   alias HexWeb.Stats.ReleaseDownload
   alias HexWeb.Release
   alias HexWeb.Package
-  alias HexWeb.Config
+
+
+  @packages 30
 
   plug :match
   plug :dispatch
@@ -54,13 +56,14 @@ defmodule HexWeb.Web.Router do
     conn      = fetch_params(conn)
     search    = conn.params["search"]
     pkg_count = Package.count(search)
+    packages_per_page = @packages
     page      = safe_page(safe_int(conn.params["page"]) || 1, pkg_count)
-    packages  = Package.all(page, Config.packages_per_page, search)
-    if Enum.empty?(packages) && search in [nil, ""], do: raise NotFound
+    packages  = Package.all(page, packages_per_page, search)
     active    = :packages
     title     = "Packages"
 
-    conn = assign_pun(conn, [search, page, packages, pkg_count, active, title])
+    conn = assign_pun(conn, [search, page, packages, pkg_count, active, title,
+                             packages_per_page])
     send_page(conn, :packages)
   end
 
@@ -105,7 +108,9 @@ defmodule HexWeb.Web.Router do
   end
 
   defp safe_page(page, _count) when page < 1,
-    do: raise NotFound
+    do: 1
+  defp safe_page(page, count) when page > div(count, @packages) + 1,
+    do: div(count, @packages) + 1
   defp safe_page(page, _count),
     do: page
 
