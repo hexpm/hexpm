@@ -52,8 +52,9 @@ remote Git URL and Git ref, and all package dependencies.</p>
       </h3>
     </div>
     <div class="panel-body">
-      <p>Remove given API key from account. The key can no longer be used to
-authenticate API requests.</p>
+      <p>Remove given API key from account.</p>
+
+<p>The key can no longer be used to authenticate API requests.</p>
 
 <p><code>mix hex.key.drop key_name -u username -p password</code></p>
 
@@ -196,6 +197,26 @@ recommended to do so.</p>
       <p>Display packages matching the given search query.</p>
 
 <p><code>mix hex.search package</code></p>
+
+    </div>
+  </div>
+
+
+  <div class="panel panel-default">
+    <div class="panel-heading">
+      <h3 id="hex_update" class="panel-title">
+        hex.update
+        <a href="#hex_update"><span class="glyphicon glyphicon-link pull-right"></span></a>
+      </h3>
+    </div>
+    <div class="panel-body">
+      <p>Update the hex registry file.</p>
+
+<p><code>mix hex.update</code></p>
+
+<p>Force fetches the registry file and bypasses any caching. This task does not
+have to be called unless there are issues with the registry file as hex
+fetches it automatically when needed.</p>
 
     </div>
   </div>

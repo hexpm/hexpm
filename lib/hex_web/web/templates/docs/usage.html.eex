@@ -18,9 +18,7 @@
   The version requirement specify which versions of the package you allow. The formats accepted for the requirement are documented in the <a href="http://elixir-lang.org/docs/stable/Version.html">Version module</a>. Below is an example <code>mix.exs</code> file.
 </p>
 
-<pre><code>Code.ensure_loaded?(Hex) and Hex.start
-
-defmodule MyProject.Mixfile do
+<pre><code>defmodule MyProject.Mixfile do
   use Mix.Project
 
   def project do

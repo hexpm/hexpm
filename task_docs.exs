@@ -9,7 +9,7 @@ template = """
 <%%# This file is auto-generated with 'mix run task_docs.exs' %>
 
 <h2>Mix tasks</h2>
-<%= lc { name, html } inlist tasks do %>
+<%= for { name, html } <- tasks do %>
 <% id = String.replace(name, ".", "_") %>
   <div class="panel panel-default">
     <div class="panel-heading">
