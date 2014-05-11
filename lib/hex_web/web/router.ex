@@ -54,10 +54,9 @@ defmodule HexWeb.Web.Router do
     conn      = fetch_params(conn)
     search    = conn.params["search"]
     pkg_count = Package.count(search)
-    if search && pkg_count == 0, do: send_page(conn, :searchnotfound)
     page      = safe_page(safe_int(conn.params["page"]) || 1, pkg_count)
     packages  = Package.all(page, Config.packages_per_page, search)
-    if Enum.empty?(packages), do: raise NotFound
+    if Enum.empty?(packages) && search in [nil, ""], do: raise NotFound
     active    = :packages
     title     = "Packages"
 

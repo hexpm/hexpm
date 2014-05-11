@@ -1,77 +1,87 @@
-<table class="table table-striped packages">
-  <tbody>
-    <%= for package <- @packages do %>
-      <tr>
-        <td style="width: 10em;">
-          <a href="/packages/<%= package.name %>">
-            <span class="glyphicon glyphicon-folder-open" style="padding-right: 0.5em;"></span><%= package.name %>
-          </a>
-        </td>
-        <td><%= package.meta["description"] %></td>
-      </tr>
-    <% end %>
-  </tbody>
-</table>
-
 <%
-pages = div(@pkg_count - 1, HexWeb.Config.packages_per_page) + 1
+search = @search
+search_present = not search in [nil, ""]
+count = @pkg_count
+%>
+<%= if search_present && count == 0 do %>
+  <p>No packages found</p>
+<% else %>
+  <table class="table table-striped packages">
+    <tbody>
+      <%= for package <- @packages do %>
+        <tr>
+          <td style="width: 10em;">
+            <a href="/packages/<%= package.name %>">
+              <span class="glyphicon glyphicon-folder-open" style="padding-right: 0.5em;"></span><%= package.name %>
+            </a>
+          </td>
+          <td><%= package.meta["description"] %></td>
+        </tr>
+      <% end %>
+    </tbody>
+  </table>
 
-show_pages =
-  cond do
-    @page < 3 ->
-      Enum.take(1..5, pages)
-    @page > pages - 3 ->
-      left =
-        if pages > 4 do
-          pages - 4
-        else
-          1
-        end
-      Enum.to_list(left..pages)
-    true ->
-      Enum.to_list(@page-2..@page+2)
+  <%
+  pages = div(count - 1, HexWeb.Config.packages_per_page) + 1
+  page  = @page
+
+  show_pages =
+    cond do
+      page < 3 ->
+        Enum.take(1..5, pages)
+      page > pages - 3 ->
+        left =
+          if pages > 4 do
+            pages - 4
+          else
+            1
+          end
+        Enum.to_list(left..pages)
+      true ->
+        Enum.to_list(page-2..page+2)
+    end
+
+  if page == 1, do: disable_prev = true
+  if page == pages, do: disable_next = true
+
+  if search_present do
+    safe_query = ""
+  else
+    safe_query = "search=#{search}&"
   end
 
-if @page == 1, do: disable_prev = true
-if @page == pages, do: disable_next = true
+  showed_packages = length(@packages)
+  %>
 
-if @search in [nil, ""] do
-  safe_query = ""
-else
-  safe_query = "search=#{@search}&"
-end
+  <p class="pagination pull-left" style="height: 30px; line-height: 30px; margin-left: 8px;">
+    Showing <%= showed_packages %> package<%= if showed_packages > 1, do: "s" %> of <%= count %> total
+  </p>
 
-showed_packages = length(@packages)
-%>
-
-<p class="pagination pull-left" style="height: 30px; line-height: 30px; margin-left: 8px;">
-  Showing <%= showed_packages %> package<%= if showed_packages > 1, do: "s" %> of <%= @pkg_count %> total
-</p>
-
-<ul class="pagination pull-right">
-  <%= if disable_prev do %>
-    <li class="disabled"><span>&laquo;</span></li>
-  <% else %>
-    <li><a href="/packages?<%= safe(safe_query) %>page=<%= @page-1 %>">&laquo;</a></li>
-  <% end %>
-
-  <%= for counter <- show_pages do %>
-    <%= if counter == @page do %>
-      <li class="active">
-        <span><%= counter %></span>
-      </li>
+  <ul class="pagination pull-right">
+    <%= if disable_prev do %>
+      <li class="disabled"><span>&laquo;</span></li>
     <% else %>
-      <li>
-        <a href="/packages?<%= safe(safe_query) %>page=<%= counter %>">
-          <%= counter %>
-        </a>
-      </li>
+      <li><a href="/packages?<%= safe(safe_query) %>page=<%= page-1 %>">&laquo;</a></li>
     <% end %>
-  <% end %>
 
-  <%= if disable_next do %>
-    <li class="disabled"><span>&raquo;</span></li>
-  <% else %>
-    <li><a href="/packages?<%= safe(safe_query) %>page=<%= @page+1 %>">&raquo;</a></li>
-  <% end %>
-</ul>
+    <%= for counter <- show_pages do %>
+      <%= if counter == page do %>
+        <li class="active">
+          <span><%= counter %></span>
+        </li>
+      <% else %>
+        <li>
+          <a href="/packages?<%= safe(safe_query) %>page=<%= counter %>">
+            <%= counter %>
+          </a>
+        </li>
+      <% end %>
+    <% end %>
+
+    <%= if disable_next do %>
+      <li class="disabled"><span>&raquo;</span></li>
+    <% else %>
+      <li><a href="/packages?<%= safe(safe_query) %>page=<%= page+1 %>">&raquo;</a></li>
+    <% end %>
+  </ul>
+<% end %>
