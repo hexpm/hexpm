@@ -42,7 +42,7 @@ defmodule HexWeb.RegistryBuilderTest do
     tid = open_table()
 
     try do
-      assert [{ :"$$version$$", 1 }] = :ets.lookup(tid, :"$$version$$")
+      assert [{ :"$$version$$", 2 }] = :ets.lookup(tid, :"$$version$$")
     after
       close_table(tid)
     end
@@ -74,15 +74,15 @@ defmodule HexWeb.RegistryBuilderTest do
     try do
       assert length(:ets.match_object(tid, :_)) == 7
 
-      assert [ { "decimal", ["0.0.1", "0.0.2"] } ] = :ets.lookup(tid, "decimal")
+      assert [ { "decimal", [["0.0.1", "0.0.2"]] } ] = :ets.lookup(tid, "decimal")
 
-      assert [ { { "decimal", "0.0.1" }, [] } ] =
+      assert [ { { "decimal", "0.0.1" }, [[]] } ] =
              :ets.lookup(tid, { "decimal", "0.0.1" })
 
-      assert [{ "postgrex", ["0.0.2"] }] =
+      assert [{ "postgrex", [["0.0.2"]] }] =
              :ets.lookup(tid, "postgrex")
 
-      reqs = :ets.lookup(tid, { "postgrex", "0.0.2" }) |> List.first |> elem(1)
+      reqs = :ets.lookup(tid, { "postgrex", "0.0.2" }) |> List.first |> elem(1) |> List.first
       assert length(reqs) == 2
       assert Enum.find(reqs, &(&1 == { "decimal", "~> 0.0.1" }))
       assert Enum.find(reqs, &(&1 == { "ex_doc", "0.1.0" }))

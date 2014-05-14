@@ -16,7 +16,7 @@ defmodule HexWeb.RegistryBuilder do
   alias HexWeb.Install
 
   @ets_table :hex_registry
-  @version    1
+  @version    2
 
   defrecordp :state, [building: false, pending: false, counter: 0, waiters: []]
 
@@ -124,7 +124,7 @@ defmodule HexWeb.RegistryBuilder do
 
             package_tuples =
               Enum.map(package_tuples, fn { name, vsns } ->
-                { name, Enum.sort(vsns, &(Version.compare(&1, &2) == :lt)) }
+                { name, [Enum.sort(vsns, &(Version.compare(&1, &2) == :lt))] }
               end)
 
             release_tuples =
@@ -135,7 +135,7 @@ defmodule HexWeb.RegistryBuilder do
                     dep_name = packages[dep_id]
                     { dep_name, req }
                   end)
-                { { package, version }, deps }
+                { { package, version }, [deps] }
               end)
 
             { :memory, memory } = :erlang.process_info(self, :memory)
