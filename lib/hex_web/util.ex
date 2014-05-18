@@ -107,19 +107,19 @@ defmodule HexWeb.Util do
     |> inspect(limit: :infinity, records: false, binaries: :as_strings)
   end
 
-  defp binarify(binary) when is_binary(binary),
+  def binarify(binary) when is_binary(binary),
     do: binary
-  defp binarify(number) when is_number(number),
+  def binarify(number) when is_number(number),
     do: number
-  defp binarify(atom) when nil?(atom) or is_boolean(atom),
+  def binarify(atom) when nil?(atom) or is_boolean(atom),
     do: atom
-  defp binarify(atom) when is_atom(atom),
+  def binarify(atom) when is_atom(atom),
     do: atom_to_binary(atom)
-  defp binarify(list) when is_list(list),
+  def binarify(list) when is_list(list),
     do: for(elem <- list, do: binarify(elem))
-  defp binarify(map) when is_map(map),
+  def binarify(map) when is_map(map),
     do: for(elem <- map, into: %{}, do: binarify(elem))
-  defp binarify(tuple) when is_tuple(tuple),
+  def binarify(tuple) when is_tuple(tuple),
     do: for(elem <- tuple_to_list(tuple), do: binarify(elem)) |> list_to_tuple
 
   def safe_deserialize_elixir("") do

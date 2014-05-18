@@ -17,10 +17,10 @@ defmodule HexWeb.ReleaseTest do
     package = Package.get("ecto")
     package_id = package.id
     assert { :ok, Release.Entity[package_id: ^package_id, version: "0.0.1"] } =
-           Release.create(package, "0.0.1", [])
+           Release.create(package, "0.0.1", [], "")
     assert Release.Entity[package_id: ^package_id, version: "0.0.1"] = Release.get(package, "0.0.1")
 
-    assert { :ok, _ } = Release.create(package, "0.0.2", [])
+    assert { :ok, _ } = Release.create(package, "0.0.2", [], "")
     assert [ Release.Entity[version: "0.0.2"], Release.Entity[version: "0.0.1"] ] =
            Release.all(package)
   end
@@ -30,10 +30,10 @@ defmodule HexWeb.ReleaseTest do
     postgrex = Package.get("postgrex")
     decimal = Package.get("decimal")
 
-    assert { :ok, _ } = Release.create(decimal, "0.0.1", %{})
-    assert { :ok, _ } = Release.create(decimal, "0.0.2", %{})
-    assert { :ok, _ } = Release.create(postgrex, "0.0.1", %{"decimal" => "~> 0.0.1"})
-    assert { :ok, _ } = Release.create(ecto, "0.0.1", %{"decimal" => "~> 0.0.2", "postgrex" => "== 0.0.1"})
+    assert { :ok, _ } = Release.create(decimal, "0.0.1", %{}, "")
+    assert { :ok, _ } = Release.create(decimal, "0.0.2", %{}, "")
+    assert { :ok, _ } = Release.create(postgrex, "0.0.1", %{"decimal" => "~> 0.0.1"}, "")
+    assert { :ok, _ } = Release.create(ecto, "0.0.1", %{"decimal" => "~> 0.0.2", "postgrex" => "== 0.0.1"}, "")
 
     release = Release.get(ecto, "0.0.1")
     reqs = release.requirements.to_list
@@ -46,34 +46,34 @@ defmodule HexWeb.ReleaseTest do
     package = Package.get("ecto")
 
     assert { :ok, _ } =
-           Release.create(package, "0.1.0", %{"decimal" => nil})
+           Release.create(package, "0.1.0", %{"decimal" => nil}, "")
 
     assert { :error, %{version: "invalid version"} } =
-           Release.create(package, "0.1", %{})
+           Release.create(package, "0.1", %{}, "")
 
     assert { :error, %{version: "pre release version is not allowed"} } =
-           Release.create(package, "0.1.0-dev", %{})
+           Release.create(package, "0.1.0-dev", %{}, "")
 
     assert { :error, %{deps: %{"decimal" => "invalid requirement: \"fail\"" }} } =
-           Release.create(package, "0.1.1", %{"decimal" => "fail"})
+           Release.create(package, "0.1.1", %{"decimal" => "fail"}, "")
   end
 
   test "release version is unique" do
     ecto = Package.get("ecto")
     postgrex = Package.get("postgrex")
-    assert { :ok, Release.Entity[] } = Release.create(ecto, "0.0.1", %{})
-    assert { :ok, Release.Entity[] } = Release.create(postgrex, "0.0.1", %{})
-    assert { :error, _ } = Release.create(ecto, "0.0.1", %{})
+    assert { :ok, Release.Entity[] } = Release.create(ecto, "0.0.1", %{}, "")
+    assert { :ok, Release.Entity[] } = Release.create(postgrex, "0.0.1", %{}, "")
+    assert { :error, _ } = Release.create(ecto, "0.0.1", %{}, "")
   end
 
   test "update release" do
     decimal = Package.get("decimal")
     postgrex = Package.get("postgrex")
 
-    assert { :ok, _ } = Release.create(decimal, "0.0.1", %{})
-    assert { :ok, release } = Release.create(postgrex, "0.0.1", %{"decimal" => "~> 0.0.1"})
+    assert { :ok, _ } = Release.create(decimal, "0.0.1", %{}, "")
+    assert { :ok, release } = Release.create(postgrex, "0.0.1", %{"decimal" => "~> 0.0.1"}, "")
 
-    Release.update(release, %{"decimal" => "~> 0.0.2"})
+    Release.update(release, %{"decimal" => "~> 0.0.2"}, "")
 
     release = Release.get(postgrex, "0.0.1")
     assert %{"decimal" => "~> 0.0.2"} = release.requirements.to_list
@@ -83,7 +83,7 @@ defmodule HexWeb.ReleaseTest do
     decimal = Package.get("decimal")
     postgrex = Package.get("postgrex")
 
-    assert { :ok, release } = Release.create(decimal, "0.0.1", %{})
+    assert { :ok, release } = Release.create(decimal, "0.0.1", %{}, "")
     Release.delete(release)
     refute Release.get(postgrex, "0.0.1")
   end

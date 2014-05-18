@@ -8,6 +8,7 @@ defmodule HexWeb.Release do
   queryable "releases" do
     belongs_to :package, HexWeb.Package
     field :version, :string
+    field :checksum, :string
     has_many :requirements, HexWeb.Requirement
     field :created_at, :datetime
     field :updated_at, :datetime
@@ -21,9 +22,11 @@ defmodule HexWeb.Release do
     also: validate(),
     also: unique([:version], scope: [:package_id], on: HexWeb.Repo)
 
-  def create(package, version, requirements, created_at \\ nil) do
+  def create(package, version, requirements, checksum, created_at \\ nil) do
     now = Util.ecto_now
-    release = package.releases.new(version: version, updated_at: now,
+    release = package.releases.new(version: version,
+                                   updated_at: now,
+                                   checksum: checksum,
                                    created_at: created_at || now)
 
     case validate_create(release) do
@@ -37,14 +40,15 @@ defmodule HexWeb.Release do
     end
   end
 
-  def update(release, requirements) do
+  def update(release, requirements, checksum) do
     if editable?(release) do
       case validate(release) do
         [] ->
           HexWeb.Repo.transaction(fn ->
             HexWeb.Repo.delete_all(release.requirements)
             HexWeb.Repo.delete(release)
-            create(release.package.get, release.version, requirements, release.created_at)
+            create(release.package.get, release.version, requirements, checksum,
+                   release.created_at)
           end) |> elem(1)
         errors ->
           { :error, Enum.into(errors, %{}) }

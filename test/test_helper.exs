@@ -38,11 +38,11 @@ defmodule HexWebTest.Case do
     contents = File.read!(contents_path)
 
     meta_string = HexWeb.Util.safe_serialize_elixir(meta)
-    blob = "1" <> meta_string <> contents
-    checksum = :crypto.hash(:md5, blob) |> HexWeb.Util.hexify
+    blob = "2" <> meta_string <> contents
+    checksum = :crypto.hash(:sha256, blob) |> HexWeb.Util.hexify
 
     files = [
-      { 'VERSION', "1"},
+      { 'VERSION', "2"},
       { 'CHECKSUM', checksum },
       { 'metadata.exs', meta_string },
       { 'contents.tar.gz', contents } ]

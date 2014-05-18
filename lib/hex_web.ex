@@ -13,7 +13,7 @@ defmodule HexWeb do
     HexWeb.Supervisor.start_link
   end
 
-  @lager_level Mix.project[:lager_level]
+  @lager_level Mix.Project.config[:lager_level]
 
   defp start_lager do
     :application.set_env(:lager, :handlers, [lager_console_backend:

@@ -13,7 +13,7 @@ defmodule HexWeb.RouterTest do
     { :ok, user } = User.create("eric", "eric@mail.com", "eric")
     { :ok, _ }    = Package.create("postgrex", user, %{})
     { :ok, pkg }  = Package.create("decimal", user, %{})
-    { :ok, _ }    = Release.create(pkg, "0.0.1", [{ "postgrex", "0.0.1" }])
+    { :ok, _ }    = Release.create(pkg, "0.0.1", [{ "postgrex", "0.0.1" }], "")
     :ok
   end
 

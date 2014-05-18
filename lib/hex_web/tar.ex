@@ -22,11 +22,18 @@ defmodule HexWeb.Tar do
       { :ok, files } ->
         files = Enum.into(files, %{}, fn { name, binary } -> { String.from_char_data!(name), binary } end)
 
-        version(files)
-        |> if_ok(checksum)
-        |> if_ok(missing_files)
-        |> if_ok(unknown_files)
-        |> if_ok(meta)
+        meta = version(files)
+               |> if_ok(checksum)
+               |> if_ok(missing_files)
+               |> if_ok(unknown_files)
+               |> if_ok(meta)
+
+        case meta do
+          { :ok, meta } ->
+            { :ok, meta, files["CHECKSUM"] }
+          error ->
+            error
+        end
 
       { :error, reason } ->
         { :error, %{tar: inspect reason} }
@@ -35,7 +42,7 @@ defmodule HexWeb.Tar do
 
   defp version(files) do
     version = files["VERSION"]
-    if version in ["1", "2"] do
+    if version in ["2"] do
       { :ok, files, binary_to_integer(version) }
     else
       { :error, %{version: :wrong} }
@@ -44,7 +51,7 @@ defmodule HexWeb.Tar do
 
   defp checksum(files, version) do
     blob = files["VERSION"] <> files["metadata.exs"] <> files["contents.tar.gz"]
-    if hash(blob, version) == HexWeb.Util.dehexify(files["CHECKSUM"]) do
+    if :crypto.hash(:sha256, blob) == HexWeb.Util.dehexify(files["CHECKSUM"]) do
       { :ok, files, version }
     else
       { :error, %{checksum: :wrong} }
@@ -77,13 +84,5 @@ defmodule HexWeb.Tar do
       err in [HexWeb.Util.BadRequest] ->
         { :error, %{metadata: err.message} }
     end
-  end
-
-  defp hash(blob, 1) do
-    :crypto.hash(:md5, blob)
-  end
-
-  defp hash(blob, 2) do
-    :crypto.hash(:sha256, blob)
   end
 end

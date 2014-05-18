@@ -64,9 +64,9 @@ defmodule HexWeb.RegistryBuilderTest do
     postgrex = Package.get("postgrex")
     decimal = Package.get("decimal")
 
-    Release.create(decimal, "0.0.1", [])
-    Release.create(decimal, "0.0.2", [{ "ex_doc", "0.0.0" }])
-    Release.create(postgrex, "0.0.2", [{ "decimal", "~> 0.0.1" }, { "ex_doc", "0.1.0" }])
+    Release.create(decimal, "0.0.1", [], "")
+    Release.create(decimal, "0.0.2", [{ "ex_doc", "0.0.0" }], "")
+    Release.create(postgrex, "0.0.2", [{ "decimal", "~> 0.0.1" }, { "ex_doc", "0.1.0" }], "")
 
     build()
     tid = open_table()
@@ -97,9 +97,9 @@ defmodule HexWeb.RegistryBuilderTest do
     postgrex = Package.get("postgrex")
     decimal = Package.get("decimal")
 
-    Release.create(decimal, "0.0.1", [])
-    Release.create(decimal, "0.0.2", [{ "ex_doc", "0.0.0" }])
-    Release.create(postgrex, "0.0.2", [{ "decimal", "~> 0.0.1" }, { "ex_doc", "0.1.0" }])
+    Release.create(decimal, "0.0.1", [], "")
+    Release.create(decimal, "0.0.2", [{ "ex_doc", "0.0.0" }], "")
+    Release.create(postgrex, "0.0.2", [{ "decimal", "~> 0.0.1" }, { "ex_doc", "0.1.0" }], "")
 
     RegistryBuilder.async_rebuild
     RegistryBuilder.async_rebuild

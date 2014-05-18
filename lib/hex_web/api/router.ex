@@ -24,16 +24,16 @@ defmodule HexWeb.API.Router do
         { body, conn } = read_body!(conn, 10_000_000)
 
         case HexWeb.Tar.metadata(body) do
-          { :ok, meta } ->
+          { :ok, meta, checksum } ->
             version = meta["version"]
             reqs    = meta["requirements"] || %{}
 
             if release = Release.get(package, version) do
-              result = Release.update(release, reqs)
+              result = Release.update(release, reqs, checksum)
               if match?({ :ok, _ }, result), do: after_release(name, version, body)
               send_update_resp(conn, result, :public)
             else
-              result = Release.create(package, version, reqs)
+              result = Release.create(package, version, reqs, checksum)
               if match?({ :ok, _ }, result), do: after_release(name, version, body)
               send_creation_resp(conn, result, :public, api_url(["packages", name, "releases", version]))
             end

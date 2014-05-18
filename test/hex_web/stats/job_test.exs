@@ -13,12 +13,12 @@ defmodule HexWeb.Stats.JobTest do
     { :ok, bar } = Package.create("bar", user, %{})
     { :ok, other } = Package.create("other", user, %{})
 
-    { :ok, _ } = Release.create(foo, "0.0.1", [])
-    { :ok, _ } = Release.create(foo, "0.0.2", [])
-    { :ok, _ } = Release.create(foo, "0.1.0", [])
-    { :ok, _ } = Release.create(bar, "0.0.1", [])
-    { :ok, _ } = Release.create(bar, "0.0.2", [])
-    { :ok, _ } = Release.create(other, "0.0.1", [])
+    { :ok, _ } = Release.create(foo, "0.0.1", [], "")
+    { :ok, _ } = Release.create(foo, "0.0.2", [], "")
+    { :ok, _ } = Release.create(foo, "0.1.0", [], "")
+    { :ok, _ } = Release.create(bar, "0.0.1", [], "")
+    { :ok, _ } = Release.create(bar, "0.0.2", [], "")
+    { :ok, _ } = Release.create(other, "0.0.1", [], "")
 
     :ok
   end
