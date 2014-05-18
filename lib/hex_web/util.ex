@@ -18,14 +18,8 @@ defmodule HexWeb.Util do
     Jazz.decode(json)
   end
 
-  def log_error(:error, error, stacktrace) do
-    exception = Exception.normalize(:error, error)
-    Lager.error "** (#{inspect exception.__record__(:name)}) #{exception.message}\n"
-                <> Exception.format_stacktrace(stacktrace)
-  end
-
-  def log_error(kind, reason, stacktrace) do
-    Lager.error "** (#{kind}) #{inspect(reason)}\n"
+  def log_error(kind, error, stacktrace) do
+    Lager.error Exception.format_banner(kind, error, stacktrace) <> "\n"
                 <> Exception.format_stacktrace(stacktrace)
   end
 
