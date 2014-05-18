@@ -18,7 +18,9 @@ defmodule HexWeb.RegistryBuilder do
   @ets_table :hex_registry
   @version    2
 
-  defrecordp :state, [building: false, pending: false, counter: 0, waiters: []]
+  defp new_state do
+    %{building: false, pending: false, counter: 0, waiters: []}
+  end
 
   def start_link() do
     :gen_server.start_link({ :local, __MODULE__ }, __MODULE__, [], [])
@@ -37,41 +39,41 @@ defmodule HexWeb.RegistryBuilder do
   end
 
   def init(_) do
-    { :ok, state() }
+    { :ok, new_state() }
   end
 
-  def handle_cast(:rebuild, state(building: false) = s) do
+  def handle_cast(:rebuild, %{building: false} = s) do
     build()
-    { :noreply, state(s, building: true) }
+    { :noreply, %{s | building: true} }
   end
 
-  def handle_cast(:rebuild, state(building: true) = s) do
-    { :noreply, state(s, pending: true) }
+  def handle_cast(:rebuild, %{building: true} = s) do
+    { :noreply, %{s | pending: true} }
   end
 
   def handle_call(:stop, _from, s) do
     { :stop, :normal, :ok, s }
   end
 
-  def handle_call(:rebuild, from, state(building: false, waiters: waiters, counter: counter) = s) do
+  def handle_call(:rebuild, from, %{building: false, waiters: waiters, counter: counter} = s) do
     build()
-    { :noreply, state(s, building: true, waiters: [{ counter, from }|waiters]) }
+    { :noreply, %{s | building: true, waiters: [{ counter, from }|waiters]} }
   end
 
-  def handle_call(:rebuild, from, state(building: true, waiters: waiters, counter: counter) = s) do
-    { :noreply, state(s, pending: true, waiters: [{ counter+1, from }|waiters]) }
+  def handle_call(:rebuild, from, %{building: true, waiters: waiters, counter: counter} = s) do
+    { :noreply, %{s | pending: true, waiters: [{ counter+1, from }|waiters]} }
   end
 
-  def handle_info(:finished_building, state(pending: pending, counter: counter) = s) do
+  def handle_info(:finished_building, %{pending: pending, counter: counter} = s) do
     if pending, do: async_rebuild()
     s = reply_to_waiters(s)
-    { :noreply, state(s, building: false, pending: false, counter: counter + 1) }
+    { :noreply, %{s | building: false, pending: false, counter: counter + 1} }
   end
 
-  defp reply_to_waiters(state(waiters: waiters, counter: counter) = s) do
+  defp reply_to_waiters(%{waiters: waiters, counter: counter} = s) do
     { done, pending } = Enum.partition(waiters, fn { id, _ } -> id == counter end)
     Enum.each(done, fn { _id, from } -> :gen_server.reply(from, :ok) end)
-    state(s, waiters: pending)
+    %{s | waiters: pending}
   end
 
   defp build do
@@ -196,10 +198,10 @@ defmodule HexWeb.RegistryBuilder do
   defp requirements do
     reqs =
       from(r in Requirement,
-           select: { r.release_id, r.dependency_id, r.requirement })
+           select: { r.release_id, r.dependency_id, r.requirement})
       |> HexWeb.Repo.all
 
-    Enum.reduce(reqs, HashDict.new, fn { rel_id, dep_id, req }, dict ->
+    Enum.reduce(reqs, HashDict.new, fn { rel_id, dep_id, req}, dict ->
       tuple = { dep_id, req }
       Dict.update(dict, rel_id, [tuple], &[tuple|&1])
     end)
