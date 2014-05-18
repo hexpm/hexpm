@@ -3,29 +3,27 @@ defmodule HexWeb.API.Util do
   API related utility functions.
   """
 
+  require Record
   import Plug.Conn
   alias HexWeb.User
   alias HexWeb.API.Key
 
   @max_age 60
 
-  defmacro when_stale(entities, opts) do
-    quote do
-      entities = unquote(entities)
-      etag     = HexWeb.Util.etag(entities)
-      modified = if is_record(entities), do: Ecto.DateTime.to_erl(entities.updated_at)
+  def when_stale(conn, entities, fun) do
+    etag     = HexWeb.Util.etag(entities)
+    modified = if Record.record?(entities), do: Ecto.DateTime.to_erl(entities.updated_at)
 
-      var!(conn) = put_resp_header(var!(conn), "etag", etag)
+    conn = put_resp_header(conn, "etag", etag)
 
-      if modified do
-        var!(conn) = put_resp_header(var!(conn), "last-modified", :cowboy_clock.rfc1123(modified))
-      end
+    if modified do
+      conn = put_resp_header(conn, "last-modified", :cowboy_clock.rfc1123(modified))
+    end
 
-      unless HexWeb.API.Util.fresh?(var!(conn), etag: etag, modified: modified) do
-        unquote(opts[:do])
-      else
-        send_resp(var!(conn), 304, "")
-      end
+    unless HexWeb.API.Util.fresh?(conn, etag: etag, modified: modified) do
+      fun.(conn)
+    else
+      send_resp(conn, 304, "")
     end
   end
 
@@ -100,7 +98,9 @@ defmodule HexWeb.API.Util do
         body = HexWeb.Util.safe_serialize_elixir(body)
         content_type = "application/vnd.hex+elixir"
       format when format == :json or fallback ->
-        body = HexWeb.Util.json_encode(body)
+        body = body
+               |> HexWeb.Util.binarify
+               |> HexWeb.Util.json_encode
         content_type = "application/json"
       _ ->
         raise Plug.Parsers.UnsupportedMediaTypeError

@@ -71,7 +71,7 @@ defmodule HexWeb.API.Router do
 
     get "users/:name" do
       if user = User.get(name) do
-        when_stale user, do: conn |> cache(:public) |> send_render(200, user)
+        when_stale(conn, user, &(&1 |> cache(:public) |> send_render(200, user)))
       else
         raise NotFound
       end
@@ -88,12 +88,12 @@ defmodule HexWeb.API.Router do
     get "packages" do
       page = parse_integer(conn.params["page"], 1)
       packages = Package.all(page, 100, conn.params["search"])
-      when_stale packages, do: conn |> cache(:public) |> send_render(200, packages)
+      when_stale(conn, packages, &(&1 |> cache(:public) |> send_render(200, packages)))
     end
 
     get "packages/:name" do
       if package = Package.get(name) do
-        when_stale package, do: conn |> cache(:public) |> send_render(200, package)
+        when_stale(conn, package, &(&1 |> cache(:public) |> send_render(200, package)))
       else
         raise NotFound
       end
@@ -135,7 +135,7 @@ defmodule HexWeb.API.Router do
 
     get "packages/:name/releases/:version" do
       if (package = Package.get(name)) && (release = Release.get(package, version)) do
-        when_stale release, do: conn |> cache(:public) |> send_render(200, release)
+        when_stale(conn, release, &(&1 |> cache(:public) |> send_render(200, release)))
       else
         raise NotFound
       end
@@ -144,14 +144,14 @@ defmodule HexWeb.API.Router do
     get "keys" do
       with_authorized_basic(user) do
         keys = Key.all(user)
-        when_stale keys, do: conn |> cache(:private) |> send_render(200, keys)
+        when_stale(conn, keys, &(&1 |> cache(:private) |> send_render(200, keys)))
       end
     end
 
     get "keys/:name" do
       with_authorized_basic(user) do
         if key = Key.get(name, user) do
-          when_stale key, do: conn |> cache(:private) |> send_render(200, key)
+          when_stale(conn, key, &(&1 |> cache(:private) |> send_render(200, key)))
         else
           raise NotFound
         end
