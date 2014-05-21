@@ -1,1 +1,1 @@
-web: mix run --no-halt -- -p $PORT
+web: mix run --no-halt

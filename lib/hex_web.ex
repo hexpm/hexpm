@@ -2,8 +2,11 @@ defmodule HexWeb do
   use Application.Behaviour
 
   def start(_type, _args) do
-    { opts, _, _ } = OptionParser.parse(System.argv, aliases: [p: :port])
-    opts = Keyword.update(opts, :port, 4000, &binary_to_integer(&1))
+    opts  = [port: 4000]
+
+    if port = System.get_env("PORT") do
+      opts = Keyword.put(opts, :port, binary_to_integer(port))
+    end
 
     start_lager()
 
