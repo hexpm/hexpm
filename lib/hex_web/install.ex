@@ -1,7 +1,7 @@
 defmodule HexWeb.Install do
   use Ecto.Model
 
-  queryable "installs" do
+  schema "installs" do
     field :hex, :string
     field :elixir, :string
   end
@@ -13,10 +13,10 @@ defmodule HexWeb.Install do
   def latest(current) do
     case Version.parse(current) do
       { :ok, current } ->
-        Enum.filter(all(), fn HexWeb.Install.Entity[elixir: elixir] ->
+        Enum.filter(all(), fn %HexWeb.Install{elixir: elixir} ->
           Version.compare(elixir, current) != :gt
         end)
-        |> Enum.map(fn HexWeb.Install.Entity[hex: hex] -> hex end)
+        |> Enum.map(fn %HexWeb.Install{hex: hex} -> hex end)
         |> Enum.sort(&(Version.compare(&1, &2) == :gt))
         |> List.first
 
@@ -26,7 +26,7 @@ defmodule HexWeb.Install do
   end
 
   def create(hex, elixir) do
-    { :ok, HexWeb.Install.new(hex: hex, elixir: elixir)
+    { :ok, %HexWeb.Install{hex: hex, elixir: elixir}
            |> HexWeb.Repo.insert }
   end
 end

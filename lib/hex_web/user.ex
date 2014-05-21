@@ -5,7 +5,7 @@ defmodule HexWeb.User do
   alias HexWeb.Util
   import HexWeb.Validation
 
-  queryable "users" do
+  schema "users" do
     field :username, :string
     field :email, :string
     field :password, :string
@@ -30,14 +30,14 @@ defmodule HexWeb.User do
 
   def create(username, email, password) do
     username = if is_binary(username), do: String.downcase(username), else: username
-    email = if is_binary(email), do: String.downcase(email), else: email
-    now = Util.ecto_now
-    user = HexWeb.User.new(username: username, email: email, password: password,
-                           created_at: now, updated_at: now)
+    email    = if is_binary(email),    do: String.downcase(email),    else: email
+    now      = Util.ecto_now
+    user     = %HexWeb.User{username: username, email: email, password: password,
+                            created_at: now, updated_at: now}
 
     case validate_create(user) do
       [] ->
-        user = user.password(gen_password(password))
+        user = %{user | password: gen_password(password)}
         { :ok, HexWeb.Repo.insert(user) }
       errors ->
         { :error, Enum.into(errors, %{}) }
@@ -45,23 +45,22 @@ defmodule HexWeb.User do
   end
 
   def update(user, email, password) do
-    email = if is_binary(email), do: String.downcase(email), else: email
     errors = []
 
     if email do
-      user = user.email(email)
+      user = %{user | email: String.downcase(email)}
       errors = errors ++ validate_email(user)
     end
 
     if password do
-      user = user.password(password)
+      user = %{user | password: password}
       errors = errors ++ validate_password(user)
+      user = %{user | password: gen_password(password)}
     end
 
     case errors do
       [] ->
-        if password, do: user = user.password(gen_password(password))
-        user = user.updated_at(Util.ecto_now)
+        user = %{user | updated_at: Util.ecto_now}
         HexWeb.Repo.update(user)
         { :ok, user }
       errors ->
@@ -70,7 +69,9 @@ defmodule HexWeb.User do
   end
 
   def get(username) do
-    from(u in HexWeb.User, where: downcase(u.username) == downcase(^username), limit: 1)
+    from(u in HexWeb.User,
+         where: downcase(u.username) == downcase(^username),
+         limit: 1)
     |> HexWeb.Repo.all
     |> List.first
   end
@@ -78,9 +79,9 @@ defmodule HexWeb.User do
   def auth?(nil, _password), do: false
 
   def auth?(user, password) do
-    stored_hash = user.password
-    password = List.from_char_data!(password)
-    stored_hash = :erlang.binary_to_list(stored_hash)
+    stored_hash   = user.password
+    password      = List.from_char_data!(password)
+    stored_hash   = :erlang.binary_to_list(stored_hash)
     { :ok, hash } = :bcrypt.hashpw(password, stored_hash)
     hash == stored_hash
   end
@@ -94,11 +95,11 @@ defmodule HexWeb.User do
   end
 end
 
-defimpl HexWeb.Render, for: HexWeb.User.Entity do
+defimpl HexWeb.Render, for: HexWeb.User do
   import HexWeb.Util
 
   def render(user) do
-    user.__entity__(:keywords)
+    HexWeb.User.__schema__(:keywords, user)
     |> Dict.take([:username, :email, :created_at, :updated_at])
     |> Dict.update!(:created_at, &to_iso8601/1)
     |> Dict.update!(:updated_at, &to_iso8601/1)

@@ -93,7 +93,14 @@ defmodule HexWeb.API.Router do
 
     get "packages/:name" do
       if package = Package.get(name) do
-        when_stale(conn, package, &(&1 |> cache(:public) |> send_render(200, package)))
+        when_stale(conn, package, fn conn ->
+          releases = Release.all(package)
+          package = Ecto.Associations.load(package, :releases, releases)
+
+          conn
+          |> cache(:public)
+          |> send_render(200, package)
+        end)
       else
         raise NotFound
       end

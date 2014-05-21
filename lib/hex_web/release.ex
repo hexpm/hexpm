@@ -5,7 +5,7 @@ defmodule HexWeb.Release do
   import HexWeb.Validation
   alias HexWeb.Util
 
-  queryable "releases" do
+  schema "releases" do
     belongs_to :package, HexWeb.Package
     field :version, :string
     field :checksum, :string
@@ -24,16 +24,18 @@ defmodule HexWeb.Release do
 
   def create(package, version, requirements, checksum, created_at \\ nil) do
     now = Util.ecto_now
-    release = package.releases.new(version: version,
-                                   updated_at: now,
-                                   checksum: checksum,
-                                   created_at: created_at || now)
+    release = struct(package.releases,
+                     version: version,
+                     updated_at: now,
+                     checksum: checksum,
+                     created_at: created_at || now)
 
     case validate_create(release) do
       [] ->
         HexWeb.Repo.transaction(fn ->
-          release = HexWeb.Repo.insert(release)
-          update_requirements(release.package(package), requirements)
+          HexWeb.Repo.insert(release)
+          |> update_requirements(requirements)
+          |> Util.maybe(&Ecto.Associations.load(&1, :package, package))
         end)
       errors ->
         { :error, Enum.into(errors, %{}) }
@@ -74,8 +76,10 @@ defmodule HexWeb.Release do
 
   # TODO: Prereleases should always be editable
   defp editable?(release) do
-    created_at = Ecto.DateTime.to_erl(release.created_at) |> :calendar.datetime_to_gregorian_seconds
-    now        = :calendar.universal_time |> :calendar.datetime_to_gregorian_seconds
+    created_at = Ecto.DateTime.to_erl(release.created_at)
+                 |> :calendar.datetime_to_gregorian_seconds
+    now = :calendar.universal_time
+          |> :calendar.datetime_to_gregorian_seconds
 
     now - created_at <= 3600
   end
@@ -85,7 +89,7 @@ defmodule HexWeb.Release do
 
     errors = Enum.filter_map(results, &match?({ :error, _ }, &1), &elem(&1, 1))
     if errors == [] do
-      release.requirements(requirements)
+      Ecto.Associations.load(release, :requirements, requirements)
     else
       HexWeb.Repo.rollback(%{deps: Enum.into(errors, %{})})
     end
@@ -104,6 +108,7 @@ defmodule HexWeb.Release do
     Enum.map(requirements, fn
       { dep, %{"requirement" => req, "optional" => optional} } ->
         add_requirement(release, deps, dep, req, optional)
+      # Backwards compatible
       { dep, req } ->
         add_requirement(release, deps, dep, req, false)
     end)
@@ -111,21 +116,20 @@ defmodule HexWeb.Release do
 
   def all(package) do
     HexWeb.Repo.all(package.releases)
-    |> Enum.map(&(&1.package(package)))
+    |> Enum.map(&Ecto.Associations.load(&1, :package, package))
+    |> sort
+  end
+
+  def sort(releases) do
+    releases
     |> Enum.sort(&(Version.compare(&1.version, &2.version) == :gt))
   end
 
   def get(package, version) do
-    release =
-      from(r in package.releases, where: r.version == ^version, limit: 1)
-      |> HexWeb.Repo.all
-      |> List.first
-
-    if release do
-      reqs = requirements(release)
-      release.package(package)
-             .requirements(reqs)
-    end
+    from(r in package.releases, where: r.version == ^version, limit: 1)
+    |> HexWeb.Repo.one
+    |> Util.maybe(&Ecto.Associations.load(&1, :package, package))
+    |> Util.maybe(&Ecto.Associations.load(&1, :requirements, requirements(&1)))
   end
 
   def requirements(release) do
@@ -156,7 +160,7 @@ defmodule HexWeb.Release do
         { :error, { dep, "invalid requirement: #{inspect req}" } }
 
       id = deps[dep] ->
-        release.requirements.new(requirement: req, optional: optional, dependency_id: id)
+        struct(release.requirements, requirement: req, optional: optional, dependency_id: id)
         |> HexWeb.Repo.insert()
         { dep, %{requirement: req, optional: optional} }
 
@@ -170,14 +174,14 @@ defmodule HexWeb.Release do
   end
 end
 
-defimpl HexWeb.Render, for: HexWeb.Release.Entity do
+defimpl HexWeb.Render, for: HexWeb.Release do
   import HexWeb.Util
 
   def render(release) do
     package = release.package.get
-    reqs    = release.requirements.to_list
+    reqs    = release.requirements.all
 
-    release.__entity__(:keywords)
+    HexWeb.Release.__schema__(:keywords, release)
     |> Dict.take([:version, :created_at, :updated_at])
     |> Dict.update!(:created_at, &to_iso8601/1)
     |> Dict.update!(:updated_at, &to_iso8601/1)

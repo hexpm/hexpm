@@ -184,8 +184,8 @@ defmodule HexWeb.API.RouterTest do
 
     postgrex = Package.get("postgrex")
     postgrex_id = postgrex.id
-    assert [ Release.Entity[package_id: ^postgrex_id, version: "0.0.2"],
-             Release.Entity[package_id: ^postgrex_id, version: "0.0.1"] ] =
+    assert [ %Release{package_id: ^postgrex_id, version: "0.0.2"},
+             %Release{package_id: ^postgrex_id, version: "0.0.1"} ] =
            Release.all(postgrex)
   end
 
@@ -246,7 +246,7 @@ defmodule HexWeb.API.RouterTest do
     assert body["requirements"] == %{"decimal" => "~> 0.0.1"}
 
     postgrex = Package.get("postgrex")
-    assert %{"decimal" => "~> 0.0.1"} = Release.get(postgrex, "0.0.1").requirements.to_list
+    assert %{"decimal" => "~> 0.0.1"} = Release.get(postgrex, "0.0.1").requirements.all
   end
 
   test "create release updates registry" do

@@ -6,7 +6,7 @@ defmodule HexWeb.Package do
   require Ecto.Validator
   alias HexWeb.Util
 
-  queryable "packages" do
+  schema "packages" do
     field :name, :string
     belongs_to :owner, HexWeb.User
     field :meta, :string
@@ -40,13 +40,14 @@ defmodule HexWeb.Package do
   def create(name, owner, meta) do
     now = Util.ecto_now
     meta = Dict.take(meta, @meta_fields)
-    package = owner.packages.new(name: name, meta: meta, created_at: now,
-                                 updated_at: now)
+    package = struct(owner.packages, name: name, meta: meta, created_at: now,
+                                     updated_at: now)
 
     case validate_create(package) do
       [] ->
-        package = package.meta(Util.json_encode(meta))
-        { :ok, HexWeb.Repo.insert(package).meta(meta).releases([]) }
+        package = %{package | meta: Util.json_encode(package.meta)}
+        package = HexWeb.Repo.insert(package)
+        { :ok, %{package | meta: meta} }
       errors ->
         { :error, errors_to_map(errors) }
     end
@@ -55,11 +56,11 @@ defmodule HexWeb.Package do
   def update(package, meta) do
     meta = Dict.take(meta, @meta_fields)
 
-    case validate(package.meta(meta)) do
+    case validate(%{package | meta: meta}) do
       [] ->
-        package = package.updated_at(Util.ecto_now)
-        HexWeb.Repo.update(package.meta(Util.json_encode(meta)))
-        { :ok, package.meta(meta) }
+        package = %{package | updated_at: Util.ecto_now, meta: Util.json_encode(meta)}
+        HexWeb.Repo.update(package)
+        { :ok, %{package | meta: meta} }
       errors ->
         { :error, errors_to_map(errors) }
     end
@@ -70,28 +71,20 @@ defmodule HexWeb.Package do
       from(p in HexWeb.Package,
            where: p.name == ^name,
            limit: 1)
-      |> HexWeb.Repo.all
-      |> List.first
+      |> HexWeb.Repo.one
 
     if package do
-      package.update_meta(&Util.json_decode!/1)
-             .releases(HexWeb.Release.all(package))
+      %{package | meta: Util.json_decode!(package.meta)}
     end
   end
 
   def all(page, count, search \\ nil) do
-    packages =
-      from(p in HexWeb.Package,
-           preload: [:releases],
-           order_by: p.name)
-      |> Util.paginate(page, count)
-      |> Util.searchinate(:name, search)
-      |> HexWeb.Repo.all
-
-    Enum.map(packages, fn pkg ->
-      pkg.update_meta(&Util.json_decode!/1)
-         .releases(Enum.sort(pkg.releases, &(Version.compare(&1.version, &2.version) == :gt)))
-    end)
+    from(p in HexWeb.Package,
+         order_by: p.name)
+    |> Util.paginate(page, count)
+    |> Util.searchinate(:name, search)
+    |> HexWeb.Repo.all
+    |> Enum.map(& %{&1 | meta: Util.json_decode!(&1.meta)})
   end
 
   def recent(count) do
@@ -105,8 +98,7 @@ defmodule HexWeb.Package do
   def count(search \\ nil) do
     from(p in HexWeb.Package, select: count(p.id))
     |> Util.searchinate(:name, search)
-    |> HexWeb.Repo.all
-    |> List.first
+    |> HexWeb.Repo.one!
   end
 
   defp errors_to_map(errors) do
@@ -117,26 +109,31 @@ defmodule HexWeb.Package do
   end
 end
 
-defimpl HexWeb.Render, for: HexWeb.Package.Entity do
+defimpl HexWeb.Render, for: HexWeb.Package do
   import HexWeb.Util
 
   def render(package) do
-    releases =
-      Enum.map(package.releases, fn release ->
-        release.__entity__(:keywords)
-        |> Dict.take([:version, :git_url, :git_ref, :created_at, :updated_at])
-        |> Dict.update!(:created_at, &to_iso8601/1)
-        |> Dict.update!(:updated_at, &to_iso8601/1)
-        |> Dict.put(:url, api_url(["packages", package.name, "releases", release.version]))
-        |> Enum.into(%{})
-      end)
+    dict =
+      HexWeb.Package.__schema__(:keywords, package)
+      |> Dict.take([:name, :meta, :created_at, :updated_at])
+      |> Dict.update!(:created_at, &to_iso8601/1)
+      |> Dict.update!(:updated_at, &to_iso8601/1)
+      |> Dict.put(:url, api_url(["packages", package.name]))
+      |> Enum.into(%{})
 
-    package.__entity__(:keywords)
-    |> Dict.take([:name, :meta, :created_at, :updated_at])
-    |> Dict.update!(:created_at, &to_iso8601/1)
-    |> Dict.update!(:updated_at, &to_iso8601/1)
-    |> Dict.put(:url, api_url(["packages", package.name]))
-    |> Dict.put(:releases, releases)
-    |> Enum.into(%{})
+    if package.releases.loaded? do
+      releases =
+        Enum.map(package.releases.all, fn release ->
+          HexWeb.Release.__schema__(:keywords, release)
+          |> Dict.take([:version, :git_url, :git_ref, :created_at, :updated_at])
+          |> Dict.update!(:created_at, &to_iso8601/1)
+          |> Dict.update!(:updated_at, &to_iso8601/1)
+          |> Dict.put(:url, api_url(["packages", package.name, "releases", release.version]))
+          |> Enum.into(%{})
+        end)
+      dict = Dict.put(dict, :releases, releases)
+    end
+
+    dict
   end
 end

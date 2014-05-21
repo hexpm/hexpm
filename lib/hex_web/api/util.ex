@@ -81,7 +81,11 @@ defmodule HexWeb.API.Util do
   end
 
   defp render(list) when is_list(list) do
-    Enum.map(list, &HexWeb.Render.render/1)
+    Enum.map(list, &render/1)
+  end
+
+  defp render(%{__struct__: _} = model) do
+    HexWeb.Render.render(model)
   end
 
   defp render(map) when is_map(map) do
@@ -136,7 +140,7 @@ defmodule HexWeb.API.Util do
 
     quote do
       case HexWeb.API.Util.authorize(var!(conn), unquote(opts)) do
-        { :ok, HexWeb.User.Entity[unquote_splicing(as)] = unquote(user) } ->
+        { :ok, %HexWeb.User{unquote_splicing(as)} = unquote(user) } ->
           unquote(block)
         _ ->
           HexWeb.API.Util.send_unauthorized(var!(conn))

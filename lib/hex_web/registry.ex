@@ -5,14 +5,14 @@ defmodule HexWeb.Registry do
   alias HexWeb.Util
   require HexWeb.Repo
 
-  queryable "registries" do
+  schema "registries" do
     field :state, :string
     field :created_at, :datetime
     field :started_at, :datetime
   end
 
   def create() do
-    registry = HexWeb.Registry.new(state: "waiting", created_at: Util.ecto_now)
+    registry = %HexWeb.Registry{state: "waiting", created_at: Util.ecto_now}
     { :ok, HexWeb.Repo.insert(registry) }
   end
 

@@ -27,7 +27,7 @@ defmodule HexWeb.Stats.Job do
         rel_id = releases[{ pkg_id, version }]
 
         if rel_id do
-          Download.new(release_id: rel_id, downloads: count, day: date)
+          %Download{release_id: rel_id, downloads: count, day: date}
           |> HexWeb.Repo.insert
         end
       end)

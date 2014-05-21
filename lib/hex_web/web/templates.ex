@@ -62,7 +62,7 @@ defmodule HexWeb.Web.Templates do
   defp rel_from_now({day, {_, _, _}}),
     do: "#{day} days ago"
 
-  defp pretty_date(Ecto.DateTime[year: year, month: month, day: day]) do
+  defp pretty_date(%Ecto.DateTime{year: year, month: month, day: day}) do
     "#{pretty_month(month)} #{day}, #{year}"
   end
 

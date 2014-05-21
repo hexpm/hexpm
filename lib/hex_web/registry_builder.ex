@@ -167,7 +167,7 @@ defmodule HexWeb.RegistryBuilder do
             build_ets(handle, file)
           end
         else
-          raise error, [], stacktrace
+          reraise error, stacktrace
         end
     end
   end
@@ -208,7 +208,7 @@ defmodule HexWeb.RegistryBuilder do
   end
 
   defp installs do
-    Enum.map(Install.all, fn Install.Entity[hex: hex, elixir: elixir] ->
+    Enum.map(Install.all, fn %Install{hex: hex, elixir: elixir} ->
       { hex, elixir }
     end)
   end

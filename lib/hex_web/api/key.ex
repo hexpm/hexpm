@@ -4,7 +4,7 @@ defmodule HexWeb.API.Key do
   import HexWeb.Validation
   alias HexWeb.Util
 
-  queryable "keys" do
+  schema "keys" do
     belongs_to :user, HexWeb.User
     field :name, :string
     field :secret, :string
@@ -17,7 +17,7 @@ defmodule HexWeb.API.Key do
 
   def create(name, user) do
     now = Util.ecto_now
-    key = user.keys.new(name: name, created_at: now, updated_at: now)
+    key = struct(user.keys, name: name, created_at: now, updated_at: now)
 
     case validate(key) do
       [] ->
@@ -31,7 +31,7 @@ defmodule HexWeb.API.Key do
         end
 
         secret = :crypto.strong_rand_bytes(16) |> Util.hexify
-        key = key.name(name).secret(secret)
+        key = %{key | name: name, secret: secret}
         { :ok, HexWeb.Repo.insert(key) }
       errors ->
         { :error, errors }
@@ -45,8 +45,7 @@ defmodule HexWeb.API.Key do
 
   def get(name, user) do
     from(k in HexWeb.API.Key, where: k.user_id == ^user.id and k.name == ^name, limit: 1)
-    |> HexWeb.Repo.all
-    |> List.first
+    |> HexWeb.Repo.one
   end
 
   def delete(key) do
@@ -59,8 +58,7 @@ defmodule HexWeb.API.Key do
          where: k.secret == ^secret,
          join: u in k.user,
          select: u)
-    |> HexWeb.Repo.all
-    |> List.first
+    |> HexWeb.Repo.one
   end
 
   defp unique_name(name, names, counter \\ 2) do
@@ -73,11 +71,11 @@ defmodule HexWeb.API.Key do
   end
 end
 
-defimpl HexWeb.Render, for: HexWeb.API.Key.Entity do
+defimpl HexWeb.Render, for: HexWeb.API.Key do
   import HexWeb.Util
 
   def render(key) do
-    key.__entity__(:keywords)
+    HexWeb.API.Key.__schema__(:keywords, key)
     |> Dict.take([:name, :secret, :created_at, :updated_at])
     |> Dict.update!(:created_at, &to_iso8601/1)
     |> Dict.update!(:updated_at, &to_iso8601/1)

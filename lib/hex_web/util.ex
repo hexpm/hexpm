@@ -6,6 +6,9 @@ defmodule HexWeb.Util do
   import Ecto.Query, only: [from: 2]
   require Lager
 
+  def maybe(nil, _fun), do: nil
+  def maybe(item, fun), do: fun.(item)
+
   def json_encode(map) do
     Jazz.encode!(map)
   end
@@ -33,9 +36,9 @@ defmodule HexWeb.Util do
     Ecto.DateTime.from_erl(:calendar.universal_time)
   end
 
-  def etag(entities) do
-    list = Enum.map(List.wrap(entities), fn entity ->
-      [ elem(entity, 1), entity.id, entity.updated_at ]
+  def etag(models) do
+    list = Enum.map(List.wrap(models), fn model ->
+      [ model.__struct__, model.id, model.updated_at ]
     end)
 
     binary = :erlang.term_to_binary(list)
@@ -79,8 +82,8 @@ defmodule HexWeb.Util do
   Converts an ecto datetime record to ISO 8601 format.
   """
   @spec to_iso8601(Ecto.DateTime.t) :: String.t
-  def to_iso8601(Ecto.DateTime[] = dt) do
-    [Ecto.DateTime|list] = tuple_to_list(dt)
+  def to_iso8601(dt) do
+    list = [dt.year, dt.month, dt.day, dt.hour, dt.min, dt.sec]
     :io_lib.format("~4..0B-~2..0B-~2..0BT~2..0B:~2..0B:~2..0BZ", list)
     |> iodata_to_binary
   end

@@ -3,7 +3,7 @@ defmodule HexWeb.Stats.ReleaseDownload do
   import Ecto.Query, only: [from: 2]
   alias HexWeb.Stats.ReleaseDownload
 
-  queryable "release_downloads", primary_key: false do
+  schema "release_downloads", primary_key: false do
     belongs_to :release, HexWeb.Release
     field :downloads, :integer
   end

@@ -26,8 +26,8 @@ defmodule HexWeb.Validation do
   Checks if the fields on the given entity are unique
   by querying the database.
   """
-  def unique(entity, fields, opts \\ []) when is_list(opts) do
-    model   = entity.model
+  def unique(model, fields, opts \\ []) when is_list(opts) do
+    module  = model.__struct__
     repo    = Keyword.fetch!(opts, :on)
     scope   = opts[:scope] || []
     message = opts[:message] || "already taken"
@@ -35,7 +35,7 @@ defmodule HexWeb.Validation do
 
     where =
       Enum.reduce(fields, false, fn field, acc ->
-        value = apply(entity, field, [])
+        value = Map.fetch!(model, field)
         if case and is_binary(value) do
           quote(do: unquote(acc) or downcase(&0.unquote(field)) == downcase(unquote(value)))
         else
@@ -45,21 +45,21 @@ defmodule HexWeb.Validation do
 
     where =
       Enum.reduce(scope, where, fn field, acc ->
-        value = apply(entity, field, [])
+        value = Map.fetch!(model, field)
         quote(do: unquote(acc) and &0.unquote(field) == unquote(value))
       end)
 
     select = Enum.map(fields, fn field -> quote(do: &0.unquote(field)) end)
 
-    query = Ecto.Query.from(model, limit: 1)
-                      .select(Ecto.Query.QueryExpr[expr: select])
-                      .wheres([Ecto.Query.QueryExpr[expr: where]])
+    query = %{Ecto.Query.from(module, limit: 1) | 
+                select: %Ecto.Query.QueryExpr{expr: select},
+                wheres: [%Ecto.Query.QueryExpr{expr: where}]}
 
     case repo.all(query) do
       [values] ->
         zipped = Enum.zip(fields, values)
         Enum.flat_map(zipped, fn { field, value } ->
-          if apply(entity, field, []) == value do
+          if Map.fetch!(model, field) == value do
             [{ field, message }]
           else
             []

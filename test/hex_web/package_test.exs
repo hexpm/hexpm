@@ -12,8 +12,8 @@ defmodule HexWeb.PackageTest do
   test "create package and get" do
     user = User.get("eric")
     user_id = user.id
-    assert { :ok, Package.Entity[] } = Package.create("ecto", user, %{})
-    assert Package.Entity[owner_id: ^user_id] = Package.get("ecto")
+    assert { :ok, %Package{} } = Package.create("ecto", user, %{})
+    assert %Package{owner_id: ^user_id} = Package.get("ecto")
     assert nil?(Package.get("postgrex"))
   end
 
@@ -34,8 +34,8 @@ defmodule HexWeb.PackageTest do
       "description"  => "so good" }
 
     user = User.get("eric")
-    assert { :ok, Package.Entity[meta: ^meta] } = Package.create("ecto", user, meta)
-    assert Package.Entity[meta: ^meta] = Package.get("ecto")
+    assert { :ok, %Package{meta: ^meta} } = Package.create("ecto", user, meta)
+    assert %Package{meta: ^meta} = Package.get("ecto")
   end
 
   test "ignore unknown meta fields" do
@@ -44,8 +44,8 @@ defmodule HexWeb.PackageTest do
       "foo"          => "bar" }
 
     user = User.get("eric")
-    assert { :ok, Package.Entity[] } = Package.create("ecto", user, meta)
-    assert Package.Entity[meta: meta2] = Package.get("ecto")
+    assert { :ok, %Package{} } = Package.create("ecto", user, meta)
+    assert %Package{meta: meta2} = Package.get("ecto")
 
     assert Dict.size(meta2) == 1
     assert meta["contributors"] == meta2["contributors"]
@@ -66,7 +66,7 @@ defmodule HexWeb.PackageTest do
 
   test "packages are unique" do
     user = User.get("eric")
-    assert { :ok, Package.Entity[] } = Package.create("ecto", user, %{})
+    assert { :ok, %Package{} } = Package.create("ecto", user, %{})
     assert { :error, _ } = Package.create("ecto", user, %{})
   end
 end
