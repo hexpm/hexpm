@@ -13,6 +13,7 @@ defmodule HexWeb.Package do
     has_many :releases, HexWeb.Release
     field :created_at, :datetime
     field :updated_at, :datetime
+    has_many :downloads, HexWeb.Stats.PackageDownload
   end
 
   validatep validate_create(package),
@@ -132,6 +133,11 @@ defimpl HexWeb.Render, for: HexWeb.Package do
           |> Enum.into(%{})
         end)
       dict = Dict.put(dict, :releases, releases)
+    end
+
+    if package.downloads.loaded? do
+      downloads = Enum.into(package.downloads.all, %{})
+      dict = Dict.put(dict, :downloads, downloads)
     end
 
     dict

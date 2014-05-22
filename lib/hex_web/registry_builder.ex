@@ -5,7 +5,7 @@ defmodule HexWeb.RegistryBuilder do
   immediately after again.
   """
 
-  use GenServer.Behaviour
+  use GenServer
   import Ecto.Query, only: [from: 2]
   require HexWeb.Repo
   require Lager

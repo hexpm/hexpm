@@ -94,8 +94,11 @@ defmodule HexWeb.API.Router do
     get "packages/:name" do
       if package = Package.get(name) do
         when_stale(conn, package, fn conn ->
+          downloads = HexWeb.Stats.PackageDownload.package(package)
           releases = Release.all(package)
-          package = Ecto.Associations.load(package, :releases, releases)
+          package = package
+                    |> Ecto.Associations.load(:releases, releases)
+                    |> Ecto.Associations.load(:downloads, downloads)
 
           conn
           |> cache(:public)
@@ -142,7 +145,14 @@ defmodule HexWeb.API.Router do
 
     get "packages/:name/releases/:version" do
       if (package = Package.get(name)) && (release = Release.get(package, version)) do
-        when_stale(conn, release, &(&1 |> cache(:public) |> send_render(200, release)))
+        when_stale(conn, release, fn conn ->
+          downloads = HexWeb.Stats.ReleaseDownload.release(release)
+          release = Ecto.Associations.load(release, :downloads, downloads)
+
+          conn
+          |> cache(:public)
+          |> send_render(200, release)
+        end)
       else
         raise NotFound
       end

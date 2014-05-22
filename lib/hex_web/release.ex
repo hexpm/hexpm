@@ -12,6 +12,7 @@ defmodule HexWeb.Release do
     has_many :requirements, HexWeb.Requirement
     field :created_at, :datetime
     field :updated_at, :datetime
+    has_one :downloads, HexWeb.Stats.ReleaseDownload
   end
 
   # TODO: Prerelease support, also see TODO below
@@ -181,13 +182,20 @@ defimpl HexWeb.Render, for: HexWeb.Release do
     package = release.package.get
     reqs    = release.requirements.all
 
-    HexWeb.Release.__schema__(:keywords, release)
-    |> Dict.take([:version, :created_at, :updated_at])
-    |> Dict.update!(:created_at, &to_iso8601/1)
-    |> Dict.update!(:updated_at, &to_iso8601/1)
-    |> Dict.put(:url, api_url(["packages", package.name, "releases", release.version]))
-    |> Dict.put(:package_url, api_url(["packages", package.name]))
-    |> Dict.put(:requirements, reqs)
-    |> Enum.into(%{})
+    dict =
+      HexWeb.Release.__schema__(:keywords, release)
+      |> Dict.take([:version, :created_at, :updated_at])
+      |> Dict.update!(:created_at, &to_iso8601/1)
+      |> Dict.update!(:updated_at, &to_iso8601/1)
+      |> Dict.put(:url, api_url(["packages", package.name, "releases", release.version]))
+      |> Dict.put(:package_url, api_url(["packages", package.name]))
+      |> Dict.put(:requirements, reqs)
+      |> Enum.into(%{})
+
+    if release.downloads.loaded? do
+      dict = Dict.put(dict, :downloads, release.downloads.get)
+    end
+
+    dict
   end
 end
