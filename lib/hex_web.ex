@@ -1,5 +1,5 @@
 defmodule HexWeb do
-  use Application.Behaviour
+  use Application
 
   def start(_type, _args) do
     opts  = [port: 4000]

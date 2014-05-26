@@ -1,7 +1,7 @@
 defmodule HexWeb.Tar do
   # The release tar contains the following files:
   # VERSION - release tar version
-  # CHECKSUM - checksum of file contents md5(VERSION <> metadata.exs <> contents.tar.gz)
+  # CHECKSUM - checksum of file contents sha256(VERSION <> metadata.exs <> contents.tar.gz)
   # metadata.exs - release metadata
   # contents.tar.gz - gzipped tar file of all files bundled in the release
 
@@ -20,7 +20,7 @@ defmodule HexWeb.Tar do
   def metadata(binary) do
     case :erl_tar.extract({ :binary, binary }, [:memory, :cooked]) do
       { :ok, files } ->
-        files = Enum.into(files, %{}, fn { name, binary } -> { String.from_char_data!(name), binary } end)
+        files = Enum.into(files, %{}, fn { name, binary } -> { List.to_string(name), binary } end)
 
         meta = version(files)
                |> if_ok(checksum)

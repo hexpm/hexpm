@@ -1,7 +1,9 @@
 defmodule HexWeb.Plug do
   import Plug.Conn
 
-  defexception BadRequest, [:message] do
+  defmodule BadRequest do
+    defexception [:message]
+
     defimpl Plug.Exception do
       def status(_exception) do
         400
@@ -9,7 +11,9 @@ defmodule HexWeb.Plug do
     end
   end
 
-  defexception NotFound, [:message] do
+  defmodule NotFound do
+    defexception [:message]
+
     defimpl Plug.Exception do
       def status(_exception) do
         404

@@ -19,7 +19,6 @@ defmodule HexWeb.Stats.ReleaseDownload do
     from(rd in ReleaseDownload,
          where: rd.release_id == ^release.id,
          select: rd.downloads)
-    |> HexWeb.Repo.all
-    |> List.first
+    |> HexWeb.Repo.one
   end
 end

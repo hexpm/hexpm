@@ -4,7 +4,7 @@ defmodule HexWeb.Mixfile do
   def project do
     [ app: :hex_web,
       version: "0.0.1",
-      elixir: "~> 0.13.2-dev",
+      elixir: "0.14.0-dev",
       elixirc_options: [
         :debug_info,
         exlager_truncation_size: 8*1024,

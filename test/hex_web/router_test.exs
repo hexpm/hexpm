@@ -39,7 +39,7 @@ defmodule HexWeb.RouterTest do
     RegistryBuilder.sync_rebuild
 
     port = HexWeb.Config.port
-    url = List.from_char_data!("http://localhost:#{port}/registry.ets.gz")
+    url = String.to_char_list("http://localhost:#{port}/registry.ets.gz")
     :inets.start
 
     assert { :ok, response } = :httpc.request(:head, { url, [] }, [], [])
@@ -63,7 +63,7 @@ defmodule HexWeb.RouterTest do
     assert conn.status == 201
 
     port = HexWeb.Config.port
-    url = List.from_char_data!("http://localhost:#{port}/tarballs/postgrex-0.0.1.tar")
+    url = String.to_char_list("http://localhost:#{port}/tarballs/postgrex-0.0.1.tar")
     :inets.start
 
     assert { :ok, response } = :httpc.request(:head, { url, [] }, [], [])
