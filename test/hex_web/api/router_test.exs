@@ -243,10 +243,10 @@ defmodule HexWeb.API.RouterTest do
 
     assert conn.status == 201
     body = Util.json_decode!(conn.resp_body)
-    assert body["requirements"] == %{"decimal" => "~> 0.0.1"}
+    assert body["requirements"] == %{"decimal" => %{"optional" => false, "requirement" => "~> 0.0.1"}}
 
     postgrex = Package.get("postgrex")
-    assert %{"decimal" => "~> 0.0.1"} = Release.get(postgrex, "0.0.1").requirements.all
+    assert [{"decimal", "~> 0.0.1", false}] = Release.get(postgrex, "0.0.1").requirements.all
   end
 
   test "create release updates registry" do

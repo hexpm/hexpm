@@ -84,8 +84,8 @@ defmodule HexWeb.RegistryBuilderTest do
 
       reqs = :ets.lookup(tid, { "postgrex", "0.0.2" }) |> List.first |> elem(1) |> List.first
       assert length(reqs) == 2
-      assert Enum.find(reqs, &(&1 == { "decimal", "~> 0.0.1" }))
-      assert Enum.find(reqs, &(&1 == { "ex_doc", "0.1.0" }))
+      assert Enum.find(reqs, &(&1 == ["decimal", "~> 0.0.1", false]))
+      assert Enum.find(reqs, &(&1 == ["ex_doc", "0.1.0", false]))
 
       assert [] = :ets.lookup(tid, "ex_doc")
     after

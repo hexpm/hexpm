@@ -38,8 +38,8 @@ defmodule HexWeb.ReleaseTest do
     release = Release.get(ecto, "0.0.1")
     reqs = release.requirements.all
     assert Dict.size(reqs) == 2
-    assert {"postgrex", "== 0.0.1" } in reqs
-    assert {"decimal", "~> 0.0.2" } in reqs
+    assert {"postgrex", "== 0.0.1", false } in reqs
+    assert {"decimal", "~> 0.0.2", false } in reqs
   end
 
   test "validate release" do
@@ -76,7 +76,7 @@ defmodule HexWeb.ReleaseTest do
     Release.update(release, %{"decimal" => "~> 0.0.2"}, "")
 
     release = Release.get(postgrex, "0.0.1")
-    assert %{"decimal" => "~> 0.0.2"} = release.requirements.all
+    assert [{"decimal", "~> 0.0.2", false}] = release.requirements.all
   end
 
   test "delete release" do

@@ -86,6 +86,7 @@ defmodule HexWeb.Release do
   end
 
   defp update_requirements(release, requirements) do
+    requirements = normalize_requirements(requirements)
     results = create_requirements(release, requirements)
 
     errors = Enum.filter_map(results, &match?({ :error, _ }, &1), &elem(&1, 1))
@@ -97,8 +98,7 @@ defmodule HexWeb.Release do
   end
 
   defp create_requirements(release, requirements) do
-    requirements = Enum.map(requirements, fn { k, v } -> { to_string(k), v } end)
-    deps = Dict.keys(requirements)
+    deps = Enum.map(requirements, &elem(&1, 0))
 
     deps_query =
          from p in HexWeb.Package,
@@ -106,12 +106,18 @@ defmodule HexWeb.Release do
       select: { p.name, p.id }
     deps = HexWeb.Repo.all(deps_query) |> Enum.into(HashDict.new)
 
+    Enum.map(requirements, fn {dep, req, optional} ->
+      add_requirement(release, deps, dep, req, optional)
+    end)
+  end
+
+  defp normalize_requirements(requirements) do
     Enum.map(requirements, fn
       { dep, %{"requirement" => req, "optional" => optional} } ->
-        add_requirement(release, deps, dep, req, optional)
+        {to_string(dep), req, optional}
       # Backwards compatible
       { dep, req } ->
-        add_requirement(release, deps, dep, req, false)
+        {to_string(dep), req, false}
     end)
   end
 
@@ -136,9 +142,8 @@ defmodule HexWeb.Release do
   def requirements(release) do
     from(req in release.requirements,
          join: p in req.dependency,
-         select: { p.name, req.requirement })
+         select: { p.name, req.requirement, req.optional })
     |> HexWeb.Repo.all
-    |> Enum.into(%{})
   end
 
   def count do
@@ -163,7 +168,7 @@ defmodule HexWeb.Release do
       id = deps[dep] ->
         struct(release.requirements, requirement: req, optional: optional, dependency_id: id)
         |> HexWeb.Repo.insert()
-        { dep, %{requirement: req, optional: optional} }
+        :ok
 
       true ->
         { :error, { dep, "unknown package" } }
@@ -180,7 +185,10 @@ defimpl HexWeb.Render, for: HexWeb.Release do
 
   def render(release) do
     package = release.package.get
-    reqs    = release.requirements.all
+
+    reqs = for {name, req, optional} <- release.requirements.all, into: %{} do
+      {name, %{requirement: req, optional: optional}}
+    end
 
     dict =
       HexWeb.Release.__schema__(:keywords, release)
