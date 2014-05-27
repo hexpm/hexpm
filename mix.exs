@@ -6,7 +6,7 @@ defmodule HexWeb.Mixfile do
       version: "0.0.1",
       elixir: "0.14.0-dev",
       elixirc_options: [
-        :debug_info,
+        debug_info: true,
         exlager_truncation_size: 8*1024,
         exlager_level: lager_level ],
       deps: deps,
