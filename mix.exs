@@ -5,20 +5,8 @@ defmodule HexWeb.Mixfile do
     [ app: :hex_web,
       version: "0.0.1",
       elixir: "0.14.0-dev",
-      elixirc_options: [
-        debug_info: true,
-        exlager_truncation_size: 8*1024,
-        exlager_level: lager_level ],
-      deps: deps,
-      lager_level: lager_level ]
-  end
-
-  defp lager_level do
-    if Mix.env in [:dev, :prod] do
-      :info
-    else
-      :notice
-    end
+      config_path: "config/#{Mix.env}.exs",
+      deps: deps ]
   end
 
   def application do
@@ -37,7 +25,7 @@ defmodule HexWeb.Mixfile do
       { :bcrypt, github: "opscode/erlang-bcrypt" },
       { :jazz, github: "meh/jazz" },
       { :mini_s3, github: "ericmj/mini_s3", branch: "hex-fixes" },
-      { :exlager, github: "khia/exlager" },
+      { :stout, github: "ericmj/stout" },
       { :ex_doc, github: "elixir-lang/ex_doc", only: :dev } ]
   end
 end

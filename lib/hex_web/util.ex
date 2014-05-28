@@ -4,7 +4,7 @@ defmodule HexWeb.Util do
   """
 
   import Ecto.Query, only: [from: 2]
-  require Lager
+  require Stout
 
   def maybe(nil, _fun), do: nil
   def maybe(item, fun), do: fun.(item)
@@ -22,7 +22,7 @@ defmodule HexWeb.Util do
   end
 
   def log_error(kind, error, stacktrace) do
-    Lager.error Exception.format_banner(kind, error, stacktrace) <> "\n"
+    Stout.error Exception.format_banner(kind, error, stacktrace) <> "\n"
                 <> Exception.format_stacktrace(stacktrace)
   end
 

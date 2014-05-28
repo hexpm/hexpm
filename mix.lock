@@ -9,9 +9,10 @@
   "goldrush": {:git, "git://github.com/DeadZen/goldrush.git", "71e63212f12c25827e0c1b4198d37d5d018a7fec", [tag: "0.1.6"]},
   "ibrowse": {:git, "git://github.com/opscode/ibrowse", "8f3f6a3a30730b193cc340a8885a960586dc98de", [tag: "v4.0.1.1"]},
   "jazz": {:git, "git://github.com/meh/jazz.git", "7af3b74e58eb1a3fc6b9874a2077efa420f6dfcc", []},
-  "lager": {:git, "https://github.com/basho/lager.git", "4d8291edb72a25ac0efde907e2ecaa115108ff90", []},
+  "lager": {:git, "git://github.com/basho/lager.git", "4d8291edb72a25ac0efde907e2ecaa115108ff90", []},
   "mini_s3": {:git, "git://github.com/ericmj/mini_s3.git", "5e3d7aa3c198381582b01f88517fdf3dfda8e549", [branch: "hex-fixes"]},
   "plug": {:git, "git://github.com/elixir-lang/plug.git", "951282035aa15ee58137ae2feca642e444324582", []},
   "poolboy": {:git, "git://github.com/devinus/poolboy.git", "91cf587b6029be696679a4788905de796ec89df3", []},
   "postgrex": {:git, "git://github.com/ericmj/postgrex.git", "6b38003bd5cd1c8f1c0b75a49a29047689e7bf6c", []},
-  "ranch": {:git, "git://github.com/extend/ranch.git", "5df1f222f94e08abdcab7084f5e13027143cc222", [ref: "0.9.0"]}}
+  "ranch": {:git, "git://github.com/extend/ranch.git", "5df1f222f94e08abdcab7084f5e13027143cc222", [ref: "0.9.0"]},
+  "stout": {:git, "git://github.com/ericmj/stout.git", "b686d5b0a5d81c8b588b3b1f6a6da3d0fc3fd700", []}}
