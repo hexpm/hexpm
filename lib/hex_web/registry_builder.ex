@@ -16,7 +16,7 @@ defmodule HexWeb.RegistryBuilder do
   alias HexWeb.Install
 
   @ets_table :hex_registry
-  @version    2
+  @version   3
 
   defp new_state do
     %{building: false, pending: false, counter: 0, waiters: []}
