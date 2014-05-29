@@ -42,7 +42,7 @@ defmodule HexWeb.RegistryBuilderTest do
     tid = open_table()
 
     try do
-      assert [{ :"$$version$$", 2 }] = :ets.lookup(tid, :"$$version$$")
+      assert [{ :"$$version$$", 3 }] = :ets.lookup(tid, :"$$version$$")
     after
       close_table(tid)
     end
