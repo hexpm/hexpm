@@ -39,7 +39,7 @@ defmodule HexWeb.API.Router do
             end
 
           { :error, errors } ->
-            send_validation_failed(conn, errors)
+            send_validation_failed(conn, %{tar: errors})
         end
       end
     else

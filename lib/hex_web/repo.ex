@@ -12,4 +12,9 @@ defmodule HexWeb.Repo do
 
   def priv,
     do: :code.priv_dir(:hex_web)
+
+  # def log(action, fun) do
+  #   IO.inspect action
+  #   fun.()
+  # end
 end

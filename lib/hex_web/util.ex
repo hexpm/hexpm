@@ -202,7 +202,7 @@ defmodule HexWeb.Util do
   def searchinate(query, _field, nil), do: query
 
   def searchinate(query, field, search) do
-    search = escape(search, ~r"(%|_)") <> "%"
+    search = "%" <> escape(search, ~r"(%|_)") <> "%"
     from(var in query, where: ilike(field(var, ^field), ^search))
   end
 

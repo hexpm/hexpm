@@ -45,7 +45,7 @@ defmodule HexWeb.Tar do
     if version in ["2"] do
       { :ok, files, binary_to_integer(version) }
     else
-      { :error, %{version: :wrong} }
+      { :error, %{version: :not_supported} }
     end
   end
 
@@ -54,7 +54,7 @@ defmodule HexWeb.Tar do
     if :crypto.hash(:sha256, blob) == HexWeb.Util.dehexify(files["CHECKSUM"]) do
       { :ok, files, version }
     else
-      { :error, %{checksum: :wrong} }
+      { :error, %{checksum: :mismatch} }
     end
   end
 
