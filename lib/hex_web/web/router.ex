@@ -53,14 +53,21 @@ defmodule HexWeb.Web.Router do
   end
 
   get "/packages" do
-    conn      = fetch_params(conn)
-    search    = conn.params["search"]
-    pkg_count = Package.count(search)
+    active            = :packages
+    title             = "Packages"
+    conn              = fetch_params(conn)
+    search            = conn.params["search"]
     packages_per_page = @packages
-    page      = safe_page(safe_int(conn.params["page"]) || 1, pkg_count)
-    packages  = Package.all(page, packages_per_page, search)
-    active    = :packages
-    title     = "Packages"
+
+    if search in [nil, ""] or String.length(search) >= 3 do
+      pkg_count = Package.count(search)
+      page      = safe_page(safe_int(conn.params["page"]) || 1, pkg_count)
+      packages  = Package.all(page, packages_per_page, search)
+    else
+      pkg_count = 0
+      page      = 1
+      packages  = []
+    end
 
     conn = assign_pun(conn, [search, page, packages, pkg_count, active, title,
                              packages_per_page])
