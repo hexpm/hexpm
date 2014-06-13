@@ -112,7 +112,7 @@ defmodule HexWeb.Package do
     query = from(var in query,
          where: ilike(var.name, ^name_search) or
                 text_match(to_tsvector("english", json_access(var.meta, "description")),
-                           to_tsquery("english", ^search)))
+                           to_tsquery("english", ^desc_search)))
     if order? do
       query = from(var in query, order_by: ilike(var.name, ^name_search))
     end
