@@ -83,7 +83,7 @@ defmodule HexWeb.Package do
     from(p in HexWeb.Package,
          order_by: p.name)
     |> Util.paginate(page, count)
-    |> Util.searchinate(:name, search)
+    |> search(search, true)
     |> HexWeb.Repo.all
     |> Enum.map(& %{&1 | meta: Util.json_decode!(&1.meta)})
   end
@@ -98,8 +98,30 @@ defmodule HexWeb.Package do
 
   def count(search \\ nil) do
     from(p in HexWeb.Package, select: count(p.id))
-    |> Util.searchinate(:name, search)
+    |> search(search, false)
     |> HexWeb.Repo.one!
+  end
+
+  def search(query, nil, _order?), do: query
+  def search(query, "", _order?), do: query
+
+  def search(query, search, order?) do
+    name_search = "%" <> like_escape(search, ~r"(%|_)") <> "%"
+    desc_search = String.replace(search, ~r"\W+", " & ")
+
+    query = from(var in query,
+         where: ilike(var.name, ^name_search) or
+                text_match(to_tsvector("english", json_access(var.meta, "description")),
+                           to_tsquery("english", ^search)))
+    if order? do
+      query = from(var in query, order_by: ilike(var.name, ^name_search))
+    end
+
+    query
+  end
+
+  defp like_escape(string, escape) do
+    String.replace(string, escape, "\\\\\\1")
   end
 
   defp errors_to_map(errors) do

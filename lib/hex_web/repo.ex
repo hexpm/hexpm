@@ -17,4 +17,24 @@ defmodule HexWeb.Repo do
   #   IO.inspect action
   #   fun.()
   # end
+
+  def query_apis do
+    [Ecto.Query.API, HexWeb.Repo.API]
+  end
+
+  defmodule API do
+    use Ecto.Query.Typespec
+
+    deft integer
+    deft string
+
+    defs to_tsvector(string, string) :: string
+
+    defs to_tsquery(string, string) :: string
+
+    defs text_match(string, string) :: boolean
+
+    defs json_access(string, string) :: string
+    defs json_access(string, integer) :: string
+  end
 end

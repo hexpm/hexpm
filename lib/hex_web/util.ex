@@ -199,18 +199,6 @@ defmodule HexWeb.Util do
          limit: count)
   end
 
-  def searchinate(query, _field, nil), do: query
-  def searchinate(query, _field, ""), do: query
-
-  def searchinate(query, field, search) do
-    search = "%" <> escape(search, ~r"(%|_)") <> "%"
-    from(var in query, where: ilike(field(var, ^field), ^search))
-  end
-
-  defp escape(string, escape) do
-    String.replace(string, escape, "\\\\\\1")
-  end
-
   def hexify(bin) do
     for << high :: size(4), low :: size(4) <- bin >>, into: "" do
       << hex_char(high), hex_char(low) >>
