@@ -102,7 +102,11 @@ defmodule HexWeb.Package do
     |> HexWeb.Repo.one!
   end
 
-  def search(query, search, order?) do
+  defp search(query, nil, _order?) do
+    query
+  end
+
+  defp search(query, search, order?) do
     name_search = "%" <> like_escape(search, ~r"(%|_)") <> "%"
     desc_search = String.replace(search, ~r"\W+", " & ")
 
