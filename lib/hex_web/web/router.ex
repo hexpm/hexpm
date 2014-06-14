@@ -58,8 +58,12 @@ defmodule HexWeb.Web.Router do
     conn              = fetch_params(conn)
     packages_per_page = @packages
     search            = conn.params["search"]
-                        |> String.replace(~r"[^a-zA-Z0-9 ]+", "")
-                        |> String.strip
+
+    if search do
+      search = search
+               |> String.replace(~r"[^a-zA-Z0-9 ]+", "")
+               |> String.strip
+    end
 
     if search in [nil, ""] or String.length(search) >= 3 do
       pkg_count = Package.count(search)
