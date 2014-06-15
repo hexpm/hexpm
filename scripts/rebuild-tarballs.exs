@@ -15,11 +15,14 @@ defmodule HexWeb.Scripts.Tarballs do
 
       content_files = contents(files)
 
-      files = [
-        {'VERSION', "2"},
-        {'CHECKSUM', checksum(files)},
-        {'metadata.exs', meta(files, content_files)},
-        {'contents.tar.gz', File.read!(@temp_tar)} ]
+      files = %{
+        "VERSION" => "2",
+        "CHECKSUM" => nil,
+        "metadata.exs" => meta(files, content_files),
+        "contents.tar.gz" => File.read!(@temp_tar) }
+
+      files = %{files | "CHECKSUM" => checksum(files)}
+              |> Enum.into([], fn {name, content} -> {String.to_char_list(name), content} end)
 
       File.rm!(@temp_tar)
       output = Path.join(output_dir, tarname)
