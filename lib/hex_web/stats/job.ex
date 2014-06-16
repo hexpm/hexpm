@@ -17,8 +17,6 @@ defmodule HexWeb.Stats.Job do
     packages = packages()
     releases = releases()
 
-    { :memory, memory } = :erlang.process_info(self, :memory)
-
     HexWeb.Repo.transaction(fn ->
       HexWeb.Repo.delete_all(from(d in Download, where: d.day == ^date))
 
@@ -38,6 +36,7 @@ defmodule HexWeb.Stats.Job do
 
     num = Enum.reduce(dict, 0, fn {_, count}, acc -> count + acc end)
 
+    { :memory, memory } = :erlang.process_info(self, :memory)
     { memory, num }
   end
 
@@ -66,11 +65,12 @@ defmodule HexWeb.Stats.Job do
   end
 
   @regex ~r"
-    \"GET\W/tarballs/
-    ([^-]*)           # package
+    \WREST.GET.OBJECT\W
+    tarballs/
+    ([^-]+)           # package
     -
-    (.*)              # version
-    .tar
+    ([0-9\\.]+)         # version
+    .tar\W
     "x
 
   defp parse_line(line) do
