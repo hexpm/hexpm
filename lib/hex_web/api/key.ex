@@ -30,7 +30,7 @@ defmodule HexWeb.API.Key do
           name = unique_name(name, names)
         end
 
-        secret = :crypto.strong_rand_bytes(16) |> Util.hexify
+        secret = :crypto.strong_rand_bytes(16) |> Base.encode16(case: :lower)
         key = %{key | name: name, secret: secret}
         { :ok, HexWeb.Repo.insert(key) }
       errors ->

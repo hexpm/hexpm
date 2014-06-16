@@ -39,7 +39,7 @@ defmodule HexWebTest.Case do
 
     meta_string = HexWeb.Util.safe_serialize_elixir(meta)
     blob = "2" <> meta_string <> contents
-    checksum = :crypto.hash(:sha256, blob) |> HexWeb.Util.hexify
+    checksum = :crypto.hash(:sha256, blob) |> Base.encode16
 
     files = [
       { 'VERSION', "2"},

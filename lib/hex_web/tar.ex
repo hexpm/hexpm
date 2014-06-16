@@ -50,11 +50,17 @@ defmodule HexWeb.Tar do
   end
 
   defp checksum(files, version) do
-    blob = files["VERSION"] <> files["metadata.exs"] <> files["contents.tar.gz"]
-    if :crypto.hash(:sha256, blob) == HexWeb.Util.dehexify(files["CHECKSUM"]) do
-      { :ok, files, version }
-    else
-      { :error, %{checksum: :mismatch} }
+    case Base.decode16(files["CHECKSUM"], case: :mixed) do
+      {:ok, ref_checksum} ->
+        blob = files["VERSION"] <> files["metadata.exs"] <> files["contents.tar.gz"]
+        if :crypto.hash(:sha256, blob) == ref_checksum do
+          { :ok, files, version }
+        else
+          { :error, %{checksum: :mismatch} }
+        end
+
+      :error ->
+        { :error, %{checksum: :invalid} }
     end
   end
 

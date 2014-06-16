@@ -43,7 +43,7 @@ defmodule HexWeb.Util do
 
     binary = :erlang.term_to_binary(list)
     :crypto.hash(:md5, binary)
-    |> hexify
+    |> Base.encode16(case: :lower)
   end
 
   def parse_integer(string, default) when is_binary(string) do
@@ -197,20 +197,5 @@ defmodule HexWeb.Util do
     from(var in query,
          offset: offset,
          limit: count)
-  end
-
-  def hexify(bin) do
-    for << high :: size(4), low :: size(4) <- bin >>, into: "" do
-      << hex_char(high), hex_char(low) >>
-    end
-  end
-
-  defp hex_char(n) when n < 10, do: ?0 + n
-  defp hex_char(n) when n < 16, do: ?a - 10 + n
-
-  def dehexify(bin) do
-    int  = :erlang.binary_to_integer(bin, 16)
-    size = byte_size(bin)
-    << int :: [integer, unit(4), size(size)] >>
   end
 end
