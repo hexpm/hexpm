@@ -18,7 +18,7 @@ defmodule HexWeb.Tar do
   end
 
   def metadata(binary) do
-    case :erl_tar.extract({ :binary, binary }, [:memory, :cooked]) do
+    case :erl_tar.extract({ :binary, binary }, [:memory]) do
       { :ok, files } ->
         files = Enum.into(files, %{}, fn { name, binary } -> { List.to_string(name), binary } end)
 
