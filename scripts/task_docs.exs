@@ -43,7 +43,7 @@ html_tasks =
   Enum.flat_map(tasks, fn task ->
     name = Mix.Task.task_name(task)
     if String.starts_with?(name, "hex.") do
-      { _line, doc } = task.__info__(:moduledoc)
+      { _line, doc } = Code.get_docs(task, :moduledoc)
       html = Markdown.to_html(doc) |> fix_headings.()
       [{ name, html }]
     else
