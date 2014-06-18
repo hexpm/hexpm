@@ -51,17 +51,17 @@ Generating api key...
 <h3>Dependencies</h3>
 
 <p>
-  For Mix to handle Hex packages as dependencies <code>Code.ensure_loaded?(Hex) and Hex.start</code> is required at the top of your mixfile. A dependency defined with no SCM (<code>:git</code> or <code>:path</code>) will be automatically treated as a Hex dependency. See the <a href="/docs/usage">Usage guide</a> for more details.
+  A dependency defined with no SCM (<code>:git</code> or <code>:path</code>) will be automatically treated as a Hex dependency. See the <a href="/docs/usage">Usage guide</a> for more details.
 </p>
 
 <p>
-  Only Hex packages will be included as dependencies of the package, for example Git dependencies will not be include. Additionally, only production dependencies will be included, just like how Mix will only fetch production dependencies when fetching the dependencies of your dependencies. Dependencies will be treated as production dependencies when they are defined with no <code>:only</code> property or with <code>only: :prod</code>.
+  Only Hex packages will be included as dependencies of the package, for example Git dependencies will not be included. Additionally, only production dependencies will be included, just like how Mix will only fetch production dependencies when fetching the dependencies of your dependencies. Dependencies will be treated as production dependencies when they are defined with no <code>:only</code> property or with <code>only: :prod</code>.
 </p>
 
-<h3>Doing the publication</h3>
+<h3>Publishing</h3>
 
 <p>
-  When finally running the command to publish a package Hex will create a tar file of all the files and directories listed in the <code>:files</code> property. When the tarball has been pushed to the Hex servers, it will be uploaded to a CDN for fast and easy access to users. Hex will also recompile the registry file that all clients will update to automatically when fetching dependencies.
+  When finally running the command to publish a package Hex will create a tar file of all the files and directories listed in the <code>:files</code> property. When the tarball has been pushed to the Hex servers, it will be uploaded to a CDN for fast and easy access to users. Hex will also recompile the registry file that all clients will update automatically when fetching dependencies.
 </p>
 
 <pre><code>$ mix hex.publish
