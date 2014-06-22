@@ -7,7 +7,7 @@ defmodule HexWeb.Web.HTML do
 
   defimpl Safe, for: Atom do
     def to_string(nil), do: ""
-    def to_string(atom), do: HTML.escape(atom_to_binary(atom))
+    def to_string(atom), do: HTML.escape(Atom.to_binary(atom))
   end
 
   defimpl Safe, for: BitString do
@@ -23,12 +23,12 @@ defmodule HexWeb.Web.HTML do
   end
 
   defimpl Safe, for: Integer do
-    def to_string(thing), do: integer_to_binary(thing)
+    def to_string(thing), do: Integer.to_string(thing)
   end
 
   defimpl Safe, for: Float do
     def to_string(thing) do
-      iodata_to_binary(:io_lib_format.fwrite_g(thing))
+      IO.iodata_to_binary(:io_lib_format.fwrite_g(thing))
     end
   end
 

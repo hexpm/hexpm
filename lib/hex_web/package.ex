@@ -36,7 +36,7 @@ defmodule HexWeb.Package do
   end
 
   @meta_fields [:contributors, :description, :links, :licenses]
-  @meta_fields @meta_fields ++ Enum.map(@meta_fields, &atom_to_binary/1)
+  @meta_fields @meta_fields ++ Enum.map(@meta_fields, &Atom.to_string/1)
 
   def create(name, owner, meta) do
     now = Util.ecto_now

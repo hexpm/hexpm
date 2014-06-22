@@ -32,7 +32,7 @@ defmodule HexWeb.Web.Templates do
     docs_tasks: [:_], ]
 
   Enum.each(@templates, fn { name, args } ->
-    name = atom_to_binary(name)
+    name = Atom.to_string(name)
     path = String.replace(name, "_", "/")
     file = Path.join([__DIR__, "templates", "#{path}.html.eex"])
     EEx.function_from_file(:def, :"template_#{name}", file, args,

@@ -43,7 +43,7 @@ defmodule HexWeb.Tar do
   defp version(files) do
     version = files["VERSION"]
     if version in ["2"] do
-      { :ok, files, binary_to_integer(version) }
+      { :ok, files, String.to_integer(version) }
     else
       { :error, %{version: :not_supported} }
     end

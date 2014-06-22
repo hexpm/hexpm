@@ -17,10 +17,9 @@ defmodule HexWebTest.Case do
 
   setup do
     Postgres.begin_test_transaction(HexWeb.Repo)
-  end
-
-  teardown do
-    Postgres.rollback_test_transaction(HexWeb.Repo)
+    on_exit fn ->
+      Postgres.rollback_test_transaction(HexWeb.Repo)
+    end
   end
 
   using do

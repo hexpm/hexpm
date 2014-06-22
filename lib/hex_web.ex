@@ -5,7 +5,7 @@ defmodule HexWeb do
     opts  = [port: 4000]
 
     if port = System.get_env("PORT") do
-      opts = Keyword.put(opts, :port, binary_to_integer(port))
+      opts = Keyword.put(opts, :port, String.to_integer(port))
     end
 
     File.mkdir_p!("tmp")

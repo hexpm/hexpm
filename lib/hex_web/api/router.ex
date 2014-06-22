@@ -1,7 +1,6 @@
 defmodule HexWeb.API.Router do
   use Plug.Router
   import Plug.Conn
-  import HexWeb.Plug
   import HexWeb.API.Util
   import HexWeb.Util, only: [api_url: 1, parse_integer: 2]
   alias HexWeb.Plug.NotFound
@@ -21,7 +20,7 @@ defmodule HexWeb.API.Router do
       user_id = package.owner_id
 
       with_authorized(_user, id: user_id) do
-        { body, conn } = read_body!(conn, 10_000_000)
+        { :ok, body, conn } = read_body(conn)
 
         case HexWeb.Tar.metadata(body) do
           { :ok, meta, checksum } ->

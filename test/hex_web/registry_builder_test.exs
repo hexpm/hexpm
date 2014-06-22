@@ -20,10 +20,6 @@ defmodule HexWeb.RegistryBuilderTest do
     :ok
   end
 
-  teardown do
-    :ok = RegistryBuilder.stop
-  end
-
   defp build do
     RegistryBuilder.sync_rebuild
   end

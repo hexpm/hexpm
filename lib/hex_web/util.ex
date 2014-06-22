@@ -85,7 +85,7 @@ defmodule HexWeb.Util do
   def to_iso8601(dt) do
     list = [dt.year, dt.month, dt.day, dt.hour, dt.min, dt.sec]
     :io_lib.format("~4..0B-~2..0B-~2..0BT~2..0B:~2..0B:~2..0BZ", list)
-    |> iodata_to_binary
+    |> IO.iodata_to_binary
   end
 
   @doc """
@@ -116,13 +116,13 @@ defmodule HexWeb.Util do
   def binarify(atom) when nil?(atom) or is_boolean(atom),
     do: atom
   def binarify(atom) when is_atom(atom),
-    do: atom_to_binary(atom)
+    do: Atom.to_string(atom)
   def binarify(list) when is_list(list),
     do: for(elem <- list, do: binarify(elem))
   def binarify(map) when is_map(map),
     do: for(elem <- map, into: %{}, do: binarify(elem))
   def binarify(tuple) when is_tuple(tuple),
-    do: for(elem <- tuple_to_list(tuple), do: binarify(elem)) |> list_to_tuple
+    do: for(elem <- Tuple.to_list(tuple), do: binarify(elem)) |> List.to_tuple
 
   def safe_deserialize_elixir("") do
     nil
@@ -162,7 +162,7 @@ defmodule HexWeb.Util do
   def safe_term?(term) when is_binary(term), do: true
   def safe_term?(term) when is_boolean(term), do: true
   def safe_term?(term) when is_list(term), do: Enum.all?(term, &safe_term?/1)
-  def safe_term?(term) when is_tuple(term), do: Enum.all?(tuple_to_list(term), &safe_term?/1)
+  def safe_term?(term) when is_tuple(term), do: Enum.all?(Tuple.to_list(term), &safe_term?/1)
   def safe_term?(_), do: false
 
   defp list_to_map(list) when is_list(list) do
