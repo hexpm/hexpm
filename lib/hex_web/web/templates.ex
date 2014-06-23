@@ -8,7 +8,7 @@ defmodule HexWeb.Web.Templates do
   end
 
   def safe(value) do
-    { :safe, value }
+    {:safe, value}
   end
 
   defmacrop inner do
@@ -31,7 +31,7 @@ defmodule HexWeb.Web.Templates do
     docs_publish: [:_],
     docs_tasks: [:_], ]
 
-  Enum.each(@templates, fn { name, args } ->
+  Enum.each(@templates, fn {name, args} ->
     name = Atom.to_string(name)
     path = String.replace(name, "_", "/")
     file = Path.join([__DIR__, "templates", "#{path}.html.eex"])

@@ -9,7 +9,7 @@ template = """
 <%%# This file is auto-generated with 'mix run task_docs.exs' %>
 
 <h2>Mix tasks</h2>
-<%= for { name, html } <- tasks do %>
+<%= for {name, html} <- tasks do %>
 <% id = String.replace(name, ".", "_") %>
   <div class="panel panel-default">
     <div class="panel-heading">
@@ -43,9 +43,9 @@ html_tasks =
   Enum.flat_map(tasks, fn task ->
     name = Mix.Task.task_name(task)
     if String.starts_with?(name, "hex.") do
-      { _line, doc } = Code.get_docs(task, :moduledoc)
+      {_line, doc} = Code.get_docs(task, :moduledoc)
       html = Markdown.to_html(doc) |> fix_headings.()
-      [{ name, html }]
+      [{name, html}]
     else
       []
     end

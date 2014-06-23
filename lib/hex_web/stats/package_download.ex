@@ -23,19 +23,19 @@ defmodule HexWeb.Stats.PackageDownload do
          where: pd.package_id != nil and pd.view == ^view,
          order_by: [desc: pd.downloads],
          limit: count,
-         select: { p.name, pd.downloads })
+         select: {p.name, pd.downloads})
     |> HexWeb.Repo.all
   end
 
   def total do
     from(pd in PackageDownload, where: pd.package_id == nil)
     |> HexWeb.Repo.all
-    |> Enum.map(&{ :"#{&1.view}", &1.downloads || 0 })
+    |> Enum.map(&{:"#{&1.view}", &1.downloads || 0})
   end
 
   def package(package) do
     from(pd in PackageDownload, where: pd.package_id == ^package.id)
     |> HexWeb.Repo.all
-    |> Enum.map(&{ :"#{&1.view}", &1.downloads || 0 })
+    |> Enum.map(&{:"#{&1.view}", &1.downloads || 0})
   end
 end

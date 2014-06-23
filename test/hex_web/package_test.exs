@@ -5,21 +5,21 @@ defmodule HexWeb.PackageTest do
   alias HexWeb.Package
 
   setup do
-    { :ok, _ } = User.create("eric", "eric@mail.com", "eric")
+    {:ok, _} = User.create("eric", "eric@mail.com", "eric")
     :ok
   end
 
   test "create package and get" do
     user = User.get("eric")
     user_id = user.id
-    assert { :ok, %Package{} } = Package.create("ecto", user, %{})
+    assert {:ok, %Package{}} = Package.create("ecto", user, %{})
     assert %Package{owner_id: ^user_id} = Package.get("ecto")
     assert nil?(Package.get("postgrex"))
   end
 
   test "update package" do
     user = User.get("eric")
-    assert { :ok, package } = Package.create("ecto", user, %{})
+    assert {:ok, package} = Package.create("ecto", user, %{})
 
     Package.update(package, %{"contributors" => ["eric", "josé"]})
     package = Package.get("ecto")
@@ -31,20 +31,20 @@ defmodule HexWeb.PackageTest do
       "contributors" => ["eric", "josé"],
       "licenses"     => ["apache", "BSD"],
       "links"        => %{"github" => "www", "docs" => "www"},
-      "description"  => "so good" }
+      "description"  => "so good"}
 
     user = User.get("eric")
-    assert { :ok, %Package{meta: ^meta} } = Package.create("ecto", user, meta)
+    assert {:ok, %Package{meta: ^meta}} = Package.create("ecto", user, meta)
     assert %Package{meta: ^meta} = Package.get("ecto")
   end
 
   test "ignore unknown meta fields" do
     meta = %{
       "contributors" => ["eric"],
-      "foo"          => "bar" }
+      "foo"          => "bar"}
 
     user = User.get("eric")
-    assert { :ok, %Package{} } = Package.create("ecto", user, meta)
+    assert {:ok, %Package{}} = Package.create("ecto", user, meta)
     assert %Package{meta: meta2} = Package.get("ecto")
 
     assert Dict.size(meta2) == 1
@@ -56,17 +56,17 @@ defmodule HexWeb.PackageTest do
       "contributors" => "eric",
       "licenses"     => 123,
       "links"        => ["url"],
-      "description"  => ["so bad"] }
+      "description"  => ["so bad"]}
 
     user = User.get("eric")
-    assert { :error, errors } = Package.create("ecto", user, meta)
+    assert {:error, errors} = Package.create("ecto", user, meta)
     assert Dict.size(errors) == 1
     assert Dict.size(errors[:meta]) == 4
   end
 
   test "packages are unique" do
     user = User.get("eric")
-    assert { :ok, %Package{} } = Package.create("ecto", user, %{})
-    assert { :error, _ } = Package.create("ecto", user, %{})
+    assert {:ok, %Package{}} = Package.create("ecto", user, %{})
+    assert {:error, _} = Package.create("ecto", user, %{})
   end
 end

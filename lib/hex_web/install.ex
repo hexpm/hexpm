@@ -12,7 +12,7 @@ defmodule HexWeb.Install do
 
   def latest(current) do
     case Version.parse(current) do
-      { :ok, current } ->
+      {:ok, current} ->
         Enum.filter(all(), fn %HexWeb.Install{elixir: elixir} ->
           Version.compare(elixir, current) != :gt
         end)
@@ -26,7 +26,7 @@ defmodule HexWeb.Install do
   end
 
   def create(hex, elixir) do
-    { :ok, %HexWeb.Install{hex: hex, elixir: elixir}
-           |> HexWeb.Repo.insert }
+    {:ok, %HexWeb.Install{hex: hex, elixir: elixir}
+           |> HexWeb.Repo.insert}
   end
 end

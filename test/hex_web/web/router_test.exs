@@ -6,7 +6,7 @@ defmodule HexWeb.Web.RouterTest do
   alias HexWeb.Release
 
   setup do
-    { :ok, user } = User.create("eric", "eric@mail.com", "eric")
+    {:ok, user} = User.create("eric", "eric@mail.com", "eric")
 
     first_date  = Ecto.DateTime.from_erl({{2014, 5, 1}, {10, 11, 12}})
     second_date = Ecto.DateTime.from_erl({{2014, 5, 2}, {10, 11, 12}})
@@ -16,12 +16,12 @@ defmodule HexWeb.Web.RouterTest do
     bar = HexWeb.Repo.insert(struct(user.packages, name: "bar", meta: "{}", created_at: second_date, updated_at: second_date))
     other = HexWeb.Repo.insert(struct(user.packages, name: "other", meta: "{}", created_at: last_date, updated_at: last_date))
 
-    { :ok, _ } = Release.create(foo, "0.0.1", [], "", Ecto.DateTime.from_erl({{2014, 5, 3}, {10, 11, 1}}))
-    { :ok, _ } = Release.create(foo, "0.0.2", [], "", Ecto.DateTime.from_erl({{2014, 5, 3}, {10, 11, 2}}))
-    { :ok, _ } = Release.create(foo, "0.1.0", [], "", Ecto.DateTime.from_erl({{2014, 5, 3}, {10, 11, 3}}))
-    { :ok, _ } = Release.create(bar, "0.0.1", [], "", Ecto.DateTime.from_erl({{2014, 5, 3}, {10, 11, 4}}))
-    { :ok, _ } = Release.create(bar, "0.0.2", [], "", Ecto.DateTime.from_erl({{2014, 5, 3}, {10, 11, 5}}))
-    { :ok, _ } = Release.create(other, "0.0.1", [], "", Ecto.DateTime.from_erl({{2014, 5, 3}, {10, 11, 6}}))
+    {:ok, _} = Release.create(foo, "0.0.1", [], "", Ecto.DateTime.from_erl({{2014, 5, 3}, {10, 11, 1}}))
+    {:ok, _} = Release.create(foo, "0.0.2", [], "", Ecto.DateTime.from_erl({{2014, 5, 3}, {10, 11, 2}}))
+    {:ok, _} = Release.create(foo, "0.1.0", [], "", Ecto.DateTime.from_erl({{2014, 5, 3}, {10, 11, 3}}))
+    {:ok, _} = Release.create(bar, "0.0.1", [], "", Ecto.DateTime.from_erl({{2014, 5, 3}, {10, 11, 4}}))
+    {:ok, _} = Release.create(bar, "0.0.2", [], "", Ecto.DateTime.from_erl({{2014, 5, 3}, {10, 11, 5}}))
+    {:ok, _} = Release.create(other, "0.0.1", [], "", Ecto.DateTime.from_erl({{2014, 5, 3}, {10, 11, 6}}))
     :ok
   end
 
@@ -32,7 +32,7 @@ defmodule HexWeb.Web.RouterTest do
 
     HexWeb.Config.store.put("logs/2013-11-01-21-32-16-E568B2907131C0C0", logfile1)
     HexWeb.Config.store.put("logs/2013-11-01-21-32-19-E568B2907131C0C0", logfile2)
-    HexWeb.Stats.Job.run({ 2013, 11, 1 })
+    HexWeb.Stats.Job.run({2013, 11, 1})
 
     conn = conn(:get, "/")
     conn = Router.call(conn, [])

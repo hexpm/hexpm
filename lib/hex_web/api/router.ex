@@ -20,24 +20,24 @@ defmodule HexWeb.API.Router do
       user_id = package.owner_id
 
       with_authorized(_user, id: user_id) do
-        { :ok, body, conn } = read_body(conn)
+        {:ok, body, conn} = read_body(conn)
 
         case HexWeb.Tar.metadata(body) do
-          { :ok, meta, checksum } ->
+          {:ok, meta, checksum} ->
             version = meta["version"]
             reqs    = meta["requirements"] || %{}
 
             if release = Release.get(package, version) do
               result = Release.update(release, reqs, checksum)
-              if match?({ :ok, _ }, result), do: after_release(name, version, body)
+              if match?({:ok, _}, result), do: after_release(name, version, body)
               send_update_resp(conn, result, :public)
             else
               result = Release.create(package, version, reqs, checksum)
-              if match?({ :ok, _ }, result), do: after_release(name, version, body)
+              if match?({:ok, _}, result), do: after_release(name, version, body)
               send_creation_resp(conn, result, :public, api_url(["packages", name, "releases", version]))
             end
 
-          { :error, errors } ->
+          {:error, errors} ->
             send_validation_failed(conn, %{tar: errors})
         end
       end

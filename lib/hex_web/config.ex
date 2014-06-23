@@ -3,7 +3,7 @@ defmodule HexWeb.Config.DSL do
     quote bind_quoted: binding do
       app_var = :"config_#{name}"
       def unquote(name)() do
-        { :ok, value } = :application.get_env(:hex_web, unquote(app_var))
+        {:ok, value} = :application.get_env(:hex_web, unquote(app_var))
         value
       end
 

@@ -8,7 +8,7 @@ defmodule Mix.Tasks.Hexweb.Stats do
     Mix.Task.run "app.start"
 
     try do
-      { time, { memory, size } } = :timer.tc fn -> HexWeb.Stats.Job.run(HexWeb.Util.yesterday()) end
+      {time, {memory, size}} = :timer.tc fn -> HexWeb.Stats.Job.run(HexWeb.Util.yesterday()) end
       Stout.info "STATS_JOB_COMPLETED #{size} downloads (#{div time, 1000}ms, #{div memory, 1024}kb)"
     catch
       kind, error ->

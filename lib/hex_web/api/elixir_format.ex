@@ -18,7 +18,7 @@ defmodule HexWeb.API.ElixirFormat do
 
   def decode(string) do
     case Code.string_to_quoted(string, existing_atoms_only: true) do
-      { :ok, ast } ->
+      {:ok, ast} ->
         safe_eval(ast)
       _ ->
         {:error, "malformed elixir"}
@@ -66,7 +66,7 @@ defmodule HexWeb.API.ElixirFormat do
   defp list_to_map(list) when is_list(list) do
     if list == [] or is_tuple(List.first(list)) do
       Enum.into(list, %{}, fn
-        { key, list } when is_list(list) -> { key, list_to_map(list) }
+        {key, list} when is_list(list) -> {key, list_to_map(list)}
         other -> list_to_map(other)
       end)
     else

@@ -32,9 +32,9 @@ defmodule HexWeb.API.Key do
 
         secret = :crypto.strong_rand_bytes(16) |> Base.encode16(case: :lower)
         key = %{key | name: name, secret: secret}
-        { :ok, HexWeb.Repo.insert(key) }
+        {:ok, HexWeb.Repo.insert(key)}
       errors ->
-        { :error, errors }
+        {:error, errors}
     end
   end
 

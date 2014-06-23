@@ -10,15 +10,15 @@ defmodule HexWeb.RouterTest do
 
   setup do
     User.create("other", "other@mail.com", "other")
-    { :ok, user } = User.create("eric", "eric@mail.com", "eric")
-    { :ok, _ }    = Package.create("postgrex", user, %{})
-    { :ok, pkg }  = Package.create("decimal", user, %{})
-    { :ok, _ }    = Release.create(pkg, "0.0.1", [{ "postgrex", "0.0.1" }], "")
+    {:ok, user} = User.create("eric", "eric@mail.com", "eric")
+    {:ok, _}    = Package.create("postgrex", user, %{})
+    {:ok, pkg}  = Package.create("decimal", user, %{})
+    {:ok, _}    = Release.create(pkg, "0.0.1", [{"postgrex", "0.0.1"}], "")
     :ok
   end
 
   test "fetch registry" do
-    { :ok, _ } = RegistryBuilder.start_link
+    {:ok, _} = RegistryBuilder.start_link
     RegistryBuilder.sync_rebuild
 
     conn = conn("GET", "/registry.ets.gz")
@@ -35,15 +35,15 @@ defmodule HexWeb.RouterTest do
       HexWeb.Config.store(HexWeb.Store.S3)
     end
 
-    { :ok, _ } = RegistryBuilder.start_link
+    {:ok, _} = RegistryBuilder.start_link
     RegistryBuilder.sync_rebuild
 
     port = HexWeb.Config.port
     url = String.to_char_list("http://localhost:#{port}/registry.ets.gz")
     :inets.start
 
-    assert { :ok, response } = :httpc.request(:head, { url, [] }, [], [])
-    assert { { _version, 200, _reason }, _headers, _body } = response
+    assert {:ok, response} = :httpc.request(:head, {url, []}, [], [])
+    assert {{_version, 200, _reason}, _headers, _body} = response
   after
     RegistryBuilder.stop
     HexWeb.Config.store(HexWeb.Store.Local)
@@ -55,8 +55,8 @@ defmodule HexWeb.RouterTest do
       HexWeb.Config.store(HexWeb.Store.S3)
     end
 
-    headers = [ { "content-type", "application/octet-stream" },
-                { "authorization", "Basic " <> :base64.encode("eric:eric") }]
+    headers = [ {"content-type", "application/octet-stream"},
+                {"authorization", "Basic " <> :base64.encode("eric:eric")}]
     body = create_tar(%{app: :postgrex, version: "0.0.1", requirements: %{decimal: "~> 0.0.1"}}, [])
     conn = conn("POST", "/api/packages/postgrex/releases", body, headers: headers)
     conn = Router.call(conn, [])
@@ -66,8 +66,8 @@ defmodule HexWeb.RouterTest do
     url = String.to_char_list("http://localhost:#{port}/tarballs/postgrex-0.0.1.tar")
     :inets.start
 
-    assert { :ok, response } = :httpc.request(:head, { url, [] }, [], [])
-    assert { { _version, 200, _reason }, _headers, _body } = response
+    assert {:ok, response} = :httpc.request(:head, {url, []}, [], [])
+    assert {{_version, 200, _reason}, _headers, _body} = response
   after
     HexWeb.Config.store(HexWeb.Store.Local)
   end
@@ -99,12 +99,12 @@ defmodule HexWeb.RouterTest do
   end
 
   test "forwarded" do
-    headers = [ { "x-forwarded-proto", "https" } ]
+    headers = [ {"x-forwarded-proto", "https"} ]
     conn = conn("GET", "/installs/hex.ez", nil, headers: headers)
     conn = Router.call(conn, [])
     assert conn.scheme == :https
 
-    headers = [ { "x-forwarded-port", "12345" } ]
+    headers = [ {"x-forwarded-port", "12345"} ]
     conn = conn("GET", "/installs/hex.ez", nil, headers: headers)
     conn = Router.call(conn, [])
     assert conn.port == 12345
@@ -125,19 +125,19 @@ defmodule HexWeb.RouterTest do
       assert conn.status == 302
       assert get_resp_header(conn, "location") == ["http://s3.hex.pm/installs/hex.ez"]
 
-      headers = [ { "user-agent", "Mix/0.0.1" } ]
+      headers = [ {"user-agent", "Mix/0.0.1"} ]
       conn = conn("GET", "/installs/hex.ez", nil, headers: headers)
       conn = Router.call(conn, [])
       assert conn.status == 302
       assert get_resp_header(conn, "location") == ["http://s3.hex.pm/installs/hex.ez"]
 
-      headers = [ { "user-agent", "Mix/0.13.0" } ]
+      headers = [ {"user-agent", "Mix/0.13.0"} ]
       conn = conn("GET", "/installs/hex.ez", nil, headers: headers)
       conn = Router.call(conn, [])
       assert conn.status == 302
       assert get_resp_header(conn, "location") == ["http://s3.hex.pm/installs/0.0.1/hex.ez"]
 
-      headers = [ { "user-agent", "Mix/0.13.1" } ]
+      headers = [ {"user-agent", "Mix/0.13.1"} ]
       conn = conn("GET", "/installs/hex.ez", nil, headers: headers)
       conn = Router.call(conn, [])
       assert conn.status == 302

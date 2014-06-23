@@ -134,11 +134,11 @@ defmodule HexWeb.API.Util do
   end
 
   defp do_with_authorized(user, as, opts, block) do
-    as = Enum.map(as, fn { key, val } -> { key, { :^, [], [val] } } end)
+    as = Enum.map(as, fn {key, val} -> {key, {:^, [], [val]}} end)
 
     quote do
       case HexWeb.API.Util.authorize(var!(conn), unquote(opts)) do
-        { :ok, %HexWeb.User{unquote_splicing(as)} = unquote(user) } ->
+        {:ok, %HexWeb.User{unquote_splicing(as)} = unquote(user)} ->
           unquote(block)
         _ ->
           HexWeb.API.Util.send_unauthorized(var!(conn))
@@ -146,7 +146,7 @@ defmodule HexWeb.API.Util do
     end
   end
 
-  # Check if a user is authorized, return `{ :ok, user }` if so,
+  # Check if a user is authorized, return `{:ok, user}` if so,
   # or `:error` if authorization failed
   @doc false
   def authorize(conn, opts) do
@@ -166,7 +166,7 @@ defmodule HexWeb.API.Util do
       [username, password] ->
         user = User.get(username)
         if User.auth?(user, password) do
-          { :ok, user }
+          {:ok, user}
         else
           :error
         end
@@ -178,7 +178,7 @@ defmodule HexWeb.API.Util do
   defp key_auth(key) do
     case Key.auth(key) do
       nil  -> :error
-      user -> { :ok, user }
+      user -> {:ok, user}
     end
   end
 
@@ -196,8 +196,8 @@ defmodule HexWeb.API.Util do
   Send a creation response if entity creation was successful,
   otherwise send validation failure response.
   """
-  @spec send_creation_resp(Plug.Conn.t, { :ok, term } | { :error, term }, :public | :private, String.t) :: Plug.Conn.t
-  def send_creation_resp(conn, { :ok, entity }, privacy, location) do
+  @spec send_creation_resp(Plug.Conn.t, {:ok, term} | {:error, term}, :public | :private, String.t) :: Plug.Conn.t
+  def send_creation_resp(conn, {:ok, entity}, privacy, location) do
     conn
     |> put_resp_header("location", location)
     |> cache_entity(entity)
@@ -205,7 +205,7 @@ defmodule HexWeb.API.Util do
     |> send_render(201, entity)
   end
 
-  def send_creation_resp(conn, { :error, errors }, _privacy, _location) do
+  def send_creation_resp(conn, {:error, errors}, _privacy, _location) do
     send_validation_failed(conn, errors)
   end
 
@@ -213,15 +213,15 @@ defmodule HexWeb.API.Util do
   Send an ok response if entity update was successful,
   otherwise send validation failure response.
   """
-  @spec send_update_resp(Plug.Conn.t, { :ok, term } | { :error, term }, :public | :private) :: Plug.Conn.t
-  def send_update_resp(conn, { :ok, entity }, privacy) do
+  @spec send_update_resp(Plug.Conn.t, {:ok, term} | {:error, term}, :public | :private) :: Plug.Conn.t
+  def send_update_resp(conn, {:ok, entity}, privacy) do
     conn
     |> cache_entity(entity)
     |> cache(privacy)
     |> send_render(200, entity)
   end
 
-  def send_update_resp(conn, { :error, errors }, _privacy) do
+  def send_update_resp(conn, {:error, errors}, _privacy) do
     send_validation_failed(conn, errors)
   end
 
@@ -229,14 +229,14 @@ defmodule HexWeb.API.Util do
   Send an ok response if entity delete was successful,
   otherwise send validation failure response.
   """
-  @spec send_delete_resp(Plug.Conn.t, :ok | { :error, term }, :public | :private) :: Plug.Conn.t
+  @spec send_delete_resp(Plug.Conn.t, :ok | {:error, term}, :public | :private) :: Plug.Conn.t
   def send_delete_resp(conn, :ok, privacy) do
     conn
     |> cache(privacy)
     |> send_resp(204, "")
   end
 
-  def send_delete_resp(conn, { :error, errors }, _privacy) do
+  def send_delete_resp(conn, {:error, errors}, _privacy) do
     send_validation_failed(conn, errors)
   end
 

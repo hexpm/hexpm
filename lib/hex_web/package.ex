@@ -27,12 +27,12 @@ defmodule HexWeb.Package do
   defp validate_meta(field, arg) do
     errors =
       Ecto.Validator.bin_dict(arg,
-        contributors: type({ :array, :string }),
-        licenses:     type({ :array, :string }),
-        links:        type({ :dict, :string, :string }),
+        contributors: type({:array, :string}),
+        licenses:     type({:array, :string}),
+        links:        type({:dict, :string, :string}),
         description:  type(:string))
 
-    if errors == [], do: [], else: [{ field, errors }]
+    if errors == [], do: [], else: [{field, errors}]
   end
 
   @meta_fields [:contributors, :description, :links, :licenses]
@@ -48,9 +48,9 @@ defmodule HexWeb.Package do
       [] ->
         package = %{package | meta: Jazz.encode!(package.meta)}
         package = HexWeb.Repo.insert(package)
-        { :ok, %{package | meta: meta} }
+        {:ok, %{package | meta: meta}}
       errors ->
-        { :error, errors_to_map(errors) }
+        {:error, errors_to_map(errors)}
     end
   end
 
@@ -61,9 +61,9 @@ defmodule HexWeb.Package do
       [] ->
         package = %{package | updated_at: Util.ecto_now, meta: Jazz.encode!(meta)}
         HexWeb.Repo.update(package)
-        { :ok, %{package | meta: meta} }
+        {:ok, %{package | meta: meta}}
       errors ->
-        { :error, errors_to_map(errors) }
+        {:error, errors_to_map(errors)}
     end
   end
 
@@ -92,7 +92,7 @@ defmodule HexWeb.Package do
     from(p in HexWeb.Package,
          order_by: [desc: p.created_at],
          limit: count,
-         select: { p.name, p.created_at })
+         select: {p.name, p.created_at})
     |> HexWeb.Repo.all
   end
 

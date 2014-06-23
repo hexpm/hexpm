@@ -33,7 +33,7 @@ defmodule HexWeb.Web.HTML do
   end
 
   defimpl Safe, for: Tuple do
-    def to_string({ :safe, thing }), do: Kernel.to_string(thing)
+    def to_string({:safe, thing}), do: Kernel.to_string(thing)
   end
 
   defmodule Engine do
@@ -44,7 +44,7 @@ defmodule HexWeb.Web.HTML do
 
     def handle_text(buffer, text) do
       quote do
-        { :safe, unquote(buffer) <> unquote(text) }
+        {:safe, unquote(buffer) <> unquote(text)}
       end
     end
 
@@ -69,11 +69,11 @@ defmodule HexWeb.Web.HTML do
       end
     end
 
-    defp unsafe({ :safe, value }), do: value
+    defp unsafe({:safe, value}), do: value
     defp unsafe(value), do: value
   end
 
-  @escapes [{ ?<, "&lt;" }, { ?>, "&gt;" }, { ?&, "&amp;" }, { ?", "&quot;" }, { ?', "&#39;" }]
+  @escapes [{?<, "&lt;"}, {?>, "&gt;"}, {?&, "&amp;"}, {?", "&quot;"}, {?', "&#39;"}]
 
   def escape(buffer) do
     for << char <- buffer >>, into: "" do
@@ -81,7 +81,7 @@ defmodule HexWeb.Web.HTML do
     end
   end
 
-  Enum.each(@escapes, fn { match, insert } ->
+  Enum.each(@escapes, fn {match, insert} ->
     defp escape_char(unquote(match)), do: unquote(insert)
   end)
 

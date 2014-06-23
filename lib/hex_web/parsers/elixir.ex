@@ -9,7 +9,7 @@ defmodule HexWeb.Parsers.Elixir do
   def parse(%Conn{} = conn, "application", "vnd.hex" <> rest, _headers, opts) do
     case Regex.run(HexWeb.Util.vendor_regex, rest) do
       [_, _version, "elixir"] ->
-        {:ok, body, conn } = Conn.read_body(conn, opts)
+        {:ok, body, conn} = Conn.read_body(conn, opts)
 
         case HexWeb.API.ElixirFormat.decode(body) do
           {:ok, params} ->
@@ -19,11 +19,11 @@ defmodule HexWeb.Parsers.Elixir do
           end
 
       _ ->
-        { :next, conn }
+        {:next, conn}
     end
   end
 
   def parse(conn, _type, _subtype, _headers, _opts) do
-    { :next, conn }
+    {:next, conn}
   end
 end

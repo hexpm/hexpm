@@ -32,7 +32,7 @@ defmodule HexWebTest.Case do
 
   def create_tar(meta, files) do
     contents_path = Path.join(@tmp, "#{meta[:app]}-#{meta[:version]}-contents.tar.gz")
-    files = Enum.map(files, fn { name, bin } -> { String.to_char_list!(name), bin } end)
+    files = Enum.map(files, fn {name, bin} -> {String.to_char_list!(name), bin} end)
     :ok = :erl_tar.create(contents_path, files, [:compressed, :cooked])
     contents = File.read!(contents_path)
 
@@ -41,10 +41,10 @@ defmodule HexWebTest.Case do
     checksum = :crypto.hash(:sha256, blob) |> Base.encode16
 
     files = [
-      { 'VERSION', "2"},
-      { 'CHECKSUM', checksum },
-      { 'metadata.exs', meta_string },
-      { 'contents.tar.gz', contents } ]
+      {'VERSION', "2"},
+      {'CHECKSUM', checksum},
+      {'metadata.exs', meta_string},
+      {'contents.tar.gz', contents} ]
     path = Path.join(@tmp, "#{meta[:app]}-#{meta[:version]}.tar")
     :ok = :erl_tar.create(path, files, [:cooked])
 

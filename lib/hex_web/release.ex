@@ -39,7 +39,7 @@ defmodule HexWeb.Release do
           |> Util.maybe(&Ecto.Associations.load(&1, :package, package))
         end)
       errors ->
-        { :error, Enum.into(errors, %{}) }
+        {:error, Enum.into(errors, %{})}
     end
   end
 
@@ -54,11 +54,11 @@ defmodule HexWeb.Release do
                    release.created_at)
           end) |> elem(1)
         errors ->
-          { :error, Enum.into(errors, %{}) }
+          {:error, Enum.into(errors, %{})}
       end
 
     else
-      { :error, [created_at: "can only modify a release up to one hour after creation"] }
+      {:error, [created_at: "can only modify a release up to one hour after creation"]}
     end
   end
 
@@ -71,7 +71,7 @@ defmodule HexWeb.Release do
 
       :ok
     else
-      { :error, [created_at: "can only delete a release up to one hour after creation"] }
+      {:error, [created_at: "can only delete a release up to one hour after creation"]}
     end
   end
 
@@ -89,7 +89,7 @@ defmodule HexWeb.Release do
     requirements = normalize_requirements(requirements)
     results = create_requirements(release, requirements)
 
-    errors = Enum.filter_map(results, &match?({ :error, _ }, &1), &elem(&1, 1))
+    errors = Enum.filter_map(results, &match?({:error, _}, &1), &elem(&1, 1))
     if errors == [] do
       Ecto.Associations.load(release, :requirements, requirements)
     else
@@ -103,7 +103,7 @@ defmodule HexWeb.Release do
     deps_query =
          from p in HexWeb.Package,
        where: p.name in array(^deps, ^:string),
-      select: { p.name, p.id }
+      select: {p.name, p.id}
     deps = HexWeb.Repo.all(deps_query) |> Enum.into(HashDict.new)
 
     Enum.map(requirements, fn {dep, req, optional} ->
@@ -113,10 +113,10 @@ defmodule HexWeb.Release do
 
   defp normalize_requirements(requirements) do
     Enum.map(requirements, fn
-      { dep, %{"requirement" => req, "optional" => optional} } ->
+      {dep, %{"requirement" => req, "optional" => optional}} ->
         {to_string(dep), req, optional}
       # Backwards compatible
-      { dep, req } ->
+      {dep, req} ->
         {to_string(dep), req, false}
     end)
   end
@@ -142,7 +142,7 @@ defmodule HexWeb.Release do
   def requirements(release) do
     from(req in release.requirements,
          join: p in req.dependency,
-         select: { p.name, req.requirement, req.optional })
+         select: {p.name, req.requirement, req.optional})
     |> HexWeb.Repo.all
   end
 
@@ -156,14 +156,14 @@ defmodule HexWeb.Release do
          order_by: [desc: r.created_at],
          join: p in r.package,
          limit: count,
-         select: { r.version, p.name })
+         select: {r.version, p.name})
     |> HexWeb.Repo.all
   end
 
   defp add_requirement(release, deps, dep, req, optional) do
     cond do
       not valid_requirement?(req) ->
-        { :error, { dep, "invalid requirement: #{inspect req}" } }
+        {:error, {dep, "invalid requirement: #{inspect req}"}}
 
       id = deps[dep] ->
         struct(release.requirements, requirement: req, optional: optional, dependency_id: id)
@@ -171,12 +171,12 @@ defmodule HexWeb.Release do
         :ok
 
       true ->
-        { :error, { dep, "unknown package" } }
+        {:error, {dep, "unknown package"}}
     end
   end
 
   defp valid_requirement?(req) do
-    nil?(req) or (is_binary(req) and match?({ :ok, _ }, Version.parse_requirement(req)))
+    nil?(req) or (is_binary(req) and match?({:ok, _}, Version.parse_requirement(req)))
   end
 end
 

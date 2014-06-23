@@ -25,7 +25,7 @@ defmodule HexWeb.Plugs.Forwarded do
 
   defp port(port, default) do
     case Integer.parse(port) do
-      { int, "" } -> int
+      {int, ""} -> int
       _           -> default
     end
   end

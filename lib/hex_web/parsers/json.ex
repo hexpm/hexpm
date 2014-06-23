@@ -7,14 +7,14 @@ defmodule HexWeb.Parsers.Json do
   def parse(%Conn{} = conn, "application", "json", _headers, opts) do
     {:ok, body, conn} = Conn.read_body(conn, opts)
     case Jazz.decode(body) do
-      { :ok, params } ->
-        { :ok, params, conn }
+      {:ok, params} ->
+        {:ok, params, conn}
       _ ->
         raise HexWeb.Plug.BadRequest, message: "malformed JSON"
     end
   end
 
   def parse(conn, _type, _subtype, _headers, _opts) do
-    { :next, conn }
+    {:next, conn}
   end
 end

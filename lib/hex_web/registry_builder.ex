@@ -23,7 +23,7 @@ defmodule HexWeb.RegistryBuilder do
   end
 
   def start_link() do
-    :gen_server.start_link({ :local, __MODULE__ }, __MODULE__, [], [])
+    :gen_server.start_link({:local, __MODULE__}, __MODULE__, [], [])
   end
 
   def stop do
@@ -39,40 +39,40 @@ defmodule HexWeb.RegistryBuilder do
   end
 
   def init(_) do
-    { :ok, new_state() }
+    {:ok, new_state()}
   end
 
   def handle_cast(:rebuild, %{building: false} = s) do
     build()
-    { :noreply, %{s | building: true} }
+    {:noreply, %{s | building: true}}
   end
 
   def handle_cast(:rebuild, %{building: true} = s) do
-    { :noreply, %{s | pending: true} }
+    {:noreply, %{s | pending: true}}
   end
 
   def handle_call(:stop, _from, s) do
-    { :stop, :normal, :ok, s }
+    {:stop, :normal, :ok, s}
   end
 
   def handle_call(:rebuild, from, %{building: false, waiters: waiters, counter: counter} = s) do
     build()
-    { :noreply, %{s | building: true, waiters: [{ counter, from }|waiters]} }
+    {:noreply, %{s | building: true, waiters: [{counter, from}|waiters]}}
   end
 
   def handle_call(:rebuild, from, %{building: true, waiters: waiters, counter: counter} = s) do
-    { :noreply, %{s | pending: true, waiters: [{ counter+1, from }|waiters]} }
+    {:noreply, %{s | pending: true, waiters: [{counter+1, from}|waiters]}}
   end
 
   def handle_info(:finished_building, %{pending: pending, counter: counter} = s) do
     if pending, do: async_rebuild()
     s = reply_to_waiters(s)
-    { :noreply, %{s | building: false, pending: false, counter: counter + 1} }
+    {:noreply, %{s | building: false, pending: false, counter: counter + 1}}
   end
 
   defp reply_to_waiters(%{waiters: waiters, counter: counter} = s) do
-    { done, pending } = Enum.partition(waiters, fn { id, _ } -> id == counter end)
-    Enum.each(done, fn { _id, from } -> :gen_server.reply(from, :ok) end)
+    {done, pending} = Enum.partition(waiters, fn {id, _} -> id == counter end)
+    Enum.each(done, fn {_id, from} -> :gen_server.reply(from, :ok) end)
     %{s | waiters: pending}
   end
 
@@ -82,7 +82,7 @@ defmodule HexWeb.RegistryBuilder do
     spawn_link(fn ->
       try do
         case builder(pid) do
-          { time, memory } ->
+          {time, memory} ->
             Stout.info "REGISTRY_BUILDER_COMPLETED (#{div time, 1000}ms, #{div memory, 1024}kb)"
           nil ->
             :ok
@@ -98,8 +98,8 @@ defmodule HexWeb.RegistryBuilder do
 
   defp builder(pid) do
     reg_file = Path.join(HexWeb.Config.tmp, "registry.ets")
-    { :ok, handle } = HexWeb.Registry.create()
-    { :ok, result } = build_ets(handle, reg_file)
+    {:ok, handle} = HexWeb.Registry.create()
+    {:ok, result} = build_ets(handle, reg_file)
 
     send pid, :finished_building
     result
@@ -120,33 +120,33 @@ defmodule HexWeb.RegistryBuilder do
             packages     = packages()
 
             package_tuples =
-              Enum.reduce(releases, HashDict.new, fn { _, vsn, pkg_id }, dict ->
+              Enum.reduce(releases, HashDict.new, fn {_, vsn, pkg_id}, dict ->
                 Dict.update(dict, packages[pkg_id], [vsn], &[vsn|&1])
               end)
 
             package_tuples =
-              Enum.map(package_tuples, fn { name, vsns } ->
-                { name, [Enum.sort(vsns, &(Version.compare(&1, &2) == :lt))] }
+              Enum.map(package_tuples, fn {name, vsns} ->
+                {name, [Enum.sort(vsns, &(Version.compare(&1, &2) == :lt))]}
               end)
 
             release_tuples =
-              Enum.map(releases, fn { id, version, pkg_id } ->
+              Enum.map(releases, fn {id, version, pkg_id} ->
                 package = packages[pkg_id]
                 deps =
-                  Enum.map(requirements[id] || [], fn { dep_id, req, opt } ->
+                  Enum.map(requirements[id] || [], fn {dep_id, req, opt} ->
                     dep_name = packages[dep_id]
                     [dep_name, req, opt]
                   end)
-                { { package, version }, [deps] }
+                {{package, version}, [deps]}
               end)
 
-            { :memory, memory } = :erlang.process_info(self, :memory)
+            {:memory, memory} = :erlang.process_info(self, :memory)
 
             File.rm(file)
 
             tid = :ets.new(@ets_table, [:public])
-            :ets.insert(tid, { :"$$version$$", @version })
-            :ets.insert(tid, { :"$$installs$$", installs })
+            :ets.insert(tid, {:"$$version$$", @version})
+            :ets.insert(tid, {:"$$installs$$", installs})
             :ets.insert(tid, release_tuples ++ package_tuples)
             :ok = :ets.tab2file(tid, String.to_char_list(file))
             :ets.delete(tid)
@@ -185,31 +185,31 @@ defmodule HexWeb.RegistryBuilder do
   end
 
   defp packages do
-    from(p in Package, select: { p.id, p.name })
+    from(p in Package, select: {p.id, p.name})
     |> HexWeb.Repo.all
     |> Enum.into(HashDict.new)
   end
 
   defp releases do
-    from(r in Release, select: { r.id, r.version, r.package_id })
+    from(r in Release, select: {r.id, r.version, r.package_id})
     |> HexWeb.Repo.all
   end
 
   defp requirements do
     reqs =
       from(r in Requirement,
-           select: { r.release_id, r.dependency_id, r.requirement, r.optional})
+           select: {r.release_id, r.dependency_id, r.requirement, r.optional})
       |> HexWeb.Repo.all
 
-    Enum.reduce(reqs, HashDict.new, fn { rel_id, dep_id, req, opt}, dict ->
-      tuple = { dep_id, req, opt }
+    Enum.reduce(reqs, HashDict.new, fn {rel_id, dep_id, req, opt}, dict ->
+      tuple = {dep_id, req, opt}
       Dict.update(dict, rel_id, [tuple], &[tuple|&1])
     end)
   end
 
   defp installs do
     Enum.map(Install.all, fn %Install{hex: hex, elixir: elixir} ->
-      { hex, elixir }
+      {hex, elixir}
     end)
   end
 

@@ -10,7 +10,7 @@ defmodule HexWeb.Tar do
   defmacrop if_ok(expr, call) do
     quote do
       case unquote(expr) do
-        { :ok, var1, var2 } ->
+        {:ok, var1, var2} ->
           unquote(Macro.pipe(quote(do: var1), Macro.pipe(quote(do: var2), call, 0), 0))
         other -> other
       end
@@ -18,9 +18,9 @@ defmodule HexWeb.Tar do
   end
 
   def metadata(binary) do
-    case :erl_tar.extract({ :binary, binary }, [:memory]) do
-      { :ok, files } ->
-        files = Enum.into(files, %{}, fn { name, binary } -> { List.to_string(name), binary } end)
+    case :erl_tar.extract({:binary, binary}, [:memory]) do
+      {:ok, files} ->
+        files = Enum.into(files, %{}, fn {name, binary} -> {List.to_string(name), binary} end)
 
         meta = version(files)
                |> if_ok(checksum)
@@ -29,23 +29,23 @@ defmodule HexWeb.Tar do
                |> if_ok(meta)
 
         case meta do
-          { :ok, meta } ->
-            { :ok, meta, files["CHECKSUM"] }
+          {:ok, meta} ->
+            {:ok, meta, files["CHECKSUM"]}
           error ->
             error
         end
 
-      { :error, reason } ->
-        { :error, %{tar: inspect reason} }
+      {:error, reason} ->
+        {:error, %{tar: inspect reason}}
     end
   end
 
   defp version(files) do
     version = files["VERSION"]
     if version in ["2"] do
-      { :ok, files, String.to_integer(version) }
+      {:ok, files, String.to_integer(version)}
     else
-      { :error, %{version: :not_supported} }
+      {:error, %{version: :not_supported}}
     end
   end
 
@@ -54,32 +54,32 @@ defmodule HexWeb.Tar do
       {:ok, ref_checksum} ->
         blob = files["VERSION"] <> files["metadata.exs"] <> files["contents.tar.gz"]
         if :crypto.hash(:sha256, blob) == ref_checksum do
-          { :ok, files, version }
+          {:ok, files, version}
         else
-          { :error, %{checksum: :mismatch} }
+          {:error, %{checksum: :mismatch}}
         end
 
       :error ->
-        { :error, %{checksum: :invalid} }
+        {:error, %{checksum: :invalid}}
     end
   end
 
   defp missing_files(files, version) do
     missing_files = Enum.reject(@files, &Dict.has_key?(files, &1))
     if length(missing_files) == 0 do
-      { :ok, files, version }
+      {:ok, files, version}
     else
-      { :error, %{missing_files: missing_files} }
+      {:error, %{missing_files: missing_files}}
     end
   end
 
   defp unknown_files(files, version) do
-    unknown_files = Enum.reject(files, fn { name, _binary } -> name in @files end)
+    unknown_files = Enum.reject(files, fn {name, _binary} -> name in @files end)
     if length(unknown_files) == 0 do
-      { :ok, files, version }
+      {:ok, files, version}
     else
       names = Enum.map(unknown_files, &elem(&1, 0))
-      { :error, %{unknown_files: names} }
+      {:error, %{unknown_files: names}}
     end
   end
 

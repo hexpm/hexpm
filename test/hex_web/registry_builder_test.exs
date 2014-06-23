@@ -10,13 +10,13 @@ defmodule HexWeb.RegistryBuilderTest do
   @ets_table :hex_registry
 
   setup do
-    { :ok, _ } = RegistryBuilder.start_link
-    { :ok, user } = User.create("eric", "eric@mail.com", "eric")
-    { :ok, _ } = Package.create("postgrex", user, %{})
-    { :ok, _ } = Package.create("decimal", user, %{})
-    { :ok, _ } = Package.create("ex_doc", user, %{})
-    { :ok, _ } = Install.create("0.0.1", "0.13.0-dev")
-    { :ok, _ } = Install.create("0.1.0", "0.13.1-dev")
+    {:ok, _} = RegistryBuilder.start_link
+    {:ok, user} = User.create("eric", "eric@mail.com", "eric")
+    {:ok, _} = Package.create("postgrex", user, %{})
+    {:ok, _} = Package.create("decimal", user, %{})
+    {:ok, _} = Package.create("ex_doc", user, %{})
+    {:ok, _} = Install.create("0.0.1", "0.13.0-dev")
+    {:ok, _} = Install.create("0.1.0", "0.13.1-dev")
     :ok
   end
 
@@ -25,7 +25,7 @@ defmodule HexWeb.RegistryBuilderTest do
   end
 
   defp open_table do
-    { :ok, tid } = :ets.file2tab('tmp/registry.ets')
+    {:ok, tid} = :ets.file2tab('tmp/registry.ets')
     tid
   end
 
@@ -38,7 +38,7 @@ defmodule HexWeb.RegistryBuilderTest do
     tid = open_table()
 
     try do
-      assert [{ :"$$version$$", 3 }] = :ets.lookup(tid, :"$$version$$")
+      assert [{:"$$version$$", 3}] = :ets.lookup(tid, :"$$version$$")
     after
       close_table(tid)
     end
@@ -49,7 +49,7 @@ defmodule HexWeb.RegistryBuilderTest do
     tid = open_table()
 
     try do
-      assert [{ :"$$installs$$", installs }] = :ets.lookup(tid, :"$$installs$$")
+      assert [{:"$$installs$$", installs}] = :ets.lookup(tid, :"$$installs$$")
       assert [{"0.0.1", "0.13.0-dev"}, {"0.1.0", "0.13.1-dev"}] = installs
     after
       close_table(tid)
@@ -61,8 +61,8 @@ defmodule HexWeb.RegistryBuilderTest do
     decimal = Package.get("decimal")
 
     Release.create(decimal, "0.0.1", [], "")
-    Release.create(decimal, "0.0.2", [{ "ex_doc", "0.0.0" }], "")
-    Release.create(postgrex, "0.0.2", [{ "decimal", "~> 0.0.1" }, { "ex_doc", "0.1.0" }], "")
+    Release.create(decimal, "0.0.2", [{"ex_doc", "0.0.0"}], "")
+    Release.create(postgrex, "0.0.2", [{"decimal", "~> 0.0.1"}, {"ex_doc", "0.1.0"}], "")
 
     build()
     tid = open_table()
@@ -70,15 +70,15 @@ defmodule HexWeb.RegistryBuilderTest do
     try do
       assert length(:ets.match_object(tid, :_)) == 7
 
-      assert [ { "decimal", [["0.0.1", "0.0.2"]] } ] = :ets.lookup(tid, "decimal")
+      assert [ {"decimal", [["0.0.1", "0.0.2"]]} ] = :ets.lookup(tid, "decimal")
 
-      assert [ { { "decimal", "0.0.1" }, [[]] } ] =
-             :ets.lookup(tid, { "decimal", "0.0.1" })
+      assert [ {{"decimal", "0.0.1"}, [[]]} ] =
+             :ets.lookup(tid, {"decimal", "0.0.1"})
 
-      assert [{ "postgrex", [["0.0.2"]] }] =
+      assert [{"postgrex", [["0.0.2"]]}] =
              :ets.lookup(tid, "postgrex")
 
-      reqs = :ets.lookup(tid, { "postgrex", "0.0.2" }) |> List.first |> elem(1) |> List.first
+      reqs = :ets.lookup(tid, {"postgrex", "0.0.2"}) |> List.first |> elem(1) |> List.first
       assert length(reqs) == 2
       assert Enum.find(reqs, &(&1 == ["decimal", "~> 0.0.1", false]))
       assert Enum.find(reqs, &(&1 == ["ex_doc", "0.1.0", false]))
@@ -94,8 +94,8 @@ defmodule HexWeb.RegistryBuilderTest do
     decimal = Package.get("decimal")
 
     Release.create(decimal, "0.0.1", [], "")
-    Release.create(decimal, "0.0.2", [{ "ex_doc", "0.0.0" }], "")
-    Release.create(postgrex, "0.0.2", [{ "decimal", "~> 0.0.1" }, { "ex_doc", "0.1.0" }], "")
+    Release.create(decimal, "0.0.2", [{"ex_doc", "0.0.0"}], "")
+    Release.create(postgrex, "0.0.2", [{"decimal", "~> 0.0.1"}, {"ex_doc", "0.1.0"}], "")
 
     RegistryBuilder.async_rebuild
     RegistryBuilder.async_rebuild

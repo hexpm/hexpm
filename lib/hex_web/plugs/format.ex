@@ -8,7 +8,7 @@ defmodule HexWeb.Plugs.Format do
 
   def call(conn, _opts) do
     accepts = parse_accepts(conn)
-    { format, version } = parse(accepts)
+    {format, version} = parse(accepts)
 
     if version in @allowed_versions do
       conn
@@ -21,22 +21,22 @@ defmodule HexWeb.Plugs.Format do
   end
 
   defp parse(accepts) do
-    { format, version } =
-      Enum.find_value(accepts, { :unknown, nil }, fn
-        { "*", "*" } ->
-          { :json, nil }
-        { "application", "*" } ->
-          { :json, nil }
-        { "application", "json" } ->
-          { :json, nil }
-        { "application", unquote("vnd." <> @vendor) <> rest } ->
+    {format, version} =
+      Enum.find_value(accepts, {:unknown, nil}, fn
+        {"*", "*"} ->
+          {:json, nil}
+        {"application", "*"} ->
+          {:json, nil}
+        {"application", "json"} ->
+          {:json, nil}
+        {"application", unquote("vnd." <> @vendor) <> rest} ->
           if result = Regex.run(HexWeb.Util.vendor_regex, rest) do
             destructure [_, version, format], result
             if version == "", do: version = nil
 
-            { format(format), version }
+            {format(format), version}
           else
-            { :json, nil }
+            {:json, nil}
           end
         _ ->
           nil
@@ -49,7 +49,7 @@ defmodule HexWeb.Plugs.Format do
       version = "beta"
     end
 
-    { format, version }
+    {format, version}
   end
 
   defp format("elixir"), do: :elixir

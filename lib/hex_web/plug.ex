@@ -22,7 +22,7 @@ defmodule HexWeb.Plug do
   end
 
   defmacro assign_pun(conn, vars) do
-    Enum.reduce(vars, conn, fn { field, _, _ } = var, ast ->
+    Enum.reduce(vars, conn, fn {field, _, _} = var, ast ->
       quote do
         Plug.Conn.assign(unquote(ast), unquote(field), unquote(var))
       end
@@ -42,7 +42,7 @@ defmodule HexWeb.Plug do
   defp parse_control(control) do
     Enum.map_join(control, ", ", fn
       atom when is_atom(atom) -> "#{atom}"
-      { key, value }          -> "#{key}=#{value}"
+      {key, value}          -> "#{key}=#{value}"
     end)
   end
 

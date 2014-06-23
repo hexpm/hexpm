@@ -15,7 +15,7 @@ defmodule HexWeb.Util do
   end
 
   def yesterday do
-    { today, _time } = :calendar.universal_time()
+    {today, _time} = :calendar.universal_time()
     today_days = :calendar.date_to_gregorian_days(today)
     :calendar.gregorian_days_to_date(today_days - 1)
   end
@@ -36,7 +36,7 @@ defmodule HexWeb.Util do
 
   def parse_integer(string, default) when is_binary(string) do
     case Integer.parse(string) do
-      { int, "" } -> int
+      {int, ""} -> int
       _ -> default
     end
   end

@@ -3,11 +3,11 @@ defmodule HexWeb.Store.S3 do
 
   defmacrop s3_config(opts) do
     quote do
-      { :config,
+      {:config,
         'http://s3.amazonaws.com',
         unquote(opts[:access_key_id]),
         unquote(opts[:secret_access_key]),
-        :virtual_hosted }
+        :virtual_hosted}
     end
   end
 

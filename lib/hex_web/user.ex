@@ -38,9 +38,9 @@ defmodule HexWeb.User do
     case validate_create(user) do
       [] ->
         user = %{user | password: gen_password(password)}
-        { :ok, HexWeb.Repo.insert(user) }
+        {:ok, HexWeb.Repo.insert(user)}
       errors ->
-        { :error, Enum.into(errors, %{}) }
+        {:error, Enum.into(errors, %{})}
     end
   end
 
@@ -62,9 +62,9 @@ defmodule HexWeb.User do
       [] ->
         user = %{user | updated_at: Util.ecto_now}
         HexWeb.Repo.update(user)
-        { :ok, user }
+        {:ok, user}
       errors ->
-        { :error, Enum.into(errors, %{}) }
+        {:error, Enum.into(errors, %{})}
     end
   end
 
@@ -82,15 +82,15 @@ defmodule HexWeb.User do
     stored_hash   = user.password
     password      = String.to_char_list(password)
     stored_hash   = :erlang.binary_to_list(stored_hash)
-    { :ok, hash } = :bcrypt.hashpw(password, stored_hash)
+    {:ok, hash} = :bcrypt.hashpw(password, stored_hash)
     hash == stored_hash
   end
 
   defp gen_password(password) do
     password      = String.to_char_list(password)
     work_factor   = HexWeb.Config.password_work_factor
-    { :ok, salt } = :bcrypt.gen_salt(work_factor)
-    { :ok, hash } = :bcrypt.hashpw(password, salt)
+    {:ok, salt} = :bcrypt.gen_salt(work_factor)
+    {:ok, hash} = :bcrypt.hashpw(password, salt)
     :erlang.list_to_binary(hash)
   end
 end
