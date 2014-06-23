@@ -36,7 +36,7 @@ defmodule HexWebTest.Case do
     :ok = :erl_tar.create(contents_path, files, [:compressed, :cooked])
     contents = File.read!(contents_path)
 
-    meta_string = HexWeb.Util.safe_serialize_elixir(meta)
+    meta_string = HexWeb.API.ElixirFormat.encode(meta)
     blob = "2" <> meta_string <> contents
     checksum = :crypto.hash(:sha256, blob) |> Base.encode16
 

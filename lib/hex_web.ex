@@ -2,7 +2,7 @@ defmodule HexWeb do
   use Application
 
   def start(_type, _args) do
-    opts  = [port: 4000]
+    opts  = [port: 4000, comress: true]
 
     if port = System.get_env("PORT") do
       opts = Keyword.put(opts, :port, String.to_integer(port))
@@ -10,7 +10,7 @@ defmodule HexWeb do
 
     File.mkdir_p!("tmp")
     HexWeb.Config.init(opts)
-    Plug.Adapters.Cowboy.http(HexWeb.Router, [], opts ++ [compress: true])
+    Plug.Adapters.Cowboy.http(HexWeb.Router, [], opts)
     HexWeb.Supervisor.start_link
   end
 

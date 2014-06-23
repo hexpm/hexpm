@@ -10,8 +10,14 @@ defmodule HexWeb.Parsers.Elixir do
     case Regex.run(HexWeb.Util.vendor_regex, rest) do
       [_, _version, "elixir"] ->
         {:ok, body, conn } = Conn.read_body(conn, opts)
-        params = HexWeb.Util.safe_deserialize_elixir(body)
-        { :ok, params, conn }
+
+        case HexWeb.API.ElixirFormat.decode(body) do
+          {:ok, params} ->
+            {:ok, params, conn}
+          {:error, reason} ->
+            raise HexWeb.Util.BadRequest, message: reason
+          end
+
       _ ->
         { :next, conn }
     end

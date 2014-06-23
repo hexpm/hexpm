@@ -99,12 +99,10 @@ defmodule HexWeb.API.Util do
   defp send_body(conn, status, body, fallback) do
     case conn.assigns[:format] do
       :elixir ->
-        body = HexWeb.Util.safe_serialize_elixir(body)
+        body = HexWeb.API.ElixirFormat.encode(body)
         content_type = "application/vnd.hex+elixir"
       format when format == :json or fallback ->
-        body = body
-               |> HexWeb.Util.binarify
-               |> HexWeb.Util.json_encode
+        body = Jazz.encode!(body)
         content_type = "application/json"
       _ ->
         raise Plug.Parsers.UnsupportedMediaTypeError

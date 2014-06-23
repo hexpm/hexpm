@@ -9,18 +9,6 @@ defmodule HexWeb.Util do
   def maybe(nil, _fun), do: nil
   def maybe(item, fun), do: fun.(item)
 
-  def json_encode(map) do
-    Jazz.encode!(map)
-  end
-
-  def json_decode!(json) do
-    Jazz.decode!(json)
-  end
-
-  def json_decode(json) do
-    Jazz.decode(json)
-  end
-
   def log_error(kind, error, stacktrace) do
     Stout.error Exception.format_banner(kind, error, stacktrace) <> "\n"
                 <> Exception.format_stacktrace(stacktrace)
@@ -98,86 +86,6 @@ defmodule HexWeb.Util do
         (?:\.(?<version>[^\+]+))?
         (?:\+(?<format>.*))?
         $/x
-  end
-
-  @doc """
-  Encode an elixir term that can be safely deserialized on another machine.
-  """
-  @spec safe_serialize_elixir(term) :: String.t
-  def safe_serialize_elixir(term) do
-    binarify(term)
-    |> inspect(limit: :infinity, records: false, binaries: :as_strings)
-  end
-
-  def binarify(binary) when is_binary(binary),
-    do: binary
-  def binarify(number) when is_number(number),
-    do: number
-  def binarify(atom) when nil?(atom) or is_boolean(atom),
-    do: atom
-  def binarify(atom) when is_atom(atom),
-    do: Atom.to_string(atom)
-  def binarify(list) when is_list(list),
-    do: for(elem <- list, do: binarify(elem))
-  def binarify(map) when is_map(map),
-    do: for(elem <- map, into: %{}, do: binarify(elem))
-  def binarify(tuple) when is_tuple(tuple),
-    do: for(elem <- Tuple.to_list(tuple), do: binarify(elem)) |> List.to_tuple
-
-  def safe_deserialize_elixir("") do
-    nil
-  end
-
-  def safe_deserialize_elixir(string) do
-    case Code.string_to_quoted(string, existing_atoms_only: true) do
-      { :ok, ast } ->
-        if safe_term?(ast) do
-          Code.eval_quoted(ast)
-          |> elem(0)
-          |> list_to_map
-        else
-          raise HexWeb.Util.BadRequest, message: "unsafe elixir"
-        end
-      _ ->
-        raise HexWeb.Util.BadRequest, message: "malformed elixir"
-    end
-  end
-
-  def safe_eval(ast) do
-    if safe_term?(ast) do
-      Code.eval_quoted(ast)
-      |> elem(0)
-      |> list_to_map
-    else
-      raise HexWeb.Util.BadRequest, message: "unsafe elixir"
-    end
-  end
-
-  def safe_term?({func, _, terms}) when func in [:{}, :%{}] and is_list(terms) do
-    Enum.all?(terms, &safe_term?/1)
-  end
-
-  def safe_term?(nil), do: true
-  def safe_term?(term) when is_number(term), do: true
-  def safe_term?(term) when is_binary(term), do: true
-  def safe_term?(term) when is_boolean(term), do: true
-  def safe_term?(term) when is_list(term), do: Enum.all?(term, &safe_term?/1)
-  def safe_term?(term) when is_tuple(term), do: Enum.all?(Tuple.to_list(term), &safe_term?/1)
-  def safe_term?(_), do: false
-
-  defp list_to_map(list) when is_list(list) do
-    if list == [] or is_tuple(List.first(list)) do
-      Enum.into(list, %{}, fn
-        { key, list } when is_list(list) -> { key, list_to_map(list) }
-        other -> list_to_map(other)
-      end)
-    else
-      Enum.map(list, &list_to_map/1)
-    end
-  end
-
-  defp list_to_map(other) do
-    other
   end
 
   def paginate(query, page, count) do

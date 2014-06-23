@@ -84,11 +84,9 @@ defmodule HexWeb.Tar do
   end
 
   defp meta(files, _version) do
-    try do
-      { :ok, HexWeb.Util.safe_deserialize_elixir(files["metadata.exs"]) }
-    rescue
-      err in [HexWeb.Util.BadRequest] ->
-        { :error, %{metadata: err.message} }
+    case HexWeb.API.ElixirFormat.decode(files["metadata.exs"]) do
+      {:ok, result}   -> {:ok, result}
+      {:error, reason} -> {:error, %{metadata: reason}}
     end
   end
 end

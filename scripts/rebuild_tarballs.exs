@@ -31,7 +31,7 @@ defmodule HexWeb.Scripts.Tarballs do
   end
 
   defp meta(files, content_files) do
-    meta = HexWeb.Util.safe_deserialize_elixir(files["metadata.exs"])
+    {:ok, meta} = HexWeb.API.ElixirFormat.decode(files["metadata.exs"])
 
     reqs = Enum.into(meta["requirements"], %{}, fn
       {name, req} when is_binary(req) ->
@@ -41,7 +41,7 @@ defmodule HexWeb.Scripts.Tarballs do
     end)
 
     meta = %{meta | "requirements" => reqs, "files" => content_files}
-    HexWeb.Util.safe_serialize_elixir(meta)
+    HexWeb.API.ElixirFormat.encode(meta)
   end
 
   defp contents(files) do
