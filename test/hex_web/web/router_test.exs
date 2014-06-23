@@ -26,12 +26,13 @@ defmodule HexWeb.Web.RouterTest do
   end
 
   test "front page" do
-    path = Path.join([__DIR__, "..", "..", "fixtures"])
+    path     = Path.join([__DIR__, "..", "..", "fixtures"])
     logfile1 = File.read!(Path.join(path, "s3_logs_1.txt"))
     logfile2 = File.read!(Path.join(path, "s3_logs_2.txt"))
+    store    = Application.get_env(:hex_web, :store)
 
-    HexWeb.Config.store.put("logs/2013-11-01-21-32-16-E568B2907131C0C0", logfile1)
-    HexWeb.Config.store.put("logs/2013-11-01-21-32-19-E568B2907131C0C0", logfile2)
+    store.put("logs/2013-11-01-21-32-16-E568B2907131C0C0", logfile1)
+    store.put("logs/2013-11-01-21-32-19-E568B2907131C0C0", logfile2)
     HexWeb.Stats.Job.run({2013, 11, 1})
 
     conn = conn(:get, "/")

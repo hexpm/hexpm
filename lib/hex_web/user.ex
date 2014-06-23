@@ -88,7 +88,7 @@ defmodule HexWeb.User do
 
   defp gen_password(password) do
     password      = String.to_char_list(password)
-    work_factor   = HexWeb.Config.password_work_factor
+    work_factor   = Application.get_env(:hex_web, :password_work_factor)
     {:ok, salt} = :bcrypt.gen_salt(work_factor)
     {:ok, hash} = :bcrypt.hashpw(password, salt)
     :erlang.list_to_binary(hash)

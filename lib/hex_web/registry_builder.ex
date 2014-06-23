@@ -97,7 +97,8 @@ defmodule HexWeb.RegistryBuilder do
   end
 
   defp builder(pid) do
-    reg_file = Path.join(HexWeb.Config.tmp, "registry.ets")
+    tmp = Application.get_env(:hex_web, :tmp)
+    reg_file = Path.join(tmp, "registry.ets")
     {:ok, handle} = HexWeb.Registry.create()
     {:ok, result} = build_ets(handle, reg_file)
 
@@ -151,7 +152,7 @@ defmodule HexWeb.RegistryBuilder do
             :ok = :ets.tab2file(tid, String.to_char_list(file))
             :ets.delete(tid)
 
-            HexWeb.Config.store.put_registry(File.read!(file))
+            Application.get_env(:hex_web, :store).put_registry(File.read!(file))
             HexWeb.Registry.set_done(handle)
 
             memory

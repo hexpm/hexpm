@@ -55,6 +55,6 @@ defmodule HexWeb.Store.Local do
   end
 
   defp dir do
-    Path.join(HexWeb.Config.tmp, "store")
+    Path.join(Application.get_env(:hex_web, :tmp), "store")
   end
 end

@@ -47,7 +47,7 @@ defmodule HexWeb.Util do
   """
   @spec api_url([String.t] | String.t) :: String.t
   def api_url(path) do
-    HexWeb.Config.url <> "/api/" <> Path.join(List.wrap(path))
+    Application.get_env(:hex_web, :url) <> "/api/" <> Path.join(List.wrap(path))
   end
 
   @doc """
@@ -55,7 +55,7 @@ defmodule HexWeb.Util do
   """
   @spec url([String.t] | String.t) :: String.t
   def url(path) do
-    HexWeb.Config.url <> "/" <> Path.join(List.wrap(path))
+    Application.get_env(:hex_web, :url) <> "/" <> Path.join(List.wrap(path))
   end
 
   @doc """
@@ -63,7 +63,7 @@ defmodule HexWeb.Util do
   """
   @spec cdn_url([String.t] | String.t) :: String.t
   def cdn_url(path) do
-    HexWeb.Config.cdn_url <> "/" <> Path.join(List.wrap(path))
+    Application.get_env(:hex_web, :cdn_url) <> "/" <> Path.join(List.wrap(path))
   end
 
   @doc """

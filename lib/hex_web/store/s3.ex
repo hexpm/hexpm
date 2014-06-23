@@ -13,20 +13,20 @@ defmodule HexWeb.Store.S3 do
 
   def list(prefix) do
     prefix = String.to_char_list(prefix)
-    bucket = HexWeb.Config.s3_bucket |> String.to_char_list
+    bucket = Application.get_env(:hex_web, :s3_bucket) |> String.to_char_list
     result = :mini_s3.list_objects(bucket, [prefix: prefix], config())
     Enum.map(result[:contents], &List.to_string(&1[:key]))
   end
 
   def get(key) do
-    bucket = HexWeb.Config.s3_bucket |> String.to_char_list
+    bucket = Application.get_env(:hex_web, :s3_bucket) |> String.to_char_list
     key = String.to_char_list(key)
     result = :mini_s3.get_object(bucket, key, [], config())
     result[:content]
   end
 
   def put(key, blob) do
-    bucket = HexWeb.Config.s3_bucket |> String.to_char_list
+    bucket = Application.get_env(:hex_web, :s3_bucket) |> String.to_char_list
     key = String.to_char_list(key)
     :mini_s3.put_object(bucket, key, blob, [], [], config())
   end
@@ -44,7 +44,7 @@ defmodule HexWeb.Store.S3 do
   end
 
   def delete_tar(name) do
-    bucket = HexWeb.Config.s3_bucket |> String.to_char_list
+    bucket = Application.get_env(:hex_web, :s3_bucket) |> String.to_char_list
     name = String.to_char_list(name)
 
     :mini_s3.delete_object(bucket, name, config())
@@ -55,7 +55,7 @@ defmodule HexWeb.Store.S3 do
   end
 
   defp redirect(conn, path) do
-    url = HexWeb.Config.cdn_url <> "/" <> path
+    url = Application.get_env(:hex_web, :cdn_url) <> "/" <> path
     HexWeb.Plug.redirect(conn, url)
   end
 
@@ -64,15 +64,15 @@ defmodule HexWeb.Store.S3 do
 
   defp upload(name, data) when is_list(name) do
     # TODO: cache
-    bucket     = HexWeb.Config.s3_bucket |> String.to_char_list
+    bucket     = Application.get_env(:hex_web, :s3_bucket) |> String.to_char_list
     opts       = [acl: :public_read]
     headers    = []
     :mini_s3.put_object(bucket, name, data, opts, headers, config())
   end
 
   defp config do
-    access_key = HexWeb.Config.s3_access_key |> String.to_char_list
-    secret_key = HexWeb.Config.s3_secret_key |> String.to_char_list
+    access_key = Application.get_env(:hex_web, :s3_access_key) |> String.to_char_list
+    secret_key = Application.get_env(:hex_web, :s3_secret_key) |> String.to_char_list
     s3_config(access_key_id: access_key, secret_access_key: secret_key)
   end
 end

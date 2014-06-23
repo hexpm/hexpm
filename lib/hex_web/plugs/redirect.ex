@@ -15,7 +15,7 @@ defmodule HexWeb.Plugs.Redirect do
       redirects when is_list(redirects) ->
         conn =
           Enum.find_value(redirects, fn redirect ->
-            if conn.host == call(redirect), do: redirect(conn, call url)
+            if conn.host == call(redirect), do: redirect(conn, call(url))
           end) || conn
       _ -> :ok
     end

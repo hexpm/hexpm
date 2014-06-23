@@ -25,7 +25,7 @@ defmodule HexWeb.API.RouterTest do
 
     assert conn.status == 201
     body = Jazz.decode!(conn.resp_body)
-    assert body["url"] == "http://hex.pm/api/users/name"
+    assert body["url"] == "http://localhost:4000/api/users/name"
 
     user = assert User.get("name")
     assert user.email == "email@mail.com"
@@ -52,7 +52,7 @@ defmodule HexWeb.API.RouterTest do
 
     assert conn.status == 200
     body = Jazz.decode!(conn.resp_body)
-    assert body["url"] == "http://hex.pm/api/users/other"
+    assert body["url"] == "http://localhost:4000/api/users/other"
     user = assert User.get("other")
     assert user.email == "email@mail.com"
 
@@ -64,7 +64,7 @@ defmodule HexWeb.API.RouterTest do
 
     assert conn.status == 200
     body = Jazz.decode!(conn.resp_body)
-    assert body["url"] == "http://hex.pm/api/users/other"
+    assert body["url"] == "http://localhost:4000/api/users/other"
     assert User.get("other")
     refute User.get("foo")
   end
@@ -103,7 +103,7 @@ defmodule HexWeb.API.RouterTest do
 
     assert conn.status == 201
     body = Jazz.decode!(conn.resp_body)
-    assert body["url"] == "http://hex.pm/api/packages/ecto"
+    assert body["url"] == "http://localhost:4000/api/packages/ecto"
 
     user_id = User.get("eric").id
     package = assert Package.get("ecto")
@@ -122,7 +122,7 @@ defmodule HexWeb.API.RouterTest do
 
     assert conn.status == 200
     body = Jazz.decode!(conn.resp_body)
-    assert body["url"] == "http://hex.pm/api/packages/ecto"
+    assert body["url"] == "http://localhost:4000/api/packages/ecto"
 
     assert Package.get("ecto").meta["description"] == "awesomeness"
   end
@@ -173,7 +173,7 @@ defmodule HexWeb.API.RouterTest do
 
     assert conn.status == 201
     body = Jazz.decode!(conn.resp_body)
-    assert body["url"] == "http://hex.pm/api/packages/postgrex/releases/0.0.1"
+    assert body["url"] == "http://localhost:4000/api/packages/postgrex/releases/0.0.1"
 
     body = create_tar(%{app: :postgrex, version: "0.0.2", git_url: "url", git_ref: "ref", requirements: %{}}, [])
     conn = conn("POST", "/api/packages/postgrex/releases", body, headers: headers)
@@ -293,7 +293,7 @@ defmodule HexWeb.API.RouterTest do
     body = Jazz.decode!(conn.resp_body)
     assert body["name"] == "macbook"
     assert body["secret"]
-    assert body["url"] == "http://hex.pm/api/keys/macbook"
+    assert body["url"] == "http://localhost:4000/api/keys/macbook"
   end
 
   test "all keys" do
@@ -311,7 +311,7 @@ defmodule HexWeb.API.RouterTest do
     first = hd(body)
     assert first["name"] == "macbook"
     assert first["secret"]
-    assert first["url"] == "http://hex.pm/api/keys/macbook"
+    assert first["url"] == "http://localhost:4000/api/keys/macbook"
   end
 
   test "delete key" do
@@ -387,7 +387,7 @@ defmodule HexWeb.API.RouterTest do
 
     assert conn.status == 201
     body = Jazz.decode!(conn.resp_body)
-    assert body["url"] == "http://hex.pm/api/users/name"
+    assert body["url"] == "http://localhost:4000/api/users/name"
 
     user = assert User.get("name")
     assert user.email == "email@mail.com"
@@ -402,7 +402,7 @@ defmodule HexWeb.API.RouterTest do
     assert body["name"] == "decimal"
 
     release = List.first(body["releases"])
-    assert release["url"] == "http://hex.pm/api/packages/decimal/releases/0.0.1"
+    assert release["url"] == "http://localhost:4000/api/packages/decimal/releases/0.0.1"
     assert release["version"] == "0.0.1"
   end
 
@@ -412,7 +412,7 @@ defmodule HexWeb.API.RouterTest do
 
     assert conn.status == 200
     body = Jazz.decode!(conn.resp_body)
-    assert body["url"] == "http://hex.pm/api/packages/decimal/releases/0.0.1"
+    assert body["url"] == "http://localhost:4000/api/packages/decimal/releases/0.0.1"
     assert body["version"] == "0.0.1"
   end
 

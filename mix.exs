@@ -12,7 +12,7 @@ defmodule HexWeb.Mixfile do
   def application do
     [applications: [:cowboy, :plug, :bcrypt, :mini_s3, :lager],
      mod: {HexWeb, []},
-     env: [config_password_work_factor: 12]]
+     env: []]
   end
 
   defp deps do

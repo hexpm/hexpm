@@ -8,10 +8,26 @@ defmodule HexWeb do
       opts = Keyword.put(opts, :port, String.to_integer(port))
     end
 
+    config(opts[:port])
     File.mkdir_p!("tmp")
-    HexWeb.Config.init(opts)
+
     Plug.Adapters.Cowboy.http(HexWeb.Router, [], opts)
     HexWeb.Supervisor.start_link
+  end
+
+  defp config(port) do
+    if System.get_env("S3_BUCKET") do
+      store = HexWeb.Store.S3
+    else
+      store = HexWeb.Store.Local
+    end
+
+    use_ssl = match?("https://" <> _, Application.get_env(:hex_web, :url))
+
+    Application.put_env(:hex_web, :use_ssl, use_ssl)
+    Application.put_env(:hex_web, :store, store)
+    Application.put_env(:hex_web, :tmp, Path.expand("tmp"))
+    Application.put_env(:hex_web, :port, port)
   end
 
   defprotocol Render do
