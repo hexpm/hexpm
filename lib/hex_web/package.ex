@@ -8,7 +8,7 @@ defmodule HexWeb.Package do
 
   schema "packages" do
     field :name, :string
-    belongs_to :owner, HexWeb.User
+    has_many :owners, HexWeb.User
     field :meta, :string
     has_many :releases, HexWeb.Release
     field :created_at, :datetime
@@ -41,13 +41,21 @@ defmodule HexWeb.Package do
   def create(name, owner, meta) do
     now = Util.ecto_now
     meta = Dict.take(meta, @meta_fields)
-    package = struct(owner.packages, name: name, meta: meta, created_at: now,
-                                     updated_at: now)
+    package = %HexWeb.Package{name: name, meta: meta, created_at: now,
+                              updated_at: now}
 
     case validate_create(package) do
       [] ->
         package = %{package | meta: Jazz.encode!(package.meta)}
-        package = HexWeb.Repo.insert(package)
+
+        {:ok, package} = HexWeb.Repo.transaction(fn ->
+          package = HexWeb.Repo.insert(package)
+
+          %HexWeb.PackageOwner{package_id: package.id, owner_id: owner.id}
+          |> HexWeb.Repo.insert
+          package
+        end)
+
         {:ok, %{package | meta: meta}}
       errors ->
         {:error, errors_to_map(errors)}
@@ -77,6 +85,23 @@ defmodule HexWeb.Package do
     if package do
       %{package | meta: Jazz.decode!(package.meta)}
     end
+  end
+
+  def owners(package) do
+    from(p in HexWeb.PackageOwner,
+         where: p.package_id == ^package.id,
+         join: u in HexWeb.User, on: u.id == p.owner_id,
+         select: u)
+    |> HexWeb.Repo.all
+  end
+
+  def owner?(package, user) do
+    from(p in HexWeb.PackageOwner,
+         where: p.package_id == ^package.id,
+         where: p.owner_id == ^user.id,
+         select: true)
+    |> HexWeb.Repo.all
+    |> Enum.any?
   end
 
   def all(page, count, search \\ nil) do

@@ -108,7 +108,7 @@ defmodule HexWeb.API.RouterTest do
     user_id = User.get("eric").id
     package = assert Package.get("ecto")
     assert package.name == "ecto"
-    assert package.owner_id == user_id
+    assert [%User{id: ^user_id}] = Package.owners(package)
   end
 
   test "update package" do

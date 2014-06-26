@@ -17,9 +17,7 @@ defmodule HexWeb.API.Router do
 
   post "packages/:name/releases" do
     if package = Package.get(name) do
-      user_id = package.owner_id
-
-      with_authorized(_user, id: user_id) do
+      with_authorized(_user, &Package.owner?(package, &1)) do
         {:ok, body, conn} = read_body(conn)
 
         case HexWeb.Tar.metadata(body) do
@@ -42,7 +40,7 @@ defmodule HexWeb.API.Router do
         end
       end
     else
-      send_resp(conn, 404, "")
+      raise NotFound
     end
   end
 
@@ -110,8 +108,7 @@ defmodule HexWeb.API.Router do
 
     put "packages/:name" do
       if package = Package.get(name) do
-        user_id = package.owner_id
-        with_authorized(_user, id: user_id) do
+        with_authorized(_user, &Package.owner?(package, &1)) do
           result = Package.update(package, conn.params["meta"])
           send_update_resp(conn, result, :public)
         end
@@ -125,9 +122,7 @@ defmodule HexWeb.API.Router do
 
     delete "packages/:name/releases/:version" do
       if (package = Package.get(name)) && (release = Release.get(package, version)) do
-        user_id = package.owner_id
-
-        with_authorized(_user, id: user_id) do
+        with_authorized(_user, &Package.owner?(package, &1)) do
           result = Release.delete(release)
 
           if result == :ok do

@@ -9,7 +9,7 @@ defmodule HexWeb.User do
     field :username, :string
     field :email, :string
     field :password, :string
-    has_many :packages, HexWeb.Package, foreign_key: :owner_id
+    has_many :package_owners, HexWeb.PackageOwner, foreign_key: :owner_id
     has_many :keys, HexWeb.API.Key
     field :created_at, :datetime
     field :updated_at, :datetime

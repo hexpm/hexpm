@@ -119,8 +119,14 @@ defmodule HexWeb.API.Util do
   """
   @spec with_authorized_basic(Macro.t, Keyword.t) :: Macro.t
   @spec with_authorized_basic(Macro.t, Keyword.t, Keyword.t) :: Macro.t
-  defmacro with_authorized_basic(user, as \\ [], opts) do
-    do_with_authorized(user, as, [only_basic: true], Keyword.fetch!(opts, :do))
+  defmacro with_authorized_basic(user, check \\ [], opts)
+
+  defmacro with_authorized_basic(user, fields, opts) when is_list(fields) do
+    with_authorized_fields(user, fields, [only_basic: true], Keyword.fetch!(opts, :do))
+  end
+
+  defmacro with_authorized_basic(user, fun, opts) do
+    with_authorized_fun(user, fun, [only_basic: true], Keyword.fetch!(opts, :do))
   end
 
   @doc """
@@ -129,17 +135,39 @@ defmodule HexWeb.API.Util do
   """
   @spec with_authorized(Macro.t, Keyword.t) :: Macro.t
   @spec with_authorized(Macro.t, Macro.t, Keyword.t) :: Macro.t
-  defmacro with_authorized(user, as \\ [], opts) do
-    do_with_authorized(user, as, [], Keyword.fetch!(opts, :do))
+  defmacro with_authorized(user, check \\ [], opts)
+
+  defmacro with_authorized(user, fields, opts) when is_list(fields) do
+    with_authorized_fields(user, fields, [], Keyword.fetch!(opts, :do))
   end
 
-  defp do_with_authorized(user, as, opts, block) do
-    as = Enum.map(as, fn {key, val} -> {key, {:^, [], [val]}} end)
+  defmacro with_authorized(user, fun, opts) do
+    with_authorized_fun(user, fun, [], Keyword.fetch!(opts, :do))
+  end
+
+  defp with_authorized_fields(user, fields, opts, block) do
+    fields = Enum.map(fields, fn {key, val} -> {key, {:^, [], [val]}} end)
 
     quote do
       case HexWeb.API.Util.authorize(var!(conn), unquote(opts)) do
-        {:ok, %HexWeb.User{unquote_splicing(as)} = unquote(user)} ->
+        {:ok, %HexWeb.User{unquote_splicing(fields)} = unquote(user)} ->
           unquote(block)
+        _ ->
+          HexWeb.API.Util.send_unauthorized(var!(conn))
+      end
+    end
+  end
+
+  defp with_authorized_fun(user, fun, opts, block) do
+    quote do
+      case HexWeb.API.Util.authorize(var!(conn), unquote(opts)) do
+        {:ok, user = unquote(user)} ->
+          if unquote(fun).(user) do
+            unquote(block)
+          else
+            HexWeb.API.Util.send_unauthorized(var!(conn))
+          end
+
         _ ->
           HexWeb.API.Util.send_unauthorized(var!(conn))
       end
@@ -149,7 +177,7 @@ defmodule HexWeb.API.Util do
   # Check if a user is authorized, return `{:ok, user}` if so,
   # or `:error` if authorization failed
   @doc false
-  def authorize(conn, opts) do
+  def authorize(conn, opts \\ []) do
     only_basic = !!opts[:only_basic]
     case get_req_header(conn, "authorization") do
       ["Basic " <> credentials] ->

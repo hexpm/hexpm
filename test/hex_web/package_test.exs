@@ -13,7 +13,7 @@ defmodule HexWeb.PackageTest do
     user = User.get("eric")
     user_id = user.id
     assert {:ok, %Package{}} = Package.create("ecto", user, %{})
-    assert %Package{owner_id: ^user_id} = Package.get("ecto")
+    assert [%User{id: ^user_id}] = Package.get("ecto") |> Package.owners
     assert nil?(Package.get("postgrex"))
   end
 
