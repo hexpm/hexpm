@@ -5,13 +5,13 @@ defmodule HexWeb.UserTest do
 
   test "create user and auth" do
     assert {:ok, %User{}} = User.create("eric", "eric@mail.com", "hunter42")
-    assert User.get("eric") |> User.auth?("hunter42")
+    assert User.get(username: "eric") |> User.auth?("hunter42")
   end
 
   test "create user and fail auth" do
     assert {:ok, %User{}} = User.create("eric", "eric@mail.com", "erics_pass")
-    refute User.get("josé") |> User.auth?("erics_pass")
-    refute User.get("eric") |> User.auth?("wrong_pass")
+    refute User.get(username: "josé") |> User.auth?("erics_pass")
+    refute User.get(username: "eric") |> User.auth?("wrong_pass")
   end
 
   test "users name and email are unique" do
@@ -24,7 +24,7 @@ defmodule HexWeb.UserTest do
     assert {:ok, user} = User.create("eric", "eric@mail.com", "erics_pass")
     User.update(user, "other@mail.com", "new_pass")
 
-    user = User.get("eric")
+    user = User.get(username: "eric")
     assert user.email == "other@mail.com"
     assert User.auth?(user, "new_pass")
     refute User.auth?(user, "erics_pass")

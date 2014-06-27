@@ -26,7 +26,7 @@ defmodule HexWeb.Util do
 
   def etag(models) do
     list = Enum.map(List.wrap(models), fn model ->
-      [ model.__struct__, model.id, model.updated_at ]
+      [model.__struct__, model.id, model.updated_at]
     end)
 
     binary = :erlang.term_to_binary(list)

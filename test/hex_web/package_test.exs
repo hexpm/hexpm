@@ -10,7 +10,7 @@ defmodule HexWeb.PackageTest do
   end
 
   test "create package and get" do
-    user = User.get("eric")
+    user = User.get(username: "eric")
     user_id = user.id
     assert {:ok, %Package{}} = Package.create("ecto", user, %{})
     assert [%User{id: ^user_id}] = Package.get("ecto") |> Package.owners
@@ -18,7 +18,7 @@ defmodule HexWeb.PackageTest do
   end
 
   test "update package" do
-    user = User.get("eric")
+    user = User.get(username: "eric")
     assert {:ok, package} = Package.create("ecto", user, %{})
 
     Package.update(package, %{"contributors" => ["eric", "josé"]})
@@ -33,7 +33,7 @@ defmodule HexWeb.PackageTest do
       "links"        => %{"github" => "www", "docs" => "www"},
       "description"  => "so good"}
 
-    user = User.get("eric")
+    user = User.get(username: "eric")
     assert {:ok, %Package{meta: ^meta}} = Package.create("ecto", user, meta)
     assert %Package{meta: ^meta} = Package.get("ecto")
   end
@@ -43,7 +43,7 @@ defmodule HexWeb.PackageTest do
       "contributors" => ["eric"],
       "foo"          => "bar"}
 
-    user = User.get("eric")
+    user = User.get(username: "eric")
     assert {:ok, %Package{}} = Package.create("ecto", user, meta)
     assert %Package{meta: meta2} = Package.get("ecto")
 
@@ -58,14 +58,14 @@ defmodule HexWeb.PackageTest do
       "links"        => ["url"],
       "description"  => ["so bad"]}
 
-    user = User.get("eric")
+    user = User.get(username: "eric")
     assert {:error, errors} = Package.create("ecto", user, meta)
     assert Dict.size(errors) == 1
     assert Dict.size(errors[:meta]) == 4
   end
 
   test "packages are unique" do
-    user = User.get("eric")
+    user = User.get(username: "eric")
     assert {:ok, %Package{}} = Package.create("ecto", user, %{})
     assert {:error, _} = Package.create("ecto", user, %{})
   end

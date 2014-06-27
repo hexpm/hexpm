@@ -38,6 +38,6 @@ defmodule HexWeb.Plugs.Exception do
       end
 
     body = %{error: status}
-    HexWeb.API.Util.send_render(conn, status, body, true)
+    HexWeb.API.Util.send_body(conn, status, body, true)
   end
 end

@@ -67,8 +67,8 @@ defmodule HexWeb.API.Router do
     end
 
     get "users/:name" do
-      if user = User.get(name) do
-        when_stale(conn, user, &(&1 |> cache(:public) |> send_render(200, user)))
+      if user = User.get(username: name) do
+        when_stale(conn, user, &send_okay(&1, user, :public))
       else
         raise NotFound
       end
@@ -85,7 +85,7 @@ defmodule HexWeb.API.Router do
     get "packages" do
       page = parse_integer(conn.params["page"], 1)
       packages = Package.all(page, 100, conn.params["search"])
-      when_stale(conn, packages, &(&1 |> cache(:public) |> send_render(200, packages)))
+      when_stale(conn, packages, &send_okay(&1, packages, :public))
     end
 
     get "packages/:name" do
@@ -97,9 +97,7 @@ defmodule HexWeb.API.Router do
                     |> Ecto.Associations.load(:releases, releases)
                     |> Ecto.Associations.load(:downloads, downloads)
 
-          conn
-          |> cache(:public)
-          |> send_render(200, package)
+          send_okay(conn, package, :public)
         end)
       else
         raise NotFound
@@ -143,10 +141,62 @@ defmodule HexWeb.API.Router do
           downloads = HexWeb.Stats.ReleaseDownload.release(release)
           release = Ecto.Associations.load(release, :downloads, downloads)
 
-          conn
-          |> cache(:public)
-          |> send_render(200, release)
+          send_okay(conn, release, :public)
         end)
+      else
+        raise NotFound
+      end
+    end
+
+    get "packages/:name/owners" do
+      if package = Package.get(name) do
+        with_authorized(_user, &Package.owner?(package, &1)) do
+          send_okay(conn, Package.owners(package), :public)
+        end
+      else
+        raise NotFound
+      end
+    end
+
+    get "packages/:name/owners/:email" do
+      if (package = Package.get(name)) && (owner = User.get(email: email)) do
+        with_authorized(_user, &Package.owner?(package, &1)) do
+          if Package.owner?(package, owner) do
+            conn
+            |> cache(:private)
+            |> send_resp(204, "")
+          else
+            raise NotFound
+          end
+        end
+      else
+        raise NotFound
+      end
+    end
+
+    put "packages/:name/owners/:email" do
+      if (package = Package.get(name)) && (owner = User.get(email: email)) do
+        with_authorized(_user, &Package.owner?(package, &1)) do
+          Package.add_owner(package, owner)
+
+          conn
+          |> cache(:private)
+          |> send_resp(204, "")
+        end
+      else
+        raise NotFound
+      end
+    end
+
+    delete "packages/:name/owners/:email" do
+      if (package = Package.get(name)) && (owner = User.get(email: email)) do
+        with_authorized(_user, &Package.owner?(package, &1)) do
+          Package.delete_owner(package, owner)
+
+          conn
+          |> cache(:private)
+          |> send_resp(204, "")
+        end
       else
         raise NotFound
       end

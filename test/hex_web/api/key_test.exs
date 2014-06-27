@@ -10,20 +10,20 @@ defmodule HexWeb.API.KeyTest do
   end
 
   test "create key and get" do
-    user = User.get("eric")
+    user = User.get(username: "eric")
     user_id = user.id
     assert {:ok, %Key{}} = Key.create("computer", user)
     assert %Key{user_id: ^user_id} = Key.get("computer", user)
   end
 
   test "create unique key name" do
-    user = User.get("eric")
+    user = User.get(username: "eric")
     assert {:ok, %Key{name: "computer"}}   = Key.create("computer", user)
     assert {:ok, %Key{name: "computer-2"}} = Key.create("computer", user)
   end
 
   test "all user keys" do
-    eric = User.get("eric")
+    eric = User.get(username: "eric")
     {:ok, jose} = User.create("jose", "jose@mail.com", "jose")
     assert {:ok, %Key{name: "computer"}} = Key.create("computer", eric)
     assert {:ok, %Key{name: "macbook"}}  = Key.create("macbook", eric)
@@ -34,7 +34,7 @@ defmodule HexWeb.API.KeyTest do
   end
 
   test "delete keys" do
-    user = User.get("eric")
+    user = User.get(username: "eric")
     assert {:ok, %Key{}} = Key.create("computer", user)
     assert {:ok, %Key{}} = Key.create("macbook", user)
     assert Key.delete(Key.get("computer", user)) == :ok

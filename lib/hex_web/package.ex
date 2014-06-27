@@ -104,6 +104,18 @@ defmodule HexWeb.Package do
     |> Enum.any?
   end
 
+  def add_owner(package, user) do
+    %HexWeb.PackageOwner{package_id: package.id, owner_id: user.id}
+    |> HexWeb.Repo.insert
+  end
+
+  def delete_owner(package, user) do
+    from(p in HexWeb.PackageOwner,
+         where: p.package_id == ^package.id,
+         where: p.owner_id == ^user.id)
+    |> HexWeb.Repo.delete_all
+  end
+
   def all(page, count, search \\ nil) do
     from(p in HexWeb.Package,
          order_by: p.name)

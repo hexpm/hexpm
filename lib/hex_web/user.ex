@@ -68,9 +68,17 @@ defmodule HexWeb.User do
     end
   end
 
-  def get(username) do
+  def get(username: username) do
     from(u in HexWeb.User,
          where: downcase(u.username) == downcase(^username),
+         limit: 1)
+    |> HexWeb.Repo.all
+    |> List.first
+  end
+
+  def get(email: email) do
+    from(u in HexWeb.User,
+         where: u.email == downcase(^email),
          limit: 1)
     |> HexWeb.Repo.all
     |> List.first
@@ -82,7 +90,7 @@ defmodule HexWeb.User do
     stored_hash   = user.password
     password      = String.to_char_list(password)
     stored_hash   = :erlang.binary_to_list(stored_hash)
-    {:ok, hash} = :bcrypt.hashpw(password, stored_hash)
+    {:ok, hash}   = :bcrypt.hashpw(password, stored_hash)
     hash == stored_hash
   end
 

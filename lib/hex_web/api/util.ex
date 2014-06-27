@@ -59,44 +59,51 @@ defmodule HexWeb.API.Util do
     |> Enum.any?(&(&1 in [etag, "*"]))
   end
 
-  defp cache_entity(conn, entity) do
-    etag     = HexWeb.Util.etag(entity)
-    modified = Ecto.DateTime.to_erl(entity.updated_at)
-
+  defp cache_entity(conn, nil) do
     conn
-    |> put_resp_header("etag", etag)
-    |> put_resp_header("last-modified", :cowboy_clock.rfc1123(modified))
+  end
+
+  defp cache_entity(conn, entity) do
+    if not is_list(entity) do
+      clock = entity.updated_at
+              |> Ecto.DateTime.to_erl
+              |> :cowboy_clock.rfc1123
+      conn = put_resp_header(conn, "last-modified", clock)
+    end
+
+    put_resp_header(conn, "etag", HexWeb.Util.etag(entity))
   end
 
   @doc """
   Renders an entity or dict body and sends it with a status code.
   """
   @spec send_render(Plug.Conn.t, non_neg_integer, term) :: Plug.Conn.t
-  @spec send_render(Plug.Conn.t, non_neg_integer, term, boolean) :: Plug.Conn.t
-  def send_render(conn, status, body, fallback \\ false)
-
-  def send_render(conn, status, body, fallback) do
+  def send_render(conn, status, body) do
     body = render(body)
-    send_body(conn, status, body, fallback)
+    send_body(conn, status, body, false)
   end
 
-  defp render(list) when is_list(list) do
-    Enum.map(list, &render/1)
+  defp render(nil) do
+    nil
   end
 
   defp render(%{__struct__: _} = model) do
     HexWeb.Render.render(model)
   end
 
+  defp render(list) when is_list(list) do
+    Enum.map(list, &render/1)
+  end
+
   defp render(map) when is_map(map) do
     map
   end
 
-  defp render(entity) do
-    HexWeb.Render.render(entity)
+  def send_body(conn, status, nil, _fallback) do
+    send_resp(conn, status, "")
   end
 
-  defp send_body(conn, status, body, fallback) do
+  def send_body(conn, status, body, fallback) do
     case conn.assigns[:format] do
       :elixir ->
         body = HexWeb.API.ElixirFormat.encode(body)
@@ -192,7 +199,7 @@ defmodule HexWeb.API.Util do
   defp basic_auth(credentials) do
     case String.split(:base64.decode(credentials), ":", parts: 2) do
       [username, password] ->
-        user = User.get(username)
+        user = User.get(username: username)
         if User.auth?(user, password) do
           {:ok, user}
         else
@@ -218,6 +225,14 @@ defmodule HexWeb.API.Util do
     conn
     |> put_resp_header("www-authenticate", "Basic realm=hex")
     |> send_resp(401, "")
+  end
+
+  @spec send_okay(Plug.Conn.t, term, :public | :private) :: Plug.Conn.t
+  def send_okay(conn, entity, privacy) do
+    conn
+    |> cache_entity(entity)
+    |> cache(privacy)
+    |> send_render(200, entity)
   end
 
   @doc """

@@ -11,8 +11,9 @@ defmodule HexWeb.API.RouterTest do
 
   setup do
     User.create("other", "other@mail.com", "other")
+    User.create("jose", "jose@mail.com", "jose")
     {:ok, user} = User.create("eric", "eric@mail.com", "eric")
-    {:ok, _}    = Package.create("postgrex", user,%{})
+    {:ok, _}    = Package.create("postgrex", user, %{})
     {:ok, pkg}  = Package.create("decimal", user, %{})
     {:ok, _}    = Release.create(pkg, "0.0.1", [{"postgrex", "0.0.1"}], "")
     :ok
@@ -27,7 +28,7 @@ defmodule HexWeb.API.RouterTest do
     body = Jazz.decode!(conn.resp_body)
     assert body["url"] == "http://localhost:4000/api/users/name"
 
-    user = assert User.get("name")
+    user = assert User.get(username: "name")
     assert user.email == "email@mail.com"
   end
 
@@ -40,7 +41,7 @@ defmodule HexWeb.API.RouterTest do
     body = Jazz.decode!(conn.resp_body)
     assert body["message"] == "Validation failed"
     assert body["errors"]["email"] == "can't be blank"
-    refute User.get("name")
+    refute User.get(username: "name")
   end
 
   test "update user" do
@@ -53,7 +54,7 @@ defmodule HexWeb.API.RouterTest do
     assert conn.status == 200
     body = Jazz.decode!(conn.resp_body)
     assert body["url"] == "http://localhost:4000/api/users/other"
-    user = assert User.get("other")
+    user = assert User.get(username: "other")
     assert user.email == "email@mail.com"
 
     headers = [ {"content-type", "application/json"},
@@ -65,12 +66,12 @@ defmodule HexWeb.API.RouterTest do
     assert conn.status == 200
     body = Jazz.decode!(conn.resp_body)
     assert body["url"] == "http://localhost:4000/api/users/other"
-    assert User.get("other")
-    refute User.get("foo")
+    assert User.get(username: "other")
+    refute User.get(username: "foo")
   end
 
   test "update user only basic auth" do
-    user = User.get("other")
+    user = User.get(username: "other")
     {:ok, key} = Key.create("macbook", user)
 
     headers = [ {"content-type", "application/json"},
@@ -82,7 +83,7 @@ defmodule HexWeb.API.RouterTest do
   end
 
   test "create package with key auth" do
-    user = User.get("eric")
+    user = User.get(username: "eric")
     {:ok, key} = Key.create("macbook", user)
 
     headers = [ {"content-type", "application/json"},
@@ -105,14 +106,14 @@ defmodule HexWeb.API.RouterTest do
     body = Jazz.decode!(conn.resp_body)
     assert body["url"] == "http://localhost:4000/api/packages/ecto"
 
-    user_id = User.get("eric").id
+    user_id = User.get(username: "eric").id
     package = assert Package.get("ecto")
     assert package.name == "ecto"
     assert [%User{id: ^user_id}] = Package.owners(package)
   end
 
   test "update package" do
-    Package.create("ecto", User.get("eric"), %{})
+    Package.create("ecto", User.get(username: "eric"), %{})
 
     headers = [ {"content-type", "application/json"},
                 {"authorization", "Basic " <> :base64.encode("eric:eric")}]
@@ -139,7 +140,7 @@ defmodule HexWeb.API.RouterTest do
   end
 
   test "update package authorizes" do
-    Package.create("ecto", User.get("eric"), %{})
+    Package.create("ecto", User.get(username: "eric"), %{})
 
     headers = [ {"content-type", "application/json"},
                 {"authorization", "Basic " <> :base64.encode("other:other")}]
@@ -279,11 +280,11 @@ defmodule HexWeb.API.RouterTest do
     conn = Router.call(conn, [])
     assert conn.status == 201
 
-    assert Key.get("macbook", User.get("eric"))
+    assert Key.get("macbook", User.get(username: "eric"))
   end
 
   test "get key" do
-    Key.create("macbook", User.get("eric"))
+    Key.create("macbook", User.get(username: "eric"))
 
     headers = [ {"authorization", "Basic " <> :base64.encode("eric:eric")}]
     conn = conn("GET", "/api/keys/macbook", nil, headers: headers)
@@ -297,7 +298,7 @@ defmodule HexWeb.API.RouterTest do
   end
 
   test "all keys" do
-    user = User.get("eric")
+    user = User.get(username: "eric")
     Key.create("macbook", user)
     Key.create("computer", user)
 
@@ -315,7 +316,7 @@ defmodule HexWeb.API.RouterTest do
   end
 
   test "delete key" do
-    user = User.get("eric")
+    user = User.get(username: "eric")
     Key.create("macbook", user)
     Key.create("computer", user)
 
@@ -329,7 +330,7 @@ defmodule HexWeb.API.RouterTest do
   end
 
   test "key authorizes" do
-    user = User.get("eric")
+    user = User.get(username: "eric")
     Key.create("macbook", user)
 
     headers = [ {"authorization", "Basic " <> :base64.encode("other:other")}]
@@ -346,7 +347,7 @@ defmodule HexWeb.API.RouterTest do
   end
 
   test "key authorizes only basic auth" do
-    user = User.get("eric")
+    user = User.get(username: "eric")
     {:ok, key} = Key.create("macbook", user)
 
     headers = [ {"authorization", key.secret}]
@@ -389,7 +390,7 @@ defmodule HexWeb.API.RouterTest do
     body = Jazz.decode!(conn.resp_body)
     assert body["url"] == "http://localhost:4000/api/users/name"
 
-    user = assert User.get("name")
+    user = assert User.get(username: "name")
     assert user.email == "email@mail.com"
   end
 
@@ -487,5 +488,97 @@ defmodule HexWeb.API.RouterTest do
     assert conn.status == 200
     body = Jazz.decode!(conn.resp_body)
     assert Dict.size(body) == 0
+  end
+
+  test "get package owners" do
+    headers = [ {"authorization", "Basic " <> :base64.encode("eric:eric")}]
+    conn = conn("GET", "/api/packages/postgrex/owners", nil, headers: headers)
+    conn = Router.call(conn, [])
+    assert conn.status == 200
+
+    body = Jazz.decode!(conn.resp_body)
+    assert [%{"username" => "eric"}] = body
+
+    package = Package.get("postgrex")
+    user = User.get(username: "jose")
+    Package.add_owner(package, user)
+
+    headers = [ {"authorization", "Basic " <> :base64.encode("eric:eric")}]
+    conn = conn("GET", "/api/packages/postgrex/owners", nil, headers: headers)
+    conn = Router.call(conn, [])
+    assert conn.status == 200
+
+    body = Jazz.decode!(conn.resp_body)
+    assert [%{"username" => "jose"}, %{"username" => "eric"}] = body
+  end
+
+  test "get package owners authorizes" do
+    headers = [ {"authorization", "Basic " <> :base64.encode("other:other")}]
+    conn = conn("GET", "/api/packages/postgrex/owners", nil, headers: headers)
+    conn = Router.call(conn, [])
+    assert conn.status == 401
+  end
+
+  test "check if user is package owner" do
+    headers = [ {"authorization", "Basic " <> :base64.encode("eric:eric")}]
+    conn = conn("GET", "/api/packages/postgrex/owners/eric@mail.com", nil, headers: headers)
+    conn = Router.call(conn, [])
+    assert conn.status == 204
+
+    headers = [ {"authorization", "Basic " <> :base64.encode("eric:eric")}]
+    conn = conn("GET", "/api/packages/postgrex/owners/jose@mail.com", nil, headers: headers)
+    conn = Router.call(conn, [])
+    assert conn.status == 404
+  end
+
+  test "check if user is package owner authorizes" do
+    headers = [ {"authorization", "Basic " <> :base64.encode("other:other")}]
+    conn = conn("GET", "/api/packages/postgrex/owners/eric@mail.com", nil, headers: headers)
+    conn = Router.call(conn, [])
+    assert conn.status == 401
+  end
+
+  test "add package owner" do
+    headers = [ {"authorization", "Basic " <> :base64.encode("eric:eric")}]
+    conn = conn("PUT", "/api/packages/postgrex/owners/jose@mail.com", nil, headers: headers)
+    conn = Router.call(conn, [])
+    assert conn.status == 204
+
+    package = Package.get("postgrex")
+    assert [%User{username: "jose"}, %User{username: "eric"}] = Package.owners(package)
+  end
+
+  test "add package owner authorizes" do
+    headers = [ {"authorization", "Basic " <> :base64.encode("other:other")}]
+    conn = conn("PUT", "/api/packages/postgrex/owners/jose@mail.com", nil, headers: headers)
+    conn = Router.call(conn, [])
+    assert conn.status == 401
+  end
+
+  test "delete package owner" do
+    package = Package.get("postgrex")
+    user = User.get(username: "jose")
+    Package.add_owner(package, user)
+
+    headers = [ {"authorization", "Basic " <> :base64.encode("eric:eric")}]
+    conn = conn("DELETE", "/api/packages/postgrex/owners/jose@mail.com", nil, headers: headers)
+    conn = Router.call(conn, [])
+    assert conn.status == 204
+
+    assert [%User{username: "eric"}] = Package.owners(package)
+
+    headers = [ {"authorization", "Basic " <> :base64.encode("eric:eric")}]
+    conn = conn("DELETE", "/api/packages/postgrex/owners/jose@mail.com", nil, headers: headers)
+    conn = Router.call(conn, [])
+    assert conn.status == 204
+
+    assert [%User{username: "eric"}] = Package.owners(package)
+  end
+
+  test "delete package owner authorizes" do
+    headers = [ {"authorization", "Basic " <> :base64.encode("other:other")}]
+    conn = conn("DELETE", "/api/packages/postgrex/owners/eric@mail.com", nil, headers: headers)
+    conn = Router.call(conn, [])
+    assert conn.status == 401
   end
 end
