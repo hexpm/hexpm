@@ -540,7 +540,7 @@ defmodule HexWeb.API.RouterTest do
 
   test "add package owner" do
     headers = [ {"authorization", "Basic " <> :base64.encode("eric:eric")}]
-    conn = conn("PUT", "/api/packages/postgrex/owners/jose@mail.com", nil, headers: headers)
+    conn = conn("PUT", "/api/packages/postgrex/owners/jose%40mail.com", nil, headers: headers)
     conn = Router.call(conn, [])
     assert conn.status == 204
 
@@ -550,7 +550,7 @@ defmodule HexWeb.API.RouterTest do
 
   test "add package owner authorizes" do
     headers = [ {"authorization", "Basic " <> :base64.encode("other:other")}]
-    conn = conn("PUT", "/api/packages/postgrex/owners/jose@mail.com", nil, headers: headers)
+    conn = conn("PUT", "/api/packages/postgrex/owners/jose%40mail.com", nil, headers: headers)
     conn = Router.call(conn, [])
     assert conn.status == 401
   end
@@ -561,14 +561,14 @@ defmodule HexWeb.API.RouterTest do
     Package.add_owner(package, user)
 
     headers = [ {"authorization", "Basic " <> :base64.encode("eric:eric")}]
-    conn = conn("DELETE", "/api/packages/postgrex/owners/jose@mail.com", nil, headers: headers)
+    conn = conn("DELETE", "/api/packages/postgrex/owners/jose%40mail.com", nil, headers: headers)
     conn = Router.call(conn, [])
     assert conn.status == 204
 
     assert [%User{username: "eric"}] = Package.owners(package)
 
     headers = [ {"authorization", "Basic " <> :base64.encode("eric:eric")}]
-    conn = conn("DELETE", "/api/packages/postgrex/owners/jose@mail.com", nil, headers: headers)
+    conn = conn("DELETE", "/api/packages/postgrex/owners/jose%40mail.com", nil, headers: headers)
     conn = Router.call(conn, [])
     assert conn.status == 204
 
@@ -577,7 +577,7 @@ defmodule HexWeb.API.RouterTest do
 
   test "delete package owner authorizes" do
     headers = [ {"authorization", "Basic " <> :base64.encode("other:other")}]
-    conn = conn("DELETE", "/api/packages/postgrex/owners/eric@mail.com", nil, headers: headers)
+    conn = conn("DELETE", "/api/packages/postgrex/owners/eric%40mail.com", nil, headers: headers)
     conn = Router.call(conn, [])
     assert conn.status == 401
   end

@@ -159,6 +159,8 @@ defmodule HexWeb.API.Router do
     end
 
     get "packages/:name/owners/:email" do
+      email = URI.decode_www_form(email)
+
       if (package = Package.get(name)) && (owner = User.get(email: email)) do
         with_authorized(_user, &Package.owner?(package, &1)) do
           if Package.owner?(package, owner) do
@@ -175,6 +177,8 @@ defmodule HexWeb.API.Router do
     end
 
     put "packages/:name/owners/:email" do
+      email = URI.decode_www_form(email)
+
       if (package = Package.get(name)) && (owner = User.get(email: email)) do
         with_authorized(_user, &Package.owner?(package, &1)) do
           Package.add_owner(package, owner)
@@ -189,6 +193,8 @@ defmodule HexWeb.API.Router do
     end
 
     delete "packages/:name/owners/:email" do
+      email = URI.decode_www_form(email)
+
       if (package = Package.get(name)) && (owner = User.get(email: email)) do
         with_authorized(_user, &Package.owner?(package, &1)) do
           Package.delete_owner(package, owner)
