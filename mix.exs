@@ -26,6 +26,6 @@ defmodule HexWeb.Mixfile do
      {:jazz, github: "meh/jazz"},
      {:mini_s3, github: "ericmj/mini_s3", branch: "hex-fixes"},
      {:stout, github: "ericmj/stout"},
-     {:ex_doc, github: "elixir-lang/ex_doc", only: :dev}]
+     {:markdown, github: "devinus/markdown", only: :dev}]
   end
 end

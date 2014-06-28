@@ -13,7 +13,7 @@
     <div class="panel-body">
       <p>Reads or updates hex configuration file.</p>
 
-<p><code>mix hex.config key [value]</code></p>
+<p><code>mix hex.config KEY [VALUE]</code></p>
 
     </div>
   </div>
@@ -29,7 +29,7 @@
     <div class="panel-body">
       <p>Prints hex package or system information.</p>
 
-<p><code>mix hex.info [package [version]]</code></p>
+<p><code>mix hex.info [PACKAGE [VERSION]]</code></p>
 
 <p>If <code>package</code> is not given, print system information. This includes when
 registry was last updated and current system version.</p>
@@ -46,17 +46,33 @@ remote Git URL and Git ref, and all package dependencies.</p>
 
   <div class="panel panel-default">
     <div class="panel-heading">
-      <h3 id="hex_key_drop" class="panel-title">
-        hex.key.drop
-        <a href="#hex_key_drop"><span class="glyphicon glyphicon-link pull-right"></span></a>
+      <h3 id="hex_key" class="panel-title">
+        hex.key
+        <a href="#hex_key"><span class="glyphicon glyphicon-link pull-right"></span></a>
       </h3>
     </div>
     <div class="panel-body">
-      <p>Remove given API key from account.</p>
+      <p>Generate, remove or list API keys.</p>
+
+<h5>Generate key</h5>
+
+<p>Generate new API key and store it in the hex config.</p>
+
+<p><code>mix hex.key new -u username -p password</code></p>
+
+<h5>Remove key</h5>
+
+<p>Remove given API key from account.</p>
 
 <p>The key can no longer be used to authenticate API requests.</p>
 
-<p><code>mix hex.key.drop key_name -u username -p password</code></p>
+<p><code>mix hex.key remove key_name -u username -p password</code></p>
+
+<h5>List keys</h5>
+
+<p>List all API keys associated with your account.</p>
+
+<p><code>mix hex.key list -u username -p password</code></p>
 
 <h4>Command line options</h4>
 
@@ -71,44 +87,42 @@ remote Git URL and Git ref, and all package dependencies.</p>
 
   <div class="panel panel-default">
     <div class="panel-heading">
-      <h3 id="hex_key_list" class="panel-title">
-        hex.key.list
-        <a href="#hex_key_list"><span class="glyphicon glyphicon-link pull-right"></span></a>
+      <h3 id="hex_owner" class="panel-title">
+        hex.owner
+        <a href="#hex_owner"><span class="glyphicon glyphicon-link pull-right"></span></a>
       </h3>
     </div>
     <div class="panel-body">
-      <p>List all API keys associated with your account.</p>
+      <p>Add, remove or list package owners.</p>
 
-<p><code>mix hex.key.list -u username -p password</code></p>
+<p>A package owner have full permissions to the package. They can publish and
+revert releases and even remove other package owners.</p>
+
+<h5>Add owner</h5>
+
+<p>Add an owner to package by specifying the package name and email of the new
+owner.</p>
+
+<p><code>mix hex.owner add PACKAGE EMAIL</code></p>
+
+<h5>Remove owner</h5>
+
+<p>Remove an owner to package by specifying the package name and email of the new
+owner.</p>
+
+<p><code>mix hex.owner remove PACKAGE EMAIL</code></p>
+
+<h5>List owners</h5>
+
+<p>List all owners of given package.</p>
+
+<p><code>mix hex.owner list PACKAGE</code></p>
 
 <h4>Command line options</h4>
 
 <ul>
-<li><p><code>--user</code>, <code>-u</code> - Username of user (required)</p></li>
-<li><p><code>--pass</code>, <code>-p</code> - Password of user (required)</p></li>
-</ul>
-
-    </div>
-  </div>
-
-
-  <div class="panel panel-default">
-    <div class="panel-heading">
-      <h3 id="hex_key_new" class="panel-title">
-        hex.key.new
-        <a href="#hex_key_new"><span class="glyphicon glyphicon-link pull-right"></span></a>
-      </h3>
-    </div>
-    <div class="panel-body">
-      <p>Generate new API key and store on local machine.</p>
-
-<p><code>mix hex.key.new -u username -p password</code></p>
-
-<h4>Command line options</h4>
-
-<ul>
-<li><p><code>--user</code>, <code>-u</code> - Username of user (required)</p></li>
-<li><p><code>--pass</code>, <code>-p</code> - Password of user (required)</p></li>
+<li><p><code>--user</code>, <code>-u</code> - Username of existing package owner (overrides user stored in config)</p></li>
+<li><p><code>--pass</code>, <code>-p</code> - Password of existing package owner (required if <code>--user</code> was given)</p></li>
 </ul>
 
     </div>
@@ -125,7 +139,7 @@ remote Git URL and Git ref, and all package dependencies.</p>
     <div class="panel-body">
       <p>Publish a new version of your package and update the package.</p>
 
-<p><code>mix hex.publish -u username -p password</code></p>
+<p><code>mix hex.publish -u USERNAME -p PASSWORD</code></p>
 
 <p>If it is a new package being published it will be created and the user
 specified in <code>username</code> will be the package owner. Only package owners can
@@ -140,7 +154,7 @@ one hour old you need to contact an administrator.</p>
 <ul>
 <li><p><code>--user</code>, <code>-u</code> - Username of package owner (overrides user stored in config)</p></li>
 <li><p><code>--pass</code>, <code>-p</code> - Password of package owner (required if <code>--user</code> was given)</p></li>
-<li><p><code>--revert version</code> - Revert given version</p></li>
+<li><p><code>--revert VERSION</code> - Revert given version</p></li>
 </ul>
 
 <h4>Configuration</h4>
@@ -196,7 +210,7 @@ recommended to do so.</p>
     <div class="panel-body">
       <p>Display packages matching the given search query.</p>
 
-<p><code>mix hex.search package</code></p>
+<p><code>mix hex.search PACKAGE</code></p>
 
     </div>
   </div>
@@ -224,31 +238,21 @@ fetches it automatically when needed.</p>
 
   <div class="panel panel-default">
     <div class="panel-heading">
-      <h3 id="hex_user_register" class="panel-title">
-        hex.user.register
-        <a href="#hex_user_register"><span class="glyphicon glyphicon-link pull-right"></span></a>
+      <h3 id="hex_user" class="panel-title">
+        hex.user
+        <a href="#hex_user"><span class="glyphicon glyphicon-link pull-right"></span></a>
       </h3>
     </div>
     <div class="panel-body">
-      <p>Registers a new hex user.</p>
+      <p>Hex user tasks.</p>
 
-<p><code>mix hex.user.register</code></p>
+<h5>Registers a new hex user.</h5>
 
-    </div>
-  </div>
+<p><code>mix hex.user register</code></p>
 
+<h5>Update user options.</h5>
 
-  <div class="panel panel-default">
-    <div class="panel-heading">
-      <h3 id="hex_user_update" class="panel-title">
-        hex.user.update
-        <a href="#hex_user_update"><span class="glyphicon glyphicon-link pull-right"></span></a>
-      </h3>
-    </div>
-    <div class="panel-body">
-      <p>Update user options.</p>
-
-<p><code>mix hex.user.update -u username -p password</code></p>
+<p><code>mix hex.user update -u USERNAME -p PASSWORD</code></p>
 
 <h4>Command line options</h4>
 
