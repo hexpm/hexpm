@@ -10,7 +10,7 @@
   When registering a user, a username, password, and email will be asked for. The email is used to be able to contact the maintainers in case there is an issue with their package. The email will never be shared to a third party.
 </p>
 
-<pre><code>$ mix hex.user.register
+<pre><code>$ mix hex.user register
 Username: johndoe
 Email: john.doe@example.com
 Password: hunter42
