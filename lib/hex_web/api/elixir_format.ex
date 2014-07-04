@@ -29,7 +29,6 @@ defmodule HexWeb.API.ElixirFormat do
     if safe_term?(ast) do
       result = Code.eval_quoted(ast)
                |> elem(0)
-               |> list_to_map
       {:ok, result}
     else
       {:error, "unsafe elixir"}
@@ -62,19 +61,4 @@ defmodule HexWeb.API.ElixirFormat do
   defp safe_term?(term) when is_list(term), do: Enum.all?(term, &safe_term?/1)
   defp safe_term?(term) when is_tuple(term), do: Enum.all?(Tuple.to_list(term), &safe_term?/1)
   defp safe_term?(_), do: false
-
-  defp list_to_map(list) when is_list(list) do
-    if list == [] or is_tuple(List.first(list)) do
-      Enum.into(list, %{}, fn
-        {key, list} when is_list(list) -> {key, list_to_map(list)}
-        other -> list_to_map(other)
-      end)
-    else
-      Enum.map(list, &list_to_map/1)
-    end
-  end
-
-  defp list_to_map(other) do
-    other
-  end
 end
