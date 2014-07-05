@@ -63,6 +63,8 @@ defmodule HexWeb.API.ElixirFormat do
   defp safe_term?(term) when is_tuple(term), do: Enum.all?(Tuple.to_list(term), &safe_term?/1)
   defp safe_term?(_), do: false
 
+  # can be removed when users are on hex v0.3.2
+  # (released 2014-07-05) (requires elixir v0.14.2)
   defp list_to_map(list) when is_list(list) do
     if list == [] or is_tuple(List.first(list)) do
       Enum.into(list, %{}, fn
