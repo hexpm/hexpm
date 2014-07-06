@@ -82,6 +82,12 @@ Proceed? [Yn] Y
 Published postgrex v0.4.0
 </code></pre>
 
+<h3>Publishing an Erlang package</h3>
+
+<p>
+  Erlang packages can also be published to Hex. An exs file describing the package is required, but unlike for Elixir projects it should not be named <code>mix.exs</code>, because Mix will treat packages with a mixfile as a Mix project. Convention is to name it <code>package.exs</code>. The package can be published with the command: <code>MIX_EXS=package.exs mix hex.publish</code>.
+</p>
+
 <h3>Example mixfile</h3>
 
 <pre><code>defmodule Postgrex.Mixfile do
