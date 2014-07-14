@@ -10,6 +10,13 @@ defmodule HexWeb.API.Router do
   alias HexWeb.Release
   alias HexWeb.API.Key
 
+  # Max filesize: ~10mb
+  # Min upload: ~10kb/s
+  @read_opts [
+    length: 10_000_000,
+    read_length: 100_000,
+    read_timeout: 10_000
+  ]
 
   plug Plugs.Format
   plug :match
@@ -18,7 +25,7 @@ defmodule HexWeb.API.Router do
   post "packages/:name/releases" do
     if package = Package.get(name) do
       with_authorized(_user, &Package.owner?(package, &1)) do
-        {:ok, body, conn} = read_body(conn)
+        {:ok, body, conn} = read_body(conn, @read_opts)
 
         case HexWeb.Tar.metadata(body) do
           {:ok, meta, checksum} ->
