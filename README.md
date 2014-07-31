@@ -1,12 +1,12 @@
 # HexWeb
 
-[![Build Status](https://travis-ci.org/ericmj/hex_web.png?branch=master "Build Status")](http://travis-ci.org/ericmj/hex_web)
+[![Build Status](https://travis-ci.org/hexpm/hex_web.svg?branch=master "Build Status")](http://travis-ci.org/hexpm/hex_web)
 
 ## Contributing
 
 To contribute to HexWeb you need to properly setup your development environment.
 
-Also see the client repository: [hex](https://github.com/ericmj/hex).
+Also see the client repository: [hex](https://github.com/hexpm/hex).
 
 ### PostgreSQL Modules
 
