@@ -4,28 +4,29 @@ defmodule HexWeb.Mixfile do
   def project do
     [app: :hex_web,
      version: "0.0.1",
-     elixir: "~> 0.14.0-dev",
+     elixir: "~> 0.15.0-dev",
      config_path: "config/#{Mix.env}.exs",
      deps: deps]
   end
 
   def application do
-    [applications: [:cowboy, :plug, :bcrypt, :mini_s3, :lager],
+    [applications: [:plug, :cowboy, :ecto, :postgrex, :jazz, :bcrypt, :mini_s3, :logger],
      mod: {HexWeb, []},
      env: []]
   end
 
   defp deps do
-    [{:plug, github: "elixir-lang/plug"},
-     {:cowboy, github: "extend/cowboy"},
-     {:ecto, github: "elixir-lang/ecto"},
-     {:poolboy, github: "devinus/poolboy", override: true},
-     {:postgrex, github: "ericmj/postgrex", override: true},
-     {:decimal, github: "ericmj/decimal", override: true},
-     {:bcrypt, github: "opscode/erlang-bcrypt"},
-     {:jazz, github: "meh/jazz"},
-     {:mini_s3, github: "ericmj/mini_s3", branch: "hex-fixes"},
-     {:stout, github: "ericmj/stout"},
-     {:markdown, github: "devinus/markdown", only: :dev}]
+    [{:plug,      github: "elixir-lang/plug"},
+     {:ecto,      github: "elixir-lang/ecto"},
+     {:jazz,      github: "meh/jazz"},
+     {:bcrypt,    github: "opscode/erlang-bcrypt"},
+     {:mini_s3,   github: "ericmj/mini_s3", branch: "hex-fixes"},
+     {:cowboy,    github: "ninenines/cowboy", override: true},
+     {:cowlib,    github: "ninenines/cowlib", override: true},
+     {:ranch,     github: "ninenines/ranch", override: true},
+     {:poolboy,   github: "devinus/poolboy", override: true},
+     {:postgrex,  github: "ericmj/postgrex", override: true},
+     {:decimal,   github: "ericmj/decimal", override: true},
+     {:markdown,  github: "devinus/markdown", only: :dev}]
   end
 end

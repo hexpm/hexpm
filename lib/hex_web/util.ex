@@ -4,14 +4,14 @@ defmodule HexWeb.Util do
   """
 
   import Ecto.Query, only: [from: 2]
-  require Stout
+  require Logger
 
   def maybe(nil, _fun), do: nil
   def maybe(item, fun), do: fun.(item)
 
   def log_error(kind, error, stacktrace) do
-    Stout.error Exception.format_banner(kind, error, stacktrace) <> "\n"
-                <> Exception.format_stacktrace(stacktrace)
+    Logger.error Exception.format_banner(kind, error, stacktrace) <> "\n" <>
+                 Exception.format_stacktrace(stacktrace)
   end
 
   def yesterday do

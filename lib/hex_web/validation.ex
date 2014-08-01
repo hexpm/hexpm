@@ -77,9 +77,7 @@ defmodule HexWeb.Validation do
   list dicts.
   """
   def type(attr, value, expected, opts \\ []) do
-    if Util.type_castable_to?(expected) do
-      value = Util.try_cast(value, expected)
-    end
+    value = Util.try_cast(value, expected)
 
     case value_to_type(value) do
       {:ok, type} ->

@@ -8,7 +8,7 @@ defmodule HexWeb.RegistryBuilder do
   use GenServer
   import Ecto.Query, only: [from: 2]
   require HexWeb.Repo
-  require Stout
+  require Logger
   alias Ecto.Adapters.Postgres
   alias HexWeb.Package
   alias HexWeb.Release
@@ -83,14 +83,14 @@ defmodule HexWeb.RegistryBuilder do
       try do
         case builder(pid) do
           {time, memory} ->
-            Stout.info "REGISTRY_BUILDER_COMPLETED (#{div time, 1000}ms, #{div memory, 1024}kb)"
+            Logger.info "REGISTRY_BUILDER_COMPLETED (#{div time, 1000}ms, #{div memory, 1024}kb)"
           nil ->
             :ok
         end
       catch
         kind, error ->
           stacktrace = System.stacktrace
-          Stout.error "REGISTRY_BUILDER_FAILED"
+          Logger.error "REGISTRY_BUILDER_FAILED"
           HexWeb.Util.log_error(kind, error, stacktrace)
       end
     end)

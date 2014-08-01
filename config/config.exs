@@ -1,9 +1,9 @@
 use Mix.Config
 
 if Mix.env == :test do
-  log_level = :notice
+  log_level = :warn
 else
-  log_level = :info
+  log_level = :debug
 end
 
 if Mix.env == :prod do
@@ -23,14 +23,8 @@ config :hex_web,
   s3_secret_key: System.get_env("S3_SECRET_KEY"),
   cdn_url:       System.get_env("CDN_URL") || "http://localhost:4000"
 
-config :lager,
-  handlers: [
-    lager_console_backend:
-      [log_level, {:lager_default_formatter, [:time, ' [', :severity, '] ', :message, '\n']}]
-  ],
-  crash_log: :undefined,
-  error_logger_hwm: 150
-
-config :stout,
-  truncation_size: 4096,
+config :logger,
   level: log_level
+
+config :logger, :console,
+  format: "$date $time [$level] $message\n"

@@ -1,6 +1,6 @@
 defmodule Mix.Tasks.Hexweb.Stats do
   use Mix.Task
-  require Stout
+  require Logger
 
   @shortdoc "Calculates yesterdays download stats"
 
@@ -9,11 +9,11 @@ defmodule Mix.Tasks.Hexweb.Stats do
 
     try do
       {time, {memory, size}} = :timer.tc fn -> HexWeb.Stats.Job.run(HexWeb.Util.yesterday()) end
-      Stout.info "STATS_JOB_COMPLETED #{size} downloads (#{div time, 1000}ms, #{div memory, 1024}kb)"
+      Logger.info "STATS_JOB_COMPLETED #{size} downloads (#{div time, 1000}ms, #{div memory, 1024}kb)"
     catch
       kind, error ->
         stacktrace = System.stacktrace
-        Stout.error "STATS_JOB_FAILED"
+        Logger.error "STATS_JOB_FAILED"
         HexWeb.Util.log_error(kind, error, stacktrace)
 
         System.at_exit(fn
