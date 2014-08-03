@@ -43,7 +43,7 @@ Using the following command you can seed your local HexWeb instance with
 some sample data:
 
 ```shell
-mix run sample_data.exs
+mix run scripts/sample_data.exs
 ```
 
 ### Running HexWeb
