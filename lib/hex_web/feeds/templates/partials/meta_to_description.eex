@@ -1,0 +1,14 @@
+<%
+description = @meta["description"] || ""
+contributors = @meta["contributors"] || []
+licenses = @meta["licenses"] || []
+%>
+    <%= if description != "" do %>
+        <p><%= description %></p>
+    <% end %>
+    <%= if contributors != [] do %>
+        <p>Contributors:<%= Enum.join(contributors, ", ") %></p>
+    <% end %>
+    <%= if licenses != [] do %>
+        <p>Licenses: <%= Enum.join(licenses, ", ") %></p>
+    <% end %>
