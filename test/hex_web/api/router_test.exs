@@ -346,16 +346,6 @@ defmodule HexWeb.API.RouterTest do
     assert conn.status == 401
   end
 
-  test "key authorizes only basic auth" do
-    user = User.get(username: "eric")
-    {:ok, key} = Key.create("macbook", user)
-
-    headers = [ {"authorization", key.secret}]
-    conn = conn("GET", "/api/keys", nil, headers: headers)
-    conn = Router.call(conn, [])
-    assert conn.status == 401
-  end
-
   test "get user" do
     conn = conn("GET", "/api/users/eric")
     conn = Router.call(conn, [])
