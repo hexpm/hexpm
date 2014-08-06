@@ -28,7 +28,7 @@ defmodule HexWeb.Release do
     release = struct(package.releases,
                      version: version,
                      updated_at: now,
-                     checksum: checksum,
+                     checksum: String.upcase(checksum),
                      created_at: created_at || now)
 
     case validate_create(release) do
