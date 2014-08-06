@@ -145,7 +145,7 @@ defmodule HexWeb.Package do
 
   defp search(query, search, order?) do
     name_search = "%" <> like_escape(search, ~r"(%|_)") <> "%"
-    desc_search = String.replace(search, ~r"\W+", " & ")
+    desc_search = String.replace(search, ~r"\s+", " & ")
 
     query = from(var in query,
          where: ilike(var.name, ^name_search) or

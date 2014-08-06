@@ -60,9 +60,7 @@ defmodule HexWeb.Web.Router do
     search            = conn.params["search"]
 
     if search do
-      search = search
-               |> String.replace(~r"[^a-zA-Z0-9 ]+", "")
-               |> String.strip
+      search = String.strip(search)
     end
 
     if search in [nil, ""] or String.length(search) >= 3 do
