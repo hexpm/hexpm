@@ -121,7 +121,7 @@ defmodule HexWeb.RegistryBuilder do
             packages     = packages()
 
             package_tuples =
-              Enum.reduce(releases, HashDict.new, fn {_, vsn, pkg_id}, dict ->
+              Enum.reduce(releases, HashDict.new, fn {_, vsn, pkg_id, _}, dict ->
                 Dict.update(dict, packages[pkg_id], [vsn], &[vsn|&1])
               end)
 

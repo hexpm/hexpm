@@ -72,7 +72,7 @@ defmodule HexWeb.RegistryBuilderTest do
 
       assert [ {"decimal", [["0.0.1", "0.0.2"]]} ] = :ets.lookup(tid, "decimal")
 
-      assert [ {{"decimal", "0.0.1"}, [[]]} ] =
+      assert [ {{"decimal", "0.0.1"}, [[], ""]} ] =
              :ets.lookup(tid, {"decimal", "0.0.1"})
 
       assert [{"postgrex", [["0.0.2"]]}] =
