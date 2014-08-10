@@ -1,5 +1,6 @@
 defmodule HexWeb.Web.Templates do
   require EEx
+  import HexWeb.Web.HTML.Helpers
 
   @asset_id :calendar.datetime_to_gregorian_seconds(:calendar.universal_time)
 

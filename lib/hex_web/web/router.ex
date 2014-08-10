@@ -51,11 +51,7 @@ defmodule HexWeb.Web.Router do
     title             = "Packages"
     conn              = fetch_params(conn)
     packages_per_page = @packages
-    search            = conn.params["search"]
-
-    if search do
-      search = String.strip(search)
-    end
+    search            = conn.params["search"] |> safe_query
 
     if not present?(search) or String.length(search) >= 3 do
       package_count = Package.count(search)
@@ -127,6 +123,14 @@ defmodule HexWeb.Web.Router do
       {int, ""} -> int
       :error    -> nil
     end
+  end
+
+  defp safe_query(nil), do: nil
+
+  defp safe_query(string) do
+    string
+    |> String.replace(~r/[^\w\s]/, "")
+    |> String.strip
   end
 
   def send_page(conn, page) do
