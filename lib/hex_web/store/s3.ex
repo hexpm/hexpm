@@ -4,7 +4,7 @@ defmodule HexWeb.Store.S3 do
   defmacrop s3_config(opts) do
     quote do
       {:config,
-        'http://s3.amazonaws.com',
+        unquote(opts[:url]),
         unquote(opts[:access_key_id]),
         unquote(opts[:secret_access_key]),
         :virtual_hosted}
@@ -73,6 +73,7 @@ defmodule HexWeb.Store.S3 do
   defp config do
     access_key = Application.get_env(:hex_web, :s3_access_key) |> String.to_char_list
     secret_key = Application.get_env(:hex_web, :s3_secret_key) |> String.to_char_list
-    s3_config(access_key_id: access_key, secret_access_key: secret_key)
+    url = Application.get_env(:hex_web, :s3_url) |> String.to_char_list
+    s3_config(access_key_id: access_key, secret_access_key: secret_key, url: url)
   end
 end
