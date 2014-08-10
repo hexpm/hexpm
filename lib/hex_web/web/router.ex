@@ -2,6 +2,7 @@ defmodule HexWeb.Web.Router do
   use Plug.Router
   import Plug.Conn
   import HexWeb.Plug
+  import HexWeb.Web.HTML.Helpers
   alias HexWeb.Plug.NotFound
   alias HexWeb.Web.Templates
   alias HexWeb.Stats.PackageDownload
@@ -56,18 +57,18 @@ defmodule HexWeb.Web.Router do
       search = String.strip(search)
     end
 
-    if search in [nil, ""] or String.length(search) >= 3 do
-      pkg_count = Package.count(search)
-      page      = safe_page(safe_int(conn.params["page"]) || 1, pkg_count)
-      packages  = Package.all(page, packages_per_page, search)
+    if not present?(search) or String.length(search) >= 3 do
+      package_count = Package.count(search)
+      page          = safe_page(safe_int(conn.params["page"]) || 1, package_count)
+      packages      = Package.all(page, packages_per_page, search)
     else
-      pkg_count = 0
-      page      = 1
-      packages  = []
+      package_count = 0
+      page          = 1
+      packages      = []
     end
 
-    conn = assign_pun(conn, [search, page, packages, pkg_count, active, title,
-                             packages_per_page])
+    conn = assign_pun(conn, [search, page, packages, package_count, active,
+                             title, packages_per_page])
     send_page(conn, :packages)
   end
 

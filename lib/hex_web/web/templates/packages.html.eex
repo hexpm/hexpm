@@ -1,9 +1,4 @@
-<%
-search = @search
-search_present = not search in [nil, ""]
-count = @pkg_count
-%>
-<%= if search_present && count == 0 do %>
+<%= if present?(@search) && @package_count == 0 do %>
   <p>No packages found</p>
 <% else %>
   <table class="table table-striped packages">
@@ -22,72 +17,54 @@ count = @pkg_count
   </table>
 
   <%
-  packages_per_page = @packages_per_page
-  pages = div(count - 1, packages_per_page) + 1
-  page  = @page
+  items_per_page = 30
+  shown_packages = length(@packages)
+  paginate = paginate(@page, @package_count, items_per_page: items_per_page, page_links: 5)
 
-  show_pages =
-    cond do
-      page < 3 ->
-        Enum.take(1..5, pages)
-      page > pages - 3 ->
-        left =
-          if pages > 4 do
-            pages - 4
-          else
-            1
-          end
-        Enum.to_list(left..pages)
-      true ->
-        Enum.to_list(page-2..page+2)
-    end
+  range_start = (@page - 1) * items_per_page + 1
+  range_end   = range_start + shown_packages - 1
 
-  if page == 1, do: disable_prev = true
-  if page == pages, do: disable_next = true
-
-  if search_present do
-    safe_query = ""
+  if present?(@search) do
+    search_query = "search=#{@search}&"
   else
-    safe_query = "search=#{search}&"
+    search_query = ""
   end
 
-  showed_packages = length(@packages)
   %>
 
   <p class="pagination pull-left" style="height: 30px; line-height: 30px; margin-left: 8px;">
-    <%= if showed_packages == 1 do %>
-      Showing last package of <%= count %> total
+    <%= if shown_packages == 1 do %>
+      Showing last package of <%= @package_count %> total
     <% else %>
-      <% left = 1 + (page - 1) * packages_per_page %>
-      Showing <%= left %>&ndash;<%= left + showed_packages - 1 %> packages of <%= count %> total
+      Showing <%= range_start %>&ndash;<%= range_end %> packages of <%= @package_count %> total
     <% end %>
   </p>
 
   <ul class="pagination pull-right">
-    <%= if disable_prev do %>
-      <li class="disabled"><span>&laquo;</span></li>
+    <%= if paginate[:prev] do %>
+      <li><a href="/packages?<%= safe(search_query) %>page=<%= @page-1 %>">&laquo;</a></li>
     <% else %>
-      <li><a href="/packages?<%= safe(safe_query) %>page=<%= page-1 %>">&laquo;</a></li>
+      <li class="disabled"><span>&laquo;</span></li>
     <% end %>
 
-    <%= for counter <- show_pages do %>
-      <%= if counter == page do %>
+    <%= for counter <- paginate[:page_links] do %>
+      <%= if counter == @page do %>
         <li class="active">
           <span><%= counter %></span>
         </li>
       <% else %>
         <li>
-          <a href="/packages?<%= safe(safe_query) %>page=<%= counter %>">
+          <a href="/packages?<%= safe(search_query) %>page=<%= counter %>">
             <%= counter %>
           </a>
         </li>
       <% end %>
     <% end %>
 
-    <%= if disable_next do %>
-      <li class="disabled"><span>&raquo;</span></li>
+    <%= if paginate[:next] do %>
+      <li><a href="/packages?<%= safe(search_query) %>page=<%= @page+1 %>">&raquo;</a></li>
     <% else %>
-      <li><a href="/packages?<%= safe(safe_query) %>page=<%= page+1 %>">&raquo;</a></li>
+      <li class="disabled"><span>&raquo;</span></li>
     <% end %>
   </ul>
 <% end %>
