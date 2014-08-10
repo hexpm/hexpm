@@ -168,7 +168,7 @@ defmodule HexWeb.API.RouterTest do
   test "create releases" do
     headers = [ {"content-type", "application/octet-stream"},
                 {"authorization", "Basic " <> :base64.encode("eric:eric")}]
-    body = create_tar(%{app: :postgrex, version: "0.0.1", git_url: "url", git_ref: "ref", requirements: %{}}, [])
+    body = create_tar(%{app: :postgrex, version: "0.0.1", requirements: %{}}, [])
     conn = conn("POST", "/api/packages/postgrex/releases", body, headers: headers)
     conn = Router.call(conn, [])
 
@@ -176,7 +176,7 @@ defmodule HexWeb.API.RouterTest do
     body = Jazz.decode!(conn.resp_body)
     assert body["url"] == "http://localhost:4000/api/packages/postgrex/releases/0.0.1"
 
-    body = create_tar(%{app: :postgrex, version: "0.0.2", git_url: "url", git_ref: "ref", requirements: %{}}, [])
+    body = create_tar(%{app: :postgrex, version: "0.0.2", requirements: %{}}, [])
     conn = conn("POST", "/api/packages/postgrex/releases", body, headers: headers)
     conn = Router.call(conn, [])
 
@@ -192,12 +192,12 @@ defmodule HexWeb.API.RouterTest do
   test "update release" do
     headers = [ {"content-type", "application/octet-stream"},
                 {"authorization", "Basic " <> :base64.encode("eric:eric")}]
-    body = create_tar(%{app: :postgrex, version: "0.0.1", git_url: "url", git_ref: "ref", requirements: %{}}, [])
+    body = create_tar(%{app: :postgrex, version: "0.0.1", requirements: %{}}, [])
     conn = conn("POST", "/api/packages/postgrex/releases", body, headers: headers)
     conn = Router.call(conn, [])
     assert conn.status == 201
 
-    body = create_tar(%{app: :postgrex, version: "0.0.1", git_url: "new_url", git_ref: "new_ref", requirements: %{}}, [])
+    body = create_tar(%{app: :postgrex, version: "0.0.1", requirements: %{}}, [])
     conn = conn("POST", "/api/packages/postgrex/releases", body, headers: headers)
     conn = Router.call(conn, [])
     assert conn.status == 200
@@ -209,7 +209,7 @@ defmodule HexWeb.API.RouterTest do
   test "delete release" do
     headers = [ {"content-type", "application/octet-stream"},
                 {"authorization", "Basic " <> :base64.encode("eric:eric")}]
-    body = create_tar(%{app: :postgrex, version: "0.0.1", git_url: "url", git_ref: "ref", requirements: %{}}, [])
+    body = create_tar(%{app: :postgrex, version: "0.0.1", requirements: %{}}, [])
     conn = conn("POST", "/api/packages/postgrex/releases", body, headers: headers)
     conn = Router.call(conn, [])
     assert conn.status == 201
@@ -226,7 +226,7 @@ defmodule HexWeb.API.RouterTest do
   test "create release authorizes" do
     headers = [ {"content-type", "application/octet-stream"},
                 {"authorization", "Basic " <> :base64.encode("other:other")}]
-    body = create_tar(%{app: :postgrex, version: "0.0.1", git_url: "url", git_ref: "ref", requirements: %{}}, [])
+    body = create_tar(%{app: :postgrex, version: "0.0.1", requirements: %{}}, [])
     conn = conn("POST", "/api/packages/postgrex/releases", body, headers: headers)
     conn = Router.call(conn, [])
 
@@ -237,7 +237,7 @@ defmodule HexWeb.API.RouterTest do
   test "create releases with requirements" do
     headers = [ {"content-type", "application/octet-stream"},
                 {"authorization", "Basic " <> :base64.encode("eric:eric")}]
-    body = create_tar(%{app: :postgrex, version: "0.0.1", git_url: "url", git_ref: "ref", requirements: %{decimal: "~> 0.0.1"}}, [])
+    body = create_tar(%{app: :postgrex, version: "0.0.1", requirements: %{decimal: "~> 0.0.1"}}, [])
     conn = conn("POST", "/api/packages/postgrex/releases", body, headers: headers)
     conn = Router.call(conn, [])
 
@@ -259,7 +259,7 @@ defmodule HexWeb.API.RouterTest do
 
     headers = [ {"content-type", "application/octet-stream"},
                 {"authorization", "Basic " <> :base64.encode("eric:eric")}]
-    body = create_tar(%{app: :postgrex, version: "0.0.1", git_url: "url", git_ref: "ref", requirements: %{decimal: "~> 0.0.1"}}, [])
+    body = create_tar(%{app: :postgrex, version: "0.0.1", requirements: %{decimal: "~> 0.0.1"}}, [])
     conn = conn("POST", "/api/packages/postgrex/releases", body, headers: headers)
     conn = Router.call(conn, [])
     assert conn.status == 201

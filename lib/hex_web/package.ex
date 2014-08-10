@@ -186,7 +186,7 @@ defimpl HexWeb.Render, for: HexWeb.Package do
       releases =
         Enum.map(package.releases.all, fn release ->
           HexWeb.Release.__schema__(:keywords, release)
-          |> Dict.take([:version, :git_url, :git_ref, :created_at, :updated_at])
+          |> Dict.take([:version, :created_at, :updated_at])
           |> Dict.update!(:created_at, &to_iso8601/1)
           |> Dict.update!(:updated_at, &to_iso8601/1)
           |> Dict.put(:url, api_url(["packages", package.name, "releases", release.version]))
