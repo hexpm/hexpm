@@ -42,6 +42,21 @@ defmodule HexWeb.Util do
   end
   def parse_integer(_, default), do: default
 
+  def binarify(binary) when is_binary(binary),
+    do: binary
+  def binarify(number) when is_number(number),
+    do: number
+  def binarify(atom) when nil?(atom) or is_boolean(atom),
+    do: atom
+  def binarify(atom) when is_atom(atom),
+    do: Atom.to_string(atom)
+  def binarify(list) when is_list(list),
+    do: for(elem <- list, do: binarify(elem))
+  def binarify(map) when is_map(map),
+    do: for(elem <- map, into: %{}, do: binarify(elem))
+  def binarify(tuple) when is_tuple(tuple),
+    do: for(elem <- Tuple.to_list(tuple), do: binarify(elem)) |> List.to_tuple
+
   @doc """
   Returns a url to an API resource on the server from a list of path components.
   """

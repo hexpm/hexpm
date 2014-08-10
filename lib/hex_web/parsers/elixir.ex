@@ -15,7 +15,7 @@ defmodule HexWeb.Parsers.Elixir do
           {:ok, params} ->
             {:ok, params, conn}
           {:error, reason} ->
-            raise HexWeb.Util.BadRequest, message: reason
+            raise HexWeb.Plug.BadRequest, message: reason
           end
 
       _ ->
