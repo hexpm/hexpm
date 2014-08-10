@@ -29,22 +29,29 @@ defmodule HexWeb.Web.Router do
     send_page(conn, :index)
   end
 
-  doc_pages = [
-    usage: "Usage",
-    publish: "Publish package",
-    tasks: "Mix tasks"
-  ]
+  get "docs/usage" do
+    active    = :docs
+    title     = "Usage"
 
-  Enum.each(doc_pages, fn {page, title} ->
-    route = "/docs/#{page}"
-    get unquote(route) do
-      active    = :docs
-      title     = unquote(title)
+    conn = assign_pun(conn, [active, title])
+    send_page(conn, :"docs_usage")
+  end
 
-      conn = assign_pun(conn, [active, title])
-      send_page(conn, :"docs_#{unquote(page)}")
-    end
-  end)
+  get "docs/publish" do
+    active    = :docs
+    title     = "Publish package"
+
+    conn = assign_pun(conn, [active, title])
+    send_page(conn, :"docs_publish")
+  end
+
+  get "docs/tasks" do
+    active    = :docs
+    title     = "Mix tasks"
+
+    conn = assign_pun(conn, [active, title])
+    send_page(conn, :"docs_tasks")
+  end
 
   get "/packages" do
     active            = :packages
