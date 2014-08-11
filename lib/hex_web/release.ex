@@ -75,7 +75,6 @@ defmodule HexWeb.Release do
     end
   end
 
-  # TODO: Prereleases should always be editable
   defp editable?(release) do
     created_at = Ecto.DateTime.to_erl(release.created_at)
                  |> :calendar.datetime_to_gregorian_seconds
