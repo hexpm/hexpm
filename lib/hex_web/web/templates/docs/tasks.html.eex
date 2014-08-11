@@ -52,13 +52,7 @@ remote Git URL and Git ref, and all package dependencies.</p>
       </h3>
     </div>
     <div class="panel-body">
-      <p>Generate, remove or list API keys.</p>
-
-<h5>Generate key</h5>
-
-<p>Generate new API key and store it in the hex config.</p>
-
-<p><code>mix hex.key new -u username -p password</code></p>
+      <p>Remove or list API keys associated with your account.</p>
 
 <h5>Remove key</h5>
 
@@ -66,20 +60,13 @@ remote Git URL and Git ref, and all package dependencies.</p>
 
 <p>The key can no longer be used to authenticate API requests.</p>
 
-<p><code>mix hex.key remove key_name -u username -p password</code></p>
+<p><code>mix hex.key remove key_name</code></p>
 
 <h5>List keys</h5>
 
 <p>List all API keys associated with your account.</p>
 
-<p><code>mix hex.key list -u username -p password</code></p>
-
-<h4>Command line options</h4>
-
-<ul>
-<li><p><code>--user</code>, <code>-u</code> - Username of user (required)</p></li>
-<li><p><code>--pass</code>, <code>-p</code> - Password of user (required)</p></li>
-</ul>
+<p><code>mix hex.key list</code></p>
 
     </div>
   </div>
@@ -118,13 +105,6 @@ owner.</p>
 
 <p><code>mix hex.owner list PACKAGE</code></p>
 
-<h4>Command line options</h4>
-
-<ul>
-<li><p><code>--user</code>, <code>-u</code> - Username of existing package owner (overrides user stored in config)</p></li>
-<li><p><code>--pass</code>, <code>-p</code> - Password of existing package owner (required if <code>--user</code> was given)</p></li>
-</ul>
-
     </div>
   </div>
 
@@ -139,7 +119,7 @@ owner.</p>
     <div class="panel-body">
       <p>Publish a new version of your package and update the package.</p>
 
-<p><code>mix hex.publish -u USERNAME -p PASSWORD</code></p>
+<p><code>mix hex.publish</code></p>
 
 <p>If it is a new package being published it will be created and the user
 specified in <code>username</code> will be the package owner. Only package owners can
@@ -152,9 +132,7 @@ one hour old you need to contact an administrator.</p>
 <h4>Command line options</h4>
 
 <ul>
-<li><p><code>--user</code>, <code>-u</code> - Username of package owner (overrides user stored in config)</p></li>
-<li><p><code>--pass</code>, <code>-p</code> - Password of package owner (required if <code>--user</code> was given)</p></li>
-<li><p><code>--revert VERSION</code> - Revert given version</p></li>
+<li><code>--revert VERSION</code> - Revert given version</li>
 </ul>
 
 <h4>Configuration</h4>
@@ -173,9 +151,9 @@ one hour old you need to contact an administrator.</p>
 <code>:git</code> or <code>:path</code> as the SCM <code>:package</code> is used.</p>
 
 <pre><code>defp deps do
-  [ { :ecto, &quot;~&gt; 0.1.0&quot; },
-    { :postgrex, &quot;~&gt; 0.3.0&quot; },
-    { :cowboy, github: &quot;extend/cowboy&quot; } ]
+  [ {:ecto, &quot;~&gt; 0.1.0&quot;},
+    {:postgrex, &quot;~&gt; 0.3.0&quot;},
+    {:cowboy, github: &quot;extend/cowboy&quot;} ]
 end
 </code></pre>
 
@@ -190,10 +168,11 @@ package.</p>
 recommended to do so.</p>
 
 <ul>
-<li><p><code>:files</code> - List of files and directories to include in the package</p></li>
+<li><p><code>:files</code> - List of files and directories to include in the package,
+can include wildcards</p></li>
 <li><p><code>:contributors</code> - List of names of contributors</p></li>
 <li><p><code>:licenses</code> - List of licenses used by the package</p></li>
-<li><p><code>:links</code> - Dictionary of links</p></li>
+<li><p><code>:links</code> - Map of links</p></li>
 </ul>
 
     </div>
@@ -218,26 +197,6 @@ recommended to do so.</p>
 
   <div class="panel panel-default">
     <div class="panel-heading">
-      <h3 id="hex_update" class="panel-title">
-        hex.update
-        <a href="#hex_update"><span class="glyphicon glyphicon-link pull-right"></span></a>
-      </h3>
-    </div>
-    <div class="panel-body">
-      <p>Update the hex registry file.</p>
-
-<p><code>mix hex.update</code></p>
-
-<p>Force fetches the registry file and bypasses any caching. This task does not
-have to be called unless there are issues with the registry file as hex
-fetches it automatically when needed.</p>
-
-    </div>
-  </div>
-
-
-  <div class="panel panel-default">
-    <div class="panel-heading">
       <h3 id="hex_user" class="panel-title">
         hex.user
         <a href="#hex_user"><span class="glyphicon glyphicon-link pull-right"></span></a>
@@ -246,20 +205,20 @@ fetches it automatically when needed.</p>
     <div class="panel-body">
       <p>Hex user tasks.</p>
 
-<h5>Registers a new hex user.</h5>
+<h5>Registers a new user</h5>
 
 <p><code>mix hex.user register</code></p>
 
-<h5>Update user options.</h5>
+<h5>Authorize a new user</h5>
 
-<p><code>mix hex.user update -u USERNAME -p PASSWORD</code></p>
+<p>Authorizes a new user on the local machine by generating a new API key and
+storing it in the hex config.</p>
 
-<h4>Command line options</h4>
+<p><code>mix hex.user auth</code></p>
 
-<ul>
-<li><p><code>--user</code>, <code>-u</code> - Username of user (required)</p></li>
-<li><p><code>--pass</code>, <code>-p</code> - Password of user (required)</p></li>
-</ul>
+<h5>Update user options</h5>
+
+<p><code>mix hex.user update</code></p>
 
     </div>
   </div>
