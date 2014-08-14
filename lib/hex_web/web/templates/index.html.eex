@@ -6,15 +6,14 @@
   <div class="col-md-12">
     <h3>Using with Elixir</h3>
     <p>Simply specify your dependencies as two item tuples like <code>{:ecto, "~> 0.1.0"}</code> and Elixir will ask if you want to install Hex if you haven't already. After installed, you can run <code>$ mix local</code> to see all available Hex tasks and <code>$ mix help TASK</code> for more information about a specific task.</p>
-    <p>Hex requires Elixir v0.13.3 or later.</p>
   </div>
 </div>
 
 <div class="row">
   <div class="col-md-12">
-    <h3>Using with Erlang</h3>
+    <h3>Using with standalone Mix</h3>
     <p>
-      Support for Erlang tools are under way. Clients for popular build tools and other Erlang VM languages are welcome!
+      Download <a href="http://s3.hex.pm/mix">Mix</a>, put it in your <code>PATH</code> and give it executable permissions. Now you can use Mix as if it was installed with Elixir.
     </p>
   </div>
 </div>

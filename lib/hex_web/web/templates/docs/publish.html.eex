@@ -26,7 +26,7 @@ Generating API key...
 </p>
 
 <p>
-  Secondly, fill in the <code>:description</code> property. It should be a few paragraphs describing the package.
+  Secondly, fill in the <code>:description</code> property. It should be a few sentences describing the package.
 </p>
 
 <p>
@@ -121,7 +121,7 @@ Published postgrex v0.4.0
 
   defp description do
     """
-    Here should be a few sentences or paragraphs describing the project.
+    A few sentences (a paragraph) describing the project.
     """
   end
 
@@ -155,7 +155,7 @@ end
 
   defp description do
     """
-    Here should be a few sentences or paragraphs describing the project.
+    A few sentences (a paragraph) describing the project.
     """
   end
 
