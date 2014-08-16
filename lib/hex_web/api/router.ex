@@ -4,6 +4,8 @@ defmodule HexWeb.API.Router do
   import HexWeb.API.Util
   import HexWeb.Util, only: [api_url: 1, parse_integer: 2]
   alias HexWeb.Plug.NotFound
+  alias HexWeb.Plug.RequestTimeout
+  alias HexWeb.Plug.RequestTooLarge
   alias HexWeb.Plugs
   alias HexWeb.User
   alias HexWeb.Package
@@ -25,25 +27,13 @@ defmodule HexWeb.API.Router do
   post "packages/:name/releases" do
     if package = Package.get(name) do
       with_authorized(_user, &Package.owner?(package, &1)) do
-        {:ok, body, conn} = read_body(conn, @read_opts)
-
-        case HexWeb.Tar.metadata(body) do
-          {:ok, meta, checksum} ->
-            version = meta["version"]
-            reqs    = meta["requirements"] || %{}
-
-            if release = Release.get(package, version) do
-              result = Release.update(release, reqs, checksum)
-              if match?({:ok, _}, result), do: after_release(name, version, body)
-              send_update_resp(conn, result, :public)
-            else
-              result = Release.create(package, version, reqs, checksum)
-              if match?({:ok, _}, result), do: after_release(name, version, body)
-              send_creation_resp(conn, result, :public, api_url(["packages", name, "releases", version]))
-            end
-
-          {:error, errors} ->
-            send_validation_failed(conn, %{tar: errors})
+        case read_body(conn, @read_opts) do
+          {:ok, body, conn} ->
+            handle_tarball(conn, package, body)
+          {:error, :timeout} ->
+            raise RequestTimeout
+          {:more, _, _} ->
+            raise RequestTooLarge
         end
       end
     else
@@ -51,8 +41,29 @@ defmodule HexWeb.API.Router do
     end
   end
 
-  defp after_release(name, version, body) do
-    Application.get_env(:hex_web, :store).put_tar("#{name}-#{version}.tar", body)
+  defp handle_tarball(conn, package, body) do
+    case HexWeb.Tar.metadata(body) do
+      {:ok, meta, checksum} ->
+        version = meta["version"]
+        reqs    = meta["requirements"] || %{}
+
+        if release = Release.get(package, version) do
+          result = Release.update(release, reqs, checksum)
+          if match?({:ok, _}, result), do: after_release(package, version, body)
+          send_update_resp(conn, result, :public)
+        else
+          result = Release.create(package, version, reqs, checksum)
+          if match?({:ok, _}, result), do: after_release(package, version, body)
+          send_creation_resp(conn, result, :public, api_url(["packages", package.name, "releases", version]))
+        end
+
+      {:error, errors} ->
+        send_validation_failed(conn, %{tar: errors})
+    end
+  end
+
+  defp after_release(package, version, body) do
+    Application.get_env(:hex_web, :store).put_tar("#{package.name}-#{version}.tar", body)
     HexWeb.RegistryBuilder.async_rebuild
   end
 

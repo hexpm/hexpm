@@ -2,7 +2,7 @@ defmodule HexWeb.Plug do
   import Plug.Conn
 
   defmodule BadRequest do
-    defexception [:message]
+    defexception [message: "Bad Request"]
 
     defimpl Plug.Exception do
       def status(_exception) do
@@ -12,11 +12,31 @@ defmodule HexWeb.Plug do
   end
 
   defmodule NotFound do
-    defexception [:message]
+    defexception [message: "Not Found"]
 
     defimpl Plug.Exception do
       def status(_exception) do
         404
+      end
+    end
+  end
+
+  defmodule RequestTimeout do
+    defexception [message: "Request Timeout"]
+
+    defimpl Plug.Exception do
+      def status(_exception) do
+        408
+      end
+    end
+  end
+
+  defmodule RequestTooLarge do
+    defexception [message: "Request Entity Too Large"]
+
+    defimpl Plug.Exception do
+      def status(_exception) do
+        413
       end
     end
   end

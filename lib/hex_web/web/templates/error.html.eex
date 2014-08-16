@@ -1,10 +1,11 @@
-<%= case @status do %>
-  <% 404 -> %>
-    <h2>Page Not Found</h2>
-  <% 500 -> %>
+<%= case {@status, @message} do %>
+  <% {500, _} -> %>
     <h2>Internal Server Error</h2>
     <p>Please contact admins if issues persist</p>
-  <% status -> %>
-    <h2>Internal Server Error (<%= status %>)</h2>
+  <% {status, nil} -> %>
+    <h2>Error (<%= status %>)</h2>
     <p>Please contact admins if issues persist</p>
+  <% {status, message} -> %>
+    <h2>Error (<%= status %>)</h2>
+    <p><%= message %></p>
 <% end %>

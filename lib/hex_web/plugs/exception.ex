@@ -13,23 +13,30 @@ defmodule HexWeb.Plugs.Exception do
         stacktrace = System.stacktrace
         status     = Plug.Exception.status(error)
 
-        if status == 500, do: HexWeb.Util.log_error(kind, error, stacktrace)
+        if status == 500 do
+          HexWeb.Util.log_error(kind, error, stacktrace)
+        end
+
+        if status != 500 and Exception.exception?(error) do
+          message = Exception.message(error)
+        end
 
         if List.first(conn.path_info) == "api" do
-          api_response(conn, status)
+          api_response(conn, status, message)
         else
-          html_response(conn, status)
+          html_response(conn, status, message)
         end
     end
   end
 
-  defp html_response(conn, status) do
+  defp html_response(conn, status, message) do
     conn
     |> assign(:status, status)
+    |> assign(:message, message)
     |> HexWeb.Web.Router.send_page(:error)
   end
 
-  defp api_response(conn, status) do
+  defp api_response(conn, status, message) do
     conn =
       try do
         HexWeb.Plugs.Format.call(conn, [])
@@ -37,7 +44,11 @@ defmodule HexWeb.Plugs.Exception do
         _, _ -> conn
       end
 
-    body = %{error: status}
+    body = %{status: status}
+    if message do
+      body = Map.put(body, :message, message)
+    end
+
     HexWeb.API.Util.send_body(conn, status, body, true)
   end
 end
