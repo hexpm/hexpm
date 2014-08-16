@@ -7,6 +7,7 @@ defmodule HexWeb.API.Util do
   import Plug.Conn
   alias HexWeb.User
   alias HexWeb.API.Key
+  import HexWeb.Util, only: [parse_integer: 2]
 
   @max_age 60
 
@@ -109,7 +110,15 @@ defmodule HexWeb.API.Util do
         body = HexWeb.API.ElixirFormat.encode(body)
         content_type = "application/vnd.hex+elixir"
       format when format == :json or fallback ->
-        body = Jazz.encode!(body, pretty: true)
+        conn = conn |> fetch_params
+        case conn.params["pp"] |> parse_integer(1) do
+          1 ->
+            body = Jazz.encode!(body, pretty: true)
+          0 ->
+            body = Jazz.encode!(body, pretty: false)
+          _ ->
+            body = Jazz.encode!(body, pretty: true)
+        end
         content_type = "application/json"
       _ ->
         raise Plug.Parsers.UnsupportedMediaTypeError
