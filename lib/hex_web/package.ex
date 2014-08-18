@@ -16,12 +16,15 @@ defmodule HexWeb.Package do
     has_many :downloads, HexWeb.Stats.PackageDownload
   end
 
+  @reserved_names ~w(eex elixir ex_unit iex logger mix hex)
+
   validatep validate_create(package),
     also: validate(),
     also: unique([:name], case_sensitive: false, on: HexWeb.Repo)
 
   validatep validate(package),
-    name: present() and type(:string) and has_format(~r"^[a-z]\w*$"),
+    name: present() and type(:string) and has_format(~r"^[a-z]\w*$") and
+          not_member_of(@reserved_names),
     meta: validate_meta()
 
   defp validate_meta(field, arg) do
