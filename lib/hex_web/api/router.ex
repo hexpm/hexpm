@@ -26,7 +26,7 @@ defmodule HexWeb.API.Router do
 
   post "packages/:name/releases" do
     if package = Package.get(name) do
-      with_authorized(_user, &Package.owner?(package, &1)) do
+      with_authorized(conn, &Package.owner?(package, &1), fn _ ->
         case read_body(conn, @read_opts) do
           {:ok, body, conn} ->
             handle_tarball(conn, package, body)
@@ -35,7 +35,7 @@ defmodule HexWeb.API.Router do
           {:more, _, _} ->
             raise RequestTooLarge
         end
-      end
+      end)
     else
       raise NotFound
     end
@@ -94,10 +94,10 @@ defmodule HexWeb.API.Router do
 
     patch "users/:name" do
       name = String.downcase(name)
-      with_authorized_basic(user, username: name) do
+      with_authorized_basic(conn, &(&1.username == name), fn user ->
         result = User.update(user, conn.params["email"], conn.params["password"])
         send_update_resp(conn, result, :public)
-      end
+      end)
     end
 
     get "packages" do
@@ -124,21 +124,21 @@ defmodule HexWeb.API.Router do
 
     put "packages/:name" do
       if package = Package.get(name) do
-        with_authorized(_user, &Package.owner?(package, &1)) do
+        with_authorized(conn, &Package.owner?(package, &1), fn _ ->
           result = Package.update(package, conn.params["meta"])
           send_update_resp(conn, result, :public)
-        end
+        end)
       else
-        with_authorized(user) do
+        with_authorized(conn, fn user ->
           result = Package.create(name, user, conn.params["meta"])
           send_creation_resp(conn, result, :public, api_url(["packages", name]))
-        end
+        end)
       end
     end
 
     delete "packages/:name/releases/:version" do
       if (package = Package.get(name)) && (release = Release.get(package, version)) do
-        with_authorized(_user, &Package.owner?(package, &1)) do
+        with_authorized(conn, &Package.owner?(package, &1), fn _ ->
           result = Release.delete(release)
 
           if result == :ok do
@@ -147,7 +147,7 @@ defmodule HexWeb.API.Router do
           end
 
           send_delete_resp(conn, result, :public)
-        end
+        end)
       else
         raise NotFound
       end
@@ -168,9 +168,9 @@ defmodule HexWeb.API.Router do
 
     get "packages/:name/owners" do
       if package = Package.get(name) do
-        with_authorized(_user, &Package.owner?(package, &1)) do
+        with_authorized(conn, &Package.owner?(package, &1), fn _ ->
           send_okay(conn, Package.owners(package), :public)
-        end
+        end)
       else
         raise NotFound
       end
@@ -180,7 +180,7 @@ defmodule HexWeb.API.Router do
       email = URI.decode_www_form(email)
 
       if (package = Package.get(name)) && (owner = User.get(email: email)) do
-        with_authorized(_user, &Package.owner?(package, &1)) do
+        with_authorized(conn, &Package.owner?(package, &1), fn _ ->
           if Package.owner?(package, owner) do
             conn
             |> cache(:private)
@@ -188,7 +188,7 @@ defmodule HexWeb.API.Router do
           else
             raise NotFound
           end
-        end
+        end)
       else
         raise NotFound
       end
@@ -198,13 +198,13 @@ defmodule HexWeb.API.Router do
       email = URI.decode_www_form(email)
 
       if (package = Package.get(name)) && (owner = User.get(email: email)) do
-        with_authorized(_user, &Package.owner?(package, &1)) do
+        with_authorized(conn, &Package.owner?(package, &1), fn _ ->
           Package.add_owner(package, owner)
 
           conn
           |> cache(:private)
           |> send_resp(204, "")
-        end
+        end)
       else
         raise NotFound
       end
@@ -214,52 +214,52 @@ defmodule HexWeb.API.Router do
       email = URI.decode_www_form(email)
 
       if (package = Package.get(name)) && (owner = User.get(email: email)) do
-        with_authorized(_user, &Package.owner?(package, &1)) do
+        with_authorized(conn, &Package.owner?(package, &1), fn _ ->
           Package.delete_owner(package, owner)
 
           conn
           |> cache(:private)
           |> send_resp(204, "")
-        end
+        end)
       else
         raise NotFound
       end
     end
 
     get "keys" do
-      with_authorized(user) do
+      with_authorized(conn, fn user ->
         keys = Key.all(user)
         when_stale(conn, keys, &(&1 |> cache(:private) |> send_render(200, keys)))
-      end
+      end)
     end
 
     get "keys/:name" do
-      with_authorized(user) do
+      with_authorized(conn, fn user ->
         if key = Key.get(name, user) do
           when_stale(conn, key, &(&1 |> cache(:private) |> send_render(200, key)))
         else
           raise NotFound
         end
-      end
+      end)
     end
 
     post "keys" do
-      with_authorized_basic(user) do
+      with_authorized_basic(conn, fn user ->
         name = conn.params["name"]
         result = Key.create(name, user)
         send_creation_resp(conn, result, :private, api_url(["keys", name]))
-      end
+      end)
     end
 
     delete "keys/:name" do
-      with_authorized(user) do
+      with_authorized(conn, fn user ->
         if key = Key.get(name, user) do
           result = Key.delete(key)
           send_delete_resp(conn, result, :private)
         else
           raise NotFound
         end
-      end
+      end)
     end
 
     match _ do

@@ -121,71 +121,45 @@ defmodule HexWeb.API.Util do
   end
 
   @doc """
-  Run the given block if a user authorized with basic authentication,
+  Run the given function if a user authorized with basic authentication,
   otherwise send an unauthorized response.
   """
-  @spec with_authorized_basic(Macro.t, Keyword.t) :: Macro.t
-  @spec with_authorized_basic(Macro.t, Keyword.t, Keyword.t) :: Macro.t
-  defmacro with_authorized_basic(user, check \\ [], opts)
-
-  defmacro with_authorized_basic(user, fields, opts) when is_list(fields) do
-    with_authorized_fields(user, fields, [only_basic: true], Keyword.fetch!(opts, :do))
-  end
-
-  defmacro with_authorized_basic(user, fun, opts) do
-    with_authorized_fun(user, fun, [only_basic: true], Keyword.fetch!(opts, :do))
-  end
-
-  @doc """
-  Run the given block if a user authorized as specified user,
-  otherwise send an unauthorized response.
-  """
-  @spec with_authorized(Macro.t, Keyword.t) :: Macro.t
-  @spec with_authorized(Macro.t, Macro.t, Keyword.t) :: Macro.t
-  defmacro with_authorized(user, check \\ [], opts)
-
-  defmacro with_authorized(user, fields, opts) when is_list(fields) do
-    with_authorized_fields(user, fields, [], Keyword.fetch!(opts, :do))
-  end
-
-  defmacro with_authorized(user, fun, opts) do
-    with_authorized_fun(user, fun, [], Keyword.fetch!(opts, :do))
-  end
-
-  defp with_authorized_fields(user, fields, opts, block) do
-    fields = Enum.map(fields, fn {key, val} -> {key, {:^, [], [val]}} end)
-
-    quote do
-      case HexWeb.API.Util.authorize(var!(conn), unquote(opts)) do
-        {:ok, %HexWeb.User{unquote_splicing(fields)} = unquote(user)} ->
-          unquote(block)
-        _ ->
-          HexWeb.API.Util.send_unauthorized(var!(conn))
-      end
+  @spec with_authorized_basic(Plug.Conn.t, (HexWeb.User.t -> boolean), (HexWeb.User.t -> any)) :: any
+  def with_authorized_basic(conn, auth? \\ fn _ -> true end, fun) do
+    case authorize(conn, only_basic: true) do
+      {:ok, user} ->
+        if auth?.(user) do
+          fun.(user)
+        else
+          send_unauthorized(conn)
+        end
+      :error ->
+        send_unauthorized(conn)
     end
   end
 
-  defp with_authorized_fun(user, fun, opts, block) do
-    quote do
-      case HexWeb.API.Util.authorize(var!(conn), unquote(opts)) do
-        {:ok, user = unquote(user)} ->
-          if unquote(fun).(user) do
-            unquote(block)
-          else
-            HexWeb.API.Util.send_unauthorized(var!(conn))
-          end
-
-        _ ->
-          HexWeb.API.Util.send_unauthorized(var!(conn))
-      end
+  @doc """
+  Run the given function if a user authorized as specified user,
+  otherwise send an unauthorized response.
+  """
+  @spec with_authorized(Plug.Conn.t, (HexWeb.User.t -> boolean), (HexWeb.User.t -> any)) :: any
+  def with_authorized(conn, auth? \\ fn _ -> true end, fun) do
+    case authorize(conn, []) do
+      {:ok, user} ->
+        if auth?.(user) do
+          fun.(user)
+        else
+          send_unauthorized(conn)
+        end
+      :error ->
+        send_unauthorized(conn)
     end
   end
 
   # Check if a user is authorized, return `{:ok, user}` if so,
   # or `:error` if authorization failed
-  @doc false
-  def authorize(conn, opts \\ []) do
-    only_basic = !!opts[:only_basic]
+  defp authorize(conn, opts) do
+    only_basic = Keyword.get(opts, :only_basic, false)
     case get_req_header(conn, "authorization") do
       ["Basic " <> credentials] ->
         basic_auth(credentials)
