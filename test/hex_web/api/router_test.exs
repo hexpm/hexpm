@@ -75,7 +75,7 @@ defmodule HexWeb.API.RouterTest do
     {:ok, key} = Key.create("macbook", user)
 
     headers = [ {"content-type", "application/json"},
-                {"authorization", key.secret}]
+                {"authorization", Key.secret(key)}]
     body = %{email: "email@mail.com", password: "pass"}
     conn = conn("PATCH", "/api/users/other", Jazz.encode!(body), headers: headers)
     conn = Router.call(conn, [])
@@ -87,7 +87,7 @@ defmodule HexWeb.API.RouterTest do
     {:ok, key} = Key.create("macbook", user)
 
     headers = [ {"content-type", "application/json"},
-                {"authorization", key.secret}]
+                {"authorization", Key.secret(key)}]
     body = %{meta: %{}}
     conn = conn("PUT", "/api/packages/ecto", Jazz.encode!(body), headers: headers)
     conn = Router.call(conn, [])
