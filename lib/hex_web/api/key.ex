@@ -11,6 +11,10 @@ defmodule HexWeb.API.Key do
     field :secret_second, :string
     field :created_at, :datetime
     field :updated_at, :datetime
+
+    # Only used after key creation to hold the users key (not hashed)
+    # the user key will never be retrievable after this
+    field :user_secret, :virtual
   end
 
   validatep validate(key),
@@ -31,8 +35,11 @@ defmodule HexWeb.API.Key do
           name = unique_name(name, names)
         end
 
-        {first, second} = gen_key()
-        key = %{key | name: name, secret_first: first, secret_second: second}
+        {user_secret, first, second} = gen_key()
+        key = %{key | name: name,
+                      user_secret: user_secret,
+                      secret_first: first,
+                      secret_second: second}
         {:ok, HexWeb.Repo.insert(key)}
       errors ->
         {:error, errors}
@@ -54,13 +61,14 @@ defmodule HexWeb.API.Key do
     :ok
   end
 
-  def secret(key) do
-    key.secret_first <> key.secret_second
-  end
-
-  def auth(<<first::binary-size(32), second::binary-size(32)>>) do
+  def auth(user_secret) do
     # Database index lookup on the first part of the key and then
     # secure compare on the second part to avoid timing attacks
+    app_secret  = Application.get_env(:hex_web, :secret)
+
+    <<first::binary-size(32), second::binary-size(32)>> =
+      :crypto.hmac(:sha256, app_secret, user_secret)
+      |> Base.encode16(case: :lower)
 
     user =
       from(k in HexWeb.API.Key,
@@ -75,13 +83,14 @@ defmodule HexWeb.API.Key do
   end
 
   defp gen_key do
-    rand   = :crypto.strong_rand_bytes(16) |> Base.encode16(case: :lower)
-    secret = Application.get_env(:hex_web, :secret)
+    user_secret = :crypto.strong_rand_bytes(16) |> Base.encode16(case: :lower)
+    app_secret  = Application.get_env(:hex_web, :secret)
 
     <<first::binary-size(32), second::binary-size(32)>> =
-      :crypto.hmac(:sha256, secret, rand) |> Base.encode16(case: :lower)
+      :crypto.hmac(:sha256, app_secret, user_secret)
+      |> Base.encode16(case: :lower)
 
-    {first, second}
+    {user_secret, first, second}
   end
 
   defp unique_name(name, names, counter \\ 2) do
@@ -99,12 +108,18 @@ defimpl HexWeb.Render, for: HexWeb.API.Key do
   alias HexWeb.API.Key
 
   def render(key) do
-    Key.__schema__(:keywords, key)
-    |> Dict.take([:name, :created_at, :updated_at])
-    |> Dict.update!(:created_at, &to_iso8601/1)
-    |> Dict.update!(:updated_at, &to_iso8601/1)
-    |> Dict.put(:url, api_url(["keys", key.name]))
-    |> Dict.put(:secret, Key.secret(key))
-    |> Enum.into(%{})
+    entity =
+      Key.__schema__(:keywords, key)
+      |> Dict.take([:name, :created_at, :updated_at])
+      |> Dict.update!(:created_at, &to_iso8601/1)
+      |> Dict.update!(:updated_at, &to_iso8601/1)
+      |> Dict.put(:url, api_url(["keys", key.name]))
+      |> Enum.into(%{})
+
+    if secret = key.user_secret do
+      Map.put(entity, :secret, secret)
+    else
+      entity
+    end
   end
 end
