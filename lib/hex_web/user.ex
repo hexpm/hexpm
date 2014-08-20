@@ -87,11 +87,12 @@ defmodule HexWeb.User do
   def auth?(nil, _password), do: false
 
   def auth?(user, password) do
-    stored_hash   = user.password
-    password      = String.to_char_list(password)
-    stored_hash   = :erlang.binary_to_list(stored_hash)
-    {:ok, hash}   = :bcrypt.hashpw(password, stored_hash)
-    hash == stored_hash
+    stored_hash = user.password
+    password    = String.to_char_list(password)
+    {:ok, hash} = :bcrypt.hashpw(password, stored_hash)
+    hash        = :erlang.list_to_binary(hash)
+
+    Util.secure_compare(hash, stored_hash)
   end
 
   defp gen_password(password) do
