@@ -4,7 +4,7 @@ defmodule HexWeb.Repo.Migrations.SplitAndHmacKeys do
   def up do
     secret = Application.get_env(:hex_web, :secret)
 
-    [ "CREATE EXTENSION pgcrypto",
+    [ "CREATE EXTENSION IF NOT EXISTS pgcrypto",
       "ALTER TABLE keys
         ADD COLUMN secret_first text UNIQUE,
         ADD COLUMN secret_second text",
