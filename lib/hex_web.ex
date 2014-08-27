@@ -11,8 +11,7 @@ defmodule HexWeb do
     config(opts[:port])
     File.mkdir_p!("tmp")
 
-    router = &HexWeb.Router.call(&1, [])
-    Plug.Adapters.Cowboy.http(HexWeb.Plugs.Exception, [router], opts)
+    Plug.Adapters.Cowboy.http(HexWeb.Router, [], opts)
     HexWeb.Supervisor.start_link
   end
 

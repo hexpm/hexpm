@@ -4,6 +4,7 @@ defmodule HexWeb.Router do
   import HexWeb.Plug
   alias HexWeb.Plugs
 
+  plug Plugs.Exception
   plug Plugs.Forwarded
   plug Plugs.Redirect,
     ssl: &__MODULE__.use_ssl/0,

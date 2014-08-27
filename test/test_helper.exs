@@ -27,10 +27,6 @@ defmodule HexWebTest.Case do
 
   @tmp Path.expand Path.join(__DIR__, "../tmp")
 
-  def call_router(conn) do
-    HexWeb.Plugs.Exception.call(conn, [&HexWeb.Router.call(&1, [])])
-  end
-
   def create_tar(version \\ 3, meta, files)
 
   def create_tar(2, meta, files) do

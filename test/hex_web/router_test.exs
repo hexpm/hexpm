@@ -2,6 +2,7 @@ defmodule HexWeb.RouterTest do
   use HexWebTest.Case
   import Plug.Conn
   import Plug.Test
+  alias HexWeb.Router
   alias HexWeb.User
   alias HexWeb.Package
   alias HexWeb.Release
@@ -21,7 +22,7 @@ defmodule HexWeb.RouterTest do
     RegistryBuilder.sync_rebuild
 
     conn = conn("GET", "/registry.ets.gz")
-    conn = call_router(conn)
+    conn = Router.call(conn, [])
 
     assert conn.status in 200..399
   after
@@ -58,7 +59,7 @@ defmodule HexWeb.RouterTest do
                 {"authorization", "Basic " <> :base64.encode("eric:eric")}]
     body = create_tar(%{app: :postgrex, version: "0.0.1", requirements: %{decimal: "~> 0.0.1"}}, [])
     conn = conn("POST", "/api/packages/postgrex/releases", body, headers: headers)
-    conn = call_router(conn)
+    conn = Router.call(conn, [])
     assert conn.status == 201
 
     port = Application.get_env(:hex_web, :port)
@@ -82,12 +83,12 @@ defmodule HexWeb.RouterTest do
 
     try do
       conn = %{conn("GET", "/foobar") | scheme: :http}
-      conn = call_router(conn)
+      conn = Router.call(conn, [])
       assert conn.status == 301
       assert get_resp_header(conn, "location") == ["https://hex.pm/foobar"]
 
       conn = %{conn("GET", "/foobar") | scheme: :https, host: "some-host.com"}
-      conn = call_router(conn)
+      conn = Router.call(conn, [])
       assert conn.status == 301
       assert get_resp_header(conn, "location") == ["https://hex.pm/foobar"]
     after
@@ -100,13 +101,13 @@ defmodule HexWeb.RouterTest do
   test "forwarded" do
     headers = [{"x-forwarded-proto", "https"}]
     conn = conn("GET", "/installs/hex.ez", nil, headers: headers)
-    conn = call_router(conn)
+    conn = Router.call(conn, [])
     assert conn.scheme == :https
 
     headers = [{"x-forwarded-for", "1.2.3.4"}]
     conn = conn("GET", "/installs/hex.ez", nil, headers: headers)
-    conn = call_router(conn)
-    assert conn.remote_ip == {1,2,3,4}
+    conn = Router.call(conn, [])
+    assert conn.port == 12345
   end
 
   test "installs" do
@@ -120,25 +121,25 @@ defmodule HexWeb.RouterTest do
 
     try do
       conn = conn("GET", "/installs/hex.ez")
-      conn = call_router(conn)
+      conn = Router.call(conn, [])
       assert conn.status == 302
       assert get_resp_header(conn, "location") == ["http://s3.hex.pm/installs/hex.ez"]
 
       headers = [ {"user-agent", "Mix/0.0.1"} ]
       conn = conn("GET", "/installs/hex.ez", nil, headers: headers)
-      conn = call_router(conn)
+      conn = Router.call(conn, [])
       assert conn.status == 302
       assert get_resp_header(conn, "location") == ["http://s3.hex.pm/installs/hex.ez"]
 
       headers = [ {"user-agent", "Mix/0.13.0"} ]
       conn = conn("GET", "/installs/hex.ez", nil, headers: headers)
-      conn = call_router(conn)
+      conn = Router.call(conn, [])
       assert conn.status == 302
       assert get_resp_header(conn, "location") == ["http://s3.hex.pm/installs/0.0.1/hex.ez"]
 
       headers = [ {"user-agent", "Mix/0.13.1"} ]
       conn = conn("GET", "/installs/hex.ez", nil, headers: headers)
-      conn = call_router(conn)
+      conn = Router.call(conn, [])
       assert conn.status == 302
       assert get_resp_header(conn, "location") == ["http://s3.hex.pm/installs/0.1.2/hex.ez"]
     after
