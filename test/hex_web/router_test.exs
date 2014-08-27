@@ -107,7 +107,7 @@ defmodule HexWeb.RouterTest do
     headers = [{"x-forwarded-for", "1.2.3.4"}]
     conn = conn("GET", "/installs/hex.ez", nil, headers: headers)
     conn = Router.call(conn, [])
-    assert conn.port == 12345
+    assert conn.remote_ip == {1,2,3,4}
   end
 
   test "installs" do

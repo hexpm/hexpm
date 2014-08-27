@@ -1,11 +1,9 @@
 defmodule HexWeb.Plugs.Exception do
-  @behaviour Plug.Wrapper
-
   import Plug.Conn
 
   def init(opts), do: opts
 
-  def wrap(conn, _opts, fun) do
+  def call(conn, [fun: fun]) do
     try do
       fun.(conn)
     catch

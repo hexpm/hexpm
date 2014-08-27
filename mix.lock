@@ -9,7 +9,7 @@
   "ibrowse": {:git, "git://github.com/opscode/ibrowse", "8f3f6a3a30730b193cc340a8885a960586dc98de", [tag: "v4.0.1.1"]},
   "jazz": {:git, "git://github.com/meh/jazz.git", "e0cf73011f64868534cd229c458e205ce04a6619", []},
   "mini_s3": {:git, "git://github.com/ericmj/mini_s3.git", "5e3d7aa3c198381582b01f88517fdf3dfda8e549", [branch: "hex-fixes"]},
-  "plug": {:git, "git://github.com/elixir-lang/plug.git", "68ca462d61d703376a78bfc201f6314b7e224272", []},
+  "plug": {:git, "git://github.com/elixir-lang/plug.git", "fb5010ae9a3bc19c99da74cb4eaca755427ad557", []},
   "poolboy": {:git, "git://github.com/devinus/poolboy.git", "17d1582533af5c076117e2e1270f4b43faa02f12", []},
   "postgrex": {:git, "git://github.com/ericmj/postgrex.git", "76426a317eab5dfeb4efd33713e63e29b1b04835", []},
   "ranch": {:git, "git://github.com/ninenines/ranch.git", "adf1822defc2b7cfdc7aca112adabfa1d614043c", []}}

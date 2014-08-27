@@ -4,7 +4,10 @@ defmodule HexWeb.Router do
   import HexWeb.Plug
   alias HexWeb.Plugs
 
-  plug Plugs.Exception
+  def call(conn, opts) do
+    Plugs.Exception.call(conn, [fun: &super(&1, opts)])
+  end
+
   plug Plugs.Forwarded
   plug Plugs.Redirect,
     ssl: &__MODULE__.use_ssl/0,
