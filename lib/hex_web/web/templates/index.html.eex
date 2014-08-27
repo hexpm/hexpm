@@ -13,7 +13,7 @@
   <div class="col-md-12">
     <h3>Using with Erlang</h3>
     <p>
-      Download a <a href="http://s3.hex.pm/mix">standalone Mix</a>, put it in your <code>PATH</code> and give it executable permissions. Now you can install Hex with <code>$ mix local.hex</code> and <a href="/docs/tasks">run all of its tasks</a>.
+      Download a <a href="http://s3.hex.pm/builds/mix/mix">standalone Mix</a>, put it in your <code>PATH</code> and give it executable permissions. Now you can install Hex with <code>$ mix local.hex</code> and <a href="/docs/tasks">run all of its tasks</a>.
     </p>
   </div>
 </div>

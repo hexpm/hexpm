@@ -98,15 +98,15 @@ defmodule HexWeb.RouterTest do
   end
 
   test "forwarded" do
-    headers = [ {"x-forwarded-proto", "https"} ]
+    headers = [{"x-forwarded-proto", "https"}]
     conn = conn("GET", "/installs/hex.ez", nil, headers: headers)
     conn = call_router(conn)
     assert conn.scheme == :https
 
-    headers = [ {"x-forwarded-port", "12345"} ]
+    headers = [{"x-forwarded-for", "1.2.3.4"}]
     conn = conn("GET", "/installs/hex.ez", nil, headers: headers)
-    assert conn.port == 12345
     conn = call_router(conn)
+    assert conn.remote_ip == {1,2,3,4}
   end
 
   test "installs" do
