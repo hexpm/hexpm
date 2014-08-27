@@ -1,7 +1,6 @@
 defmodule HexWeb.Web.RouterTest do
   use HexWebTest.Case
   import Plug.Test
-  alias HexWeb.Router
   alias HexWeb.Package
   alias HexWeb.Release
 
@@ -34,7 +33,7 @@ defmodule HexWeb.Web.RouterTest do
     HexWeb.Stats.Job.run({2013, 11, 1})
 
     conn = conn(:get, "/")
-    conn = Router.call(conn, [])
+    conn = call_router(conn)
 
     assert conn.status == 200
     assert conn.assigns[:total][:all] == 9
