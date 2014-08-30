@@ -8,7 +8,7 @@ defmodule HexWeb.Package do
 
   schema "packages" do
     field :name, :string
-    has_many :owners, HexWeb.User
+    has_many :owners, HexWeb.PackageOwner
     field :meta, :string
     has_many :releases, HexWeb.Release
     field :created_at, :datetime
@@ -88,6 +88,14 @@ defmodule HexWeb.Package do
     if package do
       %{package | meta: Jazz.decode!(package.meta)}
     end
+  end
+
+  def delete(package) do
+    package = %{package | meta: ""}
+    HexWeb.Repo.transaction(fn ->
+      HexWeb.Repo.delete_all(package.owners)
+      HexWeb.Repo.delete(package)
+    end)
   end
 
   def owners(package) do

@@ -62,8 +62,9 @@ defmodule HexWeb.Release do
     end
   end
 
-  def delete(release) do
-    if editable?(release) do
+  def delete(release, opts \\ []) do
+    force? = Keyword.get(opts, :force, false)
+    if editable?(release) or force? do
       HexWeb.Repo.transaction(fn ->
         HexWeb.Repo.delete_all(release.requirements)
         HexWeb.Repo.delete(release)
