@@ -12,7 +12,7 @@ defmodule HexWeb.API.Util do
 
   def when_stale(conn, entities, fun) do
     etag     = HexWeb.Util.etag(entities)
-    modified = if Record.record?(entities), do: Ecto.DateTime.to_erl(entities.updated_at)
+    modified = if Record.is_record(entities), do: Ecto.DateTime.to_erl(entities.updated_at)
 
     conn = put_resp_header(conn, "etag", etag)
 
