@@ -69,7 +69,8 @@
       </div>
     </div>
 
-    <script src="//ajax.googleapis.com/ajax/libs/jquery/2.1.0/jquery.min.js"></script>
+	<script src="//ajax.googleapis.com/ajax/libs/jquery/2.1.0/jquery.min.js"></script>
+	<script src="//cdnjs.cloudflare.com/ajax/libs/moment.js/2.8.2/moment.min.js"></script>
     <script src="//netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js"></script>
 
     <script>
@@ -79,8 +80,17 @@
       })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
 
       ga('create', 'UA-49056880-1', 'auto');
-      ga('send', 'pageview');
+	  ga('send', 'pageview');
 
+	  Array.prototype.slice.call(document.querySelectorAll('time')).map(function(i){
+	      if(i.attributes['type'].value == "relative") {
+	          i.innerText = moment(i.attributes['datetime'].value).fromNow();
+	      } else if(i.attributes['type'].value == "standard") {
+	          i.innerText = moment(i.attributes['datetime'].value).format("MMMM Do, YYYY");
+	      } else {
+	          throw new Error('invalid time type attribute');
+	      }
+	  });
     </script>
   </body>
 </html>

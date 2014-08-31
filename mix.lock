@@ -12,4 +12,5 @@
   "plug": {:git, "git://github.com/elixir-lang/plug.git", "fb5010ae9a3bc19c99da74cb4eaca755427ad557", []},
   "poolboy": {:git, "git://github.com/devinus/poolboy.git", "17d1582533af5c076117e2e1270f4b43faa02f12", []},
   "postgrex": {:git, "git://github.com/ericmj/postgrex.git", "76426a317eab5dfeb4efd33713e63e29b1b04835", []},
-  "ranch": {:git, "git://github.com/ninenines/ranch.git", "adf1822defc2b7cfdc7aca112adabfa1d614043c", []}}
+  "ranch": {:git, "git://github.com/ninenines/ranch.git", "adf1822defc2b7cfdc7aca112adabfa1d614043c", []},
+  "timex": {:git, "git://github.com/bitwalker/timex.git", "40bc77db79e01a14730d0c48edc3df74b31c30e1", []}}

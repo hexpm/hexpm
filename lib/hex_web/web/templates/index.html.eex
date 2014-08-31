@@ -63,7 +63,13 @@
     <p>
       <%= for { package, created_at } <- @package_new do %>
         <div class="row">
-          <div class="col-xs-5 text-right"><%= human_relative_time_from_now(created_at) %></div>
+			<div class="col-xs-5 text-right">
+			  <%= if time = created_at |> Ecto.DateTime.to_erl |> Timex.Date.from do %>
+				<time datetime="<%= time |> Timex.DateFormat.format!("{ISO}") %>" type="relative">
+					<%= time |> Timex.DateFormat.format!("{Mfull} {D}, {YYYY}") %>
+				</time>
+			  <% end %>
+			</div>
           <div class="col-xs-7"><a href="/packages/<%= package %>"><%= package %></a></div>
         </div>
       <% end %>
