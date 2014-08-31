@@ -76,7 +76,13 @@ links = Enum.to_list(@package.meta["links"] || [])
       <%= for release <- @releases do %>
         <li>
           <a href="/packages/<%= @package.name %>/<%= release.version %>"><strong><%= release.version %></strong></a>
-          <span class="text-muted"><%= pretty_date(release.created_at) %></span>
+		  <span class="text-muted">
+			<%= if time = release.created_at |> Ecto.DateTime.to_erl |> Timex.Date.from do %>
+			  <time datetime="<%= time |> Timex.DateFormat.format!("{ISO}") %>" type="standard">
+				<%= time |> Timex.DateFormat.format!("{Mfull} {D}, {YYYY}") %>
+			  </time>
+			<% end %>
+		  </span>
         </li>
       <% end %>
     </ul>
