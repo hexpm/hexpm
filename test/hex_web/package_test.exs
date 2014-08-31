@@ -14,7 +14,7 @@ defmodule HexWeb.PackageTest do
     user_id = user.id
     assert {:ok, %Package{}} = Package.create("ecto", user, %{})
     assert [%User{id: ^user_id}] = Package.get("ecto") |> Package.owners
-    assert nil?(Package.get("postgrex"))
+    assert is_nil(Package.get("postgrex"))
   end
 
   test "update package" do

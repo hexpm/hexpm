@@ -45,7 +45,7 @@ defmodule HexWeb.Plugs.Format do
     if accepts == [] do
       format = :json
     end
-    if nil?(version) do
+    if is_nil(version) do
       version = "beta"
     end
 

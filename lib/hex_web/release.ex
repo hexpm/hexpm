@@ -176,7 +176,7 @@ defmodule HexWeb.Release do
   end
 
   defp valid_requirement?(req) do
-    nil?(req) or (is_binary(req) and match?({:ok, _}, Version.parse_requirement(req)))
+    is_nil(req) or (is_binary(req) and match?({:ok, _}, Version.parse_requirement(req)))
   end
 end
 
