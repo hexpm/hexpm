@@ -58,6 +58,8 @@ defmodule HexWeb.Router do
 
   forward "/api", to: HexWeb.API.Router
 
+  forward "/feeds", to: HexWeb.Feeds.Router
+
   match _ do
     HexWeb.Web.Router.call(conn, [])
   end

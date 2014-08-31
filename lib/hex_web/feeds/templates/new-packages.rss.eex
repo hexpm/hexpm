@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<rss version="2.0">
+
+  <channel>
+
+    <title>New Packages on hex.pm</title>
+    <link>https://hex.pm/</link>
+    <description>New packages on hex.pm</description>
+    <language>en-en</language>
+
+    <%= for package <- @packages do %>
+    <item>
+      <title>Package "<%= package.name %>"</title>
+      <description><%= partial_meta_to_description([meta: package.meta]) %></description>
+      <link>https://hex.pm/packages/<%= package.name %></link>
+    </item>
+    <% end %>
+
+  </channel>
+
+</rss>

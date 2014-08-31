@@ -138,10 +138,18 @@ defmodule HexWeb.Package do
 
   def recent(count) do
     from(p in HexWeb.Package,
-         order_by: [desc: p.created_at],
-         limit: count,
-         select: {p.name, p.created_at})
+        order_by: [desc: p.created_at],
+        limit: count,
+        select: {p.name, p.created_at})
     |> HexWeb.Repo.all
+  end
+
+  def recent_full(count) do
+    from(p in HexWeb.Package,
+         order_by: [desc: p.created_at],
+         limit: count)
+    |> HexWeb.Repo.all
+    |> Enum.map(& %{&1 | meta: Jazz.decode!(&1.meta)})
   end
 
   def count(search \\ nil) do
