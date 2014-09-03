@@ -15,9 +15,8 @@ defmodule HexWeb.Release do
     has_one :downloads, HexWeb.Stats.ReleaseDownload
   end
 
-  # TODO: Prerelease support, also see TODO below
   validatep validate(release),
-    version: present() and type(:string) and valid_version(pre: false)
+    version: present() and type(:string) and valid_version(pre: true)
 
   validatep validate_create(release),
     also: validate(),
@@ -115,7 +114,6 @@ defmodule HexWeb.Release do
     Enum.map(requirements, fn
       {dep, %{"requirement" => req, "optional" => optional}} ->
         {to_string(dep), req, optional}
-      # Backwards compatible
       {dep, req} ->
         {to_string(dep), req, false}
     end)
