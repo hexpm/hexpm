@@ -34,6 +34,15 @@ defmodule HexWeb.Util do
     |> Base.encode16(case: :lower)
   end
 
+  def last_modified(models) do
+    list = Enum.map(List.wrap(models), fn model ->
+      model.updated_at
+      |> Ecto.DateTime.to_erl
+    end)
+
+    Enum.max(list)
+  end
+
   def parse_integer(string, default) when is_binary(string) do
     case Integer.parse(string) do
       {int, ""} -> int

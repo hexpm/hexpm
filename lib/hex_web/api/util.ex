@@ -12,13 +12,11 @@ defmodule HexWeb.API.Util do
 
   def when_stale(conn, entities, fun) do
     etag     = HexWeb.Util.etag(entities)
-    modified = if Record.is_record(entities), do: Ecto.DateTime.to_erl(entities.updated_at)
+    modified = HexWeb.Util.last_modified(entities)
 
-    conn = put_resp_header(conn, "etag", etag)
-
-    if modified do
-      conn = put_resp_header(conn, "last-modified", :cowboy_clock.rfc1123(modified))
-    end
+    conn = conn
+           |> put_resp_header("etag", etag)
+           |> put_resp_header("last-modified", :cowboy_clock.rfc1123(modified))
 
     unless HexWeb.API.Util.fresh?(conn, etag: etag, modified: modified) do
       fun.(conn)
@@ -28,50 +26,34 @@ defmodule HexWeb.API.Util do
   end
 
   def fresh?(conn, opts) do
-    modified_since = List.first get_req_header(conn, "if-modified-since")
-    none_match     = List.first get_req_header(conn, "if-none-match")
+    IO.inspect opts
 
-    if modified_since || none_match do
-      success = true
+    modified_since = IO.inspect List.first get_req_header(conn, "if-modified-since")
+    none_match     = IO.inspect List.first get_req_header(conn, "if-none-match")
 
-      if modified_since do
-        success = not_modified?(modified_since, opts[:modified])
-      end
-      if success && none_match do
-        success = etag_matches?(none_match, opts[:etag])
-      end
+    fresh = false
 
-      success
+    if modified_since && opts[:modified] do
+      fresh = IO.inspect not_modified?(modified_since, opts[:modified])
     end
+
+    if none_match && opts[:etag] do
+      fresh = IO.inspect etag_matches?(none_match, opts[:etag])
+    end
+
+    fresh
   end
 
-  defp not_modified?(_modified_since, nil), do: false
   defp not_modified?(modified_since, last_modified) do
     modified_since = :cowboy_http.rfc1123_date(modified_since)
     modified_since = :calendar.datetime_to_gregorian_seconds(modified_since)
     last_modified  = :calendar.datetime_to_gregorian_seconds(last_modified)
-    last_modified < modified_since
+    last_modified <= modified_since
   end
 
-  defp etag_matches?(_none_match, nil), do: false
   defp etag_matches?(none_match, etag) do
-    Plug.Util.list(none_match)
+    Plug.Conn.Utils.list(none_match)
     |> Enum.any?(&(&1 in [etag, "*"]))
-  end
-
-  defp cache_entity(conn, nil) do
-    conn
-  end
-
-  defp cache_entity(conn, entity) do
-    if not is_list(entity) do
-      clock = entity.updated_at
-              |> Ecto.DateTime.to_erl
-              |> :cowboy_clock.rfc1123
-      conn = put_resp_header(conn, "last-modified", clock)
-    end
-
-    put_resp_header(conn, "etag", HexWeb.Util.etag(entity))
   end
 
   @doc """
@@ -204,7 +186,6 @@ defmodule HexWeb.API.Util do
   @spec send_okay(Plug.Conn.t, term, :public | :private) :: Plug.Conn.t
   def send_okay(conn, entity, privacy) do
     conn
-    |> cache_entity(entity)
     |> cache(privacy)
     |> send_render(200, entity)
   end
@@ -217,7 +198,6 @@ defmodule HexWeb.API.Util do
   def send_creation_resp(conn, {:ok, entity}, privacy, location) do
     conn
     |> put_resp_header("location", location)
-    |> cache_entity(entity)
     |> cache(privacy)
     |> send_render(201, entity)
   end
@@ -233,7 +213,6 @@ defmodule HexWeb.API.Util do
   @spec send_update_resp(Plug.Conn.t, {:ok, term} | {:error, term}, :public | :private) :: Plug.Conn.t
   def send_update_resp(conn, {:ok, entity}, privacy) do
     conn
-    |> cache_entity(entity)
     |> cache(privacy)
     |> send_render(200, entity)
   end
