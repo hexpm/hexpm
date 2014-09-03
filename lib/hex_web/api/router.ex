@@ -103,7 +103,8 @@ defmodule HexWeb.API.Router do
     get "packages" do
       page = parse_integer(conn.params["page"], 1)
       packages = Package.all(page, 100, conn.params["search"])
-      when_stale(conn, packages, &send_okay(&1, packages, :public))
+      # No last-modified header for paginated results
+      when_stale(conn, packages, [modified: false], &send_okay(&1, packages, :public))
     end
 
     get "packages/:name" do

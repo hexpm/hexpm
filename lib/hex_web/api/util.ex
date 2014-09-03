@@ -10,13 +10,16 @@ defmodule HexWeb.API.Util do
 
   @max_age 60
 
-  def when_stale(conn, entities, fun) do
-    etag     = HexWeb.Util.etag(entities)
-    modified = HexWeb.Util.last_modified(entities)
+  def when_stale(conn, entities, opts \\ [], fun) do
+    if etag = HexWeb.Util.etag(entities) do
+      conn = put_resp_header(conn, "etag", etag)
+    end
 
-    conn = conn
-           |> put_resp_header("etag", etag)
-           |> put_resp_header("last-modified", :cowboy_clock.rfc1123(modified))
+    if Keyword.get(opts, :modified, true) do
+      if modified = HexWeb.Util.last_modified(entities) do
+        conn = put_resp_header(conn, "last-modified", :cowboy_clock.rfc1123(modified))
+      end
+    end
 
     unless HexWeb.API.Util.fresh?(conn, etag: etag, modified: modified) do
       fun.(conn)
@@ -26,19 +29,17 @@ defmodule HexWeb.API.Util do
   end
 
   def fresh?(conn, opts) do
-    IO.inspect opts
-
-    modified_since = IO.inspect List.first get_req_header(conn, "if-modified-since")
-    none_match     = IO.inspect List.first get_req_header(conn, "if-none-match")
+    modified_since = List.first get_req_header(conn, "if-modified-since")
+    none_match     = List.first get_req_header(conn, "if-none-match")
 
     fresh = false
 
     if modified_since && opts[:modified] do
-      fresh = IO.inspect not_modified?(modified_since, opts[:modified])
+      fresh = not_modified?(modified_since, opts[:modified])
     end
 
     if none_match && opts[:etag] do
-      fresh = IO.inspect etag_matches?(none_match, opts[:etag])
+      fresh = etag_matches?(none_match, opts[:etag])
     end
 
     fresh

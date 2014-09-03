@@ -24,6 +24,9 @@ defmodule HexWeb.Util do
     Ecto.DateTime.from_erl(:calendar.universal_time)
   end
 
+  def etag(nil), do: nil
+  def etag([]),  do: nil
+
   def etag(models) do
     list = Enum.map(List.wrap(models), fn model ->
       [model.__struct__, model.id, model.updated_at]
@@ -33,6 +36,9 @@ defmodule HexWeb.Util do
     :crypto.hash(:md5, binary)
     |> Base.encode16(case: :lower)
   end
+
+  def last_modified(nil), do: nil
+  def last_modified([]),  do: nil
 
   def last_modified(models) do
     list = Enum.map(List.wrap(models), fn model ->
