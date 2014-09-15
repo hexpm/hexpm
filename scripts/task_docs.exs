@@ -44,7 +44,7 @@ html_tasks =
     name = Mix.Task.task_name(task)
     if String.starts_with?(name, "hex.") do
       {_line, doc} = Code.get_docs(task, :moduledoc)
-      html = Markdown.to_html(doc) |> fix_headings.()
+      html = Earmark.to_html(doc) |> fix_headings.()
       [{name, html}]
     else
       []

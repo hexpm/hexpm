@@ -12,8 +12,7 @@
     </div>
     <div class="panel-body">
       <p>Reads or updates hex configuration file.</p>
-
-<p><code>mix hex.config KEY [VALUE]</code></p>
+<p><code class="inline">mix hex.config KEY [VALUE]</code></p>
 
     </div>
   </div>
@@ -28,16 +27,12 @@
     </div>
     <div class="panel-body">
       <p>Prints hex package or system information.</p>
-
-<p><code>mix hex.info [PACKAGE [VERSION]]</code></p>
-
-<p>If <code>package</code> is not given, print system information. This includes when
+<p><code class="inline">mix hex.info [PACKAGE [VERSION]]</code></p>
+<p>If <code class="inline">package</code> is not given, print system information. This includes when
 registry was last updated and current system version.</p>
-
-<p>If <code>package</code> is given, print information about the package. This includes all
+<p>If <code class="inline">package</code> is given, print information about the package. This includes all
 released versions and package metadata.</p>
-
-<p>If <code>package</code> and <code>version</code> is given print release information. This includes
+<p>If <code class="inline">package</code> and <code class="inline">version</code> is given print release information. This includes
 remote Git URL and Git ref, and all package dependencies.</p>
 
     </div>
@@ -53,20 +48,13 @@ remote Git URL and Git ref, and all package dependencies.</p>
     </div>
     <div class="panel-body">
       <p>Remove or list API keys associated with your account.</p>
-
 <h5>Remove key</h5>
-
 <p>Remove given API key from account.</p>
-
 <p>The key can no longer be used to authenticate API requests.</p>
-
-<p><code>mix hex.key remove key_name</code></p>
-
+<p><code class="inline">mix hex.key remove key_name</code></p>
 <h5>List keys</h5>
-
 <p>List all API keys associated with your account.</p>
-
-<p><code>mix hex.key list</code></p>
+<p><code class="inline">mix hex.key list</code></p>
 
     </div>
   </div>
@@ -81,29 +69,19 @@ remote Git URL and Git ref, and all package dependencies.</p>
     </div>
     <div class="panel-body">
       <p>Add, remove or list package owners.</p>
-
 <p>A package owner have full permissions to the package. They can publish and
 revert releases and even remove other package owners.</p>
-
 <h5>Add owner</h5>
-
 <p>Add an owner to package by specifying the package name and email of the new
 owner.</p>
-
-<p><code>mix hex.owner add PACKAGE EMAIL</code></p>
-
+<p><code class="inline">mix hex.owner add PACKAGE EMAIL</code></p>
 <h5>Remove owner</h5>
-
 <p>Remove an owner to package by specifying the package name and email of the new
 owner.</p>
-
-<p><code>mix hex.owner remove PACKAGE EMAIL</code></p>
-
+<p><code class="inline">mix hex.owner remove PACKAGE EMAIL</code></p>
 <h5>List owners</h5>
-
 <p>List all owners of given package.</p>
-
-<p><code>mix hex.owner list PACKAGE</code></p>
+<p><code class="inline">mix hex.owner list PACKAGE</code></p>
 
     </div>
   </div>
@@ -118,61 +96,56 @@ owner.</p>
     </div>
     <div class="panel-body">
       <p>Publish a new version of your package and update the package.</p>
-
-<p><code>mix hex.publish</code></p>
-
+<p><code class="inline">mix hex.publish</code></p>
 <p>If it is a new package being published it will be created and the user
-specified in <code>username</code> will be the package owner. Only package owners can
+specified in <code class="inline">username</code> will be the package owner. Only package owners can
 publish.</p>
-
-<p>A published version can be amended or reverted with <code>--revert</code> up to one hour
+<p>A published version can be amended or reverted with <code class="inline">--revert</code> up to one hour
 after its publication. If you want to revert a publication that is more than
 one hour old you need to contact an administrator.</p>
-
 <h4>Command line options</h4>
-
 <ul>
-<li><code>--revert VERSION</code> - Revert given version</li>
+<li><code class="inline">--revert VERSION</code> - Revert given version
+</li>
 </ul>
-
 <h4>Configuration</h4>
-
 <ul>
-<li><p><code>:app</code> - Package name (required)</p></li>
-<li><p><code>:version</code> - Package version (required)</p></li>
-<li><p><code>:deps</code> - List of package dependencies (see Dependencies below)</p></li>
-<li><p><code>:description</code> - Description of the project in a few paragraphs</p></li>
-<li><p><code>:package</code> - Hex specific configuration (see Package configuration below)</p></li>
+<li><p><code class="inline">:app</code> - Package name (required)</p>
+</li>
+<li><p><code class="inline">:version</code> - Package version (required)</p>
+</li>
+<li><p><code class="inline">:deps</code> - List of package dependencies (see Dependencies below)</p>
+</li>
+<li><p><code class="inline">:description</code> - Description of the project in a few paragraphs</p>
+</li>
+<li><code class="inline">:package</code> - Hex specific configuration (see Package configuration below)
+</li>
 </ul>
-
 <h4>Dependencies</h4>
-
-<p>Dependencies are defined in mix&#39;s dependency format. But instead of using
-<code>:git</code> or <code>:path</code> as the SCM <code>:package</code> is used.</p>
-
+<p>Dependencies are defined in mix’s dependency format. But instead of using
+<code class="inline">:git</code> or <code class="inline">:path</code> as the SCM <code class="inline">:package</code> is used.</p>
 <pre><code>defp deps do
   [ {:ecto, &quot;~&gt; 0.1.0&quot;},
     {:postgrex, &quot;~&gt; 0.3.0&quot;},
     {:cowboy, github: &quot;extend/cowboy&quot;} ]
-end
-</code></pre>
-
+end</code></pre>
 <p>As can be seen Hex package dependencies works alongside git dependencies.
 Important to note is that non-Hex dependencies will not be used during
 dependency resolution and neither will be they listed as dependencies of the
 package.</p>
-
 <h4>Package configuration</h4>
-
 <p>Additional metadata of the package can optionally be defined, but it is very
 recommended to do so.</p>
-
 <ul>
-<li><p><code>:files</code> - List of files and directories to include in the package,
-can include wildcards</p></li>
-<li><p><code>:contributors</code> - List of names of contributors</p></li>
-<li><p><code>:licenses</code> - List of licenses used by the package</p></li>
-<li><p><code>:links</code> - Map of links</p></li>
+<li><p><code class="inline">:files</code> - List of files and directories to include in the package,
+can include wildcards</p>
+</li>
+<li><p><code class="inline">:contributors</code> - List of names of contributors</p>
+</li>
+<li><p><code class="inline">:licenses</code> - List of licenses used by the package</p>
+</li>
+<li><code class="inline">:links</code> - Map of links
+</li>
 </ul>
 
     </div>
@@ -188,8 +161,7 @@ can include wildcards</p></li>
     </div>
     <div class="panel-body">
       <p>Display packages matching the given search query.</p>
-
-<p><code>mix hex.search PACKAGE</code></p>
+<p><code class="inline">mix hex.search PACKAGE</code></p>
 
     </div>
   </div>
@@ -204,21 +176,20 @@ can include wildcards</p></li>
     </div>
     <div class="panel-body">
       <p>Hex user tasks.</p>
-
 <h5>Registers a new user</h5>
-
-<p><code>mix hex.user register</code></p>
-
+<p><code class="inline">mix hex.user register</code></p>
+<h5>Prints the current user</h5>
+<p><code class="inline">mix hex.user whoami</code></p>
 <h5>Authorize a new user</h5>
-
 <p>Authorizes a new user on the local machine by generating a new API key and
 storing it in the hex config.</p>
-
-<p><code>mix hex.user auth</code></p>
-
-<h5>Update user options</h5>
-
-<p><code>mix hex.user update</code></p>
+<p><code class="inline">mix hex.user auth</code></p>
+<h5>Deauthorize the user</h5>
+<p>Deauthorizes the user from the local machine by removing the API key from the
+hex config.</p>
+<p><code class="inline">mix hex.user deauth</code></p>
+<h5>Update user configuration</h5>
+<p><code class="inline">mix hex.user update</code></p>
 
     </div>
   </div>
