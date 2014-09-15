@@ -4,13 +4,14 @@ defmodule HexWeb.Mixfile do
   def project do
     [app: :hex_web,
      version: "0.0.1",
-     elixir: "~> 1.0.0-rc1",
+     elixir: "~> 1.0",
      config_path: "config/#{Mix.env}.exs",
      deps: deps]
   end
 
   def application do
-    [applications: [:plug, :cowboy, :ecto, :postgrex, :jazz, :bcrypt, :mini_s3, :logger],
+    [applications: [:plug, :cowboy, :ecto, :postgrex, :jazz, :bcrypt, :mini_s3,
+                    :logger, :porcelain],
      mod: {HexWeb, []},
      env: []]
   end
@@ -21,6 +22,7 @@ defmodule HexWeb.Mixfile do
      {:jazz,      github: "meh/jazz"},
      {:bcrypt,    github: "opscode/erlang-bcrypt"},
      {:mini_s3,   github: "ericmj/mini_s3", branch: "hex-fixes"},
+     {:porcelain, github: "alco/porcelain"},
      {:cowboy,    github: "ninenines/cowboy", override: true},
      {:cowlib,    github: "ninenines/cowlib", override: true},
      {:ranch,     github: "ninenines/ranch", override: true},

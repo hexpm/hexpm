@@ -146,4 +146,10 @@ defmodule HexWeb.Util do
   defp arithmetic_compare("", "", acc) do
     acc
   end
+
+  def shell(cmd) do
+    stream = IO.binstream(:standard_io, :line)
+    result = Porcelain.shell(cmd, out: stream, err: :out)
+    result.status
+  end
 end

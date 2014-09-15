@@ -5,11 +5,11 @@
   "earmark": {:git, "git://github.com/pragdave/earmark.git", "2322b93284fea09e846f0d8d752f35cdb7167a50", []},
   "ecto": {:git, "git://github.com/elixir-lang/ecto.git", "ab3e7ef1ba915e86a4c538448a00bf9ce6f882f0", []},
   "envy": {:git, "git://github.com/manderson26/envy.git", "d62cb227b9000ee866c8bcc724ddf68d87621dea", [branch: "master"]},
-  "ex_doc": {:git, "git://github.com/elixir-lang/ex_doc.git", "ca71b84b9c3c7e23b4b661e485a909aee3fdbc3b", []},
   "ibrowse": {:git, "git://github.com/opscode/ibrowse", "8f3f6a3a30730b193cc340a8885a960586dc98de", [tag: "v4.0.1.1"]},
   "jazz": {:git, "git://github.com/meh/jazz.git", "49f335492aca5516495199dd81dd18b845ebaa69", []},
   "mini_s3": {:git, "git://github.com/ericmj/mini_s3.git", "5e3d7aa3c198381582b01f88517fdf3dfda8e549", [branch: "hex-fixes"]},
   "plug": {:git, "git://github.com/elixir-lang/plug.git", "756369d2b827de7a4351ff841a83586ce6c1a798", []},
   "poolboy": {:git, "git://github.com/devinus/poolboy.git", "17d1582533af5c076117e2e1270f4b43faa02f12", []},
+  "porcelain": {:git, "git://github.com/alco/porcelain.git", "1eddb32376c75b30f84f01e9fd60433af7ff7654", []},
   "postgrex": {:git, "git://github.com/ericmj/postgrex.git", "844fd92e7a14fdcab69c4a50eac20d06ab94b11d", []},
   "ranch": {:git, "git://github.com/ninenines/ranch.git", "adf1822defc2b7cfdc7aca112adabfa1d614043c", []}}
