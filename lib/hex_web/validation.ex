@@ -115,11 +115,11 @@ defmodule HexWeb.Validation do
       {:ok, {:dict, k_type, v_type}}
 
     catch
-      :error -> {:error, ""}
+      :error -> :error
     end
   end
 
-  defp type_extension(_), do: {:error, ""}
+  defp type_extension(_), do: :error
 
   defp type_to_ast({:dict, arg1, arg2}) do
     {:dict, [], [type_to_ast(arg1), type_to_ast(arg2)]}
@@ -127,6 +127,15 @@ defmodule HexWeb.Validation do
 
   defp type_to_ast(arg), do: Util.type_to_ast(arg)
 
-  defp value_to_type(nil), do: {:ok, :any}
-  defp value_to_type(value), do: Util.value_to_type(value, &type_extension/1)
+  defp value_to_type(value) do
+    case Util.value_to_type(value) do
+      {:ok, type} ->
+        {:ok, type}
+      {:error, _} = err ->
+        case type_extension(value) do
+          {:ok, type} -> {:ok, type}
+          :error -> err
+        end
+    end
+  end
 end

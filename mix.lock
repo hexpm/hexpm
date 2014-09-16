@@ -3,7 +3,7 @@
   "cowlib": {:git, "git://github.com/ninenines/cowlib.git", "d544a494af4dbc810fc9c15eaf5cc050cced1501", []},
   "decimal": {:git, "git://github.com/ericmj/decimal.git", "5d47511cfa4d9049c1a9581df7f804c989ec34c0", []},
   "earmark": {:git, "git://github.com/pragdave/earmark.git", "2322b93284fea09e846f0d8d752f35cdb7167a50", []},
-  "ecto": {:git, "git://github.com/elixir-lang/ecto.git", "ab3e7ef1ba915e86a4c538448a00bf9ce6f882f0", []},
+  "ecto": {:git, "git://github.com/elixir-lang/ecto.git", "ed223048a6f6c07fce4c84a35747866fba32752d", []},
   "envy": {:git, "git://github.com/manderson26/envy.git", "d62cb227b9000ee866c8bcc724ddf68d87621dea", [branch: "master"]},
   "ibrowse": {:git, "git://github.com/opscode/ibrowse", "8f3f6a3a30730b193cc340a8885a960586dc98de", [tag: "v4.0.1.1"]},
   "jazz": {:git, "git://github.com/meh/jazz.git", "49f335492aca5516495199dd81dd18b845ebaa69", []},
