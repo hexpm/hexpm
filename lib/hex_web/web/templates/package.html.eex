@@ -96,6 +96,18 @@ links = Enum.to_list(@package.meta["links"] || [])
         <% end %>
       <% end %>
     </ul>
+
+    <%= if @required_by && length(@required_by) > 0 do %>
+    <h4>Dependents</h4>
+    <ul class="list-unstyled">
+      <%= for name <- @required_by do %>
+      <li>
+        <a href="/packages/<%= name %>"><strong><%= name %></strong></a>
+      </li>
+      <% end %>
+    </ul>
+    <% end %>
+
   </div>
 </div>
 
