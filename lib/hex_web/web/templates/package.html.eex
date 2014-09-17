@@ -105,6 +105,11 @@ links = Enum.to_list(@package.meta["links"] || [])
         <a href="/packages/<%= name %>"><strong><%= name %></strong></a>
       </li>
       <% end %>
+      <%= if @required_by_more > 0 do %>
+      <li>
+        <a href="/packages/<%= @package.name %>/<%= @current_release.version %>/dependants"><strong>...and <%= @required_by_more %> more</strong></a>
+      </li>
+      <%= end %>
     </ul>
     <% end %>
 

@@ -152,14 +152,18 @@ defmodule HexWeb.Package do
     |> Enum.map(& %{&1 | meta: Jazz.decode!(&1.meta)})
   end
 
-  def required_by(release) do
-    from(req in HexWeb.Requirement,
+  def required_by(release, count) do
+    packages = from(req in HexWeb.Requirement,
          join: p in req.release,
          join: r in p.package,
          where: req.dependency_id == ^release.package_id,
          group_by: r.name,
+         limit: 1000,
          select: r.name)
     |> HexWeb.Repo.all
+    count_more = length(packages) - count
+    if count_more < 0, do: count_more = 0
+    {Enum.slice(packages, 0, count), count_more}
   end
 
   def count(search \\ nil) do
