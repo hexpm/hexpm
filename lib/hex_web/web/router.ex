@@ -99,8 +99,10 @@ defmodule HexWeb.Web.Router do
     if package = Package.get(name) do
       releases = Release.all(package)
       if release = Enum.find(releases, &(&1.version == version)) do
+        active    = :packages
+        title     = package.name
         {required_by, required_by_more} = Package.required_by(release, 1000)
-        conn = assign_pun(conn, [package, release, required_by, required_by_more])
+        conn = assign_pun(conn, [active, title, package, release, required_by, required_by_more])
         send_page(conn, :dependants)
       end
     end || raise NotFound
