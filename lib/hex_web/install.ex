@@ -1,6 +1,5 @@
 defmodule HexWeb.Install do
   use Ecto.Model
-  import Kernel, except: [max: 2]
 
   schema "installs" do
     field :hex, :string
@@ -8,7 +7,8 @@ defmodule HexWeb.Install do
   end
 
   def all do
-    HexWeb.Repo.all(HexWeb.Install)
+    from(i in HexWeb.Install, order_by: [asc: i.id])
+    |> HexWeb.Repo.all
   end
 
   def latest(current) do
@@ -19,17 +19,13 @@ defmodule HexWeb.Install do
             Enum.any?(elixirs, &Version.compare(&1, current) != :gt)
           end)
 
-        if installs != [] do
-          install = max(installs, &(&1.hex))
+        if install = List.last(installs) do
+          elixir =
+            install.elixirs
+            |> Enum.filter(&(Version.compare(&1, current) != :gt))
+            |> List.last
 
-          if install do
-            elixir =
-              install.elixirs
-              |> Enum.filter(&(Version.compare(&1, current) != :gt))
-              |> Enum.max
-
-            {install.hex, elixir}
-          end
+          {install.hex, elixir}
         end
 
       :error ->
@@ -39,11 +35,6 @@ defmodule HexWeb.Install do
 
   def create(hex, elixirs) do
     {:ok, %HexWeb.Install{hex: hex, elixirs: elixirs}
-           |> HexWeb.Repo.insert}
-  end
-
-  defp max([first|rest], fun) do
-    {_, elem} = Enum.reduce(rest, {fun.(first), first}, &Kernel.max({fun.(&1), &1}, &2))
-    elem
+          |> HexWeb.Repo.insert}
   end
 end

@@ -115,7 +115,7 @@ defmodule HexWeb.RegistryBuilder do
           :timer.tc(fn ->
             HexWeb.Registry.set_working(handle)
 
-            installs     = installs()
+            {installs1, installs2} = installs()
             requirements = requirements()
             releases     = releases()
             packages     = packages()
@@ -147,7 +147,9 @@ defmodule HexWeb.RegistryBuilder do
 
             tid = :ets.new(@ets_table, [:public])
             :ets.insert(tid, {:"$$version$$", @version})
-            :ets.insert(tid, {:"$$installs$$", installs})
+            # Removing :"$$installs$$" should bump version to 4
+            :ets.insert(tid, {:"$$installs$$", installs1})
+            :ets.insert(tid, {:"$$installs2$$", installs2})
             :ets.insert(tid, release_tuples ++ package_tuples)
             :ok = :ets.tab2file(tid, String.to_char_list(file))
             :ets.delete(tid)
@@ -209,9 +211,14 @@ defmodule HexWeb.RegistryBuilder do
   end
 
   defp installs do
-    Enum.map(Install.all, fn %Install{hex: hex, elixirs: elixirs} ->
-      {hex, Enum.min(elixirs)}
-    end)
+    installs2 =
+      Enum.map(Install.all, fn %Install{hex: hex, elixirs: elixirs} ->
+        {hex, elixirs}
+      end)
+
+    installs1 = Enum.map(installs2, fn {hex, elixirs} -> {hex, List.first(elixirs)} end)
+
+    {installs1, installs2}
   end
 
   defp time_diff(time1, time2) do

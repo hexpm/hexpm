@@ -16,7 +16,7 @@ defmodule HexWeb.RegistryBuilderTest do
     {:ok, _} = Package.create("decimal", user, %{})
     {:ok, _} = Package.create("ex_doc", user, %{})
     {:ok, _} = Install.create("0.0.1", ["0.13.0-dev"])
-    {:ok, _} = Install.create("0.1.0", ["0.13.1-dev"])
+    {:ok, _} = Install.create("0.1.0", ["0.13.1-dev", "0.13.1"])
     :ok
   end
 
@@ -51,6 +51,9 @@ defmodule HexWeb.RegistryBuilderTest do
     try do
       assert [{:"$$installs$$", installs}] = :ets.lookup(tid, :"$$installs$$")
       assert [{"0.0.1", "0.13.0-dev"}, {"0.1.0", "0.13.1-dev"}] = installs
+
+      assert [{:"$$installs2$$", installs}] = :ets.lookup(tid, :"$$installs2$$")
+      assert [{"0.0.1", ["0.13.0-dev"]}, {"0.1.0", ["0.13.1-dev", "0.13.1"]}] = installs
     after
       close_table(tid)
     end
@@ -68,7 +71,7 @@ defmodule HexWeb.RegistryBuilderTest do
     tid = open_table()
 
     try do
-      assert length(:ets.match_object(tid, :_)) == 7
+      assert length(:ets.match_object(tid, :_)) == 8
 
       assert [ {"decimal", [["0.0.1", "0.0.2"]]} ] = :ets.lookup(tid, "decimal")
 
