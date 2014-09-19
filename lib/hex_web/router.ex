@@ -43,10 +43,11 @@ defmodule HexWeb.Router do
         latest = nil
     end
 
-    if latest do
-      url = "installs/#{latest}/hex.ez"
-    else
-      url = "installs/hex.ez"
+    case latest do
+      {hex, elixir} ->
+        url = "installs/#{elixir}/hex-#{hex}.ez"
+      nil ->
+        url = "installs/hex.ez"
     end
 
     url = HexWeb.Util.cdn_url(url)

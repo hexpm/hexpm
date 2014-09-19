@@ -209,8 +209,8 @@ defmodule HexWeb.RegistryBuilder do
   end
 
   defp installs do
-    Enum.map(Install.all, fn %Install{hex: hex, elixir: elixir} ->
-      {hex, elixir}
+    Enum.map(Install.all, fn %Install{hex: hex, elixirs: elixirs} ->
+      {hex, Enum.min(elixirs)}
     end)
   end
 

@@ -15,8 +15,8 @@ defmodule HexWeb.RegistryBuilderTest do
     {:ok, _} = Package.create("postgrex", user, %{})
     {:ok, _} = Package.create("decimal", user, %{})
     {:ok, _} = Package.create("ex_doc", user, %{})
-    {:ok, _} = Install.create("0.0.1", "0.13.0-dev")
-    {:ok, _} = Install.create("0.1.0", "0.13.1-dev")
+    {:ok, _} = Install.create("0.0.1", ["0.13.0-dev"])
+    {:ok, _} = Install.create("0.1.0", ["0.13.1-dev"])
     :ok
   end
 

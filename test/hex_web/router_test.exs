@@ -114,10 +114,11 @@ defmodule HexWeb.RouterTest do
     cdn_url = Application.get_env(:hex_web, :cdn_url)
     Application.put_env(:hex_web, :cdn_url, "http://s3.hex.pm")
 
-    versions = [{"0.0.1", "0.13.0-dev"}, {"0.1.0", "0.13.1-dev"},
-                {"0.1.1", "0.13.1-dev"}, {"0.1.2", "0.13.1-dev"}]
+    versions = [{"0.0.1", ["0.13.0-dev"]}, {"0.1.0", ["0.13.1-dev"]},
+                {"0.1.1", ["0.13.1-dev"]}, {"0.1.2", ["0.13.1-dev"]},
+                {"0.2.0", ["0.14.0", "0.14.1", "0.14.2"]}]
 
-    Enum.each(versions, fn {hex, elixir} -> HexWeb.Install.create(hex, elixir) end)
+    Enum.each(versions, fn {hex, elixirs} -> HexWeb.Install.create(hex, elixirs) end)
 
     try do
       conn = conn("GET", "/installs/hex.ez")
@@ -135,13 +136,37 @@ defmodule HexWeb.RouterTest do
       conn = conn("GET", "/installs/hex.ez", nil, headers: headers)
       conn = Router.call(conn, [])
       assert conn.status == 302
-      assert get_resp_header(conn, "location") == ["http://s3.hex.pm/installs/0.0.1/hex.ez"]
+      assert get_resp_header(conn, "location") == ["http://s3.hex.pm/installs/0.13.0-dev/hex-0.0.1.ez"]
 
       headers = [ {"user-agent", "Mix/0.13.1"} ]
       conn = conn("GET", "/installs/hex.ez", nil, headers: headers)
       conn = Router.call(conn, [])
       assert conn.status == 302
-      assert get_resp_header(conn, "location") == ["http://s3.hex.pm/installs/0.1.2/hex.ez"]
+      assert get_resp_header(conn, "location") == ["http://s3.hex.pm/installs/0.13.1-dev/hex-0.1.2.ez"]
+
+      headers = [ {"user-agent", "Mix/0.14.0"} ]
+      conn = conn("GET", "/installs/hex.ez", nil, headers: headers)
+      conn = Router.call(conn, [])
+      assert conn.status == 302
+      assert get_resp_header(conn, "location") == ["http://s3.hex.pm/installs/0.14.0/hex-0.2.0.ez"]
+
+      headers = [ {"user-agent", "Mix/0.14.1-dev"} ]
+      conn = conn("GET", "/installs/hex.ez", nil, headers: headers)
+      conn = Router.call(conn, [])
+      assert conn.status == 302
+      assert get_resp_header(conn, "location") == ["http://s3.hex.pm/installs/0.14.0/hex-0.2.0.ez"]
+
+      headers = [ {"user-agent", "Mix/0.14.1"} ]
+      conn = conn("GET", "/installs/hex.ez", nil, headers: headers)
+      conn = Router.call(conn, [])
+      assert conn.status == 302
+      assert get_resp_header(conn, "location") == ["http://s3.hex.pm/installs/0.14.1/hex-0.2.0.ez"]
+
+      headers = [ {"user-agent", "Mix/0.14.2"} ]
+      conn = conn("GET", "/installs/hex.ez", nil, headers: headers)
+      conn = Router.call(conn, [])
+      assert conn.status == 302
+      assert get_resp_header(conn, "location") == ["http://s3.hex.pm/installs/0.14.2/hex-0.2.0.ez"]
     after
       Application.put_env(:hex_web, :cdn_url, cdn_url)
     end
