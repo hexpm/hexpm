@@ -24,6 +24,12 @@ config :hex_web,
   s3_secret_key: System.get_env("HEX_S3_SECRET_KEY"),
   cdn_url:       System.get_env("HEX_CDN_URL"),
 
+  ses_endpoint:    System.get_env("HEX_SES_ENDPOINT") || "email-smtp.us-west-2.amazonaws.com",
+  ses_port:        System.get_env("HEX_SES_PORT") || "587",
+  ses_user:        System.get_env("HEX_SES_USERNAME"),
+  ses_pass:        System.get_env("HEX_SES_PASSWORD"),
+  ses_source_addr: System.get_env("HEX_SES_SOURCE_ADDRESS"),
+
   secret: System.get_env("HEX_SECRET")
 
 if Mix.env in [:dev, :test] do

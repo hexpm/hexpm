@@ -84,6 +84,17 @@ defmodule HexWeb.API.Router do
       send_creation_resp(conn, result, :public, api_url(["users", username]))
     end
 
+    get "users/:name/confirm/:key" do
+      case User.confirm(name, key) do
+        {:ok, user} ->
+          send_okay(conn, user, :public)
+        {:error, :invalid_user} ->
+          raise NotFound
+        {:error, :invalid_key} ->
+          raise NotFound
+      end
+    end
+
     get "users/:name" do
       if user = User.get(username: name) do
         when_stale(conn, user, &send_okay(&1, user, :public))
@@ -245,7 +256,7 @@ defmodule HexWeb.API.Router do
     end
 
     post "keys" do
-      with_authorized_basic(conn, fn user ->
+      with_authorized_basic_key_only(conn, fn user ->
         name = conn.params["name"]
         result = Key.create(name, user)
         send_creation_resp(conn, result, :private, api_url(["keys", name]))

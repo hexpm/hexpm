@@ -122,6 +122,27 @@ defmodule HexWeb.API.Util do
   end
 
   @doc """
+  Run the given function if a user authorized with basic authentication,
+  otherwise send an unauthorized response.
+
+  Allows unconfirmed accounts to create keys.
+  """
+  @spec with_authorized_basic_key_only(Plug.Conn.t, (HexWeb.User.t -> boolean), (HexWeb.User.t -> any)) :: any
+  def with_authorized_basic_key_only(conn, auth? \\ fn _ -> true end, fun) do
+    case authorize(conn, only_basic: true, keys_only: true) do
+      {:ok, user} ->
+        if auth?.(user) do
+          fun.(user)
+        else
+          send_unauthorized(conn)
+        end
+      :error ->
+        send_unauthorized(conn)
+    end
+  end
+
+
+  @doc """
   Run the given function if a user authorized as specified user,
   otherwise send an unauthorized response.
   """
@@ -143,22 +164,28 @@ defmodule HexWeb.API.Util do
   # or `:error` if authorization failed
   defp authorize(conn, opts) do
     only_basic = Keyword.get(opts, :only_basic, false)
+    keys_only = Keyword.get(opts, :keys_only, false)
+
     case get_req_header(conn, "authorization") do
       ["Basic " <> credentials] ->
-        basic_auth(credentials)
+        basic_auth(credentials, keys_only)
       [key] when not only_basic ->
-        key_auth(key)
+        key_auth(key, keys_only)
       _ ->
         :error
     end
   end
 
-  defp basic_auth(credentials) do
+  defp basic_auth(credentials, keys_only) do
     case String.split(:base64.decode(credentials), ":", parts: 2) do
       [username, password] ->
         user = User.get(username: username)
         if User.auth?(user, password) do
-          {:ok, user}
+          if keys_only or user.confirmed do
+            {:ok, user}
+          else
+            :error
+          end
         else
           :error
         end
@@ -167,10 +194,16 @@ defmodule HexWeb.API.Util do
     end
   end
 
-  defp key_auth(key) do
+  defp key_auth(key, keys_only) do
     case Key.auth(key) do
-      nil  -> :error
-      user -> {:ok, user}
+      nil  ->
+        :error
+      user ->
+        if keys_only or user.confirmed do
+          {:ok, user}
+        else
+          :error
+        end
     end
   end
 
