@@ -30,7 +30,7 @@ defmodule HexWeb.Mixfile do
      {:postgrex,  github: "ericmj/postgrex", override: true},
      {:decimal,   github: "ericmj/decimal", override: true},
      {:earmark,   github: "pragdave/earmark", only: :dev},
-     {:gen_smtp,  github: "Vagabond/gen_smtp", compile: "rebar compile"}
+     {:gen_smtp,  github: "Vagabond/gen_smtp"}
    ]
   end
 end
