@@ -3,7 +3,7 @@ defmodule HexWeb.Repo.Migrations.AddValidation do
 
   def up do
     "ALTER TABLE users
-      ADD COLUMN confirmed boolean UNIQUE,
+      ADD COLUMN confirmed boolean,
       ADD COLUMN confirmation_key text UNIQUE"
   end
 
