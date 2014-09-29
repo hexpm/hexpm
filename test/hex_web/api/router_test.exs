@@ -537,7 +537,9 @@ defmodule HexWeb.API.RouterTest do
     assert conn.status == 204
 
     package = Package.get("postgrex")
-    assert [%User{username: "jose"}, %User{username: "eric"}] = Package.owners(package)
+    assert [first, second] = Package.owners(package)
+    assert first.username in ["jose", "eric"]
+    assert second.username in ["jose", "eric"]
   end
 
   test "add package owner authorizes" do

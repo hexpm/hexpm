@@ -82,20 +82,30 @@ defmodule HexWeb.API.Router do
   defp handle_docs(conn, release, body) do
     case :erl_tar.extract({:binary, body}, [:memory, :compressed]) do
       {:ok, files} ->
-        package = release.package.get
+        name = release.package.get.name
+        version = release.version
 
         task_start(fn ->
           store = Application.get_env(:hex_web, :store)
-          store.put_docs("#{package.name}-#{release.version}.tar.gz", body)
 
-          Enum.each(files, fn {name, data} ->
-            name = List.to_string(name)
-            path = Path.join([package.name, release.version, name])
+          # Delete old files
+          paths = store.list_docs_pages(Path.join(name, version))
+          Enum.each(paths, fn path ->
+            store.delete_docs_page(path)
+          end)
+
+          # Put tarball
+          store.put_docs("#{name}-#{version}.tar.gz", body)
+
+          # Upload new files
+          Enum.each(files, fn {path, data} ->
+            path = List.to_string(path)
+            path = Path.join([name, version, path])
             store.put_docs_page(path, data)
           end)
         end)
 
-        location = api_url(["packages", package.name, "releases", release.version, "docs"])
+        location = api_url(["packages", name, "releases", version, "docs"])
 
         conn
         |> put_resp_header("location", location)
