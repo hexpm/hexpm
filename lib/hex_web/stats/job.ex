@@ -8,8 +8,8 @@ defmodule HexWeb.Stats.Job do
   def run(date) do
     start()
 
-    prefix = "logs/#{date_string(date)}"
-    keys = Application.get_env(:hex_web, :store).list(prefix)
+    prefix = "hex/#{date_string(date)}"
+    keys = Application.get_env(:hex_web, :store).list_logs(prefix)
     date = Ecto.Date.from_erl(date)
 
     # TODO: Map/Reduce
@@ -47,7 +47,7 @@ defmodule HexWeb.Stats.Job do
   defp process_keys(keys) do
     Enum.reduce(keys, HashDict.new, fn key, dict ->
       key
-      |> Application.get_env(:hex_web, :store).get
+      |> Application.get_env(:hex_web, :store).get_logs
       |> process_file(dict)
     end)
   end

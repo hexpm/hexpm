@@ -23,6 +23,7 @@ config :hex_web,
   s3_access_key: System.get_env("HEX_S3_ACCESS_KEY"),
   s3_secret_key: System.get_env("HEX_S3_SECRET_KEY"),
   docs_bucket:   System.get_env("HEX_DOCS_BUCKET"),
+  logs_bucket:   System.get_env("HEX_LOGS_BUCKET"),
   docs_url:      System.get_env("HEX_DOCS_URL"),
   cdn_url:       System.get_env("HEX_CDN_URL"),
 

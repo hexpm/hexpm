@@ -29,10 +29,10 @@ defmodule HexWeb.Stats.JobTest do
     logfile2 = File.read!(Path.join(path, "s3_logs_2.txt"))
     store    = Application.get_env(:hex_web, :store)
 
-    store.put("logs/2013-11-01-21-32-16-E568B2907131C0C0", logfile1)
-    store.put("logs/2013-11-02-21-32-17-E568B2907131C0C0", logfile1)
-    store.put("logs/2013-11-03-21-32-18-E568B2907131C0C0", logfile1)
-    store.put("logs/2013-11-01-21-32-19-E568B2907131C0C0", logfile2)
+    store.put_logs("hex/2013-11-01-21-32-16-E568B2907131C0C0", logfile1)
+    store.put_logs("hex/2013-11-02-21-32-17-E568B2907131C0C0", logfile1)
+    store.put_logs("hex/2013-11-03-21-32-18-E568B2907131C0C0", logfile1)
+    store.put_logs("hex/2013-11-01-21-32-19-E568B2907131C0C0", logfile2)
 
     HexWeb.Stats.Job.run({2013, 11, 1})
 

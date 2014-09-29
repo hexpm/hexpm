@@ -5,10 +5,11 @@ defmodule HexWeb.Store.Local do
 
   # only used during development (not safe)
 
-  def list(prefix) do
-    paths = Path.join(dir, "**") |> Path.wildcard
+  def list_logs(prefix) do
+    relative = Path.join(dir, "logs")
+    paths = Path.join(relative, "**") |> Path.wildcard
     Enum.flat_map(paths, fn path ->
-      relative = Path.relative_to(path, dir)
+      relative = Path.relative_to(path, relative)
       if String.starts_with?(relative, prefix) and File.regular?(path) do
         [relative]
       else
@@ -17,14 +18,12 @@ defmodule HexWeb.Store.Local do
     end)
   end
 
-  def get(key) do
-    Path.join(dir, key) |> File.read!
+  def get_logs(key) do
+    Path.join("logs", key) |> get
   end
 
-  def put(key, blob) do
-    path = Path.join(dir, key)
-    File.mkdir_p!(Path.dirname(path))
-    File.write!(path, blob)
+  def put_logs(key, blob) do
+    Path.join("logs", key) |> put(blob)
   end
 
   def put_registry(data) do
@@ -103,6 +102,16 @@ defmodule HexWeb.Store.Local do
     else
       send_resp(conn, 404, "")
     end
+  end
+
+  defp get(key) do
+    Path.join(dir, key) |> File.read!
+  end
+
+  defp put(key, blob) do
+    path = Path.join(dir, key)
+    File.mkdir_p!(Path.dirname(path))
+    File.write!(path, blob)
   end
 
   defp delete(key) do

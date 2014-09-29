@@ -499,7 +499,9 @@ defmodule HexWeb.API.RouterTest do
     assert conn.status == 200
 
     body = Jazz.decode!(conn.resp_body)
-    assert [%{"username" => "jose"}, %{"username" => "eric"}] = body
+    assert [first, second] = body
+    assert first["username"] in ["jose", "eric"]
+    assert second["username"] in ["jose", "eric"]
   end
 
   test "get package owners authorizes" do

@@ -11,19 +11,19 @@ defmodule HexWeb.Store.S3 do
     end
   end
 
-  def list(prefix) do
-    list(:s3_bucket, prefix)
+  def list_logs(prefix) do
+    list(:logs_bucket, prefix)
   end
 
-  def get(key) do
-    bucket = Application.get_env(:hex_web, :s3_bucket) |> String.to_char_list
+  def get_logs(key) do
+    bucket = Application.get_env(:hex_web, :logs_bucket) |> String.to_char_list
     key = String.to_char_list(key)
     result = :mini_s3.get_object(bucket, key, [], config())
     result[:content]
   end
 
-  def put(key, blob) do
-    bucket = Application.get_env(:hex_web, :s3_bucket) |> String.to_char_list
+  def put_logs(key, blob) do
+    bucket = Application.get_env(:hex_web, :logs_bucket) |> String.to_char_list
     key = String.to_char_list(key)
     :mini_s3.put_object(bucket, key, blob, [], [], config())
   end
