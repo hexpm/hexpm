@@ -25,6 +25,7 @@ defmodule HexWeb.Router do
   end
 
   plug Plugs.Forwarded
+  plug Plugs.BlockedAddress
   plug Plugs.Redirect,
     ssl: &__MODULE__.use_ssl/0,
     redirect: [&__MODULE__.app_host/0],

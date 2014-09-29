@@ -165,4 +165,20 @@ defmodule HexWeb.RouterTest do
       Application.put_env(:hex_web, :cdn_url, cdn_url)
     end
   end
+
+  test "blocked address" do
+    conn = conn("GET", "/")
+    conn = Router.call(conn, [])
+    assert conn.status == 200
+
+    %HexWeb.Plugs.BlockedAddress{ip: "1.2.3.4"}
+    |> HexWeb.Repo.insert
+
+    HexWeb.Plugs.BlockedAddress.reload()
+
+    conn = conn("GET", "/")
+    conn = %{conn | remote_ip: {1,2,3,4}}
+    conn = Router.call(conn, [])
+    assert conn.status == 401
+  end
 end
