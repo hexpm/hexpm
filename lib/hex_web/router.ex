@@ -38,7 +38,8 @@ defmodule HexWeb.Router do
 
     get "docs/:package/:version/*file" do
       store = Application.get_env(:hex_web, :store)
-      store.send_docs_page(conn, package, version, file)
+      path = Path.join([package, version, file])
+      store.send_docs_page(conn, path)
     end
   end
 

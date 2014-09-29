@@ -50,28 +50,31 @@ defmodule HexWeb.Store.Local do
     send_file(conn, path)
   end
 
-  def put_docs(package, version, data) do
-    path = Path.join("docs", "#{package}-#{version}.tar.gz")
+  def put_docs(name, data) do
+    path = Path.join("docs", name)
     put(path, data)
   end
 
-  def delete_docs(package, version) do
-    path = Path.join("docs", "#{package}-#{version}.tar.gz")
+  def delete_docs(name) do
+    path = Path.join("docs", name)
     delete(path)
   end
 
-  def send_docs(conn, package, version) do
-    path = Path.join("docs", "#{package}-#{version}.tar.gz")
+  def send_docs(conn, name) do
+    path = Path.join("docs", name)
     send_file(conn, path)
   end
 
-  def put_docs_page(package, version, file, data) do
-    path = Path.join(["docs_pages", package, version, file])
+  def put_docs_page(path, data) do
+    path = Path.join("docs_pages", path)
     put(path, data)
   end
 
-  def list_docs_pages(package, version) do
-    paths = Path.join([dir, "docs_pages", package, version, "**"])
+  def put_docs_redirect(_source, _target) do
+  end
+
+  def list_docs_pages(path) do
+    paths = Path.join([dir, "docs_pages", path, "**"])
             |> Path.wildcard
 
     relative = Path.join(dir, "docs_pages")
@@ -85,13 +88,13 @@ defmodule HexWeb.Store.Local do
     end)
   end
 
-  def delete_docs_page(package, version, file) do
-    path = Path.join(["docs_pages", package, version, file])
+  def delete_docs_page(path) do
+    path = Path.join("docs_pages", path)
     delete(path)
   end
 
-  def send_docs_page(conn, package, version, file) do
-    path = Path.join(["docs_pages", package, version, file])
+  def send_docs_page(conn, path) do
+    path = Path.join("docs_pages", path)
     send_file(conn, path)
   end
 

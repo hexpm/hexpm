@@ -50,41 +50,43 @@ defmodule HexWeb.Store.S3 do
     redirect(conn, :cdn_url, path)
   end
 
-  def put_docs(package, version, data) do
-    path = Path.join("docs", "#{package}-#{version}.tar.gz")
+  def put_docs(name, data) do
+    path = Path.join("docs", name)
     upload(:s3_bucket, path, [], data)
   end
 
-  def delete_docs(package, version) do
-    path = Path.join("docs", "#{package}-#{version}.tar.gz")
+  def delete_docs(name) do
+    path = Path.join("docs", name)
     delete(:s3_bucket, path)
   end
 
-  def send_docs(conn, package, version) do
-    path = Path.join("docs", "#{package}-#{version}.tar.gz")
+  def send_docs(conn, name) do
+    path = Path.join("docs", name)
     redirect(conn, :cdn_url, path)
   end
 
-  def put_docs_page(package, version, file, data) do
-    path = Path.join([package, version, file])
-    "." <> ext = Path.extname(file)
+  def put_docs_page(path, data) do
+    "." <> ext = Path.extname(path)
     mime = Plug.MIME.type(ext)
     headers = [{'content-type', String.to_char_list(mime)}]
     upload(:docs_bucket, path, headers, data)
   end
 
-  def list_docs_pages(package, version) do
-    path = Path.join(package, version)
+  def put_docs_redirect(source, target) do
+    headers = [{'x-amz-website-redirect-location',
+                String.to_char_list("/" <> target)}]
+    upload(:docs_bucket, source, headers, "")
+  end
+
+  def list_docs_pages(path) do
     list(:docs_bucket, path)
   end
 
-  def delete_docs_page(package, version, file) do
-    path = Path.join([package, version, file])
+  def delete_docs_page(path) do
     delete(:docs_bucket, path)
   end
 
-  def send_docs_page(conn, package, version, file) do
-    path = Path.join([package, version, file])
+  def send_docs_page(conn, path) do
     redirect(conn, :docs_url, path)
   end
 

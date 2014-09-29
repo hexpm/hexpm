@@ -86,11 +86,12 @@ defmodule HexWeb.API.Router do
 
         task_start(fn ->
           store = Application.get_env(:hex_web, :store)
-          store.put_docs(package.name, release.version, body)
+          store.put_docs("#{package.name}-#{release.version}.tar.gz", body)
 
           Enum.each(files, fn {name, data} ->
             name = List.to_string(name)
-            store.put_docs_page(package.name, release.version, name, data)
+            path = Path.join([package.name, release.version, name])
+            store.put_docs_page(path, data)
           end)
         end)
 
@@ -216,7 +217,7 @@ defmodule HexWeb.API.Router do
     get "packages/:name/releases/:version/docs" do
       if (package = Package.get(name)) && Release.get(package, version) do
         store = Application.get_env(:hex_web, :store)
-        store.send_docs(conn, name, version)
+        store.send_docs(conn, "#{name}-#{version}.tar.gz")
       else
         raise NotFound
       end
@@ -228,12 +229,11 @@ defmodule HexWeb.API.Router do
 
           task_start(fn ->
             store = Application.get_env(:hex_web, :store)
-            paths = store.list_docs_pages(name, version)
-            store.delete_docs(name, version)
+            paths = store.list_docs_pages(Path.join(name, version))
+            store.delete_docs("#{name}-#{version}.tar.gz")
 
             Enum.each(paths, fn path ->
-              [^name, ^version, file] = String.split(path, "/", parts: 3)
-              store.delete_docs_page(name, version, file)
+              store.delete_docs_page(path)
             end)
           end)
 
