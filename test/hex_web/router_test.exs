@@ -52,7 +52,7 @@ defmodule HexWeb.RouterTest do
   @tag :integration
   test "integration fetch tarball" do
     if Application.get_env(:hex_web, :s3_bucket) do
-      Application.get_env(:hex_web, :store, HexWeb.Store.S3)
+      Application.put_env(:hex_web, :store, HexWeb.Store.S3)
     end
 
     headers = [ {"content-type", "application/octet-stream"},

@@ -5,7 +5,6 @@ defmodule HexWeb.Mixfile do
     [app: :hex_web,
      version: "0.0.1",
      elixir: "~> 1.0",
-     config_path: "config/#{Mix.env}.exs",
      deps: deps]
   end
 

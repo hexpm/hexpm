@@ -148,6 +148,7 @@ defmodule HexWeb.RegistryBuilder do
             tid = :ets.new(@ets_table, [:public])
             :ets.insert(tid, {:"$$version$$", @version})
             # Removing :"$$installs$$" should bump version to 4
+            # :"$$installs2$$" was added with Hex v0.5.0 (Elixir v1.0.0) (2014-09-19)
             :ets.insert(tid, {:"$$installs$$", installs1})
             :ets.insert(tid, {:"$$installs2$$", installs2})
             :ets.insert(tid, release_tuples ++ package_tuples)
