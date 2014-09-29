@@ -38,8 +38,7 @@ defmodule HexWeb.RouterTest do
     {:ok, _} = RegistryBuilder.start_link
     RegistryBuilder.sync_rebuild
 
-    port = Application.get_env(:hex_web, :port)
-    url = String.to_char_list("http://localhost:#{port}/registry.ets.gz")
+    url = HexWeb.Util.cdn_url("registry.ets.gz") |> String.to_char_list
     :inets.start
 
     assert {:ok, response} = :httpc.request(:head, {url, []}, [], [])

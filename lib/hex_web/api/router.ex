@@ -2,7 +2,7 @@ defmodule HexWeb.API.Router do
   use Plug.Router
   import Plug.Conn
   import HexWeb.API.Util
-  import HexWeb.Util, only: [api_url: 1, parse_integer: 2]
+  import HexWeb.Util, only: [api_url: 1, parse_integer: 2, task_start: 1]
   alias HexWeb.Plug.NotFound
   alias HexWeb.Plug.RequestTimeout
   alias HexWeb.Plug.RequestTooLarge
@@ -29,7 +29,7 @@ defmodule HexWeb.API.Router do
       with_authorized(conn, &Package.owner?(package, &1), fn _ ->
         case read_body(conn, @read_opts) do
           {:ok, body, conn} ->
-            handle_tarball(conn, package, body)
+            handle_publish(conn, package, body)
           {:error, :timeout} ->
             raise RequestTimeout
           {:more, _, _} ->
@@ -41,7 +41,24 @@ defmodule HexWeb.API.Router do
     end
   end
 
-  defp handle_tarball(conn, package, body) do
+  post "packages/:name/releases/:version/docs" do
+    if (package = Package.get(name)) && (release = Release.get(package, version)) do
+      with_authorized(conn, &Package.owner?(package, &1), fn _ ->
+        case read_body(conn, @read_opts) do
+          {:ok, body, conn} ->
+            handle_docs(conn, release, body)
+          {:error, :timeout} ->
+            raise RequestTimeout
+          {:more, _, _} ->
+            raise RequestTooLarge
+        end
+      end)
+    else
+      raise NotFound
+    end
+  end
+
+  defp handle_publish(conn, package, body) do
     case HexWeb.Tar.metadata(body) do
       {:ok, meta, checksum} ->
         version = meta["version"]
@@ -62,8 +79,36 @@ defmodule HexWeb.API.Router do
     end
   end
 
+  defp handle_docs(conn, release, body) do
+    case :erl_tar.extract({:binary, body}, [:memory, :compressed]) do
+      {:ok, files} ->
+        package = release.package.get
+
+        task_start(fn ->
+          store = Application.get_env(:hex_web, :store)
+          store.put_docs(package.name, release.version, body)
+
+          Enum.each(files, fn {name, data} ->
+            name = List.to_string(name)
+            store.put_docs_page(package.name, release.version, name, data)
+          end)
+        end)
+
+        location = api_url(["packages", package.name, "releases", release.version, "docs"])
+
+        conn
+        |> put_resp_header("location", location)
+        |> cache(:public)
+        |> send_resp(201, "")
+
+      {:error, reason} ->
+        send_validation_failed(conn, %{tar: inspect reason})
+    end
+  end
+
   defp after_release(package, version, body) do
-    Application.get_env(:hex_web, :store).put_tar("#{package.name}-#{version}.tar", body)
+    store = Application.get_env(:hex_web, :store)
+    store.put_release("#{package.name}-#{version}.tar", body)
     HexWeb.RegistryBuilder.async_rebuild
   end
 
@@ -143,7 +188,8 @@ defmodule HexWeb.API.Router do
           result = Release.delete(release)
 
           if result == :ok do
-            Application.get_env(:hex_web, :store).delete_tar("#{name}-#{version}.tar")
+            store = Application.get_env(:hex_web, :store)
+            store.delete_release("#{name}-#{version}.tar")
             HexWeb.RegistryBuilder.async_rebuild
           end
 
@@ -161,6 +207,39 @@ defmodule HexWeb.API.Router do
           release = Ecto.Associations.load(release, :downloads, downloads)
 
           send_okay(conn, release, :public)
+        end)
+      else
+        raise NotFound
+      end
+    end
+
+    get "packages/:name/releases/:version/docs" do
+      if (package = Package.get(name)) && Release.get(package, version) do
+        store = Application.get_env(:hex_web, :store)
+        store.send_docs(conn, name, version)
+      else
+        raise NotFound
+      end
+    end
+
+    delete "packages/:name/releases/:version/docs" do
+      if (package = Package.get(name)) && Release.get(package, version) do
+        with_authorized(conn, &Package.owner?(package, &1), fn _ ->
+
+          task_start(fn ->
+            store = Application.get_env(:hex_web, :store)
+            paths = store.list_docs_pages(name, version)
+            store.delete_docs(name, version)
+
+            Enum.each(paths, fn path ->
+              [^name, ^version, file] = String.split(path, "/", parts: 3)
+              store.delete_docs_page(name, version, file)
+            end)
+          end)
+
+          conn
+          |> cache(:private)
+          |> send_resp(204, "")
         end)
       else
         raise NotFound

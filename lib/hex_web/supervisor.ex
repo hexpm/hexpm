@@ -7,15 +7,13 @@ defmodule HexWeb.Supervisor do
 
   # Don't start RegistryBuilder during testing
   if Mix.env == :test do
-    def init([]) do
-      tree = [ worker(HexWeb.Repo, []) ]
-      supervise(tree, strategy: :one_for_one)
-    end
+    @tree [worker(HexWeb.Repo, [])]
   else
-    def init([]) do
-      tree = [ worker(HexWeb.RegistryBuilder, []),
-               worker(HexWeb.Repo, []) ]
-      supervise(tree, strategy: :one_for_one)
-    end
+    @tree [worker(HexWeb.RegistryBuilder, []),
+           worker(HexWeb.Repo, [])]
+  end
+
+  def init([]) do
+    supervise(@tree, strategy: :one_for_one)
   end
 end

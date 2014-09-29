@@ -38,7 +38,7 @@ defmodule HexWeb.Tar do
         end
 
       {:error, reason} ->
-        {:error, %{tar: inspect reason}}
+        {:error, inspect reason}
     end
   end
 

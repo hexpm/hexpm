@@ -571,4 +571,49 @@ defmodule HexWeb.API.RouterTest do
     conn = Router.call(conn, [])
     assert conn.status == 401
   end
+
+  @tag :integration
+  test "integration release docs" do
+    if Application.get_env(:hex_web, :s3_bucket) do
+      Application.put_env(:hex_web, :store, HexWeb.Store.S3)
+    end
+
+    path = Path.join("tmp", "release-docs.tar.gz")
+    files = [{'index.html', "HEYO"}]
+    :ok = :erl_tar.create(String.to_char_list(path), files, [:compressed])
+    body = File.read!(path)
+
+    headers = [{"content-type", "application/octet-stream"},
+               {"authorization", "Basic " <> :base64.encode("eric:eric")}]
+    conn = conn("POST", "/api/packages/decimal/releases/0.0.1/docs", body, headers: headers)
+    conn = Router.call(conn, [])
+    assert conn.status == 201
+
+    url = HexWeb.Util.url("api/packages/decimal/releases/0.0.1/docs") |> String.to_char_list
+    :inets.start
+    assert {:ok, response} = :httpc.request(:get, {url, []}, [], body_format: :binary)
+    assert {{_version, 200, _reason}, _headers, ^body} = response
+
+    url = HexWeb.Util.url("docs/decimal/0.0.1/index.html") |> String.to_char_list
+    :inets.start
+    assert {:ok, response} = :httpc.request(:get, {url, []}, [], body_format: :binary)
+    assert {{_version, 200, _reason}, _headers, "HEYO"} = response
+
+    headers = [{"authorization", "Basic " <> :base64.encode("eric:eric")}]
+    conn = conn("DELETE", "/api/packages/decimal/releases/0.0.1/docs", nil, headers: headers)
+    conn = Router.call(conn, [])
+    assert conn.status == 204
+
+    url = HexWeb.Util.url("api/packages/decimal/releases/0.0.1/docs") |> String.to_char_list
+    assert {:ok, response} = :httpc.request(:get, {url, []}, [], [])
+    assert {{_version, code, _reason}, _headers, _body} = response
+    assert code in 400..499
+
+    url = HexWeb.Util.url("docs/decimal/0.0.1/index.html") |> String.to_char_list
+    assert {:ok, response} = :httpc.request(:get, {url, []}, [], [])
+    assert {{_version, code, _reason}, _headers, _body} = response
+    assert code in 400..499
+  after
+    Application.get_env(:hex_web, :store, HexWeb.Store.S3)
+  end
 end

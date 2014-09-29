@@ -152,4 +152,12 @@ defmodule HexWeb.Util do
     result = Porcelain.shell(cmd, out: stream, err: :out)
     result.status
   end
+
+  defmacro task_start(fun) do
+    if Mix.env == :test do
+      quote do: unquote(fun).()
+    else
+      quote do: Task.start(unquote(fun))
+    end
+  end
 end

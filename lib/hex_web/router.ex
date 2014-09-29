@@ -27,11 +27,18 @@ defmodule HexWeb.Router do
 
   if Mix.env != :prod do
     get "registry.ets.gz" do
-      Application.get_env(:hex_web, :store).registry(conn)
+      store = Application.get_env(:hex_web, :store)
+      store.send_registry(conn)
     end
 
     get "tarballs/:ball" do
-      Application.get_env(:hex_web, :store).tar(conn, ball)
+      store = Application.get_env(:hex_web, :store)
+      store.send_release(conn, ball)
+    end
+
+    get "docs/:package/:version/*file" do
+      store = Application.get_env(:hex_web, :store)
+      store.send_docs_page(conn, package, version, file)
     end
   end
 

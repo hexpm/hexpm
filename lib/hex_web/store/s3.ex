@@ -12,10 +12,7 @@ defmodule HexWeb.Store.S3 do
   end
 
   def list(prefix) do
-    prefix = String.to_char_list(prefix)
-    bucket = Application.get_env(:hex_web, :s3_bucket) |> String.to_char_list
-    result = :mini_s3.list_objects(bucket, [prefix: prefix], config())
-    Enum.map(result[:contents], &List.to_string(&1[:key]))
+    list(:s3_bucket, prefix)
   end
 
   def get(key) do
@@ -32,42 +29,89 @@ defmodule HexWeb.Store.S3 do
   end
 
   def put_registry(data) do
-    upload('registry.ets.gz', :zlib.gzip(data))
+    upload(:s3_bucket, 'registry.ets.gz', :zlib.gzip(data))
   end
 
-  def registry(conn) do
-    redirect(conn, "registry.ets.gz")
+  def send_registry(conn) do
+    redirect(conn, :cdn_url, "registry.ets.gz")
   end
 
-  def put_tar(name, data) do
-    upload(Path.join("tarballs", name), data)
+  def put_release(name, data) do
+    upload(:s3_bucket, Path.join("tarballs", name), data)
   end
 
-  def delete_tar(name) do
-    bucket = Application.get_env(:hex_web, :s3_bucket) |> String.to_char_list
-    name = String.to_char_list(name)
-
-    :mini_s3.delete_object(bucket, name, config())
+  def delete_release(name) do
+    path = Path.join("tarballs", name)
+    delete(:s3_bucket, path)
   end
 
-  def tar(conn, name) do
-    redirect(conn, Path.join("tarballs", name))
+  def send_release(conn, name) do
+    path = Path.join("tarballs", name)
+    redirect(conn, :cdn_url, path)
   end
 
-  defp redirect(conn, path) do
-    url = Application.get_env(:hex_web, :cdn_url) <> "/" <> path
+  def put_docs(package, version, data) do
+    path = Path.join("docs", "#{package}-#{version}.tar.gz")
+    upload(:s3_bucket, path, data)
+  end
+
+  def delete_docs(package, version) do
+    path = Path.join("docs", "#{package}-#{version}.tar.gz")
+    delete(:s3_bucket, path)
+  end
+
+  def send_docs(conn, package, version) do
+    path = Path.join("docs", "#{package}-#{version}.tar.gz")
+    redirect(conn, :cdn_url, path)
+  end
+
+  def put_docs_page(package, version, file, data) do
+    path = Path.join([package, version, file])
+    upload(:docs_bucket, path, data)
+  end
+
+  def list_docs_pages(package, version) do
+    path = Path.join(package, version)
+    list(:docs_bucket, path)
+  end
+
+  def delete_docs_page(package, version, file) do
+    path = Path.join([package, version, file])
+    delete(:docs_bucket, path)
+  end
+
+  def send_docs_page(conn, package, version, file) do
+    path = Path.join([package, version, file])
+    redirect(conn, :docs_url, path)
+  end
+
+  defp delete(bucket, path) do
+    bucket = Application.get_env(:hex_web, bucket) |> String.to_char_list
+    path = String.to_char_list(path)
+    :mini_s3.delete_object(bucket, path, config())
+  end
+
+  defp redirect(conn, location, path) do
+    url = Application.get_env(:hex_web, location) <> "/" <> path
     HexWeb.Plug.redirect(conn, url)
   end
 
-  defp upload(name, data) when is_binary(name),
-    do: upload(String.to_char_list(name), data)
+  defp upload(bucket, path, data) when is_binary(path),
+    do: upload(bucket, String.to_char_list(path), data)
 
-  defp upload(name, data) when is_list(name) do
+  defp upload(bucket, path, data) when is_list(path) do
     # TODO: cache
-    bucket     = Application.get_env(:hex_web, :s3_bucket) |> String.to_char_list
+    bucket     = Application.get_env(:hex_web, bucket) |> String.to_char_list
     opts       = [acl: :public_read]
     headers    = []
-    :mini_s3.put_object(bucket, name, data, opts, headers, config())
+    :mini_s3.put_object(bucket, path, data, opts, headers, config())
+  end
+
+  defp list(bucket, prefix) do
+    prefix = String.to_char_list(prefix)
+    bucket = Application.get_env(:hex_web, bucket) |> String.to_char_list
+    result = :mini_s3.list_objects(bucket, [prefix: prefix], config())
+    Enum.map(result[:contents], &List.to_string(&1[:key]))
   end
 
   defp config do

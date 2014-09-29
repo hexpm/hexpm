@@ -22,15 +22,18 @@ config :hex_web,
   s3_bucket:     System.get_env("HEX_S3_BUCKET"),
   s3_access_key: System.get_env("HEX_S3_ACCESS_KEY"),
   s3_secret_key: System.get_env("HEX_S3_SECRET_KEY"),
+  docs_bucket:   System.get_env("HEX_DOCS_BUCKET"),
+  docs_url:      System.get_env("HEX_DOCS_URL"),
   cdn_url:       System.get_env("HEX_CDN_URL"),
 
   secret: System.get_env("HEX_SECRET")
 
 if Mix.env in [:dev, :test] do
   config :hex_web,
-    url:     System.get_env("HEX_URL")     || "http://localhost:4000",
-    cdn_url: System.get_env("HEX_CDN_URL") || "http://localhost:4000",
-    secret:  System.get_env("HEX_SECRET")  || "796f75666f756e64746865686578"
+    url:      System.get_env("HEX_URL")      || "http://localhost:4000",
+    docs_url: System.get_env("HEX_DOCS_URL") || "http://localhost:4000",
+    cdn_url:  System.get_env("HEX_CDN_URL")  || "http://localhost:4000",
+    secret:   System.get_env("HEX_SECRET")   || "796f75666f756e64746865686578"
 end
 
 
