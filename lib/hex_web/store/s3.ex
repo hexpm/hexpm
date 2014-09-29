@@ -29,7 +29,7 @@ defmodule HexWeb.Store.S3 do
   end
 
   def put_registry(data) do
-    upload(:s3_bucket, 'registry.ets.gz', :zlib.gzip(data))
+    upload(:s3_bucket, 'registry.ets.gz', [], :zlib.gzip(data))
   end
 
   def send_registry(conn) do
@@ -37,7 +37,7 @@ defmodule HexWeb.Store.S3 do
   end
 
   def put_release(name, data) do
-    upload(:s3_bucket, Path.join("tarballs", name), data)
+    upload(:s3_bucket, Path.join("tarballs", name), [], data)
   end
 
   def delete_release(name) do
@@ -52,7 +52,7 @@ defmodule HexWeb.Store.S3 do
 
   def put_docs(package, version, data) do
     path = Path.join("docs", "#{package}-#{version}.tar.gz")
-    upload(:s3_bucket, path, data)
+    upload(:s3_bucket, path, [], data)
   end
 
   def delete_docs(package, version) do
@@ -67,7 +67,10 @@ defmodule HexWeb.Store.S3 do
 
   def put_docs_page(package, version, file, data) do
     path = Path.join([package, version, file])
-    upload(:docs_bucket, path, data)
+    "." <> ext = Path.extname(file)
+    mime = Plug.MIME.type(ext)
+    headers = [{'content-type', String.to_char_list(mime)}]
+    upload(:docs_bucket, path, headers, data)
   end
 
   def list_docs_pages(package, version) do
@@ -96,14 +99,13 @@ defmodule HexWeb.Store.S3 do
     HexWeb.Plug.redirect(conn, url)
   end
 
-  defp upload(bucket, path, data) when is_binary(path),
-    do: upload(bucket, String.to_char_list(path), data)
+  defp upload(bucket, path, headers, data) when is_binary(path),
+    do: upload(bucket, String.to_char_list(path), headers, data)
 
-  defp upload(bucket, path, data) when is_list(path) do
+  defp upload(bucket, path, headers, data) when is_list(path) do
     # TODO: cache
     bucket     = Application.get_env(:hex_web, bucket) |> String.to_char_list
     opts       = [acl: :public_read]
-    headers    = []
     :mini_s3.put_object(bucket, path, data, opts, headers, config())
   end
 
