@@ -1,6 +1,6 @@
 %{"bcrypt": {:git, "git://github.com/opscode/erlang-bcrypt.git", "7515e80a5e16f62aef149709f6cc09995dd480be", []},
-  "cowboy": {:git, "git://github.com/ninenines/cowboy.git", "b57f94661f5fd186f55eb0fead49849e0b1399d1", []},
-  "cowlib": {:git, "git://github.com/ninenines/cowlib.git", "d544a494af4dbc810fc9c15eaf5cc050cced1501", []},
+  "cowboy": {:git, "git://github.com/ninenines/cowboy.git", "021f4f6069e5fae326bdfb0acb12c6500082fa44", [tag: "1.0.0"]},
+  "cowlib": {:git, "git://github.com/ninenines/cowlib.git", "d544a494af4dbc810fc9c15eaf5cc050cced1501", [tag: "1.0.0"]},
   "decimal": {:git, "git://github.com/ericmj/decimal.git", "5d47511cfa4d9049c1a9581df7f804c989ec34c0", []},
   "earmark": {:git, "git://github.com/pragdave/earmark.git", "2322b93284fea09e846f0d8d752f35cdb7167a50", []},
   "ecto": {:git, "git://github.com/elixir-lang/ecto.git", "ed223048a6f6c07fce4c84a35747866fba32752d", []},
@@ -8,8 +8,8 @@
   "ibrowse": {:git, "git://github.com/opscode/ibrowse", "8f3f6a3a30730b193cc340a8885a960586dc98de", [tag: "v4.0.1.1"]},
   "jazz": {:git, "git://github.com/meh/jazz.git", "49f335492aca5516495199dd81dd18b845ebaa69", []},
   "mini_s3": {:git, "git://github.com/ericmj/mini_s3.git", "700386bc8c3a804af57380c0fd09a02325142c9b", [branch: "hex-fixes"]},
-  "plug": {:git, "git://github.com/elixir-lang/plug.git", "756369d2b827de7a4351ff841a83586ce6c1a798", []},
-  "poolboy": {:git, "git://github.com/devinus/poolboy.git", "17d1582533af5c076117e2e1270f4b43faa02f12", []},
+  "plug": {:git, "git://github.com/elixir-lang/plug.git", "b06a0254608fee653977e97b099f3202d033d89b", []},
+  "poolboy": {:git, "git://github.com/devinus/poolboy.git", "0d4082dff0e46da7e026e4fe3209784e8ec22fea", []},
   "porcelain": {:git, "git://github.com/alco/porcelain.git", "1eddb32376c75b30f84f01e9fd60433af7ff7654", []},
   "postgrex": {:git, "git://github.com/ericmj/postgrex.git", "844fd92e7a14fdcab69c4a50eac20d06ab94b11d", []},
-  "ranch": {:git, "git://github.com/ninenines/ranch.git", "adf1822defc2b7cfdc7aca112adabfa1d614043c", []}}
+  "ranch": {:git, "git://github.com/ninenines/ranch.git", "adf1822defc2b7cfdc7aca112adabfa1d614043c", [tag: "1.0.0"]}}
