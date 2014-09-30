@@ -37,6 +37,9 @@ defmodule HexWeb.API.Router do
         end
       end)
     else
+      # Read the full body to avoid closing the connection too early :(
+      # This avoids getting H13/H18 errors on Heroku
+      read_body(conn, @read_opts)
       raise NotFound
     end
   end
@@ -54,6 +57,9 @@ defmodule HexWeb.API.Router do
         end
       end)
     else
+      # Read the full body to avoid closing the connection too early :(
+      # Works around getting H13/H18 errors on Heroku
+      read_body(conn, @read_opts)
       raise NotFound
     end
   end

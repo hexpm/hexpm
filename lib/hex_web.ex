@@ -2,7 +2,7 @@ defmodule HexWeb do
   use Application
 
   def start(_type, _args) do
-    opts  = [port: 4000, compress: true]
+    opts  = [port: 4000, compress: true, linger: {true, 10}]
 
     if port = System.get_env("PORT") do
       opts = Keyword.put(opts, :port, String.to_integer(port))

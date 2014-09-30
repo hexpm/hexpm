@@ -32,6 +32,7 @@ defmodule HexWeb.Plugs.Exception do
     |> assign(:status, status)
     |> assign(:message, message)
     |> HexWeb.Web.Router.send_page(:error)
+    |> halt
   end
 
   defp api_response(conn, status, message) do
@@ -48,5 +49,6 @@ defmodule HexWeb.Plugs.Exception do
     end
 
     HexWeb.API.Util.send_body(conn, status, body, true)
+    |> halt
   end
 end
