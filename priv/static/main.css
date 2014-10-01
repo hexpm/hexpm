@@ -20,6 +20,13 @@
   }
 }
 
+@media (min-width: 768px) {
+  .navbar-nav > li > a {
+    padding-top: 17px;
+    padding-bottom: 15px;
+  }
+}
+
 html {
   position: relative;
   min-height: 100%;
