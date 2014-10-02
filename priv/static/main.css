@@ -56,11 +56,6 @@ body {
   padding: 13px 15px;
 }
 
-.navbar-nav > li > a {
-  padding-top: 16px;
-  padding-bottom: 15px;
-}
-
 .packages {
   table-layout: fixed;
 }
