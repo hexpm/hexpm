@@ -23,23 +23,23 @@
     <h3>Statistics</h3>
     <p>
       <div class="row">
-        <div class="col-xs-3 text-right"><%= @num_packages %></div>
+        <div class="col-xs-3 text-right"><%= human_number_space @num_packages %></div>
         <div class="col-xs-9">packages</div>
       </div>
       <div class="row">
-        <div class="col-xs-3 text-right"><%= @num_releases %></div>
+        <div class="col-xs-3 text-right"><%= human_number_space @num_releases %></div>
         <div class="col-xs-9">package versions</div>
       </div>
       <div class="row">
-        <div class="col-xs-3 text-right"><%= @total[:day] %></div>
+        <div class="col-xs-3 text-right"><%= human_number_space @total[:day] %></div>
         <div class="col-xs-9">downloads yesterday</div>
       </div>
       <div class="row">
-        <div class="col-xs-3 text-right"><%= @total[:week] %></div>
+        <div class="col-xs-3 text-right"><%= human_number_space @total[:week] %></div>
         <div class="col-xs-9">downloads last seven days</div>
       </div>
       <div class="row">
-        <div class="col-xs-3 text-right"><%= @total[:all] %></div>
+        <div class="col-xs-3 text-right"><%= human_number_space @total[:all] %></div>
         <div class="col-xs-9">downloads all time</div>
       </div>
     </p>
@@ -49,7 +49,7 @@
     <p>
       <%= for { package, downloads } <- @package_top do %>
       <div class="row">
-        <div class="col-xs-3 text-right"><%= downloads %></div>
+        <div class="col-xs-3 text-right"><%= human_number_space downloads %></div>
         <div class="col-xs-9"><a href="/packages/<%= package %>"><%= package %></a></div>
       </div>
       <% end %>

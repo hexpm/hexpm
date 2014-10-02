@@ -40,6 +40,14 @@ defmodule HexWeb.Web.Templates do
                            engine: HexWeb.Web.HTML.Engine)
   end)
 
+  def human_number_space(n) when is_binary(n) do
+    Regex.replace(~r/\B(?=(\d{3})+(?!\d))/, n, " ")
+  end
+
+  def human_number_space(n) when is_integer(n) do
+    human_number_space(Integer.to_string(n))
+  end
+
   def human_relative_time_from_now(date) do
     ts = date |> Ecto.DateTime.to_erl |> :calendar.datetime_to_gregorian_seconds
     diff = :calendar.datetime_to_gregorian_seconds(:calendar.universal_time) - ts
