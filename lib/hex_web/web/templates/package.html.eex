@@ -45,19 +45,19 @@ links = Enum.to_list(@package.meta["links"] || [])
       </div>
       <div class="panel-body">
         <div class="row">
-          <div class="col-xs-4 text-right"><%= @release_downloads || 0 %></div>
+          <div class="col-xs-4 text-right"><%= human_number_space @release_downloads || 0 %></div>
           <div class="col-xs-8 text-muted">this version</div>
         </div>
         <div class="row">
-          <div class="col-xs-4 text-right"><%= @downloads[:day] || 0 %></div>
+          <div class="col-xs-4 text-right"><%= human_number_space @downloads[:day] || 0 %></div>
           <div class="col-xs-8 text-muted">yesterday</div>
         </div>
         <div class="row">
-          <div class="col-xs-4 text-right"><%= @downloads[:week] || 0 %></div>
+          <div class="col-xs-4 text-right"><%= human_number_space @downloads[:week] || 0 %></div>
           <div class="col-xs-8 text-muted">last seven days</div>
         </div>
         <div class="row">
-          <div class="col-xs-4 text-right"><%= @downloads[:all] || 0 %></div>
+          <div class="col-xs-4 text-right"><%= human_number_space @downloads[:all] || 0 %></div>
           <div class="col-xs-8 text-muted">all time</div>
         </div>
       </div>
