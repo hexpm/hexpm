@@ -20,13 +20,6 @@
   }
 }
 
-@media (min-width: 768px) {
-  .navbar-nav > li > a {
-    padding-top: 17px;
-    padding-bottom: 15px;
-  }
-}
-
 html {
   position: relative;
   min-height: 100%;
@@ -57,6 +50,15 @@ body {
 #footer .container {
   padding-right: 15px;
   padding-left: 15px;
+}
+
+.navbar-brand {
+  padding: 13px 15px;
+}
+
+.navbar-nav > li > a {
+  padding-top: 16px;
+  padding-bottom: 15px;
 }
 
 .packages {
