@@ -18,7 +18,7 @@ defmodule HexWeb.Router do
 
   plug Plug.MethodOverride
   plug Plug.Head
-  plug Plug.Static, at: "/static", from: :hex_web
+  plug Plug.Static, at: "/", from: :hex_web
 
   plug :match
   plug :dispatch
