@@ -40,12 +40,16 @@ defmodule HexWeb.Web.Templates do
                            engine: HexWeb.Web.HTML.Engine)
   end)
 
-  def human_number_space(n) when is_binary(n) do
-    Regex.replace(~r/\B(?=(\d{3})+(?!\d))/, n, " ")
+  def human_number_space(string) when is_binary(string) do
+    split         = rem(byte_size(string), 3)
+    string        = :erlang.binary_to_list(string)
+    {first, rest} = Enum.split(string, split)
+    rest          = Enum.chunk(rest, 3) |> Enum.map(&[" ", &1])
+    IO.iodata_to_binary([first, rest])
   end
 
-  def human_number_space(n) when is_integer(n) do
-    human_number_space(Integer.to_string(n))
+  def human_number_space(int) when is_integer(int) do
+    human_number_space(Integer.to_string(int))
   end
 
   def human_relative_time_from_now(date) do
