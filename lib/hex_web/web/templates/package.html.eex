@@ -5,6 +5,9 @@
       <small><%= @current_release.version %></small>
     <% end %>
   </h2>
+  <%= if description = @package.meta["description"] do %>
+    <span class="description"><%= description %></span>
+  <% end %>
 </div>
 
 <%
@@ -98,9 +101,3 @@ links = Enum.to_list(@package.meta["links"] || [])
     </ul>
   </div>
 </div>
-
-<div style="margin: 10px 0; border-top: 1px solid #eee"></div>
-
-<%= if description = @package.meta["description"] do %>
-  <pre class="description"><%= description %></pre>
-<% end %>
