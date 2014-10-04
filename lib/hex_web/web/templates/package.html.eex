@@ -4,6 +4,10 @@
     <%= if @current_release do %>
       <small><%= @current_release.version %></small>
     <% end %>
+
+    <span class="form-inline pull-right">
+      <input type="text" class="form-control input-sm" value='{:<%= @package.name %>, "~> <%= Enum.fetch!(@releases, 0).version %>"}' onfocus="this.select();" onmouseup="return false;" />
+    </span>
   </h2>
   <%= if description = @package.meta["description"] do %>
     <span class="description"><%= description %></span>
