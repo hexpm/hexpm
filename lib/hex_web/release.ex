@@ -6,12 +6,14 @@ defmodule HexWeb.Release do
   alias HexWeb.Util
 
   schema "releases" do
-    belongs_to :package, HexWeb.Package
     field :version, :string
     field :checksum, :string
-    has_many :requirements, HexWeb.Requirement
+    field :has_docs, :boolean
     field :created_at, :datetime
     field :updated_at, :datetime
+
+    belongs_to :package, HexWeb.Package
+    has_many :requirements, HexWeb.Requirement
     has_one :downloads, HexWeb.Stats.ReleaseDownload
   end
 
@@ -190,7 +192,7 @@ defimpl HexWeb.Render, for: HexWeb.Release do
 
     dict =
       HexWeb.Release.__schema__(:keywords, release)
-      |> Dict.take([:version, :created_at, :updated_at])
+      |> Dict.take([:version, :has_docs, :created_at, :updated_at])
       |> Dict.update!(:created_at, &to_iso8601/1)
       |> Dict.update!(:updated_at, &to_iso8601/1)
       |> Dict.put(:url, api_url(["packages", package.name, "releases", release.version]))

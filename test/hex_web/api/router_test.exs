@@ -582,6 +582,8 @@ defmodule HexWeb.API.RouterTest do
       Application.put_env(:hex_web, :store, HexWeb.Store.S3)
     end
 
+    decimal = Package.get("decimal")
+
     path = Path.join("tmp", "release-docs.tar.gz")
     files = [{'index.html', "HEYO"}]
     :ok = :erl_tar.create(String.to_char_list(path), files, [:compressed])
@@ -592,6 +594,7 @@ defmodule HexWeb.API.RouterTest do
     conn = conn("POST", "/api/packages/decimal/releases/0.0.1/docs", body, headers: headers)
     conn = Router.call(conn, [])
     assert conn.status == 201
+    assert Release.get(decimal, "0.0.1").has_docs
 
     url = HexWeb.Util.url("api/packages/decimal/releases/0.0.1/docs") |> String.to_char_list
     :inets.start
@@ -607,6 +610,7 @@ defmodule HexWeb.API.RouterTest do
     conn = conn("DELETE", "/api/packages/decimal/releases/0.0.1/docs", nil, headers: headers)
     conn = Router.call(conn, [])
     assert conn.status == 204
+    refute Release.get(decimal, "0.0.1").has_docs
 
     url = HexWeb.Util.url("api/packages/decimal/releases/0.0.1/docs") |> String.to_char_list
     assert {:ok, response} = :httpc.request(:get, {url, []}, [], [])

@@ -114,6 +114,10 @@ defmodule HexWeb.API.Router do
             path = Path.join([name, version, path])
             store.put_docs_page(path, data)
           end)
+
+          # Set docs flag on release
+          %{release | has_docs: true}
+          |> HexWeb.Repo.update
         end)
 
         location = api_url(["packages", name, "releases", version, "docs"])
@@ -245,7 +249,7 @@ defmodule HexWeb.API.Router do
     end
 
     delete "packages/:name/releases/:version/docs" do
-      if (package = Package.get(name)) && Release.get(package, version) do
+      if (package = Package.get(name)) && (release = Release.get(package, version)) do
         with_authorized(conn, &Package.owner?(package, &1), fn _ ->
 
           task_start(fn ->
@@ -256,6 +260,9 @@ defmodule HexWeb.API.Router do
             Enum.each(paths, fn path ->
               store.delete_docs_page(path)
             end)
+
+            %{release | has_docs: false}
+            |> HexWeb.Repo.update
           end)
 
           conn
