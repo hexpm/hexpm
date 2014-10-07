@@ -104,7 +104,7 @@ defmodule HexWeb.API.Router do
           store.put_docs("#{name}-#{version}.tar.gz", body)
 
           # Set up redirect to latest version
-          store.put_docs_redirect(name, Path.join(name, version))
+          store.put_docs_redirect(Path.join(name, "index.html"), Path.join(name, version) <> "/")
 
           # Upload new files
           Enum.each(files, fn {path, data} ->
