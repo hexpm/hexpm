@@ -165,7 +165,8 @@ defmodule HexWeb.Release do
     |> HexWeb.Repo.all
   end
 
-  defp add_requirement(release, deps, dep, req, optional) do
+  defp add_requirement(release, deps, dep, app, req, optional) do
+    cond do
       not valid_requirement?(req) ->
         {:error, {dep, "invalid requirement: #{inspect req}"}}
 
