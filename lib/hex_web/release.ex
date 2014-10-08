@@ -6,6 +6,7 @@ defmodule HexWeb.Release do
   alias HexWeb.Util
 
   schema "releases" do
+    field :app, :string
     field :version, :string
     field :checksum, :string
     field :has_docs, :boolean
@@ -18,15 +19,17 @@ defmodule HexWeb.Release do
   end
 
   validatep validate(release),
+    app: present() and type(:string),
     version: present() and type(:string) and valid_version(pre: true)
 
   validatep validate_create(release),
     also: validate(),
     also: unique([:version], scope: [:package_id], on: HexWeb.Repo)
 
-  def create(package, version, requirements, checksum, created_at \\ nil) do
+  def create(package, version, app, requirements, checksum, created_at \\ nil) do
     now = Util.ecto_now
     release = struct(package.releases,
+                     app: app,
                      version: version,
                      updated_at: now,
                      checksum: String.upcase(checksum),
@@ -44,15 +47,15 @@ defmodule HexWeb.Release do
     end
   end
 
-  def update(release, requirements, checksum) do
+  def update(release, app, requirements, checksum) do
     if editable?(release) do
       case validate(release) do
         [] ->
           HexWeb.Repo.transaction(fn ->
             HexWeb.Repo.delete_all(release.requirements)
             HexWeb.Repo.delete(release)
-            create(release.package.get, release.version, requirements, checksum,
-                   release.created_at)
+            create(release.package.get, release.version, app, requirements,
+                   checksum, release.created_at)
           end) |> elem(1)
         errors ->
           {:error, Enum.into(errors, %{})}
@@ -107,17 +110,19 @@ defmodule HexWeb.Release do
       select: {p.name, p.id}
     deps = HexWeb.Repo.all(deps_query) |> Enum.into(HashDict.new)
 
-    Enum.map(requirements, fn {dep, req, optional} ->
-      add_requirement(release, deps, dep, req, optional)
+    Enum.map(requirements, fn {dep, app, req, optional} ->
+      add_requirement(release, deps, dep, app, req, optional)
     end)
   end
 
   defp normalize_requirements(requirements) do
     Enum.map(requirements, fn
-      {dep, %{"requirement" => req, "optional" => optional}} ->
-        {to_string(dep), req, optional}
+      {dep, %{"app" => app, "requirement" => req, "optional" => optional}} ->
+        {to_string(dep), app, req, optional}
+      {dep, {req, app}} ->
+        {to_string(dep), to_string(app), req, false}
       {dep, req} ->
-        {to_string(dep), req, false}
+        {to_string(dep), to_string(dep), req, false}
     end)
   end
 
@@ -142,7 +147,7 @@ defmodule HexWeb.Release do
   def requirements(release) do
     from(req in release.requirements,
          join: p in req.dependency,
-         select: {p.name, req.requirement, req.optional})
+         select: {p.name, req.app, req.requirement, req.optional})
     |> HexWeb.Repo.all
   end
 
@@ -161,12 +166,12 @@ defmodule HexWeb.Release do
   end
 
   defp add_requirement(release, deps, dep, req, optional) do
-    cond do
       not valid_requirement?(req) ->
         {:error, {dep, "invalid requirement: #{inspect req}"}}
 
       id = deps[dep] ->
-        struct(release.requirements, requirement: req, optional: optional, dependency_id: id)
+        struct(release.requirements, requirement: req, app: app,
+               optional: optional, dependency_id: id)
         |> HexWeb.Repo.insert()
         :ok
 
@@ -186,13 +191,13 @@ defimpl HexWeb.Render, for: HexWeb.Release do
   def render(release) do
     package = release.package.get
 
-    reqs = for {name, req, optional} <- release.requirements.all, into: %{} do
-      {name, %{requirement: req, optional: optional}}
+    reqs = for {name, app, req, optional} <- release.requirements.all, into: %{} do
+      {name, %{app: app, requirement: req, optional: optional}}
     end
 
     dict =
       HexWeb.Release.__schema__(:keywords, release)
-      |> Dict.take([:version, :has_docs, :created_at, :updated_at])
+      |> Dict.take([:app, :version, :has_docs, :created_at, :updated_at])
       |> Dict.update!(:created_at, &to_iso8601/1)
       |> Dict.update!(:updated_at, &to_iso8601/1)
       |> Dict.put(:url, api_url(["packages", package.name, "releases", release.version]))

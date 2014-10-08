@@ -134,9 +134,9 @@ defmodule HexWeb.RegistryBuilder do
               Enum.map(releases, fn {id, version, pkg_id, checksum} ->
                 package = packages[pkg_id]
                 deps =
-                  Enum.map(requirements[id] || [], fn {dep_id, req, opt} ->
+                  Enum.map(requirements[id] || [], fn {dep_id, app, req, opt} ->
                     dep_name = packages[dep_id]
-                    [dep_name, req, opt]
+                    [dep_name, req, opt, app]
                   end)
                 {{package, version}, [deps, checksum]}
               end)
@@ -202,11 +202,11 @@ defmodule HexWeb.RegistryBuilder do
   defp requirements do
     reqs =
       from(r in Requirement,
-           select: {r.release_id, r.dependency_id, r.requirement, r.optional})
+           select: {r.release_id, r.dependency_id, r.app, r.requirement, r.optional})
       |> HexWeb.Repo.all
 
-    Enum.reduce(reqs, HashDict.new, fn {rel_id, dep_id, req, opt}, dict ->
-      tuple = {dep_id, req, opt}
+    Enum.reduce(reqs, HashDict.new, fn {rel_id, dep_id, app, req, opt}, dict ->
+      tuple = {dep_id, app, req, opt}
       Dict.update(dict, rel_id, [tuple], &[tuple|&1])
     end)
   end

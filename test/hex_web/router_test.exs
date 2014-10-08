@@ -13,7 +13,7 @@ defmodule HexWeb.RouterTest do
     {:ok, user} = User.create("eric", "eric@mail.com", "eric")
     {:ok, _}    = Package.create("postgrex", user, %{})
     {:ok, pkg}  = Package.create("decimal", user, %{})
-    {:ok, _}    = Release.create(pkg, "0.0.1", [{"postgrex", "0.0.1"}], "")
+    {:ok, _}    = Release.create(pkg, "0.0.1", "decimal", [{"postgrex", "0.0.1"}], "")
     :ok
   end
 
@@ -56,7 +56,7 @@ defmodule HexWeb.RouterTest do
 
     headers = [ {"content-type", "application/octet-stream"},
                 {"authorization", "Basic " <> :base64.encode("eric:eric")}]
-    body = create_tar(%{app: :postgrex, version: "0.0.1", requirements: %{decimal: "~> 0.0.1"}}, [])
+    body = create_tar(%{name: :postgrex, version: "0.0.1", requirements: %{decimal: "~> 0.0.1"}}, [])
     conn = conn("POST", "/api/packages/postgrex/releases", body, headers: headers)
     conn = Router.call(conn, [])
     assert conn.status == 201

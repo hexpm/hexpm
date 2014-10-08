@@ -30,7 +30,9 @@ defmodule HexWebTest.Case do
   def create_tar(version \\ 3, meta, files)
 
   def create_tar(2, meta, files) do
-    contents_path = Path.join(@tmp, "#{meta[:app]}-#{meta[:version]}-contents.tar.gz")
+    meta = Dict.put_new(meta, :app, meta[:name])
+
+    contents_path = Path.join(@tmp, "#{meta[:name]}-#{meta[:version]}-contents.tar.gz")
     files = Enum.map(files, fn {name, bin} -> {String.to_char_list(name), bin} end)
     :ok = :erl_tar.create(contents_path, files, [:compressed])
     contents = File.read!(contents_path)
@@ -44,14 +46,16 @@ defmodule HexWebTest.Case do
       {'CHECKSUM', checksum},
       {'metadata.exs', meta_string},
       {'contents.tar.gz', contents} ]
-    path = Path.join(@tmp, "#{meta[:app]}-#{meta[:version]}.tar")
+    path = Path.join(@tmp, "#{meta[:name]}-#{meta[:version]}.tar")
     :ok = :erl_tar.create(path, files)
 
     File.read!(path)
   end
 
   def create_tar(3, meta, files) do
-    contents_path = Path.join(@tmp, "#{meta[:app]}-#{meta[:version]}-contents.tar.gz")
+    meta = Dict.put_new(meta, :app, meta[:name])
+
+    contents_path = Path.join(@tmp, "#{meta[:name]}-#{meta[:version]}-contents.tar.gz")
     files = Enum.map(files, fn {name, bin} -> {String.to_char_list(name), bin} end)
     :ok = :erl_tar.create(contents_path, files, [:compressed])
     contents = File.read!(contents_path)
@@ -65,7 +69,7 @@ defmodule HexWebTest.Case do
       {'CHECKSUM', checksum},
       {'metadata.config', meta_string},
       {'contents.tar.gz', contents} ]
-    path = Path.join(@tmp, "#{meta[:app]}-#{meta[:version]}.tar")
+    path = Path.join(@tmp, "#{meta[:name]}-#{meta[:version]}.tar")
     :ok = :erl_tar.create(path, files)
 
     File.read!(path)

@@ -63,9 +63,9 @@ defmodule HexWeb.RegistryBuilderTest do
     postgrex = Package.get("postgrex")
     decimal = Package.get("decimal")
 
-    Release.create(decimal, "0.0.1", [], "")
-    Release.create(decimal, "0.0.2", [{"ex_doc", "0.0.0"}], "")
-    Release.create(postgrex, "0.0.2", [{"decimal", "~> 0.0.1"}, {"ex_doc", "0.1.0"}], "")
+    Release.create(decimal, "0.0.1", "decimal", [], "")
+    Release.create(decimal, "0.0.2", "decimal", [{"ex_doc", "0.0.0"}], "")
+    Release.create(postgrex, "0.0.2", "postgrex", [{"decimal", "~> 0.0.1"}, {"ex_doc", "0.1.0"}], "")
 
     build()
     tid = open_table()
@@ -83,8 +83,8 @@ defmodule HexWeb.RegistryBuilderTest do
 
       reqs = :ets.lookup(tid, {"postgrex", "0.0.2"}) |> List.first |> elem(1) |> List.first
       assert length(reqs) == 2
-      assert Enum.find(reqs, &(&1 == ["decimal", "~> 0.0.1", false]))
-      assert Enum.find(reqs, &(&1 == ["ex_doc", "0.1.0", false]))
+      assert Enum.find(reqs, &(&1 == ["decimal", "~> 0.0.1", false, "decimal"]))
+      assert Enum.find(reqs, &(&1 == ["ex_doc", "0.1.0", false, "ex_doc"]))
 
       assert [] = :ets.lookup(tid, "ex_doc")
     after
@@ -96,9 +96,9 @@ defmodule HexWeb.RegistryBuilderTest do
     postgrex = Package.get("postgrex")
     decimal = Package.get("decimal")
 
-    Release.create(decimal, "0.0.1", [], "")
-    Release.create(decimal, "0.0.2", [{"ex_doc", "0.0.0"}], "")
-    Release.create(postgrex, "0.0.2", [{"decimal", "~> 0.0.1"}, {"ex_doc", "0.1.0"}], "")
+    Release.create(decimal, "0.0.1", "decimal", [], "")
+    Release.create(decimal, "0.0.2", "decimal", [{"ex_doc", "0.0.0"}], "")
+    Release.create(postgrex, "0.0.2", "postgrex", [{"decimal", "~> 0.0.1"}, {"ex_doc", "0.1.0"}], "")
 
     RegistryBuilder.async_rebuild
     RegistryBuilder.async_rebuild
