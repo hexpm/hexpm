@@ -119,6 +119,9 @@ defmodule HexWeb.Release do
     Enum.map(requirements, fn
       {dep, %{"app" => app, "requirement" => req, "optional" => optional}} ->
         {to_string(dep), app, req, optional}
+      # Support older
+      {dep, %{"requirement" => req, "optional" => optional}} ->
+        {to_string(dep), to_string(dep), req, optional}
       {dep, {req, app}} ->
         {to_string(dep), to_string(app), req, false}
       {dep, req} ->
