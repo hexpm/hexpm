@@ -3,7 +3,7 @@ defmodule HexWeb.Repo.Migrations.AddOptionalToRequirements do
 
   def up do
     "ALTER TABLE requirements
-      ADD optional boolean"
+      ADD optional boolean DEFAULT false"
   end
 
   def down do

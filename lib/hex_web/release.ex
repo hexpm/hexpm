@@ -111,7 +111,7 @@ defmodule HexWeb.Release do
     deps = HexWeb.Repo.all(deps_query) |> Enum.into(HashDict.new)
 
     Enum.map(requirements, fn {dep, app, req, optional} ->
-      add_requirement(release, deps, dep, app, req, optional)
+      add_requirement(release, deps, dep, app, req, optional || false)
     end)
   end
 
