@@ -12,14 +12,6 @@ defmodule HexWeb.API.Router do
   alias HexWeb.Release
   alias HexWeb.API.Key
 
-  # Max filesize: ~10mb
-  # Min upload: ~10kb/s
-  @read_opts [
-    length: 10_000_000,
-    read_length: 100_000,
-    read_timeout: 10_000
-  ]
-
   plug Plugs.Format
   plug :match
   plug :dispatch
@@ -27,7 +19,7 @@ defmodule HexWeb.API.Router do
   post "packages/:name/releases" do
     if package = Package.get(name) do
       with_authorized(conn, &Package.owner?(package, &1), fn _ ->
-        case read_body(conn, @read_opts) do
+        case read_body(conn, HexWeb.request_read_opts) do
           {:ok, body, conn} ->
             handle_publish(conn, package, body)
           {:error, :timeout} ->
@@ -37,9 +29,6 @@ defmodule HexWeb.API.Router do
         end
       end)
     else
-      # Read the full body to avoid closing the connection too early :(
-      # This avoids getting H13/H18 errors on Heroku
-      read_body(conn, @read_opts)
       raise NotFound
     end
   end
@@ -47,7 +36,7 @@ defmodule HexWeb.API.Router do
   post "packages/:name/releases/:version/docs" do
     if (package = Package.get(name)) && (release = Release.get(package, version)) do
       with_authorized(conn, &Package.owner?(package, &1), fn _ ->
-        case read_body(conn, @read_opts) do
+        case read_body(conn, HexWeb.request_read_opts) do
           {:ok, body, conn} ->
             handle_docs(conn, release, body)
           {:error, :timeout} ->
@@ -57,9 +46,6 @@ defmodule HexWeb.API.Router do
         end
       end)
     else
-      # Read the full body to avoid closing the connection too early :(
-      # Works around getting H13/H18 errors on Heroku
-      read_body(conn, @read_opts)
       raise NotFound
     end
   end

@@ -15,6 +15,14 @@ defmodule HexWeb do
     HexWeb.Supervisor.start_link
   end
 
+  def request_read_opts do
+    # Max filesize: ~10mb
+    # Min upload: ~10kb/s
+    [ length: 10_000_000,
+      read_length: 100_000,
+      read_timeout: 10_000 ]
+  end
+
   defp config(port) do
     if System.get_env("S3_BUCKET") do
       store = HexWeb.Store.S3
