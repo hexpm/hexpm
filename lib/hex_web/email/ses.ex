@@ -2,11 +2,12 @@ defmodule HexWeb.Email.SES do
   @behaviour HexWeb.Email
 
   def send(to, subject, body) do
-    source   = Application.get_env(:hex_web, :ses_source_addr)
+    source   = Application.get_env(:hex_web, :email_host)
     endpoint = Application.get_env(:hex_web, :ses_endpoint)
     username = Application.get_env(:hex_web, :ses_user)
     password = Application.get_env(:hex_web, :ses_pass)
     port     = Application.get_env(:hex_web, :ses_port) |> String.to_integer
+    source   = "noreply@" <> source
 
     send(source, to, subject, body, endpoint, username, password, port)
   end

@@ -33,7 +33,11 @@ defmodule HexWeb do
       store = HexWeb.Store.Local
     end
 
-    email = HexWeb.Email.SES
+    if System.get_env("HEX_SES_USERNAME") do
+      email = HexWeb.Email.SES
+    else
+      email = HexWeb.Email.Local
+    end
 
     use_ssl = match?("https://" <> _, Application.get_env(:hex_web, :url))
 
