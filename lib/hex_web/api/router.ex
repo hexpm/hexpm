@@ -136,7 +136,15 @@ defmodule HexWeb.API.Router do
 
     post "users" do
       username = conn.params["username"]
-      result = User.create(username, conn.params["email"], conn.params["password"])
+      email    = conn.params["email"]
+      password = conn.params["password"]
+
+      # Unconfirmed users can be recreated
+      if (user = User.get(username: username)) && not user.confirmed do
+        User.delete(user)
+      end
+
+      result = User.create(username, email, password)
       send_creation_resp(conn, result, :public, api_url(["users", username]))
     end
 

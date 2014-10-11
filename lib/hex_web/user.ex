@@ -101,6 +101,10 @@ defmodule HexWeb.User do
     |> List.first
   end
 
+  def delete(user) do
+    HexWeb.Repo.delete(user)
+  end
+
   def auth?(nil, _password), do: false
 
   def auth?(user, password) do
