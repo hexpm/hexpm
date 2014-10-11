@@ -7,29 +7,24 @@ defmodule HexWeb.Email.Templates do
 
   defmacrop inner do
     quote do
-      safe apply(__MODULE__, :"template_#{var!(page)}", [var!(assigns)])
+      safe apply(__MODULE__, :"template_#{var!(name)}", [var!(assigns)])
     end
   end
 
   @templates [
-    main: [:page, :assigns],
+    main: [:name, :assigns],
     confirmation_request: [:assigns],
-    confirmed: [:assigns]
+    confirmed: [:_]
   ]
 
   Enum.each(@templates, fn {name, args} ->
     name = Atom.to_string(name)
-    file = Path.join([__DIR__, "templates", "#{path}.html.eex"])
+    file = Path.join([__DIR__, "templates", "#{name}.html.eex"])
     EEx.function_from_file(:def, :"template_#{name}", file, args,
                            engine: HexWeb.Web.HTML.Engine)
   end)
 
   def render(name, assigns) do
-    fun = :"template_#{name}"
-    apply(__MODULE__, fun, [assigns])
-  end
-
-  def render(page, assigns) do
-    template_main(page, assigns)
+    template_main(name, assigns)
   end
 end

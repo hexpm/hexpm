@@ -35,6 +35,6 @@ defmodule HexWeb.Email.SES do
       "Content-Type: text/html; charset=utf-8",
       "From: #{from}",
       "To: #{to}",
-      "Subject: #{subject}" ]
+      "Subject: #{subject}" ]
   end
 end
