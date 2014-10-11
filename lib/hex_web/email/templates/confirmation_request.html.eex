@@ -1,3 +1,7 @@
+<%
+confirm_url = HexWeb.Util.url("confirm?username=#{@username}&key=#{@key}")
+%>
+
 <h3>Welcome to Hex.pm!</h3>
 
 <p>
@@ -5,11 +9,11 @@
 </p>
 
 <p>
-  You can do so by following <a href="<%= safe HexWeb.url("confirm?username=#{@username}&key=#{@key}") %>">this link</a> or by pasting the link below in your web  browser.
+  You can do so by following <a href="<%= safe confirm_url %>">this link</a> or by pasting the link below in your web  browser.
 </p>
 
 <p>
-  <%= safe HexWeb.url("confirm?username=#{@username}&key=#{@key}") %>
+  <%= safe confirm_url %>
 </p>
 
 <p>

@@ -1,23 +1,17 @@
 defmodule HexWeb.Email.SES do
-
   @behaviour HexWeb.Email
 
   def send(to, subject, body) do
-    source = Application.get_env(:hex_web, :ses_source_addr)
-
-    send(source, to, subject, body)
-  end
-
-  def send(from, to, subject, body) do
+    source   = Application.get_env(:hex_web, :ses_source_addr)
     endpoint = Application.get_env(:hex_web, :ses_endpoint)
     username = Application.get_env(:hex_web, :ses_user)
     password = Application.get_env(:hex_web, :ses_pass)
-    {port, _} = Application.get_env(:hex_web, :ses_port) |> Integer.parse
+    port     = Application.get_env(:hex_web, :ses_port) |> String.to_integer
 
-    send(from, to, subject, body, endpoint, username, password, port)
+    send(source, to, subject, body, endpoint, username, password, port)
   end
 
-  def send(from, to, subject, body, server, login, password, port) do
+  defp send(from, to, subject, body, server, login, password, port) do
     headers = headers(from, to, subject)
     email = {to, [from], headers <> "\r\n\r\n" <> body}
     opts = [
@@ -27,7 +21,7 @@ defmodule HexWeb.Email.SES do
       port: port,
       tls: :always ]
 
-    :gen_smtp_client.send(email, opts)
+    :gen_smtp_client.send_blocking(email, opts)
   end
 
   defp headers(subject, from, to) do
@@ -36,5 +30,6 @@ defmodule HexWeb.Email.SES do
       "From: #{from}",
       "To: #{to}",
       "Subject: #{subject}" ]
+    |> Enum.join("\r\n")
   end
 end

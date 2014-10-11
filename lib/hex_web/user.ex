@@ -76,7 +76,7 @@ defmodule HexWeb.User do
       |> HexWeb.Repo.update
 
       email = Application.get_env(:hex_web, :email)
-      body = HexWeb.Email.render(:confirmed, [])
+      body = HexWeb.Email.Templates.render(:confirmed, [])
       email.send(user.email, "Hex.pm - Account confirmed", body)
 
       true
@@ -131,8 +131,9 @@ defmodule HexWeb.User do
   defp send_confirmation_email(user) do
     email = Application.get_env(:hex_web, :email)
 
-    body = HexWeb.Email.render(:confirmation_request, username: user.username,
-                               key: user.confirmation_key)
+    body = HexWeb.Email.Templates.render(:confirmation_request,
+                                         username: user.username,
+                                         key: user.confirmation_key)
     email.send(user.email, "Hex.pm - Account confirmation", body)
   end
 end
