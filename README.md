@@ -10,7 +10,7 @@ Also see the client repository: [hex](https://github.com/hexpm/hex). The client 
 
 ### PostgreSQL Modules
 
-HexWeb requires the PostgreSQL Module [pg_trgm](http://www.postgresql.org/docs/devel/static/pgtrgm.html) to be available and enabled.
+HexWeb requires the PostgreSQL modules [pg_trgm](http://www.postgresql.org/docs/9.3/static/pgtrgm.html) and [pgcrypto](http://www.postgresql.org/docs/9.3/static/pgcrypto.html) to be available.
 
 This is located in the "postgresql-contrib" package, however the package name can vary depending on your operating system. If the module is not installed the ecto migrations will fail.
 
