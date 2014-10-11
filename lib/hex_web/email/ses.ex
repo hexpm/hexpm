@@ -13,8 +13,15 @@ defmodule HexWeb.Email.SES do
   end
 
   defp send(from, to, subject, body, server, login, password, port) do
-    headers = headers(from, to, subject)
-    email = {to, [from], headers <> "\r\n\r\n" <> body}
+    headers = [
+      {"Subject", subject},
+      {"From", "Hex.pm <#{from}>"},
+      {"To", to},
+      {"Return-Path", from}
+    ]
+
+    email = :mimemail.encode({"text", "html", headers, [{"charset", "utf-8"}], body})
+
     opts = [
       relay: server,
       username: login,
@@ -22,15 +29,8 @@ defmodule HexWeb.Email.SES do
       port: port,
       tls: :always ]
 
-    :gen_smtp_client.send_blocking(email, opts)
-  end
-
-  defp headers(subject, from, to) do
-    [ "MIME-Version: 1.0",
-      "Content-Type: text/html; charset=utf-8",
-      "From: #{from}",
-      "To: #{to}",
-      "Subject: #{subject}" ]
-    |> Enum.join("\r\n")
+    :gen_smtp_client.send({from, [to], email}, opts, fn result ->
+      {:ok, _receipt} = IO.inspect result
+    end)
   end
 end

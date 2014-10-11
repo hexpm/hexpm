@@ -2,7 +2,7 @@
 confirm_url = HexWeb.Util.url("confirm?username=#{@username}&key=#{@key}")
 %>
 
-<h3>Welcome to Hex.pm!</h3>
+<h2>Welcome to Hex.pm!</h2>
 
 <p>
   To begin using your account, we require you to verify your email address.
@@ -21,6 +21,6 @@ confirm_url = HexWeb.Util.url("confirm?username=#{@username}&key=#{@key}")
 </p>
 
 <p>
-  --
+  --<br>
   The Hex.pm team
 </p>
