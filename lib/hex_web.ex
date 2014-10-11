@@ -1,3 +1,5 @@
+require Logger
+
 defmodule HexWeb do
   use Application
 
@@ -11,6 +13,7 @@ defmodule HexWeb do
     config(opts[:port])
     File.mkdir_p!("tmp")
 
+    Logger.info "Starting Cowboy on port #{opts[:port]}"
     Plug.Adapters.Cowboy.http(HexWeb.Router, [], opts)
     HexWeb.Supervisor.start_link
   end
