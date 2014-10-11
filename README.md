@@ -23,6 +23,7 @@ CREATE USER postgres;
 ALTER USER postgres PASSWORD 'postgres';
 CREATE DATABASE hex_dev;
 GRANT ALL PRIVILEGES ON DATABASE hex_dev TO postgres;
+ALTER USER postgres WITH SUPERUSER;
 ```
 
 Now you are fine to run the ecto migrations:
