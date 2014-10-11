@@ -9,13 +9,13 @@ defmodule HexWeb.User do
     field :username, :string
     field :email, :string
     field :password, :string
-    has_many :package_owners, HexWeb.PackageOwner, foreign_key: :owner_id
-    has_many :keys, HexWeb.API.Key
+    field :confirmation_key, :string
+    field :confirmed, :boolean
     field :created_at, :datetime
     field :updated_at, :datetime
 
-    field :confirmation_key, :string
-    field :confirmed, :boolean
+    has_many :package_owners, HexWeb.PackageOwner, foreign_key: :owner_id
+    has_many :keys, HexWeb.API.Key
   end
 
   validatep validate_create(user),
@@ -31,12 +31,13 @@ defmodule HexWeb.User do
   validatep validate_password(user),
     password: present() and type(:string)
 
-  def create(username, email, password) do
+  def create(username, email, password, confirmed? \\ false) do
     username = if is_binary(username), do: String.downcase(username), else: username
     email    = if is_binary(email),    do: String.downcase(email),    else: email
     now      = Util.ecto_now
     user     = %HexWeb.User{username: username, email: email, password: password,
-                            created_at: now, updated_at: now, confirmation_key: gen_confirmation_key(), confirmed: false}
+                            created_at: now, updated_at: now, confirmation_key: gen_confirmation_key(),
+                            confirmed: confirmed?}
     case validate_create(user) do
       [] ->
         user = %{user | password: gen_password(password)}

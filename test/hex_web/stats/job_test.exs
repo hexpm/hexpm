@@ -8,7 +8,7 @@ defmodule HexWeb.Stats.JobTest do
   @moduletag :integration
 
   setup do
-    {:ok, user} = User.create("eric", "eric@mail.com", "eric")
+    {:ok, user} = User.create("eric", "eric@mail.com", "eric", true)
     {:ok, foo} = Package.create("foo", user, %{})
     {:ok, bar} = Package.create("bar", user, %{})
     {:ok, other} = Package.create("other", user, %{})
