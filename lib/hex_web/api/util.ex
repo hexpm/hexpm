@@ -103,52 +103,14 @@ defmodule HexWeb.API.Util do
     |> send_resp(status, body)
   end
 
-  @doc """
-  Run the given function if a user authorized with basic authentication,
-  otherwise send an unauthorized response.
-  """
-  @spec with_authorized_basic(Plug.Conn.t, (HexWeb.User.t -> boolean), (HexWeb.User.t -> any)) :: any
-  def with_authorized_basic(conn, auth? \\ fn _ -> true end, fun) do
-    case authorize(conn, only_basic: true) do
-      {:ok, user} ->
-        if auth?.(user) do
-          fun.(user)
-        else
-          send_unauthorized(conn)
-        end
-      :error ->
-        send_unauthorized(conn)
-    end
-  end
-
-  @doc """
-  Run the given function if a user authorized with basic authentication,
-  otherwise send an unauthorized response.
-
-  Allows unconfirmed accounts to create keys.
-  """
-  @spec with_authorized_basic_key_only(Plug.Conn.t, (HexWeb.User.t -> boolean), (HexWeb.User.t -> any)) :: any
-  def with_authorized_basic_key_only(conn, auth? \\ fn _ -> true end, fun) do
-    case authorize(conn, only_basic: true, keys_only: true) do
-      {:ok, user} ->
-        if auth?.(user) do
-          fun.(user)
-        else
-          send_unauthorized(conn)
-        end
-      :error ->
-        send_unauthorized(conn)
-    end
-  end
-
 
   @doc """
   Run the given function if a user authorized as specified user,
   otherwise send an unauthorized response.
   """
-  @spec with_authorized(Plug.Conn.t, (HexWeb.User.t -> boolean), (HexWeb.User.t -> any)) :: any
-  def with_authorized(conn, auth? \\ fn _ -> true end, fun) do
-    case authorize(conn, []) do
+  @spec with_authorized(Plug.Conn.t, Keyword.t, (HexWeb.User.t -> boolean), (HexWeb.User.t -> any)) :: any
+  def with_authorized(conn, opts, auth? \\ fn _ -> true end, fun) do
+    case authorize(conn, opts) do
       {:ok, user} ->
         if auth?.(user) do
           fun.(user)
@@ -164,46 +126,50 @@ defmodule HexWeb.API.Util do
   # or `:error` if authorization failed
   defp authorize(conn, opts) do
     only_basic = Keyword.get(opts, :only_basic, false)
-    keys_only = Keyword.get(opts, :keys_only, false)
+    allow_unconfirmed = Keyword.get(opts, :allow_unconfirmed, false)
 
-    case get_req_header(conn, "authorization") do
-      ["Basic " <> credentials] ->
-        basic_auth(credentials, keys_only)
-      [key] when not only_basic ->
-        key_auth(key, keys_only)
-      _ ->
-        :error
-    end
-  end
-
-  defp basic_auth(credentials, keys_only) do
-    case String.split(:base64.decode(credentials), ":", parts: 2) do
-      [username, password] ->
-        user = User.get(username: username)
-        if User.auth?(user, password) do
-          if keys_only or user.confirmed do
-            {:ok, user}
-          else
-            :error
-          end
-        else
+    result =
+      case get_req_header(conn, "authorization") do
+        ["Basic " <> credentials] ->
+          basic_auth(credentials)
+        [key] when not only_basic ->
+          key_auth(key)
+        _ ->
           :error
-        end
-      _ ->
-        :error
-    end
-  end
+      end
 
-  defp key_auth(key, keys_only) do
-    case Key.auth(key) do
-      nil  ->
-        :error
-      user ->
-        if keys_only or user.confirmed do
+    case result do
+      {:ok, user} ->
+        if allow_unconfirmed or user.confirmed do
           {:ok, user}
         else
           :error
         end
+      error ->
+        error
+    end
+  end
+
+  defp basic_auth(credentials) do
+    case String.split(:base64.decode(credentials), ":", parts: 2) do
+      [username, password] ->
+        user = User.get(username: username)
+        if User.auth?(user, password) do
+          {:ok, user}
+        else
+          :error
+        end
+      _ ->
+        :error
+    end
+  end
+
+  defp key_auth(key) do
+    case Key.auth(key) do
+      nil ->
+        :error
+      user ->
+        {:ok, user}
     end
   end
 

@@ -18,7 +18,7 @@ defmodule HexWeb.API.Router do
 
   post "packages/:name/releases" do
     if package = Package.get(name) do
-      with_authorized(conn, &Package.owner?(package, &1), fn _ ->
+      with_authorized(conn, [], &Package.owner?(package, &1), fn _ ->
         case read_body(conn, HexWeb.request_read_opts) do
           {:ok, body, conn} ->
             handle_publish(conn, package, body)
@@ -35,7 +35,7 @@ defmodule HexWeb.API.Router do
 
   post "packages/:name/releases/:version/docs" do
     if (package = Package.get(name)) && (release = Release.get(package, version)) do
-      with_authorized(conn, &Package.owner?(package, &1), fn _ ->
+      with_authorized(conn, [], &Package.owner?(package, &1), fn _ ->
         case read_body(conn, HexWeb.request_read_opts) do
           {:ok, body, conn} ->
             handle_docs(conn, release, body)
@@ -150,7 +150,7 @@ defmodule HexWeb.API.Router do
 
     patch "users/:name" do
       name = String.downcase(name)
-      with_authorized_basic(conn, &(&1.username == name), fn user ->
+      with_authorized(conn, [only_basic: true], &(&1.username == name), fn user ->
         result = User.update(user, conn.params["email"], conn.params["password"])
         send_update_resp(conn, result, :public)
       end)
@@ -181,12 +181,12 @@ defmodule HexWeb.API.Router do
 
     put "packages/:name" do
       if package = Package.get(name) do
-        with_authorized(conn, &Package.owner?(package, &1), fn _ ->
+        with_authorized(conn, [], &Package.owner?(package, &1), fn _ ->
           result = Package.update(package, conn.params["meta"])
           send_update_resp(conn, result, :public)
         end)
       else
-        with_authorized(conn, fn user ->
+        with_authorized(conn, [], fn user ->
           result = Package.create(name, user, conn.params["meta"])
           send_creation_resp(conn, result, :public, api_url(["packages", name]))
         end)
@@ -195,7 +195,7 @@ defmodule HexWeb.API.Router do
 
     delete "packages/:name/releases/:version" do
       if (package = Package.get(name)) && (release = Release.get(package, version)) do
-        with_authorized(conn, &Package.owner?(package, &1), fn _ ->
+        with_authorized(conn, [], &Package.owner?(package, &1), fn _ ->
           result = Release.delete(release)
 
           if result == :ok do
@@ -235,7 +235,7 @@ defmodule HexWeb.API.Router do
 
     delete "packages/:name/releases/:version/docs" do
       if (package = Package.get(name)) && (release = Release.get(package, version)) do
-        with_authorized(conn, &Package.owner?(package, &1), fn _ ->
+        with_authorized(conn, [], &Package.owner?(package, &1), fn _ ->
 
           task_start(fn ->
             store = Application.get_env(:hex_web, :store)
@@ -261,7 +261,7 @@ defmodule HexWeb.API.Router do
 
     get "packages/:name/owners" do
       if package = Package.get(name) do
-        with_authorized(conn, &Package.owner?(package, &1), fn _ ->
+        with_authorized(conn, [], &Package.owner?(package, &1), fn _ ->
           send_okay(conn, Package.owners(package), :public)
         end)
       else
@@ -273,7 +273,7 @@ defmodule HexWeb.API.Router do
       email = URI.decode_www_form(email)
 
       if (package = Package.get(name)) && (owner = User.get(email: email)) do
-        with_authorized(conn, &Package.owner?(package, &1), fn _ ->
+        with_authorized(conn, [], &Package.owner?(package, &1), fn _ ->
           if Package.owner?(package, owner) do
             conn
             |> cache(:private)
@@ -291,7 +291,7 @@ defmodule HexWeb.API.Router do
       email = URI.decode_www_form(email)
 
       if (package = Package.get(name)) && (owner = User.get(email: email)) do
-        with_authorized(conn, &Package.owner?(package, &1), fn _ ->
+        with_authorized(conn, [], &Package.owner?(package, &1), fn _ ->
           Package.add_owner(package, owner)
 
           conn
@@ -307,7 +307,7 @@ defmodule HexWeb.API.Router do
       email = URI.decode_www_form(email)
 
       if (package = Package.get(name)) && (owner = User.get(email: email)) do
-        with_authorized(conn, &Package.owner?(package, &1), fn _ ->
+        with_authorized(conn, [], &Package.owner?(package, &1), fn _ ->
           Package.delete_owner(package, owner)
 
           conn
@@ -320,14 +320,14 @@ defmodule HexWeb.API.Router do
     end
 
     get "keys" do
-      with_authorized(conn, fn user ->
+      with_authorized(conn, [], fn user ->
         keys = Key.all(user)
         when_stale(conn, keys, &(&1 |> cache(:private) |> send_render(200, keys)))
       end)
     end
 
     get "keys/:name" do
-      with_authorized(conn, fn user ->
+      with_authorized(conn, [], fn user ->
         if key = Key.get(name, user) do
           when_stale(conn, key, &(&1 |> cache(:private) |> send_render(200, key)))
         else
@@ -337,7 +337,8 @@ defmodule HexWeb.API.Router do
     end
 
     post "keys" do
-      with_authorized_basic_key_only(conn, fn user ->
+      auth_opts = [only_basic: true, allow_unconfirmed: true]
+      with_authorized(conn, auth_opts, fn user ->
         name = conn.params["name"]
         result = Key.create(name, user)
         send_creation_resp(conn, result, :private, api_url(["keys", name]))
@@ -345,7 +346,7 @@ defmodule HexWeb.API.Router do
     end
 
     delete "keys/:name" do
-      with_authorized(conn, fn user ->
+      with_authorized(conn, [], fn user ->
         if key = Key.get(name, user) do
           result = Key.delete(key)
           send_delete_resp(conn, result, :private)
