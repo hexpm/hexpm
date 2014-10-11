@@ -1,0 +1,22 @@
+<h3>Welcome to Hex.pm!</h3>
+
+<p>
+  To begin using your account, we require you to verify your email address.
+</p>
+
+<p>
+  You can do so by following <a href="<%= safe HexWeb.url("confirm?username=#{@username}&key=#{@key}") %>">this link</a> or by pasting the link below in your web  browser.
+</p>
+
+<p>
+  <%= safe HexWeb.url("confirm?username=#{@username}&key=#{@key}") %>
+</p>
+
+<p>
+  Once this is complete, you will have full access to your Hex account.
+</p>
+
+<p>
+  --
+  The Hex.pm team
+</p>

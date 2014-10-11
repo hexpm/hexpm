@@ -18,9 +18,23 @@ defmodule HexWeb.Email.SES do
   end
 
   def send(from, to, subject, body, server, login, password, port) do
-    :gen_smtp_client.send(
-      {to, [from], "Subject: #{subject}\r\nFrom: #{from}\r\nTo: #{to}\r\n\r\n#{body}"},
-        [relay: server, username: login, password: password, port: port, tls: :always]
-      )
+    headers = headers(from, to, subject)
+    email = {to, [from], headers <> "\r\n\r\n" <> body}
+    opts = [
+      relay: server,
+      username: login,
+      password: password,
+      port: port,
+      tls: :always ]
+
+    :gen_smtp_client.send(email, opts)
+  end
+
+  defp headers(subject, from, to) do
+    [ "MIME-Version: 1.0",
+      "Content-Type: text/html; charset=utf-8",
+      "From: #{from}",
+      "To: #{to}",
+      "Subject: #{subject}" ]
   end
 end
