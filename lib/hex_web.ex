@@ -33,10 +33,13 @@ defmodule HexWeb do
       store = HexWeb.Store.Local
     end
 
+    email = HexWeb.Email.SES
+
     use_ssl = match?("https://" <> _, Application.get_env(:hex_web, :url))
 
     Application.put_env(:hex_web, :use_ssl, use_ssl)
     Application.put_env(:hex_web, :store, store)
+    Application.put_env(:hex_web, :email, email)
     Application.put_env(:hex_web, :tmp, Path.expand("tmp"))
     Application.put_env(:hex_web, :port, port)
   end

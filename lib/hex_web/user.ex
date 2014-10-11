@@ -3,6 +3,7 @@ defmodule HexWeb.User do
 
   import Ecto.Query, only: [from: 2]
   alias HexWeb.Util
+  alias HexWeb.EmailTemplates
   import HexWeb.Validation
 
   schema "users" do
@@ -13,6 +14,9 @@ defmodule HexWeb.User do
     has_many :keys, HexWeb.API.Key
     field :created_at, :datetime
     field :updated_at, :datetime
+
+    field :confirmation_key, :string
+    field :confirmed, :boolean
   end
 
   validatep validate_create(user),
@@ -33,11 +37,11 @@ defmodule HexWeb.User do
     email    = if is_binary(email),    do: String.downcase(email),    else: email
     now      = Util.ecto_now
     user     = %HexWeb.User{username: username, email: email, password: password,
-                            created_at: now, updated_at: now}
-
+                            created_at: now, updated_at: now, confirmation_key: gen_confirmation_key(), confirmed: false}
     case validate_create(user) do
       [] ->
         user = %{user | password: gen_password(password)}
+        send_confirmation_email(user)
         {:ok, HexWeb.Repo.insert(user)}
       errors ->
         {:error, Enum.into(errors, %{})}
@@ -57,7 +61,6 @@ defmodule HexWeb.User do
       errors = errors ++ validate_password(user)
       user = %{user | password: gen_password(password)}
     end
-
     case errors do
       [] ->
         user = %{user | updated_at: Util.ecto_now}
@@ -65,6 +68,28 @@ defmodule HexWeb.User do
         {:ok, user}
       errors ->
         {:error, Enum.into(errors, %{})}
+    end
+  end
+
+  def confirm(username, key) do
+    if user = get(username: username) do
+      if user.confirmation_key == key do
+        user = %{user | confirmed: true}
+        user = %{user | updated_at: Util.ecto_now}
+        HexWeb.Repo.update(user)
+
+        email = Application.get_env(:hex_web, :email)
+
+        body = EmailTemplates.confirmed()
+
+        email.send(user.email, "Hex.pm - Account Successfully Verified!", body)
+
+        {:ok, user}
+      else
+        {:error, :invalid_key}
+      end
+    else
+      {:error, :invalid_user}
     end
   end
 
@@ -101,6 +126,17 @@ defmodule HexWeb.User do
     {:ok, salt} = :bcrypt.gen_salt(work_factor)
     {:ok, hash} = :bcrypt.hashpw(password, salt)
     :erlang.list_to_binary(hash)
+  end
+
+  defp gen_confirmation_key do
+    :crypto.strong_rand_bytes(16) |> Base.encode16(case: :lower)
+  end
+
+  defp send_confirmation_email(user) do
+    email = Application.get_env(:hex_web, :email)
+
+    body = EmailTemplates.confirmation_request([username: user.username, key: user.confirmation_key])
+    email.send(user.email, "Hex.pm - Account Verification", body)
   end
 end
 
