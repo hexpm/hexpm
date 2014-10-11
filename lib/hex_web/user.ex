@@ -3,7 +3,6 @@ defmodule HexWeb.User do
 
   import Ecto.Query, only: [from: 2]
   alias HexWeb.Util
-  alias HexWeb.EmailTemplates
   import HexWeb.Validation
 
   schema "users" do
@@ -71,25 +70,18 @@ defmodule HexWeb.User do
     end
   end
 
-  def confirm(username, key) do
-    if user = get(username: username) do
-      if user.confirmation_key == key do
-        user = %{user | confirmed: true}
-        user = %{user | updated_at: Util.ecto_now}
-        HexWeb.Repo.update(user)
+  def confirm?(username, key) do
+    if (user = get(username: username)) && user.confirmation_key == key do
+      %{user | confirmed: true, updated_at: Util.ecto_now}
+      |> HexWeb.Repo.update
 
-        email = Application.get_env(:hex_web, :email)
+      email = Application.get_env(:hex_web, :email)
+      body = HexWeb.Email.render(:confirmed, [])
+      email.send(user.email, "Hex.pm - Account confirmed", body)
 
-        body = EmailTemplates.confirmed()
-
-        email.send(user.email, "Hex.pm - Account Successfully Verified!", body)
-
-        {:ok, user}
-      else
-        {:error, :invalid_key}
-      end
+      true
     else
-      {:error, :invalid_user}
+      false
     end
   end
 
@@ -135,8 +127,9 @@ defmodule HexWeb.User do
   defp send_confirmation_email(user) do
     email = Application.get_env(:hex_web, :email)
 
-    body = EmailTemplates.confirmation_request([username: user.username, key: user.confirmation_key])
-    email.send(user.email, "Hex.pm - Account Verification", body)
+    body = HexWeb.Email.render(:confirmation_request, username: user.username,
+                               key: user.confirmation_key)
+    email.send(user.email, "Hex.pm - Account confirmation", body)
   end
 end
 
