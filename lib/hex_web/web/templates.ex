@@ -25,6 +25,7 @@ defmodule HexWeb.Web.Templates do
   @templates [
     main: [:page, :assigns],
     error: [:assigns],
+    confirm: [:assigns],
     index: [:assigns],
     packages: [:assigns],
     package: [:assigns],

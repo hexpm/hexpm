@@ -1,0 +1,5 @@
+<%= if @success do %>
+  <h2>Account confirmed</h2>
+<% else %>
+  <h2>Failed to confirm account</h2>
+<% end %>

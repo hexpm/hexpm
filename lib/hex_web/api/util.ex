@@ -103,31 +103,14 @@ defmodule HexWeb.API.Util do
     |> send_resp(status, body)
   end
 
-  @doc """
-  Run the given function if a user authorized with basic authentication,
-  otherwise send an unauthorized response.
-  """
-  @spec with_authorized_basic(Plug.Conn.t, (HexWeb.User.t -> boolean), (HexWeb.User.t -> any)) :: any
-  def with_authorized_basic(conn, auth? \\ fn _ -> true end, fun) do
-    case authorize(conn, only_basic: true) do
-      {:ok, user} ->
-        if auth?.(user) do
-          fun.(user)
-        else
-          send_unauthorized(conn)
-        end
-      :error ->
-        send_unauthorized(conn)
-    end
-  end
 
   @doc """
   Run the given function if a user authorized as specified user,
   otherwise send an unauthorized response.
   """
-  @spec with_authorized(Plug.Conn.t, (HexWeb.User.t -> boolean), (HexWeb.User.t -> any)) :: any
-  def with_authorized(conn, auth? \\ fn _ -> true end, fun) do
-    case authorize(conn, []) do
+  @spec with_authorized(Plug.Conn.t, Keyword.t, (HexWeb.User.t -> boolean), (HexWeb.User.t -> any)) :: any
+  def with_authorized(conn, opts, auth? \\ fn _ -> true end, fun) do
+    case authorize(conn, opts) do
       {:ok, user} ->
         if auth?.(user) do
           fun.(user)
@@ -143,13 +126,27 @@ defmodule HexWeb.API.Util do
   # or `:error` if authorization failed
   defp authorize(conn, opts) do
     only_basic = Keyword.get(opts, :only_basic, false)
-    case get_req_header(conn, "authorization") do
-      ["Basic " <> credentials] ->
-        basic_auth(credentials)
-      [key] when not only_basic ->
-        key_auth(key)
-      _ ->
-        :error
+    allow_unconfirmed = Keyword.get(opts, :allow_unconfirmed, false)
+
+    result =
+      case get_req_header(conn, "authorization") do
+        ["Basic " <> credentials] ->
+          basic_auth(credentials)
+        [key] when not only_basic ->
+          key_auth(key)
+        _ ->
+          :error
+      end
+
+    case result do
+      {:ok, user} ->
+        if allow_unconfirmed or user.confirmed do
+          {:ok, user}
+        else
+          :error
+        end
+      error ->
+        error
     end
   end
 
@@ -169,8 +166,10 @@ defmodule HexWeb.API.Util do
 
   defp key_auth(key) do
     case Key.auth(key) do
-      nil  -> :error
-      user -> {:ok, user}
+      nil ->
+        :error
+      user ->
+        {:ok, user}
     end
   end
 

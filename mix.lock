@@ -5,6 +5,7 @@
   "earmark": {:git, "git://github.com/pragdave/earmark.git", "2322b93284fea09e846f0d8d752f35cdb7167a50", []},
   "ecto": {:git, "git://github.com/elixir-lang/ecto.git", "ed223048a6f6c07fce4c84a35747866fba32752d", []},
   "envy": {:git, "git://github.com/manderson26/envy.git", "d62cb227b9000ee866c8bcc724ddf68d87621dea", [branch: "master"]},
+  "gen_smtp": {:git, "git://github.com/Vagabond/gen_smtp.git", "8f7ba01172e679e8b4262334cefc3451b4c36777", []},
   "ibrowse": {:git, "git://github.com/opscode/ibrowse", "8f3f6a3a30730b193cc340a8885a960586dc98de", [tag: "v4.0.1.1"]},
   "jazz": {:git, "git://github.com/meh/jazz.git", "49f335492aca5516495199dd81dd18b845ebaa69", []},
   "mini_s3": {:git, "git://github.com/ericmj/mini_s3.git", "700386bc8c3a804af57380c0fd09a02325142c9b", [branch: "hex-fixes"]},

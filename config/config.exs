@@ -15,8 +15,8 @@ end
 config :hex_web,
   password_work_factor: work_factor,
 
-  url:      System.get_env("HEX_URL"),
-  app_host: System.get_env("APP_HOST"),
+  url:           System.get_env("HEX_URL"),
+  app_host:      System.get_env("APP_HOST"),
 
   s3_url:        System.get_env("HEX_S3_URL") || "http://s3.amazonaws.com",
   s3_bucket:     System.get_env("HEX_S3_BUCKET"),
@@ -27,7 +27,13 @@ config :hex_web,
   docs_url:      System.get_env("HEX_DOCS_URL"),
   cdn_url:       System.get_env("HEX_CDN_URL"),
 
-  secret: System.get_env("HEX_SECRET")
+  email_host:    System.get_env("HEX_EMAIL_HOST"),
+  ses_endpoint:  System.get_env("HEX_SES_ENDPOINT") || "email-smtp.us-west-2.amazonaws.com",
+  ses_port:      System.get_env("HEX_SES_PORT") || "587",
+  ses_user:      System.get_env("HEX_SES_USERNAME"),
+  ses_pass:      System.get_env("HEX_SES_PASSWORD"),
+
+  secret:        System.get_env("HEX_SECRET")
 
 if Mix.env in [:dev, :test] do
   config :hex_web,

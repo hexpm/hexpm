@@ -28,6 +28,8 @@ defmodule HexWeb.Mixfile do
      {:poolboy,   github: "devinus/poolboy", override: true},
      {:postgrex,  github: "ericmj/postgrex", override: true},
      {:decimal,   github: "ericmj/decimal", override: true},
-     {:earmark,   github: "pragdave/earmark", only: :dev}]
+     {:earmark,   github: "pragdave/earmark", only: :dev},
+     {:gen_smtp,  github: "Vagabond/gen_smtp"}
+   ]
   end
 end

@@ -10,9 +10,9 @@ defmodule HexWeb.API.RouterTest do
   alias HexWeb.RegistryBuilder
 
   setup do
-    User.create("other", "other@mail.com", "other")
-    User.create("jose", "jose@mail.com", "jose")
-    {:ok, user} = User.create("eric", "eric@mail.com", "eric")
+    User.create("other", "other@mail.com", "other", true)
+    User.create("jose", "jose@mail.com", "jose", true)
+    {:ok, user} = User.create("eric", "eric@mail.com", "eric", true)
     {:ok, _}    = Package.create("postgrex", user, %{})
     {:ok, pkg}  = Package.create("decimal", user, %{})
     {:ok, _}    = Release.create(pkg, "0.0.1", "decimal", [{"postgrex", "0.0.1"}], "")
@@ -28,8 +28,41 @@ defmodule HexWeb.API.RouterTest do
     body = Jazz.decode!(conn.resp_body)
     assert body["url"] == "http://localhost:4000/api/users/name"
 
-    user = assert User.get(username: "name")
+    user = User.get(username: "name")
     assert user.email == "email@mail.com"
+  end
+
+  test "create user sends mails and requires confirmation" do
+    body = %{username: "name", email: "create_user@mail.com", password: "pass"}
+    conn = conn("POST", "/api/users", Jazz.encode!(body), headers: [{"content-type", "application/json"}])
+    Router.call(conn, [])
+
+    user = User.get(username: "name")
+
+    {subject, contents} = HexWeb.Email.Local.read("create_user@mail.com")
+    assert subject =~ "Hex.pm"
+    assert contents =~ "confirm?username=name&key=" <> user.confirmation_key
+
+    {:ok, key} = Key.create("macbook", user)
+    headers = [ {"content-type", "application/json"},
+                {"authorization", key.user_secret}]
+    body = %{meta: %{}}
+    conn = conn("PUT", "/api/packages/ecto", Jazz.encode!(body), headers: headers)
+    conn = Router.call(conn, [])
+    assert conn.status == 401
+
+    conn = conn("GET", "/confirm?username=name&key=" <> user.confirmation_key)
+    conn = Router.call(conn, [])
+    assert conn.status == 200
+    assert conn.resp_body =~ "Account confirmed"
+
+    conn = conn("PUT", "/api/packages/ecto", Jazz.encode!(body), headers: headers)
+    conn = Router.call(conn, [])
+    assert conn.status == 201
+
+    {subject, contents} = HexWeb.Email.Local.read("create_user@mail.com")
+    assert subject =~ "Hex.pm"
+    assert contents =~ "confirmed"
   end
 
   test "create user validates" do

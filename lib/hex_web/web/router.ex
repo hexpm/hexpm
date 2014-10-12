@@ -9,6 +9,7 @@ defmodule HexWeb.Web.Router do
   alias HexWeb.Stats.ReleaseDownload
   alias HexWeb.Release
   alias HexWeb.Package
+  alias HexWeb.User
 
 
   @packages 30
@@ -27,6 +28,17 @@ defmodule HexWeb.Web.Router do
     conn = assign_pun(conn, [num_packages, num_releases, package_top,
                              package_new, releases_new, total])
     send_page(conn, :index)
+  end
+
+  get "confirm" do
+    conn = fetch_params(conn)
+    name = conn.params["username"]
+    key  = conn.params["key"]
+
+    success = User.confirm?(name, key)
+
+    conn = assign_pun(conn, [success])
+    send_page(conn, :confirm)
   end
 
   get "docs/usage" do

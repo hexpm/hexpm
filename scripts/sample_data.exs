@@ -7,8 +7,9 @@ defmodule SampleData do
   end
 
   def create_user(username, email, password) do
-    case HexWeb.User.create(username, email, password) do
-      {:ok, eric} -> eric
+    case HexWeb.User.create(username, email, password, true) do
+      {:ok, user} ->
+        user
       {:error, error} ->
         IO.puts "creating user '#{username}' failed: #{inspect error}"
         nil
