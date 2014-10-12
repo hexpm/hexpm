@@ -1,0 +1,10 @@
+<h2>Documentation for <%= @package_name %> v<%= @version %> published successfully</h2>
+
+<p>
+  The documentation for release v<%= @version %> of your package, <%= @package_name %>, has been uploaded successfully, and is now available on Hexdocs.pm.
+</p>
+
+<p>
+  --<br>
+  The Hex.pm team
+</p>

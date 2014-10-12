@@ -1,0 +1,15 @@
+<h2>Documentation for <%= @package_name %> v<%= @version %> failed to publish</h2>
+
+<p>
+  The documentation for release v<%= @version %> of your package, <%= @package_name %>, has failed to upload successfully, and is <b>not</b> available on Hexdocs.pm.
+</p>
+
+<p>
+  Please try uploading this release's documentation again. If the problem persists, please email support at <a href="mailto:support@hex.pm">support@hex.pm</a>, or open an issue at <a href="https://github.com/hexpm/hex_web">hexpm/hex_web</a>.
+</p>
+
+<p>
+  --<br>
+  The Hex.pm team
+</p>
+
