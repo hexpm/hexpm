@@ -3,7 +3,9 @@
 
 <p>
   The latest release of your package, <%= @package_name %> v<%= @version %> has failed to upload successfully, and is <b>not</b> available on Hex.pm.
+</p>
 
+<p>
   Please try uploading this release again. If the problem persists, please email support at <a href="mailto:support@hex.pm">support@hex.pm</a>, or open an issue at <a href="https://github.com/hexpm/hex_web">hexpm/hex_web</a>.
 </p>
 
