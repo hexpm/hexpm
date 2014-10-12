@@ -30,7 +30,9 @@ defmodule HexWeb.Web.Templates do
     package: [:assigns],
     docs_usage: [:_],
     docs_publish: [:_],
-    docs_tasks: [:_], ]
+    docs_tasks: [:_],
+    docs_codeofconduct: [:_],
+  ]
 
   Enum.each(@templates, fn {name, args} ->
     name = Atom.to_string(name)

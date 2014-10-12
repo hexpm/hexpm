@@ -1,0 +1,200 @@
+<h1>hex.pm Code of Conduct</h1>
+
+<p>hex.pm exists to facilitate sharing code, by making it easy for
+Elixir and Erlang developers to publish and distribute packages.</p>
+
+<p>hex.pm is a piece of technology, but more importantly, it is a community.</p>
+
+<p>We believe that our mission is best served in an environment that is
+friendly, safe, and accepting; free from intimidation or harassment.</p>
+
+<p>Towards this end, certain behaviors and practices will not be
+tolerated.</p>
+
+<h2>tl;dr</h2>
+
+<ul>
+<li>Be respectful.</li>
+<li>We're here to help: <a href="mailto:support@hex.pm">support@hex.pm</a></li>
+<li>Abusive behavior is never tolerated.</li>
+<li>Data published to hex.pm is hosted at the discretion of the service
+administrators, and may be removed.</li>
+<li>Violations of this code may result in swift and permanent expulsion
+from the hex.pm community.</li>
+</ul>
+
+
+<h2>Scope</h2>
+
+<p>We expect all members of the hex.pm community, including paid and unpaid
+agents, administrators, and users to abide by
+this Code of Conduct at all times in all hex.pm community venues, online
+and in person, and in one-on-one communications pertaining to hex.pm
+affairs.</p>
+
+<p>This policy covers the usage of the hex.pm registry, as well as the hex.pm
+website, hex.pm related events, and any other services offered by or on
+behalf of hex.pm, Inc. (collectively, the "Service").  It also applies to
+behavior in the context of the Hex.pm Open Source project communities,
+including but not limited to public GitHub repositories, IRC channels,
+social media, mailing lists, and public events.</p>
+
+<p>This Code of Conduct is in addition to, and does not in any way
+nullify or invalidate, any other terms or conditions related to use of
+the Service.</p>
+
+<p>The definitions of various subjective terms such as "discriminatory",
+"hateful", or "confusing" will be decided at the sole discretion of
+the hex.pm abuse team.</p>
+
+<h2>Friendly Harassment-Free Space</h2>
+
+<p>We are committed to providing a friendly, safe and welcoming
+environment for all, regardless of gender identity, sexual
+orientation, disability, ethnicity, religion, age, physical
+appearance, body size, race, or similar personal characteristics.</p>
+
+<p>We ask that you please respect that people have differences of opinion
+regarding technical choices, and that every design or implementation
+choice carries a trade-off and numerous costs.  There is seldom a
+single right answer.  A difference of technology preferences is not a
+license to be rude.</p>
+
+<p>Disputes over package rights must be handled respectfully, according
+to the terms described in the hex.pm Dispute Resolution document.  There
+is never a good reason to be rude over package name disputes.</p>
+
+<p>Any spamming, trolling, flaming, baiting, or other attention-stealing
+behaviour is not welcome, and will not be tolerated.</p>
+
+<p>Harassing other users of the Service is never tolerated, whether via
+public or private media.</p>
+
+<p>Avoid using offensive or harassing package names, nicknames, or other
+identifiers that might detract from a friendly, safe, and welcoming
+environment for all.</p>
+
+<p>Harassment includes, but is not limited to: harmful or prejudicial
+verbal or written comments related to gender identity, sexual
+orientation, disability, ethnicity, religion, age, physical
+appearance, body size, race, or similar personal characteristics;
+inappropriate use of nudity, sexual images, and/or sexually explicit
+language in public spaces; threats of physical or non-physical harm;
+deliberate intimidation, stalking or following; harassing photography
+or recording; sustained disruption of talks or other events;
+inappropriate physical contact; and unwelcome sexual attention.</p>
+
+<h2>Acceptable Package Content</h2>
+
+<!--
+TODO: This should probably be split out into a separate doc.  Maybe
+just link to the appropriate location in the Terms of Use once we have
+it.
+-->
+
+
+<p>The Service administrators reserve the right to make judgement calls
+about what is and isn't appropriate in published packages.  These are
+guidelines to help you be successful in our community.</p>
+
+<p>Packages published to the Service must be created using the hex.pm
+command-line client, or a functionally equivalent implementation.  For
+example, a "package" must not be a PNG or JPEG image, movie file, or
+text document.  Using the Service as a personal general-purpose
+database is also not allowed for this reason.  Packages should be hex.pm
+packages, and nothing else.</p>
+
+<p>Packages must contain some functionality.  "Squatting", that is,
+publishing an empty package to "reserve" a name, is not allowed.</p>
+
+<p>Packages must not contain illegal or infringing content.  You should
+only publish packages or other materials to the Service if you have
+the right to do so.  This includes complying with all software license
+agreements or other intellectual property restrictions. For example,
+redistributing an MIT-licensed module with the copyright notice
+removed, would not be allowed.  You will be responsible for any
+violation of laws or others’ intellectual property rights.</p>
+
+<p>Packages must not be malware.  For example, a package which is
+designed to maliciously exploit or damage computer systems, is not
+allowed.  However, an explicitly documented penetration testing
+library designed to be used for white-hat security research would most
+likely be fine.</p>
+
+<p>Package name, description, and other visible metadata must not include
+abusive, inappropriate, or harassing content.</p>
+
+<h2>Reporting Violations of this Code of Conduct</h2>
+
+<p>If you believe someone is harassing you or has otherwise violated this
+Code of Conduct, please contact us at <a href="mailto:support@hex.pm">support@hex.pm</a> to send us an
+abuse report.  If this is the initial report of a problem, please
+include as much detail as possible. It is easiest for us to address
+issues when we have more context.</p>
+
+<h2>Copyright Violations</h2>
+
+<p>We respect the intellectual property of others and ask that you do
+too. If you believe any package or other materials available through
+the Service violates a copyright held by you and you would like to
+submit a notice pursuant to the Digital Millennium Copyright Act or
+other similar international law, you can submit a notice to our agent
+for service of notice at <a href="mailto:support@hex.pm">support@hex.pm</a></p>
+
+<p>Please make sure your notice meets the Digital Millennium Copyright
+Act requirements.</p>
+
+<h2>Consequences</h2>
+
+<p>All content published to the Service, including user account
+credentials, is hosted at the sole discretion of the hex.pm
+administrators.</p>
+
+<p>Unacceptable behavior from any community member, including sponsors,
+employees, customers, or others with decision-making authority, will
+not be tolerated.</p>
+
+<p>Anyone asked to stop unacceptable behavior is expected to comply
+immediately.</p>
+
+<p>If a community member engages in unacceptable behavior, the hex.pm
+administrators may take any action they deem appropriate, up to and
+including a temporary ban or permanent expulsion from the community
+without warning (and without refund in the case of a paid event or
+service).</p>
+
+<h2>Addressing Grievances</h2>
+
+<p>If you feel you have been falsely or unfairly accused of violating
+this Code of Conduct, you should notify hex.pm, we will do our best
+to ensure that your grievance is handled appropriately.</p>
+
+<p>In general, we will choose the course of action that we judge as being
+most in the interest of fostering a safe and friendly community.</p>
+
+<h2>Contact Info</h2>
+
+<p>Please contact <a href="mailto:support@hex.pm">support@hex.pm</a> if you need to report a problem or
+address a grievance related to an abuse report.</p>
+
+<p>You are also encouraged to contact us if you are curious about
+something that might be "on the line" between appropriate and
+inappropriate content.  We are happy to provide guidance to help you
+be a successful part of our community.</p>
+
+<h2>Changes</h2>
+
+<p>This is a living document and may be updated from time to time.
+Please refer to the git history for this
+document to view the changes.</p>
+
+<h2>Credit and License</h2>
+
+<p>This code of conduct is very heavily based on <a href="http://www.npmjs.com/policies/conduct">NPM's code of conduct</a>, which in turn  borrows heavily from the Stumptown Syndicate
+<a href="http://citizencodeofconduct.org/">Citizen's Code of Conduct</a>, and the
+<a href="https://github.com/mozilla/rust/wiki/Note-development-policy#conduct">Rust Project Code of
+Conduct</a>.</p>
+
+<p>This document may be reused under a <a href="http://creativecommons.org/licenses/by-sa/4.0/">Creative Commons
+Attribution-ShareAlike
+License</a>.</p>

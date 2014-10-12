@@ -53,6 +53,14 @@ defmodule HexWeb.Web.Router do
     send_page(conn, :"docs_tasks")
   end
 
+  get "codeofconduct" do
+    active    = :docs
+    title     = "Code of Conduct"
+
+    conn = assign_pun(conn, [active, title])
+    send_page(conn, :"docs_codeofconduct")
+  end
+
   get "/packages" do
     active            = :packages
     title             = "Packages"
