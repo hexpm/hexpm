@@ -168,6 +168,10 @@ defmodule HexWeb.Release do
     |> HexWeb.Repo.all
   end
 
+  def docs_url(release) do
+    HexWeb.Util.docs_url([release.package.get.name, release.version])
+  end
+
   defp add_requirement(release, deps, dep, app, req, optional) do
     cond do
       not valid_requirement?(req) ->
