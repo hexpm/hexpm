@@ -89,11 +89,19 @@ defmodule HexWeb.Util do
   end
 
   @doc """
-  Returns a url to a resource on the server from a list of path components.
+  Returns a url to a resource on the CDN from a list of path components.
   """
   @spec cdn_url([String.t] | String.t) :: String.t
   def cdn_url(path) do
     Application.get_env(:hex_web, :cdn_url) <> "/" <> Path.join(List.wrap(path))
+  end
+
+  @doc """
+  Returns a url to a resource on the docs site from a list of path components.
+  """
+  @spec docs_url([String.t] | String.t) :: String.t
+  def docs_url(path) do
+    Application.get_env(:hex_web, :docs_url) <> "/" <> Path.join(List.wrap(path)) <> "/"
   end
 
   @doc """

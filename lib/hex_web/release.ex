@@ -209,6 +209,10 @@ defimpl HexWeb.Render, for: HexWeb.Release do
       |> Dict.put(:requirements, reqs)
       |> Enum.into(%{})
 
+    if release.has_docs do
+      dict = Dict.put(:docs_url, HexWeb.Release.docs_url(release))
+    end
+
     if release.downloads.loaded? do
       dict = Dict.put(dict, :downloads, release.downloads.get)
     end
