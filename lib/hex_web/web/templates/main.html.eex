@@ -4,8 +4,8 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <link href="//maxcdn.bootstrapcdn.com/bootswatch/3.2.0/lumen/bootstrap.min.css" rel="stylesheet">
-  	<link href="/static/main.css?<%= asset_id %>" rel="stylesheet">
-  	<title><%= if @title, do: "#{@title} | " %>hex.pm</title>
+    <link href="/static/main.css?<%= asset_id %>" rel="stylesheet">
+    <title><%= if @title, do: "#{@title} | " %>Hex</title>
     <link rel="alternate" type="application/rss+xml" title="RSS - New Packages" href="/feeds/new-packages.rss">
     <link rel="shortcut icon" href="favicon.ico">
     <link rel="icon" href="favicon.png">
