@@ -118,9 +118,11 @@ defmodule HexWeb.API.Router do
   end
 
   defp after_release(package, version, body) do
-    store = Application.get_env(:hex_web, :store)
-    store.put_release("#{package.name}-#{version}.tar", body)
-    HexWeb.RegistryBuilder.rebuild
+    task_start(fn ->
+      store = Application.get_env(:hex_web, :store)
+      store.put_release("#{package.name}-#{version}.tar", body)
+      HexWeb.RegistryBuilder.rebuild
+    end)
   end
 
   match _ do
