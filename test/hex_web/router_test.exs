@@ -18,15 +18,12 @@ defmodule HexWeb.RouterTest do
   end
 
   test "fetch registry" do
-    {:ok, _} = RegistryBuilder.start_link
-    RegistryBuilder.sync_rebuild
+    RegistryBuilder.rebuild
 
     conn = conn("GET", "/registry.ets.gz")
     conn = Router.call(conn, [])
 
     assert conn.status in 200..399
-  after
-    RegistryBuilder.stop
   end
 
   @tag :integration
@@ -35,8 +32,7 @@ defmodule HexWeb.RouterTest do
       Application.put_env(:hex_web, :store, HexWeb.Store.S3)
     end
 
-    {:ok, _} = RegistryBuilder.start_link
-    RegistryBuilder.sync_rebuild
+    RegistryBuilder.rebuild
 
     url = HexWeb.Util.cdn_url("registry.ets.gz") |> String.to_char_list
     :inets.start
@@ -44,7 +40,6 @@ defmodule HexWeb.RouterTest do
     assert {:ok, response} = :httpc.request(:head, {url, []}, [], [])
     assert {{_version, 200, _reason}, _headers, _body} = response
   after
-    RegistryBuilder.stop
     Application.put_env(:hex_web, :store, HexWeb.Store.Local)
   end
 

@@ -285,11 +285,9 @@ defmodule HexWeb.API.RouterTest do
 
   test "create release updates registry" do
     path = "tmp/registry.ets"
-    {:ok, _} = RegistryBuilder.start_link
-    RegistryBuilder.sync_rebuild
+    RegistryBuilder.rebuild
 
     File.touch!(path, {{2000,1,1,},{1,1,1}})
-    %File.Stat{mtime: mtime} = File.stat!(path)
 
     headers = [ {"content-type", "application/octet-stream"},
                 {"authorization", "Basic " <> :base64.encode("eric:eric")}]
@@ -302,8 +300,6 @@ defmodule HexWeb.API.RouterTest do
     :timer.sleep(100)
 
     refute %File.Stat{mtime: {{2000,1,1,},{1,1,1}}} = File.stat!(path)
-  after
-    RegistryBuilder.stop
   end
 
   test "create key" do

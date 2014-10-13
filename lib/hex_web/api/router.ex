@@ -120,7 +120,7 @@ defmodule HexWeb.API.Router do
   defp after_release(package, version, body) do
     store = Application.get_env(:hex_web, :store)
     store.put_release("#{package.name}-#{version}.tar", body)
-    HexWeb.RegistryBuilder.async_rebuild
+    HexWeb.RegistryBuilder.rebuild
   end
 
   match _ do
@@ -209,7 +209,7 @@ defmodule HexWeb.API.Router do
           if result == :ok do
             store = Application.get_env(:hex_web, :store)
             store.delete_release("#{name}-#{version}.tar")
-            HexWeb.RegistryBuilder.async_rebuild
+            HexWeb.RegistryBuilder.rebuild
           end
 
           send_delete_resp(conn, result, :public)

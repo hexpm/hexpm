@@ -32,7 +32,6 @@ defmodule HexWeb.Registry do
          order_by: [desc: r.started_at],
          limit: 1,
          select: r.started_at)
-    |> HexWeb.Repo.all
-    |> List.first
+    |> HexWeb.Repo.one
   end
 end

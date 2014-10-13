@@ -5,7 +5,6 @@ defmodule HexWeb.RegistryBuilder do
   immediately after again.
   """
 
-  use GenServer
   import Ecto.Query, only: [from: 2]
   require HexWeb.Repo
   require Logger
@@ -17,163 +16,101 @@ defmodule HexWeb.RegistryBuilder do
 
   @ets_table :hex_registry
   @version   3
+  @wait_time 10_000
 
-  defp new_state do
-    %{building: false, pending: false, counter: 0, waiters: []}
-  end
-
-  def start_link() do
-    :gen_server.start_link({:local, __MODULE__}, __MODULE__, [], [])
-  end
-
-  def stop do
-    :gen_server.call(__MODULE__, :stop)
-  end
-
-  def sync_rebuild do
-    :gen_server.call(__MODULE__, :rebuild)
-  end
-
-  def async_rebuild do
-    :gen_server.cast(__MODULE__, :rebuild)
-  end
-
-  def init(_) do
-    {:ok, new_state()}
-  end
-
-  def handle_cast(:rebuild, %{building: false} = s) do
-    build()
-    {:noreply, %{s | building: true}}
-  end
-
-  def handle_cast(:rebuild, %{building: true} = s) do
-    {:noreply, %{s | pending: true}}
-  end
-
-  def handle_call(:stop, _from, s) do
-    {:stop, :normal, :ok, s}
-  end
-
-  def handle_call(:rebuild, from, %{building: false, waiters: waiters, counter: counter} = s) do
-    build()
-    {:noreply, %{s | building: true, waiters: [{counter, from}|waiters]}}
-  end
-
-  def handle_call(:rebuild, from, %{building: true, waiters: waiters, counter: counter} = s) do
-    {:noreply, %{s | pending: true, waiters: [{counter+1, from}|waiters]}}
-  end
-
-  def handle_info(:finished_building, %{pending: pending, counter: counter} = s) do
-    if pending, do: async_rebuild()
-    s = reply_to_waiters(s)
-    {:noreply, %{s | building: false, pending: false, counter: counter + 1}}
-  end
-
-  defp reply_to_waiters(%{waiters: waiters, counter: counter} = s) do
-    {done, pending} = Enum.partition(waiters, fn {id, _} -> id == counter end)
-    Enum.each(done, fn {_id, from} -> :gen_server.reply(from, :ok) end)
-    %{s | waiters: pending}
-  end
-
-  defp build do
-    pid = self()
-
-    spawn_link(fn ->
-      try do
-        case builder(pid) do
-          {time, memory} ->
-            Logger.info "REGISTRY_BUILDER_COMPLETED (#{div time, 1000}ms, #{div memory, 1024}kb)"
-          nil ->
-            :ok
-        end
-      catch
-        kind, error ->
-          stacktrace = System.stacktrace
-          Logger.error "REGISTRY_BUILDER_FAILED"
-          HexWeb.Util.log_error(kind, error, stacktrace)
-      end
-    end)
-  end
-
-  defp builder(pid) do
+  def rebuild do
     tmp = Application.get_env(:hex_web, :tmp)
     reg_file = Path.join(tmp, "registry.ets")
     {:ok, handle} = HexWeb.Registry.create()
-    {:ok, result} = build_ets(handle, reg_file)
-
-    send pid, :finished_building
-    result
+    rebuild(handle, reg_file)
   end
 
-  def build_ets(handle, file) do
+  defp rebuild(handle, reg_file) do
     try do
       HexWeb.Repo.transaction(fn ->
         Postgres.query(HexWeb.Repo, "LOCK registries NOWAIT", [])
-
         unless skip?(handle) do
-          :timer.tc(fn ->
-            HexWeb.Registry.set_working(handle)
-
-            {installs1, installs2} = installs()
-            requirements = requirements()
-            releases     = releases()
-            packages     = packages()
-
-            package_tuples =
-              Enum.reduce(releases, HashDict.new, fn {_, vsn, pkg_id, _}, dict ->
-                Dict.update(dict, packages[pkg_id], [vsn], &[vsn|&1])
-              end)
-
-            package_tuples =
-              Enum.map(package_tuples, fn {name, vsns} ->
-                {name, [Enum.sort(vsns, &(Version.compare(&1, &2) == :lt))]}
-              end)
-
-            release_tuples =
-              Enum.map(releases, fn {id, version, pkg_id, checksum} ->
-                package = packages[pkg_id]
-                deps =
-                  Enum.map(requirements[id] || [], fn {dep_id, app, req, opt} ->
-                    dep_name = packages[dep_id]
-                    [dep_name, req, opt, app]
-                  end)
-                {{package, version}, [deps, checksum]}
-              end)
-
-            {:memory, memory} = :erlang.process_info(self, :memory)
-
-            File.rm(file)
-
-            tid = :ets.new(@ets_table, [:public])
-            :ets.insert(tid, {:"$$version$$", @version})
-            # Removing :"$$installs$$" should bump version to 4
-            # :"$$installs2$$" was added with Hex v0.5.0 (Elixir v1.0.0) (2014-09-19)
-            :ets.insert(tid, {:"$$installs$$", installs1})
-            :ets.insert(tid, {:"$$installs2$$", installs2})
-            :ets.insert(tid, release_tuples ++ package_tuples)
-            :ok = :ets.tab2file(tid, String.to_char_list(file))
-            :ets.delete(tid)
-
-            Application.get_env(:hex_web, :store).put_registry(File.read!(file))
-            HexWeb.Registry.set_done(handle)
-
-            memory
-          end)
+          build(handle, reg_file)
         end
       end)
     rescue
       error in [Postgrex.Error] ->
         stacktrace = System.stacktrace
         if error.code == "55P03" do
-          :timer.sleep(10_000)
+          :timer.sleep(@wait_time)
           unless skip?(handle) do
-            build_ets(handle, file)
+            rebuild(handle, reg_file)
           end
         else
           reraise error, stacktrace
         end
+      x ->
+        IO.inspect x
     end
+  end
+
+  defp build(handle, file) do
+    try do
+      {time, memory} = :timer.tc(fn ->
+        build_ets(handle, file)
+      end)
+
+      Logger.info "REGISTRY_BUILDER_COMPLETED (#{div time, 1000}ms, #{div memory, 1024}kb)"
+    catch
+      kind, error ->
+        stacktrace = System.stacktrace
+        Logger.error "REGISTRY_BUILDER_FAILED"
+        HexWeb.Util.log_error(kind, error, stacktrace)
+    end
+  end
+
+  def build_ets(handle, file) do
+    HexWeb.Registry.set_working(handle)
+
+    {installs1, installs2} = installs()
+    requirements = requirements()
+    releases     = releases()
+    packages     = packages()
+
+    package_tuples =
+      Enum.reduce(releases, HashDict.new, fn {_, vsn, pkg_id, _}, dict ->
+        Dict.update(dict, packages[pkg_id], [vsn], &[vsn|&1])
+      end)
+
+    package_tuples =
+      Enum.map(package_tuples, fn {name, vsns} ->
+        {name, [Enum.sort(vsns, &(Version.compare(&1, &2) == :lt))]}
+      end)
+
+    release_tuples =
+      Enum.map(releases, fn {id, version, pkg_id, checksum} ->
+        package = packages[pkg_id]
+        deps =
+          Enum.map(requirements[id] || [], fn {dep_id, app, req, opt} ->
+            dep_name = packages[dep_id]
+            [dep_name, req, opt, app]
+          end)
+        {{package, version}, [deps, checksum]}
+      end)
+
+    {:memory, memory} = :erlang.process_info(self, :memory)
+
+    File.rm(file)
+
+    tid = :ets.new(@ets_table, [:public])
+    :ets.insert(tid, {:"$$version$$", @version})
+    # Removing :"$$installs$$" should bump version to 4
+    # :"$$installs2$$" was added with Hex v0.5.0 (Elixir v1.0.0) (2014-09-19)
+    :ets.insert(tid, {:"$$installs$$", installs1})
+    :ets.insert(tid, {:"$$installs2$$", installs2})
+    :ets.insert(tid, release_tuples ++ package_tuples)
+    :ok = :ets.tab2file(tid, String.to_char_list(file))
+    :ets.delete(tid)
+
+    Application.get_env(:hex_web, :store).put_registry(File.read!(file))
+    HexWeb.Registry.set_done(handle)
+
+    memory
   end
 
   defp skip?(handle) do
