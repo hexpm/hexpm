@@ -2,7 +2,6 @@ defmodule HexWeb.Registry do
   use Ecto.Model
 
   import Ecto.Query, only: [from: 2]
-  alias HexWeb.Util
   require HexWeb.Repo
 
   schema "registries" do
@@ -12,13 +11,13 @@ defmodule HexWeb.Registry do
   end
 
   def create() do
-    registry = %HexWeb.Registry{state: "waiting", created_at: Util.ecto_now}
+    registry = %HexWeb.Registry{state: "waiting"}
     {:ok, HexWeb.Repo.insert(registry)}
   end
 
   def set_working(registry) do
     from(r in HexWeb.Registry, where: r.id == ^registry.id)
-    |> HexWeb.Repo.update_all(state: "working", started_at: ^Util.ecto_now)
+    |> HexWeb.Repo.update_all(state: "working", started_at: now())
   end
 
   def set_done(registry) do
