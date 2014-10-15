@@ -15,7 +15,9 @@ defmodule HexWeb.API.RouterTest do
     {:ok, user} = User.create("eric", "eric@mail.com", "eric", true)
     {:ok, _}    = Package.create("postgrex", user, %{})
     {:ok, pkg}  = Package.create("decimal", user, %{})
-    {:ok, _}    = Release.create(pkg, "0.0.1", "decimal", [{"postgrex", "0.0.1"}], "")
+    {:ok, rel}  = Release.create(pkg, "0.0.1", "decimal", [{"postgrex", "0.0.1"}], "")
+
+    %{rel | has_docs: true} |> HexWeb.Repo.update
     :ok
   end
 
