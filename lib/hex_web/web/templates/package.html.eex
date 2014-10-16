@@ -6,7 +6,7 @@
     <% end %>
   </h2>
   <%= if description = @package.meta["description"] do %>
-    <span class="description"><%= description %></span>
+    <span class="description"><%= paragraphize(description) %></span>
   <% end %>
 </div>
 

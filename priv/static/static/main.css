@@ -89,7 +89,4 @@ body {
 
 .description {
   margin: 20px 0;
-  white-space: pre-wrap;
-  word-break: normal;
-  word-wrap: normal;
 }

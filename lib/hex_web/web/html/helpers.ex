@@ -1,4 +1,6 @@
 defmodule HexWeb.Web.HTML.Helpers do
+  alias HexWeb.Web.HTML.Safe
+
   def paginate(page, count, opts) do
     per_page  = opts[:items_per_page]
     max_links = opts[:page_links] # Needs to be odd number
@@ -33,4 +35,14 @@ defmodule HexWeb.Web.HTML.Helpers do
   def present?(""),  do: false
   def present?(nil), do: false
   def present?(_),   do: true
+
+  def paragraphize(contents) do
+    paragraphs =
+      contents
+      |> Safe.to_string
+      |> :binary.replace("\r", "")
+      |> String.replace(~r"(\n{2,})", "</p>\\1<p>")
+
+    {:safe, "<p>" <> paragraphs <> "</p>"}
+  end
 end
