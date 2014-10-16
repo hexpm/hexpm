@@ -27,7 +27,7 @@ defmodule HexWeb do
   end
 
   defp config(port) do
-    if System.get_env("S3_BUCKET") do
+    if System.get_env("HEX_S3_BUCKET") do
       store = HexWeb.Store.S3
     else
       store = HexWeb.Store.Local

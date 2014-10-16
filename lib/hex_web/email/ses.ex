@@ -30,7 +30,7 @@ defmodule HexWeb.Email.SES do
       tls: :always ]
 
     :gen_smtp_client.send({from, [to], email}, opts, fn result ->
-      {:ok, _receipt} = IO.inspect result
+      {:ok, _receipt} = result
     end)
   end
 end
