@@ -1,0 +1,361 @@
+/*** uncss> filename: complete.min.css ***/
+
+/*!
+Pure v0.5.0
+Copyright 2014 Yahoo! Inc. All rights reserved.
+Licensed under the BSD License.
+https://github.com/yui/pure/blob/master/LICENSE.md
+*/
+
+/*!
+normalize.css v1.1.3 | MIT License | git.io/normalize
+Copyright (c) Nicolas Gallagher and Jonathan Neal
+*/
+
+/*! normalize.css v1.1.3 | MIT License | git.io/normalize */
+
+/*!
+Pure v0.5.0
+Copyright 2014 Yahoo! Inc. All rights reserved.
+Licensed under the BSD License.
+https://github.com/yui/pure/blob/master/LICENSE.md
+*/
+html {
+  font-size: 100%;
+  -ms-text-size-adjust: 100%;
+  -webkit-text-size-adjust: 100%;
+}
+
+html {
+  font-family: sans-serif;
+}
+
+body {
+  margin: 0;
+}
+
+a:focus {
+  outline: thin dotted;
+}
+
+a:active,
+a:hover {
+  outline: 0;
+}
+
+h1 {
+  font-size: 2em;
+  margin: .67em 0;
+}
+
+p {
+  margin: 1em 0;
+}
+
+button::-moz-focus-inner,
+input::-moz-focus-inner {
+  border: 0;
+  padding: 0;
+}
+
+.opera-only:-o-prefocus {
+  word-spacing: -.43em;
+}
+
+.pure-button {
+  display: inline-block;
+  *display: inline;
+  zoom: 1;
+  line-height: normal;
+  white-space: nowrap;
+  vertical-align: baseline;
+  text-align: center;
+  cursor: pointer;
+  -webkit-user-drag: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+}
+
+.pure-button::-moz-focus-inner {
+  padding: 0;
+  border: 0;
+}
+
+.pure-button {
+  font-family: inherit;
+  font-size: 100%;
+  *font-size: 90%;
+  *overflow: visible;
+  padding: .5em 1em;
+  color: #444;
+  color: rgba(0,0,0,.8);
+  *color: #444;
+  border: 1px solid #999;
+  border: 0 rgba(0,0,0,0);
+  background-color: #E6E6E6;
+  text-decoration: none;
+  border-radius: 2px;
+}
+
+.pure-button:hover,
+.pure-button:focus {
+  filter: progid:DXImageTransform.Microsoft.gradient(startColorstr='#00000000',endColorstr='#1a000000',GradientType=0);
+  background-image: -webkit-gradient(linear,0 0,0 100%,from(transparent),color-stop(40%,rgba(0,0,0,.05)),to(rgba(0,0,0,.1)));
+  background-image: -webkit-linear-gradient(transparent,rgba(0,0,0,.05) 40%,rgba(0,0,0,.1));
+  background-image: -moz-linear-gradient(top,rgba(0,0,0,.05) 0,rgba(0,0,0,.1));
+  background-image: -o-linear-gradient(transparent,rgba(0,0,0,.05) 40%,rgba(0,0,0,.1));
+  background-image: linear-gradient(transparent,rgba(0,0,0,.05) 40%,rgba(0,0,0,.1));
+}
+
+.pure-button:focus {
+  outline: 0;
+}
+
+.pure-button:active {
+  box-shadow: 0 0 0 1px rgba(0,0,0,.15) inset,0 0 6px rgba(0,0,0,.2) inset;
+}
+
+.pure-button::-moz-focus-inner {
+  padding: 0;
+  border: 0;
+}
+
+.pure-button-primary,
+a.pure-button-primary {
+  background-color: #0078e7;
+  color: #fff;
+}
+
+.pure-menu.pure-menu-open {
+  visibility: visible;
+  z-index: 2;
+  width: 100%;
+}
+
+.pure-menu a,
+.pure-menu .pure-menu-heading {
+  display: block;
+  color: inherit;
+  line-height: 1.5em;
+  padding: 5px 20px;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.pure-menu.pure-menu-horizontal>.pure-menu-heading {
+  display: inline-block;
+  *display: inline;
+  zoom: 1;
+  margin: 0;
+  vertical-align: middle;
+}
+
+.pure-menu-fixed {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+}
+
+.pure-menu.pure-menu-open {
+  background: #fff;
+  border: 1px solid #b7b7b7;
+}
+
+.pure-menu.pure-menu-horizontal,
+.pure-menu.pure-menu-horizontal .pure-menu-heading {
+  border: 0;
+}
+
+.pure-menu a {
+  border: 1px solid transparent;
+  border-left: 0;
+  border-right: 0;
+}
+
+.pure-menu a {
+  color: #777;
+}
+
+.pure-menu .pure-menu-heading {
+  color: #565d64;
+  text-transform: uppercase;
+  font-size: 90%;
+  margin-top: .5em;
+  border-bottom-width: 1px;
+  border-bottom-style: solid;
+  border-bottom-color: #dfdfdf;
+}
+
+.pure-menu.pure-menu-open.pure-menu-fixed {
+  border: 0;
+  border-bottom: 1px solid #b7b7b7;
+}
+
+.opera-only:-o-prefocus {
+  word-spacing: -.43em;
+}
+
+@media (max-width:480px) {
+  .pure-menu-horizontal {
+    width: 100%;
+  }
+}
+
+* {
+  -webkit-box-sizing: border-box;
+  -moz-box-sizing: border-box;
+  box-sizing: border-box;
+}
+
+body {
+  line-height: 1.7em;
+  color: #7f8c8d;
+  font-size: 13px;
+}
+
+h1 {
+  color: #34495e;
+}
+
+a:link {
+  color: #000;
+  text-decoration: underline;
+}
+
+a:active {
+  color: #000;
+  text-decoration: underline;
+}
+
+a:visited {
+  color: #000;
+  text-decoration: underline;
+}
+
+a:hover {
+  color: #000;
+  text-decoration: none;
+}
+
+.pure-button {
+  background-color: #1f8dd6;
+  color: white;
+  padding: 0.5em 2em;
+  border-radius: 5px;
+}
+
+a.pure-button-primary {
+  background: white;
+  color: #000;
+  border-radius: 5px;
+  font-size: 120%;
+  text-decoration: none;
+}
+
+.home-menu {
+  padding: 0.5em;
+  text-align: center;
+  box-shadow: 0 1px 1px rgba(0,0,0,0.10);
+}
+
+.home-menu.pure-menu-open {
+  background: #f8f8f8;
+}
+
+.pure-menu.pure-menu-open.pure-menu-fixed {
+  border-bottom: none;
+  z-index: 4;
+}
+
+.home-menu .pure-menu-heading {
+  color: white;
+  font-weight: 400;
+  font-size: 120%;
+  text-transform: none;
+  color: #333333;
+}
+
+.home-menu a {
+  color: #6FBEF3;
+}
+
+.splash-container {
+  background: #fff;
+  z-index: 1;
+  overflow: hidden;
+  width: 100%;
+  height: 100%;
+  top: 0;
+  left: 0;
+}
+
+.splash {
+  width: 80%;
+  height: 50%;
+  margin: auto;
+  position: absolute;
+  top: 100px;
+  left: 0;
+  right: 0;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+.splash-head {
+  font-size: 20px;
+  font-weight: bold;
+  color: black;
+  border: 3px solid black;
+  padding: 1em 1.6em;
+  font-weight: 100;
+  border-radius: 5px;
+  line-height: 1em;
+}
+
+.splash-subhead {
+  color: black;
+  letter-spacing: 0.05em;
+  opacity: 0.8;
+}
+
+@media (min-width:48em) {
+  body {
+    font-size: 16px;
+  }
+
+  .home-menu {
+    text-align: left;
+  }
+
+  .splash {
+    width: 50%;
+    height: 50%;
+  }
+
+  .splash-head {
+    font-size: 250%;
+  }
+}
+
+@media (min-width:78em) {
+  .splash-head {
+    font-size: 300%;
+  }
+}
+
+code {
+  text-transform: none;
+}
+
+h1,
+h2,
+h3 {
+  color: #333;
+}
+
+.no-upcase {
+  text-transform: none;
+}
