@@ -379,27 +379,30 @@ defmodule HexWeb.API.RouterTest do
   end
 
   test "get user" do
-    conn = conn("GET", "/api/users/eric")
+    headers = [ {"content-type", "application/json"},
+                {"authorization", "Basic " <> :base64.encode("eric:eric")}]
+    conn = conn("GET", "/api/users/eric", nil, headers: headers)
     conn = Router.call(conn, [])
-
     assert conn.status == 200
+
     body = Jazz.decode!(conn.resp_body)
     assert body["username"] == "eric"
     assert body["email"] == "eric@mail.com"
     refute body["password"]
+
+    conn = conn("GET", "/api/users/eric")
+    conn = Router.call(conn, [])
+    assert conn.status == 401
   end
 
   test "elixir media response" do
     headers = [ {"accept", "application/vnd.hex+elixir"} ]
-    conn = conn("GET", "/api/users/eric", nil, headers: headers)
+    conn = conn("GET", "/api/packages/postgrex", nil, headers: headers)
     conn = Router.call(conn, [])
 
     assert conn.status == 200
     {body, []} = Code.eval_string(conn.resp_body)
-    # Remove when API only supports maps
-    body = Enum.into(body, %{})
-    assert body["username"] == "eric"
-    assert body["email"] == "eric@mail.com"
+    assert body["name"] == "postgrex"
   end
 
   test "elixir media request" do
@@ -441,7 +444,7 @@ defmodule HexWeb.API.RouterTest do
 
   test "accepted formats" do
     headers = [ {"accept", "application/xml"} ]
-    conn = conn("GET", "/api/users/eric", nil, headers: headers)
+    conn = conn("GET", "/api/packages/postgrex", nil, headers: headers)
     conn = Router.call(conn, [])
     assert conn.status == 415
 
@@ -451,31 +454,31 @@ defmodule HexWeb.API.RouterTest do
     assert conn.status == 404
 
     headers = [ {"accept", "application/json"} ]
-    conn = conn("GET", "/api/users/eric", nil, headers: headers)
+    conn = conn("GET", "/api/packages/postgrex", nil, headers: headers)
     conn = Router.call(conn, [])
     assert conn.status == 200
     Jazz.decode!(conn.resp_body)
 
     headers = [ {"accept", "application/vnd.hex"} ]
-    conn = conn("GET", "/api/users/eric", nil, headers: headers)
+    conn = conn("GET", "/api/packages/postgrex", nil, headers: headers)
     conn = Router.call(conn, [])
     assert conn.status == 200
     Jazz.decode!(conn.resp_body)
 
     headers = [ {"accept", "application/vnd.hex+Jazz"} ]
-    conn = conn("GET", "/api/users/eric", nil, headers: headers)
+    conn = conn("GET", "/api/packages/postgrex", nil, headers: headers)
     conn = Router.call(conn, [])
     assert conn.status == 200
     assert get_resp_header(conn, "x-hex-media-type") == ["hex.beta"]
     Jazz.decode!(conn.resp_body)
 
     headers = [ {"accept", "application/vnd.hex.vUNSUPPORTED+Jazz"} ]
-    conn = conn("GET", "/api/users/eric", nil, headers: headers)
+    conn = conn("GET", "/api/packages/postgrex", nil, headers: headers)
     conn = Router.call(conn, [])
     assert conn.status == 415
 
     headers = [ {"accept", "application/vnd.hex.beta"} ]
-    conn = conn("GET", "/api/users/eric", nil, headers: headers)
+    conn = conn("GET", "/api/packages/postgrex", nil, headers: headers)
     conn = Router.call(conn, [])
     assert conn.status == 200
     assert get_resp_header(conn, "x-hex-media-type") == ["hex.beta"]

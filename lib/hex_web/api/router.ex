@@ -151,15 +151,12 @@ defmodule HexWeb.API.Router do
     end
 
     get "users/:name" do
-      if user = User.get(username: name) do
+      with_authorized(conn, [], &(&1.username == name), fn user ->
         when_stale(conn, user, &send_okay(&1, user, :public))
-      else
-        raise NotFound
-      end
+      end)
     end
 
     patch "users/:name" do
-      name = String.downcase(name)
       with_authorized(conn, [only_basic: true], &(&1.username == name), fn user ->
         result = User.update(user, conn.params["email"], conn.params["password"])
         send_update_resp(conn, result, :public)
