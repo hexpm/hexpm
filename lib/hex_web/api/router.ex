@@ -17,6 +17,8 @@ defmodule HexWeb.API.Router do
   plug :dispatch
 
   post "packages/:name/releases" do
+    conn = HexWeb.Plug.read_body_finally(conn)
+
     if package = Package.get(name) do
       with_authorized(conn, [], &Package.owner?(package, &1), fn _ ->
         case read_body(conn, HexWeb.request_read_opts) do
@@ -34,6 +36,8 @@ defmodule HexWeb.API.Router do
   end
 
   post "packages/:name/releases/:version/docs" do
+    conn = HexWeb.Plug.read_body_finally(conn)
+
     if (package = Package.get(name)) && (release = Release.get(package, version)) do
       with_authorized(conn, [], &Package.owner?(package, &1), fn _ ->
         case read_body(conn, HexWeb.request_read_opts) do

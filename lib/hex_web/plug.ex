@@ -71,4 +71,22 @@ defmodule HexWeb.Plug do
     |> put_resp_header("location", url)
     |> send_resp(302, "")
   end
+
+  def read_body_finally(conn) do
+    register_before_send(conn, fn conn ->
+      if conn.status in 200..399 do
+        conn
+      else
+        # If we respond with an unsuccessful error code assume we did not read
+        # body
+
+        # Read the full body to avoid closing the connection too early :(
+        # Works around getting H13/H18 errors on Heroku
+        case read_body(conn, HexWeb.request_read_opts) do
+          {:ok, _body, conn} -> conn
+          _ -> conn
+        end
+      end
+    end)
+  end
 end

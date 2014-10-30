@@ -26,6 +26,14 @@ defmodule HexWeb do
       read_timeout: 10_000 ]
   end
 
+  def request_read_fast_opts do
+    # Max filesize: ~10mb
+    # Min upload: ~10kb/s
+    [ length: 10_000_000,
+      read_length: 10_000,
+      read_timeout: 1_000 ]
+  end
+
   defp config(port) do
     if System.get_env("HEX_S3_BUCKET") do
       store = HexWeb.Store.S3
