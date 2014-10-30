@@ -1,7 +1,5 @@
 ExUnit.start exclude: [:integration]
 
-Mix.Task.run "ecto.drop", ["HexWeb.Repo"]
-Mix.Task.run "ecto.create", ["HexWeb.Repo"]
 Mix.Task.run "ecto.migrate", ["HexWeb.Repo"]
 
 File.rm_rf!("tmp")
