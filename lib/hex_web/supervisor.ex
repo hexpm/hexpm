@@ -6,7 +6,10 @@ defmodule HexWeb.Supervisor do
   end
 
   def init([]) do
-    tree = [worker(HexWeb.Repo, [])]
+    tree = [
+      worker(HexWeb.Repo, []),
+      worker(HexWeb.BlockedAddress, [])
+    ]
     supervise(tree, strategy: :one_for_one)
   end
 end

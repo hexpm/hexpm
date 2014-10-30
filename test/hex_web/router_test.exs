@@ -171,10 +171,10 @@ defmodule HexWeb.RouterTest do
     conn = Router.call(conn, [])
     assert conn.status == 200
 
-    %HexWeb.Plugs.BlockedAddress{ip: "1.2.3.4"}
+    %HexWeb.BlockedAddress{ip: "1.2.3.4"}
     |> HexWeb.Repo.insert
 
-    HexWeb.Plugs.BlockedAddress.reload()
+    HexWeb.BlockedAddress.reload
 
     conn = conn("GET", "/")
     conn = %{conn | remote_ip: {1,2,3,4}}
