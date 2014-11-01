@@ -5,6 +5,7 @@ defmodule HexWeb.Mixfile do
     [app: :hex_web,
      version: "0.0.1",
      elixir: "~> 1.0",
+     aliases: aliases,
      deps: deps]
   end
 
@@ -31,5 +32,14 @@ defmodule HexWeb.Mixfile do
      {:earmark,   github: "pragdave/earmark", only: :dev},
      {:gen_smtp,  github: "Vagabond/gen_smtp"}
    ]
+  end
+
+  defp aliases do
+    [test: &test/1]
+  end
+
+  defp test(args) do
+    Mix.Task.run "ecto.migrate", ["HexWeb.Repo"]
+    Mix.Task.run "test", args
   end
 end
