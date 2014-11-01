@@ -13,6 +13,7 @@ defmodule HexWeb.API.Router do
   alias HexWeb.API.Key
 
   plug Plugs.Format
+  plug Plugs.ResponseTime
   plug :match
   plug :dispatch
 

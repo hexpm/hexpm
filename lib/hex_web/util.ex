@@ -24,6 +24,24 @@ defmodule HexWeb.Util do
     Ecto.DateTime.from_erl(:calendar.universal_time)
   end
 
+  @doc """
+  Returns a formatted response time.
+  """
+  def format_response_time(start) do
+    time = :timer.now_diff(:os.timestamp, start)
+
+    formatted_diff(time)
+      |> Enum.join("")
+  end
+
+  @doc """
+  From Plug.Logger (https://github.com/elixir-lang/plug/blob/master/lib/plug/logger.ex#L65).
+
+  Formats microsecond (µs) time units as either µs or ms
+  """
+  defp formatted_diff(diff) when diff > 1000, do: [diff |> div(1000) |> Integer.to_string, "ms"]
+  defp formatted_diff(diff), do: [diff |> Integer.to_string, "µs"]
+
   def etag(nil), do: nil
   def etag([]),  do: nil
 
