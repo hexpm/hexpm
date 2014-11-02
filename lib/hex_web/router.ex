@@ -8,6 +8,7 @@ defmodule HexWeb.Router do
     Plugs.Exception.call(conn, [fun: &super(&1, opts)])
   end
 
+  plug Plugs.ResponseTime
   plug Plugs.Forwarded
   plug HexWeb.BlockedAddress.Plug
   plug Plugs.Redirect,
