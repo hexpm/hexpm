@@ -35,11 +35,22 @@ defmodule HexWeb.Mixfile do
   end
 
   defp aliases do
-    [test: &test/1]
+    [test: &test/1,
+     "ecto.migrate": &ecto_migrate/1,
+     "ecto.rollback": &ecto_rollback/1]
   end
 
   defp test(args) do
+    Mix.Task.run "ecto.create", ["HexWeb.Repo"]
     Mix.Task.run "ecto.migrate", ["HexWeb.Repo"]
     Mix.Task.run "test", args
+  end
+
+  defp ecto_migrate(args) do
+    Mix.Task.run "ecto.migrate", ["--no-start" | args]
+  end
+
+  defp ecto_rollback(args) do
+    Mix.Task.run "ecto.rollback", ["--no-start" | args]
   end
 end

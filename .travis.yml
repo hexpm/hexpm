@@ -11,8 +11,8 @@ before_script:
   - mix archive.install http://s3.hex.pm/installs/hex.ez --force
   - mix deps.get
   - MIX_ENV=test mix deps.compile
-  - MIX_ENV=test mix ecto.create HexWeb.Repo
 script:
+  - MIX_ENV=test mix compile
   - mix test --include integration
 env:
   - ELIXIRVERSION=v1.0.0
