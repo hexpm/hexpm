@@ -36,6 +36,8 @@ defmodule HexWeb.Mixfile do
 
   defp aliases do
     [test: &test/1,
+     "ecto.create": &ecto_create/1,
+     "ecto.drop": &ecto_drop/1,
      "ecto.migrate": &ecto_migrate/1,
      "ecto.rollback": &ecto_rollback/1]
   end
@@ -44,8 +46,19 @@ defmodule HexWeb.Mixfile do
     env(:test, fn ->
       Mix.Task.run "ecto.create", ["HexWeb.Repo"]
       Mix.Task.run "ecto.migrate", ["HexWeb.Repo"]
+      HexWeb.Repo.stop
+      Mix.Task.reenable "app.start"
+      Mix.Task.run "app.start", args
+      Mix.Task.run "test", args
     end)
-    Mix.Task.run "test", args
+  end
+
+  defp ecto_create(args) do
+    Mix.Task.run "ecto.create", args ++ ["--no-start"]
+  end
+
+  defp ecto_drop(args) do
+    Mix.Task.run "ecto.drop", args ++ ["--no-start"]
   end
 
   defp ecto_migrate(args) do
