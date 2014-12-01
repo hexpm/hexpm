@@ -12,7 +12,6 @@ defmodule HexWeb.Router do
   plug HexWeb.BlockedAddress.Plug
   plug Plugs.Redirect,
     ssl: &__MODULE__.use_ssl/0,
-    redirect: [&__MODULE__.app_host/0],
     to: &__MODULE__.url/0
 
   plug :fetch

@@ -68,11 +68,9 @@ defmodule HexWeb.RouterTest do
 
   test "redirect" do
     url      = Application.get_env(:hex_web, :url)
-    app_host = Application.get_env(:hex_web, :app_host)
     use_ssl  = Application.get_env(:hex_web, :use_ssl)
 
     Application.put_env(:hex_web, :url, "https://hex.pm")
-    Application.put_env(:hex_web, :app_host, "some-host.com")
     Application.put_env(:hex_web, :use_ssl, true)
 
     try do
@@ -80,14 +78,8 @@ defmodule HexWeb.RouterTest do
       conn = Router.call(conn, [])
       assert conn.status == 301
       assert get_resp_header(conn, "location") == ["https://hex.pm/foobar"]
-
-      conn = %{conn("GET", "/foobar") | scheme: :https, host: "some-host.com"}
-      conn = Router.call(conn, [])
-      assert conn.status == 301
-      assert get_resp_header(conn, "location") == ["https://hex.pm/foobar"]
     after
       Application.put_env(:hex_web, :url, url)
-      Application.put_env(:hex_web, :app_host, app_host)
       Application.put_env(:hex_web, :use_ssl, use_ssl)
     end
   end
