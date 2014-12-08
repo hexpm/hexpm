@@ -92,7 +92,7 @@ defmodule HexWeb.API.Util do
         body = HexWeb.API.ElixirFormat.encode(body)
         content_type = "application/vnd.hex+elixir"
       format when format == :json or fallback ->
-        body = Jazz.encode!(body, pretty: true)
+        body = Poison.encode!(body, pretty: true)
         content_type = "application/json"
       _ ->
         raise Plug.Parsers.UnsupportedMediaTypeError

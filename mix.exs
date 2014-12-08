@@ -10,26 +10,22 @@ defmodule HexWeb.Mixfile do
   end
 
   def application do
-    [applications: [:plug, :cowboy, :ecto, :postgrex, :jazz, :bcrypt, :mini_s3,
+    [applications: [:plug, :cowboy, :ecto, :postgrex, :poison, :bcrypt, :mini_s3,
                     :logger, :porcelain],
      mod: {HexWeb, []},
      env: []]
   end
 
   defp deps do
-    [{:plug,      github: "elixir-lang/plug"},
-     {:ecto,      github: "elixir-lang/ecto"},
-     {:jazz,      github: "meh/jazz"},
+    [{:plug,      "~> 0.8"},
+     {:cowboy,    "~> 1.0"},
+     {:ecto,      "~> 0.2.5"},
+     {:poison,    "~> 1.2"},
+     {:porcelain, "~> 2.0"},
+     {:postgrex,  "~> 0.6"},
+     {:earmark,   "~> 0.1"},
      {:bcrypt,    github: "opscode/erlang-bcrypt"},
      {:mini_s3,   github: "ericmj/mini_s3", branch: "hex-fixes"},
-     {:porcelain, github: "alco/porcelain"},
-     {:cowboy,    github: "ninenines/cowboy", tag: "1.0.0", override: true},
-     {:cowlib,    github: "ninenines/cowlib", tag: "1.0.0", override: true},
-     {:ranch,     github: "ninenines/ranch", tag: "1.0.0", override: true},
-     {:poolboy,   github: "devinus/poolboy", override: true},
-     {:postgrex,  github: "ericmj/postgrex", override: true},
-     {:decimal,   github: "ericmj/decimal", override: true},
-     {:earmark,   github: "pragdave/earmark", only: :dev},
      {:gen_smtp,  github: "Vagabond/gen_smtp"}
    ]
   end

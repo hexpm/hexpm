@@ -49,7 +49,7 @@ defmodule HexWeb.Package do
 
     case validate_create(package) do
       [] ->
-        package = %{package | meta: Jazz.encode!(package.meta)}
+        package = %{package | meta: Poison.encode!(package.meta)}
 
         {:ok, package} = HexWeb.Repo.transaction(fn ->
           package = HexWeb.Repo.insert(package)
@@ -70,7 +70,7 @@ defmodule HexWeb.Package do
 
     case validate(%{package | meta: meta}) do
       [] ->
-        package = %{package | updated_at: Util.ecto_now, meta: Jazz.encode!(meta)}
+        package = %{package | updated_at: Util.ecto_now, meta: Poison.encode!(meta)}
         HexWeb.Repo.update(package)
         {:ok, %{package | meta: meta}}
       errors ->
@@ -86,7 +86,7 @@ defmodule HexWeb.Package do
       |> HexWeb.Repo.one
 
     if package do
-      %{package | meta: Jazz.decode!(package.meta)}
+      %{package | meta: Poison.decode!(package.meta)}
     end
   end
 
@@ -133,7 +133,7 @@ defmodule HexWeb.Package do
     |> Util.paginate(page, count)
     |> search(search, true)
     |> HexWeb.Repo.all
-    |> Enum.map(& %{&1 | meta: Jazz.decode!(&1.meta)})
+    |> Enum.map(& %{&1 | meta: Poison.decode!(&1.meta)})
   end
 
   def recent(count) do
@@ -149,7 +149,7 @@ defmodule HexWeb.Package do
          order_by: [desc: p.created_at],
          limit: count)
     |> HexWeb.Repo.all
-    |> Enum.map(& %{&1 | meta: Jazz.decode!(&1.meta)})
+    |> Enum.map(& %{&1 | meta: Poison.decode!(&1.meta)})
   end
 
   def count(search \\ nil) do

@@ -20,7 +20,7 @@ defmodule HexWeb.Stats.PackageDownload do
     view = "#{view}"
     from(pd in PackageDownload,
          join: p in pd.package,
-         where: pd.package_id != nil and pd.view == ^view,
+         where: not is_nil(pd.package_id) and pd.view == ^view,
          order_by: [desc: pd.downloads],
          limit: count,
          select: {p.name, pd.downloads})
@@ -28,7 +28,7 @@ defmodule HexWeb.Stats.PackageDownload do
   end
 
   def total do
-    from(pd in PackageDownload, where: pd.package_id == nil)
+    from(pd in PackageDownload, where: is_nil(pd.package_id))
     |> HexWeb.Repo.all
     |> Enum.map(&{:"#{&1.view}", &1.downloads || 0})
   end
