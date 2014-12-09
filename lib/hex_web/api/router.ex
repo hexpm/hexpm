@@ -102,7 +102,6 @@ defmodule HexWeb.API.Router do
           Enum.each(files, fn {path, data} ->
             path = List.to_string(path)
             store.put_docs_page(Path.join([name, version, path]), data)
-
             store.put_docs_page(Path.join(name, path), data)
           end)
 
