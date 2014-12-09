@@ -59,9 +59,8 @@
           <div class="xs-collapse col-xs-6">
             <ul>
               <li><small class="text-muted">Hex.pm</small></li>
-              <li><small class="text-muted"><a href="https://github.com/ericmj/hex_web">Github</a></small></li>
-              <li><small class="text-muted"><a href="https://github.com/ericmj/hex_web/issues">Issues</a></small></li>
-              <li><small class="text-muted"><a href="https://github.com/ericmj/hex">Client</a></small></li>
+              <li><small class="text-muted"><a href="https://github.com/hexpm">GitHub</a></small></li>
+              <li><small class="text-muted"><a href="mailto:support@hex.pm">Support</a></small></li>
             </ul>
           </div>
           <div class="col-xs-6">
