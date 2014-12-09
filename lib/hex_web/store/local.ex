@@ -70,9 +70,6 @@ defmodule HexWeb.Store.Local do
     put(path, data)
   end
 
-  def put_docs_redirect(_source, _target) do
-  end
-
   def list_docs_pages(path) do
     paths = Path.join([dir, "docs_pages", path, "**"])
             |> Path.wildcard

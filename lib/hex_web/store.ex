@@ -17,7 +17,6 @@ defmodule HexWeb.Store do
   defcallback send_docs(Plug.Conn.t, String.t) :: Plug.Conn.t
 
   defcallback put_docs_page(String.t, binary) :: term
-  defcallback put_docs_redirect(String.t, String.t) :: term
   defcallback list_docs_pages(String.t) :: [String.t]
   defcallback delete_docs_page(String.t) :: term
   defcallback send_docs_page(Plug.Conn.t, String.t) :: Plug.Conn.t

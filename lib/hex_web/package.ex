@@ -158,6 +158,11 @@ defmodule HexWeb.Package do
     |> HexWeb.Repo.one!
   end
 
+  def versions(package) do
+    from(r in HexWeb.Release, where: r.package_id == ^package.id, select: r.version)
+    |> HexWeb.Repo.all
+  end
+
   defp search(query, nil, _order?) do
     query
   end

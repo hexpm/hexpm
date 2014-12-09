@@ -44,8 +44,6 @@ defmodule HexWeb.RegistryBuilder do
         else
           reraise error, stacktrace
         end
-      x ->
-        IO.inspect x
     end
   end
 

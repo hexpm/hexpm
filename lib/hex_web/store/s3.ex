@@ -72,12 +72,6 @@ defmodule HexWeb.Store.S3 do
     upload(:docs_bucket, path, headers, data)
   end
 
-  def put_docs_redirect(source, target) do
-    headers = [{'x-amz-website-redirect-location',
-                String.to_char_list("/" <> target)}]
-    upload(:docs_bucket, source, headers, "")
-  end
-
   def list_docs_pages(path) do
     list(:docs_bucket, path)
   end

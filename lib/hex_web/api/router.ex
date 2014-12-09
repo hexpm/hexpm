@@ -79,29 +79,31 @@ defmodule HexWeb.API.Router do
   defp handle_docs(conn, release, body) do
     case :erl_tar.extract({:binary, body}, [:memory, :compressed]) do
       {:ok, files} ->
-        name = release.package.get.name
-        version = release.version
+        package  = release.package.get
+        name     = package.name
+        version  = release.version
+        versions = Package.versions(package)
 
         task_start(fn ->
           store = Application.get_env(:hex_web, :store)
 
-          # Delete old files
+          # Delete old files, skip version redirects
           paths = store.list_docs_pages(Path.join(name, version))
           Enum.each(paths, fn path ->
-            store.delete_docs_page(path)
+            unless String.ends_with?(path, versions) do
+              store.delete_docs_page(path)
+            end
           end)
 
           # Put tarball
           store.put_docs("#{name}-#{version}.tar.gz", body)
 
-          # Set up redirect to latest version
-          store.put_docs_redirect(Path.join(name, "index.html"), Path.join(name, version) <> "/")
-
           # Upload new files
           Enum.each(files, fn {path, data} ->
             path = List.to_string(path)
-            path = Path.join([name, version, path])
-            store.put_docs_page(path, data)
+            store.put_docs_page(Path.join([name, version, path]), data)
+
+            store.put_docs_page(Path.join(name, path), data)
           end)
 
           # Set docs flag on release
