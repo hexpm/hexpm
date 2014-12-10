@@ -73,8 +73,7 @@ defmodule HexWeb.User do
 
   def confirm?(username, key) do
     if (user = get(username: username)) && user.confirmation_key == key do
-      %{user | confirmed: true, updated_at: Util.ecto_now}
-      |> HexWeb.Repo.update
+      confirm(user)
 
       email = Application.get_env(:hex_web, :email)
       body = HexWeb.Email.Templates.render(:confirmed, [])
@@ -84,6 +83,11 @@ defmodule HexWeb.User do
     else
       false
     end
+  end
+
+  def confirm(user) do
+    %{user | confirmed: true, updated_at: Util.ecto_now}
+    |> HexWeb.Repo.update
   end
 
   def get(username: username) do
