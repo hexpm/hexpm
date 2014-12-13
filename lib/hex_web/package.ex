@@ -16,7 +16,17 @@ defmodule HexWeb.Package do
     has_many :downloads, HexWeb.Stats.PackageDownload
   end
 
-  @reserved_names ~w(eex elixir ex_unit iex logger mix hex)
+  @elixir_names ~w(eex elixir ex_unit iex logger mix hex)
+  @otp_names ~w(
+    appmon asn1 common_test compiler cosEvent cosEventDomain cosFileTransfer
+    cosNotification cosProperty cosTime cosTransactions crypto debugger
+    dialyzer diameter edoc eldap erl_docgen erl_interface et eunit gs hipe
+    ic inets jinterface kernel Makefile megaco mnesia observer odbc orber
+    os_mon ose otp_mibs parsetools percept pman public_key reltool runtime_tools
+    sasl snmp ssh ssl stdlib syntax_tools test_server toolbar tools tv typer
+    webtool wx xmerl)
+
+  @reserved_names @elixir_names ++ @otp_names
 
   validatep validate_create(package),
     also: validate(),
