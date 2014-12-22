@@ -40,6 +40,7 @@ defmodule HexWeb.Mixfile do
 
   defp test(args) do
     env(:test, fn ->
+      Mix.Task.run "ecto.drop", ["HexWeb.Repo"]
       Mix.Task.run "ecto.create", ["HexWeb.Repo"]
       Mix.Task.run "ecto.migrate", ["HexWeb.Repo"]
       HexWeb.Repo.stop

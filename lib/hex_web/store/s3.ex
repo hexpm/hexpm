@@ -66,9 +66,14 @@ defmodule HexWeb.Store.S3 do
   end
 
   def put_docs_page(path, data) do
-    "." <> ext = Path.extname(path)
-    mime = Plug.MIME.type(ext)
-    headers = [{'content-type', String.to_char_list(mime)}]
+    case Path.extname(path) do
+      "." <> ext ->
+        mime = Plug.MIME.type(ext)
+        headers = [{'content-type', String.to_char_list(mime)}]
+      "" ->
+        headers = []
+    end
+
     upload(:docs_bucket, path, headers, data)
   end
 
