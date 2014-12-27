@@ -4,3 +4,4 @@
 /logs
 erl_crash.dump
 *.ez
+/src/safe_erl_term.erl
