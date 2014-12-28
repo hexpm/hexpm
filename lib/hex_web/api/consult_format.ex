@@ -2,24 +2,27 @@ defmodule HexWeb.API.ConsultFormat do
   def encode(map) when is_map(map) do
     map
     |> HexWeb.Util.binarify
-    |> Enum.map(&[:io_lib.print(&1) | ".\n\n"])
+    |> Enum.map(&[:io_lib.print(&1) | ".\n"])
     |> IO.iodata_to_binary
   end
 
   def decode(string) when is_binary(string) do
-    {:ok, pid} = StringIO.open(string)
-    try do
-      consult(pid, [])
-    after
-      StringIO.close(pid)
-    end
-  end
+    string = String.to_char_list(string)
+    case :safe_erl_term.string(string) do
+      {:ok, tokens, _line} ->
+        try do
+          terms = :safe_erl_term.terms(tokens)
+          result = Enum.into(terms, %{})
+          {:ok, result}
+        rescue
+          FunctionClauseError ->
+           {:error, "invalid terms"}
+          ArgumentError ->
+           {:error, "not in key-value format"}
+        end
 
-  defp consult(pid, acc) when is_pid(pid) do
-    case :io.read(pid, '') do
-      {:ok, term}      -> consult(pid, [term|acc])
-      {:error, reason} -> {:error, reason}
-      :eof             -> {:ok, Enum.into(acc, %{})}
+      {:error, reason} ->
+        {:error, inspect reason}
     end
   end
 end
