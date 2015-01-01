@@ -16,9 +16,9 @@ defmodule HexWeb.API.ConsultFormat do
           {:ok, result}
         rescue
           FunctionClauseError ->
-           {:error, "invalid terms"}
+            {:error, "invalid terms"}
           ArgumentError ->
-           {:error, "not in key-value format"}
+            {:error, "not in key-value format"}
         end
 
       {:error, reason} ->

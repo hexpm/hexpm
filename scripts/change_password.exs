@@ -10,4 +10,3 @@ end
 {:ok, user} = HexWeb.User.update(user, nil, password)
 
 IO.puts "Password changed for user: #{username}"
-IO.inspect user
