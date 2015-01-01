@@ -83,7 +83,7 @@ defmodule HexWeb.Web.Router do
     if not present?(search) or String.length(search) >= 3 do
       package_count = Package.count(search)
       page          = safe_page(safe_int(conn.params["page"]) || 1, package_count)
-      packages      = Package.all(page, packages_per_page, search)
+      packages      = fetch_packages(page, packages_per_page, search)
     else
       package_count = 0
       page          = 1
@@ -134,6 +134,20 @@ defmodule HexWeb.Web.Router do
     conn = assign_pun(conn, [package, releases, current_release, downloads,
                              release_downloads, active, title])
     send_page(conn, :package)
+  end
+
+  defp fetch_packages(page, packages_per_page, search) do
+    Package.all(page, packages_per_page, search) |> Enum.map(fn package ->
+      Map.put(
+        package,
+        :latest_version,
+        package
+          |> HexWeb.Release.all
+          |> List.first
+          |> Ecto.Associations.load(:requirements, [])
+          |> Map.get(:version)
+      )
+    end)
   end
 
   defp safe_page(page, _count) when page < 1,
