@@ -2,15 +2,25 @@
   <p>No packages found</p>
 <% else %>
   <table class="table table-striped packages">
+    <thead>
+      <tr>
+        <th style="width: 8em;">Name</th>
+        <th>Description</th>
+        <th style="width: 6em;" class="text-center">Latest</th>
+      </tr>
+    </thead>
     <tbody>
       <%= for package <- @packages do %>
         <tr>
           <td style="width: 10em;">
-            <a href="/packages/<%= package.name %>">
+            <a href="/packages/<%= package.name %>" style="text-decoration: none;">
               <span class="glyphicon glyphicon-folder-open" style="padding-right: 0.5em;"></span><%= package.name %>
             </a>
           </td>
           <td><%= package.meta["description"] %></td>
+          <td style="width: 6em;" class="text-center">
+            <span class="text-muted"><%= package.latest_version %></span>
+          </td>
         </tr>
       <% end %>
     </tbody>
