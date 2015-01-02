@@ -10,6 +10,7 @@ defmodule HexWeb.Web.Router do
   alias HexWeb.Release
   alias HexWeb.Package
   alias HexWeb.User
+  alias HexWeb.Util
 
 
   @packages 30
@@ -137,16 +138,14 @@ defmodule HexWeb.Web.Router do
   end
 
   defp fetch_packages(page, packages_per_page, search) do
-    Package.all(page, packages_per_page, search) |> Enum.map(fn package ->
-      Map.put(
-        package,
-        :latest_version,
-        package
-          |> HexWeb.Release.all
-          |> List.first
-          |> Ecto.Associations.load(:requirements, [])
-          |> Map.get(:version)
-      )
+    packages = Package.all(page, packages_per_page, search)
+
+    Enum.map(packages, fn package ->
+      latest_version =
+        HexWeb.Release.all(package)
+        |> List.first
+        |> Util.maybe(&Map.get(&1, :version))
+      Map.put(package, :latest_version, latest_version)
     end)
   end
 
