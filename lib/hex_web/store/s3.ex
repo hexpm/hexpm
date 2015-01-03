@@ -100,10 +100,10 @@ defmodule HexWeb.Store.S3 do
     HexWeb.Plug.redirect(conn, url)
   end
 
-  defp upload(bucket, path, headers, data) when is_binary(path),
+  def upload(bucket, path, headers, data) when is_binary(path),
     do: upload(bucket, String.to_char_list(path), headers, data)
 
-  defp upload(bucket, path, headers, data) when is_list(path) do
+  def upload(bucket, path, headers, data) when is_list(path) do
     # TODO: cache
     bucket     = Application.get_env(:hex_web, bucket) |> String.to_char_list
     opts       = [acl: :public_read]
