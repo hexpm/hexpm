@@ -24,12 +24,16 @@ defmodule HexWeb.Install do
             install.elixirs
             |> Enum.filter(&(Version.compare(&1, current) != :gt))
             |> List.last
+        end
 
-          {install.hex, elixir}
+        if elixir do
+          {:ok, install.hex, elixir}
+        else
+          :error
         end
 
       :error ->
-        nil
+        :error
     end
   end
 

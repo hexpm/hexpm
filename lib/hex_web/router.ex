@@ -44,17 +44,27 @@ defmodule HexWeb.Router do
   end
 
   get "installs/hex.ez" do
-    case List.first get_req_header(conn, "user-agent") do
-      "Mix/" <> version ->
-        latest = HexWeb.Install.latest(version)
-      _ ->
-        latest = nil
+    conn = fetch_params(conn)
+    version = conn.params["elixir"]
+
+    unless version do
+      case List.first get_req_header(conn, "user-agent") do
+        "Mix/" <> version ->
+          version = version
+        _ ->
+          # Fallback to 1.0.0 because it did send headers and did not
+          # send user-agent
+          version = "1.0.0"
+      end
     end
 
+    latest = HexWeb.Install.latest(version)
+
     case latest do
-      {hex, elixir} ->
-        url = "installs/#{elixir}/hex-#{hex}.ez"
-      nil ->
+      {:ok, _hex, elixir} ->
+        # Always assume latest hex version
+        url = "installs/#{elixir}/hex.ez"
+      :error ->
         url = "installs/hex.ez"
     end
 
