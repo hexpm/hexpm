@@ -1,14 +1,16 @@
 defmodule HexWeb.Repo do
   use Ecto.Repo, adapter: Ecto.Adapters.Postgres, env: Mix.env
 
-  def conf(:prod),
-    do: parse_url(System.get_env("DATABASE_URL")) ++ [lazy: false]
-
-  def conf(:dev),
-    do: parse_url "ecto://postgres:postgres@localhost/hexweb_dev"
-
-  def conf(:test),
-    do: parse_url "ecto://postgres:postgres@localhost/hexweb_test?size=1&max_overflow=0"
+  def conf(env) do
+    case env do
+      :prod ->
+        parse_url(Application.get_env(:hex_web, :database_url)) ++ [lazy: false]
+      :dev ->
+        parse_url Application.get_env(:hex_web, :database_url)
+      :test ->
+        parse_url(Application.get_env(:hex_web, :database_url)) ++ [size: "1", max_overflow: "0"]
+    end
+  end
 
   def priv,
     do: :code.priv_dir(:hex_web)
