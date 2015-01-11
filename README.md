@@ -16,14 +16,23 @@ This is located in the "postgresql-contrib" package, however the package name ca
 
 ### Database
 
-HexWeb connects to a localhost postgresql database `hex_dev` using the username `postgresql` with the password `postgresql`. Create this database/user if not already done:
+By default, HexWeb connects to a localhost PostgreSQL database `hexweb_dev` using the username `postgres` with the password `postgres`.
+
+Create the database and user 'postgres' if not already done:
 
 ```sql
 CREATE USER postgres;
 ALTER USER postgres PASSWORD 'postgres';
-CREATE DATABASE hex_dev;
-GRANT ALL PRIVILEGES ON DATABASE hex_dev TO postgres;
+CREATE DATABASE hexweb_dev;
+GRANT ALL PRIVILEGES ON DATABASE hexweb_dev TO postgres;
 ALTER USER postgres WITH SUPERUSER;
+```
+
+If you want to use another database, user or password, you can specify the
+`DEV_DATABASE_URL` in the shell before doing development:
+
+```shell
+export DEV_DATABASE_URL=ecto://USER:PASSWORD@localhost/DATABASE
 ```
 
 Now you are fine to run the ecto migrations:
@@ -53,3 +62,14 @@ mix run --no-halt
 ```
 
 HexWeb will be available at [http://localhost:4000/](http://localhost:4000/).
+
+### Running Tests
+
+By default, tests use a PostgreSQL called `hexweb_test` see above for setup.
+
+Again, if you want to use another database, user or password, you can specify the
+`TEST_DATABASE_URL` in the shell before running tests:
+
+```shell
+export TEST_DATABASE_URL='ecto://USER:PASSWORD@localhost/DATABASE'
+```

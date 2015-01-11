@@ -43,6 +43,17 @@ if Mix.env in [:dev, :test] do
     secret:   System.get_env("HEX_SECRET")   || "796f75666f756e64746865686578"
 end
 
+case Mix.env do
+  :prod ->
+    config :hex_web,
+      database_url: System.get_env("DATABASE_URL")
+  :dev ->
+    config :hex_web,
+      database_url: System.get_env("DEV_DATABASE_URL") || "ecto://postgres:postgres@localhost/hexweb_dev"
+  :test ->
+    config :hex_web,
+      database_url: System.get_env("TEST_DATABASE_URL") || "ecto://postgres:postgres@localhost/hexweb_test"
+end
 
 config :logger,
   level: log_level
