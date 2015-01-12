@@ -15,6 +15,7 @@ defmodule HexWeb.Release do
 
     belongs_to :package, HexWeb.Package
     has_many :requirements, HexWeb.Requirement
+    has_many :daily_downloads, HexWeb.Stats.Download
     has_one :downloads, HexWeb.Stats.ReleaseDownload
   end
 
@@ -52,10 +53,21 @@ defmodule HexWeb.Release do
       case validate(release) do
         [] ->
           HexWeb.Repo.transaction(fn ->
+            downloads = HexWeb.Repo.all(release.daily_downloads)
+            HexWeb.Repo.delete_all(release.daily_downloads)
             HexWeb.Repo.delete_all(release.requirements)
             HexWeb.Repo.delete(release)
-            create(release.package.get, release.version, app, requirements,
-                   checksum, release.created_at)
+
+            new_release =
+              create(release.package.get, release.version, app, requirements,
+                     checksum, release.created_at)
+
+            Enum.each(downloads, fn download ->
+              download = %{download | release_id: new_release.id}
+              HexWeb.Repo.insert(download)
+            end)
+
+            new_release
           end) |> elem(1)
         errors ->
           {:error, Enum.into(errors, %{})}
