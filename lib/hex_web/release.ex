@@ -60,7 +60,7 @@ defmodule HexWeb.Release do
 
             new_release =
               create(release.package.get, release.version, app, requirements,
-                     checksum, release.created_at)
+                     checksum, release.created_at) |> elem(1)
 
             Enum.each(downloads, fn download ->
               download = %{download | release_id: new_release.id}
@@ -68,7 +68,7 @@ defmodule HexWeb.Release do
             end)
 
             new_release
-          end) |> elem(1)
+          end)
         errors ->
           {:error, Enum.into(errors, %{})}
       end
