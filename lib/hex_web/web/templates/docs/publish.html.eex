@@ -1,4 +1,4 @@
-<h2>Publish a package</h2>
+<h2>Publishing a package</h2>
 
 <p>
   Publishing a package to Hex consists of creating a user, attaching some metadata to the project's <code>mix.exs</code> file and finally performing the command to push.
@@ -7,7 +7,7 @@
 <h3>Register a new user</h3>
 
 <p>
-  When registering a user, a username, password, and email will be asked for. The email is used to be able to contact the maintainers in case there is an issue with their package. The email will never be shared to a third party.
+  When registering a user, a username, password, and email will be asked for. The email is used to confirm your identity during signup, as well as to contact you in case there is an issue with one of your packages. The email will never be shared to a third party.
 </p>
 
 <pre><code>$ mix hex.user register
@@ -17,7 +17,12 @@ Password:
 Password (confirm):
 Registering...
 Generating API key...
+You are required to confirm your email to access your account, a confirmation email has been sent to john.doe@example.com
 </code></pre>
+
+<p>
+  Once this step has been completed, check your email inbox for the confirmation email. Once you have followed the enclosed link, your account will be ready to use.
+</p>
 
 <h3>Adding metadata</h3>
 
