@@ -33,7 +33,7 @@
               <a href="#" class="dropdown-toggle" data-toggle="dropdown">Documentation <b class="caret"></b></a>
               <ul class="dropdown-menu">
                 <li><a href="/docs/usage">Usage</a></li>
-                <li><a href="/docs/publish">Publish package</a></li>
+                <li><a href="/docs/publish">Publishing packages</a></li>
                 <li><a href="/docs/tasks">Mix tasks</a></li>
               </ul>
             </li>
