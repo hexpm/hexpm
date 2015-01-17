@@ -15,6 +15,7 @@ defmodule HexWeb.Web.Router do
 
   @packages 30
 
+  plug Plug.Parsers, parsers: [:urlencoded, :multipart]
   plug :match
   plug :dispatch
 
@@ -40,6 +41,27 @@ defmodule HexWeb.Web.Router do
 
     conn = assign_pun(conn, [success])
     send_page(conn, :confirm)
+  end
+
+  get "reset" do
+    conn = fetch_params(conn)
+
+    name = conn.params["username"]
+    key  = conn.params["key"]
+
+    conn = assign_pun(conn, [name, key])
+    send_page(conn, :reset)
+  end
+
+  post "reset" do
+    name     = conn.params["username"]
+    key      = conn.params["key"]
+    password = conn.params["password"]
+
+    success = User.reset?(name, key, password)
+
+    conn = assign_pun(conn, [success])
+    send_page(conn, :resetresult)
   end
 
   get "docs/usage" do

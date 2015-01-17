@@ -1,0 +1,50 @@
+<script>
+function validate() { 
+  var form = document.forms["reset_form"];
+  
+  var empty = function(form, name) {
+    return form[name].value == "" || form[name].value == null
+  };
+
+  var message = function(message) {
+    var div = document.getElementById("error");
+    div.innerHTML = message;
+  };
+
+  if(empty(form, "password") || empty(form, "confirm_password")) {
+    message("Fields cannot be left blank!")
+    return false;
+  } else if(form["confirm_password"].value != form["password"].value) {
+    message("Passwords do not match!");
+    return false;
+  } else {
+    message("");
+    return true;
+  }
+}
+</script>
+
+<div class="row">
+  <div class="col-md-8 col-md-offset-2">
+    <form name="reset_form" action="/reset" onsubmit="return validate();" method="post">
+      <h2>Reset your Hex.pm password</h2>
+
+      <p class="text-warning" id="error"></p>
+
+      <div class="form-group">
+        <label for="password">Password <strong>*</strong></label>
+        <input type="password" class="form-control" name="password" placeholder="Password">
+      </div>
+
+      <div class="form-group">
+        <label for="confirm_password">Confirm Password <strong>*</strong></label>
+        <input type="password" class="form-control" name="confirm_password" placeholder="Confirm Password">
+      </div>
+
+      <input type="hidden" name="username" value="<%= @name %>">
+      <input type="hidden" name="key" value="<%= @key %>">
+
+      <button type="submit" class="btn btn-default">Submit</button>
+    </form>
+  </div>
+</div>

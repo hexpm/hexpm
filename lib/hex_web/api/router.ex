@@ -168,6 +168,15 @@ defmodule HexWeb.API.Router do
       end)
     end
 
+    post "users/:name/reset" do
+      if (user = User.get(username: name) || User.get(email: name)) do
+        User.initiate_password_reset(user)
+        send_okay(conn, user, :public)
+      else
+        raise NotFound
+      end
+    end
+
     get "packages" do
       page = parse_integer(conn.params["page"], 1)
       packages = Package.all(page, 100, conn.params["search"])
