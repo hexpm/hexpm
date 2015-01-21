@@ -33,6 +33,8 @@ defmodule HexWeb.Web.Templates do
     docs_publish: [:_],
     docs_tasks: [:_],
     docs_codeofconduct: [:_],
+    reset: [:assigns],
+    resetresult: [:assigns]
   ]
 
   Enum.each(@templates, fn {name, args} ->

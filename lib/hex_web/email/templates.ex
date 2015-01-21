@@ -14,7 +14,9 @@ defmodule HexWeb.Email.Templates do
   @templates [
     main: [:name, :assigns],
     confirmation_request: [:assigns],
-    confirmed: [:_]
+    confirmed: [:_],
+    password_reset_request: [:assigns],
+    password_reset: [:_]
   ]
 
   Enum.each(@templates, fn {name, args} ->

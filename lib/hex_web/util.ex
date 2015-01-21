@@ -24,6 +24,22 @@ defmodule HexWeb.Util do
     Ecto.DateTime.from_erl(:calendar.universal_time)
   end
 
+  defp diff(a, b) do
+    {days, time} = :calendar.time_difference(a, b)
+    :calendar.time_to_seconds(time) - (days * 24 * 60 * 60)
+  end
+
+  @doc """
+  Determine if a given timestamp is less than a day (86400 seconds) old
+  """
+  def within_last_day(nil), do: false
+  def within_last_day(a) do
+    diff = diff(Ecto.DateTime.to_erl(a),
+                :calendar.universal_time)
+
+    diff < (24 * 60 * 60)
+  end
+
   def etag(nil), do: nil
   def etag([]),  do: nil
 

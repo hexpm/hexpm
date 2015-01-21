@@ -14,6 +14,9 @@ defmodule HexWeb.User do
     field :created_at, :datetime
     field :updated_at, :datetime
 
+    field :reset_key, :string
+    field :reset_expiry, :datetime
+
     has_many :package_owners, HexWeb.PackageOwner, foreign_key: :owner_id
     has_many :keys, HexWeb.API.Key
   end
@@ -36,8 +39,8 @@ defmodule HexWeb.User do
     email    = if is_binary(email),    do: String.downcase(email),    else: email
     now      = Util.ecto_now
     user     = %HexWeb.User{username: username, email: email, password: password,
-                            created_at: now, updated_at: now, confirmation_key: gen_confirmation_key(),
-                            confirmed: confirmed?}
+      created_at: now, updated_at: now, confirmation_key: gen_key(),
+      confirmed: confirmed?}
     case validate_create(user) do
       [] ->
         user = %{user | password: gen_password(password)}
@@ -72,7 +75,7 @@ defmodule HexWeb.User do
   end
 
   def confirm?(username, key) do
-    if (user = get(username: username)) && user.confirmation_key == key do
+    if (user = get(username: username)) && Util.secure_compare(user.confirmation_key, key) do
       confirm(user)
 
       email = Application.get_env(:hex_web, :email)
@@ -88,6 +91,45 @@ defmodule HexWeb.User do
   def confirm(user) do
     %{user | confirmed: true, updated_at: Util.ecto_now}
     |> HexWeb.Repo.update
+  end
+
+  def initiate_password_reset(user) do
+    key = gen_key()
+    now = Util.ecto_now
+
+    %{user | reset_key: key, reset_expiry: now, updated_at: now}
+    |> HexWeb.Repo.update
+
+    send_reset_email(user, key)
+  end
+
+  def reset?(username, key, password) do
+    if (user = get(username: username))
+        && user.reset_key
+        && Util.secure_compare(user.reset_key, key)
+        && Util.within_last_day(user.reset_expiry) do
+      reset(user, password)
+
+      email = Application.get_env(:hex_web, :email)
+      body = HexWeb.Email.Templates.render(:password_reset, [])
+      email.send(user.email, "Hex.pm - Password reset", body)
+
+      true
+    else
+      false
+    end
+  end
+
+  def reset(user, password) do
+    HexWeb.Repo.transaction(fn ->
+      {:ok, result} = HexWeb.User.update(user, nil, password)
+      
+      from(k in HexWeb.API.Key, where: k.user_id == ^result.id)
+      |> HexWeb.Repo.delete_all
+
+      %{result | reset_key: nil, reset_expiry: nil, updated_at: Util.ecto_now}
+      |> HexWeb.Repo.update
+    end)
   end
 
   def get(username: username) do
@@ -129,17 +171,26 @@ defmodule HexWeb.User do
     :erlang.list_to_binary(hash)
   end
 
-  defp gen_confirmation_key do
+  defp gen_key do
     :crypto.strong_rand_bytes(16) |> Base.encode16(case: :lower)
   end
 
   defp send_confirmation_email(user) do
     email = Application.get_env(:hex_web, :email)
+    body  = HexWeb.Email.Templates.render(:confirmation_request,
+                                          username: user.username,
+                                          key: user.confirmation_key)
 
-    body = HexWeb.Email.Templates.render(:confirmation_request,
-                                         username: user.username,
-                                         key: user.confirmation_key)
     email.send(user.email, "Hex.pm - Account confirmation", body)
+  end
+
+  defp send_reset_email(user, key) do
+    email = Application.get_env(:hex_web, :email)
+    body  = HexWeb.Email.Templates.render(:password_reset_request,
+                                          username: user.username,
+                                          key: key)
+
+    email.send(user.email, "Hex.pm - Password reset request", body)
   end
 end
 
