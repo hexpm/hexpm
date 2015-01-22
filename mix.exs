@@ -24,9 +24,9 @@ defmodule HexWeb.Mixfile do
      {:porcelain, "~> 2.0"},
      {:postgrex,  "~> 0.6"},
      {:earmark,   "~> 0.1"},
+     {:gen_smtp,  "~> 0.9.0"},
      {:bcrypt,    github: "opscode/erlang-bcrypt"},
-     {:mini_s3,   github: "ericmj/mini_s3", branch: "hex-fixes"},
-     {:gen_smtp,  github: "Vagabond/gen_smtp"}
+     {:mini_s3,   github: "ericmj/mini_s3", branch: "hex-fixes"}
    ]
   end
 
