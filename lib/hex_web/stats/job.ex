@@ -5,6 +5,8 @@ defmodule HexWeb.Stats.Job do
   alias HexWeb.Release
   alias HexWeb.Stats.Download
 
+  @max_downloads_per_ip 10
+
   def run(date) do
     start()
 
@@ -13,7 +15,7 @@ defmodule HexWeb.Stats.Job do
     date = Ecto.Date.from_erl(date)
 
     # TODO: Map/Reduce
-    dict = process_keys(keys)
+    dict = process_keys(keys) |> cap_on_ip
     packages = packages()
     releases = releases()
 
@@ -52,12 +54,20 @@ defmodule HexWeb.Stats.Job do
     end)
   end
 
+  defp cap_on_ip(dict) do
+    Enum.reduce(dict, HashDict.new, fn {{release, ip}, count}, dict ->
+      count = max(@max_downloads_per_ip, count)
+      Dict.update(dict, release, count, &(&1 + count))
+    end)
+  end
+
   defp process_file(file, dict) do
     lines = String.split(file, "\n")
     Enum.reduce(lines, dict, fn line, dict ->
       case parse_line(line) do
-        {_, _} = release ->
-          Dict.update(dict, release, 1, &(&1 + 1))
+        {ip, package, version} ->
+          key = {{package, version}, ip}
+          Dict.update(dict, key, 1, &(&1 + 1))
         nil ->
           dict
       end
@@ -65,18 +75,26 @@ defmodule HexWeb.Stats.Job do
   end
 
   @regex ~r"
-    \WREST.GET.OBJECT\W
+    [^\040]+\040          # bucket owner
+    [^\040]+\040          # bucket
+    \[.+\]\040            # time
+    ([^\040]+)\040        # IP address
+    [^\040]+\040          # requester ID
+    [^\040]+\040          # request ID
+    REST.GET.OBJECT\040
     tarballs/
-    ([^-]+)           # package
+    ([^-]+)               # package
     -
-    ([0-9\\.]+)         # version
-    .tar\W
+    ([0-9\\.]+)           # version
+    .tar\040
     "x
 
   defp parse_line(line) do
     case Regex.run(@regex, line) do
-      [_, package, version] -> {package, version}
-      nil                   -> nil
+      [_, ip, package, version] ->
+        {ip, package, version}
+      nil ->
+        nil
     end
   end
 
