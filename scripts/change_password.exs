@@ -1,12 +1,21 @@
-[username, password] = System.argv
+case System.argv do
+  ["username", username, password] ->
+    user = HexWeb.User.get(username: username)
 
-user = HexWeb.User.get(username: username)
+    unless user do
+      IO.puts "No user with username: #{username}"
+      System.halt(1)
+    end
 
-unless user do
-  IO.puts "No user with username: #{username}"
-  System.halt(1)
+  ["email", email, password] ->
+    user = HexWeb.User.get(email: email)
+
+    unless user do
+      IO.puts "No user with email: #{email}"
+      System.halt(1)
+    end
 end
 
-{:ok, user} = HexWeb.User.update(user, nil, password)
+{:ok, _user} = HexWeb.User.update(user, nil, password)
 
-IO.puts "Password changed for user: #{username}"
+IO.puts "Password changed for user: #{user.username} (#{user.email})"
