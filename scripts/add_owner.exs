@@ -9,7 +9,7 @@ unless package do
 end
 
 unless user do
-  IO.puts "No user: #{usernname}"
+  IO.puts "No user: #{username}"
   System.halt(1)
 end
 
