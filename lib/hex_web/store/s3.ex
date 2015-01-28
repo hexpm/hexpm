@@ -74,6 +74,8 @@ defmodule HexWeb.Store.S3 do
         headers = []
     end
 
+    headers = headers ++ [{'cache-control', 'public, max-age=1800'}]
+
     upload(:docs_bucket, path, headers, data)
   end
 
