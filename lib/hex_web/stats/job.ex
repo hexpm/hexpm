@@ -55,7 +55,7 @@ defmodule HexWeb.Stats.Job do
   end
 
   defp cap_on_ip(dict) do
-    Enum.reduce(dict, HashDict.new, fn {{release, ip}, count}, dict ->
+    Enum.reduce(dict, HashDict.new, fn {{release, _ip}, count}, dict ->
       count = max(@max_downloads_per_ip, count)
       Dict.update(dict, release, count, &(&1 + count))
     end)

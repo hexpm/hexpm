@@ -115,7 +115,8 @@ defmodule HexWeb.Store.S3 do
   defp list(bucket, prefix) do
     prefix = String.to_char_list(prefix)
     bucket = Application.get_env(:hex_web, bucket) |> String.to_char_list
-    result = :mini_s3.list_objects(bucket, [prefix: prefix], config())
+    opts = [prefix: prefix, max_keys: 1_000_000]
+    result = :mini_s3.list_objects(bucket, opts, config())
     Enum.map(result[:contents], &List.to_string(&1[:key]))
   end
 
