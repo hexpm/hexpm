@@ -171,7 +171,10 @@ defmodule HexWeb.API.Router do
     post "users/:name/reset" do
       if (user = User.get(username: name) || User.get(email: name)) do
         User.initiate_password_reset(user)
-        send_okay(conn, user, :public)
+
+        conn
+        |> cache(:private)
+        |> send_resp(204, "")
       else
         raise NotFound
       end
