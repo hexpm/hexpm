@@ -1,6 +1,8 @@
 language: erlang
 otp_release:
   - 17.0
+  - 17.4
+sudo: false
 addons:
   postgresql: "9.3"
 before_install:
