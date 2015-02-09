@@ -3,6 +3,7 @@ defmodule HexWeb.API.Router do
   import Plug.Conn
   import HexWeb.API.Util
   import HexWeb.Util, only: [api_url: 1, parse_integer: 2, task_start: 1]
+  alias HexWeb.Parsers
   alias HexWeb.Plug.NotFound
   alias HexWeb.Plug.RequestTimeout
   alias HexWeb.Plug.RequestTooLarge
@@ -137,7 +138,7 @@ defmodule HexWeb.API.Router do
   defmodule Parsed do
     use Plug.Router
 
-    plug Plug.Parsers, parsers: [HexWeb.Parsers.Json, HexWeb.Parsers.Elixir]
+    plug Plug.Parsers, parsers: [Parsers.Json, Parsers.Elixir, Parsers.Erlang]
     plug :match
     plug :dispatch
 

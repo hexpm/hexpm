@@ -419,6 +419,31 @@ defmodule HexWeb.API.RouterTest do
     assert user.email == "email@mail.com"
   end
 
+  test "erlang media response" do
+    headers = [ {"accept", "application/vnd.hex+erlang"} ]
+    conn = conn("GET", "/api/packages/postgrex", nil, headers: headers)
+    conn = Router.call(conn, [])
+
+    assert conn.status == 200
+    body = :erlang.binary_to_term(conn.resp_body)
+    assert body["name"] == "postgrex"
+  end
+
+  test "erlang media request" do
+    body = %{username: "name", email: "email@mail.com", password: "pass"}
+           |> HexWeb.API.ErlangFormat.encode
+
+    conn = conn("POST", "/api/users", body, headers: [{"content-type", "application/vnd.hex+erlang"}])
+    conn = Router.call(conn, [])
+
+    assert conn.status == 201
+    body = Poison.decode!(conn.resp_body)
+    assert body["url"] == "http://localhost:4000/api/users/name"
+
+    user = assert User.get(username: "name")
+    assert user.email == "email@mail.com"
+  end
+
   test "get package" do
     conn = conn("GET", "/api/packages/decimal")
     conn = Router.call(conn, [])

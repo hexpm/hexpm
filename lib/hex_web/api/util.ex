@@ -91,6 +91,9 @@ defmodule HexWeb.API.Util do
       :elixir ->
         body = HexWeb.API.ElixirFormat.encode(body)
         content_type = "application/vnd.hex+elixir"
+      :erlang ->
+        body = HexWeb.API.ErlangFormat.encode(body)
+        content_type = "application/vnd.hex+erlang"
       format when format == :json or fallback ->
         body = Poison.encode!(body, pretty: true)
         content_type = "application/json"

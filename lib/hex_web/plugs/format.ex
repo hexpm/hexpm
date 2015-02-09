@@ -53,6 +53,7 @@ defmodule HexWeb.Plugs.Format do
   end
 
   defp format("elixir"), do: :elixir
+  defp format("erlang"), do: :erlang
   defp format(_),        do: :json
 
   defp parse_accepts(conn) do
