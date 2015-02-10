@@ -684,4 +684,49 @@ defmodule HexWeb.API.RouterTest do
   after
     Application.get_env(:hex_web, :store, HexWeb.Store.S3)
   end
+
+  @tag :integration
+  test "delete release with docs" do
+    headers = [ {"content-type", "application/octet-stream"},
+                {"authorization", "Basic " <> :base64.encode("eric:eric")}]
+    body = create_tar(%{name: :postgrex, version: "0.0.1", requirements: %{}}, [])
+    conn = conn("POST", "/api/packages/postgrex/releases", body, headers: headers)
+    conn = Router.call(conn, [])
+    assert conn.status == 201
+
+    # Add docs to release
+    postgrex = Package.get("postgrex")
+
+    path = Path.join("tmp", "release-docs.tar.gz")
+    files = [{'index.html', "HEYO"}]
+    :ok = :erl_tar.create(String.to_char_list(path), files, [:compressed])
+    body = File.read!(path)
+
+    headers = [{"content-type", "application/octet-stream"},
+               {"authorization", "Basic " <> :base64.encode("eric:eric")}]
+    conn = conn("POST", "/api/packages/postgrex/releases/0.0.1/docs", body, headers: headers)
+    conn = Router.call(conn, [])
+    assert conn.status == 201
+    assert Release.get(postgrex, "0.0.1").has_docs
+
+    headers = [ {"authorization", "Basic " <> :base64.encode("eric:eric")}]
+    conn = conn("DELETE", "/api/packages/postgrex/releases/0.0.1", nil, headers: headers)
+    conn = Router.call(conn, [])
+    assert conn.status == 204
+
+    # Check package was deleted
+    postgrex = Package.get("postgrex")
+    refute Release.get(postgrex, "0.0.1")
+
+    # Check docs were deleted
+    url = HexWeb.Util.url("api/packages/postgrex/releases/0.0.1/docs") |> String.to_char_list
+    assert {:ok, response} = :httpc.request(:get, {url, []}, [], [])
+    assert {{_version, code, _reason}, _headers, _body} = response
+    assert code in 400..499
+
+    url = HexWeb.Util.url("docs/postgrex/0.0.1/index.html") |> String.to_char_list
+    assert {:ok, response} = :httpc.request(:get, {url, []}, [], [])
+    assert {{_version, code, _reason}, _headers, _body} = response
+    assert code in 400..499
+  end
 end
