@@ -23,32 +23,7 @@ defmodule HexWebTest.Case do
 
   @tmp Path.expand Path.join(__DIR__, "../tmp")
 
-  def create_tar(version \\ 3, meta, files)
-
-  def create_tar(2, meta, files) do
-    meta = Dict.put_new(meta, :app, meta[:name])
-
-    contents_path = Path.join(@tmp, "#{meta[:name]}-#{meta[:version]}-contents.tar.gz")
-    files = Enum.map(files, fn {name, bin} -> {String.to_char_list(name), bin} end)
-    :ok = :erl_tar.create(contents_path, files, [:compressed])
-    contents = File.read!(contents_path)
-
-    meta_string = HexWeb.API.ElixirFormat.encode(meta)
-    blob = "2" <> meta_string <> contents
-    checksum = :crypto.hash(:sha256, blob) |> Base.encode16
-
-    files = [
-      {'VERSION', "2"},
-      {'CHECKSUM', checksum},
-      {'metadata.exs', meta_string},
-      {'contents.tar.gz', contents} ]
-    path = Path.join(@tmp, "#{meta[:name]}-#{meta[:version]}.tar")
-    :ok = :erl_tar.create(path, files)
-
-    File.read!(path)
-  end
-
-  def create_tar(3, meta, files) do
+  def create_tar(meta, files) do
     meta = Dict.put_new(meta, :app, meta[:name])
 
     contents_path = Path.join(@tmp, "#{meta[:name]}-#{meta[:version]}-contents.tar.gz")
