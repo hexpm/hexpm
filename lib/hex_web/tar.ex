@@ -109,8 +109,14 @@ defmodule HexWeb.Tar do
   defp proplists_to_maps(meta) do
     meta
     |> try_update("links", &Enum.into(&1, %{}))
-    |> try_update("requirements", fn reqs ->
-         Enum.into(reqs, %{}, fn {key, value} -> {key, Enum.into(value, %{})} end)
+    |> try_update("requirements", fn
+         reqs when is_list(reqs) ->
+           Enum.into(reqs, %{}, fn
+             {key, value} when is_list(value) -> {key, Enum.into(value, %{})}
+             pair -> pair
+           end)
+         reqs ->
+           reqs
        end)
   end
 
