@@ -130,7 +130,7 @@ defmodule HexWeb.Release do
   defp normalize_requirements(requirements) do
     Enum.map(requirements, fn
       {dep, map} when is_map(map) ->
-        {to_string(dep), map["app"], map["req"], map["optional"] || false}
+        {to_string(dep), map["app"], map["requirement"], map["optional"] || false}
       {dep, {req, app}} ->
         {to_string(dep), to_string(app), req, false}
       {dep, req} ->
