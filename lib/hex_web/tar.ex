@@ -32,6 +32,7 @@ defmodule HexWeb.Tar do
 
         case meta do
           {:ok, meta} ->
+            meta = proplists_to_maps(meta)
             {:ok, meta, files["CHECKSUM"]}
           error ->
             error
@@ -102,6 +103,21 @@ defmodule HexWeb.Tar do
     case HexWeb.API.ConsultFormat.decode(files["metadata.config"]) do
       {:ok, result}    -> {:ok, result}
       {:error, reason} -> {:error, %{metadata: reason}}
+    end
+  end
+
+  defp proplists_to_maps(meta) do
+    meta
+    |> try_update("links", &Enum.into(&1, %{}))
+    |> try_update("requirements", fn reqs ->
+         Enum.into(reqs, %{}, fn {key, value} -> {key, Enum.into(value, %{})} end)
+       end)
+  end
+
+  defp try_update(map, key, fun) do
+    case Map.fetch(map, key) do
+      {:ok, value} -> Map.put(map, key, fun.(value))
+      :error -> map
     end
   end
 

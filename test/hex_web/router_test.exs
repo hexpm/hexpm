@@ -51,7 +51,8 @@ defmodule HexWeb.RouterTest do
 
     headers = [ {"content-type", "application/octet-stream"},
                 {"authorization", "Basic " <> :base64.encode("eric:eric")}]
-    body = create_tar(%{name: :postgrex, version: "0.0.1", requirements: %{decimal: "~> 0.0.1"}}, [])
+    reqs = %{decimal: %{requirement: "~> 0.0.1"}}
+    body = create_tar(%{name: :postgrex, version: "0.0.1", requirements: reqs}, [])
     conn = conn("POST", "/api/packages/postgrex/releases", body, headers: headers)
     conn = Router.call(conn, [])
     assert conn.status == 201

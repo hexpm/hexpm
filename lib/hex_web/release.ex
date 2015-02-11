@@ -129,11 +129,8 @@ defmodule HexWeb.Release do
 
   defp normalize_requirements(requirements) do
     Enum.map(requirements, fn
-      {dep, %{"app" => app, "requirement" => req, "optional" => optional}} ->
-        {to_string(dep), app, req, optional}
-      # Support everything pre Hex 0.6.0 (2014-10-13)
-      {dep, %{"requirement" => req, "optional" => optional}} ->
-        {to_string(dep), to_string(dep), req, optional}
+      {dep, map} when is_map(map) ->
+        {to_string(dep), map["app"], map["req"], map["optional"] || false}
       {dep, {req, app}} ->
         {to_string(dep), to_string(app), req, false}
       {dep, req} ->
