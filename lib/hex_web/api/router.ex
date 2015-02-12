@@ -224,9 +224,23 @@ defmodule HexWeb.API.Router do
           result = Release.delete(release)
 
           if result == :ok do
-            store = Application.get_env(:hex_web, :store)
-            store.delete_release("#{name}-#{version}.tar")
-            HexWeb.RegistryBuilder.rebuild
+            task_start(fn ->
+              store = Application.get_env(:hex_web, :store)
+
+              # Delete release tarball
+              store.delete_release("#{name}-#{version}.tar")
+
+              # Delete relevant documentation (if it exists)
+              if release.has_docs do
+                paths = store.list_docs_pages(Path.join(name, version))
+                store.delete_docs("#{name}-#{version}.tar.gz")
+                Enum.each(paths, fn path ->
+                  store.delete_docs_page(path)
+                end)
+              end
+
+              HexWeb.RegistryBuilder.rebuild
+            end)
           end
 
           send_delete_resp(conn, result, :public)
