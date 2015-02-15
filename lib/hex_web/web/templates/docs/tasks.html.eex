@@ -13,6 +13,21 @@
     <div class="panel-body">
       <p>Reads or updates hex configuration file.</p>
 <p><code class="inline">mix hex.config KEY [VALUE]</code></p>
+<h4>Config keys</h4>
+<ul>
+<li><code class="inline">username</code> - Hex username
+</li>
+<li><code class="inline">key</code> - Hex API key
+</li>
+<li><code class="inline">api_url</code> - Hex API base URL (without trailing slash)
+</li>
+<li><code class="inline">cdn_url</code> - Hex CDN base URL (without trailing slash)
+</li>
+<li><code class="inline">http_proxy</code> - HTTP proxy server
+</li>
+<li><code class="inline">https_proxy</code> - HTTPS proxy server
+</li>
+</ul>
 
     </div>
   </div>
@@ -218,8 +233,8 @@ storing it in the hex config.</p>
 <p>Deauthorizes the user from the local machine by removing the API key from the
 hex config.</p>
 <p><code class="inline">mix hex.user deauth</code></p>
-<h5>Update user configuration</h5>
-<p><code class="inline">mix hex.user update</code></p>
+<h5>Reset user password</h5>
+<p><code class="inline">mix hex.user reset password</code></p>
 
     </div>
   </div>
