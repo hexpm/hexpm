@@ -643,6 +643,7 @@ defmodule HexWeb.API.RouterTest do
     if Application.get_env(:hex_web, :s3_bucket) do
       Application.put_env(:hex_web, :store, HexWeb.Store.S3)
     end
+    :inets.start
 
     decimal = Package.get("decimal")
 
@@ -659,36 +660,23 @@ defmodule HexWeb.API.RouterTest do
     assert Release.get(decimal, "0.0.1").has_docs
 
     url = HexWeb.Util.url("api/packages/decimal/releases/0.0.1/docs") |> String.to_char_list
-    :inets.start
     assert {:ok, response} = :httpc.request(:get, {url, []}, [], body_format: :binary)
     assert {{_version, 200, _reason}, _headers, ^body} = response
 
     url = HexWeb.Util.url("docs/decimal/0.0.1/index.html") |> String.to_char_list
-    :inets.start
     assert {:ok, response} = :httpc.request(:get, {url, []}, [], body_format: :binary)
     assert {{_version, 200, _reason}, _headers, "HEYO"} = response
-
-    headers = [{"authorization", "Basic " <> :base64.encode("eric:eric")}]
-    conn = conn("DELETE", "/api/packages/decimal/releases/0.0.1/docs", nil, headers: headers)
-    conn = Router.call(conn, [])
-    assert conn.status == 204
-    refute Release.get(decimal, "0.0.1").has_docs
-
-    url = HexWeb.Util.url("api/packages/decimal/releases/0.0.1/docs") |> String.to_char_list
-    assert {:ok, response} = :httpc.request(:get, {url, []}, [], [])
-    assert {{_version, code, _reason}, _headers, _body} = response
-    assert code in 400..499
-
-    url = HexWeb.Util.url("docs/decimal/0.0.1/index.html") |> String.to_char_list
-    assert {:ok, response} = :httpc.request(:get, {url, []}, [], [])
-    assert {{_version, code, _reason}, _headers, _body} = response
-    assert code in 400..499
   after
-    Application.get_env(:hex_web, :store, HexWeb.Store.S3)
+    Application.put_env(:hex_web, :store, HexWeb.Store.Local)
   end
 
   @tag :integration
   test "delete release with docs" do
+    if Application.get_env(:hex_web, :s3_bucket) do
+      Application.put_env(:hex_web, :store, HexWeb.Store.S3)
+    end
+    :inets.start
+
     headers = [ {"content-type", "application/octet-stream"},
                 {"authorization", "Basic " <> :base64.encode("eric:eric")}]
     body = create_tar(%{name: :postgrex, version: "0.0.1", requirements: %{}}, [])
@@ -730,5 +718,7 @@ defmodule HexWeb.API.RouterTest do
     assert {:ok, response} = :httpc.request(:get, {url, []}, [], [])
     assert {{_version, code, _reason}, _headers, _body} = response
     assert code in 400..499
+  after
+    Application.put_env(:hex_web, :store, HexWeb.Store.Local)
   end
 end
