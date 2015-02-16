@@ -74,7 +74,7 @@ defmodule HexWeb.Release do
       end
 
     else
-      {:error, [created_at: "can only modify a release up to one hour after creation"]}
+      {:error, %{created_at: "can only modify a release up to one hour after creation"}}
     end
   end
 
@@ -88,7 +88,7 @@ defmodule HexWeb.Release do
 
       :ok
     else
-      {:error, [created_at: "can only delete a release up to one hour after creation"]}
+      {:error, %{created_at: "can only delete a release up to one hour after creation"}}
     end
   end
 

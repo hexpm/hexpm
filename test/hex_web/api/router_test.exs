@@ -233,13 +233,22 @@ defmodule HexWeb.API.RouterTest do
     conn = Router.call(conn, [])
     assert conn.status == 201
 
-    body = create_tar(%{name: :postgrex, version: "0.0.1", requirements: %{}}, [])
     conn = conn("POST", "/api/packages/postgrex/releases", body, headers: headers)
     conn = Router.call(conn, [])
     assert conn.status == 200
 
     postgrex = Package.get("postgrex")
-    assert Release.get(postgrex, "0.0.1")
+    release = Release.get(postgrex, "0.0.1")
+    assert release
+
+    release = put_in(release.created_at.year, 2000)
+    HexWeb.Repo.update(release)
+
+    conn = conn("POST", "/api/packages/postgrex/releases", body, headers: headers)
+    conn = Router.call(conn, [])
+    assert conn.status == 422
+    assert %{"errors" => %{"created_at" => "can only modify a release up to one hour after creation"}} =
+           Poison.decode!(conn.resp_body)
   end
 
   test "delete release" do
@@ -250,13 +259,28 @@ defmodule HexWeb.API.RouterTest do
     conn = Router.call(conn, [])
     assert conn.status == 201
 
+    postgrex = Package.get("postgrex")
+    release =  Release.get(postgrex, "0.0.1")
+    release = put_in(release.created_at.year, 2000)
+    HexWeb.Repo.update(release)
+
+    conn = conn("POST", "/api/packages/postgrex/releases", body, headers: headers)
+    conn = Router.call(conn, [])
+    assert conn.status == 422
+    assert %{"errors" => %{"created_at" => "can only modify a release up to one hour after creation"}} =
+           Poison.decode!(conn.resp_body)
+
+    release = put_in(release.created_at.year, 2030)
+    HexWeb.Repo.update(release)
+
     headers = [ {"authorization", "Basic " <> :base64.encode("eric:eric")}]
     conn = conn("DELETE", "/api/packages/postgrex/releases/0.0.1", nil, headers: headers)
     conn = Router.call(conn, [])
     assert conn.status == 204
 
     postgrex = Package.get("postgrex")
-    refute Release.get(postgrex, "0.0.1")
+    release =  Release.get(postgrex, "0.0.1")
+    refute release
   end
 
   test "create release authorizes" do
