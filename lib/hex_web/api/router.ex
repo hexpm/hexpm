@@ -79,47 +79,66 @@ defmodule HexWeb.API.Router do
   defp handle_docs(conn, release, body) do
     case :erl_tar.extract({:binary, body}, [:memory, :compressed]) do
       {:ok, files} ->
-        package  = release.package.get
-        name     = package.name
-        version  = release.version
-        versions = Package.versions(package)
+        files = Enum.map(files, fn {path, data} -> {List.to_string(path), data} end)
 
-        task_start(fn ->
-          store = Application.get_env(:hex_web, :store)
+        if check_version_dirs?(files) do
+          package  = release.package.get
+          name     = package.name
+          version  = release.version
 
-          # Delete old files, skip version redirects
-          paths = store.list_docs_pages(Path.join(name, version))
-          Enum.each(paths, fn path ->
-            unless String.ends_with?(path, versions) do
-              store.delete_docs_page(path)
-            end
+          task_start(fn ->
+            store = Application.get_env(:hex_web, :store)
+
+            # Delete old files
+            paths = store.list_docs_pages(name)
+            Enum.each(paths, fn path ->
+              first = Path.relative_to(path, name)|> Path.split |> hd
+              cond do
+                # Current (/ecto/0.8.1/...)
+                first == version ->
+                  store.delete_docs_page(path)
+                # Top-level docs, don't match version directories (/ecto/...)
+                Version.parse(first) == :error ->
+                  store.delete_docs_page(path)
+                true ->
+                  :ok
+              end
+            end)
+
+            # Put tarball
+            store.put_docs("#{name}-#{version}.tar.gz", body)
+
+            # Upload new files
+            Enum.each(files, fn {path, data} ->
+              store.put_docs_page(Path.join([name, version, path]), data)
+              store.put_docs_page(Path.join(name, path), data)
+            end)
+
+            # Set docs flag on release
+            %{release | has_docs: true}
+            |> HexWeb.Repo.update
           end)
 
-          # Put tarball
-          store.put_docs("#{name}-#{version}.tar.gz", body)
+          location = api_url(["packages", name, "releases", version, "docs"])
 
-          # Upload new files
-          Enum.each(files, fn {path, data} ->
-            path = List.to_string(path)
-            store.put_docs_page(Path.join([name, version, path]), data)
-            store.put_docs_page(Path.join(name, path), data)
-          end)
-
-          # Set docs flag on release
-          %{release | has_docs: true}
-          |> HexWeb.Repo.update
-        end)
-
-        location = api_url(["packages", name, "releases", version, "docs"])
-
-        conn
-        |> put_resp_header("location", location)
-        |> cache(:public)
-        |> send_resp(201, "")
+          conn
+          |> put_resp_header("location", location)
+          |> cache(:public)
+          |> send_resp(201, "")
+        else
+          send_validation_failed(conn, %{tar: "directory name not allowed to match a semver version"})
+        end
 
       {:error, reason} ->
         send_validation_failed(conn, %{tar: inspect reason})
     end
+  end
+
+  defp check_version_dirs?(files) do
+    Enum.all?(files, fn {path, _data} ->
+      first = Path.split(path) |> hd
+      Version.parse(first) == :error
+    end)
   end
 
   defp after_release(package, version, body) do

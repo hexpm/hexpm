@@ -115,7 +115,7 @@ defmodule HexWeb.Store.Local do
   end
 
   defp delete(key) do
-    File.rm!(Path.join(dir, key))
+    File.rm(Path.join(dir, key))
   end
 
   defp dir do

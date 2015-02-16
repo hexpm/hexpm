@@ -645,7 +645,10 @@ defmodule HexWeb.API.RouterTest do
     end
     :inets.start
 
-    decimal = Package.get("decimal")
+    user           = User.get(username: "eric")
+    {:ok, phoenix} = Package.create("phoenix", user, %{})
+    {:ok, _}       = Release.create(phoenix, "0.0.1", "phoenix", [], "")
+    {:ok, _}       = Release.create(phoenix, "0.0.2", "phoenix", [], "")
 
     path = Path.join("tmp", "release-docs.tar.gz")
     files = [{'index.html', "HEYO"}]
@@ -654,16 +657,39 @@ defmodule HexWeb.API.RouterTest do
 
     headers = [{"content-type", "application/octet-stream"},
                {"authorization", "Basic " <> :base64.encode("eric:eric")}]
-    conn = conn("POST", "/api/packages/decimal/releases/0.0.1/docs", body, headers: headers)
+    conn = conn("POST", "/api/packages/phoenix/releases/0.0.1/docs", body, headers: headers)
     conn = Router.call(conn, [])
     assert conn.status == 201
-    assert Release.get(decimal, "0.0.1").has_docs
+    assert Release.get(phoenix, "0.0.1").has_docs
 
-    url = HexWeb.Util.url("api/packages/decimal/releases/0.0.1/docs") |> String.to_char_list
+    url = HexWeb.Util.url("api/packages/phoenix/releases/0.0.1/docs") |> String.to_char_list
     assert {:ok, response} = :httpc.request(:get, {url, []}, [], body_format: :binary)
     assert {{_version, 200, _reason}, _headers, ^body} = response
 
-    url = HexWeb.Util.url("docs/decimal/0.0.1/index.html") |> String.to_char_list
+    url = HexWeb.Util.url("docs/phoenix/index.html") |> String.to_char_list
+    assert {:ok, response} = :httpc.request(:get, {url, []}, [], body_format: :binary)
+    assert {{_version, 200, _reason}, _headers, "HEYO"} = response
+
+    url = HexWeb.Util.url("docs/phoenix/0.0.1/index.html") |> String.to_char_list
+    assert {:ok, response} = :httpc.request(:get, {url, []}, [], body_format: :binary)
+    assert {{_version, 200, _reason}, _headers, "HEYO"} = response
+
+    path = Path.join("tmp", "release-docs.tar.gz")
+    files = [{'index.html', "NOPE"}]
+    :ok = :erl_tar.create(String.to_char_list(path), files, [:compressed])
+    body = File.read!(path)
+
+    headers = [{"content-type", "application/octet-stream"},
+               {"authorization", "Basic " <> :base64.encode("eric:eric")}]
+    conn = conn("POST", "/api/packages/phoenix/releases/0.0.2/docs", body, headers: headers)
+    conn = Router.call(conn, [])
+    assert conn.status == 201
+
+    url = HexWeb.Util.url("docs/phoenix/index.html") |> String.to_char_list
+    assert {:ok, response} = :httpc.request(:get, {url, []}, [], body_format: :binary)
+    assert {{_version, 200, _reason}, _headers, "NOPE"} = response
+
+    url = HexWeb.Util.url("docs/phoenix/0.0.1/index.html") |> String.to_char_list
     assert {:ok, response} = :httpc.request(:get, {url, []}, [], body_format: :binary)
     assert {{_version, 200, _reason}, _headers, "HEYO"} = response
   after
@@ -677,15 +703,9 @@ defmodule HexWeb.API.RouterTest do
     end
     :inets.start
 
-    headers = [ {"content-type", "application/octet-stream"},
-                {"authorization", "Basic " <> :base64.encode("eric:eric")}]
-    body = create_tar(%{name: :postgrex, version: "0.0.1", requirements: %{}}, [])
-    conn = conn("POST", "/api/packages/postgrex/releases", body, headers: headers)
-    conn = Router.call(conn, [])
-    assert conn.status == 201
-
-    # Add docs to release
-    postgrex = Package.get("postgrex")
+    user        = User.get(username: "eric")
+    {:ok, ecto} = Package.create("ecto", user, %{})
+    {:ok, _}    = Release.create(ecto, "0.0.1", "ecto", [], "")
 
     path = Path.join("tmp", "release-docs.tar.gz")
     files = [{'index.html', "HEYO"}]
@@ -694,30 +714,56 @@ defmodule HexWeb.API.RouterTest do
 
     headers = [{"content-type", "application/octet-stream"},
                {"authorization", "Basic " <> :base64.encode("eric:eric")}]
-    conn = conn("POST", "/api/packages/postgrex/releases/0.0.1/docs", body, headers: headers)
+    conn = conn("POST", "/api/packages/ecto/releases/0.0.1/docs", body, headers: headers)
     conn = Router.call(conn, [])
     assert conn.status == 201
-    assert Release.get(postgrex, "0.0.1").has_docs
+    assert Release.get(ecto, "0.0.1").has_docs
 
-    headers = [ {"authorization", "Basic " <> :base64.encode("eric:eric")}]
-    conn = conn("DELETE", "/api/packages/postgrex/releases/0.0.1", nil, headers: headers)
+    headers = [{"authorization", "Basic " <> :base64.encode("eric:eric")}]
+    conn = conn("DELETE", "/api/packages/ecto/releases/0.0.1", nil, headers: headers)
     conn = Router.call(conn, [])
     assert conn.status == 204
 
-    # Check package was deleted
-    postgrex = Package.get("postgrex")
-    refute Release.get(postgrex, "0.0.1")
+    # Check release was deleted
+    refute Release.get(ecto, "0.0.1")
 
     # Check docs were deleted
-    url = HexWeb.Util.url("api/packages/postgrex/releases/0.0.1/docs") |> String.to_char_list
+    url = HexWeb.Util.url("api/packages/ecto/releases/0.0.1/docs") |> String.to_char_list
     assert {:ok, response} = :httpc.request(:get, {url, []}, [], [])
     assert {{_version, code, _reason}, _headers, _body} = response
     assert code in 400..499
 
-    url = HexWeb.Util.url("docs/postgrex/0.0.1/index.html") |> String.to_char_list
+    url = HexWeb.Util.url("docs/ecto/0.0.1/index.html") |> String.to_char_list
     assert {:ok, response} = :httpc.request(:get, {url, []}, [], [])
     assert {{_version, code, _reason}, _headers, _body} = response
     assert code in 400..499
+  after
+    Application.put_env(:hex_web, :store, HexWeb.Store.Local)
+  end
+
+  @tag :integration
+  test "dont allow version directories in docs" do
+    if Application.get_env(:hex_web, :s3_bucket) do
+      Application.put_env(:hex_web, :store, HexWeb.Store.S3)
+    end
+    :inets.start
+
+    user        = User.get(username: "eric")
+    {:ok, ecto} = Package.create("ecto", user, %{})
+    {:ok, _}    = Release.create(ecto, "0.0.1", "ecto", [], "")
+
+    path = Path.join("tmp", "release-docs.tar.gz")
+    files = [{'1.2.3', "HEYO"}]
+    :ok = :erl_tar.create(String.to_char_list(path), files, [:compressed])
+    body = File.read!(path)
+
+    headers = [{"content-type", "application/octet-stream"},
+               {"authorization", "Basic " <> :base64.encode("eric:eric")}]
+    conn = conn("POST", "/api/packages/ecto/releases/0.0.1/docs", body, headers: headers)
+    conn = Router.call(conn, [])
+    assert conn.status == 422
+    assert %{"errors" => %{"tar" => "directory name not allowed to match a semver version"}} =
+           Poison.decode!(conn.resp_body)
   after
     Application.put_env(:hex_web, :store, HexWeb.Store.Local)
   end
