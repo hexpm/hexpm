@@ -41,7 +41,7 @@ defmodule HexWeb.BlockedAddress do
         case check(ip(conn.remote_ip)) do
           :ok ->
             conn
-            |> send_resp(401, "Blocked")
+            |> send_resp(403, "Blocked")
             |> halt
           :error ->
             conn

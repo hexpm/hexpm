@@ -172,6 +172,6 @@ defmodule HexWeb.RouterTest do
     conn = conn("GET", "/")
     conn = %{conn | remote_ip: {1,2,3,4}}
     conn = Router.call(conn, [])
-    assert conn.status == 401
+    assert conn.status == 403
   end
 end
