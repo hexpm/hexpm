@@ -1,19 +1,7 @@
 use Mix.Config
 
-if Mix.env == :test do
-  log_level = :warn
-else
-  log_level = :debug
-end
-
-if Mix.env == :prod do
-  work_factor = 12
-else
-  work_factor = 4
-end
-
 config :hex_web,
-  password_work_factor: work_factor,
+  password_work_factor: 4,
 
   url:           System.get_env("HEX_URL"),
   app_host:      System.get_env("APP_HOST"),
@@ -56,7 +44,9 @@ case Mix.env do
 end
 
 config :logger,
-  level: log_level
+  level: :debug
 
 config :logger, :console,
   format: "$date $time [$level] $message\n"
+
+import_config "#{Mix.env}.exs"
