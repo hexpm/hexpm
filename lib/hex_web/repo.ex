@@ -4,7 +4,7 @@ defmodule HexWeb.Repo do
   def conf(env) do
     case env do
       :prod ->
-        parse_url(Application.get_env(:hex_web, :database_url)) ++ [lazy: false]
+        parse_url(Application.get_env(:hex_web, :database_url)) ++ [lazy: false, size: "30", max_overflow: "0"]
       :dev ->
         parse_url Application.get_env(:hex_web, :database_url)
       :test ->
