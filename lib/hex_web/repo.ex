@@ -25,7 +25,8 @@ defmodule HexWeb.Repo do
       Logger.info fn ->
         next = :os.timestamp()
         diff = :timer.now_diff(next, prev)
-        [cmd, " (", inspect(div(diff, 100) / 10), "ms)"]
+        {_, workers, _, _} = :poolboy.status(__MODULE__.Pool)
+        [cmd, " (db_query=", inspect(div(diff, 100) / 10), "ms) (db_avail=", inspect(workers), ")"]
       end
     end
   end
