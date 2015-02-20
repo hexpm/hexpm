@@ -1,5 +1,6 @@
 defmodule HexWeb.Repo do
   use Ecto.Repo, adapter: Ecto.Adapters.Postgres, env: Mix.env
+  require Logger
 
   def conf(env) do
     case env do
@@ -15,10 +16,23 @@ defmodule HexWeb.Repo do
   def priv,
     do: :code.priv_dir(:hex_web)
 
-  # def log(action, fun) do
-  #   IO.inspect action
-  #   fun.()
-  # end
+  def log({:query, cmd}, fun) do
+    prev = :os.timestamp()
+
+    try do
+      fun.()
+    after
+      Logger.info fn ->
+        next = :os.timestamp()
+        diff = :timer.now_diff(next, prev)
+        [cmd, " (", inspect(div(diff, 100) / 10), "ms)"]
+      end
+    end
+  end
+
+  def log(_, fun) do
+    fun.()
+  end
 
   def query_apis do
     [Ecto.Query.API, HexWeb.Repo.API]
