@@ -39,7 +39,7 @@ defmodule HexWeb.Mixfile do
   end
 
   defp test(args) do
-    env(:test, fn ->
+    env(:test, :warn, fn ->
       Mix.Task.run "ecto.drop", ["HexWeb.Repo"]
       Mix.Task.run "ecto.create", ["HexWeb.Repo"]
       Mix.Task.run "ecto.migrate", ["HexWeb.Repo"]
@@ -66,12 +66,16 @@ defmodule HexWeb.Mixfile do
     Mix.Task.run "ecto.rollback", ["--no-start" | args]
   end
 
-  defp env(env, fun) do
+  defp env(env, level, fun) do
+    old_level = Logger.level
     old_env = Mix.env
+    Logger.configure(level: level)
     Mix.env(env)
+
     try do
       fun.()
     after
+      Logger.configure(level: old_level)
       Mix.env(old_env)
     end
   end
