@@ -2,15 +2,9 @@ defmodule HexWeb.Repo do
   use Ecto.Repo, adapter: Ecto.Adapters.Postgres, env: Mix.env
   require Logger
 
-  def conf(env) do
-    case env do
-      :prod ->
-        parse_url(Application.get_env(:hex_web, :database_url)) ++ [lazy: false, size: "30", max_overflow: "0"]
-      :dev ->
-        parse_url Application.get_env(:hex_web, :database_url)
-      :test ->
-        parse_url(Application.get_env(:hex_web, :database_url)) ++ [size: "1", max_overflow: "0"]
-    end
+  def conf(_env) do
+    {url, opts} = Application.get_env(:hex_web, :database) |> Dict.pop(:url)
+    parse_url(url) ++ opts
   end
 
   def priv,
@@ -22,7 +16,7 @@ defmodule HexWeb.Repo do
     try do
       fun.()
     after
-      Logger.info fn ->
+      Logger.debug fn ->
         next = :os.timestamp()
         diff = :timer.now_diff(next, prev)
         {_, workers, _, _} = :poolboy.status(__MODULE__.Pool)
