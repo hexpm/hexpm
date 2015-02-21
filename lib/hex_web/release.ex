@@ -138,6 +138,22 @@ defmodule HexWeb.Release do
     end)
   end
 
+  def latest_versions(packages) when is_list(packages) do
+    package_ids = Enum.map(packages, & &1.id)
+
+    query =
+           from r in HexWeb.Release,
+         where: r.package_id in array(^package_ids, ^:integer),
+      group_by: r.package_id,
+        select: {r.package_id, array_agg(r.version)}
+
+    HexWeb.Repo.all(query)
+    |> Enum.map(fn {id, versions} ->
+         {id, Enum.sort(versions, &(Version.compare(&1, &2) == :gt)) |> List.first}
+       end)
+    |> Enum.into(HashDict.new)
+  end
+
   def all(package) do
     HexWeb.Repo.all(package.releases)
     |> Enum.map(&Ecto.Associations.load(&1, :package, package))

@@ -47,5 +47,8 @@ defmodule HexWeb.Repo do
 
     defs json_access(string, string) :: string
     defs json_access(string, integer) :: string
+
+    @aggregate true
+    defs array_agg(var) :: var
   end
 end
