@@ -11,3 +11,7 @@ config :hex_web, :database,
 
 config :logger,
   level: :info
+
+# Don't include date time on heroku
+config :logger, :console,
+  format: "[$level] $message\n"
