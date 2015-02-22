@@ -19,14 +19,23 @@ defmodule HexWeb.Repo do
       Logger.debug fn ->
         next = :os.timestamp()
         diff = :timer.now_diff(next, prev)
+
         {_, workers, _, _} = :poolboy.status(__MODULE__.Pool)
-        [cmd, " (db_query=", inspect(div(diff, 100) / 10), "ms) (db_avail=", inspect(workers), ")"]
+
+        [query_str(cmd), " (db_query=", inspect(div(diff, 100) / 10),
+         "ms) (db_avail=", inspect(workers), ")"]
       end
     end
   end
 
   def log(_, fun) do
     fun.()
+  end
+
+  if Mix.env == :prod do
+    defp query_str(cmd), do: :binary.replace(cmd, "\n", " ", [:global])
+  else
+    defp query_str(cmd), do: cmd
   end
 
   def query_apis do
