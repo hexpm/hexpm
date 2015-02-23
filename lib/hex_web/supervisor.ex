@@ -9,7 +9,8 @@ defmodule HexWeb.Supervisor do
     tree = [
       worker(HexWeb.Repo, []),
       worker(HexWeb.BlockedAddress, []),
-      worker(HexWeb.API.RateLimit, [HexWeb.API.RateLimit])
+      worker(HexWeb.API.RateLimit, [HexWeb.API.RateLimit]),
+      worker(HexWeb.GithubApi, []),
     ]
     supervise(tree, strategy: :one_for_one)
   end

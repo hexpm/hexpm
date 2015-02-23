@@ -173,6 +173,34 @@ defmodule HexWeb.Package do
     |> HexWeb.Repo.all
   end
 
+  @doc "Get the last version of a package."
+  @spec last_version(String) :: String
+  def last_version(package_name) do
+    from(r in HexWeb.Release,
+          join: p in r.package,
+         where: p.name == ^package_name,
+      order_by: r.updated_at,
+         limit: 1,
+        select: r.version)
+    |> HexWeb.Repo.one
+  end
+
+  @doc "Get the latest awesome projects."
+  @spec awesomeness(Integer, String) :: [{String, String}]
+  def awesomeness(count, repo \\ "h4cc/awesome-elixir") do
+    HexWeb.GithubApi.last_awesome_packages(repo, count)
+      |> Enum.map(fn(package_name) ->
+        version = __MODULE__.last_version(package_name)
+        if version do
+          {version, package_name}
+        else
+          nil
+        end
+      end)
+      |> Enum.filter(fn(x) -> x end)
+  end
+
+
   defp search(query, nil, _order?) do
     query
   end
