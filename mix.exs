@@ -1,6 +1,3 @@
-# Start logger on 1.0
-{:ok, _} = Application.ensure_all_started(:logger)
-
 defmodule HexWeb.Mixfile do
   use Mix.Project
 
@@ -35,6 +32,7 @@ defmodule HexWeb.Mixfile do
 
   defp aliases do
     [test: &test/1,
+     "app.start": &app_start/1,
      "ecto.create": &ecto_create/1,
      "ecto.drop": &ecto_drop/1,
      "ecto.migrate": &ecto_migrate/1,
@@ -51,6 +49,12 @@ defmodule HexWeb.Mixfile do
       Mix.Task.run "app.start", args
       Mix.Task.run "test", args
     end)
+  end
+
+  defp app_start(args) do
+    Mix.Task.run "app.start", args
+    # Work around bug in 1.0 that stops logger even if --no-start is passed
+    {:ok, _} = Application.ensure_all_started(:logger)
   end
 
   defp ecto_create(args) do
@@ -78,8 +82,6 @@ defmodule HexWeb.Mixfile do
     try do
       fun.()
     after
-      # Start logger on 1.0
-      {:ok, _} = Application.ensure_all_started(:logger)
       Logger.configure(level: old_level)
       Mix.env(old_env)
     end
