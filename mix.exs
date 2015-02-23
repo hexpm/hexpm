@@ -11,7 +11,7 @@ defmodule HexWeb.Mixfile do
 
   def application do
     [applications: [:plug, :cowboy, :ecto, :postgrex, :poison, :bcrypt, :mini_s3,
-                    :logger, :porcelain],
+                    :logger, :porcelain, :httpoison],
      mod: {HexWeb, []},
      env: []]
   end
@@ -21,6 +21,7 @@ defmodule HexWeb.Mixfile do
      {:cowboy,    "~> 1.0"},
      {:ecto,      "~> 0.2.5"},
      {:poison,    "~> 1.2"},
+     {:httpoison, "~> 0.6.2"},
      {:porcelain, "~> 2.0"},
      {:postgrex,  "~> 0.6"},
      {:earmark,   "~> 0.1"},

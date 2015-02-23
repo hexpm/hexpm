@@ -6,11 +6,15 @@
   "ecto": {:hex, :ecto, "0.2.5"},
   "envy": {:git, "git://github.com/manderson26/envy.git", "d62cb227b9000ee866c8bcc724ddf68d87621dea", [branch: "master"]},
   "gen_smtp": {:hex, :gen_smtp, "0.9.0"},
+  "hackney": {:hex, :hackney, "1.0.6"},
+  "httpoison": {:hex, :httpoison, "0.6.2"},
   "ibrowse": {:git, "git://github.com/opscode/ibrowse", "8f3f6a3a30730b193cc340a8885a960586dc98de", [tag: "v4.0.1.1"]},
+  "idna": {:hex, :idna, "1.0.2"},
   "mini_s3": {:git, "git://github.com/ericmj/mini_s3.git", "700386bc8c3a804af57380c0fd09a02325142c9b", [branch: "hex-fixes"]},
   "plug": {:hex, :plug, "0.8.4"},
   "poison": {:hex, :poison, "1.2.1"},
   "poolboy": {:hex, :poolboy, "1.2.1"},
   "porcelain": {:hex, :porcelain, "2.0.0"},
   "postgrex": {:hex, :postgrex, "0.6.0"},
-  "ranch": {:hex, :ranch, "1.0.0"}}
+  "ranch": {:hex, :ranch, "1.0.0"},
+  "ssl_verify_hostname": {:hex, :ssl_verify_hostname, "1.0.1"}}

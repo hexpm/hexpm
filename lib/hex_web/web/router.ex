@@ -26,9 +26,10 @@ defmodule HexWeb.Web.Router do
     package_top  = PackageDownload.top(:all, 10)
     trending     = PackageDownload.top(:week, 10)
     total        = PackageDownload.total
+    awesomeness  = Package.awesomeness(10)
 
-    conn = assign_pun(conn, [num_packages, num_releases, package_top,
-                             trending, package_new, releases_new, total])
+    conn = assign_pun(conn, [num_packages, num_releases, package_top, trending,
+                             package_new, releases_new, total, awesomeness])
     send_page(conn, :index)
   end
 
