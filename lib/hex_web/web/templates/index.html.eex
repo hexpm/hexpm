@@ -59,6 +59,21 @@
 
 <div class="row">
   <div class="col-sm-6">
+    <h3>Awesomeness</h3>
+
+    <p>
+      <%= for { version, package } <- @awesomeness do %>
+        <div class="row">
+          <div class="col-xs-3 text-right"><%= version %></div>
+          <div class="col-xs-9"><a href="/packages/<%= package %>"><%= package %></a></div>
+        </div>
+      <% end %>
+    </p>
+  </div>
+</div>
+
+<div class="row">
+  <div class="col-sm-6">
     <h3>New packages <a href="/feeds/new-packages.rss"><img style="width: 16px; height: 16px;" src="/static/feed-icon.png" alt="Feed symbol"></a></h3>
     <p>
       <%= for { package, created_at } <- @package_new do %>
