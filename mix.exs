@@ -1,3 +1,6 @@
+# Start logger on 1.0
+{:ok, _} = Application.ensure_all_started(:logger)
+
 defmodule HexWeb.Mixfile do
   use Mix.Project
 

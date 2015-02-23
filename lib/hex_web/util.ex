@@ -177,11 +177,9 @@ defmodule HexWeb.Util do
     result.status
   end
 
-  defmacro task_start(fun) do
-    if Mix.env == :test do
-      quote do: unquote(fun).()
-    else
-      quote do: Task.start(unquote(fun))
-    end
+  if Mix.env == :test do
+    def task_start(fun), do: fun.()
+  else
+    def task_start(fun), do: Task.start(fun)
   end
 end
