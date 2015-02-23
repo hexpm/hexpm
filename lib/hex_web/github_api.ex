@@ -1,6 +1,13 @@
 defmodule HexWeb.GithubApi do
   use HTTPoison.Base
 
+  def start_link do
+    args = [ttl:       :timer.hours(24),
+            ttl_check: :timer.hours(4)]
+
+    ConCache.start_link args, name: __MODULE__
+  end
+
   defp find_package_name(title), do: String.replace(title, ~r/(Add Package )|"/, "")
 
   defp build_path(list), do: Enum.join(list, "/")
@@ -38,9 +45,11 @@ defmodule HexWeb.GithubApi do
   Get the last added packages to an awesome-elixir list.
   """
   def last_awesome_packages(repo, count) do
-    last_closed_issues(repo, count)
-      |> Enum.filter_map(fn(x) -> !x["pull_request"] end,
-                         fn(x) -> find_package_name(x["title"]) end)
+    ConCache.get_or_store __MODULE__, repo, fn ->
+      last_closed_issues(repo, count) |> Enum.filter_map(
+          fn(x) -> !x["pull_request"] end,
+          fn(x) -> find_package_name(x["title"]) end)
+    end
   end
 end
 

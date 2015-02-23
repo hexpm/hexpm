@@ -11,7 +11,7 @@ defmodule HexWeb.Mixfile do
 
   def application do
     [applications: [:plug, :cowboy, :ecto, :postgrex, :poison, :bcrypt, :mini_s3,
-                    :logger, :porcelain, :httpoison],
+                    :logger, :porcelain, :httpoison, :con_cache],
      mod: {HexWeb, []},
      env: []]
   end
@@ -26,6 +26,7 @@ defmodule HexWeb.Mixfile do
      {:postgrex,  "~> 0.6"},
      {:earmark,   "~> 0.1"},
      {:gen_smtp,  "~> 0.9.0"},
+     {:con_cache, "~> 0.7.0"},
      {:bcrypt,    github: "opscode/erlang-bcrypt"},
      {:mini_s3,   github: "ericmj/mini_s3", branch: "hex-fixes"}
    ]
