@@ -78,6 +78,8 @@ defmodule HexWeb.Mixfile do
     try do
       fun.()
     after
+      # Start logger on 1.0
+      {:ok, _} = Application.ensure_all_started(:logger)
       Logger.configure(level: old_level)
       Mix.env(old_env)
     end
