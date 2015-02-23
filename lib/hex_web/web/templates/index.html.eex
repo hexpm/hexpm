@@ -59,7 +59,7 @@
 
 <div class="row">
   <div class="col-sm-6">
-    <h3>Trending this week</h3>
+    <h3>Trending</h3>
     <p>
       <%= for { package, downloads } <- @trending do %>
       <div class="row">
@@ -71,7 +71,7 @@
   </div>
 
   <div class="col-sm-6">
-    <h3>Awesomeness</h3>
+    <h3>Awesomeness <small><a href="https://github.com/h4cc/awesome-elixir/blob/master/README.md">more</a></small></h3>
 
     <p>
       <%= for { version, package } <- @awesomeness do %>
