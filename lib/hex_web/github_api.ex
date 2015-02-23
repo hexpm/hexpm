@@ -39,7 +39,7 @@ defmodule HexWeb.GithubApi do
   @doc """
   Get the last closed issues of a repository.
   """
-  @spec read(String, Integer) :: [term]
+  @spec last_closed_issues(String, Integer) :: [term]
   def last_closed_issues(repo, count) do
     read ["repos", repo, "issues"],
       state:    :closed,
@@ -51,6 +51,7 @@ defmodule HexWeb.GithubApi do
   @doc """
   Get the last added packages to an awesome-elixir list.
   """
+  @spec last_awesome_packages(String, Integer) :: [String]
   def last_awesome_packages(repo, count) do
     ConCache.get_or_store __MODULE__, repo, fn ->
       last_closed_issues(repo, count) |> Enum.filter_map(
