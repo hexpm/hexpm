@@ -21,6 +21,9 @@ config :hex_web,
   ses_user:      System.get_env("HEX_SES_USERNAME"),
   ses_pass:      System.get_env("HEX_SES_PASSWORD"),
 
+  gh_resp_ttl:   24, # hours
+  gh_resp_ttlc:  4,  # hours
+
   secret:        System.get_env("HEX_SECRET")
 
 if Mix.env in [:dev, :test] do

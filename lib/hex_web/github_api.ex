@@ -1,9 +1,10 @@
 defmodule HexWeb.GithubApi do
+  require Logger
   use HTTPoison.Base
 
   def start_link do
-    args = [ttl:       :timer.hours(24),
-            ttl_check: :timer.hours(4)]
+    args = [ttl:       :timer.hours(Application.get_env(:hex_web, :gh_resp_ttl)),
+            ttl_check: :timer.hours(Application.get_env(:hex_web, :gh_resp_ttlc))]
 
     ConCache.start_link args, name: __MODULE__
   end
@@ -17,7 +18,12 @@ defmodule HexWeb.GithubApi do
   end
 
   @doc false
-  def process_url(url), do: "https://api.github.com" <> url
+  def process_url(url) do
+    tmp = "https://api.github.com" <> url
+    Logger.info "Retrieving data from Github"
+    Logger.debug "Github HTTP #{url}"
+    tmp
+  end
   @doc false
   def process_response_body(body), do: Poison.decode!(body)
 
@@ -38,7 +44,8 @@ defmodule HexWeb.GithubApi do
     read ["repos", repo, "issues"],
       state:    :closed,
       sort:     :updated,
-      per_page: count
+      per_page: count,
+      labels:   "help%20wanted" # filter out pull-requests
   end
 
   @doc """
