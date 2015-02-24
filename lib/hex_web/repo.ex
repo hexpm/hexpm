@@ -16,7 +16,7 @@ defmodule HexWeb.Repo do
     try do
       fun.()
     after
-      Logger.debug fn ->
+      Logger.info fn ->
         next = :os.timestamp()
         diff = :timer.now_diff(next, prev)
 
