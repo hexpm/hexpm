@@ -20,3 +20,7 @@ headers = [{'content-type', 'text/csv'}]
 HexWeb.Store.S3.upload(:s3_bucket, "installs/list.csv", headers, csv)
 
 IO.puts "Uploaded installs/list.csv"
+
+HexWeb.RegistryBuilder.rebuild
+
+IO.puts "Rebuilt registry"
