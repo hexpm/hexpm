@@ -79,44 +79,6 @@ defmodule HexWeb.API.RouterTest do
     refute User.get(username: "name")
   end
 
-  test "update user" do
-    headers = [ {"content-type", "application/json"},
-                {"authorization", "Basic " <> :base64.encode("other:other")}]
-    body = %{email: "email@mail.com", password: "pass"}
-    conn = conn("PATCH", "/api/users/other", Poison.encode!(body), headers: headers)
-    conn = Router.call(conn, [])
-
-    assert conn.status == 200
-    body = Poison.decode!(conn.resp_body)
-    assert body["url"] == "http://localhost:4000/api/users/other"
-    user = assert User.get(username: "other")
-    assert user.email == "email@mail.com"
-
-    headers = [ {"content-type", "application/json"},
-                {"authorization", "Basic " <> :base64.encode("other:pass")}]
-    body = %{username: "foo"}
-    conn = conn("PATCH", "/api/users/other", Poison.encode!(body), headers: headers)
-    conn = Router.call(conn, [])
-
-    assert conn.status == 200
-    body = Poison.decode!(conn.resp_body)
-    assert body["url"] == "http://localhost:4000/api/users/other"
-    assert User.get(username: "other")
-    refute User.get(username: "foo")
-  end
-
-  test "update user only basic auth" do
-    user = User.get(username: "other")
-    {:ok, key} = Key.create("macbook", user)
-
-    headers = [ {"content-type", "application/json"},
-                {"authorization", key.user_secret}]
-    body = %{email: "email@mail.com", password: "pass"}
-    conn = conn("PATCH", "/api/users/other", Poison.encode!(body), headers: headers)
-    conn = Router.call(conn, [])
-    assert conn.status == 401
-  end
-
   test "create package with key auth" do
     user = User.get(username: "eric")
     {:ok, key} = Key.create("macbook", user)

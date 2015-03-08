@@ -183,13 +183,6 @@ defmodule HexWeb.API.Router do
       end)
     end
 
-    patch "users/:name" do
-      with_authorized(conn, [only_basic: true], &(&1.username == name), fn user ->
-        result = User.update(user, conn.params["email"], conn.params["password"])
-        send_update_resp(conn, result, :public)
-      end)
-    end
-
     post "users/:name/reset" do
       if (user = User.get(username: name) || User.get(email: name)) do
         User.initiate_password_reset(user)
