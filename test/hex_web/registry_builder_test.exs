@@ -33,22 +33,7 @@ defmodule HexWeb.RegistryBuilderTest do
     tid = open_table()
 
     try do
-      assert [{:"$$version$$", 3}] = :ets.lookup(tid, :"$$version$$")
-    after
-      close_table(tid)
-    end
-  end
-
-  test "registry includes installs" do
-    RegistryBuilder.rebuild()
-    tid = open_table()
-
-    try do
-      assert [{:"$$installs$$", installs}] = :ets.lookup(tid, :"$$installs$$")
-      assert [{"0.0.1", "0.13.0-dev"}, {"0.1.0", "0.13.1-dev"}] = installs
-
-      assert [{:"$$installs2$$", installs}] = :ets.lookup(tid, :"$$installs2$$")
-      assert [{"0.0.1", ["0.13.0-dev"]}, {"0.1.0", ["0.13.1-dev", "0.13.1"]}] = installs
+      assert [{:"$$version$$", 4}] = :ets.lookup(tid, :"$$version$$")
     after
       close_table(tid)
     end
@@ -66,7 +51,7 @@ defmodule HexWeb.RegistryBuilderTest do
     tid = open_table()
 
     try do
-      assert length(:ets.match_object(tid, :_)) == 8
+      assert length(:ets.match_object(tid, :_)) == 7
 
       assert [ {"decimal", [["0.0.1", "0.0.2"]]} ] = :ets.lookup(tid, "decimal")
 

@@ -15,7 +15,7 @@ defmodule HexWeb.RegistryBuilder do
   alias HexWeb.Install
 
   @ets_table :hex_registry
-  @version   3
+  @version   4
   @wait_time 10_000
 
   def rebuild do
@@ -36,7 +36,7 @@ defmodule HexWeb.RegistryBuilder do
     rescue
       error in [Postgrex.Error] ->
         stacktrace = System.stacktrace
-        if error.code == "55P03" do
+        if error.postgres.code == "55P03" do
           :timer.sleep(@wait_time)
           unless skip?(handle) do
             rebuild(handle, reg_file)
@@ -65,7 +65,7 @@ defmodule HexWeb.RegistryBuilder do
   def build_ets(handle, file) do
     HexWeb.Registry.set_working(handle)
 
-    {installs1, installs2} = installs()
+    installs     = installs()
     requirements = requirements()
     releases     = releases()
     packages     = packages()
@@ -97,10 +97,7 @@ defmodule HexWeb.RegistryBuilder do
 
     tid = :ets.new(@ets_table, [:public])
     :ets.insert(tid, {:"$$version$$", @version})
-    # Removing :"$$installs$$" should bump version to 4
-    # :"$$installs2$$" was added with Hex v0.5.0 (Elixir v1.0.0) (2014-09-19)
-    :ets.insert(tid, {:"$$installs$$", installs1})
-    :ets.insert(tid, {:"$$installs2$$", installs2})
+    :ets.insert(tid, {:"$$installs2$$", installs})
     :ets.insert(tid, release_tuples ++ package_tuples)
     :ok = :ets.tab2file(tid, String.to_char_list(file))
     :ets.delete(tid)
@@ -147,14 +144,9 @@ defmodule HexWeb.RegistryBuilder do
   end
 
   defp installs do
-    installs2 =
-      Enum.map(Install.all, fn %Install{hex: hex, elixirs: elixirs} ->
-        {hex, elixirs}
-      end)
-
-    installs1 = Enum.map(installs2, fn {hex, elixirs} -> {hex, List.first(elixirs)} end)
-
-    {installs1, installs2}
+    Enum.map(Install.all, fn %Install{hex: hex, elixirs: elixirs} ->
+      {hex, elixirs}
+    end)
   end
 
   defp time_diff(time1, time2) do
