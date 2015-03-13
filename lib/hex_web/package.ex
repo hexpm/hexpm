@@ -16,7 +16,7 @@ defmodule HexWeb.Package do
     has_many :downloads, HexWeb.Stats.PackageDownload
   end
 
-  @elixir_names ~w(eex elixir ex_unit iex logger mix hex)
+  @elixir_names ~w(eex elixir ex_unit gettext iex logger mix hex)
   @otp_names ~w(
     appmon asn1 common_test compiler cosEvent cosEventDomain cosFileTransfer
     cosNotification cosProperty cosTime cosTransactions crypto debugger

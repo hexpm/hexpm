@@ -64,7 +64,7 @@ defmodule HexWeb.API.Key do
   def auth(user_secret) do
     # Database index lookup on the first part of the key and then
     # secure compare on the second part to avoid timing attacks
-    app_secret  = Application.get_env(:hex_web, :secret)
+    app_secret = Application.get_env(:hex_web, :secret)
 
     <<first::binary-size(32), second::binary-size(32)>> =
       :crypto.hmac(:sha256, app_secret, user_secret)
