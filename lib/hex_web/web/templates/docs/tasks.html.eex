@@ -5,15 +5,30 @@
 
   <div class="panel panel-default">
     <div class="panel-heading">
+      <h3 id="hex" class="panel-title">
+        hex
+        <a href="#hex"><span class="glyphicon glyphicon-link pull-right"></span></a>
+      </h3>
+    </div>
+    <div class="panel-body">
+      <p><em>Prints hex tasks and their information.</em></p>
+<p><code class="inline">mix hex</code></p>
+
+    </div>
+  </div>
+
+
+  <div class="panel panel-default">
+    <div class="panel-heading">
       <h3 id="hex_config" class="panel-title">
         hex.config
         <a href="#hex_config"><span class="glyphicon glyphicon-link pull-right"></span></a>
       </h3>
     </div>
     <div class="panel-body">
-      <p>Reads or updates hex configuration file.</p>
+      <p><em>Reads or updates hex configuration file.</em></p>
 <p><code class="inline">mix hex.config KEY [VALUE]</code></p>
-<h4>Config keys</h4>
+<h3>Config keys</h3>
 <ul>
 <li><code class="inline">username</code> - Hex username
 </li>
@@ -41,7 +56,7 @@
       </h3>
     </div>
     <div class="panel-body">
-      <p>Publishes documentation for the current project and version.</p>
+      <p><em>Publishes documentation for the current project and version.</em></p>
 <p>The documentation will be accessible at <code class="inline">http://hexdocs.pm/my_package/1.0.0</code>,
 <code class="inline">http://hexdocs.pm/my_package</code> will always redirect to the latest published
 version.</p>
@@ -50,7 +65,7 @@ provides this task by default, but any library can be used. Or an alias can be
 used to extend the documentation generation. The expected result of the task
 is the generated documentation located in the <code class="inline">docs/</code> directory with an
 <code class="inline">index.html</code> file.</p>
-<h4>Command line options</h4>
+<h3>Command line options</h3>
 <ul>
 <li><code class="inline">--revert VERSION</code> - Revert given version
 </li>
@@ -68,7 +83,7 @@ is the generated documentation located in the <code class="inline">docs/</code> 
       </h3>
     </div>
     <div class="panel-body">
-      <p>Prints hex package or system information.</p>
+      <p><em>Prints hex package or system information.</em></p>
 <p><code class="inline">mix hex.info [PACKAGE [VERSION]]</code></p>
 <p>If <code class="inline">package</code> is not given, print system information. This includes when
 registry was last updated and current system version.</p>
@@ -89,12 +104,12 @@ remote Git URL and Git ref, and all package dependencies.</p>
       </h3>
     </div>
     <div class="panel-body">
-      <p>Remove or list API keys associated with your account.</p>
-<h5>Remove key</h5>
+      <p><em>Remove or list API keys associated with your account.</em></p>
+<h4>Remove key</h4>
 <p>Remove given API key from account.</p>
 <p>The key can no longer be used to authenticate API requests.</p>
 <p><code class="inline">mix hex.key remove key_name</code></p>
-<h5>List keys</h5>
+<h4>List keys</h4>
 <p>List all API keys associated with your account.</p>
 <p><code class="inline">mix hex.key list</code></p>
 
@@ -110,18 +125,18 @@ remote Git URL and Git ref, and all package dependencies.</p>
       </h3>
     </div>
     <div class="panel-body">
-      <p>Add, remove or list package owners.</p>
+      <p><em>Add, remove or list package owners.</em></p>
 <p>A package owner have full permissions to the package. They can publish and
 revert releases and even remove other package owners.</p>
-<h5>Add owner</h5>
+<h4>Add owner</h4>
 <p>Add an owner to package by specifying the package name and email of the new
 owner.</p>
 <p><code class="inline">mix hex.owner add PACKAGE EMAIL</code></p>
-<h5>Remove owner</h5>
+<h4>Remove owner</h4>
 <p>Remove an owner to package by specifying the package name and email of the new
 owner.</p>
 <p><code class="inline">mix hex.owner remove PACKAGE EMAIL</code></p>
-<h5>List owners</h5>
+<h4>List owners</h4>
 <p>List all owners of given package.</p>
 <p><code class="inline">mix hex.owner list PACKAGE</code></p>
 
@@ -137,7 +152,7 @@ owner.</p>
       </h3>
     </div>
     <div class="panel-body">
-      <p>Publish a new version of your package and update the package.</p>
+      <p><em>Publish a new version of your package and update the package.</em></p>
 <p><code class="inline">mix hex.publish</code></p>
 <p>If it is a new package being published it will be created and the user
 specified in <code class="inline">username</code> will be the package owner. Only package owners can
@@ -145,12 +160,12 @@ publish.</p>
 <p>A published version can be amended or reverted with <code class="inline">--revert</code> up to one hour
 after its publication. If you want to revert a publication that is more than
 one hour old you need to contact an administrator.</p>
-<h4>Command line options</h4>
+<h3>Command line options</h3>
 <ul>
 <li><code class="inline">--revert VERSION</code> - Revert given version
 </li>
 </ul>
-<h4>Configuration</h4>
+<h3>Configuration</h3>
 <ul>
 <li><p><code class="inline">:app</code> - Package name (required)</p>
 </li>
@@ -163,7 +178,7 @@ one hour old you need to contact an administrator.</p>
 <li><code class="inline">:package</code> - Hex specific configuration (see Package configuration below)
 </li>
 </ul>
-<h4>Dependencies</h4>
+<h3>Dependencies</h3>
 <p>Dependencies are defined in mix’s dependency format. But instead of using
 <code class="inline">:git</code> or <code class="inline">:path</code> as the SCM <code class="inline">:package</code> is used.</p>
 <pre><code>defp deps do
@@ -175,7 +190,7 @@ end</code></pre>
 Important to note is that non-Hex dependencies will not be used during
 dependency resolution and neither will be they listed as dependencies of the
 package.</p>
-<h4>Package configuration</h4>
+<h3>Package configuration</h3>
 <p>Additional metadata of the package can optionally be defined, but it is very
 recommended to do so.</p>
 <ul>
@@ -205,7 +220,7 @@ can include wildcards</p>
       </h3>
     </div>
     <div class="panel-body">
-      <p>Display packages matching the given search query.</p>
+      <p><em>Display packages matching the given search query.</em></p>
 <p><code class="inline">mix hex.search PACKAGE</code></p>
 
     </div>
@@ -220,20 +235,20 @@ can include wildcards</p>
       </h3>
     </div>
     <div class="panel-body">
-      <p>Hex user tasks.</p>
-<h5>Registers a new user</h5>
+      <p><em>Hex user tasks.</em></p>
+<h4>Registers a new user</h4>
 <p><code class="inline">mix hex.user register</code></p>
-<h5>Prints the current user</h5>
+<h4>Prints the current user</h4>
 <p><code class="inline">mix hex.user whoami</code></p>
-<h5>Authorize a new user</h5>
+<h4>Authorize a new user</h4>
 <p>Authorizes a new user on the local machine by generating a new API key and
 storing it in the hex config.</p>
 <p><code class="inline">mix hex.user auth</code></p>
-<h5>Deauthorize the user</h5>
+<h4>Deauthorize the user</h4>
 <p>Deauthorizes the user from the local machine by removing the API key from the
 hex config.</p>
 <p><code class="inline">mix hex.user deauth</code></p>
-<h5>Reset user password</h5>
+<h4>Reset user password</h4>
 <p><code class="inline">mix hex.user reset password</code></p>
 
     </div>
