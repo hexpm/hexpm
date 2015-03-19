@@ -208,32 +208,30 @@ defimpl HexWeb.Render, for: HexWeb.Package do
   import HexWeb.Util
 
   def render(package) do
-    dict =
-      HexWeb.Package.__schema__(:keywords, package)
-      |> Dict.take([:name, :meta, :created_at, :updated_at])
-      |> Dict.update!(:created_at, &to_iso8601/1)
-      |> Dict.update!(:updated_at, &to_iso8601/1)
-      |> Dict.put(:url, api_url(["packages", package.name]))
-      |> Enum.into(%{})
+    entity =
+      package
+      |> Map.take([:name, :meta, :created_at, :updated_at])
+      |> Map.update!(:created_at, &to_iso8601/1)
+      |> Map.update!(:updated_at, &to_iso8601/1)
+      |> Map.put(:url, api_url(["packages", package.name]))
 
-    if package.releases.loaded? do
+    if association_loaded?(package.releases) do
       releases =
-        Enum.map(package.releases.all, fn release ->
-          HexWeb.Release.__schema__(:keywords, release)
-          |> Dict.take([:version, :created_at, :updated_at])
-          |> Dict.update!(:created_at, &to_iso8601/1)
-          |> Dict.update!(:updated_at, &to_iso8601/1)
-          |> Dict.put(:url, api_url(["packages", package.name, "releases", release.version]))
-          |> Enum.into(%{})
+        Enum.map(package.releases, fn release ->
+          release
+          |> Map.take([:version, :created_at, :updated_at])
+          |> Map.update!(:created_at, &to_iso8601/1)
+          |> Map.update!(:updated_at, &to_iso8601/1)
+          |> Map.put(:url, api_url(["packages", package.name, "releases", release.version]))
         end)
-      dict = Dict.put(dict, :releases, releases)
+      entity = Map.put(entity, :releases, releases)
     end
 
-    if package.downloads.loaded? do
-      downloads = Enum.into(package.downloads.all, %{})
-      dict = Dict.put(dict, :downloads, downloads)
+    if association_loaded?(package.downloads) do
+      downloads = Enum.into(package.downloads, %{})
+      entity = Map.put(entity, :downloads, downloads)
     end
 
-    dict
+    entity
   end
 end

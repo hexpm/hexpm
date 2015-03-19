@@ -9,13 +9,9 @@ defmodule HexWeb.Validation do
   Checks if a version is valid semver.
   """
   def valid_version(_attr, version, opts \\ []) do
-    allow_pre = Keyword.get(opts, :pre, true)
-
     case Version.parse(version) do
-      {:ok, %Version{pre: pre}} when allow_pre or pre == [] ->
+      {:ok, %Version{}} ->
         nil
-      {:ok, %Version{}} when not allow_pre ->
-        opts[:message] || "pre release version is not allowed"
       _ ->
         opts[:message] || "invalid version"
     end

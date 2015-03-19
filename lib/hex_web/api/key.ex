@@ -22,7 +22,7 @@ defmodule HexWeb.API.Key do
 
   def create(name, user) do
     now = Util.ecto_now
-    key = struct(user.keys, name: name, created_at: now, updated_at: now)
+    key = build(user, :keys) |> struct(name: name, created_at: now, updated_at: now)
 
     if errors = validate(key) do
       {:error, errors}
@@ -69,15 +69,20 @@ defmodule HexWeb.API.Key do
       :crypto.hmac(:sha256, app_secret, user_secret)
       |> Base.encode16(case: :lower)
 
-    user =
+    result =
       from(k in HexWeb.API.Key,
            where: k.secret_first == ^first,
-           join: u in k.user,
-           select: assoc(u, keys: k))
+           join: u in assoc(k, :user),
+           select: {u, k})
       |> HexWeb.Repo.one
 
-    if user && Util.secure_compare(List.first(user.keys.all).secret_second, second) do
-      user
+    case result do
+      {user, key} ->
+        if Util.secure_compare(key.secret_second, second) do
+          user
+        end
+      nil ->
+        nil
     end
   end
 
@@ -104,16 +109,14 @@ end
 
 defimpl HexWeb.Render, for: HexWeb.API.Key do
   import HexWeb.Util
-  alias HexWeb.API.Key
 
   def render(key) do
     entity =
-      Key.__schema__(:keywords, key)
-      |> Dict.take([:name, :created_at, :updated_at])
-      |> Dict.update!(:created_at, &to_iso8601/1)
-      |> Dict.update!(:updated_at, &to_iso8601/1)
-      |> Dict.put(:url, api_url(["keys", key.name]))
-      |> Enum.into(%{})
+      key
+      |> Map.take([:name, :created_at, :updated_at])
+      |> Map.update!(:created_at, &to_iso8601/1)
+      |> Map.update!(:updated_at, &to_iso8601/1)
+      |> Map.put(:url, api_url(["keys", key.name]))
 
     if secret = key.user_secret do
       Map.put(entity, :secret, secret)

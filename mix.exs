@@ -21,10 +21,10 @@ defmodule HexWeb.Mixfile do
   defp deps do
     [{:plug,      "~> 0.8"},
      {:cowboy,    "~> 1.0"},
-     {:ecto,      "~> 0.3.0"},
+     {:ecto,      "~> 0.4.0"},
+     {:postgrex,  ">= 0.0.0"},
      {:poison,    "~> 1.2"},
      {:porcelain, "~> 2.0"},
-     {:postgrex,  "~> 0.6"},
      {:earmark,   "~> 0.1"},
      {:gen_smtp,  "~> 0.9.0"},
      {:bcrypt,    github: "opscode/erlang-bcrypt"},

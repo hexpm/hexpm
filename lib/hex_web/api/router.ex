@@ -83,7 +83,7 @@ defmodule HexWeb.API.Router do
         files = Enum.map(files, fn {path, data} -> {List.to_string(path), data} end)
 
         if check_version_dirs?(files) do
-          package  = release.package.get
+          package  = release.package
           name     = package.name
           version  = release.version
 
@@ -207,9 +207,7 @@ defmodule HexWeb.API.Router do
         when_stale(conn, package, fn conn ->
           downloads = HexWeb.Stats.PackageDownload.package(package)
           releases = Release.all(package)
-          package = package
-                    |> Ecto.Associations.load(:releases, releases)
-                    |> Ecto.Associations.load(:downloads, downloads)
+          package = %{package | releases: releases, downloads: downloads}
 
           send_okay(conn, package, :public)
         end)
@@ -268,7 +266,7 @@ defmodule HexWeb.API.Router do
       if (package = Package.get(name)) && (release = Release.get(package, version)) do
         when_stale(conn, release, fn conn ->
           downloads = HexWeb.Stats.ReleaseDownload.release(release)
-          release = Ecto.Associations.load(release, :downloads, downloads)
+          release = %{release | downloads: downloads}
 
           send_okay(conn, release, :public)
         end)

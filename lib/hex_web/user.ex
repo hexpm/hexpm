@@ -202,11 +202,10 @@ defimpl HexWeb.Render, for: HexWeb.User do
   import HexWeb.Util
 
   def render(user) do
-    HexWeb.User.__schema__(:keywords, user)
-    |> Dict.take([:username, :email, :created_at, :updated_at])
-    |> Dict.update!(:created_at, &to_iso8601/1)
-    |> Dict.update!(:updated_at, &to_iso8601/1)
-    |> Dict.put(:url, api_url(["users", user.username]))
-    |> Enum.into(%{})
+    user
+    |> Map.take([:username, :email, :created_at, :updated_at])
+    |> Map.update!(:created_at, &to_iso8601/1)
+    |> Map.update!(:updated_at, &to_iso8601/1)
+    |> Map.put(:url, api_url(["users", user.username]))
   end
 end

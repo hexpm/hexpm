@@ -4,7 +4,7 @@ defmodule HexWeb.Stats.ReleaseDownload do
   alias HexWeb.Stats.ReleaseDownload
 
   schema "release_downloads", primary_key: false do
-    belongs_to :release, HexWeb.Release
+    belongs_to :release, HexWeb.Release, references: :id
     field :downloads, :integer
   end
 

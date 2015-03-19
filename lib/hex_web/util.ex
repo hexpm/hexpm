@@ -177,6 +177,11 @@ defmodule HexWeb.Util do
     result.status
   end
 
+  def association_loaded?(%Ecto.Associations.NotLoaded{}),
+    do: false
+  def association_loaded?(_),
+    do: true
+
   if Mix.env == :test do
     def task_start(fun), do: fun.()
   else

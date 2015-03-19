@@ -4,7 +4,7 @@ defmodule HexWeb.Stats.PackageDownload do
   alias HexWeb.Stats.PackageDownload
 
   schema "package_downloads", primary_key: false do
-    belongs_to :package, HexWeb.Package
+    belongs_to :package, HexWeb.Package, references: :id
     field :view, :string
     field :downloads, :integer
   end
@@ -19,7 +19,7 @@ defmodule HexWeb.Stats.PackageDownload do
   def top(view, count) do
     view = "#{view}"
     from(pd in PackageDownload,
-         join: p in pd.package,
+         join: p in assoc(pd, :package),
          where: not is_nil(pd.package_id) and pd.view == ^view,
          order_by: [desc: pd.downloads],
          limit: ^count,

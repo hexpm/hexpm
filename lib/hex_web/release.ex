@@ -21,9 +21,9 @@ defmodule HexWeb.Release do
 
   validatep validate(release),
     # app: present() and type(:string),
-    # version: present() and type(:string) and valid_version(pre: true)
+    # version: present() and type(:string) and valid_version()
     app: present(),
-    version: present() and valid_version(pre: true)
+    version: present() and valid_version()
 
   validatep validate_create(release),
     also: validate(),
@@ -31,12 +31,13 @@ defmodule HexWeb.Release do
 
   def create(package, version, app, requirements, checksum, created_at \\ nil) do
     now = Util.ecto_now
-    release = struct(package.releases,
-                     app: app,
-                     version: version,
-                     updated_at: now,
-                     checksum: String.upcase(checksum),
-                     created_at: created_at || now)
+    release =
+      build(package, :releases)
+      |> struct(app: app,
+                version: version,
+                updated_at: now,
+                checksum: String.upcase(checksum),
+                created_at: created_at || now)
 
     if errors = validate_create(release) do
       {:error, errors}
@@ -44,7 +45,7 @@ defmodule HexWeb.Release do
       HexWeb.Repo.transaction(fn ->
         HexWeb.Repo.insert(release)
         |> update_requirements(requirements)
-        |> Util.maybe(&Ecto.Associations.load(&1, :package, package))
+        |> Util.maybe(& %{&1 | package: package})
       end)
     end
   end
@@ -55,14 +56,14 @@ defmodule HexWeb.Release do
         {:error, errors}
       else
         HexWeb.Repo.transaction(fn ->
-          downloads = HexWeb.Repo.all(release.daily_downloads)
-          HexWeb.Repo.delete_all(release.daily_downloads)
-          HexWeb.Repo.delete_all(release.requirements)
+          downloads = HexWeb.Repo.all(assoc(release, :daily_downloads))
+          HexWeb.Repo.delete_all(assoc(release, :daily_downloads))
+          HexWeb.Repo.delete_all(assoc(release, :requirements))
           HexWeb.Repo.delete(release)
 
-          new_release =
-            create(release.package.get, release.version, app, requirements,
-                   checksum, release.created_at) |> elem(1)
+          {:ok, new_release} =
+            create(release.package, release.version, app, requirements,
+                   checksum, release.created_at)
 
           Enum.each(downloads, fn download ->
             download = %{download | release_id: new_release.id}
@@ -82,7 +83,7 @@ defmodule HexWeb.Release do
     force? = Keyword.get(opts, :force, false)
     if editable?(release) or force? do
       HexWeb.Repo.transaction(fn ->
-        HexWeb.Repo.delete_all(release.requirements)
+        HexWeb.Repo.delete_all(assoc(release, :requirements))
         HexWeb.Repo.delete(release)
       end)
 
@@ -107,7 +108,7 @@ defmodule HexWeb.Release do
 
     errors = Enum.filter_map(results, &match?({:error, _}, &1), &elem(&1, 1))
     if errors == [] do
-      Ecto.Associations.load(release, :requirements, requirements)
+      %{release | requirements: requirements}
     else
       HexWeb.Repo.rollback(%{deps: Enum.into(errors, %{})})
     end
@@ -155,8 +156,8 @@ defmodule HexWeb.Release do
   end
 
   def all(package) do
-    HexWeb.Repo.all(package.releases)
-    |> Enum.map(&Ecto.Associations.load(&1, :package, package))
+    HexWeb.Repo.all(assoc(package, :releases))
+    |> Enum.map(& %{&1 | package: package})
     |> sort
   end
 
@@ -166,15 +167,15 @@ defmodule HexWeb.Release do
   end
 
   def get(package, version) do
-    from(r in package.releases, where: r.version == ^version, limit: 1)
+    from(r in assoc(package, :releases), where: r.version == ^version, limit: 1)
     |> HexWeb.Repo.one
-    |> Util.maybe(&Ecto.Associations.load(&1, :package, package))
-    |> Util.maybe(&Ecto.Associations.load(&1, :requirements, requirements(&1)))
+    |> Util.maybe(& %{&1 | package: package})
+    |> Util.maybe(& %{&1 | requirements: requirements(&1)})
   end
 
   def requirements(release) do
-    from(req in release.requirements,
-         join: p in req.dependency,
+    from(req in assoc(release, :requirements),
+         join: p in assoc(req, :dependency),
          select: {p.name, req.app, req.requirement, req.optional})
     |> HexWeb.Repo.all
   end
@@ -187,14 +188,14 @@ defmodule HexWeb.Release do
   def recent(count) do
     from(r in HexWeb.Release,
          order_by: [desc: r.created_at],
-         join: p in r.package,
+         join: p in assoc(r, :package),
          limit: ^count,
          select: {r.version, p.name})
     |> HexWeb.Repo.all
   end
 
   def docs_url(release) do
-    HexWeb.Util.docs_url([release.package.get.name, release.version])
+    HexWeb.Util.docs_url([release.package.name, release.version])
   end
 
   defp add_requirement(release, deps, dep, app, req, optional) do
@@ -203,8 +204,11 @@ defmodule HexWeb.Release do
         {:error, {dep, "invalid requirement: #{inspect req}"}}
 
       id = deps[dep] ->
-        struct(release.requirements, requirement: req, app: app,
-               optional: optional, dependency_id: id)
+        build(release, :requirements)
+        |> struct(requirement: req,
+                  app: app,
+                  optional: optional,
+                  dependency_id: id)
         |> HexWeb.Repo.insert()
         :ok
 
@@ -222,30 +226,30 @@ defimpl HexWeb.Render, for: HexWeb.Release do
   import HexWeb.Util
 
   def render(release) do
-    package = release.package.get
+    package = release.package
 
-    reqs = for {name, app, req, optional} <- release.requirements.all, into: %{} do
+    reqs = for {name, app, req, optional} <- release.requirements, into: %{} do
       {name, %{app: app, requirement: req, optional: optional}}
     end
 
-    dict =
-      HexWeb.Release.__schema__(:keywords, release)
-      |> Dict.take([:app, :version, :has_docs, :created_at, :updated_at])
-      |> Dict.update!(:created_at, &to_iso8601/1)
-      |> Dict.update!(:updated_at, &to_iso8601/1)
-      |> Dict.put(:url, api_url(["packages", package.name, "releases", release.version]))
-      |> Dict.put(:package_url, api_url(["packages", package.name]))
-      |> Dict.put(:requirements, reqs)
+    entity =
+      release
+      |> Map.take([:app, :version, :has_docs, :created_at, :updated_at])
+      |> Map.update!(:created_at, &to_iso8601/1)
+      |> Map.update!(:updated_at, &to_iso8601/1)
+      |> Map.put(:url, api_url(["packages", package.name, "releases", release.version]))
+      |> Map.put(:package_url, api_url(["packages", package.name]))
+      |> Map.put(:requirements, reqs)
       |> Enum.into(%{})
 
     if release.has_docs do
-      dict = Dict.put(dict, :docs_url, HexWeb.Release.docs_url(release))
+      entity = Dict.put(entity, :docs_url, HexWeb.Release.docs_url(release))
     end
 
-    if release.downloads.loaded? do
-      dict = Dict.put(dict, :downloads, release.downloads.get)
+    if association_loaded?(release.downloads) do
+      entity = Dict.put(entity, :downloads, release.downloads)
     end
 
-    dict
+    entity
   end
 end

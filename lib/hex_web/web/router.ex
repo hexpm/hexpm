@@ -144,7 +144,7 @@ defmodule HexWeb.Web.Router do
     if current_release do
       release_downloads = ReleaseDownload.release(current_release)
       reqs = Release.requirements(current_release)
-      current_release = Ecto.Associations.load(current_release, :requirements, reqs)
+      current_release = %{current_release | requirements: reqs}
     end
 
     conn = assign_pun(conn, [package, releases, current_release, downloads,
