@@ -30,22 +30,26 @@ defmodule HexWeb.Package do
 
   validatep validate_create(package),
     also: validate(),
-    also: unique([:name], case_sensitive: false, on: HexWeb.Repo)
+    also: unique(:name, case_sensitive: false, on: HexWeb.Repo)
 
   validatep validate(package),
-    name: present() and type(:string) and has_format(~r"^[a-z]\w*$") and
-          not_member_of(@reserved_names),
+    # name: present() and type(:string) and has_format(~r"^[a-z]\w*$") and
+    name: present() and has_format(~r"^[a-z]\w*$") and not_member_of(@reserved_names),
     meta: validate_meta()
 
-  defp validate_meta(field, arg) do
-    errors =
-      Ecto.Validator.bin_dict(arg,
-        contributors: type({:array, :string}),
-        licenses:     type({:array, :string}),
-        links:        type({:dict, :string, :string}),
-        description:  type(:string))
+  # defp validate_meta(field, arg) do
+  #   errors =
+  #     Ecto.Validator.bin_dict(arg,
+  #       contributors: type({:array, :string}),
+  #       licenses:     type({:array, :string}),
+  #       links:        type({:dict, :string, :string}),
+  #       description:  type(:string))
 
-    if errors == [], do: [], else: [{field, errors}]
+  #   if errors == [], do: [], else: [{field, errors}]
+  # end
+
+  defp validate_meta(_field, _arg) do
+    nil
   end
 
   @meta_fields [:contributors, :description, :links, :licenses]
@@ -53,38 +57,36 @@ defmodule HexWeb.Package do
 
   def create(name, owner, meta) do
     now = Util.ecto_now
-    meta = Dict.take(meta, @meta_fields)
+    meta = Map.take(meta, @meta_fields)
     package = %HexWeb.Package{name: name, meta: meta, created_at: now,
                               updated_at: now}
 
-    case validate_create(package) do
-      [] ->
-        package = %{package | meta: Poison.encode!(package.meta)}
+    if errors = validate_create(package) do
+      {:error, errors}
+    else
+      package = %{package | meta: Poison.encode!(package.meta)}
 
-        {:ok, package} = HexWeb.Repo.transaction(fn ->
-          package = HexWeb.Repo.insert(package)
+      {:ok, package} = HexWeb.Repo.transaction(fn ->
+        package = HexWeb.Repo.insert(package)
 
-          %HexWeb.PackageOwner{package_id: package.id, owner_id: owner.id}
-          |> HexWeb.Repo.insert
-          package
-        end)
+        %HexWeb.PackageOwner{package_id: package.id, owner_id: owner.id}
+        |> HexWeb.Repo.insert
+        package
+      end)
 
-        {:ok, %{package | meta: meta}}
-      errors ->
-        {:error, errors_to_map(errors)}
+      {:ok, %{package | meta: meta}}
     end
   end
 
   def update(package, meta) do
-    meta = Dict.take(meta, @meta_fields)
+    meta = Map.take(meta, @meta_fields)
 
-    case validate(%{package | meta: meta}) do
-      [] ->
-        package = %{package | updated_at: Util.ecto_now, meta: Poison.encode!(meta)}
-        HexWeb.Repo.update(package)
-        {:ok, %{package | meta: meta}}
-      errors ->
-        {:error, errors_to_map(errors)}
+    if errors = validate(%{package | meta: meta}) do
+      {:error, errors}
+    else
+      package = %{package | updated_at: Util.ecto_now, meta: Poison.encode!(meta)}
+      HexWeb.Repo.update(package)
+      {:ok, %{package | meta: meta}}
     end
   end
 
@@ -149,7 +151,7 @@ defmodule HexWeb.Package do
   def recent(count) do
     from(p in HexWeb.Package,
         order_by: [desc: p.created_at],
-        limit: count,
+        limit: ^count,
         select: {p.name, p.created_at})
     |> HexWeb.Repo.all
   end
@@ -157,7 +159,7 @@ defmodule HexWeb.Package do
   def recent_full(count) do
     from(p in HexWeb.Package,
          order_by: [desc: p.created_at],
-         limit: count)
+         limit: ^count)
     |> HexWeb.Repo.all
     |> Enum.map(& %{&1 | meta: Poison.decode!(&1.meta)})
   end
@@ -185,10 +187,11 @@ defmodule HexWeb.Package do
 
     desc_search = String.replace(search, ~r"\s+", " & ")
 
-    query = from(var in query,
-         where: ilike(var.name, ^name_search) or
-                text_match(to_tsvector("english", json_access(var.meta, "description")),
-                           to_tsquery("english", ^desc_search)))
+    query =
+      from var in query,
+    where: ilike(var.name, ^name_search) or
+           fragment("to_tsvector('english', (?->'description')::text) @@ to_tsquery('english', ?)",
+                    var.meta, ^desc_search)
     if order? do
       query = from(var in query, order_by: ilike(var.name, ^name_search))
     end
@@ -198,13 +201,6 @@ defmodule HexWeb.Package do
 
   defp like_escape(string, escape) do
     String.replace(string, escape, "\\\\\\1")
-  end
-
-  defp errors_to_map(errors) do
-    if meta = errors[:meta] do
-      errors = Dict.put(errors, :meta, Enum.into(meta, %{}))
-    end
-    Enum.into(errors, %{})
   end
 end
 

@@ -20,12 +20,14 @@ defmodule HexWeb.Release do
   end
 
   validatep validate(release),
-    app: present() and type(:string),
-    version: present() and type(:string) and valid_version(pre: true)
+    # app: present() and type(:string),
+    # version: present() and type(:string) and valid_version(pre: true)
+    app: present(),
+    version: present() and valid_version(pre: true)
 
   validatep validate_create(release),
     also: validate(),
-    also: unique([:version], scope: [:package_id], on: HexWeb.Repo)
+    also: unique(:version, scope: [:package_id], on: HexWeb.Repo)
 
   def create(package, version, app, requirements, checksum, created_at \\ nil) do
     now = Util.ecto_now
@@ -36,41 +38,39 @@ defmodule HexWeb.Release do
                      checksum: String.upcase(checksum),
                      created_at: created_at || now)
 
-    case validate_create(release) do
-      [] ->
-        HexWeb.Repo.transaction(fn ->
-          HexWeb.Repo.insert(release)
-          |> update_requirements(requirements)
-          |> Util.maybe(&Ecto.Associations.load(&1, :package, package))
-        end)
-      errors ->
-        {:error, Enum.into(errors, %{})}
+    if errors = validate_create(release) do
+      {:error, errors}
+    else
+      HexWeb.Repo.transaction(fn ->
+        HexWeb.Repo.insert(release)
+        |> update_requirements(requirements)
+        |> Util.maybe(&Ecto.Associations.load(&1, :package, package))
+      end)
     end
   end
 
   def update(release, app, requirements, checksum) do
     if editable?(release) do
-      case validate(release) do
-        [] ->
-          HexWeb.Repo.transaction(fn ->
-            downloads = HexWeb.Repo.all(release.daily_downloads)
-            HexWeb.Repo.delete_all(release.daily_downloads)
-            HexWeb.Repo.delete_all(release.requirements)
-            HexWeb.Repo.delete(release)
+      if errors = validate(release) do
+        {:error, errors}
+      else
+        HexWeb.Repo.transaction(fn ->
+          downloads = HexWeb.Repo.all(release.daily_downloads)
+          HexWeb.Repo.delete_all(release.daily_downloads)
+          HexWeb.Repo.delete_all(release.requirements)
+          HexWeb.Repo.delete(release)
 
-            new_release =
-              create(release.package.get, release.version, app, requirements,
-                     checksum, release.created_at) |> elem(1)
+          new_release =
+            create(release.package.get, release.version, app, requirements,
+                   checksum, release.created_at) |> elem(1)
 
-            Enum.each(downloads, fn download ->
-              download = %{download | release_id: new_release.id}
-              HexWeb.Repo.insert(download)
-            end)
-
-            new_release
+          Enum.each(downloads, fn download ->
+            download = %{download | release_id: new_release.id}
+            HexWeb.Repo.insert(download)
           end)
-        errors ->
-          {:error, Enum.into(errors, %{})}
+
+          new_release
+        end)
       end
 
     else
@@ -118,7 +118,7 @@ defmodule HexWeb.Release do
 
     deps_query =
          from p in HexWeb.Package,
-       where: p.name in array(^deps, ^:string),
+       where: p.name in ^deps,
       select: {p.name, p.id}
     deps = HexWeb.Repo.all(deps_query) |> Enum.into(HashDict.new)
 
@@ -143,9 +143,9 @@ defmodule HexWeb.Release do
 
     query =
            from r in HexWeb.Release,
-         where: r.package_id in array(^package_ids, ^:integer),
+         where: r.package_id in ^package_ids,
       group_by: r.package_id,
-        select: {r.package_id, array_agg(r.version)}
+        select: {r.package_id, fragment("array_agg(?)", r.version)}
 
     HexWeb.Repo.all(query)
     |> Enum.map(fn {id, versions} ->
@@ -180,7 +180,7 @@ defmodule HexWeb.Release do
   end
 
   def count do
-    HexWeb.Repo.all(from(r in HexWeb.Release, select: count(r.id)))
+    HexWeb.Repo.all(from(r in HexWeb.Release, select: fragment("count(?)", r.id)))
     |> List.first
   end
 
@@ -188,7 +188,7 @@ defmodule HexWeb.Release do
     from(r in HexWeb.Release,
          order_by: [desc: r.created_at],
          join: p in r.package,
-         limit: count,
+         limit: ^count,
          select: {r.version, p.name})
     |> HexWeb.Repo.all
   end

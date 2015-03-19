@@ -1,7 +1,6 @@
 defmodule HexWeb.API.Key do
   use Ecto.Model
   import Ecto.Query, only: [from: 2]
-  import HexWeb.Validation
   alias HexWeb.Util
 
   schema "keys" do
@@ -14,35 +13,35 @@ defmodule HexWeb.API.Key do
 
     # Only used after key creation to hold the users key (not hashed)
     # the user key will never be retrievable after this
-    field :user_secret, :virtual
+    field :user_secret, :string, virtual: true
   end
 
   validatep validate(key),
-    name: present() and type(:string)
+    # name: present() and type(:string)
+    name: present()
 
   def create(name, user) do
     now = Util.ecto_now
     key = struct(user.keys, name: name, created_at: now, updated_at: now)
 
-    case validate(key) do
-      [] ->
-        names =
-          from(k in HexWeb.API.Key, where: k.user_id == ^user.id, select: k.name)
-          |> HexWeb.Repo.all
-          |> Enum.into(HashSet.new)
+    if errors = validate(key) do
+      {:error, errors}
+    else
+      names =
+        from(k in HexWeb.API.Key, where: k.user_id == ^user.id, select: k.name)
+        |> HexWeb.Repo.all
+        |> Enum.into(HashSet.new)
 
-        if Set.member?(names, name) do
-          name = unique_name(name, names)
-        end
+      if Set.member?(names, name) do
+        name = unique_name(name, names)
+      end
 
-        {user_secret, first, second} = gen_key()
-        key = %{key | name: name,
-                      user_secret: user_secret,
-                      secret_first: first,
-                      secret_second: second}
-        {:ok, HexWeb.Repo.insert(key)}
-      errors ->
-        {:error, errors}
+      {user_secret, first, second} = gen_key()
+      key = %{key | name: name,
+                    user_secret: user_secret,
+                    secret_first: first,
+                    secret_second: second}
+      {:ok, HexWeb.Repo.insert(key)}
     end
   end
 

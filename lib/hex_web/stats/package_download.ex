@@ -22,7 +22,7 @@ defmodule HexWeb.Stats.PackageDownload do
          join: p in pd.package,
          where: not is_nil(pd.package_id) and pd.view == ^view,
          order_by: [desc: pd.downloads],
-         limit: count,
+         limit: ^count,
          select: {p.name, pd.downloads})
     |> HexWeb.Repo.all
   end

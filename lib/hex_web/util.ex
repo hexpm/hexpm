@@ -145,8 +145,8 @@ defmodule HexWeb.Util do
   def paginate(query, page, count) do
     offset = (page - 1) * count
     from(var in query,
-         offset: offset,
-         limit: count)
+         offset: ^offset,
+         limit: ^count)
   end
 
   @doc """

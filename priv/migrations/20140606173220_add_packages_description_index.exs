@@ -19,6 +19,7 @@ defmodule HexWeb.Repo.Migrations.AddPackagesDescriptionIndex do
 
   def down do
     [ "DROP INDEX IF EXISTS packages_description_text",
-      "DROP FUNCTION IF EXISTS json_access(json, text)" ]
+      "DROP FUNCTION IF EXISTS json_access(json, text)",
+      "DROP FUNCTION IF EXISTS text_match(tsvector, tsquery)" ]
   end
 end

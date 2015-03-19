@@ -17,7 +17,7 @@ defmodule HexWeb.Registry do
 
   def set_working(registry) do
     from(r in HexWeb.Registry, where: r.id == ^registry.id)
-    |> HexWeb.Repo.update_all(state: "working", started_at: now())
+    |> HexWeb.Repo.update_all(state: "working", started_at: fragment("now()"))
   end
 
   def set_done(registry) do

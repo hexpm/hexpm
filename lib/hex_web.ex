@@ -2,6 +2,8 @@ defmodule HexWeb do
   use Application
 
   def start(_type, _args) do
+    :erlang.system_flag(:backtrace_depth, 16)
+
     opts  = [port: 4000, compress: true, linger: {true, 10}]
 
     if port = System.get_env("PORT") do

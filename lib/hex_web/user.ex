@@ -22,55 +22,59 @@ defmodule HexWeb.User do
   end
 
   validatep validate_create(user),
-    username: present() and type(:string) and has_format(~r"^[a-z0-9_\-\.!~\*'\(\)]+$", message: "illegal characters"),
-    also: unique([:username], on: HexWeb.Repo, case_sensitive: false),
+    # username: present() and type(:string) and has_format(~r"^[a-z0-9_\-\.!~\*'\(\)]+$", message: "illegal characters"),
+    username: present() and has_format(~r"^[a-z0-9_\-\.!~\*'\(\)]+$", message: "illegal characters"),
+    also: unique(:username, on: HexWeb.Repo, case_sensitive: false),
     also: validate_password(),
     also: validate_email()
 
   validatep validate_email(user),
-    email: present() and type(:string) and has_format(~r"^.+@.+\..+$"),
-    also: unique([:email], on: HexWeb.Repo)
+    # email: present() and type(:string) and has_format(~r"^.+@.+\..+$"),
+    email: present() and has_format(~r"^.+@.+\..+$"),
+    also: unique(:email, on: HexWeb.Repo)
 
   validatep validate_password(user),
-    password: present() and type(:string)
+    # password: present() and type(:string)
+    password: present()
 
   def create(username, email, password, confirmed? \\ false) do
     username = if is_binary(username), do: String.downcase(username), else: username
     email    = if is_binary(email),    do: String.downcase(email),    else: email
     now      = Util.ecto_now
-    user     = %HexWeb.User{username: username, email: email, password: password,
-      created_at: now, updated_at: now, confirmation_key: gen_key(),
-      confirmed: confirmed?}
-    case validate_create(user) do
-      [] ->
-        user = %{user | password: gen_password(password)}
-        send_confirmation_email(user)
-        {:ok, HexWeb.Repo.insert(user)}
-      errors ->
-        {:error, Enum.into(errors, %{})}
+
+    user = %HexWeb.User{username: username, email: email, password: password,
+                        created_at: now, updated_at: now, confirmation_key: gen_key(),
+                        confirmed: confirmed?}
+
+    if errors = validate_create(user) do
+      {:error, errors}
+    else
+      user = %{user | password: gen_password(password)}
+      send_confirmation_email(user)
+      {:ok, HexWeb.Repo.insert(user)}
     end
   end
 
   def update(user, email, password) do
-    errors = []
+    errors = %{}
 
     if email do
       user = %{user | email: String.downcase(email)}
-      errors = errors ++ validate_email(user)
+      errors = Map.merge(errors, validate_email(user) || %{})
     end
 
     if password do
       user = %{user | password: password}
-      errors = errors ++ validate_password(user)
+      Map.merge(errors, validate_password(user) || %{})
       user = %{user | password: gen_password(password)}
     end
-    case errors do
-      [] ->
-        user = %{user | updated_at: Util.ecto_now}
-        HexWeb.Repo.update(user)
-        {:ok, user}
-      errors ->
-        {:error, Enum.into(errors, %{})}
+
+    if errors != %{} do
+      {:error, errors}
+    else
+      user = %{user | updated_at: Util.ecto_now}
+      HexWeb.Repo.update(user)
+      {:ok, user}
     end
   end
 
@@ -123,7 +127,7 @@ defmodule HexWeb.User do
   def reset(user, password) do
     HexWeb.Repo.transaction(fn ->
       {:ok, result} = HexWeb.User.update(user, nil, password)
-      
+
       from(k in HexWeb.API.Key, where: k.user_id == ^result.id)
       |> HexWeb.Repo.delete_all
 
@@ -134,7 +138,7 @@ defmodule HexWeb.User do
 
   def get(username: username) do
     from(u in HexWeb.User,
-         where: downcase(u.username) == downcase(^username),
+         where: fragment("lower(?) = lower(?)", u.username, ^username),
          limit: 1)
     |> HexWeb.Repo.all
     |> List.first
@@ -142,7 +146,7 @@ defmodule HexWeb.User do
 
   def get(email: email) do
     from(u in HexWeb.User,
-         where: u.email == downcase(^email),
+         where: u.email == fragment("lower(?)", ^email),
          limit: 1)
     |> HexWeb.Repo.all
     |> List.first
