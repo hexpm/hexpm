@@ -120,6 +120,8 @@ defmodule HexWeb.API.Util do
         else
           send_unauthorized(conn)
         end
+      {:unconfirmed, _user} ->
+        send_unconfirmed(conn)
       :error ->
         send_unauthorized(conn)
     end
@@ -143,10 +145,13 @@ defmodule HexWeb.API.Util do
 
     case result do
       {:ok, user} ->
-        if allow_unconfirmed or user.confirmed do
-          {:ok, user}
-        else
-          :error
+        cond do
+          allow_unconfirmed or user.confirmed ->
+            {:ok, user}
+          !user.confirmed ->
+            {:unconfirmed, user}
+          true ->
+            :error
         end
       error ->
         error
@@ -184,6 +189,19 @@ defmodule HexWeb.API.Util do
     conn
     |> put_resp_header("www-authenticate", "Basic realm=hex")
     |> send_resp(401, "")
+  end
+
+  @doc """
+  Send an unconfirmed response.
+  """
+  @spec send_unconfirmed(Plug.Conn.t) :: Plug.Conn.t
+  def send_unconfirmed(conn) do
+    errors = %{user: "account needs to be confirmed"}
+    body = %{message: "Account Unconfirmed", errors: errors}
+
+    conn
+    |> put_resp_header("www-authenticate", "Basic realm=hex")
+    |> send_render(403, body)
   end
 
   @spec send_okay(Plug.Conn.t, term, :public | :private) :: Plug.Conn.t

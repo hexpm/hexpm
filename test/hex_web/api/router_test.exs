@@ -51,7 +51,8 @@ defmodule HexWeb.API.RouterTest do
     body = %{meta: %{}}
     conn = conn("PUT", "/api/packages/ecto", Poison.encode!(body), headers: headers)
     conn = Router.call(conn, [])
-    assert conn.status == 401
+    assert conn.status == 403
+    assert conn.resp_body =~ "Account Unconfirmed"
 
     conn = conn("GET", "/confirm?username=name&key=" <> user.confirmation_key)
     conn = Router.call(conn, [])
