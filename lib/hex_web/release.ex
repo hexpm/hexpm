@@ -1,17 +1,16 @@
 defmodule HexWeb.Release do
   use Ecto.Model
-
-  import Ecto.Query, only: [from: 2]
   import HexWeb.Validation
   alias HexWeb.Util
+  use HexWeb.Timestamps
 
   schema "releases" do
     field :app, :string
     field :version, :string
     field :checksum, :string
     field :has_docs, :boolean
-    field :created_at, :datetime
-    field :updated_at, :datetime
+    field :inserted_at, HexWeb.DateTime
+    field :updated_at, HexWeb.DateTime
 
     belongs_to :package, HexWeb.Package
     has_many :requirements, HexWeb.Requirement
@@ -29,15 +28,14 @@ defmodule HexWeb.Release do
     also: validate(),
     also: unique(:version, scope: [:package_id], on: HexWeb.Repo)
 
-  def create(package, version, app, requirements, checksum, created_at \\ nil) do
+  def create(package, version, app, requirements, checksum, inserted_at \\ nil) do
     now = Util.ecto_now
     release =
       build(package, :releases)
       |> struct(app: app,
                 version: version,
-                updated_at: now,
                 checksum: String.upcase(checksum),
-                created_at: created_at || now)
+                inserted_at: inserted_at || now)
 
     if errors = validate_create(release) do
       {:error, errors}
@@ -63,7 +61,7 @@ defmodule HexWeb.Release do
 
           {:ok, new_release} =
             create(release.package, release.version, app, requirements,
-                   checksum, release.created_at)
+                   checksum, release.inserted_at)
 
           Enum.each(downloads, fn download ->
             download = %{download | release_id: new_release.id}
@@ -75,7 +73,7 @@ defmodule HexWeb.Release do
       end
 
     else
-      {:error, %{created_at: "can only modify a release up to one hour after creation"}}
+      {:error, %{inserted_at: "can only modify a release up to one hour after creation"}}
     end
   end
 
@@ -89,17 +87,17 @@ defmodule HexWeb.Release do
 
       :ok
     else
-      {:error, %{created_at: "can only delete a release up to one hour after creation"}}
+      {:error, %{inserted_at: "can only delete a release up to one hour after creation"}}
     end
   end
 
   defp editable?(release) do
-    created_at = Ecto.DateTime.to_erl(release.created_at)
+    inserted_at = Ecto.DateTime.to_erl(release.inserted_at)
                  |> :calendar.datetime_to_gregorian_seconds
     now = :calendar.universal_time
           |> :calendar.datetime_to_gregorian_seconds
 
-    now - created_at <= 3600
+    now - inserted_at <= 3600
   end
 
   defp update_requirements(release, requirements) do
@@ -187,7 +185,7 @@ defmodule HexWeb.Release do
 
   def recent(count) do
     from(r in HexWeb.Release,
-         order_by: [desc: r.created_at],
+         order_by: [desc: r.inserted_at],
          join: p in assoc(r, :package),
          limit: ^count,
          select: {r.version, p.name})
@@ -234,8 +232,8 @@ defimpl HexWeb.Render, for: HexWeb.Release do
 
     entity =
       release
-      |> Map.take([:app, :version, :has_docs, :created_at, :updated_at])
-      |> Map.update!(:created_at, &to_iso8601/1)
+      |> Map.take([:app, :version, :has_docs, :inserted_at, :updated_at])
+      |> Map.update!(:inserted_at, &to_iso8601/1)
       |> Map.update!(:updated_at, &to_iso8601/1)
       |> Map.put(:url, api_url(["packages", package.name, "releases", release.version]))
       |> Map.put(:package_url, api_url(["packages", package.name]))

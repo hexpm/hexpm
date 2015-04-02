@@ -6,6 +6,11 @@ defmodule HexWeb.Util do
   import Ecto.Query, only: [from: 2]
   require Logger
 
+  def type_load!(type, term) do
+    {:ok, term} = Ecto.Type.load(type, term)
+    term
+  end
+
   def maybe(nil, _fun), do: nil
   def maybe(item, fun), do: fun.(item)
 

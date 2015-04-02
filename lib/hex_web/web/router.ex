@@ -2,7 +2,6 @@ defmodule HexWeb.Web.Router do
   use Plug.Router
   import Plug.Conn
   import HexWeb.Plug
-  import HexWeb.Web.HTML.Helpers
   alias HexWeb.Plug.NotFound
   alias HexWeb.Web.Templates
   alias HexWeb.Stats.PackageDownload

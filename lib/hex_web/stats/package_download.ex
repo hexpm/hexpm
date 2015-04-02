@@ -1,9 +1,10 @@
 defmodule HexWeb.Stats.PackageDownload do
   use Ecto.Model
-  import Ecto.Query, only: [from: 2]
   alias HexWeb.Stats.PackageDownload
 
-  schema "package_downloads", primary_key: false do
+  @primary_key false
+
+  schema "package_downloads" do
     belongs_to :package, HexWeb.Package, references: :id
     field :view, :string
     field :downloads, :integer

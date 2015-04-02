@@ -204,13 +204,13 @@ defmodule HexWeb.API.RouterTest do
     release = Release.get(postgrex, "0.0.1")
     assert release
 
-    release = put_in(release.created_at.year, 2000)
+    release = put_in(release.inserted_at.year, 2000)
     HexWeb.Repo.update(release)
 
     conn = conn("POST", "/api/packages/postgrex/releases", body, headers: headers)
     conn = Router.call(conn, [])
     assert conn.status == 422
-    assert %{"errors" => %{"created_at" => "can only modify a release up to one hour after creation"}} =
+    assert %{"errors" => %{"inserted_at" => "can only modify a release up to one hour after creation"}} =
            Poison.decode!(conn.resp_body)
   end
 
@@ -224,16 +224,16 @@ defmodule HexWeb.API.RouterTest do
 
     postgrex = Package.get("postgrex")
     release =  Release.get(postgrex, "0.0.1")
-    release = put_in(release.created_at.year, 2000)
+    release = put_in(release.inserted_at.year, 2000)
     HexWeb.Repo.update(release)
 
     conn = conn("POST", "/api/packages/postgrex/releases", body, headers: headers)
     conn = Router.call(conn, [])
     assert conn.status == 422
-    assert %{"errors" => %{"created_at" => "can only modify a release up to one hour after creation"}} =
+    assert %{"errors" => %{"inserted_at" => "can only modify a release up to one hour after creation"}} =
            Poison.decode!(conn.resp_body)
 
-    release = put_in(release.created_at.year, 2030)
+    release = put_in(release.inserted_at.year, 2030)
     HexWeb.Repo.update(release)
 
     headers = [ {"authorization", "Basic " <> :base64.encode("eric:eric")}]
@@ -286,9 +286,6 @@ defmodule HexWeb.API.RouterTest do
     conn = conn("POST", "/api/packages/postgrex/releases", body, headers: headers)
     conn = Router.call(conn, [])
     assert conn.status == 201
-
-    # async rebuild
-    :timer.sleep(100)
 
     refute %File.Stat{mtime: {{2000,1,1,},{1,1,1}}} = File.stat!(path)
   end

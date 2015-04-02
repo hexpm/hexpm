@@ -12,8 +12,8 @@ defmodule HexWeb.Mixfile do
   end
 
   def application do
-    [applications: [:plug, :cowboy, :ecto, :postgrex, :poison, :bcrypt, :mini_s3,
-                    :logger, :porcelain],
+    [applications: [:logger, :plug, :cowboy, :ecto, :postgrex, :poison, :bcrypt, :mini_s3,
+                    :porcelain],
      mod: {HexWeb, []},
      env: []]
   end
@@ -21,7 +21,7 @@ defmodule HexWeb.Mixfile do
   defp deps do
     [{:plug,      "~> 0.8"},
      {:cowboy,    "~> 1.0"},
-     {:ecto,      "~> 0.4.0"},
+     {:ecto,      "~> 0.5.0"},
      {:postgrex,  ">= 0.0.0"},
      {:poison,    "~> 1.2"},
      {:porcelain, "~> 2.0"},
@@ -42,7 +42,7 @@ defmodule HexWeb.Mixfile do
   end
 
   defp test(args) do
-    env(:test, :warn, fn ->
+    env([env: :test, level: :warn], fn ->
       Mix.Task.run "ecto.drop", ["HexWeb.Repo"]
       Mix.Task.run "ecto.create", ["HexWeb.Repo"]
       Mix.Task.run "ecto.migrate", ["HexWeb.Repo"]
@@ -68,22 +68,33 @@ defmodule HexWeb.Mixfile do
   end
 
   defp ecto_migrate(args) do
-    Mix.Task.run "ecto.migrate", ["--no-start" | args]
+    env([level: :warn], fn ->
+      # Workaround for task bug
+      Mix.Task.run "app.start", ["--no-start"]
+      Mix.Task.run "ecto.migrate", args
+    end)
   end
 
   defp ecto_rollback(args) do
-    Mix.Task.run "ecto.rollback", ["--no-start" | args]
+    env([level: :warn], fn ->
+      # Workaround for task bug
+      Mix.Task.run "app.start", ["--no-start"]
+      Mix.Task.run "ecto.rollback", args
+    end)
   end
 
-  defp env(env, level, fun) do
+  defp env(opts, fun) do
     old_level = Logger.level
     old_env = Mix.env
-    Logger.configure(level: level)
-    Mix.env(env)
+    Logger.configure(level: opts[:level])
+    if opts[:env], do: Mix.env(opts[:env])
 
     try do
       fun.()
     after
+      # If application start fails we need to restart logger because app.start
+      # stops it
+      {:ok, _} = Application.ensure_all_started(:logger)
       Logger.configure(level: old_level)
       Mix.env(old_env)
     end

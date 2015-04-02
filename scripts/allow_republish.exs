@@ -14,5 +14,5 @@ unless release do
   System.halt(1)
 end
 
-release = %{release | created_at: HexWeb.Util.ecto_now}
+release = %{release | inserted_at: HexWeb.Util.ecto_now}
 :ok = HexWeb.Repo.update(release)

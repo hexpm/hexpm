@@ -1,15 +1,15 @@
 defmodule HexWeb.API.Key do
   use Ecto.Model
-  import Ecto.Query, only: [from: 2]
   alias HexWeb.Util
+  use HexWeb.Timestamps
 
   schema "keys" do
     belongs_to :user, HexWeb.User
     field :name, :string
     field :secret_first, :string
     field :secret_second, :string
-    field :created_at, :datetime
-    field :updated_at, :datetime
+    field :inserted_at, HexWeb.DateTime
+    field :updated_at, HexWeb.DateTime
 
     # Only used after key creation to hold the users key (not hashed)
     # the user key will never be retrievable after this
@@ -21,8 +21,7 @@ defmodule HexWeb.API.Key do
     name: present()
 
   def create(name, user) do
-    now = Util.ecto_now
-    key = build(user, :keys) |> struct(name: name, created_at: now, updated_at: now)
+    key = build(user, :keys) |> struct(name: name)
 
     if errors = validate(key) do
       {:error, errors}
@@ -113,8 +112,8 @@ defimpl HexWeb.Render, for: HexWeb.API.Key do
   def render(key) do
     entity =
       key
-      |> Map.take([:name, :created_at, :updated_at])
-      |> Map.update!(:created_at, &to_iso8601/1)
+      |> Map.take([:name, :inserted_at, :updated_at])
+      |> Map.update!(:inserted_at, &to_iso8601/1)
       |> Map.update!(:updated_at, &to_iso8601/1)
       |> Map.put(:url, api_url(["keys", key.name]))
 

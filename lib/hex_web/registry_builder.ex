@@ -112,7 +112,7 @@ defmodule HexWeb.RegistryBuilder do
     # Has someone already pushed data newer than we were planning push?
     latest_started = HexWeb.Registry.latest_started
 
-    if latest_started && time_diff(latest_started, handle.created_at) > 0 do
+    if latest_started && time_diff(latest_started, handle.inserted_at) > 0 do
       HexWeb.Registry.set_done(handle)
       true
     else

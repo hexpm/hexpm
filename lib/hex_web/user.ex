@@ -1,9 +1,8 @@
 defmodule HexWeb.User do
   use Ecto.Model
-
-  import Ecto.Query, only: [from: 2]
   alias HexWeb.Util
   import HexWeb.Validation
+  use HexWeb.Timestamps
 
   schema "users" do
     field :username, :string
@@ -11,11 +10,11 @@ defmodule HexWeb.User do
     field :password, :string
     field :confirmation_key, :string
     field :confirmed, :boolean
-    field :created_at, :datetime
-    field :updated_at, :datetime
+    field :inserted_at, HexWeb.DateTime
+    field :updated_at, HexWeb.DateTime
 
     field :reset_key, :string
-    field :reset_expiry, :datetime
+    field :reset_expiry, HexWeb.DateTime
 
     has_many :package_owners, HexWeb.PackageOwner, foreign_key: :owner_id
     has_many :keys, HexWeb.API.Key
@@ -40,11 +39,9 @@ defmodule HexWeb.User do
   def create(username, email, password, confirmed? \\ false) do
     username = if is_binary(username), do: String.downcase(username), else: username
     email    = if is_binary(email),    do: String.downcase(email),    else: email
-    now      = Util.ecto_now
 
     user = %HexWeb.User{username: username, email: email, password: password,
-                        created_at: now, updated_at: now, confirmation_key: gen_key(),
-                        confirmed: confirmed?}
+                        confirmation_key: gen_key(), confirmed: confirmed?}
 
     if errors = validate_create(user) do
       {:error, errors}
@@ -72,7 +69,6 @@ defmodule HexWeb.User do
     if errors != %{} do
       {:error, errors}
     else
-      user = %{user | updated_at: Util.ecto_now}
       HexWeb.Repo.update(user)
       {:ok, user}
     end
@@ -93,7 +89,7 @@ defmodule HexWeb.User do
   end
 
   def confirm(user) do
-    %{user | confirmed: true, updated_at: Util.ecto_now}
+    %{user | confirmed: true}
     |> HexWeb.Repo.update
   end
 
@@ -101,7 +97,7 @@ defmodule HexWeb.User do
     key = gen_key()
     now = Util.ecto_now
 
-    %{user | reset_key: key, reset_expiry: now, updated_at: now}
+    %{user | reset_key: key, reset_expiry: now}
     |> HexWeb.Repo.update
 
     send_reset_email(user, key)
@@ -131,7 +127,7 @@ defmodule HexWeb.User do
       from(k in HexWeb.API.Key, where: k.user_id == ^result.id)
       |> HexWeb.Repo.delete_all
 
-      %{result | reset_key: nil, reset_expiry: nil, updated_at: Util.ecto_now}
+      %{result | reset_key: nil, reset_expiry: nil}
       |> HexWeb.Repo.update
     end)
   end
@@ -203,8 +199,8 @@ defimpl HexWeb.Render, for: HexWeb.User do
 
   def render(user) do
     user
-    |> Map.take([:username, :email, :created_at, :updated_at])
-    |> Map.update!(:created_at, &to_iso8601/1)
+    |> Map.take([:username, :email, :inserted_at, :updated_at])
+    |> Map.update!(:inserted_at, &to_iso8601/1)
     |> Map.update!(:updated_at, &to_iso8601/1)
     |> Map.put(:url, api_url(["users", user.username]))
   end

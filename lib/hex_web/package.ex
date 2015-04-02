@@ -1,18 +1,17 @@
 defmodule HexWeb.Package do
   use Ecto.Model
-
-  import Ecto.Query, only: [from: 2]
   import HexWeb.Validation
   require Ecto.Validator
   alias HexWeb.Util
+  use HexWeb.Timestamps
 
   schema "packages" do
     field :name, :string
     has_many :owners, HexWeb.PackageOwner
     field :meta, :string
     has_many :releases, HexWeb.Release
-    field :created_at, :datetime
-    field :updated_at, :datetime
+    field :inserted_at, HexWeb.DateTime
+    field :updated_at, HexWeb.DateTime
     has_many :downloads, HexWeb.Stats.PackageDownload
   end
 
@@ -56,10 +55,8 @@ defmodule HexWeb.Package do
   @meta_fields @meta_fields ++ Enum.map(@meta_fields, &Atom.to_string/1)
 
   def create(name, owner, meta) do
-    now = Util.ecto_now
     meta = Map.take(meta, @meta_fields)
-    package = %HexWeb.Package{name: name, meta: meta, created_at: now,
-                              updated_at: now}
+    package = %HexWeb.Package{name: name, meta: meta}
 
     if errors = validate_create(package) do
       {:error, errors}
@@ -84,7 +81,7 @@ defmodule HexWeb.Package do
     if errors = validate(%{package | meta: meta}) do
       {:error, errors}
     else
-      package = %{package | updated_at: Util.ecto_now, meta: Poison.encode!(meta)}
+      package = %{package | meta: Poison.encode!(meta)}
       HexWeb.Repo.update(package)
       {:ok, %{package | meta: meta}}
     end
@@ -150,15 +147,17 @@ defmodule HexWeb.Package do
 
   def recent(count) do
     from(p in HexWeb.Package,
-        order_by: [desc: p.created_at],
-        limit: ^count,
-        select: {p.name, p.created_at})
+         order_by: [desc: p.inserted_at],
+         limit: ^count,
+         select: {p.name, p.inserted_at})
     |> HexWeb.Repo.all
+    # TODO: Work around for bug in ecto 0.5.1, just select inserted_at instead
+    |> Enum.map(fn {name, inserted_at} -> {name, HexWeb.Util.type_load!(HexWeb.DateTime, inserted_at)} end)
   end
 
   def recent_full(count) do
     from(p in HexWeb.Package,
-         order_by: [desc: p.created_at],
+         order_by: [desc: p.inserted_at],
          limit: ^count)
     |> HexWeb.Repo.all
     |> Enum.map(& %{&1 | meta: Poison.decode!(&1.meta)})
@@ -210,8 +209,8 @@ defimpl HexWeb.Render, for: HexWeb.Package do
   def render(package) do
     entity =
       package
-      |> Map.take([:name, :meta, :created_at, :updated_at])
-      |> Map.update!(:created_at, &to_iso8601/1)
+      |> Map.take([:name, :meta, :inserted_at, :updated_at])
+      |> Map.update!(:inserted_at, &to_iso8601/1)
       |> Map.update!(:updated_at, &to_iso8601/1)
       |> Map.put(:url, api_url(["packages", package.name]))
 
@@ -219,8 +218,8 @@ defimpl HexWeb.Render, for: HexWeb.Package do
       releases =
         Enum.map(package.releases, fn release ->
           release
-          |> Map.take([:version, :created_at, :updated_at])
-          |> Map.update!(:created_at, &to_iso8601/1)
+          |> Map.take([:version, :inserted_at, :updated_at])
+          |> Map.update!(:inserted_at, &to_iso8601/1)
           |> Map.update!(:updated_at, &to_iso8601/1)
           |> Map.put(:url, api_url(["packages", package.name, "releases", release.version]))
         end)

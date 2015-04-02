@@ -1,11 +1,9 @@
 defmodule HexWeb.Repo do
-  use Ecto.Repo, adapter: Ecto.Adapters.Postgres, env: Mix.env
-  require Logger
+  use Ecto.Repo,
+    adapter: Ecto.Adapters.Postgres,
+    otp_app: :hex_web
 
-  def conf(_env) do
-    {url, opts} = Application.get_env(:hex_web, :database) |> Dict.pop(:url)
-    parse_url(url) ++ opts
-  end
+  require Logger
 
   def priv,
     do: :code.priv_dir(:hex_web)

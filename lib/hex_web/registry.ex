@@ -1,18 +1,28 @@
 defmodule HexWeb.Registry do
   use Ecto.Model
 
-  import Ecto.Query, only: [from: 2]
+  alias Ecto.Adapters.Postgres
   require HexWeb.Repo
 
   schema "registries" do
     field :state, :string
-    field :created_at, :datetime
-    field :started_at, :datetime
+    field :inserted_at, HexWeb.DateTime
+    # TODO: Should be an incrementing counter (sequence)
+    field :started_at, HexWeb.DateTime
   end
 
+  @insert_query "INSERT INTO registries (state) VALUES ('waiting') RETURNING *"
+
   def create() do
-    registry = %HexWeb.Registry{state: "waiting"}
-    {:ok, HexWeb.Repo.insert(registry)}
+    # TODO: Workaround while waiting for read_after_writes
+    %Postgrex.Result{rows: [{id, inserted_at, started_at, state}]} =
+      Postgres.query(HexWeb.Repo, @insert_query, [])
+
+    {:ok, %HexWeb.Registry{
+            id: id,
+            inserted_at: HexWeb.Util.type_load!(HexWeb.DateTime, inserted_at),
+            started_at: started_at,
+            state: state}}
   end
 
   def set_working(registry) do
@@ -32,5 +42,7 @@ defmodule HexWeb.Registry do
          limit: 1,
          select: r.started_at)
     |> HexWeb.Repo.one
+    # TODO: Work around for bug in ecto 0.5.1, just select started_at instead
+    |> HexWeb.Util.maybe(&HexWeb.Util.type_load!(HexWeb.DateTime, &1))
   end
 end
