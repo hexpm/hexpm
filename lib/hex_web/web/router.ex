@@ -102,15 +102,9 @@ defmodule HexWeb.Web.Router do
     packages_per_page = @packages
     search            = conn.params["search"] |> safe_query
 
-    if not present?(search) or String.length(search) >= 3 do
-      package_count = Package.count(search)
-      page          = safe_page(safe_int(conn.params["page"]) || 1, package_count)
-      packages      = fetch_packages(page, packages_per_page, search)
-    else
-      package_count = 0
-      page          = 1
-      packages      = []
-    end
+    package_count = Package.count(search)
+    page          = safe_page(safe_int(conn.params["page"]) || 1, package_count)
+    packages      = fetch_packages(page, packages_per_page, search)
 
     conn = assign_pun(conn, [search, page, packages, package_count, active,
                              title, packages_per_page])

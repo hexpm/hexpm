@@ -1,4 +1,4 @@
-<%= if present?(@search) && @package_count == 0 do %>
+<%= if @package_count == 0 do %>
   <p>No packages found</p>
 <% else %>
   <table class="table table-striped packages">

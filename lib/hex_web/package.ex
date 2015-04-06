@@ -178,7 +178,11 @@ defmodule HexWeb.Package do
   end
 
   defp search(query, search, order?) do
-    name_search = "%" <> like_escape(search, ~r"(%|_)") <> "%"
+    name_search = like_escape(search, ~r"(%|_)")
+    if String.length(search) >= 3 do
+      name_search = "%" <> name_search <> "%"
+    end
+
     desc_search = String.replace(search, ~r"\s+", " & ")
 
     query = from(var in query,
