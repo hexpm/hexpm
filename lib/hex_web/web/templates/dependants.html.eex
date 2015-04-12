@@ -1,0 +1,26 @@
+<div class="page-header" style="margin-top: 0;">
+	<h2>
+		Packages depending on <a href="/packages/<%= @package.name %>"><%= @package.name %></a>
+		<%= if @release do %>
+			<small><%= @release.version %></small>
+		<% end %>
+	</h2>
+</div>
+
+<%= if length(@required_by) <= 0 do %>
+	<p>No dependants found</p>
+<% else %>
+	<table class="table table-striped packages">
+		<tbody>
+			<%= for package <- @required_by do %>
+				<tr>
+					<td style="width: 10em;">
+						<a href="/packages/<%= package %>">
+							<span class="glyphicon glyphicon-folder-open" style="padding-right: 0.5em;"></span><%= package %>
+						</a>
+					</td>
+				</tr>
+			<% end %>
+		</tbody>
+	</table>
+<% end %>

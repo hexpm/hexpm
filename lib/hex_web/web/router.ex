@@ -131,6 +131,20 @@ defmodule HexWeb.Web.Router do
     end || raise NotFound
   end
 
+  get "/packages/:name/:version/dependants" do
+    if package = Package.get(name) do
+      releases = Release.all(package)
+      if release = Enum.find(releases, &(&1.version == version)) do
+        active    = :packages
+        title     = package.name
+        {required_by, required_by_more} = Package.required_by(release, 1000)
+        conn = assign_pun(conn, [active, title, package, release, required_by, required_by_more])
+        send_page(conn, :dependants)
+      end
+    end || raise NotFound
+
+  end
+
   match _ do
     _conn = conn
     raise NotFound
@@ -144,11 +158,12 @@ defmodule HexWeb.Web.Router do
     if current_release do
       release_downloads = ReleaseDownload.release(current_release)
       reqs = Release.requirements(current_release)
+      {required_by, required_by_more} = Package.required_by(current_release, 20)
       current_release = Ecto.Associations.load(current_release, :requirements, reqs)
     end
 
     conn = assign_pun(conn, [package, releases, current_release, downloads,
-                             release_downloads, active, title])
+                             release_downloads, active, title, required_by, required_by_more])
     send_page(conn, :package)
   end
 
