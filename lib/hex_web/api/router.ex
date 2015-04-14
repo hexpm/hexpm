@@ -211,14 +211,16 @@ defmodule HexWeb.API.Router do
     end
 
     put "packages/:name" do
+      params = Map.put(conn.params, "name", name)
+
       if package = Package.get(name) do
         with_authorized(conn, [], &Package.owner?(package, &1), fn _ ->
-          result = Package.update(package, conn.params["meta"])
+          result = Package.update(package, params)
           send_update_resp(conn, result, :public)
         end)
       else
         with_authorized(conn, [], fn user ->
-          result = Package.create(name, user, conn.params["meta"])
+          result = Package.create(user, params)
           send_creation_resp(conn, result, :public, api_url(["packages", name]))
         end)
       end

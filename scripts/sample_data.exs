@@ -35,23 +35,27 @@ HexWeb.Repo.transaction(fn ->
 
   unless eric == nil do
     {:ok, decimal} =
-      Package.create("decimal", eric, %{
-        contributors: ["Eric Meadows-Jönsson"],
-        licenses: ["Apache 2.0", "MIT"],
-        links: %{"Github" => "http://example.com/github",
-                 "Documentation" => "http://example.com/documentation"},
-        description: "Arbitrary precision decimal arithmetic for Elixir"})
+      Package.create(eric, %{
+        name: "decimal",
+        meta: %{
+          contributors: ["Eric Meadows-Jönsson"],
+          licenses: ["Apache 2.0", "MIT"],
+          links: %{"Github" => "http://example.com/github",
+                   "Documentation" => "http://example.com/documentation"},
+          description: "Arbitrary precision decimal arithmetic for Elixir"}})
 
     {:ok, _} = Release.create(decimal, %{version: "0.0.1", app: "decimal", requirements: %{}}, SampleData.checksum("decimal 0.0.1"))
     {:ok, _} = Release.create(decimal, %{version: "0.0.2", app: "decimal", requirements: %{}}, SampleData.checksum("decimal 0.0.2"))
     {:ok, _} = Release.create(decimal, %{version: "0.1.0", app: "decimal", requirements: %{}}, SampleData.checksum("decimal 0.1.0"))
 
     {:ok, postgrex} =
-      Package.create("postgrex", eric, %{
-        contributors: ["Eric Meadows-Jönsson", "José Valim"],
-        licenses: ["Apache 2.0"],
-        links: %{"Github" => "http://example.com/github"},
-        description: lorem})
+      Package.create(eric, %{
+        name: "postgrex",
+        meta: %{
+          contributors: ["Eric Meadows-Jönsson", "José Valim"],
+          licenses: ["Apache 2.0"],
+          links: %{"Github" => "http://example.com/github"},
+          description: lorem}})
 
     {:ok, _} = Release.create(postgrex, %{version: "0.0.1", app: "postgrex", requirements: %{}}, SampleData.checksum("postgrex 0.0.1"))
     {:ok, _} = Release.create(postgrex, %{version: "0.0.2", app: "postgrex", requirements: %{decimal: "~> 0.0.1"}}, SampleData.checksum("postgrex 0.0.2"))
@@ -60,11 +64,13 @@ HexWeb.Repo.transaction(fn ->
 
   unless jose == nil do
     {:ok, ecto} =
-      Package.create("ecto", jose, %{
-        contributors: ["Eric Meadows-Jönsson", "José Valim"],
-        licenses: [],
-        links: %{"Github" => "http://example.com/github"},
-        description: lorem})
+      Package.create(jose, %{
+        name: "ecto",
+        meta: %{
+          contributors: ["Eric Meadows-Jönsson", "José Valim"],
+          licenses: [],
+          links: %{"Github" => "http://example.com/github"},
+          description: lorem}})
 
     {:ok, _}   = Release.create(ecto, %{version: "0.0.1", app: "ecto", requirements: %{}}, SampleData.checksum("ecto 0.0.1"))
     {:ok, _}   = Release.create(ecto, %{version: "0.0.2", app: "ecto", requirements: %{postgrex: "~> 0.0.1"}}, SampleData.checksum("ecto 0.0.2"))
@@ -74,7 +80,7 @@ HexWeb.Repo.transaction(fn ->
     {:ok, _}   = Release.create(ecto, %{version: "0.1.3", app: "ecto", requirements: %{postgrex: "0.1.0", decimal: "0.0.2"}}, SampleData.checksum("ecto 0.1.3"))
     {:ok, rel} = Release.create(ecto, %{version: "0.2.0", app: "ecto", requirements: %{postgrex: "~> 0.1.0", decimal: "~> 0.1.0"}}, SampleData.checksum("ecto 0.2.0"))
 
-    yesterday = HexWeb.Util.yesterday |> Ecto.Date.from_erl
+    yesterday = Ecto.Type.load!(Ecto.Date, HexWeb.Util.yesterday)
     %Download{release_id: rel.id, downloads: 42, day: yesterday}
     |> HexWeb.Repo.insert
   end

@@ -11,7 +11,7 @@ defmodule HexWeb.Stats.PackageDownload do
   end
 
   def refresh do
-    Ecto.Adapters.Postgres.query(
+    Ecto.Adapters.SQL.query(
        HexWeb.Repo,
        "REFRESH MATERIALIZED VIEW package_downloads",
        [])

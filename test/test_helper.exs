@@ -3,16 +3,15 @@ ExUnit.start exclude: [:integration]
 File.rm_rf!("tmp")
 File.mkdir_p!("tmp")
 
+alias Ecto.Adapters.SQL
+
+SQL.begin_test_transaction(HexWeb.Repo)
+
 defmodule HexWebTest.Case do
   use ExUnit.CaseTemplate
 
-  alias Ecto.Adapters.Postgres
-
   setup do
-    Postgres.begin_test_transaction(HexWeb.Repo)
-    on_exit fn ->
-      Postgres.rollback_test_transaction(HexWeb.Repo)
-    end
+    SQL.restart_test_transaction(HexWeb.Repo)
   end
 
   using do

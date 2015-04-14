@@ -7,9 +7,9 @@ defmodule HexWeb.ReleaseTest do
 
   setup do
     {:ok, user} = User.create(%{username: "eric", email: "eric@mail.com", password: "eric"}, true)
-    {:ok, _} = Package.create("ecto", user, %{})
-    {:ok, _} = Package.create("postgrex", user, %{})
-    {:ok, _} = Package.create("decimal", user, %{})
+    {:ok, _} = Package.create(user, %{name: "ecto", meta: %{}})
+    {:ok, _} = Package.create(user, %{name: "postgrex", meta: %{}})
+    {:ok, _} = Package.create(user, %{name: "decimal", meta: %{}})
     :ok
   end
 

@@ -3,15 +3,13 @@ defmodule HexWeb.Release do
   import HexWeb.Validation
   import Ecto.Changeset, except: [validate_unique: 3]
   alias HexWeb.Util
-  use HexWeb.Timestamps
 
   schema "releases" do
     field :app, :string
     field :version, HexWeb.Version
     field :checksum, :string
     field :has_docs, :boolean
-    field :inserted_at, HexWeb.DateTime
-    field :updated_at, HexWeb.DateTime
+    timestamps
 
     belongs_to :package, HexWeb.Package
     has_many :requirements, HexWeb.Requirement
@@ -28,8 +26,7 @@ defmodule HexWeb.Release do
   end
 
   defp changeset(release, :update, params) do
-    Util.params(params)
-    |> cast(release, ~w(app version), [])
+    cast(params, release, ~w(app version), [])
     |> validate_version(:version)
   end
 
@@ -101,7 +98,7 @@ defmodule HexWeb.Release do
 
   defp editable?(release) do
     inserted_at =
-      Ecto.DateTime.to_erl(release.inserted_at)
+      Ecto.Type.dump!(Ecto.DateTime, release.inserted_at)
       |> :calendar.datetime_to_gregorian_seconds
 
     now =

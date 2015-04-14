@@ -3,15 +3,14 @@ defmodule HexWeb.Package do
   import HexWeb.Validation
   import Ecto.Changeset, except: [validate_unique: 3]
   alias HexWeb.Util
-  use HexWeb.Timestamps
 
   schema "packages" do
     field :name, :string
-    has_many :owners, HexWeb.PackageOwner
     field :meta, HexWeb.JSON
+    timestamps
+
     has_many :releases, HexWeb.Release
-    field :inserted_at, HexWeb.DateTime
-    field :updated_at, HexWeb.DateTime
+    has_many :owners, HexWeb.PackageOwner
     has_many :downloads, HexWeb.Stats.PackageDownload
   end
 
@@ -34,7 +33,7 @@ defmodule HexWeb.Package do
   after_delete :delete_owners
 
   defp validate_meta(changeset, field) do
-    validate_change(changeset, field, fn meta ->
+    validate_change(changeset, field, fn _field, meta ->
       type(field, Map.get(meta, "contributors"), {:array, :string}) ++
       type(field, Map.get(meta, "licenses"),     {:array, :string}) ++
       type(field, Map.get(meta, "links"),        {:dict, :string, :string}) ++
@@ -49,16 +48,15 @@ defmodule HexWeb.Package do
   end
 
   defp changeset(package, :update, params) do
-    Util.params(params)
-    |> cast(package, ~w(name meta), [])
+    cast(params, package, ~w(name meta), [])
     |> update_change(:meta, &Map.take(&1, @meta_fields))
     |> validate_format(:name, ~r"^[a-z]\w*$")
     |> validate_exclusion(:name, @reserved_names)
     |> validate_meta(:meta)
   end
 
-  def create(name, owner, meta) do
-    changeset = changeset(%HexWeb.Package{}, :create, name: name, meta: meta)
+  def create(owner, params) do
+    changeset = changeset(%HexWeb.Package{}, :create, params)
 
     if changeset.valid? do
       {:ok, package} =
@@ -77,8 +75,8 @@ defmodule HexWeb.Package do
     end
   end
 
-  def update(package, meta) do
-    changeset = changeset(package, :update, meta: meta)
+  def update(package, params) do
+    changeset = changeset(package, :update, params)
 
     if changeset.valid? do
       {:ok, HexWeb.Repo.update(changeset)}
@@ -141,8 +139,6 @@ defmodule HexWeb.Package do
          limit: ^count,
          select: {p.name, p.inserted_at})
     |> HexWeb.Repo.all
-    # TODO: Work around for bug in ecto 0.5.1, just select inserted_at instead
-    |> Enum.map(fn {name, inserted_at} -> {name, HexWeb.Util.type_load!(HexWeb.DateTime, inserted_at)} end)
   end
 
   def recent_full(count) do

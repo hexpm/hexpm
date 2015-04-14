@@ -42,9 +42,9 @@ defmodule HexWeb.Validation do
   """
   def validate_version(changeset, field) do
     validate_change(changeset, field, fn
-      %Version{build: nil} ->
+      _, %Version{build: nil} ->
         []
-      %Version{} ->
+      _, %Version{} ->
         [{field, :build_number_not_allowed}]
     end)
   end
@@ -54,11 +54,11 @@ defmodule HexWeb.Validation do
   by querying the database.
   """
   def validate_unique(changeset, field, opts \\ []) do
-    validate_change(changeset, field, fn value ->
+    validate_change(changeset, field, fn _field, value ->
       model        = changeset.model
       module       = model.__struct__
       type         = module.__schema__(:field, field)
-      dumped_value = HexWeb.Util.type_dump!(type, value)
+      dumped_value = Ecto.Type.dump!(type, value)
       repo         = Keyword.fetch!(opts, :on)
       scope        = opts[:scope] || []
       case         = Keyword.get(opts, :case_sensitive, true)

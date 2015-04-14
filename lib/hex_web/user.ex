@@ -3,7 +3,6 @@ defmodule HexWeb.User do
   alias HexWeb.Util
   import Ecto.Changeset, except: [validate_unique: 3]
   import HexWeb.Validation
-  use HexWeb.Timestamps
 
   schema "users" do
     field :username, :string
@@ -11,11 +10,10 @@ defmodule HexWeb.User do
     field :password, :string
     field :confirmation_key, :string
     field :confirmed, :boolean
-    field :inserted_at, HexWeb.DateTime
-    field :updated_at, HexWeb.DateTime
+    timestamps
 
     field :reset_key, :string
-    field :reset_expiry, HexWeb.DateTime
+    field :reset_expiry, Ecto.DateTime
 
     has_many :package_owners, HexWeb.PackageOwner, foreign_key: :owner_id
     has_many :keys, HexWeb.API.Key
@@ -24,8 +22,7 @@ defmodule HexWeb.User do
   after_delete :delete_keys
 
   defp changeset(user, :create, params) do
-    Util.params(params)
-    |> cast(user, ~w(username password email), [])
+    cast(params, user, ~w(username password email), [])
     |> update_change(:username, &String.downcase/1)
     |> update_change(:email, &String.downcase/1)
     |> validate_format(:username, ~r"^[a-z0-9_\-\.!~\*'\(\)]+$")
@@ -35,8 +32,7 @@ defmodule HexWeb.User do
   end
 
   defp changeset(user, :update, params) do
-    Util.params(params)
-    |> cast(user, ~w(username password), [])
+    cast(params, user, ~w(username password), [])
     |> update_change(:username, &String.downcase/1)
     |> validate_format(:username, ~r"^[a-z0-9_\-\.!~\*'\(\)]+$")
   end

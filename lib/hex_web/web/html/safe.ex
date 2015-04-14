@@ -57,3 +57,7 @@ end
 defimpl Safe, for: Tuple do
   def to_string({:safe, data}) when is_binary(data), do: data
 end
+
+defimpl Safe, for: Version do
+  def to_string(version), do: Kernel.to_string(version)
+end

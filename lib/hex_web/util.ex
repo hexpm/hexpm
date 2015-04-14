@@ -6,16 +6,6 @@ defmodule HexWeb.Util do
   import Ecto.Query, only: [from: 2]
   require Logger
 
-  def type_load!(type, term) do
-    {:ok, term} = Ecto.Type.load(type, term)
-    term
-  end
-
-  def type_dump!(type, term) do
-    {:ok, term} = Ecto.Type.dump(type, term)
-    term
-  end
-
   def params(params) do
     Enum.into(params, %{}, fn
       {binary, value} when is_binary(binary) -> {binary, value}
@@ -38,7 +28,7 @@ defmodule HexWeb.Util do
   end
 
   def ecto_now do
-    Ecto.DateTime.from_erl(:calendar.universal_time)
+    Ecto.Type.load!(Ecto.DateTime, :calendar.universal_time)
   end
 
   defp diff(a, b) do
@@ -51,7 +41,7 @@ defmodule HexWeb.Util do
   """
   def within_last_day(nil), do: false
   def within_last_day(a) do
-    diff = diff(Ecto.DateTime.to_erl(a),
+    diff = diff(Ecto.Type.dump!(Ecto.DateTime, a),
                 :calendar.universal_time)
 
     diff < (24 * 60 * 60)
@@ -75,8 +65,7 @@ defmodule HexWeb.Util do
 
   def last_modified(models) do
     list = Enum.map(List.wrap(models), fn model ->
-      model.updated_at
-      |> Ecto.DateTime.to_erl
+      Ecto.Type.dump!(Ecto.DateTime, model.updated_at)
     end)
 
     Enum.max(list)

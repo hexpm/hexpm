@@ -8,7 +8,7 @@ defmodule HexWeb.RegistryBuilder do
   import Ecto.Query, only: [from: 2]
   require HexWeb.Repo
   require Logger
-  alias Ecto.Adapters.Postgres
+  alias Ecto.Adapters.SQL
   alias HexWeb.Package
   alias HexWeb.Release
   alias HexWeb.Requirement
@@ -28,7 +28,7 @@ defmodule HexWeb.RegistryBuilder do
   defp rebuild(handle, reg_file) do
     try do
       HexWeb.Repo.transaction(fn ->
-        Postgres.query(HexWeb.Repo, "LOCK registries NOWAIT", [])
+        SQL.query(HexWeb.Repo, "LOCK registries NOWAIT", [])
         unless skip?(handle) do
           build(handle, reg_file)
         end
@@ -76,8 +76,12 @@ defmodule HexWeb.RegistryBuilder do
       end)
 
     package_tuples =
-      Enum.map(package_tuples, fn {name, vsns} ->
-        {name, [Enum.sort(vsns, &(Version.compare(&1, &2) == :lt))]}
+      Enum.map(package_tuples, fn {name, versions} ->
+        versions =
+          Enum.sort(versions, &(Version.compare(&1, &2) == :lt))
+          |> Enum.map(&to_string/1)
+
+        {name, [versions]}
       end)
 
     release_tuples =
@@ -88,7 +92,7 @@ defmodule HexWeb.RegistryBuilder do
             dep_name = packages[dep_id]
             [dep_name, req, opt, app]
           end)
-        {{package, version}, [deps, checksum]}
+        {{package, to_string(version)}, [deps, checksum]}
       end)
 
     {:memory, memory} = :erlang.process_info(self, :memory)
@@ -150,8 +154,8 @@ defmodule HexWeb.RegistryBuilder do
   end
 
   defp time_diff(time1, time2) do
-    time1 = Ecto.DateTime.to_erl(time1) |> :calendar.datetime_to_gregorian_seconds
-    time2 = Ecto.DateTime.to_erl(time2) |> :calendar.datetime_to_gregorian_seconds
+    time1 = Ecto.Type.dump!(Ecto.DateTime, time1) |> :calendar.datetime_to_gregorian_seconds
+    time2 = Ecto.Type.dump!(Ecto.DateTime, time2) |> :calendar.datetime_to_gregorian_seconds
     time1 - time2
   end
 end

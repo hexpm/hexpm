@@ -12,7 +12,7 @@ defmodule HexWeb.Stats.Job do
 
     prefix = "hex/#{date_string(date)}"
     keys = Application.get_env(:hex_web, :store).list_logs(prefix)
-    date = Ecto.Date.from_erl(date)
+    date = Ecto.Type.load!(Ecto.Date, date)
 
     # TODO: Map/Reduce
     dict = process_keys(keys) |> cap_on_ip
@@ -113,6 +113,6 @@ defmodule HexWeb.Stats.Job do
   defp releases do
     from(r in Release, select: {{r.package_id, r.version}, r.id})
     |> HexWeb.Repo.all
-    |> Enum.into(HashDict.new)
+    |> Enum.into(HashDict.new, fn {{pid, vsn}, rid} -> {{pid, to_string(vsn)}, rid} end)
   end
 end

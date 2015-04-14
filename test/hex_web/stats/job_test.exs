@@ -9,9 +9,9 @@ defmodule HexWeb.Stats.JobTest do
 
   setup do
     {:ok, user} = User.create(%{username: "eric", email: "eric@mail.com", password: "eric"}, true)
-    {:ok, foo} = Package.create("foo", user, %{})
-    {:ok, bar} = Package.create("bar", user, %{})
-    {:ok, other} = Package.create("other", user, %{})
+    {:ok, foo} = Package.create(user, %{name: "foo", meta: %{}})
+    {:ok, bar} = Package.create(user, %{name: "bar", meta: %{}})
+    {:ok, other} = Package.create(user, %{name: "other", meta: %{}})
 
     {:ok, _} = Release.create(foo, %{version: "0.0.1", app: "foo", requirements: %{}}, "")
     {:ok, _} = Release.create(foo, %{version: "0.0.2", app: "foo", requirements: %{}}, "")

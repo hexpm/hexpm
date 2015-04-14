@@ -13,8 +13,8 @@ defmodule HexWeb.API.RouterTest do
     User.create(%{username: "other", email: "other@mail.com", password: "other"}, true)
     User.create(%{username: "jose", email: "jose@mail.com", password: "jose"}, true)
     {:ok, user} = User.create(%{username: "eric", email: "eric@mail.com", password: "eric"}, true)
-    {:ok, _}    = Package.create("postgrex", user, %{})
-    {:ok, pkg}  = Package.create("decimal", user, %{})
+    {:ok, _}    = Package.create(user, %{name: "postgrex", meta: %{}})
+    {:ok, pkg}  = Package.create(user, %{name: "decimal", meta: %{}})
     {:ok, rel}  = Release.create(pkg, %{version: "0.0.1", app: "decimal", requirements: %{postgrex: "0.0.1"}}, "")
 
     %{rel | has_docs: true} |> HexWeb.Repo.update
@@ -138,7 +138,7 @@ defmodule HexWeb.API.RouterTest do
   end
 
   test "update package authorizes" do
-    Package.create("ecto", User.get(username: "eric"), %{})
+    Package.create(User.get(username: "eric"), %{name: "ecto", meta: %{}})
 
     headers = [ {"content-type", "application/json"},
                 {"authorization", "Basic " <> :base64.encode("other:other")}]
@@ -630,7 +630,7 @@ defmodule HexWeb.API.RouterTest do
     :inets.start
 
     user           = User.get(username: "eric")
-    {:ok, phoenix} = Package.create("phoenix", user, %{})
+    {:ok, phoenix} = Package.create(user, %{name: "phoenix", meta: %{}})
     {:ok, _}       = Release.create(phoenix, %{version: "0.0.1", app: "phoenix", requirements: %{}}, "")
     {:ok, _}       = Release.create(phoenix, %{version: "0.0.2", app: "phoenix", requirements: %{}}, "")
 
@@ -688,7 +688,7 @@ defmodule HexWeb.API.RouterTest do
     :inets.start
 
     user        = User.get(username: "eric")
-    {:ok, ecto} = Package.create("ecto", user, %{})
+    {:ok, ecto} = Package.create(user, %{name: "ecto", meta: %{}})
     {:ok, _}    = Release.create(ecto, %{version: "0.0.1", app: "ecto", requirements: %{}}, "")
 
     path = Path.join("tmp", "release-docs.tar.gz")
@@ -733,7 +733,7 @@ defmodule HexWeb.API.RouterTest do
     :inets.start
 
     user        = User.get(username: "eric")
-    {:ok, ecto} = Package.create("ecto", user, %{})
+    {:ok, ecto} = Package.create(user, %{name: "ecto", meta: %{}})
     {:ok, _}    = Release.create(ecto, %{version: "0.0.1", app: "ecto", requirements: %{}}, "")
 
     path = Path.join("tmp", "release-docs.tar.gz")

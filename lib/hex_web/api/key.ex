@@ -1,15 +1,14 @@
 defmodule HexWeb.API.Key do
   use Ecto.Model
   alias HexWeb.Util
-  use HexWeb.Timestamps
 
   schema "keys" do
-    belongs_to :user, HexWeb.User
     field :name, :string
     field :secret_first, :string
     field :secret_second, :string
-    field :inserted_at, HexWeb.DateTime
-    field :updated_at, HexWeb.DateTime
+    timestamps
+
+    belongs_to :user, HexWeb.User
 
     # Only used after key creation to hold the users key (not hashed)
     # the user key will never be retrievable after this
@@ -19,8 +18,7 @@ defmodule HexWeb.API.Key do
   before_insert :unique_name
 
   defp changeset(key, params) do
-    Util.params(params)
-    |> cast(key, ~w(name), [])
+    cast(params, key, ~w(name), [])
   end
 
   def create(user, params) do
