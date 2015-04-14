@@ -8,7 +8,7 @@ defmodule HexWeb.Repo do
   def priv,
     do: :code.priv_dir(:hex_web)
 
-  def log({:query, cmd}, fun) do
+  def log({:query, cmd, params}, fun) do
     prev = :os.timestamp()
 
     try do
@@ -20,7 +20,12 @@ defmodule HexWeb.Repo do
 
         {_, workers, _, _} = :poolboy.status(__MODULE__.Pool)
 
-        [query_str(cmd), " (db_query=", inspect(div(diff, 100) / 10),
+        data = Enum.map(params, fn
+          %Ecto.Query.Tagged{value: value} -> value
+          value -> value
+        end)
+
+        [query_str(cmd), " ", inspect(data), " (db_query=", inspect(div(diff, 100) / 10),
          "ms) (db_avail=", inspect(workers), ")"]
       end
     end
