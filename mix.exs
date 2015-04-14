@@ -19,7 +19,7 @@ defmodule HexWeb.Mixfile do
   end
 
   defp deps do
-    [{:plug,      "~> 0.8"},
+    [{:plug,      "~> 0.11"},
      {:cowboy,    "~> 1.0"},
      {:ecto,      "~> 0.7.0"},
      {:postgrex,  "~> 0.7.0"},

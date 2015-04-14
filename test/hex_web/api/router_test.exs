@@ -23,7 +23,8 @@ defmodule HexWeb.API.RouterTest do
 
   test "create user" do
     body = %{username: "name", email: "email@mail.com", password: "pass"}
-    conn = conn("POST", "/api/users", Poison.encode!(body), headers: [{"content-type", "application/json"}])
+    conn = conn("POST", "/api/users", Poison.encode!(body))
+           |> put_req_header("content-type", "application/json")
     conn = Router.call(conn, [])
 
     assert conn.status == 201
@@ -36,7 +37,8 @@ defmodule HexWeb.API.RouterTest do
 
   test "create user sends mails and requires confirmation" do
     body = %{username: "name", email: "create_user@mail.com", password: "pass"}
-    conn = conn("POST", "/api/users", Poison.encode!(body), headers: [{"content-type", "application/json"}])
+    conn = conn("POST", "/api/users", Poison.encode!(body))
+           |> put_req_header("content-type", "application/json")
     Router.call(conn, [])
 
     user = User.get(username: "name")
@@ -46,10 +48,10 @@ defmodule HexWeb.API.RouterTest do
     assert contents =~ "confirm?username=name&key=" <> user.confirmation_key
 
     {:ok, key} = Key.create(user, %{name: "macbook"})
-    headers = [ {"content-type", "application/json"},
-                {"authorization", key.user_secret}]
     body = %{meta: %{}}
-    conn = conn("PUT", "/api/packages/ecto", Poison.encode!(body), headers: headers)
+    conn = conn("PUT", "/api/packages/ecto", Poison.encode!(body))
+           |> put_req_header("content-type", "application/json")
+           |> put_req_header("authorization", key.user_secret)
     conn = Router.call(conn, [])
     assert conn.status == 403
     assert conn.resp_body =~ "Account Unconfirmed"
@@ -59,7 +61,9 @@ defmodule HexWeb.API.RouterTest do
     assert conn.status == 200
     assert conn.resp_body =~ "Account confirmed"
 
-    conn = conn("PUT", "/api/packages/ecto", Poison.encode!(body), headers: headers)
+    conn = conn("PUT", "/api/packages/ecto", Poison.encode!(body))
+           |> put_req_header("content-type", "application/json")
+           |> put_req_header("authorization", key.user_secret)
     conn = Router.call(conn, [])
     assert conn.status == 201
 
@@ -70,7 +74,8 @@ defmodule HexWeb.API.RouterTest do
 
   test "create user validates" do
     body = %{username: "name", password: "pass"}
-    conn = conn("POST", "/api/users", Poison.encode!(body), headers: [{"content-type", "application/json"}])
+    conn = conn("POST", "/api/users", Poison.encode!(body))
+           |> put_req_header("content-type", "application/json")
     conn = Router.call(conn, [])
 
     assert conn.status == 422
@@ -84,20 +89,20 @@ defmodule HexWeb.API.RouterTest do
     user = User.get(username: "eric")
     {:ok, key} = Key.create(user, %{name: "macbook"})
 
-    headers = [ {"content-type", "application/json"},
-                {"authorization", key.user_secret}]
     body = %{meta: %{}}
-    conn = conn("PUT", "/api/packages/ecto", Poison.encode!(body), headers: headers)
+    conn = conn("PUT", "/api/packages/ecto", Poison.encode!(body))
+           |> put_req_header("content-type", "application/json")
+           |> put_req_header("authorization", key.user_secret)
     conn = Router.call(conn, [])
 
     assert conn.status == 201
   end
 
   test "create package key auth" do
-    headers = [ {"content-type", "application/json"},
-                {"authorization", "Basic " <> :base64.encode("eric:eric")}]
     body = %{meta: %{}}
-    conn = conn("PUT", "/api/packages/ecto", Poison.encode!(body), headers: headers)
+    conn = conn("PUT", "/api/packages/ecto", Poison.encode!(body))
+           |> put_req_header("content-type", "application/json")
+           |> put_req_header("authorization", "Basic " <> :base64.encode("eric:eric"))
     conn = Router.call(conn, [])
 
     assert conn.status == 201
@@ -111,12 +116,12 @@ defmodule HexWeb.API.RouterTest do
   end
 
   test "update package" do
-    Package.create("ecto", User.get(username: "eric"), %{})
+    Package.create(User.get(username: "eric"), %{name: "ecto", meta: %{}})
 
-    headers = [ {"content-type", "application/json"},
-                {"authorization", "Basic " <> :base64.encode("eric:eric")}]
     body = %{meta: %{description: "awesomeness"}}
-    conn = conn("PUT", "/api/packages/ecto", Poison.encode!(body), headers: headers)
+    conn = conn("PUT", "/api/packages/ecto", Poison.encode!(body))
+           |> put_req_header("content-type", "application/json")
+           |> put_req_header("authorization", "Basic " <> :base64.encode("eric:eric"))
     conn = Router.call(conn, [])
 
     assert conn.status == 200
@@ -127,10 +132,10 @@ defmodule HexWeb.API.RouterTest do
   end
 
   test "create package authorizes" do
-    headers = [ {"content-type", "application/json"},
-                {"authorization", "Basic " <> :base64.encode("eric:WRONG")}]
     body = %{meta: %{}}
-    conn = conn("PUT", "/api/packages/ecto", Poison.encode!(body), headers: headers)
+    conn = conn("PUT", "/api/packages/ecto", Poison.encode!(body))
+           |> put_req_header("content-type", "application/json")
+           |> put_req_header("authorization", "Basic " <> :base64.encode("eric:WRONG"))
     conn = Router.call(conn, [])
 
     assert conn.status == 401
@@ -140,10 +145,10 @@ defmodule HexWeb.API.RouterTest do
   test "update package authorizes" do
     Package.create(User.get(username: "eric"), %{name: "ecto", meta: %{}})
 
-    headers = [ {"content-type", "application/json"},
-                {"authorization", "Basic " <> :base64.encode("other:other")}]
     body = %{meta: %{}}
-    conn = conn("PUT", "/api/packages/ecto", Poison.encode!(body), headers: headers)
+    conn = conn("PUT", "/api/packages/ecto", Poison.encode!(body))
+           |> put_req_header("content-type", "application/json")
+           |> put_req_header("authorization", "Basic " <> :base64.encode("other:other"))
     conn = Router.call(conn, [])
 
     assert conn.status == 401
@@ -164,10 +169,10 @@ defmodule HexWeb.API.RouterTest do
   # end
 
   test "create releases" do
-    headers = [ {"content-type", "application/octet-stream"},
-                {"authorization", "Basic " <> :base64.encode("eric:eric")}]
     body = create_tar(%{name: :postgrex, app: "not_postgrex", version: "0.0.1", requirements: %{}}, [])
-    conn = conn("POST", "/api/packages/postgrex/releases", body, headers: headers)
+    conn = conn("POST", "/api/packages/postgrex/releases", body)
+           |> put_req_header("content-type", "application/json")
+           |> put_req_header("authorization", "Basic " <> :base64.encode("eric:eric"))
     conn = Router.call(conn, [])
 
     assert conn.status == 201
@@ -176,7 +181,9 @@ defmodule HexWeb.API.RouterTest do
     assert body["url"] == "http://localhost:4000/api/packages/postgrex/releases/0.0.1"
 
     body = create_tar(%{name: :postgrex, version: "0.0.2", requirements: %{}}, [])
-    conn = conn("POST", "/api/packages/postgrex/releases", body, headers: headers)
+    conn = conn("POST", "/api/packages/postgrex/releases", body)
+           |> put_req_header("content-type", "application/json")
+           |> put_req_header("authorization", "Basic " <> :base64.encode("eric:eric"))
     conn = Router.call(conn, [])
 
     assert conn.status == 201
@@ -189,14 +196,16 @@ defmodule HexWeb.API.RouterTest do
   end
 
   test "update release" do
-    headers = [ {"content-type", "application/octet-stream"},
-                {"authorization", "Basic " <> :base64.encode("eric:eric")}]
     body = create_tar(%{name: :postgrex, version: "0.0.1", requirements: %{}}, [])
-    conn = conn("POST", "/api/packages/postgrex/releases", body, headers: headers)
+    conn = conn("POST", "/api/packages/postgrex/releases", body)
+           |> put_req_header("content-type", "application/json")
+           |> put_req_header("authorization", "Basic " <> :base64.encode("eric:eric"))
     conn = Router.call(conn, [])
     assert conn.status == 201
 
-    conn = conn("POST", "/api/packages/postgrex/releases", body, headers: headers)
+    conn = conn("POST", "/api/packages/postgrex/releases", body)
+           |> put_req_header("content-type", "application/json")
+           |> put_req_header("authorization", "Basic " <> :base64.encode("eric:eric"))
     conn = Router.call(conn, [])
     assert conn.status == 200
 
@@ -207,7 +216,9 @@ defmodule HexWeb.API.RouterTest do
     release = put_in(release.inserted_at.year, 2000)
     HexWeb.Repo.update(release)
 
-    conn = conn("POST", "/api/packages/postgrex/releases", body, headers: headers)
+    conn = conn("POST", "/api/packages/postgrex/releases", body)
+           |> put_req_header("content-type", "application/json")
+           |> put_req_header("authorization", "Basic " <> :base64.encode("eric:eric"))
     conn = Router.call(conn, [])
     assert conn.status == 422
     assert %{"errors" => %{"inserted_at" => "can only modify a release up to one hour after creation"}} =
@@ -215,10 +226,10 @@ defmodule HexWeb.API.RouterTest do
   end
 
   test "delete release" do
-    headers = [ {"content-type", "application/octet-stream"},
-                {"authorization", "Basic " <> :base64.encode("eric:eric")}]
     body = create_tar(%{name: :postgrex, version: "0.0.1", requirements: %{}}, [])
-    conn = conn("POST", "/api/packages/postgrex/releases", body, headers: headers)
+    conn = conn("POST", "/api/packages/postgrex/releases", body)
+           |> put_req_header("content-type", "application/json")
+           |> put_req_header("authorization", "Basic " <> :base64.encode("eric:eric"))
     conn = Router.call(conn, [])
     assert conn.status == 201
 
@@ -227,7 +238,9 @@ defmodule HexWeb.API.RouterTest do
     release = put_in(release.inserted_at.year, 2000)
     HexWeb.Repo.update(release)
 
-    conn = conn("POST", "/api/packages/postgrex/releases", body, headers: headers)
+    conn = conn("POST", "/api/packages/postgrex/releases", body)
+           |> put_req_header("content-type", "application/json")
+           |> put_req_header("authorization", "Basic " <> :base64.encode("eric:eric"))
     conn = Router.call(conn, [])
     assert conn.status == 422
     assert %{"errors" => %{"inserted_at" => "can only modify a release up to one hour after creation"}} =
@@ -236,8 +249,8 @@ defmodule HexWeb.API.RouterTest do
     release = put_in(release.inserted_at.year, 2030)
     HexWeb.Repo.update(release)
 
-    headers = [ {"authorization", "Basic " <> :base64.encode("eric:eric")}]
-    conn = conn("DELETE", "/api/packages/postgrex/releases/0.0.1", nil, headers: headers)
+    conn = conn("DELETE", "/api/packages/postgrex/releases/0.0.1")
+           |> put_req_header("authorization", "Basic " <> :base64.encode("eric:eric"))
     conn = Router.call(conn, [])
     assert conn.status == 204
 
@@ -247,10 +260,10 @@ defmodule HexWeb.API.RouterTest do
   end
 
   test "create release authorizes" do
-    headers = [ {"content-type", "application/octet-stream"},
-                {"authorization", "Basic " <> :base64.encode("other:other")}]
     body = create_tar(%{name: :postgrex, version: "0.0.1", requirements: %{}}, [])
-    conn = conn("POST", "/api/packages/postgrex/releases", body, headers: headers)
+    conn = conn("POST", "/api/packages/postgrex/releases", body)
+           |> put_req_header("content-type", "application/json")
+           |> put_req_header("authorization", "Basic " <> :base64.encode("other:other"))
     conn = Router.call(conn, [])
 
     assert conn.status == 401
@@ -258,11 +271,11 @@ defmodule HexWeb.API.RouterTest do
   end
 
   test "create releases with requirements" do
-    headers = [ {"content-type", "application/octet-stream"},
-                {"authorization", "Basic " <> :base64.encode("eric:eric")}]
     reqs = %{decimal: %{requirement: "~> 0.0.1", app: "not_decimal"}}
     body = create_tar(%{name: :postgrex, version: "0.0.1", requirements: reqs}, [])
-    conn = conn("POST", "/api/packages/postgrex/releases", body, headers: headers)
+    conn = conn("POST", "/api/packages/postgrex/releases", body)
+           |> put_req_header("content-type", "application/json")
+           |> put_req_header("authorization", "Basic " <> :base64.encode("eric:eric"))
     conn = Router.call(conn, [])
 
     assert conn.status == 201
@@ -279,11 +292,11 @@ defmodule HexWeb.API.RouterTest do
 
     File.touch!(path, {{2000,1,1,},{1,1,1}})
 
-    headers = [ {"content-type", "application/octet-stream"},
-                {"authorization", "Basic " <> :base64.encode("eric:eric")}]
     reqs = %{decimal: %{requirement: "~> 0.0.1"}}
     body = create_tar(%{name: :postgrex, version: "0.0.1", requirements: reqs}, [])
-    conn = conn("POST", "/api/packages/postgrex/releases", body, headers: headers)
+    conn = conn("POST", "/api/packages/postgrex/releases", body)
+           |> put_req_header("content-type", "application/json")
+           |> put_req_header("authorization", "Basic " <> :base64.encode("eric:eric"))
     conn = Router.call(conn, [])
     assert conn.status == 201
 
@@ -291,10 +304,10 @@ defmodule HexWeb.API.RouterTest do
   end
 
   test "create key" do
-    headers = [ {"content-type", "application/json"},
-                {"authorization", "Basic " <> :base64.encode("eric:eric")}]
     body = %{name: "macbook"}
-    conn = conn("POST", "/api/keys", Poison.encode!(body), headers: headers)
+    conn = conn("POST", "/api/keys", Poison.encode!(body))
+           |> put_req_header("content-type", "application/json")
+           |> put_req_header("authorization", "Basic " <> :base64.encode("eric:eric"))
     conn = Router.call(conn, [])
     assert conn.status == 201
 
@@ -304,8 +317,8 @@ defmodule HexWeb.API.RouterTest do
   test "get key" do
     Key.create(User.get(username: "eric"), %{name: "macbook"})
 
-    headers = [ {"authorization", "Basic " <> :base64.encode("eric:eric")}]
-    conn = conn("GET", "/api/keys/macbook", nil, headers: headers)
+    conn = conn("GET", "/api/keys/macbook")
+           |> put_req_header("authorization", "Basic " <> :base64.encode("eric:eric"))
     conn = Router.call(conn, [])
     assert conn.status == 200
 
@@ -320,8 +333,8 @@ defmodule HexWeb.API.RouterTest do
     Key.create(user, %{name: "macbook"})
     Key.create(user, %{name: "computer"})
 
-    headers = [ {"authorization", "Basic " <> :base64.encode("eric:eric")}]
-    conn = conn("GET", "/api/keys", nil, headers: headers)
+    conn = conn("GET", "/api/keys")
+           |> put_req_header("authorization", "Basic " <> :base64.encode("eric:eric"))
     conn = Router.call(conn, [])
     assert conn.status == 200
 
@@ -338,8 +351,8 @@ defmodule HexWeb.API.RouterTest do
     Key.create(user, %{name: "macbook"})
     Key.create(user, %{name: "computer"})
 
-    headers = [ {"authorization", "Basic " <> :base64.encode("eric:eric")}]
-    conn = conn("DELETE", "/api/keys/computer", nil, headers: headers)
+    conn = conn("DELETE", "/api/keys/computer")
+           |> put_req_header("authorization", "Basic " <> :base64.encode("eric:eric"))
     conn = Router.call(conn, [])
     assert conn.status == 204
 
@@ -351,23 +364,23 @@ defmodule HexWeb.API.RouterTest do
     user = User.get(username: "eric")
     Key.create(user, %{name: "macbook"})
 
-    headers = [ {"authorization", "Basic " <> :base64.encode("other:other")}]
-    conn = conn("GET", "/api/keys", nil, headers: headers)
+    conn = conn("GET", "/api/keys")
+           |> put_req_header("authorization", "Basic " <> :base64.encode("other:other"))
     conn = Router.call(conn, [])
     assert conn.status == 200
 
     assert Dict.size(Poison.decode!(conn.resp_body)) == 0
 
-    headers = [ {"authorization", "Basic " <> :base64.encode("eric:WRONG")}]
-    conn = conn("GET", "/api/keys", nil, headers: headers)
+    conn = conn("GET", "/api/keys")
+           |> put_req_header("authorization", "Basic " <> :base64.encode("eric:WRONG"))
     conn = Router.call(conn, [])
     assert conn.status == 401
   end
 
   test "get user" do
-    headers = [ {"content-type", "application/json"},
-                {"authorization", "Basic " <> :base64.encode("eric:eric")}]
-    conn = conn("GET", "/api/users/eric", nil, headers: headers)
+    conn = conn("GET", "/api/users/eric")
+           |> put_req_header("content-type", "application/json")
+           |> put_req_header("authorization", "Basic " <> :base64.encode("eric:eric"))
     conn = Router.call(conn, [])
     assert conn.status == 200
 
@@ -382,8 +395,8 @@ defmodule HexWeb.API.RouterTest do
   end
 
   test "elixir media response" do
-    headers = [ {"accept", "application/vnd.hex+elixir"} ]
-    conn = conn("GET", "/api/packages/postgrex", nil, headers: headers)
+    conn = conn("GET", "/api/packages/postgrex")
+           |> put_req_header("accept", "application/vnd.hex+elixir")
     conn = Router.call(conn, [])
 
     assert conn.status == 200
@@ -394,7 +407,8 @@ defmodule HexWeb.API.RouterTest do
   test "elixir media request" do
     body = %{username: "name", email: "email@mail.com", password: "pass"}
            |> HexWeb.API.ElixirFormat.encode
-    conn = conn("POST", "/api/users", body, headers: [{"content-type", "application/vnd.hex+elixir"}])
+    conn = conn("POST", "/api/users", body)
+           |> put_req_header("content-type", "application/vnd.hex+elixir")
     conn = Router.call(conn, [])
 
     assert conn.status == 201
@@ -406,8 +420,8 @@ defmodule HexWeb.API.RouterTest do
   end
 
   test "erlang media response" do
-    headers = [ {"accept", "application/vnd.hex+erlang"} ]
-    conn = conn("GET", "/api/packages/postgrex", nil, headers: headers)
+    conn = conn("GET", "/api/packages/postgrex")
+           |> put_req_header("accept", "application/vnd.hex+erlang")
     conn = Router.call(conn, [])
 
     assert conn.status == 200
@@ -419,7 +433,8 @@ defmodule HexWeb.API.RouterTest do
     body = %{username: "name", email: "email@mail.com", password: "pass"}
            |> HexWeb.API.ErlangFormat.encode
 
-    conn = conn("POST", "/api/users", body, headers: [{"content-type", "application/vnd.hex+erlang"}])
+    conn = conn("POST", "/api/users", body)
+           |> put_req_header("content-type", "application/vnd.hex+erlang")
     conn = Router.call(conn, [])
 
     assert conn.status == 201
@@ -454,42 +469,42 @@ defmodule HexWeb.API.RouterTest do
   end
 
   test "accepted formats" do
-    headers = [ {"accept", "application/xml"} ]
-    conn = conn("GET", "/api/packages/postgrex", nil, headers: headers)
+    conn = conn("GET", "/api/packages/postgrex")
+           |> put_req_header("accept", "application/xml")
     conn = Router.call(conn, [])
     assert conn.status == 415
 
-    headers = [ {"accept", "application/xml"} ]
-    conn = conn("GET", "/api/WRONGURL", nil, headers: headers)
+    conn = conn("GET", "/api/WRONGURL")
+           |> put_req_header("accept", "application/xml")
     conn = Router.call(conn, [])
     assert conn.status == 404
 
-    headers = [ {"accept", "application/json"} ]
-    conn = conn("GET", "/api/packages/postgrex", nil, headers: headers)
+    conn = conn("GET", "/api/packages/postgrex")
+           |> put_req_header("accept", "application/json")
     conn = Router.call(conn, [])
     assert conn.status == 200
     Poison.decode!(conn.resp_body)
 
-    headers = [ {"accept", "application/vnd.hex"} ]
-    conn = conn("GET", "/api/packages/postgrex", nil, headers: headers)
+    conn = conn("GET", "/api/packages/postgrex")
+           |> put_req_header("accept", "application/vnd.hex")
     conn = Router.call(conn, [])
     assert conn.status == 200
     Poison.decode!(conn.resp_body)
 
-    headers = [ {"accept", "application/vnd.hex+json"} ]
-    conn = conn("GET", "/api/packages/postgrex", nil, headers: headers)
+    conn = conn("GET", "/api/packages/postgrex")
+           |> put_req_header("accept", "application/vnd.hex+json")
     conn = Router.call(conn, [])
     assert conn.status == 200
     assert get_resp_header(conn, "x-hex-media-type") == ["hex.beta"]
     Poison.decode!(conn.resp_body)
 
-    headers = [ {"accept", "application/vnd.hex.vUNSUPPORTED+json"} ]
-    conn = conn("GET", "/api/packages/postgrex", nil, headers: headers)
+    conn = conn("GET", "/api/packages/postgrex")
+           |> put_req_header("accept", "application/vnd.hex.vUNSUPPORTED+json")
     conn = Router.call(conn, [])
     assert conn.status == 415
 
-    headers = [ {"accept", "application/vnd.hex.beta"} ]
-    conn = conn("GET", "/api/packages/postgrex", nil, headers: headers)
+    conn = conn("GET", "/api/packages/postgrex")
+           |> put_req_header("accept", "application/vnd.hex.beta")
     conn = Router.call(conn, [])
     assert conn.status == 200
     assert get_resp_header(conn, "x-hex-media-type") == ["hex.beta"]
@@ -527,8 +542,8 @@ defmodule HexWeb.API.RouterTest do
   end
 
   test "get package owners" do
-    headers = [ {"authorization", "Basic " <> :base64.encode("eric:eric")}]
-    conn = conn("GET", "/api/packages/postgrex/owners", nil, headers: headers)
+    conn = conn("GET", "/api/packages/postgrex/owners")
+           |> put_req_header("authorization", "Basic " <> :base64.encode("eric:eric"))
     conn = Router.call(conn, [])
     assert conn.status == 200
 
@@ -539,8 +554,8 @@ defmodule HexWeb.API.RouterTest do
     user = User.get(username: "jose")
     Package.add_owner(package, user)
 
-    headers = [ {"authorization", "Basic " <> :base64.encode("eric:eric")}]
-    conn = conn("GET", "/api/packages/postgrex/owners", nil, headers: headers)
+    conn = conn("GET", "/api/packages/postgrex/owners")
+           |> put_req_header("authorization", "Basic " <> :base64.encode("eric:eric"))
     conn = Router.call(conn, [])
     assert conn.status == 200
 
@@ -551,34 +566,34 @@ defmodule HexWeb.API.RouterTest do
   end
 
   test "get package owners authorizes" do
-    headers = [ {"authorization", "Basic " <> :base64.encode("other:other")}]
-    conn = conn("GET", "/api/packages/postgrex/owners", nil, headers: headers)
+    conn = conn("GET", "/api/packages/postgrex/owners")
+           |> put_req_header("authorization", "Basic " <> :base64.encode("other:other"))
     conn = Router.call(conn, [])
     assert conn.status == 401
   end
 
   test "check if user is package owner" do
-    headers = [ {"authorization", "Basic " <> :base64.encode("eric:eric")}]
-    conn = conn("GET", "/api/packages/postgrex/owners/eric@mail.com", nil, headers: headers)
+    conn = conn("GET", "/api/packages/postgrex/owners/eric@mail.com")
+           |> put_req_header("authorization", "Basic " <> :base64.encode("eric:eric"))
     conn = Router.call(conn, [])
     assert conn.status == 204
 
-    headers = [ {"authorization", "Basic " <> :base64.encode("eric:eric")}]
-    conn = conn("GET", "/api/packages/postgrex/owners/jose@mail.com", nil, headers: headers)
+    conn = conn("GET", "/api/packages/postgrex/owners/jose@mail.com")
+           |> put_req_header("authorization", "Basic " <> :base64.encode("eric:eric"))
     conn = Router.call(conn, [])
     assert conn.status == 404
   end
 
   test "check if user is package owner authorizes" do
-    headers = [ {"authorization", "Basic " <> :base64.encode("other:other")}]
-    conn = conn("GET", "/api/packages/postgrex/owners/eric@mail.com", nil, headers: headers)
+    conn = conn("GET", "/api/packages/postgrex/owners/eric@mail.com")
+           |> put_req_header("authorization", "Basic " <> :base64.encode("other:other"))
     conn = Router.call(conn, [])
     assert conn.status == 401
   end
 
   test "add package owner" do
-    headers = [ {"authorization", "Basic " <> :base64.encode("eric:eric")}]
-    conn = conn("PUT", "/api/packages/postgrex/owners/jose%40mail.com", nil, headers: headers)
+    conn = conn("PUT", "/api/packages/postgrex/owners/jose%40mail.com")
+           |> put_req_header("authorization", "Basic " <> :base64.encode("eric:eric"))
     conn = Router.call(conn, [])
     assert conn.status == 204
 
@@ -589,8 +604,8 @@ defmodule HexWeb.API.RouterTest do
   end
 
   test "add package owner authorizes" do
-    headers = [ {"authorization", "Basic " <> :base64.encode("other:other")}]
-    conn = conn("PUT", "/api/packages/postgrex/owners/jose%40mail.com", nil, headers: headers)
+    conn = conn("PUT", "/api/packages/postgrex/owners/jose%40mail.com")
+           |> put_req_header("authorization", "Basic " <> :base64.encode("other:other"))
     conn = Router.call(conn, [])
     assert conn.status == 401
   end
@@ -600,15 +615,15 @@ defmodule HexWeb.API.RouterTest do
     user = User.get(username: "jose")
     Package.add_owner(package, user)
 
-    headers = [ {"authorization", "Basic " <> :base64.encode("eric:eric")}]
-    conn = conn("DELETE", "/api/packages/postgrex/owners/jose%40mail.com", nil, headers: headers)
+    conn = conn("DELETE", "/api/packages/postgrex/owners/jose%40mail.com")
+           |> put_req_header("authorization", "Basic " <> :base64.encode("eric:eric"))
     conn = Router.call(conn, [])
     assert conn.status == 204
 
     assert [%User{username: "eric"}] = Package.owners(package)
 
-    headers = [ {"authorization", "Basic " <> :base64.encode("eric:eric")}]
-    conn = conn("DELETE", "/api/packages/postgrex/owners/jose%40mail.com", nil, headers: headers)
+    conn = conn("DELETE", "/api/packages/postgrex/owners/jose%40mail.com")
+           |> put_req_header("authorization", "Basic " <> :base64.encode("eric:eric"))
     conn = Router.call(conn, [])
     assert conn.status == 204
 
@@ -616,8 +631,8 @@ defmodule HexWeb.API.RouterTest do
   end
 
   test "delete package owner authorizes" do
-    headers = [ {"authorization", "Basic " <> :base64.encode("other:other")}]
-    conn = conn("DELETE", "/api/packages/postgrex/owners/eric%40mail.com", nil, headers: headers)
+    conn = conn("DELETE", "/api/packages/postgrex/owners/eric%40mail.com")
+           |> put_req_header("authorization", "Basic " <> :base64.encode("other:other"))
     conn = Router.call(conn, [])
     assert conn.status == 401
   end
@@ -639,9 +654,9 @@ defmodule HexWeb.API.RouterTest do
     :ok = :erl_tar.create(String.to_char_list(path), files, [:compressed])
     body = File.read!(path)
 
-    headers = [{"content-type", "application/octet-stream"},
-               {"authorization", "Basic " <> :base64.encode("eric:eric")}]
-    conn = conn("POST", "/api/packages/phoenix/releases/0.0.1/docs", body, headers: headers)
+    conn = conn("POST", "/api/packages/phoenix/releases/0.0.1/docs", body)
+           |> put_req_header("content-type", "application/octet-stream")
+           |> put_req_header("authorization", "Basic " <> :base64.encode("eric:eric"))
     conn = Router.call(conn, [])
     assert conn.status == 201
     assert Release.get(phoenix, "0.0.1").has_docs
@@ -663,9 +678,9 @@ defmodule HexWeb.API.RouterTest do
     :ok = :erl_tar.create(String.to_char_list(path), files, [:compressed])
     body = File.read!(path)
 
-    headers = [{"content-type", "application/octet-stream"},
-               {"authorization", "Basic " <> :base64.encode("eric:eric")}]
-    conn = conn("POST", "/api/packages/phoenix/releases/0.0.2/docs", body, headers: headers)
+    conn = conn("POST", "/api/packages/phoenix/releases/0.0.2/docs", body)
+           |> put_req_header("content-type", "application/octet-stream")
+           |> put_req_header("authorization", "Basic " <> :base64.encode("eric:eric"))
     conn = Router.call(conn, [])
     assert conn.status == 201
 
@@ -696,15 +711,15 @@ defmodule HexWeb.API.RouterTest do
     :ok = :erl_tar.create(String.to_char_list(path), files, [:compressed])
     body = File.read!(path)
 
-    headers = [{"content-type", "application/octet-stream"},
-               {"authorization", "Basic " <> :base64.encode("eric:eric")}]
-    conn = conn("POST", "/api/packages/ecto/releases/0.0.1/docs", body, headers: headers)
+    conn = conn("POST", "/api/packages/ecto/releases/0.0.1/docs", body)
+           |> put_req_header("content-type", "application/octet-stream")
+           |> put_req_header("authorization", "Basic " <> :base64.encode("eric:eric"))
     conn = Router.call(conn, [])
     assert conn.status == 201
     assert Release.get(ecto, "0.0.1").has_docs
 
-    headers = [{"authorization", "Basic " <> :base64.encode("eric:eric")}]
-    conn = conn("DELETE", "/api/packages/ecto/releases/0.0.1", nil, headers: headers)
+    conn = conn("DELETE", "/api/packages/ecto/releases/0.0.1")
+           |> put_req_header("authorization", "Basic " <> :base64.encode("eric:eric"))
     conn = Router.call(conn, [])
     assert conn.status == 204
 
@@ -741,9 +756,9 @@ defmodule HexWeb.API.RouterTest do
     :ok = :erl_tar.create(String.to_char_list(path), files, [:compressed])
     body = File.read!(path)
 
-    headers = [{"content-type", "application/octet-stream"},
-               {"authorization", "Basic " <> :base64.encode("eric:eric")}]
-    conn = conn("POST", "/api/packages/ecto/releases/0.0.1/docs", body, headers: headers)
+    conn = conn("POST", "/api/packages/ecto/releases/0.0.1/docs", body)
+           |> put_req_header("content-type", "application/octet-stream")
+           |> put_req_header("authorization", "Basic " <> :base64.encode("eric:eric"))
     conn = Router.call(conn, [])
     assert conn.status == 422
     assert %{"errors" => %{"tar" => "directory name not allowed to match a semver version"}} =

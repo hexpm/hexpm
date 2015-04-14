@@ -48,12 +48,12 @@ defmodule HexWeb.RouterTest do
       Application.put_env(:hex_web, :store, HexWeb.Store.S3)
     end
 
-    headers = [ {"content-type", "application/octet-stream"},
-                {"authorization", "Basic " <> :base64.encode("eric:eric")}]
     reqs = %{decimal: %{requirement: "~> 0.0.1"}}
     body = create_tar(%{name: :postgrex, version: "0.0.1", requirements: reqs}, [])
-    conn = conn("POST", "/api/packages/postgrex/releases", body, headers: headers)
-    conn = Router.call(conn, [])
+    conn = conn("POST", "/api/packages/postgrex/releases", body)
+           |> put_req_header("content-type", "application/octet-stream")
+           |> put_req_header("authorization", "Basic " <> :base64.encode("eric:eric"))
+           |> Router.call([])
     assert conn.status == 201
 
     port = Application.get_env(:hex_web, :port)
@@ -75,7 +75,7 @@ defmodule HexWeb.RouterTest do
 
     try do
       conn = %{conn("GET", "/foobar") | scheme: :http}
-      conn = Router.call(conn, [])
+             |> Router.call([])
       assert conn.status == 301
       assert get_resp_header(conn, "location") == ["https://hex.pm/foobar"]
     after
@@ -85,14 +85,14 @@ defmodule HexWeb.RouterTest do
   end
 
   test "forwarded" do
-    headers = [{"x-forwarded-proto", "https"}]
-    conn = conn("GET", "/installs/hex.ez", nil, headers: headers)
-    conn = Router.call(conn, [])
+    conn = conn("GET", "/installs/hex.ez")
+           |> put_req_header("x-forwarded-proto", "https")
+           |> Router.call([])
     assert conn.scheme == :https
 
-    headers = [{"x-forwarded-for", "1.2.3.4"}]
-    conn = conn("GET", "/installs/hex.ez", nil, headers: headers)
-    conn = Router.call(conn, [])
+    conn = conn("GET", "/installs/hex.ez")
+           |> put_req_header("x-forwarded-for", "1.2.3.4")
+           |> Router.call([])
     assert conn.remote_ip == {1,2,3,4}
   end
 
@@ -109,48 +109,48 @@ defmodule HexWeb.RouterTest do
 
     try do
       conn = conn("GET", "/installs/hex.ez")
-      conn = Router.call(conn, [])
+             |> Router.call([])
       assert conn.status == 302
       assert get_resp_header(conn, "location") == ["http://s3.hex.pm/installs/1.0.0/hex.ez"]
 
       conn = conn("GET", "/installs/hex.ez?elixir=0.0.1")
-      conn = Router.call(conn, [])
+             |> Router.call([])
       assert conn.status == 302
       assert get_resp_header(conn, "location") == ["http://s3.hex.pm/installs/hex.ez"]
 
       conn = conn("GET", "/installs/hex.ez?elixir=0.13.0")
-      conn = Router.call(conn, [])
+             |> Router.call([])
       assert conn.status == 302
       assert get_resp_header(conn, "location") == ["http://s3.hex.pm/installs/0.13.0-dev/hex.ez"]
 
       conn = conn("GET", "/installs/hex.ez?elixir=0.13.1")
-      conn = Router.call(conn, [])
+             |> Router.call([])
       assert conn.status == 302
       assert get_resp_header(conn, "location") == ["http://s3.hex.pm/installs/0.13.1-dev/hex.ez"]
 
       conn = conn("GET", "/installs/hex.ez?elixir=0.14.0")
-      conn = Router.call(conn, [])
+             |> Router.call([])
       assert conn.status == 302
       assert get_resp_header(conn, "location") == ["http://s3.hex.pm/installs/0.14.0/hex.ez"]
 
       conn = conn("GET", "/installs/hex.ez?elixir=0.14.1-dev")
-      conn = Router.call(conn, [])
+             |> Router.call([])
       assert conn.status == 302
       assert get_resp_header(conn, "location") == ["http://s3.hex.pm/installs/0.14.0/hex.ez"]
 
       conn = conn("GET", "/installs/hex.ez?elixir=0.14.1")
-      conn = Router.call(conn, [])
+             |> Router.call([])
       assert conn.status == 302
       assert get_resp_header(conn, "location") == ["http://s3.hex.pm/installs/0.14.1/hex.ez"]
 
       conn = conn("GET", "/installs/hex.ez?elixir=0.14.2")
-      conn = Router.call(conn, [])
+             |> Router.call([])
       assert conn.status == 302
       assert get_resp_header(conn, "location") == ["http://s3.hex.pm/installs/0.14.2/hex.ez"]
 
-      headers = [ {"user-agent", "Mix/0.14.1-dev"} ]
-      conn = conn("GET", "/installs/hex.ez", nil, headers: headers)
-      conn = Router.call(conn, [])
+      conn = conn("GET", "/installs/hex.ez")
+             |> put_req_header("user-agent", "Mix/0.14.1-dev")
+             |> Router.call([])
       assert conn.status == 302
       assert get_resp_header(conn, "location") == ["http://s3.hex.pm/installs/0.14.0/hex.ez"]
     after
@@ -160,7 +160,7 @@ defmodule HexWeb.RouterTest do
 
   test "blocked address" do
     conn = conn("GET", "/")
-    conn = Router.call(conn, [])
+           |> Router.call([])
     assert conn.status == 200
 
     %HexWeb.BlockedAddress{ip: "1.2.3.4"}
@@ -170,7 +170,7 @@ defmodule HexWeb.RouterTest do
 
     conn = conn("GET", "/")
     conn = %{conn | remote_ip: {1,2,3,4}}
-    conn = Router.call(conn, [])
+           |> Router.call([])
     assert conn.status == 403
   end
 end

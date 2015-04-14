@@ -8,7 +8,7 @@
   "gen_smtp": {:hex, :gen_smtp, "0.9.0"},
   "ibrowse": {:git, "git://github.com/opscode/ibrowse", "8f3f6a3a30730b193cc340a8885a960586dc98de", [tag: "v4.0.1.1"]},
   "mini_s3": {:git, "git://github.com/ericmj/mini_s3.git", "700386bc8c3a804af57380c0fd09a02325142c9b", [branch: "hex-fixes"]},
-  "plug": {:hex, :plug, "0.11.1"},
+  "plug": {:hex, :plug, "0.11.3"},
   "poison": {:hex, :poison, "1.4.0"},
   "poolboy": {:hex, :poolboy, "1.4.2"},
   "porcelain": {:hex, :porcelain, "2.0.0"},
