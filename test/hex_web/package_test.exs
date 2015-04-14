@@ -5,7 +5,7 @@ defmodule HexWeb.PackageTest do
   alias HexWeb.Package
 
   setup do
-    {:ok, _} = User.create("eric", "eric@mail.com", "eric", true)
+    {:ok, _} = User.create(%{username: "eric", email: "eric@mail.com", password: "eric"}, true)
     :ok
   end
 
@@ -51,6 +51,7 @@ defmodule HexWeb.PackageTest do
     assert meta["contributors"] == meta2["contributors"]
   end
 
+  # TODO
   # test "validate invalid meta" do
   #   meta = %{
   #     "contributors" => "eric",
@@ -72,6 +73,6 @@ defmodule HexWeb.PackageTest do
 
   test "reserved names" do
     user = User.get(username: "eric")
-    assert {:error, %{name: ["is reserved"]}} = Package.create("elixir", user, %{})
+    assert {:error, [name: :exclusion]} = Package.create("elixir", user, %{})
   end
 end

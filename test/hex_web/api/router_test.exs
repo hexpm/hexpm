@@ -10,12 +10,12 @@ defmodule HexWeb.API.RouterTest do
   alias HexWeb.RegistryBuilder
 
   setup do
-    User.create("other", "other@mail.com", "other", true)
-    User.create("jose", "jose@mail.com", "jose", true)
-    {:ok, user} = User.create("eric", "eric@mail.com", "eric", true)
+    User.create(%{username: "other", email: "other@mail.com", password: "other"}, true)
+    User.create(%{username: "jose", email: "jose@mail.com", password: "jose"}, true)
+    {:ok, user} = User.create(%{username: "eric", email: "eric@mail.com", password: "eric"}, true)
     {:ok, _}    = Package.create("postgrex", user, %{})
     {:ok, pkg}  = Package.create("decimal", user, %{})
-    {:ok, rel}  = Release.create(pkg, "0.0.1", "decimal", [{"postgrex", "0.0.1"}], "")
+    {:ok, rel}  = Release.create(pkg, %{version: "0.0.1", app: "decimal", requirements: %{postgrex: "0.0.1"}}, "")
 
     %{rel | has_docs: true} |> HexWeb.Repo.update
     :ok
@@ -45,7 +45,7 @@ defmodule HexWeb.API.RouterTest do
     assert subject =~ "Hex.pm"
     assert contents =~ "confirm?username=name&key=" <> user.confirmation_key
 
-    {:ok, key} = Key.create("macbook", user)
+    {:ok, key} = Key.create(user, %{name: "macbook"})
     headers = [ {"content-type", "application/json"},
                 {"authorization", key.user_secret}]
     body = %{meta: %{}}
@@ -76,13 +76,13 @@ defmodule HexWeb.API.RouterTest do
     assert conn.status == 422
     body = Poison.decode!(conn.resp_body)
     assert body["message"] == "Validation failed"
-    assert body["errors"]["email"] == ["can't be blank"]
+    assert body["errors"]["email"] == "required"
     refute User.get(username: "name")
   end
 
   test "create package with key auth" do
     user = User.get(username: "eric")
-    {:ok, key} = Key.create("macbook", user)
+    {:ok, key} = Key.create(user, %{name: "macbook"})
 
     headers = [ {"content-type", "application/json"},
                 {"authorization", key.user_secret}]
@@ -183,8 +183,8 @@ defmodule HexWeb.API.RouterTest do
 
     postgrex = Package.get("postgrex")
     postgrex_id = postgrex.id
-    assert [ %Release{package_id: ^postgrex_id, version: "0.0.2"},
-             %Release{package_id: ^postgrex_id, version: "0.0.1"} ] =
+    assert [ %Release{package_id: ^postgrex_id, version: %Version{major: 0, minor: 0, patch: 2}},
+             %Release{package_id: ^postgrex_id, version: %Version{major: 0, minor: 0, patch: 1}} ] =
            Release.all(postgrex)
   end
 
@@ -302,7 +302,7 @@ defmodule HexWeb.API.RouterTest do
   end
 
   test "get key" do
-    Key.create("macbook", User.get(username: "eric"))
+    Key.create(User.get(username: "eric"), %{name: "macbook"})
 
     headers = [ {"authorization", "Basic " <> :base64.encode("eric:eric")}]
     conn = conn("GET", "/api/keys/macbook", nil, headers: headers)
@@ -317,8 +317,8 @@ defmodule HexWeb.API.RouterTest do
 
   test "all keys" do
     user = User.get(username: "eric")
-    Key.create("macbook", user)
-    Key.create("computer", user)
+    Key.create(user, %{name: "macbook"})
+    Key.create(user, %{name: "computer"})
 
     headers = [ {"authorization", "Basic " <> :base64.encode("eric:eric")}]
     conn = conn("GET", "/api/keys", nil, headers: headers)
@@ -335,8 +335,8 @@ defmodule HexWeb.API.RouterTest do
 
   test "delete key" do
     user = User.get(username: "eric")
-    Key.create("macbook", user)
-    Key.create("computer", user)
+    Key.create(user, %{name: "macbook"})
+    Key.create(user, %{name: "computer"})
 
     headers = [ {"authorization", "Basic " <> :base64.encode("eric:eric")}]
     conn = conn("DELETE", "/api/keys/computer", nil, headers: headers)
@@ -349,7 +349,7 @@ defmodule HexWeb.API.RouterTest do
 
   test "key authorizes" do
     user = User.get(username: "eric")
-    Key.create("macbook", user)
+    Key.create(user, %{name: "macbook"})
 
     headers = [ {"authorization", "Basic " <> :base64.encode("other:other")}]
     conn = conn("GET", "/api/keys", nil, headers: headers)
@@ -631,8 +631,8 @@ defmodule HexWeb.API.RouterTest do
 
     user           = User.get(username: "eric")
     {:ok, phoenix} = Package.create("phoenix", user, %{})
-    {:ok, _}       = Release.create(phoenix, "0.0.1", "phoenix", [], "")
-    {:ok, _}       = Release.create(phoenix, "0.0.2", "phoenix", [], "")
+    {:ok, _}       = Release.create(phoenix, %{version: "0.0.1", app: "phoenix", requirements: %{}}, "")
+    {:ok, _}       = Release.create(phoenix, %{version: "0.0.2", app: "phoenix", requirements: %{}}, "")
 
     path = Path.join("tmp", "release-docs.tar.gz")
     files = [{'index.html', "HEYO"}]
@@ -689,7 +689,7 @@ defmodule HexWeb.API.RouterTest do
 
     user        = User.get(username: "eric")
     {:ok, ecto} = Package.create("ecto", user, %{})
-    {:ok, _}    = Release.create(ecto, "0.0.1", "ecto", [], "")
+    {:ok, _}    = Release.create(ecto, %{version: "0.0.1", app: "ecto", requirements: %{}}, "")
 
     path = Path.join("tmp", "release-docs.tar.gz")
     files = [{'index.html', "HEYO"}]
@@ -734,7 +734,7 @@ defmodule HexWeb.API.RouterTest do
 
     user        = User.get(username: "eric")
     {:ok, ecto} = Package.create("ecto", user, %{})
-    {:ok, _}    = Release.create(ecto, "0.0.1", "ecto", [], "")
+    {:ok, _}    = Release.create(ecto, %{version: "0.0.1", app: "ecto", requirements: %{}}, "")
 
     path = Path.join("tmp", "release-docs.tar.gz")
     files = [{'1.2.3', "HEYO"}]

@@ -7,7 +7,7 @@ defmodule SampleData do
   end
 
   def create_user(username, email, password) do
-    case HexWeb.User.create(username, email, password, true) do
+    case HexWeb.User.create(%{username: username, email: email, password: password}, true) do
       {:ok, user} ->
         user
       {:error, error} ->
@@ -42,9 +42,9 @@ HexWeb.Repo.transaction(fn ->
                  "Documentation" => "http://example.com/documentation"},
         description: "Arbitrary precision decimal arithmetic for Elixir"})
 
-    {:ok, _} = Release.create(decimal, "0.0.1", "decimal", %{}, SampleData.checksum("decimal 0.0.1"))
-    {:ok, _} = Release.create(decimal, "0.0.2", "decimal", %{}, SampleData.checksum("decimal 0.0.2"))
-    {:ok, _} = Release.create(decimal, "0.1.0", "decimal", %{}, SampleData.checksum("decimal 0.1.0"))
+    {:ok, _} = Release.create(decimal, %{version: "0.0.1", app: "decimal", requirements: %{}}, SampleData.checksum("decimal 0.0.1"))
+    {:ok, _} = Release.create(decimal, %{version: "0.0.2", app: "decimal", requirements: %{}}, SampleData.checksum("decimal 0.0.2"))
+    {:ok, _} = Release.create(decimal, %{version: "0.1.0", app: "decimal", requirements: %{}}, SampleData.checksum("decimal 0.1.0"))
 
     {:ok, postgrex} =
       Package.create("postgrex", eric, %{
@@ -53,9 +53,9 @@ HexWeb.Repo.transaction(fn ->
         links: %{"Github" => "http://example.com/github"},
         description: lorem})
 
-    {:ok, _} = Release.create(postgrex, "0.0.1", "postgrex", %{}, SampleData.checksum("postgrex 0.0.1"))
-    {:ok, _} = Release.create(postgrex, "0.0.2", "postgrex", %{decimal: "~> 0.0.1"}, SampleData.checksum("postgrex 0.0.2"))
-    {:ok, _} = Release.create(postgrex, "0.1.0", "postgrex", %{decimal: "0.1.0"}, SampleData.checksum("postgrex 0.1.0"))
+    {:ok, _} = Release.create(postgrex, %{version: "0.0.1", app: "postgrex", requirements: %{}}, SampleData.checksum("postgrex 0.0.1"))
+    {:ok, _} = Release.create(postgrex, %{version: "0.0.2", app: "postgrex", requirements: %{decimal: "~> 0.0.1"}}, SampleData.checksum("postgrex 0.0.2"))
+    {:ok, _} = Release.create(postgrex, %{version: "0.1.0", app: "postgrex", requirements: %{decimal: "0.1.0"}}, SampleData.checksum("postgrex 0.1.0"))
   end
 
   unless jose == nil do
@@ -66,13 +66,13 @@ HexWeb.Repo.transaction(fn ->
         links: %{"Github" => "http://example.com/github"},
         description: lorem})
 
-    {:ok, _}   = Release.create(ecto, "0.0.1", "ecto", %{}, SampleData.checksum("ecto 0.0.1"))
-    {:ok, _}   = Release.create(ecto, "0.0.2", "ecto", %{postgrex: "~> 0.0.1"}, SampleData.checksum("ecto 0.0.2"))
-    {:ok, _}   = Release.create(ecto, "0.1.0", "ecto", %{postgrex: "~> 0.0.2"}, SampleData.checksum("ecto 0.1.0"))
-    {:ok, _}   = Release.create(ecto, "0.1.1", "ecto", %{postgrex: "~> 0.1.0"}, SampleData.checksum("ecto 0.1.1"))
-    {:ok, _}   = Release.create(ecto, "0.1.2", "ecto", %{postgrex: "== 0.1.0", decimal: "0.0.1"}, SampleData.checksum("ecto 0.1.2"))
-    {:ok, _}   = Release.create(ecto, "0.1.3", "ecto", %{postgrex: "0.1.0", decimal: "0.0.2"}, SampleData.checksum("ecto 0.1.3"))
-    {:ok, rel} = Release.create(ecto, "0.2.0", "ecto", %{postgrex: "~> 0.1.0", decimal: "~> 0.1.0"}, SampleData.checksum("ecto 0.2.0"))
+    {:ok, _}   = Release.create(ecto, %{version: "0.0.1", app: "ecto", requirements: %{}}, SampleData.checksum("ecto 0.0.1"))
+    {:ok, _}   = Release.create(ecto, %{version: "0.0.2", app: "ecto", requirements: %{postgrex: "~> 0.0.1"}}, SampleData.checksum("ecto 0.0.2"))
+    {:ok, _}   = Release.create(ecto, %{version: "0.1.0", app: "ecto", requirements: %{postgrex: "~> 0.0.2"}}, SampleData.checksum("ecto 0.1.0"))
+    {:ok, _}   = Release.create(ecto, %{version: "0.1.1", app: "ecto", requirements: %{postgrex: "~> 0.1.0"}}, SampleData.checksum("ecto 0.1.1"))
+    {:ok, _}   = Release.create(ecto, %{version: "0.1.2", app: "ecto", requirements: %{postgrex: "== 0.1.0", decimal: "0.0.1"}}, SampleData.checksum("ecto 0.1.2"))
+    {:ok, _}   = Release.create(ecto, %{version: "0.1.3", app: "ecto", requirements: %{postgrex: "0.1.0", decimal: "0.0.2"}}, SampleData.checksum("ecto 0.1.3"))
+    {:ok, rel} = Release.create(ecto, %{version: "0.2.0", app: "ecto", requirements: %{postgrex: "~> 0.1.0", decimal: "~> 0.1.0"}}, SampleData.checksum("ecto 0.2.0"))
 
     yesterday = HexWeb.Util.yesterday |> Ecto.Date.from_erl
     %Download{release_id: rel.id, downloads: 42, day: yesterday}

@@ -58,22 +58,20 @@ defmodule HexWeb.API.Router do
   defp handle_publish(conn, package, body) do
     case HexWeb.Tar.metadata(body) do
       {:ok, meta, checksum} ->
-        app     = meta["app"]
         version = meta["version"]
-        reqs    = meta["requirements"] || %{}
 
         if release = Release.get(package, version) do
-          result = Release.update(release, app, reqs, checksum)
+          result = Release.update(release, meta, checksum)
           if match?({:ok, _}, result), do: after_release(package, version, body)
           send_update_resp(conn, result, :public)
         else
-          result = Release.create(package, version, app, reqs, checksum)
+          result = Release.create(package, meta, checksum)
           if match?({:ok, _}, result), do: after_release(package, version, body)
           send_creation_resp(conn, result, :public, api_url(["packages", package.name, "releases", version]))
         end
 
       {:error, errors} ->
-        send_validation_failed(conn, %{tar: errors})
+        send_validation_failed(conn, [{:tar, errors}])
     end
   end
 
@@ -85,7 +83,7 @@ defmodule HexWeb.API.Router do
         if check_version_dirs?(files) do
           package  = release.package
           name     = package.name
-          version  = release.version
+          version  = to_string(release.version)
 
           task_start(fn ->
             store = Application.get_env(:hex_web, :store)
@@ -127,11 +125,11 @@ defmodule HexWeb.API.Router do
           |> cache(:public)
           |> send_resp(201, "")
         else
-          send_validation_failed(conn, %{tar: "directory name not allowed to match a semver version"})
+          send_validation_failed(conn, [{:tar, "directory name not allowed to match a semver version"}])
         end
 
       {:error, reason} ->
-        send_validation_failed(conn, %{tar: inspect reason})
+        send_validation_failed(conn, [{:tar, inspect reason}])
     end
   end
 
@@ -164,17 +162,13 @@ defmodule HexWeb.API.Router do
     plug :dispatch
 
     post "users" do
-      username = conn.params["username"]
-      email    = conn.params["email"]
-      password = conn.params["password"]
-
       # Unconfirmed users can be recreated
-      if (user = User.get(username: username)) && not user.confirmed do
+      if (user = User.get(username: conn.params["username"])) && not user.confirmed do
         User.delete(user)
       end
 
-      result = User.create(username, email, password)
-      send_creation_resp(conn, result, :public, api_url(["users", username]))
+      result = User.create(conn.params)
+      send_creation_resp(conn, result, :public, api_url(["users", conn.params["username"]]))
     end
 
     get "users/:name" do
@@ -185,7 +179,7 @@ defmodule HexWeb.API.Router do
 
     post "users/:name/reset" do
       if (user = User.get(username: name) || User.get(email: name)) do
-        User.initiate_password_reset(user)
+        User.password_reset(user)
 
         conn
         |> cache(:private)
@@ -390,9 +384,8 @@ defmodule HexWeb.API.Router do
     post "keys" do
       auth_opts = [only_basic: true, allow_unconfirmed: true]
       with_authorized(conn, auth_opts, fn user ->
-        name = conn.params["name"]
-        result = Key.create(name, user)
-        send_creation_resp(conn, result, :private, api_url(["keys", name]))
+        result = Key.create(user, conn.params)
+        send_creation_resp(conn, result, :private, api_url(["keys", conn.params["name"]]))
       end)
     end
 

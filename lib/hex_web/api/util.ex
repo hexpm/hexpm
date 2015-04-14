@@ -258,6 +258,7 @@ defmodule HexWeb.API.Util do
   end
 
   def send_validation_failed(conn, errors) do
+    errors = errors_to_map(errors)
     body = %{message: "Validation failed", errors: errors}
     send_render(conn, 422, body)
   end
@@ -265,5 +266,17 @@ defmodule HexWeb.API.Util do
   def cache(conn, privacy) do
     HexWeb.Plug.cache(conn, ["accept", "accept-encoding"],
                       [privacy] ++ ["max-age": @max_age])
+  end
+
+  defp errors_to_map(tuple) when is_tuple(tuple) do
+    Tuple.to_list(tuple) |> Enum.map(&errors_to_map/1) |> List.to_tuple
+  end
+
+  defp errors_to_map([{_, _}|_] = list) do
+    Enum.into(list, %{}, &errors_to_map/1)
+  end
+
+  defp errors_to_map(term) do
+    term
   end
 end

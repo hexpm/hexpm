@@ -16,6 +16,6 @@ case System.argv do
     end
 end
 
-{:ok, _user} = HexWeb.User.update(user, nil, password)
+{:ok, _user} = HexWeb.User.update(%{username: user, password: password})
 
 IO.puts "Password changed for user: #{user.username} (#{user.email})"

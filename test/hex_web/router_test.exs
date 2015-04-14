@@ -9,11 +9,10 @@ defmodule HexWeb.RouterTest do
   alias HexWeb.RegistryBuilder
 
   setup do
-    User.create("other", "other@mail.com", "other", true)
-    {:ok, user} = User.create("eric", "eric@mail.com", "eric", true)
+    {:ok, user} = User.create(%{username: "eric", email: "eric@mail.com", password: "eric"}, true)
     {:ok, _}    = Package.create("postgrex", user, %{})
     {:ok, pkg}  = Package.create("decimal", user, %{})
-    {:ok, _}    = Release.create(pkg, "0.0.1", "decimal", [{"postgrex", "0.0.1"}], "")
+    {:ok, _}    = Release.create(pkg, %{version: "0.0.1", app: "decimal", requirements: %{postgrex: "0.0.1"}}, "")
     :ok
   end
 

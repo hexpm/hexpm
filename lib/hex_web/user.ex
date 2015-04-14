@@ -1,6 +1,7 @@
 defmodule HexWeb.User do
   use Ecto.Model
   alias HexWeb.Util
+  import Ecto.Changeset, except: [validate_unique: 3]
   import HexWeb.Validation
   use HexWeb.Timestamps
 
@@ -20,67 +21,61 @@ defmodule HexWeb.User do
     has_many :keys, HexWeb.API.Key
   end
 
-  validatep validate_create(user),
-    # username: present() and type(:string) and has_format(~r"^[a-z0-9_\-\.!~\*'\(\)]+$", message: "illegal characters"),
-    username: present() and has_format(~r"^[a-z0-9_\-\.!~\*'\(\)]+$", message: "illegal characters"),
-    also: unique(:username, on: HexWeb.Repo, case_sensitive: false),
-    also: validate_password(),
-    also: validate_email()
+  after_delete :delete_keys
 
-  validatep validate_email(user),
-    # email: present() and type(:string) and has_format(~r"^.+@.+\..+$"),
-    email: present() and has_format(~r"^.+@.+\..+$"),
-    also: unique(:email, on: HexWeb.Repo)
+  defp changeset(user, :create, params) do
+    Util.params(params)
+    |> cast(user, ~w(username password email), [])
+    |> update_change(:username, &String.downcase/1)
+    |> update_change(:email, &String.downcase/1)
+    |> validate_format(:username, ~r"^[a-z0-9_\-\.!~\*'\(\)]+$")
+    |> validate_format(:email, ~r"^.+@.+\..+$")
+    |> validate_unique(:username, on: HexWeb.Repo, case_sensitive: false)
+    |> validate_unique(:email, on: HexWeb.Repo, case_sensitive: false)
+  end
 
-  validatep validate_password(user),
-    # password: present() and type(:string)
-    password: present()
+  defp changeset(user, :update, params) do
+    Util.params(params)
+    |> cast(user, ~w(username password), [])
+    |> update_change(:username, &String.downcase/1)
+    |> validate_format(:username, ~r"^[a-z0-9_\-\.!~\*'\(\)]+$")
+  end
 
-  def create(username, email, password, confirmed? \\ false) do
-    username = if is_binary(username), do: String.downcase(username), else: username
-    email    = if is_binary(email),    do: String.downcase(email),    else: email
+  def create(params, confirmed? \\ false) do
+    changeset =
+      changeset(%HexWeb.User{}, :create, params)
+      |> put_change(:confirmation_key, gen_key())
+      |> put_change(:confirmed, confirmed?)
+      |> update_change(:password, &gen_password/1)
 
-    user = %HexWeb.User{username: username, email: email, password: password,
-                        confirmation_key: gen_key(), confirmed: confirmed?}
-
-    if errors = validate_create(user) do
-      {:error, errors}
+    if changeset.valid? do
+      send_confirmation_email(changeset)
+      {:ok, HexWeb.Repo.insert(changeset)}
     else
-      user = %{user | password: gen_password(password)}
-      send_confirmation_email(user)
-      {:ok, HexWeb.Repo.insert(user)}
+      {:error, changeset.errors}
     end
   end
 
-  def update(user, email, password) do
-    errors = %{}
+  def update(user, params) do
+    changeset =
+      changeset(user, :update, params)
+      |> update_change(:password, &gen_password/1)
 
-    if email do
-      user = %{user | email: String.downcase(email)}
-      errors = Map.merge(errors, validate_email(user) || %{})
-    end
-
-    if password do
-      user = %{user | password: password}
-      Map.merge(errors, validate_password(user) || %{})
-      user = %{user | password: gen_password(password)}
-    end
-
-    if errors != %{} do
-      {:error, errors}
+    if changeset.valid? do
+      {:ok, HexWeb.Repo.update(changeset)}
     else
-      HexWeb.Repo.update(user)
-      {:ok, user}
+      {:error, changeset.errors}
     end
   end
 
   def confirm?(username, key) do
-    if (user = get(username: username)) && Util.secure_compare(user.confirmation_key, key) do
+    if (user = get(username: username))
+       && Util.secure_compare(user.confirmation_key, key) do
       confirm(user)
 
-      email = Application.get_env(:hex_web, :email)
+      mailer = Application.get_env(:hex_web, :email)
       body = HexWeb.Email.Templates.render(:confirmed, [])
-      email.send(user.email, "Hex.pm - Account confirmed", body)
+      mailer.send(user.email, "Hex.pm - Account confirmed", body)
 
       true
     else
@@ -89,18 +84,16 @@ defmodule HexWeb.User do
   end
 
   def confirm(user) do
-    %{user | confirmed: true}
+    change(user, %{confirmed: true})
     |> HexWeb.Repo.update
   end
 
-  def initiate_password_reset(user) do
+  def password_reset(user) do
     key = gen_key()
-    now = Util.ecto_now
-
-    %{user | reset_key: key, reset_expiry: now}
-    |> HexWeb.Repo.update
-
     send_reset_email(user, key)
+
+    change(user, %{reset_key: key, reset_expiry: Util.ecto_now})
+    |> HexWeb.Repo.update
   end
 
   def reset?(username, key, password) do
@@ -110,9 +103,9 @@ defmodule HexWeb.User do
         && Util.within_last_day(user.reset_expiry) do
       reset(user, password)
 
-      email = Application.get_env(:hex_web, :email)
+      mailer = Application.get_env(:hex_web, :email)
       body = HexWeb.Email.Templates.render(:password_reset, [])
-      email.send(user.email, "Hex.pm - Password reset", body)
+      mailer.send(user.email, "Hex.pm - Password reset", body)
 
       true
     else
@@ -122,12 +115,12 @@ defmodule HexWeb.User do
 
   def reset(user, password) do
     HexWeb.Repo.transaction(fn ->
-      {:ok, result} = HexWeb.User.update(user, nil, password)
+      {:ok, user} = HexWeb.User.update(%{username: user, password: password})
 
-      from(k in HexWeb.API.Key, where: k.user_id == ^result.id)
+      assoc(user, :keys)
       |> HexWeb.Repo.delete_all
 
-      %{result | reset_key: nil, reset_expiry: nil}
+      change(user, %{reset_key: nil, reset_expiry: nil})
       |> HexWeb.Repo.update
     end)
   end
@@ -136,16 +129,14 @@ defmodule HexWeb.User do
     from(u in HexWeb.User,
          where: fragment("lower(?) = lower(?)", u.username, ^username),
          limit: 1)
-    |> HexWeb.Repo.all
-    |> List.first
+    |> HexWeb.Repo.one
   end
 
   def get(email: email) do
     from(u in HexWeb.User,
          where: u.email == fragment("lower(?)", ^email),
          limit: 1)
-    |> HexWeb.Repo.all
-    |> List.first
+    |> HexWeb.Repo.one
   end
 
   def delete(user) do
@@ -163,6 +154,11 @@ defmodule HexWeb.User do
     Util.secure_compare(hash, stored_hash)
   end
 
+  defp delete_keys(changeset) do
+    assoc(changeset.model, :keys)
+    |> HexWeb.Repo.delete_all
+  end
+
   defp gen_password(password) do
     password      = String.to_char_list(password)
     work_factor   = Application.get_env(:hex_web, :password_work_factor)
@@ -175,13 +171,14 @@ defmodule HexWeb.User do
     :crypto.strong_rand_bytes(16) |> Base.encode16(case: :lower)
   end
 
-  defp send_confirmation_email(user) do
-    email = Application.get_env(:hex_web, :email)
-    body  = HexWeb.Email.Templates.render(:confirmation_request,
-                                          username: user.username,
-                                          key: user.confirmation_key)
+  defp send_confirmation_email(changeset) do
+    username = get_change(changeset, :username)
+    email    = get_change(changeset, :email)
+    key      = get_change(changeset, :confirmation_key)
+    mailer   = Application.get_env(:hex_web, :email)
+    body     = HexWeb.Email.Templates.render(:confirmation_request, username: username, key: key)
 
-    email.send(user.email, "Hex.pm - Account confirmation", body)
+    mailer.send(email, "Hex.pm - Account confirmation", body)
   end
 
   defp send_reset_email(user, key) do

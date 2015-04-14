@@ -1,14 +1,14 @@
 defmodule HexWeb.Package do
   use Ecto.Model
   import HexWeb.Validation
-  require Ecto.Validator
+  import Ecto.Changeset, except: [validate_unique: 3]
   alias HexWeb.Util
   use HexWeb.Timestamps
 
   schema "packages" do
     field :name, :string
     has_many :owners, HexWeb.PackageOwner
-    field :meta, :string
+    field :meta, HexWeb.JSON
     has_many :releases, HexWeb.Release
     field :inserted_at, HexWeb.DateTime
     field :updated_at, HexWeb.DateTime
@@ -27,84 +27,75 @@ defmodule HexWeb.Package do
 
   @reserved_names @elixir_names ++ @otp_names
 
-  validatep validate_create(package),
-    also: validate(),
-    also: unique(:name, case_sensitive: false, on: HexWeb.Repo)
-
-  validatep validate(package),
-    # name: present() and type(:string) and has_format(~r"^[a-z]\w*$") and
-    name: present() and has_format(~r"^[a-z]\w*$") and not_member_of(@reserved_names),
-    meta: validate_meta()
-
-  # defp validate_meta(field, arg) do
-  #   errors =
-  #     Ecto.Validator.bin_dict(arg,
-  #       contributors: type({:array, :string}),
-  #       licenses:     type({:array, :string}),
-  #       links:        type({:dict, :string, :string}),
-  #       description:  type(:string))
-
-  #   if errors == [], do: [], else: [{field, errors}]
-  # end
-
-  defp validate_meta(_field, _arg) do
-    nil
-  end
-
-  @meta_fields [:contributors, :description, :links, :licenses]
+  # TODO: We can remove the atoms here?
+  @meta_fields ~w(contributors description links licenses)a
   @meta_fields @meta_fields ++ Enum.map(@meta_fields, &Atom.to_string/1)
 
+  after_delete :delete_owners
+
+  defp validate_meta(changeset, field) do
+    validate_change(changeset, field, fn meta ->
+      type(field, Map.get(meta, "contributors"), {:array, :string}) ++
+      type(field, Map.get(meta, "licenses"),     {:array, :string}) ++
+      type(field, Map.get(meta, "links"),        {:dict, :string, :string}) ++
+      type(field, Map.get(meta, "description"),  :string)
+    end)
+  end
+
+  # TODO: Do we really need create and update?
+  defp changeset(package, :create, params) do
+    changeset(package, :update, params)
+    |> validate_unique(:name, on: HexWeb.Repo)
+  end
+
+  defp changeset(package, :update, params) do
+    Util.params(params)
+    |> cast(package, ~w(name meta), [])
+    |> update_change(:meta, &Map.take(&1, @meta_fields))
+    |> validate_format(:name, ~r"^[a-z]\w*$")
+    |> validate_exclusion(:name, @reserved_names)
+    |> validate_meta(:meta)
+  end
+
   def create(name, owner, meta) do
-    meta = Map.take(meta, @meta_fields)
-    package = %HexWeb.Package{name: name, meta: meta}
+    changeset = changeset(%HexWeb.Package{}, :create, name: name, meta: meta)
 
-    if errors = validate_create(package) do
-      {:error, errors}
+    if changeset.valid? do
+      {:ok, package} =
+        HexWeb.Repo.transaction(fn ->
+          package = HexWeb.Repo.insert(changeset)
+
+          %HexWeb.PackageOwner{package_id: package.id, owner_id: owner.id}
+          |> HexWeb.Repo.insert
+
+          package
+        end)
+
+      {:ok, package}
     else
-      package = %{package | meta: Poison.encode!(package.meta)}
-
-      {:ok, package} = HexWeb.Repo.transaction(fn ->
-        package = HexWeb.Repo.insert(package)
-
-        %HexWeb.PackageOwner{package_id: package.id, owner_id: owner.id}
-        |> HexWeb.Repo.insert
-        package
-      end)
-
-      {:ok, %{package | meta: meta}}
+      {:error, changeset.errors}
     end
   end
 
   def update(package, meta) do
-    meta = Map.take(meta, @meta_fields)
+    changeset = changeset(package, :update, meta: meta)
 
-    if errors = validate(%{package | meta: meta}) do
-      {:error, errors}
+    if changeset.valid? do
+      {:ok, HexWeb.Repo.update(changeset)}
     else
-      package = %{package | meta: Poison.encode!(meta)}
-      HexWeb.Repo.update(package)
-      {:ok, %{package | meta: meta}}
+      {:error, changeset.errors}
     end
   end
 
   def get(name) do
-    package =
-      from(p in HexWeb.Package,
-           where: p.name == ^name,
-           limit: 1)
-      |> HexWeb.Repo.one
-
-    if package do
-      %{package | meta: Poison.decode!(package.meta)}
-    end
+    from(p in HexWeb.Package,
+         where: p.name == ^name,
+         limit: 1)
+    |> HexWeb.Repo.one
   end
 
   def delete(package) do
-    package = %{package | meta: ""}
-    HexWeb.Repo.transaction(fn ->
-      HexWeb.Repo.delete_all(package.owners)
-      HexWeb.Repo.delete(package)
-    end)
+    HexWeb.Repo.delete(package)
   end
 
   def owners(package) do
@@ -142,7 +133,6 @@ defmodule HexWeb.Package do
     |> Util.paginate(page, count)
     |> search(search, true)
     |> HexWeb.Repo.all
-    |> Enum.map(& %{&1 | meta: Poison.decode!(&1.meta)})
   end
 
   def recent(count) do
@@ -160,7 +150,6 @@ defmodule HexWeb.Package do
          order_by: [desc: p.inserted_at],
          limit: ^count)
     |> HexWeb.Repo.all
-    |> Enum.map(& %{&1 | meta: Poison.decode!(&1.meta)})
   end
 
   def count(search \\ nil) do
@@ -172,6 +161,11 @@ defmodule HexWeb.Package do
   def versions(package) do
     from(r in HexWeb.Release, where: r.package_id == ^package.id, select: r.version)
     |> HexWeb.Repo.all
+  end
+
+  defp delete_owners(changeset) do
+    assoc(changeset.model, :owners)
+    |> HexWeb.Repo.delete_all
   end
 
   defp search(query, nil, _order?) do
@@ -221,7 +215,7 @@ defimpl HexWeb.Render, for: HexWeb.Package do
           |> Map.take([:version, :inserted_at, :updated_at])
           |> Map.update!(:inserted_at, &to_iso8601/1)
           |> Map.update!(:updated_at, &to_iso8601/1)
-          |> Map.put(:url, api_url(["packages", package.name, "releases", release.version]))
+          |> Map.put(:url, api_url(["packages", package.name, "releases", to_string(release.version)]))
         end)
       entity = Map.put(entity, :releases, releases)
     end

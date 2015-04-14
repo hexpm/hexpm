@@ -16,41 +16,37 @@ defmodule HexWeb.API.Key do
     field :user_secret, :string, virtual: true
   end
 
-  validatep validate(key),
-    # name: present() and type(:string)
-    name: present()
+  before_insert :unique_name
 
-  def create(name, user) do
-    key = build(user, :keys) |> struct(name: name)
+  defp changeset(key, params) do
+    Util.params(params)
+    |> cast(key, ~w(name), [])
+  end
 
-    if errors = validate(key) do
-      {:error, errors}
+  def create(user, params) do
+    {user_secret, first, second} = gen_key()
+
+    changeset =
+      build(user, :keys)
+      |> changeset(params)
+      |> put_change(:user_secret, user_secret)
+      |> put_change(:secret_first, first)
+      |> put_change(:secret_second, second)
+
+    if changeset.valid? do
+      {:ok, HexWeb.Repo.insert(changeset)}
     else
-      names =
-        from(k in HexWeb.API.Key, where: k.user_id == ^user.id, select: k.name)
-        |> HexWeb.Repo.all
-        |> Enum.into(HashSet.new)
-
-      if Set.member?(names, name) do
-        name = unique_name(name, names)
-      end
-
-      {user_secret, first, second} = gen_key()
-      key = %{key | name: name,
-                    user_secret: user_secret,
-                    secret_first: first,
-                    secret_second: second}
-      {:ok, HexWeb.Repo.insert(key)}
+      {:error, changeset.errors}
     end
   end
 
   def all(user) do
-    from(k in HexWeb.API.Key, where: k.user_id == ^user.id)
+    assoc(user, :keys)
     |> HexWeb.Repo.all
   end
 
   def get(name, user) do
-    from(k in HexWeb.API.Key, where: k.user_id == ^user.id and k.name == ^name, limit: 1)
+    from(k in assoc(user, :keys), where: k.name == ^name, limit: 1)
     |> HexWeb.Repo.one
   end
 
@@ -96,10 +92,27 @@ defmodule HexWeb.API.Key do
     {user_secret, first, second}
   end
 
-  defp unique_name(name, names, counter \\ 2) do
+  defp unique_name(changeset) do
+    {:ok, name} = fetch_change(changeset, :name)
+
+    names =
+      from(u in assoc(changeset.model, :user),
+           join: k in assoc(u, :keys),
+           select: k.name)
+      |> HexWeb.Repo.all
+      |> Enum.into(HashSet.new)
+
+    if Set.member?(names, name) do
+      name = find_unique_name(name, names)
+    end
+
+    put_change(changeset, :name, name)
+  end
+
+  defp find_unique_name(name, names, counter \\ 2) do
     name_counter = "#{name}-#{counter}"
     if Set.member?(names, name_counter) do
-      unique_name(name, names, counter + 1)
+      find_unique_name(name, names, counter + 1)
     else
       name_counter
     end

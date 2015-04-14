@@ -2,9 +2,10 @@ defmodule HexWeb.Repo.Migrations.AddPackageDownloadsView do
   use Ecto.Migration
 
   def up do
-    [ "CREATE TYPE calendar_view AS ENUM ('day', 'week', 'all')",
+    execute "CREATE TYPE calendar_view AS ENUM ('day', 'week', 'all')"
 
-      "CREATE MATERIALIZED VIEW package_downloads (
+    execute """
+      CREATE MATERIALIZED VIEW package_downloads (
         package_id,
         view,
         downloads) AS
@@ -33,14 +34,15 @@ defmodule HexWeb.Repo.Migrations.AddPackageDownloadsView do
                               current_date - interval '1 day'
           UNION
           SELECT NULL, 'all', SUM(d.downloads)
-          FROM downloads AS d",
+          FROM downloads AS d
+    """
 
-      "CREATE INDEX ON package_downloads (package_id)",
-      "CREATE INDEX ON package_downloads (view, downloads)" ]
+    execute "CREATE INDEX ON package_downloads (package_id)"
+    execute "CREATE INDEX ON package_downloads (view, downloads)"
   end
 
   def down do
-    [ "DROP MATERIALIZED VIEW IF EXISTS package_downloads",
-      "DROP TYPE IF EXISTS calendar_view" ]
+    execute "DROP MATERIALIZED VIEW IF EXISTS package_downloads"
+    execute "DROP TYPE IF EXISTS calendar_view"
   end
 end

@@ -3,38 +3,72 @@ defmodule HexWeb.Validation do
   Ecto validation helpers.
   """
 
+  import Ecto.Changeset
   import Ecto.Query, only: [from: 2]
+
+  def type(_field, nil, _type) do
+    []
+  end
+
+  def type(field, value, {:dict, key_type, value_type}) when is_map(value) do
+    errors = Enum.flat_map(value, fn {key, _} -> type(field, key, key_type) end) ++
+             Enum.flat_map(value, fn {_, value} -> type(field, value, value_type) end)
+    if errors == [] do
+      []
+    else
+      [{field, "expected type dict(#{key_type}, #{value_type})"}]
+    end
+  end
+
+  def type(_field, value, :string) when is_binary(value),
+    do: []
+  def type(field, _value, :string),
+    do: [{field, "expected type string"}]
+
+  def type(field, value, {:array, inner}) when is_list(value) do
+    errors = Enum.flat_map(value, &type(field, &1, inner))
+    if errors == [] do
+      []
+    else
+      [{field, "expected type array(#{inner})"}]
+    end
+  end
+
+  def type(field, _value, {:array, inner}),
+    do: [{field, "expected type array(#{inner})"}]
 
   @doc """
   Checks if a version is valid semver.
   """
-  def valid_version(_attr, version, opts \\ []) do
-    case Version.parse(version) do
-      {:ok, %Version{}} ->
-        nil
-      _ ->
-        opts[:message] || "invalid version"
-    end
+  def validate_version(changeset, field) do
+    validate_change(changeset, field, fn
+      %Version{build: nil} ->
+        []
+      %Version{} ->
+        [{field, :build_number_not_allowed}]
+    end)
   end
 
   @doc """
   Checks if the fields on the given entity are unique
   by querying the database.
   """
-  def unique(model, field, opts \\ []) when is_list(opts) do
-    module  = model.__struct__
-    repo    = Keyword.fetch!(opts, :on)
-    scope   = opts[:scope] || []
-    message = opts[:message] || "already taken"
-    case    = Keyword.get(opts, :case_sensitive, true)
+  def validate_unique(changeset, field, opts \\ []) do
+    validate_change(changeset, field, fn value ->
+      model        = changeset.model
+      module       = model.__struct__
+      type         = module.__schema__(:field, field)
+      dumped_value = HexWeb.Util.type_dump!(type, value)
+      repo         = Keyword.fetch!(opts, :on)
+      scope        = opts[:scope] || []
+      case         = Keyword.get(opts, :case_sensitive, true)
 
-    if value = Map.fetch!(model, field) do
       query = from var in module, select: true, limit: 1
 
       query =
         if case do
           from var in query,
-               where: fragment("lower(?) = lower(?)", field(var, ^field), ^value)
+               where: fragment("lower(?) = lower(?)", field(var, ^field), ^dumped_value)
         else
           from var in query,
                where: field(var, ^field) == ^value
@@ -48,8 +82,10 @@ defmodule HexWeb.Validation do
         end)
 
       if repo.all(query) == [true] do
-        Map.put(%{}, field, message)
+        [{field, :already_taken}]
+      else
+        []
       end
-    end
+    end)
   end
 end
