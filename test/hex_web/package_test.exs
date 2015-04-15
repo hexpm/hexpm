@@ -51,19 +51,18 @@ defmodule HexWeb.PackageTest do
     assert meta["contributors"] == meta2["contributors"]
   end
 
-  # TODO
-  # test "validate invalid meta" do
-  #   meta = %{
-  #     "contributors" => "eric",
-  #     "licenses"     => 123,
-  #     "links"        => ["url"],
-  #     "description"  => ["so bad"]}
+  test "validate invalid meta" do
+    meta = %{
+      "contributors" => "eric",
+      "licenses"     => 123,
+      "links"        => ["url"],
+      "description"  => ["so bad"]}
 
-  #   user = User.get(username: "eric")
-  #   assert {:error, errors} = Package.create("ecto", user, meta)
-  #   assert Map.size(errors) == 1
-  #   assert Map.size(errors[:meta]) == 4
-  # end
+    user = User.get(username: "eric")
+    assert {:error, errors} = Package.create(user, %{name: "ecto", meta: meta})
+    assert length(errors) == 1
+    assert length(errors[:meta]) == 4
+  end
 
   test "packages are unique" do
     user = User.get(username: "eric")

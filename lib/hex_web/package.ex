@@ -28,22 +28,30 @@ defmodule HexWeb.Package do
 
   @reserved_names @elixir_names ++ @otp_names
 
-  # TODO: We can remove the atoms here?
-  @meta_fields ~w(contributors description links licenses)a
-  @meta_fields @meta_fields ++ Enum.map(@meta_fields, &Atom.to_string/1)
+  @meta_types %{
+    "contributors" => {:array, :string},
+    "licenses"     => {:array, :string},
+    "links"        => {:dict, :string, :string},
+    "description"  => :string
+  }
+
+  @meta_fields Map.keys(@meta_types)
 
   after_delete :delete_owners
 
   defp validate_meta(changeset, field) do
     validate_change(changeset, field, fn _field, meta ->
-      type(field, Map.get(meta, "contributors"), {:array, :string}) ++
-      type(field, Map.get(meta, "licenses"),     {:array, :string}) ++
-      type(field, Map.get(meta, "links"),        {:dict, :string, :string}) ++
-      type(field, Map.get(meta, "description"),  :string)
+      errors =
+        Enum.flat_map(@meta_types, fn {sub_field, type} ->
+          type(sub_field, Map.get(meta, sub_field), type)
+        end)
+
+      if errors == [],
+          do: [],
+        else: [{field, errors}]
     end)
   end
 
-  # TODO: Do we really need create and update?
   defp changeset(package, :create, params) do
     changeset(package, :update, params)
     |> validate_unique(:name, on: HexWeb.Repo)

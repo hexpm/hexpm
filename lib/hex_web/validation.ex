@@ -20,6 +20,10 @@ defmodule HexWeb.Validation do
     end
   end
 
+  def type(field, _value, {:dict, key_type, value_type}) do
+    [{field, "expected type dict(#{key_type}, #{value_type})"}]
+  end
+
   def type(_field, value, :string) when is_binary(value),
     do: []
   def type(field, _value, :string),
