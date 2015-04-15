@@ -1,7 +1,7 @@
 language: erlang
 otp_release:
   - 17.0
-  - 17.4
+  - 17.5
 sudo: false
 addons:
   postgresql: "9.3"
@@ -17,7 +17,7 @@ script:
   - MIX_ENV=test mix compile
   - mix test --include integration
 env:
-  - ELIXIRVERSION=v1.0.0
+  - ELIXIRVERSION=v1.0.4
   - ELIXIRVERSION=master
 notifications:
   recipients:
