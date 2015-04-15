@@ -155,18 +155,18 @@ defmodule HexWeb.API.RouterTest do
     assert get_resp_header(conn, "www-authenticate") == ["Basic realm=hex"]
   end
 
-  # test "create package validates" do
-  #   headers = [ {"content-type", "application/json"},
-  #               {"authorization", "Basic " <> :base64.encode("eric:eric")}]
-  #   body = %{meta: %{links: "invalid"}}
-  #   conn = conn("PUT", "/api/packages/ecto", Poison.encode!(body), headers: headers)
-  #   conn = Router.call(conn, [])
+  test "create package validates" do
+    body = %{meta: %{links: "invalid"}}
+    conn = conn("PUT", "/api/packages/ecto", Poison.encode!(body))
+           |> put_req_header("content-type", "application/json")
+           |> put_req_header("authorization", "Basic " <> :base64.encode("eric:eric"))
+    conn = Router.call(conn, [])
 
-  #   assert conn.status == 422
-  #   body = Poison.decode!(conn.resp_body)
-  #   assert body["message"] == "Validation failed"
-  #   assert body["errors"]["meta"]["links"] == "wrong type, expected: dict(string, string)"
-  # end
+    assert conn.status == 422
+    body = Poison.decode!(conn.resp_body)
+    assert body["message"] == "Validation failed"
+    assert body["errors"]["meta"]["links"] == "expected type dict(string, string)"
+  end
 
   test "create releases" do
     body = create_tar(%{name: :postgrex, app: "not_postgrex", version: "0.0.1", requirements: %{}}, [])
