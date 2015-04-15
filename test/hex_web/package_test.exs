@@ -73,6 +73,6 @@ defmodule HexWeb.PackageTest do
 
   test "reserved names" do
     user = User.get(username: "eric")
-    assert {:error, [name: :exclusion]} = Package.create(user, %{name: "elixir", meta: %{}})
+    assert {:error, [name: "is reserved"]} = Package.create(user, %{name: "elixir", meta: %{}})
   end
 end

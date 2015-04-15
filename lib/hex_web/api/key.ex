@@ -2,6 +2,8 @@ defmodule HexWeb.API.Key do
   use Ecto.Model
   alias HexWeb.Util
 
+  @timestamps_opts [usec: true]
+
   schema "keys" do
     field :name, :string
     field :secret_first, :string
@@ -18,7 +20,7 @@ defmodule HexWeb.API.Key do
   before_insert :unique_name
 
   defp changeset(key, params) do
-    cast(params, key, ~w(name), [])
+    cast(key, params, ~w(name), [])
   end
 
   def create(user, params) do

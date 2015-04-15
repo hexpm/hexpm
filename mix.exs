@@ -21,8 +21,8 @@ defmodule HexWeb.Mixfile do
   defp deps do
     [{:plug,      "~> 0.11"},
      {:cowboy,    "~> 1.0"},
-     {:ecto,      "~> 0.8.0"},
-     {:postgrex,  "~> 0.7.0"},
+     {:ecto,      github: "elixir-lang/ecto"},
+     {:postgrex,  ">= 0.0.0"},
      {:poison,    "~> 1.2"},
      {:porcelain, "~> 2.0"},
      {:earmark,   "~> 0.1"},

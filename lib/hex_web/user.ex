@@ -4,6 +4,8 @@ defmodule HexWeb.User do
   import Ecto.Changeset, except: [validate_unique: 3]
   import HexWeb.Validation
 
+  @timestamps_opts [usec: true]
+
   schema "users" do
     field :username, :string
     field :email, :string
@@ -22,7 +24,7 @@ defmodule HexWeb.User do
   after_delete :delete_keys
 
   defp changeset(user, :create, params) do
-    cast(params, user, ~w(username password email), [])
+    cast(user, params, ~w(username password email), [])
     |> update_change(:username, &String.downcase/1)
     |> update_change(:email, &String.downcase/1)
     |> validate_format(:username, ~r"^[a-z0-9_\-\.!~\*'\(\)]+$")
@@ -32,7 +34,7 @@ defmodule HexWeb.User do
   end
 
   defp changeset(user, :update, params) do
-    cast(params, user, ~w(username password), [])
+    cast(user, params, ~w(username password), [])
     |> update_change(:username, &String.downcase/1)
     |> validate_format(:username, ~r"^[a-z0-9_\-\.!~\*'\(\)]+$")
   end
@@ -88,7 +90,7 @@ defmodule HexWeb.User do
     key = gen_key()
     send_reset_email(user, key)
 
-    change(user, %{reset_key: key, reset_expiry: Util.ecto_now})
+    change(user, %{reset_key: key, reset_expiry: Ecto.DateTime.utc})
     |> HexWeb.Repo.update
   end
 

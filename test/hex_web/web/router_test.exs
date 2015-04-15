@@ -12,20 +12,20 @@ defmodule HexWeb.Web.RouterTest do
   end
 
   setup do
-    first_date  = Ecto.Type.load!(Ecto.DateTime, {{2014, 5, 1}, {10, 11, 12}})
-    second_date = Ecto.Type.load!(Ecto.DateTime, {{2014, 5, 2}, {10, 11, 12}})
-    last_date   = Ecto.Type.load!(Ecto.DateTime, {{2014, 5, 3}, {10, 11, 12}})
+    first_date  = Ecto.DateTime.from_erl({{2014, 5, 1}, {10, 11, 12}})
+    second_date = Ecto.DateTime.from_erl({{2014, 5, 2}, {10, 11, 12}})
+    last_date   = Ecto.DateTime.from_erl({{2014, 5, 3}, {10, 11, 12}})
 
     foo = HexWeb.Repo.insert(%Package{name: "foo", meta: %{}, inserted_at: first_date, updated_at: first_date})
     bar = HexWeb.Repo.insert(%Package{name: "bar", meta: %{}, inserted_at: second_date, updated_at: second_date})
     other = HexWeb.Repo.insert(%Package{name: "other", meta: %{}, inserted_at: last_date, updated_at: last_date})
 
-    release_create(foo, "0.0.1", "foo", [], "", Ecto.Type.load!(Ecto.DateTime, {{2014, 5, 3}, {10, 11, 1}}))
-    release_create(foo, "0.0.2", "foo", [], "", Ecto.Type.load!(Ecto.DateTime, {{2014, 5, 3}, {10, 11, 2}}))
-    release_create(foo, "0.1.0", "foo", [], "", Ecto.Type.load!(Ecto.DateTime, {{2014, 5, 3}, {10, 11, 3}}))
-    release_create(bar, "0.0.1", "bar", [], "", Ecto.Type.load!(Ecto.DateTime, {{2014, 5, 3}, {10, 11, 4}}))
-    release_create(bar, "0.0.2", "bar", [], "", Ecto.Type.load!(Ecto.DateTime, {{2014, 5, 3}, {10, 11, 5}}))
-    release_create(other, "0.0.1", "other", [], "", Ecto.Type.load!(Ecto.DateTime, {{2014, 5, 3}, {10, 11, 6}}))
+    release_create(foo, "0.0.1", "foo", [], "", Ecto.DateTime.from_erl({{2014, 5, 3}, {10, 11, 1}}))
+    release_create(foo, "0.0.2", "foo", [], "", Ecto.DateTime.from_erl({{2014, 5, 3}, {10, 11, 2}}))
+    release_create(foo, "0.1.0", "foo", [], "", Ecto.DateTime.from_erl({{2014, 5, 3}, {10, 11, 3}}))
+    release_create(bar, "0.0.1", "bar", [], "", Ecto.DateTime.from_erl({{2014, 5, 3}, {10, 11, 4}}))
+    release_create(bar, "0.0.2", "bar", [], "", Ecto.DateTime.from_erl({{2014, 5, 3}, {10, 11, 5}}))
+    release_create(other, "0.0.1", "other", [], "", Ecto.DateTime.from_erl({{2014, 5, 3}, {10, 11, 6}}))
     :ok
   end
 

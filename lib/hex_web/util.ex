@@ -27,10 +27,6 @@ defmodule HexWeb.Util do
     :calendar.gregorian_days_to_date(today_days - 1)
   end
 
-  def ecto_now do
-    Ecto.Type.load!(Ecto.DateTime, :calendar.universal_time)
-  end
-
   defp diff(a, b) do
     {days, time} = :calendar.time_difference(a, b)
     :calendar.time_to_seconds(time) - (days * 24 * 60 * 60)
@@ -41,7 +37,7 @@ defmodule HexWeb.Util do
   """
   def within_last_day(nil), do: false
   def within_last_day(a) do
-    diff = diff(Ecto.Type.dump!(Ecto.DateTime, a),
+    diff = diff(Ecto.DateTime.to_erl(a),
                 :calendar.universal_time)
 
     diff < (24 * 60 * 60)
@@ -65,7 +61,7 @@ defmodule HexWeb.Util do
 
   def last_modified(models) do
     list = Enum.map(List.wrap(models), fn model ->
-      Ecto.Type.dump!(Ecto.DateTime, model.updated_at)
+      Ecto.DateTime.to_erl(model.updated_at)
     end)
 
     Enum.max(list)
@@ -183,7 +179,7 @@ defmodule HexWeb.Util do
     result.status
   end
 
-  def association_loaded?(%Ecto.Associations.NotLoaded{}),
+  def association_loaded?(%Ecto.Association.NotLoaded{}),
     do: false
   def association_loaded?(_),
     do: true

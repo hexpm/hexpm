@@ -1,8 +1,5 @@
 defmodule HexWeb.Repo do
-  use Ecto.Repo,
-    adapter: Ecto.Adapters.Postgres,
-    otp_app: :hex_web
-
+  use Ecto.Repo, otp_app: :hex_web
   require Logger
 
   def priv,

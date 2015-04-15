@@ -31,6 +31,10 @@ if Mix.env in [:dev, :test] do
     secret:   System.get_env("HEX_SECRET")   || "796f75666f756e64746865686578"
 end
 
+config :hex_web, HexWeb.Repo,
+  adapter: Ecto.Adapters.Postgres,
+  extensions: [{HexWeb.JSON.Extension, library: Poison}]
+
 config :logger,
   level: :debug
 

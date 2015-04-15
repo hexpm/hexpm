@@ -4,6 +4,8 @@ defmodule HexWeb.Package do
   import Ecto.Changeset, except: [validate_unique: 3]
   alias HexWeb.Util
 
+  @timestamps_opts [usec: true]
+
   schema "packages" do
     field :name, :string
     field :meta, HexWeb.JSON
@@ -48,7 +50,7 @@ defmodule HexWeb.Package do
   end
 
   defp changeset(package, :update, params) do
-    cast(params, package, ~w(name meta), [])
+    cast(package, params, ~w(name meta), [])
     |> update_change(:meta, &Map.take(&1, @meta_fields))
     |> validate_format(:name, ~r"^[a-z]\w*$")
     |> validate_exclusion(:name, @reserved_names)

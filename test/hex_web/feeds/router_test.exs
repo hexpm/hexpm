@@ -13,9 +13,9 @@ defmodule HexWeb.Feeds.RouterTest do
   end
 
   setup do
-    first_date  = Ecto.Type.load!(Ecto.DateTime, {{2014, 5, 1}, {10, 11, 12}})
-    second_date = Ecto.Type.load!(Ecto.DateTime, {{2014, 5, 2}, {10, 11, 12}})
-    last_date   = Ecto.Type.load!(Ecto.DateTime, {{2014, 5, 3}, {10, 11, 12}})
+    first_date  = Ecto.DateTime.from_erl({{2014, 5, 1}, {10, 11, 12}})
+    second_date = Ecto.DateTime.from_erl({{2014, 5, 2}, {10, 11, 12}})
+    last_date   = Ecto.DateTime.from_erl({{2014, 5, 3}, {10, 11, 12}})
 
     foo = HexWeb.Repo.insert(%Package{name: "foo", meta: %{}, inserted_at: first_date, updated_at: first_date})
     bar = HexWeb.Repo.insert(%Package{name: "bar", meta: %{}, inserted_at: second_date, updated_at: second_date})

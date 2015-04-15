@@ -81,7 +81,7 @@ defmodule HexWeb.API.RouterTest do
     assert conn.status == 422
     body = Poison.decode!(conn.resp_body)
     assert body["message"] == "Validation failed"
-    assert body["errors"]["email"] == "required"
+    assert body["errors"]["email"] == "can't be blank"
     refute User.get(username: "name")
   end
 

@@ -50,7 +50,7 @@ defmodule HexWeb.ReleaseTest do
     assert {:ok, _} =
            Release.create(package, %{version: "0.1.0", app: "ecto", requirements: %{"decimal" => nil}}, "")
 
-    assert {:error, [version: :invalid]} =
+    assert {:error, [version: "is invalid"]} =
            Release.create(package, %{version: "0.1", app: "ecto", requirements: %{}}, "")
 
     assert {:error, [requirements: [{"decimal", "invalid requirement: \"fail\""}]]} =

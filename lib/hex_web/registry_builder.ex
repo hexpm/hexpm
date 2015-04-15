@@ -154,8 +154,8 @@ defmodule HexWeb.RegistryBuilder do
   end
 
   defp time_diff(time1, time2) do
-    time1 = Ecto.Type.dump!(Ecto.DateTime, time1) |> :calendar.datetime_to_gregorian_seconds
-    time2 = Ecto.Type.dump!(Ecto.DateTime, time2) |> :calendar.datetime_to_gregorian_seconds
+    time1 = Ecto.DateTime.to_erl(time1) |> :calendar.datetime_to_gregorian_seconds
+    time2 = Ecto.DateTime.to_erl(time2) |> :calendar.datetime_to_gregorian_seconds
     time1 - time2
   end
 end
