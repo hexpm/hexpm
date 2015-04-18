@@ -124,7 +124,7 @@ defmodule HexWeb.Web.Router do
   get "/packages/:name/:version" do
     if package = Package.get(name) do
       releases = Release.all(package)
-      if release = Enum.find(releases, &(&1.version == version)) do
+      if release = Enum.find(releases, &(to_string(&1.version) == version)) do
         package(conn, package, releases, release)
       end
     end || raise NotFound

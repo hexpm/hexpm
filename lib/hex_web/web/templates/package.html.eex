@@ -79,7 +79,7 @@ links = Enum.to_list(@package.meta["links"] || [])
       <%= for release <- @releases do %>
         <li>
           <a href="/packages/<%= @package.name %>/<%= release.version %>"><strong><%= release.version %></strong></a>
-          <span class="text-muted"><%= pretty_date(release.created_at) %></span>
+          <span class="text-muted"><%= pretty_date(release.inserted_at) %></span>
           <%= if release.has_docs do %>
             <span class="text-muted">(<a href="<%= safe HexWeb.Release.docs_url(release) %>">docs</a>)</span>
           <% end %>
@@ -93,7 +93,7 @@ links = Enum.to_list(@package.meta["links"] || [])
 
     <ul class="list-unstyled">
       <%= if @current_release do %>
-        <%= for { name, _app, req, optional } <- @current_release.requirements.all do %>
+        <%= for { name, _app, req, optional } <- @current_release.requirements do %>
           <li>
             <a href="/packages/<%= name %>"><strong><%= name %></strong></a>
             <%= req %>

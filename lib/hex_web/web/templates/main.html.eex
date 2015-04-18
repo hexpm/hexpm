@@ -66,14 +66,6 @@
               <li><small class="text-muted"><a href="mailto:support@hex.pm">Support</a></small></li>
             </ul>
           </div>
-          <div class="col-xs-6">
-            <div style="float: right; padding: 13px 0;">
-              <a href="https://www.heroku.com/"><img src="/static/heroku-logo-light-88x31.png"></a>
-            </div>
-            <div style="float: right; padding: 20px 0;">
-              <span class="text-muted" style="margin-right: 0.8em;">Sponsored by:</span>
-            </div>
-          </div>
         </div>
       </div>
     </div>

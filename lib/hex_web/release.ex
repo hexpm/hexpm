@@ -120,7 +120,7 @@ defmodule HexWeb.Release do
         select: {r.package_id, fragment("array_agg(?)", r.version)}
 
     result = HexWeb.Repo.all(query)
-    Enum.info(result, HashDict.new, fn {id, versions} ->
+    Enum.into(result, HashDict.new, fn {id, versions} ->
       {id, latest_version(versions)}
     end)
   end
