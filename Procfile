@@ -1,1 +1,1 @@
-web: elixir -pa _build/prod/consolidated -S mix run --no-halt
+web: mix run --no-halt
