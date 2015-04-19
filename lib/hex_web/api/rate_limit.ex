@@ -105,8 +105,7 @@ defmodule HexWeb.API.RateLimit do
     end
 
     defp ip_str({a, b, c, d}) do
-      [a, ?., b, ?., c, ?., d]
-      |> :erlang.iolist_to_binary
+      "#{a}.#{b}.#{c}.#{d}"
     end
   end
 end
