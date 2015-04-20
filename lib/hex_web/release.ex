@@ -131,7 +131,7 @@ defmodule HexWeb.Release do
 
   def latest_version(versions) do
     Enum.reduce(versions, fn version, latest ->
-      if Version.compare(version, latest) == :gt do
+      if Version.compare(version, latest) == :lt do
         latest
       else
         version
