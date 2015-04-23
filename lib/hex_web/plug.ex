@@ -41,6 +41,14 @@ defmodule HexWeb.Plug do
     end
   end
 
+  defimpl Plug.Exception, for: Ecto.CastError do
+    def status(_), do: 400
+  end
+
+  defimpl Plug.Exception, for: Ecto.NoResultsError do
+    def status(_), do: 404
+  end
+
   defmacro assign_pun(conn, vars) do
     Enum.reduce(vars, conn, fn {field, _, _} = var, ast ->
       quote do
