@@ -85,8 +85,10 @@ defmodule HexWeb.Util do
     do: Atom.to_string(atom)
   def binarify(list) when is_list(list),
     do: for(elem <- list, do: binarify(elem))
-  def binarify(%{__struct__: atom} = struct) when is_atom(atom),
-    do: struct
+  def binarify(%Version{} = version),
+    do: to_string(version)
+  def binarify(%{__struct__: atom}) when is_atom(atom),
+    do: raise "not able to binarify %#{inspect atom}{}"
   def binarify(map) when is_map(map),
     do: for(elem <- map, into: %{}, do: binarify(elem))
   def binarify(tuple) when is_tuple(tuple),
