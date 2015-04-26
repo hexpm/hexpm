@@ -173,7 +173,7 @@ defmodule HexWeb.Web.Router do
   defp safe_int(string) do
     case Integer.parse(string) do
       {int, ""} -> int
-      :error    -> nil
+      _         -> nil
     end
   end
 
