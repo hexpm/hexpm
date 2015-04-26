@@ -1,13 +1,11 @@
 defmodule HexWeb.Tar do
   # The release tar contains the following files:
-  # VERSION             - release tar version
-  # CHECKSUM            - checksum of file contents sha256(VERSION <> metadata.exs <> contents.tar.gz)
-  #     metadata.exs    - release metadata as single elixir map (VERSION 2)
-  #  OR metadata.config - release metadata in erlang term file (VERSION 3)
-  # contents.tar.gz     - gzipped tar file of all files bundled in the release
+  # VERSION         - release tar version
+  # CHECKSUM        - checksum of file contents sha256(VERSION <> metadata.exs <> contents.tar.gz)
+  # metadata.config - release metadata in erlang term file
+  # contents.tar.gz - gzipped tar file of all files bundled in the release
 
-  @files_2 ["VERSION", "CHECKSUM", "metadata.exs", "contents.tar.gz"]
-  @files_3 ["VERSION", "CHECKSUM", "metadata.config", "contents.tar.gz"]
+  @files ["VERSION", "CHECKSUM", "metadata.config", "contents.tar.gz"]
 
   defmacrop if_ok(expr, call) do
     quote do
@@ -45,7 +43,7 @@ defmodule HexWeb.Tar do
 
   defp version(files) do
     version = files["VERSION"]
-    if version in ["2", "3"] do
+    if version in ["3"] do
       {:ok, files, String.to_integer(version)}
     else
       {:error, %{version: :not_supported}}
@@ -55,8 +53,7 @@ defmodule HexWeb.Tar do
   defp checksum(files, version) do
     case Base.decode16(files["CHECKSUM"], case: :mixed) do
       {:ok, ref_checksum} ->
-        metadata = metadata_file(version)
-        blob = files["VERSION"] <> files[metadata] <> files["contents.tar.gz"]
+        blob = files["VERSION"] <> files["metadata.config"] <> files["contents.tar.gz"]
 
         if :crypto.hash(:sha256, blob) == ref_checksum do
           {:ok, files, version}
@@ -70,8 +67,7 @@ defmodule HexWeb.Tar do
   end
 
   defp missing_files(files, version) do
-    expected_files = expected_files(version)
-    missing_files = Enum.reject(expected_files, &Dict.has_key?(files, &1))
+    missing_files = Enum.reject(@files, &Dict.has_key?(files, &1))
 
     if length(missing_files) == 0 do
       {:ok, files, version}
@@ -81,8 +77,7 @@ defmodule HexWeb.Tar do
   end
 
   defp unknown_files(files, version) do
-    expected_files = expected_files(version)
-    unknown_files = Enum.reject(files, fn {name, _binary} -> name in expected_files end)
+    unknown_files = Enum.reject(files, fn {name, _binary} -> name in @files end)
 
     if length(unknown_files) == 0 do
       {:ok, files, version}
@@ -92,14 +87,7 @@ defmodule HexWeb.Tar do
     end
   end
 
-  defp meta(files, 2) do
-    case HexWeb.API.ElixirFormat.decode(files["metadata.exs"]) do
-      {:ok, result}    -> {:ok, result}
-      {:error, reason} -> {:error, %{metadata: reason}}
-    end
-  end
-
-  defp meta(files, 3) do
+  defp meta(files, _version) do
     case HexWeb.API.ConsultFormat.decode(files["metadata.config"]) do
       {:ok, result}    -> {:ok, result}
       {:error, reason} -> {:error, %{metadata: reason}}
@@ -126,10 +114,4 @@ defmodule HexWeb.Tar do
       :error -> map
     end
   end
-
-  defp expected_files(2), do: @files_2
-  defp expected_files(3), do: @files_3
-
-  defp metadata_file(2), do: "metadata.exs"
-  defp metadata_file(3), do: "metadata.config"
 end
