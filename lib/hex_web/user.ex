@@ -113,7 +113,7 @@ defmodule HexWeb.User do
 
   def reset(user, password) do
     HexWeb.Repo.transaction(fn ->
-      {:ok, user} = HexWeb.User.update(%{username: user, password: password})
+      {:ok, user} = HexWeb.User.update(user, %{password: password})
 
       assoc(user, :keys)
       |> HexWeb.Repo.delete_all
