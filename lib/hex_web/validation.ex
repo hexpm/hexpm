@@ -65,18 +65,12 @@ defmodule HexWeb.Validation do
       dumped_value = Ecto.Type.dump!(type, value)
       repo         = Keyword.fetch!(opts, :on)
       scope        = opts[:scope] || []
-      case         = Keyword.get(opts, :case_sensitive, true)
-
-      query = from var in module, select: true, limit: 1
 
       query =
-        if case do
-          from var in query,
-               where: fragment("lower(?) = lower(?)", field(var, ^field), ^dumped_value)
-        else
-          from var in query,
-               where: field(var, ^field) == ^value
-        end
+        from var in module,
+             where: field(var, ^field) == ^value,
+             limit: 1,
+             select: true
 
       query =
         Enum.reduce(scope, query, fn field, query ->

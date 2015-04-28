@@ -91,6 +91,7 @@ defmodule HexWeb.Release do
   def delete(release, opts \\ []) do
     force? = Keyword.get(opts, :force, false)
     if editable?(release) or force? do
+      # TODO: Delete tarball from S3
       HexWeb.Repo.delete(release)
       :ok
     else

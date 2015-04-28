@@ -29,8 +29,8 @@ defmodule HexWeb.User do
     |> update_change(:email, &String.downcase/1)
     |> validate_format(:username, ~r"^[a-z0-9_\-\.!~\*'\(\)]+$")
     |> validate_format(:email, ~r"^.+@.+\..+$")
-    |> validate_unique(:username, on: HexWeb.Repo, case_sensitive: false)
-    |> validate_unique(:email, on: HexWeb.Repo, case_sensitive: false)
+    |> validate_unique(:username, on: HexWeb.Repo)
+    |> validate_unique(:email, on: HexWeb.Repo)
   end
 
   defp changeset(user, :update, params) do
@@ -125,14 +125,14 @@ defmodule HexWeb.User do
 
   def get(username: username) do
     from(u in HexWeb.User,
-         where: fragment("lower(?) = lower(?)", u.username, ^username),
+         where: u.username == ^username,
          limit: 1)
     |> HexWeb.Repo.one
   end
 
   def get(email: email) do
     from(u in HexWeb.User,
-         where: u.email == fragment("lower(?)", ^email),
+         where: u.email == ^email,
          limit: 1)
     |> HexWeb.Repo.one
   end
