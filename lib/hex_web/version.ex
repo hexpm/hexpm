@@ -8,7 +8,7 @@ defmodule HexWeb.Version do
   def blank?(_),   do: false
 
   def cast(%Version{} = version),
-    do: version
+    do: {:ok, version}
   def cast(string) when is_binary(string),
     do: Version.parse(string)
   def cast(_),
