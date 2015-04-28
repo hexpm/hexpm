@@ -1,5 +1,6 @@
 defmodule HexWeb.Plugs.Forwarded do
   import Plug.Conn
+  require Logger
 
   def init(opts), do: opts
 
@@ -23,11 +24,12 @@ defmodule HexWeb.Plugs.Forwarded do
     parts = :binary.split(ip, ".", [:global])
     parts = Enum.map(parts, &Integer.parse/1)
     valid = Enum.all?(parts, &match?({int, ""} when int in 0..255, &1))
-    parts = Enum.map(parts, &elem(&1, 0))
 
     if length(parts) == 4 and valid do
+      parts = Enum.map(parts, &elem(&1, 0))
       List.to_tuple(parts)
     else
+      Logger.warn("Invalid IP: #{inspect ip}")
       default
     end
   end
