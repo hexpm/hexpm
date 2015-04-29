@@ -3,10 +3,6 @@ defmodule HexWeb.JSON do
 
   def type, do: :json
 
-  def blank?(""),  do: true
-  def blank?(nil), do: true
-  def blank?(_),   do: false
-
   def cast(term)
       when is_map(term)
         or is_binary(term)
