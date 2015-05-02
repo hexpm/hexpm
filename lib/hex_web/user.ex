@@ -21,7 +21,7 @@ defmodule HexWeb.User do
     has_many :keys, HexWeb.API.Key
   end
 
-  after_delete :delete_keys
+  before_delete :delete_keys
 
   defp changeset(user, :create, params) do
     cast(user, params, ~w(username password email), [])

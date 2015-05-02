@@ -37,7 +37,7 @@ defmodule HexWeb.Package do
 
   @meta_fields Map.keys(@meta_types)
 
-  after_delete :delete_owners
+  before_delete :delete_owners
 
   defp validate_meta(changeset, field) do
     validate_change(changeset, field, fn _field, meta ->

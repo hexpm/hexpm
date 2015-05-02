@@ -19,8 +19,8 @@ defmodule HexWeb.Release do
     has_one :downloads, HexWeb.Stats.ReleaseDownload
   end
 
-  after_delete :delete_requirements
-  after_delete :delete_downloads
+  before_delete :delete_requirements
+  before_delete :delete_downloads
 
   defp changeset(release, :create, params) do
     changeset(release, :update, params)
