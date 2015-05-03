@@ -172,6 +172,7 @@ defmodule HexWeb.Package do
   defp delete_owners(changeset) do
     assoc(changeset.model, :owners)
     |> HexWeb.Repo.delete_all
+    changeset
   end
 
   defp search(query, nil, _order?) do

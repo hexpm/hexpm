@@ -155,6 +155,7 @@ defmodule HexWeb.User do
   defp delete_keys(changeset) do
     assoc(changeset.model, :keys)
     |> HexWeb.Repo.delete_all
+    changeset
   end
 
   defp gen_password(password) do
