@@ -90,3 +90,17 @@ body {
 .description {
   margin: 20px 0;
 }
+
+.stats {
+  width: 100%;
+}
+
+.no-decoration {
+  text-decoration: none !important;
+}
+
+.stats .left {
+  width: 35%;
+  padding-right: 1.5em;
+  text-align: right;
+}

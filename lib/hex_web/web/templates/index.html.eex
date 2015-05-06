@@ -21,63 +21,63 @@
 <div class="row">
   <div class="col-sm-6">
     <h3>Statistics</h3>
-    <p>
-      <div class="row">
-        <div class="col-xs-3 text-right"><%= human_number_space @num_packages %></div>
-        <div class="col-xs-9">packages</div>
-      </div>
-      <div class="row">
-        <div class="col-xs-3 text-right"><%= human_number_space @num_releases %></div>
-        <div class="col-xs-9">package versions</div>
-      </div>
-      <div class="row">
-        <div class="col-xs-3 text-right"><%= human_number_space @total[:day] %></div>
-        <div class="col-xs-9">downloads yesterday</div>
-      </div>
-      <div class="row">
-        <div class="col-xs-3 text-right"><%= human_number_space @total[:week] %></div>
-        <div class="col-xs-9">downloads last seven days</div>
-      </div>
-      <div class="row">
-        <div class="col-xs-3 text-right"><%= human_number_space @total[:all] %></div>
-        <div class="col-xs-9">downloads all time</div>
-      </div>
-    </p>
+    <table class="stats">
+      <tr>
+        <td class="left"><%= human_number_space @num_packages %></td>
+        <td>packages</td>
+      </tr>
+      <tr>
+        <td class="left"><%= human_number_space @num_releases %></td>
+        <td>package versions</td>
+      </tr>
+      <tr>
+        <td class="left"><%= human_number_space @total[:day] %></td>
+        <td>downloads yesterday</td>
+      </tr>
+      <tr>
+        <td class="left"><%= human_number_space @total[:week] %></td>
+        <td>downloads last seven days</td>
+      </tr>
+      <tr>
+        <td class="left"><%= human_number_space @total[:all] %></td>
+        <td>downloads all time</td>
+      </tr>
+    </table>
   </div>
   <div class="col-sm-6">
     <h3>Most downloaded</h3>
-    <p>
+    <table class="stats">
       <%= for { package, downloads } <- @package_top do %>
-      <div class="row">
-        <div class="col-xs-3 text-right"><%= human_number_space downloads %></div>
-        <div class="col-xs-9"><a href="/packages/<%= package %>"><%= package %></a></div>
-      </div>
+      <tr>
+        <td class="left"><%= human_number_space downloads %></td>
+        <td><a href="/packages/<%= package %>" class="no-decoration"><%= package %></a></td>
+      </tr>
       <% end %>
-    </p>
+    </table>
   </div>
 </div>
 
 <div class="row">
   <div class="col-sm-6">
     <h3>New packages <a href="/feeds/new-packages.rss"><img style="width: 16px; height: 16px;" src="/static/feed-icon.png" alt="Feed symbol"></a></h3>
-    <p>
+    <table class="stats">
       <%= for { package, inserted_at } <- @package_new do %>
-        <div class="row">
-          <div class="col-xs-5 text-right"><%= human_relative_time_from_now(inserted_at) %></div>
-          <div class="col-xs-7"><a href="/packages/<%= package %>"><%= package %></a></div>
-        </div>
+        <tr>
+          <td class="left"><%= human_relative_time_from_now(inserted_at) %></td>
+          <td><a href="/packages/<%= package %>" class="no-decoration"><%= package %></a></td>
+        </tr>
       <% end %>
-    </p>
+    </table>
   </div>
   <div class="col-sm-6">
     <h3>Recently Updated</h3>
-    <p>
+    <table class="stats">
       <%= for { version, package } <- @releases_new do %>
-        <div class="row">
-          <div class="col-xs-3 text-right"><%= version %></div>
-          <div class="col-xs-9"><a href="/packages/<%= package %>"><%= package %></a></div>
-        </div>
+        <tr>
+          <td class="left"><%= version %></td>
+          <td><a href="/packages/<%= package %>" class="no-decoration"><%= package %></a></td>
+        </tr>
       <% end %>
-    </p>
+    </table>
   </div>
 </div>
