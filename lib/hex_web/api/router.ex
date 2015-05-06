@@ -21,19 +21,21 @@ defmodule HexWeb.API.Router do
     conn = HexWeb.Plug.read_body_finally(conn)
 
     if package = Package.get(name) do
-      with_authorized(conn, [], &Package.owner?(package, &1), fn _ ->
-        case read_body(conn, HexWeb.request_read_opts) do
-          {:ok, body, conn} ->
-            handle_publish(conn, package, body)
-          {:error, :timeout} ->
-            raise RequestTimeout
-          {:more, _, _} ->
-            raise RequestTooLarge
-        end
-      end)
+      auth = &Package.owner?(package, &1)
     else
-      raise NotFound
+      auth = fn _ -> true end
     end
+
+    with_authorized(conn, [], auth, fn _ ->
+      case read_body(conn, HexWeb.request_read_opts) do
+        {:ok, body, conn} ->
+          handle_publish(conn, package, body)
+        {:error, :timeout} ->
+          raise RequestTimeout
+        {:more, _, _} ->
+          raise RequestTooLarge
+      end
+    end)
   end
 
   post "packages/:name/releases/:version/docs" do
@@ -58,20 +60,50 @@ defmodule HexWeb.API.Router do
   defp handle_publish(conn, package, body) do
     case HexWeb.Tar.metadata(body) do
       {:ok, meta, checksum} ->
-        version = meta["version"]
-
-        if release = Release.get(package, version) do
-          result = Release.update(release, meta, checksum)
-          if match?({:ok, _}, result), do: after_release(package, version, body)
-          send_update_resp(conn, result, :public)
+        if package do
+          create_release(conn, package, checksum, meta, body)
         else
-          result = Release.create(package, meta, checksum)
-          if match?({:ok, _}, result), do: after_release(package, version, body)
-          send_creation_resp(conn, result, :public, api_url(["packages", package.name, "releases", version]))
+          package_params = %{"name" => meta["name"], "meta" => meta}
+          case create_package(conn, package_params) do
+            {:ok, package} ->
+              create_release(conn, package, checksum, meta, body)
+            {:error, errors} ->
+              send_validation_failed(conn, %{package: errors})
+          end
         end
 
       {:error, errors} ->
-        send_validation_failed(conn, [{:tar, errors}])
+        send_validation_failed(conn, %{tar: errors})
+    end
+  end
+
+  defp create_release(conn, package, checksum, meta, body) do
+    version = meta["version"]
+    release_params = %{"app" => meta["app"], "version" => version,
+                       "requirements" => meta["requirements"], "meta" => meta}
+
+    if release = Release.get(package, version) do
+      result = Release.update(release, release_params, checksum)
+      if match?({:ok, _}, result), do: after_release(package, version, body)
+      send_update_resp(conn, result, :public)
+    else
+      result = Release.create(package, release_params, checksum)
+      if match?({:ok, _}, result), do: after_release(package, version, body)
+      send_creation_resp(conn, result, :public, api_url(["packages", package.name, "releases", version]))
+    end
+  end
+
+  defp create_package(conn, params) do
+    name = params["name"]
+
+    if package = Package.get(name) do
+      with_authorized(conn, [], &Package.owner?(package, &1), fn _ ->
+        Package.update(package, params)
+      end)
+    else
+      with_authorized(conn, [], fn user ->
+        Package.create(user, params)
+      end)
     end
   end
 
@@ -155,7 +187,6 @@ defmodule HexWeb.API.Router do
   defmodule Parsed do
     use Plug.Router
 
-
     plug Plug.Parsers, parsers: [:json, HexWeb.Parsers.HexVendor],
                        json_decoder: Poison
     plug :match
@@ -210,6 +241,7 @@ defmodule HexWeb.API.Router do
       end
     end
 
+    # TODO: Remove this
     put "packages/:name" do
       params = Map.put(conn.params, "name", name)
 

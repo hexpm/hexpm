@@ -30,7 +30,6 @@ defmodule HexWeb.Tar do
 
         case meta do
           {:ok, meta} ->
-            meta = proplists_to_maps(meta)
             {:ok, meta, files["CHECKSUM"]}
           error ->
             error
@@ -89,8 +88,14 @@ defmodule HexWeb.Tar do
 
   defp meta(files, _version) do
     case HexWeb.API.ConsultFormat.decode(files["metadata.config"]) do
-      {:ok, result}    -> {:ok, result}
-      {:error, reason} -> {:error, %{metadata: reason}}
+      {:ok, meta} ->
+        meta =
+          meta
+          |> proplists_to_maps
+          |> guess_build_tool
+        {:ok, meta}
+      {:error, reason} ->
+        {:error, %{metadata: reason}}
     end
   end
 
@@ -106,6 +111,36 @@ defmodule HexWeb.Tar do
          reqs ->
            reqs
        end)
+  end
+
+  @build_tools [
+    {"mix.exs"     , "mix"},
+    {"rebar.config", "rebar"},
+    {"rebar"       , "rebar"},
+    {"Makefile"    , "make"},
+    {"Makefile.win", "make"}
+  ]
+
+  defp guess_build_tool(%{"build_tools" => _} = meta) do
+    meta
+  end
+
+  defp guess_build_tool(meta) do
+    base_files =
+      (meta["files"] || [])
+      |> Enum.filter(&(Path.dirname(&1) == "."))
+      |> Enum.into(HashSet.new)
+
+    build_tool =
+      Enum.find_value(@build_tools, fn {file, tool} ->
+        if file in base_files, do: tool
+      end)
+
+    if build_tool do
+      Map.put(meta, "build_tools", [build_tool])
+    else
+      meta
+    end
   end
 
   defp try_update(map, key, fun) do

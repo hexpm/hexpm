@@ -7,7 +7,7 @@ defmodule HexWeb.Feeds.RouterTest do
   alias HexWeb.Release
 
   defp release_create(package, version, app, requirements, checksum, inserted_at) do
-    {:ok, release} = Release.create(package, %{version: version, app: app, requirements: requirements}, checksum)
+    {:ok, release} = Release.create(package, rel_meta(%{version: version, app: app, requirements: requirements}), checksum)
     %{release | inserted_at: inserted_at}
     |> HexWeb.Repo.update
   end
@@ -17,9 +17,9 @@ defmodule HexWeb.Feeds.RouterTest do
     second_date = Ecto.DateTime.from_erl({{2014, 5, 2}, {10, 11, 12}})
     last_date   = Ecto.DateTime.from_erl({{2014, 5, 3}, {10, 11, 12}})
 
-    foo = HexWeb.Repo.insert(%Package{name: "foo", meta: %{}, inserted_at: first_date, updated_at: first_date})
-    bar = HexWeb.Repo.insert(%Package{name: "bar", meta: %{}, inserted_at: second_date, updated_at: second_date})
-    other = HexWeb.Repo.insert(%Package{name: "other", meta: %{}, inserted_at: last_date, updated_at: last_date})
+    foo = HexWeb.Repo.insert(%Package{name: "foo", inserted_at: first_date, updated_at: first_date})
+    bar = HexWeb.Repo.insert(%Package{name: "bar", inserted_at: second_date, updated_at: second_date})
+    other = HexWeb.Repo.insert(%Package{name: "other", inserted_at: last_date, updated_at: last_date})
 
     release_create(foo, "0.0.1", "foo", [], "", last_date)
     release_create(foo, "0.0.2", "foo", [], "", last_date)

@@ -7,10 +7,10 @@ defmodule HexWeb.Release do
   @timestamps_opts [usec: true]
 
   schema "releases" do
-    field :app, :string
     field :version, HexWeb.Version
     field :checksum, :string
-    field :has_docs, :boolean
+    field :meta, HexWeb.JSON
+    field :has_docs, :boolean, default: false
     timestamps
 
     belongs_to :package, HexWeb.Package
@@ -22,19 +22,53 @@ defmodule HexWeb.Release do
   before_delete :delete_requirements
   before_delete :delete_downloads
 
+  @meta_types %{
+    "app"         => :string,
+    "build_tools" => {:array, :string},
+    "elixir"      => :string
+  }
+
+  @meta_fields Map.keys(@meta_types)
+
+  @meta_fields_required ~w(app build_tools)
+
+  defp validate_meta(changeset, field) do
+    validate_change(changeset, field, fn _field, meta ->
+      type_errors =
+        Enum.flat_map(@meta_types, fn {sub_field, type} ->
+          type(sub_field, Map.get(meta, sub_field), type)
+        end)
+
+      req_errors =
+        Enum.flat_map(@meta_fields_required, fn field ->
+          if Map.has_key?(meta, field) do
+            []
+          else
+            [{field, :missing}]
+          end
+        end)
+
+      errors = req_errors ++ type_errors
+
+      if errors == [],
+          do: [],
+        else: [{field, errors}]
+    end)
+  end
+
   defp changeset(release, :create, params) do
     changeset(release, :update, params)
     |> validate_unique(:version, scope: [:package_id], on: HexWeb.Repo)
   end
 
   defp changeset(release, :update, params) do
-    cast(release, params, ~w(app version), [])
+    cast(release, params, ~w(version meta), [])
     |> validate_version(:version)
+    |> update_change(:meta, &Map.take(&1, @meta_fields))
+    |> validate_meta(:meta)
   end
 
   def create(package, params, checksum) do
-    params = Util.params(params)
-
     changeset =
       build(package, :releases)
       |> changeset(:create, params)
@@ -43,7 +77,7 @@ defmodule HexWeb.Release do
     if changeset.valid? do
       HexWeb.Repo.transaction(fn ->
         release = HexWeb.Repo.insert(changeset)
-        requirements = params["requirements"]
+        requirements = params["requirements"] || %{}
 
         case HexWeb.Requirement.create_all(release, requirements) do
           {:ok, reqs} ->
@@ -58,8 +92,6 @@ defmodule HexWeb.Release do
   end
 
   def update(release, params, checksum) do
-    params = Util.params(params)
-
     if editable?(release) do
       changeset =
         changeset(release, :update, params)
@@ -70,11 +102,11 @@ defmodule HexWeb.Release do
           HexWeb.Repo.delete_all(assoc(release, :requirements))
 
           release = HexWeb.Repo.update(changeset)
-          requirements = params["requirements"]
+          requirements = params["requirements"] || %{}
 
           case HexWeb.Requirement.create_all(release, requirements) do
             {:ok, reqs} ->
-            %{release | requirements: reqs}
+              %{release | requirements: reqs}
             {:error, errors} ->
               HexWeb.Repo.rollback([requirements: errors])
           end
@@ -208,7 +240,7 @@ defimpl HexWeb.Render, for: HexWeb.Release do
 
     entity =
       release
-      |> Map.take([:app, :version, :has_docs, :inserted_at, :updated_at])
+      |> Map.take([:meta, :version, :has_docs, :inserted_at, :updated_at])
       |> Map.update!(:inserted_at, &to_iso8601/1)
       |> Map.update!(:updated_at, &to_iso8601/1)
       |> Map.put(:url, api_url(["packages", package.name, "releases", to_string(release.version)]))

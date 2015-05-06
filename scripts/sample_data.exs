@@ -44,9 +44,9 @@ HexWeb.Repo.transaction(fn ->
                    "Documentation" => "http://example.com/documentation"},
           description: "Arbitrary precision decimal arithmetic for Elixir"}})
 
-    {:ok, _} = Release.create(decimal, %{version: "0.0.1", app: "decimal", requirements: %{}}, SampleData.checksum("decimal 0.0.1"))
-    {:ok, _} = Release.create(decimal, %{version: "0.0.2", app: "decimal", requirements: %{}}, SampleData.checksum("decimal 0.0.2"))
-    {:ok, _} = Release.create(decimal, %{version: "0.1.0", app: "decimal", requirements: %{}}, SampleData.checksum("decimal 0.1.0"))
+    {:ok, _} = Release.create(decimal, %{version: "0.0.1", app: "decimal"}, SampleData.checksum("decimal 0.0.1"))
+    {:ok, _} = Release.create(decimal, %{version: "0.0.2", app: "decimal"}, SampleData.checksum("decimal 0.0.2"))
+    {:ok, _} = Release.create(decimal, %{version: "0.1.0", app: "decimal"}, SampleData.checksum("decimal 0.1.0"))
 
     {:ok, postgrex} =
       Package.create(eric, %{
@@ -57,7 +57,7 @@ HexWeb.Repo.transaction(fn ->
           links: %{"Github" => "http://example.com/github"},
           description: lorem}})
 
-    {:ok, _} = Release.create(postgrex, %{version: "0.0.1", app: "postgrex", requirements: %{}}, SampleData.checksum("postgrex 0.0.1"))
+    {:ok, _} = Release.create(postgrex, %{version: "0.0.1", app: "postgrex"}, SampleData.checksum("postgrex 0.0.1"))
     {:ok, _} = Release.create(postgrex, %{version: "0.0.2", app: "postgrex", requirements: %{decimal: "~> 0.0.1"}}, SampleData.checksum("postgrex 0.0.2"))
     {:ok, _} = Release.create(postgrex, %{version: "0.1.0", app: "postgrex", requirements: %{decimal: "0.1.0"}}, SampleData.checksum("postgrex 0.1.0"))
   end
@@ -72,7 +72,7 @@ HexWeb.Repo.transaction(fn ->
           links: %{"Github" => "http://example.com/github"},
           description: lorem}})
 
-    {:ok, _}   = Release.create(ecto, %{version: "0.0.1", app: "ecto", requirements: %{}}, SampleData.checksum("ecto 0.0.1"))
+    {:ok, _}   = Release.create(ecto, %{version: "0.0.1", app: "ecto"}, SampleData.checksum("ecto 0.0.1"))
     {:ok, _}   = Release.create(ecto, %{version: "0.0.2", app: "ecto", requirements: %{postgrex: "~> 0.0.1"}}, SampleData.checksum("ecto 0.0.2"))
     {:ok, _}   = Release.create(ecto, %{version: "0.1.0", app: "ecto", requirements: %{postgrex: "~> 0.0.2"}}, SampleData.checksum("ecto 0.1.0"))
     {:ok, _}   = Release.create(ecto, %{version: "0.1.1", app: "ecto", requirements: %{postgrex: "~> 0.1.0"}}, SampleData.checksum("ecto 0.1.1"))

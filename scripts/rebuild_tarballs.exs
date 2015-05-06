@@ -3,64 +3,42 @@ defmodule HexWeb.Scripts.Tarballs do
 
   # NOTE: Remember to update checksums in releases table with new checksums
 
-  def main([input_dir, output_dir]) do
+  def main([input_dir]) do
     all_tars = Path.wildcard(Path.join(input_dir, "*.tar"))
+    map = %{mix: HashSet.new, rebar: HashSet.new, make: HashSet.new, unknown: HashSet.new}
 
-    Enum.each(all_tars, fn filename ->
+    Enum.reduce(all_tars, map, fn filename, map ->
       tarname = Path.basename(filename)
-      IO.puts tarname
+      [package, _] = String.split(tarname, "-", parts: 2)
 
       {:ok, files} = :erl_tar.extract(String.to_char_list(filename), [:memory])
       files = convert_files(files)
 
       content_files = contents(files)
 
-      files = %{
-        "VERSION" => "2",
-        "CHECKSUM" => nil,
-        "metadata.exs" => meta(files, content_files),
-        "contents.tar.gz" => File.read!(@temp_tar)}
+      cond do
+        "mix.exs" in content_files ->
+          type = :mix
+        "rebar.config" in content_files or "rebar" in content_files ->
+          type = :rebar
+        "Makefile" in content_files ->
+          type = :make
+        true ->
+          type = :unknown
+      end
 
-      files = %{files | "CHECKSUM" => checksum(files)}
-              |> Enum.into([], fn {name, content} -> {String.to_char_list(name), content} end)
-
-      File.rm!(@temp_tar)
-      output = Path.join(output_dir, tarname)
-      :erl_tar.create(output, files)
+      Map.update!(map, type, &HashSet.put(&1, package))
     end)
-  end
-
-  defp meta(files, content_files) do
-    {:ok, meta} = HexWeb.API.ElixirFormat.decode(files["metadata.exs"])
-
-    reqs = Enum.into(meta["requirements"], %{}, fn
-      {name, req} when is_binary(req) ->
-        {name, %{"requirement" => req, "optional" => nil}}
-      {name, map} when is_map(map) ->
-        {name, map}
-    end)
-
-    meta = %{meta | "requirements" => reqs, "files" => content_files}
-    HexWeb.API.ElixirFormat.encode(meta)
+    |> Enum.map(fn {k, v} -> {k, Enum.sort(v)} end)
+    |> IO.inspect(limit: -1)
+    |> Enum.map(fn {k, v} -> {k, Enum.count(v)} end)
+    |> IO.inspect
   end
 
   defp contents(files) do
     {:ok, inner_files} = :erl_tar.extract({:binary, files["contents.tar.gz"]}, [:memory, :compressed])
-    inner_files = uniq(inner_files)
-
-    :erl_tar.create(@temp_tar, inner_files, [:compressed])
-
-    Enum.map(inner_files, &List.to_string(elem(&1, 0)))
-  end
-
-  defp checksum(files) do
-    blob = files["VERSION"] <> files["metadata.exs"] <> files["contents.tar.gz"]
-    :crypto.hash(:sha256, blob)
-    |> Base.encode16
-  end
-
-  defp uniq(files) do
-    Enum.uniq(files, &elem(&1, 0))
+    convert_files(inner_files)
+    |> Enum.map(&elem(&1, 0))
   end
 
   defp convert_files(files) do

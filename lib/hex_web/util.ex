@@ -6,13 +6,6 @@ defmodule HexWeb.Util do
   import Ecto.Query, only: [from: 2]
   require Logger
 
-  def params(params) do
-    Enum.into(params, %{}, fn
-      {binary, value} when is_binary(binary) -> {binary, value}
-      {atom, value} when is_atom(atom) -> {Atom.to_string(atom), value}
-    end)
-  end
-
   def maybe(nil, _fun), do: nil
   def maybe(item, fun), do: fun.(item)
 

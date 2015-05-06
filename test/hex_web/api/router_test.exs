@@ -13,9 +13,9 @@ defmodule HexWeb.API.RouterTest do
     User.create(%{username: "other", email: "other@mail.com", password: "other"}, true)
     User.create(%{username: "jose", email: "jose@mail.com", password: "jose"}, true)
     {:ok, user} = User.create(%{username: "eric", email: "eric@mail.com", password: "eric"}, true)
-    {:ok, _}    = Package.create(user, %{name: "postgrex", meta: %{}})
-    {:ok, pkg}  = Package.create(user, %{name: "decimal", meta: %{}})
-    {:ok, rel}  = Release.create(pkg, %{version: "0.0.1", app: "decimal", requirements: %{postgrex: "0.0.1"}}, "")
+    {:ok, _}    = Package.create(user, pkg_meta(%{name: "postgrex"}))
+    {:ok, pkg}  = Package.create(user, pkg_meta(%{name: "decimal"}))
+    {:ok, rel}  = Release.create(pkg, rel_meta(%{version: "0.0.1", app: "decimal", requirements: %{postgrex: "0.0.1"}}), "")
 
     %{rel | has_docs: true} |> HexWeb.Repo.update
     :ok
@@ -29,7 +29,7 @@ defmodule HexWeb.API.RouterTest do
 
     assert conn.status == 201
     body = Poison.decode!(conn.resp_body)
-    assert body["url"] == "http://localhost:4000/api/users/name"
+    assert body["url"] == "http://localhost:4001/api/users/name"
 
     user = User.get(username: "name")
     assert user.email == "email@mail.com"
@@ -107,7 +107,7 @@ defmodule HexWeb.API.RouterTest do
 
     assert conn.status == 201
     body = Poison.decode!(conn.resp_body)
-    assert body["url"] == "http://localhost:4000/api/packages/ecto"
+    assert body["url"] == "http://localhost:4001/api/packages/ecto"
 
     user_id = User.get(username: "eric").id
     package = assert Package.get("ecto")
@@ -116,7 +116,7 @@ defmodule HexWeb.API.RouterTest do
   end
 
   test "update package" do
-    Package.create(User.get(username: "eric"), %{name: "ecto", meta: %{}})
+    Package.create(User.get(username: "eric"), pkg_meta(%{name: "ecto"}))
 
     body = %{meta: %{description: "awesomeness"}}
     conn = conn("PUT", "/api/packages/ecto", Poison.encode!(body))
@@ -126,13 +126,13 @@ defmodule HexWeb.API.RouterTest do
 
     assert conn.status == 200
     body = Poison.decode!(conn.resp_body)
-    assert body["url"] == "http://localhost:4000/api/packages/ecto"
+    assert body["url"] == "http://localhost:4001/api/packages/ecto"
 
     assert Package.get("ecto").meta["description"] == "awesomeness"
   end
 
   test "create package authorizes" do
-    body = %{meta: %{}}
+    body = %{}
     conn = conn("PUT", "/api/packages/ecto", Poison.encode!(body))
            |> put_req_header("content-type", "application/json")
            |> put_req_header("authorization", "Basic " <> :base64.encode("eric:WRONG"))
@@ -143,9 +143,9 @@ defmodule HexWeb.API.RouterTest do
   end
 
   test "update package authorizes" do
-    Package.create(User.get(username: "eric"), %{name: "ecto", meta: %{}})
+    Package.create(User.get(username: "eric"), pkg_meta(%{name: "ecto"}))
 
-    body = %{meta: %{}}
+    body = %{}
     conn = conn("PUT", "/api/packages/ecto", Poison.encode!(body))
            |> put_req_header("content-type", "application/json")
            |> put_req_header("authorization", "Basic " <> :base64.encode("other:other"))
@@ -169,7 +169,7 @@ defmodule HexWeb.API.RouterTest do
   end
 
   test "create releases" do
-    body = create_tar(%{name: :postgrex, app: "not_postgrex", version: "0.0.1", requirements: %{}}, [])
+    body = create_tar(%{name: :postgrex, app: "not_postgrex", version: "0.0.1"}, [])
     conn = conn("POST", "/api/packages/postgrex/releases", body)
            |> put_req_header("content-type", "application/json")
            |> put_req_header("authorization", "Basic " <> :base64.encode("eric:eric"))
@@ -177,10 +177,10 @@ defmodule HexWeb.API.RouterTest do
 
     assert conn.status == 201
     body = Poison.decode!(conn.resp_body)
-    assert body["app"] == "not_postgrex"
-    assert body["url"] == "http://localhost:4000/api/packages/postgrex/releases/0.0.1"
+    assert body["meta"]["app"] == "not_postgrex"
+    assert body["url"] == "http://localhost:4001/api/packages/postgrex/releases/0.0.1"
 
-    body = create_tar(%{name: :postgrex, version: "0.0.2", requirements: %{}}, [])
+    body = create_tar(%{name: :postgrex, version: "0.0.2"}, [])
     conn = conn("POST", "/api/packages/postgrex/releases", body)
            |> put_req_header("content-type", "application/json")
            |> put_req_header("authorization", "Basic " <> :base64.encode("eric:eric"))
@@ -193,10 +193,25 @@ defmodule HexWeb.API.RouterTest do
     assert [ %Release{package_id: ^postgrex_id, version: %Version{major: 0, minor: 0, patch: 2}},
              %Release{package_id: ^postgrex_id, version: %Version{major: 0, minor: 0, patch: 1}} ] =
            Release.all(postgrex)
+
+    Release.get(postgrex, "0.0.1")
+  end
+
+  test "create release also creates package" do
+    refute Package.get("phoenix")
+
+    body = create_tar(%{name: :phoenix, app: "phoenix", version: "1.0.0"}, [])
+    conn = conn("POST", "/api/packages/phoenix/releases", body)
+           |> put_req_header("content-type", "application/json")
+           |> put_req_header("authorization", "Basic " <> :base64.encode("eric:eric"))
+    conn = Router.call(conn, [])
+    assert conn.status == 201
+
+    assert %Package{name: "phoenix"} = Package.get("phoenix")
   end
 
   test "update release" do
-    body = create_tar(%{name: :postgrex, version: "0.0.1", requirements: %{}}, [])
+    body = create_tar(%{name: :postgrex, version: "0.0.1"}, [])
     conn = conn("POST", "/api/packages/postgrex/releases", body)
            |> put_req_header("content-type", "application/json")
            |> put_req_header("authorization", "Basic " <> :base64.encode("eric:eric"))
@@ -226,7 +241,7 @@ defmodule HexWeb.API.RouterTest do
   end
 
   test "delete release" do
-    body = create_tar(%{name: :postgrex, version: "0.0.1", requirements: %{}}, [])
+    body = create_tar(%{name: :postgrex, version: "0.0.1"}, [])
     conn = conn("POST", "/api/packages/postgrex/releases", body)
            |> put_req_header("content-type", "application/json")
            |> put_req_header("authorization", "Basic " <> :base64.encode("eric:eric"))
@@ -260,7 +275,7 @@ defmodule HexWeb.API.RouterTest do
   end
 
   test "create release authorizes" do
-    body = create_tar(%{name: :postgrex, version: "0.0.1", requirements: %{}}, [])
+    body = create_tar(%{name: :postgrex, version: "0.0.1"}, [])
     conn = conn("POST", "/api/packages/postgrex/releases", body)
            |> put_req_header("content-type", "application/json")
            |> put_req_header("authorization", "Basic " <> :base64.encode("other:other"))
@@ -325,7 +340,7 @@ defmodule HexWeb.API.RouterTest do
     body = Poison.decode!(conn.resp_body)
     assert body["name"] == "macbook"
     assert body["secret"] == nil
-    assert body["url"] == "http://localhost:4000/api/keys/macbook"
+    assert body["url"] == "http://localhost:4001/api/keys/macbook"
   end
 
   test "all keys" do
@@ -343,7 +358,7 @@ defmodule HexWeb.API.RouterTest do
     first = hd(body)
     assert first["name"] == "macbook"
     assert first["secret"] == nil
-    assert first["url"] == "http://localhost:4000/api/keys/macbook"
+    assert first["url"] == "http://localhost:4001/api/keys/macbook"
   end
 
   test "delete key" do
@@ -413,7 +428,7 @@ defmodule HexWeb.API.RouterTest do
 
     assert conn.status == 201
     body = Poison.decode!(conn.resp_body)
-    assert body["url"] == "http://localhost:4000/api/users/name"
+    assert body["url"] == "http://localhost:4001/api/users/name"
 
     user = assert User.get(username: "name")
     assert user.email == "email@mail.com"
@@ -439,7 +454,7 @@ defmodule HexWeb.API.RouterTest do
 
     assert conn.status == 201
     body = Poison.decode!(conn.resp_body)
-    assert body["url"] == "http://localhost:4000/api/users/name"
+    assert body["url"] == "http://localhost:4001/api/users/name"
 
     user = assert User.get(username: "name")
     assert user.email == "email@mail.com"
@@ -454,7 +469,7 @@ defmodule HexWeb.API.RouterTest do
     assert body["name"] == "decimal"
 
     release = List.first(body["releases"])
-    assert release["url"] == "http://localhost:4000/api/packages/decimal/releases/0.0.1"
+    assert release["url"] == "http://localhost:4001/api/packages/decimal/releases/0.0.1"
     assert release["version"] == "0.0.1"
   end
 
@@ -464,7 +479,7 @@ defmodule HexWeb.API.RouterTest do
 
     assert conn.status == 200
     body = Poison.decode!(conn.resp_body)
-    assert body["url"] == "http://localhost:4000/api/packages/decimal/releases/0.0.1"
+    assert body["url"] == "http://localhost:4001/api/packages/decimal/releases/0.0.1"
     assert body["version"] == "0.0.1"
   end
 
@@ -645,9 +660,9 @@ defmodule HexWeb.API.RouterTest do
     :inets.start
 
     user           = User.get(username: "eric")
-    {:ok, phoenix} = Package.create(user, %{name: "phoenix", meta: %{}})
-    {:ok, _}       = Release.create(phoenix, %{version: "0.0.1", app: "phoenix", requirements: %{}}, "")
-    {:ok, _}       = Release.create(phoenix, %{version: "0.0.2", app: "phoenix", requirements: %{}}, "")
+    {:ok, phoenix} = Package.create(user, pkg_meta(%{name: "phoenix"}))
+    {:ok, _}       = Release.create(phoenix, rel_meta(%{version: "0.0.1", app: "phoenix"}), "")
+    {:ok, _}       = Release.create(phoenix, rel_meta(%{version: "0.0.2", app: "phoenix"}), "")
 
     path = Path.join("tmp", "release-docs.tar.gz")
     files = [{'index.html', "HEYO"}]
@@ -703,8 +718,8 @@ defmodule HexWeb.API.RouterTest do
     :inets.start
 
     user        = User.get(username: "eric")
-    {:ok, ecto} = Package.create(user, %{name: "ecto", meta: %{}})
-    {:ok, _}    = Release.create(ecto, %{version: "0.0.1", app: "ecto", requirements: %{}}, "")
+    {:ok, ecto} = Package.create(user, pkg_meta(%{name: "ecto"}))
+    {:ok, _}    = Release.create(ecto, rel_meta(%{version: "0.0.1", app: "ecto"}), "")
 
     path = Path.join("tmp", "release-docs.tar.gz")
     files = [{'index.html', "HEYO"}]
@@ -748,8 +763,8 @@ defmodule HexWeb.API.RouterTest do
     :inets.start
 
     user        = User.get(username: "eric")
-    {:ok, ecto} = Package.create(user, %{name: "ecto", meta: %{}})
-    {:ok, _}    = Release.create(ecto, %{version: "0.0.1", app: "ecto", requirements: %{}}, "")
+    {:ok, ecto} = Package.create(user, pkg_meta(%{name: "ecto"}))
+    {:ok, _}    = Release.create(ecto, rel_meta(%{version: "0.0.1", app: "ecto"}), "")
 
     path = Path.join("tmp", "release-docs.tar.gz")
     files = [{'1.2.3', "HEYO"}]

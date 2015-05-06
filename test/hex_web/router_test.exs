@@ -10,9 +10,9 @@ defmodule HexWeb.RouterTest do
 
   setup do
     {:ok, user} = User.create(%{username: "eric", email: "eric@mail.com", password: "eric"}, true)
-    {:ok, _}    = Package.create(user, %{name: "postgrex", meta: %{}})
-    {:ok, pkg}  = Package.create(user, %{name: "decimal", meta: %{}})
-    {:ok, _}    = Release.create(pkg, %{version: "0.0.1", app: "decimal", requirements: %{postgrex: "0.0.1"}}, "")
+    {:ok, _}    = Package.create(user, pkg_meta(%{name: "postgrex"}))
+    {:ok, pkg}  = Package.create(user, pkg_meta(%{name: "decimal"}))
+    {:ok, _}    = Release.create(pkg, rel_meta(%{version: "0.0.1", app: "decimal", requirements: %{postgrex: "0.0.1"}}), "")
     :ok
   end
 

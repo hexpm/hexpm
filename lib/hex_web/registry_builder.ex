@@ -71,7 +71,7 @@ defmodule HexWeb.RegistryBuilder do
     packages     = packages()
 
     package_tuples =
-      Enum.reduce(releases, HashDict.new, fn {_, vsn, pkg_id, _}, dict ->
+      Enum.reduce(releases, HashDict.new, fn {_, vsn, pkg_id, _, _}, dict ->
         Dict.update(dict, packages[pkg_id], [vsn], &[vsn|&1])
       end)
 
@@ -85,14 +85,14 @@ defmodule HexWeb.RegistryBuilder do
       end)
 
     release_tuples =
-      Enum.map(releases, fn {id, version, pkg_id, checksum} ->
+      Enum.map(releases, fn {id, version, pkg_id, checksum, tools} ->
         package = packages[pkg_id]
         deps =
           Enum.map(requirements[id] || [], fn {dep_id, app, req, opt} ->
             dep_name = packages[dep_id]
             [dep_name, req, opt, app]
           end)
-        {{package, to_string(version)}, [deps, checksum]}
+        {{package, to_string(version)}, [deps, checksum, tools]}
       end)
 
     {:memory, memory} = :erlang.process_info(self, :memory)
@@ -131,7 +131,7 @@ defmodule HexWeb.RegistryBuilder do
   end
 
   defp releases do
-    from(r in Release, select: {r.id, r.version, r.package_id, r.checksum})
+    from(r in Release, select: {r.id, r.version, r.package_id, r.checksum, fragment("?->'build_tools'", r.meta)})
     |> HexWeb.Repo.all
   end
 

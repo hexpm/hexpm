@@ -23,7 +23,11 @@ defmodule HexWebTest.Case do
   @tmp Path.expand Path.join(__DIR__, "../tmp")
 
   def create_tar(meta, files) do
-    meta = Dict.put_new(meta, :app, meta[:name])
+    meta =
+      meta
+      |> Dict.put_new(:app, meta[:name])
+      |> Dict.put_new(:build_tools, ["mix"])
+      |> Dict.put_new(:requirements, %{})
 
     contents_path = Path.join(@tmp, "#{meta[:name]}-#{meta[:version]}-contents.tar.gz")
     files = Enum.map(files, fn {name, bin} -> {String.to_char_list(name), bin} end)
@@ -43,5 +47,26 @@ defmodule HexWebTest.Case do
     :ok = :erl_tar.create(path, files)
 
     File.read!(path)
+  end
+
+  def rel_meta(params) do
+    params = params(params)
+    meta =
+      params
+      |> Map.put_new("build_tools", ["mix"])
+      |> Map.put_new("requirements", %{})
+    Map.put(params, "meta", meta)
+  end
+
+  def pkg_meta(meta) do
+    params = params(meta)
+    Map.update(params, "meta", params, &Map.merge(params, &1))
+  end
+
+  def params(params) do
+    Enum.into(params, %{}, fn
+      {binary, value} when is_binary(binary) -> {binary, value}
+      {atom, value} when is_atom(atom) -> {Atom.to_string(atom), value}
+    end)
   end
 end

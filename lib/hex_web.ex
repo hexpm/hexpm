@@ -4,11 +4,9 @@ defmodule HexWeb do
   def start(_type, _args) do
     :erlang.system_flag(:backtrace_depth, 16)
 
-    opts  = [port: 4000, compress: true, linger: {true, 10}]
-
-    if port = System.get_env("PORT") do
-      opts = Keyword.put(opts, :port, String.to_integer(port))
-    end
+    opts = [compress: true, linger: {true, 10}]
+    port = Application.get_env(:hex_web, :port)
+    opts = Keyword.put(opts, :port, String.to_integer(port))
 
     config(opts[:port])
 

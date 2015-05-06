@@ -9,16 +9,16 @@ defmodule HexWeb.Stats.JobTest do
 
   setup do
     {:ok, user} = User.create(%{username: "eric", email: "eric@mail.com", password: "eric"}, true)
-    {:ok, foo} = Package.create(user, %{name: "foo", meta: %{}})
-    {:ok, bar} = Package.create(user, %{name: "bar", meta: %{}})
-    {:ok, other} = Package.create(user, %{name: "other", meta: %{}})
+    {:ok, foo} = Package.create(user, pkg_meta(%{name: "foo"}))
+    {:ok, bar} = Package.create(user, pkg_meta(%{name: "bar"}))
+    {:ok, other} = Package.create(user, pkg_meta(%{name: "other"}))
 
-    {:ok, _} = Release.create(foo, %{version: "0.0.1", app: "foo", requirements: %{}}, "")
-    {:ok, _} = Release.create(foo, %{version: "0.0.2", app: "foo", requirements: %{}}, "")
-    {:ok, _} = Release.create(foo, %{version: "0.1.0", app: "foo", requirements: %{}}, "")
-    {:ok, _} = Release.create(bar, %{version: "0.0.1", app: "bar", requirements: %{}}, "")
-    {:ok, _} = Release.create(bar, %{version: "0.0.2", app: "bar", requirements: %{}}, "")
-    {:ok, _} = Release.create(other, %{version: "0.0.1", app: "other", requirements: %{}}, "")
+    {:ok, _} = Release.create(foo, rel_meta(%{version: "0.0.1", app: "foo"}), "")
+    {:ok, _} = Release.create(foo, rel_meta(%{version: "0.0.2", app: "foo"}), "")
+    {:ok, _} = Release.create(foo, rel_meta(%{version: "0.1.0", app: "foo"}), "")
+    {:ok, _} = Release.create(bar, rel_meta(%{version: "0.0.1", app: "bar"}), "")
+    {:ok, _} = Release.create(bar, rel_meta(%{version: "0.0.2", app: "bar"}), "")
+    {:ok, _} = Release.create(other, rel_meta(%{version: "0.0.1", app: "other"}), "")
 
     :ok
   end

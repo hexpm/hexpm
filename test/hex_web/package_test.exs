@@ -12,14 +12,14 @@ defmodule HexWeb.PackageTest do
   test "create package and get" do
     user = User.get(username: "eric")
     user_id = user.id
-    assert {:ok, %Package{}} = Package.create(user, %{name: "ecto", meta: %{}})
+    assert {:ok, %Package{}} = Package.create(user, pkg_meta(%{name: "ecto"}))
     assert [%User{id: ^user_id}] = Package.get("ecto") |> Package.owners
     assert is_nil(Package.get("postgrex"))
   end
 
   test "update package" do
     user = User.get(username: "eric")
-    assert {:ok, package} = Package.create(user, %{name: "ecto", meta: %{}})
+    assert {:ok, package} = Package.create(user, pkg_meta(%{name: "ecto"}))
 
     Package.update(package, %{"meta" => %{"contributors" => ["eric", "josé"]}})
     package = Package.get("ecto")
@@ -34,7 +34,7 @@ defmodule HexWeb.PackageTest do
       "description"  => "so good"}
 
     user = User.get(username: "eric")
-    assert {:ok, %Package{meta: ^meta}} = Package.create(user, %{name: "ecto", meta: meta})
+    assert {:ok, %Package{meta: ^meta}} = Package.create(user, pkg_meta(%{name: "ecto", meta: meta}))
     assert %Package{meta: ^meta} = Package.get("ecto")
   end
 
@@ -44,7 +44,7 @@ defmodule HexWeb.PackageTest do
       "foo"          => "bar"}
 
     user = User.get(username: "eric")
-    assert {:ok, %Package{}} = Package.create(user, %{name: "ecto", meta: meta})
+    assert {:ok, %Package{}} = Package.create(user, pkg_meta(%{name: "ecto", meta: meta}))
     assert %Package{meta: meta2} = Package.get("ecto")
 
     assert Map.size(meta2) == 1
@@ -59,19 +59,19 @@ defmodule HexWeb.PackageTest do
       "description"  => ["so bad"]}
 
     user = User.get(username: "eric")
-    assert {:error, errors} = Package.create(user, %{name: "ecto", meta: meta})
+    assert {:error, errors} = Package.create(user, pkg_meta(%{name: "ecto", meta: meta}))
     assert length(errors) == 1
     assert length(errors[:meta]) == 4
   end
 
   test "packages are unique" do
     user = User.get(username: "eric")
-    assert {:ok, %Package{}} = Package.create(user, %{name: "ecto", meta: %{}})
-    assert {:error, _} = Package.create(user, %{name: "ecto", meta: %{}})
+    assert {:ok, %Package{}} = Package.create(user, pkg_meta(%{name: "ecto"}))
+    assert {:error, _} = Package.create(user, pkg_meta(%{name: "ecto"}))
   end
 
   test "reserved names" do
     user = User.get(username: "eric")
-    assert {:error, [name: "is reserved"]} = Package.create(user, %{name: "elixir", meta: %{}})
+    assert {:error, [name: "is reserved"]} = Package.create(user, pkg_meta(%{name: "elixir"}))
   end
 end
