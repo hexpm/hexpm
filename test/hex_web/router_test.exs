@@ -94,6 +94,11 @@ defmodule HexWeb.RouterTest do
            |> put_req_header("x-forwarded-for", "1.2.3.4")
            |> Router.call([])
     assert conn.remote_ip == {1,2,3,4}
+
+    conn = conn("GET", "/installs/hex.ez")
+           |> put_req_header("x-forwarded-for", "1.2.3.4 , 5.6.7.8")
+           |> Router.call([])
+    assert conn.remote_ip == {5,6,7,8}
   end
 
   test "installs" do

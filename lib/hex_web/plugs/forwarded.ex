@@ -21,15 +21,23 @@ defmodule HexWeb.Plugs.Forwarded do
   defp scheme(_, default), do: default
 
   defp ip(ip, default) do
-    parts = :binary.split(ip, ".", [:global])
-    parts = Enum.map(parts, &Integer.parse/1)
-    valid = Enum.all?(parts, &match?({int, ""} when int in 0..255, &1))
+    ip = :binary.split(ip, ",", [:global])
+         |> List.last
+         |> String.strip
 
-    if length(parts) == 4 and valid do
-      parts = Enum.map(parts, &elem(&1, 0))
-      List.to_tuple(parts)
+    if ip do
+      parts = :binary.split(ip, ".", [:global])
+      parts = Enum.map(parts, &Integer.parse/1)
+      valid = Enum.all?(parts, &match?({int, ""} when int in 0..255, &1))
+
+      if length(parts) == 4 and valid do
+        parts = Enum.map(parts, &elem(&1, 0))
+        List.to_tuple(parts)
+      else
+        Logger.warn("Invalid IP: #{inspect ip}")
+        default
+      end
     else
-      Logger.warn("Invalid IP: #{inspect ip}")
       default
     end
   end
