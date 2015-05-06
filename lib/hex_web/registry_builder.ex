@@ -62,7 +62,7 @@ defmodule HexWeb.RegistryBuilder do
     end
   end
 
-  def build_ets(handle, file) do
+  defp build_ets(handle, file) do
     HexWeb.Registry.set_working(handle)
 
     installs     = installs()
