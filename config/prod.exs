@@ -7,7 +7,7 @@ config :hex_web,
 config :hex_web, HexWeb.Repo,
   url: System.get_env("DATABASE_URL"),
   lazy: false,
-  size: 20,
+  size: System.get_env("NUM_DATABASE_CONNS") || 20,
   max_overflow: 0
 
 config :logger,
