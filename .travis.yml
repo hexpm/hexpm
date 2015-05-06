@@ -4,7 +4,7 @@ otp_release:
   - 17.4
 sudo: false
 addons:
-  postgresql: "9.3"
+  postgresql: "9.4"
 before_install:
   - wget http://s3.hex.pm/builds/elixir/$ELIXIRVERSION.zip
   - unzip -d elixir $ELIXIRVERSION.zip
