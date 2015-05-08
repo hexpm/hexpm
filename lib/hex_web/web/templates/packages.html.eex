@@ -4,26 +4,26 @@
   <table class="table table-striped packages">
     <thead>
       <tr>
-        <th style="width: 8em;">Name</th>
+        <th style="width: 10em;">Name</th>
         <th>Description</th>
-        <th style="width: 6em;" class="text-center">Latest</th>
-        <th style="width: 6em;" class="text-center">Downloads</th>
+        <th style="width: 5em;">Latest</th>
+        <th style="width: 6em;">Downloads</th>
       </tr>
     </thead>
     <tbody>
       <%= for package <- @packages do %>
         <tr>
-          <td style="width: 10em;">
-            <a href="/packages/<%= package.name %>" style="text-decoration: none;">
+          <td>
+            <a href="/packages/<%= package.name %>">
               <span class="glyphicon glyphicon-folder-open" style="padding-right: 0.5em;"></span><%= package.name %>
             </a>
           </td>
-          <td><%= package.meta["description"] %></td>
-          <td style="width: 6em;" class="text-center">
+          <td><%= text_length(package.meta["description"], 140) %></td>
+          <td>
             <span class="text-muted"><%= package.latest_version %></span>
           </td>
-          <td style="width: 6em;" class="text-center">
             <span class="text-muted"><%= @downloads[package.name] || 0 %></span>
+          <td>
           </td>
         </tr>
       <% end %>

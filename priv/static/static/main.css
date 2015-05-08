@@ -61,9 +61,16 @@ body {
 }
 
 .packages td {
+  padding-right: 0 !important;
+}
+
+
+.packages a {
+  display: block;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  text-decoration: none !important;
 }
 
 @media (min-width: 768px) {
