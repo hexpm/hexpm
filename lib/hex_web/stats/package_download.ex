@@ -39,4 +39,17 @@ defmodule HexWeb.Stats.PackageDownload do
     |> HexWeb.Repo.all
     |> Enum.map(&{:"#{&1.view}", &1.downloads || 0})
   end
+
+  def for_packages(view, packages) do
+    view = "#{view}"
+    package_ids = Enum.map(packages, &(&1.id))
+
+    from(pd in HexWeb.Stats.PackageDownload,
+         join: p in assoc(pd, :package),
+         where:  pd.view == ^view,
+         select: {p.name, pd.downloads})
+    |> where([pd], pd.package_id in ^package_ids)
+    |> HexWeb.Repo.all
+    |> Enum.into(%{})
+  end
 end
