@@ -104,7 +104,7 @@ defmodule HexWeb.Web.Router do
     package_count = Package.count(search)
     page          = safe_page(safe_int(conn.params["page"]) || 1, package_count)
     packages      = fetch_packages(page, packages_per_page, search)
-    downloads     = PackageDownload.for_packages("all", packages)
+    downloads     = PackageDownload.packages(packages, "all")
 
     conn = assign_pun(conn, [search, page, packages, downloads, package_count, active,
                              title, packages_per_page])

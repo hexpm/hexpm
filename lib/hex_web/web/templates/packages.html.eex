@@ -22,8 +22,8 @@
           <td>
             <span class="text-muted"><%= package.latest_version %></span>
           </td>
-            <span class="text-muted"><%= @downloads[package.name] || 0 %></span>
           <td>
+            <span class="text-muted"><%= human_number_space(@downloads[package.id] || 0) %></span>
           </td>
         </tr>
       <% end %>
