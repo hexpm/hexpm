@@ -14,11 +14,21 @@
 contribs = @package.meta["contributors"] || []
 licenses = @package.meta["licenses"] || []
 links = Enum.to_list(@package.meta["links"] || [])
+build_tools = @current_release && @current_release.meta["build_tools"] || []
 %>
 
 <div class="row">
   <div class="col-sm-8">
     <dl class="dl-horizontal package-meta">
+      <%= if build_tools != [] do %>
+        <dt>Build tools</dt>
+        <dd>
+          <%= for tool <- @current_release.meta["build_tools"] do %>
+            <span class="label label-primary"><%= tool %></span>
+          <% end %>
+        </dd>
+      <% end %>
+
       <%= if contribs != [] do %>
         <dt>Contributors</dt>
         <dd><%= Enum.join(contribs, ", ") %></dd>

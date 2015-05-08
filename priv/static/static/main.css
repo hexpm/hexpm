@@ -81,6 +81,10 @@ body {
   .package-meta dd {
     margin-left: 110px;
   }
+
+  .package-meta .label {
+    margin-right: 6px;
+  }
 }
 
 .links {
