@@ -1,49 +1,84 @@
 defmodule HexWeb.Scripts.Tarballs do
-  @temp_tar "temp.tar.gz"
-
   # NOTE: Remember to update checksums in releases table with new checksums
 
-  def main([input_dir]) do
-    all_tars = Path.wildcard(Path.join(input_dir, "*.tar"))
-    map = %{mix: HashSet.new, rebar: HashSet.new, make: HashSet.new, unknown: HashSet.new}
+  @tools [
+    {"mix.exs",       "mix"},
+    {"rebar",         "rebar"},
+    {"rebar.config",  "rebar"},
+    {"Makefile",     "make"},
+    {"Makefile.win",  "make"},
+  ]
 
-    Enum.reduce(all_tars, map, fn filename, map ->
+  def main([]) do
+    all_tars = Path.wildcard(Path.join("tarballs", "*.tar"))
+    File.mkdir_p!("tarballs2")
+
+    Enum.each(all_tars, fn filename ->
       tarname = Path.basename(filename)
-      [package, _] = String.split(tarname, "-", parts: 2)
+      [_, package, release] = Regex.run(~r"(.*)-(.*).tar"U, tarname)
 
       {:ok, files} = :erl_tar.extract(String.to_char_list(filename), [:memory])
-      files = convert_files(files)
-
+      files = string_files(files)
       content_files = contents(files)
+      tools = tools(@tools, content_files)
 
-      cond do
-        "mix.exs" in content_files ->
-          type = :mix
-        "rebar.config" in content_files or "rebar" in content_files ->
-          type = :rebar
-        "Makefile" in content_files ->
-          type = :make
-        true ->
-          type = :unknown
-      end
-
-      Map.update!(map, type, &HashSet.put(&1, package))
+      checksum = update_tarball(package, release, files, tools)
+      put_info(package, release, tools, checksum)
     end)
-    |> Enum.map(fn {k, v} -> {k, Enum.sort(v)} end)
-    |> IO.inspect(limit: -1)
-    |> Enum.map(fn {k, v} -> {k, Enum.count(v)} end)
-    |> IO.inspect
+  end
+
+  defp put_info(package, release, tools, checksum) do
+    tools = Enum.join(tools, ",")
+    Enum.join([package, release, tools, checksum], ";")
+    |> IO.puts
+  end
+
+  defp update_tarball(package, release, files, tools) do
+    {:ok, metadata} = files["metadata.config"] |> HexWeb.API.ConsultFormat.decode
+    metadata = put_in(metadata["build_tools"], tools)
+    metadata = HexWeb.API.ConsultFormat.encode(metadata)
+    files = put_in(files["metadata.config"], metadata)
+
+    blob = files["VERSION"] <> metadata <> files["contents.tar.gz"]
+    checksum = :crypto.hash(:sha256, blob) |> Base.encode16
+    files = put_in(files["CHECKSUM"], checksum)
+
+    path = Path.join("tarballs2", "#{package}-#{release}.tar")
+    files = list_files(files)
+    :ok = :erl_tar.create(path, files)
+
+    checksum
+  end
+
+  defp tools(tools, files) do
+    files = Enum.into(files, HashSet.new)
+
+    Enum.reduce(tools, HashSet.new, fn {file, tool}, set ->
+      if file in files do
+        HashSet.put(set, tool)
+      else
+        set
+      end
+    end)
+    |> Enum.to_list
   end
 
   defp contents(files) do
     {:ok, inner_files} = :erl_tar.extract({:binary, files["contents.tar.gz"]}, [:memory, :compressed])
-    convert_files(inner_files)
-    |> Enum.map(&elem(&1, 0))
+    inner_files
+    |> string_files
+    |> Enum.into(HashSet.new, &elem(&1, 0))
   end
 
-  defp convert_files(files) do
+  defp string_files(files) do
     Enum.into(files, %{}, fn {name, binary} ->
       {List.to_string(name), binary}
+    end)
+  end
+
+  defp list_files(files) do
+    Enum.into(files, [], fn {name, binary} ->
+      {String.to_char_list(name), binary}
     end)
   end
 end

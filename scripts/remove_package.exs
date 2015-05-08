@@ -24,3 +24,4 @@ else
   IO.puts "Not removed"
 end
 
+# TODO: Remove tarballs!
