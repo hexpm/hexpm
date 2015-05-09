@@ -111,3 +111,8 @@ body {
   padding-right: 1.5em;
   text-align: right;
 }
+
+.snippet {
+  cursor: default;
+  background: transparent;
+}

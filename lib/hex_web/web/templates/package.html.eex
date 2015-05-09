@@ -3,6 +3,14 @@
     <a href="/packages/<%= @package.name %>"><%= @package.name %></a>
     <%= if @current_release do %>
       <small><%= @current_release.version %></small>
+
+      <span class="form-inline pull-right">
+        <input type="text" class="form-control input-sm snippet"
+          value='{:<%= @package.name %>, "<%= @snippet %>"}'
+          onfocus="this.select();"
+          onmouseup="return false;"
+          readonly="readonly" />
+        </span>
     <% end %>
   </h2>
   <%= if description = @package.meta["description"] do %>

@@ -145,10 +145,11 @@ defmodule HexWeb.Web.Router do
       release_downloads = ReleaseDownload.release(current_release)
       reqs = Release.requirements(current_release)
       current_release = %{current_release | requirements: reqs}
+      snippet = snippet_version(current_release.version)
     end
 
     conn = assign_pun(conn, [package, releases, current_release, downloads,
-                             release_downloads, active, title])
+                             release_downloads, active, title, snippet])
     send_page(conn, :package)
   end
 
@@ -160,6 +161,15 @@ defmodule HexWeb.Web.Router do
       version = latest_versions[package.id]
       Map.put(package, :latest_version, version)
     end)
+  end
+
+  defp snippet_version({:ok, version}) do
+    %Version{major: major, minor: minor, patch: patch} = version
+
+    case {major, minor, patch} do
+      {0, minor, patch} -> "~> 0.#{minor}.#{patch}"
+      {major, minor, patch} "~> #{major}.#{minor}"
+    end
   end
 
   defp safe_page(page, _count) when page < 1,
