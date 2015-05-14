@@ -135,9 +135,10 @@ defmodule HexWeb.Package do
     |> HexWeb.Repo.delete_all
   end
 
-  def all(page, count, search \\ nil) do
+  def all(page, count, search \\ nil, sort \\ :name) do
     from(p in HexWeb.Package,
-         order_by: p.name)
+         preload: :downloads)
+    |> sort(sort)
     |> Util.paginate(page, count)
     |> search(search, true)
     |> HexWeb.Repo.all
@@ -201,6 +202,16 @@ defmodule HexWeb.Package do
 
   defp like_escape(string, escape) do
     String.replace(string, escape, "\\\\\\1")
+  end
+
+  defp sort(query, :name) do
+    from d in query, order_by: :name
+  end
+
+  defp sort(query, :downloads) do
+    from p in query,
+    left_join: d in HexWeb.Stats.PackageDownload, on: p.id == d.package_id and d.view == "all",
+    order_by: [asc: is_nil(d.downloads), desc: d.downloads]
   end
 end
 
