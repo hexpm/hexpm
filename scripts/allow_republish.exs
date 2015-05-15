@@ -15,4 +15,4 @@ unless release do
 end
 
 release = %{release | inserted_at: Ecto.DateTime.utc}
-:ok = HexWeb.Repo.update(release)
+HexWeb.Repo.update(release)
