@@ -9,27 +9,23 @@
   range_start = (@page - 1) * items_per_page + 1
   range_end   = range_start + shown_packages - 1
 
-  if present?(@search) do
-    search_query = "search=#{@search}&"
-  else
-    search_query = ""
-  end
+  if @page == 1,
+    do:   page = nil,
+    else: page = @page
 
-  if present?(@sort) do
-    sort_param = "&sort=#{@sort}"
-  else
-    sort_param = ""
-  end
-
+  sort_name_params = url_params(search: @search, page: page, sort: "name")
+  sort_downloads_params = url_params(search: @search, page: page, sort: "downloads")
+  prev_page_params = url_params(search: @search, page: @page-1, sort: @sort)
+  next_page_params = url_params(search: @search, page: @page+1, sort: @sort)
   %>
 
   <table class="table table-striped packages">
     <thead>
       <tr>
-        <th style="width: 10em;"><a href="/packages?<%= safe(search_query) %>page=<%= @page %>&sort=name">Name</a></th>
+        <th style="width: 10em;"><a href="/packages<%= sort_name_params %>">Name</a></th>
         <th>Description</th>
         <th style="width: 5em;">Latest</th>
-        <th style="width: 7em; text-align: right;"><a href="/packages?<%= safe(search_query) %>page=<%= @page %>&sort=downloads">Downloads</a></th>
+        <th style="width: 7em; text-align: right;"><a href="/packages<%= sort_downloads_params %>">Downloads</a></th>
       </tr>
     </thead>
     <tbody>
@@ -63,7 +59,7 @@
 
   <ul class="pagination pull-right">
     <%= if paginate[:prev] do %>
-      <li><a href="/packages?<%= safe(search_query) %>page=<%= @page-1 %><%= sort_param %>">&laquo;</a></li>
+      <li><a href="/packages<%= prev_page_params %>">&laquo;</a></li>
     <% else %>
       <li class="disabled"><span>&laquo;</span></li>
     <% end %>
@@ -75,7 +71,7 @@
         </li>
       <% else %>
         <li>
-          <a href="/packages?<%= safe(search_query) %>page=<%= counter %><%= sort_param %>">
+          <a href="/packages<%= url_params(search: @search, page: counter, sort: @sort) %>">
             <%= counter %>
           </a>
         </li>
@@ -83,7 +79,7 @@
     <% end %>
 
     <%= if paginate[:next] do %>
-      <li><a href="/packages?<%= safe(search_query) %>page=<%= @page+1 %><%= sort_param %>">&raquo;</a></li>
+      <li><a href="/packages<%= next_page_params %>">&raquo;</a></li>
     <% else %>
       <li class="disabled"><span>&raquo;</span></li>
     <% end %>

@@ -32,6 +32,15 @@ defmodule HexWeb.Web.HTML.Helpers do
       page_links: page_links}
   end
 
+  def url_params([]) do
+    ""
+  end
+
+  def url_params(list) do
+    list = Enum.filter(list, fn {_, v} -> present?(v) end)
+    "?" <> Enum.map_join(list, "&", fn {k, v} -> "#{k}=#{v}" end)
+  end
+
   def present?(""),  do: false
   def present?(nil), do: false
   def present?(_),   do: true
