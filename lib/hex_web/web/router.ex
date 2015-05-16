@@ -100,14 +100,15 @@ defmodule HexWeb.Web.Router do
     conn              = fetch_params(conn)
     packages_per_page = @packages
     search            = conn.params["search"] |> safe_query
+    sort              = safe_sort(conn.params["sort"] || "name")
 
     package_count = Package.count(search)
     page          = safe_page(safe_int(conn.params["page"]) || 1, package_count)
-    packages      = fetch_packages(page, packages_per_page, search)
+    packages      = fetch_packages(page, packages_per_page, search, sort)
     downloads     = PackageDownload.packages(packages, "all")
 
     conn = assign_pun(conn, [search, page, packages, downloads, package_count, active,
-                             title, packages_per_page])
+                             title, packages_per_page, sort])
     send_page(conn, :packages)
   end
 
@@ -152,8 +153,8 @@ defmodule HexWeb.Web.Router do
     send_page(conn, :package)
   end
 
-  defp fetch_packages(page, packages_per_page, search) do
-    packages = Package.all(page, packages_per_page, search)
+  defp fetch_packages(page, packages_per_page, search, sort) do
+    packages = Package.all(page, packages_per_page, search, sort)
     latest_versions = Release.latest_versions(packages)
 
     Enum.map(packages, fn package ->
@@ -185,6 +186,16 @@ defmodule HexWeb.Web.Router do
     |> String.replace(~r/[^\w\s]/, "")
     |> String.strip
   end
+
+  defp safe_sort("name") do
+    :name
+  end
+
+  defp safe_sort("downloads") do
+    :downloads
+  end
+
+  defp safe_sort(_), do: nil
 
   def send_page(conn, page) do
     body = Templates.render(page, conn.assigns)

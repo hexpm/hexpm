@@ -20,6 +20,7 @@ defmodule HexWeb.Util do
     :calendar.gregorian_days_to_date(today_days - 1)
   end
 
+
   defp diff(a, b) do
     {days, time} = :calendar.time_difference(a, b)
     :calendar.time_to_seconds(time) - (days * 24 * 60 * 60)

@@ -15,6 +15,12 @@ defmodule SampleData do
         nil
     end
   end
+
+  def last_month do
+    {today, _time} = :calendar.universal_time()
+    today_days = :calendar.date_to_gregorian_days(today)
+    :calendar.gregorian_days_to_date(today_days - 35)
+  end
 end
 
 alias HexWeb.Package
@@ -28,8 +34,9 @@ lorem = "Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmo
 HexWeb.Repo.transaction(fn ->
   eric = SampleData.create_user("eric", "eric@example.com", "eric")
   jose = SampleData.create_user("jose", "jose@example.com", "jose")
+  joe = SampleData.create_user("joe", "joe@example.com", "joe")
 
-  if eric == nil or jose == nil do
+  if eric == nil or jose == nil or joe == nil do
     IO.puts "\nThere has been an error creating the sample users.\nIf the error says '... already taken' hex_web was probably already set up."
   end
 
@@ -83,6 +90,30 @@ HexWeb.Repo.transaction(fn ->
     yesterday = Ecto.Type.load!(Ecto.Date, HexWeb.Util.yesterday)
     %Download{release_id: rel.id, downloads: 42, day: yesterday}
     |> HexWeb.Repo.insert
+  end
+
+  unless joe == nil do
+    Enum.each(1..100, fn(index) ->
+      {:ok, ups} =
+      Package.create(joe, %{
+        name: "ups_" <> to_string(index),
+        meta: %{
+          contributors: ["Joe Somebody"],
+          licenses: [],
+          links: %{"Github" => "http://example.com/github"},
+          description: lorem}})
+
+      {:ok, rel1}   = Release.create(ups, %{version: "0.0.1", app: "ups", meta: %{"app" => "ups", "build_tools" => ["mix"]}}, SampleData.checksum("ups 0.0.1"))
+      {:ok, rel2} = Release.create(ups, %{version: "0.2.0", app: "ups", requirements: %{postgrex: "~> 0.1.0", decimal: "~> 0.1.0"}, meta: %{"app" => "ups", "build_tools" => ["mix"]}}, SampleData.checksum("ups 0.2.0"))
+
+      last_month = Ecto.Type.load!(Ecto.Date, HexWeb.Util.last_month)
+      %Download{release_id: rel1.id, downloads: div(index, 2), day: last_month}
+      |> HexWeb.Repo.insert
+
+      yesterday = Ecto.Type.load!(Ecto.Date, HexWeb.Util.yesterday)
+      %Download{release_id: rel2.id, downloads: div(index, 2) + rem(index, 2), day: yesterday}
+      |> HexWeb.Repo.insert
+    end)
   end
 
   PackageDownload.refresh
