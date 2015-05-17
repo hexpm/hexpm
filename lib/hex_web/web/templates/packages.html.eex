@@ -1,5 +1,5 @@
 <%= if @package_count == 0 do %>
-  <p>No packages found</p>
+  <h4>No Results Found</h4>
 <% else %>
   <%
   items_per_page = 30
