@@ -131,13 +131,16 @@ defmodule HexWeb.Tar do
       |> Enum.filter(&(Path.dirname(&1) == "."))
       |> Enum.into(HashSet.new)
 
-    build_tool =
-      Enum.find_value(@build_tools, fn {file, tool} ->
-        if file in base_files, do: tool
+    build_tools =
+      Enum.flat_map(@build_tools, fn {file, tool} ->
+        if file in base_files,
+            do: [tool],
+          else: []
       end)
+      |> Enum.uniq
 
-    if build_tool do
-      Map.put(meta, "build_tools", [build_tool])
+    if build_tools != [] do
+      Map.put(meta, "build_tools", build_tools)
     else
       meta
     end
