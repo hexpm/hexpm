@@ -121,7 +121,9 @@ defmodule HexWeb.API.Router do
             store = Application.get_env(:hex_web, :store)
 
             # Delete old files
-            paths = store.list_docs_pages(name)
+            # Add "/" so that we don't get prefix matches, for example phoenix
+            # would match phoenix_html
+            paths = store.list_docs_pages(name <> "/")
             Enum.each(paths, fn path ->
               first = Path.relative_to(path, name)|> Path.split |> hd
               cond do
