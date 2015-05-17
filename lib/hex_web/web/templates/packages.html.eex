@@ -19,13 +19,35 @@
   next_page_params = url_params(search: @search, page: @page+1, sort: @sort)
   %>
 
+  <span class="pull-left">
+    <h4><%= @package_count %> Results Found</h4>
+  </span>
+
+  <span class="pull-right">
+    <div class="dropdown">
+      <button class="btn btn-default dropdown-toggle" type="button" id="sort_dropdown" data-toggle="dropdown">
+        Sort By
+        <span class="caret"></span>
+      </button>
+      <ul class="dropdown-menu" role="menu">
+        <li role="presentation">
+          <a role="menuitem" tabindex="-1" href="/packages<%= sort_name_params %>">Name</a>
+        </li>
+
+        <li role="presentation">
+          <a role="menuitem" tabindex="-1" href="/packages<%= sort_downloads_params %>">Downloads</a>
+        </li>
+      </ul>
+    </div>
+  </span>
+
   <table class="table table-striped packages">
     <thead>
       <tr>
-        <th style="width: 10em;"><a href="/packages<%= sort_name_params %>">Name</a></th>
+        <th style="width: 10em;">Name</th>
         <th>Description</th>
         <th style="width: 5em;">Latest</th>
-        <th style="width: 7em; text-align: right;"><a href="/packages<%= sort_downloads_params %>">Downloads</a></th>
+        <th style="width: 7em; text-align: right;">Downloads</th>
       </tr>
     </thead>
     <tbody>
