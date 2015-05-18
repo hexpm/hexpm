@@ -2,7 +2,8 @@ defmodule HexWeb.API.Router do
   use Plug.Router
   import Plug.Conn
   import HexWeb.API.Util
-  import HexWeb.Util, only: [api_url: 1, parse_integer: 2, task_start: 1]
+  import HexWeb.Util, only: [api_url: 1, task_start: 1]
+  alias HexWeb.Util
   alias HexWeb.Plug.NotFound
   alias HexWeb.Plug.RequestTimeout
   alias HexWeb.Plug.RequestTooLarge
@@ -223,8 +224,11 @@ defmodule HexWeb.API.Router do
     end
 
     get "packages" do
-      page = parse_integer(conn.params["page"], 1)
-      packages = Package.all(page, 100, conn.params["search"])
+      page      = Util.safe_int(conn.params["page"]) || 1
+      search    = conn.params["search"] |> Util.safe_search
+      sort      = Util.safe_to_atom(conn.params["sort"] || "name", ~w(name downloads))
+      packages  = Package.all(page, 100, search, sort)
+
       # No last-modified header for paginated results
       when_stale(conn, packages, [modified: false], &send_okay(&1, packages, :public))
     end

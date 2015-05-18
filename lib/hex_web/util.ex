@@ -20,6 +20,33 @@ defmodule HexWeb.Util do
     :calendar.gregorian_days_to_date(today_days - 1)
   end
 
+  def safe_to_atom(binary, allowed) do
+    if binary in allowed, do: String.to_atom(binary)
+  end
+
+  def safe_page(page, _count, _per_page) when page < 1,
+    do: 1
+  def safe_page(page, count, per_page) when page > div(count, per_page) + 1,
+    do: div(count, per_page) + 1
+  def safe_page(page, _count, _per_page),
+    do: page
+
+  def safe_int(nil), do: nil
+
+  def safe_int(string) do
+    case Integer.parse(string) do
+      {int, ""} -> int
+      _         -> nil
+    end
+  end
+
+  def safe_search(nil), do: nil
+
+  def safe_search(string) do
+    string
+    |> String.replace(~r/[^\w\s]/, "")
+    |> String.strip
+  end
 
   defp diff(a, b) do
     {days, time} = :calendar.time_difference(a, b)
@@ -60,14 +87,6 @@ defmodule HexWeb.Util do
 
     Enum.max(list)
   end
-
-  def parse_integer(string, default) when is_binary(string) do
-    case Integer.parse(string) do
-      {int, ""} -> int
-      _ -> default
-    end
-  end
-  def parse_integer(_, default), do: default
 
   def binarify(binary) when is_binary(binary),
     do: binary

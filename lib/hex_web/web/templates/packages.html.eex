@@ -2,11 +2,10 @@
   <h4>No Results Found</h4>
 <% else %>
   <%
-  items_per_page = 30
   shown_packages = length(@packages)
-  paginate = paginate(@page, @package_count, items_per_page: items_per_page, page_links: 5)
+  paginate = paginate(@page, @package_count, items_per_page: @per_page, page_links: 5)
 
-  range_start = (@page - 1) * items_per_page + 1
+  range_start = (@page - 1) * @per_page + 1
   range_end   = range_start + shown_packages - 1
 
   if @page == 1,

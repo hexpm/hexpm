@@ -140,7 +140,7 @@ defmodule HexWeb.Package do
          preload: :downloads)
     |> sort(sort)
     |> Util.paginate(page, count)
-    |> search(search, true)
+    |> search(search)
     |> HexWeb.Repo.all
   end
 
@@ -161,7 +161,7 @@ defmodule HexWeb.Package do
 
   def count(search \\ nil) do
     from(p in HexWeb.Package, select: count(p.id))
-    |> search(search, false)
+    |> search(search)
     |> HexWeb.Repo.one!
   end
 
@@ -176,11 +176,11 @@ defmodule HexWeb.Package do
     changeset
   end
 
-  defp search(query, nil, _order?) do
+  defp search(query, nil) do
     query
   end
 
-  defp search(query, search, order?) do
+  defp search(query, search) do
     name_search = like_escape(search, ~r"(%|_)")
     if String.length(search) >= 3 do
       name_search = "%" <> name_search <> "%"
@@ -188,16 +188,10 @@ defmodule HexWeb.Package do
 
     desc_search = String.replace(search, ~r"\s+", " & ")
 
-    query =
       from var in query,
     where: ilike(var.name, ^name_search) or
            fragment("to_tsvector('english', (?->'description')::text) @@ to_tsquery('english', ?)",
                     var.meta, ^desc_search)
-    if order? do
-      query = from(var in query, order_by: ilike(var.name, ^name_search))
-    end
-
-    query
   end
 
   defp like_escape(string, escape) do

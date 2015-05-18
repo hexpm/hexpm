@@ -9,6 +9,7 @@ defmodule HexWeb.Web.Router do
   alias HexWeb.Release
   alias HexWeb.Package
   alias HexWeb.User
+  alias HexWeb.Util
 
 
   @packages 30
@@ -95,20 +96,19 @@ defmodule HexWeb.Web.Router do
   end
 
   get "/packages" do
-    active            = :packages
-    title             = "Packages"
-    conn              = fetch_params(conn)
-    packages_per_page = @packages
-    search            = conn.params["search"] |> safe_query
-    sort              = safe_sort(conn.params["sort"] || "name")
-
+    active        = :packages
+    title         = "Packages"
+    conn          = fetch_params(conn)
+    per_page      = @packages
+    search        = conn.params["search"] |> Util.safe_search
+    sort          = Util.safe_to_atom(conn.params["sort"] || "name", ~w(name downloads))
     package_count = Package.count(search)
-    page          = safe_page(safe_int(conn.params["page"]) || 1, package_count)
-    packages      = fetch_packages(page, packages_per_page, search, sort)
+    page          = Util.safe_page(Util.safe_int(conn.params["page"]) || 1, package_count, @packages)
+    packages      = fetch_packages(page, @packages, search, sort)
     downloads     = PackageDownload.packages(packages, "all")
 
     conn = assign_pun(conn, [search, page, packages, downloads, package_count, active,
-                             title, packages_per_page, sort])
+                             title, per_page, sort])
     send_page(conn, :packages)
   end
 
@@ -162,40 +162,6 @@ defmodule HexWeb.Web.Router do
       Map.put(package, :latest_version, version)
     end)
   end
-
-  defp safe_page(page, _count) when page < 1,
-    do: 1
-  defp safe_page(page, count) when page > div(count, @packages) + 1,
-    do: div(count, @packages) + 1
-  defp safe_page(page, _count),
-    do: page
-
-  defp safe_int(nil), do: nil
-
-  defp safe_int(string) do
-    case Integer.parse(string) do
-      {int, ""} -> int
-      _         -> nil
-    end
-  end
-
-  defp safe_query(nil), do: nil
-
-  defp safe_query(string) do
-    string
-    |> String.replace(~r/[^\w\s]/, "")
-    |> String.strip
-  end
-
-  defp safe_sort("name") do
-    :name
-  end
-
-  defp safe_sort("downloads") do
-    :downloads
-  end
-
-  defp safe_sort(_), do: nil
 
   def send_page(conn, page) do
     body = Templates.render(page, conn.assigns)
