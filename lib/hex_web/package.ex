@@ -211,6 +211,10 @@ defmodule HexWeb.Package do
     left_join: d in HexWeb.Stats.PackageDownload, on: p.id == d.package_id and d.view == "all",
     order_by: [asc: is_nil(d.downloads), desc: d.downloads]
   end
+
+  defp sort(query, nil) do
+    query
+  end
 end
 
 defimpl HexWeb.Render, for: HexWeb.Package do
