@@ -236,9 +236,9 @@ defmodule HexWeb.API.Router do
     get "packages/:name" do
       if package = Package.get(name) do
         when_stale(conn, package, fn conn ->
-          downloads = HexWeb.Stats.PackageDownload.package(package)
+          package = HexWeb.Repo.preload(package, :downloads)
           releases = Release.all(package)
-          package = %{package | releases: releases, downloads: downloads}
+          package = %{package | releases: releases}
 
           send_okay(conn, package, :public)
         end)
