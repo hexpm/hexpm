@@ -239,7 +239,10 @@ defimpl HexWeb.Render, for: HexWeb.Package do
     end
 
     if association_loaded?(package.downloads) do
-      downloads = Enum.into(package.downloads, %{})
+      downloads =
+        Enum.into(package.downloads, %{}, fn download ->
+          {download.view, download.downloads}
+        end)
       entity = Map.put(entity, :downloads, downloads)
     end
 
