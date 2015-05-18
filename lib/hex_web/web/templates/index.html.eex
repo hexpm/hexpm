@@ -59,7 +59,7 @@
 
 <div class="row">
   <div class="col-sm-6">
-    <h3>New packages <a href="/feeds/new-packages.rss"><img style="width: 16px; height: 16px;" src="/static/feed-icon.png" alt="Feed symbol"></a></h3>
+    <h3>New packages</h3>
     <table class="stats">
       <%= for { package, inserted_at } <- @package_new do %>
         <tr>
