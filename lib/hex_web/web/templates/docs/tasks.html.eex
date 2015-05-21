@@ -119,6 +119,31 @@ remote Git URL and Git ref, and all package dependencies.</p>
 
   <div class="panel panel-default">
     <div class="panel-heading">
+      <h3 id="hex_outdated" class="panel-title">
+        hex.outdated
+        <a href="#hex_outdated"><span class="glyphicon glyphicon-link pull-right"></span></a>
+      </h3>
+    </div>
+    <div class="panel-body">
+      <p>Shows all packages that have a version mismatch between the registry and
+your mix.lock file.</p>
+<p>By default, it only shows top-level packages explicitly listed in the
+<code class="inline">mix.exs</code> file. All outdated packages can be displayed by using the <code class="inline">--all</code>
+command line option.</p>
+<h3>Command line options</h3>
+<ul>
+<li><code class="inline">--all</code> - shows all outdated packages, including packages in <code class="inline">mix.lock</code> not specified in <code class="inline">mix.exs</code>.
+</li>
+</ul>
+<p><code class="inline">mix hex.outdated</code>
+<code class="inline">mix hex.outdated --all</code></p>
+
+    </div>
+  </div>
+
+
+  <div class="panel panel-default">
+    <div class="panel-heading">
       <h3 id="hex_owner" class="panel-title">
         hex.owner
         <a href="#hex_owner"><span class="glyphicon glyphicon-link pull-right"></span></a>
@@ -167,15 +192,15 @@ one hour old you need to contact an administrator.</p>
 </ul>
 <h3>Configuration</h3>
 <ul>
-<li><p><code class="inline">:app</code> - Package name (required)</p>
+<li><p><code class="inline">:app</code> - Package name (required).</p>
 </li>
-<li><p><code class="inline">:version</code> - Package version (required)</p>
+<li><p><code class="inline">:version</code> - Package version (required).</p>
 </li>
-<li><p><code class="inline">:deps</code> - List of package dependencies (see Dependencies below)</p>
+<li><p><code class="inline">:deps</code> - List of package dependencies (see Dependencies below).</p>
 </li>
-<li><p><code class="inline">:description</code> - Description of the project in a few paragraphs</p>
+<li><p><code class="inline">:description</code> - Short description of the project.</p>
 </li>
-<li><code class="inline">:package</code> - Hex specific configuration (see Package configuration below)
+<li><code class="inline">:package</code> - Hex specific configuration (see Package configuration below).
 </li>
 </ul>
 <h3>Dependencies</h3>
@@ -195,16 +220,23 @@ package.</p>
 recommended to do so.</p>
 <ul>
 <li><p><code class="inline">:name</code> - Set this if the package name is not the same as the application
- name</p>
+ name.</p>
 </li>
 <li><p><code class="inline">:files</code> - List of files and directories to include in the package,
-can include wildcards</p>
+can include wildcards. Defaults to `["lib", "priv", "mix.exs", "README*",
+"readme*", "LICENSE*", "license*", "CHANGELOG*", "changelog*", "src"]`.</p>
 </li>
-<li><p><code class="inline">:contributors</code> - List of names of contributors</p>
+<li><p><code class="inline">:contributors</code> - List of names of contributors.</p>
 </li>
-<li><p><code class="inline">:licenses</code> - List of licenses used by the package</p>
+<li><p><code class="inline">:licenses</code> - List of licenses used by the package.</p>
 </li>
-<li><code class="inline">:links</code> - Map of links
+<li><p><code class="inline">:links</code> - Map of links relevant to the package.</p>
+</li>
+<li><code class="inline">:build_tools</code> - List of build tools that can build the package. Hex will
+try to automatically detect the build tools, it will do this based on the
+files in the package. If a “rebar” or “rebar.config” file is present Hex
+will mark it as able to build with rebar. This detection can be overridden
+by setting this field.
 </li>
 </ul>
 
@@ -248,6 +280,9 @@ storing it in the hex config.</p>
 <p>Deauthorizes the user from the local machine by removing the API key from the
 hex config.</p>
 <p><code class="inline">mix hex.user deauth</code></p>
+<h4>Test authentication</h4>
+<p>Tests if authentication works with the stored API key.</p>
+<p><code class="inline">mix hex.user test</code></p>
 <h4>Reset user password</h4>
 <p><code class="inline">mix hex.user reset password</code></p>
 
