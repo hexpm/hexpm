@@ -87,7 +87,7 @@ defmodule HexWeb.Web.Router do
     send_page(conn, :"docs_tasks")
   end
 
-  get "codeofconduct" do
+  get "docs/codeofconduct" do
     active    = :docs
     title     = "Code of Conduct"
 
