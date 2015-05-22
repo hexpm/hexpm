@@ -47,6 +47,8 @@ You are required to confirm your email to access your account, a confirmation em
   <dd>A list of licences the project is licensed with.</dd>
   <dt><code>:links</code></dt>
   <dd>A map where the key is a link name and the value is the link URL.</dd>
+  <dt><code>:build_tools</code></dt>
+  <dd>List of build tools that can build the package. Hex will try to automatically detect the build tools, it will do this based on the files in the package. If a "rebar" or "rebar.config" file is present Hex will mark it as able to build with rebar. This detection can be overridden by setting this field.</dd>
 </dl>
 
 <p>
