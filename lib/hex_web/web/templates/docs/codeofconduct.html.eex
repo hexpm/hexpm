@@ -1,6 +1,6 @@
 <h2>Code of Conduct</h2>
 
-<p>Hex exists to facilitate sharing code, by making it easy for Elixir and Erlang developers to publish and distribute packages.</p>
+<p>Hex exists to facilitate sharing code, by making it easy for Erlang ecosystem developers to publish and distribute packages.</p>
 
 <p>Hex is a piece of technology, but more importantly, it is a community.</p>
 
@@ -18,7 +18,6 @@
 <li>Violations of this code may result in swift and permanent expulsion from the Hex community.</li>
 </ul>
 
-
 <h3>Scope</h3>
 
 <p>We expect all members of the Hex community, including paid and unpaid agents, administrators, and users to abide by this Code of Conduct at all times in all Hex community venues, online and in person, and in one-on-one communications pertaining to Hex affairs.</p>
@@ -33,9 +32,9 @@
 
 <p>We are committed to providing a friendly, safe and welcoming environment for all, regardless of gender identity, sexual orientation, disability, ethnicity, religion, age, physical appearance, body size, race, or similar personal characteristics.</p>
 
-<p>We ask that you please respect that people have differences of opinion regarding technical choices, and that every design or implementation choice carries a trade-off and numerous costs.  There is seldom a single right answer.  A difference of technology preferences is not a license to be rude.</p>
+<p>We ask that you please respect that people have differences of opinion regarding technical choices, and that every design or implementation choice carries a trade-off and numerous costs. There is seldom a single right answer. A difference of technology preferences is not a license to be rude.</p>
 
-<p>Disputes over package rights must be handled respectfully, according to the terms described in the Hex Dispute Resolution document.  There is never a good reason to be rude over package name disputes.</p>
+<p>Disputes over package rights must be handled respectfully, according to the terms described in the Hex Dispute Resolution document. There is never a good reason to be rude over package name disputes.</p>
 
 <p>Any spamming, trolling, flaming, baiting, or other attention-stealing behaviour is not welcome, and will not be tolerated.</p>
 
@@ -47,28 +46,22 @@
 
 <h3>Acceptable Package Content</h3>
 
-<!--
-TODO: This should probably be split out into a separate doc.  Maybe
-just link to the appropriate location in the Terms of Use once we have
-it.
--->
 
+<p>The Service administrators reserve the right to make judgement calls about what is and isn't appropriate in published packages. These are guidelines to help you be successful in our community.</p>
 
-<p>The Service administrators reserve the right to make judgement calls about what is and isn't appropriate in published packages.  These are guidelines to help you be successful in our community.</p>
+<p>Packages published to the Service must be created using the Hex command-line client, or a functionally equivalent implementation. For example, a "package" must not be a PNG or JPEG image, movie file, or text document. Using the Service as a personal general-purpose database is also not allowed for this reason. Packages should be Hex packages, and nothing else.</p>
 
-<p>Packages published to the Service must be created using the Hex command-line client, or a functionally equivalent implementation.  For example, a "package" must not be a PNG or JPEG image, movie file, or text document.  Using the Service as a personal general-purpose database is also not allowed for this reason.  Packages should be Hex packages, and nothing else.</p>
+<p>Packages must contain some functionality. "Squatting", that is, publishing an empty package to "reserve" a name, is not allowed.</p>
 
-<p>Packages must contain some functionality.  "Squatting", that is, publishing an empty package to "reserve" a name, is not allowed.</p>
+<p>Packages must not contain illegal or infringing content. You should only publish packages or other materials to the Service if you have the right to do so. This includes complying with all software license agreements or other intellectual property restrictions. For example, redistributing an MIT-licensed module with the copyright notice removed, would not be allowed. You will be responsible for any violation of laws or others’ intellectual property rights.</p>
 
-<p>Packages must not contain illegal or infringing content.  You should only publish packages or other materials to the Service if you have the right to do so.  This includes complying with all software license agreements or other intellectual property restrictions. For example, redistributing an MIT-licensed module with the copyright notice removed, would not be allowed.  You will be responsible for any violation of laws or others’ intellectual property rights.</p>
-
-<p>Packages must not be malware.  For example, a package which is designed to maliciously exploit or damage computer systems, is not allowed.  However, an explicitly documented penetration testing library designed to be used for white-hat security research would most likely be fine.</p>
+<p>Packages must not be malware. For example, a package which is designed to maliciously exploit or damage computer systems, is not allowed. However, an explicitly documented penetration testing library designed to be used for white-hat security research would most likely be fine.</p>
 
 <p>Package name, description, and other visible metadata must not include abusive, inappropriate, or harassing content.</p>
 
 <h3>Reporting Violations of this Code of Conduct</h3>
 
-<p>If you believe someone is harassing you or has otherwise violated this Code of Conduct, please contact us at <a href="mailto:support@hex.pm">support@hex.pm</a> to send us an abuse report.  If this is the initial report of a problem, please include as much detail as possible. It is easiest for us to address issues when we have more context.</p>
+<p>If you believe someone is harassing you or has otherwise violated this Code of Conduct, please contact us at <a href="mailto:support@hex.pm">support@hex.pm</a> to send us an abuse report. If this is the initial report of a problem, please include as much detail as possible. It is easiest for us to address issues when we have more context.</p>
 
 <h3>Consequences</h3>
 
@@ -90,14 +83,14 @@ it.
 
 <p>Please contact <a href="mailto:support@hex.pm">support@hex.pm</a> if you need to report a problem or address a grievance related to an abuse report.</p>
 
-<p>You are also encouraged to contact us if you are curious about something that might be "on the line" between appropriate and inappropriate content.  We are happy to provide guidance to help you be a successful part of our community.</p>
+<p>You are also encouraged to contact us if you are curious about something that might be "on the line" between appropriate and inappropriate content. We are happy to provide guidance to help you be a successful part of our community.</p>
 
 <h3>Changes</h3>
 
-<p>This is a living document and may be updated from time to time. Please refer to the git history for this document to view the changes.</p>
+<p>This is a living document and may be updated from time to time. Please refer to the <a href="https://github.com/hexpm/hex_web/commits/master/lib/hex_web/web/templates/docs/codeofconduct.html.eex">git history</a> for this document to view the changes.</p>
 
 <h3>Credit and License</h3>
 
-<p>This code of conduct is very heavily based on <a href="http://www.npmjs.com/policies/conduct">NPM's code of conduct</a>, which in turn  borrows heavily from the Stumptown Syndicate <a href="http://citizencodeofconduct.org/">Citizen's Code of Conduct</a>, and the <a href="https://github.com/mozilla/rust/wiki/Note-development-policy#conduct">Rust Project Code of Conduct</a>.</p>
+<p>This code of conduct is based on <a href="http://www.npmjs.com/policies/conduct">NPM's code of conduct</a>, which in turn borrows heavily from the Stumptown Syndicate <a href="http://citizencodeofconduct.org/">Citizen's Code of Conduct</a>, and the <a href="https://github.com/mozilla/rust/wiki/Note-development-policy#conduct">Rust Project Code of Conduct</a>.</p>
 
 <p>This document may be reused under a <a href="http://creativecommons.org/licenses/by-sa/4.0/">Creative Commons Attribution-ShareAlike License</a>.</p>
