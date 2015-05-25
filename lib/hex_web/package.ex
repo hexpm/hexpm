@@ -96,10 +96,12 @@ defmodule HexWeb.Package do
   end
 
   def get(name) do
-    from(p in HexWeb.Package,
-         where: p.name == ^name,
-         limit: 1)
-    |> HexWeb.Repo.one
+    ConCache.get_or_store(:hex_cache, "get_package_#{name}", fn() ->
+      from(p in HexWeb.Package,
+           where: p.name == ^name,
+           limit: 1)
+      |> HexWeb.Repo.one
+    end)
   end
 
   def delete(package) do
@@ -145,18 +147,23 @@ defmodule HexWeb.Package do
   end
 
   def recent(count) do
-    from(p in HexWeb.Package,
-         order_by: [desc: p.inserted_at],
-         limit: ^count,
-         select: {p.name, p.inserted_at})
-    |> HexWeb.Repo.all
+    ConCache.get_or_store(:hex_cache, "recent_package_#{count}", fn() ->
+      from(p in HexWeb.Package,
+           order_by: [desc: p.inserted_at],
+           limit: ^count,
+           select: {p.name, p.inserted_at})
+      |> HexWeb.Repo.all
+    end)
+
   end
 
   def recent_full(count) do
-    from(p in HexWeb.Package,
-         order_by: [desc: p.inserted_at],
-         limit: ^count)
-    |> HexWeb.Repo.all
+    ConCache.get_or_store(:hex_cache, "recent_full_package_#{count}", fn() ->
+      from(p in HexWeb.Package,
+           order_by: [desc: p.inserted_at],
+           limit: ^count)
+      |> HexWeb.Repo.all
+    end)
   end
 
   def count(search \\ nil) do
