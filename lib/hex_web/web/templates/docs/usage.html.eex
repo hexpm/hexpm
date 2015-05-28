@@ -35,8 +35,8 @@
   def application, do: []
 
   defp deps do
-    [{:ecto, "~> 0.1.0"},
-     {:postgrex, "~> 0.3.0"},
+    [{:ecto, "~> 0.11.3"},
+     {:postgrex, "~> 0.8.1"},
      {:cowboy, github: "extend/cowboy"}]
   end
 end</code></pre>
