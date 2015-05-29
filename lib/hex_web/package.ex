@@ -206,6 +206,10 @@ defmodule HexWeb.Package do
     from d in query, order_by: [desc: :inserted_at]
   end
 
+  defp sort(query, :updated_at) do
+    from d in query, order_by: [desc: :updated_at]
+  end
+
   defp sort(query, :downloads) do
     from p in query,
     left_join: d in HexWeb.Stats.PackageDownload, on: p.id == d.package_id and d.view == "all",
