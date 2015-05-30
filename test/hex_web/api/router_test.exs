@@ -556,6 +556,33 @@ defmodule HexWeb.API.RouterTest do
     assert Dict.size(body) == 0
   end
 
+  test "fetch sort order" do
+    {year, month, day} = :erlang.date
+    {:ok, future} = Ecto.Date.load({year + 1, month, day})
+
+    postgrex = Package.get("postgrex")
+    postgrex = %{postgrex | updated_at: Ecto.DateTime.from_date(future)}
+    HexWeb.Repo.update(postgrex)
+
+    decimal = Package.get("decimal")
+    decimal = %{decimal | inserted_at: Ecto.DateTime.from_date(future)}
+    HexWeb.Repo.update(decimal)
+
+    conn = conn("GET", "/api/packages?sort=updated_at")
+    conn = Router.call(conn, [])
+
+    assert conn.status == 200
+    body = Poison.decode!(conn.resp_body)
+    assert hd(body)["name"] == "postgrex"
+
+    conn = conn("GET", "/api/packages?sort=inserted_at")
+    conn = Router.call(conn, [])
+
+    assert conn.status == 200
+    body = Poison.decode!(conn.resp_body)
+    assert hd(body)["name"] == "decimal"
+  end
+
   test "get package owners" do
     conn = conn("GET", "/api/packages/postgrex/owners")
            |> put_req_header("authorization", "Basic " <> :base64.encode("eric:eric"))
