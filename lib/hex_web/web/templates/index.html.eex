@@ -24,23 +24,23 @@
     <table class="stats">
       <tr>
         <td class="left"><%= human_number_space @num_packages %></td>
-        <td>packages</td>
+        <td class="text-muted">packages</td>
       </tr>
       <tr>
         <td class="left"><%= human_number_space @num_releases %></td>
-        <td>package versions</td>
+        <td class="text-muted">package versions</td>
       </tr>
       <tr>
         <td class="left"><%= human_number_space @total[:day] %></td>
-        <td>downloads yesterday</td>
+        <td class="text-muted">downloads yesterday</td>
       </tr>
       <tr>
         <td class="left"><%= human_number_space @total[:week] %></td>
-        <td>downloads last seven days</td>
+        <td class="text-muted">downloads last seven days</td>
       </tr>
       <tr>
         <td class="left"><%= human_number_space @total[:all] %></td>
-        <td>downloads all time</td>
+        <td class="text-muted">downloads all time</td>
       </tr>
     </table>
   </div>

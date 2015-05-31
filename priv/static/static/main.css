@@ -115,3 +115,13 @@ body {
   padding-right: 1.5em;
   text-align: right;
 }
+
+.downloads {
+  width: 100%;
+}
+
+.downloads .left {
+  width: 40%;
+  padding-right: 1em;
+  text-align: right;
+}
