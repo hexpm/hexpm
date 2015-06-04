@@ -16,7 +16,8 @@ defmodule HexWeb.Package do
     has_many :downloads, HexWeb.Stats.PackageDownload
   end
 
-  @elixir_names ~w(eex elixir ex_unit gettext iex logger mix hex)
+  @elixir_names ~w(eex elixir ex_unit gettext iex logger mix)
+  @tool_names ~w(rebar rebar3 hex)
   @otp_names ~w(
     appmon asn1 common_test compiler cosEvent cosEventDomain cosFileTransfer
     cosNotification cosProperty cosTime cosTransactions crypto debugger
@@ -26,7 +27,7 @@ defmodule HexWeb.Package do
     sasl snmp ssh ssl stdlib syntax_tools test_server toolbar tools tv typer
     webtool wx xmerl)
 
-  @reserved_names @elixir_names ++ @otp_names
+  @reserved_names @elixir_names ++ @otp_names ++ @tool_names
 
   @meta_types %{
     "contributors" => {:array, :string},
