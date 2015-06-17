@@ -1,46 +1,56 @@
 FORMAT: 1A
 
 # hex
-Notes API is a *short texts saving* service similar to its physical paper presence on your table.
+The Hex API is based on REST, it is currently in beta and so can change at any time.
 
-# Group Notes
-Notes related resources of the **Notes API**
+## Related specifications
 
-## Notes Collection [/notes]
-### List all Notes [GET]
-+ Response 200 (application/json)
+* Tarball format - ...
+* Registry format - ...
 
-        [{
-          "id": 1, "title": "Jogging in park"
-        }, {
-          "id": 2, "title": "Pick-up posters from post-office"
-        }]
+# Group Packages
+Something about packages.
 
-### Create a Note [POST]
-+ Request (application/json)
-
-        { "title": "Buy cheese and bread for breakfast." }
-
-+ Response 201 (application/json)
-
-        { "id": 3, "title": "Buy cheese and bread for breakfast." }
-
-## Note [/notes/{id}]
-A single Note object with all its details
+## Packages Collection [/packages{?sort}]
+### List all Packages [GET]
 
 + Parameters
-    + id (required, number, `1`) ... Numeric `id` of the Note to perform action with. Has example value.
+    + sort: downloads (enum[string], optional)
+        + Default: name
+        + Members
+            + name
+            + downloads
+            + inserted_at
+            + updated_at
 
-### Retrieve a Note [GET]
-+ Response 200 (application/json)
-
++ Request
     + Header
 
-            X-My-Header: The Value
+            Accept: application/json
 
++ Response 200 (application/json)
     + Body
 
-            { "id": 2, "title": "Pick-up posters from post-office" }
+            [{
+              "name": "plug",
+              "url": "https://hex.pm/api/packages/plug",
+              "meta": {
+                "links": {"GitHub": "https://github.com/elixir-lang/plug"},
+                "licenses": ["Apache 2"],
+                "description": "A specification and conveniences for composable modules in between web applications"
+              },
+              "downloads": {
+                "all": 43,
+                "week": 14,
+                "day": 2
+              },
+              "releases": {
+                "version": "0.4.1",
+                "url": "https://hex.pm/api/packages/plug/releases/0.4.1",
+                "inserted_at": "2014-04-23T18:58:54Z",
+                "updated_at": "2015-04-26T15:26:23Z"
+              },
+              "inserted_at": "2015-03-24T20:31:35Z",
+              "updated_at": "2015-04-02T04:55:41Z"
+            }]
 
-### Remove a Note [DELETE]
-+ Response 204
