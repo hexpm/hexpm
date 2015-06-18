@@ -115,6 +115,7 @@ Basic authentication is only allowed on some resources, specifically ones used t
 Something about packages.
 
 ## Packages Collection [/packages{?sort}]
+
 ### List all Packages [GET]
 
 + Parameters
@@ -157,3 +158,44 @@ Something about packages.
               "updated_at": "2015-04-02T04:55:41Z"
             }]
 
+# Group Users
+Something about users.
+
+## Users Collection [/users]
+
+### Create a User [POST]
+
+A successful user creation will send a confirmation email to the given email address. In the email will be link to follow that will confirm the email and activate the account. The account will not be usable until activated.
+
+A user can be recreated for the given `username` and `email` if it has not been activated yet.
+
++ Request (application/json)
+
+The following parameters are available:
+
++ `username` Username of the user. Only allows any alphanumeric and the following characters: `_-.`
++ `password` User's password. Should be a printable UTF-8 string.
++ `email` User's email address. Should be a valid email address.
+
+    + Header
+
+            Accept: application/json
+
+    + Body
+
+          {
+            "username": "ericmj",
+            "password": "hunter42",
+            "email": "ericmj@mail.com"
+          }
+
++ Response 200 (application/json)
+    + Body
+
+            {
+              "username": "ericmj",
+              "email": "ericmj@mail.com"
+              "inserted_at": "2015-04-05T01:21:49Z",
+              "updated_at": "2015-04-05T01:21:49Z",
+              "url": "https://hex.pm/api/users/ericmj"
+            }
