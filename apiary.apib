@@ -1,12 +1,64 @@
 FORMAT: 1A
 
-# hex
+# Hex
 The Hex API is based on REST, it is currently in beta and so can change at any time.
 
-## Related specifications
+### Related specifications
 
-* Tarball format - ...
-* Registry format - ...
+  * Endpoints - ...
+  * Tarball format - ...
+  * Registry format - ...
+
+### Media types
+
+Custom media types are used in the API to let consumers choose the format of the data they wish to receive. This is done by adding one or more of the following types to the Accept header when you make a request.
+
+The API supports three media types; JSON, Elixir and Erlang. Hex media types look like this:
+
+```
+application/vnd.hex[.version][+format]
+```
+
+The only accepted version is `beta`. The following are the accepted media types:
+
+  * application/json
+  * application/vnd.hex+json
+  * application/vnd.hex+elixir
+  * application/vnd.hex+erlang
+
+The elixir media type is a safe subset of elixir terms serialized with [`Kernel.inspect/1`](http://elixir-lang.org/docs/stable/elixir/Kernel.html#inspect/2). The only allowed terms are maps, lists, tuples, numbers, binaries and booleans. Atoms are strictly not allowed.
+
+The erlang media type is a safe subset of erlang terms serialized with [`erlang:term_to_binary/1`](http://www.erlang.org/doc/man/erlang.html#term_to_binary-1). The only allowed terms are maps, lists, tuples, numbers, binaries and booleans. Atoms are strictly not allowed.
+
+### Rate limiting
+
+The rate limiting allows you to make 100 requests per minute. The limits are likely to change in the future and authenticated requests will be able to make more requests. Additionally, in the future, conditional requests that return `304 Not Modified` will not count against the limits.
+
+The returned HTTP headers will tell you about your current rate limit status:
+
+Header                  | Description
+:---------------------- | :----------
+`x-ratelimit-limit`     | The maximum number of requests that the consumer is permitted to make per hour.
+`x-ratelimit-remaining` | The remaining number of requests the consumer is allowed to make until reset.
+`x-ratelimit-reset`     | The time at which the rate limit window reset in UNIX epoch.
+
+### Pagination
+
+Requests on collection resources return paginated results. Requests that return multiple results may return up to 100 items. You can specify further pages with the `?page` parameter.
+
+```
+$ curl https://hex.pm/api/packages?page=2
+```
+
+Page numbering start from 1 and will by default return the first page.
+
+### Conditional requests
+
+Most responses return an `ETag` header. Many responses will also return a `Last-Modified` header, the notable exception being responses on collection resources. You can use the values provided in these headers to send conditional requests with `If-None-Match` or `If Modified Since`, if the resource has not changed a  `304 Not Modified` response will be returned.
+
+### Authentication
+
+### Client errors
 
 # Group Packages
 Something about packages.
