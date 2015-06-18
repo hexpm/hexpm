@@ -71,6 +71,46 @@ Basic authentication is only allowed on some resources, specifically ones used t
 
 ### Client errors
 
+  1. Sending invalid JSON, Elixir or Erlang will result in `400 Bad Request`.
+
+        HTTP/1.1 400 Bad Request
+    
+        {
+          "status": 400,
+          "message": "malformed request, got Poison.SyntaxError with message Unexpected token: +"
+        }
+
+  2. Failed authentication attempts will result in `401 Unauthorized`.
+
+        HTTP/1.1 401 Unauthorized
+
+        {
+          "status": 401,
+          "message": "failed to authorize"
+        }
+
+  3. Making a request to a missing resource will result in `404 Not Found`.
+
+        HTTP/1.1 404 Not Found
+
+        {
+          "status": 404,
+          "message": "not found"
+        }
+
+  4. Validation errors or invalid parameters will return `422 Unprocessable Entity`.
+
+        HTTP/1.1 422 Unprocessable Entity
+
+        {
+          "status": 422,
+          "message": "validation failed",
+          "errors": {
+            "email": "has invalid format"
+          }
+        }
+
+
 # Group Packages
 Something about packages.
 
