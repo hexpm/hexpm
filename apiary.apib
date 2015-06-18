@@ -110,7 +110,84 @@ Basic authentication is only allowed on some resources, specifically ones used t
           }
         }
 
+# Group Users
+Something about users.
 
+## Users collection [/users]
+
+### Create a User [POST]
+
+A successful user creation will send a confirmation email to the given email address. In the email will be link to follow that will confirm the email and activate the account. The account will not be usable until activated.
+
+A user can be recreated for the given `username` and `email` if it has not been activated yet.
+
++ Request (application/json)
+
+    The following parameters are available:
+    
+    + `username` Username of the user. Only allows any alphanumeric and the following characters: `_-.`
+    + `password` User's password. Should be a printable UTF-8 string.
+    + `email` User's email address. Should be a valid email address.
+
+    + Header
+
+            Accept: application/json
+
+    + Body
+
+            {
+              "username": "ericmj",
+              "password": "hunter42",
+              "email": "ericmj@mail.com"
+            }
+
++ Response 201 (application/json)
+    + Body
+
+            {
+              "username": "ericmj",
+              "email": "ericmj@mail.com"
+              "inserted_at": "2015-04-05T01:21:49Z",
+              "updated_at": "2015-04-05T01:21:49Z",
+              "url": "https://hex.pm/api/users/ericmj"
+            }
+
+## User [/user/{username_or_email}]
+
+### Fetch a User [GET]
+
++ Request (application/json)
+
+    This request requires authentication.
+
+    + Header
+
+            Accept: application/json
+
++ Response 200 (application/json)
+    + Body
+
+            {
+              "username": "ericmj",
+              "email": "ericmj@mail.com"
+              "inserted_at": "2015-04-05T01:21:49Z",
+              "updated_at": "2015-04-05T01:21:49Z",
+              "url": "https://hex.pm/api/users/ericmj"
+            }
+
+## User reset [/user/{username_or_email}/reset]
+
+### Reset User password [POST]
+
++ Request (application/json)
+
+    This request requires authentication.
+
+    + Header
+
+            Accept: application/json
+
++ Response 204 (application/json)
 # Group Packages
 Something about packages.
 
@@ -148,54 +225,74 @@ Something about packages.
                 "week": 14,
                 "day": 2
               },
-              "releases": {
-                "version": "0.4.1",
-                "url": "https://hex.pm/api/packages/plug/releases/0.4.1",
-                "inserted_at": "2014-04-23T18:58:54Z",
-                "updated_at": "2015-04-26T15:26:23Z"
-              },
               "inserted_at": "2015-03-24T20:31:35Z",
               "updated_at": "2015-04-02T04:55:41Z"
             }]
 
-# Group Users
-Something about users.
+## Package [/packages/{name}]
 
-## Users Collection [/users]
+### Fetch a Package [GET]
 
-### Create a User [POST]
-
-A successful user creation will send a confirmation email to the given email address. In the email will be link to follow that will confirm the email and activate the account. The account will not be usable until activated.
-
-A user can be recreated for the given `username` and `email` if it has not been activated yet.
-
-+ Request (application/json)
-
-The following parameters are available:
-
-+ `username` Username of the user. Only allows any alphanumeric and the following characters: `_-.`
-+ `password` User's password. Should be a printable UTF-8 string.
-+ `email` User's email address. Should be a valid email address.
-
++ Request
     + Header
 
             Accept: application/json
-
-    + Body
-
-          {
-            "username": "ericmj",
-            "password": "hunter42",
-            "email": "ericmj@mail.com"
-          }
 
 + Response 200 (application/json)
     + Body
 
             {
-              "username": "ericmj",
-              "email": "ericmj@mail.com"
-              "inserted_at": "2015-04-05T01:21:49Z",
-              "updated_at": "2015-04-05T01:21:49Z",
-              "url": "https://hex.pm/api/users/ericmj"
+              "name": "plug",
+              "url": "https://hex.pm/api/packages/plug",
+              "meta": {
+                "links": {"GitHub": "https://github.com/elixir-lang/plug"},
+                "licenses": ["Apache 2"],
+                "description": "A specification and conveniences for composable modules in between web applications"
+              },
+              "downloads": {
+                "all": 43,
+                "week": 14,
+                "day": 2
+              },
+              "releases": [{
+                "version": "0.4.1",
+                "url": "https://hex.pm/api/packages/plug/releases/0.4.1",
+                "inserted_at": "2014-04-23T18:58:54Z",
+                "updated_at": "2015-04-26T15:26:23Z"
+              }],
+              "inserted_at": "2015-03-24T20:31:35Z",
+              "updated_at": "2015-04-02T04:55:41Z"
+            }
+
+## Release [/packages/{name}/releases/{version}]
+
+### Fetch a Release [GET]
+
++ Request
+    + Header
+
+            Accept: application/json
+
++ Response 200 (application/json)
+    + Body
+
+            {
+              "package_name": "plug",
+              "version": "0.4.1",
+              "has_docs": true,
+              "url": "https://hex.pm/api/packages/plug/releases/0.4.1",
+              "package_url": "https://hex.pm/api/packages/plug",
+              "meta": {
+                "build_tools": ["mix"]
+              },
+              "dependencies": {
+                "cowboy": {
+                  "requirement": "~> 1.0",
+                  "optional": true,
+                  "app": "cowboy"
+                }
+              }
+              "downloads": 16,
+              "inserted_at": "2014-04-23T18:58:54Z",
+              "updated_at": "2015-04-26T15:26:23Z"
             }
