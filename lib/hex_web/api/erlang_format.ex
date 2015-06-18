@@ -1,6 +1,6 @@
 defmodule HexWeb.API.ErlangFormat do
   @doc """
-  Encode an elixir term that can be safely deserialized on another machine.
+  Encode an erlang term that can be safely deserialized on another machine.
   """
   @spec encode(term) :: binary
   def encode(term) do
@@ -9,7 +9,7 @@ defmodule HexWeb.API.ErlangFormat do
   end
 
   @doc """
-  Safely deserialize an elixir formatted string.
+  Safely deserialize an erlang formatted string.
   """
   @spec decode(binary) :: term
   def decode("") do
