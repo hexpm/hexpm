@@ -2,13 +2,18 @@ FORMAT: 1A
 
 # Hex
 
-The Hex API is based on REST, it is currently in beta and so can change at any time.
+The Hex API is based on REST, it is currently in beta and so can change at any time. This API is a specification with examples from the implementation at https://hex.pm/api. Parts of the specification are optional to implement and will be marked as such.
 
 ### Related specifications
 
-  * Endpoints - ...
-  * Tarball format - ...
-  * Registry format - ...
+The HTTP API is only one of the specifications that makes the package manager Hex. Keep in mind that the HTTP API is not required to be implemented for clients to be able to consume the repository. Repositories that doesn't allow public users to publish packages can have any mechanism for publishing to their repository. Although for publicly visible repositories it is recommended to implement the endpoints for browsing packages (/packages/*).
+
+Below is a list of related specifications:
+
+  * (Endpoints)[https://github.com/hexpm/hex_web/blob/master/specifications/endpoints.md]
+  * (Tarball format)[https://github.com/hexpm/hex_web/blob/master/specifications/package_tarball.md]
+  * (Registry format)[https://github.com/hexpm/hex_web/blob/master/specifications/registry.md]
+  * (Package metadata)[https://github.com/hexpm/hex_web/blob/master/specifications/package_metadata.md]
 
 ### Media types
 
@@ -266,6 +271,12 @@ Something about packages.
 
 ## Release [/packages/{name}/releases/{version}]
 
+### Publish a Release [POST]
+
+Will also create or update a package.
+
+TODO
+
 ### Fetch a Release [GET]
 
 + Request
@@ -296,3 +307,128 @@ Something about packages.
               "inserted_at": "2014-04-23T18:58:54Z",
               "updated_at": "2015-04-26T15:26:23Z"
             }
+
+## Release Documentation [/packages/{name}/releases/{version}/docs]
+
+Release Documentation is optional to implement.
+
+### Find Release Documentation [GET]
+
++ Response 302
+    + Header
+
+            Location: https://s3.amazonaws.com/s3.hex.pm/plug-0.4.1.tar.gz
+
+### Publish Release Documentation [POST]
+
+TODO
+
+### Remove Release Documentation [DELETE]
+
++ Response 204
+
+## Package Owners Collection [/packages/{name}/owners]
+
+### Fetch Package Owners [GET]
+
++ Request
+    
+    This request requires authentication.
+
+    + Header
+
+            Accept: application/json
+
++ Response 200 (application/json)
+    + Body
+
+            [{
+              "username": "ericmj",
+              "url": "https://hex.pm/api/users/ericmj",
+              "inserted_at": "2014-04-21T17:20:12Z",
+              "updated_at": "2014-04-21T17:20:12Z",
+              "email": "ericmg@mail.com"
+            }]
+
+## Package Owner [/packages/{name}/owners/{email}]
+
+### Add a Package Owner [PUT]
+
++ Response 204
+
+### Remove a Package Owner [DELETE]
+
++ Response 204
+    
+## API Keys Collection [/keys]
+
+### List all API Keys [GET]
+
++ Request
+    
+    This request requires authentication.
+
+    + Header
+
+            Accept: application/json
+
++ Response 200 (application/json)
+    + Body
+
+            [{
+              "name": "my_computer",
+              "inserted_at": "2014-04-21T17:20:12Z",
+              "updated_at": "2014-04-21T17:20:12Z"
+            }]
+
+### Create an API Key [POST]
+
++ Request
+
+    This request requires basic authentication and is allowed to be made even if the account email has not yet been confirmed.
+
+    + Header
+
+            Accept: application/json
+
++ Response 200 (application/json)
+
+    The `secret` will only be sent, it should be stored after creating the API key. Subsequent GET requests will not include the `secret`.
+
+    + Body
+
+            [{
+              "name": "my_computer",
+              "secret": "e2bfe5e65b9235acebe06df8027905c0",
+              "inserted_at": "2014-04-21T17:20:12Z",
+              "updated_at": "2014-04-21T17:20:12Z"
+            }]
+
+## API Key [/keys/{name}] 
+
+### Fetch an API Key [GET]
+
++ Request
+    
+    This request requires authentication.
+
+    + Header
+
+            Accept: application/json
+
++ Response 200 (application/json)
+    + Body
+
+            {
+              "name": "my_computer",
+              "inserted_at": "2014-04-21T17:20:12Z",
+              "updated_at": "2014-04-21T17:20:12Z"
+            }
+
+### Remove an API Key [DELETE]
+
++ Request
+    
+    This request requires authentication.
+
++ Response 204
