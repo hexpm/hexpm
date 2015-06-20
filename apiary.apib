@@ -14,6 +14,7 @@ Below is a list of related specifications:
   * [Tarball format](https://github.com/hexpm/hex_web/blob/master/specifications/package_tarball.md)
   * [Registry format](https://github.com/hexpm/hex_web/blob/master/specifications/registry.md)
   * [Package metadata](https://github.com/hexpm/hex_web/blob/master/specifications/package_metadata.md)
+  * [Semantic Versioning](http://semver.org/)
 
 ### Media types
 
@@ -116,7 +117,8 @@ Basic authentication is only allowed on some resources, specifically ones used t
         }
 
 # Group Users
-Something about users.
+
+Authenticated requests require a User account.
 
 ## Users collection [/users]
 
@@ -164,6 +166,10 @@ A user can be recreated for the given `username` and `email` if it has not been 
 
 ## User [/user/{username_or_email}]
 
++ Parameters
+    + username_or_email: ericmj (string)
+        Can be either a username or the email address associated with a User
+
 ### Fetch a User [GET]
 
 + Request (application/json)
@@ -189,6 +195,10 @@ A user can be recreated for the given `username` and `email` if it has not been 
 
 ## User reset [/user/{username_or_email}/reset]
 
++ Parameters
+    + username_or_email: ericmj (string)
+        Can be either a username or the email address associated with a User
+
 ### Reset User password [POST]
 
 + Request (application/json)
@@ -211,12 +221,13 @@ Something about packages.
 
 + Parameters
     + sort: downloads (enum[string], optional)
+        Sorting field
         + Default: name
         + Members
-            + name
-            + downloads
-            + inserted_at
-            + updated_at
+            + name - Package name, descending
+            + downloads - Number of package downloads, ascending
+            + inserted_at - Package insertion time, ascending
+            + updated_at - Package last update time, descending
 
 + Request
 
@@ -246,6 +257,10 @@ Something about packages.
             }]
 
 ## Package [/packages/{name}]
+
++ Parameters
+    + name: plug (string)
+        The package name.
 
 ### Fetch a Package [GET]
 
@@ -283,6 +298,12 @@ Something about packages.
             }
 
 ## Release [/packages/{name}/releases/{version}]
+
++ Parameters
+    + name: plug (string)
+        Package name
+    + version: 0.4.1 (string)
+        Release version, should be a Semantic Version
 
 ### Publish a Release [POST]
 
@@ -361,6 +382,12 @@ Will also create or update a package.
 
 Release Documentation is optional to implement.
 
++ Parameters
+    + name: plug (string)
+        Package name
+    + version: 0.4.1 (string)
+        Release version, should be a Semantic Version
+
 ### Find Release Documentation [GET]
 
 + Response 302
@@ -399,6 +426,10 @@ The tarball contents will be served at http://hexdocs.pm/{package}/{version}. Th
 
 ## Package Owners Collection [/packages/{name}/owners]
 
++ Parameters
+    + name: plug (string)
+        Package name
+
 ### Fetch Package Owners [GET]
 
 + Request
@@ -423,6 +454,12 @@ The tarball contents will be served at http://hexdocs.pm/{package}/{version}. Th
             }]
 
 ## Package Owner [/packages/{name}/owners/{email}]
+
++ Parameters
+    + name: plug (string)
+        Package name
+    + email: ericmj@mail.com (string)
+        User account email, should be a valid email address belonging to an existing user
 
 ### Add a Package Owner [PUT]
 
@@ -486,7 +523,11 @@ Something about API Keys.
               "updated_at": "2014-04-21T17:20:12Z"
             }]
 
-## API Key [/keys/{name}] 
+## API Key [/keys/{name}]
+
++ Parameters
+    + name: my_computer (string)
+        Key name
 
 ### Fetch an API Key [GET]
 
