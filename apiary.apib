@@ -10,10 +10,10 @@ The HTTP API is only one of the specifications that makes the package manager He
 
 Below is a list of related specifications:
 
-  * (Endpoints)[https://github.com/hexpm/hex_web/blob/master/specifications/endpoints.md]
-  * (Tarball format)[https://github.com/hexpm/hex_web/blob/master/specifications/package_tarball.md]
-  * (Registry format)[https://github.com/hexpm/hex_web/blob/master/specifications/registry.md]
-  * (Package metadata)[https://github.com/hexpm/hex_web/blob/master/specifications/package_metadata.md]
+  * [Endpoints](https://github.com/hexpm/hex_web/blob/master/specifications/endpoints.md)
+  * [Tarball format](https://github.com/hexpm/hex_web/blob/master/specifications/package_tarball.md)
+  * [Registry format](https://github.com/hexpm/hex_web/blob/master/specifications/registry.md)
+  * [Package metadata](https://github.com/hexpm/hex_web/blob/master/specifications/package_metadata.md)
 
 ### Media types
 
@@ -147,6 +147,11 @@ A user can be recreated for the given `username` and `email` if it has not been 
             }
 
 + Response 201 (application/json)
+
+    + Header
+
+            Location: https://hex.pm/api/users/ericmj
+
     + Body
 
             {
@@ -168,8 +173,10 @@ A user can be recreated for the given `username` and `email` if it has not been 
     + Header
 
             Accept: application/json
+            Authorization: e2bfe5e65b9235acebe06df8027905c0
 
 + Response 200 (application/json)
+
     + Body
 
             {
@@ -191,8 +198,10 @@ A user can be recreated for the given `username` and `email` if it has not been 
     + Header
 
             Accept: application/json
+            Authorization: e2bfe5e65b9235acebe06df8027905c0
 
 + Response 204 (application/json)
+
 # Group Packages
 Something about packages.
 
@@ -210,11 +219,13 @@ Something about packages.
             + updated_at
 
 + Request
+
     + Header
 
             Accept: application/json
 
 + Response 200 (application/json)
+
     + Body
 
             [{
@@ -239,11 +250,13 @@ Something about packages.
 ### Fetch a Package [GET]
 
 + Request
+
     + Header
 
             Accept: application/json
 
 + Response 200 (application/json)
+
     + Body
 
             {
@@ -275,16 +288,52 @@ Something about packages.
 
 Will also create or update a package.
 
-TODO
++ Request
+
+    This request requires authentication.
+
+    The body should be a package tarball following the specification linked in the introduction.
+
+    + Header
+
+            Accept: application/json
+            Authorization: e2bfe5e65b9235acebe06df8027905c0
+
++ Response 200 (application/json)
+
+    + Body
+
+            {
+              "package_name": "plug",
+              "version": "0.4.1",
+              "has_docs": true,
+              "url": "https://hex.pm/api/packages/plug/releases/0.4.1",
+              "package_url": "https://hex.pm/api/packages/plug",
+              "meta": {
+                "build_tools": ["mix"]
+              },
+              "dependencies": {
+                "cowboy": {
+                  "requirement": "~> 1.0",
+                  "optional": true,
+                  "app": "cowboy"
+                }
+              }
+              "downloads": 16,
+              "inserted_at": "2014-04-23T18:58:54Z",
+              "updated_at": "2015-04-26T15:26:23Z"
+            }
 
 ### Fetch a Release [GET]
 
 + Request
+
     + Header
 
             Accept: application/json
 
 + Response 200 (application/json)
+
     + Body
 
             {
@@ -315,13 +364,34 @@ Release Documentation is optional to implement.
 ### Find Release Documentation [GET]
 
 + Response 302
+
     + Header
 
             Location: https://s3.amazonaws.com/s3.hex.pm/plug-0.4.1.tar.gz
 
 ### Publish Release Documentation [POST]
 
-TODO
+NOTE: Below are implementation details of hex.pm.
+
+The uploaded tarball will be served under https://s3.amazonaws.com/s3.hex.pm/docs/{package}-{version}.tar.gz.
+
+The tarball contents will be served at http://hexdocs.pm/{package}/{version}. The latest upload will be served at http://hexdocs.pm/{package}.
+
++ Request
+    
+    This request requires authentication.
+
+    The body should be a gzipped tarball containing files that should be served as documentation for the project. It should contain an `index.html` that will be served as the root.
+
+    + Header
+
+            Authorization: e2bfe5e65b9235acebe06df8027905c0
+
++ Response 201
+
+    + Header
+
+            Location: https://hex.pm/api/packages/plug/releases/0.4.1/docs
 
 ### Remove Release Documentation [DELETE]
 
@@ -338,8 +408,10 @@ TODO
     + Header
 
             Accept: application/json
+            Authorization: e2bfe5e65b9235acebe06df8027905c0
 
 + Response 200 (application/json)
+
     + Body
 
             [{
@@ -360,6 +432,10 @@ TODO
 
 + Response 204
     
+# Group API Keys
+
+Something about API Keys.
+
 ## API Keys Collection [/keys]
 
 ### List all API Keys [GET]
@@ -371,6 +447,7 @@ TODO
     + Header
 
             Accept: application/json
+            Authorization: e2bfe5e65b9235acebe06df8027905c0
 
 + Response 200 (application/json)
     + Body
@@ -390,10 +467,15 @@ TODO
     + Header
 
             Accept: application/json
+            Authorization: Basic ZXJpY21qOmh1bnRlcjQy
 
-+ Response 200 (application/json)
++ Response 201 (application/json)
 
     The `secret` will only be sent, it should be stored after creating the API key. Subsequent GET requests will not include the `secret`.
+
+    + Header
+
+            Location: https://hex.pm/api/keys/my_computer
 
     + Body
 
@@ -415,6 +497,7 @@ TODO
     + Header
 
             Accept: application/json
+            Authorization: e2bfe5e65b9235acebe06df8027905c0
 
 + Response 200 (application/json)
     + Body
@@ -430,5 +513,9 @@ TODO
 + Request
     
     This request requires authentication.
+
+    + Header
+
+            Authorization: e2bfe5e65b9235acebe06df8027905c0
 
 + Response 204
