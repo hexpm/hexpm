@@ -24,6 +24,8 @@ Below is the layout of the table.
     - Checksum: binary hex encoded sha256 checksum of package, see below
     - BuildTools: list of binary string build tool names
 
+## Links
+
 [`ets:tab2file/1`]: http://www.erlang.org/doc/man/ets.html#tab2file-2
 [semver]: http://semver.org/
 [version requirement]: http://elixir-lang.org/docs/stable/elixir/Version.html
