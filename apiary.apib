@@ -118,7 +118,7 @@ Basic authentication is only allowed on some resources, specifically ones used t
 
 # Group Users
 
-Authenticated requests require a User account.
+Authenticated requests require a User account. A User is required to publish packages but not to consume packages from the package manager.
 
 ## Users collection [/users]
 
@@ -201,6 +201,8 @@ A user can be recreated for the given `username` and `email` if it has not been 
 
 ### Reset User password [POST]
 
+Will start the process to reset a User's password. A confirmation email will be sent to the email address associated with the account. In the email will be link to follow that will show a form where a new password can be provided.
+
 + Request (application/json)
 
     This request requires authentication.
@@ -213,7 +215,8 @@ A user can be recreated for the given `username` and `email` if it has not been 
 + Response 204 (application/json)
 
 # Group Packages
-Something about packages.
+
+Packages are essential a (unique) name with some associated metadata. Packages are only interesting as a way to group and structure package releases which will be covered later.
 
 ## Packages Collection [/packages{?sort}]
 
@@ -297,6 +300,12 @@ Something about packages.
               "updated_at": "2015-04-02T04:55:41Z"
             }
 
+## Group Package Release
+
+A release has a (unique) version and belongs to a package. Associated with the release are it's content; the source code and related files required to build and use it as a library.
+
+After a release has been published there is a one hour window where it can be modified (republished) or reverted. After the hour it is immutable and cannot be altered by users, note that the administrators reserve the right to remove or modify releases in any way, either because it breaks the Code of Conduct or because any of the specifications changed.
+
 ## Release [/packages/{name}/releases/{version}]
 
 + Parameters
@@ -307,7 +316,7 @@ Something about packages.
 
 ### Publish a Release [POST]
 
-Will also create or update a package.
+Will also create a new package or update an existing one. See the package tarball specification for details about the request contents.
 
 + Request
 
@@ -327,7 +336,7 @@ Will also create or update a package.
             {
               "package_name": "plug",
               "version": "0.4.1",
-              "has_docs": true,
+              "has_docs": false,
               "url": "https://hex.pm/api/packages/plug/releases/0.4.1",
               "package_url": "https://hex.pm/api/packages/plug",
               "meta": {
@@ -342,7 +351,7 @@ Will also create or update a package.
               }
               "downloads": 16,
               "inserted_at": "2014-04-23T18:58:54Z",
-              "updated_at": "2015-04-26T15:26:23Z"
+              "updated_at": "2014-04-23T18:58:54Z"
             }
 
 ### Fetch a Release [GET]
@@ -378,9 +387,13 @@ Will also create or update a package.
               "updated_at": "2015-04-26T15:26:23Z"
             }
 
-## Release Documentation [/packages/{name}/releases/{version}/docs]
+## Group Package Documentation
 
-Release Documentation is optional to implement.
+Package Documentation is attached to a release. The documentation consists of HTML and related files to be served by a browser. Unlike releases documentation can be changed at any time by package owners.
+
+Package Documentation is optional to implement.
+
+## Package Documentation [/packages/{name}/releases/{version}/docs]
 
 + Parameters
     + name: plug (string)
@@ -388,7 +401,7 @@ Release Documentation is optional to implement.
     + version: 0.4.1 (string)
         Release version, should be a Semantic Version
 
-### Find Release Documentation [GET]
+### Find Package Documentation [GET]
 
 + Response 302
 
@@ -396,7 +409,7 @@ Release Documentation is optional to implement.
 
             Location: https://s3.amazonaws.com/s3.hex.pm/plug-0.4.1.tar.gz
 
-### Publish Release Documentation [POST]
+### Publish Package Documentation [POST]
 
 NOTE: Below are implementation details of hex.pm.
 
@@ -420,9 +433,13 @@ The tarball contents will be served at http://hexdocs.pm/{package}/{version}. Th
 
             Location: https://hex.pm/api/packages/plug/releases/0.4.1/docs
 
-### Remove Release Documentation [DELETE]
+### Remove Package Documentation [DELETE]
 
 + Response 204
+
+# Group Package Owners
+
+Package owners are Users that can publish packages. Any owner can add or remove other package owners so be careful with whom you add.
 
 ## Package Owners Collection [/packages/{name}/owners]
 
@@ -471,7 +488,7 @@ The tarball contents will be served at http://hexdocs.pm/{package}/{version}. Th
     
 # Group API Keys
 
-Something about API Keys.
+API Keys are used to authenticate requests (see Authentication section for more details). A key has a name used to identify it and a secret that is used for the actual authentication.
 
 ## API Keys Collection [/keys]
 
