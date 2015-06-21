@@ -106,7 +106,7 @@ HexWeb.Repo.transaction(fn ->
       {:ok, rel1}   = Release.create(ups, %{version: "0.0.1", app: "ups", meta: %{"app" => "ups", "build_tools" => ["mix"]}}, SampleData.checksum("ups 0.0.1"))
       {:ok, rel2} = Release.create(ups, %{version: "0.2.0", app: "ups", requirements: %{postgrex: "~> 0.1.0", decimal: "~> 0.1.0"}, meta: %{"app" => "ups", "build_tools" => ["mix"]}}, SampleData.checksum("ups 0.2.0"))
 
-      last_month = Ecto.Type.load!(Ecto.Date, HexWeb.Util.last_month)
+      last_month = Ecto.Type.load!(Ecto.Date, SampleData.last_month)
       %Download{release_id: rel1.id, downloads: div(index, 2), day: last_month}
       |> HexWeb.Repo.insert
 
