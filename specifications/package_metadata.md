@@ -18,7 +18,7 @@ Proplists are normally generic in the sense that they can have any values for ke
 All keys are strings.
 
   + `name` (string) - Package name
-  + `version` (string) - Release version, required to be [semver][]
+  + `version` (string) - Release version, required to be a [Semantic Version][]
   + `app` (string) - OTP application name, usually the same name as the package but can differ
   + `description` (string) - Package description, recommended to be a single paragraph
   + `files` (list(string)) - Files in the package tarball contents
@@ -41,5 +41,5 @@ The package ecto have an optional dependency postgrex, if a project X depends on
 ## Links
 
 [`file:consult/1`]: http://www.erlang.org/doc/man/file.html#consult-1
-[semver]: http://semver.org/
+[Semantic Version]: http://semver.org/
 [Version requirement]: http://elixir-lang.org/docs/stable/elixir/Version.html

@@ -130,11 +130,10 @@ A user can be recreated for the given `username` and `email` if it has not been 
 
 + Request (application/json)
 
-    The following parameters are available:
-    
-    + `username` Username of the user. Only allows any alphanumeric and the following characters: `_-.`
-    + `password` User's password. Should be a printable UTF-8 string.
-    + `email` User's email address. Should be a valid email address.
+    + Attributes
+        + `username` (string, required) - Only allows any alphanumeric and the following characters: `_-.`
+        + `password` (string, required) - Should simply be a printable UTF-8 string
+        + `email` (string, required) - Should be a valid email address
 
     + Header
 
@@ -149,6 +148,8 @@ A user can be recreated for the given `username` and `email` if it has not been 
             }
 
 + Response 201 (application/json)
+
+    + Attributes (User)
 
     + Header
 
@@ -170,6 +171,13 @@ A user can be recreated for the given `username` and `email` if it has not been 
     + username_or_email: ericmj (string)
         Can be either a username or the email address associated with a User
 
++ Attributes
+    + `username` (string, required) - Only allows any alphanumeric and the following characters: `_-.`
+    + `email` (string, required) - Should be a valid email address
+    + `inserted_at` (string, required) - ISO8601 encoded timestamp
+    + `updated_at` (string, required) - ISO8601 encoded timestamp
+    + `url` (string, required)
+
 ### Fetch a User [GET]
 
 + Request (application/json)
@@ -182,6 +190,8 @@ A user can be recreated for the given `username` and `email` if it has not been 
             Authorization: e2bfe5e65b9235acebe06df8027905c0
 
 + Response 200 (application/json)
+
+    + Attributes (User)
 
     + Body
 
@@ -220,6 +230,8 @@ Packages are essential a (unique) name with some associated metadata. Packages a
 
 ## Packages Collection [/packages{?sort}]
 
+This collection is paginated.
+
 ### List all Packages [GET]
 
 + Parameters
@@ -239,6 +251,8 @@ Packages are essential a (unique) name with some associated metadata. Packages a
             Accept: application/json
 
 + Response 200 (application/json)
+
+    + Attributes (array[Package])
 
     + Body
 
@@ -262,8 +276,27 @@ Packages are essential a (unique) name with some associated metadata. Packages a
 ## Package [/packages/{name}]
 
 + Parameters
-    + name: plug (string)
-        The package name.
+    + name: plug (string) - Package name
+
++ Attributes
+    + `name` (string, required) - Package name
+    + `meta` (object, required) - Package metadata
+        + `links` (object, required) - Links related to the package, key is the link name, value is the URL
+        + `licenses` (array[string], required) - Licenses that apply to the package
+        + `description` (string, required) - Package description, recommended to be a single paragraph
+    + `downloads` (object, required) - Number of package downloads
+        + `all` (number, required) - All time
+        + `week` (number, required) - Last seven days
+        + `day` (number, required) - Yesterday
+    + `releases` (array, required)
+        + `release` (object, required) - See Release for details
+            + `name` (string, required)
+            + `inserted_at` (string, required)
+            + `updated_at` (string, required)
+            + `url` (string, required)
+    + `inserted_at` (string, required) - ISO8601 encoded timestamp
+    + `updated_at` (string, required) - ISO8601 encoded timestamp
+    + `url` (string, required)
 
 ### Fetch a Package [GET]
 
@@ -274,6 +307,8 @@ Packages are essential a (unique) name with some associated metadata. Packages a
             Accept: application/json
 
 + Response 200 (application/json)
+
+    + Attributes (Package)
 
     + Body
 
@@ -312,7 +347,23 @@ After a release has been published there is a one hour window where it can be mo
     + name: plug (string)
         Package name
     + version: 0.4.1 (string)
-        Release version, should be a Semantic Version
+        Release version, should be a [Semantic Version](http://semver.org/)
+
++ Attributes
+    + `version` (string, required) - Release version, should be a [Semantic Version](http://semver.org/)
+    + `has_docs` (boolean, required) - `true` if this release has associated documentation
+    + `meta` (object, required) - Release metadata
+        + `build_tools` (array[string], required) - Names of build tools that can build the package
+    + `dependencies` (array, required) - Releases dependencies
+        + `dependency` (object, required)
+            + `name` (string, required) - Dependency's package name
+            + `requirement` (string, required) - [Version requirement](http://elixir-lang.org/docs/stable/elixir/Version.html) on dependency
+            + `optional` (boolean, required) - An optional dependency only has to be satisfied if a package higher up the chain also requires it
+            + `app` (string, required) - OTP application name, usually the dependency name but can differ
+    + `downloads` (number, required) - Number of downloads of the release
+    + `inserted_at` (string, required) - ISO8601 encoded timestamp
+    + `updated_at` (string, required) - ISO8601 encoded timestamp
+    + `url` (string, required)
 
 ### Publish a Release [POST]
 
@@ -329,12 +380,13 @@ Will also create a new package or update an existing one. See the package tarbal
             Accept: application/json
             Authorization: e2bfe5e65b9235acebe06df8027905c0
 
-+ Response 200 (application/json)
++ Response 201 (application/json)
+
+    + Attributes (Release)
 
     + Body
 
             {
-              "package_name": "plug",
               "version": "0.4.1",
               "has_docs": false,
               "url": "https://hex.pm/api/packages/plug/releases/0.4.1",
@@ -363,6 +415,8 @@ Will also create a new package or update an existing one. See the package tarbal
             Accept: application/json
 
 + Response 200 (application/json)
+
+    + Attributes (Release)
 
     + Body
 
@@ -458,17 +512,7 @@ Package owners are Users that can publish packages. Any owner can add or remove 
             Accept: application/json
             Authorization: e2bfe5e65b9235acebe06df8027905c0
 
-+ Response 200 (application/json)
-
-    + Body
-
-            [{
-              "username": "ericmj",
-              "url": "https://hex.pm/api/users/ericmj",
-              "inserted_at": "2014-04-21T17:20:12Z",
-              "updated_at": "2014-04-21T17:20:12Z",
-              "email": "ericmg@mail.com"
-            }]
++ Response 204
 
 ## Package Owner [/packages/{name}/owners/{email}]
 
@@ -504,12 +548,16 @@ API Keys are used to authenticate requests (see Authentication section for more 
             Authorization: e2bfe5e65b9235acebe06df8027905c0
 
 + Response 200 (application/json)
+
+    + Attributes (array[API Key])
+
     + Body
 
             [{
               "name": "my_computer",
               "inserted_at": "2014-04-21T17:20:12Z",
-              "updated_at": "2014-04-21T17:20:12Z"
+              "updated_at": "2014-04-21T17:20:12Z",
+              "url": "https://hex.pm/api/keys/my_computer"
             }]
 
 ### Create an API Key [POST]
@@ -518,14 +566,24 @@ API Keys are used to authenticate requests (see Authentication section for more 
 
     This request requires basic authentication and is allowed to be made even if the account email has not yet been confirmed.
 
+    + Attributes
+        + `name` (string, required)
+
     + Header
 
             Accept: application/json
             Authorization: Basic ZXJpY21qOmh1bnRlcjQy
 
+    + Body
+
+            {"name": "my_computer"}
+
 + Response 201 (application/json)
 
-    The `secret` will only be sent, it should be stored after creating the API key. Subsequent GET requests will not include the `secret`.
+    The `secret` will only be sent once, it should be stored after creating the API key. Subsequent GET requests will not include the `secret`.
+
+    + Attributes (array[API Key])
+        + `secret` - The key secret, a 32 character hex encoded string
 
     + Header
 
@@ -533,18 +591,25 @@ API Keys are used to authenticate requests (see Authentication section for more 
 
     + Body
 
-            [{
+            {
               "name": "my_computer",
               "secret": "e2bfe5e65b9235acebe06df8027905c0",
               "inserted_at": "2014-04-21T17:20:12Z",
-              "updated_at": "2014-04-21T17:20:12Z"
-            }]
+              "updated_at": "2014-04-21T17:20:12Z",
+              "url": "https://hex.pm/api/keys/my_computer"
+            }
 
 ## API Key [/keys/{name}]
 
 + Parameters
     + name: my_computer (string)
         Key name
+
++ Attributes
+    + `name` (string, required) - Key name
+    + `inserted_at` (string, required) - ISO8601 encoded timestamp
+    + `updated_at` (string, required) - ISO8601 encoded timestamp
+    + `url` (string, required)
 
 ### Fetch an API Key [GET]
 
@@ -558,12 +623,16 @@ API Keys are used to authenticate requests (see Authentication section for more 
             Authorization: e2bfe5e65b9235acebe06df8027905c0
 
 + Response 200 (application/json)
+
+    + Attributes (API Key)
+
     + Body
 
             {
               "name": "my_computer",
               "inserted_at": "2014-04-21T17:20:12Z",
-              "updated_at": "2014-04-21T17:20:12Z"
+              "updated_at": "2014-04-21T17:20:12Z",
+              "url": "https://hex.pm/api/keys/my_computer"
             }
 
 ### Remove an API Key [DELETE]
