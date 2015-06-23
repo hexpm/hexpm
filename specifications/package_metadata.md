@@ -1,17 +1,17 @@
 # Package metadata
 
-The metadata can be expressed in many media types, in the package tarball it as an "Erlang term file" that can be read with [`file:consult/1`][]. This specification describes the format used in the package tarball.
+The metadata can be expressed in many media types: in the package tarball, it is as an "Erlang term file" that can be read with [`file:consult/1`][]. This specification describes the format used in the package tarball.
 
 ## Types
 
 All types listed here are Erlang terms.
 
-  + `string` - A UTF-8 encoded Erlangbinary
+  + `string` - A UTF-8 encoded Erlang binary
   + `boolean` - A boolean (`true` or `false`)
   + `list(Inner)` - A list with an `Inner` type
-  + `proplist(Key => Value)` - A list with two element tuples where the first element is of type `Key` and the second `Value`
+  + `kvlist(Key => Value)` - A list with two element tuples where the first element is of type `Key` and the second `Value`
 
-Proplists are normally generic in the sense that they can have any values for keys, but they can also allow only specific keys: `proplist(...)` where the keys will be listed in relation to the type.
+kvlists are normally generic in the sense that they can have any values for keys, but they can also allow only specific keys: `kvlist(...)` where the keys will be listed in relation to the type.
 
 ## Format
 
@@ -41,11 +41,11 @@ All keys are strings.
 
     The library's licenses
 
-  + `links (proplist(string => string))`
+  + `links (kvlist(string => string))`
 
     Links related to the package where the key is the link name and the value is the URL
 
-  + `requirements (proplist(string => proplist(...)))`
+  + `requirements (kvlist(string => proplist(...)))`
 
     All dependencies of the package where the key is the dependent name
 
@@ -71,7 +71,7 @@ An optional dependency will only be used if a package higher up the dependency c
 
 #### Example
 
-The package ecto has an optional dependency postgrex. If a project X depends on ecto and postgrex both dependencies will be used and ecto's version requirement on postgrex has to be satisfied. But if project X only depends on ecto without listing postgrex as dependency the package can be ignored.
+The ecto package has an optional dependency on postgrex. If a project X depends on ecto and postgrex, both dependencies will be used and ecto's version requirement on postgrex has to be satisfied. But if project X only depends on ecto without listing postgrex as a dependency, the package can be ignored.
 
 [`file:consult/1`]: http://www.erlang.org/doc/man/file.html#consult-1
 [Semantic Version]: http://semver.org/

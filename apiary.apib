@@ -6,7 +6,7 @@ The Hex API is based on REST, it is currently in beta and so can change at any t
 
 ### Related specifications
 
-The HTTP API is only one of the specifications that makes the package manager Hex. Keep in mind that the HTTP API is not required to be implemented for clients to be able to consume the repository. Repositories that doesn't allow public users to publish packages can have any mechanism for publishing to their repository. Although for publicly visible repositories it is recommended to implement the endpoints for browsing packages (/packages/*).
+The HTTP API is only one of the specifications that makes the package manager Hex. Keep in mind that the HTTP API is not required to be implemented for clients to be able to consume the repository. Repositories that doesn't allow public users to publish packages can have any mechanism for publishing to their repository. For publicly visible repositories, it is recommended to also implement the endpoints for browsing packages (/packages/*).
 
 Below is a list of related specifications:
 
@@ -57,19 +57,19 @@ Page numbering start from 1 and will by default return the first page.
 
 ### Conditional requests
 
-Most responses return an `ETag` header. Many responses will also return a `Last-Modified` header, the notable exception being responses on collection resources. You can use the values provided in these headers to send conditional requests with `If-None-Match` or `If Modified Since`, if the resource has not changed a  `304 Not Modified` response will be returned.
-
-Also note that in the future `304` responses will not count against your rate limit counter.
+Most responses return an `ETag` header. Many responses will also return a `Last-Modified` header, the notable exception being responses on collection resources. You can use the values provided in these headers to send conditional requests with `If-None-Match` or `If-Modified-Since`. If the resource has not changed, a `304 Not Modified` response will be returned.
 
 ### Authentication
 
-There are two way ways to authenticate requests in the Hex API; Basic Authentication with a username and password or with an API token. Failed authentication attempts will return `403 Forbidden` except for some resources that return `404 Not Found` to prevent leaking sensitive data.
+There are two way ways to authenticate requests in the Hex API: Basic Authentication with a username and password, or with an API token. Failed authentication attempts will return `401 Unauthorized`. Resources accessed without proper authentication will return a `403 Forbidden` except for some resources that return `404 Not Found` to prevent leaking sensitive data.
+
+Any endpoint implementation for Hex should support SSL termination by default, to prevent user credentials from being intercepted by third parties.
 
 ##### Basic Authentication
 
     $ curl -u "username" https://hex.pm/api
 
-Basic authentication is only allowed on some resources, specifically ones used to generate API tokens, this because the basic authentication is computationally expensive and less secure than using API tokens.
+Basic authentication is only allowed on some resources, specifically ones used to generate API tokens. This is because the basic authentication is computationally expensive and less secure than using API tokens.
 
 ##### API Token
 
@@ -124,14 +124,14 @@ Authenticated requests require a User account. A User is required to publish pac
 
 ### Create a User [POST]
 
-A successful user creation will send a confirmation email to the given email address. In the email will be link to follow that will confirm the email and activate the account. The account will not be usable until activated.
+A successful user creation will send a confirmation email to the given email address. The email will contain a link to follow in order to confirm the email and activate the account. The account will be usable once activated.
 
-A user can be recreated for the given `username` and `email` if it has not been activated yet.
+A user can be recreated for a given `username` and `email` if it has not been activated yet.
 
 + Request (application/json)
 
     + Attributes
-        + `username` (string, required) - Only allows any alphanumeric and the following characters: `_-.`
+        + `username` (string, required) - Only allows any alphanumeric (`[A-Za-z0-9]`) and the following characters: `_-.`. Case insensitive.
         + `password` (string, required) - Should simply be a printable UTF-8 string
         + `email` (string, required) - Should be a valid email address
 
@@ -172,10 +172,10 @@ A user can be recreated for the given `username` and `email` if it has not been 
         Can be either a username or the email address associated with a User
 
 + Attributes
-    + `username` (string, required) - Only allows any alphanumeric and the following characters: `_-.`
+    + `username` (string, required) - Only allows any alphanumeric (`[A-Za-z0-9]`) and the following characters: `_-.`. Case insensitive.
     + `email` (string, required) - Should be a valid email address
-    + `inserted_at` (string, required) - ISO8601 encoded timestamp
-    + `updated_at` (string, required) - ISO8601 encoded timestamp
+    + `inserted_at` (string, required) - ISO8601-encoded timestamp
+    + `updated_at` (string, required) - ISO8601-encoded timestamp
     + `url` (string, required)
 
 ### Fetch a User [GET]
@@ -211,7 +211,7 @@ A user can be recreated for the given `username` and `email` if it has not been 
 
 ### Reset User password [POST]
 
-Will start the process to reset a User's password. A confirmation email will be sent to the email address associated with the account. In the email will be link to follow that will show a form where a new password can be provided.
+Will start the process to reset a User's password. A confirmation email will be sent to the email address associated with the account. The email will contain a link to follow and will lead to a form where a new password can be provided.
 
 + Request (application/json)
 
@@ -224,9 +224,9 @@ Will start the process to reset a User's password. A confirmation email will be 
 
 + Response 204 (application/json)
 
-# Group Packages
+# Group Releases
 
-Packages are essential a (unique) name with some associated metadata. Packages are only interesting as a way to group and structure package releases which will be covered later.
+Packages are essentially a (unique) name with some associated metadata. Group releases are a way to group and structure package releases which will be covered later.
 
 ## Packages Collection [/packages{?sort}]
 
@@ -294,8 +294,8 @@ This collection is paginated.
             + `inserted_at` (string, required)
             + `updated_at` (string, required)
             + `url` (string, required)
-    + `inserted_at` (string, required) - ISO8601 encoded timestamp
-    + `updated_at` (string, required) - ISO8601 encoded timestamp
+    + `inserted_at` (string, required) - ISO8601-encoded timestamp
+    + `updated_at` (string, required) - ISO8601-encoded timestamp
     + `url` (string, required)
 
 ### Fetch a Package [GET]
@@ -361,8 +361,8 @@ After a release has been published there is a one hour window where it can be mo
             + `optional` (boolean, required) - An optional dependency only has to be satisfied if a package higher up the chain also requires it
             + `app` (string, required) - OTP application name, usually the dependency name but can differ
     + `downloads` (number, required) - Number of downloads of the release
-    + `inserted_at` (string, required) - ISO8601 encoded timestamp
-    + `updated_at` (string, required) - ISO8601 encoded timestamp
+    + `inserted_at` (string, required) - ISO8601-encoded timestamp
+    + `updated_at` (string, required) - ISO8601-encoded timestamp
     + `url` (string, required)
 
 ### Publish a Release [POST]
@@ -529,7 +529,7 @@ Package owners are Users that can publish packages. Any owner can add or remove 
 ### Remove a Package Owner [DELETE]
 
 + Response 204
-    
+
 # Group API Keys
 
 API Keys are used to authenticate requests (see Authentication section for more details). A key has a name used to identify it and a secret that is used for the actual authentication.
@@ -539,7 +539,7 @@ API Keys are used to authenticate requests (see Authentication section for more 
 ### List all API Keys [GET]
 
 + Request
-    
+
     This request requires authentication.
 
     + Header
@@ -580,7 +580,7 @@ API Keys are used to authenticate requests (see Authentication section for more 
 
 + Response 201 (application/json)
 
-    The `secret` will only be sent once, it should be stored after creating the API key. Subsequent GET requests will not include the `secret`.
+    The `secret` will be sent only once. It should be stored after creating the API key. Subsequent responses to GET requests will not include the `secret`.
 
     + Attributes (array[API Key])
         + `secret` - The key secret, a 32 character hex encoded string
@@ -607,14 +607,14 @@ API Keys are used to authenticate requests (see Authentication section for more 
 
 + Attributes
     + `name` (string, required) - Key name
-    + `inserted_at` (string, required) - ISO8601 encoded timestamp
-    + `updated_at` (string, required) - ISO8601 encoded timestamp
+    + `inserted_at` (string, required) - ISO8601-encoded timestamp
+    + `updated_at` (string, required) - ISO8601-encoded timestamp
     + `url` (string, required)
 
 ### Fetch an API Key [GET]
 
 + Request
-    
+
     This request requires authentication.
 
     + Header
