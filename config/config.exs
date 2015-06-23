@@ -7,7 +7,7 @@ config :hex_web,
   url:           System.get_env("HEX_URL"),
   app_host:      System.get_env("APP_HOST"),
 
-  s3_url:        System.get_env("HEX_S3_URL") || "http://s3.amazonaws.com",
+  s3_url:        System.get_env("HEX_S3_URL") || "https://s3.amazonaws.com",
   s3_bucket:     System.get_env("HEX_S3_BUCKET"),
   s3_access_key: System.get_env("HEX_S3_ACCESS_KEY"),
   s3_secret_key: System.get_env("HEX_S3_SECRET_KEY"),
