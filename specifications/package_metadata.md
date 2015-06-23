@@ -17,51 +17,51 @@ Proplists are normally generic in the sense that they can have any values for ke
 
 All keys are strings.
 
-  + `name` (`string`)
+  + `name (string)`
   
     Package name
 
-  + `version` (`string`)
+  + `version (string)`
   
     Release version, required to be a [Semantic Version][]
 
-  + `app` (`string`)
+  + `app (string)`
     
     OTP application name, usually the same name as the package but can differ
 
-  + `description` (`string`)
+  + `description (string)`
     
     Package description, recommended to be a single paragraph
 
-  + `files` (`list(string)`)
+  + `files (list(string))`
 
     Files in the package tarball contents
 
-  + `licenses` (`list(string)`)
+  + `licenses (list(string))`
 
     The library's licenses
 
-  + `links` (`proplist(string => string)`)
+  + `links (proplist(string => string))`
 
     Links related to the package where the key is the link name and the value is the URL
 
-  + `requirements` (`proplist(string => proplist(...))`)
+  + `requirements (proplist(string => proplist(...)))`
 
     All dependencies of the package where the key is the dependent name
 
-    + `app` (`string`)
+    + `app (string)`
 
       OTP application name, usually the same name as the package
 
-    + `optional` (`boolean`)
+    + `optional (boolean)`
 
       If the package is required or not
 
-    + `requirement` (`string`)
+    + `requirement (string)`
 
       [Version requirement][] on the dependent
 
-  + `build_tools` (`list(string)`)
+  + `build_tools (list(string))`
 
       Names of build tools that can build the package
 
@@ -72,8 +72,6 @@ An optional dependency will only be used if a package higher up the dependency c
 #### Example
 
 The package ecto have an optional dependency postgrex, if a project X depends on ecto and postgrex both dependencies will be used and ecto's version requirement on postgrex has to be satisfies. But if project X only depends on ecto the postgrex package can be ignored.
-
-## Links
 
 [`file:consult/1`]: http://www.erlang.org/doc/man/file.html#consult-1
 [Semantic Version]: http://semver.org/
