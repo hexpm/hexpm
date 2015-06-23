@@ -221,4 +221,4 @@ Proceed? ("Y")> Y
 ===> Published relx 2.1.1
 </code></pre>
 
-Go <a href="http://www.rebar3.org/v3.0/docs/hex-package-management">here</a> for documentation on the <code>rebar3</code> hex plugin's tasks. And <a href="http://www.rebar3.org/v3.0/docs/hex-package-management">here</a> for rebar3's documentation on publishing packages.
+The <a href="http://www.rebar3.org/v3.0/docs/hex-package-management">rebar3 hex plugin's documentation</a> contains more information about the hex plugin itself and publishing packages.
