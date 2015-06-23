@@ -1,6 +1,6 @@
 # Endpoints
 
-The Hex API has two endpoints; the HTTP API is used for all administrative tasks and to browse packages, the CDN is read-only and used to deliver the registry and package tarballs.
+The Hex API has two endpoints: an HTTP API, which is used for all administrative tasks and to browse packages; and a CDN, which is read-only and used to deliver the registry and package tarballs.
 
 ### HTTP API
 
