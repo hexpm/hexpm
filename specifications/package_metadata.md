@@ -17,18 +17,53 @@ Proplists are normally generic in the sense that they can have any values for ke
 
 All keys are strings.
 
-  + `name` (string) - Package name
-  + `version` (string) - Release version, required to be a [Semantic Version][]
-  + `app` (string) - OTP application name, usually the same name as the package but can differ
-  + `description` (string) - Package description, recommended to be a single paragraph
-  + `files` (list(string)) - Files in the package tarball contents
-  + `licenses` (list(string)) - The library's licenses
-  + `links` (proplist(string => string)) - Links related to the package where the key is the link name and the value is the URL
-  + `requirements` (proplist(string => proplist(...))) - All dependencies of the package where the key is the dependent name
-    - `app` (string) - OTP application name, usually the same name as the package
-    - `optional` (boolean) - If the package is required or not
-    - `requirement` (string) - [Version requirement][] on the dependent
-  + `build_tools` - Names of build tools that can build the package
+  + `name` (`string`)
+  
+    Package name
+
+  + `version` (`string`)
+  
+    Release version, required to be a [Semantic Version][]
+
+  + `app` (`string`)
+    
+    OTP application name, usually the same name as the package but can differ
+
+  + `description` (`string`)
+    
+    Package description, recommended to be a single paragraph
+
+  + `files` (`list(string)`)
+
+    Files in the package tarball contents
+
+  + `licenses` (`list(string)`)
+
+    The library's licenses
+
+  + `links` (`proplist(string => string)`)
+
+    Links related to the package where the key is the link name and the value is the URL
+
+  + `requirements` (`proplist(string => proplist(...))`)
+
+    All dependencies of the package where the key is the dependent name
+
+    + `app` (`string`)
+
+      OTP application name, usually the same name as the package
+
+    + `optional` (`boolean`)
+
+      If the package is required or not
+
+    + `requirement` (`string`)
+
+      [Version requirement][] on the dependent
+
+  + `build_tools` (`list(string)`)
+
+      Names of build tools that can build the package
 
 ### Optional dependencies
 
