@@ -71,7 +71,7 @@ An optional dependency will only be used if a package higher up the dependency c
 
 #### Example
 
-The package ecto have an optional dependency postgrex, if a project X depends on ecto and postgrex both dependencies will be used and ecto's version requirement on postgrex has to be satisfies. But if project X only depends on ecto the postgrex package can be ignored.
+The package ecto has an optional dependency postgrex. If a project X depends on ecto and postgrex both dependencies will be used and ecto's version requirement on postgrex has to be satisfied. But if project X only depends on ecto without listing postgrex as dependency the package can be ignored.
 
 [`file:consult/1`]: http://www.erlang.org/doc/man/file.html#consult-1
 [Semantic Version]: http://semver.org/
