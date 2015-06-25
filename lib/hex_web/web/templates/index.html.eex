@@ -13,7 +13,7 @@
   <div class="col-md-12">
     <h3>Using with Erlang</h3>
     <p>
-      Download a <a href="https://s3.amazonaws.com/rebar3/rebar3">rebar3</a>, put it in your <code>PATH</code> and give it executable permissions. Now you can install the Hex plugin by adding <code>{plugins, [rebar3_hex]}.</code> and <a href="http://www.rebar3.org/v3.0/docs/hex-package-management">run all of its tasks</a>.
+      Download a <a href="https://s3.amazonaws.com/rebar3/rebar3">rebar3</a>, put it in your <code>PATH</code> and give it executable permissions. Now you can install the Hex plugin by adding <code>{plugins, [rebar3_hex]}.</code> to <code>~/.config/rebar3/rebar.config</code> and <a href="http://www.rebar3.org/v3.0/docs/hex-package-management">run all of its tasks</a>.
     </p>
   </div>
 </div>
