@@ -140,37 +140,85 @@ end
 <h3>Publishing Erlang packages</h3>
 
 <p>
-  Erlang packages can also be published to Hex. A file describing the package is required, but unlike for Elixir projects it should not be named <code>mix.exs</code>, because Mix will treat packages with a <code>mix.exs</code> file as a Mix project. Convention is to name it <code>package.exs</code>. The package can be published with the command: <code>MIX_EXS=package.exs mix hex.publish</code>. See below for an example of a <code>package.exs</code> file for Erlang projects.
+    Erlang packages can be published through the <a href="http://rebar3.org">rebar3</a> Hex plugin. It is suggested to place the entry in the global rebar3 config which should be made as <code>~/.config/rebar3/rebar.config</code>.</p>
+
+<h4>Example rebar.config file</h4>
+    <pre><code>
+{plugins, [{rebar3_hex, "0.5.1"}]}.
+    </code></pre>
+
+<p>
+Package metadata goes in your application's <code>.app.src</code> file.
 </p>
 
-<h4>Example package.exs file</h4>
+<h4>Example .app.src file</h4>
 
-<pre><code>defmodule Poolboy.Mixfile do
-  use Mix.Project
-
-  def project do
-    [app: :poolboy,
-     version: "1.2.1",
-     description: description,
-     package: package,
-     deps: deps]
-  end
-
-  defp deps do
-    [{:plug, "~> 0.2.0"}]
-  end
-
-  defp description do
-    """
-    A few sentences (a paragraph) describing the project.
-    """
-  end
-
-  defp package do
-    [files: ~w(src rebar.config README.md LICENSE UNLICENSE VERSION),
-     contributors: ["Devin Torres", "Andrew Thompson", "Kurt Williams"],
-     licenses: ["Unlicense", "Apache 2.0"],
-     links: %{"GitHub" => "https://github.com/devinus/poolboy"}]
-   end
-end
+<pre><code>
+{application, relx,
+             [{description, "Release assembler for Erlang/OTP Releases"},
+              {vsn, "2.1.1"},
+              {modules, []},
+              {registered, []},
+              {applications, [kernel, stdlib, getopt ,erlware_commons, bbmustache,
+                              providers]},
+              {contributors, ["Eric Merritt","Tristan Sloughter",
+                              "Jordan Wilberding"]},
+              {licenses, ["Apache"]},
+              {links, [{"Github", "https://github.com/erlware/relx"}]}]}.
 </code></pre>
+
+<pre><code>
+$ rebar3 hex publish
+Publishing relx 2.1.1
+  Dependencies:
+    bbmustache 1.0.1
+    providers 1.4.1
+    erlware_commons 0.13.0
+    getopt 0.8.2
+  Excluded dependencies (not part of the Hex package):
+
+  Included files:
+    src/relx.app.src
+    src/relx.erl
+    src/rlx_app_discovery.erl
+    src/rlx_app_info.erl
+    src/rlx_cmd_args.erl
+    src/rlx_config.erl
+    src/rlx_depsolver.erl
+    src/rlx_depsolver_culprit.erl
+    src/rlx_dscv_util.erl
+    src/rlx_goal.erl
+    src/rlx_goal.peg
+    src/rlx_goal_utils.erl
+    src/rlx_prv_app_discover.erl
+    src/rlx_prv_archive.erl
+    src/rlx_prv_assembler.erl
+    src/rlx_prv_overlay.erl
+    src/rlx_prv_rel_discover.erl
+    src/rlx_prv_release.erl
+    src/rlx_prv_relup.erl
+    src/rlx_rel_discovery.erl
+    src/rlx_release.erl
+    src/rlx_state.erl
+    src/rlx_topo.erl
+    src/rlx_util.erl
+    include/relx.hrl
+    priv/templates/bin
+    priv/templates/bin_windows
+    priv/templates/erl_ini
+    priv/templates/erl_script
+    priv/templates/extended_bin
+    priv/templates/extended_bin_windows
+    priv/templates/install_upgrade_escript
+    priv/templates/nodetool
+    priv/templates/sys_config
+    priv/templates/vm_args
+    rebar.config
+    rebar.lock
+    README.md
+    LICENSE.md
+Proceed? ("Y")> Y
+===> Published relx 2.1.1
+</code></pre>
+
+The <a href="http://www.rebar3.org/v3.0/docs/hex-package-management">rebar3 hex plugin's documentation</a> contains more information about the hex plugin itself and publishing packages.
