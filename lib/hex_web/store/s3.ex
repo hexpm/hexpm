@@ -1,5 +1,6 @@
 defmodule HexWeb.Store.S3 do
   @behaviour HexWeb.Store
+  @max_attempts 10
 
   defmacrop s3_config(opts) do
     quote do
@@ -18,14 +19,14 @@ defmodule HexWeb.Store.S3 do
   def get_logs(key) do
     bucket = Application.get_env(:hex_web, :logs_bucket) |> String.to_char_list
     key = String.to_char_list(key)
-    result = :mini_s3.get_object(bucket, key, [], config())
+    result = retry(fn -> :mini_s3.get_object(bucket, key, [], config()) end)
     result[:content]
   end
 
   def put_logs(key, blob) do
     bucket = Application.get_env(:hex_web, :logs_bucket) |> String.to_char_list
     key = String.to_char_list(key)
-    :mini_s3.put_object(bucket, key, blob, [], [], config())
+    retry(fn -> :mini_s3.put_object(bucket, key, blob, [], [], config()) end)
   end
 
   def put_registry(data) do
@@ -94,7 +95,7 @@ defmodule HexWeb.Store.S3 do
   defp delete(bucket, path) do
     bucket = Application.get_env(:hex_web, bucket) |> String.to_char_list
     path = String.to_char_list(path)
-    :mini_s3.delete_object(bucket, path, config())
+    retry(fn -> :mini_s3.delete_object(bucket, path, config()) end)
   end
 
   defp redirect(conn, location, path) do
@@ -109,7 +110,7 @@ defmodule HexWeb.Store.S3 do
     # TODO: cache
     bucket     = Application.get_env(:hex_web, bucket) |> String.to_char_list
     opts       = [acl: :public_read]
-    :mini_s3.put_object(bucket, path, data, opts, headers, config())
+    retry(fn -> :mini_s3.put_object(bucket, path, data, opts, headers, config()) end)
   end
 
   defp list(bucket, prefix) do
@@ -124,7 +125,7 @@ defmodule HexWeb.Store.S3 do
       opts = opts ++ [marker: String.to_char_list(marker)]
     end
 
-    result = :mini_s3.list_objects(bucket, opts, config())
+    result = retry(fn -> :mini_s3.list_objects(bucket, opts, config()) end)
     new_keys = Enum.map(result[:contents], &List.to_string(&1[:key]))
     all_keys = new_keys ++ keys
 
@@ -132,6 +133,19 @@ defmodule HexWeb.Store.S3 do
       list_all(bucket, prefix, List.last(new_keys), all_keys)
     else
       all_keys
+    end
+  end
+
+  defp retry(fun) do
+    do_retry(fun, 0)
+  end
+
+  defp do_retry(fun, attempts) when attempts < @max_attempts do
+    try do
+      fun.()
+    catch
+      :error, {:aws_error, {:socket_error, :req_timedout}} ->
+        do_retry(fun, attempts+1)
     end
   end
 
