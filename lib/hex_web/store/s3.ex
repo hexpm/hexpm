@@ -97,5 +97,6 @@ defmodule HexWeb.Store.S3 do
   defp list(bucket, prefix) do
     Application.get_env(:hex_web, bucket)
     |> S3.stream_objects(prefix: prefix)
+    |> Stream.map(&Map.get(&1, :key))
   end
 end
