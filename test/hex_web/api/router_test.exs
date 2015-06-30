@@ -9,6 +9,8 @@ defmodule HexWeb.API.RouterTest do
   alias HexWeb.API.Key
   alias HexWeb.RegistryBuilder
 
+  @port Application.get_env(:hex_web, :port)
+
   setup do
     User.create(%{username: "other", email: "other@mail.com", password: "other"}, true)
     User.create(%{username: "jose", email: "jose@mail.com", password: "jose"}, true)
@@ -29,7 +31,7 @@ defmodule HexWeb.API.RouterTest do
 
     assert conn.status == 201
     body = Poison.decode!(conn.resp_body)
-    assert body["url"] == "http://localhost:4001/api/users/name"
+    assert body["url"] == "http://localhost:#{@port}/api/users/name"
 
     user = User.get(username: "name")
     assert user.email == "email@mail.com"
@@ -107,7 +109,7 @@ defmodule HexWeb.API.RouterTest do
 
     assert conn.status == 201
     body = Poison.decode!(conn.resp_body)
-    assert body["url"] == "http://localhost:4001/api/packages/ecto"
+    assert body["url"] == "http://localhost:#{@port}/api/packages/ecto"
 
     user_id = User.get(username: "eric").id
     package = assert Package.get("ecto")
@@ -126,7 +128,7 @@ defmodule HexWeb.API.RouterTest do
 
     assert conn.status == 200
     body = Poison.decode!(conn.resp_body)
-    assert body["url"] == "http://localhost:4001/api/packages/ecto"
+    assert body["url"] == "http://localhost:#{@port}/api/packages/ecto"
 
     assert Package.get("ecto").meta["description"] == "awesomeness"
   end
@@ -178,7 +180,7 @@ defmodule HexWeb.API.RouterTest do
     assert conn.status == 201
     body = Poison.decode!(conn.resp_body)
     assert body["meta"]["app"] == "not_postgrex"
-    assert body["url"] == "http://localhost:4001/api/packages/postgrex/releases/0.0.1"
+    assert body["url"] == "http://localhost:#{@port}/api/packages/postgrex/releases/0.0.1"
 
     body = create_tar(%{name: :postgrex, version: "0.0.2"}, [])
     conn = conn("POST", "/api/packages/postgrex/releases", body)
@@ -340,7 +342,7 @@ defmodule HexWeb.API.RouterTest do
     body = Poison.decode!(conn.resp_body)
     assert body["name"] == "macbook"
     assert body["secret"] == nil
-    assert body["url"] == "http://localhost:4001/api/keys/macbook"
+    assert body["url"] == "http://localhost:#{@port}/api/keys/macbook"
   end
 
   test "all keys" do
@@ -358,7 +360,7 @@ defmodule HexWeb.API.RouterTest do
     first = hd(body)
     assert first["name"] == "macbook"
     assert first["secret"] == nil
-    assert first["url"] == "http://localhost:4001/api/keys/macbook"
+    assert first["url"] == "http://localhost:#{@port}/api/keys/macbook"
   end
 
   test "delete key" do
@@ -428,7 +430,7 @@ defmodule HexWeb.API.RouterTest do
 
     assert conn.status == 201
     body = Poison.decode!(conn.resp_body)
-    assert body["url"] == "http://localhost:4001/api/users/name"
+    assert body["url"] == "http://localhost:#{@port}/api/users/name"
 
     user = assert User.get(username: "name")
     assert user.email == "email@mail.com"
@@ -454,7 +456,7 @@ defmodule HexWeb.API.RouterTest do
 
     assert conn.status == 201
     body = Poison.decode!(conn.resp_body)
-    assert body["url"] == "http://localhost:4001/api/users/name"
+    assert body["url"] == "http://localhost:#{@port}/api/users/name"
 
     user = assert User.get(username: "name")
     assert user.email == "email@mail.com"
@@ -469,7 +471,7 @@ defmodule HexWeb.API.RouterTest do
     assert body["name"] == "decimal"
 
     release = List.first(body["releases"])
-    assert release["url"] == "http://localhost:4001/api/packages/decimal/releases/0.0.1"
+    assert release["url"] == "http://localhost:#{@port}/api/packages/decimal/releases/0.0.1"
     assert release["version"] == "0.0.1"
   end
 
@@ -479,7 +481,7 @@ defmodule HexWeb.API.RouterTest do
 
     assert conn.status == 200
     body = Poison.decode!(conn.resp_body)
-    assert body["url"] == "http://localhost:4001/api/packages/decimal/releases/0.0.1"
+    assert body["url"] == "http://localhost:#{@port}/api/packages/decimal/releases/0.0.1"
     assert body["version"] == "0.0.1"
   end
 
