@@ -173,9 +173,11 @@ defmodule HexWeb.Release do
   end
 
   def all(package) do
-    HexWeb.Repo.all(assoc(package, :releases))
-    |> Enum.map(& %{&1 | package: package})
-    |> sort
+    ConCache.get_or_store(:hex_cache, "all_releases_#{package.id}", fn() ->
+      HexWeb.Repo.all(assoc(package, :releases))
+        |> Enum.map(& %{&1 | package: package})
+        |> sort
+    end)
   end
 
   def sort(releases) do
@@ -184,10 +186,12 @@ defmodule HexWeb.Release do
   end
 
   def get(package, version) do
-    from(r in assoc(package, :releases), where: r.version == ^version, limit: 1)
-    |> HexWeb.Repo.one
-    |> Util.maybe(& %{&1 | package: package})
-    |> Util.maybe(& %{&1 | requirements: requirements(&1)})
+    ConCache.get_or_store(:hex_cache, "get_release_#{package.id}_#{version}", fn() ->
+      from(r in assoc(package, :releases), where: r.version == ^version, limit: 1)
+      |> HexWeb.Repo.one
+      |> Util.maybe(& %{&1 | package: package})
+      |> Util.maybe(& %{&1 | requirements: requirements(&1)})
+    end)
   end
 
   def requirements(release) do
@@ -198,17 +202,21 @@ defmodule HexWeb.Release do
   end
 
   def count do
-    HexWeb.Repo.all(from(r in HexWeb.Release, select: fragment("count(?)", r.id)))
-    |> List.first
+    ConCache.get_or_store(:hex_cache, "release_count", fn() ->
+      HexWeb.Repo.all(from(r in HexWeb.Release, select: fragment("count(?)", r.id)))
+      |> List.first
+    end)
   end
 
   def recent(count) do
-    from(r in HexWeb.Release,
-         order_by: [desc: r.inserted_at],
-         join: p in assoc(r, :package),
-         limit: ^count,
-         select: {r.version, p.name})
-    |> HexWeb.Repo.all
+    ConCache.get_or_store(:hex_cache, "recent_release_#{count}", fn() ->
+      from(r in HexWeb.Release,
+           order_by: [desc: r.inserted_at],
+           join: p in assoc(r, :package),
+           limit: ^count,
+           select: {r.version, p.name})
+      |> HexWeb.Repo.all
+    end)
   end
 
   def docs_url(release) do
