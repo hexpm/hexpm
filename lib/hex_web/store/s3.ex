@@ -7,14 +7,13 @@ defmodule HexWeb.Store.S3 do
   end
 
   def get_logs(key) do
-    bucket = Application.get_env(:hex_web, :logs_bucket)
-    result = S3.get_object(bucket, key)
-    result[:content]
+    Application.get_env(:hex_web, :logs_bucket)
+    |> S3.get_object!(key)
   end
 
   def put_logs(key, blob) do
     Application.get_env(:hex_web, :logs_bucket)
-    |> S3.put_object(key, blob)
+    |> S3.put_object!(key, blob)
   end
 
   def put_registry(data) do
@@ -79,7 +78,7 @@ defmodule HexWeb.Store.S3 do
 
   defp delete(bucket, path) do
     bucket = Application.get_env(:hex_web, bucket)
-    S3.delete_object(bucket, path)
+    S3.delete_object!(bucket, path)
   end
 
   defp redirect(conn, location, path) do
@@ -91,7 +90,7 @@ defmodule HexWeb.Store.S3 do
     opts = Keyword.put(opts, :acl, :public_read)
     # TODO: cache
     Application.get_env(:hex_web, bucket)
-    |> S3.put_object(path, data, opts)
+    |> S3.put_object!(path, data, opts)
   end
 
   defp list(bucket, prefix) do
