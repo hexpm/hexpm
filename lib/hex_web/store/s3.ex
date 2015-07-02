@@ -56,9 +56,8 @@ defmodule HexWeb.Store.S3 do
 
   def put_docs_page(path, data) do
     opts = case Path.extname(path) do
-      "." <> ext ->
-        [content_type: Plug.MIME.type(ext)]
-      "" -> []
+      "." <> ext -> [content_type: Plug.MIME.type(ext)]
+      ""         -> []
     end
     |> Keyword.put(:cache_control, "public, max-age=1800")
 

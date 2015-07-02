@@ -28,7 +28,7 @@ config :hex_web, HexWeb.Repo,
 
 config :ex_aws,
   access_key_id:    {:system, "HEX_S3_ACCESS_KEY"},
-  secret_acces_key: {:system, "HEX_S3_SECRET_KEY"]
+  secret_acces_key: {:system, "HEX_S3_SECRET_KEY"}
 
 config :ex_aws, :s3,
   scheme: "http://",
