@@ -7,9 +7,9 @@ defmodule HexWeb.Store.S3 do
   end
 
   def get_logs(key) do
-    Application.get_env(:hex_web, :logs_bucket)
-    |> S3.get_object!(key)
-    |> Map.get(:body)
+    bucket = Application.get_env(:hex_web, :logs_bucket)
+    {:ok, %{body: result}} = S3.get_object(bucket, key)
+    result
   end
 
   def put_logs(key, blob) do
