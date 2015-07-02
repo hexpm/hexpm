@@ -18,7 +18,7 @@ defmodule HexWeb.Store.S3 do
   end
 
   def put_registry(data) do
-    upload(:s3_bucket, "registry.ets.gz", :zlib.gzip(data))
+    upload(:s3_bucket, "registry.ets.gz", [], :zlib.gzip(data))
   end
 
   def send_registry(conn) do
@@ -26,7 +26,7 @@ defmodule HexWeb.Store.S3 do
   end
 
   def put_release(name, data) do
-    upload(:s3_bucket, Path.join("tarballs", name), data)
+    upload(:s3_bucket, Path.join("tarballs", name), [], data)
   end
 
   def delete_release(name) do
@@ -41,7 +41,7 @@ defmodule HexWeb.Store.S3 do
 
   def put_docs(name, data) do
     path = Path.join("docs", name)
-    upload(:s3_bucket, path, data)
+    upload(:s3_bucket, path, [], data)
   end
 
   def delete_docs(name) do
@@ -57,12 +57,16 @@ defmodule HexWeb.Store.S3 do
   def put_docs_page(path, data) do
     opts = case Path.extname(path) do
       "." <> ext ->
-        [content_type: Plug.MIME.type(ext)]
-      "" -> []
+        mime = Plug.MIME.type(ext)
+        headers = ["content-type": mime]
+      "" ->
+        headers = []
     end
     |> Keyword.put(:cache_control, "public, max-age=1800")
 
-    upload(:docs_bucket, path, data, opts)
+    headers = Keyword.put(headers, :"cache-control", "public, max-age=1800")
+
+    upload(:docs_bucket, path, headers, data)
   end
 
   def list_docs_pages(path) do
@@ -90,13 +94,30 @@ defmodule HexWeb.Store.S3 do
   def upload(bucket, path, data, opts \\ []) do
     opts = Keyword.put(opts, :acl, :public_read)
     # TODO: cache
-    Application.get_env(:hex_web, bucket)
-    |> S3.put_object!(path, data, opts)
+    bucket  = Application.get_env(:hex_web, bucket)
+    S3.put_object(bucket, path, data, acl: "public-read")
   end
 
   defp list(bucket, prefix) do
-    Application.get_env(:hex_web, bucket)
-    |> S3.stream_objects!(prefix: prefix)
-    |> Stream.map(&Map.get(&1, :key))
+    bucket = Application.get_env(:hex_web, bucket)
+    list_all(bucket, prefix, nil, [])
+  end
+
+  defp list_all(bucket, prefix, marker, keys) do
+    opts = [prefix: prefix]
+    if marker do
+      opts = Keyword.put(opts, :marker, marker)
+    end
+
+    {:ok, %{body: result}} = S3.list_objects(bucket, opts)
+
+    new_keys = result.contents |> Enum.map(&Dict.get(&1, :key))
+    all_keys = new_keys ++ keys
+
+    if result.is_truncated == "true" do
+      list_all(bucket, prefix, List.last(new_keys), all_keys)
+    else
+      all_keys
+    end
   end
 end
