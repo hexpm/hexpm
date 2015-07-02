@@ -9,6 +9,7 @@ defmodule HexWeb.Store.S3 do
   def get_logs(key) do
     Application.get_env(:hex_web, :logs_bucket)
     |> S3.get_object!(key)
+    |> Map.get(:body)
   end
 
   def put_logs(key, blob) do
@@ -95,7 +96,7 @@ defmodule HexWeb.Store.S3 do
 
   defp list(bucket, prefix) do
     Application.get_env(:hex_web, bucket)
-    |> S3.stream_objects(prefix: prefix)
+    |> S3.stream_objects!(prefix: prefix)
     |> Stream.map(&Map.get(&1, :key))
   end
 end
