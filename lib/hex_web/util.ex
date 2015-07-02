@@ -191,6 +191,7 @@ defmodule HexWeb.Util do
   end
 
   def shell(cmd) do
+    IO.puts("$ " <> cmd)
     stream = IO.binstream(:standard_io, :line)
     result = Porcelain.shell(cmd, out: stream, err: :out)
     result.status
