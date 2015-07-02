@@ -11,7 +11,7 @@ config :hex_web, HexWeb.Repo,
   max_overflow: 0
 
 config :logger,
-  level: :warn
+  level: :info
 
 # Don't include date time on heroku
 config :logger, :console,
