@@ -30,7 +30,7 @@ defmodule HexWeb.Mixfile do
      {:bcrypt,    github: "opscode/erlang-bcrypt"},
      {:httpoison, "~> 0.7.0"},
      {:sweet_xml, "~> 0.2.1"},
-     {:ex_aws,    github: "CargoSense/ex_aws", branch: "finish-s3"}
+     {:ex_aws,    "~> 0.4.0"}
    ]
   end
 

@@ -6,7 +6,7 @@
   "earmark": {:hex, :earmark, "0.1.15"},
   "ecto": {:git, "git://github.com/elixir-lang/ecto.git", "df464c6e1a4f1f3eff5f8ad5078e01b3f90f47af", []},
   "envy": {:git, "git://github.com/manderson26/envy.git", "e6ba39664a1016ed309ea44269247943de2eb16b", [branch: "master"]},
-  "ex_aws": {:git, "git://github.com/CargoSense/ex_aws.git", "42c9fffb9cb69ff28cfda377b8447a1bba17d8c3", [branch: "finish-s3"]},
+  "ex_aws": {:hex, :ex_aws, "0.4.0"},
   "gen_smtp": {:hex, :gen_smtp, "0.9.0"},
   "hackney": {:hex, :hackney, "1.1.0"},
   "httpoison": {:hex, :httpoison, "0.7.0"},
