@@ -29,6 +29,7 @@ defmodule HexWeb.Mixfile do
      {:gen_smtp,  "~> 0.9.0"},
      {:bcrypt,    github: "opscode/erlang-bcrypt"},
      {:httpoison, "~> 0.7.0"},
+     {:sweet_xml, "~> 0.2.1"},
      {:ex_aws,    github: "CargoSense/ex_aws", branch: "finish-s3"}
    ]
   end
