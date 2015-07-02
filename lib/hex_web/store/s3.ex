@@ -7,18 +7,18 @@ defmodule HexWeb.Store.S3 do
   end
 
   def get_logs(key) do
-    bucket = Application.get_env(:hex_web, :logs_bucket)
-    {:ok, %{body: result}} = S3.get_object(bucket, key)
-    result
+    Application.get_env(:hex_web, :logs_bucket)
+    |> S3.get_object!(key)
+    |> Map.get(:body)
   end
 
   def put_logs(key, blob) do
-    bucket = Application.get_env(:hex_web, :logs_bucket)
-    S3.put_object(bucket, key, blob)
+    Application.get_env(:hex_web, :logs_bucket)
+    |> S3.put_object!(key, blob)
   end
 
   def put_registry(data) do
-    upload(:s3_bucket, "registry.ets.gz", [], :zlib.gzip(data))
+    upload(:s3_bucket, "registry.ets.gz", :zlib.gzip(data))
   end
 
   def send_registry(conn) do
@@ -26,7 +26,7 @@ defmodule HexWeb.Store.S3 do
   end
 
   def put_release(name, data) do
-    upload(:s3_bucket, Path.join("tarballs", name), [], data)
+    upload(:s3_bucket, Path.join("tarballs", name), data)
   end
 
   def delete_release(name) do
@@ -41,7 +41,7 @@ defmodule HexWeb.Store.S3 do
 
   def put_docs(name, data) do
     path = Path.join("docs", name)
-    upload(:s3_bucket, path, [], data)
+    upload(:s3_bucket, path, data)
   end
 
   def delete_docs(name) do
@@ -55,17 +55,13 @@ defmodule HexWeb.Store.S3 do
   end
 
   def put_docs_page(path, data) do
-    case Path.extname(path) do
-      "." <> ext ->
-        mime = Plug.MIME.type(ext)
-        headers = ["content-type": mime]
-      "" ->
-        headers = []
+    opts = case Path.extname(path) do
+      "." <> ext -> [content_type: Plug.MIME.type(ext)]
+      ""         -> []
     end
+    |> Keyword.put(:cache_control, "public, max-age=1800")
 
-    headers = Keyword.put(headers, :"cache-control", "public, max-age=1800")
-
-    upload(:docs_bucket, path, headers, data)
+    upload(:docs_bucket, path, data, opts)
   end
 
   def list_docs_pages(path) do
@@ -82,7 +78,7 @@ defmodule HexWeb.Store.S3 do
 
   defp delete(bucket, path) do
     bucket = Application.get_env(:hex_web, bucket)
-    S3.delete_object(bucket, path)
+    S3.delete_object!(bucket, path)
   end
 
   defp redirect(conn, location, path) do
@@ -90,32 +86,16 @@ defmodule HexWeb.Store.S3 do
     HexWeb.Plug.redirect(conn, url)
   end
 
-  def upload(bucket, path, headers, data) do
+  def upload(bucket, path, data, opts \\ []) do
+    opts = Keyword.put(opts, :acl, :public_read)
     # TODO: cache
-    bucket  = Application.get_env(:hex_web, bucket)
-    S3.put_object(bucket, path, data, acl: "public-read")
+    Application.get_env(:hex_web, bucket)
+    |> S3.put_object!(path, data, opts)
   end
 
   defp list(bucket, prefix) do
-    bucket = Application.get_env(:hex_web, bucket)
-    list_all(bucket, prefix, nil, [])
-  end
-
-  defp list_all(bucket, prefix, marker, keys) do
-    opts = [prefix: prefix]
-    if marker do
-      opts = Keyword.put(opts, :marker, marker)
-    end
-
-    {:ok, %{body: result}} = S3.list_objects(bucket, opts)
-
-    new_keys = result.contents |> Enum.map(&Dict.get(&1, :key))
-    all_keys = new_keys ++ keys
-
-    if result.is_truncated == "true" do
-      list_all(bucket, prefix, List.last(new_keys), all_keys)
-    else
-      all_keys
-    end
+    Application.get_env(:hex_web, bucket)
+    |> S3.stream_objects!(prefix: prefix)
+    |> Stream.map(&Map.get(&1, :key))
   end
 end
