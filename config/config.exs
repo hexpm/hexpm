@@ -9,8 +9,6 @@ config :hex_web,
 
   s3_url:        System.get_env("HEX_S3_URL") || "https://s3.amazonaws.com",
   s3_bucket:     System.get_env("HEX_S3_BUCKET"),
-  s3_access_key: System.get_env("HEX_S3_ACCESS_KEY"),
-  s3_secret_key: System.get_env("HEX_S3_SECRET_KEY"),
   docs_bucket:   System.get_env("HEX_DOCS_BUCKET"),
   logs_bucket:   System.get_env("HEX_LOGS_BUCKET"),
   docs_url:      System.get_env("HEX_DOCS_URL"),
@@ -27,6 +25,15 @@ config :hex_web,
 config :hex_web, HexWeb.Repo,
   adapter: Ecto.Adapters.Postgres,
   extensions: [{HexWeb.JSON.Extension, library: Poison}]
+
+config :ex_aws,
+  access_key_id:     {:system, "HEX_S3_ACCESS_KEY"},
+  secret_access_key: {:system, "HEX_S3_SECRET_KEY"}
+
+config :ex_aws, :s3,
+  scheme: "http://",
+  host: "s3.amazonaws.com",
+  region: "us-east-1"
 
 config :logger,
   level: :debug

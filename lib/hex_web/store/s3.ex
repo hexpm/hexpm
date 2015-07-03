@@ -1,36 +1,24 @@
 defmodule HexWeb.Store.S3 do
   @behaviour HexWeb.Store
-  @max_attempts 10
-
-  defmacrop s3_config(opts) do
-    quote do
-      {:config,
-        unquote(opts[:url]),
-        unquote(opts[:access_key_id]),
-        unquote(opts[:secret_access_key]),
-        :virtual_hosted}
-    end
-  end
+  alias ExAws.S3
 
   def list_logs(prefix) do
     list(:logs_bucket, prefix)
   end
 
   def get_logs(key) do
-    bucket = Application.get_env(:hex_web, :logs_bucket) |> String.to_char_list
-    key = String.to_char_list(key)
-    result = retry(fn -> :mini_s3.get_object(bucket, key, [], config()) end)
-    result[:content]
+    bucket = Application.get_env(:hex_web, :logs_bucket)
+    {:ok, %{body: result}} = S3.get_object(bucket, key)
+    result
   end
 
   def put_logs(key, blob) do
-    bucket = Application.get_env(:hex_web, :logs_bucket) |> String.to_char_list
-    key = String.to_char_list(key)
-    retry(fn -> :mini_s3.put_object(bucket, key, blob, [], [], config()) end)
+    Application.get_env(:hex_web, :logs_bucket)
+    |> S3.put_object!(key, blob)
   end
 
   def put_registry(data) do
-    upload(:s3_bucket, 'registry.ets.gz', [], :zlib.gzip(data))
+    upload(:s3_bucket, "registry.ets.gz", [], :zlib.gzip(data))
   end
 
   def send_registry(conn) do
@@ -67,15 +55,16 @@ defmodule HexWeb.Store.S3 do
   end
 
   def put_docs_page(path, data) do
-    case Path.extname(path) do
+    opts = case Path.extname(path) do
       "." <> ext ->
         mime = Plug.MIME.type(ext)
-        headers = [{'content-type', String.to_char_list(mime)}]
+        headers = ["content-type": mime]
       "" ->
         headers = []
     end
+    |> Keyword.put(:cache_control, "public, max-age=1800")
 
-    headers = headers ++ [{'cache-control', 'public, max-age=1800'}]
+    headers = Keyword.put(headers, :"cache-control", "public, max-age=1800")
 
     upload(:docs_bucket, path, headers, data)
   end
@@ -93,9 +82,8 @@ defmodule HexWeb.Store.S3 do
   end
 
   defp delete(bucket, path) do
-    bucket = Application.get_env(:hex_web, bucket) |> String.to_char_list
-    path = String.to_char_list(path)
-    retry(fn -> :mini_s3.delete_object(bucket, path, config()) end)
+    bucket = Application.get_env(:hex_web, bucket)
+    S3.delete_object!(bucket, path)
   end
 
   defp redirect(conn, location, path) do
@@ -103,56 +91,33 @@ defmodule HexWeb.Store.S3 do
     HexWeb.Plug.redirect(conn, url)
   end
 
-  def upload(bucket, path, headers, data) when is_binary(path),
-    do: upload(bucket, String.to_char_list(path), headers, data)
-
-  def upload(bucket, path, headers, data) when is_list(path) do
+  def upload(bucket, path, data, opts \\ []) do
+    opts = Keyword.put(opts, :acl, :public_read)
     # TODO: cache
-    bucket     = Application.get_env(:hex_web, bucket) |> String.to_char_list
-    opts       = [acl: :public_read]
-    retry(fn -> :mini_s3.put_object(bucket, path, data, opts, headers, config()) end)
+    bucket  = Application.get_env(:hex_web, bucket)
+    S3.put_object(bucket, path, data, acl: "public-read")
   end
 
   defp list(bucket, prefix) do
-    prefix = String.to_char_list(prefix)
-    bucket = Application.get_env(:hex_web, bucket) |> String.to_char_list
+    bucket = Application.get_env(:hex_web, bucket)
     list_all(bucket, prefix, nil, [])
   end
 
   defp list_all(bucket, prefix, marker, keys) do
     opts = [prefix: prefix]
     if marker do
-      opts = opts ++ [marker: String.to_char_list(marker)]
+      opts = Keyword.put(opts, :marker, marker)
     end
 
-    result = retry(fn -> :mini_s3.list_objects(bucket, opts, config()) end)
-    new_keys = Enum.map(result[:contents], &List.to_string(&1[:key]))
+    {:ok, %{body: result}} = S3.list_objects(bucket, opts)
+
+    new_keys = result.contents |> Enum.map(&Dict.get(&1, :key))
     all_keys = new_keys ++ keys
 
-    if result[:is_truncated] do
+    if result.is_truncated == "true" do
       list_all(bucket, prefix, List.last(new_keys), all_keys)
     else
       all_keys
     end
-  end
-
-  defp retry(fun) do
-    do_retry(fun, 0)
-  end
-
-  defp do_retry(fun, attempts) when attempts < @max_attempts do
-    try do
-      fun.()
-    catch
-      :error, {:aws_error, {:socket_error, :req_timedout}} ->
-        do_retry(fun, attempts+1)
-    end
-  end
-
-  defp config do
-    access_key = Application.get_env(:hex_web, :s3_access_key) |> String.to_char_list
-    secret_key = Application.get_env(:hex_web, :s3_secret_key) |> String.to_char_list
-    url = Application.get_env(:hex_web, :s3_url) |> String.to_char_list
-    s3_config(access_key_id: access_key, secret_access_key: secret_key, url: url)
   end
 end
