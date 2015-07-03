@@ -59,128 +59,11 @@ defmodule HexWeb.API.Router do
   end
 
   defp handle_publish(conn, package, body) do
-    case HexWeb.Tar.metadata(body) do
-      {:ok, meta, checksum} ->
-        if package do
-          create_release(conn, package, checksum, meta, body)
-        else
-          package_params = %{"name" => meta["name"], "meta" => meta}
-          case create_package(conn, package_params) do
-            {:ok, package} ->
-              create_release(conn, package, checksum, meta, body)
-            {:error, errors} ->
-              send_validation_failed(conn, %{package: errors})
-          end
-        end
-
-      {:error, errors} ->
-        send_validation_failed(conn, %{tar: errors})
-    end
-  end
-
-  defp create_release(conn, package, checksum, meta, body) do
-    version = meta["version"]
-    release_params = %{"app" => meta["app"], "version" => version,
-                       "requirements" => meta["requirements"], "meta" => meta}
-
-    if release = Release.get(package, version) do
-      result = Release.update(release, release_params, checksum)
-      if match?({:ok, _}, result), do: after_release(package, version, body)
-      send_update_resp(conn, result, :public)
-    else
-      result = Release.create(package, release_params, checksum)
-      if match?({:ok, _}, result), do: after_release(package, version, body)
-      send_creation_resp(conn, result, :public, api_url(["packages", package.name, "releases", version]))
-    end
-  end
-
-  defp create_package(conn, params) do
-    name = params["name"]
-
-    if package = Package.get(name) do
-      with_authorized(conn, [], &Package.owner?(package, &1), fn _ ->
-        Package.update(package, params)
-      end)
-    else
-      with_authorized(conn, [], fn user ->
-        Package.create(user, params)
-      end)
-    end
+    HexWeb.API.Handlers.Package.handle_publish(conn, package, body)
   end
 
   defp handle_docs(conn, release, body) do
-    case :erl_tar.extract({:binary, body}, [:memory, :compressed]) do
-      {:ok, files} ->
-        files = Enum.map(files, fn {path, data} -> {List.to_string(path), data} end)
-
-        if check_version_dirs?(files) do
-          package  = release.package
-          name     = package.name
-          version  = to_string(release.version)
-
-          task_start(fn ->
-            store = Application.get_env(:hex_web, :store)
-
-            # Delete old files
-            # Add "/" so that we don't get prefix matches, for example phoenix
-            # would match phoenix_html
-            paths = store.list_docs_pages(name <> "/")
-            Enum.each(paths, fn path ->
-              first = Path.relative_to(path, name)|> Path.split |> hd
-              cond do
-                # Current (/ecto/0.8.1/...)
-                first == version ->
-                  store.delete_docs_page(path)
-                # Top-level docs, don't match version directories (/ecto/...)
-                Version.parse(first) == :error ->
-                  store.delete_docs_page(path)
-                true ->
-                  :ok
-              end
-            end)
-
-            # Put tarball
-            store.put_docs("#{name}-#{version}.tar.gz", body)
-
-            # Upload new files
-            Enum.each(files, fn {path, data} ->
-              store.put_docs_page(Path.join([name, version, path]), data)
-              store.put_docs_page(Path.join(name, path), data)
-            end)
-
-            # Set docs flag on release
-            %{release | has_docs: true}
-            |> HexWeb.Repo.update
-          end)
-
-          location = api_url(["packages", name, "releases", version, "docs"])
-
-          conn
-          |> put_resp_header("location", location)
-          |> cache(:public)
-          |> send_resp(201, "")
-        else
-          send_validation_failed(conn, [{:tar, "directory name not allowed to match a semver version"}])
-        end
-
-      {:error, reason} ->
-        send_validation_failed(conn, [{:tar, inspect reason}])
-    end
-  end
-
-  defp check_version_dirs?(files) do
-    Enum.all?(files, fn {path, _data} ->
-      first = Path.split(path) |> hd
-      Version.parse(first) == :error
-    end)
-  end
-
-  defp after_release(package, version, body) do
-    task_start(fn ->
-      store = Application.get_env(:hex_web, :store)
-      store.put_release("#{package.name}-#{version}.tar", body)
-      HexWeb.RegistryBuilder.rebuild
-    end)
+    HexWeb.API.Handlers.Docs.handle_docs(conn, release, body)
   end
 
   match _ do
@@ -194,6 +77,8 @@ defmodule HexWeb.API.Router do
                        json_decoder: Poison
     plug :match
     plug :dispatch
+
+    # Users
 
     post "users" do
       # Unconfirmed users can be recreated
@@ -222,6 +107,8 @@ defmodule HexWeb.API.Router do
         raise NotFound
       end
     end
+
+    # Packages
 
     get "packages" do
       page      = Util.safe_int(conn.params["page"]) || 1
@@ -309,6 +196,8 @@ defmodule HexWeb.API.Router do
       end
     end
 
+    # Release Docs
+
     get "packages/:name/releases/:version/docs" do
       if (package = Package.get(name)) && Release.get(package, version) do
         store = Application.get_env(:hex_web, :store)
@@ -343,6 +232,8 @@ defmodule HexWeb.API.Router do
         raise NotFound
       end
     end
+
+    # Package Owners
 
     get "packages/:name/owners" do
       if package = Package.get(name) do
@@ -403,6 +294,8 @@ defmodule HexWeb.API.Router do
         raise NotFound
       end
     end
+
+    # Keys
 
     get "keys" do
       with_authorized(conn, [], fn user ->
