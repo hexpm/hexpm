@@ -16,8 +16,7 @@ csv =
     Enum.join([install.hex|install.elixirs], ",")
   end)
 
-headers = [{'content-type', 'text/csv'}]
-HexWeb.Store.S3.upload(:s3_bucket, "installs/list.csv", headers, csv)
+HexWeb.Store.S3.upload(:s3_bucket, "installs/list.csv", csv, content_type: "text/csv")
 
 IO.puts "Uploaded installs/list.csv"
 
