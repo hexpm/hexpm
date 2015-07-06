@@ -18,6 +18,7 @@ defmodule HexWeb.Stats.JobTest do
     {:ok, _} = Release.create(foo, rel_meta(%{version: "0.1.0", app: "foo"}), "")
     {:ok, _} = Release.create(bar, rel_meta(%{version: "0.0.1", app: "bar"}), "")
     {:ok, _} = Release.create(bar, rel_meta(%{version: "0.0.2", app: "bar"}), "")
+    {:ok, _} = Release.create(bar, rel_meta(%{version: "0.0.3-rc.1", app: "bar"}), "")
     {:ok, _} = Release.create(other, rel_meta(%{version: "0.0.1", app: "other"}), "")
 
     :ok
@@ -39,12 +40,14 @@ defmodule HexWeb.Stats.JobTest do
     rel1 = Release.get(Package.get("foo"), "0.0.1")
     rel2 = Release.get(Package.get("foo"), "0.0.2")
     rel3 = Release.get(Package.get("bar"), "0.0.2")
+    rel4 = Release.get(Package.get("bar"), "0.0.3-rc.1")
 
     downloads = HexWeb.Repo.all(HexWeb.Stats.Download)
-    assert length(downloads) == 3
+    assert length(downloads) == 4
 
     assert Enum.find(downloads, &(&1.release_id == rel1.id)).downloads == 5
     assert Enum.find(downloads, &(&1.release_id == rel2.id)).downloads == 2
     assert Enum.find(downloads, &(&1.release_id == rel3.id)).downloads == 2
+    assert Enum.find(downloads, &(&1.release_id == rel4.id)).downloads == 1
   end
 end

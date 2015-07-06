@@ -85,9 +85,9 @@ defmodule HexWeb.Stats.Job do
     tarballs/
     ([^-]+)               # package
     -
-    ([0-9\\.]+)           # version
+    ([\d\w\.\-]+)         # version
     .tar\040
-    "x
+    "xU
 
   defp parse_line(line) do
     case Regex.run(@regex, line) do
