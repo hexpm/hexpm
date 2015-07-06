@@ -62,7 +62,6 @@ defmodule HexWeb.Validation do
       model        = changeset.model
       module       = model.__struct__
       type         = module.__schema__(:field, field)
-      dumped_value = Ecto.Type.dump!(type, value)
       repo         = Keyword.fetch!(opts, :on)
       scope        = opts[:scope] || []
 
