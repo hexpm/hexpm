@@ -87,7 +87,7 @@ defmodule HexWeb.Stats.Job do
     -
     ([\d\w\.\-]+)         # version
     .tar\040
-    "xU
+    "x
 
   defp parse_line(line) do
     case Regex.run(@regex, line) do
