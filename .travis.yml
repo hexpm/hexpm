@@ -17,7 +17,7 @@ script:
   - MIX_ENV=test mix compile
   - mix test --include integration
 env:
-  - ELIXIRVERSION=v1.0.4
+  - ELIXIRVERSION=v1.0.5
   - ELIXIRVERSION=master
 notifications:
   recipients:
