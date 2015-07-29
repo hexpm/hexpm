@@ -101,7 +101,7 @@ defmodule HexWeb.Web.Router do
     conn          = fetch_params(conn)
     per_page      = @packages
     search        = conn.params["search"] |> Util.safe_search
-    sort          = Util.safe_to_atom(conn.params["sort"] || "name", ~w(name downloads inserted_at updated_at))
+    sort          = Util.safe_to_atom(conn.params["sort"] || "name", ~w(name downloads inserted_at))
     package_count = Package.count(search)
     page          = Util.safe_page(Util.safe_int(conn.params["page"]) || 1, package_count, @packages)
     packages      = fetch_packages(page, @packages, search, sort)
