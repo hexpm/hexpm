@@ -14,6 +14,7 @@
 
   sort_name_params = url_params(search: @search, page: page, sort: "name")
   sort_downloads_params = url_params(search: @search, page: page, sort: "downloads")
+  sort_created_params = url_params(search: @search, page: page, sort: "inserted_at")
   prev_page_params = url_params(search: @search, page: @page-1, sort: @sort)
   next_page_params = url_params(search: @search, page: @page+1, sort: @sort)
   %>
@@ -35,6 +36,10 @@
 
         <li role="presentation">
           <a role="menuitem" tabindex="-1" href="/packages<%= sort_downloads_params %>">Downloads</a>
+        </li>
+
+        <li role="presentation">
+          <a role="menuitem" tabindex="-1" href="/packages<%= sort_created_params %>">Recently created</a>
         </li>
       </ul>
     </div>
