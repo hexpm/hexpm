@@ -87,17 +87,15 @@ build_tools = @current_release && @current_release.meta["build_tools"] || []
   <div class="col-sm-6">
     <h4>Versions</h4>
 
-    <ul class="list-unstyled">
-      <%= for release <- @releases do %>
-        <li>
-          <a href="/packages/<%= @package.name %>/<%= release.version %>"><strong><%= release.version %></strong></a>
-          <span class="text-muted"><%= pretty_date(release.inserted_at) %></span>
-          <%= if release.has_docs do %>
-            <span class="text-muted">(<a href="<%= safe HexWeb.Release.docs_url(release) %>">docs</a>)</span>
-          <% end %>
-        </li>
-      <% end %>
-    </ul>
+    <% show_latest_versions = 5 %>
+    <%= safe template_versions(@package, Enum.take(@releases, show_latest_versions)) %>
+
+    <%= if length(@releases) > show_latest_versions do %>
+    <div class="collapse" id="oldestVersions">
+      <%= safe template_versions(@package, Enum.drop(@releases, show_latest_versions)) %>
+    </div>
+    <p><a class="btn btn-primary" role="button" data-toggle="collapse" href="#oldestVersions" aria-expanded="false" aria-controls="oldestVersions">Oldest versions</a></p>
+    <% end %>
   </div>
 
   <div class="col-sm-6">
