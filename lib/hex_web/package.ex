@@ -187,11 +187,11 @@ defmodule HexWeb.Package do
       name_search = "%" <> name_search <> "%"
     end
 
-    desc_search = String.replace(search, ~r"\s+", " & ")
+    desc_search = String.replace(search, ~r"\s+", " | ")
 
       from var in query,
     where: ilike(var.name, ^name_search) or
-           fragment("to_tsvector('english', (?->'description')::text) @@ to_tsquery('english', ?)",
+           fragment("to_tsvector('english', regexp_replace((?->'description')::text, '/', ' ')) @@ to_tsquery('english', ?)",
                     var.meta, ^desc_search)
   end
 
