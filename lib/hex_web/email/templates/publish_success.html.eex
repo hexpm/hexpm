@@ -1,0 +1,8 @@
+<p>
+  The <%= if @docs do %>documentation for<% else %>release<% end %> <%= @packagee %> v<%= @version %> has been published, and is now available on Hex.pm.
+</p>
+
+<p>
+  --<br>
+  Hex.pm
+</p>

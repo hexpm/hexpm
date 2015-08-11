@@ -2,7 +2,7 @@ defmodule HexWeb.API.Router do
   use Plug.Router
   import Plug.Conn
   import HexWeb.API.Util
-  import HexWeb.Util, only: [api_url: 1, task_start: 1]
+  import HexWeb.Util, only: [api_url: 1]
   alias HexWeb.Util
   alias HexWeb.Plug.NotFound
   alias HexWeb.Plug.RequestTimeout
@@ -27,10 +27,10 @@ defmodule HexWeb.API.Router do
       auth = fn _ -> true end
     end
 
-    with_authorized(conn, [], auth, fn _ ->
+    with_authorized(conn, [], auth, fn user ->
       case read_body(conn, HexWeb.request_read_opts) do
         {:ok, body, conn} ->
-          handle_publish(conn, package, body)
+          HexWeb.API.Handlers.Package.publish(conn, package, user, body)
         {:error, :timeout} ->
           raise RequestTimeout
         {:more, _, _} ->
@@ -43,10 +43,10 @@ defmodule HexWeb.API.Router do
     conn = HexWeb.Plug.read_body_finally(conn)
 
     if (package = Package.get(name)) && (release = Release.get(package, version)) do
-      with_authorized(conn, [], &Package.owner?(package, &1), fn _ ->
+      with_authorized(conn, [], &Package.owner?(package, &1), fn user ->
         case read_body(conn, HexWeb.request_read_opts) do
           {:ok, body, conn} ->
-            handle_docs(conn, release, body)
+            HexWeb.API.Handlers.Docs.publish(conn, release, user, body)
           {:error, :timeout} ->
             raise RequestTimeout
           {:more, _, _} ->
@@ -56,14 +56,6 @@ defmodule HexWeb.API.Router do
     else
       raise NotFound
     end
-  end
-
-  defp handle_publish(conn, package, body) do
-    HexWeb.API.Handlers.Package.handle_publish(conn, package, body)
-  end
-
-  defp handle_docs(conn, release, body) do
-    HexWeb.API.Handlers.Docs.handle_docs(conn, release, body)
   end
 
   match _ do
@@ -157,23 +149,7 @@ defmodule HexWeb.API.Router do
           result = Release.delete(release)
 
           if result == :ok do
-            task_start(fn ->
-              store = Application.get_env(:hex_web, :store)
-
-              # Delete release tarball
-              store.delete_release("#{name}-#{version}.tar")
-
-              # Delete relevant documentation (if it exists)
-              if release.has_docs do
-                paths = store.list_docs_pages(Path.join(name, version))
-                store.delete_docs("#{name}-#{version}.tar.gz")
-                Enum.each(paths, fn path ->
-                  store.delete_docs_page(path)
-                end)
-              end
-
-              HexWeb.RegistryBuilder.rebuild
-            end)
+            HexWeb.API.Handlers.Package.revert(name, release)
           end
 
           send_delete_resp(conn, result, :public)
@@ -211,18 +187,7 @@ defmodule HexWeb.API.Router do
       if (package = Package.get(name)) && (release = Release.get(package, version)) do
         with_authorized(conn, [], &Package.owner?(package, &1), fn _ ->
 
-          task_start(fn ->
-            store = Application.get_env(:hex_web, :store)
-            paths = store.list_docs_pages(Path.join(name, version))
-            store.delete_docs("#{name}-#{version}.tar.gz")
-
-            Enum.each(paths, fn path ->
-              store.delete_docs_page(path)
-            end)
-
-            %{release | has_docs: false}
-            |> HexWeb.Repo.update
-          end)
+          HexWeb.API.Handlers.Docs.revert(name, release)
 
           conn
           |> cache(:private)

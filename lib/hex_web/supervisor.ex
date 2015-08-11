@@ -11,6 +11,7 @@ defmodule HexWeb.Supervisor do
 
     tree = [
       worker(HexWeb.Repo, []),
+      supervisor(Task.Supervisor, [[name: HexWeb.PublishTasks]]),
       worker(HexWeb.BlockedAddress, []),
       worker(HexWeb.API.RateLimit, [HexWeb.API.RateLimit]),
       Plug.Adapters.Cowboy.child_spec(:http, HexWeb.Router, [], opts)

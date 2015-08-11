@@ -61,7 +61,6 @@ defmodule HexWeb.Validation do
     validate_change(changeset, field, fn _field, value ->
       model        = changeset.model
       module       = model.__struct__
-      type         = module.__schema__(:field, field)
       repo         = Keyword.fetch!(opts, :on)
       scope        = opts[:scope] || []
 

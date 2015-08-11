@@ -203,9 +203,38 @@ defmodule HexWeb.Util do
   def association_loaded?(_),
     do: true
 
+  @publish_timeout 60_000
+
   if Mix.env == :test do
-    def task_start(fun), do: fun.()
+    def task(fun, success, failure) do
+      try do
+        fun.()
+      catch
+        kind, error ->
+          stack = System.stacktrace
+          failure.()
+          :erlang.raise kind, error, stack
+      else
+        _ ->
+          success.()
+      end
+    end
   else
-    def task_start(fun), do: Task.start(fun)
+    def task(fun, success, failure) do
+      Task.start(fn ->
+        %Task{pid: pid, ref: ref} = Task.Supervisor.async(HexWeb.PublishTasks, fun)
+
+        receive do
+          {^ref, _msg} ->
+            success.()
+          {:DOWN, ^ref, :process, ^pid, _reason} ->
+            failure.()
+        after
+          @publish_timeout ->
+            Process.exit(pid, :publish_timeout)
+            failure.()
+        end
+      end)
+    end
   end
 end
