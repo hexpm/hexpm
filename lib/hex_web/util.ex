@@ -222,16 +222,17 @@ defmodule HexWeb.Util do
   else
     def task(fun, success, failure) do
       Task.start(fn ->
-        %Task{pid: pid, ref: ref} = Task.Supervisor.async(HexWeb.PublishTasks, fun)
+        {:ok, pid} = Task.Supervisor.start_child(HexWeb.PublishTasks, fun)
+        ref        = Process.monitor(pid)
 
         receive do
-          {^ref, _msg} ->
+          {:DOWN, ^ref, :process, ^pid, :normal} ->
             success.()
           {:DOWN, ^ref, :process, ^pid, _reason} ->
             failure.()
         after
           @publish_timeout ->
-            Process.exit(pid, :publish_timeout)
+            Task.Supervisor.terminate_child(HexWeb.PublishTasks, pid)
             failure.()
         end
       end)

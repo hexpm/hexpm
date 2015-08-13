@@ -43,6 +43,7 @@ defmodule HexWeb.API.Handlers.Docs do
   end
 
   def upload_docs(release, files, body) do
+
     package  = release.package
     name     = package.name
     version  = to_string(release.version)
@@ -90,7 +91,7 @@ defmodule HexWeb.API.Handlers.Docs do
 
   defp success(release, user) do
     package = release.package.name
-    version = release.version
+    version = to_string(release.version)
     email   = Application.get_env(:hex_web, :email)
     body    = HexWeb.Email.Templates.render(:publish_success,
                                             package: package,
@@ -103,7 +104,7 @@ defmodule HexWeb.API.Handlers.Docs do
   defp failure(release, user) do
     # TODO: Revert database changes
     package = release.package.name
-    version = release.version
+    version = to_string(release.version)
     email   = Application.get_env(:hex_web, :email)
     body    = HexWeb.Email.Templates.render(:publish_fail,
                                             package: package,

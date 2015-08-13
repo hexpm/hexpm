@@ -1,5 +1,5 @@
 <p>
-  The <%= if @docs do %>documentation for<% else %>release<% end %> <%= @package %> v<%= @version %> has failed to publish successfully, and is <b>not</b> available on Hex.pm.
+  The <%= if @docs do %>documentation for<% else %>release<% end %> <%= @package %> v<%= @version %> has failed to publish successfully, and is <b>not available</b> on Hex.pm.
 </p>
 
 <p>
