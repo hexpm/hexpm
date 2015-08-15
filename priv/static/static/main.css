@@ -73,6 +73,15 @@ body {
   text-decoration: none !important;
 }
 
+#recent-versions,
+#older-versions {
+  margin-bottom: 0;
+}
+
+.show-versions {
+  margin-top: 10px;
+}
+
 @media (min-width: 768px) {
   .package-meta dt {
     width: 90px;

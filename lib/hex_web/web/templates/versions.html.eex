@@ -1,4 +1,4 @@
-    <ul class="list-unstyled">
+    <ul id="recent-versions" class="list-unstyled">
       <%= for release <- releases do %>
         <li>
           <a href="/packages/<%= package.name %>/<%= release.version %>"><strong><%= release.version %></strong></a>
