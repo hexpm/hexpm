@@ -30,6 +30,10 @@ config :ex_aws,
   access_key_id:     {:system, "HEX_S3_ACCESS_KEY"},
   secret_access_key: {:system, "HEX_S3_SECRET_KEY"}
 
+config :ex_aws, :httpoison_opts,
+  recv_timeout: 30_000,
+  hackney: [pool: false]
+
 config :ex_aws, :s3,
   scheme: "http://",
   host: "s3.amazonaws.com",

@@ -28,7 +28,7 @@ defmodule HexWeb.Mixfile do
      {:earmark,   "~> 0.1"},
      {:gen_smtp,  "~> 0.9.0"},
      {:bcrypt,    github: "opscode/erlang-bcrypt"},
-     {:httpoison, "~> 0.7.0"},
+     {:httpoison, "~> 0.7"},
      {:sweet_xml, "~> 0.2.1"},
      {:ex_aws,    "~> 0.4"}
    ]
