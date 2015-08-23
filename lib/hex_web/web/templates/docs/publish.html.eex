@@ -144,7 +144,7 @@ end
 
 <h4>Example rebar.config file</h4>
     <pre><code>
-{plugins, [{rebar3_hex, "0.5.1"}]}.
+{plugins, [rebar3_hex]}.
     </code></pre>
 
 <p>
