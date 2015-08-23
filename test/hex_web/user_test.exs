@@ -2,6 +2,7 @@ defmodule HexWeb.UserTest do
   use HexWebTest.Case
 
   alias HexWeb.User
+  alias HexWeb.Package
 
   test "create user and auth" do
     assert {:ok, %User{}} = User.create(%{username: "eric", email: "eric@mail.com", password: "hunter42"}, true)
@@ -27,5 +28,18 @@ defmodule HexWeb.UserTest do
     user = User.get(username: "eric")
     assert User.auth?(user, "new_pass")
     refute User.auth?(user, "erics_pass")
+  end
+
+  test "get" do
+    {:ok, user} = User.create(%{username: "joe", email: "joe@example.com", password: "joe"}, true)
+    assert User.get(username: "joe").username == "joe"
+    assert User.get(email: "joe@example.com").username == "joe"
+    assert User.get(id: user.id).username == "joe"
+  end
+
+  test "packages" do
+    {:ok, user} = User.create(%{username: "joe", email: "joe@example.com", password: "joe"}, true)
+    {:ok, package} = Package.create(user, pkg_meta(%{name: "joe_package"}))
+    assert User.packages(user) == [package]
   end
 end

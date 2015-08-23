@@ -1,5 +1,5 @@
 %{"aws_auth": {:hex, :aws_auth, "0.2.3"},
-  "bcrypt": {:git, "https://github.com/opscode/erlang-bcrypt.git", "7515e80a5e16f62aef149709f6cc09995dd480be", []},
+  "bcrypt": {:git, "git://github.com/opscode/erlang-bcrypt.git", "5cbe6becbe926739adebc67c6827ac2a2b9e7bbd", []},
   "cowboy": {:hex, :cowboy, "1.0.0"},
   "cowlib": {:hex, :cowlib, "1.0.1"},
   "decimal": {:hex, :decimal, "1.1.0"},

@@ -49,6 +49,19 @@ build_tools = @current_release && @current_release.meta["build_tools"] || []
           </ul>
         </dd>
       <% end %>
+
+      <%= if @owners != [] do %>
+        <dt>Owners</dt>
+        <dd>
+          <ul class="list-unstyled">
+            <%= for owner <- @owners do %>
+              <li>
+                <a href="<%= "/users/#{owner.id}" %>"><%= owner.username %></a>
+              </li>
+            <% end %>
+          </ul>
+        </dd>
+      <% end %>
     </dl>
   </div>
   <div class="col-sm-4">

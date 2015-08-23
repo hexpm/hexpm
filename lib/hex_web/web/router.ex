@@ -132,6 +132,17 @@ defmodule HexWeb.Web.Router do
     end || raise NotFound
   end
 
+  get "/users/:id" do
+    if user = User.get(id: id) do
+      title = user.username
+      packages = User.packages(user) |> append_latest_version
+      downloads = PackageDownload.packages(packages, "all")
+
+      conn = assign_pun(conn, [user, packages, downloads, title])
+      send_page(conn, :user)
+    end || raise NotFound
+  end
+
   match _ do
     _conn = conn
     raise NotFound
@@ -141,6 +152,7 @@ defmodule HexWeb.Web.Router do
     active    = :packages
     title     = package.name
     downloads = PackageDownload.package(package)
+    owners    = Package.owners(package)
 
     if current_release do
       release_downloads = ReleaseDownload.release(current_release)
@@ -149,12 +161,16 @@ defmodule HexWeb.Web.Router do
     end
 
     conn = assign_pun(conn, [package, releases, current_release, downloads,
-                             release_downloads, active, title])
+                             release_downloads, active, title, owners])
     send_page(conn, :package)
   end
 
   defp fetch_packages(page, packages_per_page, search, sort) do
-    packages = Package.all(page, packages_per_page, search, sort)
+    Package.all(page, packages_per_page, search, sort)
+    |> append_latest_version
+  end
+
+  defp append_latest_version(packages) do
     latest_versions = Release.latest_versions(packages)
 
     Enum.map(packages, fn package ->
