@@ -137,6 +137,13 @@ defmodule HexWeb.User do
     |> HexWeb.Repo.one
   end
 
+  def get(id: id) do
+    from(u in HexWeb.User,
+         where: u.id == ^id,
+         limit: 1)
+    |> HexWeb.Repo.one
+  end
+
   def delete(user) do
     HexWeb.Repo.delete(user)
   end
@@ -150,6 +157,16 @@ defmodule HexWeb.User do
     hash        = :erlang.list_to_binary(hash)
 
     Util.secure_compare(hash, stored_hash)
+  end
+
+  def packages(user) do
+    from(p in HexWeb.Package,
+         join: po in HexWeb.PackageOwner, on: p.id == po.package_id,
+         where: po.owner_id == ^user.id,
+         left_join: d in HexWeb.Stats.PackageDownload, on: p.id == d.package_id and d.view == "all",
+         order_by: [asc: is_nil(d.downloads), desc: d.downloads],
+         select: p)
+    |> HexWeb.Repo.all
   end
 
   defp delete_keys(changeset) do

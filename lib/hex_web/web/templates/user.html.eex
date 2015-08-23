@@ -1,0 +1,38 @@
+<%
+package_count = length(@packages)
+%>
+
+<div class="page-header" style="margin-top: 0;">
+  <h2><%= @user.username %></h2>
+  <span class="description">total packages <%= package_count %></span>
+</div>
+
+<table class="table table-striped packages">
+  <thead>
+    <tr>
+      <th style="width: 10em;">Name</th>
+      <th>Description</th>
+      <th style="width: 5em;">Latest</th>
+      <th style="width: 7em; text-align: right;">Downloads</th>
+    </tr>
+  </thead>
+  <tbody>
+    <%= for package <- @packages do %>
+      <tr>
+        <td>
+          <a href="/packages/<%= package.name %>">
+            <span class="glyphicon glyphicon-folder-open" style="padding-right: 0.5em;"></span><%= package.name %>
+          </a>
+        </td>
+        <td><%= text_length(package.meta["description"], 140) %></td>
+        <td>
+          <span class="text-muted"><%= package.latest_version %></span>
+        </td>
+        <td style="text-align: right;">
+          <span class="text-muted" style="padding-right: 10px;"><%= human_number_space(@downloads[package.id] || 0) %></span>
+        </td>
+      </tr>
+    <% end %>
+  </tbody>
+</table>
+

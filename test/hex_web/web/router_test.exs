@@ -4,6 +4,8 @@ defmodule HexWeb.Web.RouterTest do
   alias HexWeb.Router
   alias HexWeb.Package
   alias HexWeb.Release
+  alias HexWeb.User
+  alias HexWeb.PackageOwner
 
   defp release_create(package, version, app, requirements, checksum, inserted_at) do
     {:ok, release} = Release.create(package, rel_meta(%{version: version, app: app, requirements: requirements}), checksum)
@@ -50,5 +52,18 @@ defmodule HexWeb.Web.RouterTest do
     assert conn.assigns[:num_releases] == 6
     assert Enum.count(conn.assigns[:releases_new]) == 6
     assert Enum.count(conn.assigns[:package_new]) == 3
+  end
+
+  test "user page" do
+    {:ok, joe} = User.create(%{username: "joe", email: "joe@example.com", password: "joe"}, true)
+    HexWeb.Repo.insert(%PackageOwner{package_id: Package.get("foo").id, owner_id: joe.id})
+    HexWeb.Repo.insert(%PackageOwner{package_id: Package.get("bar").id, owner_id: joe.id})
+
+    conn = conn(:get, "/users/#{joe.id}")
+    conn = Router.call(conn, [])
+
+    assert conn.status == 200
+    assert conn.assigns[:user].username == "joe"
+    assert Enum.count(conn.assigns[:packages]) == 2
   end
 end

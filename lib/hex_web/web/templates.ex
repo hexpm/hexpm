@@ -35,7 +35,8 @@ defmodule HexWeb.Web.Templates do
     docs_codeofconduct: [:_],
     reset: [:assigns],
     resetresult: [:assigns],
-    versions: [:package, :releases]
+    versions: [:package, :releases],
+    user: [:assigns]
   ]
 
   Enum.each(@templates, fn {name, args} ->
