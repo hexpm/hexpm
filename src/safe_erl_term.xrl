@@ -18,6 +18,7 @@ Rules.
 [\#\[\]}{,+-]       : {token, {list_to_atom(TokenChars), TokenLine}}.
 (<<|>>|=>)          : {token, {list_to_atom(TokenChars), TokenLine}}.
 \.                  : {token, {dot, TokenLine}}.
+/                   : {token, {'/', TokenLine}}.
 {WS}+               : skip_token.
 
 Erlang code.

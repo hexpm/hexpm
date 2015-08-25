@@ -39,6 +39,10 @@ defmodule SafeErlTermTest do
     string! ~C'''
     <<1, 2, "three", 4, 5>>.
     '''
+
+    string! ~C'''
+    <<"åäö"/utf8>>.
+    '''
   end
 
   test "fails on unknown atoms" do
