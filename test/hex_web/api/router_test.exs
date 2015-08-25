@@ -317,7 +317,7 @@ defmodule HexWeb.API.RouterTest do
     conn = Router.call(conn, [])
     assert conn.status == 201
 
-    refute %File.Stat{mtime: {{2000,1,1,},{1,1,1}}} = File.stat!(path)
+    refute File.stat!(path).mtime == {{2000,1,1,},{1,1,1}}
   end
 
   test "create key" do
