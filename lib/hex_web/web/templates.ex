@@ -33,6 +33,7 @@ defmodule HexWeb.Web.Templates do
     docs_publish: [:_],
     docs_tasks: [:_],
     docs_codeofconduct: [:_],
+    docs_faq: [:_],
     reset: [:assigns],
     resetresult: [:assigns],
     versions: [:package, :releases]
