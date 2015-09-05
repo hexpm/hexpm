@@ -33,7 +33,7 @@ You are required to confirm your email to access your account, a confirmation em
 <h4>Metadata</h4>
 
 <p>
-First, make sure that the <code>:version</code> property is correct. All Hex packages are required to follow <a href="http://semver.org/">semantic versioning</a>. <code>:version</code> and <code>:app</code> (the package name) are the only required properties.
+  First, make sure that the <code>:version</code> property is correct. All Hex packages are required to follow <a href="http://semver.org/">semantic versioning</a>. <code>:version</code> and <code>:app</code> (the package name) are the only required properties.
 </p>
 
 <p>
@@ -56,6 +56,10 @@ First, make sure that the <code>:version</code> property is correct. All Hex pac
   <dt><code>:build_tools</code></dt>
   <dd>List of build tools that can build the package. Hex will try to automatically detect the build tools, it will do this based on the files in the package. If a "rebar" or "rebar.config" file is present Hex will mark it as able to build with rebar. This detection can be overridden by setting this field.</dd>
 </dl>
+
+<p>
+  These <code>:package</code> properties are also optional but highly recommended.
+</p>
 
 <h4>Dependencies</h4>
 
