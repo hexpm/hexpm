@@ -1,7 +1,7 @@
 <h2>Publishing a package</h2>
 
 <p>
-  Publishing a package to Hex consists of registering a Hex user, adding metadata and dependencies to the project's <code>mix.exs</code> file, and finally submitting the package with a <code>mix</code> task.
+  Publishing a package to Hex consists of registering a Hex user, adding metadata to the project's <code>mix.exs</code> file, and finally submitting the package with a <code>mix</code> task.
 </p>
 
 <h3>Registering a Hex user</h3>
@@ -24,13 +24,11 @@ You are required to confirm your email to access your account, a confirmation em
   Once this step has been completed, check your email inbox for the confirmation email. Once you have followed the enclosed link, your account will be ready to use.
 </p>
 
-<h3>Adding metadata and dependencies to <code>mix.exs</code></h3>
+<h3>Adding metadata to <code>mix.exs</code></h3>
 
 <p>
   The package is configured in the <code>project</code> function in the project's <code>mix.exs</code> file. <a href="#example-mix-exs-file">See below</a> for an example file.
 </p>
-
-<h4>Metadata</h4>
 
 <p>
   First, make sure that the <code>:version</code> property is correct. All Hex packages are required to follow <a href="http://semver.org/">semantic versioning</a>. <code>:version</code> and <code>:app</code> (the package name) are the only required properties.
