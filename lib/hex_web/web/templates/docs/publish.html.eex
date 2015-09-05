@@ -45,21 +45,17 @@ You are required to confirm your email to access your account, a confirmation em
 </p>
 
 <dl class="dl-horizontal">
-  <dt><code>:files</code></dt>
-  <dd>A list of files and directories to include in the package. Defaults to standard project directories. Has to include <code>mix.exs</code>.</dd>
   <dt><code>:contributors</code></dt>
-  <dd>A list of names of contributors to the project.</dd>
+  <dd>A list of names of contributors to the project. Optional but highly recommended.</dd>
   <dt><code>:licenses</code></dt>
-  <dd>A list of licences the project is licensed under.</dd>
+  <dd>A list of licences the project is licensed under. Optional but highly recommended.</dd>
   <dt><code>:links</code></dt>
-  <dd>A map where the key is a link name and the value is the link URL.</dd>
+  <dd>A map where the key is a link name and the value is the link URL. Optional but highly recommended.</dd>
+  <dt><code>:files</code></dt>
+  <dd>A list of files and directories to include in the package. Has to include <code>mix.exs</code>. Defaults to standard project directories, so you usually don't need to set this property.</dd>
   <dt><code>:build_tools</code></dt>
-  <dd>List of build tools that can build the package. Hex will try to automatically detect the build tools, it will do this based on the files in the package. If a "rebar" or "rebar.config" file is present Hex will mark it as able to build with rebar. This detection can be overridden by setting this field.</dd>
+  <dd>List of build tools that can build the package. It's very rare that you need to set this, as Hex tries to automatically detect the build tools based on the files in the package. If a "rebar" or "rebar.config" file is present Hex will mark it as able to build with rebar. This detection can be overridden by setting this field.</dd>
 </dl>
-
-<p>
-  These <code>:package</code> properties are also optional but highly recommended.
-</p>
 
 <h4>Dependencies</h4>
 
