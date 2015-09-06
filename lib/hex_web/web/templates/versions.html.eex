@@ -1,6 +1,6 @@
-    <ul class="list-unstyled">
+
       <%= for release <- releases do %>
-        <li>
+        <li <%= if older? do %> class="older"<% end %>>
           <a href="/packages/<%= package.name %>/<%= release.version %>"><strong><%= release.version %></strong></a>
           <span class="text-muted"><%= pretty_date(release.inserted_at) %></span>
           <%= if release.has_docs do %>
@@ -8,4 +8,4 @@
           <% end %>
         </li>
       <% end %>
-    </ul>
+

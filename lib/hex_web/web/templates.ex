@@ -36,7 +36,7 @@ defmodule HexWeb.Web.Templates do
     docs_faq: [:_],
     reset: [:assigns],
     resetresult: [:assigns],
-    versions: [:package, :releases]
+    versions: [:package, :releases, :older?]
   ]
 
   Enum.each(@templates, fn {name, args} ->

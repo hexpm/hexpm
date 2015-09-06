@@ -73,6 +73,18 @@ body {
   text-decoration: none !important;
 }
 
+#versions {
+  margin-bottom: 0;
+}
+
+.show-versions {
+  display: none;
+  margin-top: 10px;
+}
+.show-versions .btn:focus, .show-versions .btn:active {
+   outline: none !important;
+}
+
 @media (min-width: 768px) {
   .package-meta dt {
     width: 90px;

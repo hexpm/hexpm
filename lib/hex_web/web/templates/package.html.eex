@@ -87,15 +87,22 @@ build_tools = @current_release && @current_release.meta["build_tools"] || []
   <div class="col-sm-6">
     <h4>Versions</h4>
 
-    <% show_latest_versions = 5 %>
-    <%= safe template_versions(@package, Enum.take(@releases, show_latest_versions)) %>
+    <ul id="versions" class="list-unstyled">
+      <% show_latest_versions = 5 %>
+      <%= safe template_versions(@package, Enum.take(@releases, show_latest_versions), false) %>
+
+      <%= if length(@releases) > show_latest_versions do %>
+        <%= safe template_versions(@package, Enum.drop(@releases, show_latest_versions), true) %>
+      <% end %>
+    </ul>
 
     <%= if length(@releases) > show_latest_versions do %>
-    <div class="collapse" id="oldestVersions">
-      <%= safe template_versions(@package, Enum.drop(@releases, show_latest_versions)) %>
-    </div>
-    <p><a class="btn btn-primary" role="button" data-toggle="collapse" href="#oldestVersions" aria-expanded="false" aria-controls="oldestVersions">Oldest versions</a></p>
+      <p class="show-versions"><button class="btn btn-primary toggle-text" role="button" data-toggle="collapse" data-target="#versions li.older" aria-expanded="false" aria-controls="versions">
+        <span>All Versions</span>
+        <span class="invisible">Recent Versions</span>
+      </button></p>
     <% end %>
+
   </div>
 
   <div class="col-sm-6">
