@@ -3,7 +3,7 @@ use Mix.Config
 config :hex_web,
   password_work_factor: 4,
 
-  port:          "4000",
+  port:          System.get_env("PORT") || "4000",
   url:           System.get_env("HEX_URL"),
   app_host:      System.get_env("APP_HOST"),
 

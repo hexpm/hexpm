@@ -11,5 +11,3 @@ HexWeb.Util.shell(~s(aws s3 cp #{date}.zip s3://s3.hex.pm/log-archives/#{dir}-#{
 
 HexWeb.Util.shell(~s(aws s3 rm s3://logs.hex.pm --recursive --exclude "*" --include "#{dir}/#{date}*"))
 
-File.cd!("../..")
-File.rm_rf!("logs")
