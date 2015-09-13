@@ -43,20 +43,31 @@ defmodule HexWeb.API.Handlers.Docs do
   end
 
   def upload_docs(release, files, body) do
-
     package  = release.package
     name     = package.name
     version  = to_string(release.version)
 
     store = Application.get_env(:hex_web, :store)
 
+    files =
+      Enum.flat_map(files, fn {path, data} ->
+        [{Path.join([name, version, path]), data},
+         {Path.join(name, path), data}]
+      end)
+
+    paths = Enum.into(files, HashSet.new, &elem(&1, 0))
+
     # Delete old files
     # Add "/" so that we don't get prefix matches, for example phoenix
     # would match phoenix_html
-    paths = store.list_docs_pages(name <> "/")
-    Enum.each(paths, fn path ->
-      first = Path.relative_to(path, name)|> Path.split |> hd
+    existing_paths = store.list_docs_pages("#{name}/")
+    Enum.each(existing_paths, fn path ->
+      first = Path.relative_to(path, name) |> Path.split |> hd
       cond do
+        # Don't delete if we are going to overwrite with new files, this
+        # removes the downtime between a deleted and added page
+        path in paths ->
+          :ok
         # Current (/ecto/0.8.1/...)
         first == version ->
           store.delete_docs_page(path)
@@ -72,10 +83,7 @@ defmodule HexWeb.API.Handlers.Docs do
     store.put_docs("#{name}-#{version}.tar.gz", body)
 
     # Upload new files
-    Enum.each(files, fn {path, data} ->
-      store.put_docs_page(Path.join([name, version, path]), data)
-      store.put_docs_page(Path.join(name, path), data)
-    end)
+    Enum.each(files, fn {path, data} -> store.put_docs_page(path, data) end)
 
     # Set docs flag on release
     %{release | has_docs: true}
