@@ -65,18 +65,34 @@ defmodule HexWeb.Web.Router do
 
   get "docs/usage" do
     active    = :docs
-    title     = "Usage"
+    title     = "Mix Usage"
 
     conn = assign_pun(conn, [active, title])
     send_page(conn, :"docs_usage")
   end
 
+  get "docs/rebar3_usage" do
+    active    = :docs
+    title     = "Rebar3 Usage"
+
+    conn = assign_pun(conn, [active, title])
+    send_page(conn, :"docs_rebar3_usage")
+  end
+
   get "docs/publish" do
     active    = :docs
-    title     = "Publish package"
+    title     = "Mix Publish package"
 
     conn = assign_pun(conn, [active, title])
     send_page(conn, :"docs_publish")
+  end
+
+  get "docs/rebar3_publish" do
+    active    = :docs
+    title     = "Rebar3 Publish package"
+
+    conn = assign_pun(conn, [active, title])
+    send_page(conn, :"docs_rebar3_publish")
   end
 
   get "docs/tasks" do
