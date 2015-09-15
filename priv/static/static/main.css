@@ -137,3 +137,8 @@ body {
   padding-right: 1em;
   text-align: right;
 }
+
+.menu-dropdown-header {
+  font-size: 14px;
+  color: #333;
+}
