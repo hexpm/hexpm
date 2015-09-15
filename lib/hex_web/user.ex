@@ -22,6 +22,7 @@ defmodule HexWeb.User do
   end
 
   before_delete :delete_keys
+  before_delete :delete_owners
 
   defp changeset(user, :create, params) do
     cast(user, params, ~w(username password email), [])
@@ -154,6 +155,12 @@ defmodule HexWeb.User do
 
   defp delete_keys(changeset) do
     assoc(changeset.model, :keys)
+    |> HexWeb.Repo.delete_all
+    changeset
+  end
+
+  defp delete_owners(changeset) do
+    assoc(changeset.model, :package_owners)
     |> HexWeb.Repo.delete_all
     changeset
   end
