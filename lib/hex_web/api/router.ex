@@ -152,6 +152,8 @@ defmodule HexWeb.API.Router do
             HexWeb.API.Handlers.Package.revert(name, release)
           end
 
+          # TODO: Remove package from database if this was the only release
+
           send_delete_resp(conn, result, :public)
         end)
       else

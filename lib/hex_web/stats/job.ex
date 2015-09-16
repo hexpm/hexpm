@@ -5,9 +5,7 @@ defmodule HexWeb.Stats.Job do
   alias HexWeb.Release
   alias HexWeb.Stats.Download
 
-  @max_downloads_per_ip 10
-
-  def run(date) do
+  def run(date, max_downloads_per_ip \\ 10, dryrun? \\ false) do
     start()
 
     prefix = "hex/#{date_string(date)}"
@@ -15,26 +13,28 @@ defmodule HexWeb.Stats.Job do
     date = Ecto.Type.load!(Ecto.Date, date)
 
     # TODO: Map/Reduce
-    dict = process_keys(keys) |> cap_on_ip
+    dict = process_keys(keys) |> cap_on_ip(max_downloads_per_ip)
     packages = packages()
     releases = releases()
 
-    HexWeb.Repo.transaction(fn ->
-      HexWeb.Repo.delete_all(from(d in Download, where: d.day == ^date))
+    unless dryrun? do
+      HexWeb.Repo.transaction(fn ->
+        HexWeb.Repo.delete_all(from(d in Download, where: d.day == ^date))
 
-      Enum.each(dict, fn {{package, version}, count} ->
-        pkg_id = packages[package]
-        rel_id = releases[{pkg_id, version}]
+        Enum.each(dict, fn {{package, version}, count} ->
+          pkg_id = packages[package]
+          rel_id = releases[{pkg_id, version}]
 
-        if rel_id do
-          %Download{release_id: rel_id, downloads: count, day: date}
-          |> HexWeb.Repo.insert
-        end
+          if rel_id do
+            %Download{release_id: rel_id, downloads: count, day: date}
+            |> HexWeb.Repo.insert
+          end
+        end)
+
+        HexWeb.Stats.PackageDownload.refresh
+        HexWeb.Stats.ReleaseDownload.refresh
       end)
-
-      HexWeb.Stats.PackageDownload.refresh
-      HexWeb.Stats.ReleaseDownload.refresh
-    end)
+    end
 
     num = Enum.reduce(dict, 0, fn {_, count}, acc -> count + acc end)
 
@@ -54,9 +54,9 @@ defmodule HexWeb.Stats.Job do
     end)
   end
 
-  defp cap_on_ip(dict) do
+  defp cap_on_ip(dict, max_downloads_per_ip) do
     Enum.reduce(dict, HashDict.new, fn {{release, _ip}, count}, dict ->
-      count = min(@max_downloads_per_ip, count)
+      count = min(max_downloads_per_ip, count)
       HashDict.update(dict, release, count, &(&1 + count))
     end)
   end
