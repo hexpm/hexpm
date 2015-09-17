@@ -5,7 +5,7 @@ defmodule HexWeb.Stats.Job do
   alias HexWeb.Release
   alias HexWeb.Stats.Download
 
-  def run(date, max_downloads_per_ip \\ 10, dryrun? \\ false) do
+  def run(date, max_downloads_per_ip \\ 100, dryrun? \\ false) do
     start()
 
     prefix = "hex/#{date_string(date)}"
