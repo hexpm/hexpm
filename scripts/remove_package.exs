@@ -8,8 +8,14 @@ unless package do
 end
 
 releases = HexWeb.Release.all(package)
+owners   = HexWeb.Package.owners(package)
 
 IO.puts name
+
+IO.puts ""
+IO.puts "Owners:"
+Enum.each(owners, &IO.puts("#{&1.username} #{&1.email}"))
+
 IO.puts ""
 IO.puts "Releases:"
 Enum.each(releases, &IO.puts(&1.version))
