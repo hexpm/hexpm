@@ -121,7 +121,7 @@ build_tools = @current_release && @current_release.meta["build_tools"] || []
           <div class="input-group input-group-sm" >
 
             <input type="text" class="form-control snippet"
-              value='{:<%= @package.name %>, "<%= @mix_snippet %>"}'
+              value="<%= format_dep_snippet(:mix, @package.name, @mix_snippet, @current_release) %>"
               onfocus="this.select();"
               readonly="readonly"  id="mix-snippet" />
             <div class="input-group-btn" >
@@ -135,7 +135,7 @@ build_tools = @current_release && @current_release.meta["build_tools"] || []
           rebar.config:
           <div class="input-group input-group-sm" >
             <input type="text" class="form-control input-sm snippet"
-              value='{<%= @package.name %>, "<%= @rebar_snippet %>"}'
+              value="<%= format_dep_snippet(:rebar, @package.name, @rebar_snippet, @current_release) %>"
               onfocus="this.select();"
               readonly="readonly"  id="rebar-snippet" />
             <div class="input-group-btn" >
