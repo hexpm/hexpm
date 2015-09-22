@@ -5,7 +5,7 @@ defmodule HexWeb.API.ElixirFormat do
   @spec encode(term) :: String.t
   def encode(term) do
     HexWeb.Util.binarify(term)
-    |> inspect(limit: 80, binaries: :as_strings)
+    |> inspect(limit: :infinity, binaries: :as_strings)
   end
 
   @doc """
