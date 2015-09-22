@@ -8,7 +8,9 @@ defmodule HexWeb do
     port = Application.get_env(:hex_web, :port)
     opts = Keyword.put(opts, :port, String.to_integer(port))
 
-    config(opts[:port])
+    use_ssl = match?("https://" <> _, Application.get_env(:hex_web, :url))
+    Application.put_env(:hex_web, :use_ssl, use_ssl)
+    Application.put_env(:hex_web, :tmp, Path.expand("tmp"))
 
     File.mkdir_p!("tmp")
     HexWeb.Supervisor.start_link(opts)
@@ -28,28 +30,6 @@ defmodule HexWeb do
     [ length: 10_000_000,
       read_length: 10_000,
       read_timeout: 1_000 ]
-  end
-
-  defp config(port) do
-    if System.get_env("HEX_S3_BUCKET") do
-      store = HexWeb.Store.S3
-    else
-      store = HexWeb.Store.Local
-    end
-
-    if System.get_env("HEX_SES_USERNAME") do
-      email = HexWeb.Email.SES
-    else
-      email = HexWeb.Email.Local
-    end
-
-    use_ssl = match?("https://" <> _, Application.get_env(:hex_web, :url))
-
-    Application.put_env(:hex_web, :use_ssl, use_ssl)
-    Application.put_env(:hex_web, :store, store)
-    Application.put_env(:hex_web, :email, email)
-    Application.put_env(:hex_web, :tmp, Path.expand("tmp"))
-    Application.put_env(:hex_web, :port, port)
   end
 
   defprotocol Render do
