@@ -6,6 +6,7 @@ defmodule HexWeb.Tar do
   # contents.tar.gz - gzipped tar file of all files bundled in the release
 
   @files ["VERSION", "CHECKSUM", "metadata.config", "contents.tar.gz"]
+  @tar_max_size 8 * 1024 * 1024
 
   defmacrop if_ok(expr, call) do
     quote do
@@ -15,6 +16,10 @@ defmodule HexWeb.Tar do
         other -> other
       end
     end
+  end
+
+  def metadata(binary) when byte_size(binary) > @tar_max_size do
+    {:error, :too_big}
   end
 
   def metadata(binary) do

@@ -3,6 +3,10 @@ defmodule HexWeb.API.Handlers.Docs do
   import HexWeb.API.Util
   import HexWeb.Util, only: [api_url: 1, task: 3]
 
+  @zlib_magic 16 + 15
+  @compressed_max_size 8 * 1024 * 1024
+  @uncompressed_max_size 64 * 1024 * 1024
+
   def publish(conn, release, user, body) do
     case handle_tar(release, user, body) do
       :ok ->
@@ -22,24 +26,62 @@ defmodule HexWeb.API.Handlers.Docs do
   end
 
   defp handle_tar(release, user, body) do
-    case :erl_tar.extract({:binary, body}, [:memory, :compressed]) do
-      {:ok, files} ->
-        files = Enum.map(files, fn {path, data} -> {List.to_string(path), data} end)
+    case unzip(body) do
+      {:ok, data} ->
+        case :erl_tar.extract({:binary, data}, [:memory]) do
+          {:ok, files} ->
+            files = Enum.map(files, fn {path, data} -> {List.to_string(path), data} end)
 
-        if check_version_dirs?(files) do
-          task    = fn -> upload_docs(release, files, body) end
-          success = fn -> success(release, user) end
-          failure = fn -> failure(release, user) end
-          task(task, success, failure)
+            if check_version_dirs?(files) do
+              task    = fn -> upload_docs(release, files, body) end
+              success = fn -> success(release, user) end
+              failure = fn -> failure(release, user) end
+              task(task, success, failure)
 
-          :ok
-        else
-          {:error, {:tar, "directory name not allowed to match a semver version"}}
+              :ok
+            else
+              {:error, {:tar, "directory name not allowed to match a semver version"}}
+            end
+
+          {:error, reason} ->
+            {:error, {:tar, inspect reason}}
         end
 
       {:error, reason} ->
-        {:error, {:tar, inspect reason}}
+        {:error, reason}
     end
+  end
+
+  defp unzip(data) when byte_size(data) > @compressed_max_size do
+    {:error, {:tar, :too_big}}
+  end
+
+  defp unzip(data) do
+    stream = :zlib.open
+
+    try do
+      :zlib.inflateInit(stream, @zlib_magic)
+      # limit single uncompressed chunk size to 512kb
+      :zlib.setBufSize(stream, 512 * 1024)
+      uncompressed = unzip_inflate(stream, "", 0, :zlib.inflateChunk(stream, data))
+      :zlib.inflateEnd(stream)
+      uncompressed
+    after
+      :zlib.close(stream)
+    end
+  end
+
+  defp unzip_inflate(stream, data, total, _) when total > @uncompressed_max_size do
+    {:error, {:tar, :too_big}}
+  end
+
+  defp unzip_inflate(stream, data, total, {:more, uncompressed}) do
+    total = total + byte_size(uncompressed)
+    unzip_inflate(stream, [data|uncompressed], total, :zlib.inflateChunk(stream))
+  end
+
+  defp unzip_inflate(_stream, data, _total, uncompressed) do
+    {:ok, IO.iodata_to_binary([data|uncompressed])}
   end
 
   def upload_docs(release, files, body) do
