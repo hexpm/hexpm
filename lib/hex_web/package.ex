@@ -30,7 +30,7 @@ defmodule HexWeb.Package do
   @reserved_names @elixir_names ++ @otp_names ++ @tool_names
 
   @meta_types %{
-    "contributors" => {:array, :string},
+    "maintainers"  => {:array, :string},
     "licenses"     => {:array, :string},
     "links"        => {:dict, :string, :string},
     "description"  => :string
@@ -58,12 +58,26 @@ defmodule HexWeb.Package do
     |> validate_unique(:name, on: HexWeb.Repo)
   end
 
+  # TODO: Drop support for contributors (maintainers released in 0.9.0, date TBD)
+
   defp changeset(package, :update, params) do
     cast(package, params, ~w(name meta), [])
+    |> update_change(:meta, &rename_key(&1, "contributors", "maintainers"))
     |> update_change(:meta, &Map.take(&1, @meta_fields))
     |> validate_format(:name, ~r"^[a-z]\w*$")
     |> validate_exclusion(:name, @reserved_names)
     |> validate_meta(:meta)
+  end
+
+  defp rename_key(map, old_key, new_key) do
+    case Map.fetch(map, old_key) do
+      {:ok, value} ->
+        map
+        |> Map.delete(old_key)
+        |> Map.put(new_key, value)
+      :error ->
+        map
+    end
   end
 
   def create(owner, params) do

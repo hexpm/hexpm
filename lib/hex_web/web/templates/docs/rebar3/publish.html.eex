@@ -50,8 +50,8 @@ You are required to confirm your email to access your account, a confirmation em
 </p>
 
 <dl class="dl-horizontal">
-  <dt><code>contributors</code></dt>
-  <dd>A list of names of contributors to the project. Optional but highly recommended.</dd>
+  <dt><code>maintainers</code></dt>
+  <dd>A list of names and or emails of maintainers to the project. Optional but highly recommended.</dd>
   <dt><code>licenses</code></dt>
   <dd>A list of licences the project is licensed under. Optional but highly recommended.</dd>
   <dt><code>links</code></dt>
@@ -96,8 +96,8 @@ You are required to confirm your email to access your account, a confirmation em
                    erlware_commons,
                    bbmustache,
                    providers]},
-   {contributors, ["Eric Merritt", "Tristan Sloughter",
-                   "Jordan Wilberding"]},
+   {maintainers, ["Eric Merritt", "Tristan Sloughter",
+                  "Jordan Wilberding"]},
    {licenses, ["Apache"]},
    {links, [{"Github", "https://github.com/erlware/relx"}]}]}.
 </code></pre>

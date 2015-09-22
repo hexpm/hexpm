@@ -11,7 +11,8 @@
 </div>
 
 <%
-contribs = @package.meta["contributors"] || []
+# TODO: Drop support for contributors (maintainers released in 0.9.0, date TBD)
+maintains = @package.meta["maintainers"] || @package.meta["contributors"] || []
 licenses = @package.meta["licenses"] || []
 links = Enum.to_list(@package.meta["links"] || [])
 build_tools = @current_release && @current_release.meta["build_tools"] || []
@@ -29,9 +30,9 @@ build_tools = @current_release && @current_release.meta["build_tools"] || []
         </dd>
       <% end %>
 
-      <%= if contribs != [] do %>
-        <dt>Contributors</dt>
-        <dd><%= Enum.join(contribs, ", ") %></dd>
+      <%= if maintains != [] do %>
+        <dt>Maintainers</dt>
+        <dd><%= Enum.join(maintains, ", ") %></dd>
       <% end %>
 
       <%= if licenses != [] do %>

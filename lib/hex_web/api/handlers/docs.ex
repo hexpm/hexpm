@@ -71,7 +71,7 @@ defmodule HexWeb.API.Handlers.Docs do
     end
   end
 
-  defp unzip_inflate(stream, data, total, _) when total > @uncompressed_max_size do
+  defp unzip_inflate(_stream, _data, total, _) when total > @uncompressed_max_size do
     {:error, {:tar, :too_big}}
   end
 

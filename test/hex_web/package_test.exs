@@ -23,12 +23,12 @@ defmodule HexWeb.PackageTest do
 
     Package.update(package, %{"meta" => %{"contributors" => ["eric", "josé"]}})
     package = Package.get("ecto")
-    assert length(package.meta["contributors"]) == 2
+    assert length(package.meta["maintainers"]) == 2
   end
 
   test "validate valid meta" do
     meta = %{
-      "contributors" => ["eric", "josé"],
+      "maintainers" => ["eric", "josé"],
       "licenses"     => ["apache", "BSD"],
       "links"        => %{"github" => "www", "docs" => "www"},
       "description"  => "so good"}
@@ -48,12 +48,12 @@ defmodule HexWeb.PackageTest do
     assert %Package{meta: meta2} = Package.get("ecto")
 
     assert Map.size(meta2) == 1
-    assert meta["contributors"] == meta2["contributors"]
+    assert meta["contributors"] == meta2["maintainers"]
   end
 
   test "validate invalid meta" do
     meta = %{
-      "contributors" => "eric",
+      "maintainers" => "eric",
       "licenses"     => 123,
       "links"        => ["url"],
       "description"  => ["so bad"]}

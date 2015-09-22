@@ -45,7 +45,7 @@ HexWeb.Repo.transaction(fn ->
       Package.create(eric, %{
         name: "decimal",
         meta: %{
-          contributors: ["Eric Meadows-Jönsson"],
+          maintainers: ["Eric Meadows-Jönsson"],
           licenses: ["Apache 2.0", "MIT"],
           links: %{"Github" => "http://example.com/github",
                    "Documentation" => "http://example.com/documentation"},
@@ -59,7 +59,7 @@ HexWeb.Repo.transaction(fn ->
       Package.create(eric, %{
         name: "postgrex",
         meta: %{
-          contributors: ["Eric Meadows-Jönsson", "José Valim"],
+          maintainers: ["Eric Meadows-Jönsson", "José Valim"],
           licenses: ["Apache 2.0"],
           links: %{"Github" => "http://example.com/github"},
           description: lorem}})
@@ -74,7 +74,7 @@ HexWeb.Repo.transaction(fn ->
       Package.create(jose, %{
         name: "ecto",
         meta: %{
-          contributors: ["Eric Meadows-Jönsson", "José Valim"],
+          maintainers: ["Eric Meadows-Jönsson", "José Valim"],
           licenses: [],
           links: %{"Github" => "http://example.com/github"},
           description: lorem}})
@@ -98,7 +98,7 @@ HexWeb.Repo.transaction(fn ->
       Package.create(joe, %{
         name: "ups_" <> to_string(index),
         meta: %{
-          contributors: ["Joe Somebody"],
+          maintainers: ["Joe Somebody"],
           licenses: [],
           links: %{"Github" => "http://example.com/github"},
           description: lorem}})

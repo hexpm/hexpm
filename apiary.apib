@@ -80,7 +80,7 @@ Basic authentication is only allowed on some resources, specifically ones used t
   1. Sending invalid JSON, Elixir or Erlang will result in `400 Bad Request`.
 
         HTTP/1.1 400 Bad Request
-    
+
         {
           "status": 400,
           "message": "malformed request, got Poison.SyntaxError with message Unexpected token: +"
@@ -281,6 +281,7 @@ This collection is paginated.
 + Attributes
     + `name` (string, required) - Package name
     + `meta` (object, required) - Package metadata
+        + `contributors` (array[string], required) - Package maintainers (migrating to rename attribute to `maintainers` both values are valid)
         + `links` (object, required) - Links related to the package, key is the link name, value is the URL
         + `licenses` (array[string], required) - Licenses that apply to the package
         + `description` (string, required) - Package description, recommended to be a single paragraph
@@ -472,7 +473,7 @@ The uploaded tarball will be served under https://s3.amazonaws.com/s3.hex.pm/doc
 The tarball contents will be served at http://hexdocs.pm/{package}/{version}. The latest upload will be served at http://hexdocs.pm/{package}.
 
 + Request
-    
+
     This request requires authentication.
 
     The body should be a gzipped tarball containing files that should be served as documentation for the project. It should contain an `index.html` that will be served as the root.
@@ -504,7 +505,7 @@ Package owners are Users that can publish packages. Any owner can add or remove 
 ### Fetch Package Owners [GET]
 
 + Request
-    
+
     This request requires authentication.
 
     + Header
@@ -638,7 +639,7 @@ API Keys are used to authenticate requests (see Authentication section for more 
 ### Remove an API Key [DELETE]
 
 + Request
-    
+
     This request requires authentication.
 
     + Header

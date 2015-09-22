@@ -18,19 +18,19 @@ kvlists are normally generic in the sense that they can have any values for keys
 All keys are strings.
 
   + `name (string)`
-  
+
     Package name
 
   + `version (string)`
-  
+
     Release version, required to be a [Semantic Version][]
 
   + `app (string)`
-    
+
     OTP application name, usually the same name as the package but can differ
 
   + `description (string)`
-    
+
     Package description, recommended to be a single paragraph
 
   + `files (list(string))`
@@ -40,6 +40,14 @@ All keys are strings.
   + `licenses (list(string))`
 
     The library's licenses
+
+  + `contributors (list(string))`
+
+    The library's maintainers, can be a list of names and/or emails
+
+    NOTE: This field is deprecated and will change name to `maintainers`, new packages
+    should use `maintainers` but old packages will use `contributors` until the conversion
+    happens
 
   + `links (kvlist(string => string))`
 
