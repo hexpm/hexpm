@@ -170,10 +170,12 @@ defmodule HexWeb.Web.Router do
       release_downloads = ReleaseDownload.release(current_release)
       reqs = Release.requirements(current_release)
       current_release = %{current_release | requirements: reqs}
+      mix_snippet = Util.mix_snippet_version(current_release.version)
+      rebar_snippet = Util.rebar_snippet_version(current_release.version)
     end
 
     conn = assign_pun(conn, [package, releases, current_release, downloads,
-                             release_downloads, active, title])
+                             release_downloads, active, title, mix_snippet, rebar_snippet])
     send_page(conn, :package)
   end
 
