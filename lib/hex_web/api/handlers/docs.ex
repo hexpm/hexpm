@@ -3,6 +3,7 @@ defmodule HexWeb.API.Handlers.Docs do
   import HexWeb.API.Util
   import HexWeb.Util, only: [api_url: 1, task: 3]
 
+  @otp_release List.to_integer :erlang.system_info(:otp_release)
   @zlib_magic 16 + 15
   @compressed_max_size 8 * 1024 * 1024
   @uncompressed_max_size 64 * 1024 * 1024
@@ -56,32 +57,45 @@ defmodule HexWeb.API.Handlers.Docs do
     {:error, {:tar, :too_big}}
   end
 
-  defp unzip(data) do
-    stream = :zlib.open
-
-    try do
-      :zlib.inflateInit(stream, @zlib_magic)
-      # limit single uncompressed chunk size to 512kb
-      :zlib.setBufSize(stream, 512 * 1024)
-      uncompressed = unzip_inflate(stream, "", 0, :zlib.inflateChunk(stream, data))
-      :zlib.inflateEnd(stream)
-      uncompressed
-    after
-      :zlib.close(stream)
+  if @otp_release < 18 do
+    defp unzip(data) do
+      uncompressed = :zlib.gunzip(data)
+      if byte_size(uncompressed) > @uncompressed_max_size do
+        {:error, {:tar, :too_big}}
+      else
+        {:ok, uncompressed}
+      end
     end
-  end
 
-  defp unzip_inflate(_stream, _data, total, _) when total > @uncompressed_max_size do
-    {:error, {:tar, :too_big}}
-  end
+  else
 
-  defp unzip_inflate(stream, data, total, {:more, uncompressed}) do
-    total = total + byte_size(uncompressed)
-    unzip_inflate(stream, [data|uncompressed], total, :zlib.inflateChunk(stream))
-  end
+    defp unzip(data) do
+      stream = :zlib.open
 
-  defp unzip_inflate(_stream, data, _total, uncompressed) do
-    {:ok, IO.iodata_to_binary([data|uncompressed])}
+      try do
+        :zlib.inflateInit(stream, @zlib_magic)
+        # limit single uncompressed chunk size to 512kb
+        :zlib.setBufSize(stream, 512 * 1024)
+        uncompressed = unzip_inflate(stream, "", 0, :zlib.inflateChunk(stream, data))
+        :zlib.inflateEnd(stream)
+        uncompressed
+      after
+        :zlib.close(stream)
+      end
+    end
+
+    defp unzip_inflate(_stream, _data, total, _) when total > @uncompressed_max_size do
+      {:error, {:tar, :too_big}}
+    end
+
+    defp unzip_inflate(stream, data, total, {:more, uncompressed}) do
+      total = total + byte_size(uncompressed)
+      unzip_inflate(stream, [data|uncompressed], total, :zlib.inflateChunk(stream))
+    end
+
+    defp unzip_inflate(_stream, data, _total, uncompressed) do
+      {:ok, IO.iodata_to_binary([data|uncompressed])}
+    end
   end
 
   def upload_docs(release, files, body) do
