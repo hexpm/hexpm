@@ -155,3 +155,7 @@ body {
 .green {
   color: green;
 }
+
+.input-group {
+  display: inline-table;
+}
