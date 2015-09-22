@@ -189,8 +189,9 @@ defmodule HexWeb.Package do
 
     desc_search = String.replace(search, ~r"\s+", " | ")
 
+    # without fragment("?::text", var.name) the gin_trgm_ops index will not be used
       from var in query,
-    where: ilike(var.name, ^name_search) or
+    where: ilike(fragment("?::text", var.name), ^name_search) or
            fragment("to_tsvector('english', regexp_replace((?->'description')::text, '/', ' ')) @@ to_tsquery('english', ?)",
                     var.meta, ^desc_search)
   end
