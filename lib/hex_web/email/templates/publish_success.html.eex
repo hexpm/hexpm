@@ -2,9 +2,11 @@
   The <%= if @docs do %>documentation for<% else %>release<% end %> <%= @package %> v<%= @version %> has been published, and is now available on Hex.pm.
 </p>
 
-<p>
-  Note that it may take a while for the documentation on hexdocs.pm to update due to caching.
-</p>
+<%= if @docs do %>
+  <p>
+    Note that it may take a while for the documentation on hexdocs.pm to update due to caching.
+  </p>
+<% end %>
 
 <p>
   --<br>
