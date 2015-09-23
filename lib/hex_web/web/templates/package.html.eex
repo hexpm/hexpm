@@ -61,12 +61,12 @@ build_tools = @current_release && @current_release.meta["build_tools"] || []
           <% show_latest_versions = 5 %>
           <%= safe template_versions(@package, Enum.take(@releases, show_latest_versions), false) %>
 
-          <%= if length(@releases) > show_latest_versions do %>
+          <%= if length(@releases)> show_latest_versions do %>
             <%= safe template_versions(@package, Enum.drop(@releases, show_latest_versions), true) %>
           <% end %>
         </ul>
 
-        <%= if length(@releases) > show_latest_versions do %>
+        <%= if length(@releases)> show_latest_versions do %>
           <p class="show-versions"><button class="btn btn-primary toggle-text" role="button" data-toggle="collapse" data-target="#versions li.older" aria-expanded="false" aria-controls="versions">
             <span>All Versions</span>
             <span class="invisible">Recent Versions</span>
@@ -118,29 +118,29 @@ build_tools = @current_release && @current_release.meta["build_tools"] || []
       <div class="panel-body">
         <div class="package-snippet">
           mix.exs:
-          <div class="input-group input-group-sm" >
+          <div class="input-group input-group-sm">
 
             <input type="text" class="form-control snippet"
               value="<%= format_dep_snippet(:mix, @package.name, @mix_snippet, @current_release) %>"
               onfocus="this.select();"
               readonly="readonly"  id="mix-snippet" />
-            <span class="input-group-btn" >
+            <span class="input-group-btn">
               <button class="btn btn-default btn-no-hover" type="button" onclick="copy_snippet('mix-snippet', this);">
-                <span class="glyphicon glyphicon-copy" ></span>
+                <span class="glyphicon glyphicon-copy"></span>
               </button>
             </span>
           </div>
         </div>
         <div class="package-snippet">
           rebar.config:
-          <div class="input-group input-group-sm" >
+          <div class="input-group input-group-sm">
             <input type="text" class="form-control input-sm snippet"
               value="<%= format_dep_snippet(:rebar, @package.name, @rebar_snippet, @current_release) %>"
               onfocus="this.select();"
               readonly="readonly"  id="rebar-snippet" />
-            <span class="input-group-btn" >
-              <button class="btn btn-default btn-no-hover" type="button"  onclick="copy_snippet('rebar-snippet', this);">
-                <span class="glyphicon glyphicon-copy" ></span>
+            <span class="input-group-btn">
+              <button class="btn btn-default btn-no-hover" type="button" onclick="copy_snippet('rebar-snippet', this);">
+                <span class="glyphicon glyphicon-copy"></span>
               </button>
             </span>
           </div>

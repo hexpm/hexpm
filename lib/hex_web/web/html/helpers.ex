@@ -64,11 +64,11 @@ defmodule HexWeb.Web.HTML.Helpers do
   end
 
   @doc """
-    A function which formats a packages release info into
-    a build tools dependency snippet
+  Formats a package's release info into a build tools dependency snippet.
   """
-  @spec format_dep_snippet(atom, binary, binary, %HexWeb.Release{}) :: binary
-  def format_dep_snippet(build_tool, package_name, snippet, current_release \\ %{meta: %{}})
+  def format_dep_snippet(_, _, _, nil) do
+    ""
+  end
 
   def format_dep_snippet(:mix, package_name, snippet, current_release) do
     app_name = current_release.meta["app"] || package_name
