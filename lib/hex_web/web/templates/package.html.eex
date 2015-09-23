@@ -124,11 +124,11 @@ build_tools = @current_release && @current_release.meta["build_tools"] || []
               value="<%= format_dep_snippet(:mix, @package.name, @mix_snippet, @current_release) %>"
               onfocus="this.select();"
               readonly="readonly"  id="mix-snippet" />
-            <div class="input-group-btn" >
-              <button class="btn btn-default" type="button" onclick="copy_snippet('mix-snippet', this);">
+            <span class="input-group-btn" >
+              <button class="btn btn-default btn-no-hover" type="button" onclick="copy_snippet('mix-snippet', this);">
                 <span class="glyphicon glyphicon-copy" ></span>
               </button>
-            </div>
+            </span>
           </div>
         </div>
         <div class="package-snippet">
@@ -138,11 +138,11 @@ build_tools = @current_release && @current_release.meta["build_tools"] || []
               value="<%= format_dep_snippet(:rebar, @package.name, @rebar_snippet, @current_release) %>"
               onfocus="this.select();"
               readonly="readonly"  id="rebar-snippet" />
-            <div class="input-group-btn" >
-              <button class="btn btn-default" type="button"  onclick="copy_snippet('rebar-snippet', this);">
+            <span class="input-group-btn" >
+              <button class="btn btn-default btn-no-hover" type="button"  onclick="copy_snippet('rebar-snippet', this);">
                 <span class="glyphicon glyphicon-copy" ></span>
               </button>
-            </div>
+            </span>
           </div>
         </div>
       </div>

@@ -156,6 +156,7 @@ body {
   color: green;
 }
 
-.input-group {
-  display: inline-table;
+.btn-no-hover:hover {
+  margin-top: 0px;
+  border-bottom-width: 4px;
 }
