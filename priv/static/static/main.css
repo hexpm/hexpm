@@ -142,3 +142,20 @@ body {
   font-size: 14px;
   color: #333;
 }
+
+.snippet, .snippet[readonly] {
+  cursor: default;
+  background-color: transparent;
+}
+
+.package-snippet {
+  margin: 0px 0px 10px;
+}
+
+.green {
+  color: green;
+}
+
+.input-group {
+  display: inline-table;
+}

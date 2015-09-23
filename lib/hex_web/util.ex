@@ -198,6 +198,14 @@ defmodule HexWeb.Util do
     result.status
   end
 
+  def mix_snippet_version(%Version{major: 0, minor: minor, patch: patch}),
+    do: "~> 0.#{minor}.#{patch}"
+  def mix_snippet_version(%Version{major: major, minor: minor}),
+    do: "~> #{major}.#{minor}"
+
+  def rebar_snippet_version(%Version{major: major, minor: minor, patch: patch}),
+    do: "#{major}.#{minor}.#{patch}"
+
   def association_loaded?(%Ecto.Association.NotLoaded{}),
     do: false
   def association_loaded?(_),
