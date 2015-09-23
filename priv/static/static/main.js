@@ -34,6 +34,6 @@ function copy_succeeded(button) {
 
 function copy_failed(button) {
   $(button).children().removeClass("glyphicon-copy").addClass("glyphicon-remove");
-  $(button).tooltip({ title: 'Copy failed :(', container: 'body', placement: 'bottom', trigger: 'manual' }).tooltip('show');
+  $(button).tooltip({ title: 'Not supported, copy manually', container: 'body', placement: 'bottom', trigger: 'manual' }).tooltip('show');
   setTimeout(function() { $(button).children().removeClass("glyphicon-remove").addClass("glyphicon-copy"); $(button).tooltip("hide")  }, 1500);
 }
