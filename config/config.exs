@@ -4,8 +4,6 @@ store = if System.get_env("HEX_S3_BUCKET"), do: HexWeb.Store.S3, else: HexWeb.St
 email = if System.get_env("HEX_SES_USERNAME"), do: HexWeb.Email.SES, else: HexWeb.Email.Local
 
 config :hex_web,
-  password_work_factor: 4,
-
   port:          System.get_env("PORT") || "4000",
   url:           System.get_env("HEX_URL"),
   app_host:      System.get_env("APP_HOST"),
@@ -44,6 +42,9 @@ config :ex_aws, :s3,
   scheme: "http://",
   host: "s3.amazonaws.com",
   region: "us-east-1"
+
+config :comeonin,
+  bcrypt_log_rounds: 4
 
 config :logger,
   level: :debug

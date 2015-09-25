@@ -12,8 +12,8 @@ defmodule HexWeb.Mixfile do
   end
 
   def application do
-    [applications: [:logger, :plug, :cowboy, :ecto, :postgrex, :poison, :bcrypt, :httpoison, :ex_aws,
-                    :porcelain],
+    [applications: [:logger, :plug, :cowboy, :ecto, :postgrex, :poison, :comeonin, :httpoison, :ex_aws,
+                    :sweet_xml, :porcelain, :gen_smtp],
      mod: {HexWeb, []},
      env: []]
   end
@@ -27,9 +27,9 @@ defmodule HexWeb.Mixfile do
      {:porcelain, "~> 2.0"},
      {:earmark,   "~> 0.1"},
      {:gen_smtp,  "~> 0.9.0"},
-     {:bcrypt,    github: "opscode/erlang-bcrypt"},
+     {:comeonin,  "~> 1.1"},
      {:httpoison, "~> 0.7"},
-     {:sweet_xml, "~> 0.2.1"},
+     {:sweet_xml, "~> 0.2"},
      {:ex_aws,    "~> 0.4"}
    ]
   end

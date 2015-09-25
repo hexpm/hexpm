@@ -68,8 +68,7 @@ defmodule HexWeb.User do
   end
 
   def confirm?(username, key) do
-    if (user = get(username: username))
-       && Util.secure_compare(user.confirmation_key, key) do
+    if (user = get(username: username)) && Comeonin.Tools.secure_check(user.confirmation_key, key) do
       confirm(user)
 
       mailer = Application.get_env(:hex_web, :email)
@@ -98,7 +97,7 @@ defmodule HexWeb.User do
   def reset?(username, key, password) do
     if (user = get(username: username))
         && user.reset_key
-        && Util.secure_compare(user.reset_key, key)
+        && Comeonin.Tools.secure_check(user.reset_key, key)
         && Util.within_last_day(user.reset_expiry) do
       reset(user, password)
 
@@ -145,12 +144,7 @@ defmodule HexWeb.User do
   def auth?(nil, _password), do: false
 
   def auth?(user, password) do
-    stored_hash = user.password
-    password    = String.to_char_list(password)
-    {:ok, hash} = :bcrypt.hashpw(password, stored_hash)
-    hash        = :erlang.list_to_binary(hash)
-
-    Util.secure_compare(hash, stored_hash)
+    Comeonin.Bcrypt.checkpw(password, user.password)
   end
 
   defp delete_keys(changeset) do
@@ -166,11 +160,7 @@ defmodule HexWeb.User do
   end
 
   defp gen_password(password) do
-    password      = String.to_char_list(password)
-    work_factor   = Application.get_env(:hex_web, :password_work_factor)
-    {:ok, salt} = :bcrypt.gen_salt(work_factor)
-    {:ok, hash} = :bcrypt.hashpw(password, salt)
-    :erlang.list_to_binary(hash)
+    Comeonin.Bcrypt.hashpwsalt(password)
   end
 
   defp gen_key do

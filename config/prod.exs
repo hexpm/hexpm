@@ -1,13 +1,13 @@
 use Mix.Config
 
-config :hex_web,
-  password_work_factor: 12
-
 config :hex_web, HexWeb.Repo,
   url: System.get_env("DATABASE_URL"),
   lazy: false,
   size: System.get_env("NUM_DATABASE_CONNS") || 20,
   max_overflow: 0
+
+config :comeonin,
+  bcrypt_log_rounds: 12
 
 config :logger,
   level: :info

@@ -1,6 +1,5 @@
 defmodule HexWeb.API.Key do
   use Ecto.Model
-  alias HexWeb.Util
 
   @timestamps_opts [usec: true]
 
@@ -73,7 +72,7 @@ defmodule HexWeb.API.Key do
 
     case result do
       {user, key} ->
-        if Util.secure_compare(key.secret_second, second) do
+        if Comeonin.Tools.secure_check(key.secret_second, second) do
           user
         end
       nil ->
