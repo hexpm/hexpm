@@ -109,10 +109,14 @@ defmodule HexWeb.RegistryBuilder do
 
     output = File.read!(file) |> :zlib.gzip
 
-    key = Application.get_env(:hex_web, :signing_key)
-    signature = Util.sign(output, key)
+    store = Application.get_env(:hex_web, :store)
+    store.put_registry(output)
 
-    Application.get_env(:hex_web, :store).put_registry(output, signature)
+    if Application.get_env(:hex_web, :signing) do
+      key = Application.get_env(:hex_web, :signing_key)
+      signature = Util.sign(output, key)
+      store.put_registry_signature(signature)
+    end
 
     HexWeb.Registry.set_done(handle)
 

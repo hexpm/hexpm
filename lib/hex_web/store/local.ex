@@ -26,9 +26,13 @@ defmodule HexWeb.Store.Local do
     Path.join("logs", key) |> put(blob)
   end
 
-  def put_registry(data, signature) do
+  def put_registry(data) do
     File.mkdir_p!(dir)
     File.write!(Path.join(dir, "registry.ets.gz"), data)
+  end
+
+  def put_registry_signature(signature) do
+    File.mkdir_p!(dir)
     File.write!(Path.join(dir, "registry.ets.gz.signed"), signature)
   end
 
