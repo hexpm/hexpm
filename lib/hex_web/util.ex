@@ -224,4 +224,12 @@ defmodule HexWeb.Util do
       end)
     end
   end
+
+  def sign(file, key) do
+    [entry | _ ] = :public_key.pem_decode(key)
+    key = :public_key.pem_entry_decode(entry)
+
+    :public_key.sign(file, :sha512, key)
+    |> Base.encode64
+  end
 end

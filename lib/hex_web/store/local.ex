@@ -26,13 +26,18 @@ defmodule HexWeb.Store.Local do
     Path.join("logs", key) |> put(blob)
   end
 
-  def put_registry(data) do
+  def put_registry(data, signature) do
     File.mkdir_p!(dir)
-    File.write!(Path.join(dir, "registry.ets.gz"), :zlib.gzip(data))
+    File.write!(Path.join(dir, "registry.ets.gz"), data)
+    File.write!(Path.join(dir, "registry.ets.gz.signed"), signature)
   end
 
   def send_registry(conn) do
     send_file(conn, 200, Path.join(dir, "registry.ets.gz"))
+  end
+
+  def send_registry_signature(conn) do
+    send_file(conn, 200, Path.join(dir, "registry.ets.gz.signed"))
   end
 
   def put_release(name, data) do
