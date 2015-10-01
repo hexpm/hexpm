@@ -1,7 +1,6 @@
 language: erlang
 otp_release:
   - 17.5
-  - 18.0
 sudo: false
 addons:
   postgresql: "9.4"
@@ -23,3 +22,7 @@ env:
 notifications:
   recipients:
     - eric.meadows.jonsson@gmail.com
+matrix:
+  include:
+    - ELIXIRVERSION=master
+      otp_release: 18.1
