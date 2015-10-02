@@ -29,6 +29,10 @@ body {
   margin-bottom: 60px;
 }
 
+pre {
+  background-color: #f8f8f8;
+}
+
 #footer {
   position: absolute;
   bottom: 0;

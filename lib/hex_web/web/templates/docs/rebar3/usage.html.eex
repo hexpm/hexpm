@@ -10,7 +10,7 @@
   Hex packages as dependencies are supported by rebar3 even without the plugin. The hex plugin is only required for publishing an application as a hex package.
 </p>
 
-<pre><code>{deps,[
+<pre><code class="erlang">{deps,[
   ranch,                  %% picks the highest available version
   {cowboy,"1.0.1"},       %% sets the version to use
   {uuid, {pkg, uuid_erl}} %% app under a different pkg name
