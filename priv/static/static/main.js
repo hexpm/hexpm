@@ -10,6 +10,9 @@ $('.show-versions .toggle-text').click(function() {
   $(this).find('span').toggle();
 });
 
+// Highlight syntax
+hljs.initHighlightingOnLoad();
+
 // Package: copy config snippet to clipboard
 function copy_snippet(element_id, button) {
   succeeded = false;
