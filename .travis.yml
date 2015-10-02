@@ -20,8 +20,8 @@ env:
   - ELIXIRVERSION=v1.1.0
 matrix:
   include:
-    otp_release: 18.1
-    env: ELIXIRVERSION=master
+    - otp_release: 18.1
+      env: ELIXIRVERSION=master
 notifications:
   recipients:
     - eric.meadows.jonsson@gmail.com
