@@ -1,4 +1,4 @@
-language: erlang
+language: elixir
 otp_release:
   - 17.5
 elixir:
