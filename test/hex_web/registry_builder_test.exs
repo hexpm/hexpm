@@ -28,6 +28,15 @@ defmodule HexWeb.RegistryBuilderTest do
     :ets.delete(tid)
   end
 
+  defp test_data do
+    postgrex = Package.get("postgrex")
+    decimal = Package.get("decimal")
+
+    Release.create(decimal, rel_meta(%{version: "0.0.1", app: "decimal"}), "")
+    Release.create(decimal, rel_meta(%{version: "0.0.2", app: "decimal", requirements: %{ex_doc: "0.0.0"}}), "")
+    Release.create(postgrex, rel_meta(%{version: "0.0.2", app: "postgrex", requirements: %{decimal: "~> 0.0.1", ex_doc: "0.1.0"}}), "")
+  end
+
   test "registry is versioned" do
     RegistryBuilder.rebuild()
     tid = open_table()
@@ -40,12 +49,7 @@ defmodule HexWeb.RegistryBuilderTest do
   end
 
   test "registry is in correct format" do
-    postgrex = Package.get("postgrex")
-    decimal = Package.get("decimal")
-
-    Release.create(decimal, rel_meta(%{version: "0.0.1", app: "decimal"}), "")
-    Release.create(decimal, rel_meta(%{version: "0.0.2", app: "decimal", requirements: %{ex_doc: "0.0.0"}}), "")
-    Release.create(postgrex, rel_meta(%{version: "0.0.2", app: "postgrex", requirements: %{decimal: "~> 0.0.1", ex_doc: "0.1.0"}}), "")
+    test_data()
 
     RegistryBuilder.rebuild()
     tid = open_table()
@@ -70,6 +74,23 @@ defmodule HexWeb.RegistryBuilderTest do
     after
       close_table(tid)
     end
+  end
+
+  test "registry is uploaded alongside signature" do
+    keypath  = Path.join([__DIR__, "..", "fixtures"])
+    key      = File.read!(Path.join(keypath, "testkey.pem"))
+    Application.put_env(:hex_web, :signing_key, key)
+
+    test_data()
+    RegistryBuilder.rebuild()
+
+    tmp = Application.get_env(:hex_web, :tmp)
+    reg = File.read!(Path.join(tmp, "store/registry.ets.gz")) |> :zlib.gunzip
+    sig = File.read!(Path.join(tmp, "store/registry.ets.signed"))
+
+    checksum = :crypto.hash(:sha512, reg)
+
+    assert HexWeb.Util.sign(checksum, key) == sig
   end
 
   # test "building is blocking" do

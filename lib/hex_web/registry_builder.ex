@@ -107,14 +107,15 @@ defmodule HexWeb.RegistryBuilder do
     :ok = :ets.tab2file(tid, String.to_char_list(file))
     :ets.delete(tid)
 
-    output = File.read!(file) |> :zlib.gzip
+    output = File.read!(file)
 
     store = Application.get_env(:hex_web, :store)
     store.put_registry(output)
 
-    if Application.get_env(:hex_web, :signing) do
-      key = Application.get_env(:hex_web, :signing_key)
-      signature = Util.sign(output, key)
+    if key = Application.get_env(:hex_web, :signing_key) do
+      checksum = :crypto.hash(:sha512, output)
+      signature = Util.sign(checksum, key)
+
       store.put_registry_signature(signature)
     end
 

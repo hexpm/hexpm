@@ -28,12 +28,12 @@ defmodule HexWeb.Store.Local do
 
   def put_registry(data) do
     File.mkdir_p!(dir)
-    File.write!(Path.join(dir, "registry.ets.gz"), data)
+    File.write!(Path.join(dir, "registry.ets.gz"), :zlib.gzip(data))
   end
 
   def put_registry_signature(signature) do
     File.mkdir_p!(dir)
-    File.write!(Path.join(dir, "registry.ets.gz.signed"), signature)
+    File.write!(Path.join(dir, "registry.ets.signed"), signature)
   end
 
   def send_registry(conn) do

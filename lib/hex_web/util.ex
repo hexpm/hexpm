@@ -230,6 +230,6 @@ defmodule HexWeb.Util do
     key = :public_key.pem_entry_decode(entry)
 
     :public_key.sign(file, :sha512, key)
-    |> Base.encode64
+    |> Base.encode16(case: :lower)
   end
 end

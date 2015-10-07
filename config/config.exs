@@ -2,7 +2,6 @@ use Mix.Config
 
 store = if System.get_env("HEX_S3_BUCKET"), do: HexWeb.Store.S3, else: HexWeb.Store.Local
 email = if System.get_env("HEX_SES_USERNAME"), do: HexWeb.Email.SES, else: HexWeb.Email.Local
-signing = if System.get_env("HEX_SIGNING_KEY"), do: true, else: false
 
 config :hex_web,
   port:          System.get_env("PORT") || "4000",
@@ -27,7 +26,6 @@ config :hex_web,
 
   secret:        System.get_env("HEX_SECRET"),
 
-  signing:       signing,
   signing_key:   System.get_env("HEX_SIGNING_KEY")
 
 config :hex_web, HexWeb.Repo,
