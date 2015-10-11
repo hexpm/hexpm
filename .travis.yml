@@ -9,7 +9,7 @@ before_install:
   - unzip -d elixir $ELIXIRVERSION.zip
 before_script:
   - export PATH=`pwd`/elixir/bin:$PATH
-  - mix archive.install http://s3.hex.pm/installs/hex.ez --force
+  - mix local.hex --force
   - mix deps.get
   - MIX_ENV=test mix deps.compile
 script:
