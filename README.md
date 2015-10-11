@@ -8,9 +8,11 @@ To contribute to HexWeb you need to properly set up your development environment
 
 Also see the client repository: [hex](https://github.com/hexpm/hex). The client uses `hex_web` for integration tests, so `hex_web` needs to support all versions the client supports. Travis tests ensures that tests are run on all supported versions.
 
-### PostgreSQL Modules
+### PostgreSQL Modules And Version
 
-HexWeb requires the PostgreSQL modules [pg_trgm](http://www.postgresql.org/docs/9.3/static/pgtrgm.html) and [pgcrypto](http://www.postgresql.org/docs/9.3/static/pgcrypto.html) to be available.
+PostgreSQL version should be >= 9.4, as HexWeb uses the `jsonb` type, that is available from PostgreSQL 9.4 onward.
+
+HexWeb requires the PostgreSQL modules [pg_trgm](http://www.postgresql.org/docs/9.4/static/pgtrgm.html) and [pgcrypto](http://www.postgresql.org/docs/9.4/static/pgcrypto.html) to be available.
 
 This is located in the "postgresql-contrib" package, however the package name can vary depending on your operating system. If the module is not installed the ecto migrations will fail.
 
