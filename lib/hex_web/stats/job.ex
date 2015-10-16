@@ -5,15 +5,21 @@ defmodule HexWeb.Stats.Job do
   alias HexWeb.Release
   alias HexWeb.Stats.Download
 
-  def run(date, max_downloads_per_ip \\ 100, dryrun? \\ false) do
+  def run(date, buckets, max_downloads_per_ip \\ 100, dryrun? \\ false) do
     start()
 
-    prefix = "hex/#{date_string(date)}"
-    keys = Application.get_env(:hex_web, :store).list_logs(prefix)
-    date = Ecto.Type.load!(Ecto.Date, date)
+    store   = Application.get_env(:hex_web, :store)
+    prefix  = "hex/#{date_string(date)}"
+    date    = Ecto.Type.load!(Ecto.Date, date)
+
+    dict =
+      Enum.reduce(buckets, HashDict.new, fn [bucket, region], dict ->
+        keys = store.list_logs(region, bucket, prefix)
+        process_keys(store, region, bucket, keys, dict)
+      end)
 
     # TODO: Map/Reduce
-    dict = process_keys(keys) |> cap_on_ip(max_downloads_per_ip)
+    dict = cap_on_ip(dict, max_downloads_per_ip)
     packages = packages()
     releases = releases()
 
@@ -46,10 +52,9 @@ defmodule HexWeb.Stats.Job do
     HexWeb.Repo.start_link
   end
 
-  defp process_keys(keys) do
-    Enum.reduce(keys, HashDict.new, fn key, dict ->
-      key
-      |> Application.get_env(:hex_web, :store).get_logs
+  defp process_keys(store, region, bucket, keys, dict) do
+    Enum.reduce(keys, dict, fn key, dict ->
+      store.get_logs(region, bucket, key)
       |> process_file(dict)
     end)
   end

@@ -3,6 +3,9 @@ use Mix.Config
 store = if System.get_env("HEX_S3_BUCKET"), do: HexWeb.Store.S3, else: HexWeb.Store.Local
 email = if System.get_env("HEX_SES_USERNAME"), do: HexWeb.Email.SES, else: HexWeb.Email.Local
 
+logs_buckets = if value = System.get_env("HEX_LOGS_BUCKET"),
+                 do: value |> String.split(";") |> Enum.map(&String.split(&1, ","))
+
 config :hex_web,
   port:          System.get_env("PORT") || "4000",
   url:           System.get_env("HEX_URL"),
@@ -14,7 +17,7 @@ config :hex_web,
   s3_url:        System.get_env("HEX_S3_URL") || "https://s3.amazonaws.com",
   s3_bucket:     System.get_env("HEX_S3_BUCKET"),
   docs_bucket:   System.get_env("HEX_DOCS_BUCKET"),
-  logs_bucket:   System.get_env("HEX_LOGS_BUCKET"),
+  logs_buckets:  logs_buckets,
   docs_url:      System.get_env("HEX_DOCS_URL"),
   cdn_url:       System.get_env("HEX_CDN_URL"),
 

@@ -1,20 +1,21 @@
 defmodule HexWeb.Store.S3 do
   @behaviour HexWeb.Store
   alias ExAws.S3
+  alias ExAws.S3.Impl, as: S3Impl
 
-  def list_logs(prefix) do
-    list(:logs_bucket, prefix)
+  def list_logs(region, bucket, prefix) do
+    list(region, bucket, prefix)
   end
 
-  def get_logs(key) do
-    Application.get_env(:hex_web, :logs_bucket)
-    |> S3.get_object!(key)
+  def get_logs(region, bucket, key) do
+    S3.new(region: region)
+    |> S3Impl.get_object!(bucket, key)
     |> Map.get(:body)
   end
 
-  def put_logs(key, blob) do
-    Application.get_env(:hex_web, :logs_bucket)
-    |> S3.put_object!(key, blob)
+  def put_logs(region, bucket, key, blob) do
+    S3.new(region: region)
+    |> S3Impl.put_object!(bucket, key, blob)
   end
 
   def put_registry(data) do
@@ -91,6 +92,12 @@ defmodule HexWeb.Store.S3 do
     # TODO: cache
     Application.get_env(:hex_web, bucket)
     |> S3.put_object!(path, data, opts)
+  end
+
+  defp list(region, bucket, prefix) do
+    S3.new(region: region)
+    |> S3Impl.stream_objects!(bucket, prefix: prefix)
+    |> Stream.map(&Map.get(&1, :key))
   end
 
   defp list(bucket, prefix) do

@@ -5,7 +5,7 @@ defmodule HexWeb.Store.Local do
 
   # only used during development (not safe)
 
-  def list_logs(prefix) do
+  def list_logs(_, _, prefix) do
     relative = Path.join(dir, "logs")
     paths = Path.join(relative, "**") |> Path.wildcard
     Enum.flat_map(paths, fn path ->
@@ -18,11 +18,11 @@ defmodule HexWeb.Store.Local do
     end)
   end
 
-  def get_logs(key) do
+  def get_logs(_, _, key) do
     Path.join("logs", key) |> get
   end
 
-  def put_logs(key, blob) do
+  def put_logs(_, _, key, blob) do
     Path.join("logs", key) |> put(blob)
   end
 

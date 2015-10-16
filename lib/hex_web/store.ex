@@ -1,9 +1,9 @@
 defmodule HexWeb.Store do
   use Behaviour
 
-  defcallback list_logs(String.t) :: [String.t]
-  defcallback get_logs(String.t) :: binary
-  defcallback put_logs(String.t, binary) :: term
+  defcallback list_logs(String.t, String.t, String.t) :: [String.t]
+  defcallback get_logs(String.t, String.t, String.t) :: binary
+  defcallback put_logs(String.t, String.t, String.t, binary) :: term
 
   defcallback put_registry(binary) :: term
   defcallback send_registry(Plug.Conn.t) :: Plug.Conn.t
