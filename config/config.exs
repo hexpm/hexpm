@@ -3,7 +3,7 @@ use Mix.Config
 store = if System.get_env("HEX_S3_BUCKET"), do: HexWeb.Store.S3, else: HexWeb.Store.Local
 email = if System.get_env("HEX_SES_USERNAME"), do: HexWeb.Email.SES, else: HexWeb.Email.Local
 
-logs_buckets = if value = System.get_env("HEX_LOGS_BUCKET"),
+logs_buckets = if value = System.get_env("HEX_LOGS_BUCKETS"),
                  do: value |> String.split(";") |> Enum.map(&String.split(&1, ","))
 
 config :hex_web,
