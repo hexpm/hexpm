@@ -5,6 +5,7 @@ File.mkdir_p!("tmp")
 
 alias Ecto.Adapters.SQL
 
+Application.put_env(:hex_web, :store, HexWeb.Store.Local)
 SQL.begin_test_transaction(HexWeb.Repo)
 
 defmodule HexWebTest.Case do
