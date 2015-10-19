@@ -11,9 +11,9 @@ defmodule HexWeb.RegistryBuilderTest do
 
   setup do
     {:ok, user} = User.create(%{username: "eric", email: "eric@mail.com", password: "eric"}, true)
-    {:ok, _} = Package.create(user, pkg_meta(%{name: "postgrex"}))
-    {:ok, _} = Package.create(user, pkg_meta(%{name: "decimal"}))
-    {:ok, _} = Package.create(user, pkg_meta(%{name: "ex_doc"}))
+    {:ok, _} = Package.create(user, pkg_meta(%{name: "postgrex", description: "PostgreSQL driver for Elixir."}))
+    {:ok, _} = Package.create(user, pkg_meta(%{name: "decimal", description: "Arbitrary precision decimal arithmetic for Elixir."}))
+    {:ok, _} = Package.create(user, pkg_meta(%{name: "ex_doc", description: "ExDoc"}))
     {:ok, _} = Install.create("0.0.1", ["0.13.0-dev"])
     {:ok, _} = Install.create("0.1.0", ["0.13.1-dev", "0.13.1"])
     :ok
