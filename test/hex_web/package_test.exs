@@ -66,6 +66,20 @@ defmodule HexWeb.PackageTest do
     assert length(errors[:meta]) == 4
   end
 
+  test "validate blank description in metadata" do
+    meta = %{
+      "maintainers" => ["eric", "josé"],
+      "licenses"     => ["apache", "BSD"],
+      "links"        => %{"github" => "www", "docs" => "www"},
+      "description"  => ""}
+
+    user = User.get(username: "eric")
+    assert {:error, errors} = Package.create(user, pkg_meta(%{name: "ecto", meta: meta}))
+    assert length(errors) == 1
+    assert length(errors[:meta]) == 1
+    assert errors[:meta] == [{"description", :missing}]
+  end
+
   test "packages are unique" do
     user = User.get(username: "eric")
     assert {:ok, %Package{}} = Package.create(user, pkg_meta(%{name: "ecto", description: "DSL"}))

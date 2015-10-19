@@ -58,7 +58,7 @@ defmodule HexWeb.Package do
     validate_change(changeset, field, fn _field, meta ->
       errors =
         Enum.flat_map(@meta_fields_required, fn field ->
-          if Map.has_key?(meta, field) do
+          if Map.has_key?(meta, field) and is_present(meta[field]) do
             []
           else
             [{field, :missing}]
@@ -70,6 +70,12 @@ defmodule HexWeb.Package do
         else: [{field, errors}]
     end)
   end
+
+  defp is_present(string) when is_binary(string) do
+    (string |> String.strip |> String.length) > 0
+  end
+
+  defp is_present(string), do: true
 
   defp changeset(package, :create, params) do
     changeset(package, :update, params)
