@@ -15,8 +15,8 @@ defmodule HexWeb.API.RouterTest do
     User.create(%{username: "other", email: "other@mail.com", password: "other"}, true)
     User.create(%{username: "jose", email: "jose@mail.com", password: "jose"}, true)
     {:ok, user} = User.create(%{username: "eric", email: "eric@mail.com", password: "eric"}, true)
-    {:ok, _}    = Package.create(user, pkg_meta(%{name: "postgrex"}))
-    {:ok, pkg}  = Package.create(user, pkg_meta(%{name: "decimal"}))
+    {:ok, _}    = Package.create(user, pkg_meta(%{name: "postgrex", description: "Postgrex is awesome"}))
+    {:ok, pkg}  = Package.create(user, pkg_meta(%{name: "decimal", description: "Arbitrary precision decimal arithmetic for Elixir."}))
     {:ok, rel}  = Release.create(pkg, rel_meta(%{version: "0.0.1", app: "decimal", requirements: %{postgrex: "0.0.1"}}), "")
 
     %{rel | has_docs: true} |> HexWeb.Repo.update
@@ -50,7 +50,7 @@ defmodule HexWeb.API.RouterTest do
     assert contents =~ "confirm?username=name&key=" <> user.confirmation_key
 
     {:ok, key} = Key.create(user, %{name: "macbook"})
-    body = %{meta: %{}}
+    body = %{meta: %{description: "Domain-specific language."}}
     conn = conn("PUT", "/api/packages/ecto", Poison.encode!(body))
            |> put_req_header("content-type", "application/json")
            |> put_req_header("authorization", key.user_secret)
@@ -91,7 +91,7 @@ defmodule HexWeb.API.RouterTest do
     user = User.get(username: "eric")
     {:ok, key} = Key.create(user, %{name: "macbook"})
 
-    body = %{meta: %{}}
+    body = %{meta: %{description: "Domain-specific language."}}
     conn = conn("PUT", "/api/packages/ecto", Poison.encode!(body))
            |> put_req_header("content-type", "application/json")
            |> put_req_header("authorization", key.user_secret)
@@ -101,7 +101,7 @@ defmodule HexWeb.API.RouterTest do
   end
 
   test "create package key auth" do
-    body = %{meta: %{}}
+    body = %{meta: %{description: "Domain-specific language."}}
     conn = conn("PUT", "/api/packages/ecto", Poison.encode!(body))
            |> put_req_header("content-type", "application/json")
            |> put_req_header("authorization", "Basic " <> :base64.encode("eric:eric"))
@@ -118,7 +118,7 @@ defmodule HexWeb.API.RouterTest do
   end
 
   test "update package" do
-    Package.create(User.get(username: "eric"), pkg_meta(%{name: "ecto"}))
+    Package.create(User.get(username: "eric"), pkg_meta(%{name: "ecto", description: "DSL"}))
 
     body = %{meta: %{description: "awesomeness"}}
     conn = conn("PUT", "/api/packages/ecto", Poison.encode!(body))
@@ -145,7 +145,7 @@ defmodule HexWeb.API.RouterTest do
   end
 
   test "update package authorizes" do
-    Package.create(User.get(username: "eric"), pkg_meta(%{name: "ecto"}))
+    Package.create(User.get(username: "eric"), pkg_meta(%{name: "ecto", description: "DSL"}))
 
     body = %{}
     conn = conn("PUT", "/api/packages/ecto", Poison.encode!(body))
@@ -202,7 +202,7 @@ defmodule HexWeb.API.RouterTest do
   test "create release also creates package" do
     refute Package.get("phoenix")
 
-    body = create_tar(%{name: :phoenix, app: "phoenix", version: "1.0.0"}, [])
+    body = create_tar(%{name: :phoenix, app: "phoenix", description: "Web framework", version: "1.0.0"}, [])
     conn = conn("POST", "/api/packages/phoenix/releases", body)
            |> put_req_header("content-type", "application/json")
            |> put_req_header("authorization", "Basic " <> :base64.encode("eric:eric"))
@@ -689,7 +689,7 @@ defmodule HexWeb.API.RouterTest do
     :inets.start
 
     user           = User.get(username: "eric")
-    {:ok, phoenix} = Package.create(user, pkg_meta(%{name: "phoenix"}))
+    {:ok, phoenix} = Package.create(user, pkg_meta(%{name: "phoenix", description: "Web framework"}))
     {:ok, _}       = Release.create(phoenix, rel_meta(%{version: "0.0.1", app: "phoenix"}), "")
     {:ok, _}       = Release.create(phoenix, rel_meta(%{version: "0.0.2", app: "phoenix"}), "")
 
@@ -747,7 +747,7 @@ defmodule HexWeb.API.RouterTest do
     :inets.start
 
     user        = User.get(username: "eric")
-    {:ok, ecto} = Package.create(user, pkg_meta(%{name: "ecto"}))
+    {:ok, ecto} = Package.create(user, pkg_meta(%{name: "ecto", description: "DSL"}))
     {:ok, _}    = Release.create(ecto, rel_meta(%{version: "0.0.1", app: "ecto"}), "")
 
     path = Path.join("tmp", "release-docs.tar.gz")
@@ -792,7 +792,7 @@ defmodule HexWeb.API.RouterTest do
     :inets.start
 
     user        = User.get(username: "eric")
-    {:ok, ecto} = Package.create(user, pkg_meta(%{name: "ecto"}))
+    {:ok, ecto} = Package.create(user, pkg_meta(%{name: "ecto", description: "DSL"}))
     {:ok, _}    = Release.create(ecto, rel_meta(%{version: "0.0.1", app: "ecto"}), "")
 
     path = Path.join("tmp", "release-docs.tar.gz")

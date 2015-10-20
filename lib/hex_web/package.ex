@@ -37,6 +37,7 @@ defmodule HexWeb.Package do
   }
 
   @meta_fields Map.keys(@meta_types)
+  @meta_fields_required ~w(description)
 
   before_delete :delete_owners
 
@@ -53,9 +54,33 @@ defmodule HexWeb.Package do
     end)
   end
 
+  defp validate_required_meta(changeset, field) do
+    validate_change(changeset, field, fn _field, meta ->
+      errors =
+        Enum.flat_map(@meta_fields_required, fn field ->
+          if Map.has_key?(meta, field) and is_present(meta[field]) do
+            []
+          else
+            [{field, :missing}]
+          end
+        end)
+
+      if errors == [],
+          do: [],
+        else: [{field, errors}]
+    end)
+  end
+
+  defp is_present(string) when is_binary(string) do
+    (string |> String.strip |> String.length) > 0
+  end
+
+  defp is_present(string), do: true
+
   defp changeset(package, :create, params) do
     changeset(package, :update, params)
     |> validate_unique(:name, on: HexWeb.Repo)
+    |> validate_required_meta(:meta)
   end
 
   # TODO: Drop support for contributors (maintainers released in 0.9.0, date TBD)
