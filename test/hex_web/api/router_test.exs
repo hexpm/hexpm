@@ -50,7 +50,7 @@ defmodule HexWeb.API.RouterTest do
     assert contents =~ "confirm?username=name&key=" <> user.confirmation_key
 
     {:ok, key} = Key.create(user, %{name: "macbook"})
-    body = %{meta: %{ description: "Domain-specific language." }}
+    body = %{meta: %{description: "Domain-specific language."}}
     conn = conn("PUT", "/api/packages/ecto", Poison.encode!(body))
            |> put_req_header("content-type", "application/json")
            |> put_req_header("authorization", key.user_secret)
@@ -91,7 +91,7 @@ defmodule HexWeb.API.RouterTest do
     user = User.get(username: "eric")
     {:ok, key} = Key.create(user, %{name: "macbook"})
 
-    body = %{meta: %{ description: "Domain-specific language." }}
+    body = %{meta: %{description: "Domain-specific language."}}
     conn = conn("PUT", "/api/packages/ecto", Poison.encode!(body))
            |> put_req_header("content-type", "application/json")
            |> put_req_header("authorization", key.user_secret)
@@ -101,7 +101,7 @@ defmodule HexWeb.API.RouterTest do
   end
 
   test "create package key auth" do
-    body = %{meta: %{ description: "Domain-specific language." }}
+    body = %{meta: %{description: "Domain-specific language."}}
     conn = conn("PUT", "/api/packages/ecto", Poison.encode!(body))
            |> put_req_header("content-type", "application/json")
            |> put_req_header("authorization", "Basic " <> :base64.encode("eric:eric"))
