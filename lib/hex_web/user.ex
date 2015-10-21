@@ -137,6 +137,18 @@ defmodule HexWeb.User do
     |> HexWeb.Repo.one
   end
 
+  def get_packages(user) do
+    from(u in HexWeb.User,
+         where: u.username == ^user.username,
+         join: po in HexWeb.PackageOwner, on: u.id == po.owner_id,
+         join: p in HexWeb.Package, on: po.package_id == p.id,
+         select: p)
+    |> HexWeb.Repo.all
+    |> Enum.map fn(package) ->
+      %{ name: package.name, url: Util.api_url(["packages", package.name]) }
+    end
+  end
+
   def delete(user) do
     HexWeb.Repo.delete(user)
   end
@@ -196,5 +208,6 @@ defimpl HexWeb.Render, for: HexWeb.User do
     |> Map.update!(:inserted_at, &to_iso8601/1)
     |> Map.update!(:updated_at, &to_iso8601/1)
     |> Map.put(:url, api_url(["users", user.username]))
+    |> Map.put(:packages, HexWeb.User.get_packages(user))
   end
 end
