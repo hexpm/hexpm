@@ -18,6 +18,7 @@ defmodule HexWeb.User do
     field :reset_expiry, Ecto.DateTime
 
     has_many :package_owners, HexWeb.PackageOwner, foreign_key: :owner_id
+    has_many :owned_packages, through: [:package_owners, :package]
     has_many :keys, HexWeb.API.Key
   end
 
@@ -137,18 +138,6 @@ defmodule HexWeb.User do
     |> HexWeb.Repo.one
   end
 
-  def get_packages(user) do
-    from(u in HexWeb.User,
-         where: u.username == ^user.username,
-         join: po in HexWeb.PackageOwner, on: u.id == po.owner_id,
-         join: p in HexWeb.Package, on: po.package_id == p.id,
-         select: p)
-    |> HexWeb.Repo.all
-    |> Enum.map fn(package) ->
-      %{ name: package.name, url: Util.api_url(["packages", package.name]) }
-    end
-  end
-
   def delete(user) do
     HexWeb.Repo.delete(user)
   end
@@ -203,11 +192,20 @@ defimpl HexWeb.Render, for: HexWeb.User do
   import HexWeb.Util
 
   def render(user) do
-    user
-    |> Map.take([:username, :email, :inserted_at, :updated_at])
-    |> Map.update!(:inserted_at, &to_iso8601/1)
-    |> Map.update!(:updated_at, &to_iso8601/1)
-    |> Map.put(:url, api_url(["users", user.username]))
-    |> Map.put(:packages, HexWeb.User.get_packages(user))
+    entity = user
+      |> HexWeb.Repo.preload(:owned_packages)
+      |> Map.take([:username, :email, :inserted_at, :updated_at, :owned_packages])
+      |> Map.update!(:inserted_at, &to_iso8601/1)
+      |> Map.update!(:updated_at, &to_iso8601/1)
+      |> Map.put(:url, api_url(["users", user.username]))
+
+
+    packages = Enum.map(entity.owned_packages, fn(package) ->
+        package
+        |> Map.take([:name])
+        |> Map.put(:url, api_url(["packages", package.name]))
+      end)
+
+    Map.put(entity, :owned_packages, packages)
   end
 end
