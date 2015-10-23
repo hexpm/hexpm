@@ -119,6 +119,14 @@ defmodule HexWeb.Web.Router do
     send_page(conn, :"docs_faq")
   end
 
+  get "docs/mirrors" do
+    active    = :docs
+    title     = "Mirrors"
+
+    conn = assign_pun(conn, [active, title])
+    send_page(conn, :"docs_mirrors")
+  end
+
   get "/packages" do
     active        = :packages
     title         = "Packages"
