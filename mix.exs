@@ -30,6 +30,7 @@ defmodule HexWeb.Mixfile do
      {:comeonin,  "~> 1.1"},
      {:httpoison, "~> 0.7"},
      {:sweet_xml, "~> 0.2"},
+     {:redix,     "~> 0.2.0"},
      {:ex_aws,    github: "CargoSense/ex_aws"}
    ]
   end
