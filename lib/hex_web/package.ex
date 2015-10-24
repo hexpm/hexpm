@@ -75,12 +75,11 @@ defmodule HexWeb.Package do
     (string |> String.strip |> String.length) > 0
   end
 
-  defp is_present(string), do: true
+  defp is_present(_string), do: true
 
   defp changeset(package, :create, params) do
     changeset(package, :update, params)
     |> validate_unique(:name, on: HexWeb.Repo)
-    |> validate_required_meta(:meta)
   end
 
   # TODO: Drop support for contributors (maintainers released in 0.9.0, date TBD)
@@ -91,6 +90,7 @@ defmodule HexWeb.Package do
     |> update_change(:meta, &Map.take(&1, @meta_fields))
     |> validate_format(:name, ~r"^[a-z]\w*$")
     |> validate_exclusion(:name, @reserved_names)
+    |> validate_required_meta(:meta)
     |> validate_meta(:meta)
   end
 
