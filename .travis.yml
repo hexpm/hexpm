@@ -4,6 +4,8 @@ otp_release:
 sudo: false
 addons:
   postgresql: "9.4"
+services:
+  - redis-server
 before_install:
   - wget http://s3.hex.pm/builds/elixir/$ELIXIRVERSION.zip
   - unzip -d elixir $ELIXIRVERSION.zip
