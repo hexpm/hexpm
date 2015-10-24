@@ -13,6 +13,7 @@ defmodule HexWeb.Supervisor do
       worker(HexWeb.Repo, []),
       supervisor(Task.Supervisor, [[name: HexWeb.PublishTasks]]),
       worker(HexWeb.BlockedAddress, []),
+      supervisor(HexWeb.RedixPool, []),
       worker(HexWeb.API.RateLimit, [HexWeb.API.RateLimit]),
       Plug.Adapters.Cowboy.child_spec(:http, HexWeb.Router, [], opts)
     ]

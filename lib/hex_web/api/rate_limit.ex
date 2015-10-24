@@ -1,13 +1,10 @@
 # TODO: Don't rate limit conditional requests that return 304 Not Modified
 # TODO: Add a higher rate limit cap for authenticated users
-# TODO: Use redis instead of single process to support multiple dynos
 
 defmodule HexWeb.API.RateLimit do
   use GenServer
+  alias HexWeb.RedixPool
 
-  @compile {:parse_transform, :ms_transform}
-
-  @prune_timer 60_000
   @expires 60
   @rate_limit 100
 
@@ -15,63 +12,44 @@ defmodule HexWeb.API.RateLimit do
     GenServer.start_link(__MODULE__, [], name: name)
   end
 
-  def init([]) do
-    table = :ets.new(:counter, [:set, :private])
-    :erlang.send_after(@prune_timer, self, :prune_timer)
-    {:ok, table}
-  end
-
   def hit(name, key) do
     GenServer.call(name, {:hit, key})
   end
 
-  def handle_call({:hit, key}, _from, table) do
-    now = now()
+  def handle_call({:hit, {:ip, ip}}, _from, _state) do
+    key_tmp = key("tmp", ip)
+    key_real = key("real", ip)
 
-    if :ets.insert_new(table, {key, 1, now}) do
-      count = 1
-      created_at = now
-    else
-      [count, created_at] = :ets.update_counter(table, key, [{2, 1}, {3, 0}])
-    end
+    {:ok, [_, _, current, ttl]} =
+      multi(fn()->
+        RedixPool.command(["SETEX", key_tmp, @expires, 0]) # expire key in @expires seconds
+        RedixPool.command(["RENAMENX", key_tmp, key_real]) # replace real key
+        RedixPool.command(["INCR", key_real]) # increment count
+        RedixPool.command(["TTL", key_real]) # get key ttl
+      end)
 
-    expires_at = created_at + @expires
+    exceeded = current > @rate_limit # check if limit has been exceeded
+    remaining = if exceeded, do: 0, else: @rate_limit - current # number of remaining requests
+    expires_at = now() + ttl # time when rate limit resets
 
-    if expires_at <= now do
-      :ets.insert_new(table, {key, 1, now})
-      count = 1
-      expires_at = now + @expires
-    end
+    reply = {!exceeded, remaining, @rate_limit, expires_at}
 
-    remaining = @rate_limit - count
-
-    if remaining >= 0 do
-      reply = {true, remaining, @rate_limit, expires_at}
-    else
-      reply = {false, 0, @rate_limit, expires_at}
-    end
-
-    {:reply, reply, table}
-  end
-
-  def handle_call(:status, _from, table) do
-    {:reply, :ets.tab2list(table), table}
-  end
-
-  def handle_info(:prune_timer, table) do
-    delete_at = now - @expires
-
-    ms = fn {_,_,created_at} -> created_at <= delete_at end
-         |> :ets.fun2ms
-
-    :ets.select_delete(table, ms)
-    :erlang.send_after(@prune_timer, self, :prune_timer)
-    {:noreply, table}
+    {:reply, reply, []}
   end
 
   defp now do
     {mega, sec, _micro} = :os.timestamp
     mega * 1_000_000 + sec
+  end
+
+  defp multi(fun) do
+    RedixPool.command(["MULTI"])
+    fun.()
+    RedixPool.command(["EXEC"])
+  end
+
+  defp key(prefix, {a, b, c, d}) do
+    "ratelimit:#{prefix}:#{a}.#{b}.#{c}.#{d}"
   end
 
   defmodule Plug do
@@ -83,7 +61,7 @@ defmodule HexWeb.API.RateLimit do
     def call(conn, _opts) do
       ip = conn.remote_ip
 
-      if ip == {127, 0, 0, 1} do
+      if ip == {127, 0, 0, 2} do
         conn
       else
         {allowed, remaining, limit, reset} = RateLimit.hit(RateLimit, {:ip, ip})
