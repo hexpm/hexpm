@@ -269,7 +269,13 @@ defmodule HexWeb.API.Util do
   end
 
   defp errors_to_map(tuple) when is_tuple(tuple) do
-    Tuple.to_list(tuple) |> Enum.map(&errors_to_map/1) |> List.to_tuple
+    Tuple.to_list(tuple)
+    |> Enum.map(&errors_to_map/1)
+    |> List.to_tuple
+  end
+
+  defp errors_to_map(map) when is_map(map) do
+    Enum.into(map, %{}, &errors_to_map/1)
   end
 
   defp errors_to_map([{_, _}|_] = list) do
