@@ -35,7 +35,7 @@ defmodule HexWeb.API.Handlers.Docs do
 
             if check_version_dirs?(files) do
               task    = fn -> upload_docs(release, files, body) end
-              success = fn -> success(release, user) end
+              success = fn -> :ok end
               failure = fn -> failure(release, user) end
               task(task, success, failure)
 
@@ -153,18 +153,6 @@ defmodule HexWeb.API.Handlers.Docs do
     end)
   end
 
-  defp success(release, user) do
-    package = release.package.name
-    version = to_string(release.version)
-    email   = Application.get_env(:hex_web, :email)
-    body    = HexWeb.Email.Templates.render(:publish_success,
-                                            package: package,
-                                            version: version,
-                                            docs: true)
-    title   = "Hex.pm - Documentation for #{package} v#{version} has been published"
-    email.send(user.email, title, body)
-  end
-
   defp failure(release, user) do
     # TODO: Revert database changes
     package = release.package.name
@@ -174,7 +162,7 @@ defmodule HexWeb.API.Handlers.Docs do
                                             package: package,
                                             version: version,
                                             docs: true)
-    title   = "Hex.pm - Documentation for #{package} v#{version} failed to publish succesfully"
+    title   = "Hex.pm - ERROR when publishing documentation for #{package} v#{version}"
     email.send(user.email, title, body)
   end
 

@@ -56,7 +56,7 @@ defmodule HexWeb.API.Handlers.Package do
 
   defp after_release(package, version, user, body) do
     task    = fn -> job(package, version, body) end
-    success = fn -> success(package, version, user) end
+    success = fn -> :ok end
     failure = fn -> failure(package, version, user) end
     task(task, success, failure)
   end
@@ -67,16 +67,6 @@ defmodule HexWeb.API.Handlers.Package do
     HexWeb.RegistryBuilder.rebuild
   end
 
-  defp success(package, version, user) do
-    email = Application.get_env(:hex_web, :email)
-    body  = HexWeb.Email.Templates.render(:publish_success,
-                                            package: package.name,
-                                            version: version,
-                                            docs: false)
-    title = "Hex.pm - #{package.name} v#{version} has been published"
-    email.send(user.email, title, body)
-  end
-
   defp failure(package, version, user) do
     # TODO: Revert database changes
     email = Application.get_env(:hex_web, :email)
@@ -84,7 +74,7 @@ defmodule HexWeb.API.Handlers.Package do
                                             package: package.name,
                                             version: version,
                                             docs: false)
-    title = "Hex.pm - #{package.name} v#{version} failed to publish successfully"
+    title = "Hex.pm - ERROR when publishing #{package.name} v#{version}"
     email.send(user.email, title, body)
   end
 
