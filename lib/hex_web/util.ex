@@ -212,7 +212,7 @@ defmodule HexWeb.Util do
         ref        = Process.monitor(pid)
 
         receive do
-          {:DOWN, ^ref, :process, ^pid, :normal} ->
+          {:DOWN, ^ref, :process, ^pid, reason} when reason in [:normal, :noproc] ->
             success.()
           {:DOWN, ^ref, :process, ^pid, _reason} ->
             failure.()
