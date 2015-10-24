@@ -207,7 +207,7 @@ defmodule HexWeb.Util do
     end
   else
     def task(fun, success, failure) do
-      Task.start(fn ->
+      Task.Supervisor.start_child(HexWeb.PublishTasks, fn ->
         {:ok, pid} = Task.Supervisor.start_child(HexWeb.PublishTasks, fun)
         ref        = Process.monitor(pid)
 
