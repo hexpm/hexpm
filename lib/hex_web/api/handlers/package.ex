@@ -7,16 +7,12 @@ defmodule HexWeb.API.Handlers.Package do
   def publish(conn, package, user, body) do
     case HexWeb.Tar.metadata(body) do
       {:ok, meta, checksum} ->
-        if package do
-          create_release(conn, package, user, checksum, meta, body)
-        else
-          package_params = %{"name" => meta["name"], "meta" => meta}
-          case create_package(conn, package_params) do
-            {:ok, package} ->
-              create_release(conn, package, user, checksum, meta, body)
-            {:error, errors} ->
-              send_validation_failed(conn, %{package: errors})
-          end
+        package_params = %{"name" => meta["name"], "meta" => meta}
+        case create_package(conn, package, package_params) do
+          {:ok, package} ->
+            create_release(conn, package, user, checksum, meta, body)
+          {:error, errors} ->
+            send_validation_failed(conn, %{package: errors})
         end
 
       {:error, errors} ->
@@ -40,10 +36,11 @@ defmodule HexWeb.API.Handlers.Package do
     end
   end
 
-  defp create_package(conn, params) do
+  defp create_package(conn, package, params) do
     name = params["name"]
+    package = package || Package.get(name)
 
-    if package = Package.get(name) do
+    if package do
       with_authorized(conn, [], &Package.owner?(package, &1), fn _ ->
         Package.update(package, params)
       end)
