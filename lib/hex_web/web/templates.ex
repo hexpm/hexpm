@@ -36,6 +36,7 @@ defmodule HexWeb.Web.Templates do
     docs_tasks: [:_],
     docs_codeofconduct: [:_],
     docs_faq: [:_],
+    docs_mirrors: [:_],
     reset: [:assigns],
     resetresult: [:assigns],
     versions: [:package, :releases, :older?]
