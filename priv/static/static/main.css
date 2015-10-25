@@ -62,6 +62,7 @@ pre {
 
 .packages {
   table-layout: fixed;
+  min-width: 420px;
 }
 
 .packages td {
