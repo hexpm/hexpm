@@ -49,7 +49,7 @@ defmodule HexWeb.RouterTest do
     end
 
     reqs = %{decimal: %{requirement: "~> 0.0.1"}}
-    body = create_tar(%{name: :postgrex, version: "0.0.1", requirements: reqs}, [])
+    body = create_tar(%{name: :postgrex, version: "0.0.1", requirements: reqs, description: "description"}, [])
     conn = conn("POST", "/api/packages/postgrex/releases", body)
            |> put_req_header("content-type", "application/octet-stream")
            |> put_req_header("authorization", "Basic " <> :base64.encode("eric:eric"))
