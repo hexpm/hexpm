@@ -244,17 +244,17 @@ defmodule HexWeb.Package do
   end
 
   defp sort(query, :inserted_at) do
-    from d in query, order_by: [desc: :inserted_at]
+    from d in query, order_by: [desc: :inserted_at, desc: :id]
   end
 
   defp sort(query, :updated_at) do
-    from d in query, order_by: [desc: :updated_at]
+    from d in query, order_by: [desc: :updated_at, desc: :id]
   end
 
   defp sort(query, :downloads) do
     from p in query,
     left_join: d in HexWeb.Stats.PackageDownload, on: p.id == d.package_id and d.view == "all",
-    order_by: [asc: is_nil(d.downloads), desc: d.downloads]
+    order_by: [asc: is_nil(d.downloads), desc: d.downloads, desc: p.id]
   end
 
   defp sort(query, nil) do
