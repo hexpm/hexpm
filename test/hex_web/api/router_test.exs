@@ -56,7 +56,7 @@ defmodule HexWeb.API.RouterTest do
            |> put_req_header("authorization", key.user_secret)
     conn = Router.call(conn, [])
     assert conn.status == 403
-    assert conn.resp_body =~ "Account Unconfirmed"
+    assert conn.resp_body =~ "account unconfirmed"
 
     conn = conn("GET", "/confirm?username=name&key=" <> user.confirmation_key)
     conn = Router.call(conn, [])
@@ -153,7 +153,7 @@ defmodule HexWeb.API.RouterTest do
            |> put_req_header("authorization", "Basic " <> :base64.encode("other:other"))
     conn = Router.call(conn, [])
 
-    assert conn.status == 401
+    assert conn.status == 403
     assert get_resp_header(conn, "www-authenticate") == ["Basic realm=hex"]
   end
 
@@ -283,7 +283,7 @@ defmodule HexWeb.API.RouterTest do
            |> put_req_header("authorization", "Basic " <> :base64.encode("other:other"))
     conn = Router.call(conn, [])
 
-    assert conn.status == 401
+    assert conn.status == 403
     assert get_resp_header(conn, "www-authenticate") == ["Basic realm=hex"]
   end
 
@@ -613,7 +613,7 @@ defmodule HexWeb.API.RouterTest do
     conn = conn("GET", "/api/packages/postgrex/owners")
            |> put_req_header("authorization", "Basic " <> :base64.encode("other:other"))
     conn = Router.call(conn, [])
-    assert conn.status == 401
+    assert conn.status == 403
   end
 
   test "check if user is package owner" do
@@ -632,7 +632,7 @@ defmodule HexWeb.API.RouterTest do
     conn = conn("GET", "/api/packages/postgrex/owners/eric@mail.com")
            |> put_req_header("authorization", "Basic " <> :base64.encode("other:other"))
     conn = Router.call(conn, [])
-    assert conn.status == 401
+    assert conn.status == 403
   end
 
   test "add package owner" do
@@ -651,7 +651,7 @@ defmodule HexWeb.API.RouterTest do
     conn = conn("PUT", "/api/packages/postgrex/owners/jose%40mail.com")
            |> put_req_header("authorization", "Basic " <> :base64.encode("other:other"))
     conn = Router.call(conn, [])
-    assert conn.status == 401
+    assert conn.status == 403
   end
 
   test "delete package owner" do
@@ -678,7 +678,7 @@ defmodule HexWeb.API.RouterTest do
     conn = conn("DELETE", "/api/packages/postgrex/owners/eric%40mail.com")
            |> put_req_header("authorization", "Basic " <> :base64.encode("other:other"))
     conn = Router.call(conn, [])
-    assert conn.status == 401
+    assert conn.status == 403
   end
 
   @tag :integration

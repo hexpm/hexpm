@@ -117,12 +117,16 @@ defmodule HexWeb.API.Util do
         if auth?.(user) do
           fun.(user)
         else
-          send_unauthorized(conn)
+          send_forbidden(conn, "account not authorized for this action")
         end
-      {:unconfirmed, _user} ->
-        send_unconfirmed(conn)
-      :error ->
-        send_unauthorized(conn)
+      {:error, :invalid} ->
+        send_unauthorized(conn, "invalid authentication information")
+      {:error, :basic} ->
+        send_unauthorized(conn, "invalid username and password combination")
+      {:error, :key} ->
+        send_unauthorized(conn, "invalid username and API key combination")
+      {:error, :unconfirmed} ->
+        send_forbidden(conn, "account unconfirmed")
     end
   end
 
@@ -139,7 +143,7 @@ defmodule HexWeb.API.Util do
         [key] when not only_basic ->
           key_auth(key)
         _ ->
-          :error
+          {:error, :invalid}
       end
 
     case result do
@@ -148,9 +152,7 @@ defmodule HexWeb.API.Util do
           allow_unconfirmed or user.confirmed ->
             {:ok, user}
           !user.confirmed ->
-            {:unconfirmed, user}
-          true ->
-            :error
+            {:error, :unconfirmed}
         end
       error ->
         error
@@ -164,17 +166,17 @@ defmodule HexWeb.API.Util do
         if User.auth?(user, password) do
           {:ok, user}
         else
-          :error
+          {:error, :basic}
         end
       _ ->
-        :error
+        {:error, :invalid}
     end
   end
 
   defp key_auth(key) do
     case Key.auth(key) do
       nil ->
-        :error
+        {:error, :key}
       user ->
         {:ok, user}
     end
@@ -183,21 +185,20 @@ defmodule HexWeb.API.Util do
   @doc """
   Send an unauthorized response.
   """
-  @spec send_unauthorized(Plug.Conn.t) :: Plug.Conn.t
-  def send_unauthorized(conn) do
+  @spec send_unauthorized(Plug.Conn.t, String.t) :: Plug.Conn.t
+  def send_unauthorized(conn, reason) do
+    body = %{status: 401, message: reason}
     conn
     |> put_resp_header("www-authenticate", "Basic realm=hex")
-    |> send_resp(401, "")
+    |> send_render(401, body)
   end
 
   @doc """
-  Send an unconfirmed response.
+  Send a forbidden response.
   """
-  @spec send_unconfirmed(Plug.Conn.t) :: Plug.Conn.t
-  def send_unconfirmed(conn) do
-    errors = %{user: "account needs to be confirmed"}
-    body = %{message: "Account Unconfirmed", errors: errors}
-
+  @spec send_forbidden(Plug.Conn.t, String.t) :: Plug.Conn.t
+  def send_forbidden(conn, reason) do
+    body = %{status: 403, message: reason}
     conn
     |> put_resp_header("www-authenticate", "Basic realm=hex")
     |> send_render(403, body)
@@ -258,7 +259,7 @@ defmodule HexWeb.API.Util do
 
   def send_validation_failed(conn, errors) do
     errors = errors_to_map(errors)
-    body = %{message: "Validation failed", errors: errors}
+    body = %{status: 422, message: "Validation failed", errors: errors}
     send_render(conn, 422, body)
   end
 
