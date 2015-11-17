@@ -53,13 +53,12 @@ defmodule HexWeb.Requirement do
         {:error, {dep, "invalid requirement: #{inspect req}"}}
 
       id = deps[dep] ->
-        build(release, :requirements)
-        |> struct(requirement: req,
-                  app: app,
-                  optional: optional,
-                  dependency_id: id)
-        |> HexWeb.Repo.insert
-        |> case do: (req -> {:ok, req})
+        {:ok, build(release, :requirements)
+              |> struct(requirement: req,
+                        app: app,
+                        optional: optional,
+                        dependency_id: id)
+              |> HexWeb.Repo.insert}
 
       true ->
         {:error, {dep, "unknown package"}}
