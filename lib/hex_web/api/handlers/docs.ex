@@ -182,6 +182,6 @@ defmodule HexWeb.API.Handlers.Docs do
     end
 
     # TODO: Send mails
-    task(task, fn -> end, fn -> end)
+    task(task, fn -> nil end, fn -> nil end)
   end
 end
