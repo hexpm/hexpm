@@ -15,7 +15,10 @@
 </p>
 
 <p>
-  <strong>Example</strong>: <code>$ mix hex.config cdn_url https://s3.amazonaws.com/s3.hex.pm</code>
+  <strong>Mix Example</strong>: <code>$ mix hex.config cdn_url https://s3.amazonaws.com/s3.hex.pm</code>
+</p>
+<p>
+  <strong>Rebar3 Example</strong>: Add to the global or a project's top level <code>rebar.config</code>, <code>{rebar_packages_cdn, "https://s3.amazonaws.com/s3.hex.pm"}.</code>. For more information see rebar3's package support and configuration <a href="http://www.rebar3.org/docs/dependencies#package-manager-dependencies">documentation</a>.
 </p>
 
 <p>
@@ -23,7 +26,10 @@
 </p>
 
 <p>
-  <strong>Example</strong>: <code>$ HEX_CDN=https://s3.amazonaws.com/s3.hex.pm mix hex.registry</code>
+  <strong>Mix Example</strong>: <code>$ HEX_CDN=https://s3.amazonaws.com/s3.hex.pm mix hex.registry</code>
+</p>
+<p>
+  <strong>Rebar3 Example</strong>: <code>$ HEX_CDN=https://s3.amazonaws.com/s3.hex.pm rebar3 update</code>
 </p>
 
 <h3>Available mirrors</h3>
