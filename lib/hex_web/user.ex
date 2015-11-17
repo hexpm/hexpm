@@ -201,8 +201,8 @@ defimpl HexWeb.Render, for: HexWeb.User do
       |> Map.put(:url, api_url(["users", user.username]))
 
     packages = List.foldl(entity.owned_packages, %{}, fn(package, accum) ->
-        Map.put(accum, package.name, api_url(["packages", package.name]))
-      end)
+      Map.put(accum, package.name, api_url(["packages", package.name]))
+    end)
 
     Map.put(entity, :owned_packages, packages)
   end

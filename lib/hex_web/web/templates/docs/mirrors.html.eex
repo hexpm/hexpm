@@ -26,7 +26,7 @@
 </p>
 
 <p>
-  <strong>Mix Example</strong>: <code>$ HEX_CDN=https://s3.amazonaws.com/s3.hex.pm mix hex.registry</code>
+  <strong>Mix Example</strong>: <code>$ HEX_CDN=https://s3.amazonaws.com/s3.hex.pm mix deps.get</code>
 </p>
 <p>
   <strong>Rebar3 Example</strong>: <code>$ HEX_CDN=https://s3.amazonaws.com/s3.hex.pm rebar3 update</code>
