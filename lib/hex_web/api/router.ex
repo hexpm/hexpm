@@ -79,7 +79,12 @@ defmodule HexWeb.API.Router do
         User.delete(user)
       end
 
-      result = User.create(conn.params)
+      result = case User.create(conn.params) do
+        {:ok, user} ->
+          user = HexWeb.Repo.preload(user, :owned_packages)
+          {:ok, user}
+        {:error, changeset} -> {:error, changeset}
+      end
       send_creation_resp(conn, result, :public, api_url(["users", conn.params["username"]]))
     end
 

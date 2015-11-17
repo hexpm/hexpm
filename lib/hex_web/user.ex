@@ -18,6 +18,7 @@ defmodule HexWeb.User do
     field :reset_expiry, Ecto.DateTime
 
     has_many :package_owners, HexWeb.PackageOwner, foreign_key: :owner_id
+    has_many :owned_packages, through: [:package_owners, :package]
     has_many :keys, HexWeb.API.Key
   end
 
@@ -126,6 +127,7 @@ defmodule HexWeb.User do
   def get(username: username) do
     from(u in HexWeb.User,
          where: u.username == ^username,
+         preload: :owned_packages,
          limit: 1)
     |> HexWeb.Repo.one
   end
@@ -133,6 +135,7 @@ defmodule HexWeb.User do
   def get(email: email) do
     from(u in HexWeb.User,
          where: u.email == ^email,
+         preload: :owned_packages,
          limit: 1)
     |> HexWeb.Repo.one
   end
@@ -191,10 +194,16 @@ defimpl HexWeb.Render, for: HexWeb.User do
   import HexWeb.Util
 
   def render(user) do
-    user
-    |> Map.take([:username, :email, :inserted_at, :updated_at])
-    |> Map.update!(:inserted_at, &to_iso8601/1)
-    |> Map.update!(:updated_at, &to_iso8601/1)
-    |> Map.put(:url, api_url(["users", user.username]))
+    entity = user
+      |> Map.take([:username, :email, :inserted_at, :updated_at, :owned_packages])
+      |> Map.update!(:inserted_at, &to_iso8601/1)
+      |> Map.update!(:updated_at, &to_iso8601/1)
+      |> Map.put(:url, api_url(["users", user.username]))
+
+    packages = List.foldl(entity.owned_packages, %{}, fn(package, accum) ->
+        Map.put(accum, package.name, api_url(["packages", package.name]))
+      end)
+
+    Map.put(entity, :owned_packages, packages)
   end
 end
