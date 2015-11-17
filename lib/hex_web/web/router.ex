@@ -170,9 +170,12 @@ defmodule HexWeb.Web.Router do
   end
 
   defp package(conn, package, releases, current_release) do
-    active    = :packages
-    title     = package.name
-    downloads = PackageDownload.package(package)
+    active            = :packages
+    title             = package.name
+    downloads         = PackageDownload.package(package)
+    release_downloads = nil
+    mix_snippet       = nil
+    rebar_snippet     = nil
 
     if current_release do
       release_downloads = ReleaseDownload.release(current_release)

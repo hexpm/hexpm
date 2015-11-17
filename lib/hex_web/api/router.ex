@@ -21,11 +21,12 @@ defmodule HexWeb.API.Router do
   post "packages/:name/releases" do
     conn = HexWeb.Plug.read_body_finally(conn)
 
-    if package = Package.get(name) do
-      auth = &Package.owner?(package, &1)
-    else
-      auth = fn _ -> true end
-    end
+    auth =
+      if package = Package.get(name) do
+        &Package.owner?(package, &1)
+      else
+        fn _ -> true end
+      end
 
     with_authorized(conn, [], auth, fn user ->
       case read_body(conn, HexWeb.request_read_opts) do

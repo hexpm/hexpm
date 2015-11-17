@@ -26,12 +26,15 @@ defmodule HexWeb.Stats.JobTest do
 
   test "counts all downloads" do
     buckets = Application.get_env(:hex_web, :logs_buckets)
-    if buckets do
-      [[bucket, region]] = buckets
-      Application.put_env(:hex_web, :store, HexWeb.Store.S3)
-    else
-      buckets = [[bucket = nil, region = nil]]
-    end
+    {bucket, region} =
+      if buckets do
+        Application.put_env(:hex_web, :store, HexWeb.Store.S3)
+        [[bucket, region]] = buckets
+        {bucket, region}
+      else
+        buckets = [[nil, nil]]
+        {nil, nil}
+      end
 
     path     = Path.join([__DIR__, "..", "..", "fixtures"])
     logfile1 = File.read!(Path.join(path, "s3_logs_1.txt"))

@@ -60,15 +60,15 @@ defmodule HexWeb.Router do
 
     latest = HexWeb.Install.latest(version)
 
-    case latest do
-      {:ok, _hex, elixir} ->
-        # Always assume latest hex version
-        url = "installs/#{elixir}/hex.ez"
-      :error ->
-        url = "installs/hex.ez"
-    end
-
-    url = HexWeb.Util.cdn_url(url)
+    url =
+      case latest do
+        {:ok, _hex, elixir} ->
+          # Always assume latest hex version
+          "installs/#{elixir}/hex.ez"
+        :error ->
+          "installs/hex.ez"
+      end
+      |> HexWeb.Util.cdn_url
 
     conn
     |> cache([], [:public, "max-age": 60*60])

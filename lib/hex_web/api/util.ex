@@ -15,10 +15,11 @@ defmodule HexWeb.API.Util do
       conn = put_resp_header(conn, "etag", etag)
     end
 
-    if Keyword.get(opts, :modified, true) do
-      if modified = HexWeb.Util.last_modified(entities) do
-        conn = put_resp_header(conn, "last-modified", :cowboy_clock.rfc1123(modified))
-      end
+    modified = nil
+
+    if Keyword.get(opts, :modified, true) &&
+       (modified = HexWeb.Util.last_modified(entities)) do
+      conn = put_resp_header(conn, "last-modified", :cowboy_clock.rfc1123(modified))
     end
 
     unless HexWeb.API.Util.fresh?(conn, etag: etag, modified: modified) do
@@ -87,19 +88,17 @@ defmodule HexWeb.API.Util do
   end
 
   def send_body(conn, status, body, fallback) do
-    case conn.assigns[:format] do
-      :elixir ->
-        body = HexWeb.API.ElixirFormat.encode(body)
-        content_type = "application/vnd.hex+elixir"
-      :erlang ->
-        body = HexWeb.API.ErlangFormat.encode(body)
-        content_type = "application/vnd.hex+erlang"
-      format when format == :json or fallback ->
-        body = Poison.encode!(body, pretty: true)
-        content_type = "application/json"
-      _ ->
-        raise Plug.Parsers.UnsupportedMediaTypeError
-    end
+    {body, content_type} =
+      case conn.assigns[:format] do
+        :elixir ->
+          {HexWeb.API.ElixirFormat.encode(body), "application/vnd.hex+elixir"}
+        :erlang ->
+          {HexWeb.API.ErlangFormat.encode(body), "application/vnd.hex+erlang"}
+        format when format == :json or fallback ->
+          {Poison.encode!(body, pretty: true), "application/json"}
+        _ ->
+          raise Plug.Parsers.UnsupportedMediaTypeError
+      end
 
     conn
     |> put_resp_header("content-type", content_type)

@@ -28,12 +28,12 @@ defmodule HexWeb.API.RateLimit do
   def handle_call({:hit, key}, _from, table) do
     now = now()
 
-    if :ets.insert_new(table, {key, 1, now}) do
-      count = 1
-      created_at = now
-    else
-      [count, created_at] = :ets.update_counter(table, key, [{2, 1}, {3, 0}])
-    end
+    [count, created_at] =
+      if :ets.insert_new(table, {key, 1, now}) do
+        [1, now]
+      else
+        :ets.update_counter(table, key, [{2, 1}, {3, 0}])
+      end
 
     expires_at = created_at + @expires
 
@@ -45,11 +45,12 @@ defmodule HexWeb.API.RateLimit do
 
     remaining = @rate_limit - count
 
-    if remaining >= 0 do
-      reply = {true, remaining, @rate_limit, expires_at}
-    else
-      reply = {false, 0, @rate_limit, expires_at}
-    end
+    reply =
+      if remaining >= 0 do
+        {true, remaining, @rate_limit, expires_at}
+      else
+        {false, 0, @rate_limit, expires_at}
+      end
 
     {:reply, reply, table}
   end
