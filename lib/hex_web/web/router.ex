@@ -198,6 +198,12 @@ defmodule HexWeb.Web.Router do
   end
 
   def send_page(conn, page) do
+    conn =
+      conn
+      |> assign(:title, conn.assigns[:title])
+      |> assign(:active, conn.assigns[:active])
+      |> assign(:search, conn.assigns[:search])
+
     body = Templates.render(page, conn.assigns)
     status = conn.assigns[:status] || 200
 
