@@ -176,13 +176,24 @@ defmodule HexWeb.Util do
     result.status
   end
 
-  def mix_snippet_version(%Version{major: 0, minor: minor, patch: patch}),
+  def mix_snippet_version(%Version{major: 0, minor: minor, patch: patch, pre: []}),
     do: "~> 0.#{minor}.#{patch}"
-  def mix_snippet_version(%Version{major: major, minor: minor}),
+  def mix_snippet_version(%Version{major: major, minor: minor, pre: []}),
     do: "~> #{major}.#{minor}"
+  def mix_snippet_version(%Version{major: major, minor: minor, patch: patch, pre: pre}),
+    do: "~> #{major}.#{minor}.#{patch}#{pre_snippet(pre)}"
 
-  def rebar_snippet_version(%Version{major: major, minor: minor, patch: patch}),
-    do: "#{major}.#{minor}.#{patch}"
+  def rebar_snippet_version(%Version{major: major, minor: minor, patch: patch, pre: pre}),
+    do: "#{major}.#{minor}.#{patch}#{pre_snippet(pre)}"
+
+  defp pre_snippet([]), do: ""
+  defp pre_snippet(pre) do
+    "-" <>
+      Enum.map_join(pre, ".", fn
+        int when is_integer(int) -> Integer.to_string(int)
+        string when is_binary(string) -> string
+      end)
+  end
 
   def association_loaded?(%Ecto.Association.NotLoaded{}),
     do: false

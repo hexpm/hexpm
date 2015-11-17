@@ -72,17 +72,21 @@ defmodule HexWeb.Web.HTML.Helpers do
 
   def format_dep_snippet(:mix, package_name, snippet, current_release) do
     app_name = current_release.meta["app"] || package_name
-    case package_name == app_name do
-      true -> "{:#{package_name}, \"#{snippet}\"}"
-      false -> "{:#{app_name}, \"#{snippet}\", hex: :#{package_name}}"
+
+    if package_name == app_name do
+      "{:#{package_name}, \"#{snippet}\"}"
+    else
+      "{:#{app_name}, \"#{snippet}\", hex: :#{package_name}}"
     end
   end
 
   def format_dep_snippet(:rebar, package_name, snippet, current_release) do
     app_name = current_release.meta["app"] || package_name
-    case package_name == app_name do
-      true -> "{#{package_name}, \"#{snippet}\"}"
-      false -> "{#{app_name}, \"#{snippet}\", {pkg, #{package_name}}}"
+
+    if package_name == app_name do
+      "{#{package_name}, \"#{snippet}\"}"
+    else
+      "{#{app_name}, \"#{snippet}\", {pkg, #{package_name}}}"
     end
   end
 
