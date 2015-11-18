@@ -106,15 +106,11 @@ defmodule HexWeb.Tar do
 
   defp proplists_to_maps(meta) do
     meta
-    |> try_update("links", &Enum.into(&1, %{}))
-    |> try_update("requirements", fn
-         reqs when is_list(reqs) ->
-           Enum.into(reqs, %{}, fn
-             {key, value} when is_list(value) -> {key, Enum.into(value, %{})}
-             pair -> pair
-           end)
-         reqs ->
-           reqs
+    |> try_update("links", &try_into_map(&1))
+    |> try_update("requirements", fn reqs ->
+         try_into_map(reqs, fn {key, value} ->
+           {key, try_into_map(value)}
+         end)
        end)
   end
 
@@ -155,6 +151,14 @@ defmodule HexWeb.Tar do
     case Map.fetch(map, key) do
       {:ok, value} -> Map.put(map, key, fun.(value))
       :error -> map
+    end
+  end
+
+  defp try_into_map(input, fun \\ fn x -> x end) do
+    if is_list(input) and Enum.all?(input, &(is_tuple(&1) and tuple_size(&1) == 2)) do
+      Enum.into(input, %{}, fun)
+    else
+      input
     end
   end
 end
