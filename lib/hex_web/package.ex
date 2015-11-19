@@ -152,7 +152,6 @@ defmodule HexWeb.Package do
          join: u in HexWeb.User, on: u.id == p.owner_id,
          select: u)
     |> HexWeb.Repo.all
-    |> HexWeb.Repo.preload(:owned_packages)
   end
 
   def owner?(package, user) do

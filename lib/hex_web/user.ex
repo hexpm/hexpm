@@ -127,7 +127,6 @@ defmodule HexWeb.User do
   def get(username: username) do
     from(u in HexWeb.User,
          where: u.username == ^username,
-         preload: :owned_packages,
          limit: 1)
     |> HexWeb.Repo.one
   end
@@ -135,7 +134,6 @@ defmodule HexWeb.User do
   def get(email: email) do
     from(u in HexWeb.User,
          where: u.email == ^email,
-         preload: :owned_packages,
          limit: 1)
     |> HexWeb.Repo.one
   end
@@ -195,15 +193,19 @@ defimpl HexWeb.Render, for: HexWeb.User do
 
   def render(user) do
     entity = user
-      |> Map.take([:username, :email, :inserted_at, :updated_at, :owned_packages])
+      |> Map.take([:username, :email, :inserted_at, :updated_at])
       |> Map.update!(:inserted_at, &to_iso8601/1)
       |> Map.update!(:updated_at, &to_iso8601/1)
       |> Map.put(:url, api_url(["users", user.username]))
 
-    packages = List.foldl(entity.owned_packages, %{}, fn(package, accum) ->
-      Map.put(accum, package.name, api_url(["packages", package.name]))
-    end)
+    if association_loaded?(user.owned_packages) do
+      packages = List.foldl(user.owned_packages, %{}, fn(package, accum) ->
+        Map.put(accum, package.name, url(["packages", package.name]))
+      end)
 
-    Map.put(entity, :owned_packages, packages)
+      entity = Map.put(entity, :owned_packages, packages)
+    end
+
+    entity
   end
 end
