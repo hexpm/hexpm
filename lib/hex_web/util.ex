@@ -141,6 +141,14 @@ defmodule HexWeb.Util do
   end
 
   @doc """
+  Returns a url to the documentation tarball in the Amazon S3 Hex.pm bucket.
+  """
+  @spec docs_tarball_url(String.t) :: String.t
+  def docs_tarball_url(package_name) do
+    Application.get_env(:hex_web, :s3_url) <> "/" <> Application.get_env(:hex_web, :s3_bucket) <> "/docs/#{package_name}.tar.gz"
+  end
+
+  @doc """
   Converts an ecto datetime record to ISO 8601 format.
   """
   @spec to_iso8601(Ecto.DateTime.t) :: String.t

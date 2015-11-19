@@ -176,6 +176,14 @@ defmodule HexWeb.Web.Router do
     release_downloads = nil
     mix_snippet       = nil
     rebar_snippet     = nil
+    hexdocs_url       = nil
+    docs_tarball_url  = nil
+    has_docs          = Enum.any?(releases, fn(release) -> release.has_docs end)
+
+    if has_docs do
+      hexdocs_url = Util.docs_url([package.name])
+      docs_tarball_url = Util.docs_tarball_url(title)
+    end
 
     if current_release do
       release_downloads = ReleaseDownload.release(current_release)
@@ -186,7 +194,8 @@ defmodule HexWeb.Web.Router do
     end
 
     conn = assign_pun(conn, [package, releases, current_release, downloads,
-                             release_downloads, active, title, mix_snippet, rebar_snippet])
+                             release_downloads, active, title, mix_snippet,
+                             rebar_snippet, hexdocs_url, docs_tarball_url])
     send_page(conn, :package)
   end
 
