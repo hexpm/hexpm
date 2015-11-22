@@ -45,7 +45,7 @@ build_tools = @current_release && @current_release.meta["build_tools"] || []
         <dd>
           <ul class="links">
             <%= for { name, link } <- links do %>
-              <li><a href="<%= link %>"><%= name %></a></li>
+              <li><a href="<%= link %>" rel="nofollow"><%= name %></a></li>
             <% end %>
           </ul>
         </dd>
