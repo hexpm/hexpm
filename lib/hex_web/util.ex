@@ -162,11 +162,15 @@ defmodule HexWeb.Util do
         $/x
   end
 
-  def paginate(query, page, count) do
+  def paginate(query, page, count) when is_integer(page) and page > 0 do
     offset = (page - 1) * count
     from(var in query,
          offset: ^offset,
          limit: ^count)
+  end
+
+  def paginate(query, _page, count) do
+    paginate(query, 1, count)
   end
 
   def shell(cmd) do

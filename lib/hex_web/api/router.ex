@@ -105,10 +105,10 @@ defmodule HexWeb.API.Router do
     # Packages
 
     get "packages" do
-      page      = Util.safe_int(conn.params["page"]) || 1
-      search    = conn.params["search"] |> Util.safe_search
-      sort      = Util.safe_to_atom(conn.params["sort"] || "name", ~w(name downloads inserted_at updated_at))
-      packages  = Package.all(page, 100, search, sort)
+      page     = Util.safe_int(conn.params["page"])
+      search   = conn.params["search"] |> Util.safe_search
+      sort     = Util.safe_to_atom(conn.params["sort"] || "name", ~w(name downloads inserted_at updated_at))
+      packages = Package.all(page, 100, search, sort)
 
       # No last-modified header for paginated results
       when_stale(conn, packages, [modified: false], &send_okay(&1, packages, :public))
