@@ -10,7 +10,7 @@ defmodule HexWeb.Supervisor do
     Logger.info "Starting Cowboy on port #{opts[:port]}"
 
     tree = [
-      worker(HexWeb.Repo, []),
+      supervisor(HexWeb.Repo, []),
       supervisor(Task.Supervisor, [[name: HexWeb.PublishTasks]]),
       worker(HexWeb.BlockedAddress, []),
       worker(HexWeb.API.RateLimit, [HexWeb.API.RateLimit]),
