@@ -2,7 +2,19 @@
 File.mkdir_p!("logs/#{dir}")
 File.cd!("logs")
 
-HexWeb.Util.shell(~s(aws s3 cp s3://logs.hex.pm . --recursive --exclude "*" --include "#{dir}/#{date}*"))
+buckets =
+  case dir do
+    "docs" ->
+      [{"logs.hex.pm", "us-east-1"}]
+    "hex" ->
+      [{"logs.hex.pm",      "us-east-1"},
+       {"logs-eu.hex.pm",   "eu-west-1"},
+       {"logs-asia.hex.pm", "ap-southeast-1"}]
+  end
+
+Enum.each(buckets, fn {bucket, region} ->
+  HexWeb.Util.shell(~s(aws s3 cp s3://#{bucket} . --region #{region} --recursive --exclude "*" --include "#{dir}/#{date}*"))
+end)
 
 contents =
   Path.wildcard("#{dir}/**")
@@ -12,7 +24,9 @@ contents =
 filename = "#{dir}-#{date}.txt.gz"
 File.write!(filename, contents)
 
-HexWeb.Util.shell(~s(aws s3 cp #{filename} s3://s3.hex.pm/log-archives/#{filename}))
+HexWeb.Util.shell(~s(aws s3 cp #{filename} s3://backup.hex.pm/log-archives/#{filename}))
 
-HexWeb.Util.shell(~s(aws s3 rm s3://logs.hex.pm --recursive --exclude "*" --include "#{dir}/#{date}*"))
+Enum.each(buckets, fn {bucket, region} ->
+  HexWeb.Util.shell(~s(aws s3 rm s3://#{bucket} --region #{region} --recursive --exclude "*" --include "#{dir}/#{date}*"))
+end)
 
