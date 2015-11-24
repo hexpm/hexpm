@@ -15,9 +15,10 @@ defmodule HexWeb.Plugs.Exception do
           HexWeb.Util.log_error(kind, error, stacktrace)
         end
 
-        if status != 500 and Exception.exception?(error) do
-          message = Exception.message(error)
-        end
+        message =
+          if status != 500 and Exception.exception?(error) do
+            Exception.message(error)
+          end
 
         if List.first(conn.path_info) == "api" do
           api_response(conn, status, message)

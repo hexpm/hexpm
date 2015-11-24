@@ -24,11 +24,8 @@ defmodule HexWeb.Web.HTML.Helpers do
           Enum.to_list(page-2..page+2)
       end
 
-    if page != 1,         do: prev = true
-    if page != all_pages, do: next = true
-
-    %{prev: prev || false,
-      next: next || false,
+    %{prev: page != 1,
+      next: page != all_pages,
       page_links: page_links}
   end
 

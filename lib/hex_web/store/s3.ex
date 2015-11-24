@@ -1,5 +1,6 @@
 defmodule HexWeb.Store.S3 do
   @behaviour HexWeb.Store
+
   alias ExAws.S3
   alias ExAws.S3.Impl, as: S3Impl
 
@@ -78,8 +79,8 @@ defmodule HexWeb.Store.S3 do
   end
 
   defp delete(bucket, path) do
-    bucket = Application.get_env(:hex_web, bucket)
-    S3.delete_object!(bucket, path)
+    Application.get_env(:hex_web, bucket)
+    |> S3.delete_object!(bucket, path)
   end
 
   defp redirect(conn, location, path) do
