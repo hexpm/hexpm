@@ -34,6 +34,8 @@ defmodule HexWeb.API.Router do
           HexWeb.API.Handlers.Package.publish(conn, package, user, body)
         {:error, :timeout} ->
           raise RequestTimeout
+        {:error, _} ->
+          send_resp(conn, 400, "")
         {:more, _, _} ->
           raise RequestTooLarge
       end
