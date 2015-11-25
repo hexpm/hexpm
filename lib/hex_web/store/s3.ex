@@ -80,7 +80,7 @@ defmodule HexWeb.Store.S3 do
 
   defp delete(bucket, path) do
     Application.get_env(:hex_web, bucket)
-    |> S3.delete_object!(bucket, path)
+    |> S3.delete_object!(path)
   end
 
   defp redirect(conn, location, path) do
