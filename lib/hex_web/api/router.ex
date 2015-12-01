@@ -130,23 +130,6 @@ defmodule HexWeb.API.Router do
       end
     end
 
-    # TODO: Remove this
-    put "packages/:name" do
-      params = Map.put(conn.params, "name", name)
-
-      if package = Package.get(name) do
-        with_authorized(conn, [], &Package.owner?(package, &1), fn _ ->
-          result = Package.update(package, params)
-          send_update_resp(conn, result, :public)
-        end)
-      else
-        with_authorized(conn, [], fn user ->
-          result = Package.create(user, params)
-          send_creation_resp(conn, result, :public, api_url(["packages", name]))
-        end)
-      end
-    end
-
     delete "packages/:name/releases/:version" do
       if (package = Package.get(name)) && (release = Release.get(package, version)) do
         with_authorized(conn, [], &Package.owner?(package, &1), fn _ ->
