@@ -25,6 +25,7 @@ defmodule HexWeb.Router do
 
   # TODO: favicon
 
+  # Used for testing this project and hex client
   if Mix.env != :prod do
     get "registry.ets.gz" do
       store = Application.get_env(:hex_web, :store)

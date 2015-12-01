@@ -13,6 +13,8 @@ defmodule HexWeb do
     Application.put_env(:hex_web, :tmp, Path.expand("tmp"))
 
     File.mkdir_p!("tmp")
+
+    shutdown_on_eof()
     HexWeb.Supervisor.start_link(opts)
   end
 
@@ -30,6 +32,17 @@ defmodule HexWeb do
     [ length: 10_000_000,
       read_length: 10_000,
       read_timeout: 1_000 ]
+  end
+
+  # Make sure we exit after hex client tests are finished running
+  if Mix.env == :hex do
+    def shutdown_on_eof do
+      spawn_link(fn ->
+        IO.gets(:stdio, '') == :eof && System.halt(0)
+      end)
+    end
+  else
+    def shutdown_on_eof, do: nil
   end
 
   defprotocol Render do
