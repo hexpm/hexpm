@@ -7,6 +7,8 @@ logs_buckets = if value = System.get_env("HEX_LOGS_BUCKETS"),
                  do: value |> String.split(";") |> Enum.map(&String.split(&1, ","))
 
 config :hex_web,
+  user_confirm:  true,
+
   port:          System.get_env("PORT") || "4000",
   url:           System.get_env("HEX_URL"),
   app_host:      System.get_env("APP_HOST"),

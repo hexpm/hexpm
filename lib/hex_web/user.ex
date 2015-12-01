@@ -41,7 +41,11 @@ defmodule HexWeb.User do
     |> validate_format(:username, ~r"^[a-z0-9_\-\.!~\*'\(\)]+$")
   end
 
-  def create(params, confirmed? \\ false) do
+  def create(params, confirmed? \\ nil) do
+    if is_nil(confirmed?) do
+      confirmed? = not Application.get_env(:hex_web, :user_confirm)
+    end
+
     changeset =
       changeset(%HexWeb.User{}, :create, params)
       |> put_change(:confirmation_key, gen_key())
