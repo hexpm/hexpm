@@ -36,7 +36,7 @@ defmodule HexWeb.RegistryBuilder do
     rescue
       error in [Postgrex.Error] ->
         stacktrace = System.stacktrace
-        if error.postgres.code == "55P03" do
+        if error.postgres.code == :lock_not_available do
           :timer.sleep(@wait_time)
           unless skip?(handle) do
             rebuild(handle, reg_file)
