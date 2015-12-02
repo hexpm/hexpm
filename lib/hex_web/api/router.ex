@@ -29,16 +29,9 @@ defmodule HexWeb.API.Router do
       end
 
     with_authorized(conn, [], auth, fn user ->
-      case read_body(conn, HexWeb.request_read_opts) do
-        {:ok, body, conn} ->
-          HexWeb.API.Handlers.Package.publish(conn, package, user, body)
-        {:error, :timeout} ->
-          raise RequestTimeout
-        {:error, _} ->
-          send_resp(conn, 400, "")
-        {:more, _, _} ->
-          raise RequestTooLarge
-      end
+      fetch_body(conn, fn conn, body ->
+        HexWeb.API.Handlers.Package.publish(conn, package, user, body)
+      end)
     end)
   end
 
@@ -47,17 +40,25 @@ defmodule HexWeb.API.Router do
 
     if (package = Package.get(name)) && (release = Release.get(package, version)) do
       with_authorized(conn, [], &Package.owner?(package, &1), fn user ->
-        case read_body(conn, HexWeb.request_read_opts) do
-          {:ok, body, conn} ->
-            HexWeb.API.Handlers.Docs.publish(conn, release, user, body)
-          {:error, :timeout} ->
-            raise RequestTimeout
-          {:more, _, _} ->
-            raise RequestTooLarge
-        end
+        fetch_body(conn, fn conn, body ->
+          HexWeb.API.Handlers.Docs.publish(conn, release, user, body)
+        end)
       end)
     else
       raise NotFound
+    end
+  end
+
+  defp fetch_body(conn, fun) do
+    case read_body(conn, HexWeb.request_read_opts) do
+      {:ok, body, conn} ->
+        fun.(conn, body)
+      {:error, :timeout} ->
+        raise RequestTimeout
+      {:error, _} ->
+        raise BadRequest
+      {:more, _, _} ->
+        raise RequestTooLarge
     end
   end
 
