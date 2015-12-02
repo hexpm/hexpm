@@ -13,7 +13,7 @@ defmodule HexWeb.Stats.Job do
     date    = Ecto.Type.load!(Ecto.Date, date)
 
     dict =
-      Enum.reduce(buckets, HashDict.new, fn [bucket, region], dict ->
+      Enum.reduce(buckets, %{}, fn [bucket, region], dict ->
         keys = store.list_logs(region, bucket, prefix)
         process_keys(store, region, bucket, keys, dict)
       end)
@@ -60,9 +60,9 @@ defmodule HexWeb.Stats.Job do
   end
 
   defp cap_on_ip(dict, max_downloads_per_ip) do
-    Enum.reduce(dict, HashDict.new, fn {{release, _ip}, count}, dict ->
+    Enum.reduce(dict, %{}, fn {{release, _ip}, count}, dict ->
       count = min(max_downloads_per_ip, count)
-      HashDict.update(dict, release, count, &(&1 + count))
+      Map.update(dict, release, count, &(&1 + count))
     end)
   end
 
@@ -72,7 +72,7 @@ defmodule HexWeb.Stats.Job do
       case parse_line(line) do
         {ip, package, version} ->
           key = {{package, version}, ip}
-          HashDict.update(dict, key, 1, &(&1 + 1))
+          Map.update(dict, key, 1, &(&1 + 1))
         nil ->
           dict
       end
@@ -112,12 +112,12 @@ defmodule HexWeb.Stats.Job do
   defp packages do
     from(p in Package, select: {p.name, p.id})
     |> HexWeb.Repo.all
-    |> Enum.into(HashDict.new)
+    |> Enum.into(%{})
   end
 
   defp releases do
     from(r in Release, select: {{r.package_id, r.version}, r.id})
     |> HexWeb.Repo.all
-    |> Enum.into(HashDict.new, fn {{pid, vsn}, rid} -> {{pid, to_string(vsn)}, rid} end)
+    |> Enum.into(%{}, fn {{pid, vsn}, rid} -> {{pid, to_string(vsn)}, rid} end)
   end
 end

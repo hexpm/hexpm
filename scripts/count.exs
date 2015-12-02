@@ -17,22 +17,22 @@ defmodule HexWeb.Script.Count do
   end
 
   defp process_files(files) do
-    Enum.reduce(files, HashDict.new, fn {_, file}, dict ->
+    Enum.reduce(files, %{}, fn {_, file}, dict ->
       process_file(file, dict)
     end)
   end
 
   defp cap_on_ip(dict) do
-    Enum.reduce(dict, HashDict.new, fn {{release, _ip}, count}, dict ->
+    Enum.reduce(dict, %{}, fn {{release, _ip}, count}, dict ->
       count = min(@max_downloads_per_ip, count)
-      HashDict.update(dict, release, count, &(&1 + count))
+      Map.update(dict, release, count, &(&1 + count))
     end)
   end
 
   defp count_status(dict) do
-    Enum.reduce(dict, HashDict.new, fn {{release, status}, count}, dict ->
+    Enum.reduce(dict, %{}, fn {{release, status}, count}, dict ->
       map = Map.put(%{}, status, count)
-      HashDict.update(dict, release, map , &Map.put(&1, status, count))
+      Map.update(dict, release, map , &Map.put(&1, status, count))
     end)
   end
 
@@ -43,7 +43,7 @@ defmodule HexWeb.Script.Count do
         {ip, package, version, status} ->
           status = String.to_integer(status)
           key = {{package, version}, status}
-          HashDict.update(dict, key, 1, &(&1 + 1))
+          Map.update(dict, key, 1, &(&1 + 1))
         nil ->
           dict
       end

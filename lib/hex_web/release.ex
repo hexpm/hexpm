@@ -153,7 +153,7 @@ defmodule HexWeb.Release do
         select: {r.package_id, fragment("array_agg(?)", r.version)}
 
     result = HexWeb.Repo.all(query)
-    Enum.into(result, HashDict.new, fn {id, versions} ->
+    Enum.into(result, %{}, fn {id, versions} ->
       {id, latest_version(versions)}
     end)
   end
@@ -249,11 +249,11 @@ defimpl HexWeb.Render, for: HexWeb.Release do
       |> Enum.into(%{})
 
     if release.has_docs do
-      entity = Dict.put(entity, :docs_url, HexWeb.Release.docs_url(release))
+      entity = Map.put(entity, :docs_url, HexWeb.Release.docs_url(release))
     end
 
     if association_loaded?(release.downloads) do
-      entity = Dict.put(entity, :downloads, release.downloads)
+      entity = Map.put(entity, :downloads, release.downloads)
     end
 
     entity

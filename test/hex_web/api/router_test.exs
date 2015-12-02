@@ -356,7 +356,7 @@ defmodule HexWeb.API.RouterTest do
     assert conn.status == 200
 
     body = Poison.decode!(conn.resp_body)
-    assert Dict.size(body) == 2
+    assert length(body) == 2
     first = hd(body)
     assert first["name"] == "macbook"
     assert first["secret"] == nil
@@ -386,7 +386,7 @@ defmodule HexWeb.API.RouterTest do
     conn = Router.call(conn, [])
     assert conn.status == 200
 
-    assert Dict.size(Poison.decode!(conn.resp_body)) == 0
+    assert length(Poison.decode!(conn.resp_body)) == 0
 
     conn = conn("GET", "/api/keys")
            |> put_req_header("authorization", "Basic " <> :base64.encode("eric:WRONG"))
@@ -534,28 +534,28 @@ defmodule HexWeb.API.RouterTest do
 
     assert conn.status == 200
     body = Poison.decode!(conn.resp_body)
-    assert Dict.size(body) == 2
+    assert length(body) == 2
 
     conn = conn("GET", "/api/packages?search=post")
     conn = Router.call(conn, [])
 
     assert conn.status == 200
     body = Poison.decode!(conn.resp_body)
-    assert Dict.size(body) == 1
+    assert length(body) == 1
 
     conn = conn("GET", "/api/packages?page=1")
     conn = Router.call(conn, [])
 
     assert conn.status == 200
     body = Poison.decode!(conn.resp_body)
-    assert Dict.size(body) == 2
+    assert length(body) == 2
 
     conn = conn("GET", "/api/packages?page=2")
     conn = Router.call(conn, [])
 
     assert conn.status == 200
     body = Poison.decode!(conn.resp_body)
-    assert Dict.size(body) == 0
+    assert length(body) == 0
   end
 
   test "fetch sort order" do

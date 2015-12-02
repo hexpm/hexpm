@@ -39,7 +39,7 @@ defmodule HexWeb.ReleaseTest do
 
     release = Release.get(ecto, "0.0.1")
     reqs = release.requirements
-    assert Dict.size(reqs) == 2
+    assert length(reqs) == 2
     assert {"postgrex", "postgrex", "== 0.0.1", false} in reqs
     assert {"decimal", "decimal", "~> 0.0.2", false} in reqs
   end

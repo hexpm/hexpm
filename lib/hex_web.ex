@@ -51,7 +51,7 @@ defmodule HexWeb do
     Used, for example, when converting entities to JSON responses.
     """
 
-    @spec render(term) :: Dict.t
+    @spec render(term) :: map
     def render(entity)
   end
 end

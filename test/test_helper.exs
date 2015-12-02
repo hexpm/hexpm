@@ -26,9 +26,9 @@ defmodule HexWebTest.Case do
   def create_tar(meta, files) do
     meta =
       meta
-      |> Dict.put_new(:app, meta[:name])
-      |> Dict.put_new(:build_tools, ["mix"])
-      |> Dict.put_new(:requirements, %{})
+      |> Map.put_new(:app, meta[:name])
+      |> Map.put_new(:build_tools, ["mix"])
+      |> Map.put_new(:requirements, %{})
 
     contents_path = Path.join(@tmp, "#{meta[:name]}-#{meta[:version]}-contents.tar.gz")
     files = Enum.map(files, fn {name, bin} -> {String.to_char_list(name), bin} end)

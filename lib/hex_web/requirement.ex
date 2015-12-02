@@ -29,7 +29,7 @@ defmodule HexWeb.Requirement do
          from p in HexWeb.Package,
        where: p.name in ^deps,
       select: {p.name, p.id}
-    deps = HexWeb.Repo.all(deps_query) |> Enum.into(HashDict.new)
+    deps = HexWeb.Repo.all(deps_query) |> Enum.into(%{})
 
     Enum.map(requirements, fn {dep, app, req, optional} ->
       insert(release, deps, dep, app, req, optional || false)

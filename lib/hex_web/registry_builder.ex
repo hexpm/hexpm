@@ -71,8 +71,8 @@ defmodule HexWeb.RegistryBuilder do
     packages     = packages()
 
     package_tuples =
-      Enum.reduce(releases, HashDict.new, fn {_, vsn, pkg_id, _, _}, dict ->
-        Dict.update(dict, packages[pkg_id], [vsn], &[vsn|&1])
+      Enum.reduce(releases, %{}, fn {_, vsn, pkg_id, _, _}, dict ->
+        Map.update(dict, packages[pkg_id], [vsn], &[vsn|&1])
       end)
 
     package_tuples =
@@ -127,7 +127,7 @@ defmodule HexWeb.RegistryBuilder do
   defp packages do
     from(p in Package, select: {p.id, p.name})
     |> HexWeb.Repo.all
-    |> Enum.into(HashDict.new)
+    |> Enum.into(%{})
   end
 
   defp releases do
@@ -141,9 +141,9 @@ defmodule HexWeb.RegistryBuilder do
            select: {r.release_id, r.dependency_id, r.app, r.requirement, r.optional})
       |> HexWeb.Repo.all
 
-    Enum.reduce(reqs, HashDict.new, fn {rel_id, dep_id, app, req, opt}, dict ->
+    Enum.reduce(reqs, %{}, fn {rel_id, dep_id, app, req, opt}, dict ->
       tuple = {dep_id, app, req, opt}
-      Dict.update(dict, rel_id, [tuple], &[tuple|&1])
+      Map.update(dict, rel_id, [tuple], &[tuple|&1])
     end)
   end
 

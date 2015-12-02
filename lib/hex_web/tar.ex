@@ -71,7 +71,7 @@ defmodule HexWeb.Tar do
   end
 
   defp missing_files(files, version) do
-    missing_files = Enum.reject(@files, &Dict.has_key?(files, &1))
+    missing_files = Enum.reject(@files, &Map.has_key?(files, &1))
 
     if length(missing_files) == 0 do
       {:ok, files, version}
