@@ -213,7 +213,7 @@ defmodule HexWeb.Util do
       catch
         kind, error ->
           stack = System.stacktrace
-          failure.()
+          failure.({kind, error})
           :erlang.raise kind, error, stack
       else
         _ ->
@@ -229,12 +229,12 @@ defmodule HexWeb.Util do
         receive do
           {:DOWN, ^ref, :process, ^pid, reason} when reason in [:normal, :noproc] ->
             success.()
-          {:DOWN, ^ref, :process, ^pid, _reason} ->
-            failure.()
+          {:DOWN, ^ref, :process, ^pid, reason} ->
+            failure.(reason)
         after
           @publish_timeout ->
             Task.Supervisor.terminate_child(HexWeb.PublishTasks, pid)
-            failure.()
+            failure.(:timeout)
         end
       end)
     end

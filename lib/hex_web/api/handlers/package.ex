@@ -54,7 +54,7 @@ defmodule HexWeb.API.Handlers.Package do
   defp after_release(package, version, user, body) do
     task    = fn -> job(package, version, body) end
     success = fn -> :ok end
-    failure = fn -> failure(package, version, user) end
+    failure = fn reason -> failure(package, version, user, reason) end
     task(task, success, failure)
   end
 
@@ -64,7 +64,10 @@ defmodule HexWeb.API.Handlers.Package do
     HexWeb.RegistryBuilder.rebuild
   end
 
-  defp failure(package, version, user) do
+  defp failure(package, version, user, reason) do
+    require Logger
+    Logger.error "Package upload failed: #{inspect reason}"
+
     # TODO: Revert database changes
     email = Application.get_env(:hex_web, :email)
     body  = HexWeb.Email.Templates.render(:publish_fail,

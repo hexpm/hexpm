@@ -36,7 +36,7 @@ defmodule HexWeb.API.Handlers.Docs do
             if check_version_dirs?(files) do
               task    = fn -> upload_docs(release, files, body) end
               success = fn -> :ok end
-              failure = fn -> failure(release, user) end
+              failure = fn reason -> failure(release, user, reason) end
               task(task, success, failure)
 
               :ok
@@ -153,7 +153,10 @@ defmodule HexWeb.API.Handlers.Docs do
     end)
   end
 
-  defp failure(release, user) do
+  defp failure(release, user, reason) do
+    require Logger
+    Logger.error "Package upload failed: #{inspect reason}"
+
     # TODO: Revert database changes
     package = release.package.name
     version = to_string(release.version)
