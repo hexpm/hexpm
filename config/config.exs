@@ -46,6 +46,9 @@ config :ex_aws, :httpoison_opts,
 config :comeonin,
   bcrypt_log_rounds: 4
 
+config :porcelain,
+  driver: Porcelain.Driver.Basic
+
 config :logger,
   level: :debug
 
