@@ -204,7 +204,7 @@ defmodule HexWeb.Util do
   def association_loaded?(_),
     do: true
 
-  @publish_timeout 60_000
+  @publish_timeout 5 * 60 * 1000
 
   if Mix.env == :test do
     def task(fun, success, failure) do
