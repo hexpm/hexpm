@@ -22,7 +22,7 @@
           </button>
 
           <a class="navbar-brand" href="/">
-            <img src="static/hex.png" srcset="static/hex.png 1x, static/hex@2.png 2x, static/hex@3.png 3x">
+            <img src="/static/hex.png" srcset="/static/hex.png 1x, /static/hex@2.png 2x, /static/hex@3.png 3x">
           </a>
         </div>
 
