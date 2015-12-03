@@ -8,9 +8,7 @@
     <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/8.8.0/styles/github.min.css">
     <link href="/static/main.css?<%= asset_id %>" rel="stylesheet">
     <title><%= if @title, do: "#{@title} | " %>Hex</title>
-    <link rel="shortcut icon" href="/favicon.ico">
-    <link rel="icon" href="/favicon.png">
-    <link rel="apple-touch-icon" href="/favicon.png">
+    <link rel="shortcut icon" href="/favicon.png">
   </head>
   <body>
     <nav class="navbar navbar-default navbar-static-top" role="navigation">
@@ -24,7 +22,7 @@
           </button>
 
           <a class="navbar-brand" href="/">
-            <span style="font-size: 24px;">⬢</span>&nbsp;Hex
+            <img src="static/hex.png" srcset="static/hex.png 1x, static/hex@2.png 2x, static/hex@3.png 3x">
           </a>
         </div>
 
