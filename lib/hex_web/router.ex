@@ -31,7 +31,7 @@ defmodule HexWeb.Router do
       store.send_registry(conn)
     end
 
-    get "registry.ets.signed" do
+    get "registry.ets.gz.signed" do
       store = Application.get_env(:hex_web, :store)
       store.send_registry_signature(conn)
     end
