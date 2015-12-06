@@ -181,8 +181,9 @@ defmodule HexWeb.Web.Router do
     has_docs          = Enum.any?(releases, fn(release) -> release.has_docs end)
 
     if has_docs do
+      version = Util.maybe(List.first(releases), & &1.version)
       hexdocs_url = Util.docs_url([package.name])
-      docs_tarball_url = Util.docs_tarball_url(title)
+      docs_tarball_url = Util.docs_tarball_url(package.name, version)
     end
 
     if current_release do

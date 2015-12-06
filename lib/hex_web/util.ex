@@ -143,9 +143,11 @@ defmodule HexWeb.Util do
   @doc """
   Returns a url to the documentation tarball in the Amazon S3 Hex.pm bucket.
   """
-  @spec docs_tarball_url(String.t) :: String.t
-  def docs_tarball_url(package_name) do
-    Application.get_env(:hex_web, :s3_url) <> "/" <> Application.get_env(:hex_web, :s3_bucket) <> "/docs/#{package_name}.tar.gz"
+  @spec docs_tarball_url(String.t, String.t) :: String.t
+  def docs_tarball_url(package, version) do
+    s3     = Application.get_env(:hex_web, :s3_url)
+    bucket = Application.get_env(:hex_web, :s3_bucket)
+    "#{s3}/#{bucket}/docs/#{package}/#{version}.tar.gz"
   end
 
   @doc """
