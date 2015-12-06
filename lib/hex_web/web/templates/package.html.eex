@@ -50,6 +50,14 @@ build_tools = @current_release && @current_release.meta["build_tools"] || []
           </ul>
         </dd>
       <% end %>
+
+      <%= if @hexdocs_url != nil and @docs_tarball_url != nil do %>
+        <dt>Docs</dt>
+        <dd>
+          <a href="<%= @hexdocs_url %>">online</a>
+          (<a href="<%= @docs_tarball_url %>">download</a>)
+        </dd>
+      <% end %>
     </dl>
     <div style="margin: 10px 0; border-top: 1px solid #eee"></div>
 
