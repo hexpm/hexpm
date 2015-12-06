@@ -49,6 +49,10 @@ defmodule HexWeb.Requirement do
 
   defp insert(release, deps, dep, app, req, optional) do
     cond do
+      is_nil(req) ->
+        # Temporary friendly error message until people update to hex 0.9.1
+        {:error, {dep, "invalid requirement: #{inspect req}, use \">= 0.0.0\" instead"}}
+
       not valid?(req) ->
         {:error, {dep, "invalid requirement: #{inspect req}"}}
 
@@ -66,7 +70,6 @@ defmodule HexWeb.Requirement do
   end
 
   defp valid?(req) do
-    is_nil(req) or
-      (is_binary(req) and match?({:ok, _}, Version.parse_requirement(req)))
+    is_binary(req) and match?({:ok, _}, Version.parse_requirement(req))
   end
 end
