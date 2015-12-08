@@ -13,6 +13,7 @@ defmodule HexWeb.RegistryBuilder do
   alias HexWeb.Release
   alias HexWeb.Requirement
   alias HexWeb.Install
+  alias HexWeb.Util
 
   @ets_table :hex_registry
   @version   4
@@ -106,7 +107,18 @@ defmodule HexWeb.RegistryBuilder do
     :ok = :ets.tab2file(tid, String.to_char_list(file))
     :ets.delete(tid)
 
-    Application.get_env(:hex_web, :store).put_registry(File.read!(file))
+    output = File.read!(file)
+
+    store = Application.get_env(:hex_web, :store)
+    store.put_registry(output)
+
+    if key = Application.get_env(:hex_web, :signing_key) do
+      checksum = :crypto.hash(:sha512, output)
+      signature = Util.sign(checksum, key)
+
+      store.put_registry_signature(signature)
+    end
+
     HexWeb.Registry.set_done(handle)
 
     memory

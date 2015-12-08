@@ -23,8 +23,16 @@ defmodule HexWeb.Store.S3 do
     upload(:s3_bucket, "registry.ets.gz", :zlib.gzip(data))
   end
 
+  def put_registry_signature(signature) do
+    upload(:s3_bucket, "registry.ets.gz.signed", signature)
+  end
+
   def send_registry(conn) do
     redirect(conn, :cdn_url, "registry.ets.gz")
+  end
+
+  def send_registry_signature(conn) do
+    redirect(conn, :cdn_url, "registry.ets.gz.signed")
   end
 
   def put_release(name, data) do

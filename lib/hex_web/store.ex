@@ -6,7 +6,9 @@ defmodule HexWeb.Store do
   defcallback put_logs(String.t, String.t, String.t, binary) :: term
 
   defcallback put_registry(binary) :: term
+  defcallback put_registry_signature(binary) :: term
   defcallback send_registry(Plug.Conn.t) :: Plug.Conn.t
+  defcallback send_registry_signature(Plug.Conn.t) :: Plug.Conn.t
 
   defcallback put_release(String.t, binary) :: term
   defcallback delete_release(String.t) :: term

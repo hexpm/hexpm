@@ -28,6 +28,15 @@ defmodule HexWeb.RegistryBuilderTest do
     :ets.delete(tid)
   end
 
+  defp test_data do
+    postgrex = Package.get("postgrex")
+    decimal = Package.get("decimal")
+
+    Release.create(decimal, rel_meta(%{version: "0.0.1", app: "decimal"}), "")
+    Release.create(decimal, rel_meta(%{version: "0.0.2", app: "decimal", requirements: %{ex_doc: "0.0.0"}}), "")
+    Release.create(postgrex, rel_meta(%{version: "0.0.2", app: "postgrex", requirements: %{decimal: "~> 0.0.1", ex_doc: "0.1.0"}}), "")
+  end
+
   test "registry is versioned" do
     RegistryBuilder.rebuild()
     tid = open_table()
@@ -40,12 +49,7 @@ defmodule HexWeb.RegistryBuilderTest do
   end
 
   test "registry is in correct format" do
-    postgrex = Package.get("postgrex")
-    decimal = Package.get("decimal")
-
-    Release.create(decimal, rel_meta(%{version: "0.0.1", app: "decimal"}), "")
-    Release.create(decimal, rel_meta(%{version: "0.0.2", app: "decimal", requirements: %{ex_doc: "0.0.0"}}), "")
-    Release.create(postgrex, rel_meta(%{version: "0.0.2", app: "postgrex", requirements: %{decimal: "~> 0.0.1", ex_doc: "0.1.0"}}), "")
+    test_data()
 
     RegistryBuilder.rebuild()
     tid = open_table()
@@ -70,6 +74,63 @@ defmodule HexWeb.RegistryBuilderTest do
     after
       close_table(tid)
     end
+  end
+
+  test "registry is uploaded alongside signature" do
+    keypath  = Path.join([__DIR__, "..", "fixtures"])
+    key      = File.read!(Path.join(keypath, "testkey.pem"))
+    Application.put_env(:hex_web, :signing_key, key)
+
+    test_data()
+    RegistryBuilder.rebuild()
+
+    tmp = Application.get_env(:hex_web, :tmp)
+    reg = File.read!(Path.join(tmp, "store/registry.ets.gz")) |> :zlib.gunzip
+    sig = File.read!(Path.join(tmp, "store/registry.ets.gz.signed"))
+
+    checksum = :crypto.hash(:sha512, reg)
+
+    assert HexWeb.Util.sign(checksum, key) == sig
+  end
+
+  test "integration fetch registry" do
+    if Application.get_env(:hex_web, :s3_bucket) do
+      Application.put_env(:hex_web, :store, HexWeb.Store.S3)
+    end
+
+    keypath  = Path.join([__DIR__, "..", "fixtures"])
+    key      = File.read!(Path.join(keypath, "testkey.pem"))
+    Application.put_env(:hex_web, :signing_key, key)
+
+    test_data()
+    RegistryBuilder.rebuild()
+
+    :inets.start
+
+    # fetch registry
+    url = HexWeb.Util.cdn_url("registry.ets.gz") |> String.to_char_list
+    assert {:ok, response} = :httpc.request(:get, {url, []}, [], [])
+    assert {{_version, 200, _reason}, _headers, body} = response
+
+    # convert body to binary and unzip registry
+    body = body
+           |> :erlang.list_to_binary
+           |> :zlib.gunzip
+
+    # sign registry
+    checksum = :crypto.hash(:sha512, body)
+    signature = HexWeb.Util.sign(checksum, key)
+                |> :erlang.binary_to_list
+
+    # fetch generated signature
+    url = HexWeb.Util.cdn_url("registry.ets.gz.signed") |> String.to_char_list
+    assert {:ok, response} = :httpc.request(:get, {url, []}, [], [])
+
+    # compare signatures
+    {{_version, 200, _reason}, _headers, ^signature} = response
+
+  after
+    Application.put_env(:hex_web, :store, HexWeb.Store.Local)
   end
 
   # test "building is blocking" do

@@ -29,7 +29,9 @@ config :hex_web,
   ses_user:      System.get_env("HEX_SES_USERNAME"),
   ses_pass:      System.get_env("HEX_SES_PASSWORD"),
 
-  secret:        System.get_env("HEX_SECRET")
+  secret:        System.get_env("HEX_SECRET"),
+
+  signing_key:   System.get_env("HEX_SIGNING_KEY")
 
 config :hex_web, HexWeb.Repo,
   adapter: Ecto.Adapters.Postgres,
