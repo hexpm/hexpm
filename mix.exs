@@ -44,11 +44,13 @@ defmodule HexWeb.Mixfile do
   end
 
   defp test(args) do
-    # TODO: Move back to normal tasks after ecto bugs are fixed
-    System.cmd("mix", ["ecto.drop", "HexWeb.Repo"])
-    System.cmd("mix", ["ecto.create", "HexWeb.Repo"])
-    System.cmd("mix", ["ecto.migrate", "HexWeb.Repo"])
-    Mix.Task.run "test", args
+    env([env: :test, level: :warn], fn ->
+      Mix.Task.run "ecto.drop", ["HexWeb.Repo"]
+      Mix.Task.run "ecto.create", ["HexWeb.Repo"]
+      Mix.Task.run "ecto.migrate", ["HexWeb.Repo"]
+      Mix.Task.reenable "app.start"
+      Mix.Task.run "test", args
+    end)
   end
 
   defp app_start(args) do
