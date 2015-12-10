@@ -17,13 +17,17 @@ defmodule HexWeb.Registry do
   end
 
   def set_working(registry) do
-    from(r in HexWeb.Registry, where: r.id == ^registry.id)
-    |> HexWeb.Repo.update_all(state: "working", started_at: fragment("now()"))
+    from(r in HexWeb.Registry,
+         where: r.id == ^registry.id,
+         update: [set: [state: "working", started_at: fragment("now()")]])
+    |> HexWeb.Repo.update_all([])
   end
 
   def set_done(registry) do
-    from(r in HexWeb.Registry, where: r.id == ^registry.id)
-    |> HexWeb.Repo.update_all(state: "done")
+    from(r in HexWeb.Registry,
+         where: r.id == ^registry.id,
+         update: [set: [state: "done"]])
+    |> HexWeb.Repo.update_all([])
   end
 
   def latest_started do

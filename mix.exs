@@ -21,7 +21,7 @@ defmodule HexWeb.Mixfile do
   defp deps do
     [{:plug,      "~> 0.11"},
      {:cowboy,    "~> 1.0"},
-     {:ecto,      "~> 0.12.0"},
+     {:ecto,      "~> 0.13.0"},
      {:postgrex,  ">= 0.0.0"},
      {:poison,    "~> 1.2"},
      {:porcelain, "~> 2.0"},
@@ -44,15 +44,11 @@ defmodule HexWeb.Mixfile do
   end
 
   defp test(args) do
-    env([env: :test, level: :warn], fn ->
-      Mix.Task.run "ecto.drop", ["HexWeb.Repo"]
-      Mix.Task.run "ecto.create", ["HexWeb.Repo"]
-      Mix.Task.run "ecto.migrate", ["HexWeb.Repo"]
-      HexWeb.Repo.stop
-      Mix.Task.reenable "app.start"
-      Mix.Task.run "app.start", args
-      Mix.Task.run "test", args
-    end)
+    # TODO: Move back to normal tasks after ecto bugs are fixed
+    System.cmd("mix", ["ecto.drop", "HexWeb.Repo"])
+    System.cmd("mix", ["ecto.create", "HexWeb.Repo"])
+    System.cmd("mix", ["ecto.migrate", "HexWeb.Repo"])
+    Mix.Task.run "test", args
   end
 
   defp app_start(args) do
