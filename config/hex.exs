@@ -11,8 +11,7 @@ config :hex_web,
 config :hex_web, HexWeb.Repo,
   url: System.get_env("TEST_DATABASE_URL") ||
        "ecto://postgres:postgres@localhost/hex_test",
-  size: 1,
-  max_overflow: 0
+  pool_size: 5,
 
 config :hex_web,
   url:      System.get_env("HEX_URL")      || "http://localhost:4043",

@@ -1,6 +1,6 @@
 defmodule HexWeb.Registry do
   use Ecto.Model
-  require HexWeb.Repo
+  import Ecto.Changeset
 
   schema "registries" do
     field :state, :string

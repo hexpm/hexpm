@@ -8,7 +8,7 @@ defmodule HexWeb.Package do
 
   schema "packages" do
     field :name, :string
-    field :meta, HexWeb.JSON
+    field :meta, :map
     timestamps
 
     has_many :releases, HexWeb.Release

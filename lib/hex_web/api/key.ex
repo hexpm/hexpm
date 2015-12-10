@@ -1,5 +1,6 @@
 defmodule HexWeb.API.Key do
   use Ecto.Model
+  import Ecto.Changeset
 
   @timestamps_opts [usec: true]
 

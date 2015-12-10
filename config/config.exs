@@ -34,8 +34,7 @@ config :hex_web,
   signing_key:   System.get_env("HEX_SIGNING_KEY")
 
 config :hex_web, HexWeb.Repo,
-  adapter: Ecto.Adapters.Postgres,
-  extensions: [{HexWeb.JSON.Extension, library: Poison}]
+  adapter: Ecto.Adapters.Postgres
 
 config :ex_aws,
   access_key_id:     {:system, "HEX_S3_ACCESS_KEY"},

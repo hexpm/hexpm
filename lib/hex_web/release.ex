@@ -9,7 +9,7 @@ defmodule HexWeb.Release do
   schema "releases" do
     field :version, HexWeb.Version
     field :checksum, :string
-    field :meta, HexWeb.JSON
+    field :meta, :map
     field :has_docs, :boolean, default: false
     timestamps
 
