@@ -14,5 +14,6 @@ unless release do
   System.halt(1)
 end
 
-release = %{release | inserted_at: Ecto.DateTime.utc}
-HexWeb.Repo.update!(release)
+
+Ecto.Changeset.change(release, release | inserted_at: Ecto.DateTime.utc)
+|> HexWeb.Repo.update!(release)

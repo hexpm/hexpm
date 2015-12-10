@@ -7,7 +7,7 @@ defmodule HexWeb.Web.RouterTest do
 
   defp release_create(package, version, app, requirements, checksum, inserted_at) do
     {:ok, release} = Release.create(package, rel_meta(%{version: version, app: app, requirements: requirements}), checksum)
-    %{release | inserted_at: inserted_at}
+    Ecto.Changeset.change(release, inserted_at: inserted_at)
     |> HexWeb.Repo.update!
   end
 

@@ -142,7 +142,7 @@ defmodule HexWeb.API.Handlers.Docs do
     Enum.each(files, fn {path, data} -> store.put_docs_page(path, data) end)
 
     # Set docs flag on release
-    %{release | has_docs: true}
+    Ecto.Changeset.change(release, has_docs: true)
     |> HexWeb.Repo.update!
   end
 
@@ -180,7 +180,7 @@ defmodule HexWeb.API.Handlers.Docs do
         store.delete_docs_page(path)
       end)
 
-      %{release | has_docs: false}
+      Ecto.Changeset.change(release, has_docs: false)
       |> HexWeb.Repo.update!
     end
 
