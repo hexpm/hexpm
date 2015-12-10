@@ -143,7 +143,7 @@ defmodule HexWeb.API.Handlers.Docs do
 
     # Set docs flag on release
     %{release | has_docs: true}
-    |> HexWeb.Repo.update
+    |> HexWeb.Repo.update!
   end
 
   defp check_version_dirs?(files) do
@@ -181,10 +181,10 @@ defmodule HexWeb.API.Handlers.Docs do
       end)
 
       %{release | has_docs: false}
-      |> HexWeb.Repo.update
+      |> HexWeb.Repo.update!
     end
 
     # TODO: Send mails
-    task(task, fn -> nil end, fn -> nil end)
+    task(task, fn -> nil end, fn _ -> nil end)
   end
 end

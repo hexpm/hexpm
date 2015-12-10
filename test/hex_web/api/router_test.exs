@@ -19,7 +19,7 @@ defmodule HexWeb.API.RouterTest do
     {:ok, pkg}  = Package.create(user, pkg_meta(%{name: "decimal", description: "Arbitrary precision decimal arithmetic for Elixir."}))
     {:ok, rel}  = Release.create(pkg, rel_meta(%{version: "0.0.1", app: "decimal", requirements: %{postgrex: "0.0.1"}}), "")
 
-    %{rel | has_docs: true} |> HexWeb.Repo.update
+    %{rel | has_docs: true} |> HexWeb.Repo.update!
     :ok
   end
 
@@ -234,7 +234,7 @@ defmodule HexWeb.API.RouterTest do
     assert release
 
     release = put_in(release.inserted_at.year, 2000)
-    HexWeb.Repo.update(release)
+    HexWeb.Repo.update!(release)
 
     conn = conn("POST", "/api/packages/postgrex/releases", body)
            |> put_req_header("authorization", "Basic " <> :base64.encode("eric:eric"))
@@ -254,7 +254,7 @@ defmodule HexWeb.API.RouterTest do
     postgrex = Package.get("postgrex")
     release =  Release.get(postgrex, "0.0.1")
     release = put_in(release.inserted_at.year, 2000)
-    HexWeb.Repo.update(release)
+    HexWeb.Repo.update!(release)
 
     conn = conn("POST", "/api/packages/postgrex/releases", body)
            |> put_req_header("authorization", "Basic " <> :base64.encode("eric:eric"))
@@ -264,7 +264,7 @@ defmodule HexWeb.API.RouterTest do
            Poison.decode!(conn.resp_body)
 
     release = put_in(release.inserted_at.year, 2030)
-    HexWeb.Repo.update(release)
+    HexWeb.Repo.update!(release)
 
     conn = conn("DELETE", "/api/packages/postgrex/releases/0.0.1")
            |> put_req_header("authorization", "Basic " <> :base64.encode("eric:eric"))
@@ -561,11 +561,11 @@ defmodule HexWeb.API.RouterTest do
 
     postgrex = Package.get("postgrex")
     postgrex = %{postgrex | updated_at: Ecto.DateTime.from_date(future)}
-    HexWeb.Repo.update(postgrex)
+    HexWeb.Repo.update!(postgrex)
 
     decimal = Package.get("decimal")
     decimal = %{decimal | inserted_at: Ecto.DateTime.from_date(future)}
-    HexWeb.Repo.update(decimal)
+    HexWeb.Repo.update!(decimal)
 
     conn = conn("GET", "/api/packages?sort=updated_at")
     conn = Router.call(conn, [])

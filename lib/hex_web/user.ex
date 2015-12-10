@@ -54,7 +54,7 @@ defmodule HexWeb.User do
 
     if changeset.valid? do
       send_confirmation_email(changeset)
-      {:ok, HexWeb.Repo.insert(changeset)}
+      {:ok, HexWeb.Repo.insert!(changeset)}
     else
       {:error, changeset.errors}
     end
@@ -66,7 +66,7 @@ defmodule HexWeb.User do
       |> update_change(:password, &gen_password/1)
 
     if changeset.valid? do
-      {:ok, HexWeb.Repo.update(changeset)}
+      {:ok, HexWeb.Repo.update!(changeset)}
     else
       {:error, changeset.errors}
     end
@@ -88,7 +88,7 @@ defmodule HexWeb.User do
 
   def confirm(user) do
     change(user, %{confirmed: true})
-    |> HexWeb.Repo.update
+    |> HexWeb.Repo.update!
   end
 
   def password_reset(user) do
@@ -96,7 +96,7 @@ defmodule HexWeb.User do
     send_reset_email(user, key)
 
     change(user, %{reset_key: key, reset_expiry: Ecto.DateTime.utc})
-    |> HexWeb.Repo.update
+    |> HexWeb.Repo.update!
   end
 
   def reset?(username, key, password) do
@@ -124,7 +124,7 @@ defmodule HexWeb.User do
       |> HexWeb.Repo.delete_all
 
       change(user, %{reset_key: nil, reset_expiry: nil})
-      |> HexWeb.Repo.update
+      |> HexWeb.Repo.update!
     end)
   end
 
@@ -143,7 +143,7 @@ defmodule HexWeb.User do
   end
 
   def delete(user) do
-    HexWeb.Repo.delete(user)
+    HexWeb.Repo.delete!(user)
   end
 
   def auth?(nil, _password), do: false

@@ -13,7 +13,7 @@ defmodule HexWeb.Registry do
 
   def create do
     changeset = change(%HexWeb.Registry{}, %{state: "waiting"})
-    {:ok, HexWeb.Repo.insert(changeset)}
+    {:ok, HexWeb.Repo.insert!(changeset)}
   end
 
   def set_working(registry) do

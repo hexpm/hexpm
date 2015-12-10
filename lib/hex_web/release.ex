@@ -76,7 +76,7 @@ defmodule HexWeb.Release do
 
     if changeset.valid? do
       HexWeb.Repo.transaction(fn ->
-        release = HexWeb.Repo.insert(changeset)
+        release = HexWeb.Repo.insert!(changeset)
         requirements = params["requirements"] || %{}
 
         case HexWeb.Requirement.create_all(release, requirements) do
@@ -101,7 +101,7 @@ defmodule HexWeb.Release do
         HexWeb.Repo.transaction(fn ->
           HexWeb.Repo.delete_all(assoc(release, :requirements))
 
-          release = HexWeb.Repo.update(changeset)
+          release = HexWeb.Repo.update!(changeset)
           requirements = params["requirements"] || %{}
 
           case HexWeb.Requirement.create_all(release, requirements) do
@@ -124,7 +124,7 @@ defmodule HexWeb.Release do
     force? = Keyword.get(opts, :force, false)
     if editable?(release) or force? do
       # TODO: Delete tarball from S3
-      HexWeb.Repo.delete(release)
+      HexWeb.Repo.delete!(release)
       :ok
     else
       {:error, [{:inserted_at, "can only delete a release up to one hour after creation"}]}

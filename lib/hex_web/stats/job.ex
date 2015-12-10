@@ -33,7 +33,7 @@ defmodule HexWeb.Stats.Job do
 
           if rel_id do
             %Download{release_id: rel_id, downloads: count, day: date}
-            |> HexWeb.Repo.insert
+            |> HexWeb.Repo.insert!
           end
         end)
 

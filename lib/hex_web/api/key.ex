@@ -33,7 +33,7 @@ defmodule HexWeb.API.Key do
       |> put_change(:secret_second, second)
 
     if changeset.valid? do
-      {:ok, HexWeb.Repo.insert(changeset)}
+      {:ok, HexWeb.Repo.insert!(changeset)}
     else
       {:error, changeset.errors}
     end
@@ -50,7 +50,7 @@ defmodule HexWeb.API.Key do
   end
 
   def delete(key) do
-    HexWeb.Repo.delete(key)
+    HexWeb.Repo.delete!(key)
     :ok
   end
 

@@ -39,6 +39,6 @@ defmodule HexWeb.Install do
 
   def create(hex, elixirs) do
     {:ok, %HexWeb.Install{hex: hex, elixirs: elixirs}
-          |> HexWeb.Repo.insert}
+          |> HexWeb.Repo.insert!}
   end
 end

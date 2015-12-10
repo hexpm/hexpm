@@ -21,7 +21,7 @@ defmodule HexWeb.Mixfile do
   defp deps do
     [{:plug,      "~> 0.11"},
      {:cowboy,    "~> 1.0"},
-     {:ecto,      "== 0.11.0"},
+     {:ecto,      "~> 0.12.0"},
      {:postgrex,  ">= 0.0.0"},
      {:poison,    "~> 1.2"},
      {:porcelain, "~> 2.0"},

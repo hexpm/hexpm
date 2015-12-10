@@ -111,10 +111,10 @@ defmodule HexWeb.Package do
     if changeset.valid? do
       {:ok, package} =
         HexWeb.Repo.transaction(fn ->
-          package = HexWeb.Repo.insert(changeset)
+          package = HexWeb.Repo.insert!(changeset)
 
           %HexWeb.PackageOwner{package_id: package.id, owner_id: owner.id}
-          |> HexWeb.Repo.insert
+          |> HexWeb.Repo.insert!
 
           package
         end)
@@ -129,7 +129,7 @@ defmodule HexWeb.Package do
     changeset = changeset(package, :update, params)
 
     if changeset.valid? do
-      {:ok, HexWeb.Repo.update(changeset)}
+      {:ok, HexWeb.Repo.update!(changeset)}
     else
       {:error, changeset.errors}
     end
@@ -143,7 +143,7 @@ defmodule HexWeb.Package do
   end
 
   def delete(package) do
-    HexWeb.Repo.delete(package)
+    HexWeb.Repo.delete!(package)
   end
 
   def owners(package) do
@@ -165,7 +165,7 @@ defmodule HexWeb.Package do
 
   def add_owner(package, user) do
     %HexWeb.PackageOwner{package_id: package.id, owner_id: user.id}
-    |> HexWeb.Repo.insert
+    |> HexWeb.Repo.insert!
   end
 
   def delete_owner(package, user) do
