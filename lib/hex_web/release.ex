@@ -19,9 +19,6 @@ defmodule HexWeb.Release do
     has_one :downloads, HexWeb.Stats.ReleaseDownload
   end
 
-  before_delete :delete_requirements
-  before_delete :delete_downloads
-
   @meta_types %{
     "app"         => :string,
     "build_tools" => {:array, :string},
@@ -213,18 +210,6 @@ defmodule HexWeb.Release do
 
   def docs_url(release) do
     HexWeb.Util.docs_url([release.package.name, to_string(release.version)])
-  end
-
-  defp delete_requirements(changeset) do
-    assoc(changeset.model, :requirements)
-    |> HexWeb.Repo.delete_all
-    changeset
-  end
-
-  defp delete_downloads(changeset) do
-    assoc(changeset.model, :daily_downloads)
-    |> HexWeb.Repo.delete_all
-    changeset
   end
 end
 

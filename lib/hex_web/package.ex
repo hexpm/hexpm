@@ -39,8 +39,6 @@ defmodule HexWeb.Package do
   @meta_fields Map.keys(@meta_types)
   @meta_fields_required ~w(description)
 
-  before_delete :delete_owners
-
   defp validate_meta(changeset, field) do
     validate_change(changeset, field, fn _field, meta ->
       errors =
@@ -208,12 +206,6 @@ defmodule HexWeb.Package do
   def versions(package) do
     from(r in HexWeb.Release, where: r.package_id == ^package.id, select: r.version)
     |> HexWeb.Repo.all
-  end
-
-  defp delete_owners(changeset) do
-    assoc(changeset.model, :owners)
-    |> HexWeb.Repo.delete_all
-    changeset
   end
 
   defp search(query, nil) do
