@@ -9,10 +9,11 @@ defmodule HexWeb.Registry do
     field :started_at, Ecto.DateTime
   end
 
-  before_insert :delete_defaults
-
   def create do
-    changeset = change(%HexWeb.Registry{}, %{state: "waiting"})
+    changeset =
+      %HexWeb.Registry{}
+      |> change(state: "waiting")
+      |> prepare_changes(&delete_defaults/1)
     {:ok, HexWeb.Repo.insert!(changeset)}
   end
 
