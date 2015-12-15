@@ -71,21 +71,21 @@ defmodule HexWeb.Release do
       |> changeset(:create, params)
       |> put_change(:checksum, String.upcase(checksum))
 
-    if changeset.valid? do
-      HexWeb.Repo.transaction(fn ->
-        release = HexWeb.Repo.insert!(changeset)
-        requirements = params["requirements"] || %{}
+    HexWeb.Repo.transaction(fn ->
+      case HexWeb.Repo.insert(changeset) do
+        {:ok, release} ->
+          requirements = params["requirements"] || %{}
 
-        case HexWeb.Requirement.create_all(release, requirements) do
-          {:ok, reqs} ->
-            %{release | requirements: reqs, package: package}
-          {:error, errors} ->
-            HexWeb.Repo.rollback([requirements: errors])
-        end
-      end)
-    else
-      {:error, changeset.errors}
-    end
+          case HexWeb.Requirement.create_all(release, requirements) do
+            {:ok, reqs} ->
+              %{release | requirements: reqs, package: package}
+            {:error, errors} ->
+              HexWeb.Repo.rollback([requirements: errors])
+          end
+        {:error, changeset} ->
+          HexWeb.Repo.rollback(changeset.errors)
+      end
+    end)
   end
 
   def update(release, params, checksum) do
@@ -94,26 +94,26 @@ defmodule HexWeb.Release do
         changeset(release, :update, params)
         |> put_change(:checksum, String.upcase(checksum))
 
-      if changeset.valid? do
-        HexWeb.Repo.transaction(fn ->
-          HexWeb.Repo.delete_all(assoc(release, :requirements))
+      HexWeb.Repo.transaction(fn ->
+        case HexWeb.Repo.update(changeset) do
+          {:ok, release} ->
+            HexWeb.Repo.delete_all(assoc(release, :requirements))
 
-          release = HexWeb.Repo.update!(changeset)
-          requirements = params["requirements"] || %{}
+            release = HexWeb.Repo.update!(changeset)
+            requirements = params["requirements"] || %{}
 
-          case HexWeb.Requirement.create_all(release, requirements) do
-            {:ok, reqs} ->
-              %{release | requirements: reqs}
-            {:error, errors} ->
-              HexWeb.Repo.rollback([requirements: errors])
-          end
-        end)
-      else
-        {:error, changeset.errors}
-      end
-
+            case HexWeb.Requirement.create_all(release, requirements) do
+              {:ok, reqs} ->
+                %{release | requirements: reqs}
+              {:error, errors} ->
+                HexWeb.Repo.rollback([requirements: errors])
+            end
+          {:error, changeset} ->
+            HexWeb.Repo.rollback(changeset.errors)
+        end
+      end)
     else
-      {:error, [{:inserted_at, "can only modify a release up to one hour after creation"}]}
+      {:error, [inserted_at: "can only modify a release up to one hour after creation"]}
     end
   end
 
@@ -124,7 +124,7 @@ defmodule HexWeb.Release do
       HexWeb.Repo.delete!(release)
       :ok
     else
-      {:error, [{:inserted_at, "can only delete a release up to one hour after creation"}]}
+      {:error, [inserted_at: "can only delete a release up to one hour after creation"]}
     end
   end
 

@@ -106,30 +106,26 @@ defmodule HexWeb.Package do
   def create(owner, params) do
     changeset = changeset(%HexWeb.Package{}, :create, params)
 
-    if changeset.valid? do
-      {:ok, package} =
-        HexWeb.Repo.transaction(fn ->
-          package = HexWeb.Repo.insert!(changeset)
-
+    HexWeb.Repo.transaction(fn ->
+      case HexWeb.Repo.insert(changeset) do
+        {:ok, package} ->
           %HexWeb.PackageOwner{package_id: package.id, owner_id: owner.id}
           |> HexWeb.Repo.insert!
 
-          package
-        end)
-
-      {:ok, package}
-    else
-      {:error, changeset.errors}
-    end
+          {:ok, package}
+        {:error, changeset} ->
+          {:error, changeset.errors}
+      end
+    end)
+    |> elem(1)
   end
 
   def update(package, params) do
     changeset = changeset(package, :update, params)
 
-    if changeset.valid? do
-      {:ok, HexWeb.Repo.update!(changeset)}
-    else
-      {:error, changeset.errors}
+    case HexWeb.Repo.update(changeset) do
+      {:ok, package} -> {:ok, package}
+      {:error, changeset} -> {:error, changeset.errors}
     end
   end
 

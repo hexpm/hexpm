@@ -26,10 +26,9 @@ defmodule HexWeb.API.Key do
   def create(user, params) do
     changeset = build(user, :keys) |> changeset(params)
 
-    if changeset.valid? do
-      {:ok, HexWeb.Repo.insert!(changeset)}
-    else
-      {:error, changeset.errors}
+    case HexWeb.Repo.insert(changeset) do
+      {:ok, key} -> {:ok, key}
+      {:error, changeset} -> {:error, changeset.errors}
     end
   end
 

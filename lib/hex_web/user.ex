@@ -49,11 +49,12 @@ defmodule HexWeb.User do
       |> put_change(:confirmed, confirmed?)
       |> update_change(:password, &gen_password/1)
 
-    if changeset.valid? do
-      send_confirmation_email(changeset)
-      {:ok, HexWeb.Repo.insert!(changeset)}
-    else
-      {:error, changeset.errors}
+    case HexWeb.Repo.insert(changeset) do
+      {:ok, user} ->
+        send_confirmation_email(changeset)
+        {:ok, user}
+      {:error, changeset} ->
+        {:error, changeset.errors}
     end
   end
 
@@ -62,10 +63,11 @@ defmodule HexWeb.User do
       changeset(user, :update, params)
       |> update_change(:password, &gen_password/1)
 
-    if changeset.valid? do
-      {:ok, HexWeb.Repo.update!(changeset)}
-    else
-      {:error, changeset.errors}
+    case HexWeb.Repo.update(changeset) do
+      {:ok, user} ->
+        {:ok, user}
+      {:error, changeset} ->
+        {:error, changeset.errors}
     end
   end
 
