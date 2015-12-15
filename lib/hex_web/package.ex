@@ -8,7 +8,7 @@ defmodule HexWeb.Package do
 
   schema "packages" do
     field :name, :string
-    field :meta, HexWeb.JSON
+    field :meta, :map
     timestamps
 
     has_many :releases, HexWeb.Release
@@ -38,8 +38,6 @@ defmodule HexWeb.Package do
 
   @meta_fields Map.keys(@meta_types)
   @meta_fields_required ~w(description)
-
-  before_delete :delete_owners
 
   defp validate_meta(changeset, field) do
     validate_change(changeset, field, fn _field, meta ->
@@ -108,30 +106,26 @@ defmodule HexWeb.Package do
   def create(owner, params) do
     changeset = changeset(%HexWeb.Package{}, :create, params)
 
-    if changeset.valid? do
-      {:ok, package} =
-        HexWeb.Repo.transaction(fn ->
-          package = HexWeb.Repo.insert(changeset)
-
+    HexWeb.Repo.transaction(fn ->
+      case HexWeb.Repo.insert(changeset) do
+        {:ok, package} ->
           %HexWeb.PackageOwner{package_id: package.id, owner_id: owner.id}
-          |> HexWeb.Repo.insert
+          |> HexWeb.Repo.insert!
 
-          package
-        end)
-
-      {:ok, package}
-    else
-      {:error, changeset.errors}
-    end
+          {:ok, package}
+        {:error, changeset} ->
+          {:error, changeset.errors}
+      end
+    end)
+    |> elem(1)
   end
 
   def update(package, params) do
     changeset = changeset(package, :update, params)
 
-    if changeset.valid? do
-      {:ok, HexWeb.Repo.update(changeset)}
-    else
-      {:error, changeset.errors}
+    case HexWeb.Repo.update(changeset) do
+      {:ok, package} -> {:ok, package}
+      {:error, changeset} -> {:error, changeset.errors}
     end
   end
 
@@ -143,7 +137,7 @@ defmodule HexWeb.Package do
   end
 
   def delete(package) do
-    HexWeb.Repo.delete(package)
+    HexWeb.Repo.delete!(package)
   end
 
   def owners(package) do
@@ -165,7 +159,7 @@ defmodule HexWeb.Package do
 
   def add_owner(package, user) do
     %HexWeb.PackageOwner{package_id: package.id, owner_id: user.id}
-    |> HexWeb.Repo.insert
+    |> HexWeb.Repo.insert!
   end
 
   def delete_owner(package, user) do
@@ -208,12 +202,6 @@ defmodule HexWeb.Package do
   def versions(package) do
     from(r in HexWeb.Release, where: r.package_id == ^package.id, select: r.version)
     |> HexWeb.Repo.all
-  end
-
-  defp delete_owners(changeset) do
-    assoc(changeset.model, :owners)
-    |> HexWeb.Repo.delete_all
-    changeset
   end
 
   defp search(query, nil) do

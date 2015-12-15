@@ -1,6 +1,8 @@
 defmodule HexWeb.Version do
   @behaviour Ecto.Type
 
+  defstruct [:major, :minor, :patch, :pre, :build]
+
   def type, do: :string
 
   def blank?(""),  do: true
@@ -26,5 +28,14 @@ end
 defimpl Poison.Encoder, for: Version do
   def encode(version, _) do
     "\"" <> to_string(version) <> "\""
+  end
+end
+
+defimpl Ecto.DataType, for: Version do
+  def cast(version, HexWeb.Version) do
+    {:ok, struct(HexWeb.Version, version)}
+  end
+  def cast(_, _) do
+    :error
   end
 end

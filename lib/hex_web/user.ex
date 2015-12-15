@@ -22,9 +22,6 @@ defmodule HexWeb.User do
     has_many :keys, HexWeb.API.Key
   end
 
-  before_delete :delete_keys
-  before_delete :delete_owners
-
   defp changeset(user, :create, params) do
     cast(user, params, ~w(username password email), [])
     |> update_change(:username, &String.downcase/1)
@@ -52,11 +49,12 @@ defmodule HexWeb.User do
       |> put_change(:confirmed, confirmed?)
       |> update_change(:password, &gen_password/1)
 
-    if changeset.valid? do
-      send_confirmation_email(changeset)
-      {:ok, HexWeb.Repo.insert(changeset)}
-    else
-      {:error, changeset.errors}
+    case HexWeb.Repo.insert(changeset) do
+      {:ok, user} ->
+        send_confirmation_email(changeset)
+        {:ok, user}
+      {:error, changeset} ->
+        {:error, changeset.errors}
     end
   end
 
@@ -65,10 +63,11 @@ defmodule HexWeb.User do
       changeset(user, :update, params)
       |> update_change(:password, &gen_password/1)
 
-    if changeset.valid? do
-      {:ok, HexWeb.Repo.update(changeset)}
-    else
-      {:error, changeset.errors}
+    case HexWeb.Repo.update(changeset) do
+      {:ok, user} ->
+        {:ok, user}
+      {:error, changeset} ->
+        {:error, changeset.errors}
     end
   end
 
@@ -88,7 +87,7 @@ defmodule HexWeb.User do
 
   def confirm(user) do
     change(user, %{confirmed: true})
-    |> HexWeb.Repo.update
+    |> HexWeb.Repo.update!
   end
 
   def password_reset(user) do
@@ -96,7 +95,7 @@ defmodule HexWeb.User do
     send_reset_email(user, key)
 
     change(user, %{reset_key: key, reset_expiry: Ecto.DateTime.utc})
-    |> HexWeb.Repo.update
+    |> HexWeb.Repo.update!
   end
 
   def reset?(username, key, password) do
@@ -124,7 +123,7 @@ defmodule HexWeb.User do
       |> HexWeb.Repo.delete_all
 
       change(user, %{reset_key: nil, reset_expiry: nil})
-      |> HexWeb.Repo.update
+      |> HexWeb.Repo.update!
     end)
   end
 
@@ -143,25 +142,13 @@ defmodule HexWeb.User do
   end
 
   def delete(user) do
-    HexWeb.Repo.delete(user)
+    HexWeb.Repo.delete!(user)
   end
 
   def auth?(nil, _password), do: false
 
   def auth?(user, password) do
     Comeonin.Bcrypt.checkpw(password, user.password)
-  end
-
-  defp delete_keys(changeset) do
-    assoc(changeset.model, :keys)
-    |> HexWeb.Repo.delete_all
-    changeset
-  end
-
-  defp delete_owners(changeset) do
-    assoc(changeset.model, :package_owners)
-    |> HexWeb.Repo.delete_all
-    changeset
   end
 
   defp gen_password(password) do

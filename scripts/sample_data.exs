@@ -89,7 +89,7 @@ HexWeb.Repo.transaction(fn ->
 
     yesterday = Ecto.Type.load!(Ecto.Date, HexWeb.Util.yesterday)
     %Download{release_id: rel.id, downloads: 42, day: yesterday}
-    |> HexWeb.Repo.insert
+    |> HexWeb.Repo.insert!
   end
 
   unless joe == nil do
@@ -108,11 +108,11 @@ HexWeb.Repo.transaction(fn ->
 
       last_month = Ecto.Type.load!(Ecto.Date, SampleData.last_month)
       %Download{release_id: rel1.id, downloads: div(index, 2), day: last_month}
-      |> HexWeb.Repo.insert
+      |> HexWeb.Repo.insert!
 
       yesterday = Ecto.Type.load!(Ecto.Date, HexWeb.Util.yesterday)
       %Download{release_id: rel2.id, downloads: div(index, 2) + rem(index, 2), day: yesterday}
-      |> HexWeb.Repo.insert
+      |> HexWeb.Repo.insert!
     end)
   end
 

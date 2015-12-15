@@ -169,7 +169,7 @@ defmodule HexWeb.RouterTest do
     assert conn.status == 200
 
     %HexWeb.BlockedAddress{ip: "1.2.3.4"}
-    |> HexWeb.Repo.insert
+    |> HexWeb.Repo.insert!
 
     HexWeb.BlockedAddress.reload
 

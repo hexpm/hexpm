@@ -1,5 +1,6 @@
 defmodule HexWeb.API.Key do
   use Ecto.Model
+  import Ecto.Changeset
 
   @timestamps_opts [usec: true]
 
@@ -16,26 +17,18 @@ defmodule HexWeb.API.Key do
     field :user_secret, :string, virtual: true
   end
 
-  before_insert :unique_name
-
   defp changeset(key, params) do
     cast(key, params, ~w(name), [])
+    |> add_keys
+    |> unique_name
   end
 
   def create(user, params) do
-    {user_secret, first, second} = gen_key()
+    changeset = build(user, :keys) |> changeset(params)
 
-    changeset =
-      build(user, :keys)
-      |> changeset(params)
-      |> put_change(:user_secret, user_secret)
-      |> put_change(:secret_first, first)
-      |> put_change(:secret_second, second)
-
-    if changeset.valid? do
-      {:ok, HexWeb.Repo.insert(changeset)}
-    else
-      {:error, changeset.errors}
+    case HexWeb.Repo.insert(changeset) do
+      {:ok, key} -> {:ok, key}
+      {:error, changeset} -> {:error, changeset.errors}
     end
   end
 
@@ -50,7 +43,7 @@ defmodule HexWeb.API.Key do
   end
 
   def delete(key) do
-    HexWeb.Repo.delete(key)
+    HexWeb.Repo.delete!(key)
     :ok
   end
 
@@ -89,6 +82,15 @@ defmodule HexWeb.API.Key do
       |> Base.encode16(case: :lower)
 
     {user_secret, first, second}
+  end
+
+  defp add_keys(changeset) do
+    {user_secret, first, second} = gen_key()
+
+    changeset
+    |> put_change(:user_secret, user_secret)
+    |> put_change(:secret_first, first)
+    |> put_change(:secret_second, second)
   end
 
   defp unique_name(changeset) do

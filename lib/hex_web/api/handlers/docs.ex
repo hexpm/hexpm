@@ -142,8 +142,8 @@ defmodule HexWeb.API.Handlers.Docs do
     Enum.each(files, fn {path, data} -> store.put_docs_page(path, data) end)
 
     # Set docs flag on release
-    %{release | has_docs: true}
-    |> HexWeb.Repo.update
+    Ecto.Changeset.change(release, has_docs: true)
+    |> HexWeb.Repo.update!
   end
 
   defp check_version_dirs?(files) do
@@ -180,11 +180,11 @@ defmodule HexWeb.API.Handlers.Docs do
         store.delete_docs_page(path)
       end)
 
-      %{release | has_docs: false}
-      |> HexWeb.Repo.update
+      Ecto.Changeset.change(release, has_docs: false)
+      |> HexWeb.Repo.update!
     end
 
     # TODO: Send mails
-    task(task, fn -> nil end, fn -> nil end)
+    task(task, fn -> nil end, fn _ -> nil end)
   end
 end

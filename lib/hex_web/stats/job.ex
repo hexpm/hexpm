@@ -8,9 +8,9 @@ defmodule HexWeb.Stats.Job do
   def run(date, buckets, max_downloads_per_ip \\ 100, dryrun? \\ false) do
     start()
 
-    store   = Application.get_env(:hex_web, :store)
-    prefix  = "hex/#{date_string(date)}"
-    date    = Ecto.Type.load!(Ecto.Date, date)
+    store       = Application.get_env(:hex_web, :store)
+    prefix      = "hex/#{date_string(date)}"
+    {:ok, date} = Ecto.Type.load(Ecto.Date, date)
 
     dict =
       Enum.reduce(buckets, %{}, fn [bucket, region], dict ->
@@ -33,7 +33,7 @@ defmodule HexWeb.Stats.Job do
 
           if rel_id do
             %Download{release_id: rel_id, downloads: count, day: date}
-            |> HexWeb.Repo.insert
+            |> HexWeb.Repo.insert!
           end
         end)
 

@@ -1,6 +1,6 @@
 defmodule HexWeb.Registry do
   use Ecto.Model
-  require HexWeb.Repo
+  import Ecto.Changeset
 
   schema "registries" do
     field :state, :string
@@ -9,21 +9,26 @@ defmodule HexWeb.Registry do
     field :started_at, Ecto.DateTime
   end
 
-  before_insert :delete_defaults
-
   def create do
-    changeset = change(%HexWeb.Registry{}, %{state: "waiting"})
-    {:ok, HexWeb.Repo.insert(changeset)}
+    changeset =
+      %HexWeb.Registry{}
+      |> change(state: "waiting")
+      |> prepare_changes(&delete_defaults/1)
+    {:ok, HexWeb.Repo.insert!(changeset)}
   end
 
   def set_working(registry) do
-    from(r in HexWeb.Registry, where: r.id == ^registry.id)
-    |> HexWeb.Repo.update_all(state: "working", started_at: fragment("now()"))
+    from(r in HexWeb.Registry,
+         where: r.id == ^registry.id,
+         update: [set: [state: "working", started_at: fragment("now()")]])
+    |> HexWeb.Repo.update_all([])
   end
 
   def set_done(registry) do
-    from(r in HexWeb.Registry, where: r.id == ^registry.id)
-    |> HexWeb.Repo.update_all(state: "done")
+    from(r in HexWeb.Registry,
+         where: r.id == ^registry.id,
+         update: [set: [state: "done"]])
+    |> HexWeb.Repo.update_all([])
   end
 
   def latest_started do

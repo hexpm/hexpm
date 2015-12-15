@@ -21,7 +21,7 @@ defmodule HexWeb.Mixfile do
   defp deps do
     [{:plug,      "~> 0.11"},
      {:cowboy,    "~> 1.0"},
-     {:ecto,      "== 0.11.0"},
+     {:ecto,      "~> 1.1"},
      {:postgrex,  ">= 0.0.0"},
      {:poison,    "~> 1.2"},
      {:porcelain, "~> 2.0"},
@@ -48,9 +48,7 @@ defmodule HexWeb.Mixfile do
       Mix.Task.run "ecto.drop", ["HexWeb.Repo"]
       Mix.Task.run "ecto.create", ["HexWeb.Repo"]
       Mix.Task.run "ecto.migrate", ["HexWeb.Repo"]
-      HexWeb.Repo.stop
       Mix.Task.reenable "app.start"
-      Mix.Task.run "app.start", args
       Mix.Task.run "test", args
     end)
   end

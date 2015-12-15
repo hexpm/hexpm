@@ -6,8 +6,7 @@ config :hex_web,
 config :hex_web, HexWeb.Repo,
   url: System.get_env("TEST_DATABASE_URL") ||
        "ecto://postgres:postgres@localhost/hexweb_test",
-  size: 1,
-  max_overflow: 0
+  pool: Ecto.Adapters.SQL.Sandbox
 
 config :hex_web,
   url:      System.get_env("HEX_URL")      || "http://localhost:4042",

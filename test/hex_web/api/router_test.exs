@@ -19,7 +19,8 @@ defmodule HexWeb.API.RouterTest do
     {:ok, pkg}  = Package.create(user, pkg_meta(%{name: "decimal", description: "Arbitrary precision decimal arithmetic for Elixir."}))
     {:ok, rel}  = Release.create(pkg, rel_meta(%{version: "0.0.1", app: "decimal", requirements: %{postgrex: "0.0.1"}}), "")
 
-    %{rel | has_docs: true} |> HexWeb.Repo.update
+    Ecto.Changeset.change(rel, has_docs: true)
+    |> HexWeb.Repo.update!
     :ok
   end
 
@@ -233,8 +234,8 @@ defmodule HexWeb.API.RouterTest do
     release = Release.get(postgrex, "0.0.1")
     assert release
 
-    release = put_in(release.inserted_at.year, 2000)
-    HexWeb.Repo.update(release)
+    Ecto.Changeset.change(release, inserted_at: %{Ecto.DateTime.utc | year: 2000})
+    |> HexWeb.Repo.update!
 
     conn = conn("POST", "/api/packages/postgrex/releases", body)
            |> put_req_header("authorization", "Basic " <> :base64.encode("eric:eric"))
@@ -251,10 +252,9 @@ defmodule HexWeb.API.RouterTest do
     conn = Router.call(conn, [])
     assert conn.status == 201
 
-    postgrex = Package.get("postgrex")
-    release =  Release.get(postgrex, "0.0.1")
-    release = put_in(release.inserted_at.year, 2000)
-    HexWeb.Repo.update(release)
+    release = Package.get("postgrex") |> Release.get("0.0.1")
+    Ecto.Changeset.change(release, inserted_at: %{Ecto.DateTime.utc | year: 2000})
+    |> HexWeb.Repo.update!
 
     conn = conn("POST", "/api/packages/postgrex/releases", body)
            |> put_req_header("authorization", "Basic " <> :base64.encode("eric:eric"))
@@ -263,8 +263,8 @@ defmodule HexWeb.API.RouterTest do
     assert %{"errors" => %{"inserted_at" => "can only modify a release up to one hour after creation"}} =
            Poison.decode!(conn.resp_body)
 
-    release = put_in(release.inserted_at.year, 2030)
-    HexWeb.Repo.update(release)
+    Ecto.Changeset.change(release, inserted_at: %{Ecto.DateTime.utc | year: 2030})
+    |> HexWeb.Repo.update!
 
     conn = conn("DELETE", "/api/packages/postgrex/releases/0.0.1")
            |> put_req_header("authorization", "Basic " <> :base64.encode("eric:eric"))
@@ -559,13 +559,13 @@ defmodule HexWeb.API.RouterTest do
     {year, month, day} = :erlang.date
     {:ok, future} = Ecto.Date.load({year + 1, month, day})
 
-    postgrex = Package.get("postgrex")
-    postgrex = %{postgrex | updated_at: Ecto.DateTime.from_date(future)}
-    HexWeb.Repo.update(postgrex)
+    Package.get("postgrex")
+    |> Ecto.Changeset.change(updated_at: Ecto.DateTime.from_date(future))
+    |> HexWeb.Repo.update!
 
-    decimal = Package.get("decimal")
-    decimal = %{decimal | inserted_at: Ecto.DateTime.from_date(future)}
-    HexWeb.Repo.update(decimal)
+    Package.get("decimal")
+    |> Ecto.Changeset.change(inserted_at: Ecto.DateTime.from_date(future))
+    |> HexWeb.Repo.update!
 
     conn = conn("GET", "/api/packages?sort=updated_at")
     conn = Router.call(conn, [])

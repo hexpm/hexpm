@@ -62,7 +62,7 @@ defmodule HexWeb.Requirement do
                         app: app,
                         optional: optional,
                         dependency_id: id)
-              |> HexWeb.Repo.insert}
+              |> HexWeb.Repo.insert!}
 
       true ->
         {:error, {dep, "unknown package"}}
