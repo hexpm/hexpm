@@ -147,7 +147,7 @@ defmodule HexWeb.Util do
   def docs_tarball_url(package, version) do
     s3     = Application.get_env(:hex_web, :s3_url)
     bucket = Application.get_env(:hex_web, :s3_bucket)
-    "#{s3}/#{bucket}/docs/#{package}/#{version}.tar.gz"
+    "#{s3}/#{bucket}/docs/#{package}-#{version}.tar.gz"
   end
 
   @doc """
