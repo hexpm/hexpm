@@ -5,6 +5,7 @@ defmodule HexWeb.API.Router do
   import HexWeb.Util, only: [api_url: 1]
   alias HexWeb.Util
   alias HexWeb.Plug.NotFound
+  alias HexWeb.Plug.BadRequest
   alias HexWeb.Plug.RequestTimeout
   alias HexWeb.Plug.RequestTooLarge
   alias HexWeb.Plugs
