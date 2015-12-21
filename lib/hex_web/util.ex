@@ -254,7 +254,7 @@ defmodule HexWeb.Util do
     [entry | _ ] = :public_key.pem_decode(key)
     key = :public_key.pem_entry_decode(entry)
 
-    :public_key.sign(file, :sha512, key)
+    :public_key.sign({:digest, file}, :sha512, key)
     |> Base.encode16(case: :lower)
   end
 end
