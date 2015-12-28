@@ -2,4 +2,5 @@
   <ShortName>Hex</ShortName>
   <InputEncoding>utf-8</InputEncoding>
   <Url type="text/html" method="get" template="https://hex.pm/packages?search={searchTerms}&amp;sort=downloads" />
+  <Image height="48" width="48" type="image/png">https://hex.pm/favicon.png</Image>
 </OpenSearchDescription>
