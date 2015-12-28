@@ -15,6 +15,10 @@
     <p>
       Download <a href="https://s3.amazonaws.com/rebar3/rebar3">rebar3</a>, put it in your <code>PATH</code> and give it executable permissions. Now you can install the Hex plugin by adding <code>{plugins, [rebar3_hex]}.</code> to <code>~/.config/rebar3/rebar.config</code> and <a href="http://www.rebar3.org/v3.0/docs/hex-package-management">run all of its tasks</a>.
     </p>
+    <p>
+      Other option is using <a href="https://github.com/inaka/hexer">the hexer tool</a> with
+      <a href="https://github.com/inaka/hexer.mk">hexer.mk</a> (an <a href="https://github.com/ninenines/erlang.mk">erlang.mk</a> plugin) in your Makefile.
+    </p>
   </div>
 </div>
 
