@@ -152,6 +152,19 @@ build_tools = @current_release && @current_release.meta["build_tools"] || []
               </button>
             </span>
           </div>
+        <div class="package-snippet">
+          erlang.mk:
+          <div class="input-group input-group-sm">
+            <input type="text" class="form-control input-sm snippet"
+              value="<%= format_dep_snippet(:erlang_mk, @package.name, @erlang_mk_snippet, @current_release) %>"
+              onfocus="this.select();"
+              readonly="readonly"  id="erlang-mk-snippet" />
+            <span class="input-group-btn">
+              <button class="btn btn-default btn-no-hover" type="button" onclick="copy_snippet('erlang-mk-snippet', this);">
+                <span class="glyphicon glyphicon-copy"></span>
+              </button>
+            </span>
+          </div>
         </div>
       </div>
     </div>

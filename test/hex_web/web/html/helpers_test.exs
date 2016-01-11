@@ -26,4 +26,10 @@ defmodule HexWeb.Web.HTML.HelpersTest do
     release = %{ meta: %{ "app" => "erlang_mk"}}
     assert Helpers.format_dep_snippet(:rebar, package_name, "1.0.1", release) == "{erlang_mk, \"1.0.1\", {pkg, rebar}}"
   end
+
+  test "format erlang.mk dependency snippet" do
+    package_name = "cowboy"
+    release = %{meta: %{"app" => package_name}}
+    assert Helpers.format_dep_snippet(:erlang_mk, package_name, "1.0.4", release) == "dep_cowboy = hex 1.0.4"
+  end
 end
