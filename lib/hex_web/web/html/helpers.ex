@@ -87,6 +87,10 @@ defmodule HexWeb.Web.HTML.Helpers do
     end
   end
 
+  def format_dep_snippet(:erlang_mk, package_name, snippet, current_release) do
+    "dep_#{package_name} = hex #{snippet}"
+  end
+
   def human_number_space(string) when is_binary(string) do
     split         = rem(byte_size(string), 3)
     string        = :erlang.binary_to_list(string)
