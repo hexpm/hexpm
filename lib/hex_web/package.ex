@@ -157,6 +157,10 @@ defmodule HexWeb.Package do
     |> Enum.any?
   end
 
+  def last_owner?(package) do
+      (length owners package)  == 1
+  end
+
   def add_owner(package, user) do
     %HexWeb.PackageOwner{package_id: package.id, owner_id: user.id}
     |> HexWeb.Repo.insert!

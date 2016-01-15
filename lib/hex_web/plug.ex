@@ -21,6 +21,16 @@ defmodule HexWeb.Plug do
     end
   end
 
+  defmodule Forbidden do
+    defexception [message: "Forbidden"]
+
+    defimpl Plug.Exception do
+      def status(_exception) do
+        403
+      end
+    end
+  end
+
   defmodule RequestTimeout do
     defexception [message: "Request Timeout"]
 
