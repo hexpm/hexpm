@@ -655,7 +655,6 @@ defmodule HexWeb.API.RouterTest do
     package = Package.get("postgrex")
     user = User.get(username: "jose")
     Package.add_owner(package, user)
-
     conn = conn("DELETE", "/api/packages/postgrex/owners/jose%40mail.com")
            |> put_req_header("authorization", "Basic " <> :base64.encode("eric:eric"))
     conn = Router.call(conn, [])
@@ -666,9 +665,17 @@ defmodule HexWeb.API.RouterTest do
     conn = conn("DELETE", "/api/packages/postgrex/owners/jose%40mail.com")
            |> put_req_header("authorization", "Basic " <> :base64.encode("eric:eric"))
     conn = Router.call(conn, [])
-    assert conn.status == 204
+    assert conn.status == 403
 
     assert [%User{username: "eric"}] = Package.owners(package)
+  end
+
+  test "Should not be possible to remove last owner of package" do
+    package = Package.get("postgrex")
+    conn = conn("DELETE", "/api/packages/postgrex/owners/eric%40mail.com")
+           |> put_req_header("authorization", "Basic " <> :base64.encode("eric:eric"))
+    conn = Router.call(conn, [])
+    assert conn.status == 403
   end
 
   test "delete package owner authorizes" do
