@@ -158,7 +158,7 @@ defmodule HexWeb.Package do
   end
 
   def last_owner?(package) do
-      (length owners package)  == 1
+    length(owners(package)) == 1
   end
 
   def add_owner(package, user) do

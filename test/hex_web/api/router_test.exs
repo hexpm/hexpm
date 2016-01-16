@@ -670,7 +670,7 @@ defmodule HexWeb.API.RouterTest do
     assert [%User{username: "eric"}] = Package.owners(package)
   end
 
-  test "Should not be possible to remove last owner of package" do
+  test "should not be possible to remove last owner of package" do
     package = Package.get("postgrex")
     conn = conn("DELETE", "/api/packages/postgrex/owners/eric%40mail.com")
            |> put_req_header("authorization", "Basic " <> :base64.encode("eric:eric"))
