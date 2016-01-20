@@ -216,7 +216,7 @@ defmodule HexWeb.Util do
 
   @publish_timeout 5 * 60 * 1000
 
-  if Mix.env == :test do
+  if Mix.env in [:test, :hex] do
     def task(fun, success, failure) do
       try do
         fun.()
