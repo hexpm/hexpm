@@ -23,6 +23,7 @@ Enum.each(releases, &IO.puts(&1.version))
 answer = IO.gets "Remove? [Yn] "
 
 if answer =~ ~r/^(Y(es)?)?$/i do
+  Enum.each(owners, &HexWeb.Package.delete_owner(package, &1))
   Enum.each(releases, &HexWeb.Release.delete(&1, force: true))
   HexWeb.Package.delete(package)
   IO.puts "Removed"
