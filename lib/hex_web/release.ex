@@ -190,7 +190,8 @@ defmodule HexWeb.Release do
   def requirements(release) do
     from(req in assoc(release, :requirements),
          join: p in assoc(req, :dependency),
-         select: {p.name, req.app, req.requirement, req.optional})
+         select: {p.name, req.app, req.requirement, req.optional},
+         order_by: p.name)
     |> HexWeb.Repo.all
   end
 
