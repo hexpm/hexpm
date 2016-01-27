@@ -254,14 +254,14 @@ defmodule HexWeb.API.Router do
     # Keys
 
     get "keys" do
-      with_authorized(conn, [], fn user ->
+      with_authorized(conn, [only_basic: true], fn user ->
         keys = Key.all(user)
         when_stale(conn, keys, &(&1 |> cache(:private) |> send_render(200, keys)))
       end)
     end
 
     get "keys/:name" do
-      with_authorized(conn, [], fn user ->
+      with_authorized(conn, [only_basic: true], fn user ->
         if key = Key.get(name, user) do
           when_stale(conn, key, &(&1 |> cache(:private) |> send_render(200, key)))
         else
@@ -279,7 +279,7 @@ defmodule HexWeb.API.Router do
     end
 
     delete "keys/:name" do
-      with_authorized(conn, [], fn user ->
+      with_authorized(conn, [only_basic: true], fn user ->
         if key = Key.get(name, user) do
           result = Key.delete(key)
           send_delete_resp(conn, result, :private)
