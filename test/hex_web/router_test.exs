@@ -48,11 +48,20 @@ defmodule HexWeb.RouterTest do
       Application.put_env(:hex_web, :store, HexWeb.Store.S3)
     end
 
+    body = %{name: "integration-test"}
+    conn = conn("POST", "/api/keys", Poison.encode!(body))
+           |> put_req_header("content-type", "application/json")
+           |> put_req_header("authorization", "Basic " <> :base64.encode("eric:eric"))
+    conn = Router.call(conn, [])
+    assert conn.status == 201
+    body = Poison.decode!(conn.resp_body)
+    %{"secret" => api_key} = body
+
     reqs = %{decimal: %{requirement: "~> 0.0.1"}}
     body = create_tar(%{name: :postgrex, version: "0.0.1", requirements: reqs, description: "description"}, [])
     conn = conn("POST", "/api/packages/postgrex/releases", body)
            |> put_req_header("content-type", "application/octet-stream")
-           |> put_req_header("authorization", "Basic " <> :base64.encode("eric:eric"))
+           |> put_req_header("authorization", api_key)
            |> Router.call([])
     assert conn.status == 201
 

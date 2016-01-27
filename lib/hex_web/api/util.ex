@@ -138,7 +138,7 @@ defmodule HexWeb.API.Util do
 
     result =
       case get_req_header(conn, "authorization") do
-        ["Basic " <> credentials] ->
+        ["Basic " <> credentials] when only_basic ->
           basic_auth(credentials)
         [key] when not only_basic ->
           key_auth(key)

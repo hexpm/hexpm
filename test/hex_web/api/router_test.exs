@@ -10,6 +10,7 @@ defmodule HexWeb.API.RouterTest do
   alias HexWeb.RegistryBuilder
 
   @port Application.get_env(:hex_web, :port)
+  @key_name "macbook"
 
   setup do
     User.create(%{username: "other", email: "other@mail.com", password: "other"}, true)
@@ -36,6 +37,16 @@ defmodule HexWeb.API.RouterTest do
       :inets.start
     end
     :ok
+  end
+
+  @spec test_key_for(String.t | User.t) :: String.t
+  defp test_key_for(username) when is_binary(username) do
+    user = user = User.get(username: username)
+    test_key_for(user)
+  end
+  defp test_key_for(user) do
+    {:ok, key} = Key.create(user, %{name: @key_name})
+    key.user_secret
   end
 
   test "create user" do
@@ -117,7 +128,7 @@ defmodule HexWeb.API.RouterTest do
   test "create package key auth" do
     meta = %{name: "ecto", version: "1.0.0", description: "Domain-specific language."}
     conn = conn("POST", "/api/packages/ecto/releases", create_tar(meta, []))
-           |> put_req_header("authorization", "Basic " <> :base64.encode("eric:eric"))
+           |> put_req_header("authorization", test_key_for("eric"))
     conn = Router.call(conn, [])
 
     assert conn.status == 201
@@ -135,7 +146,7 @@ defmodule HexWeb.API.RouterTest do
 
     meta = %{name: "ecto", version: "1.0.0", description: "awesomeness"}
     conn = conn("POST", "/api/packages/ecto/releases", create_tar(meta, []))
-           |> put_req_header("authorization", "Basic " <> :base64.encode("eric:eric"))
+           |> put_req_header("authorization",  test_key_for("eric"))
     conn = Router.call(conn, [])
 
     assert conn.status == 201
@@ -148,7 +159,7 @@ defmodule HexWeb.API.RouterTest do
   test "create package authorizes" do
     meta = %{name: "ecto", version: "1.0.0", description: "Domain-specific language."}
     conn = conn("POST", "/api/packages/ecto/releases", create_tar(meta, []))
-           |> put_req_header("authorization", "Basic " <> :base64.encode("eric:WRONG"))
+           |> put_req_header("authorization", "WRONG")
     conn = Router.call(conn, [])
 
     assert conn.status == 401
@@ -160,17 +171,17 @@ defmodule HexWeb.API.RouterTest do
 
     meta = %{name: "ecto", version: "1.0.0", description: "Domain-specific language."}
     conn = conn("POST", "/api/packages/ecto/releases", create_tar(meta, []))
-           |> put_req_header("authorization", "Basic " <> :base64.encode("other:other"))
+           |> put_req_header("authorization", "invalid-key")
     conn = Router.call(conn, [])
 
-    assert conn.status == 403
+    assert conn.status == 401
     assert get_resp_header(conn, "www-authenticate") == ["Basic realm=hex"]
   end
 
   test "create package validates" do
     meta = %{name: "ecto", version: "1.0.0", links: "invalid", description: "description"}
     conn = conn("POST", "/api/packages/ecto/releases", create_tar(meta, []))
-           |> put_req_header("authorization", "Basic " <> :base64.encode("eric:eric"))
+           |> put_req_header("authorization", test_key_for("eric"))
     conn = Router.call(conn, [])
 
     assert conn.status == 422
@@ -182,7 +193,7 @@ defmodule HexWeb.API.RouterTest do
   test "create releases" do
     body = create_tar(%{name: :postgrex, app: "not_postgrex", version: "0.0.1", description: "description"}, [])
     conn = conn("POST", "/api/packages/postgrex/releases", body)
-           |> put_req_header("authorization", "Basic " <> :base64.encode("eric:eric"))
+           |> put_req_header("authorization", test_key_for("eric"))
     conn = Router.call(conn, [])
 
     assert conn.status == 201
@@ -192,7 +203,7 @@ defmodule HexWeb.API.RouterTest do
 
     body = create_tar(%{name: :postgrex, version: "0.0.2", description: "description"}, [])
     conn = conn("POST", "/api/packages/postgrex/releases", body)
-           |> put_req_header("authorization", "Basic " <> :base64.encode("eric:eric"))
+           |> put_req_header("authorization", test_key_for("eric"))
     conn = Router.call(conn, [])
 
     assert conn.status == 201
@@ -211,7 +222,7 @@ defmodule HexWeb.API.RouterTest do
 
     body = create_tar(%{name: :phoenix, app: "phoenix", description: "Web framework", version: "1.0.0"}, [])
     conn = conn("POST", "/api/packages/phoenix/releases", body)
-           |> put_req_header("authorization", "Basic " <> :base64.encode("eric:eric"))
+           |> put_req_header("authorization", test_key_for("eric"))
     conn = Router.call(conn, [])
     assert conn.status == 201
 
@@ -221,12 +232,12 @@ defmodule HexWeb.API.RouterTest do
   test "update release" do
     body = create_tar(%{name: :postgrex, version: "0.0.1", description: "description"}, [])
     conn = conn("POST", "/api/packages/postgrex/releases", body)
-           |> put_req_header("authorization", "Basic " <> :base64.encode("eric:eric"))
+           |> put_req_header("authorization", test_key_for("eric"))
     conn = Router.call(conn, [])
     assert conn.status == 201
 
     conn = conn("POST", "/api/packages/postgrex/releases", body)
-           |> put_req_header("authorization", "Basic " <> :base64.encode("eric:eric"))
+           |> put_req_header("authorization", test_key_for("eric"))
     conn = Router.call(conn, [])
     assert conn.status == 200
 
@@ -238,7 +249,7 @@ defmodule HexWeb.API.RouterTest do
     |> HexWeb.Repo.update!
 
     conn = conn("POST", "/api/packages/postgrex/releases", body)
-           |> put_req_header("authorization", "Basic " <> :base64.encode("eric:eric"))
+           |> put_req_header("authorization", test_key_for("eric"))
     conn = Router.call(conn, [])
     assert conn.status == 422
     assert %{"errors" => %{"inserted_at" => "can only modify a release up to one hour after creation"}} =
@@ -248,7 +259,7 @@ defmodule HexWeb.API.RouterTest do
   test "delete release" do
     body = create_tar(%{name: :postgrex, version: "0.0.1", description: "description"}, [])
     conn = conn("POST", "/api/packages/postgrex/releases", body)
-           |> put_req_header("authorization", "Basic " <> :base64.encode("eric:eric"))
+           |> put_req_header("authorization", test_key_for("eric"))
     conn = Router.call(conn, [])
     assert conn.status == 201
 
@@ -257,7 +268,7 @@ defmodule HexWeb.API.RouterTest do
     |> HexWeb.Repo.update!
 
     conn = conn("POST", "/api/packages/postgrex/releases", body)
-           |> put_req_header("authorization", "Basic " <> :base64.encode("eric:eric"))
+           |> put_req_header("authorization", test_key_for("eric"))
     conn = Router.call(conn, [])
     assert conn.status == 422
     assert %{"errors" => %{"inserted_at" => "can only modify a release up to one hour after creation"}} =
@@ -267,7 +278,7 @@ defmodule HexWeb.API.RouterTest do
     |> HexWeb.Repo.update!
 
     conn = conn("DELETE", "/api/packages/postgrex/releases/0.0.1")
-           |> put_req_header("authorization", "Basic " <> :base64.encode("eric:eric"))
+           |> put_req_header("authorization", test_key_for("eric"))
     conn = Router.call(conn, [])
     assert conn.status == 204
 
@@ -279,7 +290,7 @@ defmodule HexWeb.API.RouterTest do
   test "create release authorizes" do
     body = create_tar(%{name: :postgrex, version: "0.0.1"}, [])
     conn = conn("POST", "/api/packages/postgrex/releases", body)
-           |> put_req_header("authorization", "Basic " <> :base64.encode("other:other"))
+           |> put_req_header("authorization", test_key_for("other"))
     conn = Router.call(conn, [])
 
     assert conn.status == 403
@@ -290,7 +301,7 @@ defmodule HexWeb.API.RouterTest do
     reqs = %{decimal: %{requirement: "~> 0.0.1", app: "not_decimal"}}
     body = create_tar(%{name: :postgrex, version: "0.0.1", requirements: reqs, description: "description"}, [])
     conn = conn("POST", "/api/packages/postgrex/releases", body)
-           |> put_req_header("authorization", "Basic " <> :base64.encode("eric:eric"))
+           |> put_req_header("authorization", test_key_for("eric"))
     conn = Router.call(conn, [])
 
     assert conn.status == 201
@@ -310,7 +321,7 @@ defmodule HexWeb.API.RouterTest do
     reqs = %{decimal: %{requirement: "~> 0.0.1"}}
     body = create_tar(%{name: :postgrex, version: "0.0.1", requirements: reqs, description: "description"}, [])
     conn = conn("POST", "/api/packages/postgrex/releases", body)
-           |> put_req_header("authorization", "Basic " <> :base64.encode("eric:eric"))
+           |> put_req_header("authorization", test_key_for("eric"))
     conn = Router.call(conn, [])
     assert conn.status == 201
 
@@ -340,6 +351,15 @@ defmodule HexWeb.API.RouterTest do
     assert body["name"] == "macbook"
     assert body["secret"] == nil
     assert body["url"] == "http://localhost:#{@port}/api/keys/macbook"
+  end
+
+  test "authorization by key should be disabled in *keys/ route" do
+    conn = conn("GET", "/api/keys/macbook")
+           |> put_req_header("authorization", test_key_for("eric"))
+    conn = Router.call(conn, [])
+    assert conn.status == 401
+
+    assert get_resp_header(conn, "www-authenticate") == ["Basic realm=hex"]
   end
 
   test "all keys" do
@@ -394,7 +414,7 @@ defmodule HexWeb.API.RouterTest do
   test "get user" do
     conn = conn("GET", "/api/users/eric")
            |> put_req_header("content-type", "application/json")
-           |> put_req_header("authorization", "Basic " <> :base64.encode("eric:eric"))
+           |> put_req_header("authorization", test_key_for("eric"))
     conn = Router.call(conn, [])
     assert conn.status == 200
 
@@ -406,6 +426,16 @@ defmodule HexWeb.API.RouterTest do
     conn = conn("GET", "/api/users/eric")
     conn = Router.call(conn, [])
     assert conn.status == 401
+  end
+
+  test "basic authorization should be disabled by default except of keys route" do
+    conn = conn("GET", "/api/users/eric")
+           |> put_req_header("content-type", "application/json")
+           |> put_req_header("authorization",  "Basic " <> :base64.encode("eric:eric"))
+    conn = Router.call(conn, [])
+    assert conn.status == 401
+
+    assert get_resp_header(conn, "www-authenticate") == ["Basic realm=hex"]
   end
 
   test "elixir media response" do
@@ -584,7 +614,7 @@ defmodule HexWeb.API.RouterTest do
 
   test "get package owners" do
     conn = conn("GET", "/api/packages/postgrex/owners")
-           |> put_req_header("authorization", "Basic " <> :base64.encode("eric:eric"))
+           |> put_req_header("authorization", test_key_for("eric"))
     conn = Router.call(conn, [])
     assert conn.status == 200
 
@@ -596,7 +626,7 @@ defmodule HexWeb.API.RouterTest do
     Package.add_owner(package, user)
 
     conn = conn("GET", "/api/packages/postgrex/owners")
-           |> put_req_header("authorization", "Basic " <> :base64.encode("eric:eric"))
+           |> put_req_header("authorization", test_key_for("eric"))
     conn = Router.call(conn, [])
     assert conn.status == 200
 
@@ -608,33 +638,33 @@ defmodule HexWeb.API.RouterTest do
 
   test "get package owners authorizes" do
     conn = conn("GET", "/api/packages/postgrex/owners")
-           |> put_req_header("authorization", "Basic " <> :base64.encode("other:other"))
+           |> put_req_header("authorization", test_key_for("other"))
     conn = Router.call(conn, [])
     assert conn.status == 403
   end
 
   test "check if user is package owner" do
     conn = conn("GET", "/api/packages/postgrex/owners/eric@mail.com")
-           |> put_req_header("authorization", "Basic " <> :base64.encode("eric:eric"))
+           |> put_req_header("authorization", test_key_for("eric"))
     conn = Router.call(conn, [])
     assert conn.status == 204
 
     conn = conn("GET", "/api/packages/postgrex/owners/jose@mail.com")
-           |> put_req_header("authorization", "Basic " <> :base64.encode("eric:eric"))
+           |> put_req_header("authorization", test_key_for("eric"))
     conn = Router.call(conn, [])
     assert conn.status == 404
   end
 
   test "check if user is package owner authorizes" do
     conn = conn("GET", "/api/packages/postgrex/owners/eric@mail.com")
-           |> put_req_header("authorization", "Basic " <> :base64.encode("other:other"))
+           |> put_req_header("authorization", test_key_for("other"))
     conn = Router.call(conn, [])
     assert conn.status == 403
   end
 
   test "add package owner" do
     conn = conn("PUT", "/api/packages/postgrex/owners/jose%40mail.com")
-           |> put_req_header("authorization", "Basic " <> :base64.encode("eric:eric"))
+           |> put_req_header("authorization", test_key_for("eric"))
     conn = Router.call(conn, [])
     assert conn.status == 204
 
@@ -646,7 +676,7 @@ defmodule HexWeb.API.RouterTest do
 
   test "add package owner authorizes" do
     conn = conn("PUT", "/api/packages/postgrex/owners/jose%40mail.com")
-           |> put_req_header("authorization", "Basic " <> :base64.encode("other:other"))
+           |> put_req_header("authorization", test_key_for("other"))
     conn = Router.call(conn, [])
     assert conn.status == 403
   end
@@ -656,14 +686,14 @@ defmodule HexWeb.API.RouterTest do
     user = User.get(username: "jose")
     Package.add_owner(package, user)
     conn = conn("DELETE", "/api/packages/postgrex/owners/jose%40mail.com")
-           |> put_req_header("authorization", "Basic " <> :base64.encode("eric:eric"))
+           |> put_req_header("authorization", test_key_for("eric"))
     conn = Router.call(conn, [])
     assert conn.status == 204
 
     assert [%User{username: "eric"}] = Package.owners(package)
 
     conn = conn("DELETE", "/api/packages/postgrex/owners/jose%40mail.com")
-           |> put_req_header("authorization", "Basic " <> :base64.encode("eric:eric"))
+           |> put_req_header("authorization", test_key_for("eric"))
     conn = Router.call(conn, [])
     assert conn.status == 403
 
@@ -680,7 +710,7 @@ defmodule HexWeb.API.RouterTest do
 
   test "delete package owner authorizes" do
     conn = conn("DELETE", "/api/packages/postgrex/owners/eric%40mail.com")
-           |> put_req_header("authorization", "Basic " <> :base64.encode("other:other"))
+           |> put_req_header("authorization", test_key_for("other"))
     conn = Router.call(conn, [])
     assert conn.status == 403
   end
@@ -699,7 +729,7 @@ defmodule HexWeb.API.RouterTest do
 
     conn = conn("POST", "/api/packages/phoenix/releases/0.0.1/docs", body)
            |> put_req_header("content-type", "application/octet-stream")
-           |> put_req_header("authorization", "Basic " <> :base64.encode("eric:eric"))
+           |> put_req_header("authorization", test_key_for(user))
     conn = Router.call(conn, [])
     assert conn.status == 201
     assert Release.get(phoenix, "0.0.1").has_docs
@@ -723,7 +753,7 @@ defmodule HexWeb.API.RouterTest do
 
     conn = conn("POST", "/api/packages/phoenix/releases/0.0.2/docs", body)
            |> put_req_header("content-type", "application/octet-stream")
-           |> put_req_header("authorization", "Basic " <> :base64.encode("eric:eric"))
+           |> put_req_header("authorization", test_key_for(user))
     conn = Router.call(conn, [])
     assert conn.status == 201
 
@@ -756,13 +786,13 @@ defmodule HexWeb.API.RouterTest do
 
     conn = conn("POST", "/api/packages/ecto/releases/0.0.1/docs", body)
            |> put_req_header("content-type", "application/octet-stream")
-           |> put_req_header("authorization", "Basic " <> :base64.encode("eric:eric"))
+           |> put_req_header("authorization", test_key_for(user))
     conn = Router.call(conn, [])
     assert conn.status == 201
     assert Release.get(ecto, "0.0.1").has_docs
 
     conn = conn("DELETE", "/api/packages/ecto/releases/0.0.1")
-           |> put_req_header("authorization", "Basic " <> :base64.encode("eric:eric"))
+           |> put_req_header("authorization", test_key_for(user))
     conn = Router.call(conn, [])
     assert conn.status == 204
 
@@ -801,7 +831,7 @@ defmodule HexWeb.API.RouterTest do
 
     conn = conn("POST", "/api/packages/ecto/releases/0.0.1/docs", body)
            |> put_req_header("content-type", "application/octet-stream")
-           |> put_req_header("authorization", "Basic " <> :base64.encode("eric:eric"))
+           |> put_req_header("authorization", test_key_for(user))
     conn = Router.call(conn, [])
     assert conn.status == 422
     assert %{"errors" => %{"tar" => "directory name not allowed to match a semver version"}} =
