@@ -176,6 +176,7 @@ defmodule HexWeb.Web.Router do
     release_downloads = nil
     mix_snippet       = nil
     rebar_snippet     = nil
+    erlang_mk_snippet = nil
     hexdocs_url       = nil
     docs_tarball_url  = nil
     has_docs          = Enum.any?(releases, fn(release) -> release.has_docs end)
@@ -192,11 +193,13 @@ defmodule HexWeb.Web.Router do
       current_release = %{current_release | requirements: reqs}
       mix_snippet = Util.mix_snippet_version(current_release.version)
       rebar_snippet = Util.rebar_snippet_version(current_release.version)
+      erlang_mk_snippet = Util.erlang_mk_snippet_version(current_release.version)
     end
 
     conn = assign_pun(conn, [package, releases, current_release, downloads,
                              release_downloads, active, title, mix_snippet,
-                             rebar_snippet, hexdocs_url, docs_tarball_url])
+                             rebar_snippet, erlang_mk_snippet, hexdocs_url,
+                             docs_tarball_url])
     send_page(conn, :package)
   end
 

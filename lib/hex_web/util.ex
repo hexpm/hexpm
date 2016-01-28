@@ -200,6 +200,9 @@ defmodule HexWeb.Util do
   def rebar_snippet_version(%Version{major: major, minor: minor, patch: patch, pre: pre}),
     do: "#{major}.#{minor}.#{patch}#{pre_snippet(pre)}"
 
+  def erlang_mk_snippet_version(%Version{major: major, minor: minor, patch: patch, pre: pre}),
+    do: "#{major}.#{minor}.#{patch}#{pre_snippet(pre)}"
+
   defp pre_snippet([]), do: ""
   defp pre_snippet(pre) do
     "-" <>
