@@ -357,6 +357,15 @@ defmodule HexWeb.API.RouterTest do
     assert body["url"] == "http://localhost:#{@port}/api/keys/macbook"
   end
 
+  test "authorization by key should be disabled in *keys/ route" do
+    conn = conn("GET", "/api/keys/macbook")
+           |> put_req_header("authorization", test_key_for("eric"))
+    conn = Router.call(conn, [])
+    assert conn.status == 401
+
+    assert get_resp_header(conn, "www-authenticate") == ["Basic realm=hex"]
+  end
+
   test "all keys" do
     user = User.get(username: "eric")
     Key.create(user, %{name: "macbook"})
@@ -421,6 +430,16 @@ defmodule HexWeb.API.RouterTest do
     conn = conn("GET", "/api/users/eric")
     conn = Router.call(conn, [])
     assert conn.status == 401
+  end
+
+  test "basic authorization should be disabled by default except of keys route" do
+    conn = conn("GET", "/api/users/eric")
+           |> put_req_header("content-type", "application/json")
+           |> put_req_header("authorization",  "Basic " <> :base64.encode("eric:eric"))
+    conn = Router.call(conn, [])
+    assert conn.status == 401
+
+    assert get_resp_header(conn, "www-authenticate") == ["Basic realm=hex"]
   end
 
   test "elixir media response" do
