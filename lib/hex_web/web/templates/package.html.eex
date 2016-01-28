@@ -152,6 +152,7 @@ build_tools = @current_release && @current_release.meta["build_tools"] || []
               </button>
             </span>
           </div>
+        </div>
         <div class="package-snippet">
           erlang.mk:
           <div class="input-group input-group-sm">

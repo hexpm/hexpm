@@ -20,7 +20,7 @@ log_regex = ~r"
   \"([^\"]+)\"\040      # user-agent
 "x
 
-ua_regex = ~r"Hex/([^ ])+ \(Elixir/([^\)]+)\)"
+ua_regex = ~r"Hex/([^ ]+) \(Elixir/([^\)]+)\)"
 
 uas =
   Enum.reduce(files, %{}, fn file, uas ->
