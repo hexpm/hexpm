@@ -39,17 +39,13 @@ defmodule HexWeb.API.RouterTest do
     :ok
   end
 
-  @doc """
-  Creates and returns an auth key for a given user
-  """
-  @spec test_key_for(String.t) :: String.t
-  def test_key_for(username) when is_binary(username) do
+  @spec test_key_for(String.t | User.t) :: String.t
+  defp test_key_for(username) when is_binary(username) do
     user = user = User.get(username: username)
     test_key_for(user)
   end
-  @spec test_key_for(User.t) :: String.t
-  def test_key_for(user) do
-    {:ok, key} = Key.create(user, %{name: "macbook"})
+  defp test_key_for(user) do
+    {:ok, key} = Key.create(user, %{name: @key_name})
     key.user_secret
   end
 
@@ -726,7 +722,7 @@ defmodule HexWeb.API.RouterTest do
 
     conn = conn("POST", "/api/packages/phoenix/releases/0.0.1/docs", body)
            |> put_req_header("content-type", "application/octet-stream")
-           |> put_req_header("authorization", test_key_for("eric"))
+           |> put_req_header("authorization", test_key_for(user))
     conn = Router.call(conn, [])
     assert conn.status == 201
     assert Release.get(phoenix, "0.0.1").has_docs
@@ -750,7 +746,7 @@ defmodule HexWeb.API.RouterTest do
 
     conn = conn("POST", "/api/packages/phoenix/releases/0.0.2/docs", body)
            |> put_req_header("content-type", "application/octet-stream")
-           |> put_req_header("authorization", test_key_for("eric"))
+           |> put_req_header("authorization", test_key_for(user))
     conn = Router.call(conn, [])
     assert conn.status == 201
 
@@ -783,13 +779,13 @@ defmodule HexWeb.API.RouterTest do
 
     conn = conn("POST", "/api/packages/ecto/releases/0.0.1/docs", body)
            |> put_req_header("content-type", "application/octet-stream")
-           |> put_req_header("authorization", test_key_for("eric"))
+           |> put_req_header("authorization", test_key_for(user))
     conn = Router.call(conn, [])
     assert conn.status == 201
     assert Release.get(ecto, "0.0.1").has_docs
 
     conn = conn("DELETE", "/api/packages/ecto/releases/0.0.1")
-           |> put_req_header("authorization", test_key_for("eric"))
+           |> put_req_header("authorization", test_key_for(user))
     conn = Router.call(conn, [])
     assert conn.status == 204
 
@@ -828,7 +824,7 @@ defmodule HexWeb.API.RouterTest do
 
     conn = conn("POST", "/api/packages/ecto/releases/0.0.1/docs", body)
            |> put_req_header("content-type", "application/octet-stream")
-           |> put_req_header("authorization", test_key_for("eric"))
+           |> put_req_header("authorization", test_key_for(user))
     conn = Router.call(conn, [])
     assert conn.status == 422
     assert %{"errors" => %{"tar" => "directory name not allowed to match a semver version"}} =
