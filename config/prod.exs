@@ -2,7 +2,7 @@ use Mix.Config
 
 config :hex_web, HexWeb.Endpoint,
   http: [port: {:system, "PORT"}],
-  url: [host: System.get_env("HEX_URL"), port: 443],
+  url: [host: System.get_env("HEX_URL"), scheme: "https", port: 443],
   force_ssl: [hsts: true, rewrite_on: [:x_forwarded_proto]],
   cache_static_manifest: "priv/static/manifest.json",
   secret_key_base: {:system, "HEX_SECRET_KEY_BASE"}
