@@ -93,7 +93,7 @@ defmodule HexWeb.Store.S3 do
 
   defp redirect(conn, location, path) do
     url = Application.get_env(:hex_web, location) <> "/" <> path
-    HexWeb.Plug.redirect(conn, url)
+    Phoenix.Controller.redirect(conn, external: url)
   end
 
   def upload(bucket, path, data, opts \\ []) do
