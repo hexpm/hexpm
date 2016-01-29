@@ -17,4 +17,5 @@ config :hex_web, HexWeb.Repo,
   hostname: "localhost",
   pool: Ecto.Adapters.SQL.Sandbox
 
-config :logger, level: :warn
+config :logger,
+  level: :warn

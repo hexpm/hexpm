@@ -20,4 +20,4 @@ config :logger, :console,
   format: "[$level] $message\n"
 
 config :logger,
-  level: :info
+  level: :warn

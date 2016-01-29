@@ -58,6 +58,9 @@ config :logger, :console,
   format: "$time $metadata[$level] $message\n",
   metadata: [:request_id]
 
+config :phoenix,
+  :stacktrace_depth, 20
+
 config :phoenix, :generators,
   migration: true,
   binary_id: false

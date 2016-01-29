@@ -20,7 +20,5 @@ config :hex_web, HexWeb.Repo,
   hostname: "localhost",
   pool_size: 10
 
-config :phoenix, :stacktrace_depth, 20
-
 config :logger,
   level: :warn
