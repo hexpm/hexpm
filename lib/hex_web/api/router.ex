@@ -5,6 +5,7 @@ defmodule HexWeb.API.Router do
   import HexWeb.Util, only: [api_url: 1]
   alias HexWeb.Util
   alias HexWeb.Plug.NotFound
+  alias HexWeb.Plug.Forbidden
   alias HexWeb.Plug.BadRequest
   alias HexWeb.Plug.RequestTimeout
   alias HexWeb.Plug.RequestTooLarge
@@ -240,6 +241,9 @@ defmodule HexWeb.API.Router do
 
       if (package = Package.get(name)) && (owner = User.get(email: email)) do
         with_authorized(conn, [], &Package.owner?(package, &1), fn _ ->
+          if  Package.last_owner? package do
+            raise Forbidden
+          end
           Package.delete_owner(package, owner)
 
           conn
