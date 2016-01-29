@@ -1,5 +1,6 @@
 defmodule HexWeb.RegistryBuilderTest do
-  use HexWebTest.Case
+  use HexWeb.ModelCase
+  import Phoenix.ConnTest
 
   alias HexWeb.User
   alias HexWeb.Package
@@ -8,6 +9,7 @@ defmodule HexWeb.RegistryBuilderTest do
   alias HexWeb.RegistryBuilder
 
   @ets_table :hex_registry
+  @endpoint HexWeb.Endpoint
 
   setup do
     {:ok, user} = User.create(%{username: "eric", email: "eric@mail.com", password: "eric"}, true)
@@ -84,13 +86,13 @@ defmodule HexWeb.RegistryBuilderTest do
     test_data()
     RegistryBuilder.rebuild()
 
-    tmp = Application.get_env(:hex_web, :tmp)
+    tmp = Application.get_env(:hex_web, :tmp_dir)
     reg = File.read!(Path.join(tmp, "store/registry.ets.gz")) |> :zlib.gunzip
     sig = File.read!(Path.join(tmp, "store/registry.ets.gz.signed"))
 
     checksum = :crypto.hash(:sha512, reg)
 
-    assert HexWeb.Util.sign(checksum, key) == sig
+    assert HexWeb.Utils.sign(checksum, key) == sig
   end
 
   test "integration fetch registry" do
@@ -108,27 +110,17 @@ defmodule HexWeb.RegistryBuilderTest do
     :inets.start
 
     # fetch registry
-    url = HexWeb.Util.cdn_url("registry.ets.gz") |> String.to_char_list
-    assert {:ok, response} = :httpc.request(:get, {url, []}, [], [])
-    assert {{_version, 200, _reason}, _headers, body} = response
-
-    # convert body to binary and unzip registry
-    body = body
-           |> :erlang.list_to_binary
-           |> :zlib.gunzip
+    conn = get conn, "registry.ets.gz"
+    assert conn.status == 200
 
     # sign registry
-    checksum = :crypto.hash(:sha512, body)
-    signature = HexWeb.Util.sign(checksum, key)
-                |> :erlang.binary_to_list
+    checksum = :crypto.hash(:sha512, :zlib.gunzip(conn.resp_body))
+    signature = HexWeb.Utils.sign(checksum, key)
 
     # fetch generated signature
-    url = HexWeb.Util.cdn_url("registry.ets.gz.signed") |> String.to_char_list
-    assert {:ok, response} = :httpc.request(:get, {url, []}, [], [])
-
-    # compare signatures
-    {{_version, 200, _reason}, _headers, ^signature} = response
-
+    conn = get conn, "registry.ets.gz.signed"
+    assert conn.status == 200
+    assert conn.resp_body == signature
   after
     Application.put_env(:hex_web, :store, HexWeb.Store.Local)
   end

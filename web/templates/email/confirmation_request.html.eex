@@ -1,0 +1,22 @@
+<%
+confirm_url = HexWeb.Utils.url("password/confirm?username=#{@username}&key=#{@key}")
+%>
+
+<p>Welcome to Hex.pm!</p>
+
+<p>
+  To begin using your account, we require you to verify your email address.
+</p>
+
+<p>
+  You can do so by following <a href="<%= raw confirm_url %>">this link</a> or by pasting the link below in your web browser: <%= raw confirm_url %>.
+</p>
+
+<p>
+  Once this is complete, you will have full access to your Hex account.
+</p>
+
+<p>
+  --<br>
+  Hex.pm
+</p>

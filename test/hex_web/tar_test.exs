@@ -1,5 +1,5 @@
 defmodule HexWeb.TarTest do
-  use HexWebTest.Case
+  use HexWeb.ModelCase
 
   test "retrieve metadata" do
     meta  = %{"app" => "ecto", "version" => "1.2.3"}

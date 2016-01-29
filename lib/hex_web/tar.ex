@@ -92,7 +92,7 @@ defmodule HexWeb.Tar do
   end
 
   defp meta(files, _version) do
-    case HexWeb.API.ConsultFormat.decode(files["metadata.config"]) do
+    case HexWeb.ConsultFormat.decode(files["metadata.config"]) do
       {:ok, meta} ->
         meta =
           meta

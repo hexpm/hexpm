@@ -1,0 +1,29 @@
+    </div>
+
+    <div id="footer">
+      <div class="container">
+        <div class="row">
+          <div class="xs-collapse col-xs-6">
+            <ul>
+              <li><small class="text-muted">Hex.pm</small></li>
+              <li><small class="text-muted"><a href="https://github.com/hexpm">GitHub</a></small></li>
+              <li><small class="text-muted"><a href="mailto:support@hex.pm">Support</a></small></li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script src="<%= static_path(HexWeb.Endpoint, "/js/app.js") %>"></script>
+
+    <script>
+      (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+      (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+      m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+      })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+      ga('create', 'UA-49056880-1', 'auto');
+      ga('send', 'pageview');
+    </script>
+  </body>
+</html>

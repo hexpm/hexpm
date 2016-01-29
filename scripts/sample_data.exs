@@ -25,9 +25,9 @@ end
 
 alias HexWeb.Package
 alias HexWeb.Release
-alias HexWeb.Stats.Download
-alias HexWeb.Stats.PackageDownload
-alias HexWeb.Stats.ReleaseDownload
+alias HexWeb.Download
+alias HexWeb.PackageDownload
+alias HexWeb.ReleaseDownload
 
 lorem = "Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum."
 
@@ -43,8 +43,8 @@ HexWeb.Repo.transaction(fn ->
   unless eric == nil do
     {:ok, decimal} =
       Package.create(eric, %{
-        name: "decimal",
-        meta: %{
+        "name" => "decimal",
+        "meta" => %{
           "maintainers" => ["Eric Meadows-Jönsson"],
           "licenses" => ["Apache 2.0", "MIT"],
           "links" => %{"Github" => "http://example.com/github",
@@ -57,8 +57,8 @@ HexWeb.Repo.transaction(fn ->
 
     {:ok, postgrex} =
       Package.create(eric, %{
-        name: "postgrex",
-        meta: %{
+        "name" => "postgrex",
+        "meta" => %{
           "maintainers" => ["Eric Meadows-Jönsson", "José Valim"],
           "licenses" => ["Apache 2.0"],
           "links" => %{"Github" => "http://example.com/github"},
@@ -72,8 +72,8 @@ HexWeb.Repo.transaction(fn ->
   unless jose == nil do
     {:ok, ecto} =
       Package.create(jose, %{
-        name: "ecto",
-        meta: %{
+        "name" => "ecto",
+        "meta" => %{
           "maintainers" => ["Eric Meadows-Jönsson", "José Valim"],
           "licenses" => [],
           "links" => %{"Github" => "http://example.com/github"},
@@ -87,7 +87,7 @@ HexWeb.Repo.transaction(fn ->
     {:ok, _}   = Release.create(ecto, %{version: "0.1.3", app: "ecto", requirements: %{postgrex: "0.1.0", decimal: "0.0.2"}, meta: %{"app" => "ecto", "build_tools" => ["mix"]}}, SampleData.checksum("ecto 0.1.3"))
     {:ok, rel} = Release.create(ecto, %{version: "0.2.0", app: "ecto", requirements: %{postgrex: "~> 0.1.0", decimal: "~> 0.1.0"}, meta: %{"app" => "ecto", "build_tools" => ["mix"]}}, SampleData.checksum("ecto 0.2.0"))
 
-    {:ok, yesterday} = Ecto.Type.load(Ecto.Date, HexWeb.Util.yesterday)
+    {:ok, yesterday} = Ecto.Type.load(Ecto.Date, HexWeb.Utils.yesterday)
     %Download{release_id: rel.id, downloads: 42, day: yesterday}
     |> HexWeb.Repo.insert!
   end
@@ -96,8 +96,8 @@ HexWeb.Repo.transaction(fn ->
     Enum.each(1..100, fn(index) ->
       {:ok, ups} =
       Package.create(joe, %{
-        name: "ups_" <> to_string(index),
-        meta: %{
+        "name" => "ups_" <> to_string(index),
+        "meta" => %{
           "maintainers" => ["Joe Somebody"],
           "licenses" => [],
           "links" => %{"Github" => "http://example.com/github"},
@@ -110,7 +110,7 @@ HexWeb.Repo.transaction(fn ->
       %Download{release_id: rel1.id, downloads: div(index, 2), day: last_month}
       |> HexWeb.Repo.insert!
 
-      {:ok, yesterday} = Ecto.Type.load(Ecto.Date, HexWeb.Util.yesterday)
+      {:ok, yesterday} = Ecto.Type.load(Ecto.Date, HexWeb.Utils.yesterday)
       %Download{release_id: rel2.id, downloads: div(index, 2) + rem(index, 2), day: yesterday}
       |> HexWeb.Repo.insert!
     end)

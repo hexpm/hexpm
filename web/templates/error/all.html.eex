@@ -1,0 +1,3 @@
+<%= render(HexWeb.LayoutView, "header.html") %>
+<%= @message %>
+<%= render(HexWeb.LayoutView, "footer.html") %>

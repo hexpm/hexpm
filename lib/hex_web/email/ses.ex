@@ -7,6 +7,7 @@ defmodule HexWeb.Email.SES do
     username = Application.get_env(:hex_web, :ses_user)
     password = Application.get_env(:hex_web, :ses_pass)
     port     = Application.get_env(:hex_web, :ses_port) |> String.to_integer
+    body     = Phoenix.HTML.safe_to_string(body)
     source   = "noreply@" <> source
 
     send(source, to, subject, body, endpoint, username, password, port)

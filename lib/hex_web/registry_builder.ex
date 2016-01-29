@@ -13,14 +13,13 @@ defmodule HexWeb.RegistryBuilder do
   alias HexWeb.Release
   alias HexWeb.Requirement
   alias HexWeb.Install
-  alias HexWeb.Util
 
   @ets_table :hex_registry
   @version   4
   @wait_time 10_000
 
   def rebuild do
-    tmp = Application.get_env(:hex_web, :tmp)
+    tmp = Application.get_env(:hex_web, :tmp_dir)
     reg_file = Path.join(tmp, "registry.ets")
     {:ok, handle} = HexWeb.Registry.create()
     rebuild(handle, reg_file)
@@ -59,7 +58,7 @@ defmodule HexWeb.RegistryBuilder do
       kind, error ->
         stacktrace = System.stacktrace
         Logger.error "REGISTRY_BUILDER_FAILED"
-        HexWeb.Util.log_error(kind, error, stacktrace)
+        HexWeb.Utils.log_error(kind, error, stacktrace)
     end
   end
 
@@ -114,7 +113,7 @@ defmodule HexWeb.RegistryBuilder do
 
     if key = Application.get_env(:hex_web, :signing_key) do
       checksum = :crypto.hash(:sha512, output)
-      signature = Util.sign(checksum, key)
+      signature = HexWeb.Utils.sign(checksum, key)
 
       store.put_registry_signature(signature)
     end

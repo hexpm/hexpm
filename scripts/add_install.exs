@@ -16,10 +16,6 @@ csv =
     Enum.join([install.hex|install.elixirs], ",")
   end)
 
-HexWeb.Store.S3.upload(:s3_bucket, "installs/list.csv", csv, content_type: "text/csv")
-
-IO.puts "Uploaded installs/list.csv"
-
 HexWeb.RegistryBuilder.rebuild
 
 IO.puts "Rebuilt registry"

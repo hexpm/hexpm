@@ -4,7 +4,9 @@ defmodule HexWeb.Mixfile do
   def project do
     [app: :hex_web,
      version: "0.0.1",
-     elixir: "~> 1.0",
+     elixir: "~> 1.2",
+     elixirc_paths: elixirc_paths(Mix.env),
+     compilers: [:phoenix] ++ Mix.compilers,
      build_embedded: Mix.env == :prod,
      start_permanent: Mix.env == :prod,
      aliases: aliases,
@@ -12,30 +14,35 @@ defmodule HexWeb.Mixfile do
   end
 
   def application do
-    [applications: [:logger, :plug, :cowboy, :ecto, :postgrex, :poison, :comeonin, :httpoison, :ex_aws,
-                    :sweet_xml, :porcelain, :gen_smtp],
-     mod: {HexWeb, []},
-     env: []]
+    [mod: {HexWeb, []},
+     applications: [:phoenix, :phoenix_html, :cowboy, :logger,
+                    :phoenix_ecto, :postgrex, :comeonin, :httpoison, :ex_aws,
+                    :sweet_xml, :porcelain, :gen_smtp]]
   end
 
+  defp elixirc_paths(:test), do: ["lib", "web", "test/support"]
+  defp elixirc_paths(_),     do: ["lib", "web"]
+
   defp deps do
-    [{:plug,      "~> 0.11"},
-     {:cowboy,    "~> 1.0"},
-     {:ecto,      "~> 1.1"},
-     {:postgrex,  ">= 0.0.0"},
-     {:poison,    "~> 1.2"},
-     {:porcelain, "~> 2.0"},
-     {:earmark,   "~> 0.1"},
-     {:gen_smtp,  "~> 0.9.0"},
-     {:comeonin,  "~> 1.1"},
-     {:httpoison, "~> 0.7"},
-     {:sweet_xml, "~> 0.2"},
-     {:ex_aws,    "~> 0.4"}
-   ]
+    [{:phoenix,             "~> 1.0.4"},
+     {:phoenix_ecto,        "~> 1.1"},
+     {:postgrex,            ">= 0.0.0"},
+     {:phoenix_html,        "~> 2.1"},
+     {:cowboy,              "~> 1.0"},
+     {:porcelain,           "~> 2.0"},
+     {:earmark,             "~> 0.1"},
+     {:gen_smtp,            "~> 0.9.0"},
+     {:comeonin,            "~> 1.1"},
+     {:httpoison,           "~> 0.7"},
+     {:sweet_xml,           "~> 0.5"},
+     {:ex_aws,              "~> 0.4"},
+     {:phoenix_live_reload, "~> 1.0", only: :dev}]
   end
 
   defp aliases do
-    [test: &test/1,
+    ["ecto.setup": ["ecto.create", "ecto.migrate", "run priv/repo/seeds.exs"],
+     "ecto.reset": ["ecto.drop", "ecto.setup"],
+     test: &test/1,
      "app.start": &app_start/1,
      "ecto.create": &ecto_create/1,
      "ecto.drop": &ecto_drop/1,

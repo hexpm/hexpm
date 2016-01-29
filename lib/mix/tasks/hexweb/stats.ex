@@ -11,14 +11,14 @@ defmodule Mix.Tasks.Hexweb.Stats do
 
     try do
       {time, {memory, size}} = :timer.tc(fn ->
-        HexWeb.Stats.Job.run(HexWeb.Util.yesterday(), buckets)
+        HexWeb.StatsJob.run(HexWeb.Utils.yesterday, buckets)
       end)
       Logger.info "STATS_JOB_COMPLETED #{size} downloads (#{div time, 1000}ms, #{div memory, 1024}kb)"
     catch
       kind, error ->
         stacktrace = System.stacktrace
         Logger.error "STATS_JOB_FAILED"
-        HexWeb.Util.log_error(kind, error, stacktrace)
+        HexWeb.Utils.log_error(kind, error, stacktrace)
 
         System.at_exit(fn
           0 ->
