@@ -208,6 +208,6 @@ defmodule HexWeb.Release do
   end
 
   def docs_url(release) do
-    HexWeb.Util.docs_url([release.package.name, to_string(release.version)])
+    HexWeb.Utils.docs_url([release.package.name, to_string(release.version)])
   end
 end

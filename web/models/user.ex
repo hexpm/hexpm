@@ -1,6 +1,5 @@
 defmodule HexWeb.User do
   use HexWeb.Web, :model
-  alias HexWeb.Util
 
   @timestamps_opts [usec: true]
 
@@ -101,7 +100,7 @@ defmodule HexWeb.User do
     if (user = get(username: username))
         && user.reset_key
         && Comeonin.Tools.secure_check(user.reset_key, key)
-        && Util.within_last_day(user.reset_expiry) do
+        && HexWeb.Utils.within_last_day(user.reset_expiry) do
       reset(user, password)
 
       mailer = Application.get_env(:hex_web, :email)
