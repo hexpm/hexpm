@@ -1,11 +1,35 @@
 use Mix.Config
 
-config :hex_web, HexWeb.Repo,
-  url: System.get_env("DEV_DATABASE_URL") ||
-       "ecto://postgres:postgres@localhost/hexweb_dev"
-
 config :hex_web,
-  url:      System.get_env("HEX_URL")      || "http://localhost:4000",
   docs_url: System.get_env("HEX_DOCS_URL") || "http://localhost:4000",
   cdn_url:  System.get_env("HEX_CDN_URL")  || "http://localhost:4000",
   secret:   System.get_env("HEX_SECRET")   || "796f75666f756e64746865686578"
+
+config :hex_web, HexWeb.Endpoint,
+  http: [port: 4000],
+  debug_errors: true,
+  code_reloader: true,
+  cache_static_lookup: false,
+  check_origin: false,
+  watchers: [node: ["node_modules/brunch/bin/brunch", "watch", "--stdin"]]
+
+config :hex_web, HexWeb.Endpoint,
+  live_reload: [
+    patterns: [
+      ~r{priv/static/.*(js|css|png|jpeg|jpg|gif|svg)$},
+      ~r{web/views/.*(ex)$},
+      ~r{web/templates/.*(eex)$}
+    ]
+  ]
+
+config :logger, :console, format: "[$level] $message\n"
+
+config :phoenix, :stacktrace_depth, 20
+
+config :hex_web, HexWeb.Repo,
+  adapter: Ecto.Adapters.Postgres,
+  username: "postgres",
+  password: "postgres",
+  database: "hexweb_dev",
+  hostname: "localhost",
+  pool_size: 5

@@ -8,9 +8,8 @@ logs_buckets = if value = System.get_env("HEX_LOGS_BUCKETS"),
 
 config :hex_web,
   user_confirm:  true,
+  tmp_dir:       Path.expand("tmp"),
 
-  port:          System.get_env("PORT") || "4000",
-  url:           System.get_env("HEX_URL"),
   app_host:      System.get_env("APP_HOST"),
 
   store:         store,
@@ -33,9 +32,6 @@ config :hex_web,
 
   signing_key:   System.get_env("HEX_SIGNING_KEY")
 
-config :hex_web, HexWeb.Repo,
-  adapter: Ecto.Adapters.Postgres
-
 config :ex_aws,
   access_key_id:     {:system, "HEX_S3_ACCESS_KEY"},
   secret_access_key: {:system, "HEX_S3_SECRET_KEY"}
@@ -50,10 +46,30 @@ config :comeonin,
 config :porcelain,
   driver: Porcelain.Driver.Basic
 
-config :logger,
-  level: :debug
+config :hex_web, HexWeb.Endpoint,
+  url: [host: "localhost"],
+  root: Path.dirname(__DIR__),
+  secret_key_base: "Cc2cUvbm9x/uPD01xnKmpmU93mgZuht5cTejKf/Z2x0MmfqE1ZgHJ1/hSZwd8u4L",
+  render_errors: [accepts: ~w(html json elixir erlang)],
+  pubsub: [name: HexWeb.PubSub,
+           adapter: Phoenix.PubSub.PG2]
 
 config :logger, :console,
-  format: "$date $time [$level] $message\n"
+  format: "$time $metadata[$level] $message\n",
+  metadata: [:request_id]
+
+config :phoenix, :generators,
+  migration: true,
+  binary_id: false
+
+config :plug, :mimes, %{
+  "application/vnd.hex+json"   => ["json"],
+  "application/vnd.hex+elixir" => ["elixir"],
+  "application/vnd.hex+erlang" => ["erlang"]
+}
+
+config :phoenix, :format_encoders,
+  elixir: HexWeb.ElixirFormat,
+  erlang: HexWeb.ErlangFormat
 
 import_config "#{Mix.env}.exs"

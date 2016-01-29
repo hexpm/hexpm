@@ -1,0 +1,3 @@
+<%= render("header.html", conn: @conn) %>
+<%= @inner %>
+<%= render("footer.html", conn: @conn) %>
