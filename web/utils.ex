@@ -100,7 +100,9 @@ defmodule HexWeb.Utils do
   def binarify(list) when is_list(list),
     do: for(elem <- list, do: binarify(elem))
   def binarify(%Version{} = version),
-    do: to_string(version)
+    do: <<?", to_string(version)::binary, ?">>
+  def binarify(%Ecto.DateTime{} = dt),
+    do: <<?", Ecto.DateTime.to_iso8601(dt)::binary, ?">>
   def binarify(%{__struct__: atom}) when is_atom(atom),
     do: raise "not able to binarify %#{inspect atom}{}"
   def binarify(map) when is_map(map),
