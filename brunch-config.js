@@ -25,7 +25,7 @@ exports.config = {
 
       order: {
         after: [
-          "web/static/css/app.css"
+          "web/static/css/main.css"
         ]
       }
     },

@@ -1,15 +1,23 @@
-    </div>
-
-    <div id="footer">
-      <div class="container">
-        <div class="row">
-          <div class="xs-collapse col-xs-6">
-            <ul>
-              <li><small class="text-muted">Hex.pm</small></li>
-              <li><small class="text-muted"><a href="https://github.com/hexpm">GitHub</a></small></li>
-              <li><small class="text-muted"><a href="mailto:support@hex.pm">Support</a></small></li>
-            </ul>
-          </div>
+    <div class="footer">
+      <div class="container made-with-love">
+        Made with ♥ by Eric Meadows-Jönsson under Apache license
+      </div>
+      <div class="footer-nav">
+        <div class="container">
+          <ul>
+            <li>
+              <a href="https://github.com/hexpm/hex">about hex</a>
+            </li>
+            <li>
+              <a href="https://github.com/hexpm">github</a>
+            </li>
+            <!-- <li>
+              <a href="javascript:void(0)">twitter</a>
+            </li> -->
+            <li>
+              <a href="mailto:support@hex.pm">support</a>
+            </li>
+          </ul>
         </div>
       </div>
     </div>
@@ -26,5 +34,6 @@
       ga('create', 'UA-49056880-1', 'auto');
       ga('send', 'pageview');
     </script>
+
   </body>
 </html>
