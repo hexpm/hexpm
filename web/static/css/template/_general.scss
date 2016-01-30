@@ -1,0 +1,15 @@
+body {
+  font-family: $base-font-family;
+  @include font-size(16 , 30);
+}
+
+.browserupgrade {
+  margin: 0.2em 0;
+  background: #ccc;
+  color: #000;
+  padding: 0.2em 0;
+}
+
+a {
+  color: #ec485b;
+}

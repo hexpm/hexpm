@@ -1,0 +1,42 @@
+/*********************************************************************
+*  Typography Mixins
+*********************************************************************/
+
+@mixin font-size($sizeValue, $lineheight: 14) {
+	font: {
+		size: $sizeValue + px;
+		size: ($sizeValue / $base-font-size) + rem;
+	};
+
+	@if $lineheight != 14 {
+		line-height: $lineheight + px;
+		line-height: ($lineheight / $base-line-height) + rem;
+	}
+}
+
+@mixin line-height($sizeValue) {
+	line-height: $sizeValue + px;
+	line-height: ($sizeValue / $base-line-height) + rem;
+}
+
+@mixin font-face($font-family, $file-path, $weight: normal, $style: normal ) {
+	@font-face {
+		font-family: $font-family;
+		src: url('#{$file-path}.eot');
+		src: url('#{$file-path}.eot?#iefix') format('embedded-opentype'),
+		url('#{$file-path}.woff') format('woff'),
+		url('#{$file-path}.ttf') format('truetype'),
+		url('#{$file-path}.svg##{$font-family}') format('svg');
+		font-weight: $weight;
+		font-style: $style;
+	}
+}
+@mixin clear-fix() {
+	&:after {
+	   content: " "; /* Older browser do not support empty content */
+	   visibility: hidden;
+	   display: block;
+	   height: 0;
+	   clear: both;
+	}
+}
