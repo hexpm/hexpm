@@ -1,0 +1,216 @@
+
+// Home
+// Featured
+.featured-home {
+  background: #3e424d url('../images/bg-featured-home.png') no-repeat right bottom;
+  padding: 20px 0 0 0;
+}
+
+.search-form {
+  text-align: center;
+  padding-top: 80px;
+  margin-bottom: 60px;
+  h2 {
+    color: #ededed;
+    font-size: 45px;
+    font-weight: 100;
+    margin-bottom: 30px;
+  }
+  .input-group {
+    background: #fff;
+    padding: 1px 2px;
+    border-radius: 4px;
+  }
+  .btn-search {
+    background: #ffffff;
+    span {
+      color: #adb3b6;
+    }
+  }
+  input{
+    box-shadow: none;
+    border:none;
+    &::-webkit-input-placeholder {
+       color: #8e899c;
+    }
+
+    &:-moz-placeholder { /* Firefox 18- */
+       color: #8e899c;
+    }
+
+    &::-moz-placeholder {  /* Firefox 19+ */
+       color: #8e899c;
+    }
+
+    &:-ms-input-placeholder {
+       color: #8e899c;
+    }
+  }
+}
+
+// How to use Boxes
+.using-with-box {
+  position: relative;
+  margin-bottom: 40px;
+}
+.shadow {
+  background: #8f9198;
+  position: absolute;
+  width: 102%;
+  height: 180px;
+  left: -1%;
+  z-index: 200;
+  top: 10px;
+}
+.text-content {
+  background: #ffffff;
+  position: relative;
+  z-index: 300;
+  .side-box {
+    width: 90px;
+    float: left;
+    min-height: 200px;
+    position: relative;
+    .lang-symbol {
+      width: 124px;
+      height: 124px;
+      border-radius: 50%;
+      background: #f3e8fc;
+      position: absolute;
+      left: 25px;
+      top: 50%;
+      margin-top: -62px;
+    }
+  }
+  .instructions {
+    padding-left: 180px;
+    padding-right: 20px;
+    h3 {
+      @include font-size(22 , 30);
+      font-weight: bold;
+      margin-bottom: 25px;
+      color: #1e1c17;
+      font-weight: 800;
+    }
+    p {
+      @include font-size(16 , 40);
+      .code {
+        font-weight: bold;
+        color: #714a94;
+        background: #f8f3fc;
+        display: inline-block;
+        padding: 0 4px;
+        border-radius: 4px;
+      }
+      a {
+        color: #ec485b;
+      }
+    }
+  }
+}
+
+.elixir .side-box {
+  background: #714a94;
+  .lang-symbol {
+    background: #f3e8fc url('../images/elixir-logo.png') center no-repeat;
+  }
+}
+
+.erlang .side-box {
+  background: #ec485b;
+  .lang-symbol {
+    background: #fee3e6 url('../images/erlang-logo.png') center no-repeat;
+  }
+}
+
+.home-stats {
+  padding: 30px 0;
+  ul {
+    list-style: none;
+    text-align: center;
+    li {
+      display: inline-block;
+      margin: 0 14px;
+      img {
+        float: left;
+        margin-right: 10px;
+      }
+      .stat-info {
+        float: left;
+        text-align: left;
+        color: #000000;
+        line-height: 15px;
+        font-size: 14px;
+        .count-info {
+          font-weight: bold;
+          font-size: 18px;
+        }
+      }
+    }
+  }
+}
+
+
+.getting-started {
+  padding-bottom: 40px;
+  h2 {
+    text-align: center;
+    text-transform: uppercase;
+    font-size: 22px;
+    font-weight: bold;
+    margin-bottom: 30px;
+  }
+  a {
+    color: #4f2e85;
+    font-size: 24px;
+    line-height: 28px;
+    display: block;
+    margin-bottom: 6px;
+  }
+  p {
+    font-size: 18px;
+    line-height: 18px;
+    font-weight: 300;
+    color: #000000;
+  }
+}
+
+.log-head {
+  border-bottom: #4f2e85 1px solid;
+  margin-bottom: 10px;
+  padding-bottom: 10px;
+  color: #000000;
+  font-weight: 300;
+  font-size: 18px;
+  text-transform: uppercase;
+}
+.log-body {
+  padding-bottom: 20px;
+  ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    li {
+      a {
+        color: #ec485b;
+        font-size: 18px;
+        line-height: 18px;
+      }
+      span {
+        display: block;
+        line-height: 18px;
+      }
+      .description {
+        font-size: 12px;
+        font-weight: 300;
+      }
+      .published-at {
+        font-size: 12px;
+        font-weight: 300;
+        a {
+          font-size: 12px;
+        }
+      }
+    }
+  }
+}

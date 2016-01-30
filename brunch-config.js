@@ -21,11 +21,11 @@ exports.config = {
       }
     },
     stylesheets: {
-      joinTo: "css/app.css",
+      joinTo: "css/main.css",
 
       order: {
         after: [
-          "web/static/css/app.css"
+          "web/static/css/main.css"
         ]
       }
     },

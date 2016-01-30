@@ -1,0 +1,16 @@
+.page {
+  .page-title {
+    color: #714a94;
+    @include font-size(50 , 50);
+    font-weight: 300;
+    border-bottom: #cccccc 1px solid;
+    padding: 20px 0 20px 0;
+    margin-bottom: 20px;
+  }
+  p, ol {
+    color: #555555;
+    font-weight: 300;
+    @include font-size(20 , 40);
+    margin-bottom: 20px;
+  }
+}
