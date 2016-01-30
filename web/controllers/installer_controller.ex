@@ -2,7 +2,7 @@ defmodule HexWeb.InstallerController do
   use HexWeb.Web, :controller
 
   def get_archive(conn, params) do
-    version = params["elixir"] ||
+    current = params["elixir"] ||
       case List.first get_req_header(conn, "user-agent") do
         "Mix/" <> version ->
           version
@@ -10,8 +10,10 @@ defmodule HexWeb.InstallerController do
           "1.0.0"
       end
 
+    all_versions = HexWeb.Install.all |> HexWeb.Repo.all
+
     url =
-      case HexWeb.Install.latest(version) do
+      case HexWeb.Install.latest(all_versions, current) do
         {:ok, _hex, elixir} ->
           "installs/#{elixir}/hex.ez"
         :error ->

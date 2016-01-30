@@ -22,7 +22,10 @@ defmodule HexWeb.InstallsControllerTest do
                 {"0.2.0", ["0.14.0", "0.14.1", "0.14.2"]},
                 {"0.2.1", ["1.0.0"]}]
 
-    Enum.each(versions, fn {hex, elixirs} -> HexWeb.Install.create(hex, elixirs) end)
+    Enum.each(versions, fn {hex, elixirs} ->
+      HexWeb.Install.create(hex, elixirs)
+      |> HexWeb.Repo.insert
+    end)
 
     try do
       conn = get(conn(), "installs/hex.ez")

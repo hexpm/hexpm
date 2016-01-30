@@ -159,9 +159,9 @@ defmodule HexWeb.RegistryBuilder do
   end
 
   defp installs do
-    Enum.map(Install.all, fn %Install{hex: hex, elixirs: elixirs} ->
-      {hex, elixirs}
-    end)
+    Install.all
+    |> HexWeb.Repo.all
+    |> Enum.map(&{&1.hex, &1.elixirs})
   end
 
   defp time_diff(time1, time2) do

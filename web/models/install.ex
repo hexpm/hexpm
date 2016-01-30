@@ -8,14 +8,13 @@ defmodule HexWeb.Install do
 
   def all do
     from(i in Install, order_by: [asc: i.id])
-    |> HexWeb.Repo.all
   end
 
-  def latest(current) do
+  def latest(all, current) do
     case Version.parse(current) do
       {:ok, current} ->
         installs =
-          Enum.filter(all(), fn %Install{elixirs: elixirs} ->
+          Enum.filter(all, fn %Install{elixirs: elixirs} ->
             Enum.any?(elixirs, &Version.compare(&1, current) != :gt)
           end)
 
@@ -38,7 +37,6 @@ defmodule HexWeb.Install do
   end
 
   def create(hex, elixirs) do
-    {:ok, %Install{hex: hex, elixirs: elixirs}
-          |> HexWeb.Repo.insert!}
+    change(%HexWeb.Install{}, hex: hex, elixirs: elixirs)
   end
 end
