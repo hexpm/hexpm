@@ -1,3 +1,4 @@
+<div class="container page">
 <h2>Usage</h2>
 
 <h3>Installation</h3>
@@ -21,3 +22,4 @@
 <h3>Fetching dependencies</h3>
 
 First, update the package index with <code>rebar3 update</code>, you'll want to do this frequently to keep up to date. The default package index is stored in <code>~/.cache/rebar3/hex/default/packages.idx</code>. Running <code>rebar3 compile</code> will automatically fetch any missing dependencies and build them under <code>_build/default/lib</code>. Packages are cached to <code>~/.cache/rebar3/hex/default/packages</code>.
+</div>

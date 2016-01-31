@@ -1,5 +1,7 @@
-<h2>Publishing a package</h2>
-
+<div class="container page">
+<h2 class="page-title">
+  Publishing a package
+</h2>
 <p>
   Publishing a package to Hex consists of registering a Hex user, adding metadata to the project's <code>mix.exs</code> file, and finally submitting the package with a <code>mix</code> task.
 </p>
@@ -141,3 +143,4 @@ Published postgrex v0.4.0
 <p>
   When running the command to publish a package, Hex will create a tar file of all the files and directories listed in the <code>:files</code> property. When the tarball has been pushed to the Hex servers, it will be uploaded to a CDN for fast and reliable access for users. Hex will also recompile the registry file that all clients will update automatically when fetching dependencies.
 </p>
+</div>
