@@ -5,6 +5,7 @@
 @import "template/general";
 @import "template/navbar";
 @import "template/footer";
+@import "template/error";
 
 @import "template/home";
 @import "template/package-list";
@@ -17,7 +18,6 @@
     max-width: 1000px;
     width: auto;
   }
-
 
   /* Remove the padding we set earlier */
   .header,
