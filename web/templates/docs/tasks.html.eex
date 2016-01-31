@@ -1,8 +1,8 @@
+<div class="container page">
+<h2>
+  Mix tasks
+</h2>
 <%# This file is auto-generated with 'mix run task_docs.exs' %>
-
-<h2>Mix tasks</h2>
-
-
   <div class="panel panel-default">
     <div class="panel-heading">
       <h3 id="hex" class="panel-title">
@@ -443,4 +443,4 @@ Hex config.</p>
 
     </div>
   </div>
-
+</div>

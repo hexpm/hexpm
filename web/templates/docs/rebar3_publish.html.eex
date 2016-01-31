@@ -1,3 +1,4 @@
+<div class="container page">
 <h2>Publishing a package</h2>
 
 <p>
@@ -147,3 +148,4 @@ Published relx 3.5.0
 </p>
 
 The <a href="http://www.rebar3.org/v3.0/docs/hex-package-management">rebar3 hex plugin's documentation</a> contains more information about the hex plugin itself and publishing packages.
+</div>
