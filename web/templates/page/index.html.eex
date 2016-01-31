@@ -42,8 +42,8 @@
         <div class="instructions">
           <h3>Using with Erlang</h3>
           <p>
-            Download a <a href="https://s3.amazonaws.com/rebar3/rebar3">rebar3</a>, put it in your <span class="code">PATH</span> and give it executable permissions. Now you can install the Hex plugin by adding
-            <span class="code">{plugins, [rebar3_hex]}</span>. to <span class="code">~/.config/rebar3/rebar.config</span> and <a href="#">run all of its tasks</a>.
+            Download <a href="https://s3.amazonaws.com/rebar3/rebar3">rebar3</a>, put it in your <span class="code">PATH</span> and give it executable permissions.
+            Now you can specify Hex dependencies in your rebar.config like <span class="code">{deps, [hackney]}</span>.
           </p>
         </div>
       </div>
