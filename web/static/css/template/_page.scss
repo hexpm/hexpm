@@ -1,7 +1,8 @@
 .page {
-  .page-title {
+  padding-top: 60px;
+  h2 {
     color: #714a94;
-    @include font-size(50 , 50);
+    @include font-size(35 , 50);
     font-weight: 300;
     border-bottom: #cccccc 1px solid;
     padding: 20px 0 20px 0;
@@ -10,7 +11,7 @@
   p, ol {
     color: #555555;
     font-weight: 300;
-    @include font-size(20 , 40);
+    @include font-size(16 , 35);
     margin-bottom: 20px;
   }
 }

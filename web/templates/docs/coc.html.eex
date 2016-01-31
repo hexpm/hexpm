@@ -1,3 +1,4 @@
+<div class="container page">
 <h2>Code of Conduct</h2>
 
 <p>Hex exists to facilitate sharing code, by making it easy for Erlang ecosystem developers to publish and distribute packages.</p>
@@ -94,3 +95,4 @@
 <p>This code of conduct is based on <a href="http://www.npmjs.com/policies/conduct">NPM's code of conduct</a>, which in turn borrows heavily from the Stumptown Syndicate <a href="http://citizencodeofconduct.org/">Citizen's Code of Conduct</a>, and the <a href="https://github.com/mozilla/rust/wiki/Note-development-policy#conduct">Rust Project Code of Conduct</a>.</p>
 
 <p>This document may be reused under a <a href="http://creativecommons.org/licenses/by-sa/4.0/">Creative Commons Attribution-ShareAlike License</a>.</p>
+</div>
