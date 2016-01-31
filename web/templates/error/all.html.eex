@@ -1,3 +1,4 @@
-<%= render(HexWeb.LayoutView, "header.html") %>
-<%= @message %>
-<%= render(HexWeb.LayoutView, "footer.html") %>
+<div class="container error-view">
+  <h1><span class="letter_1">4</span><span class="letter_2">0</span><span class="letter_3">4</span></h1>
+  <span class="message"> <%= @message %> ;(</span>
+</div>

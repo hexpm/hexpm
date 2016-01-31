@@ -1,25 +1,110 @@
-<%= if @package_count == 0 do %>
-  <h4>No Results Found</h4>
-<% else %>
-  <%
-  shown_packages = length(@packages)
-  paginate = paginate(@page, @package_count, items_per_page: @per_page, page_links: 5)
+<div class="container">
+  <h2 class="packages-title">
+    Packages
+  </h2>
+  <%= if @package_count == 0 do %>
+    <h4>No Results Found</h4>
+  <% else %>
+    <%
+    shown_packages = length(@packages)
+    paginate = paginate(@page, @package_count, items_per_page: @per_page, page_links: 5)
 
-  range_start = (@page - 1) * @per_page + 1
-  range_end   = range_start + shown_packages - 1
-  page        = if @page == 1, do: nil, else: @page
+    range_start = (@page - 1) * @per_page + 1
+    range_end   = range_start + shown_packages - 1
+    page        = if @page == 1, do: nil, else: @page
 
-  sort_name_params      = params([search: @search, page: page,    sort: "name"])
-  sort_downloads_params = params([search: @search, page: page,    sort: "downloads"])
-  sort_created_params   = params([search: @search, page: page,    sort: "inserted_at"])
-  prev_page_params      = params([search: @search, page: @page-1, sort: @sort])
-  next_page_params      = params([search: @search, page: @page+1, sort: @sort])
-  %>
+    sort_name_params      = params(search: @search, page: page, sort: "name")
+    sort_downloads_params = params(search: @search, page: page, sort: "downloads")
+    sort_created_params   = params(search: @search, page: page, sort: "inserted_at")
+    prev_page_params      = params(search: @search, page: @page-1, sort: @sort)
+    next_page_params      = params(search: @search, page: @page+1, sort: @sort)
+    %>
 
-  <span class="pull-left">
-    <h4><%= @package_count %> Results Found</h4>
-  </span>
-
+  <div class="by-letters">
+    <ul>
+      <li>
+        <a href="#">a</a>
+      </li>
+      <li>
+        <a href="#">b</a>
+      </li>
+      <li>
+        <a href="#">c</a>
+      </li>
+      <li>
+        <a href="#">d</a>
+      </li>
+      <li>
+        <a href="#">e</a>
+      </li>
+      <li>
+        <a href="#">f</a>
+      </li>
+      <li>
+        <a href="#">g</a>
+      </li>
+      <li>
+        <a href="#">h</a>
+      </li>
+      <li>
+        <a href="#">i</a>
+      </li>
+      <li>
+        <a href="#">j</a>
+      </li>
+      <li>
+        <a href="#">k</a>
+      </li>
+      <li>
+        <a href="#">l</a>
+      </li>
+      <li>
+        <a href="#">m</a>
+      </li>
+      <li>
+        <a href="#">n</a>
+      </li>
+      <li>
+        <a href="#">o</a>
+      </li>
+      <li>
+        <a href="#">p</a>
+      </li>
+      <li>
+        <a href="#">q</a>
+      </li>
+      <li>
+        <a href="#">r</a>
+      </li>
+      <li>
+        <a href="#">s</a>
+      </li>
+      <li>
+        <a href="#">t</a>
+      </li>
+      <li>
+        <a href="#">u</a>
+      </li>
+      <li>
+        <a href="#">v</a>
+      </li>
+      <li>
+        <a href="#">w</a>
+      </li>
+      <li>
+        <a href="#">x</a>
+      </li>
+      <li>
+        <a href="#">y</a>
+      </li>
+      <li>
+        <a href="#">z</a>
+      </li>
+    </ul>
+  </div>
+  <div class="sort-results">
+    <span class="results-found"><%= @package_count %> Results Found</span>
+  </div>
   <span class="pull-right">
     <div class="dropdown">
       <button class="btn btn-default dropdown-toggle" type="button" id="sort_dropdown" data-toggle="dropdown">
@@ -42,69 +127,56 @@
     </div>
   </span>
 
-  <table class="table table-striped packages">
-    <thead>
-      <tr>
-        <th style="width: 10em;">Name</th>
-        <th>Description</th>
-        <th style="width: 5em;">Latest</th>
-        <th style="width: 7em; text-align: right;">Downloads</th>
-      </tr>
-    </thead>
-    <tbody>
+  <div class="package-list">
+    <ul>
       <%= for package <- @packages do %>
-        <tr>
-          <td>
-            <a href="<%= package_path(HexWeb.Endpoint, :show, package) %>">
-              <span class="glyphicon glyphicon-folder-open" style="padding-right: 0.5em;"></span><%= package.name %>
-            </a>
-          </td>
-          <td><%= text_length(package.meta.description, 140) %></td>
-          <td>
-            <span class="text-muted"><%= package.latest_version %></span>
-          </td>
-          <td style="text-align: right;">
-            <span class="text-muted" style="padding-right: 10px;"><%= human_number_space(@downloads[package.id] || 0) %></span>
-          </td>
-        </tr>
+      <li>
+        <div class="downloads-info">
+          <span class="download-count"><%= human_number_space(@downloads[package.id] || 0) %></span> <br>
+          downloads
+        </div>
+        <a href="<%= package_path(HexWeb.Endpoint, :show, package) %>"><%= package.name %></a> <span class="version"><%= package.latest_version %></span>
+        <p><%= text_length(package.meta.description, 140) %></p>
+      </li>
       <% end %>
-    </tbody>
-  </table>
-
-
-  <p class="pagination pull-left" style="height: 30px; line-height: 30px; margin-left: 8px;">
-    <%= if shown_packages == 1 do %>
-      Showing last package of <%= @package_count %> total
-    <% else %>
-      Showing <%= range_start %>&ndash;<%= range_end %> packages of <%= @package_count %> total
-    <% end %>
-  </p>
-
-  <ul class="pagination pull-right">
-    <%= if paginate[:prev] do %>
-      <li><a href="<%= package_path(HexWeb.Endpoint, :index, prev_page_params) %>">&laquo;</a></li>
-    <% else %>
-      <li class="disabled"><span>&laquo;</span></li>
-    <% end %>
-
-    <%= for counter <- paginate[:page_links] do %>
-      <%= if counter == @page do %>
-        <li class="active">
-          <span><%= counter %></span>
-        </li>
+    </ul>
+  </div>
+  <div class="pagination-wrapper">
+    <div class="pagination-info">
+      <%= if shown_packages == 1 do %>
+        Showing last package of <%= @package_count %> total
       <% else %>
-        <li>
-          <a href="<%= package_path(HexWeb.Endpoint, :index, params(search: @search, page: counter, sort: @sort)) %>">
-            <%= counter %>
-          </a>
-        </li>
+        Showing <%= range_start %>&ndash;<%= range_end %> packages of <%= @package_count %> total
       <% end %>
-    <% end %>
+    </div>
+    <nav class="pagination-widget">
+      <ul class="pagination pagination-sm">
+        <%= if paginate[:prev] do %>
+          <li><a href="<%= package_path(HexWeb.Endpoint, :index, prev_page_params) %>" aria-label="Previous">&laquo;</a></li>
+        <% else %>
+          <li class="disabled"><span>&laquo;</span></li>
+        <% end %>
+        <%= for counter <- paginate[:page_links] do %>
+          <%= if counter == @page do %>
+            <li class="active">
+              <span><%= counter %></span>
+            </li>
+          <% else %>
+            <li>
+              <a href="<%= package_path(HexWeb.Endpoint, :index, params(search: @search, page: counter, sort: @sort)) %>">
+                <%= counter %>
+              </a>
+            </li>
+          <% end %>
+        <% end %>
+        <%= if paginate[:next] do %>
+          <li><a href="<%= package_path(HexWeb.Endpoint, :index, next_page_params) %>" aria-label="Next" >&raquo;</a></li>
+        <% else %>
+          <li class="disabled"><span>&raquo;</span></li>
+        <% end %>
+      </ul>
+    </nav>
 
-    <%= if paginate[:next] do %>
-      <li><a href="<%= package_path(HexWeb.Endpoint, :index, next_page_params) %>">&raquo;</a></li>
-    <% else %>
-      <li class="disabled"><span>&raquo;</span></li>
-    <% end %>
-  </ul>
-<% end %>
+  </div>
+  <% end %>
+</div>

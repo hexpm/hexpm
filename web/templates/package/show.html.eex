@@ -21,128 +21,125 @@ tools = Keyword.take(tools, compatible_tools)
 
 %>
 
-<div class="page-header" style="margin-top: 0;">
-  <h2>
-    <a href="<%= package_path(HexWeb.Endpoint, :show, @package) %>"><%= @package.name %></a>
-    <%= if @current_release do %>
-      <small><%= @current_release.version %></small>
+<div class="container package-view">
+  <h2 class="package-title"><%= @package.name %>
+   <%= if @current_release do %>
+    <span class="version"><%= @current_release.version %></span>
     <% end %>
   </h2>
   <%= if description do %>
-    <span class="description"><%= text_to_html(description) %></span>
+    <p class="package-description">
+      <%= text_to_html(description) %>
+    </p>
   <% end %>
-</div>
 
-<div class="row">
-  <div class="col-sm-8">
-    <dl class="dl-horizontal package-meta">
-      <%= if build_tools != [] do %>
-        <dt>Build tools</dt>
-        <dd>
-          <%= for tool <- @current_release.meta.build_tools do %>
-            <span class="label label-primary"><%= tool %></span>
-          <% end %>
-        </dd>
+  <div class="row">
+    <div class="col-md-9">
+      <%= if maintains != [] do %>
+        <h3>Maintainers</h3>
+        <span class="maintainers"><%= Enum.join(maintains, ", ") %></span>
       <% end %>
 
-      <%= if maintains != [] do %>
-        <dt>Maintainers</dt>
-        <dd><%= Enum.join(maintains, ", ") %></dd>
+      <%= if links != [] or (@hexdocs_url != nil and @docs_tarball_url != nil ) do %>
+        <h3>Links</h3>
+        <ul class="links">
+          <%= for { name, link } <- links do %>
+          <li><a href="<%= link %>" rel="nofollow"><%= name %></a></li>
+          <% end %>
+          <li><a href="<%= @hexdocs_url %>">Online documentation</a> (<a href="<%= @docs_tarball_url %>">download</a>)</li>
+        </ul>
       <% end %>
 
       <%= if licenses != [] do %>
-        <dt>Licenses</dt>
-        <dd><%= Enum.join(licenses, ", ") %></dd>
+        <h3>License</h3>
+        <span class="license"><%= Enum.join(licenses, ", ") %></span>
       <% end %>
 
-      <%= if links != [] do %>
-        <dt>Links</dt>
-        <dd>
-          <ul class="links">
-            <%= for { name, link } <- links do %>
-              <li><a href="<%= link %>" rel="nofollow"><%= name %></a></li>
-            <% end %>
-          </ul>
-        </dd>
-      <% end %>
-
-      <%= if @hexdocs_url != nil and @docs_tarball_url != nil do %>
-        <dt>Docs</dt>
-        <dd>
-          <a href="<%= @hexdocs_url %>">online</a>
-          (<a href="<%= @docs_tarball_url %>">download</a>)
-        </dd>
-      <% end %>
-    </dl>
-    <div style="margin: 10px 0; border-top: 1px solid #eee"></div>
-
-    <div class="row">
-      <div class="col-sm-6">
-        <h4>Versions</h4>
-
-        <ul id="versions" class="list-unstyled">
-          <% show_latest_versions = 5 %>
-          <%= render "versions.html", [package: @package, releases: Enum.take(@releases, show_latest_versions), older?: false] %>
-
-          <%= if length(@releases) > show_latest_versions do %>
-            <%= render "versions.html", [package: @package, releases: Enum.drop(@releases, show_latest_versions), older?: true] %>
-          <% end %>
+      <div class="stats clearfix">
+        <ul>
+          <li>
+            <img src="<%= static_path(HexWeb.Endpoint, "/images/stat-calendar.png") %>" alt="calendar">
+            <span class="stat-info">
+              <span class="count-info">
+                <%= human_number_space(if @release_downloads, do: @release_downloads.downloads, else: 0) %>
+              </span> <br>
+              downloads of this version
+            </span>
+          </li>
+          <li>
+            <img src="<%= static_path(HexWeb.Endpoint, "/images/stat-calendar.png") %>" alt="calendar">
+            <span class="stat-info">
+              <span class="count-info">
+                <%= human_number_space(@downloads["day"] || 0) %>
+              </span> <br>
+              downloads yesterday
+            </span>
+          </li>
+          <li>
+            <img src="<%= static_path(HexWeb.Endpoint, "/images/stat-calendar.png") %>" alt="calendar">
+            <span class="stat-info">
+              <span class="count-info">
+                <%= human_number_space(@downloads["week"] || 0) %>
+              </span> <br>
+              downloads last seven days
+            </span>
+          </li>
+          <li>
+            <img src="<%= static_path(HexWeb.Endpoint, "/images/stat-calendar.png") %>" alt="calendar">
+            <span class="stat-info">
+              <span class="count-info">
+                <%= human_number_space(@downloads["all"] || 0) %>
+              </span> <br>
+              downloads all time
+            </span>
+          </li>
         </ul>
+      </div>
 
-        <%= if length(@releases) > show_latest_versions do %>
-          <p class="show-versions"><button class="btn btn-primary toggle-text" role="button" data-toggle="collapse" data-target="#versions li.collapse" aria-expanded="false" aria-controls="versions">
+      <div class="row">
+        <div class="col-md-6">
+          <h3>Versions</h3>
+          <ul class="version-dependency-list">
+            <% show_latest_versions = 5 %>
+            <%= render "versions.html", [package: @package, releases: Enum.take(@releases, show_latest_versions), older?: false] %>
+
+            <%= if length(@releases)> show_latest_versions do %>
+              <%= render "versions.html", [package: @package, releases: Enum.drop(@releases, show_latest_versions), older?: true] %>
+            <% end %>
+            <!-- <li>
+              <a href="#">1.0.6</a> October 17, 2015 (<a href="#">docs</a>)
+            </li> -->
+          </ul>
+          <%= if length(@releases)> show_latest_versions do %>
+          <!-- <p class="show-versions"><button class="btn btn-primary toggle-text" role="button" data-toggle="collapse" data-target="#versions li.older" aria-expanded="false" aria-controls="versions">
             <span>All Versions</span>
             <span class="invisible">Recent Versions</span>
-          </button></p>
-        <% end %>
-      </div>
-      <div class="col-sm-6">
-        <h4>Dependencies</h4>
-        <ul class="list-unstyled">
-          <%= if @current_release do %>
-            <%= for req <- @current_release.requirements do %>
-              <li>
-                <a href="<%= package_path(HexWeb.Endpoint, :show, req.name) %>"><strong><%= req.name %></strong></a>
-                <%= req.requirement %>
-                <%= if req.optional do %>(optional)<% end %>
-              </li>
-            <% end %>
+          </button></p> -->
           <% end %>
-        </ul>
+        </div>
+        <div class="col-md-6">
+          <h3>Dependencies</h3>
+          <ul class="version-dependency-list">
+            <%= if @current_release do %>
+              <%= for { name, _app, req, optional } <- @current_release.requirements do %>
+              <li>
+                <a href="<%= package_path(HexWeb.Endpoint, :show, req.name) %>"><%= name %></a> <%= req %>
+                <%= if optional do %>(optional)<% end %>
+              </li>
+              <% end %>
+            <% end %>
+          </ul>
+        </div>
       </div>
     </div>
-  </div>
-  <div class="col-sm-4">
-    <div class="panel panel-default">
-      <div class="panel-heading"><h4 class="panel-title">Downloads</h4></div>
-      <div class="panel-body">
-        <table class="downloads">
-          <tr>
-            <td class="left"><%= human_number_space if @release_downloads, do: @release_downloads.downloads, else: 0 %></td>
-            <td class="text-muted">this version</td>
-          </tr>
-          <tr>
-            <td class="left"><%= human_number_space @downloads["day"] || 0 %></td>
-            <td class="text-muted">yesterday</td>
-          </tr>
-          <tr>
-            <td class="left"><%= human_number_space @downloads["week"] || 0 %></td>
-            <td class="text-muted">last seven days</td>
-          </tr>
-          <tr>
-            <td class="left"><%= human_number_space @downloads["all"] || 0 %></td>
-            <td class="text-muted">all time</td>
-          </tr>
-        </table>
-      </div>
-    </div>
-    <div class="panel panel-default">
-      <div class="panel-heading"><h4 class="panel-title">Configs</h4></div>
-      <div class="panel-body">
-        <%= for {tool, file} <- tools do %>
-          <div class="package-snippet">
-            <%= file %>:
-            <div class="input-group input-group-sm">
+
+    <div class="col-md-3">
+      <h3>Config</h3>
+      <%= for {tool, file} <- tools do %>
+        <div class="package-snippet">
+          <span class="config-tool"><%= file %></span>
+          <div class="config-input">
+            <div class="input-group">
               <input type="text" class="form-control snippet"
                 value="<%= dep_snippet(tool, @package.name, @current_release) %>"
                 onfocus="this.select();"
@@ -154,8 +151,18 @@ tools = Keyword.take(tools, compatible_tools)
               </span>
             </div>
           </div>
-        <% end %>
-      </div>
+        </div>
+      <% end %>
+    </div>
+
+      <%= if build_tools != [] do %>
+        <h3>Build Tools</h3>
+        <div class="build-tools-box">
+          <%= for tool <- @current_release.meta.build_tools do %>
+          <span class="build-tool <%= tool %>"><%= tool %></span>
+          <% end %>
+        </div>
+      <% end %>
     </div>
   </div>
 </div>
