@@ -3,15 +3,17 @@ defmodule HexWeb.API.KeyController do
 
   def index(conn, _params) do
     authorized(conn, [], fn user ->
+      keys = Key.all(user) |> HexWeb.Repo.all
+
       conn
       |> api_cache(:private)
-      |> render(:index, keys: Key.all(user))
+      |> render(:index, keys: keys)
     end)
   end
 
   def show(conn, %{"name" => name}) do
     authorized(conn, [], fn user ->
-      if key = Key.get(name, user) do
+      if key = HexWeb.Repo.one(Key.get(name, user)) do
         when_stale(conn, key, fn conn ->
           conn
           |> api_cache(:private)
@@ -27,7 +29,7 @@ defmodule HexWeb.API.KeyController do
     auth_opts = [only_basic: true, allow_unconfirmed: true]
 
     authorized(conn, auth_opts, fn user ->
-      case Key.create(user, conn.params) do
+      case Key.create(user, conn.params) |> HexWeb.Repo.insert do
         {:ok, key} ->
           location = key_url(conn, :show, params["name"])
 
@@ -44,8 +46,8 @@ defmodule HexWeb.API.KeyController do
 
   def delete(conn, %{"name" => name}) do
     authorized(conn, [], fn user ->
-      if key = Key.get(name, user) do
-        Key.delete(key)
+      if key = HexWeb.Repo.one(Key.get(name, user)) do
+        HexWeb.Repo.delete!(key)
 
         conn
         |> api_cache(:private)

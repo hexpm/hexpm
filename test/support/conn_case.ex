@@ -47,7 +47,9 @@ defmodule HexWeb.ConnCase do
   end
 
   def key_for(user) do
-    {:ok, key} = HexWeb.Key.create(user, %{name: "any_key_name"})
+    key = user
+          |> HexWeb.Key.create(%{name: "any_key_name"})
+          |> HexWeb.Repo.insert!
     key.user_secret
   end
 end

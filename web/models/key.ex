@@ -25,27 +25,16 @@ defmodule HexWeb.Key do
   end
 
   def create(user, params) do
-    changeset = build_assoc(user, :keys) |> changeset(params)
-
-    case HexWeb.Repo.insert(changeset) do
-      {:ok, key} -> {:ok, key}
-      {:error, changeset} -> {:error, changeset.errors}
-    end
+    build_assoc(user, :keys)
+    |> changeset(params)
   end
 
   def all(user) do
     assoc(user, :keys)
-    |> HexWeb.Repo.all
   end
 
   def get(name, user) do
-    from(k in assoc(user, :keys), where: k.name == ^name, limit: 1)
-    |> HexWeb.Repo.one
-  end
-
-  def delete(key) do
-    HexWeb.Repo.delete!(key)
-    :ok
+    from(k in assoc(user, :keys), where: k.name == ^name)
   end
 
   def auth(user_secret) do
