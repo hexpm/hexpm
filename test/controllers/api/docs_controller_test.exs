@@ -28,10 +28,6 @@ defmodule HexWeb.API.DocsControllerTest do
     assert conn.status == 201
     assert Release.get(phoenix, "0.0.1").has_docs
 
-    conn = get conn(), "api/packages/phoenix/releases/0.0.1/docs"
-    assert conn.status == 200
-    assert conn.resp_body == body
-
     conn = get conn(), "docs/phoenix/index.html"
     assert conn.status == 200
     assert conn.resp_body == "HEYO"

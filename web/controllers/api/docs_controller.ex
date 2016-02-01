@@ -16,15 +16,6 @@ defmodule HexWeb.API.DocsController do
     end
   end
 
-  def show(conn, %{"name" => name, "version" => version}) do
-    if (package = Package.get(name)) && Release.get(package, version) do
-      store = Application.get_env(:hex_web, :store)
-      store.send_docs(conn, "#{name}-#{version}.tar.gz")
-    else
-      not_found(conn)
-    end
-  end
-
   def delete(conn, %{"name" => name, "version" => version}) do
     if (package = Package.get(name)) && (release = Release.get(package, version)) do
       authorized(conn, [], &Package.owner?(package, &1), fn _ ->
