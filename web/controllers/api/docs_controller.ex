@@ -33,7 +33,7 @@ defmodule HexWeb.API.DocsController do
   defp handle_tarball(conn, package, release, user, body) do
     case parse_tarball(release, user, body) do
       :ok ->
-        location = api_url(["packages", package.name, "releases", to_string(release.version), "docs"])
+        location = Release.docs_url(release)
 
         conn
         |> put_resp_header("location", location)
