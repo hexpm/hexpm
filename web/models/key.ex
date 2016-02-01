@@ -21,7 +21,7 @@ defmodule HexWeb.Key do
   defp changeset(key, params) do
     cast(key, params, ~w(name), [])
     |> add_keys
-    |> unique_name
+    |> prepare_changes(&unique_name/1)
   end
 
   def create(user, params) do
@@ -64,8 +64,8 @@ defmodule HexWeb.Key do
       from(u in assoc(changeset.model, :user),
            join: k in assoc(u, :keys),
            select: k.name)
-      |> HexWeb.Repo.all
-      |> Enum.into(HashSet.new)
+      |> changeset.repo.all
+      |> Enum.into(MapSet.new)
 
     if Set.member?(names, name) do
       name = find_unique_name(name, names)
