@@ -64,11 +64,9 @@ defmodule HexWeb.AuthHelpers do
   end
 
   defp key_auth(key) do
-    case HexWeb.Key.auth(key) do
-      nil ->
-        {:error, :key}
-      user ->
-        {:ok, user}
+    case HexWeb.Auth.auth(key) do
+      {:ok, user} -> {:ok, user}
+      :error      -> {:error, :key}
     end
   end
 
