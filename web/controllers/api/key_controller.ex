@@ -29,7 +29,7 @@ defmodule HexWeb.API.KeyController do
     authorized(conn, auth_opts, fn user ->
       case Key.create(user, conn.params) do
         {:ok, key} ->
-          location = api_url(["keys", params["name"]])
+          location = key_url(conn, :show, params["name"])
 
           conn
           |> put_resp_header("location", location)

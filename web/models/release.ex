@@ -206,8 +206,10 @@ defmodule HexWeb.Release do
          select: {r.version, p.name})
     |> HexWeb.Repo.all
   end
+end
 
-  def docs_url(release) do
-    HexWeb.Utils.docs_url([release.package.name, to_string(release.version)])
+defimpl Phoenix.Param, for: [HexWeb.Release] do
+  def to_param(release) do
+    to_string(release.version)
   end
 end

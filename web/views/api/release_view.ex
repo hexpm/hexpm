@@ -17,13 +17,13 @@ defmodule HexWeb.API.ReleaseView do
     entity =
       release
       |> Map.take([:meta, :version, :has_docs, :inserted_at, :updated_at])
-      |> Map.put(:url, api_url(["packages", package.name, "releases", to_string(release.version)]))
-      |> Map.put(:package_url, api_url(["packages", package.name]))
+      |> Map.put(:url, release_url(HexWeb.Endpoint, :show, package, release))
+      |> Map.put(:package_url, package_url(HexWeb.Endpoint, :show, package))
       |> Map.put(:requirements, reqs)
       |> Enum.into(%{})
 
     if release.has_docs do
-      entity = Map.put(entity, :docs_url, Release.docs_url(release))
+      entity = Map.put(entity, :docs_url, HexWeb.Utils.docs_tarball_url(release))
     end
 
     if assoc_loaded?(release.downloads) do

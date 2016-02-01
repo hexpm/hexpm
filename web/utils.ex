@@ -111,22 +111,6 @@ defmodule HexWeb.Utils do
     do: for(elem <- Tuple.to_list(tuple), do: binarify(elem)) |> List.to_tuple
 
   @doc """
-  Returns a url to an API resource on the server from a list of path components.
-  """
-  @spec api_url([String.t] | String.t) :: String.t
-  def api_url(path) do
-    HexWeb.Endpoint.url <> "/api/" <> Path.join(List.wrap(path))
-  end
-
-  @doc """
-  Returns a url to a resource on the server from a list of path components.
-  """
-  @spec url([String.t] | String.t) :: String.t
-  def url(path) do
-    HexWeb.Endpoint.url <> "/" <> Path.join(List.wrap(path))
-  end
-
-  @doc """
   Returns a url to a resource on the CDN from a list of path components.
   """
   @spec cdn_url([String.t] | String.t) :: String.t
@@ -145,10 +129,12 @@ defmodule HexWeb.Utils do
   @doc """
   Returns a url to the documentation tarball in the Amazon S3 Hex.pm bucket.
   """
-  @spec docs_tarball_url(String.t, String.t) :: String.t
-  def docs_tarball_url(package, version) do
-    s3     = Application.get_env(:hex_web, :s3_url)
-    bucket = Application.get_env(:hex_web, :s3_bucket)
+  @spec docs_tarball_url(HexWeb.Release.t) :: String.t
+  def docs_tarball_url(release) do
+    s3      = Application.get_env(:hex_web, :s3_url)
+    bucket  = Application.get_env(:hex_web, :s3_bucket)
+    package = release.package.name
+    version = to_string(release.version)
     "#{s3}/#{bucket}/docs/#{package}-#{version}.tar.gz"
   end
 

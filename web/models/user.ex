@@ -3,6 +3,8 @@ defmodule HexWeb.User do
 
   @timestamps_opts [usec: true]
 
+  @derive {Phoenix.Param, key: :username}
+
   schema "users" do
     field :username, :string
     field :email, :string

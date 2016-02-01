@@ -1,6 +1,8 @@
 defmodule HexWeb.Key do
   use HexWeb.Web, :model
 
+  @derive {Phoenix.Param, key: :name}
+
   @timestamps_opts [usec: true]
 
   schema "keys" do

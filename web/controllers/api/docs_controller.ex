@@ -9,7 +9,7 @@ defmodule HexWeb.API.DocsController do
     if (package = Package.get(name)) &&
        (release = Release.get(package, version)) do
       authorized(conn, [], &Package.owner?(package, &1), fn user ->
-        handle_tarball(conn, package, release, user, body)
+        handle_tarball(conn, release, user, body)
       end)
     else
       not_found(conn)
@@ -30,10 +30,10 @@ defmodule HexWeb.API.DocsController do
     end
   end
 
-  defp handle_tarball(conn, package, release, user, body) do
+  defp handle_tarball(conn, release, user, body) do
     case parse_tarball(release, user, body) do
       :ok ->
-        location = Release.docs_url(release)
+        location = HexWeb.Utils.docs_tarball_url(release)
 
         conn
         |> put_resp_header("location", location)

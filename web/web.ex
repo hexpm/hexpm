@@ -71,8 +71,6 @@ defmodule HexWeb.Web do
 
   defmacro shared do
     quote do
-      import HexWeb.SharedHelpers
-
       alias HexWeb.{
         Download,
         Install,

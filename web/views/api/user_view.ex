@@ -10,11 +10,11 @@ defmodule HexWeb.API.UserView do
   def render("user", %{user: user}) do
     entity = user
       |> Map.take([:username, :email, :inserted_at, :updated_at])
-      |> Map.put(:url, api_url(["users", user.username]))
+      |> Map.put(:url, user_url(HexWeb.Endpoint, :show, user))
 
     if assoc_loaded?(user.owned_packages) do
       packages = Enum.into(user.owned_packages, %{}, fn package ->
-        {package.name, api_url(["packages", package.name])}
+        {package.name, package_url(HexWeb.Endpoint, :show, package)}
       end)
 
       entity = Map.put(entity, :owned_packages, packages)

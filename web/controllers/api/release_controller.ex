@@ -114,7 +114,7 @@ defmodule HexWeb.API.ReleaseController do
     case Release.create(package, release_params, checksum) do
       {:ok, release} ->
         after_release(package, release.version, user, body)
-        location = api_url(["packages", package.name, "releases", to_string(release.version)])
+        location = release_url(conn, :show, package, release)
 
         conn
         |> put_resp_header("location", location)
