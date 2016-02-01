@@ -1,7 +1,7 @@
 <script>
-function validate() { 
+function validate() {
   var form = document.forms["reset_form"];
-  
+
   var empty = function(form, name) {
     return form[name].value == "" || form[name].value == null
   };
@@ -26,7 +26,7 @@ function validate() {
 
 <div class="row">
   <div class="col-md-8 col-md-offset-2">
-    <form name="reset_form" action="/reset" onsubmit="return validate();" method="post">
+    <form name="reset_form" action="/password/reset" onsubmit="return validate();" method="post">
       <h2>Reset your Hex.pm password</h2>
 
       <p class="text-warning" id="error"></p>

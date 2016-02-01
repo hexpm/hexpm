@@ -1,22 +1,22 @@
 defmodule HexWeb.PasswordController do
   use HexWeb.Web, :controller
 
-  def show_confirm(conn, params) do
+  def show_confirm(conn, %{"username" => username, "key" => key}) do
     render conn, "confirm.html", [
-      success: User.confirm?(params["username"], params["key"])
+      success: User.confirm?(username, key)
     ]
   end
 
-  def show_reset(conn, params) do
+  def show_reset(conn, %{"username" => username, "key" => key}) do
     render conn, "reset.html", [
-      username: params["username"],
-      key: params["key"]
+      username: username,
+      key: key
     ]
   end
 
-  def reset(conn, params) do
+  def reset(conn, %{"username" => username, "key" => key, "password" => password}) do
     render conn, "reset_result.html", [
-      success: User.reset?(params["username"], params["key"], params["password"])
+      success: User.reset?(username, key, password)
     ]
   end
 end

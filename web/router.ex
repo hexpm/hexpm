@@ -24,9 +24,11 @@ defmodule HexWeb.Router do
     pipe_through :browser
 
     get  "/",                       PageController,     :index
-    get  "password/confirm",        PasswordController, :show_confirm
+
     get  "password/reset",          PasswordController, :show_reset
     post "password/reset",          PasswordController, :reset
+    get  "password/confirm",        PasswordController, :show_confirm
+
     get  "docs/usage",              DocsController,     :show_usage
     get  "docs/rebar3_usage",       DocsController,     :show_rebar3_usage
     get  "docs/publish",            DocsController,     :show_publish
@@ -35,6 +37,7 @@ defmodule HexWeb.Router do
     get  "docs/codeofconduct",      DocsController,     :show_coc
     get  "docs/faq",                DocsController,     :show_faq
     get  "docs/mirrors",            DocsController,     :show_mirrors
+
     get  "packages",                PackageController,  :index
     get  "packages/:name",          PackageController,  :show
     get  "packages/:name/:version", PackageController,  :show
