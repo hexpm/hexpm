@@ -10,7 +10,7 @@ config :hex_web,
   secret:       System.get_env("HEX_SECRET")   || "796f75666f756e64746865686578"
 
 config :hex_web, HexWeb.Endpoint,
-  http: [port: 4043],
+  http: [port: 4043]
 
 config :hex_web, HexWeb.Repo,
   adapter: Ecto.Adapters.Postgres,
