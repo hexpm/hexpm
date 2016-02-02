@@ -27,8 +27,8 @@ defmodule HexWeb.User do
     |> update_change(:email, &String.downcase/1)
     |> validate_format(:username, ~r"^[a-z0-9_\-\.!~\*'\(\)]+$")
     |> validate_format(:email, ~r"^.+@.+\..+$")
-    |> validate_unique(:username, on: HexWeb.Repo)
-    |> validate_unique(:email, on: HexWeb.Repo)
+    |> unique_constraint(:username, name: "users_username_idx")
+    |> unique_constraint(:email, name: "users_email_key")
   end
 
   defp changeset(user, :update, params) do

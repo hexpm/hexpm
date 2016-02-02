@@ -76,7 +76,7 @@ defmodule HexWeb.Package do
 
   defp changeset(package, :create, params) do
     changeset(package, :update, params)
-    |> validate_unique(:name, on: HexWeb.Repo)
+    |> unique_constraint(:name, name: "packages_name_idx")
   end
 
   # TODO: Drop support for contributors (maintainers released in 0.9.0, date TBD)
@@ -111,12 +111,11 @@ defmodule HexWeb.Package do
           %PackageOwner{package_id: package.id, owner_id: owner.id}
           |> HexWeb.Repo.insert!
 
-          {:ok, package}
+          package
         {:error, changeset} ->
-          {:error, changeset.errors}
+          HexWeb.Repo.rollback(changeset.errors)
       end
     end)
-    |> elem(1)
   end
 
   def update(package, params) do

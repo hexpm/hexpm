@@ -52,36 +52,4 @@ defmodule HexWeb.Validation do
         [{field, :build_number_not_allowed}]
     end)
   end
-
-  @doc """
-  Checks if the fields on the given entity are unique
-  by querying the database.
-  """
-  def validate_unique(changeset, field, opts \\ []) do
-    validate_change(changeset, field, fn _field, value ->
-      model        = changeset.model
-      module       = model.__struct__
-      repo         = Keyword.fetch!(opts, :on)
-      scope        = opts[:scope] || []
-
-      query =
-        from var in module,
-             where: field(var, ^field) == ^value,
-             limit: 1,
-             select: true
-
-      query =
-        Enum.reduce(scope, query, fn field, query ->
-          value = Map.fetch!(model, field)
-          from var in query,
-               where: field(var, ^field) == ^value
-        end)
-
-      if repo.all(query) == [true] do
-        [{field, :already_taken}]
-      else
-        []
-      end
-    end)
-  end
 end

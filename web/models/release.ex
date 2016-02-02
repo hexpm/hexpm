@@ -53,7 +53,7 @@ defmodule HexWeb.Release do
 
   defp changeset(release, :create, params) do
     changeset(release, :update, params)
-    |> validate_unique(:version, scope: [:package_id], on: HexWeb.Repo)
+    |> unique_constraint(:version, name: "releases_package_id_version_key")
   end
 
   defp changeset(release, :update, params) do
