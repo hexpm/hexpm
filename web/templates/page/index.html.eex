@@ -106,8 +106,8 @@
     <h2>Getting Started</h2>
     <div class="row">
       <div class="col-md-4">
-        <a href="#">installing</a>
-        <p>Mix will automatically prompt you whenever there is a need to use Hex...</p>
+        <a href="/docs/usage">installing</a>
+        <p>Mix will automatically prompt you whenever there is a need to use Hex.</p>
       </div>
       <div class="col-md-4">
         <a href="#">screencasts and docs</a>
