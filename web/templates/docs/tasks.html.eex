@@ -1,5 +1,5 @@
 <div class="container page">
-<h2 class="page-title">
+<h2>
   Mix tasks
 </h2>
 <%# This file is auto-generated with 'mix run task_docs.exs' %>
