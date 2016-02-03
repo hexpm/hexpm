@@ -14,7 +14,7 @@ defmodule HexWeb.API.KeyControllerTest do
     body = %{name: "macbook"}
     conn = conn()
            |> put_req_header("content-type", "application/json")
-           |> put_req_header("authorization", "Basic " <> :base64.encode("eric:eric"))
+           |> put_req_header("authorization", "Basic " <> Base.encode64("eric:eric"))
            |> post("api/keys", Poison.encode!(body))
 
     assert conn.status == 201
