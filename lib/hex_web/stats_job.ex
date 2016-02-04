@@ -32,6 +32,8 @@ defmodule HexWeb.StatsJob do
           rel_id = releases[{pkg_id, version}]
 
           if rel_id do
+            # TODO: This is inserting null ids with ecto 1.0, make sure this
+            # is fixed 2.0 or use a changeset
             %Download{release_id: rel_id, downloads: count, day: date}
             |> HexWeb.Repo.insert!
           end

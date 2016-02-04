@@ -1,5 +1,6 @@
 defmodule HexWeb.Package do
   use HexWeb.Web, :model
+  import Ecto.Query, only: [from: 2, exclude: 2, select: 3]
 
   @derive {Phoenix.Param, key: :name}
 
@@ -102,6 +103,7 @@ defmodule HexWeb.Package do
     end
   end
 
+  # TODO: Leave this in until we have multi
   def create(owner, params) do
     changeset = changeset(%Package{}, :create, params)
 
@@ -113,29 +115,13 @@ defmodule HexWeb.Package do
 
           package
         {:error, changeset} ->
-          HexWeb.Repo.rollback(changeset.errors)
+          HexWeb.Repo.rollback(changeset)
       end
     end)
   end
 
   def update(package, params) do
-    changeset = changeset(package, :update, params)
-
-    case HexWeb.Repo.update(changeset) do
-      {:ok, package} -> {:ok, package}
-      {:error, changeset} -> {:error, changeset.errors}
-    end
-  end
-
-  def get(name) do
-    from(p in Package,
-         where: p.name == ^name,
-         limit: 1)
-    |> HexWeb.Repo.one
-  end
-
-  def delete(package) do
-    HexWeb.Repo.delete!(package)
+    changeset(package, :update, params)
   end
 
   def owners(package) do
@@ -143,32 +129,30 @@ defmodule HexWeb.Package do
          where: p.package_id == ^package.id,
          join: u in User, on: u.id == p.owner_id,
          select: u)
-    |> HexWeb.Repo.all
   end
 
-  def owner?(package, user) do
-    from(p in PackageOwner,
-         where: p.package_id == ^package.id,
-         where: p.owner_id == ^user.id,
-         select: true)
-    |> HexWeb.Repo.all
-    |> Enum.any?
+  def is_owner(package, user) do
+    from(o in PackageOwner,
+         where: o.package_id == ^package.id,
+         where: o.owner_id == ^user.id,
+         select: count(o.id) == 1)
   end
 
-  def last_owner?(package) do
-    length(owners(package)) == 1
+  def is_single_owner(package) do
+    package
+    |> owners
+    |> exclude(:select)
+    |> select([o], count(o.id) == 1)
   end
 
-  def add_owner(package, user) do
+  def create_owner(package, user) do
     %PackageOwner{package_id: package.id, owner_id: user.id}
-    |> HexWeb.Repo.insert!
   end
 
-  def delete_owner(package, user) do
+  def owner(package, user) do
     from(p in HexWeb.PackageOwner,
          where: p.package_id == ^package.id,
          where: p.owner_id == ^user.id)
-    |> HexWeb.Repo.delete_all
   end
 
   def all(page, count, search \\ nil, sort \\ :name) do
@@ -177,7 +161,6 @@ defmodule HexWeb.Package do
     |> sort(sort)
     |> HexWeb.Utils.paginate(page, count)
     |> search(search)
-    |> HexWeb.Repo.all
   end
 
   def recent(count) do
@@ -185,25 +168,11 @@ defmodule HexWeb.Package do
          order_by: [desc: p.inserted_at],
          limit: ^count,
          select: {p.name, p.inserted_at})
-    |> HexWeb.Repo.all
-  end
-
-  def recent_full(count) do
-    from(p in Package,
-         order_by: [desc: p.inserted_at],
-         limit: ^count)
-    |> HexWeb.Repo.all
   end
 
   def count(search \\ nil) do
     from(p in Package, select: count(p.id))
     |> search(search)
-    |> HexWeb.Repo.one!
-  end
-
-  def versions(package) do
-    from(r in Release, where: r.package_id == ^package.id, select: r.version)
-    |> HexWeb.Repo.all
   end
 
   defp search(query, nil) do
@@ -242,9 +211,12 @@ defmodule HexWeb.Package do
   end
 
   defp sort(query, :downloads) do
-    from p in query,
-    left_join: d in PackageDownload, on: p.id == d.package_id and d.view == "all",
-    order_by: [asc: is_nil(d.downloads), desc: d.downloads, desc: p.id]
+    from(p in query,
+      left_join: d in PackageDownload,
+        on: p.id == d.package_id and d.view == "all",
+      order_by: [asc: is_nil(d.downloads),
+                 desc: d.downloads,
+                 desc: p.id])
   end
 
   defp sort(query, nil) do

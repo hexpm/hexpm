@@ -51,11 +51,11 @@ defmodule HexWeb.API.PackageControllerTest do
     {year, month, day} = :erlang.date
     {:ok, future} = Ecto.Date.load({year + 1, month, day})
 
-    Package.get("postgrex")
+    HexWeb.Repo.get_by(Package, name: "postgrex")
     |> Ecto.Changeset.change(updated_at: Ecto.DateTime.from_date(future))
     |> HexWeb.Repo.update!
 
-    Package.get("decimal")
+    HexWeb.Repo.get_by(Package, name: "decimal")
     |> Ecto.Changeset.change(inserted_at: Ecto.DateTime.from_date(future))
     |> HexWeb.Repo.update!
 

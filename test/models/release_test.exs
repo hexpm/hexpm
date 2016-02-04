@@ -14,7 +14,7 @@ defmodule HexWeb.ReleaseTest do
   end
 
   test "create release and get" do
-    package = Package.get("ecto")
+    package = HexWeb.Repo.get_by(Package, name: "ecto")
     package_id = package.id
     assert {:ok, %Release{package_id: ^package_id, version: %Version{major: 0, minor: 0, patch: 1}}} =
            Release.create(package, rel_meta(%{version: "0.0.1", app: "ecto"}), "")
@@ -28,9 +28,9 @@ defmodule HexWeb.ReleaseTest do
   end
 
   test "create release with deps" do
-    ecto     = Package.get("ecto")
-    postgrex = Package.get("postgrex")
-    decimal  = Package.get("decimal")
+    ecto     = HexWeb.Repo.get_by(Package, name: "ecto")
+    postgrex = HexWeb.Repo.get_by(Package, name: "postgrex")
+    decimal  = HexWeb.Repo.get_by(Package, name: "decimal")
 
     assert {:ok, _} = Release.create(decimal, rel_meta(%{version: "0.0.1", app: "decimal"}), "")
     assert {:ok, _} = Release.create(decimal, rel_meta(%{version: "0.0.2", app: "decimal"}), "")
@@ -45,7 +45,7 @@ defmodule HexWeb.ReleaseTest do
   end
 
   test "validate release" do
-    package = Package.get("ecto")
+    package = HexWeb.Repo.get_by(Package, name: "ecto")
 
     assert {:ok, _} =
            Release.create(package, rel_meta(%{version: "0.1.0", app: "ecto", requirements: %{"decimal" => ">= 0.0.0"}}), "")
@@ -58,16 +58,16 @@ defmodule HexWeb.ReleaseTest do
   end
 
   test "release version is unique" do
-    ecto = Package.get("ecto")
-    postgrex = Package.get("postgrex")
+    ecto = HexWeb.Repo.get_by(Package, name: "ecto")
+    postgrex = HexWeb.Repo.get_by(Package, name: "postgrex")
     assert {:ok, %Release{}} = Release.create(ecto, rel_meta(%{version: "0.0.1", app: "ecto"}), "")
     assert {:ok, %Release{}} = Release.create(postgrex, rel_meta(%{version: "0.0.1", app: "postgrex"}), "")
     assert {:error, _} = Release.create(ecto, rel_meta(%{version: "0.0.1", app: "ecto"}), "")
   end
 
   test "update release" do
-    decimal = Package.get("decimal")
-    postgrex = Package.get("postgrex")
+    decimal = HexWeb.Repo.get_by(Package, name: "decimal")
+    postgrex = HexWeb.Repo.get_by(Package, name: "postgrex")
 
     assert {:ok, _} = Release.create(decimal, rel_meta(%{version: "0.0.1", app: "decimal"}), "")
     assert {:ok, release} = Release.create(postgrex, rel_meta(%{version: "0.0.1", app: "postgrex", requirements: %{"decimal" => "~> 0.0.1"}}), "")
@@ -80,8 +80,8 @@ defmodule HexWeb.ReleaseTest do
   end
 
   test "delete release" do
-    decimal = Package.get("decimal")
-    postgrex = Package.get("postgrex")
+    decimal = HexWeb.Repo.get_by(Package, name: "decimal")
+    postgrex = HexWeb.Repo.get_by(Package, name: "postgrex")
 
     assert {:ok, release} = Release.create(decimal, rel_meta(%{version: "0.0.1", app: "decimal"}), "")
     Release.delete(release)

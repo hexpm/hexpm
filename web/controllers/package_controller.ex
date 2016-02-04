@@ -7,7 +7,7 @@ defmodule HexWeb.PackageController do
   def index(conn, params) do
     search        = HexWeb.Utils.safe_search(params["search"])
     sort          = HexWeb.Utils.safe_to_atom(params["sort"] || "name", @sort_params)
-    package_count = Package.count(search)
+    package_count = Package.count(search) |> HexWeb.Repo.one!
     page_param    = HexWeb.Utils.safe_int(params["page"]) || 1
     page          = HexWeb.Utils.safe_page(page_param, package_count, @packages_per_page)
     packages      = fetch_packages(page, @packages_per_page, search, sort)
@@ -26,7 +26,7 @@ defmodule HexWeb.PackageController do
   end
 
   def show(conn, params) do
-    if package = Package.get(params["name"]) do
+    if package = HexWeb.Repo.get_by(Package, name: params["name"]) do
       releases = Release.all(package)
 
       release =
@@ -71,7 +71,7 @@ defmodule HexWeb.PackageController do
 
   # TODO: Clean up
   defp fetch_packages(page, packages_per_page, search, sort) do
-    packages = Package.all(page, packages_per_page, search, sort)
+    packages = Package.all(page, packages_per_page, search, sort) |> HexWeb.Repo.all
     latest_versions = Release.latest_versions(packages)
 
     Enum.map(packages, fn package ->

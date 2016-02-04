@@ -24,9 +24,9 @@ defmodule HexWeb.API.OwnerControllerTest do
     body = Poison.decode!(conn.resp_body)
     assert [%{"username" => "eric"}] = body
 
-    package = Package.get("postgrex")
+    package = HexWeb.Repo.get_by(Package, name: "postgrex")
     user = User.get(username: "jose")
-    Package.add_owner(package, user)
+    Package.create_owner(package, user) |> HexWeb.Repo.insert!
 
     conn = conn()
            |> put_req_header("authorization", key_for("eric"))
@@ -71,8 +71,8 @@ defmodule HexWeb.API.OwnerControllerTest do
            |> put("api/packages/postgrex/owners/jose%40mail.com")
     assert conn.status == 204
 
-    package = Package.get("postgrex")
-    assert [first, second] = Package.owners(package)
+    package = HexWeb.Repo.get_by(Package, name: "postgrex")
+    assert [first, second] = Package.owners(package) |> HexWeb.Repo.all
     assert first.username in ["jose", "eric"]
     assert second.username in ["jose", "eric"]
   end
@@ -85,21 +85,15 @@ defmodule HexWeb.API.OwnerControllerTest do
   end
 
   test "delete package owner" do
-    package = Package.get("postgrex")
+    package = HexWeb.Repo.get_by(Package, name: "postgrex")
     user = User.get(username: "jose")
-    Package.add_owner(package, user)
+    Package.create_owner(package, user) |> HexWeb.Repo.insert!
 
     conn = conn()
            |> put_req_header("authorization", key_for("eric"))
            |> delete("api/packages/postgrex/owners/jose%40mail.com")
     assert conn.status == 204
-    assert [%User{username: "eric"}] = Package.owners(package)
-
-    conn = conn()
-           |> put_req_header("authorization", key_for("eric"))
-           |> delete("api/packages/postgrex/owners/jose%40mail.com")
-    assert conn.status == 403
-    assert [%User{username: "eric"}] = Package.owners(package)
+    assert [%User{username: "eric"}] = Package.owners(package) |> HexWeb.Repo.all
   end
 
   test "delete package owner authorizes" do
@@ -107,5 +101,15 @@ defmodule HexWeb.API.OwnerControllerTest do
            |> put_req_header("authorization", key_for("other"))
            |> delete("api/packages/postgrex/owners/eric%40mail.com")
     assert conn.status == 403
+  end
+
+  test "not possible to remove last owner of package" do
+    package = HexWeb.Repo.get_by(Package, name: "postgrex")
+
+    conn = conn()
+           |> put_req_header("authorization", key_for("eric"))
+           |> delete("api/packages/postgrex/owners/eric%40mail.com")
+    assert conn.status == 403
+    assert [%User{username: "eric"}] = Package.owners(package) |> HexWeb.Repo.all
   end
 end

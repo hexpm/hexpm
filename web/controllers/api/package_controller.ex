@@ -7,7 +7,7 @@ defmodule HexWeb.API.PackageController do
     page     = HexWeb.Utils.safe_int(params["page"])
     search   = HexWeb.Utils.safe_search(params["search"])
     sort     = HexWeb.Utils.safe_to_atom(params["sort"] || "name", @sort_params)
-    packages = Package.all(page, 100, search, sort)
+    packages = Package.all(page, 100, search, sort) |> HexWeb.Repo.all
 
     when_stale(conn, packages, [modified: false], fn conn ->
       conn
@@ -17,7 +17,7 @@ defmodule HexWeb.API.PackageController do
   end
 
   def show(conn, %{"name" => name}) do
-    if package = Package.get(name) do
+    if package = HexWeb.Repo.get_by(Package, name: name) do
       when_stale(conn, package, fn conn ->
         package  = HexWeb.Repo.preload(package, :downloads)
         releases = Release.all(package)

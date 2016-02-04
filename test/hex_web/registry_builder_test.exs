@@ -31,8 +31,8 @@ defmodule HexWeb.RegistryBuilderTest do
   end
 
   defp test_data do
-    postgrex = Package.get("postgrex")
-    decimal = Package.get("decimal")
+    postgrex = HexWeb.Repo.get_by(Package, name: "postgrex")
+    decimal = HexWeb.Repo.get_by(Package, name: "decimal")
 
     Release.create(decimal, rel_meta(%{version: "0.0.1", app: "decimal"}), "")
     Release.create(decimal, rel_meta(%{version: "0.0.2", app: "decimal", requirements: %{ex_doc: "0.0.0"}}), "")
@@ -126,8 +126,8 @@ defmodule HexWeb.RegistryBuilderTest do
   end
 
   # test "building is blocking" do
-  #   postgrex = Package.get("postgrex")
-  #   decimal = Package.get("decimal")
+  #   postgrex = HexWeb.Repo.get_by(Package, name: "postgrex")
+  #   decimal = HexWeb.Repo.get_by(Package, name: "decimal")
 
   #   Release.create(decimal, %{version: "0.0.1", app: "decimal"}, "")
   #   Release.create(decimal, %{version: "0.0.2", app: "decimal", requirements: %{ex_doc: "0.0.0"}}, "")

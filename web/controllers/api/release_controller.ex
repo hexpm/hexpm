@@ -3,8 +3,8 @@ defmodule HexWeb.API.ReleaseController do
 
   def create(conn, %{"name" => name, "body" => body}) do
     auth =
-      if package = Package.get(name) do
-        &Package.owner?(package, &1)
+      if package = HexWeb.Repo.get_by(Package, name: name) do
+        &package_owner?(package, &1)
       else
         fn _ -> true end
       end
@@ -15,7 +15,7 @@ defmodule HexWeb.API.ReleaseController do
   end
 
   def show(conn, %{"name" => name, "version" => version}) do
-    if (package = Package.get(name)) &&
+    if (package = HexWeb.Repo.get_by(Package, name: name)) &&
        (release = Release.get(package, version)) do
       downloads = HexWeb.ReleaseDownload.release(release)
       release = %{release | downloads: downloads}
@@ -31,10 +31,10 @@ defmodule HexWeb.API.ReleaseController do
   end
 
   def delete(conn, %{"name" => name, "version" => version}) do
-    if (package = Package.get(name)) &&
+    if (package = HexWeb.Repo.get_by(Package, name: name)) &&
        (release = Release.get(package, version)) do
 
-      authorized(conn, [], &Package.owner?(package, &1), fn _ ->
+      authorized(conn, [], &package_owner?(package, &1), fn _ ->
         case Release.delete(release) do
           :ok ->
             # TODO: Remove package from database if this was the only release
@@ -61,8 +61,8 @@ defmodule HexWeb.API.ReleaseController do
         case create_package(conn, package, package_params) do
           {:ok, package} ->
             create_release(conn, package, user, checksum, meta, body)
-          {:error, errors} ->
-            validation_failed(conn, errors)
+          {:error, changeset} ->
+            validation_failed(conn, changeset.errors)
         end
 
       {:error, errors} ->
@@ -72,11 +72,12 @@ defmodule HexWeb.API.ReleaseController do
 
   defp create_package(conn, package, params) do
     name = params["name"]
-    package = package || Package.get(name)
+    package = package || HexWeb.Repo.get_by(Package, name: name)
 
     if package do
-      authorized(conn, [], &Package.owner?(package, &1), fn _ ->
+      authorized(conn, [], &package_owner?(package, &1), fn _ ->
         Package.update(package, params)
+        |> HexWeb.Repo.update
       end)
     else
       authorized(conn, [], fn user ->

@@ -1,6 +1,6 @@
 [name, username] = System.argv
 
-package = HexWeb.Package.get(name)
+package = HexWeb.Repo.get_by!(HexWeb.Package, name: name)
 user    = HexWeb.User.get(username: username)
 
 unless package do
@@ -13,4 +13,4 @@ unless user do
   System.halt(1)
 end
 
-HexWeb.Package.add_owner(package, user)
+HexWeb.Package.create_owner(package, user) |> HexWeb.Repo.insert!

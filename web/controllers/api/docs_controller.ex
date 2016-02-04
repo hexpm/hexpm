@@ -6,9 +6,9 @@ defmodule HexWeb.API.DocsController do
   @uncompressed_max_size 64 * 1024 * 1024
 
   def create(conn, %{"name" => name, "version" => version, "body" => body}) do
-    if (package = Package.get(name)) &&
+    if (package = HexWeb.Repo.get_by(Package, name: name)) &&
        (release = Release.get(package, version)) do
-      authorized(conn, [], &Package.owner?(package, &1), fn user ->
+      authorized(conn, [], &package_owner?(package, &1), fn user ->
         handle_tarball(conn, release, user, body)
       end)
     else
@@ -17,8 +17,8 @@ defmodule HexWeb.API.DocsController do
   end
 
   def delete(conn, %{"name" => name, "version" => version}) do
-    if (package = Package.get(name)) && (release = Release.get(package, version)) do
-      authorized(conn, [], &Package.owner?(package, &1), fn _ ->
+    if (package = HexWeb.Repo.get_by(Package, name: name)) && (release = Release.get(package, version)) do
+      authorized(conn, [], &package_owner?(package, &1), fn _ ->
         revert(name, release)
 
         conn

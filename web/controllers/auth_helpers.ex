@@ -84,4 +84,8 @@ defmodule HexWeb.AuthHelpers do
     |> render(HexWeb.ErrorView, :"403", message: reason)
   end
 
+  def package_owner?(package, user) do
+    HexWeb.Package.is_owner(package, user)
+    |> HexWeb.Repo.one!
+  end
 end
