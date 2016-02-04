@@ -8,6 +8,7 @@ defmodule HexWeb.ReleaseDownload do
     field :downloads, :integer
   end
 
+  # TODO: Figure out a place to move this
   def refresh do
     Ecto.Adapters.SQL.query(
        HexWeb.Repo,
@@ -19,6 +20,5 @@ defmodule HexWeb.ReleaseDownload do
     from(rd in ReleaseDownload,
          where: rd.release_id == ^release.id,
          select: rd.downloads)
-    |> HexWeb.Repo.one
   end
 end

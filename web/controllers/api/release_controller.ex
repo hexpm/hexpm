@@ -17,7 +17,7 @@ defmodule HexWeb.API.ReleaseController do
   def show(conn, %{"name" => name, "version" => version}) do
     if (package = HexWeb.Repo.get_by(Package, name: name)) &&
        (release = HexWeb.Repo.get_by(assoc(package, :releases), version: version)) do
-      downloads = HexWeb.ReleaseDownload.release(release)
+      downloads = HexWeb.ReleaseDownload.release(release) |> HexWeb.Repo.one
       release = %{release | package: package, downloads: downloads}
 
       release = HexWeb.Repo.preload(release, requirements: Release.requirements(release))

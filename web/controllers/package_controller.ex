@@ -68,7 +68,8 @@ defmodule HexWeb.PackageController do
       downloads:         PackageDownload.package(package)
                          |> HexWeb.Repo.all
                          |> Enum.into(%{}),
-      release_downloads: ReleaseDownload.release(release),
+      release_downloads: ReleaseDownload.release(release)
+                         |> HexWeb.Repo.one!,
       mix_snippet:       HexWeb.Utils.mix_snippet_version(release.version),
       rebar_snippet:     HexWeb.Utils.rebar_snippet_version(release.version),
       erlang_mk_snippet: HexWeb.Utils.erlang_mk_snippet_version(release.version)
