@@ -26,7 +26,7 @@ defmodule HexWeb.API.DocsControllerTest do
            |> put_req_header("authorization", key_for("eric"))
            |> post("api/packages/phoenix/releases/0.0.1/docs", body)
     assert conn.status == 201
-    assert Release.get(phoenix, "0.0.1").has_docs
+    assert HexWeb.Repo.get_by!(assoc(phoenix, :releases), version: "0.0.1").has_docs
 
     conn = get conn(), "docs/phoenix/index.html"
     assert conn.status == 200
@@ -78,7 +78,7 @@ defmodule HexWeb.API.DocsControllerTest do
            |> post("api/packages/ecto/releases/0.0.1/docs", body)
 
     assert conn.status == 201
-    assert Release.get(ecto, "0.0.1").has_docs
+    assert HexWeb.Repo.get_by!(assoc(ecto, :releases), version: "0.0.1").has_docs
 
     conn = conn()
            |> put_req_header("authorization", key_for("eric"))
@@ -86,7 +86,7 @@ defmodule HexWeb.API.DocsControllerTest do
     assert conn.status == 204
 
     # Check release was deleted
-    refute Release.get(ecto, "0.0.1")
+    refute HexWeb.Repo.get_by(assoc(ecto, :releases), version: "0.0.1")
 
     # Check docs were deleted
     conn = get conn(), "api/packages/ecto/releases/0.0.1/docs"

@@ -16,9 +16,11 @@ defmodule HexWeb.API.ReleaseController do
 
   def show(conn, %{"name" => name, "version" => version}) do
     if (package = HexWeb.Repo.get_by(Package, name: name)) &&
-       (release = Release.get(package, version)) do
+       (release = HexWeb.Repo.get_by(assoc(package, :releases), version: version)) do
       downloads = HexWeb.ReleaseDownload.release(release)
-      release = %{release | downloads: downloads}
+      release = %{release | package: package, downloads: downloads}
+
+      release = HexWeb.Repo.preload(release, requirements: Release.requirements(release))
 
       when_stale(conn, release, fn conn ->
         conn
@@ -32,19 +34,19 @@ defmodule HexWeb.API.ReleaseController do
 
   def delete(conn, %{"name" => name, "version" => version}) do
     if (package = HexWeb.Repo.get_by(Package, name: name)) &&
-       (release = Release.get(package, version)) do
+       (release = HexWeb.Repo.get_by(assoc(package, :releases), version: version)) do
 
       authorized(conn, [], &package_owner?(package, &1), fn _ ->
-        case Release.delete(release) do
-          :ok ->
+        case Release.delete(release) |> HexWeb.Repo.delete do
+          {:ok, release} ->
             # TODO: Remove package from database if this was the only release
             revert(name, release)
 
             conn
             |> api_cache(:private)
             |> send_resp(204, "")
-          {:error, errors} ->
-            validation_failed(conn, errors)
+          {:error, changeset} ->
+            validation_failed(conn, changeset.errors)
         end
       end)
     else
@@ -91,7 +93,7 @@ defmodule HexWeb.API.ReleaseController do
     release_params = %{"app" => meta["app"], "version" => version,
                        "requirements" => meta["requirements"], "meta" => meta}
 
-    if release = Release.get(package, version) do
+    if release = HexWeb.Repo.get_by(assoc(package, :releases), version: version) do
       update(conn, package, release, release_params, checksum, user, body)
     else
       create(conn, package, release_params, checksum, user, body)
@@ -102,6 +104,8 @@ defmodule HexWeb.API.ReleaseController do
     case Release.update(release, release_params, checksum) do
       {:ok, release} ->
         after_release(package, release.version, user, body)
+
+        release = %{release | package: package}
 
         conn
         |> api_cache(:public)
@@ -115,6 +119,8 @@ defmodule HexWeb.API.ReleaseController do
     case Release.create(package, release_params, checksum) do
       {:ok, release} ->
         after_release(package, release.version, user, body)
+
+        release = %{release | package: package}
         location = release_url(conn, :show, package, release)
 
         conn

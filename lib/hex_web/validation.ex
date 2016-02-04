@@ -51,4 +51,28 @@ defmodule HexWeb.Validation do
         [{field, :build_number_not_allowed}]
     end)
   end
+
+  def validate_meta(changeset, field, meta_types, meta_required) do
+    validate_change(changeset, field, fn _field, meta ->
+      type_errors =
+        Enum.flat_map(meta_types, fn {sub_field, type} ->
+          type(sub_field, Map.get(meta, sub_field), type)
+        end)
+
+      req_errors =
+        Enum.flat_map(meta_required, fn field ->
+          if Map.has_key?(meta, field) do
+            []
+          else
+            [{field, :missing}]
+          end
+        end)
+
+      errors = req_errors ++ type_errors
+
+      if errors == [],
+          do: [],
+        else: [{field, errors}]
+    end)
+  end
 end

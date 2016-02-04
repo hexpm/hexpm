@@ -7,9 +7,9 @@ defmodule HexWeb.API.DocsController do
 
   def create(conn, %{"name" => name, "version" => version, "body" => body}) do
     if (package = HexWeb.Repo.get_by(Package, name: name)) &&
-       (release = Release.get(package, version)) do
+       (release = HexWeb.Repo.get_by(assoc(package, :releases), version: version)) do
       authorized(conn, [], &package_owner?(package, &1), fn user ->
-        handle_tarball(conn, release, user, body)
+        handle_tarball(conn, package, release, user, body)
       end)
     else
       not_found(conn)
@@ -30,10 +30,10 @@ defmodule HexWeb.API.DocsController do
     end
   end
 
-  defp handle_tarball(conn, release, user, body) do
-    case parse_tarball(release, user, body) do
+  defp handle_tarball(conn, package, release, user, body) do
+    case parse_tarball(package, release, user, body) do
       :ok ->
-        location = HexWeb.Utils.docs_tarball_url(release)
+        location = HexWeb.Utils.docs_tarball_url(package, release)
 
         conn
         |> put_resp_header("location", location)
@@ -44,7 +44,7 @@ defmodule HexWeb.API.DocsController do
     end
   end
 
-  defp parse_tarball(release, user, body) do
+  defp parse_tarball(package, release, user, body) do
     case unzip(body) do
       {:ok, data} ->
         case :erl_tar.extract({:binary, data}, [:memory]) do
@@ -52,9 +52,9 @@ defmodule HexWeb.API.DocsController do
             files = Enum.map(files, fn {path, data} -> {List.to_string(path), data} end)
 
             if check_version_dirs?(files) do
-              task    = fn -> upload_docs(release, files, body) end
+              task    = fn -> upload_docs(package, release, files, body) end
               success = fn -> :ok end
-              failure = fn reason -> failure(release, user, reason) end
+              failure = fn reason -> failure(package, release, user, reason) end
               HexWeb.Utils.task(task, success, failure)
 
               :ok
@@ -103,8 +103,7 @@ defmodule HexWeb.API.DocsController do
     {:ok, IO.iodata_to_binary([data|uncompressed])}
   end
 
-  def upload_docs(release, files, body) do
-    package  = release.package
+  def upload_docs(package, release, files, body) do
     name     = package.name
     version  = to_string(release.version)
 
@@ -158,12 +157,12 @@ defmodule HexWeb.API.DocsController do
     end)
   end
 
-  defp failure(release, user, reason) do
+  defp failure(package, release, user, reason) do
     require Logger
     Logger.error "Package upload failed: #{inspect reason}"
 
     # TODO: Revert database changes
-    package = release.package.name
+    package = package.name
     version = to_string(release.version)
     email   = Application.get_env(:hex_web, :email)
     body    = Phoenix.View.render(HexWeb.EmailView, "publish_fail.html",

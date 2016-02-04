@@ -8,7 +8,9 @@ unless package do
 end
 
 releases = HexWeb.Release.all(package)
-owners   = HexWeb.Package.owners(package) |> HexWeb.Repo.all
+           |> HexWeb.Repo.all
+owners   = HexWeb.Package.owners(package)
+           |> HexWeb.Repo.all
 
 IO.puts name
 
@@ -24,7 +26,7 @@ answer = IO.gets "Remove? [Yn] "
 
 if answer =~ ~r/^(Y(es)?)?$/i do
   Enum.each(owners, &(HexWeb.Package.owner(package, &1) |> HexWeb.Repo.delete_all))
-  Enum.each(releases, &HexWeb.Release.delete(&1, force: true))
+  Enum.each(releases, &(HexWeb.Release.delete(&1, force: true) |> HexWeb.Repo.delete!)
   HexWeb.Repo.delete!(package)
   IO.puts "Removed"
 else

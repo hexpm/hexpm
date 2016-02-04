@@ -30,6 +30,8 @@ defmodule HexWeb.PackageController do
   def show(conn, params) do
     if package = HexWeb.Repo.get_by(Package, name: params["name"]) do
       releases = Release.all(package)
+                 |> HexWeb.Repo.all
+                 |> Release.sort
 
       release =
         if version = params["version"] do
@@ -52,7 +54,7 @@ defmodule HexWeb.PackageController do
     docs_assigns =
       if has_docs do
         [hexdocs_url: HexWeb.Utils.docs_url([package.name]),
-         docs_tarball_url: HexWeb.Utils.docs_tarball_url(package.name, release.version)]
+         docs_tarball_url: HexWeb.Utils.docs_tarball_url(package, release)]
       else
         [hexdocs_url: nil, docs_tarball_url: nil]
       end
@@ -75,11 +77,13 @@ defmodule HexWeb.PackageController do
 
   # TODO: Clean up
   defp fetch_packages(page, packages_per_page, search, sort) do
-    packages = Package.all(page, packages_per_page, search, sort) |> HexWeb.Repo.all
-    latest_versions = Release.latest_versions(packages)
+    packages = Package.all(page, packages_per_page, search, sort)
+               |> HexWeb.Repo.all
+    versions = Release.package_versions(packages)
+               |> HexWeb.Repo.all
 
     Enum.map(packages, fn package ->
-      version = latest_versions[package.id]
+      version = versions[package.id] |> Release.latest_version
       Map.put(package, :latest_version, version)
     end)
   end

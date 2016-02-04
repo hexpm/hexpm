@@ -104,11 +104,11 @@ defmodule HexWeb.API.ReleaseControllerTest do
     assert conn.status == 201
     postgrex = HexWeb.Repo.get_by(Package, name: "postgrex")
     postgrex_id = postgrex.id
-    assert [%Release{package_id: ^postgrex_id, version: %Version{major: 0, minor: 0, patch: 2}},
-            %Release{package_id: ^postgrex_id, version: %Version{major: 0, minor: 0, patch: 1}}] =
-           Release.all(postgrex)
+    assert [%Release{package_id: ^postgrex_id, version: %Version{major: 0, minor: 0, patch: 1}},
+            %Release{package_id: ^postgrex_id, version: %Version{major: 0, minor: 0, patch: 2}}] =
+           Release.all(postgrex) |> HexWeb.Repo.all
 
-    Release.get(postgrex, "0.0.1")
+    HexWeb.Repo.get_by!(assoc(postgrex, :releases), version: "0.0.1")
   end
 
   test "create release also creates package" do
@@ -140,7 +140,7 @@ defmodule HexWeb.API.ReleaseControllerTest do
 
     assert conn.status == 200
     postgrex = HexWeb.Repo.get_by(Package, name: "postgrex")
-    release = Release.get(postgrex, "0.0.1")
+    release = HexWeb.Repo.get_by!(assoc(postgrex, :releases), version: "0.0.1")
     assert release
 
     Ecto.Changeset.change(release, inserted_at: %{Ecto.DateTime.utc | year: 2000})
@@ -164,7 +164,8 @@ defmodule HexWeb.API.ReleaseControllerTest do
            |> post("api/packages/postgrex/releases", body)
 
     assert conn.status == 201
-    release = HexWeb.Repo.get_by(Package, name: "postgrex") |> Release.get("0.0.1")
+    package = HexWeb.Repo.get_by!(Package, name: "postgrex")
+    release = HexWeb.Repo.get_by!(assoc(package, :releases), version: "0.0.1")
     Ecto.Changeset.change(release, inserted_at: %{Ecto.DateTime.utc | year: 2000})
     |> HexWeb.Repo.update!
 
@@ -186,9 +187,8 @@ defmodule HexWeb.API.ReleaseControllerTest do
            |> delete("api/packages/postgrex/releases/0.0.1")
 
     assert conn.status == 204
-    postgrex = HexWeb.Repo.get_by(Package, name: "postgrex")
-    release =  Release.get(postgrex, "0.0.1")
-    refute release
+    postgrex = HexWeb.Repo.get_by!(Package, name: "postgrex")
+    refute HexWeb.Repo.get_by(assoc(postgrex, :releases), version: "0.0.1")
   end
 
   test "create releases with requirements" do
@@ -203,8 +203,13 @@ defmodule HexWeb.API.ReleaseControllerTest do
     body = Poison.decode!(conn.resp_body)
     assert body["requirements"] == %{"decimal" => %{"app" => "not_decimal", "optional" => false, "requirement" => "~> 0.0.1"}}
 
-    postgrex = HexWeb.Repo.get_by(Package, name: "postgrex")
-    assert [{"decimal", "not_decimal", "~> 0.0.1", false}] = Release.get(postgrex, "0.0.1").requirements
+    release = HexWeb.Repo.get_by(Package, name: "postgrex")
+              |> assoc(:releases)
+              |> HexWeb.Repo.get_by!(version: "0.0.1")
+              |> HexWeb.Repo.preload(:requirements)
+
+    assert [%{app: "not_decimal", requirement: "~> 0.0.1", optional: false}] =
+           release.requirements
   end
 
   test "create release updates registry" do

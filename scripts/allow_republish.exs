@@ -7,7 +7,7 @@ unless package do
   System.halt(1)
 end
 
-release = HexWeb.Release.get(package, version)
+release = HexWeb.Repo.get_by!(assoc(package, :releases), version: version)
 
 unless release do
   IO.puts "No release: #{name} #{version}"

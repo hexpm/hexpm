@@ -1,6 +1,5 @@
 defmodule HexWeb.Release do
   use HexWeb.Web, :model
-  alias HexWeb.Utils
 
   @timestamps_opts [usec: true]
 
@@ -22,34 +21,8 @@ defmodule HexWeb.Release do
     "build_tools" => {:array, :string},
     "elixir"      => :string
   }
-
-  @meta_fields Map.keys(@meta_types)
-
-  @meta_fields_required ~w(app build_tools)
-
-  defp validate_meta(changeset, field) do
-    validate_change(changeset, field, fn _field, meta ->
-      type_errors =
-        Enum.flat_map(@meta_types, fn {sub_field, type} ->
-          type(sub_field, Map.get(meta, sub_field), type)
-        end)
-
-      req_errors =
-        Enum.flat_map(@meta_fields_required, fn field ->
-          if Map.has_key?(meta, field) do
-            []
-          else
-            [{field, :missing}]
-          end
-        end)
-
-      errors = req_errors ++ type_errors
-
-      if errors == [],
-          do: [],
-        else: [{field, errors}]
-    end)
-  end
+  @meta_all Map.keys(@meta_types)
+  @meta_required ~w(app build_tools)
 
   defp changeset(release, :create, params) do
     changeset(release, :update, params)
@@ -59,10 +32,11 @@ defmodule HexWeb.Release do
   defp changeset(release, :update, params) do
     cast(release, params, ~w(version meta), [])
     |> validate_version(:version)
-    |> update_change(:meta, &Map.take(&1, @meta_fields))
-    |> validate_meta(:meta)
+    |> update_change(:meta, &Map.take(&1, @meta_all))
+    |> validate_meta(:meta, @meta_types, @meta_required)
   end
 
+  # TODO: Leave this in until we have multi
   def create(package, params, checksum) do
     changeset =
       build_assoc(package, :releases)
@@ -86,6 +60,7 @@ defmodule HexWeb.Release do
     end)
   end
 
+  # TODO: Leave this in until we have multi
   def update(release, params, checksum) do
     if editable?(release) do
       changeset =
@@ -117,40 +92,38 @@ defmodule HexWeb.Release do
 
   def delete(release, opts \\ []) do
     force? = Keyword.get(opts, :force, false)
-    if editable?(release) or force? do
-      # TODO: Delete tarball from S3
-      HexWeb.Repo.delete!(release)
-      :ok
-    else
-      {:error, [inserted_at: "can only delete a release up to one hour after creation"]}
-    end
+    change(release) |> validate_editable(force?)
+  end
+
+  defp validate_editable(changeset, true), do: changeset
+  defp validate_editable(changeset, false) do
+    validate_change(changeset, :inserted_at, fn _field, _value ->
+      if editable?(changeset.model) do
+        []
+      else
+        [inserted_at: "can only delete a release up to one hour after creation"]
+      end
+    end)
   end
 
   defp editable?(release) do
     inserted_at =
-      Ecto.DateTime.to_erl(release.inserted_at)
-      |> :calendar.datetime_to_gregorian_seconds
+      release.inserted_at
+      |> Ecto.DateTime.to_erl
+      |> to_secs
 
-    now =
-      :calendar.universal_time
-      |> :calendar.datetime_to_gregorian_seconds
-
+    now = to_secs(:calendar.universal_time)
     now - inserted_at <= 3600
   end
 
-  def latest_versions(packages) do
+  defp to_secs(datetime), do: :calendar.datetime_to_gregorian_seconds(datetime)
+
+  def package_versions(packages) do
     package_ids = Enum.map(packages, & &1.id)
-
-    query =
-           from r in Release,
+    from(r in Release,
          where: r.package_id in ^package_ids,
-      group_by: r.package_id,
-        select: {r.package_id, fragment("array_agg(?)", r.version)}
-
-    result = HexWeb.Repo.all(query)
-    Enum.into(result, %{}, fn {id, versions} ->
-      {id, latest_version(versions)}
-    end)
+         group_by: r.package_id,
+         select: {r.package_id, fragment("array_agg(?)", r.version)})
   end
 
   def latest_version([]) do
@@ -168,21 +141,11 @@ defmodule HexWeb.Release do
   end
 
   def all(package) do
-    HexWeb.Repo.all(assoc(package, :releases))
-    |> Enum.map(& %{&1 | package: package})
-    |> sort
+    assoc(package, :releases)
   end
 
   def sort(releases) do
-    releases
-    |> Enum.sort(&(Version.compare(&1.version, &2.version) == :gt))
-  end
-
-  def get(package, version) do
-    from(r in assoc(package, :releases), where: r.version == ^version, limit: 1)
-    |> HexWeb.Repo.one
-    |> Utils.maybe(& %{&1 | package: package})
-    |> Utils.maybe(& %{&1 | requirements: requirements(&1)})
+    Enum.sort(releases, &(Version.compare(&1.version, &2.version) == :gt))
   end
 
   def requirements(release) do
@@ -190,12 +153,11 @@ defmodule HexWeb.Release do
          join: p in assoc(req, :dependency),
          select: {p.name, req.app, req.requirement, req.optional},
          order_by: p.name)
-    |> HexWeb.Repo.all
   end
 
   def count do
-    HexWeb.Repo.all(from(r in Release, select: fragment("count(?)", r.id)))
-    |> List.first
+    from(r in Release,
+         select: count(r.id))
   end
 
   def recent(count) do
@@ -204,7 +166,6 @@ defmodule HexWeb.Release do
          join: p in assoc(r, :package),
          limit: ^count,
          select: {r.version, p.name})
-    |> HexWeb.Repo.all
   end
 end
 

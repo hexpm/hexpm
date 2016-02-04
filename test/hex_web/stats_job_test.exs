@@ -46,10 +46,13 @@ defmodule HexWeb.StatsJobTest do
 
     HexWeb.StatsJob.run({2013, 11, 1}, buckets)
 
-    rel1 = Release.get(HexWeb.Repo.get_by(Package, name: "foo"), "0.0.1")
-    rel2 = Release.get(HexWeb.Repo.get_by(Package, name: "foo"), "0.0.2")
-    rel3 = Release.get(HexWeb.Repo.get_by(Package, name: "bar"), "0.0.2")
-    rel4 = Release.get(HexWeb.Repo.get_by(Package, name: "bar"), "0.0.3-rc.1")
+    foo = HexWeb.Repo.get_by!(HexWeb.Package, name: "foo")
+    bar = HexWeb.Repo.get_by!(HexWeb.Package, name: "bar")
+
+    rel1 = HexWeb.Repo.get_by!(assoc(foo, :releases), version: "0.0.1")
+    rel2 = HexWeb.Repo.get_by!(assoc(foo, :releases), version: "0.0.2")
+    rel3 = HexWeb.Repo.get_by!(assoc(bar, :releases), version: "0.0.2")
+    rel4 = HexWeb.Repo.get_by!(assoc(bar, :releases), version: "0.0.3-rc.1")
 
     downloads = HexWeb.Repo.all(HexWeb.Download)
     assert length(downloads) == 4

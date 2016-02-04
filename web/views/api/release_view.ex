@@ -23,7 +23,7 @@ defmodule HexWeb.API.ReleaseView do
       |> Enum.into(%{})
 
     if release.has_docs do
-      entity = Map.put(entity, :docs_url, HexWeb.Utils.docs_tarball_url(release))
+      entity = Map.put(entity, :docs_url, HexWeb.Utils.docs_tarball_url(package, release))
     end
 
     if assoc_loaded?(release.downloads) do
