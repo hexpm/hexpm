@@ -31,15 +31,15 @@
         <td class="text-muted">package versions</td>
       </tr>
       <tr>
-        <td class="left"><%= human_number_space @total[:day] %></td>
+        <td class="left"><%= human_number_space @total["day"] %></td>
         <td class="text-muted">downloads yesterday</td>
       </tr>
       <tr>
-        <td class="left"><%= human_number_space @total[:week] %></td>
+        <td class="left"><%= human_number_space @total["week"] %></td>
         <td class="text-muted">downloads last seven days</td>
       </tr>
       <tr>
-        <td class="left"><%= human_number_space @total[:all] %></td>
+        <td class="left"><%= human_number_space @total["all"] %></td>
         <td class="text-muted">downloads all time</td>
       </tr>
     </table>
