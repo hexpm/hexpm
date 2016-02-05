@@ -6,7 +6,9 @@ defmodule HexWeb.API.KeyControllerTest do
 
   setup do
     User.create(%{username: "eric", email: "eric@mail.com", password: "eric"}, true)
+    |> HexWeb.Repo.insert!
     User.create(%{username: "other", email: "other@mail.com", password: "other"}, true)
+    |> HexWeb.Repo.insert!
     :ok
   end
 
@@ -17,12 +19,14 @@ defmodule HexWeb.API.KeyControllerTest do
            |> put_req_header("authorization", "Basic " <> Base.encode64("eric:eric"))
            |> post("api/keys", Poison.encode!(body))
 
+    user = HexWeb.Repo.get_by!(User, username: "eric")
+
     assert conn.status == 201
-    assert HexWeb.Repo.one!(Key.get("macbook", User.get(username: "eric")))
+    assert HexWeb.Repo.one(Key.get("macbook", user))
   end
 
   test "get key" do
-    User.get(username: "eric")
+    HexWeb.Repo.get_by!(User, username: "eric")
     |> Key.create(%{name: "macbook"})
     |> HexWeb.Repo.insert!
 
@@ -38,7 +42,7 @@ defmodule HexWeb.API.KeyControllerTest do
   end
 
   test "all keys" do
-    user = User.get(username: "eric")
+    user = HexWeb.Repo.get_by!(User, username: "eric")
     Key.create(user, %{name: "macbook"}) |> HexWeb.Repo.insert!
     key = Key.create(user, %{name: "computer"}) |> HexWeb.Repo.insert!
 
@@ -56,7 +60,7 @@ defmodule HexWeb.API.KeyControllerTest do
   end
 
   test "delete key" do
-    user = User.get(username: "eric")
+    user = HexWeb.Repo.get_by!(User, username: "eric")
     Key.create(user, %{name: "macbook"}) |> HexWeb.Repo.insert!
     Key.create(user, %{name: "computer"}) |> HexWeb.Repo.insert!
 
@@ -70,7 +74,7 @@ defmodule HexWeb.API.KeyControllerTest do
   end
 
   test "key authorizes" do
-    user = User.get(username: "eric")
+    user = HexWeb.Repo.get_by!(User, username: "eric")
     key = Key.create(user, %{name: "macbook"}) |> HexWeb.Repo.insert!
 
     conn = conn()

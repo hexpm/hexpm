@@ -12,12 +12,12 @@ defmodule HexWeb.RegistryBuilderTest do
   @endpoint HexWeb.Endpoint
 
   setup do
-    {:ok, user} = User.create(%{username: "eric", email: "eric@mail.com", password: "eric"}, true)
+    user = User.create(%{username: "eric", email: "eric@mail.com", password: "eric"}, true) |> HexWeb.Repo.insert!
     Package.create(user, pkg_meta(%{name: "postgrex", description: "PostgreSQL driver for Elixir."}))
     Package.create(user, pkg_meta(%{name: "decimal", description: "Arbitrary precision decimal arithmetic for Elixir."}))
     Package.create(user, pkg_meta(%{name: "ex_doc", description: "ExDoc"}))
-    Install.create("0.0.1", ["0.13.0-dev"]) |> HexWeb.Repo.insert
-    Install.create("0.1.0", ["0.13.1-dev", "0.13.1"]) |> HexWeb.Repo.insert
+    Install.create("0.0.1", ["0.13.0-dev"]) |> HexWeb.Repo.insert!
+    Install.create("0.1.0", ["0.13.1-dev", "0.13.1"]) |> HexWeb.Repo.insert!
     :ok
   end
 

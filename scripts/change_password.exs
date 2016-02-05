@@ -1,21 +1,21 @@
 case System.argv do
   ["username", username, password] ->
-    user = HexWeb.User.get(username: username)
-
-    unless user do
+    if user = HexWeb.Repo.get_by(HexWeb.User, username: username) do
+      HexWeb.User.update(user, password: password)
+      |> HexWeb.Repo.update!
+    else
       IO.puts "No user with username: #{username}"
       System.halt(1)
     end
 
-  ["email", email, password] ->
-    user = HexWeb.User.get(email: email)
 
-    unless user do
+  ["email", email, password] ->
+    if user = HexWeb.Repo.get_by(HexWeb.User, email: email) do
+      HexWeb.User.update(user, password: password)
+      |> HexWeb.Repo.update!
+    else
       IO.puts "No user with email: #{email}"
       System.halt(1)
     end
+
 end
-
-{:ok, _user} = HexWeb.User.update(%{username: user, password: password})
-
-IO.puts "Password changed for user: #{user.username} (#{user.email})"

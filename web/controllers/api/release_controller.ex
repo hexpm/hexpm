@@ -151,6 +151,8 @@ defmodule HexWeb.API.ReleaseController do
     Logger.error "Package upload failed: #{inspect reason}"
 
     # TODO: Revert database changes
+
+    # TODO: Move to mailer service
     email = Application.get_env(:hex_web, :email)
     body  = Phoenix.View.render(HexWeb.EmailView, "publish_fail.html",
                                 layout: {HexWeb.EmailView, "layout.html"},

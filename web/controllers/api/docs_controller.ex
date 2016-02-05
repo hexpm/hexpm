@@ -162,6 +162,8 @@ defmodule HexWeb.API.DocsController do
     Logger.error "Package upload failed: #{inspect reason}"
 
     # TODO: Revert database changes
+
+    # TODO: Move to mailer service
     package = package.name
     version = to_string(release.version)
     email   = Application.get_env(:hex_web, :email)

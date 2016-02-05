@@ -6,12 +6,12 @@ defmodule HexWeb.API.OwnerControllerTest do
   alias HexWeb.Release
 
   setup do
-    {:ok, user} = User.create(%{username: "eric", email: "eric@mail.com", password: "eric"}, true)
-    {:ok, _}    = User.create(%{username: "jose", email: "jose@mail.com", password: "jose"}, true)
-    {:ok, _}    = User.create(%{username: "other", email: "other@mail.com", password: "other"}, true)
-    {:ok, pkg}  = Package.create(user, pkg_meta(%{name: "decimal", description: "Arbitrary precision decimal arithmetic for Elixir."}))
-    {:ok, _}    = Package.create(user, pkg_meta(%{name: "postgrex", description: "Postgrex is awesome"}))
-    {:ok, _}    = Release.create(pkg, rel_meta(%{version: "0.0.1", app: "decimal"}), "")
+    user = User.create(%{username: "eric", email: "eric@mail.com", password: "eric"}, true) |> HexWeb.Repo.insert!
+    User.create(%{username: "jose", email: "jose@mail.com", password: "jose"}, true) |> HexWeb.Repo.insert!
+    User.create(%{username: "other", email: "other@mail.com", password: "other"}, true) |> HexWeb.Repo.insert!
+    {:ok, pkg} = Package.create(user, pkg_meta(%{name: "decimal", description: "Arbitrary precision decimal arithmetic for Elixir."}))
+    {:ok, _}   = Package.create(user, pkg_meta(%{name: "postgrex", description: "Postgrex is awesome"}))
+    {:ok, _}   = Release.create(pkg, rel_meta(%{version: "0.0.1", app: "decimal"}), "")
     :ok
   end
 
@@ -24,8 +24,8 @@ defmodule HexWeb.API.OwnerControllerTest do
     body = Poison.decode!(conn.resp_body)
     assert [%{"username" => "eric"}] = body
 
-    package = HexWeb.Repo.get_by(Package, name: "postgrex")
-    user = User.get(username: "jose")
+    package = HexWeb.Repo.get_by!(Package, name: "postgrex")
+    user = HexWeb.Repo.get_by!(User, username: "jose")
     Package.create_owner(package, user) |> HexWeb.Repo.insert!
 
     conn = conn()
@@ -71,7 +71,7 @@ defmodule HexWeb.API.OwnerControllerTest do
            |> put("api/packages/postgrex/owners/jose%40mail.com")
     assert conn.status == 204
 
-    package = HexWeb.Repo.get_by(Package, name: "postgrex")
+    package = HexWeb.Repo.get_by!(Package, name: "postgrex")
     assert [first, second] = Package.owners(package) |> HexWeb.Repo.all
     assert first.username in ["jose", "eric"]
     assert second.username in ["jose", "eric"]
@@ -85,8 +85,8 @@ defmodule HexWeb.API.OwnerControllerTest do
   end
 
   test "delete package owner" do
-    package = HexWeb.Repo.get_by(Package, name: "postgrex")
-    user = User.get(username: "jose")
+    package = HexWeb.Repo.get_by!(Package, name: "postgrex")
+    user = HexWeb.Repo.get_by!(User, username: "jose")
     Package.create_owner(package, user) |> HexWeb.Repo.insert!
 
     conn = conn()
@@ -104,7 +104,7 @@ defmodule HexWeb.API.OwnerControllerTest do
   end
 
   test "not possible to remove last owner of package" do
-    package = HexWeb.Repo.get_by(Package, name: "postgrex")
+    package = HexWeb.Repo.get_by!(Package, name: "postgrex")
 
     conn = conn()
            |> put_req_header("authorization", key_for("eric"))

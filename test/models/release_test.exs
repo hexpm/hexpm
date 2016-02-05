@@ -6,7 +6,7 @@ defmodule HexWeb.ReleaseTest do
   alias HexWeb.Release
 
   setup do
-    {:ok, user} = User.create(%{username: "eric", email: "eric@mail.com", password: "eric"}, true)
+    user     = User.create(%{username: "eric", email: "eric@mail.com", password: "eric"}, true) |> HexWeb.Repo.insert!
     {:ok, _} = Package.create(user, pkg_meta(%{name: "ecto", description: "Ecto is awesome"}))
     {:ok, _} = Package.create(user, pkg_meta(%{name: "postgrex", description: "Postgrex is awesome"}))
     {:ok, _} = Package.create(user, pkg_meta(%{name: "decimal", description: "Decimal is awesome, too"}))

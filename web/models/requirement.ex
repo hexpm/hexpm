@@ -10,6 +10,8 @@ defmodule HexWeb.Requirement do
     belongs_to :dependency, Package
   end
 
+  # TODO: Clean this up after with lands in ecto
+
   def create_all(release, requirements) do
     requirements = normalize(requirements)
     results = insert_all(release, requirements)

@@ -1,7 +1,7 @@
 [name, username] = System.argv
 
 package = HexWeb.Repo.get_by!(HexWeb.Package, name: name)
-user    = HexWeb.User.get(username: username)
+user    = HexWeb.Repo.get_by!(HexWeb.User, username: username)
 
 unless package do
   IO.puts "No package: #{name}"

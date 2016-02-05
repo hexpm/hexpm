@@ -6,9 +6,9 @@ defmodule HexWeb.StatsJobTest do
   alias HexWeb.Release
 
   setup do
-    {:ok, user} = User.create(%{username: "eric", email: "eric@mail.com", password: "eric"}, true)
-    {:ok, foo} = Package.create(user, pkg_meta(%{name: "foo", description: "Foo"}))
-    {:ok, bar} = Package.create(user, pkg_meta(%{name: "bar", description: "Bar"}))
+    user         = User.create(%{username: "eric", email: "eric@mail.com", password: "eric"}, true) |> HexWeb.Repo.insert!
+    {:ok, foo}   = Package.create(user, pkg_meta(%{name: "foo", description: "Foo"}))
+    {:ok, bar}   = Package.create(user, pkg_meta(%{name: "bar", description: "Bar"}))
     {:ok, other} = Package.create(user, pkg_meta(%{name: "other", description: "Other"}))
 
     {:ok, _} = Release.create(foo, rel_meta(%{version: "0.0.1", app: "foo"}), "")

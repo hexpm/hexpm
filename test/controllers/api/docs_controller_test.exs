@@ -7,11 +7,12 @@ defmodule HexWeb.API.DocsControllerTest do
 
   setup do
     User.create(%{username: "eric", email: "eric@mail.com", password: "eric"}, true)
+    |> HexWeb.Repo.insert!
     :ok
   end
 
   test "release docs" do
-    user           = User.get(username: "eric")
+    user           = HexWeb.Repo.get_by!(User, username: "eric")
     {:ok, phoenix} = Package.create(user, pkg_meta(%{name: "phoenix", description: "Web framework"}))
     {:ok, _}       = Release.create(phoenix, rel_meta(%{version: "0.0.1", app: "phoenix"}), "")
     {:ok, _}       = Release.create(phoenix, rel_meta(%{version: "0.0.2", app: "phoenix"}), "")
@@ -63,7 +64,7 @@ defmodule HexWeb.API.DocsControllerTest do
       Application.put_env(:hex_web, :store, HexWeb.Store.S3)
     end
 
-    user        = User.get(username: "eric")
+    user        = HexWeb.Repo.get_by!(User, username: "eric")
     {:ok, ecto} = Package.create(user, pkg_meta(%{name: "ecto", description: "DSL"}))
     {:ok, _}    = Release.create(ecto, rel_meta(%{version: "0.0.1", app: "ecto"}), "")
 
@@ -103,7 +104,7 @@ defmodule HexWeb.API.DocsControllerTest do
       Application.put_env(:hex_web, :store, HexWeb.Store.S3)
     end
 
-    user        = User.get(username: "eric")
+    user        = HexWeb.Repo.get_by!(User, username: "eric")
     {:ok, ecto} = Package.create(user, pkg_meta(%{name: "ecto", description: "DSL"}))
     {:ok, _}    = Release.create(ecto, rel_meta(%{version: "0.0.1", app: "ecto"}), "")
 

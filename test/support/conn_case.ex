@@ -42,7 +42,7 @@ defmodule HexWeb.ConnCase do
   end
 
   def key_for(username) when is_binary(username) do
-    HexWeb.User.get(username: username)
+    HexWeb.Repo.get_by!(HexWeb.User, username: username)
     |> key_for
   end
 

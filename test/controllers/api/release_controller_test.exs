@@ -7,9 +7,9 @@ defmodule HexWeb.API.ReleaseControllerTest do
   alias HexWeb.RegistryBuilder
 
   setup do
-    {:ok, user} = User.create(%{username: "eric", email: "eric@mail.com", password: "eric"}, true)
-    {:ok, pkg}  = Package.create(user, pkg_meta(%{name: "decimal", description: "Arbitrary precision decimal arithmetic for Elixir."}))
-    {:ok, _}    = Release.create(pkg, rel_meta(%{version: "0.0.1", app: "decimal"}), "")
+    user       = User.create(%{username: "eric", email: "eric@mail.com", password: "eric"}, true) |> HexWeb.Repo.insert!
+    {:ok, pkg} = Package.create(user, pkg_meta(%{name: "decimal", description: "Arbitrary precision decimal aritmetic for Elixir."}))
+    {:ok, _}   = Release.create(pkg, rel_meta(%{version: "0.0.1", app: "decimal"}), "")
     :ok
   end
 
@@ -24,14 +24,15 @@ defmodule HexWeb.API.ReleaseControllerTest do
     body = Poison.decode!(conn.resp_body)
     assert body["url"] =~ "api/packages/ecto/releases/1.0.0"
 
-    user_id = User.get(username: "eric").id
+    user_id = HexWeb.Repo.get_by!(User, username: "eric").id
     package = assert HexWeb.Repo.get_by(Package, name: "ecto")
     assert package.name == "ecto"
     assert [%User{id: ^user_id}] = Package.owners(package) |> HexWeb.Repo.all
   end
 
   test "update package" do
-    Package.create(User.get(username: "eric"), pkg_meta(%{name: "ecto", description: "DSL"}))
+    HexWeb.Repo.get_by!(User, username: "eric")
+    |> Package.create(pkg_meta(%{name: "ecto", description: "DSL"}))
 
     meta = %{name: "ecto", version: "1.0.0", description: "awesomeness"}
     conn = conn()
@@ -58,7 +59,8 @@ defmodule HexWeb.API.ReleaseControllerTest do
   end
 
   test "update package authorizes" do
-    Package.create(User.get(username: "eric"), pkg_meta(%{name: "ecto", description: "DSL"}))
+    HexWeb.Repo.get_by!(User, username: "eric")
+    |> Package.create(pkg_meta(%{name: "ecto", description: "DSL"}))
 
     meta = %{name: "ecto", version: "1.0.0", description: "Domain-specific language."}
     conn = conn()

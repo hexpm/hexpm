@@ -5,6 +5,7 @@ defmodule HexWeb.API.UserControllerTest do
 
   setup do
     User.create(%{username: "eric", email: "eric@mail.com", password: "eric"}, true)
+    |> HexWeb.Repo.insert!
     :ok
   end
 
@@ -18,7 +19,7 @@ defmodule HexWeb.API.UserControllerTest do
     body = Poison.decode!(conn.resp_body)
     assert body["url"] =~ "/api/users/name"
 
-    user = User.get(username: "name")
+    user = HexWeb.Repo.get_by!(User, username: "name")
     assert user.email == "email@mail.com"
   end
 
@@ -28,7 +29,7 @@ defmodule HexWeb.API.UserControllerTest do
            |> put_req_header("content-type", "application/json")
            |> post("api/users", Poison.encode!(body))
     assert conn.status == 201
-    user = User.get(username: "name")
+    user = HexWeb.Repo.get_by!(User, username: "name")
 
     {subject, contents} = HexWeb.Email.Local.read("create_user@mail.com")
     assert subject =~ "Hex.pm"
@@ -70,7 +71,7 @@ defmodule HexWeb.API.UserControllerTest do
     body = Poison.decode!(conn.resp_body)
     assert body["message"] == "Validation error(s)"
     assert body["errors"]["email"] == "can't be blank"
-    refute User.get(username: "name")
+    refute HexWeb.Repo.get_by(User, username: "name")
   end
 
   test "get user" do
