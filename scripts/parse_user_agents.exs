@@ -10,7 +10,7 @@ log_regex = ~r"
   REST.GET.OBJECT\040
   registry.ets.gz\040
   \"[^\"]+\"\040        # request URI
-  [^\040]+\040          # status
+  ([^\040]+)\040        # status
   [^\040]+\040          # error code
   [^\040]+\040          # bytes sent
   [^\040]+\040          # object size
@@ -28,13 +28,15 @@ uas =
     lines = String.split(contents, "\n", trim: true)
     Enum.reduce(lines, uas, fn line, uas ->
       case Regex.run(log_regex, line) do
-        [_, ua] ->
+        [_, status, ua] when status >= "200" and status < "400" ->
           case Regex.run(ua_regex, ua) do
             [_, _hex, elixir] ->
               Map.update(uas, elixir, 1, &(&1 + 1))
             nil ->
               uas
           end
+        [_, _, _] ->
+          uas
         nil ->
           uas
       end
