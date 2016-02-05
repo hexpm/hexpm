@@ -126,10 +126,8 @@ defmodule HexWeb.Release do
          select: {r.package_id, fragment("array_agg(?)", r.version)})
   end
 
-  def latest_version([]) do
-    nil
-  end
-
+  def latest_version(nil), do: nil
+  def latest_version([]), do: nil
   def latest_version(versions) do
     Enum.reduce(versions, fn version, latest ->
       if Version.compare(version, latest) == :lt do
