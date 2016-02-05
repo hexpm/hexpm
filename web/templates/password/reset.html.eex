@@ -41,7 +41,7 @@ function validate() {
         <input type="password" class="form-control" name="confirm_password" placeholder="Confirm Password">
       </div>
 
-      <input type="hidden" name="username" value="<%= @name %>">
+      <input type="hidden" name="username" value="<%= @username %>">
       <input type="hidden" name="key" value="<%= @key %>">
 
       <button type="submit" class="btn btn-default">Submit</button>
