@@ -4,7 +4,6 @@ defmodule HexWeb.Validation do
   """
 
   import Ecto.Changeset
-  import Ecto.Query, only: [from: 2]
 
   def type(_field, nil, _type) do
     []
@@ -53,35 +52,27 @@ defmodule HexWeb.Validation do
     end)
   end
 
-  @doc """
-  Checks if the fields on the given entity are unique
-  by querying the database.
-  """
-  def validate_unique(changeset, field, opts \\ []) do
-    validate_change(changeset, field, fn _field, value ->
-      model        = changeset.model
-      module       = model.__struct__
-      repo         = Keyword.fetch!(opts, :on)
-      scope        = opts[:scope] || []
-
-      query =
-        from var in module,
-             where: field(var, ^field) == ^value,
-             limit: 1,
-             select: true
-
-      query =
-        Enum.reduce(scope, query, fn field, query ->
-          value = Map.fetch!(model, field)
-          from var in query,
-               where: field(var, ^field) == ^value
+  def validate_meta(changeset, field, meta_types, meta_required) do
+    validate_change(changeset, field, fn _field, meta ->
+      type_errors =
+        Enum.flat_map(meta_types, fn {sub_field, type} ->
+          type(sub_field, Map.get(meta, sub_field), type)
         end)
 
-      if repo.all(query) == [true] do
-        [{field, :already_taken}]
-      else
-        []
-      end
+      req_errors =
+        Enum.flat_map(meta_required, fn field ->
+          if Map.has_key?(meta, field) do
+            []
+          else
+            [{field, :missing}]
+          end
+        end)
+
+      errors = req_errors ++ type_errors
+
+      if errors == [],
+          do: [],
+        else: [{field, errors}]
     end)
   end
 end

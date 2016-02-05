@@ -6,10 +6,10 @@ defmodule HexWeb.API.PackageControllerTest do
   alias HexWeb.Release
 
   setup do
-    {:ok, user} = User.create(%{username: "eric", email: "eric@mail.com", password: "eric"}, true)
-    {:ok, pkg}  = Package.create(user, pkg_meta(%{name: "decimal", description: "Arbitrary precision decimal arithmetic for Elixir."}))
-    {:ok, _}    = Package.create(user, pkg_meta(%{name: "postgrex", description: "Postgrex is awesome"}))
-    {:ok, _}    = Release.create(pkg, rel_meta(%{version: "0.0.1", app: "decimal"}), "")
+    user       = User.create(%{username: "eric", email: "eric@mail.com", password: "eric"}, true) |> HexWeb.Repo.insert!
+    {:ok, pkg} = Package.create(user, pkg_meta(%{name: "decimal", description: "Arbitrary precision decimal arithmetic for Elixir."}))
+    {:ok, _}   = Package.create(user, pkg_meta(%{name: "postgrex", description: "Postgrex is awesome"}))
+    {:ok, _}   = Release.create(pkg, rel_meta(%{version: "0.0.1", app: "decimal"}), "")
     :ok
   end
 
@@ -51,11 +51,11 @@ defmodule HexWeb.API.PackageControllerTest do
     {year, month, day} = :erlang.date
     {:ok, future} = Ecto.Date.load({year + 1, month, day})
 
-    Package.get("postgrex")
+    HexWeb.Repo.get_by(Package, name: "postgrex")
     |> Ecto.Changeset.change(updated_at: Ecto.DateTime.from_date(future))
     |> HexWeb.Repo.update!
 
-    Package.get("decimal")
+    HexWeb.Repo.get_by(Package, name: "decimal")
     |> Ecto.Changeset.change(inserted_at: Ecto.DateTime.from_date(future))
     |> HexWeb.Repo.update!
 

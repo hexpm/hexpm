@@ -19,9 +19,11 @@ defmodule HexWeb.RegistryBuilder do
   @wait_time 10_000
 
   def rebuild do
-    tmp = Application.get_env(:hex_web, :tmp_dir)
+    tmp      = Application.get_env(:hex_web, :tmp_dir)
     reg_file = Path.join(tmp, "registry.ets")
-    {:ok, handle} = HexWeb.Registry.create()
+    handle   = HexWeb.Registry.create
+               |> HexWeb.Repo.insert!
+
     rebuild(handle, reg_file)
   end
 
@@ -64,6 +66,7 @@ defmodule HexWeb.RegistryBuilder do
 
   defp build_ets(handle, file) do
     HexWeb.Registry.set_working(handle)
+    |> HexWeb.Repo.update_all([])
 
     installs     = installs()
     requirements = requirements()
@@ -119,6 +122,7 @@ defmodule HexWeb.RegistryBuilder do
     end
 
     HexWeb.Registry.set_done(handle)
+    |> HexWeb.Repo.update_all([])
 
     memory
   end
@@ -126,9 +130,11 @@ defmodule HexWeb.RegistryBuilder do
   defp skip?(handle) do
     # Has someone already pushed data newer than we were planning push?
     latest_started = HexWeb.Registry.latest_started
+                     |> HexWeb.Repo.one
 
     if latest_started && time_diff(latest_started, handle.inserted_at) > 0 do
       HexWeb.Registry.set_done(handle)
+      |> HexWeb.Repo.update_all([])
       true
     else
       false
@@ -159,9 +165,9 @@ defmodule HexWeb.RegistryBuilder do
   end
 
   defp installs do
-    Enum.map(Install.all, fn %Install{hex: hex, elixirs: elixirs} ->
-      {hex, elixirs}
-    end)
+    Install.all
+    |> HexWeb.Repo.all
+    |> Enum.map(&{&1.hex, &1.elixirs})
   end
 
   defp time_diff(time1, time2) do

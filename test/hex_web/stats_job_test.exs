@@ -6,9 +6,9 @@ defmodule HexWeb.StatsJobTest do
   alias HexWeb.Release
 
   setup do
-    {:ok, user} = User.create(%{username: "eric", email: "eric@mail.com", password: "eric"}, true)
-    {:ok, foo} = Package.create(user, pkg_meta(%{name: "foo", description: "Foo"}))
-    {:ok, bar} = Package.create(user, pkg_meta(%{name: "bar", description: "Bar"}))
+    user         = User.create(%{username: "eric", email: "eric@mail.com", password: "eric"}, true) |> HexWeb.Repo.insert!
+    {:ok, foo}   = Package.create(user, pkg_meta(%{name: "foo", description: "Foo"}))
+    {:ok, bar}   = Package.create(user, pkg_meta(%{name: "bar", description: "Bar"}))
     {:ok, other} = Package.create(user, pkg_meta(%{name: "other", description: "Other"}))
 
     {:ok, _} = Release.create(foo, rel_meta(%{version: "0.0.1", app: "foo"}), "")
@@ -46,10 +46,13 @@ defmodule HexWeb.StatsJobTest do
 
     HexWeb.StatsJob.run({2013, 11, 1}, buckets)
 
-    rel1 = Release.get(Package.get("foo"), "0.0.1")
-    rel2 = Release.get(Package.get("foo"), "0.0.2")
-    rel3 = Release.get(Package.get("bar"), "0.0.2")
-    rel4 = Release.get(Package.get("bar"), "0.0.3-rc.1")
+    foo = HexWeb.Repo.get_by!(HexWeb.Package, name: "foo")
+    bar = HexWeb.Repo.get_by!(HexWeb.Package, name: "bar")
+
+    rel1 = HexWeb.Repo.get_by!(assoc(foo, :releases), version: "0.0.1")
+    rel2 = HexWeb.Repo.get_by!(assoc(foo, :releases), version: "0.0.2")
+    rel3 = HexWeb.Repo.get_by!(assoc(bar, :releases), version: "0.0.2")
+    rel4 = HexWeb.Repo.get_by!(assoc(bar, :releases), version: "0.0.3-rc.1")
 
     downloads = HexWeb.Repo.all(HexWeb.Download)
     assert length(downloads) == 4

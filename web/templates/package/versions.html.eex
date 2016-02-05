@@ -4,7 +4,7 @@
           <a href="/packages/<%= @package.name %>/<%= release.version %>"><strong><%= release.version %></strong></a>
           <span class="text-muted"><%= pretty_date(release.inserted_at) %></span>
           <%= if release.has_docs do %>
-            <span class="text-muted">(<a href="<%= raw HexWeb.Release.docs_url(release) %>">docs</a>)</span>
+            <span class="text-muted">(<a href="<%= raw HexWeb.Utils.docs_tarball_url(@package, release) %>">docs</a>)</span>
           <% end %>
         </li>
       <% end %>

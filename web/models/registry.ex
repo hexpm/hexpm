@@ -9,25 +9,21 @@ defmodule HexWeb.Registry do
   end
 
   def create do
-    changeset =
-      %HexWeb.Registry{}
-      |> change(state: "waiting")
-      |> prepare_changes(&delete_defaults/1)
-    {:ok, HexWeb.Repo.insert!(changeset)}
+    %HexWeb.Registry{}
+    |> change(state: "waiting")
+    |> prepare_changes(&delete_defaults/1)
   end
 
   def set_working(registry) do
     from(r in Registry,
          where: r.id == ^registry.id,
          update: [set: [state: "working", started_at: fragment("now()")]])
-    |> HexWeb.Repo.update_all([])
   end
 
   def set_done(registry) do
     from(r in Registry,
          where: r.id == ^registry.id,
          update: [set: [state: "done"]])
-    |> HexWeb.Repo.update_all([])
   end
 
   def latest_started do
@@ -36,7 +32,6 @@ defmodule HexWeb.Registry do
          order_by: [desc: r.started_at],
          limit: 1,
          select: r.started_at)
-    |> HexWeb.Repo.one
   end
 
   defp delete_defaults(changeset) do

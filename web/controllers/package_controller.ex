@@ -7,7 +7,7 @@ defmodule HexWeb.PackageController do
   def index(conn, params) do
     search        = HexWeb.Utils.safe_search(params["search"])
     sort          = HexWeb.Utils.safe_to_atom(params["sort"] || "name", @sort_params)
-    package_count = Package.count(search)
+    package_count = Package.count(search) |> HexWeb.Repo.one!
     page_param    = HexWeb.Utils.safe_int(params["page"]) || 1
     page          = HexWeb.Utils.safe_page(page_param, package_count, @packages_per_page)
     packages      = fetch_packages(page, @packages_per_page, search, sort)
@@ -22,12 +22,16 @@ defmodule HexWeb.PackageController do
       page:          page,
       packages:      packages,
       downloads:     PackageDownload.packages(packages, "all")
+                     |> HexWeb.Repo.all
+                     |> Enum.into(%{})
     ]
   end
 
   def show(conn, params) do
-    if package = Package.get(params["name"]) do
+    if package = HexWeb.Repo.get_by(Package, name: params["name"]) do
       releases = Release.all(package)
+                 |> HexWeb.Repo.all
+                 |> Release.sort
 
       release =
         if version = params["version"] do
@@ -50,21 +54,24 @@ defmodule HexWeb.PackageController do
     docs_assigns =
       if has_docs do
         [hexdocs_url: HexWeb.Utils.docs_url([package.name]),
-         docs_tarball_url: HexWeb.Utils.docs_tarball_url(package.name, release.version)]
+         docs_tarball_url: HexWeb.Utils.docs_tarball_url(package, release)]
       else
         [hexdocs_url: nil, docs_tarball_url: nil]
       end
 
     render conn, "show.html", [
-      active: :packages,
-      title: package.name,
-      package: package,
-      releases: releases,
-      current_release: release,
-      downloads: PackageDownload.package(package),
-      release_downloads: ReleaseDownload.release(release),
-      mix_snippet: HexWeb.Utils.mix_snippet_version(release.version),
-      rebar_snippet: HexWeb.Utils.rebar_snippet_version(release.version),
+      active:            :packages,
+      title:             package.name,
+      package:           package,
+      releases:          releases,
+      current_release:   release,
+      downloads:         PackageDownload.package(package)
+                         |> HexWeb.Repo.all
+                         |> Enum.into(%{}),
+      release_downloads: ReleaseDownload.release(release)
+                         |> HexWeb.Repo.one!,
+      mix_snippet:       HexWeb.Utils.mix_snippet_version(release.version),
+      rebar_snippet:     HexWeb.Utils.rebar_snippet_version(release.version),
       erlang_mk_snippet: HexWeb.Utils.erlang_mk_snippet_version(release.version)
     ] ++ docs_assigns
   end
@@ -72,10 +79,12 @@ defmodule HexWeb.PackageController do
   # TODO: Clean up
   defp fetch_packages(page, packages_per_page, search, sort) do
     packages = Package.all(page, packages_per_page, search, sort)
-    latest_versions = Release.latest_versions(packages)
+               |> HexWeb.Repo.all
+    versions = Release.package_versions(packages)
+               |> HexWeb.Repo.all
 
     Enum.map(packages, fn package ->
-      version = latest_versions[package.id]
+      version = versions[package.id] |> Release.latest_version
       Map.put(package, :latest_version, version)
     end)
   end

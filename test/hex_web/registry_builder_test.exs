@@ -12,12 +12,12 @@ defmodule HexWeb.RegistryBuilderTest do
   @endpoint HexWeb.Endpoint
 
   setup do
-    {:ok, user} = User.create(%{username: "eric", email: "eric@mail.com", password: "eric"}, true)
-    {:ok, _} = Package.create(user, pkg_meta(%{name: "postgrex", description: "PostgreSQL driver for Elixir."}))
-    {:ok, _} = Package.create(user, pkg_meta(%{name: "decimal", description: "Arbitrary precision decimal arithmetic for Elixir."}))
-    {:ok, _} = Package.create(user, pkg_meta(%{name: "ex_doc", description: "ExDoc"}))
-    {:ok, _} = Install.create("0.0.1", ["0.13.0-dev"])
-    {:ok, _} = Install.create("0.1.0", ["0.13.1-dev", "0.13.1"])
+    user = User.create(%{username: "eric", email: "eric@mail.com", password: "eric"}, true) |> HexWeb.Repo.insert!
+    Package.create(user, pkg_meta(%{name: "postgrex", description: "PostgreSQL driver for Elixir."}))
+    Package.create(user, pkg_meta(%{name: "decimal", description: "Arbitrary precision decimal arithmetic for Elixir."}))
+    Package.create(user, pkg_meta(%{name: "ex_doc", description: "ExDoc"}))
+    Install.create("0.0.1", ["0.13.0-dev"]) |> HexWeb.Repo.insert!
+    Install.create("0.1.0", ["0.13.1-dev", "0.13.1"]) |> HexWeb.Repo.insert!
     :ok
   end
 
@@ -31,8 +31,8 @@ defmodule HexWeb.RegistryBuilderTest do
   end
 
   defp test_data do
-    postgrex = Package.get("postgrex")
-    decimal = Package.get("decimal")
+    postgrex = HexWeb.Repo.get_by(Package, name: "postgrex")
+    decimal = HexWeb.Repo.get_by(Package, name: "decimal")
 
     Release.create(decimal, rel_meta(%{version: "0.0.1", app: "decimal"}), "")
     Release.create(decimal, rel_meta(%{version: "0.0.2", app: "decimal", requirements: %{ex_doc: "0.0.0"}}), "")
@@ -126,8 +126,8 @@ defmodule HexWeb.RegistryBuilderTest do
   end
 
   # test "building is blocking" do
-  #   postgrex = Package.get("postgrex")
-  #   decimal = Package.get("decimal")
+  #   postgrex = HexWeb.Repo.get_by(Package, name: "postgrex")
+  #   decimal = HexWeb.Repo.get_by(Package, name: "decimal")
 
   #   Release.create(decimal, %{version: "0.0.1", app: "decimal"}, "")
   #   Release.create(decimal, %{version: "0.0.2", app: "decimal", requirements: %{ex_doc: "0.0.0"}}, "")

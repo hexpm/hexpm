@@ -50,13 +50,11 @@ defmodule HexWeb.AuthHelpers do
   end
 
   defp basic_auth(credentials) do
-    case String.split(:base64.decode(credentials), ":", parts: 2) do
+    case String.split(Base.decode64!(credentials), ":", parts: 2) do
       [username, password] ->
-        user = HexWeb.User.get(username: username)
-        if HexWeb.User.auth?(user, password) do
-          {:ok, user}
-        else
-          {:error, :basic}
+        case HexWeb.Auth.password_auth(username, password) do
+          {:ok, user} -> {:ok, user}
+          :error -> {:error, :basic}
         end
       _ ->
         {:error, :invalid}
@@ -64,11 +62,9 @@ defmodule HexWeb.AuthHelpers do
   end
 
   defp key_auth(key) do
-    case HexWeb.Key.auth(key) do
-      nil ->
-        {:error, :key}
-      user ->
-        {:ok, user}
+    case HexWeb.Auth.key_auth(key) do
+      {:ok, user} -> {:ok, user}
+      :error      -> {:error, :key}
     end
   end
 
@@ -86,4 +82,8 @@ defmodule HexWeb.AuthHelpers do
     |> render(HexWeb.ErrorView, :"403", message: reason)
   end
 
+  def package_owner?(package, user) do
+    HexWeb.Package.is_owner(package, user)
+    |> HexWeb.Repo.one!
+  end
 end

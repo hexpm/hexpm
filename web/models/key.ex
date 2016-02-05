@@ -1,6 +1,8 @@
 defmodule HexWeb.Key do
   use HexWeb.Web, :model
 
+  @derive {Phoenix.Param, key: :name}
+
   @timestamps_opts [usec: true]
 
   schema "keys" do
@@ -19,57 +21,20 @@ defmodule HexWeb.Key do
   defp changeset(key, params) do
     cast(key, params, ~w(name), [])
     |> add_keys
-    |> unique_name
+    |> prepare_changes(&unique_name/1)
   end
 
   def create(user, params) do
-    changeset = build_assoc(user, :keys) |> changeset(params)
-
-    case HexWeb.Repo.insert(changeset) do
-      {:ok, key} -> {:ok, key}
-      {:error, changeset} -> {:error, changeset.errors}
-    end
+    build_assoc(user, :keys)
+    |> changeset(params)
   end
 
   def all(user) do
     assoc(user, :keys)
-    |> HexWeb.Repo.all
   end
 
   def get(name, user) do
-    from(k in assoc(user, :keys), where: k.name == ^name, limit: 1)
-    |> HexWeb.Repo.one
-  end
-
-  def delete(key) do
-    HexWeb.Repo.delete!(key)
-    :ok
-  end
-
-  def auth(user_secret) do
-    # Database index lookup on the first part of the key and then
-    # secure compare on the second part to avoid timing attacks
-    app_secret = Application.get_env(:hex_web, :secret)
-
-    <<first::binary-size(32), second::binary-size(32)>> =
-      :crypto.hmac(:sha256, app_secret, user_secret)
-      |> Base.encode16(case: :lower)
-
-    result =
-      from(k in Key,
-           where: k.secret_first == ^first,
-           join: u in assoc(k, :user),
-           select: {u, k})
-      |> HexWeb.Repo.one
-
-    case result do
-      {user, key} ->
-        if Comeonin.Tools.secure_check(key.secret_second, second) do
-          user
-        end
-      nil ->
-        nil
-    end
+    from(k in assoc(user, :keys), where: k.name == ^name)
   end
 
   defp gen_key do
@@ -99,8 +64,8 @@ defmodule HexWeb.Key do
       from(u in assoc(changeset.model, :user),
            join: k in assoc(u, :keys),
            select: k.name)
-      |> HexWeb.Repo.all
-      |> Enum.into(HashSet.new)
+      |> changeset.repo.all
+      |> Enum.into(MapSet.new)
 
     if Set.member?(names, name) do
       name = find_unique_name(name, names)

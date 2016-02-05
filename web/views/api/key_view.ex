@@ -10,7 +10,7 @@ defmodule HexWeb.API.KeyView do
     entity =
       key
       |> Map.take([:name, :inserted_at, :updated_at])
-      |> Map.put(:url, api_url(["keys", key.name]))
+      |> Map.put(:url, key_url(HexWeb.Endpoint, :show, key))
 
     if secret = key.user_secret do
       Map.put(entity, :secret, secret)

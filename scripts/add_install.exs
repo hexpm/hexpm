@@ -3,13 +3,13 @@ case System.argv do
     IO.puts "Hex:     " <> hex
     IO.puts "Elixirs: " <> Enum.join(elixirs, ", ")
 
-    HexWeb.Install.create(hex, elixirs)
+    HexWeb.Install.create(hex, elixirs) |> HexWeb.Repo.insert
 
   _ ->
     :ok
 end
 
-all = HexWeb.Install.all
+all = HexWeb.Install.all |> HexWeb.Repo.all
 
 csv =
   Enum.map_join(all, "\n", fn install ->

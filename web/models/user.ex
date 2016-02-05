@@ -3,6 +3,8 @@ defmodule HexWeb.User do
 
   @timestamps_opts [usec: true]
 
+  @derive {Phoenix.Param, key: :username}
+
   schema "users" do
     field :username, :string
     field :email, :string
@@ -25,8 +27,8 @@ defmodule HexWeb.User do
     |> update_change(:email, &String.downcase/1)
     |> validate_format(:username, ~r"^[a-z0-9_\-\.!~\*'\(\)]+$")
     |> validate_format(:email, ~r"^.+@.+\..+$")
-    |> validate_unique(:username, on: HexWeb.Repo)
-    |> validate_unique(:email, on: HexWeb.Repo)
+    |> unique_constraint(:username, name: "users_username_idx")
+    |> unique_constraint(:email, name: "users_email_key")
   end
 
   defp changeset(user, :update, params) do
@@ -40,83 +42,44 @@ defmodule HexWeb.User do
       confirmed? = not Application.get_env(:hex_web, :user_confirm)
     end
 
-    changeset =
-      changeset(%User{}, :create, params)
-      |> put_change(:confirmation_key, gen_key())
-      |> put_change(:confirmed, confirmed?)
-      |> update_change(:password, &gen_password/1)
-
-    case HexWeb.Repo.insert(changeset) do
-      {:ok, user} ->
-        send_confirmation_email(changeset)
-        {:ok, user}
-      {:error, changeset} ->
-        {:error, changeset.errors}
-    end
+    changeset(%User{}, :create, params)
+    |> put_change(:confirmation_key, HexWeb.Auth.gen_key())
+    |> put_change(:confirmed, confirmed?)
+    |> update_change(:password, &HexWeb.Auth.gen_password/1)
   end
 
   def update(user, params) do
-    changeset =
-      changeset(user, :update, params)
-      |> update_change(:password, &gen_password/1)
-
-    case HexWeb.Repo.update(changeset) do
-      {:ok, user} ->
-        {:ok, user}
-      {:error, changeset} ->
-        {:error, changeset.errors}
-    end
+    changeset(user, :update, params)
+    |> update_change(:password, &HexWeb.Auth.gen_password/1)
   end
 
-  def confirm?(username, key) do
-    if (user = get(username: username)) && Comeonin.Tools.secure_check(user.confirmation_key, key) do
-      confirm(user)
-
-      mailer = Application.get_env(:hex_web, :email)
-      body = Phoenix.View.render(HexWeb.EmailView, "confirmed.html",
-                                 layout: {HexWeb.EmailView, "layout.html"})
-      mailer.send(user.email, "Hex.pm - Account confirmed", body)
-
-      true
-    else
-      false
-    end
-  end
+  def confirm?(nil, _key),
+    do: false
+  def confirm?(user, key),
+    do: Comeonin.Tools.secure_check(user.confirmation_key, key)
 
   def confirm(user) do
     change(user, %{confirmed: true})
-    |> HexWeb.Repo.update!
   end
 
   def password_reset(user) do
-    key = gen_key()
-    send_reset_email(user, key)
-
+    key = HexWeb.Auth.gen_key()
     change(user, %{reset_key: key, reset_expiry: Ecto.DateTime.utc})
-    |> HexWeb.Repo.update!
   end
 
-  def reset?(username, key, password) do
-    if (user = get(username: username))
-        && user.reset_key
-        && Comeonin.Tools.secure_check(user.reset_key, key)
-        && HexWeb.Utils.within_last_day(user.reset_expiry) do
-      reset(user, password)
-
-      mailer = Application.get_env(:hex_web, :email)
-      body = Phoenix.View.render(HexWeb.EmailView, "password_reset.html",
-                                 layout: {HexWeb.EmailView, "layout.html"})
-      mailer.send(user.email, "Hex.pm - Password reset", body)
-
-      true
-    else
+  def reset?(nil, _key), do: false
+  def reset?(user, key) do
+    user.reset_key &&
+      Comeonin.Tools.secure_check(user.reset_key, key) &&
+      HexWeb.Utils.within_last_day(user.reset_expiry) ||
       false
-    end
   end
 
+  # TODO: Move to with when available in ecto
   def reset(user, password) do
     HexWeb.Repo.transaction(fn ->
-      {:ok, user} = User.update(user, %{password: password})
+      user = User.update(user, %{password: password})
+             |> HexWeb.Repo.update!
 
       assoc(user, :keys)
       |> HexWeb.Repo.delete_all
@@ -124,60 +87,5 @@ defmodule HexWeb.User do
       change(user, %{reset_key: nil, reset_expiry: nil})
       |> HexWeb.Repo.update!
     end)
-  end
-
-  def get(username: username) do
-    from(u in User,
-         where: u.username == ^username,
-         limit: 1)
-    |> HexWeb.Repo.one
-  end
-
-  def get(email: email) do
-    from(u in User,
-         where: u.email == ^email,
-         limit: 1)
-    |> HexWeb.Repo.one
-  end
-
-  def delete(user) do
-    HexWeb.Repo.delete!(user)
-  end
-
-  def auth?(nil, _password), do: false
-
-  def auth?(user, password) do
-    Comeonin.Bcrypt.checkpw(password, user.password)
-  end
-
-  defp gen_password(password) do
-    Comeonin.Bcrypt.hashpwsalt(password)
-  end
-
-  defp gen_key do
-    :crypto.strong_rand_bytes(16) |> Base.encode16(case: :lower)
-  end
-
-  defp send_confirmation_email(changeset) do
-    username = get_change(changeset, :username)
-    email    = get_change(changeset, :email)
-    key      = get_change(changeset, :confirmation_key)
-    mailer   = Application.get_env(:hex_web, :email)
-    body     = Phoenix.View.render(HexWeb.EmailView, "confirmation_request.html",
-                                   layout: {HexWeb.EmailView, "layout.html"},
-                                   username: username,
-                                   key: key)
-
-    mailer.send(email, "Hex.pm - Account confirmation", body)
-  end
-
-  defp send_reset_email(user, key) do
-    email = Application.get_env(:hex_web, :email)
-    body  = Phoenix.View.render(HexWeb.EmailView, "password_reset_request.html",
-                                layout: {HexWeb.EmailView, "layout.html"},
-                                username: user.username,
-                                key: key)
-
-    email.send(user.email, "Hex.pm - Password reset request", body)
   end
 end

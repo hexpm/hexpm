@@ -107,15 +107,15 @@ build_tools = @current_release && @current_release.meta["build_tools"] || []
             <td class="text-muted">this version</td>
           </tr>
           <tr>
-            <td class="left"><%= human_number_space @downloads[:day] || 0 %></td>
+            <td class="left"><%= human_number_space @downloads["day"] || 0 %></td>
             <td class="text-muted">yesterday</td>
           </tr>
           <tr>
-            <td class="left"><%= human_number_space @downloads[:week] || 0 %></td>
+            <td class="left"><%= human_number_space @downloads["week"] || 0 %></td>
             <td class="text-muted">last seven days</td>
           </tr>
           <tr>
-            <td class="left"><%= human_number_space @downloads[:all] || 0 %></td>
+            <td class="left"><%= human_number_space @downloads["all"] || 0 %></td>
             <td class="text-muted">all time</td>
           </tr>
         </table>

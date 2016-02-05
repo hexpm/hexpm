@@ -11,14 +11,14 @@ defmodule HexWeb.API.PackageView do
     entity =
       package
       |> Map.take([:name, :meta, :inserted_at, :updated_at])
-      |> Map.put(:url, api_url(["packages", package.name]))
+      |> Map.put(:url, package_url(HexWeb.Endpoint, :show, package))
 
     if assoc_loaded?(package.releases) do
       releases =
         Enum.map(package.releases, fn release ->
           release
           |> Map.take([:version, :inserted_at, :updated_at])
-          |> Map.put(:url, api_url(["packages", package.name, "releases", to_string(release.version)]))
+          |> Map.put(:url, release_url(HexWeb.Endpoint, :show, package, release))
         end)
       entity = Map.put(entity, :releases, releases)
     end

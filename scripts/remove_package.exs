@@ -1,6 +1,6 @@
 [name] = System.argv
 
-package = HexWeb.Package.get(name)
+package = HexWeb.Repo.get_by!(HexWeb.Package, name: name)
 
 unless package do
   IO.puts "No package: #{name}"
@@ -8,7 +8,9 @@ unless package do
 end
 
 releases = HexWeb.Release.all(package)
+           |> HexWeb.Repo.all
 owners   = HexWeb.Package.owners(package)
+           |> HexWeb.Repo.all
 
 IO.puts name
 
@@ -23,9 +25,9 @@ Enum.each(releases, &IO.puts(&1.version))
 answer = IO.gets "Remove? [Yn] "
 
 if answer =~ ~r/^(Y(es)?)?$/i do
-  Enum.each(owners, &HexWeb.Package.delete_owner(package, &1))
-  Enum.each(releases, &HexWeb.Release.delete(&1, force: true))
-  HexWeb.Package.delete(package)
+  Enum.each(owners, &(HexWeb.Package.owner(package, &1) |> HexWeb.Repo.delete_all))
+  Enum.each(releases, &(HexWeb.Release.delete(&1, force: true) |> HexWeb.Repo.delete!)
+  HexWeb.Repo.delete!(package)
   IO.puts "Removed"
 else
   IO.puts "Not removed"

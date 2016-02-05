@@ -3,8 +3,8 @@ defmodule HexWeb.API.ReleaseController do
 
   def create(conn, %{"name" => name, "body" => body}) do
     auth =
-      if package = Package.get(name) do
-        &Package.owner?(package, &1)
+      if package = HexWeb.Repo.get_by(Package, name: name) do
+        &package_owner?(package, &1)
       else
         fn _ -> true end
       end
@@ -15,10 +15,12 @@ defmodule HexWeb.API.ReleaseController do
   end
 
   def show(conn, %{"name" => name, "version" => version}) do
-    if (package = Package.get(name)) &&
-       (release = Release.get(package, version)) do
-      downloads = HexWeb.ReleaseDownload.release(release)
-      release = %{release | downloads: downloads}
+    if (package = HexWeb.Repo.get_by(Package, name: name)) &&
+       (release = HexWeb.Repo.get_by(assoc(package, :releases), version: version)) do
+      downloads = HexWeb.ReleaseDownload.release(release) |> HexWeb.Repo.one
+      release = %{release | package: package, downloads: downloads}
+
+      release = HexWeb.Repo.preload(release, requirements: Release.requirements(release))
 
       when_stale(conn, release, fn conn ->
         conn
@@ -31,20 +33,20 @@ defmodule HexWeb.API.ReleaseController do
   end
 
   def delete(conn, %{"name" => name, "version" => version}) do
-    if (package = Package.get(name)) &&
-       (release = Release.get(package, version)) do
+    if (package = HexWeb.Repo.get_by(Package, name: name)) &&
+       (release = HexWeb.Repo.get_by(assoc(package, :releases), version: version)) do
 
-      authorized(conn, [], &Package.owner?(package, &1), fn _ ->
-        case Release.delete(release) do
-          :ok ->
+      authorized(conn, [], &package_owner?(package, &1), fn _ ->
+        case Release.delete(release) |> HexWeb.Repo.delete do
+          {:ok, release} ->
             # TODO: Remove package from database if this was the only release
             revert(name, release)
 
             conn
             |> api_cache(:private)
             |> send_resp(204, "")
-          {:error, errors} ->
-            validation_failed(conn, errors)
+          {:error, changeset} ->
+            validation_failed(conn, changeset.errors)
         end
       end)
     else
@@ -61,8 +63,8 @@ defmodule HexWeb.API.ReleaseController do
         case create_package(conn, package, package_params) do
           {:ok, package} ->
             create_release(conn, package, user, checksum, meta, body)
-          {:error, errors} ->
-            validation_failed(conn, errors)
+          {:error, changeset} ->
+            validation_failed(conn, changeset.errors)
         end
 
       {:error, errors} ->
@@ -72,11 +74,12 @@ defmodule HexWeb.API.ReleaseController do
 
   defp create_package(conn, package, params) do
     name = params["name"]
-    package = package || Package.get(name)
+    package = package || HexWeb.Repo.get_by(Package, name: name)
 
     if package do
-      authorized(conn, [], &Package.owner?(package, &1), fn _ ->
+      authorized(conn, [], &package_owner?(package, &1), fn _ ->
         Package.update(package, params)
+        |> HexWeb.Repo.update
       end)
     else
       authorized(conn, [], fn user ->
@@ -90,7 +93,7 @@ defmodule HexWeb.API.ReleaseController do
     release_params = %{"app" => meta["app"], "version" => version,
                        "requirements" => meta["requirements"], "meta" => meta}
 
-    if release = Release.get(package, version) do
+    if release = HexWeb.Repo.get_by(assoc(package, :releases), version: version) do
       update(conn, package, release, release_params, checksum, user, body)
     else
       create(conn, package, release_params, checksum, user, body)
@@ -101,6 +104,8 @@ defmodule HexWeb.API.ReleaseController do
     case Release.update(release, release_params, checksum) do
       {:ok, release} ->
         after_release(package, release.version, user, body)
+
+        release = %{release | package: package}
 
         conn
         |> api_cache(:public)
@@ -114,7 +119,9 @@ defmodule HexWeb.API.ReleaseController do
     case Release.create(package, release_params, checksum) do
       {:ok, release} ->
         after_release(package, release.version, user, body)
-        location = api_url(["packages", package.name, "releases", to_string(release.version)])
+
+        release = %{release | package: package}
+        location = release_url(conn, :show, package, release)
 
         conn
         |> put_resp_header("location", location)
@@ -144,14 +151,15 @@ defmodule HexWeb.API.ReleaseController do
     Logger.error "Package upload failed: #{inspect reason}"
 
     # TODO: Revert database changes
-    email = Application.get_env(:hex_web, :email)
-    body  = Phoenix.View.render(HexWeb.EmailView, "publish_fail.html",
-                                layout: {HexWeb.EmailView, "layout.html"},
-                                package: package.name,
-                                version: version,
-                                docs: false)
-    title = "Hex.pm - ERROR when publishing #{package.name} v#{version}"
-    email.send(user.email, title, body)
+
+    # TODO: Move to mailer service
+    HexWeb.Mailer.send(
+      "publish_fail.html",
+      "Hex.pm - ERROR when publishing #{package.name} v#{version}",
+      user.email,
+      package: package.name,
+      version: version,
+      docs: false)
   end
 
   def revert(name, release) do

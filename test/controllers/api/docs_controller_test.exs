@@ -7,11 +7,12 @@ defmodule HexWeb.API.DocsControllerTest do
 
   setup do
     User.create(%{username: "eric", email: "eric@mail.com", password: "eric"}, true)
+    |> HexWeb.Repo.insert!
     :ok
   end
 
   test "release docs" do
-    user           = User.get(username: "eric")
+    user           = HexWeb.Repo.get_by!(User, username: "eric")
     {:ok, phoenix} = Package.create(user, pkg_meta(%{name: "phoenix", description: "Web framework"}))
     {:ok, _}       = Release.create(phoenix, rel_meta(%{version: "0.0.1", app: "phoenix"}), "")
     {:ok, _}       = Release.create(phoenix, rel_meta(%{version: "0.0.2", app: "phoenix"}), "")
@@ -26,7 +27,7 @@ defmodule HexWeb.API.DocsControllerTest do
            |> put_req_header("authorization", key_for("eric"))
            |> post("api/packages/phoenix/releases/0.0.1/docs", body)
     assert conn.status == 201
-    assert Release.get(phoenix, "0.0.1").has_docs
+    assert HexWeb.Repo.get_by!(assoc(phoenix, :releases), version: "0.0.1").has_docs
 
     conn = get conn(), "docs/phoenix/index.html"
     assert conn.status == 200
@@ -63,7 +64,7 @@ defmodule HexWeb.API.DocsControllerTest do
       Application.put_env(:hex_web, :store, HexWeb.Store.S3)
     end
 
-    user        = User.get(username: "eric")
+    user        = HexWeb.Repo.get_by!(User, username: "eric")
     {:ok, ecto} = Package.create(user, pkg_meta(%{name: "ecto", description: "DSL"}))
     {:ok, _}    = Release.create(ecto, rel_meta(%{version: "0.0.1", app: "ecto"}), "")
 
@@ -78,7 +79,7 @@ defmodule HexWeb.API.DocsControllerTest do
            |> post("api/packages/ecto/releases/0.0.1/docs", body)
 
     assert conn.status == 201
-    assert Release.get(ecto, "0.0.1").has_docs
+    assert HexWeb.Repo.get_by!(assoc(ecto, :releases), version: "0.0.1").has_docs
 
     conn = conn()
            |> put_req_header("authorization", key_for("eric"))
@@ -86,7 +87,7 @@ defmodule HexWeb.API.DocsControllerTest do
     assert conn.status == 204
 
     # Check release was deleted
-    refute Release.get(ecto, "0.0.1")
+    refute HexWeb.Repo.get_by(assoc(ecto, :releases), version: "0.0.1")
 
     # Check docs were deleted
     conn = get conn(), "api/packages/ecto/releases/0.0.1/docs"
@@ -103,7 +104,7 @@ defmodule HexWeb.API.DocsControllerTest do
       Application.put_env(:hex_web, :store, HexWeb.Store.S3)
     end
 
-    user        = User.get(username: "eric")
+    user        = HexWeb.Repo.get_by!(User, username: "eric")
     {:ok, ecto} = Package.create(user, pkg_meta(%{name: "ecto", description: "DSL"}))
     {:ok, _}    = Release.create(ecto, rel_meta(%{version: "0.0.1", app: "ecto"}), "")
 

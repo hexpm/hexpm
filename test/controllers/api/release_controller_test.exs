@@ -7,9 +7,9 @@ defmodule HexWeb.API.ReleaseControllerTest do
   alias HexWeb.RegistryBuilder
 
   setup do
-    {:ok, user} = User.create(%{username: "eric", email: "eric@mail.com", password: "eric"}, true)
-    {:ok, pkg}  = Package.create(user, pkg_meta(%{name: "decimal", description: "Arbitrary precision decimal arithmetic for Elixir."}))
-    {:ok, _}    = Release.create(pkg, rel_meta(%{version: "0.0.1", app: "decimal"}), "")
+    user       = User.create(%{username: "eric", email: "eric@mail.com", password: "eric"}, true) |> HexWeb.Repo.insert!
+    {:ok, pkg} = Package.create(user, pkg_meta(%{name: "decimal", description: "Arbitrary precision decimal aritmetic for Elixir."}))
+    {:ok, _}   = Release.create(pkg, rel_meta(%{version: "0.0.1", app: "decimal"}), "")
     :ok
   end
 
@@ -24,14 +24,15 @@ defmodule HexWeb.API.ReleaseControllerTest do
     body = Poison.decode!(conn.resp_body)
     assert body["url"] =~ "api/packages/ecto/releases/1.0.0"
 
-    user_id = User.get(username: "eric").id
-    package = assert Package.get("ecto")
+    user_id = HexWeb.Repo.get_by!(User, username: "eric").id
+    package = assert HexWeb.Repo.get_by(Package, name: "ecto")
     assert package.name == "ecto"
-    assert [%User{id: ^user_id}] = Package.owners(package)
+    assert [%User{id: ^user_id}] = Package.owners(package) |> HexWeb.Repo.all
   end
 
   test "update package" do
-    Package.create(User.get(username: "eric"), pkg_meta(%{name: "ecto", description: "DSL"}))
+    HexWeb.Repo.get_by!(User, username: "eric")
+    |> Package.create(pkg_meta(%{name: "ecto", description: "DSL"}))
 
     meta = %{name: "ecto", version: "1.0.0", description: "awesomeness"}
     conn = conn()
@@ -43,7 +44,7 @@ defmodule HexWeb.API.ReleaseControllerTest do
     body = Poison.decode!(conn.resp_body)
     assert body["url"] =~ "/api/packages/ecto/releases/1.0.0"
 
-    assert Package.get("ecto").meta["description"] == "awesomeness"
+    assert HexWeb.Repo.get_by(Package, name: "ecto").meta["description"] == "awesomeness"
   end
 
   test "create release authorizes" do
@@ -58,7 +59,8 @@ defmodule HexWeb.API.ReleaseControllerTest do
   end
 
   test "update package authorizes" do
-    Package.create(User.get(username: "eric"), pkg_meta(%{name: "ecto", description: "DSL"}))
+    HexWeb.Repo.get_by!(User, username: "eric")
+    |> Package.create(pkg_meta(%{name: "ecto", description: "DSL"}))
 
     meta = %{name: "ecto", version: "1.0.0", description: "Domain-specific language."}
     conn = conn()
@@ -102,17 +104,17 @@ defmodule HexWeb.API.ReleaseControllerTest do
            |> post("api/packages/postgrex/releases", body)
 
     assert conn.status == 201
-    postgrex = Package.get("postgrex")
+    postgrex = HexWeb.Repo.get_by(Package, name: "postgrex")
     postgrex_id = postgrex.id
-    assert [%Release{package_id: ^postgrex_id, version: %Version{major: 0, minor: 0, patch: 2}},
-            %Release{package_id: ^postgrex_id, version: %Version{major: 0, minor: 0, patch: 1}}] =
-           Release.all(postgrex)
+    assert [%Release{package_id: ^postgrex_id, version: %Version{major: 0, minor: 0, patch: 1}},
+            %Release{package_id: ^postgrex_id, version: %Version{major: 0, minor: 0, patch: 2}}] =
+           Release.all(postgrex) |> HexWeb.Repo.all
 
-    Release.get(postgrex, "0.0.1")
+    HexWeb.Repo.get_by!(assoc(postgrex, :releases), version: "0.0.1")
   end
 
   test "create release also creates package" do
-    refute Package.get("phoenix")
+    refute HexWeb.Repo.get_by(Package, name: "phoenix")
 
     body = create_tar(%{name: :phoenix, app: "phoenix", description: "Web framework", version: "1.0.0"}, [])
     conn = conn()
@@ -121,7 +123,7 @@ defmodule HexWeb.API.ReleaseControllerTest do
            |> post("api/packages/phoenix/releases", body)
 
     assert conn.status == 201
-    assert %Package{name: "phoenix"} = Package.get("phoenix")
+    assert %Package{name: "phoenix"} = HexWeb.Repo.get_by(Package, name: "phoenix")
   end
 
   test "update release" do
@@ -139,8 +141,8 @@ defmodule HexWeb.API.ReleaseControllerTest do
            |> post("api/packages/postgrex/releases", body)
 
     assert conn.status == 200
-    postgrex = Package.get("postgrex")
-    release = Release.get(postgrex, "0.0.1")
+    postgrex = HexWeb.Repo.get_by(Package, name: "postgrex")
+    release = HexWeb.Repo.get_by!(assoc(postgrex, :releases), version: "0.0.1")
     assert release
 
     Ecto.Changeset.change(release, inserted_at: %{Ecto.DateTime.utc | year: 2000})
@@ -164,7 +166,8 @@ defmodule HexWeb.API.ReleaseControllerTest do
            |> post("api/packages/postgrex/releases", body)
 
     assert conn.status == 201
-    release = Package.get("postgrex") |> Release.get("0.0.1")
+    package = HexWeb.Repo.get_by!(Package, name: "postgrex")
+    release = HexWeb.Repo.get_by!(assoc(package, :releases), version: "0.0.1")
     Ecto.Changeset.change(release, inserted_at: %{Ecto.DateTime.utc | year: 2000})
     |> HexWeb.Repo.update!
 
@@ -186,9 +189,8 @@ defmodule HexWeb.API.ReleaseControllerTest do
            |> delete("api/packages/postgrex/releases/0.0.1")
 
     assert conn.status == 204
-    postgrex = Package.get("postgrex")
-    release =  Release.get(postgrex, "0.0.1")
-    refute release
+    postgrex = HexWeb.Repo.get_by!(Package, name: "postgrex")
+    refute HexWeb.Repo.get_by(assoc(postgrex, :releases), version: "0.0.1")
   end
 
   test "create releases with requirements" do
@@ -203,8 +205,13 @@ defmodule HexWeb.API.ReleaseControllerTest do
     body = Poison.decode!(conn.resp_body)
     assert body["requirements"] == %{"decimal" => %{"app" => "not_decimal", "optional" => false, "requirement" => "~> 0.0.1"}}
 
-    postgrex = Package.get("postgrex")
-    assert [{"decimal", "not_decimal", "~> 0.0.1", false}] = Release.get(postgrex, "0.0.1").requirements
+    release = HexWeb.Repo.get_by(Package, name: "postgrex")
+              |> assoc(:releases)
+              |> HexWeb.Repo.get_by!(version: "0.0.1")
+              |> HexWeb.Repo.preload(:requirements)
+
+    assert [%{app: "not_decimal", requirement: "~> 0.0.1", optional: false}] =
+           release.requirements
   end
 
   test "create release updates registry" do
