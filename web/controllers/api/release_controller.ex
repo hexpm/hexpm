@@ -153,14 +153,13 @@ defmodule HexWeb.API.ReleaseController do
     # TODO: Revert database changes
 
     # TODO: Move to mailer service
-    email = Application.get_env(:hex_web, :email)
-    body  = Phoenix.View.render(HexWeb.EmailView, "publish_fail.html",
-                                layout: {HexWeb.EmailView, "layout.html"},
-                                package: package.name,
-                                version: version,
-                                docs: false)
-    title = "Hex.pm - ERROR when publishing #{package.name} v#{version}"
-    email.send(user.email, title, body)
+    HexWeb.Mailer.send(
+      "publish_fail.html",
+      "Hex.pm - ERROR when publishing #{package.name} v#{version}",
+      user.email,
+      package: package.name,
+      version: version,
+      docs: false)
   end
 
   def revert(name, release) do

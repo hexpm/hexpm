@@ -7,7 +7,7 @@ defmodule HexWeb.PasswordController do
 
     if success do
       User.confirm(user) |> HexWeb.Repo.update!
-      User.send_confirmed_email(user)
+      HexWeb.Mailer.send("confirmed.html", "Hex.pm - Account confirmed", user.email, [])
     end
 
     render conn, "confirm.html", [
@@ -28,7 +28,7 @@ defmodule HexWeb.PasswordController do
 
     if success do
       User.reset(user, password)
-      User.send_reset_email(user)
+      HexWeb.Mailer.send("password_reset.html", "Hex.pm - Password reset", user.email, [])
     end
 
     render conn, "reset_result.html", [

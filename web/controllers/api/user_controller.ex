@@ -10,9 +10,14 @@ defmodule HexWeb.API.UserController do
 
     case User.create(params) |> HexWeb.Repo.insert do
       {:ok, user} ->
-        location = user_url(conn, :show, username)
+        HexWeb.Mailer.send(
+          "confirmation_request.html",
+          "Hex.pm - Account confirmation",
+          user.email,
+          username: user.username,
+          key: user.confirmation_key)
 
-        User.send_confirmation_email(user)
+        location = user_url(conn, :show, username)
 
         conn
         |> put_resp_header("location", location)
@@ -40,7 +45,13 @@ defmodule HexWeb.API.UserController do
     if (user = HexWeb.Repo.get_by!(User, username: name) ||
        HexWeb.Repo.get_by!(User, email: name)) do
       user = User.password_reset(user) |> HexWeb.Repo.update!
-      User.send_reset_request_email(user)
+
+      HexWeb.Mailer.send(
+        "password_reset_request.html",
+        "Hex.pm - Password reset request",
+        user.email,
+        username: user.username,
+        key: user.reset_key)
 
       conn
       |> api_cache(:private)

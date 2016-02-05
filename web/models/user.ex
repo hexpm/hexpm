@@ -88,42 +88,4 @@ defmodule HexWeb.User do
       |> HexWeb.Repo.update!
     end)
   end
-
-  # TODO: Move to mailer service
-  def send_confirmation_email(user) do
-    mailer   = Application.get_env(:hex_web, :email)
-    body     = Phoenix.View.render(HexWeb.EmailView, "confirmation_request.html",
-                                   layout: {HexWeb.EmailView, "layout.html"},
-                                   username: user.username,
-                                   key: user.confirmation_key)
-
-    mailer.send(user.email, "Hex.pm - Account confirmation", body)
-  end
-
-  # TODO: Move to mailer service
-  def send_confirmed_email(user) do
-    mailer = Application.get_env(:hex_web, :email)
-    body = Phoenix.View.render(HexWeb.EmailView, "confirmed.html",
-                               layout: {HexWeb.EmailView, "layout.html"})
-    mailer.send(user.email, "Hex.pm - Account confirmed", body)
-  end
-
-  # TODO: Move to mailer service
-  def send_reset_request_email(user) do
-    mailer = Application.get_env(:hex_web, :email)
-    body  = Phoenix.View.render(HexWeb.EmailView, "password_reset_request.html",
-                                layout: {HexWeb.EmailView, "layout.html"},
-                                username: user.username,
-                                key: user.reset_key)
-
-    mailer.send(user.email, "Hex.pm - Password reset request", body)
-  end
-
-  # TODO: Move to mailer service
-  def send_reset_email(user) do
-    mailer = Application.get_env(:hex_web, :email)
-    body = Phoenix.View.render(HexWeb.EmailView, "password_reset.html",
-                               layout: {HexWeb.EmailView, "layout.html"})
-    mailer.send(user.email, "Hex.pm - Password reset", body)
-  end
 end
