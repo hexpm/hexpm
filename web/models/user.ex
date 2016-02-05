@@ -43,14 +43,14 @@ defmodule HexWeb.User do
     end
 
     changeset(%User{}, :create, params)
-    |> put_change(:confirmation_key, gen_key())
+    |> put_change(:confirmation_key, HexWeb.Auth.gen_key())
     |> put_change(:confirmed, confirmed?)
-    |> update_change(:password, &gen_password/1)
+    |> update_change(:password, &HexWeb.Auth.gen_password/1)
   end
 
   def update(user, params) do
     changeset(user, :update, params)
-    |> update_change(:password, &gen_password/1)
+    |> update_change(:password, &HexWeb.Auth.gen_password/1)
   end
 
   def confirm?(nil, _key),
@@ -63,7 +63,7 @@ defmodule HexWeb.User do
   end
 
   def password_reset(user) do
-    key = gen_key()
+    key = HexWeb.Auth.gen_key()
     change(user, %{reset_key: key, reset_expiry: Ecto.DateTime.utc})
   end
 
@@ -87,21 +87,6 @@ defmodule HexWeb.User do
       change(user, %{reset_key: nil, reset_expiry: nil})
       |> HexWeb.Repo.update!
     end)
-  end
-
-  def password_auth?(nil, _password), do: false
-
-  def password_auth?(user, password) do
-    Comeonin.Bcrypt.checkpw(password, user.password)
-  end
-
-  defp gen_password(password) do
-    Comeonin.Bcrypt.hashpwsalt(password)
-  end
-
-  defp gen_key do
-    :crypto.strong_rand_bytes(16)
-    |> Base.encode16(case: :lower)
   end
 
   # TODO: Move to mailer service

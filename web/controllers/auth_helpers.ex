@@ -52,11 +52,9 @@ defmodule HexWeb.AuthHelpers do
   defp basic_auth(credentials) do
     case String.split(Base.decode64!(credentials), ":", parts: 2) do
       [username, password] ->
-        user = HexWeb.Repo.get_by(HexWeb.User, username: username)
-        if HexWeb.User.password_auth?(user, password) do
-          {:ok, user}
-        else
-          {:error, :basic}
+        case HexWeb.Auth.password_auth(username, password) do
+          {:ok, user} -> {:ok, user}
+          :error -> {:error, :basic}
         end
       _ ->
         {:error, :invalid}
@@ -64,7 +62,7 @@ defmodule HexWeb.AuthHelpers do
   end
 
   defp key_auth(key) do
-    case HexWeb.Auth.auth(key) do
+    case HexWeb.Auth.key_auth(key) do
       {:ok, user} -> {:ok, user}
       :error      -> {:error, :key}
     end

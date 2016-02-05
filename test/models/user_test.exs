@@ -1,19 +1,20 @@
 defmodule HexWeb.UserTest do
   use HexWeb.ModelCase
 
+  alias HexWeb.Auth
   alias HexWeb.User
 
   test "create user and auth" do
     User.create(%{username: "eric", email: "eric@mail.com", password: "hunter42"}, true)
     |> HexWeb.Repo.insert!
-    assert HexWeb.Repo.get_by!(User, username: "eric") |> User.password_auth?("hunter42")
+    assert {:ok, %User{username: "eric"}} = Auth.password_auth("eric", "hunter42")
   end
 
   test "create user and fail auth" do
     User.create(%{username: "eric", email: "eric@mail.com", password: "erics_pass"}, true)
     |> HexWeb.Repo.insert!
-    refute HexWeb.Repo.get_by(User, username: "josé") |> User.password_auth?("erics_pass")
-    refute HexWeb.Repo.get_by(User, username: "eric") |> User.password_auth?("wrong_pass")
+    assert :error == Auth.password_auth("josé", "erics_pass")
+    assert :error == Auth.password_auth("eric", "wrong_pass")
   end
 
   test "users name and email are unique" do
@@ -29,8 +30,7 @@ defmodule HexWeb.UserTest do
     User.update(user, %{username: "eric", password: "new_pass"})
     |> HexWeb.Repo.update!
 
-    user = HexWeb.Repo.get_by!(User, username: "eric")
-    assert User.password_auth?(user, "new_pass")
-    refute User.password_auth?(user, "erics_pass")
+    assert {:ok, %User{username: "eric"}} = Auth.password_auth("eric", "new_pass")
+    assert :error == Auth.password_auth("eric", "erics_pass")
   end
 end

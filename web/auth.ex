@@ -1,7 +1,7 @@
 defmodule HexWeb.Auth do
   import Ecto.Query, only: [from: 2]
 
-  def auth(user_secret) do
+  def key_auth(user_secret) do
     # Database index lookup on the first part of the key and then
     # secure compare on the second part to avoid timing attacks
     app_secret = Application.get_env(:hex_web, :secret)
@@ -27,5 +27,23 @@ defmodule HexWeb.Auth do
       nil ->
         :error
     end
+  end
+
+  def password_auth(username, password) do
+    if (user = HexWeb.Repo.get_by(HexWeb.User, username: username)) &&
+       Comeonin.Bcrypt.checkpw(password, user.password) do
+      {:ok, user}
+    else
+      :error
+    end
+  end
+
+  def gen_password(password) do
+    Comeonin.Bcrypt.hashpwsalt(password)
+  end
+
+  def gen_key do
+    :crypto.strong_rand_bytes(16)
+    |> Base.encode16(case: :lower)
   end
 end
