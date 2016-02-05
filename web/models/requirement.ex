@@ -6,6 +6,9 @@ defmodule HexWeb.Requirement do
     field :requirement, :string
     field :optional, :boolean
 
+    # The name of the dependency
+    field :name, :string, virtual: true
+
     belongs_to :release, Release
     belongs_to :dependency, Package
   end

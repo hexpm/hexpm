@@ -17,10 +17,14 @@ defmodule HexWeb.API.ReleaseController do
   def show(conn, %{"name" => name, "version" => version}) do
     if (package = HexWeb.Repo.get_by(Package, name: name)) &&
        (release = HexWeb.Repo.get_by(assoc(package, :releases), version: version)) do
-      downloads = HexWeb.ReleaseDownload.release(release) |> HexWeb.Repo.one
-      release = %{release | package: package, downloads: downloads}
+      release = %{release | package: package}
 
-      release = HexWeb.Repo.preload(release, requirements: Release.requirements(release))
+      release =
+        release
+        |> Map.put(:package, package)
+        |> HexWeb.Repo.preload(release,
+                               requirements: Release.requirements(release),
+                               downloads: HexWeb.ReleaseDownload.release(release))
 
       when_stale(conn, release, fn conn ->
         conn

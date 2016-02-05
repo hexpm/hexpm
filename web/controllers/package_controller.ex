@@ -48,8 +48,7 @@ defmodule HexWeb.PackageController do
 
   defp package(conn, package, releases, release) do
     has_docs = Enum.any?(releases, fn(release) -> release.has_docs end)
-    reqs     = Release.requirements(release)
-    release  = %{release | requirements: reqs}
+    release = HexWeb.Repo.preload(release, requirements: Release.requirements(release))
 
     docs_assigns =
       if has_docs do
@@ -69,7 +68,7 @@ defmodule HexWeb.PackageController do
                          |> HexWeb.Repo.all
                          |> Enum.into(%{}),
       release_downloads: ReleaseDownload.release(release)
-                         |> HexWeb.Repo.one!,
+                         |> HexWeb.Repo.one,
       mix_snippet:       HexWeb.Utils.mix_snippet_version(release.version),
       rebar_snippet:     HexWeb.Utils.rebar_snippet_version(release.version),
       erlang_mk_snippet: HexWeb.Utils.erlang_mk_snippet_version(release.version)
@@ -82,9 +81,10 @@ defmodule HexWeb.PackageController do
                |> HexWeb.Repo.all
     versions = Release.package_versions(packages)
                |> HexWeb.Repo.all
+               |> Enum.into(%{})
 
     Enum.map(packages, fn package ->
-      version = versions[package.id] |> Release.latest_version
+      version = Release.latest_version(versions[package.id])
       Map.put(package, :latest_version, version)
     end)
   end

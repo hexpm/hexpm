@@ -149,10 +149,13 @@ defmodule HexWeb.Release do
   end
 
   def requirements(release) do
+    # TODO: ecto should support %{req | ...} syntax
     from(req in assoc(release, :requirements),
          join: p in assoc(req, :dependency),
-         select: {p.name, req.app, req.requirement, req.optional},
-         order_by: p.name)
+         order_by: p.name,
+         select: %{id: req.id, release_id: req.release_id, dependency_id: p.id,
+                   name: p.name, app: req.app, requirement: req.requirement,
+                   optional: req.optional})
   end
 
   def count do
@@ -169,7 +172,7 @@ defmodule HexWeb.Release do
   end
 end
 
-defimpl Phoenix.Param, for: [HexWeb.Release] do
+defimpl Phoenix.Param, for: HexWeb.Release do
   def to_param(release) do
     to_string(release.version)
   end
