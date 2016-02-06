@@ -100,8 +100,8 @@ defmodule HexWeb.RateLimit do
           conn
         else
           conn
-          |> put_status(303)
-          |> render(HexWeb.ErrorView, :"422", message: "API rate limit exceeded for #{ip_str(ip)}")
+          |> put_status(429)
+          |> render(HexWeb.ErrorView, :"429", message: "API rate limit exceeded for #{ip_str(ip)}")
           |> halt
         end
       end

@@ -4,6 +4,8 @@ defmodule HexWeb do
   def start(_type, _args) do
     import Supervisor.Spec, warn: false
 
+    HexWeb.BlockAddress.start
+
     children = [
       supervisor(HexWeb.Repo, []),
       supervisor(Task.Supervisor, [[name: HexWeb.PublishTasks]]),

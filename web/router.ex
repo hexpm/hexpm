@@ -17,6 +17,7 @@ defmodule HexWeb.Router do
 
   pipeline :api do
     plug :accepts, @accepted_formats
+    plug HexWeb.BlockAddress.Plug
     plug HexWeb.RateLimit.Plug
   end
 
