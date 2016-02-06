@@ -103,7 +103,7 @@ build_tools = @current_release && @current_release.meta["build_tools"] || []
       <div class="panel-body">
         <table class="downloads">
           <tr>
-            <td class="left"><%= human_number_space @release_downloads.downloads || 0 %></td>
+            <td class="left"><%= human_number_space if @release_downloads, do: @release_downloads.downloads, else: 0 %></td>
             <td class="text-muted">this version</td>
           </tr>
           <tr>
