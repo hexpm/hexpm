@@ -22,8 +22,7 @@ defmodule HexWeb.API.ReleaseController do
       release =
         release
         |> Map.put(:package, package)
-        |> HexWeb.Repo.preload(release,
-                               requirements: Release.requirements(release),
+        |> HexWeb.Repo.preload(requirements: Release.requirements(release),
                                downloads: HexWeb.ReleaseDownload.release(release))
 
       when_stale(conn, release, fn conn ->
