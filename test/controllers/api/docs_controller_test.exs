@@ -99,6 +99,46 @@ defmodule HexWeb.API.DocsControllerTest do
     Application.put_env(:hex_web, :store, HexWeb.Store.Local)
   end
 
+  test "delete docs" do
+    if Application.get_env(:hex_web, :s3_bucket) do
+      Application.put_env(:hex_web, :store, HexWeb.Store.S3)
+    end
+
+    user        = HexWeb.Repo.get_by!(User, username: "eric")
+    {:ok, ecto} = Package.create(user, pkg_meta(%{name: "ecto", description: "DSL"}))
+    {:ok, _}    = Release.create(ecto, rel_meta(%{version: "0.0.1", app: "ecto"}), "")
+
+    path = Path.join("tmp", "release-docs.tar.gz")
+    files = [{'index.html', "HEYO"}]
+    :ok = :erl_tar.create(String.to_char_list(path), files, [:compressed])
+    body = File.read!(path)
+
+    conn = conn()
+           |> put_req_header("content-type", "application/octet-stream")
+           |> put_req_header("authorization", key_for("eric"))
+           |> post("api/packages/ecto/releases/0.0.1/docs", body)
+
+    assert conn.status == 201
+    assert HexWeb.Repo.get_by!(assoc(ecto, :releases), version: "0.0.1").has_docs
+
+    conn = conn()
+           |> put_req_header("authorization", key_for("eric"))
+           |> delete("api/packages/ecto/releases/0.0.1/docs")
+    assert conn.status == 204
+
+    # Check release was deleted
+    refute HexWeb.Repo.get_by(assoc(ecto, :releases), version: "0.0.1").has_docs
+
+    # Check docs were deleted
+    conn = get conn(), "api/packages/ecto/releases/0.0.1/docs"
+    assert conn.status in 400..499
+
+    conn = get conn(), "docs/ecto/0.0.1/index.html"
+    assert conn.status in 400..499
+  after
+    Application.put_env(:hex_web, :store, HexWeb.Store.Local)
+  end
+
   test "dont allow version directories in docs" do
     if Application.get_env(:hex_web, :s3_bucket) do
       Application.put_env(:hex_web, :store, HexWeb.Store.S3)

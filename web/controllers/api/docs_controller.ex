@@ -17,7 +17,8 @@ defmodule HexWeb.API.DocsController do
   end
 
   def delete(conn, %{"name" => name, "version" => version}) do
-    if (package = HexWeb.Repo.get_by(Package, name: name)) && (release = Release.get(package, version)) do
+    if (package = HexWeb.Repo.get_by(Package, name: name)) &&
+       (release = HexWeb.Repo.get_by(assoc(package, :releases), version: version)) do
       authorized(conn, [], &package_owner?(package, &1), fn _ ->
         revert(name, release)
 
