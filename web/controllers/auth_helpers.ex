@@ -1,6 +1,7 @@
 defmodule HexWeb.AuthHelpers do
   import Plug.Conn
   import Phoenix.Controller
+  import HexWeb.ControllerHelpers, only: [render_error: 3]
 
   def authorized(conn, opts, auth? \\ fn _ -> true end, fun) do
     case authorize(conn, opts) do
@@ -71,15 +72,13 @@ defmodule HexWeb.AuthHelpers do
   def unauthorized(conn, reason) do
     conn
     |> put_resp_header("www-authenticate", "Basic realm=hex")
-    |> put_status(401)
-    |> render(HexWeb.ErrorView, :"401", message: reason)
+    |> render_error(401, message: reason)
   end
 
   def forbidden(conn, reason) do
     conn
     |> put_resp_header("www-authenticate", "Basic realm=hex")
-    |> put_status(403)
-    |> render(HexWeb.ErrorView, :"403", message: reason)
+    |> render_error(403, message: reason)
   end
 
   def package_owner?(package, user) do

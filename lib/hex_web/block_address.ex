@@ -33,8 +33,7 @@ defmodule HexWeb.BlockAddress do
         case check(ip(conn.remote_ip)) do
           :ok ->
             conn
-            |> put_status(403)
-            |> render(HexWeb.ErrorView, :"403", message: "Blocked")
+            |> HexWeb.ControllerHelpers.render_error(403, message: "Blocked")
             |> halt
           :error ->
             conn
