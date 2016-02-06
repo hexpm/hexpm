@@ -18,7 +18,6 @@ defmodule HexWeb.ReleaseDownload do
 
   def release(release) do
     from(rd in ReleaseDownload,
-         where: rd.release_id == ^release.id,
-         select: rd.downloads)
+         where: rd.release_id == ^release.id)
   end
 end

@@ -27,7 +27,8 @@ defmodule HexWeb.API.ReleaseView do
     end
 
     if assoc_loaded?(release.downloads) do
-      entity = Map.put(entity, :downloads, release.downloads)
+      downloads = if release.downloads, do: release.downloads.downloads, else: 0
+      entity = Map.put(entity, :downloads, downloads)
     end
 
     entity
