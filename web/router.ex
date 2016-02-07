@@ -76,6 +76,8 @@ defmodule HexWeb.Router do
     get    "packages/:name/releases/:version",      ReleaseController, :show
     delete "packages/:name/releases/:version",      ReleaseController, :delete
 
+    # Temporary
+    get    "packages/:name/releases/:version/docs", DocsController,    :show
     delete "packages/:name/releases/:version/docs", DocsController,    :delete
 
     get    "packages/:name/owners",                 OwnerController,   :index

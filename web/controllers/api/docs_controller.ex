@@ -5,6 +5,19 @@ defmodule HexWeb.API.DocsController do
   @compressed_max_size 8 * 1024 * 1024
   @uncompressed_max_size 64 * 1024 * 1024
 
+  def show(conn, %{"name" => name, "version" => version}) do
+    if (package = HexWeb.Repo.get_by(Package, name: name)) &&
+       (release = HexWeb.Repo.get_by(assoc(package, :releases), version: version)) do
+      if release.has_docs do
+        redirect conn, external: HexWeb.Utils.docs_tarball_url(package, release)
+      else
+        not_found(conn)
+      end
+    else
+      not_found(conn)
+    end
+  end
+
   def create(conn, %{"name" => name, "version" => version, "body" => body}) do
     if (package = HexWeb.Repo.get_by(Package, name: name)) &&
        (release = HexWeb.Repo.get_by(assoc(package, :releases), version: version)) do
