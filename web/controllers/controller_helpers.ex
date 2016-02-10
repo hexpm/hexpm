@@ -1,6 +1,7 @@
 defmodule HexWeb.ControllerHelpers do
   import Plug.Conn
   import Phoenix.Controller
+  import Ecto
 
   @max_cache_age 60
 
@@ -141,5 +142,15 @@ defmodule HexWeb.ControllerHelpers do
       Ecto.DateTime.to_erl(model.updated_at)
     end)
     |> Enum.max
+  end
+
+  def fetch_release(conn, _opts) do
+    package = HexWeb.Repo.get_by!(HexWeb.Package, name: conn.params["name"])
+    release = HexWeb.Repo.get_by!(assoc(package, :releases), version: conn.params["version"])
+    release = %{release | package: package}
+
+    conn
+    |> assign(:package, package)
+    |> assign(:release, release)
   end
 end

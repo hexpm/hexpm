@@ -34,7 +34,7 @@ defmodule HexWeb.StatsJobTest do
         {nil, nil}
       end
 
-    buckets = [[nil, nil]]
+    buckets = [[bucket, region]]
 
     path     = Path.join([__DIR__, "..", "fixtures"])
     logfile1 = File.read!(Path.join(path, "s3_logs_1.txt"))

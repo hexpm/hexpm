@@ -13,15 +13,13 @@ defmodule HexWeb.API.KeyController do
 
   def show(conn, %{"name" => name}) do
     authorized(conn, [], fn user ->
-      if key = HexWeb.Repo.one(Key.get(name, user)) do
-        when_stale(conn, key, fn conn ->
-          conn
-          |> api_cache(:private)
-          |> render(:show, key: key)
-        end)
-      else
-        not_found(conn)
-      end
+      key = HexWeb.Repo.one!(Key.get(name, user))
+
+      when_stale(conn, key, fn conn ->
+        conn
+        |> api_cache(:private)
+        |> render(:show, key: key)
+      end)
     end)
   end
 

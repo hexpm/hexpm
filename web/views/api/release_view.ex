@@ -10,9 +10,9 @@ defmodule HexWeb.API.ReleaseView do
   def render("release", %{release: release}) do
     package = release.package
 
-    reqs = for {name, app, req, optional} <- release.requirements, into: %{} do
-      {name, %{app: app, requirement: req, optional: optional}}
-    end
+    reqs = Enum.into(release.requirements, %{}, fn req ->
+      {req.name, Map.take(req, ~w(app requirement optional)a)}
+    end)
 
     entity =
       release

@@ -28,7 +28,7 @@ defmodule HexWeb.Requirement do
   end
 
   defp insert_all(release, requirements) do
-    deps = Enum.map(requirements, &elem(&1, 0))
+    deps = Enum.map(requirements, & &1.name)
 
     deps_query =
          from p in Package,
@@ -36,23 +36,21 @@ defmodule HexWeb.Requirement do
       select: {p.name, p.id}
     deps = HexWeb.Repo.all(deps_query) |> Enum.into(%{})
 
-    Enum.map(requirements, fn {dep, app, req, optional} ->
-      insert(release, deps, dep, app, req, optional || false)
-    end)
+    Enum.map(requirements, &insert(release, deps, &1))
   end
 
   defp normalize(requirements) do
     Enum.map(requirements, fn
       {dep, map} when is_map(map) ->
-        {to_string(dep), map["app"], map["requirement"], map["optional"] || false}
+        %{name: to_string(dep), app: map["app"], requirement: map["requirement"], optional: map["optional"] || false}
       {dep, {req, app}} ->
-        {to_string(dep), to_string(app), req, false}
+        %{name: to_string(dep), app: to_string(app), requirement: req, optional: false}
       {dep, req} ->
-        {to_string(dep), to_string(dep), req, false}
+        %{name: to_string(dep), app: to_string(dep), requirement: req, optional: false}
     end)
   end
 
-  defp insert(release, deps, dep, app, req, optional) do
+  defp insert(release, deps, %{name: dep, app: app, requirement: req, optional: optional}) do
     cond do
       is_nil(req) ->
         # Temporary friendly error message until people update to hex 0.9.1

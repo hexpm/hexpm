@@ -1,9 +1,9 @@
 defmodule HexWeb.API.UserController do
   use HexWeb.Web, :controller
 
-  def create(conn, %{"username" => username} = params) do
+  def create(conn, params) do
     # Unconfirmed users can be recreated
-    if (user = HexWeb.Repo.get_by(User, username: username)) && !user.confirmed do
+    if (user = HexWeb.Repo.get_by(User, username: params["username"])) && !user.confirmed do
       HexWeb.Repo.delete!(user)
     end
 
@@ -16,7 +16,7 @@ defmodule HexWeb.API.UserController do
           username: user.username,
           key: user.confirmation_key)
 
-        location = user_url(conn, :show, username)
+        location = user_url(conn, :show, user.username)
 
         conn
         |> put_resp_header("location", location)
@@ -41,8 +41,10 @@ defmodule HexWeb.API.UserController do
   end
 
   def reset(conn, %{"name" => name}) do
-    if (user = HexWeb.Repo.get_by!(User, username: name) ||
-       HexWeb.Repo.get_by!(User, email: name)) do
+    user = HexWeb.Repo.get_by(User, username: name) ||
+             HexWeb.Repo.get_by(User, email: name)
+
+    if user do
       user = User.password_reset(user) |> HexWeb.Repo.update!
 
       HexWeb.Mailer.send(

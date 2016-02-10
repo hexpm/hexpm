@@ -1,6 +1,8 @@
 defmodule HexWeb.API.ReleaseController do
   use HexWeb.Web, :controller
 
+  plug :fetch_release when action != :create
+
   def create(conn, %{"name" => name, "body" => body}) do
     auth =
       if package = HexWeb.Repo.get_by(Package, name: name) do
@@ -14,48 +16,38 @@ defmodule HexWeb.API.ReleaseController do
     end)
   end
 
-  def show(conn, %{"name" => name, "version" => version}) do
-    package = HexWeb.Repo.get_by(Package, name: name)
+  def show(conn, _params) do
+    release = conn.assigns.release
 
-    if release = package && HexWeb.Repo.get_by(assoc(package, :releases), version: version) do
-      release = %{release | package: package}
+    release =
+      HexWeb.Repo.preload(release,
+        requirements: Release.requirements(release),
+        downloads: ReleaseDownload.release(release))
 
-      release =
-        release
-        |> Map.put(:package, package)
-        |> HexWeb.Repo.preload(requirements: Release.requirements(release),
-                               downloads: HexWeb.ReleaseDownload.release(release))
-
-      when_stale(conn, release, fn conn ->
-        conn
-        |> api_cache(:public)
-        |> render(:show, release: release)
-      end)
-    else
-      not_found(conn)
-    end
+    when_stale(conn, release, fn conn ->
+      conn
+      |> api_cache(:public)
+      |> render(:show, release: release)
+    end)
   end
 
-  def delete(conn, %{"name" => name, "version" => version}) do
-    package = HexWeb.Repo.get_by(Package, name: name)
+  def delete(conn, _params) do
+    package = conn.assigns.package
+    release = conn.assigns.release
 
-    if release = package && HexWeb.Repo.get_by(assoc(package, :releases), version: version) do
-      authorized(conn, [], &package_owner?(package, &1), fn _ ->
-        case Release.delete(release) |> HexWeb.Repo.delete do
-          {:ok, release} ->
-            # TODO: Remove package from database if this was the only release
-            revert(name, release)
+    authorized(conn, [], &package_owner?(package, &1), fn _ ->
+      case Release.delete(release) |> HexWeb.Repo.delete do
+        {:ok, release} ->
+          # TODO: Remove package from database if this was the only release
+          revert(release)
 
-            conn
-            |> api_cache(:private)
-            |> send_resp(204, "")
-          {:error, changeset} ->
-            validation_failed(conn, changeset.errors)
-        end
-      end)
-    else
-      not_found(conn)
-    end
+          conn
+          |> api_cache(:private)
+          |> send_resp(204, "")
+        {:error, changeset} ->
+          validation_failed(conn, changeset.errors)
+      end
+    end)
   end
 
   defp handle_tarball(conn, package, user, body) do
@@ -166,8 +158,9 @@ defmodule HexWeb.API.ReleaseController do
       docs: false)
   end
 
-  def revert(name, release) do
+  def revert(release) do
     task = fn ->
+      name    = release.package.name
       version = to_string(release.version)
       store   = Application.get_env(:hex_web, :store)
 
