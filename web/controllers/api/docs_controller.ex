@@ -6,21 +6,20 @@ defmodule HexWeb.API.DocsController do
   @uncompressed_max_size 64 * 1024 * 1024
 
   def show(conn, %{"name" => name, "version" => version}) do
-    if (package = HexWeb.Repo.get_by(Package, name: name)) &&
-       (release = HexWeb.Repo.get_by(assoc(package, :releases), version: version)) do
-      if release.has_docs do
-        redirect conn, external: HexWeb.Utils.docs_tarball_url(package, release)
-      else
-        not_found(conn)
-      end
+    package = HexWeb.Repo.get_by(Package, name: name)
+    release = package && HexWeb.Repo.get_by(assoc(package, :releases), version: version)
+
+    if release && release.has_docs do
+      redirect(conn, external: HexWeb.Utils.docs_tarball_url(package, release))
     else
       not_found(conn)
     end
   end
 
   def create(conn, %{"name" => name, "version" => version, "body" => body}) do
-    if (package = HexWeb.Repo.get_by(Package, name: name)) &&
-       (release = HexWeb.Repo.get_by(assoc(package, :releases), version: version)) do
+    package = HexWeb.Repo.get_by(Package, name: name)
+
+    if release = package && HexWeb.Repo.get_by(assoc(package, :releases), version: version) do
       authorized(conn, [], &package_owner?(package, &1), fn user ->
         handle_tarball(conn, package, release, user, body)
       end)
@@ -30,8 +29,9 @@ defmodule HexWeb.API.DocsController do
   end
 
   def delete(conn, %{"name" => name, "version" => version}) do
-    if (package = HexWeb.Repo.get_by(Package, name: name)) &&
-       (release = HexWeb.Repo.get_by(assoc(package, :releases), version: version)) do
+    package = HexWeb.Repo.get_by(Package, name: name)
+
+    if release = package && HexWeb.Repo.get_by(assoc(package, :releases), version: version) do
       authorized(conn, [], &package_owner?(package, &1), fn _ ->
         revert(name, release)
 

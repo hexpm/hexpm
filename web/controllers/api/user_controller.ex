@@ -3,8 +3,7 @@ defmodule HexWeb.API.UserController do
 
   def create(conn, %{"username" => username} = params) do
     # Unconfirmed users can be recreated
-    if (user = HexWeb.Repo.get_by(User, username: username)) &&
-       not user.confirmed do
+    if (user = HexWeb.Repo.get_by(User, username: username)) && !user.confirmed do
       HexWeb.Repo.delete!(user)
     end
 

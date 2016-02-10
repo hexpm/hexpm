@@ -16,24 +16,28 @@ defmodule HexWeb.API.OwnerController do
 
   def show(conn, %{"name" => name, "email" => email}) do
     email = URI.decode_www_form(email)
+    package = HexWeb.Repo.get_by(Package, name: name)
 
-    if (package = HexWeb.Repo.get_by(Package, name: name)) &&
-       (owner = HexWeb.Repo.get_by!(User, email: email)) do
+    if owner = package && HexWeb.Repo.get_by!(User, email: email) do
       authorized(conn, [], &package_owner?(package, &1), fn _ ->
         if package_owner?(package, owner) do
           conn
           |> api_cache(:private)
           |> send_resp(204, "")
+        else
+          not_found(conn)
         end
       end)
-    end || not_found(conn)
+    else
+      not_found(conn)
+    end
   end
 
   def create(conn, %{"name" => name, "email" => email}) do
     email = URI.decode_www_form(email)
+    package = HexWeb.Repo.get_by(Package, name: name)
 
-    if (package = HexWeb.Repo.get_by(Package, name: name)) &&
-       (user = HexWeb.Repo.get_by!(User, email: email)) do
+    if user = package && HexWeb.Repo.get_by!(User, email: email) do
       authorized(conn, [], &package_owner?(package, &1), fn _ ->
         Package.create_owner(package, user) |> HexWeb.Repo.insert!
 
@@ -48,9 +52,9 @@ defmodule HexWeb.API.OwnerController do
 
   def delete(conn, %{"name" => name, "email" => email}) do
     email = URI.decode_www_form(email)
+    package = HexWeb.Repo.get_by(Package, name: name)
 
-    if (package = HexWeb.Repo.get_by(Package, name: name)) &&
-       (owner = HexWeb.Repo.get_by!(User, email: email)) do
+    if owner = package && HexWeb.Repo.get_by!(User, email: email) do
       authorized(conn, [], &package_owner?(package, &1), fn _ ->
         if HexWeb.Repo.one!(Package.is_single_owner(package)) do
           conn

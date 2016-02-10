@@ -180,10 +180,8 @@ defmodule HexWeb.Package do
   end
 
   defp search(query, search) do
-    name_search = like_escape(search, ~r"(%|_)")
-    if String.length(search) >= 3 do
-      name_search = "%" <> name_search <> "%"
-    end
+    name_search = escape_search(search)
+    name_search = if String.length(search) >= 3, do: "%" <> name_search <> "%", else: name_search
 
     desc_search = String.replace(search, ~r"\s+", " | ")
 
@@ -194,8 +192,8 @@ defmodule HexWeb.Package do
                     var.meta, ^desc_search)
   end
 
-  defp like_escape(string, escape) do
-    String.replace(string, escape, "\\\\\\1")
+  defp escape_search(search) do
+    String.replace(search, ~r"(%|_)", "\\\\\\1")
   end
 
   defp sort(query, :name) do

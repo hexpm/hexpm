@@ -15,8 +15,9 @@ defmodule HexWeb.API.ReleaseController do
   end
 
   def show(conn, %{"name" => name, "version" => version}) do
-    if (package = HexWeb.Repo.get_by(Package, name: name)) &&
-       (release = HexWeb.Repo.get_by(assoc(package, :releases), version: version)) do
+    package = HexWeb.Repo.get_by(Package, name: name)
+
+    if release = package && HexWeb.Repo.get_by(assoc(package, :releases), version: version) do
       release = %{release | package: package}
 
       release =
@@ -36,9 +37,9 @@ defmodule HexWeb.API.ReleaseController do
   end
 
   def delete(conn, %{"name" => name, "version" => version}) do
-    if (package = HexWeb.Repo.get_by(Package, name: name)) &&
-       (release = HexWeb.Repo.get_by(assoc(package, :releases), version: version)) do
+    package = HexWeb.Repo.get_by(Package, name: name)
 
+    if release = package && HexWeb.Repo.get_by(assoc(package, :releases), version: version) do
       authorized(conn, [], &package_owner?(package, &1), fn _ ->
         case Release.delete(release) |> HexWeb.Repo.delete do
           {:ok, release} ->

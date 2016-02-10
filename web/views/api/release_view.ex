@@ -20,17 +20,14 @@ defmodule HexWeb.API.ReleaseView do
       |> Map.put(:url, release_url(HexWeb.Endpoint, :show, package, release))
       |> Map.put(:package_url, package_url(HexWeb.Endpoint, :show, package))
       |> Map.put(:requirements, reqs)
-      |> Enum.into(%{})
-
-    if release.has_docs do
-      entity = Map.put(entity, :docs_url, HexWeb.Utils.docs_tarball_url(package, release))
-    end
-
-    if assoc_loaded?(release.downloads) do
-      downloads = if release.downloads, do: release.downloads.downloads, else: 0
-      entity = Map.put(entity, :downloads, downloads)
-    end
+      |> if_value(release.has_docs, &Map.put(&1, :docs_url, HexWeb.Utils.docs_tarball_url(package, release)))
+      |> if_value(assoc_loaded?(release.downloads), &load_downloads(&1, release))
 
     entity
+  end
+
+  defp load_downloads(entity, release) do
+    downloads = if release.downloads, do: release.downloads.downloads, else: 0
+    Map.put(entity, :downloads, downloads)
   end
 end
