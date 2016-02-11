@@ -75,7 +75,7 @@
       <img src="images/stat-calendar.png" alt="">
       <span class="stat-info">
         <span class="count-info">
-          <%= human_number_space @total[:day] %>
+          <%= human_number_space @total["day"] %>
         </span> <br>
         downloads yesterday
       </span>
@@ -84,7 +84,7 @@
       <img src="images/stat-calendar.png" alt="">
       <span class="stat-info">
         <span class="count-info">
-          <%= human_number_space @total[:week] %>
+          <%= human_number_space @total["week"] %>
         </span> <br>
         downloads last seven days
       </span>
@@ -93,7 +93,7 @@
       <img src="images/stat-calendar.png" alt="">
       <span class="stat-info">
         <span class="count-info">
-          <%= human_number_space @total[:all] %>
+          <%= human_number_space @total["all"] %>
         </span> <br>
         downloads all time
       </span>
