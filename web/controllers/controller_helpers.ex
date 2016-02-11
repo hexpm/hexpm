@@ -32,12 +32,17 @@ defmodule HexWeb.ControllerHelpers do
   defp maybe_put_resp_header(conn, header, value),
     do: put_resp_header(conn, header, value)
 
+  def render_error(conn, status, assigns \\ []) do
+    conn
+    |> put_status(status)
+    |> put_layout(false)
+    |> render(HexWeb.ErrorView, :"#{status}", assigns)
+  end
+
   def validation_failed(conn, errors) do
     errors = lists_to_maps(errors)
 
-    conn
-    |> put_status(422)
-    |> render(HexWeb.ErrorView, :"422", errors: errors)
+    render_error(conn, 422, errors: errors)
   end
 
   defp lists_to_maps({x, y}),
@@ -52,9 +57,7 @@ defmodule HexWeb.ControllerHelpers do
     do: other
 
   def not_found(conn) do
-    conn
-    |> put_status(404)
-    |> render(HexWeb.ErrorView, :"404")
+    render_error(conn, 404)
   end
 
   def when_stale(conn, entities, opts \\ [], fun) do
