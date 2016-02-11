@@ -1,3 +1,4 @@
+<div class="container page">
 <h2>FAQ</h2>
 
 <h3>How should I name my packages?</h3>
@@ -12,3 +13,4 @@ Please follow these simple rules when choosing the name of the package you're pu
     <b>Prefix extension packages with the original package name</b>. If your package extends the functionality of the plug package, then its name should be something like <code>plug_extension</code>.
   </li>
 </ol>
+</div>

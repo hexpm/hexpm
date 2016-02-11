@@ -1,0 +1,93 @@
+.packages-title {
+  @include font-size(38 , $base-line-height);
+  font-weight: 300;
+  margin: 40px 0;
+  color: #5c676d;
+}
+.by-letters {
+  ul {
+    list-style: none;
+    text-align: center;
+    border: #d1d3d7 1px solid;
+    border-left: none;
+    border-right: none;
+    padding: 15px 0;
+    margin: 0;
+    li {
+      display: inline-block;
+      @include font-size(22 , $base-line-height);
+      @include line-height(36);
+      text-transform: uppercase;
+      margin: 0 8px;
+      a {
+        color: #5c676d;
+        font-weight: 300;
+        &:hover {
+          color: #aa2c3f;
+        }
+      }
+    }
+  }
+}
+
+.sort-results {
+  padding: 40px 20px 10px 20px;
+}
+
+.package-list {
+  padding: 20px 0;
+  ul {
+    list-style: none;
+    padding: 0;
+    li {
+      padding: 18px 18px;
+      &:nth-child(even) {
+        background: #f4f4f4;
+      }
+      a {
+        color: #aa2c3f;
+        @include font-size(26 , $base-line-height);
+        display: inline-block;
+      }
+      .version {
+        @include font-size(18 , $base-line-height);
+        color: #5c676d;
+        font-weight: 300;
+      }
+      p {
+        padding: 10px 0 0 0;
+        @include font-size(14 , $base-line-height);
+        font-weight: 300;
+        line-height: 16px;
+        margin: 0;
+      }
+      .downloads-info {
+        float: right;
+        color: #5c676d;
+        font-weight: 300;
+        @include font-size(18 , $base-line-height);
+        text-align: right;
+        .download-count {
+          color: #5c676d;
+          font-weight: bold;
+          display: inline-block;
+          padding: 0 0 10px 0;
+        }
+      }
+    }
+  }
+}
+
+.pagination-widget {
+  float: right;
+}
+.pagination-info {
+  float: left;
+  color: #5c676d;
+  @include font-size(16 , $base-line-height);
+  padding: 10px;
+  font-weight: 300;
+}
+.pagination {
+  margin: 0;
+}
