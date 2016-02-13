@@ -90,8 +90,9 @@ defmodule HexWeb.API.DocsControllerTest do
     refute HexWeb.Repo.get_by(assoc(ecto, :releases), version: "0.0.1")
 
     # Check docs were deleted
-    conn = get conn(), "api/packages/ecto/releases/0.0.1/docs"
-    assert conn.status in 400..499
+    assert_raise Ecto.NoResultsError, fn ->
+      get conn(), "api/packages/ecto/releases/0.0.1/docs"
+    end
 
     conn = get conn(), "docs/ecto/0.0.1/index.html"
     assert conn.status in 400..499

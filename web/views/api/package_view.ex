@@ -8,29 +8,30 @@ defmodule HexWeb.API.PackageView do
     do: render_one(package, __MODULE__, "package")
 
   def render("package", %{package: package}) do
-    entity =
-      package
-      |> Map.take([:name, :meta, :inserted_at, :updated_at])
-      |> Map.put(:url, package_url(HexWeb.Endpoint, :show, package))
+    package
+    |> Map.take([:name, :meta, :inserted_at, :updated_at])
+    |> Map.put(:url, package_url(HexWeb.Endpoint, :show, package))
+    |> if_value(assoc_loaded?(package.releases), &load_releases(&1, package, package.releases))
+    |> if_value(assoc_loaded?(package.downloads), &load_downloads(&1, package.downloads))
+  end
 
-    if assoc_loaded?(package.releases) do
-      releases =
-        Enum.map(package.releases, fn release ->
-          release
-          |> Map.take([:version, :inserted_at, :updated_at])
-          |> Map.put(:url, release_url(HexWeb.Endpoint, :show, package, release))
-        end)
-      entity = Map.put(entity, :releases, releases)
-    end
+  defp load_releases(entity, package, releases) do
+    releases =
+      Enum.map(releases, fn release ->
+        release
+        |> Map.take([:version, :inserted_at, :updated_at])
+        |> Map.put(:url, release_url(HexWeb.Endpoint, :show, package, release))
+      end)
 
-    if assoc_loaded?(package.downloads) do
-      downloads =
-        Enum.into(package.downloads, %{}, fn download ->
-          {download.view, download.downloads}
-        end)
-      entity = Map.put(entity, :downloads, downloads)
-    end
+    Map.put(entity, :releases, releases)
+  end
 
-    entity
+  defp load_downloads(entity, downloads) do
+    downloads =
+      Enum.into(downloads, %{}, fn download ->
+        {download.view, download.downloads}
+      end)
+
+    Map.put(entity, :downloads, downloads)
   end
 end

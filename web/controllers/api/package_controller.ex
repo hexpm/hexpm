@@ -17,17 +17,15 @@ defmodule HexWeb.API.PackageController do
   end
 
   def show(conn, %{"name" => name}) do
-    if package = HexWeb.Repo.get_by(Package, name: name) do
-      when_stale(conn, package, fn conn ->
-        package  = HexWeb.Repo.preload(package, [:downloads, :releases])
-        package  = update_in(package.releases, &Release.sort/1)
+    package = HexWeb.Repo.get_by!(Package, name: name)
 
-        conn
-        |> api_cache(:public)
-        |> render(:show, package: package)
-      end)
-    else
-      not_found(conn)
-    end
+    when_stale(conn, package, fn conn ->
+      package  = HexWeb.Repo.preload(package, [:downloads, :releases])
+      package  = update_in(package.releases, &Release.sort/1)
+
+      conn
+      |> api_cache(:public)
+      |> render(:show, package: package)
+    end)
   end
 end

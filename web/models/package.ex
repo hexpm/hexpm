@@ -80,27 +80,13 @@ defmodule HexWeb.Package do
     |> unique_constraint(:name, name: "packages_name_idx")
   end
 
-  # TODO: Drop support for contributors (maintainers released in 0.9.0, date TBD)
-
   defp changeset(package, :update, params) do
     cast(package, params, ~w(name meta), [])
-    |> update_change(:meta, &rename_key(&1, "contributors", "maintainers"))
     |> update_change(:meta, &Map.take(&1, @meta_fields))
     |> validate_format(:name, ~r"^[a-z]\w*$")
     |> validate_exclusion(:name, @reserved_names)
     |> validate_required_meta(:meta)
     |> validate_meta(:meta)
-  end
-
-  defp rename_key(map, old_key, new_key) do
-    case Map.fetch(map, old_key) do
-      {:ok, value} ->
-        map
-        |> Map.delete(old_key)
-        |> Map.put(new_key, value)
-      :error ->
-        map
-    end
   end
 
   # TODO: Leave this in until we have multi
@@ -180,10 +166,8 @@ defmodule HexWeb.Package do
   end
 
   defp search(query, search) do
-    name_search = like_escape(search, ~r"(%|_)")
-    if String.length(search) >= 3 do
-      name_search = "%" <> name_search <> "%"
-    end
+    name_search = escape_search(search)
+    name_search = if String.length(search) >= 3, do: "%" <> name_search <> "%", else: name_search
 
     desc_search = String.replace(search, ~r"\s+", " | ")
 
@@ -194,8 +178,8 @@ defmodule HexWeb.Package do
                     var.meta, ^desc_search)
   end
 
-  defp like_escape(string, escape) do
-    String.replace(string, escape, "\\\\\\1")
+  defp escape_search(search) do
+    String.replace(search, ~r"(%|_)", "\\\\\\1")
   end
 
   defp sort(query, :name) do

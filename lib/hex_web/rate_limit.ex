@@ -37,19 +37,13 @@ defmodule HexWeb.RateLimit do
 
     expires_at = created_at + @expires
 
-    if expires_at <= now do
-      :ets.insert_new(table, {key, 1, now})
-      count = 1
-      expires_at = now + @expires
-    end
-
-    remaining = @rate_limit - count
-
     reply =
-      if remaining >= 0 do
-        {true, remaining, @rate_limit, expires_at}
+      if expires_at <= now do
+        :ets.insert_new(table, {key, 1, now})
+        {true, @rate_limit - 1, @rate_limit, now + @expires}
       else
-        {false, 0, @rate_limit, expires_at}
+        remaining = @rate_limit - count
+        {remaining >= 0, max(remaining, 0), @rate_limit, expires_at}
       end
 
     {:reply, reply, table}
@@ -78,7 +72,7 @@ defmodule HexWeb.RateLimit do
   defmodule Plug do
     alias HexWeb.RateLimit
     import Elixir.Plug.Conn
-    import Phoenix.Controller
+    import HexWeb.ControllerHelpers
 
     def init(opts), do: opts
 
@@ -99,9 +93,7 @@ defmodule HexWeb.RateLimit do
         if allowed do
           conn
         else
-          conn
-          |> HexWeb.ControllerHelpers.render_error(429, message: "API rate limit exceeded for #{ip_str(ip)}")
-          |> halt
+          render_error(conn, 429, message: "API rate limit exceeded for #{ip_str(ip)}")
         end
       end
     end

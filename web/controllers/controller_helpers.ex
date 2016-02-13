@@ -1,6 +1,7 @@
 defmodule HexWeb.ControllerHelpers do
   import Plug.Conn
   import Phoenix.Controller
+  import Ecto
 
   @max_cache_age 60
 
@@ -37,11 +38,11 @@ defmodule HexWeb.ControllerHelpers do
     |> put_status(status)
     |> put_layout(false)
     |> render(HexWeb.ErrorView, :"#{status}", assigns)
+    |> halt
   end
 
   def validation_failed(conn, errors) do
     errors = lists_to_maps(errors)
-
     render_error(conn, 422, errors: errors)
   end
 
@@ -61,56 +62,69 @@ defmodule HexWeb.ControllerHelpers do
   end
 
   def when_stale(conn, entities, opts \\ [], fun) do
-    if etag = etag(entities) do
-      conn = put_resp_header(conn, "etag", etag)
-    end
+    etag = etag(entities)
+    modified = if Keyword.get(opts, :modified, true), do: last_modified(entities)
 
-    modified = nil
+    conn =
+      conn
+      |> put_etag(etag)
+      |> put_last_modified(modified)
 
-    if Keyword.get(opts, :modified, true) &&
-       (modified = last_modified(entities)) do
-      conn = put_resp_header(conn, "last-modified", :cowboy_clock.rfc1123(modified))
-    end
-
-    unless fresh?(conn, etag: etag, modified: modified) do
-      fun.(conn)
-    else
+    if fresh?(conn, etag: etag, modified: modified) do
       send_resp(conn, 304, "")
+    else
+      fun.(conn)
     end
   end
 
+  defp put_etag(conn, nil),
+    do: conn
+  defp put_etag(conn, etag),
+    do: put_resp_header(conn, "etag", etag)
+
+  defp put_last_modified(conn, nil),
+    do: conn
+  defp put_last_modified(conn, modified),
+    do: put_resp_header(conn, "last-modified", :cowboy_clock.rfc1123(modified))
+
   defp fresh?(conn, opts) do
+    not expired?(conn, opts)
+  end
+
+  defp expired?(conn, opts) do
     modified_since = List.first get_req_header(conn, "if-modified-since")
     none_match     = List.first get_req_header(conn, "if-none-match")
 
-    fresh = false
-
-    if modified_since && opts[:modified] do
-      fresh = not_modified?(modified_since, opts[:modified])
+    if modified_since || none_match do
+      modified_since?(modified_since, opts[:modified]) or
+        none_match?(none_match, opts[:etag])
+    else
+      true
     end
-
-    if none_match && opts[:etag] do
-      fresh = etag_matches?(none_match, opts[:etag])
-    end
-
-    fresh
   end
 
-  defp not_modified?(modified_since, last_modified) do
-    modified_since = :cowboy_http.rfc1123_date(modified_since)
-    modified_since = :calendar.datetime_to_gregorian_seconds(modified_since)
-    last_modified  = :calendar.datetime_to_gregorian_seconds(last_modified)
-    last_modified <= modified_since
+  defp modified_since?(header, last_modified) do
+    if header && last_modified do
+      modified_since = :cowboy_http.rfc1123_date(header)
+      modified_since = :calendar.datetime_to_gregorian_seconds(modified_since)
+      last_modified  = :calendar.datetime_to_gregorian_seconds(last_modified)
+      last_modified > modified_since
+    else
+      false
+    end
   end
 
-  defp etag_matches?(none_match, etag) do
-    Plug.Conn.Utils.list(none_match)
-    |> Enum.any?(&(&1 in [etag, "*"]))
+  defp none_match?(none_match, etag) do
+    if none_match && etag do
+      none_match = Plug.Conn.Utils.list(none_match)
+      not(etag in none_match) and not("*" in none_match)
+    else
+      false
+    end
   end
 
   defp etag(nil), do: nil
   defp etag([]),  do: nil
-
   defp etag(models) do
     list = Enum.map(List.wrap(models), fn model ->
       [model.__struct__, model.id, model.updated_at]
@@ -123,12 +137,30 @@ defmodule HexWeb.ControllerHelpers do
 
   def last_modified(nil), do: nil
   def last_modified([]),  do: nil
-
   def last_modified(models) do
-    list = Enum.map(List.wrap(models), fn model ->
+    Enum.map(List.wrap(models), fn model ->
       Ecto.DateTime.to_erl(model.updated_at)
     end)
+    |> Enum.max
+  end
 
-    Enum.max(list)
+  def fetch_package(conn, _opts) do
+    package = HexWeb.Repo.get_by!(HexWeb.Package, name: conn.params["name"])
+    assign(conn, :package, package)
+  end
+
+  def fetch_release(conn, _opts) do
+    package = HexWeb.Repo.get_by!(HexWeb.Package, name: conn.params["name"])
+    release = HexWeb.Repo.get_by!(assoc(package, :releases), version: conn.params["version"])
+    release = %{release | package: package}
+
+    conn
+    |> assign(:package, package)
+    |> assign(:release, release)
+  end
+
+  def authorize(conn, opts) do
+    fun = Keyword.get(opts, :fun, fn _, _ -> true end)
+    HexWeb.AuthHelpers.authorized(conn, opts, &fun.(conn, &1))
   end
 end

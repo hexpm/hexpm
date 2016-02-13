@@ -1,6 +1,9 @@
 defmodule HexWeb.API.ReleaseController do
   use HexWeb.Web, :controller
 
+  plug :fetch_release when action != :create
+  plug :authorize, [fun: &package_owner?/2] when action == :delete
+
   def create(conn, %{"name" => name, "body" => body}) do
     auth =
       if package = HexWeb.Repo.get_by(Package, name: name) do
@@ -9,51 +12,41 @@ defmodule HexWeb.API.ReleaseController do
         fn _ -> true end
       end
 
-    authorized(conn, [], auth, fn user ->
-      handle_tarball(conn, package, user, body)
-    end)
-  end
+    conn = authorized(conn, [], auth)
 
-  def show(conn, %{"name" => name, "version" => version}) do
-    if (package = HexWeb.Repo.get_by(Package, name: name)) &&
-       (release = HexWeb.Repo.get_by(assoc(package, :releases), version: version)) do
-      release = %{release | package: package}
-
-      release =
-        release
-        |> Map.put(:package, package)
-        |> HexWeb.Repo.preload(requirements: Release.requirements(release),
-                               downloads: HexWeb.ReleaseDownload.release(release))
-
-      when_stale(conn, release, fn conn ->
-        conn
-        |> api_cache(:public)
-        |> render(:show, release: release)
-      end)
+    if conn.halted do
+      conn
     else
-      not_found(conn)
+      handle_tarball(conn, package, conn.assigns.user, body)
     end
   end
 
-  def delete(conn, %{"name" => name, "version" => version}) do
-    if (package = HexWeb.Repo.get_by(Package, name: name)) &&
-       (release = HexWeb.Repo.get_by(assoc(package, :releases), version: version)) do
+  def show(conn, _params) do
+    release = conn.assigns.release
 
-      authorized(conn, [], &package_owner?(package, &1), fn _ ->
-        case Release.delete(release) |> HexWeb.Repo.delete do
-          {:ok, release} ->
-            # TODO: Remove package from database if this was the only release
-            revert(name, release)
+    release =
+      HexWeb.Repo.preload(release,
+        requirements: Release.requirements(release),
+        downloads: ReleaseDownload.release(release))
 
-            conn
-            |> api_cache(:private)
-            |> send_resp(204, "")
-          {:error, changeset} ->
-            validation_failed(conn, changeset.errors)
-        end
-      end)
-    else
-      not_found(conn)
+    when_stale(conn, release, fn conn ->
+      conn
+      |> api_cache(:public)
+      |> render(:show, release: release)
+    end)
+  end
+
+  def delete(conn, _params) do
+    case Release.delete(conn.assigns.release) |> HexWeb.Repo.delete do
+      {:ok, release} ->
+        # TODO: Remove package from database if this was the only release
+        revert(release)
+
+        conn
+        |> api_cache(:private)
+        |> send_resp(204, "")
+      {:error, changeset} ->
+        validation_failed(conn, changeset.errors)
     end
   end
 
@@ -63,7 +56,7 @@ defmodule HexWeb.API.ReleaseController do
     case HexWeb.Tar.metadata(body) do
       {:ok, meta, checksum} ->
         package_params = %{"name" => meta["name"], "meta" => meta}
-        case create_package(conn, package, package_params) do
+        case create_package(user, package, package_params) do
           {:ok, package} ->
             create_release(conn, package, user, checksum, meta, body)
           {:error, changeset} ->
@@ -75,19 +68,15 @@ defmodule HexWeb.API.ReleaseController do
     end
   end
 
-  defp create_package(conn, package, params) do
+  defp create_package(user, package, params) do
     name = params["name"]
     package = package || HexWeb.Repo.get_by(Package, name: name)
 
     if package do
-      authorized(conn, [], &package_owner?(package, &1), fn _ ->
-        Package.update(package, params)
-        |> HexWeb.Repo.update
-      end)
+      Package.update(package, params)
+      |> HexWeb.Repo.update
     else
-      authorized(conn, [], fn user ->
-        Package.create(user, params)
-      end)
+      Package.create(user, params)
     end
   end
 
@@ -165,8 +154,9 @@ defmodule HexWeb.API.ReleaseController do
       docs: false)
   end
 
-  def revert(name, release) do
+  def revert(release) do
     task = fn ->
+      name    = release.package.name
       version = to_string(release.version)
       store   = Application.get_env(:hex_web, :store)
 

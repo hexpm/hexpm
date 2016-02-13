@@ -8,18 +8,18 @@ defmodule HexWeb.API.UserView do
     do: render_one(user, __MODULE__, "user")
 
   def render("user", %{user: user}) do
-    entity = user
-      |> Map.take([:username, :email, :inserted_at, :updated_at])
-      |> Map.put(:url, user_url(HexWeb.Endpoint, :show, user))
+    user
+    |> Map.take([:username, :email, :inserted_at, :updated_at])
+    |> Map.put(:url, user_url(HexWeb.Endpoint, :show, user))
+    |> if_value(assoc_loaded?(user.owned_packages), &load_owned(&1, user.owned_packages))
+  end
 
-    if assoc_loaded?(user.owned_packages) do
-      packages = Enum.into(user.owned_packages, %{}, fn package ->
+  defp load_owned(entity, packages) do
+    packages =
+      Enum.into(packages, %{}, fn package ->
         {package.name, package_url(HexWeb.Endpoint, :show, package)}
       end)
 
-      entity = Map.put(entity, :owned_packages, packages)
-    end
-
-    entity
+    Map.put(entity, :owned_packages, packages)
   end
 end

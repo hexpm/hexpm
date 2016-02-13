@@ -1,13 +1,12 @@
 defmodule HexWeb.AuthHelpers do
   import Plug.Conn
-  import Phoenix.Controller
   import HexWeb.ControllerHelpers, only: [render_error: 3]
 
-  def authorized(conn, opts, auth? \\ fn _ -> true end, fun) do
+  def authorized(conn, opts, auth? \\ fn _ -> true end) do
     case authorize(conn, opts) do
       {:ok, user} ->
         if auth?.(user) do
-          fun.(user)
+          assign(conn, :user, user)
         else
           forbidden(conn, "account not authorized for this action")
         end
@@ -81,8 +80,16 @@ defmodule HexWeb.AuthHelpers do
     |> render_error(403, message: reason)
   end
 
-  def package_owner?(package, user) do
+
+  def package_owner?(%Plug.Conn{} = conn, user),
+    do: package_owner?(conn.assigns.package, user)
+  def package_owner?(%HexWeb.Package{} = package, user) do
     HexWeb.Package.is_owner(package, user)
     |> HexWeb.Repo.one!
   end
+
+  def correct_user?(%Plug.Conn{} = conn, user),
+    do: correct_user?(conn.params["name"], user)
+  def correct_user?(name, user) when is_binary(name),
+    do: name == user.username
 end

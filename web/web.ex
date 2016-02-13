@@ -84,6 +84,8 @@ defmodule HexWeb.Web do
         Requirement,
         User
       }
+
+      import HexWeb.SharedHelpers
     end
   end
 

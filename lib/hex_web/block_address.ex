@@ -20,7 +20,6 @@ defmodule HexWeb.BlockAddress do
   defmodule Plug do
     alias HexWeb.BlockAddress
     import Elixir.Plug.Conn
-    import Phoenix.Controller
 
     @ets :blocked_addresses
 

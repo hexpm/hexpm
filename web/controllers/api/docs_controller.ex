@@ -5,43 +5,33 @@ defmodule HexWeb.API.DocsController do
   @compressed_max_size 8 * 1024 * 1024
   @uncompressed_max_size 64 * 1024 * 1024
 
-  def show(conn, %{"name" => name, "version" => version}) do
-    if (package = HexWeb.Repo.get_by(Package, name: name)) &&
-       (release = HexWeb.Repo.get_by(assoc(package, :releases), version: version)) do
-      if release.has_docs do
-        redirect conn, external: HexWeb.Utils.docs_tarball_url(package, release)
-      else
-        not_found(conn)
-      end
+  plug :fetch_release
+  plug :authorize, [fun: &package_owner?/2] when action != :show
+
+  def show(conn, _params) do
+    package = conn.assigns.package
+    release = conn.assigns.release
+
+    if release.has_docs do
+      redirect(conn, external: HexWeb.Utils.docs_tarball_url(package, release))
     else
       not_found(conn)
     end
   end
 
-  def create(conn, %{"name" => name, "version" => version, "body" => body}) do
-    if (package = HexWeb.Repo.get_by(Package, name: name)) &&
-       (release = HexWeb.Repo.get_by(assoc(package, :releases), version: version)) do
-      authorized(conn, [], &package_owner?(package, &1), fn user ->
-        handle_tarball(conn, package, release, user, body)
-      end)
-    else
-      not_found(conn)
-    end
+  def create(conn, %{"body" => body}) do
+    package = conn.assigns.package
+    release = conn.assigns.release
+    user    = conn.assigns.user
+    handle_tarball(conn, package, release, user, body)
   end
 
-  def delete(conn, %{"name" => name, "version" => version}) do
-    if (package = HexWeb.Repo.get_by(Package, name: name)) &&
-       (release = HexWeb.Repo.get_by(assoc(package, :releases), version: version)) do
-      authorized(conn, [], &package_owner?(package, &1), fn _ ->
-        revert(name, release)
+  def delete(conn, _params) do
+    revert(conn.assigns.release)
 
-        conn
-        |> api_cache(:private)
-        |> send_resp(204, "")
-      end)
-    else
-      not_found(conn)
-    end
+    conn
+    |> api_cache(:private)
+    |> send_resp(204, "")
   end
 
   defp handle_tarball(conn, package, release, user, body) do
@@ -186,11 +176,13 @@ defmodule HexWeb.API.DocsController do
       docs: true)
   end
 
-  def revert(name, release) do
+  def revert(release) do
     task = fn ->
+      name    = release.package.name
       version = to_string(release.version)
       store   = Application.get_env(:hex_web, :store)
       paths   = store.list_docs_pages(Path.join(name, version))
+
       store.delete_docs("#{name}-#{version}.tar.gz")
 
       Enum.each(paths, fn path ->
