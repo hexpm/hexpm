@@ -22,7 +22,7 @@ defmodule HexWeb.PackageTest do
     user = HexWeb.Repo.get_by!(User, username: "eric")
     assert {:ok, package} = Package.create(user, pkg_meta(%{name: "ecto", description: "DSL"}))
 
-    Package.update(package, %{"meta" => %{"contributors" => ["eric", "josé"], "description" => "description"}})
+    Package.update(package, %{"meta" => %{"maintainers" => ["eric", "josé"], "description" => "description"}})
     |> HexWeb.Repo.update!
     package = HexWeb.Repo.get_by(Package, name: "ecto")
     assert length(package.meta["maintainers"]) == 2
@@ -42,7 +42,7 @@ defmodule HexWeb.PackageTest do
 
   test "ignore unknown meta fields" do
     meta = %{
-      "contributors" => ["eric"],
+      "maintainers" => ["eric"],
       "foo"          => "bar",
       "description" => "Lorem ipsum"
     }
@@ -52,7 +52,6 @@ defmodule HexWeb.PackageTest do
     assert %Package{meta: meta2} = HexWeb.Repo.get_by(Package, name: "ecto")
 
     assert Map.size(meta2) == 2
-    assert meta["contributors"] == meta2["maintainers"]
   end
 
   test "validate invalid meta" do

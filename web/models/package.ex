@@ -80,27 +80,13 @@ defmodule HexWeb.Package do
     |> unique_constraint(:name, name: "packages_name_idx")
   end
 
-  # TODO: Drop support for contributors (maintainers released in 0.9.0, date TBD)
-
   defp changeset(package, :update, params) do
     cast(package, params, ~w(name meta), [])
-    |> update_change(:meta, &rename_key(&1, "contributors", "maintainers"))
     |> update_change(:meta, &Map.take(&1, @meta_fields))
     |> validate_format(:name, ~r"^[a-z]\w*$")
     |> validate_exclusion(:name, @reserved_names)
     |> validate_required_meta(:meta)
     |> validate_meta(:meta)
-  end
-
-  defp rename_key(map, old_key, new_key) do
-    case Map.fetch(map, old_key) do
-      {:ok, value} ->
-        map
-        |> Map.delete(old_key)
-        |> Map.put(new_key, value)
-      :error ->
-        map
-    end
   end
 
   # TODO: Leave this in until we have multi
