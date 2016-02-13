@@ -1,6 +1,8 @@
 defmodule HexWeb.API.UserController do
   use HexWeb.Web, :controller
 
+  plug :authorize, [fun: &correct_user?/2] when action == :show
+
   def create(conn, params) do
     # Unconfirmed users can be recreated
     if (user = HexWeb.Repo.get_by(User, username: params["username"])) && !user.confirmed do
@@ -28,15 +30,13 @@ defmodule HexWeb.API.UserController do
     end
   end
 
-  def show(conn, %{"name" => name}) do
-     authorized(conn, [], &(&1.username == name), fn user ->
-      user = HexWeb.Repo.preload(user, :owned_packages)
+  def show(conn, _params) do
+    user = HexWeb.Repo.preload(conn.assigns.user, :owned_packages)
 
-      when_stale(conn, user, fn conn ->
-        conn
-        |> api_cache(:private)
-        |> render(:show, user: user)
-      end)
+    when_stale(conn, user, fn conn ->
+      conn
+      |> api_cache(:private)
+      |> render(:show, user: user)
     end)
   end
 

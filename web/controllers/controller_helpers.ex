@@ -38,11 +38,11 @@ defmodule HexWeb.ControllerHelpers do
     |> put_status(status)
     |> put_layout(false)
     |> render(HexWeb.ErrorView, :"#{status}", assigns)
+    |> halt
   end
 
   def validation_failed(conn, errors) do
     errors = lists_to_maps(errors)
-
     render_error(conn, 422, errors: errors)
   end
 
@@ -144,6 +144,11 @@ defmodule HexWeb.ControllerHelpers do
     |> Enum.max
   end
 
+  def fetch_package(conn, _opts) do
+    package = HexWeb.Repo.get_by!(HexWeb.Package, name: conn.params["name"])
+    assign(conn, :package, package)
+  end
+
   def fetch_release(conn, _opts) do
     package = HexWeb.Repo.get_by!(HexWeb.Package, name: conn.params["name"])
     release = HexWeb.Repo.get_by!(assoc(package, :releases), version: conn.params["version"])
@@ -152,5 +157,10 @@ defmodule HexWeb.ControllerHelpers do
     conn
     |> assign(:package, package)
     |> assign(:release, release)
+  end
+
+  def authorize(conn, opts) do
+    fun = Keyword.get(opts, :fun, fn _, _ -> true end)
+    HexWeb.AuthHelpers.authorized(conn, opts, &fun.(conn, &1))
   end
 end

@@ -2,6 +2,7 @@ defmodule HexWeb.API.ReleaseController do
   use HexWeb.Web, :controller
 
   plug :fetch_release when action != :create
+  plug :authorize, [fun: &package_owner?/2] when action == :delete
 
   def create(conn, %{"name" => name, "body" => body}) do
     auth =
@@ -11,9 +12,13 @@ defmodule HexWeb.API.ReleaseController do
         fn _ -> true end
       end
 
-    authorized(conn, [], auth, fn user ->
-      handle_tarball(conn, package, user, body)
-    end)
+    conn = authorized(conn, [], auth)
+
+    if conn.halted do
+      conn
+    else
+      handle_tarball(conn, package, conn.assigns.user, body)
+    end
   end
 
   def show(conn, _params) do
@@ -32,22 +37,17 @@ defmodule HexWeb.API.ReleaseController do
   end
 
   def delete(conn, _params) do
-    package = conn.assigns.package
-    release = conn.assigns.release
+    case Release.delete(conn.assigns.release) |> HexWeb.Repo.delete do
+      {:ok, release} ->
+        # TODO: Remove package from database if this was the only release
+        revert(release)
 
-    authorized(conn, [], &package_owner?(package, &1), fn _ ->
-      case Release.delete(release) |> HexWeb.Repo.delete do
-        {:ok, release} ->
-          # TODO: Remove package from database if this was the only release
-          revert(release)
-
-          conn
-          |> api_cache(:private)
-          |> send_resp(204, "")
-        {:error, changeset} ->
-          validation_failed(conn, changeset.errors)
-      end
-    end)
+        conn
+        |> api_cache(:private)
+        |> send_resp(204, "")
+      {:error, changeset} ->
+        validation_failed(conn, changeset.errors)
+    end
   end
 
   defp handle_tarball(conn, package, user, body) do
@@ -56,7 +56,7 @@ defmodule HexWeb.API.ReleaseController do
     case HexWeb.Tar.metadata(body) do
       {:ok, meta, checksum} ->
         package_params = %{"name" => meta["name"], "meta" => meta}
-        case create_package(conn, package, package_params) do
+        case create_package(user, package, package_params) do
           {:ok, package} ->
             create_release(conn, package, user, checksum, meta, body)
           {:error, changeset} ->
@@ -68,19 +68,15 @@ defmodule HexWeb.API.ReleaseController do
     end
   end
 
-  defp create_package(conn, package, params) do
+  defp create_package(user, package, params) do
     name = params["name"]
     package = package || HexWeb.Repo.get_by(Package, name: name)
 
     if package do
-      authorized(conn, [], &package_owner?(package, &1), fn _ ->
-        Package.update(package, params)
-        |> HexWeb.Repo.update
-      end)
+      Package.update(package, params)
+      |> HexWeb.Repo.update
     else
-      authorized(conn, [], fn user ->
-        Package.create(user, params)
-      end)
+      Package.create(user, params)
     end
   end
 

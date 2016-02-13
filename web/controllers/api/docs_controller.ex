@@ -6,6 +6,7 @@ defmodule HexWeb.API.DocsController do
   @uncompressed_max_size 64 * 1024 * 1024
 
   plug :fetch_release
+  plug :authorize, [fun: &package_owner?/2] when action != :show
 
   def show(conn, _params) do
     package = conn.assigns.package
@@ -21,23 +22,16 @@ defmodule HexWeb.API.DocsController do
   def create(conn, %{"body" => body}) do
     package = conn.assigns.package
     release = conn.assigns.release
-
-    authorized(conn, [], &package_owner?(package, &1), fn user ->
-      handle_tarball(conn, package, release, user, body)
-    end)
+    user    = conn.assigns.user
+    handle_tarball(conn, package, release, user, body)
   end
 
   def delete(conn, _params) do
-    package = conn.assigns.package
-    release = conn.assigns.release
+    revert(conn.assigns.release)
 
-    authorized(conn, [], &package_owner?(package, &1), fn _ ->
-      revert(release)
-
-      conn
-      |> api_cache(:private)
-      |> send_resp(204, "")
-    end)
+    conn
+    |> api_cache(:private)
+    |> send_resp(204, "")
   end
 
   defp handle_tarball(conn, package, release, user, body) do
