@@ -2,7 +2,7 @@ exports.config = {
   // See http://brunch.io/#documentation for docs.
   files: {
     javascripts: {
-      joinTo: "js/app.js",
+      joinTo: "js/main.js",
 
       // To use a separate vendor.js bundle, specify two files path
       // https://github.com/brunch/brunch/blob/stable/docs/config.md#files
@@ -21,7 +21,7 @@ exports.config = {
       }
     },
     stylesheets: {
-      joinTo: "css/app.css",
+      joinTo: "css/main.css",
 
       order: {
         after: [
@@ -30,7 +30,7 @@ exports.config = {
       }
     },
     templates: {
-      joinTo: "js/app.js"
+      joinTo: "js/main.js"
     }
   },
 

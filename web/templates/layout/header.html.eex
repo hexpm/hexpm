@@ -6,7 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="description" content="A package manager for the Erlang ecosystem">
     <link rel="search" type="application/opensearchdescription+xml" title="Hex" href="/hexsearch.xml">
-    <link rel="stylesheet" href="<%= static_path(HexWeb.Endpoint, "/css/app.css") %>">
+    <link rel="stylesheet" href="<%= static_path(HexWeb.Endpoint, "/css/main.css") %>">
     <title><%= title(assigns) %></title>
     <link rel="shortcut icon" href="/favicon.png">
   </head>

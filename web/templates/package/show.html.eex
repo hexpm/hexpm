@@ -133,7 +133,7 @@ build_tools = @current_release && @current_release.meta["build_tools"] || []
               onfocus="this.select();"
               readonly="readonly"  id="mix-snippet" />
             <span class="input-group-btn">
-              <button class="btn btn-default btn-no-hover" type="button" onclick="copy_snippet('mix-snippet', this);">
+              <button class="btn btn-default btn-no-hover" type="button" onclick="App.copy_snippet('mix-snippet', this);">
                 <span class="glyphicon glyphicon-copy"></span>
               </button>
             </span>
@@ -147,7 +147,7 @@ build_tools = @current_release && @current_release.meta["build_tools"] || []
               onfocus="this.select();"
               readonly="readonly"  id="rebar-snippet" />
             <span class="input-group-btn">
-              <button class="btn btn-default btn-no-hover" type="button" onclick="copy_snippet('rebar-snippet', this);">
+              <button class="btn btn-default btn-no-hover" type="button" onclick="App.copy_snippet('rebar-snippet', this);">
                 <span class="glyphicon glyphicon-copy"></span>
               </button>
             </span>
@@ -161,7 +161,7 @@ build_tools = @current_release && @current_release.meta["build_tools"] || []
               onfocus="this.select();"
               readonly="readonly"  id="erlang-mk-snippet" />
             <span class="input-group-btn">
-              <button class="btn btn-default btn-no-hover" type="button" onclick="copy_snippet('erlang-mk-snippet', this);">
+              <button class="btn btn-default btn-no-hover" type="button" onclick="App.copy_snippet('erlang-mk-snippet', this);">
                 <span class="glyphicon glyphicon-copy"></span>
               </button>
             </span>

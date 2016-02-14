@@ -11,7 +11,7 @@ defmodule HexWeb.LayoutView do
 
   def active(assigns, page) do
     if Map.get(assigns, :active) == page do
-      ~s(class="active")
+      raw ~s( class="active")
     end
   end
 
