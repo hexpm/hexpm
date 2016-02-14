@@ -121,7 +121,11 @@ defmodule HexWeb.Utils do
   @doc """
   Returns a url to a resource on the docs site from a list of path components.
   """
+  @spec docs_url(HexWeb.Package.t, HexWeb.Release.t) :: String.t
   @spec docs_url([String.t] | String.t) :: String.t
+  def docs_url(package, release) do
+    docs_url([package.name, to_string(release.version)])
+  end
   def docs_url(path) do
     Application.get_env(:hex_web, :docs_url) <> "/" <> Path.join(List.wrap(path)) <> "/"
   end
