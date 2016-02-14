@@ -7,11 +7,14 @@ defmodule HexWeb.BlockAddress do
   end
 
   def reload do
-    new_ips = HexWeb.Repo.all(HexWeb.BlockedAddress)
-              |> Enum.into(HashSet.new, & &1.ip)
+    all_ips = HexWeb.Repo.all(HexWeb.BlockedAddress)
+              |> Enum.into(MapSet.new, & &1.ip)
 
     old_ips = :ets.tab2list(@ets) |> Enum.map(&elem(&1, 0))
-    removed = Enum.filter(old_ips, &HashSet.member?(new_ips, &1))
+    old_ips = old_ips -- [:loaded]
+
+    removed = Enum.reject(old_ips, &(&1 in all_ips))
+    new_ips = Enum.reject(all_ips, &(&1 in old_ips))
 
     Enum.each(removed, &:ets.delete(@ets, &1))
     :ets.insert(@ets, Enum.map(new_ips, &{&1}))
