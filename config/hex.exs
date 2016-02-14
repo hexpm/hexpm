@@ -22,4 +22,4 @@ config :hex_web, HexWeb.Repo,
   pool_size: 10
 
 config :logger,
-  level: :warn
+  level: :error
