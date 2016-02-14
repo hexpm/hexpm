@@ -69,13 +69,13 @@ build_tools = @current_release && @current_release.meta["build_tools"] || []
           <% show_latest_versions = 5 %>
           <%= render "versions.html", [package: @package, releases: Enum.take(@releases, show_latest_versions), older?: false] %>
 
-          <%= if length(@releases)> show_latest_versions do %>
+          <%= if length(@releases) > show_latest_versions do %>
             <%= render "versions.html", [package: @package, releases: Enum.drop(@releases, show_latest_versions), older?: true] %>
           <% end %>
         </ul>
 
-        <%= if length(@releases)> show_latest_versions do %>
-          <p class="show-versions"><button class="btn btn-primary toggle-text" role="button" data-toggle="collapse" data-target="#versions li.older" aria-expanded="false" aria-controls="versions">
+        <%= if length(@releases) > show_latest_versions do %>
+          <p class="show-versions"><button class="btn btn-primary toggle-text" role="button" data-toggle="collapse" data-target="#versions li.collapse" aria-expanded="false" aria-controls="versions">
             <span>All Versions</span>
             <span class="invisible">Recent Versions</span>
           </button></p>

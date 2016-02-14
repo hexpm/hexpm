@@ -1,6 +1,6 @@
 
       <%= for release <- @releases do %>
-        <li <%= if @older? do %> class="older"<% end %>>
+        <li <%= if @older? do %>class="collapse"<% end %>>
           <a href="/packages/<%= @package.name %>/<%= release.version %>"><strong><%= release.version %></strong></a>
           <span class="text-muted"><%= pretty_date(release.inserted_at) %></span>
           <%= if release.has_docs do %>
