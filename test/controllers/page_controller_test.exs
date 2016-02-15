@@ -43,7 +43,7 @@ defmodule HexWeb.PageControllerTest do
     assert conn.status == 200
     assert conn.assigns[:total]["all"] == 9
     assert conn.assigns[:total]["week"] == 0
-    assert conn.assigns[:package_top] == %{"foo" => 7, "bar" => 2}
+    assert conn.assigns[:package_top] == [{"foo", 7}, {"bar", 2}]
     assert conn.assigns[:num_packages] == 3
     assert conn.assigns[:num_releases] == 6
     assert Enum.count(conn.assigns[:releases_new]) == 6
