@@ -29,7 +29,18 @@ defmodule HexWeb.API.OwnerController do
     user = HexWeb.Repo.get_by!(User, email: email)
     package = conn.assigns.package
 
-    case Package.create_owner(conn.assigns.package, user) |> HexWeb.Repo.insert do
+    result =
+      HexWeb.Repo.transaction(fn ->
+        case Package.create_owner(conn.assigns.package, user) |> HexWeb.Repo.insert do
+          {:ok, owner} ->
+            audit(conn, "owner.add", {package, user})
+            owner
+          {:error, changeset} ->
+            HexWeb.Repo.rollback(changeset)
+        end
+      end)
+
+    case result do
       {:ok, _} ->
         owners = assoc(package, :owners) |> HexWeb.Repo.all
 
@@ -60,8 +71,10 @@ defmodule HexWeb.API.OwnerController do
       |> api_cache(:private)
       |> send_resp(403, "")
     else
-      Package.owner(package, owner)
-      |> HexWeb.Repo.delete_all
+      HexWeb.Repo.transaction(fn ->
+        Package.owner(package, owner) |> HexWeb.Repo.delete_all
+        audit(conn, "owner.remove", {package, owner})
+      end)
 
       HexWeb.Mailer.send(
         "owner_remove.html",

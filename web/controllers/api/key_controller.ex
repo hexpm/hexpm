@@ -23,7 +23,18 @@ defmodule HexWeb.API.KeyController do
   end
 
   def create(conn, params) do
-    case Key.create(conn.assigns.user, conn.params) |> HexWeb.Repo.insert do
+    result =
+      HexWeb.Repo.transaction(fn ->
+        case Key.create(conn.assigns.user, conn.params) |> HexWeb.Repo.insert do
+          {:ok, key} ->
+            audit(conn, "key.generate", key)
+            key
+          {:error, changeset} ->
+            HexWeb.Repo.rollback(changeset)
+        end
+      end)
+
+    case result do
       {:ok, key} ->
         location = key_url(conn, :show, params["name"])
 
@@ -32,14 +43,17 @@ defmodule HexWeb.API.KeyController do
         |> api_cache(:private)
         |> put_status(201)
         |> render(:show, key: key)
-      {:error, errors} ->
-        validation_failed(conn, errors)
+      {:error, changeset} ->
+        validation_failed(conn, changeset.errors)
     end
   end
 
   def delete(conn, %{"name" => name}) do
     if key = HexWeb.Repo.one(Key.get(name, conn.assigns.user)) do
-      HexWeb.Repo.delete!(key)
+      HexWeb.Repo.transaction(fn ->
+        HexWeb.Repo.delete!(key)
+        audit(conn, "key.remove", key)
+      end)
 
       conn
       |> api_cache(:private)

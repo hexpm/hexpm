@@ -37,7 +37,18 @@ defmodule HexWeb.API.ReleaseController do
   end
 
   def delete(conn, _params) do
-    case Release.delete(conn.assigns.release) |> HexWeb.Repo.delete do
+    result =
+      HexWeb.Repo.transaction(fn ->
+        case Release.delete(conn.assigns.release) |> HexWeb.Repo.delete do
+          {:ok, release} ->
+            audit(conn, "release.revert", {conn.assigns.package, release})
+            release
+          {:error, changeset} ->
+            HexWeb.Repo.rollback(changeset)
+        end
+      end)
+
+    case result do
       {:ok, release} ->
         # TODO: Remove package from database if this was the only release
         revert(release)
@@ -108,7 +119,18 @@ defmodule HexWeb.API.ReleaseController do
   end
 
   defp create(conn, package, release_params, checksum, user, body) do
-    case Release.create(package, release_params, checksum) do
+    result =
+      HexWeb.Repo.transaction(fn ->
+        case Release.create(package, release_params, checksum) do
+          {:ok, release} ->
+            audit(conn, "release.publish", {package, release})
+            release
+          {:error, changeset} ->
+            HexWeb.Repo.rollback(changeset)
+        end
+      end)
+
+    case result do
       {:ok, release} ->
         after_release(package, release.version, user, body)
 

@@ -23,6 +23,11 @@ defmodule HexWeb.API.KeyControllerTest do
 
     assert conn.status == 201
     assert HexWeb.Repo.one(Key.get("macbook", user))
+
+    log = HexWeb.Repo.one!(HexWeb.AuditLog)
+    assert log.actor_id == user.id
+    assert log.action == "key.generate"
+    assert %{"name" => "macbook"} = log.params
   end
 
   test "get key" do
@@ -71,6 +76,11 @@ defmodule HexWeb.API.KeyControllerTest do
     assert conn.status == 204
     assert HexWeb.Repo.one(Key.get("macbook", user))
     refute HexWeb.Repo.one(Key.get("computer", user))
+
+    log = HexWeb.Repo.one!(HexWeb.AuditLog)
+    assert log.actor_id == user.id
+    assert log.action == "key.remove"
+    assert %{"name" => "computer"} = log.params
   end
 
   test "key authorizes" do
