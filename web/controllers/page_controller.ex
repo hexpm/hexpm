@@ -8,8 +8,7 @@ defmodule HexWeb.PageController do
       num_releases: Release.count
                     |> HexWeb.Repo.one!,
       package_top:  PackageDownload.top("all", 10)
-                    |> HexWeb.Repo.all
-                    |> Enum.into(%{}),
+                    |> HexWeb.Repo.all,
       package_new:  Package.recent(10)
                     |> HexWeb.Repo.all,
       releases_new: Release.recent(10)
