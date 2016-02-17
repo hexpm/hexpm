@@ -22,7 +22,7 @@ defmodule HexWeb.Endpoint do
   plug Plug.Logger
 
   plug Plug.Parsers,
-    parsers: [:json, HexWeb.PlugParser],
+    parsers: [:urlencoded, :json, HexWeb.PlugParser],
     pass: ["*/*"],
     json_decoder: Poison
 

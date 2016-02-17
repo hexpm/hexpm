@@ -5,11 +5,11 @@
   </h3>
 <% else %>
   <h2 class="text-danger">Failed to reset account password</h2>
-  <h3>
+  <p>
     We could not reset the password to your account. Please check the URL and try again.
+  </p>
 
-    <small>
-      If you believe there is an error, feel free to email <a href="mailto:support@hex.pm">support</a>, or leave an issue on <a href="https://github.com/hexpm">GitHub</a>.
-    </small>
-  </h3>
+  <p>
+    If you believe this was an error, please email <a href="mailto:support@hex.pm">support</a>, or open an issue at <a href="https://github.com/hexpm">GitHub</a>.
+  </p>
 <% end %>
