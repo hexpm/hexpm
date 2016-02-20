@@ -108,13 +108,10 @@ defmodule HexWeb.API.DocsController do
   end
 
   def upload_docs(package, release, files, body) do
-    name     = package.name
-    version  = to_string(release.version)
-
-    store = Application.get_env(:hex_web, :store)
-
+    name            = package.name
+    version         = to_string(release.version)
     unversioned_key = "docspage/#{package.name}"
-    versioned_key = "docspage/#{package.name}/#{release.version}"
+    versioned_key   = "docspage/#{package.name}/#{release.version}"
 
     files =
       Enum.flat_map(files, fn {path, data} ->
@@ -127,7 +124,7 @@ defmodule HexWeb.API.DocsController do
     # Delete old files
     # Add "/" so that we don't get prefix matches, for example phoenix
     # would match phoenix_html
-    existing_paths = store.list_docs_pages("#{name}/")
+    existing_paths = HexWeb.Store.list_docs_pages("#{name}/")
     Enum.each(existing_paths, fn path ->
       first = Path.relative_to(path, name) |> Path.split |> hd
       cond do
@@ -137,20 +134,20 @@ defmodule HexWeb.API.DocsController do
           :ok
         # Current (/ecto/0.8.1/...)
         first == version ->
-          store.delete_docs_page(path)
+          HexWeb.Store.delete_docs_page(path)
         # Top-level docs, don't match version directories (/ecto/...)
         Version.parse(first) == :error ->
-          store.delete_docs_page(path)
+          HexWeb.Store.delete_docs_page(path)
         true ->
           :ok
       end
     end)
 
     # Put tarball
-    store.put_docs("#{name}-#{version}.tar.gz", body)
+    HexWeb.Store.put_docs("#{name}-#{version}.tar.gz", body)
 
     # Upload new files
-    Enum.each(files, fn {path, key, data} -> store.put_docs_page(path, key, data) end)
+    Enum.each(files, fn {path, key, data} -> HexWeb.Store.put_docs_page(path, key, data) end)
 
     # Set docs flag on release
     Ecto.Changeset.change(release, has_docs: true)
@@ -183,13 +180,12 @@ defmodule HexWeb.API.DocsController do
     task = fn ->
       name    = release.package.name
       version = to_string(release.version)
-      store   = Application.get_env(:hex_web, :store)
-      paths   = store.list_docs_pages(Path.join(name, version))
+      paths   = HexWeb.Store.list_docs_pages(Path.join(name, version))
 
-      store.delete_docs("#{name}-#{version}.tar.gz")
+      HexWeb.Store.delete_docs("#{name}-#{version}.tar.gz")
 
       Enum.each(paths, fn path ->
-        store.delete_docs_page(path)
+        HexWeb.Store.delete_docs_page(path)
       end)
 
       Ecto.Changeset.change(release, has_docs: false)

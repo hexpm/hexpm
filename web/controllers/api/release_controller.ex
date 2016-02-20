@@ -133,8 +133,7 @@ defmodule HexWeb.API.ReleaseController do
   end
 
   defp job(package, version, body) do
-    store = Application.get_env(:hex_web, :store)
-    store.put_release("#{package.name}-#{version}.tar", body)
+    HexWeb.Store.put_release("#{package.name}-#{version}.tar", body)
     HexWeb.RegistryBuilder.rebuild
   end
 
@@ -158,17 +157,16 @@ defmodule HexWeb.API.ReleaseController do
     task = fn ->
       name    = release.package.name
       version = to_string(release.version)
-      store   = Application.get_env(:hex_web, :store)
 
       # Delete release tarball
-      store.delete_release("#{name}-#{version}.tar")
+      HexWeb.Store.delete_release("#{name}-#{version}.tar")
 
       # Delete relevant documentation (if it exists)
       if release.has_docs do
-        paths = store.list_docs_pages(Path.join(name, version))
-        store.delete_docs("#{name}-#{version}.tar.gz")
+        paths = HexWeb.Store.list_docs_pages(Path.join(name, version))
+        HexWeb.Store.delete_docs("#{name}-#{version}.tar.gz")
         Enum.each(paths, fn path ->
-          store.delete_docs_page(path)
+          HexWeb.Store.delete_docs_page(path)
         end)
       end
 

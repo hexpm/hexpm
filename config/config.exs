@@ -9,28 +9,24 @@ logs_buckets = if value = System.get_env("HEX_LOGS_BUCKETS"),
 config :hex_web,
   user_confirm:  true,
   tmp_dir:       Path.expand("tmp"),
-
   app_host:      System.get_env("APP_HOST"),
-
-  store:         store,
-  email:         email,
-
-  s3_url:        System.get_env("HEX_S3_URL") || "https://s3.amazonaws.com",
-  s3_bucket:     System.get_env("HEX_S3_BUCKET"),
-  docs_bucket:   System.get_env("HEX_DOCS_BUCKET"),
-  logs_buckets:  logs_buckets,
-  docs_url:      System.get_env("HEX_DOCS_URL"),
-  cdn_url:       System.get_env("HEX_CDN_URL"),
-
-  email_host:    System.get_env("HEX_EMAIL_HOST"),
-  ses_endpoint:  System.get_env("HEX_SES_ENDPOINT") || "email-smtp.us-west-2.amazonaws.com",
-  ses_port:      System.get_env("HEX_SES_PORT") || "587",
-  ses_user:      System.get_env("HEX_SES_USERNAME"),
-  ses_pass:      System.get_env("HEX_SES_PASSWORD"),
-
   secret:        System.get_env("HEX_SECRET"),
+  signing_key:   System.get_env("HEX_SIGNING_KEY"),
 
-  signing_key:   System.get_env("HEX_SIGNING_KEY")
+  store_impl:   store,
+  s3_url:       System.get_env("HEX_S3_URL") || "https://s3.amazonaws.com",
+  s3_bucket:    System.get_env("HEX_S3_BUCKET"),
+  docs_bucket:  System.get_env("HEX_DOCS_BUCKET"),
+  logs_buckets: logs_buckets,
+  docs_url:     System.get_env("HEX_DOCS_URL"),
+  cdn_url:      System.get_env("HEX_CDN_URL"),
+
+  email_impl:   email,
+  email_host:   System.get_env("HEX_EMAIL_HOST"),
+  ses_endpoint: System.get_env("HEX_SES_ENDPOINT") || "email-smtp.us-west-2.amazonaws.com",
+  ses_port:     System.get_env("HEX_SES_PORT") || "587",
+  ses_user:     System.get_env("HEX_SES_USERNAME"),
+  ses_pass:     System.get_env("HEX_SES_PASSWORD")
 
 config :ex_aws,
   access_key_id:     {:system, "HEX_S3_ACCESS_KEY"},

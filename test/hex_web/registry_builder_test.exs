@@ -96,10 +96,6 @@ defmodule HexWeb.RegistryBuilderTest do
   end
 
   test "integration fetch registry" do
-    if Application.get_env(:hex_web, :s3_bucket) do
-      Application.put_env(:hex_web, :store, HexWeb.Store.S3)
-    end
-
     keypath  = Path.join([__DIR__, "..", "fixtures"])
     key      = File.read!(Path.join(keypath, "testkey.pem"))
     Application.put_env(:hex_web, :signing_key, key)
@@ -121,8 +117,6 @@ defmodule HexWeb.RegistryBuilderTest do
     conn = get conn, "registry.ets.gz.signed"
     assert conn.status == 200
     assert conn.resp_body == signature
-  after
-    Application.put_env(:hex_web, :store, HexWeb.Store.Local)
   end
 
   # test "building is blocking" do

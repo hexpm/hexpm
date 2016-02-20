@@ -8,14 +8,13 @@ defmodule HexWeb.StatsJob do
   def run(date, buckets, max_downloads_per_ip \\ 100, dryrun? \\ false) do
     start()
 
-    store       = Application.get_env(:hex_web, :store)
     prefix      = "hex/#{date_string(date)}"
     {:ok, date} = Ecto.Type.load(Ecto.Date, date)
 
     dict =
       Enum.reduce(buckets, %{}, fn [bucket, region], dict ->
-        keys = store.list_logs(region, bucket, prefix)
-        process_keys(store, region, bucket, keys, dict)
+        keys = HexWeb.Store.list_logs(region, bucket, prefix)
+        process_keys(region, bucket, keys, dict)
       end)
 
     # TODO: Map/Reduce
@@ -54,9 +53,9 @@ defmodule HexWeb.StatsJob do
     HexWeb.Repo.start_link
   end
 
-  defp process_keys(store, region, bucket, keys, dict) do
+  defp process_keys(region, bucket, keys, dict) do
     Enum.reduce(keys, dict, fn key, dict ->
-      store.get_logs(region, bucket, key)
+      HexWeb.Store.get_logs(region, bucket, key)
       |> process_file(dict)
     end)
   end
