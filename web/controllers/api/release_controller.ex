@@ -154,7 +154,7 @@ defmodule HexWeb.API.ReleaseController do
       docs: false)
   end
 
-  def revert(release) do
+  defp revert(release) do
     task = fn ->
       name    = release.package.name
       version = to_string(release.version)

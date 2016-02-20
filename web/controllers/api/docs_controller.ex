@@ -113,13 +113,16 @@ defmodule HexWeb.API.DocsController do
 
     store = Application.get_env(:hex_web, :store)
 
+    unversioned_key = "docspage/#{package.name}"
+    versioned_key = "docspage/#{package.name}/#{release.version}"
+
     files =
       Enum.flat_map(files, fn {path, data} ->
-        [{Path.join([name, version, path]), data},
-         {Path.join(name, path), data}]
+        [{Path.join([name, version, path]), versioned_key, data},
+         {Path.join(name, path), unversioned_key, data}]
       end)
 
-    paths = Enum.into(files, HashSet.new, &elem(&1, 0))
+    paths = Enum.into(files, MapSet.new, &elem(&1, 0))
 
     # Delete old files
     # Add "/" so that we don't get prefix matches, for example phoenix
@@ -147,7 +150,7 @@ defmodule HexWeb.API.DocsController do
     store.put_docs("#{name}-#{version}.tar.gz", body)
 
     # Upload new files
-    Enum.each(files, fn {path, data} -> store.put_docs_page(path, data) end)
+    Enum.each(files, fn {path, key, data} -> store.put_docs_page(path, key, data) end)
 
     # Set docs flag on release
     Ecto.Changeset.change(release, has_docs: true)

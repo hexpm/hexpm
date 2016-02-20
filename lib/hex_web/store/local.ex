@@ -74,7 +74,7 @@ defmodule HexWeb.Store.Local do
     send_file(conn, path)
   end
 
-  def put_docs_page(path, data) do
+  def put_docs_page(path, _key, data) do
     path = Path.join("docs_pages", path)
     put(path, data)
   end
