@@ -149,6 +149,10 @@ defmodule HexWeb.API.DocsController do
     # Upload new files
     Enum.each(files, fn {path, key, data} -> HexWeb.Store.put_docs_page(path, key, data) end)
 
+    # Purge cache
+    HexWeb.CDN.purge_key(:fastly_hexdocs, unversioned_key)
+    HexWeb.CDN.purge_key(:fastly_hexdocs, versioned_key)
+
     # Set docs flag on release
     Ecto.Changeset.change(release, has_docs: true)
     |> HexWeb.Repo.update!
