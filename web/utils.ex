@@ -247,4 +247,12 @@ defmodule HexWeb.Utils do
     :public_key.sign({:digest, file}, :sha512, key)
     |> Base.encode16(case: :lower)
   end
+
+  defmacro defdispatch({function, _, args}, to: target) do
+    quote do
+      def unquote(function)(unquote_splicing(args)) do
+        unquote(target).unquote(function)(unquote_splicing(args))
+      end
+    end
+  end
 end

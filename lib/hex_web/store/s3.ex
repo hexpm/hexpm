@@ -64,12 +64,13 @@ defmodule HexWeb.Store.S3 do
     redirect(conn, :cdn_url, path)
   end
 
-  def put_docs_page(path, data) do
+  def put_docs_page(path, key, data) do
     opts = case Path.extname(path) do
       "." <> ext -> [content_type: Plug.MIME.type(ext)]
       ""         -> []
     end
-    |> Keyword.put(:cache_control, "public, max-age=1800")
+    |> Keyword.put(:cache_control, "public, max-age=86400")
+    |> Keyword.put(:meta, [{"surrogate-key", key}])
 
     upload(:docs_bucket, path, data, opts)
   end

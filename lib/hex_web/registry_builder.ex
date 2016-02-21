@@ -110,15 +110,13 @@ defmodule HexWeb.RegistryBuilder do
     :ets.delete(tid)
 
     output = File.read!(file)
-
-    store = Application.get_env(:hex_web, :store)
-    store.put_registry(output)
+    HexWeb.Store.put_registry(output)
 
     if key = Application.get_env(:hex_web, :signing_key) do
       checksum = :crypto.hash(:sha512, output)
       signature = HexWeb.Utils.sign(checksum, key)
 
-      store.put_registry_signature(signature)
+      HexWeb.Store.put_registry_signature(signature)
     end
 
     HexWeb.Registry.set_done(handle)

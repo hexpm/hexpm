@@ -21,13 +21,7 @@ defmodule HexWeb.TestControllerTest do
   end
 
   # test "fetch tarball" do
-  #   if Application.get_env(:hex_web, :s3_bucket) do
-  #     Application.put_env(:hex_web, :store, HexWeb.Store.S3)
-  #   end
-
   #   conn = get conn(), "tarballs/decimal-0.0.1.tar"
   #   assert conn.status == 200
-  # after
-  #   Application.put_env(:hex_web, :store, HexWeb.Store.Local)
   # end
 end

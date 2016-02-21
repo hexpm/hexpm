@@ -11,6 +11,7 @@ defmodule HexWeb.API.DocsControllerTest do
     :ok
   end
 
+  @tag :integration
   test "release docs" do
     user           = HexWeb.Repo.get_by!(User, username: "eric")
     {:ok, phoenix} = Package.create(user, pkg_meta(%{name: "phoenix", description: "Web framework"}))
@@ -55,15 +56,9 @@ defmodule HexWeb.API.DocsControllerTest do
     conn = get conn(), "docs/phoenix/0.0.1/index.html"
     assert conn.status == 200
     assert conn.resp_body == "HEYO"
-  after
-    Application.put_env(:hex_web, :store, HexWeb.Store.Local)
   end
 
   test "delete release with docs" do
-    if Application.get_env(:hex_web, :s3_bucket) do
-      Application.put_env(:hex_web, :store, HexWeb.Store.S3)
-    end
-
     user        = HexWeb.Repo.get_by!(User, username: "eric")
     {:ok, ecto} = Package.create(user, pkg_meta(%{name: "ecto", description: "DSL"}))
     {:ok, _}    = Release.create(ecto, rel_meta(%{version: "0.0.1", app: "ecto"}), "")
@@ -96,15 +91,10 @@ defmodule HexWeb.API.DocsControllerTest do
 
     conn = get conn(), "docs/ecto/0.0.1/index.html"
     assert conn.status in 400..499
-  after
-    Application.put_env(:hex_web, :store, HexWeb.Store.Local)
   end
 
+  @tag :integration
   test "delete docs" do
-    if Application.get_env(:hex_web, :s3_bucket) do
-      Application.put_env(:hex_web, :store, HexWeb.Store.S3)
-    end
-
     user        = HexWeb.Repo.get_by!(User, username: "eric")
     {:ok, ecto} = Package.create(user, pkg_meta(%{name: "ecto", description: "DSL"}))
     {:ok, _}    = Release.create(ecto, rel_meta(%{version: "0.0.1", app: "ecto"}), "")
@@ -136,15 +126,10 @@ defmodule HexWeb.API.DocsControllerTest do
 
     conn = get conn(), "docs/ecto/0.0.1/index.html"
     assert conn.status in 400..499
-  after
-    Application.put_env(:hex_web, :store, HexWeb.Store.Local)
   end
 
+  @tag :integration
   test "dont allow version directories in docs" do
-    if Application.get_env(:hex_web, :s3_bucket) do
-      Application.put_env(:hex_web, :store, HexWeb.Store.S3)
-    end
-
     user        = HexWeb.Repo.get_by!(User, username: "eric")
     {:ok, ecto} = Package.create(user, pkg_meta(%{name: "ecto", description: "DSL"}))
     {:ok, _}    = Release.create(ecto, rel_meta(%{version: "0.0.1", app: "ecto"}), "")
@@ -162,7 +147,5 @@ defmodule HexWeb.API.DocsControllerTest do
     assert conn.status == 422
     assert %{"errors" => %{"tar" => "directory name not allowed to match a semver version"}} =
            Poison.decode!(conn.resp_body)
-  after
-    Application.put_env(:hex_web, :store, HexWeb.Store.Local)
   end
 end
