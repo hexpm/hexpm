@@ -69,7 +69,7 @@ defmodule HexWeb.Store.S3 do
       "." <> ext -> [content_type: Plug.MIME.type(ext)]
       ""         -> []
     end
-    |> Keyword.put(:cache_control, "public, max-age=1800")
+    |> Keyword.put(:cache_control, "public, max-age=86400")
     |> Keyword.put(:meta, [{"surrogate-key", key}])
 
     upload(:docs_bucket, path, data, opts)

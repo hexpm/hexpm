@@ -4,7 +4,7 @@ defmodule HexWeb.CDN.Fastly do
 
   def purge_key(service, key) do
     service_id = Application.get_env(:hex_web, service)
-    {:ok, 200, _, %{"status" => "ok"}} = post("service/#{service_id}/key/#{key}", %{})
+    {:ok, 200, _, %{"status" => "ok"}} = post("service/#{service_id}/purge/#{key}", %{})
     :ok
   end
 
@@ -26,7 +26,10 @@ defmodule HexWeb.CDN.Fastly do
 
   defp read_body({:ok, status, headers, client}) do
     {:ok, body} = :hackney.body(client)
-    map = Poison.decode!(body)
+    map = case Poison.decode(body) do
+      {:ok, map}  -> map
+      {:error, _} -> nil
+    end
     {:ok, status, headers, map}
   end
 end
