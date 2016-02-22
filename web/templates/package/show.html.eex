@@ -90,7 +90,7 @@ tools = [mix: "mix.exs", rebar: "rebar.config", erlang_mk: "erlang.mk"]
           <%= if @current_release do %>
             <%= for req <- @current_release.requirements do %>
               <li>
-                <a href="/packages/<%= req.name %>"><strong><%= req.name %></strong></a>
+                <a href="<%= package_path(HexWeb.Endpoint, :show, req.name) %>"><strong><%= req.name %></strong></a>
                 <%= req.requirement %>
                 <%= if req.optional do %>(optional)<% end %>
               </li>

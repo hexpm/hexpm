@@ -27,13 +27,8 @@ defmodule HexWeb.ViewHelpers do
       page_links: page_links}
   end
 
-  def url_params([]) do
-    ""
-  end
-
-  def url_params(list) do
-    list = Enum.filter(list, fn {_, v} -> present?(v) end)
-    "?" <> Enum.map_join(list, "&", fn {k, v} -> "#{k}=#{v}" end)
+  def params(list) do
+    Enum.filter(list, fn {_, v} -> present?(v) end)
   end
 
   def present?(""),  do: false

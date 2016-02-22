@@ -7,14 +7,13 @@
 
   range_start = (@page - 1) * @per_page + 1
   range_end   = range_start + shown_packages - 1
+  page        = if @page == 1, do: nil, else: @page
 
-  page = if @page == 1, do: nil, else: @page
-
-  sort_name_params = url_params(search: @search, page: page, sort: "name")
-  sort_downloads_params = url_params(search: @search, page: page, sort: "downloads")
-  sort_created_params = url_params(search: @search, page: page, sort: "inserted_at")
-  prev_page_params = url_params(search: @search, page: @page-1, sort: @sort)
-  next_page_params = url_params(search: @search, page: @page+1, sort: @sort)
+  sort_name_params      = params([search: @search, page: page,    sort: "name"])
+  sort_downloads_params = params([search: @search, page: page,    sort: "downloads"])
+  sort_created_params   = params([search: @search, page: page,    sort: "inserted_at"])
+  prev_page_params      = params([search: @search, page: @page-1, sort: @sort])
+  next_page_params      = params([search: @search, page: @page+1, sort: @sort])
   %>
 
   <span class="pull-left">
@@ -29,15 +28,15 @@
       </button>
       <ul class="dropdown-menu" role="menu">
         <li role="presentation">
-          <a role="menuitem" tabindex="-1" href="/packages<%= sort_name_params %>">Name</a>
+          <a role="menuitem" tabindex="-1" href="<%= package_path(HexWeb.Endpoint, :index, sort_name_params) %>">Name</a>
         </li>
 
         <li role="presentation">
-          <a role="menuitem" tabindex="-1" href="/packages<%= sort_downloads_params %>">Downloads</a>
+          <a role="menuitem" tabindex="-1" href="<%= package_path(HexWeb.Endpoint, :index, sort_downloads_params) %>">Downloads</a>
         </li>
 
         <li role="presentation">
-          <a role="menuitem" tabindex="-1" href="/packages<%= sort_created_params %>">Recently created</a>
+          <a role="menuitem" tabindex="-1" href="<%= package_path(HexWeb.Endpoint, :index, sort_created_params) %>">Recently created</a>
         </li>
       </ul>
     </div>
@@ -56,7 +55,7 @@
       <%= for package <- @packages do %>
         <tr>
           <td>
-            <a href="/packages/<%= package.name %>">
+            <a href="<%= package_path(HexWeb.Endpoint, :show, package) %>">
               <span class="glyphicon glyphicon-folder-open" style="padding-right: 0.5em;"></span><%= package.name %>
             </a>
           </td>
@@ -83,7 +82,7 @@
 
   <ul class="pagination pull-right">
     <%= if paginate[:prev] do %>
-      <li><a href="/packages<%= prev_page_params %>">&laquo;</a></li>
+      <li><a href="<%= package_path(HexWeb.Endpoint, :index, prev_page_params) %>">&laquo;</a></li>
     <% else %>
       <li class="disabled"><span>&laquo;</span></li>
     <% end %>
@@ -95,7 +94,7 @@
         </li>
       <% else %>
         <li>
-          <a href="/packages<%= url_params(search: @search, page: counter, sort: @sort) %>">
+          <a href="<%= package_path(HexWeb.Endpoint, :index, params(search: @search, page: counter, sort: @sort)) %>">
             <%= counter %>
           </a>
         </li>
@@ -103,7 +102,7 @@
     <% end %>
 
     <%= if paginate[:next] do %>
-      <li><a href="/packages<%= next_page_params %>">&raquo;</a></li>
+      <li><a href="<%= package_path(HexWeb.Endpoint, :index, next_page_params) %>">&raquo;</a></li>
     <% else %>
       <li class="disabled"><span>&raquo;</span></li>
     <% end %>

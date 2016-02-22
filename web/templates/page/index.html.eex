@@ -50,7 +50,7 @@
       <%= for { package, downloads } <- @package_top do %>
       <tr>
         <td class="left"><%= human_number_space downloads %></td>
-        <td><a href="/packages/<%= package %>" class="no-decoration"><%= package %></a></td>
+        <td><a href="<%= package_path(HexWeb.Endpoint, :show, package) %>" class="no-decoration"><%= package %></a></td>
       </tr>
       <% end %>
     </table>
@@ -64,7 +64,7 @@
       <%= for { package, inserted_at } <- @package_new do %>
         <tr>
           <td class="left"><%= human_relative_time_from_now(inserted_at) %></td>
-          <td><a href="/packages/<%= package %>" class="no-decoration"><%= package %></a></td>
+          <td><a href="<%= package_path(HexWeb.Endpoint, :show, package) %>" class="no-decoration"><%= package %></a></td>
         </tr>
       <% end %>
     </table>
@@ -75,7 +75,7 @@
       <%= for { version, package } <- @releases_new do %>
         <tr>
           <td class="left"><%= version %></td>
-          <td><a href="/packages/<%= package %>" class="no-decoration"><%= package %></a></td>
+          <td><a href="<%= package_path(HexWeb.Endpoint, :show, package) %>" class="no-decoration"><%= package %></a></td>
         </tr>
       <% end %>
     </table>
