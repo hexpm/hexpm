@@ -49,7 +49,7 @@
             </li>
           </ul>
 
-            <form class="navbar-form navbar-right" role="search" action="<%= package_path(HexWeb.Endpoint, :index) %>" method="get">
+          <%= form_tag(package_path(HexWeb.Endpoint, :index), method: "get", class: "navbar-form navbar-right", role: "search") do %>
             <div class="input-group">
               <input type="search" class="form-control" placeholder="Search packages" name="search" value="<%= search(assigns) %>" tabindex="1">
               <input type="hidden" name="sort" value="downloads">
@@ -60,7 +60,7 @@
                 </button>
               </span>
             </div>
-          </form>
+          <% end %>
         </div>
       </div>
     </nav>

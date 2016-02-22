@@ -44,8 +44,8 @@ defmodule HexWeb.Utils do
 
   def safe_search(string) do
     string
-    |> String.replace(~r/\//, " ")
-    |> String.replace(~r/[^\w\s]/, "")
+    |> String.replace(~r/\//u, " ")
+    |> String.replace(~r/[^\w\s]/u, "")
     |> String.strip
   end
 

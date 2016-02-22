@@ -169,7 +169,7 @@ defmodule HexWeb.Package do
     name_search = escape_search(search)
     name_search = if String.length(search) >= 3, do: "%" <> name_search <> "%", else: name_search
 
-    desc_search = String.replace(search, ~r"\s+", " | ")
+    desc_search = String.replace(search, ~r"\s+"u, " | ")
 
     # without fragment("?::text", var.name) the gin_trgm_ops index will not be used
       from var in query,
@@ -179,7 +179,7 @@ defmodule HexWeb.Package do
   end
 
   defp escape_search(search) do
-    String.replace(search, ~r"(%|_)", "\\\\\\1")
+    String.replace(search, ~r"(%|_)"u, "\\\\\\1")
   end
 
   defp sort(query, :name) do
