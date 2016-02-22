@@ -26,10 +26,10 @@ defmodule HexWeb.CDN.Fastly do
 
   defp read_body({:ok, status, headers, client}) do
     {:ok, body} = :hackney.body(client)
-    map = case Poison.decode(body) do
+    body = case Poison.decode(body) do
       {:ok, map}  -> map
-      {:error, _} -> nil
+      {:error, _} -> body
     end
-    {:ok, status, headers, map}
+    {:ok, status, headers, body}
   end
 end
