@@ -182,28 +182,6 @@ defmodule HexWeb.Utils do
     result.status
   end
 
-  def mix_snippet_version(%Version{major: 0, minor: minor, patch: patch, pre: []}),
-    do: "~> 0.#{minor}.#{patch}"
-  def mix_snippet_version(%Version{major: major, minor: minor, pre: []}),
-    do: "~> #{major}.#{minor}"
-  def mix_snippet_version(%Version{major: major, minor: minor, patch: patch, pre: pre}),
-    do: "~> #{major}.#{minor}.#{patch}#{pre_snippet(pre)}"
-
-  def rebar_snippet_version(%Version{major: major, minor: minor, patch: patch, pre: pre}),
-    do: "#{major}.#{minor}.#{patch}#{pre_snippet(pre)}"
-
-  def erlang_mk_snippet_version(%Version{major: major, minor: minor, patch: patch, pre: pre}),
-    do: "#{major}.#{minor}.#{patch}#{pre_snippet(pre)}"
-
-  defp pre_snippet([]), do: ""
-  defp pre_snippet(pre) do
-    "-" <>
-      Enum.map_join(pre, ".", fn
-        int when is_integer(int) -> Integer.to_string(int)
-        string when is_binary(string) -> string
-      end)
-  end
-
   @publish_timeout 5 * 60 * 1000
 
   if Mix.env in [:test, :hex] do

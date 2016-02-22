@@ -1,6 +1,4 @@
 defmodule HexWeb.ViewHelpers do
-  import Phoenix.HTML
-
   def paginate(page, count, opts) do
     per_page  = opts[:items_per_page]
     max_links = opts[:page_links] # Needs to be odd number
@@ -42,17 +40,6 @@ defmodule HexWeb.ViewHelpers do
   def present?(nil), do: false
   def present?(_),   do: true
 
-  def paragraphize(contents) do
-    {:safe, contents} = html_escape(contents)
-
-    paragraphs =
-      contents
-      |> :binary.replace("\r", "")
-      |> String.replace(~r"(\n{2,})", "</p>\\1<p>")
-
-    raw("<p>" <> paragraphs <> "</p>")
-  end
-
   def text_length(text, length) when byte_size(text) > length do
     :binary.part(text, 0, length-3) <> "..."
   end
@@ -64,32 +51,55 @@ defmodule HexWeb.ViewHelpers do
   @doc """
   Formats a package's release info into a build tools dependency snippet.
   """
-  def format_dep_snippet(_, _, _, nil) do
+  def dep_snippet(_, _, _, nil) do
     ""
   end
 
-  def format_dep_snippet(:mix, package_name, snippet, current_release) do
-    app_name = current_release.meta["app"] || package_name
+  def dep_snippet(:mix, package_name, release) do
+    version = snippet_version(:mix, release.version)
+    app_name = release.meta["app"] || package_name
 
     if package_name == app_name do
-      "{:#{package_name}, \"#{snippet}\"}"
+      "{:#{package_name}, \"#{version}\"}"
     else
-      "{:#{app_name}, \"#{snippet}\", hex: :#{package_name}}"
+      "{:#{app_name}, \"#{version}\", hex: :#{package_name}}"
     end
   end
 
-  def format_dep_snippet(:rebar, package_name, snippet, current_release) do
-    app_name = current_release.meta["app"] || package_name
+  def dep_snippet(:rebar, package_name, release) do
+    version = snippet_version(:rebar, release.version)
+    app_name = release.meta["app"] || package_name
 
     if package_name == app_name do
-      "{#{package_name}, \"#{snippet}\"}"
+      "{#{package_name}, \"#{version}\"}"
     else
-      "{#{app_name}, \"#{snippet}\", {pkg, #{package_name}}}"
+      "{#{app_name}, \"#{version}\", {pkg, #{package_name}}}"
     end
   end
 
-  def format_dep_snippet(:erlang_mk, package_name, snippet, _current_release) do
-    "dep_#{package_name} = hex #{snippet}"
+  def dep_snippet(:erlang_mk, package_name, release) do
+    version = snippet_version(:erlang_mk, release.version)
+    "dep_#{package_name} = hex #{version}"
+  end
+
+  def snippet_version(:mix, %Version{major: 0, minor: minor, patch: patch, pre: []}),
+    do: "~> 0.#{minor}.#{patch}"
+  def snippet_version(:mix, %Version{major: major, minor: minor, pre: []}),
+    do: "~> #{major}.#{minor}"
+  def snippet_version(:mix, %Version{major: major, minor: minor, patch: patch, pre: pre}),
+    do: "~> #{major}.#{minor}.#{patch}#{pre_snippet(pre)}"
+
+  def snippet_version(other, %Version{major: major, minor: minor, patch: patch, pre: pre})
+    when other in [:rebar, :erlang_mk],
+    do: "#{major}.#{minor}.#{patch}#{pre_snippet(pre)}"
+
+  defp pre_snippet([]), do: ""
+  defp pre_snippet(pre) do
+    "-" <>
+      Enum.map_join(pre, ".", fn
+        int when is_integer(int) -> Integer.to_string(int)
+        string when is_binary(string) -> string
+      end)
   end
 
   def human_number_space(string) when is_binary(string) do

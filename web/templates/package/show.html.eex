@@ -1,3 +1,14 @@
+<%
+description = @package.meta["description"]
+# TODO: Drop support for contributors (maintainers released in 0.9.0, date TBD)
+maintains = @package.meta["maintainers"] || @package.meta["contributors"] || []
+licenses = @package.meta["licenses"] || []
+links = Enum.to_list(@package.meta["links"] || [])
+build_tools = @current_release && @current_release.meta["build_tools"] || []
+
+tools = [mix: "mix.exs", rebar: "rebar.config", erlang_mk: "erlang.mk"]
+%>
+
 <div class="page-header" style="margin-top: 0;">
   <h2>
     <a href="/packages/<%= @package.name %>"><%= @package.name %></a>
@@ -5,18 +16,10 @@
       <small><%= @current_release.version %></small>
     <% end %>
   </h2>
-  <%= if description = @package.meta["description"] do %>
-    <span class="description"><%= paragraphize(description) %></span>
+  <%= if description do %>
+    <span class="description"><%= text_to_html(description) %></span>
   <% end %>
 </div>
-
-<%
-# TODO: Drop support for contributors (maintainers released in 0.9.0, date TBD)
-maintains = @package.meta["maintainers"] || @package.meta["contributors"] || []
-licenses = @package.meta["licenses"] || []
-links = Enum.to_list(@package.meta["links"] || [])
-build_tools = @current_release && @current_release.meta["build_tools"] || []
-%>
 
 <div class="row">
   <div class="col-sm-8">
@@ -122,51 +125,24 @@ build_tools = @current_release && @current_release.meta["build_tools"] || []
       </div>
     </div>
     <div class="panel panel-default">
-      <div class="panel-heading"><h4 class="panel-title">Config</h4></div>
+      <div class="panel-heading"><h4 class="panel-title">Configs</h4></div>
       <div class="panel-body">
-        <div class="package-snippet">
-          mix.exs:
-          <div class="input-group input-group-sm">
-
-            <input type="text" class="form-control snippet"
-              value="<%= format_dep_snippet(:mix, @package.name, @mix_snippet, @current_release) %>"
-              onfocus="this.select();"
-              readonly="readonly"  id="mix-snippet" />
-            <span class="input-group-btn">
-              <button class="btn btn-default btn-no-hover" type="button" onclick="App.copy_snippet('mix-snippet', this);">
-                <span class="glyphicon glyphicon-copy"></span>
-              </button>
-            </span>
+        <%= for {tool, file} <- tools do %>
+          <div class="package-snippet">
+            <%= file %>:
+            <div class="input-group input-group-sm">
+              <input type="text" class="form-control snippet"
+                value="<%= dep_snippet(tool, @package.name, @current_release) %>"
+                onfocus="this.select();"
+                readonly="readonly" id="<%= tool %>-snippet" />
+              <span class="input-group-btn">
+                <button class="btn btn-default btn-no-hover" type="button" onclick="App.copy_snippet('<%= tool %>-snippet', this);">
+                  <span class="glyphicon glyphicon-copy"></span>
+                </button>
+              </span>
+            </div>
           </div>
-        </div>
-        <div class="package-snippet">
-          rebar.config:
-          <div class="input-group input-group-sm">
-            <input type="text" class="form-control input-sm snippet"
-              value="<%= format_dep_snippet(:rebar, @package.name, @rebar_snippet, @current_release) %>"
-              onfocus="this.select();"
-              readonly="readonly"  id="rebar-snippet" />
-            <span class="input-group-btn">
-              <button class="btn btn-default btn-no-hover" type="button" onclick="App.copy_snippet('rebar-snippet', this);">
-                <span class="glyphicon glyphicon-copy"></span>
-              </button>
-            </span>
-          </div>
-        </div>
-        <div class="package-snippet">
-          erlang.mk:
-          <div class="input-group input-group-sm">
-            <input type="text" class="form-control input-sm snippet"
-              value="<%= format_dep_snippet(:erlang_mk, @package.name, @erlang_mk_snippet, @current_release) %>"
-              onfocus="this.select();"
-              readonly="readonly"  id="erlang-mk-snippet" />
-            <span class="input-group-btn">
-              <button class="btn btn-default btn-no-hover" type="button" onclick="App.copy_snippet('erlang-mk-snippet', this);">
-                <span class="glyphicon glyphicon-copy"></span>
-              </button>
-            </span>
-          </div>
-        </div>
+        <% end %>
       </div>
     </div>
   </div>
