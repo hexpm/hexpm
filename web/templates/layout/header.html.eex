@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="description" content="A package manager for the Erlang ecosystem">
+    <meta name="description" content="<%= description(assigns) %>">
     <link rel="search" type="application/opensearchdescription+xml" title="Hex" href="<%= static_path(HexWeb.Endpoint, "/hexsearch.xml") %>">
     <link rel="stylesheet" href="<%= static_path(HexWeb.Endpoint, "/css/main.css") %>">
     <title><%= title(assigns) %></title>
