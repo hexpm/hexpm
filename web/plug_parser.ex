@@ -28,7 +28,7 @@ defmodule HexWeb.PlugParser do
       {:ok, params} ->
         {:ok, params, conn}
       {:error, reason} ->
-        raise HexWeb.BadRequestError, message: reason
+        raise HexWeb.Plugs.BadRequestError, message: reason
     end
   end
 
@@ -37,7 +37,7 @@ defmodule HexWeb.PlugParser do
       {:ok, params} ->
         {:ok, params, conn}
       {:error, reason} ->
-        raise HexWeb.BadRequestError, message: reason
+        raise HexWeb.Plugs.BadRequestError, message: reason
     end
   end
 
@@ -46,7 +46,7 @@ defmodule HexWeb.PlugParser do
       {:ok, params} ->
         {:ok, params, conn}
       _ ->
-        raise HexWeb.BadRequestError, message: "malformed JSON"
+        raise HexWeb.Plugs.BadRequestError, message: "malformed JSON"
     end
   end
 end

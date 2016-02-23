@@ -9,7 +9,7 @@ config :hex_web,
 
 config :hex_web, HexWeb.Endpoint,
   http: [port: 4043],
-  debug_errors: true
+  debug_errors: false
 
 config :hex_web, HexWeb.Repo,
   adapter: Ecto.Adapters.Postgres,
