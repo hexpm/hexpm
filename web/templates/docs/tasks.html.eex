@@ -226,7 +226,7 @@ recommended to do so.</p>
 can include wildcards. Defaults to `["lib", "priv", "mix.exs", "README*",
 "readme*", "LICENSE*", "license*", "CHANGELOG*", "changelog*", "src"]`.</p>
 </li>
-<li><p><code class="inline">:contributors</code> - List of names of contributors.</p>
+<li><p><code class="inline">:maintainers</code> - List of names of maintainers.</p>
 </li>
 <li><p><code class="inline">:licenses</code> - List of licenses used by the package.</p>
 </li>
