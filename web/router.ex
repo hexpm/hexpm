@@ -45,6 +45,7 @@ defmodule HexWeb.Router do
   end
 
   scope "/", HexWeb do
+    get "sitemap.xml", SitemapController, :sitemap
     get "installs/hex.ez", InstallerController, :get_archive
 
     # TODO: Check if we can replace this
