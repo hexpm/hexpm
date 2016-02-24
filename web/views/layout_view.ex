@@ -17,6 +17,14 @@ defmodule HexWeb.LayoutView do
     end
   end
 
+  def canonical_url(assigns) do
+    if url = Map.get(assigns, :canonical_url) do
+      tag(:link, rel: "canonical", href: url)
+    else
+      nil
+    end
+  end
+
   def active(assigns, page) do
     if Map.get(assigns, :active) == page do
       raw ~s( class="active")

@@ -62,6 +62,7 @@ defmodule HexWeb.PackageController do
       active:            :packages,
       title:             package.name,
       description:       package.meta["description"],
+      canonical_url:     package_url(conn, :show, package),
       package:           package,
       releases:          releases,
       current_release:   release,
