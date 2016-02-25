@@ -39,7 +39,7 @@ config :ex_aws,
 
 config :ex_aws, :httpoison_opts,
   recv_timeout: 30_000,
-  hackney: [pool: false]
+  hackney: [pool: true]
 
 config :comeonin,
   bcrypt_log_rounds: 4
