@@ -9,6 +9,7 @@ defmodule HexWeb.Package do
   schema "packages" do
     field :name, :string
     field :meta, :map
+    field :docs_updated_at, Ecto.DateTime
     timestamps
 
     has_many :releases, Release
@@ -129,6 +130,14 @@ defmodule HexWeb.Package do
     |> owners
     |> exclude(:select)
     |> select([o], count(o.id) == 1)
+  end
+
+  def all_has_docs do
+    from(p in Package,
+         distinct: true,
+         join: r in assoc(p, :releases),
+         where: r.has_docs == true and not is_nil(p.docs_updated_at),
+         select: p)
   end
 
   def create_owner(package, user) do

@@ -156,6 +156,8 @@ defmodule HexWeb.API.DocsController do
     # Set docs flag on release
     Ecto.Changeset.change(release, has_docs: true)
     |> HexWeb.Repo.update!
+
+    publish_sitemap()
   end
 
   defp check_version_dirs?(files) do
@@ -194,9 +196,40 @@ defmodule HexWeb.API.DocsController do
 
       Ecto.Changeset.change(release, has_docs: false)
       |> HexWeb.Repo.update!
+
+      publish_sitemap()
     end
 
     # TODO: Send mails
     HexWeb.Utils.task(task, fn -> nil end, fn _ -> nil end)
   end
+
+  def publish_sitemap do
+    # query for has docs packages
+    packages = HexWeb.Package.all_has_docs |> HexWeb.Repo.all
+
+    # build sitemap
+    result = render_sitemap(packages)
+
+    # publish sitemap
+    HexWeb.Store.put_docs_page("sitemap.xml", "docspage/sitemap.xml", result)
+  end
+
+  @sitemap_template """
+  <?xml version="1.0" encoding="utf-8"?>
+  <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+            xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+            xsi:schemaLocation="http://www.sitemaps.org/schemas/sitemap/0.9 http://www.sitemaps.org/schemas/sitemap/0.9/sitemap.xsd">
+      <%= for package <- packages do %>
+        <url>
+          <loc>https://hexdocs.pm/<%= package.name %></loc>
+          <lastmod><%=  Ecto.DateTime.to_iso8601(package.docs_updated_at) %></lastmod>
+          <changefreq>daily</changefreq>
+          <priority>0.8</priority>
+        </url>
+      <% end %>
+  </urlset>
+  """
+  require EEx
+  EEx.function_from_string :defp, :render_sitemap, @sitemap_template, [:packages]
 end
