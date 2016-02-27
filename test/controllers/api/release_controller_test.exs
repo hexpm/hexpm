@@ -27,7 +27,7 @@ defmodule HexWeb.API.ReleaseControllerTest do
     user_id = HexWeb.Repo.get_by!(User, username: "eric").id
     package = assert HexWeb.Repo.get_by(Package, name: "ecto")
     assert package.name == "ecto"
-    assert [%User{id: ^user_id}] = Package.owners(package) |> HexWeb.Repo.all
+    assert [%User{id: ^user_id}] = assoc(package, :owners) |> HexWeb.Repo.all
   end
 
   test "update package" do

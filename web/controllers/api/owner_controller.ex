@@ -5,7 +5,7 @@ defmodule HexWeb.API.OwnerController do
   plug :authorize, fun: &package_owner?/2
 
   def index(conn, _params) do
-    owners = Package.owners(conn.assigns.package) |> HexWeb.Repo.all
+    owners = assoc(conn.assigns.package, :owners) |> HexWeb.Repo.all
     conn
     |> api_cache(:private)
     |> render(:index, owners: owners)

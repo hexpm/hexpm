@@ -9,7 +9,7 @@ end
 
 releases = HexWeb.Release.all(package)
            |> HexWeb.Repo.all
-owners   = HexWeb.Package.owners(package)
+owners   = Ecto.assoc(package, :owners)
            |> HexWeb.Repo.all
 
 IO.puts name

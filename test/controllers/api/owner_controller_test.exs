@@ -72,7 +72,7 @@ defmodule HexWeb.API.OwnerControllerTest do
     assert conn.status == 204
 
     package = HexWeb.Repo.get_by!(Package, name: "postgrex")
-    assert [first, second] = Package.owners(package) |> HexWeb.Repo.all
+    assert [first, second] = assoc(package, :owners) |> HexWeb.Repo.all
     assert first.username in ["jose", "eric"]
     assert second.username in ["jose", "eric"]
   end
@@ -93,7 +93,7 @@ defmodule HexWeb.API.OwnerControllerTest do
            |> put_req_header("authorization", key_for("eric"))
            |> delete("api/packages/postgrex/owners/jose%40mail.com")
     assert conn.status == 204
-    assert [%User{username: "eric"}] = Package.owners(package) |> HexWeb.Repo.all
+    assert [%User{username: "eric"}] = assoc(package, :owners) |> HexWeb.Repo.all
   end
 
   test "delete package owner authorizes" do
@@ -110,6 +110,6 @@ defmodule HexWeb.API.OwnerControllerTest do
            |> put_req_header("authorization", key_for("eric"))
            |> delete("api/packages/postgrex/owners/eric%40mail.com")
     assert conn.status == 403
-    assert [%User{username: "eric"}] = Package.owners(package) |> HexWeb.Repo.all
+    assert [%User{username: "eric"}] = assoc(package, :owners) |> HexWeb.Repo.all
   end
 end

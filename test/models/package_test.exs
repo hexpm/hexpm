@@ -14,7 +14,7 @@ defmodule HexWeb.PackageTest do
     user = HexWeb.Repo.get_by!(User, username: "eric")
     user_id = user.id
     assert {:ok, %Package{}} = Package.create(user, pkg_meta(%{name: "ecto", description: "DSL"}))
-    assert [%User{id: ^user_id}] = HexWeb.Repo.get_by(Package, name: "ecto") |> Package.owners |> HexWeb.Repo.all
+    assert [%User{id: ^user_id}] = HexWeb.Repo.get_by(Package, name: "ecto") |> assoc(:owners) |> HexWeb.Repo.all
     assert is_nil(HexWeb.Repo.get_by(Package, name: "postgrex"))
   end
 

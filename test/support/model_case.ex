@@ -17,7 +17,7 @@ defmodule HexWeb.ModelCase do
   using do
     quote do
       alias HexWeb.Repo
-      import Ecto.Model
+      import Ecto
       import Ecto.Query, only: [from: 2]
       import HexWeb.ModelCase
       import HexWeb.TestHelpers

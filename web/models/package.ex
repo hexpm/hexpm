@@ -12,7 +12,8 @@ defmodule HexWeb.Package do
     timestamps
 
     has_many :releases, Release
-    has_many :owners, PackageOwner
+    has_many :package_owners, PackageOwner
+    has_many :owners, through: [:package_owners, :owner]
     has_many :downloads, PackageDownload
   end
 
@@ -110,13 +111,6 @@ defmodule HexWeb.Package do
     changeset(package, :update, params)
   end
 
-  def owners(package) do
-    from(p in PackageOwner,
-         where: p.package_id == ^package.id,
-         join: u in User, on: u.id == p.owner_id,
-         select: u)
-  end
-
   def is_owner(package, user) do
     from(o in PackageOwner,
          where: o.package_id == ^package.id,
@@ -126,8 +120,7 @@ defmodule HexWeb.Package do
 
   def is_single_owner(package) do
     package
-    |> owners
-    |> exclude(:select)
+    |> assoc(:owners)
     |> select([o], count(o.id) == 1)
   end
 
