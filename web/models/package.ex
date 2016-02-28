@@ -125,12 +125,11 @@ defmodule HexWeb.Package do
     |> select([o], count(o.id) == 1)
   end
 
-  def all_has_docs do
+  def all_with_docs do
     from(p in Package,
-         distinct: true,
-         join: r in assoc(p, :releases),
-         where: r.has_docs == true and not is_nil(p.docs_updated_at),
-         select: p)
+         order_by: p.name,
+         where: not is_nil(p.docs_updated_at),
+         select: {p.name, p.docs_updated_at})
   end
 
   def create_owner(package, user) do

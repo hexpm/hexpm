@@ -25,6 +25,7 @@ defmodule HexWeb.Store do
   @callback delete_docs(key) :: term
   @callback send_docs(Plug.Conn.t, key) :: Plug.Conn.t
 
+  @callback put_docs_file(key, body) :: term
   @callback put_docs_page(key, cdn_key, body) :: term
   @callback list_docs_pages(prefix) :: [key]
   @callback delete_docs_page(key) :: term
@@ -43,6 +44,7 @@ defmodule HexWeb.Store do
   defdispatch put_docs(key, body),                 to: impl
   defdispatch delete_docs(key),                    to: impl
   defdispatch send_docs(conn, key),                to: impl
+  defdispatch put_docs_file(key, body),            to: impl
   defdispatch put_docs_page(key, cdn_key, body),   to: impl
   defdispatch list_docs_pages(prefix),             to: impl
   defdispatch delete_docs_page(key),               to: impl

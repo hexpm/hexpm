@@ -64,6 +64,15 @@ defmodule HexWeb.Store.S3 do
     redirect(conn, :cdn_url, path)
   end
 
+  def put_docs_file(path, data) do
+    opts = case Path.extname(path) do
+      "." <> ext -> [content_type: Plug.MIME.type(ext)]
+      ""         -> []
+    end
+
+    upload(:docs_bucket, path, data, opts)
+  end
+
   def put_docs_page(path, key, data) do
     opts = case Path.extname(path) do
       "." <> ext -> [content_type: Plug.MIME.type(ext)]

@@ -7,10 +7,11 @@ defmodule HexWeb.Repo.Migrations.AddDocsRootUpdatedAtToPackages do
     end
     execute """
       UPDATE packages SET docs_updated_at = (
-      SELECT MAX(updated_at) FROM releases
-      WHERE has_docs = true
-      AND packages.id = releases.package_id
-      GROUP BY package_id )
+        SELECT MAX(updated_at) FROM releases
+        WHERE has_docs = true
+        AND packages.id = releases.package_id
+        GROUP BY package_id
+      )
     """
   end
 
