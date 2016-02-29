@@ -50,6 +50,53 @@ defmodule HexWeb.API.DocsControllerTest do
     assert conn.resp_body == "HEYO"
   end
 
+  @tag :integration
+  test "release beta docs" do
+    user        = HexWeb.Repo.get_by!(User, username: "eric")
+    {:ok, plug} = Package.create(user, pkg_meta(%{name: "plug", description: "Web framework"}))
+    {:ok, _}    = Release.create(plug, rel_meta(%{version: "0.0.1-beta.1", app: "plug"}), "")
+    {:ok, _}    = Release.create(plug, rel_meta(%{version: "0.5.0", app: "plug"}), "")
+    {:ok, _}    = Release.create(plug, rel_meta(%{version: "1.0.0-beta.1", app: "plug"}), "")
+
+    body = create_tarball([{'index.html', "plug v0.0.1-beta.1"}])
+    conn = conn()
+           |> put_req_header("content-type", "application/octet-stream")
+           |> put_req_header("authorization", key_for("eric"))
+           |> post("api/packages/plug/releases/0.0.1-beta.1/docs", body)
+    assert conn.status == 201
+    assert HexWeb.Repo.get_by!(assoc(plug, :releases), version: "0.0.1-beta.1").has_docs
+
+    conn = get conn(), "docs/plug/index.html"
+    assert conn.status == 200
+    assert conn.resp_body == "plug v0.0.1-beta.1"
+
+    body = create_tarball([{'index.html', "plug v0.5.0"}])
+    conn = conn()
+           |> put_req_header("content-type", "application/octet-stream")
+           |> put_req_header("authorization", key_for("eric"))
+           |> post("api/packages/plug/releases/0.5.0/docs", body)
+    assert conn.status == 201
+
+    conn = get conn(), "docs/plug/index.html"
+    assert conn.status == 200
+    assert conn.resp_body == "plug v0.5.0"
+
+    body = create_tarball([{'index.html', "plug v1.0.0-beta.1"}])
+    conn = conn()
+           |> put_req_header("content-type", "application/octet-stream")
+           |> put_req_header("authorization", key_for("eric"))
+           |> post("api/packages/plug/releases/1.0.0-beta.1/docs", body)
+    assert conn.status == 201
+
+    conn = get conn(), "docs/plug/index.html"
+    assert conn.status == 200
+    assert conn.resp_body == "plug v0.5.0"
+
+    conn = get conn(), "docs/plug/1.0.0-beta.1/index.html"
+    assert conn.status == 200
+    assert conn.resp_body == "plug v1.0.0-beta.1"
+  end
+
   test "delete release with docs" do
     user        = HexWeb.Repo.get_by!(User, username: "eric")
     {:ok, ecto} = Package.create(user, pkg_meta(%{name: "ecto", description: "DSL"}))
