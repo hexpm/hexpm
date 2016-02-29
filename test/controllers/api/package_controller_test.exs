@@ -48,15 +48,14 @@ defmodule HexWeb.API.PackageControllerTest do
   end
 
   test "fetch sort order" do
-    {year, month, day} = :erlang.date
-    {:ok, future} = Ecto.Date.load({year + 1, month, day})
+    future = %{Ecto.DateTime.utc | year: 2030, month: 1}
 
     HexWeb.Repo.get_by(Package, name: "postgrex")
-    |> Ecto.Changeset.change(updated_at: Ecto.DateTime.from_date(future))
+    |> Ecto.Changeset.change(updated_at: future)
     |> HexWeb.Repo.update!
 
     HexWeb.Repo.get_by(Package, name: "decimal")
-    |> Ecto.Changeset.change(inserted_at: Ecto.DateTime.from_date(future))
+    |> Ecto.Changeset.change(inserted_at: future)
     |> HexWeb.Repo.update!
 
     conn = get conn(), "api/packages?sort=updated_at"
