@@ -18,11 +18,7 @@ defmodule HexWeb.API.DocsControllerTest do
     {:ok, _}       = Release.create(phoenix, rel_meta(%{version: "0.0.1", app: "phoenix"}), "")
     {:ok, _}       = Release.create(phoenix, rel_meta(%{version: "0.0.2", app: "phoenix"}), "")
 
-    path = Path.join("tmp", "release-docs.tar.gz")
-    files = [{'index.html', "HEYO"}]
-    :ok = :erl_tar.create(String.to_char_list(path), files, [:compressed])
-    body = File.read!(path)
-
+    body = create_tarball([{'index.html', "HEYO"}])
     conn = conn()
            |> put_req_header("content-type", "application/octet-stream")
            |> put_req_header("authorization", key_for("eric"))
@@ -38,11 +34,7 @@ defmodule HexWeb.API.DocsControllerTest do
     assert conn.status == 200
     assert conn.resp_body == "HEYO"
 
-    path = Path.join("tmp", "release-docs.tar.gz")
-    files = [{'index.html', "NOPE"}]
-    :ok = :erl_tar.create(String.to_char_list(path), files, [:compressed])
-    body = File.read!(path)
-
+    body = create_tarball([{'index.html', "NOPE"}])
     conn = conn()
            |> put_req_header("content-type", "application/octet-stream")
            |> put_req_header("authorization", key_for("eric"))
@@ -63,11 +55,7 @@ defmodule HexWeb.API.DocsControllerTest do
     {:ok, ecto} = Package.create(user, pkg_meta(%{name: "ecto", description: "DSL"}))
     {:ok, _}    = Release.create(ecto, rel_meta(%{version: "0.0.1", app: "ecto"}), "")
 
-    path = Path.join("tmp", "release-docs.tar.gz")
-    files = [{'index.html', "HEYO"}]
-    :ok = :erl_tar.create(String.to_char_list(path), files, [:compressed])
-    body = File.read!(path)
-
+    body = create_tarball([{'index.html', "HEYO"}])
     conn = conn()
            |> put_req_header("content-type", "application/octet-stream")
            |> put_req_header("authorization", key_for("eric"))
@@ -99,11 +87,7 @@ defmodule HexWeb.API.DocsControllerTest do
     {:ok, ecto} = Package.create(user, pkg_meta(%{name: "ecto", description: "DSL"}))
     {:ok, _}    = Release.create(ecto, rel_meta(%{version: "0.0.1", app: "ecto"}), "")
 
-    path = Path.join("tmp", "release-docs.tar.gz")
-    files = [{'index.html', "HEYO"}]
-    :ok = :erl_tar.create(String.to_char_list(path), files, [:compressed])
-    body = File.read!(path)
-
+    body = create_tarball([{'index.html', "HEYO"}])
     conn = conn()
            |> put_req_header("content-type", "application/octet-stream")
            |> put_req_header("authorization", key_for("eric"))
@@ -134,11 +118,7 @@ defmodule HexWeb.API.DocsControllerTest do
     {:ok, ecto} = Package.create(user, pkg_meta(%{name: "ecto", description: "DSL"}))
     {:ok, _}    = Release.create(ecto, rel_meta(%{version: "0.0.1", app: "ecto"}), "")
 
-    path = Path.join("tmp", "release-docs.tar.gz")
-    files = [{'1.2.3', "HEYO"}]
-    :ok = :erl_tar.create(String.to_char_list(path), files, [:compressed])
-    body = File.read!(path)
-
+    body = create_tarball([{'1.2.3', "HEYO"}])
     conn = conn()
            |> put_req_header("content-type", "application/octet-stream")
            |> put_req_header("authorization", key_for("eric"))
@@ -147,5 +127,11 @@ defmodule HexWeb.API.DocsControllerTest do
     assert conn.status == 422
     assert %{"errors" => %{"tar" => "directory name not allowed to match a semver version"}} =
            Poison.decode!(conn.resp_body)
+  end
+
+  defp create_tarball(files) do
+    path = Path.join("tmp", "release-docs.tar.gz")
+    :ok = :erl_tar.create(String.to_char_list(path), files, [:compressed])
+    File.read!(path)
   end
 end
