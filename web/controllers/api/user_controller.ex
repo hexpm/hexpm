@@ -14,7 +14,7 @@ defmodule HexWeb.API.UserController do
         HexWeb.Mailer.send(
           "confirmation_request.html",
           "Hex.pm - Account confirmation",
-          user.email,
+          [user.email],
           username: user.username,
           key: user.confirmation_key)
 
@@ -50,7 +50,7 @@ defmodule HexWeb.API.UserController do
       HexWeb.Mailer.send(
         "password_reset_request.html",
         "Hex.pm - Password reset request",
-        user.email,
+        [user.email],
         username: user.username,
         key: user.reset_key)
 

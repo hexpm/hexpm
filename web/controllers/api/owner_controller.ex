@@ -27,8 +27,18 @@ defmodule HexWeb.API.OwnerController do
   def create(conn, %{"email" => email}) do
     email = URI.decode_www_form(email)
     user = HexWeb.Repo.get_by!(User, email: email)
+    package = conn.assigns.package
 
-    Package.create_owner(conn.assigns.package, user) |> HexWeb.Repo.insert!
+    Package.create_owner(package, user) |> HexWeb.Repo.insert!
+    owners = assoc(package, :owners) |> HexWeb.Repo.all
+
+    HexWeb.Mailer.send(
+      "owner_add.html",
+      "Hex.pm - Owner added",
+      Enum.map(owners, fn owner -> owner.email end),
+      username: user.username,
+      email: email,
+      package: package.name)
 
     conn
     |> api_cache(:private)
@@ -39,14 +49,23 @@ defmodule HexWeb.API.OwnerController do
     email = URI.decode_www_form(email)
     owner = HexWeb.Repo.get_by!(User, email: email)
     package = conn.assigns.package
+    owners = assoc(package, :owners) |> HexWeb.Repo.all
 
-    if HexWeb.Repo.one!(Package.is_single_owner(package)) do
+    if length(owners) == 1 do
       conn
       |> api_cache(:private)
       |> send_resp(403, "")
     else
       Package.owner(package, owner)
       |> HexWeb.Repo.delete_all
+
+      HexWeb.Mailer.send(
+        "owner_remove.html",
+        "Hex.pm - Owner removed",
+        Enum.map(owners, fn owner -> owner.email end),
+        username: owner.username,
+        email: email,
+        package: package.name)
 
       conn
       |> api_cache(:private)
