@@ -112,13 +112,20 @@ defmodule HexWeb.API.DocsController do
     version         = to_string(release.version)
     unversioned_key = "docspage/#{package.name}"
     versioned_key   = "docspage/#{package.name}/#{release.version}"
+    pre_release     = release.version.pre != []
+    first_release   = package.docs_updated_at == nil
 
     files =
       Enum.flat_map(files, fn {path, data} ->
-        [{Path.join([name, version, path]), versioned_key, data},
-         {Path.join(name, path), unversioned_key, data}]
-      end)
+        versioned = {Path.join([name, version, path]), versioned_key, data}
+        unversioned = {Path.join(name, path), unversioned_key, data}
 
+        if pre_release && !first_release do
+          [versioned]
+        else
+          [versioned, unversioned]
+        end
+      end)
     paths = Enum.into(files, MapSet.new, &elem(&1, 0))
 
     # Delete old files
@@ -135,6 +142,9 @@ defmodule HexWeb.API.DocsController do
         # Current (/ecto/0.8.1/...)
         first == version ->
           HexWeb.Store.delete_docs_page(path)
+        # Top-level docs, don't overwrite for pre-releases
+        pre_release == true ->
+          :ok
         # Top-level docs, don't match version directories (/ecto/...)
         Version.parse(first) == :error ->
           HexWeb.Store.delete_docs_page(path)

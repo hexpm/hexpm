@@ -18,11 +18,7 @@ defmodule HexWeb.API.DocsControllerTest do
     {:ok, _}       = Release.create(phoenix, rel_meta(%{version: "0.0.1", app: "phoenix"}), "")
     {:ok, _}       = Release.create(phoenix, rel_meta(%{version: "0.0.2", app: "phoenix"}), "")
 
-    path = Path.join("tmp", "release-docs.tar.gz")
-    files = [{'index.html', "HEYO"}]
-    :ok = :erl_tar.create(String.to_char_list(path), files, [:compressed])
-    body = File.read!(path)
-
+    body = create_tarball([{'index.html', "HEYO"}])
     conn = conn()
            |> put_req_header("content-type", "application/octet-stream")
            |> put_req_header("authorization", key_for("eric"))
@@ -38,11 +34,7 @@ defmodule HexWeb.API.DocsControllerTest do
     assert conn.status == 200
     assert conn.resp_body == "HEYO"
 
-    path = Path.join("tmp", "release-docs.tar.gz")
-    files = [{'index.html', "NOPE"}]
-    :ok = :erl_tar.create(String.to_char_list(path), files, [:compressed])
-    body = File.read!(path)
-
+    body = create_tarball([{'index.html', "NOPE"}])
     conn = conn()
            |> put_req_header("content-type", "application/octet-stream")
            |> put_req_header("authorization", key_for("eric"))
@@ -58,16 +50,59 @@ defmodule HexWeb.API.DocsControllerTest do
     assert conn.resp_body == "HEYO"
   end
 
+  @tag :integration
+  test "release beta docs" do
+    user        = HexWeb.Repo.get_by!(User, username: "eric")
+    {:ok, plug} = Package.create(user, pkg_meta(%{name: "plug", description: "Web framework"}))
+    {:ok, _}    = Release.create(plug, rel_meta(%{version: "0.0.1-beta.1", app: "plug"}), "")
+    {:ok, _}    = Release.create(plug, rel_meta(%{version: "0.5.0", app: "plug"}), "")
+    {:ok, _}    = Release.create(plug, rel_meta(%{version: "1.0.0-beta.1", app: "plug"}), "")
+
+    body = create_tarball([{'index.html', "plug v0.0.1-beta.1"}])
+    conn = conn()
+           |> put_req_header("content-type", "application/octet-stream")
+           |> put_req_header("authorization", key_for("eric"))
+           |> post("api/packages/plug/releases/0.0.1-beta.1/docs", body)
+    assert conn.status == 201
+    assert HexWeb.Repo.get_by!(assoc(plug, :releases), version: "0.0.1-beta.1").has_docs
+
+    conn = get conn(), "docs/plug/index.html"
+    assert conn.status == 200
+    assert conn.resp_body == "plug v0.0.1-beta.1"
+
+    body = create_tarball([{'index.html', "plug v0.5.0"}])
+    conn = conn()
+           |> put_req_header("content-type", "application/octet-stream")
+           |> put_req_header("authorization", key_for("eric"))
+           |> post("api/packages/plug/releases/0.5.0/docs", body)
+    assert conn.status == 201
+
+    conn = get conn(), "docs/plug/index.html"
+    assert conn.status == 200
+    assert conn.resp_body == "plug v0.5.0"
+
+    body = create_tarball([{'index.html', "plug v1.0.0-beta.1"}])
+    conn = conn()
+           |> put_req_header("content-type", "application/octet-stream")
+           |> put_req_header("authorization", key_for("eric"))
+           |> post("api/packages/plug/releases/1.0.0-beta.1/docs", body)
+    assert conn.status == 201
+
+    conn = get conn(), "docs/plug/index.html"
+    assert conn.status == 200
+    assert conn.resp_body == "plug v0.5.0"
+
+    conn = get conn(), "docs/plug/1.0.0-beta.1/index.html"
+    assert conn.status == 200
+    assert conn.resp_body == "plug v1.0.0-beta.1"
+  end
+
   test "delete release with docs" do
     user        = HexWeb.Repo.get_by!(User, username: "eric")
     {:ok, ecto} = Package.create(user, pkg_meta(%{name: "ecto", description: "DSL"}))
     {:ok, _}    = Release.create(ecto, rel_meta(%{version: "0.0.1", app: "ecto"}), "")
 
-    path = Path.join("tmp", "release-docs.tar.gz")
-    files = [{'index.html', "HEYO"}]
-    :ok = :erl_tar.create(String.to_char_list(path), files, [:compressed])
-    body = File.read!(path)
-
+    body = create_tarball([{'index.html', "HEYO"}])
     conn = conn()
            |> put_req_header("content-type", "application/octet-stream")
            |> put_req_header("authorization", key_for("eric"))
@@ -99,11 +134,7 @@ defmodule HexWeb.API.DocsControllerTest do
     {:ok, ecto} = Package.create(user, pkg_meta(%{name: "ecto", description: "DSL"}))
     {:ok, _}    = Release.create(ecto, rel_meta(%{version: "0.0.1", app: "ecto"}), "")
 
-    path = Path.join("tmp", "release-docs.tar.gz")
-    files = [{'index.html', "HEYO"}]
-    :ok = :erl_tar.create(String.to_char_list(path), files, [:compressed])
-    body = File.read!(path)
-
+    body = create_tarball([{'index.html', "HEYO"}])
     conn = conn()
            |> put_req_header("content-type", "application/octet-stream")
            |> put_req_header("authorization", key_for("eric"))
@@ -134,11 +165,7 @@ defmodule HexWeb.API.DocsControllerTest do
     {:ok, ecto} = Package.create(user, pkg_meta(%{name: "ecto", description: "DSL"}))
     {:ok, _}    = Release.create(ecto, rel_meta(%{version: "0.0.1", app: "ecto"}), "")
 
-    path = Path.join("tmp", "release-docs.tar.gz")
-    files = [{'1.2.3', "HEYO"}]
-    :ok = :erl_tar.create(String.to_char_list(path), files, [:compressed])
-    body = File.read!(path)
-
+    body = create_tarball([{'1.2.3', "HEYO"}])
     conn = conn()
            |> put_req_header("content-type", "application/octet-stream")
            |> put_req_header("authorization", key_for("eric"))
@@ -147,5 +174,11 @@ defmodule HexWeb.API.DocsControllerTest do
     assert conn.status == 422
     assert %{"errors" => %{"tar" => "directory name not allowed to match a semver version"}} =
            Poison.decode!(conn.resp_body)
+  end
+
+  defp create_tarball(files) do
+    path = Path.join("tmp", "release-docs.tar.gz")
+    :ok = :erl_tar.create(String.to_char_list(path), files, [:compressed])
+    File.read!(path)
   end
 end
