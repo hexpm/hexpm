@@ -1,0 +1,6 @@
+<p><%= @username %> (<%= @email %>) has been added as an owner to package <%= @package %>.</p>
+
+<p>
+  --<br>
+  Hex.pm
+</p>

@@ -1,0 +1,6 @@
+<p><%= @username %> (<%= @email %>) has been removed from owners of package <%= @package %>.</p>
+
+<p>
+  --<br>
+  Hex.pm
+</p>

@@ -1,6 +1,6 @@
 defmodule HexWeb.Package do
   use HexWeb.Web, :model
-  import Ecto.Query, only: [from: 2, select: 3]
+  import Ecto.Query, only: [from: 2]
 
   @derive {Phoenix.Param, key: :name}
 
@@ -117,12 +117,6 @@ defmodule HexWeb.Package do
          where: o.package_id == ^package.id,
          where: o.owner_id == ^user.id,
          select: count(o.id) == 1)
-  end
-
-  def is_single_owner(package) do
-    package
-    |> assoc(:owners)
-    |> select([o], count(o.id) == 1)
   end
 
   def all_with_docs do
