@@ -222,8 +222,16 @@ defmodule HexWeb.Utils do
     [entry | _ ] = :public_key.pem_decode(key)
     key = :public_key.pem_entry_decode(entry)
 
-    :public_key.sign({:digest, file}, :sha512, key)
+    :public_key.sign(file, :sha512, key)
     |> Base.encode16(case: :lower)
+  end
+
+  def verify(file, signature, key) do
+    [entry | _] = :public_key.pem_decode(key)
+    key = :public_key.pem_entry_decode(entry)
+    {:ok, signature} = Base.decode16(signature, case: :lower)
+
+    :public_key.verify(file, :sha512, signature, key)
   end
 
   defmacro defdispatch({function, _, args}, to: target) do

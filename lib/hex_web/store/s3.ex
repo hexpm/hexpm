@@ -20,7 +20,7 @@ defmodule HexWeb.Store.S3 do
   end
 
   def put_registry(data) do
-    upload(:s3_bucket, "registry.ets.gz", :zlib.gzip(data))
+    upload(:s3_bucket, "registry.ets.gz", data)
   end
 
   def put_registry_signature(signature) do

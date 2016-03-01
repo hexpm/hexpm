@@ -79,44 +79,25 @@ defmodule HexWeb.RegistryBuilderTest do
   end
 
   test "registry is uploaded alongside signature" do
-    keypath  = Path.join([__DIR__, "..", "fixtures"])
-    key      = File.read!(Path.join(keypath, "testkey.pem"))
-    Application.put_env(:hex_web, :signing_key, key)
+    keypath       = Path.join([__DIR__, "..", "fixtures"])
+    priv_key      = File.read!(Path.join(keypath, "test_priv.pem"))
+    pub_key       = File.read!(Path.join(keypath, "test_pub.pem"))
+
+    Application.put_env(:hex_web, :signing_key, priv_key)
 
     test_data()
-    RegistryBuilder.rebuild()
 
-    tmp = Application.get_env(:hex_web, :tmp_dir)
-    reg = File.read!(Path.join(tmp, "store/registry.ets.gz")) |> :zlib.gunzip
-    sig = File.read!(Path.join(tmp, "store/registry.ets.gz.signed"))
+    try do
+      RegistryBuilder.rebuild()
 
-    checksum = :crypto.hash(:sha512, reg)
+      tmp = Application.get_env(:hex_web, :tmp_dir)
+      reg = File.read!(Path.join(tmp, "store/registry.ets.gz"))
+      sig = File.read!(Path.join(tmp, "store/registry.ets.gz.signed"))
 
-    assert HexWeb.Utils.sign(checksum, key) == sig
-  end
-
-  test "integration fetch registry" do
-    keypath  = Path.join([__DIR__, "..", "fixtures"])
-    key      = File.read!(Path.join(keypath, "testkey.pem"))
-    Application.put_env(:hex_web, :signing_key, key)
-
-    test_data()
-    RegistryBuilder.rebuild()
-
-    :inets.start
-
-    # fetch registry
-    conn = get conn, "registry.ets.gz"
-    assert conn.status == 200
-
-    # sign registry
-    checksum = :crypto.hash(:sha512, :zlib.gunzip(conn.resp_body))
-    signature = HexWeb.Utils.sign(checksum, key)
-
-    # fetch generated signature
-    conn = get conn, "registry.ets.gz.signed"
-    assert conn.status == 200
-    assert conn.resp_body == signature
+      assert HexWeb.Utils.verify(reg, sig, pub_key) == true
+    after
+      Application.delete_env(:hex_web, :signing_key)
+    end
   end
 
   # test "building is blocking" do
