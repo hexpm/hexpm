@@ -1,6 +1,6 @@
 defmodule HexWeb.Package do
   use HexWeb.Web, :model
-  import Ecto.Query, only: [from: 2, exclude: 2, select: 3]
+  import Ecto.Query, only: [from: 2, select: 3]
 
   @derive {Phoenix.Param, key: :name}
 
