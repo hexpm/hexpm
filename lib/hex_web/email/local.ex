@@ -5,8 +5,10 @@ defmodule HexWeb.Email.Local do
     Path.join("tmp", "email")
     |> File.mkdir_p!
 
-    Path.join(["tmp", "email", "#{to}.html"])
-    |> File.write!([subject, "\n\n", body])
+    Enum.map(to, fn email ->
+      Path.join(["tmp", "email", "#{email}.html"])
+      |> File.write!([subject, "\n\n", body])
+    end)
   end
 
   def read(to) do

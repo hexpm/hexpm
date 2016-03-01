@@ -147,7 +147,7 @@ defmodule HexWeb.API.ReleaseController do
     HexWeb.Mailer.send(
       "publish_fail.html",
       "Hex.pm - ERROR when publishing #{package.name} v#{version}",
-      user.email,
+      [user.email],
       package: package.name,
       version: version,
       docs: false)
