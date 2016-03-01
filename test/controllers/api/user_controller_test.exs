@@ -61,6 +61,33 @@ defmodule HexWeb.API.UserControllerTest do
     assert contents =~ "confirmed"
   end
 
+  test "email is sent with reset_token when password is reset" do
+    # create user with confirmed account
+    body = %{username: "reset_test", email: "reset_user@mail.com", password: "pass"}
+    conn = conn()
+           |> put_req_header("content-type", "application/json")
+           |> post("api/users", Poison.encode!(body))
+    assert conn.status == 201
+    user = HexWeb.Repo.get_by!(User, username: "reset_test")
+
+    conn = get(conn(), "password/confirm?username=reset_test&key=" <> user.confirmation_key)
+    assert conn.status == 200
+    assert conn.resp_body =~ "Account confirmed"
+
+    # initiate reset request
+    conn = post(conn(), "api/users/#{user.username}/reset", %{}) 
+    assert conn.status == 204
+
+    # check email was sent with correct token
+    user = HexWeb.Repo.get_by!(User, username: "reset_test")
+    {subject, contents} = HexWeb.Email.Local.read("reset_user@mail.com")
+    assert subject =~ "Hex.pm"
+    assert contents =~ "#{user.reset_key}"
+
+    # check reset will succeed
+    assert User.reset?(user, user.reset_key) == true
+  end
+
   test "create user validates" do
     body = %{username: "name", password: "pass"}
     conn = conn()
