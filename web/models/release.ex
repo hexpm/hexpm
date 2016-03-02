@@ -26,7 +26,7 @@ defmodule HexWeb.Release do
 
   defp changeset(release, :create, params) do
     changeset(release, :update, params)
-    |> unique_constraint(:version, name: "releases_package_id_version_key")
+    |> unique_constraint(:version, name: "releases_package_id_version_key", message: "has already been published")
   end
 
   defp changeset(release, :update, params) do

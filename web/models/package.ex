@@ -116,7 +116,7 @@ defmodule HexWeb.Package do
     from(o in PackageOwner,
          where: o.package_id == ^package.id,
          where: o.owner_id == ^user.id,
-         select: count(o.id) == 1)
+         select: count(o.id) >= 1)
   end
 
   def all_with_docs do
@@ -127,7 +127,8 @@ defmodule HexWeb.Package do
   end
 
   def create_owner(package, user) do
-    %PackageOwner{package_id: package.id, owner_id: user.id}
+    change(%PackageOwner{}, package_id: package.id, owner_id: user.id)
+    |> unique_constraint(:owner_id, name: "package_owners_unique", message: "is already owner")
   end
 
   def owner(package, user) do

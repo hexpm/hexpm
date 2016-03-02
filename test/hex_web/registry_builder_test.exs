@@ -1,6 +1,5 @@
 defmodule HexWeb.RegistryBuilderTest do
   use HexWeb.ModelCase
-  import Phoenix.ConnTest
 
   alias HexWeb.User
   alias HexWeb.Package

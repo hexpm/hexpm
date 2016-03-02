@@ -29,20 +29,24 @@ defmodule HexWeb.API.OwnerController do
     user = HexWeb.Repo.get_by!(User, email: email)
     package = conn.assigns.package
 
-    Package.create_owner(package, user) |> HexWeb.Repo.insert!
-    owners = assoc(package, :owners) |> HexWeb.Repo.all
+    case Package.create_owner(conn.assigns.package, user) |> HexWeb.Repo.insert do
+      {:ok, _} ->
+        owners = assoc(package, :owners) |> HexWeb.Repo.all
 
-    HexWeb.Mailer.send(
-      "owner_add.html",
-      "Hex.pm - Owner added",
-      Enum.map(owners, fn owner -> owner.email end),
-      username: user.username,
-      email: email,
-      package: package.name)
+        HexWeb.Mailer.send(
+          "owner_add.html",
+          "Hex.pm - Owner added",
+          Enum.map(owners, fn owner -> owner.email end),
+          username: user.username,
+          email: email,
+          package: package.name)
 
-    conn
-    |> api_cache(:private)
-    |> send_resp(204, "")
+        conn
+        |> api_cache(:private)
+        |> send_resp(204, "")
+      {:error, changeset} ->
+        validation_failed(conn, changeset.errors)
+    end
   end
 
   def delete(conn, %{"email" => email}) do

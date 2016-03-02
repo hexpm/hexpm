@@ -85,6 +85,18 @@ defmodule HexWeb.API.OwnerControllerTest do
     assert contents =~ "jose (jose@mail.com) has been added as an owner to package postgrex."
   end
 
+  test "cannot add same owner twice" do
+    conn = conn()
+           |> put_req_header("authorization", key_for("eric"))
+           |> put("api/packages/postgrex/owners/jose%40mail.com")
+    assert conn.status == 204
+
+    conn = conn()
+           |> put_req_header("authorization", key_for("eric"))
+           |> put("api/packages/postgrex/owners/jose%40mail.com")
+    assert conn.status == 422
+  end
+
   test "add package owner authorizes" do
     conn = conn()
            |> put_req_header("authorization", key_for("other"))
