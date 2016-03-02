@@ -11,10 +11,11 @@ defmodule HexWeb.Plugs do
 
   # Max filesize: ~10mb
   # Min upload speed: ~10kb/s
+  # Read 100kb every 10s
   @read_body_opts [
     length: 10_000_000,
-    read_length: 10_000,
-    read_timeout: 1_000
+    read_length: 100_000,
+    read_timeout: 10_000
   ]
 
   def fetch_body(conn, _opts) do
