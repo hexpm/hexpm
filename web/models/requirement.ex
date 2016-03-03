@@ -17,26 +17,32 @@ defmodule HexWeb.Requirement do
 
   def create_all(release, requirements) do
     requirements = normalize(requirements)
-    results = insert_all(release, requirements)
+    deps = deps(requirements)
 
-    {_ok, errors} = Enum.partition(results, &match?({:ok, _}, &1))
+    errors = Enum.map(requirements, &validate(deps, &1))
+             |> Enum.filter(&match?({:error, _}, &1))
+
     if errors == [] do
-      {:ok, requirements}
+      case resolve(requirements, guess_config(release)) do
+        :ok ->
+          Enum.each(requirements, &insert(release, deps, &1))
+          {:ok, requirements}
+        {:error, reason} ->
+          {:error, reason}
+      end
     else
       {:error, Enum.map(errors, &elem(&1, 1))}
     end
   end
 
-  defp insert_all(release, requirements) do
+  defp deps(requirements) do
     deps = Enum.map(requirements, & &1.name)
 
-    deps_query =
-         from p in Package,
-       where: p.name in ^deps,
-      select: {p.name, p.id}
-    deps = HexWeb.Repo.all(deps_query) |> Enum.into(%{})
-
-    Enum.map(requirements, &insert(release, deps, &1))
+    from(p in Package,
+         where: p.name in ^deps,
+         select: {p.name, p.id})
+    |> HexWeb.Repo.all
+    |> Enum.into(%{})
   end
 
   defp normalize(requirements) do
@@ -50,29 +56,68 @@ defmodule HexWeb.Requirement do
     end)
   end
 
-  defp insert(release, deps, %{name: dep, app: app, requirement: req, optional: optional}) do
+  defp validate(deps, %{name: dep, requirement: req}) do
     cond do
       is_nil(req) ->
         # Temporary friendly error message until people update to hex 0.9.1
         {:error, {dep, "invalid requirement: #{inspect req}, use \">= 0.0.0\" instead"}}
-
       not valid?(req) ->
         {:error, {dep, "invalid requirement: #{inspect req}"}}
-
-      id = deps[dep] ->
-        {:ok, build_assoc(release, :requirements)
-              |> struct(requirement: req,
-                        app: app,
-                        optional: optional,
-                        dependency_id: id)
-              |> HexWeb.Repo.insert!}
-
-      true ->
+      !deps[dep] ->
         {:error, {dep, "unknown package"}}
+      true ->
+        :ok
     end
+  end
+
+  defp insert(release, deps, %{name: dep, app: app, requirement: req, optional: optional}) do
+    build_assoc(release, :requirements)
+    |> struct(requirement: req,
+              app: app,
+              optional: optional,
+              dependency_id: deps[dep])
+    |> HexWeb.Repo.insert!
   end
 
   defp valid?(req) do
     is_binary(req) and match?({:ok, _}, Version.parse_requirement(req))
+  end
+
+  defp resolve(requirements, config) do
+    Hex.Registry.open!(HexWeb.RegistryDB)
+
+    deps      = resolve_deps(requirements)
+    top_level = Enum.map(deps, &elem(&1, 0))
+    requests  = resolve_requests(requirements, config)
+
+    case Hex.Resolver.resolve(requests, deps, top_level, []) do
+      {:ok, _} -> :ok
+      {:error, messages} -> {:error, messages}
+    end
+  after
+    Hex.Registry.close
+  end
+
+  defp resolve_deps(requirements) do
+    Enum.map(requirements, fn %{app: app} ->
+      {app, false, []}
+    end)
+  end
+
+  defp resolve_requests(requirements, config) do
+    Enum.map(requirements, fn %{name: name, app: app, requirement: req} ->
+      {name, app, req, config}
+    end)
+  end
+
+  defp guess_config(release) do
+    build_tools = release.meta["build_tools"] || []
+    cond do
+      "mix" in build_tools       -> "mix.exs"
+      "rebar" in build_tools     -> "rebar.config"
+      "rebar3" in build_tools    -> "rebar.config"
+      "erlang.mk" in build_tools -> "Makefile"
+      true                       -> "TOP CONFIG"
+    end
   end
 end

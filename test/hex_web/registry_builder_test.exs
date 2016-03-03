@@ -30,12 +30,14 @@ defmodule HexWeb.RegistryBuilderTest do
   end
 
   defp test_data do
+    ex_doc = HexWeb.Repo.get_by(Package, name: "ex_doc")
     postgrex = HexWeb.Repo.get_by(Package, name: "postgrex")
     decimal = HexWeb.Repo.get_by(Package, name: "decimal")
 
-    Release.create(decimal, rel_meta(%{version: "0.0.1", app: "decimal"}), "")
-    Release.create(decimal, rel_meta(%{version: "0.0.2", app: "decimal", requirements: %{ex_doc: "0.0.0"}}), "")
-    Release.create(postgrex, rel_meta(%{version: "0.0.2", app: "postgrex", requirements: %{decimal: "~> 0.0.1", ex_doc: "0.1.0"}}), "")
+    {:ok, _} = Release.create(ex_doc, rel_meta(%{version: "0.0.1", app: "ex_doc"}), "")
+    {:ok, _} = Release.create(decimal, rel_meta(%{version: "0.0.1", app: "decimal"}), "")
+    {:ok, _} = Release.create(decimal, rel_meta(%{version: "0.0.2", app: "decimal", requirements: %{ex_doc: "0.0.1"}}), "")
+    {:ok, _} = Release.create(postgrex, rel_meta(%{version: "0.0.2", app: "postgrex", requirements: %{decimal: "~> 0.0.1", ex_doc: "0.0.1"}}), "")
   end
 
   test "registry is versioned" do
@@ -56,7 +58,7 @@ defmodule HexWeb.RegistryBuilderTest do
     tid = open_table()
 
     try do
-      assert length(:ets.match_object(tid, :_)) == 7
+      assert length(:ets.match_object(tid, :_)) == 9
 
       assert [ {"decimal", [["0.0.1", "0.0.2"]]} ] = :ets.lookup(tid, "decimal")
 
@@ -69,9 +71,9 @@ defmodule HexWeb.RegistryBuilderTest do
       reqs = :ets.lookup(tid, {"postgrex", "0.0.2"}) |> List.first |> elem(1) |> List.first
       assert length(reqs) == 2
       assert Enum.find(reqs, &(&1 == ["decimal", "~> 0.0.1", false, "decimal"]))
-      assert Enum.find(reqs, &(&1 == ["ex_doc", "0.1.0", false, "ex_doc"]))
+      assert Enum.find(reqs, &(&1 == ["ex_doc", "0.0.1", false, "ex_doc"]))
 
-      assert [] = :ets.lookup(tid, "ex_doc")
+      assert [] = :ets.lookup(tid, "non_existant")
     after
       close_table(tid)
     end
