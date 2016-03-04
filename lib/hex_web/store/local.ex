@@ -40,7 +40,7 @@ defmodule HexWeb.Store.Local do
     conn =
       case File.read(Path.join(dir, "registry.ets.gz.signed")) do
         {:ok, contents} -> put_resp_header(conn, "x-hex-signature", contents)
-        :error          -> conn
+        _               -> conn
       end
     send_file(conn, 200, Path.join(dir, "registry.ets.gz"))
   end
