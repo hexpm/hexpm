@@ -26,6 +26,11 @@ defmodule HexWeb.API.DocsControllerTest do
     assert conn.status == 201
     assert HexWeb.Repo.get_by!(assoc(phoenix, :releases), version: "0.0.1").has_docs
 
+    log = HexWeb.Repo.one!(HexWeb.AuditLog)
+    assert log.actor_id == user.id
+    assert log.action == "docs.publish"
+    assert %{"package" => %{"name" => "phoenix"}, "release" => %{"version" => "0.0.1"}} = log.params
+
     conn = get conn(), "docs/phoenix/index.html"
     assert conn.status == 200
     assert conn.resp_body == "HEYO"
@@ -142,6 +147,7 @@ defmodule HexWeb.API.DocsControllerTest do
 
     assert conn.status == 201
     assert HexWeb.Repo.get_by!(assoc(ecto, :releases), version: "0.0.1").has_docs
+    assert HexWeb.Repo.one!(HexWeb.AuditLog).action == "docs.publish"
 
     conn = conn()
            |> put_req_header("authorization", key_for("eric"))
@@ -150,6 +156,11 @@ defmodule HexWeb.API.DocsControllerTest do
 
     # Check release was deleted
     refute HexWeb.Repo.get_by(assoc(ecto, :releases), version: "0.0.1").has_docs
+
+    [_, log] = HexWeb.Repo.all(HexWeb.AuditLog)
+    assert log.actor_id == user.id
+    assert log.action == "docs.revert"
+    assert %{"package" => %{"name" => "ecto"}, "release" => %{"version" => "0.0.1"}} = log.params
 
     # Check docs were deleted
     conn = get conn(), "api/packages/ecto/releases/0.0.1/docs"

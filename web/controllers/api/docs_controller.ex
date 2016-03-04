@@ -27,7 +27,7 @@ defmodule HexWeb.API.DocsController do
   end
 
   def delete(conn, _params) do
-    revert(conn.assigns.release)
+    revert(conn.assigns.release, conn.assigns.user)
 
     conn
     |> api_cache(:private)
@@ -56,7 +56,7 @@ defmodule HexWeb.API.DocsController do
             files = Enum.map(files, fn {path, data} -> {List.to_string(path), data} end)
 
             if check_version_dirs?(files) do
-              task    = fn -> upload_docs(package, release, files, body) end
+              task    = fn -> upload_docs(package, release, user, files, body) end
               success = fn -> :ok end
               failure = fn reason -> failure(package, release, user, reason) end
               HexWeb.Utils.task(task, success, failure)
@@ -107,7 +107,7 @@ defmodule HexWeb.API.DocsController do
     {:ok, IO.iodata_to_binary([data|uncompressed])}
   end
 
-  def upload_docs(package, release, files, body) do
+  def upload_docs(package, release, user, files, body) do
     name            = package.name
     version         = to_string(release.version)
     unversioned_key = "docspage/#{package.name}"
@@ -164,8 +164,12 @@ defmodule HexWeb.API.DocsController do
     HexWeb.CDN.purge_key(:fastly_hexdocs, versioned_key)
 
     # Set docs flag on release
-    Ecto.Changeset.change(release, has_docs: true)
-    |> HexWeb.Repo.update!
+    HexWeb.Repo.transaction(fn ->
+      Ecto.Changeset.change(release, has_docs: true)
+      |> HexWeb.Repo.update!
+
+      audit(user, "docs.publish", {package, release})
+    end)
 
     Ecto.Changeset.change(release.package, docs_updated_at: Ecto.DateTime.utc)
     |> HexWeb.Repo.update!
@@ -195,7 +199,7 @@ defmodule HexWeb.API.DocsController do
       docs: true)
   end
 
-  def revert(release) do
+  def revert(release, user) do
     task = fn ->
       name    = release.package.name
       version = to_string(release.version)
@@ -207,8 +211,12 @@ defmodule HexWeb.API.DocsController do
         HexWeb.Store.delete_docs_page(path)
       end)
 
-      Ecto.Changeset.change(release, has_docs: false)
-      |> HexWeb.Repo.update!
+      HexWeb.Repo.transaction(fn ->
+        Ecto.Changeset.change(release, has_docs: false)
+        |> HexWeb.Repo.update!
+
+        audit(user, "docs.revert", {release.package, release})
+      end)
 
       Ecto.Changeset.change(release.package, docs_updated_at: Ecto.DateTime.utc)
       |> HexWeb.Repo.update!
