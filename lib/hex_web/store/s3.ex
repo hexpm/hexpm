@@ -19,8 +19,9 @@ defmodule HexWeb.Store.S3 do
     |> S3Impl.put_object!(bucket, key, blob)
   end
 
-  def put_registry(data) do
-    upload(:s3_bucket, "registry.ets.gz", data)
+  def put_registry(data, signature) do
+    opts = if signature, do: [meta: [{"signature", signature}]], else: []
+    upload(:s3_bucket, "registry.ets.gz", data, opts)
   end
 
   def put_registry_signature(signature) do

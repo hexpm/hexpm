@@ -12,7 +12,7 @@ defmodule HexWeb.Store do
   @callback get_logs(region, bucket, key) :: body
   @callback put_logs(region, bucket, key, body) :: term
 
-  @callback put_registry(body) :: term
+  @callback put_registry(body, body | nil) :: term
   @callback put_registry_signature(body) :: term
   @callback send_registry(Plug.Conn.t) :: Plug.Conn.t
   @callback send_registry_signature(Plug.Conn.t) :: Plug.Conn.t
@@ -34,7 +34,7 @@ defmodule HexWeb.Store do
   defdispatch list_logs(region, bucket, prefix),   to: impl
   defdispatch get_logs(region, bucket, key),       to: impl
   defdispatch put_logs(region, bucket, key, body), to: impl
-  defdispatch put_registry(body),                  to: impl
+  defdispatch put_registry(body, signature),       to: impl
   defdispatch put_registry_signature(body),        to: impl
   defdispatch send_registry(conn),                 to: impl
   defdispatch send_registry_signature(conn),       to: impl

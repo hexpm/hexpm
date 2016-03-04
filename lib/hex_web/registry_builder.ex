@@ -110,11 +110,15 @@ defmodule HexWeb.RegistryBuilder do
     :ets.delete(tid)
 
     output = File.read!(file) |> :zlib.gzip
-    HexWeb.Store.put_registry(output)
 
-    if key = Application.get_env(:hex_web, :signing_key) do
-      signature = HexWeb.Utils.sign(output, key)
+    signature =
+      if key = Application.get_env(:hex_web, :signing_key) do
+        HexWeb.Utils.sign(output, key)
+      end
 
+    HexWeb.Store.put_registry(output, signature)
+
+    if signature do
       HexWeb.Store.put_registry_signature(signature)
     end
 

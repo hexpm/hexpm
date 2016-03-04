@@ -26,7 +26,7 @@ defmodule HexWeb.Store.Local do
     Path.join("logs", key) |> put(blob)
   end
 
-  def put_registry(data) do
+  def put_registry(data, _signature) do
     File.mkdir_p!(dir)
     File.write!(Path.join(dir, "registry.ets.gz"), data)
   end
@@ -37,6 +37,11 @@ defmodule HexWeb.Store.Local do
   end
 
   def send_registry(conn) do
+    conn =
+      case File.read(Path.join(dir, "registry.ets.gz.signed")) do
+        {:ok, contents} -> put_resp_header(conn, "x-hex-signature", contents)
+        :error          -> conn
+      end
     send_file(conn, 200, Path.join(dir, "registry.ets.gz"))
   end
 

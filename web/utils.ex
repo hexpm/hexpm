@@ -228,8 +228,8 @@ defmodule HexWeb.Utils do
 
   def verify(file, signature, key) do
     [entry | _] = :public_key.pem_decode(key)
-    key = :public_key.pem_entry_decode(entry)
-    {:ok, signature} = Base.decode16(signature, case: :lower)
+    key         = :public_key.pem_entry_decode(entry)
+    signature   = Base.decode16!(signature, case: :lower)
 
     :public_key.verify(file, :sha512, signature, key)
   end
