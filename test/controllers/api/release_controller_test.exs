@@ -49,7 +49,7 @@ defmodule HexWeb.API.ReleaseControllerTest do
     body = Poison.decode!(conn.resp_body)
     assert body["url"] =~ "/api/packages/ecto/releases/1.0.0"
 
-    assert HexWeb.Repo.get_by(Package, name: "ecto").meta["description"] == "awesomeness"
+    assert HexWeb.Repo.get_by(Package, name: "ecto").meta.description == "awesomeness"
   end
 
   test "create release authorizes" do
@@ -87,7 +87,7 @@ defmodule HexWeb.API.ReleaseControllerTest do
     assert conn.status == 422
     body = Poison.decode!(conn.resp_body)
     assert body["message"] == "Validation error(s)"
-    assert body["errors"]["meta"]["links"] == "expected type dict(string, string)"
+    assert body["errors"]["meta"]["links"] == "is invalid"
   end
 
   test "create releases" do

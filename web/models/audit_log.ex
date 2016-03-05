@@ -22,10 +22,19 @@ defmodule HexWeb.AuditLog do
   defp extract_params("release.publish", {package, release}), do: %{package: serialize(package), release: serialize(release)}
   defp extract_params("release.revert", {package, release}), do: %{package: serialize(package), release: serialize(release)}
 
-  defp serialize(schema), do: Map.take(schema, fields(schema))
+  defp serialize(%HexWeb.Package{} = package) do
+    do_serialize(package) |> Map.put(:meta, serialize(package.meta))
+  end
+  defp serialize(%HexWeb.Release{} = release) do
+    do_serialize(release) |> Map.put(:meta, serialize(release.meta))
+  end
+  defp serialize(schema), do: do_serialize(schema)
+  defp do_serialize(schema), do: Map.take(schema, fields(schema))
 
   defp fields(%HexWeb.Key{}), do: [:id, :name]
-  defp fields(%HexWeb.Package{}), do: [:id, :name, :meta]
-  defp fields(%HexWeb.Release{}), do: [:id, :version, :checksum, :meta, :has_docs, :package_id]
+  defp fields(%HexWeb.Package{}), do: [:id, :name]
+  defp fields(%HexWeb.Release{}), do: [:id, :version, :checksum, :has_docs, :package_id]
   defp fields(%HexWeb.User{}), do: [:id, :username, :email, :confirmed]
+  defp fields(%HexWeb.PackageMetadata{}), do: HexWeb.PackageMetadata.__schema__(:fields)
+  defp fields(%HexWeb.ReleaseMetadata{}), do: HexWeb.ReleaseMetadata.__schema__(:fields)
 end

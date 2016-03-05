@@ -3,15 +3,15 @@ defmodule HexWeb.AuditLogTest do
 
   test "create" do
     actor = %HexWeb.User{id: 1}
-    package = %HexWeb.Package{id: 2, name: "ecto", meta: %{}}
+    package = %HexWeb.Package{id: 2, name: "ecto", meta: %HexWeb.PackageMetadata{description: "foo"}}
     user = %HexWeb.User{id: 3, username: "eric", email: "eric@mail.com", confirmed: true}
 
-    assert HexWeb.AuditLog.create(actor, "owner.add", {package, user}) ==
-      %HexWeb.AuditLog{
-        actor_id: 1,
-        action: "owner.add",
-        params: %{
-          package: %{id: 2, name: "ecto", meta: %{}},
-          user: %{id: 3, username: "eric", email: "eric@mail.com", confirmed: true}}}
+    assert %HexWeb.AuditLog{
+             actor_id: 1,
+             action: "owner.add",
+             params: %{
+               package: %{id: 2, name: "ecto", meta: %{description: "foo"}},
+               user: %{id: 3, username: "eric", email: "eric@mail.com", confirmed: true}}} =
+           HexWeb.AuditLog.create(actor, "owner.add", {package, user})
   end
 end

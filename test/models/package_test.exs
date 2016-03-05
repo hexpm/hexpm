@@ -25,46 +25,7 @@ defmodule HexWeb.PackageTest do
     Package.update(package, %{"meta" => %{"maintainers" => ["eric", "josé"], "description" => "description"}})
     |> HexWeb.Repo.update!
     package = HexWeb.Repo.get_by(Package, name: "ecto")
-    assert length(package.meta["maintainers"]) == 2
-  end
-
-  test "validate valid meta" do
-    meta = %{
-      "maintainers" => ["eric", "josé"],
-      "licenses"     => ["apache", "BSD"],
-      "links"        => %{"github" => "www", "docs" => "www"},
-      "description"  => "so good"}
-
-    user = HexWeb.Repo.get_by!(User, username: "eric")
-    assert {:ok, %Package{meta: ^meta}} = Package.create(user, pkg_meta(%{name: "ecto", meta: meta}))
-    assert %Package{meta: ^meta} = HexWeb.Repo.get_by(Package, name: "ecto")
-  end
-
-  test "ignore unknown meta fields" do
-    meta = %{
-      "maintainers" => ["eric"],
-      "foo"          => "bar",
-      "description" => "Lorem ipsum"
-    }
-
-    user = HexWeb.Repo.get_by!(User, username: "eric")
-    assert {:ok, %Package{}} = Package.create(user, pkg_meta(%{name: "ecto", meta: meta}))
-    assert %Package{meta: meta2} = HexWeb.Repo.get_by(Package, name: "ecto")
-
-    assert Map.size(meta2) == 2
-  end
-
-  test "validate invalid meta" do
-    meta = %{
-      "maintainers" => "eric",
-      "licenses"     => 123,
-      "links"        => ["url"],
-      "description"  => ["so bad"]}
-
-    user = HexWeb.Repo.get_by!(User, username: "eric")
-    assert {:error, changeset} = Package.create(user, pkg_meta(%{name: "ecto", meta: meta}))
-    assert length(changeset.errors) == 1
-    assert length(changeset.errors[:meta]) == 4
+    assert length(package.meta.maintainers) == 2
   end
 
   test "validate blank description in metadata" do
@@ -78,7 +39,7 @@ defmodule HexWeb.PackageTest do
     assert {:error, changeset} = Package.create(user, pkg_meta(%{name: "ecto", meta: meta}))
     assert length(changeset.errors) == 1
     assert length(changeset.errors[:meta]) == 1
-    assert changeset.errors[:meta] == [{"description", :missing}]
+    assert changeset.errors[:meta] == [description: "can't be blank"]
   end
 
   test "packages are unique" do

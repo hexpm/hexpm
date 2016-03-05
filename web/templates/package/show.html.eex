@@ -1,10 +1,10 @@
 <%
-description = @package.meta["description"]
+description = @package.meta.description
 # TODO: Drop support for contributors (maintainers released in 0.9.0, date TBD)
-maintains = @package.meta["maintainers"] || @package.meta["contributors"] || []
-licenses = @package.meta["licenses"] || []
-links = Enum.to_list(@package.meta["links"] || [])
-build_tools = @current_release && @current_release.meta["build_tools"] || []
+maintains = @package.meta.maintainers || @package.meta.contributors || []
+licenses = @package.meta.licenses || []
+links = Enum.to_list(@package.meta.links || [])
+build_tools = @current_release && @current_release.meta.build_tools || []
 
 tools = [mix: "mix.exs", rebar: "rebar.config", erlang_mk: "erlang.mk"]
 tool_compatibility = %{
@@ -39,7 +39,7 @@ tools = Keyword.take(tools, compatible_tools)
       <%= if build_tools != [] do %>
         <dt>Build tools</dt>
         <dd>
-          <%= for tool <- @current_release.meta["build_tools"] do %>
+          <%= for tool <- @current_release.meta.build_tools do %>
             <span class="label label-primary"><%= tool %></span>
           <% end %>
         </dd>

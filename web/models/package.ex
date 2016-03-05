@@ -8,7 +8,6 @@ defmodule HexWeb.Package do
 
   schema "packages" do
     field :name, :string
-    field :meta, :map
     field :docs_updated_at, Ecto.DateTime
     timestamps
 
@@ -16,6 +15,7 @@ defmodule HexWeb.Package do
     has_many :package_owners, PackageOwner
     has_many :owners, through: [:package_owners, :owner]
     has_many :downloads, PackageDownload
+    embeds_one :meta, PackageMetadata, on_replace: :delete
   end
 
   @elixir_names ~w(eex elixir ex_unit iex logger mix)
@@ -31,64 +31,17 @@ defmodule HexWeb.Package do
 
   @reserved_names @elixir_names ++ @otp_names ++ @tool_names
 
-  @meta_types %{
-    "maintainers"  => {:array, :string},
-    "licenses"     => {:array, :string},
-    "links"        => {:dict, :string, :string},
-    "description"  => :string
-  }
-
-  @meta_fields Map.keys(@meta_types)
-  @meta_fields_required ~w(description)
-
-  defp validate_meta(changeset, field) do
-    validate_change(changeset, field, fn _field, meta ->
-      errors =
-        Enum.flat_map(@meta_types, fn {sub_field, type} ->
-          type(sub_field, Map.get(meta, sub_field), type)
-        end)
-
-      if errors == [],
-          do: [],
-        else: [{field, errors}]
-    end)
-  end
-
-  defp validate_required_meta(changeset, field) do
-    validate_change(changeset, field, fn _field, meta ->
-      errors =
-        Enum.flat_map(@meta_fields_required, fn field ->
-          if Map.has_key?(meta, field) and is_present(meta[field]) do
-            []
-          else
-            [{field, :missing}]
-          end
-        end)
-
-      if errors == [],
-          do: [],
-        else: [{field, errors}]
-    end)
-  end
-
-  defp is_present(string) when is_binary(string) do
-    (string |> String.strip |> String.length) > 0
-  end
-
-  defp is_present(_string), do: true
-
   defp changeset(package, :create, params) do
     changeset(package, :update, params)
     |> unique_constraint(:name, name: "packages_name_idx")
   end
 
   defp changeset(package, :update, params) do
-    cast(package, params, ~w(name meta), [])
-    |> update_change(:meta, &Map.take(&1, @meta_fields))
+    cast(package, params, ~w(name), [])
+    |> cast_embed(:meta, required: true)
+    |> put_embed_errors(:meta)
     |> validate_format(:name, ~r"^[a-z]\w*$")
     |> validate_exclusion(:name, @reserved_names)
-    |> validate_required_meta(:meta)
-    |> validate_meta(:meta)
   end
 
   # TODO: Leave this in until we have multi

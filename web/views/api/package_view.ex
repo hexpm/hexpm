@@ -9,7 +9,8 @@ defmodule HexWeb.API.PackageView do
 
   def render("package", %{package: package}) do
     package
-    |> Map.take([:name, :meta, :inserted_at, :updated_at])
+    |> Map.take([:name, :inserted_at, :updated_at])
+    |> Map.put(:meta, Map.take(package.meta, PackageMetadata.__schema__(:fields)))
     |> Map.put(:url, package_url(HexWeb.Endpoint, :show, package))
     |> if_value(assoc_loaded?(package.releases), &load_releases(&1, package, package.releases))
     |> if_value(assoc_loaded?(package.downloads), &load_downloads(&1, package.downloads))
