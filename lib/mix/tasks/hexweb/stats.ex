@@ -13,7 +13,7 @@ defmodule Mix.Tasks.Hexweb.Stats do
       {time, {memory, size}} = :timer.tc(fn ->
         HexWeb.StatsJob.run(HexWeb.Utils.yesterday, buckets)
       end)
-      Logger.info "STATS_JOB_COMPLETED #{size} downloads (#{div time, 1000}ms, #{div memory, 1024}kb)"
+      Logger.warn "STATS_JOB_COMPLETED #{size} downloads (#{div time, 1000}ms, #{div memory, 1024}kb)"
     catch
       kind, error ->
         stacktrace = System.stacktrace

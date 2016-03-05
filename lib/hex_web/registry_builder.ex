@@ -55,7 +55,7 @@ defmodule HexWeb.RegistryBuilder do
         build_ets(handle, file)
       end)
 
-      Logger.info "REGISTRY_BUILDER_COMPLETED (#{div time, 1000}ms, #{div memory, 1024}kb)"
+      Logger.warn "REGISTRY_BUILDER_COMPLETED (#{div time, 1000}ms, #{div memory, 1024}kb)"
     catch
       kind, error ->
         stacktrace = System.stacktrace
