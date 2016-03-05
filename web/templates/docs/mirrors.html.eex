@@ -61,6 +61,12 @@
       <td><a href="https://s3-ap-southeast-1.amazonaws.com/s3-asia.hex.pm">https://s3-ap-southeast-1.amazonaws.com/s3-asia.hex.pm</a></td>
       <td>Yes</td>
     </tr>
+
+    <tr>
+      <td>China</td>
+      <td><a href="https://hex.elixir-cn.org">https://hex.elixir-cn.org</a></td>
+      <td>No</td>
+    </tr>
   </tbody>
 </table>
 
