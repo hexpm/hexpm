@@ -2,15 +2,16 @@ defmodule HexWeb.PackageMetadata do
   use HexWeb.Web, :model
 
   embedded_schema do
+    # TODO: contributors is depracated, use maintainers
+    field :contributors, {:array, :string}
     field :description, :string
     field :licenses, {:array, :string}
     field :links, :map
     field :maintainers, {:array, :string}
-    field :contributors, {:array, :string}
   end
 
   @required_fields ~w(description)
-  @optional_fields ~w(licenses links maintainers)
+  @optional_fields ~w(contributors licenses links maintainers)
 
   def changeset(meta, params \\ :empty) do
     cast(meta, params, @required_fields, @optional_fields)
