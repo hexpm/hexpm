@@ -17,6 +17,7 @@ defmodule HexWeb.PackageMetadata do
     |> validate_presence(:description)
   end
 
+  # TODO: replace with `validate_required` in Ecto 2.0.0
   defp validate_presence(changeset, field) do
     validate_change changeset, field, fn _, value ->
       is_present = (value |> String.strip |> String.length) > 0
