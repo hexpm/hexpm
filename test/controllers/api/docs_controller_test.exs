@@ -53,6 +53,10 @@ defmodule HexWeb.API.DocsControllerTest do
     conn = get conn(), "docs/phoenix/0.0.1/index.html"
     assert conn.status == 200
     assert conn.resp_body == "HEYO"
+
+    conn = get conn(), "docs/sitemap.xml"
+    assert conn.status == 200
+    assert conn.resp_body =~ "https://hexdocs.pm/phoenix"
   end
 
   @tag :integration

@@ -6,7 +6,7 @@ defmodule HexWeb.SitemapControllerTest do
 
   setup do
     user = User.create(%{username: "eric", email: "eric@mail.com", password: "eric"}, true) |> HexWeb.Repo.insert!
-    {:ok, package}   = Package.create(user, pkg_meta(%{name: "postgrex", description: "Postgrex is awesome"}))
+    {:ok, package} = Package.create(user, pkg_meta(%{name: "postgrex", description: "Postgrex is awesome"}))
     {:ok, date} = Ecto.DateTime.cast("2014-04-17T14:00:00Z")
     package
     |> Ecto.Changeset.change(updated_at: date)
@@ -22,7 +22,6 @@ defmodule HexWeb.SitemapControllerTest do
     path          = Path.join([__DIR__, "..", "fixtures"])
     expected_body = File.read!(Path.join(path, "sitemap.xml"))
 
-    #File.write "sitemap.xml", conn.resp_body
     assert conn.resp_body == expected_body
   end
 end

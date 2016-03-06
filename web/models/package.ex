@@ -119,11 +119,17 @@ defmodule HexWeb.Package do
          select: count(o.id) >= 1)
   end
 
-  def all_with_docs do
+  def docs_sitemap do
     from(p in Package,
          order_by: p.name,
          where: not is_nil(p.docs_updated_at),
          select: {p.name, p.docs_updated_at})
+  end
+
+  def packages_sitemap do
+    from(p in Package,
+         order_by: p.name,
+         select: {p.name, p.updated_at})
   end
 
   def create_owner(package, user) do

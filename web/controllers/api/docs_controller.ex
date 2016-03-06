@@ -229,27 +229,9 @@ defmodule HexWeb.API.DocsController do
   end
 
   def publish_sitemap do
-    sitemap = HexWeb.Package.all_with_docs
-              |> HexWeb.Repo.all
-              |> render_sitemap
+    packages = Package.docs_sitemap
+               |> HexWeb.Repo.all
+    sitemap = HexWeb.SitemapView.render("docs_sitemap.xml", packages: packages)
     HexWeb.Store.put_docs_file("sitemap.xml", sitemap)
   end
-
-  @sitemap_template """
-  <?xml version="1.0" encoding="utf-8"?>
-  <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
-            xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-            xsi:schemaLocation="http://www.sitemaps.org/schemas/sitemap/0.9 http://www.sitemaps.org/schemas/sitemap/0.9/sitemap.xsd">
-    <%= for {package, docs_updated_at} <- packages do %>
-      <url>
-        <loc>https://hexdocs.pm/<%= package %></loc>
-        <lastmod><%=  Ecto.DateTime.to_iso8601(docs_updated_at) %></lastmod>
-        <changefreq>daily</changefreq>
-        <priority>0.8</priority>
-      </url>
-    <% end %>
-  </urlset>
-  """
-  require EEx
-  EEx.function_from_string :defp, :render_sitemap, @sitemap_template, [:packages]
 end
