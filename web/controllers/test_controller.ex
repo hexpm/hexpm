@@ -17,4 +17,8 @@ defmodule HexWeb.TestController do
     path = Path.join([params["package"], params["version"], params["page"]])
     HexWeb.Store.send_docs_page(conn, path)
   end
+
+  def get_docs_sitemap(conn, _params) do
+    HexWeb.Store.send_docs_page(conn, "sitemap.xml")
+  end
 end

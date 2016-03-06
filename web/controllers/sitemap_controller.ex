@@ -2,9 +2,10 @@ defmodule HexWeb.SitemapController do
   use HexWeb.Web, :controller
 
   def sitemap(conn, _params) do
-    packages = HexWeb.Repo.all(Package)
+    packages = Package.packages_sitemap
+               |> HexWeb.Repo.all
     conn
     |> put_resp_content_type("text/xml")
-    |> render("sitemap.xml", packages: packages)
+    |> render("packages_sitemap.xml", packages: packages)
   end
 end

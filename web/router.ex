@@ -54,6 +54,7 @@ defmodule HexWeb.Router do
       get "registry.ets.gz.signed",       TestController, :get_registry_signed
       get "tarballs/:ball",               TestController, :get_tarball
       get "docs/:package/:version/*page", TestController, :get_docs_page
+      get "docs/sitemap.xml",             TestController, :get_docs_sitemap
     end
   end
 
