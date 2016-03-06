@@ -18,10 +18,11 @@ defmodule HexWeb.Validation do
   end
 
   @doc """
-  Adds embed errors to the changeset.errors
+  Adds embed errors directly to the `changeset.errors`. This way we don't need to
+  extract them through `Ecto.Chanegset.traverse_errors/2`.
   """
   def put_embed_errors(%Ecto.Changeset{changes: changes} = changeset, embed) do
-    if changes[embed] && length(changes[embed].errors) > 0 do
+    if changes[embed] && changes[embed].errors != [] do
       %{changeset | errors: changeset.errors ++ [{embed, changes[embed].errors}]}
     else
       changeset
