@@ -57,7 +57,7 @@ defmodule HexWeb.ReleaseTest do
     assert {:ok, _} =
            Release.create(ecto, rel_meta(%{version: "0.1.0", app: "ecto", requirements: %{"decimal" => "~> 0.1"}}), "")
 
-    assert {:error, [version: "is invalid"]} =
+    assert {:error, [version: {"is invalid", [type: HexWeb.Version]}]} =
            Release.create(ecto, rel_meta(%{version: "0.1", app: "ecto"}), "")
 
     assert {:error, [requirements: [{"decimal", "invalid requirement: \"fail\""}]]} =

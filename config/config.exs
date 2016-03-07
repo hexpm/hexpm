@@ -36,6 +36,8 @@ config :hex_web,
   fastly_hexdocs: System.get_env("HEX_FASTLY_HEXDOCS"),
   fastly_hexrepo: System.get_env("HEX_FASTLY_HEXREPO")
 
+config :hex_web, ecto_repos: [HexWeb.Repo]
+
 config :ex_aws,
   access_key_id:     {:system, "HEX_S3_ACCESS_KEY"},
   secret_access_key: {:system, "HEX_S3_SECRET_KEY"}

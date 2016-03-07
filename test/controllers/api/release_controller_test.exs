@@ -87,7 +87,7 @@ defmodule HexWeb.API.ReleaseControllerTest do
     assert conn.status == 422
     body = Poison.decode!(conn.resp_body)
     assert body["message"] == "Validation error(s)"
-    assert body["errors"]["meta"]["links"] == "is invalid"
+    assert body["errors"]["meta"]["links"] == "expected type map"
   end
 
   test "create releases" do

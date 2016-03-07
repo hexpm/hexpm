@@ -13,6 +13,10 @@ defmodule HexWeb.BlockAddressTest do
     end
   end
 
+  setup do
+    :ok = Ecto.Adapters.SQL.Sandbox.checkout(HexWeb.Repo)
+  end
+
   test "allows requests from IPs that are not blocked" do
     conn = request({0, 0, 0, 0})
     assert conn.status == 200

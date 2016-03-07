@@ -1,3 +1,3 @@
 ExUnit.start
 
-Ecto.Adapters.SQL.begin_test_transaction(HexWeb.Repo)
+Ecto.Adapters.SQL.Sandbox.mode(HexWeb.Repo, :manual)

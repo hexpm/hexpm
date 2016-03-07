@@ -38,7 +38,7 @@ defmodule HexWeb.PackageTest do
     user = HexWeb.Repo.get_by!(User, username: "eric")
     assert {:error, changeset} = Package.create(user, pkg_meta(%{name: "ecto", meta: meta}))
     assert changeset.errors == []
-    assert changeset.changes.meta.errors == [description: "can't be blank"]
+    assert changeset.changes.meta.errors == [description: {"can't be blank", []}]
   end
 
   test "packages are unique" do
@@ -49,6 +49,6 @@ defmodule HexWeb.PackageTest do
 
   test "reserved names" do
     user = HexWeb.Repo.get_by!(User, username: "eric")
-    assert {:error, %{errors: [name: "is reserved"]}} = Package.create(user, pkg_meta(%{name: "elixir", description: "Awesomeness."}))
+    assert {:error, %{errors: [name: {"is reserved", []}]}} = Package.create(user, pkg_meta(%{name: "elixir", description: "Awesomeness."}))
   end
 end

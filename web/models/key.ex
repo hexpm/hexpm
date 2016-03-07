@@ -61,7 +61,7 @@ defmodule HexWeb.Key do
     {:ok, name} = fetch_change(changeset, :name)
 
     names =
-      from(u in assoc(changeset.model, :user),
+      from(u in assoc(changeset.data, :user),
            join: k in assoc(u, :keys),
            select: k.name)
       |> changeset.repo.all

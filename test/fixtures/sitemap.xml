@@ -4,7 +4,7 @@
     xsi:schemaLocation="http://www.sitemaps.org/schemas/sitemap/0.9 http://www.sitemaps.org/schemas/sitemap/0.9/sitemap.xsd">
     <url>
         <loc>https://hex.pm/packages/postgrex</loc>
-        <lastmod>2014-04-17T14:00:00Z</lastmod>
+        <lastmod>2014-04-17T14:00:00</lastmod>
         <changefreq>daily</changefreq>
         <priority>0.8</priority>
     </url>
