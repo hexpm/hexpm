@@ -46,7 +46,7 @@ defmodule HexWeb.Script.AddSurrogateKey do
       "." <> ext -> [content_type: Plug.MIME.type(ext)]
       ""         -> []
     end
-    |> Keyword.put(:cache_control, "public, max-age=86400")
+    |> Keyword.put(:cache_control, "public, max-age=604800")
     |> Keyword.put(:metadata_directive, :REPLACE)
     |> Keyword.put(:meta, [{"surrogate-key", key}])
     |> Keyword.put(:acl, :public_read)

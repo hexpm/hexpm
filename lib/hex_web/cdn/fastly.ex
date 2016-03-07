@@ -4,8 +4,10 @@ defmodule HexWeb.CDN.Fastly do
 
   def purge_key(service, key) do
     service_id = Application.get_env(:hex_web, service)
-    {:ok, 200, _, %{"status" => "ok"}} = post("service/#{service_id}/purge/#{key}", %{})
-    :ok
+    case post("service/#{service_id}/purge/#{key}", %{}) do
+      {:ok, status, _, _} when status in [200, 404] ->
+        :ok
+    end
   end
 
   defp auth() do
