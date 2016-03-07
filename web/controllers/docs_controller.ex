@@ -56,4 +56,11 @@ defmodule HexWeb.DocsController do
       title: "Mirrors"
     ]
   end
+
+  def public_keys(conn, _params) do
+    render conn, "public_keys.html", [
+      active: :docs,
+      title: "Public keys"
+    ]
+  end
 end

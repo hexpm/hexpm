@@ -38,6 +38,7 @@ defmodule HexWeb.Router do
     get  "docs/codeofconduct",      DocsController,     :coc
     get  "docs/faq",                DocsController,     :faq
     get  "docs/mirrors",            DocsController,     :mirrors
+    get  "docs/public_keys",        DocsController,     :public_keys
 
     get  "packages",                PackageController,  :index
     get  "packages/:name",          PackageController,  :show

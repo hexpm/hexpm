@@ -45,6 +45,7 @@
                 <li role="separator" class="divider"></li>
                 <li><a href="<%= docs_path(HexWeb.Endpoint, :coc) %>">Code of Conduct</a></li>
                 <li><a href="<%= docs_path(HexWeb.Endpoint, :mirrors) %>">Mirrors</a></li>
+                <!-- <li><a href="<%= docs_path(HexWeb.Endpoint, :public_keys) %>">Public keys</a></li> -->
                 <!-- <li><a href="<%= docs_path(HexWeb.Endpoint, :faq) %>">FAQ</a></li> -->
               </ul>
             </li>

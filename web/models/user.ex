@@ -71,7 +71,7 @@ defmodule HexWeb.User do
       false
   end
 
-  # TODO: Move to with when available in ecto
+  # TODO: Move to multi when available in ecto
   def reset(user, password) do
     HexWeb.Repo.transaction(fn ->
       user = User.update(user, %{password: password})
