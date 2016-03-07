@@ -27,7 +27,8 @@ defmodule HexWeb.PasswordController do
     success = User.reset?(user, key)
 
     if success do
-      User.reset(user, password)
+      multi = User.reset(user, password)
+      {:ok, _} = HexWeb.Repo.transaction(multi)
       HexWeb.Mailer.send("password_reset.html", "Hex.pm - Password reset", [user.email], [])
     end
 

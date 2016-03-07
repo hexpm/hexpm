@@ -46,19 +46,9 @@ defmodule HexWeb.Package do
 
   # TODO: Leave this in until we have multi
   def create(owner, params) do
-    changeset = changeset(%Package{}, :create, params)
-
-    HexWeb.Repo.transaction(fn ->
-      case HexWeb.Repo.insert(changeset) do
-        {:ok, package} ->
-          %PackageOwner{package_id: package.id, owner_id: owner.id}
-          |> HexWeb.Repo.insert!
-
-          package
-        {:error, changeset} ->
-          HexWeb.Repo.rollback(changeset)
-      end
-    end)
+    changeset(%Package{}, :create, params)
+    |> put_assoc(:package_owners, [%PackageOwner{owner_id: owner.id}])
+    |> HexWeb.Repo.insert
   end
 
   def update(package, params) do

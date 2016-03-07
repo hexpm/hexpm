@@ -181,16 +181,10 @@ defmodule HexWeb.ControllerHelpers do
     HexWeb.AuthHelpers.authorized(conn, opts, &fun.(conn, &1))
   end
 
-  @doc """
-  Records an entry in audit log. This function should be used within the same transaction
-  as DB operations that are part of the action that is being audited.
-  """
   def audit(%Plug.Conn{assigns: %{user: user}}, action, params) do
     audit(user, action, params)
   end
-
-  def audit(user, action, opts) do
-    HexWeb.AuditLog.create(user, action, opts)
-    |> HexWeb.Repo.insert!
+  def audit(user, action, params) do
+    Ecto.Changeset.change(HexWeb.AuditLog.create(user, action, params), %{})
   end
 end

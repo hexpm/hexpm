@@ -37,19 +37,14 @@ defmodule HexWeb.API.ReleaseController do
   end
 
   def delete(conn, _params) do
-    result =
-      HexWeb.Repo.transaction(fn ->
-        case Release.delete(conn.assigns.release) |> HexWeb.Repo.delete do
-          {:ok, release} ->
-            audit(conn, "release.revert", {conn.assigns.package, release})
-            release
-          {:error, changeset} ->
-            HexWeb.Repo.rollback(changeset)
-        end
-      end)
+    release = conn.assigns.release
+    multi =
+      Ecto.Multi.new
+      |> Ecto.Multi.delete(:release, Release.delete(release))
+      |> Ecto.Multi.insert(:log, audit(conn, "release.revert", {release.package, release}))
 
-    case result do
-      {:ok, release} ->
+    case HexWeb.Repo.transaction(multi) do
+      {:ok, _} ->
         # TODO: Remove package from database if this was the only release
         revert(release)
 
@@ -105,7 +100,7 @@ defmodule HexWeb.API.ReleaseController do
 
   defp update(conn, package, release, release_params, checksum, user, body) do
     case Release.update(release, release_params, checksum) do
-      {:ok, release} ->
+      {:ok, %{release: release}} ->
         after_release(package, release.version, user, body)
 
         release = %{release | package: package}
@@ -119,19 +114,13 @@ defmodule HexWeb.API.ReleaseController do
   end
 
   defp create(conn, package, release_params, checksum, user, body) do
-    result =
-      HexWeb.Repo.transaction(fn ->
-        case Release.create(package, release_params, checksum) do
-          {:ok, release} ->
-            audit(conn, "release.publish", {package, release})
-            release
-          {:error, changeset} ->
-            HexWeb.Repo.rollback(changeset)
-        end
-      end)
+    multi =
+      Ecto.Multi.new
+      |> Ecto.Multi.run(:release, fn _ -> Release.create(package, release_params, checksum) end)
+      |> Ecto.Multi.insert(:log, fn %{release: release} -> audit(user, "release.publish", {package, release}) end)
 
-    case result do
-      {:ok, release} ->
+    case HexWeb.Repo.transaction(multi) do
+      {:ok, %{release: release}} ->
         after_release(package, release.version, user, body)
 
         release = %{release | package: package}
@@ -142,7 +131,7 @@ defmodule HexWeb.API.ReleaseController do
         |> api_cache(:public)
         |> put_status(201)
         |> render(:show, release: release)
-      {:error, errors} ->
+      {:error, :release, errors, _} ->
         validation_failed(conn, errors)
     end
   end

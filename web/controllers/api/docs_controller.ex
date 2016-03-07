@@ -164,16 +164,13 @@ defmodule HexWeb.API.DocsController do
     HexWeb.CDN.purge_key(:fastly_hexdocs, unversioned_key)
     HexWeb.CDN.purge_key(:fastly_hexdocs, versioned_key)
 
-    # Set docs flag on release
-    HexWeb.Repo.transaction(fn ->
-      Ecto.Changeset.change(release, has_docs: true)
-      |> HexWeb.Repo.update!
+    multi =
+      Ecto.Multi.new
+      |> Ecto.Multi.update(:release, Ecto.Changeset.change(release, has_docs: true))
+      |> Ecto.Multi.update(:package, Ecto.Changeset.change(release.package, docs_updated_at: Ecto.DateTime.utc))
+      |> Ecto.Multi.insert(:log, audit(user, "docs.publish", {package, release}))
 
-      audit(user, "docs.publish", {package, release})
-    end)
-
-    Ecto.Changeset.change(release.package, docs_updated_at: Ecto.DateTime.utc)
-    |> HexWeb.Repo.update!
+    {:ok, _} = HexWeb.Repo.transaction(multi)
 
     publish_sitemap()
   end
@@ -212,15 +209,13 @@ defmodule HexWeb.API.DocsController do
         HexWeb.Store.delete_docs_page(path)
       end)
 
-      HexWeb.Repo.transaction(fn ->
-        Ecto.Changeset.change(release, has_docs: false)
-        |> HexWeb.Repo.update!
+      multi =
+        Ecto.Multi.new
+        |> Ecto.Multi.update(:release, Ecto.Changeset.change(release, has_docs: false))
+        |> Ecto.Multi.update(:package, Ecto.Changeset.change(release.package, docs_updated_at: Ecto.DateTime.utc))
+        |> Ecto.Multi.insert(:log, audit(user, "docs.revert", {release.package, release}))
 
-        audit(user, "docs.revert", {release.package, release})
-      end)
-
-      Ecto.Changeset.change(release.package, docs_updated_at: Ecto.DateTime.utc)
-      |> HexWeb.Repo.update!
+      {:ok, _} = HexWeb.Repo.transaction(multi)
 
       HexWeb.CDN.purge_key(:fastly_hexrepo, "docs/#{name}-#{version}")
       HexWeb.CDN.purge_key(:fastly_hexdocs, "docspage/#{name}/#{version}")

@@ -75,17 +75,10 @@ defmodule HexWeb.User do
       false
   end
 
-  # TODO: Move to multi when available in ecto
   def reset(user, password) do
-    HexWeb.Repo.transaction(fn ->
-      user = User.update(user, %{password: password})
-             |> HexWeb.Repo.update!
-
-      assoc(user, :keys)
-      |> HexWeb.Repo.delete_all
-
-      change(user, %{reset_key: nil, reset_expiry: nil})
-      |> HexWeb.Repo.update!
-    end)
+    Ecto.Multi.new
+    |> Ecto.Multi.update(:password, update(user, %{password: password}))
+    |> Ecto.Multi.update(:reset, change(user, %{reset_key: nil, reset_expiry: nil}))
+    |> Ecto.Multi.delete_all(:keys, assoc(user, :keys))
   end
 end

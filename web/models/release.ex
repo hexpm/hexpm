@@ -51,31 +51,23 @@ defmodule HexWeb.Release do
     end)
   end
 
-  # TODO: Leave this in until we have multi
   def update(release, params, checksum) do
     if editable?(release) do
       changeset =
         changeset(release, :update, params)
         |> put_change(:checksum, String.upcase(checksum))
 
-      HexWeb.Repo.transaction(fn ->
-        case HexWeb.Repo.update(changeset) do
-          {:ok, release} ->
-            HexWeb.Repo.delete_all(assoc(release, :requirements))
-
-            release = HexWeb.Repo.update!(changeset)
-            requirements = params["requirements"] || %{}
-
-            case HexWeb.Requirement.create_all(release, requirements) do
-              {:ok, reqs} ->
-                %{release | requirements: reqs}
-              {:error, errors} ->
-                HexWeb.Repo.rollback([requirements: errors])
-            end
-          {:error, changeset} ->
-            HexWeb.Repo.rollback(changeset.errors)
-        end
+      Ecto.Multi.new
+      |> Ecto.Multi.update(:update, changeset)
+      |> Ecto.Multi.delete_all(:delete_requirements, assoc(release, :requirements))
+      |> Ecto.Multi.run(:requirements, fn %{update: release} ->
+        requirements = params["requirements"] || %{}
+        HexWeb.Requirement.create_all(release, requirements)
       end)
+      |> Ecto.Multi.run(:release, fn %{update: release, requirements: requirements} ->
+        {:ok, %{release | requirements: requirements}}
+      end)
+      |> HexWeb.Repo.transaction
     else
       {:error, [inserted_at: "can only modify a release up to one hour after creation"]}
     end
