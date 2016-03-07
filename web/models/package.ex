@@ -39,7 +39,6 @@ defmodule HexWeb.Package do
   defp changeset(package, :update, params) do
     cast(package, params, ~w(name), [])
     |> cast_embed(:meta, required: true)
-    |> put_embed_errors(:meta)
     |> validate_format(:name, ~r"^[a-z]\w*$")
     |> validate_exclusion(:name, @reserved_names)
   end

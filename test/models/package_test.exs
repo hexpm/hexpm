@@ -37,9 +37,8 @@ defmodule HexWeb.PackageTest do
 
     user = HexWeb.Repo.get_by!(User, username: "eric")
     assert {:error, changeset} = Package.create(user, pkg_meta(%{name: "ecto", meta: meta}))
-    assert length(changeset.errors) == 1
-    assert length(changeset.errors[:meta]) == 1
-    assert changeset.errors[:meta] == [description: "can't be blank"]
+    assert changeset.errors == []
+    assert changeset.changes.meta.errors == [description: "can't be blank"]
   end
 
   test "packages are unique" do

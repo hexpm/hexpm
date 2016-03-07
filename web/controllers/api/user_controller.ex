@@ -26,7 +26,7 @@ defmodule HexWeb.API.UserController do
         |> put_status(201)
         |> render(:show, user: user)
       {:error, changeset} ->
-        validation_failed(conn, changeset.errors)
+        validation_failed(conn, changeset)
     end
   end
 

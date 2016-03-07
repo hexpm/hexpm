@@ -57,7 +57,7 @@ defmodule HexWeb.API.ReleaseController do
         |> api_cache(:private)
         |> send_resp(204, "")
       {:error, changeset} ->
-        validation_failed(conn, changeset.errors)
+        validation_failed(conn, changeset)
     end
   end
 
@@ -71,7 +71,7 @@ defmodule HexWeb.API.ReleaseController do
           {:ok, package} ->
             create_release(conn, package, user, checksum, meta, body)
           {:error, changeset} ->
-            validation_failed(conn, changeset.errors)
+            validation_failed(conn, changeset)
         end
 
       {:error, errors} ->

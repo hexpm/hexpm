@@ -24,7 +24,6 @@ defmodule HexWeb.Release do
   defp changeset(release, :update, params) do
     cast(release, params, ~w(version), [])
     |> cast_embed(:meta, required: true)
-    |> put_embed_errors(:meta)
     |> validate_version(:version)
   end
 

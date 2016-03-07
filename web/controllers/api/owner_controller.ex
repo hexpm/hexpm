@@ -56,7 +56,7 @@ defmodule HexWeb.API.OwnerController do
         |> api_cache(:private)
         |> send_resp(204, "")
       {:error, changeset} ->
-        validation_failed(conn, changeset.errors)
+        validation_failed(conn, changeset)
     end
   end
 
