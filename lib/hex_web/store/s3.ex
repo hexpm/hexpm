@@ -8,6 +8,10 @@ defmodule HexWeb.Store.S3 do
     list(region, bucket, prefix)
   end
 
+  def get_logs(nil, bucket, key) do
+    S3.get_object!(bucket, key)
+    |> Map.get(:body)
+  end
   def get_logs(region, bucket, key) do
     S3.new(region: region)
     |> S3Impl.get_object!(bucket, key)
@@ -20,12 +24,15 @@ defmodule HexWeb.Store.S3 do
   end
 
   def put_registry(data, signature) do
-    opts = if signature, do: [meta: [{"signature", signature}]], else: []
+    opts = if(signature, do: [meta: [{"signature", signature}]], else: [])
+           |> Keyword.put(:cache_control, "public, max-age=600")
+           |> Keyword.put(:meta, [{"surrogate-key", "registry"}])
     upload(:s3_bucket, "registry.ets.gz", data, opts)
   end
 
   def put_registry_signature(signature) do
-    upload(:s3_bucket, "registry.ets.gz.signed", signature)
+    opts = [cache_control: "public, max-age=600", meta: [{"surrogate-key", "registry"}]]
+    upload(:s3_bucket, "registry.ets.gz.signed", signature, opts)
   end
 
   def send_registry(conn) do
@@ -36,8 +43,11 @@ defmodule HexWeb.Store.S3 do
     redirect(conn, :cdn_url, "registry.ets.gz.signed")
   end
 
-  def put_release(name, data) do
-    upload(:s3_bucket, Path.join("tarballs", name), data)
+  def put_release(package, version, data) do
+    name = "#{package}-#{version}.tar"
+    key  = "tarballs/#{package}-#{version}"
+    opts = [cache_control: "public, max-age=604800", meta: [{"surrogate-key", key}]]
+    upload(:s3_bucket, Path.join("tarballs", name), data, opts)
   end
 
   def delete_release(name) do
@@ -79,7 +89,7 @@ defmodule HexWeb.Store.S3 do
       "." <> ext -> [content_type: Plug.MIME.type(ext)]
       ""         -> []
     end
-    |> Keyword.put(:cache_control, "public, max-age=86400")
+    |> Keyword.put(:cache_control, "public, max-age=604800")
     |> Keyword.put(:meta, [{"surrogate-key", key}])
 
     upload(:docs_bucket, path, data, opts)
@@ -114,6 +124,7 @@ defmodule HexWeb.Store.S3 do
     |> S3.put_object!(path, data, opts)
   end
 
+  defp list(nil, bucket, prefix), do: list(bucket, prefix)
   defp list(region, bucket, prefix) do
     S3.new(region: region)
     |> S3Impl.stream_objects!(bucket, prefix: prefix)

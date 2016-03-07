@@ -117,10 +117,8 @@ defmodule HexWeb.RegistryBuilder do
       end
 
     HexWeb.Store.put_registry(output, signature)
-
-    if signature do
-      HexWeb.Store.put_registry_signature(signature)
-    end
+    if signature, do: HexWeb.Store.put_registry_signature(signature)
+    HexWeb.CDN.purge_key(:fastly_hexrepo, "registry")
 
     HexWeb.Registry.set_done(handle)
     |> HexWeb.Repo.update_all([])

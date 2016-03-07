@@ -5,6 +5,8 @@ defmodule HexWeb.Store do
   @type bucket  :: String.t
   @type prefix  :: key
   @type key     :: String.t
+  @type package :: String.t
+  @type version :: String.t
   @type body    :: binary
   @type cdn_key :: String.t
 
@@ -17,7 +19,7 @@ defmodule HexWeb.Store do
   @callback send_registry(Plug.Conn.t) :: Plug.Conn.t
   @callback send_registry_signature(Plug.Conn.t) :: Plug.Conn.t
 
-  @callback put_release(key, body) :: term
+  @callback put_release(package, version, body) :: term
   @callback delete_release(key) :: term
   @callback send_release(Plug.Conn.t, key) :: Plug.Conn.t
 
@@ -38,7 +40,7 @@ defmodule HexWeb.Store do
   defdispatch put_registry_signature(body),        to: impl
   defdispatch send_registry(conn),                 to: impl
   defdispatch send_registry_signature(conn),       to: impl
-  defdispatch put_release(key, body),              to: impl
+  defdispatch put_release(package, version, body), to: impl
   defdispatch delete_release(key),                 to: impl
   defdispatch send_release(conn, key),             to: impl
   defdispatch put_docs(key, body),                 to: impl

@@ -19,6 +19,7 @@ config :hex_web,
   s3_bucket:      System.get_env("HEX_S3_BUCKET"),
   docs_bucket:    System.get_env("HEX_DOCS_BUCKET"),
   logs_buckets:   logs_buckets,
+  fastly_bucket:  System.get_env("HEX_FASTLYLOGS_BUCKETS"),
   docs_url:       System.get_env("HEX_DOCS_URL"),
   cdn_url:        System.get_env("HEX_CDN_URL"),
 
@@ -31,7 +32,8 @@ config :hex_web,
 
   cdn_impl:       cdn,
   fastly_key:     System.get_env("HEX_FASTLY_KEY"),
-  fastly_hexdocs: System.get_env("HEX_FASTLY_HEXDOCS")
+  fastly_hexdocs: System.get_env("HEX_FASTLY_HEXDOCS"),
+  fastly_hexrepo: System.get_env("HEX_FASTLY_HEXREPO")
 
 config :ex_aws,
   access_key_id:     {:system, "HEX_S3_ACCESS_KEY"},

@@ -33,9 +33,9 @@ defmodule HexWeb.PageControllerTest do
     logfile1 = File.read!(Path.join(path, "s3_logs_1.txt"))
     logfile2 = File.read!(Path.join(path, "s3_logs_2.txt"))
 
-    HexWeb.Store.put_logs(nil, nil, "hex/2013-11-01-21-32-16-E568B2907131C0C0", logfile1)
-    HexWeb.Store.put_logs(nil, nil, "hex/2013-11-01-21-32-19-E568B2907131C0C0", logfile2)
-    HexWeb.StatsJob.run({2013, 11, 1}, [[nil, nil]])
+    HexWeb.Store.put_logs(nil, nil, "hex/2013-12-01-21-32-16-E568B2907131C0C0", logfile1)
+    HexWeb.Store.put_logs(nil, nil, "hex/2013-12-01-21-32-19-E568B2907131C0C0", logfile2)
+    HexWeb.StatsJob.run({2013, 12, 1}, [[nil, nil]], nil)
 
     conn = get conn(), "/"
 

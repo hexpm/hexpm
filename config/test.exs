@@ -18,4 +18,4 @@ config :hex_web, HexWeb.Repo,
   pool: Ecto.Adapters.SQL.Sandbox
 
 config :logger,
-  level: :warn
+  level: :error
