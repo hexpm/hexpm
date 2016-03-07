@@ -35,7 +35,7 @@ defmodule HexWeb.PageControllerTest do
 
     HexWeb.Store.put_logs(nil, nil, "hex/2013-12-01-21-32-16-E568B2907131C0C0", logfile1)
     HexWeb.Store.put_logs(nil, nil, "hex/2013-12-01-21-32-19-E568B2907131C0C0", logfile2)
-    HexWeb.StatsJob.run({2013, 12, 1}, [[nil, nil]], nil)
+    HexWeb.StatsJob.run({2013, 12, 1}, [[nil, nil]])
 
     conn = get conn(), "/"
 

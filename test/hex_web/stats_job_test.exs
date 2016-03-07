@@ -32,7 +32,6 @@ defmodule HexWeb.StatsJobTest do
       end
 
     buckets = [[bucket, region]]
-    fastly_bucket = Application.get_env(:hex_web, :fastly_bucket)
 
     path     = Path.join([__DIR__, "..", "fixtures"])
     logfile1 = File.read!(Path.join(path, "s3_logs_1.txt"))
@@ -47,7 +46,7 @@ defmodule HexWeb.StatsJobTest do
     HexWeb.Store.put_logs(region, bucket, "fastly_hex/2013-11-01T14:00:00.000-tzletcEGGiI7atIAAAAA.log.gz", logfile3)
     HexWeb.Store.put_logs(region, bucket, "fastly_hex/2013-11-01T15:00:00.000-tzletcEGGiI7atIAAAAA.log.gz", logfile4)
 
-    HexWeb.StatsJob.run({2013, 11, 1}, buckets, fastly_bucket)
+    HexWeb.StatsJob.run({2013, 11, 1}, buckets)
 
     foo = HexWeb.Repo.get_by!(HexWeb.Package, name: "foo")
     bar = HexWeb.Repo.get_by!(HexWeb.Package, name: "bar")

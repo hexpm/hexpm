@@ -19,7 +19,6 @@ config :hex_web,
   s3_bucket:      System.get_env("HEX_S3_BUCKET"),
   docs_bucket:    System.get_env("HEX_DOCS_BUCKET"),
   logs_buckets:   logs_buckets,
-  fastly_bucket:  System.get_env("HEX_FASTLYLOGS_BUCKETS"),
   docs_url:       System.get_env("HEX_DOCS_URL"),
   cdn_url:        System.get_env("HEX_CDN_URL"),
 

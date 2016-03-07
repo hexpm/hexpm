@@ -37,15 +37,15 @@ defmodule HexWeb.StatsJob do
     ([0-9]{3})\040        # status
   >x
 
-  def run(date, s3_buckets, fastly_bucket, max_downloads_per_ip \\ 100, dryrun? \\ false) do
+  def run(date, buckets,max_downloads_per_ip \\ 100, dryrun? \\ false) do
     start()
 
     s3_prefix     = "hex/#{date_string(date)}"
     fastly_prefix = "fastly_hex/#{date_string(date)}"
     {:ok, date}   = Ecto.Type.load(Ecto.Date, date)
 
-    s3_dict     = process_buckets(s3_buckets, s3_prefix, @s3_regex)
-    fastly_dict = process_buckets([fastly_bucket], fastly_prefix, @fastly_regex)
+    s3_dict     = process_buckets(buckets, s3_prefix, @s3_regex)
+    fastly_dict = process_buckets(buckets, fastly_prefix, @fastly_regex)
     dict        = merge_dicts(s3_dict, fastly_dict)
 
     # TODO: Map/Reduce
