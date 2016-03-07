@@ -6,35 +6,35 @@ defmodule ViewHelpersTest do
   test "format simple mix dependency snippet" do
     {:ok, version} = Version.parse("1.0.0")
     package_name   = "ecto"
-    release = %{meta: %{"app" => package_name}, version: version}
+    release = %{meta: %{app: package_name}, version: version}
     assert ViewHelpers.dep_snippet(:mix, package_name, release) == "{:ecto, \"~> 1.0\"}"
   end
 
   test "format mix dependency snippet" do
     {:ok, version} = Version.parse("1.0.0")
     package_name   = "timex"
-    release = %{ meta: %{ "app" => "extime"}, version: version}
+    release = %{meta: %{app: "extime"}, version: version}
     assert ViewHelpers.dep_snippet(:mix, package_name, release) == "{:extime, \"~> 1.0\", hex: :timex}"
   end
 
   test "format simple rebar dependency snippet" do
     {:ok, version} = Version.parse("1.0.0")
     package_name   = "rebar"
-    release = %{meta: %{"app" => package_name}, version: version}
+    release = %{meta: %{app: package_name}, version: version}
     assert ViewHelpers.dep_snippet(:rebar, package_name, release) == "{rebar, \"1.0.0\"}"
   end
 
   test "format rebar dependency snippet" do
     {:ok, version} = Version.parse("1.0.1")
     package_name   = "rebar"
-    release = %{ meta: %{ "app" => "erlang_mk"}, version: version}
+    release = %{meta: %{app: "erlang_mk"}, version: version}
     assert ViewHelpers.dep_snippet(:rebar, package_name, release) == "{erlang_mk, \"1.0.1\", {pkg, rebar}}"
   end
 
   test "format erlang.mk dependency snippet" do
     {:ok, version} = Version.parse("1.0.4")
     package_name   = "cowboy"
-    release = %{meta: %{"app" => package_name}, version: version}
+    release = %{meta: %{app: package_name}, version: version}
     assert ViewHelpers.dep_snippet(:erlang_mk, package_name, release) == "dep_cowboy = hex 1.0.4"
   end
 

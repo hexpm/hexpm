@@ -111,7 +111,7 @@ defmodule HexWeb.Requirement do
   end
 
   defp guess_config(release) do
-    build_tools = release.meta["build_tools"] || []
+    build_tools = release.meta.build_tools || []
     cond do
       "mix" in build_tools       -> "mix.exs"
       "rebar" in build_tools     -> "rebar.config"

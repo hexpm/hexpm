@@ -52,7 +52,7 @@ defmodule HexWeb.ViewHelpers do
 
   def dep_snippet(:mix, package_name, release) do
     version = snippet_version(:mix, release.version)
-    app_name = release.meta["app"] || package_name
+    app_name = release.meta.app || package_name
 
     if package_name == app_name do
       "{:#{package_name}, \"#{version}\"}"
@@ -63,7 +63,7 @@ defmodule HexWeb.ViewHelpers do
 
   def dep_snippet(:rebar, package_name, release) do
     version = snippet_version(:rebar, release.version)
-    app_name = release.meta["app"] || package_name
+    app_name = release.meta.app || package_name
 
     if package_name == app_name do
       "{#{package_name}, \"#{version}\"}"

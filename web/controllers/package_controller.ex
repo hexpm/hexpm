@@ -61,7 +61,7 @@ defmodule HexWeb.PackageController do
     render conn, "show.html", [
       active:            :packages,
       title:             package.name,
-      description:       package.meta["description"],
+      description:       package.meta.description,
       canonical_url:     package_url(conn, :show, package),
       package:           package,
       releases:          releases,

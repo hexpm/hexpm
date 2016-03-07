@@ -59,7 +59,7 @@
               <span class="glyphicon glyphicon-folder-open" style="padding-right: 0.5em;"></span><%= package.name %>
             </a>
           </td>
-          <td><%= text_length(package.meta["description"], 140) %></td>
+          <td><%= text_length(package.meta.description, 140) %></td>
           <td>
             <span class="text-muted"><%= package.latest_version %></span>
           </td>
