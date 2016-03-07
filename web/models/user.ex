@@ -23,13 +23,16 @@ defmodule HexWeb.User do
   end
 
   defp changeset(user, :create, params) do
-    cast(user, params, ~w(username password email), [])
-    |> update_change(:username, &String.downcase/1)
+    cast(user, params, ~w(username password email))
+    |> validate_required(:email)
+    |> validate_required(:password)
+    |> validate_required(:username)
     |> update_change(:email, &String.downcase/1)
-    |> validate_format(:username, ~r"^[a-z0-9_\-\.!~\*'\(\)]+$")
+    |> update_change(:username, &String.downcase/1)
     |> validate_format(:email, ~r"^.+@.+\..+$")
-    |> unique_constraint(:username, name: "users_username_idx")
+    |> validate_format(:username, ~r"^[a-z0-9_\-\.!~\*'\(\)]+$")
     |> unique_constraint(:email, name: "users_email_key")
+    |> unique_constraint(:username, name: "users_username_idx")
   end
 
   defp changeset(user, :update, params) do

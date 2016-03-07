@@ -22,7 +22,7 @@ defmodule HexWeb.Release do
   end
 
   defp changeset(release, :update, params) do
-    cast(release, params, ~w(version), [])
+    cast(release, params, ~w(version))
     |> cast_embed(:meta, required: true)
     |> validate_version(:version)
   end

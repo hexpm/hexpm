@@ -19,7 +19,8 @@ defmodule HexWeb.Key do
   end
 
   defp changeset(key, params) do
-    cast(key, params, ~w(name), [])
+    cast(key, params, ~w(name))
+    |> validate_required(:name)
     |> add_keys
     |> prepare_changes(&unique_name/1)
   end

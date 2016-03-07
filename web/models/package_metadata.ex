@@ -10,19 +10,9 @@ defmodule HexWeb.PackageMetadata do
     field :maintainers, {:array, :string}
   end
 
-  @required_fields ~w(description licenses)
-  @optional_fields ~w(contributors links maintainers)
-
-  def changeset(meta, params \\ :empty) do
-    cast(meta, params, @required_fields, @optional_fields)
-    |> validate_presence(:description)
-  end
-
-  # TODO: replace with `validate_required` in Ecto 2.0.0
-  defp validate_presence(changeset, field) do
-    validate_change changeset, field, fn _, value ->
-      is_present = (value |> String.strip |> String.length) > 0
-      if is_present, do: [], else: [{field, "can't be blank"}]
-    end
+  def changeset(meta, params \\ %{}) do
+    cast(meta, params, ~w(description contributors licenses links maintainers))
+    |> validate_required(:description)
+    |> validate_required(:licenses)
   end
 end
