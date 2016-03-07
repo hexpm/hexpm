@@ -103,6 +103,8 @@ defmodule HexWeb.API.OwnerControllerTest do
            |> put_req_header("authorization", key_for("eric"))
            |> put("api/packages/postgrex/owners/jose%40mail.com")
     assert conn.status == 422
+    body = Poison.decode!(conn.resp_body)
+    assert body["errors"]["owner_id"] == "is already owner"
   end
 
   test "add package owner authorizes" do

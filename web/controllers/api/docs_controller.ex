@@ -43,8 +43,8 @@ defmodule HexWeb.API.DocsController do
         |> put_resp_header("location", location)
         |> api_cache(:public)
         |> send_resp(201, "")
-      {:error, error} ->
-        validation_failed(conn, error)
+      {:error, errors} ->
+        validation_failed(conn, errors)
     end
   end
 

@@ -44,7 +44,7 @@ defmodule HexWeb.API.KeyController do
         |> put_status(201)
         |> render(:show, key: key)
       {:error, changeset} ->
-        validation_failed(conn, changeset.errors)
+        validation_failed(conn, changeset)
     end
   end
 

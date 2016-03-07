@@ -41,21 +41,24 @@ defmodule HexWeb.ControllerHelpers do
     |> halt
   end
 
-  def validation_failed(conn, errors) do
-    errors = lists_to_maps(errors)
+  def validation_failed(conn, %Ecto.Changeset{} = changeset) do
+    errors = Ecto.Changeset.traverse_errors(changeset, fn err -> err end)
+             |> normalize_errors
+    render_error(conn, 422, errors: errors)
+  end
+  def validation_failed(conn, errors) when is_list(errors) do
+    errors = Enum.into(errors, %{})
     render_error(conn, 422, errors: errors)
   end
 
-  defp lists_to_maps({x, y}),
-    do: {lists_to_maps(x), lists_to_maps(y)}
-  defp lists_to_maps([{_, _}|_] = list),
-    do: Enum.into(list, %{}, &lists_to_maps/1)
-  defp lists_to_maps(map) when is_map(map),
-    do: Enum.into(map, %{}, &lists_to_maps/1)
-  defp lists_to_maps(list) when is_list(list),
-    do: Enum.map(list, &lists_to_maps/1)
-  defp lists_to_maps(other),
-    do: other
+  # Since Changeset.traverse_errors returns `{field: [err], ...}`
+  # but Hex client expects `{field1: err1, ...}` we normalize to the latter.
+  defp normalize_errors(errors) do
+    Enum.into(errors, %{}, fn
+      {key, [val]} -> {key, val}
+      {key, %{} = map} -> {key, normalize_errors(map)}
+    end)
+  end
 
   def not_found(conn) do
     render_error(conn, 404)
