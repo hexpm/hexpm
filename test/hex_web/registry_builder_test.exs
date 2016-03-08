@@ -34,10 +34,12 @@ defmodule HexWeb.RegistryBuilderTest do
     postgrex = HexWeb.Repo.get_by!(Package, name: "postgrex")
     decimal = HexWeb.Repo.get_by!(Package, name: "decimal")
 
-    {:ok, _} = Release.create(ex_doc, rel_meta(%{version: "0.0.1", app: "ex_doc"}), "")
-    {:ok, _} = Release.create(decimal, rel_meta(%{version: "0.0.1", app: "decimal"}), "")
-    {:ok, _} = Release.create(decimal, rel_meta(%{version: "0.0.2", app: "decimal", requirements: %{ex_doc: "0.0.1"}}), "")
-    {:ok, _} = Release.create(postgrex, rel_meta(%{version: "0.0.2", app: "postgrex", requirements: %{decimal: "~> 0.0.1", ex_doc: "0.0.1"}}), "")
+    Release.create(ex_doc, rel_meta(%{version: "0.0.1", app: "ex_doc"}), "") |> HexWeb.Repo.insert!
+    Release.create(decimal, rel_meta(%{version: "0.0.1", app: "decimal"}), "") |> HexWeb.Repo.insert!
+    Release.create(decimal, rel_meta(%{version: "0.0.2", app: "decimal", requirements: [%{name: "ex_doc", requirement: "0.0.1"}]}), "") |> HexWeb.Repo.insert!
+    meta = rel_meta(%{requirements: [%{name: "decimal", requirement: "~> 0.0.1"}, %{name: "ex_doc", requirement: "0.0.1"}],
+                      app: "postgrex", version: "0.0.2"})
+    Release.create(postgrex, meta, "") |> HexWeb.Repo.insert!
   end
 
   test "registry is versioned" do

@@ -51,7 +51,7 @@ defmodule HexWeb.API.ReleaseController do
         conn
         |> api_cache(:private)
         |> send_resp(204, "")
-      {:error, changeset} ->
+      {:error, :release, changeset, _} ->
         validation_failed(conn, changeset)
     end
   end
@@ -100,8 +100,11 @@ defmodule HexWeb.API.ReleaseController do
   end
 
   defp update(conn, package, release, release_params, checksum, user, body) do
-    case Release.update(release, release_params, checksum) do
-      {:ok, %{release: release}} ->
+    release =
+      HexWeb.Repo.preload(release, requirements: Release.requirements(release))
+
+    case Release.update(release, release_params, checksum) |> HexWeb.Repo.update do
+      {:ok, release} ->
         after_release(package, release.version, user, body)
 
         release = %{release | package: package}
@@ -114,10 +117,12 @@ defmodule HexWeb.API.ReleaseController do
     end
   end
 
-  defp create(conn, package, release_params, checksum, user, body) do
+  defp create(conn, package, params, checksum, user, body) do
+    params = normalize_params(params)
+
     multi =
       Ecto.Multi.new
-      |> Ecto.Multi.run(:release, fn _ -> Release.create(package, release_params, checksum) end)
+      |> Ecto.Multi.insert(:release, Release.create(package, params, checksum))
       |> Ecto.Multi.insert(:log, fn %{release: release} -> audit(user, "release.publish", {package, release}) end)
 
     case HexWeb.Repo.transaction(multi) do
@@ -132,10 +137,32 @@ defmodule HexWeb.API.ReleaseController do
         |> api_cache(:public)
         |> put_status(201)
         |> render(:show, release: release)
-      {:error, :release, errors, _} ->
-        validation_failed(conn, errors)
+      {:error, :release, changeset, _} ->
+        validation_failed(conn, normalize_errors(changeset))
     end
   end
+
+  # Turn `%{"ecto" => %{"app" => "...", ...}}` into:
+  #      `[%{"name" => "ecto", "app" => "...", ...}]` for cast_assoc
+  defp normalize_params(%{"requirements" => requirements} = params) do
+    requirements =
+      requirements
+      |> Enum.map(fn {name, map} -> Map.put(map, "name", name) end)
+
+    %{params | "requirements" => requirements}
+  end
+  defp normalize_params(params), do: params
+
+  defp normalize_errors(%{changes: %{requirements: requirements}} = changeset) do
+    requirements =
+      requirements
+      |> Enum.map(fn %{changes: %{name: name}, errors: [{_, err}]} = req ->
+        %{req | errors: %{name => err}}
+      end)
+
+    put_in(changeset.changes.requirements, requirements)
+  end
+  defp normalize_errors(changeset), do: changeset
 
   defp after_release(package, version, user, body) do
     task    = fn -> job(package, version, body) end
