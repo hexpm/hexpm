@@ -37,7 +37,7 @@ defmodule HexWeb.StatsJob do
     ([0-9]{3})\040        # status
   >x
 
-  def run(date, buckets,max_downloads_per_ip \\ 100, dryrun? \\ false) do
+  def run(date, buckets, max_downloads_per_ip \\ 100, dryrun? \\ false) do
     start()
 
     s3_prefix     = "hex/#{date_string(date)}"
@@ -104,13 +104,9 @@ defmodule HexWeb.StatsJob do
   end
 
   defp process_buckets(buckets, prefix, regex) do
-    Enum.reduce(buckets, %{}, fn
-      [bucket, region], dict ->
-        keys = HexWeb.Store.list_logs(region, bucket, prefix)
-        process_keys(region, bucket, regex, keys, dict)
-      bucket, dict ->
-        keys = HexWeb.Store.list_logs(nil, bucket, prefix)
-        process_keys(nil, bucket, regex, keys, dict)
+    Enum.reduce(buckets, %{}, fn [bucket, region], dict ->
+      keys = HexWeb.Store.list_logs(region, bucket, prefix)
+      process_keys(region, bucket, regex, keys, dict)
     end)
   end
 
@@ -146,8 +142,7 @@ defmodule HexWeb.StatsJob do
     case Regex.run(regex, line) do
       [_, ip, request_id, package, version, status] when status in ~w(200 304) ->
         {ip, request_id, package, version}
-      nil ->
-        nil
+      _ ->
     end
   end
 

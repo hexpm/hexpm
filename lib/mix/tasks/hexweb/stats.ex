@@ -8,11 +8,10 @@ defmodule Mix.Tasks.Hexweb.Stats do
     Mix.Task.run "app.start"
 
     buckets       = Application.get_env(:hex_web, :logs_buckets)
-    fastly_bucket = Application.get_env(:hex_web, :fastlylogs_bucket)
 
     try do
       {time, {memory, size}} = :timer.tc(fn ->
-        HexWeb.StatsJob.run(HexWeb.Utils.yesterday, buckets, fastly_bucket)
+        HexWeb.StatsJob.run(HexWeb.Utils.yesterday, buckets)
       end)
       Logger.warn "STATS_JOB_COMPLETED #{size} downloads (#{div time, 1000}ms, #{div memory, 1024}kb)"
     catch
