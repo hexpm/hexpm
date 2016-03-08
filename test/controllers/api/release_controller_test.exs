@@ -226,6 +226,20 @@ defmodule HexWeb.API.ReleaseControllerTest do
            release.requirements
   end
 
+  test "create releases with requirements validates" do
+    reqs = %{decimal: %{requirement: "~> invalid", app: "not_decimal"}}
+    body = create_tar(%{name: :postgrex, version: "0.0.1", requirements: reqs, description: "description"}, [])
+    conn = conn()
+           |> put_req_header("content-type", "application/octet-stream")
+           |> put_req_header("authorization", key_for("eric"))
+           |> post("api/packages/postgrex/releases", body)
+
+    assert conn.status == 422
+    body = Poison.decode!(conn.resp_body)
+    assert body["message"] == "Validation error(s)"
+    assert body["errors"] == %{"requirements" => %{"decimal" => "invalid requirement: \"~> invalid\""}}
+  end
+
   test "create release updates registry" do
     path = "tmp/registry.ets"
     RegistryBuilder.rebuild

@@ -46,10 +46,15 @@ defmodule HexWeb.ControllerHelpers do
              |> normalize_errors
     render_error(conn, 422, errors: errors)
   end
-  def validation_failed(conn, errors) when is_list(errors) do
-    errors = Enum.into(errors, %{})
-    render_error(conn, 422, errors: errors)
+  def validation_failed(conn, errors) do
+    render_error(conn, 422, errors: errors_to_map(errors))
   end
+
+  # TODO: remove when requirements are handled with cast_assoc
+  defp errors_to_map(errors) when is_list(errors) do
+    Enum.into(errors, %{}, fn {key, value} -> {key, errors_to_map(value)} end)
+  end
+  defp errors_to_map(other), do: other
 
   # Since Changeset.traverse_errors returns `{field: [err], ...}`
   # but Hex client expects `{field1: err1, ...}` we normalize to the latter.
