@@ -223,6 +223,7 @@ defmodule HexWeb.API.DocsController do
       |> HexWeb.Repo.update!
 
       HexWeb.CDN.purge_key(:fastly_hexrepo, "docs/#{name}-#{version}")
+      HexWeb.CDN.purge_key(:fastly_hexdocs, "docspage/#{name}/#{version}")
       publish_sitemap()
     end
 
