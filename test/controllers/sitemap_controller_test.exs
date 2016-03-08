@@ -6,7 +6,7 @@ defmodule HexWeb.SitemapControllerTest do
 
   setup do
     user = User.create(%{username: "eric", email: "eric@mail.com", password: "eric"}, true) |> HexWeb.Repo.insert!
-    {:ok, package} = Package.create(user, pkg_meta(%{name: "postgrex", description: "Postgrex is awesome"}))
+    package = Package.create(user, pkg_meta(%{name: "postgrex", description: "Postgrex is awesome"})) |> HexWeb.Repo.insert!
     {:ok, date} = Ecto.DateTime.cast("2014-04-17T14:00:00Z")
     package
     |> Ecto.Changeset.change(updated_at: date)

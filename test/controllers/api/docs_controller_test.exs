@@ -14,9 +14,9 @@ defmodule HexWeb.API.DocsControllerTest do
   @tag :integration
   test "release docs" do
     user           = HexWeb.Repo.get_by!(User, username: "eric")
-    {:ok, phoenix} = Package.create(user, pkg_meta(%{name: "phoenix", description: "Web framework"}))
-    {:ok, _}       = Release.create(phoenix, rel_meta(%{version: "0.0.1", app: "phoenix"}), "")
-    {:ok, _}       = Release.create(phoenix, rel_meta(%{version: "0.0.2", app: "phoenix"}), "")
+    phoenix = Package.create(user, pkg_meta(%{name: "phoenix", description: "Web framework"})) |> HexWeb.Repo.insert!
+    Release.create(phoenix, rel_meta(%{version: "0.0.1", app: "phoenix"}), "")
+    Release.create(phoenix, rel_meta(%{version: "0.0.2", app: "phoenix"}), "")
 
     body = create_tarball([{'index.html', "HEYO"}])
     conn = conn()
@@ -62,7 +62,7 @@ defmodule HexWeb.API.DocsControllerTest do
   @tag :integration
   test "release beta docs" do
     user        = HexWeb.Repo.get_by!(User, username: "eric")
-    {:ok, plug} = Package.create(user, pkg_meta(%{name: "plug", description: "Web framework"}))
+    plug = Package.create(user, pkg_meta(%{name: "plug", description: "Web framework"})) |> HexWeb.Repo.insert!
     {:ok, _}    = Release.create(plug, rel_meta(%{version: "0.0.1-beta.1", app: "plug"}), "")
     {:ok, _}    = Release.create(plug, rel_meta(%{version: "0.5.0", app: "plug"}), "")
     {:ok, _}    = Release.create(plug, rel_meta(%{version: "1.0.0-beta.1", app: "plug"}), "")
@@ -108,7 +108,7 @@ defmodule HexWeb.API.DocsControllerTest do
 
   test "delete release with docs" do
     user        = HexWeb.Repo.get_by!(User, username: "eric")
-    {:ok, ecto} = Package.create(user, pkg_meta(%{name: "ecto", description: "DSL"}))
+    ecto = Package.create(user, pkg_meta(%{name: "ecto", description: "DSL"})) |> HexWeb.Repo.insert!
     {:ok, _}    = Release.create(ecto, rel_meta(%{version: "0.0.1", app: "ecto"}), "")
 
     body = create_tarball([{'index.html', "HEYO"}])
@@ -140,7 +140,7 @@ defmodule HexWeb.API.DocsControllerTest do
   @tag :integration
   test "delete docs" do
     user        = HexWeb.Repo.get_by!(User, username: "eric")
-    {:ok, ecto} = Package.create(user, pkg_meta(%{name: "ecto", description: "DSL"}))
+    ecto = Package.create(user, pkg_meta(%{name: "ecto", description: "DSL"})) |> HexWeb.Repo.insert!
     {:ok, _}    = Release.create(ecto, rel_meta(%{version: "0.0.1", app: "ecto"}), "")
 
     body = create_tarball([{'index.html', "HEYO"}])
@@ -177,7 +177,7 @@ defmodule HexWeb.API.DocsControllerTest do
   @tag :integration
   test "dont allow version directories in docs" do
     user        = HexWeb.Repo.get_by!(User, username: "eric")
-    {:ok, ecto} = Package.create(user, pkg_meta(%{name: "ecto", description: "DSL"}))
+    ecto = Package.create(user, pkg_meta(%{name: "ecto", description: "DSL"})) |> HexWeb.Repo.insert!
     {:ok, _}    = Release.create(ecto, rel_meta(%{version: "0.0.1", app: "ecto"}), "")
 
     body = create_tarball([{'1.2.3', "HEYO"}])

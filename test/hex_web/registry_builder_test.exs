@@ -12,9 +12,9 @@ defmodule HexWeb.RegistryBuilderTest do
 
   setup do
     user = User.create(%{username: "eric", email: "eric@mail.com", password: "eric"}, true) |> HexWeb.Repo.insert!
-    Package.create(user, pkg_meta(%{name: "postgrex", description: "PostgreSQL driver for Elixir."}))
-    Package.create(user, pkg_meta(%{name: "decimal", description: "Arbitrary precision decimal arithmetic for Elixir."}))
-    Package.create(user, pkg_meta(%{name: "ex_doc", description: "ExDoc"}))
+    Package.create(user, pkg_meta(%{name: "postgrex", description: "PostgreSQL driver for Elixir."})) |> HexWeb.Repo.insert!
+    Package.create(user, pkg_meta(%{name: "decimal", description: "Arbitrary precision decimal arithmetic for Elixir."})) |> HexWeb.Repo.insert!
+    Package.create(user, pkg_meta(%{name: "ex_doc", description: "ExDoc"})) |> HexWeb.Repo.insert!
     Install.create("0.0.1", ["0.13.0-dev"]) |> HexWeb.Repo.insert!
     Install.create("0.1.0", ["0.13.1-dev", "0.13.1"]) |> HexWeb.Repo.insert!
     :ok
@@ -30,9 +30,9 @@ defmodule HexWeb.RegistryBuilderTest do
   end
 
   defp test_data do
-    ex_doc = HexWeb.Repo.get_by(Package, name: "ex_doc")
-    postgrex = HexWeb.Repo.get_by(Package, name: "postgrex")
-    decimal = HexWeb.Repo.get_by(Package, name: "decimal")
+    ex_doc = HexWeb.Repo.get_by!(Package, name: "ex_doc")
+    postgrex = HexWeb.Repo.get_by!(Package, name: "postgrex")
+    decimal = HexWeb.Repo.get_by!(Package, name: "decimal")
 
     {:ok, _} = Release.create(ex_doc, rel_meta(%{version: "0.0.1", app: "ex_doc"}), "")
     {:ok, _} = Release.create(decimal, rel_meta(%{version: "0.0.1", app: "decimal"}), "")

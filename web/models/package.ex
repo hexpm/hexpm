@@ -44,11 +44,9 @@ defmodule HexWeb.Package do
     |> validate_exclusion(:name, @reserved_names)
   end
 
-  # TODO: Leave this in until we have multi
   def create(owner, params) do
     changeset(%Package{}, :create, params)
     |> put_assoc(:package_owners, [%PackageOwner{owner_id: owner.id}])
-    |> HexWeb.Repo.insert
   end
 
   def update(package, params) do

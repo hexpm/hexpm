@@ -83,6 +83,7 @@ defmodule HexWeb.API.ReleaseController do
       |> HexWeb.Repo.update
     else
       Package.create(user, params)
+      |> HexWeb.Repo.insert
     end
   end
 

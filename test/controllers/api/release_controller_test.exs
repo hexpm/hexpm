@@ -8,7 +8,7 @@ defmodule HexWeb.API.ReleaseControllerTest do
 
   setup do
     user       = User.create(%{username: "eric", email: "eric@mail.com", password: "eric"}, true) |> HexWeb.Repo.insert!
-    {:ok, pkg} = Package.create(user, pkg_meta(%{name: "decimal", description: "Arbitrary precision decimal aritmetic for Elixir."}))
+    pkg = Package.create(user, pkg_meta(%{name: "decimal", description: "Arbitrary precision decimal aritmetic for Elixir."})) |> HexWeb.Repo.insert!
     {:ok, _}   = Release.create(pkg, rel_meta(%{version: "0.0.1", app: "decimal"}), "")
     :ok
   end
@@ -36,8 +36,8 @@ defmodule HexWeb.API.ReleaseControllerTest do
   end
 
   test "update package" do
-    HexWeb.Repo.get_by!(User, username: "eric")
-    |> Package.create(pkg_meta(%{name: "ecto", description: "DSL"}))
+    user = HexWeb.Repo.get_by!(User, username: "eric")
+    Package.create(user, pkg_meta(%{name: "ecto", description: "DSL"})) |> HexWeb.Repo.insert!
 
     meta = %{name: "ecto", version: "1.0.0", description: "awesomeness"}
     conn = conn()
