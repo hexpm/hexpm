@@ -143,6 +143,7 @@ defmodule HexWeb.StatsJob do
       [_, ip, request_id, package, version, status] when status in ~w(200 304) ->
         {ip, request_id, package, version}
       _ ->
+        nil
     end
   end
 
