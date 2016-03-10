@@ -60,8 +60,8 @@ defmodule HexWeb.StatsJobTest do
     assert length(downloads) == 4
 
     assert Enum.find(downloads, &(&1.release_id == rel1.id)).downloads == 11
-    assert Enum.find(downloads, &(&1.release_id == rel2.id)).downloads == 4
-    assert Enum.find(downloads, &(&1.release_id == rel3.id)).downloads == 2
+    assert Enum.find(downloads, &(&1.release_id == rel2.id)).downloads == 3
+    assert Enum.find(downloads, &(&1.release_id == rel3.id)).downloads == 3
     assert Enum.find(downloads, &(&1.release_id == rel4.id)).downloads == 1
   end
 end

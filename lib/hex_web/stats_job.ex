@@ -11,7 +11,7 @@ defmodule HexWeb.StatsJob do
     \[.+\]\040            # time
     ([^\040]+)\040        # IP address
     [^\040]+\040          # requester ID
-    ([^\040]+)\040        # request ID
+    [^\040]+\040        # request ID
     REST.GET.OBJECT\040
     tarballs/
     ([^-]+)               # package
@@ -27,7 +27,6 @@ defmodule HexWeb.StatsJob do
     [^\040]+\040          # user
     [^\040]+\040          # source
     ([^\040]+)\040        # IP address
-    ([^\040]+)\040        # request ID
     "[^"]+"\040           # time
     "GET\040/tarballs/
     ([^-]+)               # package
@@ -44,8 +43,9 @@ defmodule HexWeb.StatsJob do
     fastly_prefix = "fastly_hex/#{date_string(date)}"
     {:ok, date}   = Ecto.Type.load(Ecto.Date, date)
 
-    s3_dict     = process_buckets(buckets, s3_prefix, @s3_regex)
-    fastly_dict = process_buckets(buckets, fastly_prefix, @fastly_regex)
+    ips         = HexWeb.CDN.public_ips
+    s3_dict     = process_buckets(buckets, s3_prefix, @s3_regex, ips)
+    fastly_dict = process_buckets(buckets, fastly_prefix, @fastly_regex, ips)
     dict        = merge_dicts(s3_dict, fastly_dict)
 
     # TODO: Map/Reduce
@@ -84,64 +84,54 @@ defmodule HexWeb.StatsJob do
     HexWeb.Repo.start_link
   end
 
-  # Do not count the same download in both S3 and Fastly.
-  # We use S3's request id to uniquely identify requests, if the same
-  # request ids are on S3 and Fastly we do not count the S3 request.
-  # There can be multiple logged faslty requests for the same id because
-  # fastly caches the S3 response.
-  # Also note that this is check is not perfect since we fetch log files
-  # for a whole day by filename and a request occuring at midnight can
-  # be logged at different days for S3 and Fastly, but this number should
-  # be really low.
   defp merge_dicts(s3, fastly) do
-    dict = Map.merge(s3, fastly, fn _, _s3, fastly -> fastly end)
-    Enum.reduce(dict, %{}, fn {_, list}, dict ->
-      Enum.reduce(list, dict, fn {ip, package, version}, dict ->
-        key = {{package, version}, ip}
-        Map.update(dict, key, 1, &(&1 + 1))
-      end)
-    end)
+    Map.merge(s3, fastly, fn _, x, y -> x+y end)
   end
 
-  defp process_buckets(buckets, prefix, regex) do
+  defp process_buckets(buckets, prefix, regex, ips) do
     Enum.reduce(buckets, %{}, fn [bucket, region], dict ->
       keys = HexWeb.Store.list_logs(region, bucket, prefix)
-      process_keys(region, bucket, regex, keys, dict)
+      process_keys(region, bucket, regex, ips, keys, dict)
     end)
   end
 
-  defp process_keys(region, bucket, regex, keys, dict) do
+  defp process_keys(region, bucket, regex, ips, keys, dict) do
     Enum.reduce(keys, dict, fn key, dict ->
       HexWeb.Store.get_logs(region, bucket, key)
       |> maybe_unzip(key)
-      |> process_file(regex, dict)
+      |> process_file(regex, ips, dict)
     end)
   end
 
   defp cap_on_ip(dict, max_downloads_per_ip) do
-    Enum.reduce(dict, %{}, fn {{release, _ip}, count}, dict ->
-      count = min(max_downloads_per_ip, count)
-      Map.update(dict, release, count, &(&1 + count))
+    Enum.reduce(dict, %{}, fn
+      {{release, "-"}, count}, dict ->
+        Map.update(dict, release, count, &(&1 + count))
+      {{release, _ip}, count}, dict ->
+        count = min(max_downloads_per_ip, count)
+        Map.update(dict, release, count, &(&1 + count))
     end)
   end
 
-  defp process_file(file, regex, dict) do
+  defp process_file(file, regex, ips, dict) do
     lines = String.split(file, "\n")
     Enum.reduce(lines, dict, fn line, dict ->
-      case parse_line(line, regex) do
-        {ip, request_id, package, version} ->
-          tuple = {ip, package, version}
-          Map.update(dict, request_id, [tuple], &[tuple|&1])
+      case parse_line(line, regex, ips) do
+        {ip, package, version} ->
+          key = {{package, version}, ip}
+          Map.update(dict, key, 1, &(&1 + 1))
         nil ->
           dict
       end
     end)
   end
 
-  defp parse_line(line, regex) do
+  defp parse_line(line, regex, ips) do
     case Regex.run(regex, line) do
-      [_, ip, request_id, package, version, status] when status in ~w(200 304) ->
-        {ip, request_id, package, version}
+      [_, ip, package, version, status] when status in ~w(200 304) ->
+        unless in_ip_range?(ips, HexWeb.Utils.parse_ip(ip)) do
+          {ip, package, version}
+        end
       _ ->
         nil
     end
@@ -170,4 +160,11 @@ defmodule HexWeb.StatsJob do
       do: :zlib.gunzip(data),
     else: data
   end
+
+  defp in_ip_range?(_range, nil),
+    do: false
+  defp in_ip_range?(list, ip) when is_list(list),
+    do: Enum.any?(list, &in_ip_range?(&1, ip))
+  defp in_ip_range?({range, mask}, ip),
+    do: <<range::bitstring-size(mask)>> == <<ip::bitstring-size(mask)>>
 end

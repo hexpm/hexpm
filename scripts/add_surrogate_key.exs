@@ -60,7 +60,6 @@ defmodule HexWeb.Script.AddSurrogateKey do
     IO.puts "OK   #{ix} #{path}"
   end
 
-  defp surrogate_key([package | _]) when package <= "eeb", do: nil
   defp surrogate_key([package, version | _]) do
     if Version.parse(version) == :error do
       "docspage/#{package}"

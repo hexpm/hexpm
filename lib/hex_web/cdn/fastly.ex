@@ -10,6 +10,14 @@ defmodule HexWeb.CDN.Fastly do
     end
   end
 
+  def public_ips do
+    {:ok, 200, _, body} = get("public-ip-list")
+    Enum.map(body["addresses"], fn range ->
+      [ip, mask] = String.split(range, "/")
+      {HexWeb.Utils.parse_ip(ip), String.to_integer(mask)}
+    end)
+  end
+
   defp auth() do
     Application.get_env(:hex_web, :fastly_key)
   end
@@ -23,6 +31,16 @@ defmodule HexWeb.CDN.Fastly do
 
     body = Poison.encode!(body)
     :hackney.post(url, headers, body, [])
+    |> read_body
+  end
+
+  defp get(url) do
+    url = @fastly_url <> url
+    headers = [
+      "fastly-key": auth(),
+      "accept": "application/json"]
+
+    :hackney.get(url, headers, [])
     |> read_body
   end
 
