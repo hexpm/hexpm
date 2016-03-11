@@ -24,9 +24,10 @@ defmodule HexWeb.Store.S3 do
   end
 
   def put_registry(data, signature) do
-    opts = if(signature, do: [meta: [{"signature", signature}]], else: [])
-           |> Keyword.put(:cache_control, "public, max-age=600")
-           |> Keyword.put(:meta, [{"surrogate-key", "registry"}])
+    meta = [{"surrogate-key", "registry"}]
+    meta = if signature, do: [{"signature", signature}|meta], else: meta
+
+    opts = [cache_control: "public, max-age=600", meta: meta]
     upload(:s3_bucket, "registry.ets.gz", data, opts)
   end
 
