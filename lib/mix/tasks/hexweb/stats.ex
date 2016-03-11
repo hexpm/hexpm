@@ -7,7 +7,7 @@ defmodule Mix.Tasks.Hexweb.Stats do
   def run(_args) do
     Mix.Task.run "app.start"
 
-    buckets = Application.get_env(:hex_web, :logs_buckets)
+    buckets       = Application.get_env(:hex_web, :logs_buckets)
 
     try do
       {time, {memory, size}} = :timer.tc(fn ->

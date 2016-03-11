@@ -17,7 +17,7 @@ Enum.each(buckets, fn {bucket, region} ->
 end)
 
 contents =
-  Path.wildcard("#{dir}/**")
+  Path.wildcard("**")
   |> Enum.reduce([], fn file, acc -> [acc|File.read!(file)] end)
   |> :zlib.gzip
 
@@ -29,4 +29,3 @@ HexWeb.Utils.shell(~s(aws s3 cp #{filename} s3://backup.hex.pm/log-archives/#{fi
 Enum.each(buckets, fn {bucket, region} ->
   HexWeb.Utils.shell(~s(aws s3 rm s3://#{bucket} --region #{region} --recursive --exclude "*" --include "#{dir}/#{date}*"))
 end)
-

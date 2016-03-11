@@ -49,7 +49,8 @@ defmodule HexWeb.Store.Local do
     send_file(conn, 200, Path.join(dir, "registry.ets.gz.signed"))
   end
 
-  def put_release(name, data) do
+  def put_release(package, version, data) do
+    name = "#{package}-#{version}.tar"
     path = Path.join("tarballs", name)
     put(path, data)
   end

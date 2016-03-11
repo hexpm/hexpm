@@ -51,7 +51,7 @@ defmodule HexWeb.Mixfile do
   end
 
   defp test(args) do
-    env([env: :test, level: :warn], fn ->
+    env([env: :test, level: :error], fn ->
       Mix.Task.run "ecto.drop", ["HexWeb.Repo"]
       Mix.Task.run "ecto.create", ["HexWeb.Repo"]
       Mix.Task.run "ecto.migrate", ["HexWeb.Repo"]

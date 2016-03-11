@@ -31,7 +31,8 @@ config :hex_web,
 
   cdn_impl:       cdn,
   fastly_key:     System.get_env("HEX_FASTLY_KEY"),
-  fastly_hexdocs: System.get_env("HEX_FASTLY_HEXDOCS")
+  fastly_hexdocs: System.get_env("HEX_FASTLY_HEXDOCS"),
+  fastly_hexrepo: System.get_env("HEX_FASTLY_HEXREPO")
 
 config :ex_aws,
   access_key_id:     {:system, "HEX_S3_ACCESS_KEY"},

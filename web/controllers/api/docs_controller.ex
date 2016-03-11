@@ -160,6 +160,7 @@ defmodule HexWeb.API.DocsController do
     Enum.each(files, fn {path, key, data} -> HexWeb.Store.put_docs_page(path, key, data) end)
 
     # Purge cache
+    HexWeb.CDN.purge_key(:fastly_hexrepo, "docs/#{name}-#{version}")
     HexWeb.CDN.purge_key(:fastly_hexdocs, unversioned_key)
     HexWeb.CDN.purge_key(:fastly_hexdocs, versioned_key)
 
@@ -221,6 +222,8 @@ defmodule HexWeb.API.DocsController do
       Ecto.Changeset.change(release.package, docs_updated_at: Ecto.DateTime.utc)
       |> HexWeb.Repo.update!
 
+      HexWeb.CDN.purge_key(:fastly_hexrepo, "docs/#{name}-#{version}")
+      HexWeb.CDN.purge_key(:fastly_hexdocs, "docspage/#{name}/#{version}")
       publish_sitemap()
     end
 

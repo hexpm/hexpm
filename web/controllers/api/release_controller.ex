@@ -155,7 +155,9 @@ defmodule HexWeb.API.ReleaseController do
   end
 
   defp job(package, version, body) do
-    HexWeb.Store.put_release("#{package.name}-#{version}.tar", body)
+    key = "tarballs/#{package.name}-#{version}"
+    HexWeb.Store.put_release(package.name, version, body)
+    HexWeb.CDN.purge_key(:fastly_hexrepo, key)
     HexWeb.RegistryBuilder.rebuild
   end
 
