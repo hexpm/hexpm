@@ -22,9 +22,9 @@ defmodule HexWeb.ReleaseTest do
            HexWeb.Repo.get_by!(assoc(package, :releases), version: "0.0.1")
 
     assert {:ok, _} = Release.create(package, rel_meta(%{version: "0.0.2", app: "ecto"}), "")
-    assert [%Release{version: %Version{major: 0, minor: 0, patch: 1}},
-            %Release{version: %Version{major: 0, minor: 0, patch: 2}}] =
-           Release.all(package) |> HexWeb.Repo.all
+    assert [%Release{version: %Version{major: 0, minor: 0, patch: 2}},
+            %Release{version: %Version{major: 0, minor: 0, patch: 1}}] =
+           Release.all(package) |> HexWeb.Repo.all |> Release.sort
   end
 
   test "create release with deps" do

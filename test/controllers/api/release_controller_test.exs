@@ -111,9 +111,10 @@ defmodule HexWeb.API.ReleaseControllerTest do
     assert conn.status == 201
     postgrex = HexWeb.Repo.get_by(Package, name: "postgrex")
     postgrex_id = postgrex.id
-    assert [%Release{package_id: ^postgrex_id, version: %Version{major: 0, minor: 0, patch: 1}},
-            %Release{package_id: ^postgrex_id, version: %Version{major: 0, minor: 0, patch: 2}}] =
-           Release.all(postgrex) |> HexWeb.Repo.all
+
+    assert [%Release{package_id: ^postgrex_id, version: %Version{major: 0, minor: 0, patch: 2}},
+            %Release{package_id: ^postgrex_id, version: %Version{major: 0, minor: 0, patch: 1}}] =
+           Release.all(postgrex) |> HexWeb.Repo.all |> Release.sort
 
     HexWeb.Repo.get_by!(assoc(postgrex, :releases), version: "0.0.1")
   end
