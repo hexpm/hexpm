@@ -78,8 +78,8 @@ HexWeb.Repo.transaction(fn ->
     {:ok, _}   = Release.create(ecto, %{"version" => "0.0.2", "app" => "ecto", "requirements" => %{postgrex: "~> 0.0.1"}, "meta" => %{"app" => "ecto", "build_tools" => ["mix"]}}, SampleData.checksum("ecto 0.0.2"))
     {:ok, _}   = Release.create(ecto, %{"version" => "0.1.0", "app" => "ecto", "requirements" => %{postgrex: "~> 0.0.2"}, "meta" => %{"app" => "ecto", "build_tools" => ["mix"]}}, SampleData.checksum("ecto 0.1.0"))
     {:ok, _}   = Release.create(ecto, %{"version" => "0.1.1", "app" => "ecto", "requirements" => %{postgrex: "~> 0.1.0"}, "meta" => %{"app" => "ecto", "build_tools" => ["mix"]}}, SampleData.checksum("ecto 0.1.1"))
-    {:ok, _}   = Release.create(ecto, %{"version" => "0.1.2", "app" => "ecto", "requirements" => %{postgrex: "== 0.1.0", decimal: "0.0.1"}, "meta" => %{"app" => "ecto", "build_tools" => ["mix"]}}, SampleData.checksum("ecto 0.1.2"))
-    {:ok, _}   = Release.create(ecto, %{"version" => "0.1.3", "app" => "ecto", "requirements" => %{postgrex: "0.1.0", decimal: "0.0.2"}, "meta" => %{"app" => "ecto", "build_tools" => ["mix"]}}, SampleData.checksum("ecto 0.1.3"))
+    {:ok, _}   = Release.create(ecto, %{"version" => "0.1.2", "app" => "ecto", "requirements" => %{postgrex: "== 0.1.0", decimal: "0.1.0"}, "meta" => %{"app" => "ecto", "build_tools" => ["mix"]}}, SampleData.checksum("ecto 0.1.2"))
+    {:ok, _}   = Release.create(ecto, %{"version" => "0.1.3", "app" => "ecto", "requirements" => %{postgrex: "0.1.0", decimal: "0.1.0"}, "meta" => %{"app" => "ecto", "build_tools" => ["mix"]}}, SampleData.checksum("ecto 0.1.3"))
     {:ok, rel} = Release.create(ecto, %{"version" => "0.2.0", "app" => "ecto", "requirements" => %{postgrex: "~> 0.1.0", decimal: "~> 0.1.0"}, "meta" => %{"app" => "ecto", "build_tools" => ["mix"]}}, SampleData.checksum("ecto 0.2.0"))
 
     {:ok, yesterday} = Ecto.Type.load(Ecto.Date, HexWeb.Utils.yesterday)
