@@ -7,9 +7,17 @@ defmodule HexWeb.API.PackageController do
     page     = HexWeb.Utils.safe_int(params["page"])
     search   = HexWeb.Utils.safe_search(params["search"])
     sort     = HexWeb.Utils.safe_to_atom(params["sort"] || "name", @sort_params)
-    packages = Package.all(page, 100, search, sort) |> HexWeb.Repo.all
+
+    packages =
+      Package.all(page, 100, search, sort)
+      |> HexWeb.Repo.all
+      |> HexWeb.Repo.preload([:releases])
 
     when_stale(conn, packages, [modified: false], fn conn ->
+      packages = Enum.map packages, fn(package) ->
+        update_in(package.releases, &Release.sort/1)
+      end
+
       conn
       |> api_cache(:public)
       |> render(:index, packages: packages)
