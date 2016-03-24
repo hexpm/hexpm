@@ -6,6 +6,9 @@ defmodule HexWeb.API.UserController do
   def create(conn, params) do
     # Unconfirmed users can be recreated
     if (user = HexWeb.Repo.get_by(User, username: params["username"])) && !user.confirmed do
+      # Unconfirmed users only have the key creation in the audits log
+      # That key will be deleted when the user is deleted
+      HexWeb.Repo.delete_all(assoc(user, :audit_logs))
       HexWeb.Repo.delete!(user)
     end
 
