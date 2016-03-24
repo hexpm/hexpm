@@ -9,7 +9,7 @@
 
 <p>Towards this end, certain behaviors and practices will not be tolerated.</p>
 
-<p>Hex is the set of formats and APIs that makes up the specification of Hex. Hex.pm is an implementation of the Hex specifications, it is comprised of this website and associated HTTP API, the package index and packages published to Hex.pm. In this document Hex and Hex.pm is used interchangeably but it refers to Hex.pm.</p>
+<p>Hex is the set of formats and APIs that makes up the specification of Hex. Hex.pm is an implementation of the Hex specifications, it is comprised of this website and associated HTTP API, the package registry and packages published to Hex.pm. In this document Hex and Hex.pm is used interchangeably but it refers to Hex.pm.</p>
 
 <h3>tl;dr</h3>
 
@@ -88,7 +88,7 @@
 
 <h3>Changes</h3>
 
-<p>This is a living document and may be updated from time to time. Please refer to the <a href="https://github.com/hexpm/hex_web/commits/master/lib/hex_web/web/templates/docs/codeofconduct.html.eex">git history</a> for this document to view the changes.</p>
+<p>This is a living document and may be updated from time to time. Please refer to the <a href="https://github.com/hexpm/hex_web/commits/master/lib/hex_web/web/templates/policies/codeofconduct.html.eex">git history</a> for this document to view the changes.</p>
 
 <h3>Credit and License</h3>
 

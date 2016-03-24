@@ -58,9 +58,14 @@
                 <li><a href="<%= docs_path(HexWeb.Endpoint, :rebar3_publish) %>">Publishing packages</a></li>
                 <li><a href="http://www.rebar3.org/v3.0/docs/hex-package-management">Tasks</a></li>
                 <li role="separator" class="divider"></li>
-                <li><a href="<%= docs_path(HexWeb.Endpoint, :coc) %>">Code of Conduct</a></li>
                 <li><a href="<%= docs_path(HexWeb.Endpoint, :mirrors) %>">Mirrors</a></li>
                 <li><a href="<%= docs_path(HexWeb.Endpoint, :public_keys) %>">Public keys</a></li>
+              </ul>
+            </li>
+            <li<%= active(assigns, :policy) %> class="dropdown">
+              <a href="#" class="dropdown-toggle" data-toggle="dropdown">Policies <b class="caret"></b></a>
+              <ul class="dropdown-menu">
+                <li><a href="<%= policy_path(HexWeb.Endpoint, :coc) %>">Code of Conduct</a></li>
               </ul>
             </li>
           </ul>
