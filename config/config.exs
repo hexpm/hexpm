@@ -57,6 +57,9 @@ config :hex_web, HexWeb.Endpoint,
   pubsub: [name: HexWeb.PubSub,
            adapter: Phoenix.PubSub.PG2]
 
+config :phoenix, :template_engines,
+  md: HexWeb.MarkdownEngine
+
 config :logger, :console,
   format: "$time $metadata[$level] $message\n",
   metadata: [:request_id]
