@@ -2,7 +2,7 @@ defmodule HexWeb.PackageController do
   use HexWeb.Web, :controller
 
   @packages_per_page 30
-  @sort_params ~w(name downloads inserted_at)
+  @sort_params ~w(name downloads inserted_at updated_at)
 
   def index(conn, params) do
     search        = HexWeb.Utils.safe_search(params["search"])
