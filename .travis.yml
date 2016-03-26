@@ -1,6 +1,6 @@
 language: elixir
-elixir: 1.2.1
-otp_release: 18.2
+elixir: 1.2.3
+otp_release: 18.3
 sudo: false
 addons:
   postgresql: "9.4"
