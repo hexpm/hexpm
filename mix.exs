@@ -33,7 +33,7 @@ defmodule HexWeb.Mixfile do
      {:earmark,             "~> 0.1"},
      {:gen_smtp,            "~> 0.9"},
      {:comeonin,            "~> 2.0"},
-     {:httpoison,           "~> 0.7"},
+     {:httpoison,           "~> 0.8"},
      {:sweet_xml,           "~> 0.5"},
      {:ex_aws,              "~> 0.4"},
      {:phoenix_live_reload, "~> 1.0", only: :dev}]

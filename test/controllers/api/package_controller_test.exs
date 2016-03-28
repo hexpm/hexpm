@@ -30,6 +30,12 @@ defmodule HexWeb.API.PackageControllerTest do
     assert conn.status == 200
     body = Poison.decode!(conn.resp_body)
     assert length(body) == 2
+    releases = List.first(body)["releases"]
+    for release <- releases do
+      assert length(Map.keys(release)) == 2
+      assert Map.has_key?(release, "url")
+      assert Map.has_key?(release, "version")
+    end
 
     conn = get conn(), "api/packages?search=post"
     assert conn.status == 200
