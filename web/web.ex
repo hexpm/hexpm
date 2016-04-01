@@ -72,6 +72,7 @@ defmodule HexWeb.Web do
   defmacro shared do
     quote do
       alias HexWeb.{
+        AuditLog,
         Download,
         Install,
         Key,
