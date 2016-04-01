@@ -18,7 +18,7 @@ The websites uses cookies to help identify and track visitors, and their usage o
 
 ### API
 
-A registered user is required to publish packages, to otherwise consume the API a user is not required. For users their username, email address and cryptograpically hashed password is stored. This information is not shared with other parties. Users that own packages together can see the email addresses of the other owners.
+A registered user is required to publish packages, to otherwise consume the API a user is not required. For users their username, email address and cryptographically hashed password is stored. This information is not shared with other parties. Users that own packages together can see the email addresses of the other owners.
 
 Requests to the API is logged and the same information is stored as for the websites.
 
