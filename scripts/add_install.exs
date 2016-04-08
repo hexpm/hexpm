@@ -1,3 +1,5 @@
+HexWeb.CDN.purge_key(:fastly_hexrepo, "installs")
+
 case System.argv do
   [hex | elixirs] ->
     IO.puts "Hex:     " <> hex
