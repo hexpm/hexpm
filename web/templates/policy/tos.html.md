@@ -40,7 +40,7 @@ We reserve the right at all times (but will not have an obligation) to remove or
 
 You may not do any of the following while accessing or using the Services: access, tamper with, or use non-public areas of the Services, Hex’s computer systems, or the technical delivery systems of Hex's providers; breach or circumvent any security or authentication measures; access or search or attempt to access or search the Services by any means (automated or otherwise) other than through our currently available, published interfaces that are provided by Hex (and only pursuant to the applicable terms and conditions), unless you have been specifically allowed to do so in a separate agreement with Hex (NOTE: crawling the Services is permissible if done in accordance with the provisions of the robots.txt file, however, scraping the Services without the prior consent of Hex is expressly prohibited); or interfere with, or disrupt, (or attempt to do so), the access of any user, host or network, including, without limitation, sending a virus, overloading, flooding, spamming, mail-bombing the Services, or by scripting the creation of Content in such a manner as to interfere with or create an undue burden on the Services.
 
-Any Content that you submit, port or display on or through the Services is subject to our [Code of Conduct](coc), which governs your behavior and Content on the services.
+Any Content that you submit, port or display on or through the Services is subject to our [Code of Conduct](codeofconduct), which governs your behavior and Content on the services.
 
 ### 6. Copyright Policy
 
