@@ -1,6 +1,7 @@
 body {
   font-family: $base-font-family;
   @include font-size(16 , 30);
+  padding-top: 70px;
 }
 
 .browserupgrade {
