@@ -24,6 +24,11 @@ defmodule HexWeb.Utils do
     if binary in allowed, do: String.to_atom(binary)
   end
 
+  def safe_letter(str = <<letter>>) when letter in ?A..?Z,
+    do: String.to_atom(str)
+  def safe_letter(_),
+    do: nil
+
   def safe_page(page, _count, _per_page) when page < 1,
     do: 1
   def safe_page(page, count, per_page) when page > div(count, per_page) + 1,

@@ -5,22 +5,27 @@ defmodule HexWeb.PackageController do
   @sort_params ~w(name downloads inserted_at)
 
   def index(conn, params) do
+    letter        = HexWeb.Utils.safe_letter(params["letter"])
     search        = HexWeb.Utils.safe_search(params["search"])
     sort          = HexWeb.Utils.safe_to_atom(params["sort"] || "name", @sort_params)
-    package_count = Package.count(search) |> HexWeb.Repo.one!
     page_param    = HexWeb.Utils.safe_int(params["page"]) || 1
+    package_count = Package.count(search || letter) |> HexWeb.Repo.one!
     page          = HexWeb.Utils.safe_page(page_param, package_count, @packages_per_page)
-    packages      = fetch_packages(page, @packages_per_page, search, sort)
+    packages      = fetch_packages(page, @packages_per_page, search || letter, sort)
+
+    letters = for letter <- ?A..?Z, do: <<letter>>
 
     render conn, "index.html", [
       active:        :packages,
       title:         "Packages",
       per_page:      @packages_per_page,
       search:        search,
+      letter:        letter,
       sort:          sort,
       package_count: package_count,
       page:          page,
       packages:      packages,
+      letters:       letters,
       downloads:     PackageDownload.packages(packages, "all")
                      |> HexWeb.Repo.all
                      |> Enum.into(%{})
