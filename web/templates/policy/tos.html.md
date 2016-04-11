@@ -6,7 +6,7 @@ By accessing or using the hex.pm or hexdocs.pm websites, HTTP API, repository or
 
 You are responsible for your use of the Services and any Content you post to the Services. Content you post to the Services can be viewed by anyone using the Services or using third party services. All Content you post to the Services is subject to these terms.
 
-You may use these Services only if you can form a binding contract with Hex. If use the Services on behalf of another company, organization or other entity you must be authorized to do so.
+You may use these Services only if you can form a binding contract with Hex. If you use the Services on behalf of another company, organization or other entity you must be authorized to do so.
 
 You may not use the Services for any illegal or unauthorized purpose. You must not in the use of the Services violate any laws in your jurisdiction, including but not limited to copyright or trademark laws.
 
