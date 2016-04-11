@@ -22,7 +22,7 @@ tools = Keyword.take(tools, compatible_tools)
 %>
 
 <div class="container package-view">
-  <h2 class="package-title"><%= @package.name %>
+  <h2 class="package-title"><a href="<%= package_path(HexWeb.Endpoint, :show, @package) %>"><%= @package.name %></a>
    <%= if @current_release do %>
     <span class="version"><%= @current_release.version %></span>
     <% end %>
