@@ -2,8 +2,23 @@
   <h2 class="packages-title">
     Packages
   </h2>
+
+  <div class="by-letters">
+    <ul>
+      <%= for letter <- @letters do %>
+      <li>
+        <a href="<%= package_path(HexWeb.Endpoint, :index, letter: letter) %>">
+          <%= letter %>
+        </a>
+      </li>
+      <% end %>
+    </ul>
+  </div>
+
   <%= if @package_count == 0 do %>
-    <h4>No Results Found</h4>
+    <div class="package-list no-results">
+      <h4>No Results Found</h4>
+    </div>
   <% else %>
     <%
     shown_packages = length(@packages)
@@ -20,17 +35,6 @@
     next_page_params      = params(search: @search, page: @page+1, sort: @sort)
     %>
 
-  <div class="by-letters">
-    <ul>
-      <%= for letter <- @letters do %>
-      <li>
-        <a href="<%= package_path(HexWeb.Endpoint, :index, letter: letter) %>">
-          <%= letter %>
-        </a>
-      </li>
-      <% end %>
-    </ul>
-  </div>
   <div class="sort-results">
     <span class="results-found"><%= @package_count %> Results Found</span>
   </div>
