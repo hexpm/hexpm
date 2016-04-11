@@ -35,30 +35,35 @@
     next_page_params      = params(search: @search, page: @page+1, sort: @sort)
     %>
 
-  <div class="sort-results">
-    <span class="results-found"><%= @package_count %> Results Found</span>
-  </div>
-  <span class="pull-right">
-    <div class="dropdown">
-      <button class="btn btn-default dropdown-toggle" type="button" id="sort_dropdown" data-toggle="dropdown">
-        Sort By
-        <span class="caret"></span>
-      </button>
-      <ul class="dropdown-menu" role="menu">
-        <li role="presentation">
-          <a role="menuitem" tabindex="-1" href="<%= package_path(HexWeb.Endpoint, :index, sort_name_params) %>">Name</a>
-        </li>
-
-        <li role="presentation">
-          <a role="menuitem" tabindex="-1" href="<%= package_path(HexWeb.Endpoint, :index, sort_downloads_params) %>">Downloads</a>
-        </li>
-
-        <li role="presentation">
-          <a role="menuitem" tabindex="-1" href="<%= package_path(HexWeb.Endpoint, :index, sort_created_params) %>">Recently created</a>
-        </li>
-      </ul>
+  <nav>
+    <div class="pagination-info">
+      <h4 class="results-found"><%= @package_count %> Results Found</h4>
     </div>
-  </span>
+
+    <span class="navbar-right pagination-info">
+      <div class="dropdown">
+        <button class="btn btn-default dropdown-toggle" type="button" id="sort_dropdown" data-toggle="dropdown">
+          Sort By
+          <span class="caret"></span>
+        </button>
+        <ul class="dropdown-menu dropdown-menu-right" role="menu">
+          <li role="presentation">
+            <a role="menuitem" tabindex="-1" href="<%= package_path(HexWeb.Endpoint, :index, sort_name_params) %>">Name</a>
+          </li>
+
+          <li role="presentation">
+            <a role="menuitem" tabindex="-1" href="<%= package_path(HexWeb.Endpoint, :index, sort_downloads_params) %>">Downloads</a>
+          </li>
+
+          <li role="presentation">
+            <a role="menuitem" tabindex="-1" href="<%= package_path(HexWeb.Endpoint, :index, sort_created_params) %>">Recently created</a>
+          </li>
+        </ul>
+      </div>
+    </span>
+  </nav>
+
+  <div class="clearfix"></div>
 
   <div class="package-list">
     <ul>
@@ -74,6 +79,7 @@
       <% end %>
     </ul>
   </div>
+
   <div class="pagination-wrapper">
     <div class="pagination-info">
       <%= if shown_packages == 1 do %>
@@ -109,7 +115,7 @@
         <% end %>
       </ul>
     </nav>
-
   </div>
+
   <% end %>
 </div>
