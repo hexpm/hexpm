@@ -30,9 +30,7 @@ Requests to the repository is logged and the same information is stored as for t
 
 ### Disclosure
 
-<!-- TODO: Link to terms of service -->
-
-Hex.pm may disclose personally identifiable information under special circumstances, such as to comply with subpoenas or when your actions violate the Terms of Service.
+Hex.pm may disclose personally identifiable information under special circumstances, such as to comply with subpoenas or when your actions violate the [Terms of Service](termsofservice).
 
 ### United States Jurisdiction
 
