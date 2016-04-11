@@ -155,7 +155,6 @@ tools = Keyword.take(tools, compatible_tools)
           </div>
         </div>
       <% end %>
-    </div>
 
       <%= if build_tools != [] do %>
         <h3>Build Tools</h3>
