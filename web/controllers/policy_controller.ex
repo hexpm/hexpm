@@ -14,4 +14,11 @@ defmodule HexWeb.PolicyController do
       title: "Privacy Policy"
     ]
   end
+
+  def tos(conn, _params) do
+    render conn, "tos.html", [
+      active: :policy,
+      title: "Terms of Service"
+    ]
+  end
 end

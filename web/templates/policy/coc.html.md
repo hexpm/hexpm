@@ -44,7 +44,6 @@ Harassment includes, but is not limited to: harmful or prejudicial verbal or wri
 
 ### Acceptable Package Content
 
-
 The Hex team reserve the right to make judgement calls about what is and isn't appropriate in published packages. These are guidelines to help you be successful in our community.
 
 Packages published to the Service must be created using the Hex command-line client, or a functionally equivalent implementation. For example, a "package" must not be a PNG or JPEG image, movie file, or text document. Using the Service as a personal general-purpose database is also not allowed for this reason. Packages should be Hex packages, and nothing else.
