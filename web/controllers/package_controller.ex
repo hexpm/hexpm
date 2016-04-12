@@ -3,6 +3,7 @@ defmodule HexWeb.PackageController do
 
   @packages_per_page 30
   @sort_params ~w(name downloads inserted_at)
+  @letters for letter <- ?A..?Z, do: <<letter>>
 
   def index(conn, params) do
     letter        = HexWeb.Utils.safe_letter(params["letter"])
@@ -13,7 +14,6 @@ defmodule HexWeb.PackageController do
     page          = HexWeb.Utils.safe_page(page_param, package_count, @packages_per_page)
     packages      = fetch_packages(page, @packages_per_page, search || letter, sort)
 
-    letters = for letter <- ?A..?Z, do: <<letter>>
 
     render conn, "index.html", [
       active:        :packages,
@@ -25,7 +25,7 @@ defmodule HexWeb.PackageController do
       package_count: package_count,
       page:          page,
       packages:      packages,
-      letters:       letters,
+      letters:       @letters,
       downloads:     PackageDownload.packages(packages, "all")
                      |> HexWeb.Repo.all
                      |> Enum.into(%{})
