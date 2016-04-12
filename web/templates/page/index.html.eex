@@ -142,8 +142,8 @@
     <div class="row">
       <div class="col-md-4">
         <ul>
-          <%= for {package, downloads} <- @package_top do %>
-            <%= render_package package: package, downloads: downloads %>
+          <%= for {package, inserted_at, meta, downloads} <- @package_top do %>
+            <%= render_package package: package, downloads: downloads, inserted_at: inserted_at, description: meta.description %>
           <% end %>
         </ul>
       </div>
@@ -156,8 +156,8 @@
       </div>
       <div class="col-md-4">
         <ul>
-          <%= for {version, package} <- @releases_new do %>
-            <%= render_package version: version, package: package %>
+          <%= for {package, version, inserted_at, %PackageMetadata{} = meta} <- @releases_new do %>
+            <%= render_package version: version, package: package, inserted_at: inserted_at, description: meta.description %>
           <% end %>
         </ul>
       </div>

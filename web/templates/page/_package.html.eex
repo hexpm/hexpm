@@ -4,14 +4,16 @@
     <%= if @downloads do %>
       <span class="info"><%= human_number_space @downloads %> downloads</span>
     <% end %>
-    <%= if @inserted_at do %>
-      <span class="info"><%= human_relative_time_from_now(@inserted_at) %></span>
-    <% end %>
     <%= if @description do %>
       <span class="description"><%= text_length(@description, 80) %></span>
     <% end %>
     <%= if @inserted_at do %>
-      <span class="published-at"><a href="<%= package_path(HexWeb.Endpoint, :show, @package) %>">1.0.4</a> published <%= human_relative_time_from_now(@inserted_at) %></span>
+      <span class="published-at">
+        <%= if @version do %>
+          <a href="<%= package_path(HexWeb.Endpoint, :show, @package) %>"><%= @version %></a>
+        <% end %>
+        published <%= human_relative_time_from_now(@inserted_at) %>
+      </span>
     <% end %>
   </p>
 </li>
