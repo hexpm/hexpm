@@ -107,7 +107,7 @@ defmodule HexWeb.Package do
     from(p in Package,
          order_by: [desc: p.inserted_at],
          limit: ^count,
-         select: {p.name, p.inserted_at})
+         select: {p.name, p.inserted_at, p.meta})
   end
 
   def count(search \\ nil) do
