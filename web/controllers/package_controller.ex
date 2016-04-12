@@ -6,14 +6,28 @@ defmodule HexWeb.PackageController do
   @letters for letter <- ?A..?Z, do: <<letter>>
 
   def index(conn, params) do
-    letter        = HexWeb.Utils.safe_letter(params["letter"])
+    letter        = HexWeb.Utils.safe_search(params["letter"])
     search        = HexWeb.Utils.safe_search(params["search"])
+
+    filter =
+      cond do
+        letter ->
+          {:starts_with, letter}
+        search ->
+          if String.length(search) >= 3 do
+            {:contains, search}
+          else
+            {:equals, search}
+          end
+        true ->
+          nil
+      end
+
     sort          = HexWeb.Utils.safe_to_atom(params["sort"] || "name", @sort_params)
     page_param    = HexWeb.Utils.safe_int(params["page"]) || 1
-    package_count = Package.count(search || letter) |> HexWeb.Repo.one!
+    package_count = Package.count(filter) |> HexWeb.Repo.one!
     page          = HexWeb.Utils.safe_page(page_param, package_count, @packages_per_page)
-    packages      = fetch_packages(page, @packages_per_page, search || letter, sort)
-
+    packages      = fetch_packages(page, @packages_per_page, filter, sort)
 
     render conn, "index.html", [
       active:        :packages,

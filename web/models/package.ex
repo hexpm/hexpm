@@ -119,19 +119,7 @@ defmodule HexWeb.Package do
     query
   end
 
-  defp search(query, letter) when is_atom(letter) do
-    make_search(query, {:starts_with, Atom.to_string(letter)})
-  end
-
-  defp search(query, search) when is_binary(search) do
-    if String.length(search) >= 3 do
-      make_search(query, {:contains, search})
-    else
-      make_search(query, {:equals, search})
-    end
-  end
-
-  defp make_search(query, {mode, search}) do
+  defp search(query, {mode, search}) do
     name_search = search |> escape_search() |> like_search(mode)
 
     desc_search = String.replace(search, ~r"\s+"u, " | ")
