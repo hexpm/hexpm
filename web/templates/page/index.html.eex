@@ -51,6 +51,26 @@
   </div>
 </div>
 
+<div class="getting-started">
+  <div class="container">
+    <h2>Getting Started</h2>
+    <div class="row">
+      <div class="col-md-4">
+        <a href="/docs/usage">installing</a>
+        <p>Mix will automatically prompt you whenever there is a need to use Hex.</p>
+      </div>
+      <div class="col-md-4">
+        <a href="#">screencasts and docs</a>
+        <p>Mix will automatically prompt you whenever there is a need to use Hex...</p>
+      </div>
+      <div class="col-md-4">
+        <a href="#">community</a>
+        <p>Mix will automatically prompt you whenever there is a need to use Hex...</p>
+      </div>
+    </div>
+  </div>
+</div>
+
 <div class="home-stats">
   <ul class="container">
     <li>
@@ -99,26 +119,6 @@
       </span>
     </li>
   </ul>
-</div>
-
-<div class="getting-started">
-  <div class="container">
-    <h2>Getting Started</h2>
-    <div class="row">
-      <div class="col-md-4">
-        <a href="/docs/usage">installing</a>
-        <p>Mix will automatically prompt you whenever there is a need to use Hex.</p>
-      </div>
-      <div class="col-md-4">
-        <a href="#">screencasts and docs</a>
-        <p>Mix will automatically prompt you whenever there is a need to use Hex...</p>
-      </div>
-      <div class="col-md-4">
-        <a href="#">community</a>
-        <p>Mix will automatically prompt you whenever there is a need to use Hex...</p>
-      </div>
-    </div>
-  </div>
 </div>
 
 <div class="log-head">
