@@ -55,47 +55,6 @@ tools = Keyword.take(tools, compatible_tools)
         <span class="license"><%= Enum.join(licenses, ", ") %></span>
       <% end %>
 
-      <div class="stats clearfix">
-        <ul>
-          <li>
-            <img src="<%= static_path(HexWeb.Endpoint, "/images/stat-calendar.png") %>" alt="calendar">
-            <span class="stat-info">
-              <span class="count-info">
-                <%= human_number_space(if @release_downloads, do: @release_downloads.downloads, else: 0) %>
-              </span> <br>
-              downloads of this version
-            </span>
-          </li>
-          <li>
-            <img src="<%= static_path(HexWeb.Endpoint, "/images/stat-calendar.png") %>" alt="calendar">
-            <span class="stat-info">
-              <span class="count-info">
-                <%= human_number_space(@downloads["day"] || 0) %>
-              </span> <br>
-              downloads yesterday
-            </span>
-          </li>
-          <li>
-            <img src="<%= static_path(HexWeb.Endpoint, "/images/stat-calendar.png") %>" alt="calendar">
-            <span class="stat-info">
-              <span class="count-info">
-                <%= human_number_space(@downloads["week"] || 0) %>
-              </span> <br>
-              downloads last seven days
-            </span>
-          </li>
-          <li>
-            <img src="<%= static_path(HexWeb.Endpoint, "/images/stat-calendar.png") %>" alt="calendar">
-            <span class="stat-info">
-              <span class="count-info">
-                <%= human_number_space(@downloads["all"] || 0) %>
-              </span> <br>
-              downloads all time
-            </span>
-          </li>
-        </ul>
-      </div>
-
       <div class="row">
         <div class="col-md-6">
           <h3>Versions</h3>
@@ -153,8 +112,6 @@ tools = Keyword.take(tools, compatible_tools)
           </div>
         </div>
       <% end %>
-    </div>
-
       <%= if build_tools != [] do %>
         <h3>Build Tools</h3>
         <div class="build-tools-box">
@@ -163,6 +120,39 @@ tools = Keyword.take(tools, compatible_tools)
           <% end %>
         </div>
       <% end %>
+      <h3>Stats</h3>
+      <div class="stats clearfix">
+        <ul>
+          <li>
+            <span class="stat-info">
+              <span class="count-info">
+                <%= human_number_space(if @release_downloads, do: @release_downloads.downloads, else: 0) %>
+              </span> downloads of this version
+            </span>
+          </li>
+          <li>
+            <span class="stat-info">
+              <span class="count-info">
+                <%= human_number_space(@downloads["day"] || 0) %>
+              </span> downloads yesterday
+            </span>
+          </li>
+          <li>
+            <span class="stat-info">
+              <span class="count-info">
+                <%= human_number_space(@downloads["week"] || 0) %>
+              </span> downloads last seven days
+            </span>
+          </li>
+          <li>
+            <span class="stat-info">
+              <span class="count-info">
+                <%= human_number_space(@downloads["all"] || 0) %>
+              </span> downloads all time
+            </span>
+          </li>
+        </ul>
+      </div>
     </div>
   </div>
 </div>
