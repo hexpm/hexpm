@@ -23,6 +23,11 @@
     font-weight: bold;
     color: #000000;
     margin-bottom: 15px;
+    img {
+      height: 20px;
+      width: 20px;
+      margin-top: -4px;
+    }
   }
 }
 
@@ -69,7 +74,7 @@
 
 
 .stats {
-  padding: 0 0 0 0;
+  padding: 10px 0 0 0;
   ul {
     list-style: none;
     text-align: left;
@@ -80,6 +85,8 @@
       img {
         float: left;
         margin-right: 6px;
+        height: 28px;
+        width: 28px;
       }
       .stat-info {
         float: left;
@@ -87,12 +94,12 @@
         color: #000000;
         line-height: 15px;
         @include font-size(12 , $base-line-height);
-        padding: 0 0 10px 0;
+        padding: 4px 0 0 0;
         .count-info {
           font-weight: bold;
           font-size: 18px;
           display: inline-block;
-          padding: 0 3px 0 0;
+          padding: 0 0 5px 0;
         }
       }
     }
