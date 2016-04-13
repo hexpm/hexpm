@@ -23,6 +23,11 @@
     font-weight: bold;
     color: #000000;
     margin-bottom: 15px;
+    img {
+      height: 20px;
+      width: 20px;
+      margin-top: -4px;
+    }
   }
 }
 
@@ -69,7 +74,7 @@
 
 
 .stats {
-  padding: 30px 0 0 0;
+  padding: 10px 0 0 0;
   ul {
     list-style: none;
     text-align: left;
@@ -80,6 +85,8 @@
       img {
         float: left;
         margin-right: 6px;
+        height: 28px;
+        width: 28px;
       }
       .stat-info {
         float: left;

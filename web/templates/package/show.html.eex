@@ -55,6 +55,7 @@ tools = Keyword.take(tools, compatible_tools)
         <span class="license"><%= Enum.join(licenses, ", ") %></span>
       <% end %>
 
+      <h3>Stats</h3>
       <div class="stats clearfix">
         <ul>
           <li>
@@ -63,7 +64,7 @@ tools = Keyword.take(tools, compatible_tools)
               <span class="count-info">
                 <%= human_number_space(if @release_downloads, do: @release_downloads.downloads, else: 0) %>
               </span> <br>
-              downloads of this version
+             downloads of this version
             </span>
           </li>
           <li>
@@ -72,25 +73,25 @@ tools = Keyword.take(tools, compatible_tools)
               <span class="count-info">
                 <%= human_number_space(@downloads["day"] || 0) %>
               </span> <br>
-              downloads yesterday
+             downloads yesterday
             </span>
           </li>
           <li>
             <img src="<%= static_path(HexWeb.Endpoint, "/images/stat-calendar.png") %>" alt="calendar">
             <span class="stat-info">
               <span class="count-info">
-                <%= human_number_space(@downloads["week"] || 0) %>
+               <%= human_number_space(@downloads["week"] || 0) %>
               </span> <br>
-              downloads last seven days
+             downloads last seven days
             </span>
           </li>
           <li>
             <img src="<%= static_path(HexWeb.Endpoint, "/images/stat-calendar.png") %>" alt="calendar">
             <span class="stat-info">
               <span class="count-info">
-                <%= human_number_space(@downloads["all"] || 0) %>
+               <%= human_number_space(@downloads["all"] || 0) %>
               </span> <br>
-              downloads all time
+             downloads all time
             </span>
           </li>
         </ul>
@@ -134,7 +135,7 @@ tools = Keyword.take(tools, compatible_tools)
     </div>
 
     <div class="col-md-3">
-      <h3>Config</h3>
+      <h3><img src="<%= static_path(HexWeb.Endpoint, "/images/stat-config.svg") %>" alt="config"> Config</h3>
       <%= for {tool, file} <- tools do %>
         <div class="package-snippet">
           <span class="config-tool"><%= file %></span>
@@ -153,10 +154,8 @@ tools = Keyword.take(tools, compatible_tools)
           </div>
         </div>
       <% end %>
-    </div>
-
       <%= if build_tools != [] do %>
-        <h3>Build Tools</h3>
+        <h3><img src="<%= static_path(HexWeb.Endpoint, "/images/stat-build.svg") %>" alt="build tools"> Build Tools</h3>
         <div class="build-tools-box">
           <%= for tool <- @current_release.meta.build_tools do %>
           <span class="build-tool <%= tool %>"><%= tool %></span>
