@@ -1,7 +1,4 @@
     <div class="footer">
-      <div class="container made-with-love">
-        Made with ♥ by Eric Meadows-Jönsson under Apache license
-      </div>
       <div class="footer-nav">
         <div class="container">
           <ul>
