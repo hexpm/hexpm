@@ -234,12 +234,12 @@ defmodule HexWeb.Utils do
     :public_key.verify(file, :sha512, signature, key)
   end
 
-  def parse_ip("-") do
-    nil
-  end
   def parse_ip(ip) do
-    parts = String.split(ip, ".") |> Enum.map(&String.to_integer/1)
-    for part <- parts, into: <<>>, do: <<part>>
+    parts = String.split(ip, ".")
+    if length(parts) == 4 do
+      parts = Enum.map(parts, &String.to_integer/1)
+      for part <- parts, into: <<>>, do: <<part>>
+    end
   end
 
   defmacro defdispatch({function, _, args}, to: target) do
