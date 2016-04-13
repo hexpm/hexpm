@@ -14,11 +14,7 @@ defmodule HexWeb.PackageController do
         letter ->
           {:starts_with, letter}
         search ->
-          if String.length(search) >= 3 do
-            {:contains, search}
-          else
-            {:equals, search}
-          end
+          search
         true ->
           nil
       end

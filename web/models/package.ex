@@ -119,6 +119,17 @@ defmodule HexWeb.Package do
     query
   end
 
+  defp search(query, search) when is_binary(search) do
+    filter =
+      if String.length(search) >= 3 do
+        {:contains, search}
+      else
+        {:equals, search}
+      end
+
+    search(query, filter)
+  end
+
   defp search(query, {mode, search}) do
     name_search = search |> escape_search() |> like_search(mode)
 
