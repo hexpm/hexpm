@@ -11,6 +11,13 @@ As with all legal matters you should consult with professionals about your
 specific situation. Note that actions you take can limit your rights so it's
 always strongly recommended to take legal counsel prior.
 
+Please note that all submissions will be published to the [Lumen Database](https://lumendatabase.org/)
+with any personal information removed.
+
+Submit your takedown or takedown counter notice to [copyright@hex.pm](mailto:copyright@hex.pm).
+You may include attachments but please include a copy of your letter in plain-text
+in the body of the email.
+
 ### How to submit a DMCA takedown notice
 
 The DMCA requires that you swear to the facts in your notice under penalty of
@@ -26,10 +33,7 @@ details). You will be notified of the counter notice, we will re-enable their
 content within 14 business days if you do not inform us that you have initiated legal
 action to restrain the user from engaging in copyright infringing activity on Hex.
 
-Please note that all submissions will be published to the [Lumen Database](https://lumendatabase.org/)
-with any personal information removed.
-
-#### Your complaint must follow these rules:
+#### Your takedown notice must follow these rules:
 
 1. Identify the copyrighted work you believe has been infringed.
 
@@ -54,10 +58,6 @@ with any personal information removed.
 
 9. Include your physical or electronic signature.
 
-Submit your copyright notice to [copyright@hex.pm](mailto:copyright@hex.pm). You
-may include attachments but please include a copy of your letter in plain-text
-in the body of the email.
-
 ### How to submit a DMCA takedown counter notice
 
 The DMCA requires that you swear to the facts in your notice under penalty of
@@ -75,10 +75,7 @@ notice could be that your content falls under fair-use or you may have a license
 for the copyrighted content. It is up to you if you want to explain why the DMCA
 takedown notice is not valid.
 
-Please note that all submissions will be published to the [Lumen Database](https://lumendatabase.org/)
-with any personal information removed.
-
-#### Your complaint must follow these rules:
+#### Your counter notice must follow these rules:
 
 1. Identify the disabled content.
 
@@ -96,7 +93,3 @@ with any personal information removed.
    that is allegedly infringed."
 
 6. Include your physical or electronic signature.
-
-Submit your counter notice to [copyright@hex.pm](mailto:copyright@hex.pm). You
-may include attachments but please include a copy of your letter in plain-text
-in the body of the email.
