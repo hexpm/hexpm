@@ -4,6 +4,11 @@ defmodule HexWeb.PageControllerTest do
   alias HexWeb.Package
   alias HexWeb.Release
 
+  defp create_user(username, email, password) do
+    HexWeb.User.create(%{username: username, email: email, password: password}, true)
+    |> HexWeb.Repo.insert!
+  end
+
   defp release_create(package, version, app, requirements, checksum, inserted_at) do
     {:ok, release} = Release.create(package, rel_meta(%{version: version, app: app, requirements: requirements}), checksum)
     Ecto.Changeset.change(release, inserted_at: inserted_at)
@@ -15,9 +20,11 @@ defmodule HexWeb.PageControllerTest do
     second_date = Ecto.DateTime.from_erl({{2014, 5, 2}, {10, 11, 12}})
     last_date   = Ecto.DateTime.from_erl({{2014, 5, 3}, {10, 11, 12}})
 
-    foo = HexWeb.Repo.insert!(%Package{name: "foo", inserted_at: first_date, updated_at: first_date})
-    bar = HexWeb.Repo.insert!(%Package{name: "bar", inserted_at: second_date, updated_at: second_date})
-    other = HexWeb.Repo.insert!(%Package{name: "other", inserted_at: last_date, updated_at: last_date})
+    eric = create_user("eric", "eric@example.com", "eric")
+
+    {:ok, foo} = Package.create(eric, %{name: "foo", inserted_at: first_date, updated_at: first_date, meta: %{description: "foo"}})
+    {:ok, bar} = Package.create(eric, %{name: "bar", inserted_at: second_date, updated_at: second_date, meta: %{description: "bar"}})
+    {:ok, other} = Package.create(eric, %{name: "other", inserted_at: last_date, updated_at: last_date, meta: %{description: "other"}})
 
     release_create(foo, "0.0.1", "foo", [], "", Ecto.DateTime.from_erl({{2014, 5, 3}, {10, 11, 1}}))
     release_create(foo, "0.0.2", "foo", [], "", Ecto.DateTime.from_erl({{2014, 5, 3}, {10, 11, 2}}))
@@ -42,7 +49,7 @@ defmodule HexWeb.PageControllerTest do
     assert conn.status == 200
     assert conn.assigns[:total]["all"] == 9
     assert conn.assigns[:total]["week"] == 0
-    assert conn.assigns[:package_top] == [{"foo", 7}, {"bar", 2}]
+    assert [{"foo", %Ecto.DateTime{}, %HexWeb.PackageMetadata{}, 7}, {"bar", %Ecto.DateTime{}, %HexWeb.PackageMetadata{}, 2}] = conn.assigns[:package_top]
     assert conn.assigns[:num_packages] == 3
     assert conn.assigns[:num_releases] == 6
     assert Enum.count(conn.assigns[:releases_new]) == 6
