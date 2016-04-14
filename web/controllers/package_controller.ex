@@ -12,7 +12,7 @@ defmodule HexWeb.PackageController do
     filter =
       cond do
         letter ->
-          {:starts_with, letter}
+          {:letter, letter}
         search ->
           search
         true ->

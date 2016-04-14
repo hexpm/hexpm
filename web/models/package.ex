@@ -119,6 +119,13 @@ defmodule HexWeb.Package do
     query
   end
 
+  defp search(query, {:letter, letter}) do
+    name_search = letter <> "%"
+
+    from var in query,
+    where: ilike(fragment("?::text", var.name), ^name_search)
+  end
+
   defp search(query, search) when is_binary(search) do
     filter =
       if String.length(search) >= 3 do
@@ -146,8 +153,6 @@ defmodule HexWeb.Package do
     do: "%" <> search <> "%"
   defp like_search(search, :equals),
     do: search
-  defp like_search(search, :starts_with),
-    do: search <> "%"
 
   defp escape_search(search) do
     String.replace(search, ~r"(%|_)"u, "\\\\\\1")
