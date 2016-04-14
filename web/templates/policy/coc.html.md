@@ -84,7 +84,7 @@ You are also encouraged to contact us if you are curious about something that mi
 
 ### Changes
 
-This is a living document and may be updated from time to time. Please refer to the [git history](https://github.com/hexpm/hex_web/commits/master/lib/hex_web/web/templates/policies/codeofconduct.html.eex) for this document to view the changes.
+This is a living document and may be updated from time to time. Please refer to the [git history](https://github.com/hexpm/hex_web/blob/master/web/templates/policy/coc.html.md) for this document to view the changes.
 
 ### Credit and License
 
