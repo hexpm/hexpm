@@ -39,6 +39,7 @@ defmodule HexWeb.Router do
     get  "docs/mirrors",            DocsController,     :mirrors
     get  "docs/public_keys",        DocsController,     :public_keys
 
+    get  "policies",                PolicyController,   :index
     get  "policies/codeofconduct",  PolicyController,   :coc
     get  "policies/privacy",        PolicyController,   :privacy
     get  "policies/termsofservice", PolicyController,   :tos
