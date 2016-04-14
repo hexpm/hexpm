@@ -51,6 +51,26 @@
   </div>
 </div>
 
+<div class="getting-started">
+  <div class="container">
+    <h2>Getting Started</h2>
+    <div class="row">
+      <div class="col-md-4">
+        <a href="/docs/usage">installing</a>
+        <p>Mix will automatically prompt you whenever there is a need to use Hex.</p>
+      </div>
+      <div class="col-md-4">
+        <a href="#">screencasts and docs</a>
+        <p>Mix will automatically prompt you whenever there is a need to use Hex...</p>
+      </div>
+      <div class="col-md-4">
+        <a href="#">community</a>
+        <p>Mix will automatically prompt you whenever there is a need to use Hex...</p>
+      </div>
+    </div>
+  </div>
+</div>
+
 <div class="home-stats">
   <ul class="container">
     <li>
@@ -101,26 +121,6 @@
   </ul>
 </div>
 
-<div class="getting-started">
-  <div class="container">
-    <h2>Getting Started</h2>
-    <div class="row">
-      <div class="col-md-4">
-        <a href="/docs/usage">installing</a>
-        <p>Mix will automatically prompt you whenever there is a need to use Hex.</p>
-      </div>
-      <div class="col-md-4">
-        <a href="#">screencasts and docs</a>
-        <p>Mix will automatically prompt you whenever there is a need to use Hex...</p>
-      </div>
-      <div class="col-md-4">
-        <a href="#">community</a>
-        <p>Mix will automatically prompt you whenever there is a need to use Hex...</p>
-      </div>
-    </div>
-  </div>
-</div>
-
 <div class="log-head">
   <div class="container">
     <div class="row">
@@ -142,43 +142,22 @@
     <div class="row">
       <div class="col-md-4">
         <ul>
-          <%= for {package, downloads} <- @package_top do %>
-          <li>
-            <a href="<%= package_path(HexWeb.Endpoint, :show, package) %>"><%= package %></a>
-            <p>
-              <span class="info"><%= human_number_space downloads %> downloads</span>
-              <!-- <span class="description">Small, fast, modular HTTP server written in Erlang...</span> -->
-              <span class="published-at"><a href="<%= package_path(HexWeb.Endpoint, :show, package) %>">1.0.4</a> published 2 months ago</span>
-            </p>
-          </li>
+          <%= for {package, inserted_at, meta, downloads} <- @package_top do %>
+            <%= render_package package: package, downloads: downloads, inserted_at: inserted_at, description: meta.description %>
           <% end %>
         </ul>
       </div>
       <div class="col-md-4">
         <ul>
-          <%= for {package, inserted_at} <- @package_new do %>
-          <li>
-            <a href="<%= package_path(HexWeb.Endpoint, :show, package) %>"><%= package %></a>
-            <p>
-              <span class="info"><%= human_relative_time_from_now(inserted_at) %></span>
-              <span class="description">Small, fast, modular HTTP server written in Erlang...</span>
-              <span class="published-at"><a href="<%= package_path(HexWeb.Endpoint, :show, package) %>">1.0.4</a> published <%= human_relative_time_from_now(inserted_at) %></span>
-            </p>
-          </li>
+          <%= for {package, inserted_at, %PackageMetadata{} = meta} <- @package_new do %>
+            <%= render_package package: package, inserted_at: inserted_at, description: meta.description %>
           <% end %>
         </ul>
       </div>
       <div class="col-md-4">
         <ul>
-          <%= for {version, package} <- @releases_new do %>
-          <li>
-            <a href="/packages/<%= package %>"><%= package %></a>
-            <p>
-              <span class="info">495,238 downloads</span>
-              <!-- <span class="description">Small, fast, modular HTTP server written in Erlang...</span> -->
-              <span class="published-at"><a href="<%= package_path(HexWeb.Endpoint, :show, package) %>"><%= version %></a> published 2 months ago</span>
-            </p>
-          </li>
+          <%= for {package, version, inserted_at, %PackageMetadata{} = meta} <- @releases_new do %>
+            <%= render_package version: version, package: package, inserted_at: inserted_at, description: meta.description %>
           <% end %>
         </ul>
       </div>

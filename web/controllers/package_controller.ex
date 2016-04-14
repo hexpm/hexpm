@@ -3,24 +3,39 @@ defmodule HexWeb.PackageController do
 
   @packages_per_page 30
   @sort_params ~w(name downloads inserted_at)
+  @letters for letter <- ?A..?Z, do: <<letter>>
 
   def index(conn, params) do
+    letter        = HexWeb.Utils.safe_search(params["letter"])
     search        = HexWeb.Utils.safe_search(params["search"])
+
+    filter =
+      cond do
+        letter ->
+          {:letter, letter}
+        search ->
+          search
+        true ->
+          nil
+      end
+
     sort          = HexWeb.Utils.safe_to_atom(params["sort"] || "name", @sort_params)
-    package_count = Package.count(search) |> HexWeb.Repo.one!
     page_param    = HexWeb.Utils.safe_int(params["page"]) || 1
+    package_count = Package.count(filter) |> HexWeb.Repo.one!
     page          = HexWeb.Utils.safe_page(page_param, package_count, @packages_per_page)
-    packages      = fetch_packages(page, @packages_per_page, search, sort)
+    packages      = fetch_packages(page, @packages_per_page, filter, sort)
 
     render conn, "index.html", [
       active:        :packages,
       title:         "Packages",
       per_page:      @packages_per_page,
       search:        search,
+      letter:        letter,
       sort:          sort,
       package_count: package_count,
       page:          page,
       packages:      packages,
+      letters:       @letters,
       downloads:     PackageDownload.packages(packages, "all")
                      |> HexWeb.Repo.all
                      |> Enum.into(%{})

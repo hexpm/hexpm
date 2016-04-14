@@ -24,7 +24,7 @@ defmodule HexWeb.PackageDownload do
          where: not is_nil(pd.package_id) and pd.view == ^view,
          order_by: [desc: pd.downloads],
          limit: ^count,
-         select: {p.name, pd.downloads})
+         select: {p.name, p.inserted_at, p.meta, pd.downloads})
   end
 
   def total do
