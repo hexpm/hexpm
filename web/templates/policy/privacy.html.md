@@ -44,7 +44,7 @@ All emails to `***@hex.pm` are stored, including the email address of the sender
 
 ### Questions
 
-Any questions about this Privacy Policy should be addressed to [support@hex.pm](mailto:support.hex.pm).
+Any questions about this Privacy Policy should be addressed to <support@hex.pm>.
 
 ### Changes
 

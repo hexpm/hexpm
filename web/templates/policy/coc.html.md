@@ -13,7 +13,7 @@ Hex is the set of formats and APIs that makes up the specification of Hex. Hex.p
 ### tl;dr
 
   * Be respectful.
-  * We're here to help: [support@hex.pm](mailto:support@hex.pm)
+  * We're here to help: <support@hex.pm>
   * Abusive behavior is never tolerated.
   * Data published to Hex is hosted at the discretion of the Hex team, and may be removed.
   * Violations of this code may result in swift and permanent expulsion from the Hex community.
@@ -26,7 +26,7 @@ This policy covers the usage of the Hex registry, as well as the Hex website, He
 
 This Code of Conduct is in addition to, and does not in any way nullify or invalidate, any other terms or conditions related to use of the Service.
 
-The definitions of various subjective terms such as "discriminatory", "hateful", or "confusing" will be decided at the sole discretion of the Hex team ([support@hex.pm](mailto:support@hex.pm)).
+The definitions of various subjective terms such as "discriminatory", "hateful", or "confusing" will be decided at the sole discretion of the Hex team (<support@hex.pm>).
 
 ### Friendly Harassment-Free Space
 
@@ -58,7 +58,7 @@ Package name, description, and other visible metadata must not include abusive, 
 
 ### Reporting Violations of this Code of Conduct
 
-If you believe someone is harassing you or has otherwise violated this Code of Conduct, please contact us at [support@hex.pm](mailto:support@hex.pm) to send us an abuse report. If this is the initial report of a problem, please include as much detail as possible. It is easiest for us to address issues when we have more context.
+If you believe someone is harassing you or has otherwise violated this Code of Conduct, please contact us at <support@hex.pm> to send us an abuse report. If this is the initial report of a problem, please include as much detail as possible. It is easiest for us to address issues when we have more context.
 
 ### Consequences
 
@@ -78,7 +78,7 @@ In general, we will choose the course of action that we judge as being most in t
 
 ### Contact Info
 
-Please contact the Hex team at [support@hex.pm](mailto:support@hex.pm) if you need to report a problem or address a grievance related to an abuse report.
+Please contact the Hex team at <support@hex.pm> if you need to report a problem or address a grievance related to an abuse report.
 
 You are also encouraged to contact us if you are curious about something that might be "on the line" between appropriate and inappropriate content. We are happy to provide guidance to help you be a successful part of our community.
 
