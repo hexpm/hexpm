@@ -1,4 +1,4 @@
-## Privacy policy
+## Privacy Policy
 
 We store information about access to and users on the [hex.pm](https://hex.pm) and [hexdocs.pm](https://hexdocs.pm) website, the hex.pm API and repository. This data is stored in the US on Heroku and Amazon AWS servers.
 

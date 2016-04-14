@@ -42,6 +42,7 @@ defmodule HexWeb.Router do
     get  "policies/codeofconduct",  PolicyController,   :coc
     get  "policies/privacy",        PolicyController,   :privacy
     get  "policies/termsofservice", PolicyController,   :tos
+    get  "policies/copyright",      PolicyController,   :copyright
 
     get  "packages",                PackageController,  :index
     get  "packages/:name",          PackageController,  :show

@@ -8,6 +8,13 @@ defmodule HexWeb.PolicyController do
     ]
   end
 
+  def copyright(conn, _params) do
+    render conn, "copyright.html", [
+      active: :policy,
+      title: "Copyright Policy"
+    ]
+  end
+
   def privacy(conn, _params) do
     render conn, "privacy.html", [
       active: :policy,

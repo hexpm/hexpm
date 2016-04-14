@@ -66,8 +66,9 @@
               <a href="#" class="dropdown-toggle" data-toggle="dropdown">Policies <b class="caret"></b></a>
               <ul class="dropdown-menu">
                 <li><a href="<%= policy_path(HexWeb.Endpoint, :coc) %>">Code of Conduct</a></li>
-                <li><a href="<%= policy_path(HexWeb.Endpoint, :privacy) %>">Privacy Policy</a></li>
                 <li><a href="<%= policy_path(HexWeb.Endpoint, :tos) %>">Terms of Service</a></li>
+                <li><a href="<%= policy_path(HexWeb.Endpoint, :privacy) %>">Privacy Policy</a></li>
+                <li><a href="<%= policy_path(HexWeb.Endpoint, :copyright) %>">Copyright Policy</a></li>
               </ul>
             </li>
           </ul>
