@@ -40,7 +40,7 @@ If you are a non-US user of the service, by using our service and providing us w
 
 ### Communication
 
-All emails to `***@hex.pm` are stored, including the email address of the sender and the contents of the email. This information is available internally to hex.pm but will not be disclosed to the outside.
+All emails to `***@hex.pm` are stored, including the email address of the sender and the contents of the email. This information is available internally to hex.pm but will not be disclosed to the outside. See the "Disclosure" section for exceptions to this.
 
 ### Questions
 
