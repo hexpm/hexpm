@@ -59,38 +59,42 @@ defmodule HexWeb.Router do
     end
   end
 
-  scope "/api", HexWeb.API do
-    pipe_through :upload
+  unless Application.get_env(:hex_web, :read_only) do
 
-    post "packages/:name/releases",               ReleaseController, :create
-    post "packages/:name/releases/:version/docs", DocsController,    :create
-  end
+    scope "/api", HexWeb.API do
+      pipe_through :upload
 
-  scope "/api", HexWeb.API do
-    pipe_through :api
+      post "packages/:name/releases",               ReleaseController, :create
+      post "packages/:name/releases/:version/docs", DocsController,    :create
+    end
 
-    post   "users",                                 UserController,    :create
-    get    "users/:name",                           UserController,    :show
-    post   "users/:name/reset",                     UserController,    :reset
+    scope "/api", HexWeb.API do
+      pipe_through :api
 
-    get    "packages",                              PackageController, :index
-    get    "packages/:name",                        PackageController, :show
+      post   "users",                                 UserController,    :create
+      get    "users/:name",                           UserController,    :show
+      post   "users/:name/reset",                     UserController,    :reset
 
-    get    "packages/:name/releases/:version",      ReleaseController, :show
-    delete "packages/:name/releases/:version",      ReleaseController, :delete
+      get    "packages",                              PackageController, :index
+      get    "packages/:name",                        PackageController, :show
 
-    # Temporary, see #232
-    get    "packages/:name/releases/:version/docs", DocsController,    :show
-    delete "packages/:name/releases/:version/docs", DocsController,    :delete
+      get    "packages/:name/releases/:version",      ReleaseController, :show
+      delete "packages/:name/releases/:version",      ReleaseController, :delete
 
-    get    "packages/:name/owners",                 OwnerController,   :index
-    get    "packages/:name/owners/:email",          OwnerController,   :show
-    put    "packages/:name/owners/:email",          OwnerController,   :create
-    delete "packages/:name/owners/:email",          OwnerController,   :delete
+      # Temporary, see #232
+      get    "packages/:name/releases/:version/docs", DocsController,    :show
+      delete "packages/:name/releases/:version/docs", DocsController,    :delete
 
-    get    "keys",                                  KeyController,     :index
-    get    "keys/:name",                            KeyController,     :show
-    post   "keys",                                  KeyController,     :create
-    delete "keys/:name",                            KeyController,     :delete
+      get    "packages/:name/owners",                 OwnerController,   :index
+      get    "packages/:name/owners/:email",          OwnerController,   :show
+      put    "packages/:name/owners/:email",          OwnerController,   :create
+      delete "packages/:name/owners/:email",          OwnerController,   :delete
+
+      get    "keys",                                  KeyController,     :index
+      get    "keys/:name",                            KeyController,     :show
+      post   "keys",                                  KeyController,     :create
+      delete "keys/:name",                            KeyController,     :delete
+    end
+
   end
 end
