@@ -9,7 +9,6 @@
     <title><%= title(assigns) %></title>
 
     <link rel="search" type="application/opensearchdescription+xml" title="Hex" href="<%= static_path(HexWeb.Endpoint, "/hexsearch.xml") %>">
-    <link href='https://fonts.googleapis.com/css?family=Lato:400,300,700,900,100' rel='stylesheet' type='text/css'>
     <link rel="stylesheet" href="<%= static_path(HexWeb.Endpoint, "/css/main.css") %>">
     <link rel="shortcut icon" href="<%= static_path(HexWeb.Endpoint, "/favicon.png") %>">
   </head>
@@ -28,7 +27,7 @@
             <span class="icon-bar"></span>
           </button>
           <a class="navbar-brand" href="/">
-            <span style="font-size: 24px;"><img src="<%= static_path(HexWeb.Endpoint, "/images/hex.png") %>" srcset="<%= static_path(HexWeb.Endpoint, "/images/hex.png") %> 1x, <%= static_path(HexWeb.Endpoint, "/images/hex@2.png") %> 2x, <%= static_path(HexWeb.Endpoint, "/images/hex@3.png") %> 3x"></span>
+            <img src="<%= static_path(HexWeb.Endpoint, "/images/hex.png") %>" srcset="<%= static_path(HexWeb.Endpoint, "/images/hex.png") %> 1x, <%= static_path(HexWeb.Endpoint, "/images/hex@2.png") %> 2x, <%= static_path(HexWeb.Endpoint, "/images/hex@3.png") %> 3x">
           </a>
         </div>
         <div id="navbar" class="navbar-collapse collapse">
