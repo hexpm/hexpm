@@ -1,5 +1,5 @@
 <%= for release <- @releases do %>
-  <li <%= if @older? do %>class="collapse"<% end %>>
+  <li>
     <a href="<%= package_path(HexWeb.Endpoint, :show, @package, release, []) %>"><strong><%= release.version %></strong></a>
     <span class="text-muted"><%= pretty_date(release.inserted_at) %></span>
     <%= if release.has_docs do %>

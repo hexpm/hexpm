@@ -101,22 +101,22 @@ tools = Keyword.take(tools, compatible_tools)
       <div class="row">
         <div class="col-md-6">
           <h3>Versions</h3>
-          <ul class="version-dependency-list">
+          <ul id="versions" class="version-dependency-list">
             <% show_latest_versions = 5 %>
-            <%= render "versions.html", [package: @package, releases: Enum.take(@releases, show_latest_versions), older?: false] %>
+            <%= render "versions.html", [package: @package, releases: Enum.take(@releases, show_latest_versions)] %>
 
-            <%= if length(@releases)> show_latest_versions do %>
-              <%= render "versions.html", [package: @package, releases: Enum.drop(@releases, show_latest_versions), older?: true] %>
+            <%= if length(@releases) > show_latest_versions do %>
+              <div class="collapse">
+                <%= render "versions.html", [package: @package, releases: Enum.drop(@releases, show_latest_versions)] %>
+              </div>
             <% end %>
-            <!-- <li>
-              <a href="#">1.0.6</a> October 17, 2015 (<a href="#">docs</a>)
-            </li> -->
           </ul>
           <%= if length(@releases)> show_latest_versions do %>
-          <!-- <p class="show-versions"><button class="btn btn-primary toggle-text" role="button" data-toggle="collapse" data-target="#versions li.older" aria-expanded="false" aria-controls="versions">
+          <p class="show-versions">
+            <button class="btn btn-primary toggle-text" role="button" data-toggle="collapse" data-target="#versions div.collapse" aria-expanded="false" aria-controls="versions">
             <span>All Versions</span>
             <span class="invisible">Recent Versions</span>
-          </button></p> -->
+          </button></p>
           <% end %>
         </div>
         <div class="col-md-6">
