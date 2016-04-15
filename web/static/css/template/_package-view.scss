@@ -75,7 +75,7 @@
     padding: 0;
     li {
       display: inline-block;
-      margin-right: 10px;
+      width: 24%;
       img {
         float: left;
         margin-right: 6px;
@@ -93,6 +93,9 @@
           display: inline-block;
           padding: 0 0 5px 0;
         }
+      }
+      .stat-text {
+        line-height: 11px;
       }
     }
   }
