@@ -90,4 +90,22 @@
 }
 .pagination {
   margin: 0;
+
+  li {
+    a, span,
+    a:hover, span:hover,
+    a:focus, span:focus {
+      color: #aa2c3f;
+    }
+  }
+
+  .active {
+    a, span,
+    a:hover, span:hover,
+    a:focus, span:focus {
+      background-color: #aa2c3f;
+      border-color: #aa2c3f;
+    }
+  }
+
 }
