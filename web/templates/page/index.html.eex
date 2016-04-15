@@ -74,7 +74,7 @@
 <div class="home-stats">
   <ul class="container">
     <li>
-      <img src="images/stat-package.png" alt="">
+      <span class="octicon octicon-package stat-icon stat-icon-package"></span>
       <span class="stat-info">
         <span class="count-info">
           <%= human_number_space @num_packages %>
@@ -83,7 +83,7 @@
       </span>
     </li>
     <li>
-      <img src="images/stat-version.png" alt="">
+      <span class="octicon octicon-versions stat-icon stat-icon-versions"></span>
       <span class="stat-info">
         <span class="count-info">
           <%= human_number_space @num_releases %>
@@ -92,7 +92,7 @@
       </span>
     </li>
     <li>
-      <img src="images/stat-calendar.png" alt="">
+      <span class="octicon octicon-calendar stat-icon stat-icon-calendar"></span>
       <span class="stat-info">
         <span class="count-info">
           <%= human_number_space @total["day"] %>
@@ -101,7 +101,7 @@
       </span>
     </li>
     <li>
-      <img src="images/stat-calendar.png" alt="">
+      <span class="octicon octicon-calendar stat-icon stat-icon-calendar"></span>
       <span class="stat-info">
         <span class="count-info">
           <%= human_number_space @total["week"] %>
@@ -110,7 +110,7 @@
       </span>
     </li>
     <li>
-      <img src="images/stat-calendar.png" alt="">
+      <span class="octicon octicon-calendar stat-icon stat-icon-calendar"></span>
       <span class="stat-info">
         <span class="count-info">
           <%= human_number_space @total["all"] %>

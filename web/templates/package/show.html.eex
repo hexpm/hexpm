@@ -60,7 +60,7 @@ tools = Keyword.take(tools, compatible_tools)
       <div class="stats clearfix">
         <ul>
           <li>
-            <img src="<%= static_path(HexWeb.Endpoint, "/images/stat-calendar.png") %>" alt="calendar">
+            <span class="octicon octicon-calendar stat-icon stat-icon-calendar"></span>
             <span class="stat-info">
               <span class="count-info">
                 <%= human_number_space(if @release_downloads, do: @release_downloads.downloads, else: 0) %>
@@ -69,7 +69,7 @@ tools = Keyword.take(tools, compatible_tools)
             </span>
           </li>
           <li>
-            <img src="<%= static_path(HexWeb.Endpoint, "/images/stat-calendar.png") %>" alt="calendar">
+            <span class="octicon octicon-calendar stat-icon stat-icon-calendar"></span>
             <span class="stat-info">
               <span class="count-info">
                 <%= human_number_space(@downloads["day"] || 0) %>
@@ -78,7 +78,7 @@ tools = Keyword.take(tools, compatible_tools)
             </span>
           </li>
           <li>
-            <img src="<%= static_path(HexWeb.Endpoint, "/images/stat-calendar.png") %>" alt="calendar">
+            <span class="octicon octicon-calendar stat-icon stat-icon-calendar"></span>
             <span class="stat-info">
               <span class="count-info">
                 <%= human_number_space(@downloads["week"] || 0) %>
@@ -87,7 +87,7 @@ tools = Keyword.take(tools, compatible_tools)
             </span>
           </li>
           <li>
-            <img src="<%= static_path(HexWeb.Endpoint, "/images/stat-calendar.png") %>" alt="calendar">
+            <span class="octicon octicon-calendar stat-icon stat-icon-calendar"></span>
             <span class="stat-info">
               <span class="count-info">
                 <%= human_number_space(@downloads["all"] || 0) %>
