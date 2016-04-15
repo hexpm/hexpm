@@ -8,7 +8,7 @@ We believe that our mission is best served in an environment that is friendly, s
 
 Towards this end, certain behaviors and practices will not be tolerated.
 
-Hex is the set of formats and APIs that makes up the specification of Hex. Hex.pm is an implementation of the Hex specifications, it is comprised of this website and associated HTTP API, the package repository including packages published to Hex.pm. In this document Hex and Hex.pm is used interchangeably but it refers to Hex.pm.
+Hex is the set of formats and APIs that makes up the specification of Hex. Hex.pm is an implementation of the Hex specifications, it is comprised of this website and associated HTTP API, the package repository including packages published to Hex.pm and the website hexdocs.pm. In this document Hex and Hex.pm is used interchangeably but it refers to Hex.pm.
 
 ### tl;dr
 
