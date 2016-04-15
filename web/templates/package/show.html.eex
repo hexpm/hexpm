@@ -113,10 +113,11 @@ tools = Keyword.take(tools, compatible_tools)
           </ul>
           <%= if length(@releases)> show_latest_versions do %>
           <p class="show-versions">
-            <button class="btn btn-primary toggle-text" role="button" data-toggle="collapse" data-target="#versions div.collapse" aria-expanded="false" aria-controls="versions">
-            <span>All Versions</span>
-            <span class="invisible">Recent Versions</span>
-          </button></p>
+            <span class="toggle-text" role="button" data-toggle="collapse" data-target="#versions div.collapse" aria-expanded="false" aria-controls="versions">
+              <a>Show All Versions</a>
+              <a class="invisible">Show Recent Versions</a>
+            </span>
+          </p>
           <% end %>
         </div>
         <div class="col-md-6">
