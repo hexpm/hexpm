@@ -79,7 +79,7 @@
         <span class="count-info">
           <%= human_number_space @num_packages %>
         </span> <br>
-        packages
+        packages <br> available
       </span>
     </li>
     <li>
@@ -88,7 +88,7 @@
         <span class="count-info">
           <%= human_number_space @num_releases %>
         </span> <br>
-        package versions
+        package <br> versions
       </span>
     </li>
     <li>
@@ -97,7 +97,7 @@
         <span class="count-info">
           <%= human_number_space @total["day"] %>
         </span> <br>
-        downloads yesterday
+        downloads <br> yesterday
       </span>
     </li>
     <li>
@@ -106,7 +106,7 @@
         <span class="count-info">
           <%= human_number_space @total["week"] %>
         </span> <br>
-        downloads last seven days
+        downloads <br> last 7 days
       </span>
     </li>
     <li>
@@ -115,7 +115,7 @@
         <span class="count-info">
           <%= human_number_space @total["all"] %>
         </span> <br>
-        downloads all time
+        downloads <br> all time
       </span>
     </li>
   </ul>

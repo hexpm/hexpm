@@ -65,7 +65,7 @@ tools = Keyword.take(tools, compatible_tools)
               <span class="count-info">
                 <%= human_number_space(if @release_downloads, do: @release_downloads.downloads, else: 0) %>
               </span> <br>
-              downloads of this version
+              <span class="stat-text">downloads <br> this version</span>
             </span>
           </li>
           <li>
@@ -74,7 +74,7 @@ tools = Keyword.take(tools, compatible_tools)
               <span class="count-info">
                 <%= human_number_space(@downloads["day"] || 0) %>
               </span> <br>
-              downloads yesterday
+              <span class="stat-text">downloads <br> yesterday</span>
             </span>
           </li>
           <li>
@@ -83,7 +83,7 @@ tools = Keyword.take(tools, compatible_tools)
               <span class="count-info">
                 <%= human_number_space(@downloads["week"] || 0) %>
               </span> <br>
-              downloads last seven days
+              <span class="stat-text">downloads <br> last 7 days</span>
             </span>
           </li>
           <li>
@@ -92,7 +92,7 @@ tools = Keyword.take(tools, compatible_tools)
               <span class="count-info">
                 <%= human_number_space(@downloads["all"] || 0) %>
               </span> <br>
-              downloads all time
+              <span class="stat-text">downloads <br> all time</span>
             </span>
           </li>
         </ul>
