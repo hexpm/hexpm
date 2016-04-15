@@ -123,9 +123,9 @@ tools = Keyword.take(tools, compatible_tools)
           <h3>Dependencies</h3>
           <ul class="version-dependency-list">
             <%= if @current_release do %>
-              <%= for { name, _app, req, optional } <- @current_release.requirements do %>
+              <%= for %{name: name, requirement: req, optional: optional} <- @current_release.requirements do %>
               <li>
-                <a href="<%= package_path(HexWeb.Endpoint, :show, req.name) %>"><%= name %></a> <%= req %>
+                <a href="<%= package_path(HexWeb.Endpoint, :show, name) %>"><%= name %></a> <%= req %>
                 <%= if optional do %>(optional)<% end %>
               </li>
               <% end %>
