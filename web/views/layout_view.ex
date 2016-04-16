@@ -1,6 +1,10 @@
 defmodule HexWeb.LayoutView do
   use HexWeb.Web, :view
 
+  def show_search?(assigns) do
+    Map.get(assigns, :hide_search) != true
+  end
+
   def title(assigns) do
     if title = Map.get(assigns, :title) do
       "#{title} | Hex"
