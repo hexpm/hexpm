@@ -34,7 +34,8 @@
           <%= if show_search?(assigns) do %>
           <form class="navbar-form pull-left" role="search" action="<%= package_path(HexWeb.Endpoint, :index) %>">
              <div class="input-group">
-                <input placeholder="Find packages" name="search" type="text" class="form-control">
+                <input placeholder="Find packages" name="search" type="text" class="form-control" value="<%= search(assigns) %>">
+
                 <div class="input-group-btn">
                    <button type="submit" class="btn btn-default"><span class="glyphicon glyphicon-search"></span></button>
                 </div>
