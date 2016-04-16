@@ -31,6 +31,15 @@
           </a>
         </div>
         <div id="navbar" class="navbar-collapse collapse">
+          <form class="navbar-form pull-left" role="search" action="<%= package_path(HexWeb.Endpoint, :index) %>">
+             <div class="input-group">
+                <input placeholder="Find packages" name="search" type="text" class="form-control">
+                <div class="input-group-btn">
+                   <button type="submit" class="btn btn-default"><span class="glyphicon glyphicon-search"></span></button>
+                </div>
+             </div>
+          </form>
+
           <ul class="nav navbar-nav navbar-right">
             <li><a href="<%= package_path(HexWeb.Endpoint, :index) %>">Packages</a></li>
             <li class="dropdown">
