@@ -5,7 +5,6 @@
 
       <div class="row">
         <div class="col-md-8 col-md-offset-2">
-          <form role="search" role="search" action="/packages" method="get">
           <%= form_tag(package_path(HexWeb.Endpoint, :index), method: "get", role: "search") do %>
             <div class="input-group">
               <input type="search" class="form-control" placeholder="Find packages" name="search" value="<% # search(assigns) %>" tabindex="1">
