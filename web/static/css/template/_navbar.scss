@@ -31,6 +31,13 @@
   }
 }
 
+.navbar-default .navbar-form {
+  input, button {
+    margin-top: 10px;
+    margin-bottom: 10px;
+  }
+}
+
 .navbar-default .navbar-nav > li > a:hover, .navbar-default .navbar-nav > li > a:focus {
   color: #ffffff;
 }
