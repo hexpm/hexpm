@@ -33,8 +33,21 @@
 
 .navbar-default .navbar-form {
   input, button {
+    // Vertical centering
     margin-top: 10px;
     margin-bottom: 10px;
+
+    // Override bootstrap gradient style for navbar forms.
+    box-shadow: none;
+    -webkit-box-shadow: none;
+    border-color: white;
+  }
+
+  button.btn {
+    background: #ffffff;
+    span {
+      color: #adb3b6;
+    }
   }
 }
 
