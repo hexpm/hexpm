@@ -13,6 +13,15 @@
 @import "template/package-view";
 @import "template/page";
 
+html {
+  min-height: 100%;
+  position: relative;
+}
+
+body {
+  margin-bottom: 88px;
+}
+
 /* Responsive: Portrait tablets and up */
 @media screen and (min-width: 768px) {
   .container {
