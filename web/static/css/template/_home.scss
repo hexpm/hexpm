@@ -3,7 +3,30 @@
 // Featured
 .featured-home {
   background: #3e424d url('../images/bg-featured-home.png') no-repeat right bottom;
+  background-size: 1154px;
   padding: 20px 0 0 0;
+}
+
+@media
+only screen and (-webkit-min-device-pixel-ratio: 2),
+only screen and (   min--moz-device-pixel-ratio: 2),
+only screen and (     -o-min-device-pixel-ratio: 2/1),
+only screen and (        min-device-pixel-ratio: 2) {
+  .featured-home {
+    background: #3e424d url('../images/bg-featured-home@2.png') no-repeat right bottom;
+    background-size: 1154px;
+  }
+}
+
+@media
+only screen and (-webkit-min-device-pixel-ratio: 3),
+only screen and (   min--moz-device-pixel-ratio: 3),
+only screen and (     -o-min-device-pixel-ratio: 3/1),
+only screen and (        min-device-pixel-ratio: 3) {
+  .featured-home {
+    background: #3e424d url('../images/bg-featured-home@3.png') no-repeat right bottom;
+    background-size: 1154px;
+  }
 }
 
 .search-form {
