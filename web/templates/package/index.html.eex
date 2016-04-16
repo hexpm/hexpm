@@ -3,17 +3,19 @@
     Packages
   </h2>
 
-  <div class="by-letters">
-    <ul>
-      <%= for letter <- @letters do %>
-      <li>
-        <a href="<%= package_path(HexWeb.Endpoint, :index, letter: letter) %>">
-          <%= letter %>
-        </a>
-      </li>
-      <% end %>
-    </ul>
-  </div>
+  <%= unless @conn.params["search"] do %>
+    <div class="by-letters">
+      <ul>
+        <%= for letter <- @letters do %>
+        <li>
+          <a href="<%= package_path(HexWeb.Endpoint, :index, letter: letter) %>">
+            <%= letter %>
+          </a>
+        </li>
+        <% end %>
+      </ul>
+    </div>
+  <% end %>
 
   <%= if @package_count == 0 do %>
     <div class="package-list no-results">
