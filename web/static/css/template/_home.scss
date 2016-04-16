@@ -115,14 +115,56 @@
 .elixir .side-box {
   background: #714a94;
   .lang-symbol {
-    background: #f3e8fc url('../images/elixir-logo.png') center no-repeat;
+    background: #f3e8fc url('../images/elixir.png') center no-repeat;
+    background-size: 52px;
+  }
+  @media
+  only screen and (-webkit-min-device-pixel-ratio: 2),
+  only screen and (   min--moz-device-pixel-ratio: 2),
+  only screen and (     -o-min-device-pixel-ratio: 2/1),
+  only screen and (        min-device-pixel-ratio: 2) {
+    .lang-symbol {
+      background: #fee3e6 url('../images/elixir@2.png') center no-repeat;
+      background-size: 52px;
+    }
+  }
+  @media
+  only screen and (-webkit-min-device-pixel-ratio: 3),
+  only screen and (   min--moz-device-pixel-ratio: 3),
+  only screen and (     -o-min-device-pixel-ratio: 3/1),
+  only screen and (        min-device-pixel-ratio: 3) {
+    .lang-symbol {
+      background: #fee3e6 url('../images/elixir@3.png') center no-repeat;
+      background-size: 52px;
+    }
   }
 }
 
 .erlang .side-box {
   background: #ec485b;
   .lang-symbol {
-    background: #fee3e6 url('../images/erlang-logo.png') center no-repeat;
+    background: #fee3e6 url('../images/erlang.png') center no-repeat;
+    background-size: 66px;
+  }
+  @media
+  only screen and (-webkit-min-device-pixel-ratio: 2),
+  only screen and (   min--moz-device-pixel-ratio: 2),
+  only screen and (     -o-min-device-pixel-ratio: 2/1),
+  only screen and (        min-device-pixel-ratio: 2) {
+    .lang-symbol {
+      background: #fee3e6 url('../images/erlang@2.png') center no-repeat;
+      background-size: 66px;
+    }
+  }
+  @media
+  only screen and (-webkit-min-device-pixel-ratio: 3),
+  only screen and (   min--moz-device-pixel-ratio: 3),
+  only screen and (     -o-min-device-pixel-ratio: 3/1),
+  only screen and (        min-device-pixel-ratio: 3) {
+    .lang-symbol {
+      background: #fee3e6 url('../images/erlang@3.png') center no-repeat;
+      background-size: 66px;
+    }
   }
 }
 
