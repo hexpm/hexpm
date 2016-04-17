@@ -5,25 +5,13 @@
   background: #3e424d url('../images/bg-featured-home.png') no-repeat right bottom;
   background-size: 1154px;
   padding: 20px 0 0 0;
-}
 
-@media
-only screen and (-webkit-min-device-pixel-ratio: 2),
-only screen and (   min--moz-device-pixel-ratio: 2),
-only screen and (     -o-min-device-pixel-ratio: 2/1),
-only screen and (        min-device-pixel-ratio: 2) {
-  .featured-home {
+  @include hdpi(2) {
     background: #3e424d url('../images/bg-featured-home@2.png') no-repeat right bottom;
     background-size: 1154px;
   }
-}
 
-@media
-only screen and (-webkit-min-device-pixel-ratio: 3),
-only screen and (   min--moz-device-pixel-ratio: 3),
-only screen and (     -o-min-device-pixel-ratio: 3/1),
-only screen and (        min-device-pixel-ratio: 3) {
-  .featured-home {
+  @include hdpi(3) {
     background: #3e424d url('../images/bg-featured-home@3.png') no-repeat right bottom;
     background-size: 1154px;
   }
@@ -140,23 +128,13 @@ only screen and (        min-device-pixel-ratio: 3) {
   .lang-symbol {
     background: #f3e8fc url('../images/elixir.png') center no-repeat;
     background-size: 52px;
-  }
-  @media
-  only screen and (-webkit-min-device-pixel-ratio: 2),
-  only screen and (   min--moz-device-pixel-ratio: 2),
-  only screen and (     -o-min-device-pixel-ratio: 2/1),
-  only screen and (        min-device-pixel-ratio: 2) {
-    .lang-symbol {
+
+    @include hdpi(2) {
       background: #f3e8fc url('../images/elixir@2.png') center no-repeat;
       background-size: 52px;
     }
-  }
-  @media
-  only screen and (-webkit-min-device-pixel-ratio: 3),
-  only screen and (   min--moz-device-pixel-ratio: 3),
-  only screen and (     -o-min-device-pixel-ratio: 3/1),
-  only screen and (        min-device-pixel-ratio: 3) {
-    .lang-symbol {
+
+    @include hdpi(3) {
       background: #f3e8fc url('../images/elixir@3.png') center no-repeat;
       background-size: 52px;
     }
@@ -168,23 +146,13 @@ only screen and (        min-device-pixel-ratio: 3) {
   .lang-symbol {
     background: #fee3e6 url('../images/erlang.png') center no-repeat;
     background-size: 66px;
-  }
-  @media
-  only screen and (-webkit-min-device-pixel-ratio: 2),
-  only screen and (   min--moz-device-pixel-ratio: 2),
-  only screen and (     -o-min-device-pixel-ratio: 2/1),
-  only screen and (        min-device-pixel-ratio: 2) {
-    .lang-symbol {
+
+    @include hdpi(2) {
       background: #fee3e6 url('../images/erlang@2.png') center no-repeat;
       background-size: 66px;
     }
-  }
-  @media
-  only screen and (-webkit-min-device-pixel-ratio: 3),
-  only screen and (   min--moz-device-pixel-ratio: 3),
-  only screen and (     -o-min-device-pixel-ratio: 3/1),
-  only screen and (        min-device-pixel-ratio: 3) {
-    .lang-symbol {
+
+    @include hdpi(3) {
       background: #fee3e6 url('../images/erlang@3.png') center no-repeat;
       background-size: 66px;
     }
