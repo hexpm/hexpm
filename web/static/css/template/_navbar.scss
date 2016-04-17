@@ -6,7 +6,7 @@
 }
 
 .navbar-default .navbar-brand {
-  color: #ffffff;
+  color: $color-white;
   @include font-size(16 , 19);
   &:hover {
     color: #e5e5e5;
@@ -18,13 +18,13 @@
 }
 
 .navbar-default .navbar-nav > li > a {
-  color: #ffffff;
+  color: $color-white;
   height: 70px;
   @include font-size(16 , 115);
   padding-top: 0;
   padding-bottom: 0;
   &:hover {
-    color: #ffffff;
+    color: $color-white;
   }
 }
 
@@ -41,7 +41,7 @@
   }
 
   button.btn {
-    background: #ffffff;
+    background: $color-white;
     span {
       color: #adb3b6;
     }
@@ -49,12 +49,12 @@
 }
 
 .navbar-default .navbar-nav > li > a:hover, .navbar-default .navbar-nav > li > a:focus {
-  color: #ffffff;
+  color: $color-white;
 }
 
 .navbar-default .navbar-nav > .open > a, .navbar-default .navbar-nav > .open > a:hover, .navbar-default .navbar-nav > .open > a:focus {
   background-color: #6c7479;
-  color: #ffffff;
+  color: $color-white;
 }
 
 .dropdown-menu {
@@ -65,14 +65,14 @@
   left: auto;
   min-width: 200px;
   li > a {
-    color: #ffffff;
+    color: $color-white;
     font-size: 13px;
   }
   .divider {
     background-color: #5c676d;
   }
   .dropdown-header.menu-dropdown-header {
-    color: #ffffff;
+    color: $color-white;
     font-size: 15px;
     font-weight: bold;
     text-transform: uppercase;

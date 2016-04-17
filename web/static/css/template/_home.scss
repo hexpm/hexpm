@@ -32,7 +32,7 @@
     border-radius: 4px;
   }
   .btn-search {
-    background: #ffffff;
+    background: $color-white;
     span {
       color: #adb3b6;
     }
@@ -77,7 +77,7 @@
   top: 10px;
 }
 .text-content {
-  background: #ffffff;
+  background: $color-white;
   position: relative;
   z-index: 300;
   .side-box {
