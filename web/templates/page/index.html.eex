@@ -101,26 +101,11 @@
   </ul>
 </div>
 
-<div class="log-head">
-  <div class="container">
-    <div class="row">
-      <div class="col-md-4">
-        Most Downloaded
-      </div>
-      <div class="col-md-4">
-        New Packages
-      </div>
-      <div class="col-md-4">
-        Recently Updated
-      </div>
-    </div>
-  </div>
-</div>
-
 <div class="log-body">
   <div class="container">
     <div class="row">
       <div class="col-md-4">
+        <h3 class="log-head">Most Downloaded</h3>
         <ul>
           <%= for {package, inserted_at, meta, downloads} <- @package_top do %>
             <%= render_package package: package, downloads: downloads, inserted_at: inserted_at, description: meta.description %>
@@ -128,6 +113,7 @@
         </ul>
       </div>
       <div class="col-md-4">
+        <h3 class="log-head">New Packages</h3>
         <ul>
           <%= for {package, inserted_at, %PackageMetadata{} = meta} <- @package_new do %>
             <%= render_package package: package, inserted_at: inserted_at, description: meta.description %>
@@ -135,6 +121,7 @@
         </ul>
       </div>
       <div class="col-md-4">
+        <h3 class="log-head">Recently Updated</h3>
         <ul>
           <%= for {package, version, inserted_at, %PackageMetadata{} = meta} <- @releases_new do %>
             <%= render_package version: version, package: package, inserted_at: inserted_at, description: meta.description %>
