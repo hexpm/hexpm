@@ -24,7 +24,8 @@ body {
 }
 
 /* Responsive: Portrait tablets and up */
-@media screen and (min-width: 768px) {
+
+@include min-screen(768px) {
   .container {
     max-width: 1000px;
     width: auto;
