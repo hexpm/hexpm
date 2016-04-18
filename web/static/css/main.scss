@@ -1,0 +1,38 @@
+@import "base/media-queries";
+@import "base/variables";
+@import "base/mixins";
+@import "base/fonts";
+@import "base/general";
+
+@import "template/navbar";
+@import "template/footer";
+@import "template/error";
+
+@import "template/home";
+@import "template/package-list";
+@import "template/package-view";
+@import "template/page";
+@import "template/docs";
+
+
+/* Responsive: Portrait tablets and up */
+
+@include min-screen(768px) {
+  .container {
+    max-width: 1000px;
+    width: auto;
+  }
+
+  /* Remove the padding we set earlier */
+  .header,
+  .marketing,
+  .footer {
+    padding-left: 0;
+    padding-right: 0;
+  }
+
+  /* Remove the bottom border on the jumbotron for visual effect */
+  .jumbotron {
+    border-bottom: 0;
+  }
+}

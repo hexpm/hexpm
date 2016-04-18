@@ -1,83 +1,133 @@
-<p class="lead">
-  A package manager for the Erlang ecosystem.
-</p>
+<div class="featured-home">
+  <div class="container">
+    <div class="search-form">
+      <h2>The package manager for the Erlang ecosystem</h2>
 
-<div class="row">
-  <div class="col-md-12">
-    <h3>Using with Elixir</h3>
-    <p>Simply specify your Mix dependencies as two-item tuples like <code>{:ecto, "~> 0.1.0"}</code> and Elixir will ask if you want to install Hex if you haven't already. After installed, you can run <code>$ mix local</code> to see all available Hex tasks and <code>$ mix help TASK</code> for more information about a specific task.</p>
+      <div class="row">
+        <div class="col-md-8 col-md-offset-2">
+          <%= form_tag(package_path(HexWeb.Endpoint, :index), method: "get", role: "search") do %>
+            <div class="input-group">
+              <input type="search" class="form-control" placeholder="Find packages" name="search" value="<% # search(assigns) %>" tabindex="1">
+              <input type="hidden" name="sort" value="downloads">
+              <label class="sr-only" for="inputSearchPackages">Find packages</label>
+              <span class="input-group-btn"><button type="submit" class="btn btn-search" tabindex="1"><span class="glyphicon glyphicon-search"></span></button></span>
+            </div>
+          <% end %>
+        </div>
+      </div>
+    </div>
+
+    <div class="using-with-box elixir">
+      <div class="shadow"></div>
+      <div class="text-content clearfix">
+        <div class="side-box">
+          <div class="lang-symbol"></div>
+        </div>
+        <div class="instructions">
+          <h3><a href="<%= docs_path(HexWeb.Endpoint, :usage) %>">Using with Elixir</a></h3>
+          <p>
+            Simply specify your Mix dependencies as two-item tuples like  <span class="code">{:ecto, "~> 0.1.0"}</span>  and Elixir will ask if you want to install Hex if you haven't already.
+            After installed, you can run <span class="code">$ mix local </span> to see all available Hex tasks and  <span class="code">$ mix help TASK</span> for more information about a specific task.
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <div class="using-with-box erlang">
+      <div class="shadow"></div>
+      <div class="text-content clearfix">
+        <div class="side-box">
+          <div class="lang-symbol"></div>
+        </div>
+        <div class="instructions">
+          <h3><a href="<%= docs_path(HexWeb.Endpoint, :rebar3_usage) %>">Using with Erlang</a></h3>
+          <p>
+            Download <a href="https://s3.amazonaws.com/rebar3/rebar3">rebar3</a>, put it in your <span class="code">PATH</span> and give it executable permissions.
+            Now you can specify Hex dependencies in your rebar.config like <span class="code">{deps, [hackney]}</span>.
+          </p>
+        </div>
+      </div>
+    </div>
   </div>
 </div>
 
-<div class="row">
-  <div class="col-md-12">
-    <h3>Using with Erlang</h3>
-    <p>
-      Download <a href="https://s3.amazonaws.com/rebar3/rebar3">rebar3</a>, put it in your <code>PATH</code> and give it executable permissions. Now you can specify Hex dependencies in your <code>rebar.config</code> like <code>{deps, [hackney]}.</code>.
-    </p>
-  </div>
+<div class="home-stats">
+  <ul class="container">
+    <li>
+      <span class="octicon octicon-package stat-icon stat-icon-package"></span>
+      <span class="stat-info">
+        <span class="count-info">
+          <%= human_number_space @num_packages %>
+        </span> <br>
+        packages <br> available
+      </span>
+    </li>
+    <li>
+      <span class="octicon octicon-versions stat-icon stat-icon-versions"></span>
+      <span class="stat-info">
+        <span class="count-info">
+          <%= human_number_space @num_releases %>
+        </span> <br>
+        package <br> versions
+      </span>
+    </li>
+    <li>
+      <span class="octicon octicon-calendar stat-icon stat-icon-calendar"></span>
+      <span class="stat-info">
+        <span class="count-info">
+          <%= human_number_space @total["day"] %>
+        </span> <br>
+        downloads <br> yesterday
+      </span>
+    </li>
+    <li>
+      <span class="octicon octicon-calendar stat-icon stat-icon-calendar"></span>
+      <span class="stat-info">
+        <span class="count-info">
+          <%= human_number_space @total["week"] %>
+        </span> <br>
+        downloads <br> last 7 days
+      </span>
+    </li>
+    <li>
+      <span class="octicon octicon-calendar stat-icon stat-icon-calendar"></span>
+      <span class="stat-info">
+        <span class="count-info">
+          <%= human_number_space @total["all"] %>
+        </span> <br>
+        downloads <br> all time
+      </span>
+    </li>
+  </ul>
 </div>
 
-<div class="row">
-  <div class="col-sm-6">
-    <h3>Statistics</h3>
-    <table class="stats">
-      <tr>
-        <td class="left"><%= human_number_space @num_packages %></td>
-        <td class="text-muted">packages</td>
-      </tr>
-      <tr>
-        <td class="left"><%= human_number_space @num_releases %></td>
-        <td class="text-muted">package versions</td>
-      </tr>
-      <tr>
-        <td class="left"><%= human_number_space @total["day"] %></td>
-        <td class="text-muted">downloads yesterday</td>
-      </tr>
-      <tr>
-        <td class="left"><%= human_number_space @total["week"] %></td>
-        <td class="text-muted">downloads last seven days</td>
-      </tr>
-      <tr>
-        <td class="left"><%= human_number_space @total["all"] %></td>
-        <td class="text-muted">downloads all time</td>
-      </tr>
-    </table>
-  </div>
-  <div class="col-sm-6">
-    <h3>Most downloaded</h3>
-    <table class="stats">
-      <%= for { package, downloads } <- @package_top do %>
-      <tr>
-        <td class="left"><%= human_number_space downloads %></td>
-        <td><a href="<%= package_path(HexWeb.Endpoint, :show, package) %>" class="no-decoration"><%= package %></a></td>
-      </tr>
-      <% end %>
-    </table>
-  </div>
-</div>
-
-<div class="row">
-  <div class="col-sm-6">
-    <h3>New packages</h3>
-    <table class="stats">
-      <%= for { package, inserted_at } <- @package_new do %>
-        <tr>
-          <td class="left"><%= human_relative_time_from_now(inserted_at) %></td>
-          <td><a href="<%= package_path(HexWeb.Endpoint, :show, package) %>" class="no-decoration"><%= package %></a></td>
-        </tr>
-      <% end %>
-    </table>
-  </div>
-  <div class="col-sm-6">
-    <h3>Recently Updated</h3>
-    <table class="stats">
-      <%= for { version, package } <- @releases_new do %>
-        <tr>
-          <td class="left"><%= version %></td>
-          <td><a href="<%= package_path(HexWeb.Endpoint, :show, package) %>" class="no-decoration"><%= package %></a></td>
-        </tr>
-      <% end %>
-    </table>
+<div class="log-body">
+  <div class="container">
+    <div class="row">
+      <div class="col-md-4">
+        <h3 class="log-head">Most Downloaded</h3>
+        <ul>
+          <%= for {package, inserted_at, meta, downloads} <- @package_top do %>
+            <%= render_package package: package, downloads: downloads, inserted_at: inserted_at, description: meta.description %>
+          <% end %>
+        </ul>
+      </div>
+      <div class="col-md-4">
+        <h3 class="log-head">New Packages</h3>
+        <ul>
+          <%= for {package, inserted_at, %PackageMetadata{} = meta} <- @package_new do %>
+            <%= render_package package: package, inserted_at: inserted_at, description: meta.description %>
+          <% end %>
+        </ul>
+      </div>
+      <div class="col-md-4">
+        <h3 class="log-head">Recently Updated</h3>
+        <ul>
+          <%= for {package, version, inserted_at, %PackageMetadata{} = meta} <- @releases_new do %>
+            <%= render_package version: version, package: package, inserted_at: inserted_at, description: meta.description %>
+          <% end %>
+        </ul>
+      </div>
+    </div>
   </div>
 </div>

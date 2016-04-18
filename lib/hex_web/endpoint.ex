@@ -9,8 +9,8 @@ defmodule HexWeb.Endpoint do
   # when deploying your static files in production.
   plug Plug.Static,
     at: "/", from: :hex_web, gzip: true,
-    only: ~w(css fonts images js static),
-    only_matching: ~w(favicon.ico favicon.png hexsearch.xml robots.txt)
+    only: ~w(css fonts images js),
+    only_matching: ~w(favicon hexsearch robots)
 
   # Code reloading can be explicitly enabled under the
   # :code_reloader configuration of your endpoint.

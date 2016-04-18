@@ -1,0 +1,84 @@
+.navbar {
+  min-height: 70px;
+  margin-bottom: 0px;
+  background: #5c676d;
+  border-bottom: #919ca2 1px solid;
+}
+
+.navbar-default .navbar-brand {
+  color: $color-white;
+  @include font-size(16 , 19);
+  &:hover {
+    color: #e5e5e5;
+  }
+}
+
+.nav.navbar-nav {
+  float: right;
+}
+
+.navbar-default .navbar-nav > li > a {
+  color: $color-white;
+  height: 70px;
+  @include font-size(16 , 115);
+  padding-top: 0;
+  padding-bottom: 0;
+  &:hover {
+    color: $color-white;
+  }
+}
+
+.navbar-default .navbar-form {
+  input, button {
+    // Vertical centering
+    margin-top: 10px;
+    margin-bottom: 10px;
+
+    // Override bootstrap gradient style for navbar forms.
+    box-shadow: none;
+    -webkit-box-shadow: none;
+    border-color: white;
+  }
+
+  button.btn {
+    background: $color-white;
+    span {
+      color: #adb3b6;
+    }
+  }
+}
+
+.navbar-default .navbar-nav > li > a:hover, .navbar-default .navbar-nav > li > a:focus {
+  color: $color-white;
+}
+
+.navbar-default .navbar-nav > .open > a, .navbar-default .navbar-nav > .open > a:hover, .navbar-default .navbar-nav > .open > a:focus {
+  background-color: #6c7479;
+  color: $color-white;
+}
+
+.dropdown-menu {
+  background: #6c7479;
+  border: none;
+  box-shadow: none;
+  right: 0px;
+  left: auto;
+  min-width: 200px;
+  li > a {
+    color: $color-white;
+    font-size: 13px;
+  }
+  .divider {
+    background-color: #5c676d;
+  }
+  .dropdown-header.menu-dropdown-header {
+    color: $color-white;
+    font-size: 15px;
+    font-weight: bold;
+    text-transform: uppercase;
+  }
+}
+
+.navbar-toggle {
+  margin-top: 20px;
+}

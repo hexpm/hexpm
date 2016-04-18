@@ -157,7 +157,7 @@ defmodule HexWeb.Release do
          order_by: [desc: r.inserted_at],
          join: p in assoc(r, :package),
          limit: ^count,
-         select: {r.version, p.name})
+         select: {p.name, r.version, r.inserted_at, p.meta})
   end
 end
 

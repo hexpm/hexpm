@@ -107,7 +107,7 @@ defmodule HexWeb.Package do
     from(p in Package,
          order_by: [desc: p.inserted_at],
          limit: ^count,
-         select: {p.name, p.inserted_at})
+         select: {p.name, p.inserted_at, p.meta})
   end
 
   def count(search \\ nil) do
@@ -119,18 +119,40 @@ defmodule HexWeb.Package do
     query
   end
 
-  defp search(query, search) do
-    name_search = escape_search(search)
-    name_search = if String.length(search) >= 3, do: "%" <> name_search <> "%", else: name_search
+  defp search(query, {:letter, letter}) do
+    name_search = letter <> "%"
+
+    from var in query,
+    where: ilike(fragment("?::text", var.name), ^name_search)
+  end
+
+  defp search(query, search) when is_binary(search) do
+    filter =
+      if String.length(search) >= 3 do
+        {:contains, search}
+      else
+        {:equals, search}
+      end
+
+    search(query, filter)
+  end
+
+  defp search(query, {mode, search}) do
+    name_search = search |> escape_search() |> like_search(mode)
 
     desc_search = String.replace(search, ~r"\s+"u, " | ")
 
     # without fragment("?::text", var.name) the gin_trgm_ops index will not be used
-      from var in query,
+    from var in query,
     where: ilike(fragment("?::text", var.name), ^name_search) or
            fragment("to_tsvector('english', regexp_replace((?->'description')::text, '/', ' ')) @@ to_tsquery('english', ?)",
                     var.meta, ^desc_search)
   end
+
+  defp like_search(search, :contains),
+    do: "%" <> search <> "%"
+  defp like_search(search, :equals),
+    do: search
 
   defp escape_search(search) do
     String.replace(search, ~r"(%|_)"u, "\\\\\\1")

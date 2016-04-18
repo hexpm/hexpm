@@ -135,11 +135,10 @@ defmodule HexWeb.Utils do
   """
   @spec docs_tarball_url(HexWeb.Package.t, HexWeb.Release.t) :: String.t
   def docs_tarball_url(package, release) do
-    s3      = Application.get_env(:hex_web, :s3_url)
-    bucket  = Application.get_env(:hex_web, :s3_bucket)
+    repo    = Application.get_env(:hex_web, :cdn_url)
     package = package.name
     version = to_string(release.version)
-    "#{s3}/#{bucket}/docs/#{package}-#{version}.tar.gz"
+    "#{repo}/docs/#{package}-#{version}.tar.gz"
   end
 
   @doc """
