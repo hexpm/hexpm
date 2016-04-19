@@ -102,7 +102,7 @@
             </li>
           <% else %>
             <li>
-              <a href="<%= package_path(HexWeb.Endpoint, :index, params(search: @search, page: counter, sort: @sort)) %>">
+              <a href="<%= package_path(HexWeb.Endpoint, :index, params(search: @search, page: counter, sort: @sort, letter: @letter)) %>">
                 <%= counter %>
               </a>
             </li>
