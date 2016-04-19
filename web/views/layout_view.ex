@@ -29,12 +29,6 @@ defmodule HexWeb.LayoutView do
     end
   end
 
-  def active(assigns, page) do
-    if Map.get(assigns, :active) == page do
-      raw ~s( class="active")
-    end
-  end
-
   def search(assigns) do
     Map.get(assigns, :search)
   end
