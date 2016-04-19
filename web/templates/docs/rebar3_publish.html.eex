@@ -73,7 +73,7 @@ You are required to confirm your email to access your account, a confirmation em
   Only Hex packages will be included as dependencies of the package, for example Git dependencies will not be included. Additionally, only <code>default</code> dependencies will be included, just like how rebar3 will only fetch <code>default</code> dependencies when fetching the dependencies of your dependencies.
 </p>
 
-<a name="example-rebar-config-file"></a>
+<a id="example-rebar-config-file"></a>
 <h4>Example rebar.config file</h4>
 
 <pre><code class="erlang">{deps, [{erlware_commons, "0.15.0"},
@@ -83,7 +83,7 @@ You are required to confirm your email to access your account, a confirmation em
        ]}.
 </code></pre>
 
-<a name="example-app-src-file"></a>
+<a id="example-app-src-file"></a>
 <h4>Example .app.src file</h4>
 
 <pre><code class="erlang">{application, relx,

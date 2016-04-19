@@ -67,7 +67,7 @@ You are required to confirm your email to access your account, a confirmation em
   Only Hex packages will be included as dependencies of the package, for example Git dependencies will not be included. Additionally, only production dependencies will be included, just like how Mix will only fetch production dependencies when fetching the dependencies of your dependencies. Dependencies will be treated as production dependencies when they are defined with no <code>:only</code> property or with <code>only: :prod</code>.
 </p>
 
-<a name="example-mix-exs-file"></a>
+<a id="example-mix-exs-file"></a>
 <h4>Example mix.exs file</h4>
 
 <pre><code class="elixir">defmodule Postgrex.Mixfile do
