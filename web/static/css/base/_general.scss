@@ -40,3 +40,26 @@ a {
 .collapsing {
   transition-duration: .5s !important;
 }
+
+
+/* Responsive: Portrait tablets and up */
+
+@include min-screen(768px) {
+  .container {
+    max-width: 1000px;
+    width: auto;
+  }
+
+  /* Remove the padding we set earlier */
+  .header,
+  .marketing,
+  .footer {
+    padding-left: 0;
+    padding-right: 0;
+  }
+
+  /* Remove the bottom border on the jumbotron for visual effect */
+  .jumbotron {
+    border-bottom: 0;
+  }
+}

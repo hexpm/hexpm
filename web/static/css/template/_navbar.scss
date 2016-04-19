@@ -57,6 +57,14 @@
   color: $color-white;
 }
 
+
+
+.navbar-default .navbar-nav .open .dropdown-menu > li > a {
+  @include general-mobile {
+    color: #fff;
+  }
+}
+
 .dropdown-menu {
   background: #6c7479;
   border: none;

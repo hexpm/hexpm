@@ -75,6 +75,9 @@
   left: -1%;
   z-index: 200;
   top: 10px;
+  @include general-mobile {
+    height: 92%;
+  }
 }
 .text-content {
   background: $color-white;
@@ -85,6 +88,9 @@
     float: left;
     min-height: 200px;
     position: relative;
+    @include general-mobile {
+      width: 0px;
+    }
     .lang-symbol {
       width: 124px;
       height: 124px;
@@ -94,17 +100,29 @@
       left: 25px;
       top: 50%;
       margin-top: -62px;
+      @include general-mobile {
+        width: 40px;
+        height: 40px;
+        left: 5px;
+        top: 35%;
+      }
     }
   }
   .instructions {
     padding-left: 180px;
     padding-right: 20px;
+    @include general-mobile {
+      padding-left: 20px;
+    }
     h3 {
       @include font-size(22 , 30);
       font-weight: bold;
       margin-bottom: 25px;
       color: #1e1c17;
       font-weight: 800;
+      @include general-mobile {
+        text-align: right;
+      }
     }
     p {
       @include font-size(16 , 40);
@@ -138,6 +156,11 @@
       background: #f3e8fc url('../images/elixir@3.png') center no-repeat;
       background-size: 52px;
     }
+
+    @include general-mobile {
+      background-size: 20px;
+    }
+
   }
 }
 
@@ -156,6 +179,10 @@
       background: #fee3e6 url('../images/erlang@3.png') center no-repeat;
       background-size: 66px;
     }
+
+    @include general-mobile {
+      background-size: 20px;
+    }
   }
 }
 
@@ -167,9 +194,23 @@
     li {
       display: inline-block;
       width: 19%;
-      img {
-        float: left;
-        margin-right: 10px;
+
+      @include general-mobile {
+        .stat-icon-package {
+          font-size: 30px;
+        }
+        .stat-icon-versions {
+          font-size: 38px;
+        }
+        .stat-icon-calendar {
+          font-size: 32px;
+        }
+      }
+
+      @include general-mobile {
+        .stat-icon {
+          margin-bottom: 14px;
+        }
       }
       .stat-info {
         float: left;
@@ -177,6 +218,11 @@
         color: #000000;
         line-height: 15px;
         font-size: 14px;
+        @include general-mobile {
+          font-size: 12px;
+          line-height: 12px;
+        }
+        
         .count-info {
           font-weight: bold;
           font-size: 18px;

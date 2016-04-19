@@ -106,6 +106,19 @@
   }
 }
 
+
+// --- General Mobile ---------------------------------------------------------
+@mixin general-mobile($orientation: false) {
+  $max: 667px;
+
+  @include mq(
+    $max-device-width: $max,
+    $orientation: $orientation
+  ) {
+    @content;
+  }
+}
+
 // --- iphone4 -----------------------------------------------------------------
 
 @mixin iphone4($orientation: false) {
