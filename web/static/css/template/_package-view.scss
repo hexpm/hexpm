@@ -9,12 +9,6 @@
     padding: 0 0 0 4px;
   }
 }
-p:first-of-type {
-  padding: 28px 0 15px 0;
-  line-height: 20px;
-  font-weight: 300;
-  border-bottom: #cccccc 1px solid;
-}
 
 .package-view {
   h3 {
@@ -22,6 +16,13 @@ p:first-of-type {
     font-weight: bold;
     color: #000000;
     margin-bottom: 15px;
+  }
+
+  p:first-of-type {
+    padding: 28px 0 15px 0;
+    line-height: 20px;
+    font-weight: 300;
+    border-bottom: #cccccc 1px solid;
   }
 }
 
