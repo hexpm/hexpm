@@ -42,7 +42,7 @@
     <div class="pagination-info">
       <h4 class="results-found"><%= @package_count %> Results Found</h4>
     </div>
-    <span class="navbar-right pagination-info">
+    <div class="navbar-right pagination-info">
       <div class="dropdown">
         <button class="btn btn-default dropdown-toggle" type="button" id="sort_dropdown" data-toggle="dropdown">
           Sort By
@@ -60,7 +60,7 @@
           </li>
         </ul>
       </div>
-    </span>
+    </div>
   </nav>
 
   <div class="clearfix"></div>
