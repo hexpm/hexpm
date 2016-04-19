@@ -1,8 +1,8 @@
-<div class="container page" id="mix-tasks">
-<h2>
-  Mix tasks
-</h2>
 <%# This file is auto-generated with 'mix run task_docs.exs' %>
+
+<h2>Mix tasks</h2>
+
+
   <div class="panel panel-default">
     <div class="panel-heading">
       <h3 id="hex" class="panel-title">
@@ -21,7 +21,22 @@ configuration (Default: <code class="inline">~/.hex</code>)
 </li>
 <li><code class="inline">HEX_API</code> - Sets the API URL (Default: <code class="inline">https://hex.pm/api</code>)
 </li>
-<li><code class="inline">HEX_CDN</code> - Sets the CDN URL (Default: <code class="inline">https://s3.amazonaws.com/s3.hex.pm</code>)
+<li><code class="inline">HEX_REPO</code> - Sets the repository URL (not set by default)
+</li>
+<li><code class="inline">HEX_MIRROR</code> - Sets the Hex.pm mirror URL (Default: <code class="inline">https://hexpmrepo.global.ssl.fastly.net</code>).
+Use this option when using a Hex.pm mirror, unlike when setting <code class="inline">HEX_REPO</code>
+this will still use the public key from Hex.pm when verifying the registry
+</li>
+<li><code class="inline">HEX_OFFLINE</code> - If set Hex will not fetch the regsitry or packages and will
+ instead the locally cached files if they are available
+</li>
+<li><code class="inline">HEX_UNSAFE_HTTPS</code> - If set Hex will not verify HTTPS certificates
+</li>
+<li><code class="inline">HEX_UNSAFE_REGISTRY</code> - If set Hex will not verify the registry signature
+ against the repository’s public key
+</li>
+<li><code class="inline">HTTP_PROXY</code> / <code class="inline">HTTPS_PROXY</code> - Sets the URL to a HTTP(S) proxy, the
+ environment variables can also be in lower case
 </li>
 </ul>
 
@@ -111,27 +126,30 @@ this field.
 </li>
 <li><code class="inline">key</code> - Hex API key
 </li>
-<li><code class="inline">api_url</code> - Hex API base URL (without trailing slash)
+<li><code class="inline">api_url</code> - Hex API URL, can be overridden by setting
+the environment variable <code class="inline">HEX_API</code>
 </li>
-<li><code class="inline">cdn_url</code> - Hex CDN base URL (without trailing slash)
+<li><code class="inline">repo_url</code> - Hex repository URL, can be overridden by setting
+the environment variable <code class="inline">HEX_REPO</code>
+</li>
+<li><code class="inline">mirror_url</code> - Hex.pm repository mirror URL, can be overridden by setting
+the environment variable <code class="inline">HEX_MIRROR</code>.
+Use this option when using a Hex.pm mirror, unlike when setting <code class="inline">repo_url</code>
+this will still use the public key from Hex.pm when verifying the registry
+</li>
+<li><code class="inline">offline</code> - If set to true Hex will not fetch the regsitry or packages and
+will instead the locally cached files if they are available
+</li>
+<li><code class="inline">unsafe_https</code> - If set to true Hex will not verify HTTPS certificates
+</li>
+<li><code class="inline">unsafe_registry</code> - If set to true Hex will not verify the registry
+signature against the repository’s public key
 </li>
 <li><code class="inline">http_proxy</code> - HTTP proxy server
 </li>
 <li><code class="inline">https_proxy</code> - HTTPS proxy server
 </li>
 </ul>
-<h3>CDN</h3>
-<p>Hex provides 3 different CDNs for the following areas:</p>
-<ul>
-<li>Americas (default) - <a href="https://s3.amazonaws.com/s3.hex.pm">https://s3.amazonaws.com/s3.hex.pm</a>
-</li>
-<li>Europe, Africa - <a href="https://s3-eu-west-1.amazonaws.com/s3-eu.hex.pm">https://s3-eu-west-1.amazonaws.com/s3-eu.hex.pm</a>
-</li>
-<li>Asia, Oceania - <a href="https://s3-ap-southeast-1.amazonaws.com/s3-asia.hex.pm">https://s3-ap-southeast-1.amazonaws.com/s3-asia.hex.pm</a>
-</li>
-</ul>
-<p>You can change the default CDN as follows:</p>
-<pre><code>mix hex.config cdn_url https://s3-eu-west-1.amazonaws.com/s3-eu.hex.pm</code></pre>
 
     </div>
   </div>
@@ -277,11 +295,13 @@ owner.</p>
 <p>Hex by default ships with a public key for Hex.pm but new
 ones can be added for other repositories.</p>
 <p>To list all available keys:</p>
-<pre><code>$ mix hex.public_keys</code></pre>
+<pre><code>$ mix hex.public_keys list</code></pre>
 <p>To list all available keys showing the keys themselves:</p>
-<pre><code>$ mix hex.public_keys --detailed</code></pre>
+<pre><code>$ mix hex.public_keys list --detailed</code></pre>
 <p>To add a new key:</p>
-<pre><code>$ mix hex.public_keys URL_TO_REPO LOCAL_PATH_TO_KEY</code></pre>
+<pre><code>$ mix hex.public_keys add URL_TO_REPO LOCAL_PATH_TO_KEY</code></pre>
+<p>To remove a key:</p>
+<pre><code>$ mix hex.public_keys remove URL_TO_REPO</code></pre>
 <p>Be careful when adding new keys. Only add keys from sources you
 trust.</p>
 <p>Public keys are by default stored in your HEX_HOME under the
@@ -380,20 +400,16 @@ by setting this field.
       </h3>
     </div>
     <div class="panel-body">
-      <p><em>Hex registry tasks.</em></p>
+      <p><em>Tasks for working with the locally cached registry file. </em></p>
 <h4>Fetch registry</h4>
-<p>Updates registry file.</p>
+<p>Updates the locally cached registry file.</p>
 <p><code class="inline">mix hex.registry fetch</code></p>
 <h4>Dump registry</h4>
-<p>Copies registry file to the given path.</p>
+<p>Copies the cached registry file to the given path.</p>
 <p><code class="inline">mix hex.registry dump &lt;path&gt;</code></p>
 <h4>Load registry</h4>
-<p>Takes registry file from the given path.</p>
+<p>Copies given regsitry file to the cache.</p>
 <p><code class="inline">mix hex.registry load &lt;path&gt;</code></p>
-<p>The purpose of dumping and loading registry file
-is to assist with isolate dependency resolution.
-There is <code class="inline">HEX_OFFLINE</code> environment variable available
-to run Hex in offline mode.</p>
 
     </div>
   </div>
@@ -443,4 +459,4 @@ Hex config.</p>
 
     </div>
   </div>
-</div>
+
