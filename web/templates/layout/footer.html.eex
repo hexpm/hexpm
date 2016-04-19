@@ -1,10 +1,9 @@
+    </div>
+
     <div class="footer">
       <div class="footer-nav">
         <div class="container">
           <ul>
-            <li>
-              <a href="https://github.com/hexpm/hex">about hex</a>
-            </li>
             <li>
               <a href="https://github.com/hexpm">github</a>
             </li>

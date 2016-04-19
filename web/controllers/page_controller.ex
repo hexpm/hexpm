@@ -3,6 +3,7 @@ defmodule HexWeb.PageController do
 
   def index(conn, _params) do
     render conn, "index.html", [
+      container:    "",
       hide_search:  true,
       num_packages: Package.count
                     |> HexWeb.Repo.one!,

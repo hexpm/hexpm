@@ -11,6 +11,7 @@ defmodule HexWeb.ErrorView do
     assigns
     |> Map.take([:message, :errors])
     |> Map.put(:status, String.to_integer(status))
+    |> Map.put(:container, "container error-view")
     |> Map.put_new(:message, message(status))
   end
 

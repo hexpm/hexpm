@@ -38,4 +38,8 @@ defmodule HexWeb.LayoutView do
   def search(assigns) do
     Map.get(assigns, :search)
   end
+
+  def container_class(assigns) do
+    Map.get(assigns, :container, "container page")
+  end
 end

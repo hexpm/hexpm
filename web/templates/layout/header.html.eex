@@ -67,3 +67,5 @@
         </div><!--/.nav-collapse -->
       </div>
     </nav>
+
+    <div class="<%= container_class(assigns) %>">

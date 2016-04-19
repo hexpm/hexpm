@@ -28,6 +28,7 @@ defmodule HexWeb.PackageController do
     render conn, "index.html", [
       active:        :packages,
       title:         "Packages",
+      container:     "container",
       per_page:      @packages_per_page,
       search:        search,
       letter:        letter,
@@ -77,6 +78,7 @@ defmodule HexWeb.PackageController do
       active:            :packages,
       title:             package.name,
       description:       package.meta.description,
+      container:         "container package-view",
       canonical_url:     package_url(conn, :show, package),
       package:           package,
       releases:          releases,
