@@ -1,0 +1,16 @@
+<h2>Policies</h2>
+
+<ul>
+  <li><a href="<%= policy_path(HexWeb.Endpoint, :coc) %>"><strong>Code of Conduct</strong></a></li>
+  <li><a href="<%= policy_path(HexWeb.Endpoint, :tos) %>"><strong>Terms of Service</strong></a></li>
+  <li><a href="<%= policy_path(HexWeb.Endpoint, :privacy) %>"><strong>Privacy Policy</strong></a></li>
+  <li><a href="<%= policy_path(HexWeb.Endpoint, :copyright) %>"><strong>Copyright Policy</strong></a></li>
+</ul>
+
+<p>
+  These are the legal policies of Hex and all of its services. They decide how users should act when using the Hex services and how Hex administrators will act in legal situations or in other conflicts. It's recommended for all users to read these documents.
+</p>
+
+<p>
+  These documents are updated from time to time. See the <a href="https://github.com/hexpm/hex_web/tree/master/web/templates/policies">git history</a> for the changes.
+</p>
