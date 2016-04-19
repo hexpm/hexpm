@@ -28,7 +28,7 @@ tools = Keyword.take(tools, compatible_tools)
     <% end %>
   </h2>
   <%= if description do %>
-    <%= text_to_html(description) %>
+    <%= text_to_html(description, attributes: [class: "description"]) %>
   <% end %>
 
   <div class="row">
