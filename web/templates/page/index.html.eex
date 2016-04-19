@@ -7,9 +7,9 @@
         <div class="col-md-8 col-md-offset-2">
           <%= form_tag(package_path(HexWeb.Endpoint, :index), method: "get", role: "search") do %>
             <div class="input-group">
-              <input type="search" autofocus class="form-control" placeholder="Find packages" name="search" value="<% # search(assigns) %>" tabindex="1">
+              <input type="search" autofocus class="form-control" placeholder="Find packages" name="search" id="search" value="<% # search(assigns) %>" tabindex="1">
               <input type="hidden" name="sort" value="downloads">
-              <label class="sr-only" for="inputSearchPackages">Find packages</label>
+              <label class="sr-only" for="search">Find packages</label>
               <span class="input-group-btn"><button type="submit" class="btn btn-search" tabindex="1"><span class="glyphicon glyphicon-search"></span></button></span>
             </div>
           <% end %>
