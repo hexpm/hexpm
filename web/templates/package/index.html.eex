@@ -41,6 +41,7 @@
 <nav>
   <div class="pagination-info">
     <h4 class="results-found"><%= @package_count %> Results Found</h4>
+    <%= show_sort_info(@conn.params["sort"]) %>
   </div>
   <div class="navbar-right pagination-info">
     <div class="dropdown">
