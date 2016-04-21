@@ -6,5 +6,5 @@ defmodule HexWeb.PackageView do
   def show_sort_info("inserted_at"), do: "(Sorted by recently created)"
   def show_sort_info("updated_at"), do: "(Sorted by recently updated)"
   def show_sort_info("downloads"), do: "(Sorted by downloads)"
-  def show_sort_info(param), do: nil
+  def show_sort_info(_param), do: nil
 end

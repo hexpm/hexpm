@@ -8,7 +8,7 @@
     <ul>
       <%= for letter <- @letters do %>
       <li>
-        <a href="<%= package_path(HexWeb.Endpoint, :index, letter: letter, sort: @sort) %>">
+        <a href="<%= package_path(HexWeb.Endpoint, :index, letter: letter) %>">
           <%= letter %>
         </a>
       </li>
@@ -30,12 +30,12 @@
   range_end   = range_start + shown_packages - 1
   page        = if @page == 1, do: nil, else: @page
 
-  sort_name_params      = params(search: @search, page: page,    letter: @letter, sort: "name")
-  sort_downloads_params = params(search: @search, page: page,    letter: @letter, sort: "downloads")
-  sort_created_params   = params(search: @search, page: page,    letter: @letter, sort: "inserted_at")
-  sort_updated_params   = params(search: @search, page: page,    letter: @letter, sort: "updated_at")
-  prev_page_params      = params(search: @search, page: @page-1, letter: @letter, sort: @sort)
-  next_page_params      = params(search: @search, page: @page+1, letter: @letter, sort: @sort)
+  sort_name_params      = params(search: @search, page: page,    sort: "name")
+  sort_downloads_params = params(search: @search, page: page,    sort: "downloads")
+  sort_created_params   = params(search: @search, page: page,    sort: "inserted_at")
+  sort_updated_params   = params(search: @search, page: page,    sort: "updated_at")
+  prev_page_params      = params(search: @search, page: @page-1, sort: @sort)
+  next_page_params      = params(search: @search, page: @page+1, sort: @sort)
   %>
 
 <nav>
@@ -44,26 +44,28 @@
     <%= show_sort_info(@conn.params["sort"]) %>
   </div>
   <div class="navbar-right pagination-info">
-    <div class="dropdown">
-      <button class="btn btn-default dropdown-toggle" type="button" id="sort_dropdown" data-toggle="dropdown">
-        Sort By
-        <span class="caret"></span>
-      </button>
-      <ul class="dropdown-menu dropdown-menu-right" role="menu">
-        <li role="presentation">
-          <a role="menuitem" tabindex="-1" href="<%= package_path(HexWeb.Endpoint, :index, sort_name_params) %>">Name</a>
-        </li>
-        <li role="presentation">
-          <a role="menuitem" tabindex="-1" href="<%= package_path(HexWeb.Endpoint, :index, sort_downloads_params) %>">Downloads</a>
-        </li>
-        <li role="presentation">
-          <a role="menuitem" tabindex="-1" href="<%= package_path(HexWeb.Endpoint, :index, sort_created_params) %>">Recently created</a>
-        </li>
-        <li role="presentation">
-          <a role="menuitem" tabindex="-1" href="<%= package_path(HexWeb.Endpoint, :index, sort_updated_params) %>">Recently updated</a>
-        </li>
-      </ul>
-    </div>
+    <%= unless @letter do %>
+      <div class="dropdown">
+        <button class="btn btn-default dropdown-toggle" type="button" id="sort_dropdown" data-toggle="dropdown">
+          Sort By
+          <span class="caret"></span>
+        </button>
+        <ul class="dropdown-menu dropdown-menu-right" role="menu">
+          <li role="presentation">
+            <a role="menuitem" tabindex="-1" href="<%= package_path(HexWeb.Endpoint, :index, sort_name_params) %>">Name</a>
+          </li>
+          <li role="presentation">
+            <a role="menuitem" tabindex="-1" href="<%= package_path(HexWeb.Endpoint, :index, sort_downloads_params) %>">Downloads</a>
+          </li>
+          <li role="presentation">
+            <a role="menuitem" tabindex="-1" href="<%= package_path(HexWeb.Endpoint, :index, sort_created_params) %>">Recently created</a>
+          </li>
+          <li role="presentation">
+            <a role="menuitem" tabindex="-1" href="<%= package_path(HexWeb.Endpoint, :index, sort_updated_params) %>">Recently updated</a>
+          </li>
+        </ul>
+      </div>
+    <%= end %>
   </div>
 </nav>
 
