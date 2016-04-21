@@ -199,8 +199,8 @@ defmodule HexWeb.Utils do
     end
   else
     def task(fun, success, failure) do
-      Task.Supervisor.start_child(HexWeb.PublishTasks, fn ->
-        {:ok, pid} = Task.Supervisor.start_child(HexWeb.PublishTasks, fun)
+      Task.Supervisor.start_child(HexWeb.Tasks, fn ->
+        {:ok, pid} = Task.Supervisor.start_child(HexWeb.Tasks, fun)
         ref        = Process.monitor(pid)
 
         receive do
@@ -210,7 +210,7 @@ defmodule HexWeb.Utils do
             failure.(reason)
         after
           @publish_timeout ->
-            Task.Supervisor.terminate_child(HexWeb.PublishTasks, pid)
+            Task.Supervisor.terminate_child(HexWeb.Tasks, pid)
             failure.(:timeout)
         end
       end)

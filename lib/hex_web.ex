@@ -8,7 +8,7 @@ defmodule HexWeb do
 
     children = [
       supervisor(HexWeb.Repo, []),
-      supervisor(Task.Supervisor, [[name: HexWeb.PublishTasks]]),
+      supervisor(Task.Supervisor, [[name: HexWeb.Tasks]]),
       worker(HexWeb.RateLimit, [HexWeb.RateLimit]),
       supervisor(HexWeb.Endpoint, []),
     ]
