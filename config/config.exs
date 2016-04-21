@@ -29,6 +29,7 @@ config :hex_web,
   ses_port:       System.get_env("HEX_SES_PORT") || "587",
   ses_user:       System.get_env("HEX_SES_USERNAME"),
   ses_pass:       System.get_env("HEX_SES_PASSWORD"),
+  ses_rate:       System.get_env("HEX_SES_RATE") || "1000",
 
   cdn_impl:       cdn,
   fastly_key:     System.get_env("HEX_FASTLY_KEY"),

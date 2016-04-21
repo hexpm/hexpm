@@ -4,16 +4,20 @@ defmodule HexWeb do
   def start(_type, _args) do
     import Supervisor.Spec, warn: false
 
+    tmp_dir  = Application.get_env(:hex_web, :tmp_dir)
+    ses_rate = Application.get_env(:hex_web, :ses_rate) |> String.to_integer
+
     HexWeb.BlockAddress.start
 
     children = [
       supervisor(HexWeb.Repo, []),
       supervisor(Task.Supervisor, [[name: HexWeb.Tasks]]),
       worker(HexWeb.RateLimit, [HexWeb.RateLimit]),
+      worker(HexWeb.Throttle, [[name: HexWeb.SESThrottle, rate: ses_rate, unit: 1000]]),
       supervisor(HexWeb.Endpoint, []),
     ]
 
-    File.mkdir_p(Application.get_env(:hex_web, :tmp_dir))
+    File.mkdir_p(tmp_dir)
     shutdown_on_eof()
 
     opts = [strategy: :one_for_one, name: HexWeb.Supervisor]

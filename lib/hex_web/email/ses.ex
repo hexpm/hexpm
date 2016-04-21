@@ -1,7 +1,13 @@
 defmodule HexWeb.Email.SES do
   @behaviour HexWeb.Email
+  require Logger
 
   def send(to, subject, body) do
+    HexWeb.Throttle.wait(HexWeb.SESThrottle)
+    do_send(to, subject, body)
+  end
+
+  defp do_send(to, subject, body) do
     source   = Application.get_env(:hex_web, :email_host)
     endpoint = Application.get_env(:hex_web, :ses_endpoint)
     username = Application.get_env(:hex_web, :ses_user)
@@ -30,8 +36,12 @@ defmodule HexWeb.Email.SES do
       port: port,
       tls: :always ]
 
-    :gen_smtp_client.send({from, to, email}, opts, fn result ->
-      {:ok, _receipt} = result
-    end)
+    result = :gen_smtp_client.send_blocking({from, to, email}, opts)
+
+    unless is_binary(result) do
+      Logger.error(["Failed to send email to \"", to, "\" with subject \"", subject, "\""])
+      raise "Failed to send email"
+    end
+    result
   end
 end
