@@ -4,14 +4,14 @@ defmodule HexWeb.ErrorView do
   def render(<<status::binary-3>> <> ".html", _assigns) when status != "all" do
     render "all.html",
            status: status,
-           message: message(status)
+           message: message(status),
+           container: "container error-view"
   end
 
   def render(<<status::binary-3>> <> _, assigns) when status != "all" do
     assigns
     |> Map.take([:message, :errors])
     |> Map.put(:status, String.to_integer(status))
-    |> Map.put(:container, "container error-view")
     |> Map.put_new(:message, message(status))
   end
 

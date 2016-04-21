@@ -1,7 +1,6 @@
 defmodule HexWeb.PackageViewTest do
   use HexWeb.ConnCase, async: true
 
-  import Phoenix.View
   alias HexWeb.PackageView
 
   test "show sort info" do
