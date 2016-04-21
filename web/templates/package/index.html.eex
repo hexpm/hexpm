@@ -44,23 +44,28 @@
     <%= show_sort_info(@conn.params["sort"]) %>
   </div>
   <div class="navbar-right pagination-info">
-    <div class="dropdown">
-      <button class="btn btn-default dropdown-toggle" type="button" id="sort_dropdown" data-toggle="dropdown">
-        Sort By
-        <span class="caret"></span>
-      </button>
-      <ul class="dropdown-menu dropdown-menu-right" role="menu">
-        <li role="presentation">
-          <a role="menuitem" tabindex="-1" href="<%= package_path(HexWeb.Endpoint, :index, sort_name_params) %>">Name</a>
-        </li>
-        <li role="presentation">
-          <a role="menuitem" tabindex="-1" href="<%= package_path(HexWeb.Endpoint, :index, sort_downloads_params) %>">Downloads</a>
-        </li>
-        <li role="presentation">
-          <a role="menuitem" tabindex="-1" href="<%= package_path(HexWeb.Endpoint, :index, sort_created_params) %>">Recently created</a>
-        </li>
-      </ul>
-    </div>
+    <%= unless @letter do %>
+      <div class="dropdown">
+        <button class="btn btn-default dropdown-toggle" type="button" id="sort_dropdown" data-toggle="dropdown">
+          Sort By
+          <span class="caret"></span>
+        </button>
+        <ul class="dropdown-menu dropdown-menu-right" role="menu">
+          <li role="presentation">
+            <a role="menuitem" tabindex="-1" href="<%= package_path(HexWeb.Endpoint, :index, sort_name_params) %>">Name</a>
+          </li>
+          <li role="presentation">
+            <a role="menuitem" tabindex="-1" href="<%= package_path(HexWeb.Endpoint, :index, sort_downloads_params) %>">Downloads</a>
+          </li>
+          <li role="presentation">
+            <a role="menuitem" tabindex="-1" href="<%= package_path(HexWeb.Endpoint, :index, sort_created_params) %>">Recently created</a>
+          </li>
+          <li role="presentation">
+            <a role="menuitem" tabindex="-1" href="<%= package_path(HexWeb.Endpoint, :index, sort_updated_params) %>">Recently updated</a>
+          </li>
+        </ul>
+      </div>
+    <%= end %>
   </div>
 </nav>
 
