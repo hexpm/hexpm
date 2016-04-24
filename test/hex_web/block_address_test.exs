@@ -1,5 +1,5 @@
 defmodule HexWeb.BlockAddressTest do
-  use ExUnit.Case, async: false
+  use ExUnit.Case
   use Plug.Test
 
   defmodule Hello do

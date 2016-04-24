@@ -1,5 +1,5 @@
 defmodule HexWeb.UtilsTest do
-  use HexWeb.ModelCase
+  use ExUnit.Case, async: true
   alias HexWeb.Utils
 
   test "safe search" do

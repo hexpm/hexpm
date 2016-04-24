@@ -35,7 +35,7 @@ defmodule HexWeb.Throttle do
     {:noreply, state}
   end
 
-  def handle_in(:reset, state) do
+  def handle_info(:reset, state) do
     empty? = :queue.is_empty(state.waiting)
     state  = %{state | running: 0}
     state  = filter_canceled(state)
@@ -63,7 +63,7 @@ defmodule HexWeb.Throttle do
 
   defp filter_canceled(state) do
     fun = fn {pid, _} -> not MapSet.member?(state.cancel, pid) end
-    waiting = :queue.filter(fun, state)
+    waiting = :queue.filter(fun, state.waiting)
     %{state | waiting: waiting, cancel: MapSet.new}
   end
 
