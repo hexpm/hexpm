@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<OpenSearchDescription xmlns="http://a9.com/-/spec/opensearch/1.1/">
+  <ShortName>Hex</ShortName>
+  <Description>Search for packages on Hex.pm.</Description>
+  <Contact>support@hex.pm</Contact>
+  <AdultContent>false</AdultContent>
+  <Language>en-us</Language>
+
+  <Image height="48" width="48" type="image/x-icon">
+    <%= static_url(HexWeb.Endpoint, "/favicon.ico") %>
+  </Image>
+
+  <Image height="48" width="48" type="image/png">
+     <%= static_url(HexWeb.Endpoint, "/favicon.png") %>
+  </Image>
+
+  <InputEncoding>utf-8</InputEncoding>
+  <OutputEncoding>utf-8</OutputEncoding>
+  <Url type="text/html" method="get" template="<%= package_url(HexWeb.Endpoint, :index) %>?search={searchTerms}&amp;sort=downloads" />
+</OpenSearchDescription>
