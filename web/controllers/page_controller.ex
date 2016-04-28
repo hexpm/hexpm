@@ -20,4 +20,8 @@ defmodule HexWeb.PageController do
                     |> Enum.into(%{})
     ]
   end
+
+  def sponsors(conn, _params) do
+    render conn, "sponsors.html"
+  end
 end

@@ -1,0 +1,33 @@
+<h2>Sponsors</h2>
+
+<h3 class="sponsors-preamble"><small>The following companies provide resources and services that make running Hex possible.</small></h3>
+
+<div class="sponsors container">
+  <div class="row">
+    <div class="col-md-4 image">
+      <a href="http://plataformatec.com.br/"><img src="<%= static_path(HexWeb.Endpoint, "/images/plataformatec.png") %>"></a>
+    </div>
+    <div class="col-md-8">
+      <p>
+        Plataformatec is the company behind Elixir. They are an agile software consultancy specialized in Elixir and Ruby. They provide custom software development for startups and Fortune 1000 companies mainly in USA and Brazil.
+      </p>
+      <p>
+        Plataformatec provides server hosting for Hex.
+      </p>
+    </div>
+  </div>
+
+  <div class="row">
+    <div class="col-md-4 image">
+      <a href="https://www.fastly.com/"><img src="<%= static_path(HexWeb.Endpoint, "/images/fastly.png") %>"></a>
+    </div>
+    <div class="col-md-8">
+      <p>
+        Founded in 2011, Fastly is the only content delivery network that gives businesses complete control over how they serve content, unprecedented access to real-time performance analytics, and the ability to cache frequently changing content at the edge. Our secure, global network allows enterprises to increase revenue and improve customer experiences across their websites and mobile applications while maintaining fast, consistent, and reliable performance.
+      </p>
+      <p>
+        Fastly provides Hex with free CDN services.
+      </p>
+    </div>
+  </div>
+</div>

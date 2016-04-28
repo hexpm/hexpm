@@ -25,6 +25,7 @@ defmodule HexWeb.Router do
     pipe_through :browser
 
     get  "/",                       PageController,     :index
+    get  "/sponsors",               PageController,     :sponsors
 
     get  "password/reset",          PasswordController, :show_reset
     post "password/reset",          PasswordController, :reset
@@ -51,9 +52,9 @@ defmodule HexWeb.Router do
   end
 
   scope "/", HexWeb do
-    get "sitemap.xml", SitemapController, :sitemap
-    get "hexsearch.xml", OpenSearchController, :opensearch
-    get "installs/hex.ez", InstallerController, :get_archive
+    get "sitemap.xml",     SitemapController,    :sitemap
+    get "hexsearch.xml",   OpenSearchController, :opensearch
+    get "installs/hex.ez", InstallerController,  :get_archive
 
     # TODO: Check if we can replace this
     if Mix.env in [:dev, :test, :hex] do
