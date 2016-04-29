@@ -38,7 +38,7 @@ You are required to confirm your email to access your account, a confirmation em
 </ul>
 
 <p>
-  With a name in hand, it is time to add the proper metadata to your <ocde>mix.exs</code> file.
+  With a name in hand, it is time to add the proper metadata to your <code>mix.exs</code> file.
 </p>
 
 <h3>Adding metadata to <code>mix.exs</code></h3>
