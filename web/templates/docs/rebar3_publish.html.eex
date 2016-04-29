@@ -31,6 +31,21 @@ You are required to confirm your email to access your account, a confirmation em
   Once this step has been completed, check your email inbox for the confirmation email. Once you have followed the enclosed link, your account will be ready to use.
 </p>
 
+<h3>Naming your package</h3>
+
+<p>
+  Before publishing, you will have to choose the name of your package. Remember that packages published to Hex are public and can be accessed by anyone in the community. It is also the responsibility of the community to pick and encourage good package names. Here are some tips:
+</p>
+
+<ul>
+  <li>Avoid using offensive or harassing package names, nicknames, or other identifiers that might detract from a friendly, safe, and welcoming environment for all.</li>
+  <li>If you are providing functionality on top of an existing package, consider using that package name as a prefix. For example, if you you are creating a plugin for <a href="https://github.com/erlang/rebar3">Rebar3</a>, consider calling your package <code>rebar3_plugin</code> (or <code>rebar3_somename</code>) instead of <code>plugin</code> (or <code>somename</code>).</li>
+</ul>
+
+<p>
+  With a name in hand, it is time to add the proper metadata to your <code>.app.src</code> file.
+</p>
+
 <h3>Adding metadata to <code>.app.src</code></h3>
 
 <p>
@@ -52,6 +67,8 @@ You are required to confirm your email to access your account, a confirmation em
 <dl class="dl-horizontal">
   <dt><code>licenses</code></dt>
   <dd>A list of licences the project is licensed under. This attribute is required.</dd>
+  <dt><code>pkg_name</code></dt>
+  <dd>The name of the package in case you want to publish the package with a different name than the application name.</dd>
   <dt><code>maintainers</code></dt>
   <dd>A list of names (and/or emails) of maintainers to the project. Optional but highly recommended.</dd>
   <dt><code>links</code></dt>
