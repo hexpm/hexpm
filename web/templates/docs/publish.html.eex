@@ -25,6 +25,22 @@ You are required to confirm your email to access your account, a confirmation em
   Once this step has been completed, check your email inbox for the confirmation email. Once you have followed the enclosed link, your account will be ready to use.
 </p>
 
+<h3>Naming your package</h3>
+
+<p>
+  Before publishing, you will have to choose the name of your package. Remember that packages published to Hex are public and can be accessed by anyone in the community. It is also the responsibility of the community to pick and encourage good package names. Here are some tips:
+</p>
+
+<ul>
+  <li>Avoid using offensive or harassing package names, nicknames, or other identifiers that might detract from a friendly, safe, and welcoming environment for all.</li>
+  <li>If you are providing functionality on top of an existing package, consider using that package name as a prefix. For example, if you want to add authentication to <a href="https://github.com/elixir-lang/plug">Plug</a>, consider calling your package <code>plug_auth</code> (or <code>plug_somename</code>) instead of <code>auth</code> (or <code>somename</code>).</li>
+  <li>If you don't plan to use the package beyond your current organization, considering prefixing the package name with the organization name. For example, <code>my_company_auth</code> instead of <code>auth</code>. Remember <strong>the package name does not need to be the same as the application name</strong> and you can use this is in your favor, see the configuration options below. For example, you can have an application named <code>:auth</code>, published as <code>:my_company_auth</code>. When adding it as a dependency, you must simply specify it as: <code>{:auth, "~> 1.0", hex: :my_company_auth}</code></li>
+</ul>
+
+<p>
+  With a name in hand, it is time to add the proper metadata to your <ocde>mix.exs</code> file.
+</p>
+
 <h3>Adding metadata to <code>mix.exs</code></h3>
 
 <p>
@@ -44,6 +60,8 @@ You are required to confirm your email to access your account, a confirmation em
 </p>
 
 <dl class="dl-horizontal">
+  <dt><code>:name</code></dt>
+  <dd>The name of the package in case you want to publish the package with a different name than the application name.</dd>
   <dt><code>:maintainers</code></dt>
   <dd>A list of names (and or emails) of maintainers to the project. Optional but highly recommended.</dd>
   <dt><code>:licenses</code></dt>
@@ -98,6 +116,7 @@ You are required to confirm your email to access your account, a confirmation em
 
   defp package do
     [# These are the default files included in the package
+     name: :postgrex,
      files: ["lib", "priv", "mix.exs", "README*", "readme*", "LICENSE*", "license*"],
      maintainers: ["Eric Meadows-Jönsson", "José Valim"],
      licenses: ["Apache 2.0"],
