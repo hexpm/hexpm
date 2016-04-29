@@ -5,7 +5,7 @@
 <div class="sponsors container">
   <div class="row">
     <div class="col-md-4 image">
-      <a href="http://plataformatec.com.br/"><img src="<%= static_path(HexWeb.Endpoint, "/images/plataformatec.png") %>"></a>
+      <a href="http://pages.plataformatec.com.br/elixir-phoenix-consulting"><img src="<%= static_path(HexWeb.Endpoint, "/images/plataformatec.png") %>"></a>
     </div>
     <div class="col-md-8">
       <p>
