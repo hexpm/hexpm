@@ -10,7 +10,7 @@ defmodule HexWeb.Endpoint do
   plug Plug.Static,
     at: "/", from: :hex_web, gzip: true,
     only: ~w(css fonts images js),
-    only_matching: ~w(favicon hexsearch robots)
+    only_matching: ~w(favicon robots)
 
   # Code reloading can be explicitly enabled under the
   # :code_reloader configuration of your endpoint.

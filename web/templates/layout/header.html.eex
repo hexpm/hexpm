@@ -8,7 +8,7 @@
 
     <title><%= title(assigns) %></title>
 
-    <link rel="search" type="application/opensearchdescription+xml" title="Hex" href="<%= static_path(HexWeb.Endpoint, "/hexsearch.xml") %>">
+    <link rel="search" type="application/opensearchdescription+xml" title="Hex" href="/hexsearch.xml">
     <link rel="stylesheet" href="<%= static_path(HexWeb.Endpoint, "/css/main.css") %>">
     <link rel="shortcut icon" href="<%= static_path(HexWeb.Endpoint, "/favicon.png") %>">
   </head>
