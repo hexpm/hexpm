@@ -10,8 +10,8 @@ defmodule HexWeb.PackageMetadata do
     field :maintainers, {:array, :string}
   end
 
-  @required_fields ~w(description)
-  @optional_fields ~w(contributors licenses links maintainers)
+  @required_fields ~w(description licenses)
+  @optional_fields ~w(contributors links maintainers)
 
   def changeset(meta, params \\ :empty) do
     cast(meta, params, @required_fields, @optional_fields)
