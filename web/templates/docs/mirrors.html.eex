@@ -37,6 +37,7 @@
 <table class="table table-striped">
   <thead>
     <tr>
+      <th>Provider</th>
       <th>Location</th>
       <th>URL</th>
       <th>Official?</th>
@@ -45,12 +46,21 @@
 
   <tbody>
     <tr>
-      <td>Fastly (geographically distributed)</td>
+      <td>Fastly</td>
+      <td>Geographically distributed <a href="https://www.fastly.com/network-map">*</a></td>
       <td><a href="https://repo.hex.pm">https://repo.hex.pm</a></td>
       <td>Yes</td>
     </tr>
 
     <tr>
+      <td>jsDelivr</td>
+      <td>Geographically distributed <a href="http://www.jsdelivr.com/features/network-map">*</a></td>
+      <td><a href="https://cdn.jsdelivr.net/hex">https://cdn.jsdelivr.net/hex</a></td>
+      <td>No</td>
+    </tr>
+
+    <tr>
+      <td>Privately hosted</td>
       <td>China</td>
       <td><a href="https://hex.elixir-cn.org">https://hex.elixir-cn.org</a></td>
       <td>No</td>
