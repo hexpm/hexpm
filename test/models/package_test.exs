@@ -22,7 +22,7 @@ defmodule HexWeb.PackageTest do
     user = HexWeb.Repo.get_by!(User, username: "eric")
     assert {:ok, package} = Package.create(user, pkg_meta(%{name: "ecto", description: "DSL"}))
 
-    Package.update(package, %{"meta" => %{"maintainers" => ["eric", "josé"], "description" => "description"}})
+    Package.update(package, %{"meta" => %{"maintainers" => ["eric", "josé"], "description" => "description", "licenses" => ["Apache"]}})
     |> HexWeb.Repo.update!
     package = HexWeb.Repo.get_by(Package, name: "ecto")
     assert length(package.meta.maintainers) == 2

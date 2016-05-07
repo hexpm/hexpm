@@ -22,9 +22,9 @@ defmodule HexWeb.PageControllerTest do
 
     eric = create_user("eric", "eric@example.com", "eric")
 
-    {:ok, foo} = Package.create(eric, %{name: "foo", inserted_at: first_date, updated_at: first_date, meta: %{description: "foo"}})
-    {:ok, bar} = Package.create(eric, %{name: "bar", inserted_at: second_date, updated_at: second_date, meta: %{description: "bar"}})
-    {:ok, other} = Package.create(eric, %{name: "other", inserted_at: last_date, updated_at: last_date, meta: %{description: "other"}})
+    {:ok, foo} = Package.create(eric, %{name: "foo", inserted_at: first_date, updated_at: first_date, meta: %{description: "foo", licenses: ["Apache"]}})
+    {:ok, bar} = Package.create(eric, %{name: "bar", inserted_at: second_date, updated_at: second_date, meta: %{description: "bar", licenses: ["Apache"]}})
+    {:ok, other} = Package.create(eric, %{name: "other", inserted_at: last_date, updated_at: last_date, meta: %{description: "other", licenses: ["Apache"]}})
 
     release_create(foo, "0.0.1", "foo", [], "", Ecto.DateTime.from_erl({{2014, 5, 3}, {10, 11, 1}}))
     release_create(foo, "0.0.2", "foo", [], "", Ecto.DateTime.from_erl({{2014, 5, 3}, {10, 11, 2}}))
