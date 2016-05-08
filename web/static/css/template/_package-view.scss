@@ -77,6 +77,11 @@
     li {
       display: inline-block;
       width: 24%;
+      @include general-mobile {
+        .stat-icon {
+          margin-bottom: 18px;
+        }
+      }
       img {
         float: left;
         margin-right: 6px;
@@ -87,12 +92,18 @@
         color: #000000;
         line-height: 15px;
         @include font-size(12 , $base-line-height);
+        @include general-mobile {
+          @include font-size(11 , $base-line-height);
+        }
         padding: 4px 0 0 0;
         .count-info {
           font-weight: bold;
           font-size: 18px;
           display: inline-block;
           padding: 0 0 5px 0;
+          @include general-mobile {
+            font-size: 15px;
+          }
         }
       }
       .stat-text {
