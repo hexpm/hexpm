@@ -222,7 +222,7 @@
           font-size: 12px;
           line-height: 12px;
         }
-        
+
         .count-info {
           font-weight: bold;
           font-size: 18px;
@@ -256,6 +256,14 @@
       span {
         display: block;
         line-height: 17px;
+      }
+      .title {
+        overflow: hidden;
+        white-space: nowrap;
+        text-overflow: ellipsis;
+        word-break: break-all;
+        word-wrap: break-word;
+        display: block;
       }
       .description {
         font-size: 12px;

@@ -1,5 +1,5 @@
 <li>
-  <a href="<%= package_path(HexWeb.Endpoint, :show, @package) %>"><%= @package %></a>
+  <a href="<%= package_path(HexWeb.Endpoint, :show, @package) %>" class="title"><%= @package %></a>
   <p>
     <%= if @downloads do %>
       <span class="info"><%= human_number_space @downloads %> downloads</span>
