@@ -29,6 +29,11 @@
 }
 
 .navbar-default .navbar-form {
+  @include general-mobile {
+    border-top: none;
+    box-shadow: none;
+    padding: 7px 15px 10px 15px;
+  }
   input, button {
     // Vertical centering
     margin-top: 10px;
