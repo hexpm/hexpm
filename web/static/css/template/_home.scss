@@ -268,6 +268,9 @@
       .description {
         font-size: 12px;
         font-weight: 300;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
       }
       .published-at {
         font-size: 12px;
