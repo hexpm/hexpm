@@ -3,15 +3,24 @@
 *********************************************************************/
 $color-white:         #ffffff;
 $color-black:         #000000;
-$color-red:           #a93e42;
+$color-red:           #aa2c3f;
 $color-light-red:     #e75458;
-$color-puple:         #e75458;
-$color-light-purple:  #e75458;
+$color-grey:          #d1d3d7;
 
 /*********************************************************************
 *  Typography
 *********************************************************************/
-$base-font-size: 				10;
-$base-line-height:  			16;
-$base-font-family: 				'Lato', sans-serif;
-$base-title-font-family: 		'Lato', sans-serif;
+$base-font-size:          10;
+$base-line-height:        16;
+$base-font-family:        'Lato', sans-serif;
+$base-title-font-family:  'Lato', sans-serif;
+
+/*********************************************************************
+* Font Colors
+*********************************************************************/
+$text-grey: #5c676d;
+
+/*********************************************************************
+* Border
+*********************************************************************/
+$base-border-color: $color-grey 1px solid;
