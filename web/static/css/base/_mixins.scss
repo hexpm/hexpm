@@ -31,6 +31,7 @@
 		font-style: $style;
 	}
 }
+
 @mixin clear-fix() {
 	&:after {
 	   content: " "; /* Older browser do not support empty content */

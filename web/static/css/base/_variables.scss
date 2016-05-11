@@ -16,11 +16,12 @@ $base-font-family:        'Lato', sans-serif;
 $base-title-font-family:  'Lato', sans-serif;
 
 /*********************************************************************
-* Font Colors
+*  Font Colors
 *********************************************************************/
 $text-grey: #5c676d;
 
 /*********************************************************************
-* Border
+*  Elements
 *********************************************************************/
-$base-border-color: $color-grey 1px solid;
+$base-border: 1px solid $color-grey;
+$base-box-shadow: 0px 1px 4px rgba(0,0,0,0.2);

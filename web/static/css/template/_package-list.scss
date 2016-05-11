@@ -9,7 +9,7 @@
   & {
     list-style: none;
     text-align: center;
-    border: $base-border-color;
+    border: $base-border;
     border-left: none;
     border-right: none;
     padding: 15px 0;
@@ -35,9 +35,11 @@
   }
 }
 
-.letter-sort {
+.letter-sort > .list {
   @include general-mobile {
-    .list > li {
+    box-shadow: $base-box-shadow;
+
+     > li {
       margin: 10px;
     }
   }
@@ -95,29 +97,22 @@
   float: right;
 }
 
-.pagination-info {
-  & {
-    float: left;
-    color: #5c676d;
-    @include font-size(16 , $base-line-height);
-    padding: 10px;
-    font-weight: 300;
-  }
+.pagination-info,
+.pagination-sort {
+  float: left;
+  color: $text-grey;
+  @include font-size(16, $base-line-height);
+  padding: 10px;
+  font-weight: 300;
+}
 
+.pagination-info {
   @include general-mobile {
     padding: 10px 0;
   }
 }
 
 .pagination-sort {
-  & {
-    float: left;
-    color: #5c676d;
-    @include font-size(16 , $base-line-height);
-    padding: 10px;
-    font-weight: 300;
-  }
-
   @include general-mobile {
     float: right;
     padding: 10px 0;
