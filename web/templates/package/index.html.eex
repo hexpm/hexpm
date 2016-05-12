@@ -4,8 +4,8 @@
 </h2>
 
 <%= unless @conn.params["search"] do %>
-  <div class="by-letters">
-    <ul>
+  <div class="letter-sort">
+    <ul class="list">
       <%= for letter <- @letters do %>
       <li>
         <a href="<%= package_path(HexWeb.Endpoint, :index, letter: letter) %>">
@@ -43,7 +43,7 @@
     <h4 class="results-found"><%= @package_count %> Results Found</h4>
     <%= show_sort_info(@conn.params["sort"]) %>
   </div>
-  <div class="navbar-right pagination-info">
+  <div class="navbar-right pagination-sort">
     <%= unless @letter do %>
       <div class="dropdown">
         <button class="btn btn-default dropdown-toggle" type="button" id="sort_dropdown" data-toggle="dropdown">
