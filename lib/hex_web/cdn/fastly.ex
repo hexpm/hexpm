@@ -1,4 +1,6 @@
 defmodule HexWeb.CDN.Fastly do
+  require Logger
+
   @behaviour HexWeb.CDN
   @fastly_url "https://api.fastly.com/"
 
@@ -30,7 +32,7 @@ defmodule HexWeb.CDN.Fastly do
       "content-type": "application/json"]
 
     body = Poison.encode!(body)
-    :hackney.post(url, headers, body, [])
+    retry(fn -> :hackney.post(url, headers, body, []) end, 10)
     |> read_body
   end
 
@@ -40,8 +42,22 @@ defmodule HexWeb.CDN.Fastly do
       "fastly-key": auth(),
       "accept": "application/json"]
 
-    :hackney.get(url, headers, [])
+    retry(fn -> :hackney.get(url, headers, []) end, 10)
     |> read_body
+  end
+
+  # TODO: Check if we can remove this in hackney 2.0
+  #       https://github.com/benoitc/hackney/issues/161
+  defp retry(fun, times) do
+    case fun.() do
+      {:error, reason} ->
+        Logger.error("Fastly API ERROR: #{inspect reason}")
+        if times > 0,
+          do: retry(fun, times-1),
+        else: {:error, reason}
+      result ->
+        result
+    end
   end
 
   defp read_body({:ok, status, headers, client}) do
