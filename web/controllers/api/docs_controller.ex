@@ -59,7 +59,7 @@ defmodule HexWeb.API.DocsController do
               task    = fn -> upload_docs(package, release, user, files, body) end
               success = fn -> :ok end
               failure = fn reason -> failure(package, release, user, reason) end
-              HexWeb.Utils.task(task, success, failure)
+              HexWeb.Utils.task_with_failure(task, success, failure)
 
               :ok
             else
@@ -228,7 +228,7 @@ defmodule HexWeb.API.DocsController do
     end
 
     # TODO: Send mails
-    HexWeb.Utils.task(task, fn -> nil end, fn _ -> nil end)
+    HexWeb.Utils.task_with_failure(task, fn -> nil end, fn _ -> nil end)
   end
 
   def publish_sitemap do

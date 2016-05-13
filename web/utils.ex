@@ -184,7 +184,7 @@ defmodule HexWeb.Utils do
   @publish_timeout 5 * 60 * 1000
 
   if Mix.env in [:test, :hex] do
-    def task(fun, success, failure) do
+    def task_with_failure(fun, success, failure) do
       try do
         fun.()
       catch
@@ -198,7 +198,7 @@ defmodule HexWeb.Utils do
       end
     end
   else
-    def task(fun, success, failure) do
+    def task_with_failure(fun, success, failure) do
       Task.Supervisor.start_child(HexWeb.Tasks, fn ->
         {:ok, pid} = Task.Supervisor.start_child(HexWeb.Tasks, fun)
         ref        = Process.monitor(pid)
@@ -215,6 +215,12 @@ defmodule HexWeb.Utils do
         end
       end)
     end
+  end
+
+  if Mix.env in [:test, :hex] do
+    def task(fun), do: fun.()
+  else
+    def task(fun), do: Task.Supervisor.start_child(HexWeb.Tasks, fun)
   end
 
   def sign(file, key) do

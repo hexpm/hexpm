@@ -151,7 +151,7 @@ defmodule HexWeb.API.ReleaseController do
     task    = fn -> job(package, version, body) end
     success = fn -> :ok end
     failure = fn reason -> failure(package, version, user, reason) end
-    HexWeb.Utils.task(task, success, failure)
+    HexWeb.Utils.task_with_failure(task, success, failure)
   end
 
   defp job(package, version, body) do
@@ -198,6 +198,6 @@ defmodule HexWeb.API.ReleaseController do
     end
 
     # TODO: Send mails
-    HexWeb.Utils.task(task, fn -> nil end, fn _ -> nil end)
+    HexWeb.Utils.task_with_failure(task, fn -> nil end, fn _ -> nil end)
   end
 end
