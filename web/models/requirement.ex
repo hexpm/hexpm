@@ -91,8 +91,12 @@ defmodule HexWeb.Requirement do
     requests  = resolve_requests(requirements, config)
 
     case Hex.Resolver.resolve(requests, deps, top_level, []) do
-      {:ok, _} -> :ok
-      {:error, messages} -> {:error, messages}
+      {:ok, _} ->
+        :ok
+      {:error, messages} ->
+        # Remove ANSI escape sequences
+        messages = String.replace(messages, ~r"\e\[[0-9]+[a-zA-Z]", "")
+        {:error, messages}
     end
   after
     Hex.Registry.close

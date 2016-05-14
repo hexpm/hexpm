@@ -63,8 +63,12 @@ defmodule HexWeb.ReleaseTest do
     assert {:error, [requirements: [{"decimal", "invalid requirement: \"fail\""}]]} =
            Release.create(ecto, rel_meta(%{version: "0.1.1", app: "ecto", requirements: %{"decimal" => "fail"}}), "")
 
-    assert {:error, [requirements: "Conflict on decimal\n  mix.exs: ~> 1.0\n"]} =
+    assert {:error, [requirements: requirements]} =
             Release.create(ecto, rel_meta(%{version: "0.1.1", app: "ecto", requirements: %{"decimal" => "~> 1.0"}}), "")
+
+    # TODO: Remove double check when Hex 0.12.0 is out
+    assert "Conflict on decimal\n  mix.exs: ~> 1.0\n" == requirements or
+           "Failed to use \"decimal\" because\n  You specified ~> 1.0 in your mix.exs\n" == requirements
   end
 
   test "release version is unique" do
