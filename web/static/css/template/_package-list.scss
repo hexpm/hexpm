@@ -126,7 +126,7 @@
     a, span,
     a:hover, span:hover,
     a:focus, span:focus {
-      color: #aa2c3f;
+      color: $color-red;
     }
   }
 
@@ -134,8 +134,8 @@
     a, span,
     a:hover, span:hover,
     a:focus, span:focus {
-      background-color: #aa2c3f;
-      border-color: #aa2c3f;
+      background-color: $color-red;
+      border-color: $color-red;
     }
   }
 
