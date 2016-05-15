@@ -59,11 +59,12 @@ defmodule HexWeb.Requirement do
         :ok ->
           release_changeset
         {:error, reason} ->
-          %{release_changeset | valid?: false, changes:
-            Map.put(release_changeset.changes, :requirements,
-              Enum.map(release_changeset.changes.requirements, fn req_changeset ->
-                add_error(req_changeset, :requirement, reason)
-              end))}
+          changes = Map.put(release_changeset.changes, :requirements,
+            Enum.map(release_changeset.changes.requirements, fn req_changeset ->
+              add_error(req_changeset, :requirement, reason)
+            end)
+          )
+          %{release_changeset | valid?: false, changes: changes}
       end
     else
       release_changeset

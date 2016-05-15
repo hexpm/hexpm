@@ -31,10 +31,7 @@ defmodule HexWeb.TestHelpers do
 
   def rel_meta(params) do
     params = params(params)
-    meta =
-      params
-      |> Map.put_new("build_tools", ["mix"])
-      |> Map.put_new("requirements", %{})
+    meta = Map.put_new(params, "build_tools", ["mix"])
     Map.put(params, "meta", meta)
   end
 

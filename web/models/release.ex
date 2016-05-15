@@ -29,8 +29,6 @@ defmodule HexWeb.Release do
   end
 
   def create(package, params, checksum) do
-    params = Map.put_new(params, "requirements", [])
-
     build_assoc(package, :releases)
     |> changeset(:create, params)
     |> put_change(:checksum, String.upcase(checksum))

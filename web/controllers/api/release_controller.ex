@@ -144,10 +144,11 @@ defmodule HexWeb.API.ReleaseController do
 
   # Turn `%{"ecto" => %{"app" => "...", ...}}` into:
   #      `[%{"name" => "ecto", "app" => "...", ...}]` for cast_assoc
-  defp normalize_params(%{"requirements" => requirements} = params) do
+  defp normalize_params(%{"requirements" => requirements} = params) when is_map(requirements) do
     requirements =
-      requirements
-      |> Enum.map(fn {name, map} -> Map.put(map, "name", name) end)
+      Enum.map(requirements, fn
+        {name, map} -> Map.put(map, "name", name)
+      end)
 
     %{params | "requirements" => requirements}
   end
