@@ -1,5 +1,6 @@
 defmodule HexWeb.Requirement do
   use HexWeb.Web, :model
+  require Logger
 
   schema "requirements" do
     field :app, :string
@@ -42,6 +43,8 @@ defmodule HexWeb.Requirement do
     end)
   end
 
+  # TODO: Raise validation error if field is not set
+  #       https://github.com/elixir-lang/ecto/issues/1433
   def create_all(release_changeset) do
     release_changeset =
       release_changeset
@@ -55,17 +58,22 @@ defmodule HexWeb.Requirement do
     if release_changeset.valid? do
       build_tools = get_field(release_changeset, :meta).build_tools
 
-      case resolve(requirements, guess_config(build_tools)) do
-        :ok ->
-          release_changeset
-        {:error, reason} ->
-          changes = Map.put(release_changeset.changes, :requirements,
-            Enum.map(release_changeset.changes.requirements, fn req_changeset ->
-              add_error(req_changeset, :requirement, reason)
-            end)
-          )
-          %{release_changeset | valid?: false, changes: changes}
-      end
+      {time, result} = :timer.tc(fn ->
+        case resolve(requirements, guess_config(build_tools)) do
+          :ok ->
+            release_changeset
+          {:error, reason} ->
+            changes = Map.put(release_changeset.changes, :requirements,
+              Enum.map(release_changeset.changes.requirements, fn req_changeset ->
+                add_error(req_changeset, :requirement, reason)
+              end)
+            )
+            %{release_changeset | valid?: false, changes: changes}
+        end
+      end)
+
+      Logger.warn "DEPENDENCY_RESOLUTION_COMPLETED (#{div time, 1000}ms)"
+      result
     else
       release_changeset
     end
