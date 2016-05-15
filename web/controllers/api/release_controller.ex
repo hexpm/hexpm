@@ -37,26 +37,21 @@ defmodule HexWeb.API.ReleaseController do
   end
 
   def delete(conn, _params) do
-    result =
-      HexWeb.Repo.transaction(fn ->
-        case Release.delete(conn.assigns.release) |> HexWeb.Repo.delete do
-          {:ok, release} ->
-            audit(conn, "release.revert", {conn.assigns.package, release})
-            release
-          {:error, changeset} ->
-            HexWeb.Repo.rollback(changeset)
-        end
-      end)
+    release = conn.assigns.release
+    multi =
+      Ecto.Multi.new
+      |> Ecto.Multi.delete(:release, Release.delete(release))
+      |> Ecto.Multi.insert(:log, audit(conn, "release.revert", {release.package, release}))
 
-    case result do
-      {:ok, release} ->
+    case HexWeb.Repo.transaction(multi) do
+      {:ok, _} ->
         # TODO: Remove package from database if this was the only release
         revert(release)
 
         conn
         |> api_cache(:private)
         |> send_resp(204, "")
-      {:error, changeset} ->
+      {:error, :release, changeset, _} ->
         validation_failed(conn, changeset)
     end
   end
@@ -88,6 +83,7 @@ defmodule HexWeb.API.ReleaseController do
       |> HexWeb.Repo.update
     else
       Package.create(user, params)
+      |> HexWeb.Repo.insert
     end
   end
 
@@ -104,7 +100,10 @@ defmodule HexWeb.API.ReleaseController do
   end
 
   defp update(conn, package, release, release_params, checksum, user, body) do
-    case Release.update(release, release_params, checksum) do
+    release =
+      HexWeb.Repo.preload(release, requirements: Release.requirements(release))
+
+    case Release.update(release, release_params, checksum) |> HexWeb.Repo.update do
       {:ok, release} ->
         after_release(package, release.version, user, body)
 
@@ -118,20 +117,16 @@ defmodule HexWeb.API.ReleaseController do
     end
   end
 
-  defp create(conn, package, release_params, checksum, user, body) do
-    result =
-      HexWeb.Repo.transaction(fn ->
-        case Release.create(package, release_params, checksum) do
-          {:ok, release} ->
-            audit(conn, "release.publish", {package, release})
-            release
-          {:error, changeset} ->
-            HexWeb.Repo.rollback(changeset)
-        end
-      end)
+  defp create(conn, package, params, checksum, user, body) do
+    params = normalize_params(params)
 
-    case result do
-      {:ok, release} ->
+    multi =
+      Ecto.Multi.new
+      |> Ecto.Multi.insert(:release, Release.create(package, params, checksum))
+      |> Ecto.Multi.insert(:log, fn %{release: release} -> audit(user, "release.publish", {package, release}) end)
+
+    case HexWeb.Repo.transaction(multi) do
+      {:ok, %{release: release}} ->
         after_release(package, release.version, user, body)
 
         release = %{release | package: package}
@@ -142,10 +137,32 @@ defmodule HexWeb.API.ReleaseController do
         |> api_cache(:public)
         |> put_status(201)
         |> render(:show, release: release)
-      {:error, errors} ->
-        validation_failed(conn, errors)
+      {:error, :release, changeset, _} ->
+        validation_failed(conn, normalize_errors(changeset))
     end
   end
+
+  # Turn `%{"ecto" => %{"app" => "...", ...}}` into:
+  #      `[%{"name" => "ecto", "app" => "...", ...}]` for cast_assoc
+  defp normalize_params(%{"requirements" => requirements} = params) do
+    requirements =
+      requirements
+      |> Enum.map(fn {name, map} -> Map.put(map, "name", name) end)
+
+    %{params | "requirements" => requirements}
+  end
+  defp normalize_params(params), do: params
+
+  defp normalize_errors(%{changes: %{requirements: requirements}} = changeset) do
+    requirements =
+      requirements
+      |> Enum.map(fn %{changes: %{name: name}, errors: [{_, err}]} = req ->
+        %{req | errors: %{name => err}}
+      end)
+
+    put_in(changeset.changes.requirements, requirements)
+  end
+  defp normalize_errors(changeset), do: changeset
 
   defp after_release(package, version, user, body) do
     task    = fn -> job(package, version, body) end

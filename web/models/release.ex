@@ -10,7 +10,7 @@ defmodule HexWeb.Release do
     timestamps
 
     belongs_to :package, Package
-    has_many :requirements, Requirement
+    has_many :requirements, Requirement, on_replace: :delete
     has_many :daily_downloads, Download
     has_one :downloads, ReleaseDownload
     embeds_one :meta, ReleaseMetadata, on_replace: :delete
@@ -22,80 +22,44 @@ defmodule HexWeb.Release do
   end
 
   defp changeset(release, :update, params) do
-    cast(release, params, ~w(version), [])
+    cast(release, params, ~w(version))
     |> cast_embed(:meta, required: true)
+    |> Requirement.create_all
     |> validate_version(:version)
   end
 
-  # TODO: Leave this in until we have multi
   def create(package, params, checksum) do
-    changeset =
-      build_assoc(package, :releases)
-      |> changeset(:create, params)
-      |> put_change(:checksum, String.upcase(checksum))
+    params = Map.put_new(params, "requirements", [])
 
-    HexWeb.Repo.transaction(fn ->
-      case HexWeb.Repo.insert(changeset) do
-        {:ok, release} ->
-          requirements = params["requirements"] || %{}
-
-          case Requirement.create_all(release, requirements) do
-            {:ok, reqs} ->
-              %{release | requirements: reqs, package: package}
-            {:error, errors} ->
-              HexWeb.Repo.rollback([requirements: errors])
-          end
-        {:error, changeset} ->
-          HexWeb.Repo.rollback(changeset.errors)
-      end
-    end)
+    build_assoc(package, :releases)
+    |> changeset(:create, params)
+    |> put_change(:checksum, String.upcase(checksum))
   end
 
-  # TODO: Leave this in until we have multi
   def update(release, params, checksum) do
-    if editable?(release) do
-      changeset =
-        changeset(release, :update, params)
-        |> put_change(:checksum, String.upcase(checksum))
-
-      HexWeb.Repo.transaction(fn ->
-        case HexWeb.Repo.update(changeset) do
-          {:ok, release} ->
-            HexWeb.Repo.delete_all(assoc(release, :requirements))
-
-            release = HexWeb.Repo.update!(changeset)
-            requirements = params["requirements"] || %{}
-
-            case HexWeb.Requirement.create_all(release, requirements) do
-              {:ok, reqs} ->
-                %{release | requirements: reqs}
-              {:error, errors} ->
-                HexWeb.Repo.rollback([requirements: errors])
-            end
-          {:error, changeset} ->
-            HexWeb.Repo.rollback(changeset.errors)
-        end
-      end)
-    else
-      {:error, [inserted_at: "can only modify a release up to one hour after creation"]}
-    end
+    release
+    |> changeset(:update, params)
+    |> put_change(:checksum, String.upcase(checksum))
+    |> validate_editable(:update, false)
   end
 
   def delete(release, opts \\ []) do
     force? = Keyword.get(opts, :force, false)
-    change(release) |> validate_editable(force?)
+    change(release) |> validate_editable(:delete, force?)
   end
 
-  defp validate_editable(changeset, true), do: changeset
-  defp validate_editable(changeset, false) do
-    validate_change(changeset, :inserted_at, fn _field, _value ->
-      if editable?(changeset.model) do
-        []
-      else
-        [inserted_at: "can only delete a release up to one hour after creation"]
-      end
-    end)
+  defp validate_editable(changeset, action, force)
+  defp validate_editable(changeset, _action, true), do: changeset
+  defp validate_editable(changeset, action, false) do
+    if editable?(changeset.data) do
+      changeset
+    else
+      add_error(changeset, :inserted_at, editable_error_message(action))
+    end
   end
+
+  defp editable_error_message(:update), do: "can only modify a release up to one hour after creation"
+  defp editable_error_message(:delete), do: "can only delete a release up to one hour after creation"
 
   defp editable?(release) do
     inserted_at =

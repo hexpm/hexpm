@@ -8,6 +8,10 @@ defmodule HexWeb.AuditLog do
     timestamps(updated_at: false)
   end
 
+  def build(actor, action, params) do
+    %HexWeb.AuditLog{actor_id: actor.id, action: action, params: params}
+  end
+
   def create(%HexWeb.User{id: user_id}, action, params) do
     params = extract_params(action, params)
     %HexWeb.AuditLog{actor_id: user_id, action: action, params: params}

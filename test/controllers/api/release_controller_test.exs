@@ -7,9 +7,9 @@ defmodule HexWeb.API.ReleaseControllerTest do
   alias HexWeb.RegistryBuilder
 
   setup do
-    user       = User.create(%{username: "eric", email: "eric@mail.com", password: "eric"}, true) |> HexWeb.Repo.insert!
-    {:ok, pkg} = Package.create(user, pkg_meta(%{name: "decimal", description: "Arbitrary precision decimal aritmetic for Elixir."}))
-    {:ok, _}   = Release.create(pkg, rel_meta(%{version: "0.0.1", app: "decimal"}), "")
+    user = User.create(%{username: "eric", email: "eric@mail.com", password: "eric"}, true) |> HexWeb.Repo.insert!
+    pkg = Package.create(user, pkg_meta(%{name: "decimal", description: "Arbitrary precision decimal aritmetic for Elixir."})) |> HexWeb.Repo.insert!
+    Release.create(pkg, rel_meta(%{version: "0.0.1", app: "decimal"}), "") |> HexWeb.Repo.insert!
     :ok
   end
 
@@ -36,8 +36,8 @@ defmodule HexWeb.API.ReleaseControllerTest do
   end
 
   test "update package" do
-    HexWeb.Repo.get_by!(User, username: "eric")
-    |> Package.create(pkg_meta(%{name: "ecto", description: "DSL"}))
+    user = HexWeb.Repo.get_by!(User, username: "eric")
+    Package.create(user, pkg_meta(%{name: "ecto", description: "DSL"})) |> HexWeb.Repo.insert!
 
     meta = %{name: "ecto", version: "1.0.0", description: "awesomeness"}
     conn = conn()
@@ -87,7 +87,7 @@ defmodule HexWeb.API.ReleaseControllerTest do
     assert conn.status == 422
     body = Poison.decode!(conn.resp_body)
     assert body["message"] == "Validation error(s)"
-    assert body["errors"]["meta"]["links"] == "is invalid"
+    assert body["errors"]["meta"]["links"] == "expected type map"
   end
 
   test "create releases" do
@@ -111,9 +111,10 @@ defmodule HexWeb.API.ReleaseControllerTest do
     assert conn.status == 201
     postgrex = HexWeb.Repo.get_by(Package, name: "postgrex")
     postgrex_id = postgrex.id
-    assert [%Release{package_id: ^postgrex_id, version: %Version{major: 0, minor: 0, patch: 1}},
-            %Release{package_id: ^postgrex_id, version: %Version{major: 0, minor: 0, patch: 2}}] =
-           Release.all(postgrex) |> HexWeb.Repo.all
+
+    assert [%Release{package_id: ^postgrex_id, version: %Version{major: 0, minor: 0, patch: 2}},
+            %Release{package_id: ^postgrex_id, version: %Version{major: 0, minor: 0, patch: 1}}] =
+           Release.all(postgrex) |> HexWeb.Repo.all |> Release.sort
 
     HexWeb.Repo.get_by!(assoc(postgrex, :releases), version: "0.0.1")
   end
@@ -181,10 +182,10 @@ defmodule HexWeb.API.ReleaseControllerTest do
     conn = conn()
            |> put_req_header("content-type", "application/octet-stream")
            |> put_req_header("authorization", key_for("eric"))
-           |> post("api/packages/postgrex/releases", body)
+           |> delete("api/packages/postgrex/releases/0.0.1")
 
     assert conn.status == 422
-    assert %{"errors" => %{"inserted_at" => "can only modify a release up to one hour after creation"}} =
+    assert %{"errors" => %{"inserted_at" => "can only delete a release up to one hour after creation"}} =
            Poison.decode!(conn.resp_body)
 
     Ecto.Changeset.change(release, inserted_at: %{Ecto.DateTime.utc | year: 2030, month: 1})
@@ -227,6 +228,7 @@ defmodule HexWeb.API.ReleaseControllerTest do
   end
 
   test "create releases with requirements validates" do
+    # invalid requirement
     reqs = %{decimal: %{requirement: "~> invalid", app: "not_decimal"}}
     body = create_tar(%{name: :postgrex, version: "0.0.1", requirements: reqs, description: "description"}, [])
     conn = conn()
@@ -237,7 +239,33 @@ defmodule HexWeb.API.ReleaseControllerTest do
     assert conn.status == 422
     body = Poison.decode!(conn.resp_body)
     assert body["message"] == "Validation error(s)"
-    assert body["errors"] == %{"requirements" => %{"decimal" => "invalid requirement: \"~> invalid\""}}
+    assert %{"requirements" => %{"decimal" => "invalid requirement: \"~> invalid\""}} = body["errors"]
+
+    # invalid package
+    reqs = %{not_decimal: %{requirement: "~> 1.0", app: "not_decimal"}}
+    body = create_tar(%{name: :postgrex, version: "0.0.1", requirements: reqs, description: "description"}, [])
+    conn = conn()
+           |> put_req_header("content-type", "application/octet-stream")
+           |> put_req_header("authorization", key_for("eric"))
+           |> post("api/packages/postgrex/releases", body)
+
+    assert conn.status == 422
+    body = Poison.decode!(conn.resp_body)
+    assert body["message"] == "Validation error(s)"
+    assert %{"requirements" => %{"not_decimal" => "invalid package"}} = body["errors"]
+
+    # conflict
+    reqs = %{decimal: %{requirement: "~> 1.0", app: "not_decimal"}}
+    body = create_tar(%{name: :postgrex, version: "0.1.0", requirements: reqs, description: "description"}, [])
+    conn = conn()
+           |> put_req_header("content-type", "application/octet-stream")
+           |> put_req_header("authorization", key_for("eric"))
+           |> post("api/packages/postgrex/releases", body)
+
+    assert conn.status == 422
+    body = Poison.decode!(conn.resp_body)
+    assert body["message"] == "Validation error(s)"
+    assert %{"requirements" => %{"decimal" => "Conflict on decimal\n  mix.exs: ~> 1.0\n"}} = body["errors"]
   end
 
   test "create release updates registry" do

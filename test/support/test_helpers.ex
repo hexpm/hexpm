@@ -6,6 +6,7 @@ defmodule HexWeb.TestHelpers do
       meta
       |> Map.put_new(:app, meta[:name])
       |> Map.put_new(:build_tools, ["mix"])
+      |> Map.put_new(:licenses, ["Apache"])
       |> Map.put_new(:requirements, %{})
 
     contents_path = Path.join(@tmp, "#{meta[:name]}-#{meta[:version]}-contents.tar.gz")
@@ -39,7 +40,10 @@ defmodule HexWeb.TestHelpers do
 
   def pkg_meta(meta) do
     params = params(meta)
-    Map.update(params, "meta", params, &Map.merge(params, &1))
+    meta =
+      params
+      |> Map.put_new("licenses", ["Apache"])
+    Map.put(params, "meta", meta)
   end
 
   def params(params) do

@@ -23,19 +23,15 @@ defmodule HexWeb.API.KeyController do
   end
 
   def create(conn, params) do
-    result =
-      HexWeb.Repo.transaction(fn ->
-        case Key.create(conn.assigns.user, conn.params) |> HexWeb.Repo.insert do
-          {:ok, key} ->
-            audit(conn, "key.generate", key)
-            key
-          {:error, changeset} ->
-            HexWeb.Repo.rollback(changeset)
-        end
-      end)
+    user = conn.assigns.user
 
-    case result do
-      {:ok, key} ->
+    multi =
+      Ecto.Multi.new
+      |> Ecto.Multi.insert(:key, Key.create(user, params))
+      |> Ecto.Multi.insert(:log, fn %{key: key} -> audit(conn, "key.generate", key) end)
+
+    case HexWeb.Repo.transaction(multi) do
+      {:ok, %{key: key}} ->
         location = key_url(conn, :show, params["name"])
 
         conn
@@ -43,17 +39,19 @@ defmodule HexWeb.API.KeyController do
         |> api_cache(:private)
         |> put_status(201)
         |> render(:show, key: key)
-      {:error, changeset} ->
+      {:error, :key, changeset, _} ->
         validation_failed(conn, changeset)
     end
   end
 
   def delete(conn, %{"name" => name}) do
     if key = HexWeb.Repo.one(Key.get(name, conn.assigns.user)) do
-      HexWeb.Repo.transaction(fn ->
-        HexWeb.Repo.delete!(key)
-        audit(conn, "key.remove", key)
-      end)
+      multi =
+        Ecto.Multi.new
+        |> Ecto.Multi.delete(:key, key)
+        |> Ecto.Multi.insert(:log, audit(conn, "key.remove", key))
+
+      {:ok, _} = HexWeb.Repo.transaction(multi)
 
       conn
       |> api_cache(:private)

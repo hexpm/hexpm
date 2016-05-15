@@ -19,7 +19,8 @@ defmodule HexWeb.Key do
   end
 
   defp changeset(key, params) do
-    cast(key, params, ~w(name), [])
+    cast(key, params, ~w(name))
+    |> validate_required(:name)
     |> add_keys
     |> prepare_changes(&unique_name/1)
   end
@@ -61,7 +62,7 @@ defmodule HexWeb.Key do
     {:ok, name} = fetch_change(changeset, :name)
 
     names =
-      from(u in assoc(changeset.model, :user),
+      from(u in assoc(changeset.data, :user),
            join: k in assoc(u, :keys),
            select: k.name)
       |> changeset.repo.all

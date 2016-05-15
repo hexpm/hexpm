@@ -26,21 +26,15 @@ defmodule HexWeb.API.OwnerController do
 
   def create(conn, %{"email" => email}) do
     email = URI.decode_www_form(email)
-    user = HexWeb.Repo.get_by!(User, email: email)
+    owner = HexWeb.Repo.get_by!(User, email: email)
     package = conn.assigns.package
 
-    result =
-      HexWeb.Repo.transaction(fn ->
-        case Package.create_owner(conn.assigns.package, user) |> HexWeb.Repo.insert do
-          {:ok, owner} ->
-            audit(conn, "owner.add", {package, user})
-            owner
-          {:error, changeset} ->
-            HexWeb.Repo.rollback(changeset)
-        end
-      end)
+    multi =
+      Ecto.Multi.new
+      |> Ecto.Multi.insert(:owner, Package.create_owner(conn.assigns.package, owner))
+      |> Ecto.Multi.insert(:log, audit(conn, "owner.add", {package, owner}))
 
-    case result do
+    case HexWeb.Repo.transaction(multi) do
       {:ok, _} ->
         owners = assoc(package, :owners) |> HexWeb.Repo.all
 
@@ -48,14 +42,14 @@ defmodule HexWeb.API.OwnerController do
           "owner_add.html",
           "Hex.pm - Owner added",
           Enum.map(owners, fn owner -> owner.email end),
-          username: user.username,
+          username: owner.username,
           email: email,
           package: package.name)
 
         conn
         |> api_cache(:private)
         |> send_resp(204, "")
-      {:error, changeset} ->
+      {:error, :owner, changeset, _} ->
         validation_failed(conn, changeset)
     end
   end
@@ -71,22 +65,25 @@ defmodule HexWeb.API.OwnerController do
       |> api_cache(:private)
       |> send_resp(403, "")
     else
-      HexWeb.Repo.transaction(fn ->
-        Package.owner(package, owner) |> HexWeb.Repo.delete_all
-        audit(conn, "owner.remove", {package, owner})
-      end)
+      multi =
+        Ecto.Multi.new
+        |> Ecto.Multi.delete_all(:package_owner, Package.owner(package, owner))
+        |> Ecto.Multi.insert(:log, audit(conn, "owner.remove", {package, owner}))
 
-      HexWeb.Mailer.send(
-        "owner_remove.html",
-        "Hex.pm - Owner removed",
-        Enum.map(owners, fn owner -> owner.email end),
-        username: owner.username,
-        email: email,
-        package: package.name)
+      case HexWeb.Repo.transaction(multi) do
+        {:ok, %{}} ->
+          HexWeb.Mailer.send(
+            "owner_remove.html",
+            "Hex.pm - Owner removed",
+            Enum.map(owners, fn owner -> owner.email end),
+            username: owner.username,
+            email: email,
+            package: package.name)
 
-      conn
-      |> api_cache(:private)
-      |> send_resp(204, "")
+          conn
+          |> api_cache(:private)
+          |> send_resp(204, "")
+      end
     end
   end
 end
