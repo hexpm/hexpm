@@ -265,7 +265,7 @@ defmodule HexWeb.API.ReleaseControllerTest do
     assert conn.status == 422
     body = Poison.decode!(conn.resp_body)
     assert body["message"] == "Validation error(s)"
-    assert %{"requirements" => %{"decimal" => "Conflict on decimal\n  mix.exs: ~> 1.0\n"}} = body["errors"]
+    assert %{"requirements" => %{"decimal" => "Failed to use \"decimal\" because\n  You specified ~> 1.0 in your mix.exs\n"}} = body["errors"]
   end
 
   test "create release updates registry" do

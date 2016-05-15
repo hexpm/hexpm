@@ -68,11 +68,11 @@ defmodule HexWeb.ReleaseTest do
 
     assert %{version: [{"is invalid", [type: HexWeb.Version]}]} =
            Release.create(ecto, rel_meta(%{version: "0.1", app: "ecto"}), "") |> extract_errors
-    
+
     assert %{requirements: [%{requirement: [{"invalid requirement: \"~> fail\"", []}]}]} =
            Release.create(ecto, rel_meta(%{version: "0.1.1", app: "ecto", requirements: [%{name: "decimal", requirement: "~> fail"}]}), "") |> extract_errors
-           
-    assert %{requirements: [%{requirement: [{"Conflict on decimal\n  mix.exs: ~> 1.0\n", []}]}]} =
+
+    assert %{requirements: [%{requirement: [{"Failed to use \"decimal\" because\n  You specified ~> 1.0 in your mix.exs\n", []}]}]} =
            Release.create(ecto, rel_meta(%{version: "0.1.1", app: "ecto", requirements: [%{name: "decimal", requirement: "~> 1.0"}]}), "") |> extract_errors
   end
 
