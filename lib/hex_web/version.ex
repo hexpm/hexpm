@@ -26,16 +26,16 @@ defmodule HexWeb.Version do
 end
 
 defimpl Poison.Encoder, for: Version do
-  def encode(version, _) do
-    "\"" <> to_string(version) <> "\""
-  end
+  def encode(version, _),
+    do: "\"" <> to_string(version) <> "\""
 end
 
 defimpl Ecto.DataType, for: Version do
-  def cast(version, HexWeb.Version) do
-    {:ok, struct(HexWeb.Version, version)}
-  end
-  def cast(_, _) do
-    :error
-  end
+  def dump(version),
+    do: cast(version, HexWeb.Version)
+
+  def cast(version, HexWeb.Version),
+    do: {:ok, struct(HexWeb.Version, version)}
+  def cast(_, _),
+    do: :error
 end
