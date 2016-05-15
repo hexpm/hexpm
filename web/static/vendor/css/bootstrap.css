@@ -263,7 +263,7 @@ th {
 @font-face {
   font-family: 'Glyphicons Halflings';
 
-  src: url('../fonts/glyphicons-halflings-regular.woff2') format('woff2'), url('../fonts/glyphicons-halflings-regular.woff') format('woff');
+  src: url('../fonts/glyphicons-halflings-regular.woff2?vsn=d&v=fa2772327f55d8198301fdb8bcfc8158') format('woff2'), url('../fonts/glyphicons-halflings-regular.woff?vsn=d&v=448c34a56d699c29117adc64c43affeb') format('woff');
 }
 .glyphicon {
   position: relative;

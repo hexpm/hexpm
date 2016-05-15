@@ -3,7 +3,7 @@ $octicons-version:   "c5a1d52cb40008f6d4ed65bf3f12d508b2fe8c88";
 
 @font-face {
   font-family: 'octicons';
-  src: url('#{$octicons-font-path}/octicons.woff?v=#{$octicons-version}') format('woff');
+  src: url('#{$octicons-font-path}/octicons.woff?vsn=d&v=#{$octicons-version}') format('woff');
   font-weight: normal;
   font-style: normal;
 }
