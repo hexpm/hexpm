@@ -1,6 +1,4 @@
 defmodule HexWeb.CDN do
-  import HexWeb.Utils, only: [defdispatch: 2]
-
   @type service :: atom
   @type key :: String.t
   @type ip :: <<_::32>>
@@ -9,8 +7,8 @@ defmodule HexWeb.CDN do
   @callback purge_key(service, key) :: :ok
   @callback public_ips() :: [{ip, mask}]
 
-  defdispatch purge_key(service, key), to: impl
-  defdispatch public_ips(), to: impl
+  @cdn_impl Application.get_env(:hex_web, :cdn_impl)
 
-  defp impl, do: Application.get_env(:hex_web, :cdn_impl)
+  defdelegate purge_key(service, key), to: @cdn_impl
+  defdelegate public_ips(), to: @cdn_impl
 end

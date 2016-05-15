@@ -1,6 +1,4 @@
 defmodule HexWeb.Store do
-  import HexWeb.Utils, only: [defdispatch: 2]
-
   @type region  :: String.t
   @type bucket  :: String.t
   @type prefix  :: key
@@ -33,24 +31,24 @@ defmodule HexWeb.Store do
   @callback delete_docs_page(key) :: term
   @callback send_docs_page(Plug.Conn.t, key) :: Plug.Conn.t
 
-  defdispatch list_logs(region, bucket, prefix),   to: impl
-  defdispatch get_logs(region, bucket, key),       to: impl
-  defdispatch put_logs(region, bucket, key, body), to: impl
-  defdispatch put_registry(body, signature),       to: impl
-  defdispatch put_registry_signature(body),        to: impl
-  defdispatch send_registry(conn),                 to: impl
-  defdispatch send_registry_signature(conn),       to: impl
-  defdispatch put_release(package, version, body), to: impl
-  defdispatch delete_release(key),                 to: impl
-  defdispatch send_release(conn, key),             to: impl
-  defdispatch put_docs(key, body),                 to: impl
-  defdispatch delete_docs(key),                    to: impl
-  defdispatch send_docs(conn, key),                to: impl
-  defdispatch put_docs_file(key, body),            to: impl
-  defdispatch put_docs_page(key, cdn_key, body),   to: impl
-  defdispatch list_docs_pages(prefix),             to: impl
-  defdispatch delete_docs_page(key),               to: impl
-  defdispatch send_docs_page(conn, key),           to: impl
+  @store_impl Application.get_env(:hex_web, :store_impl)
 
-  defp impl, do: Application.get_env(:hex_web, :store_impl)
+  defdelegate list_logs(region, bucket, prefix),   to: @store_impl
+  defdelegate get_logs(region, bucket, key),       to: @store_impl
+  defdelegate put_logs(region, bucket, key, body), to: @store_impl
+  defdelegate put_registry(body, signature),       to: @store_impl
+  defdelegate put_registry_signature(body),        to: @store_impl
+  defdelegate send_registry(conn),                 to: @store_impl
+  defdelegate send_registry_signature(conn),       to: @store_impl
+  defdelegate put_release(package, version, body), to: @store_impl
+  defdelegate delete_release(key),                 to: @store_impl
+  defdelegate send_release(conn, key),             to: @store_impl
+  defdelegate put_docs(key, body),                 to: @store_impl
+  defdelegate delete_docs(key),                    to: @store_impl
+  defdelegate send_docs(conn, key),                to: @store_impl
+  defdelegate put_docs_file(key, body),            to: @store_impl
+  defdelegate put_docs_page(key, cdn_key, body),   to: @store_impl
+  defdelegate list_docs_pages(prefix),             to: @store_impl
+  defdelegate delete_docs_page(key),               to: @store_impl
+  defdelegate send_docs_page(conn, key),           to: @store_impl
 end
