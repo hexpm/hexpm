@@ -86,6 +86,8 @@ defmodule HexWeb.ThrottleTest do
       assert diff(start) < 10
     end
 
+    :timer.sleep(10)
+
     spawn_link fn ->
       Throttle.wait(context.pid)
       assert_in_delta(90, 110, diff(start))
@@ -106,6 +108,8 @@ defmodule HexWeb.ThrottleTest do
       Throttle.wait(context.pid)
       assert_in_delta(90, 110, diff(start))
     end
+
+    :timer.sleep(10)
 
     # Third time unit
     spawn_link fn ->
