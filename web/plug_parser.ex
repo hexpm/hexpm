@@ -25,8 +25,10 @@ defmodule HexWeb.PlugParser do
 
   defp decode({:ok, body, conn}, "elixir") do
     case HexWeb.ElixirFormat.decode(body) do
-      {:ok, params} ->
-        {:ok, params, conn}
+      {:ok, terms} when is_map(terms) ->
+        {:ok, terms, conn}
+      {:ok, terms} ->
+        {:ok, %{"_json" => terms}, conn}
       {:error, reason} ->
         raise HexWeb.Plugs.BadRequestError, message: reason
     end
@@ -34,8 +36,10 @@ defmodule HexWeb.PlugParser do
 
   defp decode({:ok, body, conn}, "erlang") do
     case HexWeb.ErlangFormat.decode(body) do
-      {:ok, params} ->
-        {:ok, params, conn}
+      {:ok, terms} when is_map(terms) ->
+        {:ok, terms, conn}
+      {:ok, terms} ->
+        {:ok, %{"_json" => terms}, conn}
       {:error, reason} ->
         raise HexWeb.Plugs.BadRequestError, message: reason
     end
@@ -43,8 +47,10 @@ defmodule HexWeb.PlugParser do
 
   defp decode({:ok, body, conn}, "json") do
     case Poison.decode(body) do
-      {:ok, params} ->
-        {:ok, params, conn}
+      {:ok, terms} when is_map(terms) ->
+        {:ok, terms, conn}
+      {:ok, terms} ->
+        {:ok, %{"_json" => terms}, conn}
       _ ->
         raise HexWeb.Plugs.BadRequestError, message: "malformed JSON"
     end
