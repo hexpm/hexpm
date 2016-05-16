@@ -46,7 +46,7 @@ defmodule HexWeb.ControllerHelpers do
       changeset
       |> Ecto.Changeset.traverse_errors(fn
         {"is invalid", [type: type]} ->
-          "expected type #{type}"
+          "expected type #{inspect type}"
         {err, _} ->
           err
       end)
