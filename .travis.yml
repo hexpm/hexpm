@@ -7,7 +7,7 @@ addons:
 script:
   - MIX_ENV=test mix ecto.create
   - mix test --include integration
-  - MIX_ENV=test mix run scripts/sample_data.exs
+  - MIX_ENV=test mix run priv/repo/seeds.exs
 notifications:
   recipients:
     - eric.meadows.jonsson@gmail.com
