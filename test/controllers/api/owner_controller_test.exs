@@ -1,5 +1,5 @@
 defmodule HexWeb.API.OwnerControllerTest do
-  use HexWeb.ConnCase
+  use HexWeb.ConnCase, async: true
 
   alias HexWeb.User
   alias HexWeb.Package

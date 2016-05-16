@@ -1,5 +1,5 @@
 defmodule HexWeb.InstallsControllerTest do
-  use HexWeb.ConnCase
+  use HexWeb.ConnCase, async: true
 
   test "forwarding" do
     conn = conn()

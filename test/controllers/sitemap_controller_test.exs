@@ -1,5 +1,5 @@
 defmodule HexWeb.SitemapControllerTest do
-  use HexWeb.ConnCase
+  use HexWeb.ConnCase, async: true
 
   alias HexWeb.Package
   alias HexWeb.User
