@@ -36,9 +36,11 @@ defmodule HexWeb.RegistryBuilderTest do
 
     Release.create(ex_doc, rel_meta(%{version: "0.0.1", app: "ex_doc"}), "") |> HexWeb.Repo.insert!
     Release.create(decimal, rel_meta(%{version: "0.0.1", app: "decimal"}), "") |> HexWeb.Repo.insert!
-    Release.create(decimal, rel_meta(%{version: "0.0.2", app: "decimal", requirements: [%{name: "ex_doc", requirement: "0.0.1"}]}), "") |> HexWeb.Repo.insert!
-    meta = rel_meta(%{requirements: [%{name: "decimal", requirement: "~> 0.0.1"}, %{name: "ex_doc", requirement: "0.0.1"}],
-                      app: "postgrex", version: "0.0.2"})
+    reqs = [%{name: "ex_doc", app: "ex_doc", requirement: "0.0.1", optional: false}]
+    Release.create(decimal, rel_meta(%{version: "0.0.2", app: "decimal", requirements: reqs}), "") |> HexWeb.Repo.insert!
+    reqs = [%{name: "decimal", app: "decimal", requirement: "~> 0.0.1", optional: false},
+            %{name: "ex_doc", app: "ex_doc", requirement: "0.0.1", optional: false}]
+    meta = rel_meta(%{requirements: reqs, app: "postgrex", version: "0.0.2"})
     Release.create(postgrex, meta, "") |> HexWeb.Repo.insert!
   end
 

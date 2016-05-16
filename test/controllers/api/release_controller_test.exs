@@ -207,7 +207,7 @@ defmodule HexWeb.API.ReleaseControllerTest do
   end
 
   test "create releases with requirements" do
-    reqs = %{decimal: %{requirement: "~> 0.0.1", app: "not_decimal"}}
+    reqs = [%{name: "decimal", requirement: "~> 0.0.1", app: "not_decimal", optional: false}]
     body = create_tar(%{name: :postgrex, version: "0.0.1", requirements: reqs, description: "description"}, [])
     conn = conn()
            |> put_req_header("content-type", "application/octet-stream")
@@ -229,7 +229,7 @@ defmodule HexWeb.API.ReleaseControllerTest do
 
   test "create releases with requirements validates" do
     # invalid requirement
-    reqs = %{decimal: %{requirement: "~> invalid", app: "not_decimal"}}
+    reqs = [%{name: "decimal", requirement: "~> invalid", app: "not_decimal", optional: false}]
     body = create_tar(%{name: :postgrex, version: "0.0.1", requirements: reqs, description: "description"}, [])
     conn = conn()
            |> put_req_header("content-type", "application/octet-stream")
@@ -242,7 +242,7 @@ defmodule HexWeb.API.ReleaseControllerTest do
     assert %{"requirements" => %{"decimal" => "invalid requirement: \"~> invalid\""}} = body["errors"]
 
     # invalid package
-    reqs = %{not_decimal: %{requirement: "~> 1.0", app: "not_decimal"}}
+    reqs = [%{name: "not_decimal", requirement: "~> 1.0", app: "not_decimal", optional: false}]
     body = create_tar(%{name: :postgrex, version: "0.0.1", requirements: reqs, description: "description"}, [])
     conn = conn()
            |> put_req_header("content-type", "application/octet-stream")
@@ -255,7 +255,7 @@ defmodule HexWeb.API.ReleaseControllerTest do
     assert %{"requirements" => %{"not_decimal" => "invalid package"}} = body["errors"]
 
     # conflict
-    reqs = %{decimal: %{requirement: "~> 1.0", app: "not_decimal"}}
+    reqs = [%{name: "decimal", requirement: "~> 1.0", app: "not_decimal", optional: false}]
     body = create_tar(%{name: :postgrex, version: "0.1.0", requirements: reqs, description: "description"}, [])
     conn = conn()
            |> put_req_header("content-type", "application/octet-stream")
@@ -274,8 +274,8 @@ defmodule HexWeb.API.ReleaseControllerTest do
 
     File.touch!(path, {{2000,1,1,},{1,1,1}})
 
-    reqs = %{decimal: %{requirement: "~> 0.0.1"}}
-    body = create_tar(%{name: :postgrex, version: "0.0.1", requirements: reqs, description: "description"}, [])
+    reqs = [%{name: "decimal", app: "decimal", requirement: "~> 0.0.1", optional: false}]
+    body = create_tar(%{name: :postgrex, app: :postgrex, version: "0.0.1", requirements: reqs, description: "description"}, [])
     conn = conn()
            |> put_req_header("content-type", "application/octet-stream")
            |> put_req_header("authorization", key_for("eric"))

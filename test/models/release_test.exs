@@ -36,11 +36,11 @@ defmodule HexWeb.ReleaseTest do
     Release.create(decimal, rel_meta(%{version: "0.0.1", app: "decimal"}), "") |> HexWeb.Repo.insert!
     Release.create(decimal, rel_meta(%{version: "0.0.2", app: "decimal"}), "") |> HexWeb.Repo.insert!
 
-    meta = rel_meta(%{requirements: [%{name: "decimal", requirement: "~> 0.0.1"}],
+    meta = rel_meta(%{requirements: [%{name: "decimal", app: "decimal", requirement: "~> 0.0.1", optional: false}],
                       app: "postgrex", version: "0.0.1"})
     Release.create(postgrex, meta, "") |> HexWeb.Repo.insert!
 
-    meta = rel_meta(%{requirements: [%{name: "decimal", requirement: "~> 0.0.2"}, %{name: "postgrex", requirement: "== 0.0.1"}],
+    meta = rel_meta(%{requirements: [%{name: "decimal", app: "decimal", requirement: "~> 0.0.2", optional: false}, %{name: "postgrex", app: "postgrex", requirement: "== 0.0.1", optional: false}],
                       app: "ecto", version: "0.0.1"})
     Release.create(ecto, meta, "") |> HexWeb.Repo.insert!
 
@@ -63,17 +63,17 @@ defmodule HexWeb.ReleaseTest do
            |> HexWeb.Repo.insert
 
     assert {:ok, _} =
-           Release.create(ecto, rel_meta(%{version: "0.1.0", app: "ecto", requirements: [%{name: "decimal", requirement: "~> 0.1"}]}), "")
+           Release.create(ecto, rel_meta(%{version: "0.1.0", app: "ecto", requirements: [%{name: "decimal", app: "decimal", requirement: "~> 0.1", optional: false}]}), "")
            |> HexWeb.Repo.insert
 
     assert %{version: [{"is invalid", [type: HexWeb.Version]}]} =
            Release.create(ecto, rel_meta(%{version: "0.1", app: "ecto"}), "") |> extract_errors
 
     assert %{requirements: [%{requirement: [{"invalid requirement: \"~> fail\"", []}]}]} =
-           Release.create(ecto, rel_meta(%{version: "0.1.1", app: "ecto", requirements: [%{name: "decimal", requirement: "~> fail"}]}), "") |> extract_errors
+           Release.create(ecto, rel_meta(%{version: "0.1.1", app: "ecto", requirements: [%{name: "decimal", app: "decimal", requirement: "~> fail", optional: false}]}), "") |> extract_errors
 
     assert %{requirements: [%{requirement: [{"Failed to use \"decimal\" because\n  You specified ~> 1.0 in your mix.exs\n", []}]}]} =
-           Release.create(ecto, rel_meta(%{version: "0.1.1", app: "ecto", requirements: [%{name: "decimal", requirement: "~> 1.0"}]}), "") |> extract_errors
+           Release.create(ecto, rel_meta(%{version: "0.1.1", app: "ecto", requirements: [%{name: "decimal", app: "decimal", requirement: "~> 1.0", optional: false}]}), "") |> extract_errors
   end
 
   defp extract_errors(%Ecto.Changeset{} = changeset) do
@@ -97,11 +97,10 @@ defmodule HexWeb.ReleaseTest do
     postgrex = HexWeb.Repo.get_by(Package, name: "postgrex")
 
     Release.create(decimal, rel_meta(%{version: "0.0.1", app: "decimal"}), "") |> HexWeb.Repo.insert!
-    release =
-      Release.create(postgrex, rel_meta(%{version: "0.0.1", app: "postgrex", requirements: [%{name: "decimal", requirement: "~> 0.0.1"}]}), "")
-      |> HexWeb.Repo.insert!
+    reqs = [%{name: "decimal", app: "decimal", requirement: "~> 0.0.1", optional: false}]
+    release = Release.create(postgrex, rel_meta(%{version: "0.0.1", app: "postgrex", requirements: reqs}), "") |> HexWeb.Repo.insert!
 
-    params = params(%{app: "postgrex", requirements: [%{name: "decimal", requirement: ">= 0.0.1"}]})
+    params = params(%{app: "postgrex", requirements: [%{name: "decimal", app: "decimal", requirement: ">= 0.0.1", optional: false}]})
     Release.update(release, params, "") |> HexWeb.Repo.update!
 
     decimal_id = decimal.id
