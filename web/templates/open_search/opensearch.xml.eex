@@ -10,8 +10,8 @@
     <%= static_url(HexWeb.Endpoint, "/favicon.ico") %>
   </Image>
 
-  <Image height="48" width="48" type="image/png">
-     <%= static_url(HexWeb.Endpoint, "/favicon.png") %>
+  <Image height="64" width="64" type="image/png">
+     <%= static_url(HexWeb.Endpoint, "/images/favicon-64.png") %>
   </Image>
 
   <InputEncoding>utf-8</InputEncoding>
