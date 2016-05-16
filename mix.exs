@@ -41,7 +41,7 @@ defmodule HexWeb.Mixfile do
 
   defp aliases do
     ["ecto.setup": ["ecto.create", "ecto.migrate", "run priv/repo/seeds.exs"],
-     "ecto.reset": ["ecto.drop", "ecto.setup"],
+     "ecto.reset": ["ecto.drop", "ecto.create", "ecto.migrate"],
      "test": ["ecto.migrate", "test"]]
   end
 end
