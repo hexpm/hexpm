@@ -46,7 +46,7 @@ defmodule HexWeb.ControllerHelpers do
       changeset
       |> Ecto.Changeset.traverse_errors(fn
         {"is invalid", [type: type]} ->
-          "expected type #{inspect type}"
+          "expected type #{pretty_type(type)}"
         {err, _} ->
           err
       end)
@@ -57,6 +57,11 @@ defmodule HexWeb.ControllerHelpers do
   def validation_failed(conn, errors) do
     render_error(conn, 422, errors: errors_to_map(errors))
   end
+
+  defp pretty_type({:array, type}),
+    do: "list(#{pretty_type(type)})"
+  defp pretty_type(type),
+    do: to_string(type)
 
   # TODO: remove when requirements are handled with cast_assoc
   defp errors_to_map(errors) when is_list(errors) do
