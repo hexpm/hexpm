@@ -48,7 +48,13 @@ mix ecto.migrate HexWeb.Repo
 Using the following command you can seed your local HexWeb instance with some sample data:
 
 ```shell
-mix run scripts/sample_data.exs
+mix run priv/repo/seeds.exs
+```
+
+Also, all of the steps above (creating, migrating, and seeding the database) can be achieved by running:
+
+```shell
+mix ecto.setup
 ```
 
 ### Running HexWeb
