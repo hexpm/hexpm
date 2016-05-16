@@ -1,5 +1,5 @@
 defmodule HexWeb.UserTest do
-  use HexWeb.ModelCase
+  use HexWeb.ModelCase, async: true
 
   alias HexWeb.Auth
   alias HexWeb.User

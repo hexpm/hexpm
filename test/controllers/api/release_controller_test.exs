@@ -1,5 +1,5 @@
 defmodule HexWeb.API.ReleaseControllerTest do
-  use HexWeb.ConnCase
+  use HexWeb.ConnCase, async: true
 
   alias HexWeb.User
   alias HexWeb.Package

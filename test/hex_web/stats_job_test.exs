@@ -1,5 +1,5 @@
 defmodule HexWeb.StatsJobTest do
-  use HexWeb.ModelCase
+  use HexWeb.ModelCase, async: true
 
   alias HexWeb.User
   alias HexWeb.Package

@@ -1,5 +1,5 @@
 defmodule HexWeb.API.UserControllerTest do
-  use HexWeb.ConnCase
+  use HexWeb.ConnCase, async: true
 
   alias HexWeb.User
 
@@ -75,7 +75,7 @@ defmodule HexWeb.API.UserControllerTest do
     assert conn.resp_body =~ "Account confirmed"
 
     # initiate reset request
-    conn = post(conn(), "api/users/#{user.username}/reset", %{}) 
+    conn = post(conn(), "api/users/#{user.username}/reset", %{})
     assert conn.status == 204
 
     # check email was sent with correct token

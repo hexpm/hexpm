@@ -1,5 +1,5 @@
 defmodule HexWeb.TestControllerTest do
-  use HexWeb.ConnCase
+  use HexWeb.ConnCase, async: true
 
   alias HexWeb.User
   alias HexWeb.Package

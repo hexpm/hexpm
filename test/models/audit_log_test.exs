@@ -1,5 +1,5 @@
 defmodule HexWeb.AuditLogTest do
-  use HexWeb.ModelCase
+  use HexWeb.ModelCase, async: true
 
   test "build" do
     actor = %HexWeb.User{id: 1}

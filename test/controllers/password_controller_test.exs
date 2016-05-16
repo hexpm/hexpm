@@ -1,15 +1,15 @@
 defmodule HexWeb.PasswordControllerTest do
-  use HexWeb.ConnCase
+  use HexWeb.ConnCase, async: true
 
   alias HexWeb.Auth
   alias HexWeb.User
 
   test "reset user password" do
     # create user and test with current password
-    user = 
+    user =
       User.build(%{username: "eric", email: "eric@mail.com", password: "hunter42"}, true)
       |> HexWeb.Repo.insert!
-    
+
     assert {:ok, %User{username: "eric"}} = Auth.password_auth("eric", "hunter42")
 
     # initiate password reset (usually done via api)
@@ -26,4 +26,3 @@ defmodule HexWeb.PasswordControllerTest do
     assert {:ok, %User{username: "eric"}} = Auth.password_auth("eric", "abcd1234")
   end
 end
-

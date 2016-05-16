@@ -15,7 +15,8 @@ config :hex_web, HexWeb.Repo,
   password: "postgres",
   database: "hexweb_test",
   hostname: "localhost",
-  pool: Ecto.Adapters.SQL.Sandbox
+  pool: Ecto.Adapters.SQL.Sandbox,
+  pool_size: 10
 
 config :logger,
   level: :error
