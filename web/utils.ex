@@ -246,12 +246,4 @@ defmodule HexWeb.Utils do
       for part <- parts, into: <<>>, do: <<part>>
     end
   end
-
-  defmacro defdispatch({function, _, args}, to: target) do
-    quote do
-      def unquote(function)(unquote_splicing(args)) do
-        unquote(target).unquote(function)(unquote_splicing(args))
-      end
-    end
-  end
 end
