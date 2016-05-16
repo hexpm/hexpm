@@ -1,5 +1,5 @@
 defmodule HexWeb.API.KeyControllerTest do
-  use HexWeb.ConnCase, async: true
+  use HexWeb.ConnCase
 
   alias HexWeb.Key
   alias HexWeb.User

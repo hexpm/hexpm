@@ -1,5 +1,5 @@
 defmodule HexWeb.KeyTest do
-  use HexWeb.ModelCase, async: true
+  use HexWeb.ModelCase
 
   alias HexWeb.User
   alias HexWeb.Key
