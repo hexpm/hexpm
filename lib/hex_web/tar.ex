@@ -108,9 +108,13 @@ defmodule HexWeb.Tar do
     meta
     |> try_update("links", &try_into_map(&1))
     |> try_update("requirements", fn reqs ->
-         try_into_map(reqs, fn {key, value} ->
-           {key, try_into_map(value)}
-         end)
+         if is_list(reqs) and is_list(List.first(reqs)) do
+           Enum.map(reqs, &try_into_map/1)
+         else
+           try_into_map(reqs, fn {key, value} ->
+             {key, try_into_map(value)}
+           end)
+         end
        end)
   end
 
