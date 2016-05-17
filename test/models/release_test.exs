@@ -58,22 +58,23 @@ defmodule HexWeb.ReleaseTest do
     decimal = HexWeb.Repo.get_by!(Package, name: "decimal")
     ecto = HexWeb.Repo.get_by!(Package, name: "ecto")
 
-    assert {:ok, _} =
-           Release.create(decimal, rel_meta(%{version: "0.1.0", app: "decimal", requirements: []}), "")
-           |> HexWeb.Repo.insert
+    Release.create(decimal, rel_meta(%{version: "0.1.0", app: "decimal", requirements: []}), "")
+    |> HexWeb.Repo.insert!
 
-    assert {:ok, _} =
-           Release.create(ecto, rel_meta(%{version: "0.1.0", app: "ecto", requirements: [%{name: "decimal", app: "decimal", requirement: "~> 0.1", optional: false}]}), "")
-           |> HexWeb.Repo.insert
+    reqs = [%{name: "decimal", app: "decimal", requirement: "~> 0.1", optional: false}]
+    Release.create(ecto, rel_meta(%{version: "0.1.0", app: "ecto", requirements: reqs}), "")
+    |> HexWeb.Repo.insert!
 
     assert %{version: [{"is invalid", [type: HexWeb.Version]}]} =
            Release.create(ecto, rel_meta(%{version: "0.1", app: "ecto"}), "") |> extract_errors
 
+    reqs = [%{name: "decimal", app: "decimal", requirement: "~> fail", optional: false}]
     assert %{requirements: [%{requirement: [{"invalid requirement: \"~> fail\"", []}]}]} =
-           Release.create(ecto, rel_meta(%{version: "0.1.1", app: "ecto", requirements: [%{name: "decimal", app: "decimal", requirement: "~> fail", optional: false}]}), "") |> extract_errors
+           Release.create(ecto, rel_meta(%{version: "0.1.1", app: "ecto", requirements: reqs}), "") |> extract_errors
 
+    reqs = [%{name: "decimal", app: "decimal", requirement: "~> 1.0", optional: false}]
     assert %{requirements: [%{requirement: [{"Failed to use \"decimal\" because\n  You specified ~> 1.0 in your mix.exs\n", []}]}]} =
-           Release.create(ecto, rel_meta(%{version: "0.1.1", app: "ecto", requirements: [%{name: "decimal", app: "decimal", requirement: "~> 1.0", optional: false}]}), "") |> extract_errors
+           Release.create(ecto, rel_meta(%{version: "0.1.1", app: "ecto", requirements: reqs}), "") |> extract_errors
   end
 
   defp extract_errors(%Ecto.Changeset{} = changeset) do

@@ -40,7 +40,7 @@ defmodule HexWeb.BlockAddressTest do
     assert conn.status == 403
     assert conn.resp_body == Poison.encode!(%{status: 403, message: "Blocked"})
 
-    {:ok, _} = HexWeb.Repo.delete(blocked_address)
+    HexWeb.Repo.delete!(blocked_address)
     HexWeb.BlockAddress.reload
 
     conn = request({2, 2, 2, 2})

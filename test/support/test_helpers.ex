@@ -31,22 +31,33 @@ defmodule HexWeb.TestHelpers do
 
   def rel_meta(params) do
     params = params(params)
-    meta = Map.put_new(params, "build_tools", ["mix"])
+    meta =
+      params
+      |> Map.put_new("build_tools", ["mix"])
+      |> Map.update("requirements", [], &requirements_meta/1)
     Map.put(params, "meta", meta)
   end
 
   def pkg_meta(meta) do
     params = params(meta)
-    meta =
-      params
-      |> Map.put_new("licenses", ["Apache"])
+    meta = Map.put_new(params, "licenses", ["Apache"])
     Map.put(params, "meta", meta)
   end
 
-  def params(params) do
+  def params(params) when is_map(params) do
     Enum.into(params, %{}, fn
-      {binary, value} when is_binary(binary) -> {binary, value}
-      {atom, value} when is_atom(atom) -> {Atom.to_string(atom), value}
+      {binary, value} when is_binary(binary) -> {binary, params(value)}
+      {atom, value} when is_atom(atom) -> {Atom.to_string(atom), params(value)}
+    end)
+  end
+  def params(params) when is_list(params), do: Enum.map(params, &params/1)
+  def params(other), do: other
+
+  defp requirements_meta(list) do
+    Enum.map(list, fn req ->
+      req
+      |> Map.put_new("optional", false)
+      |> Map.put_new("app", req["name"])
     end)
   end
 end
