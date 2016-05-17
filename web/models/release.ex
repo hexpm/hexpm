@@ -24,7 +24,7 @@ defmodule HexWeb.Release do
   defp changeset(release, :update, params) do
     cast(release, params, ~w(version))
     |> cast_embed(:meta, required: true)
-    |> Requirement.create_all
+    |> Requirement.build_all
     |> validate_version(:version)
   end
 
@@ -43,7 +43,8 @@ defmodule HexWeb.Release do
 
   def delete(release, opts \\ []) do
     force? = Keyword.get(opts, :force, false)
-    change(release) |> validate_editable(:delete, force?)
+    change(release)
+    |> validate_editable(:delete, force?)
   end
 
   defp validate_editable(changeset, action, force)

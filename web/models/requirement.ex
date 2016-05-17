@@ -5,7 +5,7 @@ defmodule HexWeb.Requirement do
   schema "requirements" do
     field :app, :string
     field :requirement, :string
-    field :optional, :boolean, default: false
+    field :optional, :boolean
 
     # The name of the dependency used to find the package
     field :name, :string, virtual: true
@@ -14,29 +14,22 @@ defmodule HexWeb.Requirement do
     belongs_to :dependency, Package
   end
 
-  def changeset(requirement, params \\ %{}) do
-    changeset = cast(requirement, params, ~w(name app requirement optional))
-
-    name = changeset.changes.name
-    app = Map.get(changeset.changes, :app, name)
-    dep = HexWeb.Repo.get_by(Package, name: name)
-
-    changeset
-    |> put_change(:app, app)
-    |> put_assoc(:dependency, dep)
-    |> validate_requirement(dep)
+  def changeset(requirement, params, dependencies) do
+    cast(requirement, params, ~w(name app requirement optional))
+    |> put_assoc(:dependency, dependencies[params["name"]])
+    |> validate_required(~w(name app requirement optional)a)
+    |> validate_required(:dependency, message: "package does not exist")
+    |> validate_requirement(:requirement)
   end
 
-  defp validate_requirement(changeset, dep) do
-    validate_change(changeset, :requirement, fn key, req ->
+  defp validate_requirement(changeset, field) do
+    validate_change(changeset, field, fn key, req ->
       cond do
         is_nil(req) ->
           # Temporary friendly error message until people update to hex 0.9.1
           [{key, {"invalid requirement: #{inspect req}, use \">= 0.0.0\" instead", []}}]
         not valid?(req) ->
           [{key, {"invalid requirement: #{inspect req}", []}}]
-        !dep ->
-          [{key, {"invalid package", []}}]
         true ->
           []
       end
@@ -45,17 +38,18 @@ defmodule HexWeb.Requirement do
 
   # TODO: Raise validation error if field is not set
   #       https://github.com/elixir-lang/ecto/issues/1433
-  def create_all(release_changeset) do
+  def build_all(release_changeset) do
+    dependencies = preload_dependencies(release_changeset.params["requirements"])
+
     release_changeset =
       release_changeset
-      |> cast_assoc(:requirements)
-
-    requirements =
-      get_change(release_changeset, :requirements, [])
-      |> Enum.filter(& &1.changes != %{})
-      |> normalize
+      |> cast_assoc(:requirements, with: &changeset(&1, &2, dependencies))
 
     if release_changeset.valid? do
+      requirements =
+        get_change(release_changeset, :requirements, [])
+        |> Enum.map(&Ecto.Changeset.apply_changes/1)
+
       build_tools = get_field(release_changeset, :meta).build_tools
 
       {time, result} = :timer.tc(fn ->
@@ -63,12 +57,12 @@ defmodule HexWeb.Requirement do
           :ok ->
             release_changeset
           {:error, reason} ->
-            changes = Map.put(release_changeset.changes, :requirements,
-              Enum.map(release_changeset.changes.requirements, fn req_changeset ->
+            release_changeset = update_in(release_changeset.changes.requirements, fn req_changesets ->
+              Enum.map(req_changesets, fn req_changeset ->
                 add_error(req_changeset, :requirement, reason)
               end)
-            )
-            %{release_changeset | valid?: false, changes: changes}
+            end)
+            %{release_changeset | valid?: false}
         end
       end)
 
@@ -77,13 +71,8 @@ defmodule HexWeb.Requirement do
     else
       release_changeset
     end
-  end
 
-  defp normalize(requirements) do
-    Enum.map(requirements, fn
-      %{changes: %{} = req} ->
-        req
-    end)
+    # TODO: Remap requirements errors to hex http spec
   end
 
   defp valid?(req) do
@@ -120,6 +109,14 @@ defmodule HexWeb.Requirement do
       {name, app, req, config}
     end)
   end
+
+  defp preload_dependencies(requirements) when is_list(requirements) do
+    names = Enum.map(requirements, & &1["name"]) |> Enum.filter(&is_binary/1)
+    from(p in Package, where: p.name in ^names, select: {p.name, p})
+    |> HexWeb.Repo.all
+    |> Enum.into(%{})
+  end
+  defp preload_dependencies(_requirements), do: %{}
 
   defp guess_config(build_tools) do
     cond do

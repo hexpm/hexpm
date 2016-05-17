@@ -252,7 +252,7 @@ defmodule HexWeb.API.ReleaseControllerTest do
     assert conn.status == 422
     body = Poison.decode!(conn.resp_body)
     assert body["message"] == "Validation error(s)"
-    assert %{"requirements" => %{"not_decimal" => "invalid package"}} = body["errors"]
+    assert %{"requirements" => %{"not_decimal" => "package does not exist"}} = body["errors"]
 
     # conflict
     reqs = [%{name: "decimal", requirement: "~> 1.0", app: "not_decimal", optional: false}]
