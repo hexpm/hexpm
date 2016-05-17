@@ -89,8 +89,12 @@ defmodule HexWeb.API.ReleaseController do
 
   defp create_release(conn, package, user, checksum, meta, body) do
     version = meta["version"]
-    release_params = %{"app" => meta["app"], "version" => version,
-                       "requirements" => meta["requirements"], "meta" => meta}
+    release_params = %{
+      "app" => meta["app"],
+      "version" => version,
+      "requirements" => meta["requirements"],
+      "meta" => meta}
+    |> normalize_params
 
     if release = HexWeb.Repo.get_by(assoc(package, :releases), version: version) do
       update(conn, package, release, release_params, checksum, user, body)
@@ -118,8 +122,6 @@ defmodule HexWeb.API.ReleaseController do
   end
 
   defp create(conn, package, params, checksum, user, body) do
-    params = normalize_params(params)
-
     multi =
       Ecto.Multi.new
       |> Ecto.Multi.insert(:release, Release.create(package, params, checksum))
@@ -156,9 +158,9 @@ defmodule HexWeb.API.ReleaseController do
 
   defp normalize_errors(%{changes: %{requirements: requirements}} = changeset) do
     requirements =
-      requirements
-      |> Enum.map(fn %{changes: %{name: name}, errors: [{_, err}]} = req ->
-        %{req | errors: %{name => err}}
+      Enum.map(requirements, fn
+        %{changes: %{name: name}, errors: [{_, err}]} = req ->
+          %{req | errors: %{name => err}}
       end)
 
     put_in(changeset.changes.requirements, requirements)
