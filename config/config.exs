@@ -77,12 +77,7 @@ config :phoenix, :generators,
 config :plug, :mimes, %{
   "application/vnd.hex+json"   => ["json"],
   "application/vnd.hex+elixir" => ["elixir"],
-  "application/vnd.hex+erlang" => ["erlang"],
-
-  # TODO: Remove this from the spec, currently a workaround for some clients
-  "application/vnd.hex.beta+json"   => ["json"],
-  "application/vnd.hex.beta+elixir" => ["elixir"],
-  "application/vnd.hex.beta+erlang" => ["erlang"]
+  "application/vnd.hex+erlang" => ["erlang"]
 }
 
 config :phoenix, :format_encoders,
