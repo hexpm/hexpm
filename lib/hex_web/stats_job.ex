@@ -44,11 +44,11 @@ defmodule HexWeb.StatsJob do
     {:ok, date}   = Ecto.Type.load(Ecto.Date, date)
 
     ips         = HexWeb.CDN.public_ips
+    # TODO: Parallel
     s3_dict     = process_buckets(buckets, s3_prefix, @s3_regex, ips)
     fastly_dict = process_buckets(buckets, fastly_prefix, @fastly_regex, ips)
     dict        = merge_dicts(s3_dict, fastly_dict)
 
-    # TODO: Map/Reduce
     dict = cap_on_ip(dict, max_downloads_per_ip)
     packages = packages()
     releases = releases()
@@ -62,15 +62,13 @@ defmodule HexWeb.StatsJob do
           rel_id = releases[{pkg_id, version}]
 
           if rel_id do
-            # TODO: This is inserting null ids with ecto 1.0, make sure this
-            # is fixed 2.0 or use a changeset
-            %Download{release_id: rel_id, downloads: count, day: date}
+            Ecto.Changeset.change(%Download{}, %{release_id: rel_id, downloads: count, day: date})
             |> HexWeb.Repo.insert!
           end
         end)
 
-        HexWeb.PackageDownload.refresh
-        HexWeb.ReleaseDownload.refresh
+        HexWeb.Repo.refresh_view(HexWeb.PackageDownload)
+        HexWeb.Repo.refresh_view(HexWeb.ReleaseDownload)
       end)
     end
 
@@ -89,6 +87,7 @@ defmodule HexWeb.StatsJob do
   end
 
   defp process_buckets(buckets, prefix, regex, ips) do
+    # TODO: Parallel
     Enum.reduce(buckets, %{}, fn [bucket, region], dict ->
       keys = HexWeb.Store.list_logs(region, bucket, prefix)
       process_keys(region, bucket, regex, ips, keys, dict)
@@ -96,6 +95,7 @@ defmodule HexWeb.StatsJob do
   end
 
   defp process_keys(region, bucket, regex, ips, keys, dict) do
+    # TODO: Parallel
     Enum.reduce(keys, dict, fn key, dict ->
       HexWeb.Store.get_logs(region, bucket, key)
       |> maybe_unzip(key)

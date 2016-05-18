@@ -112,6 +112,6 @@ HexWeb.Repo.transaction(fn ->
     end)
   end
 
-  PackageDownload.refresh
-  ReleaseDownload.refresh
+  HexWeb.Repo.refresh_view(PackageDownload)
+  HexWeb.Repo.refresh_view(ReleaseDownload)
 end)

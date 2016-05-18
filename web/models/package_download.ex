@@ -8,14 +8,6 @@ defmodule HexWeb.PackageDownload do
     field :downloads, :integer
   end
 
-  # TODO: Figure out a place to move this
-  def refresh do
-    Ecto.Adapters.SQL.query(
-       HexWeb.Repo,
-       "REFRESH MATERIALIZED VIEW package_downloads",
-       [])
-  end
-
   def top(view, count) do
     from(pd in PackageDownload,
          join: p in assoc(pd, :package),
