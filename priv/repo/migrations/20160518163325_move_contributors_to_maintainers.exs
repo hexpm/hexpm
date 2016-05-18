@@ -5,9 +5,9 @@ defmodule HexWeb.Repo.Migrations.MoveContributorsToMaintainers do
     execute """
       UPDATE packages
         SET meta = json_object_delete_keys(
-                    json_object_set_key(meta::json, 'maintainers', meta->'contributors'),
-                    'contributors')
-        WHERE meta->'contributors' IS NOT NULL
+                     json_object_set_key(meta::json, 'maintainers', meta->'contributors'),
+                     'contributors')::jsonb
+        WHERE (meta->'contributors') IS NOT NULL
     """
   end
 
@@ -15,9 +15,9 @@ defmodule HexWeb.Repo.Migrations.MoveContributorsToMaintainers do
     execute """
       UPDATE packages
         SET meta = json_object_delete_keys(
-                    json_object_set_key(meta::json, 'contributors', meta->'maintainers'),
-                    'maintainers')::jsonb
-        WHERE meta->'maintainers' IS NOT NULL
+                     json_object_set_key(meta::json, 'contributors', meta->'maintainers'),
+                     'maintainers')::jsonb
+        WHERE (meta->'maintainers') IS NOT NULL
     """
   end
 end
