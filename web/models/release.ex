@@ -101,18 +101,14 @@ defmodule HexWeb.Release do
   end
 
   def requirements(release) do
-    # TODO: ecto should support %{req | ...} syntax
     from(req in assoc(release, :requirements),
          join: p in assoc(req, :dependency),
          order_by: p.name,
-         select: %{id: req.id, release_id: req.release_id, dependency_id: p.id,
-                   name: p.name, app: req.app, requirement: req.requirement,
-                   optional: req.optional})
+         select: %{req | name: p.name})
   end
 
   def count do
-    from(r in Release,
-         select: count(r.id))
+    from(r in Release, select: count(r.id))
   end
 
   def recent(count) do
