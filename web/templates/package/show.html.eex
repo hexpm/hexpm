@@ -1,7 +1,6 @@
 <%
 description = @package.meta.description
-# TODO: Drop support for contributors (maintainers released in 0.9.0, date TBD)
-maintains = @package.meta.maintainers || @package.meta.contributors || []
+maintains = @package.meta.maintainers || []
 licenses = @package.meta.licenses || []
 links = Enum.to_list(@package.meta.links || [])
 build_tools = @current_release && @current_release.meta.build_tools || []

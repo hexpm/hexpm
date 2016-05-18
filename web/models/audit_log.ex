@@ -39,6 +39,6 @@ defmodule HexWeb.AuditLog do
   defp fields(%HexWeb.Package{}), do: [:id, :name]
   defp fields(%HexWeb.Release{}), do: [:id, :version, :checksum, :has_docs, :package_id]
   defp fields(%HexWeb.User{}), do: [:id, :username, :email, :confirmed]
-  defp fields(%HexWeb.PackageMetadata{}), do: [:contributors, :description, :licenses, :links, :maintainers]
+  defp fields(%HexWeb.PackageMetadata{}), do: [:description, :licenses, :links, :maintainers]
   defp fields(%HexWeb.ReleaseMetadata{}), do: [:app, :build_tools, :elixir]
 end
