@@ -91,7 +91,6 @@ defmodule HexWeb.PackageController do
     ] ++ docs_assigns
   end
 
-  # TODO: Clean up
   defp fetch_packages(page, packages_per_page, search, sort) do
     packages = Package.all(page, packages_per_page, search, sort)
                |> HexWeb.Repo.all

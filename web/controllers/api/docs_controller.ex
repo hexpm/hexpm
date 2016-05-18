@@ -222,7 +222,6 @@ defmodule HexWeb.API.DocsController do
       publish_sitemap()
     end
 
-    # TODO: Send mails
     HexWeb.Utils.task_with_failure(task, fn -> nil end, fn _ -> nil end)
   end
 

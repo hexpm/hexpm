@@ -56,7 +56,6 @@ defmodule HexWeb.Router do
     get "hexsearch.xml",   OpenSearchController, :opensearch
     get "installs/hex.ez", InstallerController,  :get_archive
 
-    # TODO: Check if we can replace this
     if Mix.env in [:dev, :test, :hex] do
       get "registry.ets.gz",              TestController, :get_registry
       get "registry.ets.gz.signed",       TestController, :get_registry_signed

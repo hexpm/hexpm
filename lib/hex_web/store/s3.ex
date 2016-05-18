@@ -118,9 +118,9 @@ defmodule HexWeb.Store.S3 do
     Phoenix.Controller.redirect(conn, external: url)
   end
 
+  # TODO: verify cache-control, surrogate-key and purge for everything we upload
   def upload(bucket, path, data, opts \\ []) do
     opts = Keyword.put(opts, :acl, :public_read)
-    # TODO: cache
     Application.get_env(:hex_web, bucket)
     |> S3.put_object!(path, data, opts)
   end

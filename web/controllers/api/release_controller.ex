@@ -187,7 +187,6 @@ defmodule HexWeb.API.ReleaseController do
 
     # TODO: Revert database changes
 
-    # TODO: Move to mailer service
     HexWeb.Mailer.send(
       "publish_fail.html",
       "Hex.pm - ERROR when publishing #{package.name} v#{version}",
@@ -217,7 +216,6 @@ defmodule HexWeb.API.ReleaseController do
       HexWeb.RegistryBuilder.rebuild
     end
 
-    # TODO: Send mails
     HexWeb.Utils.task_with_failure(task, fn -> nil end, fn _ -> nil end)
   end
 end
