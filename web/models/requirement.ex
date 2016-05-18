@@ -37,7 +37,6 @@ defmodule HexWeb.Requirement do
   end
 
   # TODO: Raise validation error if field is not set
-  #       https://github.com/elixir-lang/ecto/issues/1433
   def build_all(release_changeset) do
     dependencies = preload_dependencies(release_changeset.params["requirements"])
 

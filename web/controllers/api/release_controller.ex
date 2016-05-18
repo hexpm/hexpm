@@ -159,8 +159,9 @@ defmodule HexWeb.API.ReleaseController do
   defp normalize_errors(%{changes: %{requirements: requirements}} = changeset) do
     requirements =
       Enum.map(requirements, fn
-        %{changes: %{name: name}, errors: [{_, err}]} = req ->
-          %{req | errors: %{name => err}}
+        %{errors: errors} = req ->
+          name = Ecto.Changeset.get_change(req, :name)
+          %{req | errors: for({_, v} <- errors, do: {name, v}, into: %{})}
       end)
 
     put_in(changeset.changes.requirements, requirements)
