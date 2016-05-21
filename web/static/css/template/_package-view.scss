@@ -3,6 +3,13 @@
   @include font-size(50 , $base-line-height);
   font-weight: 300;
   padding: 20px 0 0 0;
+
+  word-wrap: break-word;
+
+  a {
+    line-height: 50px;
+  }
+
   .version {
     color: #969da1;
     @include font-size(20 , $base-line-height);
