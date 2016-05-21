@@ -62,7 +62,8 @@
       a {
         color: #aa2c3f;
         @include font-size(26 , $base-line-height);
-        display: inline-block;
+        line-height: 25px;
+        word-wrap: break-word;
       }
       .version {
         @include font-size(18 , $base-line-height);
