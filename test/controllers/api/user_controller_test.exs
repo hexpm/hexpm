@@ -4,7 +4,7 @@ defmodule HexWeb.API.UserControllerTest do
   alias HexWeb.User
 
   setup do
-    User.create(%{username: "eric", email: "eric@mail.com", password: "eric"}, true)
+    User.build(%{username: "eric", email: "eric@mail.com", password: "eric"}, true)
     |> HexWeb.Repo.insert!
     :ok
   end

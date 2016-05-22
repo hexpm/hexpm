@@ -13,4 +13,4 @@ unless user do
   System.halt(1)
 end
 
-HexWeb.Package.create_owner(package, user) |> HexWeb.Repo.insert!
+HexWeb.Package.build_owner(package, user) |> HexWeb.Repo.insert!

@@ -23,7 +23,7 @@ defmodule HexWeb.InstallsControllerTest do
                 {"0.2.1", ["1.0.0"]}]
 
     Enum.each(versions, fn {hex, elixirs} ->
-      HexWeb.Install.create(hex, elixirs)
+      HexWeb.Install.build(hex, elixirs)
       |> HexWeb.Repo.insert
     end)
 

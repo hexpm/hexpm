@@ -28,7 +28,7 @@ defmodule HexWeb.Release do
     |> validate_version(:version)
   end
 
-  def create(package, params, checksum) do
+  def build(package, params, checksum) do
     build_assoc(package, :releases)
     |> changeset(:create, params)
     |> put_change(:checksum, String.upcase(checksum))

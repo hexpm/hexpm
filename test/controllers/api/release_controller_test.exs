@@ -7,9 +7,9 @@ defmodule HexWeb.API.ReleaseControllerTest do
   alias HexWeb.RegistryBuilder
 
   setup do
-    user = User.create(%{username: "eric", email: "eric@mail.com", password: "eric"}, true) |> HexWeb.Repo.insert!
-    pkg = Package.create(user, pkg_meta(%{name: "decimal", description: "Arbitrary precision decimal aritmetic for Elixir."})) |> HexWeb.Repo.insert!
-    Release.create(pkg, rel_meta(%{version: "0.0.1", app: "decimal"}), "") |> HexWeb.Repo.insert!
+    user = User.build(%{username: "eric", email: "eric@mail.com", password: "eric"}, true) |> HexWeb.Repo.insert!
+    pkg = Package.build(user, pkg_meta(%{name: "decimal", description: "Arbitrary precision decimal aritmetic for Elixir."})) |> HexWeb.Repo.insert!
+    Release.build(pkg, rel_meta(%{version: "0.0.1", app: "decimal"}), "") |> HexWeb.Repo.insert!
     :ok
   end
 
@@ -37,7 +37,7 @@ defmodule HexWeb.API.ReleaseControllerTest do
 
   test "update package" do
     user = HexWeb.Repo.get_by!(User, username: "eric")
-    Package.create(user, pkg_meta(%{name: "ecto", description: "DSL"})) |> HexWeb.Repo.insert!
+    Package.build(user, pkg_meta(%{name: "ecto", description: "DSL"})) |> HexWeb.Repo.insert!
 
     meta = %{name: "ecto", version: "1.0.0", description: "awesomeness"}
     conn = conn()
@@ -65,7 +65,7 @@ defmodule HexWeb.API.ReleaseControllerTest do
 
   test "update package authorizes" do
     HexWeb.Repo.get_by!(User, username: "eric")
-    |> Package.create(pkg_meta(%{name: "ecto", description: "DSL"}))
+    |> Package.build(pkg_meta(%{name: "ecto", description: "DSL"}))
 
     meta = %{name: "ecto", version: "1.0.0", description: "Domain-specific language."}
     conn = conn()

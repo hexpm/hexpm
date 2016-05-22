@@ -5,7 +5,7 @@ case System.argv do
     IO.puts "Hex:     " <> hex
     IO.puts "Elixirs: " <> Enum.join(elixirs, ", ")
 
-    HexWeb.Install.create(hex, elixirs) |> HexWeb.Repo.insert
+    HexWeb.Install.build(hex, elixirs) |> HexWeb.Repo.insert
 
   _ ->
     :ok

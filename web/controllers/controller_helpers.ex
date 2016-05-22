@@ -193,6 +193,6 @@ defmodule HexWeb.ControllerHelpers do
     audit(user, action, params)
   end
   def audit(user, action, params) do
-    Ecto.Changeset.change(HexWeb.AuditLog.create(user, action, params), %{})
+    Ecto.Changeset.change(HexWeb.AuditLog.build(user, action, params), %{})
   end
 end

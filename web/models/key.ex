@@ -25,7 +25,7 @@ defmodule HexWeb.Key do
     |> prepare_changes(&unique_name/1)
   end
 
-  def create(user, params) do
+  def build(user, params) do
     build_assoc(user, :keys)
     |> changeset(params)
   end

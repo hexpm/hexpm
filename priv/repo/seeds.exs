@@ -4,7 +4,7 @@ defmodule SampleData do
   end
 
   def create_user(username, email, password) do
-    HexWeb.User.create(%{username: username, email: email, password: password}, true)
+    HexWeb.User.build(%{username: username, email: email, password: password}, true)
     |> HexWeb.Repo.insert!
   end
 
@@ -34,7 +34,7 @@ HexWeb.Repo.transaction(fn ->
 
   unless eric == nil do
     decimal =
-      Package.create(eric, %{
+      Package.build(eric, %{
         "name" => "decimal",
         "meta" => %{
           "maintainers" => ["Eric Meadows-Jönsson"],
@@ -44,12 +44,12 @@ HexWeb.Repo.transaction(fn ->
           "description" => "Arbitrary precision decimal arithmetic for Elixir"}})
       |> HexWeb.Repo.insert!
 
-    Release.create(decimal, %{"version" => "0.0.1", "app" => "decimal", "meta" => %{"app" => "decimal", "build_tools" =>  ["mix"]}}, SampleData.checksum("decimal 0.0.1")) |> HexWeb.Repo.insert!
-    Release.create(decimal, %{"version" => "0.0.2", "app" => "decimal", "meta" => %{"app" => "decimal", "build_tools" =>  ["mix"]}}, SampleData.checksum("decimal 0.0.2")) |> HexWeb.Repo.insert!
-    Release.create(decimal, %{"version" => "0.1.0", "app" => "decimal", "meta" => %{"app" => "decimal", "build_tools" =>  ["mix"]}}, SampleData.checksum("decimal 0.1.0")) |> HexWeb.Repo.insert!
+    Release.build(decimal, %{"version" => "0.0.1", "app" => "decimal", "meta" => %{"app" => "decimal", "build_tools" =>  ["mix"]}}, SampleData.checksum("decimal 0.0.1")) |> HexWeb.Repo.insert!
+    Release.build(decimal, %{"version" => "0.0.2", "app" => "decimal", "meta" => %{"app" => "decimal", "build_tools" =>  ["mix"]}}, SampleData.checksum("decimal 0.0.2")) |> HexWeb.Repo.insert!
+    Release.build(decimal, %{"version" => "0.1.0", "app" => "decimal", "meta" => %{"app" => "decimal", "build_tools" =>  ["mix"]}}, SampleData.checksum("decimal 0.1.0")) |> HexWeb.Repo.insert!
 
     postgrex =
-      Package.create(eric, %{
+      Package.build(eric, %{
         "name" => "postgrex",
         "meta" => %{
           "maintainers" => ["Eric Meadows-Jönsson", "José Valim"],
@@ -58,16 +58,16 @@ HexWeb.Repo.transaction(fn ->
           "description" => lorem}})
       |> HexWeb.Repo.insert!
 
-    Release.create(postgrex, %{"version" => "0.0.1", "app" => "postgrex", "meta" => %{"app" => "postgrex", "build_tools" => ["mix"]}}, SampleData.checksum("postgrex 0.0.1")) |> HexWeb.Repo.insert!
+    Release.build(postgrex, %{"version" => "0.0.1", "app" => "postgrex", "meta" => %{"app" => "postgrex", "build_tools" => ["mix"]}}, SampleData.checksum("postgrex 0.0.1")) |> HexWeb.Repo.insert!
     reqs = [%{"name" => "decimal", "app" => "decimal", "requirement" => "~> 0.0.1", "optional" => false}]
-    Release.create(postgrex, %{"version" => "0.0.2", "app" => "postgrex", "requirements" => reqs, "meta" => %{"app" => "postgrex", "build_tools" => ["mix"]}}, SampleData.checksum("postgrex 0.0.2")) |> HexWeb.Repo.insert!
+    Release.build(postgrex, %{"version" => "0.0.2", "app" => "postgrex", "requirements" => reqs, "meta" => %{"app" => "postgrex", "build_tools" => ["mix"]}}, SampleData.checksum("postgrex 0.0.2")) |> HexWeb.Repo.insert!
     reqs = [%{"name" => "decimal", "app" => "decimal", "requirement" => "0.1.0", "optional" => false}]
-    Release.create(postgrex, %{"version" => "0.1.0", "app" => "postgrex", "requirements" => reqs, "meta" => %{"app" => "postgrex", "build_tools" => ["mix"]}}, SampleData.checksum("postgrex 0.1.0")) |> HexWeb.Repo.insert!
+    Release.build(postgrex, %{"version" => "0.1.0", "app" => "postgrex", "requirements" => reqs, "meta" => %{"app" => "postgrex", "build_tools" => ["mix"]}}, SampleData.checksum("postgrex 0.1.0")) |> HexWeb.Repo.insert!
   end
 
   unless jose == nil do
     ecto =
-      Package.create(jose, %{
+      Package.build(jose, %{
         "name" => "ecto",
         "meta" => %{
           "maintainers" => ["Eric Meadows-Jönsson", "José Valim"],
@@ -76,19 +76,19 @@ HexWeb.Repo.transaction(fn ->
           "description" => lorem}})
       |> HexWeb.Repo.insert!
 
-    Release.create(ecto, %{"version" => "0.0.1", "app" => "ecto", "meta" => %{"app" => "ecto", "build_tools" => ["mix"]}}, SampleData.checksum("ecto 0.0.1")) |> HexWeb.Repo.insert!
+    Release.build(ecto, %{"version" => "0.0.1", "app" => "ecto", "meta" => %{"app" => "ecto", "build_tools" => ["mix"]}}, SampleData.checksum("ecto 0.0.1")) |> HexWeb.Repo.insert!
     reqs = [%{"name" => "postgrex", "app" => "postgrex", "requirement" => "~> 0.0.1", "optional" => false}]
-    Release.create(ecto, %{"version" => "0.0.2", "app" => "ecto", "requirements" => reqs, "meta" => %{"app" => "ecto", "build_tools" => ["mix"]}}, SampleData.checksum("ecto 0.0.2")) |> HexWeb.Repo.insert!
+    Release.build(ecto, %{"version" => "0.0.2", "app" => "ecto", "requirements" => reqs, "meta" => %{"app" => "ecto", "build_tools" => ["mix"]}}, SampleData.checksum("ecto 0.0.2")) |> HexWeb.Repo.insert!
     reqs = [%{"name" => "postgrex", "app" => "postgrex", "requirement" => "~> 0.0.2", "optional" => false}]
-    Release.create(ecto, %{"version" => "0.1.0", "app" => "ecto", "requirements" => reqs, "meta" => %{"app" => "ecto", "build_tools" => ["mix"]}}, SampleData.checksum("ecto 0.1.0")) |> HexWeb.Repo.insert!
+    Release.build(ecto, %{"version" => "0.1.0", "app" => "ecto", "requirements" => reqs, "meta" => %{"app" => "ecto", "build_tools" => ["mix"]}}, SampleData.checksum("ecto 0.1.0")) |> HexWeb.Repo.insert!
     reqs = [%{"name" => "postgrex", "app" => "postgrex", "requirement" => "~> 0.1.0", "optional" => false}]
-    Release.create(ecto, %{"version" => "0.1.1", "app" => "ecto", "requirements" => reqs, "meta" => %{"app" => "ecto", "build_tools" => ["mix"]}}, SampleData.checksum("ecto 0.1.1")) |> HexWeb.Repo.insert!
+    Release.build(ecto, %{"version" => "0.1.1", "app" => "ecto", "requirements" => reqs, "meta" => %{"app" => "ecto", "build_tools" => ["mix"]}}, SampleData.checksum("ecto 0.1.1")) |> HexWeb.Repo.insert!
     reqs = [%{"name" => "postgrex", "app" => "postgrex", "requirement" => "== 0.1.0", "optional" => false}, %{"name" => "decimal", "app" => "decimal", "requirement" => "0.1.0", "optional" => false}]
-    Release.create(ecto, %{"version" => "0.1.2", "app" => "ecto", "requirements" => reqs, "meta" => %{"app" => "ecto", "build_tools" => ["mix"]}}, SampleData.checksum("ecto 0.1.2")) |> HexWeb.Repo.insert!
+    Release.build(ecto, %{"version" => "0.1.2", "app" => "ecto", "requirements" => reqs, "meta" => %{"app" => "ecto", "build_tools" => ["mix"]}}, SampleData.checksum("ecto 0.1.2")) |> HexWeb.Repo.insert!
     reqs = [%{"name" => "postgrex", "app" => "postgrex", "requirement" => "0.1.0", "optional" => false}, %{"name" => "decimal", "app" => "decimal", "requirement" => "0.1.0", "optional" => false}]
-    Release.create(ecto, %{"version" => "0.1.3", "app" => "ecto", "requirements" => reqs, "meta" => %{"app" => "ecto", "build_tools" => ["mix"]}}, SampleData.checksum("ecto 0.1.3")) |> HexWeb.Repo.insert!
+    Release.build(ecto, %{"version" => "0.1.3", "app" => "ecto", "requirements" => reqs, "meta" => %{"app" => "ecto", "build_tools" => ["mix"]}}, SampleData.checksum("ecto 0.1.3")) |> HexWeb.Repo.insert!
     reqs = [%{"name" => "postgrex", "app" => "postgrex", "requirement" => "~> 0.1.0", "optional" => false}, %{"name" => "decimal", "app" => "decimal", "requirement" => "~> 0.1.0", "optional" => false}]
-    rel = Release.create(ecto, %{"version" => "0.2.0", "app" => "ecto", "requirements" => reqs, "meta" => %{"app" => "ecto", "build_tools" => ["mix"]}}, SampleData.checksum("ecto 0.2.0")) |> HexWeb.Repo.insert!
+    rel = Release.build(ecto, %{"version" => "0.2.0", "app" => "ecto", "requirements" => reqs, "meta" => %{"app" => "ecto", "build_tools" => ["mix"]}}, SampleData.checksum("ecto 0.2.0")) |> HexWeb.Repo.insert!
 
     {:ok, yesterday} = Ecto.Type.load(Ecto.Date, HexWeb.Utils.yesterday)
     %Download{release_id: rel.id, downloads: 42, day: yesterday}
@@ -98,7 +98,7 @@ HexWeb.Repo.transaction(fn ->
   unless joe == nil do
     Enum.each(1..100, fn(index) ->
       ups =
-        Package.create(joe, %{
+        Package.build(joe, %{
           "name" => "ups_" <> to_string(index),
           "meta" => %{
             "maintainers" => ["Joe Somebody"],
@@ -107,9 +107,9 @@ HexWeb.Repo.transaction(fn ->
             "description" => lorem}})
         |> HexWeb.Repo.insert!
 
-      rel1 = Release.create(ups, %{"version" => "0.0.1", "app" => "ups", "meta" => %{"app" => "ups", "build_tools" => ["mix"]}}, SampleData.checksum("ups 0.0.1")) |> HexWeb.Repo.insert!
+      rel1 = Release.build(ups, %{"version" => "0.0.1", "app" => "ups", "meta" => %{"app" => "ups", "build_tools" => ["mix"]}}, SampleData.checksum("ups 0.0.1")) |> HexWeb.Repo.insert!
       reqs = [%{"name" => "postgrex", "app" => "postgrex", "requirement" => "~> 0.1.0", "optional" => false}, %{"name" => "decimal", "app" => "postgrex", "requirement" => "~> 0.1.0", "optional" => false}]
-      rel2 = Release.create(ups, %{"version" => "0.2.0", "app" => "ups", "requirements" => reqs, "meta" => %{"app" => "ups", "build_tools" => ["mix"]}}, SampleData.checksum("ups 0.2.0")) |> HexWeb.Repo.insert!
+      rel2 = Release.build(ups, %{"version" => "0.2.0", "app" => "ups", "requirements" => reqs, "meta" => %{"app" => "ups", "build_tools" => ["mix"]}}, SampleData.checksum("ups 0.2.0")) |> HexWeb.Repo.insert!
 
       {:ok, last_month} = Ecto.Type.load(Ecto.Date, SampleData.last_month)
       %Download{release_id: rel1.id, downloads: div(index, 2), day: last_month}

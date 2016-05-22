@@ -82,7 +82,7 @@ defmodule HexWeb.API.ReleaseController do
       Package.update(package, params)
       |> HexWeb.Repo.update
     else
-      Package.create(user, params)
+      Package.build(user, params)
       |> HexWeb.Repo.insert
     end
   end
@@ -124,7 +124,7 @@ defmodule HexWeb.API.ReleaseController do
   defp create(conn, package, params, checksum, user, body) do
     multi =
       Ecto.Multi.new
-      |> Ecto.Multi.insert(:release, Release.create(package, params, checksum))
+      |> Ecto.Multi.insert(:release, Release.build(package, params, checksum))
       |> Ecto.Multi.insert(:log, fn %{release: release} -> audit(user, "release.publish", {package, release}) end)
 
     case HexWeb.Repo.transaction(multi) do

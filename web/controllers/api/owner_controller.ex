@@ -31,7 +31,7 @@ defmodule HexWeb.API.OwnerController do
 
     multi =
       Ecto.Multi.new
-      |> Ecto.Multi.insert(:owner, Package.create_owner(conn.assigns.package, owner))
+      |> Ecto.Multi.insert(:owner, Package.build_owner(conn.assigns.package, owner))
       |> Ecto.Multi.insert(:log, audit(conn, "owner.add", {package, owner}))
 
     case HexWeb.Repo.transaction(multi) do

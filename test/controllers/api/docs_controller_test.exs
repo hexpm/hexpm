@@ -6,7 +6,7 @@ defmodule HexWeb.API.DocsControllerTest do
   alias HexWeb.Release
 
   setup do
-    User.create(%{username: "eric", email: "eric@mail.com", password: "eric"}, true)
+    User.build(%{username: "eric", email: "eric@mail.com", password: "eric"}, true)
     |> HexWeb.Repo.insert!
     :ok
   end
@@ -14,9 +14,9 @@ defmodule HexWeb.API.DocsControllerTest do
   @tag :integration
   test "release docs" do
     user = HexWeb.Repo.get_by!(User, username: "eric")
-    phoenix = Package.create(user, pkg_meta(%{name: "phoenix", description: "Web framework"})) |> HexWeb.Repo.insert!
-    Release.create(phoenix, rel_meta(%{version: "0.0.1", app: "phoenix"}), "") |> HexWeb.Repo.insert!
-    Release.create(phoenix, rel_meta(%{version: "0.0.2", app: "phoenix"}), "") |> HexWeb.Repo.insert!
+    phoenix = Package.build(user, pkg_meta(%{name: "phoenix", description: "Web framework"})) |> HexWeb.Repo.insert!
+    Release.build(phoenix, rel_meta(%{version: "0.0.1", app: "phoenix"}), "") |> HexWeb.Repo.insert!
+    Release.build(phoenix, rel_meta(%{version: "0.0.2", app: "phoenix"}), "") |> HexWeb.Repo.insert!
 
     body = create_tarball([{'index.html', "HEYO"}])
     conn = conn()
@@ -62,10 +62,10 @@ defmodule HexWeb.API.DocsControllerTest do
   @tag :integration
   test "release beta docs" do
     user = HexWeb.Repo.get_by!(User, username: "eric")
-    plug = Package.create(user, pkg_meta(%{name: "plug", description: "Web framework"})) |> HexWeb.Repo.insert!
-    Release.create(plug, rel_meta(%{version: "0.0.1-beta.1", app: "plug"}), "") |> HexWeb.Repo.insert!
-    Release.create(plug, rel_meta(%{version: "0.5.0", app: "plug"}), "") |> HexWeb.Repo.insert!
-    Release.create(plug, rel_meta(%{version: "1.0.0-beta.1", app: "plug"}), "") |> HexWeb.Repo.insert!
+    plug = Package.build(user, pkg_meta(%{name: "plug", description: "Web framework"})) |> HexWeb.Repo.insert!
+    Release.build(plug, rel_meta(%{version: "0.0.1-beta.1", app: "plug"}), "") |> HexWeb.Repo.insert!
+    Release.build(plug, rel_meta(%{version: "0.5.0", app: "plug"}), "") |> HexWeb.Repo.insert!
+    Release.build(plug, rel_meta(%{version: "1.0.0-beta.1", app: "plug"}), "") |> HexWeb.Repo.insert!
 
     body = create_tarball([{'index.html', "plug v0.0.1-beta.1"}])
     conn = conn()
@@ -108,8 +108,8 @@ defmodule HexWeb.API.DocsControllerTest do
 
   test "delete release with docs" do
     user = HexWeb.Repo.get_by!(User, username: "eric")
-    ecto = Package.create(user, pkg_meta(%{name: "ecto", description: "DSL"})) |> HexWeb.Repo.insert!
-    Release.create(ecto, rel_meta(%{version: "0.0.1", app: "ecto"}), "") |> HexWeb.Repo.insert!
+    ecto = Package.build(user, pkg_meta(%{name: "ecto", description: "DSL"})) |> HexWeb.Repo.insert!
+    Release.build(ecto, rel_meta(%{version: "0.0.1", app: "ecto"}), "") |> HexWeb.Repo.insert!
 
     body = create_tarball([{'index.html', "HEYO"}])
     conn = conn()
@@ -140,8 +140,8 @@ defmodule HexWeb.API.DocsControllerTest do
   @tag :integration
   test "delete docs" do
     user = HexWeb.Repo.get_by!(User, username: "eric")
-    ecto = Package.create(user, pkg_meta(%{name: "ecto", description: "DSL"})) |> HexWeb.Repo.insert!
-    Release.create(ecto, rel_meta(%{version: "0.0.1", app: "ecto"}), "") |> HexWeb.Repo.insert!
+    ecto = Package.build(user, pkg_meta(%{name: "ecto", description: "DSL"})) |> HexWeb.Repo.insert!
+    Release.build(ecto, rel_meta(%{version: "0.0.1", app: "ecto"}), "") |> HexWeb.Repo.insert!
 
     body = create_tarball([{'index.html', "HEYO"}])
     conn = conn()
@@ -177,8 +177,8 @@ defmodule HexWeb.API.DocsControllerTest do
   @tag :integration
   test "dont allow version directories in docs" do
     user = HexWeb.Repo.get_by!(User, username: "eric")
-    ecto = Package.create(user, pkg_meta(%{name: "ecto", description: "DSL"})) |> HexWeb.Repo.insert!
-    Release.create(ecto, rel_meta(%{version: "0.0.1", app: "ecto"}), "") |> HexWeb.Repo.insert!
+    ecto = Package.build(user, pkg_meta(%{name: "ecto", description: "DSL"})) |> HexWeb.Repo.insert!
+    Release.build(ecto, rel_meta(%{version: "0.0.1", app: "ecto"}), "") |> HexWeb.Repo.insert!
 
     body = create_tarball([{'1.2.3', "HEYO"}])
     conn = conn()

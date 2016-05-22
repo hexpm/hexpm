@@ -5,9 +5,9 @@ defmodule HexWeb.API.KeyControllerTest do
   alias HexWeb.User
 
   setup do
-    User.create(%{username: "eric", email: "eric@mail.com", password: "eric"}, true)
+    User.build(%{username: "eric", email: "eric@mail.com", password: "eric"}, true)
     |> HexWeb.Repo.insert!
-    User.create(%{username: "other", email: "other@mail.com", password: "other"}, true)
+    User.build(%{username: "other", email: "other@mail.com", password: "other"}, true)
     |> HexWeb.Repo.insert!
     :ok
   end
@@ -32,7 +32,7 @@ defmodule HexWeb.API.KeyControllerTest do
 
   test "get key" do
     HexWeb.Repo.get_by!(User, username: "eric")
-    |> Key.create(%{name: "macbook"})
+    |> Key.build(%{name: "macbook"})
     |> HexWeb.Repo.insert!
 
     conn = conn()
@@ -48,8 +48,8 @@ defmodule HexWeb.API.KeyControllerTest do
 
   test "all keys" do
     user = HexWeb.Repo.get_by!(User, username: "eric")
-    Key.create(user, %{name: "macbook"}) |> HexWeb.Repo.insert!
-    key = Key.create(user, %{name: "computer"}) |> HexWeb.Repo.insert!
+    Key.build(user, %{name: "macbook"}) |> HexWeb.Repo.insert!
+    key = Key.build(user, %{name: "computer"}) |> HexWeb.Repo.insert!
 
     conn = conn()
            |> put_req_header("authorization", key.user_secret)
@@ -66,8 +66,8 @@ defmodule HexWeb.API.KeyControllerTest do
 
   test "delete key" do
     user = HexWeb.Repo.get_by!(User, username: "eric")
-    Key.create(user, %{name: "macbook"}) |> HexWeb.Repo.insert!
-    Key.create(user, %{name: "computer"}) |> HexWeb.Repo.insert!
+    Key.build(user, %{name: "macbook"}) |> HexWeb.Repo.insert!
+    Key.build(user, %{name: "computer"}) |> HexWeb.Repo.insert!
 
     conn = conn()
            |> put_req_header("authorization", key_for("eric"))
@@ -85,7 +85,7 @@ defmodule HexWeb.API.KeyControllerTest do
 
   test "key authorizes" do
     user = HexWeb.Repo.get_by!(User, username: "eric")
-    key = Key.create(user, %{name: "macbook"}) |> HexWeb.Repo.insert!
+    key = Key.build(user, %{name: "macbook"}) |> HexWeb.Repo.insert!
 
     conn = conn()
            |> put_req_header("authorization", key.user_secret)
