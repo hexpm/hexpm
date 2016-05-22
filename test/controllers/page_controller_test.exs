@@ -5,12 +5,12 @@ defmodule HexWeb.PageControllerTest do
   alias HexWeb.Release
 
   defp create_user(username, email, password) do
-    HexWeb.User.create(%{username: username, email: email, password: password}, true)
+    HexWeb.User.build(%{username: username, email: email, password: password}, true)
     |> HexWeb.Repo.insert!
   end
 
   defp release_create(package, version, app, requirements, checksum, inserted_at) do
-    release = Release.create(package, rel_meta(%{version: version, app: app, requirements: requirements}), checksum)
+    release = Release.build(package, rel_meta(%{version: version, app: app, requirements: requirements}), checksum)
               |> HexWeb.Repo.insert!
     Ecto.Changeset.change(release, inserted_at: inserted_at)
     |> HexWeb.Repo.update!
@@ -23,9 +23,9 @@ defmodule HexWeb.PageControllerTest do
 
     eric = create_user("eric", "eric@example.com", "eric")
 
-    foo = Package.create(eric, %{name: "foo", inserted_at: first_date, updated_at: first_date, meta: %{description: "foo", licenses: ["Apache"]}}) |> HexWeb.Repo.insert!
-    bar = Package.create(eric, %{name: "bar", inserted_at: second_date, updated_at: second_date, meta: %{description: "bar", licenses: ["Apache"]}}) |> HexWeb.Repo.insert!
-    other = Package.create(eric, %{name: "other", inserted_at: last_date, updated_at: last_date, meta: %{description: "other", licenses: ["Apache"]}}) |> HexWeb.Repo.insert!
+    foo = Package.build(eric, %{name: "foo", inserted_at: first_date, updated_at: first_date, meta: %{description: "foo", licenses: ["Apache"]}}) |> HexWeb.Repo.insert!
+    bar = Package.build(eric, %{name: "bar", inserted_at: second_date, updated_at: second_date, meta: %{description: "bar", licenses: ["Apache"]}}) |> HexWeb.Repo.insert!
+    other = Package.build(eric, %{name: "other", inserted_at: last_date, updated_at: last_date, meta: %{description: "other", licenses: ["Apache"]}}) |> HexWeb.Repo.insert!
 
     release_create(foo, "0.0.1", "foo", [], "", Ecto.DateTime.from_erl({{2014, 5, 3}, {10, 11, 1}}))
     release_create(foo, "0.0.2", "foo", [], "", Ecto.DateTime.from_erl({{2014, 5, 3}, {10, 11, 2}}))

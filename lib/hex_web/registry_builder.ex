@@ -21,7 +21,7 @@ defmodule HexWeb.RegistryBuilder do
   def rebuild do
     tmp      = Application.get_env(:hex_web, :tmp_dir)
     reg_file = Path.join(tmp, "registry.ets")
-    handle   = HexWeb.Registry.create
+    handle   = HexWeb.Registry.build
                |> HexWeb.Repo.insert!
 
     rebuild(handle, reg_file)

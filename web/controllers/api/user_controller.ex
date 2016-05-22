@@ -12,7 +12,7 @@ defmodule HexWeb.API.UserController do
       HexWeb.Repo.delete!(user)
     end
 
-    case User.create(params) |> HexWeb.Repo.insert do
+    case User.build(params) |> HexWeb.Repo.insert do
       {:ok, user} ->
         HexWeb.Mailer.send(
           "confirmation_request.html",

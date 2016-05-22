@@ -8,7 +8,7 @@ defmodule HexWeb.Registry do
     field :started_at, Ecto.DateTime
   end
 
-  def create do
+  def build do
     %HexWeb.Registry{}
     |> change(state: "waiting")
     |> prepare_changes(&delete_defaults/1)

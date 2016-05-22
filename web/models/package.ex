@@ -44,7 +44,7 @@ defmodule HexWeb.Package do
     |> validate_exclusion(:name, @reserved_names)
   end
 
-  def create(owner, params) do
+  def build(owner, params) do
     changeset(%Package{}, :create, params)
     |> put_assoc(:package_owners, [%PackageOwner{owner_id: owner.id}])
   end
@@ -73,7 +73,7 @@ defmodule HexWeb.Package do
          select: {p.name, p.updated_at})
   end
 
-  def create_owner(package, user) do
+  def build_owner(package, user) do
     change(%PackageOwner{}, package_id: package.id, owner_id: user.id)
     |> unique_constraint(:owner_id, name: "package_owners_unique", message: "is already owner")
   end

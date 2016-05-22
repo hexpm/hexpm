@@ -6,19 +6,19 @@ defmodule HexWeb.StatsJobTest do
   alias HexWeb.Release
 
   setup do
-    user = User.create(%{username: "eric", email: "eric@mail.com", password: "eric"}, true) |> HexWeb.Repo.insert!
+    user = User.build(%{username: "eric", email: "eric@mail.com", password: "eric"}, true) |> HexWeb.Repo.insert!
 
-    foo   = Package.create(user, pkg_meta(%{name: "foo", description: "Foo"})) |> HexWeb.Repo.insert!
-    bar   = Package.create(user, pkg_meta(%{name: "bar", description: "Bar"})) |> HexWeb.Repo.insert!
-    other = Package.create(user, pkg_meta(%{name: "other", description: "Other"})) |> HexWeb.Repo.insert!
+    foo   = Package.build(user, pkg_meta(%{name: "foo", description: "Foo"})) |> HexWeb.Repo.insert!
+    bar   = Package.build(user, pkg_meta(%{name: "bar", description: "Bar"})) |> HexWeb.Repo.insert!
+    other = Package.build(user, pkg_meta(%{name: "other", description: "Other"})) |> HexWeb.Repo.insert!
 
-    Release.create(foo, rel_meta(%{version: "0.0.1", app: "foo"}), "") |> HexWeb.Repo.insert!
-    Release.create(foo, rel_meta(%{version: "0.0.2", app: "foo"}), "") |> HexWeb.Repo.insert!
-    Release.create(foo, rel_meta(%{version: "0.1.0", app: "foo"}), "") |> HexWeb.Repo.insert!
-    Release.create(bar, rel_meta(%{version: "0.0.1", app: "bar"}), "") |> HexWeb.Repo.insert!
-    Release.create(bar, rel_meta(%{version: "0.0.2", app: "bar"}), "") |> HexWeb.Repo.insert!
-    Release.create(bar, rel_meta(%{version: "0.0.3-rc.1", app: "bar"}), "") |> HexWeb.Repo.insert!
-    Release.create(other, rel_meta(%{version: "0.0.1", app: "other"}), "") |> HexWeb.Repo.insert!
+    Release.build(foo, rel_meta(%{version: "0.0.1", app: "foo"}), "") |> HexWeb.Repo.insert!
+    Release.build(foo, rel_meta(%{version: "0.0.2", app: "foo"}), "") |> HexWeb.Repo.insert!
+    Release.build(foo, rel_meta(%{version: "0.1.0", app: "foo"}), "") |> HexWeb.Repo.insert!
+    Release.build(bar, rel_meta(%{version: "0.0.1", app: "bar"}), "") |> HexWeb.Repo.insert!
+    Release.build(bar, rel_meta(%{version: "0.0.2", app: "bar"}), "") |> HexWeb.Repo.insert!
+    Release.build(bar, rel_meta(%{version: "0.0.3-rc.1", app: "bar"}), "") |> HexWeb.Repo.insert!
+    Release.build(other, rel_meta(%{version: "0.0.1", app: "other"}), "") |> HexWeb.Repo.insert!
 
     :ok
   end

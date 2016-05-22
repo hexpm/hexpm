@@ -36,7 +36,7 @@ defmodule HexWeb.Install do
     end
   end
 
-  def create(hex, elixirs) do
+  def build(hex, elixirs) do
     change(%HexWeb.Install{}, hex: hex, elixirs: elixirs)
   end
 end

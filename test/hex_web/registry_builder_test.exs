@@ -11,12 +11,12 @@ defmodule HexWeb.RegistryBuilderTest do
   @endpoint HexWeb.Endpoint
 
   setup do
-    user = User.create(%{username: "eric", email: "eric@mail.com", password: "eric"}, true) |> HexWeb.Repo.insert!
-    Package.create(user, pkg_meta(%{name: "postgrex", description: "PostgreSQL driver for Elixir."})) |> HexWeb.Repo.insert!
-    Package.create(user, pkg_meta(%{name: "decimal", description: "Arbitrary precision decimal arithmetic for Elixir."})) |> HexWeb.Repo.insert!
-    Package.create(user, pkg_meta(%{name: "ex_doc", description: "ExDoc"})) |> HexWeb.Repo.insert!
-    Install.create("0.0.1", ["0.13.0-dev"]) |> HexWeb.Repo.insert!
-    Install.create("0.1.0", ["0.13.1-dev", "0.13.1"]) |> HexWeb.Repo.insert!
+    user = User.build(%{username: "eric", email: "eric@mail.com", password: "eric"}, true) |> HexWeb.Repo.insert!
+    Package.build(user, pkg_meta(%{name: "postgrex", description: "PostgreSQL driver for Elixir."})) |> HexWeb.Repo.insert!
+    Package.build(user, pkg_meta(%{name: "decimal", description: "Arbitrary precision decimal arithmetic for Elixir."})) |> HexWeb.Repo.insert!
+    Package.build(user, pkg_meta(%{name: "ex_doc", description: "ExDoc"})) |> HexWeb.Repo.insert!
+    Install.build("0.0.1", ["0.13.0-dev"]) |> HexWeb.Repo.insert!
+    Install.build("0.1.0", ["0.13.1-dev", "0.13.1"]) |> HexWeb.Repo.insert!
     :ok
   end
 
@@ -34,14 +34,14 @@ defmodule HexWeb.RegistryBuilderTest do
     postgrex = HexWeb.Repo.get_by!(Package, name: "postgrex")
     decimal = HexWeb.Repo.get_by!(Package, name: "decimal")
 
-    Release.create(ex_doc, rel_meta(%{version: "0.0.1", app: "ex_doc"}), "") |> HexWeb.Repo.insert!
-    Release.create(decimal, rel_meta(%{version: "0.0.1", app: "decimal"}), "") |> HexWeb.Repo.insert!
+    Release.build(ex_doc, rel_meta(%{version: "0.0.1", app: "ex_doc"}), "") |> HexWeb.Repo.insert!
+    Release.build(decimal, rel_meta(%{version: "0.0.1", app: "decimal"}), "") |> HexWeb.Repo.insert!
     reqs = [%{name: "ex_doc", app: "ex_doc", requirement: "0.0.1", optional: false}]
-    Release.create(decimal, rel_meta(%{version: "0.0.2", app: "decimal", requirements: reqs}), "") |> HexWeb.Repo.insert!
+    Release.build(decimal, rel_meta(%{version: "0.0.2", app: "decimal", requirements: reqs}), "") |> HexWeb.Repo.insert!
     reqs = [%{name: "decimal", app: "decimal", requirement: "~> 0.0.1", optional: false},
             %{name: "ex_doc", app: "ex_doc", requirement: "0.0.1", optional: false}]
     meta = rel_meta(%{requirements: reqs, app: "postgrex", version: "0.0.2"})
-    Release.create(postgrex, meta, "") |> HexWeb.Repo.insert!
+    Release.build(postgrex, meta, "") |> HexWeb.Repo.insert!
   end
 
   test "registry is versioned" do
@@ -109,9 +109,9 @@ defmodule HexWeb.RegistryBuilderTest do
   #   postgrex = HexWeb.Repo.get_by(Package, name: "postgrex")
   #   decimal = HexWeb.Repo.get_by(Package, name: "decimal")
 
-  #   Release.create(decimal, %{version: "0.0.1", app: "decimal"}, "")
-  #   Release.create(decimal, %{version: "0.0.2", app: "decimal", requirements: %{ex_doc: "0.0.0"}}, "")
-  #   Release.create(postgrex, %{version: "0.0.2", app: "postgrex", requirements: %{decimal: "~> 0.0.1", ex_doc: "0.1.0"}}, "")
+  #   Release.build(decimal, %{version: "0.0.1", app: "decimal"}, "")
+  #   Release.build(decimal, %{version: "0.0.2", app: "decimal", requirements: %{ex_doc: "0.0.0"}}, "")
+  #   Release.build(postgrex, %{version: "0.0.2", app: "postgrex", requirements: %{decimal: "~> 0.0.1", ex_doc: "0.1.0"}}, "")
 
   #   pid = self
 
