@@ -16,12 +16,25 @@ defmodule HexWeb.Store.Local do
     end)
   end
 
-  def get(region, bucket, key) do
-    path = Path.join([dir(), region(region), bucket(bucket), key])
-    case File.read(path) do
-      {:ok, contents} -> contents
-      {:error, :enoent} -> nil
-    end
+  def get(region, bucket, keys, _opts) when is_list(keys) do
+    Enum.map(keys, fn key ->
+      path = Path.join([dir(), region(region), bucket(bucket), key])
+      case File.read(path) do
+        {:ok, contents} -> contents
+        {:error, :enoent} -> nil
+      end
+    end)
+  end
+
+  def get(region, bucket, key, opts) do
+    [result] = get(region, bucket, [key], opts)
+    result
+  end
+
+  def put(region, bucket, objects, _opts) do
+    Enum.each(objects, fn {key, blob, opts} ->
+      put(region, bucket, key, blob, opts)
+    end)
   end
 
   def put(region, bucket, key, blob, _opts) do
@@ -30,10 +43,12 @@ defmodule HexWeb.Store.Local do
     File.write!(path, blob)
   end
 
-  def delete(region, bucket, key) do
-    [dir(), region(region), bucket(bucket), key]
-    |> Path.join
-    |> File.rm()
+  def delete(region, bucket, keys, _opts) do
+    Enum.each(List.wrap(keys), fn key ->
+      [dir(), region(region), bucket(bucket), key]
+      |> Path.join
+      |> File.rm()
+    end)
   end
 
   defp bucket(atom) when is_atom(atom),

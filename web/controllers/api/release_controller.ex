@@ -210,12 +210,10 @@ defmodule HexWeb.API.ReleaseController do
 
       # Delete relevant documentation (if it exists)
       if release.has_docs do
-        paths = HexWeb.Store.list(nil, :docs_bucket, Path.join(name, version))
         HexWeb.Store.delete(nil, :s3_bucket, "docs/#{name}-#{version}.tar.gz")
-        # TODO: Parallel
-        Enum.each(paths, fn path ->
-          HexWeb.Store.delete(nil, :docs_bucket, path)
-        end)
+        paths = HexWeb.Store.list(nil, :docs_bucket, Path.join(name, version))
+        HexWeb.Store.delete(nil, :docs_bucket, paths)
+        # TODO: Publish docs sitemap
       end
 
       HexWeb.RegistryBuilder.rebuild

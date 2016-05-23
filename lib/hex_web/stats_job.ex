@@ -42,13 +42,10 @@ defmodule HexWeb.StatsJob do
     s3_prefix     = "hex/#{date_string(date)}"
     fastly_prefix = "fastly_hex/#{date_string(date)}"
     {:ok, date}   = Ecto.Type.load(Ecto.Date, date)
+    formats       = [{s3_prefix, @s3_regex}, {fastly_prefix, @fastly_regex}]
 
-    ips         = HexWeb.CDN.public_ips
-    # TODO: Parallel
-    s3_dict     = process_buckets(buckets, s3_prefix, @s3_regex, ips)
-    fastly_dict = process_buckets(buckets, fastly_prefix, @fastly_regex, ips)
-    dict        = merge_dicts(s3_dict, fastly_dict)
-
+    ips = HexWeb.CDN.public_ips
+    dict = process_buckets(buckets, formats, ips)
     dict = cap_on_ip(dict, max_downloads_per_ip)
     packages = packages()
     releases = releases()
@@ -82,22 +79,21 @@ defmodule HexWeb.StatsJob do
     HexWeb.Repo.start_link
   end
 
-  defp merge_dicts(s3, fastly) do
-    Map.merge(s3, fastly, fn _, x, y -> x+y end)
-  end
-
-  defp process_buckets(buckets, prefix, regex, ips) do
-    # TODO: Parallel
-    Enum.reduce(buckets, %{}, fn [bucket, region], dict ->
+  defp process_buckets(buckets, formats, ips) do
+    jobs = for b <- buckets, f <- formats, do: {b, f}
+    parallel = div(200, length(jobs))
+    HexWeb.Utils.multi_task(jobs, fn {[bucket, region], {prefix, regex}} ->
       keys = HexWeb.Store.list(region, bucket, prefix)
-      process_keys(region, bucket, regex, ips, keys, dict)
+      process_keys(region, bucket, regex, ips, keys, parallel)
     end)
+    |> Enum.reduce(%{}, &Map.merge(&1, &2, fn _, c1, c2 -> c1+c2 end))
   end
 
-  defp process_keys(region, bucket, regex, ips, keys, dict) do
-    # TODO: Parallel
-    Enum.reduce(keys, dict, fn key, dict ->
-      HexWeb.Store.get(region, bucket, key)
+  defp process_keys(region, bucket, regex, ips, keys, parallel) do
+    results = HexWeb.Store.get(region, bucket, keys, parallel: parallel)
+              |> Enum.zip(keys)
+    Enum.reduce(results, %{}, fn {content, key}, dict ->
+      content
       |> maybe_unzip(key)
       |> process_file(regex, ips, dict)
     end)

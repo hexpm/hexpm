@@ -126,33 +126,34 @@ defmodule HexWeb.API.DocsController do
           [versioned, unversioned]
         end
       end)
-    paths = Enum.into(files, MapSet.new, &elem(&1, 0))
+    paths = MapSet.new(files, &elem(&1, 0))
 
     # Delete old files
     # Add "/" so that we don't get prefix matches, for example phoenix
     # would match phoenix_html
-    # TODO: Parallel
-    existing_paths = HexWeb.Store.list(nil, :docs_bucket, "#{name}/")
-    Enum.each(existing_paths, fn path ->
-      first = Path.relative_to(path, name) |> Path.split |> hd
-      cond do
-        # Don't delete if we are going to overwrite with new files, this
-        # removes the downtime between a deleted and added page
-        path in paths ->
-          :ok
-        # Current (/ecto/0.8.1/...)
-        first == version ->
-          HexWeb.Store.delete(nil, :docs_bucket, path)
-        # Top-level docs, don't overwrite for pre-releases
-        pre_release == true ->
-          :ok
-        # Top-level docs, don't match version directories (/ecto/...)
-        Version.parse(first) == :error ->
-          HexWeb.Store.delete(nil, :docs_bucket, path)
-        true ->
-          :ok
-      end
-    end)
+    existing_keys = HexWeb.Store.list(nil, :docs_bucket, "#{name}/")
+    keys_to_delete =
+      Enum.flat_map(existing_keys, fn key ->
+        first = Path.relative_to(key, name) |> Path.split |> hd
+        cond do
+          # Don't delete if we are going to overwrite with new files, this
+          # removes the downtime between a deleted and added page
+          key in paths ->
+            []
+          # Current (/ecto/0.8.1/...)
+          first == version ->
+            [key]
+          # Top-level docs, don't overwrite for pre-releases
+          pre_release == true ->
+            []
+          # Top-level docs, don't match version directories (/ecto/...)
+          Version.parse(first) == :error ->
+            [key]
+          true ->
+            []
+        end
+      end)
+    HexWeb.Store.delete(nil, :docs_bucket, keys_to_delete)
 
     # Put tarball
     # TODO: Cache and add surrogate key
@@ -160,20 +161,22 @@ defmodule HexWeb.API.DocsController do
     HexWeb.Store.put(nil, :s3_bucket, "#{name}-#{version}.tar.gz", body, opts)
 
     # Upload new files
-    # TODO: Parallel
-    Enum.each(files, fn {store_key, cdn_key, data} ->
-      opts =
-        content_type(store_key)
-        |> Keyword.put(:cache_control, "public, max-age=604800")
-        |> Keyword.put(:meta, [{"surrogate-key", cdn_key}])
-      HexWeb.Store.put(nil, :docs_bucket, store_key, data, opts)
+    objects =
+      Enum.map(files, fn {store_key, cdn_key, data} ->
+        opts =
+          content_type(store_key)
+          |> Keyword.put(:cache_control, "public, max-age=604800")
+          |> Keyword.put(:meta, [{"surrogate-key", cdn_key}])
+        {store_key, data, opts}
     end)
+    HexWeb.Store.put(nil, :docs_bucket, objects, [])
 
     # Purge cache
-    # TODO: Parallel
-    HexWeb.CDN.purge_key(:fastly_hexrepo, "docs/#{name}-#{version}")
-    HexWeb.CDN.purge_key(:fastly_hexdocs, unversioned_key)
-    HexWeb.CDN.purge_key(:fastly_hexdocs, versioned_key)
+    HexWeb.Utils.multi_task([
+      fn -> HexWeb.CDN.purge_key(:fastly_hexrepo, "docs/#{name}-#{version}") end,
+      fn -> HexWeb.CDN.purge_key(:fastly_hexdocs, unversioned_key) end,
+      fn -> HexWeb.CDN.purge_key(:fastly_hexdocs, versioned_key) end
+    ])
 
     multi =
       Ecto.Multi.new
@@ -222,11 +225,7 @@ defmodule HexWeb.API.DocsController do
       paths   = HexWeb.Store.list(nil, :docs_bucket, Path.join(name, version))
 
       HexWeb.Store.delete(nil, :s3_bucket, "tarballs/#{name}-#{version}.tar.gz")
-
-      # TODO: Parallel
-      Enum.each(paths, fn path ->
-        HexWeb.Store.delete(nil, :docs_bucket, path)
-      end)
+      HexWeb.Store.delete(nil, :docs_bucket, paths)
 
       multi =
         Ecto.Multi.new
@@ -236,8 +235,11 @@ defmodule HexWeb.API.DocsController do
 
       {:ok, _} = HexWeb.Repo.transaction(multi)
 
-      HexWeb.CDN.purge_key(:fastly_hexrepo, "docs/#{name}-#{version}")
-      HexWeb.CDN.purge_key(:fastly_hexdocs, "docspage/#{name}/#{version}")
+      HexWeb.Utils.multi_task([
+        fn -> HexWeb.CDN.purge_key(:fastly_hexrepo, "docs/#{name}-#{version}") end,
+        fn -> HexWeb.CDN.purge_key(:fastly_hexdocs, "docspage/#{name}/#{version}") end
+      ])
+
       publish_sitemap()
     end
 

@@ -3,8 +3,34 @@ defmodule HexWeb.Utils do
   Assorted utility functions.
   """
 
+  @timeout 60 * 60 * 1000
+
   import Ecto.Query, only: [from: 2]
   require Logger
+
+  def multi_task(args, fun) do
+    args
+    |> multi_async(fun)
+    |> multi_await
+  end
+
+  def multi_task(funs) do
+    funs
+    |> multi_async
+    |> multi_await
+  end
+
+  def multi_async(args, fun) do
+    Enum.map(args, fn arg -> Task.async(fn -> fun.(arg) end) end)
+  end
+
+  def multi_async(funs) do
+    Enum.map(funs, &Task.async/1)
+  end
+
+  def multi_await(tasks) do
+    Enum.map(tasks, &Task.await(&1, @timeout))
+  end
 
   def maybe(nil, _fun), do: nil
   def maybe(item, fun), do: fun.(item)

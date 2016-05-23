@@ -130,9 +130,11 @@ defmodule HexWeb.RegistryBuilder do
     meta = if signature, do: [{"signature", signature}|meta], else: meta
     reg_opts = [acl: :public_read, cache_control: "public, max-age=600", meta: meta]
 
-    # TODO: Parallel
-    HexWeb.Store.put(nil, :s3_bucket, "registry.ets.gz", output, reg_opts)
-    if signature, do: HexWeb.Store.put(nil, :s3_bucket, "registry.ets.gz.signed", signature, sig_opts)
+    objects = [{"registry.ets.gz", output, reg_opts}]
+    objects = if signature,
+                do: [{"registry.ets.gz.signed", signature, sig_opts}|objects],
+              else: objects
+    HexWeb.Store.put(nil, :s3_bucket, objects, [])
     HexWeb.CDN.purge_key(:fastly_hexrepo, "registry")
   end
 

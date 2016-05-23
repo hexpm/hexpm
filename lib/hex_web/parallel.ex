@@ -4,13 +4,25 @@ defmodule HexWeb.Parallel do
 
   @timeout 60 * 1000
 
-  def run(fun, args, opts \\ []) do
+  def run(fun, args, opts \\ [])
+
+  def run(_fun, [], _opts), do: []
+  def run(fun, args, opts) do
     {:ok, pid} = GenServer.start_link(__MODULE__, new_state(opts))
     try do
       timeout = Keyword.get(opts, :timeout, @timeout)
       GenServer.call(pid, {:run, fun, args}, timeout)
     after
       GenServer.stop(pid)
+    end
+  end
+
+  def run!(fun, args, opts \\ [])
+
+  def run!(fun, args, opts) do
+    results = run(fun, args, opts)
+    if Enum.any?(results, &match?({:error, _}, &1)) do
+      raise "Parallel tasks failed"
     end
   end
 
@@ -79,7 +91,7 @@ defmodule HexWeb.Parallel do
   end
 
   defp new_state(opts) do
-    %{max_jobs: opts[:max_parallel] || max_parallel,
+    %{max_jobs: parallel(opts[:parallel]),
       running: Map.new,
       finished: [],
       waiting: [],
@@ -91,8 +103,8 @@ defmodule HexWeb.Parallel do
   end
 
   if Mix.env == :test do
-    defp max_parallel, do: 1
+    defp parallel(_arg), do: 1
   else
-    defp max_parallel, do: 50
+    defp parallel(arg), do: arg || 50
   end
 end
