@@ -89,7 +89,7 @@ defmodule HexWeb.StatsJob do
   defp process_buckets(buckets, prefix, regex, ips) do
     # TODO: Parallel
     Enum.reduce(buckets, %{}, fn [bucket, region], dict ->
-      keys = HexWeb.Store.list_logs(region, bucket, prefix)
+      keys = HexWeb.Store.list(region, bucket, prefix)
       process_keys(region, bucket, regex, ips, keys, dict)
     end)
   end
@@ -97,7 +97,7 @@ defmodule HexWeb.StatsJob do
   defp process_keys(region, bucket, regex, ips, keys, dict) do
     # TODO: Parallel
     Enum.reduce(keys, dict, fn key, dict ->
-      HexWeb.Store.get_logs(region, bucket, key)
+      HexWeb.Store.get(region, bucket, key)
       |> maybe_unzip(key)
       |> process_file(regex, ips, dict)
     end)

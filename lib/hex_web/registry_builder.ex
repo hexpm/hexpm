@@ -109,6 +109,15 @@ defmodule HexWeb.RegistryBuilder do
     :ok = :ets.tab2file(tid, String.to_char_list(file))
     :ets.delete(tid)
 
+    upload_registry(file)
+
+    HexWeb.Registry.set_done(handle)
+    |> HexWeb.Repo.update_all([])
+
+    memory
+  end
+
+  defp upload_registry(file) do
     output = File.read!(file) |> :zlib.gzip
 
     signature =
@@ -116,14 +125,15 @@ defmodule HexWeb.RegistryBuilder do
         HexWeb.Utils.sign(output, key)
       end
 
-    HexWeb.Store.put_registry(output, signature)
-    if signature, do: HexWeb.Store.put_registry_signature(signature)
+    meta = [{"surrogate-key", "registry"}]
+    sig_opts = [acl: :public_read, cache_control: "public, max-age=600", meta: meta]
+    meta = if signature, do: [{"signature", signature}|meta], else: meta
+    reg_opts = [acl: :public_read, cache_control: "public, max-age=600", meta: meta]
+
+    # TODO: Parallel
+    HexWeb.Store.put(nil, :s3_bucket, "registry.ets.gz", output, reg_opts)
+    if signature, do: HexWeb.Store.put(nil, :s3_bucket, "registry.ets.gz.signed", signature, sig_opts)
     HexWeb.CDN.purge_key(:fastly_hexrepo, "registry")
-
-    HexWeb.Registry.set_done(handle)
-    |> HexWeb.Repo.update_all([])
-
-    memory
   end
 
   defp skip?(handle) do

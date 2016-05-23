@@ -131,7 +131,8 @@ defmodule HexWeb.API.DocsController do
     # Delete old files
     # Add "/" so that we don't get prefix matches, for example phoenix
     # would match phoenix_html
-    existing_paths = HexWeb.Store.list_docs_pages("#{name}/")
+    # TODO: Parallel
+    existing_paths = HexWeb.Store.list(nil, :docs_bucket, "#{name}/")
     Enum.each(existing_paths, fn path ->
       first = Path.relative_to(path, name) |> Path.split |> hd
       cond do
@@ -141,25 +142,35 @@ defmodule HexWeb.API.DocsController do
           :ok
         # Current (/ecto/0.8.1/...)
         first == version ->
-          HexWeb.Store.delete_docs_page(path)
+          HexWeb.Store.delete(nil, :docs_bucket, path)
         # Top-level docs, don't overwrite for pre-releases
         pre_release == true ->
           :ok
         # Top-level docs, don't match version directories (/ecto/...)
         Version.parse(first) == :error ->
-          HexWeb.Store.delete_docs_page(path)
+          HexWeb.Store.delete(nil, :docs_bucket, path)
         true ->
           :ok
       end
     end)
 
     # Put tarball
-    HexWeb.Store.put_docs("#{name}-#{version}.tar.gz", body)
+    # TODO: Cache and add surrogate key
+    opts = [acl: :public_read]
+    HexWeb.Store.put(nil, :s3_bucket, "#{name}-#{version}.tar.gz", body, opts)
 
     # Upload new files
-    Enum.each(files, fn {path, key, data} -> HexWeb.Store.put_docs_page(path, key, data) end)
+    # TODO: Parallel
+    Enum.each(files, fn {store_key, cdn_key, data} ->
+      opts =
+        content_type(store_key)
+        |> Keyword.put(:cache_control, "public, max-age=604800")
+        |> Keyword.put(:meta, [{"surrogate-key", cdn_key}])
+      HexWeb.Store.put(nil, :docs_bucket, store_key, data, opts)
+    end)
 
     # Purge cache
+    # TODO: Parallel
     HexWeb.CDN.purge_key(:fastly_hexrepo, "docs/#{name}-#{version}")
     HexWeb.CDN.purge_key(:fastly_hexdocs, unversioned_key)
     HexWeb.CDN.purge_key(:fastly_hexdocs, versioned_key)
@@ -173,6 +184,13 @@ defmodule HexWeb.API.DocsController do
     {:ok, _} = HexWeb.Repo.transaction(multi)
 
     publish_sitemap()
+  end
+
+  defp content_type(path) do
+    case Path.extname(path) do
+      "." <> ext -> [content_type: Plug.MIME.type(ext)]
+      ""         -> []
+    end
   end
 
   defp check_version_dirs?(files) do
@@ -201,12 +219,13 @@ defmodule HexWeb.API.DocsController do
     task = fn ->
       name    = release.package.name
       version = to_string(release.version)
-      paths   = HexWeb.Store.list_docs_pages(Path.join(name, version))
+      paths   = HexWeb.Store.list(nil, :docs_bucket, Path.join(name, version))
 
-      HexWeb.Store.delete_docs("#{name}-#{version}.tar.gz")
+      HexWeb.Store.delete(nil, :s3_bucket, "tarballs/#{name}-#{version}.tar.gz")
 
+      # TODO: Parallel
       Enum.each(paths, fn path ->
-        HexWeb.Store.delete_docs_page(path)
+        HexWeb.Store.delete(nil, :docs_bucket, path)
       end)
 
       multi =
@@ -229,6 +248,9 @@ defmodule HexWeb.API.DocsController do
     packages = Package.docs_sitemap
                |> HexWeb.Repo.all
     sitemap = HexWeb.SitemapView.render("docs_sitemap.xml", packages: packages)
-    HexWeb.Store.put_docs_file("sitemap.xml", sitemap)
+
+    # TODO: Cache and surrogate key
+    opts = [acl: :public_read, content_type: "text/xml"]
+    HexWeb.Store.put(nil, :docs_bucket, "sitemap.xml", sitemap, opts)
   end
 end

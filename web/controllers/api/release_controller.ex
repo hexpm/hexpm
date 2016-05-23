@@ -176,9 +176,11 @@ defmodule HexWeb.API.ReleaseController do
   end
 
   defp job(package, version, body) do
-    key = "tarballs/#{package.name}-#{version}"
-    HexWeb.Store.put_release(package.name, version, body)
-    HexWeb.CDN.purge_key(:fastly_hexrepo, key)
+    cdn_key = "tarballs/#{package.name}-#{version}"
+    store_key = "tarballs/#{package.name}-#{version}.tar"
+    opts = [acl: :public_read, cache_control: "public, max-age=604800", meta: [{"surrogate-key", cdn_key}]]
+    HexWeb.Store.put(nil, :s3_bucket, store_key, body, opts)
+    HexWeb.CDN.purge_key(:fastly_hexrepo, cdn_key)
     HexWeb.RegistryBuilder.rebuild
   end
 
@@ -201,16 +203,18 @@ defmodule HexWeb.API.ReleaseController do
     task = fn ->
       name    = release.package.name
       version = to_string(release.version)
+      key     = "tarballs/#{name}-#{version}.tar"
 
       # Delete release tarball
-      HexWeb.Store.delete_release("#{name}-#{version}.tar")
+      HexWeb.Store.delete(nil, :s3_bucket, key)
 
       # Delete relevant documentation (if it exists)
       if release.has_docs do
-        paths = HexWeb.Store.list_docs_pages(Path.join(name, version))
-        HexWeb.Store.delete_docs("#{name}-#{version}.tar.gz")
+        paths = HexWeb.Store.list(nil, :docs_bucket, Path.join(name, version))
+        HexWeb.Store.delete(nil, :s3_bucket, "docs/#{name}-#{version}.tar.gz")
+        # TODO: Parallel
         Enum.each(paths, fn path ->
-          HexWeb.Store.delete_docs_page(path)
+          HexWeb.Store.delete(nil, :docs_bucket, path)
         end)
       end
 

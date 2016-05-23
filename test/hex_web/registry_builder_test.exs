@@ -95,9 +95,8 @@ defmodule HexWeb.RegistryBuilderTest do
     try do
       RegistryBuilder.rebuild()
 
-      tmp = Application.get_env(:hex_web, :tmp_dir)
-      reg = File.read!(Path.join(tmp, "store/registry.ets.gz"))
-      sig = File.read!(Path.join(tmp, "store/registry.ets.gz.signed"))
+      reg = HexWeb.Store.get(nil, :s3_bucket, "registry.ets.gz")
+      sig = HexWeb.Store.get(nil, :s3_bucket, "registry.ets.gz.signed")
 
       assert HexWeb.Utils.verify(reg, sig, pub_key) == true
     after
