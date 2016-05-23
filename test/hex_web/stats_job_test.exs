@@ -40,12 +40,12 @@ defmodule HexWeb.StatsJobTest do
     logfile3 = File.read!(Path.join(path, "fastly_logs_1.txt")) |> :zlib.gzip
     logfile4 = File.read!(Path.join(path, "fastly_logs_2.txt")) |> :zlib.gzip
 
-    HexWeb.Store.put(region, bucket, "hex/2013-11-01-21-32-16-E568B2907131C0C0", logfile1)
-    HexWeb.Store.put(region, bucket, "hex/2013-11-02-21-32-17-E568B2907131C0C0", logfile1)
-    HexWeb.Store.put(region, bucket, "hex/2013-11-03-21-32-18-E568B2907131C0C0", logfile1)
-    HexWeb.Store.put(region, bucket, "hex/2013-11-01-21-32-19-E568B2907131C0C0", logfile2)
-    HexWeb.Store.put(region, bucket, "fastly_hex/2013-11-01T14:00:00.000-tzletcEGGiI7atIAAAAA.log.gz", logfile3)
-    HexWeb.Store.put(region, bucket, "fastly_hex/2013-11-01T15:00:00.000-tzletcEGGiI7atIAAAAA.log.gz", logfile4)
+    HexWeb.Store.put(region, bucket, "hex/2013-11-01-21-32-16-E568B2907131C0C0", logfile1, [])
+    HexWeb.Store.put(region, bucket, "hex/2013-11-02-21-32-17-E568B2907131C0C0", logfile1, [])
+    HexWeb.Store.put(region, bucket, "hex/2013-11-03-21-32-18-E568B2907131C0C0", logfile1, [])
+    HexWeb.Store.put(region, bucket, "hex/2013-11-01-21-32-19-E568B2907131C0C0", logfile2, [])
+    HexWeb.Store.put(region, bucket, "fastly_hex/2013-11-01T14:00:00.000-tzletcEGGiI7atIAAAAA.log.gz", logfile3, [])
+    HexWeb.Store.put(region, bucket, "fastly_hex/2013-11-01T15:00:00.000-tzletcEGGiI7atIAAAAA.log.gz", logfile4, [])
 
     HexWeb.StatsJob.run({2013, 11, 1}, buckets)
 
