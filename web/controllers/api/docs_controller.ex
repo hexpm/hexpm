@@ -158,7 +158,7 @@ defmodule HexWeb.API.DocsController do
     # Put tarball
     # TODO: Cache and add surrogate key
     opts = [acl: :public_read]
-    HexWeb.Store.put(nil, :s3_bucket, "#{name}-#{version}.tar.gz", body, opts)
+    HexWeb.Store.put(nil, :s3_bucket, "docs/#{name}-#{version}.tar.gz", body, opts)
 
     # Upload new files
     objects =
