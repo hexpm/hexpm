@@ -21,9 +21,12 @@ defmodule HexWeb.Parallel do
 
   def run!(fun, args, opts) do
     results = run(fun, args, opts)
-    if Enum.any?(results, &match?({:error, _}, &1)) do
-      raise "Parallel tasks failed"
-    end
+    Enum.map(results, fn
+      {:ok, value} ->
+        value
+      {:error, _} ->
+        raise "Parallel tasks failed"
+    end)
   end
 
   def handle_call(:stop, _from, state) do

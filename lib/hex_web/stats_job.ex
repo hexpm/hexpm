@@ -83,7 +83,7 @@ defmodule HexWeb.StatsJob do
     jobs = for b <- buckets, f <- formats, do: {b, f}
     parallel = div(200, length(jobs))
     HexWeb.Utils.multi_task(jobs, fn {[bucket, region], {prefix, regex}} ->
-      keys = HexWeb.Store.list(region, bucket, prefix)
+      keys = HexWeb.Store.list(region, bucket, prefix) |> Enum.to_list
       process_keys(region, bucket, regex, ips, keys, parallel)
     end)
     |> Enum.reduce(%{}, &Map.merge(&1, &2, fn _, c1, c2 -> c1+c2 end))
