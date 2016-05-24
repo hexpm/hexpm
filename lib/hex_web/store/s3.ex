@@ -11,8 +11,8 @@ defmodule HexWeb.Store.S3 do
   end
 
   def get(region, bucket, keys, opts) when is_list(keys) do
-    HexWeb.Parallel.run!(&get(region, bucket, &1, opts), keys,
-                         timeout: :infinity, parallel: opts[:parallel] || 100)
+    opts = Keyword.put_new(opts, :timeout, :infinity)
+    HexWeb.Parallel.run!(&get(region, bucket, &1, opts), keys, opts)
   end
   def get(region, bucket, key, _opts) do
     s3 = S3.new(region: region(region))
@@ -24,8 +24,8 @@ defmodule HexWeb.Store.S3 do
 
   # TODO: verify cache-control, surrogate-key and purge for everything we upload
   def put(region, bucket, values, opts) when is_list(values) do
-    HexWeb.Parallel.run!(&put(region, bucket, &1), values,
-                         timeout: :infinity, parallel: opts[:parallel] || 100)
+    opts = Keyword.put_new(opts, :timeout, :infinity)
+    HexWeb.Parallel.run!(&put(region, bucket, &1), values, opts)
   end
 
   defp put(region, bucket, {key, blob, opts}) do
@@ -35,15 +35,29 @@ defmodule HexWeb.Store.S3 do
   def put(region, bucket, key, blob, opts) do
     S3.new(region: region(region))
     |> S3Impl.put_object!(bucket(bucket), key, blob, opts)
+    :ok
   end
 
   def delete(region, bucket, keys, opts) when is_list(keys) do
-    HexWeb.Parallel.run!(&delete(region, bucket, &1, opts), keys,
-                         timeout: :infinity, parallel: opts[:parallel] || 100)
+    case Enum.chunk(keys, 1000) do
+      [keys] ->
+        delete_mutiple(region, bucket, keys)
+      chunks ->
+        opts = Keyword.put_new(opts, :timeout, :infinity)
+        HexWeb.Parallel.run!(&delete_mutiple(region, bucket, &1), chunks, opts)
+    end
   end
   def delete(region, bucket, key, _opts) do
     S3.new(region: region(region))
     |> S3Impl.delete_object!(bucket(bucket), key)
+    :ok
+  end
+
+  defp delete_mutiple(region, bucket, keys) do
+    {:ok, _} =
+      S3.new(region: region(region))
+      |> S3Impl.delete_multiple_objects(bucket(bucket), keys)
+    :ok
   end
 
   defp bucket(atom) when is_atom(atom),
