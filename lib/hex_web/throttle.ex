@@ -8,9 +8,9 @@ defmodule HexWeb.Throttle do
     GenServer.start_link(__MODULE__, new_state(opts), opts)
   end
 
-  def wait(pid, timeout \\ @timeout) do
+  def wait(pid, increment, timeout \\ @timeout) when increment >= 1 do
     try do
-      GenServer.call(pid, :run, timeout)
+      GenServer.call(pid, {:run, increment}, timeout)
     catch
       :exit, :timeout ->
         GenServer.cast(pid, {:cancel, self()})
@@ -18,10 +18,13 @@ defmodule HexWeb.Throttle do
     end
   end
 
-  def handle_call(:run, from, state) do
+  def handle_call({:run, increment}, _, %{rate: rate}) when increment > rate do
+    raise "increase must not exceed rate: #{inspect rate}, got: #{inspect increment}"
+  end
+  def handle_call({:run, increment}, from, state) do
     first_during_unit? = state.running == 0
 
-    state = %{state | waiting: :queue.in(from, state.waiting)}
+    state = %{state | waiting: :queue.in({from, increment}, state.waiting)}
     {_, state} = try_run(state)
 
     if first_during_unit?,
@@ -48,16 +51,17 @@ defmodule HexWeb.Throttle do
   end
 
   defp try_run(state) do
-    if state.running < state.rate do
-      case :queue.out(state.waiting) do
-        {{:value, from}, waiting} ->
+    case :queue.out(state.waiting) do
+      {{:value, {from, increment}}, waiting} ->
+        if state.running + increment <= state.rate do
           GenServer.reply(from, :yes)
-          {true, %{state | running: state.running+1, waiting: waiting}}
-        {:empty, _} ->
+          {true, %{state | running: state.running + increment, waiting: waiting}}
+        else
+          state = %{state | waiting: :queue.in({from, increment}, state.waiting)}
           {false, state}
-      end
-    else
-      {false, state}
+        end
+      {:empty, _} ->
+        {false, state}
     end
   end
 

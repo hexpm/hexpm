@@ -15,23 +15,17 @@ defmodule HexWeb.ThrottleTest do
     # First time unit
     start = :erlang.monotonic_time(:milli_seconds)
 
-    Throttle.wait(context.pid)
+    Throttle.wait(context.pid, 1)
     assert diff(start) < 10
-    Throttle.wait(context.pid)
+    Throttle.wait(context.pid, 4)
     assert diff(start) < 10
-    Throttle.wait(context.pid)
-    assert diff(start) < 10
-    Throttle.wait(context.pid)
-    assert diff(start) < 10
-    Throttle.wait(context.pid)
-    assert diff(start) < 10
-    Throttle.wait(context.pid)
+    Throttle.wait(context.pid, 1)
     assert diff(start) > 90
 
     # Second time unit
     start = :erlang.monotonic_time(:milli_seconds)
 
-    Throttle.wait(context.pid)
+    Throttle.wait(context.pid, 1)
     assert diff(start) < 10
   end
 
@@ -39,7 +33,7 @@ defmodule HexWeb.ThrottleTest do
     # First time unit
     start = :erlang.monotonic_time(:milli_seconds)
 
-    Throttle.wait(context.pid)
+    Throttle.wait(context.pid, 1)
     assert diff(start) < 10
 
     :timer.sleep(110)
@@ -47,17 +41,9 @@ defmodule HexWeb.ThrottleTest do
     # Second time unit
     start = :erlang.monotonic_time(:milli_seconds)
 
-    Throttle.wait(context.pid)
+    Throttle.wait(context.pid, 5)
     assert diff(start) < 10
-    Throttle.wait(context.pid)
-    assert diff(start) < 10
-    Throttle.wait(context.pid)
-    assert diff(start) < 10
-    Throttle.wait(context.pid)
-    assert diff(start) < 10
-    Throttle.wait(context.pid)
-    assert diff(start) < 10
-    Throttle.wait(context.pid)
+    Throttle.wait(context.pid, 1)
     assert diff(start) > 90
   end
 
@@ -66,46 +52,46 @@ defmodule HexWeb.ThrottleTest do
     start = :erlang.monotonic_time(:milli_seconds)
 
     spawn_link fn ->
-      Throttle.wait(context.pid)
+      Throttle.wait(context.pid, 1)
       assert diff(start) < 10
     end
     spawn_link fn ->
-      Throttle.wait(context.pid)
+      Throttle.wait(context.pid, 1)
       assert diff(start) < 10
     end
     spawn_link fn ->
-      Throttle.wait(context.pid)
+      Throttle.wait(context.pid, 1)
       assert diff(start) < 10
     end
     spawn_link fn ->
-      Throttle.wait(context.pid)
+      Throttle.wait(context.pid, 1)
       assert diff(start) < 10
     end
     spawn_link fn ->
-      Throttle.wait(context.pid)
+      Throttle.wait(context.pid, 1)
       assert diff(start) < 10
     end
 
     :timer.sleep(10)
 
     spawn_link fn ->
-      Throttle.wait(context.pid)
+      Throttle.wait(context.pid, 1)
       assert_in_delta(90, 110, diff(start))
     end
     spawn_link fn ->
-      Throttle.wait(context.pid)
+      Throttle.wait(context.pid, 1)
       assert_in_delta(90, 110, diff(start))
     end
     spawn_link fn ->
-      Throttle.wait(context.pid)
+      Throttle.wait(context.pid, 1)
       assert_in_delta(90, 110, diff(start))
     end
     spawn_link fn ->
-      Throttle.wait(context.pid)
+      Throttle.wait(context.pid, 1)
       assert_in_delta(90, 110, diff(start))
     end
     spawn_link fn ->
-      Throttle.wait(context.pid)
+      Throttle.wait(context.pid, 1)
       assert_in_delta(90, 110, diff(start))
     end
 
@@ -113,23 +99,23 @@ defmodule HexWeb.ThrottleTest do
 
     # Third time unit
     spawn_link fn ->
-      Throttle.wait(context.pid)
+      Throttle.wait(context.pid, 1)
       assert_in_delta(190, 210, diff(start))
     end
     spawn_link fn ->
-      Throttle.wait(context.pid)
+      Throttle.wait(context.pid, 1)
       assert_in_delta(190, 210, diff(start))
     end
     spawn_link fn ->
-      Throttle.wait(context.pid)
+      Throttle.wait(context.pid, 1)
       assert_in_delta(190, 210, diff(start))
     end
     spawn_link fn ->
-      Throttle.wait(context.pid)
+      Throttle.wait(context.pid, 1)
       assert_in_delta(190, 210, diff(start))
     end
     spawn_link fn ->
-      Throttle.wait(context.pid)
+      Throttle.wait(context.pid, 1)
       assert_in_delta(190, 210, diff(start))
     end
 
