@@ -54,12 +54,13 @@ defmodule HexWeb.StatsJob do
       HexWeb.Repo.transaction(fn ->
         HexWeb.Repo.delete_all(from(d in Download, where: d.day == ^date))
 
-        Enum.map(dict, fn {{package, version}, count} ->
+        Enum.flat_map(dict, fn {{package, version}, count} ->
           pkg_id = packages[package]
-          rel_id = releases[{pkg_id, version}]
-          %{release_id: rel_id, downloads: count, day: date}
+          if rel_id = releases[{pkg_id, version}],
+            do: [%{release_id: rel_id, downloads: count, day: date}],
+          else: []
         end)
-        |> Enum.chunk(1000)
+        |> Enum.chunk(1000, 1000, [])
         |> Enum.map(&HexWeb.Repo.insert_all(Download, &1))
 
         HexWeb.Repo.refresh_view(HexWeb.PackageDownload)
