@@ -29,8 +29,11 @@ defmodule HexWeb.API.PackageController do
     package = HexWeb.Repo.get_by!(Package, name: name)
 
     when_stale(conn, package, fn conn ->
-      package  = HexWeb.Repo.preload(package, [:downloads, :releases])
-      package  = update_in(package.releases, &Release.sort/1)
+      package = HexWeb.Repo.preload(package, [
+        :downloads,
+        releases: from(r in Release, select: map(r, [:version, :inserted_at, :inserted_at]))
+      ])
+      package = update_in(package.releases, &Release.sort/1)
 
       conn
       |> api_cache(:public)
