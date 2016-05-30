@@ -25,7 +25,7 @@ defmodule HexWeb.Endpoint do
   plug Plug.Parsers,
     parsers: [:urlencoded, :json, HexWeb.PlugParser],
     pass: ["*/*"],
-    json_decoder: Poison
+    json_decoder: HexWeb.Jiffy
 
   plug Plug.MethodOverride
   plug Plug.Head

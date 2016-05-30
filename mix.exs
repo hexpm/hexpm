@@ -36,6 +36,7 @@ defmodule HexWeb.Mixfile do
      {:httpoison,           "~> 0.8"},
      {:sweet_xml,           "~> 0.5"},
      {:ex_aws,              "~> 0.4"},
+     {:jiffy,               "~> 0.14"},
      {:phoenix_live_reload, "~> 1.0", only: :dev}]
   end
 

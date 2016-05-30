@@ -68,7 +68,7 @@ config :logger, :console,
   metadata: [:request_id]
 
 config :phoenix,
-  :stacktrace_depth, 20
+  stacktrace_depth: 20
 
 config :phoenix, :generators,
   migration: true,
@@ -82,6 +82,10 @@ config :plug, :mimes, %{
 
 config :phoenix, :format_encoders,
   elixir: HexWeb.ElixirFormat,
-  erlang: HexWeb.ErlangFormat
+  erlang: HexWeb.ErlangFormat,
+  json: HexWeb.Jiffy
+
+config :ecto,
+  json_library: HexWeb.Jiffy
 
 import_config "#{Mix.env}.exs"
