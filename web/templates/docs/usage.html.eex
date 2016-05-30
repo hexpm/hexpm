@@ -3,11 +3,6 @@
 </h2>
 <h3>Installation</h3>
 <p>
-  If you want to use Hex without installing Elixir you can use standalone Mix.
-  Download <a href="http://s3.hex.pm/mix">Mix</a>, put it in your <code>PATH</code>
-  and give it executable permissions. Now you can use Mix as if it was installed with Elixir.
-</p>
-<p>
   Mix will automatically prompt you whenever there is a need to use Hex. In case you want to manually install or update hex, simply run <code>$ mix local.hex</code>.
 </p>
 <h3>Defining dependencies</h3>
