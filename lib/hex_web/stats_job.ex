@@ -11,7 +11,7 @@ defmodule HexWeb.StatsJob do
     \[.+\]\040            # time
     ([^\040]+)\040        # IP address
     [^\040]+\040          # requester ID
-    [^\040]+\040        # request ID
+    [^\040]+\040          # request ID
     REST.GET.OBJECT\040
     tarballs/
     ([^-]+)               # package
@@ -54,15 +54,13 @@ defmodule HexWeb.StatsJob do
       HexWeb.Repo.transaction(fn ->
         HexWeb.Repo.delete_all(from(d in Download, where: d.day == ^date))
 
-        Enum.each(dict, fn {{package, version}, count} ->
+        Enum.map(dict, fn {{package, version}, count} ->
           pkg_id = packages[package]
           rel_id = releases[{pkg_id, version}]
-
-          if rel_id do
-            Ecto.Changeset.change(%Download{}, %{release_id: rel_id, downloads: count, day: date})
-            |> HexWeb.Repo.insert!
-          end
+          %{release_id: rel_id, downloads: count, day: date}
         end)
+        |> Enum.chunk(1000)
+        |> Enum.map(&HexWeb.Repo.insert_all(Download, &1))
 
         HexWeb.Repo.refresh_view(HexWeb.PackageDownload)
         HexWeb.Repo.refresh_view(HexWeb.ReleaseDownload)
