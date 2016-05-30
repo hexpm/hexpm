@@ -85,7 +85,7 @@ defmodule HexWeb.Package do
   end
 
   def all(page, count, search \\ nil, sort \\ :name) do
-    from(p in Package, preload: [:downloads, :releases])
+    from(p in Package, preload: :downloads)
     |> sort(sort)
     |> HexWeb.Utils.paginate(page, count)
     |> search(search)

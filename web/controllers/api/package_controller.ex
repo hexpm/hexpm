@@ -1,5 +1,6 @@
 defmodule HexWeb.API.PackageController do
   use HexWeb.Web, :controller
+  import Ecto.Query, only: [from: 2, preload: 2]
 
   @sort_params ~w(name downloads inserted_at updated_at)
 
@@ -10,6 +11,7 @@ defmodule HexWeb.API.PackageController do
 
     packages =
       Package.all(page, 100, search, sort)
+      |> preload(releases: ^from(r in Release, select: map(r, [:version])))
       |> HexWeb.Repo.all
 
     when_stale(conn, packages, [modified: false], fn conn ->

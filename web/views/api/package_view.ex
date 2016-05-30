@@ -19,9 +19,10 @@ defmodule HexWeb.API.PackageView do
   defp load_releases(entity, params, package, releases) do
     releases =
       Enum.map(releases, fn release ->
+        version = to_string(release.version)
         release
         |> Map.take(params)
-        |> Map.put(:url, release_url(HexWeb.Endpoint, :show, package, release))
+        |> Map.put(:url, release_url(HexWeb.Endpoint, :show, package, version))
       end)
 
     Map.put(entity, :releases, releases)
