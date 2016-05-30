@@ -85,8 +85,7 @@ defmodule HexWeb.Package do
   end
 
   def all(page, count, search \\ nil, sort \\ :name) do
-    from(p in Package,
-         preload: :downloads)
+    from(p in Package, preload: [:downloads, :releases])
     |> sort(sort)
     |> HexWeb.Utils.paginate(page, count)
     |> search(search)
@@ -148,24 +147,23 @@ defmodule HexWeb.Package do
   end
 
   defp sort(query, :name) do
-    from d in query, order_by: :name
+    from p in query, order_by: p.name
   end
 
   defp sort(query, :inserted_at) do
-    from d in query, order_by: [desc: :inserted_at, desc: :id]
+    from p in query, order_by: [desc: p.inserted_at]
   end
 
   defp sort(query, :updated_at) do
-    from d in query, order_by: [desc: :updated_at, desc: :id]
+    from p in query, order_by: [desc: p.updated_at]
   end
 
   defp sort(query, :downloads) do
     from(p in query,
       left_join: d in PackageDownload,
-        on: p.id == d.package_id and d.view == "all",
-      order_by: [asc: is_nil(d.downloads),
-                 desc: d.downloads,
-                 desc: p.id])
+        on: p.id == d.package_id,
+      order_by: [fragment("? DESC NULLS LAST", d.downloads)],
+      where: d.view == "all")
   end
 
   defp sort(query, nil) do

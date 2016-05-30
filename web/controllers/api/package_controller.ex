@@ -11,7 +11,6 @@ defmodule HexWeb.API.PackageController do
     packages =
       Package.all(page, 100, search, sort)
       |> HexWeb.Repo.all
-      |> HexWeb.Repo.preload([:releases])
 
     when_stale(conn, packages, [modified: false], fn conn ->
       packages = Enum.map packages, fn(package) ->
