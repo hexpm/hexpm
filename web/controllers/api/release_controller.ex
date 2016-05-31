@@ -190,7 +190,7 @@ defmodule HexWeb.API.ReleaseController do
       HexWeb.Store.delete(nil, :s3_bucket, "docs/#{name}-#{version}.tar.gz")
       paths = HexWeb.Store.list(nil, :docs_bucket, Path.join(name, version))
       HexWeb.Store.delete(nil, :docs_bucket, paths)
-      # TODO: Publish docs sitemap
+      HexWeb.API.DocsController.publish_sitemap
     end
 
     HexWeb.RegistryBuilder.rebuild

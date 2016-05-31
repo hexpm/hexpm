@@ -225,8 +225,7 @@ defmodule HexWeb.API.DocsController do
   end
 
   def publish_sitemap do
-    packages = Package.docs_sitemap
-               |> HexWeb.Repo.all
+    packages = Package.docs_sitemap |> HexWeb.Repo.all
     sitemap = HexWeb.SitemapView.render("docs_sitemap.xml", packages: packages)
 
     # TODO: Cache and surrogate key
