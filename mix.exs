@@ -17,7 +17,7 @@ defmodule HexWeb.Mixfile do
     [mod: {HexWeb, []},
      applications: [:phoenix, :phoenix_html, :cowboy, :logger,
                     :phoenix_ecto, :postgrex, :comeonin, :httpoison, :ex_aws,
-                    :sweet_xml, :porcelain, :gen_smtp]]
+                    :sweet_xml, :porcelain, :gen_smtp, :rollbax]]
   end
 
   defp elixirc_paths(:test), do: ["lib", "web", "test/support"]
@@ -37,6 +37,7 @@ defmodule HexWeb.Mixfile do
      {:sweet_xml,           "~> 0.5"},
      {:ex_aws,              "~> 0.4"},
      {:jiffy,               "~> 0.14"},
+     {:rollbax,             "~> 0.5"},
      {:phoenix_live_reload, "~> 1.0", only: :dev}]
   end
 

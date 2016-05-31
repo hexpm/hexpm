@@ -63,10 +63,6 @@ config :hex_web, HexWeb.Endpoint,
 config :phoenix, :template_engines,
   md: HexWeb.MarkdownEngine
 
-config :logger, :console,
-  format: "$time $metadata[$level] $message\n",
-  metadata: [:request_id]
-
 config :phoenix,
   stacktrace_depth: 20
 
@@ -74,18 +70,33 @@ config :phoenix, :generators,
   migration: true,
   binary_id: false
 
+config :phoenix, :format_encoders,
+  elixir: HexWeb.ElixirFormat,
+  erlang: HexWeb.ErlangFormat,
+  json: HexWeb.Jiffy
+
 config :plug, :mimes, %{
   "application/vnd.hex+json"   => ["json"],
   "application/vnd.hex+elixir" => ["elixir"],
   "application/vnd.hex+erlang" => ["erlang"]
 }
 
-config :phoenix, :format_encoders,
-  elixir: HexWeb.ElixirFormat,
-  erlang: HexWeb.ErlangFormat,
-  json: HexWeb.Jiffy
-
 config :ecto,
   json_library: HexWeb.Jiffy
+
+config :rollbax,
+  access_token: System.get_env("ROLLBAR_ACCESS_TOKEN"),
+  environment: to_string(Mix.env),
+  enabled: :log
+
+config :logger,
+  backends: [Rollbax.Notifier, :console]
+
+config :logger, Rollbax.Notifier,
+  level: :error
+
+config :logger, :console,
+  format: "$time $metadata[$level] $message\n",
+  metadata: [:request_id]
 
 import_config "#{Mix.env}.exs"

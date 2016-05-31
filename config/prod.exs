@@ -15,6 +15,9 @@ config :hex_web, HexWeb.Repo,
 config :comeonin,
   bcrypt_log_rounds: 12
 
+config :rollbax,
+  enabled: true
+
 # Don't include date time on heroku
 config :logger, :console,
   format: "[$level] $message\n"
