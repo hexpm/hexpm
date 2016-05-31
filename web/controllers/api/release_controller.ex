@@ -1,6 +1,8 @@
 defmodule HexWeb.API.ReleaseController do
   use HexWeb.Web, :controller
 
+  @publish_timeout 60_000
+
   plug :fetch_release when action != :create
   plug :authorize, [fun: &package_owner?/2] when action == :delete
 
@@ -37,41 +39,51 @@ defmodule HexWeb.API.ReleaseController do
   end
 
   def delete(conn, _params) do
+    package = conn.assigns.package
     release = conn.assigns.release
+
     multi =
       Ecto.Multi.new
       |> Ecto.Multi.delete(:release, Release.delete(release))
-      |> Ecto.Multi.insert(:log, audit(conn, "release.revert", {release.package, release}))
+      |> Ecto.Multi.insert(:log, audit(conn, "release.revert", {package, release}))
 
-    case HexWeb.Repo.transaction(multi) do
-      {:ok, _} ->
-        # TODO: Remove package from database if this was the only release
-        revert(release)
+    {:ok, conn} = HexWeb.Repo.transaction(fn ->
+      case HexWeb.Repo.transaction(multi) do
+        {:ok, _} ->
+          if Repo.aggregate(assoc(package, :releases), :count, :id) == 0 do
+            HexWeb.Repo.delete!(package)
+          end
+          revert(release)
 
-        conn
-        |> api_cache(:private)
-        |> send_resp(204, "")
-      {:error, :release, changeset, _} ->
-        validation_failed(conn, changeset)
-    end
+          conn
+          |> api_cache(:private)
+          |> send_resp(204, "")
+        {:error, :release, changeset, _} ->
+          validation_failed(conn, changeset)
+      end
+    end, timeout: @publish_timeout)
+
+    conn
   end
 
   defp handle_tarball(conn, package, user, body) do
-    # TODO: with special form
-    # TODO: Repo.transaction
-    case HexWeb.Tar.metadata(body) do
-      {:ok, meta, checksum} ->
-        package_params = %{"name" => meta["name"], "meta" => meta}
-        case create_package(user, package, package_params) do
-          {:ok, package} ->
-            create_release(conn, package, user, checksum, meta, body)
-          {:error, changeset} ->
-            validation_failed(conn, changeset)
-        end
+    {:ok, conn} = HexWeb.Repo.transaction(fn ->
+      case HexWeb.Tar.metadata(body) do
+        {:ok, meta, checksum} ->
+          package_params = %{"name" => meta["name"], "meta" => meta}
+          case create_package(user, package, package_params) do
+            {:ok, package} ->
+              create_release(conn, package, user, checksum, meta, body)
+            {:error, changeset} ->
+              validation_failed(conn, changeset)
+          end
 
-      {:error, errors} ->
-        validation_failed(conn, %{tar: errors})
-    end
+        {:error, errors} ->
+          validation_failed(conn, %{tar: errors})
+      end
+    end, timeout: @publish_timeout)
+
+    conn
   end
 
   defp create_package(user, package, params) do

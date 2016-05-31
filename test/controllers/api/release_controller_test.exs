@@ -197,8 +197,8 @@ defmodule HexWeb.API.ReleaseControllerTest do
            |> delete("api/packages/postgrex/releases/0.0.1")
 
     assert conn.status == 204
-    postgrex = HexWeb.Repo.get_by!(Package, name: "postgrex")
-    refute HexWeb.Repo.get_by(assoc(postgrex, :releases), version: "0.0.1")
+    refute HexWeb.Repo.get_by(Package, name: "postgrex")
+    refute HexWeb.Repo.get_by(assoc(package, :releases), version: "0.0.1")
 
     [_, log] = HexWeb.Repo.all(HexWeb.AuditLog)
     assert log.actor_id == user.id
