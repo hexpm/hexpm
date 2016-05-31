@@ -3,8 +3,16 @@ defmodule HexWeb.Email.SES do
   require Logger
 
   def send(to, subject, body) do
-    HexWeb.Throttle.wait(HexWeb.SESThrottle)
-    do_send(to, subject, body)
+    ses_rate = Application.get_env(:hex_web, :ses_rate) |> String.to_integer
+
+    Enum.each(recipient_chunks(to, ses_rate), fn recipients ->
+      HexWeb.Throttle.wait(HexWeb.SESThrottle, length(recipients))
+      do_send(recipients, subject, body)
+    end)
+  end
+
+  defp recipient_chunks(recipients, limit) do
+    Enum.chunk(recipients, limit, limit, [])
   end
 
   defp do_send(to, subject, body) do
@@ -23,7 +31,7 @@ defmodule HexWeb.Email.SES do
     headers = [
       {"Subject", subject},
       {"From", "Hex.pm <#{from}>"},
-      {"To", to},
+      {"To", Enum.join(to, ",")},
       {"Return-Path", from}
     ]
 
@@ -39,7 +47,7 @@ defmodule HexWeb.Email.SES do
     result = :gen_smtp_client.send_blocking({from, to, email}, opts)
 
     unless is_binary(result) do
-      Logger.error(["Failed to send email to \"", to, "\" with subject \"", subject, "\""])
+      Logger.error(["Failed to send email to ", inspect(to), " with subject ", inspect(subject)])
       raise "Failed to send email"
     end
     result
