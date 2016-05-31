@@ -27,8 +27,9 @@ HexWeb.Repo.transaction(fn ->
   eric = SampleData.create_user("eric", "eric@example.com", "eric")
   jose = SampleData.create_user("jose", "jose@example.com", "jose")
   joe = SampleData.create_user("joe", "joe@example.com", "joe")
+  justin = SampleData.create_user("justin", "justin@example.com", "justin")
 
-  if eric == nil or jose == nil or joe == nil do
+  if eric == nil or jose == nil or joe == nil or justin == nil do
     IO.puts "\nThere has been an error creating the sample users.\nIf the error says '... already taken' hex_web was probably already set up."
   end
 
@@ -117,6 +118,49 @@ HexWeb.Repo.transaction(fn ->
 
       {:ok, yesterday} = Ecto.Type.load(Ecto.Date, HexWeb.Utils.yesterday)
       %Download{release_id: rel2.id, downloads: div(index, 2) + rem(index, 2), day: yesterday}
+      |> HexWeb.Repo.insert!
+    end)
+  end
+
+  unless justin == nil do
+    nerves =
+      Package.build(justin, %{
+        "name" => "nerves",
+        "meta" => %{
+          "maintainers" => ["Justin Schneck", "Frank Hunleth"],
+          "licenses" => ["Apache 2.0"],
+          "links" => %{"Github" => "http://example.com/github"},
+          "description" => lorem,
+          "extra" => %{
+            "foo" => %{"bar" => "baz"},
+            "key" => "value 1"}}})
+      |> HexWeb.Repo.insert!
+
+    rel = Release.build(nerves, %{"version" => "0.0.1", "app" => "nerves", "meta" => %{"app" => "nerves", "build_tools" => ["mix"]}}, SampleData.checksum("nerves 0.0.1")) |> HexWeb.Repo.insert!
+
+    {:ok, yesterday} = Ecto.Type.load(Ecto.Date, HexWeb.Utils.yesterday)
+    %Download{release_id: rel.id, downloads: 20, day: yesterday}
+    |> HexWeb.Repo.insert!
+
+    Enum.each(1..10, fn(index) ->
+      nerves_pkg =
+        Package.build(justin, %{
+          "name" => "nerves_pkg_#{index}",
+          "meta" => %{
+            "maintainers" => ["Justin Schneck", "Frank Hunleth"],
+            "licenses" => ["Apache 2.0"],
+            "links" => %{"Github" => "http://example.com/github"},
+            "description" => lorem,
+            "extra" => %{
+              "list" => ["a", "b", "c"],
+              "foo" => %{"bar" => "baz"},
+              "key" => "value"}}})
+        |> HexWeb.Repo.insert!
+
+      rel = Release.build(nerves_pkg, %{"version" => "0.0.1", "app" => "nerves_pkg_#{index}", "meta" => %{"app" => "nerves_pkg_#{index}", "build_tools" => ["mix"]}}, SampleData.checksum("nerves_pkg_#{index} 0.0.1")) |> HexWeb.Repo.insert!
+
+      {:ok, yesterday} = Ecto.Type.load(Ecto.Date, HexWeb.Utils.yesterday)
+      %Download{release_id: rel.id, downloads: div(index, 2) + rem(index, 2), day: yesterday}
       |> HexWeb.Repo.insert!
     end)
   end

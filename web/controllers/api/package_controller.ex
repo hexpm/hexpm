@@ -6,7 +6,7 @@ defmodule HexWeb.API.PackageController do
 
   def index(conn, params) do
     page     = HexWeb.Utils.safe_int(params["page"])
-    search   = HexWeb.Utils.safe_search(params["search"])
+    search   = HexWeb.Utils.parse_search(params["search"])
     sort     = HexWeb.Utils.safe_to_atom(params["sort"] || "name", @sort_params)
 
     packages =

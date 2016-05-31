@@ -42,6 +42,11 @@ defmodule HexWeb.API.PackageControllerTest do
     body = Poison.decode!(conn.resp_body)
     assert length(body) == 1
 
+    conn = get build_conn(), "api/packages?search=name%3Apost%25"
+    assert conn.status == 200
+    body = Poison.decode!(conn.resp_body)
+    assert length(body) == 1
+
     conn = get build_conn(), "api/packages?page=1"
     assert conn.status == 200
     body = Poison.decode!(conn.resp_body)

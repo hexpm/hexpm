@@ -1,7 +1,7 @@
 defmodule HexWeb.Package do
   use HexWeb.Web, :model
   import Ecto.Query, only: [from: 2]
-
+  alias HexWeb.Utils
   @derive {Phoenix.Param, key: :name}
 
   @timestamps_opts [usec: true]
@@ -30,6 +30,7 @@ defmodule HexWeb.Package do
     webtool wx xmerl)
 
   @reserved_names @elixir_names ++ @otp_names ++ @tool_names
+  @search_keys ~w(name: description: extra:)
 
   defp changeset(package, :create, params) do
     changeset(package, :update, params)
@@ -115,26 +116,73 @@ defmodule HexWeb.Package do
   end
 
   defp search(query, search) when is_binary(search) do
-    filter =
-      if String.length(search) >= 3 do
-        {:contains, search}
-      else
-        {:equals, search}
-      end
+    if Enum.any?(@search_keys, & String.starts_with?(search, &1)) do
+      Enum.reduce(parse_search(search), query, fn({k, v}, q) ->
+        search(k, q, v)
+      end)
+    else
+      search = Utils.safe_search(search)
+      filter =
+        if String.length(search) >= 3 do
+          :contains
+        else
+          :equals
+        end
+      name_search =
+        search
+        |> escape_search
+        |> like_search(filter)
 
-    search(query, filter)
+      desc_search = String.replace(search, ~r"\s+"u, " | ")
+
+      from p in query,
+      where: ilike(fragment("?::text", p.name), ^name_search) or
+             fragment("to_tsvector('english', regexp_replace((?->'description')::text, '/', ' ')) @@ to_tsquery('english', ?)", p.meta, ^desc_search)
+    end
   end
 
-  defp search(query, {mode, search}) do
-    name_search = search |> escape_search() |> like_search(mode)
+  defp search(:name, query, search) do
+    from(p in query,
+      where: ilike(fragment("?::text", p.name), ^search))
+  end
 
+  defp search(:description, query, search) do
     desc_search = String.replace(search, ~r"\s+"u, " | ")
+    from(p in query,
+      where: fragment("to_tsvector('english', regexp_replace((?->'description')::text, '/', ' ')) @@ to_tsquery('english', ?)", p.meta, ^desc_search))
+  end
 
-    # without fragment("?::text", var.name) the gin_trgm_ops index will not be used
-    from var in query,
-    where: ilike(fragment("?::text", var.name), ^name_search) or
-           fragment("to_tsvector('english', regexp_replace((?->'description')::text, '/', ' ')) @@ to_tsquery('english', ?)",
-                    var.meta, ^desc_search)
+  defp search(:extra, query, search) do
+    [v | p] =
+      search
+      |> String.split(",")
+      |> Enum.reverse
+    [h | t] = p
+
+    value = extra_value(v)
+    extra = extra(t, Map.put(%{}, h, value))
+
+    from(p in query,
+      where: fragment("?->'extra' @> ?", p.meta, ^extra))
+  end
+
+  defp extra_value(<<"[", value :: binary>>) do
+    value
+    |> String.rstrip(?])
+    |> String.split(",")
+    |> Enum.map(fn(v) ->
+      case Integer.parse(v) do
+        {int, ""} -> int
+        _ -> Utils.safe_search(v)
+      end
+    end)
+  end
+  defp extra_value(v),
+    do: Utils.safe_search(v)
+
+  defp extra([], m), do: m
+  defp extra([h | t], m) do
+    extra(t, Map.put(%{}, h, m))
   end
 
   defp like_search(search, :contains),
@@ -169,4 +217,37 @@ defmodule HexWeb.Package do
   defp sort(query, nil) do
     query
   end
+
+  defp parse_search(_, _ \\ [])
+  defp parse_search("", keys), do: Enum.reverse(keys)
+  defp parse_search(search, keys) do
+    {filter, tail} = parse_key(search, keys)
+    tail
+    |> String.strip
+    |> parse_search(filter)
+  end
+
+  defp parse_key(string, search) do
+    [k, v] = String.split(string, ":", parts: 2)
+    {v, tail} = parse_value(v)
+    {add_param({String.to_existing_atom(k), v}, search), tail}
+  end
+
+  defp parse_value(input) do
+    {rest, delim} =
+      case input do
+        "\"" <> rest -> {rest, "\""}
+        _ -> {input, " "}
+      end
+
+    case String.split(rest, delim, parts: 2) do
+      [value] -> {value, ""}
+      [value, tail] -> {value, tail}
+    end
+  end
+
+  defp add_param(param, []),
+    do: [param]
+  defp add_param(param, [scope | tail]),
+    do: [param | [scope | tail]]
 end

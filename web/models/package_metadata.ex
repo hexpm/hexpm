@@ -6,10 +6,11 @@ defmodule HexWeb.PackageMetadata do
     field :licenses, {:array, :string}
     field :links, :map
     field :maintainers, {:array, :string}
+    field :extra, :map
   end
 
   def changeset(meta, params \\ %{}) do
-    cast(meta, params, ~w(description licenses links maintainers))
+    cast(meta, params, ~w(description licenses links maintainers extra))
     |> validate_required(:description)
     |> validate_required(:licenses)
   end
