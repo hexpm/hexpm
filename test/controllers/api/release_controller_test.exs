@@ -147,10 +147,10 @@ defmodule HexWeb.API.ReleaseControllerTest do
            |> post("api/packages/postgrex/releases", body)
 
     assert conn.status == 200
-    postgrex = HexWeb.Repo.get_by(Package, name: "postgrex")
+    postgrex = HexWeb.Repo.get_by!(Package, name: "postgrex")
     release = HexWeb.Repo.get_by!(assoc(postgrex, :releases), version: "0.0.1")
-    assert release
-    assert HexWeb.Repo.one!(HexWeb.AuditLog).action == "release.publish"
+    assert [%HexWeb.AuditLog{action: "release.publish"}, %HexWeb.AuditLog{action: "release.publish"}] =
+           HexWeb.Repo.all(HexWeb.AuditLog)
 
     Ecto.Changeset.change(release, inserted_at: %{Ecto.DateTime.utc | year: 2000})
     |> HexWeb.Repo.update!

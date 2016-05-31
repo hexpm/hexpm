@@ -110,6 +110,8 @@ defmodule HexWeb.API.ReleaseController do
     case Release.update(release, release_params, checksum) |> HexWeb.Repo.update do
       {:ok, release} ->
         after_release(package, release.version, user, body)
+        audit(user, "release.publish", {package, release})
+        |> HexWeb.Repo.insert!
 
         release = %{release | package: package}
 
