@@ -44,10 +44,5 @@ defmodule HexWeb.Jiffy do
     |> :maps.from_list
   end
 
-  defp transform(term) when is_tuple(term) do
-    :lists.map(&transform/1, :erlang.tuple_to_list)
-    |> :erlang.list_to_tuple
-  end
-
   defp transform(other), do: other
 end
