@@ -207,48 +207,6 @@ defmodule HexWeb.Utils do
     result.status
   end
 
-  @publish_timeout 5 * 60 * 1000
-
-  if Mix.env in [:test, :hex] do
-    def task_with_failure(fun, success, failure) do
-      try do
-        fun.()
-      catch
-        kind, error ->
-          stack = System.stacktrace
-          failure.({kind, error})
-          :erlang.raise kind, error, stack
-      else
-        _ ->
-          success.()
-      end
-    end
-  else
-    def task_with_failure(fun, success, failure) do
-      Task.Supervisor.start_child(HexWeb.Tasks, fn ->
-        {:ok, pid} = Task.Supervisor.start_child(HexWeb.Tasks, fun)
-        ref        = Process.monitor(pid)
-
-        receive do
-          {:DOWN, ^ref, :process, ^pid, reason} when reason in [:normal, :noproc] ->
-            success.()
-          {:DOWN, ^ref, :process, ^pid, reason} ->
-            failure.(reason)
-        after
-          @publish_timeout ->
-            Task.Supervisor.terminate_child(HexWeb.Tasks, pid)
-            failure.(:timeout)
-        end
-      end)
-    end
-  end
-
-  if Mix.env in [:test, :hex] do
-    def task(fun), do: fun.()
-  else
-    def task(fun), do: Task.Supervisor.start_child(HexWeb.Tasks, fun)
-  end
-
   def sign(file, key) do
     [entry | _ ] = :public_key.pem_decode(key)
     key = :public_key.pem_entry_decode(entry)

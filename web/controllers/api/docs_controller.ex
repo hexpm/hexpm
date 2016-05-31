@@ -56,11 +56,7 @@ defmodule HexWeb.API.DocsController do
             files = Enum.map(files, fn {path, data} -> {List.to_string(path), data} end)
 
             if check_version_dirs?(files) do
-              task    = fn -> upload_docs(package, release, user, files, body) end
-              success = fn -> :ok end
-              failure = fn reason -> failure(package, release, user, reason) end
-              HexWeb.Utils.task_with_failure(task, success, failure)
-
+              upload_docs(package, release, user, files, body)
               :ok
             else
               {:error, [tar: "directory name not allowed to match a semver version"]}
@@ -126,6 +122,7 @@ defmodule HexWeb.API.DocsController do
           [versioned, unversioned]
         end
       end)
+
     paths = MapSet.new(files, &elem(&1, 0))
 
     # Delete old files
@@ -203,47 +200,28 @@ defmodule HexWeb.API.DocsController do
     end)
   end
 
-  defp failure(package, release, user, reason) do
-    require Logger
-    Logger.error "Package upload failed: #{inspect reason}"
-
-    # TODO: Revert database changes
-
-    HexWeb.Mailer.send(
-      "publish_fail.html",
-      "Hex.pm - ERROR when publishing documentation for #{package.name} v#{release.version}",
-      [user.email],
-      package: package.name,
-      version: release.version,
-      docs: true)
-  end
-
   def revert(release, user) do
-    task = fn ->
-      name    = release.package.name
-      version = to_string(release.version)
-      paths   = HexWeb.Store.list(nil, :docs_bucket, Path.join(name, version))
+    name    = release.package.name
+    version = to_string(release.version)
+    paths   = HexWeb.Store.list(nil, :docs_bucket, Path.join(name, version))
 
-      HexWeb.Store.delete(nil, :s3_bucket, "tarballs/#{name}-#{version}.tar.gz")
-      HexWeb.Store.delete(nil, :docs_bucket, paths)
+    HexWeb.Store.delete(nil, :s3_bucket, "tarballs/#{name}-#{version}.tar.gz")
+    HexWeb.Store.delete(nil, :docs_bucket, paths)
 
-      multi =
-        Ecto.Multi.new
-        |> Ecto.Multi.update(:release, Ecto.Changeset.change(release, has_docs: false))
-        |> Ecto.Multi.update(:package, Ecto.Changeset.change(release.package, docs_updated_at: Ecto.DateTime.utc))
-        |> Ecto.Multi.insert(:log, audit(user, "docs.revert", {release.package, release}))
+    multi =
+      Ecto.Multi.new
+      |> Ecto.Multi.update(:release, Ecto.Changeset.change(release, has_docs: false))
+      |> Ecto.Multi.update(:package, Ecto.Changeset.change(release.package, docs_updated_at: Ecto.DateTime.utc))
+      |> Ecto.Multi.insert(:log, audit(user, "docs.revert", {release.package, release}))
 
-      {:ok, _} = HexWeb.Repo.transaction(multi)
+    {:ok, _} = HexWeb.Repo.transaction(multi)
 
-      HexWeb.Utils.multi_task([
-        fn -> HexWeb.CDN.purge_key(:fastly_hexrepo, "docs/#{name}-#{version}") end,
-        fn -> HexWeb.CDN.purge_key(:fastly_hexdocs, "docspage/#{name}/#{version}") end
-      ])
+    HexWeb.Utils.multi_task([
+      fn -> HexWeb.CDN.purge_key(:fastly_hexrepo, "docs/#{name}-#{version}") end,
+      fn -> HexWeb.CDN.purge_key(:fastly_hexdocs, "docspage/#{name}/#{version}") end
+    ])
 
-      publish_sitemap()
-    end
-
-    HexWeb.Utils.task_with_failure(task, fn -> nil end, fn _ -> nil end)
+    publish_sitemap()
   end
 
   def publish_sitemap do
