@@ -3,11 +3,14 @@ defmodule HexWeb.TestController do
 
   def get_registry(conn, _params) do
     registry = HexWeb.Store.get(nil, :s3_bucket, "registry.ets.gz")
-    signature = HexWeb.Store.get(nil, :s3_bucket, "registry.ets.gz.signed")
 
-    conn
-    |> put_resp_header("x-hex-signature", signature)
-    |> send_resp(200, registry)
+    if signature = HexWeb.Store.get(nil, :s3_bucket, "registry.ets.gz.signed") do
+      conn
+      |> put_resp_header("x-hex-signature", signature)
+      |> send_resp(200, registry)
+    else
+      send_resp(conn, 200, registry)
+    end
   end
 
   def get_registry_signed(conn, _params) do
