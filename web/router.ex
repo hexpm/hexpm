@@ -27,41 +27,41 @@ defmodule HexWeb.Router do
     get  "/",                       PageController,     :index
     get  "/sponsors",               PageController,     :sponsors
 
-    get  "password/reset",          PasswordController, :show_reset
-    post "password/reset",          PasswordController, :reset
-    get  "password/confirm",        PasswordController, :show_confirm
+    get  "/password/reset",          PasswordController, :show_reset
+    post "/password/reset",          PasswordController, :reset
+    get  "/password/confirm",        PasswordController, :show_confirm
 
-    get  "docs/usage",              DocsController,     :usage
-    get  "docs/rebar3_usage",       DocsController,     :rebar3_usage
-    get  "docs/publish",            DocsController,     :publish
-    get  "docs/rebar3_publish",     DocsController,     :rebar3_publish
-    get  "docs/tasks",              DocsController,     :tasks
-    get  "docs/faq",                DocsController,     :faq
-    get  "docs/mirrors",            DocsController,     :mirrors
-    get  "docs/public_keys",        DocsController,     :public_keys
+    get  "/docs/usage",              DocsController,     :usage
+    get  "/docs/rebar3_usage",       DocsController,     :rebar3_usage
+    get  "/docs/publish",            DocsController,     :publish
+    get  "/docs/rebar3_publish",     DocsController,     :rebar3_publish
+    get  "/docs/tasks",              DocsController,     :tasks
+    get  "/docs/faq",                DocsController,     :faq
+    get  "/docs/mirrors",            DocsController,     :mirrors
+    get  "/docs/public_keys",        DocsController,     :public_keys
 
-    get  "policies",                PolicyController,   :index
-    get  "policies/codeofconduct",  PolicyController,   :coc
-    get  "policies/privacy",        PolicyController,   :privacy
-    get  "policies/termsofservice", PolicyController,   :tos
-    get  "policies/copyright",      PolicyController,   :copyright
+    get  "/policies",                PolicyController,   :index
+    get  "/policies/codeofconduct",  PolicyController,   :coc
+    get  "/policies/privacy",        PolicyController,   :privacy
+    get  "/policies/termsofservice", PolicyController,   :tos
+    get  "/policies/copyright",      PolicyController,   :copyright
 
-    get  "packages",                PackageController,  :index
-    get  "packages/:name",          PackageController,  :show
-    get  "packages/:name/:version", PackageController,  :show
+    get  "/packages",                PackageController,  :index
+    get  "/packages/:name",          PackageController,  :show
+    get  "/packages/:name/:version", PackageController,  :show
   end
 
   scope "/", HexWeb do
-    get "sitemap.xml",     SitemapController,    :sitemap
-    get "hexsearch.xml",   OpenSearchController, :opensearch
-    get "installs/hex.ez", InstallerController,  :get_archive
+    get "/sitemap.xml",     SitemapController,    :sitemap
+    get "/hexsearch.xml",   OpenSearchController, :opensearch
+    get "/installs/hex.ez", InstallerController,  :get_archive
 
     if Mix.env in [:dev, :test, :hex] do
-      get "registry.ets.gz",              TestController, :get_registry
-      get "registry.ets.gz.signed",       TestController, :get_registry_signed
-      get "tarballs/:ball",               TestController, :get_tarball
-      get "docs/:package/:version/*page", TestController, :get_docs_page
-      get "docs/sitemap.xml",             TestController, :get_docs_sitemap
+      get "/registry.ets.gz",              TestController, :get_registry
+      get "/registry.ets.gz.signed",       TestController, :get_registry_signed
+      get "/tarballs/:ball",               TestController, :get_tarball
+      get "/docs/:package/:version/*page", TestController, :get_docs_page
+      get "/docs/sitemap.xml",             TestController, :get_docs_sitemap
     end
   end
 
@@ -70,36 +70,36 @@ defmodule HexWeb.Router do
     scope "/api", HexWeb.API do
       pipe_through :upload
 
-      post "packages/:name/releases",               ReleaseController, :create
-      post "packages/:name/releases/:version/docs", DocsController,    :create
+      post "/packages/:name/releases",               ReleaseController, :create
+      post "/packages/:name/releases/:version/docs", DocsController,    :create
     end
 
     scope "/api", HexWeb.API do
       pipe_through :api
 
-      post   "users",                                 UserController,    :create
-      get    "users/:name",                           UserController,    :show
-      post   "users/:name/reset",                     UserController,    :reset
+      post   "/users",                                 UserController,    :create
+      get    "/users/:name",                           UserController,    :show
+      post   "/users/:name/reset",                     UserController,    :reset
 
-      get    "packages",                              PackageController, :index
-      get    "packages/:name",                        PackageController, :show
+      get    "/packages",                              PackageController, :index
+      get    "/packages/:name",                        PackageController, :show
 
-      get    "packages/:name/releases/:version",      ReleaseController, :show
-      delete "packages/:name/releases/:version",      ReleaseController, :delete
+      get    "/packages/:name/releases/:version",      ReleaseController, :show
+      delete "/packages/:name/releases/:version",      ReleaseController, :delete
 
       # Temporary, see #232
-      get    "packages/:name/releases/:version/docs", DocsController,    :show
-      delete "packages/:name/releases/:version/docs", DocsController,    :delete
+      get    "/packages/:name/releases/:version/docs", DocsController,    :show
+      delete "/packages/:name/releases/:version/docs", DocsController,    :delete
 
-      get    "packages/:name/owners",                 OwnerController,   :index
-      get    "packages/:name/owners/:email",          OwnerController,   :show
-      put    "packages/:name/owners/:email",          OwnerController,   :create
-      delete "packages/:name/owners/:email",          OwnerController,   :delete
+      get    "/packages/:name/owners",                 OwnerController,   :index
+      get    "/packages/:name/owners/:email",          OwnerController,   :show
+      put    "/packages/:name/owners/:email",          OwnerController,   :create
+      delete "/packages/:name/owners/:email",          OwnerController,   :delete
 
-      get    "keys",                                  KeyController,     :index
-      get    "keys/:name",                            KeyController,     :show
-      post   "keys",                                  KeyController,     :create
-      delete "keys/:name",                            KeyController,     :delete
+      get    "/keys",                                  KeyController,     :index
+      get    "/keys/:name",                            KeyController,     :show
+      post   "/keys",                                  KeyController,     :create
+      delete "/keys/:name",                            KeyController,     :delete
     end
 
   end

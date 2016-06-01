@@ -14,7 +14,7 @@ defmodule HexWeb.API.KeyControllerTest do
 
   test "create key" do
     body = %{name: "macbook"}
-    conn = conn()
+    conn = build_conn()
            |> put_req_header("content-type", "application/json")
            |> put_req_header("authorization", "Basic " <> Base.encode64("eric:eric"))
            |> post("api/keys", Poison.encode!(body))
@@ -35,7 +35,7 @@ defmodule HexWeb.API.KeyControllerTest do
     |> Key.build(%{name: "macbook"})
     |> HexWeb.Repo.insert!
 
-    conn = conn()
+    conn = build_conn()
            |> put_req_header("authorization", key_for("eric"))
            |> get("api/keys/macbook")
 
@@ -51,7 +51,7 @@ defmodule HexWeb.API.KeyControllerTest do
     Key.build(user, %{name: "macbook"}) |> HexWeb.Repo.insert!
     key = Key.build(user, %{name: "computer"}) |> HexWeb.Repo.insert!
 
-    conn = conn()
+    conn = build_conn()
            |> put_req_header("authorization", key.user_secret)
            |> get("api/keys")
 
@@ -69,7 +69,7 @@ defmodule HexWeb.API.KeyControllerTest do
     Key.build(user, %{name: "macbook"}) |> HexWeb.Repo.insert!
     Key.build(user, %{name: "computer"}) |> HexWeb.Repo.insert!
 
-    conn = conn()
+    conn = build_conn()
            |> put_req_header("authorization", key_for("eric"))
            |> delete("api/keys/computer")
 
@@ -87,14 +87,14 @@ defmodule HexWeb.API.KeyControllerTest do
     user = HexWeb.Repo.get_by!(User, username: "eric")
     key = Key.build(user, %{name: "macbook"}) |> HexWeb.Repo.insert!
 
-    conn = conn()
+    conn = build_conn()
            |> put_req_header("authorization", key.user_secret)
            |> get("api/keys")
 
     assert conn.status == 200
     assert length(Poison.decode!(conn.resp_body)) == 1
 
-    conn = conn()
+    conn = build_conn()
            |> put_req_header("authorization", "wrong")
            |> get("api/keys")
 

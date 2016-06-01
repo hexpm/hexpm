@@ -19,7 +19,7 @@ defmodule HexWeb.API.DocsControllerTest do
     Release.build(phoenix, rel_meta(%{version: "0.0.2", app: "phoenix"}), "") |> HexWeb.Repo.insert!
 
     body = create_tarball([{'index.html', "HEYO"}])
-    conn = conn()
+    conn = build_conn()
            |> put_req_header("content-type", "application/octet-stream")
            |> put_req_header("authorization", key_for("eric"))
            |> post("api/packages/phoenix/releases/0.0.1/docs", body)
@@ -31,30 +31,30 @@ defmodule HexWeb.API.DocsControllerTest do
     assert log.action == "docs.publish"
     assert %{"package" => %{"name" => "phoenix"}, "release" => %{"version" => "0.0.1"}} = log.params
 
-    conn = get conn(), "docs/phoenix/index.html"
+    conn = get build_conn(), "docs/phoenix/index.html"
     assert conn.status == 200
     assert conn.resp_body == "HEYO"
 
-    conn = get conn(), "docs/phoenix/0.0.1/index.html"
+    conn = get build_conn(), "docs/phoenix/0.0.1/index.html"
     assert conn.status == 200
     assert conn.resp_body == "HEYO"
 
     body = create_tarball([{'index.html', "NOPE"}])
-    conn = conn()
+    conn = build_conn()
            |> put_req_header("content-type", "application/octet-stream")
            |> put_req_header("authorization", key_for("eric"))
            |> post("api/packages/phoenix/releases/0.0.2/docs", body)
     assert conn.status == 201
 
-    conn = get conn(), "docs/phoenix/index.html"
+    conn = get build_conn(), "docs/phoenix/index.html"
     assert conn.status == 200
     assert conn.resp_body == "NOPE"
 
-    conn = get conn(), "docs/phoenix/0.0.1/index.html"
+    conn = get build_conn(), "docs/phoenix/0.0.1/index.html"
     assert conn.status == 200
     assert conn.resp_body == "HEYO"
 
-    conn = get conn(), "docs/sitemap.xml"
+    conn = get build_conn(), "docs/sitemap.xml"
     assert conn.status == 200
     assert conn.resp_body =~ "https://hexdocs.pm/phoenix"
   end
@@ -68,40 +68,40 @@ defmodule HexWeb.API.DocsControllerTest do
     Release.build(plug, rel_meta(%{version: "1.0.0-beta.1", app: "plug"}), "") |> HexWeb.Repo.insert!
 
     body = create_tarball([{'index.html', "plug v0.0.1-beta.1"}])
-    conn = conn()
+    conn = build_conn()
            |> put_req_header("content-type", "application/octet-stream")
            |> put_req_header("authorization", key_for("eric"))
            |> post("api/packages/plug/releases/0.0.1-beta.1/docs", body)
     assert conn.status == 201
     assert HexWeb.Repo.get_by!(assoc(plug, :releases), version: "0.0.1-beta.1").has_docs
 
-    conn = get conn(), "docs/plug/index.html"
+    conn = get build_conn(), "docs/plug/index.html"
     assert conn.status == 200
     assert conn.resp_body == "plug v0.0.1-beta.1"
 
     body = create_tarball([{'index.html', "plug v0.5.0"}])
-    conn = conn()
+    conn = build_conn()
            |> put_req_header("content-type", "application/octet-stream")
            |> put_req_header("authorization", key_for("eric"))
            |> post("api/packages/plug/releases/0.5.0/docs", body)
     assert conn.status == 201
 
-    conn = get conn(), "docs/plug/index.html"
+    conn = get build_conn(), "docs/plug/index.html"
     assert conn.status == 200
     assert conn.resp_body == "plug v0.5.0"
 
     body = create_tarball([{'index.html', "plug v1.0.0-beta.1"}])
-    conn = conn()
+    conn = build_conn()
            |> put_req_header("content-type", "application/octet-stream")
            |> put_req_header("authorization", key_for("eric"))
            |> post("api/packages/plug/releases/1.0.0-beta.1/docs", body)
     assert conn.status == 201
 
-    conn = get conn(), "docs/plug/index.html"
+    conn = get build_conn(), "docs/plug/index.html"
     assert conn.status == 200
     assert conn.resp_body == "plug v0.5.0"
 
-    conn = get conn(), "docs/plug/1.0.0-beta.1/index.html"
+    conn = get build_conn(), "docs/plug/1.0.0-beta.1/index.html"
     assert conn.status == 200
     assert conn.resp_body == "plug v1.0.0-beta.1"
   end
@@ -112,7 +112,7 @@ defmodule HexWeb.API.DocsControllerTest do
     Release.build(ecto, rel_meta(%{version: "0.0.1", app: "ecto"}), "") |> HexWeb.Repo.insert!
 
     body = create_tarball([{'index.html', "HEYO"}])
-    conn = conn()
+    conn = build_conn()
            |> put_req_header("content-type", "application/octet-stream")
            |> put_req_header("authorization", key_for("eric"))
            |> post("api/packages/ecto/releases/0.0.1/docs", body)
@@ -120,7 +120,7 @@ defmodule HexWeb.API.DocsControllerTest do
     assert conn.status == 201
     assert HexWeb.Repo.get_by!(assoc(ecto, :releases), version: "0.0.1").has_docs
 
-    conn = conn()
+    conn = build_conn()
            |> put_req_header("authorization", key_for("eric"))
            |> delete("api/packages/ecto/releases/0.0.1")
     assert conn.status == 204
@@ -130,10 +130,10 @@ defmodule HexWeb.API.DocsControllerTest do
 
     # Check docs were deleted
     assert_raise Ecto.NoResultsError, fn ->
-      get conn(), "api/packages/ecto/releases/0.0.1/docs"
+      get build_conn(), "api/packages/ecto/releases/0.0.1/docs"
     end
 
-    conn = get conn(), "docs/ecto/0.0.1/index.html"
+    conn = get build_conn(), "docs/ecto/0.0.1/index.html"
     assert conn.status in 400..499
   end
 
@@ -144,7 +144,7 @@ defmodule HexWeb.API.DocsControllerTest do
     Release.build(ecto, rel_meta(%{version: "0.0.1", app: "ecto"}), "") |> HexWeb.Repo.insert!
 
     body = create_tarball([{'index.html', "HEYO"}])
-    conn = conn()
+    conn = build_conn()
            |> put_req_header("content-type", "application/octet-stream")
            |> put_req_header("authorization", key_for("eric"))
            |> post("api/packages/ecto/releases/0.0.1/docs", body)
@@ -153,7 +153,7 @@ defmodule HexWeb.API.DocsControllerTest do
     assert HexWeb.Repo.get_by!(assoc(ecto, :releases), version: "0.0.1").has_docs
     assert HexWeb.Repo.one!(HexWeb.AuditLog).action == "docs.publish"
 
-    conn = conn()
+    conn = build_conn()
            |> put_req_header("authorization", key_for("eric"))
            |> delete("api/packages/ecto/releases/0.0.1/docs")
     assert conn.status == 204
@@ -167,10 +167,10 @@ defmodule HexWeb.API.DocsControllerTest do
     assert %{"package" => %{"name" => "ecto"}, "release" => %{"version" => "0.0.1"}} = log.params
 
     # Check docs were deleted
-    conn = get conn(), "api/packages/ecto/releases/0.0.1/docs"
+    conn = get build_conn(), "api/packages/ecto/releases/0.0.1/docs"
     assert conn.status in 400..499
 
-    conn = get conn(), "docs/ecto/0.0.1/index.html"
+    conn = get build_conn(), "docs/ecto/0.0.1/index.html"
     assert conn.status in 400..499
   end
 
@@ -181,7 +181,7 @@ defmodule HexWeb.API.DocsControllerTest do
     Release.build(ecto, rel_meta(%{version: "0.0.1", app: "ecto"}), "") |> HexWeb.Repo.insert!
 
     body = create_tarball([{'1.2.3', "HEYO"}])
-    conn = conn()
+    conn = build_conn()
            |> put_req_header("content-type", "application/octet-stream")
            |> put_req_header("authorization", key_for("eric"))
            |> post("api/packages/ecto/releases/0.0.1/docs", body)

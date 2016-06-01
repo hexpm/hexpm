@@ -6,7 +6,7 @@ defmodule HexWeb.API.PackageControllerTest do
   alias HexWeb.Release
 
   setup do
-    user       = User.build(%{username: "eric", email: "eric@mail.com", password: "eric"}, true) |> HexWeb.Repo.insert!
+    user = User.build(%{username: "eric", email: "eric@mail.com", password: "eric"}, true) |> HexWeb.Repo.insert!
     pkg = Package.build(user, pkg_meta(%{name: "decimal", description: "Arbitrary precision decimal arithmetic for Elixir."})) |> HexWeb.Repo.insert!
     Package.build(user, pkg_meta(%{name: "postgrex", description: "Postgrex is awesome"})) |> HexWeb.Repo.insert!
     Release.build(pkg, rel_meta(%{version: "0.0.1", app: "decimal"}), "") |> HexWeb.Repo.insert!
@@ -14,7 +14,7 @@ defmodule HexWeb.API.PackageControllerTest do
   end
 
   test "get package" do
-    conn = get conn(), "api/packages/decimal"
+    conn = get build_conn(), "api/packages/decimal"
 
     assert conn.status == 200
     body = Poison.decode!(conn.resp_body)
@@ -26,7 +26,7 @@ defmodule HexWeb.API.PackageControllerTest do
   end
 
   test "get multiple packages" do
-    conn = get conn(), "api/packages"
+    conn = get build_conn(), "api/packages"
     assert conn.status == 200
     body = Poison.decode!(conn.resp_body)
     assert length(body) == 2
@@ -37,17 +37,17 @@ defmodule HexWeb.API.PackageControllerTest do
       assert Map.has_key?(release, "version")
     end
 
-    conn = get conn(), "api/packages?search=post"
+    conn = get build_conn(), "api/packages?search=post"
     assert conn.status == 200
     body = Poison.decode!(conn.resp_body)
     assert length(body) == 1
 
-    conn = get conn(), "api/packages?page=1"
+    conn = get build_conn(), "api/packages?page=1"
     assert conn.status == 200
     body = Poison.decode!(conn.resp_body)
     assert length(body) == 2
 
-    conn = get conn(), "api/packages?page=2"
+    conn = get build_conn(), "api/packages?page=2"
     assert conn.status == 200
     body = Poison.decode!(conn.resp_body)
     assert length(body) == 0
@@ -64,12 +64,12 @@ defmodule HexWeb.API.PackageControllerTest do
     |> Ecto.Changeset.change(inserted_at: future)
     |> HexWeb.Repo.update!
 
-    conn = get conn(), "api/packages?sort=updated_at"
+    conn = get build_conn(), "api/packages?sort=updated_at"
     assert conn.status == 200
     body = Poison.decode!(conn.resp_body)
     assert hd(body)["name"] == "postgrex"
 
-    conn = get conn(), "api/packages?sort=inserted_at"
+    conn = get build_conn(), "api/packages?sort=inserted_at"
     assert conn.status == 200
     body = Poison.decode!(conn.resp_body)
     assert hd(body)["name"] == "decimal"

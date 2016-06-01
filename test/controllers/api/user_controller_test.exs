@@ -11,7 +11,7 @@ defmodule HexWeb.API.UserControllerTest do
 
   test "create user" do
     body = %{username: "name", email: "email@mail.com", password: "pass"}
-    conn = conn()
+    conn = build_conn()
            |> put_req_header("content-type", "application/json")
            |> post("api/users", Poison.encode!(body))
 
@@ -25,7 +25,7 @@ defmodule HexWeb.API.UserControllerTest do
 
   test "create user sends mails and requires confirmation" do
     body = %{username: "name", email: "create_user@mail.com", password: "pass"}
-    conn = conn()
+    conn = build_conn()
            |> put_req_header("content-type", "application/json")
            |> post("api/users", Poison.encode!(body))
     assert conn.status == 201
@@ -37,7 +37,7 @@ defmodule HexWeb.API.UserControllerTest do
 
     meta = %{name: "ecto", version: "1.0.0", description: "Domain-specific language."}
     body = create_tar(meta, [])
-    conn = conn()
+    conn = build_conn()
            |> put_req_header("content-type", "application/octet-stream")
            |> put_req_header("authorization", key_for(user))
            |> post("api/packages/ecto/releases", body)
@@ -45,11 +45,11 @@ defmodule HexWeb.API.UserControllerTest do
     assert conn.status == 403
     assert conn.resp_body =~ "account unconfirmed"
 
-    conn = get(conn(), "password/confirm?username=name&key=" <> user.confirmation_key)
+    conn = get(build_conn(), "password/confirm?username=name&key=" <> user.confirmation_key)
     assert conn.status == 200
     assert conn.resp_body =~ "Account confirmed"
 
-    conn = conn()
+    conn = build_conn()
            |> put_req_header("content-type", "application/octet-stream")
            |> put_req_header("authorization", key_for(user))
            |> post("api/packages/ecto/releases", body)
@@ -64,18 +64,18 @@ defmodule HexWeb.API.UserControllerTest do
   test "email is sent with reset_token when password is reset" do
     # create user with confirmed account
     body = %{username: "reset_test", email: "reset_user@mail.com", password: "pass"}
-    conn = conn()
+    conn = build_conn()
            |> put_req_header("content-type", "application/json")
            |> post("api/users", Poison.encode!(body))
     assert conn.status == 201
     user = HexWeb.Repo.get_by!(User, username: "reset_test")
 
-    conn = get(conn(), "password/confirm?username=reset_test&key=" <> user.confirmation_key)
+    conn = get(build_conn(), "password/confirm?username=reset_test&key=" <> user.confirmation_key)
     assert conn.status == 200
     assert conn.resp_body =~ "Account confirmed"
 
     # initiate reset request
-    conn = post(conn(), "api/users/#{user.username}/reset", %{})
+    conn = post(build_conn(), "api/users/#{user.username}/reset", %{})
     assert conn.status == 204
 
     # check email was sent with correct token
@@ -90,7 +90,7 @@ defmodule HexWeb.API.UserControllerTest do
 
   test "create user validates" do
     body = %{username: "name", password: "pass"}
-    conn = conn()
+    conn = build_conn()
            |> put_req_header("content-type", "application/json")
            |> post("api/users", Poison.encode!(body))
 
@@ -102,7 +102,7 @@ defmodule HexWeb.API.UserControllerTest do
   end
 
   test "get user" do
-    conn = conn()
+    conn = build_conn()
            |> put_req_header("content-type", "application/json")
            |> put_req_header("authorization", key_for("eric"))
            |> get("api/users/eric")
@@ -113,7 +113,7 @@ defmodule HexWeb.API.UserControllerTest do
     assert body["email"] == "eric@mail.com"
     refute body["password"]
 
-    conn = get conn(), "api/users/eric"
+    conn = get build_conn(), "api/users/eric"
     assert conn.status == 401
   end
 end

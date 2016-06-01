@@ -18,7 +18,7 @@ defmodule HexWeb.PasswordControllerTest do
       |> HexWeb.Repo.update
 
     # reset the password (using token) to `abcd1234`
-    conn = post(conn, "password/reset", %{"username" => user.username, "key" => reset_key, "password" => "abcd1234"})
+    conn = post(build_conn(), "password/reset", %{"username" => user.username, "key" => reset_key, "password" => "abcd1234"})
     assert conn.status == 200
     assert conn.assigns[:success] == true
 

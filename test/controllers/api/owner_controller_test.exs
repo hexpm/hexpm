@@ -16,7 +16,7 @@ defmodule HexWeb.API.OwnerControllerTest do
   end
 
   test "get package owners" do
-    conn = conn()
+    conn = build_conn()
            |> put_req_header("authorization", key_for("eric"))
            |> get("api/packages/postgrex/owners")
     assert conn.status == 200
@@ -28,7 +28,7 @@ defmodule HexWeb.API.OwnerControllerTest do
     user = HexWeb.Repo.get_by!(User, username: "jose")
     Package.build_owner(package, user) |> HexWeb.Repo.insert!
 
-    conn = conn()
+    conn = build_conn()
            |> put_req_header("authorization", key_for("eric"))
            |> get("api/packages/postgrex/owners")
     assert conn.status == 200
@@ -40,26 +40,26 @@ defmodule HexWeb.API.OwnerControllerTest do
   end
 
   test "get package owners authorizes" do
-    conn = conn()
+    conn = build_conn()
            |> put_req_header("authorization", key_for("other"))
            |> get("api/packages/postgrex/owners")
     assert conn.status == 403
   end
 
   test "check if user is package owner" do
-    conn = conn()
+    conn = build_conn()
            |> put_req_header("authorization", key_for("eric"))
            |> get("api/packages/postgrex/owners/eric@mail.com")
     assert conn.status == 204
 
-    conn = conn()
+    conn = build_conn()
            |> put_req_header("authorization", key_for("eric"))
            |> get("api/packages/postgrex/owners/jose@mail.com")
     assert conn.status == 404
   end
 
   test "check if user is package owner authorizes" do
-    conn = conn()
+    conn = build_conn()
            |> put_req_header("authorization", key_for("other"))
            |> get("api/packages/postgrex/owners/eric@mail.com")
     assert conn.status == 403
@@ -69,7 +69,7 @@ defmodule HexWeb.API.OwnerControllerTest do
     eric = HexWeb.Repo.get_by!(User, username: "eric")
     jose = HexWeb.Repo.get_by!(User, username: "jose")
 
-    conn = conn()
+    conn = build_conn()
            |> put_req_header("authorization", key_for(eric))
            |> put("api/packages/postgrex/owners/#{jose.email}")
     assert conn.status == 204
@@ -94,12 +94,12 @@ defmodule HexWeb.API.OwnerControllerTest do
   end
 
   test "cannot add same owner twice" do
-    conn = conn()
+    conn = build_conn()
            |> put_req_header("authorization", key_for("eric"))
            |> put("api/packages/postgrex/owners/jose%40mail.com")
     assert conn.status == 204
 
-    conn = conn()
+    conn = build_conn()
            |> put_req_header("authorization", key_for("eric"))
            |> put("api/packages/postgrex/owners/jose%40mail.com")
     assert conn.status == 422
@@ -108,7 +108,7 @@ defmodule HexWeb.API.OwnerControllerTest do
   end
 
   test "add package owner authorizes" do
-    conn = conn()
+    conn = build_conn()
            |> put_req_header("authorization", key_for("other"))
            |> put("api/packages/postgrex/owners/jose%40mail.com")
     assert conn.status == 403
@@ -120,7 +120,7 @@ defmodule HexWeb.API.OwnerControllerTest do
     package = HexWeb.Repo.get_by!(Package, name: "postgrex")
     Package.build_owner(package, jose) |> HexWeb.Repo.insert!
 
-    conn = conn()
+    conn = build_conn()
            |> put_req_header("authorization", key_for(eric))
            |> delete("api/packages/postgrex/owners/#{jose.email}")
     assert conn.status == 204
@@ -141,7 +141,7 @@ defmodule HexWeb.API.OwnerControllerTest do
   end
 
   test "delete package owner authorizes" do
-    conn = conn()
+    conn = build_conn()
            |> put_req_header("authorization", key_for("other"))
            |> delete("api/packages/postgrex/owners/eric%40mail.com")
     assert conn.status == 403
@@ -150,7 +150,7 @@ defmodule HexWeb.API.OwnerControllerTest do
   test "not possible to remove last owner of package" do
     package = HexWeb.Repo.get_by!(Package, name: "postgrex")
 
-    conn = conn()
+    conn = build_conn()
            |> put_req_header("authorization", key_for("eric"))
            |> delete("api/packages/postgrex/owners/eric%40mail.com")
     assert conn.status == 403
