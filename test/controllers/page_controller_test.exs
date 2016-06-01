@@ -45,7 +45,7 @@ defmodule HexWeb.PageControllerTest do
     HexWeb.Store.put("region", "bucket", "hex/2013-12-01-21-32-19-E568B2907131C0C0", logfile2, [])
     HexWeb.StatsJob.run({2013, 12, 1}, [["bucket", "region"]])
 
-    conn = get conn(), "/"
+    conn = get build_conn(), "/"
 
     assert conn.status == 200
     assert conn.assigns[:total]["all"] == 9

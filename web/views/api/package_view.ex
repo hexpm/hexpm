@@ -3,11 +3,11 @@ defmodule HexWeb.API.PackageView do
   import Ecto
 
   def render("index." <> _, %{packages: packages}),
-    do: render_many(packages, __MODULE__, {"package", :index})
+    do: render_many(packages, __MODULE__, "package/index")
   def render("show." <> _, %{package: package}),
-    do: render_one(package, __MODULE__, {"package", :show})
+    do: render_one(package, __MODULE__, "package/show")
 
-  def render({"package", view}, %{package: package}) do
+  def render("package/" <> view, %{package: package}) do
     package
     |> Map.take([:name, :inserted_at, :updated_at])
     |> Map.put(:meta, Map.take(package.meta, [:description, :licenses, :links, :maintainers]))
@@ -37,6 +37,6 @@ defmodule HexWeb.API.PackageView do
     Map.put(entity, :downloads, downloads)
   end
 
-  defp get_params(:index), do: [:version]
-  defp get_params(:show), do: [:version, :inserted_at, :updated_at]
+  defp get_params("index"), do: [:version]
+  defp get_params("show"), do: [:version, :inserted_at, :updated_at]
 end

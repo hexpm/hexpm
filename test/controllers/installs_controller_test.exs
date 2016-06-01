@@ -2,12 +2,12 @@ defmodule HexWeb.InstallsControllerTest do
   use HexWeb.ConnCase, async: true
 
   test "forwarding" do
-    conn = conn()
+    conn = build_conn()
            |> put_req_header("x-forwarded-for", "1.2.3.4")
            |> get("installs/hex.ez")
     assert conn.remote_ip == {1,2,3,4}
 
-    conn = conn()
+    conn = build_conn()
            |> put_req_header("x-forwarded-for", "1.2.3.4 , 5.6.7.8")
            |> get("installs/hex.ez")
     assert conn.remote_ip == {5,6,7,8}
@@ -28,39 +28,39 @@ defmodule HexWeb.InstallsControllerTest do
     end)
 
     try do
-      conn = get(conn(), "installs/hex.ez")
+      conn = get(build_conn(), "installs/hex.ez")
       assert conn.status == 302
       assert get_resp_header(conn, "location") == ["http://s3.hex.pm/installs/1.0.0/hex.ez"]
 
-      conn = get(conn(), "installs/hex.ez?elixir=0.0.1")
+      conn = get(build_conn(), "installs/hex.ez?elixir=0.0.1")
       assert conn.status == 302
       assert get_resp_header(conn, "location") == ["http://s3.hex.pm/installs/hex.ez"]
 
-      conn = get(conn(), "installs/hex.ez?elixir=0.13.0")
+      conn = get(build_conn(), "installs/hex.ez?elixir=0.13.0")
       assert conn.status == 302
       assert get_resp_header(conn, "location") == ["http://s3.hex.pm/installs/0.13.0-dev/hex.ez"]
 
-      conn = get(conn(), "installs/hex.ez?elixir=0.13.1")
+      conn = get(build_conn(), "installs/hex.ez?elixir=0.13.1")
       assert conn.status == 302
       assert get_resp_header(conn, "location") == ["http://s3.hex.pm/installs/0.13.1-dev/hex.ez"]
 
-      conn = get(conn(), "installs/hex.ez?elixir=0.14.0")
+      conn = get(build_conn(), "installs/hex.ez?elixir=0.14.0")
       assert conn.status == 302
       assert get_resp_header(conn, "location") == ["http://s3.hex.pm/installs/0.14.0/hex.ez"]
 
-      conn = get(conn(), "installs/hex.ez?elixir=0.14.1-dev")
+      conn = get(build_conn(), "installs/hex.ez?elixir=0.14.1-dev")
       assert conn.status == 302
       assert get_resp_header(conn, "location") == ["http://s3.hex.pm/installs/0.14.0/hex.ez"]
 
-      conn = get(conn(), "installs/hex.ez?elixir=0.14.1")
+      conn = get(build_conn(), "installs/hex.ez?elixir=0.14.1")
       assert conn.status == 302
       assert get_resp_header(conn, "location") == ["http://s3.hex.pm/installs/0.14.1/hex.ez"]
 
-      conn = get(conn(), "installs/hex.ez?elixir=0.14.2")
+      conn = get(build_conn(), "installs/hex.ez?elixir=0.14.2")
       assert conn.status == 302
       assert get_resp_header(conn, "location") == ["http://s3.hex.pm/installs/0.14.2/hex.ez"]
 
-      conn = conn()
+      conn = build_conn()
              |> put_req_header("user-agent", "Mix/0.14.1-dev")
              |> get("installs/hex.ez")
       assert conn.status == 302

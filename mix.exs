@@ -24,10 +24,10 @@ defmodule HexWeb.Mixfile do
   defp elixirc_paths(_),     do: ["lib", "web"]
 
   defp deps do
-    [{:phoenix,             "~> 1.1"},
+    [{:phoenix,             "~> 1.2.0-rc"},
      {:phoenix_ecto,        "~> 3.0.0-rc"},
-     {:postgrex,            ">= 0.0.0"},
      {:phoenix_html,        "~> 2.3"},
+     {:postgrex,            ">= 0.0.0"},
      {:cowboy,              "~> 1.0"},
      {:porcelain,           "~> 2.0"},
      {:earmark,             "~> 0.1"},

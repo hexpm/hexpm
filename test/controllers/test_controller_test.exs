@@ -16,12 +16,12 @@ defmodule HexWeb.TestControllerTest do
 
   test "fetch registry" do
     RegistryBuilder.rebuild
-    conn = get conn(), "registry.ets.gz"
+    conn = get build_conn(), "registry.ets.gz"
     assert conn.status in 200..399
   end
 
   # test "fetch tarball" do
-  #   conn = get conn(), "tarballs/decimal-0.0.1.tar"
+  #   conn = get build_conn(), "tarballs/decimal-0.0.1.tar"
   #   assert conn.status == 200
   # end
 end

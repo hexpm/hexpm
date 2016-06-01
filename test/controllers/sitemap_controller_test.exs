@@ -15,7 +15,7 @@ defmodule HexWeb.SitemapControllerTest do
   end
 
   test "sitemap" do
-    conn = get conn(), "/sitemap.xml"
+    conn = get build_conn(), "/sitemap.xml"
 
     assert conn.status == 200
 

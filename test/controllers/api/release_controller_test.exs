@@ -15,7 +15,7 @@ defmodule HexWeb.API.ReleaseControllerTest do
 
   test "create release" do
     meta = %{name: "ecto", version: "1.0.0", description: "Domain-specific language."}
-    conn = conn()
+    conn = build_conn()
            |> put_req_header("content-type", "application/octet-stream")
            |> put_req_header("authorization", key_for("eric"))
            |> post("api/packages/ecto/releases", create_tar(meta, []))
@@ -40,7 +40,7 @@ defmodule HexWeb.API.ReleaseControllerTest do
     Package.build(user, pkg_meta(%{name: "ecto", description: "DSL"})) |> HexWeb.Repo.insert!
 
     meta = %{name: "ecto", version: "1.0.0", description: "awesomeness"}
-    conn = conn()
+    conn = build_conn()
            |> put_req_header("content-type", "application/octet-stream")
            |> put_req_header("authorization", key_for("eric"))
            |> post("api/packages/ecto/releases", create_tar(meta, []))
@@ -54,7 +54,7 @@ defmodule HexWeb.API.ReleaseControllerTest do
 
   test "create release authorizes" do
     body = create_tar(%{name: :postgrex, version: "0.0.1"}, [])
-    conn = conn()
+    conn = build_conn()
            |> put_req_header("content-type", "application/octet-stream")
            |> put_req_header("authorization", "wrong")
            |> post("api/packages/postgrex/releases", body)
@@ -68,7 +68,7 @@ defmodule HexWeb.API.ReleaseControllerTest do
     |> Package.build(pkg_meta(%{name: "ecto", description: "DSL"}))
 
     meta = %{name: "ecto", version: "1.0.0", description: "Domain-specific language."}
-    conn = conn()
+    conn = build_conn()
            |> put_req_header("content-type", "application/octet-stream")
            |> put_req_header("authorization", "wrong")
            |> post("api/packages/ecto/releases", create_tar(meta, []))
@@ -79,7 +79,7 @@ defmodule HexWeb.API.ReleaseControllerTest do
 
   test "create package validates" do
     meta = %{name: "ecto", version: "1.0.0", links: "invalid", description: "description"}
-    conn = conn()
+    conn = build_conn()
            |> put_req_header("content-type", "application/octet-stream")
            |> put_req_header("authorization", key_for("eric"))
            |> post("api/packages/ecto/releases", create_tar(meta, []))
@@ -92,7 +92,7 @@ defmodule HexWeb.API.ReleaseControllerTest do
 
   test "create releases" do
     body = create_tar(%{name: :postgrex, app: "not_postgrex", version: "0.0.1", description: "description"}, [])
-    conn = conn()
+    conn = build_conn()
            |> put_req_header("content-type", "application/octet-stream")
            |> put_req_header("authorization", key_for("eric"))
            |> post("api/packages/postgrex/releases", body)
@@ -103,7 +103,7 @@ defmodule HexWeb.API.ReleaseControllerTest do
     assert body["url"] =~ "/api/packages/postgrex/releases/0.0.1"
 
     body = create_tar(%{name: :postgrex, version: "0.0.2", description: "description"}, [])
-    conn = conn()
+    conn = build_conn()
            |> put_req_header("content-type", "application/octet-stream")
            |> put_req_header("authorization", key_for("eric"))
            |> post("api/packages/postgrex/releases", body)
@@ -123,7 +123,7 @@ defmodule HexWeb.API.ReleaseControllerTest do
     refute HexWeb.Repo.get_by(Package, name: "phoenix")
 
     body = create_tar(%{name: :phoenix, app: "phoenix", description: "Web framework", version: "1.0.0"}, [])
-    conn = conn()
+    conn = build_conn()
            |> put_req_header("content-type", "application/octet-stream")
            |> put_req_header("authorization", key_for("eric"))
            |> post("api/packages/phoenix/releases", body)
@@ -134,14 +134,14 @@ defmodule HexWeb.API.ReleaseControllerTest do
 
   test "update release" do
     body = create_tar(%{name: :postgrex, version: "0.0.1", description: "description"}, [])
-    conn = conn()
+    conn = build_conn()
            |> put_req_header("content-type", "application/octet-stream")
            |> put_req_header("authorization", key_for("eric"))
            |> post("api/packages/postgrex/releases", body)
 
     assert conn.status == 201
 
-    conn = conn()
+    conn = build_conn()
            |> put_req_header("content-type", "application/octet-stream")
            |> put_req_header("authorization", key_for("eric"))
            |> post("api/packages/postgrex/releases", body)
@@ -155,7 +155,7 @@ defmodule HexWeb.API.ReleaseControllerTest do
     Ecto.Changeset.change(release, inserted_at: %{Ecto.DateTime.utc | year: 2000})
     |> HexWeb.Repo.update!
 
-    conn = conn()
+    conn = build_conn()
            |> put_req_header("content-type", "application/octet-stream")
            |> put_req_header("authorization", key_for("eric"))
            |> post("api/packages/postgrex/releases", body)
@@ -168,7 +168,7 @@ defmodule HexWeb.API.ReleaseControllerTest do
   test "delete release" do
     user = HexWeb.Repo.get_by!(User, username: "eric")
     body = create_tar(%{name: :postgrex, version: "0.0.1", description: "description"}, [])
-    conn = conn()
+    conn = build_conn()
            |> put_req_header("content-type", "application/octet-stream")
            |> put_req_header("authorization", key_for(user))
            |> post("api/packages/postgrex/releases", body)
@@ -179,7 +179,7 @@ defmodule HexWeb.API.ReleaseControllerTest do
     Ecto.Changeset.change(release, inserted_at: %{Ecto.DateTime.utc | year: 2000, month: 1})
     |> HexWeb.Repo.update!
 
-    conn = conn()
+    conn = build_conn()
            |> put_req_header("content-type", "application/octet-stream")
            |> put_req_header("authorization", key_for("eric"))
            |> delete("api/packages/postgrex/releases/0.0.1")
@@ -191,7 +191,7 @@ defmodule HexWeb.API.ReleaseControllerTest do
     Ecto.Changeset.change(release, inserted_at: %{Ecto.DateTime.utc | year: 2030, month: 1})
     |> HexWeb.Repo.update!
 
-    conn = conn()
+    conn = build_conn()
            |> put_req_header("content-type", "application/octet-stream")
            |> put_req_header("authorization", key_for(user))
            |> delete("api/packages/postgrex/releases/0.0.1")
@@ -209,7 +209,7 @@ defmodule HexWeb.API.ReleaseControllerTest do
   test "create releases with requirements" do
     reqs = [%{name: "decimal", requirement: "~> 0.0.1", app: "not_decimal", optional: false}]
     body = create_tar(%{name: :postgrex, version: "0.0.1", requirements: reqs, description: "description"}, [])
-    conn = conn()
+    conn = build_conn()
            |> put_req_header("content-type", "application/octet-stream")
            |> put_req_header("authorization", key_for("eric"))
            |> post("api/packages/postgrex/releases", body)
@@ -231,7 +231,7 @@ defmodule HexWeb.API.ReleaseControllerTest do
     # invalid requirement
     reqs = [%{name: "decimal", requirement: "~> invalid", app: "not_decimal", optional: false}]
     body = create_tar(%{name: :postgrex, version: "0.0.1", requirements: reqs, description: "description"}, [])
-    conn = conn()
+    conn = build_conn()
            |> put_req_header("content-type", "application/octet-stream")
            |> put_req_header("authorization", key_for("eric"))
            |> post("api/packages/postgrex/releases", body)
@@ -244,7 +244,7 @@ defmodule HexWeb.API.ReleaseControllerTest do
     # invalid package
     reqs = [%{name: "not_decimal", requirement: "~> 1.0", app: "not_decimal", optional: false}]
     body = create_tar(%{name: :postgrex, version: "0.0.1", requirements: reqs, description: "description"}, [])
-    conn = conn()
+    conn = build_conn()
            |> put_req_header("content-type", "application/octet-stream")
            |> put_req_header("authorization", key_for("eric"))
            |> post("api/packages/postgrex/releases", body)
@@ -257,7 +257,7 @@ defmodule HexWeb.API.ReleaseControllerTest do
     # conflict
     reqs = [%{name: "decimal", requirement: "~> 1.0", app: "not_decimal", optional: false}]
     body = create_tar(%{name: :postgrex, version: "0.1.0", requirements: reqs, description: "description"}, [])
-    conn = conn()
+    conn = build_conn()
            |> put_req_header("content-type", "application/octet-stream")
            |> put_req_header("authorization", key_for("eric"))
            |> post("api/packages/postgrex/releases", body)
@@ -276,7 +276,7 @@ defmodule HexWeb.API.ReleaseControllerTest do
 
     reqs = [%{name: "decimal", app: "decimal", requirement: "~> 0.0.1", optional: false}]
     body = create_tar(%{name: :postgrex, app: :postgrex, version: "0.0.1", requirements: reqs, description: "description"}, [])
-    conn = conn()
+    conn = build_conn()
            |> put_req_header("content-type", "application/octet-stream")
            |> put_req_header("authorization", key_for("eric"))
            |> post("api/packages/postgrex/releases", body)
@@ -286,7 +286,7 @@ defmodule HexWeb.API.ReleaseControllerTest do
   end
 
   test "get release" do
-    conn = get conn(), "api/packages/decimal/releases/0.0.1"
+    conn = get build_conn(), "api/packages/decimal/releases/0.0.1"
 
     assert conn.status == 200
     body = Poison.decode!(conn.resp_body)
