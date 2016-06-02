@@ -3,8 +3,7 @@ defmodule HexWeb.API.ReleaseController do
 
   @publish_timeout 60_000
 
-  plug :fetch_release when action != :create
-  plug :authorize, [fun: &package_owner?/2] when action == :delete
+  plug :fetch_release when action == :show
 
   def create(conn, %{"name" => name, "body" => body}) do
     auth =
@@ -39,27 +38,35 @@ defmodule HexWeb.API.ReleaseController do
   end
 
   def delete(conn, _params) do
-    package = conn.assigns.package
-    release = conn.assigns.release
-
-    multi =
-      Ecto.Multi.new
-      |> Ecto.Multi.delete(:release, Release.delete(release))
-      |> Ecto.Multi.insert(:log, audit(conn, "release.revert", {package, release}))
-
     {:ok, conn} = HexWeb.Repo.transaction(fn ->
-      case HexWeb.Repo.transaction(multi) do
-        {:ok, _} ->
-          if Repo.aggregate(assoc(package, :releases), :count, :id) == 0 do
-            HexWeb.Repo.delete!(package)
-          end
-          revert(release)
+      HexWeb.Repo.transaction_isolation(:serializable)
 
-          conn
-          |> api_cache(:private)
-          |> send_resp(204, "")
-        {:error, :release, changeset, _} ->
-          validation_failed(conn, changeset)
+      conn =
+        conn
+        |> fetch_release([])
+        |> authorize(fun: &package_owner?/2)
+
+      if conn.halted do
+        conn
+      else
+        package = conn.assigns.package
+        release = conn.assigns.release
+
+        case HexWeb.Repo.delete(Release.delete(release)) do
+          {:ok, _} ->
+            if Repo.aggregate(assoc(package, :releases), :count, :id) == 0 do
+              HexWeb.Repo.delete!(package)
+            end
+
+            HexWeb.Repo.insert!(audit(conn, "release.revert", {package, release}))
+            revert(release)
+
+            conn
+            |> api_cache(:private)
+            |> send_resp(204, "")
+          {:error, changeset} ->
+            validation_failed(conn, changeset)
+        end
       end
     end, timeout: @publish_timeout)
 
