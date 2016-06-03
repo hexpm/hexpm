@@ -57,6 +57,7 @@ defmodule HexWeb.Web do
 
       import HexWeb.Router.Helpers
       import HexWeb.ViewHelpers
+      import HexWeb.ViewIcons
 
       HexWeb.Web.shared
     end
