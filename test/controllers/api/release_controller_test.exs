@@ -147,10 +147,10 @@ defmodule HexWeb.API.ReleaseControllerTest do
            |> post("api/packages/postgrex/releases", body)
 
     assert conn.status == 200
-    postgrex = HexWeb.Repo.get_by(Package, name: "postgrex")
+    postgrex = HexWeb.Repo.get_by!(Package, name: "postgrex")
     release = HexWeb.Repo.get_by!(assoc(postgrex, :releases), version: "0.0.1")
-    assert release
-    assert HexWeb.Repo.one!(HexWeb.AuditLog).action == "release.publish"
+    assert [%HexWeb.AuditLog{action: "release.publish"}, %HexWeb.AuditLog{action: "release.publish"}] =
+           HexWeb.Repo.all(HexWeb.AuditLog)
 
     Ecto.Changeset.change(release, inserted_at: %{Ecto.DateTime.utc | year: 2000})
     |> HexWeb.Repo.update!
@@ -165,6 +165,7 @@ defmodule HexWeb.API.ReleaseControllerTest do
            Poison.decode!(conn.resp_body)
   end
 
+  @tag transaction_isolation: :serializable
   test "delete release" do
     user = HexWeb.Repo.get_by!(User, username: "eric")
     body = create_tar(%{name: :postgrex, version: "0.0.1", description: "description"}, [])
@@ -197,8 +198,8 @@ defmodule HexWeb.API.ReleaseControllerTest do
            |> delete("api/packages/postgrex/releases/0.0.1")
 
     assert conn.status == 204
-    postgrex = HexWeb.Repo.get_by!(Package, name: "postgrex")
-    refute HexWeb.Repo.get_by(assoc(postgrex, :releases), version: "0.0.1")
+    refute HexWeb.Repo.get_by(Package, name: "postgrex")
+    refute HexWeb.Repo.get_by(assoc(package, :releases), version: "0.0.1")
 
     [_, log] = HexWeb.Repo.all(HexWeb.AuditLog)
     assert log.actor_id == user.id

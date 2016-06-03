@@ -73,30 +73,8 @@ defmodule HexWeb.RegistryBuilder do
     releases     = releases()
     packages     = packages()
 
-    package_tuples =
-      Enum.reduce(releases, %{}, fn {_, vsn, pkg_id, _, _}, dict ->
-        Map.update(dict, packages[pkg_id], [vsn], &[vsn|&1])
-      end)
-
-    package_tuples =
-      Enum.map(package_tuples, fn {name, versions} ->
-        versions =
-          Enum.sort(versions, &(Version.compare(&1, &2) == :lt))
-          |> Enum.map(&to_string/1)
-
-        {name, [versions]}
-      end)
-
-    release_tuples =
-      Enum.map(releases, fn {id, version, pkg_id, checksum, tools} ->
-        package = packages[pkg_id]
-        deps =
-          Enum.map(requirements[id] || [], fn {dep_id, app, req, opt} ->
-            dep_name = packages[dep_id]
-            [dep_name, req, opt, app]
-          end)
-        {{package, to_string(version)}, [deps, checksum, tools]}
-      end)
+    package_tuples = package_tuples(packages, releases)
+    release_tuples = release_tuples(packages, releases, requirements)
 
     {:memory, memory} = :erlang.process_info(self, :memory)
 
@@ -152,6 +130,47 @@ defmodule HexWeb.RegistryBuilder do
     end
   end
 
+  defp package_tuples(packages, releases) do
+    Enum.reduce(releases, %{}, fn {_, vsn, pkg_id, _, _}, map ->
+      case Map.fetch(packages, pkg_id) do
+        {:ok, package} -> Map.update(map, package, [vsn], &[vsn|&1])
+        :error -> map
+      end
+    end)
+    |> sort_package_tuples
+  end
+
+  defp sort_package_tuples(tuples) do
+    Enum.map(tuples, fn {name, versions} ->
+      versions =
+        Enum.sort(versions, &(Version.compare(&1, &2) == :lt))
+        |> Enum.map(&to_string/1)
+
+      {name, [versions]}
+    end)
+  end
+
+  defp release_tuples(packages, releases, requirements) do
+    Enum.flat_map(releases, fn {id, version, pkg_id, checksum, tools} ->
+      case Map.fetch(packages, pkg_id) do
+        {:ok, package} ->
+          deps = deps_list(requirements[id] || [], packages)
+          [{{package, to_string(version)}, [deps, checksum, tools]}]
+        :error ->
+          []
+      end
+    end)
+  end
+
+  defp deps_list(requirements, packages) do
+    Enum.flat_map(requirements, fn {dep_id, app, req, opt} ->
+      case Map.fetch(packages, dep_id) do
+        {:ok, dep} -> [[dep, req, opt, app]]
+        :error -> []
+      end
+    end)
+  end
+
   defp packages do
     from(p in Package, select: {p.id, p.name})
     |> HexWeb.Repo.all
@@ -169,9 +188,9 @@ defmodule HexWeb.RegistryBuilder do
            select: {r.release_id, r.dependency_id, r.app, r.requirement, r.optional})
       |> HexWeb.Repo.all
 
-    Enum.reduce(reqs, %{}, fn {rel_id, dep_id, app, req, opt}, dict ->
+    Enum.reduce(reqs, %{}, fn {rel_id, dep_id, app, req, opt}, map ->
       tuple = {dep_id, app, req, opt}
-      Map.update(dict, rel_id, [tuple], &[tuple|&1])
+      Map.update(map, rel_id, [tuple], &[tuple|&1])
     end)
   end
 

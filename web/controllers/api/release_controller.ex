@@ -1,8 +1,9 @@
 defmodule HexWeb.API.ReleaseController do
   use HexWeb.Web, :controller
 
-  plug :fetch_release when action != :create
-  plug :authorize, [fun: &package_owner?/2] when action == :delete
+  @publish_timeout 60_000
+
+  plug :fetch_release when action == :show
 
   def create(conn, %{"name" => name, "body" => body}) do
     auth =
@@ -37,41 +38,58 @@ defmodule HexWeb.API.ReleaseController do
   end
 
   def delete(conn, _params) do
-    release = conn.assigns.release
-    multi =
-      Ecto.Multi.new
-      |> Ecto.Multi.delete(:release, Release.delete(release))
-      |> Ecto.Multi.insert(:log, audit(conn, "release.revert", {release.package, release}))
+    {:ok, conn} = HexWeb.Repo.transaction_with_isolation(fn ->
 
-    case HexWeb.Repo.transaction(multi) do
-      {:ok, _} ->
-        # TODO: Remove package from database if this was the only release
-        revert(release)
-
+      conn =
         conn
-        |> api_cache(:private)
-        |> send_resp(204, "")
-      {:error, :release, changeset, _} ->
-        validation_failed(conn, changeset)
-    end
-  end
+        |> fetch_release([])
+        |> authorize(fun: &package_owner?/2)
 
-  defp handle_tarball(conn, package, user, body) do
-    # TODO: with special form
-    # TODO: Repo.transaction
-    case HexWeb.Tar.metadata(body) do
-      {:ok, meta, checksum} ->
-        package_params = %{"name" => meta["name"], "meta" => meta}
-        case create_package(user, package, package_params) do
-          {:ok, package} ->
-            create_release(conn, package, user, checksum, meta, body)
+      if conn.halted do
+        conn
+      else
+        package = conn.assigns.package
+        release = conn.assigns.release
+
+        case HexWeb.Repo.delete(Release.delete(release)) do
+          {:ok, _} ->
+            if Repo.aggregate(assoc(package, :releases), :count, :id) == 0 do
+              HexWeb.Repo.delete!(package)
+            end
+
+            HexWeb.Repo.insert!(audit(conn, "release.revert", {package, release}))
+            revert(release)
+
+            conn
+            |> api_cache(:private)
+            |> send_resp(204, "")
           {:error, changeset} ->
             validation_failed(conn, changeset)
         end
+      end
+    end, level: :serializable, timeout: @publish_timeout)
 
-      {:error, errors} ->
-        validation_failed(conn, %{tar: errors})
-    end
+    conn
+  end
+
+  defp handle_tarball(conn, package, user, body) do
+    {:ok, conn} = HexWeb.Repo.transaction(fn ->
+      case HexWeb.Tar.metadata(body) do
+        {:ok, meta, checksum} ->
+          package_params = %{"name" => meta["name"], "meta" => meta}
+          case create_package(user, package, package_params) do
+            {:ok, package} ->
+              create_release(conn, package, user, checksum, meta, body)
+            {:error, changeset} ->
+              validation_failed(conn, changeset)
+          end
+
+        {:error, errors} ->
+          validation_failed(conn, %{tar: errors})
+      end
+    end, timeout: @publish_timeout)
+
+    conn
   end
 
   defp create_package(user, package, params) do
@@ -104,18 +122,18 @@ defmodule HexWeb.API.ReleaseController do
   end
 
   defp update(conn, package, release, release_params, checksum, user, body) do
-    release =
-      HexWeb.Repo.preload(release, requirements: Release.requirements(release))
+    release = HexWeb.Repo.preload(release, requirements: Release.requirements(release))
 
     case Release.update(release, release_params, checksum) |> HexWeb.Repo.update do
       {:ok, release} ->
-        after_release(package, release.version, user, body)
+        audit(user, "release.publish", {package, release})
+        |> HexWeb.Repo.insert!
 
-        release = %{release | package: package}
+        after_release(package, release.version, body)
 
         conn
         |> api_cache(:public)
-        |> render(:show, release: release)
+        |> render(:show, release: %{release | package: package})
       {:error, errors} ->
         validation_failed(conn, errors)
     end
@@ -129,7 +147,7 @@ defmodule HexWeb.API.ReleaseController do
 
     case HexWeb.Repo.transaction(multi) do
       {:ok, %{release: release}} ->
-        after_release(package, release.version, user, body)
+        after_release(package, release.version, body)
 
         release = %{release | package: package}
         location = release_url(conn, :show, package, release)
@@ -168,14 +186,7 @@ defmodule HexWeb.API.ReleaseController do
   end
   defp normalize_errors(changeset), do: changeset
 
-  defp after_release(package, version, user, body) do
-    task    = fn -> job(package, version, body) end
-    success = fn -> :ok end
-    failure = fn reason -> failure(package, version, user, reason) end
-    HexWeb.Utils.task_with_failure(task, success, failure)
-  end
-
-  defp job(package, version, body) do
+  defp after_release(package, version, body) do
     cdn_key = "tarballs/#{package.name}-#{version}"
     store_key = "tarballs/#{package.name}-#{version}.tar"
     opts = [acl: :public_read, cache_control: "public, max-age=604800", meta: [{"surrogate-key", cdn_key}]]
@@ -184,41 +195,22 @@ defmodule HexWeb.API.ReleaseController do
     HexWeb.RegistryBuilder.rebuild
   end
 
-  defp failure(package, version, user, reason) do
-    require Logger
-    Logger.error "Package upload failed: #{inspect reason}"
-
-    # TODO: Revert database changes
-
-    HexWeb.Mailer.send(
-      "publish_fail.html",
-      "Hex.pm - ERROR when publishing #{package.name} v#{version}",
-      [user.email],
-      package: package.name,
-      version: version,
-      docs: false)
-  end
-
   defp revert(release) do
-    task = fn ->
-      name    = release.package.name
-      version = to_string(release.version)
-      key     = "tarballs/#{name}-#{version}.tar"
+    name    = release.package.name
+    version = to_string(release.version)
+    key     = "tarballs/#{name}-#{version}.tar"
 
-      # Delete release tarball
-      HexWeb.Store.delete(nil, :s3_bucket, key)
+    # Delete release tarball
+    HexWeb.Store.delete(nil, :s3_bucket, key)
 
-      # Delete relevant documentation (if it exists)
-      if release.has_docs do
-        HexWeb.Store.delete(nil, :s3_bucket, "docs/#{name}-#{version}.tar.gz")
-        paths = HexWeb.Store.list(nil, :docs_bucket, Path.join(name, version))
-        HexWeb.Store.delete(nil, :docs_bucket, paths)
-        # TODO: Publish docs sitemap
-      end
-
-      HexWeb.RegistryBuilder.rebuild
+    # Delete relevant documentation (if it exists)
+    if release.has_docs do
+      HexWeb.Store.delete(nil, :s3_bucket, "docs/#{name}-#{version}.tar.gz")
+      paths = HexWeb.Store.list(nil, :docs_bucket, Path.join(name, version))
+      HexWeb.Store.delete(nil, :docs_bucket, paths)
+      HexWeb.API.DocsController.publish_sitemap
     end
 
-    HexWeb.Utils.task_with_failure(task, fn -> nil end, fn _ -> nil end)
+    HexWeb.RegistryBuilder.rebuild
   end
 end

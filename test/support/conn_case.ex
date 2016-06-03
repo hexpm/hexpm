@@ -35,7 +35,13 @@ defmodule HexWeb.ConnCase do
 
   setup tags do
     :ok = Ecto.Adapters.SQL.Sandbox.checkout(HexWeb.Repo)
+    if level = tags[:transaction_isolation] do
+      HexWeb.Repo.transaction_isolation(level)
+    end
+    :ok
+  end
 
+  setup tags do
     if tags[:integration] && Application.get_env(:hex_web, :s3_bucket) do
       Application.put_env(:hex_web, :store_impl, HexWeb.Store.S3)
       on_exit fn -> Application.put_env(:hex_web, :store_impl, HexWeb.Store.Local) end
