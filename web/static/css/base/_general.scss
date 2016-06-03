@@ -21,6 +21,14 @@ a, a:hover, a:focus {
   color: #ec485b;
 }
 
+.glyphicon {
+  position: relative;
+  top: 1px;
+  fill: currentColor;
+  width: 14px;
+  height: 14px;
+}
+
 .stat-icon {
   float: left;
   height: 45px;

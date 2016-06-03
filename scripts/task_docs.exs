@@ -1,4 +1,4 @@
-# Run with `mix run task_docs.exs`
+# Run with `mix run scripts/task_docs.exs`
 # Generates html for mix task docs, requires the hex client to be installed
 
 defmodule HexWeb.Script.TaskDocs do
@@ -14,7 +14,9 @@ defmodule HexWeb.Script.TaskDocs do
       <div class="panel-heading">
         <h3 id="<%= id %>" class="panel-title">
           <%= name %>
-          <a href="#<%= id %>"><span class="glyphicon glyphicon-link pull-right"></span></a>
+          <a href="#<%= id %>">
+            <%= Phoenix.HTML.safe_to_string HexWeb.ViewIcons.icon(:glyphicon, :link, class: "pull-right") %>
+          </a>
         </h3>
       </div>
       <div class="panel-body">

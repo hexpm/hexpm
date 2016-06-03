@@ -146,7 +146,9 @@ tools = Keyword.take(tools, compatible_tools)
               readonly="readonly" id="<%= tool %>-snippet" />
             <span class="input-group-btn">
               <button class="btn btn-default btn-no-hover" type="button" onclick="App.copy_snippet('<%= tool %>-snippet', this);">
-                <span class="glyphicon glyphicon-copy"></span>
+                <%= icon(:glyphicon, :copy) %>
+                <%= icon(:glyphicon, :remove, style: "display: none") %>
+                <%= icon(:glyphicon, :ok, style: "display: none; color: green") %>
               </button>
             </span>
           </div>

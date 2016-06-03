@@ -52,14 +52,24 @@ export var App = {
   },
 
   copy_succeeded: function(button) {
-    $(button).children().removeClass("glyphicon-copy").addClass("glyphicon-ok green");
+    $(button).children(".glyphicon-copy").hide();
+    $(button).children(".glyphicon-ok").show();
     $(button).tooltip({ title: 'Copied!', container: 'body', placement: 'bottom', trigger: 'manual' }).tooltip('show');
-    setTimeout(function() { $(button).children().removeClass("glyphicon-ok green").addClass("glyphicon-copy"); $(button).tooltip("hide")  }, 1500);
+    setTimeout(function() {
+      $(button).children(".glyphicon-ok").hide();
+      $(button).children(".glyphicon-copy").show();
+      $(button).tooltip("hide");
+    }, 1500);
   },
 
   copy_failed: function(button) {
-    $(button).children().removeClass("glyphicon-copy").addClass("glyphicon-remove");
+    $(button).children(".glyphicon-copy").hide();
+    $(button).children(".glyphicon-remove").show();
     $(button).tooltip({ title: 'Copy not supported in your browser', container: 'body', placement: 'bottom', trigger: 'manual' }).tooltip('show');
-    setTimeout(function() { $(button).children().removeClass("glyphicon-remove").addClass("glyphicon-copy"); $(button).tooltip("hide")  }, 1500);
+    setTimeout(function() {
+      $(button).children(".glyphicon-remove").hide();
+      $(button).children(".glyphicon-copy").show();
+      $(button).tooltip("hide")
+    }, 1500);
   }
 }
