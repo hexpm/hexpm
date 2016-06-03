@@ -55,8 +55,8 @@ defmodule HexWeb.ViewIcons do
     name = case unicode do
       <<char::utf8>> ->
         codepoint = Integer.to_string(char, 16)
+                    |> String.rjust(4, ?0)
                     |> String.downcase
-                    |> String.pad_leading(4, "0")
         Map.get(glyphicon_names, codepoint)
     end
 
