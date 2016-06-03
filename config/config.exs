@@ -75,7 +75,7 @@ config :phoenix, :format_encoders,
   erlang: HexWeb.ErlangFormat,
   json: HexWeb.Jiffy
 
-config :plug, :mimes, %{
+config :mime, :types, %{
   "application/vnd.hex+json"   => ["json"],
   "application/vnd.hex+elixir" => ["elixir"],
   "application/vnd.hex+erlang" => ["erlang"]

@@ -3,6 +3,7 @@ defmodule HexWeb.CDN.Fastly do
 
   @behaviour HexWeb.CDN
   @fastly_url "https://api.fastly.com/"
+  @retry_times 10
 
   def purge_key(service, key) do
     service_id = Application.get_env(:hex_web, service)
@@ -32,7 +33,7 @@ defmodule HexWeb.CDN.Fastly do
       "content-type": "application/json"]
 
     body = Poison.encode!(body)
-    retry(fn -> :hackney.post(url, headers, body, []) end, 10)
+    retry(fn -> :hackney.post(url, headers, body, []) end, @retry_times)
     |> read_body
   end
 
@@ -42,7 +43,7 @@ defmodule HexWeb.CDN.Fastly do
       "fastly-key": auth(),
       "accept": "application/json"]
 
-    retry(fn -> :hackney.get(url, headers, []) end, 10)
+    retry(fn -> :hackney.get(url, headers, []) end, @retry_times)
     |> read_body
   end
 
