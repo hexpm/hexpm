@@ -18,6 +18,7 @@ defmodule HexWeb.BlockAddress do
 
     Enum.each(removed, &:ets.delete(@ets, &1))
     :ets.insert(@ets, Enum.map(new_ips, &{&1}))
+    :ets.insert(@ets, {:loaded, true})
   end
 
   defmodule Plug do
@@ -49,7 +50,6 @@ defmodule HexWeb.BlockAddress do
       case :ets.lookup(@ets, :loaded) do
         [{:loaded, false}] ->
           BlockAddress.reload
-          :ets.insert(@ets, {:loaded, true})
         _ ->
           :ok
       end
