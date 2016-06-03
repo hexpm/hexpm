@@ -38,8 +38,7 @@ defmodule HexWeb.API.ReleaseController do
   end
 
   def delete(conn, _params) do
-    {:ok, conn} = HexWeb.Repo.transaction(fn ->
-      HexWeb.Repo.transaction_isolation(:serializable)
+    {:ok, conn} = HexWeb.Repo.transaction_with_isolation(fn ->
 
       conn =
         conn
@@ -68,7 +67,7 @@ defmodule HexWeb.API.ReleaseController do
             validation_failed(conn, changeset)
         end
       end
-    end, timeout: @publish_timeout)
+    end, level: :serializable, timeout: @publish_timeout)
 
     conn
   end
