@@ -1,21 +1,30 @@
 defmodule HexWeb.Jiffy do
   def decode(binary),
-    do: :jiffy.decode(binary, [:return_maps, :use_nil])
+    do: {:ok, decode!(binary)}
 
-  def decode!(binary),
-    do: decode(binary)
+  def decode!(binary) do
+    :jiffy.decode(binary, [:return_maps, :use_nil])
+  rescue
+    exception ->
+      reraise exception, System.stacktrace
+  catch
+    :throw, error ->
+      stacktrace = System.stacktrace
+      reraise Exception.normalize(:error, error, stacktrace), stacktrace
+  end
 
   def encode(term) do
+    {:ok, encode!(term)}
+  end
+
+  def encode!(term) do
     term
     |> transform
     |> :jiffy.encode([:use_nil])
   end
 
-  def encode!(term),
-    do: encode(term)
-
   def encode_to_iodata!(term),
-    do: encode(term)
+    do: encode!(term)
 
   defp transform(%Version{} = version) do
     to_string(version)
