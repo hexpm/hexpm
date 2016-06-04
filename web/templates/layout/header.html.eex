@@ -37,7 +37,9 @@
                 <input placeholder="Find packages" name="search" type="text" autofocus class="form-control" value="<%= search(assigns) %>">
 
                 <div class="input-group-btn">
-                  <button type="submit" class="btn btn-search" tabindex="1"><span class="glyphicon glyphicon-search"></span></button>
+                  <button type="submit" class="btn btn-search" tabindex="1">
+                    <%= icon(:glyphicon, :search) %>
+                  </button>
                 </div>
              </div>
           </form>

@@ -33,9 +33,7 @@
   }
   .btn-search {
     background: $color-white;
-    span {
-      color: #adb3b6;
-    }
+    color: #adb3b6;
   }
   input{
     box-shadow: none;
@@ -193,23 +191,11 @@
     text-align: center;
     li {
       display: inline-block;
-      width: 19%;
-
-      @include general-mobile {
-        .stat-icon-package {
-          font-size: 30px;
-        }
-        .stat-icon-versions {
-          font-size: 38px;
-        }
-        .stat-icon-calendar {
-          font-size: 32px;
-        }
-      }
+      width: 18%;
 
       @include general-mobile {
         .stat-icon {
-          margin-bottom: 14px;
+          margin-bottom: 5px;
         }
       }
       .stat-info {

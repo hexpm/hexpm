@@ -21,20 +21,19 @@ a, a:hover, a:focus {
   color: #ec485b;
 }
 
+.glyphicon {
+  position: relative;
+  top: 1px;
+  fill: currentColor;
+  width: 14px;
+  height: 14px;
+}
+
 .stat-icon {
   float: left;
-  line-height: 15px;
+  height: 45px;
+  fill: currentColor;
   margin-right: 10px;
-  margin-top: 13px;
-}
-.stat-icon-package {
-  font-size: 50px;
-}
-.stat-icon-versions {
-  font-size: 58px;
-}
-.stat-icon-calendar {
-  font-size: 43px;
 }
 
 .collapsing {

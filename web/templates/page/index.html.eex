@@ -10,7 +10,11 @@
               <input type="search" autofocus class="form-control" placeholder="Find packages" name="search" id="search" value="<% # search(assigns) %>" tabindex="1">
               <input type="hidden" name="sort" value="downloads">
               <label class="sr-only" for="search">Find packages</label>
-              <span class="input-group-btn"><button type="submit" class="btn btn-search" tabindex="1"><span class="glyphicon glyphicon-search"></span></button></span>
+              <span class="input-group-btn">
+                <button type="submit" class="btn btn-search" tabindex="1">
+                  <%= icon(:glyphicon, :search) %>
+                </button>
+              </span>
             </div>
           <% end %>
         </div>
@@ -54,7 +58,7 @@
 <div class="home-stats">
   <ul class="container">
     <li>
-      <span class="octicon octicon-package stat-icon stat-icon-package"></span>
+      <%= icon(:octicon, :package, class: "stat-icon stat-icon-package") %>
       <span class="stat-info">
         <span class="count-info">
           <%= human_number_space @num_packages %>
@@ -63,7 +67,7 @@
       </span>
     </li>
     <li>
-      <span class="octicon octicon-versions stat-icon stat-icon-versions"></span>
+      <%= icon(:octicon, :versions, class: "stat-icon stat-icon-versions") %>
       <span class="stat-info">
         <span class="count-info">
           <%= human_number_space @num_releases %>
@@ -72,7 +76,7 @@
       </span>
     </li>
     <li>
-      <span class="octicon octicon-calendar stat-icon stat-icon-calendar"></span>
+      <%= icon(:octicon, :calendar, class: "stat-icon stat-icon-calendar") %>
       <span class="stat-info">
         <span class="count-info">
           <%= human_number_space @total["day"] %>
@@ -81,7 +85,7 @@
       </span>
     </li>
     <li>
-      <span class="octicon octicon-calendar stat-icon stat-icon-calendar"></span>
+      <%= icon(:octicon, :calendar, class: "stat-icon stat-icon-calendar") %>
       <span class="stat-info">
         <span class="count-info">
           <%= human_number_space @total["week"] %>
@@ -90,7 +94,7 @@
       </span>
     </li>
     <li>
-      <span class="octicon octicon-calendar stat-icon stat-icon-calendar"></span>
+      <%= icon(:octicon, :calendar, class: "stat-icon stat-icon-calendar") %>
       <span class="stat-info">
         <span class="count-info">
           <%= human_number_space @total["all"] %>
