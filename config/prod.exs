@@ -16,7 +16,15 @@ config :comeonin,
   bcrypt_log_rounds: 12
 
 config :rollbax,
+  access_token: System.get_env("ROLLBAR_ACCESS_TOKEN"),
+  environment: to_string(Mix.env),
   enabled: true
+
+config :logger,
+  backends: [Rollbax.Notifier, :console]
+
+config :logger, Rollbax.Notifier,
+  level: :error
 
 # Don't include date time on heroku
 config :logger, :console,

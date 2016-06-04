@@ -24,8 +24,8 @@ defmodule HexWeb.Router do
   scope "/", HexWeb do
     pipe_through :browser
 
-    get  "/",                       PageController,     :index
-    get  "/sponsors",               PageController,     :sponsors
+    get  "/",                        PageController,     :index
+    get  "/sponsors",                PageController,     :sponsors
 
     get  "/password/reset",          PasswordController, :show_reset
     post "/password/reset",          PasswordController, :reset
