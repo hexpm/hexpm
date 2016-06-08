@@ -15,9 +15,7 @@ defmodule HexWeb.Mixfile do
 
   def application do
     [mod: {HexWeb, []},
-     applications: [:phoenix, :phoenix_html, :cowboy, :logger,
-                    :phoenix_ecto, :postgrex, :comeonin, :httpoison, :ex_aws,
-                    :sweet_xml, :porcelain, :gen_smtp, :rollbax]]
+     applications: apps(Mix.env)]
   end
 
   defp elixirc_paths(:test), do: ["lib", "web", "test/support"]
@@ -39,6 +37,23 @@ defmodule HexWeb.Mixfile do
      {:jiffy,               "~> 0.14"},
      {:rollbax,             "~> 0.5"},
      {:phoenix_live_reload, "~> 1.0", only: :dev}]
+  end
+
+  defp apps(:prod), do: apps(:other) ++ [:rollbax]
+
+  defp apps(_) do
+    [:phoenix,
+     :phoenix_html,
+     :cowboy,
+     :logger,
+     :phoenix_ecto,
+     :postgrex,
+     :comeonin,
+     :httpoison,
+     :ex_aws,
+     :sweet_xml,
+     :porcelain,
+     :gen_smtp]
   end
 
   defp aliases do

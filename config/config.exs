@@ -90,17 +90,6 @@ config :mime, :types, %{
 config :ecto,
   json_library: HexWeb.Jiffy
 
-config :rollbax,
-  access_token: System.get_env("ROLLBAR_ACCESS_TOKEN"),
-  environment: to_string(Mix.env),
-  enabled: :log
-
-config :logger,
-  backends: [Rollbax.Notifier, :console]
-
-config :logger, Rollbax.Notifier,
-  level: :error
-
 config :logger, :console,
   format: "$time $metadata[$level] $message\n",
   metadata: [:request_id]
