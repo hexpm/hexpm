@@ -116,4 +116,32 @@ defmodule HexWeb.API.UserControllerTest do
     conn = get build_conn(), "api/users/eric"
     assert conn.status == 401
   end
+
+  test "recreate unconfirmed user" do
+    # first
+    body = %{username: "name", email: "email@mail.com", password: "pass"}
+    conn = build_conn()
+           |> put_req_header("content-type", "application/json")
+           |> post("api/users", Poison.encode!(body))
+
+    assert conn.status == 201
+    body = Poison.decode!(conn.resp_body)
+    assert body["url"] =~ "/api/users/name"
+
+    user = HexWeb.Repo.get_by!(User, username: "name")
+    assert user.email == "email@mail.com"
+
+    # recreate
+    body = %{username: "name", email: "other_email@mail.com", password: "other_pass"}
+    conn = build_conn()
+           |> put_req_header("content-type", "application/json")
+           |> post("api/users", Poison.encode!(body))
+
+    assert conn.status == 201
+    body = Poison.decode!(conn.resp_body)
+    assert body["url"] =~ "/api/users/name"
+
+    user = HexWeb.Repo.get_by!(User, username: "name")
+    assert user.email == "other_email@mail.com"
+  end
 end
