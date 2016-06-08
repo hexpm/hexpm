@@ -206,7 +206,7 @@ defmodule HexWeb.API.DocsController do
     paths   = HexWeb.Store.list(nil, :docs_bucket, Path.join(name, version))
 
     HexWeb.Store.delete(nil, :s3_bucket, "tarballs/#{name}-#{version}.tar.gz")
-    HexWeb.Store.delete(nil, :docs_bucket, paths)
+    HexWeb.Store.delete(nil, :docs_bucket, Enum.to_list(paths))
 
     multi =
       Ecto.Multi.new
