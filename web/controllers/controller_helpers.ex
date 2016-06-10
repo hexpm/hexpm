@@ -169,6 +169,14 @@ defmodule HexWeb.ControllerHelpers do
     |> Enum.max
   end
 
+  def maybe_fetch_package(conn, _opts) do
+    if package = HexWeb.Repo.get_by(HexWeb.Package, name: conn.params["name"]) do
+      assign(conn, :package, package)
+    else
+      conn
+    end
+  end
+
   def fetch_package(conn, _opts) do
     package = HexWeb.Repo.get_by!(HexWeb.Package, name: conn.params["name"])
     assign(conn, :package, package)

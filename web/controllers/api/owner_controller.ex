@@ -65,25 +65,23 @@ defmodule HexWeb.API.OwnerController do
       |> api_cache(:private)
       |> send_resp(403, "")
     else
-      multi =
+      {:ok, _} =
         Ecto.Multi.new
         |> Ecto.Multi.delete_all(:package_owner, Package.owner(package, owner))
         |> Ecto.Multi.insert(:log, audit(conn, "owner.remove", {package, owner}))
+        |> HexWeb.Repo.transaction
 
-      case HexWeb.Repo.transaction(multi) do
-        {:ok, %{}} ->
-          HexWeb.Mailer.send(
-            "owner_remove.html",
-            "Hex.pm - Owner removed",
-            Enum.map(owners, fn owner -> owner.email end),
-            username: owner.username,
-            email: email,
-            package: package.name)
+      HexWeb.Mailer.send(
+        "owner_remove.html",
+        "Hex.pm - Owner removed",
+        Enum.map(owners, fn owner -> owner.email end),
+        username: owner.username,
+        email: email,
+        package: package.name)
 
-          conn
-          |> api_cache(:private)
-          |> send_resp(204, "")
-      end
+      conn
+      |> api_cache(:private)
+      |> send_resp(204, "")
     end
   end
 end

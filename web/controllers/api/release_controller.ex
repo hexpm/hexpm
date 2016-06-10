@@ -3,23 +3,13 @@ defmodule HexWeb.API.ReleaseController do
 
   @publish_timeout 60_000
 
-  plug :fetch_release when action == :show
+  plug :fetch_release when action in [:show, :delete]
+  plug :maybe_fetch_package when action in [:create]
+  plug :authorize, [fun: &package_owner?/2] when action in [:delete]
+  plug :authorize, [fun: &maybe_package_owner?/2] when action in [:create]
 
-  def create(conn, %{"name" => name, "body" => body}) do
-    auth =
-      if package = HexWeb.Repo.get_by(Package, name: name) do
-        &package_owner?(package, &1)
-      else
-        fn _ -> true end
-      end
-
-    conn = authorized(conn, [], auth)
-
-    if conn.halted do
-      conn
-    else
-      handle_tarball(conn, package, conn.assigns.user, body)
-    end
+  def create(conn, %{"body" => body}) do
+    handle_tarball(conn, conn.assigns[:package], conn.assigns.user, body)
   end
 
   def show(conn, _params) do
@@ -38,128 +28,114 @@ defmodule HexWeb.API.ReleaseController do
   end
 
   def delete(conn, _params) do
-    {:ok, conn} = HexWeb.Repo.transaction_with_isolation(fn ->
+    package = conn.assigns.package
+    release = conn.assigns.release
 
-      conn =
-        conn
-        |> fetch_release([])
-        |> authorize(fun: &package_owner?/2)
+    delete_query =
+      from(p in Package,
+        where: p.id == ^package.id,
+        where: fragment("NOT EXISTS (SELECT id FROM releases WHERE package_id = ?)", ^package.id)
+      )
 
-      if conn.halted do
-        conn
-      else
-        package = conn.assigns.package
-        release = conn.assigns.release
+    Ecto.Multi.new
+    |> Ecto.Multi.delete(:release, Release.delete(release))
+    |> Ecto.Multi.insert(:log, audit(conn, "release.revert", {package, release}))
+    |> Ecto.Multi.delete_all(:package, delete_query)
+    |> Ecto.Multi.run(:assets, fn _ -> revert_assets(release); {:ok, :ok} end)
+    |> Ecto.Multi.run(:registry, fn _ -> HexWeb.RegistryBuilder.rebuild; {:ok, :ok} end)
+    |> HexWeb.Repo.transaction_with_isolation(level: :serializable, timeout: @publish_timeout)
+    |> delete_result(conn)
+  end
 
-        case HexWeb.Repo.delete(Release.delete(release)) do
-          {:ok, _} ->
-            if Repo.aggregate(assoc(package, :releases), :count, :id) == 0 do
-              HexWeb.Repo.delete!(package)
-            end
-
-            HexWeb.Repo.insert!(audit(conn, "release.revert", {package, release}))
-            revert(release)
-
-            conn
-            |> api_cache(:private)
-            |> send_resp(204, "")
-          {:error, changeset} ->
-            validation_failed(conn, changeset)
-        end
-      end
-    end, level: :serializable, timeout: @publish_timeout)
-
+  def delete_result({:ok, _}, conn) do
     conn
+    |> api_cache(:private)
+    |> send_resp(204, "")
+  end
+  def delete_result({:error, _, changeset, _}, conn) do
+    validation_failed(conn, changeset)
   end
 
   defp handle_tarball(conn, package, user, body) do
-    {:ok, conn} = HexWeb.Repo.transaction(fn ->
-      case HexWeb.Tar.metadata(body) do
-        {:ok, meta, checksum} ->
-          package_params = %{"name" => meta["name"], "meta" => meta}
-          case create_package(user, package, package_params) do
-            {:ok, package} ->
-              create_release(conn, package, user, checksum, meta, body)
-            {:error, changeset} ->
-              validation_failed(conn, changeset)
-          end
+    case HexWeb.Tar.metadata(body) do
+      {:ok, meta, checksum} ->
+        Ecto.Multi.new
+        |> create_package(package, user, meta)
+        |> create_release(package, checksum, meta)
+        |> audit_publish(user)
+        |> publish_release(body)
+        |> HexWeb.Repo.transaction(timeout: @publish_timeout)
 
-        {:error, errors} ->
-          validation_failed(conn, %{tar: errors})
-      end
-    end, timeout: @publish_timeout)
-
-    conn
+      {:error, errors} ->
+        {:error, %{tar: errors}}
+    end
+    |> publish_result(conn)
   end
 
-  defp create_package(user, package, params) do
-    name = params["name"]
-    package = package || HexWeb.Repo.get_by(Package, name: name)
+  defp publish_result({:ok, %{action: :insert, package: package, release: release}}, conn) do
+    location = release_url(conn, :show, package, release)
 
+    conn
+    |> put_resp_header("location", location)
+    |> api_cache(:public)
+    |> put_status(201)
+    |> render(:show, release: %{release | package: package})
+  end
+  defp publish_result({:ok, %{action: :update, package: package, release: release}}, conn) do
+    conn
+    |> api_cache(:public)
+    |> render(:show, release: %{release | package: package})
+  end
+  defp publish_result({:error, errors}, conn) do
+    validation_failed(conn, errors)
+  end
+  defp publish_result({:error, _, changeset, _}, conn) do
+    validation_failed(conn, normalize_errors(changeset))
+  end
+
+  defp create_package(multi, package, user, meta) do
+    params = %{"name" => meta["name"], "meta" => meta}
     if package do
-      Package.update(package, params)
-      |> HexWeb.Repo.update
+      Ecto.Multi.update(multi, :package, Package.update(package, params))
     else
-      Package.build(user, params)
-      |> HexWeb.Repo.insert
+      Ecto.Multi.insert(multi, :package, Package.build(user, params))
     end
   end
 
-  defp create_release(conn, package, user, checksum, meta, body) do
+  defp create_release(multi, package, checksum, meta) do
     version = meta["version"]
-    release_params = %{
+    params = normalize_params(%{
       "app" => meta["app"],
       "version" => version,
       "requirements" => meta["requirements"],
-      "meta" => meta}
-    |> normalize_params
+      "meta" => meta})
 
-    if release = HexWeb.Repo.get_by(assoc(package, :releases), version: version) do
-      update(conn, package, release, release_params, checksum, user, body)
+    release = package && HexWeb.Repo.get_by(assoc(package, :releases), version: version)
+
+    if release do
+      release = HexWeb.Repo.preload(release, requirements: Release.requirements(release))
+      multi
+      |> Ecto.Multi.update(:release, Release.update(release, params, checksum))
+      |> Ecto.Multi.run(:action, fn _ -> {:ok, :update} end)
     else
-      create(conn, package, release_params, checksum, user, body)
+      multi
+      |> Ecto.Multi.insert(:release, fn %{package: package} -> Release.build(package, params, checksum) end)
+      |> Ecto.Multi.run(:action, fn _ -> {:ok, :insert} end)
     end
   end
 
-  defp update(conn, package, release, release_params, checksum, user, body) do
-    release = HexWeb.Repo.preload(release, requirements: Release.requirements(release))
-
-    case Release.update(release, release_params, checksum) |> HexWeb.Repo.update do
-      {:ok, release} ->
-        audit(user, "release.publish", {package, release})
-        |> HexWeb.Repo.insert!
-
-        after_release(package, release.version, body)
-
-        conn
-        |> api_cache(:public)
-        |> render(:show, release: %{release | package: package})
-      {:error, errors} ->
-        validation_failed(conn, errors)
-    end
+  defp publish_release(multi, body) do
+    Ecto.Multi.run(multi, :assets, fn %{package: package, release: release} ->
+      push_assets(package, release.version, body)
+      HexWeb.RegistryBuilder.rebuild
+      {:ok, :ok}
+    end)
   end
 
-  defp create(conn, package, params, checksum, user, body) do
-    multi =
-      Ecto.Multi.new
-      |> Ecto.Multi.insert(:release, Release.build(package, params, checksum))
-      |> Ecto.Multi.insert(:log, fn %{release: release} -> audit(user, "release.publish", {package, release}) end)
-
-    case HexWeb.Repo.transaction(multi) do
-      {:ok, %{release: release}} ->
-        after_release(package, release.version, body)
-
-        release = %{release | package: package}
-        location = release_url(conn, :show, package, release)
-
-        conn
-        |> put_resp_header("location", location)
-        |> api_cache(:public)
-        |> put_status(201)
-        |> render(:show, release: release)
-      {:error, :release, changeset, _} ->
-        validation_failed(conn, normalize_errors(changeset))
-    end
+  defp audit_publish(multi, user) do
+    Ecto.Multi.insert(multi, :log, fn %{package: package, release: release} ->
+      audit(user, "release.publish", {package, release})
+    end)
   end
 
   # Turn `%{"ecto" => %{"app" => "...", ...}}` into:
@@ -186,16 +162,15 @@ defmodule HexWeb.API.ReleaseController do
   end
   defp normalize_errors(changeset), do: changeset
 
-  defp after_release(package, version, body) do
+  defp push_assets(package, version, body) do
     cdn_key = "tarballs/#{package.name}-#{version}"
     store_key = "tarballs/#{package.name}-#{version}.tar"
     opts = [acl: :public_read, cache_control: "public, max-age=604800", meta: [{"surrogate-key", cdn_key}]]
     HexWeb.Store.put(nil, :s3_bucket, store_key, body, opts)
     HexWeb.CDN.purge_key(:fastly_hexrepo, cdn_key)
-    HexWeb.RegistryBuilder.rebuild
   end
 
-  defp revert(release) do
+  defp revert_assets(release) do
     name    = release.package.name
     version = to_string(release.version)
     key     = "tarballs/#{name}-#{version}.tar"
@@ -210,7 +185,5 @@ defmodule HexWeb.API.ReleaseController do
       HexWeb.Store.delete(nil, :docs_bucket, Enum.to_list(paths))
       HexWeb.API.DocsController.publish_sitemap
     end
-
-    HexWeb.RegistryBuilder.rebuild
   end
 end

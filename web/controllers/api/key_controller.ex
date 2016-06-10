@@ -46,12 +46,11 @@ defmodule HexWeb.API.KeyController do
 
   def delete(conn, %{"name" => name}) do
     if key = HexWeb.Repo.one(Key.get(name, conn.assigns.user)) do
-      multi =
+      {:ok, _} =
         Ecto.Multi.new
         |> Ecto.Multi.delete(:key, key)
         |> Ecto.Multi.insert(:log, audit(conn, "key.remove", key))
-
-      {:ok, _} = HexWeb.Repo.transaction(multi)
+        |> HexWeb.Repo.transaction
 
       conn
       |> api_cache(:private)

@@ -88,6 +88,15 @@ defmodule HexWeb.AuthHelpers do
     |> HexWeb.Repo.one!
   end
 
+  def maybe_package_owner?(%Plug.Conn{} = conn, user),
+    do: maybe_package_owner?(conn.assigns[:package], user)
+  def maybe_package_owner?(nil, _user),
+    do: true
+  def maybe_package_owner?(%HexWeb.Package{} = package, user) do
+    HexWeb.Package.is_owner(package, user)
+    |> HexWeb.Repo.one!
+  end
+
   def correct_user?(%Plug.Conn{} = conn, user),
     do: correct_user?(conn.params["name"], user)
   def correct_user?(name, user) when is_binary(name),
