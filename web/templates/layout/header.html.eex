@@ -35,6 +35,7 @@
           <form class="navbar-form pull-left" role="search" action="<%= package_path(HexWeb.Endpoint, :index) %>">
              <div class="input-group">
                 <input placeholder="Find packages" name="search" type="text" autofocus class="form-control" value="<%= search(assigns) %>">
+                <input type="hidden" name="sort" value="downloads">
 
                 <div class="input-group-btn">
                   <button type="submit" class="btn btn-search" tabindex="1">
