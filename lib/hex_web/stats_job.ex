@@ -80,16 +80,15 @@ defmodule HexWeb.StatsJob do
 
   defp process_buckets(buckets, formats, ips) do
     jobs = for b <- buckets, f <- formats, do: {b, f}
-    parallel = div(200, length(jobs))
     HexWeb.Utils.multi_task(jobs, fn {[bucket, region], {prefix, regex}} ->
       keys = HexWeb.Store.list(region, bucket, prefix) |> Enum.to_list
-      process_keys(region, bucket, regex, ips, keys, parallel)
+      process_keys(region, bucket, regex, ips, keys)
     end)
     |> Enum.reduce(%{}, &Map.merge(&1, &2, fn _, c1, c2 -> c1+c2 end))
   end
 
-  defp process_keys(region, bucket, regex, ips, keys, parallel) do
-    results = HexWeb.Store.get(region, bucket, keys, parallel: parallel)
+  defp process_keys(region, bucket, regex, ips, keys) do
+    results = HexWeb.Store.get(region, bucket, keys)
               |> Enum.zip(keys)
     Enum.reduce(results, %{}, fn {content, key}, dict ->
       content

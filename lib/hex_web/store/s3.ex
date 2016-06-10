@@ -11,7 +11,7 @@ defmodule HexWeb.Store.S3 do
   end
 
   def get(region, bucket, keys, opts) when is_list(keys) do
-    opts = Keyword.put_new(opts, :timeout, :infinity)
+    opts = default_opts(opts)
     HexWeb.Parallel.run!(&get(region, bucket, &1, opts), keys, opts)
   end
   def get(region, bucket, key, _opts) do
@@ -24,7 +24,7 @@ defmodule HexWeb.Store.S3 do
 
   # TODO: verify cache-control, surrogate-key and purge for everything we upload
   def put(region, bucket, values, opts) when is_list(values) do
-    opts = Keyword.put_new(opts, :timeout, :infinity)
+    opts = default_opts(opts)
     HexWeb.Parallel.run!(&put(region, bucket, &1), values, opts)
   end
 
@@ -43,7 +43,7 @@ defmodule HexWeb.Store.S3 do
       [keys] ->
         delete_mutiple(region, bucket, keys)
       chunks ->
-        opts = Keyword.put_new(opts, :timeout, :infinity)
+        opts = default_opts(opts)
         HexWeb.Parallel.run!(&delete_mutiple(region, bucket, &1), chunks, opts)
     end
   end
@@ -69,4 +69,10 @@ defmodule HexWeb.Store.S3 do
     do: "us-east-1"
   defp region(binary) when is_binary(binary),
     do: binary
+
+  defp default_opts(opts) do
+    opts
+    |> Keyword.put_new(:timeout, :infinity)
+    |> Keyword.put_new(:parallel, 10)
+  end
 end
