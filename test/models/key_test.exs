@@ -5,25 +5,24 @@ defmodule HexWeb.KeyTest do
   alias HexWeb.Key
 
   setup do
-    User.build(%{username: "eric", email: "eric@mail.com", password: "eric"}, true)
-    |> HexWeb.Repo.insert!
-    :ok
+    user =
+      User.build(%{username: "eric", email: "eric@mail.com", password: "eric"}, true)
+      |> HexWeb.Repo.insert!
+
+    {:ok, user: user}
   end
 
-  test "create key and get" do
-    user = HexWeb.Repo.get_by!(User, username: "eric")
+  test "create key and get", %{user: user} do
     Key.build(user, %{name: "computer"}) |> HexWeb.Repo.insert!
     assert HexWeb.Repo.one!(Key.get("computer", user)).user_id == user.id
   end
 
-  test "create unique key name" do
-    user = HexWeb.Repo.get_by!(User, username: "eric")
+  test "create unique key name", %{user: user} do
     assert %Key{name: "computer"}   = Key.build(user, %{name: "computer"}) |> HexWeb.Repo.insert!
     assert %Key{name: "computer-2"} = Key.build(user, %{name: "computer"}) |> HexWeb.Repo.insert!
   end
 
-  test "all user keys" do
-    eric = HexWeb.Repo.get_by!(User, username: "eric")
+  test "all user keys", %{user: eric} do
     jose = User.build(%{username: "jose", email: "jose@mail.com", password: "jose"}, true) |> HexWeb.Repo.insert!
 
     assert %Key{name: "computer"} = Key.build(eric, %{name: "computer"}) |> HexWeb.Repo.insert!
@@ -34,8 +33,7 @@ defmodule HexWeb.KeyTest do
     assert (Key.all(jose) |> HexWeb.Repo.all |> length) == 1
   end
 
-  test "delete keys" do
-    user = HexWeb.Repo.get_by!(User, username: "eric")
+  test "delete keys", %{user: user} do
     Key.build(user, %{name: "computer"}) |> HexWeb.Repo.insert!
     Key.build(user, %{name: "macbook"})  |> HexWeb.Repo.insert!
 

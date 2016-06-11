@@ -5,12 +5,14 @@ defmodule HexWeb.PackageTest do
   alias HexWeb.Package
 
   setup do
-    User.build(%{username: "eric", email: "eric@mail.com", password: "eric"}, true) |> HexWeb.Repo.insert!
-    :ok
+    user =
+      User.build(%{username: "eric", email: "eric@mail.com", password: "eric"}, true)
+      |> HexWeb.Repo.insert!
+
+    {:ok, user: user}
   end
 
-  test "create package and get" do
-    user = HexWeb.Repo.get_by!(User, username: "eric")
+  test "create package and get", %{user: user} do
     user_id = user.id
 
     Package.build(user, pkg_meta(%{name: "ecto", description: "DSL"})) |> HexWeb.Repo.insert!
@@ -18,8 +20,7 @@ defmodule HexWeb.PackageTest do
     assert is_nil(HexWeb.Repo.get_by(Package, name: "postgrex"))
   end
 
-  test "update package" do
-    user = HexWeb.Repo.get_by!(User, username: "eric")
+  test "update package", %{user: user} do
     package = Package.build(user, pkg_meta(%{name: "ecto", description: "DSL"})) |> HexWeb.Repo.insert!
 
     Package.update(package, %{"meta" => %{"maintainers" => ["eric", "josé"], "description" => "description", "licenses" => ["Apache"]}})
@@ -28,27 +29,24 @@ defmodule HexWeb.PackageTest do
     assert length(package.meta.maintainers) == 2
   end
 
-  test "validate blank description in metadata" do
+  test "validate blank description in metadata", %{user: user} do
     meta = %{
       "maintainers" => ["eric", "josé"],
       "licenses"     => ["apache", "BSD"],
       "links"        => %{"github" => "www", "docs" => "www"},
       "description"  => ""}
 
-    user = HexWeb.Repo.get_by!(User, username: "eric")
     assert {:error, changeset} = Package.build(user, pkg_meta(%{name: "ecto", meta: meta})) |> HexWeb.Repo.insert
     assert changeset.errors == []
     assert changeset.changes.meta.errors == [description: {"can't be blank", []}]
   end
 
-  test "packages are unique" do
-    user = HexWeb.Repo.get_by!(User, username: "eric")
+  test "packages are unique", %{user: user} do
     Package.build(user, pkg_meta(%{name: "ecto", description: "DSL"})) |> HexWeb.Repo.insert!
     assert {:error, _} = Package.build(user, pkg_meta(%{name: "ecto", description: "Domain-specific language"})) |> HexWeb.Repo.insert
   end
 
-  test "reserved names" do
-    user = HexWeb.Repo.get_by!(User, username: "eric")
+  test "reserved names", %{user: user} do
     assert {:error, %{errors: [name: {"is reserved", []}]}} = Package.build(user, pkg_meta(%{name: "elixir", description: "Awesomeness."})) |> HexWeb.Repo.insert
   end
 end
