@@ -20,10 +20,10 @@ defmodule HexWeb.StatsJobTest do
     Release.build(bar, rel_meta(%{version: "0.0.3-rc.1", app: "bar"}), "") |> HexWeb.Repo.insert!
     Release.build(other, rel_meta(%{version: "0.0.1", app: "other"}), "") |> HexWeb.Repo.insert!
 
-    :ok
+    {:ok, foo: foo, bar: bar, other: other}
   end
 
-  test "counts all downloads" do
+  test "counts all downloads", %{foo: foo, bar: bar} do
     {bucket, region} =
       if buckets = Application.get_env(:hex_web, :logs_buckets) do
         [[bucket, region]] = buckets
@@ -48,9 +48,6 @@ defmodule HexWeb.StatsJobTest do
     HexWeb.Store.put(region, bucket, "fastly_hex/2013-11-01T15:00:00.000-tzletcEGGiI7atIAAAAA.log.gz", logfile4, [])
 
     HexWeb.StatsJob.run({2013, 11, 1}, buckets)
-
-    foo = HexWeb.Repo.get_by!(HexWeb.Package, name: "foo")
-    bar = HexWeb.Repo.get_by!(HexWeb.Package, name: "bar")
 
     rel1 = HexWeb.Repo.get_by!(assoc(foo, :releases), version: "0.0.1")
     rel2 = HexWeb.Repo.get_by!(assoc(foo, :releases), version: "0.0.2")
