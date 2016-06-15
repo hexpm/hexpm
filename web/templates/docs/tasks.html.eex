@@ -29,7 +29,7 @@ configuration (Default: <code class="inline">~/.hex</code>)
 Use this option when using a Hex.pm mirror, unlike when setting <code class="inline">HEX_REPO</code>
 this will still use the public key from Hex.pm when verifying the registry
 </li>
-<li><code class="inline">HEX_OFFLINE</code> - If set Hex will not fetch the regsitry or packages and will
+<li><code class="inline">HEX_OFFLINE</code> - If set Hex will not fetch the registry or packages and will
  instead the locally cached files if they are available
 </li>
 <li><code class="inline">HEX_UNSAFE_HTTPS</code> - If set Hex will not verify HTTPS certificates
