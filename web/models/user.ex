@@ -11,7 +11,7 @@ defmodule HexWeb.User do
     field :password, :string
     field :confirmation_key, :string
     field :confirmed, :boolean
-    timestamps
+    timestamps()
 
     field :reset_key, :string
     field :reset_expiry, Ecto.DateTime

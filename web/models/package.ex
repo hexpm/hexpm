@@ -9,7 +9,7 @@ defmodule HexWeb.Package do
   schema "packages" do
     field :name, :string
     field :docs_updated_at, Ecto.DateTime
-    timestamps
+    timestamps()
 
     has_many :releases, Release
     has_many :package_owners, PackageOwner

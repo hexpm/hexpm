@@ -70,7 +70,7 @@ defmodule HexWeb.StatsJob do
 
     num = Enum.reduce(dict, 0, fn {_, count}, acc -> count + acc end)
 
-    {:memory, memory} = :erlang.process_info(self, :memory)
+    {:memory, memory} = :erlang.process_info(self(), :memory)
     {memory, num}
   end
 

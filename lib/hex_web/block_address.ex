@@ -30,7 +30,7 @@ defmodule HexWeb.BlockAddress do
     def init(opts), do: opts
 
     def call(conn, _opts) do
-      try_reload
+      try_reload()
 
       if conn.remote_ip do
         case check(ip(conn.remote_ip)) do

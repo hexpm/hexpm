@@ -9,7 +9,7 @@ defmodule HexWeb.Key do
     field :name, :string
     field :secret_first, :string
     field :secret_second, :string
-    timestamps
+    timestamps()
 
     belongs_to :user, User
 

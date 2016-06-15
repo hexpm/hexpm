@@ -17,7 +17,7 @@ defmodule HexWeb.RateLimit do
 
   def init([]) do
     table = :ets.new(:counter, [:set, :private])
-    :erlang.send_after(@prune_timer, self, {:prune_timer, @expires})
+    :erlang.send_after(@prune_timer, self(), {:prune_timer, @expires})
     {:ok, table}
   end
 
@@ -54,13 +54,13 @@ defmodule HexWeb.RateLimit do
   end
 
   def handle_info({:prune_timer, expires}, table) do
-    delete_at = now - expires
+    delete_at = now() - expires
 
     ms = fn {_,_,created_at} -> created_at <= delete_at end
          |> :ets.fun2ms
 
     :ets.select_delete(table, ms)
-    :erlang.send_after(@prune_timer, self, {:prune_timer, expires})
+    :erlang.send_after(@prune_timer, self(), {:prune_timer, expires})
     {:noreply, table}
   end
 

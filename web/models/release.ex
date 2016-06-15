@@ -7,7 +7,7 @@ defmodule HexWeb.Release do
     field :version, HexWeb.Version
     field :checksum, :string
     field :has_docs, :boolean, default: false
-    timestamps
+    timestamps()
 
     belongs_to :package, Package
     has_many :requirements, Requirement, on_replace: :delete

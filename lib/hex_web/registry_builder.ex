@@ -76,7 +76,7 @@ defmodule HexWeb.RegistryBuilder do
     package_tuples = package_tuples(packages, releases)
     release_tuples = release_tuples(packages, releases, requirements)
 
-    {:memory, memory} = :erlang.process_info(self, :memory)
+    {:memory, memory} = :erlang.process_info(self(), :memory)
 
     File.rm(file)
 
