@@ -69,12 +69,6 @@ defmodule HexWeb.Utils do
   def parse_search(nil), do: nil
   def parse_search(""), do: nil
   def parse_search(search), do: search
-  def safe_search(string) do
-    string
-    |> String.replace(~r/\//u, " ")
-    |> String.replace(~r/[^\w\s]/u, "")
-    |> String.strip
-  end
 
   defp diff(a, b) do
     {days, time} = :calendar.time_difference(a, b)

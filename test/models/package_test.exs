@@ -74,8 +74,8 @@ defmodule HexWeb.PackageTest do
 
     search = [
       {"name:nerves extra:list,[a]", 1},
-      {"name:nerves% extra:foo,bar,baz", 2},
-      {"name:nerves% extra:list,[1]", 1}]
+      {"name:nerves* extra:foo,bar,baz", 2},
+      {"name:nerves* extra:list,[1]", 1}]
     for {s, len} <- search do
       p = Package.all(1, 10, s, nil)
       |> HexWeb.Repo.all

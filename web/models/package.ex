@@ -30,7 +30,6 @@ defmodule HexWeb.Package do
     webtool wx xmerl)
 
   @reserved_names @elixir_names ++ @otp_names ++ @tool_names
-  @search_keys ~w(name: description: extra:)
 
   defp changeset(package, :create, params) do
     changeset(package, :update, params)
@@ -112,55 +111,42 @@ defmodule HexWeb.Package do
     name_search = letter <> "%"
 
     from var in query,
-    where: ilike(fragment("?::text", var.name), ^name_search)
+      where: ilike(fragment("?::text", var.name), ^name_search)
   end
 
   defp search(query, search) when is_binary(search) do
-    if Enum.any?(@search_keys, & String.starts_with?(search, &1)) do
-      Enum.reduce(parse_search(search), query, fn({k, v}, q) ->
-        search(k, q, v)
-      end)
-    else
-      search = Utils.safe_search(search)
-      filter =
-        if String.length(search) >= 3 do
-          :contains
-        else
-          :equals
-        end
-      name_search =
-        search
-        |> escape_search
-        |> like_search(filter)
+    case parse_search(search) do
+      {:ok, params} ->
+        Enum.reduce(params, query, fn {k, v}, q -> search_param(k, q, v) end)
+      :error ->
+        name_search = name_search(search)
+        desc_search = description_search(search)
 
-      desc_search = String.replace(search, ~r"\s+"u, " | ")
-
-      from p in query,
-      where: ilike(fragment("?::text", p.name), ^name_search) or
-             fragment("to_tsvector('english', regexp_replace((?->'description')::text, '/', ' ')) @@ to_tsquery('english', ?)", p.meta, ^desc_search)
+        from(p in query,
+          where: ilike(fragment("?::text", p.name), ^name_search) or
+                 fragment("to_tsvector('english', regexp_replace((?->'description')::text, '/', ' ')) @@ to_tsquery('english', ?)", p.meta, ^desc_search))
     end
   end
 
-  defp search(:name, query, search) do
+  defp search_param("name", query, search) do
+    search = extra_name_search(search)
     from(p in query,
       where: ilike(fragment("?::text", p.name), ^search))
   end
 
-  defp search(:description, query, search) do
-    desc_search = String.replace(search, ~r"\s+"u, " | ")
+  defp search_param("description", query, search) do
+    search = description_search(search)
     from(p in query,
-      where: fragment("to_tsvector('english', regexp_replace((?->'description')::text, '/', ' ')) @@ to_tsquery('english', ?)", p.meta, ^desc_search))
+      where: fragment("to_tsvector('english', regexp_replace((?->'description')::text, '/', ' ')) @@ to_tsquery('english', ?)", p.meta, ^search))
   end
 
-  defp search(:extra, query, search) do
-    [v | p] =
+  defp search_param("extra", query, search) do
+    [value | keys] =
       search
       |> String.split(",")
       |> Enum.reverse
-    [h | t] = p
 
-    value = extra_value(v)
-    extra = extra(t, Map.put(%{}, h, value))
+    extra = extra_map(keys, extra_value(value))
 
     from(p in query,
       where: fragment("?->'extra' @> ?", p.meta, ^extra))
@@ -168,21 +154,22 @@ defmodule HexWeb.Package do
 
   defp extra_value(<<"[", value :: binary>>) do
     value
-    |> String.rstrip(?])
+    |> String.trim_trailing("]")
     |> String.split(",")
-    |> Enum.map(fn(v) ->
-      case Integer.parse(v) do
-        {int, ""} -> int
-        _ -> Utils.safe_search(v)
-      end
-    end)
+    |> Enum.map(&try_integer/1)
   end
-  defp extra_value(v),
-    do: Utils.safe_search(v)
+  defp extra_value(value), do: try_integer(value)
 
-  defp extra([], m), do: m
-  defp extra([h | t], m) do
-    extra(t, Map.put(%{}, h, m))
+  defp try_integer(string) do
+    case Integer.parse(string) do
+      {int, ""} -> int
+      _ -> string
+    end
+  end
+
+  defp extra_map([], m), do: m
+  defp extra_map([h | t], m) do
+    extra_map(t, %{h => m})
   end
 
   defp like_search(search, :contains),
@@ -192,6 +179,34 @@ defmodule HexWeb.Package do
 
   defp escape_search(search) do
     String.replace(search, ~r"(%|_)"u, "\\\\\\1")
+  end
+
+  defp name_search(search) do
+    filter = search_filter(search)
+
+    search
+    |> escape_search
+    |> like_search(filter)
+  end
+
+  defp search_filter(search) do
+    if String.length(search) >= 3,
+      do: :contains,
+    else: :equals
+  end
+
+  defp description_search(search) do
+    search
+    |> String.replace(~r/\//u, " ")
+    |> String.replace(~r/[^\w\s]/u, "")
+    |> String.strip
+    |> String.replace(~r"\s+"u, " | ")
+  end
+
+  def extra_name_search(search) do
+    search
+    |> escape_search
+    |> String.replace(~r/(^\*)|(\*$)/u, "%")
   end
 
   defp sort(query, :name) do
@@ -218,36 +233,43 @@ defmodule HexWeb.Package do
     query
   end
 
-  defp parse_search(_, _ \\ [])
-  defp parse_search("", keys), do: Enum.reverse(keys)
-  defp parse_search(search, keys) do
-    {filter, tail} = parse_key(search, keys)
-    tail
-    |> String.strip
-    |> parse_search(filter)
+  defp parse_search(search) do
+    search
+    |> String.trim_leading
+    |> parse_params([])
   end
 
-  defp parse_key(string, search) do
-    [k, v] = String.split(string, ":", parts: 2)
-    {v, tail} = parse_value(v)
-    {add_param({String.to_existing_atom(k), v}, search), tail}
-  end
+  defp parse_params("", params), do: {:ok, Enum.reverse(params)}
+  defp parse_params(tail, params) do
+    # TODO: Clean up with else
+    result =
+      with {:ok, key, tail} <- parse_key(tail),
+           {:ok, value, tail} <- parse_value(tail),
+           do: {:ok, key, value, tail}
 
-  defp parse_value(input) do
-    {rest, delim} =
-      case input do
-        "\"" <> rest -> {rest, "\""}
-        _ -> {input, " "}
-      end
-
-    case String.split(rest, delim, parts: 2) do
-      [value] -> {value, ""}
-      [value, tail] -> {value, tail}
+    case result do
+      {:ok, key, value, tail} ->
+        parse_params(tail, [{key, value} | params])
+      _ ->
+        :error
     end
   end
 
-  defp add_param(param, []),
-    do: [param]
-  defp add_param(param, [scope | tail]),
-    do: [param | [scope | tail]]
+  defp parse_key(string) do
+    with [k, tail] <- String.split(string, ":", parts: 2),
+         do: {:ok, k, String.trim_leading(tail)}
+  end
+
+  defp parse_value(string) do
+    case string do
+      "\"" <> rest ->
+        with [v, tail] <- String.split(rest, "\"", parts: 2),
+             do: {:ok, v, String.trim_leading(tail)}
+      _ ->
+        case String.split(string, " ", parts: 2) do
+          [value] -> {:ok, value, ""}
+          [value, tail] -> {:ok, value, String.trim_leading(tail)}
+        end
+    end
+  end
 end
