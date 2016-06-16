@@ -12,7 +12,7 @@ defmodule HexWeb.AuditLogTest do
         action: "owner.add",
         params: %{
           package: %{id: 2, name: "ecto",
-                     meta: %{maintainers: nil, description: "some description", licenses: nil, links: nil, maintainers: nil}},
+                     meta: %{maintainers: nil, description: "some description", licenses: nil, links: nil, maintainers: nil, extra: nil}},
           user: %{id: 3, username: "eric", email: "eric@mail.com", confirmed: true}}}
   end
 end

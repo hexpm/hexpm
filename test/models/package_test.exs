@@ -49,4 +49,37 @@ defmodule HexWeb.PackageTest do
   test "reserved names", %{user: user} do
     assert {:error, %{errors: [name: {"is reserved", []}]}} = Package.build(user, pkg_meta(%{name: "elixir", description: "Awesomeness."})) |> HexWeb.Repo.insert
   end
+
+  test "search extra metadata" do
+    meta = %{
+      "maintainers"  => ["justin"],
+      "licenses"     => ["apache", "BSD"],
+      "links"        => %{"github" => "www", "docs" => "www"},
+      "description"  => "description",
+      "extra"        => %{"foo" => %{"bar" => "baz"}, "list" => ["a", 1]}}
+
+    meta2 = Map.put(meta, "extra", %{"foo" => %{"bar" => "baz"}, "list" => ["b", 2]})
+
+    user = HexWeb.Repo.get_by!(User, username: "eric")
+
+    Package.build(user, pkg_meta(%{name: "nerves", description: "DSL"}))
+    |> HexWeb.Repo.insert!
+    |> Package.update(%{"meta" => meta})
+    |> HexWeb.Repo.update!
+
+    Package.build(user, pkg_meta(%{name: "nerves_pkg", description: "DSL"}))
+    |> HexWeb.Repo.insert!
+    |> Package.update(%{"meta" => meta2})
+    |> HexWeb.Repo.update!
+
+    search = [
+      {"name:nerves extra:list,[a]", 1},
+      {"name:nerves% extra:foo,bar,baz", 2},
+      {"name:nerves% extra:list,[1]", 1}]
+    for {s, len} <- search do
+      p = Package.all(1, 10, s, nil)
+      |> HexWeb.Repo.all
+      assert length(p) == len
+    end
+  end
 end

@@ -66,8 +66,9 @@ defmodule HexWeb.Utils do
     end
   end
 
-  def safe_search(nil), do: nil
-  def safe_search(""), do: nil
+  def parse_search(nil), do: nil
+  def parse_search(""), do: nil
+  def parse_search(search), do: search
   def safe_search(string) do
     string
     |> String.replace(~r/\//u, " ")

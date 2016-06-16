@@ -6,8 +6,8 @@ defmodule HexWeb.PackageController do
   @letters for letter <- ?A..?Z, do: <<letter>>
 
   def index(conn, params) do
-    letter        = HexWeb.Utils.safe_search(params["letter"])
-    search        = HexWeb.Utils.safe_search(params["search"])
+    letter        = HexWeb.Utils.parse_search(params["letter"])
+    search        = HexWeb.Utils.parse_search(params["search"])
 
     filter =
       cond do
