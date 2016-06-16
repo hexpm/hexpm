@@ -75,6 +75,7 @@ defmodule HexWeb.ControllerHelpers do
     Enum.flat_map(errors, fn
       {_key, val}     when val == %{}  -> []
       {_key, [val|_]} when val == %{}  -> []
+      {_key, []}                       -> []
       {key, val}      when is_map(val) -> [{key, normalize_errors(val)}]
       {key, [val|_]}  when is_map(val) -> [{key, normalize_errors(val)}]
       {key, [val|_]}                   -> [{key, val}]
