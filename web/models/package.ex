@@ -154,7 +154,7 @@ defmodule HexWeb.Package do
 
   defp extra_value(<<"[", value :: binary>>) do
     value
-    |> String.trim_trailing("]")
+    |> String.rstrip(?])
     |> String.split(",")
     |> Enum.map(&try_integer/1)
   end
@@ -235,7 +235,7 @@ defmodule HexWeb.Package do
 
   defp parse_search(search) do
     search
-    |> String.trim_leading
+    |> String.lstrip
     |> parse_params([])
   end
 
@@ -257,18 +257,18 @@ defmodule HexWeb.Package do
 
   defp parse_key(string) do
     with [k, tail] <- String.split(string, ":", parts: 2),
-         do: {:ok, k, String.trim_leading(tail)}
+         do: {:ok, k, String.lstrip(tail)}
   end
 
   defp parse_value(string) do
     case string do
       "\"" <> rest ->
         with [v, tail] <- String.split(rest, "\"", parts: 2),
-             do: {:ok, v, String.trim_leading(tail)}
+             do: {:ok, v, String.lstrip(tail)}
       _ ->
         case String.split(string, " ", parts: 2) do
           [value] -> {:ok, value, ""}
-          [value, tail] -> {:ok, value, String.trim_leading(tail)}
+          [value, tail] -> {:ok, value, String.lstrip(tail)}
         end
     end
   end
