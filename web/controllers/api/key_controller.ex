@@ -46,7 +46,7 @@ defmodule HexWeb.API.KeyController do
 
   defp audit_generate(multi, user) do
     Ecto.Multi.merge(multi, fn %{key: key} ->
-      Ecto.Multi.new |> Ecto.Multi.insert(:log, audit(user, "key.generate", key))
+      Ecto.Multi.insert(Ecto.Multi.new, :log, audit(user, "key.generate", key))
     end)
   end
 
