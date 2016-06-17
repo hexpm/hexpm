@@ -34,11 +34,8 @@ defmodule HexWeb.ConnCase do
   end
 
   setup tags do
-    :ok = Ecto.Adapters.SQL.Sandbox.checkout(HexWeb.Repo)
-    if level = tags[:transaction_isolation] do
-      HexWeb.Repo.transaction_isolation(level)
-    end
-    :ok
+    opts = if level = tags[:transaction_isolation], do: [isolation: level], else: []
+    :ok = Ecto.Adapters.SQL.Sandbox.checkout(HexWeb.Repo, opts)
   end
 
   setup tags do
