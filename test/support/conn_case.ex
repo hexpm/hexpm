@@ -34,7 +34,7 @@ defmodule HexWeb.ConnCase do
   end
 
   setup tags do
-    opts = if level = tags[:transaction_isolation], do: [isolation: level], else: []
+    opts = tags |> Map.take([:isolation]) |> Enum.to_list()
     :ok = Ecto.Adapters.SQL.Sandbox.checkout(HexWeb.Repo, opts)
   end
 

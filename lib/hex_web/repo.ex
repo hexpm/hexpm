@@ -11,16 +11,6 @@ defmodule HexWeb.Repo do
     :ok
   end
 
-  def transaction_isolation(level) do
-    false = HexWeb.Repo.in_transaction?
-
-    {:ok, _} = Ecto.Adapters.SQL.query(
-       HexWeb.Repo,
-       "SET TRANSACTION ISOLATION LEVEL #{level}",
-       [])
-    :ok
-  end
-
   def transaction_with_isolation(fun_or_multi, opts) do
     false = HexWeb.Repo.in_transaction?
     level = Keyword.fetch!(opts, :level)

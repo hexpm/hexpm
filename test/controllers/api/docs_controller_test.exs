@@ -106,7 +106,7 @@ defmodule HexWeb.API.DocsControllerTest do
     assert conn.resp_body == "plug v1.0.0-beta.1"
   end
 
-  @tag transaction_isolation: :serializable
+  @tag isolation: :serializable
   test "delete release with docs" do
     user = HexWeb.Repo.get_by!(User, username: "eric")
     ecto = Package.build(user, pkg_meta(%{name: "ecto", description: "DSL"})) |> HexWeb.Repo.insert!
