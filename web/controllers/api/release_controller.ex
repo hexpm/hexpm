@@ -119,9 +119,15 @@ defmodule HexWeb.API.ReleaseController do
       |> Ecto.Multi.run(:action, fn _ -> {:ok, :update} end)
     else
       multi
-      |> Ecto.Multi.insert(:release, fn %{package: package} -> Release.build(package, params, checksum) end)
+      |> build_release(params, checksum)
       |> Ecto.Multi.run(:action, fn _ -> {:ok, :insert} end)
     end
+  end
+
+  defp build_release(multi, params, checksum) do
+    Ecto.Multi.merge(multi, fn %{package: package} ->
+      Ecto.Multi.new |> Ecto.Multi.insert(:release, Release.build(package, params, checksum))
+    end)
   end
 
   defp publish_release(multi, body) do
@@ -133,8 +139,8 @@ defmodule HexWeb.API.ReleaseController do
   end
 
   defp audit_publish(multi, user) do
-    Ecto.Multi.insert(multi, :log, fn %{package: package, release: release} ->
-      audit(user, "release.publish", {package, release})
+    Ecto.Multi.merge(multi, fn %{package: package, release: release} ->
+      Ecto.Multi.new |> Ecto.Multi.insert(:log, audit(user, "release.publish", {package, release}))
     end)
   end
 

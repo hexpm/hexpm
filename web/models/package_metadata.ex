@@ -4,7 +4,7 @@ defmodule HexWeb.PackageMetadata do
   embedded_schema do
     field :description, :string
     field :licenses, {:array, :string}
-    field :links, :map
+    field :links, {:map, :string}
     field :maintainers, {:array, :string}
     field :extra, :map
   end

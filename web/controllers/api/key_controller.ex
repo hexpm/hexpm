@@ -28,7 +28,7 @@ defmodule HexWeb.API.KeyController do
     multi =
       Ecto.Multi.new
       |> Ecto.Multi.insert(:key, Key.build(user, params))
-      |> Ecto.Multi.insert(:log, fn %{key: key} -> audit(conn, "key.generate", key) end)
+      |> audit_generate(user)
 
     case HexWeb.Repo.transaction(multi) do
       {:ok, %{key: key}} ->
@@ -42,6 +42,12 @@ defmodule HexWeb.API.KeyController do
       {:error, :key, changeset, _} ->
         validation_failed(conn, changeset)
     end
+  end
+
+  defp audit_generate(multi, user) do
+    Ecto.Multi.merge(multi, fn %{key: key} ->
+      Ecto.Multi.new |> Ecto.Multi.insert(:log, audit(user, "key.generate", key))
+    end)
   end
 
   def delete(conn, %{"name" => name}) do

@@ -59,6 +59,8 @@ defmodule HexWeb.ControllerHelpers do
 
   defp pretty_type({:array, type}),
     do: "list(#{pretty_type(type)})"
+  defp pretty_type({:map, type}),
+    do: "map(#{pretty_type(type)})"
   defp pretty_type(type),
     do: to_string(type)
 

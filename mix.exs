@@ -23,7 +23,7 @@ defmodule HexWeb.Mixfile do
 
   defp deps do
     [{:phoenix,             "~> 1.2.0-rc"},
-     {:phoenix_ecto,        "~> 3.0.0-rc"},
+     {:phoenix_ecto,        "~> 3.0.0"},
      {:phoenix_html,        "~> 2.3"},
      {:postgrex,            ">= 0.0.0"},
      {:cowboy,              "~> 1.0"},
