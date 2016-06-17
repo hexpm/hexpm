@@ -93,9 +93,9 @@ You are required to confirm your email to access your account, a confirmation em
     [app: :postgrex,
      version: "0.1.0",
      elixir: "0.13.0",
-     description: description,
-     package: package,
-     deps: deps]
+     description: description(),
+     package: package(),
+     deps: deps()]
   end
 
   def application do
