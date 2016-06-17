@@ -32,7 +32,7 @@ defmodule HexWeb.API.OwnerController do
     multi =
       Ecto.Multi.new
       |> Ecto.Multi.insert(:owner, Package.build_owner(conn.assigns.package, owner))
-      |> Ecto.Multi.insert(:log, audit(conn, "owner.add", {package, owner}))
+      |> audit(conn, "owner.add", {package, owner})
 
     case HexWeb.Repo.transaction(multi) do
       {:ok, _} ->
@@ -68,7 +68,7 @@ defmodule HexWeb.API.OwnerController do
       {:ok, _} =
         Ecto.Multi.new
         |> Ecto.Multi.delete_all(:package_owner, Package.owner(package, owner))
-        |> Ecto.Multi.insert(:log, audit(conn, "owner.remove", {package, owner}))
+        |> audit(conn, "owner.remove", {package, owner})
         |> HexWeb.Repo.transaction
 
       HexWeb.Mailer.send(

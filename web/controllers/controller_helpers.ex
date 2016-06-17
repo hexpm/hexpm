@@ -200,6 +200,14 @@ defmodule HexWeb.ControllerHelpers do
     HexWeb.AuthHelpers.authorized(conn, opts, &fun.(conn, &1))
   end
 
+  def audit(multi, conn_or_user, action, fun) when is_function(fun, 1) do
+    Ecto.Multi.merge(multi, fn data ->
+      Ecto.Multi.insert(Ecto.Multi.new, :log, audit(conn_or_user, action, fun.(data)))
+    end)
+  end
+  def audit(multi, conn_or_user, action, params) do
+    Ecto.Multi.insert(multi, :log, audit(conn_or_user, action, params))
+  end
   def audit(%Plug.Conn{assigns: %{user: user}}, action, params) do
     audit(user, action, params)
   end

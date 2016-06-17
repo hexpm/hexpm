@@ -179,7 +179,7 @@ defmodule HexWeb.API.DocsController do
       Ecto.Multi.new
       |> Ecto.Multi.update(:release, Ecto.Changeset.change(release, has_docs: true))
       |> Ecto.Multi.update(:package, Ecto.Changeset.change(release.package, docs_updated_at: Ecto.DateTime.utc))
-      |> Ecto.Multi.insert(:log, audit(user, "docs.publish", {package, release}))
+      |> audit(user, "docs.publish", {package, release})
 
     {:ok, _} = HexWeb.Repo.transaction(multi)
 
@@ -212,7 +212,7 @@ defmodule HexWeb.API.DocsController do
       Ecto.Multi.new
       |> Ecto.Multi.update(:release, Ecto.Changeset.change(release, has_docs: false))
       |> Ecto.Multi.update(:package, Ecto.Changeset.change(release.package, docs_updated_at: Ecto.DateTime.utc))
-      |> Ecto.Multi.insert(:log, audit(user, "docs.revert", {release.package, release}))
+      |> audit(user, "docs.revert", {release.package, release})
 
     {:ok, _} = HexWeb.Repo.transaction(multi)
 
