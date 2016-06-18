@@ -87,7 +87,7 @@ defmodule HexWeb.API.ReleaseControllerTest do
     assert conn.status == 422
     body = Poison.decode!(conn.resp_body)
     assert body["message"] == "Validation error(s)"
-    assert body["errors"]["meta"]["links"] == "expected type map"
+    assert body["errors"]["meta"]["links"] == "expected type map(string)"
   end
 
   test "create releases" do
@@ -165,7 +165,7 @@ defmodule HexWeb.API.ReleaseControllerTest do
            Poison.decode!(conn.resp_body)
   end
 
-  @tag transaction_isolation: :serializable
+  @tag isolation: :serializable
   test "delete release" do
     user = HexWeb.Repo.get_by!(User, username: "eric")
     body = create_tar(%{name: :postgrex, version: "0.0.1", description: "description"}, [])

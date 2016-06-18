@@ -39,7 +39,7 @@ defmodule HexWeb.API.ReleaseController do
 
     Ecto.Multi.new
     |> Ecto.Multi.delete(:release, Release.delete(release))
-    |> Ecto.Multi.insert(:log, audit(conn, "release.revert", {package, release}))
+    |> audit(conn, "release.revert", {package, release})
     |> Ecto.Multi.delete_all(:package, delete_query)
     |> Ecto.Multi.run(:assets, fn _ -> revert_assets(release); {:ok, :ok} end)
     |> Ecto.Multi.run(:registry, fn _ -> HexWeb.RegistryBuilder.rebuild; {:ok, :ok} end)
@@ -119,9 +119,15 @@ defmodule HexWeb.API.ReleaseController do
       |> Ecto.Multi.run(:action, fn _ -> {:ok, :update} end)
     else
       multi
-      |> Ecto.Multi.insert(:release, fn %{package: package} -> Release.build(package, params, checksum) end)
+      |> build_release(params, checksum)
       |> Ecto.Multi.run(:action, fn _ -> {:ok, :insert} end)
     end
+  end
+
+  defp build_release(multi, params, checksum) do
+    Ecto.Multi.merge(multi, fn %{package: package} ->
+      Ecto.Multi.insert(Ecto.Multi.new, :release, Release.build(package, params, checksum))
+    end)
   end
 
   defp publish_release(multi, body) do
@@ -133,9 +139,7 @@ defmodule HexWeb.API.ReleaseController do
   end
 
   defp audit_publish(multi, user) do
-    Ecto.Multi.insert(multi, :log, fn %{package: package, release: release} ->
-      audit(user, "release.publish", {package, release})
-    end)
+    audit(multi, user, "release.publish", fn %{package: pkg, release: rel} -> {pkg, rel} end)
   end
 
   # Turn `%{"ecto" => %{"app" => "...", ...}}` into:
