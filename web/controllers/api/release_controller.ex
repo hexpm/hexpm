@@ -120,8 +120,13 @@ defmodule HexWeb.API.ReleaseController do
     else
       multi
       |> Ecto.Multi.insert(:release, fn %{package: package} -> Release.build(package, params, checksum) end)
+      |> Ecto.Multi.insert(:download, fn %{release: release} -> build_download(release) end)
       |> Ecto.Multi.run(:action, fn _ -> {:ok, :insert} end)
     end
+  end
+
+  defp build_download(release) do
+    Ecto.Changeset.change(%Download{release: release, day: Ecto.Date.utc, downloads: 0})
   end
 
   defp publish_release(multi, body) do
