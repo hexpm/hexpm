@@ -82,4 +82,26 @@ defmodule HexWeb.PackageTest do
       assert length(p) == len
     end
   end
+
+  test "sort packages by downloads", %{user: user} do
+    phoenix =
+      Package.build(user, pkg_meta(%{name: "phoenix", description: "Web framework"}))
+      |> HexWeb.Repo.insert!
+    rel =
+      HexWeb.Release.build(phoenix, rel_meta(%{version: "0.0.1", app: "phoenix"}), "")
+      |> HexWeb.Repo.insert!
+    HexWeb.Repo.insert!(%HexWeb.Download{release: rel, day: Ecto.Date.utc(), downloads: 10})
+
+    :ok = HexWeb.Repo.refresh_view(HexWeb.PackageDownload)
+
+    Package.build(user, pkg_meta(%{name: "ecto", description: "DSL"}))
+    |> HexWeb.Repo.insert!
+
+    packages =
+      Package.all(1, 10, nil, :downloads)
+      |> HexWeb.Repo.all
+      |> Enum.map(& &1.name)
+
+    assert packages == ["phoenix", "ecto"]
+  end
 end

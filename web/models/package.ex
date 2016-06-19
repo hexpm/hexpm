@@ -226,7 +226,7 @@ defmodule HexWeb.Package do
       left_join: d in PackageDownload,
         on: p.id == d.package_id,
       order_by: [fragment("? DESC NULLS LAST", d.downloads)],
-      where: d.view == "all")
+      where: d.view == "all" or is_nil(d.view))
   end
 
   defp sort(query, nil) do
