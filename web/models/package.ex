@@ -178,7 +178,7 @@ defmodule HexWeb.Package do
     do: search
 
   defp escape_search(search) do
-    String.replace(search, ~r"(%|_)"u, "\\\\\\1")
+    String.replace(search, ~r"(%|_|\\)"u, "\\\\\\1")
   end
 
   defp name_search(search) do
