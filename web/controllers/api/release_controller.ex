@@ -41,18 +41,19 @@ defmodule HexWeb.API.ReleaseController do
     |> Ecto.Multi.delete(:release, Release.delete(release))
     |> audit(conn, "release.revert", {package, release})
     |> Ecto.Multi.delete_all(:package, delete_query)
-    |> Ecto.Multi.run(:assets, fn _ -> revert_assets(release); {:ok, :ok} end)
-    |> Ecto.Multi.run(:registry, fn _ -> HexWeb.RegistryBuilder.rebuild; {:ok, :ok} end)
     |> HexWeb.Repo.transaction_with_isolation(level: :serializable, timeout: @publish_timeout)
-    |> delete_result(conn)
+    |> delete_result(conn, release)
   end
 
-  def delete_result({:ok, _}, conn) do
+  def delete_result({:ok, _}, conn, release) do
+    revert_assets(release)
+    HexWeb.RegistryBuilder.rebuild
+
     conn
     |> api_cache(:private)
     |> send_resp(204, "")
   end
-  def delete_result({:error, _, changeset, _}, conn) do
+  def delete_result({:error, _, changeset, _}, conn, _release) do
     validation_failed(conn, changeset)
   end
 
@@ -73,6 +74,7 @@ defmodule HexWeb.API.ReleaseController do
   end
 
   defp publish_result({:ok, %{action: :insert, package: package, release: release}}, conn) do
+    HexWeb.RegistryBuilder.rebuild
     location = release_url(conn, :show, package, release)
 
     conn
@@ -82,6 +84,7 @@ defmodule HexWeb.API.ReleaseController do
     |> render(:show, release: %{release | package: package})
   end
   defp publish_result({:ok, %{action: :update, package: package, release: release}}, conn) do
+    HexWeb.RegistryBuilder.rebuild
     conn
     |> api_cache(:public)
     |> render(:show, release: %{release | package: package})
@@ -133,7 +136,6 @@ defmodule HexWeb.API.ReleaseController do
   defp publish_release(multi, body) do
     Ecto.Multi.run(multi, :assets, fn %{package: package, release: release} ->
       push_assets(package, release.version, body)
-      HexWeb.RegistryBuilder.rebuild
       {:ok, :ok}
     end)
   end
