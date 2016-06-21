@@ -21,9 +21,9 @@ config :rollbax,
   enabled: true
 
 config :logger,
-  backends: [Rollbax.Notifier, :console]
+  backends: [Rollbax.Logger, :console]
 
-config :logger, Rollbax.Notifier,
+config :logger, Rollbax.Logger,
   level: :error
 
 # Don't include date time on heroku
