@@ -117,7 +117,7 @@ defmodule HexWeb.Package do
   defp search(query, search) when is_binary(search) do
     case parse_search(search) do
       {:ok, params} ->
-        Enum.reduce(params, query, fn {k, v}, q -> search_param(k, q, v) end)
+        Enum.reduce(params, query, fn {k, v}, q -> search_param(k, v, q) end)
       :error ->
         name_search = name_search(search)
         desc_search = description_search(search)
@@ -128,19 +128,19 @@ defmodule HexWeb.Package do
     end
   end
 
-  defp search_param("name", query, search) do
+  defp search_param("name", search, query) do
     search = extra_name_search(search)
     from(p in query,
       where: ilike(fragment("?::text", p.name), ^search))
   end
 
-  defp search_param("description", query, search) do
+  defp search_param("description", search, query) do
     search = description_search(search)
     from(p in query,
       where: fragment("to_tsvector('english', regexp_replace((?->'description')::text, '/', ' ')) @@ to_tsquery('english', ?)", p.meta, ^search))
   end
 
-  defp search_param("extra", query, search) do
+  defp search_param("extra", search, query) do
     [value | keys] =
       search
       |> String.split(",")
@@ -150,6 +150,10 @@ defmodule HexWeb.Package do
 
     from(p in query,
       where: fragment("?->'extra' @> ?", p.meta, ^extra))
+  end
+
+  defp search_param(_, _, query) do
+    query
   end
 
   defp extra_value(<<"[", value :: binary>>) do
@@ -241,22 +245,16 @@ defmodule HexWeb.Package do
 
   defp parse_params("", params), do: {:ok, Enum.reverse(params)}
   defp parse_params(tail, params) do
-    # TODO: Clean up with else
-    result =
-      with {:ok, key, tail} <- parse_key(tail),
-           {:ok, value, tail} <- parse_value(tail),
-           do: {:ok, key, value, tail}
-
-    case result do
-      {:ok, key, value, tail} ->
-        parse_params(tail, [{key, value} | params])
-      _ ->
-        :error
+    with {:ok, key, tail} <- parse_key(tail),
+         {:ok, value, tail} <- parse_value(tail) do
+      parse_params(tail, [{key, value} | params])
+    else
+      _ -> :error
     end
   end
 
   defp parse_key(string) do
-    with [k, tail] <- String.split(string, ":", parts: 2),
+    with [k, tail] when k != "" <- String.split(string, ":", parts: 2),
          do: {:ok, k, String.lstrip(tail)}
   end
 
