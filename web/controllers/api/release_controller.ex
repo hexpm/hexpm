@@ -104,11 +104,11 @@ defmodule HexWeb.API.ReleaseController do
 
   defp create_release(multi, package, checksum, meta) do
     version = meta["version"]
-    params = normalize_params(%{
+    params = %{
       "app" => meta["app"],
       "version" => version,
-      "requirements" => meta["requirements"],
-      "meta" => meta})
+      "requirements" => normalize_requirements(meta["requirements"]),
+      "meta" => meta}
 
     release = package && HexWeb.Repo.get_by(assoc(package, :releases), version: version)
 
@@ -144,15 +144,15 @@ defmodule HexWeb.API.ReleaseController do
 
   # Turn `%{"ecto" => %{"app" => "...", ...}}` into:
   #      `[%{"name" => "ecto", "app" => "...", ...}]` for cast_assoc
-  defp normalize_params(%{"requirements" => requirements} = params) when is_map(requirements) do
-    requirements =
-      Enum.map(requirements, fn
-        {name, map} -> Map.put(map, "name", name)
-      end)
-
-    %{params | "requirements" => requirements}
+  defp normalize_requirements(requirements) when is_map(requirements) do
+    Enum.map(requirements, fn
+      {name, map} when is_map(map) ->
+        Map.put(map, "name", name)
+      other ->
+        other
+    end)
   end
-  defp normalize_params(params), do: params
+  defp normalize_requirements(requirements), do: requirements
 
   defp normalize_errors(%{changes: %{requirements: requirements}} = changeset) do
     requirements =
