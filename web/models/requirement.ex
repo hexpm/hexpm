@@ -109,13 +109,21 @@ defmodule HexWeb.Requirement do
     end)
   end
 
-  defp preload_dependencies(requirements) when is_list(requirements) do
-    names = Enum.map(requirements, & &1["name"]) |> Enum.filter(&is_binary/1)
+  defp preload_dependencies(requirements)  do
+    names = requirement_names(requirements)
     from(p in Package, where: p.name in ^names, select: {p.name, p})
     |> HexWeb.Repo.all
     |> Enum.into(%{})
   end
-  defp preload_dependencies(_requirements), do: %{}
+
+  defp requirement_names(requirements) when is_list(requirements) do
+    Enum.flat_map(requirements, fn
+      req when is_map(req) -> [req["name"]]
+      _ -> []
+    end)
+    |> Enum.filter(&is_binary/1)
+  end
+  defp requirement_names(_requirements), do: []
 
   defp guess_config(build_tools) do
     cond do
