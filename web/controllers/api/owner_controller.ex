@@ -26,13 +26,45 @@ defmodule HexWeb.API.OwnerController do
 
   def create(conn, %{"email" => email}) do
     email = URI.decode_www_form(email)
-    owner = HexWeb.Repo.get_by!(User, email: email)
+    new_owner = HexWeb.Repo.get_by!(User, email: email)
+    current_owner = conn.assigns.user
     package = conn.assigns.package
 
+    case add_owner(current_owner, package, new_owner) do
+      :ok ->
+        conn
+        |> api_cache(:private)
+        |> send_resp(204, "")
+      {:error, changeset} ->
+        validation_failed(conn, changeset)
+    end
+  end
+
+  def delete(conn, %{"email" => email}) do
+    email = URI.decode_www_form(email)
+    remove_owner = HexWeb.Repo.get_by!(User, email: email)
+    owner = conn.assigns.user
+    package = conn.assigns.package
+    owners = package_owners(package)
+
+    if length(owners) == 1 do
+      conn
+      |> api_cache(:private)
+      |> send_resp(403, "")
+    else
+      remove_owner(owner, package, remove_owner, owners)
+
+      conn
+      |> api_cache(:private)
+      |> send_resp(204, "")
+    end
+  end
+
+  def add_owner(current_owner, package, new_owner) do
     multi =
       Ecto.Multi.new
-      |> Ecto.Multi.insert(:owner, Package.build_owner(conn.assigns.package, owner))
-      |> audit(conn, "owner.add", {package, owner})
+      |> Ecto.Multi.insert(:owner, Package.build_owner(package, new_owner))
+      |> audit(current_owner, "owner.add", {package, new_owner})
 
     case HexWeb.Repo.transaction(multi) do
       {:ok, _} ->
@@ -42,46 +74,37 @@ defmodule HexWeb.API.OwnerController do
           "owner_add.html",
           "Hex.pm - Owner added",
           Enum.map(owners, fn owner -> owner.email end),
-          username: owner.username,
-          email: email,
-          package: package.name)
+          username: new_owner.username,
+          email: new_owner.email,
+          package: package.name
+        )
+        :ok
 
-        conn
-        |> api_cache(:private)
-        |> send_resp(204, "")
       {:error, :owner, changeset, _} ->
-        validation_failed(conn, changeset)
+        {:error, changeset}
     end
   end
 
-  def delete(conn, %{"email" => email}) do
-    email = URI.decode_www_form(email)
-    owner = HexWeb.Repo.get_by!(User, email: email)
-    package = conn.assigns.package
-    owners = assoc(package, :owners) |> HexWeb.Repo.all
+  def remove_owner(owner, package, remove_owner, owners \\ nil) do
+    owners = owners || package_owners(package)
 
-    if length(owners) == 1 do
-      conn
-      |> api_cache(:private)
-      |> send_resp(403, "")
-    else
-      {:ok, _} =
-        Ecto.Multi.new
-        |> Ecto.Multi.delete_all(:package_owner, Package.owner(package, owner))
-        |> audit(conn, "owner.remove", {package, owner})
-        |> HexWeb.Repo.transaction
+    {:ok, _} =
+      Ecto.Multi.new
+      |> Ecto.Multi.delete_all(:package_owner, Package.owner(package, remove_owner))
+      |> audit(owner, "owner.remove", {package, remove_owner})
+      |> HexWeb.Repo.transaction
 
-      HexWeb.Mailer.send(
-        "owner_remove.html",
-        "Hex.pm - Owner removed",
-        Enum.map(owners, fn owner -> owner.email end),
-        username: owner.username,
-        email: email,
-        package: package.name)
+    HexWeb.Mailer.send(
+      "owner_remove.html",
+      "Hex.pm - Owner removed",
+      Enum.map(owners, fn owner -> owner.email end),
+      username: remove_owner.username,
+      email: remove_owner.email,
+      package: package.name
+    )
+  end
 
-      conn
-      |> api_cache(:private)
-      |> send_resp(204, "")
-    end
+  defp package_owners(package) do
+    assoc(package, :owners) |> HexWeb.Repo.all
   end
 end
