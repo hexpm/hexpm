@@ -57,6 +57,16 @@ Also, all of the steps above (creating, migrating, and seeding the database) can
 mix ecto.setup
 ```
 
+### Node Dependencies
+
+All the Node dependencies can be installed with `npm`:
+
+```shell
+npm install
+```
+
+These are needed for asset compilation.
+
 ### Running HexWeb
 
 Once the database is set up you can start HexWeb:
