@@ -243,10 +243,13 @@
         display: block;
         line-height: 17px;
       }
-      .title {
-        overflow: hidden;
+      .title-container {
         white-space: nowrap;
+        overflow-x: hidden;
         text-overflow: ellipsis;
+      }
+      .title {
+        white-space: nowrap;
         word-break: break-all;
         word-wrap: break-word;
       }
