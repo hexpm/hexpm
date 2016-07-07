@@ -77,10 +77,87 @@ defmodule HexWeb.API.KeyControllerTest do
     assert HexWeb.Repo.one(Key.get("macbook", user))
     refute HexWeb.Repo.one(Key.get("computer", user))
 
+    assert HexWeb.Repo.one(Key.get_revoked("computer", user))
+
     log = HexWeb.Repo.one!(HexWeb.AuditLog)
     assert log.actor_id == user.id
     assert log.action == "key.remove"
     assert %{"name" => "computer"} = log.params
+  end
+
+  test "delete current key notifies client" do
+    user = HexWeb.Repo.get_by!(User, username: "eric")
+    key = Key.build(user, %{name: "current"}) |> HexWeb.Repo.insert!
+
+    conn = build_conn()
+           |> put_req_header("authorization", key.user_secret)
+           |> delete("api/keys/current")
+
+    assert conn.status == 200
+    body = Poison.decode!(conn.resp_body)
+    assert body["name"] == "current"
+    assert body["revoked_at"] != nil
+    assert body["created_at"] == nil
+    assert body["inserted_at"] == nil
+    assert body["secret"] == nil
+    assert body["url"] == nil
+    refute HexWeb.Repo.one(Key.get("current", user))
+
+    assert HexWeb.Repo.one(Key.get_revoked("current", user))
+
+    log = HexWeb.Repo.one!(HexWeb.AuditLog)
+    assert log.actor_id == user.id
+    assert log.action == "key.remove"
+    assert %{"name" => "current"} = log.params
+
+    conn = build_conn()
+           |> put_req_header("authorization", key.user_secret)
+           |> get("api/keys")
+
+    assert conn.status == 401
+    body = Poison.decode!(conn.resp_body)
+    assert %{"message" => "API key revoked", "status" => 401} == body
+  end
+
+  test "delete all keys" do
+    user = HexWeb.Repo.get_by!(User, username: "eric")
+    key_a = Key.build(user, %{name: "key_a"}) |> HexWeb.Repo.insert!
+    key_b = Key.build(user, %{name: "key_b"}) |> HexWeb.Repo.insert!
+
+    conn = build_conn()
+           |> put_req_header("authorization", key_a.user_secret)
+           |> delete("api/keys")
+
+    assert conn.status == 200
+    body = Poison.decode!(conn.resp_body)
+    assert body["name"] == key_a.name
+    assert body["revoked_at"] != nil
+    refute HexWeb.Repo.one(Key.get("key_a", user))
+    refute HexWeb.Repo.one(Key.get("key_b", user))
+
+    assert HexWeb.Repo.one(Key.get_revoked("key_a", user))
+    assert HexWeb.Repo.one(Key.get_revoked("key_b", user))
+
+    assert [log_a, log_b] =
+      HexWeb.AuditLog
+      |> HexWeb.Repo.all()
+      |> Enum.sort_by(fn (%{params: %{"name" => name}}) -> name end)
+    assert log_a.actor_id == user.id
+    assert log_a.action == "key.remove"
+    key_a_name = key_a.name
+    assert %{"name" => ^key_a_name} = log_a.params
+    assert log_b.actor_id == user.id
+    assert log_b.action == "key.remove"
+    key_b_name = key_b.name
+    assert %{"name" => ^key_b_name} = log_b.params
+
+    conn = build_conn()
+           |> put_req_header("authorization", key_a.user_secret)
+           |> get("api/keys")
+
+    assert conn.status == 401
+    body = Poison.decode!(conn.resp_body)
+    assert %{"message" => "API key revoked", "status" => 401} == body
   end
 
   test "key authorizes" do

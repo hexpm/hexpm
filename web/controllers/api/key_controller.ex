@@ -45,18 +45,66 @@ defmodule HexWeb.API.KeyController do
   end
 
   def delete(conn, %{"name" => name}) do
-    if key = HexWeb.Repo.one(Key.get(name, conn.assigns.user)) do
-      {:ok, _} =
-        Ecto.Multi.new
-        |> Ecto.Multi.delete(:key, key)
-        |> audit(conn, "key.remove", key)
-        |> HexWeb.Repo.transaction
+    user = conn.assigns.user
 
-      conn
-      |> api_cache(:private)
-      |> send_resp(204, "")
+    if key = HexWeb.Repo.one(Key.get(name, user)) do
+      Ecto.Multi.new
+      |> Ecto.Multi.update_all(:key, Key.revoke(user, name), [])
+      |> audit(conn, "key.remove", key)
+      |> HexWeb.Repo.transaction
+      |> case do
+        {:ok, _} ->
+          if key.id === user.current_key_id do
+            key = HexWeb.Repo.get!(assoc(user, :keys), key.id)
+            conn
+            |> api_cache(:private)
+            |> put_status(200)
+            |> render(:delete, key: key)
+          else
+            conn
+            |> api_cache(:private)
+            |> send_resp(204, "")
+          end
+        _ ->
+          not_found(conn)
+      end
     else
       not_found(conn)
+    end
+  end
+
+  def delete_all(conn, _params) do
+    user = conn.assigns.user
+
+    keys = Key.all(user) |> HexWeb.Repo.all
+    key = Enum.find(keys, fn (key) ->
+      key.id === user.current_key_id
+    end)
+
+    audit_fields = HexWeb.AuditLog.__schema__(:fields) -- [:id]
+    audit_extra = %{inserted_at: Ecto.DateTime.utc}
+    audit_key_remove = fn (key) ->
+      conn
+      |> audit("key.remove", key)
+      |> Ecto.Changeset.apply_changes()
+      |> Map.take(audit_fields)
+      |> Map.merge(audit_extra)
+    end
+
+    {:ok, _} =
+      Ecto.Multi.new
+      |> Ecto.Multi.update_all(:keys, Key.revoke_all(user), [])
+      |> Ecto.Multi.insert_all(:log, HexWeb.AuditLog, Enum.map(keys, audit_key_remove))
+      |> HexWeb.Repo.transaction
+
+    if key do
+      key = HexWeb.Repo.get!(assoc(conn.assigns.user, :keys), key.id)
+      conn
+      |> put_status(200)
+      |> render(:delete, key: key)
+    else
+      conn
+      |> send_resp(204, "")
     end
   end
 end

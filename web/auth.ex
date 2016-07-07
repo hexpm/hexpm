@@ -20,7 +20,11 @@ defmodule HexWeb.Auth do
     case result do
       {user, key} ->
         if Comeonin.Tools.secure_check(key.secret_second, second) do
-          {:ok, user}
+          if key.revoked_at === nil do
+            {:ok, %{user | current_key_id: key.id}}
+          else
+            :revoked
+          end
         else
           :error
         end

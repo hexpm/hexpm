@@ -99,6 +99,7 @@ defmodule HexWeb.Router do
       get    "/keys",                                  KeyController,     :index
       get    "/keys/:name",                            KeyController,     :show
       post   "/keys",                                  KeyController,     :create
+      delete "/keys",                                  KeyController,     :delete_all
       delete "/keys/:name",                            KeyController,     :delete
     end
 

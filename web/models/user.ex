@@ -20,6 +20,10 @@ defmodule HexWeb.User do
     has_many :owned_packages, through: [:package_owners, :package]
     has_many :keys, Key
     has_many :audit_logs, AuditLog, foreign_key: :actor_id
+
+    # Only used for key authentication to identify which key was
+    # used to authenticate the user.
+    field :current_key_id, :integer, virtual: true
   end
 
   defp changeset(user, :create, params) do
@@ -75,10 +79,15 @@ defmodule HexWeb.User do
       false
   end
 
-  def reset(user, password) do
-    Ecto.Multi.new
+  def reset(user, password, revoke_all_keys \\ true) do
+    multi = Ecto.Multi.new
     |> Ecto.Multi.update(:password, update(user, %{password: password}))
     |> Ecto.Multi.update(:reset, change(user, %{reset_key: nil, reset_expiry: nil}))
-    |> Ecto.Multi.delete_all(:keys, assoc(user, :keys))
+    if revoke_all_keys do
+      multi
+      |> Ecto.Multi.update_all(:keys, Key.revoke_all(user), [])
+    else
+      multi
+    end
   end
 end

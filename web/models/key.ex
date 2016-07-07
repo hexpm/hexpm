@@ -9,6 +9,8 @@ defmodule HexWeb.Key do
     field :name, :string
     field :secret_first, :string
     field :secret_second, :string
+    field :revoked_name, :string
+    field :revoked_at, Ecto.DateTime
     timestamps()
 
     belongs_to :user, User
@@ -31,11 +33,35 @@ defmodule HexWeb.Key do
   end
 
   def all(user) do
-    assoc(user, :keys)
+    from(k in assoc(user, :keys), where: is_nil(k.revoked_at))
   end
 
   def get(name, user) do
-    from(k in assoc(user, :keys), where: k.name == ^name)
+    from(k in assoc(user, :keys), where: k.name == ^name and is_nil(k.revoked_at))
+  end
+
+  def get_revoked(name, user) do
+    from(k in assoc(user, :keys), where: k.revoked_name == ^name)
+  end
+
+  def revoke(user, key_name, revoked_at \\ Ecto.DateTime.utc) do
+    from(k in assoc(user, :keys),
+      where: k.name == ^key_name and is_nil(k.revoked_at),
+      update: [set: [
+        revoked_name: k.name,
+        revoked_at: fragment("?", ^revoked_at),
+        name: nil
+      ]])
+  end
+
+  def revoke_all(user, revoked_at \\ Ecto.DateTime.utc) do
+    from(k in assoc(user, :keys),
+      where: is_nil(k.revoked_at),
+      update: [set: [
+        revoked_name: k.name,
+        revoked_at: fragment("?", ^revoked_at),
+        name: nil
+      ]])
   end
 
   defp gen_key do
@@ -64,6 +90,7 @@ defmodule HexWeb.Key do
     names =
       from(u in assoc(changeset.data, :user),
            join: k in assoc(u, :keys),
+           where: is_nil(k.revoked_at),
            select: k.name)
       |> changeset.repo.all
       |> Enum.into(MapSet.new)
