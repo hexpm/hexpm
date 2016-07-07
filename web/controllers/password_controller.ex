@@ -27,7 +27,7 @@ defmodule HexWeb.PasswordController do
     success = User.reset?(user, key)
 
     if success do
-      revoke_all_keys = Map.get(params, "revoke_all_keys", "yes") === "yes"
+      revoke_all_keys = Map.get(params, "revoke_all_keys", "yes") == "yes"
       multi = User.reset(user, password, revoke_all_keys)
       {:ok, _} = HexWeb.Repo.transaction(multi)
       HexWeb.Mailer.send("password_reset.html", "Hex.pm - Password reset", [user.email], [])

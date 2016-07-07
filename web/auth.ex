@@ -20,8 +20,8 @@ defmodule HexWeb.Auth do
     case result do
       {user, key} ->
         if Comeonin.Tools.secure_check(key.secret_second, second) do
-          if key.revoked_at === nil do
-            {:ok, %{user | current_key_id: key.id}}
+          if is_nil(key.revoked_at) do
+            {:ok, {user, key}}
           else
             :revoked
           end
@@ -36,7 +36,7 @@ defmodule HexWeb.Auth do
   def password_auth(username, password) do
     if (user = HexWeb.Repo.get_by(HexWeb.User, username: username)) &&
        Comeonin.Bcrypt.checkpw(password, user.password) do
-      {:ok, user}
+      {:ok, {user, nil}}
     else
       :error
     end

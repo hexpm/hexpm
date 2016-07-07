@@ -214,4 +214,17 @@ defmodule HexWeb.ControllerHelpers do
   def audit(user, action, params) do
     Ecto.Changeset.change(HexWeb.AuditLog.build(user, action, params), %{})
   end
+
+  def audit_many(multi, conn_or_user, action, list, opts \\ []) do
+    fields = HexWeb.AuditLog.__schema__(:fields) -- [:id]
+    extra = %{inserted_at: Ecto.DateTime.utc}
+    entry = fn (element) ->
+      conn_or_user
+      |> audit(action, element)
+      |> Ecto.Changeset.apply_changes()
+      |> Map.take(fields)
+      |> Map.merge(extra)
+    end
+    Ecto.Multi.insert_all(multi, :log, HexWeb.AuditLog, Enum.map(list, entry), opts)
+  end
 end

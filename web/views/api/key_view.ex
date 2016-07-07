@@ -1,28 +1,26 @@
 defmodule HexWeb.API.KeyView do
   use HexWeb.Web, :view
 
-  def render("index." <> _, %{keys: keys}),
-    do: render_many(keys, __MODULE__, "key")
-  def render("show." <> _, %{key: key}),
-    do: render_one(key, __MODULE__, "key")
-  def render("delete." <> _, %{key: key}),
-    do: render_one(key, __MODULE__, "key")
+  def render("index." <> _, %{keys: keys, authing_key: authing_key}),
+    do: render_many(keys, __MODULE__, "key", authing_key: authing_key)
+  def render("show." <> _, %{key: key, authing_key: authing_key}),
+    do: render_one(key, __MODULE__, "key", authing_key: authing_key)
+  def render("delete." <> _, %{key: key, authing_key: authing_key}),
+    do: render_one(key, __MODULE__, "key", authing_key: authing_key)
 
-  def render("key", %{key: key}) do
+  def render("key", %{key: key, authing_key: authing_key}) do
     entity =
-      if key.revoked_at do
-        %{
-          name: key.revoked_name,
-          revoked_at: key.revoked_at
-        }
-      else
-        key
-        |> Map.take([:name, :inserted_at, :updated_at])
-        |> Map.put(:url, key_url(HexWeb.Endpoint, :show, key))
-      end
+      key
+      |> Map.take([:name, :inserted_at, :updated_at, :revoked_at])
+      |> Map.put(:authing_key, !!(authing_key && key.id == authing_key.id))
 
-    if secret = key.user_secret do
-      Map.put(entity, :secret, secret)
+    if is_nil(key.revoked_at) do
+      if secret = key.user_secret do
+        Map.put(entity, :secret, secret)
+      else
+        entity
+      end
+      |> Map.put(:url, key_url(HexWeb.Endpoint, :show, key))
     else
       entity
     end

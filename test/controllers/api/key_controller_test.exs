@@ -44,6 +44,7 @@ defmodule HexWeb.API.KeyControllerTest do
     assert body["name"] == "macbook"
     assert body["secret"] == nil
     assert body["url"] =~ "/api/keys/macbook"
+    refute body["authing_key"]
   end
 
   test "all keys" do
@@ -56,12 +57,19 @@ defmodule HexWeb.API.KeyControllerTest do
            |> get("api/keys")
 
     assert conn.status == 200
-    body = Poison.decode!(conn.resp_body)
+    body = conn.resp_body
+      |> Poison.decode!()
+      |> Enum.sort_by(fn (%{"name" => name}) -> name end)
     assert length(body) == 2
-    first = hd(body)
-    assert first["name"] == "macbook"
-    assert first["secret"] == nil
-    assert first["url"] =~ "/api/keys/macbook"
+    [a, b] = body
+    assert a["name"] == "computer"
+    assert a["secret"] == nil
+    assert a["url"] =~ "/api/keys/computer"
+    assert a["authing_key"]
+    assert b["name"] == "macbook"
+    assert b["secret"] == nil
+    assert b["url"] =~ "/api/keys/macbook"
+    refute b["authing_key"]
   end
 
   test "delete key" do
@@ -73,7 +81,15 @@ defmodule HexWeb.API.KeyControllerTest do
            |> put_req_header("authorization", key_for("eric"))
            |> delete("api/keys/computer")
 
-    assert conn.status == 204
+    assert conn.status == 200
+    body = Poison.decode!(conn.resp_body)
+    assert body["name"] == "computer"
+    assert body["revoked_at"]
+    assert body["updated_at"]
+    assert body["inserted_at"]
+    refute body["secret"]
+    refute body["url"]
+    refute body["authing_key"]
     assert HexWeb.Repo.one(Key.get("macbook", user))
     refute HexWeb.Repo.one(Key.get("computer", user))
 
@@ -96,11 +112,12 @@ defmodule HexWeb.API.KeyControllerTest do
     assert conn.status == 200
     body = Poison.decode!(conn.resp_body)
     assert body["name"] == "current"
-    assert body["revoked_at"] != nil
-    assert body["created_at"] == nil
-    assert body["inserted_at"] == nil
-    assert body["secret"] == nil
-    assert body["url"] == nil
+    assert body["revoked_at"]
+    assert body["updated_at"]
+    assert body["inserted_at"]
+    refute body["secret"]
+    refute body["url"]
+    assert body["authing_key"]
     refute HexWeb.Repo.one(Key.get("current", user))
 
     assert HexWeb.Repo.one(Key.get_revoked("current", user))
@@ -131,7 +148,12 @@ defmodule HexWeb.API.KeyControllerTest do
     assert conn.status == 200
     body = Poison.decode!(conn.resp_body)
     assert body["name"] == key_a.name
-    assert body["revoked_at"] != nil
+    assert body["revoked_at"]
+    assert body["updated_at"]
+    assert body["inserted_at"]
+    refute body["secret"]
+    refute body["url"]
+    assert body["authing_key"]
     refute HexWeb.Repo.one(Key.get("key_a", user))
     refute HexWeb.Repo.one(Key.get("key_b", user))
 

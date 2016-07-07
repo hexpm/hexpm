@@ -20,10 +20,6 @@ defmodule HexWeb.User do
     has_many :owned_packages, through: [:package_owners, :package]
     has_many :keys, Key
     has_many :audit_logs, AuditLog, foreign_key: :actor_id
-
-    # Only used for key authentication to identify which key was
-    # used to authenticate the user.
-    field :current_key_id, :integer, virtual: true
   end
 
   defp changeset(user, :create, params) do

@@ -5,25 +5,32 @@ defmodule HexWeb.API.KeyController do
   plug :authorize, [only_basic: true, allow_unconfirmed: true] when action == :create
 
   def index(conn, _params) do
-    keys = Key.all(conn.assigns.user) |> HexWeb.Repo.all
+    user = conn.assigns.user
+    authing_key = conn.assigns.key
+
+    keys = Key.all(user) |> HexWeb.Repo.all
 
     conn
     |> api_cache(:private)
-    |> render(:index, keys: keys)
+    |> render(:index, keys: keys, authing_key: authing_key)
   end
 
   def show(conn, %{"name" => name}) do
-    key = HexWeb.Repo.one!(Key.get(name, conn.assigns.user))
+    user = conn.assigns.user
+    authing_key = conn.assigns.key
+
+    key = HexWeb.Repo.one!(Key.get(name, user))
 
     when_stale(conn, key, fn conn ->
       conn
       |> api_cache(:private)
-      |> render(:show, key: key)
+      |> render(:show, key: key, authing_key: authing_key)
     end)
   end
 
   def create(conn, params) do
     user = conn.assigns.user
+    authing_key = conn.assigns.key
 
     multi =
       Ecto.Multi.new
@@ -38,7 +45,7 @@ defmodule HexWeb.API.KeyController do
         |> put_resp_header("location", location)
         |> api_cache(:private)
         |> put_status(201)
-        |> render(:show, key: key)
+        |> render(:show, key: key, authing_key: authing_key)
       {:error, :key, changeset, _} ->
         validation_failed(conn, changeset)
     end
@@ -46,25 +53,19 @@ defmodule HexWeb.API.KeyController do
 
   def delete(conn, %{"name" => name}) do
     user = conn.assigns.user
+    authing_key = conn.assigns.key
 
     if key = HexWeb.Repo.one(Key.get(name, user)) do
       Ecto.Multi.new
-      |> Ecto.Multi.update_all(:key, Key.revoke(user, name), [])
+      |> Ecto.Multi.update(:key, Key.revoke(key))
       |> audit(conn, "key.remove", key)
       |> HexWeb.Repo.transaction
       |> case do
-        {:ok, _} ->
-          if key.id === user.current_key_id do
-            key = HexWeb.Repo.get!(assoc(user, :keys), key.id)
-            conn
-            |> api_cache(:private)
-            |> put_status(200)
-            |> render(:delete, key: key)
-          else
-            conn
-            |> api_cache(:private)
-            |> send_resp(204, "")
-          end
+        {:ok, %{key: key}} ->
+          conn
+          |> api_cache(:private)
+          |> put_status(200)
+          |> render(:delete, key: key, authing_key: authing_key)
         _ ->
           not_found(conn)
       end
@@ -75,36 +76,16 @@ defmodule HexWeb.API.KeyController do
 
   def delete_all(conn, _params) do
     user = conn.assigns.user
-
-    keys = Key.all(user) |> HexWeb.Repo.all
-    key = Enum.find(keys, fn (key) ->
-      key.id === user.current_key_id
-    end)
-
-    audit_fields = HexWeb.AuditLog.__schema__(:fields) -- [:id]
-    audit_extra = %{inserted_at: Ecto.DateTime.utc}
-    audit_key_remove = fn (key) ->
-      conn
-      |> audit("key.remove", key)
-      |> Ecto.Changeset.apply_changes()
-      |> Map.take(audit_fields)
-      |> Map.merge(audit_extra)
-    end
+    key = conn.assigns.key
 
     {:ok, _} =
       Ecto.Multi.new
       |> Ecto.Multi.update_all(:keys, Key.revoke_all(user), [])
-      |> Ecto.Multi.insert_all(:log, HexWeb.AuditLog, Enum.map(keys, audit_key_remove))
+      |> audit_many(conn, "key.remove", Key.all(user) |> HexWeb.Repo.all)
       |> HexWeb.Repo.transaction
 
-    if key do
-      key = HexWeb.Repo.get!(assoc(conn.assigns.user, :keys), key.id)
-      conn
-      |> put_status(200)
-      |> render(:delete, key: key)
-    else
-      conn
-      |> send_resp(204, "")
-    end
+    conn
+    |> put_status(200)
+    |> render(:delete, key: HexWeb.Repo.get!(Key, key.id), authing_key: key)
   end
 end

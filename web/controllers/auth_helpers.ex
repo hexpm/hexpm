@@ -4,9 +4,11 @@ defmodule HexWeb.AuthHelpers do
 
   def authorized(conn, opts, auth? \\ fn _ -> true end) do
     case authorize(conn, opts) do
-      {:ok, user} ->
+      {:ok, {user, key}} ->
         if auth?.(user) do
-          assign(conn, :user, user)
+          conn
+          |> assign(:key, key)
+          |> assign(:user, user)
         else
           forbidden(conn, "account not authorized for this action")
         end
@@ -39,10 +41,10 @@ defmodule HexWeb.AuthHelpers do
       end
 
     case result do
-      {:ok, user} ->
+      {:ok, {user, key}} ->
         cond do
           allow_unconfirmed or user.confirmed ->
-            {:ok, user}
+            {:ok, {user, key}}
           !user.confirmed ->
             {:error, :unconfirmed}
         end
