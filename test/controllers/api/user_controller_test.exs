@@ -35,6 +35,10 @@ defmodule HexWeb.API.UserControllerTest do
     assert subject =~ "Hex.pm"
     assert contents =~ "confirm?username=name&key=" <> user.confirmation_key
 
+    policies_href = ~s(http://localhost:4001/policies)
+    policies_link = ~s(<a href="#{policies_href}">#{policies_href}</a>)
+    assert contents =~ ~s(all of our policies found at #{policies_link})
+
     meta = %{name: "ecto", version: "1.0.0", description: "Domain-specific language."}
     body = create_tar(meta, [])
     conn = build_conn()
