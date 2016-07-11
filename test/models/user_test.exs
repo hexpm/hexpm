@@ -13,7 +13,7 @@ defmodule HexWeb.UserTest do
   end
 
   test "create user and auth" do
-    assert {:ok, %User{username: "eric"}} = Auth.password_auth("eric", "erics_pass")
+    assert {:ok, {%User{username: "eric"}, nil}} = Auth.password_auth("eric", "erics_pass")
   end
 
   test "create user and fail auth" do
@@ -30,7 +30,7 @@ defmodule HexWeb.UserTest do
     User.update(user, %{username: "eric", password: "new_pass"})
     |> HexWeb.Repo.update!
 
-    assert {:ok, %User{username: "eric"}} = Auth.password_auth("eric", "new_pass")
+    assert {:ok, {%User{username: "eric"}, nil}} = Auth.password_auth("eric", "new_pass")
     assert :error == Auth.password_auth("eric", "erics_pass")
   end
 end

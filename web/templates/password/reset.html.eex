@@ -41,6 +41,15 @@ function validate() {
         <input type="password" class="form-control" name="confirm_password" placeholder="Confirm Password">
       </div>
 
+      <div class="form-group">
+        <div class="checkbox">
+          <label>
+            <input type="hidden" name="revoke_all_keys" value="no">
+            <input type="checkbox" name="revoke_all_keys" value="yes" checked> Revoke all API keys
+          </label>
+        </div>
+      </div>
+
       <input type="hidden" name="username" value="<%= @username %>">
       <input type="hidden" name="key" value="<%= @key %>">
 
