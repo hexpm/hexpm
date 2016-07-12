@@ -1,7 +1,6 @@
 defmodule HexWeb.Package do
   use HexWeb.Web, :model
   import Ecto.Query, only: [from: 2]
-  alias HexWeb.Utils
   @derive {Phoenix.Param, key: :name}
 
   @timestamps_opts [usec: true]
