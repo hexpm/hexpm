@@ -59,11 +59,12 @@
                 <li class="dropdown-header menu-dropdown-header">Rebar3</li>
                 <li><a href="<%= docs_path(HexWeb.Endpoint, :rebar3_usage) %>">Usage</a></li>
                 <li><a href="<%= docs_path(HexWeb.Endpoint, :rebar3_publish) %>">Publishing packages</a></li>
-                <li><a href="http://www.rebar3.org/v3.0/docs/hex-package-management">Tasks</a></li>
+                <li><a href="https://www.rebar3.org/v3.0/docs/hex-package-management">Tasks</a></li>
                 <li role="separator" class="divider"></li>
                 <li><a href="<%= policy_path(HexWeb.Endpoint, :index) %>">Policies</a></li>
                 <li><a href="<%= docs_path(HexWeb.Endpoint, :mirrors) %>">Mirrors</a></li>
                 <li><a href="<%= docs_path(HexWeb.Endpoint, :public_keys) %>">Public keys</a></li>
+                <li><a href="https://github.com/hexpm/specifications">Specifications</a></li>
               </ul>
             </li>
           </ul>
