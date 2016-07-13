@@ -2,11 +2,11 @@ defmodule HexWeb.Parallel.Process do
   use GenServer
   require Logger
 
-  def run(fun, _num_args, args, opts) do
+  def reduce(fun, args, acc, reducer, opts) do
     {:ok, pid} = GenServer.start_link(__MODULE__, new_state(opts))
 
     try do
-      GenServer.call(pid, {:run, fun, args}, opts[:timeout])
+      GenServer.call(pid, {:reduce, fun, args, reducer, acc}, opts[:timeout])
     after
       GenServer.stop(pid)
     end
@@ -16,16 +16,26 @@ defmodule HexWeb.Parallel.Process do
     {:stop, :normal, :ok, state}
   end
 
-  def handle_call({:run, fun, args}, from, state) do
-    state = %{state | fun: fun, args: args, from: from, num_jobs: length(args), num_finished: 0}
+  def handle_call({:reduce, fun, args, reducer, acc}, from, state) do
+    state = %{state |
+      fun: fun,
+      args: args,
+      reducer: reducer,
+      acc: acc,
+      from: from,
+      num_jobs: length(args),
+      num_finished: 0
+    }
     state = run_tasks(state)
     {:noreply, state}
   end
 
   def handle_info({ref, message}, state) when is_reference(ref) do
     state =
-      state
-      |> maybe_next_task(Map.has_key?(state.running, ref), ref, {:ok, message})
+      %{state | running: Map.delete(state.running, ref),
+                num_finished: state.num_finished + 1,
+                acc: state.reducer.({:ok, message}, state.acc)}
+      |> run_task
       |> maybe_reply
 
     {:noreply, state}
@@ -35,28 +45,22 @@ defmodule HexWeb.Parallel.Process do
     case Map.fetch(state.running, ref) do
       {:ok, arg} ->
         Logger.error(["Parallel task failed with reason: `", inspect(reason), "` and args: `", inspect(arg), "`"])
-        {:noreply, state
-                   |> maybe_next_task(true, ref, {:error, arg})
-                   |> maybe_reply}
+        state =
+          %{state | running: Map.delete(state.running, ref),
+                    num_finished: state.num_finished + 1,
+                    acc: state.reducer.({:error, arg}, state.acc)}
+          |> run_task
+          |> maybe_reply
+          
       :error ->
         {:noreply, state}
     end
   end
 
-  defp maybe_next_task(state, true, ref, result) do
-    state = %{state | running: Map.delete(state.running, ref),
-                      finished: [result|state.finished],
-                      num_finished: state.num_finished + 1}
-
-    run_task(state)
-  end
-  defp maybe_next_task(state, false, _ref, _message), do: state
-
-  defp maybe_reply(%{num_finished: finished, num_jobs: jobs} = state)
-      when finished >= jobs do
-    GenServer.reply(state.from, state.finished)
-    %{state | finished: [], fun: nil, args: nil, from: nil, num_jobs: nil,
-              num_finished: nil}
+  defp maybe_reply(%{num_finished: finished, num_jobs: jobs, acc: acc} = state)
+  when finished >= jobs do
+    GenServer.reply(state.from, acc)
+    state
   end
   defp maybe_reply(state), do: state
 
@@ -79,12 +83,12 @@ defmodule HexWeb.Parallel.Process do
   defp new_state(opts) do
     %{max_jobs: opts[:parallel],
       running: Map.new,
-      finished: [],
-      waiting: [],
       num_jobs: nil,
       num_finished: nil,
       fun: nil,
       args: nil,
+      reducer: nil,
+      acc: nil,
       from: nil}
   end
 end

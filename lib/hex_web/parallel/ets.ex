@@ -2,13 +2,13 @@ defmodule HexWeb.Parallel.ETS do
   use GenServer
   require Logger
 
-  def run(fun, num_args, args, opts) do
+  def each(fun, num_args, args, opts) do
     {:ok, pid} = GenServer.start_link(__MODULE__, opts)
     ets = GenServer.call(pid, :ets)
     fill_ets(ets, num_args, args)
 
     try do
-      GenServer.call(pid, {:run, fun, num_args}, opts[:timeout])
+      GenServer.call(pid, {:each, fun, num_args}, opts[:timeout])
     after
       GenServer.stop(pid)
     else
@@ -40,8 +40,13 @@ defmodule HexWeb.Parallel.ETS do
     {:stop, :normal, :ok, state}
   end
 
-  def handle_call({:run, fun, num_jobs}, from, state) do
-    state = %{state | fun: fun, from: from, num_jobs: num_jobs, num_finished: 0}
+  def handle_call({:each, fun, num_jobs}, from, state) do
+    state = %{state |
+      fun: fun,
+      from: from,
+      num_jobs: num_jobs,
+      num_finished: 0
+    }
     state = run_tasks(state)
     {:noreply, state}
   end
@@ -73,7 +78,7 @@ defmodule HexWeb.Parallel.ETS do
   end
 
   defp maybe_reply(%{num_finished: finished, num_jobs: jobs} = state)
-      when finished >= jobs do
+  when finished >= jobs do
     GenServer.reply(state.from, :ok)
     state
   end

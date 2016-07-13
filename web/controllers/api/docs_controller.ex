@@ -150,7 +150,7 @@ defmodule HexWeb.API.DocsController do
             []
         end
       end)
-    HexWeb.Store.delete(nil, :docs_bucket, keys_to_delete)
+    HexWeb.Store.delete_many(nil, :docs_bucket, keys_to_delete, [])
 
     # Put tarball
     # TODO: Cache and add surrogate key
@@ -166,7 +166,7 @@ defmodule HexWeb.API.DocsController do
           |> Keyword.put(:meta, [{"surrogate-key", cdn_key}])
         {store_key, data, opts}
     end)
-    HexWeb.Store.put(nil, :docs_bucket, objects, [])
+    HexWeb.Store.put_many(nil, :docs_bucket, objects, [])
 
     # Purge cache
     HexWeb.Utils.multi_task([
@@ -205,8 +205,8 @@ defmodule HexWeb.API.DocsController do
     version = to_string(release.version)
     paths   = HexWeb.Store.list(nil, :docs_bucket, Path.join(name, version))
 
-    HexWeb.Store.delete(nil, :s3_bucket, "tarballs/#{name}-#{version}.tar.gz")
-    HexWeb.Store.delete(nil, :docs_bucket, Enum.to_list(paths))
+    HexWeb.Store.delete(nil, :s3_bucket, "tarballs/#{name}-#{version}.tar.gz", [])
+    HexWeb.Store.delete_many(nil, :docs_bucket, Enum.to_list(paths), [])
 
     multi =
       Ecto.Multi.new

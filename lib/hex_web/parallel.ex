@@ -3,32 +3,52 @@ defmodule HexWeb.Parallel do
   require Logger
 
   @timeout 60 * 1000
-  @parallel 50
+  @parallel 10
 
-  def run(fun, args, opts \\ [])
+  def each(fun, args, opts \\ [])
 
-  def run(_fun, [], _opts), do: []
-  def run(fun, args, opts) do
+  def each(_fun, [], _opts), do: []
+  def each(fun, args, opts) do
     opts = default_opts(opts)
     num_args = length(args)
-
-    if num_args > 1000 do
-      HexWeb.Parallel.ETS.run(fun, num_args, args, opts)
-    else
-      HexWeb.Parallel.Process.run(fun, num_args, args, opts)
-    end
+    HexWeb.Parallel.ETS.each(fun, num_args, args, opts)
   end
 
-  def run!(fun, args, opts \\ [])
+  def each!(fun, args, opts \\ [])
 
-  def run!(fun, args, opts) do
-    results = run(fun, args, opts)
+  def each!(fun, args, opts) do
+    results = each(fun, args, opts)
     Enum.map(results, fn
       {:ok, value} ->
         value
       {:error, _} ->
         raise "Parallel tasks failed"
     end)
+  end
+
+  def reduce(fun, args, acc, reducer, opts \\ [])
+
+  def reduce(_fun, [], acc, _reducer, _opts), do: acc
+  def reduce(fun, args, acc, reducer, opts) do
+    opts = default_opts(opts)
+    HexWeb.Parallel.Process.reduce(fun, args, acc, reducer, opts)
+  end
+
+  def reduce!(fun, args, acc, reducer, opts \\ [])
+
+  def reduce!(_fun, [], acc, _reducer, _opts), do: acc
+  def reduce!(fun, args, acc, reducer, opts) do
+    opts = default_opts(opts)
+    HexWeb.Parallel.Process.reduce(fun, args, acc, reducer!(reducer), opts)
+  end
+
+  defp reducer!(fun) do
+    fn
+      {:ok, value}, acc ->
+        fun.(value, acc)
+      {:error, _}, _acc ->
+        raise "Parallel tasks failed"
+    end
   end
 
   defp default_opts(opts) do

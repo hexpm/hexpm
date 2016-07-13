@@ -112,7 +112,7 @@ defmodule HexWeb.RegistryBuilder do
     objects = if signature,
                 do: [{"registry.ets.gz.signed", signature, sig_opts}|objects],
               else: objects
-    HexWeb.Store.put(nil, :s3_bucket, objects, [])
+    HexWeb.Store.put_many(nil, :s3_bucket, objects, [])
     HexWeb.CDN.purge_key(:fastly_hexrepo, "registry")
   end
 

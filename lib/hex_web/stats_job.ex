@@ -36,17 +36,19 @@ defmodule HexWeb.StatsJob do
     ([0-9]{3})\040        # status
   >x
 
-  def run(date, buckets, max_downloads_per_ip \\ 100, dryrun? \\ false) do
-    start()
+  @ets __MODULE__
 
+  def run(date, buckets, max_downloads_per_ip \\ 100, dryrun? \\ false) do
     s3_prefix     = "hex/#{date_string(date)}"
     fastly_prefix = "fastly_hex/#{date_string(date)}"
     {:ok, date}   = Ecto.Type.load(Ecto.Date, date)
     formats       = [{s3_prefix, @s3_regex}, {fastly_prefix, @fastly_regex}]
 
+    # No write_concurrency (issue ERL-188)
+    :ets.new(@ets, [:named_table, :public])
     ips = HexWeb.CDN.public_ips
-    dict = process_buckets(buckets, formats, ips)
-    dict = cap_on_ip(dict, max_downloads_per_ip)
+    process_buckets(buckets, formats, ips)
+    cap_on_ip(max_downloads_per_ip)
     packages = packages()
     releases = releases()
 
@@ -54,68 +56,81 @@ defmodule HexWeb.StatsJob do
       HexWeb.Repo.transaction(fn ->
         HexWeb.Repo.delete_all(from(d in Download, where: d.day == ^date))
 
-        Enum.flat_map(dict, fn {{package, version}, count} ->
-          pkg_id = packages[package]
-          if rel_id = releases[{pkg_id, version}],
-            do: [%{release_id: rel_id, downloads: count, day: date}],
-          else: []
-        end)
-        |> Enum.chunk(1000, 1000, [])
-        |> Enum.map(&HexWeb.Repo.insert_all(Download, &1))
+        {acc, _num} = :ets.foldl(fn
+          {{:cap, package, version}, count}, {acc, num} ->
+            pkg_id = packages[package]
+            {acc, num} =
+              if rel_id = releases[{pkg_id, version}] do
+                {[%{release_id: rel_id, downloads: count, day: date}|acc], num+1}
+              else
+                {acc, num}
+              end
+
+            if num >= 1000 do
+              HexWeb.Repo.insert_all(Download, acc)
+              {[], 0}
+            else
+              {acc, num}
+            end
+        end, {[], 0}, @ets)
+
+        HexWeb.Repo.insert_all(Download, acc)
 
         HexWeb.Repo.refresh_view(HexWeb.PackageDownload)
         HexWeb.Repo.refresh_view(HexWeb.ReleaseDownload)
       end)
     end
 
-    num = Enum.reduce(dict, 0, fn {_, count}, acc -> count + acc end)
+    num = :ets.foldl(fn {_, count}, acc -> count + acc end, 0, @ets)
 
     {:memory, memory} = :erlang.process_info(self(), :memory)
     {memory, num}
-  end
-
-  defp start do
-    HexWeb.Repo.start_link
+  after
+    :ets.delete(@ets)
   end
 
   defp process_buckets(buckets, formats, ips) do
     jobs = for b <- buckets, f <- formats, do: {b, f}
-    HexWeb.Utils.multi_task(jobs, fn {[bucket, region], {prefix, regex}} ->
+    Enum.each(jobs, fn {[bucket, region], {prefix, regex}} ->
       keys = HexWeb.Store.list(region, bucket, prefix) |> Enum.to_list
       process_keys(region, bucket, regex, ips, keys)
     end)
-    |> Enum.reduce(%{}, &Map.merge(&1, &2, fn _, c1, c2 -> c1+c2 end))
   end
 
   defp process_keys(region, bucket, regex, ips, keys) do
-    results = HexWeb.Store.get(region, bucket, keys)
-              |> Enum.zip(keys)
-    Enum.reduce(results, %{}, fn {content, key}, dict ->
+    HexWeb.Store.get_each(region, bucket, keys, fn key, content ->
       content
       |> maybe_unzip(key)
-      |> process_file(regex, ips, dict)
-    end)
+      |> process_file(regex, ips)
+    end, [])
   end
 
-  defp cap_on_ip(dict, max_downloads_per_ip) do
-    Enum.reduce(dict, %{}, fn
-      {{release, "-"}, count}, dict ->
-        Map.update(dict, release, count, &(&1 + count))
-      {{release, _ip}, count}, dict ->
+  defp cap_on_ip(max_downloads_per_ip) do
+    :ets.foldl(fn
+      {{:ip, _package, _version, nil}, _count}, :ok ->
+        :ok
+
+      {{:ip, package, version, ip}, count}, :ok ->
         count = min(max_downloads_per_ip, count)
-        Map.update(dict, release, count, &(&1 + count))
-    end)
+        key = {:cap, package, version}
+        :ets.update_counter(@ets, key, count, {key, 0})
+        :ets.delete(@ets, {:ip, package, version, ip})
+        :ok
+
+      {{:cap, _, _}, _}, :ok ->
+        :ok
+    end, :ok, @ets)
   end
 
-  defp process_file(file, regex, ips, dict) do
+  defp process_file(file, regex, ips) do
     lines = String.split(file, "\n")
-    Enum.reduce(lines, dict, fn line, dict ->
+    Enum.each(lines, fn line ->
       case parse_line(line, regex, ips) do
         {ip, package, version} ->
-          key = {{package, version}, ip}
-          Map.update(dict, key, 1, &(&1 + 1))
+          key = {:ip, package, version, ip}
+          :ets.update_counter(@ets, key, 1, {key, 0})
         nil ->
-          dict
+          :ok
       end
     end)
   end
@@ -123,13 +138,17 @@ defmodule HexWeb.StatsJob do
   defp parse_line(line, regex, ips) do
     case Regex.run(regex, line) do
       [_, ip, package, version, status] when status in ~w(200 304) ->
-        unless in_ip_range?(ips, HexWeb.Utils.parse_ip(ip)) do
-          {ip, package, version}
+        ip = parse_ip(ip)
+        unless in_ip_range?(ips, ip) do
+          {copy(ip), copy(package), copy(version)}
         end
       _ ->
         nil
     end
   end
+
+  defp copy(nil), do: nil
+  defp copy(binary), do: :binary.copy(binary)
 
   defp date_string(date) do
     list = Tuple.to_list(date)
@@ -154,6 +173,9 @@ defmodule HexWeb.StatsJob do
       do: :zlib.gunzip(data),
     else: data
   end
+
+  defp parse_ip("-"), do: nil
+  defp parse_ip(ip), do: HexWeb.Utils.parse_ip(ip)
 
   defp in_ip_range?(_range, nil),
     do: false

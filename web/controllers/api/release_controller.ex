@@ -182,13 +182,13 @@ defmodule HexWeb.API.ReleaseController do
     key     = "tarballs/#{name}-#{version}.tar"
 
     # Delete release tarball
-    HexWeb.Store.delete(nil, :s3_bucket, key)
+    HexWeb.Store.delete(nil, :s3_bucket, key, [])
 
     # Delete relevant documentation (if it exists)
     if release.has_docs do
-      HexWeb.Store.delete(nil, :s3_bucket, "docs/#{name}-#{version}.tar.gz")
+      HexWeb.Store.delete(nil, :s3_bucket, "docs/#{name}-#{version}.tar.gz", [])
       paths = HexWeb.Store.list(nil, :docs_bucket, Path.join(name, version))
-      HexWeb.Store.delete(nil, :docs_bucket, Enum.to_list(paths))
+      HexWeb.Store.delete_many(nil, :docs_bucket, Enum.to_list(paths), [])
       HexWeb.API.DocsController.publish_sitemap
     end
   end

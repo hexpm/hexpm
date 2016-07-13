@@ -16,25 +16,28 @@ defmodule HexWeb.Store.Local do
     end)
   end
 
-  def get(region, bucket, keys, _opts) when is_list(keys) do
-    Enum.map(keys, fn key ->
-      path = Path.join([dir(), region(region), bucket(bucket), key])
-      case File.read(path) do
-        {:ok, contents} -> contents
-        {:error, :enoent} -> nil
-      end
-    end)
+  def get(region, bucket, key, _opts) do
+    path = Path.join([dir(), region(region), bucket(bucket), key])
+    case File.read(path) do
+      {:ok, contents} -> contents
+      {:error, :enoent} -> nil
+    end
   end
 
-  def get(region, bucket, key, opts) do
-    [result] = get(region, bucket, [key], opts)
-    result
+  def get_many(region, bucket, keys, opts) do
+    Enum.map(keys, &get(region, bucket, &1, opts))
   end
 
-  def put(region, bucket, objects, _opts) do
-    Enum.each(objects, fn {key, blob, opts} ->
-      put(region, bucket, key, blob, opts)
-    end)
+  def get_each(region, bucket, keys, fun, opts) do
+    get_many(region, bucket, keys, opts)
+    |> Enum.zip(keys)
+    |> Enum.each(fn {body, key} -> fun.(key, body) end)
+  end
+
+  def get_reduce(region, bucket, keys, acc, fun, opts) do
+    get_many(region, bucket, keys, opts)
+    |> Enum.zip(keys)
+    |> Enum.reduce(acc, fn {body, key}, acc -> fun.(key, body, acc) end)
   end
 
   def put(region, bucket, key, blob, _opts) do
@@ -43,12 +46,32 @@ defmodule HexWeb.Store.Local do
     File.write!(path, blob)
   end
 
-  def delete(region, bucket, keys, _opts) do
-    Enum.each(List.wrap(keys), fn key ->
-      [dir(), region(region), bucket(bucket), key]
-      |> Path.join
-      |> File.rm()
+  def put_many(region, bucket, objects, _opts) do
+    Enum.each(objects, fn {key, blob, opts} ->
+      put(region, bucket, key, blob, opts)
     end)
+  end
+
+  def put_multipart_init(_region, _bucket, _key, _opts) do
+    raise "not implemented"
+  end
+
+  def put_multipart_part(_region, _bucket, _key, _upload_id, _part_number, _blob) do
+    raise "not implemented"
+  end
+
+  def put_multipart_complete(_region, _bucket, _key, _upload_id, _parts) do
+    raise "not implemented"
+  end
+
+  def delete(region, bucket, key, _opts) do
+    [dir(), region(region), bucket(bucket), key]
+    |> Path.join
+    |> File.rm
+  end
+
+  def delete_many(region, bucket, keys, opts) do
+    Enum.each(keys, &delete(region, bucket, &1, opts))
   end
 
   defp bucket(atom) when is_atom(atom),
