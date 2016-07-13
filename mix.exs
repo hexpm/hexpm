@@ -29,7 +29,7 @@ defmodule HexWeb.Mixfile do
      {:postgrex,            ">= 0.0.0"},
      {:cowboy,              "~> 1.0"},
      {:porcelain,           "~> 2.0"},
-     {:earmark,             "~> 0.1"},
+     {:earmark,             "~> 1.0"},
      {:gen_smtp,            "~> 0.9"},
      {:comeonin,            "~> 2.0"},
      {:httpoison,           "~> 0.8"},
@@ -54,7 +54,8 @@ defmodule HexWeb.Mixfile do
      :ex_aws,
      :sweet_xml,
      :porcelain,
-     :gen_smtp]
+     :gen_smtp,
+     :jiffy]
   end
 
   defp aliases do
