@@ -43,50 +43,47 @@ defmodule HexWeb.StatsJob do
     fastly_prefix = "fastly_hex/#{date_string(date)}"
     {:ok, date}   = Ecto.Type.load(Ecto.Date, date)
     formats       = [{s3_prefix, @s3_regex}, {fastly_prefix, @fastly_regex}]
+    ips           = HexWeb.CDN.public_ips
 
     # No write_concurrency (issue ERL-188)
     :ets.new(@ets, [:named_table, :public])
-    ips = HexWeb.CDN.public_ips
-    process_buckets(buckets, formats, ips)
-    cap_on_ip(max_downloads_per_ip)
+    map = try do
+      process_buckets(buckets, formats, ips)
+      cap_on_ip(max_downloads_per_ip)
+    after
+      :ets.delete(@ets)
+    end
+
     packages = packages()
     releases = releases()
+
+    # May not be a perfect count since it counts downloads without a release
+    # in the database. Should be uncommon
+    num = Enum.reduce(map, 0, fn {_, count}, acc -> count + acc end)
 
     unless dryrun? do
       HexWeb.Repo.transaction(fn ->
         HexWeb.Repo.delete_all(from(d in Download, where: d.day == ^date))
 
-        {acc, _num} = :ets.foldl(fn
-          {{:cap, package, version}, count}, {acc, num} ->
+        map
+        |> Enum.flat_map(fn {{package, version}, count} ->
             pkg_id = packages[package]
-            {acc, num} =
-              if rel_id = releases[{pkg_id, version}] do
-                {[%{release_id: rel_id, downloads: count, day: date}|acc], num+1}
-              else
-                {acc, num}
-              end
-
-            if num >= 1000 do
-              HexWeb.Repo.insert_all(Download, acc)
-              {[], 0}
+            if rel_id = releases[{pkg_id, version}] do
+              [%{release_id: rel_id, downloads: count, day: date}]
             else
-              {acc, num}
+              []
             end
-        end, {[], 0}, @ets)
-
-        HexWeb.Repo.insert_all(Download, acc)
+        end)
+        |> Enum.chunk(1000, 1000, [])
+        |> Enum.each(&HexWeb.Repo.insert_all(Download, &1))
 
         HexWeb.Repo.refresh_view(HexWeb.PackageDownload)
         HexWeb.Repo.refresh_view(HexWeb.ReleaseDownload)
       end)
     end
 
-    num = :ets.foldl(fn {_, count}, acc -> count + acc end, 0, @ets)
-
     {:memory, memory} = :erlang.process_info(self(), :memory)
     {memory, num}
-  after
-    :ets.delete(@ets)
   end
 
   defp process_buckets(buckets, formats, ips) do
@@ -107,19 +104,12 @@ defmodule HexWeb.StatsJob do
 
   defp cap_on_ip(max_downloads_per_ip) do
     :ets.foldl(fn
-      {{:ip, _package, _version, nil}, _count}, :ok ->
-        :ok
-
-      {{:ip, package, version, ip}, count}, :ok ->
+      {{_package, _version, nil}, _count}, map ->
+        map
+      {{package, version, _ip}, count}, map ->
         count = min(max_downloads_per_ip, count)
-        key = {:cap, package, version}
-        :ets.update_counter(@ets, key, count, {key, 0})
-        :ets.delete(@ets, {:ip, package, version, ip})
-        :ok
-
-      {{:cap, _, _}, _}, :ok ->
-        :ok
-    end, :ok, @ets)
+        Map.update(map, {package, version}, count, &(&1 + count))
+    end, %{}, @ets)
   end
 
   defp process_file(file, regex, ips) do
@@ -127,7 +117,7 @@ defmodule HexWeb.StatsJob do
     Enum.each(lines, fn line ->
       case parse_line(line, regex, ips) do
         {ip, package, version} ->
-          key = {:ip, package, version, ip}
+          key = {package, version, ip}
           :ets.update_counter(@ets, key, 1, {key, 0})
         nil ->
           :ok
