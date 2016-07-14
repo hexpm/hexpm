@@ -55,4 +55,17 @@ defmodule HexWeb.Plugs do
         raise RequestTooLargeError
     end
   end
+
+  def user_agent(conn, _opts) do
+    case get_req_header(conn, "user-agent") do
+      [value | _] ->
+        assign(conn, :user_agent, value)
+      [] ->
+        if Application.get_env(:hex_web, :user_agent_req) do
+          HexWeb.ControllerHelpers.render_error(conn, 400, message: "User-Agent header is requried")
+        else
+          assign(conn, :user_agent, "missing")
+        end
+    end
+  end
 end

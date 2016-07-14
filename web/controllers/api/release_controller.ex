@@ -63,7 +63,7 @@ defmodule HexWeb.API.ReleaseController do
         Ecto.Multi.new
         |> create_package(package, user, meta)
         |> create_release(package, checksum, meta)
-        |> audit_publish(user)
+        |> audit_publish(conn)
         |> publish_release(body)
         |> HexWeb.Repo.transaction(timeout: @publish_timeout)
 
@@ -140,8 +140,8 @@ defmodule HexWeb.API.ReleaseController do
     end)
   end
 
-  defp audit_publish(multi, user) do
-    audit(multi, user, "release.publish", fn %{package: pkg, release: rel} -> {pkg, rel} end)
+  defp audit_publish(multi, conn) do
+    audit(multi, conn, "release.publish", fn %{package: pkg, release: rel} -> {pkg, rel} end)
   end
 
   # Turn `%{"ecto" => %{"app" => "...", ...}}` into:

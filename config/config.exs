@@ -9,6 +9,7 @@ logs_buckets = if value = System.get_env("HEX_LOGS_BUCKETS"),
 
 config :hex_web,
   user_confirm:   true,
+  user_agent_req: true,
   tmp_dir:        Path.expand("tmp"),
   app_host:       System.get_env("APP_HOST"),
   secret:         System.get_env("HEX_SECRET"),

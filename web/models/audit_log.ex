@@ -3,14 +3,21 @@ defmodule HexWeb.AuditLog do
 
   schema "audit_logs" do
     belongs_to :actor, User
+    field :user_agent, :string
     field :action, :string
     field :params, :map
     timestamps(updated_at: false)
   end
 
-  def build(%HexWeb.User{id: user_id}, action, params) do
-    params = extract_params(action, params)
-    %HexWeb.AuditLog{actor_id: user_id, action: action, params: params}
+  # NOTE: user_agent should be just "WEB" when action is from the web interface
+
+  def build(%HexWeb.User{id: user_id}, user_agent, action, params) do
+    %HexWeb.AuditLog{
+      actor_id: user_id,
+      user_agent: user_agent,
+      action: action,
+      params: extract_params(action, params)
+    }
   end
 
   defp extract_params("docs.publish", {package, release}), do: %{package: serialize(package), release: serialize(release)}

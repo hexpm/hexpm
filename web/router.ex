@@ -11,12 +11,14 @@ defmodule HexWeb.Router do
 
   pipeline :upload do
     plug :accepts, @accepted_formats
+    plug :user_agent
     plug :fetch_body
     plug :read_body_finally
   end
 
   pipeline :api do
     plug :accepts, @accepted_formats
+    plug :user_agent
     plug HexWeb.BlockAddress.Plug
     plug HexWeb.RateLimit.Plug
   end

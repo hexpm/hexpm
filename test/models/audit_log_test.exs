@@ -6,9 +6,10 @@ defmodule HexWeb.AuditLogTest do
     package = %HexWeb.Package{id: 2, name: "ecto", meta: %HexWeb.PackageMetadata{description: "some description"}}
     user = %HexWeb.User{id: 3, username: "eric", email: "eric@mail.com", confirmed: true}
 
-    assert HexWeb.AuditLog.build(actor, "owner.add", {package, user}) ==
+    assert HexWeb.AuditLog.build(actor, "Hex/0.12.1", "owner.add", {package, user}) ==
       %HexWeb.AuditLog{
         actor_id: 1,
+        user_agent: "Hex/0.12.1",
         action: "owner.add",
         params: %{
           package: %{id: 2, name: "ecto",

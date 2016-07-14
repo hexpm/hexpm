@@ -27,10 +27,9 @@ defmodule HexWeb.API.OwnerController do
   def create(conn, %{"email" => email}) do
     email = URI.decode_www_form(email)
     new_owner = HexWeb.Repo.get_by!(User, email: email)
-    current_owner = conn.assigns.user
     package = conn.assigns.package
 
-    case add_owner(current_owner, package, new_owner) do
+    case add_owner(conn, package, new_owner) do
       :ok ->
         conn
         |> api_cache(:private)
@@ -43,7 +42,6 @@ defmodule HexWeb.API.OwnerController do
   def delete(conn, %{"email" => email}) do
     email = URI.decode_www_form(email)
     remove_owner = HexWeb.Repo.get_by!(User, email: email)
-    owner = conn.assigns.user
     package = conn.assigns.package
     owners = package_owners(package)
 
@@ -52,7 +50,7 @@ defmodule HexWeb.API.OwnerController do
       |> api_cache(:private)
       |> send_resp(403, "")
     else
-      remove_owner(owner, package, remove_owner, owners)
+      remove_owner(conn, package, remove_owner, owners)
 
       conn
       |> api_cache(:private)
@@ -60,11 +58,11 @@ defmodule HexWeb.API.OwnerController do
     end
   end
 
-  def add_owner(current_owner, package, new_owner) do
+  def add_owner(conn, package, new_owner) do
     multi =
       Ecto.Multi.new
       |> Ecto.Multi.insert(:owner, Package.build_owner(package, new_owner))
-      |> audit(current_owner, "owner.add", {package, new_owner})
+      |> audit(conn, "owner.add", {package, new_owner})
 
     case HexWeb.Repo.transaction(multi) do
       {:ok, _} ->
@@ -85,13 +83,13 @@ defmodule HexWeb.API.OwnerController do
     end
   end
 
-  def remove_owner(owner, package, remove_owner, owners \\ nil) do
+  def remove_owner(conn, package, remove_owner, owners \\ nil) do
     owners = owners || package_owners(package)
 
     {:ok, _} =
       Ecto.Multi.new
       |> Ecto.Multi.delete_all(:package_owner, Package.owner(package, remove_owner))
-      |> audit(owner, "owner.remove", {package, remove_owner})
+      |> audit(conn, "owner.remove", {package, remove_owner})
       |> HexWeb.Repo.transaction
 
     HexWeb.Mailer.send(

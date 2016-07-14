@@ -200,26 +200,29 @@ defmodule HexWeb.ControllerHelpers do
     HexWeb.AuthHelpers.authorized(conn, opts, &fun.(conn, &1))
   end
 
-  def audit(multi, conn_or_user, action, fun) when is_function(fun, 1) do
+  def audit(multi, conn, action, fun) when is_function(fun, 1) do
     Ecto.Multi.merge(multi, fn data ->
-      Ecto.Multi.insert(Ecto.Multi.new, :log, audit(conn_or_user, action, fun.(data)))
+      Ecto.Multi.insert(Ecto.Multi.new, :log, audit(conn, action, fun.(data)))
     end)
   end
-  def audit(multi, conn_or_user, action, params) do
-    Ecto.Multi.insert(multi, :log, audit(conn_or_user, action, params))
+  def audit(multi, conn, action, params) do
+    Ecto.Multi.insert(multi, :log, audit(conn, action, params))
   end
-  def audit(%Plug.Conn{assigns: %{user: user}}, action, params) do
-    audit(user, action, params)
-  end
-  def audit(user, action, params) do
-    Ecto.Changeset.change(HexWeb.AuditLog.build(user, action, params), %{})
+  def audit(conn, action, params) do
+    user = conn.assigns.user
+    user_agent = conn.assigns.user_agent
+    do_audit(user, user_agent, action, params)
   end
 
-  def audit_many(multi, conn_or_user, action, list, opts \\ []) do
+  defp do_audit(user, user_agent, action, params) do
+    Ecto.Changeset.change(HexWeb.AuditLog.build(user, user_agent, action, params), %{})
+  end
+
+  def audit_many(multi, conn, action, list, opts \\ []) do
     fields = HexWeb.AuditLog.__schema__(:fields) -- [:id]
     extra = %{inserted_at: Ecto.DateTime.utc}
     entry = fn (element) ->
-      conn_or_user
+      conn
       |> audit(action, element)
       |> Ecto.Changeset.apply_changes()
       |> Map.take(fields)

@@ -22,22 +22,21 @@ defmodule HexWeb.API.DocsController do
   def create(conn, %{"body" => body}) do
     package = conn.assigns.package
     release = conn.assigns.release
-    user    = conn.assigns.user
-    handle_tarball(conn, package, release, user, body)
+    handle_tarball(conn, package, release, body)
   end
 
   def delete(conn, _params) do
-    revert(conn.assigns.release, conn.assigns.user)
+    revert(conn, conn.assigns.release)
 
     conn
     |> api_cache(:private)
     |> send_resp(204, "")
   end
 
-  defp handle_tarball(conn, package, release, user, body) do
+  defp handle_tarball(conn, package, release, body) do
     case parse_tarball(body) do
       {:ok, {files, body}} ->
-        upload_docs(package, release, user, files, body)
+        upload_docs(conn, package, release, files, body)
         location = HexWeb.Utils.docs_tarball_url(package, release)
 
         conn
@@ -50,11 +49,9 @@ defmodule HexWeb.API.DocsController do
   end
 
   defp parse_tarball(body) do
-    import Access
-
     with {:ok, data} <- unzip(body),
          {:ok, files} <- :erl_tar.extract({:binary, data}, [:memory]),
-         files = update_in(files, [all(), elem(0)], &List.to_string/1),
+         files = Enum.map(files, fn {path, data} -> {List.to_string(path), data} end),
          :ok <- check_version_dirs(files),
          do: {:ok, {files, body}}
   end
@@ -91,7 +88,7 @@ defmodule HexWeb.API.DocsController do
     {:ok, IO.iodata_to_binary([data|uncompressed])}
   end
 
-  def upload_docs(package, release, user, files, body) do
+  def upload_docs(conn, package, release, files, body) do
     name            = package.name
     version         = to_string(release.version)
     unversioned_key = "docspage/#{package.name}"
@@ -167,7 +164,7 @@ defmodule HexWeb.API.DocsController do
       Ecto.Multi.new
       |> Ecto.Multi.update(:release, Ecto.Changeset.change(release, has_docs: true))
       |> Ecto.Multi.update(:package, Ecto.Changeset.change(release.package, docs_updated_at: Ecto.DateTime.utc))
-      |> audit(user, "docs.publish", {package, release})
+      |> audit(conn, "docs.publish", {package, release})
 
     {:ok, _} = HexWeb.Repo.transaction(multi)
 
@@ -192,7 +189,7 @@ defmodule HexWeb.API.DocsController do
     else: {:error, "directory name not allowed to match a semver version"}
   end
 
-  def revert(release, user) do
+  def revert(conn, release) do
     name    = release.package.name
     version = to_string(release.version)
     paths   = HexWeb.Store.list(nil, :docs_bucket, Path.join(name, version))
@@ -204,7 +201,7 @@ defmodule HexWeb.API.DocsController do
       Ecto.Multi.new
       |> Ecto.Multi.update(:release, Ecto.Changeset.change(release, has_docs: false))
       |> Ecto.Multi.update(:package, Ecto.Changeset.change(release.package, docs_updated_at: Ecto.DateTime.utc))
-      |> audit(user, "docs.revert", {release.package, release})
+      |> audit(conn, "docs.revert", {release.package, release})
 
     {:ok, _} = HexWeb.Repo.transaction(multi)
 

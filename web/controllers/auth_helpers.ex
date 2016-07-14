@@ -81,7 +81,6 @@ defmodule HexWeb.AuthHelpers do
 
   def forbidden(conn, reason) do
     conn
-    |> put_resp_header("www-authenticate", "Basic realm=hex")
     |> render_error(403, message: reason)
   end
 
