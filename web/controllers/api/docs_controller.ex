@@ -35,8 +35,9 @@ defmodule HexWeb.API.DocsController do
   end
 
   defp handle_tarball(conn, package, release, user, body) do
-    case parse_tarball(package, release, user, body) do
-      :ok ->
+    case parse_tarball(body) do
+      {:ok, {files, body}} ->
+        upload_docs(package, release, user, files, body)
         location = HexWeb.Utils.docs_tarball_url(package, release)
 
         conn
@@ -44,35 +45,22 @@ defmodule HexWeb.API.DocsController do
         |> api_cache(:public)
         |> send_resp(201, "")
       {:error, errors} ->
-        validation_failed(conn, errors)
+        validation_failed(conn, [tar: errors])
     end
   end
 
-  defp parse_tarball(package, release, user, body) do
-    case unzip(body) do
-      {:ok, data} ->
-        case :erl_tar.extract({:binary, data}, [:memory]) do
-          {:ok, files} ->
-            files = Enum.map(files, fn {path, data} -> {List.to_string(path), data} end)
+  defp parse_tarball(body) do
+    import Access
 
-            if check_version_dirs?(files) do
-              upload_docs(package, release, user, files, body)
-              :ok
-            else
-              {:error, [tar: "directory name not allowed to match a semver version"]}
-            end
-
-          {:error, reason} ->
-            {:error, [tar: inspect reason]}
-        end
-
-      {:error, reason} ->
-        {:error, reason}
-    end
+    with {:ok, data} <- unzip(body),
+         {:ok, files} <- :erl_tar.extract({:binary, data}, [:memory]),
+         files = update_in(files, [all(), elem(0)], &List.to_string/1),
+         :ok <- check_version_dirs(files),
+         do: {:ok, {files, body}}
   end
 
   defp unzip(data) when byte_size(data) > @compressed_max_size do
-    {:error, [tar: :too_big]}
+    {:error, "too big"}
   end
 
   defp unzip(data) do
@@ -91,7 +79,7 @@ defmodule HexWeb.API.DocsController do
   end
 
   defp unzip_inflate(_stream, _data, total, _) when total > @uncompressed_max_size do
-    {:error, [tar: :too_big]}
+    {:error, "too big"}
   end
 
   defp unzip_inflate(stream, data, total, {:more, uncompressed}) do
@@ -193,11 +181,15 @@ defmodule HexWeb.API.DocsController do
     end
   end
 
-  defp check_version_dirs?(files) do
-    Enum.all?(files, fn {path, _data} ->
+  defp check_version_dirs(files) do
+    result = Enum.all?(files, fn {path, _data} ->
       first = Path.split(path) |> hd
       Version.parse(first) == :error
     end)
+
+    if result,
+      do: :ok,
+    else: {:error, "directory name not allowed to match a semver version"}
   end
 
   def revert(release, user) do
