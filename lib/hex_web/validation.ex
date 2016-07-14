@@ -13,7 +13,16 @@ defmodule HexWeb.Validation do
       _, %Version{build: nil} ->
         []
       _, %Version{} ->
-        [{field, :build_number_not_allowed}]
+        [{field, "build number not allowed"}]
+    end)
+  end
+
+  def validate_list_required(changeset, field) do
+    validate_change(changeset, field, fn
+      _, [] ->
+        [{field, "can't be blank"}]
+      _, list when is_list(list) ->
+        []
     end)
   end
 end

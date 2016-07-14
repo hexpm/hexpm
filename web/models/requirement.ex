@@ -125,7 +125,7 @@ defmodule HexWeb.Requirement do
   end
   defp requirement_names(_requirements), do: []
 
-  defp guess_config(build_tools) do
+  defp guess_config(build_tools) when is_list(build_tools) do
     cond do
       "mix" in build_tools       -> "mix.exs"
       "rebar" in build_tools     -> "rebar.config"
@@ -134,4 +134,5 @@ defmodule HexWeb.Requirement do
       true                       -> "TOP CONFIG"
     end
   end
+  defp guess_config(_), do: "TOP CONFIG"
 end

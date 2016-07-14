@@ -66,16 +66,31 @@ defmodule HexWeb.ReleaseTest do
     Release.build(ecto, rel_meta(%{version: "0.1.0", app: "ecto", requirements: reqs}), "")
     |> HexWeb.Repo.insert!
 
+    assert %{meta: %{app: [{"can't be blank", []}]}} =
+           Release.build(decimal, %{"meta" => %{"version" => "0.1.0", "requirements" => [], "build_tools" => ["mix"]}}, "")
+           |> extract_errors
+
+    assert %{meta: %{build_tools: [{"can't be blank", []}]}} =
+           Release.build(decimal, %{"meta" => %{"app" => "decimal", "version" => "0.1.0", "requirements" => []}}, "")
+           |> extract_errors
+
+    assert %{meta: %{build_tools: [{"can't be blank", []}]}} =
+           Release.build(decimal, %{"meta" => %{"app" => "decimal", "version" => "0.1.0", "requirements" => [], "build_tools" => []}}, "")
+           |> extract_errors
+
     assert %{version: [{"is invalid", [type: HexWeb.Version]}]} =
-           Release.build(ecto, rel_meta(%{version: "0.1", app: "ecto"}), "") |> extract_errors
+           Release.build(ecto, rel_meta(%{version: "0.1", app: "ecto"}), "")
+           |> extract_errors
 
     reqs = [%{name: "decimal", app: "decimal", requirement: "~> fail", optional: false}]
     assert %{requirements: [%{requirement: [{"invalid requirement: \"~> fail\"", []}]}]} =
-           Release.build(ecto, rel_meta(%{version: "0.1.1", app: "ecto", requirements: reqs}), "") |> extract_errors
+           Release.build(ecto, rel_meta(%{version: "0.1.1", app: "ecto", requirements: reqs}), "")
+           |> extract_errors
 
     reqs = [%{name: "decimal", app: "decimal", requirement: "~> 1.0", optional: false}]
     assert %{requirements: [%{requirement: [{"Failed to use \"decimal\" because\n  You specified ~> 1.0 in your mix.exs\n", []}]}]} =
-           Release.build(ecto, rel_meta(%{version: "0.1.1", app: "ecto", requirements: reqs}), "") |> extract_errors
+           Release.build(ecto, rel_meta(%{version: "0.1.1", app: "ecto", requirements: reqs}), "")
+           |> extract_errors
   end
 
   defp extract_errors(%Ecto.Changeset{} = changeset) do
