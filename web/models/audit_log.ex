@@ -29,6 +29,17 @@ defmodule HexWeb.AuditLog do
     Ecto.Multi.insert(multi, :log, build(user, user_agent, action, params))
   end
 
+  def audit_many(multi, {user, user_agent}, action, list, opts \\ []) do
+    fields = HexWeb.AuditLog.__schema__(:fields) -- [:id]
+    extra = %{inserted_at: Ecto.DateTime.utc}
+    entry = fn (element) ->
+      build(user, user_agent, action, element)
+      |> Map.take(fields)
+      |> Map.merge(extra)
+    end
+    Ecto.Multi.insert_all(multi, :log, HexWeb.AuditLog, Enum.map(list, entry), opts)
+  end
+
   defp extract_params("docs.publish", {package, release}), do: %{package: serialize(package), release: serialize(release)}
   defp extract_params("docs.revert", {package, release}), do: %{package: serialize(package), release: serialize(release)}
   defp extract_params("key.generate", key), do: serialize(key)
