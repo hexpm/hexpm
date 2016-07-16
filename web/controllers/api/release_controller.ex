@@ -45,7 +45,7 @@ defmodule HexWeb.API.ReleaseController do
     |> delete_result(conn, release)
   end
 
-  def delete_result({:ok, _}, conn, release) do
+  defp delete_result({:ok, _}, conn, release) do
     revert_assets(release)
     HexWeb.RegistryBuilder.rebuild
 
@@ -53,7 +53,7 @@ defmodule HexWeb.API.ReleaseController do
     |> api_cache(:private)
     |> send_resp(204, "")
   end
-  def delete_result({:error, _, changeset, _}, conn, _release) do
+  defp delete_result({:error, _, changeset, _}, conn, _release) do
     validation_failed(conn, changeset)
   end
 

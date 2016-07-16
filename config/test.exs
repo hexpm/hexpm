@@ -18,7 +18,8 @@ config :hex_web, HexWeb.Repo,
   database: "hexweb_test",
   hostname: "localhost",
   pool: Ecto.Adapters.SQL.Sandbox,
-  pool_size: 10
+  pool_size: 10,
+  ownership_timeout: 61_000
 
 config :logger,
   level: :error
