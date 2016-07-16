@@ -31,7 +31,7 @@ defmodule HexWeb.API.PackageController do
     when_stale(conn, package, fn conn ->
       package = HexWeb.Repo.preload(package, [
         :downloads,
-        releases: from(r in Release, select: map(r, [:version, :inserted_at, :inserted_at]))
+        releases: from(r in Release, select: map(r, [:version, :inserted_at, :updated_at]))
       ])
       package = update_in(package.releases, &Release.sort/1)
 
