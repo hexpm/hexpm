@@ -29,6 +29,16 @@ defmodule HexWeb.Web do
     end
   end
 
+  def crud do
+    quote do
+      alias HexWeb.Repo
+      import Ecto
+      import HexWeb.AuditLog, only: [audit: 4]
+
+      HexWeb.Web.shared
+    end
+  end
+
   def controller do
     quote do
       use Phoenix.Controller

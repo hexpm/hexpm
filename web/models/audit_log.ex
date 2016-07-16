@@ -20,6 +20,10 @@ defmodule HexWeb.AuditLog do
     }
   end
 
+  def audit(%Ecto.Multi{} = multi, {user, user_agent}, action, params) do
+    Ecto.Multi.insert(multi, :log, build(user, user_agent, action, params))
+  end
+
   defp extract_params("docs.publish", {package, release}), do: %{package: serialize(package), release: serialize(release)}
   defp extract_params("docs.revert", {package, release}), do: %{package: serialize(package), release: serialize(release)}
   defp extract_params("key.generate", key), do: serialize(key)
