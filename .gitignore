@@ -1,6 +1,6 @@
 /tmp
 /logs
-/src/safe_erl_term.erl
+/src/*.erl
 
 /_build
 /db
@@ -12,4 +12,3 @@
 erl_crash.dump
 
 /priv/static
-

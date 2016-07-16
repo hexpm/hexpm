@@ -6,7 +6,8 @@ defmodule HexWeb.Mixfile do
      version: "0.0.1",
      elixir: "~> 1.2",
      elixirc_paths: elixirc_paths(Mix.env),
-     compilers: [:phoenix] ++ Mix.compilers,
+     gpb_options: gpb_options(),
+     compilers: [:phoenix, :gpb] ++ Mix.compilers,
      build_embedded: Mix.env == :prod,
      start_permanent: Mix.env == :prod,
      aliases: aliases(),
@@ -20,6 +21,14 @@ defmodule HexWeb.Mixfile do
 
   defp elixirc_paths(:test), do: ["lib", "web", "test/support"]
   defp elixirc_paths(_),     do: ["lib", "web"]
+
+  defp gpb_options do
+    [verify: :always,
+     strings_as_binaries: true,
+     maps: true,
+     maps_unset_optional: :omitted,
+     report_warnings: true]
+  end
 
   defp deps do
     [{:phoenix,             "~> 1.2.0-rc"},
@@ -37,6 +46,7 @@ defmodule HexWeb.Mixfile do
      {:ex_aws,              "~> 0.4"},
      {:jiffy,               "~> 0.14"},
      {:rollbax,             "~> 0.5"},
+     {:gpb,                 "~> 3.23", only: :dev},
      {:phoenix_live_reload, "~> 1.0", only: :dev}]
   end
 
@@ -59,8 +69,36 @@ defmodule HexWeb.Mixfile do
   end
 
   defp aliases do
-    ["ecto.setup": ["ecto.create", "ecto.migrate", "run priv/repo/seeds.exs"],
+    ["compile.gpb": &compile_gpb/1,
+     "ecto.setup": ["ecto.create", "ecto.migrate", "run priv/repo/seeds.exs"],
      "ecto.reset": ["ecto.drop", "ecto.create", "ecto.migrate"],
      "test": ["ecto.migrate", "test"]]
+  end
+
+  defp compile_gpb(args) do
+    alias Mix.Compilers.Erlang
+    {opts, _, _} = OptionParser.parse(args, switches: [force: :boolean])
+
+    project     = Mix.Project.config
+    proto_paths = project[:proto_paths] || ["proto"]
+    erlc_path   = project[:erlc_paths] |> List.first
+    mappings    = Enum.zip(proto_paths, Stream.repeatedly(fn -> erlc_path end))
+    options     = project[:gpb_options] || []
+    options     = options ++ [o: erlc_path]
+    manifest    = Path.join(Mix.Project.manifest_path, ".compile.gpb")
+
+    Erlang.compile(manifest, mappings, :proto, :erl, opts, fn
+      input, output ->
+        Erlang.ensure_application!(:gpb, input)
+
+        file        = Path.basename(input)
+        import_path = input |> Path.relative_to_cwd |> Path.dirname
+        options     = options ++ [i: import_path]
+
+        case :gpb_compile.file(Erlang.to_erl_file(file), options) do
+          :ok -> {:ok, output}
+          {:error, _} -> :error
+        end
+    end)
   end
 end
