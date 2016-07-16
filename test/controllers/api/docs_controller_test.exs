@@ -57,6 +57,21 @@ defmodule HexWeb.API.DocsControllerTest do
     conn = get build_conn(), "docs/sitemap.xml"
     assert conn.status == 200
     assert conn.resp_body =~ "https://hexdocs.pm/phoenix"
+
+    body = create_tarball([{'index.html', "HEYA"}])
+    conn = build_conn()
+           |> put_req_header("content-type", "application/octet-stream")
+           |> put_req_header("authorization", key_for("eric"))
+           |> post("api/packages/phoenix/releases/0.0.1/docs", body)
+    assert conn.status == 201
+
+    conn = get build_conn(), "docs/phoenix/index.html"
+    assert conn.status == 200
+    assert conn.resp_body == "NOPE"
+
+    conn = get build_conn(), "docs/phoenix/0.0.1/index.html"
+    assert conn.status == 200
+    assert conn.resp_body == "HEYA"
   end
 
   @tag :integration

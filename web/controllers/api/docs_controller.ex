@@ -96,18 +96,27 @@ defmodule HexWeb.API.DocsController do
     pre_release     = release.version.pre != []
     first_release   = package.docs_updated_at == nil
 
+    latest_version = from(r in Release.all(package), select: r.version, where: r.has_docs == true or r.version == ^version)
+                     |> HexWeb.Repo.all
+                     |> Enum.reject(fn(version) -> version.pre != [] end)
+                     |> Enum.sort(&Version.compare(&1, &2) == :gt)
+                     |> List.first
+
+    docs_for_latest_release = (latest_version != nil) && (release.version == latest_version)
     files =
       Enum.flat_map(files, fn {path, data} ->
         versioned = {Path.join([name, version, path]), versioned_key, data}
         unversioned = {Path.join(name, path), unversioned_key, data}
 
-        if pre_release && !first_release do
-          [versioned]
-        else
-          [versioned, unversioned]
+        cond do
+          pre_release && !first_release ->
+            [versioned]
+          first_release || docs_for_latest_release ->
+            [versioned, unversioned]
+          true ->
+            [versioned]
         end
       end)
-
     paths = MapSet.new(files, &elem(&1, 0))
 
     # Delete old files
@@ -129,7 +138,7 @@ defmodule HexWeb.API.DocsController do
           pre_release == true ->
             []
           # Top-level docs, don't match version directories (/ecto/...)
-          Version.parse(first) == :error ->
+          Version.parse(first) == :error && docs_for_latest_release ->
             [key]
           true ->
             []
@@ -154,11 +163,18 @@ defmodule HexWeb.API.DocsController do
     HexWeb.Store.put_many(nil, :docs_bucket, objects, [])
 
     # Purge cache
-    HexWeb.Utils.multi_task([
+    purge_tasks = [
       fn -> HexWeb.CDN.purge_key(:fastly_hexrepo, "docs/#{name}-#{version}") end,
-      fn -> HexWeb.CDN.purge_key(:fastly_hexdocs, unversioned_key) end,
       fn -> HexWeb.CDN.purge_key(:fastly_hexdocs, versioned_key) end
-    ])
+    ]
+    purge_tasks =
+      if first_release || docs_for_latest_release do
+        [fn -> HexWeb.CDN.purge_key(:fastly_hexdocs, unversioned_key) end | purge_tasks]
+      else
+        purge_tasks
+      end
+
+    HexWeb.Utils.multi_task(purge_tasks)
 
     multi =
       Ecto.Multi.new
