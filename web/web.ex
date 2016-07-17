@@ -33,6 +33,7 @@ defmodule HexWeb.Web do
     quote do
       alias HexWeb.Repo
       import Ecto
+      import Ecto.Query, only: [from: 1, from: 2]
       import HexWeb.AuditLog, only: [audit: 4]
 
       HexWeb.Web.shared
