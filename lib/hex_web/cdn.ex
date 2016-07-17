@@ -4,7 +4,7 @@ defmodule HexWeb.CDN do
   @type ip :: <<_::32>>
   @type mask :: 0..32
 
-  @callback purge_key(service, key) :: :ok
+  @callback purge_key(service, key | [key]) :: :ok
   @callback public_ips() :: [{ip, mask}]
 
   @cdn_impl Application.get_env(:hex_web, :cdn_impl)

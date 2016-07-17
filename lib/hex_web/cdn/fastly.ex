@@ -5,6 +5,16 @@ defmodule HexWeb.CDN.Fastly do
   @fastly_url "https://api.fastly.com/"
   @retry_times 10
 
+  def purge_key(service, keys) when is_list(keys) do
+    service_id = Application.get_env(:hex_web, service)
+    HexWeb.Parallel.each!(fn key ->
+      case post("service/#{service_id}/purge/#{key}", %{}) do
+        {:ok, status, _, _} when status in [200, 404] ->
+          :ok
+      end
+    end, keys, [])
+  end
+
   def purge_key(service, key) do
     service_id = Application.get_env(:hex_web, service)
     case post("service/#{service_id}/purge/#{key}", %{}) do
@@ -21,7 +31,7 @@ defmodule HexWeb.CDN.Fastly do
     end)
   end
 
-  defp auth() do
+  defp auth do
     Application.get_env(:hex_web, :fastly_key)
   end
 
