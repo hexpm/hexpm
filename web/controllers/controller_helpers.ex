@@ -200,6 +200,11 @@ defmodule HexWeb.ControllerHelpers do
     HexWeb.AuthHelpers.authorized(conn, opts, &fun.(conn, &1))
   end
 
+  def audit_data(conn) do
+    {conn.assigns.user, conn.assigns.user_agent}
+  end
+
+  # TODO: remove once auditing is moved out of all controllers
   def audit(multi, conn, action, fun) when is_function(fun, 1) do
     Ecto.Multi.merge(multi, fn data ->
       Ecto.Multi.insert(Ecto.Multi.new, :log, audit(conn, action, fun.(data)))
