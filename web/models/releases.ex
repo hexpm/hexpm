@@ -35,14 +35,14 @@ defmodule HexWeb.Releases do
   end
 
   defp publish_result({:ok, _} = result) do
-    HexWeb.RegistryBuilder.rebuild
+    HexWeb.RegistryBuilder.full_build
     result
   end
   defp publish_result(result), do: result
 
   defp revert_result({:ok, %{release: release}}) do
     revert_assets(release)
-    HexWeb.RegistryBuilder.rebuild
+    HexWeb.RegistryBuilder.full_build
     :ok
   end
   defp revert_result(result), do: result

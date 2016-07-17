@@ -1,5 +1,5 @@
 defmodule HexWeb.RegistryBuilderTest do
-  use HexWeb.ModelCase, async: true
+  use HexWeb.ModelCase
 
   alias HexWeb.User
   alias HexWeb.Package
@@ -21,7 +21,9 @@ defmodule HexWeb.RegistryBuilderTest do
   end
 
   defp open_table do
-    {:ok, tid} = :ets.file2tab('tmp/registry.ets')
+    contents = HexWeb.Store.get(nil, :s3_bucket, "registry.ets.gz", []) |> :zlib.gunzip
+    File.write!("tmp/registry_builder_test.ets", contents)
+    {:ok, tid} = :ets.file2tab('tmp/registry_builder_test.ets')
     tid
   end
 
@@ -45,7 +47,7 @@ defmodule HexWeb.RegistryBuilderTest do
   end
 
   test "registry is versioned" do
-    RegistryBuilder.rebuild()
+    RegistryBuilder.full_build()
     tid = open_table()
 
     try do
@@ -58,7 +60,7 @@ defmodule HexWeb.RegistryBuilderTest do
   test "registry is in correct format" do
     test_data()
 
-    RegistryBuilder.rebuild()
+    RegistryBuilder.full_build()
     tid = open_table()
 
     try do
@@ -93,7 +95,7 @@ defmodule HexWeb.RegistryBuilderTest do
     test_data()
 
     try do
-      RegistryBuilder.rebuild()
+      RegistryBuilder.full_build()
 
       reg = HexWeb.Store.get(nil, :s3_bucket, "registry.ets.gz", [])
       sig = HexWeb.Store.get(nil, :s3_bucket, "registry.ets.gz.signed", [])
@@ -102,6 +104,41 @@ defmodule HexWeb.RegistryBuilderTest do
     after
       Application.delete_env(:hex_web, :signing_key)
     end
+  end
+
+  test "registry v2 is in correct format" do
+    test_data()
+
+    RegistryBuilder.full_build()
+
+    names = HexWeb.Store.get(nil, :s3_bucket, "names", [])
+            |> :zlib.gunzip
+            |> :hex_pb_names.decode_msg(:Names)
+
+    assert length(names.packages) == 3
+    assert [%{name: "decimal"} | _] = names.packages
+
+    versions = HexWeb.Store.get(nil, :s3_bucket, "versions", [])
+               |> :zlib.gunzip
+               |> :hex_pb_versions.decode_msg(:Versions)
+
+    assert length(versions.packages) == 3
+    assert [%{name: "decimal", versions: ["0.0.1", "0.0.2"]} | _] = versions.packages
+
+    decimal = HexWeb.Store.get(nil, :s3_bucket, "packages/decimal", [])
+              |> :zlib.gunzip
+              |> :hex_pb_package.decode_msg(:Package)
+
+    assert length(decimal.releases) == 2
+    assert [%{version: "0.0.1", checksum: checksum, dependencies: []} | _] = decimal.releases
+    assert is_binary(checksum)
+
+    postgrex = HexWeb.Store.get(nil, :s3_bucket, "packages/postgrex", [])
+              |> :zlib.gunzip
+              |> :hex_pb_package.decode_msg(:Package)
+
+    assert [%{version: "0.0.2", dependencies: deps}] = postgrex.releases
+    assert deps == [%{package: "decimal", requirement: "~> 0.0.1"}, %{package: "ex_doc", requirement: "0.0.1"}]
   end
 
   # test "building is blocking" do
@@ -115,15 +152,15 @@ defmodule HexWeb.RegistryBuilderTest do
   #   pid = self
 
   #   Task.start_link(fn ->
-  #     RegistryBuilder.rebuild
+  #     RegistryBuilder.full_build
   #     send pid, :done
   #   end)
   #   Task.start_link(fn ->
-  #     RegistryBuilder.rebuild
+  #     RegistryBuilder.full_build
   #     send pid, :done
   #   end)
 
-  #   RegistryBuilder.rebuild
+  #   RegistryBuilder.full_build
 
   #   receive do: (:done -> :ok)
   #   receive do: (:done -> :ok)

@@ -46,7 +46,7 @@ defmodule HexWeb.Mixfile do
      {:ex_aws,              "~> 0.4"},
      {:jiffy,               "~> 0.14"},
      {:rollbax,             "~> 0.5"},
-     {:gpb,                 "~> 3.23", only: :dev},
+     {:gpb,                 "~> 3.23"},
      {:phoenix_live_reload, "~> 1.0", only: :dev}]
   end
 

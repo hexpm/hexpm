@@ -1,7 +1,0 @@
-message Names {
-  message Package {
-    required string name = 1;
-  }
-
-  repeated Package packages = 1;
-}
