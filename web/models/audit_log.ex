@@ -20,6 +20,11 @@ defmodule HexWeb.AuditLog do
     }
   end
 
+  def audit(%Ecto.Multi{} = multi, {user, user_agent}, action, fun) when is_function(fun, 1) do
+    Ecto.Multi.merge(multi, fn data ->
+      Ecto.Multi.insert(Ecto.Multi.new, :log, build(user, user_agent, action, fun.(data)))
+    end)
+  end
   def audit(%Ecto.Multi{} = multi, {user, user_agent}, action, params) do
     Ecto.Multi.insert(multi, :log, build(user, user_agent, action, params))
   end
