@@ -130,7 +130,7 @@ defmodule HexWeb.RegistryBuilderTest do
     RegistryBuilder.full_build()
 
     Release.build(context.decimal, rel_meta(%{version: "0.0.3", app: "decimal", requirements: []}), "") |> HexWeb.Repo.insert!
-    RegistryBuilder.partial_build({:single, "decimal"})
+    RegistryBuilder.partial_build({:publish, "decimal"})
 
     tid = open_table()
     assert length(:ets.match_object(tid, :_)) == 10
@@ -147,7 +147,7 @@ defmodule HexWeb.RegistryBuilderTest do
     RegistryBuilder.full_build()
 
     Release.delete(decimal2) |> HexWeb.Repo.delete!
-    RegistryBuilder.partial_build({:single, "decimal"})
+    RegistryBuilder.partial_build({:publish, "decimal"})
 
     tid = open_table()
     assert length(:ets.match_object(tid, :_)) == 8
@@ -165,7 +165,7 @@ defmodule HexWeb.RegistryBuilderTest do
 
     ecto = Package.build(context.user, pkg_meta(%{name: "ecto", description: "..."})) |> HexWeb.Repo.insert!
     Release.build(ecto, rel_meta(%{version: "0.0.1", app: "ecto", requirements: []}), "") |> HexWeb.Repo.insert!
-    RegistryBuilder.partial_build({:single, "ecto"})
+    RegistryBuilder.partial_build({:publish, "ecto"})
 
     tid = open_table()
     assert length(:ets.match_object(tid, :_)) == 11
@@ -185,7 +185,7 @@ defmodule HexWeb.RegistryBuilderTest do
 
     Release.delete(postgrex1) |> HexWeb.Repo.delete!
     HexWeb.Repo.delete!(context.postgrex)
-    RegistryBuilder.partial_build({:remove, "postgrex"})
+    RegistryBuilder.partial_build({:revert, "postgrex"})
 
     tid = open_table()
     assert length(:ets.match_object(tid, :_)) == 7

@@ -31,21 +31,21 @@ defmodule HexWeb.Releases do
     |> audit_revert(audit_data, package, release)
     |> Ecto.Multi.delete_all(:package, delete_query)
     |> Repo.transaction_with_isolation(level: :serializable, timeout: @publish_timeout)
-    |> revert_result
+    |> revert_result(package)
   end
 
-  defp publish_result({:ok, _} = result) do
-    HexWeb.RegistryBuilder.full_build
+  defp publish_result({:ok, %{package: package}} = result) do
+    HexWeb.RegistryBuilder.partial_build({:publish, package.name})
     result
   end
   defp publish_result(result), do: result
 
-  defp revert_result({:ok, %{release: release}}) do
+  defp revert_result({:ok, %{release: release}}, package) do
     revert_assets(release)
-    HexWeb.RegistryBuilder.full_build
+    HexWeb.RegistryBuilder.partial_build({:revert, package.name})
     :ok
   end
-  defp revert_result(result), do: result
+  defp revert_result(result, _package), do: result
 
   defp create_package(multi, package, user, meta) do
     params = %{"name" => meta["name"], "meta" => meta}

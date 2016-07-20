@@ -103,8 +103,8 @@ defmodule HexWeb.RegistryBuilder do
     end)
   end
 
-  defp partial({:single, package}) do
-    log(:single, fn ->
+  defp partial({:publish, package}) do
+    log(:publish, fn ->
       {packages, releases, installs} = tuples()
 
       ets = build_ets(packages, releases, installs)
@@ -121,8 +121,8 @@ defmodule HexWeb.RegistryBuilder do
     end)
   end
 
-  defp partial({:remove, package}) do
-    log(:remove, fn ->
+  defp partial({:revert, package}) do
+    log(:revert, fn ->
       {packages, releases, installs} = tuples()
       ets = build_ets(packages, releases, installs)
       names = build_names(packages)
