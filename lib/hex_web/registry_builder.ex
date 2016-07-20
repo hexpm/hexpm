@@ -7,7 +7,7 @@ defmodule HexWeb.RegistryBuilder do
 
   # TODO: installs ???
   # TODO: signing
-  # TODO: partial builds
+  # TODO: remove skips
 
   import Ecto.Query, only: [from: 2]
   require HexWeb.Repo
@@ -23,7 +23,11 @@ defmodule HexWeb.RegistryBuilder do
   @wait_time 10_000
 
   def full_build do
-    locked_build(&do_full_rebuild/0)
+    locked_build(&full/0)
+  end
+
+  def partial_build(action) do
+    locked_build(fn -> partial(action) end)
   end
 
   defp locked_build(fun) do
@@ -72,35 +76,85 @@ defmodule HexWeb.RegistryBuilder do
     end
   end
 
-  defp do_full_rebuild do
-    log(:FULL, fn ->
-      installs       = installs()
-      requirements   = requirements()
-      releases       = releases()
-      packages       = packages()
-      package_tuples = package_tuples(packages, releases)
-      release_tuples = release_tuples(packages, releases, requirements)
+  defp full do
+    log(:full, fn ->
+      {packages, releases, installs} = tuples()
 
-      ets = build_ets(package_tuples, release_tuples, installs)
-      new = build_new(package_tuples, release_tuples)
-      # TODO: Delete old files after upload
+      ets = build_ets(packages, releases, installs)
+      new = build_new(packages, releases)
       upload_files(ets, new)
 
-      # TODO: purge
-      # HexWeb.CDN.purge_key(:fastly_hexrepo, "registry")
+      {_, _, packages} = new
+      new_keys = Enum.map(packages, &"packages/#{elem(&1, 0)}") |> Enum.sort
+      old_keys = HexWeb.Store.list(nil, :s3_bucket, "packages/") |> Enum.sort
+      HexWeb.Store.delete_many(nil, :s3_bucket, old_keys -- new_keys, [])
+
+      HexWeb.CDN.purge_key(:fastly_hexrepo, "registry")
     end)
+  end
+
+  defp partial(:v1) do
+    log(:v1, fn ->
+      {packages, releases, installs} = tuples()
+      ets = build_ets(packages, releases, installs)
+      upload_files(ets, nil)
+
+      HexWeb.CDN.purge_key(:fastly_hexrepo, ["registry-index"])
+    end)
+  end
+
+  defp partial({:single, package}) do
+    log(:single, fn ->
+      {packages, releases, installs} = tuples()
+
+      ets = build_ets(packages, releases, installs)
+      names = build_names(packages)
+      versions = build_versions(packages)
+
+      release_map = Enum.filter(releases, &match?({{^package, _}, _}, &1)) |> Map.new
+      package_versions = Enum.find(packages, &match?({^package, _}, &1)) |> elem(1) |> hd
+      package_object = build_package(package, package_versions, release_map)
+
+      upload_files(ets, {names, versions, [{package, package_object}]})
+
+      HexWeb.CDN.purge_key(:fastly_hexrepo, ["registry-index", "registry-package-#{package}"])
+    end)
+  end
+
+  defp partial({:remove, package}) do
+    log(:remove, fn ->
+      {packages, releases, installs} = tuples()
+      ets = build_ets(packages, releases, installs)
+      names = build_names(packages)
+      versions = build_versions(packages)
+
+      upload_files(ets, {names, versions, []})
+      HexWeb.Store.delete(nil, :s3_bucket, "packages/#{package}", [])
+
+      HexWeb.CDN.purge_key(:fastly_hexrepo, ["registry-index", "registry-package-#{package}"])
+    end)
+  end
+
+  defp tuples do
+    installs       = installs()
+    requirements   = requirements()
+    releases       = releases()
+    packages       = packages()
+    package_tuples = package_tuples(packages, releases)
+    release_tuples = release_tuples(packages, releases, requirements)
+
+    {package_tuples, release_tuples, installs}
   end
 
   defp log(type, fun) do
     try do
       {time, _} = :timer.tc(fun)
-
       Logger.warn "REGISTRY_BUILDER_COMPLETED #{type} (#{div time, 1000}ms)"
     catch
-      kind, error ->
+      exception ->
         stacktrace = System.stacktrace
         Logger.error "REGISTRY_BUILDER_FAILED #{type}"
-        HexWeb.Utils.log_error(kind, error, stacktrace)
+        reraise exception, stacktrace
     end
   end
 
@@ -149,59 +203,69 @@ defmodule HexWeb.RegistryBuilder do
     release_map = Map.new(releases)
 
     Enum.map(packages, fn {name, [versions]} ->
-      releases =
-        Enum.map(versions, fn version ->
-          [deps, checksum, _tools] = release_map[{name, version}]
-          deps =
-            Enum.map(deps, fn [dep, req, opt, app] ->
-              map = %{package: dep, requirement: req}
-              map = if opt, do: Map.put(map, :optional, true), else: map
-              map = if app != dep, do: Map.put(map, :app, app), else: map
-              map
-            end)
-
-          checksum = checksum |> Base.decode16!
-          %{version: version, checksum: checksum, dependencies: deps}
-        end)
-
-      contents =
-        %{releases: releases}
-        |> :hex_pb_package.encode_msg(:Package)
-        |> :zlib.gzip
-
+      contents = build_package(name, versions, release_map)
       {name, contents}
     end)
   end
 
-  defp upload_files({ets, ets_sign}, {names, versions, packages}) do
-    meta = [{"surrogate-key", "registry registry-all"}]
-    ets_meta = if ets_sign, do: [{"signature", ets_sign}|meta], else: meta
-    opts = [acl: :public_read, cache_control: "public, max-age=600", meta: meta]
-    ets_opts = Keyword.put(opts, :meta, ets_meta)
+  defp build_package(name, versions, release_map) do
+    releases =
+      Enum.map(versions, fn version ->
+        [deps, checksum, _tools] = release_map[{name, version}]
+        deps =
+          Enum.map(deps, fn [dep, req, opt, app] ->
+            map = %{package: dep, requirement: req}
+            map = if opt, do: Map.put(map, :optional, true), else: map
+            map = if app != dep, do: Map.put(map, :app, app), else: map
+            map
+          end)
 
-    ets_object = {"registry.ets.gz", ets, ets_opts}
-    ets_sign_object = {"registry.ets.gz.signed", ets_sign, opts}
-    names_object = {"names", names, ets_opts}
-    versions_object = {"versions", versions, ets_opts}
+        checksum = checksum |> Base.decode16!
+        %{version: version, checksum: checksum, dependencies: deps}
+      end)
+
+    %{releases: releases}
+    |> :hex_pb_package.encode_msg(:Package)
+    |> :zlib.gzip
+  end
+
+  defp upload_files(v1, v2) do
+    objects = v2_objects(v2) ++ v1_objects(v1)
+    HexWeb.Store.put_many(nil, :s3_bucket, objects, [])
+  end
+
+  defp v1_objects(nil), do: []
+  defp v1_objects({ets, signature}) do
+    meta = [{"surrogate-key", "registry registry-index"}]
+    index_meta = if signature, do: [{"signature", signature}|meta], else: meta
+    opts = [acl: :public_read, cache_control: "public, max-age=600", meta: meta]
+    index_opts = Keyword.put(opts, :meta, index_meta)
+
+    ets_object = {"registry.ets.gz", ets, index_opts}
+
+    if signature do
+      signature_object = {"registry.ets.gz.signed", signature, opts}
+      [ets_object, signature_object]
+    else
+      [ets_object]
+    end
+  end
+
+  defp v2_objects(nil), do: []
+  defp v2_objects({names, versions, packages}) do
+    meta = [{"surrogate-key", "registry registry-index"}]
+    opts = [acl: :public_read, cache_control: "public, max-age=600", meta: meta]
+    index_opts = Keyword.put(opts, :meta, meta)
+
+    names_object = {"names", names, index_opts}
+    versions_object = {"versions", versions, index_opts}
 
     package_objects = Enum.map(packages, fn {name, contents} ->
       opts = Keyword.put(opts, :meta, [{"surrogate-key", "registry registry-package-#{name}"}])
       {"packages/#{name}", contents, opts}
     end)
 
-    objects = [
-      ets_object,
-      ets_sign_object,
-      names_object,
-      versions_object |
-      package_objects]
-    |> filter_objects
-
-    HexWeb.Store.put_many(nil, :s3_bucket, objects, [])
-  end
-
-  defp filter_objects(objects) do
-    Enum.reject(objects, fn {_name, obj, _opts} -> is_nil(obj) end)
+    package_objects ++ [names_object, versions_object]
   end
 
   defp package_tuples(packages, releases) do
