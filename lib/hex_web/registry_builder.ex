@@ -5,22 +5,19 @@ defmodule HexWeb.RegistryBuilder do
   immediately after again.
   """
 
-  # TODO: installs ???
   # TODO: signing
-  # TODO: remove skips
 
   import Ecto.Query, only: [from: 2]
   require HexWeb.Repo
   require Logger
-  alias Ecto.Adapters.SQL
   alias HexWeb.Package
   alias HexWeb.Release
   alias HexWeb.Requirement
   alias HexWeb.Install
 
   @ets_table :hex_registry
-  @version   4
-  @wait_time 10_000
+  @version 4
+  @lock_timeout 30_000
 
   def full_build do
     locked_build(&full/0)
@@ -31,49 +28,10 @@ defmodule HexWeb.RegistryBuilder do
   end
 
   defp locked_build(fun) do
-    handle = HexWeb.Repo.insert!(HexWeb.Registry.build)
-
-    try do
-      HexWeb.Repo.transaction(fn ->
-        SQL.query(HexWeb.Repo, "LOCK registries NOWAIT", [])
-        run_or_skip(handle, fun)
-      end)
-    rescue
-      error in [Postgrex.Error] ->
-        stacktrace = System.stacktrace
-        if error.postgres.code == :lock_not_available do
-          :timer.sleep(@wait_time)
-          run_or_skip(handle, fun)
-        else
-          reraise error, stacktrace
-        end
-    end
-  end
-
-  defp run_or_skip(handle, fun) do
-    unless skip?(handle) do
-      HexWeb.Registry.set_working(handle)
-      |> HexWeb.Repo.update_all([])
-
+    HexWeb.Repo.transaction(fn ->
+      HexWeb.Repo.advisory_lock(:registry, timeout: @lock_timeout)
       fun.()
-
-      HexWeb.Registry.set_done(handle)
-      |> HexWeb.Repo.update_all([])
-    end
-  end
-
-  defp skip?(handle) do
-    # Has someone already pushed data newer than we were planning push?
-    latest_started = HexWeb.Registry.latest_started
-                     |> HexWeb.Repo.one
-
-    if latest_started && time_diff(latest_started, handle.inserted_at) > 0 do
-      HexWeb.Registry.set_done(handle)
-      |> HexWeb.Repo.update_all([])
-      true
-    else
-      false
-    end
+    end)
   end
 
   defp full do
@@ -338,11 +296,5 @@ defmodule HexWeb.RegistryBuilder do
     Install.all
     |> HexWeb.Repo.all
     |> Enum.map(&{&1.hex, &1.elixirs})
-  end
-
-  defp time_diff(time1, time2) do
-    time1 = Ecto.DateTime.to_erl(time1) |> :calendar.datetime_to_gregorian_seconds
-    time2 = Ecto.DateTime.to_erl(time2) |> :calendar.datetime_to_gregorian_seconds
-    time1 - time2
   end
 end

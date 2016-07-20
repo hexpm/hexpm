@@ -209,32 +209,4 @@ defmodule HexWeb.RegistryBuilderTest do
     assert v2_map("packages/decimal")
     refute v2_map("packages/postgrex")
   end
-
-  # test "building is blocking" do
-  #   postgrex = HexWeb.Repo.get_by(Package, name: "postgrex")
-  #   decimal = HexWeb.Repo.get_by(Package, name: "decimal")
-
-  #   Release.build(decimal, %{version: "0.0.1", app: "decimal"}, "")
-  #   Release.build(decimal, %{version: "0.0.2", app: "decimal", requirements: %{ex_doc: "0.0.0"}}, "")
-  #   Release.build(postgrex, %{version: "0.0.2", app: "postgrex", requirements: %{decimal: "~> 0.0.1", ex_doc: "0.1.0"}}, "")
-
-  #   pid = self
-
-  #   Task.start_link(fn ->
-  #     RegistryBuilder.full_build
-  #     send pid, :done
-  #   end)
-  #   Task.start_link(fn ->
-  #     RegistryBuilder.full_build
-  #     send pid, :done
-  #   end)
-
-  #   RegistryBuilder.full_build
-
-  #   receive do: (:done -> :ok)
-  #   receive do: (:done -> :ok)
-
-  #   tid = open_table()
-  #   close_table(tid)
-  # end
 end
