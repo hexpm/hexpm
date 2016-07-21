@@ -13,7 +13,7 @@ config :hex_web,
   tmp_dir:        Path.expand("tmp"),
   app_host:       System.get_env("APP_HOST"),
   secret:         System.get_env("HEX_SECRET"),
-  signing_key:    System.get_env("HEX_SIGNING_KEY"),
+  private_key:    System.get_env("HEX_SIGNING_KEY"),
   read_only:      System.get_env("HEX_READ_ONLY"),
 
   store_impl:     store,

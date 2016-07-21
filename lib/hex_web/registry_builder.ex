@@ -5,8 +5,6 @@ defmodule HexWeb.RegistryBuilder do
   immediately after again.
   """
 
-  # TODO: signing
-
   import Ecto.Query, only: [from: 2]
   require HexWeb.Repo
   require Logger
@@ -128,13 +126,18 @@ defmodule HexWeb.RegistryBuilder do
     :ets.delete(tid)
 
     contents = File.read!(file) |> :zlib.gzip
-    {contents, try_sign(contents)}
+    signature = contents |> sign |> Base.encode16(case: :lower)
+    {contents, signature}
   end
 
-  defp try_sign(contents) do
-    if key = Application.get_env(:hex_web, :signing_key) do
-      HexWeb.Utils.sign(contents, key)
-    end
+  defp sign(contents) do
+    key = Application.fetch_env!(:hex_web, :private_key)
+    HexWeb.Utils.sign(contents, key)
+  end
+
+  defp sign_protobuf(contents) do
+    signature = sign(contents)
+    :hex_pb_signed.encode_msg(%{payload: contents, signature: signature}, :Signed)
   end
 
   defp build_new(packages, releases) do
@@ -147,6 +150,7 @@ defmodule HexWeb.RegistryBuilder do
     packages = Enum.map(packages, fn {name, _versions} -> %{name: name} end)
     %{packages: packages}
     |> :hex_pb_names.encode_msg(:Names)
+    |> sign_protobuf
     |> :zlib.gzip
   end
 
@@ -154,6 +158,7 @@ defmodule HexWeb.RegistryBuilder do
     packages = Enum.map(packages, fn {name, [versions]} -> %{name: name, versions: versions} end)
     %{packages: packages}
     |> :hex_pb_versions.encode_msg(:Versions)
+    |> sign_protobuf
     |> :zlib.gzip
   end
 
@@ -184,6 +189,7 @@ defmodule HexWeb.RegistryBuilder do
 
     %{releases: releases}
     |> :hex_pb_package.encode_msg(:Package)
+    |> sign_protobuf
     |> :zlib.gzip
   end
 
@@ -195,18 +201,13 @@ defmodule HexWeb.RegistryBuilder do
   defp v1_objects(nil), do: []
   defp v1_objects({ets, signature}) do
     meta = [{"surrogate-key", "registry registry-index"}]
-    index_meta = if signature, do: [{"signature", signature}|meta], else: meta
+    index_meta = [{"signature", signature}|meta]
     opts = [acl: :public_read, cache_control: "public, max-age=600", meta: meta]
     index_opts = Keyword.put(opts, :meta, index_meta)
 
     ets_object = {"registry.ets.gz", ets, index_opts}
-
-    if signature do
-      signature_object = {"registry.ets.gz.signed", signature, opts}
-      [ets_object, signature_object]
-    else
-      [ets_object]
-    end
+    signature_object = {"registry.ets.gz.signed", signature, opts}
+    [ets_object, signature_object]
   end
 
   defp v2_objects(nil), do: []

@@ -1,0 +1,4 @@
+message Signed {
+  required bytes payload = 1;
+  optional bytes signature = 2;
+}

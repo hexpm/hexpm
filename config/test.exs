@@ -2,10 +2,12 @@ use Mix.Config
 
 config :hex_web,
   user_agent_req: false,
-  
-  docs_url: System.get_env("HEX_DOCS_URL") || "http://localhost:4042",
-  cdn_url:  System.get_env("HEX_CDN_URL")  || "http://localhost:4042",
-  secret:   System.get_env("HEX_SECRET")   || "796f75666f756e64746865686578"
+
+  docs_url:    System.get_env("HEX_DOCS_URL") || "http://localhost:4042",
+  cdn_url:     System.get_env("HEX_CDN_URL")  || "http://localhost:4042",
+  secret:      System.get_env("HEX_SECRET")   || "796f75666f756e64746865686578",
+  private_key: File.read!("test/fixtures/private.pem"),
+  public_key:  File.read!("test/fixtures/public.pem")
 
 config :hex_web, HexWeb.Endpoint,
   http: [port: 4001],

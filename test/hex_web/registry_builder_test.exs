@@ -31,9 +31,14 @@ defmodule HexWeb.RegistryBuilderTest do
   defp v2_map(path) do
     {module, message} = path_to_protobuf(path)
     if contents = HexWeb.Store.get(nil, :s3_bucket, path, []) do
-      contents
-      |> :zlib.gunzip
-      |> module.decode_msg(message)
+      %{payload: payload, signature: signature} =
+        contents
+        |> :zlib.gunzip
+        |> :hex_pb_signed.decode_msg(:Signed)
+
+      public_key = Application.fetch_env!(:hex_web, :public_key)
+      assert HexWeb.Utils.verify(payload, signature, public_key)
+      module.decode_msg(payload, message)
     end
   end
   defp path_to_protobuf("names"), do: {:hex_pb_names, :Names}
@@ -84,23 +89,15 @@ defmodule HexWeb.RegistryBuilderTest do
   end
 
   test "registry is uploaded alongside signature", context do
-    keypath       = Path.join([__DIR__, "..", "fixtures"])
-    priv_key      = File.read!(Path.join(keypath, "test_priv.pem"))
-    pub_key       = File.read!(Path.join(keypath, "test_pub.pem"))
+    test_data(context)
+    RegistryBuilder.full_build()
 
-    Application.put_env(:hex_web, :signing_key, priv_key)
+    registry = HexWeb.Store.get(nil, :s3_bucket, "registry.ets.gz", [])
+    signature = HexWeb.Store.get(nil, :s3_bucket, "registry.ets.gz.signed", [])
 
-    try do
-      test_data(context)
-      RegistryBuilder.full_build()
-
-      reg = HexWeb.Store.get(nil, :s3_bucket, "registry.ets.gz", [])
-      sig = HexWeb.Store.get(nil, :s3_bucket, "registry.ets.gz.signed", [])
-
-      assert HexWeb.Utils.verify(reg, sig, pub_key) == true
-    after
-      Application.delete_env(:hex_web, :signing_key)
-    end
+    public_key = Application.fetch_env!(:hex_web, :public_key)
+    signature = Base.decode16!(signature, case: :lower)
+    assert HexWeb.Utils.verify(registry, signature, public_key)
   end
 
   test "registry v2 is in correct format", context do

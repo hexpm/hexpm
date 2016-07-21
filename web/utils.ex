@@ -202,20 +202,16 @@ defmodule HexWeb.Utils do
     result.status
   end
 
-  def sign(file, key) do
+  def sign(payload, key) do
     [entry | _ ] = :public_key.pem_decode(key)
     key = :public_key.pem_entry_decode(entry)
-
-    :public_key.sign(file, :sha512, key)
-    |> Base.encode16(case: :lower)
+    :public_key.sign(payload, :sha512, key)
   end
 
-  def verify(file, signature, key) do
+  def verify(payload, signature, key) do
     [entry | _] = :public_key.pem_decode(key)
-    key         = :public_key.pem_entry_decode(entry)
-    signature   = Base.decode16!(signature, case: :lower)
-
-    :public_key.verify(file, :sha512, signature, key)
+    key = :public_key.pem_entry_decode(entry)
+    :public_key.verify(payload, :sha512, signature, key)
   end
 
   def parse_ip(ip) do
