@@ -35,11 +35,11 @@ defmodule HexWeb.Key do
     from(k in assoc(user, :keys), where: is_nil(k.revoked_at))
   end
 
-  def get(name, user) do
+  def get(user, name) do
     from(k in assoc(user, :keys), where: k.name == ^name and is_nil(k.revoked_at))
   end
 
-  def get_revoked(name, user) do
+  def get_revoked(user, name) do
     from(k in assoc(user, :keys), where: k.name == ^name and not is_nil(k.revoked_at))
   end
 

@@ -1,5 +1,6 @@
 defmodule HexWeb.API.KeyController do
   use HexWeb.Web, :controller
+  alias HexWeb.Keys
 
   plug :authorize when action != :create
   plug :authorize, [only_basic: true, allow_unconfirmed: true] when action == :create
@@ -8,7 +9,7 @@ defmodule HexWeb.API.KeyController do
     user = conn.assigns.user
     authing_key = conn.assigns.key
 
-    keys = Key.all(user) |> HexWeb.Repo.all
+    keys = Keys.all(user)
 
     conn
     |> api_cache(:private)
@@ -19,7 +20,7 @@ defmodule HexWeb.API.KeyController do
     user = conn.assigns.user
     authing_key = conn.assigns.key
 
-    key = HexWeb.Repo.one!(Key.get(name, user))
+    key = Keys.get(user, name)
 
     when_stale(conn, key, fn conn ->
       conn
@@ -32,12 +33,7 @@ defmodule HexWeb.API.KeyController do
     user = conn.assigns.user
     authing_key = conn.assigns.key
 
-    multi =
-      Ecto.Multi.new
-      |> Ecto.Multi.insert(:key, Key.build(user, params))
-      |> audit(conn, "key.generate", fn %{key: key} -> key end)
-
-    case HexWeb.Repo.transaction(multi) do
+    case Keys.add(user, params, audit: audit_data(conn)) do
       {:ok, %{key: key}} ->
         location = key_url(conn, :show, params["name"])
 
@@ -55,22 +51,14 @@ defmodule HexWeb.API.KeyController do
     user = conn.assigns.user
     authing_key = conn.assigns.key
 
-    if key = HexWeb.Repo.one(Key.get(name, user)) do
-      Ecto.Multi.new
-      |> Ecto.Multi.update(:key, Key.revoke(key))
-      |> audit(conn, "key.remove", key)
-      |> HexWeb.Repo.transaction
-      |> case do
-        {:ok, %{key: key}} ->
-          conn
-          |> api_cache(:private)
-          |> put_status(200)
-          |> render(:delete, key: key, authing_key: authing_key)
-        _ ->
-          not_found(conn)
-      end
-    else
-      not_found(conn)
+    case Keys.remove(user, name, [audit: audit_data(conn)]) do
+      {:ok, %{key: key}} ->
+        conn
+        |> api_cache(:private)
+        |> put_status(200)
+        |> render(:delete, key: key, authing_key: authing_key)
+      _ ->
+        not_found(conn)
     end
   end
 
@@ -78,11 +66,7 @@ defmodule HexWeb.API.KeyController do
     user = conn.assigns.user
     key = conn.assigns.key
 
-    {:ok, _} =
-      Ecto.Multi.new
-      |> Ecto.Multi.update_all(:keys, Key.revoke_all(user), [])
-      |> audit_many(conn, "key.remove", Key.all(user) |> HexWeb.Repo.all)
-      |> HexWeb.Repo.transaction
+    {:ok, _} = Keys.remove_all(user, audit: audit_data(conn))
 
     conn
     |> put_status(200)

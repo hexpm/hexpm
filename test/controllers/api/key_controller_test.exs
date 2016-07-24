@@ -22,7 +22,7 @@ defmodule HexWeb.API.KeyControllerTest do
     user = HexWeb.Repo.get_by!(User, username: "eric")
 
     assert conn.status == 201
-    assert HexWeb.Repo.one(Key.get("macbook", user))
+    assert HexWeb.Repo.one(Key.get(user, "macbook"))
 
     log = HexWeb.Repo.one!(HexWeb.AuditLog)
     assert log.actor_id == user.id
@@ -90,10 +90,10 @@ defmodule HexWeb.API.KeyControllerTest do
     refute body["secret"]
     refute body["url"]
     refute body["authing_key"]
-    assert HexWeb.Repo.one(Key.get("macbook", user))
-    refute HexWeb.Repo.one(Key.get("computer", user))
+    assert HexWeb.Repo.one(Key.get(user, "macbook"))
+    refute HexWeb.Repo.one(Key.get(user, "computer"))
 
-    assert HexWeb.Repo.one(Key.get_revoked("computer", user))
+    assert HexWeb.Repo.one(Key.get_revoked(user, "computer"))
 
     log = HexWeb.Repo.one!(HexWeb.AuditLog)
     assert log.actor_id == user.id
@@ -118,9 +118,9 @@ defmodule HexWeb.API.KeyControllerTest do
     refute body["secret"]
     refute body["url"]
     assert body["authing_key"]
-    refute HexWeb.Repo.one(Key.get("current", user))
+    refute HexWeb.Repo.one(Key.get(user, "current"))
 
-    assert HexWeb.Repo.one(Key.get_revoked("current", user))
+    assert HexWeb.Repo.one(Key.get_revoked(user, "current"))
 
     log = HexWeb.Repo.one!(HexWeb.AuditLog)
     assert log.actor_id == user.id
@@ -154,11 +154,11 @@ defmodule HexWeb.API.KeyControllerTest do
     refute body["secret"]
     refute body["url"]
     assert body["authing_key"]
-    refute HexWeb.Repo.one(Key.get("key_a", user))
-    refute HexWeb.Repo.one(Key.get("key_b", user))
+    refute HexWeb.Repo.one(Key.get(user, "key_a"))
+    refute HexWeb.Repo.one(Key.get(user, "key_b"))
 
-    assert HexWeb.Repo.one(Key.get_revoked("key_a", user))
-    assert HexWeb.Repo.one(Key.get_revoked("key_b", user))
+    assert HexWeb.Repo.one(Key.get_revoked(user, "key_a"))
+    assert HexWeb.Repo.one(Key.get_revoked(user, "key_b"))
 
     assert [log_a, log_b] =
       HexWeb.AuditLog
