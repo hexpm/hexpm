@@ -16,6 +16,7 @@ defmodule HexWeb.RegistryBuilder do
   @ets_table :hex_registry
   @version 4
   @lock_timeout 30_000
+  @transaction_timeout 60_000
 
   def full_build do
     locked_build(&full/0)
@@ -29,7 +30,7 @@ defmodule HexWeb.RegistryBuilder do
     HexWeb.Repo.transaction(fn ->
       HexWeb.Repo.advisory_lock(:registry, timeout: @lock_timeout)
       fun.()
-    end)
+    end, timeout: @transaction_timeout)
   end
 
   defp full do
