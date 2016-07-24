@@ -146,7 +146,7 @@ defmodule HexWeb.RegistryBuilder do
      build_packages(packages, releases)}
   end
 
-  def build_names(packages) do
+  defp build_names(packages) do
     packages = Enum.map(packages, fn {name, _versions} -> %{name: name} end)
     %{packages: packages}
     |> :hex_pb_names.encode_msg(:Names)
@@ -154,7 +154,7 @@ defmodule HexWeb.RegistryBuilder do
     |> :zlib.gzip
   end
 
-  def build_versions(packages) do
+  defp build_versions(packages) do
     packages = Enum.map(packages, fn {name, [versions]} -> %{name: name, versions: versions} end)
     %{packages: packages}
     |> :hex_pb_versions.encode_msg(:Versions)
@@ -162,7 +162,7 @@ defmodule HexWeb.RegistryBuilder do
     |> :zlib.gzip
   end
 
-  def build_packages(packages, releases) do
+  defp build_packages(packages, releases) do
     release_map = Map.new(releases)
 
     Enum.map(packages, fn {name, [versions]} ->
@@ -177,7 +177,7 @@ defmodule HexWeb.RegistryBuilder do
         [deps, checksum, _tools] = release_map[{name, version}]
         deps =
           Enum.map(deps, fn [dep, req, opt, app] ->
-            map = %{package: dep, requirement: req}
+            map = %{package: dep, requirement: req || ">= 0.0.0"}
             map = if opt, do: Map.put(map, :optional, true), else: map
             map = if app != dep, do: Map.put(map, :app, app), else: map
             map
