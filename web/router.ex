@@ -57,13 +57,21 @@ defmodule HexWeb.Router do
     get "/sitemap.xml",     SitemapController,    :sitemap
     get "/hexsearch.xml",   OpenSearchController, :opensearch
     get "/installs/hex.ez", InstallerController,  :get_archive
+  end
 
-    if Mix.env in [:dev, :test, :hex] do
+  if Mix.env in [:dev, :test, :hex] do
+    scope "/repo", HexWeb do
       get "/registry.ets.gz",              TestController, :get_registry
       get "/registry.ets.gz.signed",       TestController, :get_registry_signed
+      get "/names",                        TestController, :get_names
+      get "/versions",                     TestController, :get_version
+      get "/packages/:package",            TestController, :get_package
       get "/tarballs/:ball",               TestController, :get_tarball
-      get "/docs/:package/:version/*page", TestController, :get_docs_page
-      get "/docs/sitemap.xml",             TestController, :get_docs_sitemap
+    end
+
+    scope "/docs", HexWeb do
+      get "/:package/:version/*page", TestController, :get_docs_page
+      get "/sitemap.xml",             TestController, :get_docs_sitemap
     end
   end
 
