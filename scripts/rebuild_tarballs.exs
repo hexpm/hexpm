@@ -51,11 +51,11 @@ defmodule HexWeb.Scripts.Tarballs do
   end
 
   defp tools(tools, files) do
-    files = Enum.into(files, HashSet.new)
+    files = MapSet.new(files)
 
-    Enum.reduce(tools, HashSet.new, fn {file, tool}, set ->
+    Enum.reduce(tools, MapSet.new, fn {file, tool}, set ->
       if file in files do
-        HashSet.put(set, tool)
+        MapSet.put(set, tool)
       else
         set
       end
@@ -67,7 +67,7 @@ defmodule HexWeb.Scripts.Tarballs do
     {:ok, inner_files} = :erl_tar.extract({:binary, files["contents.tar.gz"]}, [:memory, :compressed])
     inner_files
     |> string_files
-    |> Enum.into(HashSet.new, &elem(&1, 0))
+    |> MapSet.new(&elem(&1, 0))
   end
 
   defp string_files(files) do

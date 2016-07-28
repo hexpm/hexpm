@@ -7,6 +7,7 @@ defmodule HexWeb.Mixfile do
      elixir: "~> 1.2",
      elixirc_paths: elixirc_paths(Mix.env),
      gpb_options: gpb_options(),
+     xref: xref(),
      compilers: [:phoenix, :gpb] ++ Mix.compilers,
      build_embedded: Mix.env == :prod,
      start_permanent: Mix.env == :prod,
@@ -28,6 +29,10 @@ defmodule HexWeb.Mixfile do
      maps: true,
      maps_unset_optional: :omitted,
      report_warnings: true]
+  end
+
+  defp xref do
+    [exclude: [{Hex.Registry, :prefetch, 1}]]
   end
 
   defp deps do
