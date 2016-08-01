@@ -26,7 +26,7 @@ defmodule HexWeb.CheckNamesTest do
     HexWeb.Repo.insert!(%HexWeb.Package{name: "foo", inserted_at: yesterday})
     HexWeb.Repo.insert!(%HexWeb.Package{name: "fooo", inserted_at: yesterday})
 
-    {:ok, %{}}
+    :ok
   end
 
   test "check for typosquats", _ do
