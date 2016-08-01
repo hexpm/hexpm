@@ -32,6 +32,7 @@ defmodule Mix.Tasks.Hexweb.CheckNames do
     |> Enum.uniq_by(fn([a, b, _]) -> if a > b, do: "#{a}-#{b}", else: "#{b}-#{a}" end)
   end
 
+  def send_mail([], _), do: :ok
   def send_mail(candidates, threshold) do
     HexWeb.Mailer.send(
       "typosquat_candidates.html",
