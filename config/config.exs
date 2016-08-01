@@ -36,7 +36,7 @@ config :hex_web,
   fastly_key:     System.get_env("HEX_FASTLY_KEY"),
   fastly_hexdocs: System.get_env("HEX_FASTLY_HEXDOCS"),
   fastly_hexrepo: System.get_env("HEX_FASTLY_HEXREPO"),
-  jaro_threshold: System.get_env("HEX_JARO_THRESHOLD") || 0.8,
+  levenshtein_threshold: System.get_env("HEX_LEVENSHTEIN_THRESHOLD") || 2,
   support_email:  "support@hex.pm"
 
 config :hex_web, ecto_repos: [HexWeb.Repo]

@@ -3,7 +3,6 @@ defmodule HexWeb.CheckNamesTest do
 
   alias Mix.Tasks.Hexweb.CheckNames
 
-
   setup do
     yesterday =
       Ecto.DateTime.utc
@@ -17,21 +16,20 @@ defmodule HexWeb.CheckNamesTest do
     HexWeb.Repo.insert!(%HexWeb.Package{name: "hector"})
     HexWeb.Repo.insert!(%HexWeb.Package{name: "phoenics"})
     HexWeb.Repo.insert!(%HexWeb.Package{name: "poison"})
+    HexWeb.Repo.insert!(%HexWeb.Package{name: "poizon"})
     # yesterday's
     HexWeb.Repo.insert!(%HexWeb.Package{name: "ecto", inserted_at: yesterday})
     HexWeb.Repo.insert!(%HexWeb.Package{name: "phoenix", inserted_at: yesterday})
     HexWeb.Repo.insert!(%HexWeb.Package{name: "potion", inserted_at: yesterday})
     HexWeb.Repo.insert!(%HexWeb.Package{name: "asdf", inserted_at: yesterday})
     HexWeb.Repo.insert!(%HexWeb.Package{name: "conga", inserted_at: yesterday})
+    HexWeb.Repo.insert!(%HexWeb.Package{name: "foo", inserted_at: yesterday})
+    HexWeb.Repo.insert!(%HexWeb.Package{name: "fooo", inserted_at: yesterday})
 
     {:ok, %{}}
   end
 
   test "check for typosquats", _ do
-    assert length(CheckNames.current_packages) == 5
-    assert length(CheckNames.new_packages) == 3
-
-    threshold = 0.8
-    assert length(CheckNames.find_candidates(threshold)) == 3
+    assert length(CheckNames.find_candidates(2)) == 5
   end
 end
