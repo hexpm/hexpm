@@ -17,13 +17,16 @@ defmodule Mix.Tasks.Hexweb.CheckNames do
   end
 
   def find_candidates(threshold) do
-    querystr = "SELECT pnew.name new_name, pall.name curr_name, levenshtein(pall.name, pnew.name) as dist
-                FROM packages as pall
-                CROSS JOIN packages as pnew
-                WHERE pall.name <> pnew.name
-                  AND pnew.inserted_at >= CURRENT_DATE
-                  AND levenshtein(pall.name, pnew.name) <= $1
-                ORDER BY pall.name, dist;"
+    querystr = """
+      SELECT pnew.name new_name, pall.name curr_name, levenshtein(pall.name, pnew.name) as dist
+      FROM packages as pall
+      CROSS JOIN packages as pnew
+      WHERE pall.name <> pnew.name
+        AND pnew.inserted_at >= CURRENT_DATE
+        AND levenshtein(pall.name, pnew.name) <= $1
+        ORDER BY pall.name, dist;
+    """
+
     Ecto.Adapters.SQL.query!(HexWeb.Repo, querystr, [threshold])
     |> Map.fetch!(:rows)
     |> Enum.uniq_by(fn([a, b, _]) -> if a > b, do: "#{a}-#{b}", else: "#{b}-#{a}" end)
