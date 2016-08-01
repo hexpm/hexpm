@@ -2,7 +2,6 @@ use Mix.Config
 
 config :hex_web,
   user_confirm: false,
-  secret:       "796f75666f756e64746865686578",
   docs_url:     System.get_env("HEX_DOCS_URL") || "http://localhost:4043",
   cdn_url:      System.get_env("HEX_CDN_URL")  || "http://localhost:4043",
   secret:       System.get_env("HEX_SECRET")   || "796f75666f756e64746865686578"
