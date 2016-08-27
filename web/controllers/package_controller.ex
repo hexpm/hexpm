@@ -63,7 +63,7 @@ defmodule HexWeb.PackageController do
 
     docs_assigns =
       if has_docs do
-        [hexdocs_url: HexWeb.Utils.docs_url([package.name]),
+        [hexdocs_url: HexWeb.Utils.docs_url(package, release),
          docs_tarball_url: HexWeb.Utils.docs_tarball_url(package, release)]
       else
         [hexdocs_url: nil, docs_tarball_url: nil]
