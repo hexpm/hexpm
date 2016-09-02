@@ -134,7 +134,7 @@ defmodule HexWeb.Tar do
     base_files =
       (meta["files"] || [])
       |> Enum.filter(&(Path.dirname(&1) == "."))
-      |> Enum.into(MapSet.new)
+      |> MapSet.new
 
     build_tools =
       Enum.flat_map(@build_tools, fn {file, tool} ->

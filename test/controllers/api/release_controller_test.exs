@@ -270,10 +270,8 @@ defmodule HexWeb.API.ReleaseControllerTest do
   end
 
   test "create release updates registry" do
-    path = "tmp/registry.ets"
-    RegistryBuilder.rebuild
-
-    File.touch!(path, {{2000,1,1,},{1,1,1}})
+    RegistryBuilder.full_build
+    registry_before = HexWeb.Store.get(nil, :s3_bucket, "registry.ets.gz", [])
 
     reqs = [%{name: "decimal", app: "decimal", requirement: "~> 0.0.1", optional: false}]
     body = create_tar(%{name: :postgrex, app: :postgrex, version: "0.0.1", requirements: reqs, description: "description"}, [])
@@ -283,7 +281,9 @@ defmodule HexWeb.API.ReleaseControllerTest do
            |> post("api/packages/postgrex/releases", body)
 
     assert conn.status == 201
-    refute File.stat!(path).mtime == {{2000,1,1,},{1,1,1}}
+
+    registry_after = HexWeb.Store.get(nil, :s3_bucket, "registry.ets.gz", [])
+    assert registry_before != registry_after
   end
 
   test "get release" do

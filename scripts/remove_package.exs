@@ -28,7 +28,7 @@ if answer =~ ~r/^(Y(es)?)?$/i do
   Enum.each(owners, &(HexWeb.Package.owner(package, &1) |> HexWeb.Repo.delete_all))
   Enum.each(releases, &(HexWeb.Release.delete(&1, force: true) |> HexWeb.Repo.delete!))
   HexWeb.Repo.delete!(package)
-  HexWeb.RegistryBuilder.rebuild
+  HexWeb.RegistryBuilder.partial_build({:revert, name})
   IO.puts "Removed"
 else
   IO.puts "Not removed"

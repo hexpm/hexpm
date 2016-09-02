@@ -1,0 +1,25 @@
+message Package {
+  // All releases of the package
+  repeated Release releases = 1;
+}
+
+message Release {
+  // Release version
+  required string version = 1;
+  // sha256 checksum of package tarball
+  required bytes checksum = 2;
+  // All dependencies of the release
+  repeated Dependency dependencies = 3;
+}
+
+message Dependency {
+  // Package name of dependency
+  required string package = 1;
+  // Version requirement of dependency
+  required string requirement = 2;
+  // If set and true the package is optional (see dependency resolution)
+  optional bool optional = 3;
+  // If set is the OTP application name of the dependency, if not set the
+  // application name is the same as the package name
+  optional string app = 4;
+}

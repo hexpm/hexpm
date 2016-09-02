@@ -85,6 +85,12 @@ defmodule HexWeb.Requirement do
     top_level = Enum.map(deps, &elem(&1, 0))
     requests  = resolve_requests(requirements, config)
 
+    # TODO: Remove function_exported? on Hex 0.14+
+    #       Also remove the xref exclude
+    if function_exported?(Hex.Registry, :prefetch, 1) do
+      requests |> Enum.map(&elem(&1, 0)) |> Hex.Registry.prefetch
+    end
+
     case Hex.Resolver.resolve(requests, deps, top_level, []) do
       {:ok, _} ->
         :ok
