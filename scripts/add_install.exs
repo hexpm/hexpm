@@ -22,6 +22,6 @@ HexWeb.CDN.purge_key(:fastly_hexrepo, "installs")
 
 IO.puts "Uploaded installs/list.csv"
 
-HexWeb.RegistryBuilder.rebuild
+HexWeb.RegistryBuilder.partial_build(:v1)
 
 IO.puts "Rebuilt registry"
