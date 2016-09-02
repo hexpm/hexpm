@@ -1,5 +1,4 @@
 [action, dir, date] = System.argv
-key_chunk_factor = 10_000
 file_chunk_factor = 5 * 1024 * 1024
 
 buckets =
@@ -45,6 +44,7 @@ keys =
     {bucket, region, keys}
   end)
 
+if action == "upload" do
   IO.puts "Uploading archive (backup.hex.pm)"
   {time, _} = :timer.tc(fn ->
     key = "logs/monthly/#{filename}"
@@ -67,12 +67,10 @@ keys =
 end
 
 if action == "delete" do
-  keys = Enum.concat(keys)
-
-  Enum.each(buckets, fn {bucket, region} ->
+  Enum.each(keys, fn {bucket, region, keys} ->
     IO.puts "Deleting keys (#{bucket})"
     {time, _} = :timer.tc(fn ->
-      HexWeb.Store.S3.delete(region, bucket, keys, timeout: :infinity)
+      HexWeb.Store.S3.delete_many(region, bucket, keys, timeout: :infinity)
     end)
     IO.puts "Deleting time: #{div(time, 1_000_000)}s"
   end)

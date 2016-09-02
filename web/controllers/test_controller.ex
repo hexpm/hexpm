@@ -49,6 +49,10 @@ defmodule HexWeb.TestController do
     |> send_object(conn)
   end
 
+  def get_installs_csv(conn, _params) do
+    send_resp(conn, 200, "")
+  end
+
   defp send_object(nil, conn), do: send_resp(conn, 404, "")
   defp send_object(obj, conn), do: send_resp(conn, 200, obj)
 end

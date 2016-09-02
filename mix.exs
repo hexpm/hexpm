@@ -52,6 +52,7 @@ defmodule HexWeb.Mixfile do
      {:jiffy,               "~> 0.14"},
      {:rollbax,             "~> 0.5"},
      {:gpb,                 "~> 3.23"},
+     {:plug,                "~> 1.2.0-rc.0", override: true},
      {:phoenix_live_reload, "~> 1.0", only: :dev}]
   end
 
