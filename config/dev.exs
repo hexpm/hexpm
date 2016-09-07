@@ -33,5 +33,5 @@ config :hex_web, HexWeb.Repo,
   username: "postgres",
   password: "postgres",
   database: "hexweb_dev",
-  hostname: "localhost",
+  hostname: System.get_env("DEV_DATABASE_HOST") || "localhost",
   pool_size: 5
