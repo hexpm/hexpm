@@ -15,7 +15,7 @@ defmodule HexWeb.Package do
   end
 
   @elixir_names ~w(eex elixir ex_unit iex logger mix)
-  @tool_names ~w(rebar rebar3 hex)
+  @tool_names ~w(rebar rebar3 hex hex_web hexpm)
   @otp_names ~w(
     appmon asn1 common_test compiler cosEvent cosEventDomain cosFileTransfer
     cosNotification cosProperty cosTime cosTransactions crypto debugger
@@ -24,8 +24,9 @@ defmodule HexWeb.Package do
     os_mon ose otp_mibs parsetools percept pman public_key reltool runtime_tools
     sasl snmp ssh ssl stdlib syntax_tools test_server toolbar tools tv typer
     webtool wx xmerl)
+  @app_names ~w(flow firenest toucan)
 
-  @reserved_names @elixir_names ++ @otp_names ++ @tool_names
+  @reserved_names @elixir_names ++ @otp_names ++ @tool_names ++ @app_names
 
   defp changeset(package, :create, params) do
     changeset(package, :update, params)
