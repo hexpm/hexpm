@@ -1,6 +1,5 @@
 defmodule HexWeb.API.OwnerController do
   use HexWeb.Web, :controller
-  alias HexWeb.Owners
 
   plug :fetch_package
   plug :authorize, fun: &package_owner?/2
