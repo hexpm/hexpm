@@ -19,6 +19,29 @@ defmodule HexWeb.Releases do
     |> publish_result
   end
 
+  def publish_docs(package, release, files, body, [audit: audit_data]) do
+    version        = to_string(release.version)
+    latest_version = from(r in Release.all(package), select: r.version, where: r.has_docs == true or r.version == ^version)
+                     |> Repo.all
+                     |> Enum.reject(fn(version) -> version.pre != [] end)
+                     |> Enum.sort(&Version.compare(&1, &2) == :gt)
+                     |> List.first
+
+    docs_for_latest_release = (latest_version != nil) && (release.version == latest_version)
+
+    Assets.push_docs(release, files, body, docs_for_latest_release)
+
+    multi =
+      Ecto.Multi.new
+      |> Ecto.Multi.update(:release, Ecto.Changeset.change(release, has_docs: true))
+      |> Ecto.Multi.update(:package, Ecto.Changeset.change(release.package, docs_updated_at: Ecto.DateTime.utc))
+      |> audit(audit_data, "docs.publish", {package, release})
+
+    {:ok, _} = Repo.transaction(multi)
+
+    Sitemaps.publish_docs_sitemap()
+  end
+
   def revert(package, release, [audit: audit_data]) do
     delete_query =
       from(p in Package,
@@ -34,15 +57,27 @@ defmodule HexWeb.Releases do
     |> revert_result(package)
   end
 
+  def revert_docs(release, [audit: audit_data]) do
+    multi =
+      Ecto.Multi.new
+      |> Ecto.Multi.update(:release, Ecto.Changeset.change(release, has_docs: false))
+      |> Ecto.Multi.update(:package, Ecto.Changeset.change(release.package, docs_updated_at: Ecto.DateTime.utc))
+      |> audit(audit_data, "docs.revert", {release.package, release})
+
+    {:ok, _} = Repo.transaction(multi)
+
+    Assets.revert_docs(release)
+  end
+
   defp publish_result({:ok, %{package: package}} = result) do
-    HexWeb.RegistryBuilder.partial_build({:publish, package.name})
+    RegistryBuilder.partial_build({:publish, package.name})
     result
   end
   defp publish_result(result), do: result
 
   defp revert_result({:ok, %{release: release}}, package) do
-    revert_assets(release)
-    HexWeb.RegistryBuilder.partial_build({:revert, package.name})
+    Assets.revert_release(release)
+    RegistryBuilder.partial_build({:revert, package.name})
     :ok
   end
   defp revert_result(result, _package), do: result
@@ -94,34 +129,10 @@ defmodule HexWeb.Releases do
 
   defp publish_release(multi, body) do
     Ecto.Multi.run(multi, :assets, fn %{package: package, release: release} ->
-      push_assets(package, release.version, body)
+      release = %{release | package: package}
+      Assets.push_release(release, body)
       {:ok, :ok}
     end)
-  end
-
-  defp push_assets(package, version, body) do
-    cdn_key = "tarballs/#{package.name}-#{version}"
-    store_key = "tarballs/#{package.name}-#{version}.tar"
-    opts = [acl: :public_read, cache_control: "public, max-age=604800", meta: [{"surrogate-key", cdn_key}]]
-    HexWeb.Store.put(nil, :s3_bucket, store_key, body, opts)
-    HexWeb.CDN.purge_key(:fastly_hexrepo, cdn_key)
-  end
-
-  defp revert_assets(release) do
-    name    = release.package.name
-    version = to_string(release.version)
-    key     = "tarballs/#{name}-#{version}.tar"
-
-    # Delete release tarball
-    HexWeb.Store.delete(nil, :s3_bucket, key, [])
-
-    # Delete relevant documentation (if it exists)
-    if release.has_docs do
-      HexWeb.Store.delete(nil, :s3_bucket, "docs/#{name}-#{version}.tar.gz", [])
-      paths = HexWeb.Store.list(nil, :docs_bucket, Path.join(name, version))
-      HexWeb.Store.delete_many(nil, :docs_bucket, Enum.to_list(paths), [])
-      HexWeb.API.DocsController.publish_sitemap
-    end
   end
 
   defp normalize_requirements(requirements) when is_map(requirements) do

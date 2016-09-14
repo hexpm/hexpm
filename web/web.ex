@@ -31,6 +31,8 @@ defmodule HexWeb.Web do
 
   def crud do
     quote do
+      alias HexWeb.{Assets, Sitemaps, RegistryBuilder}
+
       alias HexWeb.Repo
       import Ecto
       import Ecto.Query, only: [from: 1, from: 2]
@@ -44,7 +46,7 @@ defmodule HexWeb.Web do
     quote do
       use Phoenix.Controller
 
-      alias HexWeb.{Keys, Owners, Releases, Users}
+      alias HexWeb.{Keys, Owners, Releases, Sitemaps, Users}
 
       alias HexWeb.Repo
       import Ecto

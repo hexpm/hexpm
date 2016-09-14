@@ -36,7 +36,7 @@ defmodule HexWeb.API.ReleaseController do
   end
 
   defp handle_tarball(conn, package, user, body) do
-    case HexWeb.Tar.metadata(body) do
+    case HexWeb.ReleaseTar.metadata(body) do
       {:ok, meta, checksum} ->
         Releases.publish(package, user, body, meta, checksum, audit: audit_data(conn))
 
