@@ -59,19 +59,6 @@ defmodule HexWeb.Package do
          select: count(o.id) >= 1)
   end
 
-  def docs_sitemap do
-    from(p in Package,
-         order_by: p.name,
-         where: not is_nil(p.docs_updated_at),
-         select: {p.name, p.docs_updated_at})
-  end
-
-  def packages_sitemap do
-    from(p in Package,
-         order_by: p.name,
-         select: {p.name, p.updated_at})
-  end
-
   def build_owner(package, user) do
     change(%PackageOwner{}, package_id: package.id, owner_id: user.id)
     |> unique_constraint(:owner_id, name: "package_owners_unique", message: "is already owner")

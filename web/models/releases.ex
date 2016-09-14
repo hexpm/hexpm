@@ -1,6 +1,5 @@
 defmodule HexWeb.Releases do
   use HexWeb.Web, :crud
-  alias HexWeb.{Assets, Sitemaps, RegistryBuilder}
 
   @publish_timeout 60_000
 
