@@ -1,6 +1,5 @@
 defmodule HexWeb.API.ReleaseController do
   use HexWeb.Web, :controller
-  alias HexWeb.Releases
 
   plug :fetch_release when action in [:show, :delete]
   plug :maybe_fetch_package when action in [:create]

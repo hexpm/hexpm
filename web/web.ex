@@ -44,6 +44,8 @@ defmodule HexWeb.Web do
     quote do
       use Phoenix.Controller
 
+      alias HexWeb.{Keys, Owners, Releases, Users}
+
       alias HexWeb.Repo
       import Ecto
       import Ecto.Query, only: [from: 1, from: 2]

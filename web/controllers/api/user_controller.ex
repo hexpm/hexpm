@@ -1,6 +1,5 @@
 defmodule HexWeb.API.UserController do
   use HexWeb.Web, :controller
-  alias HexWeb.Users
 
   plug :authorize, [fun: &correct_user?/2] when action == :show
 

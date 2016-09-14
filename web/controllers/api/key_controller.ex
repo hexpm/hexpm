@@ -1,6 +1,5 @@
 defmodule HexWeb.API.KeyController do
   use HexWeb.Web, :controller
-  alias HexWeb.Keys
 
   plug :authorize when action != :create
   plug :authorize, [only_basic: true, allow_unconfirmed: true] when action == :create
