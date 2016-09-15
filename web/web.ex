@@ -96,7 +96,6 @@ defmodule HexWeb.Web do
         PackageDownload,
         PackageMetadata,
         PackageOwner,
-        Registry,
         Release,
         ReleaseDownload,
         ReleaseMetadata,
