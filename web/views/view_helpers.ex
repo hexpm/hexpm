@@ -46,10 +46,6 @@ defmodule HexWeb.ViewHelpers do
   @doc """
   Formats a package's release info into a build tools dependency snippet.
   """
-  def dep_snippet(_, _, _, nil) do
-    ""
-  end
-
   def dep_snippet(:mix, package_name, release) do
     version = snippet_version(:mix, release.version)
     app_name = release.meta.app || package_name
@@ -57,7 +53,7 @@ defmodule HexWeb.ViewHelpers do
     if package_name == app_name do
       "{:#{package_name}, \"#{version}\"}"
     else
-      "{:#{app_name}, \"#{version}\", hex: :#{package_name}}"
+      "{#{app_name(:mix, app_name)}, \"#{version}\", hex: :#{package_name}}"
     end
   end
 
@@ -68,7 +64,7 @@ defmodule HexWeb.ViewHelpers do
     if package_name == app_name do
       "{#{package_name}, \"#{version}\"}"
     else
-      "{#{app_name}, \"#{version}\", {pkg, #{package_name}}}"
+      "{#{app_name(:rebar, app_name)}, \"#{version}\", {pkg, #{package_name}}}"
     end
   end
 
@@ -95,6 +91,20 @@ defmodule HexWeb.ViewHelpers do
         int when is_integer(int) -> Integer.to_string(int)
         string when is_binary(string) -> string
       end)
+  end
+
+  @elixir_atom_chars ~r"^[a-zA-Z_][a-zA-Z_0-9]*$"
+  @erlang_atom_chars ~r"^[a-z][a-zA-Z_0-9]*$"
+
+  defp app_name(:mix, name) do
+    if Regex.match?(@elixir_atom_chars, name),
+      do: ":#{name}",
+    else: ":#{inspect name}"
+  end
+  defp app_name(:rebar, name) do
+    if Regex.match?(@erlang_atom_chars, name),
+      do: name,
+    else: inspect(String.to_charlist(name))
   end
 
   def human_number_space(string) when is_binary(string) do

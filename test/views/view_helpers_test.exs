@@ -38,6 +38,20 @@ defmodule ViewHelpersTest do
     assert ViewHelpers.dep_snippet(:erlang_mk, package_name, release) == "dep_cowboy = hex 1.0.4"
   end
 
+  test "escape mix application name" do
+    {:ok, version} = Version.parse("1.0.0")
+    package_name   = "lfe_app"
+    release = %{meta: %{app: "lfe-app"}, version: version}
+    assert ViewHelpers.dep_snippet(:mix, package_name, release) == "{:\"lfe-app\", \"~> 1.0\", hex: :lfe_app}"
+  end
+
+  test "escape rebar application name" do
+    {:ok, version} = Version.parse("1.0.1")
+    package_name   = "lfe_app"
+    release = %{meta: %{app: "lfe-app"}, version: version}
+    assert ViewHelpers.dep_snippet(:rebar, package_name, release) == "{'lfe-app', \"1.0.1\", {pkg, lfe_app}}"
+  end
+
   test "mix config version" do
     version0 = %Version{major: 0, minor: 0, patch: 1, pre: ["dev", 0, 1]}
     version1 = %Version{major: 0, minor: 0, patch: 2, pre: []}
