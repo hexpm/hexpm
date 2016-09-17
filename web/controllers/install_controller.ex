@@ -1,4 +1,4 @@
-defmodule HexWeb.InstallerController do
+defmodule HexWeb.InstallController do
   use HexWeb.Web, :controller
 
   def get_archive(conn, params) do
