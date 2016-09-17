@@ -34,7 +34,7 @@ defmodule HexWeb.StatsJobTest do
 
     buckets = [[bucket, region]]
 
-    path     = Path.join([__DIR__, "..", "fixtures"])
+    path     = Path.join([__DIR__, "..", "..", "..", "fixtures"])
     logfile1 = File.read!(Path.join(path, "s3_logs_1.txt"))
     logfile2 = File.read!(Path.join(path, "s3_logs_2.txt"))
     logfile3 = File.read!(Path.join(path, "fastly_logs_1.txt")) |> :zlib.gzip
