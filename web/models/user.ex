@@ -24,9 +24,7 @@ defmodule HexWeb.User do
 
   defp changeset(user, :create, params) do
     cast(user, params, ~w(username password email))
-    |> validate_required(:email)
-    |> validate_required(:password)
-    |> validate_required(:username)
+    |> validate_required(~w(username password email)a)
     |> update_change(:email, &String.downcase/1)
     |> update_change(:username, &String.downcase/1)
     |> validate_format(:email, ~r"^.+@.+\..+$")
