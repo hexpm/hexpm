@@ -36,7 +36,8 @@ defmodule HexWeb.User do
   end
 
   defp changeset(user, :update, params) do
-    cast(user, params, ~w(username password), [])
+    cast(user, params, ~w(username password))
+    |> validate_required(~w(username password)a)
     |> update_change(:username, &String.downcase/1)
     |> validate_format(:username, ~r"^[a-z0-9_\-\.!~\*'\(\)]+$")
   end
