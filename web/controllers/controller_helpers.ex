@@ -203,36 +203,4 @@ defmodule HexWeb.ControllerHelpers do
   def audit_data(conn) do
     {conn.assigns.user, conn.assigns.user_agent}
   end
-
-  # TODO: remove once auditing is moved out of all controllers
-  def audit(multi, conn, action, fun) when is_function(fun, 1) do
-    Ecto.Multi.merge(multi, fn data ->
-      Ecto.Multi.insert(Ecto.Multi.new, :log, audit(conn, action, fun.(data)))
-    end)
-  end
-  def audit(multi, conn, action, params) do
-    Ecto.Multi.insert(multi, :log, audit(conn, action, params))
-  end
-  def audit(conn, action, params) do
-    user = conn.assigns.user
-    user_agent = conn.assigns.user_agent
-    do_audit(user, user_agent, action, params)
-  end
-
-  defp do_audit(user, user_agent, action, params) do
-    Ecto.Changeset.change(HexWeb.AuditLog.build(user, user_agent, action, params), %{})
-  end
-
-  def audit_many(multi, conn, action, list, opts \\ []) do
-    fields = HexWeb.AuditLog.__schema__(:fields) -- [:id]
-    extra = %{inserted_at: Ecto.DateTime.utc}
-    entry = fn (element) ->
-      conn
-      |> audit(action, element)
-      |> Ecto.Changeset.apply_changes()
-      |> Map.take(fields)
-      |> Map.merge(extra)
-    end
-    Ecto.Multi.insert_all(multi, :log, HexWeb.AuditLog, Enum.map(list, entry), opts)
-  end
 end
