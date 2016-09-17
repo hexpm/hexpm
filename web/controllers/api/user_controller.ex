@@ -29,7 +29,7 @@ defmodule HexWeb.API.UserController do
   end
 
   def reset(conn, %{"name" => name}) do
-    case Users.reset(name) do
+    case Users.request_reset(name) do
       :ok ->
         conn
         |> api_cache(:private)
