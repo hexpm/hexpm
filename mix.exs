@@ -4,7 +4,7 @@ defmodule HexWeb.Mixfile do
   def project do
     [app: :hex_web,
      version: "0.0.1",
-     elixir: "~> 1.2",
+     elixir: "~> 1.3",
      elixirc_paths: elixirc_paths(Mix.env),
      gpb_options: gpb_options(),
      xref: xref(),
@@ -38,7 +38,7 @@ defmodule HexWeb.Mixfile do
   defp deps do
     [{:phoenix,             "~> 1.2.0-rc"},
      {:phoenix_ecto,        "~> 3.0.0"},
-     {:ecto,                "~> 2.0"},
+     {:ecto,                "~> 2.1.0-rc", override: true},
      {:phoenix_html,        "~> 2.3"},
      {:postgrex,            ">= 0.0.0"},
      {:cowboy,              "~> 1.0"},

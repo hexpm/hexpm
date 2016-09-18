@@ -3,7 +3,7 @@ defmodule HexWeb.Repo.Migrations.AddDocsRootUpdatedAtToPackages do
 
   def up do
     alter table(:packages) do
-      add :docs_updated_at, :datetime, null: true
+      add :docs_updated_at, :naive_datetime, null: true
     end
     execute """
       UPDATE packages SET docs_updated_at = (

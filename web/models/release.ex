@@ -1,8 +1,6 @@
 defmodule HexWeb.Release do
   use HexWeb.Web, :model
 
-  @timestamps_opts [usec: true]
-
   schema "releases" do
     field :version, HexWeb.Version
     field :checksum, :string
@@ -63,7 +61,7 @@ defmodule HexWeb.Release do
   defp editable?(release) do
     inserted_at =
       release.inserted_at
-      |> Ecto.DateTime.to_erl
+      |> NaiveDateTime.to_erl
       |> to_secs
 
     now = to_secs(:calendar.universal_time)

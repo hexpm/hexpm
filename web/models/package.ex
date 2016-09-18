@@ -2,11 +2,9 @@ defmodule HexWeb.Package do
   use HexWeb.Web, :model
   @derive {Phoenix.Param, key: :name}
 
-  @timestamps_opts [usec: true]
-
   schema "packages" do
     field :name, :string
-    field :docs_updated_at, Ecto.DateTime
+    field :docs_updated_at, :naive_datetime
     timestamps()
 
     has_many :releases, Release

@@ -4,7 +4,7 @@ defmodule Mix.Tasks.Hexweb.CheckNamesTest do
   alias Mix.Tasks.Hexweb.CheckNames
 
   setup do
-    yesterday = HexWeb.Utils.yesterday |> Ecto.DateTime.from_date
+    {:ok, yesterday} = NaiveDateTime.new(HexWeb.Utils.utc_yesterday, ~T[00:00:00.000])
 
     # today's
     HexWeb.Repo.insert!(%HexWeb.Package{name: "hector"})

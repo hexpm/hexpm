@@ -167,7 +167,7 @@ defmodule HexWeb.ControllerHelpers do
   def last_modified([]),  do: nil
   def last_modified(models) do
     Enum.map(List.wrap(models), fn model ->
-      Ecto.DateTime.to_erl(model.updated_at)
+      NaiveDateTime.to_erl(model.updated_at)
     end)
     |> Enum.max
   end

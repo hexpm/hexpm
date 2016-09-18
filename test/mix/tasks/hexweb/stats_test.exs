@@ -47,7 +47,7 @@ defmodule Mix.Tasks.Hexweb.StatsTest do
     HexWeb.Store.put(region, bucket, "fastly_hex/2013-11-01T14:00:00.000-tzletcEGGiI7atIAAAAA.log.gz", logfile3, [])
     HexWeb.Store.put(region, bucket, "fastly_hex/2013-11-01T15:00:00.000-tzletcEGGiI7atIAAAAA.log.gz", logfile4, [])
 
-    HexWeb.StatsJob.run({2013, 11, 1}, buckets)
+    HexWeb.StatsJob.run(~D[2013-11-01], buckets)
 
     rel1 = HexWeb.Repo.get_by!(assoc(foo, :releases), version: "0.0.1")
     rel2 = HexWeb.Repo.get_by!(assoc(foo, :releases), version: "0.0.2")

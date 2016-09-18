@@ -4,6 +4,6 @@ defmodule HexWeb.Download do
   schema "downloads" do
     belongs_to :release, Release
     field :downloads, :integer
-    field :day, Ecto.Date
+    field :day, :date
   end
 end

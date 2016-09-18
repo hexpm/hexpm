@@ -3,13 +3,11 @@ defmodule HexWeb.Key do
 
   @derive {Phoenix.Param, key: :name}
 
-  @timestamps_opts [usec: true]
-
   schema "keys" do
     field :name, :string
     field :secret_first, :string
     field :secret_second, :string
-    field :revoked_at, Ecto.DateTime
+    field :revoked_at, :naive_datetime
     timestamps()
 
     belongs_to :user, User
@@ -43,20 +41,20 @@ defmodule HexWeb.Key do
     from(k in assoc(user, :keys), where: k.name == ^name and not is_nil(k.revoked_at))
   end
 
-  def revoke(key, revoked_at \\ Ecto.DateTime.utc) do
+  def revoke(key, revoked_at \\ HexWeb.Utils.utc_now) do
     key
     |> change()
     |> put_change(:revoked_at, key.revoked_at || revoked_at)
     |> validate_required(:revoked_at)
   end
 
-  def revoke_by_name(user, key_name, revoked_at \\ Ecto.DateTime.utc) do
+  def revoke_by_name(user, key_name, revoked_at \\ HexWeb.Utils.utc_now) do
     from(k in assoc(user, :keys),
       where: k.name == ^key_name and is_nil(k.revoked_at),
       update: [set: [revoked_at: fragment("?", ^revoked_at)]])
   end
 
-  def revoke_all(user, revoked_at \\ Ecto.DateTime.utc) do
+  def revoke_all(user, revoked_at \\ HexWeb.Utils.utc_now) do
     from(k in assoc(user, :keys),
       where: is_nil(k.revoked_at),
       update: [set: [revoked_at: fragment("?", ^revoked_at)]])

@@ -40,16 +40,16 @@ defmodule HexWeb.Jiffy do
           "preloaded the association or remove it from the data to be encoded"
   end
 
-  defp transform(%Ecto.DateTime{} = struct) do
-    Ecto.DateTime.to_iso8601(struct) <> "Z"
+  defp transform(%NaiveDateTime{} = struct) do
+    NaiveDateTime.to_iso8601(struct) <> "Z"
   end
 
-  defp transform(%Ecto.Date{} = struct) do
-    Ecto.Date.to_iso8601(struct)
+  defp transform(%Date{} = struct) do
+    Date.to_iso8601(struct)
   end
 
-  defp transform(%Ecto.Time{} = struct) do
-    Ecto.Date.to_iso8601(struct)
+  defp transform(%Time{} = struct) do
+    Time.to_iso8601(struct)
   end
 
   defp transform(term) when is_list(term) do

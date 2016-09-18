@@ -110,7 +110,7 @@ defmodule HexWeb.ViewHelpers do
   end
 
   def human_relative_time_from_now(date) do
-    ts = Ecto.DateTime.to_erl(date) |> :calendar.datetime_to_gregorian_seconds
+    ts = NaiveDateTime.to_erl(date) |> :calendar.datetime_to_gregorian_seconds
     diff = :calendar.datetime_to_gregorian_seconds(:calendar.universal_time) - ts
     rel_from_now(:calendar.seconds_to_daystime(diff))
   end
@@ -132,7 +132,7 @@ defmodule HexWeb.ViewHelpers do
   defp rel_from_now({day, {_, _, _}}),
     do: "#{day} days ago"
 
-  def pretty_date(%Ecto.DateTime{year: year, month: month, day: day}) do
+  def pretty_date(%NaiveDateTime{year: year, month: month, day: day}) do
     "#{pretty_month(month)} #{day}, #{year}"
   end
 
