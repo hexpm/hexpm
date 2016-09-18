@@ -11,7 +11,7 @@ defmodule Mix.Tasks.Hexweb.CheckNames do
 
     threshold
     |> find_candidates
-    |> send_mail(threshold)
+    |> HexWeb.Mailer.send_typosquat_candidates_email(threshold)
 
     :ok
   end
@@ -30,15 +30,5 @@ defmodule Mix.Tasks.Hexweb.CheckNames do
     Ecto.Adapters.SQL.query!(HexWeb.Repo, query, [threshold])
     |> Map.fetch!(:rows)
     |> Enum.uniq_by(fn([a, b, _]) -> if a > b, do: "#{a}-#{b}", else: "#{b}-#{a}" end)
-  end
-
-  def send_mail([], _), do: :ok
-  def send_mail(candidates, threshold) do
-    HexWeb.Mailer.send(
-      "typosquat_candidates.html",
-      "Hex.pm - Typosquat candidates",
-      [Application.get_env(:hex_web, :support_email)],
-      candidates: candidates,
-      threshold: threshold)
   end
 end
