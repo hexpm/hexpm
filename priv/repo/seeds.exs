@@ -10,8 +10,12 @@ defmodule SampleData do
 
   def last_month do
     {today, _time} = :calendar.universal_time()
-    today_days = :calendar.date_to_gregorian_days(today)
-    :calendar.gregorian_days_to_date(today_days - 35)
+
+    today
+    |> :calendar.date_to_gregorian_days()
+    |> Kernel.-(35)
+    |> :calendar.gregorian_days_to_date()
+    |> Date.from_erl!()
   end
 end
 
@@ -91,7 +95,7 @@ HexWeb.Repo.transaction(fn ->
     reqs = [%{"name" => "postgrex", "app" => "postgrex", "requirement" => "~> 0.1.0", "optional" => false}, %{"name" => "decimal", "app" => "decimal", "requirement" => "~> 0.1.0", "optional" => false}]
     rel = Release.build(ecto, %{"version" => "0.2.0", "app" => "ecto", "requirements" => reqs, "meta" => %{"app" => "ecto", "build_tools" => ["mix"]}}, SampleData.checksum("ecto 0.2.0")) |> HexWeb.Repo.insert!
 
-    %Download{release_id: rel.id, downloads: 42, day: HexWeb.Utils.yesterday}
+    %Download{release_id: rel.id, downloads: 42, day: HexWeb.Utils.utc_yesterday}
     |> HexWeb.Repo.insert!
   end
 
@@ -111,11 +115,10 @@ HexWeb.Repo.transaction(fn ->
       reqs = [%{"name" => "postgrex", "app" => "postgrex", "requirement" => "~> 0.1.0", "optional" => false}, %{"name" => "decimal", "app" => "postgrex", "requirement" => "~> 0.1.0", "optional" => false}]
       rel2 = Release.build(ups, %{"version" => "0.2.0", "app" => "ups", "requirements" => reqs, "meta" => %{"app" => "ups", "build_tools" => ["mix"]}}, SampleData.checksum("ups 0.2.0")) |> HexWeb.Repo.insert!
 
-      {:ok, last_month} = Ecto.Type.load(Ecto.Date, SampleData.last_month)
-      %Download{release_id: rel1.id, downloads: div(index, 2), day: last_month}
+      %Download{release_id: rel1.id, downloads: div(index, 2), day: SampleData.last_month}
       |> HexWeb.Repo.insert!
 
-      %Download{release_id: rel2.id, downloads: div(index, 2) + rem(index, 2), day: HexWeb.Utils.yesterday}
+      %Download{release_id: rel2.id, downloads: div(index, 2) + rem(index, 2), day: HexWeb.Utils.utc_yesterday}
       |> HexWeb.Repo.insert!
     end)
   end
@@ -136,7 +139,7 @@ HexWeb.Repo.transaction(fn ->
 
     rel = Release.build(nerves, %{"version" => "0.0.1", "app" => "nerves", "meta" => %{"app" => "nerves", "build_tools" => ["mix"]}}, SampleData.checksum("nerves 0.0.1")) |> HexWeb.Repo.insert!
 
-    %Download{release_id: rel.id, downloads: 20, day: HexWeb.Utils.yesterday}
+    %Download{release_id: rel.id, downloads: 20, day: HexWeb.Utils.utc_yesterday}
     |> HexWeb.Repo.insert!
 
     Enum.each(1..10, fn(index) ->
@@ -156,7 +159,7 @@ HexWeb.Repo.transaction(fn ->
 
       rel = Release.build(nerves_pkg, %{"version" => "0.0.1", "app" => "nerves_pkg_#{index}", "meta" => %{"app" => "nerves_pkg_#{index}", "build_tools" => ["mix"]}}, SampleData.checksum("nerves_pkg_#{index} 0.0.1")) |> HexWeb.Repo.insert!
 
-      %Download{release_id: rel.id, downloads: div(index, 2) + rem(index, 2), day: HexWeb.Utils.yesterday}
+      %Download{release_id: rel.id, downloads: div(index, 2) + rem(index, 2), day: HexWeb.Utils.utc_yesterday}
       |> HexWeb.Repo.insert!
     end)
   end

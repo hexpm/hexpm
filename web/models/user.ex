@@ -1,8 +1,6 @@
 defmodule HexWeb.User do
   use HexWeb.Web, :model
 
-  @timestamps_opts [usec: true]
-
   @derive {Phoenix.Param, key: :username}
 
   schema "users" do
@@ -14,7 +12,7 @@ defmodule HexWeb.User do
     timestamps()
 
     field :reset_key, :string
-    field :reset_expiry, Ecto.DateTime
+    field :reset_expiry, :naive_datetime
 
     has_many :package_owners, PackageOwner, foreign_key: :owner_id
     has_many :owned_packages, through: [:package_owners, :package]
@@ -63,7 +61,7 @@ defmodule HexWeb.User do
 
   def password_reset(user) do
     key = HexWeb.Auth.gen_key()
-    change(user, %{reset_key: key, reset_expiry: Ecto.DateTime.utc})
+    change(user, %{reset_key: key, reset_expiry: HexWeb.Utils.utc_now})
   end
 
   def reset?(nil, _key), do: false

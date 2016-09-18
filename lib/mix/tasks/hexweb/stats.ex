@@ -11,7 +11,7 @@ defmodule Mix.Tasks.Hexweb.Stats do
 
     try do
       {time, {memory, size}} = :timer.tc(fn ->
-        HexWeb.StatsJob.run(HexWeb.Utils.yesterday, buckets)
+        HexWeb.StatsJob.run(HexWeb.Utils.utc_yesterday, buckets)
       end)
       Logger.warn "STATS_JOB_COMPLETED #{size} downloads (#{div time, 1000}ms, #{div memory, 1024}kb)"
     catch

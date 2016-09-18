@@ -4,7 +4,7 @@
     xsi:schemaLocation="http://www.sitemaps.org/schemas/sitemap/0.9 http://www.sitemaps.org/schemas/sitemap/0.9/sitemap.xsd">
     <%= for {name, updated_at} <- @packages do %><url>
         <loc>https://hex.pm<%= package_path(HexWeb.Endpoint, :show, name) %></loc>
-        <lastmod><%= Ecto.DateTime.to_iso8601(updated_at) %>Z</lastmod>
+        <lastmod><%= HexWeb.Utils.binarify(updated_at) %>Z</lastmod>
         <changefreq>daily</changefreq>
         <priority>0.8</priority>
     </url><% end %>

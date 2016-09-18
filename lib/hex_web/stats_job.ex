@@ -39,9 +39,8 @@ defmodule HexWeb.StatsJob do
   @ets __MODULE__
 
   def run(date, buckets, max_downloads_per_ip \\ 100, dryrun? \\ false) do
-    s3_prefix     = "hex/#{date_string(date)}"
-    fastly_prefix = "fastly_hex/#{date_string(date)}"
-    {:ok, date}   = Ecto.Type.load(Ecto.Date, date)
+    s3_prefix     = "hex/#{date}"
+    fastly_prefix = "fastly_hex/#{date}"
     formats       = [{s3_prefix, @s3_regex}, {fastly_prefix, @fastly_regex}]
     ips           = HexWeb.CDN.public_ips
 
@@ -139,12 +138,6 @@ defmodule HexWeb.StatsJob do
 
   defp copy(nil), do: nil
   defp copy(binary), do: :binary.copy(binary)
-
-  defp date_string(date) do
-    list = Tuple.to_list(date)
-    :io_lib.format("~4..0B-~2..0B-~2..0B", list)
-    |> IO.iodata_to_binary
-  end
 
   defp packages do
     from(p in Package, select: {p.name, p.id})

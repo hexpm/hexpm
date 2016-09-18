@@ -40,14 +40,24 @@ defmodule HexWeb.Utils do
                  Exception.format_stacktrace(stacktrace)
   end
 
-  def yesterday do
+  # TODO: replace with NaiveDateTime.utc_now/0 in Elixir 1.4
+  def utc_now do
+    DateTime.to_naive(DateTime.utc_now)
+  end
+
+  # TODO: replace with Time.utc_today/0 in Elixir 1.4
+  def utc_today do
+    DateTime.to_date(DateTime.utc_now)
+  end
+
+  def utc_yesterday do
     {today, _time} = :calendar.universal_time()
 
     today
     |> :calendar.date_to_gregorian_days()
     |> Kernel.-(1)
     |> :calendar.gregorian_days_to_date()
-    |> Ecto.Date.from_erl()
+    |> Date.from_erl!()
   end
 
   def safe_to_atom(binary, allowed) do
@@ -84,7 +94,7 @@ defmodule HexWeb.Utils do
   """
   def within_last_day(nil), do: false
   def within_last_day(a) do
-    diff = diff(Ecto.DateTime.to_erl(a),
+    diff = diff(NaiveDateTime.to_erl(a),
                 :calendar.universal_time)
 
     diff < (24 * 60 * 60)
@@ -108,7 +118,7 @@ defmodule HexWeb.Utils do
 
   def last_modified(models) do
     list = Enum.map(List.wrap(models), fn model ->
-      Ecto.DateTime.to_erl(model.updated_at)
+      NaiveDateTime.to_erl(model.updated_at)
     end)
 
     Enum.max(list)
@@ -126,8 +136,8 @@ defmodule HexWeb.Utils do
     do: for(elem <- list, do: binarify(elem))
   def binarify(%Version{} = version),
     do: to_string(version)
-  def binarify(%Ecto.DateTime{} = dt),
-    do: Ecto.DateTime.to_iso8601(dt)
+  def binarify(%NaiveDateTime{} = dt),
+    do: dt |> Map.put(:microsecond, {0, 0}) |> NaiveDateTime.to_iso8601()
   def binarify(%{__struct__: atom}) when is_atom(atom),
     do: raise "not able to binarify %#{inspect atom}{}"
   def binarify(map) when is_map(map),
