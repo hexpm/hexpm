@@ -167,16 +167,6 @@ defmodule HexWeb.Utils do
   end
 
   @doc """
-  Converts an ecto datetime record to ISO 8601 format.
-  """
-  @spec to_iso8601(Ecto.DateTime.t) :: String.t
-  def to_iso8601(dt) do
-    list = [dt.year, dt.month, dt.day, dt.hour, dt.min, dt.sec]
-    :io_lib.format("~4..0B-~2..0B-~2..0BT~2..0B:~2..0B:~2..0BZ", list)
-    |> IO.iodata_to_binary
-  end
-
-  @doc """
   A regex parsing out the version and format at the end of a media type.
   '.version+format'
   """
