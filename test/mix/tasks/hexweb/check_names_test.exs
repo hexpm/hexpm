@@ -1,4 +1,4 @@
-defmodule HexWeb.CheckNamesTest do
+defmodule Mix.Tasks.Hexweb.CheckNamesTest do
   use HexWeb.ModelCase, async: true
 
   alias Mix.Tasks.Hexweb.CheckNames

@@ -1,4 +1,4 @@
-defmodule HexWeb.StatsJobTest do
+defmodule Mix.Tasks.Hexweb.StatsTest do
   use HexWeb.ModelCase, async: true
 
   alias HexWeb.User
