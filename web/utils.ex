@@ -42,8 +42,12 @@ defmodule HexWeb.Utils do
 
   def yesterday do
     {today, _time} = :calendar.universal_time()
-    today_days = :calendar.date_to_gregorian_days(today)
-    :calendar.gregorian_days_to_date(today_days - 1)
+
+    today
+    |> :calendar.date_to_gregorian_days()
+    |> Kernel.-(1)
+    |> :calendar.gregorian_days_to_date()
+    |> Ecto.Date.from_erl()
   end
 
   def safe_to_atom(binary, allowed) do

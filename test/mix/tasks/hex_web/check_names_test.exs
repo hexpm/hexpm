@@ -4,13 +4,7 @@ defmodule HexWeb.CheckNamesTest do
   alias Mix.Tasks.Hexweb.CheckNames
 
   setup do
-    yesterday =
-      Ecto.DateTime.utc
-      |> Ecto.DateTime.to_erl
-      |> :calendar.datetime_to_gregorian_seconds
-      |> Kernel.-(60 * 60 * 24 * 2)
-      |> :calendar.gregorian_seconds_to_datetime
-      |> Ecto.DateTime.from_erl
+    yesterday = HexWeb.Utils.yesterday |> Ecto.DateTime.from_date
 
     # today's
     HexWeb.Repo.insert!(%HexWeb.Package{name: "hector"})
