@@ -137,7 +137,7 @@ defmodule HexWeb.Utils do
   def binarify(%Version{} = version),
     do: to_string(version)
   def binarify(%NaiveDateTime{} = dt),
-    do: dt |> Map.put(:microsecond, 0) |> NaiveDateTime.to_iso8601()
+    do: dt |> Map.put(:microsecond, {0, 0}) |> NaiveDateTime.to_iso8601()
   def binarify(%{__struct__: atom}) when is_atom(atom),
     do: raise "not able to binarify %#{inspect atom}{}"
   def binarify(map) when is_map(map),
