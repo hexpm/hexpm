@@ -19,17 +19,8 @@ defmodule HexWeb.Owners do
     case Repo.transaction(multi) do
       {:ok, _} ->
         owners = all(package)
-
-        HexWeb.Mailer.send(
-          "owner_add.html",
-          "Hex.pm - Owner added",
-          Enum.map(owners, & &1.email),
-          username: owner.username,
-          email: owner.email,
-          package: package.name
-        )
+        Mailer.send_owner_added_email(package, owners, owner)
         :ok
-
       {:error, :owner, changeset, _} ->
         {:error, changeset}
     end
@@ -47,15 +38,7 @@ defmodule HexWeb.Owners do
         |> audit(audit_data, "owner.remove", {package, owner})
 
       {:ok, _} = Repo.transaction(multi)
-
-      HexWeb.Mailer.send(
-        "owner_remove.html",
-        "Hex.pm - Owner removed",
-        Enum.map(owners, & &1.email),
-        username: owner.username,
-        email: owner.email,
-        package: package.name
-      )
+      Mailer.send_owner_removed_email(package, owners, owner)
       :ok
     end
   end

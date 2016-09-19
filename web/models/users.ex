@@ -14,7 +14,7 @@ defmodule HexWeb.Users do
 
     case User.build(params) |> Repo.insert do
       {:ok, user} ->
-        send_confirmation_request_email(user)
+        Mailer.send_confirmation_request_email(user)
         {:ok, user}
 
       other ->
@@ -36,7 +36,7 @@ defmodule HexWeb.Users do
 
     if User.confirm?(user, key) do
       User.confirm(user) |> Repo.update!
-      HexWeb.Mailer.send("confirmed.html", "Hex.pm - Account confirmed", [user.email], [])
+      Mailer.send_user_confirmed_email(user)
       :ok
     else
       :error
@@ -49,7 +49,7 @@ defmodule HexWeb.Users do
 
     if user do
       user = User.password_reset(user) |> Repo.update!
-      send_password_reset_request_email(user)
+      Mailer.send_password_reset_request_email(user)
       :ok
     else
       {:error, :not_found}
@@ -61,36 +61,10 @@ defmodule HexWeb.Users do
     if User.reset?(user, key) do
       multi = User.reset(user, password, revoke_all_keys?)
       {:ok, _} = Repo.transaction(multi)
-      send_password_reset_email(user)
+      Mailer.send_password_reset_email(user)
       :ok
     else
       :error
     end
-  end
-
-  defp send_confirmation_request_email(user) do
-    HexWeb.Mailer.send(
-      "confirmation_request.html",
-      "Hex.pm - Account confirmation",
-      [user.email],
-      username: user.username,
-      key: user.confirmation_key)
-  end
-
-  def send_password_reset_request_email(user) do
-    HexWeb.Mailer.send(
-      "password_reset_request.html",
-      "Hex.pm - Password reset request",
-      [user.email],
-      username: user.username,
-      key: user.reset_key)
-  end
-
-  def send_password_reset_email(user) do
-    HexWeb.Mailer.send(
-      "password_reset.html",
-      "Hex.pm - Password reset",
-      [user.email],
-      [])
   end
 end

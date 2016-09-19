@@ -32,6 +32,7 @@ defmodule HexWeb.Web do
   def crud do
     quote do
       alias HexWeb.{Assets, Sitemaps, RegistryBuilder}
+      alias HexWeb.Mailer
 
       alias HexWeb.Repo
       import Ecto
