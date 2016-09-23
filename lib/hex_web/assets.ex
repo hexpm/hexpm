@@ -22,9 +22,11 @@ defmodule HexWeb.Assets do
   end
 
   def push_docs_sitemap(sitemap) do
-    # TODO: Cache and surrogate key
-    opts = [acl: :public_read, content_type: "text/xml"]
+    opts = [acl: :public_read, content_type: "text/xml",
+            cache_control: "public, max-age=300",
+            meta: [{"surrogate-key", "sitemap"}]]
     HexWeb.Store.put(nil, :docs_bucket, "sitemap.xml", sitemap, opts)
+    HexWeb.CDN.purge_key(:fastly_hexdocs, "sitemap")
   end
 
   def push_docs(release, files, body, docs_for_latest_release) do
