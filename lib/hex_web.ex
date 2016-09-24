@@ -39,14 +39,4 @@ defmodule HexWeb do
   else
     def shutdown_on_eof, do: nil
   end
-
-  defprotocol Render do
-    @moduledoc """
-    Render entities to something that can be showed publicly.
-    Used, for example, when converting entities to JSON responses.
-    """
-
-    @spec render(term) :: map
-    def render(entity)
-  end
 end
