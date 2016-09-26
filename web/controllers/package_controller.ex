@@ -26,7 +26,6 @@ defmodule HexWeb.PackageController do
     packages      = fetch_packages(page, @packages_per_page, filter, sort)
 
     render conn, "index.html", [
-      active:        :packages,
       title:         "Packages",
       container:     "container",
       per_page:      @packages_per_page,
@@ -75,7 +74,6 @@ defmodule HexWeb.PackageController do
       end
 
     render conn, "show.html", [
-      active:            :packages,
       title:             package.name,
       description:       package.meta.description,
       container:         "container package-view",
