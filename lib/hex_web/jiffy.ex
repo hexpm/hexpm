@@ -20,11 +20,22 @@ defmodule HexWeb.Jiffy do
   def encode!(term) do
     term
     |> transform
-    |> :jiffy.encode([:use_nil])
+    |> do_encode
   end
 
   def encode_to_iodata!(term),
     do: encode!(term)
+
+  defp do_encode(term) do
+    :jiffy.encode(term, [:use_nil])
+  rescue
+    exception ->
+      reraise exception, System.stacktrace
+  catch
+    :throw, error ->
+      stacktrace = System.stacktrace
+      reraise Exception.normalize(:error, error, stacktrace), stacktrace
+  end
 
   defp transform(%Version{} = version) do
     to_string(version)
