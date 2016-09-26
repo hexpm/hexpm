@@ -28,7 +28,8 @@ defmodule HexWeb.Mixfile do
      strings_as_binaries: true,
      maps: true,
      maps_unset_optional: :omitted,
-     report_warnings: true]
+     report_warnings: true,
+     target_erlang_version: 18]
   end
 
   defp xref do
