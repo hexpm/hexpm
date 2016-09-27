@@ -29,9 +29,10 @@ defmodule HexWeb.Router do
     get  "/",                        PageController,     :index
     get  "/sponsors",                PageController,     :sponsors
 
-    get  "/password/reset",          PasswordController, :show_reset
-    post "/password/reset",          PasswordController, :reset
-    get  "/password/confirm",        PasswordController, :show_confirm
+    get  "/password/reset",          PasswordController, :reset
+    get  "/password/new",            PasswordController, :new
+    post "/password/choose",         PasswordController, :choose
+    get "/password/choose",         PasswordController, :choose
 
     get  "/docs/usage",              DocsController,     :usage
     get  "/docs/rebar3_usage",       DocsController,     :rebar3_usage
@@ -51,6 +52,10 @@ defmodule HexWeb.Router do
     get  "/packages",                PackageController,  :index
     get  "/packages/:name",          PackageController,  :show
     get  "/packages/:name/:version", PackageController,  :show
+
+    get "/login",                    LoginController,    :login
+    get "/signup",                   LoginController,    :signup
+    get "/confirm",                  LoginController,    :confirm
   end
 
   scope "/", HexWeb do

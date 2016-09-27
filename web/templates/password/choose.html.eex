@@ -1,0 +1,19 @@
+<div class="row">
+  <div class="col-md-8 col-md-offset-2">
+    <%= if @success do %>
+      <h2>Password reset</h2>
+      <p>
+        Your account password has been reset, you now have full access to your account at Hex.pm.
+      </p>
+    <% else %>
+      <h2>Failed to reset account password</h2>
+      <p>
+        We could not reset the password to your account. Please check the URL and try again.
+      </p>
+
+      <p>
+        If you believe this was an error, please email <a href="mailto:support@hex.pm">support</a>, or open an issue at <a href="https://github.com/hexpm">GitHub</a>.
+      </p>
+    <% end %>
+  </div>
+</div>

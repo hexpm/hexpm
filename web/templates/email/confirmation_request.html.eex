@@ -1,5 +1,5 @@
 <%
-confirm_url = password_url(HexWeb.Endpoint, :show_confirm, username: @username, key: @key)
+confirm_url = login_url(HexWeb.Endpoint, :confirm, username: @username, key: @key)
 %>
 
 <p>Welcome to Hex.pm!</p>

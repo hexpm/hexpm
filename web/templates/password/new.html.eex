@@ -1,0 +1,27 @@
+<div class="row">
+  <div class="col-md-8 col-md-offset-2">
+    <%= form_tag(password_path(HexWeb.Endpoint, :reset), name: "reset_form") do %>
+      <h2>Choose a new password</h2>
+
+      <div class="form-group">
+        <label for="password">Password</label>
+        <input type="password" class="form-control" name="password">
+      </div>
+
+      <div class="form-group">
+        <div class="checkbox">
+          <input type="hidden" name="revoke_all_keys" value="no">
+          <label>
+            <input type="checkbox" name="revoke_all_keys" value="yes" checked>
+            Revoke all API keys
+          </label>
+        </div>
+      </div>
+
+      <input type="hidden" name="username" value="<%= @username %>">
+      <input type="hidden" name="key" value="<%= @key %>">
+
+      <button type="submit" class="btn btn-default">Submit</button>
+    <% end %>
+  </div>
+</div>
