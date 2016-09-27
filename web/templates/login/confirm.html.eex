@@ -1,0 +1,15 @@
+<%= if @success do %>
+  <h2 class="text-success">Email confirmed</h2>
+  <h3>
+    Your email has been confirmed, you now have full access to your account at Hex.pm
+  </h3>
+<% else %>
+  <h2 class="text-danger">Failed to confirm email</h2>
+  <h3>
+    We could not confirm your email. Please check the URL and try again.
+
+    <small>
+      If you believe there is an error, feel free to email <a href="mailto:support@hex.pm">support</a>, or leave an issue on <a href="https://github.com/hexpm">GitHub</a>.
+    </small>
+  </h3>
+<% end %>

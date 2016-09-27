@@ -49,7 +49,7 @@ defmodule HexWeb.API.UserControllerTest do
     assert conn.status == 403
     assert conn.resp_body =~ "account unconfirmed"
 
-    conn = get(build_conn(), "password/confirm?username=name&key=" <> user.confirmation_key)
+    conn = get(build_conn(), "confirm?username=name&key=" <> user.confirmation_key)
     assert conn.status == 200
     assert conn.resp_body =~ "Email confirmed"
 
