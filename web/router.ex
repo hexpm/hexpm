@@ -6,6 +6,8 @@ defmodule HexWeb.Router do
   pipeline :browser do
     plug :accepts, ["html"]
     # plug :fetch_flash
+    plug :fetch_session
+    plug :protect_from_forgery
     plug :put_secure_browser_headers
   end
 
