@@ -51,7 +51,7 @@ defmodule HexWeb.API.UserControllerTest do
 
     conn = get(build_conn(), "password/confirm?username=name&key=" <> user.confirmation_key)
     assert conn.status == 200
-    assert conn.resp_body =~ "Account confirmed"
+    assert conn.resp_body =~ "Email confirmed"
 
     conn = build_conn()
            |> put_req_header("content-type", "application/octet-stream")
@@ -74,9 +74,9 @@ defmodule HexWeb.API.UserControllerTest do
     assert conn.status == 201
     user = HexWeb.Repo.get_by!(User, username: "reset_test")
 
-    conn = get(build_conn(), "password/confirm?username=reset_test&key=" <> user.confirmation_key)
+    conn = get(build_conn(), "confirm?username=reset_test&key=" <> user.confirmation_key)
     assert conn.status == 200
-    assert conn.resp_body =~ "Account confirmed"
+    assert conn.resp_body =~ "Email confirmed"
 
     # initiate reset request
     conn = post(build_conn(), "api/users/#{user.username}/reset", %{})
