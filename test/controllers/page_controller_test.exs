@@ -48,12 +48,12 @@ defmodule HexWeb.PageControllerTest do
     conn = get build_conn(), "/"
 
     assert conn.status == 200
-    assert conn.assigns[:total]["all"] == 9
-    assert conn.assigns[:total]["week"] == 0
-    assert [{"foo", %NaiveDateTime{}, %HexWeb.PackageMetadata{}, 7}, {"bar", %NaiveDateTime{}, %HexWeb.PackageMetadata{}, 2}] = conn.assigns[:package_top]
-    assert conn.assigns[:num_packages] == 3
-    assert conn.assigns[:num_releases] == 6
-    assert Enum.count(conn.assigns[:releases_new]) == 6
-    assert Enum.count(conn.assigns[:package_new]) == 3
+    assert conn.assigns.total["all"] == 9
+    assert conn.assigns.total["week"] == 0
+    assert [{"foo", %NaiveDateTime{}, %HexWeb.PackageMetadata{}, 7}, {"bar", %NaiveDateTime{}, %HexWeb.PackageMetadata{}, 2}] = conn.assigns.package_top
+    assert conn.assigns.num_packages == 3
+    assert conn.assigns.num_releases == 6
+    assert Enum.count(conn.assigns.releases_new) == 6
+    assert Enum.count(conn.assigns.package_new) == 3
   end
 end
