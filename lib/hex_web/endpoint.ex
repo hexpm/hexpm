@@ -30,5 +30,11 @@ defmodule HexWeb.Endpoint do
   plug Plug.MethodOverride
   plug Plug.Head
 
+  plug Plug.Session,
+    store: :cookie,
+    key: "_hex_web_key",
+    signing_salt: "vGpjq82L",
+    encryption_salt: "y77stVMu"
+
   plug HexWeb.Router
 end
