@@ -7,7 +7,7 @@ defmodule HexWeb.API.PackageController do
     page     = HexWeb.Utils.safe_int(params["page"])
     search   = HexWeb.Utils.parse_search(params["search"])
     sort     = HexWeb.Utils.safe_to_atom(params["sort"] || "name", @sort_params)
-    packages = Packages.search(page, search, sort)
+    packages = Packages.search(page, 100, search, sort)
 
     when_stale(conn, packages, [modified: false], fn conn ->
       conn

@@ -3,6 +3,18 @@ defmodule HexWeb.Releases do
 
   @publish_timeout 60_000
 
+  def all(package) do
+    Release.all(package)
+    |> Repo.all
+    |> Release.sort
+  end
+
+  def package_versions(packages) do
+    Release.package_versions(packages)
+    |> Repo.all
+    |> Enum.into(%{})
+  end
+
   def preload(release) do
     Repo.preload(release,
       requirements: Release.requirements(release),

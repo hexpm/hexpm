@@ -6,8 +6,8 @@ defmodule HexWeb.PackageController do
   @letters for letter <- ?A..?Z, do: <<letter>>
 
   def index(conn, params) do
-    letter        = HexWeb.Utils.parse_search(params["letter"])
-    search        = HexWeb.Utils.parse_search(params["search"])
+    letter = HexWeb.Utils.parse_search(params["letter"])
+    search = HexWeb.Utils.parse_search(params["search"])
 
     filter =
       cond do
@@ -21,7 +21,7 @@ defmodule HexWeb.PackageController do
 
     sort          = HexWeb.Utils.safe_to_atom(params["sort"] || "name", @sort_params)
     page_param    = HexWeb.Utils.safe_int(params["page"]) || 1
-    package_count = Package.count(filter) |> HexWeb.Repo.one!
+    package_count = Packages.count(filter)
     page          = HexWeb.Utils.safe_page(page_param, package_count, @packages_per_page)
     packages      = fetch_packages(page, @packages_per_page, filter, sort)
 
@@ -36,17 +36,13 @@ defmodule HexWeb.PackageController do
       page:          page,
       packages:      packages,
       letters:       @letters,
-      downloads:     PackageDownload.packages(packages, "all")
-                     |> HexWeb.Repo.all
-                     |> Enum.into(%{})
+      downloads:     Packages.packages_downloads(packages, "all")
     ]
   end
 
   def show(conn, params) do
-    if package = HexWeb.Repo.get_by(Package, name: params["name"]) do
-      releases = Release.all(package)
-                 |> HexWeb.Repo.all
-                 |> Release.sort
+    if package = Packages.get(params["name"]) do
+      releases = Releases.all(package)
 
       release =
         if version = params["version"] do
@@ -63,7 +59,7 @@ defmodule HexWeb.PackageController do
 
   defp package(conn, package, releases, release) do
     has_docs = Enum.any?(releases, fn(release) -> release.has_docs end)
-    release = HexWeb.Repo.preload(release, requirements: Release.requirements(release))
+    release = Releases.preload(release)
 
     docs_assigns =
       if has_docs do
@@ -81,20 +77,13 @@ defmodule HexWeb.PackageController do
       package:           package,
       releases:          releases,
       current_release:   release,
-      downloads:         PackageDownload.package(package)
-                         |> HexWeb.Repo.all
-                         |> Enum.into(%{}),
-      release_downloads: ReleaseDownload.release(release)
-                         |> HexWeb.Repo.one
+      downloads:         Packages.package_downloads(package)
     ] ++ docs_assigns
   end
 
   defp fetch_packages(page, packages_per_page, search, sort) do
-    packages = Package.all(page, packages_per_page, search, sort)
-               |> HexWeb.Repo.all
-    versions = Release.package_versions(packages)
-               |> HexWeb.Repo.all
-               |> Enum.into(%{})
+    packages = Packages.search(page, packages_per_page, search, sort)
+    versions = Releases.package_versions(packages)
 
     Enum.map(packages, fn package ->
       version = Release.latest_version(versions[package.id])

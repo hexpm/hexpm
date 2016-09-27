@@ -61,7 +61,7 @@ tools = Keyword.take(tools, compatible_tools)
           <%= icon(:octicon, :calendar, class: "stat-icon stat-icon-calendar") %>
           <span class="stat-info">
             <span class="count-info">
-              <%= human_number_space(if @release_downloads, do: @release_downloads.downloads, else: 0) %>
+              <%= human_number_space(if @current_release.downloads, do: @current_release.downloads.downloads, else: 0) %>
             </span> <br>
             <span class="stat-text">downloads <br> this version</span>
           </span>
