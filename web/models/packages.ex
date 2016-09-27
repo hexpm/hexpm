@@ -2,7 +2,7 @@ defmodule HexWeb.Packages do
   use HexWeb.Web, :crud
 
   def count(filter) do
-    Package.count(filter) |> HexWeb.Repo.one!
+     HexWeb.Repo.one!(Package.count(filter))
   end
 
   def get(name) do
