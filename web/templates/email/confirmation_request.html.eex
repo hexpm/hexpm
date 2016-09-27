@@ -13,11 +13,11 @@ confirm_url = password_url(HexWeb.Endpoint, :show_confirm, username: @username, 
 </p>
 
 <p>
-  By confirming your account you accept our terms of service and all of our policies found at <a href="<%= policy_url(HexWeb.Endpoint, :index) %>"><%= policy_url(HexWeb.Endpoint, :index) %></a>.
+  By confirming your email you accept our terms of service and all of our policies found at <a href="<%= policy_url(HexWeb.Endpoint, :index) %>"><%= policy_url(HexWeb.Endpoint, :index) %></a>.
 </p>
 
 <p>
-  Once this is complete, you will have full access to your Hex account.
+  Once this is complete, you will have full access to your Hex.pm account.
 </p>
 
 <p>

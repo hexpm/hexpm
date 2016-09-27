@@ -31,7 +31,7 @@ defmodule HexWeb.Mailer do
   def send_user_confirmed_email(user) do
     send(
       "confirmed.html",
-      "Hex.pm - Account confirmed",
+      "Hex.pm - Email confirmed",
       [user.email],
       []
     )
@@ -40,7 +40,7 @@ defmodule HexWeb.Mailer do
   def send_confirmation_request_email(user) do
     send(
       "confirmation_request.html",
-      "Hex.pm - Account confirmation",
+      "Hex.pm - Email confirmation",
       [user.email],
       username: user.username,
       key: user.confirmation_key)
