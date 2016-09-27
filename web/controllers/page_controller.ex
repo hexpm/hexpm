@@ -5,19 +5,12 @@ defmodule HexWeb.PageController do
     render conn, "index.html", [
       container:    "",
       hide_search:  true,
-      num_packages: Package.count
-                    |> HexWeb.Repo.one!,
-      num_releases: Release.count
-                    |> HexWeb.Repo.one!,
-      package_top:  PackageDownload.top("all", 8)
-                    |> HexWeb.Repo.all,
-      package_new:  Package.recent(10)
-                    |> HexWeb.Repo.all,
-      releases_new: Release.recent(10)
-                    |> HexWeb.Repo.all,
-      total:        PackageDownload.total
-                    |> HexWeb.Repo.all
-                    |> Enum.into(%{})
+      num_packages: Packages.count,
+      num_releases: Releases.count,
+      package_top:  Packages.top_downloads("all", 8),
+      package_new:  Packages.recent(10),
+      releases_new: Releases.recent(10),
+      total:        Packages.total_downloads
     ]
   end
 
