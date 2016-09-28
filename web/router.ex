@@ -31,10 +31,10 @@ defmodule HexWeb.Router do
     get  "/",                        PageController,     :index
     get  "/sponsors",                PageController,     :sponsors
 
-    get  "/password/reset",          PasswordController, :reset
-    get  "/password/new",            PasswordController, :new
-    post "/password/choose",         PasswordController, :choose
-    get "/password/choose",         PasswordController, :choose
+    get  "/password/reset",          PasswordController, :show_reset
+    post "/password/reset",          PasswordController, :submit_reset
+    get  "/password/new",            PasswordController, :show_new
+    post "/password/new",            PasswordController, :submit_new
 
     get  "/docs/usage",              DocsController,     :usage
     get  "/docs/rebar3_usage",       DocsController,     :rebar3_usage
