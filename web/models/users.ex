@@ -1,8 +1,11 @@
 defmodule HexWeb.Users do
   use HexWeb.Web, :crud
 
-  def get(username) do
-    Repo.get_by(User, username: username)
+  def get(username_or_email) do
+    Repo.one(
+      from u in HexWeb.User,
+      where: u.username == ^username_or_email or u.email == ^username_or_email
+    )
   end
 
   def with_owned_packages(user) do

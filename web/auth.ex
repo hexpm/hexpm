@@ -33,8 +33,8 @@ defmodule HexWeb.Auth do
     end
   end
 
-  def password_auth(username, password) do
-    if (user = HexWeb.Repo.get_by(HexWeb.User, username: username)) &&
+  def password_auth(username_or_email, password) do
+    if (user = HexWeb.Users.get(username_or_email)) &&
        Comeonin.Bcrypt.checkpw(password, user.password) do
       {:ok, {user, nil}}
     else
