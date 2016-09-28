@@ -47,8 +47,7 @@ defmodule HexWeb.Users do
   end
 
   def request_reset(name) do
-    user = Repo.get_by(User, username: name) ||
-             Repo.get_by(User, email: name)
+    user = Repo.get_by(User, username: name) || Repo.get_by(User, email: name)
 
     if user do
       user = User.password_reset(user) |> Repo.update!
