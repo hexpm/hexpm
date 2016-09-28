@@ -4,9 +4,11 @@ defmodule HexWeb.API.UserControllerTest do
   alias HexWeb.User
 
   setup do
-    User.build(%{username: "eric", email: "eric@mail.com", password: "eric"}, true)
-    |> HexWeb.Repo.insert!
-    :ok
+    user =
+      User.build(%{username: "eric", email: "eric@mail.com", password: "eric"}, true)
+      |> HexWeb.Repo.insert!
+
+    %{user: user}
   end
 
   test "create user" do
@@ -28,6 +30,7 @@ defmodule HexWeb.API.UserControllerTest do
     conn = build_conn()
            |> put_req_header("content-type", "application/json")
            |> post("api/users", Poison.encode!(body))
+
     assert conn.status == 201
     user = HexWeb.Repo.get_by!(User, username: "name")
 
@@ -65,26 +68,14 @@ defmodule HexWeb.API.UserControllerTest do
     assert contents =~ "confirmed"
   end
 
-  test "email is sent with reset_token when password is reset" do
-    # create user with confirmed account
-    body = %{username: "reset_test", email: "reset_user@mail.com", password: "pass"}
-    conn = build_conn()
-           |> put_req_header("content-type", "application/json")
-           |> post("api/users", Poison.encode!(body))
-    assert conn.status == 201
-    user = HexWeb.Repo.get_by!(User, username: "reset_test")
-
-    conn = get(build_conn(), "confirm?username=reset_test&key=" <> user.confirmation_key)
-    assert conn.status == 200
-    assert conn.resp_body =~ "Email confirmed"
-
+  test "email is sent with reset_token when password is reset", c do
     # initiate reset request
-    conn = post(build_conn(), "api/users/#{user.username}/reset", %{})
+    conn = post(build_conn(), "api/users/#{c.user.username}/reset", %{})
     assert conn.status == 204
 
     # check email was sent with correct token
-    user = HexWeb.Repo.get_by!(User, username: "reset_test")
-    {subject, contents} = HexWeb.Email.Local.read("reset_user@mail.com")
+    user = HexWeb.Repo.get_by!(User, username: c.user.username)
+    {subject, contents} = HexWeb.Email.Local.read(c.user.email)
     assert subject =~ "Hex.pm"
     assert contents =~ "#{user.reset_key}"
 
