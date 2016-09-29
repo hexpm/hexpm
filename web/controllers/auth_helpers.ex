@@ -55,8 +55,8 @@ defmodule HexWeb.AuthHelpers do
 
   defp basic_auth(credentials) do
     case String.split(Base.decode64!(credentials), ":", parts: 2) do
-      [username, password] ->
-        case HexWeb.Auth.password_auth(username, password) do
+      [username_or_email, password] ->
+        case HexWeb.Auth.password_auth(username_or_email, password) do
           {:ok, user} -> {:ok, user}
           :error -> {:error, :basic}
         end
