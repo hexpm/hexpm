@@ -103,6 +103,6 @@ defmodule HexWeb.AuthHelpers do
 
   def correct_user?(%Plug.Conn{} = conn, user),
     do: correct_user?(conn.params["name"], user)
-  def correct_user?(name, user) when is_binary(name),
-    do: name == user.username
+  def correct_user?(username_or_email, user) when is_binary(username_or_email),
+    do: username_or_email in [user.username, user.email]
 end
