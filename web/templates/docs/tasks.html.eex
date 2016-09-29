@@ -8,7 +8,7 @@
       <h3 id="hex" class="panel-title">
         hex
         <a href="#hex">
-          <svg aria-hidden="aria-hidden" class="glyphicon pull-right" version="1.1" viewBox="0 0 1200 1200"><g transform="translate(0, 1200) scale(1, -1)"><path d="M776.5 1214q93.5 0 159.5 -66l141 -141q66 -66 66 -160q0 -42 -28 -95.5t-62 -87.5l-29 -29q-31 53 -77 99l-18 18l95 95l-247 248l-389 -389l212 -212l-105 -106l-19 18l-141 141q-66 66 -66 159t66 159l283 283q65 66 158.5 66zM600 706l105 105q10 -8 19 -17l141 -141 q66 -66 66 -159t-66 -159l-283 -283q-66 -66 -159 -66t-159 66l-141 141q-66 66 -66 159.5t66 159.5l55 55q29 -55 75 -102l18 -17l-95 -95l247 -248l389 389z"></g></svg>
+          <svg aria-hidden="aria-hidden" class="glyphicon glyphicon-link pull-right" version="1.1" viewBox="0 0 1200 1200"><g transform="translate(0, 1200) scale(1, -1)"><path d="M776.5 1214q93.5 0 159.5 -66l141 -141q66 -66 66 -160q0 -42 -28 -95.5t-62 -87.5l-29 -29q-31 53 -77 99l-18 18l95 95l-247 248l-389 -389l212 -212l-105 -106l-19 18l-141 141q-66 66 -66 159t66 159l283 283q65 66 158.5 66zM600 706l105 105q10 -8 19 -17l141 -141 q66 -66 66 -159t-66 -159l-283 -283q-66 -66 -159 -66t-159 66l-141 141q-66 66 -66 159.5t66 159.5l55 55q29 -55 75 -102l18 -17l-95 -95l247 -248l389 389z"></g></svg>
         </a>
       </h3>
     </div>
@@ -29,16 +29,16 @@ configuration (Default: <code class="inline">~/.hex</code>)
 Use this option when using a Hex.pm mirror, unlike when setting <code class="inline">HEX_REPO</code>
 this will still use the public key from Hex.pm when verifying the registry
 </li>
-<li><code class="inline">HEX_OFFLINE</code> - If set Hex will not fetch the regsitry or packages and will
- instead the locally cached files if they are available
+<li><code class="inline">HEX_OFFLINE</code> - If set Hex will not fetch the registry or packages and will
+instead the locally cached files if they are available
 </li>
 <li><code class="inline">HEX_UNSAFE_HTTPS</code> - If set Hex will not verify HTTPS certificates
 </li>
 <li><code class="inline">HEX_UNSAFE_REGISTRY</code> - If set Hex will not verify the registry signature
- against the repository’s public key
+against the repository’s public key
 </li>
 <li><code class="inline">HTTP_PROXY</code> / <code class="inline">HTTPS_PROXY</code> - Sets the URL to a HTTP(S) proxy, the
- environment variables can also be in lower case
+environment variables can also be in lower case
 </li>
 </ul>
 
@@ -51,7 +51,7 @@ this will still use the public key from Hex.pm when verifying the registry
       <h3 id="hex_build" class="panel-title">
         hex.build
         <a href="#hex_build">
-          <svg aria-hidden="aria-hidden" class="glyphicon pull-right" version="1.1" viewBox="0 0 1200 1200"><g transform="translate(0, 1200) scale(1, -1)"><path d="M776.5 1214q93.5 0 159.5 -66l141 -141q66 -66 66 -160q0 -42 -28 -95.5t-62 -87.5l-29 -29q-31 53 -77 99l-18 18l95 95l-247 248l-389 -389l212 -212l-105 -106l-19 18l-141 141q-66 66 -66 159t66 159l283 283q65 66 158.5 66zM600 706l105 105q10 -8 19 -17l141 -141 q66 -66 66 -159t-66 -159l-283 -283q-66 -66 -159 -66t-159 66l-141 141q-66 66 -66 159.5t66 159.5l55 55q29 -55 75 -102l18 -17l-95 -95l247 -248l389 389z"></g></svg>
+          <svg aria-hidden="aria-hidden" class="glyphicon glyphicon-link pull-right" version="1.1" viewBox="0 0 1200 1200"><g transform="translate(0, 1200) scale(1, -1)"><path d="M776.5 1214q93.5 0 159.5 -66l141 -141q66 -66 66 -160q0 -42 -28 -95.5t-62 -87.5l-29 -29q-31 53 -77 99l-18 18l95 95l-247 248l-389 -389l212 -212l-105 -106l-19 18l-141 141q-66 66 -66 159t66 159l283 283q65 66 158.5 66zM600 706l105 105q10 -8 19 -17l141 -141 q66 -66 66 -159t-66 -159l-283 -283q-66 -66 -159 -66t-159 66l-141 141q-66 66 -66 159.5t66 159.5l55 55q29 -55 75 -102l18 -17l-95 -95l247 -248l389 389z"></g></svg>
         </a>
       </h3>
     </div>
@@ -60,7 +60,7 @@ this will still use the public key from Hex.pm when verifying the registry
 <p>The package .tar file is created in the current directory, but is not pushed
 to the repository. An app named <code class="inline">foo</code> at version <code class="inline">1.2.3</code> will be built as
 <code class="inline">foo-1.2.3.tar</code>.</p>
-<p><code class="inline">mix hex.build</code></p>
+<pre><code>mix hex.build</code></pre>
 <h3>Configuration</h3>
 <ul>
 <li><p><code class="inline">:app</code> - Package name (required).</p>
@@ -119,12 +119,12 @@ this field.
       <h3 id="hex_config" class="panel-title">
         hex.config
         <a href="#hex_config">
-          <svg aria-hidden="aria-hidden" class="glyphicon pull-right" version="1.1" viewBox="0 0 1200 1200"><g transform="translate(0, 1200) scale(1, -1)"><path d="M776.5 1214q93.5 0 159.5 -66l141 -141q66 -66 66 -160q0 -42 -28 -95.5t-62 -87.5l-29 -29q-31 53 -77 99l-18 18l95 95l-247 248l-389 -389l212 -212l-105 -106l-19 18l-141 141q-66 66 -66 159t66 159l283 283q65 66 158.5 66zM600 706l105 105q10 -8 19 -17l141 -141 q66 -66 66 -159t-66 -159l-283 -283q-66 -66 -159 -66t-159 66l-141 141q-66 66 -66 159.5t66 159.5l55 55q29 -55 75 -102l18 -17l-95 -95l247 -248l389 389z"></g></svg>
+          <svg aria-hidden="aria-hidden" class="glyphicon glyphicon-link pull-right" version="1.1" viewBox="0 0 1200 1200"><g transform="translate(0, 1200) scale(1, -1)"><path d="M776.5 1214q93.5 0 159.5 -66l141 -141q66 -66 66 -160q0 -42 -28 -95.5t-62 -87.5l-29 -29q-31 53 -77 99l-18 18l95 95l-247 248l-389 -389l212 -212l-105 -106l-19 18l-141 141q-66 66 -66 159t66 159l283 283q65 66 158.5 66zM600 706l105 105q10 -8 19 -17l141 -141 q66 -66 66 -159t-66 -159l-283 -283q-66 -66 -159 -66t-159 66l-141 141q-66 66 -66 159.5t66 159.5l55 55q29 -55 75 -102l18 -17l-95 -95l247 -248l389 389z"></g></svg>
         </a>
       </h3>
     </div>
     <div class="panel-body">
-      <p><em>Reads or updates Hex configuration file.</em></p>
+      <p><em>Reads, updates or deletes Hex configuration keys.</em></p>
 <pre><code>mix hex.config KEY [VALUE]</code></pre>
 <h3>Config keys</h3>
 <ul>
@@ -156,6 +156,11 @@ signature against the repository’s public key
 <li><code class="inline">https_proxy</code> - HTTPS proxy server
 </li>
 </ul>
+<h3>Command line options</h3>
+<ul>
+<li><code class="inline">--delete</code> - Remove a specific config key
+</li>
+</ul>
 
     </div>
   </div>
@@ -166,25 +171,20 @@ signature against the repository’s public key
       <h3 id="hex_docs" class="panel-title">
         hex.docs
         <a href="#hex_docs">
-          <svg aria-hidden="aria-hidden" class="glyphicon pull-right" version="1.1" viewBox="0 0 1200 1200"><g transform="translate(0, 1200) scale(1, -1)"><path d="M776.5 1214q93.5 0 159.5 -66l141 -141q66 -66 66 -160q0 -42 -28 -95.5t-62 -87.5l-29 -29q-31 53 -77 99l-18 18l95 95l-247 248l-389 -389l212 -212l-105 -106l-19 18l-141 141q-66 66 -66 159t66 159l283 283q65 66 158.5 66zM600 706l105 105q10 -8 19 -17l141 -141 q66 -66 66 -159t-66 -159l-283 -283q-66 -66 -159 -66t-159 66l-141 141q-66 66 -66 159.5t66 159.5l55 55q29 -55 75 -102l18 -17l-95 -95l247 -248l389 389z"></g></svg>
+          <svg aria-hidden="aria-hidden" class="glyphicon glyphicon-link pull-right" version="1.1" viewBox="0 0 1200 1200"><g transform="translate(0, 1200) scale(1, -1)"><path d="M776.5 1214q93.5 0 159.5 -66l141 -141q66 -66 66 -160q0 -42 -28 -95.5t-62 -87.5l-29 -29q-31 53 -77 99l-18 18l95 95l-247 248l-389 -389l212 -212l-105 -106l-19 18l-141 141q-66 66 -66 159t66 159l283 283q65 66 158.5 66zM600 706l105 105q10 -8 19 -17l141 -141 q66 -66 66 -159t-66 -159l-283 -283q-66 -66 -159 -66t-159 66l-141 141q-66 66 -66 159.5t66 159.5l55 55q29 -55 75 -102l18 -17l-95 -95l247 -248l389 389z"></g></svg>
         </a>
       </h3>
     </div>
     <div class="panel-body">
-      <p><em>Publishes documentation for the current project and version.</em></p>
-<p>The documentation will be accessible at <code class="inline">https://hexdocs.pm/my_package/1.0.0</code>,
-<code class="inline">https://hexdocs.pm/my_package</code> will always redirect to the latest published
-version.</p>
-<p>Documentation will be generated by running the <code class="inline">mix docs</code> task. <code class="inline">ex_doc</code>
-provides this task by default, but any library can be used. Or an alias can be
-used to extend the documentation generation. The expected result of the task
-is the generated documentation located in the <code class="inline">docs/</code> directory with an
-<code class="inline">index.html</code> file.</p>
-<h3>Command line options</h3>
-<ul>
-<li><code class="inline">--revert VERSION</code> - Revert given version
-</li>
-</ul>
+      <p><em>Fetch or open documentation of a package</em></p>
+<pre><code>mix hex.docs fetch package &lt;version&gt;</code></pre>
+<p>It will retrieve and decompress the specified version of the documentation
+for a package. If you do not specify the <code class="inline">version</code> argument, this task will
+retrieve the latest documentation available in the mirror.</p>
+<pre><code>mix hex.docs open package &lt;version&gt;</code></pre>
+<p>It will open the specified version of the documentation for a package in a
+Web browser. If you do not specify the <code class="inline">version</code> argument, this task will
+open the latest documentation available in your filesystem.</p>
 
     </div>
   </div>
@@ -195,13 +195,13 @@ is the generated documentation located in the <code class="inline">docs/</code> 
       <h3 id="hex_info" class="panel-title">
         hex.info
         <a href="#hex_info">
-          <svg aria-hidden="aria-hidden" class="glyphicon pull-right" version="1.1" viewBox="0 0 1200 1200"><g transform="translate(0, 1200) scale(1, -1)"><path d="M776.5 1214q93.5 0 159.5 -66l141 -141q66 -66 66 -160q0 -42 -28 -95.5t-62 -87.5l-29 -29q-31 53 -77 99l-18 18l95 95l-247 248l-389 -389l212 -212l-105 -106l-19 18l-141 141q-66 66 -66 159t66 159l283 283q65 66 158.5 66zM600 706l105 105q10 -8 19 -17l141 -141 q66 -66 66 -159t-66 -159l-283 -283q-66 -66 -159 -66t-159 66l-141 141q-66 66 -66 159.5t66 159.5l55 55q29 -55 75 -102l18 -17l-95 -95l247 -248l389 389z"></g></svg>
+          <svg aria-hidden="aria-hidden" class="glyphicon glyphicon-link pull-right" version="1.1" viewBox="0 0 1200 1200"><g transform="translate(0, 1200) scale(1, -1)"><path d="M776.5 1214q93.5 0 159.5 -66l141 -141q66 -66 66 -160q0 -42 -28 -95.5t-62 -87.5l-29 -29q-31 53 -77 99l-18 18l95 95l-247 248l-389 -389l212 -212l-105 -106l-19 18l-141 141q-66 66 -66 159t66 159l283 283q65 66 158.5 66zM600 706l105 105q10 -8 19 -17l141 -141 q66 -66 66 -159t-66 -159l-283 -283q-66 -66 -159 -66t-159 66l-141 141q-66 66 -66 159.5t66 159.5l55 55q29 -55 75 -102l18 -17l-95 -95l247 -248l389 389z"></g></svg>
         </a>
       </h3>
     </div>
     <div class="panel-body">
       <p><em>Prints Hex package or system information.</em></p>
-<p><code class="inline">mix hex.info [PACKAGE [VERSION]]</code></p>
+<pre><code>mix hex.info [PACKAGE [VERSION]]</code></pre>
 <p>If <code class="inline">package</code> is not given, print system information. This includes when
 registry was last updated and current system version.</p>
 <p>If <code class="inline">package</code> is given, print information about the package. This includes all
@@ -218,7 +218,7 @@ remote Git URL and Git ref, and all package dependencies.</p>
       <h3 id="hex_key" class="panel-title">
         hex.key
         <a href="#hex_key">
-          <svg aria-hidden="aria-hidden" class="glyphicon pull-right" version="1.1" viewBox="0 0 1200 1200"><g transform="translate(0, 1200) scale(1, -1)"><path d="M776.5 1214q93.5 0 159.5 -66l141 -141q66 -66 66 -160q0 -42 -28 -95.5t-62 -87.5l-29 -29q-31 53 -77 99l-18 18l95 95l-247 248l-389 -389l212 -212l-105 -106l-19 18l-141 141q-66 66 -66 159t66 159l283 283q65 66 158.5 66zM600 706l105 105q10 -8 19 -17l141 -141 q66 -66 66 -159t-66 -159l-283 -283q-66 -66 -159 -66t-159 66l-141 141q-66 66 -66 159.5t66 159.5l55 55q29 -55 75 -102l18 -17l-95 -95l247 -248l389 389z"></g></svg>
+          <svg aria-hidden="aria-hidden" class="glyphicon glyphicon-link pull-right" version="1.1" viewBox="0 0 1200 1200"><g transform="translate(0, 1200) scale(1, -1)"><path d="M776.5 1214q93.5 0 159.5 -66l141 -141q66 -66 66 -160q0 -42 -28 -95.5t-62 -87.5l-29 -29q-31 53 -77 99l-18 18l95 95l-247 248l-389 -389l212 -212l-105 -106l-19 18l-141 141q-66 66 -66 159t66 159l283 283q65 66 158.5 66zM600 706l105 105q10 -8 19 -17l141 -141 q66 -66 66 -159t-66 -159l-283 -283q-66 -66 -159 -66t-159 66l-141 141q-66 66 -66 159.5t66 159.5l55 55q29 -55 75 -102l18 -17l-95 -95l247 -248l389 389z"></g></svg>
         </a>
       </h3>
     </div>
@@ -227,10 +227,12 @@ remote Git URL and Git ref, and all package dependencies.</p>
 <h4>Remove key</h4>
 <p>Removes given API key from account.</p>
 <p>The key can no longer be used to authenticate API requests.</p>
-<p><code class="inline">mix hex.key remove key_name</code></p>
+<pre><code>mix hex.key remove key_name</code></pre>
+<p>To remove all API keys from your account, pass the <code class="inline">--all</code> option.</p>
+<pre><code>mix hex.key remove --all</code></pre>
 <h4>List keys</h4>
 <p>Lists all API keys associated with your account.</p>
-<p><code class="inline">mix hex.key list</code></p>
+<pre><code>mix hex.key list</code></pre>
 
     </div>
   </div>
@@ -241,19 +243,19 @@ remote Git URL and Git ref, and all package dependencies.</p>
       <h3 id="hex_outdated" class="panel-title">
         hex.outdated
         <a href="#hex_outdated">
-          <svg aria-hidden="aria-hidden" class="glyphicon pull-right" version="1.1" viewBox="0 0 1200 1200"><g transform="translate(0, 1200) scale(1, -1)"><path d="M776.5 1214q93.5 0 159.5 -66l141 -141q66 -66 66 -160q0 -42 -28 -95.5t-62 -87.5l-29 -29q-31 53 -77 99l-18 18l95 95l-247 248l-389 -389l212 -212l-105 -106l-19 18l-141 141q-66 66 -66 159t66 159l283 283q65 66 158.5 66zM600 706l105 105q10 -8 19 -17l141 -141 q66 -66 66 -159t-66 -159l-283 -283q-66 -66 -159 -66t-159 66l-141 141q-66 66 -66 159.5t66 159.5l55 55q29 -55 75 -102l18 -17l-95 -95l247 -248l389 389z"></g></svg>
+          <svg aria-hidden="aria-hidden" class="glyphicon glyphicon-link pull-right" version="1.1" viewBox="0 0 1200 1200"><g transform="translate(0, 1200) scale(1, -1)"><path d="M776.5 1214q93.5 0 159.5 -66l141 -141q66 -66 66 -160q0 -42 -28 -95.5t-62 -87.5l-29 -29q-31 53 -77 99l-18 18l95 95l-247 248l-389 -389l212 -212l-105 -106l-19 18l-141 141q-66 66 -66 159t66 159l283 283q65 66 158.5 66zM600 706l105 105q10 -8 19 -17l141 -141 q66 -66 66 -159t-66 -159l-283 -283q-66 -66 -159 -66t-159 66l-141 141q-66 66 -66 159.5t66 159.5l55 55q29 -55 75 -102l18 -17l-95 -95l247 -248l389 389z"></g></svg>
         </a>
       </h3>
     </div>
     <div class="panel-body">
-      <p>Shows all packages that have a version mismatch between the registry and
-your mix.lock file.</p>
+      <p><em>Shows all Hex dependencies that have newer versions in the registry.</em></p>
 <p>By default, it only shows top-level packages explicitly listed in the
 <code class="inline">mix.exs</code> file. All outdated packages can be displayed by using the <code class="inline">--all</code>
 command line option.</p>
 <p>If a dependency name is given all requirements on that dependency, from
 the entire dependency tree, are listed. This is useful if you are trying
 to figure why a package isn’t updating when you run <code class="inline">mix deps.update</code>.</p>
+<pre><code>mix hex.outdated [APP]</code></pre>
 <h3>Command line options</h3>
 <ul>
 <li><code class="inline">--all</code> - shows all outdated packages, including children of packages defined in <code class="inline">mix.exs</code>
@@ -261,7 +263,6 @@ to figure why a package isn’t updating when you run <code class="inline">mix d
 <li><code class="inline">--pre</code> - include pre-releases when checking for newer versions
 </li>
 </ul>
-<p><em><code class="inline">mix hex.outdated [APP]</code></em></p>
 
     </div>
   </div>
@@ -272,7 +273,7 @@ to figure why a package isn’t updating when you run <code class="inline">mix d
       <h3 id="hex_owner" class="panel-title">
         hex.owner
         <a href="#hex_owner">
-          <svg aria-hidden="aria-hidden" class="glyphicon pull-right" version="1.1" viewBox="0 0 1200 1200"><g transform="translate(0, 1200) scale(1, -1)"><path d="M776.5 1214q93.5 0 159.5 -66l141 -141q66 -66 66 -160q0 -42 -28 -95.5t-62 -87.5l-29 -29q-31 53 -77 99l-18 18l95 95l-247 248l-389 -389l212 -212l-105 -106l-19 18l-141 141q-66 66 -66 159t66 159l283 283q65 66 158.5 66zM600 706l105 105q10 -8 19 -17l141 -141 q66 -66 66 -159t-66 -159l-283 -283q-66 -66 -159 -66t-159 66l-141 141q-66 66 -66 159.5t66 159.5l55 55q29 -55 75 -102l18 -17l-95 -95l247 -248l389 389z"></g></svg>
+          <svg aria-hidden="aria-hidden" class="glyphicon glyphicon-link pull-right" version="1.1" viewBox="0 0 1200 1200"><g transform="translate(0, 1200) scale(1, -1)"><path d="M776.5 1214q93.5 0 159.5 -66l141 -141q66 -66 66 -160q0 -42 -28 -95.5t-62 -87.5l-29 -29q-31 53 -77 99l-18 18l95 95l-247 248l-389 -389l212 -212l-105 -106l-19 18l-141 141q-66 66 -66 159t66 159l283 283q65 66 158.5 66zM600 706l105 105q10 -8 19 -17l141 -141 q66 -66 66 -159t-66 -159l-283 -283q-66 -66 -159 -66t-159 66l-141 141q-66 66 -66 159.5t66 159.5l55 55q29 -55 75 -102l18 -17l-95 -95l247 -248l389 389z"></g></svg>
         </a>
       </h3>
     </div>
@@ -283,17 +284,17 @@ revert releases and even remove other package owners.</p>
 <h4>Add owner</h4>
 <p>Adds an owner to package by specifying the package name and email of the new
 owner.</p>
-<p><code class="inline">mix hex.owner add PACKAGE EMAIL</code></p>
+<pre><code>mix hex.owner add PACKAGE EMAIL</code></pre>
 <h4>Remove owner</h4>
 <p>Removes an owner to package by specifying the package name and email of the new
 owner.</p>
-<p><code class="inline">mix hex.owner remove PACKAGE EMAIL</code></p>
+<pre><code>mix hex.owner remove PACKAGE EMAIL</code></pre>
 <h4>List owners</h4>
 <p>Lists all owners of given package.</p>
-<p><code class="inline">mix hex.owner list PACKAGE</code></p>
+<pre><code>mix hex.owner list PACKAGE</code></pre>
 <h4>List owned packages</h4>
 <p>Lists all packages owned by the current user.</p>
-<p><code class="inline">mix hex.owner packages</code></p>
+<pre><code>mix hex.owner packages</code></pre>
 
     </div>
   </div>
@@ -304,7 +305,7 @@ owner.</p>
       <h3 id="hex_public_keys" class="panel-title">
         hex.public_keys
         <a href="#hex_public_keys">
-          <svg aria-hidden="aria-hidden" class="glyphicon pull-right" version="1.1" viewBox="0 0 1200 1200"><g transform="translate(0, 1200) scale(1, -1)"><path d="M776.5 1214q93.5 0 159.5 -66l141 -141q66 -66 66 -160q0 -42 -28 -95.5t-62 -87.5l-29 -29q-31 53 -77 99l-18 18l95 95l-247 248l-389 -389l212 -212l-105 -106l-19 18l-141 141q-66 66 -66 159t66 159l283 283q65 66 158.5 66zM600 706l105 105q10 -8 19 -17l141 -141 q66 -66 66 -159t-66 -159l-283 -283q-66 -66 -159 -66t-159 66l-141 141q-66 66 -66 159.5t66 159.5l55 55q29 -55 75 -102l18 -17l-95 -95l247 -248l389 389z"></g></svg>
+          <svg aria-hidden="aria-hidden" class="glyphicon glyphicon-link pull-right" version="1.1" viewBox="0 0 1200 1200"><g transform="translate(0, 1200) scale(1, -1)"><path d="M776.5 1214q93.5 0 159.5 -66l141 -141q66 -66 66 -160q0 -42 -28 -95.5t-62 -87.5l-29 -29q-31 53 -77 99l-18 18l95 95l-247 248l-389 -389l212 -212l-105 -106l-19 18l-141 141q-66 66 -66 159t66 159l283 283q65 66 158.5 66zM600 706l105 105q10 -8 19 -17l141 -141 q66 -66 66 -159t-66 -159l-283 -283q-66 -66 -159 -66t-159 66l-141 141q-66 66 -66 159.5t66 159.5l55 55q29 -55 75 -102l18 -17l-95 -95l247 -248l389 389z"></g></svg>
         </a>
       </h3>
     </div>
@@ -313,13 +314,13 @@ owner.</p>
 <p>Hex by default ships with a public key for Hex.pm but new
 ones can be added for other repositories.</p>
 <p>To list all available keys:</p>
-<pre><code>$ mix hex.public_keys list</code></pre>
+<pre><code>mix hex.public_keys list</code></pre>
 <p>To list all available keys showing the keys themselves:</p>
-<pre><code>$ mix hex.public_keys list --detailed</code></pre>
+<pre><code>mix hex.public_keys list --detailed</code></pre>
 <p>To add a new key:</p>
-<pre><code>$ mix hex.public_keys add URL_TO_REPO LOCAL_PATH_TO_KEY</code></pre>
+<pre><code>mix hex.public_keys add URL_TO_REPO LOCAL_PATH_TO_KEY</code></pre>
 <p>To remove a key:</p>
-<pre><code>$ mix hex.public_keys remove URL_TO_REPO</code></pre>
+<pre><code>mix hex.public_keys remove URL_TO_REPO</code></pre>
 <p>Be careful when adding new keys. Only add keys from sources you
 trust.</p>
 <p>Public keys are by default stored in your HEX_HOME under the
@@ -340,22 +341,35 @@ intended for automation in build systems like <code class="inline">make</code>
       <h3 id="hex_publish" class="panel-title">
         hex.publish
         <a href="#hex_publish">
-          <svg aria-hidden="aria-hidden" class="glyphicon pull-right" version="1.1" viewBox="0 0 1200 1200"><g transform="translate(0, 1200) scale(1, -1)"><path d="M776.5 1214q93.5 0 159.5 -66l141 -141q66 -66 66 -160q0 -42 -28 -95.5t-62 -87.5l-29 -29q-31 53 -77 99l-18 18l95 95l-247 248l-389 -389l212 -212l-105 -106l-19 18l-141 141q-66 66 -66 159t66 159l283 283q65 66 158.5 66zM600 706l105 105q10 -8 19 -17l141 -141 q66 -66 66 -159t-66 -159l-283 -283q-66 -66 -159 -66t-159 66l-141 141q-66 66 -66 159.5t66 159.5l55 55q29 -55 75 -102l18 -17l-95 -95l247 -248l389 389z"></g></svg>
+          <svg aria-hidden="aria-hidden" class="glyphicon glyphicon-link pull-right" version="1.1" viewBox="0 0 1200 1200"><g transform="translate(0, 1200) scale(1, -1)"><path d="M776.5 1214q93.5 0 159.5 -66l141 -141q66 -66 66 -160q0 -42 -28 -95.5t-62 -87.5l-29 -29q-31 53 -77 99l-18 18l95 95l-247 248l-389 -389l212 -212l-105 -106l-19 18l-141 141q-66 66 -66 159t66 159l283 283q65 66 158.5 66zM600 706l105 105q10 -8 19 -17l141 -141 q66 -66 66 -159t-66 -159l-283 -283q-66 -66 -159 -66t-159 66l-141 141q-66 66 -66 159.5t66 159.5l55 55q29 -55 75 -102l18 -17l-95 -95l247 -248l389 389z"></g></svg>
         </a>
       </h3>
     </div>
     <div class="panel-body">
-      <p><em>Publishes a new version of your package and update the package.</em></p>
-<p><code class="inline">mix hex.publish</code></p>
+      <p><em>Publishes a new version of your package and its documentation.</em></p>
+<pre><code>mix hex.publish package</code></pre>
 <p>If it is a new package being published it will be created and the user
 specified in <code class="inline">username</code> will be the package owner. Only package owners can
 publish.</p>
 <p>A published version can be amended or reverted with <code class="inline">--revert</code> up to one hour
-after its publication. If you want to revert a publication that is more than
-one hour old you need to contact an administrator.</p>
+after its publication. Older packages can not be reverted.</p>
+<pre><code>mix hex.publish docs</code></pre>
+<p>The documentation will be accessible at <code class="inline">https://hexdocs.pm/my_package/1.0.0</code>,
+<code class="inline">https://hexdocs.pm/my_package</code> will always redirect to the latest published
+version.</p>
+<p>Documentation will be generated by running the <code class="inline">mix docs</code> task. <code class="inline">ex_doc</code>
+provides this task by default, but any library can be used. Or an alias can be
+used to extend the documentation generation. The expected result of the task
+is the generated documentation located in the <code class="inline">docs/</code> directory with an
+<code class="inline">index.html</code> file.</p>
+<p>Note that if you want to publish a new version of your package and its
+documentation in one step, you can use the following shorthand:</p>
+<pre><code>mix hex.publish</code></pre>
 <h3>Command line options</h3>
 <ul>
 <li><code class="inline">--revert VERSION</code> - Revert given version
+</li>
+<li><code class="inline">--canonical URL</code> - Specify the canonical URL for the documentation
 </li>
 </ul>
 <h3>Configuration</h3>
@@ -417,21 +431,21 @@ by setting this field.
       <h3 id="hex_registry" class="panel-title">
         hex.registry
         <a href="#hex_registry">
-          <svg aria-hidden="aria-hidden" class="glyphicon pull-right" version="1.1" viewBox="0 0 1200 1200"><g transform="translate(0, 1200) scale(1, -1)"><path d="M776.5 1214q93.5 0 159.5 -66l141 -141q66 -66 66 -160q0 -42 -28 -95.5t-62 -87.5l-29 -29q-31 53 -77 99l-18 18l95 95l-247 248l-389 -389l212 -212l-105 -106l-19 18l-141 141q-66 66 -66 159t66 159l283 283q65 66 158.5 66zM600 706l105 105q10 -8 19 -17l141 -141 q66 -66 66 -159t-66 -159l-283 -283q-66 -66 -159 -66t-159 66l-141 141q-66 66 -66 159.5t66 159.5l55 55q29 -55 75 -102l18 -17l-95 -95l247 -248l389 389z"></g></svg>
+          <svg aria-hidden="aria-hidden" class="glyphicon glyphicon-link pull-right" version="1.1" viewBox="0 0 1200 1200"><g transform="translate(0, 1200) scale(1, -1)"><path d="M776.5 1214q93.5 0 159.5 -66l141 -141q66 -66 66 -160q0 -42 -28 -95.5t-62 -87.5l-29 -29q-31 53 -77 99l-18 18l95 95l-247 248l-389 -389l212 -212l-105 -106l-19 18l-141 141q-66 66 -66 159t66 159l283 283q65 66 158.5 66zM600 706l105 105q10 -8 19 -17l141 -141 q66 -66 66 -159t-66 -159l-283 -283q-66 -66 -159 -66t-159 66l-141 141q-66 66 -66 159.5t66 159.5l55 55q29 -55 75 -102l18 -17l-95 -95l247 -248l389 389z"></g></svg>
         </a>
       </h3>
     </div>
     <div class="panel-body">
-      <p><em>Tasks for working with the locally cached registry file. </em></p>
+      <p><em>Tasks for working with the locally cached registry file.</em></p>
 <h4>Fetch registry</h4>
 <p>Updates the locally cached registry file.</p>
-<p><code class="inline">mix hex.registry fetch</code></p>
+<pre><code>mix hex.registry fetch</code></pre>
 <h4>Dump registry</h4>
 <p>Copies the cached registry file to the given path.</p>
-<p><code class="inline">mix hex.registry dump &lt;path&gt;</code></p>
+<pre><code>mix hex.registry dump &lt;path&gt;</code></pre>
 <h4>Load registry</h4>
 <p>Copies given regsitry file to the cache.</p>
-<p><code class="inline">mix hex.registry load &lt;path&gt;</code></p>
+<pre><code>mix hex.registry load &lt;path&gt;</code></pre>
 
     </div>
   </div>
@@ -442,13 +456,13 @@ by setting this field.
       <h3 id="hex_search" class="panel-title">
         hex.search
         <a href="#hex_search">
-          <svg aria-hidden="aria-hidden" class="glyphicon pull-right" version="1.1" viewBox="0 0 1200 1200"><g transform="translate(0, 1200) scale(1, -1)"><path d="M776.5 1214q93.5 0 159.5 -66l141 -141q66 -66 66 -160q0 -42 -28 -95.5t-62 -87.5l-29 -29q-31 53 -77 99l-18 18l95 95l-247 248l-389 -389l212 -212l-105 -106l-19 18l-141 141q-66 66 -66 159t66 159l283 283q65 66 158.5 66zM600 706l105 105q10 -8 19 -17l141 -141 q66 -66 66 -159t-66 -159l-283 -283q-66 -66 -159 -66t-159 66l-141 141q-66 66 -66 159.5t66 159.5l55 55q29 -55 75 -102l18 -17l-95 -95l247 -248l389 389z"></g></svg>
+          <svg aria-hidden="aria-hidden" class="glyphicon glyphicon-link pull-right" version="1.1" viewBox="0 0 1200 1200"><g transform="translate(0, 1200) scale(1, -1)"><path d="M776.5 1214q93.5 0 159.5 -66l141 -141q66 -66 66 -160q0 -42 -28 -95.5t-62 -87.5l-29 -29q-31 53 -77 99l-18 18l95 95l-247 248l-389 -389l212 -212l-105 -106l-19 18l-141 141q-66 66 -66 159t66 159l283 283q65 66 158.5 66zM600 706l105 105q10 -8 19 -17l141 -141 q66 -66 66 -159t-66 -159l-283 -283q-66 -66 -159 -66t-159 66l-141 141q-66 66 -66 159.5t66 159.5l55 55q29 -55 75 -102l18 -17l-95 -95l247 -248l389 389z"></g></svg>
         </a>
       </h3>
     </div>
     <div class="panel-body">
       <p><em>Displays packages matching the given search query.</em></p>
-<p><code class="inline">mix hex.search PACKAGE</code></p>
+<pre><code>mix hex.search PACKAGE</code></pre>
 
     </div>
   </div>
@@ -459,29 +473,32 @@ by setting this field.
       <h3 id="hex_user" class="panel-title">
         hex.user
         <a href="#hex_user">
-          <svg aria-hidden="aria-hidden" class="glyphicon pull-right" version="1.1" viewBox="0 0 1200 1200"><g transform="translate(0, 1200) scale(1, -1)"><path d="M776.5 1214q93.5 0 159.5 -66l141 -141q66 -66 66 -160q0 -42 -28 -95.5t-62 -87.5l-29 -29q-31 53 -77 99l-18 18l95 95l-247 248l-389 -389l212 -212l-105 -106l-19 18l-141 141q-66 66 -66 159t66 159l283 283q65 66 158.5 66zM600 706l105 105q10 -8 19 -17l141 -141 q66 -66 66 -159t-66 -159l-283 -283q-66 -66 -159 -66t-159 66l-141 141q-66 66 -66 159.5t66 159.5l55 55q29 -55 75 -102l18 -17l-95 -95l247 -248l389 389z"></g></svg>
+          <svg aria-hidden="aria-hidden" class="glyphicon glyphicon-link pull-right" version="1.1" viewBox="0 0 1200 1200"><g transform="translate(0, 1200) scale(1, -1)"><path d="M776.5 1214q93.5 0 159.5 -66l141 -141q66 -66 66 -160q0 -42 -28 -95.5t-62 -87.5l-29 -29q-31 53 -77 99l-18 18l95 95l-247 248l-389 -389l212 -212l-105 -106l-19 18l-141 141q-66 66 -66 159t66 159l283 283q65 66 158.5 66zM600 706l105 105q10 -8 19 -17l141 -141 q66 -66 66 -159t-66 -159l-283 -283q-66 -66 -159 -66t-159 66l-141 141q-66 66 -66 159.5t66 159.5l55 55q29 -55 75 -102l18 -17l-95 -95l247 -248l389 389z"></g></svg>
         </a>
       </h3>
     </div>
     <div class="panel-body">
       <p><em>Hex user tasks.</em></p>
 <h4>Register a new user</h4>
-<p><code class="inline">mix hex.user register</code></p>
+<pre><code>mix hex.user register</code></pre>
 <h4>Print the current user</h4>
-<p><code class="inline">mix hex.user whoami</code></p>
+<pre><code>mix hex.user whoami</code></pre>
 <h4>Authorize a new user</h4>
 <p>Authorizes a new user on the local machine by generating a new API key and
 storing it in the Hex config.</p>
-<p><code class="inline">mix hex.user auth</code></p>
+<pre><code>mix hex.user auth</code></pre>
 <h4>Deauthorize the user</h4>
 <p>Deauthorizes the user from the local machine by removing the API key from the
 Hex config.</p>
-<p><code class="inline">mix hex.user deauth</code></p>
+<pre><code>mix hex.user deauth</code></pre>
+<h4>Reencrypt API key</h4>
+<p>Updates the passphrase for the locally stored API key.</p>
+<pre><code>mix hex.user passphrase</code></pre>
 <h4>Test authentication</h4>
 <p>Tests if authentication works with the stored API key.</p>
-<p><code class="inline">mix hex.user test</code></p>
+<pre><code>mix hex.user test</code></pre>
 <h4>Reset user password</h4>
-<p><code class="inline">mix hex.user reset password</code></p>
+<pre><code>mix hex.user reset password</code></pre>
 
     </div>
   </div>
