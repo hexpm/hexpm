@@ -1,7 +1,7 @@
 defmodule HexWeb.InstallController do
   use HexWeb.Web, :controller
 
-  def get_archive(conn, params) do
+  def archive(conn, params) do
     current = params["elixir"] ||
       case List.first get_req_header(conn, "user-agent") do
         "Mix/" <> version ->

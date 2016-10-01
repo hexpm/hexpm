@@ -1,6 +1,6 @@
 <div class="row">
   <div class="col-md-8 col-md-offset-2">
-    <%= form_tag(password_path(HexWeb.Endpoint, :submit_reset)) do %>
+    <%= form_tag(password_reset_path(HexWeb.Endpoint, :create)) do %>
       <h2>Reset your password</h2>
 
       <div class="form-group">

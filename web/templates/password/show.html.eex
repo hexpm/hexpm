@@ -1,6 +1,6 @@
 <div class="row">
   <div class="col-md-8 col-md-offset-2">
-    <%= form_tag(password_path(HexWeb.Endpoint, :submit_new)) do %>
+    <%= form_tag(password_path(HexWeb.Endpoint, :update)) do %>
       <h2>Choose a new password</h2>
 
       <div class="form-group">
