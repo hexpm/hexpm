@@ -7,8 +7,9 @@
     padding: 20px 0 20px 0;
     margin-bottom: 20px;
   }
-  p, ol {
+  p, ol, li {
     color: #555555;
+    font-weight: 300;
     @include font-size(16 , 35);
     margin-bottom: 20px;
   }
