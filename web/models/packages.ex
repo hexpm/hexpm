@@ -1,8 +1,8 @@
 defmodule HexWeb.Packages do
   use HexWeb.Web, :crud
 
-  def count(filter) do
-     HexWeb.Repo.one!(Package.count(filter))
+  def count(filter \\ nil) do
+    HexWeb.Repo.one!(Package.count(filter))
   end
 
   def get(name) do
@@ -26,6 +26,10 @@ defmodule HexWeb.Packages do
     end)
   end
 
+  def recent(count) do
+    Repo.all(Package.recent(count))
+  end
+
   def package_downloads(package) do
     PackageDownload.package(package)
     |> Repo.all
@@ -34,6 +38,16 @@ defmodule HexWeb.Packages do
 
   def packages_downloads(packages, view) do
     PackageDownload.packages(packages, view)
+    |> Repo.all
+    |> Enum.into(%{})
+  end
+
+  def top_downloads(view, count) do
+    Repo.all(PackageDownload.top(view, count))
+  end
+
+  def total_downloads do
+    PackageDownload.total
     |> Repo.all
     |> Enum.into(%{})
   end

@@ -9,6 +9,14 @@ defmodule HexWeb.Releases do
     |> Release.sort
   end
 
+  def recent(count) do
+    Repo.all(Release.recent(count))
+  end
+
+  def count do
+    Repo.one!(Release.count)
+  end
+
   def package_versions(packages) do
     Release.package_versions(packages)
     |> Repo.all
