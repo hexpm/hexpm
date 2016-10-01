@@ -158,6 +158,10 @@ defmodule HexWeb.ViewHelpers do
   defp pretty_month(10), do: "October"
   defp pretty_month(11), do: "November"
   defp pretty_month(12), do: "December"
+
+  def if_value(arg, nil, _fun),   do: arg
+  def if_value(arg, false, _fun), do: arg
+  def if_value(arg, _true, fun),  do: fun.(arg)
 end
 
 defimpl Phoenix.HTML.Safe, for: Version do
