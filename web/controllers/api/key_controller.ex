@@ -69,6 +69,6 @@ defmodule HexWeb.API.KeyController do
 
     conn
     |> put_status(200)
-    |> render(:delete, key: HexWeb.Repo.get!(Key, key.id), authing_key: key)
+    |> render(:delete, key: Keys.get(key.id), authing_key: key)
   end
 end
