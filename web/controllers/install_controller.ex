@@ -10,10 +10,10 @@ defmodule HexWeb.InstallController do
           "1.0.0"
       end
 
-    all_versions = HexWeb.Install.all |> HexWeb.Repo.all
+    all_versions = Installs.all
 
     url =
-      case HexWeb.Install.latest(all_versions, current) do
+      case Install.latest(all_versions, current) do
         {:ok, _hex, elixir} ->
           "installs/#{elixir}/hex.ez"
         :error ->
