@@ -1,7 +1,6 @@
 defmodule HexWeb.ControllerHelpers do
   import Plug.Conn
   import Phoenix.Controller
-  import Ecto
 
   @max_cache_age 60
 
@@ -173,7 +172,7 @@ defmodule HexWeb.ControllerHelpers do
   end
 
   def maybe_fetch_package(conn, _opts) do
-    if package = HexWeb.Repo.get_by(HexWeb.Package, name: conn.params["name"]) do
+    if package = HexWeb.Packages.get(conn.params["name"]) do
       assign(conn, :package, package)
     else
       conn
@@ -181,14 +180,13 @@ defmodule HexWeb.ControllerHelpers do
   end
 
   def fetch_package(conn, _opts) do
-    package = HexWeb.Repo.get_by!(HexWeb.Package, name: conn.params["name"])
+    package = HexWeb.Packages.get!(conn.params["name"])
     assign(conn, :package, package)
   end
 
   def fetch_release(conn, _opts) do
-    package = HexWeb.Repo.get_by!(HexWeb.Package, name: conn.params["name"])
-    release = HexWeb.Repo.get_by!(assoc(package, :releases), version: conn.params["version"])
-    release = %{release | package: package}
+    package = HexWeb.Packages.get!(conn.params["name"])
+    release = HexWeb.Releases.get(package, conn.params["version"])
 
     conn
     |> assign(:package, package)

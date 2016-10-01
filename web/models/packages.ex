@@ -6,6 +6,10 @@ defmodule HexWeb.Packages do
   end
 
   def get(name) do
+    Repo.get_by(Package, name: name)
+  end
+
+  def get!(name) do
     Repo.get_by!(Package, name: name)
   end
 

@@ -17,6 +17,11 @@ defmodule HexWeb.Releases do
     Repo.one!(Release.count)
   end
 
+  def get(package, version) do
+    release = Repo.get_by!(assoc(package, :releases), version: version)
+    %{release | package: package}
+  end
+
   def package_versions(packages) do
     Release.package_versions(packages)
     |> Repo.all

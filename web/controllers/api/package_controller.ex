@@ -17,7 +17,7 @@ defmodule HexWeb.API.PackageController do
   end
 
   def show(conn, %{"name" => name}) do
-    package = Packages.get(name)
+    package = Packages.get!(name)
 
     when_stale(conn, package, fn conn ->
       package = Packages.preload(package)
