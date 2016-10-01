@@ -1,4 +1,4 @@
-defmodule HexWeb.LoginControllerTest do
+defmodule HexWeb.SignupControllerTest do
   use HexWeb.ConnCase, async: true
 
   alias HexWeb.User

@@ -1,6 +1,6 @@
 <div class="row">
   <div class="col-md-8 col-md-offset-2">
-    <%= form_tag("/login") do %>
+    <%= form_tag("TODO") do %>
       <h2>Log in</h2>
 
       <div class="form-group">
@@ -10,7 +10,7 @@
 
       <div class="form-group">
         <label for="password">Password</label>
-        <span style="float: right;"><a href="/password/reset">Forgot your password?</a></span>
+        <span style="float: right;"><a href="<%= password_reset_path(HexWeb.Endpoint, :show) %>">Forgot your password?</a></span>
         <input type="password" class="form-control" name="password">
       </div>
 
@@ -18,7 +18,7 @@
 
       <br><br>
 
-      <p><a href="/signup">Don't have an account?</a></p>
+      <p><a href="<%= signup_path(HexWeb.Endpoint, :show) %>">Don't have an account?</a></p>
     <% end %>
   </div>
 </div>
