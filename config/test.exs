@@ -13,6 +13,9 @@ config :hex_web, HexWeb.Endpoint,
   http: [port: 4001],
   server: false
 
+config :hex_web, HexWeb.Mailer,
+  adapter: Bamboo.LocalAdapter
+
 config :hex_web, HexWeb.Repo,
   adapter: Ecto.Adapters.Postgres,
   username: "postgres",
