@@ -23,6 +23,12 @@ defmodule HexWeb.LoginController do
     end
   end
 
+  def delete(conn, _params) do
+    conn
+    |> delete_session("username")
+    |> redirect(to: "/")
+  end
+
   defp auth(username, password) do
     case HexWeb.Auth.password_auth(username, password) do
       {:ok, {user, nil}} ->

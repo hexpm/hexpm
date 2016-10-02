@@ -13,9 +13,9 @@ defmodule HexWeb.PasswordControllerTest do
 
   test "show select new password", c do
     conn = get(build_conn(), "password/new", %{"username" => c.user.username, "key" => "RESET_KEY"})
+    assert conn.status == 200
     assert conn.resp_body =~ "Choose a new password"
     assert conn.resp_body =~ "RESET_KEY"
-    assert conn.status == 200
   end
 
   test "submit new password", c do

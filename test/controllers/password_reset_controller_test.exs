@@ -12,15 +12,13 @@ defmodule HexWeb.PasswordResetControllerTest do
 
   test "show reset your password" do
     conn = get(build_conn(), "password/reset", %{})
-    assert conn.resp_body =~ "Reset your password"
-    assert conn.status == 200
+    assert response(conn, 200) =~ "Reset your password"
   end
 
   test "email is sent with reset_token when password is reset", c do
     # initiate reset request
     conn = post(build_conn(), "password/reset", %{"username" => c.user.username})
-    assert conn.resp_body =~ "Reset your password"
-    assert conn.status == 200
+    assert response(conn, 200) =~ "Reset your password"
 
     # check email was sent with correct token
     user = HexWeb.Repo.get_by!(User, username: c.user.username)

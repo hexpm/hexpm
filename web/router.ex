@@ -59,6 +59,7 @@ defmodule HexWeb.Router do
 
     get  "/login", LoginController, :show
     post "/login", LoginController, :create
+    post "/logout", LoginController, :delete
 
     get  "/signup",  SignupController, :signup
     get  "/confirm", SignupController, :confirm

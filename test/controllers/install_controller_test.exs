@@ -29,42 +29,34 @@ defmodule HexWeb.InstallControllerTest do
 
     try do
       conn = get(build_conn(), "installs/hex.ez")
-      assert conn.status == 302
-      assert get_resp_header(conn, "location") == ["http://s3.hex.pm/installs/1.0.0/hex.ez"]
+      assert redirected_to(conn) == "http://s3.hex.pm/installs/1.0.0/hex.ez"
 
       conn = get(build_conn(), "installs/hex.ez?elixir=0.0.1")
-      assert conn.status == 302
-      assert get_resp_header(conn, "location") == ["http://s3.hex.pm/installs/hex.ez"]
+      assert redirected_to(conn) == "http://s3.hex.pm/installs/hex.ez"
 
       conn = get(build_conn(), "installs/hex.ez?elixir=0.13.0")
-      assert conn.status == 302
-      assert get_resp_header(conn, "location") == ["http://s3.hex.pm/installs/0.13.0-dev/hex.ez"]
+      assert redirected_to(conn) == "http://s3.hex.pm/installs/0.13.0-dev/hex.ez"
 
       conn = get(build_conn(), "installs/hex.ez?elixir=0.13.1")
-      assert conn.status == 302
-      assert get_resp_header(conn, "location") == ["http://s3.hex.pm/installs/0.13.1-dev/hex.ez"]
+      assert redirected_to(conn) == "http://s3.hex.pm/installs/0.13.1-dev/hex.ez"
 
       conn = get(build_conn(), "installs/hex.ez?elixir=0.14.0")
-      assert conn.status == 302
-      assert get_resp_header(conn, "location") == ["http://s3.hex.pm/installs/0.14.0/hex.ez"]
+      assert redirected_to(conn) == "http://s3.hex.pm/installs/0.14.0/hex.ez"
 
       conn = get(build_conn(), "installs/hex.ez?elixir=0.14.1-dev")
-      assert conn.status == 302
-      assert get_resp_header(conn, "location") == ["http://s3.hex.pm/installs/0.14.0/hex.ez"]
+      assert redirected_to(conn) == "http://s3.hex.pm/installs/0.14.0/hex.ez"
 
       conn = get(build_conn(), "installs/hex.ez?elixir=0.14.1")
-      assert conn.status == 302
-      assert get_resp_header(conn, "location") == ["http://s3.hex.pm/installs/0.14.1/hex.ez"]
+      assert redirected_to(conn) == "http://s3.hex.pm/installs/0.14.1/hex.ez"
 
       conn = get(build_conn(), "installs/hex.ez?elixir=0.14.2")
-      assert conn.status == 302
-      assert get_resp_header(conn, "location") == ["http://s3.hex.pm/installs/0.14.2/hex.ez"]
+      assert redirected_to(conn) == "http://s3.hex.pm/installs/0.14.2/hex.ez"
 
-      conn = build_conn()
-             |> put_req_header("user-agent", "Mix/0.14.1-dev")
-             |> get("installs/hex.ez")
-      assert conn.status == 302
-      assert get_resp_header(conn, "location") == ["http://s3.hex.pm/installs/0.14.0/hex.ez"]
+      conn =
+        build_conn()
+        |> put_req_header("user-agent", "Mix/0.14.1-dev")
+        |> get("installs/hex.ez")
+      assert redirected_to(conn) == "http://s3.hex.pm/installs/0.14.0/hex.ez"
     after
       Application.put_env(:hex_web, :cdn_url, cdn_url)
     end
