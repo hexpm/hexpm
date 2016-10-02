@@ -14,7 +14,7 @@ defmodule HexWeb.API.OwnerController do
 
   def show(conn, %{"email" => email}) do
     email = URI.decode_www_form(email)
-    owner = Owners.get(email)
+    owner = Owners.get!(email)
 
     if package_owner?(conn.assigns.package, owner) do
       conn
@@ -27,7 +27,7 @@ defmodule HexWeb.API.OwnerController do
 
   def create(conn, %{"email" => email}) do
     email = URI.decode_www_form(email)
-    new_owner = Owners.get(email)
+    new_owner = Owners.get!(email)
     package = conn.assigns.package
 
     case Owners.add(package, new_owner, audit: audit_data(conn)) do
@@ -42,7 +42,7 @@ defmodule HexWeb.API.OwnerController do
 
   def delete(conn, %{"email" => email}) do
     email = URI.decode_www_form(email)
-    remove_owner = Owners.get(email)
+    remove_owner = Owners.get!(email)
     package = conn.assigns.package
 
     case Owners.remove(package, remove_owner, audit: audit_data(conn)) do

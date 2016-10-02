@@ -88,8 +88,7 @@ defmodule HexWeb.AuthHelpers do
   def package_owner?(%Plug.Conn{} = conn, user),
     do: package_owner?(conn.assigns.package, user)
   def package_owner?(%HexWeb.Package{} = package, user) do
-    HexWeb.Package.is_owner(package, user)
-    |> HexWeb.Repo.one!
+    HexWeb.Packages.owner?(package, user)
   end
 
   def maybe_package_owner?(%Plug.Conn{} = conn, user),
@@ -97,8 +96,7 @@ defmodule HexWeb.AuthHelpers do
   def maybe_package_owner?(nil, _user),
     do: true
   def maybe_package_owner?(%HexWeb.Package{} = package, user) do
-    HexWeb.Package.is_owner(package, user)
-    |> HexWeb.Repo.one!
+    HexWeb.Packages.owner?(package, user)
   end
 
   def correct_user?(%Plug.Conn{} = conn, user),

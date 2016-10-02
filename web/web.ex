@@ -47,7 +47,7 @@ defmodule HexWeb.Web do
     quote do
       use Phoenix.Controller
 
-      alias HexWeb.{Keys, Owners, Packages, Releases, Sitemaps, Users}
+      alias HexWeb.{Installs, Keys, Owners, Packages, Releases, Sitemaps, Users}
 
       alias HexWeb.Repo
       import Ecto
