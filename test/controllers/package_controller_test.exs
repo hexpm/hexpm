@@ -39,14 +39,12 @@ defmodule HexWeb.PackageControllerTest do
 
   test "show package" do
     conn = get build_conn(), "/packages/decimal"
-    assert conn.status == 200
-    assert String.contains?(conn.resp_body, escape("{:decimal, \"~> 0.0.2\"}"))
+    assert response(conn, 200) =~ escape("{:decimal, \"~> 0.0.2\"}")
   end
 
   test "show package version" do
     conn = get build_conn(), "/packages/decimal/0.0.1"
-    assert conn.status == 200
-    assert String.contains?(conn.resp_body, escape("{:decimal, \"~> 0.0.1\"}"))
+    assert response(conn, 200) =~ escape("{:decimal, \"~> 0.0.1\"}")
   end
 
   defp escape(html) do

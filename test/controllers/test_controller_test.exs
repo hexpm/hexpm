@@ -16,7 +16,7 @@ defmodule HexWeb.TestControllerTest do
 
   test "fetch registry" do
     RegistryBuilder.partial_build(:v1)
-    conn = get build_conn(), "repo/registry.ets.gz"
+    conn = get(build_conn(), "repo/registry.ets.gz")
     assert conn.status in 200..399
   end
 
