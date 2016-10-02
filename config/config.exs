@@ -29,10 +29,7 @@ config :hex_web,
 
   email_impl:   email,
   email_host:   System.get_env("HEX_EMAIL_HOST"),
-  ses_endpoint: System.get_env("HEX_SES_ENDPOINT") || "email-smtp.us-west-2.amazonaws.com",
-  ses_port:     System.get_env("HEX_SES_PORT") || "587",
-  ses_user:     System.get_env("HEX_SES_USERNAME"),
-  ses_pass:     System.get_env("HEX_SES_PASSWORD"),
+
   ses_rate:     System.get_env("HEX_SES_RATE") || "1000",
 
   cdn_impl:       cdn,
@@ -64,6 +61,16 @@ config :hex_web, HexWeb.Endpoint,
   root: Path.dirname(__DIR__),
   secret_key_base: "Cc2cUvbm9x/uPD01xnKmpmU93mgZuht5cTejKf/Z2x0MmfqE1ZgHJ1/hSZwd8u4L",
   render_errors: [accepts: ~w(html json elixir erlang)]
+
+config :hex_web, HexWeb.Mailer,
+  adapter: Bamboo.SMTPAdapter,
+  server: System.get_env("HEX_SES_ENDPOINT") || "email-smtp.us-west-2.amazonaws.com",
+  port: System.get_env("HEX_SES_PORT") || "587",
+  username: System.get_env("HEX_SES_USERNAME"),
+  password: System.get_env("HEX_SES_PASSWORD"),
+  tls: :always,
+  ssl: true,
+  retries: 1
 
 config :phoenix, :template_engines,
   md: HexWeb.MarkdownEngine
