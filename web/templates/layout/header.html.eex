@@ -50,6 +50,7 @@
 
           <ul class="nav navbar-nav navbar-right">
             <li><a href="<%= package_path(HexWeb.Endpoint, :index) %>">Packages</a></li>
+
             <li class="dropdown">
               <a href="#" class="dropdown-toggle" data-toggle="dropdown">Documentation <b class="caret"></b></a>
               <ul class="dropdown-menu">
@@ -69,10 +70,36 @@
                 <li><a href="https://github.com/hexpm/specifications">Specifications</a></li>
               </ul>
             </li>
-            <li><a href="<%= login_path(HexWeb.Endpoint, :show) %>">Log in</a></li>
+
+            <%= if username = assigns[:username] do %>
+              <li class="dropdown">
+                <a href="#" class="dropdown-toggle" data-toggle="dropdown"><%= username %> <b class="caret"></b></a>
+                <ul class="dropdown-menu">
+                  <li><a href="#">Log out</a></li>
+                </ul>
+              </li>
+            <% else %>
+              <li><a href="<%= login_path(HexWeb.Endpoint, :show) %>">Log in</a></li>
+            <% end %>
+
           </ul>
         </div><!--/.nav-collapse -->
       </div>
     </nav>
+
+    <div class="container">
+      <%= if flash = get_flash(@conn, :error) do %>
+        <div class="alert alert-danger" role="alert"><%= flash %></div>
+      <% end %>
+      <%= if flash = get_flash(@conn, :warning) do %>
+        <div class="alert alert-warning" role="alert"><%= flash %></div>
+      <% end %>
+      <%= if flash = get_flash(@conn, :info) do %>
+        <div class="alert alert-info" role="alert"><%= flash %></div>
+      <% end %>
+      <%= if flash = get_flash(@conn, :success) do %>
+        <div class="alert alert-success" role="alert"><%= flash %></div>
+      <% end %>
+    </div>
 
     <div class="<%= container_class(assigns) %>">

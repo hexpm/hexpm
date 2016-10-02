@@ -14,10 +14,12 @@ defmodule HexWeb.PasswordController do
     revoke_all_keys? = Map.get(params, "revoke_all_keys", "yes") == "yes"
     success = Users.reset(username, key, password, revoke_all_keys?) == :ok
 
-    render conn, "update.html", [
+    conn
+    |> put_status(success_to_status(success))
+    |> render("update.html", [
       title: "Choose a new password",
       container: "container page password-view",
       success: success
-    ]
+    ])
   end
 end

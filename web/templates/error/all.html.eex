@@ -1,4 +1,4 @@
-<%= render(HexWeb.LayoutView, "header.html") %>
+<%= render(HexWeb.LayoutView, "header.html", assigns) %>
 <h1><%= @status %></h1>
 <span class="message"><%= @message %></span>
-<%= render(HexWeb.LayoutView, "footer.html") %>
+<%= render(HexWeb.LayoutView, "footer.html", assigns) %>
