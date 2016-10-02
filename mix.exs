@@ -44,7 +44,8 @@ defmodule HexWeb.Mixfile do
      {:cowboy,              "~> 1.0"},
      {:porcelain,           "~> 2.0"},
      {:earmark,             "~> 1.0"},
-     {:gen_smtp,            "~> 0.9"},
+     {:bamboo,              "~> 0.7"},
+     {:bamboo_smtp,         "~> 1.2"},
      {:comeonin,            "~> 2.0"},
      {:httpoison,           "~> 0.8"},
      {:sweet_xml,           "~> 0.5"},
@@ -70,8 +71,9 @@ defmodule HexWeb.Mixfile do
      :ex_aws,
      :sweet_xml,
      :porcelain,
-     :gen_smtp,
-     :jiffy]
+     :jiffy,
+     :bamboo,
+     :bamboo_smtp]
   end
 
   defp aliases do
