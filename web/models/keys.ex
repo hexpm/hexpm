@@ -6,11 +6,11 @@ defmodule HexWeb.Keys do
     |> Repo.all
   end
 
-  def get(id) do
+  def get!(id) do
     Repo.get!(Key, id)
   end
 
-  def get(user, name) do
+  def get!(user, name) do
     Repo.one!(Key.get(user, name))
   end
 

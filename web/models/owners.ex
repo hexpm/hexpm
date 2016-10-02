@@ -6,7 +6,7 @@ defmodule HexWeb.Owners do
     |> Repo.all
   end
 
-  def get(email) do
+  def get!(email) do
     Repo.get_by!(User, email: email)
   end
 

@@ -186,7 +186,7 @@ defmodule HexWeb.ControllerHelpers do
 
   def fetch_release(conn, _opts) do
     package = HexWeb.Packages.get!(conn.params["name"])
-    release = HexWeb.Releases.get(package, conn.params["version"])
+    release = HexWeb.Releases.get!(package, conn.params["version"])
 
     conn
     |> assign(:package, package)
