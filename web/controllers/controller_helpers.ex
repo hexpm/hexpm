@@ -201,4 +201,7 @@ defmodule HexWeb.ControllerHelpers do
   def audit_data(conn) do
     {conn.assigns.user, conn.assigns.user_agent}
   end
+
+  def success_to_status(true), do: 200
+  def success_to_status(false), do: 400
 end

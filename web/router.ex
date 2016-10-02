@@ -5,10 +5,11 @@ defmodule HexWeb.Router do
 
   pipeline :browser do
     plug :accepts, ["html"]
-    # plug :fetch_flash
     plug :fetch_session
+    plug :fetch_flash
     plug :protect_from_forgery
     plug :put_secure_browser_headers
+    plug :login
   end
 
   pipeline :upload do
@@ -56,7 +57,9 @@ defmodule HexWeb.Router do
     get  "/packages/:name",          PackageController, :show
     get  "/packages/:name/:version", PackageController, :show
 
-    get  "/login",   LoginController,  :show
+    get  "/login", LoginController, :show
+    post "/login", LoginController, :create
+
     get  "/signup",  SignupController, :signup
     get  "/confirm", SignupController, :confirm
   end

@@ -34,7 +34,8 @@ defmodule HexWeb.Endpoint do
     store: :cookie,
     key: "_hex_web_key",
     signing_salt: "vGpjq82L",
-    encryption_salt: "y77stVMu"
+    encryption_salt: "y77stVMu",
+    max_age: 60 * 60 * 24 * 30
 
   plug HexWeb.Router
 end
