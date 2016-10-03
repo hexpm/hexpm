@@ -10,10 +10,11 @@ tool_compatibility = %{
   "mix" => [:mix],
   "rebar" => [:mix, :rebar, :erlang_mk],
   "rebar3"=> [:mix, :rebar, :erlang_mk],
+  "make" => [:mix, :erlang_mk],
   "erlang.mk" => [:mix, :erlang_mk]
 }
 
-compatible_tools = Enum.flat_map( build_tools, &(Map.get(tool_compatibility, &1, [])))
+compatible_tools = Enum.flat_map(build_tools, &(Map.get(tool_compatibility, &1, [])))
                    |> Enum.uniq
 
 tools = Keyword.take(tools, compatible_tools)
