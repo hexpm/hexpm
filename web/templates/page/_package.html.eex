@@ -1,5 +1,5 @@
 <li>
-  <div class='title-container'>
+  <div class="title-container">
     <a href="<%= package_path(HexWeb.Endpoint, :show, @package) %>" class="title"><%= @package %></a>
   </div>
   <p>

@@ -93,15 +93,20 @@ defmodule HexWeb.Web do
         Download,
         Install,
         Key,
+        Keys,
+        Owners,
         Package,
+        Packages,
         PackageDownload,
         PackageMetadata,
         PackageOwner,
         Release,
+        Releases,
         ReleaseDownload,
         ReleaseMetadata,
         Requirement,
-        User
+        User,
+        Users
       }
     end
   end

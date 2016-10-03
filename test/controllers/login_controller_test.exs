@@ -18,7 +18,7 @@ defmodule HexWeb.LoginControllerTest do
 
   test "log in with correct password", c do
     conn = post(build_conn(), "login", %{username: c.user.username, password: c.password})
-    assert redirected_to(conn) == "/"
+    assert redirected_to(conn) == "/users/#{c.user.username}"
     assert get_session(conn, "username") == c.user.username
   end
 
@@ -41,6 +41,9 @@ defmodule HexWeb.LoginControllerTest do
   test "log out", c do
     conn =
       build_conn()
+      # |> bypass_through(HexWeb.Router, [:browser])
+      # |> put_session("username", c.user.username)
+      # |> recycle
       |> my_put_session("username", c.user.username)
       |> post("logout")
 

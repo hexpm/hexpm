@@ -34,7 +34,7 @@ defmodule HexWeb.API.KeyController do
 
     case Keys.add(user, params, audit: audit_data(conn)) do
       {:ok, %{key: key}} ->
-        location = key_url(conn, :show, params["name"])
+        location = api_key_url(conn, :show, params["name"])
 
         conn
         |> put_resp_header("location", location)

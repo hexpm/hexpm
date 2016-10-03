@@ -6,7 +6,7 @@ defmodule HexWeb.API.UserController do
   def create(conn, params) do
     case Users.add(params) do
       {:ok, user} ->
-        location = user_url(conn, :show, user.username)
+        location = api_user_url(conn, :show, user.username)
 
         conn
         |> put_resp_header("location", location)

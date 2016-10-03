@@ -4,7 +4,7 @@ defmodule HexWeb.SignupController do
   def signup(conn, _params) do
     render conn, "signup.html", [
       title: "Sign up",
-      container: "container page login-view"
+      container: "container page signup"
     ]
   end
 

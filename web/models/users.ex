@@ -8,6 +8,10 @@ defmodule HexWeb.Users do
     )
   end
 
+  def get_by_username(username) do
+    Repo.get_by(User, username: username)
+  end
+
   def with_owned_packages(user) do
     Repo.preload(user, :owned_packages)
   end

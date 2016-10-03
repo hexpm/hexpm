@@ -1,0 +1,17 @@
+<h2><%= @user.username %></h2>
+
+<%= if @user.owned_packages == [] do %>
+  <h3>No owned packages</h3>
+<% else %>
+  <h3>Owned packages</h3>
+  <div class="user-package-list">
+    <ul>
+      <%= for package <- @packages do %>
+        <li>
+          <a href="<%= package_path(HexWeb.Endpoint, :show, package) %>"><strong><%= package.name %></strong></a>
+          <%= package.latest_version %>
+        </li>
+      <% end %>
+    </ul>
+  </div>
+<% end %>

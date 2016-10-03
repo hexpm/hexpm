@@ -26,6 +26,15 @@ defmodule HexWeb.Packages do
     update_in(package.releases, &Release.sort/1)
   end
 
+  def attach_versions(packages) do
+    versions = Releases.package_versions(packages)
+
+    Enum.map(packages, fn package ->
+      version = Release.latest_version(versions[package.id])
+      %{package | latest_version: version}
+    end)
+  end
+
   def search(page, packages_per_page, query, sort) do
     Package.all(page, packages_per_page, query, sort)
     |> Ecto.Query.preload(releases: ^from(r in Release, select: map(r, [:version])))
