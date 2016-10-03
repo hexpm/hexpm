@@ -32,11 +32,20 @@ defmodule HexWeb.Router do
     get  "/",         PageController, :index
     get  "/sponsors", PageController, :sponsors
 
+    get  "/login", LoginController, :show
+    post "/login", LoginController, :create
+    post "/logout", LoginController, :delete
+
+    get  "/signup",  SignupController, :signup
+    get  "/confirm", SignupController, :confirm
+
     get  "/password/new", PasswordController, :show
     post "/password/new", PasswordController, :update
 
     get  "/password/reset", PasswordResetController, :show
     post "/password/reset", PasswordResetController, :create
+
+    get  "/users/:username", UserController, :show
 
     get  "/docs/usage",          DocsController, :usage
     get  "/docs/rebar3_usage",   DocsController, :rebar3_usage
@@ -56,13 +65,6 @@ defmodule HexWeb.Router do
     get  "/packages",                PackageController, :index
     get  "/packages/:name",          PackageController, :show
     get  "/packages/:name/:version", PackageController, :show
-
-    get  "/login", LoginController, :show
-    post "/login", LoginController, :create
-    post "/logout", LoginController, :delete
-
-    get  "/signup",  SignupController, :signup
-    get  "/confirm", SignupController, :confirm
   end
 
   scope "/", HexWeb do
@@ -90,14 +92,14 @@ defmodule HexWeb.Router do
 
   unless Application.get_env(:hex_web, :read_only) do
 
-    scope "/api", HexWeb.API do
+    scope "/api", HexWeb.API, as: :api do
       pipe_through :upload
 
       post "/packages/:name/releases",               ReleaseController, :create
       post "/packages/:name/releases/:version/docs", DocsController,    :create
     end
 
-    scope "/api", HexWeb.API do
+    scope "/api", HexWeb.API, as: :api do
       pipe_through :api
 
       post   "/users",             UserController, :create
@@ -125,6 +127,5 @@ defmodule HexWeb.Router do
       delete "/keys",       KeyController, :delete_all
       delete "/keys/:name", KeyController, :delete
     end
-
   end
 end

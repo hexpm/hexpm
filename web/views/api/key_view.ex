@@ -20,7 +20,7 @@ defmodule HexWeb.API.KeyView do
       else
         entity
       end
-      |> Map.put(:url, key_url(HexWeb.Endpoint, :show, key))
+      |> Map.put(:url, api_key_url(HexWeb.Endpoint, :show, key))
     else
       entity
     end

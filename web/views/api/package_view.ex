@@ -11,7 +11,7 @@ defmodule HexWeb.API.PackageView do
     package
     |> Map.take([:name, :inserted_at, :updated_at])
     |> Map.put(:meta, Map.take(package.meta, [:description, :licenses, :links, :maintainers]))
-    |> Map.put(:url, package_url(HexWeb.Endpoint, :show, package))
+    |> Map.put(:url, api_package_url(HexWeb.Endpoint, :show, package))
     |> if_value(assoc_loaded?(package.releases), &load_releases(&1, get_params(view), package, package.releases))
     |> if_value(assoc_loaded?(package.downloads), &load_downloads(&1, package.downloads))
   end
@@ -22,7 +22,7 @@ defmodule HexWeb.API.PackageView do
         version = to_string(release.version)
         release
         |> Map.take(params)
-        |> Map.put(:url, release_url(HexWeb.Endpoint, :show, package, version))
+        |> Map.put(:url, api_release_url(HexWeb.Endpoint, :show, package, version))
       end)
 
     Map.put(entity, :releases, releases)

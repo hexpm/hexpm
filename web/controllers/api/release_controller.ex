@@ -47,7 +47,7 @@ defmodule HexWeb.API.ReleaseController do
   end
 
   defp publish_result({:ok, %{action: :insert, package: package, release: release}}, conn) do
-    location = release_url(conn, :show, package, release)
+    location = api_release_url(conn, :show, package, release)
 
     conn
     |> put_resp_header("location", location)

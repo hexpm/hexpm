@@ -86,11 +86,6 @@ defmodule HexWeb.PackageController do
 
   defp fetch_packages(page, packages_per_page, search, sort) do
     packages = Packages.search(page, packages_per_page, search, sort)
-    versions = Releases.package_versions(packages)
-
-    Enum.map(packages, fn package ->
-      version = Release.latest_version(versions[package.id])
-      Map.put(package, :latest_version, version)
-    end)
+    Packages.attach_versions(packages)
   end
 end

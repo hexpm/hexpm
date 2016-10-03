@@ -5,6 +5,7 @@ defmodule HexWeb.Package do
   schema "packages" do
     field :name, :string
     field :docs_updated_at, :naive_datetime
+    field :latest_version, HexWeb.Version, virtual: true
     timestamps()
 
     has_many :releases, Release

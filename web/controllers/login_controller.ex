@@ -2,8 +2,8 @@ defmodule HexWeb.LoginController do
   use HexWeb.Web, :controller
 
   def show(conn, _params) do
-    if get_session(conn, "username") do
-      redirect(conn, to: "/") # TODO: user_path(conn, :show, username)
+    if username = get_session(conn, "username") do
+      redirect(conn, to: user_path(conn, :show, username))
     else
       render_show(conn)
     end
@@ -14,7 +14,7 @@ defmodule HexWeb.LoginController do
       {:ok, _user} ->
         conn
         |> put_session("username", username)
-        |> redirect(to: "/") # TODO: user_path(conn, :show, username)
+        |> redirect(to: user_path(conn, :show, username))
       {:error, reason} ->
         conn
         |> put_flash(:error, error_to_message(reason))
@@ -43,7 +43,7 @@ defmodule HexWeb.LoginController do
   defp render_show(conn) do
     render conn, "show.html", [
       title: "Log in",
-      container: "container page login-view"
+      container: "container page login"
     ]
   end
 
