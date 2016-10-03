@@ -44,7 +44,7 @@ defmodule HexWeb.ConnCase do
       on_exit fn -> Application.put_env(:hex_web, :store_impl, HexWeb.Store.Local) end
     end
 
-    {:ok, conn: Phoenix.ConnTest.build_conn()}
+    :ok
   end
 
   def key_for(username) when is_binary(username) do

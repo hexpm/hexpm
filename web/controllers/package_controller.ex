@@ -80,7 +80,8 @@ defmodule HexWeb.PackageController do
       package:           package,
       releases:          releases,
       current_release:   release,
-      downloads:         Packages.package_downloads(package)
+      downloads:         Packages.package_downloads(package),
+      owners:            Owners.all(package)
     ] ++ docs_assigns
   end
 
