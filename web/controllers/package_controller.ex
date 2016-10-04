@@ -59,11 +59,16 @@ defmodule HexWeb.PackageController do
 
   defp package(conn, package, releases, release) do
     has_docs = Enum.any?(releases, fn(release) -> release.has_docs end)
+    latest_release? = List.first(releases) == release
     release = Releases.preload(release)
 
     docs_assigns =
       if has_docs do
-        [hexdocs_url: HexWeb.Utils.docs_url([package.name]),
+        docs_url = case latest_release? do
+                     true -> HexWeb.Utils.docs_url([package.name])
+                     false -> HexWeb.Utils.docs_url(package, release)
+                   end
+        [hexdocs_url: docs_url,
          docs_tarball_url: HexWeb.Utils.docs_tarball_url(package, release)]
       else
         [hexdocs_url: nil, docs_tarball_url: nil]
