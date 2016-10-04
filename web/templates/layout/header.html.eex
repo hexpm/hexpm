@@ -89,7 +89,7 @@
       </div>
     </nav>
 
-    <%= unless assigns[:custom_flash] do %>
+    <%= unless assigns[:error] || assigns[:custom_flash] do %>
       <%= render "_flash.html", conn: @conn %>
     <% end %>
 

@@ -4,6 +4,7 @@ defmodule HexWeb.ErrorView do
   def render(<<status::binary-3>> <> ".html", assigns) when status != "all" do
     render "all.html",
            conn: assigns.conn,
+           error: true,
            status: status,
            message: message(status),
            container: "container error-view"
@@ -21,6 +22,7 @@ defmodule HexWeb.ErrorView do
   def template_not_found(_template, assigns) do
     render "all.html",
            conn: assigns.conn,
+           error: true,
            status: "500",
            message: "Internal server error"
   end
