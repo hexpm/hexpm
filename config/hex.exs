@@ -18,5 +18,8 @@ config :hex_web, HexWeb.Repo,
   hostname: "localhost",
   pool_size: 10
 
+config :hex_web, HexWeb.Mailer,
+  adapter: Bamboo.LocalAdapter
+
 config :logger,
   level: :error
