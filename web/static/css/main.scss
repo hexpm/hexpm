@@ -4,14 +4,16 @@
 @import "base/fonts";
 @import "base/general";
 
-@import "template/navbar";
-@import "template/footer";
 @import "template/error";
+@import "template/footer";
+@import "template/navbar";
 
+@import "template/docs";
 @import "template/home";
+@import "template/login";
 @import "template/package-list";
 @import "template/package-view";
 @import "template/page";
-@import "template/docs";
+@import "template/signup";
 @import "template/sponsors";
 @import "template/user";

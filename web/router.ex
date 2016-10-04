@@ -32,11 +32,12 @@ defmodule HexWeb.Router do
     get  "/",         PageController, :index
     get  "/sponsors", PageController, :sponsors
 
-    get  "/login", LoginController, :show
-    post "/login", LoginController, :create
-    post "/logout", LoginController, :delete
+    get  "/login",  LoginController, :show
+    post "/login",  LoginController, :create
+    get  "/logout", LoginController, :delete
 
-    get  "/signup",  SignupController, :signup
+    get  "/signup",  SignupController, :show
+    post "/signup",  SignupController, :create
     get  "/confirm", SignupController, :confirm
 
     get  "/password/new", PasswordController, :show

@@ -1,5 +1,8 @@
 <div class="featured-home">
   <div class="container">
+
+    <%= render HexWeb.LayoutView, "_flash.html", conn: @conn %>
+
     <div class="search-form">
       <h2>The package manager for the Erlang ecosystem</h2>
 

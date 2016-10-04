@@ -18,7 +18,7 @@
 
       <br><br>
 
-      <p><a href="<%= signup_path(HexWeb.Endpoint, :signup) %>">Don't have an account?</a></p>
+      <p><a href="<%= signup_path(HexWeb.Endpoint, :show) %>">Don't have an account?</a></p>
     <% end %>
   </div>
 </div>

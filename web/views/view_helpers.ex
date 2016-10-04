@@ -1,4 +1,40 @@
 defmodule HexWeb.ViewHelpers do
+  use Phoenix.HTML
+
+  def text_input(form, field, opts \\ []) do
+    opts =
+      opts
+      |> add_error_class(form, field)
+      |> Keyword.put_new(:value, form.params[Atom.to_string(field)])
+
+    Phoenix.HTML.Form.text_input(form, field, opts)
+  end
+
+  def password_input(form, field, opts \\ []) do
+    opts = add_error_class(opts, form, field)
+    Phoenix.HTML.Form.password_input(form, field, opts)
+  end
+
+  defp add_error_class(opts, form, field) do
+    error? = Keyword.has_key?(form.errors, field)
+    error_class = if error?, do: "form-input-error", else: ""
+    class = "form-control #{error_class} #{opts[:class]}"
+
+    Keyword.put(opts, :class, class)
+  end
+
+  def error_tag(form, field) do
+    if error = form.errors[field] do
+      content_tag(:span, translate_error(error), class: "form-error")
+    end
+  end
+
+  defp translate_error({msg, opts}) do
+    Enum.reduce(opts, msg, fn {key, value}, msg ->
+      String.replace(msg, "%{#{key}}", value)
+    end)
+  end
+
   def paginate(page, count, opts) do
     per_page  = opts[:items_per_page]
     max_links = opts[:page_links] # Needs to be odd number
@@ -41,70 +77,6 @@ defmodule HexWeb.ViewHelpers do
 
   def text_length(text, _length) do
     text
-  end
-
-  @doc """
-  Formats a package's release info into a build tools dependency snippet.
-  """
-  def dep_snippet(:mix, package_name, release) do
-    version = snippet_version(:mix, release.version)
-    app_name = release.meta.app || package_name
-
-    if package_name == app_name do
-      "{:#{package_name}, \"#{version}\"}"
-    else
-      "{#{app_name(:mix, app_name)}, \"#{version}\", hex: :#{package_name}}"
-    end
-  end
-
-  def dep_snippet(:rebar, package_name, release) do
-    version = snippet_version(:rebar, release.version)
-    app_name = release.meta.app || package_name
-
-    if package_name == app_name do
-      "{#{package_name}, \"#{version}\"}"
-    else
-      "{#{app_name(:rebar, app_name)}, \"#{version}\", {pkg, #{package_name}}}"
-    end
-  end
-
-  def dep_snippet(:erlang_mk, package_name, release) do
-    version = snippet_version(:erlang_mk, release.version)
-    "dep_#{package_name} = hex #{version}"
-  end
-
-  def snippet_version(:mix, %Version{major: 0, minor: minor, patch: patch, pre: []}),
-    do: "~> 0.#{minor}.#{patch}"
-  def snippet_version(:mix, %Version{major: major, minor: minor, pre: []}),
-    do: "~> #{major}.#{minor}"
-  def snippet_version(:mix, %Version{major: major, minor: minor, patch: patch, pre: pre}),
-    do: "~> #{major}.#{minor}.#{patch}#{pre_snippet(pre)}"
-
-  def snippet_version(other, %Version{major: major, minor: minor, patch: patch, pre: pre})
-    when other in [:rebar, :erlang_mk],
-    do: "#{major}.#{minor}.#{patch}#{pre_snippet(pre)}"
-
-  defp pre_snippet([]), do: ""
-  defp pre_snippet(pre) do
-    "-" <>
-      Enum.map_join(pre, ".", fn
-        int when is_integer(int) -> Integer.to_string(int)
-        string when is_binary(string) -> string
-      end)
-  end
-
-  @elixir_atom_chars ~r"^[a-zA-Z_][a-zA-Z_0-9]*$"
-  @erlang_atom_chars ~r"^[a-z][a-zA-Z_0-9]*$"
-
-  defp app_name(:mix, name) do
-    if Regex.match?(@elixir_atom_chars, name),
-      do: ":#{name}",
-    else: ":#{inspect name}"
-  end
-  defp app_name(:rebar, name) do
-    if Regex.match?(@erlang_atom_chars, name),
-      do: name,
-    else: inspect(String.to_charlist(name))
   end
 
   def human_number_space(string) when is_binary(string) do
