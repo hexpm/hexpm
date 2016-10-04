@@ -4,7 +4,10 @@
 .featured-home {
   background: #3e424d url('../images/bg-featured-home.png') no-repeat right bottom;
   background-size: 1154px;
-  padding: 20px 0 0 0;
+
+  .alert {
+    margin-bottom: -20px;
+  }
 
   @include hdpi(2) {
     background: #3e424d url('../images/bg-featured-home@2.png') no-repeat right bottom;
@@ -20,6 +23,7 @@
 .search-form {
   text-align: center;
   margin-bottom: 60px;
+  padding: 20px 0 0 0;
   h2 {
     color: #ededed;
     font-size: 45px;

@@ -3,31 +3,36 @@ defmodule HexWeb.PolicyController do
 
   def index(conn, _params) do
     render conn, "index.html", [
-      title: "Policies"
+      title: "Policies",
+      container: "container page policy"
     ]
   end
 
   def coc(conn, _params) do
     render conn, "coc.html", [
-      title: "Code of Conduct"
+      title: "Code of Conduct",
+      container: "container page policy"
     ]
   end
 
   def copyright(conn, _params) do
     render conn, "copyright.html", [
-      title: "Copyright Policy"
+      title: "Copyright Policy",
+      container: "container page policy"
     ]
   end
 
   def privacy(conn, _params) do
     render conn, "privacy.html", [
-      title: "Privacy Policy"
+      title: "Privacy Policy",
+      container: "container page policy"
     ]
   end
 
   def tos(conn, _params) do
     render conn, "tos.html", [
-      title: "Terms of Service"
+      title: "Terms of Service",
+      container: "container page policy"
     ]
   end
 end

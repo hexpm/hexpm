@@ -1,0 +1,43 @@
+<%= if @changeset.action do %>
+  <div class="alert alert-danger">
+    Oops, something went wrong! Please check the errors below.
+  </div>
+<% end %>
+
+<div class="row">
+  <div class="col-md-8 col-md-offset-2">
+    <%= form_for(@changeset, signup_path(HexWeb.Endpoint, :create), fn f -> %>
+      <h2>Sign up</h2>
+
+      <div class="form-group">
+        <%= label f, :full_name %>
+        <%= text_input f, :full_name %>
+        <%= error_tag f, :full_name %>
+      </div>
+
+      <div class="form-group">
+        <%= label f, :username %>
+        <%= text_input f, :username %>
+        <%= error_tag f, :username %>
+      </div>
+
+      <div class="form-group">
+        <%= label f, :email %>
+        <%= text_input f, :email %>
+        <%= error_tag f, :email %>
+      </div>
+
+      <div class="form-group">
+        <%= label f, :password %>
+        <%= password_input f, :password %>
+        <%= error_tag f, :password %>
+      </div>
+
+      <button type="submit" class="btn btn-default">Sign up</button>
+
+      <br><br>
+
+      <p><a href="<%= login_path(HexWeb.Endpoint, :show) %>">Already have an account?</a></p>
+    <% end) %>
+  </div>
+</div>

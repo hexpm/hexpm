@@ -5,6 +5,7 @@ defmodule HexWeb.User do
 
   schema "users" do
     field :username, :string
+    field :full_name, :string
     field :email, :string
     field :password, :string
     field :confirmation_key, :string
@@ -20,22 +21,25 @@ defmodule HexWeb.User do
     has_many :audit_logs, AuditLog, foreign_key: :actor_id
   end
 
+  @email_regex ~r"^.+@.+\..+$"
+  @username_regex ~r"^[a-z0-9_\-\.!~\*'\(\)]+$"
+
   defp changeset(user, :create, params) do
-    cast(user, params, ~w(username password email))
+    cast(user, params, ~w(username full_name password email))
     |> validate_required(~w(username password email)a)
     |> update_change(:email, &String.downcase/1)
     |> update_change(:username, &String.downcase/1)
-    |> validate_format(:email, ~r"^.+@.+\..+$")
-    |> validate_format(:username, ~r"^[a-z0-9_\-\.!~\*'\(\)]+$")
+    |> validate_format(:email, @email_regex)
+    |> validate_format(:username, @username_regex)
     |> unique_constraint(:email, name: "users_email_key")
     |> unique_constraint(:username, name: "users_username_idx")
   end
 
   defp changeset(user, :update, params) do
-    cast(user, params, ~w(username password))
+    cast(user, params, ~w(username full_name password))
     |> validate_required(~w(username password)a)
     |> update_change(:username, &String.downcase/1)
-    |> validate_format(:username, ~r"^[a-z0-9_\-\.!~\*'\(\)]+$")
+    |> validate_format(:username, @username_regex)
   end
 
   def build(params, confirmed? \\ not Application.get_env(:hex_web, :user_confirm)) do

@@ -89,19 +89,8 @@
       </div>
     </nav>
 
-    <div class="container">
-      <%= if flash = get_flash(@conn, :error) do %>
-        <div class="alert alert-danger" role="alert"><%= flash %></div>
-      <% end %>
-      <%= if flash = get_flash(@conn, :warning) do %>
-        <div class="alert alert-warning" role="alert"><%= flash %></div>
-      <% end %>
-      <%= if flash = get_flash(@conn, :info) do %>
-        <div class="alert alert-info" role="alert"><%= flash %></div>
-      <% end %>
-      <%= if flash = get_flash(@conn, :success) do %>
-        <div class="alert alert-success" role="alert"><%= flash %></div>
-      <% end %>
-    </div>
+    <%= unless assigns[:custom_flash] do %>
+      <%= render "_flash.html", conn: @conn %>
+    <% end %>
 
     <div class="<%= container_class(assigns) %>">

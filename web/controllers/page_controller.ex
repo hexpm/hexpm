@@ -4,6 +4,7 @@ defmodule HexWeb.PageController do
   def index(conn, _params) do
     render conn, "index.html", [
       container:    "",
+      custom_flash: true,
       hide_search:  true,
       num_packages: Packages.count,
       num_releases: Releases.count,
@@ -15,6 +16,8 @@ defmodule HexWeb.PageController do
   end
 
   def sponsors(conn, _params) do
-    render conn, "sponsors.html"
+    render conn, "sponsors.html",
+      title: "Sponsors",
+      container: "container page sponsors"
   end
 end
