@@ -34,7 +34,7 @@ defmodule HexWeb.Router do
 
     get  "/login",  LoginController, :show
     post "/login",  LoginController, :create
-    get  "/logout", LoginController, :delete
+    post "/logout", LoginController, :delete
 
     get  "/signup",  SignupController, :show
     post "/signup",  SignupController, :create

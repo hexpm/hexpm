@@ -64,7 +64,30 @@
 
 .navbar-default .navbar-nav .open .dropdown-menu > li > a {
   @include general-mobile {
-    color: #fff;
+    color: $color-white;
+  }
+}
+
+// copied from bootstrap
+.dropdown-menu {
+  li .btn-link {
+    display: block;
+    padding: 3px 20px;
+    clear: both;
+    font-weight: normal;
+    line-height: 1.42857143;
+    color: #333;
+    white-space: nowrap;
+
+    // custom
+    width: 100%;
+    text-align: left;
+  }
+  li .btn-link:hover,
+  li .btn-link:focus {
+    color: #262626;
+    text-decoration: none;
+    background-color: #f5f5f5;
   }
 }
 
@@ -75,13 +98,16 @@
   right: 0px;
   left: auto;
   min-width: 200px;
-  li > a {
+
+  li > a, li .btn-link {
     color: $color-white;
     font-size: 13px;
   }
+
   .divider {
     background-color: #5c676d;
   }
+
   .dropdown-header.menu-dropdown-header {
     color: $color-white;
     font-size: 15px;

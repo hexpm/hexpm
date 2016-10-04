@@ -77,7 +77,11 @@
                 <ul class="dropdown-menu">
                   <li><a href="<%= user_path(HexWeb.Endpoint, :show, username) %>">Profile</a></li>
                   <li role="separator" class="divider"></li>
-                  <li><a href="<%= login_path(HexWeb.Endpoint, :delete) %>">Log out</a></li>
+                  <li>
+                    <%= form_tag(login_path(HexWeb.Endpoint, :delete)) do %>
+                      <button type="submit" class="btn btn-link">Log out</button>
+                    <% end %>
+                  </li>
                 </ul>
               </li>
             <% else %>
