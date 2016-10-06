@@ -29,6 +29,6 @@ defmodule HexWeb.PageController do
         |> put_layout(false)
         |> send_resp(200, key)
       end
-    end || render_error(conn, 400)
+    end || render_error(conn, 404)
   end
 end

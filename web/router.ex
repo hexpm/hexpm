@@ -29,9 +29,9 @@ defmodule HexWeb.Router do
   scope "/", HexWeb do
     pipe_through :browser
 
-    get  "/",                             PageController, :index
-    get  "/sponsors",                     PageController, :sponsors
-    get "/.well-known/acme-challenge/:id", PageController, :letsencrypt
+    get  "/",                               PageController, :index
+    get  "/sponsors",                       PageController, :sponsors
+    get  "/.well-known/acme-challenge/:id", PageController, :letsencrypt
 
     get  "/login",  LoginController, :show
     post "/login",  LoginController, :create
@@ -92,42 +92,39 @@ defmodule HexWeb.Router do
     end
   end
 
-  unless Application.get_env(:hex_web, :read_only) do
+  scope "/api", HexWeb.API, as: :api do
+    pipe_through :upload
 
-    scope "/api", HexWeb.API, as: :api do
-      pipe_through :upload
+    post "/packages/:name/releases",               ReleaseController, :create
+    post "/packages/:name/releases/:version/docs", DocsController,    :create
+  end
 
-      post "/packages/:name/releases",               ReleaseController, :create
-      post "/packages/:name/releases/:version/docs", DocsController,    :create
-    end
+  scope "/api", HexWeb.API, as: :api do
+    pipe_through :api
 
-    scope "/api", HexWeb.API, as: :api do
-      pipe_through :api
+    post   "/users",             UserController, :create
+    get    "/users/:name",       UserController, :show
+    post   "/users/:name/reset", UserController, :reset
 
-      post   "/users",             UserController, :create
-      get    "/users/:name",       UserController, :show
-      post   "/users/:name/reset", UserController, :reset
+    get    "/packages",       PackageController, :index
+    get    "/packages/:name", PackageController, :show
 
-      get    "/packages",       PackageController, :index
-      get    "/packages/:name", PackageController, :show
+    get    "/packages/:name/releases/:version", ReleaseController, :show
+    delete "/packages/:name/releases/:version", ReleaseController, :delete
 
-      get    "/packages/:name/releases/:version", ReleaseController, :show
-      delete "/packages/:name/releases/:version", ReleaseController, :delete
+    # Temporary, see #232
+    get    "/packages/:name/releases/:version/docs", DocsController, :show
+    delete "/packages/:name/releases/:version/docs", DocsController, :delete
 
-      # Temporary, see #232
-      get    "/packages/:name/releases/:version/docs", DocsController, :show
-      delete "/packages/:name/releases/:version/docs", DocsController, :delete
+    get    "/packages/:name/owners",        OwnerController, :index
+    get    "/packages/:name/owners/:email", OwnerController, :show
+    put    "/packages/:name/owners/:email", OwnerController, :create
+    delete "/packages/:name/owners/:email", OwnerController, :delete
 
-      get    "/packages/:name/owners",        OwnerController, :index
-      get    "/packages/:name/owners/:email", OwnerController, :show
-      put    "/packages/:name/owners/:email", OwnerController, :create
-      delete "/packages/:name/owners/:email", OwnerController, :delete
-
-      get    "/keys",       KeyController, :index
-      get    "/keys/:name", KeyController, :show
-      post   "/keys",       KeyController, :create
-      delete "/keys",       KeyController, :delete_all
-      delete "/keys/:name", KeyController, :delete
-    end
+    get    "/keys",       KeyController, :index
+    get    "/keys/:name", KeyController, :show
+    post   "/keys",       KeyController, :create
+    delete "/keys",       KeyController, :delete_all
+    delete "/keys/:name", KeyController, :delete
   end
 end
