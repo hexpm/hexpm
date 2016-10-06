@@ -29,8 +29,9 @@ defmodule HexWeb.Router do
   scope "/", HexWeb do
     pipe_through :browser
 
-    get  "/",         PageController, :index
-    get  "/sponsors", PageController, :sponsors
+    get  "/",                             PageController, :index
+    get  "/sponsors",                     PageController, :sponsors
+    get "/.well-known/acme-challenge/:id", PageController, :letsencrypt
 
     get  "/login",  LoginController, :show
     post "/login",  LoginController, :create
