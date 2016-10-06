@@ -11,10 +11,11 @@ defmodule HexWeb.LoginController do
 
   def create(conn, %{"username" => username, "password" => password}) do
     case auth(username, password) do
-      {:ok, _user} ->
+      {:ok, user} ->
         conn
-        |> put_session("username", username)
-        |> redirect(to: user_path(conn, :show, username))
+        |> put_session("username", user.username)
+        |> put_session("email", user.email)
+        |> redirect(to: user_path(conn, :show, user.username))
       {:error, reason} ->
         conn
         |> put_flash(:error, error_to_message(reason))
