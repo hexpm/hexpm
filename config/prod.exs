@@ -5,12 +5,12 @@ config :hex_web, HexWeb.Endpoint,
   url: [host: System.get_env("HEX_URL"), scheme: "https", port: 443],
   force_ssl: [hsts: true, rewrite_on: [:x_forwarded_proto]],
   cache_static_manifest: "priv/static/manifest.json",
-  secret_key_base: {:system, "HEX_SECRET_KEY_BASE"}
+  secret_key_base: System.get_env("HEX_SECRET_KEY_BASE")
 
 config :hex_web, HexWeb.Repo,
   adapter: Ecto.Adapters.Postgres,
   url: {:system, "DATABASE_URL"},
-  pool_size: 20
+  pool_size: System.get_env("NUM_DATABASE_CONNS") || 20
 
 config :comeonin,
   bcrypt_log_rounds: 12
@@ -18,7 +18,7 @@ config :comeonin,
 config :rollbax,
   access_token: System.get_env("ROLLBAR_ACCESS_TOKEN"),
   environment: to_string(Mix.env),
-  enabled: true
+  enabled: !!System.get_env("ROLLBAR_ACCESS_TOKEN")
 
 config :logger,
   backends: [Rollbax.Logger, :console]
