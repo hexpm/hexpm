@@ -5,12 +5,10 @@
   border-bottom: #919ca2 1px solid;
 }
 
-.navbar-default .navbar-brand {
-  color: $color-white;
-  @include font-size(16 , 19);
-  &:hover {
-    color: #e5e5e5;
-  }
+.navbar-default .navbar-avatar {
+  width: 40px;
+  border-radius: 100%;
+  margin: 0 5px 0 5px;
 }
 
 .nav.navbar-nav {

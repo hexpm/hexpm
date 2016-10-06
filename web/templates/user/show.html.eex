@@ -1,17 +1,37 @@
 <h2><%= @user.username %></h2>
 
-<%= if @user.owned_packages == [] do %>
-  <h3>No owned packages</h3>
-<% else %>
-  <h3>Owned packages</h3>
-  <div class="user-package-list">
-    <ul>
-      <%= for package <- @packages do %>
-        <li>
-          <a href="<%= package_path(HexWeb.Endpoint, :show, package) %>"><strong><%= package.name %></strong></a>
-          <%= package.latest_version %>
-        </li>
-      <% end %>
+<div class="row">
+  <div class="col-md-9">
+    <%= if @user.owned_packages == [] do %>
+      <h3>No owned packages</h3>
+    <% else %>
+      <h3>Owned packages</h3>
+      <ul class="user-package-list">
+        <%= for package <- @packages do %>
+          <li>
+            <a href="<%= package_path(HexWeb.Endpoint, :show, package) %>"><%= package.name %></a>
+            <%= package.latest_version %>
+          </li>
+        <% end %>
+      </ul>
+    <% end %>
+  </div>
+
+  <div class="col-md-3">
+    <a href="http://en.gravatar.com/emails/" class="avatar">
+      <img src="<%= gravatar_url(@user.email, 440) %>">
+    </a>
+
+    <%= if assigns[:username] == @user.username do %>
+      <ul class="user-profile-list">
+        <li><a href="#">Update your profile</a></li>
+      </ul>
+    <% end %>
+
+    <h4><%= @user.full_name %></h4>
+    <ul class="user-profile-list">
+      <li><a href="mailto:<%= @user.email %>"><%= @user.email %></a></li>
+      <li><a href="<%= user_path(HexWeb.Endpoint, :show, @user) %>">@<%= @user.username %></a> on Hex.pm</li>
     </ul>
   </div>
-<% end %>
+</div>

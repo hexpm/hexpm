@@ -70,10 +70,11 @@ defmodule HexWeb.Plugs do
   end
 
   def login(conn, _opts) do
-    if username = get_session(conn, "username") do
-      assign(conn, :username, username)
-    else
-      assign(conn, :username, nil)
-    end
+    username = get_session(conn, "username")
+    email = get_session(conn, "email")
+
+    conn
+    |> assign(:username, username)
+    |> assign(:email, email)
   end
 end

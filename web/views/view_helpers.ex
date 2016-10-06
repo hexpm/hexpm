@@ -1,6 +1,17 @@
 defmodule HexWeb.ViewHelpers do
   use Phoenix.HTML
 
+  def signed_in?(assigns) do
+    !!(assigns[:username] && assigns[:email])
+  end
+
+  def gravatar_url(email, size) do
+    hash =
+      :crypto.hash(:md5, String.trim(email))
+      |> Base.encode16(case: :lower)
+    "https://www.gravatar.com/avatar/#{hash}?s=#{size}&d=retro"
+  end
+
   def text_input(form, field, opts \\ []) do
     opts =
       opts
