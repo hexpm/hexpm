@@ -12,6 +12,14 @@ defmodule HexWeb.ViewHelpers do
     "https://www.gravatar.com/avatar/#{hash}?s=#{size}&d=retro"
   end
 
+  def changeset_error(changeset) do
+    if changeset.action do
+      content_tag(:div, class: "alert alert-danger") do
+        "Oops, something went wrong! Please check the errors below."
+      end
+    end
+  end
+
   def text_input(form, field, opts \\ []) do
     opts =
       opts
