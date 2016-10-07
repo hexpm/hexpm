@@ -47,7 +47,9 @@ defmodule HexWeb.Router do
     get  "/password/reset", PasswordResetController, :show
     post "/password/reset", PasswordResetController, :create
 
-    get  "/users/:username", UserController, :show
+    get  "/users/:username",      UserController, :show
+    get  "/users/:username/edit", UserController, :edit
+    post "/users/:username",      UserController, :update
 
     get  "/docs/usage",          DocsController, :usage
     get  "/docs/rebar3_usage",   DocsController, :rebar3_usage

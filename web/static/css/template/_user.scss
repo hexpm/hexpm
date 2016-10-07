@@ -28,7 +28,11 @@
     }
   }
 
-  li a {
+  a {
     font-weight: 400;
   }
+}
+
+.user-edit a {
+  font-weight: 400 !important;
 }

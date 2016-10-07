@@ -23,10 +23,14 @@ defmodule HexWeb.Users do
       {:ok, user} ->
         Mailer.send_confirmation_request_email(user)
         {:ok, user}
-
       other ->
         other
     end
+  end
+
+  def update(user, params) do
+    User.update_profile(user, params)
+    |> Repo.update
   end
 
   defp recreate_unconfirmed_user(username) do
