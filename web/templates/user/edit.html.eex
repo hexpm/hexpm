@@ -1,0 +1,25 @@
+<%= if @changeset.action do %>
+  <div class="alert alert-danger">
+    Oops, something went wrong! Please check the errors below.
+  </div>
+<% end %>
+
+<div class="row">
+  <div class="col-md-8 col-md-offset-2">
+    <h2>Update your profile</h2>
+
+    <%= form_for @changeset, user_path(HexWeb.Endpoint, :update, @username), [method: :post], fn f -> %>
+      <div class="form-group">
+        <%= label f, :full_name %>
+        <%= text_input f, :full_name %>
+        <%= error_tag f, :full_name %>
+      </div>
+
+      <button type="submit" class="btn btn-default">Save</button>
+
+      <br><br>
+
+      <p><a href="<%= password_reset_path(HexWeb.Endpoint, :show) %>">Need to change your password?</a></p>
+    <% end %>
+  </div>
+</div>

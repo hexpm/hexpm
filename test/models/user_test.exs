@@ -26,11 +26,19 @@ defmodule HexWeb.UserTest do
     assert {:error, _} = User.build(%{username: "name", email: "eric@mail.com", password: "pass"}, true) |> HexWeb.Repo.insert
   end
 
-  test "update user", %{user: user} do
-    User.update(user, %{username: "eric", password: "new_pass"})
+  test "update password", %{user: user} do
+    User.update_password(user, %{username: "new_username", password: "new_pass"})
     |> HexWeb.Repo.update!
 
     assert {:ok, {%User{username: "eric"}, nil}} = Auth.password_auth("eric", "new_pass")
     assert :error == Auth.password_auth("eric", "erics_pass")
+  end
+
+  test "update profile", %{user: user} do
+    User.update_profile(user, %{full_name: "Eric", username: "new_username", password: "new_pass"})
+    |> HexWeb.Repo.update!
+
+    assert {:ok, {%User{username: "eric", full_name: "Eric"}, nil}} = Auth.password_auth("eric", "erics_pass")
+    assert :error == Auth.password_auth("eric", "new_pass")
   end
 end
