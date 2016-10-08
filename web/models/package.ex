@@ -24,7 +24,7 @@ defmodule HexWeb.Package do
     os_mon ose otp_mibs parsetools percept pman public_key reltool runtime_tools
     sasl snmp ssh ssl stdlib syntax_tools test_server toolbar tools tv typer
     webtool wx xmerl)
-  @app_names ~w(flow firenest toucan)
+  @app_names ~w(flow firenest toucan net)
 
   @reserved_names @elixir_names ++ @otp_names ++ @tool_names ++ @app_names
 

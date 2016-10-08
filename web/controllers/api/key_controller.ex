@@ -19,7 +19,7 @@ defmodule HexWeb.API.KeyController do
     user = conn.assigns.user
     authing_key = conn.assigns.key
 
-    key = Keys.get(user, name)
+    key = Keys.get!(user, name)
 
     when_stale(conn, key, fn conn ->
       conn
@@ -69,6 +69,6 @@ defmodule HexWeb.API.KeyController do
 
     conn
     |> put_status(200)
-    |> render(:delete, key: Keys.get(key.id), authing_key: key)
+    |> render(:delete, key: Keys.get!(key.id), authing_key: key)
   end
 end

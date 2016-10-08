@@ -3,7 +3,7 @@
   Packages
 </h2>
 
-<%= unless @conn.params["search"] do %>
+<%= unless @search do %>
   <div class="letter-sort">
     <ul class="list">
       <%= for letter <- @letters do %>
@@ -41,7 +41,7 @@
 <nav>
   <div class="pagination-info">
     <h4 class="results-found"><%= @package_count %> Results Found</h4>
-    <%= show_sort_info(@conn.params["sort"]) %>
+    <%= show_sort_info(@sort) %>
   </div>
   <div class="navbar-right pagination-sort">
     <%= unless @letter do %>

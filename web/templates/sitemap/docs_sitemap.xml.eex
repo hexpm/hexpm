@@ -3,7 +3,7 @@
     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
     xsi:schemaLocation="http://www.sitemaps.org/schemas/sitemap/0.9 http://www.sitemaps.org/schemas/sitemap/0.9/sitemap.xsd">
     <%= for {name, docs_updated_at} <- @packages do %><url>
-        <loc>https://hexdocs.pm/<%= name %></loc>
+        <loc>https://hexdocs.pm/<%= name %>/</loc>
         <lastmod><%= HexWeb.Utils.binarify(docs_updated_at) %>Z</lastmod>
         <changefreq>daily</changefreq>
         <priority>0.8</priority>
