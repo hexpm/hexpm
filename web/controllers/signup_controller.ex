@@ -13,7 +13,9 @@ defmodule HexWeb.SignupController do
         |> put_flash(:custom_location, true)
         |> redirect(to: "/")
       {:error, changeset} ->
-        render_show(conn, changeset)
+        conn
+        |> put_status(400)
+        |> render_show(changeset)
     end
   end
 

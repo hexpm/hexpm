@@ -34,7 +34,9 @@ defmodule HexWeb.UserController do
         {:ok, user} ->
           redirect(conn, to: user_path(conn, :show, user))
         {:error, changeset} ->
-          render_edit(conn, changeset)
+          conn
+          |> put_status(400)
+          |> render_edit(changeset)
       end
     else
       not_found(conn)
