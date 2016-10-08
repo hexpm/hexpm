@@ -5,7 +5,8 @@
 
   <div class="panel panel-default">
     <div class="panel-heading">
-      <h3 id="hex" class="panel-title">
+      <h3 class="panel-title">
+        <a class="anchor" id="hex"></a>
         hex
         <a href="#hex">
           <svg aria-hidden="aria-hidden" class="glyphicon glyphicon-link pull-right" version="1.1" viewBox="0 0 1200 1200"><g transform="translate(0, 1200) scale(1, -1)"><path d="M776.5 1214q93.5 0 159.5 -66l141 -141q66 -66 66 -160q0 -42 -28 -95.5t-62 -87.5l-29 -29q-31 53 -77 99l-18 18l95 95l-247 248l-389 -389l212 -212l-105 -106l-19 18l-141 141q-66 66 -66 159t66 159l283 283q65 66 158.5 66zM600 706l105 105q10 -8 19 -17l141 -141 q66 -66 66 -159t-66 -159l-283 -283q-66 -66 -159 -66t-159 66l-141 141q-66 66 -66 159.5t66 159.5l55 55q29 -55 75 -102l18 -17l-95 -95l247 -248l389 389z"></g></svg>
@@ -48,7 +49,8 @@ environment variables can also be in lower case
 
   <div class="panel panel-default">
     <div class="panel-heading">
-      <h3 id="hex_build" class="panel-title">
+      <h3 class="panel-title">
+        <a class="anchor" id="hex_build"></a>
         hex.build
         <a href="#hex_build">
           <svg aria-hidden="aria-hidden" class="glyphicon glyphicon-link pull-right" version="1.1" viewBox="0 0 1200 1200"><g transform="translate(0, 1200) scale(1, -1)"><path d="M776.5 1214q93.5 0 159.5 -66l141 -141q66 -66 66 -160q0 -42 -28 -95.5t-62 -87.5l-29 -29q-31 53 -77 99l-18 18l95 95l-247 248l-389 -389l212 -212l-105 -106l-19 18l-141 141q-66 66 -66 159t66 159l283 283q65 66 158.5 66zM600 706l105 105q10 -8 19 -17l141 -141 q66 -66 66 -159t-66 -159l-283 -283q-66 -66 -159 -66t-159 66l-141 141q-66 66 -66 159.5t66 159.5l55 55q29 -55 75 -102l18 -17l-95 -95l247 -248l389 389z"></g></svg>
@@ -116,7 +118,8 @@ this field.
 
   <div class="panel panel-default">
     <div class="panel-heading">
-      <h3 id="hex_config" class="panel-title">
+      <h3 class="panel-title">
+        <a class="anchor" id="hex_config"></a>
         hex.config
         <a href="#hex_config">
           <svg aria-hidden="aria-hidden" class="glyphicon glyphicon-link pull-right" version="1.1" viewBox="0 0 1200 1200"><g transform="translate(0, 1200) scale(1, -1)"><path d="M776.5 1214q93.5 0 159.5 -66l141 -141q66 -66 66 -160q0 -42 -28 -95.5t-62 -87.5l-29 -29q-31 53 -77 99l-18 18l95 95l-247 248l-389 -389l212 -212l-105 -106l-19 18l-141 141q-66 66 -66 159t66 159l283 283q65 66 158.5 66zM600 706l105 105q10 -8 19 -17l141 -141 q66 -66 66 -159t-66 -159l-283 -283q-66 -66 -159 -66t-159 66l-141 141q-66 66 -66 159.5t66 159.5l55 55q29 -55 75 -102l18 -17l-95 -95l247 -248l389 389z"></g></svg>
@@ -168,7 +171,8 @@ signature against the repository’s public key
 
   <div class="panel panel-default">
     <div class="panel-heading">
-      <h3 id="hex_docs" class="panel-title">
+      <h3 class="panel-title">
+        <a class="anchor" id="hex_docs"></a>
         hex.docs
         <a href="#hex_docs">
           <svg aria-hidden="aria-hidden" class="glyphicon glyphicon-link pull-right" version="1.1" viewBox="0 0 1200 1200"><g transform="translate(0, 1200) scale(1, -1)"><path d="M776.5 1214q93.5 0 159.5 -66l141 -141q66 -66 66 -160q0 -42 -28 -95.5t-62 -87.5l-29 -29q-31 53 -77 99l-18 18l95 95l-247 248l-389 -389l212 -212l-105 -106l-19 18l-141 141q-66 66 -66 159t66 159l283 283q65 66 158.5 66zM600 706l105 105q10 -8 19 -17l141 -141 q66 -66 66 -159t-66 -159l-283 -283q-66 -66 -159 -66t-159 66l-141 141q-66 66 -66 159.5t66 159.5l55 55q29 -55 75 -102l18 -17l-95 -95l247 -248l389 389z"></g></svg>
@@ -192,7 +196,8 @@ open the latest documentation available in your filesystem.</p>
 
   <div class="panel panel-default">
     <div class="panel-heading">
-      <h3 id="hex_info" class="panel-title">
+      <h3 class="panel-title">
+        <a class="anchor" id="hex_info"></a>
         hex.info
         <a href="#hex_info">
           <svg aria-hidden="aria-hidden" class="glyphicon glyphicon-link pull-right" version="1.1" viewBox="0 0 1200 1200"><g transform="translate(0, 1200) scale(1, -1)"><path d="M776.5 1214q93.5 0 159.5 -66l141 -141q66 -66 66 -160q0 -42 -28 -95.5t-62 -87.5l-29 -29q-31 53 -77 99l-18 18l95 95l-247 248l-389 -389l212 -212l-105 -106l-19 18l-141 141q-66 66 -66 159t66 159l283 283q65 66 158.5 66zM600 706l105 105q10 -8 19 -17l141 -141 q66 -66 66 -159t-66 -159l-283 -283q-66 -66 -159 -66t-159 66l-141 141q-66 66 -66 159.5t66 159.5l55 55q29 -55 75 -102l18 -17l-95 -95l247 -248l389 389z"></g></svg>
@@ -215,7 +220,8 @@ remote Git URL and Git ref, and all package dependencies.</p>
 
   <div class="panel panel-default">
     <div class="panel-heading">
-      <h3 id="hex_key" class="panel-title">
+      <h3 class="panel-title">
+        <a class="anchor" id="hex_key"></a>
         hex.key
         <a href="#hex_key">
           <svg aria-hidden="aria-hidden" class="glyphicon glyphicon-link pull-right" version="1.1" viewBox="0 0 1200 1200"><g transform="translate(0, 1200) scale(1, -1)"><path d="M776.5 1214q93.5 0 159.5 -66l141 -141q66 -66 66 -160q0 -42 -28 -95.5t-62 -87.5l-29 -29q-31 53 -77 99l-18 18l95 95l-247 248l-389 -389l212 -212l-105 -106l-19 18l-141 141q-66 66 -66 159t66 159l283 283q65 66 158.5 66zM600 706l105 105q10 -8 19 -17l141 -141 q66 -66 66 -159t-66 -159l-283 -283q-66 -66 -159 -66t-159 66l-141 141q-66 66 -66 159.5t66 159.5l55 55q29 -55 75 -102l18 -17l-95 -95l247 -248l389 389z"></g></svg>
@@ -240,7 +246,8 @@ remote Git URL and Git ref, and all package dependencies.</p>
 
   <div class="panel panel-default">
     <div class="panel-heading">
-      <h3 id="hex_outdated" class="panel-title">
+      <h3 class="panel-title">
+        <a class="anchor" id="hex_outdated"></a>
         hex.outdated
         <a href="#hex_outdated">
           <svg aria-hidden="aria-hidden" class="glyphicon glyphicon-link pull-right" version="1.1" viewBox="0 0 1200 1200"><g transform="translate(0, 1200) scale(1, -1)"><path d="M776.5 1214q93.5 0 159.5 -66l141 -141q66 -66 66 -160q0 -42 -28 -95.5t-62 -87.5l-29 -29q-31 53 -77 99l-18 18l95 95l-247 248l-389 -389l212 -212l-105 -106l-19 18l-141 141q-66 66 -66 159t66 159l283 283q65 66 158.5 66zM600 706l105 105q10 -8 19 -17l141 -141 q66 -66 66 -159t-66 -159l-283 -283q-66 -66 -159 -66t-159 66l-141 141q-66 66 -66 159.5t66 159.5l55 55q29 -55 75 -102l18 -17l-95 -95l247 -248l389 389z"></g></svg>
@@ -270,7 +277,8 @@ to figure why a package isn’t updating when you run <code class="inline">mix d
 
   <div class="panel panel-default">
     <div class="panel-heading">
-      <h3 id="hex_owner" class="panel-title">
+      <h3 class="panel-title">
+        <a class="anchor" id="hex_owner"></a>
         hex.owner
         <a href="#hex_owner">
           <svg aria-hidden="aria-hidden" class="glyphicon glyphicon-link pull-right" version="1.1" viewBox="0 0 1200 1200"><g transform="translate(0, 1200) scale(1, -1)"><path d="M776.5 1214q93.5 0 159.5 -66l141 -141q66 -66 66 -160q0 -42 -28 -95.5t-62 -87.5l-29 -29q-31 53 -77 99l-18 18l95 95l-247 248l-389 -389l212 -212l-105 -106l-19 18l-141 141q-66 66 -66 159t66 159l283 283q65 66 158.5 66zM600 706l105 105q10 -8 19 -17l141 -141 q66 -66 66 -159t-66 -159l-283 -283q-66 -66 -159 -66t-159 66l-141 141q-66 66 -66 159.5t66 159.5l55 55q29 -55 75 -102l18 -17l-95 -95l247 -248l389 389z"></g></svg>
@@ -302,7 +310,8 @@ owner.</p>
 
   <div class="panel panel-default">
     <div class="panel-heading">
-      <h3 id="hex_public_keys" class="panel-title">
+      <h3 class="panel-title">
+        <a class="anchor" id="hex_public_keys"></a>
         hex.public_keys
         <a href="#hex_public_keys">
           <svg aria-hidden="aria-hidden" class="glyphicon glyphicon-link pull-right" version="1.1" viewBox="0 0 1200 1200"><g transform="translate(0, 1200) scale(1, -1)"><path d="M776.5 1214q93.5 0 159.5 -66l141 -141q66 -66 66 -160q0 -42 -28 -95.5t-62 -87.5l-29 -29q-31 53 -77 99l-18 18l95 95l-247 248l-389 -389l212 -212l-105 -106l-19 18l-141 141q-66 66 -66 159t66 159l283 283q65 66 158.5 66zM600 706l105 105q10 -8 19 -17l141 -141 q66 -66 66 -159t-66 -159l-283 -283q-66 -66 -159 -66t-159 66l-141 141q-66 66 -66 159.5t66 159.5l55 55q29 -55 75 -102l18 -17l-95 -95l247 -248l389 389z"></g></svg>
@@ -338,7 +347,8 @@ intended for automation in build systems like <code class="inline">make</code>
 
   <div class="panel panel-default">
     <div class="panel-heading">
-      <h3 id="hex_publish" class="panel-title">
+      <h3 class="panel-title">
+        <a class="anchor" id="hex_publish"></a>
         hex.publish
         <a href="#hex_publish">
           <svg aria-hidden="aria-hidden" class="glyphicon glyphicon-link pull-right" version="1.1" viewBox="0 0 1200 1200"><g transform="translate(0, 1200) scale(1, -1)"><path d="M776.5 1214q93.5 0 159.5 -66l141 -141q66 -66 66 -160q0 -42 -28 -95.5t-62 -87.5l-29 -29q-31 53 -77 99l-18 18l95 95l-247 248l-389 -389l212 -212l-105 -106l-19 18l-141 141q-66 66 -66 159t66 159l283 283q65 66 158.5 66zM600 706l105 105q10 -8 19 -17l141 -141 q66 -66 66 -159t-66 -159l-283 -283q-66 -66 -159 -66t-159 66l-141 141q-66 66 -66 159.5t66 159.5l55 55q29 -55 75 -102l18 -17l-95 -95l247 -248l389 389z"></g></svg>
@@ -428,7 +438,8 @@ by setting this field.
 
   <div class="panel panel-default">
     <div class="panel-heading">
-      <h3 id="hex_registry" class="panel-title">
+      <h3 class="panel-title">
+        <a class="anchor" id="hex_registry"></a>
         hex.registry
         <a href="#hex_registry">
           <svg aria-hidden="aria-hidden" class="glyphicon glyphicon-link pull-right" version="1.1" viewBox="0 0 1200 1200"><g transform="translate(0, 1200) scale(1, -1)"><path d="M776.5 1214q93.5 0 159.5 -66l141 -141q66 -66 66 -160q0 -42 -28 -95.5t-62 -87.5l-29 -29q-31 53 -77 99l-18 18l95 95l-247 248l-389 -389l212 -212l-105 -106l-19 18l-141 141q-66 66 -66 159t66 159l283 283q65 66 158.5 66zM600 706l105 105q10 -8 19 -17l141 -141 q66 -66 66 -159t-66 -159l-283 -283q-66 -66 -159 -66t-159 66l-141 141q-66 66 -66 159.5t66 159.5l55 55q29 -55 75 -102l18 -17l-95 -95l247 -248l389 389z"></g></svg>
@@ -453,7 +464,8 @@ by setting this field.
 
   <div class="panel panel-default">
     <div class="panel-heading">
-      <h3 id="hex_search" class="panel-title">
+      <h3 class="panel-title">
+        <a class="anchor" id="hex_search"></a>
         hex.search
         <a href="#hex_search">
           <svg aria-hidden="aria-hidden" class="glyphicon glyphicon-link pull-right" version="1.1" viewBox="0 0 1200 1200"><g transform="translate(0, 1200) scale(1, -1)"><path d="M776.5 1214q93.5 0 159.5 -66l141 -141q66 -66 66 -160q0 -42 -28 -95.5t-62 -87.5l-29 -29q-31 53 -77 99l-18 18l95 95l-247 248l-389 -389l212 -212l-105 -106l-19 18l-141 141q-66 66 -66 159t66 159l283 283q65 66 158.5 66zM600 706l105 105q10 -8 19 -17l141 -141 q66 -66 66 -159t-66 -159l-283 -283q-66 -66 -159 -66t-159 66l-141 141q-66 66 -66 159.5t66 159.5l55 55q29 -55 75 -102l18 -17l-95 -95l247 -248l389 389z"></g></svg>
@@ -470,7 +482,8 @@ by setting this field.
 
   <div class="panel panel-default">
     <div class="panel-heading">
-      <h3 id="hex_user" class="panel-title">
+      <h3 class="panel-title">
+        <a class="anchor" id="hex_user"></a>
         hex.user
         <a href="#hex_user">
           <svg aria-hidden="aria-hidden" class="glyphicon glyphicon-link pull-right" version="1.1" viewBox="0 0 1200 1200"><g transform="translate(0, 1200) scale(1, -1)"><path d="M776.5 1214q93.5 0 159.5 -66l141 -141q66 -66 66 -160q0 -42 -28 -95.5t-62 -87.5l-29 -29q-31 53 -77 99l-18 18l95 95l-247 248l-389 -389l212 -212l-105 -106l-19 18l-141 141q-66 66 -66 159t66 159l283 283q65 66 158.5 66zM600 706l105 105q10 -8 19 -17l141 -141 q66 -66 66 -159t-66 -159l-283 -283q-66 -66 -159 -66t-159 66l-141 141q-66 66 -66 159.5t66 159.5l55 55q29 -55 75 -102l18 -17l-95 -95l247 -248l389 389z"></g></svg>
@@ -502,4 +515,3 @@ Hex config.</p>
 
     </div>
   </div>
-
