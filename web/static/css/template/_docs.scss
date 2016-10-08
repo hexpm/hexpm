@@ -1,3 +1,10 @@
 #mix-tasks h3 {
   padding-top: 90px; margin-top: -90px;
 }
+
+a.anchor {
+  display: block;
+  position: relative;
+  top: -90px;
+  visibility: hidden;
+}
