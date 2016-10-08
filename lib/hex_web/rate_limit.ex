@@ -74,6 +74,8 @@ defmodule HexWeb.RateLimit do
     import Elixir.Plug.Conn
     import HexWeb.ControllerHelpers
 
+    @behaviour Elixir.Plug
+
     def init(opts), do: opts
 
     def call(conn, _opts) do

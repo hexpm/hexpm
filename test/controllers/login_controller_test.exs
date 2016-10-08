@@ -41,19 +41,10 @@ defmodule HexWeb.LoginControllerTest do
   test "log out", c do
     conn =
       build_conn()
-      # |> bypass_through(HexWeb.Router, [:browser])
-      # |> put_session("username", c.user.username)
-      # |> recycle
-      |> my_put_session("username", c.user.username)
+      |> test_login(c.user)
       |> post("logout")
 
     assert redirected_to(conn) == "/"
     refute get_session(conn, "username")
-  end
-
-  # See: https://github.com/elixir-lang/plug/issues/455
-  defp my_put_session(conn, key, value) do
-    private = Map.update(conn.private, :plug_session, %{key => value}, &Map.put(&1, key, value))
-    %{conn | private: private}
   end
 end
