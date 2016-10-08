@@ -14,6 +14,7 @@ config :hex_web,
   app_host:       System.get_env("APP_HOST"),
   secret:         System.get_env("HEX_SECRET"),
   private_key:    System.get_env("HEX_SIGNING_KEY"),
+  auth_gate:      System.get_env("HEX_AUTH_GATE"),
 
   store_impl:     store,
   s3_url:         System.get_env("HEX_S3_URL") || "https://s3.amazonaws.com",

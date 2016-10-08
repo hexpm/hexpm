@@ -5,6 +5,7 @@ defmodule HexWeb.Router do
 
   pipeline :browser do
     plug :accepts, ["html"]
+    plug :auth_gate
     plug :fetch_session
     plug :fetch_flash
     plug :protect_from_forgery
@@ -14,6 +15,7 @@ defmodule HexWeb.Router do
 
   pipeline :upload do
     plug :accepts, @accepted_formats
+    plug :auth_gate
     plug :user_agent
     plug :fetch_body
     plug :read_body_finally
@@ -21,6 +23,7 @@ defmodule HexWeb.Router do
 
   pipeline :api do
     plug :accepts, @accepted_formats
+    plug :auth_gate
     plug :user_agent
     plug HexWeb.BlockAddress.Plug
     plug HexWeb.RateLimit.Plug
