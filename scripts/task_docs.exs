@@ -12,7 +12,8 @@ defmodule HexWeb.Script.TaskDocs do
   <% id = String.replace(name, ".", "_") %>
     <div class="panel panel-default">
       <div class="panel-heading">
-        <h3 id="<%= id %>" class="panel-title">
+        <h3 class="panel-title">
+          <a class="anchor" id="<%= id %>"></a>
           <%= name %>
           <a href="#<%= id %>">
             <%= Phoenix.HTML.safe_to_string HexWeb.ViewIcons.icon(:glyphicon, :link, class: "pull-right") %>
