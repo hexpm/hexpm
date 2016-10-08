@@ -30,7 +30,7 @@ defmodule HexWeb.Endpoint do
   plug Plug.MethodOverride
   plug Plug.Head
 
-  plug Plug.Session,
+  plug HexWeb.Session,
     store: :cookie,
     key: "_hex_web_key",
     signing_salt: "vGpjq82L",

@@ -58,4 +58,19 @@ defmodule HexWeb.ConnCase do
           |> HexWeb.Repo.insert!
     key.user_secret
   end
+
+  # See: https://github.com/elixir-lang/plug/issues/455
+  def my_put_session(conn, key, value) do
+    private =
+      conn.private
+      |> Map.update(:plug_session, %{key => value}, &Map.put(&1, key, value))
+      |> Map.put(:plug_session_fetch, :bypass)
+    %{conn | private: private}
+  end
+
+  def test_login(conn, user) do
+    conn
+    |> my_put_session("username", user.username)
+    |> my_put_session("email", user.email)
+  end
 end
