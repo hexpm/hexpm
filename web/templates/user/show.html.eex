@@ -31,7 +31,11 @@
     <h4><%= @user.full_name %></h4>
     <ul class="user-profile-list">
       <li><a href="mailto:<%= @user.email %>"><%= @user.email %></a></li>
-      <li><a href="<%= user_path(HexWeb.Endpoint, :show, @user) %>"><%= @user.username %></a> on Hex.pm</li>
+      <%= for {field, service, url} <- UserHandles.services do %>
+        <%= if handle = Map.get(@user.handles, field) do %>
+          <li><a href="<%= String.replace(url, "{handle}", handle) %>"><%= handle %></a> on <%= service %></li>
+        <% end %>
+      <% end %>
     </ul>
   </div>
 </div>
