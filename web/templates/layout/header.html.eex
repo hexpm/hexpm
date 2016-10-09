@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" prefix="og: http://ogp.me/ns#">
   <head>
     <meta charset="utf-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
@@ -7,6 +7,8 @@
     <meta name="description" content="<%= description(assigns) %>">
 
     <title><%= title(assigns) %></title>
+
+    <%= og_tags(assigns) %>
 
     <link rel="search" type="application/opensearchdescription+xml" title="Hex" href="/hexsearch.xml">
     <link rel="stylesheet" href="<%= static_path(HexWeb.Endpoint, "/css/main.css") %>">
