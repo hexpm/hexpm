@@ -15,6 +15,8 @@ defmodule HexWeb.User do
     field :reset_key, :string
     field :reset_expiry, :naive_datetime
 
+    embeds_one :handles, UserHandles, on_replace: :delete
+
     has_many :package_owners, PackageOwner, foreign_key: :owner_id
     has_many :owned_packages, through: [:package_owners, :package]
     has_many :keys, Key
@@ -36,13 +38,6 @@ defmodule HexWeb.User do
     |> unique_constraint(:username, name: "users_username_idx")
   end
 
-  defp changeset(user, :update, params) do
-    cast(user, params, ~w(username full_name password))
-    |> validate_required(~w(username password)a)
-    |> update_change(:username, &String.downcase/1)
-    |> validate_format(:username, @username_regex)
-  end
-
   def build(params, confirmed? \\ not Application.get_env(:hex_web, :user_confirm)) do
     changeset(%User{}, :create, params)
     |> put_change(:confirmation_key, HexWeb.Auth.gen_key())
@@ -53,6 +48,7 @@ defmodule HexWeb.User do
   def update_profile(user, params) do
     cast(user, params, ~w(full_name))
     |> validate_required(~w(full_name)a)
+    |> cast_embed(:handles)
   end
 
   def update_password(user, params) do

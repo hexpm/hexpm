@@ -7,7 +7,7 @@ defmodule HexWeb.ReleaseMetadata do
     field :elixir, :string
   end
 
-  def changeset(meta, params \\ %{}) do
+  def changeset(meta, params) do
     cast(meta, params, ~w(app build_tools elixir))
     |> validate_required(~w(app build_tools)a)
     |> validate_list_required(:build_tools)

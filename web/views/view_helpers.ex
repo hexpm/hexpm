@@ -21,10 +21,12 @@ defmodule HexWeb.ViewHelpers do
   end
 
   def text_input(form, field, opts \\ []) do
+    value = form.params[Atom.to_string(field)] || Map.get(form.data, field)
+
     opts =
       opts
       |> add_error_class(form, field)
-      |> Keyword.put_new(:value, form.params[Atom.to_string(field)])
+      |> Keyword.put_new(:value, value)
 
     Phoenix.HTML.Form.text_input(form, field, opts)
   end

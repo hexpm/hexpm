@@ -107,7 +107,8 @@ defmodule HexWeb.Web do
         ReleaseMetadata,
         Requirement,
         User,
-        Users
+        Users,
+        UserHandles,
       }
     end
   end
