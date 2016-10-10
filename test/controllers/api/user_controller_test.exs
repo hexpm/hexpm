@@ -52,7 +52,7 @@ defmodule HexWeb.API.UserControllerTest do
     assert conn.status == 403
     assert conn.resp_body =~ "account unconfirmed"
 
-    conn = get(build_conn(), "confirm?username=name&key=" <> user.confirmation_key)
+    conn = get(build_conn(), "email/confirm?username=name&key=" <> user.confirmation_key)
     assert conn.status == 200
     assert conn.resp_body =~ "Email confirmed"
 
@@ -99,7 +99,6 @@ defmodule HexWeb.API.UserControllerTest do
   test "get user" do
     conn = build_conn()
            |> put_req_header("content-type", "application/json")
-           |> put_req_header("authorization", key_for("eric"))
            |> get("api/users/eric")
 
     assert conn.status == 200
@@ -107,9 +106,6 @@ defmodule HexWeb.API.UserControllerTest do
     assert body["username"] == "eric"
     assert body["email"] == "eric@mail.com"
     refute body["password"]
-
-    conn = get build_conn(), "api/users/eric"
-    assert conn.status == 401
   end
 
   test "recreate unconfirmed user" do

@@ -9,9 +9,16 @@ defmodule HexWeb.API.UserView do
 
   def render("user", %{user: user}) do
     user
-    |> Map.take([:username, :email, :inserted_at, :updated_at])
+    |> Map.take([:username, :full_name, :email, :handles, :inserted_at, :updated_at])
     |> Map.put(:url, api_user_url(HexWeb.Endpoint, :show, user))
+    |> Map.update!(:handles, &render_handles/1)
     |> if_value(assoc_loaded?(user.owned_packages), &load_owned(&1, user.owned_packages))
+  end
+
+  def render_handles(nil), do: %{}
+  def render_handles(handles) do
+    keys = UserHandles.services |> Enum.map(&elem(&1, 0))
+    Map.take(handles, keys)
   end
 
   defp load_owned(entity, packages) do

@@ -1,8 +1,6 @@
 defmodule HexWeb.API.UserController do
   use HexWeb.Web, :controller
 
-  plug :authorize, [fun: &correct_user?/2] when action == :show
-
   def create(conn, params) do
     case Users.add(params) do
       {:ok, user} ->
@@ -18,8 +16,8 @@ defmodule HexWeb.API.UserController do
     end
   end
 
-  def show(conn, _params) do
-    user = Users.with_owned_packages(conn.assigns.user)
+  def show(conn, %{"name" => username}) do
+    user = username |> Users.get |> Users.with_owned_packages
 
     when_stale(conn, user, fn conn ->
       conn
