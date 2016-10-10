@@ -26,21 +26,28 @@ defmodule HexWeb.Validation do
     end)
   end
 
-  def validate_password(changeset, field, opts \\ []) do
-    validate_change changeset, field, {:password, opts}, fn _, _ ->
-      hash = Map.fetch!(changeset.data, field)
-      error_param = "#{field}_current"
-      error_field = String.to_atom(error_param)
+  def validate_password(changeset, field, hash, opts \\ []) do
+    error_param = "#{field}_current"
+    error_field = String.to_atom(error_param)
+
+    errors =
       case Map.fetch(changeset.params, error_param) do
         {:ok, value} ->
-          if Comeonin.Bcrypt.checkpw(value, hash) do
-            []
-          else
-            [{error_field, "is invalid"}]
-          end
+          hash = default_hash(hash)
+          if Comeonin.Bcrypt.checkpw(value, hash),
+            do: [],
+          else: [{error_field, {"is invalid", []}}]
+
         :error ->
-          [{error_field, "can't be blank"}]
+          [{error_field, {"can't be blank", []}}]
       end
-    end
+
+    %{changeset | validations: [{:password, opts}|changeset.validations],
+                  errors: errors ++ changeset.errors,
+                  valid?: changeset.valid? and errors == []}
   end
+
+  defp default_hash(nil), do: Comeonin.Bcrypt.hashpwsalt("password")
+  defp default_hash(""), do: Comeonin.Bcrypt.hashpwsalt("password")
+  defp default_hash(password), do: password
 end

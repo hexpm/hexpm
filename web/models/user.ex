@@ -58,9 +58,12 @@ defmodule HexWeb.User do
   end
 
   def update_password(user, params) do
+    password = user.password
+    user = %{user | password: nil}
+
     cast(user, params, ~w(password))
     |> validate_required(~w(password)a)
-    |> validate_password(:password)
+    |> validate_password(:password, password)
     |> validate_confirmation(:password, required: true, message: "does not match password")
     |> update_change(:password, &HexWeb.Auth.gen_password/1)
   end
