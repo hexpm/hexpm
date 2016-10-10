@@ -11,7 +11,7 @@ defmodule HexWeb.RegistryBuilderTest do
   @endpoint HexWeb.Endpoint
 
   setup do
-    user = User.build(%{username: "eric", email: "eric@mail.com", password: "eric"}, true) |> HexWeb.Repo.insert!
+    user = User.build(%{username: "eric", email: "eric@mail.com", password: "ericeric"}, true) |> HexWeb.Repo.insert!
     postgrex = Package.build(user, pkg_meta(%{name: "postgrex", description: "PostgreSQL driver for Elixir."})) |> HexWeb.Repo.insert!
     decimal = Package.build(user, pkg_meta(%{name: "decimal", description: "Arbitrary precision decimal arithmetic for Elixir."})) |> HexWeb.Repo.insert!
     ex_doc = Package.build(user, pkg_meta(%{name: "ex_doc", description: "ExDoc"})) |> HexWeb.Repo.insert!

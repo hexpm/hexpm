@@ -6,7 +6,7 @@ defmodule HexWeb.KeyTest do
 
   setup do
     user =
-      User.build(%{username: "eric", email: "eric@mail.com", password: "eric"}, true)
+      User.build(%{username: "eric", email: "eric@mail.com", password: "ericeric"}, true)
       |> HexWeb.Repo.insert!
 
     {:ok, user: user}
@@ -23,7 +23,7 @@ defmodule HexWeb.KeyTest do
   end
 
   test "all user keys", %{user: eric} do
-    jose = User.build(%{username: "jose", email: "jose@mail.com", password: "jose"}, true) |> HexWeb.Repo.insert!
+    jose = User.build(%{username: "jose", email: "jose@mail.com", password: "josejose"}, true) |> HexWeb.Repo.insert!
 
     assert %Key{name: "computer"} = Key.build(eric, %{name: "computer"}) |> HexWeb.Repo.insert!
     assert %Key{name: "macbook"}  = Key.build(eric, %{name: "macbook"}) |> HexWeb.Repo.insert!

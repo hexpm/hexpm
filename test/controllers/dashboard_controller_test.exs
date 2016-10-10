@@ -49,17 +49,17 @@ defmodule HexWeb.DashboardControllerTest do
   test "update password", c do
     conn = build_conn()
            |> test_login(c.user)
-           |> post("dashboard/password", %{user: %{password_current: c.password, password: "new", password_confirmation: "new"}})
+           |> post("dashboard/password", %{user: %{password_current: c.password, password: "newpass", password_confirmation: "newpass"}})
 
     assert response(conn, 200) =~ "Change password"
-    assert {:ok, _} = HexWeb.Auth.password_auth(c.user.username, "new")
+    assert {:ok, _} = HexWeb.Auth.password_auth(c.user.username, "newpass")
     assert :error = HexWeb.Auth.password_auth(c.user.username, c.password)
   end
 
   test "update password invalid current password", c do
     conn = build_conn()
            |> test_login(c.user)
-           |> post("dashboard/password", %{user: %{password_current: "WRONG", password: "new", password_confirmation: "new"}})
+           |> post("dashboard/password", %{user: %{password_current: "WRONG", password: "newpass", password_confirmation: "newpass"}})
 
     assert response(conn, 400) =~ "Change password"
     assert {:ok, _} = HexWeb.Auth.password_auth(c.user.username, c.password)
@@ -68,20 +68,20 @@ defmodule HexWeb.DashboardControllerTest do
   test "update password invalid confirmation password", c do
     conn = build_conn()
            |> test_login(c.user)
-           |> post("dashboard/password", %{user: %{password_current: c.password, password: "new", password_confirmation: "WRONG"}})
+           |> post("dashboard/password", %{user: %{password_current: c.password, password: "newpass", password_confirmation: "WRONG"}})
 
     assert response(conn, 400) =~ "Change password"
     assert {:ok, _} = HexWeb.Auth.password_auth(c.user.username, c.password)
-    assert :error = HexWeb.Auth.password_auth(c.user.username, "new")
+    assert :error = HexWeb.Auth.password_auth(c.user.username, "newpass")
   end
 
   test "update password missing current password", c do
     conn = build_conn()
            |> test_login(c.user)
-           |> post("dashboard/password", %{user: %{password: "new", password_confirmation: "new"}})
+           |> post("dashboard/password", %{user: %{password: "newpass", password_confirmation: "newpass"}})
 
     assert response(conn, 400) =~ "Change password"
     assert {:ok, _} = HexWeb.Auth.password_auth(c.user.username, c.password)
-    assert :error = HexWeb.Auth.password_auth(c.user.username, "new")
+    assert :error = HexWeb.Auth.password_auth(c.user.username, "newpass")
   end
 end
