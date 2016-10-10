@@ -6,7 +6,7 @@ defmodule HexWeb.PackageTest do
 
   setup do
     user =
-      User.build(%{username: "eric", email: "eric@mail.com", password: "eric"}, true)
+      User.build(%{username: "eric", email: "eric@mail.com", password: "ericeric"}, true)
       |> HexWeb.Repo.insert!
 
     {:ok, user: user}

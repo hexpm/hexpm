@@ -7,7 +7,7 @@ defmodule HexWeb.ReleaseTest do
 
   setup do
     user =
-      User.build(%{username: "eric", email: "eric@mail.com", password: "eric"}, true)
+      User.build(%{username: "eric", email: "eric@mail.com", password: "ericeric"}, true)
       |> HexWeb.Repo.insert!
     ecto =
       Package.build(user, pkg_meta(%{name: "ecto", description: "Ecto is awesome"}))

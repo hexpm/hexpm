@@ -5,14 +5,14 @@ defmodule HexWeb.API.UserControllerTest do
 
   setup do
     user =
-      User.build(%{username: "eric", email: "eric@mail.com", password: "eric"}, true)
+      User.build(%{username: "eric", email: "eric@mail.com", password: "ericeric"}, true)
       |> HexWeb.Repo.insert!
 
     %{user: user}
   end
 
   test "create user" do
-    body = %{username: "name", email: "email@mail.com", password: "pass"}
+    body = %{username: "name", email: "email@mail.com", password: "passpass"}
     conn = build_conn()
            |> put_req_header("content-type", "application/json")
            |> post("api/users", Poison.encode!(body))
@@ -26,7 +26,7 @@ defmodule HexWeb.API.UserControllerTest do
   end
 
   test "create user sends mails and requires confirmation" do
-    body = %{username: "name", email: "create_user@mail.com", password: "pass"}
+    body = %{username: "name", email: "create_user@mail.com", password: "passpass"}
     conn = build_conn()
            |> put_req_header("content-type", "application/json")
            |> post("api/users", Poison.encode!(body))
@@ -84,7 +84,7 @@ defmodule HexWeb.API.UserControllerTest do
   end
 
   test "create user validates" do
-    body = %{username: "name", password: "pass"}
+    body = %{username: "name", password: "passpass"}
     conn = build_conn()
            |> put_req_header("content-type", "application/json")
            |> post("api/users", Poison.encode!(body))
@@ -110,7 +110,7 @@ defmodule HexWeb.API.UserControllerTest do
 
   test "recreate unconfirmed user" do
     # first
-    body = %{username: "name", email: "email@mail.com", password: "pass"}
+    body = %{username: "name", email: "email@mail.com", password: "passpass"}
     conn = build_conn()
            |> put_req_header("content-type", "application/json")
            |> post("api/users", Poison.encode!(body))

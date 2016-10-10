@@ -22,8 +22,8 @@ defmodule HexWeb.UserTest do
   end
 
   test "users name and email are unique" do
-    assert {:error, _} = User.build(%{username: "eric", email: "mail@mail.com", password: "pass"}, true) |> HexWeb.Repo.insert
-    assert {:error, _} = User.build(%{username: "name", email: "eric@mail.com", password: "pass"}, true) |> HexWeb.Repo.insert
+    assert {:error, _} = User.build(%{username: "eric", email: "mail@mail.com", password: "passpass"}, true) |> HexWeb.Repo.insert
+    assert {:error, _} = User.build(%{username: "name", email: "eric@mail.com", password: "passpass"}, true) |> HexWeb.Repo.insert
   end
 
   test "update password", %{user: user} do

@@ -30,12 +30,16 @@ defmodule HexWeb.User do
   defp changeset(user, :create, params) do
     cast(user, params, ~w(username full_name password email))
     |> validate_required(~w(username password email)a)
-    |> update_change(:email, &String.downcase/1)
     |> update_change(:username, &String.downcase/1)
-    |> validate_format(:email, @email_regex)
+    |> validate_length(:username, min: 3)
     |> validate_format(:username, @username_regex)
-    |> unique_constraint(:email, name: "users_email_key")
     |> unique_constraint(:username, name: "users_username_idx")
+    |> update_change(:email, &String.downcase/1)
+    |> validate_format(:email, @email_regex)
+    |> validate_confirmation(:email, message: "does not match email")
+    |> unique_constraint(:email, name: "users_email_key")
+    |> validate_length(:password, min: 7)
+    |> validate_confirmation(:password, message: "does not match password")
   end
 
   def build(params, confirmed? \\ not Application.get_env(:hex_web, :user_confirm)) do
@@ -63,8 +67,9 @@ defmodule HexWeb.User do
 
     cast(user, params, ~w(password))
     |> validate_required(~w(password)a)
+    |> validate_length(:password, min: 7)
     |> validate_password(:password, password)
-    |> validate_confirmation(:password, required: true, message: "does not match password")
+    |> validate_confirmation(:password, message: "does not match password")
     |> update_change(:password, &HexWeb.Auth.gen_password/1)
   end
 
@@ -91,14 +96,13 @@ defmodule HexWeb.User do
   end
 
   def reset(user, password, revoke_all_keys \\ true) do
-    multi = Ecto.Multi.new
-    |> Ecto.Multi.update(:password, update_password_no_validation(user, %{password: password}))
-    |> Ecto.Multi.update(:reset, change(user, %{reset_key: nil, reset_expiry: nil}))
-    if revoke_all_keys do
-      multi
-      |> Ecto.Multi.update_all(:keys, Key.revoke_all(user), [])
-    else
-      multi
-    end
+    multi =
+      Ecto.Multi.new
+      |> Ecto.Multi.update(:password, update_password_no_validation(user, %{password: password}))
+      |> Ecto.Multi.update(:reset, change(user, %{reset_key: nil, reset_expiry: nil}))
+
+    if revoke_all_keys,
+      do: Ecto.Multi.update_all(multi, :keys, Key.revoke_all(user), []),
+    else: multi
   end
 end

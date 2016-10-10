@@ -52,7 +52,7 @@ defmodule HexWeb.ViewHelpers do
 
   defp translate_error({msg, opts}) do
     Enum.reduce(opts, msg, fn {key, value}, msg ->
-      String.replace(msg, "%{#{key}}", value)
+      String.replace(msg, "%{#{key}}", to_string(value))
     end)
   end
 

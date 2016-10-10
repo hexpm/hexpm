@@ -6,7 +6,7 @@ defmodule Mix.Tasks.Hexweb.StatsTest do
   alias HexWeb.Release
 
   setup do
-    user = User.build(%{username: "eric", email: "eric@mail.com", password: "eric"}, true) |> HexWeb.Repo.insert!
+    user = User.build(%{username: "eric", email: "eric@mail.com", password: "ericeric"}, true) |> HexWeb.Repo.insert!
 
     foo   = Package.build(user, pkg_meta(%{name: "foo", description: "Foo"})) |> HexWeb.Repo.insert!
     bar   = Package.build(user, pkg_meta(%{name: "bar", description: "Bar"})) |> HexWeb.Repo.insert!

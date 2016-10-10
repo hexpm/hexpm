@@ -21,7 +21,7 @@ defmodule HexWeb.PageControllerTest do
     second_date = ~N[2014-05-02 10:11:12]
     last_date   = ~N[2014-05-03 10:11:12]
 
-    eric = create_user("eric", "eric@example.com", "eric")
+    eric = create_user("eric", "eric@example.com", "ericeric")
 
     foo = Package.build(eric, %{name: "foo", inserted_at: first_date, updated_at: first_date, meta: %{description: "foo", licenses: ["Apache"]}}) |> HexWeb.Repo.insert!
     bar = Package.build(eric, %{name: "bar", inserted_at: second_date, updated_at: second_date, meta: %{description: "bar", licenses: ["Apache"]}}) |> HexWeb.Repo.insert!
