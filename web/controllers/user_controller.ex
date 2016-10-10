@@ -15,38 +15,4 @@ defmodule HexWeb.UserController do
       not_found(conn)
     end
   end
-
-  def edit(conn, %{"username" => username}) do
-    user = Users.get_by_username(username)
-
-    if username == get_session(conn, "username") && user do
-      render_edit(conn, User.update_profile(user, %{}))
-    else
-      not_found(conn)
-    end
-  end
-
-  def update(conn, %{"username" => username} = params) do
-    user = Users.get_by_username(username)
-
-    if username == get_session(conn, "username") && user do
-      case Users.update(user, params["user"]) do
-        {:ok, user} ->
-          redirect(conn, to: user_path(conn, :show, user))
-        {:error, changeset} ->
-          conn
-          |> put_status(400)
-          |> render_edit(changeset)
-      end
-    else
-      not_found(conn)
-    end
-  end
-
-  defp render_edit(conn, changeset) do
-    render conn, "edit.html",
-      title: "Update your profile",
-      container: "container page user-edit",
-      changeset: changeset
-  end
 end

@@ -5,7 +5,7 @@
     <%= if @user.owned_packages == [] do %>
       <h3>No owned packages</h3>
     <% else %>
-      <h3>Owned packages</h3>
+      <h3 class="first-header">Owned packages</h3>
       <ul class="user-package-list">
         <%= for package <- @packages do %>
           <li>
@@ -21,12 +21,6 @@
     <a href="http://en.gravatar.com/emails/" class="avatar">
       <img src="<%= gravatar_url(@user.email, 440) %>">
     </a>
-
-    <%= if assigns[:username] == @user.username do %>
-      <ul class="user-profile-list">
-        <li><a href="<%= user_path(HexWeb.Endpoint, :edit, @user) %>">Update your profile</a></li>
-      </ul>
-    <% end %>
 
     <h4><%= @user.full_name %></h4>
     <ul class="user-profile-list">

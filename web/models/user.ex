@@ -51,9 +51,17 @@ defmodule HexWeb.User do
     |> cast_embed(:handles)
   end
 
+  def update_password_no_validation(user, params) do
+    cast(user, params, ~w(password))
+    |> validate_required(~w(password)a)
+    |> update_change(:password, &HexWeb.Auth.gen_password/1)
+  end
+
   def update_password(user, params) do
     cast(user, params, ~w(password))
     |> validate_required(~w(password)a)
+    |> validate_password(:password)
+    |> validate_confirmation(:password, required: true, message: "does not match password")
     |> update_change(:password, &HexWeb.Auth.gen_password/1)
   end
 
@@ -81,7 +89,7 @@ defmodule HexWeb.User do
 
   def reset(user, password, revoke_all_keys \\ true) do
     multi = Ecto.Multi.new
-    |> Ecto.Multi.update(:password, update_password(user, %{password: password}))
+    |> Ecto.Multi.update(:password, update_password_no_validation(user, %{password: password}))
     |> Ecto.Multi.update(:reset, change(user, %{reset_key: nil, reset_expiry: nil}))
     if revoke_all_keys do
       multi

@@ -3,22 +3,25 @@ defmodule HexWeb.LoginController do
 
   def show(conn, _params) do
     if username = get_session(conn, "username") do
-      redirect(conn, to: user_path(conn, :show, username))
+      path = conn.params["return"] || user_path(conn, :show, username)
+      redirect(conn, to: path)
     else
       render_show(conn)
     end
   end
 
   def create(conn, %{"username" => username, "password" => password}) do
-    case auth(username, password) do
+    case password_auth(username, password) do
       {:ok, user} ->
+        path = conn.params["return"] || user_path(conn, :show, user.username)
+
         conn
         |> put_session("username", user.username)
         |> put_session("email", user.email)
-        |> redirect(to: user_path(conn, :show, user.username))
+        |> redirect(to: path)
       {:error, reason} ->
         conn
-        |> put_flash(:error, error_to_message(reason))
+        |> put_flash(:error, auth_error_message(reason))
         |> put_status(400)
         |> render_show
     end
@@ -30,24 +33,11 @@ defmodule HexWeb.LoginController do
     |> redirect(to: "/")
   end
 
-  defp auth(username, password) do
-    case HexWeb.Auth.password_auth(username, password) do
-      {:ok, {user, nil}} ->
-        if user.confirmed,
-          do: {:ok, user},
-        else: {:error, :unconfirmed}
-      :error ->
-        {:error, :wrong}
-    end
-  end
-
   defp render_show(conn) do
     render conn, "show.html", [
       title: "Log in",
-      container: "container page login"
+      container: "container page login",
+      return: conn.params["return"]
     ]
   end
-
-  defp error_to_message(:wrong), do: "Invalid username, email or password"
-  defp error_to_message(:unconfirmed), do: "Email has not been confirmed yet"
 end

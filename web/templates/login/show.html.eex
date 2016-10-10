@@ -14,7 +14,9 @@
         <input type="password" class="form-control" name="password" tabindex="11">
       </div>
 
-      <button type="submit" class="btn btn-default" tabindex="12">Log in</button>
+      <input type="hidden" name="return" value="<%= @return %>">
+
+      <button type="submit" class="btn btn-primary" tabindex="12">Log in</button>
 
       <br><br>
 

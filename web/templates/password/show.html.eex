@@ -21,7 +21,7 @@
       <input type="hidden" name="username" value="<%= @username %>">
       <input type="hidden" name="key" value="<%= @key %>">
 
-      <button type="submit" class="btn btn-default">Submit</button>
+      <button type="submit" class="btn btn-primary">Submit</button>
     <% end %>
   </div>
 </div>
