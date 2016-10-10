@@ -7,9 +7,6 @@
             <li>
               <a href="https://github.com/hexpm">github</a>
             </li>
-            <!-- <li>
-              <a href="javascript:void(0)">twitter</a>
-            </li> -->
             <li>
               <a href="<%= policy_path(HexWeb.Endpoint, :index) %>">policies</a>
             </li>
