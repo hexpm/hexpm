@@ -1,7 +1,7 @@
 defmodule HexWeb.Mailer do
   def send(template, title, emails, assigns) do
-    assigns = [layout: {HexWeb.EmailView, "layout.html"}] ++ assigns
-    body    = Phoenix.View.render(HexWeb.EmailView, template, assigns)
+    assigns = [layout: {HexWeb.EmailsView, "layout.html"}] ++ assigns
+    body    = Phoenix.View.render(HexWeb.EmailsView, template, assigns)
 
     HexWeb.Email.send(emails, title, body)
   end

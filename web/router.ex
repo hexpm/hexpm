@@ -42,7 +42,6 @@ defmodule HexWeb.Router do
 
     get  "/signup",  SignupController, :show
     post "/signup",  SignupController, :create
-    get  "/confirm", SignupController, :confirm
 
     get  "/password/new", PasswordController, :show
     post "/password/new", PasswordController, :update
@@ -50,9 +49,17 @@ defmodule HexWeb.Router do
     get  "/password/reset", PasswordResetController, :show
     post "/password/reset", PasswordResetController, :create
 
-    get  "/users/:username",      UserController, :show
-    get  "/users/:username/edit", UserController, :edit
-    post "/users/:username",      UserController, :update
+    get  "/email/confirm", EmailController, :confirm
+
+    get  "/users/:username", UserController, :show
+
+    get  "/dashboard",          DashboardController, :index
+    get  "/dashboard/profile",  DashboardController, :profile
+    post "/dashboard/profile",  DashboardController, :update_profile
+    get  "/dashboard/email",    DashboardController, :email
+    post "/dashboard/email",    DashboardController, :update_email
+    get  "/dashboard/password", DashboardController, :password
+    post "/dashboard/password", DashboardController, :update_password
 
     get  "/docs/usage",          DocsController, :usage
     get  "/docs/rebar3_usage",   DocsController, :rebar3_usage

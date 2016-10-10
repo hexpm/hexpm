@@ -27,7 +27,7 @@ defmodule HexWeb.UserTest do
   end
 
   test "update password", %{user: user} do
-    User.update_password(user, %{username: "new_username", password: "new_pass"})
+    User.update_password_no_validation(user, %{username: "new_username", password: "new_pass"})
     |> HexWeb.Repo.update!
 
     assert {:ok, {%User{username: "eric"}, nil}} = Auth.password_auth("eric", "new_pass")

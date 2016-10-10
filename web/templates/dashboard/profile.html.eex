@@ -1,0 +1,44 @@
+<%= changeset_error(@changeset) %>
+
+<div class="row">
+  <div class="col-md-3">
+    <%= render "_sidebar.html", conn: @conn %>
+  </div>
+
+  <div class="col-md-9">
+    <div class="panel panel-default">
+      <div class="panel-heading">Public profile</div>
+      <div class="panel-body">
+        <%= form_for @changeset, dashboard_path(HexWeb.Endpoint, :update_profile), [method: :post], fn f -> %>
+          <div class="form-group">
+            <%= label f, :full_name %>
+            <%= text_input f, :full_name %>
+            <%= error_tag f, :full_name %>
+          </div>
+
+          <%= inputs_for f, :handles, fn f -> %>
+            <div class="form-group">
+              <%= label f, :twitter %>
+              <%= text_input f, :twitter %>
+              <%= error_tag f, :twitter %>
+            </div>
+
+            <div class="form-group">
+              <%= label f, :github %>
+              <%= text_input f, :github %>
+              <%= error_tag f, :github %>
+            </div>
+
+            <div class="form-group">
+              <%= label f, :freenode %>
+              <%= text_input f, :freenode %>
+              <%= error_tag f, :freenode %>
+            </div>
+          <% end %>
+
+          <button type="submit" class="btn btn-primary">Save</button>
+        <% end %>
+      </div>
+    </div>
+  </div>
+</div>

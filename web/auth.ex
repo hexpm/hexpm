@@ -42,9 +42,8 @@ defmodule HexWeb.Auth do
     end
   end
 
-  def gen_password(password) do
-    Comeonin.Bcrypt.hashpwsalt(password)
-  end
+  def gen_password(nil), do: nil
+  def gen_password(password), do: Comeonin.Bcrypt.hashpwsalt(password)
 
   def gen_key do
     :crypto.strong_rand_bytes(16)

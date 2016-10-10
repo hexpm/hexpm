@@ -28,8 +28,13 @@ defmodule HexWeb.Users do
     end
   end
 
-  def update(user, params) do
+  def update_profile(user, params) do
     User.update_profile(user, params)
+    |> Repo.update
+  end
+
+  def update_password(user, params) do
+    User.update_password(user, params)
     |> Repo.update
   end
 

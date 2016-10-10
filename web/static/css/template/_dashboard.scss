@@ -1,0 +1,40 @@
+.list-group-item {
+  margin: 0 0 -1px 0 !important;
+}
+
+.list-group-item:last-child {
+  margin-bottom: 0 !important;
+}
+
+.dashboard .row {
+  margin-top: 20px;
+}
+
+.dashboard .list-group-item {
+  font-weight: 400;
+
+  :hover {
+    background-color: #f9f9f9;
+  }
+
+  &.selected {
+    background-color: #fff;
+
+    a {
+      text-decoration: none;
+      color: #555;
+      font-weight: bold;
+      cursor: default;
+    }
+
+    :before {
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      left: 0;
+      width: 2px;
+      content: "";
+      background-color: #ec485b;
+    }
+  }
+}
