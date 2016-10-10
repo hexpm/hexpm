@@ -14,6 +14,7 @@ defmodule HexWeb.API.PackageView do
     |> Map.put(:url, api_package_url(HexWeb.Endpoint, :show, package))
     |> if_value(assoc_loaded?(package.releases), &load_releases(&1, get_params(view), package, package.releases))
     |> if_value(assoc_loaded?(package.downloads), &load_downloads(&1, package.downloads))
+    |> if_value(assoc_loaded?(package.owners), &load_owners(&1, package.owners))
   end
 
   defp load_releases(entity, params, package, releases) do
@@ -35,6 +36,17 @@ defmodule HexWeb.API.PackageView do
       end)
 
     Map.put(entity, :downloads, downloads)
+  end
+
+  defp load_owners(entity, owners) do
+    owners =
+      Enum.map(owners, fn user ->
+        user
+        |> Map.take([:username, :email])
+        |> Map.put(:url, api_user_url(HexWeb.Endpoint, :show, user))
+      end)
+
+    Map.put(entity, :owners, owners)
   end
 
   defp get_params("index"), do: [:version]
