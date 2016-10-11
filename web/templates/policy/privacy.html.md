@@ -30,9 +30,9 @@ Requests to the repository is logged and the same information is stored as for t
 
 ### User information
 
-For registered users their username, email address, full name and cryptographically hashed password is stored and is required to be provided by users. Other profile information may be stored of the user if the user chooses to provide it.
+For registered users their username, email address, and cryptographically hashed password is stored and is required to be provided by users. In addition to this profile information, such as user's full name and social media handles, may be stored of the user if the user chooses to provide it.
 
-Profile information is public and accessible to anyone including the user's username, full name and email address with the ability to opt-out of showing the full name and email address. Packages owned and published by the user is also public.
+Profile information is public and accessible to anyone including the user's username, email address, and full name with the ability to opt-out of showing the email address and full name. Packages owned and published by the user is also public. No other information, including the user's password, is public and will not be shared with other parties.
 
 ### Disclosure
 
