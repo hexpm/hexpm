@@ -10,7 +10,7 @@
   margin-top: 20px;
 }
 
-.dashboard .list-group-item {
+.dashboard .sidebar .list-group-item {
   font-weight: 400;
 
   :hover {
@@ -37,4 +37,54 @@
       background-color: #ec485b;
     }
   }
+}
+
+.dashboard .email .panel-body {
+  padding-bottom: 0;
+}
+
+.dashboard .email .panel .label {
+  margin-left: 4px;
+  font-size: 0.7em;
+}
+
+.dashboard .email .address {
+  font-weight: 400;
+}
+
+.dashboard .email {
+  float: right;
+
+  svg {
+    float: right;
+    margin-top: 3px;
+    margin-left: 10px;
+    width: 1em;
+    height: 1em;
+    fill: #ec485b;
+  }
+
+  .verification {
+    float: right;
+    font-size: 0.9em;
+  }
+
+  .btn-xs {
+    float: right;
+    margin-left: 4px;
+    font-size: 0.7em;
+  }
+
+  .form-inline input#user_email {
+    width: 300px;
+  }
+}
+
+.panel>.list-group .list-group-item, .panel>.panel-collapse>.list-group .list-group-item {
+    border-width: 1px 0;
+    border-radius: 0;
+}
+.list-group-item:first-child {
+    border-top-left-radius: 4px;
+    border-top-right-radius: 4px;
 }

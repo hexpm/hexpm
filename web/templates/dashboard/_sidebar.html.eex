@@ -1,4 +1,4 @@
-<div class="panel panel-default">
+<div class="panel panel-default sidebar">
   <div class="panel-heading">Account settings</div>
   <ul class="list-group">
     <%= for {id, name} <- pages() do %>

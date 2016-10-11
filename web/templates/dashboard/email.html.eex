@@ -1,0 +1,50 @@
+<%= # changeset_error(@changeset) %>
+
+<div class="row">
+  <div class="col-md-3">
+    <%= render "_sidebar.html", conn: @conn %>
+  </div>
+
+  <div class="col-md-9 email">
+    <div class="panel panel-default">
+      <div class="panel-heading">Emails</div>
+      <div class="panel-body">
+        <p>
+          The <strong>primary</strong> email address will be used when Hex.pm communicates with you.
+          The <strong>public</strong> email address will be displayed on your profile page.
+        </p>
+      </div>
+      <ul class="list-group">
+        <li class="list-group-item">
+          <span class="address">eric.meadows.jonsson@gmail.com</span>
+          <span class="label label-success">Public</span>
+          <a href="#"><%= HexWeb.ViewIcons.icon(:octicon, :trashcan) %></a>
+          <button type="button" class="btn btn-primary btn-xs">Set as primary</button>
+        </li>
+        <li class="list-group-item">
+          <span class="address">ericmj@hex.com</span>
+          <span class="label label-success">Primary</span>
+          <a href="#"><%= HexWeb.ViewIcons.icon(:octicon, :trashcan) %></a>
+          <button type="button" class="btn btn-primary btn-xs">Set as public</button>
+        </li>
+        <li class="list-group-item">
+          <span class="address">verifyme@hex.com</span>
+          <span class="label label-default">Unverified</span>
+          <a href="#"><%= HexWeb.ViewIcons.icon(:octicon, :trashcan) %></a>
+          <a href="#" class="verification">Resend verification email</a>
+        </li>
+        <li class="list-group-item">
+          <%= form_for @add_email_changeset, dashboard_path(HexWeb.Endpoint, :add_email), [method: :post], fn f -> %>
+            <%= label f, :email, "Add email address" %>
+            <div class="form-group form-inline">
+              <%= email_input f, :email %>
+              <button type="submit" class="btn btn-primary">Add</button>
+              <%= error_tag f, :email %>
+            </div>
+
+          <% end %>
+        </li>
+      </ul>
+    </div>
+  </div>
+</div>

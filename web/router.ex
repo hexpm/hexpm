@@ -56,10 +56,14 @@ defmodule HexWeb.Router do
     get  "/dashboard",          DashboardController, :index
     get  "/dashboard/profile",  DashboardController, :profile
     post "/dashboard/profile",  DashboardController, :update_profile
-    get  "/dashboard/email",    DashboardController, :email
-    post "/dashboard/email",    DashboardController, :update_email
     get  "/dashboard/password", DashboardController, :password
     post "/dashboard/password", DashboardController, :update_password
+    get  "/dashboard/email",    DashboardController, :email
+    post "/dashboard/email",    DashboardController, :add_email
+    post "/dashboard/email",    DashboardController, :remove_email
+    post "/dashboard/email",    DashboardController, :primary_email
+    post "/dashboard/email",    DashboardController, :public_email
+    post "/dashboard/email",    DashboardController, :resend_verify_email
 
     get  "/docs/usage",          DocsController, :usage
     get  "/docs/rebar3_usage",   DocsController, :rebar3_usage
