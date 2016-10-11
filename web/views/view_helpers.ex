@@ -31,6 +31,17 @@ defmodule HexWeb.ViewHelpers do
     Phoenix.HTML.Form.text_input(form, field, opts)
   end
 
+  def email_input(form, field, opts \\ []) do
+    value = form.params[Atom.to_string(field)] || Map.get(form.data, field)
+
+    opts =
+      opts
+      |> add_error_class(form, field)
+      |> Keyword.put_new(:value, value)
+
+    Phoenix.HTML.Form.email_input(form, field, opts)
+  end
+
   def password_input(form, field, opts \\ []) do
     opts = add_error_class(opts, form, field)
     Phoenix.HTML.Form.password_input(form, field, opts)

@@ -18,9 +18,7 @@
   </div>
 
   <div class="col-md-3">
-    <a href="http://en.gravatar.com/emails/" class="avatar">
-      <img src="<%= gravatar_url(@user.email, 440) %>">
-    </a>
+    <img src="<%= gravatar_url(@user.email, 440) %>" class="avatar">
 
     <h4><%= @user.full_name %></h4>
     <ul class="user-profile-list">

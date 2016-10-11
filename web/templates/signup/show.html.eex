@@ -19,13 +19,13 @@
 
       <div class="form-group">
         <%= label f, :email %>
-        <%= text_input f, :email %>
+        <%= email_input f, :email %>
         <%= error_tag f, :email %>
       </div>
 
       <div class="form-group">
         <%= label f, :email_confirmation %>
-        <%= text_input f, :email_confirmation %>
+        <%= email_input f, :email_confirmation %>
         <%= error_tag f, :email_confirmation %>
       </div>
 

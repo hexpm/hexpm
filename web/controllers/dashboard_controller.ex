@@ -46,6 +46,25 @@ defmodule HexWeb.DashboardController do
     end
   end
 
+  def email(conn, _params) do
+    render_email(conn)
+  end
+
+  def add_email(conn, _params) do
+  end
+
+  def remove_email(conn, _params) do
+  end
+
+  def primary_email(conn, _params) do
+  end
+
+  def public_email(conn, _params) do
+  end
+
+  def resend_verify_email(conn, _params) do
+  end
+
   defp render_profile(conn, changeset) do
     render conn, "profile.html", [
       title: "Dashboard - Public profile",
@@ -59,6 +78,14 @@ defmodule HexWeb.DashboardController do
       title: "Dashboard - Change password",
       container: "container page dashboard",
       changeset: changeset
+    ]
+  end
+
+  defp render_email(conn) do
+    render conn, "email.html", [
+      title: "Dashboard - Email",
+      container: "container page dashboard",
+      add_email_changeset: Ecto.Changeset.cast(%User{}, %{}, [])
     ]
   end
 end

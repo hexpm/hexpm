@@ -70,7 +70,11 @@ defmodule HexWeb.Web do
 
       # Use all HTML functionality (forms, tags, etc)
       use Phoenix.HTML
-      import Phoenix.HTML.Form, except: [text_input: 2, text_input: 3, password_input: 2, password_input: 3]
+      import Phoenix.HTML.Form, except: [
+        text_input: 2, text_input: 3,
+        email_input: 2, email_input: 3,
+        password_input: 2, password_input: 3
+      ]
 
       import HexWeb.Router.Helpers
       import HexWeb.ViewHelpers
