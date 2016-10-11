@@ -26,7 +26,6 @@ defmodule HexWeb.User do
   @email_regex ~r"^.+@.+\..+$"
   @username_regex ~r"^[a-z0-9_\-\.!~\*'\(\)]+$"
 
-  # TODO: Make full_name required
   defp changeset(user, :create, params) do
     cast(user, params, ~w(username full_name password email))
     |> validate_required(~w(username password email)a)
@@ -51,7 +50,6 @@ defmodule HexWeb.User do
 
   def update_profile(user, params) do
     cast(user, params, ~w(full_name))
-    |> validate_required(~w(full_name)a)
     |> cast_embed(:handles)
   end
 
