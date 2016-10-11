@@ -138,4 +138,18 @@
 .owners-list {
   list-style: none;
   padding: 0;
+
+  li {
+    margin: 5px 0 5px 0;
+  }
+
+  a {
+    display: block;
+  }
+}
+
+.owner-avatar {
+  width: 30px;
+  border-radius: 100%;
+  margin: 0 7px 0 0;
 }
