@@ -44,34 +44,32 @@ defmodule HexWeb.PackageController do
     if package = Packages.get(params["name"]) do
       releases = Releases.all(package)
 
-      release =
+      {release, type} =
         if version = params["version"] do
-          Enum.find(releases, &(to_string(&1.version) == version))
+          {Enum.find(releases, &(to_string(&1.version) == version)), :release}
         else
-          List.first(releases)
+          {List.first(releases), :package}
         end
 
       if release do
-        package(conn, package, releases, release)
+        package(conn, package, releases, release, type)
       end
     end || not_found(conn)
   end
 
-  defp package(conn, package, releases, release) do
-    has_docs = Enum.any?(releases, fn(release) -> release.has_docs end)
-    latest_release? = List.first(releases) == release
+  defp package(conn, package, releases, release, type) do
     release = Releases.preload(release)
 
     docs_assigns =
-      if has_docs do
-        docs_url = case latest_release? do
-                     true -> HexWeb.Utils.docs_url([package.name])
-                     false -> HexWeb.Utils.docs_url(package, release)
-                   end
-        [hexdocs_url: docs_url,
-         docs_tarball_url: HexWeb.Utils.docs_tarball_url(package, release)]
-      else
-        [hexdocs_url: nil, docs_tarball_url: nil]
+      cond do
+        type == :package and Enum.any?(releases, fn(release) -> release.has_docs end) ->
+          [hexdocs_url: HexWeb.Utils.docs_url([package.name]),
+           docs_tarball_url: HexWeb.Utils.docs_tarball_url(package, release)]
+        type == :release and release.has_docs ->
+          [hexdocs_url: HexWeb.Utils.docs_url(package, release),
+           docs_tarball_url: HexWeb.Utils.docs_tarball_url(package, release)]
+        true ->
+          [hexdocs_url: nil, docs_tarball_url: nil]
       end
 
     render conn, "show.html", [
