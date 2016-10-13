@@ -6,4 +6,6 @@ message Names {
 message Package {
   // Package name
   required string name = 1;
+  // If set, the package namespace
+  optional string namespace = 2;
 }

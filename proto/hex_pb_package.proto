@@ -10,6 +10,22 @@ message Release {
   required bytes checksum = 2;
   // All dependencies of the release
   repeated Dependency dependencies = 3;
+  // If set the release is retired, a retired release should only be
+  // resolved if it has already been locked in a project
+  optional RetirementStatus retired = 4;
+}
+
+message RetirementStatus {
+  required RetirementReason reason = 1;
+  optional string message = 2;
+}
+
+enum RetirementReason {
+  RETIRED_OTHER = 0;
+  RETIRED_INVALID = 1;
+  RETIRED_SECURITY = 2;
+  RETIRED_DEPRECATED = 3;
+  RETIRED_RENAMED = 4;
 }
 
 message Dependency {
@@ -22,4 +38,6 @@ message Dependency {
   // If set is the OTP application name of the dependency, if not set the
   // application name is the same as the package name
   optional string app = 4;
+  // If set, the namespace where the dependency is located
+  optional string namespace = 5;
 }
