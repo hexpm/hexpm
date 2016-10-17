@@ -216,8 +216,8 @@ defmodule HexWeb.ControllerHelpers do
     end
   end
 
-  def auth_error_message(:wrong), do: "Invalid username, email or password"
-  def auth_error_message(:unconfirmed), do: "Email has not been verified yet"
+  def auth_error_message(:wrong), do: "Invalid username, email or password."
+  def auth_error_message(:unconfirmed), do: "Email has not been verified yet."
 
   def requires_login(conn, _opts) do
     if conn.assigns[:logged_in] do
@@ -227,4 +227,35 @@ defmodule HexWeb.ControllerHelpers do
       |> halt
     end
   end
+
+  def nillify_params(conn, keys) do
+    params =
+      Enum.reduce(keys, conn.params, fn key, params ->
+        case Map.fetch(conn.params, key) do
+          {:ok, value} -> Map.put(params, key, scrub_param(value))
+          :error -> params
+        end
+      end)
+
+    %{conn | params: params}
+  end
+
+  defp scrub_param(%{__struct__: mod} = struct) when is_atom(mod) do
+    struct
+  end
+  defp scrub_param(%{} = param) do
+    Enum.reduce(param, %{}, fn({k, v}, acc) ->
+      Map.put(acc, k, scrub_param(v))
+    end)
+  end
+  defp scrub_param(param) when is_list(param) do
+    Enum.map(param, &scrub_param/1)
+  end
+  defp scrub_param(param) do
+    if scrub?(param), do: nil, else: param
+  end
+
+  defp scrub?(" " <> rest), do: scrub?(rest)
+  defp scrub?(""), do: true
+  defp scrub?(_), do: false
 end

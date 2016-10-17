@@ -10,16 +10,19 @@ defmodule HexWeb.Repo.Migrations.AddEmailsTable do
       "primary" boolean,
       public boolean,
       verification_key varchar(255),
-      user_id integer REFERENCES users ON DELETE CASCADE
+      user_id integer REFERENCES users ON DELETE CASCADE,
+      inserted_at timestamp,
+      updated_at timestamp
     )
     """
 
-    execute ~s{CREATE UNIQUE INDEX ON emails (user_id, "primary")}
-    execute ~s{CREATE UNIQUE INDEX ON emails (user_id, public)}
+    # (Ab)uses the fact that unique indexes are not considered equal for NULL values
+    execute ~s{CREATE UNIQUE INDEX ON emails (user_id, (CASE WHEN "primary" THEN TRUE ELSE NULL END))}
+    execute ~s{CREATE UNIQUE INDEX ON emails (user_id, (CASE WHEN public THEN TRUE ELSE NULL END))}
 
     execute """
-    INSERT INTO emails (email, verified, "primary", public, verification_key, user_id)
-      SELECT users.email, users.confirmed, TRUE, TRUE, users.confirmation_key, users.id
+    INSERT INTO emails (email, verified, "primary", public, verification_key, user_id, inserted_at, updated_at)
+      SELECT users.email, users.confirmed, TRUE, TRUE, users.confirmation_key, users.id, users.inserted_at, users.updated_at
       FROM users
     """
 

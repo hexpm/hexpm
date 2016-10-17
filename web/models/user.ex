@@ -87,6 +87,9 @@ defmodule HexWeb.User do
     else: multi
   end
 
-  def email(user, :primary), do: Enum.find(user.emails, & &1.primary).email
-  def email(user, :public), do: Enum.find(user.emails, & &1.public).email
+  def email(user, :primary), do: user.emails |> Enum.find(& &1.primary) |> email
+  def email(user, :public), do: user.emails |> Enum.find(& &1.public) |> email
+
+  defp email(nil), do: nil
+  defp email(email), do: email.email
 end

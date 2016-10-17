@@ -5,6 +5,9 @@ defmodule HexWeb.ViewHelpers do
     !!assigns[:logged_in]
   end
 
+  def gravatar_url(nil, size) do
+    "https://www.gravatar.com/avatar?s=#{size}&d=mm"
+  end
   def gravatar_url(email, size) do
     hash =
       :crypto.hash(:md5, String.trim(email))

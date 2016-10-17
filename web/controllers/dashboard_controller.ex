@@ -37,7 +37,7 @@ defmodule HexWeb.DashboardController do
       {:ok, user} ->
         # TODO: Maybe send an email here?
         conn
-        |> put_flash(:info, "Your password has been updated!")
+        |> put_flash(:info, "Your password has been updated.")
         |> render_password(User.update_password(user, %{}))
       {:error, changeset} ->
         conn
@@ -47,22 +47,88 @@ defmodule HexWeb.DashboardController do
   end
 
   def email(conn, _params) do
-    render_email(conn)
+    user = Users.with_emails(conn.assigns.logged_in)
+    render_email(conn, user)
   end
 
-  def add_email(_conn, _params) do
+  def add_email(conn, params) do
+    user = Users.with_emails(conn.assigns.logged_in)
+
+    case Users.add_email(user, params["email"]) do
+      {:ok, user} ->
+        email = params["email"]["email"]
+        conn
+        |> put_flash(:info, "A verification email has been sent to #{email}.")
+        |> render_email(user)
+      {:error, changeset} ->
+        conn
+        |> put_status(400)
+        |> render_email(user, changeset)
+    end
   end
 
-  def remove_email(_conn, _params) do
+  def remove_email(conn, params) do
+    user = Users.with_emails(conn.assigns.logged_in)
+    email = params["email"]
+
+    case Users.remove_email(user, params) do
+      :ok ->
+        conn
+        |> put_flash(:info, "Removed email #{email} from your account.")
+        |> redirect(to: dashboard_path(conn, :email))
+      {:error, reason} ->
+        conn
+        |> put_flash(:error, email_error_message(reason, email))
+        |> redirect(to: dashboard_path(conn, :email))
+    end
   end
 
-  def primary_email(_conn, _params) do
+  def primary_email(conn, params) do
+    user = Users.with_emails(conn.assigns.logged_in)
+    email = params["email"]
+
+    case Users.primary_email(user, params) do
+      :ok ->
+        conn
+        |> put_flash(:info, "Your primary email was changed to #{email}.")
+        |> redirect(to: dashboard_path(conn, :email))
+      {:error, reason} ->
+        conn
+        |> put_flash(:error, email_error_message(reason, email))
+        |> redirect(to: dashboard_path(conn, :email))
+    end
   end
 
-  def public_email(_conn, _params) do
+  def public_email(conn, params) do
+    user = Users.with_emails(conn.assigns.logged_in)
+    email = params["email"]
+
+    case Users.public_email(user, params) do
+      :ok ->
+        conn
+        |> put_flash(:info, "Your public email was changed to #{email}.")
+        |> redirect(to: dashboard_path(conn, :email))
+      {:error, reason} ->
+        conn
+        |> put_flash(:error, email_error_message(reason, email))
+        |> redirect(to: dashboard_path(conn, :email))
+    end
   end
 
-  def resend_verify_email(_conn, _params) do
+  def resend_verify_email(conn, params) do
+    user = Users.with_emails(conn.assigns.logged_in)
+    email = params["email"]
+
+    case Users.resend_verify_email(user, params) do
+      :ok ->
+        conn
+        |> put_flash(:info, "A verification email has been sent to #{email}.")
+        |> redirect(to: dashboard_path(conn, :email))
+      {:error, reason} ->
+        conn
+        |> put_flash(:error, email_error_message(reason, email))
+        |> redirect(to: dashboard_path(conn, :email))
+    end
   end
 
   defp render_profile(conn, changeset) do
@@ -81,11 +147,21 @@ defmodule HexWeb.DashboardController do
     ]
   end
 
-  defp render_email(conn) do
+  defp render_email(conn, user, add_email_changeset \\ add_email_changeset()) do
+    emails = Enum.sort_by(user.emails, &[not &1.primary, not &1.public, not &1.verified, -&1.id])
+
     render conn, "email.html", [
       title: "Dashboard - Email",
       container: "container page dashboard",
-      add_email_changeset: Ecto.Changeset.cast(%User{}, %{}, [])
+      add_email_changeset: add_email_changeset,
+      emails: emails
     ]
   end
+
+  defp add_email_changeset do
+    Email.changeset(%Email{}, :create, %{}, false)
+  end
+
+  defp email_error_message(:unknown_email, email), do: "Unknown email #{email}."
+  defp email_error_message(:not_verified, email), do: "Email #{email} not verified."
 end

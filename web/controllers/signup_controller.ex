@@ -2,7 +2,6 @@ defmodule HexWeb.SignupController do
   use HexWeb.Web, :controller
 
   def show(conn, _params) do
-    IO.inspect User.build(%{}).data
     render_show(conn, User.build(%{}))
   end
 
@@ -10,7 +9,7 @@ defmodule HexWeb.SignupController do
     case Users.add(params["user"]) do
       {:ok, _user} ->
         conn
-        |> put_flash(:info, "A confirmation email has been sent, you will have access to your account shortly")
+        |> put_flash(:info, "A confirmation email has been sent, you will have access to your account shortly.")
         |> put_flash(:custom_location, true)
         |> redirect(to: "/")
       {:error, changeset} ->

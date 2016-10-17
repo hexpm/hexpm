@@ -2,10 +2,12 @@ defmodule HexWeb.Users do
   use HexWeb.Web, :crud
 
   def get(username_or_email, preload \\ []) do
+    # Somewhat crazy hack to get this done in one query
+    # Makes assumptions about how Ecto choses variable names
     Repo.one(
       from u in HexWeb.User,
-      join: e in assoc(u, :emails),
-      where: u.username == ^username_or_email or e.email == ^username_or_email,
+      where: u.username == ^username_or_email or
+             ^username_or_email in fragment("SELECT emails.email FROM emails WHERE emails.user_id = u0.id"),
       preload: ^preload
     )
   end
@@ -80,5 +82,77 @@ defmodule HexWeb.Users do
     else
       :error
     end
+  end
+
+  def add_email(user, params) do
+    email = build_assoc(user, :emails)
+    case Email.changeset(email, :create, params) |> Repo.insert do
+      {:ok, email} ->
+        user = with_emails(%{user | emails: %Ecto.Association.NotLoaded{}})
+        Mailer.send_verification_email(user, email)
+        {:ok, user}
+      {:error, _} = error ->
+        error
+    end
+  end
+
+  def remove_email(user, params) do
+    if email = find_email(user, params) do
+      Repo.delete!(email)
+      :ok
+    else
+      {:error, :unknown_email}
+    end
+  end
+
+  def primary_email(user, params) do
+    new_primary = find_email(user, params)
+    old_primary = Enum.find(user.emails, &(&1.primary))
+
+    cond do
+      !new_primary ->
+        {:error, :unknown_email}
+      !new_primary.verified ->
+        {:error, :not_verified}
+      true ->
+        now = Ecto.DateTime.utc(:usec)
+        Repo.transaction(fn ->
+          Repo.update!(change(old_primary, primary: false, updated_at: now))
+          Repo.update!(change(new_primary, primary: true, updated_at: now))
+        end)
+        :ok
+    end
+  end
+
+  def public_email(user, params) do
+    new_public = find_email(user, params)
+    old_public = Enum.find(user.emails, &(&1.public))
+
+    cond do
+      !new_public ->
+        {:error, :unknown_email}
+      !new_public.verified ->
+        {:error, :not_verified}
+      true ->
+        now = Ecto.DateTime.utc(:usec)
+        Repo.transaction(fn ->
+          Repo.update!(change(old_public, public: false, updated_at: now))
+          Repo.update!(change(new_public, public: true, updated_at: now))
+        end)
+        :ok
+    end
+  end
+
+  def resend_verify_email(user, params) do
+    if email = find_email(user, params) do
+      Mailer.send_verification_email(user, email)
+      :ok
+    else
+      {:error, :unknown_email}
+    end
+  end
+
+  defp find_email(user, params) do
+    Enum.find(user.emails, &(&1.email == params["email"]))
   end
 end

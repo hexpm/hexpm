@@ -1,6 +1,8 @@
 defmodule HexWeb.LoginController do
   use HexWeb.Web, :controller
 
+  plug :nillify_params, ["return"]
+
   def show(conn, _params) do
     if username = get_session(conn, "username") do
       path = conn.params["return"] || user_path(conn, :show, username)
@@ -13,7 +15,7 @@ defmodule HexWeb.LoginController do
   def create(conn, %{"username" => username, "password" => password}) do
     case password_auth(username, password) do
       {:ok, user} ->
-        path = conn.params["return"] || user_path(conn, :show, user.username)
+        path = conn.params["return"] || user_path(conn, :show, user)
 
         conn
         |> put_session("username", user.username)

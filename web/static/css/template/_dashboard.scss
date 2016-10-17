@@ -13,7 +13,7 @@
 .dashboard .sidebar .list-group-item {
   font-weight: 400;
 
-  :hover {
+  &:hover {
     background-color: #f9f9f9;
   }
 
@@ -56,26 +56,26 @@
   float: right;
 
   svg {
-    float: right;
-    margin-top: 3px;
-    margin-left: 10px;
-    width: 1em;
-    height: 1em;
+    width: 0.9em;
     fill: #ec485b;
   }
 
-  .verification {
-    float: right;
-    font-size: 0.9em;
+  .btn-svg {
+    margin-top: 3px;
   }
 
-  .btn-xs {
+  .btn-link {
+    padding: 0;
+  }
+
+  form.action {
     float: right;
+    margin-top: -1px;
     margin-left: 4px;
     font-size: 0.7em;
   }
 
-  .form-inline input#user_email {
+  .form-inline input#email_email {
     width: 300px;
   }
 }
