@@ -3,15 +3,19 @@ defmodule HexWeb.Email do
 
   schema "emails" do
     field :email, :string
-    field :verified, :boolean
-    field :primary, :boolean
-    field :public, :boolean
+    field :verified, :boolean, default: false
+    field :primary, :boolean, default: false
+    field :public, :boolean, default: false
     field :verification_key, :string
 
     belongs_to :user, User
+
+    timestamps()
   end
 
   @email_regex ~r"^.+@.+\..+$"
+
+  def changeset(email, type, params, verified? \\ not Application.get_env(:hex_web, :user_confirm))
 
   def changeset(email, :first, params, verified?) do
     changeset(email, :create, params, verified?)
