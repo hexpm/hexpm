@@ -19,6 +19,7 @@ defmodule HexWeb.ModelCase do
       alias HexWeb.Repo
       import Ecto
       import Ecto.Query, only: [from: 2]
+      import HexWeb.Case
       import HexWeb.ModelCase
       import HexWeb.TestHelpers
     end
@@ -26,11 +27,7 @@ defmodule HexWeb.ModelCase do
 
   setup tags do
     :ok = Ecto.Adapters.SQL.Sandbox.checkout(HexWeb.Repo)
-
-    if tags[:integration] && Application.get_env(:hex_web, :s3_bucket) do
-      Application.put_env(:hex_web, :store_impl, HexWeb.Store.S3)
-      on_exit fn -> Application.put_env(:hex_web, :store_impl, HexWeb.Store.Local) end
-    end
+    HexWeb.Case.reset_store(tags)
 
     :ok
   end

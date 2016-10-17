@@ -1,10 +1,12 @@
 defmodule HexWeb.Users do
   use HexWeb.Web, :crud
 
-  def get(username_or_email) do
+  def get(username_or_email, preload \\ []) do
     Repo.one(
       from u in HexWeb.User,
-      where: u.username == ^username_or_email or u.email == ^username_or_email
+      join: e in assoc(u, :emails),
+      where: u.username == ^username_or_email or e.email == ^username_or_email,
+      preload: ^preload
     )
   end
 
@@ -16,12 +18,14 @@ defmodule HexWeb.Users do
     Repo.preload(user, :owned_packages)
   end
 
-  def add(params) do
-    recreate_unconfirmed_user(params["username"])
+  def with_emails(user) do
+    Repo.preload(user, :emails)
+  end
 
+  def add(params) do
     case User.build(params) |> Repo.insert do
       {:ok, user} ->
-        Mailer.send_confirmation_request_email(user)
+        Mailer.send_verification_email(user, hd(user.emails))
         {:ok, user}
       other ->
         other
@@ -38,22 +42,17 @@ defmodule HexWeb.Users do
     |> Repo.update
   end
 
-  defp recreate_unconfirmed_user(username) do
-    if (user = Repo.get_by(User, username: username)) && !user.confirmed do
-      # Unconfirmed users only have the key creation in the audits log
-      # That key will be deleted when the user is deleted
-      Repo.delete_all(assoc(user, :audit_logs))
-      Repo.delete!(user)
-    end
-  end
+  def verify_email(username, email, key) do
+    user = Repo.preload(get(username), :emails)
 
-  def confirm(username, key) do
-    user = get(username)
-
-    if User.confirm?(user, key) do
-      User.confirm(user) |> Repo.update!
-      Mailer.send_user_confirmed_email(user)
-      :ok
+    if email = Enum.find(user.emails, &(&1.email == email)) do
+      if Email.verify?(email, key) do
+        Email.verify(email)
+        |> Repo.update!
+        :ok
+      else
+        :error
+      end
     else
       :error
     end
@@ -63,7 +62,7 @@ defmodule HexWeb.Users do
     user = Repo.get_by(User, username: name) || Repo.get_by(User, email: name)
 
     if user do
-      user = User.password_reset(user) |> Repo.update!
+      user = user |> User.password_reset |> Repo.update! |> with_emails
       Mailer.send_password_reset_request_email(user)
       :ok
     else
@@ -76,7 +75,7 @@ defmodule HexWeb.Users do
     if User.reset?(user, key) do
       multi = User.reset(user, password, revoke_all_keys?)
       {:ok, _} = Repo.transaction(multi)
-      Mailer.send_password_reset_email(user)
+      user |> with_emails |> Mailer.send_password_reset_email
       :ok
     else
       :error

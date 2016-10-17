@@ -1,5 +1,5 @@
-defmodule HexWeb.Email.Local do
-  @behaviour HexWeb.Email
+defmodule HexWeb.Mail.Local do
+  @behaviour HexWeb.Mail
 
   def send(to, subject, {:safe, body}) do
     Path.join("tmp", "email")

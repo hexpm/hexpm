@@ -3,11 +3,7 @@ defmodule HexWeb.PasswordResetControllerTest do
   alias HexWeb.User
 
   setup do
-    user =
-      User.build(%{username: "eric", email: "eric@mail.com", password: "hunter42"}, true)
-      |> HexWeb.Repo.insert!
-
-    %{user: user}
+    %{user: create_user("eric", "eric@mail.com", "hunter42")}
   end
 
   test "show reset your password" do
@@ -21,8 +17,8 @@ defmodule HexWeb.PasswordResetControllerTest do
     assert response(conn, 200) =~ "Reset your password"
 
     # check email was sent with correct token
-    user = HexWeb.Repo.get_by!(User, username: c.user.username)
-    {subject, contents} = HexWeb.Email.Local.read(c.user.email)
+    user = HexWeb.Repo.get_by!(User, username: c.user.username) |> HexWeb.Repo.preload(:emails)
+    {subject, contents} = HexWeb.Mail.Local.read(User.email(user, :primary))
     assert subject =~ "Hex.pm"
     assert contents =~ "#{user.reset_key}"
 

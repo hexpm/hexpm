@@ -6,6 +6,6 @@ defmodule HexWeb.Repo.Migrations.EnablyPgsqlFuzzymatch do
   end
 
   def down do
-    raise "Non reversible migration"
+    raise "non reversible migration"
   end
 end

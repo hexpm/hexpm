@@ -6,10 +6,7 @@ defmodule HexWeb.User do
   schema "users" do
     field :username, :string
     field :full_name, :string
-    field :email, :string
     field :password, :string
-    field :confirmation_key, :string
-    field :confirmed, :boolean
     timestamps()
 
     field :reset_key, :string
@@ -17,35 +14,30 @@ defmodule HexWeb.User do
 
     embeds_one :handles, UserHandles, on_replace: :delete
 
+    has_many :emails, Email
     has_many :package_owners, PackageOwner, foreign_key: :owner_id
     has_many :owned_packages, through: [:package_owners, :package]
     has_many :keys, Key
     has_many :audit_logs, AuditLog, foreign_key: :actor_id
   end
 
-  @email_regex ~r"^.+@.+\..+$"
   @username_regex ~r"^[a-z0-9_\-\.!~\*'\(\)]+$"
 
-  defp changeset(user, :create, params) do
-    cast(user, params, ~w(username full_name password email))
-    |> validate_required(~w(username password email)a)
+  defp changeset(user, :create, params, confirmed?) do
+    cast(user, params, ~w(username full_name password))
+    |> validate_required(~w(username password)a)
+    |> cast_assoc(:emails, required: true, with: &Email.changeset(&1, :first, &2, confirmed?))
     |> update_change(:username, &String.downcase/1)
     |> validate_length(:username, min: 3)
     |> validate_format(:username, @username_regex)
     |> unique_constraint(:username, name: "users_username_idx")
-    |> update_change(:email, &String.downcase/1)
-    |> validate_format(:email, @email_regex)
-    |> validate_confirmation(:email, message: "does not match email")
-    |> unique_constraint(:email, name: "users_email_key")
     |> validate_length(:password, min: 7)
     |> validate_confirmation(:password, message: "does not match password")
+    |> update_change(:password, &HexWeb.Auth.gen_password/1)
   end
 
   def build(params, confirmed? \\ not Application.get_env(:hex_web, :user_confirm)) do
-    changeset(%User{}, :create, params)
-    |> put_change(:confirmation_key, HexWeb.Auth.gen_key())
-    |> put_change(:confirmed, confirmed?)
-    |> update_change(:password, &HexWeb.Auth.gen_password/1)
+    changeset(%HexWeb.User{}, :create, params, confirmed?)
   end
 
   def update_profile(user, params) do
@@ -71,15 +63,6 @@ defmodule HexWeb.User do
     |> update_change(:password, &HexWeb.Auth.gen_password/1)
   end
 
-  def confirm?(nil, _key),
-    do: false
-  def confirm?(user, key),
-    do: Comeonin.Tools.secure_check(user.confirmation_key, key)
-
-  def confirm(user) do
-    change(user, %{confirmed: true})
-  end
-
   def password_reset(user) do
     key = HexWeb.Auth.gen_key()
     change(user, %{reset_key: key, reset_expiry: HexWeb.Utils.utc_now})
@@ -103,4 +86,7 @@ defmodule HexWeb.User do
       do: Ecto.Multi.update_all(multi, :keys, Key.revoke_all(user), []),
     else: multi
   end
+
+  def email(user, :primary), do: Enum.find(user.emails, & &1.primary).email
+  def email(user, :public), do: Enum.find(user.emails, & &1.public).email
 end

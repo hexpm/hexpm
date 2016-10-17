@@ -1,14 +1,8 @@
 defmodule HexWeb.LoginControllerTest do
   use HexWeb.ConnCase, async: true
 
-  alias HexWeb.User
-
   setup do
-    user =
-      User.build(%{username: "eric", email: "eric@mail.com", password: "hunter42"}, true)
-      |> HexWeb.Repo.insert!
-
-    %{user: user, password: "hunter42"}
+    %{user: create_user("eric", "eric@mail.com", "hunter42"), password: "hunter42"}
   end
 
   test "show log in page" do
@@ -30,11 +24,11 @@ defmodule HexWeb.LoginControllerTest do
   end
 
   test "log in with unconfirmed email", c do
-    Ecto.Changeset.change(c.user, confirmed: false) |> HexWeb.Repo.update!
+    Ecto.Changeset.change(hd(c.user.emails), verified: false) |> HexWeb.Repo.update!
 
     conn = post(build_conn(), "login", %{username: c.user.username, password: c.password})
     assert response(conn, 400) =~ "Log in"
-    assert get_flash(conn, "error") == "Email has not been confirmed yet"
+    assert get_flash(conn, "error") == "Email has not been verified yet"
     refute get_session(conn, "username")
   end
 

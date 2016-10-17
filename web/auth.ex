@@ -14,29 +14,29 @@ defmodule HexWeb.Auth do
       from(k in HexWeb.Key,
            where: k.secret_first == ^first,
            join: u in assoc(k, :user),
-           select: {u, k})
+           preload: [user: {u, :emails}])
       |> HexWeb.Repo.one
 
     case result do
-      {user, key} ->
+      nil ->
+        :error
+      key ->
         if Comeonin.Tools.secure_check(key.secret_second, second) do
           if is_nil(key.revoked_at) do
-            {:ok, {user, key}}
+            {:ok, {key.user, key, find_email(key.user, nil)}}
           else
             :revoked
           end
         else
           :error
         end
-      nil ->
-        :error
     end
   end
 
   def password_auth(username_or_email, password) do
-    if (user = HexWeb.Users.get(username_or_email)) &&
-       Comeonin.Bcrypt.checkpw(password, user.password) do
-      {:ok, {user, nil}}
+    user = HexWeb.Users.get(username_or_email, [:emails])
+    if user && Comeonin.Bcrypt.checkpw(password, user.password) do
+      {:ok, {user, nil, find_email(user, username_or_email)}}
     else
       :error
     end
@@ -48,5 +48,10 @@ defmodule HexWeb.Auth do
   def gen_key do
     :crypto.strong_rand_bytes(16)
     |> Base.encode16(case: :lower)
+  end
+
+  defp find_email(user, email) do
+    Enum.find(user.emails, &(&1.email == email)) ||
+      Enum.find(user.emails, & &1.primary)
   end
 end

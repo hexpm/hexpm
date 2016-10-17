@@ -1,25 +1,21 @@
 defmodule HexWeb.EmailControllerTest do
   use HexWeb.ConnCase, async: true
 
-  alias HexWeb.User
-
   setup do
-    user =
-      User.build(%{username: "eric", email: "eric@mail.com", password: "hunter42"}, true)
-      |> HexWeb.Repo.insert!
-
-    %{user: user}
+    %{user: create_user("eric", "eric@mail.com", "hunter42")}
   end
 
-  test "confirm email with invalid key", c do
-    conn = get(build_conn(), "email/confirm", %{username: c.user.username, key: "invalid"})
-    assert response(conn, 400) =~ "We could not confirm your email"
+  test "verify email with invalid key", c do
+    email = hd(c.user.emails)
+    conn = get(build_conn(), "email/verify", %{username: c.user.username, email: email.email, key: "invalid"})
+    assert response(conn, 400) =~ "We could not verify your email"
     refute conn.assigns.success
   end
 
-  test "confirm email with valid key", c do
-    conn = get(build_conn(), "email/confirm", %{username: c.user.username, key: c.user.confirmation_key})
-    assert response(conn, 200) =~ "Your email has been confirmed"
+  test "verify email with valid key", c do
+    email = hd(c.user.emails)
+    conn = get(build_conn(), "email/verify", %{username: c.user.username, email: email.email, key: email.verification_key})
+    assert response(conn, 200) =~ "Your email has been verified"
     assert conn.assigns.success
   end
 end

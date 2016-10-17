@@ -2,6 +2,8 @@ defmodule HexWeb.API.UserController do
   use HexWeb.Web, :controller
 
   def create(conn, params) do
+    params = email_param(params)
+
     case Users.add(params) do
       {:ok, user} ->
         location = api_user_url(conn, :show, user.username)
@@ -17,7 +19,11 @@ defmodule HexWeb.API.UserController do
   end
 
   def show(conn, %{"name" => username}) do
-    user = username |> Users.get |> Users.with_owned_packages
+    user =
+      username
+      |> Users.get
+      |> Users.with_owned_packages
+      |> Users.with_emails
 
     when_stale(conn, user, fn conn ->
       conn
@@ -32,5 +38,13 @@ defmodule HexWeb.API.UserController do
     conn
     |> api_cache(:private)
     |> send_resp(204, "")
+  end
+
+  defp email_param(params) do
+    if email = params["email"] do
+      Map.put_new(params, "emails", [%{"email" => email}])
+    else
+      params
+    end
   end
 end

@@ -1,9 +1,9 @@
 defmodule HexWeb.PackageControllerTest do
   use HexWeb.ConnCase, async: true
-  alias HexWeb.{User, Package, Release}
+  alias HexWeb.{Package, Release}
 
   setup do
-    eric = User.build(%{username: "eric", email: "eric@mail.com", password: "ericeric"}, true) |> HexWeb.Repo.insert!
+    eric = create_user("eric", "eric@mail.com", "ericeric")
     decimal = Package.build(eric, pkg_meta(%{name: "decimal", description: "Arbitrary precision decimal arithmetic for Elixir."})) |> HexWeb.Repo.insert!
     Package.build(eric, pkg_meta(%{name: "postgrex", description: "Postgrex is awesome"})) |> HexWeb.Repo.insert!
     Release.build(decimal, rel_meta(%{version: "0.0.1", app: "decimal"}), "") |> HexWeb.Repo.insert!

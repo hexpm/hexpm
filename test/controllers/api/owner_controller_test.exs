@@ -6,9 +6,9 @@ defmodule HexWeb.API.OwnerControllerTest do
   alias HexWeb.Release
 
   setup do
-    user = User.build(%{username: "eric", email: "eric@mail.com", password: "ericeric"}, true) |> HexWeb.Repo.insert!
-    User.build(%{username: "jose", email: "jose@mail.com", password: "josejose"}, true) |> HexWeb.Repo.insert!
-    User.build(%{username: "other", email: "other@mail.com", password: "otherother"}, true) |> HexWeb.Repo.insert!
+    user = create_user("eric", "eric@mail.com", "ericeric")
+    create_user("jose", "jose@mail.com", "josejose")
+    create_user("other", "other@mail.com", "otherother")
     pkg = Package.build(user, pkg_meta(%{name: "decimal", description: "Arbitrary precision decimal arithmetic for Elixir."})) |> HexWeb.Repo.insert!
     Package.build(user, pkg_meta(%{name: "postgrex", description: "Postgrex is awesome"})) |> HexWeb.Repo.insert!
     Release.build(pkg, rel_meta(%{version: "0.0.1", app: "decimal"}), "") |> HexWeb.Repo.insert!
@@ -71,7 +71,7 @@ defmodule HexWeb.API.OwnerControllerTest do
 
     conn = build_conn()
            |> put_req_header("authorization", key_for(eric))
-           |> put("api/packages/postgrex/owners/#{jose.email}")
+           |> put("api/packages/postgrex/owners/#{jose.username}")
     assert conn.status == 204
 
     package = HexWeb.Repo.get_by!(Package, name: "postgrex")
@@ -84,11 +84,11 @@ defmodule HexWeb.API.OwnerControllerTest do
     assert log.action == "owner.add"
     assert %{"package" => %{"name" => "postgrex"}, "user" => %{"username" => "jose"}} = log.params
 
-    {subject, contents} = HexWeb.Email.Local.read("eric@mail.com")
+    {subject, contents} = HexWeb.Mail.Local.read("eric@mail.com")
     assert subject =~ "Hex.pm"
     assert contents =~ "jose (jose@mail.com) has been added as an owner to package postgrex."
 
-    {subject, contents} = HexWeb.Email.Local.read("jose@mail.com")
+    {subject, contents} = HexWeb.Mail.Local.read("jose@mail.com")
     assert subject =~ "Hex.pm"
     assert contents =~ "jose (jose@mail.com) has been added as an owner to package postgrex."
   end
@@ -122,7 +122,7 @@ defmodule HexWeb.API.OwnerControllerTest do
 
     conn = build_conn()
            |> put_req_header("authorization", key_for(eric))
-           |> delete("api/packages/postgrex/owners/#{jose.email}")
+           |> delete("api/packages/postgrex/owners/#{jose.username}")
     assert conn.status == 204
     assert [%User{username: "eric"}] = assoc(package, :owners) |> HexWeb.Repo.all
 
@@ -131,11 +131,11 @@ defmodule HexWeb.API.OwnerControllerTest do
     assert log.action == "owner.remove"
     assert %{"package" => %{"name" => "postgrex"}, "user" => %{"username" => "jose"}} = log.params
 
-    {subject, contents} = HexWeb.Email.Local.read("eric@mail.com")
+    {subject, contents} = HexWeb.Mail.Local.read("eric@mail.com")
     assert subject =~ "Hex.pm"
     assert contents =~ "jose (jose@mail.com) has been removed from owners of package postgrex."
 
-    {subject, contents} = HexWeb.Email.Local.read("jose@mail.com")
+    {subject, contents} = HexWeb.Mail.Local.read("jose@mail.com")
     assert subject =~ "Hex.pm"
     assert contents =~ "jose (jose@mail.com) has been removed from owners of package postgrex."
   end

@@ -4,7 +4,7 @@ defmodule SampleData do
   end
 
   def create_user(username, email, password) do
-    HexWeb.User.build(%{username: username, email: email, password: password}, true)
+    HexWeb.User.build(%{username: username, emails: [%{email: email}], password: password}, true)
     |> HexWeb.Repo.insert!
   end
 

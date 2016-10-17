@@ -171,7 +171,7 @@ tools = Keyword.take(tools, compatible_tools)
       <%= for user <- @owners do %>
         <li>
           <a href="<%= user_path(HexWeb.Endpoint, :show, user) %>">
-            <img src="<%= gravatar_url(user.email, 60) %>" class="owner-avatar"><%= user.username %>
+            <img src="<%= gravatar_url(User.email(user, :public), 60) %>" class="owner-avatar"><%= user.username %>
           </a>
         </li>
       <% end %>

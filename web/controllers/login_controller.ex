@@ -17,7 +17,6 @@ defmodule HexWeb.LoginController do
 
         conn
         |> put_session("username", user.username)
-        |> put_session("email", user.email)
         |> redirect(to: path)
       {:error, reason} ->
         conn

@@ -40,6 +40,8 @@ defmodule HexWeb.AuditLog do
     Ecto.Multi.insert_all(multi, :log, HexWeb.AuditLog, Enum.map(list, entry), opts)
   end
 
+  # TODO: Add emails
+
   defp extract_params("docs.publish", {package, release}), do: %{package: serialize(package), release: serialize(release)}
   defp extract_params("docs.revert", {package, release}), do: %{package: serialize(package), release: serialize(release)}
   defp extract_params("key.generate", key), do: serialize(key)
@@ -61,7 +63,7 @@ defmodule HexWeb.AuditLog do
   defp fields(%HexWeb.Key{}), do: [:id, :name]
   defp fields(%HexWeb.Package{}), do: [:id, :name]
   defp fields(%HexWeb.Release{}), do: [:id, :version, :checksum, :has_docs, :package_id]
-  defp fields(%HexWeb.User{}), do: [:id, :username, :email, :confirmed]
+  defp fields(%HexWeb.User{}), do: [:id, :username]
   defp fields(%HexWeb.PackageMetadata{}), do: [:description, :licenses, :links, :maintainers, :extra]
   defp fields(%HexWeb.ReleaseMetadata{}), do: [:app, :build_tools, :elixir]
 end

@@ -6,10 +6,6 @@ defmodule HexWeb.Owners do
     |> Repo.all
   end
 
-  def get!(email) do
-    Repo.get_by!(User, email: email)
-  end
-
   def add(package, owner, [audit: audit_data]) do
     multi =
       Ecto.Multi.new
@@ -18,7 +14,8 @@ defmodule HexWeb.Owners do
 
     case Repo.transaction(multi) do
       {:ok, _} ->
-        owners = all(package)
+        owners = package |> all |> Users.with_emails
+        owner = Enum.find(owners, &(&1.id == owner.id))
         Mailer.send_owner_added_email(package, owners, owner)
         :ok
       {:error, :owner, changeset, _} ->
@@ -27,7 +24,7 @@ defmodule HexWeb.Owners do
   end
 
   def remove(package, owner, [audit: audit_data]) do
-    owners = all(package)
+    owners = package |> all |> Users.with_emails
 
     if length(owners) == 1 do
       {:error, :last_owner}
@@ -38,6 +35,7 @@ defmodule HexWeb.Owners do
         |> audit(audit_data, "owner.remove", {package, owner})
 
       {:ok, _} = Repo.transaction(multi)
+      owner = Enum.find(owners, &(&1.id == owner.id))
       Mailer.send_owner_removed_email(package, owners, owner)
       :ok
     end

@@ -5,11 +5,7 @@ defmodule HexWeb.PackageTest do
   alias HexWeb.Package
 
   setup do
-    user =
-      User.build(%{username: "eric", email: "eric@mail.com", password: "ericeric"}, true)
-      |> HexWeb.Repo.insert!
-
-    {:ok, user: user}
+    %{user: create_user("eric", "eric@mail.com", "ericeric")}
   end
 
   test "create package and get", %{user: user} do

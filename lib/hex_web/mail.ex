@@ -1,4 +1,4 @@
-defmodule HexWeb.Email do
+defmodule HexWeb.Mail do
   @type emails :: [String.t]
   @type title  :: String.t
   @type body   :: Phoenix.HTML.Safe

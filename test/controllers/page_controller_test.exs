@@ -4,11 +4,6 @@ defmodule HexWeb.PageControllerTest do
   alias HexWeb.Package
   alias HexWeb.Release
 
-  defp create_user(username, email, password) do
-    HexWeb.User.build(%{username: username, email: email, password: password}, true)
-    |> HexWeb.Repo.insert!
-  end
-
   defp release_create(package, version, app, requirements, checksum, inserted_at) do
     release = Release.build(package, rel_meta(%{version: version, app: app, requirements: requirements}), checksum)
               |> HexWeb.Repo.insert!
