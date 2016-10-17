@@ -2,7 +2,7 @@ defmodule HexWeb.ViewHelpers do
   use Phoenix.HTML
 
   def signed_in?(assigns) do
-    !!(assigns[:username] && assigns[:email])
+    !!assigns[:logged_in]
   end
 
   def gravatar_url(email, size) do

@@ -96,6 +96,7 @@ defmodule HexWeb.Web do
       alias HexWeb.{
         AuditLog,
         Download,
+        Email,
         Install,
         Key,
         Keys,

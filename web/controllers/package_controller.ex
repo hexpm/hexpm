@@ -72,6 +72,9 @@ defmodule HexWeb.PackageController do
           [hexdocs_url: nil, docs_tarball_url: nil]
       end
 
+    downloads = Packages.package_downloads(package)
+    owners = Owners.all(package) |> Users.with_emails
+
     render conn, "show.html", [
       title:             package.name,
       description:       package.meta.description,
@@ -80,8 +83,8 @@ defmodule HexWeb.PackageController do
       package:           package,
       releases:          releases,
       current_release:   release,
-      downloads:         Packages.package_downloads(package),
-      owners:            Owners.all(package)
+      downloads:         downloads,
+      owners:            owners
     ] ++ docs_assigns
   end
 

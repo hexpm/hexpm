@@ -207,8 +207,8 @@ defmodule HexWeb.ControllerHelpers do
 
   def password_auth(username, password) do
     case HexWeb.Auth.password_auth(username, password) do
-      {:ok, {user, nil}} ->
-        if user.confirmed,
+      {:ok, {user, nil, email}} ->
+        if email.verified,
           do: {:ok, user},
         else: {:error, :unconfirmed}
       :error ->
@@ -217,13 +217,14 @@ defmodule HexWeb.ControllerHelpers do
   end
 
   def auth_error_message(:wrong), do: "Invalid username, email or password"
-  def auth_error_message(:unconfirmed), do: "Email has not been confirmed yet"
+  def auth_error_message(:unconfirmed), do: "Email has not been verified yet"
 
   def requires_login(conn, _opts) do
-    if conn.assigns[:username] && conn.assigns[:email] do
+    if conn.assigns[:logged_in] do
       conn
     else
       redirect(conn, to: HexWeb.Router.Helpers.login_path(conn, :show, return: conn.request_path))
+      |> halt
     end
   end
 end

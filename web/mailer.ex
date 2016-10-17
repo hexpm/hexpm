@@ -3,16 +3,16 @@ defmodule HexWeb.Mailer do
     assigns = [layout: {HexWeb.EmailsView, "layout.html"}] ++ assigns
     body    = Phoenix.View.render(HexWeb.EmailsView, template, assigns)
 
-    HexWeb.Email.send(emails, title, body)
+    HexWeb.Mail.send(emails, title, body)
   end
 
   def send_owner_added_email(package, owners, owner) do
     send(
       "owner_add.html",
       "Hex.pm - Owner added",
-      Enum.map(owners, & &1.email),
+      email(owners),
       username: owner.username,
-      email: owner.email,
+      email: email(owner),
       package: package.name
     )
   end
@@ -21,36 +21,28 @@ defmodule HexWeb.Mailer do
     send(
       "owner_remove.html",
       "Hex.pm - Owner removed",
-      Enum.map(owners, & &1.email),
+      email(owners),
       username: owner.username,
-      email: owner.email,
+      email: email(owner),
       package: package.name
     )
   end
 
-  def send_user_confirmed_email(user) do
+  def send_verification_email(user, email) do
     send(
-      "confirmed.html",
-      "Hex.pm - Email confirmed",
-      [user.email],
-      []
-    )
-  end
-
-  def send_confirmation_request_email(user) do
-    send(
-      "confirmation_request.html",
-      "Hex.pm - Email confirmation",
-      [user.email],
+      "verification.html",
+      "Hex.pm - Email verification",
+      [email.email],
       username: user.username,
-      key: user.confirmation_key)
+      email: email.email,
+      key: email.verification_key)
   end
 
   def send_password_reset_request_email(user) do
     send(
       "password_reset_request.html",
       "Hex.pm - Password reset request",
-      [user.email],
+      email(user),
       username: user.username,
       key: user.reset_key)
   end
@@ -59,7 +51,7 @@ defmodule HexWeb.Mailer do
     send(
       "password_reset.html",
       "Hex.pm - Password reset",
-      [user.email],
+      email(user),
       [])
   end
 
@@ -72,4 +64,9 @@ defmodule HexWeb.Mailer do
       candidates: candidates,
       threshold: threshold)
   end
+
+  defp email(%HexWeb.User{} = user),
+    do: [HexWeb.User.email(user, :primary)]
+  defp email(users) when is_list(users),
+    do: Enum.flat_map(users, &email/1)
 end

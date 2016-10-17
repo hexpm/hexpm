@@ -1,12 +1,11 @@
 defmodule Mix.Tasks.Hexweb.StatsTest do
   use HexWeb.ModelCase, async: true
 
-  alias HexWeb.User
   alias HexWeb.Package
   alias HexWeb.Release
 
   setup do
-    user = User.build(%{username: "eric", email: "eric@mail.com", password: "ericeric"}, true) |> HexWeb.Repo.insert!
+    user = create_user("eric", "eric@mail.com", "ericeric")
 
     foo   = Package.build(user, pkg_meta(%{name: "foo", description: "Foo"})) |> HexWeb.Repo.insert!
     bar   = Package.build(user, pkg_meta(%{name: "bar", description: "Bar"})) |> HexWeb.Repo.insert!
@@ -20,7 +19,7 @@ defmodule Mix.Tasks.Hexweb.StatsTest do
     Release.build(bar, rel_meta(%{version: "0.0.3-rc.1", app: "bar"}), "") |> HexWeb.Repo.insert!
     Release.build(other, rel_meta(%{version: "0.0.1", app: "other"}), "") |> HexWeb.Repo.insert!
 
-    {:ok, foo: foo, bar: bar, other: other}
+    %{foo: foo, bar: bar, other: other}
   end
 
   test "counts all downloads", %{foo: foo, bar: bar} do

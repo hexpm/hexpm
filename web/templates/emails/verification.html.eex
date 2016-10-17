@@ -1,0 +1,16 @@
+<%
+verify_url = email_url(HexWeb.Endpoint, :verify, username: @username, email: @email, key: @key)
+%>
+
+<p>
+  To begin using your email, we require you to verify your email address.
+</p>
+
+<p>
+  You can do so by following <a href="<%= raw verify_url %>">this link</a> or by pasting the link below in your web browser: <%= raw verify_url %>.
+</p>
+
+<p>
+  --<br>
+  Hex.pm
+</p>

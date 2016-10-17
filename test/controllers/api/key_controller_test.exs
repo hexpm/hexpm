@@ -5,10 +5,8 @@ defmodule HexWeb.API.KeyControllerTest do
   alias HexWeb.User
 
   setup do
-    User.build(%{username: "eric", email: "eric@mail.com", password: "ericeric"}, true)
-    |> HexWeb.Repo.insert!
-    User.build(%{username: "other", email: "other@mail.com", password: "otherother"}, true)
-    |> HexWeb.Repo.insert!
+    create_user("eric", "eric@mail.com", "ericeric")
+    create_user("other", "other@mail.com", "otherother")
     :ok
   end
 

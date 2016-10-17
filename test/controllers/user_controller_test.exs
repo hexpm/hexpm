@@ -1,14 +1,8 @@
 defmodule HexWeb.UserControllerTest do
   use HexWeb.ConnCase, async: true
 
-  alias HexWeb.User
-
   setup do
-    user =
-      User.build(%{username: "eric", email: "eric@mail.com", password: "hunter42"}, true)
-      |> HexWeb.Repo.insert!
-
-    %{user: user, password: "hunter42"}
+    %{user: create_user("eric", "eric@mail.com", "hunter42"), password: "hunter42"}
   end
 
   test "show profile page", c do

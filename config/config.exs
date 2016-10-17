@@ -1,7 +1,7 @@
 use Mix.Config
 
 store = if System.get_env("HEX_S3_BUCKET"), do: HexWeb.Store.S3, else: HexWeb.Store.Local
-email = if System.get_env("HEX_SES_USERNAME"), do: HexWeb.Email.SES, else: HexWeb.Email.Local
+email = if System.get_env("HEX_SES_USERNAME"), do: HexWeb.Mail.SES, else: HexWeb.Mail.Local
 cdn   = if System.get_env("HEX_FASTLY_KEY"), do: HexWeb.CDN.Fastly, else: HexWeb.CDN.Local
 
 logs_buckets = if value = System.get_env("HEX_LOGS_BUCKETS"),

@@ -4,11 +4,7 @@ defmodule HexWeb.PasswordControllerTest do
   alias HexWeb.User
 
   setup do
-    user =
-      User.build(%{username: "eric", email: "eric@mail.com", password: "hunter42"}, true)
-      |> HexWeb.Repo.insert!
-
-    %{user: user}
+    %{user: create_user("eric", "eric@mail.com", "hunter42")}
   end
 
   test "show select new password", c do
@@ -19,7 +15,7 @@ defmodule HexWeb.PasswordControllerTest do
   end
 
   test "submit new password", c do
-    assert {:ok, {%User{username: "eric"}, nil}} = Auth.password_auth("eric", "hunter42")
+    assert {:ok, {%User{username: "eric"}, _, _}} = Auth.password_auth("eric", "hunter42")
 
     # initiate password reset (usually done via api)
     user = User.password_reset(c.user) |> HexWeb.Repo.update!
@@ -30,6 +26,6 @@ defmodule HexWeb.PasswordControllerTest do
     assert conn.assigns.success == true
 
     # check new password will work
-    assert {:ok, {%User{username: "eric"}, nil}} = Auth.password_auth("eric", "abcd1234")
+    assert {:ok, {%User{username: "eric"}, _, _}} = Auth.password_auth("eric", "abcd1234")
   end
 end

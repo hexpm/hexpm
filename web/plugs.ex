@@ -71,11 +71,9 @@ defmodule HexWeb.Plugs do
 
   def login(conn, _opts) do
     username = get_session(conn, "username")
-    email = get_session(conn, "email")
-
-    conn
-    |> assign(:username, username)
-    |> assign(:email, email)
+    user = username && HexWeb.Users.get_by_username(username)
+    user = user && HexWeb.Users.with_emails(user)
+    assign(conn, :logged_in, user)
   end
 
   def auth_gate(conn, _opts) do

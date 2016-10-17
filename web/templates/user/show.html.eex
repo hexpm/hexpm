@@ -18,11 +18,13 @@
   </div>
 
   <div class="col-md-3">
-    <img src="<%= gravatar_url(@user.email, 440) %>" class="avatar">
+    <img src="<%= gravatar_url(@public_email, 440) %>" class="avatar">
 
     <h4><%= @user.full_name %></h4>
     <ul class="user-profile-list">
-      <li><a href="mailto:<%= @user.email %>"><%= @user.email %></a></li>
+      <%= if @public_email do %>
+        <li><a href="mailto:<%= @public_email %>"><%= @public_email %></a></li>
+      <% end %>
       <%= for {field, service, url} <- UserHandles.services do %>
         <%= if handle = Map.get(@user.handles, field) do %>
           <li><a href="<%= String.replace(url, "{handle}", handle) %>"><%= handle %></a> on <%= service %></li>

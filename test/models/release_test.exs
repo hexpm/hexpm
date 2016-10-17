@@ -1,14 +1,11 @@
 defmodule HexWeb.ReleaseTest do
   use HexWeb.ModelCase, async: true
 
-  alias HexWeb.User
   alias HexWeb.Package
   alias HexWeb.Release
 
   setup do
-    user =
-      User.build(%{username: "eric", email: "eric@mail.com", password: "ericeric"}, true)
-      |> HexWeb.Repo.insert!
+    user = create_user("eric", "eric@mail.com", "ericeric")
     ecto =
       Package.build(user, pkg_meta(%{name: "ecto", description: "Ecto is awesome"}))
       |> HexWeb.Repo.insert!
@@ -19,7 +16,7 @@ defmodule HexWeb.ReleaseTest do
       Package.build(user, pkg_meta(%{name: "decimal", description: "Decimal is awesome, too"}))
       |> HexWeb.Repo.insert!
 
-    {:ok, ecto: ecto, postgrex: postgrex, decimal: decimal}
+    %{ecto: ecto, postgrex: postgrex, decimal: decimal}
   end
 
   test "create release and get", %{ecto: package} do

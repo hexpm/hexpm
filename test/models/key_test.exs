@@ -1,15 +1,10 @@
 defmodule HexWeb.KeyTest do
   use HexWeb.ModelCase, async: true
 
-  alias HexWeb.User
   alias HexWeb.Key
 
   setup do
-    user =
-      User.build(%{username: "eric", email: "eric@mail.com", password: "ericeric"}, true)
-      |> HexWeb.Repo.insert!
-
-    {:ok, user: user}
+    %{user: create_user("eric", "eric@mail.com", "ericeric")}
   end
 
   test "create key and get", %{user: user} do
@@ -23,7 +18,7 @@ defmodule HexWeb.KeyTest do
   end
 
   test "all user keys", %{user: eric} do
-    jose = User.build(%{username: "jose", email: "jose@mail.com", password: "josejose"}, true) |> HexWeb.Repo.insert!
+    jose = create_user("jose", "jose@mail.com", "josejose")
 
     assert %Key{name: "computer"} = Key.build(eric, %{name: "computer"}) |> HexWeb.Repo.insert!
     assert %Key{name: "macbook"}  = Key.build(eric, %{name: "macbook"}) |> HexWeb.Repo.insert!

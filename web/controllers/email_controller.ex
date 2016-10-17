@@ -1,13 +1,13 @@
 defmodule HexWeb.EmailController do
   use HexWeb.Web, :controller
 
-  def confirm(conn, %{"username" => username, "key" => key}) do
-    success = Users.confirm(username, key) == :ok
-    title = if success, do: "Email confirmed", else: "Failed to confirm email"
+  def verify(conn, %{"username" => username, "email" => email, "key" => key}) do
+    success = Users.verify_email(username, email, key) == :ok
+    title = if success, do: "Email verified", else: "Failed to verify email"
 
     conn
     |> put_status(success_to_status(success))
-    |> render("confirm.html", [
+    |> render("verify.html", [
       title: title,
       success: success
     ])

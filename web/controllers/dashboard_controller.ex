@@ -8,12 +8,12 @@ defmodule HexWeb.DashboardController do
   end
 
   def profile(conn, _params) do
-    user = Users.get_by_username(conn.assigns.username)
+    user = conn.assigns.logged_in
     render_profile(conn, User.update_profile(user, %{}))
   end
 
   def update_profile(conn, params) do
-    user = Users.get_by_username(conn.assigns.username)
+    user = conn.assigns.logged_in
 
     case Users.update_profile(user, params["user"]) do
       {:ok, user} ->
@@ -26,12 +26,12 @@ defmodule HexWeb.DashboardController do
   end
 
   def password(conn, _params) do
-    user = Users.get_by_username(conn.assigns.username)
+    user = conn.assigns.logged_in
     render_password(conn, User.update_password(user, %{}))
   end
 
   def update_password(conn, params) do
-    user = Users.get_by_username(conn.assigns.username)
+    user = conn.assigns.logged_in
 
     case Users.update_password(user, params["user"]) do
       {:ok, user} ->
@@ -50,19 +50,19 @@ defmodule HexWeb.DashboardController do
     render_email(conn)
   end
 
-  def add_email(conn, _params) do
+  def add_email(_conn, _params) do
   end
 
-  def remove_email(conn, _params) do
+  def remove_email(_conn, _params) do
   end
 
-  def primary_email(conn, _params) do
+  def primary_email(_conn, _params) do
   end
 
-  def public_email(conn, _params) do
+  def public_email(_conn, _params) do
   end
 
-  def resend_verify_email(conn, _params) do
+  def resend_verify_email(_conn, _params) do
   end
 
   defp render_profile(conn, changeset) do

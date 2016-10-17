@@ -1,5 +1,5 @@
-defmodule HexWeb.Email.SES do
-  @behaviour HexWeb.Email
+defmodule HexWeb.Mail.SES do
+  @behaviour HexWeb.Mail
   require Logger
 
   def send(to, subject, body) do

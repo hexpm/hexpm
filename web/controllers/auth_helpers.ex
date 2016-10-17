@@ -19,7 +19,7 @@ defmodule HexWeb.AuthHelpers do
       {:error, :key} ->
         unauthorized(conn, "invalid username and API key combination")
       {:error, :unconfirmed} ->
-        forbidden(conn, "account unconfirmed")
+        forbidden(conn, "email not verified")
       {:error, :revoked_key} ->
         unauthorized(conn, "API key revoked")
     end
@@ -41,11 +41,11 @@ defmodule HexWeb.AuthHelpers do
       end
 
     case result do
-      {:ok, {user, key}} ->
+      {:ok, {user, key, email}} ->
         cond do
-          allow_unconfirmed or user.confirmed ->
+          allow_unconfirmed || (email && email.verified) ->
             {:ok, {user, key}}
-          !user.confirmed ->
+          true ->
             {:error, :unconfirmed}
         end
       error ->

@@ -2,10 +2,9 @@ defmodule HexWeb.SitemapControllerTest do
   use HexWeb.ConnCase, async: true
 
   alias HexWeb.Package
-  alias HexWeb.User
 
   setup do
-    user = User.build(%{username: "eric", email: "eric@mail.com", password: "ericeric"}, true) |> HexWeb.Repo.insert!
+    user = create_user("eric", "eric@mail.com", "ericeric")
     package = Package.build(user, pkg_meta(%{name: "postgrex", description: "Postgrex is awesome"})) |> HexWeb.Repo.insert!
 
     package
