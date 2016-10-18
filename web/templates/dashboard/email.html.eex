@@ -28,7 +28,9 @@
 
             <%= form_tag(dashboard_path(HexWeb.Endpoint, :remove_email), method: :delete, class: "action") do %>
               <input type="hidden" name="email" value="<%= email.email %>">
-              <button type="submit" class="btn btn-link btn-svg"><%= HexWeb.ViewIcons.icon(:octicon, :trashcan) %></button>
+              <button type="submit" class="btn btn-link btn-svg" <%= if email.primary do %>disabled<% end %>>
+                <%= HexWeb.ViewIcons.icon(:octicon, :trashcan) %>
+              </button>
             <% end %>
 
             <%= if email.verified and not email.primary do %>
