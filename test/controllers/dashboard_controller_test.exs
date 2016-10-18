@@ -72,4 +72,30 @@ defmodule HexWeb.DashboardControllerTest do
     assert {:ok, _} = HexWeb.Auth.password_auth(c.user.username, c.password)
     assert :error = HexWeb.Auth.password_auth(c.user.username, "newpass")
   end
+
+  test "add email", c do
+    conn = build_conn()
+           |> test_login(c.user)
+           |> post("dashboard/email", %{email: %{email: "new@mail.com"}})
+
+    assert redirected_to(conn) == "/dashboard/email"
+    assert get_flash(conn, :info) =~ "A verification email has been sent"
+    user = HexWeb.Repo.get!(HexWeb.User, c.user.id) |> HexWeb.Repo.preload(:emails)
+    email = Enum.find(user.emails, &(&1.email == "new@mail.com"))
+    refute email.verified
+    refute email.primary
+    refute email.public
+  end
+
+  test "cannot add existing email", c do
+    email = hd(c.user.emails).email
+
+    conn = build_conn()
+           |> test_login(c.user)
+           |> post("dashboard/email", %{email: %{email: email}})
+
+    response(conn, 400)
+    assert conn.resp_body =~ "Add email"
+    assert conn.resp_body =~ "has already been taken"
+  end
 end
