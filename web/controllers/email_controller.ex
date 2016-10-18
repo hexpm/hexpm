@@ -3,13 +3,13 @@ defmodule HexWeb.EmailController do
 
   def verify(conn, %{"username" => username, "email" => email, "key" => key}) do
     success = Users.verify_email(username, email, key) == :ok
-    title = if success, do: "Email verified", else: "Failed to verify email"
+    conn =
+      if success,
+        do: put_flash(conn, :info, "Your email #{email} has been verified."),
+      else: put_flash(conn, :error, "Your email #{email} failed to verify.")
 
     conn
-    |> put_status(success_to_status(success))
-    |> render("verify.html", [
-      title: title,
-      success: success
-    ])
+    |> put_flash(:custom_location, true)
+    |> redirect(to: "/")
   end
 end

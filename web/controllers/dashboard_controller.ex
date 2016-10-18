@@ -16,8 +16,10 @@ defmodule HexWeb.DashboardController do
     user = conn.assigns.logged_in
 
     case Users.update_profile(user, params["user"]) do
-      {:ok, user} ->
-        render_profile(conn, User.update_profile(user, %{}))
+      {:ok, _user} ->
+        conn
+        |> put_flash(:info, "Profile updated successfully.")
+        |> redirect(to: dashboard_path(conn, :profile))
       {:error, changeset} ->
         conn
         |> put_status(400)
@@ -34,11 +36,11 @@ defmodule HexWeb.DashboardController do
     user = conn.assigns.logged_in
 
     case Users.update_password(user, params["user"]) do
-      {:ok, user} ->
+      {:ok, _user} ->
         # TODO: Maybe send an email here?
         conn
         |> put_flash(:info, "Your password has been updated.")
-        |> render_password(User.update_password(user, %{}))
+        |> redirect(to: dashboard_path(conn, :password))
       {:error, changeset} ->
         conn
         |> put_status(400)
@@ -55,11 +57,11 @@ defmodule HexWeb.DashboardController do
     user = Users.with_emails(conn.assigns.logged_in)
 
     case Users.add_email(user, params["email"]) do
-      {:ok, user} ->
+      {:ok, _user} ->
         email = params["email"]["email"]
         conn
         |> put_flash(:info, "A verification email has been sent to #{email}.")
-        |> render_email(user)
+        |> redirect(to: dashboard_path(conn, :email))
       {:error, changeset} ->
         conn
         |> put_status(400)

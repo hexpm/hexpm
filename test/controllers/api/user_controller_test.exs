@@ -43,7 +43,8 @@ defmodule HexWeb.API.UserControllerTest do
     assert json_response(conn, 403)["message"] == "email not verified"
 
     conn = get(build_conn(), "email/verify?username=name&email=#{URI.encode_www_form(email.email)}&key=#{email.verification_key}")
-    assert response(conn, 200) =~ "Email verified"
+    assert redirected_to(conn) == "/"
+    assert get_flash(conn, :info) =~ "verified"
 
     conn = build_conn()
            |> put_req_header("content-type", "application/octet-stream")
@@ -66,7 +67,7 @@ defmodule HexWeb.API.UserControllerTest do
     assert contents =~ "#{user.reset_key}"
 
     # check reset will succeed
-    assert User.reset?(user, user.reset_key) == true
+    assert User.password_reset?(user, user.reset_key) == true
   end
 
   test "create user validates" do

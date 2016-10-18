@@ -45,9 +45,11 @@ defmodule HexWeb.User do
     |> cast_embed(:handles)
   end
 
-  def update_password_no_validation(user, params) do
+  def update_password_no_check(user, params) do
     cast(user, params, ~w(password))
     |> validate_required(~w(password)a)
+    |> validate_length(:password, min: 7)
+    |> validate_confirmation(:password, message: "does not match password")
     |> update_change(:password, &HexWeb.Auth.gen_password/1)
   end
 
@@ -63,23 +65,22 @@ defmodule HexWeb.User do
     |> update_change(:password, &HexWeb.Auth.gen_password/1)
   end
 
-  def password_reset(user) do
+  def init_password_reset(user) do
     key = HexWeb.Auth.gen_key()
     change(user, %{reset_key: key, reset_expiry: HexWeb.Utils.utc_now})
   end
 
-  def reset?(nil, _key), do: false
-  def reset?(user, key) do
-    user.reset_key &&
-      Comeonin.Tools.secure_check(user.reset_key, key) &&
-      HexWeb.Utils.within_last_day(user.reset_expiry) ||
-      false
+  def password_reset?(nil, _key), do: false
+  def password_reset?(user, key) do
+    !!(user.reset_key &&
+       Comeonin.Tools.secure_check(user.reset_key, key) &&
+       HexWeb.Utils.within_last_day(user.reset_expiry))
   end
 
-  def reset(user, password, revoke_all_keys \\ true) do
+  def password_reset(user, params, revoke_all_keys \\ true) do
     multi =
       Ecto.Multi.new
-      |> Ecto.Multi.update(:password, update_password_no_validation(user, %{password: password}))
+      |> Ecto.Multi.update(:password, update_password_no_check(user, params))
       |> Ecto.Multi.update(:reset, change(user, %{reset_key: nil, reset_expiry: nil}))
 
     if revoke_all_keys,
