@@ -60,6 +60,10 @@
     fill: #ec485b;
   }
 
+  button:disabled svg {
+    fill: #999;
+  }
+
   .btn-svg {
     margin-top: 3px;
   }
@@ -68,7 +72,7 @@
     padding: 0;
   }
 
-  form.action {
+  .action {
     float: right;
     margin-top: -1px;
     margin-left: 4px;

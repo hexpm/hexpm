@@ -67,6 +67,7 @@ defmodule HexWeb.DashboardController do
     end
   end
 
+  # TODO: Should not be able to remove primary email
   def remove_email(conn, params) do
     user = Users.with_emails(conn.assigns.logged_in)
     email = params["email"]
