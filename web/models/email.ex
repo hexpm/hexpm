@@ -41,4 +41,12 @@ defmodule HexWeb.Email do
   def verify(email) do
     change(email, %{verified: true})
   end
+
+  def toggle_primary(email, flag) do
+    change(email, %{primary: flag})
+  end
+
+  def toggle_public(email, flag) do
+    change(email, %{public: flag})
+  end
 end

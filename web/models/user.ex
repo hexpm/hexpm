@@ -70,6 +70,10 @@ defmodule HexWeb.User do
     change(user, %{reset_key: key, reset_expiry: HexWeb.Utils.utc_now})
   end
 
+  def disable_password_reset(user) do
+    change(user, %{reset_key: nil, reset_expiry: nil})
+  end
+
   def password_reset?(nil, _key), do: false
   def password_reset?(user, key) do
     !!(user.reset_key &&
@@ -81,7 +85,7 @@ defmodule HexWeb.User do
     multi =
       Ecto.Multi.new
       |> Ecto.Multi.update(:password, update_password_no_check(user, params))
-      |> Ecto.Multi.update(:reset, change(user, %{reset_key: nil, reset_expiry: nil}))
+      |> Ecto.Multi.update(:reset, disable_password_reset(user))
 
     if revoke_all_keys,
       do: Ecto.Multi.update_all(multi, :keys, Key.revoke_all(user), []),

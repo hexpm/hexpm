@@ -120,10 +120,10 @@ defmodule HexWeb.Users do
       !new_primary.verified ->
         {:error, :not_verified}
       true ->
-        now = Ecto.DateTime.utc(:usec)
         Repo.transaction(fn ->
-          Repo.update!(change(old_primary, primary: false, updated_at: now))
-          Repo.update!(change(new_primary, primary: true, updated_at: now))
+          Repo.update!(User.disable_password_reset(user))
+          Repo.update!(Email.toggle_primary(old_primary, false))
+          Repo.update!(Email.toggle_primary(new_primary, true))
         end)
         :ok
     end
@@ -139,10 +139,9 @@ defmodule HexWeb.Users do
       !new_public.verified ->
         {:error, :not_verified}
       true ->
-        now = Ecto.DateTime.utc(:usec)
         Repo.transaction(fn ->
-          Repo.update!(change(old_public, public: false, updated_at: now))
-          Repo.update!(change(new_public, public: true, updated_at: now))
+          Repo.update!(Email.toggle_public(old_public, false))
+          Repo.update!(Email.toggle_public(new_public, true))
         end)
         :ok
     end
