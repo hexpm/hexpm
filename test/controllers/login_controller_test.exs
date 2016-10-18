@@ -19,7 +19,7 @@ defmodule HexWeb.LoginControllerTest do
   test "log in with wrong password", c do
     conn = post(build_conn(), "login", %{username: c.user.username, password: "WRONG"})
     assert response(conn, 400) =~ "Log in"
-    assert get_flash(conn, "error") == "Invalid username, email or password"
+    assert get_flash(conn, "error") == "Invalid username, email or password."
     refute get_session(conn, "username")
   end
 
@@ -28,7 +28,7 @@ defmodule HexWeb.LoginControllerTest do
 
     conn = post(build_conn(), "login", %{username: c.user.username, password: c.password})
     assert response(conn, 400) =~ "Log in"
-    assert get_flash(conn, "error") == "Email has not been verified yet"
+    assert get_flash(conn, "error") == "Email has not been verified yet."
     refute get_session(conn, "username")
   end
 
