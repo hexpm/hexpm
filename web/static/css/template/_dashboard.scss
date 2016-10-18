@@ -17,11 +17,14 @@
     background-color: #f9f9f9;
   }
 
+  a {
+    text-decoration: none;
+  }
+
   &.selected {
     background-color: #fff;
 
     a {
-      text-decoration: none;
       color: #555;
       font-weight: bold;
       cursor: default;
