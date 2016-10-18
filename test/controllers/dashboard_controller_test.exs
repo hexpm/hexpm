@@ -20,7 +20,8 @@ defmodule HexWeb.DashboardControllerTest do
            |> test_login(c.user)
            |> post("dashboard/profile", %{user: %{full_name: "New Name"}})
 
-    assert response(conn, 200) =~ "Public profile"
+    assert redirected_to(conn) == "/dashboard/profile"
+    assert get_flash(conn, :info) =~ "Profile updated successfully"
     assert Users.get(c.user.username).full_name == "New Name"
   end
 
@@ -37,7 +38,8 @@ defmodule HexWeb.DashboardControllerTest do
            |> test_login(c.user)
            |> post("dashboard/password", %{user: %{password_current: c.password, password: "newpass", password_confirmation: "newpass"}})
 
-    assert response(conn, 200) =~ "Change password"
+    assert redirected_to(conn) == "/dashboard/password"
+    assert get_flash(conn, :info) =~ "Your password has been updated"
     assert {:ok, _} = HexWeb.Auth.password_auth(c.user.username, "newpass")
     assert :error = HexWeb.Auth.password_auth(c.user.username, c.password)
   end

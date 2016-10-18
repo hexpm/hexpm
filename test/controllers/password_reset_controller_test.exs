@@ -23,6 +23,6 @@ defmodule HexWeb.PasswordResetControllerTest do
     assert contents =~ "#{user.reset_key}"
 
     # check reset will succeed
-    assert User.reset?(user, user.reset_key) == true
+    assert User.password_reset?(user, user.reset_key) == true
   end
 end

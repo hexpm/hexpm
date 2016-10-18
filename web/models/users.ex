@@ -61,10 +61,8 @@ defmodule HexWeb.Users do
   end
 
   def request_reset(name) do
-    user = Repo.get_by(User, username: name) || Repo.get_by(User, email: name)
-
-    if user do
-      user = user |> User.password_reset |> Repo.update! |> with_emails
+    if user = get(name) do
+      user = user |> User.init_password_reset |> Repo.update! |> with_emails
       Mailer.send_password_reset_request_email(user)
       :ok
     else
@@ -72,13 +70,20 @@ defmodule HexWeb.Users do
     end
   end
 
-  def reset(username, key, password, revoke_all_keys?) do
+  def password_reset(username, key, params, revoke_all_keys?) do
     user = get(username)
-    if User.reset?(user, key) do
-      multi = User.reset(user, password, revoke_all_keys?)
-      {:ok, _} = Repo.transaction(multi)
-      user |> with_emails |> Mailer.send_password_reset_email
-      :ok
+
+    if user && User.password_reset?(user, key) do
+      multi = User.password_reset(user, params, revoke_all_keys?)
+      case Repo.transaction(multi) do
+        {:ok, _} ->
+          user
+          |> with_emails
+          |> Mailer.send_password_reset_email
+          :ok
+        {:error, _, changeset, _} ->
+          {:error, changeset}
+      end
     else
       :error
     end
