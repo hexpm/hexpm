@@ -9,6 +9,21 @@
     <div class="panel panel-default">
       <div class="panel-heading">Public profile</div>
       <div class="panel-body">
+        <div class="form-group">
+          <label>Profile picture</label>
+          <img src="<%= gravatar_url(User.email(@logged_in, :public), 320) %>">
+          <%= if User.email(@logged_in, :public) do %>
+            <small>
+              Gravatar is used to display your profile picture. Go to <a href="https://en.gravatar.com/emails/">gravatar</a> to change it.
+            </small>
+          <% else %>
+            <small>
+              <a href="https://en.gravatar.com/">Gravatar</a> is used to display your profile picture.
+              Choose a public email addess below to show your avatar on your profile.
+            </small>
+          <% end %>
+        </div>
+
         <%= form_for @changeset, dashboard_path(HexWeb.Endpoint, :update_profile), [method: :post], fn f -> %>
           <div class="form-group">
             <%= label f, :full_name %>
@@ -20,9 +35,9 @@
             <%= label f, :public_email %>
             <%= select f, :public_email, public_email_options(@changeset.data), value: public_email_value(@changeset.data) %>
             <%= error_tag f, :public_email %>
-            <p>
+            <small>
               You can add or remove email address on the <a href="<%= dashboard_path(HexWeb.Endpoint, :email) %>">email settings page</a>.
-            </p>
+            </small>
           </div>
 
           <%= inputs_for f, :handles, fn f -> %>
