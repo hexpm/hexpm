@@ -102,11 +102,16 @@ defmodule HexWeb.Users do
   end
 
   def remove_email(user, params) do
-    if email = find_email(user, params) do
-      Repo.delete!(email)
-      :ok
-    else
-      {:error, :unknown_email}
+    email = find_email(user, params)
+
+    cond do
+      !email ->
+        {:error, :unknown_email}
+      email.primary ->
+        {:error, :primary}
+      true ->
+        Repo.delete!(email)
+        :ok
     end
   end
 
@@ -148,11 +153,16 @@ defmodule HexWeb.Users do
   end
 
   def resend_verify_email(user, params) do
-    if email = find_email(user, params) do
-      Mailer.send_verification_email(user, email)
-      :ok
-    else
-      {:error, :unknown_email}
+    email = find_email(user, params)
+
+    cond do
+      !email ->
+        {:error, :unknown_email}
+      email.verified ->
+        {:error, :already_verified}
+      true ->
+        Mailer.send_verification_email(user, email)
+        :ok
     end
   end
 
