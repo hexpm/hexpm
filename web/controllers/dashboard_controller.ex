@@ -69,7 +69,6 @@ defmodule HexWeb.DashboardController do
     end
   end
 
-  # TODO: Should not be able to remove primary email
   def remove_email(conn, params) do
     user = Users.with_emails(conn.assigns.logged_in)
     email = params["email"]
@@ -167,4 +166,6 @@ defmodule HexWeb.DashboardController do
 
   defp email_error_message(:unknown_email, email), do: "Unknown email #{email}."
   defp email_error_message(:not_verified, email), do: "Email #{email} not verified."
+  defp email_error_message(:already_verified, email), do: "Email #{email} already verified."
+  defp email_error_message(:primary, email), do: "Cannot remove primary email #{email}."
 end

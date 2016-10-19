@@ -98,4 +98,91 @@ defmodule HexWeb.DashboardControllerTest do
     assert conn.resp_body =~ "Add email"
     assert conn.resp_body =~ "has already been taken"
   end
+
+  test "remove email", c do
+    {:ok, _} = Users.add_email(c.user, %{email: "new@mail.com"})
+
+    conn = build_conn()
+           |> test_login(c.user)
+           |> delete("dashboard/email", %{email: "new@mail.com"})
+
+    assert redirected_to(conn) == "/dashboard/email"
+    assert get_flash(conn, :info) =~ "Removed email"
+    user = HexWeb.Repo.get!(HexWeb.User, c.user.id) |> HexWeb.Repo.preload(:emails)
+    refute Enum.find(user.emails, &(&1.email == "new@mail.com"))
+  end
+
+  test "cannot remove primary email", c do
+    conn = build_conn()
+           |> test_login(c.user)
+           |> delete("dashboard/email", %{email: "eric@mail.com"})
+
+    assert redirected_to(conn) == "/dashboard/email"
+    assert get_flash(conn, :error) =~ "Cannot remove primary email"
+    user = HexWeb.Repo.get!(HexWeb.User, c.user.id) |> HexWeb.Repo.preload(:emails)
+    assert Enum.find(user.emails, &(&1.email == "eric@mail.com"))
+  end
+
+  test "make email primary", c do
+    {:ok, user} = Users.add_email(c.user, %{email: "new@mail.com"})
+    email = Enum.find(user.emails, &(&1.email == "new@mail.com"))
+    Ecto.Changeset.change(email, %{verified: true}) |> HexWeb.Repo.update!
+
+    conn = build_conn()
+           |> test_login(c.user)
+           |> post("dashboard/email/primary", %{email: "new@mail.com"})
+
+    assert redirected_to(conn) == "/dashboard/email"
+    assert get_flash(conn, :info) =~ "primary email was changed"
+
+    user = HexWeb.Repo.get!(HexWeb.User, c.user.id) |> HexWeb.Repo.preload(:emails)
+    assert Enum.find(user.emails, &(&1.email == "new@mail.com")).primary
+    refute Enum.find(user.emails, &(&1.email == "eric@mail.com")).primary
+  end
+
+  test "cannot make unverified email primary", c do
+    {:ok, _} = Users.add_email(c.user, %{email: "new@mail.com"})
+
+    conn = build_conn()
+           |> test_login(c.user)
+           |> post("dashboard/email/primary", %{email: "new@mail.com"})
+
+    assert redirected_to(conn) == "/dashboard/email"
+    assert get_flash(conn, :error) =~ "not verified"
+
+    user = HexWeb.Repo.get!(HexWeb.User, c.user.id) |> HexWeb.Repo.preload(:emails)
+    refute Enum.find(user.emails, &(&1.email == "new@mail.com")).primary
+  end
+
+  test "make email public", c do
+    {:ok, user} = Users.add_email(c.user, %{email: "new@mail.com"})
+    email = Enum.find(user.emails, &(&1.email == "new@mail.com"))
+    Ecto.Changeset.change(email, %{verified: true}) |> HexWeb.Repo.update!
+
+    conn = build_conn()
+           |> test_login(c.user)
+           |> post("dashboard/email/public", %{email: "new@mail.com"})
+
+    assert redirected_to(conn) == "/dashboard/email"
+    assert get_flash(conn, :info) =~ "public email was changed"
+
+    user = HexWeb.Repo.get!(HexWeb.User, c.user.id) |> HexWeb.Repo.preload(:emails)
+    assert Enum.find(user.emails, &(&1.email == "new@mail.com")).public
+    refute Enum.find(user.emails, &(&1.email == "eric@mail.com")).public
+  end
+
+  test "resend verify email", c do
+    {:ok, _} = Users.add_email(c.user, %{email: "new@mail.com"})
+
+    conn = build_conn()
+           |> test_login(c.user)
+           |> post("dashboard/email/resend", %{email: "new@mail.com"})
+
+    assert redirected_to(conn) == "/dashboard/email"
+    assert get_flash(conn, :info) =~ "verification email has been sent"
+
+    {subject, contents} = HexWeb.Mail.Local.read("new@mail.com")
+    assert subject =~ "Hex.pm"
+    assert contents =~ "email/verify?username=#{c.user.username}"
+  end
 end
