@@ -11,7 +11,7 @@
       <div class="panel-body">
         <div class="form-group">
           <label>Profile picture</label>
-          <img src="<%= gravatar_url(User.email(@logged_in, :public), 320) %>">
+          <img src="<%= gravatar_url(User.email(@logged_in, :public), :large) %>">
           <%= if User.email(@logged_in, :public) do %>
             <small>
               Gravatar is used to display your profile picture. Go to <a href="https://en.gravatar.com/emails/">gravatar</a> to change it.
