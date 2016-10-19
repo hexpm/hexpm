@@ -150,7 +150,7 @@ defmodule HexWeb.DashboardController do
   end
 
   defp render_email(conn, user, add_email_changeset \\ add_email_changeset()) do
-    emails = Enum.sort_by(user.emails, &[not &1.primary, not &1.public, not &1.verified, -&1.id])
+    emails = Email.order_emails(user.emails)
 
     render conn, "email.html", [
       title: "Dashboard - Email",

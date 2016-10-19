@@ -16,6 +16,15 @@
             <%= error_tag f, :full_name %>
           </div>
 
+          <div class="form-group">
+            <%= label f, :public_email %>
+            <%= select f, :public_email, public_email_options(@changeset.data), value: public_email_value(@changeset.data) %>
+            <%= error_tag f, :public_email %>
+            <p>
+              You can add or remove email address on the <a href="<%= dashboard_path(HexWeb.Endpoint, :email) %>">email settings page</a>.
+            </p>
+          </div>
+
           <%= inputs_for f, :handles, fn f -> %>
             <div class="form-group">
               <%= label f, :twitter %>

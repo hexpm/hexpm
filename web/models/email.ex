@@ -49,4 +49,8 @@ defmodule HexWeb.Email do
   def toggle_public(email, flag) do
     change(email, %{public: flag})
   end
+
+  def order_emails(emails) do
+    Enum.sort_by(emails, &[not &1.primary, not &1.public, not &1.verified, -&1.id])
+  end
 end
