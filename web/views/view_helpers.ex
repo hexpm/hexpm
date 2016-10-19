@@ -50,6 +50,11 @@ defmodule HexWeb.ViewHelpers do
     Phoenix.HTML.Form.password_input(form, field, opts)
   end
 
+  def select(form, field, options, opts \\ []) do
+    opts = add_error_class(opts, form, field)
+    Phoenix.HTML.Form.select(form, field, options, opts)
+  end
+
   defp add_error_class(opts, form, field) do
     error? = Keyword.has_key?(form.errors, field)
     error_class = if error?, do: "form-input-error", else: ""

@@ -35,8 +35,18 @@ defmodule HexWeb.Users do
   end
 
   def update_profile(user, params) do
-    User.update_profile(user, params)
-    |> Repo.update
+    Repo.transaction(fn ->
+      with {:ok, user} <- User.update_profile(user, params) |> Repo.update,
+           :ok <- public_email(user, %{"email" => params["public_email"]}) do
+        {:ok, user}
+      else
+        {:error, atom} when is_atom(atom) ->
+          %Ecto.Changeset{errors: [{:public_email, {"unknown error", []}}], valid?: false}
+        other ->
+          other
+      end
+    end)
+    |> elem(1)
   end
 
   def update_password(user, params) do
@@ -134,6 +144,16 @@ defmodule HexWeb.Users do
     end
   end
 
+  def public_email(_user, %{"email" => nil}) do
+    :ok
+  end
+
+  def public_email(user, %{"email" => "none"}) do
+    old_public = Enum.find(user.emails, &(&1.public))
+    Repo.update!(Email.toggle_public(old_public, false))
+    :ok
+  end
+
   def public_email(user, params) do
     new_public = find_email(user, params)
     old_public = Enum.find(user.emails, &(&1.public))
@@ -143,9 +163,11 @@ defmodule HexWeb.Users do
         {:error, :unknown_email}
       !new_public.verified ->
         {:error, :not_verified}
+      old_public && new_public.id == old_public.id ->
+        :ok
       true ->
         Repo.transaction(fn ->
-          Repo.update!(Email.toggle_public(old_public, false))
+          if old_public, do: Repo.update!(Email.toggle_public(old_public, false))
           Repo.update!(Email.toggle_public(new_public, true))
         end)
         :ok

@@ -74,7 +74,8 @@ defmodule HexWeb.Web do
       import Phoenix.HTML.Form, except: [
         text_input: 2, text_input: 3,
         email_input: 2, email_input: 3,
-        password_input: 2, password_input: 3
+        password_input: 2, password_input: 3,
+        select: 3, select: 4
       ]
 
       import HexWeb.Router.Helpers
