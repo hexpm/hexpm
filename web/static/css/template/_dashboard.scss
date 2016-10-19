@@ -42,6 +42,16 @@
   }
 }
 
+.dashboard img {
+  width: 160px;
+  display: block;
+  border-radius: 5px;
+}
+
+.dashboard p {
+  margin: 5px 0 0 0 !important;
+}
+
 .dashboard .email .panel-body {
   padding-bottom: 0;
 }
