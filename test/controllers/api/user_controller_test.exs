@@ -95,6 +95,8 @@ defmodule HexWeb.API.UserControllerTest do
     refute body["password"]
   end
 
+  # TODO
+  # NOTE: Also test for website sign up controller
   # test "recreate unconfirmed user" do
   #   # first
   #   body = %{username: "name", email: "email@mail.com", password: "passpass"}
