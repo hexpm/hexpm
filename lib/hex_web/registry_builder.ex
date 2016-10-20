@@ -156,7 +156,7 @@ defmodule HexWeb.RegistryBuilder do
   end
 
   defp build_versions(packages) do
-    packages = Enum.map(packages, fn {name, [versions]} -> %{name: name, versions: versions} end)
+    packages = Enum.map(packages, fn {name, [versions]} -> %{name: name, versions: versions, retired: []} end)
     %{packages: packages}
     |> :hex_pb_versions.encode_msg(:Versions)
     |> sign_protobuf
