@@ -1,8 +1,8 @@
 defmodule HexWeb.Owners do
   use HexWeb.Web, :crud
 
-  def all(package) do
-    assoc(package, :owners)
+  def all(package, preload \\ []) do
+    from(u in assoc(package, :owners), preload: ^preload)
     |> Repo.all
   end
 

@@ -8,7 +8,8 @@ defmodule HexWeb.UserController do
         |> Users.with_owned_packages
         |> Users.with_emails
       packages = Packages.attach_versions(user.owned_packages) |> Enum.sort_by(& &1.name)
-      public_email = User.email(user, :public)
+      # NOTE: Disabled while waiting for privacy policy grace period
+      public_email = nil # User.email(user, :public)
 
       render conn, "show.html",
         title: user.username,
