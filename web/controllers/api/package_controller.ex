@@ -21,7 +21,7 @@ defmodule HexWeb.API.PackageController do
 
     when_stale(conn, package, fn conn ->
       package = Packages.preload(package)
-      package = %{package | owners: Owners.all(package)}
+      package = %{package | owners: Owners.all(package, :emails)}
 
       conn
       |> api_cache(:public)

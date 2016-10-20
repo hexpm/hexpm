@@ -41,9 +41,10 @@ defmodule HexWeb.API.PackageView do
   defp load_owners(entity, owners) do
     owners =
       Enum.map(owners, fn user ->
-        user
-        |> Map.take([:username, :email])
-        |> Map.put(:url, api_user_url(HexWeb.Endpoint, :show, user))
+        %{username: user.username,
+          # NOTE: Disabled while waiting for privacy policy grace period
+          # email: User.email(user, :public),
+          url: api_user_url(HexWeb.Endpoint, :show, user)}
       end)
 
     Map.put(entity, :owners, owners)

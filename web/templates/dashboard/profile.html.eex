@@ -12,16 +12,23 @@
         <div class="form-group">
           <label>Profile picture</label>
           <img src="<%= gravatar_url(User.email(@logged_in, :public), :large) %>">
-          <%= if User.email(@logged_in, :public) do %>
+          <p>
             <small>
-              Gravatar is used to display your profile picture. Go to <a href="https://en.gravatar.com/emails/">gravatar</a> to change it.
+              <%= if User.email(@logged_in, :public) do %>
+                Gravatar is used to display your profile picture. Go to <a href="https://en.gravatar.com/emails/">gravatar</a> to change it.
+              <% else %>
+                <a href="https://en.gravatar.com/">Gravatar</a> is used to display your profile picture.
+                Choose a public email addess below to show your avatar on your profile.
+              <% end %>
             </small>
-          <% else %>
+          </p>
+          <p>
             <small>
-              <a href="https://en.gravatar.com/">Gravatar</a> is used to display your profile picture.
-              Choose a public email addess below to show your avatar on your profile.
+              <em>
+                Note that while waiting for the new <a href="<%= policy_path(HexWeb.Endpoint, :privacy) %>">privacy policy</a> to take effect all profile pictures are currently disabled.
+              </em>
             </small>
-          <% end %>
+          </p>
         </div>
 
         <%= form_for @changeset, dashboard_path(HexWeb.Endpoint, :update_profile), [method: :post], fn f -> %>

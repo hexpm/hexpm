@@ -12,7 +12,7 @@ defmodule HexWeb.API.UserController do
         |> put_resp_header("location", location)
         |> api_cache(:private)
         |> put_status(201)
-        |> render(:show, user: user)
+        |> render(:show, user: user, show_email: true)
       {:error, changeset} ->
         validation_failed(conn, changeset)
     end
@@ -28,7 +28,7 @@ defmodule HexWeb.API.UserController do
     when_stale(conn, user, fn conn ->
       conn
       |> api_cache(:private)
-      |> render(:show, user: user)
+      |> render(:show, user: user, show_email: false)
     end)
   end
 

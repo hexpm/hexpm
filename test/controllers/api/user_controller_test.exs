@@ -89,7 +89,8 @@ defmodule HexWeb.API.UserControllerTest do
 
     body = json_response(conn, 200)
     assert body["username"] == "eric"
-    assert body["email"] == "eric@mail.com"
+    # NOTE: Disabled while waiting for privacy policy grace period
+    # assert body["email"] == "eric@mail.com"
     refute body["emails"]
     refute body["password"]
   end
