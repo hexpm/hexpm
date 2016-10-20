@@ -25,6 +25,7 @@ defmodule HexWeb.Email do
 
   def changeset(email, :create, params, verified?) do
     cast(email, params, ~w(email))
+    |> validate_required(~w(email)a)
     |> update_change(:email, &String.downcase/1)
     |> validate_format(:email, @email_regex)
     |> validate_confirmation(:email, message: "does not match email")

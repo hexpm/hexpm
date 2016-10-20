@@ -1,6 +1,5 @@
 defmodule HexWeb.Session do
   @behaviour Plug
-  @test Mix.env == :test
 
   def init(opts), do: Plug.Session.init(opts)
 
