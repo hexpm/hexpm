@@ -1,6 +1,7 @@
 defmodule HexWeb.DashboardControllerTest do
   use HexWeb.ConnCase, async: true
 
+  alias HexWeb.User
   alias HexWeb.Users
 
   setup do
@@ -23,6 +24,43 @@ defmodule HexWeb.DashboardControllerTest do
     assert redirected_to(conn) == "/dashboard/profile"
     assert get_flash(conn, :info) =~ "Profile updated successfully"
     assert Users.get(c.user.username).full_name == "New Name"
+  end
+
+  test "update profile change public email", c do
+    {:ok, user} = Users.add_email(c.user, %{email: "new@mail.com"})
+    email = Enum.find(user.emails, &(&1.email == "new@mail.com"))
+    Ecto.Changeset.change(email, %{verified: true}) |> HexWeb.Repo.update!
+    conn = build_conn()
+           |> test_login(c.user)
+           |> post("dashboard/profile", %{user: %{public_email: "new@mail.com"}})
+
+    assert redirected_to(conn) == "/dashboard/profile"
+    assert get_flash(conn, :info) =~ "Profile updated successfully"
+
+    user = HexWeb.Repo.get!(HexWeb.User, c.user.id) |> HexWeb.Repo.preload(:emails)
+    assert Enum.find(user.emails, &(&1.email == "new@mail.com")).public
+    refute Enum.find(user.emails, &(&1.email == "eric@mail.com")).public
+  end
+
+  test "update profile don't show public email", c do
+    conn = build_conn()
+           |> test_login(c.user)
+           |> post("dashboard/profile", %{user: %{public_email: "none"}})
+
+    assert redirected_to(conn) == "/dashboard/profile"
+    assert get_flash(conn, :info) =~ "Profile updated successfully"
+    refute Users.get(c.user.username) |> Users.with_emails |> User.email(:public)
+  end
+
+  test "update profile with no emails", c do
+    HexWeb.Repo.delete_all(HexWeb.Email)
+
+    conn = build_conn()
+           |> test_login(c.user)
+           |> post("dashboard/profile", %{user: %{public_email: "none"}})
+
+    assert redirected_to(conn) == "/dashboard/profile"
+    assert get_flash(conn, :info) =~ "Profile updated successfully"
   end
 
   test "show password", c do

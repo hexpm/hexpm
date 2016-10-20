@@ -41,7 +41,7 @@ defmodule HexWeb.Users do
         {:ok, user}
       else
         {:error, atom} when is_atom(atom) ->
-          %Ecto.Changeset{errors: [{:public_email, {"unknown error", []}}], valid?: false}
+          %Ecto.Changeset{errors: [public_email: {"unknown error", []}], valid?: false}
         other ->
           other
       end
@@ -149,8 +149,9 @@ defmodule HexWeb.Users do
   end
 
   def public_email(user, %{"email" => "none"}) do
-    old_public = Enum.find(user.emails, &(&1.public))
-    Repo.update!(Email.toggle_public(old_public, false))
+    if old_public = Enum.find(user.emails, &(&1.public)) do
+      Repo.update!(Email.toggle_public(old_public, false))
+    end
     :ok
   end
 
