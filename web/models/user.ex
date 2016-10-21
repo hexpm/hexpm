@@ -83,12 +83,12 @@ defmodule HexWeb.User do
 
   def password_reset(user, params, revoke_all_keys \\ true) do
     multi =
-      Ecto.Multi.new
-      |> Ecto.Multi.update(:password, update_password_no_check(user, params))
-      |> Ecto.Multi.update(:reset, disable_password_reset(user))
+      Multi.new
+      |> Multi.update(:password, update_password_no_check(user, params))
+      |> Multi.update(:reset, disable_password_reset(user))
 
     if revoke_all_keys,
-      do: Ecto.Multi.update_all(multi, :keys, Key.revoke_all(user), []),
+      do: Multi.update_all(multi, :keys, Key.revoke_all(user), []),
     else: multi
   end
 

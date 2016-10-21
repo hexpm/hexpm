@@ -35,7 +35,7 @@ defmodule HexWeb.Releases do
   end
 
   def publish(package, user, body, meta, checksum, [audit: audit_data]) do
-    Ecto.Multi.new
+    Multi.new
     |> create_package(package, user, meta)
     |> create_release(package, checksum, meta)
     |> audit_publish(audit_data)
@@ -57,9 +57,9 @@ defmodule HexWeb.Releases do
     Assets.push_docs(release, files, body, docs_for_latest_release)
 
     multi =
-      Ecto.Multi.new
-      |> Ecto.Multi.update(:release, Ecto.Changeset.change(release, has_docs: true))
-      |> Ecto.Multi.update(:package, Ecto.Changeset.change(release.package, docs_updated_at: HexWeb.Utils.utc_now))
+      Multi.new
+      |> Multi.update(:release, Ecto.Changeset.change(release, has_docs: true))
+      |> Multi.update(:package, Ecto.Changeset.change(release.package, docs_updated_at: HexWeb.Utils.utc_now))
       |> audit(audit_data, "docs.publish", {package, release})
 
     {:ok, _} = Repo.transaction(multi)
@@ -74,19 +74,19 @@ defmodule HexWeb.Releases do
         where: fragment("NOT EXISTS (SELECT id FROM releases WHERE package_id = ?)", ^package.id)
       )
 
-    Ecto.Multi.new
-    |> Ecto.Multi.delete(:release, Release.delete(release))
+    Multi.new
+    |> Multi.delete(:release, Release.delete(release))
     |> audit_revert(audit_data, package, release)
-    |> Ecto.Multi.delete_all(:package, delete_query)
+    |> Multi.delete_all(:package, delete_query)
     |> Repo.transaction_with_isolation(level: :serializable, timeout: @publish_timeout)
     |> revert_result(package)
   end
 
   def revert_docs(release, [audit: audit_data]) do
     multi =
-      Ecto.Multi.new
-      |> Ecto.Multi.update(:release, Ecto.Changeset.change(release, has_docs: false))
-      |> Ecto.Multi.update(:package, Ecto.Changeset.change(release.package, docs_updated_at: HexWeb.Utils.utc_now))
+      Multi.new
+      |> Multi.update(:release, Ecto.Changeset.change(release, has_docs: false))
+      |> Multi.update(:package, Ecto.Changeset.change(release.package, docs_updated_at: HexWeb.Utils.utc_now))
       |> audit(audit_data, "docs.revert", {release.package, release})
 
     {:ok, _} = Repo.transaction(multi)
@@ -110,9 +110,9 @@ defmodule HexWeb.Releases do
   defp create_package(multi, package, user, meta) do
     params = %{"name" => meta["name"], "meta" => meta}
     if package do
-      Ecto.Multi.update(multi, :package, Package.update(package, params))
+      Multi.update(multi, :package, Package.update(package, params))
     else
-      Ecto.Multi.insert(multi, :package, Package.build(user, params))
+      Multi.insert(multi, :package, Package.build(user, params))
     end
   end
 
@@ -129,18 +129,18 @@ defmodule HexWeb.Releases do
     if release do
       release = Repo.preload(release, requirements: Release.requirements(release))
       multi
-      |> Ecto.Multi.update(:release, Release.update(release, params, checksum))
-      |> Ecto.Multi.run(:action, fn _ -> {:ok, :update} end)
+      |> Multi.update(:release, Release.update(release, params, checksum))
+      |> Multi.run(:action, fn _ -> {:ok, :update} end)
     else
       multi
       |> build_release(params, checksum)
-      |> Ecto.Multi.run(:action, fn _ -> {:ok, :insert} end)
+      |> Multi.run(:action, fn _ -> {:ok, :insert} end)
     end
   end
 
   defp build_release(multi, params, checksum) do
-    Ecto.Multi.merge(multi, fn %{package: package} ->
-      Ecto.Multi.insert(Ecto.Multi.new, :release, Release.build(package, params, checksum))
+    Multi.merge(multi, fn %{package: package} ->
+      Multi.insert(Multi.new, :release, Release.build(package, params, checksum))
     end)
   end
 
@@ -153,7 +153,7 @@ defmodule HexWeb.Releases do
   end
 
   defp publish_release(multi, body) do
-    Ecto.Multi.run(multi, :assets, fn %{package: package, release: release} ->
+    Multi.run(multi, :assets, fn %{package: package, release: release} ->
       release = %{release | package: package}
       Assets.push_release(release, body)
       {:ok, :ok}

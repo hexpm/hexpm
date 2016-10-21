@@ -8,8 +8,8 @@ defmodule HexWeb.Owners do
 
   def add(package, owner, [audit: audit_data]) do
     multi =
-      Ecto.Multi.new
-      |> Ecto.Multi.insert(:owner, Package.build_owner(package, owner))
+      Multi.new
+      |> Multi.insert(:owner, Package.build_owner(package, owner))
       |> audit(audit_data, "owner.add", {package, owner})
 
     case Repo.transaction(multi) do
@@ -30,8 +30,8 @@ defmodule HexWeb.Owners do
       {:error, :last_owner}
     else
       multi =
-        Ecto.Multi.new
-        |> Ecto.Multi.delete_all(:package_owner, Package.owner(package, owner))
+        Multi.new
+        |> Multi.delete_all(:package_owner, Package.owner(package, owner))
         |> audit(audit_data, "owner.remove", {package, owner})
 
       {:ok, _} = Repo.transaction(multi)

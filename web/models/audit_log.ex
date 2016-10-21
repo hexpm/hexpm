@@ -11,8 +11,8 @@ defmodule HexWeb.AuditLog do
 
   # NOTE: user_agent should be just "WEB" when action is from the web interface
 
-  def build(%HexWeb.User{id: user_id}, user_agent, action, params) do
-    %HexWeb.AuditLog{
+  def build(%User{id: user_id}, user_agent, action, params) do
+    %AuditLog{
       actor_id: user_id,
       user_agent: user_agent,
       action: action,
@@ -20,24 +20,24 @@ defmodule HexWeb.AuditLog do
     }
   end
 
-  def audit(%Ecto.Multi{} = multi, {user, user_agent}, action, fun) when is_function(fun, 1) do
-    Ecto.Multi.merge(multi, fn data ->
-      Ecto.Multi.insert(Ecto.Multi.new, :log, build(user, user_agent, action, fun.(data)))
+  def audit(%Multi{} = multi, {user, user_agent}, action, fun) when is_function(fun, 1) do
+    Multi.merge(multi, fn data ->
+      Multi.insert(Multi.new, :log, build(user, user_agent, action, fun.(data)))
     end)
   end
-  def audit(%Ecto.Multi{} = multi, {user, user_agent}, action, params) do
-    Ecto.Multi.insert(multi, :log, build(user, user_agent, action, params))
+  def audit(%Multi{} = multi, {user, user_agent}, action, params) do
+    Multi.insert(multi, :log, build(user, user_agent, action, params))
   end
 
   def audit_many(multi, {user, user_agent}, action, list, opts \\ []) do
-    fields = HexWeb.AuditLog.__schema__(:fields) -- [:id]
+    fields = AuditLog.__schema__(:fields) -- [:id]
     extra = %{inserted_at: HexWeb.Utils.utc_now}
     entry = fn (element) ->
       build(user, user_agent, action, element)
       |> Map.take(fields)
       |> Map.merge(extra)
     end
-    Ecto.Multi.insert_all(multi, :log, HexWeb.AuditLog, Enum.map(list, entry), opts)
+    Multi.insert_all(multi, :log, AuditLog, Enum.map(list, entry), opts)
   end
 
   # TODO: Add emails
@@ -51,19 +51,20 @@ defmodule HexWeb.AuditLog do
   defp extract_params("release.publish", {package, release}), do: %{package: serialize(package), release: serialize(release)}
   defp extract_params("release.revert", {package, release}), do: %{package: serialize(package), release: serialize(release)}
 
-  defp serialize(%HexWeb.Package{} = package) do
+  defp serialize(%Package{} = package) do
     do_serialize(package) |> Map.put(:meta, serialize(package.meta))
   end
-  defp serialize(%HexWeb.Release{} = release) do
+  defp serialize(%Release{} = release) do
     do_serialize(release) |> Map.put(:meta, serialize(release.meta))
   end
   defp serialize(schema), do: do_serialize(schema)
   defp do_serialize(schema), do: Map.take(schema, fields(schema))
 
-  defp fields(%HexWeb.Key{}), do: [:id, :name]
-  defp fields(%HexWeb.Package{}), do: [:id, :name]
-  defp fields(%HexWeb.Release{}), do: [:id, :version, :checksum, :has_docs, :package_id]
-  defp fields(%HexWeb.User{}), do: [:id, :username]
-  defp fields(%HexWeb.PackageMetadata{}), do: [:description, :licenses, :links, :maintainers, :extra]
-  defp fields(%HexWeb.ReleaseMetadata{}), do: [:app, :build_tools, :elixir]
+  defp fields(%Key{}), do: [:id, :name]
+  defp fields(%Package{}), do: [:id, :name]
+  defp fields(%Release{}), do: [:id, :version, :checksum, :has_docs, :package_id]
+  defp fields(%User{}), do: [:id, :username]
+  defp fields(%PackageMetadata{}), do: [:description, :licenses, :links, :maintainers, :extra]
+  defp fields(%ReleaseMetadata{}), do: [:app, :build_tools, :elixir]
+  defp fields(%Email{}), do: [:email, :primary, :public, :primary]
 end
