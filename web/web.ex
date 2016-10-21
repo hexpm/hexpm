@@ -38,7 +38,6 @@ defmodule HexWeb.Web do
       import Ecto.Query, only: [from: 1, from: 2]
       import HexWeb.AuditLog, only: [audit: 4, audit_many: 4]
 
-      alias HexWeb.{Assets, Mailer, Sitemaps, RegistryBuilder}
       alias HexWeb.Repo
       alias Ecto.Multi
 
@@ -50,15 +49,12 @@ defmodule HexWeb.Web do
     quote do
       use Phoenix.Controller
 
-      alias HexWeb.{Installs, Keys, Owners, Packages, Releases, Sitemaps, Users}
-
-      alias HexWeb.Repo
       import Ecto
       import Ecto.Query, only: [from: 1, from: 2]
 
-      import HexWeb.Router.Helpers
-      import HexWeb.ControllerHelpers
-      import HexWeb.AuthHelpers
+      import HexWeb.{Router.Helpers, ControllerHelpers, AuthHelpers}
+
+      alias HexWeb.{Endpoint, Repo}
 
       HexWeb.Web.shared
     end
@@ -67,12 +63,12 @@ defmodule HexWeb.Web do
   def view do
     quote do
       use Phoenix.View, root: "web/templates"
+      use Phoenix.HTML
 
       # Import convenience functions from controllers
       import Phoenix.Controller, only: [get_csrf_token: 0, get_flash: 2, view_module: 1]
 
       # Use all HTML functionality (forms, tags, etc)
-      use Phoenix.HTML
       import Phoenix.HTML.Form, except: [
         text_input: 2, text_input: 3,
         email_input: 2, email_input: 3,
@@ -80,9 +76,9 @@ defmodule HexWeb.Web do
         select: 3, select: 4
       ]
 
-      import HexWeb.Router.Helpers
-      import HexWeb.ViewHelpers
-      import HexWeb.ViewIcons
+      import HexWeb.{Router.Helpers, ViewHelpers, ViewIcons}
+
+      alias HexWeb.Endpoint
 
       HexWeb.Web.shared
     end
@@ -98,23 +94,28 @@ defmodule HexWeb.Web do
   defmacro shared do
     quote do
       alias HexWeb.{
+        Assets,
         AuditLog,
         Download,
         Email,
         Install,
+        Installs,
         Key,
         Keys,
+        Mailer,
         Owners,
         Package,
         Packages,
         PackageDownload,
         PackageMetadata,
         PackageOwner,
+        RegistryBuilder,
         Release,
         Releases,
         ReleaseDownload,
         ReleaseMetadata,
         Requirement,
+        Sitemaps,
         User,
         Users,
         UserHandles,

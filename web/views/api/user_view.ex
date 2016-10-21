@@ -11,7 +11,7 @@ defmodule HexWeb.API.UserView do
     entity =
       user
       |> Map.take([:username, :full_name, :handles, :inserted_at, :updated_at])
-      |> Map.put(:url, api_user_url(HexWeb.Endpoint, :show, user))
+      |> Map.put(:url, api_user_url(Endpoint, :show, user))
       |> Map.update!(:handles, &render_handles/1)
       |> if_value(assoc_loaded?(user.owned_packages), &load_owned(&1, user.owned_packages))
 
@@ -33,7 +33,7 @@ defmodule HexWeb.API.UserView do
   defp load_owned(entity, packages) do
     packages =
       Enum.into(packages, %{}, fn package ->
-        {package.name, api_package_url(HexWeb.Endpoint, :show, package)}
+        {package.name, api_package_url(Endpoint, :show, package)}
       end)
 
     Map.put(entity, :owned_packages, packages)

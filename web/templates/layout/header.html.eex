@@ -11,8 +11,8 @@
     <%= og_tags(assigns) %>
 
     <link rel="search" type="application/opensearchdescription+xml" title="Hex" href="/hexsearch.xml">
-    <link rel="stylesheet" href="<%= static_path(HexWeb.Endpoint, "/css/main.css") %>">
-    <link rel="shortcut icon" href="<%= static_path(HexWeb.Endpoint, "/favicon.png") %>">
+    <link rel="stylesheet" href="<%= static_path(Endpoint, "/css/main.css") %>">
+    <link rel="shortcut icon" href="<%= static_path(Endpoint, "/favicon.png") %>">
   </head>
   <body>
     <!--[if lt IE 10]>
@@ -29,12 +29,12 @@
             <span class="icon-bar"></span>
           </button>
           <a class="navbar-brand" href="/">
-            <img src="<%= static_path(HexWeb.Endpoint, "/images/hex.png") %>" srcset="<%= static_path(HexWeb.Endpoint, "/images/hex.png") %> 1x, <%= static_path(HexWeb.Endpoint, "/images/hex@2.png") %> 2x, <%= static_path(HexWeb.Endpoint, "/images/hex@3.png") %> 3x" alt="hex logo">
+            <img src="<%= static_path(Endpoint, "/images/hex.png") %>" srcset="<%= static_path(Endpoint, "/images/hex.png") %> 1x, <%= static_path(Endpoint, "/images/hex@2.png") %> 2x, <%= static_path(Endpoint, "/images/hex@3.png") %> 3x" alt="hex logo">
           </a>
         </div>
         <div id="navbar" class="navbar-collapse collapse">
           <%= if show_search?(assigns) do %>
-          <form class="navbar-form pull-left" role="search" action="<%= package_path(HexWeb.Endpoint, :index) %>">
+          <form class="navbar-form pull-left" role="search" action="<%= package_path(Endpoint, :index) %>">
              <div class="input-group">
                 <input placeholder="Find packages" name="search" type="text" autofocus class="form-control" value="<%= search(assigns) %>">
                 <input type="hidden" name="sort" value="downloads">
@@ -49,24 +49,24 @@
           <% end %>
 
           <ul class="nav navbar-nav navbar-right">
-            <li><a href="<%= package_path(HexWeb.Endpoint, :index) %>">Packages</a></li>
+            <li><a href="<%= package_path(Endpoint, :index) %>">Packages</a></li>
 
             <li class="dropdown">
               <a href="#" class="dropdown-toggle" data-toggle="dropdown">Documentation <b class="caret"></b></a>
               <ul class="dropdown-menu">
                 <li class="dropdown-header menu-dropdown-header">Mix</li>
-                <li><a href="<%= docs_path(HexWeb.Endpoint, :usage) %>">Usage</a></li>
-                <li><a href="<%= docs_path(HexWeb.Endpoint, :publish) %>">Publishing packages</a></li>
-                <li><a href="<%= docs_path(HexWeb.Endpoint, :tasks) %>">Tasks</a></li>
+                <li><a href="<%= docs_path(Endpoint, :usage) %>">Usage</a></li>
+                <li><a href="<%= docs_path(Endpoint, :publish) %>">Publishing packages</a></li>
+                <li><a href="<%= docs_path(Endpoint, :tasks) %>">Tasks</a></li>
                 <li role="separator" class="divider"></li>
                 <li class="dropdown-header menu-dropdown-header">Rebar3</li>
-                <li><a href="<%= docs_path(HexWeb.Endpoint, :rebar3_usage) %>">Usage</a></li>
-                <li><a href="<%= docs_path(HexWeb.Endpoint, :rebar3_publish) %>">Publishing packages</a></li>
+                <li><a href="<%= docs_path(Endpoint, :rebar3_usage) %>">Usage</a></li>
+                <li><a href="<%= docs_path(Endpoint, :rebar3_publish) %>">Publishing packages</a></li>
                 <li><a href="https://www.rebar3.org/v3.0/docs/hex-package-management">Tasks</a></li>
                 <li role="separator" class="divider"></li>
-                <li><a href="<%= policy_path(HexWeb.Endpoint, :index) %>">Policies</a></li>
-                <li><a href="<%= docs_path(HexWeb.Endpoint, :mirrors) %>">Mirrors</a></li>
-                <li><a href="<%= docs_path(HexWeb.Endpoint, :public_keys) %>">Public keys</a></li>
+                <li><a href="<%= policy_path(Endpoint, :index) %>">Policies</a></li>
+                <li><a href="<%= docs_path(Endpoint, :mirrors) %>">Mirrors</a></li>
+                <li><a href="<%= docs_path(Endpoint, :public_keys) %>">Public keys</a></li>
                 <li><a href="https://github.com/hexpm/specifications">Specifications</a></li>
               </ul>
             </li>
@@ -79,18 +79,18 @@
                   <b class="caret"></b>
                 </a>
                 <ul class="dropdown-menu">
-                  <li><a href="<%= user_path(HexWeb.Endpoint, :show, @logged_in) %>">Profile</a></li>
-                  <li><a href="<%= dashboard_path(HexWeb.Endpoint, :profile) %>">Dashboard</a></li>
+                  <li><a href="<%= user_path(Endpoint, :show, @logged_in) %>">Profile</a></li>
+                  <li><a href="<%= dashboard_path(Endpoint, :profile) %>">Dashboard</a></li>
                   <li role="separator" class="divider"></li>
                   <li>
-                    <%= form_tag(login_path(HexWeb.Endpoint, :delete)) do %>
+                    <%= form_tag(login_path(Endpoint, :delete)) do %>
                       <button type="submit" class="btn btn-link">Log out</button>
                     <% end %>
                   </li>
                 </ul>
               </li>
             <% else %>
-              <li><a href="<%= login_path(HexWeb.Endpoint, :show) %>">Log in</a></li>
+              <li><a href="<%= login_path(Endpoint, :show) %>">Log in</a></li>
             <% end %>
 
           </ul>

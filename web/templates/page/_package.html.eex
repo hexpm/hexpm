@@ -1,6 +1,6 @@
 <li>
   <div class="title-container">
-    <a href="<%= package_path(HexWeb.Endpoint, :show, @package) %>" class="title"><%= @package %></a>
+    <a href="<%= package_path(Endpoint, :show, @package) %>" class="title"><%= @package %></a>
   </div>
   <p>
     <%= if @downloads do %>
@@ -12,7 +12,7 @@
     <%= if @inserted_at do %>
       <span class="published-at">
         <%= if @version do %>
-          <a href="<%= package_path(HexWeb.Endpoint, :show, @package) %>"><%= @version %></a>
+          <a href="<%= package_path(Endpoint, :show, @package) %>"><%= @version %></a>
         <% end %>
         published <%= human_relative_time_from_now(@inserted_at) %>
       </span>

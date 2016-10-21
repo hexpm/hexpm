@@ -23,8 +23,8 @@ defmodule HexWeb.API.ReleaseView do
       release
       |> Map.take([:version, :has_docs, :inserted_at, :updated_at])
       |> Map.put(:meta, meta)
-      |> Map.put(:url, api_release_url(HexWeb.Endpoint, :show, package, release))
-      |> Map.put(:package_url, api_package_url(HexWeb.Endpoint, :show, package))
+      |> Map.put(:url, api_release_url(Endpoint, :show, package, release))
+      |> Map.put(:package_url, api_package_url(Endpoint, :show, package))
       |> Map.put(:requirements, reqs)
       |> if_value(release.has_docs, &Map.put(&1, :docs_url, HexWeb.Utils.docs_tarball_url(package, release)))
       |> if_value(assoc_loaded?(release.downloads), &load_downloads(&1, release))

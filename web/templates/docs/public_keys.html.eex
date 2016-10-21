@@ -43,5 +43,5 @@ J1i2xWFndWa6nfFnRxZmCStCOZWYYPlaxr+FZceFbpMwzTNs4g3d4tLNUcbKAIH4
 <h4>Mix</h4>
 
 <p>
-  Run <code>mix help hex.public_keys</code> in your terminal for instructions or go to <code><a href="<%= docs_path(HexWeb.Endpoint, :tasks) %>#hex_public_keys">hex.public_keys</a></code>.
+  Run <code>mix help hex.public_keys</code> in your terminal for instructions or go to <code><a href="<%= docs_path(Endpoint, :tasks) %>#hex_public_keys">hex.public_keys</a></code>.
 </p>

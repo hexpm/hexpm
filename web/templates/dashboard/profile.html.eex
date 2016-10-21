@@ -25,13 +25,13 @@
           <p>
             <small>
               <em>
-                Note that while waiting for the new <a href="<%= policy_path(HexWeb.Endpoint, :privacy) %>">privacy policy</a> to take effect all profile pictures are currently disabled.
+                Note that while waiting for the new <a href="<%= policy_path(Endpoint, :privacy) %>">privacy policy</a> to take effect all profile pictures are currently disabled.
               </em>
             </small>
           </p>
         </div>
 
-        <%= form_for @changeset, dashboard_path(HexWeb.Endpoint, :update_profile), [method: :post], fn f -> %>
+        <%= form_for @changeset, dashboard_path(Endpoint, :update_profile), [method: :post], fn f -> %>
           <div class="form-group">
             <%= label f, :full_name %>
             <%= text_input f, :full_name %>
@@ -43,7 +43,7 @@
             <%= select f, :public_email, public_email_options(@changeset.data), value: public_email_value(@changeset.data) %>
             <%= error_tag f, :public_email %>
             <small>
-              You can add or remove email address on the <a href="<%= dashboard_path(HexWeb.Endpoint, :email) %>">email settings page</a>.
+              You can add or remove email address on the <a href="<%= dashboard_path(Endpoint, :email) %>">email settings page</a>.
             </small>
           </div>
 

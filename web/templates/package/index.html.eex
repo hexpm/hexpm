@@ -8,7 +8,7 @@
     <ul class="list">
       <%= for letter <- @letters do %>
       <li>
-        <a href="<%= package_path(HexWeb.Endpoint, :index, letter: letter) %>">
+        <a href="<%= package_path(Endpoint, :index, letter: letter) %>">
           <%= letter %>
         </a>
       </li>
@@ -52,16 +52,16 @@
         </button>
         <ul class="dropdown-menu dropdown-menu-right" role="menu">
           <li role="presentation">
-            <a role="menuitem" tabindex="-1" href="<%= package_path(HexWeb.Endpoint, :index, sort_name_params) %>">Name</a>
+            <a role="menuitem" tabindex="-1" href="<%= package_path(Endpoint, :index, sort_name_params) %>">Name</a>
           </li>
           <li role="presentation">
-            <a role="menuitem" tabindex="-1" href="<%= package_path(HexWeb.Endpoint, :index, sort_downloads_params) %>">Downloads</a>
+            <a role="menuitem" tabindex="-1" href="<%= package_path(Endpoint, :index, sort_downloads_params) %>">Downloads</a>
           </li>
           <li role="presentation">
-            <a role="menuitem" tabindex="-1" href="<%= package_path(HexWeb.Endpoint, :index, sort_created_params) %>">Recently created</a>
+            <a role="menuitem" tabindex="-1" href="<%= package_path(Endpoint, :index, sort_created_params) %>">Recently created</a>
           </li>
           <li role="presentation">
-            <a role="menuitem" tabindex="-1" href="<%= package_path(HexWeb.Endpoint, :index, sort_updated_params) %>">Recently updated</a>
+            <a role="menuitem" tabindex="-1" href="<%= package_path(Endpoint, :index, sort_updated_params) %>">Recently updated</a>
           </li>
         </ul>
       </div>
@@ -79,7 +79,7 @@
         <span class="download-count"><%= human_number_space(@downloads[package.id] || 0) %></span> <br>
         downloads
       </div>
-      <a href="<%= package_path(HexWeb.Endpoint, :show, package) %>"><%= package.name %></a> <span class="version"><%= package.latest_version %></span>
+      <a href="<%= package_path(Endpoint, :show, package) %>"><%= package.name %></a> <span class="version"><%= package.latest_version %></span>
       <p><%= text_length(package.meta.description, 140) %></p>
     </li>
     <% end %>
@@ -97,7 +97,7 @@
   <nav class="pagination-widget">
     <ul class="pagination pagination-sm">
       <%= if paginate[:prev] do %>
-        <li><a href="<%= package_path(HexWeb.Endpoint, :index, prev_page_params) %>" aria-label="Previous">&laquo;</a></li>
+        <li><a href="<%= package_path(Endpoint, :index, prev_page_params) %>" aria-label="Previous">&laquo;</a></li>
       <% else %>
         <li class="disabled"><span>&laquo;</span></li>
       <% end %>
@@ -108,14 +108,14 @@
           </li>
         <% else %>
           <li>
-            <a href="<%= package_path(HexWeb.Endpoint, :index, params(search: @search, page: counter, sort: @sort, letter: @letter)) %>">
+            <a href="<%= package_path(Endpoint, :index, params(search: @search, page: counter, sort: @sort, letter: @letter)) %>">
               <%= counter %>
             </a>
           </li>
         <% end %>
       <% end %>
       <%= if paginate[:next] do %>
-        <li><a href="<%= package_path(HexWeb.Endpoint, :index, next_page_params) %>" aria-label="Next" >&raquo;</a></li>
+        <li><a href="<%= package_path(Endpoint, :index, next_page_params) %>" aria-label="Next" >&raquo;</a></li>
       <% else %>
         <li class="disabled"><span>&raquo;</span></li>
       <% end %>
