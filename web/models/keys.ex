@@ -15,15 +15,15 @@ defmodule HexWeb.Keys do
   end
 
   def add(user, params, [audit: audit_data]) do
-    Ecto.Multi.new
-    |> Ecto.Multi.insert(:key, Key.build(user, params))
+    Multi.new
+    |> Multi.insert(:key, Key.build(user, params))
     |> audit(audit_data, "key.generate", fn %{key: key} -> key end)
     |> Repo.transaction
   end
 
   def remove(key, [audit: audit_data]) do
-    Ecto.Multi.new
-    |> Ecto.Multi.update(:key, Key.revoke(key))
+    Multi.new
+    |> Multi.update(:key, Key.revoke(key))
     |> audit(audit_data, "key.remove", key)
     |> Repo.transaction
   end
@@ -37,8 +37,8 @@ defmodule HexWeb.Keys do
   end
 
   def remove_all(user, [audit: audit_data]) do
-    Ecto.Multi.new
-    |> Ecto.Multi.update_all(:keys, Key.revoke_all(user), [])
+    Multi.new
+    |> Multi.update_all(:keys, Key.revoke_all(user), [])
     |> audit_many(audit_data, "key.remove", all(user))
     |> Repo.transaction
   end

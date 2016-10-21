@@ -25,20 +25,22 @@ defmodule HexWeb.Web do
       import Ecto.Query, only: [from: 1, from: 2]
       import HexWeb.Validation
 
+      alias Ecto.Multi
+
       HexWeb.Web.shared
     end
   end
 
   def crud do
     quote do
-      alias HexWeb.{Assets, Sitemaps, RegistryBuilder}
-      alias HexWeb.Mailer
-
-      alias HexWeb.Repo
       import Ecto
       import Ecto.Changeset
       import Ecto.Query, only: [from: 1, from: 2]
       import HexWeb.AuditLog, only: [audit: 4, audit_many: 4]
+
+      alias HexWeb.{Assets, Mailer, Sitemaps, RegistryBuilder}
+      alias HexWeb.Repo
+      alias Ecto.Multi
 
       HexWeb.Web.shared
     end
