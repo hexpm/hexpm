@@ -5,7 +5,7 @@
 <div class="sponsors container">
   <div class="row">
     <div class="col-md-4 image">
-      <a href="http://pages.plataformatec.com.br/elixir-phoenix-consulting"><img src="<%= static_path(HexWeb.Endpoint, "/images/plataformatec.png") %>" alt="Plataformatec logo"></a>
+      <a href="http://pages.plataformatec.com.br/elixir-phoenix-consulting"><img src="<%= static_path(Endpoint, "/images/plataformatec.png") %>" alt="Plataformatec logo"></a>
     </div>
     <div class="col-md-8">
       <p>
@@ -19,7 +19,7 @@
 
   <div class="row">
     <div class="col-md-4 image">
-      <a href="https://www.fastly.com/"><img src="<%= static_path(HexWeb.Endpoint, "/images/fastly.png") %>" alt="Fastly logo"></a>
+      <a href="https://www.fastly.com/"><img src="<%= static_path(Endpoint, "/images/fastly.png") %>" alt="Fastly logo"></a>
     </div>
     <div class="col-md-8">
       <p>

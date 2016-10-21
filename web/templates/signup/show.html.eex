@@ -4,7 +4,7 @@
   <div class="col-md-8 col-md-offset-2">
     <h2>Sign up</h2>
 
-    <%= form_for @changeset, signup_path(HexWeb.Endpoint, :create), fn f -> %>
+    <%= form_for @changeset, signup_path(Endpoint, :create), fn f -> %>
       <div class="form-group">
         <%= label f, :full_name %>
         <%= text_input f, :full_name %>
@@ -47,7 +47,7 @@
 
       <br><br>
 
-      <p><a href="<%= login_path(HexWeb.Endpoint, :show) %>">Already have an account?</a></p>
+      <p><a href="<%= login_path(Endpoint, :show) %>">Already have an account?</a></p>
     <% end %>
   </div>
 </div>

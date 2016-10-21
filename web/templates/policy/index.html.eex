@@ -1,10 +1,10 @@
 <h2>Policies</h2>
 
 <ul>
-  <li><a href="<%= policy_path(HexWeb.Endpoint, :coc) %>">Code of Conduct</a></li>
-  <li><a href="<%= policy_path(HexWeb.Endpoint, :tos) %>">Terms of Service</a></li>
-  <li><a href="<%= policy_path(HexWeb.Endpoint, :privacy) %>">Privacy Policy</a></li>
-  <li><a href="<%= policy_path(HexWeb.Endpoint, :copyright) %>">Copyright Policy</a></li>
+  <li><a href="<%= policy_path(Endpoint, :coc) %>">Code of Conduct</a></li>
+  <li><a href="<%= policy_path(Endpoint, :tos) %>">Terms of Service</a></li>
+  <li><a href="<%= policy_path(Endpoint, :privacy) %>">Privacy Policy</a></li>
+  <li><a href="<%= policy_path(Endpoint, :copyright) %>">Copyright Policy</a></li>
 </ul>
 
 <p>

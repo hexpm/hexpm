@@ -21,7 +21,7 @@ tools = Keyword.take(tools, compatible_tools)
 
 %>
 
-<h2 class="package-title"><a href="<%= package_path(HexWeb.Endpoint, :show, @package) %>"><%= @package.name %></a>
+<h2 class="package-title"><a href="<%= package_path(Endpoint, :show, @package) %>"><%= @package.name %></a>
  <%= if @current_release do %>
   <span class="version"><%= @current_release.version %></span>
   <% end %>
@@ -123,7 +123,7 @@ tools = Keyword.take(tools, compatible_tools)
           <%= if @current_release do %>
             <%= for %{name: name, requirement: req, app: app, optional: optional} <- @current_release.requirements do %>
             <li>
-              <a href="<%= package_path(HexWeb.Endpoint, :show, name) %>"><%= name %></a> <%= req %>
+              <a href="<%= package_path(Endpoint, :show, name) %>"><%= name %></a> <%= req %>
               <%= if app != name do %>(app: <%= app %>)<% end %>
               <%= if optional do %>(optional)<% end %>
             </li>
@@ -170,7 +170,7 @@ tools = Keyword.take(tools, compatible_tools)
     <ul class="owners-list">
       <%= for user <- @owners do %>
         <li>
-          <a href="<%= user_path(HexWeb.Endpoint, :show, user) %>">
+          <a href="<%= user_path(Endpoint, :show, user) %>">
             <img src="<%= gravatar_url(User.email(user, :public), :small) %>" class="owner-avatar"><%= user.username %>
           </a>
         </li>

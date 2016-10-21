@@ -11,7 +11,7 @@ defmodule HexWeb.API.PackageView do
     package
     |> Map.take([:name, :inserted_at, :updated_at])
     |> Map.put(:meta, Map.take(package.meta, [:description, :licenses, :links, :maintainers]))
-    |> Map.put(:url, api_package_url(HexWeb.Endpoint, :show, package))
+    |> Map.put(:url, api_package_url(Endpoint, :show, package))
     |> if_value(assoc_loaded?(package.releases), &load_releases(&1, get_params(view), package, package.releases))
     |> if_value(assoc_loaded?(package.downloads), &load_downloads(&1, package.downloads))
     |> if_value(assoc_loaded?(package.owners), &load_owners(&1, package.owners))
@@ -23,7 +23,7 @@ defmodule HexWeb.API.PackageView do
         version = to_string(release.version)
         release
         |> Map.take(params)
-        |> Map.put(:url, api_release_url(HexWeb.Endpoint, :show, package, version))
+        |> Map.put(:url, api_release_url(Endpoint, :show, package, version))
       end)
 
     Map.put(entity, :releases, releases)
@@ -44,7 +44,7 @@ defmodule HexWeb.API.PackageView do
         %{username: user.username,
           # NOTE: Disabled while waiting for privacy policy grace period
           # email: User.email(user, :public),
-          url: api_user_url(HexWeb.Endpoint, :show, user)}
+          url: api_user_url(Endpoint, :show, user)}
       end)
 
     Map.put(entity, :owners, owners)

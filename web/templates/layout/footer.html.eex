@@ -8,10 +8,10 @@
               <a href="https://github.com/hexpm">github</a>
             </li>
             <li>
-              <a href="<%= policy_path(HexWeb.Endpoint, :index) %>">policies</a>
+              <a href="<%= policy_path(Endpoint, :index) %>">policies</a>
             </li>
             <li>
-              <a href="<%= page_path(HexWeb.Endpoint, :sponsors) %>">sponsors</a>
+              <a href="<%= page_path(Endpoint, :sponsors) %>">sponsors</a>
             </li>
             <li>
               <a href="mailto:support@hex.pm">support</a>
@@ -21,7 +21,7 @@
       </div>
     </div>
 
-    <script src="<%= static_path(HexWeb.Endpoint, "/js/main.js") %>"></script>
+    <script src="<%= static_path(Endpoint, "/js/main.js") %>"></script>
     <script>App = require("web/static/js/app").App; App.init()</script>
 
     <script>

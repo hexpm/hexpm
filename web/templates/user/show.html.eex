@@ -9,7 +9,7 @@
       <ul class="user-package-list">
         <%= for package <- @packages do %>
           <li>
-            <a href="<%= package_path(HexWeb.Endpoint, :show, package) %>"><%= package.name %></a>
+            <a href="<%= package_path(Endpoint, :show, package) %>"><%= package.name %></a>
             <%= package.latest_version %>
           </li>
         <% end %>

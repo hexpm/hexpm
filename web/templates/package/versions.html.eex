@@ -1,6 +1,6 @@
 <%= for release <- @releases do %>
   <li>
-    <a href="<%= package_path(HexWeb.Endpoint, :show, @package, release, []) %>"><strong><%= release.version %></strong></a>
+    <a href="<%= package_path(Endpoint, :show, @package, release, []) %>"><strong><%= release.version %></strong></a>
     <span class="text-muted"><%= pretty_date(release.inserted_at) %></span>
     <%= if release.has_docs do %>
       <span class="text-muted">(<a href="<%= raw HexWeb.Utils.docs_url(@package, release) %>">docs</a>)</span>
