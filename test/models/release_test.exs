@@ -93,6 +93,11 @@ defmodule HexWeb.ReleaseTest do
            |> extract_errors
   end
 
+  test "ensure unique build tools", %{decimal: decimal} do
+    changeset = Release.build(decimal, rel_meta(%{version: "0.1.0", app: "decimal", build_tools: ["mix", "make", "make"]}), "")
+    assert changeset.changes.meta.changes.build_tools == ["mix", "make"]
+  end
+
   defp extract_errors(%Ecto.Changeset{} = changeset) do
     Ecto.Changeset.traverse_errors(changeset, fn err -> err end)
   end
