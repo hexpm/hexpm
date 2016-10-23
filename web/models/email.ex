@@ -40,7 +40,7 @@ defmodule HexWeb.Email do
     do: Comeonin.Tools.secure_check(email.verification_key, key)
 
   def verify(email) do
-    change(email, %{verified: true})
+    change(email, %{verified: true, verification_key: nil})
   end
 
   def toggle_primary(email, flag) do
