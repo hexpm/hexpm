@@ -4,7 +4,8 @@ defmodule HexWeb.LoginController do
   plug :nillify_params, ["return"]
 
   def show(conn, _params) do
-    if username = get_session(conn, "username") do
+    if logged_in?(conn) do
+      username = get_session(conn, "username")
       path = conn.params["return"] || user_path(conn, :show, username)
       redirect(conn, to: path)
     else
