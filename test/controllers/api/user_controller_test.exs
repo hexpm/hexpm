@@ -64,7 +64,7 @@ defmodule HexWeb.API.UserControllerTest do
     email = hd(c.user.emails).email
     {subject, contents} = HexWeb.Mail.Local.read(email)
     assert subject =~ "Hex.pm"
-    assert contents =~ "#{user.reset_key}"
+    assert contents =~ user.reset_key
 
     # check reset will succeed
     assert User.password_reset?(user, user.reset_key) == true
