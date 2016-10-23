@@ -87,9 +87,6 @@ defmodule HexWeb.Users do
       multi = User.password_reset(user, params, revoke_all_keys?)
       case Repo.transaction(multi) do
         {:ok, _} ->
-          user
-          |> with_emails
-          |> Mailer.send_password_reset_email
           :ok
         {:error, _, changeset, _} ->
           {:error, changeset}
