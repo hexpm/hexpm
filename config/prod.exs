@@ -1,5 +1,9 @@
 use Mix.Config
 
+config :hex_web,
+  cookie_sign_salt: System.get_env("HEX_COOKIE_SIGNING_SALT"),
+  cookie_encr_salt: System.get_env("HEX_COOKIE_ENCRYPTION_SALT")
+
 config :hex_web, HexWeb.Endpoint,
   http: [port: {:system, "PORT"}],
   url: [host: System.get_env("HEX_URL"), scheme: "https", port: 443],
