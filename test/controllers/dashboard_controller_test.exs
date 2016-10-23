@@ -4,6 +4,11 @@ defmodule HexWeb.DashboardControllerTest do
   alias HexWeb.User
   alias HexWeb.Users
 
+  defp add_email(user, email) do
+    {:ok, user} = Users.add_email(user, %{email: email}, audit: {user, "TEST"})
+    user
+  end
+
   setup do
     %{user: create_user("eric", "eric@mail.com", "hunter42"), password: "hunter42"}
   end
@@ -27,7 +32,7 @@ defmodule HexWeb.DashboardControllerTest do
   end
 
   test "update profile change public email", c do
-    {:ok, user} = Users.add_email(c.user, %{email: "new@mail.com"})
+    user = add_email(c.user, "new@mail.com")
     email = Enum.find(user.emails, &(&1.email == "new@mail.com"))
     Ecto.Changeset.change(email, %{verified: true}) |> HexWeb.Repo.update!
     conn = build_conn()
@@ -138,7 +143,7 @@ defmodule HexWeb.DashboardControllerTest do
   end
 
   test "remove email", c do
-    {:ok, _} = Users.add_email(c.user, %{email: "new@mail.com"})
+    add_email(c.user, "new@mail.com")
 
     conn = build_conn()
            |> test_login(c.user)
@@ -162,7 +167,7 @@ defmodule HexWeb.DashboardControllerTest do
   end
 
   test "make email primary", c do
-    {:ok, user} = Users.add_email(c.user, %{email: "new@mail.com"})
+    user = add_email(c.user, "new@mail.com")
     email = Enum.find(user.emails, &(&1.email == "new@mail.com"))
     Ecto.Changeset.change(email, %{verified: true}) |> HexWeb.Repo.update!
 
@@ -179,7 +184,7 @@ defmodule HexWeb.DashboardControllerTest do
   end
 
   test "cannot make unverified email primary", c do
-    {:ok, _} = Users.add_email(c.user, %{email: "new@mail.com"})
+    add_email(c.user, "new@mail.com")
 
     conn = build_conn()
            |> test_login(c.user)
@@ -193,7 +198,7 @@ defmodule HexWeb.DashboardControllerTest do
   end
 
   test "make email public", c do
-    {:ok, user} = Users.add_email(c.user, %{email: "new@mail.com"})
+    user = add_email(c.user, "new@mail.com")
     email = Enum.find(user.emails, &(&1.email == "new@mail.com"))
     Ecto.Changeset.change(email, %{verified: true}) |> HexWeb.Repo.update!
 
@@ -210,7 +215,7 @@ defmodule HexWeb.DashboardControllerTest do
   end
 
   test "resend verify email", c do
-    {:ok, _} = Users.add_email(c.user, %{email: "new@mail.com"})
+    add_email(c.user, "new@mail.com")
 
     conn = build_conn()
            |> test_login(c.user)

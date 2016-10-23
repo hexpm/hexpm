@@ -10,6 +10,7 @@ defmodule HexWeb.Router do
     plug :fetch_flash
     plug :protect_from_forgery
     plug :put_secure_browser_headers
+    plug :web_user_agent
     plug :login
   end
 

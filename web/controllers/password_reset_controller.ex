@@ -9,7 +9,7 @@ defmodule HexWeb.PasswordResetController do
   end
 
   def create(conn, %{"username" => name}) do
-    Users.request_reset(name)
+    Users.password_reset_init(name, audit: audit_data(conn))
 
     render conn, "create.html", [
       title: "Reset your password",

@@ -199,7 +199,10 @@ defmodule HexWeb.ControllerHelpers do
   end
 
   def audit_data(conn) do
-    {conn.assigns.user, conn.assigns.user_agent}
+    # TODO: We should generalize logged_in and user between
+    #       the web and api pipelines
+    user = conn.assigns[:logged_in] || conn.assigns[:user]
+    {user, conn.assigns.user_agent}
   end
 
   def success_to_status(true), do: 200

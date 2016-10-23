@@ -69,6 +69,10 @@ defmodule HexWeb.Plugs do
     end
   end
 
+  def web_user_agent(conn, _opts) do
+    assign(conn, :user_agent, "WEB")
+  end
+
   def login(conn, _opts) do
     username = get_session(conn, "username")
     user = username && HexWeb.Users.get_by_username(username)

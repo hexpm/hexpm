@@ -24,34 +24,51 @@ defmodule HexWeb.Users do
     Repo.preload(user, :emails)
   end
 
-  def add(params) do
-    case User.build(params) |> Repo.insert do
-      {:ok, user} ->
-        Mailer.send_verification_email(user, hd(user.emails))
+  def add(params, [audit: audit_data]) do
+    multi =
+      Multi.new
+      |> Multi.insert(:user, User.build(params))
+      |> audit_with_user(audit_data, "user.create", fn %{user: user} -> user end)
+      |> audit_with_user(audit_data, "email.add", fn %{user: %{emails: [email]}} -> email end)
+      |> audit_with_user(audit_data, "email.primary", fn %{user: %{emails: [email]}} -> {nil, email} end)
+      |> audit_with_user(audit_data, "email.public", fn %{user: %{emails: [email]}} -> {nil, email} end)
+
+    case Repo.transaction(multi) do
+      {:ok, %{user: %{emails: [email]} = user}} ->
+        Mailer.send_verification_email(user, email)
         {:ok, user}
-      other ->
-        other
+      {:error, :user, changeset, _} ->
+        {:error, changeset}
     end
   end
 
-  def update_profile(user, params) do
-    Repo.transaction(fn ->
-      with {:ok, user} <- User.update_profile(user, params) |> Repo.update,
-           :ok <- public_email(user, %{"email" => params["public_email"]}) do
+  def update_profile(user, params, [audit: audit_data]) do
+    multi =
+      Multi.new
+      |> Multi.update(:user, User.update_profile(user, params))
+      |> audit(audit_data, "user.update", fn %{user: user} -> user end)
+      |> Multi.merge(fn %{user: user} -> public_email_multi(user, %{"email" => params["public_email"]}, [audit: audit_data]) end)
+
+    case Repo.transaction(multi) do
+      {:ok, %{user: user}} ->
         {:ok, user}
-      else
-        {:error, atom} when is_atom(atom) ->
-          %Ecto.Changeset{errors: [public_email: {"unknown error", []}], valid?: false}
-        other ->
-          other
-      end
-    end)
-    |> elem(1)
+      {:error, :public_email, _, _} ->
+        {:error, %Ecto.Changeset{data: user, errors: [public_email: {"unknown error", []}], valid?: false}}
+    end
   end
 
-  def update_password(user, params) do
-    User.update_password(user, params)
-    |> Repo.update
+  def update_password(user, params, [audit: audit_data]) do
+    multi =
+      Multi.new
+      |> Multi.update(:user, User.update_password(user, params))
+      |> audit(audit_data, "password.update", nil)
+
+    case Repo.transaction(multi) do
+      {:ok, %{user: user}} ->
+        {:ok, user}
+      {:error, :user, changeset, _} ->
+        {:error, changeset}
+    end
   end
 
   def verify_email(username, email, key) do
@@ -70,21 +87,31 @@ defmodule HexWeb.Users do
     end
   end
 
-  def request_reset(name) do
+  def password_reset_init(name, [audit: audit_data]) do
     if user = get(name) do
-      user = user |> User.init_password_reset |> Repo.update! |> with_emails
-      Mailer.send_password_reset_request_email(user)
+      {:ok, %{user: user}} =
+        Multi.new
+        |> Multi.update(:user, User.init_password_reset(user))
+        |> audit(audit_data, "password.reset.init", nil)
+        |> Repo.transaction
+
+      user
+      |> with_emails
+      |> Mailer.send_password_reset_request_email
       :ok
     else
       {:error, :not_found}
     end
   end
 
-  def password_reset(username, key, params, revoke_all_keys?) do
+  def password_reset_finish(username, key, params, revoke_all_keys?, [audit: audit_data]) do
     user = get(username)
 
     if user && User.password_reset?(user, key) do
-      multi = User.password_reset(user, params, revoke_all_keys?)
+      multi =
+        User.password_reset(user, params, revoke_all_keys?)
+        |> audit(audit_data, "password.reset.finish", nil)
+
       case Repo.transaction(multi) do
         {:ok, _} ->
           :ok
@@ -96,19 +123,25 @@ defmodule HexWeb.Users do
     end
   end
 
-  def add_email(user, params) do
+  def add_email(user, params, [audit: audit_data]) do
     email = build_assoc(user, :emails)
-    case Email.changeset(email, :create, params) |> Repo.insert do
-      {:ok, email} ->
+
+    multi =
+      Multi.new
+      |> Multi.insert(:email, Email.changeset(email, :create, params))
+      |> audit(audit_data, "email.add", fn %{email: email} -> email end)
+
+    case Repo.transaction(multi) do
+      {:ok, %{email: email}} ->
         user = with_emails(%{user | emails: %Ecto.Association.NotLoaded{}})
         Mailer.send_verification_email(user, email)
         {:ok, user}
-      {:error, _} = error ->
-        error
+      {:error, :email, changeset, _} ->
+        {:error, changeset}
     end
   end
 
-  def remove_email(user, params) do
+  def remove_email(user, params, [audit: audit_data]) do
     email = find_email(user, params)
 
     cond do
@@ -117,12 +150,16 @@ defmodule HexWeb.Users do
       email.primary ->
         {:error, :primary}
       true ->
-        Repo.delete!(email)
+        {:ok, _} =
+          Multi.new
+          |> Ecto.Multi.delete(:email, email)
+          |> audit(audit_data, "email.add", email)
+          |> Repo.transaction
         :ok
     end
   end
 
-  def primary_email(user, params) do
+  def primary_email(user, params, [audit: audit_data]) do
     new_primary = find_email(user, params)
     old_primary = Enum.find(user.emails, &(&1.primary))
 
@@ -132,43 +169,60 @@ defmodule HexWeb.Users do
       !new_primary.verified ->
         {:error, :not_verified}
       true ->
-        Repo.transaction(fn ->
-          Repo.update!(User.disable_password_reset(user))
-          Repo.update!(Email.toggle_primary(old_primary, false))
-          Repo.update!(Email.toggle_primary(new_primary, true))
-        end)
+        {:ok, _} =
+          Multi.new
+          |> Multi.update(:reset, User.disable_password_reset(user))
+          |> Multi.update(:old_primary, Email.toggle_primary(old_primary, false))
+          |> Multi.update(:new_primary, Email.toggle_primary(new_primary, true))
+          |> audit(audit_data, "email.primary", {old_primary, new_primary})
+          |> Repo.transaction
         :ok
     end
   end
 
-  def public_email(_user, %{"email" => nil}) do
-    :ok
-  end
-
-  def public_email(user, %{"email" => "none"}) do
-    if old_public = Enum.find(user.emails, &(&1.public)) do
-      Repo.update!(Email.toggle_public(old_public, false))
+  def public_email(user, params, opts) do
+    case Repo.transaction(public_email_multi(user, params, opts)) do
+      {:ok, _} ->
+        :ok
+      {:error, :public_email, reason, _} ->
+        {:error, reason}
     end
-    :ok
   end
 
-  def public_email(user, params) do
+  defp public_email_multi(_user, %{"email" => nil}, _opts) do
+    Multi.new
+  end
+
+  defp public_email_multi(user, %{"email" => "none"}, [audit: audit_data]) do
+    if old_public = Enum.find(user.emails, &(&1.public)) do
+      Multi.new
+      |> Multi.update(:old_public, Email.toggle_public(old_public, false))
+      |> audit(audit_data, "email.public", {old_public, nil})
+    else
+      Multi.new
+    end
+  end
+
+  defp public_email_multi(user, params, [audit: audit_data]) do
     new_public = find_email(user, params)
     old_public = Enum.find(user.emails, &(&1.public))
 
     cond do
       !new_public ->
-        {:error, :unknown_email}
+        Multi.run(Multi.new, :public_email, fn _ -> {:error, :unknown_email} end)
       !new_public.verified ->
-        {:error, :not_verified}
+        Multi.run(Multi.new, :public_email, fn _ -> {:error, :not_verified} end)
       old_public && new_public.id == old_public.id ->
-        :ok
+        Multi.new
       true ->
-        Repo.transaction(fn ->
-          if old_public, do: Repo.update!(Email.toggle_public(old_public, false))
-          Repo.update!(Email.toggle_public(new_public, true))
-        end)
-        :ok
+        multi =
+          if old_public,
+            do: Multi.update(Multi.new, :old_public, Email.toggle_public(old_public, false)),
+          else: Multi.new
+
+        multi
+        |> Multi.update(:new_public, Email.toggle_public(new_public, true))
+        |> audit(audit_data, "email.public", {old_public, new_public})
     end
   end
 
