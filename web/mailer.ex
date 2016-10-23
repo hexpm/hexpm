@@ -47,14 +47,6 @@ defmodule HexWeb.Mailer do
       key: user.reset_key)
   end
 
-  def send_password_reset_email(user) do
-    send(
-      "password_reset.html",
-      "Hex.pm - Password reset",
-      email(user),
-      [])
-  end
-
   def send_typosquat_candidates_email([], _), do: :ok
   def send_typosquat_candidates_email(candidates, threshold) do
     send(
