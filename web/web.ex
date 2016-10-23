@@ -54,7 +54,7 @@ defmodule HexWeb.Web do
 
       import HexWeb.{Router.Helpers, ControllerHelpers, AuthHelpers}
 
-      alias HexWeb.{Endpoint, Repo}
+      alias HexWeb.Endpoint
 
       HexWeb.Web.shared
     end
