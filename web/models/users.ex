@@ -42,6 +42,18 @@ defmodule HexWeb.Users do
     end
   end
 
+  def signed_in?(user, session_key) do
+    user.session_key == session_key
+  end
+
+  def sign_in(%User{session_key: nil} = user) do
+    User.new_session(user)
+    |> Repo.update!
+  end
+  def sign_in(%User{} = user) do
+    user
+  end
+
   def update_profile(user, params, [audit: audit_data]) do
     multi =
       Multi.new

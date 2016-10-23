@@ -51,6 +51,10 @@ defmodule HexWeb.ConnCase do
   end
 
   def test_login(conn, user) do
-    my_put_session(conn, "username", user.username)
+    user = HexWeb.Users.sign_in(user)
+
+    conn
+    |> my_put_session("username", user.username)
+    |> my_put_session("key", user.session_key)
   end
 end

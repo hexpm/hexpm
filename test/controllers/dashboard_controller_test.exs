@@ -21,6 +21,20 @@ defmodule HexWeb.DashboardControllerTest do
     assert response(conn, 200) =~ "Public profile"
   end
 
+  test "requires login" do
+    conn = get(build_conn(), "dashboard/profile")
+    assert redirected_to(conn) == "/login?return=dashboard%2Fprofile"
+  end
+
+  test "requires login after session key changes", c do
+    conn = build_conn()
+           |> test_login(c.user)
+           |> my_put_session("key", "WRONG")
+           |> get("dashboard/profile")
+
+    assert redirected_to(conn) == "/login?return=dashboard%2Fprofile"
+  end
+
   test "update profile", c do
     conn = build_conn()
            |> test_login(c.user)

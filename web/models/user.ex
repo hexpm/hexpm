@@ -12,6 +12,8 @@ defmodule HexWeb.User do
     field :reset_key, :string
     field :reset_expiry, :naive_datetime
 
+    field :session_key, :string
+
     embeds_one :handles, UserHandles, on_replace: :delete
 
     has_many :emails, Email
@@ -71,7 +73,7 @@ defmodule HexWeb.User do
   end
 
   def disable_password_reset(user) do
-    change(user, %{reset_key: nil, reset_expiry: nil})
+    change(user, %{reset_key: nil, reset_expiry: nil, session_key: nil})
   end
 
   def password_reset?(nil, _key), do: false
@@ -90,6 +92,11 @@ defmodule HexWeb.User do
     if revoke_all_keys,
       do: Multi.update_all(multi, :keys, Key.revoke_all(user), []),
     else: multi
+  end
+
+  def new_session(user) do
+    key = HexWeb.Auth.gen_key()
+    change(user, %{session_key: key})
   end
 
   def email(user, :primary), do: user.emails |> Enum.find(& &1.primary) |> email
