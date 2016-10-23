@@ -2,6 +2,7 @@ defmodule HexWeb.PasswordControllerTest do
   use HexWeb.ConnCase, async: true
   alias HexWeb.Auth
   alias HexWeb.User
+  alias HexWeb.Users
 
   setup do
     %{user: create_user("eric", "eric@mail.com", "hunter42")}
@@ -31,6 +32,7 @@ defmodule HexWeb.PasswordControllerTest do
 
     # initiate password reset (usually done via api)
     user = User.init_password_reset(c.user) |> HexWeb.Repo.update!
+    user = Users.sign_in(user)
 
     # chose new password (using token) to `abcd1234`
     conn = post(build_conn(), "password/new", %{"user" => %{"username" => user.username, "key" => user.reset_key, "password" => "abcd1234"}})
@@ -38,6 +40,6 @@ defmodule HexWeb.PasswordControllerTest do
     assert get_flash(conn, :info) =~ "password has been changed"
 
     # check new password will work
-    assert {:ok, {%User{username: "eric"}, _, _}} = Auth.password_auth("eric", "abcd1234")
+    assert {:ok, {%User{username: "eric", session_key: nil}, _, _}} = Auth.password_auth("eric", "abcd1234")
   end
 end

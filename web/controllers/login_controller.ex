@@ -15,10 +15,12 @@ defmodule HexWeb.LoginController do
   def create(conn, %{"username" => username, "password" => password}) do
     case password_auth(username, password) do
       {:ok, user} ->
+        user = Users.sign_in(user)
         path = conn.params["return"] || user_path(conn, :show, user)
 
         conn
         |> put_session("username", user.username)
+        |> put_session("key", user.session_key)
         |> redirect(to: path)
       {:error, reason} ->
         conn
