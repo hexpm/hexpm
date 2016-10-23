@@ -223,12 +223,16 @@ defmodule HexWeb.ControllerHelpers do
   def auth_error_message(:unconfirmed), do: "Email has not been verified yet."
 
   def requires_login(conn, _opts) do
-    if conn.assigns[:logged_in] do
+    if logged_in?(conn) do
       conn
     else
       redirect(conn, to: HexWeb.Router.Helpers.login_path(conn, :show, return: conn.request_path))
       |> halt
     end
+  end
+
+  def logged_in?(conn) do
+    !!conn.assigns[:logged_in]
   end
 
   def nillify_params(conn, keys) do
