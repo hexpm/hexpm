@@ -15,7 +15,7 @@ defmodule HexWeb.DashboardController do
   def update_profile(conn, params) do
     user = conn.assigns.logged_in
 
-    case Users.update_profile(user, params["user"]) do
+    case Users.update_profile(user, params["user"], audit: audit_data(conn)) do
       {:ok, _user} ->
         conn
         |> put_flash(:info, "Profile updated successfully.")
@@ -35,7 +35,7 @@ defmodule HexWeb.DashboardController do
   def update_password(conn, params) do
     user = conn.assigns.logged_in
 
-    case Users.update_password(user, params["user"]) do
+    case Users.update_password(user, params["user"], audit: audit_data(conn)) do
       {:ok, _user} ->
         # TODO: Maybe send an email here?
         conn
@@ -56,7 +56,7 @@ defmodule HexWeb.DashboardController do
   def add_email(conn, params) do
     user = Users.with_emails(conn.assigns.logged_in)
 
-    case Users.add_email(user, params["email"]) do
+    case Users.add_email(user, params["email"], audit: audit_data(conn)) do
       {:ok, _user} ->
         email = params["email"]["email"]
         conn
@@ -73,7 +73,7 @@ defmodule HexWeb.DashboardController do
     user = Users.with_emails(conn.assigns.logged_in)
     email = params["email"]
 
-    case Users.remove_email(user, params) do
+    case Users.remove_email(user, params, audit: audit_data(conn)) do
       :ok ->
         conn
         |> put_flash(:info, "Removed email #{email} from your account.")
@@ -89,7 +89,7 @@ defmodule HexWeb.DashboardController do
     user = Users.with_emails(conn.assigns.logged_in)
     email = params["email"]
 
-    case Users.primary_email(user, params) do
+    case Users.primary_email(user, params, audit: audit_data(conn)) do
       :ok ->
         conn
         |> put_flash(:info, "Your primary email was changed to #{email}.")
@@ -105,7 +105,7 @@ defmodule HexWeb.DashboardController do
     user = Users.with_emails(conn.assigns.logged_in)
     email = params["email"]
 
-    case Users.public_email(user, params) do
+    case Users.public_email(user, params, audit: audit_data(conn)) do
       :ok ->
         conn
         |> put_flash(:info, "Your public email was changed to #{email}.")

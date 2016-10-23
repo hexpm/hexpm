@@ -6,7 +6,7 @@ defmodule HexWeb.SignupController do
   end
 
   def create(conn, params) do
-    case Users.add(params["user"]) do
+    case Users.add(params["user"], audit: audit_data(conn)) do
       {:ok, _user} ->
         conn
         |> put_flash(:info, "A confirmation email has been sent, you will have access to your account shortly.")

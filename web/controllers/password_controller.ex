@@ -24,7 +24,7 @@ defmodule HexWeb.PasswordController do
     key = params["key"]
     revoke_all_keys? = (params["revoke_all_keys"] || "yes") == "yes"
 
-    case Users.password_reset(username, key, params, revoke_all_keys?) do
+    case Users.password_reset_finish(username, key, params, revoke_all_keys?, audit: audit_data(conn)) do
       :ok ->
         conn
         |> put_flash(:info, "Your account password has been changed to your new password.")

@@ -36,7 +36,7 @@ defmodule HexWeb.Web do
       import Ecto
       import Ecto.Changeset
       import Ecto.Query, only: [from: 1, from: 2]
-      import HexWeb.AuditLog, only: [audit: 4, audit_many: 4]
+      import HexWeb.AuditLog, only: [audit: 4, audit_many: 4, audit_with_user: 4]
 
       alias HexWeb.Repo
       alias Ecto.Multi

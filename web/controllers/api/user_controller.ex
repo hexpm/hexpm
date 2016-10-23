@@ -4,7 +4,7 @@ defmodule HexWeb.API.UserController do
   def create(conn, params) do
     params = email_param(params)
 
-    case Users.add(params) do
+    case Users.add(params, audit: audit_data(conn)) do
       {:ok, user} ->
         location = api_user_url(conn, :show, user.username)
 
@@ -33,7 +33,7 @@ defmodule HexWeb.API.UserController do
   end
 
   def reset(conn, %{"name" => name}) do
-    Users.request_reset(name)
+    Users.password_reset_init(name, audit: audit_data(conn))
 
     conn
     |> api_cache(:private)
