@@ -20,7 +20,7 @@ defmodule HexWeb.PasswordResetControllerTest do
     user = HexWeb.Repo.get_by!(User, username: c.user.username) |> HexWeb.Repo.preload(:emails)
     {subject, contents} = HexWeb.Mail.Local.read(User.email(user, :primary))
     assert subject =~ "Hex.pm"
-    assert contents =~ "#{user.reset_key}"
+    assert contents =~ user.reset_key
 
     # check reset will succeed
     assert User.password_reset?(user, user.reset_key) == true
