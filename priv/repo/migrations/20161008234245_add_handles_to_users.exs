@@ -3,7 +3,7 @@ defmodule HexWeb.Repo.Migrations.AddHandlesToUsers do
 
   def change do
     alter table(:users) do
-      add :handles, :jsonb, default: fragment("json_build_object('id', uuid_generate_v4()::text)")
+      add :handles, :jsonb, default: fragment("json_build_object('id', uuid_generate_v4()::text)::jsonb")
     end
   end
 end
