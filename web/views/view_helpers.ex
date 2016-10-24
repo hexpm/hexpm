@@ -18,7 +18,7 @@ defmodule HexWeb.ViewHelpers do
   end
 
   # NOTE: Remove after privacy policy grace period
-  def gravatar_url(nil, size) do
+  def private_gravatar_url(nil, size) do
     "https://www.gravatar.com/avatar?s=#{gravatar_size(size)}&d=mm"
   end
   def private_gravatar_url(email, size) do
