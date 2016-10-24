@@ -28,10 +28,10 @@ alias HexWeb.ReleaseDownload
 lorem = "Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum."
 
 HexWeb.Repo.transaction(fn ->
-  eric = SampleData.create_user("eric", "eric@example.com", "eric")
-  jose = SampleData.create_user("jose", "jose@example.com", "jose")
-  joe = SampleData.create_user("joe", "joe@example.com", "joe")
-  justin = SampleData.create_user("justin", "justin@example.com", "justin")
+  eric = SampleData.create_user("eric", "eric@example.com", "ericric")
+  jose = SampleData.create_user("jose", "jose@example.com", "josejose")
+  joe = SampleData.create_user("joe", "joe@example.com", "joejoejoe")
+  justin = SampleData.create_user("justin", "justin@example.com", "justinjustin")
 
   if eric == nil or jose == nil or joe == nil or justin == nil do
     IO.puts "\nThere has been an error creating the sample users.\nIf the error says '... already taken' hex_web was probably already set up."
