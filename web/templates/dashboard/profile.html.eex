@@ -11,7 +11,7 @@
       <div class="panel-body">
         <div class="form-group">
           <label>Profile picture</label>
-          <img src="<%= gravatar_url(User.email(@logged_in, :public), :large) %>">
+          <img src="<%= private_gravatar_url(User.email(@logged_in, :public), :large) %>">
           <p>
             <small>
               <%= if User.email(@logged_in, :public) do %>
@@ -22,10 +22,12 @@
               <% end %>
             </small>
           </p>
+
+          <%# NOTE: Remove after privacy policy grace period %>
           <p>
             <small>
               <em>
-                Note that while waiting for the new <a href="<%= policy_path(Endpoint, :privacy) %>">privacy policy</a> to take effect all profile pictures are currently disabled.
+                Note that while waiting for the new <a href="<%= policy_path(Endpoint, :privacy) %>">privacy policy</a> to take effect profile pictures are currently not shown publically.
               </em>
             </small>
           </p>
