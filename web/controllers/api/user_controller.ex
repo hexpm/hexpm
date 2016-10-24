@@ -19,17 +19,22 @@ defmodule HexWeb.API.UserController do
   end
 
   def show(conn, %{"name" => username}) do
-    user =
-      username
-      |> Users.get
-      |> Users.with_owned_packages
-      |> Users.with_emails
+    user = Users.get(username)
 
-    when_stale(conn, user, fn conn ->
-      conn
-      |> api_cache(:private)
-      |> render(:show, user: user, show_email: false)
-    end)
+    if user do
+      user =
+        user
+        |> Users.with_owned_packages
+        |> Users.with_emails
+
+      when_stale(conn, user, fn conn ->
+        conn
+        |> api_cache(:private)
+        |> render(:show, user: user, show_email: false)
+      end)
+    else
+      not_found(conn)
+    end
   end
 
   def reset(conn, %{"name" => name}) do

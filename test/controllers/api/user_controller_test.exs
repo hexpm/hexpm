@@ -93,6 +93,12 @@ defmodule HexWeb.API.UserControllerTest do
     # assert body["email"] == "eric@mail.com"
     refute body["emails"]
     refute body["password"]
+
+    conn = build_conn()
+           |> put_req_header("content-type", "application/json")
+           |> get("api/users/bad")
+
+    assert json_response(conn, 404)
   end
 
   # TODO
