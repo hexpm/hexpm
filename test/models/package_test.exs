@@ -26,13 +26,7 @@ defmodule HexWeb.PackageTest do
   end
 
   test "validate blank description in metadata", %{user: user} do
-    meta = %{
-      "maintainers" => ["eric", "josé"],
-      "licenses"     => ["apache", "BSD"],
-      "links"        => %{"github" => "www", "docs" => "www"},
-      "description"  => ""}
-
-    assert {:error, changeset} = Package.build(user, pkg_meta(%{name: "ecto", meta: meta})) |> HexWeb.Repo.insert
+    assert {:error, changeset} = Package.build(user, pkg_meta(%{name: "ecto", description: ""})) |> HexWeb.Repo.insert
     assert changeset.errors == []
     assert changeset.changes.meta.errors == [description: {"can't be blank", []}]
   end
