@@ -18,7 +18,7 @@ The websites uses cookies to help identify and track visitors, and their usage o
 
 ### API
 
-A registered user is required to publish packages, to otherwise consume the API a user is not required. For users their username, email address and cryptographically hashed password is stored. This information is not shared with other parties. Users that own packages together can see the email addresses of the other owners.
+A registered user is required to publish packages, to otherwise consume the API a user is not required. See the "User information" section below for more information about what user information is stored and is public.
 
 Requests to the API is logged and the same information is stored as for the websites.
 
@@ -27,6 +27,12 @@ Requests to the API is logged and the same information is stored as for the webs
 Packages published to hex.pm are public. Package metadata will be displayed on the hex.pm website and the full contents of the package will be available on the repository, as such care needs to be taken to not include private or confidential information in the package. Additionally, documentation that has been published to hex.pm will be displayed to the public on hexdocs.pm. Anything published to hex.pm should be seen as public immediately and forever, if credentials are accidentally published they should be changed immediately.
 
 Requests to the repository is logged and the same information is stored as for the websites.
+
+### User information
+
+For registered users their username, email address, and cryptographically hashed password is stored and is required to be provided by users. In addition to this profile information, such as user's full name and social media handles, may be stored of the user if the user chooses to provide it.
+
+Profile information is public and accessible to anyone including the user's username, email address, and full name with the ability to opt-out of showing the email address and full name. Packages owned and published by the user is also public. No other information, including the user's password, is public and will not be shared with other parties.
 
 ### Disclosure
 
@@ -50,7 +56,7 @@ Any questions about this Privacy Policy should be addressed to <support@hex.pm>.
 
 Although most changes are likely to be minor, hex.pm may change its Privacy Policy from time to time, and at hex.pm's sole discretion. The detailed history of changes can be found in the [git repository](https://github.com/hexpm/hex_web/blob/master/web/templates/policy/privacy.html.md) history for this document.
 
-hex.pm encourages visitors to frequently check this page for any changes to its Privacy Policy. Your continued use of the hex.pm websites and the repository after any change in this Privacy Policy will constitute your acceptance of such change.
+Hex.pm encourages visitors to frequently check this page for any changes to its Privacy Policy. Your continued use of the hex.pm websites and the repository after any change in this Privacy Policy will constitute your acceptance of such change.
 
 ### Credit and License
 
