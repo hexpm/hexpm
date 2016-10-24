@@ -63,19 +63,19 @@ defmodule HexWeb.ReleaseTest do
     Release.build(ecto, rel_meta(%{version: "0.1.0", app: "ecto", requirements: reqs}), "")
     |> HexWeb.Repo.insert!
 
-    assert %{meta: %{app: [{"can't be blank", []}]}} =
+    assert %{meta: %{app: [{"can't be blank", _}]}} =
            Release.build(decimal, %{"meta" => %{"version" => "0.1.0", "requirements" => [], "build_tools" => ["mix"]}}, "")
            |> extract_errors
 
-    assert %{meta: %{build_tools: [{"can't be blank", []}]}} =
+    assert %{meta: %{build_tools: [{"can't be blank", _}]}} =
            Release.build(decimal, %{"meta" => %{"app" => "decimal", "version" => "0.1.0", "requirements" => []}}, "")
            |> extract_errors
 
-    assert %{meta: %{build_tools: [{"can't be blank", []}]}} =
+    assert %{meta: %{build_tools: [{"can't be blank", _}]}} =
            Release.build(decimal, %{"meta" => %{"app" => "decimal", "version" => "0.1.0", "requirements" => [], "build_tools" => []}}, "")
            |> extract_errors
 
-    assert %{version: [{"is invalid", [type: HexWeb.Version]}]} =
+    assert %{version: [{"is invalid", _}]} =
            Release.build(ecto, rel_meta(%{version: "0.1", app: "ecto"}), "")
            |> extract_errors
 
