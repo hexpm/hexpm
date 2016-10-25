@@ -16,7 +16,7 @@ defmodule HexWeb.UserHandles do
   def services do
     [{:twitter, "Twitter", "https://twitter.com/{handle}"},
      {:github, "GitHub", "https://github.com/{handle}"},
-     {:elixirforum, "Elixir Forum", "https://elixirforum.com/users/ericmj"},
+     {:elixirforum, "Elixir Forum", "https://elixirforum.com/users/{handle}"},
      {:freenode, "Freenode", "irc://chat.freenode.net/elixir-lang"},
      {:slack, "Slack", "https://elixir-slackin.herokuapp.com/"}]
   end
