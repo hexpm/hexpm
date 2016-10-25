@@ -151,9 +151,10 @@ defmodule HexWeb.DashboardControllerTest do
            |> test_login(c.user)
            |> post("dashboard/email", %{email: %{email: email}})
 
-    response(conn, 400)
-    assert conn.resp_body =~ "Add email"
-    assert conn.resp_body =~ "has already been taken"
+    assert redirected_to(conn) == "/dashboard/email"
+    assert get_flash(conn, :error) =~ "already in use"
+    user = HexWeb.Repo.get!(HexWeb.User, c.user.id) |> HexWeb.Repo.preload(:emails)
+    assert Enum.count(user.emails, &(&1.email == email)) === 1
   end
 
   test "remove email", c do
