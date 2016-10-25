@@ -27,7 +27,7 @@
           <p>
             <small>
               <em>
-                Note that while waiting for the new <a href="<%= policy_path(Endpoint, :privacy) %>">privacy policy</a> to take effect profile pictures are currently not shown publically.
+                Note that while waiting for the new <a href="<%= policy_path(Endpoint, :privacy) %>">privacy policy</a> to take effect profile pictures are currently not shown publicly.
               </em>
             </small>
           </p>
