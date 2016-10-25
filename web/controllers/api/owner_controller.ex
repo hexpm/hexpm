@@ -35,13 +35,17 @@ defmodule HexWeb.API.OwnerController do
     new_owner = Users.get(email)
     package = conn.assigns.package
 
-    case Owners.add(package, new_owner, audit: audit_data(conn)) do
-      :ok ->
-        conn
-        |> api_cache(:private)
-        |> send_resp(204, "")
-      {:error, changeset} ->
-        validation_failed(conn, changeset)
+    if new_owner do
+      case Owners.add(package, new_owner, audit: audit_data(conn)) do
+        :ok ->
+          conn
+          |> api_cache(:private)
+          |> send_resp(204, "")
+        {:error, changeset} ->
+          validation_failed(conn, changeset)
+      end
+    else
+      not_found(conn)
     end
   end
 

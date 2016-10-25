@@ -9,10 +9,6 @@ defmodule HexWeb.Packages do
     Repo.get_by(Package, name: name)
   end
 
-  def get!(name) do
-    Repo.get_by!(Package, name: name)
-  end
-
   def owner?(package, user) do
     Package.is_owner(package, user)
     |> Repo.one!

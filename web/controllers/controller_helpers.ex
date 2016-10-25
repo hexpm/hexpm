@@ -175,22 +175,29 @@ defmodule HexWeb.ControllerHelpers do
     if package = HexWeb.Packages.get(conn.params["name"]) do
       assign(conn, :package, package)
     else
-      conn
+      assign(conn, :package, nil)
     end
   end
 
   def fetch_package(conn, _opts) do
-    package = HexWeb.Packages.get!(conn.params["name"])
-    assign(conn, :package, package)
+    if package = HexWeb.Packages.get(conn.params["name"]) do
+      assign(conn, :package, package)
+    else
+      conn |> not_found |> halt
+    end
   end
 
   def fetch_release(conn, _opts) do
-    package = HexWeb.Packages.get!(conn.params["name"])
-    release = HexWeb.Releases.get!(package, conn.params["version"])
+    package = HexWeb.Packages.get(conn.params["name"])
+    release = package && HexWeb.Releases.get(package, conn.params["version"])
 
-    conn
-    |> assign(:package, package)
-    |> assign(:release, release)
+    if release do
+      conn
+      |> assign(:package, package)
+      |> assign(:release, release)
+    else
+      conn |> not_found |> halt
+    end
   end
 
   def authorize(conn, opts) do

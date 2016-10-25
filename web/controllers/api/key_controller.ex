@@ -18,14 +18,17 @@ defmodule HexWeb.API.KeyController do
   def show(conn, %{"name" => name}) do
     user = conn.assigns.user
     authing_key = conn.assigns.key
+    key = Keys.get(user, name)
 
-    key = Keys.get!(user, name)
-
-    when_stale(conn, key, fn conn ->
-      conn
-      |> api_cache(:private)
-      |> render(:show, key: key, authing_key: authing_key)
-    end)
+    if key do
+      when_stale(conn, key, fn conn ->
+        conn
+        |> api_cache(:private)
+        |> render(:show, key: key, authing_key: authing_key)
+      end)
+    else
+      not_found(conn)
+    end
   end
 
   def create(conn, params) do
@@ -69,6 +72,6 @@ defmodule HexWeb.API.KeyController do
 
     conn
     |> put_status(200)
-    |> render(:delete, key: Keys.get!(key.id), authing_key: key)
+    |> render(:delete, key: Keys.get(key.id), authing_key: key)
   end
 end

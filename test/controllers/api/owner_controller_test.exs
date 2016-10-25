@@ -93,6 +93,15 @@ defmodule HexWeb.API.OwnerControllerTest do
     assert contents =~ "jose (jose@mail.com) has been added as an owner to package postgrex."
   end
 
+  test "add unknown user package owner" do
+    eric = HexWeb.Repo.get_by!(User, username: "eric")
+    
+    conn = build_conn()
+           |> put_req_header("authorization", key_for(eric))
+           |> put("api/packages/postgrex/owners/UNKNOWN")
+    assert conn.status == 404
+  end
+
   test "cannot add same owner twice" do
     conn = build_conn()
            |> put_req_header("authorization", key_for("eric"))

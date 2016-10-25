@@ -2,14 +2,8 @@ defmodule HexWeb.Users do
   use HexWeb.Web, :crud
 
   def get(username_or_email, preload \\ []) do
-    # Somewhat crazy hack to get this done in one query
-    # Makes assumptions about how Ecto choses variable names
-    Repo.one(
-      from u in HexWeb.User,
-      where: u.username == ^username_or_email or
-             ^username_or_email in fragment("SELECT emails.email FROM emails WHERE emails.user_id = u0.id"),
-      preload: ^preload
-    )
+    User.get(username_or_email, preload)
+    |> Repo.one
   end
 
   def get_by_username(username) do

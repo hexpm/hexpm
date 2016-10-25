@@ -104,4 +104,13 @@ defmodule HexWeb.User do
 
   defp email(nil), do: nil
   defp email(email), do: email.email
+
+  def get(username_or_email, preload \\ []) do
+    # Somewhat crazy hack to get this done in one query
+    # Makes assumptions about how Ecto choses variable names
+    from u in HexWeb.User,
+      where: u.username == ^username_or_email or
+             ^username_or_email in fragment("SELECT emails.email FROM emails WHERE emails.user_id = u0.id"),
+      preload: ^preload
+  end
 end

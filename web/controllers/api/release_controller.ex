@@ -7,7 +7,7 @@ defmodule HexWeb.API.ReleaseController do
   plug :authorize, [fun: &maybe_package_owner?/2] when action in [:create]
 
   def create(conn, %{"body" => body}) do
-    handle_tarball(conn, conn.assigns[:package], conn.assigns.user, body)
+    handle_tarball(conn, conn.assigns.package, conn.assigns.user, body)
   end
 
   def show(conn, _params) do

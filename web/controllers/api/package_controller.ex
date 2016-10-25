@@ -17,15 +17,19 @@ defmodule HexWeb.API.PackageController do
   end
 
   def show(conn, %{"name" => name}) do
-    package = Packages.get!(name)
+    package = Packages.get(name)
 
-    when_stale(conn, package, fn conn ->
-      package = Packages.preload(package)
-      package = %{package | owners: Owners.all(package, :emails)}
+    if package do
+      when_stale(conn, package, fn conn ->
+        package = Packages.preload(package)
+        package = %{package | owners: Owners.all(package, :emails)}
 
-      conn
-      |> api_cache(:public)
-      |> render(:show, package: package)
-    end)
+        conn
+        |> api_cache(:public)
+        |> render(:show, package: package)
+      end)
+    else
+      not_found(conn)
+    end
   end
 end
