@@ -19,7 +19,7 @@ defmodule HexWeb.Releases do
 
   def get(package, version) do
     release = Repo.get_by(assoc(package, :releases), version: version)
-    %{release | package: package}
+    release && %{release | package: package}
   end
 
   def package_versions(packages) do

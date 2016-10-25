@@ -294,4 +294,12 @@ defmodule HexWeb.API.ReleaseControllerTest do
     assert body["url"] =~ "/api/packages/decimal/releases/0.0.1"
     assert body["version"] == "0.0.1"
   end
+
+  test "get unknown release" do
+    conn = get build_conn(), "api/packages/decimal/releases/1.2.3"
+    assert conn.status == 404
+
+    conn = get build_conn(), "api/packages/unknown/releases/1.2.3"
+    assert conn.status == 404
+  end
 end
