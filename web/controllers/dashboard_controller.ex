@@ -55,17 +55,16 @@ defmodule HexWeb.DashboardController do
 
   def add_email(conn, params) do
     user = Users.with_emails(conn.assigns.logged_in)
-
+    email = params["email"]["email"]
     case Users.add_email(user, params["email"], audit: audit_data(conn)) do
       {:ok, _user} ->
-        email = params["email"]["email"]
         conn
         |> put_flash(:info, "A verification email has been sent to #{email}.")
         |> redirect(to: dashboard_path(conn, :email))
-      {:error, changeset} ->
+      {:error, _changeset} ->
         conn
-        |> put_status(400)
-        |> render_email(user, changeset)
+        |> put_flash(:error, email_error_message(:exists, email))
+        |> redirect(to: dashboard_path(conn, :email))
     end
   end
 
@@ -168,4 +167,5 @@ defmodule HexWeb.DashboardController do
   defp email_error_message(:not_verified, email), do: "Email #{email} not verified."
   defp email_error_message(:already_verified, email), do: "Email #{email} already verified."
   defp email_error_message(:primary, email), do: "Cannot remove primary email #{email}."
+  defp email_error_message(:exists, email), do: "Email #{email} already in use."
 end
