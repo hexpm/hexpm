@@ -43,7 +43,7 @@ defmodule HexWeb.ControllerHelpers do
   def validation_failed(conn, %Ecto.Changeset{} = changeset) do
     errors =
       Ecto.Changeset.traverse_errors(changeset, fn
-        {"is invalid", [type: type]} ->
+        {"is invalid", [type: type, validation: _]} ->
           "expected type #{pretty_type(type)}"
         {err, _} ->
           err

@@ -2,6 +2,9 @@ defmodule HexWeb.PackageDownload do
   use HexWeb.Web, :model
   import HexWeb.QueryAPI, only: [coalesce: 2]
 
+  # TODO: remove pk from package_downloads view
+  @primary_key false
+
   schema "package_downloads" do
     belongs_to :package, Package, references: :id
     field :view, :string

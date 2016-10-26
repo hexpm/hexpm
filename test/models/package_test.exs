@@ -28,7 +28,7 @@ defmodule HexWeb.PackageTest do
   test "validate blank description in metadata", %{user: user} do
     assert {:error, changeset} = Package.build(user, pkg_meta(%{name: "ecto", description: ""})) |> HexWeb.Repo.insert
     assert changeset.errors == []
-    assert changeset.changes.meta.errors == [description: {"can't be blank", []}]
+    assert [description: {"can't be blank", _}] = changeset.changes.meta.errors
   end
 
   test "packages are unique", %{user: user} do
@@ -37,7 +37,7 @@ defmodule HexWeb.PackageTest do
   end
 
   test "reserved names", %{user: user} do
-    assert {:error, %{errors: [name: {"is reserved", []}]}} = Package.build(user, pkg_meta(%{name: "elixir", description: "Awesomeness."})) |> HexWeb.Repo.insert
+    assert {:error, %{errors: [name: {"is reserved", _}]}} = Package.build(user, pkg_meta(%{name: "elixir", description: "Awesomeness."})) |> HexWeb.Repo.insert
   end
 
   test "search extra metadata" do
