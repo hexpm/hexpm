@@ -45,8 +45,10 @@ defmodule HexWeb.ControllerHelpers do
       Ecto.Changeset.traverse_errors(changeset, fn
         {"is invalid", [type: type, validation: _]} ->
           "expected type #{pretty_type(type)}"
-        {err, _} ->
-          err
+        {msg, opts} ->
+          Enum.reduce(opts, msg, fn {key, value}, msg ->
+            String.replace(msg, "%{#{key}}", to_string(value))
+          end)
       end)
       |> normalize_errors
 
@@ -71,7 +73,7 @@ defmodule HexWeb.ControllerHelpers do
 
   # TODO: Fix clients instead
   # Since Changeset.traverse_errors returns `{field: [err], ...}`
-  # but Hex client expects `{field1: err1, ...}` we normalize to the latter.
+  # but Hex client expects `{field: err1, ...}` we normalize to the latter.
   defp normalize_errors(errors) do
     Enum.flat_map(errors, fn
       {_key, val}     when val == %{}  -> []
