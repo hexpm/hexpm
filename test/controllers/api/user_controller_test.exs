@@ -98,7 +98,24 @@ defmodule HexWeb.API.UserControllerTest do
            |> put_req_header("content-type", "application/json")
            |> get("api/users/bad")
 
-    assert json_response(conn, 404)
+    json_response(conn, 404)
+  end
+
+  test "test auth" do
+    conn = build_conn()
+           |> put_req_header("content-type", "application/json")
+           |> put_req_header("authorization", key_for("eric"))
+           |> get("api/users/eric/test")
+
+    body = json_response(conn, 200)
+    assert body["username"] == "eric"
+
+    conn = build_conn()
+           |> put_req_header("content-type", "application/json")
+           |> put_req_header("authorization", "badkey")
+           |> get("api/users/eric/test")
+
+    json_response(conn, 401)
   end
 
   # TODO

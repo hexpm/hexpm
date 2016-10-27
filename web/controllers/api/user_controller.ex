@@ -1,6 +1,8 @@
 defmodule HexWeb.API.UserController do
   use HexWeb.Web, :controller
 
+  plug :authorize when action in [:test]
+
   def create(conn, params) do
     params = email_param(params)
 
@@ -35,6 +37,10 @@ defmodule HexWeb.API.UserController do
     else
       not_found(conn)
     end
+  end
+
+  def test(conn, params) do
+    show(conn, params)
   end
 
   def reset(conn, %{"name" => name}) do

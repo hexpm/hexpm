@@ -121,6 +121,7 @@ defmodule HexWeb.Router do
 
     post   "/users",             UserController, :create
     get    "/users/:name",       UserController, :show
+    get    "/users/:name/test",  UserController, :test
     post   "/users/:name/reset", UserController, :reset
 
     get    "/packages",       PackageController, :index
