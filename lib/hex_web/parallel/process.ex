@@ -45,13 +45,12 @@ defmodule HexWeb.Parallel.Process do
     case Map.fetch(state.running, ref) do
       {:ok, arg} ->
         Logger.error(["Parallel task failed with reason: `", inspect(reason), "` and args: `", inspect(arg), "`"])
-        state =
-          %{state | running: Map.delete(state.running, ref),
-                    num_finished: state.num_finished + 1,
-                    acc: state.reducer.({:error, arg}, state.acc)}
-          |> run_task
-          |> maybe_reply
-          
+        %{state | running: Map.delete(state.running, ref),
+                  num_finished: state.num_finished + 1,
+                  acc: state.reducer.({:error, arg}, state.acc)}
+        |> run_task
+        |> maybe_reply
+
       :error ->
         {:noreply, state}
     end
