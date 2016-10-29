@@ -63,16 +63,24 @@ defmodule HexWeb.ReleaseTest do
     Release.build(ecto, rel_meta(%{version: "0.1.0", app: "ecto", requirements: reqs}), "")
     |> HexWeb.Repo.insert!
 
+    meta = %{"version" => "0.1.0", "requirements" => [], "build_tools" => ["mix"]}
     assert %{meta: %{app: [{"can't be blank", _}]}} =
-           Release.build(decimal, %{"meta" => %{"version" => "0.1.0", "requirements" => [], "build_tools" => ["mix"]}}, "")
+           Release.build(decimal, %{"meta" => meta}, "")
            |> extract_errors
 
+    meta = %{"app" => "decimal", "version" => "0.1.0", "requirements" => []}
     assert %{meta: %{build_tools: [{"can't be blank", _}]}} =
-           Release.build(decimal, %{"meta" => %{"app" => "decimal", "version" => "0.1.0", "requirements" => []}}, "")
+           Release.build(decimal, %{"meta" => meta}, "")
            |> extract_errors
 
+    meta = %{"app" => "decimal", "version" => "0.1.0", "requirements" => [], "build_tools" => []}
     assert %{meta: %{build_tools: [{"can't be blank", _}]}} =
-           Release.build(decimal, %{"meta" => %{"app" => "decimal", "version" => "0.1.0", "requirements" => [], "build_tools" => []}}, "")
+           Release.build(decimal, %{"meta" => meta}, "")
+           |> extract_errors
+
+    meta = %{"app" => "decimal", "version" => "0.1.0", "requirements" => [], "build_tools" => ["mix"], "elixir" => "== == 0.0.1"}
+    assert %{meta: %{elixir: [{"invalid requirement: \"== == 0.0.1\"", _}]}} =
+           Release.build(decimal, %{"meta" => meta}, "")
            |> extract_errors
 
     assert %{version: [{"is invalid", _}]} =
