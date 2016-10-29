@@ -12,5 +12,15 @@ defmodule HexWeb.ReleaseMetadata do
     |> validate_required(~w(app build_tools)a)
     |> validate_list_required(:build_tools)
     |> update_change(:build_tools, &Enum.uniq/1)
+    |> validate_elixir()
+  end
+
+  defp validate_elixir(changeset) do
+    validate_change(changeset, :elixir, fn _, elixir ->
+      case Version.parse_requirement(elixir) do
+        {:ok, _} -> []
+        _ -> [elixir: "has invalid version requirement"]
+      end
+    end)
   end
 end

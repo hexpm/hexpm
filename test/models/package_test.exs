@@ -26,9 +26,20 @@ defmodule HexWeb.PackageTest do
   end
 
   test "validate blank description in metadata", %{user: user} do
-    assert {:error, changeset} = Package.build(user, pkg_meta(%{name: "ecto", description: ""})) |> HexWeb.Repo.insert
+    changeset = Package.build(user, pkg_meta(%{name: "ecto", description: ""}))
     assert changeset.errors == []
     assert [description: {"can't be blank", _}] = changeset.changes.meta.errors
+  end
+
+  test "validate invalid link in metadata", %{user: user} do
+    meta = pkg_meta(%{name: "ecto", description: "DSL",
+                      links: %{"docs" => "https://hexdocs.pm", "a" => "aaa", "b" => "bbb"}})
+    changeset = Package.build(user, meta)
+
+    assert changeset.errors == []
+    assert [links: {"invalid link \"aaa\"", _},
+            links: {"invalid link \"bbb\"", _}] =
+           changeset.changes.meta.errors
   end
 
   test "packages are unique", %{user: user} do
@@ -44,7 +55,7 @@ defmodule HexWeb.PackageTest do
     meta = %{
       "maintainers"  => ["justin"],
       "licenses"     => ["apache", "BSD"],
-      "links"        => %{"github" => "www", "docs" => "www"},
+      "links"        => %{"github" => "https://github.com", "docs" => "https://hexdocs.pm"},
       "description"  => "description",
       "extra"        => %{"foo" => %{"bar" => "baz"}, "list" => ["a", 1]}}
 
