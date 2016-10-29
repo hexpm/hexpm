@@ -79,7 +79,7 @@ defmodule HexWeb.ReleaseTest do
            |> extract_errors
 
     meta = %{"app" => "decimal", "version" => "0.1.0", "requirements" => [], "build_tools" => ["mix"], "elixir" => "== == 0.0.1"}
-    assert %{meta: %{elixir: [{"has invalid version requirement", _}]}} =
+    assert %{meta: %{elixir: [{"invalid requirement: \"== == 0.0.1\"", _}]}} =
            Release.build(decimal, %{"meta" => meta}, "")
            |> extract_errors
 

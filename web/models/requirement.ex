@@ -22,20 +22,6 @@ defmodule HexWeb.Requirement do
     |> validate_requirement(:requirement)
   end
 
-  defp validate_requirement(changeset, field) do
-    validate_change(changeset, field, fn key, req ->
-      cond do
-        is_nil(req) ->
-          # Temporary friendly error message until people update to hex 0.9.1
-          [{key, {"invalid requirement: #{inspect req}, use \">= 0.0.0\" instead", []}}]
-        not valid?(req) ->
-          [{key, {"invalid requirement: #{inspect req}", []}}]
-        true ->
-          []
-      end
-    end)
-  end
-
   # TODO: Raise validation error if field is not set
   def build_all(release_changeset) do
     dependencies = preload_dependencies(release_changeset.params["requirements"])
@@ -72,10 +58,6 @@ defmodule HexWeb.Requirement do
     end
 
     # TODO: Remap requirements errors to hex http spec
-  end
-
-  defp valid?(req) do
-    is_binary(req) and match?({:ok, _}, Version.parse_requirement(req))
   end
 
   defp resolve(requirements, config) do

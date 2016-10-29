@@ -26,6 +26,24 @@ defmodule HexWeb.Validation do
     end)
   end
 
+  def validate_requirement(changeset, field) do
+    validate_change(changeset, field, fn key, req ->
+      cond do
+        is_nil(req) ->
+          # Temporary friendly error message until people update to hex 0.9.1
+          [{key, {"invalid requirement: #{inspect req}, use \">= 0.0.0\" instead", []}}]
+        not valid_requirement?(req) ->
+          [{key, {"invalid requirement: #{inspect req}", []}}]
+        true ->
+          []
+      end
+    end)
+  end
+
+  defp valid_requirement?(req) do
+    is_binary(req) and match?({:ok, _}, Version.parse_requirement(req))
+  end
+
   def validate_password(changeset, field, hash, opts \\ []) do
     error_param = "#{field}_current"
     error_field = String.to_atom(error_param)
