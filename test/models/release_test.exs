@@ -85,7 +85,7 @@ defmodule HexWeb.ReleaseTest do
            |> extract_errors
 
     reqs = [%{name: "decimal", app: "decimal", requirement: "~> 1.0", optional: false}]
-    assert %{requirements: [%{requirement: [{"Failed to use \"decimal\" because\n  You specified ~> 1.0 in your mix.exs\n", []}]}]} =
+    assert %{requirements: [%{requirement: [{"Failed to use \"decimal\" because\n  mix.exs specifies ~> 1.0\n", []}]}]} =
            Release.build(ecto, rel_meta(%{version: "0.1.1", app: "ecto", requirements: reqs}), "")
            |> extract_errors
   end
