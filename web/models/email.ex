@@ -36,8 +36,10 @@ defmodule HexWeb.Email do
 
   def verify?(nil, _key),
     do: false
-  def verify?(email, key),
-    do: Comeonin.Tools.secure_check(email.verification_key, key)
+  def verify?(%Email{verification_key: verification_key}, key),
+    do: verify?(verification_key, key)
+  def verify?(verification_key, key),
+    do: Comeonin.Tools.secure_check(verification_key, key)
 
   def verify(email) do
     change(email, %{verified: true, verification_key: nil})
