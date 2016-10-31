@@ -77,7 +77,7 @@ defmodule HexWeb.Mixfile do
   defp aliases do
     ["compile.gpb": &compile_gpb/1,
      "ecto.setup": ["ecto.create", "ecto.migrate", "run priv/repo/seeds.exs"],
-     "ecto.reset": ["ecto.drop", "ecto.create", "ecto.migrate"],
+     "ecto.reset": ["ecto.drop", "ecto.setup"],
      "test": ["ecto.migrate", "test"]]
   end
 
