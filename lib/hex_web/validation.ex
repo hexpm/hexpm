@@ -40,6 +40,17 @@ defmodule HexWeb.Validation do
     end)
   end
 
+  def validate_verified_email_exists(changeset, field, opts) do
+    validate_change changeset, field, fn _, email ->
+      case HexWeb.Repo.get_by(HexWeb.Email, email: email, verified: true) do
+        nil ->
+          []
+        _ ->
+          [{field, opts[:message]}]
+      end
+    end
+  end
+
   defp valid_requirement?(req) do
     is_binary(req) and match?({:ok, _}, Version.parse_requirement(req))
   end

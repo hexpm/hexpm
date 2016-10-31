@@ -153,7 +153,7 @@ defmodule HexWeb.DashboardControllerTest do
 
     response(conn, 400)
     assert conn.resp_body =~ "Add email"
-    assert conn.resp_body =~ "Email already verified"
+    assert conn.resp_body =~ "Email already in use"
   end
 
   test "can add existing email which is not verified", c do
