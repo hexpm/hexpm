@@ -43,6 +43,7 @@ defmodule HexWeb.Email do
 
   def verify(email) do
     change(email, %{verified: true, verification_key: nil})
+    |> unique_constraint(:email, name: "emails_email_key", message: "Email already verified by another user")
   end
 
   def toggle_primary(email, flag) do
