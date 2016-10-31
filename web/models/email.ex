@@ -29,7 +29,9 @@ defmodule HexWeb.Email do
     |> update_change(:email, &String.downcase/1)
     |> validate_format(:email, @email_regex)
     |> validate_confirmation(:email, message: "does not match email")
+    |> validate_verified_email_exists(:email, message: "Email already verified by another user")
     |> unique_constraint(:email, name: "emails_email_key")
+    |> unique_constraint(:email, name: "emails_email_user_key")
     |> put_change(:verified, verified?)
     |> put_change(:verification_key, HexWeb.Auth.gen_key())
   end
@@ -53,5 +55,16 @@ defmodule HexWeb.Email do
 
   def order_emails(emails) do
     Enum.sort_by(emails, &[not &1.primary, not &1.public, not &1.verified, -&1.id])
+  end
+
+  defp validate_verified_email_exists(changeset, field, opts \\ []) do
+    validate_change changeset, field, fn _, email ->
+      case HexWeb.Repo.get_by(__MODULE__, email: email, verified: true) do
+        nil ->
+          []
+        _ ->
+          [{field, opts[:message]}]
+      end
+    end
   end
 end
