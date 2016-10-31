@@ -9,7 +9,7 @@ defmodule HexWeb.Repo.Migrations.ModifyEmailsUniqueConstraint do
 
   def down do
     execute ~s{DROP INDEX emails_email_key}
-    execute ~s{ALTER TABLE emails DROP CONSTRAINT emails_email_user_key}
+    execute ~s{DROP INDEX emails_email_user_key}
     execute ~s{ALTER TABLE emails ADD CONSTRAINT emails_email_key UNIQUE (email)}
   end
 end
