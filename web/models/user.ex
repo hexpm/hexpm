@@ -110,7 +110,7 @@ defmodule HexWeb.User do
     # Makes assumptions about how Ecto choses variable names
     from u in HexWeb.User,
       where: u.username == ^username_or_email or
-             ^username_or_email in fragment("SELECT emails.email FROM emails WHERE emails.user_id = u0.id"),
+             ^username_or_email in fragment("SELECT emails.email FROM emails WHERE emails.user_id = u0.id and emails.verified"),
       preload: ^preload
   end
 end

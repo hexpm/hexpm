@@ -82,9 +82,14 @@ defmodule HexWeb.Users do
 
     if email = Enum.find(user.emails, &(&1.email == email)) do
       if Email.verify?(email, key) do
-        Email.verify(email)
-        |> Repo.update!
-        :ok
+        result = Email.verify(email)
+        |> Repo.update
+        case result do
+          {:ok, _} ->
+            :ok
+          {:error, _} ->
+            :error
+        end
       else
         :error
       end

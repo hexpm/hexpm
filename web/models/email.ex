@@ -29,7 +29,9 @@ defmodule HexWeb.Email do
     |> update_change(:email, &String.downcase/1)
     |> validate_format(:email, @email_regex)
     |> validate_confirmation(:email, message: "does not match email")
+    |> validate_verified_email_exists(:email, message: "Email already in use")
     |> unique_constraint(:email, name: "emails_email_key")
+    |> unique_constraint(:email, name: "emails_email_user_key")
     |> put_change(:verified, verified?)
     |> put_change(:verification_key, HexWeb.Auth.gen_key())
   end
@@ -43,6 +45,7 @@ defmodule HexWeb.Email do
 
   def verify(email) do
     change(email, %{verified: true, verification_key: nil})
+    |> unique_constraint(:email, name: "emails_email_key", message: "Email already in use")
   end
 
   def toggle_primary(email, flag) do

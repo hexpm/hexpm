@@ -153,7 +153,52 @@ defmodule HexWeb.DashboardControllerTest do
 
     response(conn, 400)
     assert conn.resp_body =~ "Add email"
-    assert conn.resp_body =~ "has already been taken"
+    assert conn.resp_body =~ "Email already in use"
+  end
+
+  test "can add existing email which is not verified", c do
+    u2 = %{user: create_user("techgaun", "techgaun@example.com", "hunter24", false), password: "hunter24"}
+    email = hd(u2.user.emails).email
+
+    conn = build_conn()
+           |> test_login(c.user)
+           |> post("dashboard/email", %{email: %{email: email}})
+
+    assert redirected_to(conn) == "/dashboard/email"
+    assert get_flash(conn, :info) =~ "A verification email has been sent"
+  end
+
+  test "verified email logs appropriate user correctly", c do
+    u2 = %{user: create_user("techgaun", "techgaun@example.com", "hunter24", false), password: "hunter24"}
+    user = add_email(c.user, hd(u2.user.emails).email)
+    [dup_email] = tl(user.emails)
+
+    conn = build_conn()
+      |> get("email/verify", %{username: c.user.username, email: dup_email.email, key: dup_email.verification_key})
+
+    assert redirected_to(conn) == "/"
+    assert get_flash(conn, :info) =~ "has been verified"
+
+    conn = build_conn()
+           |> test_login(c.user)
+           |> post("dashboard/email/primary", %{email: dup_email.email})
+
+    assert redirected_to(conn) == "/dashboard/email"
+    assert get_flash(conn, :info) =~ "primary email was changed"
+
+    conn = post(build_conn(), "login", %{username: dup_email.email, password: c.password})
+    assert redirected_to(conn) == "/users/#{c.user.username}"
+    assert get_session(conn, "username") == c.user.username
+
+    session_key = get_session(conn, "key")
+    assert <<_::binary-32>> = session_key
+    assert Users.get(c.user.username).session_key == session_key
+
+    conn = build_conn()
+      |> get("email/verify", %{username: u2.user.username, email: dup_email.email, key: hd(u2.user.emails).verification_key})
+
+    assert redirected_to(conn) == "/"
+    assert get_flash(conn, :error) =~ "failed to verify."
   end
 
   test "remove email", c do
