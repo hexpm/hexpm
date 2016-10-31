@@ -153,7 +153,19 @@ defmodule HexWeb.DashboardControllerTest do
 
     response(conn, 400)
     assert conn.resp_body =~ "Add email"
-    assert conn.resp_body =~ "has already been taken"
+    assert conn.resp_body =~ "Email already verified"
+  end
+
+  test "can add existing email which is not verified", c do
+    u2 = %{user: create_user("techgaun", "techgaun@example.com", "hunter24", false), password: "hunter24"}
+    email = hd(u2.user.emails).email
+
+    conn = build_conn()
+           |> test_login(c.user)
+           |> post("dashboard/email", %{email: %{email: email}})
+
+    assert redirected_to(conn) == "/dashboard/email"
+    assert get_flash(conn, :info) =~ "A verification email has been sent"
   end
 
   test "remove email", c do
