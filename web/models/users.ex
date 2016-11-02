@@ -78,17 +78,19 @@ defmodule HexWeb.Users do
   end
 
   def verify_email(username, email, key) do
-    user = Repo.preload(get(username), :emails)
-
-    if email = Enum.find(user.emails, &(&1.email == email)) do
-      if Email.verify?(email, key) do
-        result = Email.verify(email)
-        |> Repo.update
-        case result do
-          {:ok, _} ->
-            :ok
-          {:error, _} ->
-            :error
+    if user = get(username, [:emails]) do
+      if email = Enum.find(user.emails, &(&1.email == email)) do
+        if Email.verify?(email, key) do
+          result = Email.verify(email)
+          |> Repo.update
+          case result do
+            {:ok, _} ->
+              :ok
+            {:error, _} ->
+              :error
+          end
+        else
+          :error
         end
       else
         :error
