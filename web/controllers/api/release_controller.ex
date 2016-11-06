@@ -29,7 +29,6 @@ defmodule HexWeb.API.ReleaseController do
         conn
         |> api_cache(:private)
         |> send_resp(204, "")
-
       {:error, _, changeset, _} ->
         validation_failed(conn, changeset)
     end

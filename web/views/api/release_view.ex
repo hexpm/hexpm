@@ -19,10 +19,16 @@ defmodule HexWeb.API.ReleaseView do
       |> Map.take([:app, :build_tools, :elixir])
       |> Map.update!(:build_tools, &Enum.uniq/1)
 
+    retirement = if release.retirement do
+      release.retirement
+      |> Map.take([:status, :message])
+    end
+
     entity =
       release
       |> Map.take([:version, :has_docs, :inserted_at, :updated_at])
       |> Map.put(:meta, meta)
+      |> Map.put(:retirement, retirement)
       |> Map.put(:url, api_release_url(Endpoint, :show, package, release))
       |> Map.put(:package_url, api_package_url(Endpoint, :show, package))
       |> Map.put(:requirements, reqs)

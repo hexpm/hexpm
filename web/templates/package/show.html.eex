@@ -26,6 +26,13 @@ tools = Keyword.take(tools, compatible_tools)
   <span class="version"><%= @current_release.version %></span>
   <% end %>
 </h2>
+
+<%= if retirement = @current_release.retirement do %>
+  <div class="alert alert-danger" role="alert">
+    <%= retirement_html(retirement) %>
+  </div>
+<% end %>
+
 <%= if description do %>
   <div class="description">
     <%= text_length(description,300) |> text_to_html(insert_brs: false) %>
@@ -106,11 +113,11 @@ tools = Keyword.take(tools, compatible_tools)
         </ul>
 
         <%= if length(@releases)> show_latest_versions do %>
-          <ul id="older_versions" class="collapse version-dependency-list">
+          <ul id="older-versions" class="collapse version-dependency-list">
             <%= render "versions.html", [package: @package, releases: Enum.drop(@releases, show_latest_versions)] %>
           </ul>
           <p class="show-versions">
-            <span class="toggle-text" role="button" data-toggle="collapse" data-target="#older_versions" aria-expanded="false" aria-controls="versions">
+            <span class="toggle-text" role="button" data-toggle="collapse" data-target="#older-versions" aria-expanded="false" aria-controls="versions">
               <a>Show All Versions</a>
               <a class="invisible">Show Recent Versions</a>
             </span>

@@ -114,6 +114,7 @@ defmodule HexWeb.Web do
         Releases,
         ReleaseDownload,
         ReleaseMetadata,
+        ReleaseRetirement,
         Requirement,
         Sitemaps,
         User,
