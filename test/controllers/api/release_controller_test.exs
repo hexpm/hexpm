@@ -8,9 +8,9 @@ defmodule HexWeb.API.ReleaseControllerTest do
 
   setup do
     user = create_user("eric", "eric@mail.com", "ericeric")
-    pkg = Package.build(user, pkg_meta(%{name: "decimal", description: "Arbitrary precision decimal aritmetic for Elixir."})) |> HexWeb.Repo.insert!
-    Release.build(pkg, rel_meta(%{version: "0.0.1", app: "decimal"}), "") |> HexWeb.Repo.insert!
-    :ok
+    package = Package.build(user, pkg_meta(%{name: "decimal", description: "Arbitrary precision decimal aritmetic for Elixir."})) |> HexWeb.Repo.insert!
+    release = Release.build(package, rel_meta(%{version: "0.0.1", app: "decimal"}), "") |> HexWeb.Repo.insert!
+    %{user: user, package: package, release: release}
   end
 
   test "create release" do

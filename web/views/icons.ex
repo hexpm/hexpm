@@ -70,6 +70,7 @@ defmodule HexWeb.ViewIcons do
   def icon(:octicon, name, opts) do
     class = "octicon octicon-#{name}"
     {d, x} = octicon(name)
+    title = if title = opts[:title], do: content_tag(:title, title), else: ""
 
     opts =
       opts
@@ -77,10 +78,11 @@ defmodule HexWeb.ViewIcons do
       |> Keyword.put_new(:version, "1.1")
       |> Keyword.put_new(:viewBox, "0 0 #{x} 1024")
       |> Keyword.update(:class, class, &"#{class} #{&1}")
+      |> Keyword.drop([:title])
 
     content_tag(:svg, opts) do
       content_tag(:g, transform: "translate(0, 800) scale(1, -1)") do
-        tag(:path, d: d)
+        [content_tag(:path, "", d: d), title]
       end
     end
   end
@@ -89,6 +91,7 @@ defmodule HexWeb.ViewIcons do
     class = "glyphicon glyphicon-#{name}"
     {d, x} = glyphicon(name)
     x = if x == "", do: "1200", else: x
+    title = if title = opts[:title], do: content_tag(:title, title), else: ""
 
     opts =
       opts
@@ -96,10 +99,11 @@ defmodule HexWeb.ViewIcons do
       |> Keyword.put_new(:version, "1.1")
       |> Keyword.put_new(:viewBox, "0 0 #{x} 1200")
       |> Keyword.update(:class, class, &"#{class} #{&1}")
+      |> Keyword.drop([:title])
 
     content_tag(:svg, opts) do
       content_tag(:g, transform: "translate(0, 1200) scale(1, -1)") do
-        tag(:path, d: d)
+        [content_tag(:path, "", d: d), title]
       end
     end
   end

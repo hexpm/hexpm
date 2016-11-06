@@ -11,7 +11,9 @@ defmodule HexWeb.Release do
     has_many :requirements, Requirement, on_replace: :delete
     has_many :daily_downloads, Download
     has_one :downloads, ReleaseDownload
+
     embeds_one :meta, ReleaseMetadata, on_replace: :delete
+    embeds_one :retirement, ReleaseRetirement, on_replace: :delete
   end
 
   defp changeset(release, :create, params) do
@@ -43,6 +45,16 @@ defmodule HexWeb.Release do
     force? = Keyword.get(opts, :force, false)
     change(release)
     |> validate_editable(:delete, force?)
+  end
+
+  def retire(release, params) do
+    cast(release, params, [])
+    |> cast_embed(:retirement, required: true)
+  end
+
+  def unretire(release) do
+    change(release)
+    |> put_embed(:retirement, nil)
   end
 
   defp validate_editable(changeset, action, force)

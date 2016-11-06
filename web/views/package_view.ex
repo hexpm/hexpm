@@ -71,4 +71,14 @@ defmodule HexWeb.PackageView do
       do: name,
     else: inspect(String.to_charlist(name))
   end
+
+  def retirement_message(retirement) do
+    [ReleaseRetirement.status_text(retirement.status)] ++
+      if(retirement.message, do: [": ", retirement.message], else: [])
+  end
+
+  def retirement_html(retirement) do
+    [content_tag(:strong, ReleaseRetirement.status_text(retirement.status))] ++
+      if(retirement.message, do: [": ", retirement.message], else: [])
+  end
 end

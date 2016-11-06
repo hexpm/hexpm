@@ -61,6 +61,8 @@ defmodule HexWeb.AuditLog do
   defp extract_params("owner.remove", {package, user}), do: %{package: serialize(package), user: serialize(user)}
   defp extract_params("release.publish", {package, release}), do: %{package: serialize(package), release: serialize(release)}
   defp extract_params("release.revert", {package, release}), do: %{package: serialize(package), release: serialize(release)}
+  defp extract_params("release.retire", {package, release}), do: %{package: serialize(package), release: serialize(release)}
+  defp extract_params("release.unretire", {package, release}), do: %{package: serialize(package), release: serialize(release)}
   defp extract_params("email.add", email), do: serialize(email)
   defp extract_params("email.remove", email), do: serialize(email)
   defp extract_params("email.primary", {old_email, new_email}), do: %{old_email: serialize(old_email), new_email: serialize(new_email)}
@@ -71,12 +73,22 @@ defmodule HexWeb.AuditLog do
   defp extract_params("password.reset.finish", nil), do: %{}
   defp extract_params("password.update", nil), do: %{}
 
-  defp serialize(%Package{} = package),
-    do: package |> do_serialize |> Map.put(:meta, serialize(package.meta))
-  defp serialize(%Release{} = release),
-    do: release |> do_serialize |> Map.put(:meta, serialize(release.meta))
-  defp serialize(%User{} = user),
-    do: user |> do_serialize |> Map.put(:handles, serialize(user.handles))
+  defp serialize(%Package{} = package) do
+    package
+    |> do_serialize
+    |> Map.put(:meta, serialize(package.meta))
+  end
+  defp serialize(%Release{} = release) do
+    release
+    |> do_serialize
+    |> Map.put(:meta, serialize(release.meta))
+    |> Map.put(:retirement, serialize(release.retirement))
+  end
+  defp serialize(%User{} = user) do
+    user
+    |> do_serialize
+    |> Map.put(:handles, serialize(user.handles))
+  end
   defp serialize(nil),
     do: nil
   defp serialize(schema),
@@ -90,6 +102,7 @@ defmodule HexWeb.AuditLog do
   defp fields(%User{}), do: [:id, :username]
   defp fields(%PackageMetadata{}), do: [:description, :licenses, :links, :maintainers, :extra]
   defp fields(%ReleaseMetadata{}), do: [:app, :build_tools, :elixir]
+  defp fields(%ReleaseRetirement{}), do: [:status, :message]
   defp fields(%Email{}), do: [:email, :primary, :public, :primary]
   defp fields(%UserHandles{}), do: [:github, :twitter, :freenode]
 

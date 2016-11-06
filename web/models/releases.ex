@@ -17,7 +17,11 @@ defmodule HexWeb.Releases do
     Repo.one!(Release.count)
   end
 
-  def get(package, version) do
+  def get(package, version) when is_binary(package) do
+    package = Packages.get(package)
+    package && get(package, version)
+  end
+  def get(%Package{} = package, version) do
     release = Repo.get_by(assoc(package, :releases), version: version)
     release && %{release | package: package}
   end
@@ -94,6 +98,22 @@ defmodule HexWeb.Releases do
     Assets.revert_docs(release)
   end
 
+  def retire(package, release, params, [audit: audit_data]) do
+    params = %{"retirement" => params}
+
+    Multi.new
+    |> Multi.update(:release, Release.retire(release, params))
+    |> audit_retire(audit_data, package)
+    |> Repo.transaction
+  end
+
+  def unretire(package, release, [audit: audit_data]) do
+    Multi.new
+    |> Multi.update(:release, Release.unretire(release))
+    |> audit_unretire(audit_data, package)
+    |> Repo.transaction
+  end
+
   defp publish_result({:ok, %{package: package}} = result) do
     RegistryBuilder.partial_build({:publish, package.name})
     result
@@ -150,6 +170,14 @@ defmodule HexWeb.Releases do
 
   defp audit_revert(multi, audit_data, package, release) do
     audit(multi, audit_data, "release.revert", {package, release})
+  end
+
+  defp audit_retire(multi, audit_data, package) do
+    audit(multi, audit_data, "release.retire", fn %{release: rel} -> {package, rel} end)
+  end
+
+  defp audit_unretire(multi, audit_data, package) do
+    audit(multi, audit_data, "release.unretire", fn %{release: rel} -> {package, rel} end)
   end
 
   defp publish_release(multi, body) do

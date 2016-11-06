@@ -1,5 +1,8 @@
 <%= for release <- @releases do %>
-  <li>
+  <li style="position: relative">
+    <%= if retirement = release.retirement do %>
+      <%= icon(:glyphicon, :remove, class: "retirement-icon", title: retirement_message(retirement)) %>
+    <% end %>
     <a href="<%= package_path(Endpoint, :show, @package, release, []) %>"><strong><%= release.version %></strong></a>
     <span class="text-muted"><%= pretty_date(release.inserted_at) %></span>
     <%= if release.has_docs do %>
