@@ -1,12 +1,14 @@
 <%= for release <- @releases do %>
-  <li style="position: relative">
-    <%= if retirement = release.retirement do %>
-      <%= icon(:glyphicon, :remove, class: "retirement-icon", title: retirement_message(retirement)) %>
-    <% end %>
+  <li>
     <a href="<%= package_path(Endpoint, :show, @package, release, []) %>"><strong><%= release.version %></strong></a>
-    <span class="text-muted"><%= pretty_date(release.inserted_at) %></span>
-    <%= if release.has_docs do %>
-      <span class="text-muted">(<a href="<%= raw HexWeb.Utils.docs_url(@package, release) %>">docs</a>)</span>
+    <%= pretty_date(release.inserted_at) %>
+
+    <%= if retirement = release.retirement do %>
+      (<span class="version-retirement">retired</span>)
+    <% else %>
+      <%= if release.has_docs do %>
+        (<a href="<%= raw HexWeb.Utils.docs_url(@package, release) %>">docs</a>)
+      <% end %>
     <% end %>
   </li>
 <% end %>

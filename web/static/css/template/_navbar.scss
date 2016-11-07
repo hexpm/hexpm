@@ -1,7 +1,7 @@
 .navbar {
   min-height: 70px;
   margin-bottom: 0;
-  background: #5c676d;
+  background: $color-text-grey;
   border-bottom: #919ca2 1px solid;
 }
 
@@ -107,7 +107,7 @@
   }
 
   .divider {
-    background-color: #5c676d;
+    background-color: $color-text-grey;
   }
 
   .dropdown-header.menu-dropdown-header {

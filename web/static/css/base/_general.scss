@@ -20,7 +20,12 @@ body {
 a,
 a:hover,
 a:focus {
-  color: #ec485b;
+  color: $color-link;
+  font-weight: normal;
+}
+
+code {
+  padding: 0 4px;
 }
 
 .glyphicon {

@@ -1,8 +1,7 @@
 .packages-title {
   @include font-size(38, $base-line-height);
   margin: 40px 0;
-  font-weight: 300;
-  color: #5c676d;
+  color: $color-text-grey;
 }
 
 .letter-sort > .list {
@@ -33,11 +32,11 @@
 
   > li > a {
     font-weight: 300;
-    color: $text-grey;
+    color: $color-text-grey;
   }
 
   > li > a:hover {
-    color: $color-red;
+    color: $color-link;
   }
 }
 
@@ -57,20 +56,20 @@
       padding: 18px;
 
       &:nth-child(even) {
-        background: #f4f4f4;
+        background: $color-light-grey;
       }
 
       a {
         @include font-size(26, $base-line-height);
         line-height: 25px;
-        color: #aa2c3f;
+        color: $color-link;
         word-wrap: break-word;
       }
 
       .version {
         @include font-size(18, $base-line-height);
         font-weight: 300;
-        color: #5c676d;
+        color: $color-text-grey;
       }
 
       p {
@@ -85,14 +84,14 @@
         @include font-size(18, $base-line-height);
         float: right;
         font-weight: 300;
-        color: #5c676d;
+        color: $color-text-grey;
         text-align: right;
 
         .download-count {
           display: inline-block;
           padding: 0 0 10px;
           font-weight: bold;
-          color: #5c676d;
+          color: $color-text-grey;
         }
       }
     }
@@ -119,7 +118,7 @@
   float: left;
   padding: 10px;
   font-weight: 300;
-  color: $text-grey;
+  color: $color-text-grey;
 }
 
 .pagination-info {
@@ -145,7 +144,7 @@
     span,
     span:hover,
     span:focus {
-      color: $color-red;
+      color: $color-link;
     }
   }
 
@@ -156,8 +155,8 @@
     span,
     span:hover,
     span:focus {
-      background-color: $color-red;
-      border-color: $color-red;
+      background-color: $color-link;
+      border-color: $color-link;
     }
   }
 }
