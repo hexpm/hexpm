@@ -33,8 +33,8 @@
         <div class="instructions">
           <h3><a href="<%= docs_path(Endpoint, :usage) %>">Using with Elixir</a></h3>
           <p>
-            Simply specify your Mix dependencies as two-item tuples like <span class="code">{:plug, "~> 1.1.0"}</span> and Elixir will ask if you want to install Hex if you haven't already.
-            After installed, you can run <span class="code">$ mix local </span> to see all available Hex tasks and  <span class="code">$ mix help TASK</span> for more information about a specific task.
+            Simply specify your Mix dependencies as two-item tuples like <code>{:plug, "~> 1.1.0"}</code> and Elixir will ask if you want to install Hex if you haven't already.
+            After installed, you can run <code>$ mix local </code> to see all available Hex tasks and  <code>$ mix help TASK</code> for more information about a specific task.
           </p>
         </div>
       </div>
@@ -49,8 +49,8 @@
         <div class="instructions">
           <h3><a href="<%= docs_path(Endpoint, :rebar3_usage) %>">Using with Erlang</a></h3>
           <p>
-            Download <a href="https://s3.amazonaws.com/rebar3/rebar3">rebar3</a>, put it in your <span class="code">PATH</span> and give it executable permissions.
-            Now you can specify Hex dependencies in your rebar.config like <span class="code">{deps, [hackney]}</span>.
+            Download <a href="https://s3.amazonaws.com/rebar3/rebar3">rebar3</a>, put it in your <code>PATH</code> and give it executable permissions.
+            Now you can specify Hex dependencies in your rebar.config like <code>{deps, [hackney]}</code>.
           </p>
         </div>
       </div>

@@ -18,17 +18,20 @@ compatible_tools = Enum.flat_map(build_tools, &(Map.get(tool_compatibility, &1, 
                    |> Enum.uniq
 
 tools = Keyword.take(tools, compatible_tools)
-
 %>
 
-<h2 class="package-title"><a href="<%= package_path(Endpoint, :show, @package) %>"><%= @package.name %></a>
- <%= if @current_release do %>
-  <span class="version"><%= @current_release.version %></span>
+<h2 class="package-title"><%= @package.name %>
+  <%= if @current_release do %>
+    <%= if @current_release.retirement do %>
+      <span class="version retired"><%= @current_release.version %> (retired)</span>
+    <% else %>
+      <span class="version"><%= @current_release.version %></span>
+    <% end %>
   <% end %>
 </h2>
 
-<%= if retirement = @current_release.retirement do %>
-  <div class="alert alert-danger" role="alert">
+<%= if retirement = @current_release && @current_release.retirement do %>
+  <div class="alert alert-danger" style="margin-top: 40px" role="alert">
     <%= retirement_html(retirement) %>
   </div>
 <% end %>

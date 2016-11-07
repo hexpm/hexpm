@@ -137,18 +137,10 @@
 
     p {
       @include font-size(16, 40);
-
-      .code {
+      
+      code {
         display: inline-block;
-        padding: 0 4px;
         font-weight: bold;
-        color: #714a94;
-        background: #f8f3fc;
-        border-radius: 4px;
-      }
-
-      a {
-        color: #ec485b;
       }
     }
   }
@@ -260,7 +252,6 @@
       a {
         font-size: 18px;
         line-height: 18px;
-        color: #ec485b;
       }
 
       span {
