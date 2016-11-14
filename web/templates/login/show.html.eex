@@ -5,18 +5,18 @@
 
       <div class="form-group">
         <label for="username">Username or Email</label>
-        <input type="text" class="form-control" name="username" tabindex="10">
+        <input type="text" class="form-control" name="username">
       </div>
 
       <div class="form-group">
         <label for="password">Password</label>
         <span style="float: right;"><a href="<%= password_reset_path(Endpoint, :show) %>">Forgot your password?</a></span>
-        <input type="password" class="form-control" name="password" tabindex="11">
+        <input type="password" class="form-control" name="password">
       </div>
 
       <input type="hidden" name="return" value="<%= @return %>">
 
-      <button type="submit" class="btn btn-primary" tabindex="12">Log in</button>
+      <button type="submit" class="btn btn-primary">Log in</button>
 
       <br><br>
 
