@@ -62,7 +62,7 @@ defmodule HexWeb.PlugAttack do
   defp try_reload_addresses do
     case :ets.lookup(@addresses_ets, :loaded) do
       [{:loaded, false}] ->
-        BlockAddress.reload
+        HexWeb.BlockAddress.reload
       _ ->
         :ok
     end
