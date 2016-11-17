@@ -12,7 +12,7 @@ defmodule HexWeb do
     children = [
       supervisor(HexWeb.Repo, []),
       supervisor(Task.Supervisor, [[name: HexWeb.Tasks]]),
-      worker(HexWeb.RateLimit, [HexWeb.RateLimit]),
+      worker(PlugAttack.Storage.Ets, [HexWeb.PlugAttack, [clean_period: 60_000]]),
       worker(HexWeb.Throttle, [[name: HexWeb.SESThrottle, rate: ses_rate, unit: 1000]]),
       supervisor(HexWeb.Endpoint, []),
     ]

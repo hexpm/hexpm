@@ -8,7 +8,7 @@ defmodule HexWeb.RateLimitTest do
     use Phoenix.Controller
 
     plug :accepts, ~w(json)
-    plug HexWeb.RateLimit.Plug
+    plug HexWeb.PlugAttack
 
     def index(conn, _params) do
       send_resp(conn, 200, "Hello, World!")
@@ -39,7 +39,7 @@ defmodule HexWeb.RateLimitTest do
     conn = request({2, 2, 2, 2})
     assert get_resp_header(conn, "x-ratelimit-remaining") == ["99"]
 
-    HexWeb.RateLimit.prune(HexWeb.RateLimit, 0)
+    PlugAttack.Storage.Ets.clean(HexWeb.PlugAttack)
 
     conn = request({2, 2, 2, 2})
     assert get_resp_header(conn, "x-ratelimit-remaining") == ["99"]
