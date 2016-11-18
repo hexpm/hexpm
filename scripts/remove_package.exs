@@ -11,12 +11,15 @@ releases = HexWeb.Release.all(package)
            |> HexWeb.Repo.all
 owners   = Ecto.assoc(package, :owners)
            |> HexWeb.Repo.all
+           |> HexWeb.Repo.preload(:emails)
 
 IO.puts name
 
 IO.puts ""
 IO.puts "Owners:"
-Enum.each(owners, &IO.puts("#{&1.username} #{&1.email}"))
+Enum.each(owners, fn owner ->
+  IO.puts("#{owner.username} #{HexWeb.User.email(owner, :primary)}")
+end)
 
 IO.puts ""
 IO.puts "Releases:"
