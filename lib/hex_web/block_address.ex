@@ -6,6 +6,15 @@ defmodule HexWeb.BlockAddress do
     :ets.insert(@ets, {:loaded, false})
   end
 
+  def try_reload do
+    case :ets.lookup(@ets, :loaded) do
+      [{:loaded, false}] ->
+        reload()
+      _ ->
+        :ok
+    end
+  end
+
   def reload do
     all_ips = HexWeb.Repo.all(HexWeb.BlockedAddress)
               |> Enum.into(MapSet.new, & &1.ip)
@@ -20,4 +29,7 @@ defmodule HexWeb.BlockAddress do
     :ets.insert(@ets, Enum.map(new_ips, &{&1}))
     :ets.insert(@ets, {:loaded, true})
   end
+
+  def blocked?(ip),
+    do: match?([{^ip}], :ets.lookup(@ets, ip))
 end

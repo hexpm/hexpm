@@ -1,18 +1,22 @@
+# TODO: Don't rate limit conditional requests that return 304 Not Modified
+# TODO: Add a higher rate limit cap for authenticated users
+# TODO: Use redis instead of single process to support multiple dynos
+
 defmodule HexWeb.PlugAttack do
   use PlugAttack
+
+  alias HexWeb.BlockAddress
+
   import HexWeb.ControllerHelpers
   import Plug.Conn
-
-  @addresses_ets :blocked_addresses
 
   rule "allow local", conn do
     allow conn.remote_ip == {127, 0, 0, 1}
   end
 
   rule "block addresses", conn do
-    try_reload_addresses()
-
-    check_blocked(ip_str(conn.remote_ip))
+    BlockAddress.try_reload()
+    block BlockAddress.blocked?(ip_str(conn.remote_ip))
   end
 
   rule "ip throttle", conn do
@@ -50,21 +54,5 @@ defmodule HexWeb.PlugAttack do
 
   defp ip_str({a, b, c, d}) do
     "#{a}.#{b}.#{c}.#{d}"
-  end
-
-  defp check_blocked(ip) do
-    case :ets.lookup(@addresses_ets, ip) do
-      [{^ip}] -> PlugAttack.Rule.block(ip)
-      _       -> nil
-    end
-  end
-
-  defp try_reload_addresses do
-    case :ets.lookup(@addresses_ets, :loaded) do
-      [{:loaded, false}] ->
-        HexWeb.BlockAddress.reload
-      _ ->
-        :ok
-    end
   end
 end
