@@ -60,6 +60,13 @@
     </tr>
 
     <tr>
+      <td>UPYUN</td>
+      <td>China</td>
+      <td><a href="https://hexpm.upyun.com">https://hexpm.upyun.com</a></td>
+      <td>No</td>
+    </tr>
+
+    <tr>
       <td>Privately hosted</td>
       <td>China</td>
       <td><a href="https://hex.elixir-cn.org">https://hex.elixir-cn.org</a></td>
