@@ -26,38 +26,31 @@ defmodule HexWeb.API.DocsControllerTest do
     assert %{"package" => %{"name" => "phoenix"}, "release" => %{"version" => "0.0.1"}} = log.params
 
     conn = get build_conn(), "docs/phoenix/index.html"
-    assert conn.status == 200
-    assert conn.resp_body == "phoenix v0.0.1"
+    assert response(conn, 200) == "phoenix v0.0.1"
 
     conn = get build_conn(), "docs/phoenix/0.0.1/index.html"
-    assert conn.status == 200
-    assert conn.resp_body == "phoenix v0.0.1"
+    assert response(conn, 200) == "phoenix v0.0.1"
 
     conn = publish_docs(user, phoenix, "0.5.0", [{'index.html', "phoenix v0.5.0"}])
     assert conn.status == 201
 
     conn = get build_conn(), "docs/phoenix/index.html"
-    assert conn.status == 200
-    assert conn.resp_body == "phoenix v0.5.0"
+    assert response(conn, 200) == "phoenix v0.5.0"
 
     conn = get build_conn(), "docs/phoenix/0.0.1/index.html"
-    assert conn.status == 200
-    assert conn.resp_body == "phoenix v0.0.1"
+    assert response(conn, 200) == "phoenix v0.0.1"
 
     conn = get build_conn(), "docs/sitemap.xml"
-    assert conn.status == 200
-    assert conn.resp_body =~ "https://hexdocs.pm/phoenix"
+    assert response(conn, 200) =~ "https://hexdocs.pm/phoenix"
 
     conn = publish_docs(user, phoenix, "0.0.1", [{'index.html', "phoenix v0.0.1 (updated)"}])
     assert conn.status == 201
 
     conn = get build_conn(), "docs/phoenix/index.html"
-    assert conn.status == 200
-    assert conn.resp_body == "phoenix v0.5.0"
+    assert response(conn, 200) == "phoenix v0.5.0"
 
     conn = get build_conn(), "docs/phoenix/0.0.1/index.html"
-    assert conn.status == 200
-    assert conn.resp_body == "phoenix v0.0.1 (updated)"
+    assert response(conn, 200) == "phoenix v0.0.1 (updated)"
   end
 
   @tag :integration
@@ -72,26 +65,22 @@ defmodule HexWeb.API.DocsControllerTest do
     assert HexWeb.Repo.get_by!(assoc(plug, :releases), version: "0.0.1-beta.1").has_docs
 
     conn = get build_conn(), "docs/plug/index.html"
-    assert conn.status == 200
-    assert conn.resp_body == "plug v0.0.1-beta.1"
+    assert response(conn, 200) == "plug v0.0.1-beta.1"
 
     conn = publish_docs(user, plug, "0.5.0", [{'index.html', "plug v0.5.0"}])
     assert conn.status == 201
 
     conn = get build_conn(), "docs/plug/index.html"
-    assert conn.status == 200
-    assert conn.resp_body == "plug v0.5.0"
+    assert response(conn, 200) == "plug v0.5.0"
 
     conn = publish_docs(user, plug, "1.0.0-beta.1", [{'index.html', "plug v1.0.0-beta.1"}])
     assert conn.status == 201
 
     conn = get build_conn(), "docs/plug/index.html"
-    assert conn.status == 200
-    assert conn.resp_body == "plug v0.5.0"
+    assert response(conn, 200) == "plug v0.5.0"
 
     conn = get build_conn(), "docs/plug/1.0.0-beta.1/index.html"
-    assert conn.status == 200
-    assert conn.resp_body == "plug v1.0.0-beta.1"
+    assert response(conn, 200) == "plug v1.0.0-beta.1"
   end
 
   @tag isolation: :serializable
@@ -153,8 +142,7 @@ defmodule HexWeb.API.DocsControllerTest do
     assert conn.status in 400..499
 
     conn = get build_conn(), "docs/ecto/index.html"
-    assert conn.status == 200
-    assert conn.resp_body == "ecto v2.0.0"
+    assert response(conn, 200) == "ecto v2.0.0"
 
     # Revert latest release
     conn = revert_docs(user, ecto, "2.0.0")
@@ -172,8 +160,7 @@ defmodule HexWeb.API.DocsControllerTest do
 
     # TODO: update top-level docs to the next-to-last version
     conn = get build_conn(), "docs/ecto/index.html"
-    assert conn.status == 200
-    assert conn.resp_body == "ecto v2.0.0"
+    assert response(conn, 200) == "ecto v2.0.0"
 
     # Revert remaining release
     conn = revert_docs(user, ecto, "0.0.1")
@@ -191,8 +178,7 @@ defmodule HexWeb.API.DocsControllerTest do
 
     # TODO: deleting last version should remove top-level docs
     conn = get build_conn(), "docs/ecto/index.html"
-    assert conn.status == 200
-    assert conn.resp_body == "ecto v2.0.0"
+    assert response(conn, 200) == "ecto v2.0.0"
   end
 
   @tag :integration
