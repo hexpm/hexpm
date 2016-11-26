@@ -152,5 +152,5 @@ defmodule HexWeb.Assets do
 
   def tarball_cdn_key(release), do: "tarballs/#{release.package.name}-#{release.version}"
 
-  def tarball_store_key(release), do: "tarballs/#{release.package.name}-#{release.version}.tar"
+  def tarball_store_key(release), do: "tarballs/#{release.package.name}-#{release.version}.tar.gz"
 end
