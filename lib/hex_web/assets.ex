@@ -14,7 +14,7 @@ defmodule HexWeb.Assets do
 
     # Delete relevant documentation (if it exists)
     if release.has_docs do
-      HexWeb.Store.delete(nil, :s3_bucket, "docs/#{name}-#{version}.tar.gz", [])
+      HexWeb.Store.delete(nil, :s3_bucket, docs_store_key(release), [])
       paths = HexWeb.Store.list(nil, :docs_bucket, Path.join(name, version))
       HexWeb.Store.delete_many(nil, :docs_bucket, Enum.to_list(paths), [])
       HexWeb.Sitemaps.publish_docs_sitemap()
@@ -35,13 +35,11 @@ defmodule HexWeb.Assets do
     package = release.package
     pre_release    = version.pre != []
     first_release  = package.docs_updated_at == nil
-    unversioned_key = "docspage/#{package.name}"
-    versioned_key   = "docspage/#{package.name}/#{release.version}"
 
     files =
       Enum.flat_map(files, fn {path, data} ->
-        versioned = {Path.join([name, to_string(version), path]), versioned_key, data}
-        unversioned = {Path.join(name, path), unversioned_key, data}
+        versioned = {Path.join([name, to_string(version), path]), versioned_key(release), data}
+        unversioned = {Path.join(name, path), unversioned_key(release), data}
 
         cond do
           pre_release && !first_release ->
@@ -55,7 +53,7 @@ defmodule HexWeb.Assets do
     paths = MapSet.new(files, &elem(&1, 0))
 
     delete_old_docs(release, paths, docs_for_latest_release)
-    put_tarball(release, body)
+    put_docs_tarball(release, body)
     upload_new_files(files)
     purge_cache(release, docs_for_latest_release)
   end
@@ -65,19 +63,19 @@ defmodule HexWeb.Assets do
     version = to_string(release.version)
     paths   = HexWeb.Store.list(nil, :docs_bucket, Path.join(name, version))
 
-    HexWeb.Store.delete(nil, :s3_bucket, "tarballs/#{name}-#{version}.tar.gz", [])
+    HexWeb.Store.delete(nil, :s3_bucket, tarball_store_key(release), [])
     HexWeb.Store.delete_many(nil, :docs_bucket, Enum.to_list(paths), [])
 
     HexWeb.Utils.multi_task([
-      fn -> HexWeb.CDN.purge_key(:fastly_hexrepo, "docs/#{name}-#{version}") end,
-      fn -> HexWeb.CDN.purge_key(:fastly_hexdocs, "docspage/#{name}/#{version}") end
+      fn -> HexWeb.CDN.purge_key(:fastly_hexrepo, docs_cdn_key(release)) end,
+      fn -> HexWeb.CDN.purge_key(:fastly_hexdocs, versioned_key(release)) end
     ])
   end
 
-  defp put_tarball(release, body) do
+  defp put_docs_tarball(release, body) do
     # TODO: Cache and add surrogate key
     opts = [acl: :public_read]
-    HexWeb.Store.put(nil, :s3_bucket, "docs/#{release.package.name}-#{release.version}.tar.gz", body, opts)
+    HexWeb.Store.put(nil, :s3_bucket, docs_store_key(release), body, opts)
   end
 
   defp delete_old_docs(release, paths, docs_for_latest_release) do
@@ -126,16 +124,14 @@ defmodule HexWeb.Assets do
 
   defp purge_cache(release, docs_for_latest_release) do
     first_release   = release.package.docs_updated_at == nil
-    unversioned_key = "docspage/#{release.package.name}"
-    versioned_key   = "docspage/#{release.package.name}/#{release.version}"
 
     purge_tasks = [
-      fn -> HexWeb.CDN.purge_key(:fastly_hexrepo, "docs/#{release.package.name}-#{release.version}") end,
-      fn -> HexWeb.CDN.purge_key(:fastly_hexdocs, versioned_key) end
+      fn -> HexWeb.CDN.purge_key(:fastly_hexrepo, docs_cdn_key(release)) end,
+      fn -> HexWeb.CDN.purge_key(:fastly_hexdocs, versioned_key(release)) end
     ]
     purge_tasks =
       if first_release || docs_for_latest_release do
-        [fn -> HexWeb.CDN.purge_key(:fastly_hexdocs, unversioned_key) end | purge_tasks]
+        [fn -> HexWeb.CDN.purge_key(:fastly_hexdocs, unversioned_key(release)) end | purge_tasks]
       else
         purge_tasks
       end
@@ -150,7 +146,21 @@ defmodule HexWeb.Assets do
     end
   end
 
-  def tarball_cdn_key(release), do: "tarballs/#{release.package.name}-#{release.version}"
+  def tarball_cdn_key(release),
+    do: "tarballs/#{release.package.name}-#{release.version}"
 
-  def tarball_store_key(release), do: "tarballs/#{release.package.name}-#{release.version}.tar.gz"
+  def tarball_store_key(release),
+    do: "tarballs/#{release.package.name}-#{release.version}.tar.gz"
+
+  def docs_cdn_key(release),
+    do: "docs/#{release.package.name}-#{release.version}"
+
+  def docs_store_key(release),
+    do: "docs/#{release.package.name}-#{release.version}.tar.gz"
+
+  def versioned_key(release),
+    do: "docspage/#{release.package.name}"
+
+  def unversioned_key(release),
+    do: "docspage/#{release.package.name}/#{release.version}"
 end
