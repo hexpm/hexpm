@@ -63,7 +63,6 @@ defmodule HexWeb.Assets do
     version = to_string(release.version)
     paths   = HexWeb.Store.list(nil, :docs_bucket, Path.join(name, version))
 
-    HexWeb.Store.delete(nil, :s3_bucket, tarball_store_key(release), [])
     HexWeb.Store.delete_many(nil, :docs_bucket, Enum.to_list(paths), [])
 
     HexWeb.Utils.multi_task([
@@ -150,7 +149,7 @@ defmodule HexWeb.Assets do
     do: "tarballs/#{release.package.name}-#{release.version}"
 
   def tarball_store_key(release),
-    do: "tarballs/#{release.package.name}-#{release.version}.tar.gz"
+    do: "tarballs/#{release.package.name}-#{release.version}.tar"
 
   def docs_cdn_key(release),
     do: "docs/#{release.package.name}-#{release.version}"
@@ -159,8 +158,8 @@ defmodule HexWeb.Assets do
     do: "docs/#{release.package.name}-#{release.version}.tar.gz"
 
   def versioned_key(release),
-    do: "docspage/#{release.package.name}"
+    do: "docspage/#{release.package.name}/#{release.version}"
 
   def unversioned_key(release),
-    do: "docspage/#{release.package.name}/#{release.version}"
+    do: "docspage/#{release.package.name}"
 end
