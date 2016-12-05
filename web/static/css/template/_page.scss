@@ -8,11 +8,21 @@
     margin-bottom: 20px;
   }
 
-  p, ol, li {
+  p {
     color: #555555;
     font-weight: 300;
     @include font-size(16 , 35);
     margin-bottom: 20px;
+  }
+
+  ol, li {
+    color: #555555;
+    font-weight: 300;
+    @include font-size(16 , 35);
+  }
+
+  ul {
+    list-style-type: circle;
   }
 
   .first-header {

@@ -42,7 +42,7 @@ tools = Keyword.take(tools, compatible_tools)
     <%= if links != [] || (@hexdocs_url && @docs_tarball_url) do %>
       <h3>Links</h3>
       <ul class="links">
-        <%= for { name, link } <- links do %>
+        <%= for {name, link} <- links do %>
         <li><a href="<%= link %>" rel="nofollow"><%= name %></a></li>
         <% end %>
         <%= if @hexdocs_url && @docs_tarball_url do %>
