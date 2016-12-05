@@ -25,10 +25,8 @@
       <%= if @public_email do %>
         <li><a href="mailto:<%= @public_email %>"><%= @public_email %></a></li>
       <% end %>
-      <%= for {field, service, url} <- UserHandles.services do %>
-        <%= if handle = Map.get(@user.handles, field) do %>
-          <li><a href="<%= String.replace(url, "{handle}", handle) %>"><%= handle %></a> on <%= service %></li>
-        <% end %>
+      <%= for {service, handle, url} <- handles(@user) do %>
+        <li><a href="<%= url %>"><%= handle %></a> on <%= service %></li>
       <% end %>
     </ul>
   </div>

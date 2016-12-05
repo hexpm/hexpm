@@ -20,4 +20,23 @@ defmodule HexWeb.UserHandles do
      {:freenode, "Freenode", "irc://chat.freenode.net/elixir-lang"},
      {:slack, "Slack", "https://elixir-slackin.herokuapp.com/"}]
   end
+
+  def handle(:twitter, handle), do: unuri(handle, "twitter.com", "/")
+  def handle(:github, handle), do: unuri(handle, "github.com", "/")
+  def handle(:elixirforum, handle), do: unuri(handle, "elixirforum.com", "/users/")
+  def handle(_service, handle), do: handle
+
+  defp unuri(handle, host, path) do
+    uri = URI.parse(handle)
+    http? = uri.scheme in ["http", "https"]
+    host? = String.contains?(uri.host, host)
+    path? = String.starts_with?(uri.path, path)
+
+    if http? and host? and path? do
+      {_, handle} = String.split_at(uri.path, String.length(path))
+      handle
+    else
+      uri.path
+    end
+  end
 end
