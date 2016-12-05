@@ -12,6 +12,8 @@ config :hex_web, HexWeb.Endpoint,
   code_reloader: true,
   cache_static_lookup: false,
   check_origin: false,
+  pubsub: [name: HexWeb.PubSub,
+           adapter: Phoenix.PubSub.PG2],
   watchers: [node: ["node_modules/brunch/bin/brunch", "watch", "--stdin",
              cd: Path.expand("..", __DIR__)]]
 
