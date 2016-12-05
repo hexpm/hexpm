@@ -63,9 +63,7 @@ config :hex_web, HexWeb.Endpoint,
   url: [host: "localhost"],
   root: Path.dirname(__DIR__),
   secret_key_base: "Cc2cUvbm9x/uPD01xnKmpmU93mgZuht5cTejKf/Z2x0MmfqE1ZgHJ1/hSZwd8u4L",
-  render_errors: [accepts: ~w(html json elixir erlang)],
-  pubsub: [name: HexWeb.PubSub,
-           adapter: Phoenix.PubSub.PG2]
+  render_errors: [accepts: ~w(html json elixir erlang)]
 
 config :phoenix, :template_engines,
   md: HexWeb.MarkdownEngine
