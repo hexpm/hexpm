@@ -112,10 +112,13 @@ defmodule HexWeb.Assets do
   defp upload_new_files(files) do
     objects =
       Enum.map(files, fn {store_key, cdn_key, data} ->
+        surrogate_key = {"surrogate-key", cdn_key}
+        surrogate_control = {"surrogate-control", "max-age=604800"}
+        
         opts =
           content_type(store_key)
-          |> Keyword.put(:cache_control, "public, max-age=604800")
-          |> Keyword.put(:meta, [{"surrogate-key", cdn_key}])
+          |> Keyword.put(:cache_control, "public, max-age=3600")
+          |> Keyword.put(:meta, [surrogate_key, surrogate_control])
         {store_key, data, opts}
     end)
     HexWeb.Store.put_many(nil, :docs_bucket, objects, [])
