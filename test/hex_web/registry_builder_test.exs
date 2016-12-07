@@ -6,9 +6,6 @@ defmodule HexWeb.RegistryBuilderTest do
   alias HexWeb.Install
   alias HexWeb.RegistryBuilder
 
-  @ets_table :hex_registry
-  @endpoint HexWeb.Endpoint
-
   setup do
     user = create_user("eric", "eric@mail.com", "ericeric")
     postgrex = Package.build(user, pkg_meta(%{name: "postgrex", description: "PostgreSQL driver for Elixir."})) |> HexWeb.Repo.insert!

@@ -8,8 +8,6 @@ defmodule SafeErlTermTest do
     end
   end
 
-  @valid_atoms [:foo, :bar, :baz]
-
   test "works as erl_scan:string/1" do
     string! '''
     {}.
