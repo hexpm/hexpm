@@ -11,7 +11,7 @@
       <div class="panel-body">
         <div class="form-group">
           <label>Profile picture</label>
-          <img src="<%= private_gravatar_url(User.email(@logged_in, :public), :large) %>">
+          <img src="<%= gravatar_url(User.email(@logged_in, :public), :large) %>">
           <p>
             <small>
               <%= if User.email(@logged_in, :public) do %>

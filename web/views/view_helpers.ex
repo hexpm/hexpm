@@ -14,14 +14,7 @@ defmodule HexWeb.ViewHelpers do
       |> Base.encode16(case: :lower)
     "https://www.gravatar.com/avatar/#{hash}?s=#{gravatar_size(size)}&d=retro"
   end
-
-  def private_gravatar_url(email, size) do
-    hash =
-      :crypto.hash(:md5, String.trim(email))
-      |> Base.encode16(case: :lower)
-    "https://www.gravatar.com/avatar/#{hash}?s=#{gravatar_size(size)}&d=retro"
-  end
-
+  
   defp gravatar_size(:large), do: 440
   defp gravatar_size(:small), do: 80
 
