@@ -2,9 +2,7 @@ defmodule HexWeb.API.OwnerController do
   use HexWeb.Web, :controller
 
   plug :fetch_package
-  # NOTE: Disabled while waiting for privacy policy grace period
-  # plug :authorize, fun: &package_owner?/2 when not action in [:index, :show]
-  plug :authorize, fun: &package_owner?/2
+  plug :authorize, [fun: &package_owner?/2] when action in [:create, :delete]
 
   def index(conn, _params) do
     owners =

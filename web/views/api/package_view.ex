@@ -42,8 +42,7 @@ defmodule HexWeb.API.PackageView do
     owners =
       Enum.map(owners, fn user ->
         %{username: user.username,
-          # NOTE: Disabled while waiting for privacy policy grace period
-          # email: User.email(user, :public),
+          email: User.email(user, :public),
           url: api_user_url(Endpoint, :show, user)}
       end)
 

@@ -23,15 +23,6 @@
               <% end %>
             </small>
           </p>
-
-          <%# NOTE: Remove after privacy policy grace period %>
-          <p>
-            <small>
-              <em>
-                Note that while waiting for the new <a href="<%= policy_path(Endpoint, :privacy) %>">privacy policy</a> to take effect profile pictures are currently not shown publicly.
-              </em>
-            </small>
-          </p>
         </div>
 
         <%= form_for @changeset, dashboard_path(Endpoint, :update_profile), [method: :post], fn f -> %>

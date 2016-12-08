@@ -8,19 +8,13 @@ defmodule HexWeb.ViewHelpers do
   def gravatar_url(nil, size) do
     "https://www.gravatar.com/avatar?s=#{gravatar_size(size)}&d=mm"
   end
-  def gravatar_url(_email, size) do
-    # NOTE: Disabled while waiting for privacy policy grace period
-    # hash =
-    #   :crypto.hash(:md5, String.trim(email))
-    #   |> Base.encode16(case: :lower)
-    # "https://www.gravatar.com/avatar/#{hash}?s=#{gravatar_size(size)}&d=retro"
-    gravatar_url(nil, size)
+  def gravatar_url(email, size) do
+    hash =
+      :crypto.hash(:md5, String.trim(email))
+      |> Base.encode16(case: :lower)
+    "https://www.gravatar.com/avatar/#{hash}?s=#{gravatar_size(size)}&d=retro"
   end
 
-  # NOTE: Remove after privacy policy grace period
-  def private_gravatar_url(nil, size) do
-    "https://www.gravatar.com/avatar?s=#{gravatar_size(size)}&d=mm"
-  end
   def private_gravatar_url(email, size) do
     hash =
       :crypto.hash(:md5, String.trim(email))

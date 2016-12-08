@@ -39,13 +39,6 @@ defmodule HexWeb.API.OwnerControllerTest do
     assert second["username"] in ["jose", "eric"]
   end
 
-  test "get package owners authorizes" do
-    conn = build_conn()
-           |> put_req_header("authorization", key_for("other"))
-           |> get("api/packages/postgrex/owners")
-    assert conn.status == 403
-  end
-
   test "check if user is package owner" do
     conn = build_conn()
            |> put_req_header("authorization", key_for("eric"))
@@ -56,13 +49,6 @@ defmodule HexWeb.API.OwnerControllerTest do
            |> put_req_header("authorization", key_for("eric"))
            |> get("api/packages/postgrex/owners/jose@mail.com")
     assert conn.status == 404
-  end
-
-  test "check if user is package owner authorizes" do
-    conn = build_conn()
-           |> put_req_header("authorization", key_for("other"))
-           |> get("api/packages/postgrex/owners/eric@mail.com")
-    assert conn.status == 403
   end
 
   test "add package owner" do
@@ -95,7 +81,7 @@ defmodule HexWeb.API.OwnerControllerTest do
 
   test "add unknown user package owner" do
     eric = HexWeb.Repo.get_by!(User, username: "eric")
-    
+
     conn = build_conn()
            |> put_req_header("authorization", key_for(eric))
            |> put("api/packages/postgrex/owners/UNKNOWN")
