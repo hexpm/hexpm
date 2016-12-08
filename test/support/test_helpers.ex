@@ -10,7 +10,7 @@ defmodule HexWeb.TestHelpers do
       |> Map.put_new(:requirements, %{})
 
     contents_path = Path.join(@tmp, "#{meta[:name]}-#{meta[:version]}-contents.tar.gz")
-    files = Enum.map(files, fn {name, bin} -> {String.to_char_list(name), bin} end)
+    files = Enum.map(files, fn {name, bin} -> {String.to_charlist(name), bin} end)
     :ok = :erl_tar.create(contents_path, files, [:compressed])
     contents = File.read!(contents_path)
 

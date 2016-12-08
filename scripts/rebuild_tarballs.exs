@@ -17,7 +17,7 @@ defmodule HexWeb.Scripts.Tarballs do
       tarname = Path.basename(filename)
       [_, package, release] = Regex.run(~r"(.*)-(.*).tar"U, tarname)
 
-      {:ok, files} = :erl_tar.extract(String.to_char_list(filename), [:memory])
+      {:ok, files} = :erl_tar.extract(String.to_charlist(filename), [:memory])
       files = string_files(files)
       content_files = contents(files)
       tools = tools(@tools, content_files)
@@ -78,7 +78,7 @@ defmodule HexWeb.Scripts.Tarballs do
 
   defp list_files(files) do
     Enum.into(files, [], fn {name, binary} ->
-      {String.to_char_list(name), binary}
+      {String.to_charlist(name), binary}
     end)
   end
 end

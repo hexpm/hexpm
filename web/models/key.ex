@@ -91,14 +91,14 @@ defmodule HexWeb.Key do
       |> changeset.repo.all
       |> Enum.into(MapSet.new)
 
-    name = if Set.member?(names, name), do: find_unique_name(name, names), else: name
+    name = if MapSet.member?(names, name), do: find_unique_name(name, names), else: name
 
     put_change(changeset, :name, name)
   end
 
   defp find_unique_name(name, names, counter \\ 2) do
     name_counter = "#{name}-#{counter}"
-    if Set.member?(names, name_counter) do
+    if MapSet.member?(names, name_counter) do
       find_unique_name(name, names, counter + 1)
     else
       name_counter

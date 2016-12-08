@@ -121,7 +121,7 @@ defmodule HexWeb.API.DocsControllerTest do
     conn = publish_docs(user, ecto, "2.0.0", [{'index.html', "ecto v2.0.0"}])
     assert conn.status == 201
 
-    # Revert middle release 
+    # Revert middle release
     conn = revert_docs(user, ecto, "0.5.0")
     assert conn.status == 204
 
@@ -215,7 +215,7 @@ defmodule HexWeb.API.DocsControllerTest do
 
   defp create_tarball(files) do
     path = Path.join("tmp", "release-docs.tar.gz")
-    :ok = :erl_tar.create(String.to_char_list(path), files, [:compressed])
+    :ok = :erl_tar.create(String.to_charlist(path), files, [:compressed])
     File.read!(path)
   end
 end

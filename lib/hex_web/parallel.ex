@@ -3,7 +3,6 @@ defmodule HexWeb.Parallel do
   require Logger
 
   @timeout 60 * 1000
-  @parallel 10
 
   def each(fun, args, opts \\ [])
 
@@ -60,6 +59,6 @@ defmodule HexWeb.Parallel do
   if Mix.env == :test do
     defp parallel(_arg), do: 1
   else
-    defp parallel(arg), do: arg || @parallel
+    defp parallel(arg), do: arg || 10
   end
 end

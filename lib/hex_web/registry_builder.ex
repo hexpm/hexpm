@@ -123,7 +123,7 @@ defmodule HexWeb.RegistryBuilder do
     :ets.insert(tid, {:"$$installs2$$", installs})
     :ets.insert(tid, packages)
     :ets.insert(tid, releases)
-    :ok = :ets.tab2file(tid, String.to_char_list(file))
+    :ok = :ets.tab2file(tid, String.to_charlist(file))
     :ets.delete(tid)
 
     contents = File.read!(file) |> :zlib.gzip

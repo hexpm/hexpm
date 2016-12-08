@@ -13,7 +13,7 @@ defmodule HexWeb.Plugs.Forwarded do
     ip = :binary.split(ip, ",", [:global]) |> List.last
 
     if ip do
-      ip    = String.strip(ip)
+      ip    = String.trim(ip)
       parts = :binary.split(ip, ".", [:global])
       parts = Enum.map(parts, &Integer.parse/1)
       valid = Enum.all?(parts, &match?({int, ""} when int in 0..255, &1))

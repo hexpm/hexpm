@@ -7,7 +7,7 @@ defmodule HexWeb.ConsultFormat do
   end
 
   def decode(string) when is_binary(string) do
-    string = String.to_char_list(string)
+    string = String.to_charlist(string)
     case :safe_erl_term.string(string) do
       {:ok, tokens, _line} ->
         try do

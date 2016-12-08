@@ -20,9 +20,9 @@ Enum.each(tars, fn file ->
   [package, version] = String.split(file, "-", parts: 2)
   version = String.slice(version, 0..-8)
 
-  source = Path.join([input, file])               |> String.to_char_list
-  root = Path.join([output, package])             |> String.to_char_list
-  release = Path.join([output, package, version]) |> String.to_char_list
+  source = Path.join([input, file])               |> String.to_charlist
+  root = Path.join([output, package])             |> String.to_charlist
+  release = Path.join([output, package, version]) |> String.to_charlist
 
   if version == max_versions[package] do
     :erl_tar.extract(source, [:compressed, cwd: root])
