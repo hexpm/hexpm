@@ -77,12 +77,12 @@
     <h5>Exact Match:</h5>
     <ul>
       <li>
-      <div class="downloads-info">
+        <div class="downloads-info">
           <span class="download-count"><%= human_number_space(@downloads[@exact_match.id] || 0) %></span> <br>
           downloads
-      </div>
-      <a href="<%= package_path(Endpoint, :show, @exact_match) %>"><%= @exact_match.name %></a> <span class="version"><%= @exact_match.latest_version %></span>
-      <p><%= text_length(@exact_match.meta.description, 140) %></p>
+        </div>
+        <a href="<%= package_path(Endpoint, :show, @exact_match) %>"><%= @exact_match.name %></a> <span class="version"><%= @exact_match.latest_version %></span>
+        <p><%= text_length(@exact_match.meta.description, 140) %></p>
       </li>
     </ul>
   </div>
@@ -90,18 +90,18 @@
 
 <div class="package-list">
   <%= if @exact_match do %>
-      <h5>Search Results:</h5>
+    <h5>Search Results:</h5>
   <% end %>
   <ul>
     <%= for package <- @packages do %>
-    <li>
-      <div class="downloads-info">
-        <span class="download-count"><%= human_number_space(@downloads[package.id] || 0) %></span> <br>
-        downloads
-      </div>
-      <a href="<%= package_path(Endpoint, :show, package) %>"><%= package.name %></a> <span class="version"><%= package.latest_version %></span>
-      <p><%= text_length(package.meta.description, 140) %></p>
-    </li>
+      <li>
+        <div class="downloads-info">
+          <span class="download-count"><%= human_number_space(@downloads[package.id] || 0) %></span> <br>
+          downloads
+        </div>
+        <a href="<%= package_path(Endpoint, :show, package) %>"><%= package.name %></a> <span class="version"><%= package.latest_version %></span>
+        <p><%= text_length(package.meta.description, 140) %></p>
+      </li>
     <% end %>
   </ul>
 </div>
