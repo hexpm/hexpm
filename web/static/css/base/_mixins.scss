@@ -1,7 +1,3 @@
-/*********************************************************************
-*  Typography Mixins
-*********************************************************************/
-
 @mixin font-size($sizeValue, $lineheight: 14) {
 	font: {
 		size: $sizeValue + px;
@@ -34,7 +30,7 @@
 
 @mixin clear-fix() {
 	&:after {
-	   content: " "; /* Older browser do not support empty content */
+	   content: " "; // Older browser do not support empty content
 	   visibility: hidden;
 	   display: block;
 	   height: 0;

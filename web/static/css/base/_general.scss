@@ -61,7 +61,7 @@ input[type="checkbox"] {
 }
 
 
-/* Responsive: Portrait tablets and up */
+// Responsive: Portrait tablets and up
 
 @include min-screen(768px) {
   .container {
@@ -69,7 +69,7 @@ input[type="checkbox"] {
     width: auto;
   }
 
-  /* Remove the padding we set earlier */
+  // Remove the padding we set earlier
   .header,
   .marketing,
   .footer {
@@ -77,7 +77,7 @@ input[type="checkbox"] {
     padding-right: 0;
   }
 
-  /* Remove the bottom border on the jumbotron for visual effect */
+  // Remove the bottom border on the jumbotron for visual effect
   .jumbotron {
     border-bottom: 0;
   }
