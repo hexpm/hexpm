@@ -20,56 +20,60 @@ import "phoenix_html"
 
 // import socket from "./socket"
 
-export var App = {
-  init: function() {
+export default class App {
+  constructor() {
+    $(".copy-button").click(this.onCopy.bind(this))
+
     // Show show-versions button if JS is enabled
-    $('.show-versions').show();
+    $(".show-versions").show()
 
     // Package: toggle text in "All Versions / Recent Version" buttons
-    $('.show-versions .invisible').removeClass('invisible').toggle();
-    $('.show-versions .toggle-text').click(function() {
-      $(this).find('a').toggle();
-    });
+    $(".show-versions .invisible").removeClass("invisible").toggle()
+    $(".show-versions .toggle-text").click((event) => $(event.target).find("a").toggle())
 
     // Highlight syntax
-    hljs.initHighlightingOnLoad();
-  },
+    hljs.initHighlightingOnLoad()
+  }
 
   // Package: copy config snippet to clipboard
-  copy_snippet: function(element_id, button) {
-    var succeeded = false;
-    try {
-      var snippet = document.getElementById(element_id);
-      snippet.select();
+  onCopy(event) {
+    var button = $(event.currentTarget)
+    var succeeded = false
 
-      succeeded = document.execCommand('copy')
+    try {
+      var snippet = document.getElementById(button.attr("data-input-id"))
+      snippet.select()
+      succeeded = document.execCommand("copy")
     } catch (e) {
-      console.log('snippet copy failed', e);
+      console.log("snippet copy failed", e)
     }
 
-    if(succeeded) { this.copy_succeeded(button) }
-    else { this.copy_failed(button); }
-  },
+    succeeded ? this.copySucceeded(button) : this.copyFailed(button)
+  }
 
-  copy_succeeded: function(button) {
-    $(button).children(".glyphicon-copy").hide();
-    $(button).children(".glyphicon-ok").show();
-    $(button).tooltip({ title: 'Copied!', container: 'body', placement: 'bottom', trigger: 'manual' }).tooltip('show');
-    setTimeout(function() {
-      $(button).children(".glyphicon-ok").hide();
-      $(button).children(".glyphicon-copy").show();
-      $(button).tooltip("hide");
-    }, 1500);
-  },
+  copySucceeded(button) {
+    button.children(".glyphicon-copy").hide()
+    button.children(".glyphicon-ok").show()
+    button.tooltip({title: "Copied!", container: "body", placement: "bottom", trigger: "manual"}).tooltip("show")
 
-  copy_failed: function(button) {
-    $(button).children(".glyphicon-copy").hide();
-    $(button).children(".glyphicon-remove").show();
-    $(button).tooltip({ title: 'Copy not supported in your browser', container: 'body', placement: 'bottom', trigger: 'manual' }).tooltip('show');
-    setTimeout(function() {
-      $(button).children(".glyphicon-remove").hide();
-      $(button).children(".glyphicon-copy").show();
-      $(button).tooltip("hide")
-    }, 1500);
+    setTimeout(() => {
+      button.children(".glyphicon-ok").hide()
+      button.children(".glyphicon-copy").show()
+      button.tooltip("hide")
+    }, 1500)
+  }
+
+  copyFailed(button) {
+    button.children(".glyphicon-copy").hide()
+    button.children(".glyphicon-remove").show()
+    button.tooltip({title: "Copy not supported in your browser", container: "body", placement: "bottom", trigger: "manual"}).tooltip("show")
+
+    setTimeout(() => {
+      button.children(".glyphicon-remove").hide()
+      button.children(".glyphicon-copy").show()
+      button.tooltip("hide")
+    }, 1500)
   }
 }
+
+new App()
