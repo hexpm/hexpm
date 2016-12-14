@@ -24,6 +24,7 @@ defmodule HexWeb.PackageController do
     package_count = Packages.count(filter)
     page          = HexWeb.Utils.safe_page(page_param, package_count, @packages_per_page)
     packages      = fetch_packages(page, @packages_per_page, filter, sort)
+    exact_match   = Packages.get(search)
 
     render conn, "index.html", [
       title:         "Packages",
@@ -36,7 +37,8 @@ defmodule HexWeb.PackageController do
       page:          page,
       packages:      packages,
       letters:       @letters,
-      downloads:     Packages.packages_downloads(packages, "all")
+      downloads:     Packages.packages_downloads(packages, "all"),
+      exact_match:   exact_match
     ]
   end
 
