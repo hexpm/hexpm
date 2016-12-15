@@ -1,7 +1,8 @@
-@import "base/media-queries";
+@import "vendor/media-queries";
+@import "vendor/lato";
+
 @import "base/variables";
 @import "base/mixins";
-@import "base/fonts";
 @import "base/general";
 
 @import "template/error";

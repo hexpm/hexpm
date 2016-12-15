@@ -7,7 +7,9 @@
 # below is our settings.
 
 
-exclude: 'web/static/vendor/**'
+exclude:
+  - 'web/static/vendor/**'
+  - 'web/static/css/vendor/**'
 
 linters:
   BangFormat:
