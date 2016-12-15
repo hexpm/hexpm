@@ -6,11 +6,6 @@
 # https://github.com/causes/scss-lint/blob/master/config/default.yml
 # below is our settings.
 
-
-exclude:
-  - 'web/static/vendor/**'
-  - 'web/static/css/vendor/**'
-
 linters:
   BangFormat:
     enabled: true
