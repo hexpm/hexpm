@@ -29,6 +29,6 @@ module.exports = {
     "no-underscore-dangle": 0,
     "no-void": 2,
     "quotes": [2, "double"],
-    "semi": [2, "always"]
+    "semi": [2, "never"]
   }
 };
