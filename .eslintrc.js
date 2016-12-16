@@ -10,7 +10,8 @@ module.exports = {
     "es6": true
   },
   "globals": {
-    "hljs": false
+    "hljs": false,
+    "exports": true
   },
   "rules": {
     "camelcase": 2,

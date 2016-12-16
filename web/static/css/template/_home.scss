@@ -1,6 +1,3 @@
-
-// Home
-// Featured
 .featured-home {
   background: #3e424d url("../images/bg-featured-home.png") no-repeat right bottom;
   background-size: 1154px;
@@ -51,17 +48,11 @@
       color: #8e899c;
     }
 
-    // Firefox 18-
     ::-moz-placeholder {
       color: #8e899c;
     }
 
-    // Firefox 19+
-    ::-moz-placeholder {
-      color: #8e899c;
-    }
-
-    ::-ms-input-placeholder {
+    :-ms-input-placeholder {
       color: #8e899c;
     }
   }
@@ -135,14 +126,13 @@
 
     h3 {
       @include font-size(22, 30);
+      margin-bottom: 25px;
+      font-weight: bold;
+      color: #1e1c17;
+
       @include general-mobile {
         text-align: right;
       }
-
-      font-weight: bold;
-      margin-bottom: 25px;
-      color: #1e1c17;
-      font-weight: 800;
     }
 
     p {
@@ -229,10 +219,10 @@
 
       .stat-info {
         float: left;
-        text-align: left;
-        color: #000000;
-        line-height: 15px;
         font-size: 14px;
+        line-height: 15px;
+        color: #000;
+        text-align: left;
 
         @include general-mobile {
           font-size: 12px;
@@ -240,8 +230,8 @@
         }
 
         .count-info {
-          font-weight: bold;
           font-size: 18px;
+          font-weight: bold;
         }
       }
     }
@@ -249,28 +239,28 @@
 }
 
 .log-head {
-  border-bottom: #4f2e85 1px solid;
-  margin-bottom: 20px;
   padding-bottom: 10px;
-  color: #000000;
-  font-weight: 300;
+  margin-bottom: 20px;
   font-size: 18px;
+  font-weight: 300;
+  color: #000;
   text-transform: uppercase;
+  border-bottom: #4f2e85 1px solid;
 }
 
 .log-body {
   padding-bottom: 20px;
 
   ul {
-    list-style: none;
-    margin: 0;
     padding: 0;
+    margin: 0;
+    list-style: none;
 
     li {
       a {
-        color: #ec485b;
         font-size: 18px;
         line-height: 18px;
+        color: #ec485b;
       }
 
       span {
@@ -285,17 +275,17 @@
       }
 
       .title {
-        white-space: nowrap;
         word-break: break-all;
         word-wrap: break-word;
+        white-space: nowrap;
       }
 
       .description {
+        overflow: hidden;
         font-size: 12px;
         font-weight: 300;
-        white-space: nowrap;
-        overflow: hidden;
         text-overflow: ellipsis;
+        white-space: nowrap;
       }
 
       .published-at {

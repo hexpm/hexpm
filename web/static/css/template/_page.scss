@@ -15,7 +15,8 @@
     color: #555;
   }
 
-  ol, li {
+  ol,
+  li {
     @include font-size(16, 35);
     font-weight: 300;
     color: #555;

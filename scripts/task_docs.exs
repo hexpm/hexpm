@@ -44,10 +44,7 @@ defmodule HexWeb.Script.TaskDocs do
       name = Mix.Task.task_name(task)
       if String.starts_with?(name, "hex") do
         {_line, doc} = Code.get_docs(task, :moduledoc)
-        if doc do
-          html = to_html(doc)
-          [{name, html}]
-        end
+        if doc, do: [{name, to_html(doc)}]
       end || []
     end)
   end

@@ -29,7 +29,7 @@ defmodule HexWeb.Script.AddSurrogateKey do
   defp stream do
     Stream.resource(
       fn -> :ok end,
-      fn :ok -> if(elem = next(), do: {[elem], :ok}, else: {:halt, :ok}) end,
+      fn :ok -> if elem = next(), do: {[elem], :ok}, else: {:halt, :ok} end,
       fn :ok -> :ok end)
   end
 
