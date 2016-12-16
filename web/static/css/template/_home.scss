@@ -98,7 +98,7 @@
     }
 
     .lang-symbol {
-    position: absolute;
+      position: absolute;
       top: 50%;
       left: 25px;
       width: 124px;
@@ -269,9 +269,9 @@
       }
 
       .title-container {
-        white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
+        white-space: nowrap;
       }
 
       .title {
