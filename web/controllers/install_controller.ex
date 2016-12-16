@@ -21,7 +21,7 @@ defmodule HexWeb.InstallController do
       end
 
     conn
-    |> cache([:public, "max-age": 60*60], [])
+    |> cache([:public, "max-age": 60 * 60], [])
     |> redirect(external: HexWeb.Utils.cdn_url(url))
   end
 end

@@ -1,9 +1,8 @@
 .package-title {
-  color: #714a94;
-  @include font-size(50 , $base-line-height);
+  @include font-size(50, $base-line-height);
+  padding: 20px 0 0;
   font-weight: 300;
-  padding: 20px 0 0 0;
-
+  color: #714a94;
   word-wrap: break-word;
 
   a {
@@ -11,33 +10,35 @@
   }
 
   .version {
+    @include font-size(20, $base-line-height);
     color: #969da1;
-    @include font-size(20 , $base-line-height);
     padding: 0 0 0 4px;
   }
 }
 
 .package-view {
   h3 {
-    @include font-size(20 , $base-line-height);
-    font-weight: bold;
-    color: #000000;
+    @include font-size(20, $base-line-height);
     margin-bottom: 15px;
+    font-weight: bold;
+    color: #000;
   }
 
   .description {
-    padding: 28px 0 15px 0;
-    line-height: 20px;
+    padding: 28px 0 15px;
     font-weight: 300;
-    border-bottom: #cccccc 1px solid;
+    line-height: 20px;
+    border-bottom: #ccc 1px solid;
   }
 }
 
 .links {
-  list-style: none;
   padding: 0;
+  list-style: none;
+
   li {
     margin-bottom: 5px;
+
     a {
       color: #c65252;
     }
@@ -45,32 +46,37 @@
 }
 
 .build-tool {
-  color: $color-white;
-  padding: 4px 6px;
-  border-radius: 4px;
   display: inline-block;
+  padding: 4px 6px;
+  color: $color-white;
+  border-radius: 4px;
+
   &.mix {
     background: #775199;
   }
+
   &.rebar {
     background: #c65252;
   }
+
   &.rebar3 {
     background: #c65252;
   }
+
   &.make {
     background: #5c676d;
   }
 }
 
 .config-tool {
-  @include font-size(18 , $base-line-height);
-  font-weight: 300;
-  margin-bottom: 8px;
+  @include font-size(18, $base-line-height);
   display: inline-block;
+  margin-bottom: 8px;
+  font-weight: 300;
 }
 .config-input {
   margin-bottom: 10px;
+
   input {
     border: 1px #c1bfbf solid;
     border-radius: 2px;
@@ -79,43 +85,52 @@
 
 
 .stats {
-  padding: 30px 0 0 0;
+  padding: 30px 0 0;
+
   ul {
-    list-style: none;
-    text-align: left;
     padding: 0;
+    text-align: left;
+    list-style: none;
+
     li {
       display: inline-block;
       width: 24%;
+
       @include general-mobile {
         .stat-icon {
           margin-bottom: 18px;
         }
       }
+
       img {
         float: left;
         margin-right: 6px;
       }
+
       .stat-info {
+        @include font-size(12, $base-line-height);
         float: left;
-        text-align: left;
-        color: #000000;
+        padding: 4px 0 0;
         line-height: 15px;
-        @include font-size(12 , $base-line-height);
+        color: #000;
+        text-align: left;
+
         @include general-mobile {
-          @include font-size(11 , $base-line-height);
+          @include font-size(11, $base-line-height);
         }
-        padding: 4px 0 0 0;
+
         .count-info {
-          font-weight: bold;
-          font-size: 18px;
           display: inline-block;
-          padding: 0 0 5px 0;
+          padding: 0 0 5px;
+          font-size: 18px;
+          font-weight: bold;
+
           @include general-mobile {
             font-size: 15px;
           }
         }
       }
+
       .stat-text {
         line-height: 11px;
       }
@@ -124,23 +139,23 @@
 }
 
 .version-dependency-list {
+  padding: 5px 0 0;
   list-style: none;
-  padding: 5px 0 0 0;
-  li {
-    margin: 0 0 10px 0;
-    @include font-size(18 , $base-line-height);
-    color: #000000;
-    font-weight: 300;
-  }
 
+  li {
+    @include font-size(18, $base-line-height);
+    margin: 0 0 10px;
+    font-weight: 300;
+    color: #000;
+  }
 }
 
 .owners-list {
-  list-style: none;
   padding: 0;
+  list-style: none;
 
   li {
-    margin: 5px 0 5px 0;
+    margin: 5px 0;
   }
 
   a {
@@ -150,6 +165,6 @@
 
 .owner-avatar {
   width: 30px;
+  margin: 0 7px;
   border-radius: 100%;
-  margin: 0 7px 0 0;
 }

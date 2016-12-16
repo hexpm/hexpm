@@ -1,8 +1,8 @@
 .user {
   .user-package-list {
-    list-style: none;
-    margin: 0;
     padding: 0;
+    margin: 0;
+    list-style: none;
 
     li {
       margin-bottom: 5px;
@@ -10,10 +10,10 @@
   }
 
   .user-profile-list {
-    list-style: none;
-    margin: 0;
     padding: 0;
+    margin: 0;
     margin-bottom: 20px;
+    list-style: none;
 
     li {
       margin-bottom: 3px;
@@ -22,8 +22,8 @@
 
   .avatar {
     width: 100%;
-    border-radius: 5px;
     margin-bottom: 10px;
+    border-radius: 5px;
   }
 
   a {

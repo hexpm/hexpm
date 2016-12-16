@@ -1,4 +1,4 @@
-exports.config = {
+module.exports.config = {
   // See http://brunch.io/#documentation for docs.
   files: {
     javascripts: {
@@ -71,4 +71,4 @@ exports.config = {
     enabled: true,
     whitelist: ["phoenix", "phoenix_html"]
   }
-};
+}

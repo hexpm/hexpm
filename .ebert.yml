@@ -7,7 +7,7 @@ engines:
   eslint:
     enabled: true
   csslint:
-    enabled: false
+    enabled: true
   scss-lint:
     enabled: true
   remark-lint:

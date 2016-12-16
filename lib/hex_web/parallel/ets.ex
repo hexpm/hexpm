@@ -18,7 +18,7 @@ defmodule HexWeb.Parallel.ETS do
   end
 
   defp fill_ets(ets, length, args) do
-    args = Enum.zip(0..length-1, args)
+    args = Enum.zip(0..(length - 1), args)
     :ets.insert(ets, args)
   end
 
@@ -99,7 +99,7 @@ defmodule HexWeb.Parallel.ETS do
           :ok
         end)
         %{state | running: Map.put(state.running, task.ref, {id, arg}),
-                  counter: state.counter+1}
+                  counter: state.counter + 1}
       [] ->
         state
     end

@@ -42,7 +42,7 @@ defmodule HexWeb.Mail.SES do
       username: login,
       password: password,
       port: port,
-      tls: :always ]
+      tls: :always]
 
     result = :gen_smtp_client.send_blocking({from, to, email}, opts)
 

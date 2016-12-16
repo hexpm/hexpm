@@ -2,60 +2,67 @@
 // Home
 // Featured
 .featured-home {
-  background: #3e424d url('../images/bg-featured-home.png') no-repeat right bottom;
+  background: #3e424d url("../images/bg-featured-home.png") no-repeat right bottom;
   background-size: 1154px;
 
-  .alert {
-    margin-bottom: -20px;
-  }
-
   @include hdpi(2) {
-    background: #3e424d url('../images/bg-featured-home@2.png') no-repeat right bottom;
+    background: #3e424d url("../images/bg-featured-home@2.png") no-repeat right bottom;
     background-size: 1154px;
   }
 
   @include hdpi(3) {
-    background: #3e424d url('../images/bg-featured-home@3.png') no-repeat right bottom;
+    background: #3e424d url("../images/bg-featured-home@3.png") no-repeat right bottom;
     background-size: 1154px;
+  }
+
+  .alert {
+    margin-bottom: -20px;
   }
 }
 
 .search-form {
-  text-align: center;
+  padding: 20px 0 0;
   margin-bottom: 60px;
-  padding: 20px 0 0 0;
+  text-align: center;
+
   h2 {
-    color: #ededed;
+    margin-bottom: 30px;
     font-size: 45px;
     font-weight: 100;
-    margin-bottom: 30px;
+    color: #ededed;
   }
+
   .input-group {
-    background: #fff;
     padding: 1px 2px;
+    background: #fff;
     border-radius: 4px;
   }
+
   .btn-search {
-    background: $color-white;
     color: #adb3b6;
+    background: $color-white;
   }
-  input{
+
+  input {
+    border: 0;
     box-shadow: none;
-    border:none;
-    &::-webkit-input-placeholder {
-       color: #8e899c;
+
+    ::-webkit-input-placeholder {
+      color: #8e899c;
     }
 
-    &:-moz-placeholder { /* Firefox 18- */
-       color: #8e899c;
+    // Firefox 18-
+    ::-moz-placeholder {
+      color: #8e899c;
     }
 
-    &::-moz-placeholder {  /* Firefox 19+ */
-       color: #8e899c;
+    // Firefox 19+
+    ::-moz-placeholder {
+      color: #8e899c;
     }
 
-    &:-ms-input-placeholder {
-       color: #8e899c;
+    ::-ms-input-placeholder {
+      color: #8e899c;
     }
   }
 }
@@ -69,73 +76,87 @@
     color: #4f2e85;
   }
 }
+
 .shadow {
-  background: #8f9198;
   position: absolute;
-  width: 102%;
-  height: 180px;
+  top: 10px;
   left: -1%;
   z-index: 200;
-  top: 10px;
+  width: 102%;
+  height: 180px;
+  background: #8f9198;
+
   @include general-mobile {
     height: 92%;
   }
 }
+
 .text-content {
-  background: $color-white;
   position: relative;
   z-index: 300;
+  background: $color-white;
+
   .side-box {
-    width: 90px;
-    float: left;
-    min-height: 200px;
     position: relative;
+    float: left;
+    width: 90px;
+    min-height: 200px;
+
     @include general-mobile {
-      width: 0px;
+      width: 0;
     }
+
     .lang-symbol {
+    position: absolute;
+      top: 50%;
+      left: 25px;
       width: 124px;
       height: 124px;
-      border-radius: 50%;
-      background: #f3e8fc;
-      position: absolute;
-      left: 25px;
-      top: 50%;
       margin-top: -62px;
+      background: #f3e8fc;
+      border-radius: 50%;
+
       @include general-mobile {
+        top: 35%;
+        left: 5px;
         width: 40px;
         height: 40px;
-        left: 5px;
-        top: 35%;
       }
     }
   }
+
   .instructions {
-    padding-left: 180px;
     padding-right: 20px;
+    padding-left: 180px;
+
     @include general-mobile {
       padding-left: 20px;
     }
+
     h3 {
-      @include font-size(22 , 30);
+      @include font-size(22, 30);
+      @include general-mobile {
+        text-align: right;
+      }
+
       font-weight: bold;
       margin-bottom: 25px;
       color: #1e1c17;
       font-weight: 800;
-      @include general-mobile {
-        text-align: right;
-      }
     }
+
     p {
-      @include font-size(16 , 40);
+      @include font-size(16, 40);
+
       .code {
+        display: inline-block;
+        padding: 0 4px;
         font-weight: bold;
         color: #714a94;
         background: #f8f3fc;
-        display: inline-block;
-        padding: 0 4px;
         border-radius: 4px;
       }
+
       a {
         color: #ec485b;
       }
@@ -145,40 +166,41 @@
 
 .elixir .side-box {
   background: #714a94;
+
   .lang-symbol {
-    background: #f3e8fc url('../images/elixir.png') center no-repeat;
+    background: #f3e8fc url("../images/elixir.png") center no-repeat;
     background-size: 52px;
 
     @include hdpi(2) {
-      background: #f3e8fc url('../images/elixir@2.png') center no-repeat;
+      background: #f3e8fc url("../images/elixir@2.png") center no-repeat;
       background-size: 52px;
     }
 
     @include hdpi(3) {
-      background: #f3e8fc url('../images/elixir@3.png') center no-repeat;
+      background: #f3e8fc url("../images/elixir@3.png") center no-repeat;
       background-size: 52px;
     }
 
     @include general-mobile {
       background-size: 20px;
     }
-
   }
 }
 
 .erlang .side-box {
   background: #ec485b;
+
   .lang-symbol {
-    background: #fee3e6 url('../images/erlang.png') center no-repeat;
+    background: #fee3e6 url("../images/erlang.png") center no-repeat;
     background-size: 66px;
 
     @include hdpi(2) {
-      background: #fee3e6 url('../images/erlang@2.png') center no-repeat;
+      background: #fee3e6 url("../images/erlang@2.png") center no-repeat;
       background-size: 66px;
     }
 
     @include hdpi(3) {
-      background: #fee3e6 url('../images/erlang@3.png') center no-repeat;
+      background: #fee3e6 url("../images/erlang@3.png") center no-repeat;
       background-size: 66px;
     }
 
@@ -190,9 +212,11 @@
 
 .home-stats {
   padding: 30px 0;
+
   ul {
-    list-style: none;
     text-align: center;
+    list-style: none;
+
     li {
       display: inline-block;
       width: 18%;
@@ -202,12 +226,14 @@
           margin-bottom: 5px;
         }
       }
+
       .stat-info {
         float: left;
         text-align: left;
         color: #000000;
         line-height: 15px;
         font-size: 14px;
+
         @include general-mobile {
           font-size: 12px;
           line-height: 12px;
@@ -231,32 +257,39 @@
   font-size: 18px;
   text-transform: uppercase;
 }
+
 .log-body {
   padding-bottom: 20px;
+
   ul {
     list-style: none;
     margin: 0;
     padding: 0;
+
     li {
       a {
         color: #ec485b;
         font-size: 18px;
         line-height: 18px;
       }
+
       span {
         display: block;
         line-height: 17px;
       }
+
       .title-container {
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
       }
+
       .title {
         white-space: nowrap;
         word-break: break-all;
         word-wrap: break-word;
       }
+
       .description {
         font-size: 12px;
         font-weight: 300;
@@ -264,9 +297,11 @@
         overflow: hidden;
         text-overflow: ellipsis;
       }
+
       .published-at {
         font-size: 12px;
         font-weight: 300;
+
         a {
           font-size: 12px;
         }

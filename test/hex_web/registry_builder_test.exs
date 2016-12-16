@@ -68,9 +68,9 @@ defmodule HexWeb.RegistryBuilderTest do
 
     assert length(:ets.match_object(tid, :_)) == 9
 
-    assert [ {"decimal", [["0.0.1", "0.0.2"]]} ] = :ets.lookup(tid, "decimal")
+    assert [{"decimal", [["0.0.1", "0.0.2"]]}] = :ets.lookup(tid, "decimal")
 
-    assert [ {{"decimal", "0.0.1"}, [[], "", ["mix"]]} ] =
+    assert [{{"decimal", "0.0.1"}, [[], "", ["mix"]]}] =
            :ets.lookup(tid, {"decimal", "0.0.1"})
 
     assert [{"postgrex", [["0.0.2"]]}] =

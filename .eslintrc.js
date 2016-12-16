@@ -9,6 +9,9 @@ module.exports = {
     "jquery": true,
     "es6": true
   },
+  "globals": {
+    "hljs": false
+  },
   "rules": {
     "camelcase": 2,
     "comma-dangle": [2, "never"],

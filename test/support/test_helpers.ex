@@ -22,7 +22,7 @@ defmodule HexWeb.TestHelpers do
       {'VERSION', "3"},
       {'CHECKSUM', checksum},
       {'metadata.config', meta_string},
-      {'contents.tar.gz', contents} ]
+      {'contents.tar.gz', contents}]
     path = Path.join(@tmp, "#{meta[:name]}-#{meta[:version]}.tar")
     :ok = :erl_tar.create(path, files)
 

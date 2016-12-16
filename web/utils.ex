@@ -207,7 +207,7 @@ defmodule HexWeb.Utils do
   end
 
   def sign(payload, key) do
-    [entry | _ ] = :public_key.pem_decode(key)
+    [entry | _] = :public_key.pem_decode(key)
     key = :public_key.pem_entry_decode(entry)
     :public_key.sign(payload, :sha512, key)
   end

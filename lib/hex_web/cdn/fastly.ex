@@ -64,7 +64,7 @@ defmodule HexWeb.CDN.Fastly do
       {:error, reason} ->
         Logger.warn("Fastly API ERROR: #{inspect reason}")
         if times > 0,
-          do: retry(fun, times-1),
+          do: retry(fun, times - 1),
         else: {:error, reason}
       result ->
         result

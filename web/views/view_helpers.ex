@@ -14,7 +14,7 @@ defmodule HexWeb.ViewHelpers do
       |> Base.encode16(case: :lower)
     "https://www.gravatar.com/avatar/#{hash}?s=#{gravatar_size(size)}&d=retro"
   end
-  
+
   defp gravatar_size(:large), do: 440
   defp gravatar_size(:small), do: 80
 
@@ -98,7 +98,7 @@ defmodule HexWeb.ViewHelpers do
             end
           Enum.to_list(start..all_pages)
         true ->
-          Enum.to_list(page-2..page+2)
+          Enum.to_list((page - 2)..(page + 2))
       end
 
     %{prev: page != 1,
@@ -115,7 +115,7 @@ defmodule HexWeb.ViewHelpers do
   def present?(_),   do: true
 
   def text_length(text, length) when byte_size(text) > length do
-    :binary.part(text, 0, length-3) <> "..."
+    :binary.part(text, 0, length - 3) <> "..."
   end
 
   def text_length(text, _length) do

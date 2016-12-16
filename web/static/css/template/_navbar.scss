@@ -1,14 +1,14 @@
 .navbar {
   min-height: 70px;
-  margin-bottom: 0px;
+  margin-bottom: 0;
   background: #5c676d;
   border-bottom: #919ca2 1px solid;
 }
 
 .navbar-default .navbar-avatar {
   width: 40px;
-  border-radius: 100%;
   margin: 0 0 0 5px;
+  border-radius: 100%;
 }
 
 .nav.navbar-nav {
@@ -16,11 +16,13 @@
 }
 
 .navbar-default .navbar-nav > li > a {
-  color: $color-white;
+  @include font-size(16, 115);
+
   height: 70px;
-  @include font-size(16 , 115);
   padding-top: 0;
   padding-bottom: 0;
+  color: $color-white;
+
   &:hover {
     color: $color-white;
   }
@@ -28,37 +30,40 @@
 
 .navbar-default .navbar-form {
   @include general-mobile {
-    border-top: none;
+    padding: 7px 15px 10px;
+    border-top: 0;
     box-shadow: none;
-    padding: 7px 15px 10px 15px;
   }
-  input, button {
+
+  input,
+  button {
     // Vertical centering
     margin-top: 10px;
     margin-bottom: 10px;
 
     // Override bootstrap gradient style for navbar forms.
+    border-color: #fff;
     box-shadow: none;
     -webkit-box-shadow: none;
-    border-color: white;
   }
 
   button.btn {
-    background: $color-white;
     color: #adb3b6;
+    background: $color-white;
   }
 }
 
-.navbar-default .navbar-nav > li > a:hover, .navbar-default .navbar-nav > li > a:focus {
+.navbar-default .navbar-nav > li > a:hover,
+.navbar-default .navbar-nav > li > a:focus {
   color: $color-white;
 }
 
-.navbar-default .navbar-nav > .open > a, .navbar-default .navbar-nav > .open > a:hover, .navbar-default .navbar-nav > .open > a:focus {
+.navbar-default .navbar-nav > .open > a,
+.navbar-default .navbar-nav > .open > a:hover,
+.navbar-default .navbar-nav > .open > a:focus {
   background-color: #6c7479;
   color: $color-white;
 }
-
-
 
 .navbar-default .navbar-nav .open .dropdown-menu > li > a {
   @include general-mobile {
@@ -66,40 +71,39 @@
   }
 }
 
-// copied from bootstrap
 .dropdown-menu {
+  right: 0;
+  left: auto;
+  min-width: 200px;
+  background: #6c7479;
+  border: 0;
+  box-shadow: none;
+
+  // copied from bootstrap
   li .btn-link {
     display: block;
+    width: 100%; // custom
     padding: 3px 20px;
     clear: both;
     font-weight: normal;
     line-height: 1.42857143;
     color: #333;
+    text-align: left; // custom
     white-space: nowrap;
-
-    // custom
-    width: 100%;
-    text-align: left;
   }
+
+  // copied from bootstrap
   li .btn-link:hover,
   li .btn-link:focus {
     color: #262626;
     text-decoration: none;
     background-color: #f5f5f5;
   }
-}
 
-.dropdown-menu {
-  background: #6c7479;
-  border: none;
-  box-shadow: none;
-  right: 0px;
-  left: auto;
-  min-width: 200px;
-
-  li > a, li .btn-link {
-    color: $color-white;
+  li > a,
+  li .btn-link {
     font-size: 13px;
+    color: $color-white;
   }
 
   .divider {
@@ -107,9 +111,9 @@
   }
 
   .dropdown-header.menu-dropdown-header {
-    color: $color-white;
     font-size: 15px;
     font-weight: bold;
+    color: $color-white;
     text-transform: uppercase;
   }
 }

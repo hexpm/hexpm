@@ -1,39 +1,41 @@
 html {
-  min-height: 100%;
   position: relative;
+  min-height: 100%;
 }
 
 body {
-  font-family: $base-font-family;
-  @include font-size(16 , 30);
+  @include font-size(16, 30);
   padding-top: 70px;
   margin-bottom: 88px;
+  font-family: $base-font-family;
 }
 
 .browserupgrade {
-  margin: 0.2em 0;
-  background: #ccc;
+  padding: .2em 0;
+  margin: .2em 0;
   color: #000;
-  padding: 0.2em 0;
+  background: #ccc;
 }
 
-a, a:hover, a:focus {
+a,
+a:hover,
+a:focus {
   color: #ec485b;
 }
 
 .glyphicon {
   position: relative;
   top: 1px;
-  fill: currentColor;
   width: 14px;
   height: 14px;
+  fill: currentColor;
 }
 
 .stat-icon {
   float: left;
   height: 45px;
-  fill: currentColor;
   margin-right: 10px;
+  fill: currentColor;
 }
 
 .collapsing {
@@ -41,8 +43,8 @@ a, a:hover, a:focus {
 }
 
 .alert {
-  margin-bottom: 0px;
   margin-top: 20px;
+  margin-bottom: 0px;
 }
 
 .form-error {
@@ -65,16 +67,16 @@ input[type="checkbox"] {
 
 @include min-screen(768px) {
   .container {
-    max-width: 1000px;
     width: auto;
+    max-width: 1000px;
   }
 
   // Remove the padding we set earlier
   .header,
   .marketing,
   .footer {
-    padding-left: 0;
     padding-right: 0;
+    padding-left: 0;
   }
 
   // Remove the bottom border on the jumbotron for visual effect

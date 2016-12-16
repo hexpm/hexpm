@@ -1,24 +1,24 @@
 .page {
   h2 {
-    color: #714a94;
-    @include font-size(35 , 50);
-    font-weight: 300;
-    border-bottom: #cccccc 1px solid;
-    padding: 20px 0 20px 0;
+    @include font-size(35, 50);
+    padding: 20px 0;
     margin-bottom: 20px;
+    font-weight: 300;
+    color: #714a94;
+    border-bottom: #ccc 1px solid;
   }
 
   p {
-    color: #555555;
-    font-weight: 300;
-    @include font-size(16 , 35);
+    @include font-size(16, 35);
     margin-bottom: 20px;
+    font-weight: 300;
+    color: #555;
   }
 
   ol, li {
-    color: #555555;
+    @include font-size(16, 35);
     font-weight: 300;
-    @include font-size(16 , 35);
+    color: #555;
   }
 
   ul {

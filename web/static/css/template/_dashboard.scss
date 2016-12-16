@@ -1,5 +1,5 @@
 .list-group-item {
-  margin: 0 0 -1px 0 !important;
+  margin: 0 0 -1px !important;
 }
 
 .list-group-item:last-child {
@@ -25,18 +25,18 @@
     background-color: #fff;
 
     a {
-      color: #555;
       font-weight: bold;
+      color: #555;
       cursor: default;
     }
 
-    :before {
+    ::before {
+      content: "";
       position: absolute;
       top: 0;
       bottom: 0;
       left: 0;
       width: 2px;
-      content: "";
       background-color: #ec485b;
     }
   }
@@ -49,17 +49,17 @@
 }
 
 .dashboard p {
-  margin: 5px 0 0 0 !important;
+  margin: 5px 0 0 !important;
 }
 
 .dashboard small {
   font-weight: 300;
-  color: #555555;
+  color: #555;
 }
 
 .dashboard .email .panel .label {
   margin-left: 4px;
-  font-size: 0.7em;
+  font-size: .7em;
 }
 
 .dashboard .email .address {
@@ -70,7 +70,7 @@
   float: right;
 
   svg {
-    width: 0.9em;
+    width: .9em;
     fill: #ec485b;
   }
 
@@ -90,7 +90,7 @@
     float: right;
     margin-top: -1px;
     margin-left: 4px;
-    font-size: 0.7em;
+    font-size: .7em;
   }
 
   .form-inline input#email_email {
@@ -98,10 +98,12 @@
   }
 }
 
-.panel>.list-group .list-group-item, .panel>.panel-collapse>.list-group .list-group-item {
-    border-width: 1px 0;
-    border-radius: 0;
+.panel>.list-group .list-group-item,
+.panel>.panel-collapse>.list-group .list-group-item {
+  border-width: 1px 0;
+  border-radius: 0;
 }
+
 .list-group-item:first-child {
     border-top-left-radius: 4px;
     border-top-right-radius: 4px;

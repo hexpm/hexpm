@@ -42,11 +42,10 @@ defmodule HexWeb.AuthHelpers do
 
     case result do
       {:ok, {user, key, email}} ->
-        cond do
-          allow_unconfirmed || (email && email.verified) ->
-            {:ok, {user, key}}
-          true ->
-            {:error, :unconfirmed}
+        if allow_unconfirmed || (email && email.verified) do
+          {:ok, {user, key}}
+        else
+          {:error, :unconfirmed}
         end
       error ->
         error
