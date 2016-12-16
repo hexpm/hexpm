@@ -71,17 +71,22 @@
 
 <div class="clearfix"></div>
 
+<%= if @exact_match do %>
+  <div class="exact-match">
+    <h5>Exact Match:</h5>
+    <ul>
+      <%= render "_package.html", package: @exact_match, package_downloads: @downloads[@exact_match.id] %>
+    </ul>
+  </div>
+<% end %>
+
 <div class="package-list">
+  <%= if @exact_match do %>
+    <h5>Search Results:</h5>
+  <% end %>
   <ul>
     <%= for package <- @packages do %>
-    <li>
-      <div class="downloads-info">
-        <span class="download-count"><%= human_number_space(@downloads[package.id] || 0) %></span> <br>
-        downloads
-      </div>
-      <a href="<%= package_path(Endpoint, :show, package) %>"><%= package.name %></a> <span class="version"><%= package.latest_version %></span>
-      <p><%= text_length(package.meta.description, 140) %></p>
-    </li>
+      <%= render "_package.html", package: package, package_downloads: @downloads[package.id] %>
     <% end %>
   </ul>
 </div>
