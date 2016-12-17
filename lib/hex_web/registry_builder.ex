@@ -122,13 +122,19 @@ defmodule HexWeb.RegistryBuilder do
     :ets.insert(tid, {:"$$version$$", @version})
     :ets.insert(tid, {:"$$installs2$$", installs})
     :ets.insert(tid, packages)
-    :ets.insert(tid, releases)
+    :ets.insert(tid, trim_releases(releases))
     :ok = :ets.tab2file(tid, String.to_charlist(file))
     :ets.delete(tid)
 
     contents = File.read!(file) |> :zlib.gzip
     signature = contents |> sign |> Base.encode16(case: :lower)
     {contents, signature}
+  end
+
+  defp trim_releases(releases) do
+    Enum.map(releases, fn {key, [deps, checksum, tools, _retirement]} ->
+      {key, [deps, checksum, tools]}
+    end)
   end
 
   defp sign(contents) do
@@ -175,7 +181,7 @@ defmodule HexWeb.RegistryBuilder do
   defp build_package(name, versions, release_map) do
     releases =
       Enum.map(versions, fn version ->
-        [deps, checksum, _tools] = release_map[{name, version}]
+        [deps, checksum, _tools, retirement] = release_map[{name, version}]
         deps =
           Enum.map(deps, fn [dep, req, opt, app] ->
             map = %{package: dep, requirement: req || ">= 0.0.0"}
@@ -184,8 +190,19 @@ defmodule HexWeb.RegistryBuilder do
             map
           end)
 
-        checksum = checksum |> Base.decode16!
-        %{version: version, checksum: checksum, dependencies: deps}
+        release = %{
+          version: version,
+          checksum: Base.decode16!(checksum),
+          dependencies: deps
+        }
+
+        if retirement do
+          retire = %{reason: retirement_reason(retirement.status)}
+          retire = if retirement.message, do: Map.put(retire, :message, retirement.message), else: retire
+          Map.put(release, :retired, retire)
+        else
+          release
+        end
       end)
 
     %{releases: releases}
@@ -193,6 +210,12 @@ defmodule HexWeb.RegistryBuilder do
     |> sign_protobuf
     |> :zlib.gzip
   end
+
+  defp retirement_reason("other"), do: :RETIRED_OTHER
+  defp retirement_reason("invalid"), do: :RETIRED_INVALID
+  defp retirement_reason("security"), do: :RETIRED_SECURITY
+  defp retirement_reason("deprecated"), do: :RETIRED_DEPRECATED
+  defp retirement_reason("renamed"), do: :RETIRED_RENAMED
 
   defp upload_files(v1, v2) do
     objects = v2_objects(v2) ++ v1_objects(v1)
@@ -229,7 +252,7 @@ defmodule HexWeb.RegistryBuilder do
   end
 
   defp package_tuples(packages, releases) do
-    Enum.reduce(releases, %{}, fn {_, vsn, pkg_id, _, _}, map ->
+    Enum.reduce(releases, %{}, fn {_, vsn, pkg_id, _, _, _}, map ->
       case Map.fetch(packages, pkg_id) do
         {:ok, package} -> Map.update(map, package, [vsn], &[vsn|&1])
         :error -> map
@@ -250,11 +273,11 @@ defmodule HexWeb.RegistryBuilder do
   end
 
   defp release_tuples(packages, releases, requirements) do
-    Enum.flat_map(releases, fn {id, version, pkg_id, checksum, tools} ->
+    Enum.flat_map(releases, fn {id, version, pkg_id, checksum, tools, retirement} ->
       case Map.fetch(packages, pkg_id) do
         {:ok, package} ->
           deps = deps_list(requirements[id] || [], packages)
-          [{{package, to_string(version)}, [deps, checksum, tools]}]
+          [{{package, to_string(version)}, [deps, checksum, tools, retirement]}]
         :error ->
           []
       end
@@ -272,20 +295,22 @@ defmodule HexWeb.RegistryBuilder do
   end
 
   defp packages do
-    from(p in Package, select: {p.id, p.name})
+    from(p in Package,
+      select: {p.id, p.name})
     |> HexWeb.Repo.all
     |> Enum.into(%{})
   end
 
   defp releases do
-    from(r in Release, select: {r.id, r.version, r.package_id, r.checksum, fragment("?->'build_tools'", r.meta)})
+    from(r in Release,
+      select: {r.id, r.version, r.package_id, r.checksum, fragment("?->'build_tools'", r.meta), r.retirement})
     |> HexWeb.Repo.all
   end
 
   defp requirements do
     reqs =
       from(r in Requirement,
-           select: {r.release_id, r.dependency_id, r.app, r.requirement, r.optional})
+        select: {r.release_id, r.dependency_id, r.app, r.requirement, r.optional})
       |> HexWeb.Repo.all
 
     Enum.reduce(reqs, %{}, fn {rel_id, dep_id, app, req, opt}, map ->
