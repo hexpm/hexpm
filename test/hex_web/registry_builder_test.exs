@@ -123,7 +123,7 @@ defmodule HexWeb.RegistryBuilderTest do
     RegistryBuilder.full_build()
 
     release = Release.build(context.decimal, rel_meta(%{version: "0.0.3", app: "decimal", requirements: []}), "") |> HexWeb.Repo.insert!
-    Release.retire(release, %{retirement: %{status: "invalid", message: "message"}}) |> HexWeb.Repo.update!
+    Release.retire(release, %{retirement: %{reason: "invalid", message: "message"}}) |> HexWeb.Repo.update!
     RegistryBuilder.partial_build({:publish, "decimal"})
 
     tid = open_table()
