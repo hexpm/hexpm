@@ -73,12 +73,12 @@ defmodule HexWeb.PackageView do
   end
 
   def retirement_message(retirement) do
-    [ReleaseRetirement.status_text(retirement.status)] ++
+    [ReleaseRetirement.reason_text(retirement.reason)] ++
       if(retirement.message, do: [": ", retirement.message], else: [])
   end
 
   def retirement_html(retirement) do
-    [content_tag(:strong, ReleaseRetirement.status_text(retirement.status))] ++
+    [content_tag(:strong, ReleaseRetirement.reason_text(retirement.reason))] ++
       if(retirement.message, do: [": ", retirement.message], else: [])
   end
 end

@@ -197,7 +197,7 @@ defmodule HexWeb.RegistryBuilder do
         }
 
         if retirement do
-          retire = %{reason: retirement_reason(retirement.status)}
+          retire = %{reason: retirement_reason(retirement.reason)}
           retire = if retirement.message, do: Map.put(retire, :message, retirement.message), else: retire
           Map.put(release, :retired, retire)
         else
