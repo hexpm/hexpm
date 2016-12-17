@@ -8,6 +8,7 @@ defmodule HexWeb.PackageControllerTest do
     Package.build(eric, pkg_meta(%{name: "postgrex", description: "Postgrex is awesome"})) |> HexWeb.Repo.insert!
     Release.build(decimal, rel_meta(%{version: "0.0.1", app: "decimal"}), "") |> HexWeb.Repo.insert!
     Release.build(decimal, rel_meta(%{version: "0.0.2", app: "decimal"}), "") |> HexWeb.Repo.insert!
+    Release.build(decimal, rel_meta(%{version: "0.0.3-dev", app: "decimal"}), "") |> HexWeb.Repo.insert!
     :ok
   end
 

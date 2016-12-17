@@ -90,17 +90,42 @@ defmodule HexWeb.Release do
          select: {r.package_id, fragment("array_agg(?)", r.version)})
   end
 
-  def latest_version(nil), do: nil
-  def latest_version([]), do: nil
-  def latest_version(versions) do
-    Enum.reduce(versions, fn version, latest ->
-      if Version.compare(version, latest) == :lt do
+  def latest_version(nil, _opts), do: nil
+  def latest_version(releases, opts) do
+    only_stable? = Keyword.fetch!(opts, :only_stable)
+    unstable_fallback? = Keyword.get(opts, :unstable_fallback, false)
+
+    stable_releases = if only_stable? do
+      Enum.filter(releases, &(to_version(&1).pre == []))
+    else
+      releases
+    end
+
+    if stable_releases == [] and unstable_fallback? do
+      latest(releases)
+    else
+      latest(stable_releases)
+    end
+  end
+
+  defp latest([]), do: nil
+  defp latest(releases) do
+    Enum.reduce(releases, fn release, latest ->
+      if compare(release, latest) == :lt do
         latest
       else
-        version
+        release
       end
     end)
   end
+
+  defp compare(release1, release2) do
+    Version.compare(to_version(release1), to_version(release2))
+  end
+
+  defp to_version(%Release{version: version}), do: to_version(version)
+  defp to_version(%Version{} = version), do: version
+  defp to_version(version) when is_binary(version), do: Version.parse!(version)
 
   def all(package) do
     assoc(package, :releases)
