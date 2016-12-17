@@ -50,11 +50,14 @@ defmodule HexWeb.Releases do
 
   def publish_docs(package, release, files, body, [audit: audit_data]) do
     version        = to_string(release.version)
-    latest_version = from(r in Release.all(package), select: r.version, where: r.has_docs == true or r.version == ^version)
-                     |> Repo.all
-                     |> Enum.reject(fn(version) -> version.pre != [] end)
-                     |> Enum.sort(&Version.compare(&1, &2) == :gt)
-                     |> List.first
+    latest_version =
+      from(r in Release.all(package),
+        where: r.has_docs == true or r.version == ^version,
+        select: r.version)
+      |> Repo.all
+      |> Enum.reject(&(&1.pre != []))
+      |> Enum.sort(&Version.compare(&1, &2) == :gt)
+      |> List.first
 
     docs_for_latest_release = (latest_version != nil) && (release.version == latest_version)
 
@@ -102,16 +105,20 @@ defmodule HexWeb.Releases do
     params = %{"retirement" => params}
 
     Multi.new
+    |> Multi.run(:package, fn _ -> {:ok, package} end)
     |> Multi.update(:release, Release.retire(release, params))
     |> audit_retire(audit_data, package)
     |> Repo.transaction
+    |> publish_result
   end
 
   def unretire(package, release, [audit: audit_data]) do
     Multi.new
+    |> Multi.run(:package, fn _ -> {:ok, package} end)
     |> Multi.update(:release, Release.unretire(release))
     |> audit_unretire(audit_data, package)
     |> Repo.transaction
+    |> publish_result
   end
 
   defp publish_result({:ok, %{package: package}} = result) do

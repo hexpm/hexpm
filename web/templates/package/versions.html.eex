@@ -3,7 +3,7 @@
     <a href="<%= package_path(Endpoint, :show, @package, release, []) %>"><strong><%= release.version %></strong></a>
     <%= pretty_date(release.inserted_at) %>
 
-    <%= if retirement = release.retirement do %>
+    <%= if release.retirement do %>
       (<span class="version-retirement">retired</span>)
     <% else %>
       <%= if release.has_docs do %>

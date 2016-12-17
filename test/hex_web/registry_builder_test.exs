@@ -122,7 +122,8 @@ defmodule HexWeb.RegistryBuilderTest do
     test_data(context)
     RegistryBuilder.full_build()
 
-    Release.build(context.decimal, rel_meta(%{version: "0.0.3", app: "decimal", requirements: []}), "") |> HexWeb.Repo.insert!
+    release = Release.build(context.decimal, rel_meta(%{version: "0.0.3", app: "decimal", requirements: []}), "") |> HexWeb.Repo.insert!
+    Release.retire(release, %{retirement: %{status: "invalid", message: "message"}}) |> HexWeb.Repo.update!
     RegistryBuilder.partial_build({:publish, "decimal"})
 
     tid = open_table()
@@ -133,6 +134,10 @@ defmodule HexWeb.RegistryBuilderTest do
 
     decimal = v2_map("packages/decimal")
     assert length(decimal.releases) == 3
+    release = List.last(decimal.releases)
+    assert release.version == "0.0.3"
+    assert release.retired.reason == :RETIRED_INVALID
+    assert release.retired.message == "message"
   end
 
   test "partial build remove release", context do
