@@ -21,7 +21,7 @@ defmodule HexWeb.API.ReleaseView do
 
     retirement = if release.retirement do
       release.retirement
-      |> Map.take([:status, :message])
+      |> Map.take([:reason, :message])
     end
 
     entity =
