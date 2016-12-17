@@ -34,6 +34,7 @@ You are required to confirm your email to access your account, a confirmation em
 <ul>
   <li>Avoid using offensive or harassing package names, nicknames, or other identifiers that might detract from a friendly, safe, and welcoming environment for all.</li>
   <li>If you are providing functionality on top of an existing package, consider using that package name as a prefix. For example, if you want to add authentication to <a href="https://github.com/elixir-lang/plug">Plug</a>, consider calling your package <code>plug_auth</code> (or <code>plug_somename</code>) instead of <code>auth</code> (or <code>somename</code>).</li>
+  <li>Avoid namespace conflicts with existing packages. Plug owns the <code>Plug</code> namespace, if you have an authentication package for Plug use the namespace <code>PlugAuth</code> instead of <code>Plug.Auth</code>.</li>
 </ul>
 
 <p>
