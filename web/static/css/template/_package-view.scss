@@ -1,7 +1,7 @@
 .package-title {
   @include font-size(50, $base-line-height);
   padding: 20px 0 0;
-  color: #714a94;
+  color: $color-purple;
   word-wrap: break-word;
 
   a {

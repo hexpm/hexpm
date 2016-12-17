@@ -104,7 +104,6 @@
       width: 124px;
       height: 124px;
       margin-top: -62px;
-      background: #f3e8fc;
       border-radius: 50%;
 
       @include general-mobile {
@@ -137,7 +136,7 @@
 
     p {
       @include font-size(16, 40);
-      
+
       code {
         display: inline-block;
         font-weight: bold;
@@ -147,19 +146,19 @@
 }
 
 .elixir .side-box {
-  background: #714a94;
+  background: $color-purple;
 
   .lang-symbol {
-    background: #f3e8fc url("../images/elixir.png") center no-repeat;
+    background: $color-purple-light url("../images/elixir.png") center no-repeat;
     background-size: 52px;
 
     @include hdpi(2) {
-      background: #f3e8fc url("../images/elixir@2.png") center no-repeat;
+      background: $color-purple-light url("../images/elixir@2.png") center no-repeat;
       background-size: 52px;
     }
 
     @include hdpi(3) {
-      background: #f3e8fc url("../images/elixir@3.png") center no-repeat;
+      background: $color-purple-light url("../images/elixir@3.png") center no-repeat;
       background-size: 52px;
     }
 
@@ -170,19 +169,19 @@
 }
 
 .erlang .side-box {
-  background: #ec485b;
+  background: $color-erl-red;
 
   .lang-symbol {
-    background: #fee3e6 url("../images/erlang.png") center no-repeat;
+    background: $color-erl-red-light url("../images/erlang.png") center no-repeat;
     background-size: 66px;
 
     @include hdpi(2) {
-      background: #fee3e6 url("../images/erlang@2.png") center no-repeat;
+      background: $color-erl-red-light url("../images/erlang@2.png") center no-repeat;
       background-size: 66px;
     }
 
     @include hdpi(3) {
-      background: #fee3e6 url("../images/erlang@3.png") center no-repeat;
+      background: $color-erl-red-light url("../images/erlang@3.png") center no-repeat;
       background-size: 66px;
     }
 
