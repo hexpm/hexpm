@@ -48,9 +48,9 @@ defmodule HexWeb.PackageController do
 
       {release, type} =
         if version = params["version"] do
-          {Enum.find(releases, &(to_string(&1.version) == version)), :release}
+          {matching_release(releases, version), :release}
         else
-          {List.first(releases), :package}
+          {Release.latest_version(releases, only_stable: true), :package}
         end
 
       if release do
@@ -59,12 +59,16 @@ defmodule HexWeb.PackageController do
     end || not_found(conn)
   end
 
+  defp matching_release(releases, version) do
+    Enum.find(releases, &(to_string(&1.version) == version))
+  end
+
   defp package(conn, package, releases, release, type) do
     release = Releases.preload(release)
 
     docs_assigns =
       cond do
-        type == :package and Enum.any?(releases, fn(release) -> release.has_docs end) ->
+        type == :package and Enum.any?(releases, &(&1.has_docs)) ->
           [hexdocs_url: HexWeb.Utils.docs_url([package.name]),
            docs_tarball_url: HexWeb.Utils.docs_tarball_url(package, release)]
         type == :release and release.has_docs ->
