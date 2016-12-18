@@ -274,6 +274,8 @@ defmodule HexWeb.DashboardControllerTest do
   end
 
   test "resend verify email", c do
+    Bamboo.SentEmail.reset
+
     add_email(c.user, "new@mail.com")
 
     conn = build_conn()
@@ -283,8 +285,8 @@ defmodule HexWeb.DashboardControllerTest do
     assert redirected_to(conn) == "/dashboard/email"
     assert get_flash(conn, :info) =~ "verification email has been sent"
 
-    {subject, contents} = HexWeb.Mail.Local.read("new@mail.com")
-    assert subject =~ "Hex.pm"
-    assert contents =~ "email/verify?username=#{c.user.username}"
+    [email] = Bamboo.SentEmail.all
+    assert email.subject =~ "Hex.pm"
+    assert email.html_body =~ "email/verify?username=#{c.user.username}"
   end
 end
