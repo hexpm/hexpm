@@ -26,7 +26,7 @@ defmodule HexWeb.Packages do
     versions = Releases.package_versions(packages)
 
     Enum.map(packages, fn package ->
-      version = Release.latest_version(versions[package.id], only_stable: true)
+      version = Release.latest_version(versions[package.id], only_stable: true, unstable_fallback: true)
       %{package | latest_version: version}
     end)
   end

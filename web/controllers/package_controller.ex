@@ -50,7 +50,7 @@ defmodule HexWeb.PackageController do
         if version = params["version"] do
           {matching_release(releases, version), :release}
         else
-          {Release.latest_version(releases, only_stable: true), :package}
+          {Release.latest_version(releases, only_stable: true, unstable_fallback: true), :package}
         end
 
       if release do
