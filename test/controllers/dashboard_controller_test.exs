@@ -274,8 +274,6 @@ defmodule HexWeb.DashboardControllerTest do
   end
 
   test "resend verify email", c do
-    Bamboo.SentEmail.reset
-
     add_email(c.user, "new@mail.com")
 
     conn = build_conn()

@@ -20,8 +20,6 @@ defmodule HexWeb.API.UserControllerTest do
   end
 
   test "create user sends mails and requires confirmation" do
-    Bamboo.SentEmail.reset
-
     body = %{username: "name", email: "create_user@mail.com", password: "passpass"}
     conn = build_conn()
            |> put_req_header("content-type", "application/json")
@@ -57,8 +55,6 @@ defmodule HexWeb.API.UserControllerTest do
   end
 
   test "email is sent with reset_token when password is reset", c do
-    Bamboo.SentEmail.reset
-
     # initiate reset request
     conn = post(build_conn(), "api/users/#{c.user.username}/reset", %{})
     assert conn.status == 204

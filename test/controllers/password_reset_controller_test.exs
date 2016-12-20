@@ -12,8 +12,6 @@ defmodule HexWeb.PasswordResetControllerTest do
   end
 
   test "email is sent with reset_token when password is reset", c do
-    Bamboo.SentEmail.reset
-
     # initiate reset request
     conn = post(build_conn(), "password/reset", %{"username" => c.user.username})
     assert response(conn, 200) =~ "Reset your password"

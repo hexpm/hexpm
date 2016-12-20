@@ -53,8 +53,6 @@ defmodule HexWeb.API.OwnerControllerTest do
   end
 
   test "add package owner" do
-    Bamboo.SentEmail.reset
-
     eric = HexWeb.Repo.get_by!(User, username: "eric")
     jose = HexWeb.Repo.get_by!(User, username: "jose")
 
@@ -114,8 +112,6 @@ defmodule HexWeb.API.OwnerControllerTest do
   end
 
   test "delete package owner" do
-    Bamboo.SentEmail.reset
-
     eric = HexWeb.Repo.get_by!(User, username: "eric")
     jose = HexWeb.Repo.get_by!(User, username: "jose")
     package = HexWeb.Repo.get_by!(Package, name: "postgrex")
