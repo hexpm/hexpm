@@ -24,9 +24,19 @@ defmodule HexWeb.API.PackageView do
         release
         |> Map.take(params)
         |> Map.put(:url, api_release_url(Endpoint, :show, package, version))
+        |> if_value(release[:retirement], &load_retirement(&1, release.retirement))
       end)
 
     Map.put(entity, :releases, releases)
+  end
+
+  defp load_retirement(entity, retirement) do
+    retirement = %{
+      message: retirement.message,
+      reason: retirement.reason
+    }
+
+    Map.put(entity, :retirement, retirement)
   end
 
   defp load_downloads(entity, downloads) do
