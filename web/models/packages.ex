@@ -17,7 +17,7 @@ defmodule HexWeb.Packages do
   def preload(package) do
     package = Repo.preload(package, [
       :downloads,
-      releases: from(r in Release, select: map(r, [:version, :inserted_at, :updated_at]))
+      releases: from(r in Release, select: map(r, [:version, :inserted_at, :updated_at, :retirement]))
     ])
     update_in(package.releases, &Release.sort/1)
   end
