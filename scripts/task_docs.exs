@@ -42,7 +42,7 @@ defmodule HexWeb.Script.TaskDocs do
   defp get_docs(tasks) do
     Enum.flat_map(tasks, fn task ->
       name = Mix.Task.task_name(task)
-      if String.starts_with?(name, "hex") do
+      if String.starts_with?(name, "hex") && Mix.Task.shortdoc(task) do
         {_line, doc} = Code.get_docs(task, :moduledoc)
         if doc, do: [{name, to_html(doc)}]
       end || []
