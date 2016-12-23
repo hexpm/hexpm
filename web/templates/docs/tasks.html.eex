@@ -9,7 +9,7 @@
         <a class="anchor" id="hex"></a>
         hex
         <a href="#hex">
-          <svg aria-hidden="aria-hidden" class="glyphicon glyphicon-link pull-right" version="1.1" viewBox="0 0 1200 1200"><g transform="translate(0, 1200) scale(1, -1)"><path d="M776.5 1214q93.5 0 159.5 -66l141 -141q66 -66 66 -160q0 -42 -28 -95.5t-62 -87.5l-29 -29q-31 53 -77 99l-18 18l95 95l-247 248l-389 -389l212 -212l-105 -106l-19 18l-141 141q-66 66 -66 159t66 159l283 283q65 66 158.5 66zM600 706l105 105q10 -8 19 -17l141 -141 q66 -66 66 -159t-66 -159l-283 -283q-66 -66 -159 -66t-159 66l-141 141q-66 66 -66 159.5t66 159.5l55 55q29 -55 75 -102l18 -17l-95 -95l247 -248l389 389z"></g></svg>
+          <svg aria-hidden="aria-hidden" class="glyphicon glyphicon-link pull-right" version="1.1" viewBox="0 0 1200 1200"><g transform="translate(0, 1200) scale(1, -1)"><path d="M776.5 1214q93.5 0 159.5 -66l141 -141q66 -66 66 -160q0 -42 -28 -95.5t-62 -87.5l-29 -29q-31 53 -77 99l-18 18l95 95l-247 248l-389 -389l212 -212l-105 -106l-19 18l-141 141q-66 66 -66 159t66 159l283 283q65 66 158.5 66zM600 706l105 105q10 -8 19 -17l141 -141 q66 -66 66 -159t-66 -159l-283 -283q-66 -66 -159 -66t-159 66l-141 141q-66 66 -66 159.5t66 159.5l55 55q29 -55 75 -102l18 -17l-95 -95l247 -248l389 389z"></path></g></svg>
         </a>
       </h3>
     </div>
@@ -41,6 +41,9 @@ against the repository’s public key
 <li><code class="inline">HTTP_PROXY</code> / <code class="inline">HTTPS_PROXY</code> - Sets the URL to a HTTP(S) proxy, the
 environment variables can also be in lower case
 </li>
+<li><code class="inline">HEX_HTTP_CONCURRENCY</code> - Limits the number of concurrent HTTP requests in
+flight, (Default: 8)
+</li>
 </ul>
 
     </div>
@@ -53,7 +56,7 @@ environment variables can also be in lower case
         <a class="anchor" id="hex_build"></a>
         hex.build
         <a href="#hex_build">
-          <svg aria-hidden="aria-hidden" class="glyphicon glyphicon-link pull-right" version="1.1" viewBox="0 0 1200 1200"><g transform="translate(0, 1200) scale(1, -1)"><path d="M776.5 1214q93.5 0 159.5 -66l141 -141q66 -66 66 -160q0 -42 -28 -95.5t-62 -87.5l-29 -29q-31 53 -77 99l-18 18l95 95l-247 248l-389 -389l212 -212l-105 -106l-19 18l-141 141q-66 66 -66 159t66 159l283 283q65 66 158.5 66zM600 706l105 105q10 -8 19 -17l141 -141 q66 -66 66 -159t-66 -159l-283 -283q-66 -66 -159 -66t-159 66l-141 141q-66 66 -66 159.5t66 159.5l55 55q29 -55 75 -102l18 -17l-95 -95l247 -248l389 389z"></g></svg>
+          <svg aria-hidden="aria-hidden" class="glyphicon glyphicon-link pull-right" version="1.1" viewBox="0 0 1200 1200"><g transform="translate(0, 1200) scale(1, -1)"><path d="M776.5 1214q93.5 0 159.5 -66l141 -141q66 -66 66 -160q0 -42 -28 -95.5t-62 -87.5l-29 -29q-31 53 -77 99l-18 18l95 95l-247 248l-389 -389l212 -212l-105 -106l-19 18l-141 141q-66 66 -66 159t66 159l283 283q65 66 158.5 66zM600 706l105 105q10 -8 19 -17l141 -141 q66 -66 66 -159t-66 -159l-283 -283q-66 -66 -159 -66t-159 66l-141 141q-66 66 -66 159.5t66 159.5l55 55q29 -55 75 -102l18 -17l-95 -95l247 -248l389 389z"></path></g></svg>
         </a>
       </h3>
     </div>
@@ -73,7 +76,7 @@ to the repository. An app named <code class="inline">foo</code> at version <code
 </li>
 <li><p><code class="inline">:description</code> - Short description of the project.</p>
 </li>
-<li><code class="inline">:package</code> - Hex specific configuration (see Package configuration below).
+<li><p><code class="inline">:package</code> - Hex specific configuration (see Package configuration below).</p>
 </li>
 </ul>
 <h3>Dependencies</h3>
@@ -96,7 +99,7 @@ package.</p>
 </li>
 <li><p><code class="inline">:files</code> - List of files and directories to include in the package,
 can include wildcards. Defaults to <code class="inline">[&quot;lib&quot;, &quot;priv&quot;, &quot;mix.exs&quot;, &quot;README*&quot;,
-    &quot;readme*&quot;, &quot;LICENSE*&quot;, &quot;license*&quot;, &quot;CHANGELOG*&quot;, &quot;changelog*&quot;, &quot;src&quot;]</code>.</p>
+&quot;readme*&quot;, &quot;LICENSE*&quot;, &quot;license*&quot;, &quot;CHANGELOG*&quot;, &quot;changelog*&quot;, &quot;src&quot;]</code>.</p>
 </li>
 <li><p><code class="inline">:maintainers</code> - List of names and/or emails of maintainers.</p>
 </li>
@@ -104,11 +107,11 @@ can include wildcards. Defaults to <code class="inline">[&quot;lib&quot;, &quot;
 </li>
 <li><p><code class="inline">:links</code> - Map of links relevant to the package.</p>
 </li>
-<li><code class="inline">:build_tools</code> - List of build tools that can build the package. Hex will
+<li><p><code class="inline">:build_tools</code> - List of build tools that can build the package. Hex will
 try to automatically detect the build tools based on the files in the
 package. If a “rebar” or “rebar.config” file is present Hex will mark it
 as able to build with rebar. This detection can be overridden by setting
-this field.
+this field.</p>
 </li>
 </ul>
 
@@ -122,7 +125,7 @@ this field.
         <a class="anchor" id="hex_config"></a>
         hex.config
         <a href="#hex_config">
-          <svg aria-hidden="aria-hidden" class="glyphicon glyphicon-link pull-right" version="1.1" viewBox="0 0 1200 1200"><g transform="translate(0, 1200) scale(1, -1)"><path d="M776.5 1214q93.5 0 159.5 -66l141 -141q66 -66 66 -160q0 -42 -28 -95.5t-62 -87.5l-29 -29q-31 53 -77 99l-18 18l95 95l-247 248l-389 -389l212 -212l-105 -106l-19 18l-141 141q-66 66 -66 159t66 159l283 283q65 66 158.5 66zM600 706l105 105q10 -8 19 -17l141 -141 q66 -66 66 -159t-66 -159l-283 -283q-66 -66 -159 -66t-159 66l-141 141q-66 66 -66 159.5t66 159.5l55 55q29 -55 75 -102l18 -17l-95 -95l247 -248l389 389z"></g></svg>
+          <svg aria-hidden="aria-hidden" class="glyphicon glyphicon-link pull-right" version="1.1" viewBox="0 0 1200 1200"><g transform="translate(0, 1200) scale(1, -1)"><path d="M776.5 1214q93.5 0 159.5 -66l141 -141q66 -66 66 -160q0 -42 -28 -95.5t-62 -87.5l-29 -29q-31 53 -77 99l-18 18l95 95l-247 248l-389 -389l212 -212l-105 -106l-19 18l-141 141q-66 66 -66 159t66 159l283 283q65 66 158.5 66zM600 706l105 105q10 -8 19 -17l141 -141 q66 -66 66 -159t-66 -159l-283 -283q-66 -66 -159 -66t-159 66l-141 141q-66 66 -66 159.5t66 159.5l55 55q29 -55 75 -102l18 -17l-95 -95l247 -248l389 389z"></path></g></svg>
         </a>
       </h3>
     </div>
@@ -158,6 +161,9 @@ signature against the repository’s public key
 </li>
 <li><code class="inline">https_proxy</code> - HTTPS proxy server
 </li>
+<li><code class="inline">http_concurrency</code> - Limits the number of concurrent HTTP requests in
+flight, can be overridden by setting <code class="inline">HEX_HTTP_CONCURRENCY</code>
+</li>
 </ul>
 <h3>Command line options</h3>
 <ul>
@@ -175,20 +181,27 @@ signature against the repository’s public key
         <a class="anchor" id="hex_docs"></a>
         hex.docs
         <a href="#hex_docs">
-          <svg aria-hidden="aria-hidden" class="glyphicon glyphicon-link pull-right" version="1.1" viewBox="0 0 1200 1200"><g transform="translate(0, 1200) scale(1, -1)"><path d="M776.5 1214q93.5 0 159.5 -66l141 -141q66 -66 66 -160q0 -42 -28 -95.5t-62 -87.5l-29 -29q-31 53 -77 99l-18 18l95 95l-247 248l-389 -389l212 -212l-105 -106l-19 18l-141 141q-66 66 -66 159t66 159l283 283q65 66 158.5 66zM600 706l105 105q10 -8 19 -17l141 -141 q66 -66 66 -159t-66 -159l-283 -283q-66 -66 -159 -66t-159 66l-141 141q-66 66 -66 159.5t66 159.5l55 55q29 -55 75 -102l18 -17l-95 -95l247 -248l389 389z"></g></svg>
+          <svg aria-hidden="aria-hidden" class="glyphicon glyphicon-link pull-right" version="1.1" viewBox="0 0 1200 1200"><g transform="translate(0, 1200) scale(1, -1)"><path d="M776.5 1214q93.5 0 159.5 -66l141 -141q66 -66 66 -160q0 -42 -28 -95.5t-62 -87.5l-29 -29q-31 53 -77 99l-18 18l95 95l-247 248l-389 -389l212 -212l-105 -106l-19 18l-141 141q-66 66 -66 159t66 159l283 283q65 66 158.5 66zM600 706l105 105q10 -8 19 -17l141 -141 q66 -66 66 -159t-66 -159l-283 -283q-66 -66 -159 -66t-159 66l-141 141q-66 66 -66 159.5t66 159.5l55 55q29 -55 75 -102l18 -17l-95 -95l247 -248l389 389z"></path></g></svg>
         </a>
       </h3>
     </div>
     <div class="panel-body">
-      <p><em>Fetch or open documentation of a package</em></p>
-<pre><code>mix hex.docs fetch package &lt;version&gt;</code></pre>
+      <p><em>Fetch or open documentation of a package.</em></p>
+<pre><code>mix hex.docs fetch PACKAGE [VERSION]</code></pre>
 <p>It will retrieve and decompress the specified version of the documentation
 for a package. If you do not specify the <code class="inline">version</code> argument, this task will
 retrieve the latest documentation available in the mirror.</p>
-<pre><code>mix hex.docs open package &lt;version&gt;</code></pre>
+<pre><code>mix hex.docs open PACKAGE [VERSION]</code></pre>
+<h3>Command line options</h3>
+<ul>
+<li><code class="inline">--offline</code> - Open a local version available in your filesystem
+</li>
+<li><code class="inline">--module Some.Module</code> - Open a specified module documentation page inside desired package
+</li>
+</ul>
 <p>It will open the specified version of the documentation for a package in a
 Web browser. If you do not specify the <code class="inline">version</code> argument, this task will
-open the latest documentation available in your filesystem.</p>
+open the latest documentation.</p>
 
     </div>
   </div>
@@ -200,7 +213,7 @@ open the latest documentation available in your filesystem.</p>
         <a class="anchor" id="hex_info"></a>
         hex.info
         <a href="#hex_info">
-          <svg aria-hidden="aria-hidden" class="glyphicon glyphicon-link pull-right" version="1.1" viewBox="0 0 1200 1200"><g transform="translate(0, 1200) scale(1, -1)"><path d="M776.5 1214q93.5 0 159.5 -66l141 -141q66 -66 66 -160q0 -42 -28 -95.5t-62 -87.5l-29 -29q-31 53 -77 99l-18 18l95 95l-247 248l-389 -389l212 -212l-105 -106l-19 18l-141 141q-66 66 -66 159t66 159l283 283q65 66 158.5 66zM600 706l105 105q10 -8 19 -17l141 -141 q66 -66 66 -159t-66 -159l-283 -283q-66 -66 -159 -66t-159 66l-141 141q-66 66 -66 159.5t66 159.5l55 55q29 -55 75 -102l18 -17l-95 -95l247 -248l389 389z"></g></svg>
+          <svg aria-hidden="aria-hidden" class="glyphicon glyphicon-link pull-right" version="1.1" viewBox="0 0 1200 1200"><g transform="translate(0, 1200) scale(1, -1)"><path d="M776.5 1214q93.5 0 159.5 -66l141 -141q66 -66 66 -160q0 -42 -28 -95.5t-62 -87.5l-29 -29q-31 53 -77 99l-18 18l95 95l-247 248l-389 -389l212 -212l-105 -106l-19 18l-141 141q-66 66 -66 159t66 159l283 283q65 66 158.5 66zM600 706l105 105q10 -8 19 -17l141 -141 q66 -66 66 -159t-66 -159l-283 -283q-66 -66 -159 -66t-159 66l-141 141q-66 66 -66 159.5t66 159.5l55 55q29 -55 75 -102l18 -17l-95 -95l247 -248l389 389z"></path></g></svg>
         </a>
       </h3>
     </div>
@@ -224,7 +237,7 @@ remote Git URL and Git ref, and all package dependencies.</p>
         <a class="anchor" id="hex_key"></a>
         hex.key
         <a href="#hex_key">
-          <svg aria-hidden="aria-hidden" class="glyphicon glyphicon-link pull-right" version="1.1" viewBox="0 0 1200 1200"><g transform="translate(0, 1200) scale(1, -1)"><path d="M776.5 1214q93.5 0 159.5 -66l141 -141q66 -66 66 -160q0 -42 -28 -95.5t-62 -87.5l-29 -29q-31 53 -77 99l-18 18l95 95l-247 248l-389 -389l212 -212l-105 -106l-19 18l-141 141q-66 66 -66 159t66 159l283 283q65 66 158.5 66zM600 706l105 105q10 -8 19 -17l141 -141 q66 -66 66 -159t-66 -159l-283 -283q-66 -66 -159 -66t-159 66l-141 141q-66 66 -66 159.5t66 159.5l55 55q29 -55 75 -102l18 -17l-95 -95l247 -248l389 389z"></g></svg>
+          <svg aria-hidden="aria-hidden" class="glyphicon glyphicon-link pull-right" version="1.1" viewBox="0 0 1200 1200"><g transform="translate(0, 1200) scale(1, -1)"><path d="M776.5 1214q93.5 0 159.5 -66l141 -141q66 -66 66 -160q0 -42 -28 -95.5t-62 -87.5l-29 -29q-31 53 -77 99l-18 18l95 95l-247 248l-389 -389l212 -212l-105 -106l-19 18l-141 141q-66 66 -66 159t66 159l283 283q65 66 158.5 66zM600 706l105 105q10 -8 19 -17l141 -141 q66 -66 66 -159t-66 -159l-283 -283q-66 -66 -159 -66t-159 66l-141 141q-66 66 -66 159.5t66 159.5l55 55q29 -55 75 -102l18 -17l-95 -95l247 -248l389 389z"></path></g></svg>
         </a>
       </h3>
     </div>
@@ -250,7 +263,7 @@ remote Git URL and Git ref, and all package dependencies.</p>
         <a class="anchor" id="hex_outdated"></a>
         hex.outdated
         <a href="#hex_outdated">
-          <svg aria-hidden="aria-hidden" class="glyphicon glyphicon-link pull-right" version="1.1" viewBox="0 0 1200 1200"><g transform="translate(0, 1200) scale(1, -1)"><path d="M776.5 1214q93.5 0 159.5 -66l141 -141q66 -66 66 -160q0 -42 -28 -95.5t-62 -87.5l-29 -29q-31 53 -77 99l-18 18l95 95l-247 248l-389 -389l212 -212l-105 -106l-19 18l-141 141q-66 66 -66 159t66 159l283 283q65 66 158.5 66zM600 706l105 105q10 -8 19 -17l141 -141 q66 -66 66 -159t-66 -159l-283 -283q-66 -66 -159 -66t-159 66l-141 141q-66 66 -66 159.5t66 159.5l55 55q29 -55 75 -102l18 -17l-95 -95l247 -248l389 389z"></g></svg>
+          <svg aria-hidden="aria-hidden" class="glyphicon glyphicon-link pull-right" version="1.1" viewBox="0 0 1200 1200"><g transform="translate(0, 1200) scale(1, -1)"><path d="M776.5 1214q93.5 0 159.5 -66l141 -141q66 -66 66 -160q0 -42 -28 -95.5t-62 -87.5l-29 -29q-31 53 -77 99l-18 18l95 95l-247 248l-389 -389l212 -212l-105 -106l-19 18l-141 141q-66 66 -66 159t66 159l283 283q65 66 158.5 66zM600 706l105 105q10 -8 19 -17l141 -141 q66 -66 66 -159t-66 -159l-283 -283q-66 -66 -159 -66t-159 66l-141 141q-66 66 -66 159.5t66 159.5l55 55q29 -55 75 -102l18 -17l-95 -95l247 -248l389 389z"></path></g></svg>
         </a>
       </h3>
     </div>
@@ -281,7 +294,7 @@ to figure why a package isn’t updating when you run <code class="inline">mix d
         <a class="anchor" id="hex_owner"></a>
         hex.owner
         <a href="#hex_owner">
-          <svg aria-hidden="aria-hidden" class="glyphicon glyphicon-link pull-right" version="1.1" viewBox="0 0 1200 1200"><g transform="translate(0, 1200) scale(1, -1)"><path d="M776.5 1214q93.5 0 159.5 -66l141 -141q66 -66 66 -160q0 -42 -28 -95.5t-62 -87.5l-29 -29q-31 53 -77 99l-18 18l95 95l-247 248l-389 -389l212 -212l-105 -106l-19 18l-141 141q-66 66 -66 159t66 159l283 283q65 66 158.5 66zM600 706l105 105q10 -8 19 -17l141 -141 q66 -66 66 -159t-66 -159l-283 -283q-66 -66 -159 -66t-159 66l-141 141q-66 66 -66 159.5t66 159.5l55 55q29 -55 75 -102l18 -17l-95 -95l247 -248l389 389z"></g></svg>
+          <svg aria-hidden="aria-hidden" class="glyphicon glyphicon-link pull-right" version="1.1" viewBox="0 0 1200 1200"><g transform="translate(0, 1200) scale(1, -1)"><path d="M776.5 1214q93.5 0 159.5 -66l141 -141q66 -66 66 -160q0 -42 -28 -95.5t-62 -87.5l-29 -29q-31 53 -77 99l-18 18l95 95l-247 248l-389 -389l212 -212l-105 -106l-19 18l-141 141q-66 66 -66 159t66 159l283 283q65 66 158.5 66zM600 706l105 105q10 -8 19 -17l141 -141 q66 -66 66 -159t-66 -159l-283 -283q-66 -66 -159 -66t-159 66l-141 141q-66 66 -66 159.5t66 159.5l55 55q29 -55 75 -102l18 -17l-95 -95l247 -248l389 389z"></path></g></svg>
         </a>
       </h3>
     </div>
@@ -314,7 +327,7 @@ owner.</p>
         <a class="anchor" id="hex_public_keys"></a>
         hex.public_keys
         <a href="#hex_public_keys">
-          <svg aria-hidden="aria-hidden" class="glyphicon glyphicon-link pull-right" version="1.1" viewBox="0 0 1200 1200"><g transform="translate(0, 1200) scale(1, -1)"><path d="M776.5 1214q93.5 0 159.5 -66l141 -141q66 -66 66 -160q0 -42 -28 -95.5t-62 -87.5l-29 -29q-31 53 -77 99l-18 18l95 95l-247 248l-389 -389l212 -212l-105 -106l-19 18l-141 141q-66 66 -66 159t66 159l283 283q65 66 158.5 66zM600 706l105 105q10 -8 19 -17l141 -141 q66 -66 66 -159t-66 -159l-283 -283q-66 -66 -159 -66t-159 66l-141 141q-66 66 -66 159.5t66 159.5l55 55q29 -55 75 -102l18 -17l-95 -95l247 -248l389 389z"></g></svg>
+          <svg aria-hidden="aria-hidden" class="glyphicon glyphicon-link pull-right" version="1.1" viewBox="0 0 1200 1200"><g transform="translate(0, 1200) scale(1, -1)"><path d="M776.5 1214q93.5 0 159.5 -66l141 -141q66 -66 66 -160q0 -42 -28 -95.5t-62 -87.5l-29 -29q-31 53 -77 99l-18 18l95 95l-247 248l-389 -389l212 -212l-105 -106l-19 18l-141 141q-66 66 -66 159t66 159l283 283q65 66 158.5 66zM600 706l105 105q10 -8 19 -17l141 -141 q66 -66 66 -159t-66 -159l-283 -283q-66 -66 -159 -66t-159 66l-141 141q-66 66 -66 159.5t66 159.5l55 55q29 -55 75 -102l18 -17l-95 -95l247 -248l389 389z"></path></g></svg>
         </a>
       </h3>
     </div>
@@ -351,7 +364,7 @@ intended for automation in build systems like <code class="inline">make</code>
         <a class="anchor" id="hex_publish"></a>
         hex.publish
         <a href="#hex_publish">
-          <svg aria-hidden="aria-hidden" class="glyphicon glyphicon-link pull-right" version="1.1" viewBox="0 0 1200 1200"><g transform="translate(0, 1200) scale(1, -1)"><path d="M776.5 1214q93.5 0 159.5 -66l141 -141q66 -66 66 -160q0 -42 -28 -95.5t-62 -87.5l-29 -29q-31 53 -77 99l-18 18l95 95l-247 248l-389 -389l212 -212l-105 -106l-19 18l-141 141q-66 66 -66 159t66 159l283 283q65 66 158.5 66zM600 706l105 105q10 -8 19 -17l141 -141 q66 -66 66 -159t-66 -159l-283 -283q-66 -66 -159 -66t-159 66l-141 141q-66 66 -66 159.5t66 159.5l55 55q29 -55 75 -102l18 -17l-95 -95l247 -248l389 389z"></g></svg>
+          <svg aria-hidden="aria-hidden" class="glyphicon glyphicon-link pull-right" version="1.1" viewBox="0 0 1200 1200"><g transform="translate(0, 1200) scale(1, -1)"><path d="M776.5 1214q93.5 0 159.5 -66l141 -141q66 -66 66 -160q0 -42 -28 -95.5t-62 -87.5l-29 -29q-31 53 -77 99l-18 18l95 95l-247 248l-389 -389l212 -212l-105 -106l-19 18l-141 141q-66 66 -66 159t66 159l283 283q65 66 158.5 66zM600 706l105 105q10 -8 19 -17l141 -141 q66 -66 66 -159t-66 -159l-283 -283q-66 -66 -159 -66t-159 66l-141 141q-66 66 -66 159.5t66 159.5l55 55q29 -55 75 -102l18 -17l-95 -95l247 -248l389 389z"></path></g></svg>
         </a>
       </h3>
     </div>
@@ -370,7 +383,7 @@ version.</p>
 <p>Documentation will be generated by running the <code class="inline">mix docs</code> task. <code class="inline">ex_doc</code>
 provides this task by default, but any library can be used. Or an alias can be
 used to extend the documentation generation. The expected result of the task
-is the generated documentation located in the <code class="inline">docs/</code> directory with an
+is the generated documentation located in the <code class="inline">doc/</code> directory with an
 <code class="inline">index.html</code> file.</p>
 <p>Note that if you want to publish a new version of your package and its
 documentation in one step, you can use the following shorthand:</p>
@@ -378,8 +391,6 @@ documentation in one step, you can use the following shorthand:</p>
 <h3>Command line options</h3>
 <ul>
 <li><code class="inline">--revert VERSION</code> - Revert given version
-</li>
-<li><code class="inline">--canonical URL</code> - Specify the canonical URL for the documentation
 </li>
 </ul>
 <h3>Configuration</h3>
@@ -392,7 +403,7 @@ documentation in one step, you can use the following shorthand:</p>
 </li>
 <li><p><code class="inline">:description</code> - Short description of the project.</p>
 </li>
-<li><code class="inline">:package</code> - Hex specific configuration (see Package configuration below).
+<li><p><code class="inline">:package</code> - Hex specific configuration (see Package configuration below).</p>
 </li>
 </ul>
 <h3>Dependencies</h3>
@@ -416,7 +427,7 @@ recommended to do so.</p>
 </li>
 <li><p><code class="inline">:files</code> - List of files and directories to include in the package,
 can include wildcards. Defaults to <code class="inline">[&quot;lib&quot;, &quot;priv&quot;, &quot;mix.exs&quot;, &quot;README*&quot;,
-    &quot;readme*&quot;, &quot;LICENSE*&quot;, &quot;license*&quot;, &quot;CHANGELOG*&quot;, &quot;changelog*&quot;, &quot;src&quot;]</code>.</p>
+&quot;readme*&quot;, &quot;LICENSE*&quot;, &quot;license*&quot;, &quot;CHANGELOG*&quot;, &quot;changelog*&quot;, &quot;src&quot;]</code>.</p>
 </li>
 <li><p><code class="inline">:maintainers</code> - List of names and/or emails of maintainers.</p>
 </li>
@@ -424,11 +435,11 @@ can include wildcards. Defaults to <code class="inline">[&quot;lib&quot;, &quot;
 </li>
 <li><p><code class="inline">:links</code> - Map of links relevant to the package.</p>
 </li>
-<li><code class="inline">:build_tools</code> - List of build tools that can build the package. Hex will
+<li><p><code class="inline">:build_tools</code> - List of build tools that can build the package. Hex will
 try to automatically detect the build tools, it will do this based on the
 files in the package. If a “rebar” or “rebar.config” file is present Hex
 will mark it as able to build with rebar. This detection can be overridden
-by setting this field.
+by setting this field.</p>
 </li>
 </ul>
 
@@ -439,24 +450,43 @@ by setting this field.
   <div class="panel panel-default">
     <div class="panel-heading">
       <h3 class="panel-title">
-        <a class="anchor" id="hex_registry"></a>
-        hex.registry
-        <a href="#hex_registry">
-          <svg aria-hidden="aria-hidden" class="glyphicon glyphicon-link pull-right" version="1.1" viewBox="0 0 1200 1200"><g transform="translate(0, 1200) scale(1, -1)"><path d="M776.5 1214q93.5 0 159.5 -66l141 -141q66 -66 66 -160q0 -42 -28 -95.5t-62 -87.5l-29 -29q-31 53 -77 99l-18 18l95 95l-247 248l-389 -389l212 -212l-105 -106l-19 18l-141 141q-66 66 -66 159t66 159l283 283q65 66 158.5 66zM600 706l105 105q10 -8 19 -17l141 -141 q66 -66 66 -159t-66 -159l-283 -283q-66 -66 -159 -66t-159 66l-141 141q-66 66 -66 159.5t66 159.5l55 55q29 -55 75 -102l18 -17l-95 -95l247 -248l389 389z"></g></svg>
+        <a class="anchor" id="hex_retire"></a>
+        hex.retire
+        <a href="#hex_retire">
+          <svg aria-hidden="aria-hidden" class="glyphicon glyphicon-link pull-right" version="1.1" viewBox="0 0 1200 1200"><g transform="translate(0, 1200) scale(1, -1)"><path d="M776.5 1214q93.5 0 159.5 -66l141 -141q66 -66 66 -160q0 -42 -28 -95.5t-62 -87.5l-29 -29q-31 53 -77 99l-18 18l95 95l-247 248l-389 -389l212 -212l-105 -106l-19 18l-141 141q-66 66 -66 159t66 159l283 283q65 66 158.5 66zM600 706l105 105q10 -8 19 -17l141 -141 q66 -66 66 -159t-66 -159l-283 -283q-66 -66 -159 -66t-159 66l-141 141q-66 66 -66 159.5t66 159.5l55 55q29 -55 75 -102l18 -17l-95 -95l247 -248l389 389z"></path></g></svg>
         </a>
       </h3>
     </div>
     <div class="panel-body">
-      <p><em>Tasks for working with the locally cached registry file.</em></p>
-<h4>Fetch registry</h4>
-<p>Updates the locally cached registry file.</p>
-<pre><code>mix hex.registry fetch</code></pre>
-<h4>Dump registry</h4>
-<p>Copies the cached registry file to the given path.</p>
-<pre><code>mix hex.registry dump &lt;path&gt;</code></pre>
-<h4>Load registry</h4>
-<p>Copies given regsitry file to the cache.</p>
-<pre><code>mix hex.registry load &lt;path&gt;</code></pre>
+      <p><em>Retires a package version.</em></p>
+<pre><code>mix hex.retire PACKAGE VERSION REASON
+
+mix hex.retire PACKAGE VERSION --unretire</code></pre>
+<p>Mark a package as retired when you no longer recommend it’s usage. A retired
+is still resolvable and usable but it will be flagged as retired in the
+repository and a message will be displayed to users when they use the package.</p>
+<h3>Retirement reasons</h3>
+<ul>
+<li><strong>renamed</strong> - The package has been renamed, including the new package name
+in the message
+</li>
+<li><strong>deprecated</strong> - The package has been deprecated, if there’s a replacing
+package include it in the message
+</li>
+<li><strong>security</strong> - There are security issues with this package
+</li>
+<li><strong>invalid</strong> - The package is invalid, for example it does not compile correctly
+</li>
+<li><strong>other</strong> - Any other reason not included above, clarify the reason in
+the message
+</li>
+</ul>
+<h3>Command line options</h3>
+<ul>
+<li><code class="inline">--message &quot;MESSAGE&quot;</code> - Optional message (up to 140 characters) clarifying
+the retirement reason
+</li>
+</ul>
 
     </div>
   </div>
@@ -468,7 +498,7 @@ by setting this field.
         <a class="anchor" id="hex_search"></a>
         hex.search
         <a href="#hex_search">
-          <svg aria-hidden="aria-hidden" class="glyphicon glyphicon-link pull-right" version="1.1" viewBox="0 0 1200 1200"><g transform="translate(0, 1200) scale(1, -1)"><path d="M776.5 1214q93.5 0 159.5 -66l141 -141q66 -66 66 -160q0 -42 -28 -95.5t-62 -87.5l-29 -29q-31 53 -77 99l-18 18l95 95l-247 248l-389 -389l212 -212l-105 -106l-19 18l-141 141q-66 66 -66 159t66 159l283 283q65 66 158.5 66zM600 706l105 105q10 -8 19 -17l141 -141 q66 -66 66 -159t-66 -159l-283 -283q-66 -66 -159 -66t-159 66l-141 141q-66 66 -66 159.5t66 159.5l55 55q29 -55 75 -102l18 -17l-95 -95l247 -248l389 389z"></g></svg>
+          <svg aria-hidden="aria-hidden" class="glyphicon glyphicon-link pull-right" version="1.1" viewBox="0 0 1200 1200"><g transform="translate(0, 1200) scale(1, -1)"><path d="M776.5 1214q93.5 0 159.5 -66l141 -141q66 -66 66 -160q0 -42 -28 -95.5t-62 -87.5l-29 -29q-31 53 -77 99l-18 18l95 95l-247 248l-389 -389l212 -212l-105 -106l-19 18l-141 141q-66 66 -66 159t66 159l283 283q65 66 158.5 66zM600 706l105 105q10 -8 19 -17l141 -141 q66 -66 66 -159t-66 -159l-283 -283q-66 -66 -159 -66t-159 66l-141 141q-66 66 -66 159.5t66 159.5l55 55q29 -55 75 -102l18 -17l-95 -95l247 -248l389 389z"></path></g></svg>
         </a>
       </h3>
     </div>
@@ -486,7 +516,7 @@ by setting this field.
         <a class="anchor" id="hex_user"></a>
         hex.user
         <a href="#hex_user">
-          <svg aria-hidden="aria-hidden" class="glyphicon glyphicon-link pull-right" version="1.1" viewBox="0 0 1200 1200"><g transform="translate(0, 1200) scale(1, -1)"><path d="M776.5 1214q93.5 0 159.5 -66l141 -141q66 -66 66 -160q0 -42 -28 -95.5t-62 -87.5l-29 -29q-31 53 -77 99l-18 18l95 95l-247 248l-389 -389l212 -212l-105 -106l-19 18l-141 141q-66 66 -66 159t66 159l283 283q65 66 158.5 66zM600 706l105 105q10 -8 19 -17l141 -141 q66 -66 66 -159t-66 -159l-283 -283q-66 -66 -159 -66t-159 66l-141 141q-66 66 -66 159.5t66 159.5l55 55q29 -55 75 -102l18 -17l-95 -95l247 -248l389 389z"></g></svg>
+          <svg aria-hidden="aria-hidden" class="glyphicon glyphicon-link pull-right" version="1.1" viewBox="0 0 1200 1200"><g transform="translate(0, 1200) scale(1, -1)"><path d="M776.5 1214q93.5 0 159.5 -66l141 -141q66 -66 66 -160q0 -42 -28 -95.5t-62 -87.5l-29 -29q-31 53 -77 99l-18 18l95 95l-247 248l-389 -389l212 -212l-105 -106l-19 18l-141 141q-66 66 -66 159t66 159l283 283q65 66 158.5 66zM600 706l105 105q10 -8 19 -17l141 -141 q66 -66 66 -159t-66 -159l-283 -283q-66 -66 -159 -66t-159 66l-141 141q-66 66 -66 159.5t66 159.5l55 55q29 -55 75 -102l18 -17l-95 -95l247 -248l389 389z"></path></g></svg>
         </a>
       </h3>
     </div>
@@ -515,4 +545,3 @@ Hex config.</p>
 
     </div>
   </div>
-
