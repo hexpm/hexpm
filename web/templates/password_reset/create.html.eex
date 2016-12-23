@@ -2,6 +2,8 @@
   <div class="col-md-8 col-md-offset-2">
     <h2>Reset your password</h2>
 
-    <p>You should receive an email shortly with a link to reset your password.</p>
+    <p>
+      If this account has been registered in Hex, you should receive an email shortly with a link to reset your password.
+    </p>
   </div>
 </div>
