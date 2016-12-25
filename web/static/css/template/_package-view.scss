@@ -1,5 +1,5 @@
 .package-title {
-  @include font-size(50, $base-line-height);
+  @include font-size(50);
   padding: 20px 0 0;
   color: $color-purple;
   word-wrap: break-word;
@@ -143,10 +143,12 @@
   list-style: none;
 
   li {
-    @include font-size(18, $base-line-height);
+    @include font-size(18);
     margin: 0 0 10px;
+    overflow: hidden;
     font-weight: 300;
     color: #000;
+    text-overflow: ellipsis;
   }
 }
 
