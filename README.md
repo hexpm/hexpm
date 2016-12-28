@@ -28,6 +28,10 @@ ALTER USER postgres PASSWORD 'postgres';
 CREATE DATABASE hexweb_dev;
 GRANT ALL PRIVILEGES ON DATABASE hexweb_dev TO postgres;
 ALTER USER postgres WITH SUPERUSER;
+
+-- if you also want to setup the test database
+CREATE DATABASE hexweb_test;
+GRANT ALL PRIVILEGES ON DATABASE hexweb_test TO postgres;
 ```
 
 If you want to use another database, user or password, you can specify the
