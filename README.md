@@ -32,6 +32,7 @@ ALTER USER postgres WITH SUPERUSER;
 -- if you also want to setup the test database
 CREATE DATABASE hexweb_test;
 GRANT ALL PRIVILEGES ON DATABASE hexweb_test TO postgres;
+ALTER DATABASE hexweb_test SET timezone TO 'UTC';
 ```
 
 If you want to use another database, user or password, you can specify the
