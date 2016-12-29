@@ -61,7 +61,7 @@ config :hex_web, HexWeb.Mailer,
   username: System.get_env("HEX_SES_USERNAME"),
   password: System.get_env("HEX_SES_PASSWORD"),
   tls: :always,
-  ssl: true,
+  ssl: false,
   retries: 1
 
 config :phoenix, :template_engines,
