@@ -6,6 +6,8 @@ cdn   = if System.get_env("HEX_FASTLY_KEY"), do: HexWeb.CDN.Fastly, else: HexWeb
 logs_buckets = if value = System.get_env("HEX_LOGS_BUCKETS"),
                  do: value |> String.split(";") |> Enum.map(&String.split(&1, ","))
 
+smtp_port = String.to_integer(System.get_env("HEX_SES_PORT") || "587")
+
 config :hex_web,
   user_confirm:   true,
   user_agent_req: true,
@@ -55,7 +57,7 @@ config :hex_web, HexWeb.Endpoint,
 config :hex_web, HexWeb.Mailer,
   adapter: Bamboo.SMTPAdapter,
   server: System.get_env("HEX_SES_ENDPOINT") || "email-smtp.us-west-2.amazonaws.com",
-  port: System.get_env("HEX_SES_PORT") || "587",
+  port: smtp_port,
   username: System.get_env("HEX_SES_USERNAME"),
   password: System.get_env("HEX_SES_PASSWORD"),
   tls: :always,
