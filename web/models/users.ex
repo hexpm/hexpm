@@ -137,7 +137,7 @@ defmodule HexWeb.Users do
     case Repo.transaction(multi) do
       {:ok, %{email: email}} ->
         user = with_emails(%{user | emails: %Ecto.Association.NotLoaded{}})
-        Mail.verification(user, email) |> Mailer.deliver_now_throttled(user, email)
+        Mail.verification(user, email) |> Mailer.deliver_now_throttled
         {:ok, user}
       {:error, :email, changeset, _} ->
         {:error, changeset}
