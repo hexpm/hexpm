@@ -283,8 +283,11 @@ defmodule HexWeb.DashboardControllerTest do
     assert redirected_to(conn) == "/dashboard/email"
     assert get_flash(conn, :info) =~ "verification email has been sent"
 
-    [email] = Bamboo.SentEmail.all
-    assert email.subject =~ "Hex.pm"
-    assert email.html_body =~ "email/verify?username=#{c.user.username}"
+    [email_one, email_two] = Bamboo.SentEmail.all
+    assert email_one.subject =~ "Hex.pm"
+    assert email_one.html_body =~ "email/verify?username=#{c.user.username}"
+
+    assert email_two.subject =~ "Hex.pm"
+    assert email_two.html_body =~ "email/verify?username=#{c.user.username}"
   end
 end

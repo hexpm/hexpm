@@ -72,8 +72,8 @@ defmodule HexWeb.API.OwnerControllerTest do
     emails_first = assoc(first, :emails) |> HexWeb.Repo.all
     emails_second = assoc(second, :emails) |> HexWeb.Repo.all
 
-    assert {first.username, hd(emails_first).email} in email.to
-    assert {second.username, hd(emails_second).email} in email.to
+    assert [{first.username, hd(emails_first).email}] in email.to
+    assert [{second.username, hd(emails_second).email}] in email.to
 
     log = HexWeb.Repo.one!(HexWeb.AuditLog)
     assert log.actor_id == eric.id
@@ -130,8 +130,8 @@ defmodule HexWeb.API.OwnerControllerTest do
     eric_emails = assoc(eric, :emails) |> HexWeb.Repo.all
     jose_emails = assoc(jose, :emails) |> HexWeb.Repo.all
 
-    assert {eric.username, hd(eric_emails).email} in email.to
-    assert {jose.username, hd(jose_emails).email} in email.to
+    assert [{eric.username, hd(eric_emails).email}] in email.to
+    assert [{jose.username, hd(jose_emails).email}] in email.to
 
     log = HexWeb.Repo.one!(HexWeb.AuditLog)
     assert log.actor_id == eric.id
