@@ -1,5 +1,6 @@
 defmodule HexWeb.API.OwnerControllerTest do
   use HexWeb.ConnCase, async: true
+  use Bamboo.Test
 
   alias HexWeb.User
   alias HexWeb.Package
@@ -65,18 +66,19 @@ defmodule HexWeb.API.OwnerControllerTest do
     assert first.username in ["jose", "eric"]
     assert second.username in ["jose", "eric"]
 
+    [email] = Bamboo.SentEmail.all
+    assert email.subject =~ "Hex.pm"
+    assert email.html_body =~ "jose (jose@mail.com) has been added as an owner to package postgrex."
+    emails_first = assoc(first, :emails) |> HexWeb.Repo.all
+    emails_second = assoc(second, :emails) |> HexWeb.Repo.all
+
+    assert [{first.username, hd(emails_first).email}] in email.to
+    assert [{second.username, hd(emails_second).email}] in email.to
+
     log = HexWeb.Repo.one!(HexWeb.AuditLog)
     assert log.actor_id == eric.id
     assert log.action == "owner.add"
     assert %{"package" => %{"name" => "postgrex"}, "user" => %{"username" => "jose"}} = log.params
-
-    {subject, contents} = HexWeb.Mail.Local.read("eric@mail.com")
-    assert subject =~ "Hex.pm"
-    assert contents =~ "jose (jose@mail.com) has been added as an owner to package postgrex."
-
-    {subject, contents} = HexWeb.Mail.Local.read("jose@mail.com")
-    assert subject =~ "Hex.pm"
-    assert contents =~ "jose (jose@mail.com) has been added as an owner to package postgrex."
   end
 
   test "add unknown user package owner" do
@@ -121,18 +123,21 @@ defmodule HexWeb.API.OwnerControllerTest do
     assert conn.status == 204
     assert [%User{username: "eric"}] = assoc(package, :owners) |> HexWeb.Repo.all
 
+    [email] = Bamboo.SentEmail.all
+    assert email.subject =~ "Hex.pm"
+    assert email.html_body =~ "jose (jose@mail.com) has been removed from owners of package postgrex."
+
+    eric_emails = assoc(eric, :emails) |> HexWeb.Repo.all
+    jose_emails = assoc(jose, :emails) |> HexWeb.Repo.all
+
+    assert [{eric.username, hd(eric_emails).email}] in email.to
+    assert [{jose.username, hd(jose_emails).email}] in email.to
+
     log = HexWeb.Repo.one!(HexWeb.AuditLog)
     assert log.actor_id == eric.id
     assert log.action == "owner.remove"
     assert %{"package" => %{"name" => "postgrex"}, "user" => %{"username" => "jose"}} = log.params
 
-    {subject, contents} = HexWeb.Mail.Local.read("eric@mail.com")
-    assert subject =~ "Hex.pm"
-    assert contents =~ "jose (jose@mail.com) has been removed from owners of package postgrex."
-
-    {subject, contents} = HexWeb.Mail.Local.read("jose@mail.com")
-    assert subject =~ "Hex.pm"
-    assert contents =~ "jose (jose@mail.com) has been removed from owners of package postgrex."
   end
 
   test "delete package owner authorizes" do

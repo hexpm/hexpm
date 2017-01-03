@@ -41,6 +41,9 @@ defmodule HexWeb.Web do
       alias HexWeb.Repo
       alias Ecto.Multi
 
+      alias HexWeb.Mailer
+      alias HexWeb.Mail
+
       HexWeb.Web.shared
     end
   end

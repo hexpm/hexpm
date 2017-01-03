@@ -27,11 +27,11 @@ defmodule HexWeb.API.UserControllerTest do
 
     assert conn.status == 201
     user = HexWeb.Repo.get_by!(User, username: "name") |> HexWeb.Repo.preload(:emails)
-    email = hd(user.emails)
+    user_email = hd(user.emails)
 
-    {subject, contents} = HexWeb.Mail.Local.read("create_user@mail.com")
-    assert subject =~ "Hex.pm"
-    assert contents =~ "email/verify?username=name&email=#{URI.encode_www_form(email.email)}&key=#{email.verification_key}"
+    [email] = Bamboo.SentEmail.all
+    assert email.subject =~ "Hex.pm"
+    assert email.html_body =~ "email/verify?username=name&email=#{URI.encode_www_form(user_email.email)}&key=#{user_email.verification_key}"
 
     meta = %{name: "ecto", version: "1.0.0", description: "Domain-specific language."}
     body = create_tar(meta, [])
@@ -42,7 +42,7 @@ defmodule HexWeb.API.UserControllerTest do
 
     assert json_response(conn, 403)["message"] == "email not verified"
 
-    conn = get(build_conn(), "email/verify?username=name&email=#{URI.encode_www_form(email.email)}&key=#{email.verification_key}")
+    conn = get(build_conn(), "email/verify?username=name&email=#{URI.encode_www_form(user_email.email)}&key=#{user_email.verification_key}")
     assert redirected_to(conn) == "/"
     assert get_flash(conn, :info) =~ "verified"
 
@@ -61,10 +61,10 @@ defmodule HexWeb.API.UserControllerTest do
 
     # check email was sent with correct token
     user = HexWeb.Repo.get_by!(User, username: c.user.username) |> HexWeb.Repo.preload(:emails)
-    email = hd(c.user.emails).email
-    {subject, contents} = HexWeb.Mail.Local.read(email)
-    assert subject =~ "Hex.pm"
-    assert contents =~ user.reset_key
+
+    [email] = Bamboo.SentEmail.all
+    assert email.subject =~ "Hex.pm"
+    assert email.html_body =~ "#{user.reset_key}"
 
     # check reset will succeed
     assert User.password_reset?(user, user.reset_key) == true

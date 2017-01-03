@@ -1,11 +1,12 @@
 use Mix.Config
 
 store = if System.get_env("HEX_S3_BUCKET"), do: HexWeb.Store.S3, else: HexWeb.Store.Local
-email = if System.get_env("HEX_SES_USERNAME"), do: HexWeb.Mail.SES, else: HexWeb.Mail.Local
 cdn   = if System.get_env("HEX_FASTLY_KEY"), do: HexWeb.CDN.Fastly, else: HexWeb.CDN.Local
 
 logs_buckets = if value = System.get_env("HEX_LOGS_BUCKETS"),
                  do: value |> String.split(";") |> Enum.map(&String.split(&1, ","))
+
+smtp_port = String.to_integer(System.get_env("HEX_SES_PORT") || "587")
 
 config :hex_web,
   user_confirm:   true,
@@ -20,19 +21,7 @@ config :hex_web,
   cookie_encr_salt: "TZDiyTeFQ819hsC3",
 
   store_impl:   store,
-  s3_url:       System.get_env("HEX_S3_URL") || "https://s3.amazonaws.com",
-  s3_bucket:    System.get_env("HEX_S3_BUCKET"),
-  docs_bucket:  System.get_env("HEX_DOCS_BUCKET"),
-  logs_buckets: logs_buckets,
-  docs_url:     System.get_env("HEX_DOCS_URL"),
-  cdn_url:      System.get_env("HEX_CDN_URL"),
-
-  email_impl:   email,
   email_host:   System.get_env("HEX_EMAIL_HOST"),
-  ses_endpoint: System.get_env("HEX_SES_ENDPOINT") || "email-smtp.us-west-2.amazonaws.com",
-  ses_port:     System.get_env("HEX_SES_PORT") || "587",
-  ses_user:     System.get_env("HEX_SES_USERNAME"),
-  ses_pass:     System.get_env("HEX_SES_PASSWORD"),
   ses_rate:     System.get_env("HEX_SES_RATE") || "1000",
 
   cdn_impl:       cdn,
@@ -64,6 +53,16 @@ config :hex_web, HexWeb.Endpoint,
   root: Path.dirname(__DIR__),
   secret_key_base: "Cc2cUvbm9x/uPD01xnKmpmU93mgZuht5cTejKf/Z2x0MmfqE1ZgHJ1/hSZwd8u4L",
   render_errors: [accepts: ~w(html json elixir erlang)]
+
+config :hex_web, HexWeb.Mailer,
+  adapter: Bamboo.SMTPAdapter,
+  server: System.get_env("HEX_SES_ENDPOINT") || "email-smtp.us-west-2.amazonaws.com",
+  port: smtp_port,
+  username: System.get_env("HEX_SES_USERNAME"),
+  password: System.get_env("HEX_SES_PASSWORD"),
+  tls: :always,
+  ssl: false,
+  retries: 1
 
 config :phoenix, :template_engines,
   md: HexWeb.MarkdownEngine

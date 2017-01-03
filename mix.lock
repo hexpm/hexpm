@@ -1,4 +1,6 @@
-%{"certifi": {:hex, :certifi, "0.7.0", "861a57f3808f7eb0c2d1802afeaae0fa5de813b0df0979153cbafcd853ababaf", [:rebar3], []},
+%{"bamboo": {:hex, :bamboo, "0.7.0", "2722e395a396dfedc12d300c900f65b216f7d7bf9d430c5dd0235690997878b7", [:mix], [{:httpoison, "~> 0.9", [hex: :httpoison, optional: false]}, {:plug, "~> 1.0", [hex: :plug, optional: false]}, {:poison, ">= 1.5.0", [hex: :poison, optional: false]}]},
+  "bamboo_smtp": {:hex, :bamboo_smtp, "1.2.1", "47181e338cbee9d028e94f2bc5829816b26d719d8213b07d0fa107d95b591947", [:mix], [{:bamboo, "~> 0.7.0", [hex: :bamboo, optional: false]}, {:gen_smtp, "~> 0.11.0", [hex: :gen_smtp, optional: false]}]},
+  "certifi": {:hex, :certifi, "0.7.0", "861a57f3808f7eb0c2d1802afeaae0fa5de813b0df0979153cbafcd853ababaf", [:rebar3], []},
   "comeonin": {:hex, :comeonin, "2.6.0", "74c288338b33205f9ce97e2117bb9a2aaab103a1811d243443d76fdb62f904ac", [:make, :mix], []},
   "connection": {:hex, :connection, "1.0.4", "a1cae72211f0eef17705aaededacac3eb30e6625b04a6117c1b2db6ace7d5976", [:mix], []},
   "cowboy": {:hex, :cowboy, "1.0.4", "a324a8df9f2316c833a470d918aaf73ae894278b8aa6226ce7a9bf699388f878", [:make, :rebar], [{:cowlib, "~> 1.0.0", [hex: :cowlib, optional: false]}, {:ranch, "~> 1.0", [hex: :ranch, optional: false]}]},

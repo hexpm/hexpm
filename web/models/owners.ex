@@ -16,7 +16,7 @@ defmodule HexWeb.Owners do
       {:ok, _} ->
         owners = package |> all |> Users.with_emails
         owner = Enum.find(owners, &(&1.id == owner.id))
-        Mailer.send_owner_added_email(package, owners, owner)
+        Mail.owner_added(package, owners, owner) |> Mailer.deliver_now_throttled
         :ok
       {:error, :owner, changeset, _} ->
         {:error, changeset}
@@ -36,7 +36,7 @@ defmodule HexWeb.Owners do
 
       {:ok, _} = Repo.transaction(multi)
       owner = Enum.find(owners, &(&1.id == owner.id))
-      Mailer.send_owner_removed_email(package, owners, owner)
+      Mail.owner_removed(package, owners, owner) |> Mailer.deliver_now_throttled
       :ok
     end
   end

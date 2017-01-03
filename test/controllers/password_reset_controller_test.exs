@@ -18,9 +18,9 @@ defmodule HexWeb.PasswordResetControllerTest do
 
     # check email was sent with correct token
     user = HexWeb.Repo.get_by!(User, username: c.user.username) |> HexWeb.Repo.preload(:emails)
-    {subject, contents} = HexWeb.Mail.Local.read(User.email(user, :primary))
-    assert subject =~ "Hex.pm"
-    assert contents =~ user.reset_key
+    [email] = Bamboo.SentEmail.all
+    assert email.subject =~ "Hex.pm"
+    assert email.html_body =~ user.reset_key
 
     # check reset will succeed
     assert User.password_reset?(user, user.reset_key) == true

@@ -38,6 +38,7 @@ defmodule HexWeb.ConnCase do
     opts = tags |> Map.take([:isolation]) |> Enum.to_list()
     :ok = Ecto.Adapters.SQL.Sandbox.checkout(HexWeb.Repo, opts)
     HexWeb.Case.reset_store(tags)
+    Bamboo.SentEmail.reset
     :ok
   end
 
