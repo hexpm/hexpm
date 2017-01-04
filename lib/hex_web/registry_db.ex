@@ -115,4 +115,13 @@ defmodule HexWeb.RegistryDB do
 
   def get_build_tools(_name, _package, _version),
     do: raise "not implemented"
+
+  def retired(_name, _package, _version),
+    do: raise "not implemented"
+
+  def tarball_etag(_name, _package, _version),
+    do: raise "not implemented"
+
+  def tarball_etag(_name, _package, _version, _String_t),
+    do: raise "not implemented"
 end
