@@ -45,7 +45,7 @@ defmodule HexWeb.TestController do
   end
 
   def docs_sitemap(conn, _params) do
-    HexWeb.Store.get(nil, :docs_bucket, "sitemap.xml", [])
+    HexWeb.Store.get(nil, :docs_bucket, sitemap_path(HexWeb.Endpoint, :sitemap), [])
     |> send_object(conn)
   end
 

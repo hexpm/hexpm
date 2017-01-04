@@ -11,7 +11,7 @@ defmodule HexWeb.SignupController do
         conn
         |> put_flash(:info, "A confirmation email has been sent, you will have access to your account shortly.")
         |> put_flash(:custom_location, true)
-        |> redirect(to: "/")
+        |> redirect(to: page_path(HexWeb.Endpoint, :index))
       {:error, changeset} ->
         conn
         |> put_status(400)

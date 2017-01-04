@@ -12,6 +12,6 @@ defmodule HexWeb.EmailController do
 
     conn
     |> put_flash(:custom_location, true)
-    |> redirect(to: "/")
+    |> redirect(to: page_path(HexWeb.Endpoint, :index))
   end
 end

@@ -34,7 +34,7 @@ defmodule HexWeb.LoginController do
   def delete(conn, _params) do
     conn
     |> delete_session("username")
-    |> redirect(to: "/")
+    |> redirect(to: page_path(HexWeb.Endpoint, :index))
   end
 
   defp render_show(conn) do
