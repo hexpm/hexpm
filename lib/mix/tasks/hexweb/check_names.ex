@@ -23,7 +23,7 @@ defmodule Mix.Tasks.Hexweb.CheckNames do
     FROM packages as pall
     CROSS JOIN packages as pnew
     WHERE pall.name <> pnew.name
-      AND pnew.inserted_at >= CURRENT_DATE
+      AND pnew.inserted_at >= CURRENT_DATE AT TIME ZONE 'UTC'
       AND levenshtein(pall.name, pnew.name) <= $1
     ORDER BY pall.name, dist;
     """
