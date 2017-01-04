@@ -12,7 +12,8 @@ defmodule HexWeb.Mixfile do
      build_embedded: Mix.env == :prod,
      start_permanent: Mix.env == :prod,
      aliases: aliases(),
-     deps: deps()]
+     deps: deps(),
+     test_coverage: [tool: ExCoveralls]]
   end
 
   def application do
@@ -54,6 +55,7 @@ defmodule HexWeb.Mixfile do
      {:rollbax,             "~> 0.5"},
      {:gpb,                 "~> 3.23"},
      {:plug,                "~> 1.2"},
+     {:excoveralls, "~> 0.5"},
      {:phoenix_live_reload, "~> 1.0", only: :dev}]
   end
 
