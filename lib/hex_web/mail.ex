@@ -5,7 +5,7 @@ defmodule HexWeb.Mail do
   def owner_added(package, owners, owner) do
     owner_email = hd(owner.emails).email
 
-    new_email
+    new_email()
     |> to(owners)
     |> from(source())
     |> subject("Hex.pm - Owner added")
@@ -18,7 +18,7 @@ defmodule HexWeb.Mail do
   def owner_removed(package, owners, owner) do
     owner_email = hd(owner.emails).email
 
-    new_email
+    new_email()
     |> to(owners)
     |> from(source())
     |> subject("Hex.pm - Owner removed")
@@ -29,7 +29,7 @@ defmodule HexWeb.Mail do
   end
 
   def verification(user, email) do
-    new_email
+    new_email()
     |> to(user)
     |> from(source())
     |> subject("Hex.pm - Email verification")
@@ -40,7 +40,7 @@ defmodule HexWeb.Mail do
   end
 
   def user_confirmed(user) do
-    new_email
+    new_email()
     |> to(user)
     |> from(source())
     |> subject("Hex.pm - Account confirmed")
@@ -48,7 +48,7 @@ defmodule HexWeb.Mail do
   end
 
   def password_reset_request(user) do
-    new_email
+    new_email()
     |> to(user)
     |> from(source())
     |> subject("Hex.pm - Password reset request")
@@ -59,7 +59,7 @@ defmodule HexWeb.Mail do
 
   def typosquat_candidates([], _), do: :ok
   def typosquat_candidate(candidates, threshold) do
-    new_email
+    new_email()
     |> to(Application.get_env(:hex_web, :support_email))
     |> from(source())
     |> subject("Hex.pm - Typosquat candidates")
