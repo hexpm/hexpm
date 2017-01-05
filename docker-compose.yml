@@ -1,0 +1,18 @@
+version: '2'
+services:
+  web:
+    build: .
+    ports:
+      - "4000:4000"
+    depends_on:
+      - postgres
+    environment:
+      - DEV_DATABASE_HOST=postgres
+    command: sh -c "./wait-for-postgres.sh postgres postgres && mix ecto.migrate HexWeb.Repo && mix phoenix.server"
+
+  postgres:
+    image: postgres
+    environment:
+     - POSTGRES_USER=postgres
+     - POSTGRES_PASSWORD=postgres
+     - POSTGRES_DB=hexweb_dev
