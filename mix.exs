@@ -50,7 +50,7 @@ defmodule HexWeb.Mixfile do
      {:comeonin,            "~> 2.0"},
      {:httpoison,           "~> 0.8"},
      {:sweet_xml,           "~> 0.5"},
-     {:ex_aws,              "~> 0.4"},
+     {:ex_aws,              "~> 1.0"},
      {:jiffy,               "~> 0.14"},
      {:rollbax,             "~> 0.5"},
      {:gpb,                 "~> 3.23"},
