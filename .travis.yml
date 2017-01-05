@@ -4,12 +4,13 @@ otp_release: 19.1
 sudo: false
 addons:
   postgresql: '9.4'
+env:
+  - MIX_ENV=test
 script:
-- MIX_ENV=test mix ecto.create
-- mix test --include integration
-- MIX_ENV=test mix run priv/repo/seeds.exs
-- git clone https://github.com/hexpm/hex ../hex && cd ../hex && mix deps.get && mix
-  test --include integration
+  - mix ecto.create
+  - mix test --include integration && mix coveralls.travis
+  - mix run priv/repo/seeds.exs
+  - git clone https://github.com/hexpm/hex ../hex && cd ../hex && mix deps.get && mix test --include integration
 notifications:
   recipients:
   - eric.meadows.jonsson@gmail.com
