@@ -1,5 +1,6 @@
 defmodule HexWeb.API.OwnerControllerTest do
-  use HexWeb.ConnCase, async: true
+  # TODO: debug Bamboo.Test race conditions and change back to async: true
+  use HexWeb.ConnCase, async: false
   use Bamboo.Test
 
   alias HexWeb.User
