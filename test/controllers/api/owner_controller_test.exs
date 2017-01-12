@@ -50,6 +50,11 @@ defmodule HexWeb.API.OwnerControllerTest do
            |> put_req_header("authorization", key_for(c.eric))
            |> get("api/packages/postgrex/owners/jose@mail.com")
     assert conn.status == 404
+
+    conn = build_conn()
+           |> put_req_header("authorization", key_for(c.eric))
+           |> get("api/packages/postgrex/owners/UNKNOWN")
+    assert conn.status == 404
   end
 
   test "add package owner", c do
@@ -135,6 +140,15 @@ defmodule HexWeb.API.OwnerControllerTest do
            |> put_req_header("authorization", key_for(c.other))
            |> delete("api/packages/postgrex/owners/eric%40mail.com")
     assert conn.status == 403
+  end
+
+  test "delete unknown user package owner", c do
+    Package.build_owner(c.package, c.jose) |> HexWeb.Repo.insert!
+
+    conn = build_conn()
+           |> put_req_header("authorization", key_for(c.eric))
+           |> delete("api/packages/postgrex/owners/UNKNOWN")
+    assert conn.status == 404
   end
 
   test "not possible to remove last owner of package", c do
