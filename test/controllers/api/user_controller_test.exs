@@ -82,14 +82,14 @@ defmodule HexWeb.API.UserControllerTest do
     refute HexWeb.Repo.get_by(User, username: "name")
   end
 
-  test "get user" do
+  test "get user", c do
     conn = build_conn()
            |> put_req_header("content-type", "application/json")
-           |> get("api/users/eric")
+           |> get("api/users/#{c.user.username}")
 
     body = json_response(conn, 200)
-    assert body["username"] == "eric"
-    assert body["email"] == "eric@mail.com"
+    assert body["username"] == c.user.username
+    assert body["email"] == hd(c.user.emails).email
     refute body["emails"]
     refute body["password"]
 
@@ -100,19 +100,19 @@ defmodule HexWeb.API.UserControllerTest do
     json_response(conn, 404)
   end
 
-  test "test auth" do
+  test "test auth", c do
     conn = build_conn()
            |> put_req_header("content-type", "application/json")
-           |> put_req_header("authorization", key_for("eric"))
-           |> get("api/users/eric/test")
+           |> put_req_header("authorization", key_for(c.user))
+           |> get("api/users/#{c.user.username}/test")
 
     body = json_response(conn, 200)
-    assert body["username"] == "eric"
+    assert body["username"] == c.user.username
 
     conn = build_conn()
            |> put_req_header("content-type", "application/json")
            |> put_req_header("authorization", "badkey")
-           |> get("api/users/eric/test")
+           |> get("api/users/#{c.user.username}/test")
 
     json_response(conn, 401)
   end
