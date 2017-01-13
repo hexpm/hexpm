@@ -69,7 +69,7 @@ defmodule HexWeb.User do
 
   def init_password_reset(user) do
     key = HexWeb.Auth.gen_key()
-    change(user, %{reset_key: key, reset_expiry: HexWeb.Utils.utc_now})
+    change(user, %{reset_key: key, reset_expiry: NaiveDateTime.utc_now})
   end
 
   def disable_password_reset(user) do

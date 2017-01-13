@@ -38,7 +38,7 @@ defmodule HexWeb.AuditLog do
 
   def audit_many(multi, {user, user_agent}, action, list, opts \\ []) do
     fields = AuditLog.__schema__(:fields) -- [:id]
-    extra = %{inserted_at: HexWeb.Utils.utc_now}
+    extra = %{inserted_at: NaiveDateTime.utc_now}
     entry = fn (element) ->
       build(user, user_agent, action, element)
       |> Map.take(fields)

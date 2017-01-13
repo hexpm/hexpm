@@ -58,7 +58,7 @@ defmodule HexWeb.API.PackageControllerTest do
   end
 
   test "fetch sort order" do
-    future = %{HexWeb.Utils.utc_now | year: 2030}
+    future = %{NaiveDateTime.utc_now | year: 2030}
 
     HexWeb.Repo.get_by(Package, name: "postgrex")
     |> Ecto.Changeset.change(updated_at: future)

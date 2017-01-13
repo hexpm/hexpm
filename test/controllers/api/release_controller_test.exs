@@ -152,7 +152,7 @@ defmodule HexWeb.API.ReleaseControllerTest do
     assert [%HexWeb.AuditLog{action: "release.publish"}, %HexWeb.AuditLog{action: "release.publish"}] =
            HexWeb.Repo.all(HexWeb.AuditLog)
 
-    Ecto.Changeset.change(release, inserted_at: %{HexWeb.Utils.utc_now | year: 2000})
+    Ecto.Changeset.change(release, inserted_at: %{NaiveDateTime.utc_now | year: 2000})
     |> HexWeb.Repo.update!
 
     conn = build_conn()
@@ -177,7 +177,7 @@ defmodule HexWeb.API.ReleaseControllerTest do
     assert conn.status == 201
     package = HexWeb.Repo.get_by!(Package, name: "postgrex")
     release = HexWeb.Repo.get_by!(assoc(package, :releases), version: "0.0.1")
-    Ecto.Changeset.change(release, inserted_at: %{HexWeb.Utils.utc_now | year: 2000})
+    Ecto.Changeset.change(release, inserted_at: %{NaiveDateTime.utc_now | year: 2000})
     |> HexWeb.Repo.update!
 
     conn = build_conn()
@@ -189,7 +189,7 @@ defmodule HexWeb.API.ReleaseControllerTest do
     assert %{"errors" => %{"inserted_at" => "can only delete a release up to one hour after creation"}} =
            Poison.decode!(conn.resp_body)
 
-    Ecto.Changeset.change(release, inserted_at: %{HexWeb.Utils.utc_now | year: 2030})
+    Ecto.Changeset.change(release, inserted_at: %{NaiveDateTime.utc_now | year: 2030})
     |> HexWeb.Repo.update!
 
     conn = build_conn()
