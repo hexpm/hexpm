@@ -36,4 +36,4 @@
   "ranch": {:hex, :ranch, "1.2.1", "a6fb992c10f2187b46ffd17ce398ddf8a54f691b81768f9ef5f461ea7e28c762", [:make], []},
   "rollbax": {:hex, :rollbax, "0.7.0", "b1c194f4ce10b507898ece4d995d0aaab4da247e7fce0b1e9e76384b134ed41e", [:mix], [{:hackney, "~> 1.1", [hex: :hackney, optional: false]}, {:poison, "~> 1.4 or ~> 2.0", [hex: :poison, optional: false]}]},
   "ssl_verify_fun": {:hex, :ssl_verify_fun, "1.1.1", "28a4d65b7f59893bc2c7de786dec1e1555bd742d336043fe644ae956c3497fbe", [:make, :rebar], []},
-  "sweet_xml": {:hex, :sweet_xml, "0.6.2", "8f8aadd902dcc62fb85b7a308bb6a083874e97eb51ccddaf855d97c8ffad7d64", [:mix], []}}
+  "sweet_xml": {:hex, :sweet_xml, "0.6.3", "814265792baeb163421811c546581c522dfdcb9d1767b1e59959c52906414e80", [:mix], []}}
