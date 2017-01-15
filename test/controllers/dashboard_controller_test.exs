@@ -13,6 +13,13 @@ defmodule HexWeb.DashboardControllerTest do
     %{user: create_user("eric", "eric@mail.com", "hunter42"), password: "hunter42"}
   end
 
+  test "show index page", context do
+      conn = build_conn()
+             |> test_login(context.user)
+             |> get("dashboard")
+      assert redirected_to(conn) == "/dashboard/profile"
+  end
+
   test "show profile", c do
     conn = build_conn()
            |> test_login(c.user)
