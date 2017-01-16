@@ -1,5 +1,6 @@
 defmodule HexWeb.PasswordResetControllerTest do
-  use HexWeb.ConnCase, async: true
+  # TODO: debug Bamboo.Test race conditions and change back to async: true
+  use HexWeb.ConnCase, async: false
   alias HexWeb.User
 
   setup do
