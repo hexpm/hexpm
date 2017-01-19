@@ -84,19 +84,19 @@ defmodule HexWeb.AuthHelpers do
   end
 
 
+  def package_owner?(_, nil),
+    do: false
   def package_owner?(%Plug.Conn{} = conn, user),
     do: package_owner?(conn.assigns.package, user)
-  def package_owner?(%HexWeb.Package{} = package, user) do
-    HexWeb.Packages.owner?(package, user)
-  end
+  def package_owner?(%HexWeb.Package{} = package, user),
+    do: HexWeb.Packages.owner?(package, user)
 
   def maybe_package_owner?(%Plug.Conn{} = conn, user),
     do: maybe_package_owner?(conn.assigns[:package], user)
   def maybe_package_owner?(nil, _user),
     do: true
-  def maybe_package_owner?(%HexWeb.Package{} = package, user) do
-    HexWeb.Packages.owner?(package, user)
-  end
+  def maybe_package_owner?(%HexWeb.Package{} = package, user),
+    do: HexWeb.Packages.owner?(package, user)
 
   def correct_user?(%Plug.Conn{} = conn, user),
     do: correct_user?(conn.params["name"], user)

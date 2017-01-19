@@ -91,7 +91,7 @@ defmodule HexWeb.PackageTest do
     rel =
       HexWeb.Release.build(phoenix, rel_meta(%{version: "0.0.1", app: "phoenix"}), "")
       |> HexWeb.Repo.insert!
-    HexWeb.Repo.insert!(%HexWeb.Download{release: rel, day: HexWeb.Utils.utc_today, downloads: 10})
+    HexWeb.Repo.insert!(%HexWeb.Download{release: rel, day: Date.utc_today, downloads: 10})
 
     :ok = HexWeb.Repo.refresh_view(HexWeb.PackageDownload)
 

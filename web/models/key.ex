@@ -41,20 +41,20 @@ defmodule HexWeb.Key do
     from(k in assoc(user, :keys), where: k.name == ^name and not is_nil(k.revoked_at))
   end
 
-  def revoke(key, revoked_at \\ HexWeb.Utils.utc_now) do
+  def revoke(key, revoked_at \\ NaiveDateTime.utc_now) do
     key
     |> change()
     |> put_change(:revoked_at, key.revoked_at || revoked_at)
     |> validate_required(:revoked_at)
   end
 
-  def revoke_by_name(user, key_name, revoked_at \\ HexWeb.Utils.utc_now) do
+  def revoke_by_name(user, key_name, revoked_at \\ NaiveDateTime.utc_now) do
     from(k in assoc(user, :keys),
       where: k.name == ^key_name and is_nil(k.revoked_at),
       update: [set: [revoked_at: fragment("?", ^revoked_at)]])
   end
 
-  def revoke_all(user, revoked_at \\ HexWeb.Utils.utc_now) do
+  def revoke_all(user, revoked_at \\ NaiveDateTime.utc_now) do
     from(k in assoc(user, :keys),
       where: is_nil(k.revoked_at),
       update: [set: [revoked_at: fragment("?", ^revoked_at)]])

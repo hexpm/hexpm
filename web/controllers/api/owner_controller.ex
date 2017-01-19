@@ -52,15 +52,19 @@ defmodule HexWeb.API.OwnerController do
     remove_owner = Users.get(email)
     package = conn.assigns.package
 
-    case Owners.remove(package, remove_owner, audit: audit_data(conn)) do
-      :ok ->
-        conn
-        |> api_cache(:private)
-        |> send_resp(204, "")
-      {:error, :last_owner} ->
-        conn
-        |> api_cache(:private)
-        |> send_resp(403, "")
+    if remove_owner do
+      case Owners.remove(package, remove_owner, audit: audit_data(conn)) do
+        :ok ->
+          conn
+          |> api_cache(:private)
+          |> send_resp(204, "")
+        {:error, :last_owner} ->
+          conn
+          |> api_cache(:private)
+          |> send_resp(403, "")
+      end
+    else
+      not_found(conn)
     end
   end
 end

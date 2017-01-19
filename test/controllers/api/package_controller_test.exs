@@ -6,10 +6,10 @@ defmodule HexWeb.API.PackageControllerTest do
 
   setup do
     user = create_user("eric", "eric@mail.com", "ericeric")
-    pkg = Package.build(user, pkg_meta(%{name: "decimal", description: "Arbitrary precision decimal arithmetic for Elixir."})) |> HexWeb.Repo.insert!
-    Package.build(user, pkg_meta(%{name: "postgrex", description: "Postgrex is awesome"})) |> HexWeb.Repo.insert!
-    Release.build(pkg, rel_meta(%{version: "0.0.1", app: "decimal"}), "") |> HexWeb.Repo.insert!
-    :ok
+    decimal = Package.build(user, pkg_meta(%{name: "decimal", description: "Arbitrary precision decimal arithmetic for Elixir."})) |> HexWeb.Repo.insert!
+    postgrex = Package.build(user, pkg_meta(%{name: "postgrex", description: "Postgrex is awesome"})) |> HexWeb.Repo.insert!
+    Release.build(decimal, rel_meta(%{version: "0.0.1", app: "decimal"}), "") |> HexWeb.Repo.insert!
+    {:ok, decimal: decimal, postgrex: postgrex}
   end
 
   test "get package" do
@@ -57,14 +57,14 @@ defmodule HexWeb.API.PackageControllerTest do
     assert length(body) == 0
   end
 
-  test "fetch sort order" do
-    future = %{HexWeb.Utils.utc_now | year: 2030}
+  test "fetch sort order", c do
+    future = %{NaiveDateTime.utc_now | year: 2030}
 
-    HexWeb.Repo.get_by(Package, name: "postgrex")
+    c.postgrex
     |> Ecto.Changeset.change(updated_at: future)
     |> HexWeb.Repo.update!
 
-    HexWeb.Repo.get_by(Package, name: "decimal")
+    c.decimal
     |> Ecto.Changeset.change(inserted_at: future)
     |> HexWeb.Repo.update!
 

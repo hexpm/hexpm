@@ -40,16 +40,6 @@ defmodule HexWeb.Utils do
                  Exception.format_stacktrace(stacktrace)
   end
 
-  # TODO: replace with NaiveDateTime.utc_now/0 in Elixir 1.4
-  def utc_now do
-    DateTime.to_naive(DateTime.utc_now)
-  end
-
-  # TODO: replace with Time.utc_today/0 in Elixir 1.4
-  def utc_today do
-    DateTime.to_date(DateTime.utc_now)
-  end
-
   def utc_yesterday do
     {today, _time} = :calendar.universal_time()
 

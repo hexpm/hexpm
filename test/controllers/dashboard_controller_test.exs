@@ -1,5 +1,6 @@
 defmodule HexWeb.DashboardControllerTest do
-  use HexWeb.ConnCase, async: true
+  # TODO: debug Bamboo.Test race conditions and change back to async: true
+  use HexWeb.ConnCase, async: false
 
   alias HexWeb.User
   alias HexWeb.Users
@@ -11,6 +12,13 @@ defmodule HexWeb.DashboardControllerTest do
 
   setup do
     %{user: create_user("eric", "eric@mail.com", "hunter42"), password: "hunter42"}
+  end
+
+  test "show index page", context do
+      conn = build_conn()
+             |> test_login(context.user)
+             |> get("dashboard")
+      assert redirected_to(conn) == "/dashboard/profile"
   end
 
   test "show profile", c do

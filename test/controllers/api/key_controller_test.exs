@@ -2,39 +2,36 @@ defmodule HexWeb.API.KeyControllerTest do
   use HexWeb.ConnCase, async: true
 
   alias HexWeb.Key
-  alias HexWeb.User
 
   setup do
-    create_user("eric", "eric@mail.com", "ericeric")
-    create_user("other", "other@mail.com", "otherother")
-    :ok
+    eric = create_user("eric", "eric@mail.com", "ericeric")
+    other = create_user("other", "other@mail.com", "otherother")
+    {:ok, eric: eric, other: other}
   end
 
-  test "create key" do
+  test "create key", c do
     body = %{name: "macbook"}
     conn = build_conn()
            |> put_req_header("content-type", "application/json")
            |> put_req_header("authorization", "Basic " <> Base.encode64("eric:ericeric"))
            |> post("api/keys", Poison.encode!(body))
 
-    user = HexWeb.Repo.get_by!(User, username: "eric")
-
     assert conn.status == 201
-    assert HexWeb.Repo.one(Key.get(user, "macbook"))
+    assert HexWeb.Repo.one(Key.get(c.eric, "macbook"))
 
     log = HexWeb.Repo.one!(HexWeb.AuditLog)
-    assert log.actor_id == user.id
+    assert log.actor_id == c.eric.id
     assert log.action == "key.generate"
     assert %{"name" => "macbook"} = log.params
   end
 
-  test "get key" do
-    HexWeb.Repo.get_by!(User, username: "eric")
+  test "get key", c do
+    c.eric
     |> Key.build(%{name: "macbook"})
     |> HexWeb.Repo.insert!
 
     conn = build_conn()
-           |> put_req_header("authorization", key_for("eric"))
+           |> put_req_header("authorization", key_for(c.eric))
            |> get("api/keys/macbook")
 
     assert conn.status == 200
@@ -45,10 +42,9 @@ defmodule HexWeb.API.KeyControllerTest do
     refute body["authing_key"]
   end
 
-  test "all keys" do
-    user = HexWeb.Repo.get_by!(User, username: "eric")
-    Key.build(user, %{name: "macbook"}) |> HexWeb.Repo.insert!
-    key = Key.build(user, %{name: "computer"}) |> HexWeb.Repo.insert!
+  test "all keys", c do
+    Key.build(c.eric, %{name: "macbook"}) |> HexWeb.Repo.insert!
+    key = Key.build(c.eric, %{name: "computer"}) |> HexWeb.Repo.insert!
 
     conn = build_conn()
            |> put_req_header("authorization", key.user_secret)
@@ -70,13 +66,12 @@ defmodule HexWeb.API.KeyControllerTest do
     refute b["authing_key"]
   end
 
-  test "delete key" do
-    user = HexWeb.Repo.get_by!(User, username: "eric")
-    Key.build(user, %{name: "macbook"}) |> HexWeb.Repo.insert!
-    Key.build(user, %{name: "computer"}) |> HexWeb.Repo.insert!
+  test "delete key", c do
+    Key.build(c.eric, %{name: "macbook"}) |> HexWeb.Repo.insert!
+    Key.build(c.eric, %{name: "computer"}) |> HexWeb.Repo.insert!
 
     conn = build_conn()
-           |> put_req_header("authorization", key_for("eric"))
+           |> put_req_header("authorization", key_for(c.eric))
            |> delete("api/keys/computer")
 
     assert conn.status == 200
@@ -88,20 +83,19 @@ defmodule HexWeb.API.KeyControllerTest do
     refute body["secret"]
     refute body["url"]
     refute body["authing_key"]
-    assert HexWeb.Repo.one(Key.get(user, "macbook"))
-    refute HexWeb.Repo.one(Key.get(user, "computer"))
+    assert HexWeb.Repo.one(Key.get(c.eric, "macbook"))
+    refute HexWeb.Repo.one(Key.get(c.eric, "computer"))
 
-    assert HexWeb.Repo.one(Key.get_revoked(user, "computer"))
+    assert HexWeb.Repo.one(Key.get_revoked(c.eric, "computer"))
 
     log = HexWeb.Repo.one!(HexWeb.AuditLog)
-    assert log.actor_id == user.id
+    assert log.actor_id == c.eric.id
     assert log.action == "key.remove"
     assert %{"name" => "computer"} = log.params
   end
 
-  test "delete current key notifies client" do
-    user = HexWeb.Repo.get_by!(User, username: "eric")
-    key = Key.build(user, %{name: "current"}) |> HexWeb.Repo.insert!
+  test "delete current key notifies client", c do
+    key = Key.build(c.eric, %{name: "current"}) |> HexWeb.Repo.insert!
 
     conn = build_conn()
            |> put_req_header("authorization", key.user_secret)
@@ -116,12 +110,12 @@ defmodule HexWeb.API.KeyControllerTest do
     refute body["secret"]
     refute body["url"]
     assert body["authing_key"]
-    refute HexWeb.Repo.one(Key.get(user, "current"))
+    refute HexWeb.Repo.one(Key.get(c.eric, "current"))
 
-    assert HexWeb.Repo.one(Key.get_revoked(user, "current"))
+    assert HexWeb.Repo.one(Key.get_revoked(c.eric, "current"))
 
     log = HexWeb.Repo.one!(HexWeb.AuditLog)
-    assert log.actor_id == user.id
+    assert log.actor_id == c.eric.id
     assert log.action == "key.remove"
     assert %{"name" => "current"} = log.params
 
@@ -134,10 +128,9 @@ defmodule HexWeb.API.KeyControllerTest do
     assert %{"message" => "API key revoked", "status" => 401} == body
   end
 
-  test "delete all keys" do
-    user = HexWeb.Repo.get_by!(User, username: "eric")
-    key_a = Key.build(user, %{name: "key_a"}) |> HexWeb.Repo.insert!
-    key_b = Key.build(user, %{name: "key_b"}) |> HexWeb.Repo.insert!
+  test "delete all keys", c do
+    key_a = Key.build(c.eric, %{name: "key_a"}) |> HexWeb.Repo.insert!
+    key_b = Key.build(c.eric, %{name: "key_b"}) |> HexWeb.Repo.insert!
 
     conn = build_conn()
            |> put_req_header("authorization", key_a.user_secret)
@@ -152,21 +145,21 @@ defmodule HexWeb.API.KeyControllerTest do
     refute body["secret"]
     refute body["url"]
     assert body["authing_key"]
-    refute HexWeb.Repo.one(Key.get(user, "key_a"))
-    refute HexWeb.Repo.one(Key.get(user, "key_b"))
+    refute HexWeb.Repo.one(Key.get(c.eric, "key_a"))
+    refute HexWeb.Repo.one(Key.get(c.eric, "key_b"))
 
-    assert HexWeb.Repo.one(Key.get_revoked(user, "key_a"))
-    assert HexWeb.Repo.one(Key.get_revoked(user, "key_b"))
+    assert HexWeb.Repo.one(Key.get_revoked(c.eric, "key_a"))
+    assert HexWeb.Repo.one(Key.get_revoked(c.eric, "key_b"))
 
     assert [log_a, log_b] =
       HexWeb.AuditLog
       |> HexWeb.Repo.all()
       |> Enum.sort_by(fn (%{params: %{"name" => name}}) -> name end)
-    assert log_a.actor_id == user.id
+    assert log_a.actor_id == c.eric.id
     assert log_a.action == "key.remove"
     key_a_name = key_a.name
     assert %{"name" => ^key_a_name} = log_a.params
-    assert log_b.actor_id == user.id
+    assert log_b.actor_id == c.eric.id
     assert log_b.action == "key.remove"
     key_b_name = key_b.name
     assert %{"name" => ^key_b_name} = log_b.params
@@ -180,9 +173,8 @@ defmodule HexWeb.API.KeyControllerTest do
     assert %{"message" => "API key revoked", "status" => 401} == body
   end
 
-  test "key authorizes" do
-    user = HexWeb.Repo.get_by!(User, username: "eric")
-    key = Key.build(user, %{name: "macbook"}) |> HexWeb.Repo.insert!
+  test "key authorizes", c do
+    key = Key.build(c.eric, %{name: "macbook"}) |> HexWeb.Repo.insert!
 
     conn = build_conn()
            |> put_req_header("authorization", key.user_secret)

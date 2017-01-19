@@ -119,6 +119,8 @@ defmodule HexWeb.Router do
   scope "/api", HexWeb.API, as: :api do
     pipe_through :api
 
+    get    "/", IndexController, :index
+
     post   "/users",             UserController, :create
     get    "/users/:name",       UserController, :show
     get    "/users/:name/test",  UserController, :test

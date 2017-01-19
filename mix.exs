@@ -4,7 +4,7 @@ defmodule HexWeb.Mixfile do
   def project do
     [app: :hex_web,
      version: "0.0.1",
-     elixir: "~> 1.3",
+     elixir: "~> 1.4",
      elixirc_paths: elixirc_paths(Mix.env),
      gpb_options: gpb_options(),
      xref: xref(),
@@ -18,7 +18,7 @@ defmodule HexWeb.Mixfile do
 
   def application do
     [mod: {HexWeb, []},
-     applications: apps(Mix.env)]
+     extra_applications: [:logger]]
   end
 
   defp elixirc_paths(:test), do: ["lib", "web", "test/support"]
@@ -41,41 +41,20 @@ defmodule HexWeb.Mixfile do
     [{:phoenix,             "~> 1.2"},
      {:phoenix_ecto,        "~> 3.1-rc"},
      {:phoenix_html,        "~> 2.3"},
-     {:postgrex,            ">= 0.0.0"},
-     {:cowboy,              "~> 1.0"},
-     {:porcelain,           "~> 2.0"},
-     {:earmark,             "~> 1.0"},
      {:bamboo,              "~> 0.7"},
      {:bamboo_smtp,         "~> 1.2"},
      {:comeonin,            "~> 2.0"},
-     {:httpoison,           "~> 0.8"},
-     {:sweet_xml,           "~> 0.5"},
      {:ex_aws,              "~> 1.0"},
-     {:jiffy,               "~> 0.14"},
-     {:rollbax,             "~> 0.5"},
      {:gpb,                 "~> 3.23"},
+     {:httpoison,           "~> 0.8"},
+     {:jiffy,               "~> 0.14"},
      {:plug,                "~> 1.2"},
-     {:excoveralls, "~> 0.5"},
-     {:phoenix_live_reload, "~> 1.0", only: :dev}]
-  end
-
-  defp apps(:prod), do: apps(:other) ++ [:rollbax]
-
-  defp apps(_) do
-    [:phoenix,
-     :phoenix_html,
-     :cowboy,
-     :logger,
-     :phoenix_ecto,
-     :postgrex,
-     :comeonin,
-     :httpoison,
-     :ex_aws,
-     :sweet_xml,
-     :porcelain,
-     :jiffy,
-     :bamboo,
-     :bamboo_smtp]
+     {:porcelain,           "~> 2.0"},
+     {:postgrex,            ">= 0.0.0"},
+     {:sweet_xml,           "~> 0.5"},
+     {:phoenix_live_reload, "~> 1.0", only: :dev},
+     {:excoveralls,         "~> 0.5", only: :test},
+     {:rollbax,             "~> 0.5", only: :prod}]
   end
 
   defp aliases do

@@ -66,7 +66,7 @@ defmodule HexWeb.Releases do
     multi =
       Multi.new
       |> Multi.update(:release, Ecto.Changeset.change(release, has_docs: true))
-      |> Multi.update(:package, Ecto.Changeset.change(release.package, docs_updated_at: HexWeb.Utils.utc_now))
+      |> Multi.update(:package, Ecto.Changeset.change(release.package, docs_updated_at: NaiveDateTime.utc_now))
       |> audit(audit_data, "docs.publish", {package, release})
 
     {:ok, _} = Repo.transaction(multi)
@@ -93,7 +93,7 @@ defmodule HexWeb.Releases do
     multi =
       Multi.new
       |> Multi.update(:release, Ecto.Changeset.change(release, has_docs: false))
-      |> Multi.update(:package, Ecto.Changeset.change(release.package, docs_updated_at: HexWeb.Utils.utc_now))
+      |> Multi.update(:package, Ecto.Changeset.change(release.package, docs_updated_at: NaiveDateTime.utc_now))
       |> audit(audit_data, "docs.revert", {release.package, release})
 
     {:ok, _} = Repo.transaction(multi)

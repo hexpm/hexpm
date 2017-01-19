@@ -21,6 +21,13 @@ config :hex_web,
   cookie_encr_salt: "TZDiyTeFQ819hsC3",
 
   store_impl:   store,
+  s3_url:       System.get_env("HEX_S3_URL") || "https://s3.amazonaws.com",
+  s3_bucket:    System.get_env("HEX_S3_BUCKET"),
+  docs_bucket:  System.get_env("HEX_DOCS_BUCKET"),
+  logs_buckets: logs_buckets,
+  docs_url:     System.get_env("HEX_DOCS_URL"),
+  cdn_url:      System.get_env("HEX_CDN_URL"),
+
   email_host:   System.get_env("HEX_EMAIL_HOST"),
   ses_rate:     System.get_env("HEX_SES_RATE") || "1000",
 
