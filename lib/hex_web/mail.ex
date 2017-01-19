@@ -30,7 +30,7 @@ defmodule HexWeb.Mail do
 
   def verification(user, email) do
     new_email()
-    |> to(user)
+    |> to(%{email | user: user})
     |> from(source())
     |> subject("Hex.pm - Email verification")
     |> assign(:username, user.username)
