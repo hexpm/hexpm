@@ -3,27 +3,21 @@ defmodule HexWeb.Mail do
   use Bamboo.Phoenix, view: HexWeb.EmailView
 
   def owner_added(package, owners, owner) do
-    owner_email = hd(owner.emails).email
-
     new_email()
     |> to(owners)
     |> from(source())
     |> subject("Hex.pm - Owner added")
     |> assign(:username, owner.username)
-    |> assign(:email, owner_email)
     |> assign(:package, package.name)
     |> render("owner_add.html")
   end
 
   def owner_removed(package, owners, owner) do
-    owner_email = hd(owner.emails).email
-
     new_email()
     |> to(owners)
     |> from(source())
     |> subject("Hex.pm - Owner removed")
     |> assign(:username, owner.username)
-    |> assign(:email, owner_email)
     |> assign(:package, package.name)
     |> render("owner_remove.html")
   end

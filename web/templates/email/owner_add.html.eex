@@ -1,4 +1,4 @@
-<p><%= @username %> (<%= @email %>) has been added as an owner to package <%= @package %>.</p>
+<p><%= @username %> has been added as an owner to package <%= @package %>.</p>
 
 <p>
   --<br>

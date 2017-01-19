@@ -69,7 +69,7 @@ defmodule HexWeb.API.OwnerControllerTest do
 
     [email] = Bamboo.SentEmail.all
     assert email.subject =~ "Hex.pm"
-    assert email.html_body =~ "jose (jose@mail.com) has been added as an owner to package postgrex."
+    assert email.html_body =~ "jose has been added as an owner to package postgrex."
     emails_first = assoc(first, :emails) |> HexWeb.Repo.all
     emails_second = assoc(second, :emails) |> HexWeb.Repo.all
 
@@ -121,7 +121,7 @@ defmodule HexWeb.API.OwnerControllerTest do
 
     [email] = Bamboo.SentEmail.all
     assert email.subject =~ "Hex.pm"
-    assert email.html_body =~ "jose (jose@mail.com) has been removed from owners of package postgrex."
+    assert email.html_body =~ "jose has been removed from owners of package postgrex."
 
     eric_emails = assoc(c.eric, :emails) |> HexWeb.Repo.all
     jose_emails = assoc(c.jose, :emails) |> HexWeb.Repo.all
