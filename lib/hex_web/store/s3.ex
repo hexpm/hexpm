@@ -2,17 +2,17 @@ defmodule HexWeb.Store.S3 do
   @behaviour HexWeb.Store
 
   alias ExAws.S3
-  alias ExAws.S3.Impl, as: S3Impl
 
   def list(region, bucket, prefix) do
-    S3.new(region: region(region))
-    |> S3Impl.stream_objects!(bucket(bucket), prefix: prefix)
+    S3.list_objects(bucket(bucket), prefix: prefix)
+    |> ExAws.stream!(region: region(region))
     |> Stream.map(&Map.get(&1, :key))
   end
 
   def get(region, bucket, key, opts) do
-    s3 = S3.new(region: region(region))
-    case S3Impl.get_object(s3, bucket(bucket), key, opts) do
+    S3.get_object(bucket(bucket), key, opts)
+    |> ExAws.request(region: region(region))
+    |> case do
       {:ok, %{body: body}} -> body
       {:error, {:http_error, 404, _}} -> nil
     end
@@ -41,8 +41,9 @@ defmodule HexWeb.Store.S3 do
 
   # TODO: verify cache-control, surrogate-key and purge for everything we upload
   def put(region, bucket, key, blob, opts) do
-    S3.new(region: region(region))
-    |> S3Impl.put_object!(bucket(bucket), key, blob, opts)
+    S3.put_object(bucket(bucket), key, blob, opts)
+    |> ExAws.request!(region: region(region))
+
     :ok
   end
 
@@ -54,15 +55,15 @@ defmodule HexWeb.Store.S3 do
   end
 
   def put_multipart_init(region, bucket, key, opts) do
-    S3.new(region: region(region))
-    |> S3Impl.initiate_multipart_upload(bucket(bucket), key, opts)
+    S3.initiate_multipart_upload(bucket(bucket), key, opts)
+    |> ExAws.request(region: region(region))
     |> ok
     |> get_in([:body, :upload_id])
   end
 
   def put_multipart_part(region, bucket, key, upload_id, part_number, blob) do
-    S3.new(region: region(region))
-    |> S3Impl.upload_part(bucket(bucket), key, upload_id, part_number, blob)
+    S3.upload_part(bucket(bucket), key, upload_id, part_number, blob)
+    |> ExAws.request(region: region(region))
     |> ok
     |> Map.fetch!(:headers)
     |> List.keyfind("ETag", 0)
@@ -70,16 +71,17 @@ defmodule HexWeb.Store.S3 do
   end
 
   def put_multipart_complete(region, bucket, key, upload_id, parts) do
-    S3.new(region: region(region))
-    |> S3Impl.complete_multipart_upload(bucket(bucket), key, upload_id, parts)
+    S3.complete_multipart_upload(bucket(bucket), key, upload_id, parts)
+    |> ExAws.request(region: region(region))
     |> ok
   end
 
   defp ok({:ok, result}), do: result
 
   def delete(region, bucket, key, _opts) do
-    S3.new(region: region(region))
-    |> S3Impl.delete_object!(bucket(bucket), key)
+    S3.delete_object(bucket(bucket), key)
+    |> ExAws.request(region: region(region))
+
     :ok
   end
 
@@ -95,8 +97,8 @@ defmodule HexWeb.Store.S3 do
 
   defp delete_mutiple(region, bucket, keys) do
     {:ok, _} =
-      S3.new(region: region(region))
-      |> S3Impl.delete_multiple_objects(bucket(bucket), keys)
+      S3.delete_multiple_objects(bucket(bucket), keys)
+      |> ExAws.request(region: region(region))
     :ok
   end
 

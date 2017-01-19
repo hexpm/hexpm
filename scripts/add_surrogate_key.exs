@@ -56,7 +56,8 @@ defmodule HexWeb.Script.AddSurrogateKey do
 
   defp upload(path, opts, ix) do
     IO.puts "COPY #{ix} #{path}"
-    S3.put_object_copy!(@bucket, path, @bucket, path, opts)
+    S3.put_object_copy(@bucket, path, @bucket, path, opts)
+    |> ExAws.request!
     IO.puts "OK   #{ix} #{path}"
   end
 
@@ -70,7 +71,8 @@ defmodule HexWeb.Script.AddSurrogateKey do
   defp surrogate_key(_), do: nil
 
   defp list do
-    S3.stream_objects!(@bucket)
+    S3.list_objects(@bucket)
+    |> ExAws.stream!
     |> Stream.map(&Map.get(&1, :key))
   end
 end
