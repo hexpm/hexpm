@@ -56,7 +56,6 @@ defmodule HexWeb.Mixfile do
      {:sweet_xml,           "~> 0.5"},
      {:hackney,             "~> 1.6.5", override: true},
      {:phoenix_live_reload, "~> 1.0", only: :dev},
-     {:excoveralls,         "~> 0.5", only: :test},
      {:rollbax,             "~> 0.5", only: :prod}]
   end
 
