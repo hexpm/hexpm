@@ -1,3 +1,5 @@
+syntax = "proto2";
+
 message Package {
   // All releases of the package
   repeated Release releases = 1;
@@ -38,6 +40,6 @@ message Dependency {
   // If set is the OTP application name of the dependency, if not set the
   // application name is the same as the package name
   optional string app = 4;
-  // If set, the namespace where the dependency is located
-  optional string namespace = 5;
+  // If set, the repository where the dependency is located
+  optional string repository = 5;
 }
