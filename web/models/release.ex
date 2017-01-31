@@ -16,29 +16,27 @@ defmodule HexWeb.Release do
     embeds_one :retirement, ReleaseRetirement, on_replace: :delete
   end
 
-  defp changeset(release, :create, params) do
-    changeset(release, :update, params)
+  defp changeset(release, :create, params, checksum) do
+    changeset(release, :update, params, checksum)
     |> unique_constraint(:version, name: "releases_package_id_version_key", message: "has already been published")
   end
 
-  defp changeset(release, :update, params) do
+  defp changeset(release, :update, params, checksum) do
     cast(release, params, ~w(version))
     |> cast_embed(:meta, required: true)
-    |> Requirement.build_all
     |> validate_version(:version)
+    |> validate_editable(:update, false)
+    |> put_change(:checksum, String.upcase(checksum))
+    |> Requirement.build_all
   end
 
   def build(package, params, checksum) do
     build_assoc(package, :releases)
-    |> changeset(:create, params)
-    |> put_change(:checksum, String.upcase(checksum))
+    |> changeset(:create, params, checksum)
   end
 
   def update(release, params, checksum) do
-    release
-    |> changeset(:update, params)
-    |> put_change(:checksum, String.upcase(checksum))
-    |> validate_editable(:update, false)
+    changeset(release, :update, params, checksum)
   end
 
   def delete(release, opts \\ []) do
@@ -70,6 +68,7 @@ defmodule HexWeb.Release do
   defp editable_error_message(:update), do: "can only modify a release up to one hour after creation"
   defp editable_error_message(:delete), do: "can only delete a release up to one hour after creation"
 
+  defp editable?(%Release{inserted_at: nil}), do: true
   defp editable?(release) do
     inserted_at =
       release.inserted_at
