@@ -34,7 +34,7 @@ defmodule HexWeb.Mixfile do
   end
 
   defp xref do
-    [exclude: [{Hex.Registry, :prefetch, 1}]]
+    []
   end
 
   defp deps do
