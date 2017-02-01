@@ -1,5 +1,5 @@
 language: elixir
-elixir: 1.4.0
+elixir: 1.4.1
 otp_release: 19.1
 sudo: false
 addons:
@@ -8,7 +8,7 @@ env:
   - MIX_ENV=test
 script:
   - mix ecto.create
-  - mix test --include integration && mix coveralls.travis
+  - mix test --include integration
   - mix run priv/repo/seeds.exs
   - git clone https://github.com/hexpm/hex ../hex && cd ../hex && mix deps.get && mix test --include integration
 notifications:
