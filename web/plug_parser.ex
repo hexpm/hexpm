@@ -46,7 +46,11 @@ defmodule HexWeb.PlugParser do
   end
 
   defp decode({:ok, body, conn}, "json") do
-    case Poison.decode(body) do
+    decoder = 
+      Keyword.get(opts, :json_decoder) ||
+      raise ArgumentError, "PlugParser parser expects a :json_decoder option"
+      
+    case decoder.decode(body) do
       {:ok, terms} when is_map(terms) ->
         {:ok, terms, conn}
       {:ok, terms} ->
