@@ -1,18 +1,6 @@
 defmodule HexWeb.Plugs do
   import Plug.Conn, except: [read_body: 1]
 
-  defmodule BadRequestError do
-    defexception [plug_status: 400, message: "bad request"]
-  end
-
-  defmodule RequestTimeoutError do
-    defexception [plug_status: 408, message: "request timeout"]
-  end
-
-  defmodule RequestTooLargeError do
-    defexception [plug_status: 413, message: "request too large"]
-  end
-
   # Max filesize: ~10mb
   # Min upload speed: ~10kb/s
   # Read 100kb every 10s
@@ -48,11 +36,11 @@ defmodule HexWeb.Plugs do
       {:ok, body, conn} ->
         {conn, body}
       {:error, :timeout} ->
-        raise RequestTimeoutError
+        raise Plug.TimeoutError
       {:error, _} ->
-        raise BadRequestError
+        raise Plug.BadRequestError
       {:more, _, _} ->
-        raise RequestTooLargeError
+        raise Plug.Parsers.RequestTooLargeError
     end
   end
 
