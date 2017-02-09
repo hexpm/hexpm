@@ -67,26 +67,16 @@ defmodule HexWeb.RegistryBuilder do
       ets = build_ets(packages, releases, installs)
       names = build_names(packages)
       versions = build_versions(packages)
-
       release_map = Enum.filter(releases, &match?({{^package, _}, _}, &1)) |> Map.new
-      package_versions = Enum.find(packages, &match?({^package, _}, &1)) |> elem(1) |> hd
-      package_object = build_package(package, package_versions, release_map)
 
-      upload_files(ets, {names, versions, [{package, package_object}]})
-
-      HexWeb.CDN.purge_key(:fastly_hexrepo, ["registry-index", "registry-package-#{package}"])
-    end)
-  end
-
-  defp partial({:revert, package}) do
-    log(:revert, fn ->
-      {packages, releases, installs} = tuples()
-      ets = build_ets(packages, releases, installs)
-      names = build_names(packages)
-      versions = build_versions(packages)
-
-      upload_files(ets, {names, versions, []})
-      HexWeb.Store.delete(nil, :s3_bucket, "packages/#{package}", [])
+      case Enum.find(packages, &match?({^package, _}, &1)) do
+        {^package, [package_versions]} ->
+          package_object = build_package(package, package_versions, release_map)
+          upload_files(ets, {names, versions, [{package, package_object}]})
+        nil ->
+          upload_files(ets, {names, versions, []})
+          HexWeb.Store.delete(nil, :s3_bucket, "packages/#{package}", [])
+      end
 
       HexWeb.CDN.purge_key(:fastly_hexrepo, ["registry-index", "registry-package-#{package}"])
     end)

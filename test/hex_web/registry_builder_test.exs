@@ -183,7 +183,7 @@ defmodule HexWeb.RegistryBuilderTest do
 
     Release.delete(postgrex1) |> HexWeb.Repo.delete!
     HexWeb.Repo.delete!(context.postgrex)
-    RegistryBuilder.partial_build({:revert, "postgrex"})
+    RegistryBuilder.partial_build({:publish, "postgrex"})
 
     tid = open_table()
     assert length(:ets.match_object(tid, :_)) == 7

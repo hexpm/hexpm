@@ -129,7 +129,7 @@ defmodule HexWeb.Releases do
 
   defp revert_result({:ok, %{release: release}}, package) do
     Assets.revert_release(release)
-    RegistryBuilder.partial_build({:revert, package.name})
+    RegistryBuilder.partial_build({:publish, package.name})
     :ok
   end
   defp revert_result(result, _package), do: result
