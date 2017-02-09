@@ -65,7 +65,7 @@ defmodule HexWeb.Web do
 
   def view do
     quote do
-      use Phoenix.View, root: "web/templates"
+      use Phoenix.View, root: "lib/hex_web/web/templates"
       use Phoenix.HTML
 
       # Import convenience functions from controllers

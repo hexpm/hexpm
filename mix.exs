@@ -21,8 +21,8 @@ defmodule HexWeb.Mixfile do
      extra_applications: [:logger]]
   end
 
-  defp elixirc_paths(:test), do: ["lib", "web", "test/support"]
-  defp elixirc_paths(_),     do: ["lib", "web"]
+  defp elixirc_paths(:test), do: ["lib", "test/support"]
+  defp elixirc_paths(_),     do: ["lib"]
 
   defp gpb_options do
     [verify: :always,

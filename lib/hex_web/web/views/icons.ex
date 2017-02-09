@@ -2,7 +2,7 @@ defmodule HexWeb.ViewIcons do
   use Phoenix.HTML
   import SweetXml
 
-  @icons_dir       Path.join(__DIR__, "../../assets/vendor/icons")
+  @icons_dir       Path.join(__DIR__, "../../../../assets/vendor/icons")
   @octicons_svg    Path.join(@icons_dir, "octicons.svg")
   @glyphicons_svg  Path.join(@icons_dir, "glyphicons-halflings-regular.svg")
   @glyphicons_less Path.join(@icons_dir, "glyphicons.less")

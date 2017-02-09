@@ -21,8 +21,8 @@ config :hex_web, HexWeb.Endpoint,
   live_reload: [
     patterns: [
       ~r{priv/static/.*(js|css|png|jpeg|jpg|gif|svg)$},
-      ~r{web/views/.*(ex)$},
-      ~r{web/templates/.*(eex|md)$}
+      ~r{lib/web/views/.*(ex)$},
+      ~r{lib/web/templates/.*(eex|md)$}
     ]
   ]
 
