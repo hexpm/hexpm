@@ -72,7 +72,7 @@ defmodule HexWeb.Mixfile do
     {opts, _, _} = OptionParser.parse(args, switches: [force: :boolean])
 
     project     = Mix.Project.config
-    proto_paths = project[:proto_paths] || ["proto"]
+    proto_paths = project[:proto_paths] || ["priv/proto"]
     erlc_path   = project[:erlc_paths] |> List.first
     mappings    = Enum.zip(proto_paths, Stream.repeatedly(fn -> erlc_path end))
     options     = project[:gpb_options] || []
