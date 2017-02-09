@@ -11,7 +11,7 @@
     <%= og_tags(assigns) %>
 
     <link rel="search" type="application/opensearchdescription+xml" title="Hex" href="/hexsearch.xml">
-    <link rel="stylesheet" href="<%= static_path(Endpoint, "/css/main.css") %>">
+    <link rel="stylesheet" href="<%= static_path(Endpoint, "/css/app.css") %>">
     <link rel="shortcut icon" href="<%= static_path(Endpoint, "/favicon.png") %>">
   </head>
   <body>

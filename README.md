@@ -67,7 +67,7 @@ mix ecto.setup
 All the Node dependencies can be installed with `npm`:
 
 ```shell
-npm install
+cd assets && npm install
 ```
 
 These are needed for asset compilation.
