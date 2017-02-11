@@ -7,7 +7,7 @@ config :hex_web,
   secret:       System.get_env("HEX_SECRET")   || "796f75666f756e64746865686578"
 
 config :hex_web, HexWeb.Endpoint,
-  http: [port: 4043],
+  http: [port: 4043, protocol_options: [max_keepalive: :infinity]],
   debug_errors: false
 
 config :hex_web, HexWeb.Repo,
