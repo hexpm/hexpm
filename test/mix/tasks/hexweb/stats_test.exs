@@ -1,23 +1,25 @@
 defmodule Mix.Tasks.Hexweb.StatsTest do
   use HexWeb.ModelCase, async: true
 
+  alias HexWeb.Download
   alias HexWeb.Package
   alias HexWeb.Release
+  alias HexWeb.Store
 
   setup do
     user = create_user("eric", "eric@mail.com", "ericeric")
 
-    foo   = Package.build(user, pkg_meta(%{name: "foo", description: "Foo"})) |> HexWeb.Repo.insert!
-    bar   = Package.build(user, pkg_meta(%{name: "bar", description: "Bar"})) |> HexWeb.Repo.insert!
-    other = Package.build(user, pkg_meta(%{name: "other", description: "Other"})) |> HexWeb.Repo.insert!
+    foo   = Package.build(user, pkg_meta(%{name: "foo", description: "Foo"})) |> Repo.insert!
+    bar   = Package.build(user, pkg_meta(%{name: "bar", description: "Bar"})) |> Repo.insert!
+    other = Package.build(user, pkg_meta(%{name: "other", description: "Other"})) |> Repo.insert!
 
-    Release.build(foo, rel_meta(%{version: "0.0.1", app: "foo"}), "") |> HexWeb.Repo.insert!
-    Release.build(foo, rel_meta(%{version: "0.0.2", app: "foo"}), "") |> HexWeb.Repo.insert!
-    Release.build(foo, rel_meta(%{version: "0.1.0", app: "foo"}), "") |> HexWeb.Repo.insert!
-    Release.build(bar, rel_meta(%{version: "0.0.1", app: "bar"}), "") |> HexWeb.Repo.insert!
-    Release.build(bar, rel_meta(%{version: "0.0.2", app: "bar"}), "") |> HexWeb.Repo.insert!
-    Release.build(bar, rel_meta(%{version: "0.0.3-rc.1", app: "bar"}), "") |> HexWeb.Repo.insert!
-    Release.build(other, rel_meta(%{version: "0.0.1", app: "other"}), "") |> HexWeb.Repo.insert!
+    Release.build(foo, rel_meta(%{version: "0.0.1", app: "foo"}), "") |> Repo.insert!
+    Release.build(foo, rel_meta(%{version: "0.0.2", app: "foo"}), "") |> Repo.insert!
+    Release.build(foo, rel_meta(%{version: "0.1.0", app: "foo"}), "") |> Repo.insert!
+    Release.build(bar, rel_meta(%{version: "0.0.1", app: "bar"}), "") |> Repo.insert!
+    Release.build(bar, rel_meta(%{version: "0.0.2", app: "bar"}), "") |> Repo.insert!
+    Release.build(bar, rel_meta(%{version: "0.0.3-rc.1", app: "bar"}), "") |> Repo.insert!
+    Release.build(other, rel_meta(%{version: "0.0.1", app: "other"}), "") |> Repo.insert!
 
     %{foo: foo, bar: bar, other: other}
   end
@@ -39,21 +41,21 @@ defmodule Mix.Tasks.Hexweb.StatsTest do
     logfile3 = File.read!(Path.join(path, "fastly_logs_1.txt")) |> :zlib.gzip
     logfile4 = File.read!(Path.join(path, "fastly_logs_2.txt")) |> :zlib.gzip
 
-    HexWeb.Store.put(region, bucket, "hex/2013-11-01-21-32-16-E568B2907131C0C0", logfile1, [])
-    HexWeb.Store.put(region, bucket, "hex/2013-11-02-21-32-17-E568B2907131C0C0", logfile1, [])
-    HexWeb.Store.put(region, bucket, "hex/2013-11-03-21-32-18-E568B2907131C0C0", logfile1, [])
-    HexWeb.Store.put(region, bucket, "hex/2013-11-01-21-32-19-E568B2907131C0C0", logfile2, [])
-    HexWeb.Store.put(region, bucket, "fastly_hex/2013-11-01T14:00:00.000-tzletcEGGiI7atIAAAAA.log.gz", logfile3, [])
-    HexWeb.Store.put(region, bucket, "fastly_hex/2013-11-01T15:00:00.000-tzletcEGGiI7atIAAAAA.log.gz", logfile4, [])
+    Store.put(region, bucket, "hex/2013-11-01-21-32-16-E568B2907131C0C0", logfile1, [])
+    Store.put(region, bucket, "hex/2013-11-02-21-32-17-E568B2907131C0C0", logfile1, [])
+    Store.put(region, bucket, "hex/2013-11-03-21-32-18-E568B2907131C0C0", logfile1, [])
+    Store.put(region, bucket, "hex/2013-11-01-21-32-19-E568B2907131C0C0", logfile2, [])
+    Store.put(region, bucket, "fastly_hex/2013-11-01T14:00:00.000-tzletcEGGiI7atIAAAAA.log.gz", logfile3, [])
+    Store.put(region, bucket, "fastly_hex/2013-11-01T15:00:00.000-tzletcEGGiI7atIAAAAA.log.gz", logfile4, [])
 
-    HexWeb.StatsJob.run(~D[2013-11-01], buckets)
+    Mix.Tasks.Hexweb.Stats.run(~D[2013-11-01], buckets)
 
-    rel1 = HexWeb.Repo.get_by!(assoc(foo, :releases), version: "0.0.1")
-    rel2 = HexWeb.Repo.get_by!(assoc(foo, :releases), version: "0.0.2")
-    rel3 = HexWeb.Repo.get_by!(assoc(bar, :releases), version: "0.0.2")
-    rel4 = HexWeb.Repo.get_by!(assoc(bar, :releases), version: "0.0.3-rc.1")
+    rel1 = Repo.get_by!(assoc(foo, :releases), version: "0.0.1")
+    rel2 = Repo.get_by!(assoc(foo, :releases), version: "0.0.2")
+    rel3 = Repo.get_by!(assoc(bar, :releases), version: "0.0.2")
+    rel4 = Repo.get_by!(assoc(bar, :releases), version: "0.0.3-rc.1")
 
-    downloads = HexWeb.Repo.all(HexWeb.Download)
+    downloads = HexWeb.Repo.all(Download)
     assert length(downloads) == 4
 
     assert Enum.find(downloads, &(&1.release_id == rel1.id)).downloads == 11
