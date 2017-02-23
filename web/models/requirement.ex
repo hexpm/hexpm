@@ -38,7 +38,7 @@ defmodule HexWeb.Requirement do
       build_tools = get_field(release_changeset, :meta).build_tools
 
       {time, result} = :timer.tc(fn ->
-        case resolve(requirements, guess_config(build_tools)) do
+        case Resolver.run(requirements, build_tools) do
           :ok ->
             release_changeset
           {:error, reason} ->
@@ -60,41 +60,6 @@ defmodule HexWeb.Requirement do
     # TODO: Remap requirements errors to hex http spec
   end
 
-  defp resolve(requirements, config) do
-    Hex.Registry.open!(HexWeb.RegistryDB)
-
-    deps      = resolve_deps(requirements)
-    top_level = Enum.map(deps, &elem(&1, 0))
-    requests  = resolve_requests(requirements, config)
-
-    requests
-    |> Enum.map(&elem(&1, 0))
-    |> Hex.Registry.prefetch
-
-    case Hex.Resolver.resolve(requests, deps, top_level, []) do
-      {:ok, _} ->
-        :ok
-      {:error, messages} ->
-        # Remove ANSI escape sequences
-        messages = String.replace(messages, ~r"\e\[[0-9]+[a-zA-Z]", "")
-        {:error, messages}
-    end
-  after
-    Hex.Registry.close
-  end
-
-  defp resolve_deps(requirements) do
-    Enum.map(requirements, fn %{app: app} ->
-      {app, false, []}
-    end)
-  end
-
-  defp resolve_requests(requirements, config) do
-    Enum.map(requirements, fn %{name: name, app: app, requirement: req} ->
-      {name, app, req, config}
-    end)
-  end
-
   defp preload_dependencies(requirements)  do
     names = requirement_names(requirements)
     from(p in Package, where: p.name in ^names, select: {p.name, p})
@@ -110,15 +75,4 @@ defmodule HexWeb.Requirement do
     |> Enum.filter(&is_binary/1)
   end
   defp requirement_names(_requirements), do: []
-
-  defp guess_config(build_tools) when is_list(build_tools) do
-    cond do
-      "mix" in build_tools       -> "mix.exs"
-      "rebar" in build_tools     -> "rebar.config"
-      "rebar3" in build_tools    -> "rebar.config"
-      "erlang.mk" in build_tools -> "Makefile"
-      true                       -> "TOP CONFIG"
-    end
-  end
-  defp guess_config(_), do: "TOP CONFIG"
 end

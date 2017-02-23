@@ -119,6 +119,7 @@ defmodule HexWeb.Web do
         ReleaseMetadata,
         ReleaseRetirement,
         Requirement,
+        Resolver,
         Sitemaps,
         User,
         Users,
