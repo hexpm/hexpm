@@ -39,7 +39,7 @@ defmodule HexWeb.RateLimitTest do
     conn = request({2, 2, 2, 2})
     assert get_resp_header(conn, "x-ratelimit-remaining") == ["99"]
 
-    send(HexWeb.RateLimit, {:prune_timer, 0})
+    HexWeb.RateLimit.prune(HexWeb.RateLimit, 0)
 
     conn = request({2, 2, 2, 2})
     assert get_resp_header(conn, "x-ratelimit-remaining") == ["99"]

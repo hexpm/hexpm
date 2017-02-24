@@ -12,56 +12,56 @@ defmodule HexWeb.RateLimit do
   @rate_limit 100
 
   def start_link(name) do
-    GenServer.start_link(__MODULE__, [], name: name)
+    GenServer.start_link(__MODULE__, name, name: name)
   end
 
-  def init([]) do
-    table = :ets.new(:counter, [:set, :private])
-    :erlang.send_after(@prune_timer, self(), {:prune_timer, @expires})
-    {:ok, table}
+  def prune(name, expires) do
+    GenServer.call(name, {:prune, expires})
   end
 
   def hit(name, key) do
-    GenServer.call(name, {:hit, key})
-  end
-
-  def handle_call({:hit, key}, _from, table) do
     now = now()
 
     [count, created_at] =
-      if :ets.insert_new(table, {key, 1, now}) do
+      if :ets.insert_new(name, {key, 1, now}) do
         [1, now]
       else
-        :ets.update_counter(table, key, [{2, 1}, {3, 0}])
+        :ets.update_counter(name, key, [{2, 1}, {3, 0}])
       end
 
     expires_at = created_at + @expires
 
-    reply =
-      if expires_at <= now do
-        :ets.insert_new(table, {key, 1, now})
-        {true, @rate_limit - 1, @rate_limit, now + @expires}
-      else
-        remaining = @rate_limit - count
-        {remaining >= 0, max(remaining, 0), @rate_limit, expires_at}
-      end
-
-    {:reply, reply, table}
+    if expires_at <= now do
+      :ets.insert_new(name, {key, 1, now})
+      {true, @rate_limit - 1, @rate_limit, now + @expires}
+    else
+      remaining = @rate_limit - count
+      {remaining >= 0, max(remaining, 0), @rate_limit, expires_at}
+    end
   end
 
-  def handle_call(:status, _from, table) do
-    {:reply, :ets.tab2list(table), table}
+  def init(name) do
+    :ets.new(name, [:named_table, :set, :public, read_concurrency: true, write_concurrency: true])
+    :erlang.send_after(@prune_timer, self(), {:prune_timer, @expires})
+    {:ok, name}
   end
 
-  def handle_info({:prune_timer, expires}, table) do
+  def handle_call({:prune, expires}, _from, name) do
+    do_prune(expires, name)
+    {:reply, :ok, name}
+  end
+
+  def handle_info({:prune_timer, expires}, name) do
+    do_prune(expires, name)
+    {:noreply, name}
+  end
+
+  defp do_prune(expires, name) do
     delete_at = now() - expires
+    ms = :ets.fun2ms(fn {_,_,created_at} -> created_at <= delete_at end)
 
-    ms = fn {_,_,created_at} -> created_at <= delete_at end
-         |> :ets.fun2ms
-
-    :ets.select_delete(table, ms)
+    :ets.select_delete(name, ms)
     :erlang.send_after(@prune_timer, self(), {:prune_timer, expires})
-    {:noreply, table}
   end
 
   defp now do
