@@ -147,9 +147,9 @@
     margin: 0 0 10px;
     overflow: hidden;
     font-weight: 300;
+    line-height: 1.06;  // Just enough for e.g. the bottom of a "g" not to be cut off.
     color: #000;
     text-overflow: ellipsis;
-    line-height: 1.06;  // Just enough for e.g. the bottom of a "g" not to be cut off.
   }
 }
 
