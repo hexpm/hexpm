@@ -17,7 +17,7 @@ defmodule HexWeb.Mixfile do
   end
 
   def application do
-    [mod: {HexWeb, []},
+    [mod: {HexWeb.Application, []},
      extra_applications: [:logger]]
   end
 

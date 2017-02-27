@@ -1,4 +1,4 @@
-defmodule HexWeb do
+defmodule HexWeb.Application do
   use Application
 
   def start(_type, _args) do
