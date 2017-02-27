@@ -16,5 +16,5 @@ exclude_paths:
   - config
   - priv/repo
   - test
-  - web/static/vendor
-  - web/static/css/vendor
+  - assets/vendor
+  - assets/css/vendor
