@@ -1,5 +1,5 @@
 defmodule HexWeb.Keys do
-  use HexWeb.Web, :crud
+  use HexWeb.Web, :context
 
   def all(user) do
     Key.all(user)

@@ -31,7 +31,7 @@ defmodule HexWeb.Web do
     end
   end
 
-  def crud do
+  def context do
     quote do
       import Ecto
       import Ecto.Changeset

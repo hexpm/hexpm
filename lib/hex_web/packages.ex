@@ -1,5 +1,5 @@
 defmodule HexWeb.Packages do
-  use HexWeb.Web, :crud
+  use HexWeb.Web, :context
 
   def count(filter \\ nil) do
     Repo.one!(Package.count(filter))

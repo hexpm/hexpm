@@ -1,5 +1,5 @@
 defmodule HexWeb.Owners do
-  use HexWeb.Web, :crud
+  use HexWeb.Web, :context
 
   def all(package, preload \\ []) do
     from(u in assoc(package, :owners), preload: ^preload)

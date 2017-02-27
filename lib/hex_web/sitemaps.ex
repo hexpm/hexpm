@@ -1,5 +1,5 @@
 defmodule HexWeb.Sitemaps do
-  use HexWeb.Web, :crud
+  use HexWeb.Web, :context
 
   def packages do
     from(p in Package,

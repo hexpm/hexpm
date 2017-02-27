@@ -1,5 +1,5 @@
 defmodule HexWeb.Releases do
-  use HexWeb.Web, :crud
+  use HexWeb.Web, :context
 
   @publish_timeout 60_000
 
