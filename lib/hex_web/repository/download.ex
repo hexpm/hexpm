@@ -1,5 +1,5 @@
 defmodule HexWeb.Download do
-  use HexWeb.Web, :model
+  use HexWeb.Web, :schema
 
   schema "downloads" do
     belongs_to :release, Release

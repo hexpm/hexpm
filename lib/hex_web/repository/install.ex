@@ -1,5 +1,5 @@
 defmodule HexWeb.Install do
-  use HexWeb.Web, :model
+  use HexWeb.Web, :schema
 
   schema "installs" do
     field :hex, :string

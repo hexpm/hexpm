@@ -1,5 +1,5 @@
 defmodule HexWeb.PackageOwner do
-  use HexWeb.Web, :model
+  use HexWeb.Web, :schema
 
   schema "package_owners" do
     belongs_to :package, Package

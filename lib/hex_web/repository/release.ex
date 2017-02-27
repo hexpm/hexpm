@@ -1,5 +1,5 @@
 defmodule HexWeb.Release do
-  use HexWeb.Web, :model
+  use HexWeb.Web, :schema
 
   schema "releases" do
     field :version, HexWeb.Version

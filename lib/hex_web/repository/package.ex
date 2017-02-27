@@ -1,5 +1,5 @@
 defmodule HexWeb.Package do
-  use HexWeb.Web, :model
+  use HexWeb.Web, :schema
   @derive {Phoenix.Param, key: :name}
 
   schema "packages" do

@@ -1,5 +1,5 @@
 defmodule HexWeb.ReleaseDownload do
-  use HexWeb.Web, :model
+  use HexWeb.Web, :schema
 
   @primary_key false
 

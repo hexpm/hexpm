@@ -1,5 +1,5 @@
 defmodule HexWeb.User do
-  use HexWeb.Web, :model
+  use HexWeb.Web, :schema
 
   @derive {Phoenix.Param, key: :username}
 

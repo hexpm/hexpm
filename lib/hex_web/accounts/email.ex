@@ -1,5 +1,5 @@
 defmodule HexWeb.Email do
-  use HexWeb.Web, :model
+  use HexWeb.Web, :schema
 
   schema "emails" do
     field :email, :string

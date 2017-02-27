@@ -1,5 +1,5 @@
 defmodule HexWeb.AuditLog do
-  use HexWeb.Web, :model
+  use HexWeb.Web, :schema
 
   schema "audit_logs" do
     belongs_to :actor, User

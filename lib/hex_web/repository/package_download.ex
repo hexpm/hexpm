@@ -1,5 +1,5 @@
 defmodule HexWeb.PackageDownload do
-  use HexWeb.Web, :model
+  use HexWeb.Web, :schema
   import HexWeb.QueryAPI, only: [coalesce: 2]
 
   # TODO: remove pk from package_downloads view

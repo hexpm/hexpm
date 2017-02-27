@@ -16,7 +16,7 @@ defmodule HexWeb.Web do
   below.
   """
 
-  def model do
+  def schema do
     quote do
       use Ecto.Schema
 

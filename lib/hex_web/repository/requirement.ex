@@ -1,5 +1,5 @@
 defmodule HexWeb.Requirement do
-  use HexWeb.Web, :model
+  use HexWeb.Web, :schema
   require Logger
 
   schema "requirements" do

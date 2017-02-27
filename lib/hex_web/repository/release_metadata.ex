@@ -1,5 +1,5 @@
 defmodule HexWeb.ReleaseMetadata do
-  use HexWeb.Web, :model
+  use HexWeb.Web, :schema
 
   embedded_schema do
     field :app, :string

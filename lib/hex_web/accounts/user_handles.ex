@@ -1,5 +1,5 @@
 defmodule HexWeb.UserHandles do
-  use HexWeb.Web, :model
+  use HexWeb.Web, :schema
 
   embedded_schema do
     field :twitter, :string

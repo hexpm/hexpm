@@ -1,5 +1,5 @@
 defmodule HexWeb.BlockedAddress do
-  use HexWeb.Web, :model
+  use HexWeb.Web, :schema
 
   schema "blocked_addresses" do
     field :ip, :string
