@@ -55,6 +55,7 @@ defmodule HexWeb.Mixfile do
      {:postgrex,            ">= 0.0.0"},
      {:sweet_xml,           "~> 0.5"},
      {:hackney,             "~> 1.6.5", override: true},
+     {:plug_attack,         "~> 0.3"},
      {:phoenix_live_reload, "~> 1.0", only: :dev},
      {:rollbax,             "~> 0.5", only: :prod}]
   end

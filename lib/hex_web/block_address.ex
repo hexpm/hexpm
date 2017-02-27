@@ -6,6 +6,15 @@ defmodule HexWeb.BlockAddress do
     :ets.insert(@ets, {:loaded, false})
   end
 
+  def try_reload do
+    case :ets.lookup(@ets, :loaded) do
+      [{:loaded, false}] ->
+        reload()
+      _ ->
+        :ok
+    end
+  end
+
   def reload do
     all_ips = HexWeb.Repo.all(HexWeb.BlockedAddress)
               |> Enum.into(MapSet.new, & &1.ip)
@@ -21,49 +30,6 @@ defmodule HexWeb.BlockAddress do
     :ets.insert(@ets, {:loaded, true})
   end
 
-  defmodule Plug do
-    alias HexWeb.BlockAddress
-    import Elixir.Plug.Conn
-
-    @ets :blocked_addresses
-
-    def init(opts), do: opts
-
-    def call(conn, _opts) do
-      try_reload()
-
-      if conn.remote_ip do
-        case check(ip(conn.remote_ip)) do
-          :ok ->
-            conn
-            |> HexWeb.ControllerHelpers.render_error(403, message: "Blocked")
-            |> halt
-          :error ->
-            conn
-        end
-      else
-        conn
-      end
-    end
-
-    defp try_reload do
-      case :ets.lookup(@ets, :loaded) do
-        [{:loaded, false}] ->
-          BlockAddress.reload
-        _ ->
-          :ok
-      end
-    end
-
-    defp check(ip) do
-      case :ets.lookup(@ets, ip) do
-        [{^ip}] -> :ok
-        [] -> :error
-      end
-    end
-
-    defp ip({a, b, c, d}) do
-      "#{a}.#{b}.#{c}.#{d}"
-    end
-  end
+  def blocked?(ip),
+    do: match?([{^ip}], :ets.lookup(@ets, ip))
 end

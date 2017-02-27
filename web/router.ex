@@ -26,8 +26,7 @@ defmodule HexWeb.Router do
     plug :accepts, @accepted_formats
     plug :auth_gate
     plug :user_agent
-    plug HexWeb.BlockAddress.Plug
-    plug HexWeb.RateLimit.Plug
+    plug HexWeb.PlugAttack
   end
 
   scope "/", HexWeb do
