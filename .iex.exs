@@ -1,0 +1,32 @@
+alias HexWeb.Repo
+alias HexWeb.{
+  Assets,
+  AuditLog,
+  Download,
+  Email,
+  Install,
+  Installs,
+  Key,
+  Keys,
+  Mailer,
+  Owners,
+  Package,
+  PackageDownload,
+  PackageMetadata,
+  PackageOwner,
+  Packages,
+  RegistryBuilder,
+  Release,
+  ReleaseDownload,
+  ReleaseMetadata,
+  ReleaseRetirement,
+  Releases,
+  Requirement,
+  Resolver,
+  Sitemaps,
+  User,
+  UserHandles,
+  Users,
+}
+
+import_if_available Ecto.Query, only: [from: 1, from: 2]
