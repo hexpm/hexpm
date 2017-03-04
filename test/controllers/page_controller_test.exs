@@ -32,9 +32,8 @@ defmodule HexWeb.PageControllerTest do
   end
 
   test "index" do
-    path     = Path.join([__DIR__, "..", "fixtures"])
-    logfile1 = File.read!(Path.join(path, "s3_logs_1.txt"))
-    logfile2 = File.read!(Path.join(path, "s3_logs_2.txt"))
+    logfile1 = read_fixture("s3_logs_1.txt")
+    logfile2 = read_fixture("s3_logs_2.txt")
 
     HexWeb.Store.put("region", "bucket", "hex/2013-12-01-21-32-16-E568B2907131C0C0", logfile1, [])
     HexWeb.Store.put("region", "bucket", "hex/2013-12-01-21-32-19-E568B2907131C0C0", logfile2, [])

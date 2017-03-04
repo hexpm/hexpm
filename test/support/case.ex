@@ -24,4 +24,9 @@ defmodule HexWeb.Case do
           |> HexWeb.Repo.insert!
     key.user_secret
   end
+
+  def read_fixture(path) do
+    Path.join([__DIR__, "..", "fixtures", path])
+    |> File.read!
+  end
 end

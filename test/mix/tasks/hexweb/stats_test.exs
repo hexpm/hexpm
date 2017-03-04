@@ -35,11 +35,10 @@ defmodule Mix.Tasks.Hexweb.StatsTest do
 
     buckets = [[bucket, region]]
 
-    path     = Path.join([__DIR__, "..", "..", "..", "fixtures"])
-    logfile1 = File.read!(Path.join(path, "s3_logs_1.txt"))
-    logfile2 = File.read!(Path.join(path, "s3_logs_2.txt"))
-    logfile3 = File.read!(Path.join(path, "fastly_logs_1.txt")) |> :zlib.gzip
-    logfile4 = File.read!(Path.join(path, "fastly_logs_2.txt")) |> :zlib.gzip
+    logfile1 = read_fixture("s3_logs_1.txt")
+    logfile2 = read_fixture("s3_logs_2.txt")
+    logfile3 = read_fixture("fastly_logs_1.txt") |> :zlib.gzip
+    logfile4 = read_fixture("fastly_logs_2.txt") |> :zlib.gzip
 
     Store.put(region, bucket, "hex/2013-11-01-21-32-16-E568B2907131C0C0", logfile1, [])
     Store.put(region, bucket, "hex/2013-11-02-21-32-17-E568B2907131C0C0", logfile1, [])

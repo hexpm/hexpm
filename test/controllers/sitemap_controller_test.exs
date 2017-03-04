@@ -15,10 +15,6 @@ defmodule HexWeb.SitemapControllerTest do
 
   test "sitemap" do
     conn = get build_conn(), "/sitemap.xml"
-
-    path          = Path.join([__DIR__, "..", "fixtures"])
-    expected_body = File.read!(Path.join(path, "sitemap.xml"))
-
-    assert response(conn, 200) == expected_body
+    assert response(conn, 200) == read_fixture("sitemap.xml")
   end
 end
