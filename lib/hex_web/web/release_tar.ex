@@ -1,4 +1,4 @@
-defmodule HexWeb.ReleaseTar do
+defmodule HexWeb.Repository.ReleaseTar do
   # The release tar contains the following files:
   # VERSION         - release tar version
   # CHECKSUM        - checksum of file contents sha256(VERSION <> metadata.exs <> contents.tar.gz)

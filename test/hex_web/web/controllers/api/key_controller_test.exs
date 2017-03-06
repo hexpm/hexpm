@@ -1,7 +1,8 @@
 defmodule HexWeb.API.KeyControllerTest do
   use HexWeb.ConnCase, async: true
 
-  alias HexWeb.Key
+  alias HexWeb.Accounts.AuditLog
+  alias HexWeb.Accounts.Key
 
   setup do
     eric = create_user("eric", "eric@mail.com", "ericeric")
@@ -19,7 +20,7 @@ defmodule HexWeb.API.KeyControllerTest do
     assert conn.status == 201
     assert HexWeb.Repo.one(Key.get(c.eric, "macbook"))
 
-    log = HexWeb.Repo.one!(HexWeb.AuditLog)
+    log = HexWeb.Repo.one!(AuditLog)
     assert log.actor_id == c.eric.id
     assert log.action == "key.generate"
     assert %{"name" => "macbook"} = log.params
@@ -88,7 +89,7 @@ defmodule HexWeb.API.KeyControllerTest do
 
     assert HexWeb.Repo.one(Key.get_revoked(c.eric, "computer"))
 
-    log = HexWeb.Repo.one!(HexWeb.AuditLog)
+    log = HexWeb.Repo.one!(AuditLog)
     assert log.actor_id == c.eric.id
     assert log.action == "key.remove"
     assert %{"name" => "computer"} = log.params
@@ -114,7 +115,7 @@ defmodule HexWeb.API.KeyControllerTest do
 
     assert HexWeb.Repo.one(Key.get_revoked(c.eric, "current"))
 
-    log = HexWeb.Repo.one!(HexWeb.AuditLog)
+    log = HexWeb.Repo.one!(AuditLog)
     assert log.actor_id == c.eric.id
     assert log.action == "key.remove"
     assert %{"name" => "current"} = log.params
@@ -152,7 +153,7 @@ defmodule HexWeb.API.KeyControllerTest do
     assert HexWeb.Repo.one(Key.get_revoked(c.eric, "key_b"))
 
     assert [log_a, log_b] =
-      HexWeb.AuditLog
+      AuditLog
       |> HexWeb.Repo.all()
       |> Enum.sort_by(fn (%{params: %{"name" => name}}) -> name end)
     assert log_a.actor_id == c.eric.id

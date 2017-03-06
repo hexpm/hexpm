@@ -1,6 +1,6 @@
 [name, version] = System.argv
 
-package = HexWeb.Repo.get_by!(HexWeb.Package, name: name)
+package = HexWeb.Repo.get_by!(HexWeb.Repository.Package, name: name)
 
 unless package do
   IO.puts "No package: #{name}"

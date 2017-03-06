@@ -1,9 +1,9 @@
 defmodule HexWeb.TestControllerTest do
   use HexWeb.ConnCase, async: true
 
-  alias HexWeb.Package
-  alias HexWeb.Release
-  alias HexWeb.RegistryBuilder
+  alias HexWeb.Repository.Package
+  alias HexWeb.Repository.Release
+  alias HexWeb.Repository.RegistryBuilder
 
   setup do
     user = create_user("eric", "eric@mail.com", "ericeric")

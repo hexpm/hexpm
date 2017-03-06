@@ -3,9 +3,10 @@ defmodule HexWeb.API.OwnerControllerTest do
   use HexWeb.ConnCase, async: false
   use Bamboo.Test
 
-  alias HexWeb.User
-  alias HexWeb.Package
-  alias HexWeb.Release
+  alias HexWeb.Accounts.AuditLog
+  alias HexWeb.Accounts.User
+  alias HexWeb.Repository.Package
+  alias HexWeb.Repository.Release
 
   setup do
     eric = create_user("eric", "eric@mail.com", "ericeric")
@@ -76,7 +77,7 @@ defmodule HexWeb.API.OwnerControllerTest do
     assert {first.username, hd(emails_first).email} in email.to
     assert {second.username, hd(emails_second).email} in email.to
 
-    log = HexWeb.Repo.one!(HexWeb.AuditLog)
+    log = HexWeb.Repo.one!(AuditLog)
     assert log.actor_id == c.eric.id
     assert log.action == "owner.add"
     assert %{"package" => %{"name" => "postgrex"}, "user" => %{"username" => "jose"}} = log.params
@@ -129,7 +130,7 @@ defmodule HexWeb.API.OwnerControllerTest do
     assert {c.eric.username, hd(eric_emails).email} in email.to
     assert {c.jose.username, hd(jose_emails).email} in email.to
 
-    log = HexWeb.Repo.one!(HexWeb.AuditLog)
+    log = HexWeb.Repo.one!(AuditLog)
     assert log.actor_id == c.eric.id
     assert log.action == "owner.remove"
     assert %{"package" => %{"name" => "postgrex"}, "user" => %{"username" => "jose"}} = log.params

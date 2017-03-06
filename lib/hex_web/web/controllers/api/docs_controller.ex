@@ -21,7 +21,7 @@ defmodule HexWeb.API.DocsController do
 
     case HexWeb.DocsTar.parse(body) do
       {:ok, {files, body}} ->
-        HexWeb.Releases.publish_docs(package, release, files, body, audit: audit_data(conn))
+        HexWeb.Repository.Releases.publish_docs(package, release, files, body, audit: audit_data(conn))
         location = HexWeb.Utils.docs_tarball_url(package, release)
 
         conn
@@ -34,7 +34,7 @@ defmodule HexWeb.API.DocsController do
   end
 
   def delete(conn, _params) do
-    HexWeb.Releases.revert_docs(conn.assigns.release, audit: audit_data(conn))
+    HexWeb.Repository.Releases.revert_docs(conn.assigns.release, audit: audit_data(conn))
 
     conn
     |> api_cache(:private)

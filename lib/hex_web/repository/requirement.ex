@@ -1,4 +1,4 @@
-defmodule HexWeb.Requirement do
+defmodule HexWeb.Repository.Requirement do
   use HexWeb.Web, :schema
   require Logger
 

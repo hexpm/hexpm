@@ -1,4 +1,4 @@
-defmodule HexWeb.Users do
+defmodule HexWeb.Accounts.Users do
   use HexWeb.Web, :context
 
   def get(username_or_email, preload \\ []) do
@@ -29,7 +29,7 @@ defmodule HexWeb.Users do
 
     case Repo.transaction(multi) do
       {:ok, %{user: %{emails: [email]} = user}} ->
-        Mail.verification(user, email) |> Mailer.deliver_now_throttled
+        Emails.verification(user, email) |> Mailer.deliver_now_throttled
         {:ok, user}
       {:error, :user, changeset, _} ->
         {:error, changeset}
@@ -98,7 +98,7 @@ defmodule HexWeb.Users do
 
       user
       |> with_emails
-      |> Mail.password_reset_request
+      |> Emails.password_reset_request
       |> Mailer.deliver_now_throttled
 
       :ok
@@ -137,7 +137,7 @@ defmodule HexWeb.Users do
     case Repo.transaction(multi) do
       {:ok, %{email: email}} ->
         user = with_emails(%{user | emails: %Ecto.Association.NotLoaded{}})
-        Mail.verification(user, email) |> Mailer.deliver_now_throttled
+        Emails.verification(user, email) |> Mailer.deliver_now_throttled
         {:ok, user}
       {:error, :email, changeset, _} ->
         {:error, changeset}
@@ -238,7 +238,7 @@ defmodule HexWeb.Users do
       email.verified ->
         {:error, :already_verified}
       true ->
-        Mail.verification(user, email) |> Mailer.deliver_now_throttled
+        Emails.verification(user, email) |> Mailer.deliver_now_throttled
         :ok
     end
   end

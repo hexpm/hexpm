@@ -1,4 +1,4 @@
-defmodule HexWeb.Mailer do
+defmodule HexWeb.Emails.Mailer do
   use Bamboo.Mailer, otp_app: :hex_web
 
   def deliver_now_throttled(email) do
@@ -11,7 +11,7 @@ defmodule HexWeb.Mailer do
       HexWeb.Throttle.wait(HexWeb.SESThrottle, length(chunk))
       email
       |> Bamboo.Email.to(chunk)
-      |> HexWeb.Mailer.deliver_now
+      |> HexWeb.Emails.Mailer.deliver_now
     end)
   end
 

@@ -36,13 +36,13 @@ defmodule HexWeb.Web do
       import Ecto
       import Ecto.Changeset
       import Ecto.Query, only: [from: 1, from: 2]
-      import HexWeb.AuditLog, only: [audit: 4, audit_many: 4, audit_with_user: 4]
+      import HexWeb.Accounts.AuditLog, only: [audit: 4, audit_many: 4, audit_with_user: 4]
 
       alias HexWeb.Repo
       alias Ecto.Multi
 
-      alias HexWeb.Mailer
-      alias HexWeb.Mail
+      alias HexWeb.Emails
+      alias HexWeb.Emails.Mailer
 
       HexWeb.Web.shared
     end
@@ -97,33 +97,34 @@ defmodule HexWeb.Web do
   defmacro shared do
     quote do
       alias HexWeb.{
-        Assets,
-        AuditLog,
-        Download,
-        Email,
-        Install,
-        Installs,
-        Key,
-        Keys,
-        Mailer,
-        Owners,
-        Package,
-        Packages,
-        PackageDownload,
-        PackageMetadata,
-        PackageOwner,
-        RegistryBuilder,
-        Release,
-        Releases,
-        ReleaseDownload,
-        ReleaseMetadata,
-        ReleaseRetirement,
-        Requirement,
-        Resolver,
-        Sitemaps,
-        User,
-        Users,
-        UserHandles,
+        Accounts.AuditLog,
+        Accounts.Email,
+        Accounts.Key,
+        Accounts.Keys,
+        Accounts.User,
+        Accounts.UserHandles,
+        Accounts.Users,
+        Emails,
+        Emails.Mailer,
+        Repository.Assets,
+        Repository.Download,
+        Repository.Install,
+        Repository.Installs,
+        Repository.Owners,
+        Repository.Package,
+        Repository.PackageDownload,
+        Repository.PackageMetadata,
+        Repository.PackageOwner,
+        Repository.Packages,
+        Repository.RegistryBuilder,
+        Repository.Release,
+        Repository.ReleaseDownload,
+        Repository.ReleaseMetadata,
+        Repository.ReleaseRetirement,
+        Repository.Releases,
+        Repository.Requirement,
+        Repository.Resolver,
+        Repository.Sitemaps,
       }
     end
   end

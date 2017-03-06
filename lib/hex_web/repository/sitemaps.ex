@@ -1,4 +1,4 @@
-defmodule HexWeb.Sitemaps do
+defmodule HexWeb.Repository.Sitemaps do
   use HexWeb.Web, :context
 
   def packages do
@@ -18,6 +18,6 @@ defmodule HexWeb.Sitemaps do
 
   def publish_docs_sitemap do
     sitemap = HexWeb.SitemapView.render("docs_sitemap.xml", packages: packages_with_docs())
-    HexWeb.Assets.push_docs_sitemap(sitemap)
+    HexWeb.Repository.Assets.push_docs_sitemap(sitemap)
   end
 end

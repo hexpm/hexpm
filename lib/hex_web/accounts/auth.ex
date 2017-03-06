@@ -1,4 +1,4 @@
-defmodule HexWeb.Auth do
+defmodule HexWeb.Accounts.Auth do
   import Ecto.Query, only: [from: 2]
 
   def key_auth(user_secret) do
@@ -11,7 +11,7 @@ defmodule HexWeb.Auth do
       |> Base.encode16(case: :lower)
 
     result =
-      from(k in HexWeb.Key,
+      from(k in HexWeb.Accounts.Key,
            where: k.secret_first == ^first,
            join: u in assoc(k, :user),
            preload: [user: {u, :emails}])
@@ -34,7 +34,7 @@ defmodule HexWeb.Auth do
   end
 
   def password_auth(username_or_email, password) do
-    user = HexWeb.Users.get(username_or_email, [:emails])
+    user = HexWeb.Accounts.Users.get(username_or_email, [:emails])
     if user && Comeonin.Bcrypt.checkpw(password, user.password) do
       {:ok, {user, nil, find_email(user, username_or_email)}}
     else

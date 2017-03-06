@@ -1,4 +1,4 @@
-defmodule HexWeb.Assets do
+defmodule HexWeb.Repository.Assets do
   def push_release(release, body) do
     opts = [acl: :public_read, cache_control: "public, max-age=604800", meta: [{"surrogate-key", tarball_cdn_key(release)}]]
     HexWeb.Store.put(nil, :s3_bucket, tarball_store_key(release), body, opts)
@@ -17,7 +17,7 @@ defmodule HexWeb.Assets do
       HexWeb.Store.delete(nil, :s3_bucket, docs_store_key(release), [])
       paths = HexWeb.Store.list(nil, :docs_bucket, Path.join(name, version))
       HexWeb.Store.delete_many(nil, :docs_bucket, Enum.to_list(paths), [])
-      HexWeb.Sitemaps.publish_docs_sitemap()
+      HexWeb.Repository.Sitemaps.publish_docs_sitemap()
     end
   end
 

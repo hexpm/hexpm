@@ -1,7 +1,7 @@
-defmodule HexWeb.KeyTest do
+defmodule HexWeb.Accounts.KeyTest do
   use HexWeb.ModelCase, async: true
 
-  alias HexWeb.Key
+  alias HexWeb.Accounts.Key
 
   setup do
     %{user: create_user("eric", "eric@mail.com", "ericeric")}

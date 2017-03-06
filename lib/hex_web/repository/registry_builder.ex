@@ -1,4 +1,4 @@
-defmodule HexWeb.RegistryBuilder do
+defmodule HexWeb.Repository.RegistryBuilder do
   @doc """
   Builds the ets registry file. Only one build process should run at a given
   time, but if a rebuild request comes in during building we need to rebuild
@@ -8,10 +8,10 @@ defmodule HexWeb.RegistryBuilder do
   import Ecto.Query, only: [from: 2]
   require HexWeb.Repo
   require Logger
-  alias HexWeb.Package
-  alias HexWeb.Release
-  alias HexWeb.Requirement
-  alias HexWeb.Install
+  alias HexWeb.Repository.Package
+  alias HexWeb.Repository.Release
+  alias HexWeb.Repository.Requirement
+  alias HexWeb.Repository.Install
 
   @ets_table :hex_registry
   @version 4

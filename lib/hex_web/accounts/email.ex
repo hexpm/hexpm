@@ -1,5 +1,7 @@
-defmodule HexWeb.Email do
+defmodule HexWeb.Accounts.Email do
   use HexWeb.Web, :schema
+
+  alias HexWeb.Accounts.Auth
 
   schema "emails" do
     field :email, :string
@@ -33,7 +35,7 @@ defmodule HexWeb.Email do
     |> unique_constraint(:email, name: "emails_email_key")
     |> unique_constraint(:email, name: "emails_email_user_key")
     |> put_change(:verified, verified?)
-    |> put_change(:verification_key, HexWeb.Auth.gen_key())
+    |> put_change(:verification_key, Auth.gen_key())
   end
 
   def verify?(nil, _key),

@@ -1,8 +1,8 @@
-defmodule HexWeb.UserTest do
+defmodule HexWeb.Accounts.UserTest do
   use HexWeb.ModelCase, async: true
 
-  alias HexWeb.Auth
-  alias HexWeb.User
+  alias HexWeb.Accounts.Auth
+  alias HexWeb.Accounts.User
 
   setup do
     %{user: create_user("eric", "eric@mail.com", "erics_pass")}

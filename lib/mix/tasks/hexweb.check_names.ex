@@ -11,8 +11,8 @@ defmodule Mix.Tasks.Hexweb.CheckNames do
 
     threshold
     |> find_candidates
-    |> HexWeb.Mail.typosquat_candidates(threshold)
-    |> HexWeb.Mailer.deliver_now_throttled
+    |> HexWeb.Emails.typosquat_candidates(threshold)
+    |> HexWeb.Emails.Mailer.deliver_now_throttled
 
     :ok
   end

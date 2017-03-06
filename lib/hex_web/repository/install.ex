@@ -1,4 +1,4 @@
-defmodule HexWeb.Install do
+defmodule HexWeb.Repository.Install do
   use HexWeb.Web, :schema
 
   schema "installs" do
@@ -37,6 +37,6 @@ defmodule HexWeb.Install do
   end
 
   def build(hex, elixirs) do
-    change(%HexWeb.Install{}, hex: hex, elixirs: elixirs)
+    change(%HexWeb.Repository.Install{}, hex: hex, elixirs: elixirs)
   end
 end

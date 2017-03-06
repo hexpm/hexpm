@@ -1,4 +1,4 @@
-defmodule HexWeb.ReleaseRetirement do
+defmodule HexWeb.Repository.ReleaseRetirement do
   use HexWeb.Web, :schema
 
   embedded_schema do

@@ -1,13 +1,15 @@
-defmodule HexWeb.AuditLogTest do
+defmodule HexWeb.Accounts.AuditLogTest do
   use HexWeb.ModelCase, async: true
 
-  test "build" do
-    actor = %HexWeb.User{id: 1}
-    package = %HexWeb.Package{id: 2, name: "ecto", meta: %HexWeb.PackageMetadata{description: "some description"}}
-    user = %HexWeb.User{id: 3, username: "eric", handles: %HexWeb.UserHandles{github: "ericmj"}}
+  alias HexWeb.Accounts.AuditLog
 
-    assert HexWeb.AuditLog.build(actor, "Hex/0.12.1", "owner.add", {package, user}) ==
-      %HexWeb.AuditLog{
+  test "build" do
+    actor = %HexWeb.Accounts.User{id: 1}
+    package = %HexWeb.Repository.Package{id: 2, name: "ecto", meta: %HexWeb.Repository.PackageMetadata{description: "some description"}}
+    user = %HexWeb.Accounts.User{id: 3, username: "eric", handles: %HexWeb.Accounts.UserHandles{github: "ericmj"}}
+
+    assert AuditLog.build(actor, "Hex/0.12.1", "owner.add", {package, user}) ==
+      %AuditLog{
         actor_id: 1,
         user_agent: "Hex/0.12.1",
         action: "owner.add",

@@ -1,4 +1,4 @@
-defmodule HexWeb.Packages do
+defmodule HexWeb.Repository.Packages do
   use HexWeb.Web, :context
 
   def count(filter \\ nil) do

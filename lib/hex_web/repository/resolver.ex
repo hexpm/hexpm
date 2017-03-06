@@ -1,4 +1,4 @@
-defmodule HexWeb.Resolver do
+defmodule HexWeb.Repository.Resolver do
   import Ecto.Query, only: [from: 2]
 
   @behaviour Hex.Registry
@@ -125,14 +125,14 @@ defmodule HexWeb.Resolver do
       |> Enum.reject(&:ets.member(name, {:versions, &1}))
 
     packages =
-      from(p in HexWeb.Package,
+      from(p in HexWeb.Repository.Package,
            where: p.name in ^packages,
            select: {p.id, p.name})
       |> HexWeb.Repo.all
       |> Map.new
 
     releases =
-      from(r in HexWeb.Release,
+      from(r in HexWeb.Repository.Release,
            where: r.package_id in ^Map.keys(packages),
            select: {r.package_id, {r.id, r.version}})
       |> HexWeb.Repo.all
@@ -173,7 +173,7 @@ defmodule HexWeb.Resolver do
         release_id = :ets.lookup_element(name, {:release, package, version}, 2)
 
         deps =
-          from(r in HexWeb.Requirement,
+          from(r in HexWeb.Repository.Requirement,
                join: p in assoc(r, :dependency),
                where: r.release_id == ^release_id,
                select: {p.name, r.app, r.requirement, r.optional})

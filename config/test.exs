@@ -13,7 +13,7 @@ config :hex_web, HexWeb.Endpoint,
   http: [port: 4001],
   server: false
 
-config :hex_web, HexWeb.Mailer,
+config :hex_web, HexWeb.Emails.Mailer,
   adapter: Bamboo.LocalAdapter
 
 config :hex_web, HexWeb.Repo,

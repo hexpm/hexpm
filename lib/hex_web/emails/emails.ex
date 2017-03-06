@@ -1,4 +1,4 @@
-defmodule HexWeb.Mail do
+defmodule HexWeb.Emails do
   import Bamboo.Email
   use Bamboo.Phoenix, view: HexWeb.EmailView
 

@@ -1,4 +1,4 @@
-defmodule HexWeb.Download do
+defmodule HexWeb.Repository.Download do
   use HexWeb.Web, :schema
 
   schema "downloads" do

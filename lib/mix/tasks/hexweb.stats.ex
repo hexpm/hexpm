@@ -3,11 +3,11 @@ defmodule Mix.Tasks.Hexweb.Stats do
   require Logger
   import Ecto.Query, only: [from: 2]
   alias HexWeb.CDN
-  alias HexWeb.Download
-  alias HexWeb.Package
-  alias HexWeb.PackageDownload
-  alias HexWeb.Release
-  alias HexWeb.ReleaseDownload
+  alias HexWeb.Repository.Download
+  alias HexWeb.Repository.Package
+  alias HexWeb.Repository.PackageDownload
+  alias HexWeb.Repository.Release
+  alias HexWeb.Repository.ReleaseDownload
   alias HexWeb.Repo
   alias HexWeb.Store
   alias HexWeb.Utils

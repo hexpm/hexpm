@@ -1,10 +1,11 @@
 defmodule HexWeb.API.ReleaseControllerTest do
   use HexWeb.ConnCase, async: true
 
-  alias HexWeb.User
-  alias HexWeb.Package
-  alias HexWeb.Release
-  alias HexWeb.RegistryBuilder
+  alias HexWeb.Accounts.AuditLog
+  alias HexWeb.Accounts.User
+  alias HexWeb.Repository.Package
+  alias HexWeb.Repository.Release
+  alias HexWeb.Repository.RegistryBuilder
 
   setup do
     user = create_user("eric", "eric@mail.com", "ericeric")
@@ -29,7 +30,7 @@ defmodule HexWeb.API.ReleaseControllerTest do
     assert package.name == "ecto"
     assert [%User{id: ^user_id}] = assoc(package, :owners) |> HexWeb.Repo.all
 
-    log = HexWeb.Repo.one!(HexWeb.AuditLog)
+    log = HexWeb.Repo.one!(AuditLog)
     assert log.actor_id == user_id
     assert log.action == "release.publish"
     assert %{"package" => %{"name" => "ecto"}, "release" => %{"version" => "1.0.0"}} = log.params
@@ -143,8 +144,8 @@ defmodule HexWeb.API.ReleaseControllerTest do
     assert conn.status == 200
     postgrex = HexWeb.Repo.get_by!(Package, name: "postgrex")
     release = HexWeb.Repo.get_by!(assoc(postgrex, :releases), version: "0.0.1")
-    assert [%HexWeb.AuditLog{action: "release.publish"}, %HexWeb.AuditLog{action: "release.publish"}] =
-           HexWeb.Repo.all(HexWeb.AuditLog)
+    assert [%AuditLog{action: "release.publish"}, %AuditLog{action: "release.publish"}] =
+           HexWeb.Repo.all(AuditLog)
 
     Ecto.Changeset.change(release, inserted_at: %{NaiveDateTime.utc_now | year: 2000})
     |> HexWeb.Repo.update!
@@ -194,7 +195,7 @@ defmodule HexWeb.API.ReleaseControllerTest do
     refute HexWeb.Repo.get_by(Package, name: "postgrex")
     refute HexWeb.Repo.get_by(assoc(package, :releases), version: "0.0.1")
 
-    [_, log] = HexWeb.Repo.all(HexWeb.AuditLog)
+    [_, log] = HexWeb.Repo.all(AuditLog)
     assert log.actor_id == c.user.id
     assert log.action == "release.revert"
     assert %{"package" => %{"name" => "postgrex"}, "release" => %{"version" => "0.0.1"}} = log.params

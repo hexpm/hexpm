@@ -9,18 +9,18 @@ defmodule HexWeb.Case do
   end
 
   def create_user(username, email, password, confirmed? \\ true) do
-    HexWeb.User.build(%{username: username, password: password, emails: [%{email: email}]}, confirmed?)
+    HexWeb.Accounts.User.build(%{username: username, password: password, emails: [%{email: email}]}, confirmed?)
     |> HexWeb.Repo.insert!
   end
 
   def key_for(username) when is_binary(username) do
-    HexWeb.Repo.get_by!(HexWeb.User, username: username)
+    HexWeb.Repo.get_by!(HexWeb.Accounts.User, username: username)
     |> key_for
   end
 
   def key_for(user) do
     key = user
-          |> HexWeb.Key.build(%{name: "any_key_name"})
+          |> HexWeb.Accounts.Key.build(%{name: "any_key_name"})
           |> HexWeb.Repo.insert!
     key.user_secret
   end

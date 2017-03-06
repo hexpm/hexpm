@@ -16,7 +16,7 @@ defmodule HexWeb.BlockAddress do
   end
 
   def reload do
-    all_ips = HexWeb.Repo.all(HexWeb.BlockedAddress)
+    all_ips = HexWeb.Repo.all(HexWeb.BlockAddress.Entry)
               |> Enum.into(MapSet.new, & &1.ip)
 
     old_ips = :ets.tab2list(@ets) |> Enum.map(&elem(&1, 0))

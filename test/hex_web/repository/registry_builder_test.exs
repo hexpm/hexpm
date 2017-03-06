@@ -1,10 +1,10 @@
-defmodule HexWeb.RegistryBuilderTest do
+defmodule HexWeb.Repository.RegistryBuilderTest do
   use HexWeb.ModelCase
 
-  alias HexWeb.Package
-  alias HexWeb.Release
-  alias HexWeb.Install
-  alias HexWeb.RegistryBuilder
+  alias HexWeb.Repository.Package
+  alias HexWeb.Repository.Release
+  alias HexWeb.Repository.Install
+  alias HexWeb.Repository.RegistryBuilder
 
   setup do
     user = create_user("eric", "eric@mail.com", "ericeric")

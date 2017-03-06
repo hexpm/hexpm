@@ -1,4 +1,4 @@
-defmodule HexWeb.ReleaseMetadata do
+defmodule HexWeb.Repository.ReleaseMetadata do
   use HexWeb.Web, :schema
 
   embedded_schema do

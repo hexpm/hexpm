@@ -1,7 +1,7 @@
 [name] = System.argv
 
-user = HexWeb.Repo.get_by!(HexWeb.User, username: name) ||
-         HexWeb.Repo.get_by!(HexWeb.User, email: name)
+user = HexWeb.Repo.get_by!(HexWeb.Accounts.User, username: name) ||
+         HexWeb.Repo.get_by!(HexWeb.Accounts.User, email: name)
 
 unless user do
   IO.puts "No user: #{name}"

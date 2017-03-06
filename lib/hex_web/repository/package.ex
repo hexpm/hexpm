@@ -1,4 +1,4 @@
-defmodule HexWeb.Package do
+defmodule HexWeb.Repository.Package do
   use HexWeb.Web, :schema
   @derive {Phoenix.Param, key: :name}
 
@@ -65,7 +65,7 @@ defmodule HexWeb.Package do
   end
 
   def owner(package, user) do
-    from(p in HexWeb.PackageOwner,
+    from(p in HexWeb.Repository.PackageOwner,
          where: p.package_id == ^package.id,
          where: p.owner_id == ^user.id)
   end

@@ -1,5 +1,7 @@
-defmodule HexWeb.User do
+defmodule HexWeb.Accounts.User do
   use HexWeb.Web, :schema
+
+  alias HexWeb.Accounts.Auth
 
   @derive {Phoenix.Param, key: :username}
 
@@ -35,11 +37,11 @@ defmodule HexWeb.User do
     |> unique_constraint(:username, name: "users_username_idx")
     |> validate_length(:password, min: 7)
     |> validate_confirmation(:password, message: "does not match password")
-    |> update_change(:password, &HexWeb.Auth.gen_password/1)
+    |> update_change(:password, &Auth.gen_password/1)
   end
 
   def build(params, confirmed? \\ not Application.get_env(:hex_web, :user_confirm)) do
-    changeset(%HexWeb.User{}, :create, params, confirmed?)
+    changeset(%HexWeb.Accounts.User{}, :create, params, confirmed?)
   end
 
   def update_profile(user, params) do
@@ -52,7 +54,7 @@ defmodule HexWeb.User do
     |> validate_required(~w(password)a)
     |> validate_length(:password, min: 7)
     |> validate_confirmation(:password, message: "does not match password")
-    |> update_change(:password, &HexWeb.Auth.gen_password/1)
+    |> update_change(:password, &Auth.gen_password/1)
   end
 
   def update_password(user, params) do
@@ -64,11 +66,11 @@ defmodule HexWeb.User do
     |> validate_length(:password, min: 7)
     |> validate_password(:password, password)
     |> validate_confirmation(:password, message: "does not match password")
-    |> update_change(:password, &HexWeb.Auth.gen_password/1)
+    |> update_change(:password, &Auth.gen_password/1)
   end
 
   def init_password_reset(user) do
-    key = HexWeb.Auth.gen_key()
+    key = Auth.gen_key()
     change(user, %{reset_key: key, reset_expiry: NaiveDateTime.utc_now})
   end
 
@@ -95,7 +97,7 @@ defmodule HexWeb.User do
   end
 
   def new_session(user) do
-    key = HexWeb.Auth.gen_key()
+    key = Auth.gen_key()
     change(user, %{session_key: key})
   end
 
@@ -108,7 +110,7 @@ defmodule HexWeb.User do
   def get(username_or_email, preload \\ []) do
     # Somewhat crazy hack to get this done in one query
     # Makes assumptions about how Ecto choses variable names
-    from u in HexWeb.User,
+    from u in HexWeb.Accounts.User,
       where: u.username == ^username_or_email or
              ^username_or_email in fragment("SELECT emails.email FROM emails WHERE emails.user_id = u0.id and emails.verified"),
       preload: ^preload

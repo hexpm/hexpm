@@ -1,13 +1,13 @@
 [name] = System.argv
 
-package = HexWeb.Repo.get_by!(HexWeb.Package, name: name)
+package = HexWeb.Repo.get_by!(HexWeb.Repository.Package, name: name)
 
 unless package do
   IO.puts "No package: #{name}"
   System.halt(1)
 end
 
-releases = HexWeb.Release.all(package)
+releases = HexWeb.Repository.Release.all(package)
            |> HexWeb.Repo.all
 owners   = Ecto.assoc(package, :owners)
            |> HexWeb.Repo.all
@@ -18,7 +18,7 @@ IO.puts name
 IO.puts ""
 IO.puts "Owners:"
 Enum.each(owners, fn owner ->
-  IO.puts("#{owner.username} #{HexWeb.User.email(owner, :primary)}")
+  IO.puts("#{owner.username} #{HexWeb.Accounts.User.email(owner, :primary)}")
 end)
 
 IO.puts ""
@@ -28,10 +28,10 @@ Enum.each(releases, &IO.puts(&1.version))
 answer = IO.gets "Remove? [Yn] "
 
 if answer =~ ~r/^(Y(es)?)?$/i do
-  Enum.each(owners, &(HexWeb.Package.owner(package, &1) |> HexWeb.Repo.delete_all))
-  Enum.each(releases, &(HexWeb.Release.delete(&1, force: true) |> HexWeb.Repo.delete!))
+  Enum.each(owners, &(HexWeb.Repository.Package.owner(package, &1) |> HexWeb.Repo.delete_all))
+  Enum.each(releases, &(HexWeb.Repository.Release.delete(&1, force: true) |> HexWeb.Repo.delete!))
   HexWeb.Repo.delete!(package)
-  HexWeb.RegistryBuilder.partial_build({:publish, name})
+  HexWeb.Repository.RegistryBuilder.partial_build({:publish, name})
   IO.puts "Removed"
 else
   IO.puts "Not removed"

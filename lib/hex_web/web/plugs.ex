@@ -65,10 +65,10 @@ defmodule HexWeb.Plugs do
     username = get_session(conn, "username")
     key = get_session(conn, "key")
 
-    user = username && HexWeb.Users.get_by_username(username)
-    user = user && HexWeb.Users.with_emails(user)
+    user = username && HexWeb.Accounts.Users.get_by_username(username)
+    user = user && HexWeb.Accounts.Users.with_emails(user)
 
-    if user && HexWeb.Users.signed_in?(user, key) do
+    if user && HexWeb.Accounts.Users.signed_in?(user, key) do
       assign(conn, :logged_in, user)
     else
       assign(conn, :logged_in, nil)

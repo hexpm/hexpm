@@ -1,4 +1,4 @@
-defmodule HexWeb.Owners do
+defmodule HexWeb.Repository.Owners do
   use HexWeb.Web, :context
 
   def all(package, preload \\ []) do
@@ -16,7 +16,7 @@ defmodule HexWeb.Owners do
       {:ok, _} ->
         owners = package |> all |> Users.with_emails
         owner = Enum.find(owners, &(&1.id == owner.id))
-        Mail.owner_added(package, owners, owner) |> Mailer.deliver_now_throttled
+        Emails.owner_added(package, owners, owner) |> Mailer.deliver_now_throttled
         :ok
       {:error, :owner, changeset, _} ->
         {:error, changeset}
@@ -36,7 +36,7 @@ defmodule HexWeb.Owners do
 
       {:ok, _} = Repo.transaction(multi)
       owner = Enum.find(owners, &(&1.id == owner.id))
-      Mail.owner_removed(package, owners, owner) |> Mailer.deliver_now_throttled
+      Emails.owner_removed(package, owners, owner) |> Mailer.deliver_now_throttled
       :ok
     end
   end

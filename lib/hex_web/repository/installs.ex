@@ -1,4 +1,4 @@
-defmodule HexWeb.Installs do
+defmodule HexWeb.Repository.Installs do
   use HexWeb.Web, :context
 
   def all do

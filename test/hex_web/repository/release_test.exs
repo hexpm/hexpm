@@ -1,8 +1,8 @@
-defmodule HexWeb.ReleaseTest do
+defmodule HexWeb.Repository.ReleaseTest do
   use HexWeb.ModelCase, async: true
 
-  alias HexWeb.Package
-  alias HexWeb.Release
+  alias HexWeb.Repository.Package
+  alias HexWeb.Repository.Release
 
   setup do
     user = create_user("eric", "eric@mail.com", "ericeric")

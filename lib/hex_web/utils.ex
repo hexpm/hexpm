@@ -146,7 +146,7 @@ defmodule HexWeb.Utils do
   @doc """
   Returns a url to a resource on the docs site from a list of path components.
   """
-  @spec docs_url(HexWeb.Package.t, HexWeb.Release.t) :: String.t
+  @spec docs_url(HexWeb.Repository.Package.t, HexWeb.Repository.Release.t) :: String.t
   @spec docs_url([String.t] | String.t) :: String.t
   def docs_url(package, release) do
     docs_url([package.name, to_string(release.version)])
@@ -158,7 +158,7 @@ defmodule HexWeb.Utils do
   @doc """
   Returns a url to the documentation tarball in the Amazon S3 Hex.pm bucket.
   """
-  @spec docs_tarball_url(HexWeb.Package.t, HexWeb.Release.t) :: String.t
+  @spec docs_tarball_url(HexWeb.Repository.Package.t, HexWeb.Repository.Release.t) :: String.t
   def docs_tarball_url(package, release) do
     repo    = Application.get_env(:hex_web, :cdn_url)
     package = package.name

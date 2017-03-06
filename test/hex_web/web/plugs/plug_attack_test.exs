@@ -72,7 +72,7 @@ defmodule HexWeb.PlugAttackTest do
     end
 
     test "halts requests from IPs that are blocked" do
-      HexWeb.Repo.insert!(%HexWeb.BlockedAddress{ip: "10.1.1.1", comment: "blocked"})
+      HexWeb.Repo.insert!(%HexWeb.BlockAddress.Entry{ip: "10.1.1.1", comment: "blocked"})
       HexWeb.BlockAddress.reload
 
       conn = request({10, 1, 1, 1})
@@ -81,7 +81,7 @@ defmodule HexWeb.PlugAttackTest do
     end
 
     test "allows requests again when the IP is unblocked" do
-      blocked_address = HexWeb.Repo.insert!(%HexWeb.BlockedAddress{ip: "20.2.2.2", comment: "blocked"})
+      blocked_address = HexWeb.Repo.insert!(%HexWeb.BlockAddress.Entry{ip: "20.2.2.2", comment: "blocked"})
       HexWeb.BlockAddress.reload
 
       conn = request({20, 2, 2, 2})

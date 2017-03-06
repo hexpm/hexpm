@@ -1,4 +1,4 @@
-defmodule HexWeb.Releases do
+defmodule HexWeb.Repository.Releases do
   use HexWeb.Web, :context
 
   @publish_timeout 60_000

@@ -2,6 +2,8 @@ defmodule HexWeb.AuthHelpers do
   import Plug.Conn
   import HexWeb.ControllerHelpers, only: [render_error: 3]
 
+  alias HexWeb.Accounts.Auth
+
   def authorized(conn, opts, auth? \\ fn _ -> true end) do
     case authorize(conn, opts) do
       {:ok, {user, key}} ->
@@ -55,7 +57,7 @@ defmodule HexWeb.AuthHelpers do
   defp basic_auth(credentials) do
     case String.split(Base.decode64!(credentials), ":", parts: 2) do
       [username_or_email, password] ->
-        case HexWeb.Auth.password_auth(username_or_email, password) do
+        case Auth.password_auth(username_or_email, password) do
           {:ok, user} -> {:ok, user}
           :error -> {:error, :basic}
         end
@@ -65,7 +67,7 @@ defmodule HexWeb.AuthHelpers do
   end
 
   defp key_auth(key) do
-    case HexWeb.Auth.key_auth(key) do
+    case Auth.key_auth(key) do
       {:ok, user} -> {:ok, user}
       :error      -> {:error, :key}
       :revoked    -> {:error, :revoked_key}
@@ -88,15 +90,15 @@ defmodule HexWeb.AuthHelpers do
     do: false
   def package_owner?(%Plug.Conn{} = conn, user),
     do: package_owner?(conn.assigns.package, user)
-  def package_owner?(%HexWeb.Package{} = package, user),
-    do: HexWeb.Packages.owner?(package, user)
+  def package_owner?(%HexWeb.Repository.Package{} = package, user),
+    do: HexWeb.Repository.Packages.owner?(package, user)
 
   def maybe_package_owner?(%Plug.Conn{} = conn, user),
     do: maybe_package_owner?(conn.assigns[:package], user)
   def maybe_package_owner?(nil, _user),
     do: true
-  def maybe_package_owner?(%HexWeb.Package{} = package, user),
-    do: HexWeb.Packages.owner?(package, user)
+  def maybe_package_owner?(%HexWeb.Repository.Package{} = package, user),
+    do: HexWeb.Repository.Packages.owner?(package, user)
 
   def correct_user?(%Plug.Conn{} = conn, user),
     do: correct_user?(conn.params["name"], user)

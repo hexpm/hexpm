@@ -42,7 +42,7 @@ defmodule HexWeb.Validation do
 
   def validate_verified_email_exists(changeset, field, opts) do
     validate_change changeset, field, fn _, email ->
-      case HexWeb.Repo.get_by(HexWeb.Email, email: email, verified: true) do
+      case HexWeb.Repo.get_by(HexWeb.Accounts.Email, email: email, verified: true) do
         nil ->
           []
         _ ->

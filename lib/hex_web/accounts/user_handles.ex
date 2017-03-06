@@ -1,4 +1,4 @@
-defmodule HexWeb.UserHandles do
+defmodule HexWeb.Accounts.UserHandles do
   use HexWeb.Web, :schema
 
   embedded_schema do

@@ -1,8 +1,8 @@
 defmodule HexWeb.PasswordControllerTest do
   use HexWeb.ConnCase, async: true
-  alias HexWeb.Auth
-  alias HexWeb.User
-  alias HexWeb.Users
+  alias HexWeb.Accounts.Auth
+  alias HexWeb.Accounts.User
+  alias HexWeb.Accounts.Users
 
   setup do
     %{user: create_user("eric", "eric@mail.com", "hunter42")}

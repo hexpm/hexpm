@@ -52,7 +52,7 @@ defmodule HexWeb.ConnCase do
   end
 
   def test_login(conn, user) do
-    user = HexWeb.Users.sign_in(user)
+    user = HexWeb.Accounts.Users.sign_in(user)
 
     conn
     |> my_put_session("username", user.username)

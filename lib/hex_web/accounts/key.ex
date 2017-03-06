@@ -1,4 +1,4 @@
-defmodule HexWeb.Key do
+defmodule HexWeb.Accounts.Key do
   use HexWeb.Web, :schema
 
   @derive {Phoenix.Param, key: :name}

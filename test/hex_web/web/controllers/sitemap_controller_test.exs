@@ -1,7 +1,7 @@
 defmodule HexWeb.SitemapControllerTest do
   use HexWeb.ConnCase, async: true
 
-  alias HexWeb.Package
+  alias HexWeb.Repository.Package
 
   setup do
     user = create_user("eric", "eric@mail.com", "ericeric")

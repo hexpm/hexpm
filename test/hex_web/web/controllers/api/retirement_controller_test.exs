@@ -1,8 +1,8 @@
 defmodule HexWeb.API.RetirementControllerTest do
   use HexWeb.ConnCase, async: true
 
-  alias HexWeb.Package
-  alias HexWeb.Release
+  alias HexWeb.Repository.Package
+  alias HexWeb.Repository.Release
 
   setup do
     user = create_user("eric", "eric@mail.com", "ericeric")
@@ -18,7 +18,7 @@ defmodule HexWeb.API.RetirementControllerTest do
            |> post("api/packages/#{c.package.name}/releases/#{c.release.version}/retire", params)
     assert conn.status == 204
 
-    release = HexWeb.Releases.get(c.package, c.release.version)
+    release = HexWeb.Repository.Releases.get(c.package, c.release.version)
     assert release.retirement
     assert release.retirement.reason == "security"
     assert release.retirement.message == "See CVE-NNNN"
@@ -28,7 +28,7 @@ defmodule HexWeb.API.RetirementControllerTest do
            |> delete("api/packages/#{c.package.name}/releases/#{c.release.version}/retire")
     assert conn.status == 204
 
-    release = HexWeb.Releases.get(c.package, c.release.version)
+    release = HexWeb.Repository.Releases.get(c.package, c.release.version)
     refute release.retirement
   end
 end

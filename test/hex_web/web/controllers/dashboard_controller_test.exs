@@ -2,8 +2,9 @@ defmodule HexWeb.DashboardControllerTest do
   # TODO: debug Bamboo.Test race conditions and change back to async: true
   use HexWeb.ConnCase, async: false
 
-  alias HexWeb.User
-  alias HexWeb.Users
+  alias HexWeb.Accounts.Auth
+  alias HexWeb.Accounts.User
+  alias HexWeb.Accounts.Users
 
   defp add_email(user, email) do
     {:ok, user} = Users.add_email(user, %{email: email}, audit: {user, "TEST"})
@@ -64,7 +65,7 @@ defmodule HexWeb.DashboardControllerTest do
     assert redirected_to(conn) == "/dashboard/profile"
     assert get_flash(conn, :info) =~ "Profile updated successfully"
 
-    user = HexWeb.Repo.get!(HexWeb.User, c.user.id) |> HexWeb.Repo.preload(:emails)
+    user = HexWeb.Repo.get!(HexWeb.Accounts.User, c.user.id) |> HexWeb.Repo.preload(:emails)
     assert Enum.find(user.emails, &(&1.email == "new@mail.com")).public
     refute Enum.find(user.emails, &(&1.email == "eric@mail.com")).public
   end
@@ -80,7 +81,7 @@ defmodule HexWeb.DashboardControllerTest do
   end
 
   test "update profile with no emails", c do
-    HexWeb.Repo.delete_all(HexWeb.Email)
+    HexWeb.Repo.delete_all(HexWeb.Accounts.Email)
 
     conn = build_conn()
            |> test_login(c.user)
@@ -105,8 +106,8 @@ defmodule HexWeb.DashboardControllerTest do
 
     assert redirected_to(conn) == "/dashboard/password"
     assert get_flash(conn, :info) =~ "Your password has been updated"
-    assert {:ok, _} = HexWeb.Auth.password_auth(c.user.username, "newpass")
-    assert :error = HexWeb.Auth.password_auth(c.user.username, c.password)
+    assert {:ok, _} = Auth.password_auth(c.user.username, "newpass")
+    assert :error = Auth.password_auth(c.user.username, c.password)
   end
 
   test "update password invalid current password", c do
@@ -115,7 +116,7 @@ defmodule HexWeb.DashboardControllerTest do
            |> post("dashboard/password", %{user: %{password_current: "WRONG", password: "newpass", password_confirmation: "newpass"}})
 
     assert response(conn, 400) =~ "Change password"
-    assert {:ok, _} = HexWeb.Auth.password_auth(c.user.username, c.password)
+    assert {:ok, _} = Auth.password_auth(c.user.username, c.password)
   end
 
   test "update password invalid confirmation password", c do
@@ -124,8 +125,8 @@ defmodule HexWeb.DashboardControllerTest do
            |> post("dashboard/password", %{user: %{password_current: c.password, password: "newpass", password_confirmation: "WRONG"}})
 
     assert response(conn, 400) =~ "Change password"
-    assert {:ok, _} = HexWeb.Auth.password_auth(c.user.username, c.password)
-    assert :error = HexWeb.Auth.password_auth(c.user.username, "newpass")
+    assert {:ok, _} = Auth.password_auth(c.user.username, c.password)
+    assert :error = Auth.password_auth(c.user.username, "newpass")
   end
 
   test "update password missing current password", c do
@@ -134,8 +135,8 @@ defmodule HexWeb.DashboardControllerTest do
            |> post("dashboard/password", %{user: %{password: "newpass", password_confirmation: "newpass"}})
 
     assert response(conn, 400) =~ "Change password"
-    assert {:ok, _} = HexWeb.Auth.password_auth(c.user.username, c.password)
-    assert :error = HexWeb.Auth.password_auth(c.user.username, "newpass")
+    assert {:ok, _} = Auth.password_auth(c.user.username, c.password)
+    assert :error = Auth.password_auth(c.user.username, "newpass")
   end
 
   test "add email", c do
@@ -145,7 +146,7 @@ defmodule HexWeb.DashboardControllerTest do
 
     assert redirected_to(conn) == "/dashboard/email"
     assert get_flash(conn, :info) =~ "A verification email has been sent"
-    user = HexWeb.Repo.get!(HexWeb.User, c.user.id) |> HexWeb.Repo.preload(:emails)
+    user = HexWeb.Repo.get!(HexWeb.Accounts.User, c.user.id) |> HexWeb.Repo.preload(:emails)
     email = Enum.find(user.emails, &(&1.email == "new@mail.com"))
     refute email.verified
     refute email.primary
@@ -218,7 +219,7 @@ defmodule HexWeb.DashboardControllerTest do
 
     assert redirected_to(conn) == "/dashboard/email"
     assert get_flash(conn, :info) =~ "Removed email"
-    user = HexWeb.Repo.get!(HexWeb.User, c.user.id) |> HexWeb.Repo.preload(:emails)
+    user = HexWeb.Repo.get!(HexWeb.Accounts.User, c.user.id) |> HexWeb.Repo.preload(:emails)
     refute Enum.find(user.emails, &(&1.email == "new@mail.com"))
   end
 
@@ -229,7 +230,7 @@ defmodule HexWeb.DashboardControllerTest do
 
     assert redirected_to(conn) == "/dashboard/email"
     assert get_flash(conn, :error) =~ "Cannot remove primary email"
-    user = HexWeb.Repo.get!(HexWeb.User, c.user.id) |> HexWeb.Repo.preload(:emails)
+    user = HexWeb.Repo.get!(HexWeb.Accounts.User, c.user.id) |> HexWeb.Repo.preload(:emails)
     assert Enum.find(user.emails, &(&1.email == "eric@mail.com"))
   end
 
@@ -245,7 +246,7 @@ defmodule HexWeb.DashboardControllerTest do
     assert redirected_to(conn) == "/dashboard/email"
     assert get_flash(conn, :info) =~ "primary email was changed"
 
-    user = HexWeb.Repo.get!(HexWeb.User, c.user.id) |> HexWeb.Repo.preload(:emails)
+    user = HexWeb.Repo.get!(HexWeb.Accounts.User, c.user.id) |> HexWeb.Repo.preload(:emails)
     assert Enum.find(user.emails, &(&1.email == "new@mail.com")).primary
     refute Enum.find(user.emails, &(&1.email == "eric@mail.com")).primary
   end
@@ -260,7 +261,7 @@ defmodule HexWeb.DashboardControllerTest do
     assert redirected_to(conn) == "/dashboard/email"
     assert get_flash(conn, :error) =~ "not verified"
 
-    user = HexWeb.Repo.get!(HexWeb.User, c.user.id) |> HexWeb.Repo.preload(:emails)
+    user = HexWeb.Repo.get!(HexWeb.Accounts.User, c.user.id) |> HexWeb.Repo.preload(:emails)
     refute Enum.find(user.emails, &(&1.email == "new@mail.com")).primary
   end
 
@@ -276,7 +277,7 @@ defmodule HexWeb.DashboardControllerTest do
     assert redirected_to(conn) == "/dashboard/email"
     assert get_flash(conn, :info) =~ "public email was changed"
 
-    user = HexWeb.Repo.get!(HexWeb.User, c.user.id) |> HexWeb.Repo.preload(:emails)
+    user = HexWeb.Repo.get!(HexWeb.Accounts.User, c.user.id) |> HexWeb.Repo.preload(:emails)
     assert Enum.find(user.emails, &(&1.email == "new@mail.com")).public
     refute Enum.find(user.emails, &(&1.email == "eric@mail.com")).public
   end

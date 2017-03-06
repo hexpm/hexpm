@@ -2,6 +2,8 @@ defmodule HexWeb.ControllerHelpers do
   import Plug.Conn
   import Phoenix.Controller
 
+  alias HexWeb.Accounts.Auth
+
   @max_cache_age 60
 
   def cache(conn, control, vary) do
@@ -174,7 +176,7 @@ defmodule HexWeb.ControllerHelpers do
   end
 
   def maybe_fetch_package(conn, _opts) do
-    if package = HexWeb.Packages.get(conn.params["name"]) do
+    if package = HexWeb.Repository.Packages.get(conn.params["name"]) do
       assign(conn, :package, package)
     else
       assign(conn, :package, nil)
@@ -182,7 +184,7 @@ defmodule HexWeb.ControllerHelpers do
   end
 
   def fetch_package(conn, _opts) do
-    if package = HexWeb.Packages.get(conn.params["name"]) do
+    if package = HexWeb.Repository.Packages.get(conn.params["name"]) do
       assign(conn, :package, package)
     else
       conn |> not_found |> halt
@@ -190,8 +192,8 @@ defmodule HexWeb.ControllerHelpers do
   end
 
   def fetch_release(conn, _opts) do
-    package = HexWeb.Packages.get(conn.params["name"])
-    release = package && HexWeb.Releases.get(package, conn.params["version"])
+    package = HexWeb.Repository.Packages.get(conn.params["name"])
+    release = package && HexWeb.Repository.Releases.get(package, conn.params["version"])
 
     if release do
       conn
@@ -218,7 +220,7 @@ defmodule HexWeb.ControllerHelpers do
   def success_to_status(false), do: 400
 
   def password_auth(username, password) do
-    case HexWeb.Auth.password_auth(username, password) do
+    case Auth.password_auth(username, password) do
       {:ok, {user, nil, email}} ->
         if email.verified,
           do: {:ok, user},

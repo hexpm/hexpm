@@ -61,7 +61,7 @@ config :hex_web, HexWeb.Endpoint,
   secret_key_base: "Cc2cUvbm9x/uPD01xnKmpmU93mgZuht5cTejKf/Z2x0MmfqE1ZgHJ1/hSZwd8u4L",
   render_errors: [accepts: ~w(html json elixir erlang)]
 
-config :hex_web, HexWeb.Mailer,
+config :hex_web, HexWeb.Emails.Mailer,
   adapter: Bamboo.SMTPAdapter,
   server: System.get_env("HEX_SES_ENDPOINT") || "email-smtp.us-west-2.amazonaws.com",
   port: smtp_port,

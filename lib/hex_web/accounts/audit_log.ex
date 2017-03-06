@@ -1,4 +1,4 @@
-defmodule HexWeb.AuditLog do
+defmodule HexWeb.Accounts.AuditLog do
   use HexWeb.Web, :schema
 
   schema "audit_logs" do

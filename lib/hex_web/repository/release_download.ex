@@ -1,4 +1,4 @@
-defmodule HexWeb.ReleaseDownload do
+defmodule HexWeb.Repository.ReleaseDownload do
   use HexWeb.Web, :schema
 
   @primary_key false

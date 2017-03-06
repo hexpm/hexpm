@@ -1,4 +1,4 @@
-defmodule HexWeb.PackageOwner do
+defmodule HexWeb.Repository.PackageOwner do
   use HexWeb.Web, :schema
 
   schema "package_owners" do

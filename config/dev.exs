@@ -38,5 +38,5 @@ config :hex_web, HexWeb.Repo,
   hostname: "localhost",
   pool_size: 5
 
-config :hex_web, HexWeb.Mailer,
+config :hex_web, HexWeb.Emails.Mailer,
   adapter: Bamboo.LocalAdapter

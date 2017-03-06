@@ -1,9 +1,9 @@
 defmodule Mix.Tasks.Hexweb.StatsTest do
   use HexWeb.ModelCase, async: true
 
-  alias HexWeb.Download
-  alias HexWeb.Package
-  alias HexWeb.Release
+  alias HexWeb.Repository.Download
+  alias HexWeb.Repository.Package
+  alias HexWeb.Repository.Release
   alias HexWeb.Store
 
   setup do

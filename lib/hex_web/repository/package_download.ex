@@ -1,4 +1,4 @@
-defmodule HexWeb.PackageDownload do
+defmodule HexWeb.Repository.PackageDownload do
   use HexWeb.Web, :schema
   import HexWeb.QueryAPI, only: [coalesce: 2]
 

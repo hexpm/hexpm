@@ -2,7 +2,7 @@ defmodule HexWeb.API.UserControllerTest do
   # TODO: debug Bamboo.Test race conditions and change back to async: true
   use HexWeb.ConnCase, async: false
 
-  alias HexWeb.User
+  alias HexWeb.Accounts.User
 
   setup do
     %{user: create_user("eric", "eric@mail.com", "ericeric")}

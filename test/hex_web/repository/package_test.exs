@@ -1,8 +1,8 @@
-defmodule HexWeb.PackageTest do
+defmodule HexWeb.Repository.PackageTest do
   use HexWeb.ModelCase, async: true
 
-  alias HexWeb.User
-  alias HexWeb.Package
+  alias HexWeb.Accounts.User
+  alias HexWeb.Repository.Package
 
   setup do
     %{user: create_user("eric", "eric@mail.com", "ericeric")}
@@ -89,11 +89,11 @@ defmodule HexWeb.PackageTest do
       Package.build(user, pkg_meta(%{name: "phoenix", description: "Web framework"}))
       |> HexWeb.Repo.insert!
     rel =
-      HexWeb.Release.build(phoenix, rel_meta(%{version: "0.0.1", app: "phoenix"}), "")
+      HexWeb.Repository.Release.build(phoenix, rel_meta(%{version: "0.0.1", app: "phoenix"}), "")
       |> HexWeb.Repo.insert!
-    HexWeb.Repo.insert!(%HexWeb.Download{release: rel, day: Date.utc_today, downloads: 10})
+    HexWeb.Repo.insert!(%HexWeb.Repository.Download{release: rel, day: Date.utc_today, downloads: 10})
 
-    :ok = HexWeb.Repo.refresh_view(HexWeb.PackageDownload)
+    :ok = HexWeb.Repo.refresh_view(HexWeb.Repository.PackageDownload)
 
     Package.build(user, pkg_meta(%{name: "ecto", description: "DSL"}))
     |> HexWeb.Repo.insert!

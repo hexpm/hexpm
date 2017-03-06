@@ -4,7 +4,7 @@ defmodule SampleData do
   end
 
   def create_user(username, email, password) do
-    HexWeb.User.build(%{username: username, emails: [%{email: email}], password: password}, true)
+    HexWeb.Accounts.User.build(%{username: username, emails: [%{email: email}], password: password}, true)
     |> HexWeb.Repo.insert!
   end
 
@@ -19,11 +19,11 @@ defmodule SampleData do
   end
 end
 
-alias HexWeb.Package
-alias HexWeb.Release
-alias HexWeb.Download
-alias HexWeb.PackageDownload
-alias HexWeb.ReleaseDownload
+alias HexWeb.Repository.Package
+alias HexWeb.Repository.Release
+alias HexWeb.Repository.Download
+alias HexWeb.Repository.PackageDownload
+alias HexWeb.Repository.ReleaseDownload
 
 lorem = "Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum."
 

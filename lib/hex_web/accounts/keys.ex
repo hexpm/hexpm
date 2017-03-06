@@ -1,4 +1,4 @@
-defmodule HexWeb.Keys do
+defmodule HexWeb.Accounts.Keys do
   use HexWeb.Web, :context
 
   def all(user) do

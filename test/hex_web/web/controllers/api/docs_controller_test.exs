@@ -1,8 +1,9 @@
 defmodule HexWeb.API.DocsControllerTest do
   use HexWeb.ConnCase, async: true
 
-  alias HexWeb.Package
-  alias HexWeb.Release
+  alias HexWeb.Accounts.AuditLog
+  alias HexWeb.Repository.Package
+  alias HexWeb.Repository.Release
 
   setup do
     user = create_user("eric", "eric@mail.com", "ericeric")
@@ -19,7 +20,7 @@ defmodule HexWeb.API.DocsControllerTest do
     assert conn.status == 201
     assert HexWeb.Repo.get_by!(assoc(phoenix, :releases), version: "0.0.1").has_docs
 
-    log = HexWeb.Repo.one!(HexWeb.AuditLog)
+    log = HexWeb.Repo.one!(AuditLog)
     assert log.actor_id == c.user.id
     assert log.action == "docs.publish"
     assert %{"package" => %{"name" => "phoenix"}, "release" => %{"version" => "0.0.1"}} = log.params
@@ -127,7 +128,7 @@ defmodule HexWeb.API.DocsControllerTest do
     refute HexWeb.Repo.get_by(assoc(ecto, :releases), version: "0.5.0").has_docs
 
     [%{action: "docs.publish"}, %{action: "docs.publish"}, %{action: "docs.publish"}, log] =
-      HexWeb.Repo.all(HexWeb.AuditLog)
+      HexWeb.Repo.all(AuditLog)
     assert log.actor_id == c.user.id
     assert log.action == "docs.revert"
     assert %{"package" => %{"name" => "ecto"}, "release" => %{"version" => "0.5.0"}} = log.params

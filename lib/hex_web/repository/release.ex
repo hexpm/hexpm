@@ -1,4 +1,4 @@
-defmodule HexWeb.Release do
+defmodule HexWeb.Repository.Release do
   use HexWeb.Web, :schema
 
   schema "releases" do
@@ -146,7 +146,7 @@ defmodule HexWeb.Release do
   end
 
   def recent(count) do
-    from(r in HexWeb.Release,
+    from(r in HexWeb.Repository.Release,
          order_by: [desc: r.inserted_at],
          join: p in assoc(r, :package),
          limit: ^count,
@@ -154,7 +154,7 @@ defmodule HexWeb.Release do
   end
 end
 
-defimpl Phoenix.Param, for: HexWeb.Release do
+defimpl Phoenix.Param, for: HexWeb.Repository.Release do
   def to_param(release) do
     to_string(release.version)
   end
