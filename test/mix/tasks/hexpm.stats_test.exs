@@ -1,5 +1,5 @@
 defmodule Mix.Tasks.Hexweb.StatsTest do
-  use Hexpm.ModelCase, async: true
+  use Hexpm.DataCase, async: true
 
   alias Hexpm.Repository.Download
   alias Hexpm.Repository.Package

@@ -1,5 +1,5 @@
 defmodule Mix.Tasks.Hexweb.CheckNamesTest do
-  use Hexpm.ModelCase, async: true
+  use Hexpm.DataCase, async: true
 
   alias Mix.Tasks.Hexweb.CheckNames
 

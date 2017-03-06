@@ -1,5 +1,5 @@
 defmodule Hexpm.Repository.ReleaseTest do
-  use Hexpm.ModelCase, async: true
+  use Hexpm.DataCase, async: true
 
   alias Hexpm.Repository.Package
   alias Hexpm.Repository.Release

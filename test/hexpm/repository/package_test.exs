@@ -1,5 +1,5 @@
 defmodule Hexpm.Repository.PackageTest do
-  use Hexpm.ModelCase, async: true
+  use Hexpm.DataCase, async: true
 
   alias Hexpm.Accounts.User
   alias Hexpm.Repository.Package

@@ -1,5 +1,5 @@
 defmodule Hexpm.Repository.RegistryBuilderTest do
-  use Hexpm.ModelCase
+  use Hexpm.DataCase
 
   alias Hexpm.Repository.Package
   alias Hexpm.Repository.Release

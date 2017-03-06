@@ -1,4 +1,4 @@
-defmodule Hexpm.ModelCase do
+defmodule Hexpm.DataCase do
   @moduledoc """
   This module defines the test case to be used by
   model tests.
@@ -20,7 +20,7 @@ defmodule Hexpm.ModelCase do
       import Ecto
       import Ecto.Query, only: [from: 2]
       import Hexpm.Case
-      import Hexpm.ModelCase
+      import Hexpm.DataCase
       import Hexpm.TestHelpers
     end
   end

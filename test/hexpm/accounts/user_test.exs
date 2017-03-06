@@ -1,5 +1,5 @@
 defmodule Hexpm.Accounts.UserTest do
-  use Hexpm.ModelCase, async: true
+  use Hexpm.DataCase, async: true
 
   alias Hexpm.Accounts.Auth
   alias Hexpm.Accounts.User
