@@ -38,7 +38,7 @@ defmodule Hexpm.Mixfile do
   end
 
   defp deps do
-    [{:phoenix,             "~> 1.2"},
+    [{:phoenix,             "~> 1.3-rc"},
      {:phoenix_ecto,        "~> 3.1-rc"},
      {:phoenix_html,        "~> 2.3"},
      {:bamboo,              "~> 0.7"},
