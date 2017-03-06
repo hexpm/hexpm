@@ -1,4 +1,4 @@
-defmodule Hexpm.InstallController do
+defmodule Hexpm.Web.InstallController do
   use Hexpm.Web, :controller
 
   def archive(conn, params) do

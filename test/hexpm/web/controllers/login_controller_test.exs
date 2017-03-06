@@ -1,4 +1,4 @@
-defmodule Hexpm.LoginControllerTest do
+defmodule Hexpm.Web.LoginControllerTest do
   use Hexpm.ConnCase, async: true
   alias Hexpm.Accounts.Users
 

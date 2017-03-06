@@ -1,4 +1,4 @@
-defmodule Hexpm.PlugParser do
+defmodule Hexpm.Web.PlugParser do
   alias Plug.Conn
 
   @formats ~w(elixir erlang json)
@@ -44,8 +44,8 @@ defmodule Hexpm.PlugParser do
 
   defp get_decoder(format, opts) do
     case format do
-      "elixir" -> Hexpm.ElixirFormat
-      "erlang" -> Hexpm.ErlangFormat
+      "elixir" -> Hexpm.Web.ElixirFormat
+      "erlang" -> Hexpm.Web.ErlangFormat
       "json" -> Keyword.fetch!(opts, :json_decoder)
     end
   end

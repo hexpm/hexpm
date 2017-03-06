@@ -7,7 +7,7 @@ defmodule Hexpm.PlugAttack do
 
   alias Hexpm.BlockAddress
 
-  import Hexpm.ControllerHelpers
+  import Hexpm.Web.ControllerHelpers
   import Plug.Conn
 
   rule "allow local", conn do

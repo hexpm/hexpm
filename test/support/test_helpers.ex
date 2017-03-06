@@ -14,7 +14,7 @@ defmodule Hexpm.TestHelpers do
     :ok = :erl_tar.create(contents_path, files, [:compressed])
     contents = File.read!(contents_path)
 
-    meta_string = Hexpm.ConsultFormat.encode(meta)
+    meta_string = Hexpm.Web.ConsultFormat.encode(meta)
     blob = "3" <> meta_string <> contents
     checksum = :crypto.hash(:sha256, blob) |> Base.encode16
 

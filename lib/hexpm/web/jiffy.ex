@@ -1,4 +1,4 @@
-defmodule Hexpm.Jiffy do
+defmodule Hexpm.Web.Jiffy do
   def decode(binary),
     do: {:ok, decode!(binary)}
 

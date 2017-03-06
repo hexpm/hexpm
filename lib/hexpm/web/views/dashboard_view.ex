@@ -1,4 +1,4 @@
-defmodule Hexpm.DashboardView do
+defmodule Hexpm.Web.DashboardView do
   use Hexpm.Web, :view
 
   defp pages do

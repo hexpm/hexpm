@@ -1,4 +1,4 @@
-defmodule Hexpm.API.OwnerController do
+defmodule Hexpm.Web.API.OwnerController do
   use Hexpm.Web, :controller
 
   plug :fetch_package

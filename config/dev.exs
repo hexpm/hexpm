@@ -6,7 +6,7 @@ config :hexpm,
   secret:      System.get_env("HEX_SECRET")   || "796f75666f756e64746865686578",
   private_key: File.read!("test/fixtures/private.pem")
 
-config :hexpm, Hexpm.Endpoint,
+config :hexpm, Hexpm.Web.Endpoint,
   http: [port: 4000],
   debug_errors: true,
   code_reloader: true,
@@ -17,7 +17,7 @@ config :hexpm, Hexpm.Endpoint,
   watchers: [node: ["node_modules/brunch/bin/brunch", "watch", "--stdin",
              cd: Path.expand("../assets", __DIR__)]]
 
-config :hexpm, Hexpm.Endpoint,
+config :hexpm, Hexpm.Web.Endpoint,
   live_reload: [
     patterns: [
       ~r{priv/static/.*(js|css|png|jpeg|jpg|gif|svg)$},

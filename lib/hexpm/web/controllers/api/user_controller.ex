@@ -1,4 +1,4 @@
-defmodule Hexpm.API.UserController do
+defmodule Hexpm.Web.API.UserController do
   use Hexpm.Web, :controller
 
   plug :authorize when action in [:test]

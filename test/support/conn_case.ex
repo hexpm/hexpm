@@ -24,13 +24,13 @@ defmodule Hexpm.ConnCase do
       import Ecto
       import Ecto.Query, only: [from: 2]
 
-      import Hexpm.Router.Helpers
+      import Hexpm.Web.Router.Helpers
       import Hexpm.TestHelpers
       import Hexpm.Case
       import unquote(__MODULE__)
 
       # The default endpoint for testing
-      @endpoint Hexpm.Endpoint
+      @endpoint Hexpm.Web.Endpoint
     end
   end
 

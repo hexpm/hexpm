@@ -9,7 +9,7 @@ config :hexpm,
   private_key: File.read!("test/fixtures/private.pem"),
   public_key:  File.read!("test/fixtures/public.pem")
 
-config :hexpm, Hexpm.Endpoint,
+config :hexpm, Hexpm.Web.Endpoint,
   http: [port: 4001],
   server: false
 

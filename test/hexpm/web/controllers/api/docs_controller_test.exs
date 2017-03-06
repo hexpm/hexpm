@@ -1,4 +1,4 @@
-defmodule Hexpm.API.DocsControllerTest do
+defmodule Hexpm.Web.API.DocsControllerTest do
   use Hexpm.ConnCase, async: true
 
   alias Hexpm.Accounts.AuditLog

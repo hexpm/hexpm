@@ -1,4 +1,4 @@
-defmodule Hexpm.Plugs do
+defmodule Hexpm.Web.Plugs do
   import Plug.Conn, except: [read_body: 1]
 
   # Max filesize: ~10mb
@@ -50,7 +50,7 @@ defmodule Hexpm.Plugs do
         assign(conn, :user_agent, value)
       [] ->
         if Application.get_env(:hexpm, :user_agent_req) do
-          Hexpm.ControllerHelpers.render_error(conn, 400, message: "User-Agent header is requried")
+          Hexpm.Web.ControllerHelpers.render_error(conn, 400, message: "User-Agent header is requried")
         else
           assign(conn, :user_agent, "missing")
         end
@@ -110,7 +110,7 @@ defmodule Hexpm.Plugs do
   defp auth_error(conn) do
     conn
     |> put_resp_header("www-authenticate", "Basic realm=hex")
-    |> Hexpm.ControllerHelpers.render_error(401)
+    |> Hexpm.Web.ControllerHelpers.render_error(401)
     |> halt
   end
 end

@@ -1,4 +1,4 @@
-defmodule Hexpm.DashboardControllerTest do
+defmodule Hexpm.Web.DashboardControllerTest do
   # TODO: debug Bamboo.Test race conditions and change back to async: true
   use Hexpm.ConnCase, async: false
 

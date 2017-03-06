@@ -1,3 +1,3 @@
-defmodule Hexpm.PolicyView do
+defmodule Hexpm.Web.PolicyView do
   use Hexpm.Web, :view
 end

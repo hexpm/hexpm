@@ -1,4 +1,4 @@
-defmodule Hexpm.ElixirFormat do
+defmodule Hexpm.Web.ElixirFormat do
   def encode_to_iodata!(term) do
     Hexpm.Utils.binarify(term)
     |> inspect(limit: :infinity, binaries: :as_strings)

@@ -1,4 +1,4 @@
-defmodule Hexpm.API.KeyView do
+defmodule Hexpm.Web.API.KeyView do
   use Hexpm.Web, :view
 
   def render("index." <> _, %{keys: keys, authing_key: authing_key}),

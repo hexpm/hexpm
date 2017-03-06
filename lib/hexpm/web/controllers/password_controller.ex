@@ -1,4 +1,4 @@
-defmodule Hexpm.PasswordController do
+defmodule Hexpm.Web.PasswordController do
   use Hexpm.Web, :controller
 
   def show(conn, %{"username" => username, "key" => key}) do
@@ -29,12 +29,12 @@ defmodule Hexpm.PasswordController do
         conn
         |> put_flash(:info, "Your account password has been changed to your new password.")
         |> put_flash(:custom_location, true)
-        |> redirect(to: page_path(Hexpm.Endpoint, :index))
+        |> redirect(to: page_path(Hexpm.Web.Endpoint, :index))
       :error ->
         conn
         |> put_flash(:error, "Failed to change your password.")
         |> put_flash(:custom_location, true)
-        |> redirect(to: page_path(Hexpm.Endpoint, :index))
+        |> redirect(to: page_path(Hexpm.Web.Endpoint, :index))
       {:error, changeset} ->
         render_show(conn, username, key, changeset)
     end

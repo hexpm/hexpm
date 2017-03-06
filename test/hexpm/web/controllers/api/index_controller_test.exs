@@ -1,4 +1,4 @@
-defmodule Hexpm.API.IndexControllerTest do
+defmodule Hexpm.Web.API.IndexControllerTest do
   use Hexpm.ConnCase, async: true
 
   test "index" do

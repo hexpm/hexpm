@@ -1,4 +1,4 @@
-defmodule Hexpm.ControllerHelpers do
+defmodule Hexpm.Web.ControllerHelpers do
   import Plug.Conn
   import Phoenix.Controller
 
@@ -38,7 +38,7 @@ defmodule Hexpm.ControllerHelpers do
     conn
     |> put_status(status)
     |> put_layout(false)
-    |> render(Hexpm.ErrorView, :"#{status}", assigns)
+    |> render(Hexpm.Web.ErrorView, :"#{status}", assigns)
     |> halt
   end
 
@@ -206,7 +206,7 @@ defmodule Hexpm.ControllerHelpers do
 
   def authorize(conn, opts) do
     fun = Keyword.get(opts, :fun, fn _, _ -> true end)
-    Hexpm.AuthHelpers.authorized(conn, opts, &fun.(conn, &1))
+    Hexpm.Web.AuthHelpers.authorized(conn, opts, &fun.(conn, &1))
   end
 
   def audit_data(conn) do
@@ -237,7 +237,7 @@ defmodule Hexpm.ControllerHelpers do
     if logged_in?(conn) do
       conn
     else
-      redirect(conn, to: Hexpm.Router.Helpers.login_path(conn, :show, return: conn.request_path))
+      redirect(conn, to: Hexpm.Web.Router.Helpers.login_path(conn, :show, return: conn.request_path))
       |> halt
     end
   end

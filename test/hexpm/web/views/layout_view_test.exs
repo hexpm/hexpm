@@ -1,3 +1,3 @@
-defmodule Hexpm.LayoutViewTest do
+defmodule Hexpm.Web.LayoutViewTest do
   use Hexpm.ConnCase, async: true
 end

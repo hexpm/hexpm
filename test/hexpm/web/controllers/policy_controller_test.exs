@@ -1,4 +1,4 @@
-defmodule Hexpm.PolicyControllerTest do
+defmodule Hexpm.Web.PolicyControllerTest do
   use Hexpm.ConnCase, async: true
 
   test "show policy index" do

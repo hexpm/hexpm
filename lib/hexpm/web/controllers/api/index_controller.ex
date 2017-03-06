@@ -1,4 +1,4 @@
-defmodule Hexpm.API.IndexController do
+defmodule Hexpm.Web.API.IndexController do
   use Hexpm.Web, :controller
 
   def index(conn, _params) do

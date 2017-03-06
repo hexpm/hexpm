@@ -1,4 +1,4 @@
-defmodule Hexpm.LayoutView do
+defmodule Hexpm.Web.LayoutView do
   use Hexpm.Web, :view
 
   def show_search?(assigns) do
@@ -42,7 +42,7 @@ defmodule Hexpm.LayoutView do
       tag(:meta, property: "og:title", content: Map.get(assigns, :title)),
       tag(:meta, property: "og:type", content: "website"),
       tag(:meta, property: "og:url", content: Map.get(assigns, :canonical_url)),
-      tag(:meta, property: "og:image", content: static_url(Hexpm.Endpoint, "/images/hex.png")),
+      tag(:meta, property: "og:image", content: static_url(Hexpm.Web.Endpoint, "/images/hex.png")),
       tag(:meta, property: "og:description", content: description(assigns)),
       tag(:meta, property: "og:site_name", content: "Hex")
     ]

@@ -1,4 +1,4 @@
-defmodule Hexpm.API.KeyControllerTest do
+defmodule Hexpm.Web.API.KeyControllerTest do
   use Hexpm.ConnCase, async: true
 
   alias Hexpm.Accounts.AuditLog

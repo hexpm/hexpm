@@ -50,14 +50,14 @@ defmodule Hexpm.Web do
 
   def controller do
     quote do
-      use Phoenix.Controller
+      use Phoenix.Controller, namespace: Hexpm.Web
 
       import Ecto
       import Ecto.Query, only: [from: 1, from: 2]
 
-      import Hexpm.{Router.Helpers, ControllerHelpers, AuthHelpers}
+      import Hexpm.Web.{Router.Helpers, ControllerHelpers, AuthHelpers}
 
-      alias Hexpm.Endpoint
+      alias Hexpm.Web.Endpoint
 
       Hexpm.Web.shared
     end
@@ -65,7 +65,8 @@ defmodule Hexpm.Web do
 
   def view do
     quote do
-      use Phoenix.View, root: "lib/hexpm/web/templates"
+      use Phoenix.View, root: "lib/hexpm/web/templates",
+                        namespace: Hexpm.Web
       use Phoenix.HTML
 
       # Import convenience functions from controllers
@@ -79,9 +80,9 @@ defmodule Hexpm.Web do
         select: 3, select: 4
       ]
 
-      import Hexpm.{Router.Helpers, ViewHelpers, ViewIcons}
+      import Hexpm.Web.{Router.Helpers, ViewHelpers, ViewIcons}
 
-      alias Hexpm.Endpoint
+      alias Hexpm.Web.Endpoint
 
       Hexpm.Web.shared
     end
@@ -90,7 +91,7 @@ defmodule Hexpm.Web do
   def router do
     quote do
       use Phoenix.Router
-      import Hexpm.Plugs
+      import Hexpm.Web.Plugs
     end
   end
 

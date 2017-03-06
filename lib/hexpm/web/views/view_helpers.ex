@@ -1,4 +1,4 @@
-defmodule Hexpm.ViewHelpers do
+defmodule Hexpm.Web.ViewHelpers do
   use Phoenix.HTML
 
   def signed_in?(assigns) do

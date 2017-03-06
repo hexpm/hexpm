@@ -1,4 +1,4 @@
-defmodule Hexpm.EmailControllerTest do
+defmodule Hexpm.Web.EmailControllerTest do
   use Hexpm.ConnCase, async: true
 
   setup do

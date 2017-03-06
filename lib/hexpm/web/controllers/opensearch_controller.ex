@@ -1,4 +1,4 @@
-defmodule Hexpm.OpenSearchController do
+defmodule Hexpm.Web.OpenSearchController do
   use Hexpm.Web, :controller
 
   def opensearch(conn, _params) do

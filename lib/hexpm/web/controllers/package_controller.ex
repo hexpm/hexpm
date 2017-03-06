@@ -1,4 +1,4 @@
-defmodule Hexpm.PackageController do
+defmodule Hexpm.Web.PackageController do
   use Hexpm.Web, :controller
 
   @packages_per_page 30

@@ -1,4 +1,4 @@
-defmodule Hexpm.PolicyController do
+defmodule Hexpm.Web.PolicyController do
   use Hexpm.Web, :controller
 
   def index(conn, _params) do

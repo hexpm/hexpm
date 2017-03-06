@@ -1,4 +1,4 @@
-defmodule Hexpm.PasswordResetControllerTest do
+defmodule Hexpm.Web.PasswordResetControllerTest do
   # TODO: debug Bamboo.Test race conditions and change back to async: true
   use Hexpm.ConnCase, async: false
   alias Hexpm.Accounts.User

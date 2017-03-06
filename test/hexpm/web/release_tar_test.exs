@@ -1,4 +1,4 @@
-defmodule Hexpm.Repository.ReleaseTarTest do
+defmodule Hexpm.Web.ReleaseTarTest do
   use ExUnit.Case, async: true
   import Hexpm.TestHelpers
 
@@ -6,6 +6,6 @@ defmodule Hexpm.Repository.ReleaseTarTest do
     meta  = %{"app" => "ecto", "version" => "1.2.3"}
     files = [{"README", "pls read me"}]
     tar   = create_tar(meta, files)
-    assert {:ok, %{"app" => "ecto", "version" => "1.2.3"}, _checksum} = Hexpm.Repository.ReleaseTar.metadata(tar)
+    assert {:ok, %{"app" => "ecto", "version" => "1.2.3"}, _checksum} = Hexpm.Web.ReleaseTar.metadata(tar)
   end
 end

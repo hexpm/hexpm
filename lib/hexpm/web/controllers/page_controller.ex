@@ -1,4 +1,4 @@
-defmodule Hexpm.PageController do
+defmodule Hexpm.Web.PageController do
   use Hexpm.Web, :controller
 
   def index(conn, _params) do

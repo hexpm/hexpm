@@ -1,7 +1,7 @@
-defmodule Hexpm.PackageViewTest do
+defmodule Hexpm.Web.PackageViewTest do
   use Hexpm.ConnCase, async: true
 
-  alias Hexpm.PackageView
+  alias Hexpm.Web.PackageView
 
   test "show sort info" do
     assert PackageView.show_sort_info("name") == "(Sorted by name)"

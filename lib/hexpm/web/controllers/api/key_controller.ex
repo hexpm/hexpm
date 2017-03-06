@@ -1,4 +1,4 @@
-defmodule Hexpm.API.KeyController do
+defmodule Hexpm.Web.API.KeyController do
   use Hexpm.Web, :controller
 
   plug :authorize when action != :create

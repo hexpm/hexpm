@@ -1,4 +1,4 @@
-defmodule Hexpm.API.ReleaseView do
+defmodule Hexpm.Web.API.ReleaseView do
   use Hexpm.Web, :view
   import Ecto
 

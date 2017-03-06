@@ -1,4 +1,4 @@
-defmodule Hexpm.UserView do
+defmodule Hexpm.Web.UserView do
   use Hexpm.Web, :view
 
   def handles(user) do

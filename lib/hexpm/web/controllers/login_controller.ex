@@ -1,4 +1,4 @@
-defmodule Hexpm.LoginController do
+defmodule Hexpm.Web.LoginController do
   use Hexpm.Web, :controller
 
   plug :nillify_params, ["return"]
@@ -34,7 +34,7 @@ defmodule Hexpm.LoginController do
   def delete(conn, _params) do
     conn
     |> delete_session("username")
-    |> redirect(to: page_path(Hexpm.Endpoint, :index))
+    |> redirect(to: page_path(Hexpm.Web.Endpoint, :index))
   end
 
   defp render_show(conn) do

@@ -1,4 +1,4 @@
-defmodule Hexpm.API.RetirementControllerTest do
+defmodule Hexpm.Web.API.RetirementControllerTest do
   use Hexpm.ConnCase, async: true
 
   alias Hexpm.Repository.Package

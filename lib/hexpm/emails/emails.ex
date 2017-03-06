@@ -1,6 +1,6 @@
 defmodule Hexpm.Emails do
   import Bamboo.Email
-  use Bamboo.Phoenix, view: Hexpm.EmailView
+  use Bamboo.Phoenix, view: Hexpm.Web.EmailView
 
   def owner_added(package, owners, owner) do
     new_email()

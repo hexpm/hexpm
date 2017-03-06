@@ -1,4 +1,4 @@
-defmodule Hexpm.API.PackageController do
+defmodule Hexpm.Web.API.PackageController do
   use Hexpm.Web, :controller
 
   @sort_params ~w(name downloads inserted_at updated_at)

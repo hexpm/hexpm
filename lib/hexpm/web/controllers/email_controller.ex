@@ -1,4 +1,4 @@
-defmodule Hexpm.EmailController do
+defmodule Hexpm.Web.EmailController do
   use Hexpm.Web, :controller
 
   # TODO: Sign in user after verification
@@ -12,6 +12,6 @@ defmodule Hexpm.EmailController do
 
     conn
     |> put_flash(:custom_location, true)
-    |> redirect(to: page_path(Hexpm.Endpoint, :index))
+    |> redirect(to: page_path(Hexpm.Web.Endpoint, :index))
   end
 end

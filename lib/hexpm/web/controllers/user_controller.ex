@@ -1,4 +1,4 @@
-defmodule Hexpm.UserController do
+defmodule Hexpm.Web.UserController do
   use Hexpm.Web, :controller
 
   def show(conn, %{"username" => username}) do

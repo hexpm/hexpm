@@ -1,4 +1,4 @@
-defmodule Hexpm.DocsController do
+defmodule Hexpm.Web.DocsController do
   use Hexpm.Web, :controller
 
   def usage(conn, _params) do

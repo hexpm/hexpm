@@ -1,4 +1,4 @@
-defmodule Hexpm.API.RetirementController do
+defmodule Hexpm.Web.API.RetirementController do
   use Hexpm.Web, :controller
 
   plug :fetch_release when action in [:create, :delete]

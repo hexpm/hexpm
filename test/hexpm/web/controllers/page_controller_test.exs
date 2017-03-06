@@ -1,4 +1,4 @@
-defmodule Hexpm.PageControllerTest do
+defmodule Hexpm.Web.PageControllerTest do
   use Hexpm.ConnCase, async: true
 
   alias Hexpm.Repository.Package

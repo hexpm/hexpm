@@ -14,7 +14,7 @@ defmodule Hexpm.Application do
       supervisor(Task.Supervisor, [[name: Hexpm.Tasks]]),
       worker(PlugAttack.Storage.Ets, [Hexpm.PlugAttack, [clean_period: 60_000]]),
       worker(Hexpm.Throttle, [[name: Hexpm.SESThrottle, rate: ses_rate, unit: 1000]]),
-      supervisor(Hexpm.Endpoint, []),
+      supervisor(Hexpm.Web.Endpoint, []),
     ]
 
     File.mkdir_p(tmp_dir)
@@ -25,7 +25,7 @@ defmodule Hexpm.Application do
   end
 
   def config_change(changed, _new, removed) do
-    Hexpm.Endpoint.config_change(changed, removed)
+    Hexpm.Web.Endpoint.config_change(changed, removed)
     :ok
   end
 

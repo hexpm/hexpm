@@ -1,4 +1,4 @@
-defmodule Hexpm.Plugs.Forwarded do
+defmodule Hexpm.Web.Plugs.Forwarded do
   import Plug.Conn
   require Logger
 

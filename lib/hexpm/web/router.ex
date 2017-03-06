@@ -1,4 +1,4 @@
-defmodule Hexpm.Router do
+defmodule Hexpm.Web.Router do
   use Hexpm.Web, :router
 
   @accepted_formats ~w(json elixir erlang)
@@ -29,7 +29,7 @@ defmodule Hexpm.Router do
     plug Hexpm.PlugAttack
   end
 
-  scope "/", Hexpm do
+  scope "/", Hexpm.Web do
     pipe_through :browser
 
     get  "/",                               PageController, :index
@@ -85,14 +85,14 @@ defmodule Hexpm.Router do
     get  "/packages/:name/:version", PackageController, :show
   end
 
-  scope "/", Hexpm do
+  scope "/", Hexpm.Web do
     get "/sitemap.xml",     SitemapController,    :sitemap
     get "/hexsearch.xml",   OpenSearchController, :opensearch
     get "/installs/hex.ez", InstallController,    :archive
   end
 
   if Mix.env in [:dev, :test, :hex] do
-    scope "/repo", Hexpm do
+    scope "/repo", Hexpm.Web do
       get "/registry.ets.gz",        TestController, :registry
       get "/registry.ets.gz.signed", TestController, :registry_signed
       get "/names",                  TestController, :names
@@ -102,20 +102,20 @@ defmodule Hexpm.Router do
       get "/installs/hex-1.x.csv",   TestController, :installs_csv
     end
 
-    scope "/docs", Hexpm do
+    scope "/docs", Hexpm.Web do
       get "/:package/:version/*page", TestController, :docs_page
       get "/sitemap.xml",             TestController, :docs_sitemap
     end
   end
 
-  scope "/api", Hexpm.API, as: :api do
+  scope "/api", Hexpm.Web.API, as: :api do
     pipe_through :upload
 
     post "/packages/:name/releases",               ReleaseController, :create
     post "/packages/:name/releases/:version/docs", DocsController,    :create
   end
 
-  scope "/api", Hexpm.API, as: :api do
+  scope "/api", Hexpm.Web.API, as: :api do
     pipe_through :api
 
     get    "/", IndexController, :index

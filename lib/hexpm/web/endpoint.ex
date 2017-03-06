@@ -1,7 +1,7 @@
-defmodule Hexpm.Endpoint do
+defmodule Hexpm.Web.Endpoint do
   use Phoenix.Endpoint, otp_app: :hexpm
 
-  plug Hexpm.Plugs.Forwarded
+  plug Hexpm.Web.Plugs.Forwarded
 
   # Serve at "/" the static files from "priv/static" directory.
   #
@@ -23,9 +23,9 @@ defmodule Hexpm.Endpoint do
   plug Plug.Logger
 
   plug Plug.Parsers,
-    parsers: [:urlencoded, :json, Hexpm.PlugParser],
+    parsers: [:urlencoded, :json, Hexpm.Web.PlugParser],
     pass: ["*/*"],
-    json_decoder: Hexpm.Jiffy
+    json_decoder: Hexpm.Web.Jiffy
 
   plug Plug.MethodOverride
   plug Plug.Head
@@ -37,5 +37,5 @@ defmodule Hexpm.Endpoint do
     encryption_salt: Application.get_env(:hexpm, :cookie_encr_salt),
     max_age: 60 * 60 * 24 * 30
 
-  plug Hexpm.Router
+  plug Hexpm.Web.Router
 end

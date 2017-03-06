@@ -1,4 +1,4 @@
-defmodule Hexpm.Repository.ReleaseTar do
+defmodule Hexpm.Web.ReleaseTar do
   # The release tar contains the following files:
   # VERSION         - release tar version
   # CHECKSUM        - checksum of file contents sha256(VERSION <> metadata.exs <> contents.tar.gz)
@@ -92,7 +92,7 @@ defmodule Hexpm.Repository.ReleaseTar do
   end
 
   defp meta(files, _version) do
-    case Hexpm.ConsultFormat.decode(files["metadata.config"]) do
+    case Hexpm.Web.ConsultFormat.decode(files["metadata.config"]) do
       {:ok, meta} ->
         meta =
           meta

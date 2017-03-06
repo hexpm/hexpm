@@ -1,4 +1,4 @@
-defmodule Hexpm.API.DocsController do
+defmodule Hexpm.Web.API.DocsController do
   use Hexpm.Web, :controller
 
   plug :fetch_release
@@ -19,7 +19,7 @@ defmodule Hexpm.API.DocsController do
     package = conn.assigns.package
     release = conn.assigns.release
 
-    case Hexpm.DocsTar.parse(body) do
+    case Hexpm.Web.DocsTar.parse(body) do
       {:ok, {files, body}} ->
         Hexpm.Repository.Releases.publish_docs(package, release, files, body, audit: audit_data(conn))
         location = Hexpm.Utils.docs_tarball_url(package, release)

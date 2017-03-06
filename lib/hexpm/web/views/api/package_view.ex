@@ -1,4 +1,4 @@
-defmodule Hexpm.API.PackageView do
+defmodule Hexpm.Web.API.PackageView do
   use Hexpm.Web, :view
   import Ecto
 

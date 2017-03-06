@@ -1,4 +1,4 @@
-defmodule Hexpm.SitemapController do
+defmodule Hexpm.Web.SitemapController do
   use Hexpm.Web, :controller
 
   def sitemap(conn, _params) do

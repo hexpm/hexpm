@@ -1,7 +1,7 @@
-defmodule Hexpm.API.OwnerView do
+defmodule Hexpm.Web.API.OwnerView do
   use Hexpm.Web, :view
 
   def render("index." <> format, %{owners: owners}) do
-    render(Hexpm.API.UserView, "index." <> format, users: owners, show_email: true)
+    render(Hexpm.Web.API.UserView, "index." <> format, users: owners, show_email: true)
   end
 end

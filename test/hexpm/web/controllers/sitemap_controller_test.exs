@@ -1,4 +1,4 @@
-defmodule Hexpm.SitemapControllerTest do
+defmodule Hexpm.Web.SitemapControllerTest do
   use Hexpm.ConnCase, async: true
 
   alias Hexpm.Repository.Package

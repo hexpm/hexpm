@@ -1,4 +1,4 @@
-defmodule Hexpm.API.UserView do
+defmodule Hexpm.Web.API.UserView do
   use Hexpm.Web, :view
   import Ecto
 

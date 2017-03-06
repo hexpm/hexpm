@@ -1,4 +1,4 @@
-defmodule Hexpm.InstallControllerTest do
+defmodule Hexpm.Web.InstallControllerTest do
   use Hexpm.ConnCase, async: true
 
   test "forwarding" do
