@@ -1,4 +1,4 @@
-defmodule Mix.Tasks.Hexweb.CheckNames do
+defmodule Mix.Tasks.Hexpm.CheckNames do
   use Mix.Task
   require Logger
 

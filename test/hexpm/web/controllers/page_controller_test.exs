@@ -37,7 +37,7 @@ defmodule Hexpm.Web.PageControllerTest do
 
     Hexpm.Store.put("region", "bucket", "hex/2013-12-01-21-32-16-E568B2907131C0C0", logfile1, [])
     Hexpm.Store.put("region", "bucket", "hex/2013-12-01-21-32-19-E568B2907131C0C0", logfile2, [])
-    Mix.Tasks.Hexweb.Stats.run(~D[2013-12-01], [["bucket", "region"]])
+    Mix.Tasks.Hexpm.Stats.run(~D[2013-12-01], [["bucket", "region"]])
 
     conn = get build_conn(), "/"
 

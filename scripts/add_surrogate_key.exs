@@ -1,7 +1,7 @@
 defmodule Hexpm.Script.AddSurrogateKey do
   alias ExAws.S3
 
-  @agent :hexweb_surrogate_agent
+  @agent :hexpm_surrogate_agent
   @num_processes 50
   @bucket "hexdocs.pm"
 

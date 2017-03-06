@@ -18,21 +18,21 @@ This is located in the "postgresql-contrib" package, however the package name ca
 
 ### Database
 
-By default, Hexpm connects to a localhost PostgreSQL database `hexweb_dev` using the username `postgres` with the password `postgres`.
+By default, Hexpm connects to a localhost PostgreSQL database `hexpm_dev` using the username `postgres` with the password `postgres`.
 
 Create the database and user 'postgres' if not already done:
 
 ```sql
 CREATE USER postgres;
 ALTER USER postgres PASSWORD 'postgres';
-CREATE DATABASE hexweb_dev;
-GRANT ALL PRIVILEGES ON DATABASE hexweb_dev TO postgres;
+CREATE DATABASE hexpm_dev;
+GRANT ALL PRIVILEGES ON DATABASE hexpm_dev TO postgres;
 ALTER USER postgres WITH SUPERUSER;
 
 -- if you also want to setup the test database
-CREATE DATABASE hexweb_test;
-GRANT ALL PRIVILEGES ON DATABASE hexweb_test TO postgres;
-ALTER DATABASE hexweb_test SET timezone TO 'UTC';
+CREATE DATABASE hexpm_test;
+GRANT ALL PRIVILEGES ON DATABASE hexpm_test TO postgres;
+ALTER DATABASE hexpm_test SET timezone TO 'UTC';
 ```
 
 If you want to use another database, user or password, you can specify the
@@ -88,7 +88,7 @@ Hexpm will be available at [http://localhost:4000/](http://localhost:4000/).
 
 ### Running Tests
 
-By default, tests use a PostgreSQL called `hexweb_test` see above for setup.
+By default, tests use a PostgreSQL called `hexpm_test` see above for setup.
 
 Again, if you want to use another database, user or password, you can specify the
 `TEST_DATABASE_URL` in the shell before running tests:

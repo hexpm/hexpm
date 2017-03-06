@@ -34,7 +34,7 @@ config :hexpm, Hexpm.Repo,
   adapter: Ecto.Adapters.Postgres,
   username: "postgres",
   password: "postgres",
-  database: "hexweb_dev",
+  database: "hexpm_dev",
   hostname: "localhost",
   pool_size: 5
 

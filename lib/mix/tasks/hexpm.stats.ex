@@ -1,4 +1,4 @@
-defmodule Mix.Tasks.Hexweb.Stats do
+defmodule Mix.Tasks.Hexpm.Stats do
   use Mix.Task
   require Logger
   import Ecto.Query, only: [from: 2]
