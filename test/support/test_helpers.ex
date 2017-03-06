@@ -1,4 +1,4 @@
-defmodule HexWeb.TestHelpers do
+defmodule Hexpm.TestHelpers do
    @tmp Path.expand Path.join(__DIR__, "../../tmp")
 
   def create_tar(meta, files) do
@@ -14,7 +14,7 @@ defmodule HexWeb.TestHelpers do
     :ok = :erl_tar.create(contents_path, files, [:compressed])
     contents = File.read!(contents_path)
 
-    meta_string = HexWeb.ConsultFormat.encode(meta)
+    meta_string = Hexpm.ConsultFormat.encode(meta)
     blob = "3" <> meta_string <> contents
     checksum = :crypto.hash(:sha256, blob) |> Base.encode16
 

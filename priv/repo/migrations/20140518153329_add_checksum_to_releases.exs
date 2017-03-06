@@ -1,4 +1,4 @@
-defmodule HexWeb.Repo.Migrations.AddChecksumToReleases do
+defmodule Hexpm.Repo.Migrations.AddChecksumToReleases do
   use Ecto.Migration
 
   def up do

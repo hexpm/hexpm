@@ -1,4 +1,4 @@
-defmodule HexWeb.Repo.Migrations.MoveContributorsToMaintainers do
+defmodule Hexpm.Repo.Migrations.MoveContributorsToMaintainers do
   use Ecto.Migration
 
   def up do

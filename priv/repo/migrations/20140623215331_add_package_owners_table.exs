@@ -1,4 +1,4 @@
-defmodule HexWeb.Repo.Migrations.AddPackageOwnersTable do
+defmodule Hexpm.Repo.Migrations.AddPackageOwnersTable do
   use Ecto.Migration
 
   def up do

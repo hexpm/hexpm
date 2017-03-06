@@ -1,4 +1,4 @@
-defmodule HexWeb.Repo.Migrations.AddDeleteConstraints do
+defmodule Hexpm.Repo.Migrations.AddDeleteConstraints do
   use Ecto.Migration
 
   def up do

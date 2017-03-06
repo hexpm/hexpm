@@ -1,4 +1,4 @@
-defmodule HexWeb.Repo.Migrations.AddResetKeyToUsers do
+defmodule Hexpm.Repo.Migrations.AddResetKeyToUsers do
   use Ecto.Migration
 
   def up do

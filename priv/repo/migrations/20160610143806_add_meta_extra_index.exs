@@ -1,4 +1,4 @@
-defmodule HexWeb.Repo.Migrations.AddMetaExtraIndex do
+defmodule Hexpm.Repo.Migrations.AddMetaExtraIndex do
   use Ecto.Migration
 
   def up do

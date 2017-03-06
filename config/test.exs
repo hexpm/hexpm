@@ -1,6 +1,6 @@
 use Mix.Config
 
-config :hex_web,
+config :hexpm,
   user_agent_req: false,
 
   docs_url:    System.get_env("HEX_DOCS_URL") || "http://localhost:4042",
@@ -9,14 +9,14 @@ config :hex_web,
   private_key: File.read!("test/fixtures/private.pem"),
   public_key:  File.read!("test/fixtures/public.pem")
 
-config :hex_web, HexWeb.Endpoint,
+config :hexpm, Hexpm.Endpoint,
   http: [port: 4001],
   server: false
 
-config :hex_web, HexWeb.Emails.Mailer,
+config :hexpm, Hexpm.Emails.Mailer,
   adapter: Bamboo.LocalAdapter
 
-config :hex_web, HexWeb.Repo,
+config :hexpm, Hexpm.Repo,
   adapter: Ecto.Adapters.Postgres,
   username: "postgres",
   password: "postgres",

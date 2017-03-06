@@ -1,5 +1,5 @@
-alias HexWeb.Repo
-alias HexWeb.{
+alias Hexpm.Repo
+alias Hexpm.{
   Accounts.AuditLog,
   Accounts.Email,
   Accounts.Key,

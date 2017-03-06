@@ -1,4 +1,4 @@
-defmodule HexWeb.Repo.Migrations.AddSessionKeyToUsers do
+defmodule Hexpm.Repo.Migrations.AddSessionKeyToUsers do
   use Ecto.Migration
 
   def change do

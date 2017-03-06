@@ -1,4 +1,4 @@
-defmodule HexWeb.ModelCase do
+defmodule Hexpm.ModelCase do
   @moduledoc """
   This module defines the test case to be used by
   model tests.
@@ -16,18 +16,18 @@ defmodule HexWeb.ModelCase do
 
   using do
     quote do
-      alias HexWeb.Repo
+      alias Hexpm.Repo
       import Ecto
       import Ecto.Query, only: [from: 2]
-      import HexWeb.Case
-      import HexWeb.ModelCase
-      import HexWeb.TestHelpers
+      import Hexpm.Case
+      import Hexpm.ModelCase
+      import Hexpm.TestHelpers
     end
   end
 
   setup tags do
-    :ok = Ecto.Adapters.SQL.Sandbox.checkout(HexWeb.Repo)
-    HexWeb.Case.reset_store(tags)
+    :ok = Ecto.Adapters.SQL.Sandbox.checkout(Hexpm.Repo)
+    Hexpm.Case.reset_store(tags)
 
     :ok
   end

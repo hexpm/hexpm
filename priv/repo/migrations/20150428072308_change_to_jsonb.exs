@@ -1,4 +1,4 @@
-defmodule HexWeb.Repo.Migrations.ChangeToJsonb do
+defmodule Hexpm.Repo.Migrations.ChangeToJsonb do
   use Ecto.Migration
 
   def up do

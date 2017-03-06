@@ -1,0 +1,72 @@
+<%= changeset_error(@add_email_changeset) %>
+
+<div class="row">
+  <div class="col-md-3">
+    <%= render "_sidebar.html", conn: @conn %>
+  </div>
+
+  <div class="col-md-9 email">
+    <div class="panel panel-default">
+      <div class="panel-heading">Emails</div>
+      <div class="panel-body">
+        <p>
+          The <strong>primary</strong> email address will be used when Hex.pm communicates with you.
+          The <strong>public</strong> email address will be displayed on your profile page.
+        </p>
+      </div>
+      <ul class="list-group">
+        <%= for email <- @emails do %>
+          <li class="list-group-item">
+            <span class="address"><%= email.email %></span>
+
+            <%= if email.primary do %>
+              <span class="label label-success">Primary</span>
+            <% end %>
+            <%= if email.public do %>
+              <span class="label label-success">Public</span>
+            <% end %>
+
+            <%= form_tag(dashboard_path(Endpoint, :remove_email), method: :delete, class: "action") do %>
+              <input type="hidden" name="email" value="<%= email.email %>">
+              <button type="submit" class="btn btn-link btn-svg" <%= if email.primary do %>disabled<% end %>>
+                <%= Hexpm.ViewIcons.icon(:octicon, :trashcan) %>
+              </button>
+            <% end %>
+
+            <%= if email.verified and not email.primary do %>
+              <%= form_tag(dashboard_path(Endpoint, :primary_email), class: "action") do %>
+                <input type="hidden" name="email" value="<%= email.email %>">
+                <button type="submit" class="btn btn-primary btn-xs">Set as primary</button>
+              <% end %>
+            <% end %>
+            <%= if email.verified and not email.public do %>
+              <%= form_tag(dashboard_path(Endpoint, :public_email), class: "action") do %>
+                <input type="hidden" name="email" value="<%= email.email %>">
+                <button type="submit" class="btn btn-primary btn-xs">Set as public</button>
+              <% end %>
+            <% end %>
+
+            <%= unless email.verified do %>
+              <%= form_tag(dashboard_path(Endpoint, :resend_verify_email), class: "action") do %>
+                <input type="hidden" name="email" value="<%= email.email %>">
+                <button type="submit" class="btn btn-link">Resend verification email</button>
+              <% end %>
+            <% end %>
+          </li>
+        <% end %>
+
+        <li class="list-group-item">
+          <%= form_for @add_email_changeset, dashboard_path(Endpoint, :add_email), [method: :post], fn f -> %>
+            <%= label f, :email, "Add email address" %>
+            <div class="form-group form-inline">
+              <%= email_input f, :email %>
+              <button type="submit" class="btn btn-primary">Add</button>
+              <%= error_tag f, :email %>
+            </div>
+
+          <% end %>
+        </li>
+      </ul>
+    </div>
+  </div>
+</div>

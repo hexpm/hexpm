@@ -1,4 +1,4 @@
-defmodule HexWeb.Repo.Migrations.RenameCreatedAtColumns do
+defmodule Hexpm.Repo.Migrations.RenameCreatedAtColumns do
   use Ecto.Migration
 
   def up do

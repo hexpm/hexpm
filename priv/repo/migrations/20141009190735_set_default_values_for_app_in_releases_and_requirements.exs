@@ -1,4 +1,4 @@
-defmodule HexWeb.Repo.Migrations.SetDefaultValuesForAppInReleasesAndRequirements do
+defmodule Hexpm.Repo.Migrations.SetDefaultValuesForAppInReleasesAndRequirements do
   use Ecto.Migration
 
   def up do

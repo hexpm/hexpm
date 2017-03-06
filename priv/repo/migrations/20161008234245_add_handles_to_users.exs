@@ -1,4 +1,4 @@
-defmodule HexWeb.Repo.Migrations.AddHandlesToUsers do
+defmodule Hexpm.Repo.Migrations.AddHandlesToUsers do
   use Ecto.Migration
 
   def change do

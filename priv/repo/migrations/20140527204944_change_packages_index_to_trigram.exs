@@ -1,4 +1,4 @@
-defmodule HexWeb.Repo.Migrations.ChangePackagesIndexToTrigram do
+defmodule Hexpm.Repo.Migrations.ChangePackagesIndexToTrigram do
   use Ecto.Migration
 
   def up do

@@ -1,4 +1,4 @@
-defmodule HexWeb.Repo.Migrations.BlockedAddresses do
+defmodule Hexpm.Repo.Migrations.BlockedAddresses do
   use Ecto.Migration
 
   def up do

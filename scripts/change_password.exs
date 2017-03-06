@@ -1,8 +1,8 @@
 case System.argv do
   ["username", username, password] ->
-    if user = HexWeb.Repo.get_by(HexWeb.Accounts.User, username: username) do
-      HexWeb.Accounts.User.update_password_no_check(user, password: password)
-      |> HexWeb.Repo.update!
+    if user = Hexpm.Repo.get_by(Hexpm.Accounts.User, username: username) do
+      Hexpm.Accounts.User.update_password_no_check(user, password: password)
+      |> Hexpm.Repo.update!
     else
       IO.puts "No user with username: #{username}"
       System.halt(1)
@@ -10,9 +10,9 @@ case System.argv do
 
 
   ["email", email, password] ->
-    if user = HexWeb.Repo.get_by(HexWeb.Accounts.User, email: email) do
-      HexWeb.Accounts.User.update_password_no_check(user, password: password)
-      |> HexWeb.Repo.update!
+    if user = Hexpm.Repo.get_by(Hexpm.Accounts.User, email: email) do
+      Hexpm.Accounts.User.update_password_no_check(user, password: password)
+      |> Hexpm.Repo.update!
     else
       IO.puts "No user with email: #{email}"
       System.halt(1)

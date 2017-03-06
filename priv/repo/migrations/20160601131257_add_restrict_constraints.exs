@@ -1,4 +1,4 @@
-defmodule HexWeb.Repo.Migrations.AddRestrictConstraints do
+defmodule Hexpm.Repo.Migrations.AddRestrictConstraints do
   use Ecto.Migration
 
   def up do

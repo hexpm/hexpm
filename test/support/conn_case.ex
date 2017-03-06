@@ -1,4 +1,4 @@
-defmodule HexWeb.ConnCase do
+defmodule Hexpm.ConnCase do
   @moduledoc """
   This module defines the test case to be used by
   tests that require setting up a connection.
@@ -20,24 +20,24 @@ defmodule HexWeb.ConnCase do
       # Import conveniences for testing with connections
       use Phoenix.ConnTest
 
-      alias HexWeb.Repo
+      alias Hexpm.Repo
       import Ecto
       import Ecto.Query, only: [from: 2]
 
-      import HexWeb.Router.Helpers
-      import HexWeb.TestHelpers
-      import HexWeb.Case
+      import Hexpm.Router.Helpers
+      import Hexpm.TestHelpers
+      import Hexpm.Case
       import unquote(__MODULE__)
 
       # The default endpoint for testing
-      @endpoint HexWeb.Endpoint
+      @endpoint Hexpm.Endpoint
     end
   end
 
   setup tags do
     opts = tags |> Map.take([:isolation]) |> Enum.to_list()
-    :ok = Ecto.Adapters.SQL.Sandbox.checkout(HexWeb.Repo, opts)
-    HexWeb.Case.reset_store(tags)
+    :ok = Ecto.Adapters.SQL.Sandbox.checkout(Hexpm.Repo, opts)
+    Hexpm.Case.reset_store(tags)
     Bamboo.SentEmail.reset
     :ok
   end
@@ -52,7 +52,7 @@ defmodule HexWeb.ConnCase do
   end
 
   def test_login(conn, user) do
-    user = HexWeb.Accounts.Users.sign_in(user)
+    user = Hexpm.Accounts.Users.sign_in(user)
 
     conn
     |> my_put_session("username", user.username)

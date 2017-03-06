@@ -1,4 +1,4 @@
-defmodule HexWeb.Repo.Migrations.AddimestampIndiciesToPackagesAndReleases do
+defmodule Hexpm.Repo.Migrations.AddimestampIndiciesToPackagesAndReleases do
   use Ecto.Migration
 
   def up do

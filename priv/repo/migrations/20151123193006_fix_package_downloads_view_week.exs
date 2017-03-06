@@ -1,4 +1,4 @@
-defmodule HexWeb.Repo.Migrations.FixPackageDownloadsViewWeek do
+defmodule Hexpm.Repo.Migrations.FixPackageDownloadsViewWeek do
   use Ecto.Migration
 
   def up do

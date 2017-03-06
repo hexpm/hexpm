@@ -1,8 +1,8 @@
-defmodule HexWeb.Repo.Migrations.SplitAndHmacKeys do
+defmodule Hexpm.Repo.Migrations.SplitAndHmacKeys do
   use Ecto.Migration
 
   def up do
-    secret = Application.get_env(:hex_web, :secret)
+    secret = Application.get_env(:hexpm, :secret)
 
     execute "CREATE EXTENSION IF NOT EXISTS pgcrypto"
 

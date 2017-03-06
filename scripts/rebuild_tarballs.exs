@@ -1,4 +1,4 @@
-defmodule HexWeb.Scripts.Tarballs do
+defmodule Hexpm.Scripts.Tarballs do
   # NOTE: Remember to update checksums in releases table with new checksums
 
   @tools [
@@ -34,9 +34,9 @@ defmodule HexWeb.Scripts.Tarballs do
   end
 
   defp update_tarball(package, release, files, tools) do
-    {:ok, metadata} = files["metadata.config"] |> HexWeb.API.ConsultFormat.decode
+    {:ok, metadata} = files["metadata.config"] |> Hexpm.API.ConsultFormat.decode
     metadata = put_in(metadata["build_tools"], tools)
-    metadata = HexWeb.API.ConsultFormat.encode(metadata)
+    metadata = Hexpm.API.ConsultFormat.encode(metadata)
     files = put_in(files["metadata.config"], metadata)
 
     blob = files["VERSION"] <> metadata <> files["contents.tar.gz"]
@@ -83,4 +83,4 @@ defmodule HexWeb.Scripts.Tarballs do
   end
 end
 
-HexWeb.Scripts.Tarballs.main(System.argv)
+Hexpm.Scripts.Tarballs.main(System.argv)

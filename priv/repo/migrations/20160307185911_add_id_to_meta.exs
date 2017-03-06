@@ -1,4 +1,4 @@
-defmodule HexWeb.Repo.Migrations.AddIdToMeta do
+defmodule Hexpm.Repo.Migrations.AddIdToMeta do
   use Ecto.Migration
 
   def up do

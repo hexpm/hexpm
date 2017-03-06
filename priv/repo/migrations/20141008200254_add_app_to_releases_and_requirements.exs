@@ -1,4 +1,4 @@
-defmodule HexWeb.Repo.Migrations.AddAppToReleasesAndRequirements do
+defmodule Hexpm.Repo.Migrations.AddAppToReleasesAndRequirements do
   use Ecto.Migration
 
   def up do

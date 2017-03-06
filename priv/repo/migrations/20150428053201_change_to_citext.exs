@@ -1,4 +1,4 @@
-defmodule HexWeb.Repo.Migrations.ChangeToCitext do
+defmodule Hexpm.Repo.Migrations.ChangeToCitext do
   use Ecto.Migration
 
   def up do

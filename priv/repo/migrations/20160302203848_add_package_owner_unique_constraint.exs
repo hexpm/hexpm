@@ -1,4 +1,4 @@
-defmodule HexWeb.Repo.Migrations.AddPackageOwnerUniqueConstraint do
+defmodule Hexpm.Repo.Migrations.AddPackageOwnerUniqueConstraint do
   use Ecto.Migration
 
   def up do

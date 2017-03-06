@@ -1,8 +1,8 @@
-defmodule HexWeb.Mixfile do
+defmodule Hexpm.Mixfile do
   use Mix.Project
 
   def project do
-    [app: :hex_web,
+    [app: :hexpm,
      version: "0.0.1",
      elixir: "~> 1.4",
      elixirc_paths: elixirc_paths(Mix.env),
@@ -17,7 +17,7 @@ defmodule HexWeb.Mixfile do
   end
 
   def application do
-    [mod: {HexWeb.Application, []},
+    [mod: {Hexpm.Application, []},
      extra_applications: [:logger]]
   end
 

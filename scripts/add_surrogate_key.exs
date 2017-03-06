@@ -1,4 +1,4 @@
-defmodule HexWeb.Script.AddSurrogateKey do
+defmodule Hexpm.Script.AddSurrogateKey do
   alias ExAws.S3
 
   @agent :hexweb_surrogate_agent
@@ -77,4 +77,4 @@ defmodule HexWeb.Script.AddSurrogateKey do
   end
 end
 
-HexWeb.Script.AddSurrogateKey.main(System.argv)
+Hexpm.Script.AddSurrogateKey.main(System.argv)
