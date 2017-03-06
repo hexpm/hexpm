@@ -1,4 +1,4 @@
-defmodule HexWeb.Repo.Migrations.ChangeInstallsElixirReqToArray do
+defmodule Hexpm.Repo.Migrations.ChangeInstallsElixirReqToArray do
   use Ecto.Migration
 
   def up do

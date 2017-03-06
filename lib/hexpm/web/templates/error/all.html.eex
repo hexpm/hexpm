@@ -1,0 +1,4 @@
+<%= render(Hexpm.Web.LayoutView, "header.html", assigns) %>
+<h1><%= @status %></h1>
+<span class="message"><%= @message %></span>
+<%= render(Hexpm.Web.LayoutView, "footer.html", assigns) %>

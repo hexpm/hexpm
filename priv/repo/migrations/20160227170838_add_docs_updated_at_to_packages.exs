@@ -1,4 +1,4 @@
-defmodule HexWeb.Repo.Migrations.AddDocsRootUpdatedAtToPackages do
+defmodule Hexpm.Repo.Migrations.AddDocsRootUpdatedAtToPackages do
   use Ecto.Migration
 
   def up do

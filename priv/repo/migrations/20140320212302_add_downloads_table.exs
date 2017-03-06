@@ -1,4 +1,4 @@
-defmodule HexWeb.Repo.Migrations.AddStatsTable do
+defmodule Hexpm.Repo.Migrations.AddStatsTable do
   use Ecto.Migration
 
   def up do

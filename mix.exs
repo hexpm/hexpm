@@ -1,8 +1,8 @@
-defmodule HexWeb.Mixfile do
+defmodule Hexpm.Mixfile do
   use Mix.Project
 
   def project do
-    [app: :hex_web,
+    [app: :hexpm,
      version: "0.0.1",
      elixir: "~> 1.4",
      elixirc_paths: elixirc_paths(Mix.env),
@@ -17,12 +17,12 @@ defmodule HexWeb.Mixfile do
   end
 
   def application do
-    [mod: {HexWeb, []},
+    [mod: {Hexpm.Application, []},
      extra_applications: [:logger]]
   end
 
-  defp elixirc_paths(:test), do: ["lib", "web", "test/support"]
-  defp elixirc_paths(_),     do: ["lib", "web"]
+  defp elixirc_paths(:test), do: ["lib", "test/support"]
+  defp elixirc_paths(_),     do: ["lib"]
 
   defp gpb_options do
     [verify: :always,
@@ -72,7 +72,7 @@ defmodule HexWeb.Mixfile do
     {opts, _, _} = OptionParser.parse(args, switches: [force: :boolean])
 
     project     = Mix.Project.config
-    proto_paths = project[:proto_paths] || ["proto"]
+    proto_paths = project[:proto_paths] || ["priv/proto"]
     erlc_path   = project[:erlc_paths] |> List.first
     mappings    = Enum.zip(proto_paths, Stream.repeatedly(fn -> erlc_path end))
     options     = project[:gpb_options] || []

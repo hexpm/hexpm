@@ -7,7 +7,7 @@
 /deps
 /*.ez
 
-/node_modules
+/assets/node_modules
 
 erl_crash.dump
 

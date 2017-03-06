@@ -1,4 +1,4 @@
-defmodule HexWeb.Repo.Migrations.AddPackagesDescriptionIndex do
+defmodule Hexpm.Repo.Migrations.AddPackagesDescriptionIndex do
   use Ecto.Migration
 
   def up do

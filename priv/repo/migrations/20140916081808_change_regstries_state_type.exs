@@ -1,4 +1,4 @@
-defmodule HexWeb.Repo.Migrations.ChangeRegstriesStateType do
+defmodule Hexpm.Repo.Migrations.ChangeRegstriesStateType do
   use Ecto.Migration
 
   def up do

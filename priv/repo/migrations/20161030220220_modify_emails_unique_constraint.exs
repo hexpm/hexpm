@@ -1,4 +1,4 @@
-defmodule HexWeb.Repo.Migrations.ModifyEmailsUniqueConstraint do
+defmodule Hexpm.Repo.Migrations.ModifyEmailsUniqueConstraint do
   use Ecto.Migration
 
   def up do

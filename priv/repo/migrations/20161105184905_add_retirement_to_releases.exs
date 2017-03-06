@@ -1,4 +1,4 @@
-defmodule HexWeb.Repo.Migrations.AddRetirementToReleases do
+defmodule Hexpm.Repo.Migrations.AddRetirementToReleases do
   use Ecto.Migration
 
   def change do

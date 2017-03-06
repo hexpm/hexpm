@@ -1,4 +1,4 @@
-defmodule HexWeb.Repo.Migrations.AddConfirmationToUsers do
+defmodule Hexpm.Repo.Migrations.AddConfirmationToUsers do
   use Ecto.Migration
 
   def up do

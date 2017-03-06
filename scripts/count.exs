@@ -1,4 +1,4 @@
-defmodule HexWeb.Script.Count do
+defmodule Hexpm.Script.Count do
   @max_downloads_per_ip 10
 
   def run do
@@ -77,4 +77,4 @@ defmodule HexWeb.Script.Count do
   end
 end
 
-HexWeb.Script.Count.run
+Hexpm.Script.Count.run

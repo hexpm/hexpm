@@ -3,13 +3,13 @@ case System.argv do
     IO.puts "Hex:     " <> hex
     IO.puts "Elixirs: " <> Enum.join(elixirs, ", ")
 
-    HexWeb.Install.build(hex, elixirs) |> HexWeb.Repo.insert
+    Hexpm.Repository.Install.build(hex, elixirs) |> Hexpm.Repo.insert
 
   _ ->
     :ok
 end
 
-all = HexWeb.Install.all |> HexWeb.Repo.all
+all = Hexpm.Repository.Install.all |> Hexpm.Repo.all
 
 csv =
   Enum.map_join(all, "\n", fn install ->
@@ -17,11 +17,11 @@ csv =
   end)
 
 opts = [acl: :public_read, content_type: "text/csv", cache_control: "public, max-age=604800", meta: [{"surrogate-key", "installs"}]]
-HexWeb.Store.S3.put(nil, :s3_bucket, "installs/list.csv", csv, opts)
-HexWeb.CDN.purge_key(:fastly_hexrepo, "installs")
+Hexpm.Store.S3.put(nil, :s3_bucket, "installs/list.csv", csv, opts)
+Hexpm.CDN.purge_key(:fastly_hexrepo, "installs")
 
 IO.puts "Uploaded installs/list.csv"
 
-HexWeb.RegistryBuilder.partial_build(:v1)
+Hexpm.Repository.RegistryBuilder.partial_build(:v1)
 
 IO.puts "Rebuilt registry"

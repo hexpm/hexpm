@@ -20,9 +20,9 @@ keys =
   Enum.map(buckets, fn {bucket, region} ->
     IO.puts "Listing keys (#{bucket})"
     {time, keys} = :timer.tc(fn ->
-      HexWeb.Utils.multi_task(1..31, fn day ->
+      Hexpm.Utils.multi_task(1..31, fn day ->
         day = day |> Integer.to_string |> String.pad_leading(2, "0")
-        HexWeb.Store.S3.list(region, bucket, "#{dir}/#{date}-#{day}")
+        Hexpm.Store.S3.list(region, bucket, "#{dir}/#{date}-#{day}")
         |> Enum.to_list
       end)
       |> Enum.concat
@@ -34,7 +34,7 @@ keys =
     if action == "upload" do
       IO.puts "Fetching objects (#{bucket})"
       {time, _} = :timer.tc(fn ->
-        HexWeb.Store.S3.get_each(region, bucket, keys, fn _key, data ->
+        Hexpm.Store.S3.get_each(region, bucket, keys, fn _key, data ->
           IO.binwrite(file, data)
         end, timeout: :infinity)
       end)
@@ -49,18 +49,18 @@ if action == "upload" do
   {time, _} = :timer.tc(fn ->
     key = "logs/monthly/#{filename}"
 
-    upload_id = HexWeb.Store.S3.put_multipart_init("us-east-1", "backup.hex.pm", key, [])
+    upload_id = Hexpm.Store.S3.put_multipart_init("us-east-1", "backup.hex.pm", key, [])
 
     # NOTE: Could be parallel
     parts =
       File.stream!(filename, [], file_chunk_factor)
       |> Stream.with_index(1)
       |> Enum.map(fn {data, ix} ->
-           etag = HexWeb.Store.S3.put_multipart_part("us-east-1", "backup.hex.pm", key, upload_id, ix, data)
+           etag = Hexpm.Store.S3.put_multipart_part("us-east-1", "backup.hex.pm", key, upload_id, ix, data)
            {ix, etag}
          end)
 
-    HexWeb.Store.S3.put_multipart_complete("us-east-1", "backup.hex.pm", key, upload_id, parts)
+    Hexpm.Store.S3.put_multipart_complete("us-east-1", "backup.hex.pm", key, upload_id, parts)
   end)
 
   IO.puts "Uploading time: #{div(time, 1_000_000)}s"
@@ -70,7 +70,7 @@ if action == "delete" do
   Enum.each(keys, fn {bucket, region, keys} ->
     IO.puts "Deleting keys (#{bucket})"
     {time, _} = :timer.tc(fn ->
-      HexWeb.Store.S3.delete_many(region, bucket, keys, timeout: :infinity)
+      Hexpm.Store.S3.delete_many(region, bucket, keys, timeout: :infinity)
     end)
     IO.puts "Deleting time: #{div(time, 1_000_000)}s"
   end)

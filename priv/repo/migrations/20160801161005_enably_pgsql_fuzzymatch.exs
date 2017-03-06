@@ -1,4 +1,4 @@
-defmodule HexWeb.Repo.Migrations.EnablyPgsqlFuzzymatch do
+defmodule Hexpm.Repo.Migrations.EnablyPgsqlFuzzymatch do
   use Ecto.Migration
 
   def up do

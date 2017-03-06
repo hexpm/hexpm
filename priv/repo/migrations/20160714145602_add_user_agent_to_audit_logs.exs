@@ -1,4 +1,4 @@
-defmodule HexWeb.Repo.Migrations.AddUserAgentToAuditLogs do
+defmodule Hexpm.Repo.Migrations.AddUserAgentToAuditLogs do
   use Ecto.Migration
 
   def change do

@@ -1,4 +1,4 @@
-defmodule HexWeb.Repo.Migrations.AddOptionalToRequirements do
+defmodule Hexpm.Repo.Migrations.AddOptionalToRequirements do
   use Ecto.Migration
 
   def up do

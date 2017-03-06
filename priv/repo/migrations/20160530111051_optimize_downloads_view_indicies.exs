@@ -1,4 +1,4 @@
-defmodule HexWeb.Repo.Migrations.OptimizeDownloadsViewIndicies do
+defmodule Hexpm.Repo.Migrations.OptimizeDownloadsViewIndicies do
   use Ecto.Migration
 
   def up do

@@ -1,4 +1,4 @@
-defmodule HexWeb.Repo.Migrations.RemoveUnnecessaryFunctions do
+defmodule Hexpm.Repo.Migrations.RemoveUnnecessaryFunctions do
   use Ecto.Migration
 
   def up do

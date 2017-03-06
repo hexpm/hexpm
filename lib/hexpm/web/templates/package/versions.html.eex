@@ -1,0 +1,14 @@
+<%= for release <- @releases do %>
+  <li>
+    <a href="<%= package_path(Endpoint, :show, @package, release, []) %>"><strong><%= release.version %></strong></a>
+    <%= pretty_date(release.inserted_at) %>
+
+    <%= if release.retirement do %>
+      (<span class="version-retirement">retired</span>)
+    <% else %>
+      <%= if release.has_docs do %>
+        (<a href="<%= raw Hexpm.Utils.docs_url(@package, release) %>">docs</a>)
+      <% end %>
+    <% end %>
+  </li>
+<% end %>

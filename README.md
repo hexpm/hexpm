@@ -1,24 +1,24 @@
-# HexWeb
+# Hexpm
 
-[![Build Status](https://travis-ci.org/hexpm/hex_web.svg?branch=master "Build Status")](http://travis-ci.org/hexpm/hex_web)
+[![Build Status](https://travis-ci.org/hexpm/hexpm.svg?branch=master "Build Status")](http://travis-ci.org/hexpm/hexpm)
 
 ## Contributing
 
-To contribute to HexWeb you need to properly set up your development environment.
+To contribute to Hexpm you need to properly set up your development environment.
 
-Also see the client repository: [hex](https://github.com/hexpm/hex). The client uses `hex_web` for integration tests, so `hex_web` needs to support all versions the client supports. Travis tests ensures that tests are run on all supported versions.
+Also see the client repository: [hex](https://github.com/hexpm/hex). The client uses `hexpm` for integration tests, so `hexpm` needs to support all versions the client supports. Travis tests ensures that tests are run on all supported versions.
 
 ### PostgreSQL Modules And Version
 
-PostgreSQL version should be >= 9.4, as HexWeb uses the `jsonb` type, that is available from PostgreSQL 9.4 onward.
+PostgreSQL version should be >= 9.4, as Hexpm uses the `jsonb` type, that is available from PostgreSQL 9.4 onward.
 
-HexWeb requires the PostgreSQL modules [pg_trgm](http://www.postgresql.org/docs/9.4/static/pgtrgm.html) and [pgcrypto](http://www.postgresql.org/docs/9.4/static/pgcrypto.html) to be available.
+Hexpm requires the PostgreSQL modules [pg_trgm](http://www.postgresql.org/docs/9.4/static/pgtrgm.html) and [pgcrypto](http://www.postgresql.org/docs/9.4/static/pgcrypto.html) to be available.
 
 This is located in the "postgresql-contrib" package, however the package name can vary depending on your operating system. If the module is not installed the ecto migrations will fail.
 
 ### Database
 
-By default, HexWeb connects to a localhost PostgreSQL database `hexweb_dev` using the username `postgres` with the password `postgres`.
+By default, Hexpm connects to a localhost PostgreSQL database `hexweb_dev` using the username `postgres` with the password `postgres`.
 
 Create the database and user 'postgres' if not already done:
 
@@ -45,12 +45,12 @@ export DEV_DATABASE_URL=ecto://USER:PASSWORD@localhost/DATABASE
 Now you are fine to run the ecto migrations:
 
 ```shell
-mix ecto.migrate HexWeb.Repo
+mix ecto.migrate Hexpm.Repo
 ```
 
 ### Sample Data
 
-Using the following command you can seed your local HexWeb instance with some sample data:
+Using the following command you can seed your local Hexpm instance with some sample data:
 
 ```shell
 mix run priv/repo/seeds.exs
@@ -67,14 +67,14 @@ mix ecto.setup
 All the Node dependencies can be installed with `npm`:
 
 ```shell
-npm install
+cd assets && npm install
 ```
 
 These are needed for asset compilation.
 
-### Running HexWeb
+### Running Hexpm
 
-Once the database is set up you can start HexWeb:
+Once the database is set up you can start Hexpm:
 
 ```shell
 # with console
@@ -84,7 +84,7 @@ iex -S mix phoenix.server
 mix phoenix.server
 ```
 
-HexWeb will be available at [http://localhost:4000/](http://localhost:4000/).
+Hexpm will be available at [http://localhost:4000/](http://localhost:4000/).
 
 ### Running Tests
 
@@ -105,7 +105,7 @@ You can generate the HTML coverage report like so
 MIX_ENV=test mix coveralls.html
 ```
 
-Or visit the project Coveralls page at [https://coveralls.io/github/hexpm/hex_web](https://coveralls.io/github/hexpm/hex_web).
+Or visit the project Coveralls page at [https://coveralls.io/github/hexpm/hexpm](https://coveralls.io/github/hexpm/hexpm).
 
 ## License
 

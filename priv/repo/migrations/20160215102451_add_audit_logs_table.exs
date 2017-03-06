@@ -1,4 +1,4 @@
-defmodule HexWeb.Repo.Migrations.AddAuditLogsTable do
+defmodule Hexpm.Repo.Migrations.AddAuditLogsTable do
   use Ecto.Migration
 
   def change do

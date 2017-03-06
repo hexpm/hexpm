@@ -1,4 +1,4 @@
-defmodule HexWeb.Repo.Migrations.AddPackageDownloadsView do
+defmodule Hexpm.Repo.Migrations.AddPackageDownloadsView do
   use Ecto.Migration
 
   def up do

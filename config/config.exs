@@ -1,14 +1,14 @@
 use Mix.Config
 
-store = if System.get_env("HEX_S3_BUCKET"), do: HexWeb.Store.S3, else: HexWeb.Store.Local
-cdn   = if System.get_env("HEX_FASTLY_KEY"), do: HexWeb.CDN.Fastly, else: HexWeb.CDN.Local
+store = if System.get_env("HEX_S3_BUCKET"), do: Hexpm.Store.S3, else: Hexpm.Store.Local
+cdn   = if System.get_env("HEX_FASTLY_KEY"), do: Hexpm.CDN.Fastly, else: Hexpm.CDN.Local
 
 logs_buckets = if value = System.get_env("HEX_LOGS_BUCKETS"),
                  do: value |> String.split(";") |> Enum.map(&String.split(&1, ","))
 
 smtp_port = String.to_integer(System.get_env("HEX_SES_PORT") || "587")
 
-config :hex_web,
+config :hexpm,
   user_confirm:   true,
   user_agent_req: true,
   tmp_dir:        Path.expand("tmp"),
@@ -39,7 +39,7 @@ config :hex_web,
 
   levenshtein_threshold: System.get_env("HEX_LEVENSHTEIN_THRESHOLD") || 2
 
-config :hex_web, ecto_repos: [HexWeb.Repo]
+config :hexpm, ecto_repos: [Hexpm.Repo]
 
 config :ex_aws,
   access_key_id:     {:system, "HEX_S3_ACCESS_KEY"},
@@ -55,13 +55,13 @@ config :comeonin,
 config :porcelain,
   driver: Porcelain.Driver.Basic
 
-config :hex_web, HexWeb.Endpoint,
+config :hexpm, Hexpm.Web.Endpoint,
   url: [host: "localhost"],
   root: Path.dirname(__DIR__),
   secret_key_base: "Cc2cUvbm9x/uPD01xnKmpmU93mgZuht5cTejKf/Z2x0MmfqE1ZgHJ1/hSZwd8u4L",
-  render_errors: [accepts: ~w(html json elixir erlang)]
+  render_errors: [view: Hexpm.Web.ErrorView, accepts: ~w(html json elixir erlang)]
 
-config :hex_web, HexWeb.Mailer,
+config :hexpm, Hexpm.Emails.Mailer,
   adapter: Bamboo.SMTPAdapter,
   server: System.get_env("HEX_SES_ENDPOINT") || "email-smtp.us-west-2.amazonaws.com",
   port: smtp_port,
@@ -72,7 +72,7 @@ config :hex_web, HexWeb.Mailer,
   retries: 1
 
 config :phoenix, :template_engines,
-  md: HexWeb.MarkdownEngine
+  md: Hexpm.Web.MarkdownEngine
 
 config :phoenix,
   stacktrace_depth: 20
@@ -82,9 +82,9 @@ config :phoenix, :generators,
   binary_id: false
 
 config :phoenix, :format_encoders,
-  elixir: HexWeb.ElixirFormat,
-  erlang: HexWeb.ErlangFormat,
-  json: HexWeb.Jiffy
+  elixir: Hexpm.Web.ElixirFormat,
+  erlang: Hexpm.Web.ErlangFormat,
+  json: Hexpm.Web.Jiffy
 
 config :mime, :types, %{
   "application/vnd.hex+json"   => ["json"],
@@ -93,7 +93,7 @@ config :mime, :types, %{
 }
 
 config :ecto,
-  json_library: HexWeb.Jiffy
+  json_library: Hexpm.Web.Jiffy
 
 config :logger, :console,
   format: "$time $metadata[$level] $message\n",

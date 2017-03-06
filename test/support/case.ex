@@ -1,27 +1,27 @@
-defmodule HexWeb.Case do
+defmodule Hexpm.Case do
   import ExUnit.Callbacks
 
   def reset_store(tags) do
-    if tags[:integration] && Application.get_env(:hex_web, :s3_bucket) do
-      Application.put_env(:hex_web, :store_impl, HexWeb.Store.S3)
-      on_exit fn -> Application.put_env(:hex_web, :store_impl, HexWeb.Store.Local) end
+    if tags[:integration] && Application.get_env(:hexpm, :s3_bucket) do
+      Application.put_env(:hexpm, :store_impl, Hexpm.Store.S3)
+      on_exit fn -> Application.put_env(:hexpm, :store_impl, Hexpm.Store.Local) end
     end
   end
 
   def create_user(username, email, password, confirmed? \\ true) do
-    HexWeb.User.build(%{username: username, password: password, emails: [%{email: email}]}, confirmed?)
-    |> HexWeb.Repo.insert!
+    Hexpm.Accounts.User.build(%{username: username, password: password, emails: [%{email: email}]}, confirmed?)
+    |> Hexpm.Repo.insert!
   end
 
   def key_for(username) when is_binary(username) do
-    HexWeb.Repo.get_by!(HexWeb.User, username: username)
+    Hexpm.Repo.get_by!(Hexpm.Accounts.User, username: username)
     |> key_for
   end
 
   def key_for(user) do
     key = user
-          |> HexWeb.Key.build(%{name: "any_key_name"})
-          |> HexWeb.Repo.insert!
+          |> Hexpm.Accounts.Key.build(%{name: "any_key_name"})
+          |> Hexpm.Repo.insert!
     key.user_secret
   end
 
