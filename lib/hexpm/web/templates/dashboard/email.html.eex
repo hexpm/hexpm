@@ -16,7 +16,7 @@
       </div>
       <ul class="list-group">
         <%= for email <- @emails do %>
-          <li class="list-group-item">
+          <li class="list-group-item clearfix">
             <span class="address"><%= email.email %></span>
 
             <%= if email.primary do %>
@@ -58,12 +58,11 @@
         <li class="list-group-item">
           <%= form_for @add_email_changeset, dashboard_path(Endpoint, :add_email), [method: :post], fn f -> %>
             <%= label f, :email, "Add email address" %>
-            <div class="form-group form-inline">
-              <%= email_input f, :email %>
-              <button type="submit" class="btn btn-primary">Add</button>
+            <div class="form-group">
+              <%= email_input f, :email, class: "form-control" %>
               <%= error_tag f, :email %>
             </div>
-
+            <button type="submit" class="btn btn-primary">Add</button>
           <% end %>
         </li>
       </ul>
