@@ -50,7 +50,7 @@ defmodule Hexpm.Script.TaskDocs do
   end
 
   defp to_html(doc) do
-    Earmark.to_html(doc)
+    Earmark.as_html!(doc)
     |> fix_headings
     |> emphasise_synopsis
   end

@@ -5,7 +5,7 @@ defmodule Hexpm.Web.MarkdownEngine do
     html =
       path
       |> File.read!
-      |> Earmark.to_html(%Earmark.Options{gfm: true})
+      |> Earmark.as_html!(%Earmark.Options{gfm: true})
 
     {:safe, html}
   end

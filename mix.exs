@@ -38,26 +38,26 @@ defmodule Hexpm.Mixfile do
   end
 
   defp deps do
-    [{:phoenix,             "~> 1.3-rc"},
-     {:phoenix_ecto,        "~> 3.1-rc"},
-     {:phoenix_html,        "~> 2.3"},
-     {:bamboo,              "~> 0.7"},
-     {:bamboo_smtp,         "~> 1.2"},
-     {:comeonin,            "~> 2.0"},
-     {:cowboy,              "~> 1.0"},
-     {:earmark,             "~> 1.0"},
-     {:ex_aws,              "~> 1.0"},
-     {:gpb,                 "~> 3.23"},
-     {:httpoison,           "~> 0.8"},
-     {:jiffy,               "~> 0.14"},
-     {:plug,                "~> 1.2"},
-     {:porcelain,           "~> 2.0"},
-     {:postgrex,            ">= 0.0.0"},
-     {:sweet_xml,           "~> 0.5"},
-     {:hackney,             "~> 1.6.5", override: true},
-     {:plug_attack,         "~> 0.3"},
+    [{:phoenix, "~> 1.3-rc"},
+     {:phoenix_ecto, "~> 3.1-rc"},
+     {:phoenix_html, "~> 2.3"},
+     {:bamboo, "~> 0.7"},
+     {:bamboo_smtp, "~> 1.2"},
+     {:comeonin, "~> 3.0"},
+     {:cowboy, "~> 1.0"},
+     {:earmark, "~> 1.0"},
+     {:ex_aws, "~> 1.0"},
+     {:gpb, "~> 3.23"},
+     {:httpoison, "~> 0.8"},
+     {:jiffy, "~> 0.14"},
+     {:plug, "~> 1.2"},
+     {:porcelain, "~> 2.0"},
+     {:postgrex, ">= 0.0.0"},
+     {:sweet_xml, "~> 0.5"},
+     {:plug_attack, "~> 0.3"},
+     {:hackney, "~> 1.7"},
      {:phoenix_live_reload, "~> 1.0", only: :dev},
-     {:rollbax,             "~> 0.5", only: :prod}]
+     {:rollbax, "~> 0.5", only: :prod}]
   end
 
   defp aliases do
