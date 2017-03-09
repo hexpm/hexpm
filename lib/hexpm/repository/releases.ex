@@ -16,14 +16,15 @@ defmodule Hexpm.Repository.Releases do
   def count do
     Repo.one!(Release.count)
   end
-
-  def get(package, version) when is_binary(package) do
-    package = Packages.get(package)
-    package && get(package, version)
-  end
-  def get(%Package{} = package, version) do
+  
+  def get(package, version) do
     release = Repo.get_by(assoc(package, :releases), version: version)
     release && %{release | package: package}
+  end
+
+  def get(repository, package, version) when is_binary(package) do
+    package = Packages.get(repository, package)
+    package && get(package, version)
   end
 
   def package_versions(packages) do
