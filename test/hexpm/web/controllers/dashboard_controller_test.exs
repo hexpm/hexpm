@@ -162,7 +162,7 @@ defmodule Hexpm.Web.DashboardControllerTest do
 
     response(conn, 400)
     assert conn.resp_body =~ "Add email"
-    assert conn.resp_body =~ "Email already in use"
+    assert conn.resp_body =~ "email already in use"
   end
 
   test "can add existing email which is not verified", c do

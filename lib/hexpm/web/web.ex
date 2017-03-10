@@ -99,6 +99,7 @@ defmodule Hexpm.Web do
     quote do
       alias Hexpm.{
         Accounts.AuditLog,
+        Accounts.Auth,
         Accounts.Email,
         Accounts.Key,
         Accounts.Keys,

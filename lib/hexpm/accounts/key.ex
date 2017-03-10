@@ -60,9 +60,9 @@ defmodule Hexpm.Accounts.Key do
       update: [set: [revoked_at: fragment("?", ^revoked_at)]])
   end
 
-  defp gen_key do
-    user_secret = :crypto.strong_rand_bytes(16) |> Base.encode16(case: :lower)
-    app_secret  = Application.get_env(:hexpm, :secret)
+  def gen_key() do
+    user_secret = Auth.gen_key()
+    app_secret = Application.get_env(:hexpm, :secret)
 
     <<first::binary-size(32), second::binary-size(32)>> =
       :crypto.hmac(:sha256, app_secret, user_secret)

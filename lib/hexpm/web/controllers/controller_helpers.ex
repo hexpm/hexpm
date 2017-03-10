@@ -43,17 +43,7 @@ defmodule Hexpm.Web.ControllerHelpers do
   end
 
   def validation_failed(conn, %Ecto.Changeset{} = changeset) do
-    errors =
-      Ecto.Changeset.traverse_errors(changeset, fn
-        {"is invalid", [type: type, validation: _]} ->
-          "expected type #{pretty_type(type)}"
-        {msg, opts} ->
-          Enum.reduce(opts, msg, fn {key, value}, msg ->
-            String.replace(msg, "%{#{key}}", to_string(value))
-          end)
-      end)
-      |> normalize_errors
-
+    errors = translate_errors(changeset)
     render_error(conn, 422, errors: errors)
   end
   def validation_failed(conn, errors) do
@@ -66,6 +56,18 @@ defmodule Hexpm.Web.ControllerHelpers do
     do: "map(#{pretty_type(type)})"
   defp pretty_type(type),
     do: to_string(type)
+
+  def translate_errors(changeset) do
+    Ecto.Changeset.traverse_errors(changeset, fn
+      {"is invalid", [type: type, validation: _]} ->
+        "expected type #{pretty_type(type)}"
+      {msg, opts} ->
+        Enum.reduce(opts, msg, fn {key, value}, msg ->
+          String.replace(msg, "%{#{key}}", to_string(value))
+        end)
+    end)
+    |> normalize_errors
+  end
 
   # TODO: remove when requirements are handled with cast_assoc
   defp errors_to_map(errors) when is_list(errors) do

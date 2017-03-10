@@ -1,6 +1,8 @@
 defmodule Hexpm.Accounts.Auth do
   import Ecto.Query, only: [from: 2]
 
+  alias Hexpm.Accounts.{Key, Users}
+
   def key_auth(user_secret) do
     # Database index lookup on the first part of the key and then
     # secure compare on the second part to avoid timing attacks
@@ -11,7 +13,7 @@ defmodule Hexpm.Accounts.Auth do
       |> Base.encode16(case: :lower)
 
     result =
-      from(k in Hexpm.Accounts.Key,
+      from(k in Key,
            where: k.secret_first == ^first,
            join: u in assoc(k, :user),
            preload: [user: {u, :emails}])
@@ -34,7 +36,7 @@ defmodule Hexpm.Accounts.Auth do
   end
 
   def password_auth(username_or_email, password) do
-    user = Hexpm.Accounts.Users.get(username_or_email, [:emails])
+    user = Users.get(username_or_email, [:emails])
     if user && Comeonin.Bcrypt.checkpw(password, user.password) do
       {:ok, {user, nil, find_email(user, username_or_email)}}
     else
@@ -51,7 +53,6 @@ defmodule Hexpm.Accounts.Auth do
   end
 
   defp find_email(user, email) do
-    Enum.find(user.emails, &(&1.email == email)) ||
-      Enum.find(user.emails, & &1.primary)
+    Enum.find(user.emails, &(&1.email == email)) || Enum.find(user.emails, & &1.primary)
   end
 end

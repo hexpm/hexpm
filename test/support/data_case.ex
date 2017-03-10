@@ -22,6 +22,7 @@ defmodule Hexpm.DataCase do
       import Hexpm.Case
       import Hexpm.DataCase
       import Hexpm.TestHelpers
+      import Hexpm.Factory
     end
   end
 
@@ -56,5 +57,9 @@ defmodule Hexpm.DataCase do
   """
   def errors_on(model, data) do
     model.__struct__.changeset(model, data).errors
+  end
+
+  def errors_on(%Ecto.Changeset{} = changeset) do
+    Hexpm.Web.ControllerHelpers.translate_errors(changeset)
   end
 end

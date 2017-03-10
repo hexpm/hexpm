@@ -1,8 +1,6 @@
 defmodule Hexpm.Accounts.User do
   use Hexpm.Web, :schema
 
-  alias Hexpm.Accounts.Auth
-
   @derive {Phoenix.Param, key: :username}
 
   schema "users" do
