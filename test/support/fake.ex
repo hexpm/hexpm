@@ -43,7 +43,7 @@ defmodule Hexpm.Fake do
 
     def random(unquote(key), opts) do
       [{_key, size}] = :ets.lookup(__MODULE__, {unquote(key), :size})
-      counter = Enum.random(1..size)
+      counter = Enum.random(1..size) - 1
       opts = Keyword.put(opts, :num_objects, size)
       generator(unquote(key), counter, opts)
     end

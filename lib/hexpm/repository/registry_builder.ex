@@ -63,11 +63,11 @@ defmodule Hexpm.Repository.RegistryBuilder do
   defp partial({:publish, package}) do
     log(:publish, fn ->
       {packages, releases, installs} = tuples()
+      release_map = Map.new(releases)
 
       ets = build_ets(packages, releases, installs)
       names = build_names(packages)
-      versions = build_versions(packages)
-      release_map = Enum.filter(releases, &match?({{^package, _}, _}, &1)) |> Map.new
+      versions = build_versions(packages, release_map)
 
       case Enum.find(packages, &match?({^package, _}, &1)) do
         {^package, [package_versions]} ->
@@ -138,9 +138,10 @@ defmodule Hexpm.Repository.RegistryBuilder do
   end
 
   defp build_new(packages, releases) do
+    release_map = Map.new(releases)
     {build_names(packages),
-     build_versions(packages),
-     build_packages(packages, releases)}
+     build_versions(packages, release_map),
+     build_packages(packages, release_map)}
   end
 
   defp build_names(packages) do
@@ -151,17 +152,27 @@ defmodule Hexpm.Repository.RegistryBuilder do
     |> :zlib.gzip
   end
 
-  defp build_versions(packages) do
-    packages = Enum.map(packages, fn {name, [versions]} -> %{name: name, versions: versions, retired: []} end)
+  defp build_versions(packages, release_map) do
+    packages = Enum.map(packages, fn {name, [versions]} ->
+      %{name: name, versions: versions, retired: build_retired_indexes(name, versions, release_map)}
+    end)
+
     %{packages: packages}
     |> :hex_pb_versions.encode_msg(:Versions)
     |> sign_protobuf
     |> :zlib.gzip
   end
 
-  defp build_packages(packages, releases) do
-    release_map = Map.new(releases)
+  defp build_retired_indexes(name, versions, release_map) do
+    versions
+    |> Enum.with_index()
+    |> Enum.flat_map(fn {version, ix} ->
+      [_deps, _checksum, _tools, retirement] = release_map[{name, version}]
+      if retirement, do: [ix], else: []
+    end)
+  end
 
+  defp build_packages(packages, release_map) do
     Enum.map(packages, fn {name, [versions]} ->
       contents = build_package(name, versions, release_map)
       {name, contents}

@@ -1,20 +1,27 @@
 defmodule Hexpm.Repository.RegistryBuilderTest do
   use Hexpm.DataCase
 
-  alias Hexpm.Repository.Package
   alias Hexpm.Repository.Release
-  alias Hexpm.Repository.Install
   alias Hexpm.Repository.RegistryBuilder
 
-  setup do
-    user = create_user("eric", "eric@mail.com", "ericeric")
-    postgrex = Package.build(user, pkg_meta(%{name: "postgrex", description: "PostgreSQL driver for Elixir."})) |> Hexpm.Repo.insert!
-    decimal = Package.build(user, pkg_meta(%{name: "decimal", description: "Arbitrary precision decimal arithmetic for Elixir."})) |> Hexpm.Repo.insert!
-    ex_doc = Package.build(user, pkg_meta(%{name: "ex_doc", description: "ExDoc"})) |> Hexpm.Repo.insert!
-    Install.build("0.0.1", ["0.13.0-dev"]) |> Hexpm.Repo.insert!
-    Install.build("0.1.0", ["0.13.1-dev", "0.13.1"]) |> Hexpm.Repo.insert!
+  @checksum "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855"
 
-    %{user: user, postgrex: postgrex, decimal: decimal, ex_doc: ex_doc}
+  setup do
+    packages = [p1, p2, p3] = insert_list(3, :package)
+
+    req1 = insert(:requirement, requirement: "0.0.1", dependency: p1, app: p1.name)
+    req2 = insert(:requirement, requirement: "~> 0.0.1", dependency: p2, app: p2.name)
+    req3 = insert(:requirement, requirement: "0.0.1", dependency: p1, app: p1.name)
+
+    r1 = insert(:release, package: p1, version: "0.0.1")
+    r2 = insert(:release, package: p2, version: "0.0.1")
+    r3 = insert(:release, package: p2, version: "0.0.2", requirements: [req1])
+    r4 = insert(:release, package: p3, version: "0.0.2", requirements: [req2, req3])
+
+    insert(:install, hex: "0.0.1", elixirs: ["1.0.0"])
+    insert(:install, hex: "0.1.0", elixirs: ["1.1.0", "1.1.1"])
+
+    %{packages: packages, releases: [r1, r2, r3, r4]}
   end
 
   defp open_table do
@@ -37,174 +44,155 @@ defmodule Hexpm.Repository.RegistryBuilderTest do
       module.decode_msg(payload, message)
     end
   end
+
   defp path_to_protobuf("names"), do: {:hex_pb_names, :Names}
   defp path_to_protobuf("versions"), do: {:hex_pb_versions, :Versions}
   defp path_to_protobuf("packages/" <> _), do: {:hex_pb_package, :Package}
 
-  defp test_data(context) do
-    ex_doc1 = Release.build(context.ex_doc, rel_meta(%{version: "0.0.1", app: "ex_doc"}), "") |> Hexpm.Repo.insert!
-    decimal1 = Release.build(context.decimal, rel_meta(%{version: "0.0.1", app: "decimal"}), "") |> Hexpm.Repo.insert!
-    reqs = [%{name: "ex_doc", app: "ex_doc", requirement: "0.0.1", optional: false}]
-    decimal2 = Release.build(context.decimal, rel_meta(%{version: "0.0.2", app: "decimal", requirements: reqs}), "") |> Hexpm.Repo.insert!
-    reqs = [%{name: "decimal", app: "decimal", requirement: "~> 0.0.1", optional: false},
-            %{name: "ex_doc", app: "ex_doc", requirement: "0.0.1", optional: false}]
-    meta = rel_meta(%{requirements: reqs, app: "postgrex", version: "0.0.2"})
-    postgrex1 = Release.build(context.postgrex, meta, "") |> Hexpm.Repo.insert!
+  describe "full_build/0" do
+    test "registry is versioned" do
+      RegistryBuilder.full_build()
+      tid = open_table()
 
-    %{ex_doc1: ex_doc1, decimal1: decimal1, decimal2: decimal2, postgrex1: postgrex1}
+      assert [{:"$$version$$", 4}] = :ets.lookup(tid, :"$$version$$")
+    end
+
+    test "registry is in correct format", %{packages: [p1, p2, p3]} do
+      RegistryBuilder.full_build()
+      tid = open_table()
+
+      assert length(:ets.match_object(tid, :_)) == 9
+      assert :ets.lookup(tid, p2.name) == [{p2.name, [["0.0.1", "0.0.2"]]}]
+      assert :ets.lookup(tid, {p2.name, "0.0.1"}) == [{{p2.name, "0.0.1"}, [[], @checksum, ["mix"]]}]
+      assert :ets.lookup(tid, p3.name) == [{p3.name, [["0.0.2"]]}]
+
+      requirements = :ets.lookup(tid, {p3.name, "0.0.2"}) |> List.first |> elem(1) |> List.first
+      assert length(requirements ) == 2
+      assert Enum.find(requirements, &(&1 == [p2.name, "~> 0.0.1", false, p2.name]))
+      assert Enum.find(requirements, &(&1 == [p1.name, "0.0.1", false, p1.name]))
+
+      assert [] = :ets.lookup(tid, "non_existant")
+    end
+
+    test "registry is uploaded alongside signature" do
+      RegistryBuilder.full_build()
+
+      registry = Hexpm.Store.get(nil, :s3_bucket, "registry.ets.gz", [])
+      signature = Hexpm.Store.get(nil, :s3_bucket, "registry.ets.gz.signed", [])
+
+      public_key = Application.fetch_env!(:hexpm, :public_key)
+      signature = Base.decode16!(signature, case: :lower)
+      assert Hexpm.Utils.verify(registry, signature, public_key)
+    end
+
+    test "registry v2 is in correct format", %{packages: [p1, p2, p3] = packages} do
+      RegistryBuilder.full_build()
+      first = packages |> Enum.map(& &1.name) |> Enum.sort |> List.first
+
+      names = v2_map("names")
+      assert length(names.packages) == 3
+      assert List.first(names.packages) == %{name: first}
+
+      versions = v2_map("versions")
+      assert length(versions.packages) == 3
+      assert Enum.find(versions.packages, &(&1.name == p2.name)) == %{name: p2.name, versions: ["0.0.1", "0.0.2"], retired: []}
+
+      package2 = v2_map("packages/#{p2.name}")
+      assert length(package2.releases) == 2
+      assert List.first(package2.releases) == %{version: "0.0.1", checksum: Base.decode16!(@checksum), dependencies: []}
+
+      package3 = v2_map("packages/#{p3.name}")
+      assert [%{version: "0.0.2", dependencies: deps}] = package3.releases
+      assert length(deps) == 2
+      assert %{package: p2.name, requirement: "~> 0.0.1"} in deps
+      assert %{package: p1.name, requirement: "0.0.1"} in deps
+    end
+
+    test "remove package", %{packages: [p1, p2, p3], releases: [_, _, _, r4]} do
+      RegistryBuilder.full_build()
+
+      Hexpm.Repo.delete!(r4)
+      Hexpm.Repo.delete!(p3)
+      RegistryBuilder.full_build
+
+      assert length(v2_map("names").packages) == 2
+      assert v2_map("packages/#{p1.name}")
+      assert v2_map("packages/#{p2.name}")
+      refute v2_map("packages/#{p3.name}")
+    end
   end
 
-  test "registry is versioned" do
-    RegistryBuilder.full_build()
-    tid = open_table()
+  describe "partial_build/1" do
+    test "add release", %{packages: [_, p2, _]} do
+      RegistryBuilder.full_build()
 
-    assert [{:"$$version$$", 4}] = :ets.lookup(tid, :"$$version$$")
-  end
+      release = insert(:release, package: p2, version: "0.0.3")
+      Release.retire(release, %{retirement: %{reason: "invalid", message: "message"}}) |> Hexpm.Repo.update!
+      RegistryBuilder.partial_build({:publish, p2.name})
 
-  test "registry is in correct format", context do
-    test_data(context)
-    RegistryBuilder.full_build()
-    tid = open_table()
+      tid = open_table()
+      assert length(:ets.match_object(tid, :_)) == 10
 
-    assert length(:ets.match_object(tid, :_)) == 9
+      versions = v2_map("versions")
+      assert Enum.find(versions.packages, &(&1.name == p2.name)) == %{name: p2.name, versions: ["0.0.1", "0.0.2", "0.0.3"], retired: [2]}
 
-    assert [{"decimal", [["0.0.1", "0.0.2"]]}] = :ets.lookup(tid, "decimal")
+      package = v2_map("packages/#{p2.name}")
+      assert length(package.releases) == 3
+      release = List.last(package.releases)
+      assert release.version == "0.0.3"
+      assert release.retired.reason == :RETIRED_INVALID
+      assert release.retired.message == "message"
+    end
 
-    assert [{{"decimal", "0.0.1"}, [[], "", ["mix"]]}] =
-           :ets.lookup(tid, {"decimal", "0.0.1"})
+    test "remove release", %{packages: [_, p2, _], releases: [_, _, r3, _]} do
+      RegistryBuilder.full_build()
 
-    assert [{"postgrex", [["0.0.2"]]}] =
-           :ets.lookup(tid, "postgrex")
+      Hexpm.Repo.delete!(r3)
+      RegistryBuilder.partial_build({:publish, p2.name})
 
-    reqs = :ets.lookup(tid, {"postgrex", "0.0.2"}) |> List.first |> elem(1) |> List.first
-    assert length(reqs) == 2
-    assert Enum.find(reqs, &(&1 == ["decimal", "~> 0.0.1", false, "decimal"]))
-    assert Enum.find(reqs, &(&1 == ["ex_doc", "0.0.1", false, "ex_doc"]))
+      tid = open_table()
+      assert length(:ets.match_object(tid, :_)) == 8
 
-    assert [] = :ets.lookup(tid, "non_existant")
-  end
+      versions = v2_map("versions")
+      assert Enum.find(versions.packages, &(&1.name == p2.name)) == %{name: p2.name, versions: ["0.0.1"], retired: []}
 
-  test "registry is uploaded alongside signature", context do
-    test_data(context)
-    RegistryBuilder.full_build()
+      package2 = v2_map("packages/#{p2.name}")
+      assert length(package2.releases) == 1
+    end
 
-    registry = Hexpm.Store.get(nil, :s3_bucket, "registry.ets.gz", [])
-    signature = Hexpm.Store.get(nil, :s3_bucket, "registry.ets.gz.signed", [])
+    test "add package" do
+      RegistryBuilder.full_build()
 
-    public_key = Application.fetch_env!(:hexpm, :public_key)
-    signature = Base.decode16!(signature, case: :lower)
-    assert Hexpm.Utils.verify(registry, signature, public_key)
-  end
+      p = insert(:package)
+      insert(:release, package: p, version: "0.0.1")
+      RegistryBuilder.partial_build({:publish, p.name})
 
-  test "registry v2 is in correct format", context do
-    test_data(context)
-    RegistryBuilder.full_build()
+      tid = open_table()
+      assert length(:ets.match_object(tid, :_)) == 11
 
-    names = v2_map("names")
-    assert length(names.packages) == 3
-    assert [%{name: "decimal"} | _] = names.packages
+      assert length(v2_map("names").packages) == 4
 
-    versions = v2_map("versions")
-    assert length(versions.packages) == 3
-    assert [%{name: "decimal", versions: ["0.0.1", "0.0.2"]} | _] = versions.packages
+      versions = v2_map("versions")
+      assert Enum.find(versions.packages, &(&1.name == p.name)) == %{name: p.name, versions: ["0.0.1"], retired: []}
 
-    decimal = v2_map("packages/decimal")
-    assert length(decimal.releases) == 2
-    assert [%{version: "0.0.1", checksum: checksum, dependencies: []} | _] = decimal.releases
-    assert is_binary(checksum)
+      ecto = v2_map("packages/#{p.name}")
+      assert length(ecto.releases) == 1
+    end
 
-    postgrex = v2_map("packages/postgrex")
-    assert [%{version: "0.0.2", dependencies: deps}] = postgrex.releases
-    assert deps == [%{package: "decimal", requirement: "~> 0.0.1"}, %{package: "ex_doc", requirement: "0.0.1"}]
-  end
+    test "remove package", %{packages: [_, _, p3], releases: [_, _, _, r4]} do
+      RegistryBuilder.full_build()
 
-  test "partial build add release", context do
-    test_data(context)
-    RegistryBuilder.full_build()
+      Hexpm.Repo.delete!(r4)
+      Hexpm.Repo.delete!(p3)
+      RegistryBuilder.partial_build({:publish, p3.name})
 
-    release = Release.build(context.decimal, rel_meta(%{version: "0.0.3", app: "decimal", requirements: []}), "") |> Hexpm.Repo.insert!
-    Release.retire(release, %{retirement: %{reason: "invalid", message: "message"}}) |> Hexpm.Repo.update!
-    RegistryBuilder.partial_build({:publish, "decimal"})
+      tid = open_table()
+      assert length(:ets.match_object(tid, :_)) == 7
 
-    tid = open_table()
-    assert length(:ets.match_object(tid, :_)) == 10
+      assert length(v2_map("names").packages) == 2
+      assert length(v2_map("versions").packages) == 2
 
-    versions = v2_map("versions")
-    assert [%{name: "decimal", versions: ["0.0.1", "0.0.2", "0.0.3"]} | _] = versions.packages
-
-    decimal = v2_map("packages/decimal")
-    assert length(decimal.releases) == 3
-    release = List.last(decimal.releases)
-    assert release.version == "0.0.3"
-    assert release.retired.reason == :RETIRED_INVALID
-    assert release.retired.message == "message"
-  end
-
-  test "partial build remove release", context do
-    %{decimal2: decimal2} = test_data(context)
-    RegistryBuilder.full_build()
-
-    Release.delete(decimal2) |> Hexpm.Repo.delete!
-    RegistryBuilder.partial_build({:publish, "decimal"})
-
-    tid = open_table()
-    assert length(:ets.match_object(tid, :_)) == 8
-
-    versions = v2_map("versions")
-    assert [%{name: "decimal", versions: ["0.0.1"]} | _] = versions.packages
-
-    decimal = v2_map("packages/decimal")
-    assert length(decimal.releases) == 1
-  end
-
-  test "partial build add package", context do
-    test_data(context)
-    RegistryBuilder.full_build()
-
-    ecto = Package.build(context.user, pkg_meta(%{name: "ecto", description: "..."})) |> Hexpm.Repo.insert!
-    Release.build(ecto, rel_meta(%{version: "0.0.1", app: "ecto", requirements: []}), "") |> Hexpm.Repo.insert!
-    RegistryBuilder.partial_build({:publish, "ecto"})
-
-    tid = open_table()
-    assert length(:ets.match_object(tid, :_)) == 11
-
-    assert length(v2_map("names").packages) == 4
-
-    versions = v2_map("versions")
-    assert [_, %{name: "ecto", versions: ["0.0.1"]} | _] = versions.packages
-
-    ecto = v2_map("packages/ecto")
-    assert length(ecto.releases) == 1
-  end
-
-  test "partial build remove package", context do
-    %{postgrex1: postgrex1} = test_data(context)
-    RegistryBuilder.full_build()
-
-    Release.delete(postgrex1) |> Hexpm.Repo.delete!
-    Hexpm.Repo.delete!(context.postgrex)
-    RegistryBuilder.partial_build({:publish, "postgrex"})
-
-    tid = open_table()
-    assert length(:ets.match_object(tid, :_)) == 7
-
-    assert length(v2_map("names").packages) == 2
-    assert length(v2_map("versions").packages) == 2
-
-    refute v2_map("packages/postgrex")
-  end
-
-  test "full build remove package", context do
-    %{postgrex1: postgrex1} = test_data(context)
-    RegistryBuilder.full_build()
-
-    Release.delete(postgrex1) |> Hexpm.Repo.delete!
-    Hexpm.Repo.delete!(context.postgrex)
-    RegistryBuilder.full_build
-
-    assert length(v2_map("names").packages) == 2
-    assert v2_map("packages/ex_doc")
-    assert v2_map("packages/decimal")
-    refute v2_map("packages/postgrex")
+      refute v2_map("packages/#{p3.name}")
+    end
   end
 end
