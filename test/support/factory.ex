@@ -29,4 +29,37 @@ defmodule Hexpm.Factory do
       user_secret: user_secret
     }
   end
+
+  def user_handles_factory() do
+    %Hexpm.Accounts.UserHandles{}
+  end
+
+  def package_factory() do
+    %Hexpm.Repository.Package{
+      name: Fake.sequence(:package),
+      meta: build(:package_metadata)
+    }
+  end
+
+  def package_metadata_factory() do
+    %Hexpm.Repository.PackageMetadata{
+      description: Fake.random(:sentence),
+      licenses: ["MIT"]
+    }
+  end
+
+  def release_factory() do
+    %Hexpm.Repository.Release{
+      version: "1.0.0",
+      checksum: "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      meta: build(:release_metadata)
+    }
+  end
+
+  def release_metadata_factory() do
+    %Hexpm.Repository.ReleaseMetadata{
+      app: Fake.random(:package),
+      build_tools: ["mix"]
+    }
+  end
 end

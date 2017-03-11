@@ -9,13 +9,13 @@ defmodule Hexpm.Accounts.AuditLog do
     timestamps(updated_at: false)
   end
 
-  def build(nil, user_agent, action, nil)
-  when action in ~w(password.reset.init password.reset.finish) do
+  def build(nil, user_agent, action, params)
+      when action in ~w(password.reset.init password.reset.finish) do
     %AuditLog{
       actor_id: nil,
       user_agent: user_agent,
       action: action,
-      params: %{}
+      params: extract_params(action, params)
     }
   end
   def build(%User{id: user_id}, user_agent, action, params) do
@@ -39,12 +39,12 @@ defmodule Hexpm.Accounts.AuditLog do
   def audit_many(multi, {user, user_agent}, action, list, opts \\ []) do
     fields = AuditLog.__schema__(:fields) -- [:id]
     extra = %{inserted_at: NaiveDateTime.utc_now}
-    entry = fn (element) ->
-      build(user, user_agent, action, element)
+    entries = Enum.map(list, fn entry ->
+      build(user, user_agent, action, entry)
       |> Map.take(fields)
       |> Map.merge(extra)
-    end
-    Multi.insert_all(multi, multi_key(action), AuditLog, Enum.map(list, entry), opts)
+    end)
+    Multi.insert_all(multi, multi_key(action), AuditLog, entries, opts)
   end
 
   def audit_with_user(multi, {nil, user_agent}, action, fun) do
