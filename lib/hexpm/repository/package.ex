@@ -44,8 +44,8 @@ defmodule Hexpm.Repository.Package do
     |> validate_exclusion(:name, @reserved_names)
   end
 
-  def build(owner, params) do
-    changeset(%Package{}, :create, params)
+  def build(repository, owner, params) do
+    changeset(build_assoc(repository, :packages), :create, params)
     |> put_assoc(:package_owners, [%PackageOwner{owner_id: owner.id}])
   end
 

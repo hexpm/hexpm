@@ -21,12 +21,14 @@ defmodule Hexpm.ConnCase do
       use Phoenix.ConnTest
 
       alias Hexpm.Repo
+      alias Hexpm.Fake
+
       import Ecto
       import Ecto.Query, only: [from: 2]
-
       import Hexpm.Web.Router.Helpers
       import Hexpm.TestHelpers
       import Hexpm.Case
+      import Hexpm.Factory
       import unquote(__MODULE__)
 
       # The default endpoint for testing
@@ -57,5 +59,11 @@ defmodule Hexpm.ConnCase do
     conn
     |> my_put_session("username", user.username)
     |> my_put_session("key", user.session_key)
+  end
+
+  def json_post(conn, path, params) do
+    conn
+    |> Plug.Conn.put_req_header("content-type", "application/json")
+    |> Phoenix.ConnTest.dispatch(Hexpm.Web.Endpoint, :post, path, Poison.encode!(params))
   end
 end
