@@ -49,6 +49,10 @@ defmodule Hexpm.Factory do
     }
   end
 
+  def package_owner_factory() do
+    %Hexpm.Repository.PackageOwner{}
+  end
+
   def release_factory() do
     %Hexpm.Repository.Release{
       version: "1.0.0",

@@ -4,159 +4,163 @@ defmodule Hexpm.Web.API.OwnerControllerTest do
   use Bamboo.Test
 
   alias Hexpm.Accounts.AuditLog
-  alias Hexpm.Accounts.User
-  alias Hexpm.Repository.Package
-  alias Hexpm.Repository.Release
 
   setup do
-    eric = create_user("eric", "eric@mail.com", "ericeric")
-    jose = create_user("jose", "jose@mail.com", "josejose")
-    other = create_user("other", "other@mail.com", "otherother")
-    pkg = Package.build(eric, pkg_meta(%{name: "decimal", description: "Arbitrary precision decimal arithmetic for Elixir."})) |> Hexpm.Repo.insert!
-    package = Package.build(eric, pkg_meta(%{name: "postgrex", description: "Postgrex is awesome"})) |> Hexpm.Repo.insert!
-    Release.build(pkg, rel_meta(%{version: "0.0.1", app: "postgrex"}), "") |> Hexpm.Repo.insert!
+    user1 = insert(:user)
+    user2 = insert(:user)
+    package = insert(:package, package_owners: [build(:package_owner, owner: user1)])
 
-    {:ok, eric: eric, jose: jose, other: other, package: package}
+    %{user1: user1, user2: user2, package: package}
   end
 
-  test "get package owners", c do
-    conn = build_conn()
-           |> put_req_header("authorization", key_for(c.eric))
-           |> get("api/packages/postgrex/owners")
-    assert conn.status == 200
+  describe "GET /packages/:name/owners" do
+    test "get all package owners", %{user1: user1, user2: user2, package: package} do
+      conn = build_conn()
+             |> put_req_header("authorization", key_for(user1))
+             |> get("api/packages/#{package.name}/owners")
 
-    body = Poison.decode!(conn.resp_body)
-    assert [%{"username" => "eric"}] = body
+      result = json_response(conn, 200)
+      assert List.first(result)["username"] == user1.username
 
-    Package.build_owner(c.package, c.jose) |> Hexpm.Repo.insert!
+      insert(:package_owner, package: package, owner: user2)
 
-    conn = build_conn()
-           |> put_req_header("authorization", key_for(c.eric))
-           |> get("api/packages/postgrex/owners")
-    assert conn.status == 200
+      conn = build_conn()
+             |> put_req_header("authorization", key_for(user1))
+             |> get("api/packages/#{package.name}/owners")
 
-    body = Poison.decode!(conn.resp_body)
-    assert [first, second] = body
-    assert first["username"] in ["jose", "eric"]
-    assert second["username"] in ["jose", "eric"]
+      [first, second] = json_response(conn, 200)
+      assert first["username"] in [user1.username, user2.username]
+      assert second["username"] in [user1.username, user2.username]
+    end
   end
 
-  test "check if user is package owner", c do
-    conn = build_conn()
-           |> put_req_header("authorization", key_for(c.eric))
-           |> get("api/packages/postgrex/owners/eric@mail.com")
-    assert conn.status == 204
+  describe "GET /packages/:name/owners/:email" do
+    test "check if user is package owner", %{user1: user1, user2: user2, package: package} do
+      conn = build_conn()
+             |> put_req_header("authorization", key_for(user1))
+             |> get("api/packages/#{package.name}/owners/#{hd(user1.emails).email}")
+      assert conn.status == 204
 
-    conn = build_conn()
-           |> put_req_header("authorization", key_for(c.eric))
-           |> get("api/packages/postgrex/owners/jose@mail.com")
-    assert conn.status == 404
+      conn = build_conn()
+             |> put_req_header("authorization", key_for(user1))
+             |> get("api/packages/#{package.name}/owners/#{hd(user2.emails).email}")
+      assert conn.status == 404
 
-    conn = build_conn()
-           |> put_req_header("authorization", key_for(c.eric))
-           |> get("api/packages/postgrex/owners/UNKNOWN")
-    assert conn.status == 404
+      conn = build_conn()
+             |> put_req_header("authorization", key_for(user1))
+             |> get("api/packages/#{package.name}/owners/UNKNOWN")
+      assert conn.status == 404
+    end
   end
 
-  test "add package owner", c do
-    conn = build_conn()
-           |> put_req_header("authorization", key_for(c.eric))
-           |> put("api/packages/postgrex/owners/#{c.jose.username}")
-    assert conn.status == 204
+  describe "PUT /packages/:name/owners/:email" do
+    test "add package owner", %{user1: user1, user2: user2, package: package} do
+      conn = build_conn()
+             |> put_req_header("authorization", key_for(user1))
+             |> put("api/packages/#{package.name}/owners/#{user2.username}")
+      assert conn.status == 204
 
-    assert [first, second] = assoc(c.package, :owners) |> Hexpm.Repo.all
-    assert first.username in ["jose", "eric"]
-    assert second.username in ["jose", "eric"]
+      assert [first, second] = assoc(package, :owners) |> Hexpm.Repo.all
+      assert first.username in [user1.username, user2.username]
+      assert second.username in [user1.username, user2.username]
 
-    [email] = Bamboo.SentEmail.all
-    assert email.subject =~ "Hex.pm"
-    assert email.html_body =~ "jose has been added as an owner to package postgrex."
-    emails_first = assoc(first, :emails) |> Hexpm.Repo.all
-    emails_second = assoc(second, :emails) |> Hexpm.Repo.all
+      [email] = Bamboo.SentEmail.all
+      assert email.subject =~ "Hex.pm"
+      assert email.html_body =~ "#{user2.username} has been added as an owner to package #{package.name}."
+      emails_first = assoc(first, :emails) |> Hexpm.Repo.all
+      emails_second = assoc(second, :emails) |> Hexpm.Repo.all
 
-    assert {first.username, hd(emails_first).email} in email.to
-    assert {second.username, hd(emails_second).email} in email.to
+      assert {first.username, hd(emails_first).email} in email.to
+      assert {second.username, hd(emails_second).email} in email.to
 
-    log = Hexpm.Repo.one!(AuditLog)
-    assert log.actor_id == c.eric.id
-    assert log.action == "owner.add"
-    assert %{"package" => %{"name" => "postgrex"}, "user" => %{"username" => "jose"}} = log.params
+      log = Hexpm.Repo.one!(AuditLog)
+      assert log.actor_id == user1.id
+      assert log.action == "owner.add"
+      assert log.params["package"]["name"] == package.name
+      assert log.params["user"]["username"] == user2.username
+    end
+
+    test "add unknown user package owner", %{user1: user, package: package} do
+      conn = build_conn()
+             |> put_req_header("authorization", key_for(user))
+             |> put("api/packages/#{package.name}/owners/UNKNOWN")
+      assert conn.status == 404
+    end
+
+    test "can add same owner twice", %{user1: user1, user2: user2, package: package} do
+      conn = build_conn()
+             |> put_req_header("authorization", key_for(user1))
+             |> put("api/packages/#{package.name}/owners/#{hd(user2.emails).email}")
+      assert conn.status == 204
+
+      conn = build_conn()
+             |> put_req_header("authorization", key_for(user1))
+             |> put("api/packages/#{package.name}/owners/#{hd(user2.emails).email}")
+      assert conn.status == 204
+    end
+
+    test "add package owner authorizes", %{user2: user2, package: package} do
+      user3 = insert(:user)
+
+      conn = build_conn()
+             |> put_req_header("authorization", key_for(user3))
+             |> put("api/packages/#{package.name}/owners/#{hd(user2.emails).email}")
+      assert conn.status == 403
+    end
   end
 
-  test "add unknown user package owner", c do
-    conn = build_conn()
-           |> put_req_header("authorization", key_for(c.eric))
-           |> put("api/packages/postgrex/owners/UNKNOWN")
-    assert conn.status == 404
-  end
 
-  test "cannot add same owner twice", c do
-    conn = build_conn()
-           |> put_req_header("authorization", key_for(c.eric))
-           |> put("api/packages/postgrex/owners/jose%40mail.com")
-    assert conn.status == 204
+  describe "DELETE /packages/:name/owners/:email" do
+    test "delete package owner", %{user1: user1, user2: user2, package: package} do
+      insert(:package_owner, package: package, owner: user2)
 
-    conn = build_conn()
-           |> put_req_header("authorization", key_for(c.eric))
-           |> put("api/packages/postgrex/owners/jose%40mail.com")
-    assert conn.status == 422
-    body = Poison.decode!(conn.resp_body)
-    assert body["errors"]["owner_id"] == "is already owner"
-  end
+      conn = build_conn()
+             |> put_req_header("authorization", key_for(user1))
+             |> delete("api/packages/#{package.name}/owners/#{user2.username}")
+      assert conn.status == 204
+      assert [user] = assoc(package, :owners) |> Hexpm.Repo.all
+      assert user.id == user1.id
 
-  test "add package owner authorizes", c do
-    conn = build_conn()
-           |> put_req_header("authorization", key_for(c.other))
-           |> put("api/packages/postgrex/owners/jose%40mail.com")
-    assert conn.status == 403
-  end
+      [email] = Bamboo.SentEmail.all
+      assert email.subject =~ "Hex.pm"
+      assert email.html_body =~ "#{user2.username} has been removed from owners of package #{package.name}."
 
-  test "delete package owner", c do
-    Package.build_owner(c.package, c.jose) |> Hexpm.Repo.insert!
+      user1_emails = assoc(user1, :emails) |> Hexpm.Repo.all
+      user2_emails = assoc(user2, :emails) |> Hexpm.Repo.all
 
-    conn = build_conn()
-           |> put_req_header("authorization", key_for(c.eric))
-           |> delete("api/packages/postgrex/owners/#{c.jose.username}")
-    assert conn.status == 204
-    assert [%User{username: "eric"}] = assoc(c.package, :owners) |> Hexpm.Repo.all
+      assert {user1.username, hd(user1_emails).email} in email.to
+      assert {user2.username, hd(user2_emails).email} in email.to
 
-    [email] = Bamboo.SentEmail.all
-    assert email.subject =~ "Hex.pm"
-    assert email.html_body =~ "jose has been removed from owners of package postgrex."
+      log = Hexpm.Repo.one!(AuditLog)
+      assert log.actor_id == user1.id
+      assert log.action == "owner.remove"
+      assert log.params["package"]["name"] == package.name
+      assert log.params["user"]["username"] == user2.username
+    end
 
-    eric_emails = assoc(c.eric, :emails) |> Hexpm.Repo.all
-    jose_emails = assoc(c.jose, :emails) |> Hexpm.Repo.all
+    test "delete package owner authorizes", %{user1: user1, user2: user2, package: package} do
+      conn = build_conn()
+             |> put_req_header("authorization", key_for(user2))
+             |> delete("api/packages/#{package.name}/owners/#{user1.username}")
+      assert conn.status == 403
+    end
 
-    assert {c.eric.username, hd(eric_emails).email} in email.to
-    assert {c.jose.username, hd(jose_emails).email} in email.to
+    test "delete unknown user package owner", %{user1: user1, user2: user2, package: package} do
+      insert(:package_owner, package: package, owner: user2)
 
-    log = Hexpm.Repo.one!(AuditLog)
-    assert log.actor_id == c.eric.id
-    assert log.action == "owner.remove"
-    assert %{"package" => %{"name" => "postgrex"}, "user" => %{"username" => "jose"}} = log.params
-  end
+      conn = build_conn()
+             |> put_req_header("authorization", key_for(user1))
+             |> delete("api/packages/#{package.name}/owners/UNKNOWN")
+      assert conn.status == 404
+    end
 
-  test "delete package owner authorizes", c do
-    conn = build_conn()
-           |> put_req_header("authorization", key_for(c.other))
-           |> delete("api/packages/postgrex/owners/eric%40mail.com")
-    assert conn.status == 403
-  end
-
-  test "delete unknown user package owner", c do
-    Package.build_owner(c.package, c.jose) |> Hexpm.Repo.insert!
-
-    conn = build_conn()
-           |> put_req_header("authorization", key_for(c.eric))
-           |> delete("api/packages/postgrex/owners/UNKNOWN")
-    assert conn.status == 404
-  end
-
-  test "not possible to remove last owner of package", c do
-    conn = build_conn()
-           |> put_req_header("authorization", key_for(c.eric))
-           |> delete("api/packages/postgrex/owners/eric%40mail.com")
-    assert conn.status == 403
-    assert [%User{username: "eric"}] = assoc(c.package, :owners) |> Hexpm.Repo.all
+    test "not possible to remove last owner of package", %{user1: user1, package: package} do
+      conn = build_conn()
+             |> put_req_header("authorization", key_for(user1))
+             |> delete("api/packages/#{package.name}/owners/#{user1.username}")
+      assert conn.status == 403
+      assert [user] = assoc(package, :owners) |> Hexpm.Repo.all
+      assert user.id == user1.id
+    end
   end
 end

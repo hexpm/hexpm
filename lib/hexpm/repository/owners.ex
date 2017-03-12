@@ -9,7 +9,7 @@ defmodule Hexpm.Repository.Owners do
   def add(package, owner, [audit: audit_data]) do
     multi =
       Multi.new
-      |> Multi.insert(:owner, Package.build_owner(package, owner))
+      |> Multi.insert(:owner, Package.build_owner(package, owner), on_conflict: :nothing, conflict_target: [:package_id, :owner_id])
       |> audit(audit_data, "owner.add", {package, owner})
 
     case Repo.transaction(multi) do

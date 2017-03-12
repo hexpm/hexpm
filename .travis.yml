@@ -1,9 +1,9 @@
+dist: trusty
 language: elixir
-elixir: 1.4.1
-otp_release: 19.1
-sudo: false
+elixir: 1.4.2
+otp_release: 19.2
 addons:
-  postgresql: '9.4'
+  postgresql: 9.6
 env:
   - MIX_ENV=test
 script:
