@@ -137,10 +137,16 @@ defmodule Hexpm.Repository.Releases do
 
   defp create_package(multi, repository, package, user, meta) do
     params = %{"name" => meta["name"], "meta" => meta}
-    if package do
-      Multi.update(multi, :package, Package.update(package, params))
-    else
-      Multi.insert(multi, :package, Package.build(repository, user, params))
+    cond do
+      !package ->
+        Multi.insert(multi, :package, Package.build(repository, user, params))
+      package.name != meta["name"] ->
+        changeset =
+          Package.build(repository, user, params)
+          |> add_error(:name, "mismatch between metadata and endpoint")
+        Multi.update(multi, :package, changeset)
+      true ->
+        Multi.update(multi, :package, Package.update(package, params))
     end
   end
 

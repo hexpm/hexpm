@@ -21,6 +21,7 @@ defmodule Hexpm.Repo.Migrations.AddRepositoriesTable do
     create unique_index(:repositories, [:name])
     create index(:repositories, [:public])
     create unique_index(:packages, [:repository_id, :name])
+    drop index(:packages, [:name], name: "packages_name_idx")
   end
 
   def down do
@@ -29,5 +30,7 @@ defmodule Hexpm.Repo.Migrations.AddRepositoriesTable do
     end
 
     drop table(:repositories)
+
+    create unique_index(:packages, [:name], name: "packages_name_idx")
   end
 end
