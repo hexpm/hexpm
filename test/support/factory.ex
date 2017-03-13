@@ -34,6 +34,13 @@ defmodule Hexpm.Factory do
     %Hexpm.Accounts.UserHandles{}
   end
 
+  def repository_factory() do
+    %Hexpm.Repository.Repository{
+      name: Fake.sequence(:package),
+      public: true
+    }
+  end
+
   def package_factory() do
     %Hexpm.Repository.Package{
       name: Fake.sequence(:package),
