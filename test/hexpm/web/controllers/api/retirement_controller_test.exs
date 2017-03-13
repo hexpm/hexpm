@@ -1,34 +1,31 @@
 defmodule Hexpm.Web.API.RetirementControllerTest do
   use Hexpm.ConnCase, async: true
 
-  alias Hexpm.Repository.Package
-  alias Hexpm.Repository.Release
-
   setup do
-    user = create_user("eric", "eric@mail.com", "ericeric")
-    package = Package.build(user, pkg_meta(%{name: "decimal", description: "Arbitrary precision decimal aritmetic for Elixir."})) |> Hexpm.Repo.insert!
-    release = Release.build(package, rel_meta(%{version: "0.0.1", app: "decimal"}), "") |> Hexpm.Repo.insert!
-    %{user: user, package: package, release: release}
+    user = insert(:user)
+    package = insert(:package, package_owners: [build(:package_owner, owner: user)])
+    insert(:release, package: package, version: "1.0.0")
+    %{user: user, package: package}
   end
 
-  test "retire and unretire release", c do
+  test "retire and unretire release", %{user: user, package: package} do
     params = %{"reason" => "security", "message" => "See CVE-NNNN"}
-    conn = build_conn()
-           |> put_req_header("authorization", key_for(c.user))
-           |> post("api/packages/#{c.package.name}/releases/#{c.release.version}/retire", params)
-    assert conn.status == 204
+    build_conn()
+    |> put_req_header("authorization", key_for(user))
+    |> post("api/packages/#{package.name}/releases/1.0.0/retire", params)
+    |> response(204)
 
-    release = Hexpm.Repository.Releases.get(c.package, c.release.version)
+    release = Hexpm.Repository.Releases.get(package, "1.0.0")
     assert release.retirement
     assert release.retirement.reason == "security"
     assert release.retirement.message == "See CVE-NNNN"
 
-    conn = build_conn()
-           |> put_req_header("authorization", key_for(c.user))
-           |> delete("api/packages/#{c.package.name}/releases/#{c.release.version}/retire")
-    assert conn.status == 204
+    build_conn()
+    |> put_req_header("authorization", key_for(user))
+    |> delete("api/packages/#{package.name}/releases/1.0.0/retire")
+    |> response(204)
 
-    release = Hexpm.Repository.Releases.get(c.package, c.release.version)
+    release = Hexpm.Repository.Releases.get(package, "1.0.0")
     refute release.retirement
   end
 end
