@@ -22,7 +22,8 @@ defmodule Hexpm.Mixfile do
   end
 
   defp elixirc_paths(:test), do: ["lib", "test/support"]
-  defp elixirc_paths(_),     do: ["lib"]
+  defp elixirc_paths(:dev), do: ["lib", "test/support/fake.ex", "test/support/factory.ex"]
+  defp elixirc_paths(_), do: ["lib"]
 
   defp gpb_options do
     [verify: :always,
@@ -63,7 +64,7 @@ defmodule Hexpm.Mixfile do
 
   defp aliases do
     ["compile.gpb": &compile_gpb/1,
-     "ecto.setup": ["ecto.create", "ecto.migrate", "run priv/repo/seeds.exs"],
+     "ecto.setup": ["ecto.drop", "ecto.create", "ecto.migrate", "run priv/repo/seeds.exs"],
      "ecto.reset": ["ecto.drop", "ecto.create", "ecto.migrate"],
      "test": ["ecto.migrate", "test"]]
   end

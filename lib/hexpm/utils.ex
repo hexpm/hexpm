@@ -40,12 +40,16 @@ defmodule Hexpm.Utils do
                  Exception.format_stacktrace(stacktrace)
   end
 
-  def utc_yesterday do
+  def utc_yesterday() do
+    utc_days_ago(1)
+  end
+
+  def utc_days_ago(days) do
     {today, _time} = :calendar.universal_time()
 
     today
     |> :calendar.date_to_gregorian_days()
-    |> Kernel.-(1)
+    |> Kernel.-(days)
     |> :calendar.gregorian_days_to_date()
     |> Date.from_erl!()
   end

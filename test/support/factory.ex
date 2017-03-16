@@ -82,6 +82,10 @@ defmodule Hexpm.Factory do
     }
   end
 
+  def download_factory() do
+    %Hexpm.Repository.Download{}
+  end
+
   def install_factory() do
     %Hexpm.Repository.Install{}
   end
