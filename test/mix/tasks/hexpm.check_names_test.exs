@@ -7,18 +7,18 @@ defmodule Mix.Tasks.Hexpm.CheckNamesTest do
     {:ok, yesterday} = NaiveDateTime.new(Hexpm.Utils.utc_yesterday, ~T[00:00:00.000])
 
     # today's
-    Hexpm.Repo.insert!(%Hexpm.Repository.Package{name: "hector"})
-    Hexpm.Repo.insert!(%Hexpm.Repository.Package{name: "phoenics"})
-    Hexpm.Repo.insert!(%Hexpm.Repository.Package{name: "poison"})
-    Hexpm.Repo.insert!(%Hexpm.Repository.Package{name: "poizon"})
+    insert(:package, name: "hector")
+    insert(:package, name: "phoenics")
+    insert(:package, name: "poison")
+    insert(:package, name: "poizon")
     # yesterday's
-    Hexpm.Repo.insert!(%Hexpm.Repository.Package{name: "ecto", inserted_at: yesterday})
-    Hexpm.Repo.insert!(%Hexpm.Repository.Package{name: "phoenix", inserted_at: yesterday})
-    Hexpm.Repo.insert!(%Hexpm.Repository.Package{name: "potion", inserted_at: yesterday})
-    Hexpm.Repo.insert!(%Hexpm.Repository.Package{name: "asdf", inserted_at: yesterday})
-    Hexpm.Repo.insert!(%Hexpm.Repository.Package{name: "conga", inserted_at: yesterday})
-    Hexpm.Repo.insert!(%Hexpm.Repository.Package{name: "foo", inserted_at: yesterday})
-    Hexpm.Repo.insert!(%Hexpm.Repository.Package{name: "fooo", inserted_at: yesterday})
+    insert(:package, name: "ecto", inserted_at: yesterday)
+    insert(:package, name: "phoenix", inserted_at: yesterday)
+    insert(:package, name: "potion", inserted_at: yesterday)
+    insert(:package, name: "asdf", inserted_at: yesterday)
+    insert(:package, name: "conga", inserted_at: yesterday)
+    insert(:package, name: "foo", inserted_at: yesterday)
+    insert(:package, name: "fooo", inserted_at: yesterday)
 
     :ok
   end

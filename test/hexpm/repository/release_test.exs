@@ -1,140 +1,133 @@
 defmodule Hexpm.Repository.ReleaseTest do
   use Hexpm.DataCase, async: true
 
-  alias Hexpm.Repository.Package
   alias Hexpm.Repository.Release
 
   setup do
-    user = create_user("eric", "eric@mail.com", "ericeric")
-    ecto =
-      Package.build(user, pkg_meta(%{name: "ecto", description: "Ecto is awesome"}))
-      |> Hexpm.Repo.insert!
-    postgrex =
-      Package.build(user, pkg_meta(%{name: "postgrex", description: "Postgrex is awesome"}))
-      |> Hexpm.Repo.insert!
-    decimal =
-      Package.build(user, pkg_meta(%{name: "decimal", description: "Decimal is awesome, too"}))
-      |> Hexpm.Repo.insert!
-
-    %{ecto: ecto, postgrex: postgrex, decimal: decimal}
+    packages = insert_list(3, :package)
+    %{packages: packages}
   end
 
-  test "create release and get", %{ecto: package} do
+  test "create release and get", %{packages: [package, _, _]} do
     package_id = package.id
 
     assert %Release{package_id: ^package_id, version: %Version{major: 0, minor: 0, patch: 1}} =
-           Release.build(package, rel_meta(%{version: "0.0.1", app: "ecto"}), "") |> Hexpm.Repo.insert!
+           Release.build(package, rel_meta(%{version: "0.0.1", app: package.name}), "") |> Hexpm.Repo.insert!
     assert %Release{package_id: ^package_id, version: %Version{major: 0, minor: 0, patch: 1}} =
            Hexpm.Repo.get_by!(assoc(package, :releases), version: "0.0.1")
 
-    Release.build(package, rel_meta(%{version: "0.0.2", app: "ecto"}), "") |> Hexpm.Repo.insert!
+    Release.build(package, rel_meta(%{version: "0.0.2", app: package.name}), "") |> Hexpm.Repo.insert!
     assert [%Release{version: %Version{major: 0, minor: 0, patch: 2}},
             %Release{version: %Version{major: 0, minor: 0, patch: 1}}] =
            Release.all(package) |> Hexpm.Repo.all |> Release.sort
   end
 
-  test "create release with deps", %{ecto: ecto, postgrex: postgrex, decimal: decimal} do
-    Release.build(decimal, rel_meta(%{version: "0.0.1", app: "decimal"}), "") |> Hexpm.Repo.insert!
-    Release.build(decimal, rel_meta(%{version: "0.0.2", app: "decimal"}), "") |> Hexpm.Repo.insert!
+  test "create release with deps", %{packages: [package1, package2, package3]} do
+    Release.build(package3, rel_meta(%{version: "0.0.1", app: package3.name}), "") |> Hexpm.Repo.insert!
+    Release.build(package3, rel_meta(%{version: "0.0.2", app: package3.name}), "") |> Hexpm.Repo.insert!
 
-    meta = rel_meta(%{requirements: [%{name: "decimal", app: "decimal", requirement: "~> 0.0.1", optional: false}],
-                      app: "postgrex", version: "0.0.1"})
-    Release.build(postgrex, meta, "") |> Hexpm.Repo.insert!
+    meta = rel_meta(%{requirements: [%{name: package3.name, app: package3.name, requirement: "~> 0.0.1", optional: false}],
+                      app: package2.name, version: "0.0.1"})
+    Release.build(package2, meta, "") |> Hexpm.Repo.insert!
 
-    meta = rel_meta(%{requirements: [%{name: "decimal", app: "decimal", requirement: "~> 0.0.2", optional: false}, %{name: "postgrex", app: "postgrex", requirement: "== 0.0.1", optional: false}],
-                      app: "ecto", version: "0.0.1"})
-    Release.build(ecto, meta, "") |> Hexpm.Repo.insert!
+    meta = rel_meta(%{requirements: [%{name: package3.name, app: package3.name, requirement: "~> 0.0.2", optional: false}, %{name: package2.name, app: package2.name, requirement: "== 0.0.1", optional: false}],
+                      app: package1.name, version: "0.0.1"})
+    Release.build(package1, meta, "") |> Hexpm.Repo.insert!
 
-    postgrex_id = postgrex.id
-    decimal_id = decimal.id
+    package2_id = package2.id
+    package3_id = package3.id
+    package2_name = package2.name
+    package3_name = package3.name
 
-    release = Hexpm.Repo.get_by!(assoc(ecto, :releases), version: "0.0.1")
+    release = Hexpm.Repo.get_by!(assoc(package1, :releases), version: "0.0.1")
               |> Hexpm.Repo.preload(:requirements)
-    assert [%{dependency_id: ^decimal_id, app: "decimal", requirement: "~> 0.0.2", optional: false},
-            %{dependency_id: ^postgrex_id, app: "postgrex", requirement: "== 0.0.1", optional: false}] =
+    assert [%{dependency_id: ^package3_id, app: ^package3_name, requirement: "~> 0.0.2", optional: false},
+            %{dependency_id: ^package2_id, app: ^package2_name, requirement: "== 0.0.1", optional: false}] =
            release.requirements
   end
 
-  test "validate release", %{ecto: ecto, decimal: decimal} do
-    Release.build(decimal, rel_meta(%{version: "0.1.0", app: "decimal", requirements: []}), "")
+  test "validate release", %{packages: [_, package2, package3]} do
+    Release.build(package3, rel_meta(%{version: "0.1.0", app: package3.name, requirements: []}), "")
     |> Hexpm.Repo.insert!
 
-    reqs = [%{name: "decimal", app: "decimal", requirement: "~> 0.1", optional: false}]
-    Release.build(ecto, rel_meta(%{version: "0.1.0", app: "ecto", requirements: reqs}), "")
+    reqs = [%{name: package3.name, app: package3.name, requirement: "~> 0.1", optional: false}]
+    Release.build(package2, rel_meta(%{version: "0.1.0", app: package2.name, requirements: reqs}), "")
     |> Hexpm.Repo.insert!
 
     meta = %{"version" => "0.1.0", "requirements" => [], "build_tools" => ["mix"]}
     assert %{meta: %{app: [{"can't be blank", _}]}} =
-           Release.build(decimal, %{"meta" => meta}, "")
+           Release.build(package3, %{"meta" => meta}, "")
            |> extract_errors
 
-    meta = %{"app" => "decimal", "version" => "0.1.0", "requirements" => []}
+    meta = %{"app" => package3.name, "version" => "0.1.0", "requirements" => []}
     assert %{meta: %{build_tools: [{"can't be blank", _}]}} =
-           Release.build(decimal, %{"meta" => meta}, "")
+           Release.build(package3, %{"meta" => meta}, "")
            |> extract_errors
 
-    meta = %{"app" => "decimal", "version" => "0.1.0", "requirements" => [], "build_tools" => []}
+    meta = %{"app" => package3.name, "version" => "0.1.0", "requirements" => [], "build_tools" => []}
     assert %{meta: %{build_tools: [{"can't be blank", _}]}} =
-           Release.build(decimal, %{"meta" => meta}, "")
+           Release.build(package3, %{"meta" => meta}, "")
            |> extract_errors
 
-    meta = %{"app" => "decimal", "version" => "0.1.0", "requirements" => [], "build_tools" => ["mix"], "elixir" => "== == 0.0.1"}
+    meta = %{"app" => package3.name, "version" => "0.1.0", "requirements" => [], "build_tools" => ["mix"], "elixir" => "== == 0.0.1"}
     assert %{meta: %{elixir: [{"invalid requirement: \"== == 0.0.1\"", _}]}} =
-           Release.build(decimal, %{"meta" => meta}, "")
+           Release.build(package3, %{"meta" => meta}, "")
            |> extract_errors
 
     assert %{version: [{"is invalid", _}]} =
-           Release.build(ecto, rel_meta(%{version: "0.1", app: "ecto"}), "")
+           Release.build(package2, rel_meta(%{version: "0.1", app: package2.name}), "")
            |> extract_errors
 
-    reqs = [%{name: "decimal", app: "decimal", requirement: "~> fail", optional: false}]
+    reqs = [%{name: package3.name, app: package3.name, requirement: "~> fail", optional: false}]
     assert %{requirements: [%{requirement: [{"invalid requirement: \"~> fail\"", []}]}]} =
-           Release.build(ecto, rel_meta(%{version: "0.1.1", app: "ecto", requirements: reqs}), "")
+           Release.build(package2, rel_meta(%{version: "0.1.1", app: package2.name, requirements: reqs}), "")
            |> extract_errors
 
-    reqs = [%{name: "decimal", app: "decimal", requirement: "~> 1.0", optional: false}]
-    assert %{requirements: [%{requirement: [{"Failed to use \"decimal\" because\n  mix.exs specifies ~> 1.0\n", []}]}]} =
-           Release.build(ecto, rel_meta(%{version: "0.1.1", app: "ecto", requirements: reqs}), "")
-           |> extract_errors
+    reqs = [%{name: package3.name, app: package3.name, requirement: "~> 1.0", optional: false}]
+    errors =
+      Release.build(package2, rel_meta(%{version: "0.1.1", app: package2.name, requirements: reqs}), "")
+      |> extract_errors
+    assert hd(errors[:requirements])[:requirement] == [{~s(Failed to use "#{package3.name}" because\n  mix.exs specifies ~> 1.0\n), []}]
   end
 
-  test "ensure unique build tools", %{decimal: decimal} do
-    changeset = Release.build(decimal, rel_meta(%{version: "0.1.0", app: "decimal", build_tools: ["mix", "make", "make"]}), "")
+  test "ensure unique build tools", %{packages: [_, _, package3]} do
+    changeset = Release.build(package3, rel_meta(%{version: "0.1.0", app: package3.name, build_tools: ["mix", "make", "make"]}), "")
     assert changeset.changes.meta.changes.build_tools == ["mix", "make"]
+  end
+
+  test "release version is unique", %{packages: [package1, package2, _]} do
+    Release.build(package1, rel_meta(%{version: "0.0.1", app: package1.name}), "") |> Hexpm.Repo.insert!
+    Release.build(package2, rel_meta(%{version: "0.0.1", app: package2.name}), "") |> Hexpm.Repo.insert!
+
+    assert {:error, %{errors: [version: {"has already been published", []}]}} =
+           Release.build(package1, rel_meta(%{version: "0.0.1", app: package1.name}), "")
+           |> Hexpm.Repo.insert
+  end
+
+  test "update release", %{packages: [_, package2, package3] } do
+    Release.build(package3, rel_meta(%{version: "0.0.1", app: package3.name}), "") |> Hexpm.Repo.insert!
+    reqs = [%{name: package3.name, app: package3.name, requirement: "~> 0.0.1", optional: false}]
+    release = Release.build(package2, rel_meta(%{version: "0.0.1", app: package2.name, requirements: reqs}), "") |> Hexpm.Repo.insert!
+
+    params = params(%{app: package2.name, requirements: [%{name: package3.name, app: package3.name, requirement: ">= 0.0.1", optional: false}]})
+    Release.update(release, params, "") |> Hexpm.Repo.update!
+
+    package3_id = package3.id
+    package3_name = package3.name
+
+    release = Hexpm.Repo.get_by!(assoc(package2, :releases), version: "0.0.1")
+              |> Hexpm.Repo.preload(:requirements)
+    assert [%{dependency_id: ^package3_id, app: ^package3_name, requirement: ">= 0.0.1", optional: false}] =
+           release.requirements
+  end
+
+  test "delete release", %{packages: [_, package2, package3]} do
+    release = Release.build(package3, rel_meta(%{version: "0.0.1", app: package3.name}), "") |> Hexpm.Repo.insert!
+    Release.delete(release) |> Hexpm.Repo.delete!
+    refute Hexpm.Repo.get_by(assoc(package2, :releases), version: "0.0.1")
   end
 
   defp extract_errors(%Ecto.Changeset{} = changeset) do
     Ecto.Changeset.traverse_errors(changeset, fn err -> err end)
-  end
-
-  test "release version is unique", %{ecto: ecto, postgrex: postgrex} do
-    Release.build(ecto, rel_meta(%{version: "0.0.1", app: "ecto"}), "") |> Hexpm.Repo.insert!
-    Release.build(postgrex, rel_meta(%{version: "0.0.1", app: "postgrex"}), "") |> Hexpm.Repo.insert!
-
-    assert {:error, %{errors: [version: {"has already been published", []}]}} =
-           Release.build(ecto, rel_meta(%{version: "0.0.1", app: "ecto"}), "")
-           |> Hexpm.Repo.insert
-  end
-
-  test "update release", %{decimal: decimal, postgrex: postgrex} do
-    Release.build(decimal, rel_meta(%{version: "0.0.1", app: "decimal"}), "") |> Hexpm.Repo.insert!
-    reqs = [%{name: "decimal", app: "decimal", requirement: "~> 0.0.1", optional: false}]
-    release = Release.build(postgrex, rel_meta(%{version: "0.0.1", app: "postgrex", requirements: reqs}), "") |> Hexpm.Repo.insert!
-
-    params = params(%{app: "postgrex", requirements: [%{name: "decimal", app: "decimal", requirement: ">= 0.0.1", optional: false}]})
-    Release.update(release, params, "") |> Hexpm.Repo.update!
-
-    decimal_id = decimal.id
-
-    release = Hexpm.Repo.get_by!(assoc(postgrex, :releases), version: "0.0.1")
-              |> Hexpm.Repo.preload(:requirements)
-    assert [%{dependency_id: ^decimal_id, app: "decimal", requirement: ">= 0.0.1", optional: false}] =
-           release.requirements
-  end
-
-  test "delete release", %{decimal: decimal, postgrex: postgrex} do
-    release = Release.build(decimal, rel_meta(%{version: "0.0.1", app: "decimal"}), "") |> Hexpm.Repo.insert!
-    Release.delete(release) |> Hexpm.Repo.delete!
-    refute Hexpm.Repo.get_by(assoc(postgrex, :releases), version: "0.0.1")
   end
 end

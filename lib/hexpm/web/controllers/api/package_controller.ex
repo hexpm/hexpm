@@ -16,8 +16,8 @@ defmodule Hexpm.Web.API.PackageController do
     end)
   end
 
-  def show(conn, %{"name" => name}) do
-    package = Packages.get(name)
+  def show(conn, %{"repository" => repository, "name" => name}) do
+    package = Packages.get(repository, name)
 
     if package do
       when_stale(conn, package, fn conn ->

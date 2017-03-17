@@ -7,7 +7,7 @@ defmodule Hexpm.Web.API.ReleaseController do
   plug :authorize, [fun: &maybe_package_owner?/2] when action in [:create]
 
   def create(conn, %{"body" => body}) do
-    handle_tarball(conn, conn.assigns.package, conn.assigns.user, body)
+    handle_tarball(conn, conn.assigns.repository, conn.assigns.package, conn.assigns.user, body)
   end
 
   def show(conn, _params) do
@@ -34,10 +34,10 @@ defmodule Hexpm.Web.API.ReleaseController do
     end
   end
 
-  defp handle_tarball(conn, package, user, body) do
+  defp handle_tarball(conn, repository, package, user, body) do
     case Hexpm.Web.ReleaseTar.metadata(body) do
       {:ok, meta, checksum} ->
-        Releases.publish(package, user, body, meta, checksum, audit: audit_data(conn))
+        Releases.publish(repository, package, user, body, meta, checksum, audit: audit_data(conn))
 
       {:error, errors} ->
         {:error, %{tar: errors}}

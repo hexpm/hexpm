@@ -24,7 +24,7 @@ defmodule Hexpm.Web.PackageController do
     package_count = Packages.count(filter)
     page          = Hexpm.Utils.safe_page(page_param, package_count, @packages_per_page)
     packages      = fetch_packages(page, @packages_per_page, filter, sort)
-    exact_match   = Packages.get(search || "")
+    exact_match   = Packages.get(params["repository"], search || "")
 
     render conn, "index.html", [
       title:         "Packages",
@@ -43,7 +43,7 @@ defmodule Hexpm.Web.PackageController do
   end
 
   def show(conn, params) do
-    if package = Packages.get(params["name"]) do
+    if package = Packages.get(params["repository"], params["name"]) do
       releases = Releases.all(package)
 
       {release, type} =

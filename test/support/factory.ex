@@ -34,10 +34,18 @@ defmodule Hexpm.Factory do
     %Hexpm.Accounts.UserHandles{}
   end
 
+  def repository_factory() do
+    %Hexpm.Repository.Repository{
+      name: Fake.sequence(:package),
+      public: true
+    }
+  end
+
   def package_factory() do
     %Hexpm.Repository.Package{
       name: Fake.sequence(:package),
-      meta: build(:package_metadata)
+      meta: build(:package_metadata),
+      repository_id: 1
     }
   end
 
@@ -48,10 +56,14 @@ defmodule Hexpm.Factory do
     }
   end
 
+  def package_owner_factory() do
+    %Hexpm.Repository.PackageOwner{}
+  end
+
   def release_factory() do
     %Hexpm.Repository.Release{
       version: "1.0.0",
-      checksum: "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      checksum: "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855",
       meta: build(:release_metadata)
     }
   end
@@ -61,5 +73,20 @@ defmodule Hexpm.Factory do
       app: Fake.random(:package),
       build_tools: ["mix"]
     }
+  end
+
+  def requirement_factory() do
+    %Hexpm.Repository.Requirement{
+      app: Fake.random(:package),
+      optional: false
+    }
+  end
+
+  def download_factory() do
+    %Hexpm.Repository.Download{}
+  end
+
+  def install_factory() do
+    %Hexpm.Repository.Install{}
   end
 end

@@ -1,51 +1,53 @@
 defmodule Hexpm.Web.PackageControllerTest do
   use Hexpm.ConnCase, async: true
-  alias Hexpm.Repository.{Package, Release}
 
   setup do
-    eric = create_user("eric", "eric@mail.com", "ericeric")
-    decimal = Package.build(eric, pkg_meta(%{name: "decimal", description: "Arbitrary precision decimal arithmetic for Elixir."})) |> Hexpm.Repo.insert!
-    Package.build(eric, pkg_meta(%{name: "postgrex", description: "Postgrex is awesome"})) |> Hexpm.Repo.insert!
-    Release.build(decimal, rel_meta(%{version: "0.0.1", app: "decimal"}), "") |> Hexpm.Repo.insert!
-    Release.build(decimal, rel_meta(%{version: "0.0.2", app: "decimal"}), "") |> Hexpm.Repo.insert!
-    Release.build(decimal, rel_meta(%{version: "0.0.3-dev", app: "decimal"}), "") |> Hexpm.Repo.insert!
-    :ok
+    package1 = insert(:package)
+    package2 = insert(:package)
+    insert(:release, package: package1, version: "0.0.1", meta: build(:release_metadata, app: package1.name))
+    insert(:release, package: package1, version: "0.0.2", meta: build(:release_metadata, app: package1.name))
+    insert(:release, package: package1, version: "0.0.3-dev", meta: build(:release_metadata, app: package1.name))
+    insert(:release, package: package2, version: "1.0.0", meta: build(:release_metadata, app: package2.name))
+    %{package1: package1, package2: package2}
   end
 
-  test "index" do
-    conn = get build_conn(), "/packages"
-    assert conn.status == 200
-    assert conn.resp_body =~ ~r/decimal.*0.0.2/
-    assert conn.resp_body =~ ~r/postgrex/
+  describe "GET /packages" do
+    test "index", %{package1: package1, package2: package2} do
+      conn = get build_conn(), "/packages"
+      result = response(conn, 200)
+      assert result =~ ~r/#{package1.name}.*0.0.2/
+      assert result =~ package2.name
+    end
+
+    test "index with letter", %{package1: package1, package2: package2} do
+      conn = get build_conn(), "/packages?letter=#{String.at(package1.name, 0)}"
+      assert response(conn, 200) =~ package1.name
+
+      conn = get build_conn(), "/packages?letter=#{String.at(package2.name, 0)}"
+      assert response(conn, 200) =~ package2.name
+    end
+
+    test "index with search query", %{package1: package1, package2: package2} do
+      conn = get build_conn(), "/packages?search=#{package1.name}"
+      assert response(conn, 200) =~ ~r/#{package1.name}.*0.0.2/
+
+      conn = get build_conn(), "/packages?search=#{package2.name}"
+      assert response(conn, 200) =~ ~r/#{package2.name}.*1.0.0/
+    end
   end
 
-  test "index with letter" do
-    conn = get build_conn(), "/packages?letter=D"
-    assert conn.status == 200
-    assert conn.resp_body =~ ~r/decimal/
-    refute conn.resp_body =~ ~r/postgrex/
-
-    conn = get build_conn(), "/packages?letter=P"
-    assert conn.status == 200
-    refute conn.resp_body =~ ~r/decimal/
-    assert conn.resp_body =~ ~r/postgrex/
+  describe "GET /packages/:name" do
+    test "show package", %{package1: package1} do
+      conn = get build_conn(), "/packages/#{package1.name}"
+      assert response(conn, 200) =~ escape(~s({:#{package1.name}, "~> 0.0.2"}))
+    end
   end
 
-  test "index with search query" do
-    conn = get build_conn(), "/packages?search=dec"
-    assert conn.status == 200
-    assert conn.resp_body =~ ~r/decimal.*0.0.2/
-    refute conn.resp_body =~ ~r/postgrex/
-  end
-
-  test "show package" do
-    conn = get build_conn(), "/packages/decimal"
-    assert response(conn, 200) =~ escape("{:decimal, \"~> 0.0.2\"}")
-  end
-
-  test "show package version" do
-    conn = get build_conn(), "/packages/decimal/0.0.1"
-    assert response(conn, 200) =~ escape("{:decimal, \"~> 0.0.1\"}")
+  describe "GET /packages/:name/:version" do
+    test "show package version", %{package1: package1} do
+      conn = get build_conn(), "/packages/#{package1.name}/0.0.1"
+      assert response(conn, 200) =~ escape(~s({:#{package1.name}, "~> 0.0.1"}))
+    end
   end
 
   defp escape(html) do

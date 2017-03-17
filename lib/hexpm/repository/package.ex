@@ -8,6 +8,7 @@ defmodule Hexpm.Repository.Package do
     field :latest_version, Hexpm.Version, virtual: true
     timestamps()
 
+    belongs_to :repository, Repository
     has_many :releases, Release
     has_many :package_owners, PackageOwner
     has_many :owners, through: [:package_owners, :owner]
@@ -31,7 +32,7 @@ defmodule Hexpm.Repository.Package do
 
   defp changeset(package, :create, params) do
     changeset(package, :update, params)
-    |> unique_constraint(:name, name: "packages_name_idx")
+    |> unique_constraint(:name, name: "packages_repository_id_name_index")
   end
 
   defp changeset(package, :update, params) do
@@ -43,8 +44,8 @@ defmodule Hexpm.Repository.Package do
     |> validate_exclusion(:name, @reserved_names)
   end
 
-  def build(owner, params) do
-    changeset(%Package{}, :create, params)
+  def build(repository, owner, params) do
+    changeset(build_assoc(repository, :packages), :create, params)
     |> put_assoc(:package_owners, [%PackageOwner{owner_id: owner.id}])
   end
 

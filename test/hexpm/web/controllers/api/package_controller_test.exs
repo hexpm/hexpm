@@ -1,81 +1,63 @@
 defmodule Hexpm.Web.API.PackageControllerTest do
   use Hexpm.ConnCase, async: true
 
-  alias Hexpm.Repository.Package
-  alias Hexpm.Repository.Release
-
   setup do
-    user = create_user("eric", "eric@mail.com", "ericeric")
-    decimal = Package.build(user, pkg_meta(%{name: "decimal", description: "Arbitrary precision decimal arithmetic for Elixir."})) |> Hexpm.Repo.insert!
-    postgrex = Package.build(user, pkg_meta(%{name: "postgrex", description: "Postgrex is awesome"})) |> Hexpm.Repo.insert!
-    Release.build(decimal, rel_meta(%{version: "0.0.1", app: "decimal"}), "") |> Hexpm.Repo.insert!
-    {:ok, decimal: decimal, postgrex: postgrex}
+    package1 = insert(:package, inserted_at: ~N[2030-01-01 00:00:00])
+    package2 = insert(:package, updated_at: ~N[2030-01-01 00:00:00])
+    insert(:release, package: package1, version: "0.0.1")
+    %{package1: package1, package2: package2}
   end
 
-  test "get package" do
-    conn = get build_conn(), "api/packages/decimal"
+  describe "GET /api/packages" do
+    test "multiple packages", %{package1: package1} do
+      conn = get build_conn(), "api/packages"
+      result = json_response(conn, 200)
+      assert length(result) == 2
+      releases = List.first(result)["releases"]
 
-    assert conn.status == 200
-    body = Poison.decode!(conn.resp_body)
-    assert body["name"] == "decimal"
+      for release <- releases do
+        assert length(Map.keys(release)) == 2
+        assert Map.has_key?(release, "url")
+        assert Map.has_key?(release, "version")
+      end
 
-    release = List.first(body["releases"])
-    assert release["url"] =~ "/api/packages/decimal/releases/0.0.1"
-    assert release["version"] == "0.0.1"
-  end
+      conn = get build_conn(), "api/packages?search=#{package1.name}"
+      result = json_response(conn, 200)
+      assert length(result) == 1
 
-  test "get multiple packages" do
-    conn = get build_conn(), "api/packages"
-    assert conn.status == 200
-    body = Poison.decode!(conn.resp_body)
-    assert length(body) == 2
-    releases = List.first(body)["releases"]
-    for release <- releases do
-      assert length(Map.keys(release)) == 2
-      assert Map.has_key?(release, "url")
-      assert Map.has_key?(release, "version")
+      conn = get build_conn(), "api/packages?search=name%3A#{package1.name}*"
+      result = json_response(conn, 200)
+      assert length(result) == 1
+
+      conn = get build_conn(), "api/packages?page=1"
+      result = json_response(conn, 200)
+      assert length(result) == 2
+
+      conn = get build_conn(), "api/packages?page=2"
+      result = json_response(conn, 200)
+      assert length(result) == 0
     end
 
-    conn = get build_conn(), "api/packages?search=post"
-    assert conn.status == 200
-    body = Poison.decode!(conn.resp_body)
-    assert length(body) == 1
+    test "sort order", %{package1: package1, package2: package2} do
+      conn = get build_conn(), "api/packages?sort=updated_at"
+      result = json_response(conn, 200)
+      assert hd(result)["name"] == package2.name
 
-    conn = get build_conn(), "api/packages?search=name%3Apost*"
-    assert conn.status == 200
-    body = Poison.decode!(conn.resp_body)
-    assert length(body) == 1
-
-    conn = get build_conn(), "api/packages?page=1"
-    assert conn.status == 200
-    body = Poison.decode!(conn.resp_body)
-    assert length(body) == 2
-
-    conn = get build_conn(), "api/packages?page=2"
-    assert conn.status == 200
-    body = Poison.decode!(conn.resp_body)
-    assert length(body) == 0
+      conn = get build_conn(), "api/packages?sort=inserted_at"
+      result = json_response(conn, 200)
+      assert hd(result)["name"] == package1.name
+    end
   end
 
-  test "fetch sort order", c do
-    future = %{NaiveDateTime.utc_now | year: 2030}
+  describe "GET /api/packages/:name" do
+    test "get package", %{package1: package1} do
+      conn = get build_conn(), "api/packages/#{package1.name}"
+      result = json_response(conn, 200)
+      assert result["name"] == package1.name
 
-    c.postgrex
-    |> Ecto.Changeset.change(updated_at: future)
-    |> Hexpm.Repo.update!
-
-    c.decimal
-    |> Ecto.Changeset.change(inserted_at: future)
-    |> Hexpm.Repo.update!
-
-    conn = get build_conn(), "api/packages?sort=updated_at"
-    assert conn.status == 200
-    body = Poison.decode!(conn.resp_body)
-    assert hd(body)["name"] == "postgrex"
-
-    conn = get build_conn(), "api/packages?sort=inserted_at"
-    assert conn.status == 200
-    body = Poison.decode!(conn.resp_body)
-    assert hd(body)["name"] == "decimal"
+      release = List.first(result["releases"])
+      assert release["url"] =~ "/api/packages/#{package1.name}/releases/0.0.1"
+      assert release["version"] == "0.0.1"
+    end
   end
 end

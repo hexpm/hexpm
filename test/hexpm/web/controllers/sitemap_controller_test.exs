@@ -1,20 +1,14 @@
 defmodule Hexpm.Web.SitemapControllerTest do
   use Hexpm.ConnCase, async: true
 
-  alias Hexpm.Repository.Package
-
   setup do
-    user = create_user("eric", "eric@mail.com", "ericeric")
-    package = Package.build(user, pkg_meta(%{name: "postgrex", description: "Postgrex is awesome"})) |> Hexpm.Repo.insert!
-
-    package
-    |> Ecto.Changeset.change(updated_at: ~N[2014-04-17 14:00:00.000])
-    |> Hexpm.Repo.update!
-    :ok
+    package = insert(:package, updated_at: ~N[2014-04-17 14:00:00.000])
+    %{package: package}
   end
 
-  test "sitemap" do
+  test "GET /sitemap.xml", %{package: package} do
     conn = get build_conn(), "/sitemap.xml"
-    assert response(conn, 200) == read_fixture("sitemap.xml")
+    sitemap = read_fixture("sitemap.xml") |> String.replace("{package}", package.name)
+    assert response(conn, 200) == sitemap
   end
 end

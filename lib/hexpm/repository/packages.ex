@@ -5,8 +5,14 @@ defmodule Hexpm.Repository.Packages do
     Repo.one!(Package.count(filter))
   end
 
-  def get(name) do
-    Repo.get_by(Package, name: name)
+  def get(repository, name) when is_binary(repository) do
+    repository = Repositories.get(repository)
+    repository && get(repository, name)
+  end
+
+  def get(repository, name) do
+    package = Repo.get_by(assoc(repository, :packages), name: name)
+    package && %{package | repository: repository}
   end
 
   def owner?(package, user) do

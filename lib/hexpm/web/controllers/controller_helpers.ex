@@ -3,6 +3,7 @@ defmodule Hexpm.Web.ControllerHelpers do
   import Phoenix.Controller
 
   alias Hexpm.Accounts.Auth
+  alias Hexpm.Repository.{Packages, Releases, Repositories}
 
   @max_cache_age 60
 
@@ -178,29 +179,47 @@ defmodule Hexpm.Web.ControllerHelpers do
   end
 
   def maybe_fetch_package(conn, _opts) do
-    if package = Hexpm.Repository.Packages.get(conn.params["name"]) do
-      assign(conn, :package, package)
+    if repository = Repositories.get(conn.params["repository"]) do
+      conn = assign(conn, :repository, repository)
+      if package = Packages.get(repository, conn.params["name"]) do
+        assign(conn, :package, package)
+      else
+        assign(conn, :package, nil)
+      end
     else
-      assign(conn, :package, nil)
+      conn |> not_found |> halt
     end
   end
 
   def fetch_package(conn, _opts) do
-    if package = Hexpm.Repository.Packages.get(conn.params["name"]) do
-      assign(conn, :package, package)
+    if repository = Repositories.get(conn.params["repository"]) do
+      package = Packages.get(repository, conn.params["name"])
+
+      if package do
+        conn
+        |> assign(:repository, repository)
+        |> assign(:package, package)
+      else
+        conn |> not_found |> halt
+      end
     else
       conn |> not_found |> halt
     end
   end
 
   def fetch_release(conn, _opts) do
-    package = Hexpm.Repository.Packages.get(conn.params["name"])
-    release = package && Hexpm.Repository.Releases.get(package, conn.params["version"])
+    if repository = Repositories.get(conn.params["repository"]) do
+      package = Hexpm.Repository.Packages.get(repository, conn.params["name"])
+      release = package && Releases.get(package, conn.params["version"])
 
-    if release do
-      conn
-      |> assign(:package, package)
-      |> assign(:release, release)
+      if release do
+        conn
+        |> assign(:repository, repository)
+        |> assign(:package, package)
+        |> assign(:release, release)
+      else
+        conn |> not_found |> halt
+      end
     else
       conn |> not_found |> halt
     end

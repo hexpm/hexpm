@@ -3,192 +3,213 @@ defmodule Hexpm.Web.API.DocsControllerTest do
 
   alias Hexpm.Accounts.AuditLog
   alias Hexpm.Repository.Package
-  alias Hexpm.Repository.Release
 
   setup do
-    user = create_user("eric", "eric@mail.com", "ericeric")
+    user = insert(:user)
     {:ok, user: user}
   end
 
-  @tag :integration
-  test "release docs", c do
-    phoenix = Package.build(c.user, pkg_meta(%{name: "phoenix", description: "Web framework"})) |> Hexpm.Repo.insert!
-    Release.build(phoenix, rel_meta(%{version: "0.0.1", app: "phoenix"}), "") |> Hexpm.Repo.insert!
-    Release.build(phoenix, rel_meta(%{version: "0.5.0", app: "phoenix"}), "") |> Hexpm.Repo.insert!
-
-    conn = publish_docs(c.user, phoenix, "0.0.1", [{'index.html', "phoenix v0.0.1"}])
-    assert conn.status == 201
-    assert Hexpm.Repo.get_by!(assoc(phoenix, :releases), version: "0.0.1").has_docs
-
-    log = Hexpm.Repo.one!(AuditLog)
-    assert log.actor_id == c.user.id
-    assert log.action == "docs.publish"
-    assert %{"package" => %{"name" => "phoenix"}, "release" => %{"version" => "0.0.1"}} = log.params
-
-    conn = get build_conn(), "docs/phoenix/index.html"
-    assert response(conn, 200) == "phoenix v0.0.1"
-
-    conn = get build_conn(), "docs/phoenix/0.0.1/index.html"
-    assert response(conn, 200) == "phoenix v0.0.1"
-
-    conn = publish_docs(c.user, phoenix, "0.5.0", [{'index.html', "phoenix v0.5.0"}])
-    assert conn.status == 201
-
-    conn = get build_conn(), "docs/phoenix/index.html"
-    assert response(conn, 200) == "phoenix v0.5.0"
-
-    conn = get build_conn(), "docs/phoenix/0.0.1/index.html"
-    assert response(conn, 200) == "phoenix v0.0.1"
-
-    conn = get build_conn(), "docs/sitemap.xml"
-    assert response(conn, 200) =~ "https://hexdocs.pm/phoenix"
-
-    conn = publish_docs(c.user, phoenix, "0.0.1", [{'index.html', "phoenix v0.0.1 (updated)"}])
-    assert conn.status == 201
-
-    conn = get build_conn(), "docs/phoenix/index.html"
-    assert response(conn, 200) == "phoenix v0.5.0"
-
-    conn = get build_conn(), "docs/phoenix/0.0.1/index.html"
-    assert response(conn, 200) == "phoenix v0.0.1 (updated)"
+  defp path(path) do
+    build_conn()
+    |> get(path)
+    |> response(200)
   end
 
-  @tag :integration
-  test "release beta docs", c do
-    plug = Package.build(c.user, pkg_meta(%{name: "plug", description: "Web framework"})) |> Hexpm.Repo.insert!
-    Release.build(plug, rel_meta(%{version: "0.0.1-beta.1", app: "plug"}), "") |> Hexpm.Repo.insert!
-    Release.build(plug, rel_meta(%{version: "0.5.0", app: "plug"}), "") |> Hexpm.Repo.insert!
-    Release.build(plug, rel_meta(%{version: "1.0.0-beta.1", app: "plug"}), "") |> Hexpm.Repo.insert!
+  describe "POST /api/packages/:name/releases/:version/docs" do
+    @tag :integration
+    test "release docs", %{user: user} do
+      package = insert(:package, package_owners: [build(:package_owner, owner: user)])
+      insert(:release, package: package, version: "0.0.1")
 
-    conn = publish_docs(c.user, plug, "0.0.1-beta.1", [{'index.html', "plug v0.0.1-beta.1"}])
-    assert conn.status == 201
-    assert Hexpm.Repo.get_by!(assoc(plug, :releases), version: "0.0.1-beta.1").has_docs
+      publish_docs(user, package, "0.0.1", [{'index.html', "package v0.0.1"}])
+      |> response(201)
+      assert Hexpm.Repo.get_by!(assoc(package, :releases), version: "0.0.1").has_docs
 
-    conn = get build_conn(), "docs/plug/index.html"
-    assert response(conn, 200) == "plug v0.0.1-beta.1"
+      log = Hexpm.Repo.one!(AuditLog)
+      assert log.actor_id == user.id
+      assert log.action == "docs.publish"
+      assert log.params["package"]["name"] == package.name
+      assert log.params["release"]["version"] == "0.0.1"
 
-    conn = publish_docs(c.user, plug, "0.5.0", [{'index.html', "plug v0.5.0"}])
-    assert conn.status == 201
+      assert path("docs/#{package.name}/index.html") == "package v0.0.1"
+      assert path("docs/#{package.name}/0.0.1/index.html") == "package v0.0.1"
+      assert path("docs/sitemap.xml") =~ "https://hexdocs.pm/#{package.name}"
+    end
 
-    conn = get build_conn(), "docs/plug/index.html"
-    assert response(conn, 200) == "plug v0.5.0"
+    @tag :integration
+    test "update main docs", %{user: user} do
+      package = insert(:package, package_owners: [build(:package_owner, owner: user)])
+      insert(:release, package: package, version: "0.0.1")
+      insert(:release, package: package, version: "0.5.0")
 
-    conn = publish_docs(c.user, plug, "1.0.0-beta.1", [{'index.html', "plug v1.0.0-beta.1"}])
-    assert conn.status == 201
+      publish_docs(user, package, "0.0.1", [{'index.html', "package v0.0.1"}])
+      |> response(201)
 
-    conn = get build_conn(), "docs/plug/index.html"
-    assert response(conn, 200) == "plug v0.5.0"
+      publish_docs(user, package, "0.5.0", [{'index.html', "package v0.5.0"}])
+      |> response(201)
 
-    conn = get build_conn(), "docs/plug/1.0.0-beta.1/index.html"
-    assert response(conn, 200) == "plug v1.0.0-beta.1"
+      assert path("docs/#{package.name}/index.html") == "package v0.5.0"
+      assert path("docs/#{package.name}/0.0.1/index.html") == "package v0.0.1"
+    end
+
+    @tag :integration
+    test "dont update main docs for older versions", %{user: user} do
+      package = insert(:package, package_owners: [build(:package_owner, owner: user)])
+      insert(:release, package: package, version: "0.0.1")
+      insert(:release, package: package, version: "0.5.0")
+
+      publish_docs(user, package, "0.5.0", [{'index.html', "package v0.5.0"}])
+      |> response(201)
+
+      publish_docs(user, package, "0.0.1", [{'index.html', "package v0.0.1"}])
+      |> response(201)
+
+      assert path("docs/#{package.name}/index.html") == "package v0.5.0"
+    end
+
+    @tag :integration
+    test "overwrite docs", %{user: user} do
+      package = insert(:package, package_owners: [build(:package_owner, owner: user)])
+      insert(:release, package: package, version: "0.0.1")
+      insert(:release, package: package, version: "0.5.0")
+
+      publish_docs(user, package, "0.0.1", [{'index.html', "package v0.0.1"}])
+      |> response(201)
+
+      publish_docs(user, package, "0.0.1", [{'index.html', "package v0.0.1 (updated)"}])
+      |> response(201)
+
+      assert path("docs/#{package.name}/index.html") == "package v0.0.1 (updated)"
+      assert path("docs/#{package.name}/0.0.1/index.html") == "package v0.0.1 (updated)"
+    end
+
+    @tag :integration
+    test "beta docs do not overwrite stable main docs", %{user: user} do
+      package = insert(:package, package_owners: [build(:package_owner, owner: user)])
+      insert(:release, package: package, version: "0.5.0")
+      insert(:release, package: package, version: "1.0.0-beta")
+
+      publish_docs(user, package, "0.5.0", [{'index.html', "package v0.5.0"}])
+      |> response(201)
+
+      publish_docs(user, package, "1.0.0-beta", [{'index.html', "package v1.0.0-beta"}])
+      |> response(201)
+
+      assert path("docs/#{package.name}/index.html") == "package v0.5.0"
+      assert path("docs/#{package.name}/1.0.0-beta/index.html") == "package v1.0.0-beta"
+    end
+
+    # TODO
+    @tag :integration
+    # test "beta docs can overwrite beta main docs", %{user: user} do
+    #   package = insert(:package, package_owners: [build(:package_owner, owner: user)])
+    #   insert(:release, package: package, version: "0.0.1-beta")
+    #   insert(:release, package: package, version: "1.0.0-beta")
+    #
+    #   publish_docs(user, package, "0.0.1-beta", [{'index.html', "package v0.0.1-beta"}])
+    #   |> response(201)
+    #
+    #   publish_docs(user, package, "1.0.0-beta", [{'index.html', "package v1.0.0-beta"}])
+    #   |> response(201)
+    #
+    #   assert path("docs/#{package.name}/index.html") == "package v1.0.0-beta"
+    #   assert path("docs/#{package.name}/1.0.0-beta/index.html") == "package v1.0.0-beta"
+    # end
+
+    @tag :integration
+    test "dont allow version directories in docs", %{user: user} do
+      package = insert(:package, package_owners: [build(:package_owner, owner: user)])
+      insert(:release, package: package, version: "0.0.1")
+
+      result =
+        publish_docs(user, package, "0.0.1", [{'1.2.3', "package   v0.0.1"}])
+        |> json_response(422)
+      assert result["errors"]["tar"] == "directory name not allowed to match a semver version"
+    end
   end
 
-  @tag isolation: :serializable
-  test "delete release with docs", c do
-    ecto = Package.build(c.user, pkg_meta(%{name: "ecto", description: "DSL"})) |> Hexpm.Repo.insert!
-    Release.build(ecto, rel_meta(%{version: "0.0.1", app: "ecto"}), "") |> Hexpm.Repo.insert!
+  describe "DELETE /api/packages/:name/releases/:version/docs" do
+    @tag isolation: :serializable
+    test "delete release with docs", %{user: user} do
+      package = insert(:package, package_owners: [build(:package_owner, owner: user)])
+      insert(:release, package: package, version: "0.0.1")
 
-    conn = publish_docs(c.user, ecto, "0.0.1", [{'index.html', "ecto v0.0.1"}])
-    assert conn.status == 201
-    assert Hexpm.Repo.get_by!(assoc(ecto, :releases), version: "0.0.1").has_docs
+      publish_docs(user, package, "0.0.1", [{'index.html', "package v0.0.1"}])
+      |> response(201)
+      assert Hexpm.Repo.get_by!(assoc(package, :releases), version: "0.0.1").has_docs
 
-    conn = revert_release(c.user, ecto, "0.0.1")
-    assert conn.status == 204
+      revert_release(user, package, "0.0.1")
+      |> response(204)
 
-    # Check release was deleted
-    refute Hexpm.Repo.get_by(assoc(ecto, :releases), version: "0.0.1")
+      # Check release was deleted
+      refute Hexpm.Repo.get_by(assoc(package, :releases), version: "0.0.1")
 
-    # Check docs were deleted
-    conn = get build_conn(), "api/packages/ecto/releases/0.0.1/docs"
-    assert conn.status in 400..499
+      # Check docs were deleted
+      assert get(build_conn(), "api/packages/#{package.name}/releases/0.0.1/docs").status in 400..499
+      assert get(build_conn(), "docs/#{package.name}/0.0.1/index.html").status in 400..499
+    end
 
-    conn = get build_conn(), "docs/ecto/0.0.1/index.html"
-    assert conn.status in 400..499
-  end
+    @tag :integration
+    test "delete docs", %{user: user} do
+      package = insert(:package, package_owners: [build(:package_owner, owner: user)])
+      insert(:release, package: package, version: "0.0.1")
+      insert(:release, package: package, version: "0.5.0")
+      insert(:release, package: package, version: "2.0.0")
 
-  @tag :integration
-  test "delete docs", c do
-    ecto = Package.build(c.user, pkg_meta(%{name: "ecto", description: "DSL"})) |> Hexpm.Repo.insert!
-    Release.build(ecto, rel_meta(%{version: "0.0.1", app: "ecto"}), "") |> Hexpm.Repo.insert!
-    Release.build(ecto, rel_meta(%{version: "0.5.0", app: "ecto"}), "") |> Hexpm.Repo.insert!
-    Release.build(ecto, rel_meta(%{version: "2.0.0", app: "ecto"}), "") |> Hexpm.Repo.insert!
+      publish_docs(user, package, "0.0.1", [{'index.html', "package v0.0.1"}])
+      |> response(201)
+      publish_docs(user, package, "0.5.0", [{'index.html', "package v0.5.0"}])
+      |> response(201)
+      publish_docs(user, package, "2.0.0", [{'index.html', "package v2.0.0"}])
+      |> response(201)
 
-    conn = publish_docs(c.user, ecto, "0.0.1", [{'index.html', "ecto v0.0.1"}])
-    assert conn.status == 201
-    conn = publish_docs(c.user, ecto, "0.5.0", [{'index.html', "ecto v0.5.0"}])
-    assert conn.status == 201
-    conn = publish_docs(c.user, ecto, "2.0.0", [{'index.html', "ecto v2.0.0"}])
-    assert conn.status == 201
+      # Revert middle release
+      revert_docs(user, package, "0.5.0")
+      |> response(204)
 
-    # Revert middle release
-    conn = revert_docs(c.user, ecto, "0.5.0")
-    assert conn.status == 204
+      # Check release was deleted
+      refute Hexpm.Repo.get_by(assoc(package, :releases), version: "0.5.0").has_docs
 
-    # Check release was deleted
-    refute Hexpm.Repo.get_by(assoc(ecto, :releases), version: "0.5.0").has_docs
+      [%{action: "docs.publish"}, %{action: "docs.publish"}, %{action: "docs.publish"}, log] = Hexpm.Repo.all(AuditLog)
+      assert log.actor_id == user.id
+      assert log.action == "docs.revert"
+      assert log.params["package"]["name"] == package.name
+      assert log.params["release"]["version"] == "0.5.0"
 
-    [%{action: "docs.publish"}, %{action: "docs.publish"}, %{action: "docs.publish"}, log] =
-      Hexpm.Repo.all(AuditLog)
-    assert log.actor_id == c.user.id
-    assert log.action == "docs.revert"
-    assert %{"package" => %{"name" => "ecto"}, "release" => %{"version" => "0.5.0"}} = log.params
+      # Check docs were deleted
+      assert get(build_conn(), "api/packages/#{package.name}/releases/0.5.0/docs").status in 400..499
+      assert get(build_conn(), "docs/#{package.name}/0.5.0/index.html").status in 400..499
 
-    # Check docs were deleted
-    conn = get build_conn(), "api/packages/ecto/releases/0.5.0/docs"
-    assert conn.status in 400..499
+      assert path("docs/#{package.name}/index.html") == "package v2.0.0"
 
-    conn = get build_conn(), "docs/ecto/0.5.0/index.html"
-    assert conn.status in 400..499
+      # Revert latest release
+      revert_docs(user, package, "2.0.0")
+      |> response(204)
 
-    conn = get build_conn(), "docs/ecto/index.html"
-    assert response(conn, 200) == "ecto v2.0.0"
+      # Check release was deleted
+      refute Hexpm.Repo.get_by(assoc(package, :releases), version: "2.0.0").has_docs
 
-    # Revert latest release
-    conn = revert_docs(c.user, ecto, "2.0.0")
-    assert conn.status == 204
+      # Check docs were deleted
+      assert get(build_conn(), "api/packages/#{package.name}/releases/2.0.0/docs").status in 400..499
+      assert get(build_conn(), "docs/#{package.name}/2.0.0/index.html").status in 400..499
 
-    # Check release was deleted
-    refute Hexpm.Repo.get_by(assoc(ecto, :releases), version: "2.0.0").has_docs
+      # TODO: update top-level docs to the next-to-last version
+      assert path("docs/#{package.name}/index.html") == "package v2.0.0"
 
-    # Check docs were deleted
-    conn = get build_conn(), "api/packages/ecto/releases/2.0.0/docs"
-    assert conn.status in 400..499
+      # Revert remaining release
+      revert_docs(user, package, "0.0.1")
+      |> response(204)
 
-    conn = get build_conn(), "docs/ecto/2.0.0/index.html"
-    assert conn.status in 400..499
+      # Check release was deleted
+      refute Hexpm.Repo.get_by(assoc(package, :releases), version: "0.0.1").has_docs
 
-    # TODO: update top-level docs to the next-to-last version
-    conn = get build_conn(), "docs/ecto/index.html"
-    assert response(conn, 200) == "ecto v2.0.0"
+      # Check docs were deleted
+      assert get(build_conn(), "api/packages/#{package.name}/releases/0.0.1/docs").status in 400..499
+      assert get(build_conn(), "docs/#{package.name}/0.0.1/index.html").status in 400..499
 
-    # Revert remaining release
-    conn = revert_docs(c.user, ecto, "0.0.1")
-    assert conn.status == 204
-
-    # Check release was deleted
-    refute Hexpm.Repo.get_by(assoc(ecto, :releases), version: "0.0.1").has_docs
-
-    # Check docs were deleted
-    conn = get build_conn(), "api/packages/ecto/releases/0.0.1/docs"
-    assert conn.status in 400..499
-
-    conn = get build_conn(), "docs/ecto/0.0.1/index.html"
-    assert conn.status in 400..499
-
-    # TODO: deleting last version should remove top-level docs
-    conn = get build_conn(), "docs/ecto/index.html"
-    assert response(conn, 200) == "ecto v2.0.0"
-  end
-
-  @tag :integration
-  test "dont allow version directories in docs", c do
-    ecto = Package.build(c.user, pkg_meta(%{name: "ecto", description: "DSL"})) |> Hexpm.Repo.insert!
-    Release.build(ecto, rel_meta(%{version: "0.0.1", app: "ecto"}), "") |> Hexpm.Repo.insert!
-
-    conn = publish_docs(c.user, ecto, "0.0.1", [{'1.2.3', "ecto v0.0.1"}])
-    assert conn.status == 422
-    assert %{"errors" => %{"tar" => "directory name not allowed to match a semver version"}} =
-           Poison.decode!(conn.resp_body)
+      # TODO: deleting last version should remove top-level docs
+      assert path("docs/#{package.name}/index.html") == "package v2.0.0"
+    end
   end
 
   defp publish_docs(user, %Package{name: name}, version, files) do

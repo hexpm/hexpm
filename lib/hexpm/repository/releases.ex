@@ -17,13 +17,14 @@ defmodule Hexpm.Repository.Releases do
     Repo.one!(Release.count)
   end
 
-  def get(package, version) when is_binary(package) do
-    package = Packages.get(package)
-    package && get(package, version)
-  end
-  def get(%Package{} = package, version) do
+  def get(package, version) do
     release = Repo.get_by(assoc(package, :releases), version: version)
     release && %{release | package: package}
+  end
+
+  def get(repository, package, version) when is_binary(package) do
+    package = Packages.get(repository, package)
+    package && get(package, version)
   end
 
   def package_versions(packages) do
@@ -38,9 +39,9 @@ defmodule Hexpm.Repository.Releases do
       downloads: ReleaseDownload.release(release))
   end
 
-  def publish(package, user, body, meta, checksum, [audit: audit_data]) do
+  def publish(repository, package, user, body, meta, checksum, [audit: audit_data]) do
     Multi.new
-    |> create_package(package, user, meta)
+    |> create_package(repository, package, user, meta)
     |> create_release(package, checksum, meta)
     |> audit_publish(audit_data)
     |> publish_release(body)
@@ -134,12 +135,18 @@ defmodule Hexpm.Repository.Releases do
   end
   defp revert_result(result, _package), do: result
 
-  defp create_package(multi, package, user, meta) do
+  defp create_package(multi, repository, package, user, meta) do
     params = %{"name" => meta["name"], "meta" => meta}
-    if package do
-      Multi.update(multi, :package, Package.update(package, params))
-    else
-      Multi.insert(multi, :package, Package.build(user, params))
+    cond do
+      !package ->
+        Multi.insert(multi, :package, Package.build(repository, user, params))
+      package.name != meta["name"] ->
+        changeset =
+          Package.build(repository, user, params)
+          |> add_error(:name, "mismatch between metadata and endpoint")
+        Multi.update(multi, :package, changeset)
+      true ->
+        Multi.update(multi, :package, Package.update(package, params))
     end
   end
 
