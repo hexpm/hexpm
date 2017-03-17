@@ -42,9 +42,17 @@ defmodule Hexpm.Web.LayoutView do
       tag(:meta, property: "og:title", content: Map.get(assigns, :title)),
       tag(:meta, property: "og:type", content: "website"),
       tag(:meta, property: "og:url", content: Map.get(assigns, :canonical_url)),
-      tag(:meta, property: "og:image", content: static_url(Hexpm.Web.Endpoint, "/images/hex.png")),
+      tag(:meta, property: "og:image", content: static_url(Hexpm.Web.Endpoint, "/images/open-graph.png")),
+      tag(:meta, property: "og:image:width", content: "1200"),
+      tag(:meta, property: "og:image:height", content: "630"),
       tag(:meta, property: "og:description", content: description(assigns)),
-      tag(:meta, property: "og:site_name", content: "Hex")
+      tag(:meta, property: "og:site_name", content: "Hex"),
+      tag(:meta, property: "twitter:card", content: "summary_large_image"),
+      tag(:meta, property: "twitter:site", content: "@hex_pm"),
+      tag(:meta, property: "twitter:creator", content: "@hex_pm"),
+      tag(:meta, property: "twitter:title", content: Map.get(assigns, :title)),
+      tag(:meta, property: "twitter:description", content: description(assigns)),
+      tag(:meta, property: "twitter:image", content: static_url(Hexpm.Web.Endpoint, "/images/open-graph.png"))
     ]
   end
 end
