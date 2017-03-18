@@ -2,29 +2,33 @@ defmodule Hexpm.Web.EmailControllerTest do
   use Hexpm.ConnCase, async: true
 
   setup do
-    %{user: create_user("eric", "eric@mail.com", "hunter42")}
+    email = build(:email, verified: false, verification_key: Hexpm.Accounts.Auth.gen_key())
+    user = insert(:user, emails: [email])
+    %{user: user}
   end
 
-  test "verify email with invalid key", c do
-    email = hd(c.user.emails)
-    conn = get(build_conn(), "email/verify", %{username: c.user.username, email: email.email, key: "invalid"})
+  describe "GET /email/verify" do
+    test "verify email with invalid key", c do
+      email = hd(c.user.emails)
+      conn = get(build_conn(), "email/verify", %{username: c.user.username, email: email.email, key: "invalid"})
 
-    assert redirected_to(conn) == "/"
-    assert get_flash(conn, :error) =~ "failed to verify"
-  end
+      assert redirected_to(conn) == "/"
+      assert get_flash(conn, :error) =~ "failed to verify"
+    end
 
-  test "verify email with invalid username" do
-    conn = get(build_conn(), "email/verify", %{username: "invalid", email: "invalid", key: "invalid"})
+    test "verify email with invalid username" do
+      conn = get(build_conn(), "email/verify", %{username: "invalid", email: "invalid", key: "invalid"})
 
-    assert redirected_to(conn) == "/"
-    assert get_flash(conn, :error) =~ "failed to verify"
-  end
+      assert redirected_to(conn) == "/"
+      assert get_flash(conn, :error) =~ "failed to verify"
+    end
 
-  test "verify email with valid key", c do
-    email = hd(c.user.emails)
-    conn = get(build_conn(), "email/verify", %{username: c.user.username, email: email.email, key: email.verification_key})
+    test "verify email with valid key", c do
+      email = hd(c.user.emails)
+      conn = get(build_conn(), "email/verify", %{username: c.user.username, email: email.email, key: email.verification_key})
 
-    assert redirected_to(conn) == "/"
-    assert get_flash(conn, :info) =~ "has been verified"
+      assert redirected_to(conn) == "/"
+      assert get_flash(conn, :info) =~ "has been verified"
+    end
   end
 end
