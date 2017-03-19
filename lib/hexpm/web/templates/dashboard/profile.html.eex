@@ -44,31 +44,47 @@
           <%= inputs_for f, :handles, fn f -> %>
             <div class="form-group">
               <%= label f, :twitter %>
-              <%= text_input f, :twitter %>
+              <div class="input-group">
+                <div class="input-group-addon">twitter.com/</div>
+                <%= text_input f, :twitter, placeholder: "your_twitter_id" %>
+              </div>
+
               <%= error_tag f, :twitter %>
             </div>
 
             <div class="form-group">
               <%= label f, :github, "GitHub" %>
-              <%= text_input f, :github %>
+              <div class="input-group">
+                <div class="input-group-addon">github.com/</div>
+                <%= text_input f, :github, placeholder: "your_github_id" %>
+              </div>
               <%= error_tag f, :github %>
             </div>
 
             <div class="form-group">
               <%= label f, :elixirforum, "Elixir Forum" %>
-              <%= text_input f, :elixirforum %>
+              <div class="input-group">
+                <div class="input-group-addon">elixirforum.com/users/</div>
+                <%= text_input f, :elixirforum, placeholder: "your_elixir_forum_id" %>
+              </div>
               <%= error_tag f, :elixirforum %>
             </div>
 
             <div class="form-group">
               <%= label f, :freenode %>
-              <%= text_input f, :freenode %>
+              <%= text_input f, :freenode, placeholder: "Your nickname on Elixir IRC channel" %>
+              <span class="help-block">Elixir IRC channel:
+                <a href="irc://chat.freenode.net/elixir-lang">irc://chat.freenode.net/elixir-lang</a>
+              </span>
               <%= error_tag f, :freenode %>
             </div>
 
             <div class="form-group">
               <%= label f, :slack %>
-              <%= text_input f, :slack %>
+              <%= text_input f, :slack, placeholder: "Your nickname on Elixir Slack channel" %>
+              <span class="help-block">Elixir Slack channel:
+                <a href="https://elixir-slackin.herokuapp.com">elixir-slackin.herokuapp.com</a>
+              </span>
               <%= error_tag f, :slack %>
             </div>
           <% end %>
