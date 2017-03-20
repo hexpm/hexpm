@@ -664,7 +664,6 @@ esbullington
 esdras
 eso
 essenciary
-et
 ethanml
 etiennedesticourt
 etroynov
@@ -814,7 +813,6 @@ gvl
 gwash3189
 h1u2i3
 h4cc
-h8
 habibutsu
 hahuang65
 hairyhum
@@ -887,7 +885,6 @@ ianmcdonald
 ianrumford
 icidasset
 iconoclast
-id
 idahoev
 idahogray
 idyll
@@ -1454,7 +1451,6 @@ mjcloutier
 mje113
 mjmortimer
 mjs2600
-mk
 mkasztelnik
 mkaszubowski
 mkrogemann
@@ -1604,7 +1600,6 @@ nulian
 nullpilot
 nurugger07
 nuss.justin
-o
 oakfang
 obmarg
 ocannings
@@ -1826,7 +1821,6 @@ rimenes
 ringling
 ritou
 riverrun
-rj
 rjanja
 rjsamson
 rkulkarni
@@ -1879,7 +1873,6 @@ rveshovda
 rvirding
 rwan
 rwdaigle
-ry
 ryanbillingsley
 ryankask
 ryanwinchester
@@ -2111,7 +2104,6 @@ svarlet
 svetob
 sviridov
 svogelsang
-sw
 swelham
 swimbikego
 syamilmj
@@ -2311,7 +2303,6 @@ voronchuk
 vptheron
 vramiro
 vstavskyi
-vt
 vysakh0
 waasi
 wadexing
@@ -2425,13 +2416,11 @@ zepplock
 zero778
 zerotao
 zeuxis
-zf
 zhangsoledad
 zhongwencool
 zhuoyikang
 zhyu
 zirkonit
-zj
 zkwentz
 zmoshansky
 zmstone
