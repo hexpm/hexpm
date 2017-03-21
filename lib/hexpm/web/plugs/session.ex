@@ -1,4 +1,4 @@
-defmodule Hexpm.Session do
+defmodule Hexpm.Web.Plugs.SessionBypass do
   @behaviour Plug
 
   def init(opts), do: Plug.Session.init(opts)

@@ -2,7 +2,7 @@
 # TODO: Add a higher rate limit cap for authenticated users
 # TODO: Use redis instead of single process to support multiple dynos
 
-defmodule Hexpm.PlugAttack do
+defmodule Hexpm.Web.Plugs.Attack do
   use PlugAttack
 
   alias Hexpm.BlockAddress
@@ -20,7 +20,7 @@ defmodule Hexpm.PlugAttack do
   end
 
   rule "ip throttle", conn do
-    throttle(conn.remote_ip, [storage: {PlugAttack.Storage.Ets, Hexpm.PlugAttack},
+    throttle(conn.remote_ip, [storage: {PlugAttack.Storage.Ets, Hexpm.Web.Plugs.Attack},
                               limit: 100, period: 60_000])
   end
 

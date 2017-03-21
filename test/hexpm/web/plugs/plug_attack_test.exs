@@ -1,4 +1,4 @@
-defmodule Hexpm.PlugAttackTest do
+defmodule Hexpm.Web.Plugs.AttackTest do
   use ExUnit.Case, async: true
   use Plug.Test
 
@@ -8,7 +8,7 @@ defmodule Hexpm.PlugAttackTest do
     use Phoenix.Controller
 
     plug :accepts, ~w(json)
-    plug Hexpm.PlugAttack
+    plug Hexpm.Web.Plugs.Attack
 
     def index(conn, _params) do
       send_resp(conn, 200, "Hello, World!")
@@ -16,7 +16,7 @@ defmodule Hexpm.PlugAttackTest do
   end
 
   setup do
-    PlugAttack.Storage.Ets.clean(Hexpm.PlugAttack)
+    PlugAttack.Storage.Ets.clean(Hexpm.Web.Plugs.Attack)
     :ok
   end
 
@@ -46,7 +46,7 @@ defmodule Hexpm.PlugAttackTest do
       conn = request({2, 2, 2, 2})
       assert get_resp_header(conn, "x-ratelimit-remaining") == ["99"]
 
-      PlugAttack.Storage.Ets.clean(Hexpm.PlugAttack)
+      PlugAttack.Storage.Ets.clean(Hexpm.Web.Plugs.Attack)
 
       conn = request({2, 2, 2, 2})
       assert get_resp_header(conn, "x-ratelimit-remaining") == ["99"]

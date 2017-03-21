@@ -28,7 +28,7 @@ defmodule Hexpm.Web.Router do
     plug :accepts, @accepted_formats
     plug :auth_gate
     plug :user_agent
-    plug Hexpm.PlugAttack
+    plug Hexpm.Web.Plugs.Attack
     plug :default_repository
   end
 

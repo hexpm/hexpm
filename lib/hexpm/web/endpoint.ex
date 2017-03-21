@@ -30,7 +30,7 @@ defmodule Hexpm.Web.Endpoint do
   plug Plug.MethodOverride
   plug Plug.Head
 
-  plug Hexpm.Session,
+  plug Hexpm.Web.Plugs.SessionBypass,
     store: :cookie,
     key: "_hexpm_key",
     signing_salt: Application.get_env(:hexpm, :cookie_sign_salt),
