@@ -58,6 +58,7 @@ tools = Keyword.take(tools, compatible_tools)
         <%= if @hexdocs_url && @docs_tarball_url do %>
         <li><a href="<%= @hexdocs_url %>">Online documentation</a> (<a href="<%= @docs_tarball_url %>">download</a>)</li>
         <% end %>
+        <li><a href="<%= package_path(Endpoint, :index, search: "depends:#{@package.name}") %>" rel="nofollow">Dependants</a></li>
       </ul>
     <% end %>
 

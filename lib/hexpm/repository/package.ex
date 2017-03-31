@@ -72,7 +72,7 @@ defmodule Hexpm.Repository.Package do
   end
 
   def all(page, count, search \\ nil, sort \\ :name) do
-    from(p in Package, preload: :downloads)
+    from(p in Package, group_by: p.id, preload: :downloads)
     |> sort(sort)
     |> Hexpm.Utils.paginate(page, count)
     |> search(search)
@@ -86,7 +86,7 @@ defmodule Hexpm.Repository.Package do
   end
 
   def count(search \\ nil) do
-    from(p in Package, select: count(p.id))
+    from(p in Package, select: count(fragment("DISTINCT(?)", p.id)))
     |> search(search)
   end
 
@@ -113,6 +113,14 @@ defmodule Hexpm.Repository.Package do
           where: ilike(fragment("?::text", p.name), ^name_search) or
                  fragment("to_tsvector('english', regexp_replace((?->'description')::text, '/', ' ')) @@ to_tsquery('english', ?)", p.meta, ^desc_search))
     end
+  end
+
+  defp search_param("depends", search, query) do
+    from(p in query,
+         join: rel in assoc(p, :releases),
+         join: req in assoc(rel, :requirements),
+         join: dep in assoc(req, :dependency),
+         where: dep.name == ^search)
   end
 
   defp search_param("name", search, query) do
@@ -216,6 +224,7 @@ defmodule Hexpm.Repository.Package do
     from(p in query,
       left_join: d in PackageDownload,
         on: p.id == d.package_id,
+      group_by: d.downloads,
       order_by: [fragment("? DESC NULLS LAST", d.downloads)],
       where: d.view == "all" or is_nil(d.view))
   end
