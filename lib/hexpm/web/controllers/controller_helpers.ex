@@ -64,7 +64,11 @@ defmodule Hexpm.Web.ControllerHelpers do
         "expected type #{pretty_type(type)}"
       {msg, opts} ->
         Enum.reduce(opts, msg, fn {key, value}, msg ->
-          String.replace(msg, "%{#{key}}", to_string(value))
+          if String.Chars.impl_for(key) && String.Chars.impl_for(value) do
+            String.replace(msg, "%{#{key}}", to_string(value))
+          else
+            raise "Unable to translate error: #{inspect({msg, opts})}"
+          end
         end)
     end)
     |> normalize_errors
