@@ -107,6 +107,7 @@ defmodule Hexpm.Web.ReleaseTar do
   defp proplists_to_maps(meta) do
     meta
     |> try_update("links", &try_into_map(&1))
+    |> try_update("extra", &try_into_map(&1))
     |> try_update("requirements", fn reqs ->
          if is_list(reqs) and is_list(List.first(reqs)) do
            Enum.map(reqs, &try_into_map/1)

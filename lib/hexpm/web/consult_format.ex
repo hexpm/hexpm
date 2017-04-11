@@ -1,9 +1,9 @@
 defmodule Hexpm.Web.ConsultFormat do
   def encode(map) when is_map(map) do
     map
-    |> Hexpm.Utils.binarify
+    |> Hexpm.Utils.binarify(maps: false)
     |> Enum.map(&[:io_lib.print(&1) | ".\n"])
-    |> IO.iodata_to_binary
+    |> IO.iodata_to_binary()
   end
 
   def decode(string) when is_binary(string) do

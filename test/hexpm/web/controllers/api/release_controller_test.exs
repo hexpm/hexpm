@@ -92,6 +92,19 @@ defmodule Hexpm.Web.API.ReleaseControllerTest do
       assert result["errors"]["meta"]["links"] == "expected type map(string)"
     end
 
+    test "create package casts proplist metadata", %{user: user, package: package} do
+      meta = %{name: package.name, version: "1.0.0", links: %{"link" => "http://localhost"}, extra: %{"key" => "value"}, description: "description"}
+      conn = build_conn()
+             |> put_req_header("content-type", "application/octet-stream")
+             |> put_req_header("authorization", key_for(user))
+             |> post("api/packages/#{package.name}/releases", create_tar(meta, []))
+
+      json_response(conn, 201)
+      package = Hexpm.Repo.get_by!(Package, name: package.name)
+      assert package.meta.links == %{"link" => "http://localhost"}
+      assert package.meta.extra == %{"key" => "value"}
+    end
+
     test "create release checks if package name is correct", %{user: user, package: package} do
       meta = %{name: Fake.sequence(:package), version: "0.1.0", description: "description"}
       conn = build_conn()
