@@ -2,20 +2,21 @@ defmodule Hexpm.Web.PasswordController do
   use Hexpm.Web, :controller
 
   def show(conn, %{"username" => username, "key" => key}) do
-    path = password_path(conn, :show)
-
     conn
-    |> put_resp_cookie("reset_username", username, max_age: 60, path: path)
-    |> put_resp_cookie("reset_key", key, max_age: 60, path: path)
-    |> redirect(to: path)
+    |> put_session("reset_username", username)
+    |> put_session("reset_key", key)
+    |> redirect(to: password_path(conn, :show))
   end
 
   def show(conn, _params) do
-    username = conn.req_cookies["reset_username"]
-    key = conn.req_cookies["reset_key"]
+    username = get_session(conn, "reset_username")
+    key = get_session(conn, "reset_key")
     changeset = User.update_password(%User{}, %{})
 
-    render_show(conn, username, key, changeset)
+    conn
+    |> delete_session("reset_username")
+    |> delete_session("reset_key")
+    |> render_show(username, key, changeset)
   end
 
   def update(conn, params) do

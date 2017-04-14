@@ -14,14 +14,14 @@ defmodule Hexpm.Web.PasswordControllerTest do
       conn = get(build_conn(), "password/new", %{"username" => "username", "key" => "RESET_KEY"})
 
       assert redirected_to(conn) == "/password/new"
-      assert conn.resp_cookies["reset_username"][:value] == "username"
-      assert conn.resp_cookies["reset_key"][:value] == "RESET_KEY"
+      assert get_session(conn, "reset_username") == "username"
+      assert get_session(conn, "reset_key") == "RESET_KEY"
     end
 
     test "show select new password" do
       conn = build_conn()
-             |> put_req_cookie("reset_username", "username")
-             |> put_req_cookie("reset_key", "RESET_KEY")
+             |> my_put_session("reset_username", "username")
+             |> my_put_session("reset_key", "RESET_KEY")
              |> get("password/new")
 
       assert conn.status == 200
