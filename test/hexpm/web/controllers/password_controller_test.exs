@@ -20,8 +20,8 @@ defmodule Hexpm.Web.PasswordControllerTest do
 
     test "show select new password" do
       conn = build_conn()
-             |> my_put_session("reset_username", "username")
-             |> my_put_session("reset_key", "RESET_KEY")
+             |> test_put_session("reset_username", "username")
+             |> test_put_session("reset_key", "RESET_KEY")
              |> get("password/new")
 
       assert conn.status == 200

@@ -45,7 +45,7 @@ defmodule Hexpm.ConnCase do
   end
 
   # See: https://github.com/elixir-lang/plug/issues/455
-  def my_put_session(conn, key, value) do
+  def test_put_session(conn, key, value) do
     private =
       conn.private
       |> Map.update(:plug_session, %{key => value}, &Map.put(&1, key, value))
@@ -57,8 +57,8 @@ defmodule Hexpm.ConnCase do
     user = Hexpm.Accounts.Users.sign_in(user)
 
     conn
-    |> my_put_session("username", user.username)
-    |> my_put_session("key", user.session_key)
+    |> test_put_session("username", user.username)
+    |> test_put_session("key", user.session_key)
   end
 
   def json_post(conn, path, params) do

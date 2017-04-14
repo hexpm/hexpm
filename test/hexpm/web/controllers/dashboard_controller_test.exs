@@ -38,7 +38,7 @@ defmodule Hexpm.Web.DashboardControllerTest do
   test "requires login after session key changes", c do
     conn = build_conn()
            |> test_login(c.user)
-           |> my_put_session("key", "WRONG")
+           |> test_put_session("key", "WRONG")
            |> get("dashboard/profile")
 
     assert redirected_to(conn) == "/login?return=dashboard%2Fprofile"
