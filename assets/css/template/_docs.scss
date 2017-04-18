@@ -4,3 +4,10 @@ a.anchor {
   display: block;
   visibility: hidden;
 }
+
+a code.inline,
+a:hover code.inline,
+a:focus code.inline {
+  font-weight: normal;
+  color: $color-link;
+}
