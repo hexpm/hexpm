@@ -16,7 +16,7 @@
 <p>
   The version requirement specify which versions of the package you allow.
   The formats accepted for the requirement are documented in
-  the <a href="http://elixir-lang.org/docs/stable/elixir/Version.html">Version module</a>.
+  the <a href="https://hexdocs.pm/elixir/Version.html">Version module</a>.
   Below is an example <code>mix.exs</code> file.
 </p>
 <pre>
@@ -25,18 +25,22 @@ defmodule MyProject.Mixfile do
   use Mix.Project
 
   def project do
-    [app: :my_project,
-     version: "0.0.1",
-     elixir: "~> 0.13.0",
-     deps: deps()]
+    [
+      app: :my_project,
+      version: "0.0.1",
+      elixir: "~> 1.0",
+      deps: deps()
+    ]
   end
 
   def application, do: []
 
   defp deps do
-    [{:ecto, "~> 0.11.3"},
-     {:postgrex, "~> 0.8.1"},
-     {:cowboy, github: "extend/cowboy"}]
+    [
+      {:ecto, "~> 2.0"},
+      {:postgrex, "~> 0.8.1"},
+      {:cowboy, github: "ninenines/cowboy"}
+    ]
   end
 end
 </code>
