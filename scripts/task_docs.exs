@@ -2,7 +2,7 @@
 # Generates html for mix task docs, requires the hex client to be installed
 
 defmodule Hexpm.Script.TaskDocs do
-  @output_path "web/templates/docs/tasks.html.eex"
+  @output_path "lib/hexpm/web/templates/docs/tasks.html.eex"
 
   @template """
   <%%# This file is auto-generated with 'mix run task_docs.exs' %>
