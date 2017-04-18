@@ -77,20 +77,20 @@ Only Hex packages will be included as dependencies of the package, for example G
 
 ```elixir
 defmodule Postgrex.Mixfile do
-  use Mix.Proj
+  use Mix.Project
 
   def project do
     [
       app: :postgrex,
       version: "0.1.0",
-      elixir: "0.13.0",
+      elixir: "~> 1.0",
       build_embedded: Mix.env == :prod,
       start_permanent: Mix.env == :prod,
       description: description(),
       package: package(),
       deps: deps(),
       name: "Postgrex",
-      source_url: "https://github.com/ericmj/postgrex"
+      source_url: "https://github.com/elixir-ecto/postgrex"
     ]
   end
 
@@ -100,8 +100,8 @@ defmodule Postgrex.Mixfile do
 
   defp deps do
     [
-      {:decimal, "~> 0.2.0"},
-      {:ex_doc, github: "elixir-lang/ex_doc"}
+      {:decimal, "~> 1.0"},
+      {:ex_doc, "~> 0.14", only: :dev},
     ]
   end
 
@@ -118,7 +118,7 @@ defmodule Postgrex.Mixfile do
       files: ["lib", "priv", "mix.exs", "README*", "readme*", "LICENSE*", "license*"],
       maintainers: ["Eric Meadows-Jönsson", "José Valim"],
       licenses: ["Apache 2.0"],
-      links: %{"GitHub" => "https://github.com/ericmj/postgrex"}
+      links: %{"GitHub" => "https://github.com/elixir-ecto/postgrex"}
     ]
   end
 end
