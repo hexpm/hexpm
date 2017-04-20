@@ -78,10 +78,10 @@ Once the database is set up you can start Hexpm:
 
 ```shell
 # with console
-iex -S mix phoenix.server
+iex -S mix phx.server
 
 # without console
-mix phoenix.server
+mix phx.server
 ```
 
 Hexpm will be available at [http://localhost:4000/](http://localhost:4000/).
