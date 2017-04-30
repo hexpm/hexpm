@@ -8,5 +8,5 @@ defmodule Hexpm.Repository.RepositoryUser do
     belongs_to :user, User
   end
 
-  @roles ["owner", "admin", "write", "read"]
+  # @roles ["owner", "admin", "write", "read"]
 end
