@@ -25,10 +25,21 @@ defmodule Hexpm.Repository.Package do
     ic inets jinterface kernel Makefile megaco mnesia observer odbc orber
     os_mon ose otp_mibs parsetools percept pman public_key reltool runtime_tools
     sasl snmp ssh ssl stdlib syntax_tools test_server toolbar tools tv typer
-    webtool wx xmerl)
+    webtool wx xmerl
+  )
   @app_names ~w(firenest toucan net)
+  @windows_names ~w(
+    nul con prn aux com1 com2 com3 com4 com5 com6 com7 com8 com9lpt1 lpt2
+    lpt3 lpt4 lpt5 lpt6 lpt7 lpt8 lpt9
+  )
 
-  @reserved_names @elixir_names ++ @otp_names ++ @tool_names ++ @app_names
+  @reserved_names Enum.concat [
+    @elixir_names,
+    @otp_names,
+    @tool_names,
+    @app_names,
+    @windows_names
+  ]
 
   defp changeset(package, :create, params) do
     changeset(package, :update, params)
