@@ -10,7 +10,8 @@ defmodule Mix.Tasks.Hexpm.CheckNames do
     threshold = Application.get_env(:hexpm, :levenshtein_threshold)
 
     threshold
-    |> find_candidates
+    |> to_integer()
+    |> find_candidates()
     |> Hexpm.Emails.typosquat_candidates(threshold)
     |> Hexpm.Emails.Mailer.deliver_now_throttled
 
@@ -32,4 +33,7 @@ defmodule Mix.Tasks.Hexpm.CheckNames do
     |> Map.fetch!(:rows)
     |> Enum.uniq_by(fn([a, b, _]) -> if a > b, do: "#{a}-#{b}", else: "#{b}-#{a}" end)
   end
+
+  defp to_integer(int) when is_integer(int), do: int
+  defp to_integer(string) when is_binary(string), do: String.to_integer(string)
 end
