@@ -76,7 +76,9 @@ defmodule Hexpm.Validation do
                   valid?: changeset.valid? and errors == []}
   end
 
-  defp default_hash(nil), do: Comeonin.Bcrypt.hashpwsalt("password")
-  defp default_hash(""), do: Comeonin.Bcrypt.hashpwsalt("password")
+  @default_password Comeonin.Bcrypt.hashpwsalt("password")
+
+  defp default_hash(nil), do: @default_password
+  defp default_hash(""), do: @default_password
   defp default_hash(password), do: password
 end

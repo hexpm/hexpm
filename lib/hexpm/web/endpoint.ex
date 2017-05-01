@@ -31,11 +31,9 @@ defmodule Hexpm.Web.Endpoint do
   plug Plug.Head
   plug Hexpm.Web.Plugs.Vary, ["accept-encoding"]
 
-  plug Hexpm.Web.Plugs.SessionBypass,
-    store: :cookie,
+  plug Plug.Session,
+    store: Hexpm.Web.Session,
     key: "_hexpm_key",
-    signing_salt: Application.get_env(:hexpm, :cookie_sign_salt),
-    encryption_salt: Application.get_env(:hexpm, :cookie_encr_salt),
     max_age: 60 * 60 * 24 * 30
 
   plug Hexpm.Web.Router

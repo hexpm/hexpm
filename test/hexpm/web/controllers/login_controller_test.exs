@@ -1,6 +1,5 @@
 defmodule Hexpm.Web.LoginControllerTest do
-  use Hexpm.ConnCase, async: true
-  alias Hexpm.Accounts.Users
+  use Hexpm.ConnCase
 
   setup do
     %{user: create_user("eric", "eric@mail.com", "hunter42"), password: "hunter42"}
@@ -14,27 +13,25 @@ defmodule Hexpm.Web.LoginControllerTest do
   test "log in with correct password", c do
     conn = post(build_conn(), "login", %{username: c.user.username, password: c.password})
     assert redirected_to(conn) == "/users/#{c.user.username}"
-    assert get_session(conn, "username") == c.user.username
 
-    session_key = get_session(conn, "key")
-    assert <<_::binary-32>> = session_key
-    assert Users.get(c.user.username).session_key == session_key
+    assert get_session(conn, "user_id") == c.user.id
+    assert last_session().data["user_id"] == c.user.id
   end
 
-  test "log in reuses session key", c do
-    user = Users.sign_in(c.user)
-
-    conn = post(build_conn(), "login", %{username: user.username, password: c.password})
+  test "log in keeps you logged in", c do
+    conn = post(build_conn(), "login", %{username: c.user.username, password: c.password})
     assert redirected_to(conn) == "/users/#{c.user.username}"
 
-    assert get_session(conn, "key") == user.session_key
+    conn = conn |> recycle() |> get("/")
+    assert get_session(conn, "user_id") == c.user.id
   end
 
   test "log in with wrong password", c do
     conn = post(build_conn(), "login", %{username: c.user.username, password: "WRONG"})
     assert response(conn, 400) =~ "Log in"
     assert get_flash(conn, "error") == "Invalid username, email or password."
-    refute get_session(conn, "username")
+    refute get_session(conn, "user_id")
+    refute last_session().data["user_id"]
   end
 
   test "log in with unconfirmed email", c do
@@ -43,16 +40,21 @@ defmodule Hexpm.Web.LoginControllerTest do
     conn = post(build_conn(), "login", %{username: c.user.username, password: c.password})
     assert response(conn, 400) =~ "Log in"
     assert get_flash(conn, "error") == "Email has not been verified yet."
-    refute get_session(conn, "username")
+    refute get_session(conn, "user_id")
+    refute last_session().data["user_id"]
   end
 
   test "log out", c do
+    conn = post(build_conn(), "login", %{username: c.user.username, password: c.password})
+    assert redirected_to(conn) == "/users/#{c.user.username}"
+
     conn =
-      build_conn()
-      |> test_login(c.user)
+      conn
+      |> recycle()
       |> post("logout")
 
     assert redirected_to(conn) == "/"
-    refute get_session(conn, "username")
+    refute get_session(conn, "user_id")
+    refute last_session().data["user_id"]
   end
 end

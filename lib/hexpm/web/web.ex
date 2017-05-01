@@ -103,6 +103,7 @@ defmodule Hexpm.Web do
         Accounts.Email,
         Accounts.Key,
         Accounts.Keys,
+        Accounts.Session,
         Accounts.User,
         Accounts.UserHandles,
         Accounts.Users,

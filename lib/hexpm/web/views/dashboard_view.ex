@@ -14,10 +14,13 @@ defmodule Hexpm.Web.DashboardView do
   end
 
   defp public_email_options(user) do
-    emails = Email.order_emails(user.emails)
+    emails =
+      user.emails
+      |> Email.order_emails()
+      |> Enum.filter(& &1.verified)
+      |> Enum.map(&{&1.email, &1.email})
 
-    [{"Don't show a public email address", "none"}] ++
-      Enum.filter_map(emails, & &1.verified, &{&1.email, &1.email})
+    [{"Don't show a public email address", "none"}] ++ emails
   end
 
   defp public_email_value(user) do
