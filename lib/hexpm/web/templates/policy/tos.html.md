@@ -68,4 +68,4 @@ The failure of Hex to enforce any right or provision of these Terms will not be 
 
 If Hex makes changes to these Terms we will post a notice on the hex.pm website and notify you by email. New features, tools or resources added to the Services will be subject to the Terms. By continuing to use the Services you are agreeing to the Terms as it is subject to the changes.
 
-The detailed history of changes to these Terms can be found in the [git repository](https://github.com/hexpm/hexpm/blob/master/web/templates/policy/tos.html.md) history for this document.
+The detailed history of changes to these Terms can be found in the [git repository](https://github.com/hexpm/hexpm/blob/master/lib/hexpm/web/templates/policy/tos.html.md) history for this document.
