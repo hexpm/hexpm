@@ -12,10 +12,16 @@ defmodule Mix.Tasks.Hexpm.CheckNames do
     threshold
     |> to_integer()
     |> find_candidates()
-    |> Hexpm.Emails.typosquat_candidates(threshold)
-    |> Hexpm.Emails.Mailer.deliver_now_throttled
+    |> send_email(threshold)
 
     :ok
+  end
+
+  defp send_email([], _threshold), do: :ok
+  defp send_email(candidates, threshold) do
+    candidates
+    |> Hexpm.Emails.typosquat_candidates(threshold)
+    |> Hexpm.Emails.Mailer.deliver_now_throttled()
   end
 
   def find_candidates(threshold) do
