@@ -60,8 +60,8 @@ defmodule Hexpm.Web.ControllerHelpers do
 
   def translate_errors(changeset) do
     Ecto.Changeset.traverse_errors(changeset, fn
-      {"is invalid", [type: type, validation: _]} ->
-        "expected type #{pretty_type(type)}"
+      {"is invalid", opts} ->
+        "expected type #{pretty_type(opts[:type])}"
       {msg, opts} ->
         Enum.reduce(opts, msg, fn {key, value}, msg ->
           if String.Chars.impl_for(key) && String.Chars.impl_for(value) do
