@@ -32,7 +32,7 @@ defmodule Mix.Tasks.Hexpm.CheckNames do
     WHERE pall.name <> pnew.name
       AND pnew.inserted_at >= CURRENT_DATE AT TIME ZONE 'UTC'
       AND levenshtein(pall.name, pnew.name) <= $1
-    ORDER BY pall.name, dist;
+    ORDER BY pall.name, dist
     """
 
     Ecto.Adapters.SQL.query!(Hexpm.Repo, query, [threshold])
