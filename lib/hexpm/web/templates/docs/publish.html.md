@@ -126,7 +126,7 @@ end
 
 ### Submitting the package
 
-After the package metadata and dependencies have been added to `mix.exs`, we are ready to publish the package with the `mix hex.publish` comma
+After the package metadata and dependencies have been added to `mix.exs`, we are ready to publish the package with the `mix hex.publish` command:
 
 ```nohighlight
 $ mix hex.publish
