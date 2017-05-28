@@ -11,4 +11,11 @@ defmodule Hexpm.Repository.Repository do
     has_many :repository_user, RepositoryUser
     has_many :users, through: [:repository_user, :user]
   end
+
+  def has_access(repository, user) do
+    from(ro in RepositoryUser,
+         where: ro.repository_id == ^repository.id,
+         where: ro.user_id == ^user.id,
+         select: count(ro.id) >= 1)
+  end
 end

@@ -4,16 +4,50 @@ defmodule Hexpm.Web.AuthHelpers do
 
   alias Hexpm.Accounts.Auth
 
-  def authorized(conn, opts, auth? \\ fn _ -> true end) do
+  def authorized(conn, opts) do
+    fun = Keyword.get(opts, :fun, fn _, _ -> true end)
     case authorize(conn, opts) do
       {:ok, {user, key}} ->
-        if auth?.(user) do
+        if fun.(conn, user) do
           conn
           |> assign(:key, key)
           |> assign(:user, user)
         else
           forbidden(conn, "account not authorized for this action")
         end
+      {:error, _} = error ->
+        auth_error(conn, error)
+    end
+  end
+
+  def maybe_authorized(conn, opts) do
+    fun = opts[:fun]
+    case authorize(conn, opts) do
+      {:ok, {user, key}} ->
+        if !fun || fun.(conn, user) do
+          conn
+          |> assign(:key, key)
+          |> assign(:user, user)
+        else
+          forbidden(conn, "account not authorized for this action")
+        end
+      {:error, :missing} ->
+        if !fun || fun.(conn, nil) do
+          conn
+          |> assign(:key, nil)
+          |> assign(:user, nil)
+        else
+          forbidden(conn, "account not authorized for this action")
+        end
+      {:error, _} = error ->
+        auth_error(conn, error)
+    end
+  end
+
+  defp auth_error(conn, error) do
+    case error do
+      {:error, :missing} ->
+        unauthorized(conn, "missing authentication information")
       {:error, :invalid} ->
         unauthorized(conn, "invalid authentication information")
       {:error, :basic} ->
@@ -27,7 +61,6 @@ defmodule Hexpm.Web.AuthHelpers do
     end
   end
 
-
   defp authorize(conn, opts) do
     only_basic = Keyword.get(opts, :only_basic, false)
     allow_unconfirmed = Keyword.get(opts, :allow_unconfirmed, false)
@@ -39,7 +72,7 @@ defmodule Hexpm.Web.AuthHelpers do
         [key] when not only_basic ->
           key_auth(key)
         _ ->
-          {:error, :invalid}
+          {:error, :missing}
       end
 
     case result do
@@ -85,7 +118,6 @@ defmodule Hexpm.Web.AuthHelpers do
     |> render_error(403, message: reason)
   end
 
-
   def package_owner?(_, nil),
     do: false
   def package_owner?(%Plug.Conn{} = conn, user),
@@ -99,6 +131,11 @@ defmodule Hexpm.Web.AuthHelpers do
     do: true
   def maybe_package_owner?(%Hexpm.Repository.Package{} = package, user),
     do: Hexpm.Repository.Packages.owner?(package, user)
+
+  def repository_access?(%Plug.Conn{} = conn, user),
+    do: repository_access?(conn.assigns.repository, user)
+  def repository_access?(%Hexpm.Repository.Repository{} = repository, user),
+    do: Hexpm.Repository.Repositories.access?(repository, user)
 
   def correct_user?(%Plug.Conn{} = conn, user),
     do: correct_user?(conn.params["name"], user)
