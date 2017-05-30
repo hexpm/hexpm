@@ -29,6 +29,7 @@ defmodule Hexpm.Web.Endpoint do
 
   plug Plug.MethodOverride
   plug Plug.Head
+  plug Hexpm.Web.Plugs.Vary, ["accept-encoding"]
 
   plug Hexpm.Web.Plugs.SessionBypass,
     store: :cookie,

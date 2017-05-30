@@ -7,11 +7,13 @@ Hexpm.Fake.start()
 
 lorem = "Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum."
 
+password = &Comeonin.Bcrypt.hashpwsalt/1
+
 Hexpm.Repo.transaction(fn ->
-  eric = insert(:user, username: "eric", emails: [build(:email, email: "eric@example.com")], password: "ericric")
-  jose = insert(:user, username: "jose", emails: [build(:email, email: "jose@example.com")], password: "josejose")
-  joe = insert(:user, username: "joe", emails: [build(:email, email: "joe@example.com")], password: "joejoejoe")
-  justin = insert(:user, username: "justin", emails: [build(:email, email: "justin@example.com")], password: "justinjustin")
+  eric = insert(:user, username: "eric", emails: [build(:email, email: "eric@example.com")], password: password.("ericric"))
+  jose = insert(:user, username: "jose", emails: [build(:email, email: "jose@example.com")], password: password.("josejose"))
+  joe = insert(:user, username: "joe", emails: [build(:email, email: "joe@example.com")], password: password.("joejoejoe"))
+  justin = insert(:user, username: "justin", emails: [build(:email, email: "justin@example.com")], password: password.("justinjustin"))
 
   decimal = insert(:package,
     name: "decimal",

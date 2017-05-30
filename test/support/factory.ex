@@ -60,6 +60,12 @@ defmodule Hexpm.Factory do
     %Hexpm.Repository.PackageOwner{}
   end
 
+  def repostory_user_factory() do
+    %Hexpm.Repository.RepositoryUser{
+      role: "read"
+    }
+  end
+
   def release_factory() do
     %Hexpm.Repository.Release{
       version: "1.0.0",

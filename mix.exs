@@ -49,7 +49,6 @@ defmodule Hexpm.Mixfile do
      {:earmark, "~> 1.0"},
      {:ex_aws, "~> 1.0"},
      {:gpb, "~> 3.23"},
-     {:httpoison, "~> 0.8"},
      {:jiffy, "~> 0.14"},
      {:plug, "~> 1.2"},
      {:porcelain, "~> 2.0"},

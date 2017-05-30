@@ -15,36 +15,8 @@
     </div>
     <div class="panel-body">
       <p><em>Prints Hex tasks and their information.</em></p>
-<p><code class="inline">mix hex</code></p>
-<p>Hex and some Mix tasks can be configured with the following environment
-variables:</p>
-<ul>
-<li><code class="inline">HEX_HOME</code> - Sets the directory where Hex stores the cache and
-configuration (Default: <code class="inline">~/.hex</code>)
-</li>
-<li><code class="inline">HEX_API</code> - Sets the API URL (Default: <code class="inline">https://hex.pm/api</code>)
-</li>
-<li><code class="inline">HEX_REPO</code> - Sets the repository URL (not set by default)
-</li>
-<li><code class="inline">HEX_MIRROR</code> - Sets the Hex.pm mirror URL (Default: <code class="inline">https://repo.hex.pm</code>).
-Use this option when using a Hex.pm mirror, unlike when setting <code class="inline">HEX_REPO</code>
-this will still use the public key from Hex.pm when verifying the registry
-</li>
-<li><code class="inline">HEX_OFFLINE</code> - If set Hex will not fetch the registry or packages and will
-instead the locally cached files if they are available
-</li>
-<li><code class="inline">HEX_UNSAFE_HTTPS</code> - If set Hex will not verify HTTPS certificates
-</li>
-<li><code class="inline">HEX_UNSAFE_REGISTRY</code> - If set Hex will not verify the registry signature
-against the repository’s public key
-</li>
-<li><code class="inline">HTTP_PROXY</code> / <code class="inline">HTTPS_PROXY</code> - Sets the URL to a HTTP(S) proxy, the
-environment variables can also be in lower case
-</li>
-<li><code class="inline">HEX_HTTP_CONCURRENCY</code> - Limits the number of concurrent HTTP requests in
-flight, (Default: 8)
-</li>
-</ul>
+<pre><code> mix hex</code></pre>
+<p>See <code class="inline">mix help hex.config</code> to see all available configuration options.</p>
 
     </div>
   </div>
@@ -138,31 +110,32 @@ this field.</p>
 </li>
 <li><code class="inline">key</code> - Hex API key
 </li>
-<li><code class="inline">api_url</code> - Hex API URL, can be overridden by setting
-the environment variable <code class="inline">HEX_API</code>
-</li>
-<li><code class="inline">repo_url</code> - Hex repository URL, can be overridden by setting
-the environment variable <code class="inline">HEX_REPO</code>
-</li>
-<li><code class="inline">mirror_url</code> - Hex.pm repository mirror URL, can be overridden by setting
-the environment variable <code class="inline">HEX_MIRROR</code>.
-Use this option when using a Hex.pm mirror, unlike when setting <code class="inline">repo_url</code>
-this will still use the public key from Hex.pm when verifying the registry
+<li><code class="inline">api_url</code> - Hex API URL. Can be overridden by setting the environment
+variable <code class="inline">HEX_API_URL</code> (Default: <code class="inline">&quot;https://hex.pm/api&quot;</code>)
 </li>
 <li><code class="inline">offline</code> - If set to true Hex will not fetch the regsitry or packages and
-will instead the locally cached files if they are available
+will instead use locally cached files if they are available. Can be
+overridden by setting the environment variable <code class="inline">HEX_OFFLINE</code> (Default:
+<code class="inline">false</code>)
 </li>
-<li><code class="inline">unsafe_https</code> - If set to true Hex will not verify HTTPS certificates
+<li><code class="inline">unsafe_https</code> - If set to true Hex will not verify HTTPS certificates.
+Can be overridden by setting the environment variable <code class="inline">HEX_UNSAFE_HTTPS</code>
+(Default: <code class="inline">false</code>)
 </li>
 <li><code class="inline">unsafe_registry</code> - If set to true Hex will not verify the registry
-signature against the repository’s public key
+signature against the repository’s public key. Can be overridden by
+setting the environment variable <code class="inline">HEX_UNSAFE_REGISTRY</code> (Default:
+<code class="inline">false</code>)
 </li>
-<li><code class="inline">http_proxy</code> - HTTP proxy server
+<li><code class="inline">http_proxy</code> - HTTP proxy server. Can be overridden by setting the
+environment variable <code class="inline">HTTP_PROXY</code> (Default: <code class="inline">nil</code>)
 </li>
-<li><code class="inline">https_proxy</code> - HTTPS proxy server
+<li><code class="inline">https_proxy</code> - HTTPS proxy server. Can be overridden by setting the
+environment variable <code class="inline">HTTPS_PROXY</code> (Default: <code class="inline">nil</code>)
 </li>
 <li><code class="inline">http_concurrency</code> - Limits the number of concurrent HTTP requests in
-flight, can be overridden by setting <code class="inline">HEX_HTTP_CONCURRENCY</code>
+flight. Can be overridden by setting the environment variable
+<code class="inline">HEX_HTTP_CONCURRENCY</code> (Default: <code class="inline">8</code>)
 </li>
 </ul>
 <h3>Command line options</h3>
@@ -186,7 +159,7 @@ flight, can be overridden by setting <code class="inline">HEX_HTTP_CONCURRENCY</
       </h3>
     </div>
     <div class="panel-body">
-      <p><em>Fetch or open documentation of a package.</em></p>
+      <p><em>Fetches or opens documentation of a package.</em></p>
 <pre><code>mix hex.docs fetch PACKAGE [VERSION]</code></pre>
 <p>It will retrieve and decompress the specified version of the documentation
 for a package. If you do not specify the <code class="inline">version</code> argument, this task will
@@ -226,32 +199,6 @@ registry was last updated and current system version.</p>
 released versions and package metadata.</p>
 <p>If <code class="inline">package</code> and <code class="inline">version</code> is given print release information. This includes
 remote Git URL and Git ref, and all package dependencies.</p>
-
-    </div>
-  </div>
-
-
-  <div class="panel panel-default">
-    <div class="panel-heading">
-      <h3 class="panel-title">
-        <a class="anchor" id="hex_key"></a>
-        hex.key
-        <a href="#hex_key">
-          <svg aria-hidden="aria-hidden" class="glyphicon glyphicon-link pull-right" version="1.1" viewBox="0 0 1200 1200"><g transform="translate(0, 1200) scale(1, -1)"><path d="M776.5 1214q93.5 0 159.5 -66l141 -141q66 -66 66 -160q0 -42 -28 -95.5t-62 -87.5l-29 -29q-31 53 -77 99l-18 18l95 95l-247 248l-389 -389l212 -212l-105 -106l-19 18l-141 141q-66 66 -66 159t66 159l283 283q65 66 158.5 66zM600 706l105 105q10 -8 19 -17l141 -141 q66 -66 66 -159t-66 -159l-283 -283q-66 -66 -159 -66t-159 66l-141 141q-66 66 -66 159.5t66 159.5l55 55q29 -55 75 -102l18 -17l-95 -95l247 -248l389 389z"></path></g></svg>
-        </a>
-      </h3>
-    </div>
-    <div class="panel-body">
-      <p><em>Removes or lists API keys associated with your account.</em></p>
-<h4>Remove key</h4>
-<p>Removes given API key from account.</p>
-<p>The key can no longer be used to authenticate API requests.</p>
-<pre><code>mix hex.key remove key_name</code></pre>
-<p>To remove all API keys from your account, pass the <code class="inline">--all</code> option.</p>
-<pre><code>mix hex.key remove --all</code></pre>
-<h4>List keys</h4>
-<p>Lists all API keys associated with your account.</p>
-<pre><code>mix hex.key list</code></pre>
 
     </div>
   </div>
@@ -324,43 +271,6 @@ owner.</p>
   <div class="panel panel-default">
     <div class="panel-heading">
       <h3 class="panel-title">
-        <a class="anchor" id="hex_public_keys"></a>
-        hex.public_keys
-        <a href="#hex_public_keys">
-          <svg aria-hidden="aria-hidden" class="glyphicon glyphicon-link pull-right" version="1.1" viewBox="0 0 1200 1200"><g transform="translate(0, 1200) scale(1, -1)"><path d="M776.5 1214q93.5 0 159.5 -66l141 -141q66 -66 66 -160q0 -42 -28 -95.5t-62 -87.5l-29 -29q-31 53 -77 99l-18 18l95 95l-247 248l-389 -389l212 -212l-105 -106l-19 18l-141 141q-66 66 -66 159t66 159l283 283q65 66 158.5 66zM600 706l105 105q10 -8 19 -17l141 -141 q66 -66 66 -159t-66 -159l-283 -283q-66 -66 -159 -66t-159 66l-141 141q-66 66 -66 159.5t66 159.5l55 55q29 -55 75 -102l18 -17l-95 -95l247 -248l389 389z"></path></g></svg>
-        </a>
-      </h3>
-    </div>
-    <div class="panel-body">
-      <p><em>Public keys are used by Hex to verify the registry file.</em></p>
-<p>Hex by default ships with a public key for Hex.pm but new
-ones can be added for other repositories.</p>
-<p>To list all available keys:</p>
-<pre><code>mix hex.public_keys list</code></pre>
-<p>To list all available keys showing the keys themselves:</p>
-<pre><code>mix hex.public_keys list --detailed</code></pre>
-<p>To add a new key:</p>
-<pre><code>mix hex.public_keys add URL_TO_REPO LOCAL_PATH_TO_KEY</code></pre>
-<p>To remove a key:</p>
-<pre><code>mix hex.public_keys remove URL_TO_REPO</code></pre>
-<p>Be careful when adding new keys. Only add keys from sources you
-trust.</p>
-<p>Public keys are by default stored in your HEX_HOME under the
-public_keys directory.</p>
-<h3>Command line options</h3>
-<ul>
-<li><code class="inline">--force</code> - forces installation without a shell prompt; primarily
-intended for automation in build systems like <code class="inline">make</code>
-</li>
-</ul>
-
-    </div>
-  </div>
-
-
-  <div class="panel panel-default">
-    <div class="panel-heading">
-      <h3 class="panel-title">
         <a class="anchor" id="hex_publish"></a>
         hex.publish
         <a href="#hex_publish">
@@ -410,9 +320,9 @@ documentation in one step, you can use the following shorthand:</p>
 <p>Dependencies are defined in mix’s dependency format. But instead of using
 <code class="inline">:git</code> or <code class="inline">:path</code> as the SCM <code class="inline">:package</code> is used.</p>
 <pre><code>defp deps do
-  [ {:ecto, &quot;~&gt; 0.1.0&quot;},
-    {:postgrex, &quot;~&gt; 0.3.0&quot;},
-    {:cowboy, github: &quot;extend/cowboy&quot;} ]
+  [{:ecto, &quot;~&gt; 0.1.0&quot;},
+  {:postgrex, &quot;~&gt; 0.3.0&quot;},
+  {:cowboy, github: &quot;extend/cowboy&quot;}]
 end</code></pre>
 <p>As can be seen Hex package dependencies works alongside git dependencies.
 Important to note is that non-Hex dependencies will not be used during
@@ -442,6 +352,45 @@ will mark it as able to build with rebar. This detection can be overridden
 by setting this field.</p>
 </li>
 </ul>
+
+    </div>
+  </div>
+
+
+  <div class="panel panel-default">
+    <div class="panel-heading">
+      <h3 class="panel-title">
+        <a class="anchor" id="hex_repo"></a>
+        hex.repo
+        <a href="#hex_repo">
+          <svg aria-hidden="aria-hidden" class="glyphicon glyphicon-link pull-right" version="1.1" viewBox="0 0 1200 1200"><g transform="translate(0, 1200) scale(1, -1)"><path d="M776.5 1214q93.5 0 159.5 -66l141 -141q66 -66 66 -160q0 -42 -28 -95.5t-62 -87.5l-29 -29q-31 53 -77 99l-18 18l95 95l-247 248l-389 -389l212 -212l-105 -106l-19 18l-141 141q-66 66 -66 159t66 159l283 283q65 66 158.5 66zM600 706l105 105q10 -8 19 -17l141 -141 q66 -66 66 -159t-66 -159l-283 -283q-66 -66 -159 -66t-159 66l-141 141q-66 66 -66 159.5t66 159.5l55 55q29 -55 75 -102l18 -17l-95 -95l247 -248l389 389z"></path></g></svg>
+        </a>
+      </h3>
+    </div>
+    <div class="panel-body">
+      <p><em>Manages the list of available Hex repositories.</em></p>
+<p>To use a package from another repository add <code class="inline">repo: :my_repo</code> to the
+dependency declaration in <code class="inline">mix.exs</code>:</p>
+<pre><code>{:plug, &quot;~&gt; 1.0&quot;, repo: :my_repo}</code></pre>
+<p>By default all dependencies of plug will also be fetched from <code class="inline">:my_repo</code>
+unless plug has declared otherwise in its dependency definition.</p>
+<p>To use packages from <code class="inline">:my_repo</code> you need to add it to your configuration
+first. You do that by calling <code class="inline">mix hex.repo my_repo https://myrepo.example.com</code>.</p>
+<p>The default repo is called <code class="inline">:hexpm</code> and points to https://repo.hex.pm. This
+can be overridden by using <code class="inline">mix hex.repo set ...</code>.</p>
+<p>Child dependencies will always be fetched from the same repository as the
+parent package. To override which repository a package is fetched from add
+the package to your dependencies and add the <code class="inline">:repo</code> option.</p>
+<h4>Add a repo</h4>
+<pre><code>mix hex.repo add NAME URL [PUBLIC_KEY_PATH [AUTH_KEY]]</code></pre>
+<h4>Set config for repo</h4>
+<pre><code>mix hex.repo set url NAME URL
+mix hex.repo set public_key NAME PUBLIC_KEY_PATH
+mix hex.repo set auth_key NAME AUTH_KEY</code></pre>
+<h4>Remove repo</h4>
+<pre><code>mix hex.repo remove NAME</code></pre>
+<h4>List all repos</h4>
+<pre><code>mix hex.repo list</code></pre>
 
     </div>
   </div>
@@ -537,6 +486,16 @@ Hex config.</p>
 <h4>Reencrypt API key</h4>
 <p>Updates the passphrase for the locally stored API key.</p>
 <pre><code>mix hex.user passphrase</code></pre>
+<h4>Remove key</h4>
+<p>Removes given API key from account.</p>
+<p>The key can no longer be used to authenticate API requests.</p>
+<pre><code>mix hex.user key --remove key_name</code></pre>
+<h4>Remove all keys</h4>
+<p>Remove all API keys from your account.</p>
+<pre><code>mix hex.user key --remove-all</code></pre>
+<h4>List keys</h4>
+<p>Lists all API keys associated with your account.</p>
+<pre><code>mix hex.user key --list</code></pre>
 <h4>Test authentication</h4>
 <p>Tests if authentication works with the stored API key.</p>
 <pre><code>mix hex.user test</code></pre>
@@ -545,3 +504,4 @@ Hex config.</p>
 
     </div>
   </div>
+

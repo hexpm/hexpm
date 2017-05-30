@@ -51,8 +51,7 @@ defmodule Hexpm.Emails do
     |> render("password_reset_request.html")
   end
 
-  def typosquat_candidates([], _), do: :ok
-  def typosquat_candidate(candidates, threshold) do
+  def typosquat_candidates(candidates, threshold) do
     new_email()
     |> to(Application.get_env(:hexpm, :support_email))
     |> from(source())

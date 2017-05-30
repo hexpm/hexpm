@@ -14,9 +14,16 @@ defmodule Hexpm.Web.ControllerHelpers do
   end
 
   def api_cache(conn, privacy) do
-    control = [privacy] ++ ["max-age": @max_cache_age]
+    control = [signed_in_privacy(conn, privacy)] ++ ["max-age": @max_cache_age]
     vary    = ["accept", "accept-encoding"]
     cache(conn, control, vary)
+  end
+
+  defp signed_in_privacy(conn, :signed_in) do
+    if conn.assigns.user, do: :private, else: :public
+  end
+  defp signed_in_privacy(_conn, other) do
+    other
   end
 
   defp parse_vary(nil),  do: nil
@@ -60,8 +67,8 @@ defmodule Hexpm.Web.ControllerHelpers do
 
   def translate_errors(changeset) do
     Ecto.Changeset.traverse_errors(changeset, fn
-      {"is invalid", [type: type, validation: _]} ->
-        "expected type #{pretty_type(type)}"
+      {"is invalid", opts} ->
+        "expected type #{pretty_type(opts[:type])}"
       {msg, opts} ->
         Enum.reduce(opts, msg, fn {key, value}, msg ->
           if String.Chars.impl_for(key) && String.Chars.impl_for(value) do
@@ -182,6 +189,14 @@ defmodule Hexpm.Web.ControllerHelpers do
     |> Enum.max
   end
 
+  def fetch_repository(conn, _opts) do
+    if repository = Repositories.get(conn.params["repository"]) do
+      assign(conn, :repository, repository)
+    else
+      conn |> not_found |> halt
+    end
+  end
+
   def maybe_fetch_package(conn, _opts) do
     if repository = Repositories.get(conn.params["repository"]) do
       conn = assign(conn, :repository, repository)
@@ -230,8 +245,11 @@ defmodule Hexpm.Web.ControllerHelpers do
   end
 
   def authorize(conn, opts) do
-    fun = Keyword.get(opts, :fun, fn _, _ -> true end)
-    Hexpm.Web.AuthHelpers.authorized(conn, opts, &fun.(conn, &1))
+    Hexpm.Web.AuthHelpers.authorized(conn, opts)
+  end
+
+  def maybe_authorize(conn, opts) do
+    Hexpm.Web.AuthHelpers.maybe_authorized(conn, opts)
   end
 
   def audit_data(conn) do

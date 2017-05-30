@@ -19,6 +19,8 @@ defmodule Hexpm.Accounts.User do
     has_many :emails, Email
     has_many :package_owners, PackageOwner, foreign_key: :owner_id
     has_many :owned_packages, through: [:package_owners, :package]
+    has_many :repository_users, RepositoryUser
+    has_many :repositories, through: [:repository_users, :repository]
     has_many :keys, Key
     has_many :audit_logs, AuditLog, foreign_key: :actor_id
   end
