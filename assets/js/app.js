@@ -22,7 +22,10 @@ import "phoenix_html"
 
 export default class App {
   constructor() {
-    $(".copy-button").click(this.onCopy.bind(this))
+    $(".snippet-copy-button").click(this.copySnippet.bind(this))
+
+    $(".backup-copy-button").click(this.copyBackupCode.bind(this))
+    $(".backup-download-button").click(this.downloadBackupCode.bind(this))
 
     // Show show-versions button if JS is enabled
     $(".show-versions").show()
@@ -35,8 +38,48 @@ export default class App {
     hljs.initHighlightingOnLoad()
   }
 
+  // 2FA: Create a text file with backup codes and download
+  downloadBackupCode(event) {
+    var button = $(event.currentTarget)
+    var text = button.attr("data-download-text")
+    var el = document.createElement('a')
+
+    el.setAttribute('href', 'data:text/plain;charset=utf-8,' + encodeURIComponent(text));
+    el.setAttribute('download', 'hex_backup_codes.txt');
+    el.style.display = 'none';
+
+    document.body.appendChild(el);
+    el.click();
+    document.body.removeChild(el);
+  }
+
+  // 2FA: Copy backup codes to the clipboard
+  copyBackupCode(event) {
+    var button = $(event.currentTarget)
+    var el = document.createElement('textarea')
+
+    el.value = button.attr("data-clipboard-text")
+    el.setAttribute('readonly', '') // Prevent keyboard from showing on mobile
+    el.style.contain = 'strict'
+    el.style.all = 'unset'
+    el.style.position = 'absolute'
+    el.style.left = '-9999px'
+    el.style.fontSize = '12pt' // Prevent zooming on iOS
+    document.body.appendChild(el)
+    el.select()
+
+    let succeeded = false;
+    try {
+      succeeded = document.execCommand('copy')
+    } catch (err) {}
+
+    document.body.removeChild(el)
+
+    succeeded ? this.copySucceeded(button) : this.copyFailed(button)
+  }
+
   // Package: copy config snippet to clipboard
-  onCopy(event) {
+  copySnippet(event) {
     var button = $(event.currentTarget)
     var succeeded = false
 

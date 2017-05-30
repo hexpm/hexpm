@@ -14,6 +14,11 @@
         <input type="password" class="form-control" name="password">
       </div>
 
+      <div class="form-group">
+        <label for="twofactor">2FA</label>
+        <input type="password" class="form-control" name="twofactor">
+      </div>
+
       <input type="hidden" name="return" value="<%= @return %>">
 
       <button type="submit" class="btn btn-primary">Log in</button>

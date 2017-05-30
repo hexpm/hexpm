@@ -1,7 +1,7 @@
 defmodule Hexpm.Accounts.Auth do
   import Ecto.Query, only: [from: 2]
 
-  alias Hexpm.Accounts.{Key, Users}
+  alias Hexpm.Accounts.{Key, User, Users, TOTP, BackupCode}
 
   def key_auth(user_secret) do
     # Database index lookup on the first part of the key and then
@@ -41,6 +41,26 @@ defmodule Hexpm.Accounts.Auth do
       {:ok, {user, nil, find_email(user, username_or_email)}}
     else
       :error
+    end
+  end
+
+  def twofactor_auth(user, code, backup_allowed? \\ true) do
+    case User.totp(user) do
+      %TOTP{} = totp ->
+        case TOTP.verify(totp, code) do
+          true ->
+            {:ok, user}
+          {:backupcode, code} ->
+            if backup_allowed? && BackupCode.included?(user.twofactor.backupcodes, code) do
+              {:backupcode, user, code}
+            else
+              :error
+            end
+          false ->
+            :error
+        end
+      :disabled ->
+        {:ok, user}
     end
   end
 

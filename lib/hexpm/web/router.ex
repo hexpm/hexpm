@@ -56,17 +56,22 @@ defmodule Hexpm.Web.Router do
 
     get  "/users/:username", UserController, :show
 
-    get    "/dashboard",               DashboardController, :index
-    get    "/dashboard/profile",       DashboardController, :profile
-    post   "/dashboard/profile",       DashboardController, :update_profile
-    get    "/dashboard/password",      DashboardController, :password
-    post   "/dashboard/password",      DashboardController, :update_password
-    get    "/dashboard/email",         DashboardController, :email
-    post   "/dashboard/email",         DashboardController, :add_email
-    delete "/dashboard/email",         DashboardController, :remove_email
-    post   "/dashboard/email/primary", DashboardController, :primary_email
-    post   "/dashboard/email/public",  DashboardController, :public_email
-    post   "/dashboard/email/resend",  DashboardController, :resend_verify_email
+    get    "/dashboard",                   DashboardController, :index
+    get    "/dashboard/profile",           DashboardController, :profile
+    post   "/dashboard/profile",           DashboardController, :update_profile
+    get    "/dashboard/password",          DashboardController, :password
+    post   "/dashboard/password",          DashboardController, :update_password
+    get    "/dashboard/twofactor",         DashboardController, :twofactor
+    post   "/dashboard/twofactor",         DashboardController, :toggle_twofactor
+    get    "/dashboard/twofactor/confirm", DashboardController, :show_qrcode_twofactor
+    post   "/dashboard/twofactor/confirm", DashboardController, :confirm_twofactor
+    post   "/dashboard/twofactor/regen",   DashboardController, :regen_backup_twofactor
+    get    "/dashboard/email",             DashboardController, :email
+    post   "/dashboard/email",             DashboardController, :add_email
+    delete "/dashboard/email",             DashboardController, :remove_email
+    post   "/dashboard/email/primary",     DashboardController, :primary_email
+    post   "/dashboard/email/public",      DashboardController, :public_email
+    post   "/dashboard/email/resend",      DashboardController, :resend_verify_email
 
     get  "/docs/usage",          DocsController, :usage
     get  "/docs/rebar3_usage",   DocsController, :rebar3_usage

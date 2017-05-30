@@ -41,6 +41,24 @@ defmodule Hexpm.Emails do
     |> render("confirmed.html")
   end
 
+  def user_twofactor_enabled(user) do
+    new_email()
+    |> to(user)
+    |> from(source())
+    |> subject("Hex.pm - Two-factor enabled")
+    |> assign(:username, user.username)
+    |> render("twofactor_enabled.html")
+  end
+
+  def user_twofactor_disabled(user) do
+    new_email()
+    |> to(user)
+    |> from(source())
+    |> subject("Hex.pm - Two-factor disabled")
+    |> assign(:username, user.username)
+    |> render("twofactor_disabled.html")
+  end
+
   def password_reset_request(user) do
     new_email()
     |> to(user)

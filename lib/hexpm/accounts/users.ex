@@ -77,6 +77,86 @@ defmodule Hexpm.Accounts.Users do
     end
   end
 
+  def setup_twofactor(user, params, [audit: audit_data]) do
+    multi =
+      Multi.new
+      |> Multi.update(:user, User.setup_twofactor(user, params))
+      |> audit(audit_data, "twofactor.enable.init", nil)
+
+    case Repo.transaction(multi) do
+      {:ok, %{user: user}} ->
+        {:ok, user}
+      {:error, :user, changeset, _} ->
+        {:error, changeset}
+    end
+  end
+
+  def enable_twofactor(user, params, [audit: audit_data]) do
+    multi =
+      Multi.new
+      |> Multi.update(:user, User.enable_twofactor(user, params))
+      |> audit(audit_data, "twofactor.enable.finish", nil)
+
+    case Repo.transaction(multi) do
+      {:ok, %{user: user}} ->
+        user
+        |> with_emails
+        |> Emails.user_twofactor_enabled
+        |> Mailer.deliver_now_throttled
+
+        {:ok, user}
+      {:error, :user, changeset, _} ->
+        {:error, changeset}
+    end
+  end
+
+  def disable_twofactor(user, params, [audit: audit_data]) do
+    multi =
+      Multi.new
+      |> Multi.update(:user, User.disable_twofactor(user, params))
+      |> audit(audit_data, "twofactor.disable", nil)
+
+    case Repo.transaction(multi) do
+      {:ok, %{user: user}} ->
+        user
+        |> with_emails
+        |> Emails.user_twofactor_disabled
+        |> Mailer.deliver_now_throttled
+
+        {:ok, user}
+      {:error, :user, changeset, _} ->
+        {:error, changeset}
+    end
+  end
+
+  def regen_twofactor_backupcodes(user, params, [audit: audit_data]) do
+    multi =
+      Multi.new
+      |> Multi.update(:user, User.regen_twofactor_backupcodes(user, params))
+      |> audit(audit_data, "twofactor.backupcode.regen", nil)
+
+    case Repo.transaction(multi) do
+      {:ok, %{user: user}} ->
+        {:ok, user}
+      {:error, :user, changeset, _} ->
+        {:error, changeset}
+    end
+  end
+
+  def use_twofactor_backupcode(user, code, [audit: audit_data]) do
+    multi =
+      Multi.new
+      |> Multi.update(:user, User.use_twofactor_backupcode(user, code))
+      |> audit(audit_data, "twofactor.backupcode.use", nil)
+
+    case Repo.transaction(multi) do
+      {:ok, %{user: user}} ->
+        {:ok, user}
+      {:error, :user, changeset, _} ->
+        {:error, changeset}
+    end
+  end
+
   def verify_email(username, email, key) do
     with %User{emails: emails} <- get(username, :emails),
          %Email{} = email <- Enum.find(emails, &(&1.email == email)),

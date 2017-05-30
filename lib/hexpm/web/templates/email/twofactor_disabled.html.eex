@@ -1,0 +1,6 @@
+<p>Two-factor authentication has just been disabled on your Hex.pm account, <%= @username %>.</p>
+
+<p>
+  --<br>
+  Hex.pm
+</p>

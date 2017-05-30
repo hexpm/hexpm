@@ -20,13 +20,14 @@ defmodule Hexpm.Web.AuthHelpers do
         unauthorized(conn, "invalid username and password combination")
       {:error, :key} ->
         unauthorized(conn, "invalid username and API key combination")
+      {:error, :twofactor} ->
+        twofactor_required(conn, "totp") # TODO: change depending on type required
       {:error, :unconfirmed} ->
         forbidden(conn, "email not verified")
       {:error, :revoked_key} ->
         unauthorized(conn, "API key revoked")
     end
   end
-
 
   defp authorize(conn, opts) do
     only_basic = Keyword.get(opts, :only_basic, false)
@@ -45,7 +46,10 @@ defmodule Hexpm.Web.AuthHelpers do
     case result do
       {:ok, {user, key, email}} ->
         if allow_unconfirmed || (email && email.verified) do
-          {:ok, {user, key}}
+            case twofactor_auth(conn, user) do
+              {:ok, user} -> {:ok, {user, key}}
+              {:error, reason} -> {:error, reason}
+            end
         else
           {:error, :unconfirmed}
         end
@@ -74,6 +78,27 @@ defmodule Hexpm.Web.AuthHelpers do
     end
   end
 
+  defp twofactor_auth(conn, user) do
+    case get_req_header(conn, "x-hex-otp") do
+      [code] ->
+        # twofactor backup codes cannot be used in the API,
+        # so any attempt to use one just errors out
+        case Auth.twofactor_auth(user, code, false) do
+          {:ok, user} ->
+            {:ok, user}
+          :error ->
+            {:error, :twofactor}
+        end
+      _ -> {:error, :twofactor}
+    end
+  end
+
+  def twofactor_required(conn, type) do
+    conn
+    |> put_resp_header("x-hex-otp", "required; #{type}")
+    |> render_error(401, message: "two-factor authentication required")
+  end
+
   def unauthorized(conn, reason) do
     conn
     |> put_resp_header("www-authenticate", "Basic realm=hex")
@@ -84,7 +109,6 @@ defmodule Hexpm.Web.AuthHelpers do
     conn
     |> render_error(403, message: reason)
   end
-
 
   def package_owner?(_, nil),
     do: false

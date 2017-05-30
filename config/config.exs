@@ -20,6 +20,9 @@ config :hexpm,
   cookie_sign_salt: "lYEJ7Wc8jFwNrPke",
   cookie_encr_salt: "TZDiyTeFQ819hsC3",
 
+  totp_pbkdf2_iters: 32_768,
+  totp_encryption_secret: System.get_env("HEX_TOTP_SECRET") || "be944366eabe41f5efd07892c2d61754",
+
   store_impl:   store,
   s3_url:       System.get_env("HEX_S3_URL") || "https://s3.amazonaws.com",
   s3_bucket:    System.get_env("HEX_S3_BUCKET"),
@@ -81,6 +84,9 @@ config :phoenix, :format_encoders,
   elixir: Hexpm.Web.ElixirFormat,
   erlang: Hexpm.Web.ErlangFormat,
   json: Hexpm.Web.Jiffy
+
+config :phoenix, :filter_parameters,
+  ["password", "secret", "pin", "otp"]
 
 config :mime, :types, %{
   "application/vnd.hex+json"   => ["json"],

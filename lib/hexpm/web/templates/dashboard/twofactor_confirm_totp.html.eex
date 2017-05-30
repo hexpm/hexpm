@@ -1,0 +1,73 @@
+<%
+qrcode = TOTP.qrcode(@totp)
+secret = @totp.key
+%>
+
+<%= changeset_error(@changeset) %>
+
+<div class="row">
+  <div class="col-md-3">
+    <%= render "_sidebar.html", conn: @conn %>
+  </div>
+
+  <div class="col-md-9">
+    <div class="panel panel-default">
+      <div class="panel-heading">2FA - Setup</div>
+
+      <div class="panel-body">
+        <p><strong>On your phone:</strong></p>
+
+        <ol>
+          <li>
+            Install a compatible TOTP application.
+            We recommend <a href="https://support.google.com/accounts/answer/1066447?hl=en">Google Authenticator</a> (proprietary)
+            or <a href="https://freeotp.github.io/">FreeOTP</a> (open source).
+          </li>
+          <li>
+            In the application, add a new entry in one of two ways:
+            <ul>
+              <li>Scan the code with your phone's camera to add the entry automatically.</li>
+              <li>Enter the details provided to add the entry manually.</li>
+            </ul>
+          </li>
+        </ol>
+
+        <p><strong>On Hex.pm:</strong></p>
+
+        <ol>
+          <li>Enter the current six-digit code from your phone into the PIN code field below.</li>
+          <li>Click <i>confirm</i>.</li>
+        </ol>
+
+        <p>
+          If the PIN you entered was correct, you'll see a message indicating that Two-Factor Authentication has been enabled,
+          and you'll be presented with a list of backup codes.
+        </p>
+
+        <hr />
+
+        <div class="text-center">
+          <img style="width: 50%" class="img-responsive center-block" src="data:image/png;base64,<%= qrcode %>">
+          <p class="secret"><strong>secret</strong>: <%= secret %></p>
+
+          <p>
+            <%= form_for @changeset, dashboard_path(Endpoint, :confirm_twofactor), [method: :post, class: "form-inline center"], fn f -> %>
+              <%= inputs_for f, :twofactor, fn _f -> %><% end %>
+
+              <div class="input-group">
+                <%= password_input f, :pin, placeholder: "PIN Code" %>
+                <%= error_tag f, :pin %>
+
+                <div class="input-group-btn">
+                  <button type="submit" class="btn btn-primary" tabindex="1">
+                    Confirm
+                  </button>
+                </div>
+              </div>
+            <% end %>
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
