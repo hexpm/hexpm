@@ -30,7 +30,7 @@ defmodule Hexpm.Accounts.BackupCode do
     app_secret = Application.get_env(:hexpm, :totp_encryption_secret)
     enc_tag = "HEXTOTPBACKUP"
 
-    Hexpm.Crypto.encrypt(backupcode, app_secret, enc_tag)
+    Hexpm.Crypto.encrypt(app_secret, backupcode, enc_tag)
   end
 
   def decrypt(codes) when is_list(codes), do: Enum.map(codes, &decrypt/1)
@@ -38,7 +38,7 @@ defmodule Hexpm.Accounts.BackupCode do
     app_secret = Application.get_env(:hexpm, :totp_encryption_secret)
     enc_tag = "HEXTOTPBACKUP"
 
-    {:ok, decrypted} = Hexpm.Crypto.decrypt(encrypted, app_secret, enc_tag)
+    {:ok, decrypted} = Hexpm.Crypto.decrypt(app_secret, encrypted, enc_tag)
     decrypted
   end
 
