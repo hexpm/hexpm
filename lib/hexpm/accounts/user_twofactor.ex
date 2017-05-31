@@ -4,10 +4,10 @@ defmodule Hexpm.Accounts.UserTwoFactor do
   @types ~w(totp disabled)
 
   embedded_schema do
-    field :enabled, :boolean, default: false
-    field :type, :string, default: "disabled"
-    field :secret, :string, default: ""
-    field :backupcodes, {:array, :string}, default: []
+    field :enabled, :boolean
+    field :type, :string
+    field :secret, :string
+    field :backupcodes, {:array, :string}
   end
 
   def setup(twofactor, params) do

@@ -100,12 +100,12 @@
 
 .dashboard .twofactor .secret {
   font-family: Menlo,Monaco,Consolas,"Courier New",monospace;
-  line-height: 1.8 !important;
+  line-height: 1.8;
 }
 
 .dashboard .twofactor .backupcode {
   font-family: Menlo,Monaco,Consolas,"Courier New",monospace;
-  line-height: 1.8 !important;
+  line-height: 1.8;
   display: inline-block;
   width: 48%;
 }
@@ -123,9 +123,7 @@
 
 .dashboard .backupcode {
   font-family: Menlo,Monaco,Consolas,"Courier New",monospace;
-  line-height: 1.8 !important;
+  line-height: 1.8;
   display: inline-block;
   width: 48%;
 }
-
-

@@ -7,5 +7,3 @@ defmodule Hexpm.Repo.Migrations.AddTwofactorToUsers do
     end
   end
 end
-
-

@@ -20,7 +20,6 @@ config :hexpm,
   cookie_sign_salt: "lYEJ7Wc8jFwNrPke",
   cookie_encr_salt: "TZDiyTeFQ819hsC3",
 
-  totp_pbkdf2_iters: 32_768,
   totp_encryption_secret: System.get_env("HEX_TOTP_SECRET") || "be944366eabe41f5efd07892c2d61754",
 
   store_impl:   store,

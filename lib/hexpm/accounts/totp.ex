@@ -1,9 +1,6 @@
 defmodule Hexpm.Accounts.TOTP do
   alias Hexpm.Accounts.BackupCode
 
-  @app_secret Application.get_env(:hexpm, :totp_encryption_secret)
-  @enc_tag "HEXTOTPSECRET"
-
   @moduledoc """
   Defines a `Hexpm.Accounts.TOTP` struct.
 
@@ -114,11 +111,17 @@ defmodule Hexpm.Accounts.TOTP do
   end
 
   def encrypt_secret(secret) do
-    Hexpm.Crypto.encrypt(secret, @app_secret, @enc_tag)
+    app_secret = Application.get_env(:hexpm, :totp_encryption_secret)
+    enc_tag = "HEXTOTPBACKUP"
+
+    Hexpm.Crypto.encrypt(secret, app_secret, enc_tag)
   end
 
   def decrypt_secret(encrypted) do
-    {:ok, secret} = Hexpm.Crypto.decrypt(encrypted, @app_secret, @enc_tag)
+    app_secret = Application.get_env(:hexpm, :totp_encryption_secret)
+    enc_tag = "HEXTOTPBACKUP"
+
+    {:ok, secret} = Hexpm.Crypto.decrypt(encrypted, app_secret, enc_tag)
     secret
   end
 end

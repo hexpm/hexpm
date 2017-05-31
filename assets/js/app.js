@@ -41,16 +41,16 @@ export default class App {
   // 2FA: Create a text file with backup codes and download
   downloadBackupCode(event) {
     var button = $(event.currentTarget)
-    var text = button.attr("data-download-text")
+    var text = button.attr('data-download-text')
     var el = document.createElement('a')
 
-    el.setAttribute('href', 'data:text/plain;charset=utf-8,' + encodeURIComponent(text));
-    el.setAttribute('download', 'hex_backup_codes.txt');
-    el.style.display = 'none';
+    el.setAttribute('href', 'data:text/plain;charset=utf-8,' + encodeURIComponent(text))
+    el.setAttribute('download', 'hex_backup_codes.txt')
+    el.style.display = 'none'
 
-    document.body.appendChild(el);
-    el.click();
-    document.body.removeChild(el);
+    document.body.appendChild(el)
+    el.click()
+    document.body.removeChild(el)
   }
 
   // 2FA: Copy backup codes to the clipboard
@@ -58,7 +58,7 @@ export default class App {
     var button = $(event.currentTarget)
     var el = document.createElement('textarea')
 
-    el.value = button.attr("data-clipboard-text")
+    el.value = button.attr('data-clipboard-text')
     el.setAttribute('readonly', '') // Prevent keyboard from showing on mobile
     el.style.contain = 'strict'
     el.style.all = 'unset'
@@ -68,7 +68,7 @@ export default class App {
     document.body.appendChild(el)
     el.select()
 
-    let succeeded = false;
+    let succeeded = false
     try {
       succeeded = document.execCommand('copy')
     } catch (err) {}

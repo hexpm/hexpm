@@ -44,7 +44,7 @@ defmodule Hexpm.Accounts.User do
   end
 
   def totp(user, force? \\ false) do
-    if(force? or user.twofactor.enabled) do
+    if force? or user.twofactor.enabled do
       TOTP.new_encrypted([
         account_name: user.username,
         key: user.twofactor.secret
@@ -55,7 +55,7 @@ defmodule Hexpm.Accounts.User do
   end
 
   def backupcodes(user, force? \\ false) do
-    if(force? or user.twofactor.enabled) do
+    if force? or user.twofactor.enabled do
       BackupCode.decrypt(user.twofactor.backupcodes)
     else
       %TOTP{}

@@ -12,19 +12,17 @@
         <%= form_for @changeset, dashboard_path(Endpoint, :toggle_twofactor), [method: :post], fn f -> %>
           <%= inputs_for f, :twofactor, fn f -> %>
             <div class="form-group">
-                <%= label f, :enabled, "Enabled?" %>
-                <%= checkbox f, :enabled %>
+              <%= label f, :enabled, "Enabled?" %>
+              <%= checkbox f, :enabled %>
             </div>
 
             <div class="form-group">
-                <%= label f, :type, "Type" %>
-                <%= select f, :type, @types %>
+              <%= label f, :type, "Type" %>
+              <%= select f, :type, @types %>
             </div>
           <% end %>
 
-          <button type="submit" class="btn btn-primary">
-            Save
-          </button>
+          <button type="submit" class="btn btn-primary">Save</button>
         <% end %>
       </div>
     </div>

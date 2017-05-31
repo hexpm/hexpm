@@ -1,7 +1,4 @@
 defmodule Hexpm.Accounts.BackupCode do
-  @app_secret Application.get_env(:hexpm, :totp_encryption_secret)
-  @enc_tag "HEXTOTPBACKUP"
-
   @doc """
   Generate `n` backup codes.
   """
@@ -30,12 +27,18 @@ defmodule Hexpm.Accounts.BackupCode do
 
   def encrypt(codes) when is_list(codes), do: Enum.map(codes, &encrypt/1)
   def encrypt(backupcode) do
-    Hexpm.Crypto.encrypt(backupcode, @app_secret, @enc_tag)
+    app_secret = Application.get_env(:hexpm, :totp_encryption_secret)
+    enc_tag = "HEXTOTPBACKUP"
+
+    Hexpm.Crypto.encrypt(backupcode, app_secret, enc_tag)
   end
 
   def decrypt(codes) when is_list(codes), do: Enum.map(codes, &decrypt/1)
   def decrypt(encrypted) do
-    {:ok, decrypted} = Hexpm.Crypto.decrypt(encrypted, @app_secret, @enc_tag)
+    app_secret = Application.get_env(:hexpm, :totp_encryption_secret)
+    enc_tag = "HEXTOTPBACKUP"
+
+    {:ok, decrypted} = Hexpm.Crypto.decrypt(encrypted, app_secret, enc_tag)
     decrypted
   end
 
