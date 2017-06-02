@@ -44,21 +44,14 @@ defmodule Hexpm.ConnCase do
     :ok
   end
 
-  # See: https://github.com/elixir-lang/plug/issues/455
-  def test_put_session(conn, key, value) do
-    private =
-      conn.private
-      |> Map.update(:plug_session, %{key => value}, &Map.put(&1, key, value))
-      |> Map.put(:plug_session_fetch, :bypass)
-    %{conn | private: private}
+  def test_login(conn, user) do
+    Plug.Test.init_test_session(conn, %{"user_id" => user.id})
   end
 
-  def test_login(conn, user) do
-    user = Hexpm.Accounts.Users.sign_in(user)
-
-    conn
-    |> test_put_session("username", user.username)
-    |> test_put_session("key", user.session_key)
+  def last_session() do
+    import Ecto.Query
+    from(s in Hexpm.Accounts.Session, order_by: [desc: s.id], limit: 1)
+    |> Hexpm.Repo.one
   end
 
   def json_post(conn, path, params) do

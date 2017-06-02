@@ -12,8 +12,6 @@ defmodule Hexpm.Accounts.User do
     field :reset_key, :string
     field :reset_expiry, :naive_datetime
 
-    field :session_key, :string
-
     embeds_one :handles, UserHandles, on_replace: :delete
 
     has_many :emails, Email
@@ -75,7 +73,7 @@ defmodule Hexpm.Accounts.User do
   end
 
   def disable_password_reset(user) do
-    change(user, %{reset_key: nil, reset_expiry: nil, session_key: nil})
+    change(user, %{reset_key: nil, reset_expiry: nil})
   end
 
   def password_reset?(nil, _key), do: false
@@ -90,15 +88,11 @@ defmodule Hexpm.Accounts.User do
       Multi.new
       |> Multi.update(:password, update_password_no_check(user, params))
       |> Multi.update(:reset, disable_password_reset(user))
+      |> Multi.delete_all(:reset_sessions, Session.by_user(user))
 
     if revoke_all_keys,
       do: Multi.update_all(multi, :keys, Key.revoke_all(user), []),
     else: multi
-  end
-
-  def new_session(user) do
-    key = Auth.gen_key()
-    change(user, %{session_key: key})
   end
 
   def email(user, :primary), do: user.emails |> Enum.find(& &1.primary) |> email

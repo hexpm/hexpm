@@ -63,7 +63,7 @@ defmodule Hexpm.Web.Plugs do
 
   def default_repository(conn, _opts) do
     param_set? = Map.has_key?(conn.params, "repository")
-    
+
     case conn.path_info do
       ["api", "packages" | _] when not param_set? ->
         put_in(conn.params["repository"], "hexpm")
@@ -75,13 +75,12 @@ defmodule Hexpm.Web.Plugs do
   end
 
   def login(conn, _opts) do
-    username = get_session(conn, "username")
-    key = get_session(conn, "key")
+    user_id = get_session(conn, "user_id")
 
-    user = username && Hexpm.Accounts.Users.get_by_username(username)
+    user = user_id && Hexpm.Accounts.Users.get_by_id(user_id)
     user = user && Hexpm.Accounts.Users.with_emails(user)
 
-    if user && Hexpm.Accounts.Users.signed_in?(user, key) do
+    if user do
       assign(conn, :logged_in, user)
     else
       assign(conn, :logged_in, nil)
