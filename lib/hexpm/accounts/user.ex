@@ -58,7 +58,7 @@ defmodule Hexpm.Accounts.User do
     if force? or user.twofactor.enabled do
       BackupCode.decrypt(user.twofactor.backupcodes)
     else
-      %TOTP{}
+      []
     end
   end
 
