@@ -95,4 +95,10 @@ defmodule Hexpm.Factory do
   def install_factory() do
     %Hexpm.Repository.Install{}
   end
+
+  def block_address_factory() do
+    %Hexpm.BlockAddress.Entry{
+      comment: "blocked"
+    }
+  end
 end
