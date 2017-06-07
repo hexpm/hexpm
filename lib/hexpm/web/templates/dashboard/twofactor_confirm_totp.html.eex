@@ -10,7 +10,7 @@ secret = @totp.key
     <%= render "_sidebar.html", conn: @conn %>
   </div>
 
-  <div class="col-md-9">
+  <div class="col-md-9 twofactor">
     <div class="panel panel-default">
       <div class="panel-heading">2FA - Setup</div>
 
@@ -47,25 +47,22 @@ secret = @totp.key
         <hr />
 
         <div class="text-center">
-          <img style="width: 50%" class="img-responsive center-block" src="data:image/png;base64,<%= qrcode %>">
           <p class="secret"><strong>secret</strong>: <%= secret %></p>
+          <img style="width: 50%" class="img-responsive center-block" src="data:image/png;base64,<%= qrcode %>">
 
-          <p>
-            <%= form_for @changeset, dashboard_path(Endpoint, :confirm_twofactor), [method: :post, class: "form-inline center"], fn f -> %>
+          <br />
+
+          <span>
+            <%= form_for @changeset, dashboard_path(Endpoint, :confirm_twofactor), [method: :post, class: "form-confirm"], fn f -> %>
               <%= inputs_for f, :twofactor, fn _f -> %><% end %>
-
               <div class="input-group">
-                <%= password_input f, :pin, placeholder: "PIN Code" %>
-                <%= error_tag f, :pin %>
-
+                <input type="tel" id="pin" name="pin" class="form-control" placeholder="PIN Code" required>
                 <div class="input-group-btn">
-                  <button type="submit" class="btn btn-primary" tabindex="1">
-                    Confirm
-                  </button>
+                  <button type="submit" class="btn btn-primary btn-lg" tabindex="1">Confirm</button>
                 </div>
               </div>
             <% end %>
-          </p>
+          </span>
         </div>
       </div>
     </div>

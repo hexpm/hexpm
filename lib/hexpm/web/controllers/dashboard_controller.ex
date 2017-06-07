@@ -190,7 +190,7 @@ defmodule Hexpm.Web.DashboardController do
   def confirm_twofactor(conn, params) do
     user = conn.assigns.logged_in
     totp = User.totp(user, true)
-    pin = params["user"]["pin"]
+    pin = params["pin"]
 
     case TOTP.verify(totp, pin) do
       true ->

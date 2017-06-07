@@ -120,8 +120,8 @@ defmodule Hexpm.Accounts.TOTP do
   def decrypt_secret(encrypted) do
     app_secret = Application.get_env(:hexpm, :totp_encryption_secret)
     enc_tag = "HEXTOTPBACKUP"
-
     {:ok, secret} = Hexpm.Crypto.decrypt(app_secret, encrypted, enc_tag)
+
     secret
   end
 end
