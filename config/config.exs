@@ -57,6 +57,14 @@ config :hexpm, Hexpm.Web.Endpoint,
   secret_key_base: "Cc2cUvbm9x/uPD01xnKmpmU93mgZuht5cTejKf/Z2x0MmfqE1ZgHJ1/hSZwd8u4L",
   render_errors: [view: Hexpm.Web.ErrorView, accepts: ~w(html json elixir erlang)]
 
+config :hexpm, Hexpm.Repo,
+  pool: DBConnection.Sojourn,
+  protector: false,
+  overload_alarm: false
+
+config :sasl,
+  sasl_error_logger: false
+
 config :hexpm, Hexpm.Emails.Mailer,
   adapter: Bamboo.SMTPAdapter,
   server: System.get_env("HEX_SES_ENDPOINT") || "email-smtp.us-west-2.amazonaws.com",
