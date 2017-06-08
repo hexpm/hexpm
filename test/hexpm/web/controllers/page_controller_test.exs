@@ -1,5 +1,5 @@
 defmodule Hexpm.Web.PageControllerTest do
-  use Hexpm.ConnCase, async: true
+  use Hexpm.ConnCase
 
   setup do
     first_date  = ~N[2014-05-01 10:11:12]

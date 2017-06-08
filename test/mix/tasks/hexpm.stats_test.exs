@@ -1,5 +1,5 @@
 defmodule Mix.Tasks.Hexpm.StatsTest do
-  use Hexpm.DataCase, async: true
+  use Hexpm.DataCase  
 
   alias Hexpm.Repository.Download
   alias Hexpm.Store
