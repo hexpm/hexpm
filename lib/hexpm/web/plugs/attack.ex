@@ -1,14 +1,13 @@
 # TODO: Don't rate limit conditional requests that return 304 Not Modified
-# TODO: Add a higher rate limit cap for authenticated users
 # TODO: Use redis instead of single process to support multiple dynos
 
 defmodule Hexpm.Web.Plugs.Attack do
   use PlugAttack
-
-  alias Hexpm.BlockAddress
-
   import Hexpm.Web.ControllerHelpers
   import Plug.Conn
+  alias Hexpm.BlockAddress
+
+  @storage {PlugAttack.Storage.Ets, Hexpm.Web.Plugs.Attack}
 
   rule "allow local", conn do
     allow conn.remote_ip == {127, 0, 0, 1}
@@ -16,18 +15,30 @@ defmodule Hexpm.Web.Plugs.Attack do
 
   rule "block addresses", conn do
     BlockAddress.try_reload()
-    block BlockAddress.blocked?(ip_str(conn.remote_ip))
+    block BlockAddress.blocked?(ip_string(conn.remote_ip))
+  end
+
+  rule "user throttle", conn do
+    if user = conn.assigns.user do
+      throttle({:user, user.id}, [
+        storage: @storage,
+        limit: 500,
+        period: 60_000
+      ])
+    end
   end
 
   rule "ip throttle", conn do
-    throttle(conn.remote_ip, [storage: {PlugAttack.Storage.Ets, Hexpm.Web.Plugs.Attack},
-                              limit: 100, period: 60_000])
+    throttle({:ip, conn.remote_ip}, [
+      storage: @storage,
+      limit: 100,
+      period: 60_000
+    ])
   end
 
   def allow_action(conn, {:throttle, data}, _opts) do
     add_throttling_headers(conn, data)
   end
-
   def allow_action(conn, _data, _opts) do
     conn
   end
@@ -35,9 +46,8 @@ defmodule Hexpm.Web.Plugs.Attack do
   def block_action(conn, {:throttle, data}, _opts) do
     conn
     |> add_throttling_headers(data)
-    |> render_error(429, message: "API rate limit exceeded for #{ip_str(conn.remote_ip)}")
+    |> render_error(429, message: "API rate limit exceeded for #{throttled_user(conn)}")
   end
-
   def block_action(conn, _data, _opts) do
     render_error(conn, 403, message: "Blocked")
   end
@@ -52,7 +62,15 @@ defmodule Hexpm.Web.Plugs.Attack do
     |> put_resp_header("x-ratelimit-reset", Integer.to_string(reset))
   end
 
-  defp ip_str({a, b, c, d}) do
+  defp throttled_user(conn) do
+    if user = conn.assigns.user do
+      "user #{user.id}"
+    else
+      "IP #{ip_string(conn.remote_ip)}"
+    end
+  end
+
+  defp ip_string({a, b, c, d}) do
     "#{a}.#{b}.#{c}.#{d}"
   end
 end

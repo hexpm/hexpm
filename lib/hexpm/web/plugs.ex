@@ -101,6 +101,23 @@ defmodule Hexpm.Web.Plugs do
     end
   end
 
+  def authenticate(conn, _opts) do
+    case Hexpm.Web.AuthHelpers.authenticate(conn) do
+      {:ok, {user, key, email}} ->
+        conn
+        |> assign(:user, user)
+        |> assign(:key, key)
+        |> assign(:email, email)
+      {:error, :missing} ->
+        conn
+        |> assign(:user, nil)
+        |> assign(:key, nil)
+        |> assign(:email, nil)
+      {:error, _} = error ->
+        Hexpm.Web.AuthHelpers.error(conn, error)
+    end
+  end
+
   defp basic_auth(conn, credentials, possible) do
     credentials = Base.decode64!(credentials)
     if credentials in possible do

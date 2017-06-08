@@ -6,45 +6,38 @@ defmodule Hexpm.Web.AuthHelpers do
 
   def authorized(conn, opts) do
     fun = Keyword.get(opts, :fun, fn _, _ -> true end)
-    case authorize(conn, opts) do
-      {:ok, {user, key}} ->
-        if fun.(conn, user) do
-          conn
-          |> assign(:key, key)
-          |> assign(:user, user)
-        else
-          forbidden(conn, "account not authorized for this action")
-        end
-      {:error, _} = error ->
-        auth_error(conn, error)
+    user = conn.assigns.user
+
+    if user do
+      authorized(conn, user, fun, opts)
+    else
+      error(conn, {:error, :missing})
     end
   end
 
   def maybe_authorized(conn, opts) do
-    fun = opts[:fun]
-    case authorize(conn, opts) do
-      {:ok, {user, key}} ->
-        if !fun || fun.(conn, user) do
-          conn
-          |> assign(:key, key)
-          |> assign(:user, user)
-        else
-          forbidden(conn, "account not authorized for this action")
-        end
-      {:error, :missing} ->
-        if !fun || fun.(conn, nil) do
-          conn
-          |> assign(:key, nil)
-          |> assign(:user, nil)
-        else
-          forbidden(conn, "account not authorized for this action")
-        end
-      {:error, _} = error ->
-        auth_error(conn, error)
+    authorized(conn, conn.assigns.user, opts[:fun], opts)
+  end
+
+  defp authorized(conn, user, fun, opts) do
+    only_basic = Keyword.get(opts, :only_basic, false)
+    allow_unconfirmed = Keyword.get(opts, :allow_unconfirmed, false)
+    key = conn.assigns.key
+    email = conn.assigns.email
+
+    cond do
+      user && ((only_basic && key) || (!only_basic && !key)) ->
+        error(conn, {:error, :missing})
+      user && ((!email or !email.verified) && !allow_unconfirmed) ->
+        error(conn, {:error, :unconfirmed})
+      fun && !fun.(conn, user) ->
+        error(conn, {:error, :auth})
+      true ->
+        conn
     end
   end
 
-  defp auth_error(conn, error) do
+  def error(conn, error) do
     case error do
       {:error, :missing} ->
         unauthorized(conn, "missing authentication information")
@@ -58,32 +51,19 @@ defmodule Hexpm.Web.AuthHelpers do
         forbidden(conn, "email not verified")
       {:error, :revoked_key} ->
         unauthorized(conn, "API key revoked")
+      {:error, :auth} ->
+        forbidden(conn, "account not authorized for this action")
     end
   end
 
-  defp authorize(conn, opts) do
-    only_basic = Keyword.get(opts, :only_basic, false)
-    allow_unconfirmed = Keyword.get(opts, :allow_unconfirmed, false)
-
-    result =
-      case get_req_header(conn, "authorization") do
-        ["Basic " <> credentials] when only_basic ->
-          basic_auth(credentials)
-        [key] when not only_basic ->
-          key_auth(key)
-        _ ->
-          {:error, :missing}
-      end
-
-    case result do
-      {:ok, {user, key, email}} ->
-        if allow_unconfirmed || (email && email.verified) do
-          {:ok, {user, key}}
-        else
-          {:error, :unconfirmed}
-        end
-      error ->
-        error
+  def authenticate(conn) do
+    case get_req_header(conn, "authorization") do
+      ["Basic " <> credentials] ->
+        basic_auth(credentials)
+      [key] ->
+        key_auth(key)
+      _ ->
+        {:error, :missing}
     end
   end
 
@@ -91,7 +71,7 @@ defmodule Hexpm.Web.AuthHelpers do
     case String.split(Base.decode64!(credentials), ":", parts: 2) do
       [username_or_email, password] ->
         case Auth.password_auth(username_or_email, password) do
-          {:ok, user} -> {:ok, user}
+          {:ok, result} -> {:ok, result}
           :error -> {:error, :basic}
         end
       _ ->
@@ -101,9 +81,9 @@ defmodule Hexpm.Web.AuthHelpers do
 
   defp key_auth(key) do
     case Auth.key_auth(key) do
-      {:ok, user} -> {:ok, user}
-      :error      -> {:error, :key}
-      :revoked    -> {:error, :revoked_key}
+      {:ok, result} -> {:ok, result}
+      :error -> {:error, :key}
+      :revoked -> {:error, :revoked_key}
     end
   end
 
