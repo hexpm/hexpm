@@ -43,7 +43,7 @@ Under the `:package` property are some additional configuration options:
   <dt><code>:licenses</code></dt>
   <dd>A list of licences the project is licensed under. This attribute is required.</dd>
   <dt><code>:name</code></dt>
-  <dd>The name of the package in case you want to publish the package with a different name than the application name.</dd>
+  <dd>The name of the package in case you want to publish the package with a different name than the application name. By default this is set to the same as the name of your OTP application (having the same value as `project.app`), written in snake_case (lowercase with underscores as word separator).</dd>
   <dt><code>:maintainers</code></dt>
   <dd>A list of names (and/or emails) of maintainers to the project. Optional but highly recommended.</dd>
   <dt><code>:links</code></dt>
