@@ -45,6 +45,7 @@ defmodule Hexpm.Repository.Releases do
     |> create_release(package, checksum, meta)
     |> audit_publish(audit_data)
     |> publish_release(body)
+    |> refresh_package_dependants()
     |> Repo.transaction(timeout: @publish_timeout)
     |> publish_result
   end
@@ -86,6 +87,7 @@ defmodule Hexpm.Repository.Releases do
     |> Multi.delete(:release, Release.delete(release))
     |> audit_revert(audit_data, package, release)
     |> Multi.delete_all(:package, delete_query)
+    |> refresh_package_dependants()
     |> Repo.transaction_with_isolation(level: :serializable, timeout: @publish_timeout)
     |> revert_result(package)
   end
@@ -109,6 +111,7 @@ defmodule Hexpm.Repository.Releases do
     |> Multi.run(:package, fn _ -> {:ok, package} end)
     |> Multi.update(:release, Release.retire(release, params))
     |> audit_retire(audit_data, package)
+    |> refresh_package_dependants()
     |> Repo.transaction
     |> publish_result
   end
@@ -118,6 +121,7 @@ defmodule Hexpm.Repository.Releases do
     |> Multi.run(:package, fn _ -> {:ok, package} end)
     |> Multi.update(:release, Release.unretire(release))
     |> audit_unretire(audit_data, package)
+    |> refresh_package_dependants()
     |> Repo.transaction
     |> publish_result
   end
@@ -175,6 +179,16 @@ defmodule Hexpm.Repository.Releases do
   defp build_release(multi, params, checksum) do
     Multi.merge(multi, fn %{package: package} ->
       Multi.insert(Multi.new, :release, Release.build(package, params, checksum))
+    end)
+  end
+
+  defp refresh_package_dependants(multi) do
+    multi
+    |> Multi.run(:refresh, fn _ ->
+      case Hexpm.Repo.refresh_view(Hexpm.Repository.PackageDependant) do
+        :ok -> {:ok, :refresh}
+        :error -> {:error, :refresh}
+      end
     end)
   end
 
