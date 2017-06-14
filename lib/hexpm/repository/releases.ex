@@ -111,7 +111,6 @@ defmodule Hexpm.Repository.Releases do
     |> Multi.run(:package, fn _ -> {:ok, package} end)
     |> Multi.update(:release, Release.retire(release, params))
     |> audit_retire(audit_data, package)
-    |> refresh_package_dependants()
     |> Repo.transaction
     |> publish_result
   end
@@ -121,7 +120,6 @@ defmodule Hexpm.Repository.Releases do
     |> Multi.run(:package, fn _ -> {:ok, package} end)
     |> Multi.update(:release, Release.unretire(release))
     |> audit_unretire(audit_data, package)
-    |> refresh_package_dependants()
     |> Repo.transaction
     |> publish_result
   end
@@ -183,12 +181,9 @@ defmodule Hexpm.Repository.Releases do
   end
 
   defp refresh_package_dependants(multi) do
-    multi
-    |> Multi.run(:refresh, fn _ ->
-      case Hexpm.Repo.refresh_view(Hexpm.Repository.PackageDependant) do
-        :ok -> {:ok, :refresh}
-        :error -> {:error, :refresh}
-      end
+    Multi.run(multi, :refresh, fn _ ->
+      :ok = Hexpm.Repo.refresh_view(Hexpm.Repository.PackageDependant)
+      {:ok, :refresh}
     end)
   end
 
