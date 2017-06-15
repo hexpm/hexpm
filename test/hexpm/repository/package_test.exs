@@ -85,22 +85,25 @@ defmodule Hexpm.Repository.PackageTest do
     end
   end
 
-  test "search dependants", %{user: user, repository: repository} do
-    Package.build(repository, user, pkg_meta(%{name: "nerves", description: "Nerves package"}))
-    |> Hexpm.Repo.insert!
-    phoenix =
-      Package.build(repository, user, pkg_meta(%{name: "phoenix", description: "Web framework"}))
-      |> Hexpm.Repo.insert!
-    ecto =
-      Package.build(repository, user, pkg_meta(%{name: "ecto", description: "Database wrapper"}))
-      |> Hexpm.Repo.insert!
-    rel =
-      Hexpm.Repository.Release.build(phoenix, rel_meta(%{version: "0.0.1", app: "phoenix"}), "")
-      |> Hexpm.Repo.insert!
-    Hexpm.Repo.insert!(%Hexpm.Repository.Requirement{app: "phoenix", release: rel, dependency: ecto})
+  test "search dependants", %{repository: repository} do
+    insert(:package, name: "nerves", repository_id: repository.id)
+    poison = insert(:package, name: "poison", repository_id: repository.id)
+    ecto = insert(:package, name: "ecto", repository_id: repository.id)
+    phoenix = insert(:package, name: "phoenix", repository_id: repository.id)
+
+    rel = insert(:release, package: ecto)
+    insert(:requirement, release: rel, dependency: poison)
+    rel = insert(:release, package: phoenix)
+    insert(:requirement, release: rel, dependency: poison)
+    insert(:requirement, release: rel, dependency: ecto)
+
     Hexpm.Repo.refresh_view(Hexpm.Repository.PackageDependant)
 
-    assert ["phoenix"] = Package.all(1, 10, "depends:ecto", nil)
+    assert ["phoenix", "ecto"] = Package.all(1, 10, "depends:poison", nil)
+                               |> Hexpm.Repo.all
+                               |> Enum.map(& &1.name)
+
+    assert ["phoenix"] = Package.all(1, 10, "depends:poison depends:ecto", nil)
                          |> Hexpm.Repo.all
                          |> Enum.map(& &1.name)
   end
