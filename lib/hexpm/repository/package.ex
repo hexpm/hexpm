@@ -150,6 +150,13 @@ defmodule Hexpm.Repository.Package do
       where: fragment("?->'extra' @> ?", p.meta, ^extra))
   end
 
+  defp search_param("depends", search, query) do
+    from(p in query,
+         join: pd in Hexpm.Repository.PackageDependant,
+         on: p.id == pd.dependant_id,
+         where: pd.name == ^search)
+  end
+
   defp search_param(_, _, query) do
     query
   end
