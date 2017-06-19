@@ -2,15 +2,8 @@ defmodule Mix.Tasks.Hexpm.Stats do
   use Mix.Task
   require Logger
   import Ecto.Query, only: [from: 2]
-  alias Hexpm.CDN
-  alias Hexpm.Repository.Download
-  alias Hexpm.Repository.Package
-  alias Hexpm.Repository.PackageDownload
-  alias Hexpm.Repository.Release
-  alias Hexpm.Repository.ReleaseDownload
-  alias Hexpm.Repo
-  alias Hexpm.Store
-  alias Hexpm.Utils
+  alias Hexpm.{CDN, Repo, Store, Utils}
+  alias Hexpm.Repository.{Download, Package, PackageDownload, Release, ReleaseDownload}
 
   @shortdoc "Calculates yesterdays download stats"
 
@@ -75,10 +68,10 @@ defmodule Mix.Tasks.Hexpm.Stats do
 
   @doc false
   def run(date, buckets, max_downloads_per_ip \\ 100, dryrun? \\ false) do
-    s3_prefix     = "hex/#{date}"
+    s3_prefix = "hex/#{date}"
     fastly_prefix = "fastly_hex/#{date}"
-    formats       = [{s3_prefix, @s3_regex}, {fastly_prefix, @fastly_regex}]
-    ips           = CDN.public_ips
+    formats = [{s3_prefix, @s3_regex}, {fastly_prefix, @fastly_regex}]
+    ips = CDN.public_ips()
 
     # No write_concurrency (issue ERL-188)
     :ets.new(@ets, [:named_table, :public])
@@ -130,11 +123,12 @@ defmodule Mix.Tasks.Hexpm.Stats do
   end
 
   defp process_keys(region, bucket, regex, ips, keys) do
-    Store.get_each(region, bucket, keys, fn key, content ->
-      content
+    Task.async_stream(keys, fn key ->
+      Store.get(region, bucket, key, [])
       |> maybe_unzip(key)
       |> process_file(regex, ips)
-    end, [])
+    end, max_concurrency: 10, timeout: 600_000)
+    |> Stream.run()
   end
 
   defp cap_on_ip(max_downloads_per_ip) do

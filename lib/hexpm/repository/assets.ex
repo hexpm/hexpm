@@ -10,13 +10,13 @@ defmodule Hexpm.Repository.Assets do
     version = to_string(release.version)
 
     # Delete release tarball
-    Hexpm.Store.delete(nil, :s3_bucket, tarball_store_key(release), [])
+    Hexpm.Store.delete(nil, :s3_bucket, tarball_store_key(release))
 
     # Delete relevant documentation (if it exists)
     if release.has_docs do
-      Hexpm.Store.delete(nil, :s3_bucket, docs_store_key(release), [])
+      Hexpm.Store.delete(nil, :s3_bucket, docs_store_key(release))
       paths = Hexpm.Store.list(nil, :docs_bucket, Path.join(name, version))
-      Hexpm.Store.delete_many(nil, :docs_bucket, Enum.to_list(paths), [])
+      Hexpm.Store.delete_many(nil, :docs_bucket, Enum.to_list(paths))
       Hexpm.Repository.Sitemaps.publish_docs_sitemap()
     end
   end
@@ -63,7 +63,7 @@ defmodule Hexpm.Repository.Assets do
     version = to_string(release.version)
     paths   = Hexpm.Store.list(nil, :docs_bucket, Path.join(name, version))
 
-    Hexpm.Store.delete_many(nil, :docs_bucket, Enum.to_list(paths), [])
+    Hexpm.Store.delete_many(nil, :docs_bucket, Enum.to_list(paths))
 
     Hexpm.Utils.multi_task([
       fn -> Hexpm.CDN.purge_key(:fastly_hexrepo, docs_cdn_key(release)) end,
@@ -106,22 +106,24 @@ defmodule Hexpm.Repository.Assets do
             []
         end
       end)
-    Hexpm.Store.delete_many(nil, :docs_bucket, keys_to_delete, [])
+    Hexpm.Store.delete_many(nil, :docs_bucket, keys_to_delete)
   end
 
   defp upload_new_files(files) do
-    objects =
-      Enum.map(files, fn {store_key, cdn_key, data} ->
-        surrogate_key = {"surrogate-key", cdn_key}
-        surrogate_control = {"surrogate-control", "max-age=604800"}
-        
-        opts =
-          content_type(store_key)
-          |> Keyword.put(:cache_control, "public, max-age=3600")
-          |> Keyword.put(:meta, [surrogate_key, surrogate_control])
-        {store_key, data, opts}
+    Enum.map(files, fn {store_key, cdn_key, data} ->
+      surrogate_key = {"surrogate-key", cdn_key}
+      surrogate_control = {"surrogate-control", "max-age=604800"}
+
+      opts =
+        content_type(store_key)
+        |> Keyword.put(:cache_control, "public, max-age=3600")
+        |> Keyword.put(:meta, [surrogate_key, surrogate_control])
+      {store_key, data, opts}
     end)
-    Hexpm.Store.put_many(nil, :docs_bucket, objects, [])
+    |> Task.async_stream(fn {key, data, opts} ->
+      Hexpm.Store.put(nil, :docs_bucket, key, data, opts)
+    end, max_concurrency: 10, timeout: 60_000)
+    |> Stream.run()
   end
 
   defp purge_cache(release, docs_for_latest_release) do
