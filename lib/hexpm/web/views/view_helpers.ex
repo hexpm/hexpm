@@ -177,6 +177,11 @@ defmodule Hexpm.Web.ViewHelpers do
   def if_value(arg, nil, _fun),   do: arg
   def if_value(arg, false, _fun), do: arg
   def if_value(arg, _true, fun),  do: fun.(arg)
+
+  def safe_join(enum, separator, fun \\ & &1) do
+    Enum.map_join(enum, separator, &safe_to_string(fun.(&1)))
+    |> raw()
+  end
 end
 
 defimpl Phoenix.HTML.Safe, for: Version do

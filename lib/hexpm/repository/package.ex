@@ -82,11 +82,12 @@ defmodule Hexpm.Repository.Package do
          where: p.owner_id == ^user.id)
   end
 
-  def all(page, count, search \\ nil, sort \\ :name) do
+  def all(page, count, search \\ nil, sort \\ :name, fields \\ nil) do
     from(p in Package, preload: :downloads)
     |> sort(sort)
     |> Hexpm.Utils.paginate(page, count)
     |> search(search)
+    |> fields(fields)
   end
 
   def recent(count) do
@@ -99,6 +100,13 @@ defmodule Hexpm.Repository.Package do
   def count(search \\ nil) do
     from(p in Package, select: count(p.id))
     |> search(search)
+  end
+
+  defp fields(query, nil) do
+    query
+  end
+  defp fields(query, fields) do
+    from(p in query, select: ^fields)
   end
 
   defp search(query, nil) do
