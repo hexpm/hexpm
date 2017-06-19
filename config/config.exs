@@ -60,7 +60,8 @@ config :hexpm, Hexpm.Web.Endpoint,
 config :hexpm, Hexpm.Repo,
   pool: DBConnection.Sojourn,
   protector: false,
-  overload_alarm: false
+  overload_alarm: false,
+  underload_alarm: false
 
 config :sasl,
   sasl_error_logger: false
