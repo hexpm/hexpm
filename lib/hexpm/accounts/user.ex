@@ -83,18 +83,6 @@ defmodule Hexpm.Accounts.User do
        Hexpm.Utils.within_last_day(user.reset_expiry))
   end
 
-  def password_reset(user, params, revoke_all_keys \\ true) do
-    multi =
-      Multi.new()
-      |> Multi.update(:password, update_password_no_check(user, params))
-      |> Multi.update(:reset, disable_password_reset(user))
-      |> Multi.delete_all(:reset_sessions, Session.by_user(user))
-
-    if revoke_all_keys,
-      do: Multi.update_all(multi, :keys, Key.revoke_all(user), []),
-    else: multi
-  end
-
   def email(user, :primary), do: user.emails |> Enum.find(& &1.primary) |> email
   def email(user, :public), do: user.emails |> Enum.find(& &1.public) |> email
 
