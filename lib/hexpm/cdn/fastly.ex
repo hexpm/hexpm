@@ -7,12 +7,13 @@ defmodule Hexpm.CDN.Fastly do
 
   def purge_key(service, keys) when is_list(keys) do
     service_id = Application.get_env(:hexpm, service)
-    Hexpm.Parallel.each!(fn key ->
+    Task.async_stream(keys, fn key ->
       case post("service/#{service_id}/purge/#{key}", %{}) do
         {:ok, status, _, _} when status in [200, 404] ->
           :ok
       end
-    end, keys, [])
+    end, max_concurrency: 10, timeout: 60_000)
+    |> Stream.run()
   end
 
   def purge_key(service, key) do
