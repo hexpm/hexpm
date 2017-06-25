@@ -32,8 +32,8 @@ defmodule Hexpm.Store.Local do
 
   def delete(region, bucket, key) do
     [dir(), region(region), bucket(bucket), key]
-    |> Path.join
-    |> File.rm
+    |> Path.join()
+    |> File.rm()
   end
 
   def delete_many(region, bucket, keys) do

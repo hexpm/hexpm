@@ -1,12 +1,10 @@
 defmodule Hexpm.Web.ErlangFormat do
   def encode_to_iodata!(term) do
-    Hexpm.Utils.binarify(term)
-    |> :erlang.term_to_binary
+    term
+    |> Hexpm.Utils.binarify()
+    |> :erlang.term_to_binary()
   end
 
-  @doc """
-  Safely deserialize an erlang formatted string.
-  """
   @spec decode(binary) :: term
   def decode("") do
     {:ok, nil}

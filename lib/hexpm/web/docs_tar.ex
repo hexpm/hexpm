@@ -16,7 +16,7 @@ defmodule Hexpm.Web.DocsTar do
   end
 
   defp unzip(data) do
-    stream = :zlib.open
+    stream = :zlib.open()
 
     try do
       :zlib.inflateInit(stream, @zlib_magic)
@@ -45,12 +45,14 @@ defmodule Hexpm.Web.DocsTar do
 
   defp check_version_dirs(files) do
     result = Enum.all?(files, fn {path, _data} ->
-      first = Path.split(path) |> hd
+      first = Path.split(path) |> hd()
       Version.parse(first) == :error
     end)
 
-    if result,
-      do: :ok,
-    else: {:error, "directory name not allowed to match a semver version"}
+    if result do
+      :ok
+    else
+      {:error, "directory name not allowed to match a semver version"}
+    end
   end
 end

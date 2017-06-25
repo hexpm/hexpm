@@ -7,7 +7,6 @@ defmodule Hexpm.Web.API.KeyController do
   def index(conn, _params) do
     user = conn.assigns.user
     authing_key = conn.assigns.key
-
     keys = Keys.all(user)
 
     conn
@@ -67,7 +66,6 @@ defmodule Hexpm.Web.API.KeyController do
   def delete_all(conn, _params) do
     user = conn.assigns.user
     key = conn.assigns.key
-
     {:ok, _} = Keys.remove_all(user, audit: audit_data(conn))
 
     conn

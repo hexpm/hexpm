@@ -10,10 +10,10 @@ defmodule Hexpm.Web.Plugs.Forwarded do
   end
 
   defp ip([ip|_]) do
-    ip = :binary.split(ip, ",", [:global]) |> List.last
+    ip = :binary.split(ip, ",", [:global]) |> List.last()
 
     if ip do
-      ip    = String.trim(ip)
+      ip = String.trim(ip)
       parts = :binary.split(ip, ".", [:global])
       parts = Enum.map(parts, &Integer.parse/1)
       valid = Enum.all?(parts, &match?({int, ""} when int in 0..255, &1))

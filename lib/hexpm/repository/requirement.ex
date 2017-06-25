@@ -69,8 +69,10 @@ defmodule Hexpm.Repository.Requirement do
 
   defp requirement_names(requirements) when is_list(requirements) do
     Enum.flat_map(requirements, fn
-      req when is_map(req) -> [req["name"]]
-      _ -> []
+      req when is_map(req) ->
+        [req["name"]]
+      _ ->
+        []
     end)
     |> Enum.filter(&is_binary/1)
   end

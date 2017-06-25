@@ -1,8 +1,7 @@
 defmodule Hexpm.Repository.RegistryBuilderTest do
   use Hexpm.DataCase
 
-  alias Hexpm.Repository.Release
-  alias Hexpm.Repository.RegistryBuilder
+  alias Hexpm.Repository.{RegistryBuilder, Release}
 
   @checksum "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855"
 

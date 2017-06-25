@@ -116,8 +116,8 @@ defmodule Hexpm.Repository.Package do
   defp search(query, {:letter, letter}) do
     name_search = letter <> "%"
 
-    from var in query,
-      where: ilike(fragment("?::text", var.name), ^name_search)
+    from(var in query,
+      where: ilike(fragment("?::text", var.name), ^name_search))
   end
 
   defp search(query, search) when is_binary(search) do
@@ -150,7 +150,7 @@ defmodule Hexpm.Repository.Package do
     [value | keys] =
       search
       |> String.split(",")
-      |> Enum.reverse
+      |> Enum.reverse()
 
     extra = extra_map(keys, extra_value(value))
 
@@ -189,10 +189,8 @@ defmodule Hexpm.Repository.Package do
     extra_map(t, %{h => m})
   end
 
-  defp like_search(search, :contains),
-    do: "%" <> search <> "%"
-  defp like_search(search, :equals),
-    do: search
+  defp like_search(search, :contains), do: "%" <> search <> "%"
+  defp like_search(search, :equals), do: search
 
   defp escape_search(search) do
     String.replace(search, ~r"(%|_|\\)"u, "\\\\\\1")
@@ -202,46 +200,47 @@ defmodule Hexpm.Repository.Package do
     filter = search_filter(search)
 
     search
-    |> escape_search
+    |> escape_search()
     |> like_search(filter)
   end
 
   defp search_filter(search) do
-    if String.length(search) >= 3,
-      do: :contains,
-    else: :equals
+    if String.length(search) >= 3 do
+      :contains
+    else
+      :equals
+    end
   end
 
   defp description_search(search) do
     search
     |> String.replace(~r/\//u, " ")
     |> String.replace(~r/[^\w\s]/u, "")
-    |> String.trim
+    |> String.trim()
     |> String.replace(~r"\s+"u, " | ")
   end
 
   def extra_name_search(search) do
     search
-    |> escape_search
+    |> escape_search()
     |> String.replace(~r/(^\*)|(\*$)/u, "%")
   end
 
   defp sort(query, :name) do
-    from p in query, order_by: p.name
+    from(p in query, order_by: p.name)
   end
 
   defp sort(query, :inserted_at) do
-    from p in query, order_by: [desc: p.inserted_at]
+    from(p in query, order_by: [desc: p.inserted_at])
   end
 
   defp sort(query, :updated_at) do
-    from p in query, order_by: [desc: p.updated_at]
+    from(p in query, order_by: [desc: p.updated_at])
   end
 
   defp sort(query, :downloads) do
     from(p in query,
-      left_join: d in PackageDownload,
-        on: p.id == d.package_id,
+      left_join: d in PackageDownload, on: p.id == d.package_id,
       order_by: [fragment("? DESC NULLS LAST", d.downloads)],
       where: d.view == "all" or is_nil(d.view))
   end
@@ -252,7 +251,7 @@ defmodule Hexpm.Repository.Package do
 
   defp parse_search(search) do
     search
-    |> String.trim_leading
+    |> String.trim_leading()
     |> parse_params([])
   end
 
@@ -267,15 +266,17 @@ defmodule Hexpm.Repository.Package do
   end
 
   defp parse_key(string) do
-    with [k, tail] when k != "" <- String.split(string, ":", parts: 2),
-         do: {:ok, k, String.trim_leading(tail)}
+    with [k, tail] when k != "" <- String.split(string, ":", parts: 2) do
+      {:ok, k, String.trim_leading(tail)}
+    end
   end
 
   defp parse_value(string) do
     case string do
       "\"" <> rest ->
-        with [v, tail] <- String.split(rest, "\"", parts: 2),
-             do: {:ok, v, String.trim_leading(tail)}
+        with [v, tail] <- String.split(rest, "\"", parts: 2) do
+          {:ok, v, String.trim_leading(tail)}
+        end
       _ ->
         case String.split(string, " ", parts: 2) do
           [value] -> {:ok, value, ""}

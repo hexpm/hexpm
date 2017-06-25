@@ -11,13 +11,13 @@ defmodule Hexpm.Utils do
   def multi_task(args, fun) do
     args
     |> multi_async(fun)
-    |> multi_await
+    |> multi_await()
   end
 
   def multi_task(funs) do
     funs
-    |> multi_async
-    |> multi_await
+    |> multi_async()
+    |> multi_await()
   end
 
   def multi_async(args, fun) do
@@ -58,15 +58,17 @@ defmodule Hexpm.Utils do
     if binary in allowed, do: String.to_atom(binary)
   end
 
-  def safe_page(page, _count, _per_page) when page < 1,
-    do: 1
-  def safe_page(page, count, per_page) when page > div(count, per_page) + 1,
-    do: div(count, per_page) + 1
-  def safe_page(page, _count, _per_page),
-    do: page
+  def safe_page(page, _count, _per_page) when page < 1 do
+    1
+  end
+  def safe_page(page, count, per_page) when page > div(count, per_page) + 1 do
+    div(count, per_page) + 1
+  end
+  def safe_page(page, _count, _per_page) do
+    page
+  end
 
   def safe_int(nil), do: nil
-
   def safe_int(string) do
     case Integer.parse(string) do
       {int, ""} -> int

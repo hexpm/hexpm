@@ -8,17 +8,14 @@ defmodule Hexpm.Repository.RegistryBuilder do
   import Ecto.Query, only: [from: 2]
   require Hexpm.Repo
   require Logger
-  alias Hexpm.Repository.Package
-  alias Hexpm.Repository.Release
-  alias Hexpm.Repository.Requirement
-  alias Hexpm.Repository.Install
+  alias Hexpm.Repository.{Package, Release, Requirement, Install}
 
   @ets_table :hex_registry
   @version 4
   @lock_timeout 30_000
   @transaction_timeout 60_000
 
-  def full_build do
+  def full_build() do
     locked_build(&full/0)
   end
 
@@ -33,7 +30,7 @@ defmodule Hexpm.Repository.RegistryBuilder do
     end, timeout: @transaction_timeout)
   end
 
-  defp full do
+  defp full() do
     log(:full, fn ->
       {packages, releases, installs} = tuples()
 
@@ -42,8 +39,8 @@ defmodule Hexpm.Repository.RegistryBuilder do
       upload_files(ets, new)
 
       {_, _, packages} = new
-      new_keys = Enum.map(packages, &"packages/#{elem(&1, 0)}") |> Enum.sort
-      old_keys = Hexpm.Store.list(nil, :s3_bucket, "packages/") |> Enum.sort
+      new_keys = Enum.map(packages, &"packages/#{elem(&1, 0)}") |> Enum.sort()
+      old_keys = Hexpm.Store.list(nil, :s3_bucket, "packages/") |> Enum.sort()
 
       Hexpm.Store.delete_many(nil, :s3_bucket, old_keys -- new_keys)
       Hexpm.CDN.purge_key(:fastly_hexrepo, "registry")
@@ -83,10 +80,10 @@ defmodule Hexpm.Repository.RegistryBuilder do
   end
 
   defp tuples do
-    installs       = installs()
-    requirements   = requirements()
-    releases       = releases()
-    packages       = packages()
+    installs = installs()
+    requirements = requirements()
+    releases = releases()
+    packages = packages()
     package_tuples = package_tuples(packages, releases)
     release_tuples = release_tuples(packages, releases, requirements)
 
@@ -116,8 +113,8 @@ defmodule Hexpm.Repository.RegistryBuilder do
     :ok = :ets.tab2file(tid, String.to_charlist(file))
     :ets.delete(tid)
 
-    contents = File.read!(file) |> :zlib.gzip
-    signature = contents |> sign |> Base.encode16(case: :lower)
+    contents = File.read!(file) |> :zlib.gzip()
+    signature = contents |> sign() |> Base.encode16(case: :lower)
     {contents, signature}
   end
 
@@ -148,8 +145,8 @@ defmodule Hexpm.Repository.RegistryBuilder do
     packages = Enum.map(packages, fn {name, _versions} -> %{name: name} end)
     %{packages: packages}
     |> :hex_pb_names.encode_msg(:Names)
-    |> sign_protobuf
-    |> :zlib.gzip
+    |> sign_protobuf()
+    |> :zlib.gzip()
   end
 
   defp build_versions(packages, release_map) do
@@ -159,8 +156,8 @@ defmodule Hexpm.Repository.RegistryBuilder do
 
     %{packages: packages}
     |> :hex_pb_versions.encode_msg(:Versions)
-    |> sign_protobuf
-    |> :zlib.gzip
+    |> sign_protobuf()
+    |> :zlib.gzip()
   end
 
   defp build_retired_indexes(name, versions, release_map) do
@@ -208,8 +205,8 @@ defmodule Hexpm.Repository.RegistryBuilder do
 
     %{releases: releases}
     |> :hex_pb_package.encode_msg(:Package)
-    |> sign_protobuf
-    |> :zlib.gzip
+    |> sign_protobuf()
+    |> :zlib.gzip()
   end
 
   defp retirement_reason("other"), do: :RETIRED_OTHER
@@ -219,8 +216,8 @@ defmodule Hexpm.Repository.RegistryBuilder do
   defp retirement_reason("renamed"), do: :RETIRED_RENAMED
 
   defp upload_files(v1, v2) do
-    objects = v2_objects(v2) ++ v1_objects(v1)
-    Task.async_stream(objects, fn {key, data, opts} ->
+    v2_objects(v2) ++ v1_objects(v1)
+    |> Task.async_stream(fn {key, data, opts} ->
       Hexpm.Store.put(nil, :s3_bucket, key, data, opts)
     end, max_concurrency: 10, timeout: 60_000)
     |> Stream.run()
@@ -262,18 +259,19 @@ defmodule Hexpm.Repository.RegistryBuilder do
         :error -> map
       end
     end)
-    |> sort_package_tuples
+    |> sort_package_tuples()
   end
 
   defp sort_package_tuples(tuples) do
     Enum.map(tuples, fn {name, versions} ->
       versions =
-        Enum.sort(versions, &(Version.compare(&1, &2) == :lt))
+        versions
+        |> Enum.sort(&(Version.compare(&1, &2) == :lt))
         |> Enum.map(&to_string/1)
 
       {name, [versions]}
     end)
-    |> Enum.sort
+    |> Enum.sort()
   end
 
   defp release_tuples(packages, releases, requirements) do
@@ -295,27 +293,36 @@ defmodule Hexpm.Repository.RegistryBuilder do
         :error -> []
       end
     end)
-    |> Enum.sort
+    |> Enum.sort()
   end
 
   defp packages do
-    from(p in Package,
-      select: {p.id, p.name})
-    |> Hexpm.Repo.all
+    from(p in Package, select: {p.id, p.name})
+    |> Hexpm.Repo.all()
     |> Enum.into(%{})
   end
 
   defp releases do
-    from(r in Release,
-      select: {r.id, r.version, r.package_id, r.checksum, fragment("?->'build_tools'", r.meta), r.retirement})
-    |> Hexpm.Repo.all
+    from(r in Release, select: {
+      r.id,
+      r.version,
+      r.package_id,
+      r.checksum,
+      fragment("?->'build_tools'", r.meta),
+      r.retirement
+    })
+    |> Hexpm.Repo.all()
   end
 
   defp requirements do
-    reqs =
-      from(r in Requirement,
-        select: {r.release_id, r.dependency_id, r.app, r.requirement, r.optional})
-      |> Hexpm.Repo.all
+    reqs = from(r in Requirement, select: {
+      r.release_id,
+      r.dependency_id,
+      r.app,
+      r.requirement,
+      r.optional
+    })
+    |> Hexpm.Repo.all()
 
     Enum.reduce(reqs, %{}, fn {rel_id, dep_id, app, req, opt}, map ->
       tuple = {dep_id, app, req, opt}
@@ -324,8 +331,8 @@ defmodule Hexpm.Repository.RegistryBuilder do
   end
 
   defp installs do
-    Install.all
-    |> Hexpm.Repo.all
+    Install.all()
+    |> Hexpm.Repo.all()
     |> Enum.map(&{&1.hex, &1.elixirs})
   end
 end

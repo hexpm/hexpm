@@ -112,7 +112,6 @@ defmodule Hexpm.Repository.Resolver do
   def versions(name, package_name), do: get_versions(name, package_name)
   def deps("hexpm", package, version), do: get_deps_new(Process.get(__MODULE__), package, version)
   def deps(name, package, version), do: get_deps_old(name, package, version)
-  def checksum(_name, _package, _version), do: raise "not implemented"
 
   def prefetch(packages) do
     packages = Enum.map(packages, fn {"hexpm", name} -> name end)
@@ -121,21 +120,21 @@ defmodule Hexpm.Repository.Resolver do
   def prefetch(name, packages) do
     packages =
       packages
-      |> Enum.uniq
+      |> Enum.uniq()
       |> Enum.reject(&:ets.member(name, {:versions, &1}))
 
     packages =
       from(p in Hexpm.Repository.Package,
            where: p.name in ^packages,
            select: {p.id, p.name})
-      |> Hexpm.Repo.all
-      |> Map.new
+      |> Hexpm.Repo.all()
+      |> Map.new()
 
     releases =
       from(r in Hexpm.Repository.Release,
            where: r.package_id in ^Map.keys(packages),
            select: {r.package_id, {r.id, r.version}})
-      |> Hexpm.Repo.all
+      |> Hexpm.Repo.all()
       |> Enum.group_by(&elem(&1, 0), &elem(&1, 1))
 
     versions =
@@ -183,34 +182,4 @@ defmodule Hexpm.Repository.Resolver do
         deps
     end
   end
-
-  def version(_name),
-    do: raise "not implemented"
-
-  def installs(_name),
-    do: raise "not implemented"
-
-  def stat(_name),
-    do: raise "not implemented"
-
-  def search(_name, _term),
-    do: raise "not implemented"
-
-  def all_packages(_name),
-    do: raise "not implemented"
-
-  def get_checksum(_name, _package, _version),
-    do: raise "not implemented"
-
-  def get_build_tools(_name, _package, _version),
-    do: raise "not implemented"
-
-  def retired(_name, _package, _version),
-    do: raise "not implemented"
-
-  def tarball_etag(_name, _package, _version),
-    do: raise "not implemented"
-
-  def tarball_etag(_name, _package, _version, _String_t),
-    do: raise "not implemented"
 end

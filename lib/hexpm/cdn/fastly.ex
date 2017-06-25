@@ -12,7 +12,7 @@ defmodule Hexpm.CDN.Fastly do
         {:ok, status, _, _} when status in [200, 404] ->
           :ok
       end
-    end, max_concurrency: 10, timeout: 60_000)
+    end, max_concurrency: 10, timeout: 10_000)
     |> Stream.run()
   end
 
@@ -24,7 +24,7 @@ defmodule Hexpm.CDN.Fastly do
     end
   end
 
-  def public_ips do
+  def public_ips() do
     {:ok, 200, _, body} = get("public-ip-list")
     Enum.map(body["addresses"], fn range ->
       [ip, mask] = String.split(range, "/")
@@ -32,7 +32,7 @@ defmodule Hexpm.CDN.Fastly do
     end)
   end
 
-  defp auth do
+  defp auth() do
     Application.get_env(:hexpm, :fastly_key)
   end
 
@@ -45,7 +45,7 @@ defmodule Hexpm.CDN.Fastly do
 
     body = Poison.encode!(body)
     retry(fn -> :hackney.post(url, headers, body, []) end, @retry_times)
-    |> read_body
+    |> read_body()
   end
 
   defp get(url) do
@@ -55,18 +55,18 @@ defmodule Hexpm.CDN.Fastly do
       "accept": "application/json"]
 
     retry(fn -> :hackney.get(url, headers, []) end, @retry_times)
-    |> read_body
+    |> read_body()
   end
 
-  # TODO: Check if we can remove this in hackney 2.0
-  #       https://github.com/benoitc/hackney/issues/161
   defp retry(fun, times) do
     case fun.() do
       {:error, reason} ->
         Logger.warn("Fastly API ERROR: #{inspect reason}")
-        if times > 0,
-          do: retry(fun, times - 1),
-        else: {:error, reason}
+        if times > 0 do
+          retry(fun, times - 1)
+        else
+          {:error, reason}
+        end
       result ->
         result
     end

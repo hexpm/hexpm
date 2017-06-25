@@ -51,12 +51,14 @@ defmodule Hexpm.Web.ViewIcons do
 
   Enum.each(glyphicons, fn %{unicode: unicode, d: d, x: x} ->
     # LOL xmerl
-    unicode = unicode |> Enum.reverse |> IO.iodata_to_binary
+    unicode = unicode |> Enum.reverse() |> IO.iodata_to_binary()
     name = case unicode do
       <<char::utf8>> ->
-        codepoint = Integer.to_string(char, 16)
-                    |> String.pad_leading(4, "0")
-                    |> String.downcase
+        codepoint =
+          char
+          |> Integer.to_string(16)
+          |> String.pad_leading(4, "0")
+          |> String.downcase
         Map.get(glyphicon_names, codepoint)
     end
 
