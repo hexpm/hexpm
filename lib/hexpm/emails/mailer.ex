@@ -5,22 +5,24 @@ defmodule Hexpm.Emails.Mailer do
     ses_rate = Application.get_env(:hexpm, :ses_rate) |> String.to_integer
 
     email
-    |> recipients
+    |> recipients()
     |> recipient_chunks(ses_rate)
     |> Enum.each(fn chunk ->
       Hexpm.Throttle.wait(Hexpm.SESThrottle, length(chunk))
+
       email
       |> Bamboo.Email.to(chunk)
-      |> Hexpm.Emails.Mailer.deliver_now
+      |> deliver_now()
     end)
   end
 
-  defp recipient_chunks(recipients, limit),
-    do: Enum.chunk(recipients, limit, limit, [])
+  defp recipient_chunks(recipients, limit) do
+    Enum.chunk(recipients, limit, limit, [])
+  end
 
   defp recipients(email) do
     email
-    |> Bamboo.Mailer.normalize_addresses
-    |> Bamboo.Email.all_recipients
+    |> Bamboo.Mailer.normalize_addresses()
+    |> Bamboo.Email.all_recipients()
   end
 end

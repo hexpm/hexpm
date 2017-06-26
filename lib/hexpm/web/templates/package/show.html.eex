@@ -5,7 +5,12 @@ licenses = @package.meta.licenses || []
 links = Enum.to_list(@package.meta.links || [])
 build_tools = @current_release && @current_release.meta.build_tools || []
 
-tools = [mix: "mix.exs", rebar: "rebar.config", erlang_mk: "erlang.mk"]
+tools = [
+  mix: "mix.exs",
+  rebar: "rebar.config",
+  erlang_mk: "erlang.mk"
+]
+
 tool_compatibility = %{
   "mix" => [:mix],
   "rebar" => [:mix, :rebar, :erlang_mk],
@@ -14,8 +19,10 @@ tool_compatibility = %{
   "erlang.mk" => [:mix, :erlang_mk]
 }
 
-compatible_tools = Enum.flat_map(build_tools, &(Map.get(tool_compatibility, &1, [])))
-                   |> Enum.uniq
+compatible_tools =
+  build_tools
+  |> Enum.flat_map(&(Map.get(tool_compatibility, &1, [])))
+  |> Enum.uniq()
 
 tools = Keyword.take(tools, compatible_tools)
 %>

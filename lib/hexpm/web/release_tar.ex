@@ -27,11 +27,12 @@ defmodule Hexpm.Web.ReleaseTar do
       {:ok, files} ->
         files = Enum.into(files, %{}, fn {name, binary} -> {List.to_string(name), binary} end)
 
-        meta = version(files)
-               |> if_ok(checksum)
-               |> if_ok(missing_files)
-               |> if_ok(unknown_files)
-               |> if_ok(meta)
+        meta =
+          version(files)
+          |> if_ok(checksum)
+          |> if_ok(missing_files)
+          |> if_ok(unknown_files)
+          |> if_ok(meta)
 
         case meta do
           {:ok, meta} ->
@@ -94,10 +95,7 @@ defmodule Hexpm.Web.ReleaseTar do
   defp meta(files, _version) do
     case Hexpm.Web.ConsultFormat.decode(files["metadata.config"]) do
       {:ok, meta} ->
-        meta =
-          meta
-          |> proplists_to_maps
-          |> guess_build_tool
+        meta = meta |> proplists_to_maps() |> guess_build_tool()
         {:ok, meta}
       {:error, reason} ->
         {:error, %{metadata: reason}}
@@ -109,14 +107,14 @@ defmodule Hexpm.Web.ReleaseTar do
     |> try_update("links", &try_into_map(&1))
     |> try_update("extra", &try_into_map(&1))
     |> try_update("requirements", fn reqs ->
-         if is_list(reqs) and is_list(List.first(reqs)) do
-           Enum.map(reqs, &try_into_map/1)
-         else
-           try_into_map(reqs, fn {key, value} ->
-             {key, try_into_map(value)}
-           end)
-         end
-       end)
+      if is_list(reqs) and is_list(List.first(reqs)) do
+        Enum.map(reqs, &try_into_map/1)
+      else
+        try_into_map(reqs, fn {key, value} ->
+          {key, try_into_map(value)}
+        end)
+      end
+    end)
   end
 
   @build_tools [
@@ -135,7 +133,7 @@ defmodule Hexpm.Web.ReleaseTar do
     base_files =
       (meta["files"] || [])
       |> Enum.filter(&(Path.dirname(&1) == "."))
-      |> MapSet.new
+      |> MapSet.new()
 
     build_tools =
       Enum.flat_map(@build_tools, fn {file, tool} ->
@@ -143,7 +141,7 @@ defmodule Hexpm.Web.ReleaseTar do
             do: [tool],
           else: []
       end)
-      |> Enum.uniq
+      |> Enum.uniq()
 
     if build_tools != [] do
       Map.put(meta, "build_tools", build_tools)

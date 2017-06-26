@@ -17,7 +17,7 @@ defmodule Hexpm.Repository.Packages do
 
   def owner?(package, user) do
     Package.is_owner(package, user)
-    |> Repo.one!
+    |> Repo.one!()
   end
 
   def preload(package) do
@@ -46,9 +46,7 @@ defmodule Hexpm.Repository.Packages do
     Package.all(page, packages_per_page, query, sort, nil)
     |> Ecto.Query.preload(releases: ^from(r in Release, select: map(r, [:version])))
     |> Repo.all()
-    |> Enum.map(fn package ->
-      update_in(package.releases, &Release.sort/1)
-    end)
+    |> Enum.map(fn package -> update_in(package.releases, &Release.sort/1) end)
   end
 
   def recent(count) do
@@ -57,13 +55,13 @@ defmodule Hexpm.Repository.Packages do
 
   def package_downloads(package) do
     PackageDownload.package(package)
-    |> Repo.all
+    |> Repo.all()
     |> Enum.into(%{})
   end
 
   def packages_downloads(packages, view) do
     PackageDownload.packages(packages, view)
-    |> Repo.all
+    |> Repo.all()
     |> Enum.into(%{})
   end
 
@@ -73,7 +71,7 @@ defmodule Hexpm.Repository.Packages do
 
   def total_downloads do
     PackageDownload.total
-    |> Repo.all
+    |> Repo.all()
     |> Enum.into(%{})
   end
 end

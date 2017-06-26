@@ -2,9 +2,7 @@ defmodule Hexpm.Web.DashboardControllerTest do
   # TODO: debug Bamboo.Test race conditions and change back to async: true
   use Hexpm.ConnCase, async: false
 
-  alias Hexpm.Accounts.Auth
-  alias Hexpm.Accounts.User
-  alias Hexpm.Accounts.Users
+  alias Hexpm.Accounts.{Auth, User, Users}
 
   defp add_email(user, email) do
     {:ok, user} = Users.add_email(user, %{email: email}, audit: {user, "TEST"})

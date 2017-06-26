@@ -7,7 +7,7 @@ defmodule Hexpm.Application do
     tmp_dir  = Application.get_env(:hexpm, :tmp_dir)
     ses_rate = Application.get_env(:hexpm, :ses_rate) |> String.to_integer
 
-    Hexpm.BlockAddress.start
+    Hexpm.BlockAddress.start()
 
     children = [
       supervisor(Hexpm.Repo, []),
@@ -31,12 +31,12 @@ defmodule Hexpm.Application do
 
   # Make sure we exit after hex client tests are finished running
   if Mix.env == :hex do
-    def shutdown_on_eof do
+    def shutdown_on_eof() do
       spawn_link(fn ->
         IO.gets(:stdio, '') == :eof && System.halt(0)
       end)
     end
   else
-    def shutdown_on_eof, do: nil
+    def shutdown_on_eof(), do: nil
   end
 end

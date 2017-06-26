@@ -8,7 +8,7 @@ defmodule Hexpm.Repository.Owners do
 
   def add(package, owner, [audit: audit_data]) do
     multi =
-      Multi.new
+      Multi.new()
       |> Multi.insert(:owner, Package.build_owner(package, owner), on_conflict: :nothing, conflict_target: [:package_id, :owner_id])
       |> audit(audit_data, "owner.add", {package, owner})
 
@@ -24,19 +24,20 @@ defmodule Hexpm.Repository.Owners do
   end
 
   def remove(package, owner, [audit: audit_data]) do
-    owners = package |> all |> Users.with_emails
+    owners = package |> all() |> Users.with_emails()
 
     if length(owners) == 1 do
       {:error, :last_owner}
     else
       multi =
-        Multi.new
+        Multi.new()
         |> Multi.delete_all(:package_owner, Package.owner(package, owner))
         |> audit(audit_data, "owner.remove", {package, owner})
 
       {:ok, _} = Repo.transaction(multi)
       owner = Enum.find(owners, &(&1.id == owner.id))
-      Emails.owner_removed(package, owners, owner) |> Mailer.deliver_now_throttled
+      Emails.owner_removed(package, owners, owner)
+      |> Mailer.deliver_now_throttled()
       :ok
     end
   end

@@ -24,7 +24,7 @@ defmodule Hexpm.Accounts.Users do
 
   def add(params, [audit: audit_data]) do
     multi =
-      Multi.new
+      Multi.new()
       |> Multi.insert(:user, User.build(params))
       |> audit_with_user(audit_data, "user.create", fn %{user: user} -> user end)
       |> audit_with_user(audit_data, "email.add", fn %{user: %{emails: [email]}} -> email end)
@@ -42,10 +42,12 @@ defmodule Hexpm.Accounts.Users do
 
   def update_profile(user, params, [audit: audit_data]) do
     multi =
-      Multi.new
+      Multi.new()
       |> Multi.update(:user, User.update_profile(user, params))
       |> audit(audit_data, "user.update", fn %{user: user} -> user end)
-      |> Multi.merge(fn %{user: user} -> public_email_multi(user, %{"email" => params["public_email"]}, [audit: audit_data]) end)
+      |> Multi.merge(fn %{user: user} ->
+        public_email_multi(user, %{"email" => params["public_email"]}, [audit: audit_data])
+      end)
 
     case Repo.transaction(multi) do
       {:ok, %{user: user}} ->
@@ -83,15 +85,15 @@ defmodule Hexpm.Accounts.Users do
   def password_reset_init(name, [audit: audit_data]) do
     if user = get(name) do
       {:ok, %{user: user}} =
-        Multi.new
+        Multi.new()
         |> Multi.update(:user, User.init_password_reset(user))
         |> audit(audit_data, "password.reset.init", nil)
-        |> Repo.transaction
+        |> Repo.transaction()
 
       user
-      |> with_emails
-      |> Emails.password_reset_request
-      |> Mailer.deliver_now_throttled
+      |> with_emails()
+      |> Emails.password_reset_request()
+      |> Mailer.deliver_now_throttled()
 
       :ok
     else
@@ -122,7 +124,7 @@ defmodule Hexpm.Accounts.Users do
     email = build_assoc(user, :emails)
 
     multi =
-      Multi.new
+      Multi.new()
       |> Multi.insert(:email, Email.changeset(email, :create, params))
       |> audit(audit_data, "email.add", fn %{email: email} -> email end)
 
@@ -146,10 +148,10 @@ defmodule Hexpm.Accounts.Users do
         {:error, :primary}
       true ->
         {:ok, _} =
-          Multi.new
+          Multi.new()
           |> Ecto.Multi.delete(:email, email)
           |> audit(audit_data, "email.add", email)
-          |> Repo.transaction
+          |> Repo.transaction()
         :ok
     end
   end
@@ -165,12 +167,12 @@ defmodule Hexpm.Accounts.Users do
         {:error, :not_verified}
       true ->
         {:ok, _} =
-          Multi.new
+          Multi.new()
           |> Multi.update(:reset, User.disable_password_reset(user))
           |> Multi.update(:old_primary, Email.toggle_primary(old_primary, false))
           |> Multi.update(:new_primary, Email.toggle_primary(new_primary, true))
           |> audit(audit_data, "email.primary", {old_primary, new_primary})
-          |> Repo.transaction
+          |> Repo.transaction()
         :ok
     end
   end
@@ -185,16 +187,16 @@ defmodule Hexpm.Accounts.Users do
   end
 
   defp public_email_multi(_user, %{"email" => nil}, _opts) do
-    Multi.new
+    Multi.new()
   end
 
   defp public_email_multi(user, %{"email" => "none"}, [audit: audit_data]) do
     if old_public = Enum.find(user.emails, &(&1.public)) do
-      Multi.new
+      Multi.new()
       |> Multi.update(:old_public, Email.toggle_public(old_public, false))
       |> audit(audit_data, "email.public", {old_public, nil})
     else
-      Multi.new
+      Multi.new()
     end
   end
 
@@ -208,12 +210,12 @@ defmodule Hexpm.Accounts.Users do
       !new_public.verified ->
         Multi.run(Multi.new, :public_email, fn _ -> {:error, :not_verified} end)
       old_public && new_public.id == old_public.id ->
-        Multi.new
+        Multi.new()
       true ->
         multi =
           if old_public,
             do: Multi.update(Multi.new, :old_public, Email.toggle_public(old_public, false)),
-          else: Multi.new
+          else: Multi.new()
 
         multi
         |> Multi.update(:new_public, Email.toggle_public(new_public, true))
@@ -230,7 +232,7 @@ defmodule Hexpm.Accounts.Users do
       email.verified ->
         {:error, :already_verified}
       true ->
-        Emails.verification(user, email) |> Mailer.deliver_now_throttled
+        Emails.verification(user, email) |> Mailer.deliver_now_throttled()
         :ok
     end
   end

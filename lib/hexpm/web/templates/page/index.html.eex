@@ -1,6 +1,5 @@
 <div class="featured-home">
   <div class="container">
-
     <%= render Hexpm.Web.LayoutView, "_flash.html", conn: @conn %>
 
     <div class="search-form">

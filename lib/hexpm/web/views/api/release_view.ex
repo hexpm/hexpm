@@ -1,45 +1,50 @@
 defmodule Hexpm.Web.API.ReleaseView do
   use Hexpm.Web, :view
-  import Ecto
+  alias Hexpm.Web.API.RetirementView
 
-  def render("index." <> _, %{releases: releases}),
-    do: render_many(releases, __MODULE__, "release")
-  def render("show." <> _, %{release: release}),
-    do: render_one(release, __MODULE__, "release")
+  def render("index." <> _, %{releases: releases}) do
+    render_many(releases, __MODULE__, "show")
+  end
+  def render("show." <> _, %{release: release}) do
+    render_one(release, __MODULE__, "show")
+  end
+  def render("minimal." <> _, %{release: release, package: package}) do
+    render_one(release, __MODULE__, "minimal", %{package: package})
+  end
 
-  def render("release", %{release: release}) do
-    package = release.package
+  def render("show", %{release: release}) do
+    %{
+      version: release.version,
+      has_docs: release.has_docs,
+      inserted_at: release.inserted_at,
+      updated_at: release.updated_at,
+      retirement: render_one(release.retirement, RetirementView, "show.json"),
+      package_url: api_package_url(Endpoint, :show, release.package),
+      url: api_release_url(Endpoint, :show, release.package, release),
+      requirements: requirements(release.requirements),
+      meta: %{
+        app: release.meta.app,
+        build_tools: Enum.uniq(release.meta.build_tools),
+        elixir: release.meta.elixir,
+      },
+    }
+    |> include_if_loaded(:downloads, release.downloads, &downloads/1)
+  end
 
-    reqs = Enum.into(release.requirements, %{}, fn req ->
+  def render("minimal", %{release: release, package: package}) do
+    %{
+      version: release.version,
+      url: api_release_url(Endpoint, :show, package, to_string(release.version)),
+    }
+  end
+
+  defp requirements(requirements) do
+    Enum.into(requirements, %{}, fn req ->
       {req.name, Map.take(req, ~w(app requirement optional)a)}
     end)
-
-    meta =
-      release.meta
-      |> Map.take([:app, :build_tools, :elixir])
-      |> Map.update!(:build_tools, &Enum.uniq/1)
-
-    retirement = if release.retirement do
-      release.retirement
-      |> Map.take([:reason, :message])
-    end
-
-    entity =
-      release
-      |> Map.take([:version, :has_docs, :inserted_at, :updated_at])
-      |> Map.put(:meta, meta)
-      |> Map.put(:retirement, retirement)
-      |> Map.put(:url, api_release_url(Endpoint, :show, package, release))
-      |> Map.put(:package_url, api_package_url(Endpoint, :show, package))
-      |> Map.put(:requirements, reqs)
-      |> if_value(release.has_docs, &Map.put(&1, :docs_url, Hexpm.Utils.docs_tarball_url(package, release)))
-      |> if_value(assoc_loaded?(release.downloads), &load_downloads(&1, release))
-
-    entity
   end
 
-  defp load_downloads(entity, release) do
-    downloads = if release.downloads, do: release.downloads.downloads, else: 0
-    Map.put(entity, :downloads, downloads)
-  end
+  defp downloads(%Ecto.Association.NotLoaded{}), do: 0
+  defp downloads(nil), do: 0
+  defp downloads(downloads), do: downloads.downloads
 end

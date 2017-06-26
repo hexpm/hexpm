@@ -15,7 +15,8 @@ defmodule Hexpm.Web.Session do
          true <- session && Plug.Crypto.secure_compare(token, session.token) do
       {{id, token}, session.data}
     else
-      _ -> {nil, %{}}
+      _ ->
+        {nil, %{}}
     end
   end
 

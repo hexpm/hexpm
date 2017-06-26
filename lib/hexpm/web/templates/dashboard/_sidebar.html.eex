@@ -2,7 +2,11 @@
   <div class="panel-heading">Account settings</div>
   <ul class="list-group">
     <%= for {id, name} <- pages() do %>
-    <li class="list-group-item <%= selected(@conn, id) %>"><a href="<%= dashboard_path(Endpoint, id) %>"><%= name %></a></li>
+      <li class="list-group-item <%= selected(@conn, id) %>">
+        <a href="<%= dashboard_path(Endpoint, id) %>">
+          <%= name %>
+        </a>
+      </li>
     <% end %>
   </ul>
 </div>

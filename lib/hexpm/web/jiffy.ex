@@ -19,12 +19,13 @@ defmodule Hexpm.Web.Jiffy do
 
   def encode!(term) do
     term
-    |> transform
-    |> do_encode
+    |> transform()
+    |> do_encode()
   end
 
-  def encode_to_iodata!(term),
-    do: encode!(term)
+  def encode_to_iodata!(term) do
+    encode!(term)
+  end
 
   defp do_encode(term) do
     :jiffy.encode(term, [:use_nil])
@@ -72,5 +73,7 @@ defmodule Hexpm.Web.Jiffy do
     |> :maps.from_list
   end
 
-  defp transform(other), do: other
+  defp transform(other) do
+    other
+  end
 end

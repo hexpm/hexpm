@@ -27,7 +27,7 @@ defmodule Hexpm.Repository.Release do
     |> validate_version(:version)
     |> validate_editable(:update, false)
     |> put_change(:checksum, String.upcase(checksum))
-    |> Requirement.build_all
+    |> Requirement.build_all()
   end
 
   def build(package, params, checksum) do
@@ -55,7 +55,6 @@ defmodule Hexpm.Repository.Release do
     |> put_embed(:retirement, nil)
   end
 
-  defp validate_editable(changeset, action, force)
   defp validate_editable(changeset, _action, true), do: changeset
   defp validate_editable(changeset, action, false) do
     if editable?(changeset.data) do
@@ -72,8 +71,8 @@ defmodule Hexpm.Repository.Release do
   defp editable?(release) do
     inserted_at =
       release.inserted_at
-      |> NaiveDateTime.to_erl
-      |> to_secs
+      |> NaiveDateTime.to_erl()
+      |> to_secs()
 
     now = to_secs(:calendar.universal_time)
     now - inserted_at <= 3600

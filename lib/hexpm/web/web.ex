@@ -27,7 +27,7 @@ defmodule Hexpm.Web do
 
       alias Ecto.Multi
 
-      Hexpm.Web.shared
+      Hexpm.Web.shared()
     end
   end
 
@@ -38,13 +38,11 @@ defmodule Hexpm.Web do
       import Ecto.Query, only: [from: 1, from: 2]
       import Hexpm.Accounts.AuditLog, only: [audit: 4, audit_many: 4, audit_with_user: 4]
 
-      alias Hexpm.Repo
       alias Ecto.Multi
 
-      alias Hexpm.Emails
-      alias Hexpm.Emails.Mailer
+      alias Hexpm.{Emails, Emails.Mailer, Repo}
 
-      Hexpm.Web.shared
+      Hexpm.Web.shared()
     end
   end
 
@@ -59,7 +57,7 @@ defmodule Hexpm.Web do
 
       alias Hexpm.Web.Endpoint
 
-      Hexpm.Web.shared
+      Hexpm.Web.shared()
     end
   end
 

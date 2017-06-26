@@ -31,7 +31,6 @@ keys =
     {bucket, region, Hexpm.Store.S3.list(region, bucket, prefix)}
   end)
 
-
 if action == "count" do
   keys
   |> Task.async_stream(fn {_bucket, _region, stream} ->

@@ -4,9 +4,9 @@ defmodule Hexpm.Web.API.PackageController do
   @sort_params ~w(name downloads inserted_at updated_at)
 
   def index(conn, params) do
-    page     = Hexpm.Utils.safe_int(params["page"])
-    search   = Hexpm.Utils.parse_search(params["search"])
-    sort     = Hexpm.Utils.safe_to_atom(params["sort"] || "name", @sort_params)
+    page = Hexpm.Utils.safe_int(params["page"])
+    search = Hexpm.Utils.parse_search(params["search"])
+    sort = Hexpm.Utils.safe_to_atom(params["sort"] || "name", @sort_params)
     packages = Packages.search_with_versions(page, 100, search, sort)
 
     when_stale(conn, packages, [modified: false], fn conn ->

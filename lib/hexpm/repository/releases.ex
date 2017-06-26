@@ -5,8 +5,8 @@ defmodule Hexpm.Repository.Releases do
 
   def all(package) do
     Release.all(package)
-    |> Repo.all
-    |> Release.sort
+    |> Repo.all()
+    |> Release.sort()
   end
 
   def recent(count) do
@@ -29,7 +29,7 @@ defmodule Hexpm.Repository.Releases do
 
   def package_versions(packages) do
     Release.package_versions(packages)
-    |> Repo.all
+    |> Repo.all()
     |> Enum.into(%{})
   end
 
@@ -40,14 +40,14 @@ defmodule Hexpm.Repository.Releases do
   end
 
   def publish(repository, package, user, body, meta, checksum, [audit: audit_data]) do
-    Multi.new
+    Multi.new()
     |> create_package(repository, package, user, meta)
     |> create_release(package, checksum, meta)
     |> audit_publish(audit_data)
     |> publish_release(body)
     |> refresh_package_dependants()
     |> Repo.transaction(timeout: @publish_timeout)
-    |> publish_result
+    |> publish_result()
   end
 
   def publish_docs(package, release, files, body, [audit: audit_data]) do
@@ -56,17 +56,17 @@ defmodule Hexpm.Repository.Releases do
       from(r in Release.all(package),
         where: r.has_docs == true or r.version == ^version,
         select: r.version)
-      |> Repo.all
+      |> Repo.all()
       |> Enum.reject(&(&1.pre != []))
       |> Enum.sort(&Version.compare(&1, &2) == :gt)
-      |> List.first
+      |> List.first()
 
     docs_for_latest_release = (latest_version != nil) && (release.version == latest_version)
 
     Assets.push_docs(release, files, body, docs_for_latest_release)
 
     multi =
-      Multi.new
+      Multi.new()
       |> Multi.update(:release, Ecto.Changeset.change(release, has_docs: true))
       |> Multi.update(:package, Ecto.Changeset.change(release.package, docs_updated_at: NaiveDateTime.utc_now))
       |> audit(audit_data, "docs.publish", {package, release})
@@ -83,7 +83,7 @@ defmodule Hexpm.Repository.Releases do
         where: fragment("NOT EXISTS (SELECT id FROM releases WHERE package_id = ?)", ^package.id)
       )
 
-    Multi.new
+    Multi.new()
     |> Multi.delete(:release, Release.delete(release))
     |> audit_revert(audit_data, package, release)
     |> Multi.delete_all(:package, delete_query)
@@ -94,7 +94,7 @@ defmodule Hexpm.Repository.Releases do
 
   def revert_docs(release, [audit: audit_data]) do
     multi =
-      Multi.new
+      Multi.new()
       |> Multi.update(:release, Ecto.Changeset.change(release, has_docs: false))
       |> Multi.update(:package, Ecto.Changeset.change(release.package, docs_updated_at: NaiveDateTime.utc_now))
       |> audit(audit_data, "docs.revert", {release.package, release})
@@ -107,21 +107,21 @@ defmodule Hexpm.Repository.Releases do
   def retire(package, release, params, [audit: audit_data]) do
     params = %{"retirement" => params}
 
-    Multi.new
+    Multi.new()
     |> Multi.run(:package, fn _ -> {:ok, package} end)
     |> Multi.update(:release, Release.retire(release, params))
     |> audit_retire(audit_data, package)
-    |> Repo.transaction
-    |> publish_result
+    |> Repo.transaction()
+    |> publish_result()
   end
 
   def unretire(package, release, [audit: audit_data]) do
-    Multi.new
+    Multi.new()
     |> Multi.run(:package, fn _ -> {:ok, package} end)
     |> Multi.update(:release, Release.unretire(release))
     |> audit_unretire(audit_data, package)
-    |> Repo.transaction
-    |> publish_result
+    |> Repo.transaction()
+    |> publish_result()
   end
 
   defp publish_result({:ok, %{package: package}} = result) do

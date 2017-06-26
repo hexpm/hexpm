@@ -2,9 +2,7 @@ defmodule Hexpm.Web.API.ReleaseControllerTest do
   use Hexpm.ConnCase, async: true
 
   alias Hexpm.Accounts.AuditLog
-  alias Hexpm.Repository.Package
-  alias Hexpm.Repository.Release
-  alias Hexpm.Repository.RegistryBuilder
+  alias Hexpm.Repository.{Package, RegistryBuilder, Release}
 
   setup do
     user = insert(:user)
