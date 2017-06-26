@@ -1,8 +1,7 @@
 defmodule Hexpm.Web.PasswordControllerTest do
-  use Hexpm.ConnCase, async: true
-  alias Hexpm.Accounts.Auth
-  alias Hexpm.Accounts.User
-  alias Hexpm.Accounts.Users
+  use Hexpm.ConnCase
+  alias Hexpm.Accounts.{Auth, Session, User}
+  alias Hexpm.Repo
 
   setup do
     user = insert(:user, password: Auth.gen_password("hunter42"))
@@ -20,8 +19,7 @@ defmodule Hexpm.Web.PasswordControllerTest do
 
     test "show select new password" do
       conn = build_conn()
-             |> test_put_session("reset_username", "username")
-             |> test_put_session("reset_key", "RESET_KEY")
+             |> Plug.Test.init_test_session(%{"reset_username" => "username", "reset_key" => "RESET_KEY"})
              |> get("password/new")
 
       assert conn.status == 200
@@ -34,18 +32,24 @@ defmodule Hexpm.Web.PasswordControllerTest do
     test "submit new password", c do
       username = c.user.username
       assert {:ok, {%User{username: ^username}, _, _}} = Auth.password_auth(username, "hunter42")
+      Repo.insert!(Session.build(%{"user_id" => c.user.id}))
+      Repo.insert!(Session.build(%{"user_id" => c.user.id}))
 
       # initiate password reset (usually done via api)
-      user = User.init_password_reset(c.user) |> Hexpm.Repo.update!
-      user = Users.sign_in(user)
+      user = User.init_password_reset(c.user) |> Repo.update!
 
       # chose new password (using token) to `abcd1234`
-      conn = post(build_conn(), "password/new", %{"user" => %{"username" => user.username, "key" => user.reset_key, "password" => "abcd1234"}})
+      conn =
+        build_conn()
+        |> test_login(user)
+        |> post("password/new", %{"user" => %{"username" => user.username, "key" => user.reset_key, "password" => "abcd1234"}})
       assert redirected_to(conn) == "/"
       assert get_flash(conn, :info) =~ "password has been changed"
+      refute get_session(conn, "user_id")
 
       # check new password will work
-      assert {:ok, {%User{username: ^username, session_key: nil}, _, _}} = Auth.password_auth(username, "abcd1234")
+      assert {:ok, {%User{username: ^username}, _, _}} = Auth.password_auth(username, "abcd1234")
+      refute last_session().data["user_id"]
     end
   end
 end

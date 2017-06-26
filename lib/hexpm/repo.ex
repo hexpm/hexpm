@@ -1,5 +1,6 @@
 defmodule Hexpm.Repo do
   use Ecto.Repo, otp_app: :hexpm
+  import Ecto.Query
 
   @advisory_locks %{
     registry: 1
@@ -36,5 +37,16 @@ defmodule Hexpm.Repo do
        [Map.fetch!(@advisory_locks, key)],
        opts)
     :ok
+  end
+
+  def pluck(q, field) when is_atom(field) do
+    pluck(q, [field]) |> Enum.map(&List.first/1)
+  end
+  def pluck(q, fields) when is_list(fields) do
+    select(q, [x], map(x, ^fields)) |> all() |> Enum.map(&take_values(&1, fields))
+  end
+
+  defp take_values(map, fields) when is_map(map) and is_list(fields) do
+    Enum.map(fields, &Map.fetch!(map, &1))
   end
 end

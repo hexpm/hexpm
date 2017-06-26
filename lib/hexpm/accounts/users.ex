@@ -6,6 +6,10 @@ defmodule Hexpm.Accounts.Users do
     |> Repo.one
   end
 
+  def get_by_id(id) do
+    Repo.get(User, id)
+  end
+
   def get_by_username(username) do
     Repo.get_by(User, username: username)
   end
@@ -34,18 +38,6 @@ defmodule Hexpm.Accounts.Users do
       {:error, :user, changeset, _} ->
         {:error, changeset}
     end
-  end
-
-  def signed_in?(user, session_key) do
-    user.session_key == session_key
-  end
-
-  def sign_in(%User{session_key: nil} = user) do
-    User.new_session(user)
-    |> Repo.update!
-  end
-  def sign_in(%User{} = user) do
-    user
   end
 
   def update_profile(user, params, [audit: audit_data]) do

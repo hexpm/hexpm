@@ -1,5 +1,5 @@
 defmodule Hexpm.Repository.PackageTest do
-  use Hexpm.DataCase, async: true
+  use Hexpm.DataCase
 
   alias Hexpm.Accounts.User
   alias Hexpm.Repository.Package
@@ -79,31 +79,37 @@ defmodule Hexpm.Repository.PackageTest do
       {"name:nerves* extra:foo,bar,baz", 2},
       {"name:nerves* extra:list,[1]", 1}]
     for {s, len} <- search do
-      p = Package.all(1, 10, s, nil)
-      |> Hexpm.Repo.all
+      p = Package.all(1, 10, s, nil) |> Hexpm.Repo.all
       assert length(p) == len
     end
   end
 
-  test "sort packages by downloads", %{user: user, repository: repository} do
-    phoenix =
-      Package.build(repository, user, pkg_meta(%{name: "phoenix", description: "Web framework"}))
-      |> Hexpm.Repo.insert!
-    rel =
-      Hexpm.Repository.Release.build(phoenix, rel_meta(%{version: "0.0.1", app: "phoenix"}), "")
-      |> Hexpm.Repo.insert!
-    Hexpm.Repo.insert!(%Hexpm.Repository.Download{release: rel, day: Date.utc_today, downloads: 10})
+  test "search dependants", %{repository: repository} do
+    insert(:package, name: "nerves", repository_id: repository.id)
+    poison = insert(:package, name: "poison", repository_id: repository.id)
+    ecto = insert(:package, name: "ecto", repository_id: repository.id)
+    phoenix = insert(:package, name: "phoenix", repository_id: repository.id)
+
+    rel = insert(:release, package: ecto)
+    insert(:requirement, release: rel, dependency: poison)
+    rel = insert(:release, package: phoenix)
+    insert(:requirement, release: rel, dependency: poison)
+    insert(:requirement, release: rel, dependency: ecto)
+
+    Hexpm.Repo.refresh_view(Hexpm.Repository.PackageDependant)
+
+    assert ["ecto", "phoenix"] = Package.all(1, 10, "depends:poison") |> Repo.pluck(:name)
+    assert ["phoenix"] = Package.all(1, 10, "depends:poison depends:ecto") |> Repo.pluck(:name)
+  end
+
+  test "sort packages by downloads", %{repository: repository} do
+    %{id: ecto_id} = insert(:package, repository_id: repository.id)
+    %{id: phoenix_id} = insert(:package, repository_id: repository.id)
+    insert(:release, package_id: phoenix_id, daily_downloads: [build(:download, downloads: 10)])
+    insert(:release, package_id: ecto_id, daily_downloads: [build(:download, downloads: 5)])
 
     :ok = Hexpm.Repo.refresh_view(Hexpm.Repository.PackageDownload)
 
-    Package.build(repository, user, pkg_meta(%{name: "ecto", description: "DSL"}))
-    |> Hexpm.Repo.insert!
-
-    packages =
-      Package.all(1, 10, nil, :downloads)
-      |> Hexpm.Repo.all
-      |> Enum.map(& &1.name)
-
-    assert packages == ["phoenix", "ecto"]
+    assert [^phoenix_id, ^ecto_id] = Package.all(1, 10, nil, :downloads) |> Repo.pluck(:id)
   end
 end

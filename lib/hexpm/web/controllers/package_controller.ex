@@ -79,18 +79,22 @@ defmodule Hexpm.Web.PackageController do
       end
 
     downloads = Packages.package_downloads(package)
-    owners = Owners.all(package) |> Users.with_emails
+    owners = Owners.all(package) |> Users.with_emails()
+    dependants = Packages.search(1, 20, "depends:#{package.name}", :downloads, [:name])
+    dependants_count = Packages.count("depends:#{package.name}")
 
     render conn, "show.html", [
-      title:             package.name,
-      description:       package.meta.description,
-      container:         "container package-view",
-      canonical_url:     package_url(conn, :show, package),
-      package:           package,
-      releases:          releases,
-      current_release:   release,
-      downloads:         downloads,
-      owners:            owners
+      title: package.name,
+      description: package.meta.description,
+      container: "container package-view",
+      canonical_url: package_url(conn, :show, package),
+      package: package,
+      releases: releases,
+      current_release: release,
+      downloads: downloads,
+      owners: owners,
+      dependants: dependants,
+      dependants_count: dependants_count
     ] ++ docs_assigns
   end
 

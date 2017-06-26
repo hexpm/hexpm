@@ -44,8 +44,8 @@ defmodule Hexpm.Repository.RegistryBuilder do
       {_, _, packages} = new
       new_keys = Enum.map(packages, &"packages/#{elem(&1, 0)}") |> Enum.sort
       old_keys = Hexpm.Store.list(nil, :s3_bucket, "packages/") |> Enum.sort
-      Hexpm.Store.delete_many(nil, :s3_bucket, old_keys -- new_keys, [])
 
+      Hexpm.Store.delete_many(nil, :s3_bucket, old_keys -- new_keys)
       Hexpm.CDN.purge_key(:fastly_hexrepo, "registry")
     end)
   end
@@ -75,7 +75,7 @@ defmodule Hexpm.Repository.RegistryBuilder do
           upload_files(ets, {names, versions, [{package, package_object}]})
         nil ->
           upload_files(ets, {names, versions, []})
-          Hexpm.Store.delete(nil, :s3_bucket, "packages/#{package}", [])
+          Hexpm.Store.delete(nil, :s3_bucket, "packages/#{package}")
       end
 
       Hexpm.CDN.purge_key(:fastly_hexrepo, ["registry-index", "registry-package-#{package}"])
@@ -220,7 +220,10 @@ defmodule Hexpm.Repository.RegistryBuilder do
 
   defp upload_files(v1, v2) do
     objects = v2_objects(v2) ++ v1_objects(v1)
-    Hexpm.Store.put_many(nil, :s3_bucket, objects, [])
+    Task.async_stream(objects, fn {key, data, opts} ->
+      Hexpm.Store.put(nil, :s3_bucket, key, data, opts)
+    end, max_concurrency: 10, timeout: 60_000)
+    |> Stream.run()
   end
 
   defp v1_objects(nil), do: []

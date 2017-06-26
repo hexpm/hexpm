@@ -6,7 +6,7 @@ defmodule Hexpm.Web.LoginController do
   def show(conn, _params) do
     if logged_in?(conn) do
       username = get_session(conn, "username")
-      path = conn.params["return"] || user_path(conn, :show, username)
+      path = conn.params["return"] || user_path(conn, :show, conn.assigns.logged_in)
       redirect(conn, to: path)
     else
       render_show(conn)
@@ -28,10 +28,11 @@ defmodule Hexpm.Web.LoginController do
     case password_auth(username, password) do
       {:ok, user} ->
         if user.twofactor.enabled do
-          # take user to 2FA
-        else
-          create_session(conn, user)
-        end
+
+        conn
+        |> configure_session(renew: true)
+        |> put_session("user_id", user.id)
+        |> redirect(to: path)
       {:error, reason} ->
         conn
         |> put_flash(:error, auth_error_message(reason))
@@ -67,7 +68,7 @@ defmodule Hexpm.Web.LoginController do
 
   def delete(conn, _params) do
     conn
-    |> delete_session("username")
+    |> delete_session("user_id")
     |> redirect(to: page_path(Hexpm.Web.Endpoint, :index))
   end
 

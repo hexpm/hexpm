@@ -35,15 +35,6 @@ defmodule Hexpm.Web.DashboardControllerTest do
     assert redirected_to(conn) == "/login?return=dashboard%2Fprofile"
   end
 
-  test "requires login after session key changes", c do
-    conn = build_conn()
-           |> test_login(c.user)
-           |> test_put_session("key", "WRONG")
-           |> get("dashboard/profile")
-
-    assert redirected_to(conn) == "/login?return=dashboard%2Fprofile"
-  end
-
   test "update profile", c do
     conn = build_conn()
            |> test_login(c.user)
@@ -197,11 +188,7 @@ defmodule Hexpm.Web.DashboardControllerTest do
 
     conn = post(build_conn(), "login", %{username: dup_email.email, password: c.password})
     assert redirected_to(conn) == "/users/#{c.user.username}"
-    assert get_session(conn, "username") == c.user.username
-
-    session_key = get_session(conn, "key")
-    assert <<_::binary-32>> = session_key
-    assert Users.get(c.user.username).session_key == session_key
+    assert get_session(conn, "user_id") == c.user.id
 
     conn = build_conn()
       |> get("email/verify", %{username: u2.user.username, email: dup_email.email, key: hd(u2.user.emails).verification_key})

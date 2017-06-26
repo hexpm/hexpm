@@ -1,12 +1,12 @@
 defmodule Hexpm.BlockAddress do
   @ets :blocked_addresses
 
-  def start do
+  def start() do
     :ets.new(@ets, [:named_table, :set, :public, read_concurrency: true])
     :ets.insert(@ets, {:loaded, false})
   end
 
-  def try_reload do
+  def try_reload() do
     case :ets.lookup(@ets, :loaded) do
       [{:loaded, false}] ->
         reload()
@@ -15,9 +15,11 @@ defmodule Hexpm.BlockAddress do
     end
   end
 
-  def reload do
-    all_ips = Hexpm.Repo.all(Hexpm.BlockAddress.Entry)
-              |> Enum.into(MapSet.new, & &1.ip)
+  def reload() do
+    all_ips =
+      Hexpm.BlockAddress.Entry
+      |> Hexpm.Repo.all()
+      |> Enum.into(MapSet.new, & &1.ip)
 
     old_ips = :ets.tab2list(@ets) |> Enum.map(&elem(&1, 0))
     old_ips = old_ips -- [:loaded]
@@ -30,6 +32,7 @@ defmodule Hexpm.BlockAddress do
     :ets.insert(@ets, {:loaded, true})
   end
 
-  def blocked?(ip),
-    do: match?([{^ip}], :ets.lookup(@ets, ip))
+  def blocked?(ip) do
+    match?([{^ip}], :ets.lookup(@ets, ip))
+  end
 end

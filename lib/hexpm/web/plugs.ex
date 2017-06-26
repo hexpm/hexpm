@@ -75,13 +75,12 @@ defmodule Hexpm.Web.Plugs do
   end
 
   def login(conn, _opts) do
-    username = get_session(conn, "username")
-    key = get_session(conn, "key")
+    user_id = get_session(conn, "user_id")
 
-    user = username && Hexpm.Accounts.Users.get_by_username(username)
+    user = user_id && Hexpm.Accounts.Users.get_by_id(user_id)
     user = user && Hexpm.Accounts.Users.with_emails(user)
 
-    if user && Hexpm.Accounts.Users.signed_in?(user, key) do
+    if user do
       assign(conn, :logged_in, user)
     else
       assign(conn, :logged_in, nil)
@@ -99,6 +98,23 @@ defmodule Hexpm.Web.Plugs do
       end
     else
       conn
+    end
+  end
+
+  def authenticate(conn, _opts) do
+    case Hexpm.Web.AuthHelpers.authenticate(conn) do
+      {:ok, {user, key, email}} ->
+        conn
+        |> assign(:user, user)
+        |> assign(:key, key)
+        |> assign(:email, email)
+      {:error, :missing} ->
+        conn
+        |> assign(:user, nil)
+        |> assign(:key, nil)
+        |> assign(:email, nil)
+      {:error, _} = error ->
+        Hexpm.Web.AuthHelpers.error(conn, error)
     end
   end
 

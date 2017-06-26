@@ -54,7 +54,7 @@ Any questions about this Privacy Policy should be addressed to <support@hex.pm>.
 
 ### Changes
 
-Although most changes are likely to be minor, hex.pm may change its Privacy Policy from time to time, and at hex.pm's sole discretion. The detailed history of changes can be found in the [git repository](https://github.com/hexpm/hexpm/blob/master/web/templates/policy/privacy.html.md) history for this document.
+Although most changes are likely to be minor, hex.pm may change its Privacy Policy from time to time, and at hex.pm's sole discretion. The detailed history of changes can be found in the [git repository](https://github.com/hexpm/hexpm/blob/master/lib/hexpm/web/templates/policy/privacy.html.md) history for this document.
 
 Hex.pm encourages visitors to frequently check this page for any changes to its Privacy Policy. Your continued use of the hex.pm websites and the repository after any change in this Privacy Policy will constitute your acceptance of such change.
 

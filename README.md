@@ -97,16 +97,6 @@ Again, if you want to use another database, user or password, you can specify th
 export TEST_DATABASE_URL='ecto://USER:PASSWORD@localhost/DATABASE'
 ```
 
-Test Coverage is currently provided by ExCoveralls.
-
-You can generate the HTML coverage report like so
-
-```shell
-MIX_ENV=test mix coveralls.html
-```
-
-Or visit the project Coveralls page at [https://coveralls.io/github/hexpm/hexpm](https://coveralls.io/github/hexpm/hexpm).
-
 ## License
 
     Copyright 2015 Eric Meadows-Jönsson

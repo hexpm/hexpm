@@ -28,6 +28,8 @@ defmodule Hexpm.Web.PasswordController do
     case Users.password_reset_finish(username, key, params, revoke_all_keys?, audit: audit_data(conn)) do
       :ok ->
         conn
+        |> clear_session()
+        |> configure_session(renew: true)
         |> put_flash(:info, "Your account password has been changed to your new password.")
         |> put_flash(:custom_location, true)
         |> redirect(to: page_path(Hexpm.Web.Endpoint, :index))

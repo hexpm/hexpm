@@ -5,7 +5,7 @@ config :hexpm,
   cookie_encr_salt: System.get_env("HEX_COOKIE_ENCRYPTION_SALT")
 
 config :hexpm, Hexpm.Web.Endpoint,
-  http: [port: {:system, "PORT"}],
+  http: [port: {:system, "PORT"}, compress: true],
   url: [host: System.get_env("HEX_URL"), scheme: "https", port: 443],
   force_ssl: [hsts: true, host: nil, rewrite_on: [:x_forwarded_proto]],
   cache_static_manifest: "priv/static/cache_manifest.json",
@@ -14,7 +14,8 @@ config :hexpm, Hexpm.Web.Endpoint,
 config :hexpm, Hexpm.Repo,
   adapter: Ecto.Adapters.Postgres,
   url: {:system, "DATABASE_URL"},
-  pool_size: System.get_env("NUM_DATABASE_CONNS") || 20,
+  pool_size: 20,
+  queue_size: 20 * 5,
   ssl: true
 
 config :comeonin,

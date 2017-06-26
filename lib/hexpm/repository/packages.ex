@@ -37,10 +37,15 @@ defmodule Hexpm.Repository.Packages do
     end)
   end
 
-  def search(page, packages_per_page, query, sort) do
-    Package.all(page, packages_per_page, query, sort)
+  def search(page, packages_per_page, query, sort, fields \\ nil) do
+    Package.all(page, packages_per_page, query, sort, fields)
+    |> Repo.all()
+  end
+
+  def search_with_versions(page, packages_per_page, query, sort) do
+    Package.all(page, packages_per_page, query, sort, nil)
     |> Ecto.Query.preload(releases: ^from(r in Release, select: map(r, [:version])))
-    |> Repo.all
+    |> Repo.all()
     |> Enum.map(fn package ->
       update_in(package.releases, &Release.sort/1)
     end)

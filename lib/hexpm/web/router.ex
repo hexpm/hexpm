@@ -19,6 +19,8 @@ defmodule Hexpm.Web.Router do
     plug :accepts, @accepted_formats
     plug :auth_gate
     plug :user_agent
+    plug :authenticate
+    plug Hexpm.Web.Plugs.Attack
     plug :fetch_body
     plug :read_body_finally
     plug :default_repository
@@ -28,6 +30,7 @@ defmodule Hexpm.Web.Router do
     plug :accepts, @accepted_formats
     plug :auth_gate
     plug :user_agent
+    plug :authenticate
     plug Hexpm.Web.Plugs.Attack
     plug :default_repository
   end

@@ -1,6 +1,7 @@
 defmodule Hexpm.Web.Plugs.AttackTest do
   use ExUnit.Case, async: true
   use Plug.Test
+  import Hexpm.Factory
 
   defmodule Hello do
     # need to use Phoenix.Controller because RateLimit.Plug uses ErrorView
@@ -16,90 +17,111 @@ defmodule Hexpm.Web.Plugs.AttackTest do
   end
 
   setup do
+    :ok = Ecto.Adapters.SQL.Sandbox.checkout(Hexpm.Repo)
     PlugAttack.Storage.Ets.clean(Hexpm.Web.Plugs.Attack)
-    :ok
+    %{user: insert(:user)}
   end
 
   describe "throttle" do
-
-    test "allows requests when limit is not exceeded" do
-      conn = request({0, 0, 0, 0})
+    test "allows unauthenticated requests when limit is not exceeded" do
+      conn = request_ip({0, 0, 0, 0})
       assert conn.status == 200
-      assert conn.resp_body == "Hello, World!"
       assert get_resp_header(conn, "x-ratelimit-limit") == ["100"]
       assert get_resp_header(conn, "x-ratelimit-remaining") == ["99"]
     end
 
-    test "halts requests when limit is exceeded" do
+    test "allows authenticated requests when limit is not exceeded", %{user: user} do
+      conn = request_user(user)
+      assert conn.status == 200
+      assert get_resp_header(conn, "x-ratelimit-limit") == ["500"]
+      assert get_resp_header(conn, "x-ratelimit-remaining") == ["499"]
+    end
+
+    test "halts requests when ip limit is exceeded" do
       Enum.each(99..0, fn i ->
-        conn = request({1, 1, 1, 1})
+        conn = request_ip({1, 1, 1, 1})
         assert conn.status == 200
         assert get_resp_header(conn, "x-ratelimit-remaining") == ["#{i}"]
       end)
 
-      conn = request({1, 1, 1, 1})
+      conn = request_ip({1, 1, 1, 1})
       assert conn.status == 429
-      assert conn.resp_body == Poison.encode!(%{status: 429, message: "API rate limit exceeded for 1.1.1.1"})
+      assert conn.resp_body == Poison.encode!(%{status: 429, message: "API rate limit exceeded for IP 1.1.1.1"})
+    end
+
+    test "halts requests when user limit is exceeded", %{user: user} do
+      Enum.each(499..0, fn i ->
+        conn = request_user(user)
+        assert conn.status == 200
+        assert get_resp_header(conn, "x-ratelimit-remaining") == ["#{i}"]
+      end)
+
+      conn = request_user(user)
+      assert conn.status == 429
+      assert conn.resp_body == Poison.encode!(%{status: 429, message: "API rate limit exceeded for user #{user.id}"})
     end
 
     test "allows requests again when limit expired" do
-      conn = request({2, 2, 2, 2})
+      conn = request_ip({2, 2, 2, 2})
       assert get_resp_header(conn, "x-ratelimit-remaining") == ["99"]
 
       PlugAttack.Storage.Ets.clean(Hexpm.Web.Plugs.Attack)
 
-      conn = request({2, 2, 2, 2})
+      conn = request_ip({2, 2, 2, 2})
       assert get_resp_header(conn, "x-ratelimit-remaining") == ["99"]
     end
 
     test "doesn't limit requests from 127.0.0.1" do
-      conn = request({127, 0, 0, 1})
+      conn = request_ip({127, 0, 0, 1})
       assert conn.status == 200
-      assert conn.resp_body == "Hello, World!"
-      assert get_resp_header(conn, "x-ratelimit-limit") == []
+      assert get_resp_header(conn, "x-ratelimit-remaining") == []
     end
   end
 
   describe "block addresses" do
-    setup do
-      :ok = Ecto.Adapters.SQL.Sandbox.checkout(Hexpm.Repo)
-    end
-
     test "allows requests from IPs that are not blocked" do
-      conn = request({0, 0, 0, 0})
+      conn = request_ip({0, 0, 0, 0})
       assert conn.status == 200
       assert conn.resp_body == "Hello, World!"
     end
 
     test "halts requests from IPs that are blocked" do
-      Hexpm.Repo.insert!(%Hexpm.BlockAddress.Entry{ip: "10.1.1.1", comment: "blocked"})
+      insert(:block_address, ip: "10.1.1.1")
       Hexpm.BlockAddress.reload
 
-      conn = request({10, 1, 1, 1})
+      conn = request_ip({10, 1, 1, 1})
       assert conn.status == 403
       assert conn.resp_body == Poison.encode!(%{status: 403, message: "Blocked"})
     end
 
     test "allows requests again when the IP is unblocked" do
-      blocked_address = Hexpm.Repo.insert!(%Hexpm.BlockAddress.Entry{ip: "20.2.2.2", comment: "blocked"})
+      blocked_address = insert(:block_address, ip: "20.2.2.2")
       Hexpm.BlockAddress.reload
 
-      conn = request({20, 2, 2, 2})
+      conn = request_ip({20, 2, 2, 2})
       assert conn.status == 403
       assert conn.resp_body == Poison.encode!(%{status: 403, message: "Blocked"})
 
       Hexpm.Repo.delete!(blocked_address)
       Hexpm.BlockAddress.reload
 
-      conn = request({20, 2, 2, 2})
+      conn = request_ip({20, 2, 2, 2})
       assert conn.status == 200
       assert conn.resp_body == "Hello, World!"
     end
   end
 
-  defp request(remote_ip) do
+  defp request_ip(remote_ip) do
     conn(:get, "/")
     |> Map.put(:remote_ip, remote_ip)
+    |> assign(:user, nil)
+    |> Hello.call(:index)
+  end
+
+  defp request_user(user) do
+    conn(:get, "/")
+    |> Map.put(:remote_ip, {10, 0, 0, 1})
+    |> assign(:user, user)
     |> Hello.call(:index)
   end
 end

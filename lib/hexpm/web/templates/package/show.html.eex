@@ -38,7 +38,7 @@ tools = Keyword.take(tools, compatible_tools)
 
 <%= if description do %>
   <div class="description">
-    <%= text_length(description,300) |> text_to_html(insert_brs: false) %>
+    <%= text_length(description, 300) |> text_to_html(insert_brs: false) %>
   </div>
 <% end %>
 
@@ -52,11 +52,11 @@ tools = Keyword.take(tools, compatible_tools)
     <%= if links != [] || (@hexdocs_url && @docs_tarball_url) do %>
       <h3>Links</h3>
       <ul class="links">
-        <%= for {name, link} <- links do %>
-        <li><a href="<%= link %>" rel="nofollow"><%= name %></a></li>
-        <% end %>
         <%= if @hexdocs_url && @docs_tarball_url do %>
-        <li><a href="<%= @hexdocs_url %>">Online documentation</a> (<a href="<%= @docs_tarball_url %>">download</a>)</li>
+          <li><a href="<%= @hexdocs_url %>">Online documentation</a> (<a href="<%= @docs_tarball_url %>">download</a>)</li>
+        <% end %>
+        <%= for {name, link} <- links do %>
+          <li><a href="<%= link %>" rel="nofollow"><%= name %></a></li>
         <% end %>
       </ul>
     <% end %>
@@ -186,5 +186,12 @@ tools = Keyword.take(tools, compatible_tools)
         </li>
       <% end %>
     </ul>
+
+    <h3>Dependents (<%= @dependants_count %>)</h3>
+    <%= safe_join(@dependants, ", ", fn package ->
+      link(package.name, to: package_path(Endpoint, :show, package.name))
+    end) %><%= if @dependants_count != 0 do %>,
+    <a href="<%= package_path(Endpoint, :index, search: "depends:#{@package.name}") %>">show all...</a>
+    <% end %>
   </div>
 </div>
