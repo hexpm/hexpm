@@ -2,7 +2,7 @@ defmodule Hexpm.Web.AuthHelpers do
   import Plug.Conn
   import Hexpm.Web.ControllerHelpers, only: [render_error: 3]
 
-  alias Hexpm.Accounts.Auth
+  alias Hexpm.Accounts.{Auth, TwoFactor}
 
   def authorized(conn, opts) do
     fun = Keyword.get(opts, :fun, fn _, _ -> true end)
@@ -47,8 +47,10 @@ defmodule Hexpm.Web.AuthHelpers do
         unauthorized(conn, "invalid username and password combination")
       {:error, :key} ->
         unauthorized(conn, "invalid username and API key combination")
-      {:error, :twofactor} ->
-        twofactor_required(conn, "totp") # TODO: change depending on type required
+      {:error, {:twofactor, :missing}} ->
+        twofactor_error(conn, "totp", "two-factor authentication required") # TODO: change depending on type required
+      {:error, {:twofactor, :incorrect}} ->
+        twofactor_error(conn, "totp", "invalid one-time password") # TODO: change depending on type required
       {:error, :unconfirmed} ->
         forbidden(conn, "email not verified")
       {:error, :revoked_key} ->
@@ -59,13 +61,26 @@ defmodule Hexpm.Web.AuthHelpers do
   end
 
   def authenticate(conn) do
-    case get_req_header(conn, "authorization") do
+    result = case get_req_header(conn, "authorization") do
       ["Basic " <> credentials] ->
         basic_auth(credentials)
       [key] ->
         key_auth(key)
       _ ->
         {:error, :missing}
+    end
+
+    case result do
+      {:ok, {user, key, email}} ->
+        if TwoFactor.enabled?(user.twofactor) do
+          case twofactor_auth(conn, user) do
+            {:ok, _user} -> {:ok, {user, key, email}}
+            {:error, reason} -> {:error, reason}
+          end
+        else
+          {:ok, {user, key, email}}
+        end
+      {:error, error} -> {:error, error}
     end
   end
 
@@ -98,16 +113,16 @@ defmodule Hexpm.Web.AuthHelpers do
           {:ok, user} ->
             {:ok, user}
           :error ->
-            {:error, :twofactor}
+            {:error, {:twofactor, :incorrect}}
         end
-      _ -> {:error, :twofactor}
+      _ -> {:error, {:twofactor, :missing}}
     end
   end
 
-  def twofactor_required(conn, type) do
+  def twofactor_error(conn, type, reason) do
     conn
     |> put_resp_header("x-hex-otp", "required; #{type}")
-    |> render_error(401, message: "two-factor authentication required")
+    |> render_error(401, message: reason)
   end
 
   def unauthorized(conn, reason) do

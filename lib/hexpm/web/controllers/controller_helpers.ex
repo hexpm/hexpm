@@ -273,9 +273,12 @@ defmodule Hexpm.Web.ControllerHelpers do
     end
   end
 
+  def auth_error_message(:sudo, :wrong), do: "Invalid password."
   def auth_error_message(:wrong), do: "Invalid username, email or password."
   def auth_error_message(:unconfirmed), do: "Email has not been verified yet."
-  def auth_error_message(:twofactor), do: "Two factor authentication required."
+  def auth_error_message(:twofactor, :missing), do: "Two factor authentication required."
+  def auth_error_message(:twofactor, :incorrect), do: "Invalid one-time password."
+  def auth_error_message(:expired), do: "Session timed out. Please login again."
 
   def requires_login(conn, _opts) do
     if logged_in?(conn) do
@@ -286,8 +289,59 @@ defmodule Hexpm.Web.ControllerHelpers do
     end
   end
 
+  # needs to be paired with `requires_login`!
+  def requires_sudo(conn, _opts) do
+    if sudomode?(conn) do
+      conn
+    else
+      redirect(conn, to: Hexpm.Web.Router.Helpers.login_path(conn, :show_sudo, return: conn.request_path))
+      |> halt
+    end
+  end
+
+  def session_exists?(conn), do: !!conn.assigns[:logged_in]
+
   def logged_in?(conn) do
-    !!conn.assigns[:logged_in]
+    if session_exists?(conn) do
+      case halfopen?(conn) do
+        :halfopen  -> false # 2fa is still required
+        :expired   -> false # session has timed out
+        :fullyopen -> true  # authentication is complete
+      end
+    else
+      false
+    end
+  end
+
+  def sudomode(conn, :enable), do: put_session(conn, "sudo", timestamp())
+
+  def sudomode?(conn) do
+    sudo = get_session(conn, "sudo")
+
+    if sudo do
+      timestamp = NaiveDateTime.from_iso8601!(sudo)
+      ttl = Application.get_env(:hexpm, :sudomode_ttl)
+
+      Hexpm.Utils.within_last_period(timestamp, ttl)
+    else
+      false
+    end
+  end
+
+  def halfopen(conn, :enable), do: put_session(conn, "halfopen", timestamp())
+  def halfopen(conn, :disable), do: delete_session(conn, "halfopen")
+
+  def halfopen?(conn) do
+    half = get_session(conn, "halfopen")
+
+    if half do
+      timestamp = NaiveDateTime.from_iso8601!(half)
+      ttl = Application.get_env(:hexpm, :halfopen_session_ttl)
+
+      if Hexpm.Utils.within_last_period(timestamp, ttl), do: :halfopen, else: :expired
+    else
+      :fullyopen
+    end
   end
 
   def nillify_params(conn, keys) do
@@ -320,4 +374,9 @@ defmodule Hexpm.Web.ControllerHelpers do
   defp scrub?(" " <> rest), do: scrub?(rest)
   defp scrub?(""), do: true
   defp scrub?(_), do: false
+
+  defp timestamp() do
+    NaiveDateTime.utc_now()
+    |> NaiveDateTime.to_iso8601()
+  end
 end

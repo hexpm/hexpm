@@ -81,7 +81,7 @@ defmodule Hexpm.Web.ViewIcons do
       |> Keyword.drop([:title])
 
     content_tag(:svg, opts) do
-      content_tag(:g, transform: "translate(0, 800) scale(1, -1)") do
+      content_tag(:g, transform: "translate(0, 825) scale(1, -1)") do
         [content_tag(:path, "", d: d), title]
       end
     end

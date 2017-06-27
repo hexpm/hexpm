@@ -41,12 +41,12 @@ export default class App {
   // 2FA: Create a text file with backup codes and download
   downloadBackupCode(event) {
     var button = $(event.currentTarget)
-    var text = button.attr('data-download-text')
-    var el = document.createElement('a')
+    var text = button.attr("data-download-text")
+    var el = document.createElement("a")
 
-    el.setAttribute('href', 'data:text/plain;charset=utf-8,' + encodeURIComponent(text))
-    el.setAttribute('download', 'hex_backup_codes.txt')
-    el.style.display = 'none'
+    el.setAttribute("href", "data:text/plain;charset=utf-8," + encodeURIComponent(text))
+    el.setAttribute("download", "hex_backup_codes.txt")
+    el.style.display = "none"
 
     document.body.appendChild(el)
     el.click()
@@ -56,21 +56,21 @@ export default class App {
   // 2FA: Copy backup codes to the clipboard
   copyBackupCode(event) {
     var button = $(event.currentTarget)
-    var el = document.createElement('textarea')
+    var el = document.createElement("textarea")
 
-    el.value = button.attr('data-clipboard-text')
-    el.setAttribute('readonly', '') // Prevent keyboard from showing on mobile
-    el.style.contain = 'strict'
-    el.style.all = 'unset'
-    el.style.position = 'absolute'
-    el.style.left = '-9999px'
-    el.style.fontSize = '12pt' // Prevent zooming on iOS
+    el.value = button.attr("data-clipboard-text")
+    el.setAttribute("readonly", "") // Prevent keyboard from showing on mobile
+    el.style.contain = "strict"
+    el.style.all = "unset"
+    el.style.position = "absolute"
+    el.style.left = "-9999px"
+    el.style.fontSize = "12pt" // Prevent zooming on iOS
     document.body.appendChild(el)
     el.select()
 
     let succeeded = false
     try {
-      succeeded = document.execCommand('copy')
+      succeeded = document.execCommand("copy")
     } catch (err) {}
 
     document.body.removeChild(el)

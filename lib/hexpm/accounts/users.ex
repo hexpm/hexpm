@@ -22,6 +22,10 @@ defmodule Hexpm.Accounts.Users do
     Repo.preload(user, :emails)
   end
 
+  def with_twofactor(user) do
+    Repo.preload(user, :twofactor)
+  end
+
   def add(params, [audit: audit_data]) do
     multi =
       Multi.new
@@ -86,7 +90,7 @@ defmodule Hexpm.Accounts.Users do
   def enable_twofactor(user, params, [audit: audit_data]) do
     multi =
       Multi.new
-      |> Multi.update(:user, User.enable_twofactor(user, params))
+      |> Multi.update(:user, User.toggle_twofactor(user, params, true))
       |> audit(audit_data, "twofactor.enable.finish", nil)
 
     case Repo.transaction(multi) do
@@ -102,14 +106,14 @@ defmodule Hexpm.Accounts.Users do
     end
   end
 
-  def disable_twofactor(user, params, [audit: audit_data]) do
+  def disable_twofactor(user, _params, [audit: audit_data]) do
     multi =
       Multi.new
-      |> Multi.update(:user, User.disable_twofactor(user, params))
+      |> Multi.delete(:twofactor, user.twofactor)
       |> audit(audit_data, "twofactor.disable", nil)
 
     case Repo.transaction(multi) do
-      {:ok, %{user: user}} ->
+      {:ok, _} ->
         user
         |> with_emails
         |> Emails.user_twofactor_disabled
@@ -138,7 +142,7 @@ defmodule Hexpm.Accounts.Users do
   def use_twofactor_backupcode(user, code, [audit: audit_data]) do
     multi =
       Multi.new
-      |> Multi.update(:user, User.use_twofactor_backupcode(user, code))
+      |> Multi.update(:user, User.use_twofactor_backupcode(user, %{}, code))
       |> audit(audit_data, "twofactor.backupcode.use", nil)
 
     case Repo.transaction(multi) do

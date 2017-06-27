@@ -20,7 +20,11 @@ config :hexpm,
   cookie_sign_salt: "lYEJ7Wc8jFwNrPke",
   cookie_encr_salt: "TZDiyTeFQ819hsC3",
 
+  sudomode_ttl: 15 * 60,
+  halfopen_session_ttl: 5 * 60,
+
   totp_encryption_secret: System.get_env("HEX_TOTP_SECRET") || "be944366eabe41f5efd07892c2d61754",
+  totp_encryption_rounds: 4_096, # 2^^12
 
   store_impl:   store,
   s3_url:       System.get_env("HEX_S3_URL") || "https://s3.amazonaws.com",

@@ -79,6 +79,7 @@ defmodule Hexpm.Web.Plugs do
 
     user = user_id && Hexpm.Accounts.Users.get_by_id(user_id)
     user = user && Hexpm.Accounts.Users.with_emails(user)
+    user = user && Hexpm.Accounts.Users.with_twofactor(user)
 
     if user do
       assign(conn, :logged_in, user)

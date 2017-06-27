@@ -25,28 +25,6 @@ defmodule Hexpm.Accounts.TOTP do
   def new(params \\ []), do: struct(__MODULE__, params)
 
   @doc """
-  Returns a new %TOTP{} struct with a decrypted `key`
-  """
-  def new_encrypted(params \\ []) do
-    params = Keyword.update(params, :key, "", fn enc ->
-      decrypt_secret(enc)
-    end)
-
-    params = Keyword.update(params, :backupcodes, [], fn enc ->
-      Enum.map(enc, fn enc ->
-        BackupCode.decrypt(enc)
-      end)
-    end)
-
-    struct(__MODULE__, params)
-  end
-
-  @doc """
-  Generate a Base32 encoded key of 20 bits.
-  """
-  def generate_key, do: :crypto.strong_rand_bytes(20) |> Base.encode32(case: :lower)
-
-  @doc """
   Generate a Key URI to create a QR Code for Google Authenticator given a %TOTP{} struct `t`.
   """
   def token(t) do
@@ -70,7 +48,8 @@ defmodule Hexpm.Accounts.TOTP do
   """
   def code(t) do
     options = [interval_length: t.interval, token_length: t.digits]
-    code = Comeonin.Otp.gen_totp(String.upcase(t.key), options)
+    key = String.upcase(t.key)
+    code = Comeonin.Otp.gen_totp(key, options)
 
     {code, t.interval}
   end
@@ -84,6 +63,7 @@ defmodule Hexpm.Accounts.TOTP do
       * used take into account clock skew
   """
   def verify(t, code, opts \\ []) do
+    key = String.upcase(t.key)
     window = Keyword.get(opts, :window, 1)
 
     options = [
@@ -92,7 +72,7 @@ defmodule Hexpm.Accounts.TOTP do
       token_length: t.digits
     ]
 
-    case Comeonin.Otp.check_totp(code, String.upcase(t.key), options) do
+    case Comeonin.Otp.check_totp(code, key, options) do
       true ->
         true
 
@@ -102,6 +82,7 @@ defmodule Hexpm.Accounts.TOTP do
         true
 
       _ ->
+        # ensure the code is formatted like a backup code
         if BackupCode.is?(code) do
           {:backupcode, code}
         else
@@ -109,6 +90,11 @@ defmodule Hexpm.Accounts.TOTP do
         end
     end
   end
+
+  @doc """
+  Generate a Base32 encoded key of 20 bits.
+  """
+  def generate_key(), do: :crypto.strong_rand_bytes(20) |> Base.encode32(case: :lower)
 
   def encrypt_secret(secret) do
     app_secret = Application.get_env(:hexpm, :totp_encryption_secret)

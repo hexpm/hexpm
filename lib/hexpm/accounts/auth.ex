@@ -16,7 +16,7 @@ defmodule Hexpm.Accounts.Auth do
       from(k in Key,
            where: k.secret_first == ^first,
            join: u in assoc(k, :user),
-           preload: [user: {u, :emails}])
+           preload: [user: {u, [:emails, :twofactor]}])
       |> Hexpm.Repo.one
 
     case result do
@@ -36,7 +36,7 @@ defmodule Hexpm.Accounts.Auth do
   end
 
   def password_auth(username_or_email, password) do
-    user = Users.get(username_or_email, [:emails])
+    user = Users.get(username_or_email, [:emails, :twofactor])
     if user && Comeonin.Bcrypt.checkpw(password, user.password) do
       {:ok, {user, nil, find_email(user, username_or_email)}}
     else
@@ -50,15 +50,18 @@ defmodule Hexpm.Accounts.Auth do
         case TOTP.verify(totp, code) do
           true ->
             {:ok, user}
+
+          false ->
+            :error
+
           {:backupcode, code} ->
-            if backup_allowed? && BackupCode.included?(user.twofactor.backupcodes, code) do
+            if backup_allowed? && BackupCode.included?(user.twofactor.data["backupcodes"], code) do
               {:backupcode, user, code}
             else
               :error
             end
-          false ->
-            :error
         end
+
       :disabled ->
         {:ok, user}
     end

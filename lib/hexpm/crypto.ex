@@ -19,13 +19,8 @@ defmodule Hexpm.Crypto do
     |> untag(tag)
   end
 
-  defp gen_salt do
-    :crypto.strong_rand_bytes(16)
-  end
-
-  defp iterations do
-    4_096 # 2^12
-  end
+  defp gen_salt(), do: :crypto.strong_rand_bytes(16)
+  defp iterations(), do: Application.get_env(:hexpm, :totp_encryption_rounds)
 
   defp pad(plain, size) do
     byte = size - rem(byte_size(plain), size)

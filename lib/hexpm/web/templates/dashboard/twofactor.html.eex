@@ -9,26 +9,44 @@
     <div class="panel panel-default">
       <div class="panel-heading">2FA</div>
       <div class="panel-body">
+        <%= if @enabled do %>
+          <p>
+            <span class="label label-success">Enabled <%= icon(:glyphicon, :ok) %></span>
+            Two-factor authentication is currently turned <strong>on</strong>.
+          </p>
+        <% else %>
+          <p>
+            <span class="label label-danger">Disabled <%= icon(:glyphicon, :remove) %></span>
+            Two-factor authentication is currently turned <strong>off</strong>.
+          </p>
+        <% end %>
+
+        <hr />
+
         <%= form_for @changeset, dashboard_path(Endpoint, :toggle_twofactor), [method: :post], fn f -> %>
           <%= inputs_for f, :twofactor, fn f -> %>
-            <div class="form-group">
-              <%= label f, :enabled, "Enabled?" %>
-              <%= checkbox f, :enabled %>
-            </div>
+            <%# This form allows the setting to be toggled, so enabled is equal to the opposite of the current state %>
+            <%= hidden_input f, :enabled, value: to_string(not @enabled) %>
 
-            <div class="form-group">
-              <%= label f, :type, "Type" %>
-              <%= select f, :type, @types %>
-            </div>
+            <%= if not @enabled do %>
+              <div class="form-group">
+                <%= label f, :type, "Type" %>
+                <%= select f, :type, @types %>
+              </div>
+            <% end %>
           <% end %>
 
-          <button type="submit" class="btn btn-primary">Save</button>
+          <%= if @enabled do %>
+            <button type="submit" class="btn btn-danger">Disable 2FA</button>
+          <% else %>
+            <button type="submit" class="btn btn-success">Enable 2FA</button>
+          <% end %>
         <% end %>
       </div>
     </div>
 
     <%= if @enabled do %>
-      <%= render "_recoverycodes.html", backupcodes: @backupcodes, changeset: @changeset %>
+      <%= render "_backupcodes.html", backupcodes: @backupcodes, changeset: @changeset %>
     <% end %>
   </div>
 </div>

@@ -46,6 +46,8 @@ defmodule Hexpm.Web.Router do
     post "/login",  LoginController, :create
     get  "/login/totp",  LoginController, :show_twofactor_totp
     post "/login/totp",  LoginController, :create_twofactor_totp
+    get  "/login/sudo",  LoginController, :show_sudo
+    post "/login/sudo",  LoginController, :create_sudo
     post "/logout", LoginController, :delete
 
     get  "/signup",  SignupController, :show

@@ -18,7 +18,7 @@ defmodule Hexpm.Accounts.BackupCode do
   Checks if a list (`encrypted`) of encrypted backup codes contains
   the given code (`code`).
 
-  Expensive operation (can be ~800ms!)
+  Expensive operation (can be ~400ms!)
   """
   def included?(encrypted, code) do
     decrypt(encrypted)

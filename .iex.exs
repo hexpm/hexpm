@@ -1,14 +1,15 @@
 alias Hexpm.Repo
 alias Hexpm.{
   Accounts.AuditLog,
+  Accounts.BackupCode,
   Accounts.Email,
   Accounts.Key,
   Accounts.Keys,
   Accounts.Session,
   Accounts.TOTP,
+  Accounts.TwoFactor,
   Accounts.User,
   Accounts.UserHandles,
-  Accounts.UserTwoFactor,
   Accounts.Users,
   Emails,
   Emails.Mailer,

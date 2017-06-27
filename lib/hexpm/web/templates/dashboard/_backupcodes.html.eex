@@ -41,7 +41,10 @@ clipboard = Enum.join(@backupcodes, "\n")
         </button>
 
         <button type="button" class="btn btn-success backup-copy-button" data-clipboard-text="<%= clipboard %>">
-          Copy <%= icon(:glyphicon, :copy) %>
+          Copy
+          <%= icon(:glyphicon, :copy) %>
+          <%= icon(:glyphicon, :remove, style: "display: none") %>
+          <%= icon(:glyphicon, :ok, style: "display: none") %>
         </button>
 
         <button type="submit" class="btn btn-danger">

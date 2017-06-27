@@ -1,7 +1,10 @@
 defmodule Hexpm.Web.DashboardController do
   use Hexpm.Web, :controller
 
+  @sudo ~w(twofactor toggle_twofactor show_qrcode_twofactor confirm_twofactor regen_backup_twofactor)a
+
   plug :requires_login
+  plug :requires_sudo when action in @sudo
 
   def index(conn, _params) do
     redirect(conn, to: dashboard_path(conn, :profile))
@@ -136,7 +139,7 @@ defmodule Hexpm.Web.DashboardController do
   def twofactor(conn, _params) do
     user = conn.assigns.logged_in
     changeset = User.setup_twofactor(user, %{})
-    enabled? = user.twofactor.enabled
+    enabled? = TwoFactor.enabled?(user.twofactor)
     backupcodes = User.backupcodes(user)
 
     render_twofactor(conn, changeset, backupcodes, enabled?)
@@ -144,55 +147,60 @@ defmodule Hexpm.Web.DashboardController do
 
   def toggle_twofactor(conn, params) do
     user = conn.assigns.logged_in
-    enabled? = user.twofactor.enabled
+    enabled? = params["user"]["twofactor"]["enabled"]
 
-    if enabled? do
-      case Users.disable_twofactor(user, params["user"], audit: audit_data(conn)) do
-        {:ok, _user} ->
-          conn
-          |> put_flash(:info, "Two-factor authentication is now disabled.")
-          |> redirect(to: dashboard_path(conn, :twofactor))
-        {:error, _changeset} ->
-          conn
-          |> put_flash(:error, "An internal error occured. Please try again.")
-          |> redirect(to: dashboard_path(conn, :twofactor))
+    if Hexpm.Utils.parse_bool(enabled?) do
+      if TwoFactor.enabled?(user.twofactor) do
+        # do not enable if 2fa is currently set up.
+        redirect(conn, to: dashboard_path(conn, :twofactor))
+      else
+        case Users.setup_twofactor(user, params["user"], audit: audit_data(conn)) do
+          {:ok, _user} ->
+            redirect(conn, to: dashboard_path(conn, :show_qrcode_twofactor))
+          {:error, _changeset} ->
+            conn
+            |> put_flash(:error, "An internal error occured. Please try again.")
+            |> redirect(to: dashboard_path(conn, :twofactor))
+        end
       end
     else
-      # TODO: check that this hasn't already been done
-      case Users.setup_twofactor(user, params["user"], audit: audit_data(conn)) do
-        {:ok, _user} ->
-          conn
-          |> redirect(to: dashboard_path(conn, :show_qrcode_twofactor))
-        {:error, _changeset} ->
-          conn
-          |> put_flash(:error, "An internal error occured. Please try again.")
-          |> redirect(to: dashboard_path(conn, :twofactor))
+      if not TwoFactor.enabled?(user.twofactor) do
+        # do not disable if 2fa is currently disabled.
+        redirect(conn, to: dashboard_path(conn, :twofactor))
+      else
+        case Users.disable_twofactor(user, params["user"], audit: audit_data(conn)) do
+          {:ok, _user} ->
+            conn
+            |> put_flash(:info, "Two-factor authentication is now disabled.")
+            |> redirect(to: dashboard_path(conn, :twofactor))
+          {:error, _changeset} ->
+            conn
+            |> put_flash(:error, "An internal error occured. Please try again.")
+            |> redirect(to: dashboard_path(conn, :twofactor))
+        end
       end
     end
   end
 
   def show_qrcode_twofactor(conn, _params) do
     user = conn.assigns.logged_in
-
-    enabled? = user.twofactor.enabled
-    secret_set? = String.length(user.twofactor.secret) > 0 # TODO: better approach
+    enabled? = TwoFactor.enabled?(user.twofactor)
+    secret_set? = String.length(user.twofactor.data["secret"]) > 0 # TODO: better approach
 
     if !enabled? and secret_set? do
       changeset = User.setup_twofactor(user, %{})
       totp = User.totp(user, true)
       render_twofactor_confirm_totp(conn, changeset, totp)
     else
-      conn
-      |> redirect(to: dashboard_path(conn, :twofactor))
+      redirect(conn, to: dashboard_path(conn, :twofactor))
     end
   end
 
   def confirm_twofactor(conn, params) do
     user = conn.assigns.logged_in
     totp = User.totp(user, true)
-    pin = params["pin"]
 
-    case TOTP.verify(totp, pin) do
+    case TOTP.verify(totp, params["otp"]) do
       true ->
         case Users.enable_twofactor(user, params["user"], audit: audit_data(conn)) do
           {:ok, _user} ->
@@ -204,7 +212,7 @@ defmodule Hexpm.Web.DashboardController do
             |> put_flash(:error, "An internal error occured. Please try again.")
             |> redirect(to: dashboard_path(conn, :show_qrcode_twofactor))
         end
-      _ ->
+      _ -> # catches incorrect codes and backup codes
         conn
         |> put_flash(:error, "The code you entered was incorrect.")
         |> redirect(to: dashboard_path(conn, :show_qrcode_twofactor))

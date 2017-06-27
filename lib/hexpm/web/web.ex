@@ -106,6 +106,7 @@ defmodule Hexpm.Web do
         Accounts.Keys,
         Accounts.Session,
         Accounts.TOTP,
+        Accounts.TwoFactor,
         Accounts.User,
         Accounts.UserHandles,
         Accounts.UserTwoFactor,

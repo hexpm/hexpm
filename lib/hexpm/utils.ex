@@ -74,6 +74,10 @@ defmodule Hexpm.Utils do
     end
   end
 
+  def parse_bool(bool) when is_boolean(bool), do: bool
+  def parse_bool("false"), do: false
+  def parse_bool("true"), do: true
+
   def parse_search(nil), do: nil
   def parse_search(""), do: nil
   def parse_search(search), do: String.trim(search)
@@ -92,6 +96,16 @@ defmodule Hexpm.Utils do
                 :calendar.universal_time)
 
     diff < (24 * 60 * 60)
+  end
+
+  @doc """
+  Determine if a given timestamp is less than `period` seconds old
+  """
+  def within_last_period(a, period) do
+    diff = diff(NaiveDateTime.to_erl(a),
+                :calendar.universal_time)
+
+    diff < period
   end
 
   def etag(nil), do: nil

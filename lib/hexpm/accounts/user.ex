@@ -13,7 +13,8 @@ defmodule Hexpm.Accounts.User do
     field :reset_expiry, :naive_datetime
 
     embeds_one :handles, UserHandles, on_replace: :delete
-    embeds_one :twofactor, UserTwoFactor, on_replace: :delete
+
+    has_one :twofactor, TwoFactor
 
     has_many :emails, Email
     has_many :package_owners, PackageOwner, foreign_key: :owner_id
@@ -44,10 +45,12 @@ defmodule Hexpm.Accounts.User do
   end
 
   def totp(user, force? \\ false) do
-    if force? or user.twofactor.enabled do
-      TOTP.new_encrypted([
+    if force? or TwoFactor.enabled?(user.twofactor) do
+      secret = TOTP.decrypt_secret(user.twofactor.data["secret"])
+
+      TOTP.new([
         account_name: user.username,
-        key: user.twofactor.secret
+        key: secret
       ])
     else
       :disabled
@@ -55,8 +58,8 @@ defmodule Hexpm.Accounts.User do
   end
 
   def backupcodes(user, force? \\ false) do
-    if force? or user.twofactor.enabled do
-      BackupCode.decrypt(user.twofactor.backupcodes)
+    if force? or TwoFactor.enabled?(user.twofactor) do
+      BackupCode.decrypt(user.twofactor.data["backupcodes"])
     else
       []
     end
@@ -67,39 +70,24 @@ defmodule Hexpm.Accounts.User do
     |> cast_embed(:handles)
   end
 
+  def toggle_twofactor(user, params, flag) do
+    cast(user, params, ~w())
+    |> cast_assoc(:twofactor, with: &TwoFactor.toggle_enabled(&1, &2, flag))
+  end
+
   def setup_twofactor(user, params) do
     cast(user, params, ~w())
-    |> cast_embed(:twofactor, with: &UserTwoFactor.setup/2)
-  end
-
-  def enable_twofactor(user, params) do
-    cast(user, params, ~w())
-    |> cast_embed(:twofactor, with: &UserTwoFactor.enable/2)
-  end
-
-  def disable_twofactor(user, params) do
-    cast(user, params, ~w())
-    |> cast_embed(:twofactor, with: &UserTwoFactor.disable/2)
+    |> cast_assoc(:twofactor, with: &TwoFactor.setup(&1, &2, :totp))
   end
 
   def regen_twofactor_backupcodes(user, params) do
     cast(user, params, ~w())
-    |> cast_embed(:twofactor, with: &UserTwoFactor.regen_backup_codes/2)
+    |> cast_assoc(:twofactor, with: &TwoFactor.regen_backupcodes(&1, &2))
   end
 
-  def use_twofactor_backupcode(user, code) do
-    decrypted = BackupCode.decrypt(user.twofactor.backupcodes)
-    new = List.delete(decrypted, code) |> BackupCode.encrypt
-
-    params = %{
-      :twofactor => %{
-        :id => user.twofactor.id,
-        :backupcodes => new
-      }
-    }
-
+  def use_twofactor_backupcode(user, params, code) do
     cast(user, params, ~w())
-    |> cast_embed(:twofactor, with: &UserTwoFactor.use_backup_code/2)
+    |> cast_assoc(:twofactor, with: &TwoFactor.use_backupcode(&1, &2, code))
   end
 
   def update_password_no_check(user, params) do
