@@ -104,7 +104,7 @@ defmodule Hexpm.Repository.ReleaseTest do
            |> Hexpm.Repo.insert
   end
 
-  test "update release", %{packages: [_, package2, package3] } do
+  test "update release", %{packages: [_, package2, package3]} do
     Release.build(package3, rel_meta(%{version: "0.0.1", app: package3.name}), "") |> Hexpm.Repo.insert!
     reqs = [%{name: package3.name, app: package3.name, requirement: "~> 0.0.1", optional: false}]
     release = Release.build(package2, rel_meta(%{version: "0.0.1", app: package2.name, requirements: reqs}), "") |> Hexpm.Repo.insert!
@@ -119,6 +119,16 @@ defmodule Hexpm.Repository.ReleaseTest do
               |> Hexpm.Repo.preload(:requirements)
     assert [%{dependency_id: ^package3_id, app: ^package3_name, requirement: ">= 0.0.1", optional: false}] =
            release.requirements
+  end
+
+  test "do not allow pre-release dependencies of stable releases", %{packages: [_, package2, package3]} do
+    Release.build(package3, rel_meta(%{version: "0.0.1-dev", app: package3.name}), "") |> Hexpm.Repo.insert!
+    reqs = [%{name: package3.name, app: package3.name, requirement: "~> 0.0.1-alpha", optional: false}]
+    assert {:error, changeset} = Release.build(package2, rel_meta(%{version: "0.0.1", app: package2.name, requirements: reqs}), "") |> Hexpm.Repo.insert
+    assert [requirement: {"invalid requirement: \"~> 0.0.1-alpha\", unstable requirements are not allowed for stable releases", []}] =
+           hd(changeset.changes.requirements).errors
+
+    Release.build(package2, rel_meta(%{version: "0.0.1-dev", app: package2.name, requirements: reqs}), "") |> Hexpm.Repo.insert!
   end
 
   test "delete release", %{packages: [_, package2, package3]} do
