@@ -36,14 +36,10 @@ defmodule Hexpm.Accounts.Keys do
     end
   end
 
-  def remove_all(user, opts) do
-    remove_all_multi(user, opts) |> Repo.transaction()
-  end
-
-  @doc false
-  def remove_all_multi(user, [audit: audit_data]) do
+  def remove_all(user, [audit: audit_data]) do
     Multi.new()
     |> Multi.update_all(:keys, Key.revoke_all(user), [])
     |> audit_many(audit_data, "key.remove", all(user))
+    |> Repo.transaction()
   end
 end

@@ -59,7 +59,7 @@ defmodule Hexpm.Accounts.Users do
 
   def update_password(user, params, [audit: audit_data]) do
     multi =
-      Multi.new()
+      Multi.new
       |> Multi.update(:user, User.update_password(user, params))
       |> audit(audit_data, "password.update", nil)
 
@@ -106,12 +106,8 @@ defmodule Hexpm.Accounts.Users do
 
     if user && User.password_reset?(user, key) do
       multi =
-        Multi.new()
-        |> Multi.update(:password, User.update_password_no_check(user, params))
-        |> Multi.update(:reset, User.disable_password_reset(user))
-        |> Multi.delete_all(:reset_sessions, Session.by_user(user))
+        User.password_reset(user, params, revoke_all_keys?)
         |> audit(audit_data, "password.reset.finish", nil)
-        |> maybe_revoke_all_keys(revoke_all_keys?, user, audit_data)
 
       case Repo.transaction(multi) do
         {:ok, _} ->
@@ -123,11 +119,6 @@ defmodule Hexpm.Accounts.Users do
       :error
     end
   end
-
-  defp maybe_revoke_all_keys(multi, false, _, _),
-    do: multi
-  defp maybe_revoke_all_keys(multi, true, user, audit_data),
-    do: Multi.append(multi, Keys.remove_all_multi(user, [audit: audit_data]))
 
   def add_email(user, params, [audit: audit_data]) do
     email = build_assoc(user, :emails)
