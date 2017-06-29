@@ -1,6 +1,6 @@
 defmodule Hexpm.Web.PasswordControllerTest do
   use Hexpm.ConnCase
-  alias Hexpm.Accounts.{Auth, Session, User}
+  alias Hexpm.Accounts.{AuditLog, Auth, Key, Session, User}
   alias Hexpm.Repo
 
   setup do
@@ -31,6 +31,7 @@ defmodule Hexpm.Web.PasswordControllerTest do
   describe "POST /password/new" do
     test "submit new password", c do
       username = c.user.username
+      key = insert(:key, user: c.user)
       assert {:ok, {%User{username: ^username}, _, _}} = Auth.password_auth(username, "hunter42")
       Repo.insert!(Session.build(%{"user_id" => c.user.id}))
       Repo.insert!(Session.build(%{"user_id" => c.user.id}))
@@ -47,9 +48,14 @@ defmodule Hexpm.Web.PasswordControllerTest do
       assert get_flash(conn, :info) =~ "password has been changed"
       refute get_session(conn, "user_id")
 
+      # key is revoked
+      assert Repo.get!(Key, key.id).revoked_at
+
       # check new password will work
       assert {:ok, {%User{username: ^username}, _, _}} = Auth.password_auth(username, "abcd1234")
       refute last_session().data["user_id"]
+
+      assert [%AuditLog{action: "password.reset.finish"}, %AuditLog{action: "key.remove"}] = Repo.all(AuditLog)
     end
   end
 end
