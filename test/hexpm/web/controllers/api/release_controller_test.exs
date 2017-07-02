@@ -185,6 +185,30 @@ defmodule Hexpm.Web.API.ReleaseControllerTest do
              Hexpm.Repo.all(AuditLog)
     end
 
+    test "update release with different and unresolved requirements", %{user: user, package: package} do
+      name = Fake.sequence(:package)
+      reqs = [%{name: package.name, requirement: "~> 0.0.1", app: "app", optional: false}]
+      meta = %{name: name, version: "0.0.1", requirements: reqs, description: "description"}
+      conn = build_conn()
+             |> put_req_header("content-type", "application/octet-stream")
+             |> put_req_header("authorization", key_for(user))
+             |> post("api/packages/#{meta.name}/releases", create_tar(meta, []))
+
+      result = json_response(conn, 201)
+      assert result["requirements"] == %{package.name => %{"app" => "app", "optional" => false, "requirement" => "~> 0.0.1"}}
+
+      # re-publish with unresolved requirement
+      reqs = [%{name: package.name, requirement: "~> 9.0", app: "app", optional: false}]
+      meta = %{name: name, version: "0.0.1", requirements: reqs, description: "description"}
+      conn = build_conn()
+             |> put_req_header("content-type", "application/octet-stream")
+             |> put_req_header("authorization", key_for(user))
+             |> post("api/packages/#{meta.name}/releases", create_tar(meta, []))
+
+      result = json_response(conn, 422)
+      assert result["errors"]["requirements"][package.name] =~ ~s(Failed to use "#{package.name}")
+    end
+
     test "cannot update release after grace period", %{user: user, package: package, release: release} do
       Ecto.Changeset.change(release, inserted_at: %{NaiveDateTime.utc_now | year: 2000})
       |> Hexpm.Repo.update!
