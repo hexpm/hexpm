@@ -6,6 +6,8 @@ defmodule Hexpm.Repository.RepositoryUser do
 
     belongs_to :repository, Repository
     belongs_to :user, User
+
+    timestamps()
   end
 
   # @roles ["owner", "admin", "write", "read"]
