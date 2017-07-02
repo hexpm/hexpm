@@ -5,7 +5,7 @@ defmodule Hexpm.Repository.Requirement do
   schema "requirements" do
     field :app, :string
     field :requirement, :string
-    field :optional, :boolean
+    field :optional, :boolean, default: false
 
     # The name of the dependency used to find the package
     field :name, :string, virtual: true
