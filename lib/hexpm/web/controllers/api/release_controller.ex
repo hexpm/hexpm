@@ -70,7 +70,7 @@ defmodule Hexpm.Web.API.ReleaseController do
     requirements =
       Enum.map(requirements, fn
         %{errors: errors} = req ->
-          name = Ecto.Changeset.get_change(req, :name)
+          name = Ecto.Changeset.get_field(req, :name)
           %{req | errors: for({_, v} <- errors, do: {name, v}, into: %{})}
       end)
 
