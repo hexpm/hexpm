@@ -27,7 +27,7 @@ defmodule Hexpm.Web.API.PackageView do
     |> include_if_loaded(:owners, package.owners, UserView, "minimal.json")
     |> group_downloads()
   end
-  
+
   defp group_downloads(%{downloads: downloads} = package) do
     Map.put(package, :downloads, Enum.reduce(downloads, %{}, &Map.merge(&1, &2)))
   end
