@@ -60,10 +60,10 @@ tools = Keyword.take(tools, compatible_tools)
       <h3>Links</h3>
       <ul class="links">
         <%= if @hexdocs_url && @docs_tarball_url do %>
-          <li><a href="<%= @hexdocs_url %>">Online documentation</a> (<a href="<%= @docs_tarball_url %>">download</a>)</li>
+          <li><a href="<%= @hexdocs_url %>" target="_blank" rel="nofollow">Online documentation</a> (<a href="<%= @docs_tarball_url %>">download</a>)</li>
         <% end %>
         <%= for {name, link} <- links do %>
-          <li><a href="<%= link %>" rel="nofollow"><%= name %></a></li>
+          <li><a href="<%= link %>" rel="nofollow" target="_blank"><%= name %></a></li>
         <% end %>
       </ul>
     <% end %>
