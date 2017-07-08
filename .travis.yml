@@ -1,16 +1,26 @@
 dist: trusty
 language: elixir
-elixir: 1.4.2
-otp_release: 19.2
+elixir: 1.4.5
+otp_release: 20.0
 addons:
   postgresql: 9.6
 env:
-  - MIX_ENV=test
-script:
+  global:
+    - MIX_ENV=test
+    - HEXPM_PATH=..
+    - HEXWEB_PATH=..
+  matrix:
+    - HEX_VERSION=master
+    - HEX_VERSION=v0.16.0
+    - HEX_VERSION=v0.15.0
+    - HEX_VERSION=v0.14.1
+before_script:
   - mix ecto.create
+  - git clone https://github.com/hexpm/hex hex -b ${HEX_VERSION} --depth 1
+script:
   - mix test --include integration
   - mix run priv/repo/seeds.exs
-  - git clone https://github.com/hexpm/hex ../hex && cd ../hex && mix deps.get && mix test --include integration
+  - cd hex; mix deps.get && mix test --include integration
 notifications:
   recipients:
   - eric.meadows.jonsson@gmail.com

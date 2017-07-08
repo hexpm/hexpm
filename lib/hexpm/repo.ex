@@ -1,3 +1,10 @@
+# Needed to support old hex clients for CI testing
+if Mix.env == :hex do
+  defmodule HexWeb.Repo do
+    use Ecto.Repo, otp_app: :hexpm
+  end
+end
+
 defmodule Hexpm.Repo do
   use Ecto.Repo, otp_app: :hexpm
   import Ecto.Query
