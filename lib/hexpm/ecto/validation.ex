@@ -26,16 +26,17 @@ defmodule Hexpm.Validation do
     end)
   end
 
-  def validate_requirement(changeset, field, opts) do
+  def validate_requirement(changeset, field, _opts) do
     validate_change(changeset, field, fn key, req ->
       cond do
         is_nil(req) ->
-          # Temporary friendly error message until people update to hex 0.9.1
           [{key, {"invalid requirement: #{inspect req}, use \">= 0.0.0\" instead", []}}]
         not valid_requirement?(req) ->
           [{key, {"invalid requirement: #{inspect req}", []}}]
-        String.contains?(req, "-") and not Keyword.fetch!(opts, :pre) ->
-          [{key, {"invalid requirement: #{inspect req}, unstable requirements are not allowed for stable releases", []}}]
+        # Wait until rebar3 has supported this for at least 2 months
+        # https://github.com/hexpm/rebar3_hex/issues/69
+        # String.contains?(req, "-") and not Keyword.fetch!(opts, :pre) ->
+        #   [{key, {"invalid requirement: #{inspect req}, unstable requirements are not allowed for stable releases", []}}]
         true ->
           []
       end

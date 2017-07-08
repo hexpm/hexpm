@@ -121,6 +121,7 @@ defmodule Hexpm.Repository.ReleaseTest do
            release.requirements
   end
 
+  @tag :skip
   test "do not allow pre-release dependencies of stable releases", %{packages: [_, package2, package3]} do
     Release.build(package3, rel_meta(%{version: "0.0.1-dev", app: package3.name}), "") |> Hexpm.Repo.insert!
     reqs = [%{name: package3.name, app: package3.name, requirement: "~> 0.0.1-alpha", optional: false}]
