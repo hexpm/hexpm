@@ -31,4 +31,7 @@ defmodule Hexpm.Web.API.PackageView do
   defp group_downloads(%{downloads: downloads} = package) do
     Map.put(package, :downloads, Enum.reduce(downloads, %{}, &Map.merge(&1, &2)))
   end
+  defp group_downloads(package) do
+    package
+  end
 end
