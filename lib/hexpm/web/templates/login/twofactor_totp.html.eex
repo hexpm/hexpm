@@ -1,0 +1,28 @@
+<div class="row">
+  <div class="col-md-6 col-md-offset-3">
+    <div class="login-card">
+      <div class="text-center">
+        <%= icon(:octicon, :key, class: "icon") %>
+        <h3>Two-Factor Authentication</h3>
+      </div>
+
+      <hr/>
+
+      <%= form_tag(login_path(Endpoint, :create_twofactor_totp), class: "form-signin") do %>
+        <div class="input-group">
+          <input type="tel" id="otp" name="otp" class="form-control" placeholder="OTP" autocomplete="off" required>
+          <div class="input-group-btn">
+            <button type="submit" class="btn btn-primary btn-lg" tabindex="1">Confirm</button>
+          </div>
+        </div>
+
+        <input type="hidden" name="return" value="<%= @return %>">
+      <% end %>
+
+      <div class="text-center">
+          <p>Enter the current six-digit code from your phone into the OTP field above to verify your identity.</p>
+      </div>
+    </div>
+  </div>
+</div>
+

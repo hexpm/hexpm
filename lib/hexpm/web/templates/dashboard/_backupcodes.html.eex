@@ -1,0 +1,56 @@
+<%
+clipboard = Enum.join(@backupcodes, "\n")
+%>
+
+<div class="panel panel-default">
+  <div class="panel-heading">
+    <h3 class="panel-title">Backup Codes</h3>
+  </div>
+
+  <div class="panel-body">
+    <p>
+      <strong>Put these in a safe spot!</strong>
+    </p>
+
+    <p>
+      Backup codes can be used to access your account in the event you lose access to your device
+      and cannot receive two-factor authentication codes.
+    </p>
+
+    <p>
+      Hex Support <i>cannot</i> restore access to accounts with two-factor authentication enabled for security reasons,
+      so if you lose your device and don't have a copy of your backup codes, you will lose access to your account.
+    </p>
+
+    <hr />
+
+    <ul>
+      <%= for code <- @backupcodes do %>
+        <li class="backupcode text-center"><%= code %></li>
+      <% end %>
+    </ul>
+  </div>
+
+  <div class="panel-footer">
+    <div class="text-center">
+      <%= form_for @changeset, dashboard_path(Endpoint, :regen_backup_twofactor), [method: :post], fn f -> %>
+        <%= inputs_for f, :twofactor, fn _f -> %><% end %>
+
+        <button type="button" class="btn btn-success backup-download-button" data-download-text="<%= clipboard %>">
+          Download <%= icon(:glyphicon, :download) %>
+        </button>
+
+        <button type="button" class="btn btn-success backup-copy-button" data-clipboard-text="<%= clipboard %>">
+          Copy
+          <%= icon(:glyphicon, :copy) %>
+          <%= icon(:glyphicon, :remove, style: "display: none") %>
+          <%= icon(:glyphicon, :ok, style: "display: none") %>
+        </button>
+
+        <button type="submit" class="btn btn-danger">
+          Regenerate <%= icon(:glyphicon, :repeat) %>
+        </button>
+      <% end %>
+    </div>
+  </div>
+</div>

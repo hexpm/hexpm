@@ -4,7 +4,8 @@ defmodule Hexpm.Web.DashboardView do
   defp pages do
     [profile: "Profile",
      password: "Password",
-     email: "Email"]
+     email: "Email",
+     twofactor: "2FA"]
   end
 
   defp selected(conn, id) do

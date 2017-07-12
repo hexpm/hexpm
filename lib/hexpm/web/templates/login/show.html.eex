@@ -1,26 +1,25 @@
 <div class="row">
-  <div class="col-md-8 col-md-offset-2">
-    <%= form_tag(login_path(Endpoint, :create)) do %>
-      <h2>Log in</h2>
-
-      <div class="form-group">
-        <label for="username">Username or Email</label>
-        <input type="text" class="form-control" name="username">
+  <div class="col-md-6 col-md-offset-3">
+    <div class="login-card">
+      <div class="text-center">
+        <h3>Login to Hex.pm</h3>
       </div>
 
-      <div class="form-group">
-        <label for="password">Password</label>
-        <span style="float: right;"><a href="<%= password_reset_path(Endpoint, :show) %>">Forgot your password?</a></span>
-        <input type="password" class="form-control" name="password">
+      <hr/>
+
+      <%= form_tag(login_path(Endpoint, :create), class: "form-signin") do %>
+        <input type="text" id="username" name="username" class="form-control" placeholder="Username or Email" required autofocus>
+        <input type="password" id="password" name="password" class="form-control" placeholder="Password" required>
+
+        <input type="hidden" name="return" value="<%= @return %>">
+
+        <button class="btn btn-lg btn-primary btn-block btn-signin" type="submit">Sign in</button>
+      <% end %>
+
+      <div class="text-center">
+        <a class="btn btn-link" href="<%= password_reset_path(Endpoint, :show) %>">Forgot your password?</a>
+        <a class="btn btn-link" href="<%= signup_path(Endpoint, :show) %>">Don't have an account?</a>
       </div>
-
-      <input type="hidden" name="return" value="<%= @return %>">
-
-      <button type="submit" class="btn btn-primary">Log in</button>
-
-      <br><br>
-
-      <p><a href="<%= signup_path(Endpoint, :show) %>">Don't have an account?</a></p>
-    <% end %>
+    </div>
   </div>
 </div>

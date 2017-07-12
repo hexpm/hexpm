@@ -1,7 +1,10 @@
 defmodule Hexpm.Web.DashboardController do
   use Hexpm.Web, :controller
 
+  @sudo ~w(twofactor toggle_twofactor show_qrcode_twofactor confirm_twofactor regen_backup_twofactor)a
+
   plug :requires_login
+  plug :requires_sudo when action in @sudo
 
   def index(conn, _params) do
     redirect(conn, to: dashboard_path(conn, :profile))
@@ -133,6 +136,104 @@ defmodule Hexpm.Web.DashboardController do
     end
   end
 
+  def twofactor(conn, _params) do
+    user = conn.assigns.logged_in
+    changeset = User.setup_twofactor(user, %{})
+    enabled? = TwoFactor.enabled?(user.twofactor)
+    backupcodes = User.backupcodes(user)
+
+    render_twofactor(conn, changeset, backupcodes, enabled?)
+  end
+
+  def toggle_twofactor(conn, params) do
+    user = conn.assigns.logged_in
+    enabled? = params["user"]["twofactor"]["enabled"]
+
+    if Hexpm.Utils.parse_bool(enabled?) do
+      if TwoFactor.enabled?(user.twofactor) do
+        # do not enable if 2fa is currently set up.
+        redirect(conn, to: dashboard_path(conn, :twofactor))
+      else
+        case Users.setup_twofactor(user, params["user"], audit: audit_data(conn)) do
+          {:ok, _user} ->
+            redirect(conn, to: dashboard_path(conn, :show_qrcode_twofactor))
+          {:error, _changeset} ->
+            conn
+            |> put_flash(:error, "An internal error occured. Please try again.")
+            |> redirect(to: dashboard_path(conn, :twofactor))
+        end
+      end
+    else
+      if not TwoFactor.enabled?(user.twofactor) do
+        # do not disable if 2fa is currently disabled.
+        redirect(conn, to: dashboard_path(conn, :twofactor))
+      else
+        case Users.disable_twofactor(user, params["user"], audit: audit_data(conn)) do
+          {:ok, _user} ->
+            conn
+            |> put_flash(:info, "Two-factor authentication is now disabled.")
+            |> redirect(to: dashboard_path(conn, :twofactor))
+          {:error, _changeset} ->
+            conn
+            |> put_flash(:error, "An internal error occured. Please try again.")
+            |> redirect(to: dashboard_path(conn, :twofactor))
+        end
+      end
+    end
+  end
+
+  def show_qrcode_twofactor(conn, _params) do
+    user = conn.assigns.logged_in
+    enabled? = TwoFactor.enabled?(user.twofactor)
+    secret_set? = String.length(user.twofactor.data["secret"]) > 0 # TODO: better approach
+
+    if !enabled? and secret_set? do
+      changeset = User.setup_twofactor(user, %{})
+      totp = User.totp(user, true)
+      render_twofactor_confirm_totp(conn, changeset, totp)
+    else
+      redirect(conn, to: dashboard_path(conn, :twofactor))
+    end
+  end
+
+  def confirm_twofactor(conn, params) do
+    user = conn.assigns.logged_in
+    totp = User.totp(user, true)
+
+    case TOTP.verify(totp, params["otp"], [allow_repeat: true]) do
+      true ->
+        case Users.enable_twofactor(user, params["user"], audit: audit_data(conn)) do
+          {:ok, _user} ->
+            conn
+            |> put_flash(:info, "Two-factor authentication is now enabled.")
+            |> redirect(to: dashboard_path(conn, :twofactor))
+          {:error, _changeset} ->
+            conn
+            |> put_flash(:error, "An internal error occured. Please try again.")
+            |> redirect(to: dashboard_path(conn, :show_qrcode_twofactor))
+        end
+      _ -> # catches incorrect codes and backup codes
+        conn
+        |> put_flash(:error, "The code you entered was incorrect.")
+        |> redirect(to: dashboard_path(conn, :show_qrcode_twofactor))
+    end
+  end
+
+  def regen_backup_twofactor(conn, params) do
+    user = conn.assigns.logged_in
+
+    case Users.regen_twofactor_backupcodes(user, params["user"], audit: audit_data(conn)) do
+      {:ok, _user} ->
+        conn
+        |> put_flash(:info, "Your backup codes have been regenerated. Scroll down to make a copy.")
+        |> redirect(to: dashboard_path(conn, :twofactor))
+      {:error, _changeset} ->
+        conn
+        |> put_flash(:error, "Could not regenerate backup codes.")
+        |> redirect(to: dashboard_path(conn, :twofactor))
+    end
+  end
+
   defp render_profile(conn, changeset) do
     render conn, "profile.html", [
       title: "Dashboard - Public profile",
@@ -157,6 +258,26 @@ defmodule Hexpm.Web.DashboardController do
       container: "container page dashboard",
       add_email_changeset: add_email_changeset,
       emails: emails
+    ]
+  end
+
+  defp render_twofactor(conn, changeset, backupcodes, enabled?) do
+    render conn, "twofactor.html", [
+      title: "Dashboard - 2FA",
+      container: "container page dashboard",
+      changeset: changeset,
+      types: ["TOTP": "totp"],
+      backupcodes: backupcodes,
+      enabled: enabled?
+    ]
+  end
+
+  defp render_twofactor_confirm_totp(conn, changeset, totp) do
+    render conn, "twofactor_confirm_totp.html", [
+      title: "Dashboard - 2FA",
+      container: "container page dashboard",
+      changeset: changeset,
+      totp: totp
     ]
   end
 

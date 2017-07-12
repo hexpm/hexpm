@@ -1,0 +1,70 @@
+<%
+qrcode = TOTP.qrcode(@totp)
+secret = @totp.key
+%>
+
+<%= changeset_error(@changeset) %>
+
+<div class="row">
+  <div class="col-md-3">
+    <%= render "_sidebar.html", conn: @conn %>
+  </div>
+
+  <div class="col-md-9 twofactor">
+    <div class="panel panel-default">
+      <div class="panel-heading">2FA - Setup</div>
+
+      <div class="panel-body">
+        <p><strong>On your phone:</strong></p>
+
+        <ol>
+          <li>
+            Install a compatible TOTP application.
+            We recommend <a href="https://support.google.com/accounts/answer/1066447?hl=en">Google Authenticator</a> (proprietary)
+            or <a href="https://freeotp.github.io/">FreeOTP</a> (open source).
+          </li>
+          <li>
+            In the application, add a new entry in one of two ways:
+            <ul>
+              <li>Scan the QR code with your phone's camera to add the entry automatically.</li>
+              <li>Enter the secret provided below to add the entry manually.</li>
+            </ul>
+          </li>
+        </ol>
+
+        <p><strong>On Hex.pm:</strong></p>
+
+        <ol>
+          <li>Enter the current six-digit code from your phone into the OTP field below.</li>
+          <li>Click <i>confirm</i>.</li>
+        </ol>
+
+        <p>
+          If the OTP you entered was correct, you'll see a message indicating that Two-Factor Authentication has been enabled,
+          and you'll be presented with a list of backup codes.
+        </p>
+
+        <hr />
+
+        <div class="text-center">
+          <p class="secret"><strong>secret</strong>: <%= secret %></p>
+          <img style="width: 50%" class="img-responsive center-block" src="data:image/png;base64,<%= qrcode %>">
+
+          <br />
+
+          <span>
+            <%= form_for @changeset, dashboard_path(Endpoint, :confirm_twofactor), [method: :post, class: "form-confirm"], fn f -> %>
+              <%= inputs_for f, :twofactor, fn _f -> %><% end %>
+              <div class="input-group">
+                <input type="tel" id="otp" name="otp" class="form-control" placeholder="OTP" autocomplete="off" required>
+                <div class="input-group-btn">
+                  <button type="submit" class="btn btn-primary btn-lg" tabindex="1">Confirm</button>
+                </div>
+              </div>
+            <% end %>
+          </span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

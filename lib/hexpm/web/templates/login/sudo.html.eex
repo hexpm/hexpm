@@ -1,0 +1,28 @@
+<div class="row">
+  <div class="col-md-6 col-md-offset-3">
+    <div class="login-card">
+      <div class="text-center">
+        <%= icon(:octicon, :shield, class: "icon") %>
+        <h3>Re-enter your password to enter <strong>sudo mode</strong>.</h3>
+      </div>
+
+      <hr/>
+
+      <%= form_tag(login_path(Endpoint, :create_sudo), class: "form-signin") do %>
+        <input type="password" id="password" name="password" class="form-control" placeholder="Password" required>
+        <input type="hidden" name="return" value="<%= @return %>">
+
+        <button class="btn btn-lg btn-primary btn-block btn-signin" type="submit">Continue</button>
+      <% end %>
+
+      <div class="text-center">
+        <a class="btn btn-link" data-toggle="collapse" href="#sudocollapse" aria-expanded="false" aria-controls="sudocollapse">What is this?</a>
+        <div class="collapse" id="sudocollapse">
+          <br/>
+          <p>As an extra security step, Hex asks you for your password before you undertake a potentially risky action.</p>
+          <p>After you've performed a sudo-protected action, you'll only be asked to re-authenticate again after 15 minutes of inactivity.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

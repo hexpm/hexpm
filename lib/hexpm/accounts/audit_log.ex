@@ -72,6 +72,11 @@ defmodule Hexpm.Accounts.AuditLog do
   defp extract_params("password.reset.init", nil), do: %{}
   defp extract_params("password.reset.finish", nil), do: %{}
   defp extract_params("password.update", nil), do: %{}
+  defp extract_params("twofactor.enable.init", nil), do: %{}
+  defp extract_params("twofactor.enable.finish", nil), do: %{}
+  defp extract_params("twofactor.disable", nil), do: %{}
+  defp extract_params("twofactor.backupcode.use", nil), do: %{}
+  defp extract_params("twofactor.backupcode.regen", nil), do: %{}
 
   defp serialize(%Package{} = package) do
     package

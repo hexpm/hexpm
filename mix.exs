@@ -53,6 +53,7 @@ defmodule Hexpm.Mixfile do
      {:plug, "~> 1.2"},
      {:porcelain, "~> 2.0"},
      {:postgrex, ">= 0.0.0"},
+     {:qrcode, git: "https://gitlab.com/Pacodastre/qrcode", runtime: false},
      {:sweet_xml, "~> 0.5"},
      {:plug_attack, "~> 0.3"},
      {:hackney, "~> 1.7"},

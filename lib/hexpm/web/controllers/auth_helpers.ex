@@ -2,7 +2,7 @@ defmodule Hexpm.Web.AuthHelpers do
   import Plug.Conn
   import Hexpm.Web.ControllerHelpers, only: [render_error: 3]
 
-  alias Hexpm.Accounts.Auth
+  alias Hexpm.Accounts.{Auth, Users, TwoFactor}
 
   def authorized(conn, opts) do
     fun = Keyword.get(opts, :fun, fn _, _ -> true end)
@@ -47,6 +47,10 @@ defmodule Hexpm.Web.AuthHelpers do
         unauthorized(conn, "invalid username and password combination")
       {:error, :key} ->
         unauthorized(conn, "invalid username and API key combination")
+      {:error, {:twofactor, :missing}} ->
+        twofactor_error(conn, "totp", "two-factor authentication required") # TODO: change depending on type required
+      {:error, {:twofactor, :incorrect}} ->
+        twofactor_error(conn, "totp", "invalid one-time password") # TODO: change depending on type required
       {:error, :unconfirmed} ->
         forbidden(conn, "email not verified")
       {:error, :revoked_key} ->
@@ -57,13 +61,26 @@ defmodule Hexpm.Web.AuthHelpers do
   end
 
   def authenticate(conn) do
-    case get_req_header(conn, "authorization") do
+    result = case get_req_header(conn, "authorization") do
       ["Basic " <> credentials] ->
         basic_auth(credentials)
       [key] ->
         key_auth(key)
       _ ->
         {:error, :missing}
+    end
+
+    case result do
+      {:ok, {user, key, email}} ->
+        if TwoFactor.enabled?(user.twofactor) do
+          case twofactor_auth(conn, user) do
+            {:ok, _user} -> {:ok, {user, key, email}}
+            {:error, reason} -> {:error, reason}
+          end
+        else
+          {:ok, {user, key, email}}
+        end
+      {:error, error} -> {:error, error}
     end
   end
 
@@ -85,6 +102,37 @@ defmodule Hexpm.Web.AuthHelpers do
       :error -> {:error, :key}
       :revoked -> {:error, :revoked_key}
     end
+  end
+
+  defp twofactor_auth(conn, user) do
+    case get_req_header(conn, "x-hex-otp") do
+      [code] ->
+        # twofactor backup codes cannot be used in the API,
+        # so any attempt to use one just errors out
+        case Auth.twofactor_auth(user, code, false) do
+          {:ok, user} ->
+            case set_last_otp(conn, user, code) do
+              :ok -> {:ok, user}
+              :error -> {:error, {:twofactor, :incorrect}}
+            end
+          :error ->
+            {:error, {:twofactor, :incorrect}}
+        end
+      _ -> {:error, {:twofactor, :missing}}
+    end
+  end
+
+  defp set_last_otp(conn, user, code) do
+    case Users.use_twofactor_code(user, code, audit: {user, conn.assigns.user_agent}) do
+      {:ok, _user} -> :ok
+      {:error, _changeset} -> :error
+    end
+  end
+
+  def twofactor_error(conn, type, reason) do
+    conn
+    |> put_resp_header("x-hex-otp", "required; #{type}")
+    |> render_error(401, message: reason)
   end
 
   def unauthorized(conn, reason) do
@@ -131,3 +179,4 @@ defmodule Hexpm.Web.AuthHelpers do
     username_or_email in [user.username, user.email]
   end
 end
+
