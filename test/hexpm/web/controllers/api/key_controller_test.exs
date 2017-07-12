@@ -1,8 +1,7 @@
 defmodule Hexpm.Web.API.KeyControllerTest do
   use Hexpm.ConnCase, async: true
 
-  alias Hexpm.Accounts.AuditLog
-  alias Hexpm.Accounts.Key
+  alias Hexpm.Accounts.{AuditLog, Key}
 
   setup do
     eric = create_user("eric", "eric@mail.com", "ericeric")
@@ -82,7 +81,6 @@ defmodule Hexpm.Web.API.KeyControllerTest do
     assert body["updated_at"]
     assert body["inserted_at"]
     refute body["secret"]
-    refute body["url"]
     refute body["authing_key"]
     assert Hexpm.Repo.one(Key.get(c.eric, "macbook"))
     refute Hexpm.Repo.one(Key.get(c.eric, "computer"))
@@ -109,7 +107,6 @@ defmodule Hexpm.Web.API.KeyControllerTest do
     assert body["updated_at"]
     assert body["inserted_at"]
     refute body["secret"]
-    refute body["url"]
     assert body["authing_key"]
     refute Hexpm.Repo.one(Key.get(c.eric, "current"))
 
@@ -144,7 +141,6 @@ defmodule Hexpm.Web.API.KeyControllerTest do
     assert body["updated_at"]
     assert body["inserted_at"]
     refute body["secret"]
-    refute body["url"]
     assert body["authing_key"]
     refute Hexpm.Repo.one(Key.get(c.eric, "key_a"))
     refute Hexpm.Repo.one(Key.get(c.eric, "key_b"))

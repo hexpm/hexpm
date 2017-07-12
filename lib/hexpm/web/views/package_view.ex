@@ -8,9 +8,6 @@ defmodule Hexpm.Web.PackageView do
   def show_sort_info("downloads"), do: "(Sorted by downloads)"
   def show_sort_info(_param), do: nil
 
-  @doc """
-  Formats a package's release info into a build tools dependency snippet.
-  """
   def dep_snippet(:mix, package_name, release) do
     version = snippet_version(:mix, release.version)
     app_name = release.meta.app || package_name
@@ -38,16 +35,20 @@ defmodule Hexpm.Web.PackageView do
     "dep_#{package_name} = hex #{version}"
   end
 
-  def snippet_version(:mix, %Version{major: 0, minor: minor, patch: patch, pre: []}),
-    do: "~> 0.#{minor}.#{patch}"
-  def snippet_version(:mix, %Version{major: major, minor: minor, pre: []}),
-    do: "~> #{major}.#{minor}"
-  def snippet_version(:mix, %Version{major: major, minor: minor, patch: patch, pre: pre}),
-    do: "~> #{major}.#{minor}.#{patch}#{pre_snippet(pre)}"
+  def snippet_version(:mix, %Version{major: 0, minor: minor, patch: patch, pre: []}) do
+    "~> 0.#{minor}.#{patch}"
+  end
+  def snippet_version(:mix, %Version{major: major, minor: minor, pre: []}) do
+    "~> #{major}.#{minor}"
+  end
+  def snippet_version(:mix, %Version{major: major, minor: minor, patch: patch, pre: pre}) do
+    "~> #{major}.#{minor}.#{patch}#{pre_snippet(pre)}"
+  end
 
   def snippet_version(other, %Version{major: major, minor: minor, patch: patch, pre: pre})
-    when other in [:rebar, :erlang_mk],
-    do: "#{major}.#{minor}.#{patch}#{pre_snippet(pre)}"
+      when other in [:rebar, :erlang_mk] do
+    "#{major}.#{minor}.#{patch}#{pre_snippet(pre)}"
+  end
 
   defp pre_snippet([]), do: ""
   defp pre_snippet(pre) do
@@ -62,14 +63,18 @@ defmodule Hexpm.Web.PackageView do
   @erlang_atom_chars ~r"^[a-z][a-zA-Z_0-9]*$"
 
   defp app_name(:mix, name) do
-    if Regex.match?(@elixir_atom_chars, name),
-      do: ":#{name}",
-    else: ":#{inspect name}"
+    if Regex.match?(@elixir_atom_chars, name) do
+      ":#{name}"
+    else
+      ":#{inspect name}"
+    end
   end
   defp app_name(:rebar, name) do
-    if Regex.match?(@erlang_atom_chars, name),
-      do: name,
-    else: inspect(String.to_charlist(name))
+    if Regex.match?(@erlang_atom_chars, name) do
+      name
+    else
+      inspect(String.to_charlist(name))
+    end
   end
 
   def retirement_message(retirement) do

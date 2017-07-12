@@ -142,32 +142,41 @@ defmodule Hexpm.Web.AuthHelpers do
   end
 
   def forbidden(conn, reason) do
-    conn
-    |> render_error(403, message: reason)
+    render_error(conn, 403, message: reason)
   end
 
-  def package_owner?(_, nil),
-    do: false
-  def package_owner?(%Plug.Conn{} = conn, user),
-    do: package_owner?(conn.assigns.package, user)
-  def package_owner?(%Hexpm.Repository.Package{} = package, user),
-    do: Hexpm.Repository.Packages.owner?(package, user)
+  def package_owner?(_, nil) do
+    false
+  end
+  def package_owner?(%Plug.Conn{} = conn, user) do
+    package_owner?(conn.assigns.package, user)
+  end
+  def package_owner?(%Hexpm.Repository.Package{} = package, user) do
+    Hexpm.Repository.Packages.owner?(package, user)
+  end
 
-  def maybe_package_owner?(%Plug.Conn{} = conn, user),
-    do: maybe_package_owner?(conn.assigns[:package], user)
-  def maybe_package_owner?(nil, _user),
-    do: true
-  def maybe_package_owner?(%Hexpm.Repository.Package{} = package, user),
-    do: Hexpm.Repository.Packages.owner?(package, user)
+  def maybe_package_owner?(%Plug.Conn{} = conn, user) do
+    maybe_package_owner?(conn.assigns[:package], user)
+  end
+  def maybe_package_owner?(nil, _user) do
+    true
+  end
+  def maybe_package_owner?(%Hexpm.Repository.Package{} = package, user) do
+    Hexpm.Repository.Packages.owner?(package, user)
+  end
 
-  def repository_access?(%Plug.Conn{} = conn, user),
-    do: repository_access?(conn.assigns.repository, user)
-  def repository_access?(%Hexpm.Repository.Repository{} = repository, user),
-    do: Hexpm.Repository.Repositories.access?(repository, user)
+  def repository_access?(%Plug.Conn{} = conn, user) do
+    repository_access?(conn.assigns.repository, user)
+  end
+  def repository_access?(%Hexpm.Repository.Repository{} = repository, user) do
+    Hexpm.Repository.Repositories.access?(repository, user)
+  end
 
-  def correct_user?(%Plug.Conn{} = conn, user),
-    do: correct_user?(conn.params["name"], user)
-  def correct_user?(username_or_email, user) when is_binary(username_or_email),
-    do: username_or_email in [user.username, user.email]
+  def correct_user?(%Plug.Conn{} = conn, user) do
+    correct_user?(conn.params["name"], user)
+  end
+  def correct_user?(username_or_email, user) when is_binary(username_or_email) do
+    username_or_email in [user.username, user.email]
+  end
 end
 

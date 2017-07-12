@@ -20,15 +20,12 @@ defmodule Hexpm.ConnCase do
       # Import conveniences for testing with connections
       use Phoenix.ConnTest
 
-      alias Hexpm.Repo
-      alias Hexpm.Fake
+      alias Hexpm.{Fake, Repo}
 
       import Ecto
       import Ecto.Query, only: [from: 2]
       import Hexpm.Web.Router.Helpers
-      import Hexpm.TestHelpers
-      import Hexpm.Case
-      import Hexpm.Factory
+      import Hexpm.{Case, Factory, TestHelpers}
       import unquote(__MODULE__)
 
       # The default endpoint for testing

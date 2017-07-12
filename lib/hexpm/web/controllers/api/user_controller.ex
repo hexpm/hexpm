@@ -26,8 +26,8 @@ defmodule Hexpm.Web.API.UserController do
     if user do
       user =
         user
-        |> Users.with_owned_packages
-        |> Users.with_emails
+        |> Users.with_owned_packages()
+        |> Users.with_emails()
 
       when_stale(conn, user, fn conn ->
         conn

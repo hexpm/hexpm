@@ -13,16 +13,15 @@ defmodule Hexpm.Repository.Install do
   def latest(all, current) do
     case Version.parse(current) do
       {:ok, current} ->
-        installs =
-          Enum.filter(all, fn %Install{elixirs: elixirs} ->
-            Enum.any?(elixirs, &Version.compare(&1, current) != :gt)
-          end)
+        installs = Enum.filter(all, fn %Install{elixirs: elixirs} ->
+          Enum.any?(elixirs, &Version.compare(&1, current) != :gt)
+        end)
 
         elixir =
           if install = List.last(installs) do
             install.elixirs
             |> Enum.filter(&(Version.compare(&1, current) != :gt))
-            |> List.last
+            |> List.last()
           end
 
         if elixir do

@@ -3,8 +3,9 @@ use Mix.Config
 store = if System.get_env("HEX_S3_BUCKET"), do: Hexpm.Store.S3, else: Hexpm.Store.Local
 cdn   = if System.get_env("HEX_FASTLY_KEY"), do: Hexpm.CDN.Fastly, else: Hexpm.CDN.Local
 
-logs_buckets = if value = System.get_env("HEX_LOGS_BUCKETS"),
-                 do: value |> String.split(";") |> Enum.map(&String.split(&1, ","))
+logs_buckets =
+  if value = System.get_env("HEX_LOGS_BUCKETS"),
+    do: value |> String.split(";") |> Enum.map(&String.split(&1, ","))
 
 smtp_port = String.to_integer(System.get_env("HEX_SES_PORT") || "587")
 

@@ -138,7 +138,7 @@ defmodule Hexpm.Accounts.User do
 
   def password_reset(user, params, revoke_all_keys \\ true) do
     multi =
-      Multi.new
+      Multi.new()
       |> Multi.update(:password, update_password_no_check(user, params))
       |> Multi.update(:reset, disable_password_reset(user))
       |> Multi.delete_all(:reset_sessions, Session.by_user(user))
@@ -157,9 +157,9 @@ defmodule Hexpm.Accounts.User do
   def get(username_or_email, preload \\ []) do
     # Somewhat crazy hack to get this done in one query
     # Makes assumptions about how Ecto choses variable names
-    from u in Hexpm.Accounts.User,
+    from(u in Hexpm.Accounts.User,
       where: u.username == ^username_or_email or
              ^username_or_email in fragment("SELECT emails.email FROM emails WHERE emails.user_id = u0.id and emails.verified"),
-      preload: ^preload
+      preload: ^preload)
   end
 end

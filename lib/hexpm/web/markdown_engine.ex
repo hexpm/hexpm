@@ -4,7 +4,7 @@ defmodule Hexpm.Web.MarkdownEngine do
   def compile(path, _name) do
     html =
       path
-      |> File.read!
+      |> File.read!()
       |> Earmark.as_html!(%Earmark.Options{gfm: true})
 
     {:safe, html}

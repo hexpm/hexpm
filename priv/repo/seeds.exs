@@ -1,7 +1,6 @@
 import Hexpm.Factory
 
-alias Hexpm.Repository.PackageDownload
-alias Hexpm.Repository.ReleaseDownload
+alias Hexpm.Repository.{PackageDownload, ReleaseDownload}
 
 Hexpm.Fake.start()
 

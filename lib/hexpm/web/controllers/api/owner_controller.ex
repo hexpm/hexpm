@@ -7,8 +7,8 @@ defmodule Hexpm.Web.API.OwnerController do
   def index(conn, _params) do
     owners =
       conn.assigns.package
-      |> Owners.all
-      |> Users.with_emails
+      |> Owners.all()
+      |> Users.with_emails()
 
     conn
     |> api_cache(:private)

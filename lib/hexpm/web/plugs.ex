@@ -109,11 +109,13 @@ defmodule Hexpm.Web.Plugs do
         |> assign(:user, user)
         |> assign(:key, key)
         |> assign(:email, email)
+
       {:error, :missing} ->
         conn
         |> assign(:user, nil)
         |> assign(:key, nil)
         |> assign(:email, nil)
+
       {:error, _} = error ->
         Hexpm.Web.AuthHelpers.error(conn, error)
     end
@@ -141,6 +143,6 @@ defmodule Hexpm.Web.Plugs do
     conn
     |> put_resp_header("www-authenticate", "Basic realm=hex")
     |> Hexpm.Web.ControllerHelpers.render_error(401)
-    |> halt
+    |> halt()
   end
 end

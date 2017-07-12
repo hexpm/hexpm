@@ -1,12 +1,16 @@
 defmodule Hexpm.Repository.Assets do
   def push_release(release, body) do
-    opts = [acl: :public_read, cache_control: "public, max-age=604800", meta: [{"surrogate-key", tarball_cdn_key(release)}]]
+    opts = [
+      acl: :public_read,
+      cache_control: "public, max-age=604800",
+      meta: [{"surrogate-key", tarball_cdn_key(release)}]
+    ]
     Hexpm.Store.put(nil, :s3_bucket, tarball_store_key(release), body, opts)
     Hexpm.CDN.purge_key(:fastly_hexrepo, tarball_cdn_key(release))
   end
 
   def revert_release(release) do
-    name    = release.package.name
+    name = release.package.name
     version = to_string(release.version)
 
     # Delete release tarball
@@ -22,9 +26,12 @@ defmodule Hexpm.Repository.Assets do
   end
 
   def push_docs_sitemap(sitemap) do
-    opts = [acl: :public_read, content_type: "text/xml",
-            cache_control: "public, max-age=300",
-            meta: [{"surrogate-key", "sitemap"}]]
+    opts = [
+      acl: :public_read,
+      content_type: "text/xml",
+      cache_control: "public, max-age=300",
+      meta: [{"surrogate-key", "sitemap"}]
+    ]
     Hexpm.Store.put(nil, :docs_bucket, "sitemap.xml", sitemap, opts)
     Hexpm.CDN.purge_key(:fastly_hexdocs, "sitemap")
   end
@@ -33,8 +40,8 @@ defmodule Hexpm.Repository.Assets do
     name = release.package.name
     version = release.version
     package = release.package
-    pre_release    = version.pre != []
-    first_release  = package.docs_updated_at == nil
+    pre_release? = version.pre != []
+    first_release? = package.docs_updated_at == nil
 
     files =
       Enum.flat_map(files, fn {path, data} ->
@@ -42,9 +49,9 @@ defmodule Hexpm.Repository.Assets do
         unversioned = {Path.join(name, path), unversioned_key(release), data}
 
         cond do
-          pre_release && !first_release ->
+          pre_release? and not first_release? ->
             [versioned]
-          first_release || docs_for_latest_release ->
+          first_release? || docs_for_latest_release ->
             [versioned, unversioned]
           true ->
             [versioned]
@@ -59,9 +66,9 @@ defmodule Hexpm.Repository.Assets do
   end
 
   def revert_docs(release) do
-    name    = release.package.name
+    name = release.package.name
     version = to_string(release.version)
-    paths   = Hexpm.Store.list(nil, :docs_bucket, Path.join(name, version))
+    paths = Hexpm.Store.list(nil, :docs_bucket, Path.join(name, version))
 
     Hexpm.Store.delete_many(nil, :docs_bucket, Enum.to_list(paths))
 
@@ -80,7 +87,7 @@ defmodule Hexpm.Repository.Assets do
   defp delete_old_docs(release, paths, docs_for_latest_release) do
     name = release.package.name
     version = release.version
-    pre_release    = version.pre != []
+    pre_release? = version.pre != []
 
     # Add "/" so that we don't get prefix matches, for example phoenix
     # would match phoenix_html
@@ -97,7 +104,7 @@ defmodule Hexpm.Repository.Assets do
           first == version ->
             [key]
           # Top-level docs, don't overwrite for pre-releases
-          pre_release == true ->
+          pre_release? ->
             []
           # Top-level docs, don't match version directories (/ecto/...)
           Version.parse(first) == :error && docs_for_latest_release ->
@@ -122,19 +129,19 @@ defmodule Hexpm.Repository.Assets do
     end)
     |> Task.async_stream(fn {key, data, opts} ->
       Hexpm.Store.put(nil, :docs_bucket, key, data, opts)
-    end, max_concurrency: 10, timeout: 60_000)
+    end, max_concurrency: 10, timeout: 10_000)
     |> Stream.run()
   end
 
   defp purge_cache(release, docs_for_latest_release) do
-    first_release   = release.package.docs_updated_at == nil
+    first_release? = release.package.docs_updated_at == nil
 
     purge_tasks = [
       fn -> Hexpm.CDN.purge_key(:fastly_hexrepo, docs_cdn_key(release)) end,
       fn -> Hexpm.CDN.purge_key(:fastly_hexdocs, versioned_key(release)) end
     ]
     purge_tasks =
-      if first_release || docs_for_latest_release do
+      if first_release? || docs_for_latest_release do
         [fn -> Hexpm.CDN.purge_key(:fastly_hexdocs, unversioned_key(release)) end | purge_tasks]
       else
         purge_tasks
@@ -150,21 +157,27 @@ defmodule Hexpm.Repository.Assets do
     end
   end
 
-  def tarball_cdn_key(release),
-    do: "tarballs/#{release.package.name}-#{release.version}"
+  def tarball_cdn_key(release) do
+    "tarballs/#{release.package.name}-#{release.version}"
+  end
 
-  def tarball_store_key(release),
-    do: "tarballs/#{release.package.name}-#{release.version}.tar"
+  def tarball_store_key(release) do
+    "tarballs/#{release.package.name}-#{release.version}.tar"
+  end
 
-  def docs_cdn_key(release),
-    do: "docs/#{release.package.name}-#{release.version}"
+  def docs_cdn_key(release) do
+    "docs/#{release.package.name}-#{release.version}"
+  end
 
-  def docs_store_key(release),
-    do: "docs/#{release.package.name}-#{release.version}.tar.gz"
+  def docs_store_key(release) do
+    "docs/#{release.package.name}-#{release.version}.tar.gz"
+  end
 
-  def versioned_key(release),
-    do: "docspage/#{release.package.name}/#{release.version}"
+  def versioned_key(release) do
+    "docspage/#{release.package.name}/#{release.version}"
+  end
 
-  def unversioned_key(release),
-    do: "docspage/#{release.package.name}"
+  def unversioned_key(release) do
+    "docspage/#{release.package.name}"
+  end
 end

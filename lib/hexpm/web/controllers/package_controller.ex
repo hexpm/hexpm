@@ -19,27 +19,27 @@ defmodule Hexpm.Web.PackageController do
           nil
       end
 
-    sort          = Hexpm.Utils.safe_to_atom(params["sort"] || "name", @sort_params)
-    page_param    = Hexpm.Utils.safe_int(params["page"]) || 1
+    sort = Hexpm.Utils.safe_to_atom(params["sort"] || "name", @sort_params)
+    page_param = Hexpm.Utils.safe_int(params["page"]) || 1
     package_count = Packages.count(filter)
-    page          = Hexpm.Utils.safe_page(page_param, package_count, @packages_per_page)
-    packages      = fetch_packages(page, @packages_per_page, filter, sort)
-    exact_match   = Packages.get(params["repository"], search || "")
+    page = Hexpm.Utils.safe_page(page_param, package_count, @packages_per_page)
+    packages = fetch_packages(page, @packages_per_page, filter, sort)
+    exact_match = Packages.get(params["repository"], search || "")
 
-    render conn, "index.html", [
-      title:         "Packages",
-      container:     "container",
-      per_page:      @packages_per_page,
-      search:        search,
-      letter:        letter,
-      sort:          sort,
+    render(conn, "index.html", [
+      title: "Packages",
+      container: "container",
+      per_page: @packages_per_page,
+      search: search,
+      letter: letter,
+      sort: sort,
       package_count: package_count,
-      page:          page,
-      packages:      packages,
-      letters:       @letters,
-      downloads:     Packages.packages_downloads(packages, "all"),
-      exact_match:   exact_match
-    ]
+      page: page,
+      packages: packages,
+      letters: @letters,
+      downloads: Packages.packages_downloads(packages, "all"),
+      exact_match: exact_match
+    ])
   end
 
   def show(conn, params) do
@@ -83,7 +83,7 @@ defmodule Hexpm.Web.PackageController do
     dependants = Packages.search(1, 20, "depends:#{package.name}", :downloads, [:name])
     dependants_count = Packages.count("depends:#{package.name}")
 
-    render conn, "show.html", [
+    render(conn, "show.html", [
       title: package.name,
       description: package.meta.description,
       container: "container package-view",
@@ -95,7 +95,7 @@ defmodule Hexpm.Web.PackageController do
       owners: owners,
       dependants: dependants,
       dependants_count: dependants_count
-    ] ++ docs_assigns
+    ] ++ docs_assigns)
   end
 
   defp fetch_packages(page, packages_per_page, search, sort) do

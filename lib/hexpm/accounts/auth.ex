@@ -19,6 +19,7 @@ defmodule Hexpm.Accounts.Auth do
            preload: [user: {u, [:emails, :twofactor]}])
       |> Hexpm.Repo.one
 
+
     case result do
       nil ->
         :error
@@ -70,7 +71,7 @@ defmodule Hexpm.Accounts.Auth do
   def gen_password(nil), do: nil
   def gen_password(password), do: Comeonin.Bcrypt.hashpwsalt(password)
 
-  def gen_key do
+  def gen_key() do
     :crypto.strong_rand_bytes(16)
     |> Base.encode16(case: :lower)
   end

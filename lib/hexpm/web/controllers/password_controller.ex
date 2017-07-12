@@ -44,12 +44,12 @@ defmodule Hexpm.Web.PasswordController do
   end
 
   defp render_show(conn, username, key, changeset) do
-    render conn, "show.html", [
+    render(conn, "show.html", [
       title: "Choose a new password",
       container: "container page password-view",
       username: username,
       key: key,
       changeset: changeset
-    ]
+    ])
   end
 end

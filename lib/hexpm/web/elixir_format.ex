@@ -1,12 +1,10 @@
 defmodule Hexpm.Web.ElixirFormat do
   def encode_to_iodata!(term) do
-    Hexpm.Utils.binarify(term)
+    term
+    |> Hexpm.Utils.binarify()
     |> inspect(limit: :infinity, binaries: :as_strings)
   end
 
-  @doc """
-  Safely deserialize an elixir formatted string.
-  """
   @spec decode(String.t) :: term
   def decode("") do
     {:ok, nil}
@@ -23,8 +21,7 @@ defmodule Hexpm.Web.ElixirFormat do
 
   defp safe_eval(ast) do
     if safe_term?(ast) do
-      result = Code.eval_quoted(ast)
-               |> elem(0)
+      result = Code.eval_quoted(ast) |> elem(0)
       {:ok, result}
     else
       {:error, "unsafe elixir"}

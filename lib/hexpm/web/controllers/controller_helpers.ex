@@ -15,7 +15,7 @@ defmodule Hexpm.Web.ControllerHelpers do
 
   def api_cache(conn, privacy) do
     control = [signed_in_privacy(conn, privacy)] ++ ["max-age": @max_cache_age]
-    vary    = ["accept", "accept-encoding"]
+    vary = ["accept", "accept-encoding"]
     cache(conn, control, vary)
   end
 
@@ -47,7 +47,7 @@ defmodule Hexpm.Web.ControllerHelpers do
     |> put_status(status)
     |> put_layout(false)
     |> render(Hexpm.Web.ErrorView, :"#{status}", assigns)
-    |> halt
+    |> halt()
   end
 
   def validation_failed(conn, %Ecto.Changeset{} = changeset) do
@@ -58,17 +58,15 @@ defmodule Hexpm.Web.ControllerHelpers do
     render_error(conn, 422, errors: errors_to_map(errors))
   end
 
-  defp pretty_type({:array, type}),
-    do: "list(#{pretty_type(type)})"
-  defp pretty_type({:map, type}),
-    do: "map(#{pretty_type(type)})"
-  defp pretty_type(type),
-    do: to_string(type)
+  defp pretty_type({:array, type}), do: "list(#{pretty_type(type)})"
+  defp pretty_type({:map, type}), do: "map(#{pretty_type(type)})"
+  defp pretty_type(type), do: to_string(type)
 
   def translate_errors(changeset) do
     Ecto.Changeset.traverse_errors(changeset, fn
       {"is invalid", opts} ->
         "expected type #{pretty_type(opts[:type])}"
+
       {msg, opts} ->
         Enum.reduce(opts, msg, fn {key, value}, msg ->
           if String.Chars.impl_for(key) && String.Chars.impl_for(value) do
@@ -78,7 +76,7 @@ defmodule Hexpm.Web.ControllerHelpers do
           end
         end)
     end)
-    |> normalize_errors
+    |> normalize_errors()
   end
 
   # TODO: remove when requirements are handled with cast_assoc

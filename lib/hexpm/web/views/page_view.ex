@@ -8,6 +8,6 @@ defmodule Hexpm.Web.PageView do
       inserted_at: nil,
       version: nil,
     ] |> Keyword.merge(data)
-    render "_package.html", data
+    render("_package.html", data)
   end
 end

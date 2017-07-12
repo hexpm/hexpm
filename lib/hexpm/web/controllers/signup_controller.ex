@@ -20,10 +20,10 @@ defmodule Hexpm.Web.SignupController do
   end
 
   defp render_show(conn, changeset) do
-    render conn, "show.html", [
+    render(conn, "show.html", [
       title: "Sign up",
       container: "container page signup",
       changeset: changeset
-    ]
+    ])
   end
 end

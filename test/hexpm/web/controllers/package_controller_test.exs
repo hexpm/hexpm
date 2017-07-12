@@ -15,7 +15,7 @@ defmodule Hexpm.Web.PackageControllerTest do
     test "index", %{package1: package1, package2: package2} do
       conn = get build_conn(), "/packages"
       result = response(conn, 200)
-      assert result =~ ~r/#{package1.name}.*0.0.2/
+      assert result =~ ~r/#{package1.name}.*0.0.2/s
       assert result =~ package2.name
     end
 
@@ -29,10 +29,10 @@ defmodule Hexpm.Web.PackageControllerTest do
 
     test "index with search query", %{package1: package1, package2: package2} do
       conn = get build_conn(), "/packages?search=#{package1.name}"
-      assert response(conn, 200) =~ ~r/#{package1.name}.*0.0.2/
+      assert response(conn, 200) =~ ~r/#{package1.name}.*0.0.2/s
 
       conn = get build_conn(), "/packages?search=#{package2.name}"
-      assert response(conn, 200) =~ ~r/#{package2.name}.*1.0.0/
+      assert response(conn, 200) =~ ~r/#{package2.name}.*1.0.0/s
     end
   end
 

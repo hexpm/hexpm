@@ -59,7 +59,7 @@
         {Credo.Check.Refactor.ABCSize, false},
         {Credo.Check.Refactor.CondStatements},
         {Credo.Check.Refactor.DoubleBooleanNegation, false}, # That's a feature!
-        {Credo.Check.Refactor.FunctionArity},
+        {Credo.Check.Refactor.FunctionArity, max_arity: 8},
         {Credo.Check.Refactor.MatchInCondition},
         {Credo.Check.Refactor.PipeChainStart, false},
         {Credo.Check.Refactor.CyclomaticComplexity},

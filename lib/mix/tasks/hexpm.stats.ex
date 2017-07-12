@@ -171,29 +171,34 @@ defmodule Mix.Tasks.Hexpm.Stats do
 
   defp packages do
     from(p in Package, select: {p.name, p.id})
-    |> Repo.all
+    |> Repo.all()
     |> Enum.into(%{})
   end
 
   defp releases do
     from(r in Release, select: {{r.package_id, r.version}, r.id})
-    |> Repo.all
+    |> Repo.all()
     |> Enum.into(%{}, fn {{pid, vsn}, rid} -> {{pid, to_string(vsn)}, rid} end)
   end
 
   defp maybe_unzip(data, key) do
-    if String.ends_with?(key, ".gz"),
-      do: :zlib.gunzip(data),
-    else: data
+    if String.ends_with?(key, ".gz") do
+      :zlib.gunzip(data)
+    else
+      data
+    end
   end
 
   defp parse_ip("-"), do: nil
   defp parse_ip(ip), do: Utils.parse_ip(ip)
 
-  defp in_ip_range?(_range, nil),
-    do: false
-  defp in_ip_range?(list, ip) when is_list(list),
-    do: Enum.any?(list, &in_ip_range?(&1, ip))
-  defp in_ip_range?({range, mask}, ip),
-    do: <<range::bitstring-size(mask)>> == <<ip::bitstring-size(mask)>>
+  defp in_ip_range?(_range, nil) do
+    false
+  end
+  defp in_ip_range?(list, ip) when is_list(list) do
+    Enum.any?(list, &in_ip_range?(&1, ip))
+  end
+  defp in_ip_range?({range, mask}, ip) do
+    <<range::bitstring-size(mask)>> == <<ip::bitstring-size(mask)>>
+  end
 end

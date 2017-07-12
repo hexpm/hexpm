@@ -27,8 +27,9 @@ defmodule Hexpm.Throttle do
     state = %{state | waiting: :queue.in({from, increment}, state.waiting)}
     {_, state} = try_run(state)
 
-    if first_during_unit?,
-      do: :erlang.send_after(state.unit, self(), :reset)
+    if first_during_unit? do
+      :erlang.send_after(state.unit, self(), :reset)
+    end
 
     {:noreply, state}
   end
@@ -40,12 +41,14 @@ defmodule Hexpm.Throttle do
 
   def handle_info(:reset, state) do
     empty? = :queue.is_empty(state.waiting)
-    state  = %{state | running: 0}
-    state  = filter_canceled(state)
-    state  = churn_queue(state)
+    state =
+      %{state | running: 0}
+      |> filter_canceled()
+      |> churn_queue()
 
-    unless empty?,
-      do: :erlang.send_after(state.unit, self(), :reset)
+    unless empty? do
+      :erlang.send_after(state.unit, self(), :reset)
+    end
 
     {:noreply, state}
   end
@@ -60,6 +63,7 @@ defmodule Hexpm.Throttle do
           state = %{state | waiting: :queue.in({from, increment}, state.waiting)}
           {false, state}
         end
+
       {:empty, _} ->
         {false, state}
     end

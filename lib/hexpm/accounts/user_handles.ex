@@ -13,12 +13,27 @@ defmodule Hexpm.Accounts.UserHandles do
     cast(handles, params, ~w(twitter github elixirforum freenode slack))
   end
 
-  def services do
+  def services() do
     [{:twitter, "Twitter", "https://twitter.com/{handle}"},
      {:github, "GitHub", "https://github.com/{handle}"},
      {:elixirforum, "Elixir Forum", "https://elixirforum.com/users/{handle}"},
      {:freenode, "Freenode", "irc://chat.freenode.net/elixir-lang"},
      {:slack, "Slack", "https://elixir-slackin.herokuapp.com/"}]
+  end
+
+  def render(%{handles: nil}) do
+    []
+  end
+  def render(user) do
+    Enum.flat_map(services(), fn {field, service, url} ->
+      if handle = Map.get(user.handles, field) do
+        handle = UserHandles.handle(service, handle)
+        full_url = String.replace(url, "{handle}", handle)
+        [{service, handle, full_url}]
+      else
+        []
+      end
+    end)
   end
 
   def handle(:twitter, handle), do: unuri(handle, "twitter.com", "/")

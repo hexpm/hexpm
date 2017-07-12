@@ -111,9 +111,9 @@ defmodule Hexpm.Web.ViewHelpers do
     Enum.filter(list, fn {_, v} -> present?(v) end)
   end
 
-  def present?(""),  do: false
+  def present?(""), do: false
   def present?(nil), do: false
-  def present?(_),   do: true
+  def present?(_), do: true
 
   def text_length(text, length) when byte_size(text) > length do
     :binary.part(text, 0, length - 3) <> "..."
@@ -141,22 +141,14 @@ defmodule Hexpm.Web.ViewHelpers do
     rel_from_now(:calendar.seconds_to_daystime(diff))
   end
 
-  defp rel_from_now({0, {0, 0, sec}}) when sec < 30,
-    do: "about now"
-  defp rel_from_now({0, {0, min, _}}) when min < 2,
-    do: "1 minute ago"
-  defp rel_from_now({0, {0, min, _}}),
-    do: "#{min} minutes ago"
-  defp rel_from_now({0, {1, _, _}}),
-    do: "1 hour ago"
-  defp rel_from_now({0, {hour, _, _}}) when hour < 24,
-    do: "#{hour} hours ago"
-  defp rel_from_now({1, {_, _, _}}),
-    do: "1 day ago"
-  defp rel_from_now({day, {_, _, _}}) when day < 0,
-    do: "about now"
-  defp rel_from_now({day, {_, _, _}}),
-    do: "#{day} days ago"
+  defp rel_from_now({0, {0, 0, sec}}) when sec < 30, do: "about now"
+  defp rel_from_now({0, {0, min, _}}) when min < 2, do: "1 minute ago"
+  defp rel_from_now({0, {0, min, _}}), do: "#{min} minutes ago"
+  defp rel_from_now({0, {1, _, _}}), do: "1 hour ago"
+  defp rel_from_now({0, {hour, _, _}}) when hour < 24, do: "#{hour} hours ago"
+  defp rel_from_now({1, {_, _, _}}), do: "1 day ago"
+  defp rel_from_now({day, {_, _, _}}) when day < 0, do: "about now"
+  defp rel_from_now({day, {_, _, _}}), do: "#{day} days ago"
 
   def pretty_date(%NaiveDateTime{year: year, month: month, day: day}) do
     "#{pretty_month(month)} #{day}, #{year}"
@@ -182,6 +174,21 @@ defmodule Hexpm.Web.ViewHelpers do
   def safe_join(enum, separator, fun \\ & &1) do
     Enum.map_join(enum, separator, &safe_to_string(fun.(&1)))
     |> raw()
+  end
+
+  def include_if_loaded(output, key, struct, view, name \\ "show.json", assigns \\ %{})
+
+  def include_if_loaded(output, _key, %Ecto.Association.NotLoaded{}, _view, _name, _assigns) do
+    output
+  end
+  def include_if_loaded(output, key, structs, fun, _name, _assigns) when is_function(fun, 1) do
+    Map.put(output, key, fun.(structs))
+  end
+  def include_if_loaded(output, key, structs, view, name, assigns) when is_list(structs) do
+    Map.put(output, key, Phoenix.View.render_many(structs, view, name, assigns))
+  end
+  def include_if_loaded(output, key, struct, view, name, assigns) do
+    Map.put(output, key, Phoenix.View.render_one(struct, view, name, assigns))
   end
 end
 
