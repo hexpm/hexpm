@@ -276,9 +276,9 @@ defmodule Hexpm.Web.ControllerHelpers do
   def auth_error_message(:sudo, :wrong), do: "Invalid password."
   def auth_error_message(:wrong), do: "Invalid username, email or password."
   def auth_error_message(:unconfirmed), do: "Email has not been verified yet."
+  def auth_error_message(:expired), do: "Session timed out. Please login again."
   def auth_error_message(:twofactor, :missing), do: "Two factor authentication required."
   def auth_error_message(:twofactor, :incorrect), do: "Invalid one-time password."
-  def auth_error_message(:expired), do: "Session timed out. Please login again."
 
   def requires_login(conn, _opts) do
     if logged_in?(conn) do

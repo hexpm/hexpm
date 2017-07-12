@@ -10,7 +10,6 @@ defmodule Hexpm.Accounts.TOTP do
     * `key`           - A shared, base32 encoded secret of arbitrary length.
     * `interval`      - Defines a period that a TOTP code will be valid for, in seconds. (default: 30)
     * `digits`        - The number of digits that are present in the code. (default: 6)
-    * `backupcodes`   - An array of backup codes to test (default: [])
   """
 
   defstruct issuer: "Hex.pm",
@@ -57,14 +56,22 @@ defmodule Hexpm.Accounts.TOTP do
   @doc """
   Verify a TOTP code given a %TOTP{} struct `t` and a candidate code `code`
 
-  There is one option:
+  There are three options:
     * window - the number of attempts, before and after the current one, allowed
       * the default is 1 (1 interval before and 1 interval after)
       * used take into account clock skew
+    * allow_repeat - should the same token be allowed to be repeated in the given window
+      * the default is false
+    * last - the binary value of the last code entered by the user
+      * required if allow_repeat is true
   """
   def verify(t, code, opts \\ []) do
-    key = String.upcase(t.key)
     window = Keyword.get(opts, :window, 1)
+
+    allow_repeat? = Keyword.get(opts, :allow_repeat, false)
+    last = Keyword.get(opts, :last, nil)
+
+    key = String.upcase(t.key)
 
     options = [
       interval_length: t.interval,
@@ -73,13 +80,20 @@ defmodule Hexpm.Accounts.TOTP do
     ]
 
     case Comeonin.Otp.check_totp(code, key, options) do
-      true ->
-        true
-
-      x when is_number(x) ->
+      x when is_number(x) or x == true ->
         # when the current code is in the previous or next window, the timestamp
         # is returned instead of a boolean value
-        true
+        unless allow_repeat? do
+          # if code == last, then we return false as
+          # the user is attempting to repeat the last OTP
+          if last do
+            not Comeonin.Tools.secure_check(code, last)
+          else
+            true
+          end
+        else
+          true
+        end
 
       _ ->
         # ensure the code is formatted like a backup code

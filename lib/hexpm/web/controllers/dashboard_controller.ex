@@ -200,7 +200,7 @@ defmodule Hexpm.Web.DashboardController do
     user = conn.assigns.logged_in
     totp = User.totp(user, true)
 
-    case TOTP.verify(totp, params["otp"]) do
+    case TOTP.verify(totp, params["otp"], [allow_repeat: true]) do
       true ->
         case Users.enable_twofactor(user, params["user"], audit: audit_data(conn)) do
           {:ok, _user} ->

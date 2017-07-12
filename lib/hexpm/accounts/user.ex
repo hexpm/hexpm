@@ -15,7 +15,6 @@ defmodule Hexpm.Accounts.User do
     embeds_one :handles, UserHandles, on_replace: :delete
 
     has_one :twofactor, TwoFactor
-
     has_many :emails, Email
     has_many :package_owners, PackageOwner, foreign_key: :owner_id
     has_many :owned_packages, through: [:package_owners, :package]
@@ -46,12 +45,14 @@ defmodule Hexpm.Accounts.User do
 
   def totp(user, force? \\ false) do
     if force? or TwoFactor.enabled?(user.twofactor) do
-      secret = TOTP.decrypt_secret(user.twofactor.data["secret"])
-
-      TOTP.new([
-        account_name: user.username,
-        key: secret
-      ])
+      if secret = user.twofactor.data["secret"] do
+        TOTP.new([
+          account_name: user.username,
+          key: TOTP.decrypt_secret(secret)
+        ])
+      else
+        :disabled
+      end
     else
       :disabled
     end
@@ -59,7 +60,11 @@ defmodule Hexpm.Accounts.User do
 
   def backupcodes(user, force? \\ false) do
     if force? or TwoFactor.enabled?(user.twofactor) do
-      BackupCode.decrypt(user.twofactor.data["backupcodes"])
+      if codes = user.twofactor.data["backupcodes"] do
+        BackupCode.decrypt(codes)
+      else
+        []
+      end
     else
       []
     end
@@ -83,6 +88,11 @@ defmodule Hexpm.Accounts.User do
   def regen_twofactor_backupcodes(user, params) do
     cast(user, params, ~w())
     |> cast_assoc(:twofactor, with: &TwoFactor.regen_backupcodes(&1, &2))
+  end
+
+  def use_twofactor_code(user, params, code) do
+    cast(user, params, ~w())
+    |> cast_assoc(:twofactor, with: &TwoFactor.set_last(&1, &2, code))
   end
 
   def use_twofactor_backupcode(user, params, code) do

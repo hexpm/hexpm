@@ -47,7 +47,7 @@ defmodule Hexpm.Accounts.Auth do
   def twofactor_auth(user, code, backup_allowed? \\ true) do
     case User.totp(user) do
       %TOTP{} = totp ->
-        case TOTP.verify(totp, code) do
+        case TOTP.verify(totp, code, last: user.twofactor.data["last"]) do
           true ->
             {:ok, user}
 

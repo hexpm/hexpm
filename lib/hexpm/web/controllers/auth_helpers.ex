@@ -2,7 +2,7 @@ defmodule Hexpm.Web.AuthHelpers do
   import Plug.Conn
   import Hexpm.Web.ControllerHelpers, only: [render_error: 3]
 
-  alias Hexpm.Accounts.{Auth, TwoFactor}
+  alias Hexpm.Accounts.{Auth, Users, TwoFactor}
 
   def authorized(conn, opts) do
     fun = Keyword.get(opts, :fun, fn _, _ -> true end)
@@ -111,11 +111,21 @@ defmodule Hexpm.Web.AuthHelpers do
         # so any attempt to use one just errors out
         case Auth.twofactor_auth(user, code, false) do
           {:ok, user} ->
-            {:ok, user}
+            case set_last_otp(conn, user, code) do
+              :ok -> {:ok, user}
+              :error -> {:error, {:twofactor, :incorrect}}
+            end
           :error ->
             {:error, {:twofactor, :incorrect}}
         end
       _ -> {:error, {:twofactor, :missing}}
+    end
+  end
+
+  defp set_last_otp(conn, user, code) do
+    case Users.use_twofactor_code(user, code, audit: {user, conn.assigns.user_agent}) do
+      {:ok, _user} -> :ok
+      {:error, _changeset} -> :error
     end
   end
 
@@ -160,3 +170,4 @@ defmodule Hexpm.Web.AuthHelpers do
   def correct_user?(username_or_email, user) when is_binary(username_or_email),
     do: username_or_email in [user.username, user.email]
 end
+

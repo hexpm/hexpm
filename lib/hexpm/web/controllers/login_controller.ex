@@ -90,17 +90,27 @@ defmodule Hexpm.Web.LoginController do
           expire_session(conn)
 
         :fullyopen -> # session is already open
-          path = conn.params["return"] || user_path(conn, :show, conn.assigns[:logged_in])
-          redirect(conn, to: path)
+          redirect(conn, to: return)
 
         :halfopen -> # session requires 2fa
           case Auth.twofactor_auth(conn.assigns[:logged_in], otp) do
-            {:ok, _user} ->
-              conn
-              |> halfopen(:disable) # fully open session
-              |> redirect(to: return)
+            {:ok, user} ->
+              # set user.twofactor.data.last to otp to prevent reuse
+              case set_last_otp(conn, user, otp) do
+                :ok ->
+                  conn
+                  |> halfopen(:disable) # fully open session
+                  |> redirect(to: return)
+
+                :error ->
+                  conn
+                  |> put_flash(:error, auth_error_message(:twofactor, :incorrect))
+                  |> put_status(400)
+                  |> render_show_twofactor_totp
+              end
 
             {:backupcode, user, code} ->
+              # delete code from user.twofactor.data.backupcodes
               case use_backup_code(conn, user, code) do
                 :ok ->
                   conn
@@ -167,6 +177,13 @@ defmodule Hexpm.Web.LoginController do
     |> delete_session("sudo")
     |> delete_session("halfopen")
     |> redirect(to: return)
+  end
+
+  defp set_last_otp(conn, user, code) do
+    case Users.use_twofactor_code(user, code, audit: audit_data(conn)) do
+      {:ok, _user} -> :ok
+      {:error, _changeset} -> :error
+    end
   end
 
   defp use_backup_code(conn, user, code) do

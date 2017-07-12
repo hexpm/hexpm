@@ -125,6 +125,23 @@ defmodule Hexpm.Accounts.Users do
     end
   end
 
+  def use_twofactor_code(user, code, [audit: audit_data]) do
+    params = %{
+      twofactor: %{id: user.twofactor.id}
+    }
+
+    multi =
+      Multi.new
+      |> Multi.update(:user, User.use_twofactor_code(user, params, code))
+
+    case Repo.transaction(multi) do
+      {:ok, %{user: user}} ->
+        {:ok, user}
+      {:error, :user, changeset, _} ->
+        {:error, changeset}
+    end
+  end
+
   def regen_twofactor_backupcodes(user, params, [audit: audit_data]) do
     multi =
       Multi.new
@@ -140,9 +157,13 @@ defmodule Hexpm.Accounts.Users do
   end
 
   def use_twofactor_backupcode(user, code, [audit: audit_data]) do
+    params = %{
+      twofactor: %{id: user.twofactor.id}
+    }
+
     multi =
       Multi.new
-      |> Multi.update(:user, User.use_twofactor_backupcode(user, %{}, code))
+      |> Multi.update(:user, User.use_twofactor_backupcode(user, params, code))
       |> audit(audit_data, "twofactor.backupcode.use", nil)
 
     case Repo.transaction(multi) do

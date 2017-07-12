@@ -12,7 +12,7 @@ defmodule Hexpm.Accounts.TwoFactor do
   end
 
   def enabled?(nil), do: false
-  def enabled?(twofactor), do: twofactor.enabled\
+  def enabled?(twofactor), do: twofactor.enabled
 
   def changeset(twofactor, _params) do
     change(twofactor)
@@ -28,6 +28,12 @@ defmodule Hexpm.Accounts.TwoFactor do
     data   = %{secret: secret, backupcodes: codes}
 
     change(twofactor, %{type: "totp", data: data})
+  end
+
+  def set_last(twofactor, _params, code) do
+    data = Map.put(twofactor.data, "last", code)
+
+    change(twofactor, %{data: data})
   end
 
   def regen_backupcodes(twofactor, _params) do
