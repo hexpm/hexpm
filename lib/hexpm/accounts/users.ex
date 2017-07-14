@@ -23,9 +23,12 @@ defmodule Hexpm.Accounts.Users do
   end
 
   def add(params, [audit: audit_data]) do
+    user_changeset = User.build(params)
+
     multi =
       Multi.new()
-      |> Multi.insert(:user, User.build(params))
+      |> Multi.run(:clear_unverified_user, fn _ -> clear_unverified_user(user_changeset) end)
+      |> Multi.insert(:user, user_changeset)
       |> audit_with_user(audit_data, "user.create", fn %{user: user} -> user end)
       |> audit_with_user(audit_data, "email.add", fn %{user: %{emails: [email]}} -> email end)
       |> audit_with_user(audit_data, "email.primary", fn %{user: %{emails: [email]}} -> {nil, email} end)
@@ -184,6 +187,20 @@ defmodule Hexpm.Accounts.Users do
       {:error, :public_email, reason, _} ->
         {:error, reason}
     end
+  end
+
+  defp clear_unverified_user(user_changeset) do
+    username = get_field(user_changeset, :username)
+    user =
+      username
+      |> get_by_username()
+      |> with_emails()
+
+    if User.has_no_verified_emails?(user) do
+      Repo.delete!(user)
+    end
+
+    {:ok, :ok}
   end
 
   defp public_email_multi(_user, %{"email" => nil}, _opts) do
