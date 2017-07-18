@@ -1,28 +1,58 @@
 defmodule Hexpm.Web.API.KeyControllerTest do
   use Hexpm.ConnCase, async: true
 
-  alias Hexpm.Accounts.{AuditLog, Key}
+  alias Hexpm.Accounts.{AuditLog, Key, KeyPermission}
 
   setup do
     eric = create_user("eric", "eric@mail.com", "ericeric")
     other = create_user("other", "other@mail.com", "otherother")
-    {:ok, eric: eric, other: other}
+    repo = insert(:repository)
+    unowned_repo = insert(:repository)
+    insert(:repository_user, repository: repo, user: eric)
+    {:ok, repo: repo, unowned_repo: unowned_repo, eric: eric, other: other}
   end
 
-  test "create key", c do
+  test "create api key", c do
     body = %{name: "macbook"}
-    conn = build_conn()
-           |> put_req_header("content-type", "application/json")
-           |> put_req_header("authorization", "Basic " <> Base.encode64("eric:ericeric"))
-           |> post("api/keys", Poison.encode!(body))
+    conn =
+      build_conn()
+      |> put_req_header("content-type", "application/json")
+      |> put_req_header("authorization", "Basic " <> Base.encode64("eric:ericeric"))
+      |> post("api/keys", Poison.encode!(body))
 
     assert conn.status == 201
-    assert Hexpm.Repo.one(Key.get(c.eric, "macbook"))
+    key = Hexpm.Repo.one!(Key.get(c.eric, "macbook"))
+    assert [%KeyPermission{domain: "api"}] = key.permissions
 
     log = Hexpm.Repo.one!(AuditLog)
     assert log.actor_id == c.eric.id
     assert log.action == "key.generate"
     assert %{"name" => "macbook"} = log.params
+  end
+
+  test "create repo key", c do
+    body = %{name: "macbook", permissions: [%{domain: "repository", resource: c.repo.name}]}
+    build_conn()
+    |> put_req_header("content-type", "application/json")
+    |> put_req_header("authorization", "Basic " <> Base.encode64("eric:ericeric"))
+    |> post("api/keys", Poison.encode!(body))
+    |> json_response(201)
+
+    key = Hexpm.Repo.one!(Key.get(c.eric, "macbook"))
+    repo_name = c.repo.name
+    assert [%KeyPermission{domain: "repository", resource: ^repo_name}] = key.permissions
+  end
+
+  test "create repo key for repository unknown repository is allowed", c do
+    body = %{name: "macbook", permissions: [%{domain: "repository", resource: "SOME_UNKNOWN_REPO"}]}
+    build_conn()
+    |> put_req_header("content-type", "application/json")
+    |> put_req_header("authorization", "Basic " <> Base.encode64("eric:ericeric"))
+    |> post("api/keys", Poison.encode!(body))
+    |> json_response(201)
+
+    key = Hexpm.Repo.one!(Key.get(c.eric, "macbook"))
+    assert [%KeyPermission{domain: "repository", resource: "SOME_UNKNOWN_REPO"}] = key.permissions
   end
 
   test "get key", c do
@@ -39,6 +69,7 @@ defmodule Hexpm.Web.API.KeyControllerTest do
     assert body["name"] == "macbook"
     assert body["secret"] == nil
     assert body["url"] =~ "/api/keys/macbook"
+    assert body["permissions"] == [%{"domain" => "api", "resource" => nil}]
     refute body["authing_key"]
   end
 

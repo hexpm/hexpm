@@ -3,6 +3,7 @@ alias Hexpm.{
   Accounts.AuditLog,
   Accounts.Email,
   Accounts.Key,
+  Accounts.KeyPermission,
   Accounts.Keys,
   Accounts.Session,
   Accounts.User,

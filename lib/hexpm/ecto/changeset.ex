@@ -1,6 +1,6 @@
-defmodule Hexpm.Validation do
+defmodule Hexpm.Changeset do
   @moduledoc """
-  Ecto validation helpers.
+  Ecto changeset helpers.
   """
 
   import Ecto.Changeset
@@ -84,4 +84,12 @@ defmodule Hexpm.Validation do
   defp default_hash(nil), do: @default_password
   defp default_hash(""), do: @default_password
   defp default_hash(password), do: password
+
+  def put_default_embed(changeset, key, value) do
+    if get_change(changeset, key) do
+      changeset
+    else
+      put_embed(changeset, key, value)
+    end
+  end
 end

@@ -23,7 +23,7 @@ defmodule Hexpm.Web do
       import Ecto
       import Ecto.Changeset
       import Ecto.Query, only: [from: 1, from: 2]
-      import Hexpm.Validation
+      import Hexpm.Changeset
 
       alias Ecto.Multi
 
@@ -100,6 +100,7 @@ defmodule Hexpm.Web do
         Accounts.Auth,
         Accounts.Email,
         Accounts.Key,
+        Accounts.KeyPermission,
         Accounts.Keys,
         Accounts.Session,
         Accounts.User,

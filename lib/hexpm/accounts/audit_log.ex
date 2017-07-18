@@ -75,19 +75,24 @@ defmodule Hexpm.Accounts.AuditLog do
 
   defp serialize(%Package{} = package) do
     package
-    |> do_serialize
+    |> do_serialize()
     |> Map.put(:meta, serialize(package.meta))
   end
   defp serialize(%Release{} = release) do
     release
-    |> do_serialize
+    |> do_serialize()
     |> Map.put(:meta, serialize(release.meta))
     |> Map.put(:retirement, serialize(release.retirement))
   end
   defp serialize(%User{} = user) do
     user
-    |> do_serialize
+    |> do_serialize()
     |> Map.put(:handles, serialize(user.handles))
+  end
+  defp serialize(%Key{} = key) do
+    key
+    |> do_serialize()
+    |> Map.put(:permissions, Enum.map(key.permissions, &serialize/1))
   end
   defp serialize(nil),
     do: nil
@@ -97,6 +102,7 @@ defmodule Hexpm.Accounts.AuditLog do
   defp do_serialize(schema), do: Map.take(schema, fields(schema))
 
   defp fields(%Key{}), do: [:id, :name]
+  defp fields(%KeyPermission{}), do: [:resource, :domain]
   defp fields(%Package{}), do: [:id, :name]
   defp fields(%Release{}), do: [:id, :version, :checksum, :has_docs, :package_id]
   defp fields(%User{}), do: [:id, :username]

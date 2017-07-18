@@ -10,23 +10,26 @@ defmodule Hexpm.Case do
 
   def create_user(username, email, password, confirmed? \\ true) do
     Hexpm.Accounts.User.build(%{username: username, password: password, emails: [%{email: email}]}, confirmed?)
-    |> Hexpm.Repo.insert!
+    |> Hexpm.Repo.insert!()
   end
 
-  def key_for(username) when is_binary(username) do
+  def key_for(user, type \\ :api)
+
+  def key_for(username, type) when is_binary(username) do
     Hexpm.Repo.get_by!(Hexpm.Accounts.User, username: username)
-    |> key_for
+    |> key_for(type)
   end
 
-  def key_for(user) do
-    key = user
-          |> Hexpm.Accounts.Key.build(%{name: "any_key_name"})
-          |> Hexpm.Repo.insert!
+  def key_for(user, _type) do
+    key =
+      user
+      |> Hexpm.Accounts.Key.build(%{name: "any_key_name"})
+      |> Hexpm.Repo.insert!
     key.user_secret
   end
 
   def read_fixture(path) do
     Path.join([__DIR__, "..", "fixtures", path])
-    |> File.read!
+    |> File.read!()
   end
 end
