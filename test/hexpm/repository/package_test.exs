@@ -91,10 +91,10 @@ defmodule Hexpm.Repository.PackageTest do
     phoenix = insert(:package, name: "phoenix", repository_id: repository.id)
 
     rel = insert(:release, package: ecto)
-    insert(:requirement, release: rel, dependency: poison)
+    insert(:requirement, release: rel, dependency: poison, requirement: "~> 1.0")
     rel = insert(:release, package: phoenix)
-    insert(:requirement, release: rel, dependency: poison)
-    insert(:requirement, release: rel, dependency: ecto)
+    insert(:requirement, release: rel, dependency: poison, requirement: "~> 1.0")
+    insert(:requirement, release: rel, dependency: ecto, requirement: "~> 1.0")
 
     Hexpm.Repo.refresh_view(Hexpm.Repository.PackageDependant)
 

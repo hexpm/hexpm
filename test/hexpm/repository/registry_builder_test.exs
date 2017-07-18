@@ -8,14 +8,14 @@ defmodule Hexpm.Repository.RegistryBuilderTest do
   setup do
     packages = [p1, p2, p3] = insert_list(3, :package)
 
-    req1 = insert(:requirement, requirement: "0.0.1", dependency: p1, app: p1.name)
-    req2 = insert(:requirement, requirement: "~> 0.0.1", dependency: p2, app: p2.name)
-    req3 = insert(:requirement, requirement: "0.0.1", dependency: p1, app: p1.name)
-
     r1 = insert(:release, package: p1, version: "0.0.1")
     r2 = insert(:release, package: p2, version: "0.0.1")
-    r3 = insert(:release, package: p2, version: "0.0.2", requirements: [req1])
-    r4 = insert(:release, package: p3, version: "0.0.2", requirements: [req2, req3])
+    r3 = insert(:release, package: p2, version: "0.0.2")
+    r4 = insert(:release, package: p3, version: "0.0.2")
+
+    insert(:requirement, release: r3, requirement: "0.0.1", dependency: p1, app: p1.name)
+    insert(:requirement, release: r4, requirement: "~> 0.0.1", dependency: p2, app: p2.name)
+    insert(:requirement, release: r4, requirement: "0.0.1", dependency: p1, app: p1.name)
 
     insert(:install, hex: "0.0.1", elixirs: ["1.0.0"])
     insert(:install, hex: "0.1.0", elixirs: ["1.1.0", "1.1.1"])

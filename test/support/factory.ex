@@ -2,9 +2,12 @@ defmodule Hexpm.Factory do
   use ExMachina.Ecto, repo: Hexpm.Repo
   alias Hexpm.Fake
 
+  @password Comeonin.Bcrypt.hashpwsalt("password")
+
   def user_factory() do
     %Hexpm.Accounts.User{
       username: Fake.sequence(:username),
+      password: @password,
       full_name: Fake.random(:full_name),
       emails: [build(:email)]
     }
@@ -89,7 +92,9 @@ defmodule Hexpm.Factory do
   end
 
   def download_factory() do
-    %Hexpm.Repository.Download{}
+    %Hexpm.Repository.Download{
+      day: ~D[2017-01-01]
+    }
   end
 
   def install_factory() do
