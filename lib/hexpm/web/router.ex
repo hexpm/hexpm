@@ -164,5 +164,7 @@ defmodule Hexpm.Web.Router do
     post "/keys", KeyController, :create
     delete "/keys", KeyController, :delete_all
     delete "/keys/:name", KeyController, :delete
+
+    get "/auth", AuthController, :show
   end
 end
