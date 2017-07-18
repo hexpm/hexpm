@@ -2,7 +2,7 @@ defmodule Hexpm.Web.AuthHelpers do
   import Plug.Conn
   import Hexpm.Web.ControllerHelpers, only: [render_error: 3]
 
-  alias Hexpm.Accounts.Auth
+  alias Hexpm.Accounts.{Auth, Key}
 
   def authorized(conn, opts) do
     fun = Keyword.get(opts, :fun, fn _, _ -> true end)
@@ -22,6 +22,8 @@ defmodule Hexpm.Web.AuthHelpers do
   defp authorized(conn, user, fun, opts) do
     only_basic = Keyword.get(opts, :only_basic, false)
     allow_unconfirmed = Keyword.get(opts, :allow_unconfirmed, false)
+    domain = Keyword.get(opts, :domain)
+    resource = Keyword.get(opts, :resource)
     key = conn.assigns.key
     email = conn.assigns.email
 
@@ -30,11 +32,20 @@ defmodule Hexpm.Web.AuthHelpers do
         error(conn, {:error, :missing})
       user && ((!email or !email.verified) && !allow_unconfirmed) ->
         error(conn, {:error, :unconfirmed})
+      user && key && !verify_permissions?(key, domain, resource) ->
+        error(conn, {:error, :domain})
       fun && !fun.(conn, user) ->
         error(conn, {:error, :auth})
       true ->
         conn
     end
+  end
+
+  defp verify_permissions?(_key, nil, _resource) do
+    true
+  end
+  defp verify_permissions?(key, domain, resource) do
+    Key.verify_permissions?(key, domain, resource)
   end
 
   def error(conn, error) do
@@ -51,6 +62,8 @@ defmodule Hexpm.Web.AuthHelpers do
         forbidden(conn, "email not verified")
       {:error, :revoked_key} ->
         unauthorized(conn, "API key revoked")
+      {:error, :domain} ->
+        unauthorized(conn, "key not authorized for this action")
       {:error, :auth} ->
         forbidden(conn, "account not authorized for this action")
     end

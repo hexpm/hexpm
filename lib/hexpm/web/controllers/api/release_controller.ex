@@ -3,8 +3,8 @@ defmodule Hexpm.Web.API.ReleaseController do
 
   plug :fetch_release when action in [:show, :delete]
   plug :maybe_fetch_package when action in [:create]
-  plug :authorize, [fun: &package_owner?/2] when action in [:delete]
-  plug :authorize, [fun: &maybe_package_owner?/2] when action in [:create]
+  plug :authorize, [domain: :api, fun: &package_owner?/2] when action in [:delete]
+  plug :authorize, [domain: :api, fun: &maybe_package_owner?/2] when action in [:create]
 
   def create(conn, %{"body" => body}) do
     handle_tarball(conn, conn.assigns.repository, conn.assigns.package, conn.assigns.user, body)

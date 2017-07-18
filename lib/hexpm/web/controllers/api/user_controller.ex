@@ -1,7 +1,7 @@
 defmodule Hexpm.Web.API.UserController do
   use Hexpm.Web, :controller
 
-  plug :authorize when action in [:test]
+  plug :authorize, [domain: :api] when action in [:test]
 
   def create(conn, params) do
     params = email_param(params)

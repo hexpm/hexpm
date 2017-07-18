@@ -2,7 +2,7 @@ defmodule Hexpm.Web.API.OwnerController do
   use Hexpm.Web, :controller
 
   plug :fetch_package
-  plug :authorize, [fun: &package_owner?/2] when action in [:create, :delete]
+  plug :authorize, [domain: :api, fun: &package_owner?/2] when action in [:create, :delete]
 
   def index(conn, _params) do
     owners =
