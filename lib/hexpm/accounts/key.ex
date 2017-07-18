@@ -11,17 +11,20 @@ defmodule Hexpm.Accounts.Key do
     timestamps()
 
     belongs_to :user, User
+    embeds_many :permissions, KeyPermission
 
-    # Only used after key creation to hold the users key (not hashed)
+    # Only used after key creation to hold the user's key (not hashed)
     # the user key will never be retrievable after this
     field :user_secret, :string, virtual: true
   end
 
-  defp changeset(key, params) do
+  def changeset(key, params) do
     cast(key, params, ~w(name))
     |> validate_required(:name)
-    |> add_keys
+    |> add_keys()
     |> prepare_changes(&unique_name/1)
+    |> cast_embed(:permissions)
+    |> put_default_embed(:permissions, [%KeyPermission{domain: "api"}])
   end
 
   def build(user, params) do
@@ -109,5 +112,15 @@ defmodule Hexpm.Accounts.Key do
     else
       name_counter
     end
+  end
+
+  def verify_permissions?(_key, nil, _resource) do
+    true
+  end
+  def verify_permissions?(key, :api, _resource) do
+    Enum.any?(key.permissions, &(&1.domain == "api"))
+  end
+  def verify_permissions?(key, :repository, resource) do
+    Enum.any?(key.permissions, &(&1.domain == "repository" and &1.resource == resource))
   end
 end

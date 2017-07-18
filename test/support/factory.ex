@@ -29,8 +29,13 @@ defmodule Hexpm.Factory do
       name: Fake.random(:username),
       secret_first: first,
       secret_second: second,
-      user_secret: user_secret
+      user_secret: user_secret,
+      permissions: [build(:key_permission, domain: "api")]
     }
+  end
+
+  def key_permission_factory() do
+    %Hexpm.Accounts.KeyPermission{}
   end
 
   def user_handles_factory() do
@@ -63,7 +68,7 @@ defmodule Hexpm.Factory do
     %Hexpm.Repository.PackageOwner{}
   end
 
-  def repostory_user_factory() do
+  def repository_user_factory() do
     %Hexpm.Repository.RepositoryUser{
       role: "read"
     }
