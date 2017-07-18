@@ -2,8 +2,8 @@ defmodule Hexpm.Web.API.RepositoryController do
   use Hexpm.Web, :controller
 
   plug :fetch_repository when action in [:show]
-  plug :maybe_authorize when action in [:index]
-  plug :maybe_authorize, [fun: &repository_access?/2] when action in [:show]
+  plug :maybe_authorize, [domain: :api] when action in [:index]
+  plug :maybe_authorize, [domain: :api, fun: &repository_access?/2] when action in [:show]
 
   def index(conn, _params) do
     repositories = Repositories.all_public() ++ all_by_user(conn.assigns.user)
