@@ -117,7 +117,7 @@ defmodule Hexpm.Web.Router do
   scope "/api", Hexpm.Web.API, as: :api do
     pipe_through :upload
 
-    for prefix <- ["/", "/repositories/:repository"] do
+    for prefix <- ["/", "/repos/:repository"] do
       scope prefix do
         post "/packages/:name/releases", ReleaseController, :create
         post "/packages/:name/releases/:version/docs", DocsController,    :create
@@ -135,10 +135,10 @@ defmodule Hexpm.Web.Router do
     get "/users/:name/test", UserController, :test
     post "/users/:name/reset", UserController, :reset
 
-    get "/repositories", RepositoryController, :index
-    get "/repositories/:repository", RepositoryController, :show
+    get "/repos", RepositoryController, :index
+    get "/repos/:repository", RepositoryController, :show
 
-    for prefix <- ["/", "/repositories/:repository"] do
+    for prefix <- ["/", "/repos/:repository"] do
       scope prefix do
         get "/packages", PackageController, :index
         get "/packages/:name", PackageController, :show
