@@ -1,8 +1,6 @@
 defmodule Hexpm.Web.EmailController do
   use Hexpm.Web, :controller
 
-  # TODO: Sign in user after verification
-
   def verify(conn, %{"username" => username, "email" => email, "key" => key}) do
     success = Users.verify_email(username, email, key) == :ok
     conn =
