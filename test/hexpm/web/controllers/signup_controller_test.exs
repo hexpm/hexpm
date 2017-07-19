@@ -21,6 +21,17 @@ defmodule Hexpm.Web.SignupControllerTest do
     assert user.full_name == "José"
   end
 
+  test "create user when existing, unverified one exists" do
+    create_user("jose", "jose@example.com", "secret123", false)
+
+    conn = post(build_conn(), "signup", %{user: %{username: "jose", emails: [%{email: "jose@mail.com"}], password: "hunter42", full_name: "José"}})
+
+    assert redirected_to(conn) == "/"
+    user = Users.get("jose")
+    assert user.username == "jose"
+    assert user.full_name == "José"
+  end
+
   test "create user invalid" do
     conn = post(build_conn(), "signup", %{user: %{username: "eric", emails: [%{email: "jose@mail.com"}], password: "hunter42", full_name: "José"}})
     assert response(conn, 400) =~ "Sign up"

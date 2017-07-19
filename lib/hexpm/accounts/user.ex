@@ -95,6 +95,11 @@ defmodule Hexpm.Accounts.User do
     else: multi
   end
 
+  def has_no_verified_emails?(nil), do: false
+  def has_no_verified_emails?(user) do
+    Enum.all?(user.emails, &(not &1.verified))
+  end
+
   def email(user, :primary), do: user.emails |> Enum.find(& &1.primary) |> email
   def email(user, :public), do: user.emails |> Enum.find(& &1.public) |> email
 
