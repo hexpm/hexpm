@@ -1,5 +1,7 @@
 use Mix.Config
 
+pool_size = String.to_integer(System.get_env("HEX_POOL_SIZE") || "20")
+
 config :hexpm,
   cookie_sign_salt: System.get_env("HEX_COOKIE_SIGNING_SALT"),
   cookie_encr_salt: System.get_env("HEX_COOKIE_ENCRYPTION_SALT")
@@ -14,8 +16,8 @@ config :hexpm, Hexpm.Web.Endpoint,
 config :hexpm, Hexpm.Repo,
   adapter: Ecto.Adapters.Postgres,
   url: {:system, "DATABASE_URL"},
-  pool_size: 20,
-  queue_size: 20 * 5,
+  pool_size: pool_size,
+  queue_size: pool_size * 5,
   ssl: true
 
 config :comeonin,
