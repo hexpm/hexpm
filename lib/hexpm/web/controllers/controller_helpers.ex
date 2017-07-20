@@ -120,15 +120,19 @@ defmodule Hexpm.Web.ControllerHelpers do
     end
   end
 
-  defp put_etag(conn, nil),
-    do: conn
-  defp put_etag(conn, etag),
-    do: put_resp_header(conn, "etag", etag)
+  defp put_etag(conn, nil) do
+    conn
+  end
+  defp put_etag(conn, etag) do
+    put_resp_header(conn, "etag", etag)
+  end
 
-  defp put_last_modified(conn, nil),
-    do: conn
-  defp put_last_modified(conn, modified),
-    do: put_resp_header(conn, "last-modified", :cowboy_clock.rfc1123(modified))
+  defp put_last_modified(conn, nil) do
+    conn
+  end
+  defp put_last_modified(conn, modified) do
+    put_resp_header(conn, "last-modified", :cowboy_clock.rfc1123(modified))
+  end
 
   defp fresh?(conn, opts) do
     not expired?(conn, opts)
@@ -166,8 +170,12 @@ defmodule Hexpm.Web.ControllerHelpers do
     end
   end
 
-  defp etag(nil), do: nil
-  defp etag([]),  do: nil
+  defp etag(nil) do
+    nil
+  end
+  defp etag([]) do
+    nil
+  end
   defp etag(models) do
     list = Enum.map(List.wrap(models), fn model ->
       [model.__struct__, model.id, model.updated_at]
@@ -191,7 +199,7 @@ defmodule Hexpm.Web.ControllerHelpers do
     if repository = Repositories.get(conn.params["repository"]) do
       assign(conn, :repository, repository)
     else
-      conn |> not_found |> halt
+      conn |> not_found() |> halt()
     end
   end
 
@@ -204,7 +212,7 @@ defmodule Hexpm.Web.ControllerHelpers do
         assign(conn, :package, nil)
       end
     else
-      conn |> not_found |> halt
+      conn |> not_found() |> halt()
     end
   end
 
@@ -217,10 +225,10 @@ defmodule Hexpm.Web.ControllerHelpers do
         |> assign(:repository, repository)
         |> assign(:package, package)
       else
-        conn |> not_found |> halt
+        conn |> not_found() |> halt()
       end
     else
-      conn |> not_found |> halt
+      conn |> not_found() |> halt()
     end
   end
 
@@ -235,10 +243,22 @@ defmodule Hexpm.Web.ControllerHelpers do
         |> assign(:package, package)
         |> assign(:release, release)
       else
-        conn |> not_found |> halt
+        conn |> not_found() |> halt()
       end
     else
-      conn |> not_found |> halt
+      conn |> not_found() |> halt()
+    end
+  end
+
+  def required_params(conn, required_param_names) do
+    remaining = required_param_names -- Map.keys(conn.params)
+
+    if remaining == [] do
+      conn
+    else
+      names = Enum.map_join(remaining, ", ", &inspect/1)
+      message = "missing required parameters: #{names}"
+      render_error(conn, 400, message: message)
     end
   end
 
