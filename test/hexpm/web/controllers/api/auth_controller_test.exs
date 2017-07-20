@@ -47,6 +47,7 @@ defmodule Hexpm.Web.API.AuthControllerTest do
       |> response(400)
     end
 
+    test "authenticate full key", %{full_key: key, owned_repo: owned_repo, unowned_repo: unowned_repo} do
       build_conn()
       |> put_req_header("authorization", key.user_secret)
       |> get("api/auth", domain: "api")
@@ -60,25 +61,20 @@ defmodule Hexpm.Web.API.AuthControllerTest do
       build_conn()
       |> put_req_header("authorization", key.user_secret)
       |> get("api/auth", domain: "repository", resource: unowned_repo.name)
-      |> response(403)
+      |> response(401)
 
       build_conn()
       |> put_req_header("authorization", key.user_secret)
       |> get("api/auth", domain: "repository", resource: "BADREPO")
-      |> response(403)
+      |> response(401)
 
       build_conn()
       |> put_req_header("authorization", key.user_secret)
       |> get("api/auth", domain: "repository")
-      |> response(403)
+      |> response(401)
     end
 
     test "authenticate api key", %{api_key: key} do
-      build_conn()
-      |> put_req_header("authorization", key.user_secret)
-      |> get("api/auth")
-      |> response(204)
-
       build_conn()
       |> put_req_header("authorization", key.user_secret)
       |> get("api/auth", domain: "api")
@@ -87,24 +83,19 @@ defmodule Hexpm.Web.API.AuthControllerTest do
       build_conn()
       |> put_req_header("authorization", key.user_secret)
       |> get("api/auth", domain: "repository", resource: "myrepo")
-      |> response(403)
+      |> response(401)
     end
 
     test "authenticate repo key", %{repo_key: key, owned_repo: owned_repo, unowned_repo: unowned_repo} do
       build_conn()
       |> put_req_header("authorization", key.user_secret)
-      |> get("api/auth")
-      |> response(204)
-
-      build_conn()
-      |> put_req_header("authorization", key.user_secret)
       |> get("api/auth", domain: "api")
-      |> response(403)
+      |> response(401)
 
       build_conn()
       |> put_req_header("authorization", key.user_secret)
       |> get("api/auth", domain: "repository")
-      |> response(403)
+      |> response(401)
 
       build_conn()
       |> put_req_header("authorization", key.user_secret)
@@ -114,12 +105,12 @@ defmodule Hexpm.Web.API.AuthControllerTest do
       build_conn()
       |> put_req_header("authorization", key.user_secret)
       |> get("api/auth", domain: "repository", resource: unowned_repo.name)
-      |> response(403)
+      |> response(401)
 
       build_conn()
       |> put_req_header("authorization", key.user_secret)
       |> get("api/auth", domain: "repository", resource: "BADREPO")
-      |> response(403)
+      |> response(401)
     end
 
     test "authenticate repo key against repo without access permissions", %{unowned_repo_key: key, unowned_repo: unowned_repo} do
