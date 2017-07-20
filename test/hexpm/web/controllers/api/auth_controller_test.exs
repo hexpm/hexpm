@@ -29,22 +29,23 @@ defmodule Hexpm.Web.API.AuthControllerTest do
   describe "GET /api/auth" do
     test "without key" do
       build_conn()
-      |> get("api/auth")
+      |> get("api/auth", domain: "api")
       |> response(401)
     end
 
     test "with invalid key" do
       build_conn()
       |> put_req_header("authorization", "ABC")
-      |> get("api/auth")
+      |> get("api/auth", domain: "api")
       |> response(401)
     end
 
-    test "authenticate full key", %{full_key: key, owned_repo: owned_repo, unowned_repo: unowned_repo} do
+    test "without domain returns 400", %{full_key: key} do
       build_conn()
       |> put_req_header("authorization", key.user_secret)
       |> get("api/auth")
-      |> response(204)
+      |> response(400)
+    end
 
       build_conn()
       |> put_req_header("authorization", key.user_secret)
