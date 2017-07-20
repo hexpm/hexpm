@@ -8,16 +8,16 @@ defmodule Hexpm.Web.API.AuthController do
     key = conn.assigns.key
     user = conn.assigns.user
     resource = params["resource"]
+    domain = domain_to_atom(domain)
 
-    if domain do
-      domain = domain_to_atom(domain)
-      if Key.verify_permissions?(key, domain, resource) and verify?(user, domain, resource) do
+    if Key.verify_permissions?(key, domain, resource) do
+      if verify?(user, domain, resource) do
         send_resp(conn, 204, "")
       else
-        send_resp(conn, 403, "")
+        error(conn, {:error, :auth})
       end
     else
-      send_resp(conn, 204, "")
+      error(conn, {:error, :domain})
     end
   end
 
