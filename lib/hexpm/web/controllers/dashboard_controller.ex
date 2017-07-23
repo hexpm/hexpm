@@ -49,12 +49,11 @@ defmodule Hexpm.Web.DashboardController do
   end
 
   def email(conn, _params) do
-    user = Users.with_emails(conn.assigns.logged_in)
-    render_email(conn, user)
+    render_email(conn, conn.assigns.logged_in)
   end
 
-  def add_email(conn, params) do
-    user = Users.with_emails(conn.assigns.logged_in)
+  def add_email(conn, %{"email" => email} = params) do
+    user = conn.assigns.logged_in
 
     case Users.add_email(user, params["email"], audit: audit_data(conn)) do
       {:ok, _user} ->
@@ -69,11 +68,8 @@ defmodule Hexpm.Web.DashboardController do
     end
   end
 
-  def remove_email(conn, params) do
-    user = Users.with_emails(conn.assigns.logged_in)
-    email = params["email"]
-
-    case Users.remove_email(user, params, audit: audit_data(conn)) do
+  def remove_email(conn, %{"email" => email} = params) do
+    case Users.remove_email(conn.assigns.logged_in, params, audit: audit_data(conn)) do
       :ok ->
         conn
         |> put_flash(:info, "Removed email #{email} from your account.")
@@ -85,11 +81,8 @@ defmodule Hexpm.Web.DashboardController do
     end
   end
 
-  def primary_email(conn, params) do
-    user = Users.with_emails(conn.assigns.logged_in)
-    email = params["email"]
-
-    case Users.primary_email(user, params, audit: audit_data(conn)) do
+  def primary_email(conn, %{"email" => email} = params) do
+    case Users.primary_email(conn.assigns.logged_in, params, audit: audit_data(conn)) do
       :ok ->
         conn
         |> put_flash(:info, "Your primary email was changed to #{email}.")
@@ -101,11 +94,8 @@ defmodule Hexpm.Web.DashboardController do
     end
   end
 
-  def public_email(conn, params) do
-    user = Users.with_emails(conn.assigns.logged_in)
-    email = params["email"]
-
-    case Users.public_email(user, params, audit: audit_data(conn)) do
+  def public_email(conn, %{"email" => email} = params) do
+    case Users.public_email(conn.assigns.logged_in, params, audit: audit_data(conn)) do
       :ok ->
         conn
         |> put_flash(:info, "Your public email was changed to #{email}.")
@@ -117,11 +107,8 @@ defmodule Hexpm.Web.DashboardController do
     end
   end
 
-  def resend_verify_email(conn, params) do
-    user = Users.with_emails(conn.assigns.logged_in)
-    email = params["email"]
-
-    case Users.resend_verify_email(user, params) do
+  def resend_verify_email(conn, %{"email" => email} = params) do
+    case Users.resend_verify_email(conn.assigns.logged_in, params) do
       :ok ->
         conn
         |> put_flash(:info, "A verification email has been sent to #{email}.")

@@ -5,10 +5,7 @@ defmodule Hexpm.Web.API.OwnerController do
   plug :authorize, [domain: :api, fun: &package_owner?/2] when action in [:create, :delete]
 
   def index(conn, _params) do
-    owners =
-      conn.assigns.package
-      |> Owners.all()
-      |> Users.with_emails()
+    owners = Owners.all(conn.assigns.package, [:emails])
 
     conn
     |> api_cache(:private)

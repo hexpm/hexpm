@@ -21,14 +21,9 @@ defmodule Hexpm.Web.API.UserController do
   end
 
   def show(conn, %{"name" => username}) do
-    user = Users.get(username)
+    user = Users.get(username, [:owned_packages, :emails])
 
     if user do
-      user =
-        user
-        |> Users.with_owned_packages()
-        |> Users.with_emails()
-
       when_stale(conn, user, fn conn ->
         conn
         |> api_cache(:private)

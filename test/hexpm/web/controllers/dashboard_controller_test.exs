@@ -66,7 +66,7 @@ defmodule Hexpm.Web.DashboardControllerTest do
 
     assert redirected_to(conn) == "/dashboard/profile"
     assert get_flash(conn, :info) =~ "Profile updated successfully"
-    refute Users.get(c.user.username) |> Users.with_emails |> User.email(:public)
+    refute Users.get(c.user.username, [:emails]) |> User.email(:public)
   end
 
   test "update profile with no emails", c do

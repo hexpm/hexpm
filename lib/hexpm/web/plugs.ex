@@ -77,8 +77,7 @@ defmodule Hexpm.Web.Plugs do
   def login(conn, _opts) do
     user_id = get_session(conn, "user_id")
 
-    user = user_id && Hexpm.Accounts.Users.get_by_id(user_id)
-    user = user && Hexpm.Accounts.Users.with_emails(user)
+    user = user_id && Hexpm.Accounts.Users.get_by_id(user_id, [:emails, :repositories])
 
     if user do
       assign(conn, :logged_in, user)

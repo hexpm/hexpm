@@ -3,7 +3,7 @@ defmodule Hexpm.Repository.Owners do
 
   def all(package, preload \\ []) do
     from(u in assoc(package, :owners), preload: ^preload)
-    |> Repo.all
+    |> Repo.all()
   end
 
   def add(package, owner, [audit: audit_data]) do
@@ -14,9 +14,9 @@ defmodule Hexpm.Repository.Owners do
 
     case Repo.transaction(multi) do
       {:ok, _} ->
-        owners = package |> all |> Users.with_emails
+        owners = package |> all([:emails])
         owner = Enum.find(owners, &(&1.id == owner.id))
-        Emails.owner_added(package, owners, owner) |> Mailer.deliver_now_throttled
+        Emails.owner_added(package, owners, owner) |> Mailer.deliver_now_throttled()
         :ok
       {:error, :owner, changeset, _} ->
         {:error, changeset}
@@ -24,7 +24,7 @@ defmodule Hexpm.Repository.Owners do
   end
 
   def remove(package, owner, [audit: audit_data]) do
-    owners = package |> all() |> Users.with_emails()
+    owners = package |> all([:emails])
 
     if length(owners) == 1 do
       {:error, :last_owner}
@@ -38,6 +38,7 @@ defmodule Hexpm.Repository.Owners do
       owner = Enum.find(owners, &(&1.id == owner.id))
       Emails.owner_removed(package, owners, owner)
       |> Mailer.deliver_now_throttled()
+
       :ok
     end
   end

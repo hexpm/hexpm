@@ -3,23 +3,17 @@ defmodule Hexpm.Accounts.Users do
 
   def get(username_or_email, preload \\ []) do
     User.get(username_or_email, preload)
-    |> Repo.one
+    |> Repo.one()
   end
 
-  def get_by_id(id) do
+  def get_by_id(id, preload \\ []) do
     Repo.get(User, id)
+    |> Repo.preload(preload)
   end
 
-  def get_by_username(username) do
+  def get_by_username(username, preload \\ []) do
     Repo.get_by(User, username: username)
-  end
-
-  def with_owned_packages(user) do
-    Repo.preload(user, :owned_packages)
-  end
-
-  def with_emails(user) do
-    Repo.preload(user, :emails)
+    |> Repo.preload(preload)
   end
 
   def add(params, [audit: audit_data]) do
@@ -33,7 +27,8 @@ defmodule Hexpm.Accounts.Users do
 
     case Repo.transaction(multi) do
       {:ok, %{user: %{emails: [email]} = user}} ->
-        Emails.verification(user, email) |> Mailer.deliver_now_throttled
+        Emails.verification(user, email)
+        |> Mailer.deliver_now_throttled()
         {:ok, user}
       {:error, :user, changeset, _} ->
         {:error, changeset}
@@ -83,7 +78,7 @@ defmodule Hexpm.Accounts.Users do
   end
 
   def password_reset_init(name, [audit: audit_data]) do
-    if user = get(name) do
+    if user = get(name, [:emails]) do
       {:ok, %{user: user}} =
         Multi.new()
         |> Multi.update(:user, User.init_password_reset(user))
@@ -91,7 +86,6 @@ defmodule Hexpm.Accounts.Users do
         |> Repo.transaction()
 
       user
-      |> with_emails()
       |> Emails.password_reset_request()
       |> Mailer.deliver_now_throttled()
 
@@ -130,8 +124,10 @@ defmodule Hexpm.Accounts.Users do
 
     case Repo.transaction(multi) do
       {:ok, %{email: email}} ->
-        user = with_emails(%{user | emails: %Ecto.Association.NotLoaded{}})
-        Emails.verification(user, email) |> Mailer.deliver_now_throttled
+        user = Repo.preload(user, :emails, force: true)
+        Emails.verification(user, email)
+        |> Mailer.deliver_now_throttled()
+
         {:ok, user}
       {:error, :email, changeset, _} ->
         {:error, changeset}
