@@ -10,7 +10,7 @@ defmodule Hexpm.Web.API.RepositoryController do
 
     when_stale(conn, repositories, [modified: false], fn conn ->
       conn
-      |> api_cache(:signed_in)
+      |> api_cache(:logged_in)
       |> render(:index, repositories: repositories)
     end)
   end

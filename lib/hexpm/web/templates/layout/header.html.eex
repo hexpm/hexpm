@@ -71,15 +71,15 @@
               </ul>
             </li>
 
-            <%= if signed_in?(assigns) do %>
+            <%= if logged_in?(assigns) do %>
               <li class="dropdown">
                 <a href="#" class="dropdown-toggle" data-toggle="dropdown">
-                  <%= @logged_in.username %>
-                  <img src="<%= gravatar_url(User.email(@logged_in, :public), :small) %>" class="navbar-avatar">
+                  <%= @user.username %>
+                  <img src="<%= gravatar_url(User.email(@user, :public), :small) %>" class="navbar-avatar">
                   <b class="caret"></b>
                 </a>
                 <ul class="dropdown-menu">
-                  <li><a href="<%= user_path(Endpoint, :show, @logged_in) %>">Profile</a></li>
+                  <li><a href="<%= user_path(Endpoint, :show, @user) %>">Profile</a></li>
                   <li><a href="<%= dashboard_path(Endpoint, :profile) %>">Dashboard</a></li>
                   <li role="separator" class="divider"></li>
                   <li>

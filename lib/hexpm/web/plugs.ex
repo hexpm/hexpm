@@ -80,9 +80,9 @@ defmodule Hexpm.Web.Plugs do
     user = user_id && Hexpm.Accounts.Users.get_by_id(user_id, [:emails, :repositories])
 
     if user do
-      assign(conn, :logged_in, user)
+      assign(conn, :user, user)
     else
-      assign(conn, :logged_in, nil)
+      assign(conn, :user, nil)
     end
   end
 

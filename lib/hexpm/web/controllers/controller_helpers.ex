@@ -14,15 +14,15 @@ defmodule Hexpm.Web.ControllerHelpers do
   end
 
   def api_cache(conn, privacy) do
-    control = [signed_in_privacy(conn, privacy)] ++ ["max-age": @max_cache_age]
+    control = [logged_in_privacy(conn, privacy)] ++ ["max-age": @max_cache_age]
     vary = ["accept", "accept-encoding"]
     cache(conn, control, vary)
   end
 
-  defp signed_in_privacy(conn, :signed_in) do
+  defp logged_in_privacy(conn, :logged_in) do
     if conn.assigns.user, do: :private, else: :public
   end
-  defp signed_in_privacy(_conn, other) do
+  defp logged_in_privacy(_conn, other) do
     other
   end
 
@@ -264,10 +264,7 @@ defmodule Hexpm.Web.ControllerHelpers do
   end
 
   def audit_data(conn) do
-    # TODO: We should generalize logged_in and user between
-    #       the web and api pipelines
-    user = conn.assigns[:logged_in] || conn.assigns[:user]
-    {user, conn.assigns.user_agent}
+    {conn.assigns.user, conn.assigns.user_agent}
   end
 
   def success_to_status(true), do: 200
@@ -297,7 +294,7 @@ defmodule Hexpm.Web.ControllerHelpers do
   end
 
   def logged_in?(conn) do
-    !!conn.assigns[:logged_in]
+    !!conn.assigns[:user]
   end
 
   def nillify_params(conn, keys) do
