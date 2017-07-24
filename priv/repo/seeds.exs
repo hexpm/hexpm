@@ -69,7 +69,8 @@ Hexpm.Repo.transaction(fn ->
       requirement: "~> 0.0.1")],
     meta: build(:release_metadata,
       app: "postgrex",
-      build_tools: ["mix"]))
+      build_tools: ["mix"]),
+    has_docs: true)
 
   insert(:release,
     package: postgrex,
@@ -177,7 +178,8 @@ Hexpm.Repo.transaction(fn ->
         requirement: "~> 0.1.0")],
     meta: build(:release_metadata,
       app: "ecto",
-      build_tools: ["mix"]))
+      build_tools: ["mix"]),
+    has_docs: true)
 
   insert(:download, release: rel, downloads: 42, day: Hexpm.Utils.utc_yesterday())
 
