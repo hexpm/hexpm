@@ -158,7 +158,7 @@ defmodule Hexpm.Repository.Assets do
 
   defp content_type(path) do
     case Path.extname(path) do
-      "." <> ext -> [content_type: Plug.MIME.type(ext)]
+      "." <> ext -> [content_type: MIME.type(ext)]
       ""         -> []
     end
   end
