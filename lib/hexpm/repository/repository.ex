@@ -18,4 +18,12 @@ defmodule Hexpm.Repository.Repository do
          where: ro.user_id == ^user.id,
          select: count(ro.id) >= 1)
   end
+
+  def hexpm() do
+    %__MODULE__{
+      id: 1,
+      name: "hexpm",
+      public: true
+    }
+  end
 end
