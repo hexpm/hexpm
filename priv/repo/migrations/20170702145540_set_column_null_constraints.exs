@@ -14,6 +14,8 @@ defmodule Hexpm.Repo.Migrations.SetColumnNullConstraints do
   end
 
   def up do
+    execute "UPDATE requirements SET requirement = '>= 0.0.0' WHERE requirement IS NULL"
+
     set_not_null("blocked_addresses", ~w(ip))
     set_not_null("downloads", ~w(release_id downloads day))
     set_not_null("emails", ~w(email verified primary public user_id inserted_at updated_at))

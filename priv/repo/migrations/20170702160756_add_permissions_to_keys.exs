@@ -3,7 +3,7 @@ defmodule Hexpm.Repo.Migrations.AddPermissionsToKeys do
 
   def up do
     alter table(:keys) do
-      add :permissions, {:array, :jsonb}, null: false, default: fragment("ARRAY[json_build_object('id', uuid_generate_v4(), 'policy', 'api')]")
+      add :permissions, {:array, :jsonb}, null: false, default: fragment("ARRAY[json_build_object('id', uuid_generate_v4(), 'domain', 'api')]")
     end
 
     execute "ALTER TABLE keys ALTER permissions DROP DEFAULT"
