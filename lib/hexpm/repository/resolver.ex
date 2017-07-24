@@ -168,7 +168,6 @@ defmodule Hexpm.Repository.Resolver do
       [{_, deps}] ->
         deps
       [] ->
-        # TODO: Preload requirements in prefetch, maybe?
         release_id = :ets.lookup_element(name, {:release, package, version}, 2)
 
         deps =
@@ -176,7 +175,7 @@ defmodule Hexpm.Repository.Resolver do
                join: p in assoc(r, :dependency),
                where: r.release_id == ^release_id,
                select: {p.name, r.app, r.requirement, r.optional})
-          |> Hexpm.Repo.all
+          |> Hexpm.Repo.all()
 
         :ets.insert(name, {{:deps, package, version}, deps})
         deps

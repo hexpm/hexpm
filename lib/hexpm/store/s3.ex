@@ -18,7 +18,6 @@ defmodule Hexpm.Store.S3 do
     end
   end
 
-  # TODO: verify cache-control, surrogate-key and purge for everything we upload
   def put(region, bucket, key, blob, opts) do
     S3.put_object(bucket(bucket), key, blob, opts)
     |> ExAws.request!(region: region(region))

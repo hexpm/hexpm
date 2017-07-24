@@ -31,10 +31,9 @@ if answer =~ ~r/^(Y(es)?)?$/i do
   Enum.each(owners, &(Hexpm.Repository.Package.owner(package, &1) |> Hexpm.Repo.delete_all))
   Enum.each(releases, &(Hexpm.Repository.Release.delete(&1, force: true) |> Hexpm.Repo.delete!))
   Hexpm.Repo.delete!(package)
+  Hexpm.Repository.Assets.revert_release(release)
   Hexpm.Repository.RegistryBuilder.partial_build({:publish, name})
   IO.puts "Removed"
 else
   IO.puts "Not removed"
 end
-
-# TODO: Remove tarballs!

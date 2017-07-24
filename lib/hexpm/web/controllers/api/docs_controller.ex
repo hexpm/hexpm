@@ -29,7 +29,7 @@ defmodule Hexpm.Web.API.DocsController do
         |> api_cache(:public)
         |> send_resp(201, "")
       {:error, errors} ->
-        validation_failed(conn, [tar: errors])
+        validation_failed(conn, %{tar: errors})
     end
   end
 

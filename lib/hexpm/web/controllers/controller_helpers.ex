@@ -55,7 +55,7 @@ defmodule Hexpm.Web.ControllerHelpers do
     render_error(conn, 422, errors: errors)
   end
   def validation_failed(conn, errors) do
-    render_error(conn, 422, errors: errors_to_map(errors))
+    render_error(conn, 422, errors: errors)
   end
 
   defp pretty_type({:array, type}), do: "list(#{pretty_type(type)})"
@@ -79,13 +79,6 @@ defmodule Hexpm.Web.ControllerHelpers do
     |> normalize_errors()
   end
 
-  # TODO: remove when requirements are handled with cast_assoc
-  defp errors_to_map(errors) when is_list(errors) do
-    Enum.into(errors, %{}, fn {key, value} -> {key, errors_to_map(value)} end)
-  end
-  defp errors_to_map(other), do: other
-
-  # TODO: Fix clients instead
   # Since Changeset.traverse_errors returns `{field: [err], ...}`
   # but Hex client expects `{field: err1, ...}` we normalize to the latter.
   defp normalize_errors(errors) do

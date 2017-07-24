@@ -79,8 +79,14 @@ defmodule Hexpm.Repository.Assets do
   end
 
   defp put_docs_tarball(release, body) do
-    # TODO: Cache and add surrogate key
-    opts = [acl: :public_read]
+    surrogate_key = {"surrogate-key", docs_cdn_key(release)}
+    surrogate_control = {"surrogate-control", "max-age=604800"}
+    opts = [
+      acl: :public_read,
+      cache_control: "public, max-age=3600",
+      meta: [surrogate_key, surrogate_control]
+    ]
+
     Hexpm.Store.put(nil, :s3_bucket, docs_store_key(release), body, opts)
   end
 

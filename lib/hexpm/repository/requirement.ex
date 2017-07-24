@@ -22,7 +22,6 @@ defmodule Hexpm.Repository.Requirement do
     |> validate_requirement(:requirement, pre: get_field(release_changeset, :version).pre != [])
   end
 
-  # TODO: Raise validation error if field is not set
   def build_all(release_changeset) do
     dependencies = preload_dependencies(release_changeset.params["requirements"])
 
@@ -41,8 +40,6 @@ defmodule Hexpm.Repository.Requirement do
     else
       release_changeset
     end
-
-    # TODO: Remap requirements errors to hex http spec
   end
 
   defp validate_resolver(release_changeset, requirements) do

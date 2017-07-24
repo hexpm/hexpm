@@ -1,5 +1,5 @@
 # TODO: Don't rate limit conditional requests that return 304 Not Modified
-# TODO: Use redis instead of single process to support multiple dynos
+# NOTE: Does not rate limit accross multiple hosts
 
 defmodule Hexpm.Web.Plugs.Attack do
   use PlugAttack
