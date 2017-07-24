@@ -60,6 +60,9 @@ defmodule Hexpm.Accounts.Users do
 
     case Repo.transaction(multi) do
       {:ok, %{user: user}} ->
+        user
+        |> Emails.password_changed()
+        |> Mailer.deliver_now_throttled()
         {:ok, user}
       {:error, :user, changeset, _} ->
         {:error, changeset}
