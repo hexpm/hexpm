@@ -89,6 +89,7 @@ defmodule Hexpm.Web.Router do
     get "/packages", PackageController, :index
     get "/packages/:name", PackageController, :show
     get "/packages/:name/:version", PackageController, :show
+    get "/packages/:repository/:name/:version", PackageController, :show
   end
 
   scope "/", Hexpm.Web do
@@ -120,7 +121,7 @@ defmodule Hexpm.Web.Router do
     for prefix <- ["/", "/repos/:repository"] do
       scope prefix do
         post "/packages/:name/releases", ReleaseController, :create
-        post "/packages/:name/releases/:version/docs", DocsController,    :create
+        post "/packages/:name/releases/:version/docs", DocsController, :create
       end
     end
   end

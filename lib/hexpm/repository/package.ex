@@ -90,23 +90,34 @@ defmodule Hexpm.Repository.Package do
          where: p.owner_id == ^user.id)
   end
 
-  def all(page, count, search \\ nil, sort \\ :name, fields \\ nil) do
-    from(p in Package, preload: :downloads)
+  def all(repositories, page, count, search, sort, fields) do
+    from(p in assoc(repositories, :packages),
+      join: r in assoc(p, :repository),
+      preload: :downloads
+    )
     |> sort(sort)
     |> Hexpm.Utils.paginate(page, count)
     |> search(search)
     |> fields(fields)
   end
 
-  def recent(count) do
-    from(p in Package,
-         order_by: [desc: p.inserted_at],
-         limit: ^count,
-         select: {p.name, p.inserted_at, p.meta})
+  def recent(repository, count) do
+    from(p in assoc(repository, :packages),
+      order_by: [desc: p.inserted_at],
+      limit: ^count,
+      select: {p.name, p.inserted_at, p.meta}
+    )
   end
 
-  def count(search \\ nil) do
+  def count() do
     from(p in Package, select: count(p.id))
+  end
+
+  def count(repositories, search) do
+    from(p in assoc(repositories, :packages),
+      join: r in assoc(p, :repository),
+      select: count(p.id)
+    )
     |> search(search)
   end
 
@@ -117,15 +128,29 @@ defmodule Hexpm.Repository.Package do
     from(p in query, select: ^fields)
   end
 
+  defmacrop description_query(p, search) do
+    quote do
+      fragment(
+        "to_tsvector('english', regexp_replace((?->'description')::text, '/', ' ')) @@ to_tsquery('english', ?)",
+        unquote(p).meta,
+        ^unquote(search)
+      )
+    end
+  end
+
+  defmacrop name_query(p, search) do
+    quote do
+      ilike(fragment("?::text", unquote(p).name), ^unquote(search))
+    end
+  end
+
   defp search(query, nil) do
     query
   end
 
   defp search(query, {:letter, letter}) do
-    name_search = letter <> "%"
-
-    from(var in query,
-      where: ilike(fragment("?::text", var.name), ^name_search))
+    search = letter <> "%"
+    from(p in query, where: name_query(p, search))
   end
 
   defp search(query, search) when is_binary(search) do
@@ -133,25 +158,46 @@ defmodule Hexpm.Repository.Package do
       {:ok, params} ->
         Enum.reduce(params, query, fn {k, v}, q -> search_param(k, v, q) end)
       :error ->
-        name_search = name_search(search)
-        desc_search = description_search(search)
-
-        from(p in query,
-          where: ilike(fragment("?::text", p.name), ^name_search) or
-                 fragment("to_tsvector('english', regexp_replace((?->'description')::text, '/', ' ')) @@ to_tsquery('english', ?)", p.meta, ^desc_search))
+        basic_search(query, search)
     end
   end
 
+  defp basic_search(query, search) do
+    {repository, package} = name_search(search)
+    description = description_search(search)
+
+    if repository do
+      from([p, r] in query,
+        where: name_query(p, package),
+        where: name_query(r, repository),
+        or_where: description_query(p, description)
+      )
+    else
+      from(p in query,
+        where: name_query(p, package),
+        or_where: description_query(p, description)
+      )
+    end
+  end
+
+  # TODO: add repository param
   defp search_param("name", search, query) do
-    search = extra_name_search(search)
-    from(p in query,
-      where: ilike(fragment("?::text", p.name), ^search))
+    case String.split(search, "/", parts: 2) do
+      [repository, package] ->
+        from([p, r] in query,
+          where: name_query(p, extra_name_search(package)),
+          where: name_query(r, extra_name_search(repository))
+        )
+
+      _ ->
+        search = extra_name_search(search)
+        from(p in query, where: name_query(p, search))
+    end
   end
 
   defp search_param("description", search, query) do
     search = description_search(search)
-    from(p in query,
-      where: fragment("to_tsvector('english', regexp_replace((?->'description')::text, '/', ' ')) @@ to_tsquery('english', ?)", p.meta, ^search))
+    from(p in query, where: description_query(p, search))
   end
 
   defp search_param("extra", search, query) do
@@ -205,11 +251,18 @@ defmodule Hexpm.Repository.Package do
   end
 
   defp name_search(search) do
-    filter = search_filter(search)
+    case String.split(search, "/", parts: 2) do
+      [repository, package] ->
+        {do_name_search(repository), do_name_search(package)}
+      _ ->
+        {nil, do_name_search(search)}
+    end
+  end
 
+  defp do_name_search(search) do
     search
     |> escape_search()
-    |> like_search(filter)
+    |> like_search(search_filter(search))
   end
 
   defp search_filter(search) do

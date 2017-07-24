@@ -1,8 +1,12 @@
 defmodule Hexpm.Repository.Packages do
   use Hexpm.Web, :context
 
-  def count(filter \\ nil) do
-    Repo.one!(Package.count(filter))
+  def count() do
+    Repo.one!(Package.count())
+  end
+
+  def count(repositories, filter) do
+    Repo.one!(Package.count(repositories, filter))
   end
 
   def get(repository, name) when is_binary(repository) do
@@ -21,9 +25,16 @@ defmodule Hexpm.Repository.Packages do
   end
 
   def preload(package) do
+    releases = from(r in Release, select: map(r, [
+      :version,
+      :inserted_at,
+      :updated_at,
+      :retirement
+    ]))
+
     package = Repo.preload(package, [
       :downloads,
-      releases: from(r in Release, select: map(r, [:version, :inserted_at, :updated_at, :retirement]))
+      releases: releases
     ])
     update_in(package.releases, &Release.sort/1)
   end
@@ -37,20 +48,22 @@ defmodule Hexpm.Repository.Packages do
     end)
   end
 
-  def search(page, packages_per_page, query, sort, fields \\ nil) do
-    Package.all(page, packages_per_page, query, sort, fields)
+  def search(repositories, page, packages_per_page, query, sort, fields) do
+    # TODO: attach repositories
+    Package.all(repositories, page, packages_per_page, query, sort, fields)
     |> Repo.all()
   end
 
-  def search_with_versions(page, packages_per_page, query, sort) do
-    Package.all(page, packages_per_page, query, sort, nil)
+  def search_with_versions(repositories, page, packages_per_page, query, sort) do
+    # TODO: attach repositories
+    Package.all(repositories, page, packages_per_page, query, sort, nil)
     |> Ecto.Query.preload(releases: ^from(r in Release, select: map(r, [:version])))
     |> Repo.all()
     |> Enum.map(fn package -> update_in(package.releases, &Release.sort/1) end)
   end
 
-  def recent(count) do
-    Repo.all(Package.recent(count))
+  def recent(repository, count) do
+    Repo.all(Package.recent(repository, count))
   end
 
   def package_downloads(package) do
@@ -65,12 +78,12 @@ defmodule Hexpm.Repository.Packages do
     |> Enum.into(%{})
   end
 
-  def top_downloads(view, count) do
-    Repo.all(PackageDownload.top(view, count))
+  def top_downloads(repository, view, count) do
+    Repo.all(PackageDownload.top(repository, view, count))
   end
 
-  def total_downloads do
-    PackageDownload.total
+  def total_downloads() do
+    PackageDownload.total()
     |> Repo.all()
     |> Enum.into(%{})
   end

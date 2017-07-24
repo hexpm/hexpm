@@ -144,12 +144,14 @@ defmodule Hexpm.Repository.Release do
     from(r in Release, select: count(r.id))
   end
 
-  def recent(count) do
+  def recent(repository, count) do
     from(r in Hexpm.Repository.Release,
-         order_by: [desc: r.inserted_at],
-         join: p in assoc(r, :package),
-         limit: ^count,
-         select: {p.name, r.version, r.inserted_at, p.meta})
+      join: p in assoc(r, :package),
+      where: p.repository_id == ^repository.id,
+      order_by: [desc: r.inserted_at],
+      limit: ^count,
+      select: {p.name, r.version, r.inserted_at, p.meta}
+    )
   end
 end
 

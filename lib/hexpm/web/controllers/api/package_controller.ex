@@ -4,10 +4,12 @@ defmodule Hexpm.Web.API.PackageController do
   @sort_params ~w(name downloads inserted_at updated_at)
 
   def index(conn, params) do
+    # TODO: check permission
+    repositories = Users.all_repositories(conn.assigns.current_user)
     page = Hexpm.Utils.safe_int(params["page"])
     search = Hexpm.Utils.parse_search(params["search"])
     sort = Hexpm.Utils.safe_to_atom(params["sort"] || "name", @sort_params)
-    packages = Packages.search_with_versions(page, 100, search, sort)
+    packages = Packages.search_with_versions(repositories, page, 100, search, sort)
 
     when_stale(conn, packages, [modified: false], fn conn ->
       conn
@@ -17,6 +19,7 @@ defmodule Hexpm.Web.API.PackageController do
   end
 
   def show(conn, %{"repository" => repository, "name" => name}) do
+    # TODO: check permission
     package = Packages.get(repository, name)
 
     if package do

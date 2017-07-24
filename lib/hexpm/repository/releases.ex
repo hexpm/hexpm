@@ -9,12 +9,12 @@ defmodule Hexpm.Repository.Releases do
     |> Release.sort()
   end
 
-  def recent(count) do
-    Repo.all(Release.recent(count))
+  def recent(repository, count) do
+    Repo.all(Release.recent(repository, count))
   end
 
-  def count do
-    Repo.one!(Release.count)
+  def count() do
+    Repo.one!(Release.count())
   end
 
   def get(package, version) do

@@ -16,6 +16,14 @@ defmodule Hexpm.Accounts.Users do
     |> Repo.preload(preload)
   end
 
+  def all_repositories(%User{repositories: repositories})
+      when is_list(repositories) do
+    [Repository.hexpm() | repositories]
+  end
+  def all_repositories(nil) do
+    [Repository.hexpm()]
+  end
+
   def add(params, [audit: audit_data]) do
     multi =
       Multi.new()

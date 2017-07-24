@@ -37,7 +37,7 @@ defmodule Hexpm.ConnCase do
     opts = tags |> Map.take([:isolation]) |> Enum.to_list()
     :ok = Ecto.Adapters.SQL.Sandbox.checkout(Hexpm.Repo, opts)
     Hexpm.Case.reset_store(tags)
-    Bamboo.SentEmail.reset
+    Bamboo.SentEmail.reset()
     :ok
   end
 
@@ -48,7 +48,7 @@ defmodule Hexpm.ConnCase do
   def last_session() do
     import Ecto.Query
     from(s in Hexpm.Accounts.Session, order_by: [desc: s.id], limit: 1)
-    |> Hexpm.Repo.one
+    |> Hexpm.Repo.one()
   end
 
   def json_post(conn, path, params) do
