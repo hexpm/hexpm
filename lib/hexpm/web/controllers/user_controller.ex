@@ -2,7 +2,7 @@ defmodule Hexpm.Web.UserController do
   use Hexpm.Web, :controller
 
   def show(conn, %{"username" => username}) do
-    if user = Users.get_by_username(username, [:owned_packages, :emails]) do
+    if user = Users.get_by_username(username, [:emails, owned_packages: :repository]) do
       packages = Packages.attach_versions(user.owned_packages) |> Enum.sort_by(& &1.name)
       public_email = User.email(user, :public)
 

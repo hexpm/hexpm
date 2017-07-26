@@ -26,15 +26,15 @@
   paginate = paginate(@page, @package_count, items_per_page: @per_page, page_links: 5)
 
   range_start = (@page - 1) * @per_page + 1
-  range_end   = range_start + shown_packages - 1
-  page        = if @page == 1, do: nil, else: @page
+  range_end = range_start + shown_packages - 1
+  page = if @page == 1, do: nil, else: @page
 
-  sort_name_params      = params(search: @search, page: page,    sort: "name")
-  sort_downloads_params = params(search: @search, page: page,    sort: "downloads")
-  sort_created_params   = params(search: @search, page: page,    sort: "inserted_at")
-  sort_updated_params   = params(search: @search, page: page,    sort: "updated_at")
-  prev_page_params      = params(search: @search, page: @page-1, sort: @sort)
-  next_page_params      = params(search: @search, page: @page+1, sort: @sort)
+  sort_name_params = params(search: @search, page: page, sort: "name")
+  sort_downloads_params = params(search: @search, page: page, sort: "downloads")
+  sort_created_params = params(search: @search, page: page, sort: "inserted_at")
+  sort_updated_params = params(search: @search, page: page, sort: "updated_at")
+  prev_page_params = params(search: @search, page: @page-1, sort: @sort)
+  next_page_params = params(search: @search, page: @page+1, sort: @sort)
   %>
 
 <nav>

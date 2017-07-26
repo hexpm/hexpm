@@ -1,6 +1,6 @@
 import Hexpm.Factory
 
-alias Hexpm.Repository.{PackageDownload, ReleaseDownload}
+alias Hexpm.Repository.{PackageDependant, PackageDownload, ReleaseDownload}
 
 Hexpm.Fake.start()
 
@@ -183,6 +183,59 @@ Hexpm.Repo.transaction(fn ->
 
   insert(:download, release: rel, downloads: 42, day: Hexpm.Utils.utc_yesterday())
 
+  myrepo = insert(:repository, name: "myrepo")
+
+  private = insert(:package,
+    repository_id: myrepo.id,
+    name: "private",
+    package_owners: [build(:package_owner, owner: eric)],
+    meta: build(:package_metadata,
+      maintainers: [],
+      licenses: [],
+      links: %{"Github" => "http://example.com/github"},
+      description: lorem
+    )
+  )
+
+  insert(:release,
+    package: private,
+    version: "0.0.1",
+    meta: build(:release_metadata,
+      app: "private",
+      build_tools: ["mix"]
+    )
+  )
+
+  other_private = insert(:package,
+    repository_id: myrepo.id,
+    name: "other_private",
+    package_owners: [build(:package_owner, owner: eric)],
+    meta: build(:package_metadata,
+      maintainers: [],
+      licenses: [],
+      links: %{"Github" => "http://example.com/github"},
+      description: lorem
+    )
+  )
+
+  insert(:release,
+    package: other_private,
+    version: "0.0.1",
+    meta: build(:release_metadata,
+      app: "other_private",
+      build_tools: ["mix"]
+    ),
+    requirements: [
+      build(:requirement,
+        dependency: private,
+        app: "private",
+        requirement: ">= 0.0.0"
+      )
+    ]
+  )
+
+  insert(:repository_user, repository: myrepo, user: eric)
+
   Enum.each(1..100, fn index ->
     ups = insert(:package,
       name: "ups_#{index}",
@@ -265,6 +318,7 @@ Hexpm.Repo.transaction(fn ->
     insert(:download, release: rel, downloads: div(index, 2) + rem(index, 2), day: Hexpm.Utils.utc_yesterday())
   end)
 
+  Hexpm.Repo.refresh_view(PackageDependant)
   Hexpm.Repo.refresh_view(PackageDownload)
   Hexpm.Repo.refresh_view(ReleaseDownload)
 end)

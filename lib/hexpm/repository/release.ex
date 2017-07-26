@@ -135,9 +135,10 @@ defmodule Hexpm.Repository.Release do
 
   def requirements(release) do
     from(req in assoc(release, :requirements),
-         join: p in assoc(req, :dependency),
-         order_by: p.name,
-         select: %{req | name: p.name})
+         join: package in assoc(req, :dependency),
+         join: repo in assoc(package, :repository),
+         order_by: [repo.name, package.name],
+         select: %{req | name: package.name, repository: repo.name})
   end
 
   def count do

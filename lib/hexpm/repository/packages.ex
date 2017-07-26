@@ -14,6 +14,11 @@ defmodule Hexpm.Repository.Packages do
     repository && get(repository, name)
   end
 
+  def get(repositories, name) when is_list(repositories) do
+    Repo.get_by(assoc(repositories, :packages), name: name)
+    |> Repo.preload(:repository)
+  end
+
   def get(repository, name) do
     package = Repo.get_by(assoc(repository, :packages), name: name)
     package && %{package | repository: repository}
@@ -49,17 +54,26 @@ defmodule Hexpm.Repository.Packages do
   end
 
   def search(repositories, page, packages_per_page, query, sort, fields) do
-    # TODO: attach repositories
     Package.all(repositories, page, packages_per_page, query, sort, fields)
     |> Repo.all()
+    |> attach_repositories(repositories)
   end
 
   def search_with_versions(repositories, page, packages_per_page, query, sort) do
-    # TODO: attach repositories
     Package.all(repositories, page, packages_per_page, query, sort, nil)
     |> Ecto.Query.preload(releases: ^from(r in Release, select: map(r, [:version])))
     |> Repo.all()
     |> Enum.map(fn package -> update_in(package.releases, &Release.sort/1) end)
+    |> attach_repositories(repositories)
+  end
+
+  defp attach_repositories(packages, repositories) do
+    repositories = Map.new(repositories, &{&1.id, &1})
+
+    Enum.map(packages, fn package ->
+      repository = Map.fetch!(repositories, package.repository_id)
+      %{package | repository: repository}
+    end)
   end
 
   def recent(repository, count) do

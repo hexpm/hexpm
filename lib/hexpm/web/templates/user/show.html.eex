@@ -9,7 +9,7 @@
       <ul class="user-package-list">
         <%= for package <- @packages do %>
           <li>
-            <a href="<%= package_path(Endpoint, :show, package) %>"><%= package.name %></a>
+            <a href="<%= path_for_package(package) %>"><%= package_name(package) %></a>
             <%= package.latest_version %>
           </li>
         <% end %>

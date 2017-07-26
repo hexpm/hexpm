@@ -3,7 +3,7 @@
     <span class="download-count"><%= human_number_space(@package_downloads || 0) %></span> <br>
     downloads
   </div>
-  <a href="<%= package_path(Endpoint, :show, @package) %>"><%= @package.name %></a>
+  <a href="<%= path_for_package(@package) %>"><%= package_name(@package) %></a>
   <span class="version"><%= @package.latest_version %></span>
   <p><%= text_length(@package.meta.description, 140) %></p>
 </li>

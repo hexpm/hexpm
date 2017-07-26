@@ -5,6 +5,40 @@ defmodule Hexpm.Web.ViewHelpers do
     !!assigns[:current_user]
   end
 
+  def package_name(package) do
+    package_name(package.repository.name, package.name)
+  end
+
+  def package_name("hexpm", package) do
+    package
+  end
+  def package_name(repository, package) do
+    repository <> " / " <> package
+  end
+
+  def path_for_package(package) do
+    if package.repository.name == "hexpm" do
+      Hexpm.Web.Router.Helpers.package_path(Hexpm.Web.Endpoint, :show, package, [])
+    else
+      Hexpm.Web.Router.Helpers.package_path(Hexpm.Web.Endpoint, :show, package.repository, package, [])
+    end
+  end
+
+  def path_for_package("hexpm", package) do
+    Hexpm.Web.Router.Helpers.package_path(Hexpm.Web.Endpoint, :show, package, [])
+  end
+  def path_for_package(repository, package) do
+    Hexpm.Web.Router.Helpers.package_path(Hexpm.Web.Endpoint, :show, repository, package, [])
+  end
+
+  def path_for_release(package, release) do
+    if package.repository.name == "hexpm" do
+      Hexpm.Web.Router.Helpers.package_path(Hexpm.Web.Endpoint, :show, package, release, [])
+    else
+      Hexpm.Web.Router.Helpers.package_path(Hexpm.Web.Endpoint, :show, package.repository, package, release, [])
+    end
+  end
+
   def gravatar_url(nil, size) do
     "https://www.gravatar.com/avatar?s=#{gravatar_size(size)}&d=mm"
   end
