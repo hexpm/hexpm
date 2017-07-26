@@ -97,6 +97,10 @@ defmodule Hexpm.Web.DashboardControllerTest do
     assert get_flash(conn, :info) =~ "Your password has been updated"
     assert {:ok, _} = Auth.password_auth(c.user.username, "newpass")
     assert :error = Auth.password_auth(c.user.username, c.password)
+
+    email = Bamboo.SentEmail.one()
+    assert email.subject =~ "Your password has changed"
+    assert email.html_body =~ "password/reset"
   end
 
   test "update password invalid current password", c do
@@ -189,7 +193,7 @@ defmodule Hexpm.Web.DashboardControllerTest do
     assert get_session(conn, "user_id") == c.user.id
 
     conn = build_conn()
-      |> get("email/verify", %{username: u2.user.username, email: dup_email.email, key: hd(u2.user.emails).verification_key})
+           |> get("email/verify", %{username: u2.user.username, email: dup_email.email, key: hd(u2.user.emails).verification_key})
 
     assert redirected_to(conn) == "/"
     assert get_flash(conn, :error) =~ "failed to verify."

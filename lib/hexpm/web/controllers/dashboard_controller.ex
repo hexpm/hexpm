@@ -37,7 +37,6 @@ defmodule Hexpm.Web.DashboardController do
 
     case Users.update_password(user, params["user"], audit: audit_data(conn)) do
       {:ok, _user} ->
-        # TODO: Maybe send an email here?
         conn
         |> put_flash(:info, "Your password has been updated.")
         |> redirect(to: dashboard_path(conn, :password))

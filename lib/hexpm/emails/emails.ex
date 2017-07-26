@@ -51,6 +51,15 @@ defmodule Hexpm.Emails do
     |> render("password_reset_request.html")
   end
 
+  def password_changed(user) do
+    new_email()
+    |> to(user)
+    |> from(source())
+    |> subject("Hex.pm - Your password has changed")
+    |> assign(:username, user.username)
+    |> render("password_changed.html")
+  end
+
   def typosquat_candidates(candidates, threshold) do
     new_email()
     |> to(Application.get_env(:hexpm, :support_email))
