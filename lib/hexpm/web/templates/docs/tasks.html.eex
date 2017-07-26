@@ -25,6 +25,27 @@
   <div class="panel panel-default">
     <div class="panel-heading">
       <h3 class="panel-title">
+        <a class="anchor" id="hex_audit"></a>
+        hex.audit
+        <a href="#hex_audit">
+          <svg aria-hidden="aria-hidden" class="glyphicon glyphicon-link pull-right" version="1.1" viewBox="0 0 1200 1200"><g transform="translate(0, 1200) scale(1, -1)"><path d="M776.5 1214q93.5 0 159.5 -66l141 -141q66 -66 66 -160q0 -42 -28 -95.5t-62 -87.5l-29 -29q-31 53 -77 99l-18 18l95 95l-247 248l-389 -389l212 -212l-105 -106l-19 18l-141 141q-66 66 -66 159t66 159l283 283q65 66 158.5 66zM600 706l105 105q10 -8 19 -17l141 -141 q66 -66 66 -159t-66 -159l-283 -283q-66 -66 -159 -66t-159 66l-141 141q-66 66 -66 159.5t66 159.5l55 55q29 -55 75 -102l18 -17l-95 -95l247 -248l389 389z"></path></g></svg>
+        </a>
+      </h3>
+    </div>
+    <div class="panel-body">
+      <p><em>Shows all Hex dependencies that have been marked as retired.</em></p>
+<p>Retired packages are no longer recommended to be used by their
+maintainers. The task will display a message describing
+the reason for retirement and exit with a non-zero code
+if any retired dependencies are found.</p>
+
+    </div>
+  </div>
+
+
+  <div class="panel panel-default">
+    <div class="panel-heading">
+      <h3 class="panel-title">
         <a class="anchor" id="hex_build"></a>
         hex.build
         <a href="#hex_build">
@@ -389,6 +410,8 @@ mix hex.repo set public_key NAME PUBLIC_KEY_PATH
 mix hex.repo set auth_key NAME AUTH_KEY</code></pre>
 <h4>Remove repo</h4>
 <pre><code>mix hex.repo remove NAME</code></pre>
+<h4>Show repo config</h4>
+<pre><code>mix hex.repo show NAME</code></pre>
 <h4>List all repos</h4>
 <pre><code>mix hex.repo list</code></pre>
 
