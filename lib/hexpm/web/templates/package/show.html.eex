@@ -27,7 +27,7 @@ compatible_tools =
 tools = Keyword.take(tools, compatible_tools)
 %>
 
-<h2 class="package-title"><%= @package.name %>
+<h2 class="package-title"><%= package_name(@package) %>
   <%= if @current_release do %>
     <%= if @current_release.retirement do %>
       <span class="version retired"><%= @current_release.version %> (retired)</span>
@@ -138,9 +138,9 @@ tools = Keyword.take(tools, compatible_tools)
         <h3>Dependencies</h3>
         <ul class="version-dependency-list">
           <%= if @current_release do %>
-            <%= for %{name: name, requirement: req, app: app, optional: optional} <- @current_release.requirements do %>
+            <%= for %{repository: repository, name: name, requirement: req, app: app, optional: optional} <- @current_release.requirements do %>
             <li>
-              <a href="<%= package_path(Endpoint, :show, name) %>"><%= name %></a> <%= req %>
+              <a href="<%= path_for_package(repository, name) %>"><%= package_name(repository, name) %></a> <%= req %>
               <%= if app != name do %>(app: <%= app %>)<% end %>
               <%= if optional do %>(optional)<% end %>
             </li>
@@ -196,7 +196,7 @@ tools = Keyword.take(tools, compatible_tools)
 
     <h3>Dependents (<%= @dependants_count %>)</h3>
     <%= safe_join(@dependants, ", ", fn package ->
-      link(package.name, to: package_path(Endpoint, :show, package.name))
+      link(package_name(package), to: path_for_package(package))
     end) %><%= if @dependants_count != 0 do %>,
     <a href="<%= package_path(Endpoint, :index, search: "depends:#{@package.name}") %>">show all...</a>
     <% end %>

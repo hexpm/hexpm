@@ -7,7 +7,8 @@ defmodule Hexpm.Repository.Requirement do
     field :requirement, :string
     field :optional, :boolean, default: false
 
-    # The name of the dependency used to find the package
+    # The repository and name of the dependency used to find the package
+    field :repository, :string, virtual: true
     field :name, :string, virtual: true
 
     belongs_to :release, Release

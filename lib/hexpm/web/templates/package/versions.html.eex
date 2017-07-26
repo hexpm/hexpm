@@ -1,6 +1,6 @@
 <%= for release <- @releases do %>
   <li>
-    <a href="<%= package_path(Endpoint, :show, @package, release, []) %>"><strong><%= release.version %></strong></a>
+    <a href="<%= path_for_release(@package, release) %>"><strong><%= release.version %></strong></a>
     <%= pretty_date(release.inserted_at) %>
 
     <%= if release.retirement do %>
