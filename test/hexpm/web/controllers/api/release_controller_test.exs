@@ -21,6 +21,7 @@ defmodule Hexpm.Web.API.ReleaseControllerTest do
 
       result = json_response(conn, 201)
       assert result["url"] =~ "api/packages/#{meta.name}/releases/1.0.0"
+      assert result["html_url"] =~ "packages/#{meta.name}/1.0.0"
 
       package = Hexpm.Repo.get_by!(Package, name: meta.name)
       package_owner = Hexpm.Repo.one!(assoc(package, :owners))
@@ -43,6 +44,7 @@ defmodule Hexpm.Web.API.ReleaseControllerTest do
       assert conn.status == 201
       result = json_response(conn, 201)
       assert result["url"] =~ "/api/packages/#{package.name}/releases/1.0.0"
+      assert result["html_url"] =~ "packages/#{package.name}/1.0.0"
 
       assert Hexpm.Repo.get_by(Package, name: package.name).meta.description == "awesomeness"
     end
@@ -135,6 +137,7 @@ defmodule Hexpm.Web.API.ReleaseControllerTest do
       result = json_response(conn, 201)
       assert result["meta"]["app"] == "other"
       assert result["url"] =~ "/api/packages/#{meta.name}/releases/0.0.1"
+      assert result["html_url"] =~ "packages/#{meta.name}/0.0.1"
 
       meta = %{name: meta.name, version: "0.0.2", description: "description"}
       build_conn()
@@ -339,6 +342,7 @@ defmodule Hexpm.Web.API.ReleaseControllerTest do
         |> json_response(200)
 
       assert result["url"] =~ "/api/packages/#{package.name}/releases/#{release.version}"
+      assert result["html_url"] =~ "/packages/#{package.name}/#{release.version}"
       assert result["version"] == "#{release.version}"
     end
 
