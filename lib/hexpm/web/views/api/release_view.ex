@@ -36,7 +36,6 @@ defmodule Hexpm.Web.API.ReleaseView do
     %{
       version: release.version,
       url: api_release_url(Endpoint, :show, package, to_string(release.version)),
-      html_url: package_url(Endpoint, :show, package, to_string(release.version), []),
     }
   end
 
