@@ -32,7 +32,13 @@ defmodule Hexpm.Repository.Package do
     nul con prn aux com1 com2 com3 com4 com5 com6 com7 com8 com9lpt1 lpt2
     lpt3 lpt4 lpt5 lpt6 lpt7 lpt8 lpt9
   )
-  @generic_names ~w(package repository)
+
+  # Backwards compatible for tests, fixed in Hex at 2017-07-29
+  if Mix.env == :hex do
+    @generic_names []
+  else
+    @generic_names ~w(package repository)
+  end
 
   @reserved_names Enum.concat [
     @elixir_names,
