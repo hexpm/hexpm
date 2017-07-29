@@ -169,15 +169,15 @@ defmodule Hexpm.Web.ControllerHelpers do
   defp etag([]) do
     nil
   end
-  defp etag(models) do
-    list = Enum.map(List.wrap(models), fn model ->
-      [model.__struct__, model.id, model.updated_at]
-    end)
+  defp etag(structs) do
+    list = Enum.map(List.wrap(structs), &etag_key/1)
 
     binary = :erlang.term_to_binary(list)
     :crypto.hash(:md5, binary)
     |> Base.encode16(case: :lower)
   end
+
+  defp etag_key(%schema{id: id, updated_at: updated_at}), do: [schema, id, updated_at]
 
   def last_modified(nil), do: nil
   def last_modified([]),  do: nil
