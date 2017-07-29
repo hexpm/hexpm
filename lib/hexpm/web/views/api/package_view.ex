@@ -15,6 +15,7 @@ defmodule Hexpm.Web.API.PackageView do
       inserted_at: package.inserted_at,
       updated_at: package.updated_at,
       url: api_package_url(Endpoint, :show, package),
+      html_url: package_url(Endpoint, :show, package),
       meta: %{
         description: package.meta.description,
         licenses: package.meta.licenses,

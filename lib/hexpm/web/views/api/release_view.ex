@@ -21,6 +21,7 @@ defmodule Hexpm.Web.API.ReleaseView do
       retirement: render_one(release.retirement, RetirementView, "show.json"),
       package_url: api_package_url(Endpoint, :show, release.package),
       url: api_release_url(Endpoint, :show, release.package, release),
+      html_url: package_url(Endpoint, :show, release.package, to_string(release.version), []),
       requirements: requirements(release.requirements),
       meta: %{
         app: release.meta.app,
@@ -35,6 +36,7 @@ defmodule Hexpm.Web.API.ReleaseView do
     %{
       version: release.version,
       url: api_release_url(Endpoint, :show, package, to_string(release.version)),
+      html_url: package_url(Endpoint, :show, package, to_string(release.version), []),
     }
   end
 

@@ -16,9 +16,10 @@ defmodule Hexpm.Web.API.PackageControllerTest do
       releases = List.first(result)["releases"]
 
       for release <- releases do
-        assert length(Map.keys(release)) == 2
+        assert length(Map.keys(release)) == 3
         assert Map.has_key?(release, "url")
         assert Map.has_key?(release, "version")
+        assert Map.has_key?(release, "html_url")
       end
 
       conn = get build_conn(), "api/packages?search=#{package1.name}"
@@ -57,6 +58,7 @@ defmodule Hexpm.Web.API.PackageControllerTest do
 
       release = List.first(result["releases"])
       assert release["url"] =~ "/api/packages/#{package1.name}/releases/0.0.1"
+      assert release["html_url"] =~ "/packages/#{package1.name}/0.0.1"
       assert release["version"] == "0.0.1"
     end
   end
