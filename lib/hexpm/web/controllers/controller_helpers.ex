@@ -177,7 +177,7 @@ defmodule Hexpm.Web.ControllerHelpers do
     |> Base.encode16(case: :lower)
   end
 
-  defp etag_key(%schema{id: id, updated_at: updated_at}), do: [schema, id, updated_at]
+  defp etag_key(%schema{id: id, updated_at: updated_at}), do: [schema, :v2, id, updated_at]
 
   def last_modified(nil), do: nil
   def last_modified([]),  do: nil
