@@ -6,7 +6,7 @@ defmodule Hexpm.Web.AuthHelpers do
 
   def authorized(conn, opts) do
     fun = Keyword.get(opts, :fun, fn _, _ -> true end)
-    user = conn.assigns.user
+    user = conn.assigns.current_user
 
     if user do
       authorized(conn, user, fun, opts)
@@ -16,7 +16,7 @@ defmodule Hexpm.Web.AuthHelpers do
   end
 
   def maybe_authorized(conn, opts) do
-    authorized(conn, conn.assigns.user, opts[:fun], opts)
+    authorized(conn, conn.assigns.current_user, opts[:fun], opts)
   end
 
   defp authorized(conn, user, fun, opts) do

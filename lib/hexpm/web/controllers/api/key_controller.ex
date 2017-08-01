@@ -5,7 +5,7 @@ defmodule Hexpm.Web.API.KeyController do
   plug :authorize, [domain: :api, only_basic: true, allow_unconfirmed: true] when action == :create
 
   def index(conn, _params) do
-    user = conn.assigns.user
+    user = conn.assigns.current_user
     authing_key = conn.assigns.key
     keys = Keys.all(user)
 
@@ -15,7 +15,7 @@ defmodule Hexpm.Web.API.KeyController do
   end
 
   def show(conn, %{"name" => name}) do
-    user = conn.assigns.user
+    user = conn.assigns.current_user
     authing_key = conn.assigns.key
     key = Keys.get(user, name)
 
@@ -31,7 +31,7 @@ defmodule Hexpm.Web.API.KeyController do
   end
 
   def create(conn, params) do
-    user = conn.assigns.user
+    user = conn.assigns.current_user
     authing_key = conn.assigns.key
 
     case Keys.add(user, params, audit: audit_data(conn)) do
@@ -49,7 +49,7 @@ defmodule Hexpm.Web.API.KeyController do
   end
 
   def delete(conn, %{"name" => name}) do
-    user = conn.assigns.user
+    user = conn.assigns.current_user
     authing_key = conn.assigns.key
 
     case Keys.remove(user, name, [audit: audit_data(conn)]) do
@@ -64,7 +64,7 @@ defmodule Hexpm.Web.API.KeyController do
   end
 
   def delete_all(conn, _params) do
-    user = conn.assigns.user
+    user = conn.assigns.current_user
     key = conn.assigns.key
     {:ok, _} = Keys.remove_all(user, audit: audit_data(conn))
 

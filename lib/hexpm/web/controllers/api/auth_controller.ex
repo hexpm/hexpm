@@ -6,7 +6,7 @@ defmodule Hexpm.Web.API.AuthController do
 
   def show(conn, %{"domain" => domain} = params) do
     key = conn.assigns.key
-    user = conn.assigns.user
+    user = conn.assigns.current_user
     resource = params["resource"]
     domain = domain_to_atom(domain)
 

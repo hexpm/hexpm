@@ -114,14 +114,14 @@ defmodule Hexpm.Web.Plugs.AttackTest do
   defp request_ip(remote_ip) do
     conn(:get, "/")
     |> Map.put(:remote_ip, remote_ip)
-    |> assign(:user, nil)
+    |> assign(:current_user, nil)
     |> Hello.call(:index)
   end
 
   defp request_user(user) do
     conn(:get, "/")
     |> Map.put(:remote_ip, {10, 0, 0, 1})
-    |> assign(:user, user)
+    |> assign(:current_user, user)
     |> Hello.call(:index)
   end
 end
