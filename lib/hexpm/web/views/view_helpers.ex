@@ -2,7 +2,7 @@ defmodule Hexpm.Web.ViewHelpers do
   use Phoenix.HTML
 
   def logged_in?(assigns) do
-    !!assigns[:user]
+    !!assigns[:current_user]
   end
 
   def gravatar_url(nil, size) do

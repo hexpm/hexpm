@@ -80,9 +80,9 @@ defmodule Hexpm.Web.Plugs do
     user = user_id && Hexpm.Accounts.Users.get_by_id(user_id, [:emails, :repositories])
 
     if user do
-      assign(conn, :user, user)
+      assign(conn, :current_user, user)
     else
-      assign(conn, :user, nil)
+      assign(conn, :current_user, nil)
     end
   end
 
@@ -104,13 +104,13 @@ defmodule Hexpm.Web.Plugs do
     case Hexpm.Web.AuthHelpers.authenticate(conn) do
       {:ok, {user, key, email}} ->
         conn
-        |> assign(:user, user)
+        |> assign(:current_user, user)
         |> assign(:key, key)
         |> assign(:email, email)
 
       {:error, :missing} ->
         conn
-        |> assign(:user, nil)
+        |> assign(:current_user, nil)
         |> assign(:key, nil)
         |> assign(:email, nil)
 

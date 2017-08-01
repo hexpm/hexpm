@@ -7,7 +7,7 @@ defmodule Hexpm.Web.API.ReleaseController do
   plug :authorize, [domain: :api, fun: &maybe_package_owner?/2] when action in [:create]
 
   def create(conn, %{"body" => body}) do
-    handle_tarball(conn, conn.assigns.repository, conn.assigns.package, conn.assigns.user, body)
+    handle_tarball(conn, conn.assigns.repository, conn.assigns.package, conn.assigns.current_user, body)
   end
 
   def show(conn, _params) do

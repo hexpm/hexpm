@@ -20,7 +20,7 @@ defmodule Hexpm.Web.ControllerHelpers do
   end
 
   defp logged_in_privacy(conn, :logged_in) do
-    if conn.assigns.user, do: :private, else: :public
+    if conn.assigns.current_user, do: :private, else: :public
   end
   defp logged_in_privacy(_conn, other) do
     other
@@ -264,7 +264,7 @@ defmodule Hexpm.Web.ControllerHelpers do
   end
 
   def audit_data(conn) do
-    {conn.assigns.user, conn.assigns.user_agent}
+    {conn.assigns.current_user, conn.assigns.user_agent}
   end
 
   def success_to_status(true), do: 200
@@ -294,7 +294,7 @@ defmodule Hexpm.Web.ControllerHelpers do
   end
 
   def logged_in?(conn) do
-    !!conn.assigns[:user]
+    !!conn.assigns[:current_user]
   end
 
   def nillify_params(conn, keys) do

@@ -6,7 +6,7 @@ defmodule Hexpm.Web.API.RepositoryController do
   plug :maybe_authorize, [domain: :api, fun: &repository_access?/2] when action in [:show]
 
   def index(conn, _params) do
-    repositories = Repositories.all_public() ++ all_by_user(conn.assigns.user)
+    repositories = Repositories.all_public() ++ all_by_user(conn.assigns.current_user)
 
     when_stale(conn, repositories, [modified: false], fn conn ->
       conn

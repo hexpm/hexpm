@@ -5,7 +5,7 @@ defmodule Hexpm.Web.LoginController do
 
   def show(conn, _params) do
     if logged_in?(conn) do
-      path = conn.params["return"] || user_path(conn, :show, conn.assigns.user)
+      path = conn.params["return"] || user_path(conn, :show, conn.assigns.current_user)
       redirect(conn, to: path)
     else
       render_show(conn)
