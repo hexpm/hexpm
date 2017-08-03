@@ -1,6 +1,7 @@
 use Mix.Config
 
 config :hexpm,
+  tmp_dir: Path.expand("tmp/dev"),
   docs_url: System.get_env("HEX_DOCS_URL") || "http://localhost:4000",
   cdn_url: System.get_env("HEX_CDN_URL")  || "http://localhost:4000",
   secret: System.get_env("HEX_SECRET")   || "796f75666f756e64746865686578",

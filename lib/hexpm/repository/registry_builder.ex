@@ -103,7 +103,8 @@ defmodule Hexpm.Repository.RegistryBuilder do
   end
 
   defp build_ets(packages, releases, installs) do
-    file = Path.join("tmp", "registry-#{:erlang.unique_integer([:positive])}.ets")
+    tmp = Application.get_env(:hexpm, :tmp_dir)
+    file = Path.join(tmp, "registry-#{:erlang.unique_integer([:positive])}.ets")
 
     tid = :ets.new(@ets_table, [:public])
     :ets.insert(tid, {:"$$version$$", @version})

@@ -24,9 +24,10 @@ defmodule Hexpm.Repository.RegistryBuilderTest do
   end
 
   defp open_table do
-    contents = Hexpm.Store.get(nil, :s3_bucket, "registry.ets.gz", []) |> :zlib.gunzip
-    File.write!("tmp/registry_builder_test.ets", contents)
-    {:ok, tid} = :ets.file2tab('tmp/registry_builder_test.ets')
+    contents = Hexpm.Store.get(nil, :s3_bucket, "registry.ets.gz", []) |> :zlib.gunzip()
+    path = Path.join(Application.get_env(:hexpm, :tmp_dir), "registry_builder_test.ets")
+    File.write!(path, contents)
+    {:ok, tid} = :ets.file2tab(String.to_charlist(path))
     tid
   end
 
