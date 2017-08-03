@@ -3,7 +3,10 @@ defmodule Hexpm.Web.UserController do
 
   def show(conn, %{"username" => username}) do
     if user = Users.get_by_username(username, [:emails, owned_packages: :repository]) do
-      packages = Packages.attach_versions(user.owned_packages) |> Enum.sort_by(& &1.name)
+      packages =
+        user.owned_packages
+        |> Packages.attach_versions()
+        |> Enum.sort_by(&[repository_sort(&1.repository), &1.name])
       public_email = User.email(user, :public)
 
       render(conn, "show.html", [
@@ -17,4 +20,8 @@ defmodule Hexpm.Web.UserController do
       not_found(conn)
     end
   end
+
+  # Atoms sort before strings
+  defp repository_sort(%Repository{id: 1}), do: :first
+  defp repository_sort(%Repository{name: name}), do: name
 end
