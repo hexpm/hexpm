@@ -58,15 +58,21 @@ defmodule Hexpm.Web.PackageControllerTest do
       assert response(conn, 200) =~ ~r/#{package2.name}.*1.0.0/s
     end
 
-    test "list private packages", %{user1: user1, package3: package3, package4: package4} do
+    test "list private packages", %{
+      user1: user1,
+      package3: package3,
+      package4: package4,
+      repository1: repository1,
+      repository2: repository2
+    } do
       conn =
         build_conn()
         |> test_login(user1)
         |> get("/packages")
 
       result = response(conn, 200)
-      assert result =~ package3.name
-      refute result =~ package4.name
+      assert result =~ "#{repository1.name} / #{package3.name}"
+      refute result =~ "#{repository2.name} / #{package4.name}"
     end
   end
 

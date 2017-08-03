@@ -1,8 +1,10 @@
 defmodule Hexpm.Web.API.ReleaseController do
   use Hexpm.Web, :controller
 
-  plug :fetch_release when action in [:show, :delete]
+  plug :maybe_fetch_release when action in [:show]
+  plug :fetch_release when action in [:delete]
   plug :maybe_fetch_package when action in [:create]
+  plug :maybe_authorize, [domain: :api, fun: &repository_access?/2] when action in [:show]
   plug :authorize, [domain: :api, fun: &package_owner?/2] when action in [:delete]
   plug :authorize, [domain: :api, fun: &maybe_package_owner?/2] when action in [:create]
 
@@ -11,18 +13,20 @@ defmodule Hexpm.Web.API.ReleaseController do
   end
 
   def show(conn, _params) do
-    # TODO: check permission
-    release = Releases.preload(conn.assigns.release)
+    if release = conn.assigns.release do
+      release = Releases.preload(release)
 
-    when_stale(conn, release, fn conn ->
-      conn
-      |> api_cache(:public)
-      |> render(:show, release: release)
-    end)
+      when_stale(conn, release, fn conn ->
+        conn
+        |> api_cache(:public)
+        |> render(:show, release: release)
+      end)
+    else
+      not_found(conn)
+    end
   end
 
   def delete(conn, _params) do
-    # TODO: check permission
     package = conn.assigns.package
     release = conn.assigns.release
 
@@ -54,12 +58,12 @@ defmodule Hexpm.Web.API.ReleaseController do
     |> put_resp_header("location", location)
     |> api_cache(:public)
     |> put_status(201)
-    |> render(:show, release: %{release | package: package})
+    |> render(:show, release: release)
   end
-  defp publish_result({:ok, %{action: :update, package: package, release: release}}, conn) do
+  defp publish_result({:ok, %{action: :update, release: release}}, conn) do
     conn
     |> api_cache(:public)
-    |> render(:show, release: %{release | package: package})
+    |> render(:show, release: release)
   end
   defp publish_result({:error, errors}, conn) do
     validation_failed(conn, errors)

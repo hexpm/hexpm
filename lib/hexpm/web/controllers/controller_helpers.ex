@@ -7,6 +7,7 @@ defmodule Hexpm.Web.ControllerHelpers do
 
   @max_cache_age 60
 
+  # TODO: check privacy settings
   def cache(conn, control, vary) do
     conn
     |> maybe_put_resp_header("cache-control", parse_control(control))
@@ -185,62 +186,65 @@ defmodule Hexpm.Web.ControllerHelpers do
     Enum.map(List.wrap(models), fn model ->
       NaiveDateTime.to_erl(model.updated_at)
     end)
-    |> Enum.max
+    |> Enum.max()
   end
 
   def fetch_repository(conn, _opts) do
     if repository = Repositories.get(conn.params["repository"]) do
       assign(conn, :repository, repository)
     else
-      conn |> not_found() |> halt()
+      conn
+      |> Hexpm.Web.AuthHelpers.forbidden("account not authorized for this action")
+      |> halt()
     end
   end
 
   def maybe_fetch_package(conn, _opts) do
-    if repository = Repositories.get(conn.params["repository"]) do
-      conn = assign(conn, :repository, repository)
-      if package = Packages.get(repository, conn.params["name"]) do
-        assign(conn, :package, package)
-      else
-        assign(conn, :package, nil)
-      end
-    else
-      conn |> not_found() |> halt()
-    end
+    repository = Repositories.get(conn.params["repository"])
+    package = repository && Hexpm.Repository.Packages.get(repository, conn.params["name"])
+
+    conn
+    |> assign(:repository, repository)
+    |> assign(:package, package)
   end
 
   def fetch_package(conn, _opts) do
-    if repository = Repositories.get(conn.params["repository"]) do
-      package = Packages.get(repository, conn.params["name"])
+    repository = Repositories.get(conn.params["repository"])
+    package = repository && Packages.get(repository, conn.params["name"])
 
-      if package do
-        conn
-        |> assign(:repository, repository)
-        |> assign(:package, package)
-      else
-        conn |> not_found() |> halt()
-      end
+    if package do
+      conn
+      |> assign(:repository, repository)
+      |> assign(:package, package)
     else
       conn |> not_found() |> halt()
     end
   end
 
   def fetch_release(conn, _opts) do
-    if repository = Repositories.get(conn.params["repository"]) do
-      package = Hexpm.Repository.Packages.get(repository, conn.params["name"])
-      release = package && Releases.get(package, conn.params["version"])
+    repository = Repositories.get(conn.params["repository"])
+    package = repository && Hexpm.Repository.Packages.get(repository, conn.params["name"])
+    release = package && Releases.get(package, conn.params["version"])
 
-      if release do
-        conn
-        |> assign(:repository, repository)
-        |> assign(:package, package)
-        |> assign(:release, release)
-      else
-        conn |> not_found() |> halt()
-      end
+    if release do
+      conn
+      |> assign(:repository, repository)
+      |> assign(:package, package)
+      |> assign(:release, release)
     else
       conn |> not_found() |> halt()
     end
+  end
+
+  def maybe_fetch_release(conn, _opts) do
+    repository = Repositories.get(conn.params["repository"])
+    package = repository && Hexpm.Repository.Packages.get(repository, conn.params["name"])
+    release = package && Releases.get(package, conn.params["version"])
+
+    conn
+    |> assign(:repository, repository)
+    |> assign(:package, package)
+    |> assign(:release, release)
   end
 
   def required_params(conn, required_param_names) do

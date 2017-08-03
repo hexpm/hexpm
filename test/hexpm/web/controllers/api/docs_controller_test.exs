@@ -2,7 +2,7 @@ defmodule Hexpm.Web.API.DocsControllerTest do
   use Hexpm.ConnCase, async: true
 
   alias Hexpm.Accounts.AuditLog
-  alias Hexpm.Repository.Package
+  alias Hexpm.Repository.{Package, Repository}
 
   setup do
     user = insert(:user)
@@ -128,6 +128,33 @@ defmodule Hexpm.Web.API.DocsControllerTest do
     end
   end
 
+  describe "POST /api/repos/:repository/packages/:name/releases/:version/docs" do
+    @tag :integration
+    test "release docs authorizes", %{user: user} do
+      repository = insert(:repository)
+      package = insert(:package, repository_id: repository.id, package_owners: [build(:package_owner, owner: user)])
+      insert(:release, package: package, version: "0.0.1")
+
+      publish_docs(user, repository, package, "0.0.1", [{'index.html', "package v0.0.1"}])
+      |> response(403)
+
+      refute Hexpm.Repo.get_by!(assoc(package, :releases), version: "0.0.1").has_docs
+    end
+
+    @tag :integration
+    test "release docs", %{user: user} do
+      repository = insert(:repository)
+      package = insert(:package, repository_id: repository.id, package_owners: [build(:package_owner, owner: user)])
+      insert(:release, package: package, version: "0.0.1")
+      insert(:repository_user, repository: repository, user: user)
+
+      publish_docs(user, repository, package, "0.0.1", [{'index.html', "package v0.0.1"}])
+      |> response(201)
+
+      assert Hexpm.Repo.get_by!(assoc(package, :releases), version: "0.0.1").has_docs
+    end
+  end
+
   describe "DELETE /api/packages/:name/releases/:version/docs" do
     @tag isolation: :serializable
     test "delete release with docs", %{user: user} do
@@ -212,6 +239,42 @@ defmodule Hexpm.Web.API.DocsControllerTest do
     end
   end
 
+
+  describe "DELETE /api/repos/:repository/packages/:name/releases/:version/docs" do
+    @tag :integration
+    test "delete docs authorizes", %{user: user1} do
+      user2 = insert(:user)
+      repository = insert(:repository)
+      package = insert(:package, repository_id: repository.id, package_owners: [build(:package_owner, owner: user1), build(:package_owner, owner: user2)])
+      insert(:release, package: package, version: "0.0.1")
+      insert(:repository_user, repository: repository, user: user1)
+
+      publish_docs(user1, repository, package, "0.0.1", [{'index.html', "package v0.0.1"}])
+      |> response(201)
+
+      revert_docs(user2, repository, package, "0.0.1")
+      |> response(403)
+
+      assert Hexpm.Repo.get_by(assoc(package, :releases), version: "0.0.1").has_docs
+    end
+
+    @tag :integration
+    test "delete docs", %{user: user} do
+      repository = insert(:repository)
+      package = insert(:package, repository_id: repository.id, package_owners: [build(:package_owner, owner: user)])
+      insert(:release, package: package, version: "0.0.1")
+      insert(:repository_user, repository: repository, user: user)
+
+      publish_docs(user, repository, package, "0.0.1", [{'index.html', "package v0.0.1"}])
+      |> response(201)
+
+      revert_docs(user, repository, package, "0.0.1")
+      |> response(204)
+
+      refute Hexpm.Repo.get_by(assoc(package, :releases), version: "0.0.1").has_docs
+    end
+  end
+
   defp publish_docs(user, %Package{name: name}, version, files) do
     body = create_tarball(files)
 
@@ -225,6 +288,21 @@ defmodule Hexpm.Web.API.DocsControllerTest do
     build_conn()
     |> put_req_header("authorization", key_for(user))
     |> delete("api/packages/#{name}/releases/#{version}/docs")
+  end
+
+  defp publish_docs(user, %Repository{name: repository}, %Package{name: name}, version, files) do
+    body = create_tarball(files)
+
+    build_conn()
+    |> put_req_header("content-type", "application/octet-stream")
+    |> put_req_header("authorization", key_for(user))
+    |> post("api/repos/#{repository}/packages/#{name}/releases/#{version}/docs", body)
+  end
+
+  def revert_docs(user, %Repository{name: repository}, %Package{name: name}, version) do
+    build_conn()
+    |> put_req_header("authorization", key_for(user))
+    |> delete("api/repos/#{repository}/packages/#{name}/releases/#{version}/docs")
   end
 
   def revert_release(user, %Package{name: name}, version) do

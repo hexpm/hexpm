@@ -19,9 +19,9 @@ defmodule Hexpm.Web.API.ReleaseView do
       inserted_at: release.inserted_at,
       updated_at: release.updated_at,
       retirement: render_one(release.retirement, RetirementView, "show.json"),
-      package_url: api_package_url(Endpoint, :show, release.package),
-      url: api_release_url(Endpoint, :show, release.package, release),
-      html_url: package_url(Endpoint, :show, release.package, to_string(release.version), []),
+      package_url: package_url(release.package),
+      url: release_url(release.package, release),
+      html_url: html_url(release.package, release),
       requirements: requirements(release.requirements),
       meta: %{
         app: release.meta.app,
@@ -35,7 +35,7 @@ defmodule Hexpm.Web.API.ReleaseView do
   def render("minimal", %{release: release, package: package}) do
     %{
       version: release.version,
-      url: api_release_url(Endpoint, :show, package, to_string(release.version)),
+      url: release_url(package, release),
     }
   end
 
@@ -48,4 +48,25 @@ defmodule Hexpm.Web.API.ReleaseView do
   defp downloads(%Ecto.Association.NotLoaded{}), do: 0
   defp downloads(nil), do: 0
   defp downloads(downloads), do: downloads.downloads
+
+  defp html_url(%Package{repository_id: 1} = package, release) do
+    package_url(Endpoint, :show, package, to_string(release.version), [])
+  end
+  defp html_url(%Package{} = package, release) do
+    package_url(Endpoint, :show, package.repository, package, to_string(release.version), [])
+  end
+
+  defp package_url(%Package{repository_id: 1} = package) do
+    api_package_url(Endpoint, :show, package, [])
+  end
+  defp package_url(%Package{} = package) do
+    api_package_url(Endpoint, :show, package.repository, package, [])
+  end
+
+  defp release_url(%Package{repository_id: 1} = package, release) do
+    api_release_url(Endpoint, :show, package, to_string(release.version), [])
+  end
+  defp release_url(%Package{} = package, release) do
+    api_release_url(Endpoint, :show, package.repository, package, to_string(release.version), [])
+  end
 end

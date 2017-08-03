@@ -81,12 +81,13 @@ defmodule Hexpm.Web.AuthHelpers do
   end
 
   defp basic_auth(credentials) do
-    case String.split(Base.decode64!(credentials), ":", parts: 2) do
-      [username_or_email, password] ->
-        case Auth.password_auth(username_or_email, password) do
-          {:ok, result} -> {:ok, result}
-          :error -> {:error, :basic}
-        end
+    with {:ok, decoded} <- Base.decode64(credentials),
+         [username_or_email, password] = String.split(decoded, ":", parts: 2) do
+      case Auth.password_auth(username_or_email, password) do
+        {:ok, result} -> {:ok, result}
+        :error -> {:error, :basic}
+      end
+    else
       _ ->
         {:error, :invalid}
     end
@@ -117,17 +118,20 @@ defmodule Hexpm.Web.AuthHelpers do
     package_owner?(conn.assigns.package, user)
   end
   def package_owner?(%Hexpm.Repository.Package{} = package, user) do
-    Hexpm.Repository.Packages.owner?(package, user)
+    Hexpm.Repository.Packages.owner_with_access?(package, user)
   end
 
   def maybe_package_owner?(%Plug.Conn{} = conn, user) do
-    maybe_package_owner?(conn.assigns[:package], user)
+    maybe_package_owner?(conn.assigns.repository, conn.assigns.package, user)
   end
-  def maybe_package_owner?(nil, _user) do
-    true
+  defp maybe_package_owner?(nil, nil, _user) do
+    false
   end
-  def maybe_package_owner?(%Hexpm.Repository.Package{} = package, user) do
-    Hexpm.Repository.Packages.owner?(package, user)
+  defp maybe_package_owner?(repository, nil, user) do
+    Hexpm.Repository.Repositories.access?(repository, user)
+  end
+  defp maybe_package_owner?(_repository, %Hexpm.Repository.Package{} = package, user) do
+    Hexpm.Repository.Packages.owner_with_access?(package, user)
   end
 
   def repository_access?(%Plug.Conn{} = conn, user) do
@@ -135,6 +139,9 @@ defmodule Hexpm.Web.AuthHelpers do
   end
   def repository_access?(%Hexpm.Repository.Repository{} = repository, user) do
     Hexpm.Repository.Repositories.access?(repository, user)
+  end
+  def repository_access?(nil, _user) do
+    false
   end
 
   def correct_user?(%Plug.Conn{} = conn, user) do

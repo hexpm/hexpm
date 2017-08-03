@@ -41,6 +41,7 @@ defmodule Hexpm.Repository.Releases do
 
   def publish(repository, package, user, body, meta, checksum, [audit: audit_data]) do
     Multi.new()
+    |> Multi.run(:repository, fn _ -> {:ok, repository} end)
     |> create_package(repository, package, user, meta)
     |> create_release(package, checksum, meta)
     |> audit_publish(audit_data)
@@ -51,11 +52,12 @@ defmodule Hexpm.Repository.Releases do
   end
 
   def publish_docs(package, release, files, body, [audit: audit_data]) do
-    version        = to_string(release.version)
+    version = to_string(release.version)
     latest_version =
       from(r in Release.all(package),
         where: r.has_docs == true or r.version == ^version,
-        select: r.version)
+        select: r.version
+      )
       |> Repo.all()
       |> Enum.reject(&(&1.pre != []))
       |> Enum.sort(&Version.compare(&1, &2) == :gt)
@@ -108,6 +110,7 @@ defmodule Hexpm.Repository.Releases do
     params = %{"retirement" => params}
 
     Multi.new()
+    |> Multi.run(:repository, fn _ -> {:ok, package.repository} end)
     |> Multi.run(:package, fn _ -> {:ok, package} end)
     |> Multi.update(:release, Release.retire(release, params))
     |> audit_retire(audit_data, package)
@@ -117,6 +120,7 @@ defmodule Hexpm.Repository.Releases do
 
   def unretire(package, release, [audit: audit_data]) do
     Multi.new()
+    |> Multi.run(:repository, fn _ -> {:ok, package.repository} end)
     |> Multi.run(:package, fn _ -> {:ok, package} end)
     |> Multi.update(:release, Release.unretire(release))
     |> audit_unretire(audit_data, package)
@@ -124,9 +128,11 @@ defmodule Hexpm.Repository.Releases do
     |> publish_result()
   end
 
-  defp publish_result({:ok, %{package: package}} = result) do
+  defp publish_result({:ok, %{repository: repository, package: package, release: release} = result}) do
     RegistryBuilder.partial_build({:publish, package.name})
-    result
+    package = %{package | repository: repository}
+    release = %{release | package: package}
+    {:ok, %{result | release: release, package: package}}
   end
   defp publish_result(result), do: result
 
