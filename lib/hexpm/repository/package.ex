@@ -79,13 +79,23 @@ defmodule Hexpm.Repository.Package do
          select: count(o.id) >= 1)
   end
 
+  def is_owner_with_access(package, user) do
+    from(po in PackageOwner,
+      left_join: ru in RepositoryUser, on: ru.repository_id == ^package.repository_id,
+      where: ru.user_id == ^user.id or ^package.repository.public,
+      where: po.package_id == ^package.id,
+      where: po.owner_id == ^user.id,
+      select: count(po.id) >= 1
+    )
+  end
+
   def build_owner(package, user) do
     change(%PackageOwner{}, package_id: package.id, owner_id: user.id)
     |> unique_constraint(:owner_id, name: "package_owners_unique", message: "is already owner")
   end
 
   def owner(package, user) do
-    from(p in Hexpm.Repository.PackageOwner,
+    from(p in PackageOwner,
          where: p.package_id == ^package.id,
          where: p.owner_id == ^user.id)
   end

@@ -103,7 +103,7 @@ defmodule Hexpm.Accounts.AuditLog do
 
   defp fields(%Key{}), do: [:id, :name]
   defp fields(%KeyPermission{}), do: [:resource, :domain]
-  defp fields(%Package{}), do: [:id, :name]
+  defp fields(%Package{}), do: [:id, :name, :repository_id]
   defp fields(%Release{}), do: [:id, :version, :checksum, :has_docs, :package_id]
   defp fields(%User{}), do: [:id, :username]
   defp fields(%PackageMetadata{}), do: [:description, :licenses, :links, :maintainers, :extra]

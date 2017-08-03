@@ -16,7 +16,7 @@ defmodule Hexpm.Accounts.Auth do
       from(k in Key,
            where: k.secret_first == ^first,
            join: u in assoc(k, :user),
-           preload: [user: {u, :emails}])
+           preload: [user: {u, [:emails, :repositories]}])
       |> Hexpm.Repo.one()
 
     case result do
@@ -36,7 +36,7 @@ defmodule Hexpm.Accounts.Auth do
   end
 
   def password_auth(username_or_email, password) do
-    user = Users.get(username_or_email, [:emails])
+    user = Users.get(username_or_email, [:emails, :repositories])
     if user && Comeonin.Bcrypt.checkpw(password, user.password) do
       {:ok, {user, nil, find_email(user, username_or_email)}}
     else

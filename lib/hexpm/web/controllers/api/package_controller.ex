@@ -1,10 +1,13 @@
 defmodule Hexpm.Web.API.PackageController do
   use Hexpm.Web, :controller
 
+  plug :maybe_fetch_package when action in [:show]
+  plug :maybe_authorize, [domain: :api, fun: &repository_access?/2] when action in [:show]
+
   @sort_params ~w(name downloads inserted_at updated_at)
 
   def index(conn, params) do
-    # TODO: check permission
+    # TODO: Handle /repos/:repo/ and /
     repositories = Users.all_repositories(conn.assigns.current_user)
     page = Hexpm.Utils.safe_int(params["page"])
     search = Hexpm.Utils.parse_search(params["search"])
@@ -18,11 +21,8 @@ defmodule Hexpm.Web.API.PackageController do
     end)
   end
 
-  def show(conn, %{"repository" => repository, "name" => name}) do
-    # TODO: check permission
-    package = Packages.get(repository, name)
-
-    if package do
+  def show(conn, _params) do
+    if package = conn.assigns.package do
       when_stale(conn, package, fn conn ->
         package = Packages.preload(package)
         package = %{package | owners: Owners.all(package, :emails)}

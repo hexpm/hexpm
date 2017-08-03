@@ -29,6 +29,11 @@ defmodule Hexpm.Repository.Packages do
     |> Repo.one!()
   end
 
+  def owner_with_access?(package, user) do
+    Package.is_owner_with_access(package, user)
+    |> Repo.one!()
+  end
+
   def preload(package) do
     releases = from(r in Release, select: map(r, [
       :version,

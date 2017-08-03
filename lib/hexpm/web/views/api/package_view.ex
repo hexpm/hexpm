@@ -11,11 +11,12 @@ defmodule Hexpm.Web.API.PackageView do
 
   def render("show", %{package: package}) do
     %{
+      repository: package.repository.name,
       name: package.name,
       inserted_at: package.inserted_at,
       updated_at: package.updated_at,
-      url: api_package_url(Endpoint, :show, package),
-      html_url: package_url(Endpoint, :show, package),
+      url: package_url(package),
+      html_url: html_url(package),
       meta: %{
         description: package.meta.description,
         licenses: package.meta.licenses,
@@ -34,5 +35,19 @@ defmodule Hexpm.Web.API.PackageView do
   end
   defp group_downloads(package) do
     package
+  end
+
+  defp html_url(%Package{repository_id: 1} = package) do
+    package_url(Endpoint, :show, package, [])
+  end
+  defp html_url(%Package{} = package) do
+    package_url(Endpoint, :show, package.repository, package, [])
+  end
+
+  defp package_url(%Package{repository_id: 1} = package) do
+    api_package_url(Endpoint, :show, package, [])
+  end
+  defp package_url(package) do
+    api_package_url(Endpoint, :show, package.repository, package, [])
   end
 end
