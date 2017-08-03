@@ -239,7 +239,6 @@ defmodule Hexpm.Web.API.DocsControllerTest do
     end
   end
 
-
   describe "DELETE /api/repos/:repository/packages/:name/releases/:version/docs" do
     @tag :integration
     test "delete docs authorizes", %{user: user1} do
@@ -312,7 +311,7 @@ defmodule Hexpm.Web.API.DocsControllerTest do
   end
 
   defp create_tarball(files) do
-    path = Path.join("tmp", "release-docs.tar.gz")
+    path = Path.join(Application.get_env(:hexpm, :tmp_dir), "release-docs.tar.gz")
     :ok = :erl_tar.create(String.to_charlist(path), files, [:compressed])
     File.read!(path)
   end

@@ -1,5 +1,5 @@
 defmodule Hexpm.TestHelpers do
-   @tmp Path.expand Path.join(__DIR__, "../../tmp")
+   @tmp Application.get_env(:hexpm, :tmp_dir)
 
   def create_tar(meta, files) do
     meta =
