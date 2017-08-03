@@ -23,7 +23,7 @@ defmodule Hexpm.Accounts.User do
     has_many :audit_logs, AuditLog, foreign_key: :actor_id
   end
 
-  @username_regex ~r"^[a-z0-9_\-\.!~\*'\(\)]+$"
+  @username_regex ~r"^[a-z0-9_\-\.\(\)]+$"
 
   defp changeset(user, :create, params, confirmed?) do
     cast(user, params, ~w(username full_name password))
