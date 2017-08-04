@@ -1,49 +1,48 @@
 use Mix.Config
 
 store = if System.get_env("HEX_S3_BUCKET"), do: Hexpm.Store.S3, else: Hexpm.Store.Local
-cdn   = if System.get_env("HEX_FASTLY_KEY"), do: Hexpm.CDN.Fastly, else: Hexpm.CDN.Local
+cdn = if System.get_env("HEX_FASTLY_KEY"), do: Hexpm.CDN.Fastly, else: Hexpm.CDN.Local
 
 logs_buckets =
-  if value = System.get_env("HEX_LOGS_BUCKETS"),
-    do: value |> String.split(";") |> Enum.map(&String.split(&1, ","))
+  if value = System.get_env("HEX_LOGS_BUCKETS") do
+    value
+    |> String.split(";")
+    |> Enum.map(&String.split(&1, ","))
+  end
 
 smtp_port = String.to_integer(System.get_env("HEX_SES_PORT") || "587")
 
 config :hexpm,
-  user_confirm:   true,
+  user_confirm: true,
   user_agent_req: true,
-  tmp_dir:        Path.expand("tmp"),
-  app_host:       System.get_env("APP_HOST"),
-
-  auth_gate:        System.get_env("HEX_AUTH_GATE"),
-  secret:           System.get_env("HEX_SECRET"),
-  private_key:      System.get_env("HEX_SIGNING_KEY"),
+  tmp_dir: Path.expand("tmp"),
+  app_host: System.get_env("APP_HOST"),
+  auth_gate: System.get_env("HEX_AUTH_GATE"),
+  secret: System.get_env("HEX_SECRET"),
+  private_key: System.get_env("HEX_SIGNING_KEY"),
   cookie_sign_salt: "lYEJ7Wc8jFwNrPke",
   cookie_encr_salt: "TZDiyTeFQ819hsC3",
-
-  store_impl:   store,
-  s3_url:       System.get_env("HEX_S3_URL") || "https://s3.amazonaws.com",
-  s3_bucket:    System.get_env("HEX_S3_BUCKET"),
-  docs_bucket:  System.get_env("HEX_DOCS_BUCKET"),
+  store_impl: store,
+  s3_url: System.get_env("HEX_S3_URL") || "https://s3.amazonaws.com",
+  s3_bucket: System.get_env("HEX_S3_BUCKET"),
+  docs_bucket: System.get_env("HEX_DOCS_BUCKET"),
   logs_buckets: logs_buckets,
-  docs_url:     System.get_env("HEX_DOCS_URL"),
-  cdn_url:      System.get_env("HEX_CDN_URL"),
-
-  email_host:   System.get_env("HEX_EMAIL_HOST"),
-  ses_rate:     System.get_env("HEX_SES_RATE") || "1000",
-
-  cdn_impl:       cdn,
-  fastly_key:     System.get_env("HEX_FASTLY_KEY"),
+  docs_url: System.get_env("HEX_DOCS_URL"),
+  cdn_url: System.get_env("HEX_CDN_URL"),
+  email_host: System.get_env("HEX_EMAIL_HOST"),
+  ses_rate: System.get_env("HEX_SES_RATE") || "1000",
+  cdn_impl: cdn,
+  fastly_key: System.get_env("HEX_FASTLY_KEY"),
   fastly_hexdocs: System.get_env("HEX_FASTLY_HEXDOCS"),
   fastly_hexrepo: System.get_env("HEX_FASTLY_HEXREPO"),
-  support_email:  "support@hex.pm",
-
+  support_email: "support@hex.pm",
   levenshtein_threshold: System.get_env("HEX_LEVENSHTEIN_THRESHOLD") || 2
 
-config :hexpm, ecto_repos: [Hexpm.Repo]
+config :hexpm,
+  ecto_repos: [Hexpm.Repo]
 
 config :ex_aws,
-  access_key_id:     {:system, "HEX_S3_ACCESS_KEY"},
+  access_key_id: {:system, "HEX_S3_ACCESS_KEY"},
   secret_access_key: {:system, "HEX_S3_SECRET_KEY"}
 
 config :comeonin,
@@ -93,7 +92,7 @@ config :phoenix, :format_encoders,
   json: Hexpm.Web.Jiffy
 
 config :mime, :types, %{
-  "application/vnd.hex+json"   => ["json"],
+  "application/vnd.hex+json" => ["json"],
   "application/vnd.hex+elixir" => ["elixir"],
   "application/vnd.hex+erlang" => ["erlang"]
 }

@@ -2,9 +2,9 @@ use Mix.Config
 
 config :hexpm,
   user_confirm: false,
-  docs_url:     System.get_env("HEX_DOCS_URL") || "http://localhost:4043",
-  cdn_url:      System.get_env("HEX_CDN_URL")  || "http://localhost:4043",
-  secret:       System.get_env("HEX_SECRET")   || "796f75666f756e64746865686578"
+  docs_url: System.get_env("HEX_DOCS_URL") || "http://localhost:4043",
+  cdn_url: System.get_env("HEX_CDN_URL") || "http://localhost:4043",
+  secret: System.get_env("HEX_SECRET") || "796f75666f756e64746865686578"
 
 config :hexpm, Hexpm.Web.Endpoint,
   http: [port: 4043, protocol_options: [max_keepalive: :infinity]],
