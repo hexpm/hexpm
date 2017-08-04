@@ -16,7 +16,6 @@ defmodule Hexpm.Web.API.DocsControllerTest do
   end
 
   describe "POST /api/packages/:name/releases/:version/docs" do
-    @tag :integration
     test "release docs", %{user: user} do
       package = insert(:package, package_owners: [build(:package_owner, owner: user)])
       insert(:release, package: package, version: "0.0.1")
@@ -36,7 +35,6 @@ defmodule Hexpm.Web.API.DocsControllerTest do
       assert path("docs/sitemap.xml") =~ "https://hexdocs.pm/#{package.name}"
     end
 
-    @tag :integration
     test "update main docs", %{user: user} do
       package = insert(:package, package_owners: [build(:package_owner, owner: user)])
       insert(:release, package: package, version: "0.0.1")
@@ -52,7 +50,6 @@ defmodule Hexpm.Web.API.DocsControllerTest do
       assert path("docs/#{package.name}/0.0.1/index.html") == "package v0.0.1"
     end
 
-    @tag :integration
     test "dont update main docs for older versions", %{user: user} do
       package = insert(:package, package_owners: [build(:package_owner, owner: user)])
       insert(:release, package: package, version: "0.0.1")
@@ -67,7 +64,6 @@ defmodule Hexpm.Web.API.DocsControllerTest do
       assert path("docs/#{package.name}/index.html") == "package v0.5.0"
     end
 
-    @tag :integration
     test "overwrite docs", %{user: user} do
       package = insert(:package, package_owners: [build(:package_owner, owner: user)])
       insert(:release, package: package, version: "0.0.1")
@@ -83,7 +79,6 @@ defmodule Hexpm.Web.API.DocsControllerTest do
       assert path("docs/#{package.name}/0.0.1/index.html") == "package v0.0.1 (updated)"
     end
 
-    @tag :integration
     test "beta docs do not overwrite stable main docs", %{user: user} do
       package = insert(:package, package_owners: [build(:package_owner, owner: user)])
       insert(:release, package: package, version: "0.5.0")
@@ -100,7 +95,6 @@ defmodule Hexpm.Web.API.DocsControllerTest do
     end
 
     # TODO
-    @tag :integration
     # test "beta docs can overwrite beta main docs", %{user: user} do
     #   package = insert(:package, package_owners: [build(:package_owner, owner: user)])
     #   insert(:release, package: package, version: "0.0.1-beta")
@@ -116,7 +110,6 @@ defmodule Hexpm.Web.API.DocsControllerTest do
     #   assert path("docs/#{package.name}/1.0.0-beta/index.html") == "package v1.0.0-beta"
     # end
 
-    @tag :integration
     test "dont allow version directories in docs", %{user: user} do
       package = insert(:package, package_owners: [build(:package_owner, owner: user)])
       insert(:release, package: package, version: "0.0.1")
@@ -129,7 +122,6 @@ defmodule Hexpm.Web.API.DocsControllerTest do
   end
 
   describe "POST /api/repos/:repository/packages/:name/releases/:version/docs" do
-    @tag :integration
     test "release docs authorizes", %{user: user} do
       repository = insert(:repository)
       package = insert(:package, repository_id: repository.id, package_owners: [build(:package_owner, owner: user)])
@@ -141,7 +133,6 @@ defmodule Hexpm.Web.API.DocsControllerTest do
       refute Hexpm.Repo.get_by!(assoc(package, :releases), version: "0.0.1").has_docs
     end
 
-    @tag :integration
     test "release docs", %{user: user} do
       repository = insert(:repository)
       package = insert(:package, repository_id: repository.id, package_owners: [build(:package_owner, owner: user)])
@@ -176,7 +167,6 @@ defmodule Hexpm.Web.API.DocsControllerTest do
       assert get(build_conn(), "docs/#{package.name}/0.0.1/index.html").status in 400..499
     end
 
-    @tag :integration
     test "delete docs", %{user: user} do
       package = insert(:package, package_owners: [build(:package_owner, owner: user)])
       insert(:release, package: package, version: "0.0.1")
@@ -240,7 +230,6 @@ defmodule Hexpm.Web.API.DocsControllerTest do
   end
 
   describe "DELETE /api/repos/:repository/packages/:name/releases/:version/docs" do
-    @tag :integration
     test "delete docs authorizes", %{user: user1} do
       user2 = insert(:user)
       repository = insert(:repository)
@@ -257,7 +246,6 @@ defmodule Hexpm.Web.API.DocsControllerTest do
       assert Hexpm.Repo.get_by(assoc(package, :releases), version: "0.0.1").has_docs
     end
 
-    @tag :integration
     test "delete docs", %{user: user} do
       repository = insert(:repository)
       package = insert(:package, repository_id: repository.id, package_owners: [build(:package_owner, owner: user)])
