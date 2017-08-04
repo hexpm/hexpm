@@ -36,7 +36,7 @@ defmodule Hexpm.ConnCase do
   setup tags do
     opts = tags |> Map.take([:isolation]) |> Enum.to_list()
     :ok = Ecto.Adapters.SQL.Sandbox.checkout(Hexpm.Repo, opts)
-    Hexpm.Case.reset_store(tags)
+    Hexpm.Case.reset_store()
     Bamboo.SentEmail.reset()
     :ok
   end

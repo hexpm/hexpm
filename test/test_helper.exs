@@ -1,5 +1,5 @@
-ExUnit.start
+ExUnit.start()
 
-Hexpm.BlockAddress.reload
+Hexpm.BlockAddress.reload()
 Ecto.Adapters.SQL.Sandbox.mode(Hexpm.Repo, :manual)
 Hexpm.Fake.start()

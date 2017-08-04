@@ -24,9 +24,9 @@ defmodule Hexpm.DataCase do
     end
   end
 
-  setup tags do
+  setup do
     :ok = Ecto.Adapters.SQL.Sandbox.checkout(Hexpm.Repo)
-    Hexpm.Case.reset_store(tags)
+    Hexpm.Case.reset_store()
 
     :ok
   end
