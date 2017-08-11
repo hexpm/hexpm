@@ -178,14 +178,12 @@ defmodule Hexpm.Repository.Package do
 
     if repository do
       from([p, r] in query,
-        where: name_query(p, package),
-        where: name_query(r, repository),
-        or_where: description_query(p, description)
+        where: (name_query(p, package) and name_query(r, repository)) or
+                 description_query(p, description)
       )
     else
       from(p in query,
-        where: name_query(p, package),
-        or_where: description_query(p, description)
+        where: name_query(p, package) or description_query(p, description)
       )
     end
   end
