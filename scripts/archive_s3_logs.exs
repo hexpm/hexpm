@@ -3,9 +3,11 @@
 buckets =
   case dir do
     "hex" ->
-      [{"logs.hex.pm",      "us-east-1"},
-       {"logs-eu.hex.pm",   "eu-west-1"},
-       {"logs-asia.hex.pm", "ap-southeast-1"}]
+      [
+        {"logs.hex.pm", "us-east-1"},
+        {"logs-eu.hex.pm", "eu-west-1"},
+        {"eu.logs.hex.pm", "eu-west-1"}
+      ]
      "fastly_hex" ->
        [{"logs.hex.pm", "us-east-1"}]
   end
@@ -62,8 +64,9 @@ end
 
 if action == "upload" do
   key = "logs/monthly/#{filename}"
-  stream = File.stream(filename, [:read_ahead])
-  Hexpm.Store.S3.upload("us-east-1", "backup.hex.pm", key, stream)
+  ExAws.S3.Upload.stream_file(filename, [:read_ahead])
+  |> ExAws.S3.upload("us-east-1", "backup.hex.pm", key, timeout: 600_000)
+  |> ExAws.request!(region: region(region))
 end
 
 if action == "delete" do
