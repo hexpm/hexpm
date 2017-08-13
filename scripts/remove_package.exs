@@ -8,9 +8,10 @@ unless package do
 end
 
 releases = Hexpm.Repository.Release.all(package)
-           |> Hexpm.Repo.all
+           |> Hexpm.Repo.all()
+           |> Hexpm.Repo.preload(:package)
 owners   = Ecto.assoc(package, :owners)
-           |> Hexpm.Repo.all
+           |> Hexpm.Repo.all()
            |> Hexpm.Repo.preload(:emails)
 
 IO.puts name
@@ -31,7 +32,7 @@ if answer =~ ~r/^(Y(es)?)?$/i do
   Enum.each(owners, &(Hexpm.Repository.Package.owner(package, &1) |> Hexpm.Repo.delete_all))
   Enum.each(releases, &(Hexpm.Repository.Release.delete(&1, force: true) |> Hexpm.Repo.delete!))
   Hexpm.Repo.delete!(package)
-  Hexpm.Repository.Assets.revert_release(release)
+  Enum.each(releases, &Hexpm.Repository.Assets.revert_release/1)
   Hexpm.Repository.RegistryBuilder.partial_build({:publish, name})
   IO.puts "Removed"
 else
