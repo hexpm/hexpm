@@ -21,13 +21,11 @@ defmodule Hexpm.Store.S3 do
   def put(region, bucket, key, blob, opts) do
     S3.put_object(bucket(bucket), key, blob, opts)
     |> ExAws.request!(region: region(region))
-    :ok
   end
 
   def delete(region, bucket, key) do
     S3.delete_object(bucket(bucket), key)
-    |> ExAws.request(region: region(region))
-    :ok
+    |> ExAws.request!(region: region(region))
   end
 
   def delete_many(region, bucket, keys) do
@@ -35,9 +33,8 @@ defmodule Hexpm.Store.S3 do
     keys
     |> Stream.chunk(1000, 1000, [])
     |> Enum.each(fn chunk ->
-      {:ok, _} =
-        S3.delete_multiple_objects(bucket(bucket), chunk)
-        |> ExAws.request(region: region(region))
+      S3.delete_multiple_objects(bucket(bucket), chunk)
+      |> ExAws.request!(region: region(region))
     end)
   end
 

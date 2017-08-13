@@ -158,7 +158,7 @@ defmodule Mix.Tasks.Hexpm.Stats do
     case Regex.run(regex, line) do
       [_, ip, package, version, status] when status in ~w(200 304) ->
         ip = parse_ip(ip)
-        unless in_ip_range?(ips, ip) do
+        unless Utils.in_ip_range?(ips, ip) do
           {copy(ip), copy(package), copy(version)}
         end
       _ ->
@@ -191,14 +191,4 @@ defmodule Mix.Tasks.Hexpm.Stats do
 
   defp parse_ip("-"), do: nil
   defp parse_ip(ip), do: Utils.parse_ip(ip)
-
-  defp in_ip_range?(_range, nil) do
-    false
-  end
-  defp in_ip_range?(list, ip) when is_list(list) do
-    Enum.any?(list, &in_ip_range?(&1, ip))
-  end
-  defp in_ip_range?({range, mask}, ip) do
-    <<range::bitstring-size(mask)>> == <<ip::bitstring-size(mask)>>
-  end
 end

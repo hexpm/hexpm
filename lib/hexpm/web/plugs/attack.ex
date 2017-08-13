@@ -13,6 +13,11 @@ defmodule Hexpm.Web.Plugs.Attack do
     allow conn.remote_ip == {127, 0, 0, 1}
   end
 
+  rule "allow addresses", conn do
+    BlockAddress.try_reload()
+    allow BlockAddress.allowed?(ip_string(conn.remote_ip))
+  end
+
   rule "block addresses", conn do
     BlockAddress.try_reload()
     block BlockAddress.blocked?(ip_string(conn.remote_ip))

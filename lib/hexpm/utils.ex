@@ -276,4 +276,14 @@ defmodule Hexpm.Utils do
       for part <- parts, into: <<>>, do: <<part>>
     end
   end
+
+  def in_ip_range?(_range, nil) do
+    false
+  end
+  def in_ip_range?(list, ip) when is_list(list) do
+    Enum.any?(list, &in_ip_range?(&1, ip))
+  end
+  def in_ip_range?({range, mask}, ip) do
+    <<range::bitstring-size(mask)>> == <<ip::bitstring-size(mask)>>
+  end
 end

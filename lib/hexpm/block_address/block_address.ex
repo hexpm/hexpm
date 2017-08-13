@@ -16,23 +16,35 @@ defmodule Hexpm.BlockAddress do
   end
 
   def reload() do
-    all_ips =
+    records =
       Hexpm.BlockAddress.Entry
       |> Hexpm.Repo.all()
-      |> Enum.into(MapSet.new, & &1.ip)
+      |> Enum.into(MapSet.new, &{:blocked, &1.ip})
 
-    old_ips = :ets.tab2list(@ets) |> Enum.map(&elem(&1, 0))
-    old_ips = old_ips -- [:loaded]
+    records = MapSet.put(records, {:allowed, Hexpm.CDN.public_ips()})
 
-    removed = Enum.reject(old_ips, &(&1 in all_ips))
-    new_ips = Enum.reject(all_ips, &(&1 in old_ips))
+    old_records = :ets.tab2list(@ets) |> Enum.map(&elem(&1, 0))
 
-    Enum.each(removed, &:ets.delete(@ets, &1))
-    :ets.insert(@ets, Enum.map(new_ips, &{&1}))
+    remove = Enum.reject(old_records, &(&1 in records))
+    add = Enum.reject(records, &(&1 in old_records))
+
+    Enum.each(remove, &:ets.delete(@ets, &1))
+    :ets.insert(@ets, Enum.map(add, &{&1}))
+    :ets.insert(@ets, {:allowed, Hexpm.CDN.public_ips()})
     :ets.insert(@ets, {:loaded, true})
   end
 
   def blocked?(ip) do
-    match?([{^ip}], :ets.lookup(@ets, ip))
+    match?([{{:blocked, ^ip}}], :ets.lookup(@ets, {:blocked, ip}))
+  end
+
+  def allowed?(ip) do
+    case :ets.lookup(@ets, :allowed) do
+      [{:allowed, allowed}] ->
+        ip = Hexpm.Utils.parse_ip(ip)
+        Hexpm.Utils.in_ip_range?(allowed, ip)
+      [] ->
+        false
+    end
   end
 end

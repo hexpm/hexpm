@@ -76,6 +76,13 @@ defmodule Hexpm.Web.Plugs.AttackTest do
       assert conn.status == 200
       assert get_resp_header(conn, "x-ratelimit-remaining") == []
     end
+
+    test "doesn't limit requests from CDN" do
+      Hexpm.BlockAddress.reload()
+      conn = request_ip({127, 0, 0, 255})
+      assert conn.status == 200
+      assert get_resp_header(conn, "x-ratelimit-remaining") == []
+    end
   end
 
   describe "block addresses" do
@@ -87,7 +94,7 @@ defmodule Hexpm.Web.Plugs.AttackTest do
 
     test "halts requests from IPs that are blocked" do
       insert(:block_address, ip: "10.1.1.1")
-      Hexpm.BlockAddress.reload
+      Hexpm.BlockAddress.reload()
 
       conn = request_ip({10, 1, 1, 1})
       assert conn.status == 403
@@ -96,14 +103,14 @@ defmodule Hexpm.Web.Plugs.AttackTest do
 
     test "allows requests again when the IP is unblocked" do
       blocked_address = insert(:block_address, ip: "20.2.2.2")
-      Hexpm.BlockAddress.reload
+      Hexpm.BlockAddress.reload()
 
       conn = request_ip({20, 2, 2, 2})
       assert conn.status == 403
       assert conn.resp_body == Poison.encode!(%{status: 403, message: "Blocked"})
 
       Hexpm.Repo.delete!(blocked_address)
-      Hexpm.BlockAddress.reload
+      Hexpm.BlockAddress.reload()
 
       conn = request_ip({20, 2, 2, 2})
       assert conn.status == 200
