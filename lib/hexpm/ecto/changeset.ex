@@ -43,19 +43,37 @@ defmodule Hexpm.Changeset do
     end)
   end
 
+  defp valid_requirement?(req) do
+    is_binary(req) and match?({:ok, _}, Version.parse_requirement(req))
+  end
+
   def validate_verified_email_exists(changeset, field, opts) do
-    validate_change changeset, field, fn _, email ->
+    validate_change(changeset, field, fn _, email ->
       case Hexpm.Repo.get_by(Hexpm.Accounts.Email, email: email, verified: true) do
         nil ->
           []
         _ ->
           [{field, opts[:message]}]
       end
-    end
+    end)
   end
 
-  defp valid_requirement?(req) do
-    is_binary(req) and match?({:ok, _}, Version.parse_requirement(req))
+  def validate_repository(changeset, field, opts) do
+    validate_change(changeset, field, fn key, dependency_repository ->
+      repository = Keyword.fetch!(opts, :repository)
+      if dependency_repository in ["hexpm", repository.name] do
+        []
+      else
+        [{key, {repository_error(repository, dependency_repository), []}}]
+      end
+    end)
+  end
+
+  defp repository_error(%{id: 1}, dependency_repository) do
+    "dependencies can only belong to public repository \"hexpm\", got: #{inspect dependency_repository}"
+  end
+  defp repository_error(%{name: name}, dependency_repository) do
+    "dependencies can only belong to public repository \"hexpm\" or current repository #{inspect name}, got: #{inspect dependency_repository}"
   end
 
   def validate_password(changeset, field, hash, opts \\ []) do

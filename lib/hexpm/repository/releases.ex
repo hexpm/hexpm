@@ -171,7 +171,7 @@ defmodule Hexpm.Repository.Releases do
     if release do
       release = Repo.preload(release, requirements: Release.requirements(release))
       multi
-      |> Multi.update(:release, Release.update(release, params, checksum))
+      |> Multi.update(:release, Release.update(release, params, package, checksum))
       |> Multi.run(:action, fn _ -> {:ok, :update} end)
     else
       multi

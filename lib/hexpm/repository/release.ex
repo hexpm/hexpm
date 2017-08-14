@@ -16,27 +16,27 @@ defmodule Hexpm.Repository.Release do
     embeds_one :retirement, ReleaseRetirement, on_replace: :delete
   end
 
-  defp changeset(release, :create, params, checksum) do
-    changeset(release, :update, params, checksum)
+  defp changeset(release, :create, params, package, checksum) do
+    changeset(release, :update, params, package, checksum)
     |> unique_constraint(:version, name: "releases_package_id_version_key", message: "has already been published")
   end
 
-  defp changeset(release, :update, params, checksum) do
+  defp changeset(release, :update, params, package, checksum) do
     cast(release, params, ~w(version))
     |> cast_embed(:meta, required: true)
     |> validate_version(:version)
     |> validate_editable(:update, false)
     |> put_change(:checksum, String.upcase(checksum))
-    |> Requirement.build_all()
+    |> Requirement.build_all(package)
   end
 
   def build(package, params, checksum) do
     build_assoc(package, :releases)
-    |> changeset(:create, params, checksum)
+    |> changeset(:create, params, package, checksum)
   end
 
-  def update(release, params, checksum) do
-    changeset(release, :update, params, checksum)
+  def update(release, params, package, checksum) do
+    changeset(release, :update, params, package, checksum)
   end
 
   def delete(release, opts \\ []) do
