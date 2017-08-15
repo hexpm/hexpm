@@ -57,7 +57,7 @@ defmodule Hexpm.Web.AuthHelpers do
       {:error, :basic} ->
         unauthorized(conn, "invalid username and password combination")
       {:error, :key} ->
-        unauthorized(conn, "invalid username and API key combination")
+        unauthorized(conn, "invalid API key")
       {:error, :unconfirmed} ->
         forbidden(conn, "email not verified")
       {:error, :revoked_key} ->
