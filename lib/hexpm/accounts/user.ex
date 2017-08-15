@@ -25,6 +25,8 @@ defmodule Hexpm.Accounts.User do
 
   @username_regex ~r"^[a-z0-9_\-\.\(\)]+$"
 
+  @reserved_names ~w(me hex hexpm elixir erlang otp)
+
   defp changeset(user, :create, params, confirmed?) do
     cast(user, params, ~w(username full_name password))
     |> validate_required(~w(username password)a)
@@ -32,6 +34,7 @@ defmodule Hexpm.Accounts.User do
     |> update_change(:username, &String.downcase/1)
     |> validate_length(:username, min: 3)
     |> validate_format(:username, @username_regex)
+    |> validate_exclusion(:username, @reserved_names)
     |> unique_constraint(:username, name: "users_username_idx")
     |> validate_length(:password, min: 7)
     |> validate_confirmation(:password, message: "does not match password")

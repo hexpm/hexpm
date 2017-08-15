@@ -2,6 +2,7 @@ defmodule Hexpm.Web.API.UserController do
   use Hexpm.Web, :controller
 
   plug :authorize, [domain: :api] when action in [:test]
+  plug :authorize, [domain: :api] when action in [:me]
 
   def create(conn, params) do
     params = email_param(params)
@@ -18,6 +19,16 @@ defmodule Hexpm.Web.API.UserController do
       {:error, changeset} ->
         validation_failed(conn, changeset)
     end
+  end
+
+  def me(conn, _params) do
+    user = conn.assigns.current_user
+
+    when_stale(conn, user, fn conn ->
+      conn
+      |> api_cache(:private)
+      |> render(:show, user: user)
+    end)
   end
 
   def show(conn, %{"name" => username}) do

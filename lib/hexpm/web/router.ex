@@ -132,6 +132,7 @@ defmodule Hexpm.Web.Router do
     get "/", IndexController, :index
 
     post "/users", UserController, :create
+    get "/users/me", UserController, :me
     get "/users/:name", UserController, :show
     get "/users/:name/test", UserController, :test
     post "/users/:name/reset", UserController, :reset

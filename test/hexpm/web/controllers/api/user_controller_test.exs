@@ -58,6 +58,29 @@ defmodule Hexpm.Web.API.UserControllerTest do
     end
   end
 
+  describe "GET /api/users/me" do
+    test "get current user" do
+      user = insert(:user)
+
+      body =
+        build_conn()
+        |> put_req_header("authorization", key_for(user))
+        |> get("api/users/me")
+        |> json_response(200)
+
+      assert body["username"] == user.username
+      assert body["email"] == hd(user.emails).email
+      refute body["emails"]
+      refute body["password"]
+    end
+
+    test "return 401 if not authenticated" do
+      build_conn()
+      |> get("api/users/me")
+      |> json_response(401)
+    end
+  end
+
   describe "GET /api/users/:name" do
     test "get user" do
       user = insert(:user)
