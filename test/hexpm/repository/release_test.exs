@@ -100,6 +100,7 @@ defmodule Hexpm.Repository.ReleaseTest do
     repository2 = insert(:repository)
     package1_repo = insert(:package, repository_id: repository1.id)
     package2_repo = insert(:package, repository_id: repository2.id)
+    package3_repo = insert(:package, repository_id: repository2.id, repository: repository2)
     Release.build(package1_repo, rel_meta(%{version: "0.0.1", app: package1_repo.name}), "") |> Hexpm.Repo.insert!()
     Release.build(package2_repo, rel_meta(%{version: "0.0.1", app: package2_repo.name}), "") |> Hexpm.Repo.insert!()
     package1 = Repo.preload(package1, :repository)
@@ -139,6 +140,22 @@ defmodule Hexpm.Repository.ReleaseTest do
     assert %{
       requirements: [%{dependency: [{"package does not exist" <> _, [validation: :required]}]}]
     } = Release.build(package1, meta, "") |> extract_errors()
+
+    meta = rel_meta(%{
+      requirements: [%{name: package2_repo.name, repository: "hexpm", app: package2_repo.name, requirement: "~> 0.0.1", optional: false}],
+      app: package1.name,
+      version: "0.0.1"})
+    assert %{
+      requirements: [%{dependency: [{"package does not exist" <> _, [validation: :required]}]}]
+    } = Release.build(package3_repo, meta, "") |> extract_errors()
+
+    meta = rel_meta(%{
+      requirements: [%{name: package2_repo.name, app: package2_repo.name, requirement: "~> 0.0.1", optional: false}],
+      app: package1.name,
+      version: "0.0.1"})
+    assert %{
+      requirements: [%{dependency: [{"package does not exist" <> _, [validation: :required]}]}]
+    } = Release.build(package3_repo, meta, "") |> extract_errors()
   end
 
   test "validate release", %{packages: [_, package2, package3]} do
