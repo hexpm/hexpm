@@ -274,7 +274,7 @@ defmodule Hexpm.Web.API.ReleaseControllerTest do
              |> post("api/packages/#{meta.name}/releases", create_tar(meta, []))
 
       result = json_response(conn, 422)
-      assert result["errors"]["requirements"]["nonexistant_package"] == "package does not exist"
+      assert result["errors"]["requirements"]["nonexistant_package"] == "package does not exist in repository \"hexpm\""
     end
 
     test "create releases with requirements validates resolution", %{user: user, package: package} do

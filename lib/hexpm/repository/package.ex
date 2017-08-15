@@ -64,7 +64,9 @@ defmodule Hexpm.Repository.Package do
   end
 
   def build(repository, owner, params) do
-    changeset(build_assoc(repository, :packages), :create, params)
+    build_assoc(repository, :packages)
+    |> Map.put(:repository, repository)
+    |> changeset(:create, params)
     |> put_assoc(:package_owners, [%PackageOwner{owner_id: owner.id}])
   end
 
