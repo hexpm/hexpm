@@ -4,7 +4,9 @@ defmodule Hexpm.Repository.ReleaseTest do
   alias Hexpm.Repository.Release
 
   setup do
-    packages = insert_list(3, :package)
+    packages =
+      insert_list(3, :package)
+      |> Hexpm.Repo.preload(:repository)
     %{packages: packages}
   end
 
@@ -123,19 +125,19 @@ defmodule Hexpm.Repository.ReleaseTest do
     } = Release.build(package1, meta, "") |> extract_errors()
 
     meta = rel_meta(%{
-      requirements: [%{name: package1_repo.name, repository: "hexpm", app: package2_repo.name, requirement: "~> 0.0.1", optional: false}],
+      requirements: [%{name: package1_repo.name, repository: "hexpm", app: package1_repo.name, requirement: "~> 0.0.1", optional: false}],
       app: package1.name,
       version: "0.0.1"})
     assert %{
-      requirements: [%{dependency: [{"package does not exist", [validation: :required]}]}]
+      requirements: [%{dependency: [{"package does not exist" <> _, [validation: :required]}]}]
     } = Release.build(package1, meta, "") |> extract_errors()
 
     meta = rel_meta(%{
-      requirements: [%{name: package1_repo.name, app: package2_repo.name, requirement: "~> 0.0.1", optional: false}],
+      requirements: [%{name: package1_repo.name, app: package1_repo.name, requirement: "~> 0.0.1", optional: false}],
       app: package1.name,
       version: "0.0.1"})
     assert %{
-      requirements: [%{dependency: [{"package does not exist", [validation: :required]}]}]
+      requirements: [%{dependency: [{"package does not exist" <> _, [validation: :required]}]}]
     } = Release.build(package1, meta, "") |> extract_errors()
   end
 

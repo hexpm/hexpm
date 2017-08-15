@@ -19,7 +19,7 @@ defmodule Hexpm.Repository.Requirement do
     cast(requirement, params, ~w(repository name app requirement optional))
     |> put_assoc(:dependency, dependencies[{params["name"], params["repository"] || "hexpm"}])
     |> validate_required(~w(name app requirement optional)a)
-    |> validate_required(:dependency, message: "package does not exist")
+    |> validate_required(:dependency, message: "package does not exist in repository #{inspect package.repository.name}")
     |> validate_requirement(:requirement, pre: get_field(release_changeset, :version).pre != [])
     |> validate_repository(:repository, repository: package.repository)
   end
