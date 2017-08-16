@@ -8,34 +8,37 @@ defmodule Mix.Tasks.Hexpm.Stats do
   @shortdoc "Calculates yesterdays download stats"
 
   @s3_regex ~r<
-    [^\040]+\040          # bucket owner
-    [^\040]+\040          # bucket
-    \[.+\]\040            # time
-    ([^\040]+)\040        # IP address
-    [^\040]+\040          # requester ID
-    [^\040]+\040          # request ID
+    [^\040]+\040 # bucket owner
+    [^\040]+\040 # bucket
+    \[.+\]\040 # time
+    ([^\040]+)\040 # IP address
+    [^\040]+\040 # requester ID
+    [^\040]+\040 # request ID
     REST.GET.OBJECT\040
     tarballs/
-    ([^-]+)               # package
+    ([^-]+) # package
     -
-    ([\d\w\.\-]+)         # version
-    .tar\040
-    "[^"]+"\040           # request line
-    ([0-9]{3})\040        # status
+    ([\d\w\.\-]+) # version
+    .tar(?:\?[^\040"]*)?\040
+    "[^"]+"\040 # request line
+    ([0-9]{3})\040 # status
     >x
 
   @fastly_regex ~r<
-    [^\040]+\040          # syslog
-    [^\040]+\040          # user
-    [^\040]+\040          # source
-    ([^\040]+)\040        # IP address
-    "[^"]+"\040           # time
+    [^\040]+\040 # syslog
+    [^\040]+\040 # user
+    [^\040]+\040 # source
+    ([^\040]+)\040 # IP address
+    (?:(?:"[^"]+")|(?:\[[^\]]+\]))\040 # time
     "GET\040/tarballs/
-    ([^-]+)               # package
+    ([^-]+) # package
     -
-    ([\d\w\.\-]+)         # version
-    .tar"\040
-    ([0-9]{3})\040        # status
+    ([\d\w\.\-]+) # version
+    .tar
+    (?:\?[^\040"]*)?
+    (?:\040HTTP/\d\.\d)?
+    "\040
+    ([0-9]{3})\040 # status
   >x
 
   @ets __MODULE__
@@ -117,7 +120,7 @@ defmodule Mix.Tasks.Hexpm.Stats do
   defp process_buckets(buckets, formats, ips) do
     jobs = for b <- buckets, f <- formats, do: {b, f}
     Enum.each(jobs, fn {[bucket, region], {prefix, regex}} ->
-      keys = Store.list(region, bucket, prefix) |> Enum.to_list
+      keys = Store.list(region, bucket, prefix) |> Enum.to_list()
       process_keys(region, bucket, regex, ips, keys)
     end)
   end

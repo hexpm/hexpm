@@ -5,7 +5,6 @@ buckets =
     "hex" ->
       [
         {"logs.hex.pm", "us-east-1"},
-        {"logs-eu.hex.pm", "eu-west-1"},
         {"eu.logs.hex.pm", "eu-west-1"}
       ]
      "fastly_hex" ->
