@@ -2,7 +2,7 @@ defmodule Hexpm.Web.API.KeyController do
   use Hexpm.Web, :controller
 
   plug :authorize, [domain: :api] when action != :create
-  plug :authorize, [domain: :api, only_basic: true, allow_unconfirmed: true] when action == :create
+  plug :authorize, [domain: :api, allow_unconfirmed: true] when action == :create
 
   def index(conn, _params) do
     user = conn.assigns.current_user
@@ -34,18 +34,29 @@ defmodule Hexpm.Web.API.KeyController do
     user = conn.assigns.current_user
     authing_key = conn.assigns.key
 
-    case Keys.add(user, params, audit: audit_data(conn)) do
-      {:ok, %{key: key}} ->
-        location = api_key_url(conn, :show, params["name"])
+    if api_key?(params) and conn.assigns.auth_source == :key do
+      Hexpm.Web.AuthHelpers.error(conn, {:error, :basic_required})
+    else
+      case Keys.add(user, params, audit: audit_data(conn)) do
+        {:ok, %{key: key}} ->
+          location = api_key_url(conn, :show, params["name"])
 
-        conn
-        |> put_resp_header("location", location)
-        |> api_cache(:private)
-        |> put_status(201)
-        |> render(:show, key: key, authing_key: authing_key)
-      {:error, :key, changeset, _} ->
-        validation_failed(conn, changeset)
+          conn
+          |> put_resp_header("location", location)
+          |> api_cache(:private)
+          |> put_status(201)
+          |> render(:show, key: key, authing_key: authing_key)
+        {:error, :key, changeset, _} ->
+          validation_failed(conn, changeset)
+      end
     end
+  end
+
+  defp api_key?(params) do
+    params["permissions"] in [nil, []] or
+      Enum.any?(params["permissions"], fn permission ->
+        permission["domain"] == "api"
+      end)
   end
 
   def delete(conn, %{"name" => name}) do

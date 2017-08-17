@@ -20,7 +20,6 @@ defmodule Hexpm.Web.AuthHelpers do
   end
 
   defp authorized(conn, user, fun, opts) do
-    only_basic = Keyword.get(opts, :only_basic, false)
     allow_unconfirmed = Keyword.get(opts, :allow_unconfirmed, false)
     domain = Keyword.get(opts, :domain)
     resource = Keyword.get(opts, :resource)
@@ -28,8 +27,6 @@ defmodule Hexpm.Web.AuthHelpers do
     email = conn.assigns.email
 
     cond do
-      user && ((only_basic && key) || (!only_basic && !key)) ->
-        error(conn, {:error, :missing})
       user && ((!email or !email.verified) && !allow_unconfirmed) ->
         error(conn, {:error, :unconfirmed})
       user && key && !verify_permissions?(key, domain, resource) ->
@@ -54,7 +51,7 @@ defmodule Hexpm.Web.AuthHelpers do
         unauthorized(conn, "missing authentication information")
       {:error, :invalid} ->
         unauthorized(conn, "invalid authentication information")
-      {:error, :basic} ->
+      {:error, :password} ->
         unauthorized(conn, "invalid username and password combination")
       {:error, :key} ->
         unauthorized(conn, "invalid API key")
@@ -66,6 +63,8 @@ defmodule Hexpm.Web.AuthHelpers do
         unauthorized(conn, "key not authorized for this action")
       {:error, :auth} ->
         forbidden(conn, "account not authorized for this action")
+      {:error, :basic_required} ->
+        unauthorized(conn, "action requires password authentication")
     end
   end
 
@@ -85,7 +84,7 @@ defmodule Hexpm.Web.AuthHelpers do
          [username_or_email, password] = String.split(decoded, ":", parts: 2) do
       case Auth.password_auth(username_or_email, password) do
         {:ok, result} -> {:ok, result}
-        :error -> {:error, :basic}
+        :error -> {:error, :password}
       end
     else
       _ ->

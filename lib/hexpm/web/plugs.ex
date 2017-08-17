@@ -102,11 +102,12 @@ defmodule Hexpm.Web.Plugs do
 
   def authenticate(conn, _opts) do
     case Hexpm.Web.AuthHelpers.authenticate(conn) do
-      {:ok, {user, key, email}} ->
+      {:ok, {user, key, email, source}} ->
         conn
         |> assign(:current_user, user)
         |> assign(:key, key)
         |> assign(:email, email)
+        |> assign(:auth_source, source)
 
       {:error, :missing} ->
         conn

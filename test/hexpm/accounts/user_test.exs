@@ -40,7 +40,7 @@ defmodule Hexpm.Accounts.UserTest do
       User.update_password_no_check(user, %{username: "ignore_this", password: "new_password", password_confirmation: "new_password"})
       |> Hexpm.Repo.update!
 
-      assert {:ok, {auth_user, nil, _}} = Auth.password_auth(user.username, "new_password")
+      assert {:ok, {auth_user, nil, _, :password}} = Auth.password_auth(user.username, "new_password")
       assert auth_user.id == user.id
       assert :error == Auth.password_auth(user.username, "password")
     end

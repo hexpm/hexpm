@@ -25,7 +25,7 @@ defmodule Hexpm.Accounts.Auth do
       key ->
         if Comeonin.Tools.secure_check(key.secret_second, second) do
           if is_nil(key.revoked_at) do
-            {:ok, {key.user, key, find_email(key.user, nil)}}
+            {:ok, {key.user, key, find_email(key.user, nil), :key}}
           else
             :revoked
           end
@@ -38,7 +38,7 @@ defmodule Hexpm.Accounts.Auth do
   def password_auth(username_or_email, password) do
     user = Users.get(username_or_email, [:owned_packages, :emails, :repositories])
     if user && Comeonin.Bcrypt.checkpw(password, user.password) do
-      {:ok, {user, nil, find_email(user, username_or_email)}}
+      {:ok, {user, nil, find_email(user, username_or_email), :password}}
     else
       :error
     end

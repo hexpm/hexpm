@@ -31,7 +31,7 @@ defmodule Hexpm.Web.PasswordControllerTest do
   describe "POST /password/new" do
     test "submit new password", c do
       username = c.user.username
-      assert {:ok, {%User{username: ^username}, _, _}} = Auth.password_auth(username, "hunter42")
+      assert {:ok, {%User{username: ^username}, _, _, :password}} = Auth.password_auth(username, "hunter42")
       Repo.insert!(Session.build(%{"user_id" => c.user.id}))
       Repo.insert!(Session.build(%{"user_id" => c.user.id}))
 
@@ -48,7 +48,7 @@ defmodule Hexpm.Web.PasswordControllerTest do
       refute get_session(conn, "user_id")
 
       # check new password will work
-      assert {:ok, {%User{username: ^username}, _, _}} = Auth.password_auth(username, "abcd1234")
+      assert {:ok, {%User{username: ^username}, _, _, :password}} = Auth.password_auth(username, "abcd1234")
       refute last_session().data["user_id"]
     end
   end

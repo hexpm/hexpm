@@ -30,11 +30,37 @@ defmodule Hexpm.Web.API.KeyControllerTest do
     assert %{"name" => "macbook"} = log.params
   end
 
+  test "create api key requires password authentication", c do
+    key = Key.build(c.eric, %{name: "computer"}) |> Hexpm.Repo.insert!
+
+    body = %{name: "macbook"}
+    build_conn()
+    |> put_req_header("content-type", "application/json")
+           |> put_req_header("authorization", key.user_secret)
+    |> post("api/keys", Poison.encode!(body))
+    |> json_response(401)
+  end
+
   test "create repo key", c do
     body = %{name: "macbook", permissions: [%{domain: "repository", resource: c.repo.name}]}
     build_conn()
     |> put_req_header("content-type", "application/json")
     |> put_req_header("authorization", "Basic " <> Base.encode64("eric:ericeric"))
+    |> post("api/keys", Poison.encode!(body))
+    |> json_response(201)
+
+    key = Hexpm.Repo.one!(Key.get(c.eric, "macbook"))
+    repo_name = c.repo.name
+    assert [%KeyPermission{domain: "repository", resource: ^repo_name}] = key.permissions
+  end
+
+  test "create repo key with api key", c do
+    key = Key.build(c.eric, %{name: "computer"}) |> Hexpm.Repo.insert!
+
+    body = %{name: "macbook", permissions: [%{domain: "repository", resource: c.repo.name}]}
+    build_conn()
+    |> put_req_header("content-type", "application/json")
+    |> put_req_header("authorization", key.user_secret)
     |> post("api/keys", Poison.encode!(body))
     |> json_response(201)
 

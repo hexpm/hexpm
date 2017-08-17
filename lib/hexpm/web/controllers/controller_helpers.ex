@@ -276,7 +276,7 @@ defmodule Hexpm.Web.ControllerHelpers do
 
   def password_auth(username, password) do
     case Auth.password_auth(username, password) do
-      {:ok, {user, nil, email}} ->
+      {:ok, {user, nil, email, :password}} ->
         if email.verified,
           do: {:ok, user},
         else: {:error, :unconfirmed}
