@@ -164,26 +164,44 @@ defmodule Hexpm.Repository.Assets do
   end
 
   def tarball_cdn_key(release) do
-    "tarballs/#{release.package.name}-#{release.version}"
+    "tarballs/#{repository_cdn_key(release)}#{release.package.name}-#{release.version}"
   end
 
   def tarball_store_key(release) do
-    "tarballs/#{release.package.name}-#{release.version}.tar"
+    "tarballs/#{repository_store_key(release)}#{release.package.name}-#{release.version}.tar"
   end
 
   def docs_cdn_key(release) do
-    "docs/#{release.package.name}-#{release.version}"
+    "docs/#{repository_cdn_key(release)}#{release.package.name}-#{release.version}"
   end
 
   def docs_store_key(release) do
-    "docs/#{release.package.name}-#{release.version}.tar.gz"
+    "docs/#{repository_store_key(release)}#{release.package.name}-#{release.version}.tar.gz"
   end
 
   def versioned_key(release) do
-    "docspage/#{release.package.name}/#{release.version}"
+    "docspage/#{repository_cdn_key(release)}#{release.package.name}/#{release.version}"
   end
 
   def unversioned_key(release) do
-    "docspage/#{release.package.name}"
+    "docspage/#{repository_cdn_key(release)}#{release.package.name}"
+  end
+
+  defp repository_cdn_key(release) do
+    repo = release.package.repository
+    if repo.id == 1 do
+      ""
+    else
+      "#{repo.name}/"
+    end
+  end
+
+  defp repository_store_key(release) do
+    repo = release.package.repository
+    if repo.id == 1 do
+      ""
+    else
+      "repos/#{repo.name}/"
+    end
   end
 end

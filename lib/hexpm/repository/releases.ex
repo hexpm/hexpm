@@ -45,10 +45,9 @@ defmodule Hexpm.Repository.Releases do
     |> create_package(repository, package, user, meta)
     |> create_release(package, checksum, meta)
     |> audit_publish(audit_data)
-    |> publish_release(body)
     |> refresh_package_dependants()
     |> Repo.transaction(timeout: @publish_timeout)
-    |> publish_result()
+    |> publish_result(body)
   end
 
   def publish_docs(package, release, files, body, [audit: audit_data]) do
@@ -67,13 +66,12 @@ defmodule Hexpm.Repository.Releases do
 
     Assets.push_docs(release, files, body, docs_for_latest_release)
 
-    multi =
+    {:ok, _} =
       Multi.new()
       |> Multi.update(:release, Ecto.Changeset.change(release, has_docs: true))
       |> Multi.update(:package, Ecto.Changeset.change(release.package, docs_updated_at: NaiveDateTime.utc_now))
       |> audit(audit_data, "docs.publish", {package, release})
-
-    {:ok, _} = Repo.transaction(multi)
+      |> Repo.transaction()
 
     Sitemaps.publish_docs_sitemap()
   end
@@ -95,13 +93,12 @@ defmodule Hexpm.Repository.Releases do
   end
 
   def revert_docs(release, [audit: audit_data]) do
-    multi =
+    {:ok, _} =
       Multi.new()
       |> Multi.update(:release, Ecto.Changeset.change(release, has_docs: false))
       |> Multi.update(:package, Ecto.Changeset.change(release.package, docs_updated_at: NaiveDateTime.utc_now))
       |> audit(audit_data, "docs.revert", {release.package, release})
-
-    {:ok, _} = Repo.transaction(multi)
+      |> Repo.transaction()
 
     Assets.revert_docs(release)
   end
@@ -128,13 +125,14 @@ defmodule Hexpm.Repository.Releases do
     |> publish_result()
   end
 
-  defp publish_result({:ok, %{repository: repository, package: package, release: release} = result}) do
-    RegistryBuilder.partial_build({:publish, package.name})
+  defp publish_result({:ok, %{repository: repository, package: package, release: release} = result}, body) do
     package = %{package | repository: repository}
     release = %{release | package: package}
+    Assets.push_release(release, body)
+    RegistryBuilder.partial_build({:publish, package.name})
     {:ok, %{result | release: release, package: package}}
   end
-  defp publish_result(result), do: result
+  defp publish_result(result, _body), do: result
 
   defp revert_result({:ok, %{release: release}}, package) do
     Assets.revert_release(release)
@@ -207,14 +205,6 @@ defmodule Hexpm.Repository.Releases do
 
   defp audit_unretire(multi, audit_data, package) do
     audit(multi, audit_data, "release.unretire", fn %{release: rel} -> {package, rel} end)
-  end
-
-  defp publish_release(multi, body) do
-    Multi.run(multi, :assets, fn %{package: package, release: release} ->
-      release = %{release | package: package}
-      Assets.push_release(release, body)
-      {:ok, :ok}
-    end)
   end
 
   defp normalize_requirements(requirements) when is_map(requirements) do
