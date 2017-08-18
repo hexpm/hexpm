@@ -1,7 +1,7 @@
 defmodule Hexpm.Web.TestControllerTest do
   use Hexpm.ConnCase, async: true
 
-  alias Hexpm.Repository.RegistryBuilder
+  alias Hexpm.Repository.{RegistryBuilder, Repository}
 
   setup do
     insert(:package, releases: [build(:release)])
@@ -9,7 +9,7 @@ defmodule Hexpm.Web.TestControllerTest do
   end
 
   test "fetch registry" do
-    RegistryBuilder.partial_build(:v1)
+    RegistryBuilder.partial_build({:v1, Repository.hexpm()})
     conn = get(build_conn(), "repo/registry.ets.gz")
     assert conn.status in 200..399
   end

@@ -2,14 +2,13 @@ case System.argv do
   [hex | elixirs] ->
     IO.puts "Hex:     " <> hex
     IO.puts "Elixirs: " <> Enum.join(elixirs, ", ")
-
-    Hexpm.Repository.Install.build(hex, elixirs) |> Hexpm.Repo.insert
+    Hexpm.Repository.Install.build(hex, elixirs) |> Hexpm.Repo.insert!()
 
   _ ->
     :ok
 end
 
-all = Hexpm.Repository.Install.all |> Hexpm.Repo.all
+all = Hexpm.Repository.Install.all() |> Hexpm.Repo.all()
 
 csv =
   Enum.map_join(all, "\n", fn install ->
@@ -22,6 +21,6 @@ Hexpm.CDN.purge_key(:fastly_hexrepo, "installs")
 
 IO.puts "Uploaded installs/list.csv"
 
-Hexpm.Repository.RegistryBuilder.partial_build(:v1)
+Hexpm.Repository.RegistryBuilder.partial_build({:v1, Hexpm.Repository.Repository.hexpm()})
 
 IO.puts "Rebuilt registry"

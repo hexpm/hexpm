@@ -1,18 +1,24 @@
 [name] = System.argv
 
-package = Hexpm.Repo.get_by!(Hexpm.Repository.Package, name: name)
+package =
+  Hexpm.Repository.Package
+  |> Hexpm.Repo.get_by!(name: name)
+  |> Hexpm.Repo.preload(:repository)
+
 
 unless package do
   IO.puts "No package: #{name}"
   System.halt(1)
 end
 
-releases = Hexpm.Repository.Release.all(package)
-           |> Hexpm.Repo.all()
-           |> Hexpm.Repo.preload(:package)
-owners   = Ecto.assoc(package, :owners)
-           |> Hexpm.Repo.all()
-           |> Hexpm.Repo.preload(:emails)
+releases =
+  Hexpm.Repository.Release.all(package)
+  |> Hexpm.Repo.all()
+  |> Hexpm.Repo.preload(:package)
+owners   =
+  Ecto.assoc(package, :owners)
+  |> Hexpm.Repo.all()
+  |> Hexpm.Repo.preload(:emails)
 
 IO.puts name
 
@@ -33,7 +39,7 @@ if answer =~ ~r/^(Y(es)?)?$/i do
   Enum.each(releases, &(Hexpm.Repository.Release.delete(&1, force: true) |> Hexpm.Repo.delete!))
   Hexpm.Repo.delete!(package)
   Enum.each(releases, &Hexpm.Repository.Assets.revert_release/1)
-  Hexpm.Repository.RegistryBuilder.partial_build({:publish, name})
+  Hexpm.Repository.RegistryBuilder.partial_build({:publish, package})
   IO.puts "Removed"
 else
   IO.puts "Not removed"

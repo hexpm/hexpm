@@ -1,12 +1,14 @@
 defmodule Hexpm.Repository.RegistryBuilderTest do
   use Hexpm.DataCase
 
-  alias Hexpm.Repository.{RegistryBuilder, Release}
+  alias Hexpm.Repository.{RegistryBuilder, Release, Repository}
 
   @checksum "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855"
 
   setup do
-    packages = [p1, p2, p3] = insert_list(3, :package)
+    packages = [p1, p2, p3] =
+      insert_list(3, :package)
+      |> Hexpm.Repo.preload(:repository)
 
     r1 = insert(:release, package: p1, version: "0.0.1")
     r2 = insert(:release, package: p2, version: "0.0.1")
@@ -23,20 +25,24 @@ defmodule Hexpm.Repository.RegistryBuilderTest do
     %{packages: packages, releases: [r1, r2, r3, r4]}
   end
 
-  defp open_table do
-    contents = Hexpm.Store.get(nil, :s3_bucket, "registry.ets.gz", []) |> :zlib.gunzip()
-    path = Path.join(Application.get_env(:hexpm, :tmp_dir), "registry_builder_test.ets")
-    File.write!(path, contents)
-    {:ok, tid} = :ets.file2tab(String.to_charlist(path))
-    tid
+  defp open_table(repo \\ nil) do
+    path = if repo, do: "repos/#{repo}/registry.ets.gz", else: "registry.ets.gz"
+    if contents = Hexpm.Store.get(nil, :s3_bucket, path, []) do
+      contents = :zlib.gunzip(contents)
+      path = Path.join(Application.get_env(:hexpm, :tmp_dir), "registry_builder_test.ets")
+      File.write!(path, contents)
+      {:ok, tid} = :ets.file2tab(String.to_charlist(path))
+      tid
+    end
   end
 
   defp v2_map(path) do
-    {module, message} = path_to_protobuf(path)
+    nonrepo_path = Regex.replace(~r"^repos/\w+/", path, "")
+    {module, message} = path_to_protobuf(nonrepo_path)
     if contents = Hexpm.Store.get(nil, :s3_bucket, path, []) do
       %{payload: payload, signature: signature} =
         contents
-        |> :zlib.gunzip
+        |> :zlib.gunzip()
         |> :hex_pb_signed.decode_msg(:Signed)
 
       public_key = Application.fetch_env!(:hexpm, :public_key)
@@ -50,32 +56,27 @@ defmodule Hexpm.Repository.RegistryBuilderTest do
   defp path_to_protobuf("packages/" <> _), do: {:hex_pb_package, :Package}
 
   describe "full_build/0" do
-    test "registry is versioned" do
-      RegistryBuilder.full_build()
-      tid = open_table()
-
-      assert [{:"$$version$$", 4}] = :ets.lookup(tid, :"$$version$$")
-    end
-
     test "registry is in correct format", %{packages: [p1, p2, p3]} do
-      RegistryBuilder.full_build()
+      RegistryBuilder.full_build(Repository.hexpm())
       tid = open_table()
+
+      assert :ets.lookup(tid, :"$$version$$") == [{:"$$version$$", 4}]
 
       assert length(:ets.match_object(tid, :_)) == 9
       assert :ets.lookup(tid, p2.name) == [{p2.name, [["0.0.1", "0.0.2"]]}]
       assert :ets.lookup(tid, {p2.name, "0.0.1"}) == [{{p2.name, "0.0.1"}, [[], @checksum, ["mix"]]}]
       assert :ets.lookup(tid, p3.name) == [{p3.name, [["0.0.2"]]}]
 
-      requirements = :ets.lookup(tid, {p3.name, "0.0.2"}) |> List.first |> elem(1) |> List.first
+      requirements = :ets.lookup(tid, {p3.name, "0.0.2"}) |> List.first() |> elem(1) |> List.first()
       assert length(requirements ) == 2
-      assert Enum.find(requirements, &(&1 == [p2.name, "~> 0.0.1", false, p2.name]))
-      assert Enum.find(requirements, &(&1 == [p1.name, "0.0.1", false, p1.name]))
+      assert Enum.find(requirements, &(&1 == ["hexpm", p2.name, "~> 0.0.1", false, p2.name]))
+      assert Enum.find(requirements, &(&1 == ["hexpm", p1.name, "0.0.1", false, p1.name]))
 
       assert [] = :ets.lookup(tid, "non_existant")
     end
 
     test "registry is uploaded alongside signature" do
-      RegistryBuilder.full_build()
+      RegistryBuilder.full_build(Repository.hexpm())
 
       registry = Hexpm.Store.get(nil, :s3_bucket, "registry.ets.gz", [])
       signature = Hexpm.Store.get(nil, :s3_bucket, "registry.ets.gz.signed", [])
@@ -86,8 +87,8 @@ defmodule Hexpm.Repository.RegistryBuilderTest do
     end
 
     test "registry v2 is in correct format", %{packages: [p1, p2, p3] = packages} do
-      RegistryBuilder.full_build()
-      first = packages |> Enum.map(& &1.name) |> Enum.sort |> List.first
+      RegistryBuilder.full_build(Repository.hexpm())
+      first = packages |> Enum.map(& &1.name) |> Enum.sort() |> List.first()
 
       names = v2_map("names")
       assert length(names.packages) == 3
@@ -109,26 +110,40 @@ defmodule Hexpm.Repository.RegistryBuilderTest do
     end
 
     test "remove package", %{packages: [p1, p2, p3], releases: [_, _, _, r4]} do
-      RegistryBuilder.full_build()
+      RegistryBuilder.full_build(Repository.hexpm())
 
       Hexpm.Repo.delete!(r4)
       Hexpm.Repo.delete!(p3)
-      RegistryBuilder.full_build
+      RegistryBuilder.full_build(Repository.hexpm())
 
       assert length(v2_map("names").packages) == 2
       assert v2_map("packages/#{p1.name}")
       assert v2_map("packages/#{p2.name}")
       refute v2_map("packages/#{p3.name}")
     end
+
+    test "registry builds for multiple repositories" do
+      repository = insert(:repository)
+      package = insert(:package, repository_id: repository.id, repository: repository)
+      insert(:release, package: package, version: "0.0.1")
+      RegistryBuilder.full_build(repository)
+
+      refute open_table(repository.name)
+
+      names = v2_map("repos/#{repository.name}/names")
+      assert length(names.packages) == 1
+
+      assert v2_map("repos/#{repository.name}/packages/#{package.name}")
+    end
   end
 
   describe "partial_build/1" do
     test "add release", %{packages: [_, p2, _]} do
-      RegistryBuilder.full_build()
+      RegistryBuilder.full_build(Repository.hexpm())
 
       release = insert(:release, package: p2, version: "0.0.3")
       Release.retire(release, %{retirement: %{reason: "invalid", message: "message"}}) |> Hexpm.Repo.update!
-      RegistryBuilder.partial_build({:publish, p2.name})
+      RegistryBuilder.partial_build({:publish, p2})
 
       tid = open_table()
       assert length(:ets.match_object(tid, :_)) == 10
@@ -145,10 +160,10 @@ defmodule Hexpm.Repository.RegistryBuilderTest do
     end
 
     test "remove release", %{packages: [_, p2, _], releases: [_, _, r3, _]} do
-      RegistryBuilder.full_build()
+      RegistryBuilder.full_build(Repository.hexpm())
 
       Hexpm.Repo.delete!(r3)
-      RegistryBuilder.partial_build({:publish, p2.name})
+      RegistryBuilder.partial_build({:publish, p2})
 
       tid = open_table()
       assert length(:ets.match_object(tid, :_)) == 8
@@ -161,11 +176,11 @@ defmodule Hexpm.Repository.RegistryBuilderTest do
     end
 
     test "add package" do
-      RegistryBuilder.full_build()
+      RegistryBuilder.full_build(Repository.hexpm())
 
-      p = insert(:package)
+      p = insert(:package) |> Hexpm.Repo.preload(:repository)
       insert(:release, package: p, version: "0.0.1")
-      RegistryBuilder.partial_build({:publish, p.name})
+      RegistryBuilder.partial_build({:publish, p})
 
       tid = open_table()
       assert length(:ets.match_object(tid, :_)) == 11
@@ -180,11 +195,11 @@ defmodule Hexpm.Repository.RegistryBuilderTest do
     end
 
     test "remove package", %{packages: [_, _, p3], releases: [_, _, _, r4]} do
-      RegistryBuilder.full_build()
+      RegistryBuilder.full_build(Repository.hexpm())
 
       Hexpm.Repo.delete!(r4)
       Hexpm.Repo.delete!(p3)
-      RegistryBuilder.partial_build({:publish, p3.name})
+      RegistryBuilder.partial_build({:publish, p3})
 
       tid = open_table()
       assert length(:ets.match_object(tid, :_)) == 7
@@ -193,6 +208,25 @@ defmodule Hexpm.Repository.RegistryBuilderTest do
       assert length(v2_map("versions").packages) == 2
 
       refute v2_map("packages/#{p3.name}")
+    end
+
+    test "add package for multiple repositories" do
+      repository = insert(:repository)
+      package1 = insert(:package, repository_id: repository.id, repository: repository)
+      insert(:release, package: package1, version: "0.0.1")
+      RegistryBuilder.full_build(repository)
+
+      package2 = insert(:package, repository_id: repository.id, repository: repository)
+      insert(:release, package: package2, version: "0.0.1")
+      RegistryBuilder.partial_build({:publish, package2})
+
+      refute open_table(repository.name)
+
+      names = v2_map("repos/#{repository.name}/names")
+      assert length(names.packages) == 2
+
+      assert v2_map("repos/#{repository.name}/packages/#{package1.name}")
+      assert v2_map("repos/#{repository.name}/packages/#{package2.name}")
     end
   end
 end

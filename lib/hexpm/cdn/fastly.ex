@@ -6,7 +6,9 @@ defmodule Hexpm.CDN.Fastly do
   @retry_times 10
 
   def purge_key(service, keys) when is_list(keys) do
+    keys = Enum.uniq(keys)
     service_id = Application.get_env(:hexpm, service)
+
     Task.async_stream(keys, fn key ->
       case post("service/#{service_id}/purge/#{key}", %{}) do
         {:ok, status, _, _} when status in [200, 404] ->

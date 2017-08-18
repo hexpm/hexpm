@@ -112,7 +112,7 @@ defmodule Hexpm.Repository.Releases do
     |> Multi.update(:release, Release.retire(release, params))
     |> audit_retire(audit_data, package)
     |> Repo.transaction()
-    |> publish_result()
+    |> publish_result(nil)
   end
 
   def unretire(package, release, [audit: audit_data]) do
@@ -122,21 +122,21 @@ defmodule Hexpm.Repository.Releases do
     |> Multi.update(:release, Release.unretire(release))
     |> audit_unretire(audit_data, package)
     |> Repo.transaction()
-    |> publish_result()
+    |> publish_result(nil)
   end
 
   defp publish_result({:ok, %{repository: repository, package: package, release: release} = result}, body) do
     package = %{package | repository: repository}
     release = %{release | package: package}
-    Assets.push_release(release, body)
-    RegistryBuilder.partial_build({:publish, package.name})
+    if body, do: Assets.push_release(release, body)
+    RegistryBuilder.partial_build({:publish, package})
     {:ok, %{result | release: release, package: package}}
   end
   defp publish_result(result, _body), do: result
 
   defp revert_result({:ok, %{release: release}}, package) do
     Assets.revert_release(release)
-    RegistryBuilder.partial_build({:publish, package.name})
+    RegistryBuilder.partial_build({:publish, package})
     :ok
   end
   defp revert_result(result, _package), do: result

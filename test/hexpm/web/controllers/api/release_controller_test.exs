@@ -2,7 +2,7 @@ defmodule Hexpm.Web.API.ReleaseControllerTest do
   use Hexpm.ConnCase, async: true
 
   alias Hexpm.Accounts.AuditLog
-  alias Hexpm.Repository.{Package, RegistryBuilder, Release}
+  alias Hexpm.Repository.{Package, RegistryBuilder, Release, Repository}
 
   setup do
     user = insert(:user)
@@ -290,7 +290,7 @@ defmodule Hexpm.Web.API.ReleaseControllerTest do
     end
 
     test "create release updates registry", %{user: user, package: package} do
-      RegistryBuilder.full_build()
+      RegistryBuilder.full_build(Repository.hexpm())
       registry_before = Hexpm.Store.get(nil, :s3_bucket, "registry.ets.gz", [])
 
       reqs = [%{name: package.name, app: "app", requirement: "~> 0.0.1", optional: false}]
