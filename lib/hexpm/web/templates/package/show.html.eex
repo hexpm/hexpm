@@ -73,6 +73,11 @@ tools = Keyword.take(tools, compatible_tools)
       <span class="license"><%= Enum.join(licenses, ", ") %></span>
     <% end %>
 
+    <%= if @current_release.checksum do %>
+      <h3>Checksum</h3>
+      <span class="checksum"><%= @current_release.checksum %></span>
+    <% end %>
+
     <div class="stats clearfix">
       <ul>
         <li>
