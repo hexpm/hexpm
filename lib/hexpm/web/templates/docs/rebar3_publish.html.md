@@ -50,7 +50,7 @@ You can also add any of the following to the list of application attributes:
 
 <dl class="dl-horizontal">
   <dt><code>licenses</code></dt>
-  <dd>A list of licences the project is licensed under. This attribute is required.</dd>
+  <dd>A list of licenses the project is licensed under. This attribute is required.</dd>
   <dt><code>pkg_name</code></dt>
   <dd>The name of the package in case you want to publish the package with a different name than the application name.</dd>
   <dt><code>maintainers</code></dt>
