@@ -69,8 +69,8 @@ defmodule Hexpm.Repository.RegistryBuilderTest do
 
       requirements = :ets.lookup(tid, {p3.name, "0.0.2"}) |> List.first() |> elem(1) |> List.first()
       assert length(requirements ) == 2
-      assert Enum.find(requirements, &(&1 == ["hexpm", p2.name, "~> 0.0.1", false, p2.name]))
-      assert Enum.find(requirements, &(&1 == ["hexpm", p1.name, "0.0.1", false, p1.name]))
+      assert Enum.find(requirements, &(&1 == [p2.name, "~> 0.0.1", false, p2.name]))
+      assert Enum.find(requirements, &(&1 == [p1.name, "0.0.1", false, p1.name]))
 
       assert [] = :ets.lookup(tid, "non_existant")
     end

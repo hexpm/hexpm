@@ -134,6 +134,9 @@ defmodule Hexpm.Repository.RegistryBuilder do
 
   defp trim_releases(releases) do
     Enum.map(releases, fn {key, [deps, checksum, tools, _retirement]} ->
+      deps = Enum.map(deps, fn [_repo, dep, req, opt, app] ->
+        [dep, req, opt, app]
+      end)
       {key, [deps, checksum, tools]}
     end)
   end
