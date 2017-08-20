@@ -138,7 +138,7 @@ tools = Keyword.take(tools, compatible_tools)
         <% end %>
       </div>
       <div class="col-md-6">
-        <h3>Dependencies</h3>
+        <h3>Dependencies (<%= if @current_release, do: Enum.count(@current_release.requirements), else: 0 %>)</h3>
         <ul class="version-dependency-list">
           <%= if @current_release do %>
             <%= for %{repository: repository, name: name, requirement: req, app: app, optional: optional} <- @current_release.requirements do %>
