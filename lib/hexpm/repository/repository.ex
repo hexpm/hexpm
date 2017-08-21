@@ -14,12 +14,17 @@ defmodule Hexpm.Repository.Repository do
 
   @roles ~w(admin write read)
 
-  def has_access(repository, user) do
+  def has_access(repository, user, role) do
     from(ro in RepositoryUser,
          where: ro.repository_id == ^repository.id,
          where: ro.user_id == ^user.id,
+         where: ro.role in ^role_or_higher(role),
          select: count(ro.id) >= 1)
   end
+
+  def role_or_higher("read"), do: ["read", "write", "admin"]
+  def role_or_higher("write"), do: ["write", "admin"]
+  def role_or_higher("admin"), do: ["admin"]
 
   def hexpm() do
     %__MODULE__{

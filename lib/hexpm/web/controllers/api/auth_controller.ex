@@ -26,7 +26,7 @@ defmodule Hexpm.Web.API.AuthController do
   end
   defp verify?(user, :repository, name) do
     if repository = Repositories.get(name) do
-      Repositories.access?(repository, user)
+      Repositories.access?(repository, user, "read")
     else
       false
     end

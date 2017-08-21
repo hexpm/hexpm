@@ -312,7 +312,7 @@ defmodule Hexpm.Web.DashboardControllerTest do
   end
 
   test "add member to repository", %{user: user, repository: repository} do
-    insert(:repository_user, repository: repository, user: user)
+    insert(:repository_user, repository: repository, user: user, role: "admin")
     new_user = insert(:user)
     add_email(new_user, "new@mail.com")
     params = %{"username" => new_user.username, role: "write"}
@@ -331,7 +331,7 @@ defmodule Hexpm.Web.DashboardControllerTest do
   end
 
   test "remove member from repository", %{user: user, repository: repository} do
-    insert(:repository_user, repository: repository, user: user)
+    insert(:repository_user, repository: repository, user: user, role: "admin")
     new_user = insert(:user)
     insert(:repository_user, repository: repository, user: new_user)
     params = %{"username" => new_user.username}
@@ -346,7 +346,7 @@ defmodule Hexpm.Web.DashboardControllerTest do
   end
 
   test "change role of member in repository", %{user: user, repository: repository} do
-    insert(:repository_user, repository: repository, user: user)
+    insert(:repository_user, repository: repository, user: user, role: "admin")
     new_user = insert(:user)
     insert(:repository_user, repository: repository, user: new_user, role: "write")
     params = %{"username" => new_user.username, "role" => "read"}

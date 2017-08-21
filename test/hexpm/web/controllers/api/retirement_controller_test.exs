@@ -69,7 +69,7 @@ defmodule Hexpm.Web.API.RetirementControllerTest do
     end
 
     test "returns 404 for missing package if you are authorized", %{user: user, repository: repository, repository_package: package} do
-      insert(:repository_user, repository: repository, user: user)
+      insert(:repository_user, repository: repository, user: user, role: "write")
 
       params = %{"reason" => "security", "message" => "See CVE-NNNN"}
       build_conn()
@@ -83,6 +83,22 @@ defmodule Hexpm.Web.API.RetirementControllerTest do
 
     test "retire release", %{user: user, repository: repository, repository_package: package} do
       insert(:repository_user, repository: repository, user: user)
+
+      params = %{"reason" => "security", "message" => "See CVE-NNNN"}
+      build_conn()
+      |> put_req_header("authorization", key_for(user))
+      |> post("api/repos/#{repository.name}/packages/#{package.name}/releases/1.0.0/retire", params)
+      |> response(204)
+
+      release = Hexpm.Repository.Releases.get(package, "1.0.0")
+      assert release.retirement
+      assert release.retirement.reason == "security"
+      assert release.retirement.message == "See CVE-NNNN"
+    end
+
+    test "retire release using write permission and without package owner", %{repository: repository, repository_package: package} do
+      user = insert(:user)
+      insert(:repository_user, repository: repository, user: user, role: "write")
 
       params = %{"reason" => "security", "message" => "See CVE-NNNN"}
       build_conn()
@@ -141,7 +157,7 @@ defmodule Hexpm.Web.API.RetirementControllerTest do
     end
 
     test "returns 404 for missing package if you are authorized", %{user: user, repository: repository, repository_package: package} do
-      insert(:repository_user, repository: repository, user: user)
+      insert(:repository_user, repository: repository, user: user, role: "write")
 
       build_conn()
       |> put_req_header("authorization", key_for(user))
@@ -154,6 +170,19 @@ defmodule Hexpm.Web.API.RetirementControllerTest do
 
     test "unretire release", %{user: user, repository: repository, repository_package: package} do
       insert(:repository_user, repository: repository, user: user)
+
+      build_conn()
+      |> put_req_header("authorization", key_for(user))
+      |> delete("api/repos/#{repository.name}/packages/#{package.name}/releases/2.0.0/retire")
+      |> response(204)
+
+      release = Hexpm.Repository.Releases.get(package, "2.0.0")
+      refute release.retirement
+    end
+
+    test "unretire release using write permission and without package owner", %{repository: repository, repository_package: package} do
+      user = insert(:user)
+      insert(:repository_user, repository: repository, user: user, role: "write")
 
       build_conn()
       |> put_req_header("authorization", key_for(user))
