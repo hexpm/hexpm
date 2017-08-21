@@ -119,6 +119,71 @@ defmodule Hexpm.Web.DashboardController do
     end
   end
 
+  def repository(conn, %{"dashboard_repo" => repository}) do
+    access_repository(conn, repository, fn repository ->
+      render_repository(conn, repository)
+    end)
+  end
+
+  def update_repository(conn, %{"dashboard_repo" => repository, "action" => "add_member", "repository_user" => params}) do
+    username = params["username"]
+    access_repository(conn, repository, fn repository ->
+      case Repositories.add_member(repository, username, params) do
+        {:ok, _} ->
+          conn
+          |> put_flash(:info, "User #{username} has been added to the repository.")
+          |> redirect(to: dashboard_path(conn, :repository, repository))
+        {:error, :unknown_user} ->
+          conn
+          |> put_status(400)
+          |> put_flash(:error, "Unknown user #{username}.")
+          |> render_repository(repository)
+        {:error, changeset} ->
+          conn
+          |> put_status(400)
+          |> render_repository(repository, add_member: changeset)
+      end
+    end)
+  end
+
+  def update_repository(conn, %{"dashboard_repo" => repository, "action" => "remove_member", "repository_user" => params}) do
+    username = params["username"]
+    access_repository(conn, repository, fn repository ->
+      case Repositories.remove_member(repository, username) do
+        :ok ->
+          conn
+          |> put_flash(:info, "User #{username} has been removed from the repository.")
+          |> redirect(to: dashboard_path(conn, :repository, repository))
+        {:error, reason} ->
+          conn
+          |> put_status(400)
+          |> put_flash(:error, remove_member_error_message(reason, username))
+          |> render_repository(repository)
+      end
+    end)
+  end
+
+  def update_repository(conn, %{"dashboard_repo" => repository, "action" => "change_role", "repository_user" => params}) do
+    username = params["username"]
+    access_repository(conn, repository, fn repository ->
+      case Repositories.change_role(repository, username, params) do
+        {:ok, _} ->
+          conn
+          |> put_flash(:info, "User #{username}'s role has been changed to #{params["role"]}.")
+          |> redirect(to: dashboard_path(conn, :repository, repository))
+        {:error, :unknown_user} ->
+          conn
+          |> put_status(400)
+          |> put_flash(:error, "Unknown user #{username}.")
+          |> render_repository(repository)
+        {:error, changeset} ->
+          conn
+          |> put_status(400)
+          |> render_repository(repository, change_role: changeset)
+      end
+    end)
+  end
+
   defp render_profile(conn, changeset) do
     render conn, "profile.html", [
       title: "Dashboard - Public profile",
@@ -146,12 +211,38 @@ defmodule Hexpm.Web.DashboardController do
     ]
   end
 
-  defp add_email_changeset do
+  defp render_repository(conn, repository, opts \\ []) do
+    render conn, "repository.html", [
+      title: "Dashboard - Repository",
+      container: "container page dashboard",
+      repository: repository,
+      add_member_changeset: opts[:add_member_changeset] || add_member_changeset(),
+    ]
+  end
+
+  defp access_repository(conn, repository, fun) do
+    user = conn.assigns.current_user
+    repository = Repositories.get(repository, [:packages, users: :emails])
+    if repository && user.id in Enum.map(repository.users, & &1.id) do
+      fun.(repository)
+    else
+      not_found(conn)
+    end
+  end
+
+  defp add_email_changeset() do
     Email.changeset(%Email{}, :create, %{}, false)
+  end
+
+  defp add_member_changeset() do
+    Repository.add_member(%RepositoryUser{}, %{})
   end
 
   defp email_error_message(:unknown_email, email), do: "Unknown email #{email}."
   defp email_error_message(:not_verified, email), do: "Email #{email} not verified."
   defp email_error_message(:already_verified, email), do: "Email #{email} already verified."
   defp email_error_message(:primary, email), do: "Cannot remove primary email #{email}."
+
+  defp remove_member_error_message(:unknown_user, username), do: "Unknown user #{username}."
+  defp remove_member_error_message(:last_member, _username), do: "Cannot remove last member from repository."
 end

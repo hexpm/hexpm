@@ -6,7 +6,7 @@ defmodule Hexpm.Emails do
     new_email()
     |> to(owners)
     |> from(source())
-    |> subject("Hex.pm - Owner added")
+    |> subject("Hex.pm - Owner added to package #{package.name}")
     |> assign(:username, owner.username)
     |> assign(:package, package.name)
     |> render("owner_add.html")
@@ -16,7 +16,7 @@ defmodule Hexpm.Emails do
     new_email()
     |> to(owners)
     |> from(source())
-    |> subject("Hex.pm - Owner removed")
+    |> subject("Hex.pm - Owner removed from package #{package.name}")
     |> assign(:username, owner.username)
     |> assign(:package, package.name)
     |> render("owner_remove.html")
@@ -68,6 +68,16 @@ defmodule Hexpm.Emails do
     |> assign(:candidates, candidates)
     |> assign(:threshold, threshold)
     |> render("typosquat_candidates.html")
+  end
+
+  def repository_invite(repository, user) do
+    new_email()
+    |> to(user)
+    |> from(source())
+    |> subject("Hex.pm - You have been invited to the #{repository.name} repository")
+    |> assign(:repository, repository.name)
+    |> assign(:username, user.username)
+    |> render("repository_invite.html")
   end
 
   defp source do

@@ -1,0 +1,99 @@
+<div class="row">
+  <div class="col-md-3">
+    <%= render "_sidebar.html", assigns %>
+  </div>
+
+  <div class="col-md-9 repository members">
+    <div class="panel panel-default">
+      <div class="panel-heading">Members</div>
+      <div class="panel-body">
+        Here you control your repository members and their roles. Mouse-over the role for more details.
+      </div>
+      <ul class="list-group clearfix">
+        <%= for repository_user <- @repository.repository_users do %>
+          <li class="list-group-item clearfix">
+            <img src="<%= gravatar_url(User.email(repository_user.user, :public), :small) %>" class="member-avatar">
+            <a class="member-username" href="<%= user_path(Endpoint, :show, @current_user) %>"><%= repository_user.user.username %></a>
+            <div style="float: right">
+              <div class="dropdown role-dropdown">
+                <button class="btn btn-default dropdown-toggle" type="button" data-toggle="dropdown">
+                  <%= repository_role(repository_user.role) %>
+                  <span class="caret"></span>
+                </button>
+                <ul class="dropdown-menu dropdown-menu-right">
+                  <%= for {name, id, title} <- repository_roles() do %>
+                    <li>
+                      <%= form_tag dashboard_path(Endpoint, :update_repository, @repository), class: "change-role" do %>
+                        <input type="hidden" name="action" value="change_role">
+                        <input type="hidden" name="repository_user[username]" value="<%= repository_user.user.username %>">
+                        <input type="hidden" name="repository_user[role]" value="<%= id %>">
+                        <button type="submit" class="btn btn-link" title="<%= title %>"><%= name %></button>
+                      <% end %>
+                    </li>
+                  <% end %>
+                </ul>
+                  <%= form_tag dashboard_path(Endpoint, :update_repository, @repository), class: "remove-role" do %>
+                    <input type="hidden" name="action" value="remove_member">
+                    <input type="hidden" name="repository_user[username]" value="<%= repository_user.user.username %>">
+                    <%= submit "Remove", class: "btn btn-danger", disabled: repository_user.user.id == @current_user.id %>
+                  <% end %>
+              </div>
+            </div>
+          </li>
+        <% end %>
+        <li class="list-group-item clearfix">
+          <%= form_for @add_member_changeset, dashboard_path(Endpoint, :update_repository, @repository), [method: :post, class: "form-inline"], fn f -> %>
+            <input type="hidden" name="action" value="add_member">
+            <div class="form-group">
+              <%= text_input f, :username, class: "form-control", style: "width: 250px", placeholder: "Username or email address", required: true %>
+              <%= error_tag f, :username %>
+            </div>
+            <div class="form-group">
+              <%= select f, :role, repository_roles_selector(), style: "width: 80px" %>
+              <%= error_tag f, :role %>
+            </div>
+            <button type="submit" class="btn btn-primary">Add member</button>
+          <% end %>
+        </li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="col-md-9 repository">
+    <div class="panel panel-default">
+      <div class="panel-heading">Packages</div>
+      <div class="panel-body">
+        <%= if @repository.packages == [] do %>
+          No packages in repository
+        <% else %>
+          <ul class="repository-package-list">
+            <%= for package <- @repository.packages do %>
+              <li>
+                <a href="<%= path_for_package(@repository.name, package.name) %>"><%= package.name %></a>
+                <%= package.latest_version %>
+              </li>
+            <% end %>
+          </ul>
+        <% end %>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-md-9 repository">
+    <div class="panel panel-default">
+      <div class="panel-heading">Billing</div>
+      <div class="panel-body">
+        <p><em>Private repositories is currently in beta and billing has not yet been implemented.</em></p>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-md-9 repository">
+    <div class="panel panel-default">
+      <div class="panel-heading">Danger zone</div>
+      <div class="panel-body">
+        <p><em>Leave or delete repository...</em></p>
+      </div>
+    </div>
+  </div>
+</div>
