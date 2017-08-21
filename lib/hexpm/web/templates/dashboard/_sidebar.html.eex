@@ -9,9 +9,6 @@
       </li>
     <% end %>
   </ul>
-</div>
-
-<div class="panel panel-default sidebar">
   <div class="panel-heading">Repository settings</div>
   <%= if @current_user.repositories == [] do %>
     <div class="panel-body">
