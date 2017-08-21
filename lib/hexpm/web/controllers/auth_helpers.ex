@@ -123,13 +123,16 @@ defmodule Hexpm.Web.AuthHelpers do
   def maybe_package_owner?(%Plug.Conn{} = conn, user) do
     maybe_package_owner?(conn.assigns.repository, conn.assigns.package, user)
   end
-  defp maybe_package_owner?(nil, nil, _user) do
+  def maybe_package_owner(%Hexpm.Repository.Package{} = package, user) do
+    maybe_package_owner?(package.repository, package, user)
+  end
+  def maybe_package_owner?(nil, nil, _user) do
     false
   end
-  defp maybe_package_owner?(repository, nil, user) do
-    Hexpm.Repository.Repositories.access?(repository, user)
+  def maybe_package_owner?(repository, nil, user) do
+    repository.public or Hexpm.Repository.Repositories.access?(repository, user, "write")
   end
-  defp maybe_package_owner?(_repository, %Hexpm.Repository.Package{} = package, user) do
+  def maybe_package_owner?(repository, %Hexpm.Repository.Package{} = package, user) do
     Hexpm.Repository.Packages.owner_with_access?(package, user)
   end
 
@@ -137,7 +140,7 @@ defmodule Hexpm.Web.AuthHelpers do
     repository_access?(conn.assigns.repository, user)
   end
   def repository_access?(%Hexpm.Repository.Repository{} = repository, user) do
-    Hexpm.Repository.Repositories.access?(repository, user)
+    repository.public or Hexpm.Repository.Repositories.access?(repository, user, "read")
   end
   def repository_access?(nil, _user) do
     false

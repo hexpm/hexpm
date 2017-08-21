@@ -78,6 +78,7 @@ defmodule Hexpm.Web.Router do
     get "/docs/publish", DocsController, :publish
     get "/docs/rebar3_publish", DocsController, :rebar3_publish
     get "/docs/tasks", DocsController, :tasks
+    get "/docs/private", DocsController, :private
     get "/docs/faq", DocsController, :faq
     get "/docs/mirrors", DocsController, :mirrors
     get "/docs/public_keys", DocsController, :public_keys

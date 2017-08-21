@@ -30,8 +30,9 @@ defmodule Hexpm.Repository.Packages do
   end
 
   def owner_with_access?(package, user) do
-    Package.is_owner_with_access(package, user)
-    |> Repo.one!()
+    repository = package.repository
+    Repo.one!(Package.is_owner_with_access(package, user)) or
+      (not repository.public and Repositories.access?(repository, user, "write"))
   end
 
   def preload(package) do

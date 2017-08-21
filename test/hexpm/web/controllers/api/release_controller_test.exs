@@ -327,8 +327,21 @@ defmodule Hexpm.Web.API.ReleaseControllerTest do
       |> json_response(403)
     end
 
+    test "create release and new package requries write permission", %{user: user, repository: repository} do
+      insert(:repository_user, repository: repository, user: user, role: "read")
+
+      meta = %{name: Fake.sequence(:package), version: "1.0.0", description: "Domain-specific language."}
+      build_conn()
+      |> put_req_header("content-type", "application/octet-stream")
+      |> put_req_header("authorization", key_for(user))
+      |> post("api/repos/#{repository.name}/packages/#{meta.name}/releases", create_tar(meta, []))
+      |> json_response(403)
+
+      refute Hexpm.Repo.get_by(Package, name: meta.name)
+    end
+
     test "create release and new package", %{user: user, repository: repository} do
-      insert(:repository_user, repository: repository, user: user)
+      insert(:repository_user, repository: repository, user: user, role: "write")
 
       meta = %{name: Fake.sequence(:package), version: "1.0.0", description: "Domain-specific language."}
       result =

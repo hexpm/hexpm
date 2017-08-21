@@ -120,14 +120,14 @@ defmodule Hexpm.Web.DashboardController do
   end
 
   def repository(conn, %{"dashboard_repo" => repository}) do
-    access_repository(conn, repository, fn repository ->
+    access_repository(conn, repository, "read", fn repository ->
       render_repository(conn, repository)
     end)
   end
 
   def update_repository(conn, %{"dashboard_repo" => repository, "action" => "add_member", "repository_user" => params}) do
     username = params["username"]
-    access_repository(conn, repository, fn repository ->
+    access_repository(conn, repository, "admin", fn repository ->
       case Repositories.add_member(repository, username, params) do
         {:ok, _} ->
           conn
@@ -147,8 +147,9 @@ defmodule Hexpm.Web.DashboardController do
   end
 
   def update_repository(conn, %{"dashboard_repo" => repository, "action" => "remove_member", "repository_user" => params}) do
+    # TODO: Also remove all package ownerships on repository for removed member
     username = params["username"]
-    access_repository(conn, repository, fn repository ->
+    access_repository(conn, repository, "admin", fn repository ->
       case Repositories.remove_member(repository, username) do
         :ok ->
           conn
@@ -165,7 +166,7 @@ defmodule Hexpm.Web.DashboardController do
 
   def update_repository(conn, %{"dashboard_repo" => repository, "action" => "change_role", "repository_user" => params}) do
     username = params["username"]
-    access_repository(conn, repository, fn repository ->
+    access_repository(conn, repository, "admin", fn repository ->
       case Repositories.change_role(repository, username, params) do
         {:ok, _} ->
           conn
@@ -220,14 +221,15 @@ defmodule Hexpm.Web.DashboardController do
     ]
   end
 
-  defp access_repository(conn, repository, fun) do
+  defp access_repository(conn, repository, role, fun) do
     user = conn.assigns.current_user
-    repository = Repositories.get(repository, [:packages, users: :emails])
-    if repository && user.id in Enum.map(repository.users, & &1.id) do
-      fun.(repository)
-    else
-      not_found(conn)
-    end
+    repository = Repositories.get(repository, [:packages, :repository_users, users: :emails])
+    if repository do
+      repo_user = Enum.find(repository.repository_users, &(&1.user_id == user.id))
+      if repo_user && repo_user.role in Repository.role_or_higher(role) do
+        fun.(repository)
+      end
+    end || not_found(conn)
   end
 
   defp add_email_changeset() do

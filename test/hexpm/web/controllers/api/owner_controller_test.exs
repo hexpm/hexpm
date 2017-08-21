@@ -4,6 +4,7 @@ defmodule Hexpm.Web.API.OwnerControllerTest do
   use Bamboo.Test
 
   alias Hexpm.Accounts.AuditLog
+  alias Hexpm.Repository.PackageOwner
 
   setup do
     user1 = insert(:user)
@@ -202,7 +203,6 @@ defmodule Hexpm.Web.API.OwnerControllerTest do
     end
   end
 
-
   describe "PUT /repos/:repository/packages/:name/owners/:email" do
     test "returns 403 if you are not authorized", %{user1: user1, user2: user2, repository: repository, repository_package: package} do
       build_conn()
@@ -232,7 +232,8 @@ defmodule Hexpm.Web.API.OwnerControllerTest do
     end
 
     test "returns 404 for missing package if you are authorized", %{user1: user1, user2: user2, repository: repository, repository_package: package} do
-      insert(:repository_user, repository: repository, user: user1)
+      insert(:repository_user, repository: repository, user: user1, role: "write")
+      insert(:repository_user, repository: repository, user: user2)
 
       build_conn()
       |> put_req_header("authorization", key_for(user1))
@@ -242,12 +243,38 @@ defmodule Hexpm.Web.API.OwnerControllerTest do
       assert Hexpm.Repo.aggregate(assoc(package, :owners), :count, :id) == 1
     end
 
+    test "requries owner to be member of repository", %{user1: user1, repository: repository, repository_package: package} do
+      insert(:repository_user, repository: repository, user: user1)
+      user3 = insert(:user)
+
+      build_conn()
+      |> put_req_header("authorization", key_for(user1))
+      |> put("api/repos/#{repository.name}/packages/#{package.name}/owners/#{user3.username}")
+      |> response(422)
+
+      assert Hexpm.Repo.aggregate(assoc(package, :owners), :count, :id) == 1
+    end
+
     test "add package owner", %{user1: user1, user2: user2, repository: repository, repository_package: package} do
       insert(:repository_user, repository: repository, user: user1)
+      insert(:repository_user, repository: repository, user: user2)
 
       build_conn()
       |> put_req_header("authorization", key_for(user1))
       |> put("api/repos/#{repository.name}/packages/#{package.name}/owners/#{user2.username}")
+      |> response(204)
+
+      assert Hexpm.Repo.aggregate(assoc(package, :owners), :count, :id) == 2
+    end
+
+    test "add package owner using write permission and without package owner", %{user2: user2, repository: repository, repository_package: package} do
+      insert(:repository_user, repository: repository, user: user2, role: "write")
+      user3 = insert(:user)
+      insert(:repository_user, repository: repository, user: user3)
+
+      build_conn()
+      |> put_req_header("authorization", key_for(user2))
+      |> put("api/repos/#{repository.name}/packages/#{package.name}/owners/#{user3.username}")
       |> response(204)
 
       assert Hexpm.Repo.aggregate(assoc(package, :owners), :count, :id) == 2
@@ -299,10 +326,11 @@ defmodule Hexpm.Web.API.OwnerControllerTest do
     end
 
     test "not possible to remove last owner of package", %{user1: user1, package: package} do
-      conn = build_conn()
-             |> put_req_header("authorization", key_for(user1))
-             |> delete("api/packages/#{package.name}/owners/#{user1.username}")
-      assert conn.status == 403
+      build_conn()
+      |> put_req_header("authorization", key_for(user1))
+      |> delete("api/packages/#{package.name}/owners/#{user1.username}")
+      |> json_response(422)
+
       assert [user] = assoc(package, :owners) |> Hexpm.Repo.all
       assert user.id == user1.id
     end
@@ -343,7 +371,7 @@ defmodule Hexpm.Web.API.OwnerControllerTest do
     end
 
     test "returns 404 for missing package if you are authorized", %{user1: user1, user2: user2, repository: repository, repository_package: package} do
-      insert(:repository_user, repository: repository, user: user1)
+      insert(:repository_user, repository: repository, user: user1, role: "write")
       insert(:package_owner, package: package, owner: user2)
 
       build_conn()
@@ -364,6 +392,19 @@ defmodule Hexpm.Web.API.OwnerControllerTest do
       |> response(204)
 
       assert Hexpm.Repo.aggregate(assoc(package, :owners), :count, :id) == 1
+    end
+
+    test "delete package owner using write permission and without package owner", %{user1: user1, user2: user2, repository: repository, repository_package: package} do
+      insert(:repository_user, repository: repository, user: user1, role: "write")
+      Repo.delete_all(from(po in PackageOwner, where: po.owner_id == ^user1.id))
+      insert(:package_owner, package: package, owner: user2)
+
+      build_conn()
+      |> put_req_header("authorization", key_for(user1))
+      |> delete("api/repos/#{repository.name}/packages/#{package.name}/owners/#{user2.username}")
+      |> response(204)
+
+      assert Hexpm.Repo.aggregate(assoc(package, :owners), :count, :id) == 0
     end
   end
 end

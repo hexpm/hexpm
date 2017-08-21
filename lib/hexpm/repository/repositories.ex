@@ -14,11 +14,11 @@ defmodule Hexpm.Repository.Repositories do
     |> Repo.preload(preload)
   end
 
-  def access?(repository, nil) do
-    repository.public
+  def access?(%Repository{public: false}, nil, _role) do
+    false
   end
-  def access?(repository, user) do
-    repository.public or Repo.one!(Repository.has_access(repository, user))
+  def access?(%Repository{public: false} = repository, user, role) do
+    Repo.one!(Repository.has_access(repository, user, role))
   end
 
   def add_member(repository, username, params) do
