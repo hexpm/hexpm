@@ -36,6 +36,13 @@ defmodule Hexpm.Web.DocsController do
     ]
   end
 
+  def private(conn, _params) do
+    render conn, "private.html", [
+      title: "Private packages",
+      container: "container page docs"
+    ]
+  end
+
   def coc(conn, _params) do
     render(conn, "coc.html", [
       title: "Code of Conduct",

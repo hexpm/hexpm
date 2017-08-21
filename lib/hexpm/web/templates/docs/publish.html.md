@@ -79,7 +79,7 @@ Only Hex packages will be included as dependencies of the package, for example G
 defmodule Postgrex.Mixfile do
   use Mix.Project
 
-  def project do
+  def project() do
     [
       app: :postgrex,
       version: "0.1.0",
@@ -94,27 +94,26 @@ defmodule Postgrex.Mixfile do
     ]
   end
 
-  def application do
+  def application() do
     []
   end
 
-  defp deps do
+  defp deps() do
     [
       {:decimal, "~> 1.0"},
       {:ex_doc, "~> 0.14", only: :dev},
     ]
   end
 
-  defp description do
-    """
-    A few sentences (a paragraph) describing the project.
-    """
+  defp description() do
+    "A few sentences (a paragraph) describing the project."
   end
 
-  defp package do
-    # These are the default files included in the package
+  defp package() do
     [
-      name: :postgrex,
+      # This option is only needed when you don't want to use the OTP application name
+      name: "postgrex",
+      # These are the default files included in the package
       files: ["lib", "priv", "mix.exs", "README*", "readme*", "LICENSE*", "license*"],
       maintainers: ["Eric Meadows-Jönsson", "José Valim"],
       licenses: ["Apache 2.0"],

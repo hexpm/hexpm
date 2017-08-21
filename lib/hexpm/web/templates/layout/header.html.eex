@@ -64,6 +64,7 @@
                 <li><a href="<%= docs_path(Endpoint, :rebar3_publish) %>">Publishing packages</a></li>
                 <li><a href="https://www.rebar3.org/v3.0/docs/hex-package-management">Tasks</a></li>
                 <li role="separator" class="divider"></li>
+                <li><a href="<%= docs_path(Endpoint, :private) %>">Private packages</a></li>
                 <li><a href="<%= policy_path(Endpoint, :index) %>">Policies</a></li>
                 <li><a href="<%= docs_path(Endpoint, :mirrors) %>">Mirrors</a></li>
                 <li><a href="<%= docs_path(Endpoint, :public_keys) %>">Public keys</a></li>
