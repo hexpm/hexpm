@@ -1,0 +1,12 @@
+<%
+accept_url = dashboard_url(Endpoint, :repository, @repository)
+%>
+
+<p>You have been invited to the <strong><%= @repository %></strong> repository.</p>
+
+<p>To accept the invitation click <a href="<%= raw accept_url %>">this link</a> or paste this link in your web browser: <%= raw accept_url %>. You need to be logged in as <strong><%= @username %></strong> to accept.</p>
+
+<p>
+  --<br>
+  Hex.pm
+</p>

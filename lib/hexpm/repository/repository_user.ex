@@ -9,6 +9,4 @@ defmodule Hexpm.Repository.RepositoryUser do
 
     timestamps()
   end
-
-  # @roles ["owner", "admin", "write", "read"]
 end

@@ -10,14 +10,18 @@ defmodule Hexpm.Web.DashboardControllerTest do
   end
 
   setup do
-    %{user: create_user("eric", "eric@mail.com", "hunter42"), password: "hunter42"}
+    %{
+      user: create_user("eric", "eric@mail.com", "hunter42"),
+      password: "hunter42",
+      repository: insert(:repository),
+    }
   end
 
   test "show index page", context do
-      conn = build_conn()
-             |> test_login(context.user)
-             |> get("dashboard")
-      assert redirected_to(conn) == "/dashboard/profile"
+    conn = build_conn()
+           |> test_login(context.user)
+           |> get("dashboard")
+    assert redirected_to(conn) == "/dashboard/profile"
   end
 
   test "show profile", c do
@@ -287,5 +291,73 @@ defmodule Hexpm.Web.DashboardControllerTest do
 
     assert email_two.subject =~ "Hex.pm"
     assert email_two.html_body =~ "email/verify?username=#{c.user.username}"
+  end
+
+  test "show repository", %{user: user, repository: repository} do
+    insert(:repository_user, repository: repository, user: user)
+
+    conn =
+      build_conn()
+      |> test_login(user)
+      |> get("dashboard/repos/#{repository.name}")
+
+    assert response(conn, 200) =~ "Members"
+  end
+
+  test "show repository authenticates", %{user: user, repository: repository} do
+    build_conn()
+    |> test_login(user)
+    |> get("dashboard/repos/#{repository.name}")
+    |> response(404)
+  end
+
+  test "add member to repository", %{user: user, repository: repository} do
+    insert(:repository_user, repository: repository, user: user)
+    new_user = insert(:user)
+    add_email(new_user, "new@mail.com")
+    params = %{"username" => new_user.username, role: "write"}
+
+    conn =
+      build_conn()
+      |> test_login(user)
+      |> post("dashboard/repos/#{repository.name}", %{"action" => "add_member", "repository_user" => params})
+
+    assert redirected_to(conn) == "/dashboard/repos/#{repository.name}"
+    assert repo_user = Repo.get_by(assoc(repository, :repository_users), user_id: new_user.id)
+    assert repo_user.role == "write"
+
+    [email, _verify_email] = Bamboo.SentEmail.all()
+    assert email.subject =~ "You have been invited to"
+  end
+
+  test "remove member from repository", %{user: user, repository: repository} do
+    insert(:repository_user, repository: repository, user: user)
+    new_user = insert(:user)
+    insert(:repository_user, repository: repository, user: new_user)
+    params = %{"username" => new_user.username}
+
+    conn =
+      build_conn()
+      |> test_login(user)
+      |> post("dashboard/repos/#{repository.name}", %{"action" => "remove_member", "repository_user" => params})
+
+    assert redirected_to(conn) == "/dashboard/repos/#{repository.name}"
+    refute Repo.get_by(assoc(repository, :repository_users), user_id: new_user.id)
+  end
+
+  test "change role of member in repository", %{user: user, repository: repository} do
+    insert(:repository_user, repository: repository, user: user)
+    new_user = insert(:user)
+    insert(:repository_user, repository: repository, user: new_user, role: "write")
+    params = %{"username" => new_user.username, "role" => "read"}
+
+    conn =
+      build_conn()
+      |> test_login(user)
+      |> post("dashboard/repos/#{repository.name}", %{"action" => "change_role", "repository_user" => params})
+
+    assert redirected_to(conn) == "/dashboard/repos/#{repository.name}"
+    assert repo_user = Repo.get_by(assoc(repository, :repository_users), user_id: new_user.id)
+    assert repo_user.role == "read"
   end
 end
