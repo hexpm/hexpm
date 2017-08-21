@@ -132,7 +132,7 @@ defmodule Hexpm.Web.AuthHelpers do
   def maybe_package_owner?(repository, nil, user) do
     repository.public or Hexpm.Repository.Repositories.access?(repository, user, "write")
   end
-  def maybe_package_owner?(repository, %Hexpm.Repository.Package{} = package, user) do
+  def maybe_package_owner?(_repository, %Hexpm.Repository.Package{} = package, user) do
     Hexpm.Repository.Packages.owner_with_access?(package, user)
   end
 

@@ -177,6 +177,11 @@ defmodule Hexpm.Web.DashboardController do
           |> put_status(400)
           |> put_flash(:error, "Unknown user #{username}.")
           |> render_repository(repository)
+        {:error, :last_admin} ->
+          conn
+          |> put_status(400)
+          |> put_flash(:error, "Cannot demote last admin member.")
+          |> render_repository(repository)
         {:error, changeset} ->
           conn
           |> put_status(400)
@@ -225,11 +230,21 @@ defmodule Hexpm.Web.DashboardController do
     user = conn.assigns.current_user
     repository = Repositories.get(repository, [:packages, :repository_users, users: :emails])
     if repository do
-      repo_user = Enum.find(repository.repository_users, &(&1.user_id == user.id))
-      if repo_user && repo_user.role in Repository.role_or_higher(role) do
-        fun.(repository)
+      if repo_user = Enum.find(repository.repository_users, &(&1.user_id == user.id)) do
+        if repo_user.role in Repository.role_or_higher(role) do
+          fun.(repository)
+        else
+          conn
+          |> put_status(400)
+          |> put_flash(:error, "You do not have permission for this action.")
+          |> render_repository(repository)
+        end
+      else
+        not_found(conn)
       end
-    end || not_found(conn)
+    else
+      not_found(conn)
+    end
   end
 
   defp add_email_changeset() do

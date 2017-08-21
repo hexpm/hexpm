@@ -68,13 +68,20 @@ defmodule Hexpm.Repository.Repositories do
   end
 
   def change_role(repository, username, params) do
-    if user = Users.get(username) do
-      assoc(repository, :repository_users)
-      |> Repo.get_by(user_id: user.id)
-      |> Repository.change_role(params)
-      |> Repo.update()
-    else
-      {:error, :unknown_user}
+    user = Users.get(username)
+    repo_users = Repo.all(assoc(repository, :repository_users))
+    repo_user = Enum.find(repo_users, &(&1.user_id == user.id))
+    number_admins = Enum.count(repo_users, &(&1.role == "admin"))
+
+    cond do
+      !repo_user ->
+        {:error, :unknown_user}
+      repo_user.role == "admin" and number_admins == 1 ->
+        {:error, :last_admin}
+      true ->
+        repo_user
+        |> Repository.change_role(params)
+        |> Repo.update()
     end
   end
 
