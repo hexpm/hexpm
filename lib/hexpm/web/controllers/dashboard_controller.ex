@@ -131,7 +131,7 @@ defmodule Hexpm.Web.DashboardController do
       case Repositories.add_member(repository, username, params) do
         {:ok, _} ->
           conn
-          |> put_flash(:info, "User #{username} has been added to the repository.")
+          |> put_flash(:info, "User #{username} has been added to the organization.")
           |> redirect(to: dashboard_path(conn, :repository, repository))
         {:error, :unknown_user} ->
           conn
@@ -261,5 +261,5 @@ defmodule Hexpm.Web.DashboardController do
   defp email_error_message(:primary, email), do: "Cannot remove primary email #{email}."
 
   defp remove_member_error_message(:unknown_user, username), do: "Unknown user #{username}."
-  defp remove_member_error_message(:last_member, _username), do: "Cannot remove last member from repository."
+  defp remove_member_error_message(:last_member, _username), do: "Cannot remove last member from organization."
 end

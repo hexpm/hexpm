@@ -7,7 +7,7 @@
     <div class="panel panel-default">
       <div class="panel-heading">Members</div>
       <div class="panel-body">
-        Here you control your repository members and their roles. Mouse-over the role for more details.
+        Here you control your organization members and their roles. Mouse-over the role for more details.
       </div>
       <ul class="list-group clearfix">
         <%= for repository_user <- @repository.repository_users do %>
@@ -64,7 +64,7 @@
       <div class="panel-heading">Packages</div>
       <div class="panel-body">
         <%= if @repository.packages == [] do %>
-          No packages in repository
+          No packages in organization repository
         <% else %>
           <ul class="repository-package-list">
             <%= for package <- @repository.packages do %>
@@ -92,7 +92,7 @@
     <div class="panel panel-default">
       <div class="panel-heading">Danger zone</div>
       <div class="panel-body">
-        <p><em>Leave or delete repository...</em></p>
+        <p><em>Leave or delete organization...</em></p>
       </div>
     </div>
   </div>
