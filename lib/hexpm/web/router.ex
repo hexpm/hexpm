@@ -40,7 +40,6 @@ defmodule Hexpm.Web.Router do
 
     get "/", PageController, :index
     get "/sponsors", PageController, :sponsors
-    get "/.well-known/acme-challenge/:id", PageController, :letsencrypt
 
     get "/login", LoginController, :show
     post "/login", LoginController, :create

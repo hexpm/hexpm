@@ -72,7 +72,7 @@ defmodule Hexpm.Accounts.User do
 
   def init_password_reset(user) do
     key = Auth.gen_key()
-    change(user, %{reset_key: key, reset_expiry: NaiveDateTime.utc_now})
+    change(user, %{reset_key: key, reset_expiry: NaiveDateTime.utc_now()})
   end
 
   def disable_password_reset(user) do
