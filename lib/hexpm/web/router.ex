@@ -161,14 +161,14 @@ defmodule Hexpm.Web.Router do
         get "/packages/:name/owners/:email", OwnerController, :show
         put "/packages/:name/owners/:email", OwnerController, :create
         delete "/packages/:name/owners/:email", OwnerController, :delete
-
-        get "/keys", KeyController, :index
-        get "/keys/:name", KeyController, :show
-        post "/keys", KeyController, :create
-        delete "/keys", KeyController, :delete_all
-        delete "/keys/:name", KeyController, :delete
       end
     end
+
+    get "/keys", KeyController, :index
+    get "/keys/:name", KeyController, :show
+    post "/keys", KeyController, :create
+    delete "/keys", KeyController, :delete_all
+    delete "/keys/:name", KeyController, :delete
 
     get "/auth", AuthController, :show
   end
