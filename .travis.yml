@@ -1,6 +1,6 @@
 dist: trusty
 language: elixir
-elixir: 1.4.5
+elixir: 1.5.1
 otp_release: 20.0
 addons:
   postgresql: 9.6
@@ -11,7 +11,7 @@ env:
     - HEXWEB_PATH=..
   matrix:
     - HEX_VERSION=master
-    - HEX_VERSION=v0.16.0
+    - HEX_VERSION=v0.16.1
     - HEX_VERSION=v0.15.0
     - HEX_VERSION=v0.14.1
 before_script:
