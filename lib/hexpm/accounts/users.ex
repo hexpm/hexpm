@@ -81,7 +81,7 @@ defmodule Hexpm.Accounts.Users do
     with %User{emails: emails} <- get(username, :emails),
          %Email{} = email <- Enum.find(emails, &(&1.email == email)),
          true <- Email.verify?(email, key),
-         {:ok, _} <- Email.verify(email) |> Repo.update do
+         {:ok, _} <- Email.verify(email) |> Repo.update() do
       :ok
     else
       _ -> :error

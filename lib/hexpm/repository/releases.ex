@@ -180,7 +180,7 @@ defmodule Hexpm.Repository.Releases do
 
   defp build_release(multi, params, checksum) do
     Multi.merge(multi, fn %{package: package} ->
-      Multi.insert(Multi.new, :release, Release.build(package, params, checksum))
+      Multi.insert(Multi.new(), :release, Release.build(package, params, checksum))
     end)
   end
 

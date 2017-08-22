@@ -23,16 +23,4 @@ defmodule Hexpm.Web.PageController do
       container: "container page sponsors"
     ])
   end
-
-  def letsencrypt(conn, %{"id" => id}) do
-    if key = System.get_env("HEX_LETSENCRYPT") do
-      [verify_id, _secret] = String.split(key, ".")
-
-      if id == verify_id do
-        conn
-        |> put_layout(false)
-        |> send_resp(200, key)
-      end
-    end || render_error(conn, 404)
-  end
 end
