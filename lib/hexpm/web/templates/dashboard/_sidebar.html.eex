@@ -9,10 +9,10 @@
       </li>
     <% end %>
   </ul>
-  <div class="panel-heading">Repository settings</div>
+  <div class="panel-heading">Organization settings</div>
   <%= if @current_user.repositories == [] do %>
     <div class="panel-body">
-      <small>You are not a member of any repositories. Private packages is currently in beta, email <a href="mailto:support@hex.pm">support@hex.pm</a> to request access.</small>
+      <small>You are not a member of any organizations. Organizations is currently in beta, email <a href="mailto:support@hex.pm">support@hex.pm</a> to request access.</small>
     </div>
   <% else %>
     <ul class="list-group">
