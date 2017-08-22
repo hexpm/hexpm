@@ -238,6 +238,7 @@ defmodule Hexpm.Repository.RegistryBuilder do
   defp upload_files(repository, v1, v2) do
     v2_objects(v2, repository) ++ v1_objects(v1, repository)
     |> Task.async_stream(fn {key, data, opts} ->
+      opts = [acl: store_acl(repository)] ++ opts
       Hexpm.Store.put(nil, :s3_bucket, key, data, opts)
     end, max_concurrency: 10, timeout: 60_000)
     |> Stream.run()
@@ -248,7 +249,7 @@ defmodule Hexpm.Repository.RegistryBuilder do
     surrogate_key = repository_cdn_key(repository, "registry") <> " " <> repository_cdn_key(repository, "registry-index")
     meta = [{"surrogate-key", surrogate_key}]
     index_meta = [{"signature", signature} | meta]
-    opts = [acl: :public_read, cache_control: "public, max-age=600", meta: meta]
+    opts = [cache_control: "public, max-age=600", meta: meta]
     index_opts = Keyword.put(opts, :meta, index_meta)
 
     ets_object = {repository_store_key(repository, "registry.ets.gz"), ets, index_opts}
@@ -260,7 +261,7 @@ defmodule Hexpm.Repository.RegistryBuilder do
   defp v2_objects({names, versions, packages}, repository) do
     surrogate_key = repository_cdn_key(repository, "registry") <> " " <> repository_cdn_key(repository, "registry-index")
     meta = [{"surrogate-key", surrogate_key}]
-    opts = [acl: :public_read, cache_control: "public, max-age=600", meta: meta]
+    opts = [cache_control: "public, max-age=600", meta: meta]
     index_opts = Keyword.put(opts, :meta, meta)
 
     names_object = {repository_store_key(repository, "names"), names, index_opts}
@@ -398,4 +399,7 @@ defmodule Hexpm.Repository.RegistryBuilder do
   defp repository_store_key(%Repository{name: name}, key) do
     "repos/#{name}/#{key}"
   end
+
+  defp store_acl(%Repository{public: true}), do: :public_read
+  defp store_acl(%Repository{public: false}), do: :private
 end

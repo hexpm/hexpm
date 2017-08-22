@@ -1,7 +1,9 @@
 defmodule Hexpm.Repository.Assets do
+  alias Hexpm.Repository.Repository
+
   def push_release(release, body) do
     opts = [
-      acl: :public_read,
+      acl: store_acl(release.package.repository),
       cache_control: "public, max-age=604800",
       meta: [{"surrogate-key", tarball_cdn_key(release)}]
     ]
@@ -61,7 +63,7 @@ defmodule Hexpm.Repository.Assets do
 
     delete_old_docs(release, paths, docs_for_latest_release)
     put_docs_tarball(release, body)
-    upload_new_files(files)
+    upload_new_files(release, files)
     purge_cache(release, docs_for_latest_release)
   end
 
@@ -82,7 +84,7 @@ defmodule Hexpm.Repository.Assets do
     surrogate_key = {"surrogate-key", docs_cdn_key(release)}
     surrogate_control = {"surrogate-control", "max-age=604800"}
     opts = [
-      acl: :public_read,
+      acl: store_acl(release.package.repository),
       cache_control: "public, max-age=3600",
       meta: [surrogate_key, surrogate_control]
     ]
@@ -122,13 +124,14 @@ defmodule Hexpm.Repository.Assets do
     Hexpm.Store.delete_many(nil, :docs_bucket, keys_to_delete)
   end
 
-  defp upload_new_files(files) do
+  defp upload_new_files(release, files) do
     Enum.map(files, fn {store_key, cdn_key, data} ->
       surrogate_key = {"surrogate-key", cdn_key}
       surrogate_control = {"surrogate-control", "max-age=604800"}
 
       opts =
         content_type(store_key)
+        |> Keyword.put(:acl, store_acl(release.package.repository))
         |> Keyword.put(:cache_control, "public, max-age=3600")
         |> Keyword.put(:meta, [surrogate_key, surrogate_control])
       {store_key, data, opts}
@@ -144,7 +147,7 @@ defmodule Hexpm.Repository.Assets do
 
     purge_tasks = [
       fn -> Hexpm.CDN.purge_key(:fastly_hexrepo, docs_cdn_key(release)) end,
-      fn -> Hexpm.CDN.purge_key(:fastly_hexdocs, versioned_key(release)) end
+      fn -> Hexpm.CDN.purge_key(:fastly_hexdocs, versioned_key(release)) end,
     ]
     purge_tasks =
       if first_release? || docs_for_latest_release do
@@ -204,4 +207,7 @@ defmodule Hexpm.Repository.Assets do
       "repos/#{repo.name}/"
     end
   end
+
+  defp store_acl(%Repository{public: true}), do: :public_read
+  defp store_acl(%Repository{public: false}), do: :private
 end
