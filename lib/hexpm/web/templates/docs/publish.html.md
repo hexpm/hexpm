@@ -76,7 +76,7 @@ Only Hex packages will be included as dependencies of the package, for example G
 #### Example mix.exs file
 
 ```elixir
-defmodule Postgrex.Mixfile do
+defmodule Postgrex.MixProject do
   use Mix.Project
 
   def project() do

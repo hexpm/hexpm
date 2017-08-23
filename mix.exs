@@ -1,4 +1,4 @@
-defmodule Hexpm.Mixfile do
+defmodule Hexpm.MixProject do
   use Mix.Project
 
   def project do
