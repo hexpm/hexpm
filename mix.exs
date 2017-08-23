@@ -66,7 +66,8 @@ defmodule Hexpm.Mixfile do
       {:sbroker, "~> 1.0"},
       {:ex_machina, "~> 2.0", only: [:dev, :test]},
       {:phoenix_live_reload, "~> 1.0", only: :dev},
-      {:rollbax, "~> 0.5", only: :prod}
+      {:rollbax, "~> 0.5", only: :prod},
+      {:corsica, "~> 1.0"}
     ]
   end
 

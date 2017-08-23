@@ -32,6 +32,7 @@ defmodule Hexpm.Web.Router do
     plug :user_agent
     plug :authenticate
     plug Hexpm.Web.Plugs.Attack
+    plug Corsica, origins: "*", allow_methods: ["HEAD", "GET"]
     plug :default_repository
   end
 
