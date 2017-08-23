@@ -327,7 +327,7 @@ defmodule Hexpm.Web.DashboardControllerTest do
     assert repo_user.role == "write"
 
     [email, _verify_email] = Bamboo.SentEmail.all()
-    assert email.subject =~ "You have been invited to"
+    assert email.subject =~ "You have been added to"
   end
 
   test "remove member from repository", %{user: user, repository: repository} do
