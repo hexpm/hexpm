@@ -9,6 +9,7 @@ defmodule Hexpm.Repository.PackageMetadata do
     field :extra, :map
   end
 
+  # TODO: licenses not required for private packages
   def changeset(meta, params) do
     cast(meta, params, ~w(description licenses links maintainers extra))
     |> validate_required(~w(description licenses)a)

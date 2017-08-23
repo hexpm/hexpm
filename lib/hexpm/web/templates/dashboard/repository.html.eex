@@ -64,7 +64,7 @@
       <div class="panel-heading">Packages</div>
       <div class="panel-body">
         <%= if @repository.packages == [] do %>
-          No packages in organization repository
+          No packages in organization repository.
         <% else %>
           <ul class="repository-package-list">
             <%= for package <- @repository.packages do %>

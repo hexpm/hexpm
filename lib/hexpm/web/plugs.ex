@@ -114,6 +114,7 @@ defmodule Hexpm.Web.Plugs do
         |> assign(:current_user, nil)
         |> assign(:key, nil)
         |> assign(:email, nil)
+        |> assign(:auth_source, nil)
 
       {:error, _} = error ->
         Hexpm.Web.AuthHelpers.error(conn, error)

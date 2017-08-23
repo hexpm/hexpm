@@ -74,7 +74,7 @@ defmodule Hexpm.Emails do
     new_email()
     |> to(user)
     |> from(source())
-    |> subject("Hex.pm - You have been invited to the #{repository.name} repository")
+    |> subject("Hex.pm - You have been added to the #{repository.name} repository")
     |> assign(:repository, repository.name)
     |> assign(:username, user.username)
     |> render("repository_invite.html")

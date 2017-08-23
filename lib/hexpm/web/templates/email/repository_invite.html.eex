@@ -1,10 +1,10 @@
 <%
-accept_url = dashboard_url(Endpoint, :repository, @repository)
+dashboard_url = dashboard_url(Endpoint, :repository, @repository)
 %>
 
-<p>You have been invited to the <strong><%= @repository %></strong> repository.</p>
+<p>You have been added as a member to the <strong><%= @repository %></strong> repository.</p>
 
-<p>To accept the invitation click <a href="<%= raw accept_url %>">this link</a> or paste this link in your web browser: <%= raw accept_url %>. You need to be logged in as <strong><%= @username %></strong> to accept.</p>
+<p>Go check out the <a href="<%= raw dashboard_url %>">repository</a>, if you do not want to join the repository you can leave it from the dashboard. You need to be logged in as <strong><%= @username %></strong> to accept.</p>
 
 <p>
   --<br>

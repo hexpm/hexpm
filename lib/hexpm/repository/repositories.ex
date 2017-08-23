@@ -21,6 +21,8 @@ defmodule Hexpm.Repository.Repositories do
     Repo.one!(Repository.has_access(repository, user, role))
   end
 
+  # TODO: audit log
+
   def add_member(repository, username, params) do
     if user = Users.get(username, [:emails]) do
       repository_user = %RepositoryUser{repository_id: repository.id, user_id: user.id}
@@ -55,7 +57,7 @@ defmodule Hexpm.Repository.Repositories do
   end
 
   def create(name, user) do
-    result =
+    {:ok, result} =
       Multi.new()
       |> Multi.insert(:repository, Repository.changeset(%Repository{name: name}, %{}))
       |> Multi.merge(fn %{repository: repository} ->
