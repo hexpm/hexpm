@@ -174,15 +174,6 @@ tools = Keyword.take(tools, compatible_tools)
       </div>
     <% end %>
 
-    <%= if build_tools != [] do %>
-      <h3>Build Tools</h3>
-      <div class="build-tools-box">
-        <%= for tool <- Enum.uniq(@current_release.meta.build_tools) do %>
-        <span class="build-tool <%= tool %>"><%= tool %></span>
-        <% end %>
-      </div>
-    <% end %>
-
     <h3>Checksum</h3>
     <div class="config-input">
       <div class="input-group">
@@ -199,6 +190,15 @@ tools = Keyword.take(tools, compatible_tools)
         </span>
       </div>
     </div>
+
+    <%= if build_tools != [] do %>
+      <h3>Build Tools</h3>
+      <div class="build-tools-box">
+        <%= for tool <- Enum.uniq(@current_release.meta.build_tools) do %>
+        <span class="build-tool <%= tool %>"><%= tool %></span>
+        <% end %>
+      </div>
+    <% end %>
 
     <h3>Owners</h3>
     <ul class="owners-list">
