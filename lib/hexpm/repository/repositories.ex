@@ -21,6 +21,20 @@ defmodule Hexpm.Repository.Repositories do
     Repo.one!(Repository.has_access(repository, user, role))
   end
 
+  def create(name, user) do
+    {:ok, result} =
+      Multi.new()
+      |> Multi.insert(:repository, Repository.changeset(%Repository{name: name}, %{}))
+      |> Multi.merge(fn %{repository: repository} ->
+        repository_user = %RepositoryUser{repository_id: repository.id, user_id: user.id, role: "admin"}
+        Multi.insert(Multi.new(), :repository_user, Repository.add_member(repository_user, %{}))
+      end)
+      |> Repo.transaction()
+
+    send_invite_email(result.repository, user)
+    result.repository
+  end
+
   # TODO: audit log
 
   def add_member(repository, username, params) do
@@ -54,19 +68,6 @@ defmodule Hexpm.Repository.Repositories do
     else
       {:error, :unknown_user}
     end
-  end
-
-  def create(name, user) do
-    {:ok, result} =
-      Multi.new()
-      |> Multi.insert(:repository, Repository.changeset(%Repository{name: name}, %{}))
-      |> Multi.merge(fn %{repository: repository} ->
-        repository_user = %RepositoryUser{repository_id: repository.id, user_id: user.id, role: "admin"}
-        Multi.insert(Multi.new(), :repository_user, Repository.add_member(repository_user, %{}))
-      end)
-      |> Repo.transaction()
-
-    send_invite_email(result.repository, user)
   end
 
   def change_role(repository, username, params) do
