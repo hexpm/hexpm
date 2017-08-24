@@ -47,8 +47,8 @@ defmodule Hexpm.Repository.Assets do
 
     files =
       Enum.flat_map(files, fn {path, data} ->
-        versioned = {Path.join([name, to_string(version), path]), versioned_key(release), data}
-        unversioned = {Path.join(name, path), unversioned_key(release), data}
+        versioned = {Path.join([name, to_string(version), path]), docspage_versioned_cdn_key(release), data}
+        unversioned = {Path.join(name, path), docspage_unversioned_cdn_key(release), data}
 
         cond do
           pre_release? and not first_release? ->
@@ -76,7 +76,7 @@ defmodule Hexpm.Repository.Assets do
 
     Hexpm.Utils.multi_task([
       fn -> Hexpm.CDN.purge_key(:fastly_hexrepo, docs_cdn_key(release)) end,
-      fn -> Hexpm.CDN.purge_key(:fastly_hexdocs, versioned_key(release)) end
+      fn -> Hexpm.CDN.purge_key(:fastly_hexdocs, docspage_versioned_cdn_key(release)) end
     ])
   end
 
@@ -147,11 +147,11 @@ defmodule Hexpm.Repository.Assets do
 
     purge_tasks = [
       fn -> Hexpm.CDN.purge_key(:fastly_hexrepo, docs_cdn_key(release)) end,
-      fn -> Hexpm.CDN.purge_key(:fastly_hexdocs, versioned_key(release)) end,
+      fn -> Hexpm.CDN.purge_key(:fastly_hexdocs, docspage_versioned_cdn_key(release)) end,
     ]
     purge_tasks =
       if first_release? || docs_for_latest_release do
-        [fn -> Hexpm.CDN.purge_key(:fastly_hexdocs, unversioned_key(release)) end | purge_tasks]
+        [fn -> Hexpm.CDN.purge_key(:fastly_hexdocs, docspage_unversioned_cdn_key(release)) end | purge_tasks]
       else
         purge_tasks
       end
@@ -171,7 +171,7 @@ defmodule Hexpm.Repository.Assets do
   end
 
   def tarball_store_key(release) do
-    "tarballs/#{repository_store_key(release)}#{release.package.name}-#{release.version}.tar"
+    "#{repository_store_key(release)}tarballs/#{release.package.name}-#{release.version}.tar"
   end
 
   def docs_cdn_key(release) do
@@ -179,14 +179,14 @@ defmodule Hexpm.Repository.Assets do
   end
 
   def docs_store_key(release) do
-    "docs/#{repository_store_key(release)}#{release.package.name}-#{release.version}.tar.gz"
+    "#{repository_store_key(release)}docs/#{release.package.name}-#{release.version}.tar.gz"
   end
 
-  def versioned_key(release) do
+  def docspage_versioned_cdn_key(release) do
     "docspage/#{repository_cdn_key(release)}#{release.package.name}/#{release.version}"
   end
 
-  def unversioned_key(release) do
+  def docspage_unversioned_cdn_key(release) do
     "docspage/#{repository_cdn_key(release)}#{release.package.name}"
   end
 
@@ -195,7 +195,7 @@ defmodule Hexpm.Repository.Assets do
     if repo.id == 1 do
       ""
     else
-      "#{repo.name}/"
+      "#{repo.name}-"
     end
   end
 
