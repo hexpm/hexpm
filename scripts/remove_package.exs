@@ -1,10 +1,21 @@
-[name] = System.argv
+desctructure [name, repo], Enum.reverse(System.argv())
+
+repository =
+  if repo do
+    Hexpm.Repo.get_by!(Hexpm.Repository.Repository, name: repo)
+  else
+    Hexpm.Repo.get!(Hexpm.Repository.Repository, 1)
+  end
+
+unless repository do
+  IO.puts "No package: #{repo}"
+  System.halt(1)
+end
 
 package =
   Hexpm.Repository.Package
-  |> Hexpm.Repo.get_by!(name: name)
+  |> Hexpm.Repo.get_by!(name: name, repository_id: repository.id)
   |> Hexpm.Repo.preload(:repository)
-
 
 unless package do
   IO.puts "No package: #{name}"
@@ -14,7 +25,7 @@ end
 releases =
   Hexpm.Repository.Release.all(package)
   |> Hexpm.Repo.all()
-  |> Hexpm.Repo.preload(:package)
+  |> Hexpm.Repo.preload([package: :repository])
 owners   =
   Ecto.assoc(package, :owners)
   |> Hexpm.Repo.all()
