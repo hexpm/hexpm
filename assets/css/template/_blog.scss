@@ -1,0 +1,24 @@
+.blog {
+  .index-post {
+    padding-top: 5px;
+    padding-bottom: 10px;
+    border-bottom: #ccc 1px solid;
+
+    .subtitle {
+      font-style: italic;
+    }
+  }
+
+  .show-post .subtitle {
+    padding-bottom: 10px;
+    font-style: italic;
+  }
+
+  h3 {
+    font-size: 28px;
+  }
+
+  .content {
+    padding-top: 10px;
+  }
+}

@@ -5,13 +5,16 @@
         <div class="container">
           <ul>
             <li>
-              <a href="https://github.com/hexpm">github</a>
+              <a href="<%= blog_path(Endpoint, :index) %>">blog</a>
             </li>
             <li>
               <a href="<%= policy_path(Endpoint, :index) %>">policies</a>
             </li>
             <li>
               <a href="<%= page_path(Endpoint, :sponsors) %>">sponsors</a>
+            </li>
+            <li>
+              <a href="https://github.com/hexpm">github</a>
             </li>
             <li>
               <a href="mailto:support@hex.pm">support</a>
