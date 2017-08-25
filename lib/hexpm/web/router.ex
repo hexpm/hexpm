@@ -92,6 +92,9 @@ defmodule Hexpm.Web.Router do
     get "/packages/:name", PackageController, :show
     get "/packages/:name/:version", PackageController, :show
     get "/packages/:repository/:name/:version", PackageController, :show
+
+    get "/blog", BlogController, :index
+    get "/blog/:name", BlogController, :show
   end
 
   scope "/", Hexpm.Web do
