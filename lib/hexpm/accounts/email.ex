@@ -29,7 +29,7 @@ defmodule Hexpm.Accounts.Email do
     |> update_change(:email, &String.downcase/1)
     |> validate_format(:email, @email_regex)
     |> validate_confirmation(:email, message: "does not match email")
-    |> validate_verified_email_exists(:email, message: "email already in use")
+    |> validate_verified_email_exists(:email, message: "already in use")
     |> unique_constraint(:email, name: "emails_email_key")
     |> unique_constraint(:email, name: "emails_email_user_key")
     |> put_change(:verified, verified?)
@@ -45,7 +45,7 @@ defmodule Hexpm.Accounts.Email do
 
   def verify(email) do
     change(email, %{verified: true, verification_key: nil})
-    |> unique_constraint(:email, name: "emails_email_key", message: "email already in use")
+    |> unique_constraint(:email, name: "emails_email_key", message: "already in use")
   end
 
   def toggle_primary(email, flag) do

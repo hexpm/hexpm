@@ -53,6 +53,7 @@ defmodule Hexpm.Web.ControllerHelpers do
 
   def validation_failed(conn, %Ecto.Changeset{} = changeset) do
     errors = translate_errors(changeset)
+    Ecto.Changeset.traverse_errors(changeset, & &1)
     render_error(conn, 422, errors: errors)
   end
   def validation_failed(conn, errors) do
@@ -83,15 +84,24 @@ defmodule Hexpm.Web.ControllerHelpers do
   # Since Changeset.traverse_errors returns `{field: [err], ...}`
   # but Hex client expects `{field: err1, ...}` we normalize to the latter.
   defp normalize_errors(errors) do
-    Enum.flat_map(errors, fn
-      {_key, val}     when val == %{}  -> []
-      {_key, [val|_]} when val == %{}  -> []
-      {_key, []}                       -> []
-      {key, val}      when is_map(val) -> [{key, normalize_errors(val)}]
-      {key, [val|_]}  when is_map(val) -> [{key, normalize_errors(val)}]
-      {key, [val|_]}                   -> [{key, val}]
-    end)
-    |> Enum.into(%{})
+    Enum.flat_map(errors, &normalize_key_value/1)
+    |> Map.new()
+  end
+
+  defp normalize_key_value({key, value}) do
+    case value do
+      _ when value == %{} ->
+        []
+      [%{} | _] = value ->
+        value = Enum.reduce(value, %{}, &Map.merge(&2, normalize_errors(&1)))
+        [{key, value}]
+      [] ->
+        []
+      value when is_map(value) ->
+        [{key, normalize_errors(value)}]
+      [value | _] ->
+        [{key, value}]
+    end
   end
 
   def not_found(conn) do

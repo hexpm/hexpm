@@ -31,7 +31,7 @@ defmodule Hexpm.Accounts.UserTest do
       assert {:error, changeset} = User.build(%{username: user.username, emails: [%{email: "some_other_email@example.com"}], password: "password"}, true) |> Hexpm.Repo.insert
       assert errors_on(changeset)[:username] == "has already been taken"
       assert {:error, changeset} = User.build(%{username: "some_other_username", emails: [%{email: hd(user.emails).email}], password: "password"}, true) |> Hexpm.Repo.insert
-      assert errors_on(changeset)[:emails][:email] == "email already in use"
+      assert errors_on(changeset)[:emails][:email] == "already in use"
     end
   end
 
