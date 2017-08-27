@@ -64,7 +64,7 @@ defmodule Hexpm.Emails do
     new_email()
     |> to(Application.get_env(:hexpm, :support_email))
     |> from(source())
-    |> subject("Hex.pm - Typosquat candidates")
+    |> subject("[TYPOSQUAT CANDIDATES]")
     |> assign(:candidates, candidates)
     |> assign(:threshold, threshold)
     |> render("typosquat_candidates.html")
@@ -78,6 +78,18 @@ defmodule Hexpm.Emails do
     |> assign(:repository, repository.name)
     |> assign(:username, user.username)
     |> render("repository_invite.html")
+  end
+
+  def repository_signup(user, name, members, opensource) do
+    new_email()
+    |> to(Application.get_env(:hexpm, :support_email))
+    |> from(source())
+    |> subject("[ORGANIZATION SIGN UP] #{name}")
+    |> assign(:user, user)
+    |> assign(:name, name)
+    |> assign(:members, members)
+    |> assign(:opensource, opensource)
+    |> render("repository_signup.html")
   end
 
   defp source do
