@@ -13,7 +13,7 @@ Hex integrates with Mix's dependency handling. Dependencies are defined in Mix's
 The version requirement specify which versions of the package you allow. The formats accepted for the requirement are documented in the [Version module](https://hexdocs.pm/elixir/Version.html). Below is an example `mix.exs` file.
 
 ```elixir
-defmodule MyProject.Mixfile do
+defmodule MyProject.MixProject do
   use Mix.Project
 
   def project do
