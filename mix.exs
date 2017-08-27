@@ -52,22 +52,22 @@ defmodule Hexpm.MixProject do
       {:bamboo, "~> 0.7"},
       {:bamboo_smtp, "~> 1.2"},
       {:comeonin, "~> 3.0"},
+      {:corsica, "~> 1.0"},
       {:cowboy, "~> 1.0"},
       {:earmark, "~> 1.0"},
       {:ex_aws, "~> 1.0"},
       {:gpb, "~> 3.23"},
+      {:hackney, "~> 1.7"},
       {:jiffy, "~> 0.14"},
       {:plug, "~> 1.2"},
+      {:plug_attack, "~> 0.3"},
       {:porcelain, "~> 2.0"},
       {:postgrex, ">= 0.0.0"},
-      {:sweet_xml, "~> 0.5"},
-      {:plug_attack, "~> 0.3"},
-      {:hackney, "~> 1.7"},
       {:sbroker, "~> 1.0"},
-      {:ex_machina, "~> 2.0", only: [:dev, :test]},
+      {:sweet_xml, "~> 0.5"},
       {:phoenix_live_reload, "~> 1.0", only: :dev},
-      {:rollbax, "~> 0.5", only: :prod},
-      {:corsica, "~> 1.0"}
+      {:ex_machina, "~> 2.0", only: [:dev, :test]},
+      {:rollbax, "~> 0.5", only: :prod}
     ]
   end
 
