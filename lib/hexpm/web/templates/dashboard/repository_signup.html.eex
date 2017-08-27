@@ -1,0 +1,45 @@
+<div class="row">
+  <div class="col-md-3">
+    <%= render "_sidebar.html", assigns %>
+  </div>
+
+  <div class="col-md-9 repository-signup">
+    <div class="panel panel-default">
+      <div class="panel-heading">Organization sign up</div>
+      <div class="panel-body">
+        <p>
+          Organizations is currently in private beta, fill out this form to request access
+          and we will get back to you shortly.
+        </p>
+        <p>
+          While in beta the service will be free, but when it goes
+          live it will have a fee based on the number of members in the organization. Before it
+          goes live we will inform the admin(s) of the repository so that you can cancel the
+          service or add billing details.
+        </p>
+      </div>
+      <div class="panel-body">
+        <%= form_tag dashboard_path(Endpoint, :new_repository_signup) do %>
+          <div class="form-group">
+            <label for="name">Organization name</label>
+            <input type="text" id="name" name="name" class="form-control" placeholder="Name">
+          </div>
+          <div class="form-group">
+            <label for="members">How many members do you estimate the  organization will have?</label>
+            <input type="number" id="members" name="members" class="form-control" placeholder="Number" aria-describedby="helpBlock">
+            <span id="helpBlock" class="help-block">Each user that requires access to the organization or its repository needs to be added as a member.</span>
+          </div>
+          <div class="checkbox">
+            <input type="hidden" name="opensource" value="no">
+            <label>
+              <input type="checkbox" name="opensource" value="yes" checked>
+              <input type="checkbox" value="">
+              Check this if the organization will be used for open source only
+            </label>
+          </div>
+          <%= submit "Submit", class: "btn btn-primary" %>
+        <% end %>
+      </div>
+    </div>
+  </div>
+</div>

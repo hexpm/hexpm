@@ -2,8 +2,6 @@ defmodule Hexpm.Web.BlogView do
   use Hexpm.Web, :view
 
   def render("index.html", _assigns) do
-    templates = Phoenix.Template.find_all(@phoenix_root)
-
     posts = Enum.flat_map(all_templates(), fn
       "index.html" ->
         []

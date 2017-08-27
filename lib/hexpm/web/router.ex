@@ -35,6 +35,10 @@ defmodule Hexpm.Web.Router do
     plug :default_repository
   end
 
+  if Mix.env() == :dev do
+    forward "/sent_emails", Bamboo.EmailPreviewPlug
+  end
+
   scope "/", Hexpm.Web do
     pipe_through :browser
 
@@ -71,6 +75,8 @@ defmodule Hexpm.Web.Router do
     post "/dashboard/email/resend", DashboardController, :resend_verify_email
     get "/dashboard/repos/:dashboard_repo", DashboardController, :repository
     post "/dashboard/repos/:dashboard_repo", DashboardController, :update_repository
+    get "/dashboard/signup", DashboardController, :repository_signup
+    post "/dashboard/signup", DashboardController, :new_repository_signup
 
     get "/docs/usage", DocsController, :usage
     get "/docs/rebar3_usage", DocsController, :rebar3_usage

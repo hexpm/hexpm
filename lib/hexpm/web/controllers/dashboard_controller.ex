@@ -190,6 +190,22 @@ defmodule Hexpm.Web.DashboardController do
     end)
   end
 
+  def repository_signup(conn, _params) do
+    render conn, "repository_signup.html", [
+      title: "Dashboard - Repository sign up",
+      container: "container page dashboard",
+    ]
+  end
+
+  def new_repository_signup(conn, %{"name" => name, "members" => members, "opensource" => opensource}) do
+    Emails.repository_signup(conn.assigns.current_user, name, members, opensource)
+    |> Mailer.deliver_now_throttled()
+
+    conn
+    |> put_flash(:info, "You have requested access to the organization beta. We will get back to you shortly.")
+    |> redirect(to: dashboard_path(conn, :repository_signup))
+  end
+
   defp render_profile(conn, changeset) do
     render conn, "profile.html", [
       title: "Dashboard - Public profile",
