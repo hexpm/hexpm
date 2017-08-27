@@ -303,7 +303,7 @@ defmodule Hexpm.Repository.RegistryBuilder do
     Enum.flat_map(releases, fn {id, version, pkg_id, checksum, tools, retirement} ->
       case Map.fetch(packages, pkg_id) do
         {:ok, package} ->
-          deps = deps_list(requirements[id] || [], packages)
+          deps = deps_list(requirements[id] || [])
           [{{package, to_string(version)}, [deps, checksum, tools, retirement]}]
         :error ->
           []
@@ -311,12 +311,9 @@ defmodule Hexpm.Repository.RegistryBuilder do
     end)
   end
 
-  defp deps_list(requirements, packages) do
-    Enum.flat_map(requirements, fn {repo, dep_id, app, req, opt} ->
-      case Map.fetch(packages, dep_id) do
-        {:ok, dep} -> [[repo, dep, req, opt, app]]
-        :error -> []
-      end
+  defp deps_list(requirements) do
+    Enum.map(requirements, fn {repo, dep_name, app, req, opt} ->
+      [repo, dep_name, req, opt, app]
     end)
     |> Enum.sort()
   end
@@ -356,7 +353,7 @@ defmodule Hexpm.Repository.RegistryBuilder do
       select: {
         req.release_id,
         dep_repo.name,
-        req.dependency_id,
+        dep.name,
         req.app,
         req.requirement,
         req.optional,
@@ -364,8 +361,8 @@ defmodule Hexpm.Repository.RegistryBuilder do
     )
     |> Hexpm.Repo.all()
 
-    Enum.reduce(reqs, %{}, fn {rel_id, repo, dep_id, app, req, opt}, map ->
-      tuple = {repo, dep_id, app, req, opt}
+    Enum.reduce(reqs, %{}, fn {rel_id, repo, dep_name, app, req, opt}, map ->
+      tuple = {repo, dep_name, app, req, opt}
       Map.update(map, rel_id, [tuple], &[tuple | &1])
     end)
   end
