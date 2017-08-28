@@ -61,24 +61,26 @@ to the repository. An app named <code class="inline">foo</code> at version <code
 <pre><code>mix hex.build</code></pre>
 <h3>Configuration</h3>
 <ul>
-<li><p><code class="inline">:app</code> - Package name (required).</p>
+<li><code class="inline">:app</code> - Package name (required).
 </li>
-<li><p><code class="inline">:version</code> - Package version (required).</p>
+<li><code class="inline">:version</code> - Package version (required).
 </li>
-<li><p><code class="inline">:deps</code> - List of package dependencies (see Dependencies below).</p>
+<li><code class="inline">:deps</code> - List of package dependencies (see Dependencies below).
 </li>
-<li><p><code class="inline">:description</code> - Short description of the project.</p>
+<li><code class="inline">:description</code> - Short description of the project.
 </li>
-<li><p><code class="inline">:package</code> - Hex specific configuration (see Package configuration below).</p>
+<li><code class="inline">:package</code> - Hex specific configuration (see Package configuration below).
 </li>
 </ul>
 <h3>Dependencies</h3>
 <p>Dependencies are defined in mix’s dependency format. But instead of using
 <code class="inline">:git</code> or <code class="inline">:path</code> as the SCM <code class="inline">:package</code> is used.</p>
 <pre><code>defp deps do
-  [ {:ecto, &quot;~&gt; 0.1.0&quot;},
+  [
+    {:ecto, &quot;~&gt; 0.1.0&quot;},
     {:postgrex, &quot;~&gt; 0.3.0&quot;},
-    {:cowboy, github: &quot;extend/cowboy&quot;} ]
+    {:cowboy, github: &quot;extend/cowboy&quot;}
+  ]
 end</code></pre>
 <p>As can be seen Hex package dependencies works alongside git dependencies.
 Important to note is that non-Hex dependencies will not be used during
@@ -87,24 +89,24 @@ package.</p>
 <h3>Package configuration</h3>
 <p>Additional package metadata is optional, but highly recommended.</p>
 <ul>
-<li><p><code class="inline">:name</code> - Set this if the package name is not the same as the application
- name.</p>
+<li><code class="inline">:name</code> - Set this if the package name is not the same as the application
+ name.
 </li>
-<li><p><code class="inline">:files</code> - List of files and directories to include in the package,
+<li><code class="inline">:files</code> - List of files and directories to include in the package,
 can include wildcards. Defaults to <code class="inline">[&quot;lib&quot;, &quot;priv&quot;, &quot;mix.exs&quot;, &quot;README*&quot;,
-&quot;readme*&quot;, &quot;LICENSE*&quot;, &quot;license*&quot;, &quot;CHANGELOG*&quot;, &quot;changelog*&quot;, &quot;src&quot;]</code>.</p>
+&quot;readme*&quot;, &quot;LICENSE*&quot;, &quot;license*&quot;, &quot;CHANGELOG*&quot;, &quot;changelog*&quot;, &quot;src&quot;]</code>.
 </li>
-<li><p><code class="inline">:maintainers</code> - List of names and/or emails of maintainers.</p>
+<li><code class="inline">:maintainers</code> - List of names and/or emails of maintainers.
 </li>
-<li><p><code class="inline">:licenses</code> - List of licenses used by the package.</p>
+<li><code class="inline">:licenses</code> - List of licenses used by the package.
 </li>
-<li><p><code class="inline">:links</code> - Map of links relevant to the package.</p>
+<li><code class="inline">:links</code> - Map of links relevant to the package.
 </li>
-<li><p><code class="inline">:build_tools</code> - List of build tools that can build the package. Hex will
+<li><code class="inline">:build_tools</code> - List of build tools that can build the package. Hex will
 try to automatically detect the build tools based on the files in the
 package. If a “rebar” or “rebar.config” file is present Hex will mark it
 as able to build with rebar. This detection can be overridden by setting
-this field.</p>
+this field.
 </li>
 </ul>
 
@@ -123,7 +125,7 @@ this field.</p>
       </h3>
     </div>
     <div class="panel-body">
-      <p><em>Reads, updates or deletes Hex configuration keys.</em></p>
+      <p><em>Reads, updates or deletes local Hex configuration.</em></p>
 <pre><code>mix hex.config KEY [VALUE]</code></pre>
 <h3>Config keys</h3>
 <ul>
@@ -134,7 +136,7 @@ this field.</p>
 <li><code class="inline">api_url</code> - Hex API URL. Can be overridden by setting the environment
 variable <code class="inline">HEX_API_URL</code> (Default: <code class="inline">&quot;https://hex.pm/api&quot;</code>)
 </li>
-<li><code class="inline">offline</code> - If set to true Hex will not fetch the regsitry or packages and
+<li><code class="inline">offline</code> - If set to true Hex will not fetch the registry or packages and
 will instead use locally cached files if they are available. Can be
 overridden by setting the environment variable <code class="inline">HEX_OFFLINE</code> (Default:
 <code class="inline">false</code>)
@@ -192,10 +194,13 @@ retrieve the latest documentation available in the mirror.</p>
 </li>
 <li><code class="inline">--module Some.Module</code> - Open a specified module documentation page inside desired package
 </li>
+<li><code class="inline">--organization ORGANIZATION - The organization the package belongs to
+
+It will open the specified version of the documentation for a package in a
+Web browser. If you do not specify the</code>version` argument, this task will
+open the latest documentation.
+</li>
 </ul>
-<p>It will open the specified version of the documentation for a package in a
-Web browser. If you do not specify the <code class="inline">version</code> argument, this task will
-open the latest documentation.</p>
 
     </div>
   </div>
@@ -220,6 +225,42 @@ registry was last updated and current system version.</p>
 released versions and package metadata.</p>
 <p>If <code class="inline">package</code> and <code class="inline">version</code> is given print release information. This includes
 remote Git URL and Git ref, and all package dependencies.</p>
+<h3>Command line options</h3>
+<ul>
+<li><code class="inline">--organization ORGANIZATION</code> - The organization the package belongs to
+</li>
+</ul>
+
+    </div>
+  </div>
+
+
+  <div class="panel panel-default">
+    <div class="panel-heading">
+      <h3 class="panel-title">
+        <a class="anchor" id="hex_organization"></a>
+        hex.organization
+        <a href="#hex_organization">
+          <svg aria-hidden="aria-hidden" class="glyphicon glyphicon-link pull-right" version="1.1" viewBox="0 0 1200 1200"><g transform="translate(0, 1200) scale(1, -1)"><path d="M776.5 1214q93.5 0 159.5 -66l141 -141q66 -66 66 -160q0 -42 -28 -95.5t-62 -87.5l-29 -29q-31 53 -77 99l-18 18l95 95l-247 248l-389 -389l212 -212l-105 -106l-19 18l-141 141q-66 66 -66 159t66 159l283 283q65 66 158.5 66zM600 706l105 105q10 -8 19 -17l141 -141 q66 -66 66 -159t-66 -159l-283 -283q-66 -66 -159 -66t-159 66l-141 141q-66 66 -66 159.5t66 159.5l55 55q29 -55 75 -102l18 -17l-95 -95l247 -248l389 389z"></path></g></svg>
+        </a>
+      </h3>
+    </div>
+    <div class="panel-body">
+      <p><em>Manages the list of authorized Hex.pm organizations.</em></p>
+<p>Organizations is a feature of Hex.pm to host and manage private packages. See
+https://hex.pm/docs/private for more information.</p>
+<p>By authorizing a new organization a new key is created for fetching packages
+from the organizations repository and the repository and key is stored on the
+local machine.</p>
+<p>To use a package from an organization add <code class="inline">organization: &quot;my_organization&quot;</code> to the
+dependency declaration in <code class="inline">mix.exs</code>:</p>
+<pre><code>{:plug, &quot;~&gt; 1.0&quot;, repo: &quot;my_organization&quot;}</code></pre>
+<h3>Authorize an organization</h3>
+<pre><code>mix hex.organization auth NAME</code></pre>
+<h3>Deauthorize and remove an organization</h3>
+<pre><code>mix hex.organization deauth NAME</code></pre>
+<h3>List all authorized organizations</h3>
+<pre><code>mix hex.organization list</code></pre>
 
     </div>
   </div>
@@ -284,6 +325,11 @@ owner.</p>
 <h4>List owned packages</h4>
 <p>Lists all packages owned by the current user.</p>
 <pre><code>mix hex.owner packages</code></pre>
+<h3>Command line options</h3>
+<ul>
+<li><code class="inline">--organization ORGANIZATION</code> - The organization the package belongs to
+</li>
+</ul>
 
     </div>
   </div>
@@ -323,27 +369,31 @@ documentation in one step, you can use the following shorthand:</p>
 <ul>
 <li><code class="inline">--revert VERSION</code> - Revert given version
 </li>
+<li><code class="inline">--organization ORGANIZATION</code> - The organization the package belongs to
+</li>
 </ul>
 <h3>Configuration</h3>
 <ul>
-<li><p><code class="inline">:app</code> - Package name (required).</p>
+<li><code class="inline">:app</code> - Package name (required).
 </li>
-<li><p><code class="inline">:version</code> - Package version (required).</p>
+<li><code class="inline">:version</code> - Package version (required).
 </li>
-<li><p><code class="inline">:deps</code> - List of package dependencies (see Dependencies below).</p>
+<li><code class="inline">:deps</code> - List of package dependencies (see Dependencies below).
 </li>
-<li><p><code class="inline">:description</code> - Short description of the project.</p>
+<li><code class="inline">:description</code> - Short description of the project.
 </li>
-<li><p><code class="inline">:package</code> - Hex specific configuration (see Package configuration below).</p>
+<li><code class="inline">:package</code> - Hex specific configuration (see Package configuration below).
 </li>
 </ul>
 <h3>Dependencies</h3>
 <p>Dependencies are defined in mix’s dependency format. But instead of using
 <code class="inline">:git</code> or <code class="inline">:path</code> as the SCM <code class="inline">:package</code> is used.</p>
 <pre><code>defp deps do
-  [{:ecto, &quot;~&gt; 0.1.0&quot;},
-  {:postgrex, &quot;~&gt; 0.3.0&quot;},
-  {:cowboy, github: &quot;extend/cowboy&quot;}]
+  [
+    {:ecto, &quot;~&gt; 0.1.0&quot;},
+    {:postgrex, &quot;~&gt; 0.3.0&quot;},
+    {:cowboy, github: &quot;extend/cowboy&quot;}
+  ]
 end</code></pre>
 <p>As can be seen Hex package dependencies works alongside git dependencies.
 Important to note is that non-Hex dependencies will not be used during
@@ -353,24 +403,27 @@ package.</p>
 <p>Additional metadata of the package can optionally be defined, but it is very
 recommended to do so.</p>
 <ul>
-<li><p><code class="inline">:name</code> - Set this if the package name is not the same as the application
- name.</p>
+<li><code class="inline">:name</code> - Set this if the package name is not the same as the application
+name.
 </li>
-<li><p><code class="inline">:files</code> - List of files and directories to include in the package,
+<li><code class="inline">:organization</code> - Set this if you are publishing to an organization instead
+of the default public hex.pm.
+</li>
+<li><code class="inline">:files</code> - List of files and directories to include in the package,
 can include wildcards. Defaults to <code class="inline">[&quot;lib&quot;, &quot;priv&quot;, &quot;mix.exs&quot;, &quot;README*&quot;,
-&quot;readme*&quot;, &quot;LICENSE*&quot;, &quot;license*&quot;, &quot;CHANGELOG*&quot;, &quot;changelog*&quot;, &quot;src&quot;]</code>.</p>
+&quot;readme*&quot;, &quot;LICENSE*&quot;, &quot;license*&quot;, &quot;CHANGELOG*&quot;, &quot;changelog*&quot;, &quot;src&quot;]</code>.
 </li>
-<li><p><code class="inline">:maintainers</code> - List of names and/or emails of maintainers.</p>
+<li><code class="inline">:maintainers</code> - List of names and/or emails of maintainers.
 </li>
-<li><p><code class="inline">:licenses</code> - List of licenses used by the package.</p>
+<li><code class="inline">:licenses</code> - List of licenses used by the package.
 </li>
-<li><p><code class="inline">:links</code> - Map of links relevant to the package.</p>
+<li><code class="inline">:links</code> - Map of links relevant to the package.
 </li>
-<li><p><code class="inline">:build_tools</code> - List of build tools that can build the package. Hex will
+<li><code class="inline">:build_tools</code> - List of build tools that can build the package. Hex will
 try to automatically detect the build tools, it will do this based on the
 files in the package. If a “rebar” or “rebar.config” file is present Hex
 will mark it as able to build with rebar. This detection can be overridden
-by setting this field.</p>
+by setting this field.
 </li>
 </ul>
 
@@ -390,29 +443,40 @@ by setting this field.</p>
     </div>
     <div class="panel-body">
       <p><em>Manages the list of available Hex repositories.</em></p>
-<p>To use a package from another repository add <code class="inline">repo: :my_repo</code> to the
+<p>The repository is where packages and the registry of packages is stored.
+You can fetch packages from multiple different repositories and packages
+can depend on packages from other repositories. To use a package from another
+repository than the global default <code class="inline">hexpm</code> add <code class="inline">repo: &quot;my_repo&quot;</code> to the
 dependency declaration in <code class="inline">mix.exs</code>:</p>
-<pre><code>{:plug, &quot;~&gt; 1.0&quot;, repo: :my_repo}</code></pre>
-<p>By default all dependencies of plug will also be fetched from <code class="inline">:my_repo</code>
+<pre><code>{:plug, &quot;~&gt; 1.0&quot;, repo: &quot;my_repo&quot;}</code></pre>
+<p>By default all dependencies of plug will also be fetched from <code class="inline">my_repo</code>
 unless plug has declared otherwise in its dependency definition.</p>
-<p>To use packages from <code class="inline">:my_repo</code> you need to add it to your configuration
+<p>To use packages from <code class="inline">my_repo</code> you need to add it to your configuration
 first. You do that by calling <code class="inline">mix hex.repo my_repo https://myrepo.example.com</code>.</p>
-<p>The default repo is called <code class="inline">:hexpm</code> and points to https://repo.hex.pm. This
+<p>The default repo is called <code class="inline">hexpm</code> and points to https://repo.hex.pm. This
 can be overridden by using <code class="inline">mix hex.repo set ...</code>.</p>
-<p>Child dependencies will always be fetched from the same repository as the
-parent package. To override which repository a package is fetched from add
-the package to your dependencies and add the <code class="inline">:repo</code> option.</p>
-<h4>Add a repo</h4>
-<pre><code>mix hex.repo add NAME URL [PUBLIC_KEY_PATH [AUTH_KEY]]</code></pre>
-<h4>Set config for repo</h4>
-<pre><code>mix hex.repo set url NAME URL
-mix hex.repo set public_key NAME PUBLIC_KEY_PATH
-mix hex.repo set auth_key NAME AUTH_KEY</code></pre>
-<h4>Remove repo</h4>
+<p>A repository configured from an organization will have <code class="inline">hexpm:</code> prefixed to
+its name. To depend on packages from an organization add <code class="inline">repo: &quot;hexpm:my_organization&quot;</code>
+to the dependency declaration or simply <code class="inline">organization: &quot;my_organization&quot;</code>.</p>
+<p>To configure organizations, see the <code class="inline">hex.organization</code> task.</p>
+<h3>Add a repo</h3>
+<pre><code>mix hex.repo add NAME URL</code></pre>
+<h4>Command line options</h4>
+<ul>
+<li><code class="inline">--public-key path</code> - Path to public key used to verify the registry (optional).
+</li>
+<li><code class="inline">--auth-key key</code> - Key used to authenticate HTTP requests to repository (optional).
+</li>
+</ul>
+<h3>Set config for repo</h3>
+<pre><code>mix hex.repo set NAME --url URL
+mix hex.repo set NAME --public-key PATH
+mix hex.repo set NAME --auth-key KEY</code></pre>
+<h3>Remove repo</h3>
 <pre><code>mix hex.repo remove NAME</code></pre>
-<h4>Show repo config</h4>
+<h3>Show repo config</h3>
 <pre><code>mix hex.repo show NAME</code></pre>
-<h4>List all repos</h4>
+<h3>List all repos</h3>
 <pre><code>mix hex.repo list</code></pre>
 
     </div>
@@ -458,6 +522,8 @@ the message
 <li><code class="inline">--message &quot;MESSAGE&quot;</code> - Optional message (up to 140 characters) clarifying
 the retirement reason
 </li>
+<li><code class="inline">--organization ORGANIZATION</code> - The organization the package belongs to
+</li>
 </ul>
 
     </div>
@@ -477,6 +543,11 @@ the retirement reason
     <div class="panel-body">
       <p><em>Displays packages matching the given search query.</em></p>
 <pre><code>mix hex.search PACKAGE</code></pre>
+<h3>Command line options</h3>
+<ul>
+<li><code class="inline">--organization ORGANIZATION</code> - The organization the package belongs to
+</li>
+</ul>
 
     </div>
   </div>
@@ -509,13 +580,13 @@ Hex config.</p>
 <h4>Reencrypt API key</h4>
 <p>Updates the passphrase for the locally stored API key.</p>
 <pre><code>mix hex.user passphrase</code></pre>
-<h4>Remove key</h4>
+<h4>Revoke key</h4>
 <p>Removes given API key from account.</p>
 <p>The key can no longer be used to authenticate API requests.</p>
-<pre><code>mix hex.user key --remove key_name</code></pre>
-<h4>Remove all keys</h4>
-<p>Remove all API keys from your account.</p>
-<pre><code>mix hex.user key --remove-all</code></pre>
+<pre><code>mix hex.user key --revoke key_name</code></pre>
+<h4>Revoke all keys</h4>
+<p>Revoke all API keys from your account.</p>
+<pre><code>mix hex.user key --revoke-all</code></pre>
 <h4>List keys</h4>
 <p>Lists all API keys associated with your account.</p>
 <pre><code>mix hex.user key --list</code></pre>
