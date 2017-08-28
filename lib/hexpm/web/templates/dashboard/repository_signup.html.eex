@@ -32,8 +32,7 @@
           <div class="checkbox">
             <input type="hidden" name="opensource" value="no">
             <label>
-              <input type="checkbox" name="opensource" value="yes" checked>
-              <input type="checkbox" value="">
+              <input type="checkbox" name="opensource" value="yes">
               Check this if the organization will be used for open source only
             </label>
           </div>
