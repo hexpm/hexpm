@@ -13,7 +13,7 @@
         <%= for repository_user <- @repository.repository_users do %>
           <li class="list-group-item clearfix">
             <img src="<%= gravatar_url(User.email(repository_user.user, :public), :small) %>" class="member-avatar">
-            <a class="member-username" href="<%= user_path(Endpoint, :show, @current_user) %>"><%= repository_user.user.username %></a>
+            <a class="member-username" href="<%= user_path(Endpoint, :show, repository_user) %>"><%= repository_user.user.username %></a>
             <div style="float: right">
               <div class="dropdown role-dropdown">
                 <button class="btn btn-default dropdown-toggle" type="button" data-toggle="dropdown">
