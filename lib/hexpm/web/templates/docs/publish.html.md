@@ -40,10 +40,12 @@ Fill in the `:description` property. It should be a sentence, or a few sentences
 Under the `:package` property are some additional configuration options:
 
 <dl class="dl-horizontal">
-  <dt><code>:licenses</code></dt>
-  <dd>A list of licenses the project is licensed under. This attribute is required.</dd>
   <dt><code>:name</code></dt>
   <dd>The name of the package in case you want to publish the package with a different name than the application name. By default this is set to the same as the name of your OTP application (having the same value as `project.app`), written in snake_case (lowercase with underscores as word separator).</dd>
+  <dt><code>:organization</code></dt>
+  <dd>The organization the package belongs to. The package will be published to the organization repository, defaults to the global <code>"hexpm"</code> repository.</dd>
+  <dt><code>:licenses</code></dt>
+  <dd>A list of licenses the project is licensed under. This attribute is required.</dd>
   <dt><code>:maintainers</code></dt>
   <dd>A list of names (and/or emails) of maintainers to the project. Optional but highly recommended.</dd>
   <dt><code>:links</code></dt>

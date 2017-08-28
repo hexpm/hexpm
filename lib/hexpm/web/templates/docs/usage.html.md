@@ -16,26 +16,39 @@ The version requirement specify which versions of the package you allow. The for
 defmodule MyProject.MixProject do
   use Mix.Project
 
-  def project do
+  def project() do
     [
       app: :my_project,
       version: "0.0.1",
       elixir: "~> 1.0",
-      deps: deps()
+      deps: deps(),
     ]
   end
 
-  def application, do: []
+  def application() do
+    []
+  end
 
-  defp deps do
+  defp deps() do
     [
       {:ecto, "~> 2.0"},
       {:postgrex, "~> 0.8.1"},
-      {:cowboy, github: "ninenines/cowboy"}
+      {:cowboy, github: "ninenines/cowboy"},
     ]
   end
 end
 ```
+
+### Options
+
+<dl class="dl-horizontal">
+  <dt><code>:hex</code></dt>
+  <dd>The name of the package. Defaults to the dependency application name.</dd>
+  <dt><code>:repo</code></dt>
+  <dd>The repository to fetch the package from, the repository needs to be configured with the <code>`mix hex.repo`</code> task. Defaults to the global <code>"hexpm"</code> repository.</dd>
+  <dt><code>:organization</code></dt>
+  <dd>The organization repository to fetch the package from, the organization needs to be configured with the <code>`mix hex.organization`</code> task.</dd>
+</dl>
 
 ### Fetching dependencies
 
