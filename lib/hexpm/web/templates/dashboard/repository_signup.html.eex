@@ -22,20 +22,21 @@
         <%= form_tag dashboard_path(Endpoint, :new_repository_signup) do %>
           <div class="form-group">
             <label for="name">Organization name</label>
-            <input type="text" id="name" name="name" class="form-control" placeholder="Name">
+            <input type="text" id="name" name="name" class="form-control" placeholder="Only allows lowercase letters and underscore" required pattern="[a-z]\w*" aria-describedby="name-helpblock">
+            <span id="name-helpbox" class="help-block">This name will be used when you declare your dependencies in <code>mix.exs</code>.</span>
           </div>
           <div class="form-group">
             <label for="members">How many members do you estimate the  organization will have?</label>
-            <input type="number" id="members" name="members" class="form-control" placeholder="Number" aria-describedby="helpBlock">
-            <span id="helpBlock" class="help-block">Each user that requires access to the organization or its repository needs to be added as a member.</span>
+            <input type="number" id="members" name="members" class="form-control" required aria-describedby="members-helpblock">
+            <span id="members-helpblock" class="help-block">Each user that requires access to the organization or its repository needs to be added as a member.</span>
           </div>
           <div class="checkbox">
             <input type="hidden" name="opensource" value="no">
             <label>
-              <input type="checkbox" name="opensource" value="yes" aria-describedby="helpBlock">
+              <input type="checkbox" name="opensource" value="yes" aria-describedby="opensource-helpbox">
               Check this if the organization will be used for open source only
             </label>
-            <span id="helpBlock" class="help-block">Open source organizations' packages are also private.</span>
+            <span id="opensource-helpbox" class="help-block">Open source organizations' packages are also private.</span>
           </div>
           <%= submit "Submit", class: "btn btn-primary" %>
         <% end %>
