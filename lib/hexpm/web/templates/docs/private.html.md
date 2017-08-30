@@ -43,3 +43,21 @@ defp deps() do
   ]
 end
 ```
+
+### Authenticating on CI and build servers
+
+You can generate repository authentication keys manually with the `mix hex.organization key` task. This can then be used to fetch packages on your CI servers without requiring manual authentication with username and password.
+
+Run the following command on your local machine:
+
+```nohighlight
+$ mix hex.organization key acme
+Passphrase: ...
+126d49fb3014bd26457471ebae97c625
+```
+
+Copy the returned hash and authenticate with it on your build server:
+
+```nohighlight
+$ mix hex.organization auth acme --key 126d49fb3014bd26457471ebae97c625
+```
