@@ -286,7 +286,7 @@ defmodule Hexpm.Web.API.ReleaseControllerTest do
              |> post("api/packages/#{meta.name}/releases", create_tar(meta, []))
 
       result = json_response(conn, 422)
-      assert result["errors"]["requirements"][package.name] == ~s(Failed to use "#{package.name}" because\n  mix.exs specifies ~> 1.0\n)
+      assert result["errors"]["requirements"][package.name] =~ ~s(Failed to use "#{package.name}" because)
     end
 
     test "create release updates registry", %{user: user, package: package} do

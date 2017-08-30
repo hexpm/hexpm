@@ -199,7 +199,7 @@ defmodule Hexpm.Repository.ReleaseTest do
     errors =
       Release.build(package2, rel_meta(%{version: "0.1.1", app: package2.name, requirements: reqs}), "")
       |> extract_errors()
-    assert hd(errors[:requirements])[:requirement] == [{~s(Failed to use "#{package3.name}" because\n  mix.exs specifies ~> 1.0\n), []}]
+    assert [{~s(Failed to use) <> _, []}] = hd(errors[:requirements])[:requirement]
   end
 
   test "ensure unique build tools", %{packages: [_, _, package3]} do
