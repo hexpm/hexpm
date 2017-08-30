@@ -8,10 +8,11 @@ defmodule Hexpm.Accounts.KeyPermission do
 
   @domains ~w(api repository)
 
-  def changeset(struct, params) do
+  def changeset(struct, user, params) do
     cast(struct, params, ~w(domain resource))
     |> validate_inclusion(:domain, @domains)
     |> validate_required_resource()
+    |> validate_permission(user)
   end
 
   defp validate_required_resource(changeset) do
@@ -20,5 +21,17 @@ defmodule Hexpm.Accounts.KeyPermission do
     else
       changeset
     end
+  end
+
+  defp validate_permission(changeset, user) do
+    validate_change(changeset, :resource, fn _, resource ->
+      domain = get_change(changeset, :domain)
+      if User.verify_permissions?(user, domain, resource) do
+        []
+      else
+        # NOTE: Possibly change repository if we add more domains
+        [resource: "you do not have access to this repository"]
+      end
+    end)
   end
 end

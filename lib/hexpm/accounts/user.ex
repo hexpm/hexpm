@@ -112,4 +112,18 @@ defmodule Hexpm.Accounts.User do
              ^username_or_email in fragment("SELECT emails.email FROM emails WHERE emails.user_id = u0.id and emails.verified"),
       preload: ^preload)
   end
+
+  def verify_permissions?(_user, "api", _resource) do
+    true
+  end
+  def verify_permissions?(user, "repository", name) do
+    if repository = Repositories.get(name) do
+      Repositories.access?(repository, user, "read")
+    else
+      false
+    end
+  end
+  def verify_permissions?(_user, _domain, _resource) do
+    false
+  end
 end

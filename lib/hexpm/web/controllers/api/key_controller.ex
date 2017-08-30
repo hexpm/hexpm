@@ -1,8 +1,8 @@
 defmodule Hexpm.Web.API.KeyController do
   use Hexpm.Web, :controller
 
-  plug :authorize, [domain: :api] when action != :create
-  plug :authorize, [domain: :api, allow_unconfirmed: true] when action == :create
+  plug :authorize, [domain: "api"] when action != :create
+  plug :authorize, [domain: "api", allow_unconfirmed: true] when action == :create
 
   def index(conn, _params) do
     user = conn.assigns.current_user

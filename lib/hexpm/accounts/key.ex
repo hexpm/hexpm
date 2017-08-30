@@ -18,18 +18,18 @@ defmodule Hexpm.Accounts.Key do
     field :user_secret, :string, virtual: true
   end
 
-  def changeset(key, params) do
+  def changeset(key, user, params) do
     cast(key, params, ~w(name))
     |> validate_required(:name)
     |> add_keys()
     |> prepare_changes(&unique_name/1)
-    |> cast_embed(:permissions)
+    |> cast_embed(:permissions, with: &KeyPermission.changeset(&1, user, &2))
     |> put_default_embed(:permissions, [%KeyPermission{domain: "api"}])
   end
 
   def build(user, params) do
     build_assoc(user, :keys)
-    |> changeset(params)
+    |> changeset(user, params)
   end
 
   def all(user) do
@@ -114,13 +114,13 @@ defmodule Hexpm.Accounts.Key do
     end
   end
 
-  def verify_permissions?(_key, nil, _resource) do
-    false
-  end
-  def verify_permissions?(key, :api, _resource) do
+  def verify_permissions?(key, "api", _resource) do
     Enum.any?(key.permissions, &(&1.domain == "api"))
   end
-  def verify_permissions?(key, :repository, resource) do
+  def verify_permissions?(key, "repository", resource) do
     Enum.any?(key.permissions, &(&1.domain == "repository" and &1.resource == resource))
+  end
+  def verify_permissions?(_key, nil, _resource) do
+    false
   end
 end

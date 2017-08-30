@@ -30,13 +30,13 @@ defmodule Hexpm.Changeset do
     validate_change(changeset, field, fn key, req ->
       cond do
         is_nil(req) ->
-          [{key, {"invalid requirement: #{inspect req}, use \">= 0.0.0\" instead", []}}]
+          [{key, "invalid requirement: #{inspect req}, use \">= 0.0.0\" instead"}]
         not valid_requirement?(req) ->
-          [{key, {"invalid requirement: #{inspect req}", []}}]
+          [{key, "invalid requirement: #{inspect req}"}]
         # Wait until rebar3 has supported this for at least 2 months
         # https://github.com/hexpm/rebar3_hex/issues/69
         # String.contains?(req, "-") and not Keyword.fetch!(opts, :pre) ->
-        #   [{key, {"invalid requirement: #{inspect req}, unstable requirements are not allowed for stable releases", []}}]
+        #   [{key, "invalid requirement: #{inspect req}, unstable requirements are not allowed for stable releases"}]
         true ->
           []
       end
@@ -92,7 +92,7 @@ defmodule Hexpm.Changeset do
           [{error_field, {"can't be blank", []}}]
       end
 
-    %{changeset | validations: [{:password, opts}|changeset.validations],
+    %{changeset | validations: [{:password, opts} | changeset.validations],
                   errors: errors ++ changeset.errors,
                   valid?: changeset.valid? and errors == []}
   end
