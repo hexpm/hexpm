@@ -105,9 +105,9 @@ defmodule Hexpm.Web.Router do
   end
 
   scope "/", Hexpm.Web do
-    get "/sitemap.xml", SitemapController,    :sitemap
+    get "/sitemap.xml", SitemapController, :sitemap
     get "/hexsearch.xml", OpenSearchController, :opensearch
-    get "/installs/hex.ez", InstallController,    :archive
+    get "/installs/hex.ez", InstallController, :archive
   end
 
   if Mix.env in [:dev, :test, :hex] do
@@ -119,6 +119,11 @@ defmodule Hexpm.Web.Router do
       get "/packages/:package", TestController, :package
       get "/tarballs/:ball", TestController, :tarball
       get "/installs/hex-1.x.csv", TestController, :installs_csv
+    end
+
+    scope "/api", Hexpm.Web do
+      pipe_through :api
+      post "/repo", TestController, :repo
     end
 
     scope "/docs", Hexpm.Web do
