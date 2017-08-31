@@ -221,7 +221,7 @@ defmodule Hexpm.Web.API.ReleaseControllerTest do
 
     test "cannot update release after grace period", %{user: user, package: package, release: release} do
       Ecto.Changeset.change(release, inserted_at: %{NaiveDateTime.utc_now | year: 2000})
-      |> Hexpm.Repo.update!
+      |> Hexpm.Repo.update!()
 
       meta = %{name: package.name, version: "0.0.1", description: "description"}
       conn = build_conn()
@@ -374,6 +374,19 @@ defmodule Hexpm.Web.API.ReleaseControllerTest do
       package = Hexpm.Repo.get_by!(Package, name: meta.name)
       assert package.repository_id == repository.id
     end
+
+    test "can update private package after grace period", %{user: user, repository: repository} do
+      package = insert(:package, package_owners: [build(:package_owner, owner: user)], repository_id: repository.id)
+      insert(:release, package: package, version: "0.0.1", inserted_at: %{NaiveDateTime.utc_now | year: 2000})
+      insert(:repository_user, repository: repository, user: user)
+
+      meta = %{name: package.name, version: "0.0.1", description: "description"}
+      build_conn()
+      |> put_req_header("content-type", "application/octet-stream")
+      |> put_req_header("authorization", key_for(user))
+      |> post("api/repos/#{repository.name}/packages/#{package.name}/releases", create_tar(meta, []))
+      |> json_response(200)
+    end
   end
 
   describe "DELETE /api/packages/:name/releases/:version" do
@@ -392,7 +405,7 @@ defmodule Hexpm.Web.API.ReleaseControllerTest do
 
     @tag isolation: :serializable
     test "delete release", %{user: user, package: package, release: release} do
-      Ecto.Changeset.change(release, inserted_at: %{NaiveDateTime.utc_now | year: 2030})
+      Ecto.Changeset.change(release, inserted_at: %{NaiveDateTime.utc_now() | year: 2030})
       |> Hexpm.Repo.update!
 
       build_conn()
@@ -440,6 +453,18 @@ defmodule Hexpm.Web.API.ReleaseControllerTest do
       refute Hexpm.Repo.get_by(Package, name: package.name)
       refute Hexpm.Repo.get_by(assoc(package, :releases), version: "0.0.1")
     end
+
+    @tag isolation: :serializable
+    test "can delete private package release after grace period", %{user: user, repository: repository} do
+      package = insert(:package, repository_id: repository.id, package_owners: [build(:package_owner, owner: user)])
+      insert(:release, package: package, version: "0.0.1", inserted_at: %{NaiveDateTime.utc_now() | year: 2000})
+      insert(:repository_user, repository: repository, user: user)
+
+      build_conn()
+      |> put_req_header("authorization", key_for(user))
+      |> delete("api/repos/#{repository.name}/packages/#{package.name}/releases/0.0.1")
+      |> response(204)
+    end
   end
 
   describe "GET /api/packages/:name/releases/:version" do
@@ -472,17 +497,17 @@ defmodule Hexpm.Web.API.ReleaseControllerTest do
       |> put_req_header("authorization", key_for(user))
       |> get("api/repos/#{repository.name}/packages/#{package.name}/releases/0.0.1")
       |> json_response(403)
-  end
+    end
 
-  test "get release returns 403 for non-existant repository", %{user: user} do
-    package = insert(:package)
-    insert(:release, package: package, version: "0.0.1")
+    test "get release returns 403 for non-existant repository", %{user: user} do
+      package = insert(:package)
+      insert(:release, package: package, version: "0.0.1")
 
-    build_conn()
-    |> put_req_header("authorization", key_for(user))
-    |> get("api/repos/NONEXISTANT_REPOSITORY/packages/#{package.name}/releases/0.0.1")
-    |> json_response(403)
-  end
+      build_conn()
+      |> put_req_header("authorization", key_for(user))
+      |> get("api/repos/NONEXISTANT_REPOSITORY/packages/#{package.name}/releases/0.0.1")
+      |> json_response(403)
+    end
 
     test "get release", %{user: user, repository: repository} do
       package = insert(:package, repository_id: repository.id)

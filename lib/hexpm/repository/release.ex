@@ -35,8 +35,8 @@ defmodule Hexpm.Repository.Release do
     |> changeset(:create, params, package, checksum)
   end
 
-  def update(release, params, package, checksum) do
-    changeset(release, :update, params, package, checksum)
+  def update(release, params, checksum) do
+    changeset(release, :update, params, release.package, checksum)
   end
 
   def delete(release, opts \\ []) do
@@ -68,13 +68,14 @@ defmodule Hexpm.Repository.Release do
   defp editable_error_message(:delete), do: "can only delete a release up to one hour after creation"
 
   defp editable?(%Release{inserted_at: nil}), do: true
+  defp editable?(%Release{package: %Package{repository_id: id}}) when id != 1, do: true
   defp editable?(release) do
     inserted_at =
       release.inserted_at
       |> NaiveDateTime.to_erl()
       |> to_secs()
 
-    now = to_secs(:calendar.universal_time)
+    now = to_secs(:calendar.universal_time())
     now - inserted_at <= 3600
   end
 
