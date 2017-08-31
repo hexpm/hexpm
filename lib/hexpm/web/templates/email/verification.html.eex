@@ -7,7 +7,7 @@ verify_url = email_url(Endpoint, :verify, username: @username, email: @email, ke
 </p>
 
 <p>
-  You can do so by following <a href="<%= raw verify_url %>">this link</a> or by pasting this link in your web browser: <%= raw verify_url %>.
+  You can do so by following <a href="<%= raw verify_url %>">this link</a> or by pasting this link in your web browser: <%= raw verify_url %>
 </p>
 
 <p>
