@@ -194,10 +194,10 @@ retrieve the latest documentation available in the mirror.</p>
 </li>
 <li><code class="inline">--module Some.Module</code> - Open a specified module documentation page inside desired package
 </li>
-<li><code class="inline">--organization ORGANIZATION - The organization the package belongs to
+<li><code class="inline">--organization ORGANIZATION</code> - The organization the package belongs to
 
 It will open the specified version of the documentation for a package in a
-Web browser. If you do not specify the</code>version` argument, this task will
+Web browser. If you do not specify the version argument, this task will
 open the latest documentation.
 </li>
 </ul>
@@ -248,13 +248,13 @@ remote Git URL and Git ref, and all package dependencies.</p>
     <div class="panel-body">
       <p><em>Manages the list of authorized Hex.pm organizations.</em></p>
 <p>Organizations is a feature of Hex.pm to host and manage private packages. See
-https://hex.pm/docs/private for more information.</p>
+<a href="<%= docs_path(Endpoint, :private) %>">https://hex.pm/docs/private</a> for more information.</p>
 <p>By authorizing a new organization a new key is created for fetching packages
 from the organizations repository and the repository and key is stored on the
 local machine.</p>
 <p>To use a package from an organization add <code class="inline">organization: &quot;my_organization&quot;</code> to the
 dependency declaration in <code class="inline">mix.exs</code>:</p>
-<pre><code>{:plug, &quot;~&gt; 1.0&quot;, repo: &quot;my_organization&quot;}</code></pre>
+<pre><code>{:plug, &quot;~&gt; 1.0&quot;, organization: &quot;my_organization&quot;}</code></pre>
 <h3>Authorize an organization</h3>
 <pre><code>mix hex.organization auth NAME</code></pre>
 <h3>Deauthorize and remove an organization</h3>
@@ -598,4 +598,3 @@ Hex config.</p>
 
     </div>
   </div>
-
