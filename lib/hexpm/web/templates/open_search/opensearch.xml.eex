@@ -16,5 +16,5 @@
 
   <InputEncoding>utf-8</InputEncoding>
   <OutputEncoding>utf-8</OutputEncoding>
-  <Url type="text/html" method="get" template="<%= package_url(Endpoint, :index) %>?search={searchTerms}&amp;sort=downloads" />
+  <Url type="text/html" method="get" template="<%= package_url(Endpoint, :index) %>?search={searchTerms}&amp;sort=ninety_days" />
 </OpenSearchDescription>

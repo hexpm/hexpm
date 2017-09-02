@@ -92,6 +92,30 @@ defmodule Hexpm.Repository.Packages do
     |> Enum.into(%{})
   end
 
+  @doc """
+    Retrieves package downloads including all views available.
+    i.e day, week, month, ninety_days, all.
+    The return value is a map with the following structure:
+    %{ package.id => %{ view1 => numDownloads, view2 => numDownloads, ...}
+    Example: %{ 105 => %{ "all" => 1_234_567, "ninety_days" => 10_000, etc... }
+  """
+  def packages_downloads_with_all_views(packages) do
+    PackageDownload.packages_and_all_download_views(packages)
+    |> Repo.all()
+    |> Enum.into([])
+    |> Enum.reduce(%{}, fn(package, acc) ->
+      { id, view, dls } = package
+      case Map.has_key?(acc, id) do
+        true ->
+          map = Map.get(acc, id)
+                |> Map.put(view, dls)
+          Map.update!(acc, id, fn(_) -> map end)
+        false ->
+          Map.put_new(acc, id,  %{ view => dls })
+      end
+    end)
+  end
+
   def packages_downloads(packages, view) do
     PackageDownload.packages(packages, view)
     |> Repo.all()

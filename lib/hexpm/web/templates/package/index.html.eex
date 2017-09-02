@@ -30,7 +30,8 @@
   page = if @page == 1, do: nil, else: @page
 
   sort_name_params = params(search: @search, page: page, sort: "name")
-  sort_downloads_params = params(search: @search, page: page, sort: "downloads")
+  sort_total_downloads_params = params(search: @search, page: page, sort: "total_downloads")
+  sort_recent_downloads_params = params(search: @search, page: page, sort: "ninety_days")
   sort_created_params = params(search: @search, page: page, sort: "inserted_at")
   sort_updated_params = params(search: @search, page: page, sort: "updated_at")
   prev_page_params = params(search: @search, page: @page-1, sort: @sort)
@@ -54,7 +55,10 @@
             <a role="menuitem" tabindex="-1" href="<%= package_path(Endpoint, :index, sort_name_params) %>">Name</a>
           </li>
           <li role="presentation">
-            <a role="menuitem" tabindex="-1" href="<%= package_path(Endpoint, :index, sort_downloads_params) %>">Downloads</a>
+            <a role="menuitem" tabindex="-1" href="<%= package_path(Endpoint, :index, sort_total_downloads_params) %>">Total Downloads</a>
+          </li>
+          <li role="presentation">
+            <a role="menuitem" tabindex="-1" href="<%= package_path(Endpoint, :index, sort_recent_downloads_params) %>">Recent Downloads</a>
           </li>
           <li role="presentation">
             <a role="menuitem" tabindex="-1" href="<%= package_path(Endpoint, :index, sort_created_params) %>">Recently created</a>
@@ -74,7 +78,7 @@
   <div class="exact-match">
     <h5>Exact Match:</h5>
     <ul>
-      <%= render "_package.html", package: @exact_match, package_downloads: @downloads[@exact_match.id] %>
+      <%= render "_package.html", package: @exact_match, package_downloads: downloads_for_package(@exact_match, @downloads), view: @sort %>
     </ul>
   </div>
 <% end %>
@@ -85,7 +89,7 @@
   <% end %>
   <ul>
     <%= for package <- @packages do %>
-      <%= render "_package.html", package: package, package_downloads: @downloads[package.id] %>
+      <%= render "_package.html", package: package, package_downloads: downloads_for_package(package, @downloads), view: @sort %>
     <% end %>
   </ul>
 </div>
