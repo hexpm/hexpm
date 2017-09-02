@@ -124,7 +124,6 @@ defmodule Hexpm.Repository.PackageTest do
     assert [^phoenix_id, ^ecto_id] = Package.all([repository], 1, 10, nil, :total_downloads, nil) |> Repo.pluck(:id)
   end
 
-
   test "sort packages by recent downloads", %{repository: repository} do
     %{id: ecto_id} = insert(:package, repository_id: repository.id)
     %{id: phoenix_id} = insert(:package, repository_id: repository.id)

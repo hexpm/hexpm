@@ -104,14 +104,14 @@ defmodule Hexpm.Repository.Packages do
     |> Repo.all()
     |> Enum.into([])
     |> Enum.reduce(%{}, fn(package, acc) ->
-      { id, view, dls } = package
+      {id, view, dls} = package
       case Map.has_key?(acc, id) do
         true ->
           map = Map.get(acc, id)
                 |> Map.put(view, dls)
           Map.update!(acc, id, fn(_) -> map end)
         false ->
-          Map.put_new(acc, id,  %{ view => dls })
+          Map.put_new(acc, id,  %{view => dls})
       end
     end)
   end

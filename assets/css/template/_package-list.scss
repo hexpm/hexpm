@@ -93,6 +93,7 @@
           font-weight: bold;
           color: $color-text-grey;
         }
+        
         .downloads-count-wrapper {
           position: relative;
           display: inline-block;
@@ -100,6 +101,7 @@
           .downloads-count-desc {
             border-bottom: 1px dotted $color-purple;
           }
+
           .tooltiptext {
             @include font-size(14, $base-line-height);
             position: relative;

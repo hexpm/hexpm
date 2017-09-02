@@ -13,7 +13,6 @@ defmodule Hexpm.Web.PackageView do
     Map.get(downloads, package.id, %{"all" => 0, "ninety_days" => 0})
   end
 
-
   def display_downloads(package_downloads, view) do
     case view do
       :ninety_days ->

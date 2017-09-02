@@ -323,7 +323,6 @@ defmodule Hexpm.Repository.Package do
       order_by: [fragment("? DESC NULLS LAST", d.downloads)])
   end
 
-
   defp sort(query, nil) do
     query
   end
