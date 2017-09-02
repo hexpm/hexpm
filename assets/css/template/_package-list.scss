@@ -102,6 +102,7 @@
           }
           .tooltiptext {
             @include font-size(14, $base-line-height);
+            top: -2em;
             visibility: hidden;
             width: 300px;
             background-color: $color-text-grey;
@@ -111,24 +112,21 @@
             border: #919ca2 1px solid;
             padding: 5px 5px;
             position: relative;
-            top: -2em;
             text-transform: none;
-            -webkit-transition: all 0.3s ease;
-            -moz-transition: all 0.3s ease-in-out;
-            -o-transition: all 0.3s ease;
-            transition: all 0.3s ease-in-out;
+            transition: all .3s ease-in-out;
           }
         }
+
         .downloads-count-wrapper:hover .tooltiptext {
-          visibility: visible;
           top: 1.2em;
-          -webkit-transition: all 0.2s ease;
-          -moz-transition: all 0.2s ease;
-          -o-transition: all 0.2s ease;
-          transition: all 0.2s ease;
+          visibility: visible;
+          transition: all .2s ease;
         }
+
       }
+
     }
+    
   }
 
   h5 {
