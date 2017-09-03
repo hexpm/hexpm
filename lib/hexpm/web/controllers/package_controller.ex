@@ -1,8 +1,14 @@
 defmodule Hexpm.Web.PackageController do
   use Hexpm.Web, :controller
 
+  @moduledoc """
+    sort params:
+    recent_downloads is defined as the sum of a packages downloads over ninety days.
+    total_downloads is the sum of all a packages downloads.
+  """
+
   @packages_per_page 30
-  @sort_params ~w(name ninety_days total_downloads inserted_at updated_at)
+  @sort_params ~w(name recent_downloads total_downloads inserted_at updated_at)
   @letters for letter <- ?A..?Z, do: <<letter>>
 
   def index(conn, params) do
@@ -20,7 +26,7 @@ defmodule Hexpm.Web.PackageController do
       end
 
     repositories = Users.all_repositories(conn.assigns.current_user)
-    sort = Hexpm.Utils.safe_to_atom(params["sort"] || "ninety_days", @sort_params)
+    sort = Hexpm.Utils.safe_to_atom(params["sort"] || "recent_downloads", @sort_params)
     page_param = Hexpm.Utils.safe_int(params["page"]) || 1
     package_count = Packages.count(repositories, filter)
     page = Hexpm.Utils.safe_page(page_param, package_count, @packages_per_page)

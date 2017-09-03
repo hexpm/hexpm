@@ -93,7 +93,7 @@
           font-weight: bold;
           color: $color-text-grey;
         }
-        
+
         .downloads-count-wrapper {
           position: relative;
           display: inline-block;
@@ -117,7 +117,6 @@
             border-radius: 4px;
             transition: all .3s ease-in-out;
           }
-
         }
 
         .downloads-count-wrapper:hover .tooltiptext {
@@ -125,11 +124,8 @@
           visibility: visible;
           transition: all .2s ease;
         }
-
       }
-
     }
-
   }
 
   h5 {

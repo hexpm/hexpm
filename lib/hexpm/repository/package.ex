@@ -316,10 +316,10 @@ defmodule Hexpm.Repository.Package do
       order_by: [fragment("? DESC NULLS LAST", d.downloads)])
   end
 
-  defp sort(query, :ninety_days) do
+  defp sort(query, :recent_downloads) do
     from(p in query,
       left_join: d in PackageDownload,
-      on: p.id == d.package_id and (d.view == "ninety_days" or is_nil(d.view)),
+      on: p.id == d.package_id and (d.view == "recent" or is_nil(d.view)),
       order_by: [fragment("? DESC NULLS LAST", d.downloads)])
   end
 

@@ -10,7 +10,7 @@
           <%= form_tag(package_path(Endpoint, :index), method: "get", role: "search") do %>
             <div class="input-group">
               <input type="search" autofocus class="form-control" placeholder="Find packages" name="search" id="search" value="<% # search(assigns) %>" tabindex="1">
-              <input type="hidden" name="sort" value="ninety_days">
+              <input type="hidden" name="sort" value="recent_downloads">
               <label class="sr-only" for="search">Find packages</label>
               <span class="input-group-btn">
                 <button type="submit" class="btn btn-search" tabindex="1">

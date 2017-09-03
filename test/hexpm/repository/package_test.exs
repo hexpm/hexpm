@@ -132,6 +132,6 @@ defmodule Hexpm.Repository.PackageTest do
 
     :ok = Hexpm.Repo.refresh_view(Hexpm.Repository.PackageDownload)
 
-    assert [^phoenix_id, ^ecto_id] = Package.all([repository], 1, 10, nil, :ninety_days, nil) |> Repo.pluck(:id)
+    assert [^phoenix_id, ^ecto_id] = Package.all([repository], 1, 10, nil, :recent_downloads, nil) |> Repo.pluck(:id)
   end
 end

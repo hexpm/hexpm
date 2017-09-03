@@ -43,8 +43,7 @@ defmodule Hexpm.Repository.PackageDownload do
     from(pd in PackageDownload,
       join: p in assoc(pd, :package),
       where: pd.package_id in ^package_ids,
-      select: {p.id, pd.view, coalesce(pd.downloads, 0)},
-      order_by: [desc: pd.view])
+      select: {p.id, pd.view, coalesce(pd.downloads, 0)})
   end
 
   def packages(packages, view) do

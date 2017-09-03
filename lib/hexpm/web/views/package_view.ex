@@ -6,17 +6,17 @@ defmodule Hexpm.Web.PackageView do
   def show_sort_info(:inserted_at), do: "(Sorted by recently created)"
   def show_sort_info(:updated_at), do: "(Sorted by recently updated)"
   def show_sort_info(:total_downloads), do: "(Sorted by total downloads)"
-  def show_sort_info(:ninety_days), do: "(Sorted by last ninety days)"
+  def show_sort_info(:recent_downloads), do: "(Sorted by recent downloads)"
   def show_sort_info(_param), do: nil
 
   def downloads_for_package(package, downloads) do
-    Map.get(downloads, package.id, %{"all" => 0, "ninety_days" => 0})
+    Map.get(downloads, package.id, %{"all" => 0, "recent" => 0})
   end
 
   def display_downloads(package_downloads, view) do
     case view do
-      :ninety_days ->
-        Map.get(package_downloads, "ninety_days")
+      :recent_downloads->
+        Map.get(package_downloads, "recent")
       _ ->
         Map.get(package_downloads, "all")
     end
@@ -24,18 +24,18 @@ defmodule Hexpm.Web.PackageView do
 
   def display_downloads_for_opposite_views(package_downloads, view) do
     case view do
-      :ninety_days ->
+      :recent_downloads->
         downloads = display_downloads(package_downloads, :all) || 0
         "total downloads: #{human_number_space(downloads)}"
       _ ->
-        downloads = display_downloads(package_downloads, :ninety_days) || 0
+        downloads = display_downloads(package_downloads, :recent_downloads) || 0
         "recent downloads: #{human_number_space(downloads)}"
     end
   end
 
   def display_downloads_view_title(view) do
     case view do
-      :ninety_days -> "recent downloads"
+      :recent_downloads-> "recent downloads"
       _ -> "total downloads"
     end
   end

@@ -4,14 +4,14 @@ defmodule Hexpm.Web.API.PackageController do
   plug :maybe_fetch_package when action in [:show]
   plug :maybe_authorize, [domain: "api", fun: &repository_access?/2] when action in [:show]
 
-  @sort_params ~w(name downloads inserted_at updated_at)
+  @sort_params ~w(name recent_downloads total_downloads inserted_at updated_at)
 
   def index(conn, params) do
     # TODO: Handle /repos/:repo/ and /
     repositories = Users.all_repositories(conn.assigns.current_user)
     page = Hexpm.Utils.safe_int(params["page"])
     search = Hexpm.Utils.parse_search(params["search"])
-    sort = Hexpm.Utils.safe_to_atom(params["sort"] || "name", @sort_params)
+    sort = Hexpm.Utils.safe_to_atom(params["sort"] || "recent_downloads", @sort_params)
     packages = Packages.search_with_versions(repositories, page, 100, search, sort)
 
     when_stale(conn, packages, [modified: false], fn conn ->
