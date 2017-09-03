@@ -8,7 +8,7 @@ defmodule Hexpm.Web.PackageViewTest do
     assert PackageView.show_sort_info(:inserted_at) == "(Sorted by recently created)"
     assert PackageView.show_sort_info(:updated_at) == "(Sorted by recently updated)"
     assert PackageView.show_sort_info(:total_downloads) == "(Sorted by total downloads)"
-    assert PackageView.show_sort_info(:ninety_days) == "(Sorted by last ninety days)"
+    assert PackageView.show_sort_info(:recent_downloads) == "(Sorted by recent downloads)"
     assert PackageView.show_sort_info(nil) == "(Sorted by name)"
   end
 
