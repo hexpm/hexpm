@@ -15,7 +15,7 @@ defmodule Hexpm.Web.PackageView do
 
   def display_downloads(package_downloads, view) do
     case view do
-      :recent_downloads->
+      :recent_downloads ->
         Map.get(package_downloads, "recent")
       _ ->
         Map.get(package_downloads, "all")
@@ -24,7 +24,7 @@ defmodule Hexpm.Web.PackageView do
 
   def display_downloads_for_opposite_views(package_downloads, view) do
     case view do
-      :recent_downloads->
+      :recent_downloads ->
         downloads = display_downloads(package_downloads, :all) || 0
         "total downloads: #{human_number_space(downloads)}"
       _ ->
@@ -35,7 +35,7 @@ defmodule Hexpm.Web.PackageView do
 
   def display_downloads_view_title(view) do
     case view do
-      :recent_downloads-> "recent downloads"
+      :recent_downloads -> "recent downloads"
       _ -> "total downloads"
     end
   end
