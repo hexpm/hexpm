@@ -10,7 +10,7 @@ defmodule Hexpm.Web.Session do
 
   def get(_conn, cookie, _opts) do
     with {id, "++" <> token} <- Integer.parse(cookie),
-         {:ok, token} = Base.url_decode64(token),
+         {:ok, token} <- Base.url_decode64(token),
          session = Repo.get(Session, id),
          true <- session && Plug.Crypto.secure_compare(token, session.token) do
       {{id, token}, session.data}
