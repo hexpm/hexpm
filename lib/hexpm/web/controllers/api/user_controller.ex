@@ -33,6 +33,7 @@ defmodule Hexpm.Web.API.UserController do
 
   def show(conn, %{"name" => username}) do
     user = Users.get(username, [:owned_packages, :emails])
+    user = filter_packages(user)
 
     if user do
       when_stale(conn, user, fn conn ->
@@ -43,6 +44,13 @@ defmodule Hexpm.Web.API.UserController do
     else
       not_found(conn)
     end
+  end
+
+  # TODO: enable other repository users to see private packages
+  # TODO: add tests
+  defp filter_packages(nil), do: nil
+  defp filter_packages(user) do
+    %{user | owned_packages: Enum.filter(user.owned_packages, & &1.repository_id == 1)}
   end
 
   def test(conn, params) do
