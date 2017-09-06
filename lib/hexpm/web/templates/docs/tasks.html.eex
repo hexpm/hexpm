@@ -1,4 +1,4 @@
-<%# This file is auto-generated with 'mix run task_docs.exs' %>
+<%# This file is auto-generated with 'mix run scripts/task_docs.exs' %>
 
 <h2>Mix tasks</h2>
 

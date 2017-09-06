@@ -5,7 +5,7 @@ defmodule Hexpm.Script.TaskDocs do
   @output_path "lib/hexpm/web/templates/docs/tasks.html.eex"
 
   @template """
-  <%%# This file is auto-generated with 'mix run task_docs.exs' %>
+  <%%# This file is auto-generated with 'mix run scripts/task_docs.exs' %>
 
   <h2>Mix tasks</h2>
   <%= for {name, html} <- tasks do %>
