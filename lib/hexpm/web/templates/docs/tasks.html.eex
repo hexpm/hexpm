@@ -129,10 +129,6 @@ this field.
 <pre><code>mix hex.config KEY [VALUE]</code></pre>
 <h3>Config keys</h3>
 <ul>
-<li><code class="inline">username</code> - Hex username
-</li>
-<li><code class="inline">key</code> - Hex API key
-</li>
 <li><code class="inline">api_url</code> - Hex API URL. Can be overridden by setting the environment
 variable <code class="inline">HEX_API_URL</code> (Default: <code class="inline">&quot;https://hex.pm/api&quot;</code>)
 </li>
@@ -151,14 +147,17 @@ setting the environment variable <code class="inline">HEX_UNSAFE_REGISTRY</code>
 <code class="inline">false</code>)
 </li>
 <li><code class="inline">http_proxy</code> - HTTP proxy server. Can be overridden by setting the
-environment variable <code class="inline">HTTP_PROXY</code> (Default: <code class="inline">nil</code>)
+environment variable <code class="inline">HTTP_PROXY</code>
 </li>
 <li><code class="inline">https_proxy</code> - HTTPS proxy server. Can be overridden by setting the
-environment variable <code class="inline">HTTPS_PROXY</code> (Default: <code class="inline">nil</code>)
+environment variable <code class="inline">HTTPS_PROXY</code>
 </li>
 <li><code class="inline">http_concurrency</code> - Limits the number of concurrent HTTP requests in
 flight. Can be overridden by setting the environment variable
 <code class="inline">HEX_HTTP_CONCURRENCY</code> (Default: <code class="inline">8</code>)
+</li>
+<li><code class="inline">http_timeout</code> - Sets the timeout for HTTP requests in seconds. Can be
+overridden by setting the environment variable <code class="inline">HEX_HTTP_TIMEOUT</code>
 </li>
 </ul>
 <h3>Command line options</h3>
@@ -194,13 +193,12 @@ retrieve the latest documentation available in the mirror.</p>
 </li>
 <li><code class="inline">--module Some.Module</code> - Open a specified module documentation page inside desired package
 </li>
-<li><code class="inline">--organization ORGANIZATION - The organization the package belongs to
-
-It will open the specified version of the documentation for a package in a
-Web browser. If you do not specify the</code>version` argument, this task will
-open the latest documentation.
+<li><code class="inline">--organization ORGANIZATION</code> - The organization the package belongs to
 </li>
 </ul>
+<p>It will open the specified version of the documentation for a package in a
+Web browser. If you do not specify the <code class="inline">version</code> argument, this task will
+open the latest documentation.</p>
 
     </div>
   </div>
@@ -248,7 +246,7 @@ remote Git URL and Git ref, and all package dependencies.</p>
     <div class="panel-body">
       <p><em>Manages the list of authorized Hex.pm organizations.</em></p>
 <p>Organizations is a feature of Hex.pm to host and manage private packages. See
-https://hex.pm/docs/private for more information.</p>
+<a href="https://hex.pm/docs/private">https://hex.pm/docs/private</a> for more information.</p>
 <p>By authorizing a new organization a new key is created for fetching packages
 from the organizations repository and the repository and key is stored on the
 local machine.</p>
@@ -257,8 +255,21 @@ dependency declaration in <code class="inline">mix.exs</code>:</p>
 <pre><code>{:plug, &quot;~&gt; 1.0&quot;, organization: &quot;my_organization&quot;}</code></pre>
 <h3>Authorize an organization</h3>
 <pre><code>mix hex.organization auth NAME</code></pre>
+<h4>Command line options</h4>
+<ul>
+<li><code class="inline">--key KEY</code> - Hash of key used to authenticate HTTP requests to repository, if
+omitted will generate a new key with your account credentials. This flag
+is useful if you have a key pre-generated with <code class="inline">mix hex.organization key</code>
+and want to authenticate on a CI server or similar system
+</li>
+</ul>
 <h3>Deauthorize and remove an organization</h3>
 <pre><code>mix hex.organization deauth NAME</code></pre>
+<h3>Generate a repository autentication key</h3>
+<p>This command is useful to pre-generate keys for use with <code class="inline">mix hex.organization auth NAME --key KEY</code>
+on CI servers or similar systems. It returns the hash of the generated key that you can pass to
+<code class="inline">auth NAME --key KEY</code></p>
+<pre><code>mix hex.organization key NAME</code></pre>
 <h3>List all authorized organizations</h3>
 <pre><code>mix hex.organization list</code></pre>
 
@@ -463,9 +474,9 @@ to the dependency declaration or simply <code class="inline">organization: &quot
 <pre><code>mix hex.repo add NAME URL</code></pre>
 <h4>Command line options</h4>
 <ul>
-<li><code class="inline">--public-key path</code> - Path to public key used to verify the registry (optional).
+<li><code class="inline">--public-key PATH</code> - Path to public key used to verify the registry (optional).
 </li>
-<li><code class="inline">--auth-key key</code> - Key used to authenticate HTTP requests to repository (optional).
+<li><code class="inline">--auth-key KEY</code> - Key used to authenticate HTTP requests to repository (optional).
 </li>
 </ul>
 <h3>Set config for repo</h3>
