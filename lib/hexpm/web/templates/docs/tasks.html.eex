@@ -254,7 +254,7 @@ from the organizations repository and the repository and key is stored on the
 local machine.</p>
 <p>To use a package from an organization add <code class="inline">organization: &quot;my_organization&quot;</code> to the
 dependency declaration in <code class="inline">mix.exs</code>:</p>
-<pre><code>{:plug, &quot;~&gt; 1.0&quot;, repo: &quot;my_organization&quot;}</code></pre>
+<pre><code>{:plug, &quot;~&gt; 1.0&quot;, organization: &quot;my_organization&quot;}</code></pre>
 <h3>Authorize an organization</h3>
 <pre><code>mix hex.organization auth NAME</code></pre>
 <h3>Deauthorize and remove an organization</h3>
