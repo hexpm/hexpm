@@ -20,7 +20,7 @@ defmodule Hexpm.Repository.Requirement do
     |> put_assoc(:dependency, dependencies[{params["name"], params["repository"] || "hexpm"}])
     |> validate_required(~w(name app requirement optional)a)
     |> validate_required(:dependency, message: "package does not exist in repository #{inspect package.repository.name}")
-    |> validate_requirement(:requirement, pre: get_field(release_changeset, :version).pre != [])
+    |> validate_requirement(:requirement, pre: version_pre(release_changeset) != [])
     |> validate_repository(:repository, repository: package.repository)
   end
 
@@ -101,4 +101,9 @@ defmodule Hexpm.Repository.Requirement do
     end)
   end
   defp requirement_names(_requirements), do: []
+
+  defp version_pre(release_changeset) do
+    version = get_field(release_changeset, :version)
+    version && version.pre
+  end
 end
