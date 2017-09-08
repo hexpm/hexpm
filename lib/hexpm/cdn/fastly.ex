@@ -5,8 +5,8 @@ defmodule Hexpm.CDN.Fastly do
   @fastly_url "https://api.fastly.com/"
   @retry_times 10
 
-  def purge_key(service, keys) when is_list(keys) do
-    keys = keys |> List.wrap() |> Enum.uniq() |> Enum.join(" ")
+  def purge_key(service, keys) do
+    keys = keys |> List.wrap() |> Enum.uniq()
     body = %{"surrogate_keys" => keys}
     service_id = Application.get_env(:hexpm, service)
 
