@@ -40,31 +40,32 @@ defmodule Hexpm.Web.PackageView do
     end
   end
 
-  def dep_snippet(:mix, package_name, release) do
+  def dep_snippet(:mix, package, release) do
     version = snippet_version(:mix, release.version)
-    app_name = release.meta.app || package_name
+    app_name = release.meta.app || package.name
+    organization = snippet_organization(package.repository.name)
 
-    if package_name == app_name do
-      "{:#{package_name}, \"#{version}\"}"
+    if package.name == app_name do
+      "{:#{package.name}, \"#{version}\"#{organization}}"
     else
-      "{#{app_name(:mix, app_name)}, \"#{version}\", hex: :#{package_name}}"
+      "{#{app_name(:mix, app_name)}, \"#{version}\", hex: :#{package.name}#{organization}}"
     end
   end
 
-  def dep_snippet(:rebar, package_name, release) do
+  def dep_snippet(:rebar, package, release) do
     version = snippet_version(:rebar, release.version)
-    app_name = release.meta.app || package_name
+    app_name = release.meta.app || package.name
 
-    if package_name == app_name do
-      "{#{package_name}, \"#{version}\"}"
+    if package.name == app_name do
+      "{#{package.name}, \"#{version}\"}"
     else
-      "{#{app_name(:rebar, app_name)}, \"#{version}\", {pkg, #{package_name}}}"
+      "{#{app_name(:rebar, app_name)}, \"#{version}\", {pkg, #{package.name}}}"
     end
   end
 
-  def dep_snippet(:erlang_mk, package_name, release) do
+  def dep_snippet(:erlang_mk, package, release) do
     version = snippet_version(:erlang_mk, release.version)
-    "dep_#{package_name} = hex #{version}"
+    "dep_#{package.name} = hex #{version}"
   end
 
   def snippet_version(:mix, %Version{major: 0, minor: minor, patch: patch, pre: []}) do
@@ -81,6 +82,9 @@ defmodule Hexpm.Web.PackageView do
       when other in [:rebar, :erlang_mk] do
     "#{major}.#{minor}.#{patch}#{pre_snippet(pre)}"
   end
+
+  defp snippet_organization("hexpm"), do: ""
+  defp snippet_organization(repository), do: ", organization: #{inspect repository}"
 
   defp pre_snippet([]), do: ""
   defp pre_snippet(pre) do

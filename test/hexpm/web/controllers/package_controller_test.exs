@@ -100,7 +100,7 @@ defmodule Hexpm.Web.PackageControllerTest do
         build_conn()
         |> test_login(user1)
         |> get("/packages/#{repository1.name}/#{package3.name}")
-      assert response(conn, 200) =~ escape(~s({:#{package3.name}, "~> 0.0.1"}))
+      assert response(conn, 200) =~ escape(~s({:#{package3.name}, "~> 0.0.1", organization: "#{repository1.name}"}))
     end
 
     test "dont show private package", %{user2: user2, repository1: repository1, package3: package3} do
@@ -133,7 +133,7 @@ defmodule Hexpm.Web.PackageControllerTest do
         build_conn()
         |> test_login(user1)
         |> get("/packages/#{repository1.name}/#{package3.name}/0.0.1")
-      assert response(conn, 200) =~ escape(~s({:#{package3.name}, "~> 0.0.1"}))
+      assert response(conn, 200) =~ escape(~s({:#{package3.name}, "~> 0.0.1", organization: "#{repository1.name}"}))
     end
 
     test "dont show private package", %{user2: user2, repository1: repository1, package3: package3} do
