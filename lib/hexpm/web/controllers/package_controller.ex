@@ -1,12 +1,6 @@
 defmodule Hexpm.Web.PackageController do
   use Hexpm.Web, :controller
 
-  @moduledoc """
-    sort params:
-    recent_downloads is defined as the sum of a packages downloads over ninety days.
-    total_downloads is the sum of all a packages downloads.
-  """
-
   @packages_per_page 30
   @sort_params ~w(name recent_downloads total_downloads inserted_at updated_at)
   @letters for letter <- ?A..?Z, do: <<letter>>
@@ -95,7 +89,7 @@ defmodule Hexpm.Web.PackageController do
 
     downloads = Packages.package_downloads(package)
     owners = Owners.all(package, [:emails])
-    dependants = Packages.search(repositories, 1, 20, "depends:#{package.name}", :total_downloads, [:name, :repository_id])
+    dependants = Packages.search(repositories, 1, 20, "depends:#{package.name}", :recent_downloads, [:name, :repository_id])
     dependants_count = Packages.count(repositories, "depends:#{package.name}")
 
     render(conn, "show.html", [
