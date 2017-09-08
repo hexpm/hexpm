@@ -113,7 +113,7 @@ defmodule Hexpm.Repository.PackageTest do
     assert ["phoenix"] = Package.all([repository], 1, 10, "depends:poison depends:ecto", nil, nil) |> Repo.pluck(:name)
   end
 
-  test "sort packages by downloads", %{repository: repository} do
+  test "sort packages by total downloads", %{repository: repository} do
     %{id: ecto_id} = insert(:package, repository_id: repository.id)
     %{id: phoenix_id} = insert(:package, repository_id: repository.id)
     insert(:release, package_id: phoenix_id, daily_downloads: [build(:download, downloads: 10)])
@@ -121,6 +121,19 @@ defmodule Hexpm.Repository.PackageTest do
 
     :ok = Hexpm.Repo.refresh_view(Hexpm.Repository.PackageDownload)
 
-    assert [^phoenix_id, ^ecto_id] = Package.all([repository], 1, 10, nil, :downloads, nil) |> Repo.pluck(:id)
+    assert [^phoenix_id, ^ecto_id] = Package.all([repository], 1, 10, nil, :total_downloads, nil) |> Repo.pluck(:id)
+  end
+
+  test "sort packages by recent downloads", %{repository: repository} do
+    %{id: ecto_id} = insert(:package, repository_id: repository.id)
+    %{id: phoenix_id} = insert(:package, repository_id: repository.id)
+    %{id: decimal_id} = insert(:package, repository_id: repository.id)
+    insert(:release, package_id: phoenix_id, daily_downloads: [build(:download, downloads: 10, day: Hexpm.Utils.utc_days_ago(91))])
+    insert(:release, package_id: decimal_id, daily_downloads: [build(:download, downloads: 10, day: Hexpm.Utils.utc_days_ago(35))])
+    insert(:release, package_id: ecto_id, daily_downloads: [build(:download, downloads: 5, day: Hexpm.Utils.utc_days_ago(10))])
+
+    :ok = Hexpm.Repo.refresh_view(Hexpm.Repository.PackageDownload)
+
+    assert [^decimal_id, ^ecto_id, ^phoenix_id] = Package.all([repository], 1, 10, nil, :recent_downloads, nil) |> Repo.pluck(:id)
   end
 end

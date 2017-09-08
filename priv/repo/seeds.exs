@@ -37,12 +37,17 @@ Hexpm.Repo.transaction(fn ->
       app: "decimal",
       build_tools: ["mix"]))
 
-  insert(:release,
+  decimal_release = insert(:release,
     package: decimal,
     version: "0.1.0",
     meta: build(:release_metadata,
       app: "decimal",
       build_tools: ["mix"]))
+
+  insert(:download, release: decimal_release, downloads: 1_200_000, day: Hexpm.Utils.utc_days_ago(180))
+  insert(:download, release: decimal_release, downloads: 200_000, day: Hexpm.Utils.utc_days_ago(90))
+  insert(:download, release: decimal_release, downloads: 56_000, day: Hexpm.Utils.utc_days_ago(35))
+  insert(:download, release: decimal_release, downloads: 1_000, day: Hexpm.Utils.utc_yesterday())
 
   postgrex = insert(:package,
     name: "postgrex",
@@ -72,7 +77,7 @@ Hexpm.Repo.transaction(fn ->
       build_tools: ["mix"]),
     has_docs: true)
 
-  insert(:release,
+  postgrex_release = insert(:release,
     package: postgrex,
     version: "0.1.0",
     requirements: [build(:requirement,
@@ -82,6 +87,11 @@ Hexpm.Repo.transaction(fn ->
     meta: build(:release_metadata,
       app: "postgrex",
       build_tools: ["mix"]))
+
+  insert(:download, release: postgrex_release, downloads: 1_200_000, day: Hexpm.Utils.utc_days_ago(180))
+  insert(:download, release: postgrex_release, downloads: 200_000, day: Hexpm.Utils.utc_days_ago(90))
+  insert(:download, release: postgrex_release, downloads: 56_000, day: Hexpm.Utils.utc_days_ago(35))
+  insert(:download, release: postgrex_release, downloads: 1_000, day: Hexpm.Utils.utc_yesterday())
 
   ecto = insert(:package,
     name: "ecto",
@@ -181,6 +191,9 @@ Hexpm.Repo.transaction(fn ->
       build_tools: ["mix"]),
     has_docs: true)
 
+  insert(:download, release: rel, downloads: 1_500_000, day: Hexpm.Utils.utc_days_ago(180))
+  insert(:download, release: rel, downloads: 200_000, day: Hexpm.Utils.utc_days_ago(90))
+  insert(:download, release: rel, downloads: 56_000, day: Hexpm.Utils.utc_days_ago(35))
   insert(:download, release: rel, downloads: 42, day: Hexpm.Utils.utc_yesterday())
 
   myrepo = insert(:repository, name: "myrepo")
@@ -269,6 +282,8 @@ Hexpm.Repo.transaction(fn ->
         app: "ups",
         build_tools: ["mix"]))
 
+    insert(:download, release: rel1, downloads: div(index, 2), day: Hexpm.Utils.utc_days_ago(180))
+    insert(:download, release: rel1, downloads: div(index, 2), day: Hexpm.Utils.utc_days_ago(90))
     insert(:download, release: rel1, downloads: div(index, 2), day: Hexpm.Utils.utc_days_ago(35))
     insert(:download, release: rel2, downloads: div(index, 2), day: Hexpm.Utils.utc_yesterday())
   end)

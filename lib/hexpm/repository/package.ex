@@ -309,10 +309,17 @@ defmodule Hexpm.Repository.Package do
     from(p in query, order_by: [desc: p.updated_at])
   end
 
-  defp sort(query, :downloads) do
+  defp sort(query, :total_downloads) do
     from(p in query,
       left_join: d in PackageDownload,
       on: p.id == d.package_id and (d.view == "all" or is_nil(d.view)),
+      order_by: [fragment("? DESC NULLS LAST", d.downloads)])
+  end
+
+  defp sort(query, :recent_downloads) do
+    from(p in query,
+      left_join: d in PackageDownload,
+      on: p.id == d.package_id and (d.view == "recent" or is_nil(d.view)),
       order_by: [fragment("? DESC NULLS LAST", d.downloads)])
   end
 

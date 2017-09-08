@@ -2,7 +2,7 @@ defmodule Hexpm.Web.PackageController do
   use Hexpm.Web, :controller
 
   @packages_per_page 30
-  @sort_params ~w(name downloads inserted_at updated_at)
+  @sort_params ~w(name recent_downloads total_downloads inserted_at updated_at)
   @letters for letter <- ?A..?Z, do: <<letter>>
 
   def index(conn, params) do
@@ -20,12 +20,12 @@ defmodule Hexpm.Web.PackageController do
       end
 
     repositories = Users.all_repositories(conn.assigns.current_user)
-    sort = Hexpm.Utils.safe_to_atom(params["sort"] || "name", @sort_params)
+    sort = Hexpm.Utils.safe_to_atom(params["sort"] || "recent_downloads", @sort_params)
     page_param = Hexpm.Utils.safe_int(params["page"]) || 1
     package_count = Packages.count(repositories, filter)
     page = Hexpm.Utils.safe_page(page_param, package_count, @packages_per_page)
     packages = fetch_packages(repositories, page, @packages_per_page, filter, sort)
-    downloads = Packages.packages_downloads(packages, "all")
+    downloads = Packages.packages_downloads_with_all_views(packages)
     exact_match = exact_match(repositories, search)
 
     render(conn, "index.html", [
@@ -89,7 +89,7 @@ defmodule Hexpm.Web.PackageController do
 
     downloads = Packages.package_downloads(package)
     owners = Owners.all(package, [:emails])
-    dependants = Packages.search(repositories, 1, 20, "depends:#{package.name}", :downloads, [:name, :repository_id])
+    dependants = Packages.search(repositories, 1, 20, "depends:#{package.name}", :recent_downloads, [:name, :repository_id])
     dependants_count = Packages.count(repositories, "depends:#{package.name}")
 
     render(conn, "show.html", [

@@ -93,6 +93,37 @@
           font-weight: bold;
           color: $color-text-grey;
         }
+
+        .downloads-count-wrapper {
+          position: relative;
+          display: inline-block;
+
+          .downloads-count-desc {
+            border-bottom: 1px dotted $color-purple;
+          }
+
+          .tooltiptext {
+            @include font-size(14, $base-line-height);
+            position: relative;
+            top: -2em;
+            width: 300px;
+            padding: 5px;
+            color: $color-white;
+            text-align: center;
+            text-transform: none;
+            visibility: hidden;
+            background-color: $color-text-grey;
+            border: #919ca2 1px solid;
+            border-radius: 4px;
+            transition: all .3s ease-in-out;
+          }
+        }
+
+        .downloads-count-wrapper:hover .tooltiptext {
+          top: 1.2em;
+          visibility: visible;
+          transition: all .2s ease;
+        }
       }
     }
   }

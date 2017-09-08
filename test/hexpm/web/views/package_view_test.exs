@@ -4,10 +4,12 @@ defmodule Hexpm.Web.PackageViewTest do
   alias Hexpm.Web.PackageView
 
   test "show sort info" do
-    assert PackageView.show_sort_info("name") == "(Sorted by name)"
-    assert PackageView.show_sort_info("inserted_at") == "(Sorted by recently created)"
-    assert PackageView.show_sort_info("updated_at") == "(Sorted by recently updated)"
-    assert PackageView.show_sort_info("downloads") == "(Sorted by downloads)"
+    assert PackageView.show_sort_info(:name) == "(Sorted by name)"
+    assert PackageView.show_sort_info(:inserted_at) == "(Sorted by recently created)"
+    assert PackageView.show_sort_info(:updated_at) == "(Sorted by recently updated)"
+    assert PackageView.show_sort_info(:total_downloads) == "(Sorted by total downloads)"
+    assert PackageView.show_sort_info(:recent_downloads) == "(Sorted by recent downloads)"
+    assert PackageView.show_sort_info(nil) == "(Sorted by name)"
   end
 
   test "show sort info when sort param is not available" do

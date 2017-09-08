@@ -3,6 +3,6 @@ defmodule Hexpm.Web.OpenSearchControllerTest do
 
   test "opensearch" do
     conn = get build_conn(), "/hexsearch.xml"
-    assert response(conn, 200) =~ "<Url type=\"text/html\" method=\"get\" template=\"http://localhost:4001/packages?search={searchTerms}&amp;sort=downloads\" />"
+    assert response(conn, 200) =~ "<Url type=\"text/html\" method=\"get\" template=\"http://localhost:4001/packages?search={searchTerms}&amp;sort=recent_downloads\" />"
   end
 end

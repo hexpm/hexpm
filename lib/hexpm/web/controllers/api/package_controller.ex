@@ -4,7 +4,7 @@ defmodule Hexpm.Web.API.PackageController do
   plug :maybe_fetch_package when action in [:show]
   plug :maybe_authorize, [domain: "api", fun: &repository_access?/2] when action in [:show]
 
-  @sort_params ~w(name downloads inserted_at updated_at)
+  @sort_params ~w(name recent_downloads total_downloads inserted_at updated_at)
 
   def index(conn, params) do
     # TODO: Handle /repos/:repo/ and /

@@ -37,6 +37,15 @@ defmodule Hexpm.Repository.PackageDownload do
     )
   end
 
+  def packages_and_all_download_views(packages) do
+    package_ids = Enum.map(packages, &(&1.id))
+
+    from(pd in PackageDownload,
+      join: p in assoc(pd, :package),
+      where: pd.package_id in ^package_ids,
+      select: {p.id, pd.view, coalesce(pd.downloads, 0)})
+  end
+
   def packages(packages, view) do
     package_ids = Enum.map(packages, &(&1.id))
 

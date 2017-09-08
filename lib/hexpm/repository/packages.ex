@@ -92,6 +92,14 @@ defmodule Hexpm.Repository.Packages do
     |> Enum.into(%{})
   end
 
+  def packages_downloads_with_all_views(packages) do
+    PackageDownload.packages_and_all_download_views(packages)
+    |> Repo.all()
+    |> Enum.reduce(%{}, fn({id, view, dls}, acc) ->
+         Map.update(acc, id, %{view => dls}, &Map.put(&1, view, dls))
+    end)
+  end
+
   def packages_downloads(packages, view) do
     PackageDownload.packages(packages, view)
     |> Repo.all()
