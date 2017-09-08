@@ -6,24 +6,12 @@ defmodule Hexpm.CDN.Fastly do
   @retry_times 10
 
   def purge_key(service, keys) when is_list(keys) do
-    keys = Enum.uniq(keys)
+    keys = keys |> List.wrap() |> Enum.uniq() |> Enum.join(" ")
+    body = %{"surrogate_keys" => keys}
     service_id = Application.get_env(:hexpm, service)
 
-    Task.async_stream(keys, fn key ->
-      case post("service/#{service_id}/purge/#{key}", %{}) do
-        {:ok, status, _, _} when status in [200, 404] ->
-          :ok
-      end
-    end, max_concurrency: 10, timeout: 10_000)
-    |> Stream.run()
-  end
-
-  def purge_key(service, key) do
-    service_id = Application.get_env(:hexpm, service)
-    case post("service/#{service_id}/purge/#{key}", %{}) do
-      {:ok, status, _, _} when status in [200, 404] ->
-        :ok
-    end
+    {:ok, 200, _, _} = post("service/#{service_id}/purge", body)
+    :ok
   end
 
   def public_ips() do
@@ -45,7 +33,7 @@ defmodule Hexpm.CDN.Fastly do
       "accept": "application/json",
       "content-type": "application/json"]
 
-    body = Poison.encode!(body)
+    body = Hexpm.Web.Jiffy.encode!(body)
     retry(fn -> :hackney.post(url, headers, body, []) end, @retry_times)
     |> read_body()
   end
@@ -76,7 +64,7 @@ defmodule Hexpm.CDN.Fastly do
 
   defp read_body({:ok, status, headers, client}) do
     {:ok, body} = :hackney.body(client)
-    body = case Poison.decode(body) do
+    body = case Hexpm.Web.Jiffy.decode(body) do
       {:ok, map}  -> map
       {:error, _} -> body
     end

@@ -27,11 +27,12 @@ defmodule Hexpm.Script.TaskDocs do
   <% end %>
   """
 
-  def run do
-    Mix.Task.load_all
-    html = Mix.Task.all_modules
-           |> get_docs
-           |> Enum.sort(&(elem(&1, 0) < elem(&2, 0)))
+  def run() do
+    Mix.Task.load_all()
+    html =
+      Mix.Task.all_modules()
+      |> get_docs()
+      |> Enum.sort(&(elem(&1, 0) < elem(&2, 0)))
 
     html = EEx.eval_string(@template, [tasks: html])
 
@@ -50,9 +51,9 @@ defmodule Hexpm.Script.TaskDocs do
   end
 
   defp to_html(doc) do
-    Earmark.as_html!(doc)
-    |> fix_headings
-    |> emphasise_synopsis
+    Earmark.as_html!(doc, %Earmark.Options{gfm: true})
+    |> fix_headings()
+    |> emphasise_synopsis()
   end
 
   defp fix_headings(html) do
@@ -76,4 +77,4 @@ defmodule Hexpm.Script.TaskDocs do
   end
 end
 
-Hexpm.Script.TaskDocs.run
+Hexpm.Script.TaskDocs.run()

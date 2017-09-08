@@ -1,4 +1,4 @@
-desctructure [name, repo], Enum.reverse(System.argv())
+destructure [name, repo], Enum.reverse(System.argv())
 
 repository =
   if repo do
