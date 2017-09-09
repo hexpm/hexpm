@@ -35,17 +35,10 @@ GRANT ALL PRIVILEGES ON DATABASE hexpm_test TO postgres;
 ALTER DATABASE hexpm_test SET timezone TO 'UTC';
 ```
 
-If you want to use another database, user or password, you can specify the
-`DEV_DATABASE_URL` in the shell before doing development:
-
-```shell
-export DEV_DATABASE_URL=ecto://USER:PASSWORD@localhost/DATABASE
-```
-
 Now you are fine to run the ecto migrations:
 
 ```shell
-mix ecto.migrate Hexpm.Repo
+mix ecto.migrate
 ```
 
 ### Sample Data
@@ -89,13 +82,6 @@ Hexpm will be available at [http://localhost:4000/](http://localhost:4000/).
 ### Running Tests
 
 By default, tests use a PostgreSQL called `hexpm_test` see above for setup.
-
-Again, if you want to use another database, user or password, you can specify the
-`TEST_DATABASE_URL` in the shell before running tests:
-
-```shell
-export TEST_DATABASE_URL='ecto://USER:PASSWORD@localhost/DATABASE'
-```
 
 ## License
 
