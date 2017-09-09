@@ -20,53 +20,62 @@ defmodule Hexpm.Web.PackageViewTest do
     assert PackageView.show_sort_info(nil) == "(Sorted by name)"
   end
 
-  test "format simple mix dependency snippet" do
-    version = Version.parse!("1.0.0")
-    package_name   = "ecto"
-    release = %{meta: %{app: package_name}, version: version}
-    assert PackageView.dep_snippet(:mix, package_name, release) == "{:ecto, \"~> 1.0\"}"
-  end
+  describe "dep_snippet/3" do
+    test "format simple mix dependency snippet" do
+      version = Version.parse!("1.0.0")
+      package = %{name: "ecto", repository: %{name: "hexpm"}}
+      release = %{meta: %{app: package.name}, version: version}
+      assert PackageView.dep_snippet(:mix, package, release) == ~s({:ecto, "~> 1.0"})
+    end
 
-  test "format mix dependency snippet" do
-    version = Version.parse!("1.0.0")
-    package_name   = "timex"
-    release = %{meta: %{app: "extime"}, version: version}
-    assert PackageView.dep_snippet(:mix, package_name, release) == "{:extime, \"~> 1.0\", hex: :timex}"
-  end
+    test "format mix dependency snippet" do
+      version = Version.parse!("1.0.0")
+      package = %{name: "timex", repository: %{name: "hexpm"}}
+      release = %{meta: %{app: "extime"}, version: version}
+      assert PackageView.dep_snippet(:mix, package, release) == ~s({:extime, "~> 1.0", hex: :timex})
+    end
 
-  test "format simple rebar dependency snippet" do
-    version = Version.parse!("1.0.0")
-    package_name   = "rebar"
-    release = %{meta: %{app: package_name}, version: version}
-    assert PackageView.dep_snippet(:rebar, package_name, release) == "{rebar, \"1.0.0\"}"
-  end
+    test "format private mix dependency snippet" do
+      version = Version.parse!("1.0.0")
+      package = %{name: "ecto", repository: %{name: "private"}}
+      release = %{meta: %{app: package.name}, version: version}
+      assert PackageView.dep_snippet(:mix, package, release) == ~s({:ecto, "~> 1.0", organization: "private"})
+    end
 
-  test "format rebar dependency snippet" do
-    version = Version.parse!("1.0.1")
-    package_name   = "rebar"
-    release = %{meta: %{app: "erlang_mk"}, version: version}
-    assert PackageView.dep_snippet(:rebar, package_name, release) == "{erlang_mk, \"1.0.1\", {pkg, rebar}}"
-  end
+    test "format simple rebar dependency snippet" do
+      version = Version.parse!("1.0.0")
+      package = %{name: "rebar"}
+      release = %{meta: %{app: package.name}, version: version}
+      assert PackageView.dep_snippet(:rebar, package, release) == ~s({rebar, "1.0.0"})
+    end
 
-  test "format erlang.mk dependency snippet" do
-    version = Version.parse!("1.0.4")
-    package_name   = "cowboy"
-    release = %{meta: %{app: package_name}, version: version}
-    assert PackageView.dep_snippet(:erlang_mk, package_name, release) == "dep_cowboy = hex 1.0.4"
-  end
+    test "format rebar dependency snippet" do
+      version = Version.parse!("1.0.1")
+      package = %{name: "rebar"}
+      release = %{meta: %{app: "erlang_mk"}, version: version}
+      assert PackageView.dep_snippet(:rebar, package, release) == ~s({erlang_mk, "1.0.1", {pkg, rebar}})
+    end
 
-  test "escape mix application name" do
-    version = Version.parse!("1.0.0")
-    package_name   = "lfe_app"
-    release = %{meta: %{app: "lfe-app"}, version: version}
-    assert PackageView.dep_snippet(:mix, package_name, release) == "{:\"lfe-app\", \"~> 1.0\", hex: :lfe_app}"
-  end
+    test "format erlang.mk dependency snippet" do
+      version = Version.parse!("1.0.4")
+      package = %{name: "cowboy"}
+      release = %{meta: %{app: package.name}, version: version}
+      assert PackageView.dep_snippet(:erlang_mk, package, release) == "dep_cowboy = hex 1.0.4"
+    end
 
-  test "escape rebar application name" do
-    version = Version.parse!("1.0.1")
-    package_name   = "lfe_app"
-    release = %{meta: %{app: "lfe-app"}, version: version}
-    assert PackageView.dep_snippet(:rebar, package_name, release) == "{'lfe-app', \"1.0.1\", {pkg, lfe_app}}"
+    test "escape mix application name" do
+      version = Version.parse!("1.0.0")
+      package = %{name: "lfe_app", repository: %{name: "hexpm"}}
+      release = %{meta: %{app: "lfe-app"}, version: version}
+      assert PackageView.dep_snippet(:mix, package, release) == ~s({:"lfe-app", "~> 1.0", hex: :lfe_app})
+    end
+
+    test "escape rebar application name" do
+      version = Version.parse!("1.0.1")
+      package = %{name: "lfe_app"}
+      release = %{meta: %{app: "lfe-app"}, version: version}
+      assert PackageView.dep_snippet(:rebar, package, release) == ~s({'lfe-app', "1.0.1", {pkg, lfe_app}})
+    end
   end
 
   test "mix config version" do

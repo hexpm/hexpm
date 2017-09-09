@@ -159,7 +159,7 @@ tools = Keyword.take(tools, compatible_tools)
         <div class="config-input">
           <div class="input-group">
             <input type="text" class="form-control snippet"
-              value="<%= dep_snippet(tool, @package.name, @current_release) %>"
+              value="<%= dep_snippet(tool, @package, @current_release) %>"
               onfocus="this.select();"
               readonly="readonly" id="<%= tool %>-snippet" />
             <span class="input-group-btn">
