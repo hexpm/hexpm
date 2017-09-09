@@ -46,8 +46,8 @@ defmodule Hexpm.MixProject do
 
   defp deps do
     [
-      {:phoenix, "~> 1.3-rc"},
-      {:phoenix_ecto, "~> 3.1-rc"},
+      {:phoenix, "~> 1.3"},
+      {:phoenix_ecto, "~> 3.1"},
       {:phoenix_html, "~> 2.3"},
       {:bamboo, "~> 0.7"},
       {:bamboo_smtp, "~> 1.2"},
