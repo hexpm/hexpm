@@ -2,7 +2,6 @@ defmodule Hexpm.Repository.PackageDownload do
   use Hexpm.Web, :schema
   import Hexpm.QueryAPI, only: [coalesce: 2]
 
-  # TODO: remove pk from package_downloads view
   @primary_key false
 
   schema "package_downloads" do
