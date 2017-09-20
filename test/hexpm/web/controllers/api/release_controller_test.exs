@@ -524,4 +524,95 @@ defmodule Hexpm.Web.API.ReleaseControllerTest do
       assert result["version"] == "0.0.1"
     end
   end
+
+  describe "GET /api/packages/:name/releases/:version/downloads" do
+    setup do
+      user = insert(:user)
+      repository = insert(:repository)
+      package = insert(:package, package_owners: [build(:package_owner, owner: user)])
+      release = insert(:release, package: package, version: "0.0.1")
+
+      insert(:download, release: release, downloads: 1, day: ~D[2000-01-01])
+      insert(:download, release: release, downloads: 1, day: ~D[2000-02-01])
+      insert(:download, release: release, downloads: 1, day: ~D[2000-02-07])
+      insert(:download, release: release, downloads: 1, day: ~D[2000-02-08])
+
+      %{
+        user: user,
+        repository: repository,
+        package: package,
+        release: release
+      }
+    end
+
+    test "get release downloads (all by default)", %{package: package, release: release} do
+      result =
+        build_conn()
+        |> get("api/packages/#{package.name}/releases/#{release.version}/downloads")
+        |> json_response(200)
+
+      assert result["name"] == "#{package.name}"
+      assert result["version"] == "#{release.version}"
+      assert result["downloads"] == 4
+
+      result =
+        build_conn()
+        |> get("api/packages/#{package.name}/releases/#{release.version}/downloads/all")
+        |> json_response(200)
+
+      assert result["name"] == "#{package.name}"
+      assert result["version"] == "#{release.version}"
+      assert result["downloads"] == 4
+
+      result =
+        build_conn()
+        |> get("api/packages/#{package.name}/releases/#{release.version}/downloads/xxx")
+        |> json_response(200)
+
+      assert result["name"] == "#{package.name}"
+      assert result["version"] == "#{release.version}"
+      assert result["downloads"] == 4
+    end
+
+    test "get release downloads by day", %{package: package, release: release} do
+      result =
+        build_conn()
+        |> get("api/packages/#{package.name}/releases/#{release.version}/downloads/by_day")
+        |> json_response(200)
+
+      assert result["name"] == "#{package.name}"
+      assert result["version"] == "#{release.version}"
+      assert result["downloads"] == [
+        ["2000-01-01", 1],
+        ["2000-02-01", 1],
+        ["2000-02-07", 1],
+        ["2000-02-08", 1],
+      ]
+    end
+
+    test "get release downloads by week", %{package: package, release: release} do
+      result =
+        build_conn()
+        |> get("api/packages/#{package.name}/releases/#{release.version}/downloads/by_week")
+        |> json_response(200)
+
+      assert result["name"] == "#{package.name}"
+      assert result["version"] == "#{release.version}"
+      assert length(result["downloads"]) == 3 # to avoid different LOCALE (week)
+    end
+
+    test "get release downloads by month", %{package: package, release: release} do
+      result =
+        build_conn()
+        |> get("api/packages/#{package.name}/releases/#{release.version}/downloads/by_month")
+        |> json_response(200)
+
+      assert result["name"] == "#{package.name}"
+      assert result["version"] == "#{release.version}"
+      assert result["downloads"] == [
+        ["2000-01", 1],
+        ["2000-02", 3],
+      ]
+    end
+  end
 end

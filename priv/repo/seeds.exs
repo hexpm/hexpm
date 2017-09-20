@@ -193,7 +193,9 @@ Hexpm.Repo.transaction(fn ->
 
   insert(:download, release: rel, downloads: 1_500_000, day: Hexpm.Utils.utc_days_ago(180))
   insert(:download, release: rel, downloads: 200_000, day: Hexpm.Utils.utc_days_ago(90))
+  insert(:download, release: rel, downloads: 1, day: Hexpm.Utils.utc_days_ago(45))
   insert(:download, release: rel, downloads: 56_000, day: Hexpm.Utils.utc_days_ago(35))
+  insert(:download, release: rel, downloads: 1, day: Hexpm.Utils.utc_days_ago(2))
   insert(:download, release: rel, downloads: 42, day: Hexpm.Utils.utc_yesterday())
 
   myrepo = insert(:repository, name: "myrepo")

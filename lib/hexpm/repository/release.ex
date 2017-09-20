@@ -155,6 +155,34 @@ defmodule Hexpm.Repository.Release do
       select: {p.name, r.version, r.inserted_at, p.meta}
     )
   end
+
+  def downloads_by(release_id, filter) do
+    case filter do
+      :by_day ->
+        from(d in Download,
+          where: d.release_id == ^release_id,
+          group_by: fragment("date_trunc('day', ?)", d.day),
+          order_by: fragment("date_trunc('day', ?)", d.day),
+          select: {fragment("to_char(date_trunc('day', ?), 'YYYY-MM-DD')", d.day), fragment("sum(?)", d.downloads)})
+      :by_week ->
+        from(d in Download,
+          where: d.release_id == ^release_id,
+          group_by: fragment("date_trunc('week', ?)",  d.day), # d.day,
+          order_by: fragment("date_trunc('week', ?)",  d.day), # d.day,
+          select: {fragment("to_char(date_trunc('week', ?), 'YYYY-MM-DD')", d.day), fragment("sum(?)", d.downloads)})
+      :by_month ->
+        from(d in Download,
+          where: d.release_id == ^release_id,
+          group_by: fragment("date_trunc('month', ?)",  d.day), # d.day,
+          order_by: fragment("date_trunc('month', ?)",  d.day), # d.day,
+          select: {fragment("to_char(date_trunc('month', ?), 'YYYY-MM')", d.day), fragment("sum(?)", d.downloads)})
+      _ ->
+        from(d in Download,
+          where: d.release_id == ^release_id,
+          select: fragment("sum(?)", d.downloads))
+    end
+  end
+
 end
 
 defimpl Phoenix.Param, for: Hexpm.Repository.Release do

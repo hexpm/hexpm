@@ -125,6 +125,18 @@ defmodule Hexpm.Repository.Releases do
     |> publish_result(nil)
   end
 
+  def downloads_by(package, :all) do
+    Release.downloads_by(package, :all)
+    |> Repo.one()
+  end
+  def downloads_by(package, filter) when filter in [:by_day, :by_week, :by_month] do
+    Release.downloads_by(package, filter)
+    |> Repo.all()
+    |> Enum.map(fn {date, downloads} ->
+      [to_string(date), downloads]
+    end)
+  end
+
   defp publish_result({:ok, %{repository: repository, package: package, release: release} = result}, body) do
     package = %{package | repository: repository}
     release = %{release | package: package}

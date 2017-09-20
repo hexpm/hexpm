@@ -1,10 +1,10 @@
 defmodule Hexpm.Web.API.ReleaseController do
   use Hexpm.Web, :controller
 
-  plug :maybe_fetch_release when action in [:show]
+  plug :maybe_fetch_release when action in [:show, :show_downloads]
   plug :fetch_release when action in [:delete]
   plug :maybe_fetch_package when action in [:create]
-  plug :maybe_authorize, [domain: "api", fun: &repository_access?/2] when action in [:show]
+  plug :maybe_authorize, [domain: "api", fun: &repository_access?/2] when action in [:show, :show_downloads]
   plug :authorize, [domain: "api", fun: &package_owner?/2] when action in [:delete]
   plug :authorize, [domain: "api", fun: &maybe_package_owner?/2] when action in [:create]
 
@@ -37,6 +37,18 @@ defmodule Hexpm.Web.API.ReleaseController do
         |> send_resp(204, "")
       {:error, _, changeset, _} ->
         validation_failed(conn, changeset)
+    end
+  end
+
+  def show_downloads(conn, params) do
+    if release = conn.assigns.release do
+      filter = Hexpm.Utils.safe_to_atom(params["filter"], ["by_month", "by_week", "by_day"]) || :all
+      downloads = Releases.downloads_by(release.id, filter)
+      conn
+      |> api_cache(:public)
+      |> render(:show_downloads, [package: release.package, release: release, downloads: downloads])
+    else
+      not_found(conn)
     end
   end
 

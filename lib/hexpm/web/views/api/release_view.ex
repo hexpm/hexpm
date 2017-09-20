@@ -11,6 +11,9 @@ defmodule Hexpm.Web.API.ReleaseView do
   def render("minimal." <> _, %{release: release, package: package}) do
     render_one(release, __MODULE__, "minimal", %{package: package})
   end
+  def render("show_downloads." <> _, %{release: release, package: package, downloads: downloads}) do
+    %{name: package.name, version: release.version, downloads: downloads}
+  end
 
   def render("show", %{release: release}) do
     %{
