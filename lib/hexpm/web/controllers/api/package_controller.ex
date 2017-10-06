@@ -11,7 +11,7 @@ defmodule Hexpm.Web.API.PackageController do
     repositories = Users.all_repositories(conn.assigns.current_user)
     page = Hexpm.Utils.safe_int(params["page"])
     search = Hexpm.Utils.parse_search(params["search"])
-    sort = Hexpm.Utils.safe_to_atom(params["sort"] || "name", @sort_params)
+    sort = sort(params["sort"])
     packages = Packages.search_with_versions(repositories, page, 100, search, sort)
 
     when_stale(conn, packages, [modified: false], fn conn ->
@@ -35,4 +35,8 @@ defmodule Hexpm.Web.API.PackageController do
       not_found(conn)
     end
   end
+
+  defp sort(nil), do: sort("name")
+  defp sort("downloads"), do: sort("total_downloads")
+  defp sort(param), do: Hexpm.Utils.safe_to_atom(param, @sort_params)
 end
