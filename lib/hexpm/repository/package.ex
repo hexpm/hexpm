@@ -59,7 +59,7 @@ defmodule Hexpm.Repository.Package do
     |> cast_embed(:meta, required: true)
     |> validate_required(:name)
     |> validate_length(:name, min: 2)
-    |> validate_format(:name, ~r"^[a-z]\w*$")
+    |> validate_format(:name, ~r/^[a-z](_?([a-z]|\d)+)+$/)
     |> validate_exclusion(:name, @reserved_names)
   end
 
