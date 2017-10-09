@@ -64,8 +64,8 @@ end
 if action == "upload" do
   key = "logs/monthly/#{filename}"
   ExAws.S3.Upload.stream_file(filename, [:read_ahead])
-  |> ExAws.S3.upload("us-east-1", "backup.hex.pm", key, timeout: 600_000)
-  |> ExAws.request!(region: region(region))
+  |> ExAws.S3.upload("backup.hex.pm", key, timeout: 600_000)
+  |> ExAws.request!(region: "us-east-1")
 end
 
 if action == "delete" do
