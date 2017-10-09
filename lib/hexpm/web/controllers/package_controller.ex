@@ -20,7 +20,7 @@ defmodule Hexpm.Web.PackageController do
       end
 
     repositories = Users.all_repositories(conn.assigns.current_user)
-    sort = Hexpm.Utils.safe_to_atom(params["sort"] || "recent_downloads", @sort_params)
+    sort = sort(params["sort"])
     page_param = Hexpm.Utils.safe_int(params["page"]) || 1
     package_count = Packages.count(repositories, filter)
     page = Hexpm.Utils.safe_page(page_param, package_count, @packages_per_page)
@@ -66,6 +66,10 @@ defmodule Hexpm.Web.PackageController do
       end
     end || not_found(conn)
   end
+
+  defp sort(nil), do: sort("recent_downloads")
+  defp sort("downloads"), do: sort("recent_downloads")
+  defp sort(param), do: Hexpm.Utils.safe_to_atom(param, @sort_params)
 
   defp matching_release(releases, version) do
     Enum.find(releases, &(to_string(&1.version) == version))
