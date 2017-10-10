@@ -171,9 +171,6 @@ defmodule Hexpm.Web.Router do
         get "/packages/:name/releases/:version/docs", DocsController, :show
         delete "/packages/:name/releases/:version/docs", DocsController, :delete
 
-        get "/packages/:name/releases/:version/downloads", ReleaseController, :show_downloads
-        get "/packages/:name/releases/:version/downloads/:filter", ReleaseController, :show_downloads
-
         get "/packages/:name/owners", OwnerController, :index
         get "/packages/:name/owners/:email", OwnerController, :show
         put "/packages/:name/owners/:email", OwnerController, :create
