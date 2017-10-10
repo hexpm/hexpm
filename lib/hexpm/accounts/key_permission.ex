@@ -1,12 +1,13 @@
 defmodule Hexpm.Accounts.KeyPermission do
   use Hexpm.Web, :schema
 
+  @derive Hexpm.Web.Stale
+  @domains ~w(api repository)
+
   embedded_schema do
     field :domain, :string
     field :resource, :string
   end
-
-  @domains ~w(api repository)
 
   def changeset(struct, user, params) do
     cast(struct, params, ~w(domain resource))

@@ -174,28 +174,24 @@ defmodule Hexpm.Web.ControllerHelpers do
     end
   end
 
-  defp etag(nil) do
-    nil
-  end
-  defp etag([]) do
-    nil
-  end
-  defp etag(models) do
-    list = Enum.map(List.wrap(models), fn model ->
-      [model.__struct__, model.id, model.updated_at]
-    end)
+  defp etag(schemas) do
+    binary =
+      schemas
+      |> List.wrap()
+      |> Enum.map(&Hexpm.Web.Stale.etag/1)
+      |> List.flatten()
+      |> :erlang.term_to_binary()
 
-    binary = :erlang.term_to_binary(list)
     :crypto.hash(:md5, binary)
     |> Base.encode16(case: :lower)
   end
 
-  def last_modified(nil), do: nil
-  def last_modified([]),  do: nil
-  def last_modified(models) do
-    Enum.map(List.wrap(models), fn model ->
-      NaiveDateTime.to_erl(model.updated_at)
-    end)
+  def last_modified(schemas) do
+    schemas
+    |> List.wrap()
+    |> Enum.map(&Hexpm.Web.Stale.last_modified/1)
+    |> List.flatten()
+    |> Enum.map(&NaiveDateTime.to_erl/1)
     |> Enum.max()
   end
 

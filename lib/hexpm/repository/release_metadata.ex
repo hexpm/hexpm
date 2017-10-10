@@ -1,6 +1,8 @@
 defmodule Hexpm.Repository.ReleaseMetadata do
   use Hexpm.Web, :schema
 
+  @derive Hexpm.Web.Stale
+
   embedded_schema do
     field :app, :string
     field :build_tools, {:array, :string}

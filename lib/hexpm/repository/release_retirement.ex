@@ -1,6 +1,8 @@
 defmodule Hexpm.Repository.ReleaseRetirement do
   use Hexpm.Web, :schema
 
+  @derive Hexpm.Web.Stale
+
   embedded_schema do
     field :reason, :string
     field :message, :string

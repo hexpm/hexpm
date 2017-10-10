@@ -1,6 +1,8 @@
 defmodule Hexpm.Repository.Release do
   use Hexpm.Web, :schema
 
+  @derive {Hexpm.Web.Stale, assocs: [:requirements, :downloads]}
+
   schema "releases" do
     field :version, Hexpm.Version
     field :checksum, :string

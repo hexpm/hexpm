@@ -1,5 +1,7 @@
 defmodule Hexpm.Repository.Package do
   use Hexpm.Web, :schema
+
+  @derive {Hexpm.Web.Stale, assocs: [:releases, :owners, :downloads]}
   @derive {Phoenix.Param, key: :name}
 
   schema "packages" do
