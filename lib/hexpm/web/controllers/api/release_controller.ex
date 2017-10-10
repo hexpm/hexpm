@@ -12,9 +12,11 @@ defmodule Hexpm.Web.API.ReleaseController do
     handle_tarball(conn, conn.assigns.repository, conn.assigns.package, conn.assigns.current_user, body)
   end
 
-  def show(conn, _params) do
+  def show(conn, params) do
     if release = conn.assigns.release do
-      release = Releases.preload(release)
+      release =
+        Releases.preload(release, [:requirements])
+        |> Map.put(:downloads, Releases.downloads_by_period(release.id, params["downloads"]))
 
       when_stale(conn, release, fn conn ->
         conn
@@ -37,18 +39,6 @@ defmodule Hexpm.Web.API.ReleaseController do
         |> send_resp(204, "")
       {:error, _, changeset, _} ->
         validation_failed(conn, changeset)
-    end
-  end
-
-  def show_downloads(conn, params) do
-    if release = conn.assigns.release do
-      filter = Hexpm.Utils.safe_to_atom(params["filter"], ["by_month", "by_week", "by_day"]) || :all
-      downloads = Releases.downloads_by(release.id, filter)
-      conn
-      |> api_cache(:public)
-      |> render(:show_downloads, [package: release.package, release: release, downloads: downloads])
-    else
-      not_found(conn)
     end
   end
 

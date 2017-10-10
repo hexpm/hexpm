@@ -156,30 +156,34 @@ defmodule Hexpm.Repository.Release do
     )
   end
 
-  def downloads_by(release_id, filter) do
+  defmacro date_trunc(period, expr) do
+    quote do
+      fragment("date_trunc(?, ?)", unquote(period), unquote(expr))
+    end
+  end
+  defmacro date_trunc_format(period, format, expr) do
+    quote do
+      fragment("to_char(date_trunc(?, ?), ?)", unquote(period), unquote(expr), unquote(format))
+    end
+  end
+
+  def downloads_by_period(release_id, filter) do
+    query = from(d in Download,
+      where: d.release_id == ^release_id)
     case filter do
-      :by_day ->
-        from(d in Download,
-          where: d.release_id == ^release_id,
-          group_by: fragment("date_trunc('day', ?)", d.day),
-          order_by: fragment("date_trunc('day', ?)", d.day),
-          select: {fragment("to_char(date_trunc('day', ?), 'YYYY-MM-DD')", d.day), fragment("sum(?)", d.downloads)})
-      :by_week ->
-        from(d in Download,
-          where: d.release_id == ^release_id,
-          group_by: fragment("date_trunc('week', ?)",  d.day), # d.day,
-          order_by: fragment("date_trunc('week', ?)",  d.day), # d.day,
-          select: {fragment("to_char(date_trunc('week', ?), 'YYYY-MM-DD')", d.day), fragment("sum(?)", d.downloads)})
-      :by_month ->
-        from(d in Download,
-          where: d.release_id == ^release_id,
-          group_by: fragment("date_trunc('month', ?)",  d.day), # d.day,
-          order_by: fragment("date_trunc('month', ?)",  d.day), # d.day,
-          select: {fragment("to_char(date_trunc('month', ?), 'YYYY-MM')", d.day), fragment("sum(?)", d.downloads)})
-      _ ->
-        from(d in Download,
-          where: d.release_id == ^release_id,
-          select: fragment("sum(?)", d.downloads))
+      "day" ->
+        from(d in query,
+          group_by: date_trunc("day", d.day),
+          order_by: date_trunc("day", d.day),
+          select: {date_trunc_format("day", "YYYY-MM-DD", d.day), sum(d.downloads)})
+      "month" ->
+        from(d in query,
+          group_by: date_trunc("month", d.day),
+          order_by: date_trunc("month", d.day),
+          select: {date_trunc_format("month", "YYYY-MM", d.day), sum(d.downloads)})
+      "all" ->
+        from(d in query,
+          select: sum(d.downloads))
     end
   end
 

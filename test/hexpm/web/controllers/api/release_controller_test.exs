@@ -530,12 +530,16 @@ defmodule Hexpm.Web.API.ReleaseControllerTest do
       user = insert(:user)
       repository = insert(:repository)
       package = insert(:package, package_owners: [build(:package_owner, owner: user)])
-      release = insert(:release, package: package, version: "0.0.1")
+      relprev = insert(:release, package: package, version: "0.0.1")
+      release = insert(:release, package: package, version: "0.0.2")
 
+      insert(:download, release: relprev, downloads: 8, day: ~D[2000-01-01])
       insert(:download, release: release, downloads: 1, day: ~D[2000-01-01])
-      insert(:download, release: release, downloads: 1, day: ~D[2000-02-01])
-      insert(:download, release: release, downloads: 1, day: ~D[2000-02-07])
-      insert(:download, release: release, downloads: 1, day: ~D[2000-02-08])
+      insert(:download, release: release, downloads: 3, day: ~D[2000-02-01])
+      insert(:download, release: release, downloads: 2, day: ~D[2000-02-07])
+      insert(:download, release: release, downloads: 4, day: ~D[2000-02-08])
+
+      Hexpm.Repo.refresh_view(Hexpm.Repository.ReleaseDownload)
 
       %{
         user: user,
@@ -548,70 +552,54 @@ defmodule Hexpm.Web.API.ReleaseControllerTest do
     test "get release downloads (all by default)", %{package: package, release: release} do
       result =
         build_conn()
-        |> get("api/packages/#{package.name}/releases/#{release.version}/downloads")
+        |> get("api/packages/#{package.name}/releases/#{release.version}")
         |> json_response(200)
 
-      assert result["name"] == "#{package.name}"
       assert result["version"] == "#{release.version}"
-      assert result["downloads"] == 4
+      assert result["downloads"] == 10
 
       result =
         build_conn()
-        |> get("api/packages/#{package.name}/releases/#{release.version}/downloads/all")
+        |> get("api/packages/#{package.name}/releases/#{release.version}?downloads=all")
         |> json_response(200)
 
-      assert result["name"] == "#{package.name}"
       assert result["version"] == "#{release.version}"
-      assert result["downloads"] == 4
+      assert result["downloads"] == 10
 
       result =
         build_conn()
-        |> get("api/packages/#{package.name}/releases/#{release.version}/downloads/xxx")
+        |> get("api/packages/#{package.name}/releases/#{release.version}?downloads=xxx")
         |> json_response(200)
 
-      assert result["name"] == "#{package.name}"
       assert result["version"] == "#{release.version}"
-      assert result["downloads"] == 4
+      assert result["downloads"] == 10
     end
 
     test "get release downloads by day", %{package: package, release: release} do
       result =
         build_conn()
-        |> get("api/packages/#{package.name}/releases/#{release.version}/downloads/by_day")
+        |> get("api/packages/#{package.name}/releases/#{release.version}?downloads=day")
         |> json_response(200)
 
-      assert result["name"] == "#{package.name}"
       assert result["version"] == "#{release.version}"
       assert result["downloads"] == [
         ["2000-01-01", 1],
-        ["2000-02-01", 1],
-        ["2000-02-07", 1],
-        ["2000-02-08", 1],
+        ["2000-02-01", 3],
+        ["2000-02-07", 2],
+        ["2000-02-08", 4],
       ]
-    end
-
-    test "get release downloads by week", %{package: package, release: release} do
-      result =
-        build_conn()
-        |> get("api/packages/#{package.name}/releases/#{release.version}/downloads/by_week")
-        |> json_response(200)
-
-      assert result["name"] == "#{package.name}"
-      assert result["version"] == "#{release.version}"
-      assert length(result["downloads"]) == 3 # to avoid different LOCALE (week)
     end
 
     test "get release downloads by month", %{package: package, release: release} do
       result =
         build_conn()
-        |> get("api/packages/#{package.name}/releases/#{release.version}/downloads/by_month")
+        |> get("api/packages/#{package.name}/releases/#{release.version}?downloads=month")
         |> json_response(200)
 
-      assert result["name"] == "#{package.name}"
       assert result["version"] == "#{release.version}"
       assert result["downloads"] == [
         ["2000-01", 1],
-        ["2000-02", 3],
+        ["2000-02", 9],
       ]
     end
   end
