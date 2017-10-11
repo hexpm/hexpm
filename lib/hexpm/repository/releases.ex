@@ -33,10 +33,9 @@ defmodule Hexpm.Repository.Releases do
     |> Enum.into(%{})
   end
 
-  def preload(release) do
-    Repo.preload(release,
-      requirements: Release.requirements(release),
-      downloads: ReleaseDownload.release(release))
+  def preload(release, keys) do
+    preload = Enum.map(keys, &preload_field(release, &1))
+    Repo.preload(release, preload)
   end
 
   def publish(repository, package, user, body, meta, checksum, [audit: audit_data]) do
@@ -123,6 +122,19 @@ defmodule Hexpm.Repository.Releases do
     |> audit_unretire(audit_data, package)
     |> Repo.transaction()
     |> publish_result(nil)
+  end
+
+  def downloads_by_period(package, filter) do
+    if filter in ["day", "month"] do
+      Release.downloads_by_period(package, filter)
+      |> Repo.all()
+      |> Enum.map(fn {date, downloads} ->
+        [to_string(date), downloads]
+      end)
+    else
+      Release.downloads_by_period(package, "all")
+      |> Repo.one()
+    end
   end
 
   defp publish_result({:ok, %{repository: repository, package: package, release: release} = result}, body) do
@@ -219,4 +231,7 @@ defmodule Hexpm.Repository.Releases do
     end)
   end
   defp normalize_requirements(requirements), do: requirements
+
+  defp preload_field(release, :requirements), do: {:requirements, Release.requirements(release)}
+  defp preload_field(release, :downloads), do: {:downloads, ReleaseDownload.release(release)}
 end

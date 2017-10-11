@@ -76,7 +76,7 @@ defmodule Hexpm.Web.PackageController do
   end
 
   defp package(conn, repositories, package, releases, release, type) do
-    release = Releases.preload(release)
+    release = Releases.preload(release, [:requirements, :downloads])
     latest_release_with_docs = Enum.find(releases, & &1.has_docs)
 
     docs_assigns =

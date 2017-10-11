@@ -12,9 +12,11 @@ defmodule Hexpm.Web.API.ReleaseController do
     handle_tarball(conn, conn.assigns.repository, conn.assigns.package, conn.assigns.current_user, body)
   end
 
-  def show(conn, _params) do
+  def show(conn, params) do
     if release = conn.assigns.release do
-      release = Releases.preload(release)
+      release =
+        Releases.preload(release, [:requirements])
+        |> Map.put(:downloads, Releases.downloads_by_period(release.id, params["downloads"]))
 
       when_stale(conn, release, fn conn ->
         conn

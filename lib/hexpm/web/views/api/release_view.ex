@@ -47,5 +47,5 @@ defmodule Hexpm.Web.API.ReleaseView do
 
   defp downloads(%Ecto.Association.NotLoaded{}), do: 0
   defp downloads(nil), do: 0
-  defp downloads(downloads), do: downloads.downloads
+  defp downloads(downloads), do: downloads
 end

@@ -155,6 +155,37 @@ defmodule Hexpm.Repository.Release do
       select: {p.name, r.version, r.inserted_at, p.meta}
     )
   end
+
+  defmacrop date_trunc(period, expr) do
+    quote do
+      fragment("date_trunc(?, ?)", unquote(period), unquote(expr))
+    end
+  end
+
+  defmacrop date_trunc_format(period, format, expr) do
+    quote do
+      fragment("to_char(date_trunc(?, ?), ?)", unquote(period), unquote(expr), unquote(format))
+    end
+  end
+
+  def downloads_by_period(release_id, filter) do
+    query = from(d in Download, where: d.release_id == ^release_id)
+    case filter do
+      "day" ->
+        from(d in query,
+          group_by: date_trunc("day", d.day),
+          order_by: date_trunc("day", d.day),
+          select: {date_trunc_format("day", "YYYY-MM-DD", d.day), sum(d.downloads)})
+      "month" ->
+        from(d in query,
+          group_by: date_trunc("month", d.day),
+          order_by: date_trunc("month", d.day),
+          select: {date_trunc_format("month", "YYYY-MM", d.day), sum(d.downloads)})
+      "all" ->
+        from(d in query, select: sum(d.downloads))
+    end
+  end
+
 end
 
 defimpl Phoenix.Param, for: Hexpm.Repository.Release do
