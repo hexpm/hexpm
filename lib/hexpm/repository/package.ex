@@ -51,6 +51,7 @@ defmodule Hexpm.Repository.Package do
 
   defp changeset(package, :create, params) do
     changeset(package, :update, params)
+    |> validate_format(:name, ~r/^[a-z](_?([a-z]|\d)+)+$/)
     |> unique_constraint(:name, name: "packages_repository_id_name_index")
   end
 
@@ -59,7 +60,7 @@ defmodule Hexpm.Repository.Package do
     |> cast_embed(:meta, required: true)
     |> validate_required(:name)
     |> validate_length(:name, min: 2)
-    |> validate_format(:name, ~r/^[a-z](_?([a-z]|\d)+)+$/)
+    |> validate_format(:name, ~r"^[a-z]\w*$")
     |> validate_exclusion(:name, @reserved_names)
   end
 
