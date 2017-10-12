@@ -268,7 +268,7 @@ and want to authenticate on a CI server or similar system
 <h3>Generate a repository autentication key</h3>
 <p>This command is useful to pre-generate keys for use with <code class="inline">mix hex.organization auth NAME --key KEY</code>
 on CI servers or similar systems. It returns the hash of the generated key that you can pass to
-<code class="inline">auth NAME --key KEY</code></p>
+<code class="inline">auth NAME --key KEY</code>. This key allows read-only access to the repository.</p>
 <pre><code>mix hex.organization key NAME</code></pre>
 <h3>List all authorized organizations</h3>
 <pre><code>mix hex.organization list</code></pre>
