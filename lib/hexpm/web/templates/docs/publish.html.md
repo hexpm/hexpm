@@ -51,7 +51,7 @@ Under the `:package` property are some additional configuration options:
   <dt><code>:links</code></dt>
   <dd>A map where the key is a link name and the value is the link URL. Optional but highly recommended.</dd>
   <dt><code>:files</code></dt>
-  <dd>A list of files and directories to include in the package. Has to include <code>mix.exs</code>. Defaults to standard project directories, so you usually don't need to set this property.</dd>
+  <dd>A list of files and directories to include in the package. Defaults to standard project directories, so you usually don't need to set this property.</dd>
   <dt><code>:build_tools</code></dt>
   <dd>List of build tools that can build the package. It's very rare that you need to set this, as Hex tries to automatically detect the build tools based on the files in the package. If a <code>rebar</code> or <code>rebar.config</code> file is present Hex will mark it as able to build with rebar. This detection can be overridden by setting this field.</dd>
 </dl>
