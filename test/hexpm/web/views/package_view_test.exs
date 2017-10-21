@@ -25,21 +25,21 @@ defmodule Hexpm.Web.PackageViewTest do
       version = Version.parse!("1.0.0")
       package = %{name: "ecto", repository: %{name: "hexpm"}}
       release = %{meta: %{app: package.name}, version: version}
-      assert PackageView.dep_snippet(:mix, package, release) == ~s({:ecto, "~> 1.0"})
+      assert PackageView.dep_snippet(:mix, package, release) == ~s({:ecto, "~> 1.0"},)
     end
 
     test "format mix dependency snippet" do
       version = Version.parse!("1.0.0")
       package = %{name: "timex", repository: %{name: "hexpm"}}
       release = %{meta: %{app: "extime"}, version: version}
-      assert PackageView.dep_snippet(:mix, package, release) == ~s({:extime, "~> 1.0", hex: :timex})
+      assert PackageView.dep_snippet(:mix, package, release) == ~s({:extime, "~> 1.0", hex: :timex},)
     end
 
     test "format private mix dependency snippet" do
       version = Version.parse!("1.0.0")
       package = %{name: "ecto", repository: %{name: "private"}}
       release = %{meta: %{app: package.name}, version: version}
-      assert PackageView.dep_snippet(:mix, package, release) == ~s({:ecto, "~> 1.0", organization: "private"})
+      assert PackageView.dep_snippet(:mix, package, release) == ~s({:ecto, "~> 1.0", organization: "private"},)
     end
 
     test "format simple rebar dependency snippet" do
@@ -67,7 +67,7 @@ defmodule Hexpm.Web.PackageViewTest do
       version = Version.parse!("1.0.0")
       package = %{name: "lfe_app", repository: %{name: "hexpm"}}
       release = %{meta: %{app: "lfe-app"}, version: version}
-      assert PackageView.dep_snippet(:mix, package, release) == ~s({:"lfe-app", "~> 1.0", hex: :lfe_app})
+      assert PackageView.dep_snippet(:mix, package, release) == ~s({:"lfe-app", "~> 1.0", hex: :lfe_app},)
     end
 
     test "escape rebar application name" do
