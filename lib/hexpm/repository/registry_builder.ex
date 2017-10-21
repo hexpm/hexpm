@@ -337,8 +337,8 @@ defmodule Hexpm.Repository.RegistryBuilder do
         r.package_id,
         r.checksum,
         fragment("?->'build_tools'", r.meta),
-        r.retirement,
-      },
+        r.retirement
+      }
     )
     |> Hexpm.Repo.all()
   end
@@ -356,8 +356,8 @@ defmodule Hexpm.Repository.RegistryBuilder do
         dep.name,
         req.app,
         req.requirement,
-        req.optional,
-      },
+        req.optional
+      }
     )
     |> Hexpm.Repo.all()
 
