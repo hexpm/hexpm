@@ -53,9 +53,10 @@ defmodule Hexpm.Web do
       import Ecto
       import Ecto.Query, only: [from: 1, from: 2]
 
-      import Hexpm.Web.{Router.Helpers, ControllerHelpers, AuthHelpers}
+      import Hexpm.Web.{ControllerHelpers, AuthHelpers}
 
       alias Hexpm.Web.Endpoint
+      alias Hexpm.Web.Router.Helpers, as: Routes
 
       Hexpm.Web.shared()
     end
@@ -78,9 +79,10 @@ defmodule Hexpm.Web do
         select: 3, select: 4
       ]
 
-      import Hexpm.Web.{Router.Helpers, ViewHelpers, ViewIcons}
+      import Hexpm.Web.{ViewHelpers, ViewIcons}
 
       alias Hexpm.Web.Endpoint
+      alias Hexpm.Web.Router.Helpers, as: Routes
 
       Hexpm.Web.shared
     end
