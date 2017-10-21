@@ -46,9 +46,9 @@ defmodule Hexpm.Web.PackageView do
     organization = snippet_organization(package.repository.name)
 
     if package.name == app_name do
-      "{:#{package.name}, \"#{version}\"#{organization}}"
+      "{:#{package.name}, \"#{version}\"#{organization}},"
     else
-      "{#{app_name(:mix, app_name)}, \"#{version}\", hex: :#{package.name}#{organization}}"
+      "{#{app_name(:mix, app_name)}, \"#{version}\", hex: :#{package.name}#{organization}},"
     end
   end
 
