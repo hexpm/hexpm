@@ -39,7 +39,7 @@ defmodule Hexpm.Web.API.KeyController do
     else
       case Keys.add(user, params, audit: audit_data(conn)) do
         {:ok, %{key: key}} ->
-          location = api_key_url(conn, :show, params["name"])
+          location = Routes.api_key_url(conn, :show, params["name"])
 
           conn
           |> put_resp_header("location", location)

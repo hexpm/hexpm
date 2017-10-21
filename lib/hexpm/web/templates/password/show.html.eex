@@ -2,7 +2,7 @@
 
 <div class="row">
   <div class="col-md-8 col-md-offset-2">
-    <%= form_for @changeset, password_path(Endpoint, :update), [method: :post], fn f -> %>
+    <%= form_for @changeset, Routes.password_path(Endpoint, :update), [method: :post], fn f -> %>
       <h2>Choose a new password</h2>
 
       <div class="form-group">

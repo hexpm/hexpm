@@ -11,7 +11,7 @@ defmodule Hexpm.Web.SignupController do
         conn
         |> put_flash(:info, "A confirmation email has been sent, you will have access to your account shortly.")
         |> put_flash(:custom_location, true)
-        |> redirect(to: page_path(Hexpm.Web.Endpoint, :index))
+        |> redirect(to: Routes.page_path(Hexpm.Web.Endpoint, :index))
       {:error, changeset} ->
         conn
         |> put_status(400)

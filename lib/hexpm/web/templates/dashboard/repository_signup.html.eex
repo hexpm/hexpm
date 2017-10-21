@@ -19,7 +19,7 @@
         </p>
       </div>
       <div class="panel-body">
-        <%= form_tag dashboard_path(Endpoint, :new_repository_signup) do %>
+        <%= form_tag Routes.dashboard_path(Endpoint, :new_repository_signup) do %>
           <div class="form-group">
             <label for="name">Organization name</label>
             <input type="text" id="name" name="name" class="form-control" placeholder="Only allows lowercase letters and underscore" required pattern="[a-z]\w*" aria-describedby="name-helpblock">

@@ -26,7 +26,7 @@
               <span class="label label-success">Public</span>
             <% end %>
 
-            <%= form_tag(dashboard_path(Endpoint, :remove_email), method: :delete, class: "action") do %>
+            <%= form_tag(Routes.dashboard_path(Endpoint, :remove_email), method: :delete, class: "action") do %>
               <input type="hidden" name="email" value="<%= email.email %>">
               <button type="submit" class="btn btn-link btn-svg" <%= if email.primary do %>disabled<% end %>>
                 <%= Hexpm.Web.ViewIcons.icon(:octicon, :trashcan) %>
@@ -34,20 +34,20 @@
             <% end %>
 
             <%= if email.verified and not email.primary do %>
-              <%= form_tag(dashboard_path(Endpoint, :primary_email), class: "action") do %>
+              <%= form_tag(Routes.dashboard_path(Endpoint, :primary_email), class: "action") do %>
                 <input type="hidden" name="email" value="<%= email.email %>">
                 <button type="submit" class="btn btn-primary btn-xs">Set as primary</button>
               <% end %>
             <% end %>
             <%= if email.verified and not email.public do %>
-              <%= form_tag(dashboard_path(Endpoint, :public_email), class: "action") do %>
+              <%= form_tag(Routes.dashboard_path(Endpoint, :public_email), class: "action") do %>
                 <input type="hidden" name="email" value="<%= email.email %>">
                 <button type="submit" class="btn btn-primary btn-xs">Set as public</button>
               <% end %>
             <% end %>
 
             <%= unless email.verified do %>
-              <%= form_tag(dashboard_path(Endpoint, :resend_verify_email), class: "action") do %>
+              <%= form_tag(Routes.dashboard_path(Endpoint, :resend_verify_email), class: "action") do %>
                 <input type="hidden" name="email" value="<%= email.email %>">
                 <button type="submit" class="btn btn-link">Resend verification email</button>
               <% end %>
@@ -56,7 +56,7 @@
         <% end %>
 
         <li class="list-group-item">
-          <%= form_for @add_email_changeset, dashboard_path(Endpoint, :add_email), [method: :post], fn f -> %>
+          <%= form_for @add_email_changeset, Routes.dashboard_path(Endpoint, :add_email), [method: :post], fn f -> %>
             <%= label f, :email, "Add email address" %>
             <div class="form-group">
               <%= email_input f, :email, class: "form-control" %>

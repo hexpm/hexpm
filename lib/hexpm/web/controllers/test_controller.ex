@@ -50,7 +50,7 @@ defmodule Hexpm.Web.TestController do
   end
 
   def docs_sitemap(conn, _params) do
-    Hexpm.Store.get(nil, :docs_bucket, sitemap_path(Hexpm.Web.Endpoint, :sitemap), [])
+    Hexpm.Store.get(nil, :docs_bucket, Routes.sitemap_path(Hexpm.Web.Endpoint, :sitemap), [])
     |> send_object(conn)
   end
 

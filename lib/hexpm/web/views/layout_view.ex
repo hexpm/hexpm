@@ -42,7 +42,7 @@ defmodule Hexpm.Web.LayoutView do
       tag(:meta, property: "og:title", content: Map.get(assigns, :title)),
       tag(:meta, property: "og:type", content: "website"),
       tag(:meta, property: "og:url", content: Map.get(assigns, :canonical_url)),
-      tag(:meta, property: "og:image", content: static_url(Hexpm.Web.Endpoint, "/images/favicon-160.png")),
+      tag(:meta, property: "og:image", content: Routes.static_url(Hexpm.Web.Endpoint, "/images/favicon-160.png")),
       tag(:meta, property: "og:image:width", content: "160"),
       tag(:meta, property: "og:image:height", content: "160"),
       tag(:meta, property: "og:description", content: description(assigns)),

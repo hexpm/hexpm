@@ -4,6 +4,7 @@ defmodule Hexpm.Web.ControllerHelpers do
 
   alias Hexpm.Accounts.Auth
   alias Hexpm.Repository.{Packages, Releases, Repositories}
+  alias Hexpm.Web.Router.Helpers, as: Routes
 
   @max_cache_age 60
 
@@ -302,7 +303,7 @@ defmodule Hexpm.Web.ControllerHelpers do
     if logged_in?(conn) do
       conn
     else
-      redirect(conn, to: Hexpm.Web.Router.Helpers.login_path(conn, :show, return: conn.request_path))
+      redirect(conn, to: Routes.login_path(conn, :show, return: conn.request_path))
       |> halt
     end
   end

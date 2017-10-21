@@ -4,7 +4,7 @@ defmodule Hexpm.Web.DashboardController do
   plug :requires_login
 
   def index(conn, _params) do
-    redirect(conn, to: dashboard_path(conn, :profile))
+    redirect(conn, to: Routes.dashboard_path(conn, :profile))
   end
 
   def profile(conn, _params) do
@@ -19,7 +19,7 @@ defmodule Hexpm.Web.DashboardController do
       {:ok, _user} ->
         conn
         |> put_flash(:info, "Profile updated successfully.")
-        |> redirect(to: dashboard_path(conn, :profile))
+        |> redirect(to: Routes.dashboard_path(conn, :profile))
       {:error, changeset} ->
         conn
         |> put_status(400)
@@ -39,7 +39,7 @@ defmodule Hexpm.Web.DashboardController do
       {:ok, _user} ->
         conn
         |> put_flash(:info, "Your password has been updated.")
-        |> redirect(to: dashboard_path(conn, :password))
+        |> redirect(to: Routes.dashboard_path(conn, :password))
       {:error, changeset} ->
         conn
         |> put_status(400)
@@ -59,7 +59,7 @@ defmodule Hexpm.Web.DashboardController do
         email = params["email"]["email"]
         conn
         |> put_flash(:info, "A verification email has been sent to #{email}.")
-        |> redirect(to: dashboard_path(conn, :email))
+        |> redirect(to: Routes.dashboard_path(conn, :email))
       {:error, changeset} ->
         conn
         |> put_status(400)
@@ -72,11 +72,11 @@ defmodule Hexpm.Web.DashboardController do
       :ok ->
         conn
         |> put_flash(:info, "Removed email #{email} from your account.")
-        |> redirect(to: dashboard_path(conn, :email))
+        |> redirect(to: Routes.dashboard_path(conn, :email))
       {:error, reason} ->
         conn
         |> put_flash(:error, email_error_message(reason, email))
-        |> redirect(to: dashboard_path(conn, :email))
+        |> redirect(to: Routes.dashboard_path(conn, :email))
     end
   end
 
@@ -85,11 +85,11 @@ defmodule Hexpm.Web.DashboardController do
       :ok ->
         conn
         |> put_flash(:info, "Your primary email was changed to #{email}.")
-        |> redirect(to: dashboard_path(conn, :email))
+        |> redirect(to: Routes.dashboard_path(conn, :email))
       {:error, reason} ->
         conn
         |> put_flash(:error, email_error_message(reason, email))
-        |> redirect(to: dashboard_path(conn, :email))
+        |> redirect(to: Routes.dashboard_path(conn, :email))
     end
   end
 
@@ -98,11 +98,11 @@ defmodule Hexpm.Web.DashboardController do
       :ok ->
         conn
         |> put_flash(:info, "Your public email was changed to #{email}.")
-        |> redirect(to: dashboard_path(conn, :email))
+        |> redirect(to: Routes.dashboard_path(conn, :email))
       {:error, reason} ->
         conn
         |> put_flash(:error, email_error_message(reason, email))
-        |> redirect(to: dashboard_path(conn, :email))
+        |> redirect(to: Routes.dashboard_path(conn, :email))
     end
   end
 
@@ -111,11 +111,11 @@ defmodule Hexpm.Web.DashboardController do
       :ok ->
         conn
         |> put_flash(:info, "A verification email has been sent to #{email}.")
-        |> redirect(to: dashboard_path(conn, :email))
+        |> redirect(to: Routes.dashboard_path(conn, :email))
       {:error, reason} ->
         conn
         |> put_flash(:error, email_error_message(reason, email))
-        |> redirect(to: dashboard_path(conn, :email))
+        |> redirect(to: Routes.dashboard_path(conn, :email))
     end
   end
 
@@ -132,7 +132,7 @@ defmodule Hexpm.Web.DashboardController do
         {:ok, _} ->
           conn
           |> put_flash(:info, "User #{username} has been added to the organization.")
-          |> redirect(to: dashboard_path(conn, :repository, repository))
+          |> redirect(to: Routes.dashboard_path(conn, :repository, repository))
         {:error, :unknown_user} ->
           conn
           |> put_status(400)
@@ -154,7 +154,7 @@ defmodule Hexpm.Web.DashboardController do
         :ok ->
           conn
           |> put_flash(:info, "User #{username} has been removed from the repository.")
-          |> redirect(to: dashboard_path(conn, :repository, repository))
+          |> redirect(to: Routes.dashboard_path(conn, :repository, repository))
         {:error, reason} ->
           conn
           |> put_status(400)
@@ -171,7 +171,7 @@ defmodule Hexpm.Web.DashboardController do
         {:ok, _} ->
           conn
           |> put_flash(:info, "User #{username}'s role has been changed to #{params["role"]}.")
-          |> redirect(to: dashboard_path(conn, :repository, repository))
+          |> redirect(to: Routes.dashboard_path(conn, :repository, repository))
         {:error, :unknown_user} ->
           conn
           |> put_status(400)
@@ -203,7 +203,7 @@ defmodule Hexpm.Web.DashboardController do
 
     conn
     |> put_flash(:info, "You have requested access to the organization beta. We will get back to you shortly.")
-    |> redirect(to: dashboard_path(conn, :repository_signup))
+    |> redirect(to: Routes.dashboard_path(conn, :repository_signup))
   end
 
   defp render_profile(conn, changeset) do

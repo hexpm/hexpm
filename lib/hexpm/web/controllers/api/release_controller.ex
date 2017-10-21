@@ -54,7 +54,7 @@ defmodule Hexpm.Web.API.ReleaseController do
   end
 
   defp publish_result({:ok, %{action: :insert, package: package, release: release}}, conn) do
-    location = api_release_url(conn, :show, package, release)
+    location = Routes.api_release_url(conn, :show, package, release)
 
     conn
     |> put_resp_header("location", location)

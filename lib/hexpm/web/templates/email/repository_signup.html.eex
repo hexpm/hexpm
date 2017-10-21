@@ -8,5 +8,5 @@
   Username: <%= @user.username %>
   Full name: <%= @user.full_name %>
   Email: <%= User.email(@user, :primary) %>
-  Link: <a href="<%= user_url(Endpoint, :show, @user) %>"><%= user_url(Endpoint, :show, @user) %></a>
+  Link: <a href="<%= Routes.user_url(Endpoint, :show, @user) %>"><%= Routes.user_url(Endpoint, :show, @user) %></a>
 </pre>

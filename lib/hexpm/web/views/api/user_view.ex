@@ -17,7 +17,7 @@ defmodule Hexpm.Web.API.UserView do
       full_name: user.full_name,
       handles: handles(user),
       email: User.email(user, :public),
-      url: api_user_url(Endpoint, :show, user),
+      url: Routes.api_user_url(Endpoint, :show, user),
       inserted_at: user.inserted_at,
       updated_at: user.updated_at,
     }
@@ -28,7 +28,7 @@ defmodule Hexpm.Web.API.UserView do
     %{
       username: user.username,
       email: User.email(user, :public),
-      url: api_user_url(Endpoint, :show, user),
+      url: Routes.api_user_url(Endpoint, :show, user),
     }
   end
 
@@ -40,7 +40,7 @@ defmodule Hexpm.Web.API.UserView do
 
   defp owned_packages(packages) do
     Enum.into(packages, %{}, fn package ->
-      {package.name, api_package_url(Endpoint, :show, package)}
+      {package.name, Routes.api_package_url(Endpoint, :show, package)}
     end)
   end
 end

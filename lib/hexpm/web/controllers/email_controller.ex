@@ -12,6 +12,6 @@ defmodule Hexpm.Web.EmailController do
 
     conn
     |> put_flash(:custom_location, true)
-    |> redirect(to: page_path(Hexpm.Web.Endpoint, :index))
+    |> redirect(to: Routes.page_path(Hexpm.Web.Endpoint, :index))
   end
 end
