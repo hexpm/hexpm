@@ -53,7 +53,6 @@ defmodule Hexpm.Web.ControllerHelpers do
 
   def validation_failed(conn, %Ecto.Changeset{} = changeset) do
     errors = translate_errors(changeset)
-    Ecto.Changeset.traverse_errors(changeset, & &1)
     render_error(conn, 422, errors: errors)
   end
   def validation_failed(conn, errors) do
