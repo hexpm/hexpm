@@ -128,9 +128,6 @@ defmodule Hexpm.Repository.Releases do
     if filter in ["day", "month"] do
       Release.downloads_by_period(package, filter)
       |> Repo.all()
-      |> Enum.map(fn {date, downloads} ->
-        [to_string(date), downloads]
-      end)
     else
       Release.downloads_by_period(package, "all")
       |> Repo.one()

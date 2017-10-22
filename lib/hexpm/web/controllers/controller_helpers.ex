@@ -191,9 +191,15 @@ defmodule Hexpm.Web.ControllerHelpers do
     |> List.wrap()
     |> Enum.map(&Hexpm.Web.Stale.last_modified/1)
     |> List.flatten()
-    |> Enum.map(&NaiveDateTime.to_erl/1)
+    |> Enum.reject(&is_nil/1)
+    |> Enum.map(&time_to_erl/1)
     |> Enum.max()
   end
+
+  defp time_to_erl(%NaiveDateTime{} = datetime),
+    do: NaiveDateTime.to_erl(datetime)
+  defp time_to_erl(%Date{} = date),
+    do: {Date.to_erl(date), {0, 0, 0}}
 
   def fetch_repository(conn, _opts) do
     if repository = Repositories.get(conn.params["repository"]) do
