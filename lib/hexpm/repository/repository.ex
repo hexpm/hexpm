@@ -1,5 +1,7 @@
 defmodule Hexpm.Repository.Repository do
   use Hexpm.Web, :schema
+
+  @derive Hexpm.Web.Stale
   @derive {Phoenix.Param, key: :name}
 
   schema "repositories" do

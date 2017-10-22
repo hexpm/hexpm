@@ -174,30 +174,32 @@ defmodule Hexpm.Web.ControllerHelpers do
     end
   end
 
-  defp etag(nil) do
-    nil
-  end
-  defp etag([]) do
-    nil
-  end
-  defp etag(models) do
-    list = Enum.map(List.wrap(models), fn model ->
-      [model.__struct__, model.id, model.updated_at]
-    end)
+  defp etag(schemas) do
+    binary =
+      schemas
+      |> List.wrap()
+      |> Enum.map(&Hexpm.Web.Stale.etag/1)
+      |> List.flatten()
+      |> :erlang.term_to_binary()
 
-    binary = :erlang.term_to_binary(list)
     :crypto.hash(:md5, binary)
     |> Base.encode16(case: :lower)
   end
 
-  def last_modified(nil), do: nil
-  def last_modified([]),  do: nil
-  def last_modified(models) do
-    Enum.map(List.wrap(models), fn model ->
-      NaiveDateTime.to_erl(model.updated_at)
-    end)
+  def last_modified(schemas) do
+    schemas
+    |> List.wrap()
+    |> Enum.map(&Hexpm.Web.Stale.last_modified/1)
+    |> List.flatten()
+    |> Enum.reject(&is_nil/1)
+    |> Enum.map(&time_to_erl/1)
     |> Enum.max()
   end
+
+  defp time_to_erl(%NaiveDateTime{} = datetime),
+    do: NaiveDateTime.to_erl(datetime)
+  defp time_to_erl(%Date{} = date),
+    do: {Date.to_erl(date), {0, 0, 0}}
 
   def fetch_repository(conn, _opts) do
     if repository = Repositories.get(conn.params["repository"]) do

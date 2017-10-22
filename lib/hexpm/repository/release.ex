@@ -1,6 +1,8 @@
 defmodule Hexpm.Repository.Release do
   use Hexpm.Web, :schema
 
+  @derive {Hexpm.Web.Stale, assocs: [:requirements, :downloads]}
+
   schema "releases" do
     field :version, Hexpm.Version
     field :checksum, :string
@@ -175,14 +177,29 @@ defmodule Hexpm.Repository.Release do
         from(d in query,
           group_by: date_trunc("day", d.day),
           order_by: date_trunc("day", d.day),
-          select: {date_trunc_format("day", "YYYY-MM-DD", d.day), sum(d.downloads)})
+          select: %Download{
+            day: date_trunc_format("day", "YYYY-MM-DD", d.day),
+            downloads: sum(d.downloads),
+            updated_at: max(d.day)
+          }
+        )
       "month" ->
         from(d in query,
           group_by: date_trunc("month", d.day),
           order_by: date_trunc("month", d.day),
-          select: {date_trunc_format("month", "YYYY-MM", d.day), sum(d.downloads)})
+          select:  %Download{
+            day: date_trunc_format("month", "YYYY-MM", d.day),
+            downloads: sum(d.downloads),
+            updated_at: max(d.day)
+          }
+        )
       "all" ->
-        from(d in query, select: sum(d.downloads))
+        from(d in query,
+          select: %Download{
+            downloads: sum(d.downloads),
+            updated_at: max(d.day)
+          }
+        )
     end
   end
 

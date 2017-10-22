@@ -1,6 +1,7 @@
 defmodule Hexpm.Repository.ReleaseDownload do
   use Hexpm.Web, :schema
 
+  @derive Hexpm.Web.Stale
   @primary_key false
 
   schema "release_downloads" do

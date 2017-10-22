@@ -67,7 +67,7 @@ defmodule Hexpm.Repository.Packages do
 
   def search_with_versions(repositories, page, packages_per_page, query, sort) do
     Package.all(repositories, page, packages_per_page, query, sort, nil)
-    |> Ecto.Query.preload(releases: ^from(r in Release, select: map(r, [:version])))
+    |> Ecto.Query.preload(releases: ^from(r in Release, select: struct(r, [:id, :version, :updated_at])))
     |> Repo.all()
     |> Enum.map(fn package -> update_in(package.releases, &Release.sort/1) end)
     |> attach_repositories(repositories)

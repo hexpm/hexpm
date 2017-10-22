@@ -2,9 +2,6 @@ defmodule Hexpm.Web.API.ReleaseView do
   use Hexpm.Web, :view
   alias Hexpm.Web.API.RetirementView
 
-  def render("index." <> _, %{releases: releases}) do
-    render_many(releases, __MODULE__, "show")
-  end
   def render("show." <> _, %{release: release}) do
     render_one(release, __MODULE__, "show")
   end
@@ -28,8 +25,8 @@ defmodule Hexpm.Web.API.ReleaseView do
         build_tools: Enum.uniq(release.meta.build_tools),
         elixir: release.meta.elixir,
       },
+      downloads: downloads(release.downloads)
     }
-    |> include_if_loaded(:downloads, release.downloads, &downloads/1)
   end
 
   def render("minimal", %{release: release, package: package}) do
@@ -45,7 +42,13 @@ defmodule Hexpm.Web.API.ReleaseView do
     end)
   end
 
-  defp downloads(%Ecto.Association.NotLoaded{}), do: 0
-  defp downloads(nil), do: 0
-  defp downloads(downloads), do: downloads
+  defp downloads(%Ecto.Association.NotLoaded{}), do: nil
+  defp downloads(%Download{downloads: downloads}) do
+    downloads
+  end
+  defp downloads(downloads) when is_list(downloads) do
+    Enum.map(downloads, fn download ->
+      [download.day, download.downloads]
+    end)
+  end
 end

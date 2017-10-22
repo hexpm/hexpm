@@ -1,6 +1,9 @@
 defmodule Hexpm.Accounts.Email do
   use Hexpm.Web, :schema
 
+  @derive Hexpm.Web.Stale
+  @email_regex ~r"^.+@.+\..+$"
+
   schema "emails" do
     field :email, :string
     field :verified, :boolean, default: false
@@ -12,8 +15,6 @@ defmodule Hexpm.Accounts.Email do
 
     timestamps()
   end
-
-  @email_regex ~r"^.+@.+\..+$"
 
   def changeset(email, type, params, verified? \\ not Application.get_env(:hexpm, :user_confirm))
 

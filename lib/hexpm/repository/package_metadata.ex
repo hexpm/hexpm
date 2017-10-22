@@ -1,6 +1,8 @@
 defmodule Hexpm.Repository.PackageMetadata do
   use Hexpm.Web, :schema
 
+  @derive Hexpm.Web.Stale
+
   embedded_schema do
     field :description, :string
     field :licenses, {:array, :string}

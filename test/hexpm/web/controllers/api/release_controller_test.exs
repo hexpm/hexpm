@@ -486,6 +486,22 @@ defmodule Hexpm.Web.API.ReleaseControllerTest do
       conn = get(build_conn(), "api/packages/unknown/releases/1.2.3")
       assert conn.status == 404
     end
+
+    test "get release with requirements", %{package: package, release: release} do
+      package2 = insert(:package)
+      insert(:release, package: package2, version: "0.0.1")
+      insert(:requirement, release: release, dependency: package2, requirement: "~> 0.0.1")
+
+      result =
+        build_conn()
+        |> get("api/packages/#{package.name}/releases/#{release.version}")
+        |> json_response(200)
+
+      assert result["url"] =~ "/api/packages/#{package.name}/releases/#{release.version}"
+      assert result["html_url"] =~ "/packages/#{package.name}/#{release.version}"
+      assert result["version"] == "#{release.version}"
+      assert result["requirements"][package2.name]["requirement"] == "~> 0.0.1"
+    end
   end
 
   describe "GET /api/repos/:repository/packages/:name/releases/:version" do
