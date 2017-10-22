@@ -5,13 +5,13 @@
         <div class="container">
           <ul>
             <li>
-              <a href="<%= blog_path(Endpoint, :index) %>">blog</a>
+              <a href="<%= Routes.blog_path(Endpoint, :index) %>">blog</a>
             </li>
             <li>
-              <a href="<%= policy_path(Endpoint, :index) %>">policies</a>
+              <a href="<%= Routes.policy_path(Endpoint, :index) %>">policies</a>
             </li>
             <li>
-              <a href="<%= page_path(Endpoint, :sponsors) %>">sponsors</a>
+              <a href="<%= Routes.page_path(Endpoint, :sponsors) %>">sponsors</a>
             </li>
             <li>
               <a href="https://github.com/hexpm">github</a>
@@ -24,7 +24,7 @@
       </div>
     </div>
 
-    <script src="<%= static_path(Endpoint, "/js/app.js") %>"></script>
+    <script src="<%= Routes.static_path(Endpoint, "/js/app.js") %>"></script>
 
     <script>
       (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){

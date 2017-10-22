@@ -21,10 +21,10 @@ defmodule Hexpm.ConnCase do
       use Phoenix.ConnTest
 
       alias Hexpm.{Fake, Repo}
+      alias Hexpm.Web.Router.Helpers, as: Routes
 
       import Ecto
       import Ecto.Query, only: [from: 2]
-      import Hexpm.Web.Router.Helpers
       import Hexpm.{Case, Factory, TestHelpers}
       import unquote(__MODULE__)
 

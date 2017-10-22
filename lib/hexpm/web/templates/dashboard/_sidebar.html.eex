@@ -3,7 +3,7 @@
   <ul class="list-group">
     <%= for {id, name} <- account_settings() do %>
       <li class="list-group-item <%= selected_setting(@conn, id) %>">
-        <a href="<%= dashboard_path(Endpoint, id) %>">
+        <a href="<%= Routes.dashboard_path(Endpoint, id) %>">
           <%= name %>
         </a>
       </li>
@@ -12,20 +12,20 @@
   <div class="panel-heading">Organization settings</div>
   <%= if @current_user.repositories == [] do %>
     <div class="panel-body">
-      <small>You are not a member of any organizations. Organizations is currently in beta, fill out the <a href="<%= dashboard_path(Endpoint, :repository_signup) %>">sign up form</a> to request access.</small>
+      <small>You are not a member of any organizations. Organizations is currently in beta, fill out the <a href="<%= Routes.dashboard_path(Endpoint, :repository_signup) %>">sign up form</a> to request access.</small>
     </div>
   <% else %>
     <ul class="list-group">
       <%= for repository <- @current_user.repositories do %>
         <li class="list-group-item <%= selected_repository(@conn, repository.name) %>">
-          <a href="<%= dashboard_path(Endpoint, :repository, repository) %>">
+          <a href="<%= Routes.dashboard_path(Endpoint, :repository, repository) %>">
             <%= repository.name %>
           </a>
         </li>
       <% end %>
     </ul>
     <div class="panel-body">
-      <small>Fill out the <a href="<%= dashboard_path(Endpoint, :repository_signup) %>">sign up form</a> to request access to a new organization.</small>
+      <small>Fill out the <a href="<%= Routes.dashboard_path(Endpoint, :repository_signup) %>">sign up form</a> to request access to a new organization.</small>
     </div>
   <% end %>
 </div>

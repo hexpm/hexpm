@@ -204,7 +204,7 @@ tools = Keyword.take(tools, compatible_tools)
     <ul class="owners-list">
       <%= for user <- @owners do %>
         <li>
-          <a href="<%= user_path(Endpoint, :show, user) %>">
+          <a href="<%= Routes.user_path(Endpoint, :show, user) %>">
             <img src="<%= gravatar_url(User.email(user, :public), :small) %>" class="owner-avatar"><%= user.username %>
           </a>
         </li>
@@ -215,7 +215,7 @@ tools = Keyword.take(tools, compatible_tools)
     <%= safe_join(@dependants, ", ", fn package ->
       link(package_name(package), to: path_for_package(package))
     end) %><%= if @dependants_count != 0 do %>,
-    <a href="<%= package_path(Endpoint, :index, search: "depends:#{@package.name}") %>">show all...</a>
+    <a href="<%= Routes.package_path(Endpoint, :index, search: "depends:#{@package.name}") %>">show all...</a>
     <% end %>
   </div>
 </div>

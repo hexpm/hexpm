@@ -1,8 +1,8 @@
 defmodule Hexpm.Web.ViewHelpers do
   use Phoenix.HTML
   alias Hexpm.Repository.Package
-  alias Hexpm.Web.Router.Helpers
   alias Hexpm.Web.Endpoint
+  alias Hexpm.Web.Router.Helpers, as: Routes
 
   def logged_in?(assigns) do
     !!assigns[:current_user]
@@ -21,53 +21,53 @@ defmodule Hexpm.Web.ViewHelpers do
 
   def path_for_package(package) do
     if package.repository.name == "hexpm" do
-      Helpers.package_path(Endpoint, :show, package, [])
+      Routes.package_path(Endpoint, :show, package, [])
     else
-      Helpers.package_path(Endpoint, :show, package.repository, package, [])
+      Routes.package_path(Endpoint, :show, package.repository, package, [])
     end
   end
 
   def path_for_package("hexpm", package) do
-    Helpers.package_path(Endpoint, :show, package, [])
+    Routes.package_path(Endpoint, :show, package, [])
   end
   def path_for_package(repository, package) do
-    Helpers.package_path(Endpoint, :show, repository, package, [])
+    Routes.package_path(Endpoint, :show, repository, package, [])
   end
 
   def path_for_release(package, release) do
     if package.repository.name == "hexpm" do
-      Helpers.package_path(Endpoint, :show, package, release, [])
+      Routes.package_path(Endpoint, :show, package, release, [])
     else
-      Helpers.package_path(Endpoint, :show, package.repository, package, release, [])
+      Routes.package_path(Endpoint, :show, package.repository, package, release, [])
     end
   end
 
   def html_url_for_package(%Package{repository_id: 1} = package) do
-    Helpers.package_url(Endpoint, :show, package, [])
+    Routes.package_url(Endpoint, :show, package, [])
   end
   def html_url_for_package(%Package{} = package) do
-    Helpers.package_url(Endpoint, :show, package.repository, package, [])
+    Routes.package_url(Endpoint, :show, package.repository, package, [])
   end
 
   def html_url_for_release(%Package{repository_id: 1} = package, release) do
-    Helpers.package_url(Endpoint, :show, package, to_string(release.version), [])
+    Routes.package_url(Endpoint, :show, package, to_string(release.version), [])
   end
   def html_url_for_release(%Package{} = package, release) do
-    Helpers.package_url(Endpoint, :show, package.repository, package, to_string(release.version), [])
+    Routes.package_url(Endpoint, :show, package.repository, package, to_string(release.version), [])
   end
 
   def url_for_package(%Package{repository_id: 1} = package) do
-    Helpers.api_package_url(Endpoint, :show, package, [])
+    Routes.api_package_url(Endpoint, :show, package, [])
   end
   def url_for_package(package) do
-    Helpers.api_package_url(Endpoint, :show, package.repository, package, [])
+    Routes.api_package_url(Endpoint, :show, package.repository, package, [])
   end
 
   def url_for_release(%Package{repository_id: 1} = package, release) do
-    Helpers.api_release_url(Endpoint, :show, package, to_string(release.version), [])
+    Routes.api_release_url(Endpoint, :show, package, to_string(release.version), [])
   end
   def url_for_release(%Package{} = package, release) do
-    Helpers.api_release_url(Endpoint, :show, package.repository, package, to_string(release.version), [])
+    Routes.api_release_url(Endpoint, :show, package.repository, package, to_string(release.version), [])
   end
 
   def gravatar_url(nil, size) do

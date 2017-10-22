@@ -1,5 +1,5 @@
 <%
-verify_url = email_url(Endpoint, :verify, username: @username, email: @email, key: @key)
+verify_url = Routes.email_url(Endpoint, :verify, username: @username, email: @email, key: @key)
 %>
 
 <p>

@@ -21,7 +21,7 @@ defmodule Hexpm.Web.API.KeyView do
       revoked_at: key.revoked_at,
       inserted_at: key.inserted_at,
       updated_at: key.updated_at,
-      url: api_key_url(Endpoint, :show, key)
+      url: Routes.api_key_url(Endpoint, :show, key)
     }
   end
 end

@@ -25,7 +25,7 @@
           </p>
         </div>
 
-        <%= form_for @changeset, dashboard_path(Endpoint, :update_profile), [method: :post], fn f -> %>
+        <%= form_for @changeset, Routes.dashboard_path(Endpoint, :update_profile), [method: :post], fn f -> %>
           <div class="form-group">
             <%= label f, :full_name %>
             <%= text_input f, :full_name %>
@@ -37,7 +37,7 @@
             <%= select f, :public_email, public_email_options(@changeset.data), value: public_email_value(@changeset.data) %>
             <%= error_tag f, :public_email %>
             <small>
-              You can add or remove email address on the <a href="<%= dashboard_path(Endpoint, :email) %>">email settings page</a>.
+              You can add or remove email address on the <a href="<%= Routes.dashboard_path(Endpoint, :email) %>">email settings page</a>.
             </small>
           </div>
 
