@@ -29,7 +29,7 @@ defmodule Hexpm.Repository.Package do
     sasl snmp ssh ssl stdlib syntax_tools test_server toolbar tools tv typer
     webtool wx xmerl
   )
-  @app_names ~w(firenest toucan net)
+  @app_names ~w(firenest toucan net http net_http)
   @windows_names ~w(
     nul con prn aux com1 com2 com3 com4 com5 com6 com7 com8 com9lpt1 lpt2
     lpt3 lpt4 lpt5 lpt6 lpt7 lpt8 lpt9
