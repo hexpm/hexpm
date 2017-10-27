@@ -50,10 +50,9 @@ defmodule Hexpm.Repository.Releases do
   end
 
   def publish_docs(package, release, files, body, [audit: audit_data]) do
-    version = to_string(release.version)
     latest_version =
       from(r in Release.all(package),
-        where: r.has_docs == true or r.version == ^version,
+        where: r.has_docs == true or r.version == ^to_string(release.version),
         select: r.version
       )
       |> Repo.all()
@@ -61,9 +60,9 @@ defmodule Hexpm.Repository.Releases do
       |> Enum.sort(&Version.compare(&1, &2) == :gt)
       |> List.first()
 
-    docs_for_latest_release = (latest_version != nil) && (release.version == latest_version)
+    latest_release? = (latest_version != nil) and (Version.compare(release.version, latest_version) in [:eq, :gt])
 
-    Assets.push_docs(release, files, body, docs_for_latest_release)
+    Assets.push_docs(release, files, body, latest_release?)
 
     {:ok, _} =
       Multi.new()

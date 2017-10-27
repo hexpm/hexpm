@@ -10,9 +10,10 @@ defmodule Hexpm.Web.API.DocsControllerTest do
   end
 
   defp path(path) do
-    build_conn()
-    |> get(path)
-    |> response(200)
+    response = build_conn() |> get(path)
+    if response.status == 200 do
+      response.resp_body
+    end
   end
 
   describe "POST /api/packages/:name/releases/:version/docs" do
@@ -55,13 +56,14 @@ defmodule Hexpm.Web.API.DocsControllerTest do
       insert(:release, package: package, version: "0.0.1")
       insert(:release, package: package, version: "0.5.0")
 
-      publish_docs(user, package, "0.5.0", [{'index.html', "package v0.5.0"}])
+      publish_docs(user, package, "0.5.0", [{'index.html', "package v0.5.0"}, {'remove.html', "dont remove me"}])
       |> response(201)
 
       publish_docs(user, package, "0.0.1", [{'index.html', "package v0.0.1"}])
       |> response(201)
 
       assert path("docs/#{package.name}/index.html") == "package v0.5.0"
+      assert path("docs/#{package.name}/remove.html") == "dont remove me"
     end
 
     test "overwrite docs", %{user: user} do
@@ -69,7 +71,7 @@ defmodule Hexpm.Web.API.DocsControllerTest do
       insert(:release, package: package, version: "0.0.1")
       insert(:release, package: package, version: "0.5.0")
 
-      publish_docs(user, package, "0.0.1", [{'index.html', "package v0.0.1"}])
+      publish_docs(user, package, "0.0.1", [{'index.html', "package v0.0.1"}, {'remove.html', "please remove me"}])
       |> response(201)
 
       publish_docs(user, package, "0.0.1", [{'index.html', "package v0.0.1 (updated)"}])
@@ -77,6 +79,8 @@ defmodule Hexpm.Web.API.DocsControllerTest do
 
       assert path("docs/#{package.name}/index.html") == "package v0.0.1 (updated)"
       assert path("docs/#{package.name}/0.0.1/index.html") == "package v0.0.1 (updated)"
+      refute path("docs/#{package.name}/remove.html")
+      refute path("docs/#{package.name}/0.0.1/remove.html")
     end
 
     test "beta docs do not overwrite stable main docs", %{user: user} do
@@ -84,13 +88,14 @@ defmodule Hexpm.Web.API.DocsControllerTest do
       insert(:release, package: package, version: "0.5.0")
       insert(:release, package: package, version: "1.0.0-beta")
 
-      publish_docs(user, package, "0.5.0", [{'index.html', "package v0.5.0"}])
+      publish_docs(user, package, "0.5.0", [{'index.html', "package v0.5.0"}, {'remove.html', "dont remove me"}])
       |> response(201)
 
       publish_docs(user, package, "1.0.0-beta", [{'index.html', "package v1.0.0-beta"}])
       |> response(201)
 
       assert path("docs/#{package.name}/index.html") == "package v0.5.0"
+      assert path("docs/#{package.name}/remove.html") == "dont remove me"
       assert path("docs/#{package.name}/1.0.0-beta/index.html") == "package v1.0.0-beta"
     end
 
