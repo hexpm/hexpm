@@ -38,33 +38,31 @@ defmodule Hexpm.Repository.Assets do
     Hexpm.CDN.purge_key(:fastly_hexdocs, "sitemap")
   end
 
-  def push_docs(release, files, body, docs_for_latest_release) do
+  def push_docs(release, files, body, latest_release?) do
     name = release.package.name
     version = release.version
     package = release.package
     pre_release? = version.pre != []
     first_release? = package.docs_updated_at == nil
+    publish_unversioned? = first_release? or (latest_release? and not pre_release?)
 
     files =
       Enum.flat_map(files, fn {path, data} ->
         versioned = {Path.join([name, to_string(version), path]), docspage_versioned_cdn_key(release), data}
         unversioned = {Path.join(name, path), docspage_unversioned_cdn_key(release), data}
 
-        cond do
-          pre_release? and not first_release? ->
-            [versioned]
-          first_release? || docs_for_latest_release ->
-            [versioned, unversioned]
-          true ->
-            [versioned]
+        if publish_unversioned? do
+          [versioned, unversioned]
+        else
+          [versioned]
         end
       end)
     paths = MapSet.new(files, &elem(&1, 0))
 
-    delete_old_docs(release, paths, docs_for_latest_release)
+    delete_old_docs(release, paths, publish_unversioned?)
     put_docs_tarball(release, body)
     upload_new_files(release, files)
-    purge_cache(release, docs_for_latest_release)
+    purge_cache(release, publish_unversioned?)
   end
 
   def revert_docs(release) do
@@ -92,36 +90,33 @@ defmodule Hexpm.Repository.Assets do
     Hexpm.Store.put(nil, :s3_bucket, docs_store_key(release), body, opts)
   end
 
-  defp delete_old_docs(release, paths, docs_for_latest_release) do
+  defp delete_old_docs(release, paths, publish_unversioned?) do
     name = release.package.name
     version = release.version
-    pre_release? = version.pre != []
 
     # Add "/" so that we don't get prefix matches, for example phoenix
     # would match phoenix_html
     existing_keys = Hexpm.Store.list(nil, :docs_bucket, "#{name}/")
-    keys_to_delete =
-      Enum.flat_map(existing_keys, fn key ->
-        first = Path.relative_to(key, name) |> Path.split |> hd
-        cond do
-          # Don't delete if we are going to overwrite with new files, this
-          # removes the downtime between a deleted and added page
-          key in paths ->
-            []
-          # Current (/ecto/0.8.1/...)
-          first == version ->
-            [key]
-          # Top-level docs, don't overwrite for pre-releases
-          pre_release? ->
-            []
-          # Top-level docs, don't match version directories (/ecto/...)
-          Version.parse(first) == :error && docs_for_latest_release ->
-            [key]
-          true ->
-            []
-        end
-      end)
+    keys_to_delete = Enum.filter(existing_keys, &delete_key?(&1, paths, name, version, publish_unversioned?))
     Hexpm.Store.delete_many(nil, :docs_bucket, keys_to_delete)
+  end
+
+  defp delete_key?(key, paths, name, version, publish_unversioned?) do
+    # Don't delete if we are going to overwrite with new files, this
+    # removes the downtime between a deleted and added page
+    if key in paths do
+      false
+    else
+      first = Path.relative_to(key, name) |> Path.split() |> hd()
+      case Version.parse(first) do
+        {:ok, first} ->
+          # Current (/ecto/0.8.1/...)
+          Version.compare(first, version) == :eq
+        :error ->
+          # Top-level docs, don't match version directories (/ecto/...)
+          publish_unversioned?
+      end
+    end
   end
 
   defp upload_new_files(release, files) do
@@ -142,15 +137,13 @@ defmodule Hexpm.Repository.Assets do
     |> Stream.run()
   end
 
-  defp purge_cache(release, docs_for_latest_release) do
-    first_release? = release.package.docs_updated_at == nil
-
+  defp purge_cache(release, publish_unversioned?) do
     purge_tasks = [
       fn -> Hexpm.CDN.purge_key(:fastly_hexrepo, docs_cdn_key(release)) end,
       fn -> Hexpm.CDN.purge_key(:fastly_hexdocs, docspage_versioned_cdn_key(release)) end,
     ]
     purge_tasks =
-      if first_release? || docs_for_latest_release do
+      if publish_unversioned? do
         [fn -> Hexpm.CDN.purge_key(:fastly_hexdocs, docspage_unversioned_cdn_key(release)) end | purge_tasks]
       else
         purge_tasks
