@@ -118,6 +118,11 @@ defmodule Hexpm.Web.Plugs.AttackTest do
     end
   end
 
+  test "reject malformed query string", %{user: user} do
+    conn = request_user(user, "/%00")
+    assert conn.status == 400
+  end
+
   defp request_ip(remote_ip) do
     conn(:get, "/")
     |> Map.put(:remote_ip, remote_ip)
@@ -125,8 +130,8 @@ defmodule Hexpm.Web.Plugs.AttackTest do
     |> Hello.call(:index)
   end
 
-  defp request_user(user) do
-    conn(:get, "/")
+  defp request_user(user, path \\ "/") do
+    conn(:get, path)
     |> Map.put(:remote_ip, {10, 0, 0, 1})
     |> assign(:current_user, user)
     |> Hello.call(:index)
