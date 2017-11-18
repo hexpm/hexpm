@@ -9,6 +9,7 @@ defmodule Hexpm.Web.Router do
     plug :fetch_session
     plug :fetch_flash
     plug :protect_from_forgery
+    plug Hexpm.Web.Plugs.Attack
     plug :put_secure_browser_headers
     plug :web_user_agent
     plug :login
