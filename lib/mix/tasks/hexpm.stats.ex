@@ -76,8 +76,7 @@ defmodule Mix.Tasks.Hexpm.Stats do
     formats = [{s3_prefix, @s3_regex}, {fastly_prefix, @fastly_regex}]
     ips = CDN.public_ips()
 
-    # No write_concurrency (issue ERL-188)
-    :ets.new(@ets, [:named_table, :public])
+    :ets.new(@ets, [:named_table, :public, write_concurrency: true])
     map = try do
       process_buckets(buckets, formats, ips)
       cap_on_ip(max_downloads_per_ip)
