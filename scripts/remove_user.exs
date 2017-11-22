@@ -1,7 +1,6 @@
 [name] = System.argv
 
-user = Hexpm.Repo.get_by!(Hexpm.Accounts.User, username: name) ||
-         Hexpm.Repo.get_by!(Hexpm.Accounts.User, email: name)
+user = Hexpm.Users.get(name, [:emails])
 
 unless user do
   IO.puts "No user: #{name}"
