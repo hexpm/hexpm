@@ -1,5 +1,5 @@
 defmodule Hexpm.Repository.Resolver do
-  import Ecto.Query, only: [from: 2]
+  import Ecto.Query, only: [from: 2, or_where: 3]
 
   @behaviour Hex.Registry
 
@@ -13,7 +13,7 @@ defmodule Hexpm.Repository.Resolver do
 
     deps = resolve_deps(requirements)
     top_level = Enum.map(deps, &elem(&1, 0))
-    requests = resolve_requests(requirements, config)
+    requests = resolve_new_requests(requirements, config)
 
     requests
     |> Enum.map(&{elem(&1, 0), elem(&1, 1)})
@@ -34,14 +34,14 @@ defmodule Hexpm.Repository.Resolver do
   end
 
   defp resolve_deps(requirements) do
-    Enum.map(requirements, fn %{app: app} ->
-      {"hexpm", app, false, []}
+    Enum.map(requirements, fn %{repository: repository, app: app} ->
+      {repository || "hexpm", app, false, []}
     end)
   end
 
-  defp resolve_requests(requirements, config) do
-    Enum.map(requirements, fn %{name: name, app: app, requirement: req} ->
-      {"hexpm", name, app, req, config}
+  defp resolve_new_requests(requirements, config) do
+    Enum.map(requirements, fn %{repository: repository, name: name, app: app, requirement: req} ->
+      {repository || "hexpm", name, app, req, config}
     end)
   end
 
@@ -73,43 +73,51 @@ defmodule Hexpm.Repository.Resolver do
     end
   end
 
-  def versions(name \\ Process.get(__MODULE__), "hexpm", package) do
-    :ets.lookup_element(name, {:versions, package}, 2)
+  def versions(name \\ Process.get(__MODULE__), repository, package) do
+    :ets.lookup_element(name, {:versions, repository, package}, 2)
   end
 
-  def deps(name \\ Process.get(__MODULE__), "hexpm", package, version) do
-    case :ets.lookup(name, {:deps, package, version}) do
+  def deps(name \\ Process.get(__MODULE__), repository, package, version) do
+    case :ets.lookup(name, {:deps, repository, package, version}) do
       [{_, deps}] ->
         deps
       [] ->
-        release_id = :ets.lookup_element(name, {:release, package, version}, 2)
+        release_id = :ets.lookup_element(name, {:release, repository, package, version}, 2)
 
         deps =
           from(r in Hexpm.Repository.Requirement,
                join: p in assoc(r, :dependency),
+               join: repo in assoc(p, :repository),
                where: r.release_id == ^release_id,
-               select: {"hexpm", p.name, r.app, r.requirement, r.optional})
+               select: {repo.name, p.name, r.app, r.requirement, r.optional})
           |> Hexpm.Repo.all()
 
-        :ets.insert(name, {{:deps, package, version}, deps})
+        :ets.insert(name, {{:deps, repository, package, version}, deps})
         deps
-      end
+    end
   end
 
-  def prefetch(packages) do
-    packages = Enum.map(packages, fn {"hexpm", name} -> name end)
-    prefetch(Process.get(__MODULE__), packages)
-  end
-  def prefetch(name, packages) do
+  def prefetch(name \\ Process.get(__MODULE__), packages) do
     packages =
       packages
       |> Enum.uniq()
-      |> Enum.reject(&:ets.member(name, {:versions, &1}))
+      |> Enum.reject(fn {repo, package} -> :ets.member(name, {:versions, repo, package}) end)
+
+    load_prefetch(name, packages)
+  end
+
+  defp load_prefetch(_name, []), do: :ok
+
+  defp load_prefetch(name, packages) do
+    packages_query =
+      from(p in Hexpm.Repository.Package,
+           join: r in assoc(p, :repository),
+           select: {p.id, {r.name, p.name}})
 
     packages =
-      from(p in Hexpm.Repository.Package,
-           where: p.name in ^packages,
-           select: {p.id, p.name})
+      Enum.reduce(packages, packages_query, fn {repository, package}, query ->
+        or_where(query, [p, r], r.name == ^repository and p.name == ^package)
+      end)
       |> Hexpm.Repo.all()
       |> Map.new()
 
@@ -121,14 +129,15 @@ defmodule Hexpm.Repository.Resolver do
       |> Enum.group_by(&elem(&1, 0), &elem(&1, 1))
 
     versions =
-      Enum.map(packages, fn {id, name} ->
-        {{:versions, name}, Enum.map(releases[id], &elem(&1, 1))}
+      Enum.map(packages, fn {id, {repo, package}} ->
+        {{:versions, repo, package}, Enum.map(releases[id], &elem(&1, 1))}
       end)
 
     releases =
       Enum.flat_map(releases, fn {pid, versions} ->
         Enum.map(versions, fn {rid, vsn} ->
-          {{:release, packages[pid], vsn}, rid}
+          {repo, package} = packages[pid]
+          {{:release, repo, package, vsn}, rid}
         end)
       end)
 
