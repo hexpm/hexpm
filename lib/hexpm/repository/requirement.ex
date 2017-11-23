@@ -19,7 +19,7 @@ defmodule Hexpm.Repository.Requirement do
 
   def changeset(requirement, params, dependencies, release_changeset, package) do
     cast(requirement, params, ~w(repository name app requirement optional))
-    |> put_assoc(:dependency, dependencies[{params["name"], params["repository"] || "hexpm"}])
+    |> put_assoc(:dependency, dependencies[{params["repository"] || "hexpm", params["name"]}])
     |> validate_required(~w(name app requirement optional)a)
     |> validate_required(:dependency, message: "package does not exist in repository #{inspect package.repository.name}")
     |> validate_requirement(:requirement, pre: version_pre(release_changeset) != [])
@@ -70,7 +70,7 @@ defmodule Hexpm.Repository.Requirement do
     from(
       p in Package,
       join: r in assoc(p, :repository),
-      select: {{p.name, r.name}, %{p | repository: r}}
+      select: {{r.name, p.name}, %{p | repository: r}}
     )
     |> filter_dependencies(names)
   end
@@ -80,11 +80,11 @@ defmodule Hexpm.Repository.Requirement do
   end
   defp filter_dependencies(query, names) do
     import Ecto.Query, only: [or_where: 3]
-    Enum.reduce(names, query, fn {package, repository}, query ->
-      or_where(query, [p, r], p.name == ^package and r.name == ^repository)
+    Enum.reduce(names, query, fn {repository, package}, query ->
+      or_where(query, [p, r], r.name == ^repository and p.name == ^package)
     end)
     |> Hexpm.Repo.all()
-    |> Enum.into(%{})
+    |> Map.new()
   end
 
   defp requirement_names(requirements) when is_list(requirements) do
@@ -94,7 +94,7 @@ defmodule Hexpm.Repository.Requirement do
         repository = req["repository"] || "hexpm"
 
         if is_binary(name) and is_binary(repository) do
-          [{name, repository}]
+          [{repository, name}]
         else
           []
         end
