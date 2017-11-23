@@ -18,6 +18,10 @@ defmodule Hexpm.Throttle do
     end
   end
 
+  def init(state) do
+    {:ok, state}
+  end
+
   def handle_call({:run, increment}, _, %{rate: rate}) when increment > rate do
     raise "increase must not exceed rate: #{inspect rate}, got: #{inspect increment}"
   end
