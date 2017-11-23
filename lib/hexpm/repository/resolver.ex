@@ -130,7 +130,11 @@ defmodule Hexpm.Repository.Resolver do
 
     versions =
       Enum.map(packages, fn {id, {repo, package}} ->
-        {{:versions, repo, package}, Enum.map(releases[id], &elem(&1, 1))}
+        versions =
+          releases[id]
+          |> Enum.map(&elem(&1, 1))
+          |> Enum.sort(&(Version.compare(&1, &2) != :gt))
+        {{:versions, repo, package}, versions}
       end)
 
     releases =
