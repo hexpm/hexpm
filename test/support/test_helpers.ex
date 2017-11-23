@@ -31,11 +31,11 @@ defmodule Hexpm.TestHelpers do
 
   def rel_meta(params) do
     params = params(params)
-    meta =
-      params
-      |> Map.put_new("build_tools", ["mix"])
-      |> Map.update("requirements", [], &requirements_meta/1)
-    Map.put(params, "meta", meta)
+    meta = Map.put_new(params, "build_tools", ["mix"])
+
+    params
+    |> Map.put("meta", meta)
+    |> Map.update("requirements", [], &requirements_meta/1)
   end
 
   def pkg_meta(meta) do
@@ -56,6 +56,7 @@ defmodule Hexpm.TestHelpers do
   defp requirements_meta(list) do
     Enum.map(list, fn req ->
       req
+      |> Map.put_new("repository", "hexpm")
       |> Map.put_new("optional", false)
       |> Map.put_new("app", req["name"])
     end)
