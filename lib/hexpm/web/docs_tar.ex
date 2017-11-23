@@ -35,7 +35,7 @@ defmodule Hexpm.Web.DocsTar do
   end
 
   defp unzip_inflate(stream, data, total, {:more, uncompressed}) do
-    total = total + byte_size(uncompressed)
+    total = total + IO.iodata_length(uncompressed)
     unzip_inflate(stream, [data|uncompressed], total, :zlib.inflateChunk(stream))
   end
 
