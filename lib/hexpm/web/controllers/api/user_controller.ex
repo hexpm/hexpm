@@ -22,7 +22,7 @@ defmodule Hexpm.Web.API.UserController do
   end
 
   def me(conn, _params) do
-    user = conn.assigns.current_user
+    user = Users.put_repositories(conn.assigns.current_user)
 
     when_stale(conn, user, fn conn ->
       conn
