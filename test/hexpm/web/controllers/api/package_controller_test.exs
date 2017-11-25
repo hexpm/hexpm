@@ -78,6 +78,8 @@ defmodule Hexpm.Web.API.PackageControllerTest do
       conn = get build_conn(), "api/packages/#{package1.name}"
       result = json_response(conn, 200)
       assert result["name"] == package1.name
+      assert result["url"] =~ "/api/packages/#{package1.name}"
+      assert result["html_url"] =~ "/packages/#{package1.name}"
 
       release = List.first(result["releases"])
       assert release["url"] =~ "/api/packages/#{package1.name}/releases/0.0.1"
@@ -125,6 +127,8 @@ defmodule Hexpm.Web.API.PackageControllerTest do
 
       assert result["name"] == package3.name
       assert result["repository"] == repository.name
+      assert result["url"] =~ "/api/repos/#{repository.name}/packages/#{package3.name}"
+      assert result["html_url"] =~ "/packages/#{repository.name}/#{package3.name}"
     end
   end
 end
