@@ -61,6 +61,10 @@ defmodule Hexpm.Web.API.UserControllerTest do
   describe "GET /api/users/me" do
     test "get current user" do
       user = insert(:user)
+      repository = insert(:repository, users: [user])
+      package1 = insert(:package, package_owners: [build(:package_owner, owner: user)])
+      _package2 = insert(:package, repository_id: repository.id, package_owners: [build(:package_owner, owner: user)])
+      insert(:repository_user, repository: repository, user: user)
 
       body =
         build_conn()
@@ -72,6 +76,10 @@ defmodule Hexpm.Web.API.UserControllerTest do
       assert body["email"] == hd(user.emails).email
       refute body["emails"]
       refute body["password"]
+      assert Enum.count(body["owned_packages"]) == 2
+      assert body["owned_packages"][package1.name] =~ "/api/packages/#{package1.name}"
+      # TODO:
+      # assert body["owned_packages"][package2.name] =~ "/api/repos/#{repository.name}/packages/#{package2.name}"
     end
 
     test "return 401 if not authenticated" do
