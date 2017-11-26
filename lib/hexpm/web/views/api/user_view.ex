@@ -40,7 +40,7 @@ defmodule Hexpm.Web.API.UserView do
 
   defp owned_packages(packages) do
     Enum.into(packages, %{}, fn package ->
-      {package.name, Routes.api_package_url(Endpoint, :show, package)}
+      {package.name, url_for_package(package)}
     end)
   end
 end
