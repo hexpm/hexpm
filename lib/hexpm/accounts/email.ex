@@ -42,7 +42,7 @@ defmodule Hexpm.Accounts.Email do
   def verify?(%Email{verification_key: verification_key}, key),
     do: verify?(verification_key, key)
   def verify?(verification_key, key),
-    do: Comeonin.Tools.secure_check(verification_key, key)
+    do: Hexpm.Utils.secure_check(verification_key, key)
 
   def verify(email) do
     change(email, %{verified: true, verification_key: nil})

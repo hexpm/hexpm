@@ -20,8 +20,8 @@ config :hexpm, Hexpm.Repo,
   queue_size: pool_size * 5,
   ssl: true
 
-config :comeonin,
-  bcrypt_log_rounds: 12
+config :bcrypt_elixir,
+  log_rounds: 12
 
 config :rollbax,
   access_token: System.get_env("ROLLBAR_ACCESS_TOKEN"),

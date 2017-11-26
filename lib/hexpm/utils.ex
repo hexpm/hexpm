@@ -8,6 +8,23 @@ defmodule Hexpm.Utils do
   import Ecto.Query, only: [from: 2]
   require Logger
 
+  def secure_check(left, right) do
+    if byte_size(left) == byte_size(right) do
+      secure_check(left, right, 0) == 0
+    else
+      false
+    end
+  end
+
+  defp secure_check(<<left, left_rest::binary>>, <<right, right_rest::binary>>, acc) do
+    import Bitwise, only: [|||: 2, ^^^: 2]
+    secure_check(left_rest, right_rest, acc ||| left ^^^ right)
+  end
+
+  defp secure_check(<<>>, <<>>, acc) do
+    acc
+  end
+
   def multi_task(args, fun) do
     args
     |> multi_async(fun)

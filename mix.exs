@@ -51,7 +51,7 @@ defmodule Hexpm.MixProject do
       {:phoenix_html, "~> 2.3"},
       {:bamboo, "~> 0.7"},
       {:bamboo_smtp, "~> 1.2"},
-      {:comeonin, "~> 3.0"},
+      {:bcrypt_elixir, "~> 1.0"},
       {:corsica, "~> 1.0"},
       {:cowboy, "~> 1.0"},
       {:earmark, "~> 1.0"},

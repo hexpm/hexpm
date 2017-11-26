@@ -83,7 +83,7 @@ defmodule Hexpm.Accounts.User do
   def password_reset?(nil, _key), do: false
   def password_reset?(user, key) do
     !!(user.reset_key &&
-       Comeonin.Tools.secure_check(user.reset_key, key) &&
+       Hexpm.Utils.secure_check(user.reset_key, key) &&
        Hexpm.Utils.within_last_day(user.reset_expiry))
   end
 

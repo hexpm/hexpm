@@ -2,7 +2,7 @@ defmodule Hexpm.Factory do
   use ExMachina.Ecto, repo: Hexpm.Repo
   alias Hexpm.Fake
 
-  @password Comeonin.Bcrypt.hashpwsalt("password")
+  @password Bcrypt.hash_pwd_salt("password")
 
   def user_factory() do
     %Hexpm.Accounts.User{

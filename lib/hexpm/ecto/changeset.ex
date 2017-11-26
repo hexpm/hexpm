@@ -84,7 +84,7 @@ defmodule Hexpm.Changeset do
       case Map.fetch(changeset.params, error_param) do
         {:ok, value} ->
           hash = default_hash(hash)
-          if Comeonin.Bcrypt.checkpw(value, hash),
+          if Bcrypt.verify_pass(value, hash),
             do: [],
           else: [{error_field, {"is invalid", []}}]
 
@@ -97,7 +97,7 @@ defmodule Hexpm.Changeset do
                   valid?: changeset.valid? and errors == []}
   end
 
-  @default_password Comeonin.Bcrypt.hashpwsalt("password")
+  @default_password Bcrypt.hash_pwd_salt("password")
 
   defp default_hash(nil), do: @default_password
   defp default_hash(""), do: @default_password

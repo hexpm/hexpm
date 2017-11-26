@@ -45,8 +45,8 @@ config :ex_aws,
   access_key_id: {:system, "HEX_S3_ACCESS_KEY"},
   secret_access_key: {:system, "HEX_S3_SECRET_KEY"}
 
-config :comeonin,
-  bcrypt_log_rounds: 4
+config :bcrypt_elixir,
+  log_rounds: 4
 
 config :porcelain,
   driver: Porcelain.Driver.Basic
