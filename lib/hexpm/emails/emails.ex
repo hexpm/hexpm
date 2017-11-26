@@ -33,14 +33,6 @@ defmodule Hexpm.Emails do
     |> render("verification.html")
   end
 
-  def user_confirmed(user) do
-    new_email()
-    |> to(user)
-    |> from(source())
-    |> subject("Hex.pm - Account confirmed")
-    |> render("confirmed.html")
-  end
-
   def password_reset_request(user) do
     new_email()
     |> to(user)
