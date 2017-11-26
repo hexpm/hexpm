@@ -67,14 +67,7 @@ config :sasl,
   sasl_error_logger: false
 
 config :hexpm, Hexpm.Emails.Mailer,
-  adapter: Bamboo.SMTPAdapter,
-  server: System.get_env("HEX_SES_ENDPOINT") || "email-smtp.us-west-2.amazonaws.com",
-  port: smtp_port,
-  username: System.get_env("HEX_SES_USERNAME"),
-  password: System.get_env("HEX_SES_PASSWORD"),
-  tls: :always,
-  ssl: false,
-  retries: 1
+  adapter: Hexpm.Emails.Bamboo.SESAdapter
 
 config :phoenix, :template_engines,
   md: Hexpm.Web.MarkdownEngine
