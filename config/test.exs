@@ -13,8 +13,7 @@ config :hexpm, Hexpm.Web.Endpoint,
   http: [port: 4001],
   server: false
 
-config :hexpm, Hexpm.Emails.Mailer,
-  adapter: Bamboo.LocalAdapter
+config :hexpm, Hexpm.Emails.Mailer, adapter: Bamboo.TestAdapter
 
 config :hexpm, Hexpm.Repo,
   adapter: Ecto.Adapters.Postgres,

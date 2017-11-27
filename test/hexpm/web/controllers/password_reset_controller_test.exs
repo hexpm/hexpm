@@ -1,6 +1,6 @@
 defmodule Hexpm.Web.PasswordResetControllerTest do
-  # TODO: debug Bamboo.Test race conditions and change back to async: true
-  use Hexpm.ConnCase, async: false
+  use Hexpm.ConnCase, async: true
+  use Bamboo.Test
   alias Hexpm.Accounts.User
 
   setup do
@@ -19,9 +19,7 @@ defmodule Hexpm.Web.PasswordResetControllerTest do
 
     # check email was sent with correct token
     user = Hexpm.Repo.get_by!(User, username: c.user.username) |> Hexpm.Repo.preload(:emails)
-    [email] = Bamboo.SentEmail.all
-    assert email.subject =~ "Hex.pm"
-    assert email.html_body =~ user.reset_key
+    assert_delivered_email Hexpm.Emails.password_reset_request(user)
 
     # check reset will succeed
     assert User.password_reset?(user, user.reset_key) == true

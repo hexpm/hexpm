@@ -1,6 +1,5 @@
 defmodule Hexpm.Web.API.OwnerControllerTest do
-  # TODO: debug Bamboo.Test race conditions and change back to async: true
-  use Hexpm.ConnCase, async: false
+  use Hexpm.ConnCase, async: true
   use Bamboo.Test
 
   alias Hexpm.Accounts.AuditLog
@@ -158,14 +157,7 @@ defmodule Hexpm.Web.API.OwnerControllerTest do
       assert first.username in [user1.username, user2.username]
       assert second.username in [user1.username, user2.username]
 
-      [email] = Bamboo.SentEmail.all
-      assert email.subject =~ "Hex.pm"
-      assert email.html_body =~ "#{user2.username} has been added as an owner to package #{package.name}."
-      emails_first = assoc(first, :emails) |> Hexpm.Repo.all
-      emails_second = assoc(second, :emails) |> Hexpm.Repo.all
-
-      assert {first.username, hd(emails_first).email} in email.to
-      assert {second.username, hd(emails_second).email} in email.to
+      assert_delivered_email Hexpm.Emails.owner_added(package, [user1, user2], user2)
 
       log = Hexpm.Repo.one!(AuditLog)
       assert log.actor_id == user1.id
@@ -292,15 +284,7 @@ defmodule Hexpm.Web.API.OwnerControllerTest do
       assert [user] = assoc(package, :owners) |> Hexpm.Repo.all
       assert user.id == user1.id
 
-      [email] = Bamboo.SentEmail.all
-      assert email.subject =~ "Hex.pm"
-      assert email.html_body =~ "#{user2.username} has been removed from owners of package #{package.name}."
-
-      user1_emails = assoc(user1, :emails) |> Hexpm.Repo.all
-      user2_emails = assoc(user2, :emails) |> Hexpm.Repo.all
-
-      assert {user1.username, hd(user1_emails).email} in email.to
-      assert {user2.username, hd(user2_emails).email} in email.to
+      assert_delivered_email Hexpm.Emails.owner_removed(package, [user1, user2], user2)
 
       log = Hexpm.Repo.one!(AuditLog)
       assert log.actor_id == user1.id

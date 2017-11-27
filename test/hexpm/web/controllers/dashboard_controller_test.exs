@@ -1,6 +1,6 @@
 defmodule Hexpm.Web.DashboardControllerTest do
-  # TODO: debug Bamboo.Test race conditions and change back to async: true
-  use Hexpm.ConnCase, async: false
+  use Hexpm.ConnCase, async: true
+  use Bamboo.Test
 
   alias Hexpm.Accounts.{Auth, User, Users}
 
@@ -102,9 +102,7 @@ defmodule Hexpm.Web.DashboardControllerTest do
     assert {:ok, _} = Auth.password_auth(c.user.username, "newpass")
     assert :error = Auth.password_auth(c.user.username, c.password)
 
-    email = Bamboo.SentEmail.one()
-    assert email.subject =~ "Your password has changed"
-    assert email.html_body =~ "password/reset"
+    assert_delivered_email Hexpm.Emails.password_changed(c.user)
   end
 
   test "update password invalid current password", c do
@@ -276,21 +274,17 @@ defmodule Hexpm.Web.DashboardControllerTest do
   end
 
   test "resend verify email", c do
-    add_email(c.user, "new@mail.com")
+    user = add_email(c.user, "new@mail.com")
 
     conn = build_conn()
-           |> test_login(c.user)
+           |> test_login(user)
            |> post("dashboard/email/resend", %{email: "new@mail.com"})
 
     assert redirected_to(conn) == "/dashboard/email"
     assert get_flash(conn, :info) =~ "verification email has been sent"
 
-    [email_one, email_two] = Bamboo.SentEmail.all
-    assert email_one.subject =~ "Hex.pm"
-    assert email_one.html_body =~ "email/verify?username=#{c.user.username}"
-
-    assert email_two.subject =~ "Hex.pm"
-    assert email_two.html_body =~ "email/verify?username=#{c.user.username}"
+    assert_delivered_email Hexpm.Emails.verification(user, List.last(user.emails))
+    assert_delivered_email Hexpm.Emails.verification(user, List.last(user.emails))
   end
 
   test "show repository", %{user: user, repository: repository} do
@@ -326,8 +320,7 @@ defmodule Hexpm.Web.DashboardControllerTest do
     assert repo_user = Repo.get_by(assoc(repository, :repository_users), user_id: new_user.id)
     assert repo_user.role == "write"
 
-    [email, _verify_email] = Bamboo.SentEmail.all()
-    assert email.subject =~ "You have been added to"
+    assert_delivered_email Hexpm.Emails.repository_invite(repository, new_user)
   end
 
   test "remove member from repository", %{user: user, repository: repository} do
