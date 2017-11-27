@@ -3,9 +3,8 @@ defmodule Hexpm.Emails do
   use Bamboo.Phoenix, view: Hexpm.Web.EmailView
 
   def owner_added(package, owners, owner) do
-    new_email()
+    email()
     |> to(owners)
-    |> from(source())
     |> subject("Hex.pm - Owner added to package #{package.name}")
     |> assign(:username, owner.username)
     |> assign(:package, package.name)
@@ -13,9 +12,8 @@ defmodule Hexpm.Emails do
   end
 
   def owner_removed(package, owners, owner) do
-    new_email()
+    email()
     |> to(owners)
-    |> from(source())
     |> subject("Hex.pm - Owner removed from package #{package.name}")
     |> assign(:username, owner.username)
     |> assign(:package, package.name)
@@ -23,9 +21,8 @@ defmodule Hexpm.Emails do
   end
 
   def verification(user, email) do
-    new_email()
+    email()
     |> to(%{email | user: user})
-    |> from(source())
     |> subject("Hex.pm - Email verification")
     |> assign(:username, user.username)
     |> assign(:email, email.email)
@@ -34,9 +31,8 @@ defmodule Hexpm.Emails do
   end
 
   def password_reset_request(user) do
-    new_email()
+    email()
     |> to(user)
-    |> from(source())
     |> subject("Hex.pm - Password reset request")
     |> assign(:username, user.username)
     |> assign(:key, user.reset_key)
@@ -44,18 +40,16 @@ defmodule Hexpm.Emails do
   end
 
   def password_changed(user) do
-    new_email()
+    email()
     |> to(user)
-    |> from(source())
     |> subject("Hex.pm - Your password has changed")
     |> assign(:username, user.username)
     |> render("password_changed.html")
   end
 
   def typosquat_candidates(candidates, threshold) do
-    new_email()
+    email()
     |> to(Application.get_env(:hexpm, :support_email))
-    |> from(source())
     |> subject("[TYPOSQUAT CANDIDATES]")
     |> assign(:candidates, candidates)
     |> assign(:threshold, threshold)
@@ -63,9 +57,8 @@ defmodule Hexpm.Emails do
   end
 
   def repository_invite(repository, user) do
-    new_email()
+    email()
     |> to(user)
-    |> from(source())
     |> subject("Hex.pm - You have been added to the #{repository.name} repository")
     |> assign(:repository, repository.name)
     |> assign(:username, user.username)
@@ -73,9 +66,8 @@ defmodule Hexpm.Emails do
   end
 
   def repository_signup(user, name, members, opensource) do
-    new_email()
+    email()
     |> to(Application.get_env(:hexpm, :support_email))
-    |> from(source())
     |> subject("[ORGANIZATION SIGN UP] #{name}")
     |> assign(:user, user)
     |> assign(:name, name)
@@ -84,7 +76,13 @@ defmodule Hexpm.Emails do
     |> render("repository_signup.html")
   end
 
-  defp source do
+  defp email() do
+    new_email()
+    |> from(source())
+    |> put_html_layout({Hexpm.Web.EmailView, "layout.html"})
+  end
+
+  defp source() do
     host = Application.get_env(:hexpm, :email_host) || "hex.pm"
     {"Hex.pm", "noreply@#{host}"}
   end
