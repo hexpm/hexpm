@@ -63,6 +63,23 @@ defmodule Hexpm.Web.DashboardControllerTest do
     refute Enum.find(user.emails, &(&1.email == "eric@mail.com")).public
   end
 
+  test "update profile change gravatar email", c do
+    user = add_email(c.user, "gravatar@mail.com")
+    email = Enum.find(user.emails, &(&1.email == "gravatar@mail.com"))
+    Ecto.Changeset.change(email, %{verified: true}) |> Hexpm.Repo.update!
+    conn =
+      build_conn()
+      |> test_login(c.user)
+      |> post("dashboard/profile", %{user: %{gravatar_email: "gravatar@mail.com"}})
+
+    assert redirected_to(conn) == "/dashboard/profile"
+    assert get_flash(conn, :info) =~ "Profile updated successfully"
+
+    user = Hexpm.Repo.get!(Hexpm.Accounts.User, c.user.id) |> Hexpm.Repo.preload(:emails)
+    assert Enum.find(user.emails, &(&1.email == "gravatar@mail.com")).gravatar
+    refute Enum.find(user.emails, &(&1.email == "eric@mail.com")).gravatar
+  end
+
   test "update profile don't show public email", c do
     conn = build_conn()
            |> test_login(c.user)
@@ -271,6 +288,55 @@ defmodule Hexpm.Web.DashboardControllerTest do
     user = Hexpm.Repo.get!(Hexpm.Accounts.User, c.user.id) |> Hexpm.Repo.preload(:emails)
     assert Enum.find(user.emails, &(&1.email == "new@mail.com")).public
     refute Enum.find(user.emails, &(&1.email == "eric@mail.com")).public
+  end
+
+  test "set email for gravatar", c do
+    user = add_email(c.user, "gravatar@mail.com")
+    email = Enum.find(user.emails, &(&1.email == "gravatar@mail.com"))
+    Ecto.Changeset.change(email, %{verified: true}) |> Hexpm.Repo.update!
+
+    conn =
+      build_conn()
+      |> test_login(c.user)
+      |> post("dashboard/email/gravatar", %{email: "gravatar@mail.com"})
+
+    assert redirected_to(conn) == "/dashboard/email"
+    assert get_flash(conn, :info) =~ "gravatar email was changed"
+
+    user = Hexpm.Repo.get!(Hexpm.Accounts.User, c.user.id) |> Hexpm.Repo.preload(:emails)
+    assert Enum.find(user.emails, &(&1.email == "gravatar@mail.com")).gravatar
+    refute Enum.find(user.emails, &(&1.email == "eric@mail.com")).gravatar
+  end
+
+  test "unknown email cannot be gravatar email", c do
+    email = Enum.find(c.user.emails, &(&1.email == "eric@mail.com"))
+    Hexpm.Accounts.Email.toggle_gravatar(email, true) |> Hexpm.Repo.update
+    conn =
+      build_conn()
+      |> test_login(c.user)
+      |> post("dashboard/email/gravatar", %{email: "gravatar@mail.com"})
+
+    assert redirected_to(conn) == "/dashboard/email"
+    assert get_flash(conn, :error) =~ "Unknown email"
+
+    user = Hexpm.Repo.get!(Hexpm.Accounts.User, c.user.id) |> Hexpm.Repo.preload(:emails)
+    assert Enum.find(user.emails, &(&1.email == "eric@mail.com")).gravatar
+    refute Enum.find(user.emails, &(&1.email == "gravatar@mail.com"))
+  end
+
+  test "unverified email cannot be gravatar email", c do
+    add_email(c.user, "gravatar@mail.com")
+
+    conn =
+      build_conn()
+      |> test_login(c.user)
+      |> post("dashboard/email/gravatar", %{email: "gravatar@mail.com"})
+
+    assert redirected_to(conn) == "/dashboard/email"
+    assert get_flash(conn, :error) =~ "not verified"
+
+    user = Hexpm.Repo.get!(Hexpm.Accounts.User, c.user.id) |> Hexpm.Repo.preload(:emails)
+    refute Enum.find(user.emails, &(&1.email == "gravatar@mail.com")).gravatar
   end
 
   test "resend verify email", c do

@@ -9,6 +9,7 @@ defmodule Hexpm.Accounts.Email do
     field :verified, :boolean, default: false
     field :primary, :boolean, default: false
     field :public, :boolean, default: false
+    field :gravatar, :boolean, default: false
     field :verification_key, :string
 
     belongs_to :user, User
@@ -55,6 +56,10 @@ defmodule Hexpm.Accounts.Email do
 
   def toggle_public(email, flag) do
     change(email, %{public: flag})
+  end
+
+  def toggle_gravatar(email, flag) do
+    change(email, %{gravatar: flag})
   end
 
   def order_emails(emails) do

@@ -106,6 +106,19 @@ defmodule Hexpm.Web.DashboardController do
     end
   end
 
+  def gravatar_email(conn, %{"email" => email} = params) do
+    case Users.gravatar_email(conn.assigns.current_user, params, audit: audit_data(conn)) do
+      :ok ->
+        conn
+        |> put_flash(:info, "Your gravatar email was changed to #{email}.")
+        |> redirect(to: Routes.dashboard_path(conn, :email))
+      {:error, reason} ->
+        conn
+        |> put_flash(:error, email_error_message(reason, email))
+        |> redirect(to: Routes.dashboard_path(conn, :email))
+    end
+  end
+
   def resend_verify_email(conn, %{"email" => email} = params) do
     case Users.resend_verify_email(conn.assigns.current_user, params) do
       :ok ->

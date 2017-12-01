@@ -67,6 +67,7 @@ defmodule Hexpm.Accounts.AuditLog do
   defp extract_params("email.remove", email), do: serialize(email)
   defp extract_params("email.primary", {old_email, new_email}), do: %{old_email: serialize(old_email), new_email: serialize(new_email)}
   defp extract_params("email.public", {old_email, new_email}), do: %{old_email: serialize(old_email), new_email: serialize(new_email)}
+  defp extract_params("email.gravatar", {old_email, new_email}), do: %{old_email: serialize(old_email), new_email: serialize(new_email)}
   defp extract_params("user.create", user), do: serialize(user)
   defp extract_params("user.update", user), do: serialize(user)
   defp extract_params("password.reset.init", nil), do: %{}
@@ -109,7 +110,7 @@ defmodule Hexpm.Accounts.AuditLog do
   defp fields(%PackageMetadata{}), do: [:description, :licenses, :links, :maintainers, :extra]
   defp fields(%ReleaseMetadata{}), do: [:app, :build_tools, :elixir]
   defp fields(%ReleaseRetirement{}), do: [:status, :message]
-  defp fields(%Email{}), do: [:email, :primary, :public, :primary]
+  defp fields(%Email{}), do: [:email, :primary, :public, :primary, :gravatar]
   defp fields(%UserHandles{}), do: [:github, :twitter, :freenode]
 
   defp multi_key(action), do: :"log.#{action}"

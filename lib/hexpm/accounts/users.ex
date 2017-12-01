@@ -56,12 +56,17 @@ defmodule Hexpm.Accounts.Users do
       |> Multi.merge(fn %{user: user} ->
         public_email_multi(user, %{"email" => params["public_email"]}, [audit: audit_data])
       end)
+      |> Multi.merge(fn %{user: user} ->
+        gravatar_email_multi(user, %{"email" => params["gravatar_email"]}, [audit: audit_data])
+      end)
 
     case Repo.transaction(multi) do
       {:ok, %{user: user}} ->
         {:ok, user}
       {:error, :public_email, _, _} ->
         {:error, %Ecto.Changeset{data: user, errors: [public_email: {"unknown error", []}], valid?: false}}
+      {:error, :gravatar_email, _, _} ->
+        {:error, %Ecto.Changeset{data: user, errors: [gravatar_email: {"unknown error", []}], valid?: false}}
     end
   end
 
@@ -186,6 +191,52 @@ defmodule Hexpm.Accounts.Users do
           |> audit(audit_data, "email.primary", {old_primary, new_primary})
           |> Repo.transaction()
         :ok
+    end
+  end
+
+  def gravatar_email(user, params, opts) do
+    case Repo.transaction(gravatar_email_multi(user, params, opts)) do
+      {:ok, _} ->
+        :ok
+      {:error, :gravatar_email, reason, _} ->
+        {:error, reason}
+    end
+  end
+
+  defp gravatar_email_multi(_user, %{"email" => nil}, _opts) do
+    Multi.new()
+  end
+
+  defp gravatar_email_multi(user, %{"email" => "none"}, [audit: audit_data]) do
+    if old_gravatar = Enum.find(user.emails, &(&1.gravatar)) do
+      Multi.new()
+      |> Multi.update(:old_gravatar, Email.toggle_gravatar(old_gravatar, false))
+      |> audit(audit_data, "email.gravatar", {old_gravatar, nil})
+    else
+      Multi.new()
+    end
+  end
+
+  defp gravatar_email_multi(user, params, [audit: audit_data]) do
+    new_gravatar = find_email(user, params)
+    old_gravatar = Enum.find(user.emails, &(&1.gravatar))
+
+    cond do
+      !new_gravatar ->
+        Multi.run(Multi.new, :gravatar_email, fn _ -> {:error, :unknown_email} end)
+      !new_gravatar.verified ->
+        Multi.run(Multi.new, :gravatar_email, fn _ -> {:error, :not_verified} end)
+      old_gravatar && new_gravatar.id == old_gravatar.id ->
+        Multi.new()
+      true ->
+        multi =
+          if old_gravatar,
+            do: Multi.update(Multi.new(), :old_gravatar, Email.toggle_gravatar(old_gravatar, false)),
+            else: Multi.new()
+
+        multi
+        |> Multi.update(:new_gravatar, Email.toggle_gravatar(new_gravatar, true))
+        |> audit(audit_data, "email.gravatar", {new_gravatar, nil})
     end
   end
 
