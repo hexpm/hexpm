@@ -11,15 +11,15 @@
       <div class="panel-body">
         <div class="form-group">
           <label>Profile picture</label>
-          <img src="<%= gravatar_url(User.email(@current_user, :public), :large) %>">
+          <img src="<%= gravatar_url(User.email(@current_user, :gravatar), :large) %>">
           <p>
             <small>
-              <%= if User.email(@current_user, :public) do %>
-                Gravatar is used to display your profile picture, we use your public email address as the Gravatar email.
-                Go to <a href="https://en.gravatar.com/emails/">Gravatar</a> to change the image.
+              <%= if User.email(@current_user, :gravatar) do %>
+                Gravatar is used to display your profile picture. You can choose your Gravatar email below or
+                go to <a href="https://en.gravatar.com/emails/">Gravatar</a> to change the image.
               <% else %>
                 <a href="https://en.gravatar.com/">Gravatar</a> is used to display your profile picture.
-                Choose a public email address below to show your avatar on your profile.
+                Choose a Gravatar email address below to show your avatar on your profile.
               <% end %>
             </small>
           </p>
