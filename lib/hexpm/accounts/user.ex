@@ -101,6 +101,7 @@ defmodule Hexpm.Accounts.User do
 
   def email(user, :primary), do: user.emails |> Enum.find(& &1.primary) |> email()
   def email(user, :public), do: user.emails |> Enum.find(& &1.public) |> email()
+  def email(user, :gravatar), do: user.emails |> Enum.find(&(&1.gravatar)) |> email()
 
   defp email(nil), do: nil
   defp email(email), do: email.email

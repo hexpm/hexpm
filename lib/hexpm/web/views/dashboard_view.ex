@@ -35,6 +35,19 @@ defmodule Hexpm.Web.DashboardView do
     User.email(user, :public) || "none"
   end
 
+  def gravatar_email_options(user) do
+    emails =
+      user.emails
+      |> Enum.filter(&(&1.verified))
+      |> Enum.map(&{&1.email, &1.email})
+
+    [{"Don't show an avatar", "none"}] ++ emails
+  end
+
+  def gravatar_email_value(user) do
+    User.email(user, :gravatar) || "none"
+  end
+
   defp repository_roles_selector() do
     Enum.map(repository_roles(), fn {name, id, _title} ->
       {name, id}
