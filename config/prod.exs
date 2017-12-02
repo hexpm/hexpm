@@ -15,7 +15,6 @@ config :hexpm, Hexpm.Web.Endpoint,
 
 config :hexpm, Hexpm.Repo,
   adapter: Ecto.Adapters.Postgres,
-  url: {:system, "DATABASE_URL"},
   pool_size: pool_size,
   queue_size: pool_size * 5,
   ssl: true

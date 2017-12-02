@@ -13,6 +13,14 @@ defmodule Hexpm.Repo do
     registry: 1
   }
 
+  def init(opts) do
+    if url = System.get_env("DATABASE_URL") do
+      {:ok, Keyword.put(opts, :url, url)}
+    else
+      {:ok, opts}
+    end
+  end
+
   def refresh_view(schema) do
     source = schema.__schema__(:source)
 
