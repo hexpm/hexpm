@@ -2,7 +2,12 @@ defmodule Hexpm.Web.SignupController do
   use Hexpm.Web, :controller
 
   def show(conn, _params) do
-    render_show(conn, User.build(%{}))
+    if logged_in?(conn) do
+      path = Routes.user_path(conn, :show, conn.assigns.current_user)
+      redirect(conn, to: path)
+    else
+      render_show(conn, User.build(%{}))
+    end
   end
 
   def create(conn, params) do
