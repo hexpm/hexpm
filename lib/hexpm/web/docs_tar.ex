@@ -20,9 +20,7 @@ defmodule Hexpm.Web.DocsTar do
 
     try do
       :zlib.inflateInit(stream, @zlib_magic)
-      # limit single uncompressed chunk size to 512kb
-      :zlib.setBufSize(stream, 512 * 1024)
-      uncompressed = unzip_inflate(stream, "", 0, :zlib.inflateChunk(stream, data))
+      uncompressed = unzip_inflate(stream, "", 0, :zlib.safeInflate(stream, data))
       :zlib.inflateEnd(stream)
       uncompressed
     after
@@ -34,13 +32,17 @@ defmodule Hexpm.Web.DocsTar do
     {:error, "too big"}
   end
 
-  defp unzip_inflate(stream, data, total, {:more, uncompressed}) do
+  defp unzip_inflate(stream, data, total, {:continue, uncompressed}) do
     total = total + IO.iodata_length(uncompressed)
-    unzip_inflate(stream, [data|uncompressed], total, :zlib.inflateChunk(stream))
+    unzip_inflate(stream, [data|uncompressed], total, :zlib.safeInflate(stream, []))
   end
 
-  defp unzip_inflate(_stream, data, _total, uncompressed) do
-    {:ok, IO.iodata_to_binary([data|uncompressed])}
+  defp unzip_inflate(_stream, data, total, {:finished, uncompressed}) do
+    if total + IO.iodata_length(uncompressed) > @uncompressed_max_size do
+      {:error, "too big"}
+    else
+      {:ok, IO.iodata_to_binary([data|uncompressed])}
+    end
   end
 
   defp check_version_dirs(files) do
