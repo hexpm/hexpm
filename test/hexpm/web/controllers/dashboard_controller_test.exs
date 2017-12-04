@@ -310,7 +310,7 @@ defmodule Hexpm.Web.DashboardControllerTest do
 
   test "unknown email cannot be gravatar email", c do
     email = Enum.find(c.user.emails, &(&1.email == "eric@mail.com"))
-    Hexpm.Accounts.Email.toggle_gravatar(email, true) |> Hexpm.Repo.update
+    Hexpm.Accounts.Email.toggle_flag(email, :gravatar, true) |> Hexpm.Repo.update
     conn =
       build_conn()
       |> test_login(c.user)

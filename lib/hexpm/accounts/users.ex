@@ -173,24 +173,16 @@ defmodule Hexpm.Accounts.Users do
     end
   end
 
-  def primary_email(user, params, [audit: audit_data]) do
-    new_primary = find_email(user, params)
-    old_primary = Enum.find(user.emails, &(&1.primary))
+  def primary_email(user, params, opts) do
+    multi =
+      email_flag_multi(user, params, :primary, opts)
+      |> Multi.update(:reset, User.disable_password_reset(user))
 
-    cond do
-      !new_primary ->
-        {:error, :unknown_email}
-      !new_primary.verified ->
-        {:error, :not_verified}
-      true ->
-        {:ok, _} =
-          Multi.new()
-          |> Multi.update(:reset, User.disable_password_reset(user))
-          |> Multi.update(:old_primary, Email.toggle_primary(old_primary, false))
-          |> Multi.update(:new_primary, Email.toggle_primary(new_primary, true))
-          |> audit(audit_data, "email.primary", {old_primary, new_primary})
-          |> Repo.transaction()
+    case Repo.transaction(multi) do
+      {:ok, _} ->
         :ok
+      {:error, :primary_email, reason, _} ->
+        {:error, reason}
     end
   end
 
@@ -203,41 +195,12 @@ defmodule Hexpm.Accounts.Users do
     end
   end
 
-  defp gravatar_email_multi(_user, %{"email" => nil}, _opts) do
-    Multi.new()
+  defp gravatar_email_multi(user, %{"email" => "none"}, opts) do
+    unset_email_flag_multi(user, :gravatar, opts)
   end
 
-  defp gravatar_email_multi(user, %{"email" => "none"}, [audit: audit_data]) do
-    if old_gravatar = Enum.find(user.emails, &(&1.gravatar)) do
-      Multi.new()
-      |> Multi.update(:old_gravatar, Email.toggle_gravatar(old_gravatar, false))
-      |> audit(audit_data, "email.gravatar", {old_gravatar, nil})
-    else
-      Multi.new()
-    end
-  end
-
-  defp gravatar_email_multi(user, params, [audit: audit_data]) do
-    new_gravatar = find_email(user, params)
-    old_gravatar = Enum.find(user.emails, &(&1.gravatar))
-
-    cond do
-      !new_gravatar ->
-        Multi.run(Multi.new, :gravatar_email, fn _ -> {:error, :unknown_email} end)
-      !new_gravatar.verified ->
-        Multi.run(Multi.new, :gravatar_email, fn _ -> {:error, :not_verified} end)
-      old_gravatar && new_gravatar.id == old_gravatar.id ->
-        Multi.new()
-      true ->
-        multi =
-          if old_gravatar,
-            do: Multi.update(Multi.new(), :old_gravatar, Email.toggle_gravatar(old_gravatar, false)),
-            else: Multi.new()
-
-        multi
-        |> Multi.update(:new_gravatar, Email.toggle_gravatar(new_gravatar, true))
-        |> audit(audit_data, "email.gravatar", {new_gravatar, nil})
-    end
+  defp gravatar_email_multi(user, params, opts) do
+    email_flag_multi(user, params, :gravatar, opts)
   end
 
   def public_email(user, params, opts) do
@@ -249,40 +212,55 @@ defmodule Hexpm.Accounts.Users do
     end
   end
 
-  defp public_email_multi(_user, %{"email" => nil}, _opts) do
-    Multi.new()
+  defp public_email_multi(user, %{"email" => "none"}, opts) do
+    unset_email_flag_multi(user, :public, opts)
   end
 
-  defp public_email_multi(user, %{"email" => "none"}, [audit: audit_data]) do
-    if old_public = Enum.find(user.emails, &(&1.public)) do
+  defp public_email_multi(user, params, opts) do
+    email_flag_multi(user, params, :public, opts)
+  end
+
+  defp unset_email_flag_multi(user, flag, [audit: audit_data]) do
+    if old_email = Enum.find(user.emails, &Map.get(&1, flag)) do
+      old_email_op = String.to_atom("old_#{flag}")
       Multi.new()
-      |> Multi.update(:old_public, Email.toggle_public(old_public, false))
-      |> audit(audit_data, "email.public", {old_public, nil})
+      |> Multi.update(old_email_op, Email.toggle_flag(old_email, flag, false))
+      |> audit(audit_data, "email.#{flag}", {old_email, nil})
     else
       Multi.new()
     end
   end
 
-  defp public_email_multi(user, params, [audit: audit_data]) do
-    new_public = find_email(user, params)
-    old_public = Enum.find(user.emails, &(&1.public))
+  defp email_flag_multi(_user, %{"email" => nil}, _flag, _opts) do
+    Multi.new()
+  end
+
+  defp email_flag_multi(user, params, flag, [audit: audit_data]) do
+    new_email = find_email(user, params)
+    old_email = Enum.find(user.emails, &Map.get(&1, flag))
+
+    error_op_name = String.to_atom("#{flag}_email")
 
     cond do
-      !new_public ->
-        Multi.run(Multi.new, :public_email, fn _ -> {:error, :unknown_email} end)
-      !new_public.verified ->
-        Multi.run(Multi.new, :public_email, fn _ -> {:error, :not_verified} end)
-      old_public && new_public.id == old_public.id ->
+      !new_email ->
+        Multi.run(Multi.new, error_op_name, fn _ -> {:error, :unknown_email} end)
+      !new_email.verified ->
+        Multi.run(Multi.new, error_op_name, fn _ -> {:error, :not_verified} end)
+      old_email && new_email.id == old_email.id ->
         Multi.new()
       true ->
         multi =
-          if old_public,
-            do: Multi.update(Multi.new, :old_public, Email.toggle_public(old_public, false)),
-          else: Multi.new()
+          if old_email do
+            old_email_op_name = String.to_atom("old_#{flag}")
+            Multi.update(Multi.new(), old_email_op_name, Email.toggle_flag(old_email, flag, false))
+          else
+            Multi.new()
+          end
 
+        new_email_op_name = String.to_atom("new_#{flag}")
         multi
-        |> Multi.update(:new_public, Email.toggle_public(new_public, true))
-        |> audit(audit_data, "email.public", {old_public, new_public})
+        |> Multi.update(new_email_op_name, Email.toggle_flag(new_email, flag, true))
+        |> audit(audit_data, "email.#{flag}", {old_email, new_email})
     end
   end
 
