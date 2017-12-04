@@ -11,13 +11,15 @@ defmodule Hexpm.Web.UserController do
         |> Packages.attach_versions()
         |> Enum.sort_by(&[repository_sort(&1.repository), &1.name])
       public_email = User.email(user, :public)
+      gravatar_email = User.email(user, :gravatar)
 
       render(conn, "show.html", [
         title: user.username,
         container: "container page user",
         user: user,
         packages: packages,
-        public_email: public_email
+        public_email: public_email,
+        gravatar_email: gravatar_email
       ])
     else
       not_found(conn)
