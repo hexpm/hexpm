@@ -13,7 +13,7 @@ defmodule Hexpm.Repo do
     registry: 1
   }
 
-  def init(opts) do
+  def init(_reason, opts) do
     if url = System.get_env("DATABASE_URL") do
       {:ok, Keyword.put(opts, :url, url)}
     else
