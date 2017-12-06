@@ -35,6 +35,9 @@ config :hexpm,
   fastly_key: System.get_env("HEX_FASTLY_KEY"),
   fastly_hexdocs: System.get_env("HEX_FASTLY_HEXDOCS"),
   fastly_hexrepo: System.get_env("HEX_FASTLY_HEXREPO"),
+  billing_impl: Hexpm.Billing.Hexpm,
+  billing_key: System.get_env("HEX_BILLING_KEY") || "hex_billing_key",
+  billing_url: System.get_env("HEX_BILLING_URL") || "http://localhost:4010/",
   support_email: "support@hex.pm",
   levenshtein_threshold: System.get_env("HEX_LEVENSHTEIN_THRESHOLD") || 2
 

@@ -80,6 +80,8 @@ defmodule Hexpm.Web.Router do
     post "/dashboard/email/gravatar", DashboardController, :gravatar_email
     get "/dashboard/repos/:dashboard_repo", DashboardController, :repository
     post "/dashboard/repos/:dashboard_repo", DashboardController, :update_repository
+    post "/dashboard/repos/:dashboard_repo/billing_token", DashboardController, :billing_token
+    get "/dashboard/repos/:dashboard_repo/invoices/:id", DashboardController, :show_invoice
     get "/dashboard/signup", DashboardController, :repository_signup
     post "/dashboard/signup", DashboardController, :new_repository_signup
 

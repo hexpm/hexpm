@@ -69,4 +69,28 @@ defmodule Hexpm.Web.DashboardView do
       end
     end)
   end
+
+  defp payment_card(card) do
+    card_exp_month = String.pad_leading(card["exp_month"], 2, "0")
+    expires = "#{card_exp_month}/#{card["exp_year"]}"
+    "#{card["brand"]} **** **** **** #{card["last4"]}, Expires: #{expires}"
+  end
+
+  defp subscription_status("active"), do: "Active"
+  # Check if last invoice was unpaid and add note about it?
+  defp subscription_status("canceled"), do: "Not active"
+  defp subscription_status("past_due") do
+    "Active with past due invoices. If the invoice is not paid the " <>
+      "organization will be disabled."
+  end
+
+  defp payment_date(date) do
+    date |> NaiveDateTime.from_iso8601!() |> pretty_date()
+  end
+
+  defp money(integer) when is_integer(integer) do
+    whole = div(integer, 100)
+    float = rem(integer, 100) |> Integer.to_string() |> String.pad_leading(2, "0")
+    "#{whole}.#{float}"
+  end
 end
