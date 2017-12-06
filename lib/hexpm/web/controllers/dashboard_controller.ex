@@ -233,6 +233,29 @@ defmodule Hexpm.Web.DashboardController do
     end)
   end
 
+  def billing_token(conn, %{"dashboard_repo" => repository, "token" => token}) do
+    access_repository(conn, repository, "admin", fn repository ->
+      Hexpm.Billing.checkout(repository.name, %{payment_source: token})
+      send_resp(conn, 204, "")
+    end)
+  end
+
+  def show_invoice(conn, %{"dashboard_repo" => repository, "id" => id}) do
+    access_repository(conn, repository, "admin", fn repository ->
+      id = String.to_integer(id)
+      billing = Hexpm.Billing.dashboard(repository.name)
+      invoice_ids = Enum.map(billing["invoices"], & &1["id"])
+      if id in invoice_ids do
+        invoice = Hexpm.Billing.invoice(id)
+        conn
+        |> put_resp_header("content-type", "text/html")
+        |> send_resp(200, invoice)
+      else
+        not_found(conn)
+      end
+    end)
+  end
+
   def repository_signup(conn, _params) do
     render(
       conn,
@@ -292,12 +315,25 @@ defmodule Hexpm.Web.DashboardController do
   end
 
   defp render_repository(conn, repository, opts \\ []) do
+    billing = Hexpm.Billing.dashboard(repository.name)
+    post_action = Routes.dashboard_path(Endpoint, :billing_token, repository)
+
+    checkout_html =
+      billing["checkout_html"]
+      |> String.replace("${post_action}", post_action)
+      |> String.replace("${csrf_token}", get_csrf_token())
+
     render(
       conn,
       "repository.html",
       title: "Dashboard - Repository",
       container: "container page dashboard",
       repository: repository,
+      checkout_html: checkout_html,
+      subscription: billing["subscription"],
+      monthly_cost: billing["monthly_cost"],
+      card: billing["card"],
+      invoices: billing["invoices"],
       add_member_changeset: opts[:add_member_changeset] || add_member_changeset()
     )
   end

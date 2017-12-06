@@ -83,16 +83,62 @@
     <div class="panel panel-default">
       <div class="panel-heading">Billing</div>
       <div class="panel-body">
-        <p><em>Private repositories is currently in beta and billing has not yet been implemented.</em></p>
+        <%= if @subscription do %>
+          <dl>
+            <dt>Plan</dt>
+            <dd>Hex.pm Organization ($8.00 / month)</dd>
+            <dt>Payment</dt>
+            <dd><%= payment_card(@card) %></dd>
+            <dt>Next invoice</dt>
+            <dd><%= payment_date(@subscription["current_period_end"]) %></dd>
+            <dt>Status</dt>
+            <dd><%= subscription_status(@subscription["status"]) %></dd>
+          </dl>
+
+          <%= raw(@checkout_html) %>
+          <button type="button" class="btn btn-danger">Cancel</button>
+        <% else %>
+          Subscription is not active and organization is disabled.<br><br>
+          <%= raw(@checkout_html) %>
+        <% end %>
+
+        <%= if @invoices != [] do %>
+          <br><br>
+          <h4>Payment history</h4>
+          <table class="table table-striped">
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Amount</th>
+                <th>Payment</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              <%= for invoice <- @invoices do %>
+                <tr>
+                  <td>
+                    <a href="<%= Routes.dashboard_path(Endpoint, :show_invoice, @repository, invoice["id"]) %>" target="_blank">
+                      <%= payment_date(invoice["date"]) %>
+                    </a>
+                    </td>
+                  <td>$<%= money(invoice["amount_due"])%></td>
+                  <td><%= payment_card(invoice["card"]) %></td>
+                  <td><%= if invoice["paid"], do: "Paid", else: "Not paid" %></td>
+                </tr>
+              <% end %>
+            </tbody>
+          </table>
+        <% end %>
       </div>
     </div>
   </div>
 
   <div class="col-sm-9 repository">
-    <div class="panel panel-default">
+    <div class="panel panel-danger">
       <div class="panel-heading">Danger zone</div>
       <div class="panel-body">
-        <p><em>Leave or delete organization...</em></p>
+        <p><em>Leave, delete (delete == inactive) organization...</em></p>
       </div>
     </div>
   </div>

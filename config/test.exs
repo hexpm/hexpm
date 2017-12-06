@@ -7,7 +7,8 @@ config :hexpm,
   cdn_url: System.get_env("HEX_CDN_URL") || "http://localhost:4042",
   secret: System.get_env("HEX_SECRET") || "796f75666f756e64746865686578",
   private_key: File.read!("test/fixtures/private.pem"),
-  public_key: File.read!("test/fixtures/public.pem")
+  public_key: File.read!("test/fixtures/public.pem"),
+  billing_impl: Hexpm.Billing.Local
 
 config :hexpm, Hexpm.Web.Endpoint,
   http: [port: 4001],
