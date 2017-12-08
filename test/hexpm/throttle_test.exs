@@ -36,7 +36,7 @@ defmodule Hexpm.ThrottleTest do
     Throttle.wait(context.pid, 1)
     assert diff(start) < 10
 
-    :timer.sleep(110)
+    Process.sleep(110)
 
     # Second time unit
     start = :erlang.monotonic_time(:milli_seconds)
@@ -76,7 +76,7 @@ defmodule Hexpm.ThrottleTest do
       assert diff(start) < 10
     end)
 
-    :timer.sleep(10)
+    Process.sleep(10)
 
     spawn_link(fn ->
       Throttle.wait(context.pid, 1)
@@ -103,7 +103,7 @@ defmodule Hexpm.ThrottleTest do
       assert_in_delta(90, 110, diff(start))
     end)
 
-    :timer.sleep(10)
+    Process.sleep(10)
 
     # Third time unit
     spawn_link(fn ->
@@ -131,6 +131,6 @@ defmodule Hexpm.ThrottleTest do
       assert_in_delta(190, 210, diff(start))
     end)
 
-    :timer.sleep(300)
+    Process.sleep(300)
   end
 end
