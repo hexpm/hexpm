@@ -16,4 +16,8 @@ defmodule Hexpm.Billing.Local do
   def checkout(_repository, _data) do
     %{}
   end
+
+  def report() do
+    []
+  end
 end

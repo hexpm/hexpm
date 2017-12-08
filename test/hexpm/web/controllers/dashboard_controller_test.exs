@@ -409,6 +409,15 @@ defmodule Hexpm.Web.DashboardControllerTest do
   end
 
   test "show repository", %{user: user, repository: repository} do
+    Mox.expect(Hexpm.Billing.Mock, :dashboard, fn token ->
+      assert repository.name == token
+      %{
+        "checkout_html" => "",
+        "monthly_cost" => 800,
+        "invoices" => []
+      }
+    end)
+
     insert(:repository_user, repository: repository, user: user)
 
     conn =

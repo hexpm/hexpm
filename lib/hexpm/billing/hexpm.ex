@@ -16,6 +16,11 @@ defmodule Hexpm.Billing.Hexpm do
     body
   end
 
+  def report() do
+    {:ok, 200, _headers, body} = get_json("api/reports/customers")
+    body
+  end
+
   defp auth() do
     Application.get_env(:hexpm, :billing_key)
   end

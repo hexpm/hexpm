@@ -58,6 +58,7 @@ defmodule Hexpm.MixProject do
       {:gpb, "~> 3.23"},
       {:hackney, "~> 1.7"},
       {:jiffy, "~> 0.14"},
+      {:mox, "~> 0.3.1", only: :test},
       {:phoenix_ecto, "~> 3.1"},
       {:phoenix_html, "~> 2.3"},
       {:phoenix_live_reload, "~> 1.0", only: :dev},

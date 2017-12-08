@@ -8,7 +8,7 @@ config :hexpm,
   secret: System.get_env("HEX_SECRET") || "796f75666f756e64746865686578",
   private_key: File.read!("test/fixtures/private.pem"),
   public_key: File.read!("test/fixtures/public.pem"),
-  billing_impl: Hexpm.Billing.Local
+  billing_impl: Hexpm.Billing.Mock
 
 config :hexpm, Hexpm.Web.Endpoint,
   http: [port: 4001],

@@ -76,8 +76,9 @@ defmodule Hexpm.Web.DashboardView do
     "#{card["brand"]} **** **** **** #{card["last4"]}, Expires: #{expires}"
   end
 
+  # TODO: Notify if subscription will cancel at period end and when that is
   defp subscription_status("active"), do: "Active"
-  # Check if last invoice was unpaid and add note about it?
+  # TODO: Check if last invoice was unpaid and add note about it?
   defp subscription_status("canceled"), do: "Not active"
   defp subscription_status("past_due") do
     "Active with past due invoices. If the invoice is not paid the " <>
@@ -88,7 +89,7 @@ defmodule Hexpm.Web.DashboardView do
     date |> NaiveDateTime.from_iso8601!() |> pretty_date()
   end
 
-  defp money(integer) when is_integer(integer) do
+  defp money(integer) when is_integer(integer) and integer >= 0 do
     whole = div(integer, 100)
     float = rem(integer, 100) |> Integer.to_string() |> String.pad_leading(2, "0")
     "#{whole}.#{float}"
