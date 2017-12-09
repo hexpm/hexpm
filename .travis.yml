@@ -1,6 +1,6 @@
 dist: trusty
 language: elixir
-elixir: 1.5.1
+elixir: 1.5.2
 otp_release: 20.1
 addons:
   postgresql: 9.6
