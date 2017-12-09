@@ -8,6 +8,13 @@ defmodule Hexpm.Web.API.RepositoryView do
     do: render_one(repository, __MODULE__, "show")
 
   def render("show", %{repository: repository}) do
-    Map.take(repository, [:name, :public, :inserted_at, :updated_at])
+    Map.take(repository, [
+      :name,
+      :public,
+      :active,
+      :billing_active,
+      :inserted_at,
+      :updated_at
+    ])
   end
 end

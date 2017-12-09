@@ -2,7 +2,7 @@ defmodule Hexpm.Web.API.DocsController do
   use Hexpm.Web, :controller
 
   plug :fetch_release
-  plug :authorize, [fun: &package_owner?/2, domain: "api"] when action in [:create, :delete]
+  plug :authorize, [fun: &package_owner/2, domain: "api"] when action in [:create, :delete]
 
   def show(conn, _params) do
     package = conn.assigns.package

@@ -19,12 +19,12 @@ defmodule Hexpm.Accounts.KeyPermission do
   defp validate_permission(changeset, user) do
     validate_change(changeset, :resource, fn _, resource ->
       domain = get_change(changeset, :domain)
-
-      if User.verify_permissions?(user, domain, resource) do
-        []
-      else
-        # NOTE: Possibly change repository if we add more domains
-        [resource: "you do not have access to this repository"]
+      case User.verify_permissions(user, domain, resource) do
+        {:ok, _} ->
+          []
+        :error ->
+          # NOTE: Possibly change repository if we add more domains
+          [resource: "you do not have access to this repository"]
       end
     end)
   end

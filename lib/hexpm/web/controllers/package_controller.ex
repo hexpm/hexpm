@@ -54,7 +54,11 @@ defmodule Hexpm.Web.PackageController do
     repositories = Users.all_repositories(conn.assigns.current_user)
 
     if repository in Enum.map(repositories, & &1.name) do
-      if package = Packages.get(repository, name) do
+      repository = Repositories.get(repository)
+      package = repository && Packages.get(repository, name)
+
+      # Should have access even though repository does not have active billing
+      if package do
         releases = Releases.all(package)
 
         {release, type} =

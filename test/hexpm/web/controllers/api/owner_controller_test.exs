@@ -299,12 +299,20 @@ defmodule Hexpm.Web.API.OwnerControllerTest do
       assert Hexpm.Repo.aggregate(assoc(package, :owners), :count, :id) == 1
     end
 
-    test "returns 404 for missing package if you are authorized", %{
-      user1: user1,
-      user2: user2,
-      repository: repository,
-      repository_package: package
-    } do
+    test "returns 403 if repository does not have active billing", %{user1: user1, user2: user2} do
+      repository = insert(:repository, billing_active: false)
+      insert(:repository_user, repository: repository, user: user1)
+      package = insert(:package, repository_id: repository.id, package_owners: [build(:package_owner, owner: user1)])
+
+      build_conn()
+      |> put_req_header("authorization", key_for(user1))
+      |> put("api/repos/#{repository.name}/packages/#{package.name}/owners/#{user2.username}")
+      |> response(403)
+
+      assert Hexpm.Repo.aggregate(assoc(package, :owners), :count, :id) == 1
+    end
+
+    test "returns 404 for missing package if you are authorized", %{user1: user1, user2: user2, repository: repository, repository_package: package} do
       insert(:repository_user, repository: repository, user: user1, role: "write")
       insert(:repository_user, repository: repository, user: user2)
 
