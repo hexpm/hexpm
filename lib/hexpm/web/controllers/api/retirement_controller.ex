@@ -2,7 +2,7 @@ defmodule Hexpm.Web.API.RetirementController do
   use Hexpm.Web, :controller
 
   plug :maybe_fetch_release when action in [:create, :delete]
-  plug :authorize, [domain: "api", fun: &maybe_package_owner?/2] when action in [:create, :delete]
+  plug :authorize, [domain: "api", fun: &maybe_package_owner/2] when action in [:create, :delete]
 
   def create(conn, params) do
     package = conn.assigns.package

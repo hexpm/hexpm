@@ -2,8 +2,9 @@ defmodule Hexpm.Web.API.OwnerController do
   use Hexpm.Web, :controller
 
   plug :maybe_fetch_package
-  plug :authorize, [domain: "api", fun: &repository_access?/2] when action in [:index, :show]
-  plug :authorize, [domain: "api", fun: &maybe_package_owner?/2] when action in [:create, :delete]
+  plug :authorize, [domain: "api", fun: &repository_access/2] when action in [:index, :show]
+  plug :authorize, [domain: "api", fun: &maybe_package_owner/2] when action in [:create, :delete]
+  plug :authorize, [domain: "api", fun: &repository_billing_active/2] when action in [:create, :delete]
 
   def index(conn, _params) do
     if package = conn.assigns.package do
@@ -22,7 +23,7 @@ defmodule Hexpm.Web.API.OwnerController do
       email = URI.decode_www_form(email)
       owner = Users.get(email)
 
-      if package_owner?(package, owner) do
+      if package_owner(package, owner) == :ok do
         conn
         |> api_cache(:private)
         |> send_resp(204, "")
