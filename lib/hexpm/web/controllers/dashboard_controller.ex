@@ -240,6 +240,24 @@ defmodule Hexpm.Web.DashboardController do
     end)
   end
 
+  def cancel_billing(conn, %{"dashboard_repo" => repository}) do
+    access_repository(conn, repository, "admin", fn repository ->
+      billing = Hexpm.Billing.cancel(repository.name)
+
+      cancel_date =
+        billing["subscription"]["current_period_end"]
+        |> Hexpm.Web.DashboardView.payment_date()
+
+      message =
+        "Your subscription is cancelled, you will have access to the repository until " <>
+          "the end of your billing period at #{cancel_date}"
+
+      conn
+      |> put_flash(:info, message)
+      |> redirect(to: Routes.dashboard_path(conn, :repository, repository))
+    end)
+  end
+
   def show_invoice(conn, %{"dashboard_repo" => repository, "id" => id}) do
     access_repository(conn, repository, "admin", fn repository ->
       id = String.to_integer(id)

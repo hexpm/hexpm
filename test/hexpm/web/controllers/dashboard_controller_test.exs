@@ -436,6 +436,7 @@ defmodule Hexpm.Web.DashboardControllerTest do
   end
 
   test "add member to repository", %{user: user, repository: repository} do
+    # TODO: Update quantity in billing
     insert(:repository_user, repository: repository, user: user, role: "admin")
     new_user = insert(:user)
     add_email(new_user, "new@mail.com")
@@ -457,6 +458,7 @@ defmodule Hexpm.Web.DashboardControllerTest do
   end
 
   test "remove member from repository", %{user: user, repository: repository} do
+    # TODO: Update quantity in billing
     insert(:repository_user, repository: repository, user: user, role: "admin")
     new_user = insert(:user)
     insert(:repository_user, repository: repository, user: new_user)
@@ -491,5 +493,31 @@ defmodule Hexpm.Web.DashboardControllerTest do
     assert redirected_to(conn) == "/dashboard/repos/#{repository.name}"
     assert repo_user = Repo.get_by(assoc(repository, :repository_users), user_id: new_user.id)
     assert repo_user.role == "read"
+  end
+
+  test "cancel billing", %{user: user, repository: repository} do
+    Mox.expect(Hexpm.Billing.Mock, :cancel, fn token ->
+      assert repository.name == token
+      %{
+        "subscription" => %{
+          "cancel_at_period_end" => true,
+          "current_period_end" => "2017-12-12T00:00:00Z"
+        }
+      }
+    end)
+
+    insert(:repository_user, repository: repository, user: user, role: "admin")
+
+    conn =
+      build_conn()
+      |> test_login(user)
+      |> post("dashboard/repos/#{repository.name}/cancel_billing")
+
+    message =
+      "Your subscription is cancelled, you will have access to the repository until " <>
+          "the end of your billing period at December 12, 2017"
+
+    assert redirected_to(conn) == "/dashboard/repos/#{repository.name}"
+    assert get_flash(conn, :info) == message
   end
 end

@@ -90,15 +90,21 @@
             <dt>Payment</dt>
             <dd><%= payment_card(@card) %></dd>
             <dt>Next invoice</dt>
-            <dd><%= payment_date(@subscription["current_period_end"]) %></dd>
+            <%= if @subscription["cancel_at_period_end"] do %>
+              <dd>Subscription ends at <%= payment_date(@subscription["current_period_end"]) %></dd>
+            <% else %>
+              <dd><%= payment_date(@subscription["current_period_end"]) %></dd>
+            <% end %>
             <dt>Status</dt>
-            <dd><%= subscription_status(@subscription["status"]) %></dd>
+            <dd><%= subscription_status(@subscription) %></dd>
           </dl>
 
           <%= raw(@checkout_html) %>
-          <button type="button" class="btn btn-danger">Cancel</button>
+          <%= form_tag(Routes.dashboard_path(Endpoint, :cancel_billing, @repository), class: "cancel-billing") do %>
+            <button type="submit" class="btn btn-danger">Cancel</button>
+          <% end %>
         <% else %>
-          Subscription is not active and organization is disabled.<br><br>
+          Subscription is not active. Organization will be disabled until a payment method has been added.<br><br>
           <%= raw(@checkout_html) %>
         <% end %>
 
