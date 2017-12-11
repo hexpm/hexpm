@@ -76,16 +76,22 @@ defmodule Hexpm.Web.DashboardView do
     "#{card["brand"]} **** **** **** #{card["last4"]}, Expires: #{expires}"
   end
 
-  # TODO: Notify if subscription will cancel at period end and when that is
-  defp subscription_status("active"), do: "Active"
+  defp subscription_status(%{"status" => "active", "cancel_at_period_end" => false}) do
+    "Active"
+  end
+  defp subscription_status(%{"status" => "active", "cancel_at_period_end" => true}) do
+    "Ends after current subscription period"
+  end
+  defp subscription_status(%{"status" => "past_due"}) do
+    "Active with past due invoice, if the invoice is not paid the " <>
+      "organization will be disabled"
+  end
   # TODO: Check if last invoice was unpaid and add note about it?
-  defp subscription_status("canceled"), do: "Not active"
-  defp subscription_status("past_due") do
-    "Active with past due invoices. If the invoice is not paid the " <>
-      "organization will be disabled."
+  defp subscription_status(%{"status" => "canceled"}) do
+    "Not active"
   end
 
-  defp payment_date(date) do
+  def payment_date(date) do
     date |> NaiveDateTime.from_iso8601!() |> pretty_date()
   end
 

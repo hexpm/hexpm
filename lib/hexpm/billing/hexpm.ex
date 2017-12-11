@@ -1,18 +1,23 @@
 defmodule Hexpm.Billing.Hexpm do
   @behaviour Hexpm.Billing
 
+  def checkout(repository, data) do
+    {:ok, 204, _headers, body} = post("api/customers/#{repository}/payment_source", data)
+    body
+  end
+
   def dashboard(repository) do
     {:ok, 200, _headers, body} = get_json("api/customers/#{repository}")
     body
   end
 
-  def invoice(id) do
-    {:ok, 200, _headers, body} = get_html("invoices/html/#{id}")
+  def cancel(repository) do
+    {:ok, 200, _headers, body} = post("api/customers/#{repository}/cancel", %{})
     body
   end
 
-  def checkout(repository, data) do
-    {:ok, 204, _headers, body} = post("api/customers/#{repository}/payment_source", data)
+  def invoice(id) do
+    {:ok, 200, _headers, body} = get_html("invoices/html/#{id}")
     body
   end
 
@@ -69,11 +74,15 @@ defmodule Hexpm.Billing.Hexpm do
   end
 
   defp decode_body(body, headers) do
-    {_, content_type} = List.keyfind(headers, "content-type", 0)
-    if String.contains?(content_type, "application/json") do
-      Hexpm.Web.Jiffy.decode(body)
-    else
-      {:ok, body}
+    case List.keyfind(headers, "content-type", 0) do
+      nil ->
+        {:ok, nil}
+      {_, content_type} ->
+        if String.contains?(content_type, "application/json") do
+          Hexpm.Web.Jiffy.decode(body)
+        else
+          {:ok, body}
+        end
     end
   end
 end

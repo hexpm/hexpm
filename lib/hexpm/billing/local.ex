@@ -1,6 +1,10 @@
 defmodule Hexpm.Billing.Local do
   @behaviour Hexpm.Billing
 
+  def checkout(_repository, _data) do
+    %{}
+  end
+
   def dashboard(_repository) do
     %{
       "checkout_html" => "",
@@ -9,11 +13,11 @@ defmodule Hexpm.Billing.Local do
     }
   end
 
-  def invoice(_id) do
+  def cancel(_repository) do
     %{}
   end
 
-  def checkout(_repository, _data) do
+  def invoice(_id) do
     %{}
   end
 
