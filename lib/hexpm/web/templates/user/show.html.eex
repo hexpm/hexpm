@@ -1,7 +1,7 @@
 <h2><%= @user.username %></h2>
 
 <div class="row">
-  <div class="col-md-9">
+  <div class="col-sm-9">
     <%= if @user.owned_packages == [] do %>
       <h3>No owned packages</h3>
     <% else %>
@@ -17,7 +17,7 @@
     <% end %>
   </div>
 
-  <div class="col-md-3">
+  <div class="col-sm-3">
     <img src="<%= gravatar_url(@gravatar_email, :large) %>" class="avatar">
 
     <h4><%= @user.full_name %></h4>

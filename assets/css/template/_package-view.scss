@@ -83,61 +83,6 @@
   }
 }
 
-
-.stats {
-  padding: 30px 0 0;
-
-  ul {
-    padding: 0;
-    text-align: left;
-    list-style: none;
-
-    li {
-      display: inline-block;
-      width: 24%;
-
-      @include general-mobile {
-        .stat-icon {
-          margin-bottom: 18px;
-        }
-      }
-
-      img {
-        float: left;
-        margin-right: 6px;
-      }
-
-      .stat-info {
-        @include font-size(12, $base-line-height);
-        float: left;
-        padding: 4px 0 0;
-        line-height: 15px;
-        color: #000;
-        text-align: left;
-
-        @include general-mobile {
-          @include font-size(11, $base-line-height);
-        }
-
-        .count-info {
-          display: inline-block;
-          padding: 0 0 5px;
-          font-size: 18px;
-          font-weight: bold;
-
-          @include general-mobile {
-            font-size: 15px;
-          }
-        }
-      }
-
-      .stat-text {
-        line-height: 11px;
-      }
-    }
-  }
-}
-
 .version-dependency-list {
   padding: 0;
   list-style: none;

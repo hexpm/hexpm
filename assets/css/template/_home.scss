@@ -191,44 +191,6 @@
   }
 }
 
-.home-stats {
-  padding: 30px 0;
-
-  ul {
-    text-align: center;
-    list-style: none;
-
-    li {
-      display: inline-block;
-      width: 18%;
-
-      @include general-mobile {
-        .stat-icon {
-          margin-bottom: 5px;
-        }
-      }
-
-      .stat-info {
-        float: left;
-        font-size: 14px;
-        line-height: 15px;
-        color: #000;
-        text-align: left;
-
-        @include general-mobile {
-          font-size: 12px;
-          line-height: 12px;
-        }
-
-        .count-info {
-          font-size: 18px;
-          font-weight: bold;
-        }
-      }
-    }
-  }
-}
-
 .log-head {
   padding-bottom: 10px;
   margin-bottom: 20px;

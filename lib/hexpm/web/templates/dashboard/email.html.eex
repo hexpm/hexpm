@@ -1,11 +1,11 @@
 <%= changeset_error(@add_email_changeset) %>
 
 <div class="row">
-  <div class="col-md-3">
+  <div class="col-sm-3">
     <%= render "_sidebar.html", assigns %>
   </div>
 
-  <div class="col-md-9 email">
+  <div class="col-sm-9 email">
     <div class="panel panel-default">
       <div class="panel-heading">Emails</div>
       <div class="panel-body">
