@@ -4,6 +4,7 @@ maintains = @package.meta.maintainers || []
 licenses = @package.meta.licenses || []
 links = Enum.to_list(@package.meta.links || [])
 build_tools = @current_release && @current_release.meta.build_tools || []
+downloads = if @current_release.downloads, do: @current_release.downloads.downloads, else: 0
 
 tools = [
   mix: "mix.exs",
@@ -73,42 +74,54 @@ tools = Keyword.take(tools, compatible_tools)
       <span class="license"><%= Enum.join(licenses, ", ") %></span>
     <% end %>
 
-    <div class="stats clearfix">
+    <div class="stats package-stats clearfix">
       <ul>
         <li>
           <%= icon(:octicon, :calendar, class: "stat-icon stat-icon-calendar") %>
           <span class="stat-info">
-            <span class="count-info">
-              <%= human_number_space(if @current_release.downloads, do: @current_release.downloads.downloads, else: 0) %>
-            </span> <br>
-            <span class="stat-text">downloads <br> this version</span>
+            <span class="count-info wrap">
+              <%= human_number_space(downloads, 5) %>
+            </span>
+            <span class="count-info no-wrap">
+              <%= human_number_space(downloads) %>
+            </span>
+            <br> <span class="stat-text">downloads <br> this version</span>
           </span>
         </li>
         <li>
           <%= icon(:octicon, :calendar, class: "stat-icon stat-icon-calendar") %>
           <span class="stat-info">
-            <span class="count-info">
+            <span class="count-info wrap">
+              <%= human_number_space(@downloads["day"] || 0, 5) %>
+            </span>
+            <span class="count-info no-wrap">
               <%= human_number_space(@downloads["day"] || 0) %>
-            </span> <br>
-            <span class="stat-text">downloads <br> yesterday</span>
+            </span>
+            <br> <span class="stat-text">downloads <br> yesterday</span>
           </span>
         </li>
         <li>
           <%= icon(:octicon, :calendar, class: "stat-icon stat-icon-calendar") %>
           <span class="stat-info">
-            <span class="count-info">
+            <span class="count-info wrap">
+              <%= human_number_space(@downloads["week"] || 0, 5) %>
+            </span>
+            <span class="count-info no-wrap">
               <%= human_number_space(@downloads["week"] || 0) %>
-            </span> <br>
-            <span class="stat-text">downloads <br> last 7 days</span>
+            </span>
+            <br> <span class="stat-text">downloads <br> last 7 days</span>
           </span>
         </li>
         <li>
           <%= icon(:octicon, :calendar, class: "stat-icon stat-icon-calendar") %>
           <span class="stat-info">
-            <span class="count-info">
+            <span class="count-info wrap">
+              <%= human_number_space(@downloads["all"] || 0, 5) %>
+            </span>
+            <span class="count-info no-wrap">
               <%= human_number_space(@downloads["all"] || 0) %>
-            </span> <br>
-            <span class="stat-text">downloads <br> all time</span>
+            </span>
+            <br> <span class="stat-text">downloads <br> all time</span>
           </span>
         </li>
       </ul>

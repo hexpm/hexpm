@@ -187,16 +187,39 @@ defmodule Hexpm.Web.ViewHelpers do
     text
   end
 
-  def human_number_space(string) when is_binary(string) do
-    split         = rem(byte_size(string), 3)
-    string        = :erlang.binary_to_list(string)
-    {first, rest} = Enum.split(string, split)
-    rest          = Enum.chunk_every(rest, 3) |> Enum.map(&[" ", &1])
-    IO.iodata_to_binary([first, rest])
+  @number_unit ["K", "M", "B"]
+
+  def human_number_space(integer, max, count \\ 0)
+
+  def human_number_space(integer, max, count) when is_integer(integer) do
+    integer |> Integer.to_charlist() |> human_number_space(max, count)
   end
 
-  def human_number_space(int) when is_integer(int) do
-    human_number_space(Integer.to_string(int))
+  def human_number_space(string, max, count) when is_list(string) do
+    cond do
+      length(string) > max ->
+        string = Enum.drop(string, -3)
+        human_number_space(string, max, count + 1)
+      count == 0 ->
+        human_number_space(:erlang.list_to_binary(string))
+      true ->
+        human_number_space(:erlang.list_to_binary(string)) <> Enum.at(@number_unit, count - 1)
+    end
+  end
+
+  def human_number_space(string) when is_binary(string) do
+    string
+    |> :erlang.binary_to_list()
+    |> Enum.reverse()
+    |> Enum.chunk_every(3)
+    |> Enum.intersperse(?\s)
+    |> List.flatten()
+    |> Enum.reverse()
+    |> :erlang.list_to_binary()
+  end
+
+  def human_number_space(integer) when is_integer(integer) do
+    integer |> Integer.to_string() |> human_number_space()
   end
 
   def human_relative_time_from_now(date) do
