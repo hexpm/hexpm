@@ -23,6 +23,12 @@ defmodule Hexpm.Web.Plugs.Attack do
     block BlockAddress.blocked?(ip_string(conn.remote_ip))
   end
 
+  rule "valid query string", conn do
+    if String.contains?(conn.request_path <> conn.query_string, "%00") do
+      block :bad_request
+    end
+  end
+
   rule "user throttle", conn do
     if user = conn.assigns.current_user do
       throttle({:user, user.id}, [
@@ -52,6 +58,9 @@ defmodule Hexpm.Web.Plugs.Attack do
     conn
     |> add_throttling_headers(data)
     |> render_error(429, message: "API rate limit exceeded for #{throttled_user(conn)}")
+  end
+  def block_action(conn, :bad_request, _opts) do
+    render_error(conn, 400, message: "Bad request")
   end
   def block_action(conn, _data, _opts) do
     render_error(conn, 403, message: "Blocked")
