@@ -274,6 +274,29 @@ defmodule Hexpm.Web.DashboardController do
     end)
   end
 
+  def update_billing_email(conn, %{"dashboard_repo" => repository, "email" => email}) do
+    access_repository(conn, repository, "admin", fn repository ->
+      billing = Hexpm.Billing.dashboard(repository.name)
+
+      emails =
+        conn.assigns.current_user.emails
+        |> Enum.filter(& &1.verified)
+        |> Enum.map(& &1.email)
+
+      if email in emails or email == billing["email"] do
+        Hexpm.Billing.update(repository.name, %{"email" => email})
+        conn
+        |> put_flash(:info, "Updated your billing email.")
+        |> redirect(to: Routes.dashboard_path(conn, :repository, repository))
+      else
+        conn
+        |> put_status(400)
+        |> put_flash(:error, "Failed to update billing email.")
+        |> render_repository(repository)
+      end
+    end)
+  end
+
   def repository_signup(conn, _params) do
     render(
       conn,
@@ -348,6 +371,7 @@ defmodule Hexpm.Web.DashboardController do
       container: "container page dashboard",
       repository: repository,
       checkout_html: checkout_html,
+      billing_email: billing["email"],
       subscription: billing["subscription"],
       monthly_cost: billing["monthly_cost"],
       card: billing["card"],

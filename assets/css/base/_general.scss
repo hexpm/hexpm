@@ -107,6 +107,15 @@ input[type="checkbox"] {
   }
 }
 
+.panel-body-part {
+  border-top: 1px solid #ddd;
+  padding: 15px;
+
+  h4 {
+    margin-top: 0;
+  }
+}
+
 // Responsive: Portrait tablets and up
 
 @include min-screen(768px) {

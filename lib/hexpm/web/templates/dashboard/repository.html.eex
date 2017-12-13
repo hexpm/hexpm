@@ -86,7 +86,7 @@
         <%= if @subscription do %>
           <dl>
             <dt>Plan</dt>
-            <dd>Hex.pm Organization ($8.00 / month)</dd>
+            <dd>Hex.pm Organization ($8.00 per user / month)</dd>
             <dt>Payment</dt>
             <dd><%= payment_card(@card) %></dd>
             <dt>Next invoice</dt>
@@ -101,15 +101,30 @@
 
           <%= raw(@checkout_html) %>
           <%= form_tag(Routes.dashboard_path(Endpoint, :cancel_billing, @repository), class: "cancel-billing") do %>
-            <button type="submit" class="btn btn-danger">Cancel</button>
+            <%= submit "Cancel", class: "btn btn-danger", disabled: !@subscription || @subscription["cancel_at_period_end"] %>
           <% end %>
         <% else %>
           Subscription is not active. Organization will be disabled until a payment method has been added.<br><br>
           <%= raw(@checkout_html) %>
         <% end %>
+      </div>
 
-        <%= if @invoices != [] do %>
-          <br><br>
+      <div class="panel-body-part">
+        <h4>Billing email</h4>
+        <%= form_tag(Routes.dashboard_path(Endpoint, :update_billing_email, @repository), class: "form-inline") do %>
+          <div class="form-group">
+            <select id="billing_email" name="email" class="form-control">
+              <%= for email <- billing_emails(@current_user, @billing_email) do %>
+                <option value="<%= email %>" <%= if email == @billing_email do %>selected<% end %>><%= email %></option>
+              <% end %>
+            </select>
+            <%= submit "Save", class: "btn btn-primary" %>
+          </div>
+        <% end %>
+      </div>
+
+      <%= if @invoices != [] do %>
+        <div class="panel-body-part">
           <h4>Payment history</h4>
           <table class="table table-striped">
             <thead>
@@ -130,13 +145,13 @@
                     </td>
                   <td>$<%= money(invoice["amount_due"])%></td>
                   <td><%= payment_card(invoice["card"]) %></td>
-                  <td><%= if invoice["paid"], do: "Paid", else: "Not paid" %></td>
+                  <td><%= invoice_status(invoice) %></td>
                 </tr>
               <% end %>
             </tbody>
           </table>
-        <% end %>
-      </div>
+        </div>
+      <% end %>
     </div>
   </div>
 
