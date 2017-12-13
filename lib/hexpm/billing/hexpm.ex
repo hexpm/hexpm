@@ -16,6 +16,11 @@ defmodule Hexpm.Billing.Hexpm do
     body
   end
 
+  def update(repository, params) do
+    {:ok, 200, _headers, body} = patch("api/customers/#{repository}", params)
+    body
+  end
+
   def invoice(id) do
     {:ok, 200, _headers, body} = get_html("invoices/html/#{id}")
     body
@@ -40,6 +45,19 @@ defmodule Hexpm.Billing.Hexpm do
 
     body = Hexpm.Web.Jiffy.encode!(body)
     :hackney.post(url, headers, body, [])
+    |> read_request()
+  end
+
+  defp patch(url, body) do
+    url = Application.get_env(:hexpm, :billing_url) <> url
+    headers = [
+      {"authorization", auth()},
+      {"accept", "application/json"},
+      {"content-type", "application/json"}
+    ]
+
+    body = Hexpm.Web.Jiffy.encode!(body)
+    :hackney.patch(url, headers, body, [])
     |> read_request()
   end
 

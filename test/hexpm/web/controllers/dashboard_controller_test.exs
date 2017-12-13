@@ -520,4 +520,52 @@ defmodule Hexpm.Web.DashboardControllerTest do
     assert redirected_to(conn) == "/dashboard/repos/#{repository.name}"
     assert get_flash(conn, :info) == message
   end
+
+  test "update billing email", %{user: user, repository: repository} do
+    Mox.expect(Hexpm.Billing.Mock, :dashboard, 2, fn token ->
+      assert repository.name == token
+      %{
+        "checkout_html" => "",
+        "monthly_cost" => 800,
+        "invoices" => []
+      }
+    end)
+
+    Mox.expect(Hexpm.Billing.Mock, :update, fn token, params ->
+      assert repository.name == token
+      assert %{"email" => _} = params
+      %{}
+    end)
+
+    insert(:repository_user, repository: repository, user: user, role: "admin")
+
+    conn =
+      build_conn()
+      |> test_login(user)
+      |> post("dashboard/repos/#{repository.name}/update_billing_email", %{"email" => hd(user.emails).email})
+
+    assert redirected_to(conn) == "/dashboard/repos/#{repository.name}"
+    assert get_flash(conn, :info) == "Updated your billing email."
+  end
+
+  test "cannot update billing email that you do not own", %{user: user, repository: repository} do
+    Mox.expect(Hexpm.Billing.Mock, :dashboard, 2, fn token ->
+      assert repository.name == token
+      %{
+        "checkout_html" => "",
+        "monthly_cost" => 800,
+        "invoices" => []
+      }
+    end)
+
+    insert(:repository_user, repository: repository, user: user, role: "admin")
+
+    conn =
+      build_conn()
+      |> test_login(user)
+      |> post("dashboard/repos/#{repository.name}/update_billing_email", %{"email" => "nonexistant@example.com"})
+
+    response(conn, 400)
+    assert get_flash(conn, :error) == "Failed to update billing email."
+  end
 end

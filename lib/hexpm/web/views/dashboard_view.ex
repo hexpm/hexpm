@@ -91,6 +91,10 @@ defmodule Hexpm.Web.DashboardView do
     "Not active"
   end
 
+  defp invoice_status(%{"paid" => true}), do: "Paid"
+  defp invoice_status(%{"paid" => false, "attempted" => true}), do: "Past due"
+  defp invoice_status(%{"paid" => false, "attempted" => false}), do: "Pending"
+
   def payment_date(date) do
     date |> NaiveDateTime.from_iso8601!() |> pretty_date()
   end
@@ -99,5 +103,14 @@ defmodule Hexpm.Web.DashboardView do
     whole = div(integer, 100)
     float = rem(integer, 100) |> Integer.to_string() |> String.pad_leading(2, "0")
     "#{whole}.#{float}"
+  end
+
+  defp billing_emails(user, billing_email) do
+    emails =
+      user.emails
+      |> Enum.filter(& &1.verified)
+      |> Enum.map(& &1.email)
+
+    Enum.uniq([billing_email | emails])
   end
 end
