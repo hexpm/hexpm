@@ -11,6 +11,7 @@ defmodule Hexpm.Web.Router do
     plug :protect_from_forgery
     plug :put_secure_browser_headers
     plug :web_user_agent
+    plug :validate_url
     plug :login
     plug :default_repository
   end
@@ -20,6 +21,7 @@ defmodule Hexpm.Web.Router do
     plug :auth_gate
     plug :user_agent
     plug :authenticate
+    plug :validate_url
     plug Hexpm.Web.Plugs.Attack
     plug :fetch_body
     plug :read_body_finally
@@ -31,6 +33,7 @@ defmodule Hexpm.Web.Router do
     plug :auth_gate
     plug :user_agent
     plug :authenticate
+    plug :validate_url
     plug Hexpm.Web.Plugs.Attack
     plug Corsica, origins: "*", allow_methods: ["HEAD", "GET"]
     plug :default_repository

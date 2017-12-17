@@ -10,6 +10,16 @@ defmodule Hexpm.Web.Plugs do
     read_timeout: 10_000
   ]
 
+  def validate_url(conn, _opts) do
+    if String.contains?(conn.request_path <> conn.query_string, "%00") do
+      conn
+      |> Hexpm.Web.ControllerHelpers.render_error(400)
+      |> halt()
+    else
+      conn
+    end
+  end
+
   def fetch_body(conn, _opts) do
     {conn, body} = read_body(conn)
     put_in(conn.params["body"], body)
