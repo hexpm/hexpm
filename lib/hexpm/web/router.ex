@@ -77,6 +77,7 @@ defmodule Hexpm.Web.Router do
     post "/dashboard/email/primary", DashboardController, :primary_email
     post "/dashboard/email/public", DashboardController, :public_email
     post "/dashboard/email/resend", DashboardController, :resend_verify_email
+    post "/dashboard/email/gravatar", DashboardController, :gravatar_email
     get "/dashboard/repos/:dashboard_repo", DashboardController, :repository
     post "/dashboard/repos/:dashboard_repo", DashboardController, :update_repository
     get "/dashboard/signup", DashboardController, :repository_signup

@@ -12,7 +12,7 @@
       <ul class="list-group clearfix">
         <%= for repository_user <- @repository.repository_users do %>
           <li class="list-group-item clearfix">
-            <img src="<%= gravatar_url(User.email(repository_user.user, :public), :small) %>" class="member-avatar">
+            <img src="<%= gravatar_url(User.email(repository_user.user, :gravatar), :small) %>" class="member-avatar">
             <a class="member-username" href="<%= Routes.user_path(Endpoint, :show, repository_user.user) %>"><%= repository_user.user.username %></a>
             <div style="float: right">
               <div class="dropdown role-dropdown">

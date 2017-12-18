@@ -18,7 +18,8 @@ defmodule Hexpm.Factory do
       email: Fake.sequence(:email),
       verified: true,
       primary: true,
-      public: true
+      public: true,
+      gravatar: true
     }
   end
 

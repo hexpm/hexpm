@@ -9,6 +9,7 @@ defmodule Hexpm.Accounts.Email do
     field :verified, :boolean, default: false
     field :primary, :boolean, default: false
     field :public, :boolean, default: false
+    field :gravatar, :boolean, default: false
     field :verification_key, :string
 
     belongs_to :user, User
@@ -49,12 +50,8 @@ defmodule Hexpm.Accounts.Email do
     |> unique_constraint(:email, name: "emails_email_key", message: "already in use")
   end
 
-  def toggle_primary(email, flag) do
-    change(email, %{primary: flag})
-  end
-
-  def toggle_public(email, flag) do
-    change(email, %{public: flag})
+  def toggle_flag(email, flag, value) do
+    change(email, %{flag => value})
   end
 
   def order_emails(emails) do

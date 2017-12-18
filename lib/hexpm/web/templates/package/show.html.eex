@@ -205,7 +205,7 @@ tools = Keyword.take(tools, compatible_tools)
       <%= for user <- @owners do %>
         <li>
           <a href="<%= Routes.user_path(Endpoint, :show, user) %>">
-            <img src="<%= gravatar_url(User.email(user, :public), :small) %>" class="owner-avatar"><%= user.username %>
+            <img src="<%= gravatar_url(User.email(user, :gravatar), :small) %>" class="owner-avatar"><%= user.username %>
           </a>
         </li>
       <% end %>
