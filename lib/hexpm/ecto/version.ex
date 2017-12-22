@@ -5,10 +5,6 @@ defmodule Hexpm.Version do
 
   def type(), do: :string
 
-  def blank?(""),  do: true
-  def blank?(nil), do: true
-  def blank?(_),   do: false
-
   def cast(%Version{} = version), do: {:ok, version}
   def cast(string) when is_binary(string), do: Version.parse(string)
   def cast(_), do: :error

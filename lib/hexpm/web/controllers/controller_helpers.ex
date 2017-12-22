@@ -220,19 +220,6 @@ defmodule Hexpm.Web.ControllerHelpers do
     |> assign(:package, package)
   end
 
-  def fetch_package(conn, _opts) do
-    repository = Repositories.get(conn.params["repository"])
-    package = repository && Packages.get(repository, conn.params["name"])
-
-    if package do
-      conn
-      |> assign(:repository, repository)
-      |> assign(:package, package)
-    else
-      conn |> not_found() |> halt()
-    end
-  end
-
   def fetch_release(conn, _opts) do
     repository = Repositories.get(conn.params["repository"])
     package = repository && Hexpm.Repository.Packages.get(repository, conn.params["name"])
@@ -282,9 +269,6 @@ defmodule Hexpm.Web.ControllerHelpers do
   def audit_data(conn) do
     {conn.assigns.current_user, conn.assigns.user_agent}
   end
-
-  def success_to_status(true), do: 200
-  def success_to_status(false), do: 400
 
   def password_auth(username, password) do
     case Auth.password_auth(username, password) do

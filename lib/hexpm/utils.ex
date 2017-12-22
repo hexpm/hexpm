@@ -244,18 +244,6 @@ defmodule Hexpm.Utils do
     "#{repo}/docs/#{package}-#{version}.tar.gz"
   end
 
-  @doc """
-  A regex parsing out the version and format at the end of a media type.
-  '.version+format'
-  """
-  @spec vendor_regex() :: Regex.t
-  def vendor_regex do
-    ~r/^
-        (?:\.(?<version>[^\+]+))?
-        (?:\+(?<format>.*))?
-        $/x
-  end
-
   def paginate(query, page, count) when is_integer(page) and page > 0 do
     offset = (page - 1) * count
     from(var in query,
