@@ -3,7 +3,7 @@ defmodule Hexpm.Web.ControllerHelpers do
   import Phoenix.Controller
 
   alias Hexpm.Accounts.Auth
-  alias Hexpm.Repository.{Packages, Releases, Repositories}
+  alias Hexpm.Repository.{Releases, Repositories}
   alias Hexpm.Web.Router.Helpers, as: Routes
 
   @max_cache_age 60
