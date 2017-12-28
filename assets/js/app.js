@@ -22,6 +22,7 @@ import "phoenix_html"
 
 export default class App {
   constructor() {
+    // Copy button
     $(".copy-button").click(this.onCopy.bind(this))
 
     // Show show-versions button if JS is enabled
@@ -30,7 +31,16 @@ export default class App {
     // Package: toggle text in "All Versions / Recent Version" buttons
     $(".show-versions .invisible").removeClass("invisible").toggle()
     $(".show-versions .toggle-text").click((event) => $(event.target).parent().find("a").toggle())
+
+    // Focus search field
     $("[name='search']").focus()
+
+    // Switch tabs
+    $('.nav-tabs a').click(function (e) {
+      e.preventDefault()
+      $(this).tab('show')
+    })
+
     // Highlight syntax
     hljs.initHighlightingOnLoad()
   }

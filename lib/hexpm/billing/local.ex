@@ -18,7 +18,7 @@ defmodule Hexpm.Billing.Local do
   end
 
   def update(_repository, _params) do
-    %{}
+    {:ok, %{}}
   end
 
   def invoice(_id) do
