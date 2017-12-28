@@ -41,19 +41,21 @@ defmodule Hexpm.Repository.Repositories do
     result.repository
   end
 
-  # TODO: audit log
 
-  def add_member(repository, username, params) do
+  def add_member(repository, username, params, [audit: audit_data]) do
     if user = Users.get(username, [:emails]) do
       repository_user = %RepositoryUser{repository_id: repository.id, user_id: user.id}
-      changeset = Repository.add_member(repository_user, params)
 
-      case Repo.insert(changeset) do
-        {:ok, repository_user} ->
+      multi =
+        Multi.new()
+        |> Multi.insert(:repository_user, Repository.add_member(repository_user, params))
+        |> audit(audit_data, "repository.member.add", {repository, user})
+
+      case Repo.transaction(multi) do
+        {:ok, result} ->
           send_invite_email(repository, user)
-          {:ok, repository_user}
-
-        {:error, changeset} ->
+          {:ok, result.repository_user}
+        {:error, :repository_user, changeset, _} ->
           {:error, changeset}
       end
     else
@@ -61,7 +63,7 @@ defmodule Hexpm.Repository.Repositories do
     end
   end
 
-  def remove_member(repository, username) do
+  def remove_member(repository, username, [audit: audit_data]) do
     if user = Users.get(username) do
       count = Repo.aggregate(assoc(repository, :repository_users), :count, :id)
 
@@ -69,7 +71,15 @@ defmodule Hexpm.Repository.Repositories do
         {:error, :last_member}
       else
         repository_user = Repo.get_by(assoc(repository, :repository_users), user_id: user.id)
-        repository_user && Repo.delete!(repository_user)
+
+        if repository_user do
+          {:ok, _result} =
+            Multi.new()
+            |> Multi.delete(:repository_user, repository_user)
+            |> audit(audit_data, "repository.member.remove", {repository, user})
+            |> Repo.transaction()
+        end
+
         :ok
       end
     else
@@ -77,23 +87,30 @@ defmodule Hexpm.Repository.Repositories do
     end
   end
 
-  def change_role(repository, username, params) do
+  def change_role(repository, username, params, [audit: audit_data]) do
     user = Users.get(username)
-    repo_users = Repo.all(assoc(repository, :repository_users))
-    repo_user = Enum.find(repo_users, &(&1.user_id == user.id))
-    number_admins = Enum.count(repo_users, &(&1.role == "admin"))
+    repository_users = Repo.all(assoc(repository, :repository_users))
+    repository_user = Enum.find(repository_users, &(&1.user_id == user.id))
+    number_admins = Enum.count(repository_users, &(&1.role == "admin"))
 
     cond do
-      !repo_user ->
+      !repository_user ->
         {:error, :unknown_user}
-
-      repo_user.role == "admin" and number_admins == 1 ->
+      repository_user.role == "admin" and number_admins == 1 ->
         {:error, :last_admin}
 
       true ->
-        repo_user
-        |> Repository.change_role(params)
-        |> Repo.update()
+        multi =
+          Multi.new()
+          |> Multi.update(:repository_user, Repository.change_role(repository_user, params))
+          |> audit(audit_data, "repository.member.role", {repository, user, params["role"]})
+
+        case Repo.transaction(multi) do
+          {:ok, result} ->
+            {:ok, result.repository_user}
+          {:error, :repository_user, changeset, _} ->
+            {:error, changeset}
+        end
     end
   end
 

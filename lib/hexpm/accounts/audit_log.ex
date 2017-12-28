@@ -99,12 +99,23 @@ defmodule Hexpm.Accounts.AuditLog do
 
   defp extract_params("user.create", user), do: serialize(user)
   defp extract_params("user.update", user), do: serialize(user)
+  defp extract_params("repository.create", repository), do: serialize(repository)
+
+  defp extract_params("repository.member.add", {repository, user}),
+    do: %{repository: serialize(repository), user: serialize(user)}
+
+  defp extract_params("repository.member.remove", {repository, user}),
+    do: %{repository: serialize(repository), user: serialize(user)}
+
+  defp extract_params("repository.member.role", {repository, user, role}),
+    do: %{repository: serialize(repository), user: serialize(user), role: role}
 
   defp serialize(%Key{} = key) do
     key
     |> do_serialize()
     |> Map.put(:permissions, Enum.map(key.permissions, &serialize/1))
   end
+
   defp serialize(%Package{} = package) do
     package
     |> do_serialize()
@@ -137,6 +148,7 @@ defmodule Hexpm.Accounts.AuditLog do
   defp fields(%Release{}), do: [:id, :version, :checksum, :has_docs, :package_id]
   defp fields(%ReleaseMetadata{}), do: [:app, :build_tools, :elixir]
   defp fields(%ReleaseRetirement{}), do: [:status, :message]
+  defp fields(%Repository{}), do: [:name, :public, :active, :billing_active]
   defp fields(%User{}), do: [:id, :username]
   defp fields(%UserHandles{}), do: [:github, :twitter, :freenode]
 
