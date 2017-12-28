@@ -12,7 +12,7 @@
   <div class="panel-heading">Organization settings</div>
   <%= if @current_user.repositories == [] do %>
     <div class="panel-body">
-      <small>You are not a member of any organizations. Organizations is currently in beta, fill out the <a href="<%= Routes.dashboard_path(Endpoint, :repository_signup) %>">sign up form</a> to request access.</small>
+      <small>You are not a member of any organizations. Organizations is currently in beta, fill out the <a href="<%= Routes.dashboard_path(Endpoint, :new_repository) %>">sign up form</a> to request access.</small>
     </div>
   <% else %>
     <ul class="list-group">
@@ -25,7 +25,7 @@
       <% end %>
     </ul>
     <div class="panel-body">
-      <small>Fill out the <a href="<%= Routes.dashboard_path(Endpoint, :repository_signup) %>">sign up form</a> to request access to a new organization.</small>
+      <small>Create <a href="<%= Routes.dashboard_path(Endpoint, :new_repository) %>">new organization</a></small>
     </div>
   <% end %>
 </div>

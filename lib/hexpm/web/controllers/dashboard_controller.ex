@@ -310,29 +310,29 @@ defmodule Hexpm.Web.DashboardController do
     end)
   end
 
-  def repository_signup(conn, _params) do
-    render(
-      conn,
-      "repository_signup.html",
-      title: "Dashboard - Repository sign up",
-      container: "container page dashboard"
-    )
+  def new_repository(conn, _params) do
+    render_new_repository(conn)
   end
 
-  def new_repository_signup(conn, %{
-        "name" => name,
-        "members" => members,
-        "opensource" => opensource
-      }) do
-    Emails.repository_signup(conn.assigns.current_user, name, members, opensource)
-    |> Mailer.deliver_now_throttled()
+  def create_repository(conn, params) do
+    case Repositories.create(conn.assigns.current_user, params["repository"], audit: audit_data(conn)) do
+      {:ok, repository} ->
+        conn
+        |> put_flash(:info, "Repository created.")
+        |> redirect(to: Routes.dashboard_path(conn, :repository, repository))
+      {:error, changeset} ->
+        conn
+        |> put_status(400)
+        |> render_new_repository(changeset)
+    end
+  end
 
-    conn
-    |> put_flash(
-      :info,
-      "You have requested access to the organization beta. We will get back to you shortly."
-    )
-    |> redirect(to: Routes.dashboard_path(conn, :repository_signup))
+  defp render_new_repository(conn, changeset \\ create_repository_changeset()) do
+    render conn, "repository_signup.html", [
+      title: "Dashboard - Repository sign up",
+      container: "container page dashboard",
+      changeset: changeset
+    ]
   end
 
   defp render_profile(conn, changeset) do
@@ -425,6 +425,10 @@ defmodule Hexpm.Web.DashboardController do
 
   defp add_member_changeset() do
     Repository.add_member(%RepositoryUser{}, %{})
+  end
+
+  defp create_repository_changeset() do
+    Repository.changeset(%Repository{}, %{})
   end
 
   defp email_error_message(:unknown_email, email), do: "Unknown email #{email}."
