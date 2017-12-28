@@ -511,7 +511,7 @@ defmodule Hexpm.Web.DashboardControllerTest do
     conn =
       build_conn()
       |> test_login(user)
-      |> post("dashboard/repos/#{repository.name}/cancel_billing")
+      |> post("dashboard/repos/#{repository.name}/cancel-billing")
 
     message =
       "Your subscription is cancelled, you will have access to the repository until " <>
@@ -542,7 +542,7 @@ defmodule Hexpm.Web.DashboardControllerTest do
     conn =
       build_conn()
       |> test_login(user)
-      |> post("dashboard/repos/#{repository.name}/update_billing", %{"email" => hd(user.emails).email})
+      |> post("dashboard/repos/#{repository.name}/update-billing", %{"email" => hd(user.emails).email})
 
     assert redirected_to(conn) == "/dashboard/repos/#{repository.name}"
     assert get_flash(conn, :info) == "Updated your billing information."
@@ -563,9 +563,32 @@ defmodule Hexpm.Web.DashboardControllerTest do
     conn =
       build_conn()
       |> test_login(user)
-      |> post("dashboard/repos/#{repository.name}/update_billing", %{"email" => "nonexistant@example.com"})
+      |> post("dashboard/repos/#{repository.name}/update-billing", %{"email" => "nonexistant@example.com"})
 
     response(conn, 400)
     assert get_flash(conn, :error) == "Invalid billing email."
+  end
+
+  test "create repository", %{user: user} do
+    conn =
+      build_conn()
+      |> test_login(user)
+      |> post("dashboard/repo-signup", %{"repository" => %{"name" => "createrepo"}})
+
+    response(conn, 302)
+    assert get_resp_header(conn, "location") == ["/dashboard/repos/createrepo"]
+    assert get_flash(conn, :info) == "Repository created."
+  end
+
+  test "create repository validates name", %{user: user} do
+    insert(:repository, name: "createrepovalidates")
+
+    conn =
+      build_conn()
+      |> test_login(user)
+      |> post("dashboard/repo-signup", %{"repository" => %{"name" => "createrepovalidates"}})
+
+    assert response(conn, 400) =~ "Oops, something went wrong"
+    assert response(conn, 400) =~ "has already been taken"
   end
 end

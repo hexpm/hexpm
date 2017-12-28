@@ -80,17 +80,17 @@ defmodule Hexpm.Web.Router do
     post "/dashboard/email/gravatar", DashboardController, :gravatar_email
     get "/dashboard/repos/:dashboard_repo", DashboardController, :repository
     post "/dashboard/repos/:dashboard_repo", DashboardController, :update_repository
-    post "/dashboard/repos/:dashboard_repo/billing_token", DashboardController, :billing_token
-    post "/dashboard/repos/:dashboard_repo/cancel_billing", DashboardController, :cancel_billing
-    post "/dashboard/repos/:dashboard_repo/update_billing", DashboardController, :update_billing
+    post "/dashboard/repos/:dashboard_repo/billing-token", DashboardController, :billing_token
+    post "/dashboard/repos/:dashboard_repo/cancel-billing", DashboardController, :cancel_billing
+    post "/dashboard/repos/:dashboard_repo/update-billing", DashboardController, :update_billing
     get "/dashboard/repos/:dashboard_repo/invoices/:id", DashboardController, :show_invoice
-    get "/dashboard/signup", DashboardController, :repository_signup
-    post "/dashboard/signup", DashboardController, :new_repository_signup
+    get "/dashboard/repo-signup", DashboardController, :new_repository
+    post "/dashboard/repo-signup", DashboardController, :create_repository
 
     get "/docs/usage", DocsController, :usage
-    get "/docs/rebar3_usage", DocsController, :rebar3_usage
+    get "/docs/rebar3-usage", DocsController, :rebar3_usage
     get "/docs/publish", DocsController, :publish
-    get "/docs/rebar3_publish", DocsController, :rebar3_publish
+    get "/docs/rebar3-publish", DocsController, :rebar3_publish
     get "/docs/tasks", DocsController, :tasks
     get "/docs/private", DocsController, :private
     get "/docs/faq", DocsController, :faq

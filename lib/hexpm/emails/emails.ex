@@ -65,17 +65,6 @@ defmodule Hexpm.Emails do
     |> render("repository_invite.html")
   end
 
-  def repository_signup(user, name, members, opensource) do
-    email()
-    |> to(Application.get_env(:hexpm, :support_email))
-    |> subject("[ORGANIZATION SIGN UP] #{name}")
-    |> assign(:user, user)
-    |> assign(:name, name)
-    |> assign(:members, members)
-    |> assign(:opensource, opensource)
-    |> render("repository_signup.html")
-  end
-
   defp email() do
     new_email()
     |> from(source())

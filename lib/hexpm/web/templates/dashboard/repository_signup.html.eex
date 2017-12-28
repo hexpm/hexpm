@@ -1,3 +1,5 @@
+<%= changeset_error(@changeset) %>
+
 <div class="row">
   <div class="col-sm-3">
     <%= render "_sidebar.html", assigns %>
@@ -5,39 +7,14 @@
 
   <div class="col-sm-9 repository-signup">
     <div class="panel panel-default">
-      <div class="panel-heading">Organization sign up</div>
+      <div class="panel-heading">Create new organization</div>
       <div class="panel-body">
-        <p>
-          Organizations is currently in private beta, fill out this form to request access
-          and we will get back to you shortly.
-        </p>
-        <p>
-          While in beta the service will be free, but when it goes
-          live it will have a fee based on the number of members in the organization. Before it
-          goes live we will inform the admin(s) of the repository so that you can cancel the
-          service or add billing details.
-        </p>
-      </div>
-      <div class="panel-body">
-        <%= form_tag Routes.dashboard_path(Endpoint, :new_repository_signup) do %>
+        <%= form_for @changeset, Routes.dashboard_path(Endpoint, :create_repository), fn f -> %>
           <div class="form-group">
-            <label for="name">Organization name</label>
-            <input type="text" id="name" name="name" class="form-control" placeholder="Only allows lowercase letters and underscore" required pattern="[a-z]\w*" aria-describedby="name-helpblock">
+            <%= label f, :password_current, "Organization name" %>
+            <%= text_input f, :name, [placeholder: "Only allows lowercase letters and underscore", required: true, pattern: "[a-z]\\w*", "aria-describedby": "name-helpblock"] %>
+            <%= error_tag f, :name %>
             <span id="name-helpbox" class="help-block">This name will be used when you declare your dependencies in <code>mix.exs</code>.</span>
-          </div>
-          <div class="form-group">
-            <label for="members">How many members do you estimate the  organization will have?</label>
-            <input type="number" id="members" name="members" class="form-control" required aria-describedby="members-helpblock">
-            <span id="members-helpblock" class="help-block">Each user that requires access to the organization or its repository needs to be added as a member.</span>
-          </div>
-          <div class="checkbox">
-            <input type="hidden" name="opensource" value="no">
-            <label>
-              <input type="checkbox" name="opensource" value="yes" aria-describedby="opensource-helpbox">
-              Check this if the organization will be used for open source only
-            </label>
-            <span id="opensource-helpbox" class="help-block">Open source organizations' packages are also private.</span>
-          </div>
           <%= submit "Submit", class: "btn btn-primary" %>
         <% end %>
       </div>

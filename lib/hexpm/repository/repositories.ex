@@ -22,10 +22,10 @@ defmodule Hexpm.Repository.Repositories do
     Repo.one!(Repository.has_access(repository, user, role))
   end
 
-  def create(name, user) do
-    {:ok, result} =
+  def create(user, params, [audit: audit_data]) do
+    multi =
       Multi.new()
-      |> Multi.insert(:repository, Repository.changeset(%Repository{name: name}, %{}))
+      |> Multi.insert(:repository, Repository.changeset(%Repository{}, params))
       |> Multi.merge(fn %{repository: repository} ->
         repository_user = %RepositoryUser{
           repository_id: repository.id,
@@ -35,12 +35,15 @@ defmodule Hexpm.Repository.Repositories do
 
         Multi.insert(Multi.new(), :repository_user, Repository.add_member(repository_user, %{}))
       end)
-      |> Repo.transaction()
+      |> audit(audit_data, "repository.create", fn %{repository: repository} -> repository end)
 
-    send_invite_email(result.repository, user)
-    result.repository
+    case Repo.transaction(multi) do
+      {:ok, result} ->
+        {:ok, result.repository}
+      {:error, :repository, changeset, _} ->
+        {:error, changeset}
+    end
   end
-
 
   def add_member(repository, username, params, [audit: audit_data]) do
     if user = Users.get(username, [:emails]) do

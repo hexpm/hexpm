@@ -24,7 +24,7 @@ defmodule Hexpm.Billing.Hexpm do
   end
 
   def invoice(id) do
-    {:ok, 200, _headers, body} = get_html("invoices/html/#{id}")
+    {:ok, 200, _headers, body} = get_html("api/invoices/html/#{id}")
     body
   end
 
