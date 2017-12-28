@@ -155,7 +155,7 @@ defmodule Hexpm.Web.DashboardController do
     username = params["username"]
 
     access_repository(conn, repository, "admin", fn repository ->
-      case Repositories.add_member(repository, username, params) do
+      case Repositories.add_member(repository, username, params, audit: audit_data(conn)) do
         {:ok, _} ->
           conn
           |> put_flash(:info, "User #{username} has been added to the organization.")
@@ -184,7 +184,7 @@ defmodule Hexpm.Web.DashboardController do
     username = params["username"]
 
     access_repository(conn, repository, "admin", fn repository ->
-      case Repositories.remove_member(repository, username) do
+      case Repositories.remove_member(repository, username, audit: audit_data(conn)) do
         :ok ->
           conn
           |> put_flash(:info, "User #{username} has been removed from the repository.")
@@ -207,7 +207,7 @@ defmodule Hexpm.Web.DashboardController do
     username = params["username"]
 
     access_repository(conn, repository, "admin", fn repository ->
-      case Repositories.change_role(repository, username, params) do
+      case Repositories.change_role(repository, username, params, audit: audit_data(conn)) do
         {:ok, _} ->
           conn
           |> put_flash(:info, "User #{username}'s role has been changed to #{params["role"]}.")
