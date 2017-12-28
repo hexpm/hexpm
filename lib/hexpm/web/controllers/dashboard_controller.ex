@@ -274,7 +274,7 @@ defmodule Hexpm.Web.DashboardController do
     end)
   end
 
-  def update_billing_email(conn, %{"dashboard_repo" => repository, "email" => email}) do
+  def update_billing(conn, %{"dashboard_repo" => repository, "email" => email} = params) do
     access_repository(conn, repository, "admin", fn repository ->
       billing = Hexpm.Billing.dashboard(repository.name)
 
@@ -284,14 +284,27 @@ defmodule Hexpm.Web.DashboardController do
         |> Enum.map(& &1.email)
 
       if email in emails or email == billing["email"] do
-        Hexpm.Billing.update(repository.name, %{"email" => email})
-        conn
-        |> put_flash(:info, "Updated your billing email.")
-        |> redirect(to: Routes.dashboard_path(conn, :repository, repository))
+        billing_params =
+          %{"email" => email}
+          |> Map.merge(Map.take(params, ["person", "company"]))
+          |> Map.put_new("person", nil)
+          |> Map.put_new("company", nil)
+
+        case Hexpm.Billing.update(repository.name, billing_params) do
+          {:ok, _} ->
+            conn
+            |> put_flash(:info, "Updated your billing information.")
+            |> redirect(to: Routes.dashboard_path(conn, :repository, repository))
+          {:error, reason} ->
+            conn
+            |> put_status(400)
+            |> put_flash(:error, "Failed to update billing information.")
+            |> render_repository(repository, params: params, errors: reason["errors"])
+        end
       else
         conn
         |> put_status(400)
-        |> put_flash(:error, "Failed to update billing email.")
+        |> put_flash(:error, "Invalid billing email.")
         |> render_repository(repository)
       end
     end)
@@ -376,6 +389,10 @@ defmodule Hexpm.Web.DashboardController do
       monthly_cost: billing["monthly_cost"],
       card: billing["card"],
       invoices: billing["invoices"],
+      person: billing["person"],
+      company: billing["company"],
+      params: opts[:params],
+      errors: opts[:errors],
       add_member_changeset: opts[:add_member_changeset] || add_member_changeset()
     )
   end

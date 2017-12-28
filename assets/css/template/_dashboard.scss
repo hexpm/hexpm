@@ -6,7 +6,7 @@
   margin-bottom: 0 !important;
 }
 
-.dashboard .row {
+.dashboard > .row {
   margin-top: 20px;
 }
 
@@ -130,6 +130,10 @@
   li {
     margin-bottom: 5px;
   }
+}
+
+.dashboard .tab-pane {
+  padding: 10px 0 0 0;
 }
 
 .panel>.list-group .list-group-item,

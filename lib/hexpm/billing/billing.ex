@@ -4,7 +4,7 @@ defmodule Hexpm.Billing do
   @callback checkout(repository(), data :: map()) :: map()
   @callback dashboard(repository()) :: map()
   @callback cancel(repository()) :: map()
-  @callback update(repository(), map()) :: map()
+  @callback update(repository(), map()) :: {:ok, map()} | {:error, map()}
   @callback invoice(id :: pos_integer()) :: binary()
   @callback report() :: [map()]
 
