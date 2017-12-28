@@ -99,10 +99,12 @@ defmodule Hexpm.Accounts.AuditLog do
 
   defp extract_params("user.create", user), do: serialize(user)
   defp extract_params("user.update", user), do: serialize(user)
-  defp extract_params("password.reset.init", nil), do: %{}
-  defp extract_params("password.reset.finish", nil), do: %{}
-  defp extract_params("password.update", nil), do: %{}
 
+  defp serialize(%Key{} = key) do
+    key
+    |> do_serialize()
+    |> Map.put(:permissions, Enum.map(key.permissions, &serialize/1))
+  end
   defp serialize(%Package{} = package) do
     package
     |> do_serialize()
@@ -122,26 +124,20 @@ defmodule Hexpm.Accounts.AuditLog do
     |> Map.put(:handles, serialize(user.handles))
   end
 
-  defp serialize(%Key{} = key) do
-    key
-    |> do_serialize()
-    |> Map.put(:permissions, Enum.map(key.permissions, &serialize/1))
-  end
-
   defp serialize(nil), do: nil
   defp serialize(schema), do: do_serialize(schema)
 
   defp do_serialize(schema), do: Map.take(schema, fields(schema))
 
+  defp fields(%Email{}), do: [:email, :primary, :public, :primary, :gravatar]
   defp fields(%Key{}), do: [:id, :name]
   defp fields(%KeyPermission{}), do: [:resource, :domain]
   defp fields(%Package{}), do: [:id, :name, :repository_id]
-  defp fields(%Release{}), do: [:id, :version, :checksum, :has_docs, :package_id]
-  defp fields(%User{}), do: [:id, :username]
   defp fields(%PackageMetadata{}), do: [:description, :licenses, :links, :maintainers, :extra]
+  defp fields(%Release{}), do: [:id, :version, :checksum, :has_docs, :package_id]
   defp fields(%ReleaseMetadata{}), do: [:app, :build_tools, :elixir]
   defp fields(%ReleaseRetirement{}), do: [:status, :message]
-  defp fields(%Email{}), do: [:email, :primary, :public, :primary, :gravatar]
+  defp fields(%User{}), do: [:id, :username]
   defp fields(%UserHandles{}), do: [:github, :twitter, :freenode]
 
   defp multi_key(action), do: :"log.#{action}"
