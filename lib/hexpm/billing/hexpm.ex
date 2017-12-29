@@ -16,6 +16,13 @@ defmodule Hexpm.Billing.Hexpm do
     body
   end
 
+  def create(params) do
+    case post("api/customers", params) do
+      {:ok, 200, _headers, body} -> {:ok, body}
+      {:ok, 422, _headers, body} -> {:error, body}
+    end
+  end
+
   def update(repository, params) do
     case patch("api/customers/#{repository}", params) do
       {:ok, 200, _headers, body} -> {:ok, body}

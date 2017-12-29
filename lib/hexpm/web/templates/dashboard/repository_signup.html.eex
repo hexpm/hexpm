@@ -9,14 +9,37 @@
     <div class="panel panel-default">
       <div class="panel-heading">Create new organization</div>
       <div class="panel-body">
-        <%= form_for @changeset, Routes.dashboard_path(Endpoint, :create_repository), fn f -> %>
-          <div class="form-group">
-            <%= label f, :password_current, "Organization name" %>
-            <%= text_input f, :name, [placeholder: "Only allows lowercase letters and underscore", required: true, pattern: "[a-z]\\w*", "aria-describedby": "name-helpblock"] %>
-            <%= error_tag f, :name %>
-            <span id="name-helpbox" class="help-block">This name will be used when you declare your dependencies in <code>mix.exs</code>.</span>
-          <%= submit "Submit", class: "btn btn-primary" %>
-        <% end %>
+        <ul class="nav nav-tabs" role="tablist">
+          <li role="presentation" class="<%= if !@params["company"] do %>active<% end %>"><a href="#person" aria-controls="person" role="tab" data-toggle="tab">Person</a></li>
+          <li role="presentation" class="<%= if @params["company"] do %>active<% end %>"><a href="#company" aria-controls="company" role="tab" data-toggle="tab">Company</a></li>
+        </ul>
+
+        <div class="tab-content">
+          <div role="tabpanel" class="tab-pane <%= if !@params["company"] do %>active<% end %>" id="person">
+            <%= form_for @changeset, Routes.dashboard_path(Endpoint, :create_repository), fn f -> %>
+              <div class="form-group">
+                <%= label f, :password_current, "Organization name" %>
+                <%= text_input f, :name, [placeholder: "Only allows lowercase letters and underscore", required: true, pattern: "[a-z]\\w*", "aria-describedby": "name-helpblock"] %>
+                <%= error_tag f, :name %>
+                <span id="name-helpbox" class="help-block">This name will be used when you declare your dependencies in <code>mix.exs</code>.</span>
+              </div>
+              <%= render "_billing_person.html", assigns %>
+              <%= submit "Submit", class: "btn btn-primary" %>
+            <% end %>
+          </div>
+          <div role="tabpanel" class="tab-pane <%= if @params["company"] do %>active<% end %>" id="company">
+            <%= form_for @changeset, Routes.dashboard_path(Endpoint, :create_repository), fn f -> %>
+              <div class="form-group">
+                <%= label f, :password_current, "Organization name" %>
+                <%= text_input f, :name, [placeholder: "Only allows lowercase letters and underscore", required: true, pattern: "[a-z]\\w*", "aria-describedby": "name-helpblock"] %>
+                <%= error_tag f, :name %>
+                <span id="name-helpbox" class="help-block">This name will be used when you declare your dependencies in <code>mix.exs</code>.</span>
+              </div>
+              <%= render "_billing_company.html", assigns %>
+              <%= submit "Submit", class: "btn btn-primary" %>
+            <% end %>
+          </div>
+        </div>
       </div>
     </div>
   </div>
