@@ -570,10 +570,17 @@ defmodule Hexpm.Web.DashboardControllerTest do
   end
 
   test "create repository", %{user: user} do
+    Mox.expect(Hexpm.Billing.Mock, :create, 1, fn params ->
+      assert params == %{"person" => %{"country" => "SE"}, "company" => nil, "email" => "eric@mail.com"}
+      {:ok, %{}}
+    end)
+
+    params = %{"repository" => %{"name" => "createrepo"}, "person" => %{"country" => "SE"}, "email" => "eric@mail.com"}
+
     conn =
       build_conn()
       |> test_login(user)
-      |> post("dashboard/repo-signup", %{"repository" => %{"name" => "createrepo"}})
+      |> post("dashboard/repo-signup", params)
 
     response(conn, 302)
     assert get_resp_header(conn, "location") == ["/dashboard/repos/createrepo"]
@@ -582,11 +589,12 @@ defmodule Hexpm.Web.DashboardControllerTest do
 
   test "create repository validates name", %{user: user} do
     insert(:repository, name: "createrepovalidates")
+    params = %{"repository" => %{"name" => "createrepovalidates"}, "person" => %{"country" => "SE"}, "email" => "eric@mail.com"}
 
     conn =
       build_conn()
       |> test_login(user)
-      |> post("dashboard/repo-signup", %{"repository" => %{"name" => "createrepovalidates"}})
+      |> post("dashboard/repo-signup", params)
 
     assert response(conn, 400) =~ "Oops, something went wrong"
     assert response(conn, 400) =~ "has already been taken"

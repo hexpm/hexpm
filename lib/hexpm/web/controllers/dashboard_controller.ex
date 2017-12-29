@@ -274,7 +274,7 @@ defmodule Hexpm.Web.DashboardController do
     end)
   end
 
-  def update_billing(conn, %{"dashboard_repo" => repository, "email" => email} = params) do
+  def update_billing(conn, %{"dashboard_repo" => repository} = params) do
     access_repository(conn, repository, "admin", fn repository ->
       billing = Hexpm.Billing.dashboard(repository.name)
 
@@ -283,10 +283,9 @@ defmodule Hexpm.Web.DashboardController do
         |> Enum.filter(& &1.verified)
         |> Enum.map(& &1.email)
 
-      if email in emails or email == billing["email"] do
+      if params["email"] in emails or params["email"] == billing["email"] do
         billing_params =
-          %{"email" => email}
-          |> Map.merge(Map.take(params, ["person", "company"]))
+          Map.take(params, ["email", "person", "company"])
           |> Map.put_new("person", nil)
           |> Map.put_new("company", nil)
 
@@ -315,23 +314,60 @@ defmodule Hexpm.Web.DashboardController do
   end
 
   def create_repository(conn, params) do
-    case Repositories.create(conn.assigns.current_user, params["repository"], audit: audit_data(conn)) do
-      {:ok, repository} ->
-        conn
-        |> put_flash(:info, "Repository created.")
-        |> redirect(to: Routes.dashboard_path(conn, :repository, repository))
-      {:error, changeset} ->
-        conn
-        |> put_status(400)
-        |> render_new_repository(changeset)
+    emails =
+      conn.assigns.current_user.emails
+      |> Enum.filter(& &1.verified)
+      |> Enum.map(& &1.email)
+
+    if params["email"] in emails do
+      Hexpm.Repo.transaction(fn ->
+        case Repositories.create(conn.assigns.current_user, params["repository"], audit: audit_data(conn)) do
+          {:ok, repository} ->
+            billing_params =
+              Map.take(params, ["email", "person", "company"])
+              |> Map.put_new("person", nil)
+              |> Map.put_new("company", nil)
+
+            case Hexpm.Billing.create(billing_params) do
+              {:ok, _} ->
+                conn
+                |> put_flash(:info, "Repository created.")
+                |> redirect(to: Routes.dashboard_path(conn, :repository, repository))
+              {:error, reason} ->
+                changeset = Repository.changeset(%Repository{}, params["repository"])
+
+                conn
+                |> put_status(400)
+                |> put_flash(:error, "Oops, something went wrong! Please check the errors below.")
+                |> render_new_repository(changeset: changeset, params: params, errors: reason["errors"])
+                |> Hexpm.Repo.rollback()
+            end
+          {:error, changeset} ->
+            conn
+            |> put_status(400)
+            |> render_new_repository(changeset: changeset, params: params)
+            |> Hexpm.Repo.rollback()
+        end
+      end)
+      |> elem(1)
+    else
+      conn
+      |> put_status(400)
+      |> put_flash(:error, "Invalid billing email.")
+      |> render_new_repository(params: params)
     end
   end
 
-  defp render_new_repository(conn, changeset \\ create_repository_changeset()) do
+  defp render_new_repository(conn, opts \\ []) do
     render conn, "repository_signup.html", [
       title: "Dashboard - Repository sign up",
       container: "container page dashboard",
-      changeset: changeset
+      billing_email: nil,
+      person: nil,
+      company: nil,
+      params: opts[:params],
+      errors: opts[:errors],
+      changeset: opts[:changeset] || create_repository_changeset()
     ]
   end
 

@@ -1,0 +1,16 @@
+<div class="form-group">
+  <label for="billing_email">Billing email</label>
+  <select id="billing_email" name="email" class="form-control" required>
+    <%= for email <- billing_emails(@current_user, @billing_email) do %>
+      <option value="<%= email %>" <%= if email == (@params["email"] || @billing_email) do %>selected<% end %>><%= email %></option>
+    <% end %>
+  </select>
+</div>
+<div class="form-group">
+  <label for="person_country">Country</label>
+  <select id="person_country" name="person[country]" class="form-control" required>
+    <%= for {code, country} <- countries() do %>
+      <option value="<%= code %>" <%= if code == (@params["person"]["country"] || @person["country"]) do %>selected<% end %>><%= country %></option>
+    <% end %>
+  </select>
+</div>

@@ -1,0 +1,50 @@
+<div class="form-group">
+  <label for="billing_email">Billing email</label>
+  <select id="billing_email" name="email" class="form-control" required>
+    <%= for email <- billing_emails(@current_user, @billing_email) do %>
+      <option value="<%= email %>" <%= if email == (@params["email"] || @billing_email) do %>selected<% end %>><%= email %></option>
+    <% end %>
+  </select>
+</div>
+<div class="form-group">
+  <label for="company_name">Company name</label>
+  <input id="company_name" name="company[name]" class="form-control" type="text" value="<%= (@params["company"]["name"] || @company["name"]) %>" required>
+</div>
+<div class="form-group <%= if @errors["company"]["vat"] do %>has-error<% end %>">
+  <label for="company_vat">VAT number</label>
+  <input id="company_vat" name="company[vat]" class="form-control" type="text" value="<%= (@params["company"]["vat"] || @company["vat"]) %>">
+  <%= if @errors["company"]["vat"] do %>
+    <span class="help-block"><%= @errors["company"]["vat"] %></span>
+  <% end %>
+</div>
+<div class="form-group">
+  <label for="company_address_line1">Address</label>
+  <div class="row">
+    <div class="col-xs-6">
+      <input id="company_address_line1" name="company[address_line1]" class="form-control" type="text" value="<%= (@params["company"]["address_line1"] || @company["address_line1"]) %>" required>
+    </div>
+    <div class="col-xs-6">
+      <input id="company_address_line2" name="company[address_line2]" class="form-control" type="text" value="<%= (@params["company"]["address_line2"] || @company["address_line2"]) %>">
+    </div>
+  </div>
+</div>
+<div class="form-group">
+  <label for="company_address_zip">Zip code</label>
+  <input id="company_address_zip" name="company[address_zip]" class="form-control" type="text" value="<%= (@params["company"]["address_zip"] || @company["address_zip"]) %>" required>
+</div>
+<div class="form-group">
+  <label for="company_address_city">City</label>
+  <input id="company_address_city" name="company[address_city]" class="form-control" type="text" value="<%= (@params["company"]["address_city"] || @company["address_city"]) %>" required>
+</div>
+<div class="form-group">
+  <label for="company_address_state">State</label>
+  <input id="company_address_state" name="company[address_state]" class="form-control" type="text" value="<%= (@params["company"]["address_state"] || @company["address_state"]) %>">
+</div>
+<div class="form-group">
+  <label for="company_address_country">Country</label>
+  <select id="company_address_country" name="company[address_country]" class="form-control" required>
+    <%= for {code, country} <- countries() do %>
+      <option value="<%= code %>" <%= if code ==  (@params["company"]["address_country"] || @company["address_country"]) do %>selected<% end %>><%= country %></option>
+    <% end %>
+  </select>
+</div>
