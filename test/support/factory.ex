@@ -47,7 +47,6 @@ defmodule Hexpm.Factory do
     %Hexpm.Repository.Repository{
       name: Fake.sequence(:package),
       public: false,
-      active: true,
       billing_active: true
     }
   end

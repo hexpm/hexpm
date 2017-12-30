@@ -7,7 +7,7 @@ defmodule Hexpm.Repository.Repository do
   schema "repositories" do
     field :name, :string
     field :public, :boolean
-    field :active, :boolean, default: false
+    field :active, :boolean, default: true
     field :billing_active, :boolean, default: false
     timestamps()
 
