@@ -18,6 +18,26 @@ defmodule Hexpm.Repository.Repository do
 
   @roles ~w(admin write read)
 
+  def changeset(struct, params) do
+    cast(struct, params, [:name])
+    |> validate_required([:name])
+    |> unique_constraint(:name)
+    |> put_change(:public, false)
+  end
+
+  def add_member(struct, params) do
+    cast(struct, params, [:role])
+    |> validate_required([:role])
+    |> validate_inclusion(:role, @roles)
+    |> unique_constraint(:user_id, name: "repository_users_repository_id_user_id_index", message: "is already member")
+  end
+
+  def change_role(struct, params) do
+    cast(struct, params, [:role])
+    |> validate_required([:role])
+    |> validate_inclusion(:role, @roles)
+  end
+
   def has_access(repository, user, role) do
     from(
       ro in RepositoryUser,
@@ -38,29 +58,5 @@ defmodule Hexpm.Repository.Repository do
       name: "hexpm",
       public: true
     }
-  end
-
-  def changeset(struct, params) do
-    cast(struct, params, [:name])
-    |> validate_required([:name])
-    |> unique_constraint(:name)
-    |> put_change(:public, false)
-  end
-
-  def add_member(struct, params) do
-    cast(struct, params, [:role])
-    |> validate_required([:role])
-    |> validate_inclusion(:role, @roles)
-    |> unique_constraint(
-      :user_id,
-      name: "repository_users_repository_id_user_id_index",
-      message: "is already member"
-    )
-  end
-
-  def change_role(struct, params) do
-    cast(struct, params, [:role])
-    |> validate_required([:role])
-    |> validate_inclusion(:role, @roles)
   end
 end

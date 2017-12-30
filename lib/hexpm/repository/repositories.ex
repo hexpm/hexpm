@@ -117,6 +117,10 @@ defmodule Hexpm.Repository.Repositories do
     end
   end
 
+  def number_members(repository) do
+    Repo.aggregate(assoc(repository, :repository_users), :count, :id)
+  end
+
   defp send_invite_email(repository, user) do
     Emails.repository_invite(repository, user)
     |> Mailer.deliver_now_throttled()

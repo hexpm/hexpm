@@ -436,7 +436,12 @@ defmodule Hexpm.Web.DashboardControllerTest do
   end
 
   test "add member to repository", %{user: user, repository: repository} do
-    # TODO: Update quantity in billing
+    Mox.expect(Hexpm.Billing.Mock, :update, fn repository_name, map ->
+      assert repository_name == repository.name
+      assert map == %{"quantity" => 2}
+      {:ok, %{}}
+    end)
+
     insert(:repository_user, repository: repository, user: user, role: "admin")
     new_user = insert(:user)
     add_email(new_user, "new@mail.com")
@@ -458,7 +463,12 @@ defmodule Hexpm.Web.DashboardControllerTest do
   end
 
   test "remove member from repository", %{user: user, repository: repository} do
-    # TODO: Update quantity in billing
+    Mox.expect(Hexpm.Billing.Mock, :update, fn repository_name, map ->
+      assert repository_name == repository.name
+      assert map == %{"quantity" => 1}
+      {:ok, %{}}
+    end)
+
     insert(:repository_user, repository: repository, user: user, role: "admin")
     new_user = insert(:user)
     insert(:repository_user, repository: repository, user: new_user)
