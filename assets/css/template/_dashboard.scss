@@ -101,7 +101,8 @@
 .dashboard .repository {
   float: right;
 
-  form.remove-role, form.cancel-billing {
+  form.remove-role,
+  form.cancel-billing {
     display: inline-block;
   }
 
@@ -133,7 +134,7 @@
 }
 
 .dashboard .tab-pane {
-  padding: 10px 0 0 0;
+  padding: 10px 0 0;
 }
 
 .panel>.list-group .list-group-item,
