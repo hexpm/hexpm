@@ -36,9 +36,9 @@ export default class App {
     $("[name='search']").focus()
 
     // Switch tabs
-    $('.nav-tabs a').click(function (e) {
+    $(".nav-tabs a").click(function (e) {
       e.preventDefault()
-      $(this).tab('show')
+      $(this).tab("show")
     })
 
     // Highlight syntax
