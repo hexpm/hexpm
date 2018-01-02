@@ -25,7 +25,7 @@
       <% end %>
     </ul>
     <div class="panel-body">
-      <small>Create <a href="<%= Routes.dashboard_path(Endpoint, :new_repository) %>">new organization</a></small>
+      <small><a href="<%= Routes.dashboard_path(Endpoint, :new_repository) %>">New organization</a></small>
     </div>
   <% end %>
 </div>
