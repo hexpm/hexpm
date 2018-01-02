@@ -2,6 +2,7 @@ use Mix.Config
 
 store = if System.get_env("HEX_S3_BUCKET"), do: Hexpm.Store.S3, else: Hexpm.Store.Local
 cdn = if System.get_env("HEX_FASTLY_KEY"), do: Hexpm.CDN.Fastly, else: Hexpm.CDN.Local
+billing = if System.get_env("HEX_BILLING_URL"), do: Hexpm.Billing.Hexpm, else: Hexpm.Billing.Local
 
 logs_buckets =
   if value = System.get_env("HEX_LOGS_BUCKETS") do
@@ -35,7 +36,7 @@ config :hexpm,
   fastly_key: System.get_env("HEX_FASTLY_KEY"),
   fastly_hexdocs: System.get_env("HEX_FASTLY_HEXDOCS"),
   fastly_hexrepo: System.get_env("HEX_FASTLY_HEXREPO"),
-  billing_impl: Hexpm.Billing.Hexpm,
+  billing_impl: billing,
   billing_key: System.get_env("HEX_BILLING_KEY") || "hex_billing_key",
   billing_url: System.get_env("HEX_BILLING_URL") || "http://localhost:4010/",
   support_email: "support@hex.pm",

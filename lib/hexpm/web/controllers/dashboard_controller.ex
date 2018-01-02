@@ -157,8 +157,8 @@ defmodule Hexpm.Web.DashboardController do
     access_repository(conn, repository, "admin", fn repository ->
       case Repositories.add_member(repository, username, params, audit: audit_data(conn)) do
         {:ok, _} ->
-          number_members = Repositories.number_members(repository)
-          {:ok, _customer} = Hexpm.Billing.update(repository.name, %{"quantity" => number_members})
+          members_count = Repositories.members_count(repository)
+          {:ok, _customer} = Hexpm.Billing.update(repository.name, %{"quantity" => members_count})
 
           conn
           |> put_flash(:info, "User #{username} has been added to the organization.")
@@ -189,8 +189,8 @@ defmodule Hexpm.Web.DashboardController do
     access_repository(conn, repository, "admin", fn repository ->
       case Repositories.remove_member(repository, username, audit: audit_data(conn)) do
         :ok ->
-          number_members = Repositories.number_members(repository)
-          {:ok, _customer} = Hexpm.Billing.update(repository.name, %{"quantity" => number_members})
+          members_count = Repositories.members_count(repository)
+          {:ok, _customer} = Hexpm.Billing.update(repository.name, %{"quantity" => members_count})
 
           conn
           |> put_flash(:info, "User #{username} has been removed from the repository.")
