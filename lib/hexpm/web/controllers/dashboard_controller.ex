@@ -333,6 +333,7 @@ defmodule Hexpm.Web.DashboardController do
               Map.take(params, ["email", "person", "company"])
               |> Map.put_new("person", nil)
               |> Map.put_new("company", nil)
+              |> Map.put("token", params["repository"]["name"])
 
             case Hexpm.Billing.create(billing_params) do
               {:ok, _} ->
