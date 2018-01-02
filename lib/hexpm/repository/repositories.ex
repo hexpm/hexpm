@@ -117,7 +117,7 @@ defmodule Hexpm.Repository.Repositories do
     end
   end
 
-  def number_members(repository) do
+  def members_count(repository) do
     Repo.aggregate(assoc(repository, :repository_users), :count, :id)
   end
 

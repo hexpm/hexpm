@@ -16,10 +16,10 @@ defmodule Hexpm.Billing.ReportTest do
       ]
     end)
 
-    {:ok, pid} = Billing.Report.start_link(timeout: 60_000)
+    {:ok, pid} = Billing.Report.start_link(interval: 60_000)
     Sandbox.allow(Repo, self(), pid)
     Mox.allow(Billing.Mock, self(), pid)
-    send(pid, :timeout)
+    send(pid, :update)
     :sys.get_state(pid)
 
     assert Repositories.get(repository1.name).billing_active
@@ -39,10 +39,10 @@ defmodule Hexpm.Billing.ReportTest do
       ]
     end)
 
-    {:ok, pid} = Billing.Report.start_link(timeout: 60_000)
+    {:ok, pid} = Billing.Report.start_link(interval: 60_000)
     Sandbox.allow(Repo, self(), pid)
     Mox.allow(Billing.Mock, self(), pid)
-    send(pid, :timeout)
+    send(pid, :update)
     :sys.get_state(pid)
 
     refute Repositories.get(repository1.name).billing_active

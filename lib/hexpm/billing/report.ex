@@ -9,11 +9,11 @@ defmodule Hexpm.Billing.Report do
   end
 
   def init(opts) do
-    Process.send_after(self(), :timeout, opts[:timeout])
+    Process.send_after(self(), :update, opts[:interval])
     {:ok, opts}
   end
 
-  def handle_info(:timeout, opts) do
+  def handle_info(:update, opts) do
     report = Hexpm.Billing.report()
     repositories = repositories()
 
@@ -30,7 +30,7 @@ defmodule Hexpm.Billing.Report do
       end
     end)
 
-    Process.send_after(self(), :timeout, opts[:timeout])
+    Process.send_after(self(), :update, opts[:interval])
     {:noreply, opts}
   end
 

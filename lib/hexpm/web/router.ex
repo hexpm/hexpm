@@ -88,9 +88,9 @@ defmodule Hexpm.Web.Router do
     post "/dashboard/repo-signup", DashboardController, :create_repository
 
     get "/docs/usage", DocsController, :usage
-    get "/docs/rebar3-usage", DocsController, :rebar3_usage
+    get "/docs/rebar3_usage", DocsController, :rebar3_usage
     get "/docs/publish", DocsController, :publish
-    get "/docs/rebar3-publish", DocsController, :rebar3_publish
+    get "/docs/rebar3_publish", DocsController, :rebar3_publish
     get "/docs/tasks", DocsController, :tasks
     get "/docs/private", DocsController, :private
     get "/docs/faq", DocsController, :faq

@@ -14,7 +14,7 @@ defmodule Hexpm.Application do
       supervisor(Task.Supervisor, [[name: Hexpm.Tasks]]),
       worker(PlugAttack.Storage.Ets, [Hexpm.Web.Plugs.Attack, [clean_period: 60_000]]),
       worker(Hexpm.Throttle, [[name: Hexpm.SESThrottle, rate: ses_rate, unit: 1000]]),
-      worker(Hexpm.Billing.Report, [[name: Hexpm.Billing.Report, timeout: 60_000]]),
+      worker(Hexpm.Billing.Report, [[name: Hexpm.Billing.Report, interval: 60_000]]),
       supervisor(Hexpm.Web.Endpoint, [])
     ]
 
