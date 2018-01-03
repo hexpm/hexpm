@@ -581,7 +581,7 @@ defmodule Hexpm.Web.DashboardControllerTest do
 
   test "create repository", %{user: user} do
     Mox.expect(Hexpm.Billing.Mock, :create, 1, fn params ->
-      assert params == %{"person" => %{"country" => "SE"}, "company" => nil, "email" => "eric@mail.com"}
+      assert params == %{"person" => %{"country" => "SE"}, "token" => "createrepo", "company" => nil, "email" => "eric@mail.com"}
       {:ok, %{}}
     end)
 
@@ -594,7 +594,7 @@ defmodule Hexpm.Web.DashboardControllerTest do
 
     response(conn, 302)
     assert get_resp_header(conn, "location") == ["/dashboard/repos/createrepo"]
-    assert get_flash(conn, :info) == "Repository created."
+    assert get_flash(conn, :info) == "Organization created."
   end
 
   test "create repository validates name", %{user: user} do
