@@ -10,22 +10,16 @@
     <% end %>
   </ul>
   <div class="panel-heading">Organization settings</div>
-  <%= if @current_user.repositories == [] do %>
-    <div class="panel-body">
-      <small>You are not a member of any organizations. Organizations is currently in beta, fill out the <a href="<%= Routes.dashboard_path(Endpoint, :new_repository) %>">sign up form</a> to request access.</small>
-    </div>
-  <% else %>
-    <ul class="list-group">
-      <%= for repository <- @current_user.repositories do %>
-        <li class="list-group-item <%= selected_repository(@conn, repository.name) %>">
-          <a href="<%= Routes.dashboard_path(Endpoint, :repository, repository) %>">
-            <%= repository.name %>
-          </a>
-        </li>
-      <% end %>
-    </ul>
-    <div class="panel-body">
-      <small><a href="<%= Routes.dashboard_path(Endpoint, :new_repository) %>">New organization</a></small>
-    </div>
-  <% end %>
+  <ul class="list-group">
+    <%= for repository <- @current_user.repositories do %>
+      <li class="list-group-item <%= selected_repository(@conn, repository.name) %>">
+        <a href="<%= Routes.dashboard_path(Endpoint, :repository, repository) %>">
+          <%= repository.name %>
+        </a>
+      </li>
+    <% end %>
+  </ul>
+  <div class="panel-body">
+    <small><a href="<%= Routes.dashboard_path(Endpoint, :new_repository) %>">New organization</a></small>
+  </div>
 </div>
