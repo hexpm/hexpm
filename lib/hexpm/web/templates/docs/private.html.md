@@ -1,8 +1,6 @@
 ## Private packages and organizations
 
-*Organizations is currently in beta, fill out the [sign up form](/dashboard/signup) to request access.*
-
-With an organization you can publish and fetch private packages from Hex.pm and you can control exactly which users have access to the packages. To administer any organizations you are a member of go to the [dashboard](/dashboard).
+With an organization you can publish and fetch private packages from Hex.pm and you can control exactly which users have access to the packages. To administer any organizations you are a member of go to the [dashboard](/dashboard). Go to the [sign up form](/dashboard/repo-signup) to create an organization.
 
 ### Add an organization to Mix
 
