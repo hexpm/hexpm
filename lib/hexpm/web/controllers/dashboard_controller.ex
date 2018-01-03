@@ -338,7 +338,7 @@ defmodule Hexpm.Web.DashboardController do
             case Hexpm.Billing.create(billing_params) do
               {:ok, _} ->
                 conn
-                |> put_flash(:info, "Repository created.")
+                |> put_flash(:info, "Organization created.")
                 |> redirect(to: Routes.dashboard_path(conn, :repository, repository))
               {:error, reason} ->
                 changeset = Repository.changeset(%Repository{}, params["repository"])
@@ -430,6 +430,7 @@ defmodule Hexpm.Web.DashboardController do
       billing_email: billing["email"],
       subscription: billing["subscription"],
       monthly_cost: billing["monthly_cost"],
+      amount_with_tax: billing["amount_with_tax"],
       card: billing["card"],
       invoices: billing["invoices"],
       person: billing["person"],
