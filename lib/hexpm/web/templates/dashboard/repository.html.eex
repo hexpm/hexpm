@@ -95,6 +95,8 @@
             <% else %>
               <dd><%= payment_date(@subscription["current_period_end"]) %></dd>
             <% end %>
+            <dt>Monthly cost</dt>
+            <dd>$<%= money(@amount_with_tax) %></dd>
             <dt>Status</dt>
             <dd><%= subscription_status(@subscription) %></dd>
           </dl>
@@ -105,6 +107,7 @@
           <% end %>
         <% else %>
           Subscription is not active. Organization will be disabled until a payment method has been added.<br><br>
+          Subscription cost is $8.00 per user / month + VAT.<br><br>
           <%= raw(@checkout_html) %>
         <% end %>
       </div>

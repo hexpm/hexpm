@@ -9,6 +9,14 @@
     <div class="panel panel-default">
       <div class="panel-heading">Create new organization</div>
       <div class="panel-body">
+        <p>
+          With organizations you can publish and host private packages with fine-grained access
+          control to packages for your organization members. For more information see the
+          <a href="<%= Routes.docs_path(Endpoint, :private) %>">private package documentation</a>.
+        </p>
+        <p>The cost for organizations is <strong>$8.00 per user / month</strong>.</p>
+        <br>
+
         <ul class="nav nav-tabs" role="tablist">
           <li role="presentation" class="<%= if !@params["company"] do %>active<% end %>"><a href="#person" aria-controls="person" role="tab" data-toggle="tab">Person</a></li>
           <li role="presentation" class="<%= if @params["company"] do %>active<% end %>"><a href="#company" aria-controls="company" role="tab" data-toggle="tab">Company</a></li>
