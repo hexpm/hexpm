@@ -46,6 +46,7 @@ defmodule Hexpm.Billing.Hexpm do
 
   defp post(url, body) do
     url = Application.get_env(:hexpm, :billing_url) <> url
+
     headers = [
       {"authorization", auth()},
       {"accept", "application/json"},
@@ -53,12 +54,14 @@ defmodule Hexpm.Billing.Hexpm do
     ]
 
     body = Hexpm.Web.Jiffy.encode!(body)
+
     :hackney.post(url, headers, body, [])
     |> read_request()
   end
 
   defp patch(url, body) do
     url = Application.get_env(:hexpm, :billing_url) <> url
+
     headers = [
       {"authorization", auth()},
       {"accept", "application/json"},
@@ -66,12 +69,14 @@ defmodule Hexpm.Billing.Hexpm do
     ]
 
     body = Hexpm.Web.Jiffy.encode!(body)
+
     :hackney.patch(url, headers, body, [])
     |> read_request()
   end
 
   defp get_json(url) do
     url = Application.get_env(:hexpm, :billing_url) <> url
+
     headers = [
       {"authorization", auth()},
       {"accept", "application/json"}
@@ -83,6 +88,7 @@ defmodule Hexpm.Billing.Hexpm do
 
   defp get_html(url) do
     url = Application.get_env(:hexpm, :billing_url) <> url
+
     headers = [
       {"authorization", auth()},
       {"accept", "text/html"}
@@ -94,8 +100,9 @@ defmodule Hexpm.Billing.Hexpm do
 
   defp read_request(result) do
     with {:ok, status, headers, ref} <- result,
-       {:ok, body} <- :hackney.body(ref),
-       {:ok, body} <- decode_body(body, headers) do
+         headers = normalize_headers(headers),
+         {:ok, body} <- :hackney.body(ref),
+         {:ok, body} <- decode_body(body, headers) do
       {:ok, status, headers, body}
     end
   end
@@ -104,6 +111,7 @@ defmodule Hexpm.Billing.Hexpm do
     case List.keyfind(headers, "content-type", 0) do
       nil ->
         {:ok, nil}
+
       {_, content_type} ->
         if String.contains?(content_type, "application/json") do
           Hexpm.Web.Jiffy.decode(body)
@@ -111,5 +119,11 @@ defmodule Hexpm.Billing.Hexpm do
           {:ok, body}
         end
     end
+  end
+
+  defp normalize_headers(headers) do
+    Enum.map(headers, fn {key, value} ->
+      {String.downcase(key), value}
+    end)
   end
 end
