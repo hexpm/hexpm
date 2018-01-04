@@ -106,8 +106,9 @@
             <%= submit "Cancel", class: "btn btn-danger", disabled: !@subscription || @subscription["cancel_at_period_end"] %>
           <% end %>
         <% else %>
-          Subscription is not active. Organization will be disabled until a payment method has been added.<br><br>
-          Subscription cost is $8.00 per user / month + VAT.<br><br>
+          <%# Subscription is not active. Organization will be disabled until a payment method has been added. %>
+          Subscription is not active. <strong>Organization will be disabled</strong> on the 1st of March unless a payment method has been added.<br><br>
+          Subscription cost is <strong>$8.00 per user / month</strong> + VAT.<br><br>
           <%= raw(@checkout_html) %>
         <% end %>
       </div>
