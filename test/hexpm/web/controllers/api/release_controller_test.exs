@@ -483,6 +483,8 @@ defmodule Hexpm.Web.API.ReleaseControllerTest do
       refute Hexpm.Repo.get_by(Package, name: meta.name)
     end
 
+    # TODO: Change when billing is required
+    @tag :skip
     test "repository needs to have active billing", %{user: user} do
       repository = insert(:repository, billing_active: false)
       insert(:repository_user, repository: repository, user: user, role: "write")
@@ -630,6 +632,8 @@ defmodule Hexpm.Web.API.ReleaseControllerTest do
       assert Hexpm.Repo.get_by(assoc(package, :releases), version: "0.0.1")
     end
 
+    # TODO: Change when billing is required
+    @tag :skip
     @tag isolation: :serializable
     test "repository needs to have active billing", %{user: user} do
       repository = insert(:repository, billing_active: false)

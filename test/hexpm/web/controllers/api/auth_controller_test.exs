@@ -154,6 +154,8 @@ defmodule Hexpm.Web.API.AuthControllerTest do
       |> response(403)
     end
 
+    # TODO: Change when billing is required
+    @tag :skip
     test "authenticate repository key against repository without active billing", %{user: user} do
       repo = insert(:repository, billing_active: false)
       insert(:repository_user, repository: repo, user: user)
