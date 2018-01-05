@@ -7,8 +7,10 @@ defmodule Hexpm.Billing.Hexpm do
   end
 
   def dashboard(repository) do
-    {:ok, 200, _headers, body} = get_json("api/customers/#{repository}")
-    body
+    case get_json("api/customers/#{repository}") do
+      {:ok, 200, _headers, body} -> body
+      {:ok, 404, _headers, _body} -> nil
+    end
   end
 
   def cancel(repository) do

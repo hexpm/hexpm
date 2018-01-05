@@ -283,35 +283,14 @@ defmodule Hexpm.Web.DashboardController do
   def update_billing(conn, %{"dashboard_repo" => repository} = params) do
     access_repository(conn, repository, "admin", fn repository ->
       billing = Hexpm.Billing.dashboard(repository.name)
+      update_billing(conn, repository, billing, params, &Hexpm.Billing.update(repository.name, &1))
+    end)
+  end
 
-      emails =
-        conn.assigns.current_user.emails
-        |> Enum.filter(& &1.verified)
-        |> Enum.map(& &1.email)
-
-      if params["email"] in emails or params["email"] == billing["email"] do
-        billing_params =
-          Map.take(params, ["email", "person", "company"])
-          |> Map.put_new("person", nil)
-          |> Map.put_new("company", nil)
-
-        case Hexpm.Billing.update(repository.name, billing_params) do
-          {:ok, _} ->
-            conn
-            |> put_flash(:info, "Updated your billing information.")
-            |> redirect(to: Routes.dashboard_path(conn, :repository, repository))
-          {:error, reason} ->
-            conn
-            |> put_status(400)
-            |> put_flash(:error, "Failed to update billing information.")
-            |> render_repository(repository, params: params, errors: reason["errors"])
-        end
-      else
-        conn
-        |> put_status(400)
-        |> put_flash(:error, "Invalid billing email.")
-        |> render_repository(repository)
-      end
+  def create_billing(conn, %{"dashboard_repo" => repository} = params) do
+    access_repository(conn, repository, "admin", fn repository ->
+      params = Map.put(params, "token", repository.name)
+      update_billing(conn, repository, nil, params, &Hexpm.Billing.create/1)
     end)
   end
 
@@ -365,9 +344,40 @@ defmodule Hexpm.Web.DashboardController do
     end
   end
 
+  defp update_billing(conn, repository, billing, params, fun) do
+    emails =
+      conn.assigns.current_user.emails
+      |> Enum.filter(& &1.verified)
+      |> Enum.map(& &1.email)
+
+    if params["email"] in emails or params["email"] == billing["email"] do
+      billing_params =
+        Map.take(params, ["email", "person", "company", "token"])
+        |> Map.put_new("person", nil)
+        |> Map.put_new("company", nil)
+
+      case fun.(billing_params) do
+        {:ok, _} ->
+          conn
+          |> put_flash(:info, "Updated your billing information.")
+          |> redirect(to: Routes.dashboard_path(conn, :repository, repository))
+        {:error, reason} ->
+          conn
+          |> put_status(400)
+          |> put_flash(:error, "Failed to update billing information.")
+          |> render_repository(repository, params: params, errors: reason["errors"])
+      end
+    else
+      conn
+      |> put_status(400)
+      |> put_flash(:error, "Invalid billing email.")
+      |> render_repository(repository)
+    end
+  end
+
   defp render_new_repository(conn, opts \\ []) do
     render conn, "repository_signup.html", [
-      title: "Dashboard - Repository sign up",
+      title: "Dashboard - Organization sign up",
       container: "container page dashboard",
       billing_email: nil,
       person: nil,
@@ -413,6 +423,36 @@ defmodule Hexpm.Web.DashboardController do
 
   defp render_repository(conn, repository, opts \\ []) do
     billing = Hexpm.Billing.dashboard(repository.name)
+
+    assigns = [
+      title: "Dashboard - Organization",
+      container: "container page dashboard",
+      repository: repository,
+      params: opts[:params],
+      errors: opts[:errors],
+      add_member_changeset: opts[:add_member_changeset] || add_member_changeset()
+    ]
+
+    assigns = Keyword.merge(assigns, billing_assigns(billing, repository))
+    render conn, "repository.html", assigns
+  end
+
+  defp billing_assigns(nil, _repository) do
+    [
+      billing_started?: false,
+      checkout_html: nil,
+      billing_email: nil,
+      subscription: nil,
+      monthly_cost: nil,
+      amount_with_tax: nil,
+      card: nil,
+      invoices: nil,
+      person: nil,
+      company: nil
+    ]
+  end
+
+  defp billing_assigns(billing, repository) do
     post_action = Routes.dashboard_path(Endpoint, :billing_token, repository)
 
     checkout_html =
@@ -420,12 +460,8 @@ defmodule Hexpm.Web.DashboardController do
       |> String.replace("${post_action}", post_action)
       |> String.replace("${csrf_token}", get_csrf_token())
 
-    render(
-      conn,
-      "repository.html",
-      title: "Dashboard - Repository",
-      container: "container page dashboard",
-      repository: repository,
+    [
+      billing_started?: true,
       checkout_html: checkout_html,
       billing_email: billing["email"],
       subscription: billing["subscription"],
@@ -434,11 +470,8 @@ defmodule Hexpm.Web.DashboardController do
       card: billing["card"],
       invoices: billing["invoices"],
       person: billing["person"],
-      company: billing["company"],
-      params: opts[:params],
-      errors: opts[:errors],
-      add_member_changeset: opts[:add_member_changeset] || add_member_changeset()
-    )
+      company: billing["company"]
+    ]
   end
 
   defp access_repository(conn, repository, role, fun) do

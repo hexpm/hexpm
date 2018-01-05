@@ -83,88 +83,120 @@
     <div class="panel panel-default">
       <div class="panel-heading">Billing</div>
       <div class="panel-body">
-        <%= if @subscription do %>
-          <dl>
-            <dt>Plan</dt>
-            <dd>Hex.pm Organization ($8.00 per user / month)</dd>
-            <dt>Payment</dt>
-            <dd><%= payment_card(@card) %></dd>
-            <dt>Next invoice</dt>
-            <%= if @subscription["cancel_at_period_end"] do %>
-              <dd>Subscription ends at <%= payment_date(@subscription["current_period_end"]) %></dd>
-            <% else %>
-              <dd><%= payment_date(@subscription["current_period_end"]) %></dd>
+        <%= if @billing_started? do %>
+          <%= if @subscription do %>
+            <dl>
+              <dt>Plan</dt>
+              <dd>Hex.pm Organization ($8.00 per user / month)</dd>
+              <dt>Payment</dt>
+              <dd><%= payment_card(@card) %></dd>
+              <dt>Next invoice</dt>
+              <%= if @subscription["cancel_at_period_end"] do %>
+                <dd>Subscription ends at <%= payment_date(@subscription["current_period_end"]) %></dd>
+              <% else %>
+                <dd><%= payment_date(@subscription["current_period_end"]) %></dd>
+              <% end %>
+              <dt>Monthly cost</dt>
+              <dd>$<%= money(@amount_with_tax) %></dd>
+              <dt>Status</dt>
+              <dd><%= subscription_status(@subscription) %></dd>
+            </dl>
+
+            <%= raw(@checkout_html) %>
+            <%= form_tag(Routes.dashboard_path(Endpoint, :cancel_billing, @repository), class: "cancel-billing") do %>
+              <%= submit "Cancel", class: "btn btn-danger", disabled: !@subscription || @subscription["cancel_at_period_end"] %>
             <% end %>
-            <dt>Monthly cost</dt>
-            <dd>$<%= money(@amount_with_tax) %></dd>
-            <dt>Status</dt>
-            <dd><%= subscription_status(@subscription) %></dd>
-          </dl>
-
-          <%= raw(@checkout_html) %>
-          <%= form_tag(Routes.dashboard_path(Endpoint, :cancel_billing, @repository), class: "cancel-billing") do %>
-            <%= submit "Cancel", class: "btn btn-danger", disabled: !@subscription || @subscription["cancel_at_period_end"] %>
+          <% else %>
+            <%# Subscription is not active. Organization will be disabled until a payment method has been added. %>
+            Subscription is not active. <strong>Organization will be disabled</strong> on the 1st of March
+            unless a payment method has been added.<br><br>
+            Subscription cost is <strong>$8.00 per user / month</strong> + VAT.<br><br>
+            <%= raw(@checkout_html) %>
           <% end %>
-        <% else %>
-          <%# Subscription is not active. Organization will be disabled until a payment method has been added. %>
-          Subscription is not active. <strong>Organization will be disabled</strong> on the 1st of March unless a payment method has been added.<br><br>
-          Subscription cost is <strong>$8.00 per user / month</strong> + VAT.<br><br>
-          <%= raw(@checkout_html) %>
-        <% end %>
-      </div>
+        </div>
 
-      <div class="panel-body-part">
+        <div class="panel-body-part">
+          <h4>Billing information</h4>
+          <div>
+            <ul class="nav nav-tabs" role="tablist">
+              <li role="presentation" class="<%= if show_person?(@person, @errors) do %>active<% end %>"><a href="#person" aria-controls="person" role="tab" data-toggle="tab">Person</a></li>
+              <li role="presentation" class="<%= if show_company?(@company, @errors) do %>active<% end %>"><a href="#company" aria-controls="company" role="tab" data-toggle="tab">Company</a></li>
+            </ul>
+
+            <div class="tab-content">
+              <div role="tabpanel" class="tab-pane <%= if show_person?(@person, @errors) do %>active<% end %>" id="person">
+                <%= form_tag(Routes.dashboard_path(Endpoint, :update_billing, @repository)) do %>
+                  <%= render "_billing_person.html", assigns %>
+                  <%= submit "Save", class: "btn btn-primary" %>
+                <% end %>
+              </div>
+              <div role="tabpanel" class="tab-pane <%= if show_company?(@company, @errors) do %>active<% end %>" id="company">
+                <%= form_tag(Routes.dashboard_path(Endpoint, :update_billing, @repository)) do %>
+                  <%= render "_billing_company.html", assigns %>
+                  <%= submit "Save", class: "btn btn-primary" %>
+                <% end %>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <%= if @invoices != [] do %>
+          <div class="panel-body-part">
+            <h4>Payment history</h4>
+            <table class="table table-striped">
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th>Amount</th>
+                  <th>Payment</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                <%= for invoice <- @invoices do %>
+                  <tr>
+                    <td>
+                      <a href="<%= Routes.dashboard_path(Endpoint, :show_invoice, @repository, invoice["id"]) %>" target="_blank">
+                        <%= payment_date(invoice["date"]) %>
+                      </a>
+                      </td>
+                    <td>$<%= money(invoice["amount_due"])%></td>
+                    <td><%= payment_card(invoice["card"]) %></td>
+                    <td><%= invoice_status(invoice) %></td>
+                  </tr>
+                <% end %>
+              </tbody>
+            </table>
+          </div>
+        <% end %>
+      <% else %>
+        <%# Subscription is not active. Organization will be disabled until a payment method has been added. %>
+        Subscription is not active. <strong>Organization will be disabled</strong> on the 1st of March
+        unless a payment method has been added.<br><br>
+        Subscription cost is <strong>$8.00 per user / month</strong> + VAT.<br><br>
+        Enter your billing information below to enable the payment method form:<br><br>
+
         <h4>Billing information</h4>
         <div>
           <ul class="nav nav-tabs" role="tablist">
-            <li role="presentation" class="<%= if show_person?(@person, @errors) do %>active<% end %>"><a href="#person" aria-controls="person" role="tab" data-toggle="tab">Person</a></li>
-            <li role="presentation" class="<%= if show_company?(@company, @errors) do %>active<% end %>"><a href="#company" aria-controls="company" role="tab" data-toggle="tab">Company</a></li>
+            <li role="presentation" class="active"><a href="#person" aria-controls="person" role="tab" data-toggle="tab">Person</a></li>
+            <li role="presentation"><a href="#company" aria-controls="company" role="tab" data-toggle="tab">Company</a></li>
           </ul>
 
           <div class="tab-content">
-            <div role="tabpanel" class="tab-pane <%= if show_person?(@person, @errors) do %>active<% end %>" id="person">
-              <%= form_tag(Routes.dashboard_path(Endpoint, :update_billing, @repository)) do %>
+            <div role="tabpanel" class="tab-pane active" id="person">
+              <%= form_tag(Routes.dashboard_path(Endpoint, :create_billing, @repository)) do %>
                 <%= render "_billing_person.html", assigns %>
                 <%= submit "Save", class: "btn btn-primary" %>
               <% end %>
             </div>
-            <div role="tabpanel" class="tab-pane <%= if show_company?(@company, @errors) do %>active<% end %>" id="company">
-              <%= form_tag(Routes.dashboard_path(Endpoint, :update_billing, @repository)) do %>
+            <div role="tabpanel" class="tab-pane" id="company">
+              <%= form_tag(Routes.dashboard_path(Endpoint, :create_billing, @repository)) do %>
                 <%= render "_billing_company.html", assigns %>
                 <%= submit "Save", class: "btn btn-primary" %>
               <% end %>
             </div>
           </div>
-        </div>
-      </div>
-
-      <%= if @invoices != [] do %>
-        <div class="panel-body-part">
-          <h4>Payment history</h4>
-          <table class="table table-striped">
-            <thead>
-              <tr>
-                <th>Date</th>
-                <th>Amount</th>
-                <th>Payment</th>
-                <th>Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              <%= for invoice <- @invoices do %>
-                <tr>
-                  <td>
-                    <a href="<%= Routes.dashboard_path(Endpoint, :show_invoice, @repository, invoice["id"]) %>" target="_blank">
-                      <%= payment_date(invoice["date"]) %>
-                    </a>
-                    </td>
-                  <td>$<%= money(invoice["amount_due"])%></td>
-                  <td><%= payment_card(invoice["card"]) %></td>
-                  <td><%= invoice_status(invoice) %></td>
-                </tr>
-              <% end %>
-            </tbody>
-          </table>
         </div>
       <% end %>
     </div>
