@@ -83,6 +83,7 @@ defmodule Hexpm.Web.Router do
     post "/dashboard/repos/:dashboard_repo/billing-token", DashboardController, :billing_token
     post "/dashboard/repos/:dashboard_repo/cancel-billing", DashboardController, :cancel_billing
     post "/dashboard/repos/:dashboard_repo/update-billing", DashboardController, :update_billing
+    post "/dashboard/repos/:dashboard_repo/create-billing", DashboardController, :create_billing
     get "/dashboard/repos/:dashboard_repo/invoices/:id", DashboardController, :show_invoice
     get "/dashboard/repo-signup", DashboardController, :new_repository
     post "/dashboard/repo-signup", DashboardController, :create_repository

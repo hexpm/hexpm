@@ -2,7 +2,7 @@ defmodule Hexpm.Billing do
   @type repository() :: String.t()
 
   @callback checkout(repository(), data :: map()) :: map()
-  @callback dashboard(repository()) :: map()
+  @callback dashboard(repository()) :: map() | nil
   @callback cancel(repository()) :: map()
   @callback create(map()) :: {:ok, map()} | {:error, map()}
   @callback update(repository(), map()) :: {:ok, map()} | {:error, map()}

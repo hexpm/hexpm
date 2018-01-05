@@ -609,4 +609,23 @@ defmodule Hexpm.Web.DashboardControllerTest do
     assert response(conn, 400) =~ "Oops, something went wrong"
     assert response(conn, 400) =~ "has already been taken"
   end
+
+  test "create billing customer after repository", %{user: user, repository: repository} do
+    Mox.expect(Hexpm.Billing.Mock, :create, 1, fn params ->
+      assert params == %{"person" => %{"country" => "SE"}, "token" => repository.name, "company" => nil, "email" => "eric@mail.com"}
+      {:ok, %{}}
+    end)
+
+    insert(:repository_user, repository: repository, user: user, role: "admin")
+    params = %{"repository" => %{"name" => repository.name}, "person" => %{"country" => "SE"}, "email" => "eric@mail.com"}
+
+    conn =
+      build_conn()
+      |> test_login(user)
+      |> post("dashboard/repos/#{repository.name}/create-billing", params)
+
+    response(conn, 302)
+    assert get_resp_header(conn, "location") == ["/dashboard/repos/#{repository.name}"]
+    assert get_flash(conn, :info) == "Updated your billing information."
+  end
 end
