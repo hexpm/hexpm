@@ -17,7 +17,7 @@ defmodule Hexpm.Emails.Mailer do
   end
 
   defp recipient_chunks(recipients, limit) do
-    Enum.chunk(recipients, limit, limit, [])
+    Enum.chunk_every(recipients, limit, limit, [])
   end
 
   defp recipients(email) do

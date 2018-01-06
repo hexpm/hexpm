@@ -104,7 +104,7 @@ defmodule Mix.Tasks.Hexpm.Stats do
               []
             end
         end)
-        |> Enum.chunk(1000, 1000, [])
+        |> Enum.chunk_every(1000, 1000, [])
         |> Enum.each(&Repo.insert_all(Download, &1))
 
         Repo.refresh_view(PackageDownload)

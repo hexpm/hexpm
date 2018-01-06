@@ -191,7 +191,7 @@ defmodule Hexpm.Web.ViewHelpers do
     split         = rem(byte_size(string), 3)
     string        = :erlang.binary_to_list(string)
     {first, rest} = Enum.split(string, split)
-    rest          = Enum.chunk(rest, 3) |> Enum.map(&[" ", &1])
+    rest          = Enum.chunk_every(rest, 3) |> Enum.map(&[" ", &1])
     IO.iodata_to_binary([first, rest])
   end
 

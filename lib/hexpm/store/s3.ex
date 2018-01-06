@@ -31,7 +31,7 @@ defmodule Hexpm.Store.S3 do
   def delete_many(region, bucket, keys) do
     # AWS doesn't like concurrent delete requests
     keys
-    |> Stream.chunk(1000, 1000, [])
+    |> Stream.chunk_every(1000, 1000, [])
     |> Enum.each(fn chunk ->
       S3.delete_multiple_objects(bucket(bucket), chunk)
       |> ExAws.request!(region: region(region))
