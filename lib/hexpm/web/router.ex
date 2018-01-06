@@ -120,9 +120,14 @@ defmodule Hexpm.Web.Router do
       get "/registry.ets.gz.signed", TestController, :registry_signed
       get "/names", TestController, :names
       get "/versions", TestController, :version
-      get "/packages/:package", TestController, :package
-      get "/tarballs/:ball", TestController, :tarball
       get "/installs/hex-1.x.csv", TestController, :installs_csv
+
+      for prefix <- ["/", "/repos/:repository"] do
+        scope prefix do
+          get "/packages/:package", TestController, :package
+          get "/tarballs/:ball", TestController, :tarball
+        end
+      end
     end
 
     scope "/api", Hexpm.Web do
