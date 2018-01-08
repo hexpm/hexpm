@@ -12,11 +12,11 @@ defmodule Hexpm.Store do
   @callback delete(region, bucket, key) :: term
   @callback delete_many(region, bucket, [key]) :: [term]
 
-  @store_impl Application.get_env(:hexpm, :store_impl)
+  defp impl(), do: Application.get_env(:hexpm, :store_impl)
 
-  defdelegate list(region, bucket, prefix), to: @store_impl
-  defdelegate get(region, bucket, key, opts), to: @store_impl
-  defdelegate put(region, bucket, key, body, opts), to: @store_impl
-  defdelegate delete(region, bucket, key), to: @store_impl
-  defdelegate delete_many(region, bucket, keys), to: @store_impl
+  def list(region, bucket, prefix), do: impl().list(region, bucket, prefix)
+  def get(region, bucket, key, opts), do: impl().get(region, bucket, key, opts)
+  def put(region, bucket, key, body, opts), do: impl().put(region, bucket, key, body, opts)
+  def delete(region, bucket, key), do: impl().delete(region, bucket, key)
+  def delete_many(region, bucket, keys), do: impl().delete_many(region, bucket, keys)
 end
