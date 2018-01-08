@@ -115,7 +115,10 @@ defmodule Hexpm.Accounts.User do
       preload: ^preload)
   end
 
-  def verify_permissions?(_user, "api", _resource) do
+  def verify_permissions?(_user, "api", nil) do
+    true
+  end
+  def verify_permissions?(_user, "repositories", nil) do
     true
   end
   def verify_permissions?(user, "repository", name) do
