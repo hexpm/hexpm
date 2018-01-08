@@ -7,8 +7,8 @@ defmodule Hexpm.CDN do
   @callback purge_key(service, key | [key]) :: :ok
   @callback public_ips() :: [{ip, mask}]
 
-  @cdn_impl Application.get_env(:hexpm, :cdn_impl)
+  defp impl(), do: Application.get_env(:hexpm, :cdn_impl)
 
-  defdelegate purge_key(service, key), to: @cdn_impl
-  defdelegate public_ips(), to: @cdn_impl
+  def purge_key(service, key), do: impl().purge_key(service, key)
+  def public_ips(), do: impl().public_ips()
 end

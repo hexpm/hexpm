@@ -9,13 +9,13 @@ defmodule Hexpm.Billing do
   @callback invoice(id :: pos_integer()) :: binary()
   @callback report() :: [map()]
 
-  @billing_impl Application.get_env(:hexpm, :billing_impl)
+  defp impl(), do: Application.get_env(:hexpm, :billing_impl)
 
-  defdelegate checkout(repository, data), to: @billing_impl
-  defdelegate dashboard(repository), to: @billing_impl
-  defdelegate cancel(repository), to: @billing_impl
-  defdelegate create(params), to: @billing_impl
-  defdelegate update(repository, params), to: @billing_impl
-  defdelegate invoice(id), to: @billing_impl
-  defdelegate report(), to: @billing_impl
+  def checkout(repository, data), do: impl().checkout(repository, data)
+  def dashboard(repository), do: impl().dashboard(repository)
+  def cancel(repository), do: impl().cancel(repository)
+  def create(params), do: impl().create(params)
+  def update(repository, params), do: impl().update(repository, params)
+  def invoice(id), do: impl().invoice(id)
+  def report(), do: impl().report()
 end
