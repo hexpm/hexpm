@@ -2,7 +2,7 @@
 
 <div class="subtitle">August 28, 2017 · by Eric Meadows-Jönsson</div>
 
-We are announcing the addition of private packages on Hex.pm. With private packages you can publ  ish
+We are announcing the addition of private packages on Hex.pm. With private packages you can publish
 packages to Hex.pm that only your organization members can access and download. With your organization
 you get a repository namespace on Hex.pm so that your private packages will not conflict with packages
 in the global, public repository. Go check out the [private package](/docs/private) documentation to

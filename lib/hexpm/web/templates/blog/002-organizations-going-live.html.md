@@ -1,0 +1,15 @@
+## Organizations going live
+
+<div class="subtitle">February 1, 2018 · by Eric Meadows-Jönsson</div>
+
+A few months ago we introduced the beta of private packages and organizations. In the meantime we
+have been building the billing system and iterating on organizations. We'd like to thank beta
+users for their valuable feedback.
+
+Today we are going out of beta and are going live with organizations. This means you will have to
+go to the [organization dashboard](/dashboard) and enter a payment method and billing details if
+you want to continue using organizations. You have until **1st of March** to enter a payment
+method.
+
+The pricing will be $8.00 per user / month + local VAT where applicable. If you are using private
+packages for open source please contact [support@hex.pm](mailto:support@hex.pm).
