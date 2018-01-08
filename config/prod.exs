@@ -7,11 +7,11 @@ config :hexpm,
   cookie_encr_salt: System.get_env("HEX_COOKIE_ENCRYPTION_SALT")
 
 config :hexpm, Hexpm.Web.Endpoint,
-  http: [port: {:system, "PORT"}, compress: true],
-  url: [host: System.get_env("HEX_URL"), scheme: "https", port: 443],
+  http: [compress: true],
+  url: [scheme: "https", port: 443],
   force_ssl: [hsts: true, host: nil, rewrite_on: [:x_forwarded_proto]],
-  cache_static_manifest: "priv/static/cache_manifest.json",
-  secret_key_base: System.get_env("HEX_SECRET_KEY_BASE")
+  load_from_system_env: true,
+  cache_static_manifest: "priv/static/cache_manifest.json"
 
 config :hexpm, Hexpm.Repo,
   adapter: Ecto.Adapters.Postgres,
