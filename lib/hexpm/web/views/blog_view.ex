@@ -31,6 +31,8 @@ defmodule Hexpm.Web.BlogView do
   def all_templates() do
     Phoenix.Template.find_all(@phoenix_root)
     |> Enum.map(&Phoenix.Template.template_path_to_name(&1, @phoenix_root))
+    |> Enum.sort()
+    |> Enum.reverse()
   end
 
   defp first_paragraph(content) do
