@@ -2,7 +2,7 @@
 
 <div class="subtitle">August 28, 2017 · by Eric Meadows-Jönsson</div>
 
-We are announcing the addition of private packages on Hex.pm. With private packages you can publish
+We are announcing the addition of private packages on Hex.pm. With private packages you can publ  ish
 packages to Hex.pm that only your organization members can access and download. With your organization
 you get a repository namespace on Hex.pm so that your private packages will not conflict with packages
 in the global, public repository. Go check out the [private package](/docs/private) documentation to
@@ -20,7 +20,7 @@ packages will help us increase the quality of both public and private services.
 
 This feature is currently in beta and there are still missing features, most notably billing and documentation
 hosting on hexdocs.pm. If you want to try it or help beta test private packages, please fill out the
-[sign up form](/dashboard/signup) to request access.
+[sign up form](/dashboard/repo-signup) to request access.
 
 Even though we are introducing paid features everything around Hex will stay open source, the only closed
 source part will be the billing service.
