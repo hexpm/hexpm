@@ -77,6 +77,8 @@ defmodule Hexpm.Web.API.UserControllerTest do
       assert Enum.count(body["owned_packages"]) == 2
       assert body["owned_packages"][package1.name] =~ "/api/packages/#{package1.name}"
       assert body["owned_packages"][package2.name] =~ "/api/repos/#{repository.name}/packages/#{package2.name}"
+      assert hd(body["organizations"])["name"] == repository.name
+      assert hd(body["organizations"])["role"] == "read"
     end
 
     test "return 401 if not authenticated" do
