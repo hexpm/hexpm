@@ -37,4 +37,18 @@ defmodule Hexpm.Web.Endpoint do
     max_age: 60 * 60 * 24 * 30
 
   plug Hexpm.Web.Router
+
+  def init(_key, config) do
+    if config[:load_from_system_env] do
+      port = System.get_env("PORT")
+      host = System.get_env("HEX_URL")
+      secret_key_base = System.get_env("HEX_SECRET_KEY_BASE")
+      config = put_in(config[:http][:port], port)
+      config = put_in(config[:url][:host], host)
+      config = put_in(config[:secret_key_base], secret_key_base)
+      {:ok, config}
+    else
+      {:ok, config}
+    end
+  end
 end
