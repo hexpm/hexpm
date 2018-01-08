@@ -107,4 +107,51 @@ defmodule Hexpm.Web.PackageViewTest do
     assert PackageView.snippet_version(:erlang_mk, version3) == "2.0.2"
   end
 
+  describe "retirement_message/1" do
+    test "reason is 'other', message contains text" do
+      retirement = %{reason: "other", message: "something went terribly wrong"}
+      assert PackageView.retirement_message(retirement) == ["Retired package", "; reason: ", "something went terribly wrong"]
+    end
+
+    test "reason is 'other', message is empty" do
+      retirement = %{reason: "other", message: nil}
+      assert PackageView.retirement_message(retirement) == ["Retired package"]
+    end
+
+    test "reason is not 'other', message contains text" do
+      retirement = %{reason: "security", message: "something went terribly wrong"}
+      assert PackageView.retirement_message(retirement) == ["Retired package", "; reason: ", "Security issue", " - ", "something went terribly wrong"]
+    end
+
+    test "reason is not 'other', message is empty" do
+      retirement = %{reason: "security", message: nil}
+      assert PackageView.retirement_message(retirement) == ["Retired package", "; reason: ", "Security issue"]
+    end
+  end
+
+  describe "retirement_html/1" do
+    test "reason is 'other', message contains text" do
+      retirement = %{reason: "other", message: "something went terribly wrong"}
+      assert PackageView.retirement_html(retirement) ==
+        [{:safe, [60, "strong", [], 62, "Retired package;", 60, 47, "strong", 62]}, " reason: ", "something went terribly wrong"]
+    end
+
+    test "reason is 'other', message is empty" do
+      retirement = %{reason: "other", message: nil}
+      assert PackageView.retirement_html(retirement) ==
+        [safe: [60, "strong", [], 62, "Retired package", 60, 47, "strong", 62]]
+    end
+
+    test "reason is not 'other', message contains text" do
+      retirement = %{reason: "security", message: "something went terribly wrong"}
+      assert PackageView.retirement_html(retirement) ==
+        [{:safe, [60, "strong", [], 62, "Retired package;", 60, 47, "strong", 62]}, " reason: ", "Security issue", " - ", "something went terribly wrong"]
+    end
+
+    test "reason is not 'other', message is empty" do
+      retirement = %{reason: "security", message: nil}
+      assert PackageView.retirement_html(retirement) ==
+        [{:safe, [60, "strong", [], 62, "Retired package;", 60, 47, "strong", 62]}, " reason: ", "Security issue"]
+    end
+  end
 end
