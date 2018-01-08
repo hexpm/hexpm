@@ -80,6 +80,18 @@ defmodule Hexpm.Web.API.KeyControllerTest do
     refute Hexpm.Repo.one(Key.get(c.eric, "macbook"))
   end
 
+  test "create repo key for all repositories", c do
+    body = %{name: "macbook", permissions: [%{domain: "repositories"}]}
+    build_conn()
+    |> put_req_header("content-type", "application/json")
+    |> put_req_header("authorization", "Basic " <> Base.encode64("eric:ericeric"))
+    |> post("api/keys", Poison.encode!(body))
+    |> json_response(201)
+
+    key = Hexpm.Repo.one!(Key.get(c.eric, "macbook"))
+    assert [%KeyPermission{domain: "repositories", resource: nil}] = key.permissions
+  end
+
   test "get key", c do
     c.eric
     |> Key.build(%{name: "macbook"})

@@ -13,6 +13,7 @@ defmodule Hexpm.Web.API.AuthControllerTest do
     ])
     api_key = insert(:key, user: user, permissions: [build(:key_permission, domain: "api")])
     repo_key = insert(:key, user: user, permissions: [build(:key_permission, domain: "repository", resource: owned_repo.name)])
+    all_repos_key = insert(:key, user: user, permissions: [build(:key_permission, domain: "repositories")])
     unowned_repo_key = insert(:key, user: user, permissions: [build(:key_permission, domain: "repository", resource: unowned_repo.name)])
 
     {:ok, [
@@ -22,6 +23,7 @@ defmodule Hexpm.Web.API.AuthControllerTest do
       full_key: full_key,
       api_key: api_key,
       repo_key: repo_key,
+      all_repos_key: all_repos_key,
       unowned_repo_key: unowned_repo_key,
     ]}
   end
@@ -71,7 +73,7 @@ defmodule Hexpm.Web.API.AuthControllerTest do
       build_conn()
       |> put_req_header("authorization", key.user_secret)
       |> get("api/auth", domain: "repository")
-      |> response(401)
+      |> response(400)
     end
 
     test "authenticate api key", %{api_key: key} do
@@ -86,7 +88,7 @@ defmodule Hexpm.Web.API.AuthControllerTest do
       |> response(401)
     end
 
-    test "authenticate repo key", %{repo_key: key, owned_repo: owned_repo, unowned_repo: unowned_repo} do
+    test "authenticate repo key with explicit repository", %{repo_key: key, owned_repo: owned_repo, unowned_repo: unowned_repo} do
       build_conn()
       |> put_req_header("authorization", key.user_secret)
       |> get("api/auth", domain: "api")
@@ -95,7 +97,7 @@ defmodule Hexpm.Web.API.AuthControllerTest do
       build_conn()
       |> put_req_header("authorization", key.user_secret)
       |> get("api/auth", domain: "repository")
-      |> response(401)
+      |> response(400)
 
       build_conn()
       |> put_req_header("authorization", key.user_secret)
@@ -117,6 +119,33 @@ defmodule Hexpm.Web.API.AuthControllerTest do
       build_conn()
       |> put_req_header("authorization", key.user_secret)
       |> get("api/auth", domain: "repository", resource: unowned_repo.name)
+      |> response(403)
+    end
+
+    test "authenticate repo key with all repositories", %{all_repos_key: key, owned_repo: owned_repo, unowned_repo: unowned_repo} do
+      build_conn()
+      |> put_req_header("authorization", key.user_secret)
+      |> get("api/auth", domain: "api")
+      |> response(401)
+
+      build_conn()
+      |> put_req_header("authorization", key.user_secret)
+      |> get("api/auth", domain: "repository")
+      |> response(400)
+
+      build_conn()
+      |> put_req_header("authorization", key.user_secret)
+      |> get("api/auth", domain: "repository", resource: owned_repo.name)
+      |> response(204)
+
+      build_conn()
+      |> put_req_header("authorization", key.user_secret)
+      |> get("api/auth", domain: "repository", resource: unowned_repo.name)
+      |> response(403)
+
+      build_conn()
+      |> put_req_header("authorization", key.user_secret)
+      |> get("api/auth", domain: "repository", resource: "BADREPO")
       |> response(403)
     end
   end
