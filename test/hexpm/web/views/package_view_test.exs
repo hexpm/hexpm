@@ -3,6 +3,10 @@ defmodule Hexpm.Web.PackageViewTest do
 
   alias Hexpm.Web.PackageView
 
+  defp parse_html_list_to_string(html_map) do
+    Enum.map_join(html_map, fn(x) -> if is_tuple(x), do: Phoenix.HTML.safe_to_string(x), else: x end)
+  end
+
   test "show sort info" do
     assert PackageView.show_sort_info(:name) == "(Sorted by name)"
     assert PackageView.show_sort_info(:inserted_at) == "(Sorted by recently created)"
@@ -131,27 +135,23 @@ defmodule Hexpm.Web.PackageViewTest do
 
   describe "retirement_html/1" do
     test "reason is 'other', message contains text" do
-      retirement = %{reason: "other", message: "something went terribly wrong"}
-      assert PackageView.retirement_html(retirement) ==
-        [{:safe, [60, "strong", [], 62, "Retired package;", 60, 47, "strong", 62]}, " reason: ", "something went terribly wrong"]
+      retirement = PackageView.retirement_html(%{reason: "other", message: "something went terribly wrong"})
+      assert parse_html_list_to_string(retirement) == "<strong>Retired package;</strong> reason: something went terribly wrong"
     end
 
     test "reason is 'other', message is empty" do
-      retirement = %{reason: "other", message: nil}
-      assert PackageView.retirement_html(retirement) ==
-        [safe: [60, "strong", [], 62, "Retired package", 60, 47, "strong", 62]]
+      retirement = PackageView.retirement_html(%{reason: "other", message: nil})
+      assert parse_html_list_to_string(retirement) == "<strong>Retired package</strong>"
     end
 
     test "reason is not 'other', message contains text" do
-      retirement = %{reason: "security", message: "something went terribly wrong"}
-      assert PackageView.retirement_html(retirement) ==
-        [{:safe, [60, "strong", [], 62, "Retired package;", 60, 47, "strong", 62]}, " reason: ", "Security issue", " - ", "something went terribly wrong"]
+      retirement = PackageView.retirement_html(%{reason: "security", message: "something went terribly wrong"})
+      assert parse_html_list_to_string(retirement) == "<strong>Retired package;</strong> reason: Security issue - something went terribly wrong"
     end
 
     test "reason is not 'other', message is empty" do
-      retirement = %{reason: "security", message: nil}
-      assert PackageView.retirement_html(retirement) ==
-        [{:safe, [60, "strong", [], 62, "Retired package;", 60, 47, "strong", 62]}, " reason: ", "Security issue"]
+      retirement = PackageView.retirement_html(%{reason: "security", message: nil})
+      assert parse_html_list_to_string(retirement) == "<strong>Retired package;</strong> reason: Security issue"
     end
   end
 end
