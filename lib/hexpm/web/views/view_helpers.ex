@@ -222,10 +222,12 @@ defmodule Hexpm.Web.ViewHelpers do
     integer |> Integer.to_string() |> human_number_space()
   end
 
-  def human_relative_time_from_now(date) do
-    ts = NaiveDateTime.to_erl(date) |> :calendar.datetime_to_gregorian_seconds
+  def human_relative_time_from_now(datetime) do
+    ts = NaiveDateTime.to_erl(datetime) |> :calendar.datetime_to_gregorian_seconds
     diff = :calendar.datetime_to_gregorian_seconds(:calendar.universal_time) - ts
-    rel_from_now(:calendar.seconds_to_daystime(diff))
+    rel = rel_from_now(:calendar.seconds_to_daystime(diff))
+
+    content_tag :span, rel, title: pretty_datetime(datetime)
   end
 
   defp rel_from_now({0, {0, 0, sec}}) when sec < 30, do: "about now"
