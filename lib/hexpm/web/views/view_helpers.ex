@@ -237,7 +237,7 @@ defmodule Hexpm.Web.ViewHelpers do
   defp rel_from_now({day, {_, _, _}}) when day < 0, do: "about now"
   defp rel_from_now({day, {_, _, _}}), do: "#{day} days ago"
 
-  def pretty_date(%NaiveDateTime{year: year, month: month, day: day}) do
+  def pretty_datetime(%NaiveDateTime{year: year, month: month, day: day}) do
     "#{pretty_month(month)} #{day}, #{year}"
   end
 
