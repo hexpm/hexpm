@@ -38,13 +38,15 @@ defmodule Hexpm.Repository.Assets do
     Hexpm.CDN.purge_key(:fastly_hexdocs, "sitemap")
   end
 
-  def push_docs(release, files, body, latest_release?) do
+  def push_docs(release, files, body, all_versions) do
     name = release.package.name
     version = release.version
-    package = release.package
+    latest_version = List.first(all_versions)
     pre_release? = version.pre != []
-    first_release? = package.docs_updated_at == nil
-    publish_unversioned? = first_release? or (latest_release? and not pre_release?)
+    first_release? = all_versions == []
+    all_pre_releases? = Enum.all?(all_versions, &(&1.pre != []))
+    latest_release? = first_release? or Version.compare(release.version, latest_version) in [:eq, :gt]
+    publish_unversioned? = latest_release? and (not pre_release? or all_pre_releases?)
 
     files =
       Enum.flat_map(files, fn {path, data} ->
