@@ -114,12 +114,31 @@ defmodule Hexpm.Web.PackageView do
   end
 
   def retirement_message(retirement) do
-    [ReleaseRetirement.reason_text(retirement.reason)] ++
-      if(retirement.message, do: [": ", retirement.message], else: [])
+    reason = ReleaseRetirement.reason_text(retirement.reason)
+    ["Retired package"] ++
+      cond do
+        reason && retirement.message ->
+          ["; reason: ", reason, " - ", retirement.message]
+        reason ->
+          ["; reason: ", reason]
+        retirement.message ->
+          ["; reason: ", retirement.message]
+        true ->
+          []
+      end
   end
 
   def retirement_html(retirement) do
-    [content_tag(:strong, ReleaseRetirement.reason_text(retirement.reason))] ++
-      if(retirement.message, do: [": ", retirement.message], else: [])
+    reason = ReleaseRetirement.reason_text(retirement.reason)
+    cond do
+      reason && retirement.message ->
+        [content_tag(:strong, "Retired package;"), " reason: ", reason, " - ", retirement.message]
+      reason ->
+        [content_tag(:strong, "Retired package;"), " reason: ", reason]
+      retirement.message ->
+        [content_tag(:strong, "Retired package;"), " reason: ", retirement.message]
+      true ->
+        [content_tag(:strong, "Retired package")]
+    end
   end
 end
