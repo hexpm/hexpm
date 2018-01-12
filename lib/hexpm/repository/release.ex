@@ -2,6 +2,8 @@ defmodule Hexpm.Repository.Release do
   use Hexpm.Web, :schema
 
   @derive {Hexpm.Web.Stale, assocs: [:requirements, :downloads]}
+  @one_hour 60 * 60
+  @one_day @one_hour * 24
 
   schema "releases" do
     field :version, Hexpm.Version
@@ -72,16 +74,21 @@ defmodule Hexpm.Repository.Release do
   defp editable?(%Release{inserted_at: nil}), do: true
   defp editable?(%Release{package: %Package{repository_id: id}}) when id != 1, do: true
   defp editable?(release) do
-    inserted_at =
-      release.inserted_at
-      |> NaiveDateTime.to_erl()
-      |> to_secs()
-
-    now = to_secs(:calendar.universal_time())
-    now - inserted_at <= 3600
+    within_seconds?(release.inserted_at, @one_hour) or
+    within_seconds?(release.package.inserted_at, @one_day)
   end
 
-  defp to_secs(datetime), do: :calendar.datetime_to_gregorian_seconds(datetime)
+  defp within_seconds?(datetime, within_seconds) do
+    at =
+      datetime
+      |> NaiveDateTime.to_erl()
+      |> erl_to_seconds()
+
+    now = erl_to_seconds(:calendar.universal_time())
+    now - at <= within_seconds
+  end
+
+  defp erl_to_seconds(datetime), do: :calendar.datetime_to_gregorian_seconds(datetime)
 
   def package_versions(packages) do
     package_ids = Enum.map(packages, & &1.id)
