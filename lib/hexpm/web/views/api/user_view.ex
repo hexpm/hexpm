@@ -58,11 +58,15 @@ defmodule Hexpm.Web.API.UserView do
     Enum.map(packages, fn package ->
       %{
         name: package.name,
+        repository: repository_name(package),
         url: url_for_package(package),
         html_url: html_url_for_package(package)
       }
     end)
   end
+
+  defp repository_name(%Package{repository_id: 1}), do: "hexpm"
+  defp repository_name(%Package{repository: %{name: name}}), do: name
 
   defp organizations(user) do
     Enum.map(user.repository_users, fn ru ->

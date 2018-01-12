@@ -80,8 +80,10 @@ defmodule Hexpm.Web.API.UserControllerTest do
       assert [json1, json2] = body["packages"]
       assert json1["url"] =~ "/api/packages/#{package1.name}"
       assert json1["html_url"] =~ "/packages/#{package1.name}"
+      assert json1["repository"] =~ "hexpm"
       assert json2["url"] =~ "/api/repos/#{repository.name}/packages/#{package2.name}"
       assert json2["html_url"] =~ "/packages/#{repository.name}/#{package2.name}"
+      assert json2["repository"] =~ repository.name
 
       # TODO: deprecated
       assert Enum.count(body["owned_packages"]) == 2
