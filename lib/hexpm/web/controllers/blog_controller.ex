@@ -1,6 +1,12 @@
 defmodule Hexpm.Web.BlogController do
   use Hexpm.Web, :controller
 
+  Enum.each(Hexpm.Web.BlogView.all_templates(), fn {slug, template} ->
+    defp slug_to_template(unquote(slug)), do: unquote(Path.rootname(template))
+  end)
+
+  defp slug_to_template(_other), do: nil
+
   def index(conn, _params) do
     render(
       conn,
@@ -10,26 +16,17 @@ defmodule Hexpm.Web.BlogController do
     )
   end
 
-  def show(conn, %{"name" => "private-packages-and-organizations"}) do
-    redirect(conn, to: Routes.blog_path(Endpoint, :show, "001-private-packages-and-organizations"))
-  end
-
-  def show(conn, %{"name" => name}) do
-    if name in all_slugs() do
+  def show(conn, %{"slug" => slug}) do
+    if template = slug_to_template(slug) do
       render(
         conn,
-        "#{name}.html",
-        title: title(name),
+        "#{template}.html",
+        title: title(slug),
         container: "container page blog"
       )
     else
       not_found(conn)
     end
-  end
-
-  defp all_slugs() do
-    Hexpm.Web.BlogView.all_templates()
-    |> Enum.map(&Path.rootname/1)
   end
 
   defp title(slug) do
