@@ -55,7 +55,9 @@ defmodule Hexpm.Web.API.UserView do
   end
 
   defp packages(packages) do
-    Enum.map(packages, fn package ->
+    packages
+    |> Enum.sort_by(&[repository_sort(&1), &1.name])
+    |> Enum.map(fn package ->
       %{
         name: package.name,
         repository: repository_name(package),
@@ -67,6 +69,11 @@ defmodule Hexpm.Web.API.UserView do
 
   defp repository_name(%Package{repository_id: 1}), do: "hexpm"
   defp repository_name(%Package{repository: %{name: name}}), do: name
+
+  # TODO: DRY up
+  # Atoms sort before strings
+  defp repository_sort(%Package{repository_id: 1}), do: :first
+  defp repository_sort(%Package{repository: %{name: name}}), do: name
 
   defp organizations(user) do
     Enum.map(user.repository_users, fn ru ->

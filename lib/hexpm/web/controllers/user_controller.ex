@@ -26,6 +26,7 @@ defmodule Hexpm.Web.UserController do
     end
   end
 
+  # TODO: DRY up
   # Atoms sort before strings
   defp repository_sort(%Repository{id: 1}), do: :first
   defp repository_sort(%Repository{name: name}), do: name
