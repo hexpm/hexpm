@@ -219,8 +219,26 @@ defmodule Hexpm.Web.API.ReleaseControllerTest do
       assert result["errors"]["requirements"][package.name] =~ ~s(Failed to use "#{package.name}")
     end
 
+    test "can update release within package 24 hour grace period", %{user: user, package: package, release: release} do
+      Ecto.Changeset.change(package, inserted_at: NaiveDateTime.add(NaiveDateTime.utc_now(), -36000, :second))
+      |> Hexpm.Repo.update!()
+
+      Ecto.Changeset.change(release, inserted_at: NaiveDateTime.add(NaiveDateTime.utc_now(), -36000, :second))
+      |> Hexpm.Repo.update!()
+
+      meta = %{name: package.name, version: "0.0.1", description: "description"}
+      build_conn()
+      |> put_req_header("content-type", "application/octet-stream")
+      |> put_req_header("authorization", key_for(user))
+      |> post("api/packages/#{package.name}/releases", create_tar(meta, []))
+      |> json_response(200)
+    end
+
     test "cannot update release after grace period", %{user: user, package: package, release: release} do
-      Ecto.Changeset.change(release, inserted_at: %{NaiveDateTime.utc_now | year: 2000})
+      Ecto.Changeset.change(package, inserted_at: %{NaiveDateTime.utc_now() | year: 2000})
+      |> Hexpm.Repo.update!()
+
+      Ecto.Changeset.change(release, inserted_at: %{NaiveDateTime.utc_now() | year: 2000})
       |> Hexpm.Repo.update!()
 
       meta = %{name: package.name, version: "0.0.1", description: "description"}
@@ -377,7 +395,7 @@ defmodule Hexpm.Web.API.ReleaseControllerTest do
 
     test "can update private package after grace period", %{user: user, repository: repository} do
       package = insert(:package, package_owners: [build(:package_owner, owner: user)], repository_id: repository.id)
-      insert(:release, package: package, version: "0.0.1", inserted_at: %{NaiveDateTime.utc_now | year: 2000})
+      insert(:release, package: package, version: "0.0.1", inserted_at: %{NaiveDateTime.utc_now() | year: 2000})
       insert(:repository_user, repository: repository, user: user)
 
       meta = %{name: package.name, version: "0.0.1", description: "description"}
@@ -392,7 +410,10 @@ defmodule Hexpm.Web.API.ReleaseControllerTest do
   describe "DELETE /api/packages/:name/releases/:version" do
     @tag isolation: :serializable
     test "delete release validates release age", %{user: user, package: package, release: release} do
-      Ecto.Changeset.change(release, inserted_at: %{NaiveDateTime.utc_now | year: 2000})
+      Ecto.Changeset.change(package, inserted_at: %{NaiveDateTime.utc_now() | year: 2000})
+      |> Hexpm.Repo.update!()
+
+      Ecto.Changeset.change(release, inserted_at: %{NaiveDateTime.utc_now() | year: 2000})
       |> Hexpm.Repo.update!
 
       conn = build_conn()
