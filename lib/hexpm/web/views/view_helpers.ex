@@ -187,22 +187,47 @@ defmodule Hexpm.Web.ViewHelpers do
     text
   end
 
+  @number_unit ["K", "M", "B"]
+
+  def human_number_space(integer, max, count \\ 0)
+
+  def human_number_space(integer, max, count) when is_integer(integer) do
+    integer |> Integer.to_charlist() |> human_number_space(max, count)
+  end
+
+  def human_number_space(string, max, count) when is_list(string) do
+    cond do
+      length(string) > max ->
+        string = Enum.drop(string, -3)
+        human_number_space(string, max, count + 1)
+      count == 0 ->
+        human_number_space(:erlang.list_to_binary(string))
+      true ->
+        human_number_space(:erlang.list_to_binary(string)) <> Enum.at(@number_unit, count - 1)
+    end
+  end
+
   def human_number_space(string) when is_binary(string) do
-    split         = rem(byte_size(string), 3)
-    string        = :erlang.binary_to_list(string)
-    {first, rest} = Enum.split(string, split)
-    rest          = Enum.chunk_every(rest, 3) |> Enum.map(&[" ", &1])
-    IO.iodata_to_binary([first, rest])
+    string
+    |> :erlang.binary_to_list()
+    |> Enum.reverse()
+    |> Enum.chunk_every(3)
+    |> Enum.intersperse(?\s)
+    |> List.flatten()
+    |> Enum.reverse()
+    |> :erlang.list_to_binary()
   end
 
-  def human_number_space(int) when is_integer(int) do
-    human_number_space(Integer.to_string(int))
+  def human_number_space(integer) when is_integer(integer) do
+    integer |> Integer.to_string() |> human_number_space()
   end
 
-  def human_relative_time_from_now(date) do
-    ts = NaiveDateTime.to_erl(date) |> :calendar.datetime_to_gregorian_seconds
+  def human_relative_time_from_now(datetime) do
+    ts = NaiveDateTime.to_erl(datetime) |> :calendar.datetime_to_gregorian_seconds
     diff = :calendar.datetime_to_gregorian_seconds(:calendar.universal_time) - ts
-    rel_from_now(:calendar.seconds_to_daystime(diff))
+    rel = rel_from_now(:calendar.seconds_to_daystime(diff))
+
+    content_tag :span, rel, title: pretty_datetime(datetime)
   end
 
   defp rel_from_now({0, {0, 0, sec}}) when sec < 30, do: "about now"
@@ -214,7 +239,7 @@ defmodule Hexpm.Web.ViewHelpers do
   defp rel_from_now({day, {_, _, _}}) when day < 0, do: "about now"
   defp rel_from_now({day, {_, _, _}}), do: "#{day} days ago"
 
-  def pretty_date(%NaiveDateTime{year: year, month: month, day: day}) do
+  def pretty_datetime(%NaiveDateTime{year: year, month: month, day: day}) do
     "#{pretty_month(month)} #{day}, #{year}"
   end
 

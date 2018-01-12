@@ -1,9 +1,9 @@
 <div class="row">
-  <div class="col-md-3">
+  <div class="col-sm-3">
     <%= render "_sidebar.html", assigns %>
   </div>
 
-  <div class="col-md-9 repository-signup">
+  <div class="col-sm-9 repository-signup">
     <div class="panel panel-default">
       <div class="panel-heading">Organization sign up</div>
       <div class="panel-body">

@@ -114,33 +114,6 @@ defmodule Hexpm.Web.Router do
     get "/installs/hex.ez", InstallController, :archive
   end
 
-  if Mix.env in [:dev, :test, :hex] do
-    scope "/repo", Hexpm.Web do
-      get "/registry.ets.gz", TestController, :registry
-      get "/registry.ets.gz.signed", TestController, :registry_signed
-      get "/names", TestController, :names
-      get "/versions", TestController, :version
-      get "/installs/hex-1.x.csv", TestController, :installs_csv
-
-      for prefix <- ["/", "/repos/:repository"] do
-        scope prefix do
-          get "/packages/:package", TestController, :package
-          get "/tarballs/:ball", TestController, :tarball
-        end
-      end
-    end
-
-    scope "/api", Hexpm.Web do
-      pipe_through :api
-      post "/repo", TestController, :repo
-    end
-
-    scope "/docs", Hexpm.Web do
-      get "/:package/:version/*page", TestController, :docs_page
-      get "/sitemap.xml", TestController, :docs_sitemap
-    end
-  end
-
   scope "/api", Hexpm.Web.API, as: :api do
     pipe_through :upload
 
@@ -194,5 +167,33 @@ defmodule Hexpm.Web.Router do
     delete "/keys/:name", KeyController, :delete
 
     get "/auth", AuthController, :show
+  end
+
+  if Mix.env in [:dev, :test, :hex] do
+    scope "/repo", Hexpm.Web do
+      get "/registry.ets.gz", TestController, :registry
+      get "/registry.ets.gz.signed", TestController, :registry_signed
+      get "/names", TestController, :names
+      get "/versions", TestController, :version
+      get "/installs/hex-1.x.csv", TestController, :installs_csv
+
+      for prefix <- ["/", "/repos/:repository"] do
+        scope prefix do
+          get "/packages/:package", TestController, :package
+          get "/tarballs/:ball", TestController, :tarball
+        end
+      end
+    end
+
+    scope "/api", Hexpm.Web do
+      pipe_through :api
+
+      post "/repo", TestController, :repo
+    end
+
+    scope "/docs", Hexpm.Web do
+      get "/:package/:version/*page", TestController, :docs_page
+      get "/sitemap.xml", TestController, :docs_sitemap
+    end
   end
 end

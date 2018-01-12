@@ -7,6 +7,9 @@ defmodule Hexpm.Web.API.UserView do
   def render("show." <> _, %{user: user}) do
     render_one(user, __MODULE__, "show")
   end
+  def render("me." <> _, %{user: user}) do
+    render_one(user, __MODULE__, "me")
+  end
   def render("minimal." <> _, %{user: user}) do
     render_one(user, __MODULE__, "minimal")
   end
@@ -22,6 +25,12 @@ defmodule Hexpm.Web.API.UserView do
       updated_at: user.updated_at,
     }
     |> include_if_loaded(:owned_packages, user.owned_packages, &owned_packages/1)
+    |> include_if_loaded(:packages, user.owned_packages, &packages/1)
+  end
+
+  def render("me", %{user: user}) do
+    render_one(user, __MODULE__, "show")
+    |> Map.put(:organizations, organizations(user))
   end
 
   def render("minimal", %{user: user}) do
@@ -38,9 +47,29 @@ defmodule Hexpm.Web.API.UserView do
     end)
   end
 
+  # TODO: deprecated
   defp owned_packages(packages) do
     Enum.into(packages, %{}, fn package ->
       {package.name, url_for_package(package)}
+    end)
+  end
+
+  defp packages(packages) do
+    Enum.map(packages, fn package ->
+      %{
+        name: package.name,
+        url: url_for_package(package),
+        html_url: html_url_for_package(package)
+      }
+    end)
+  end
+
+  defp organizations(user) do
+    Enum.map(user.repository_users, fn ru ->
+      %{
+        name: ru.repository.name,
+        role: ru.role
+      }
     end)
   end
 end

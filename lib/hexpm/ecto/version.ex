@@ -1,8 +1,6 @@
 defmodule Hexpm.Version do
   @behaviour Ecto.Type
 
-  defstruct [:major, :minor, :patch, :pre, :build]
-
   def type(), do: :string
 
   def cast(%Version{} = version), do: {:ok, version}

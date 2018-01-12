@@ -119,9 +119,16 @@ defmodule Hexpm.Accounts.Key do
     Enum.any?(key.permissions, &(&1.domain == "api"))
   end
   def verify_permissions?(key, "repository", resource) do
-    Enum.any?(key.permissions, &(&1.domain == "repository" and &1.resource == resource))
+    Enum.any?(key.permissions, fn permission ->
+      (permission.domain == "repository" and permission.resource == resource) or
+        permission.domain == "repositories"
+    end)
   end
   def verify_permissions?(_key, nil, _resource) do
     false
   end
+
+  def valid_permission_request?("api", nil), do: true
+  def valid_permission_request?("repository", repository) when is_binary(repository), do: true
+  def valid_permission_request?(_domain, _resource), do: false
 end

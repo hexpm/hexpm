@@ -1,11 +1,11 @@
 <%= changeset_error(@changeset) %>
 
 <div class="row">
-  <div class="col-md-3">
+  <div class="col-sm-3">
     <%= render "_sidebar.html", assigns %>
   </div>
 
-  <div class="col-md-9">
+  <div class="col-sm-9">
     <div class="panel panel-default">
       <div class="panel-heading">Public profile</div>
       <div class="panel-body">

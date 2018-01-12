@@ -1,9 +1,9 @@
 <div class="row">
-  <div class="col-md-3">
+  <div class="col-sm-3">
     <%= render "_sidebar.html", assigns %>
   </div>
 
-  <div class="col-md-9 repository members">
+  <div class="col-sm-9 repository members">
     <div class="panel panel-default">
       <div class="panel-heading">Members</div>
       <div class="panel-body">
@@ -59,7 +59,7 @@
     </div>
   </div>
 
-  <div class="col-md-9 repository">
+  <div class="col-sm-9 repository">
     <div class="panel panel-default">
       <div class="panel-heading">Packages</div>
       <div class="panel-body">
@@ -79,7 +79,7 @@
     </div>
   </div>
 
-  <div class="col-md-9 repository">
+  <div class="col-sm-9 repository">
     <div class="panel panel-default">
       <div class="panel-heading">Billing</div>
       <div class="panel-body">
@@ -88,7 +88,7 @@
     </div>
   </div>
 
-  <div class="col-md-9 repository">
+  <div class="col-sm-9 repository">
     <div class="panel panel-default">
       <div class="panel-heading">Danger zone</div>
       <div class="panel-body">

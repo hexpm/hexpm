@@ -27,7 +27,7 @@ defmodule Hexpm.Web.API.UserController do
     when_stale(conn, user, fn conn ->
       conn
       |> api_cache(:private)
-      |> render(:show, user: user)
+      |> render(:me, user: user)
     end)
   end
 
