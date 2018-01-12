@@ -4,8 +4,8 @@ defmodule Hexpm.Web.API.RetirementView do
   def render("show." <> _, %{retirement: retirement}) do
     render_one(retirement, __MODULE__, "show")
   end
-  def render("minimal." <> _, %{retirement: retirement}) do
-    render_one(retirement, __MODULE__, "minimal")
+  def render("package." <> _, %{retirement: retirement}) do
+    render_one(retirement, __MODULE__, "package")
   end
 
   def render("show", %{retirement: retirement}) do
@@ -15,8 +15,8 @@ defmodule Hexpm.Web.API.RetirementView do
     }
   end
 
-  def render("minimal", %{retirement: %{retirement: retirement}}) when is_nil(retirement), do: %{}
-  def render("minimal", %{retirement: %{retirement: retirement, version: version}}) do
+  def render("package", %{retirement: %{retirement: nil}}), do: %{}
+  def render("package", %{retirement: %{retirement: retirement, version: version}}) do
     %{
       version => %{reason: retirement.reason, message: retirement.message}
     }

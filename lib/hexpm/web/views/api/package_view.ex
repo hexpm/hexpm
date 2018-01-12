@@ -25,7 +25,7 @@ defmodule Hexpm.Web.API.PackageView do
       }
     }
     |> include_if_loaded(:releases, package.releases, ReleaseView, "minimal.json", package: package)
-    |> include_if_loaded(:retirement, package.releases, RetirementView, "minimal.json")
+    |> include_if_loaded(:retirement, package.releases, RetirementView, "package.json")
     |> include_if_loaded(:downloads, package.downloads, DownloadView, "show.json")
     |> include_if_loaded(:owners, package.owners, UserView, "minimal.json")
     |> group_downloads()
