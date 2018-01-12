@@ -1,0 +1,45 @@
+<div class="pricing container">
+  <h3>Hex is free to use for public open source packages.</h3>
+  <h3>Publish unlimited number of private packages with organizations.</h3>
+
+  <div class="boxes">
+    <div class="box">
+      <h3>Open source</h3>
+      <p>For public, open source projects.</p>
+      <div class="price">
+        <div class="price-amount">$0</div>
+      </div>
+      <ul class="features">
+        <li><strong>&gt;</strong> Unlimited number of <strong>public</strong> packages</li>
+        <li><strong>&gt;</strong> <strong>Public</strong> package documentation</li>
+        <li><strong>&gt;</strong> Multiple package owners</li>
+      </ul>
+      <div class="action">
+        <a class="btn btn-primary" href="<%= Routes.signup_path(Endpoint, :show) %>" role="button">Sign up</a>
+      </div>
+    </div>
+
+    <div class="box">
+      <h3>Organization</h3>
+      <p>For private projects with teams of users.</p>
+      <div class="price">
+        <div class="price-amount">$8</div>
+        <div class="price-details">/ per user / per month</div>
+      </div>
+      <ul class="features">
+        <li><strong>&gt;</strong> Unlimited number of <strong>private</strong> packages</li>
+        <li><strong>&gt;</strong> <strong>Private</strong> package documentation</li>
+        <li><strong>&gt;</strong> Multiple package owners</li>
+        <li><strong>&gt;</strong> Organization-wide user permissions</li>
+        <li><strong>&gt;</strong> Republish and delete packages</li>
+      </ul>
+      <div class="action">
+        <%# TODO: Fix link %>
+        <a class="btn btn-primary" href="/dashboard/repo-signup" role="button">Create organization</a>
+      </div>
+    </div>
+  </div>
+
+  <%# TODO: Fix link %>
+  <p>For more information about pricing and billing read the <a href="#">FAQ</a>.</p>
+</div>
