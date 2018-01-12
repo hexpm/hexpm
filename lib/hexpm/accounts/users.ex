@@ -17,10 +17,7 @@ defmodule Hexpm.Accounts.Users do
   end
 
   def put_repositories(user) do
-    repositories =
-      user.repositories
-      |> Map.new(&{&1.id, &1})
-      |> Map.put(1, Repository.hexpm())
+    repositories = Map.new(user.repositories, &{&1.id, &1})
     %{user | owned_packages: Enum.map(user.owned_packages, &%{&1 | repository: repositories[&1.repository_id]})}
   end
 
