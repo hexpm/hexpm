@@ -48,11 +48,21 @@ Hex respects the intellectual property rights of others and expects users of the
 
 We reserve the right to remove Content alleged to be infringing without prior notice, at our sole discretion, and without liability to you. In appropriate circumstances, Hex will also terminate a user’s account if the user is determined to be a repeat infringer. Under the U.S. Digital Millennium Copyright Act, our designated copyright agent for notice of alleged copyright infringement appearing on the Services is: <copyright@hex.pm>.
 
-### 7. Ending These Terms
+### 7. Payment
+
+Our pricing is available at [hex.pm/pricing](/pricing). Prices are fixed during the subscription billing period, however prices are subject to change at the end of the billing period.
+
+The billing period is one month from the day when the subscription started, you will be billed for the next period when the period starts. Changes to the subscription, due to change of plan or quantity of subscription, will be pro-rated on the next invoice. You may change or cancel your subscription at any time. There are no credits or refunds for partial months of use, including periods with an active subscription when the Services were not used. If the subscription is cancelled the Services will remain available until the end of the billing period.
+
+Upon payment failure or cancellation of the subscription you will lose access to Services that are non-free, including data submitted or posted using non-free Services. Data will be kept for a minimum of 90 days unless the Services were terminated due to breaking of these Terms or the contents of the data violates these Terms.
+
+By agreeing to these Terms you give us permission to charge your credit card on file. You agree to pay Hex any charges occurred due to the use of the Services, if you have any disputes contact [support@hexpm](mailto:support@hex.pm). Free usage of the Services are not required to provide payment information.
+
+### 8. Ending These Terms
 
 The Terms will continue to apply indefinitely or until terminated by Hex. If you stop using the Services the Terms will continue to apply to any information you have submitted or posted to the Services. Nothing in this section shall affect Hex's rights to change, limit or stop the provision of the Services without prior notice.
 
-### 8. Disclaimers and Limitations of Liability
+### 9. Disclaimers and Limitations of Liability
 
 Your access to and use of the Services or any Content are at your own risk. You understand and agree that the Services are provided to you on an “AS IS” and “AS AVAILABLE” basis. Without limiting the foregoing, to the maximum extent permitted under applicable law, HEX DISCLAIM ALL WARRANTIES AND CONDITIONS, WHETHER EXPRESS OR IMPLIED, OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, OR NON-INFRINGEMENT.
 
@@ -64,7 +74,7 @@ TO THE MAXIMUM EXTENT PERMITTED BY APPLICABLE LAW, HEX SHALL NOT BE LIABLE FOR A
 
 The failure of Hex to enforce any right or provision of these Terms will not be deemed a waiver of such right or provision. In the event that any provision of these Terms is held to be invalid or unenforceable, then that provision will be limited or eliminated to the minimum extent necessary, and the remaining provisions of these Terms will remain in full force and effect.
 
-### 9. Changes
+### 10. Changes
 
 If Hex makes changes to these Terms we will post a notice on the hex.pm website and notify you by email. New features, tools or resources added to the Services will be subject to the Terms. By continuing to use the Services you are agreeing to the Terms as it is subject to the changes.
 
