@@ -37,8 +37,8 @@ defmodule Hexpm.Web.API.PackageView do
   end
   defp group_downloads(package), do: package
 
-  defp group_retirements(%{retirements: retirement} = package) do
-    Map.put(package, :retirements, Enum.reduce(retirement, %{}, &Map.merge(&1, &2)))
+  defp group_retirements(%{retirements: retirements} = package) do
+    Map.put(package, :retirements, Enum.reduce(retirements, %{}, &Map.merge(&1, &2)))
   end
   defp group_retirements(package), do: package
 end
