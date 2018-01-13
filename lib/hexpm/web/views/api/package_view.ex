@@ -25,7 +25,7 @@ defmodule Hexpm.Web.API.PackageView do
       }
     }
     |> include_if_loaded(:releases, package.releases, ReleaseView, "minimal.json", package: package)
-    |> include_if_loaded(:retirement, package.releases, RetirementView, "package.json")
+    |> include_if_loaded(:retirements, package.releases, RetirementView, "package.json")
     |> include_if_loaded(:downloads, package.downloads, DownloadView, "show.json")
     |> include_if_loaded(:owners, package.owners, UserView, "minimal.json")
     |> group_downloads()
@@ -37,8 +37,8 @@ defmodule Hexpm.Web.API.PackageView do
   end
   defp group_downloads(package), do: package
 
-  defp group_retirements(%{retirement: retirement} = package) do
-    Map.put(package, :retirement, Enum.reduce(retirement, %{}, &Map.merge(&1, &2)))
+  defp group_retirements(%{retirements: retirement} = package) do
+    Map.put(package, :retirements, Enum.reduce(retirement, %{}, &Map.merge(&1, &2)))
   end
   defp group_retirements(package), do: package
 end

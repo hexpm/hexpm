@@ -138,7 +138,7 @@ defmodule Hexpm.Web.API.PackageControllerTest do
     test "get package with retired versions", %{package4: package4} do
       conn = get build_conn(), "api/packages/#{package4.name}"
       result = json_response(conn, 200)
-      assert result["retirement"] == %{"0.0.1" => %{"message" => "not backward compatible", "reason" => "other"}}
+      assert result["retirements"] == %{"0.0.1" => %{"message" => "not backward compatible", "reason" => "other"}}
     end
   end
 end
