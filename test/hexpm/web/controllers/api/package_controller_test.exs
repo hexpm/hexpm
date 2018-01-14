@@ -7,14 +7,18 @@ defmodule Hexpm.Web.API.PackageControllerTest do
     package1 = insert(:package, inserted_at: ~N[2030-01-01 00:00:00])
     package2 = insert(:package, updated_at: ~N[2030-01-01 00:00:00])
     package3 = insert(:package, repository_id: repository.id, updated_at: ~N[2030-01-01 00:00:00])
+    package4 = insert(:package)
     insert(:release, package: package1, version: "0.0.1")
     insert(:release, package: package3, version: "0.0.1")
+    insert(:release, package: package4, version: "0.0.1", retirement: %{reason: "other", message: "not backward compatible"})
+    insert(:release, package: package4, version: "1.0.0")
     insert(:repository_user, repository: repository, user: user)
 
     %{
       package1: package1,
       package2: package2,
       package3: package3,
+      package4: package4,
       repository: repository,
       user: user
     }
@@ -24,7 +28,7 @@ defmodule Hexpm.Web.API.PackageControllerTest do
     test "multiple packages", %{package1: package1} do
       conn = get build_conn(), "api/packages"
       result = json_response(conn, 200)
-      assert length(result) == 2
+      assert length(result) == 3
       releases = List.first(result)["releases"]
 
       for release <- releases do
@@ -43,7 +47,7 @@ defmodule Hexpm.Web.API.PackageControllerTest do
 
       conn = get build_conn(), "api/packages?page=1"
       result = json_response(conn, 200)
-      assert length(result) == 2
+      assert length(result) == 3
 
       conn = get build_conn(), "api/packages?page=2"
       result = json_response(conn, 200)
@@ -68,7 +72,7 @@ defmodule Hexpm.Web.API.PackageControllerTest do
         |> get("api/packages")
         |> json_response(200)
 
-      assert length(result) == 3
+      assert length(result) == 4
       assert package3.name in Enum.map(result, & &1["name"])
     end
   end
@@ -129,6 +133,12 @@ defmodule Hexpm.Web.API.PackageControllerTest do
       assert result["repository"] == repository.name
       assert result["url"] =~ "/api/repos/#{repository.name}/packages/#{package3.name}"
       assert result["html_url"] =~ "/packages/#{repository.name}/#{package3.name}"
+    end
+
+    test "get package with retired versions", %{package4: package4} do
+      conn = get build_conn(), "api/packages/#{package4.name}"
+      result = json_response(conn, 200)
+      assert result["retirements"] == %{"0.0.1" => %{"message" => "not backward compatible", "reason" => "other"}}
     end
   end
 end
