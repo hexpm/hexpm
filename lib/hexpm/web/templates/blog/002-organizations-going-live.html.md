@@ -8,7 +8,8 @@ users for their valuable feedback.
 
 Today we are going out of beta and are going [live with organizations](/pricing). Beta users will
 have to go to the [organization dashboard](/dashboard) and enter a payment method and billing
-details to continue using organizations. You have **40 days** to enter a payment method.
+details to continue using organizations. You have **40 days** (until 12th of March) to enter a
+payment method.
 
 The pricing will be **$8.00 per user / month** + local VAT where applicable. If you are using private
 packages for open source please contact [support@hex.pm](mailto:support@hex.pm). Check out the
