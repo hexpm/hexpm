@@ -41,9 +41,8 @@
     </div>
   </div>
 
-  <%# TODO: Fix link %>
   <p>
-    For more information about pricing and billing read the <a href="#">FAQ</a>.<br>
+    For more information about pricing and billing read the <a href="<%= Routes.docs_path(Endpoint, :faq) %>">FAQ</a>.<br>
     * Local VAT is added for private EU citizens.
   </p>
 </div>
