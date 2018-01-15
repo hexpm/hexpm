@@ -8,8 +8,8 @@
   }
 
   .boxes {
-    margin: 0 auto;
     width: 800px;
+    margin: 0 auto;
     overflow: auto;
 
     h3 {
@@ -21,10 +21,10 @@
   .box {
     float: left;
     width: 350px;
+    padding: 20px;
+    margin: 25px;
     background-color: #eaecf3;
     border-radius: 5px;
-    margin: 25px;
-    padding: 20px;
   }
 
   .price {
@@ -32,9 +32,9 @@
   }
 
   .price-amount {
+    margin: 30px;
     font-size: 60px;
     font-weight: bold;
-    margin: 30px;
   }
 
   .price-details {
@@ -43,10 +43,10 @@
 
   .features {
     margin-top: 35px;
-    list-style-type: none;
-    list-style-position: inside;
-    padding: 0;
     text-align: left;
+    list-style-position: inside;
+    list-style-type: none;
+    padding: 0;
 
     li {
       padding: 0;
