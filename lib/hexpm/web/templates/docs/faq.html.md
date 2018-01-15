@@ -57,7 +57,7 @@ continue to use the organization until the end of the current billing period.
 
 Failed invoice payments will be retried three times. After 15 days your subscription will be
 cancelled and you will not be able to access packages or documentation. When you pay the invoice
-and start the subscription your organization will be enabled again.
+and start the subscription again your organization will again be enabled.
 
 We will keep all your data for a minimum of 90 days. You can contact
 [support@hex.pm](mailto:support@hex.pm) to retrieve a dump of all your packages and documentation.
