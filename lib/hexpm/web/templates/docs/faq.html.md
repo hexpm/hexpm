@@ -7,8 +7,9 @@
 This could be for a number of reason. When you run `mix hex.publish [docs]` the documentation is
 generated on your machine and then uploaded to Hex. Issues with documentation usually stem from
 the documentation generation. First verify that your documentation works locally by running
-`mix docs`, also verify that there are no differences in letter casing since Hexdocs is
-case-sensitive but your machine may be case-insensitive.
+`mix docs` and then opening the generated files locally, typically `doc/index.html`, also verify
+that there are no differences in letter casing since Hexdocs is case-sensitive but your machine
+may be case-insensitive.
 
 You can always republish old documentation with `mix hex.publish docs` to update it. Finally make
 sure you clear your browser cache to ensure you are viewing the latest version.
@@ -22,31 +23,32 @@ depended upon packages are not removed from the repository.
 
 A package release can be retired if you do not recommend its use because it does not work, has
 security issues, been deprecated or any other reason. A package is retired with the
-`mix hex.retire` task. I retired package will still be resolvable and fetchable but users of
+`mix hex.retire` task. A retired package will still be resolvable and fetchable but users of
 the package will get a warning a message and the website will show the release as retired.
 
 #### How should I name my packages?
 
 Please follow these simple rules when choosing the name of the package you're publishing on Hex.
 
-1. **Never use another package's namespace**. For example, the namespace of the plug library is
+1. **Prefix extension packages with the original package name**. If your package extends the
+functionality of the plug package, then its name should be something like `plug_extension`.
+2. **Never use another package's namespace**. For example, the namespace of the plug library is
 `Plug.`: if your project extends plug, then its modules should be called `PlugExtension` instead
 of `Plug.Extension`.
-2. **Prefix extension packages with the original package name**. If your package extends the
-functionality of the plug package, then its name should be something like `plug_extension`.
 
 ### Billing
 
 #### How are organizations billed?
 
 Organizations are billed monthly on the day of the month the subscription was started. The
-subscription is invoiced and charged for the in advance when the next billing period starts.
+subscription is invoiced and charged in advance when the next billing period starts.
 Changes in the number of members in the organizations are pro-rated on the next invoice.
 
 #### Do listed prices include VAT?
 
 All prices are listed excluding VAT. Private EU citizens are required to pay VAT based on the VAT
 rate of their country of origin. EU companies registered for VAT need to supply a valid VAT number.
+VAT is not included for customers outside of the EU.
 
 #### Can I cancel at any time?
 
