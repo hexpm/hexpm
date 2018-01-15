@@ -63,13 +63,14 @@
                 <li class="dropdown-header menu-dropdown-header">Rebar3</li>
                 <li><a href="<%= Routes.docs_path(Endpoint, :rebar3_usage) %>">Usage</a></li>
                 <li><a href="<%= Routes.docs_path(Endpoint, :rebar3_publish) %>">Publishing packages</a></li>
-                <li><a href="https://www.rebar3.org/v3.0/docs/hex-package-management">Tasks</a></li>
+                <li><a href="https://www.rebar3.org/v3.0/docs/hex-package-management" target="_blank">Tasks</a></li>
                 <li role="separator" class="divider"></li>
+                <li><a href="<%= Routes.docs_path(Endpoint, :faq) %>">FAQ</a></li>
                 <li><a href="<%= Routes.docs_path(Endpoint, :private) %>">Private packages</a></li>
                 <li><a href="<%= Routes.policy_path(Endpoint, :index) %>">Policies</a></li>
                 <li><a href="<%= Routes.docs_path(Endpoint, :mirrors) %>">Mirrors</a></li>
                 <li><a href="<%= Routes.docs_path(Endpoint, :public_keys) %>">Public keys</a></li>
-                <li><a href="https://github.com/hexpm/specifications">Specifications</a></li>
+                <li><a href="https://github.com/hexpm/specifications" target="_blank">Specifications</a></li>
               </ul>
             </li>
 
