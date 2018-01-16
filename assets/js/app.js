@@ -30,7 +30,7 @@ export default class App {
     // Package: toggle text in "All Versions / Recent Version" buttons
     $(".show-versions .invisible").removeClass("invisible").toggle()
     $(".show-versions .toggle-text").click((event) => $(event.target).parent().find("a").toggle())
-
+    $("[name='search']").focus()
     // Highlight syntax
     hljs.initHighlightingOnLoad()
   }
