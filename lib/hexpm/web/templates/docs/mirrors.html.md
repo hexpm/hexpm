@@ -2,7 +2,7 @@
 
 Hex packages, the registry and other files are by distributed (mirrored) in various locations. The choice of mirror can be customized in Hex clients.
 
-_Note_: By default, Fastly is used to the deliver files. Fastly distributes files geographically for low latency and fast downloads.
+_Note_: By default, Fastly is used to deliver the files. Fastly distributes files geographically for low latency and fast downloads.
 
 ### Usage
 
