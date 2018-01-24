@@ -66,7 +66,7 @@
           <%= human_number_space(@num_packages, 5) %>
         </span>
         <span class="count-info no-wrap">
-          <%= human_number_space(5560) %>
+          <%= human_number_space(@num_packages) %>
         </span>
         <br> packages <br> available
       </span>
