@@ -51,12 +51,12 @@ defmodule Hexpm.Web.DashboardController do
     render_email(conn, conn.assigns.current_user)
   end
 
-  def add_email(conn, %{"email" => email} = params) do
+  def add_email(conn, %{"email" => email_params}) do
     user = conn.assigns.current_user
 
-    case Users.add_email(user, params["email"], audit: audit_data(conn)) do
+    case Users.add_email(user, email_params, audit: audit_data(conn)) do
       {:ok, _user} ->
-        email = params["email"]["email"]
+        email = email_params["email"]
         conn
         |> put_flash(:info, "A verification email has been sent to #{email}.")
         |> redirect(to: Routes.dashboard_path(conn, :email))
