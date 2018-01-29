@@ -5,7 +5,7 @@ defmodule Mix.Tasks.Hexpm.CheckNames do
   @shortdoc "Check package names for typosquatters"
 
   def run(_args) do
-    Mix.Task.run "app.start"
+    Mix.Task.run("app.start")
 
     threshold = Application.get_env(:hexpm, :levenshtein_threshold)
 
@@ -18,6 +18,7 @@ defmodule Mix.Tasks.Hexpm.CheckNames do
   end
 
   defp send_email([], _threshold), do: :ok
+
   defp send_email(candidates, threshold) do
     candidates
     |> Hexpm.Emails.typosquat_candidates(threshold)
@@ -37,7 +38,7 @@ defmodule Mix.Tasks.Hexpm.CheckNames do
 
     Ecto.Adapters.SQL.query!(Hexpm.Repo, query, [threshold])
     |> Map.fetch!(:rows)
-    |> Enum.uniq_by(fn([a, b, _]) -> if a > b, do: "#{a}-#{b}", else: "#{b}-#{a}" end)
+    |> Enum.uniq_by(fn [a, b, _] -> if a > b, do: "#{a}-#{b}", else: "#{b}-#{a}" end)
   end
 
   defp to_integer(int) when is_integer(int), do: int

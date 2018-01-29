@@ -19,7 +19,7 @@ defmodule Hexpm.Web.PasswordResetControllerTest do
 
     # check email was sent with correct token
     user = Hexpm.Repo.get_by!(User, username: c.user.username) |> Hexpm.Repo.preload(:emails)
-    assert_delivered_email Hexpm.Emails.password_reset_request(user)
+    assert_delivered_email(Hexpm.Emails.password_reset_request(user))
 
     # check reset will succeed
     assert User.password_reset?(user, user.reset_key) == true

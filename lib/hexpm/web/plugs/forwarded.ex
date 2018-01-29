@@ -9,7 +9,7 @@ defmodule Hexpm.Web.Plugs.Forwarded do
     %{conn | remote_ip: ip(ip) || conn.remote_ip}
   end
 
-  defp ip([ip|_]) do
+  defp ip([ip | _]) do
     ip = :binary.split(ip, ",", [:global]) |> List.last()
 
     if ip do
@@ -22,7 +22,7 @@ defmodule Hexpm.Web.Plugs.Forwarded do
         parts = Enum.map(parts, &elem(&1, 0))
         List.to_tuple(parts)
       else
-        Logger.warn("Invalid IP: #{inspect ip}")
+        Logger.warn("Invalid IP: #{inspect(ip)}")
         nil
       end
     end

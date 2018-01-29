@@ -26,7 +26,7 @@ defmodule Hexpm.Emails.Bamboo.SESAdapter do
     config
   end
 
-  defp send_email(request, email, times)  do
+  defp send_email(request, email, times) do
     request
     |> ExAws.request()
     |> maybe_retry(request, email, times)
@@ -35,7 +35,7 @@ defmodule Hexpm.Emails.Bamboo.SESAdapter do
   defp maybe_retry({:error, {:http_error, 454, _body}} = error, request, email, times) do
     if times > @backoff_times do
       Logger.warn("AWS SES throttled ##{times}")
-      raise "failed to send email\n\n#{inspect email}\n\n#{inspect error}"
+      raise "failed to send email\n\n#{inspect(email)}\n\n#{inspect(error)}"
     else
       Process.sleep(@backoff * trunc(:math.pow(2, times)))
       send_email(request, email, times + 1)
@@ -43,7 +43,7 @@ defmodule Hexpm.Emails.Bamboo.SESAdapter do
   end
 
   defp maybe_retry({:error, _} = error, _request, email, _times) do
-    raise "failed to send email\n\n#{inspect email}\n\n#{inspect error}"
+    raise "failed to send email\n\n#{inspect(email)}\n\n#{inspect(error)}"
   end
 
   defp maybe_retry({:ok, result}, _request, _email, _times) do

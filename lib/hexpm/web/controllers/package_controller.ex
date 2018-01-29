@@ -13,8 +13,10 @@ defmodule Hexpm.Web.PackageController do
       cond do
         letter ->
           {:letter, letter}
+
         search ->
           search
+
         true ->
           nil
       end
@@ -28,7 +30,9 @@ defmodule Hexpm.Web.PackageController do
     downloads = Packages.packages_downloads_with_all_views(packages)
     exact_match = exact_match(repositories, search)
 
-    render(conn, "index.html", [
+    render(
+      conn,
+      "index.html",
       title: "Packages",
       container: "container",
       per_page: @packages_per_page,
@@ -41,7 +45,7 @@ defmodule Hexpm.Web.PackageController do
       letters: @letters,
       downloads: downloads,
       exact_match: exact_match
-    ])
+    )
   end
 
   def show(conn, params) do
@@ -57,7 +61,8 @@ defmodule Hexpm.Web.PackageController do
           if version = params["version"] do
             {matching_release(releases, version), :release}
           else
-            {Release.latest_version(releases, only_stable: true, unstable_fallback: true), :package}
+            {Release.latest_version(releases, only_stable: true, unstable_fallback: true),
+             :package}
           end
 
         if release do
@@ -82,33 +87,49 @@ defmodule Hexpm.Web.PackageController do
     docs_assigns =
       cond do
         type == :package && latest_release_with_docs ->
-          [hexdocs_url: Hexpm.Utils.docs_url([package.name]),
-           docs_tarball_url: Hexpm.Utils.docs_tarball_url(package, latest_release_with_docs)]
+          [
+            hexdocs_url: Hexpm.Utils.docs_url([package.name]),
+            docs_tarball_url: Hexpm.Utils.docs_tarball_url(package, latest_release_with_docs)
+          ]
+
         type == :release and release.has_docs ->
-          [hexdocs_url: Hexpm.Utils.docs_url(package, release),
-           docs_tarball_url: Hexpm.Utils.docs_tarball_url(package, release)]
+          [
+            hexdocs_url: Hexpm.Utils.docs_url(package, release),
+            docs_tarball_url: Hexpm.Utils.docs_tarball_url(package, release)
+          ]
+
         true ->
           [hexdocs_url: nil, docs_tarball_url: nil]
       end
 
     downloads = Packages.package_downloads(package)
     owners = Owners.all(package, [:emails])
-    dependants = Packages.search(repositories, 1, 20, "depends:#{package.name}", :recent_downloads, [:name, :repository_id])
+
+    dependants =
+      Packages.search(repositories, 1, 20, "depends:#{package.name}", :recent_downloads, [
+        :name,
+        :repository_id
+      ])
+
     dependants_count = Packages.count(repositories, "depends:#{package.name}")
 
-    render(conn, "show.html", [
-      title: package.name,
-      description: package.meta.description,
-      container: "container package-view",
-      canonical_url: Routes.package_url(conn, :show, package),
-      package: package,
-      releases: releases,
-      current_release: release,
-      downloads: downloads,
-      owners: owners,
-      dependants: dependants,
-      dependants_count: dependants_count
-    ] ++ docs_assigns)
+    render(
+      conn,
+      "show.html",
+      [
+        title: package.name,
+        description: package.meta.description,
+        container: "container package-view",
+        canonical_url: Routes.package_url(conn, :show, package),
+        package: package,
+        releases: releases,
+        current_release: release,
+        downloads: downloads,
+        owners: owners,
+        dependants: dependants,
+        dependants_count: dependants_count
+      ] ++ docs_assigns
+    )
   end
 
   defp fetch_packages(repositories, page, packages_per_page, search, sort) do
@@ -119,6 +140,7 @@ defmodule Hexpm.Web.PackageController do
   defp exact_match(_repositories, nil) do
     nil
   end
+
   defp exact_match(repositories, search) do
     case String.split(search, "/", parts: 2) do
       [repository, package] ->
@@ -140,6 +162,7 @@ defmodule Hexpm.Web.PackageController do
     case Version.parse(version) do
       {:ok, _} ->
         params
+
       :error ->
         params
         |> Map.put("repository", name)
@@ -147,6 +170,7 @@ defmodule Hexpm.Web.PackageController do
         |> Map.delete("version")
     end
   end
+
   defp fixup_params(params) do
     params
   end

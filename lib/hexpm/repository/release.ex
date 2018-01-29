@@ -22,7 +22,11 @@ defmodule Hexpm.Repository.Release do
 
   defp changeset(release, :create, params, package, checksum) do
     changeset(release, :update, params, package, checksum)
-    |> unique_constraint(:version, name: "releases_package_id_version_key", message: "has already been published")
+    |> unique_constraint(
+      :version,
+      name: "releases_package_id_version_key",
+      message: "has already been published"
+    )
   end
 
   defp changeset(release, :update, params, package, checksum) do
@@ -45,6 +49,7 @@ defmodule Hexpm.Repository.Release do
 
   def delete(release, opts \\ []) do
     force? = Keyword.get(opts, :force, false)
+
     change(release)
     |> validate_editable(:delete, force?)
   end
@@ -60,6 +65,7 @@ defmodule Hexpm.Repository.Release do
   end
 
   defp validate_editable(changeset, _action, true), do: changeset
+
   defp validate_editable(changeset, action, false) do
     if editable?(changeset.data) do
       changeset
@@ -68,14 +74,18 @@ defmodule Hexpm.Repository.Release do
     end
   end
 
-  defp editable_error_message(:update), do: "can only modify a release up to one hour after creation"
-  defp editable_error_message(:delete), do: "can only delete a release up to one hour after creation"
+  defp editable_error_message(:update),
+    do: "can only modify a release up to one hour after creation"
+
+  defp editable_error_message(:delete),
+    do: "can only delete a release up to one hour after creation"
 
   defp editable?(%Release{inserted_at: nil}), do: true
   defp editable?(%Release{package: %Package{repository_id: id}}) when id != 1, do: true
+
   defp editable?(release) do
     within_seconds?(release.inserted_at, @one_hour) or
-    within_seconds?(release.package.inserted_at, @one_day)
+      within_seconds?(release.package.inserted_at, @one_day)
   end
 
   defp within_seconds?(datetime, within_seconds) do
@@ -92,22 +102,27 @@ defmodule Hexpm.Repository.Release do
 
   def package_versions(packages) do
     package_ids = Enum.map(packages, & &1.id)
-    from(r in Release,
-         where: r.package_id in ^package_ids,
-         group_by: r.package_id,
-         select: {r.package_id, fragment("array_agg(?)", r.version)})
+
+    from(
+      r in Release,
+      where: r.package_id in ^package_ids,
+      group_by: r.package_id,
+      select: {r.package_id, fragment("array_agg(?)", r.version)}
+    )
   end
 
   def latest_version(nil, _opts), do: nil
+
   def latest_version(releases, opts) do
     only_stable? = Keyword.fetch!(opts, :only_stable)
     unstable_fallback? = Keyword.get(opts, :unstable_fallback, false)
 
-    stable_releases = if only_stable? do
-      Enum.filter(releases, &(to_version(&1).pre == []))
-    else
-      releases
-    end
+    stable_releases =
+      if only_stable? do
+        Enum.filter(releases, &(to_version(&1).pre == []))
+      else
+        releases
+      end
 
     if stable_releases == [] and unstable_fallback? do
       latest(releases)
@@ -117,6 +132,7 @@ defmodule Hexpm.Repository.Release do
   end
 
   defp latest([]), do: nil
+
   defp latest(releases) do
     Enum.reduce(releases, fn release, latest ->
       if compare(release, latest) == :lt do
@@ -144,19 +160,22 @@ defmodule Hexpm.Repository.Release do
   end
 
   def requirements(release) do
-    from(req in assoc(release, :requirements),
-         join: package in assoc(req, :dependency),
-         join: repo in assoc(package, :repository),
-         order_by: [repo.name, package.name],
-         select: %{req | name: package.name, repository: repo.name})
+    from(
+      req in assoc(release, :requirements),
+      join: package in assoc(req, :dependency),
+      join: repo in assoc(package, :repository),
+      order_by: [repo.name, package.name],
+      select: %{req | name: package.name, repository: repo.name}
+    )
   end
 
-  def count do
+  def count() do
     from(r in Release, select: count(r.id))
   end
 
   def recent(repository, count) do
-    from(r in Hexpm.Repository.Release,
+    from(
+      r in Hexpm.Repository.Release,
       join: p in assoc(r, :package),
       where: p.repository_id == ^repository.id,
       order_by: [desc: r.inserted_at],
@@ -179,9 +198,11 @@ defmodule Hexpm.Repository.Release do
 
   def downloads_by_period(release_id, filter) do
     query = from(d in Download, where: d.release_id == ^release_id)
+
     case filter do
       "day" ->
-        from(d in query,
+        from(
+          d in query,
           group_by: date_trunc("day", d.day),
           order_by: date_trunc("day", d.day),
           select: %Download{
@@ -190,18 +211,22 @@ defmodule Hexpm.Repository.Release do
             updated_at: max(d.day)
           }
         )
+
       "month" ->
-        from(d in query,
+        from(
+          d in query,
           group_by: date_trunc("month", d.day),
           order_by: date_trunc("month", d.day),
-          select:  %Download{
+          select: %Download{
             day: date_trunc_format("month", "YYYY-MM", d.day),
             downloads: sum(d.downloads),
             updated_at: max(d.day)
           }
         )
+
       "all" ->
-        from(d in query,
+        from(
+          d in query,
           select: %Download{
             downloads: sum(d.downloads),
             updated_at: max(d.day)
@@ -209,7 +234,6 @@ defmodule Hexpm.Repository.Release do
         )
     end
   end
-
 end
 
 defimpl Phoenix.Param, for: Hexpm.Repository.Release do

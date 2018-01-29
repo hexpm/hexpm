@@ -2,9 +2,9 @@ defmodule Hexpm.Web.ViewIcons do
   use Phoenix.HTML
   import SweetXml
 
-  @icons_dir       Path.join(__DIR__, "../../../../assets/vendor/icons")
-  @octicons_svg    Path.join(@icons_dir, "octicons.svg")
-  @glyphicons_svg  Path.join(@icons_dir, "glyphicons-halflings-regular.svg")
+  @icons_dir Path.join(__DIR__, "../../../../assets/vendor/icons")
+  @octicons_svg Path.join(@icons_dir, "octicons.svg")
+  @glyphicons_svg Path.join(@icons_dir, "glyphicons-halflings-regular.svg")
   @glyphicons_less Path.join(@icons_dir, "glyphicons.less")
 
   @external_resource @octicons_svg
@@ -13,14 +13,16 @@ defmodule Hexpm.Web.ViewIcons do
 
   doc = File.read!(@octicons_svg)
 
-  octicons = SweetXml.xpath(doc, ~x"//glyph"l,
-    name: ~x"./@glyph-name"s,
-    d: ~x"./@d"s,
-    x: ~x"./@horiz-adv-x"s
-  )
+  octicons =
+    SweetXml.xpath(
+      doc,
+      ~x"//glyph"l,
+      name: ~x"./@glyph-name"s,
+      d: ~x"./@d"s,
+      x: ~x"./@horiz-adv-x"s
+    )
 
-  defp octicon(name) when is_atom(name),
-    do: octicon(Atom.to_string(name))
+  defp octicon(name) when is_atom(name), do: octicon(Atom.to_string(name))
 
   Enum.each(octicons, fn %{name: name, d: d, x: x} ->
     defp octicon(unquote(name)), do: {unquote(d), unquote(x)}
@@ -28,39 +30,48 @@ defmodule Hexpm.Web.ViewIcons do
 
   doc = File.read!(@glyphicons_svg)
 
-  glyphicons = SweetXml.xpath(doc, ~x"//glyph[@unicode][@d]"l,
-    unicode: ~x"./@unicode",
-    d: ~x"./@d"s,
-    x: ~x"./@horiz-adv-x"s
-  )
+  glyphicons =
+    SweetXml.xpath(
+      doc,
+      ~x"//glyph[@unicode][@d]"l,
+      unicode: ~x"./@unicode",
+      d: ~x"./@d"s,
+      x: ~x"./@horiz-adv-x"s
+    )
 
-  lines = File.read!(@glyphicons_less)
-          |> String.split("\n", trim: true)
+  lines =
+    File.read!(@glyphicons_less)
+    |> String.split("\n", trim: true)
+
   @glyphicon_less_regex ~r'\.glyphicon-([-\w]+)\s*\{ &:before \{ content: "\\([0-9a-f]{4})"; \} \}'
-  glyphicon_names = Enum.reduce(lines, %{}, fn line, map ->
-    case Regex.run(@glyphicon_less_regex, line) do
-      [_, name, content] ->
-        Map.put(map, content, name)
-      nil ->
-        map
-    end
-  end)
+  glyphicon_names =
+    Enum.reduce(lines, %{}, fn line, map ->
+      case Regex.run(@glyphicon_less_regex, line) do
+        [_, name, content] ->
+          Map.put(map, content, name)
 
-  defp glyphicon(name) when is_atom(name),
-    do: glyphicon(Atom.to_string(name))
+        nil ->
+          map
+      end
+    end)
+
+  defp glyphicon(name) when is_atom(name), do: glyphicon(Atom.to_string(name))
 
   Enum.each(glyphicons, fn %{unicode: unicode, d: d, x: x} ->
     # LOL xmerl
     unicode = unicode |> Enum.reverse() |> IO.iodata_to_binary()
-    name = case unicode do
-      <<char::utf8>> ->
-        codepoint =
-          char
-          |> Integer.to_string(16)
-          |> String.pad_leading(4, "0")
-          |> String.downcase
-        Map.get(glyphicon_names, codepoint)
-    end
+
+    name =
+      case unicode do
+        <<char::utf8>> ->
+          codepoint =
+            char
+            |> Integer.to_string(16)
+            |> String.pad_leading(4, "0")
+            |> String.downcase()
+
+          Map.get(glyphicon_names, codepoint)
+      end
 
     if name do
       defp glyphicon(unquote(name)), do: {unquote(d), unquote(x)}
@@ -82,8 +93,8 @@ defmodule Hexpm.Web.ViewIcons do
       |> Keyword.update(:class, class, &"#{class} #{&1}")
       |> Keyword.drop([:title])
 
-    content_tag(:svg, opts) do
-      content_tag(:g, transform: "translate(0, 800) scale(1, -1)") do
+    content_tag :svg, opts do
+      content_tag :g, transform: "translate(0, 800) scale(1, -1)" do
         [content_tag(:path, "", d: d), title]
       end
     end
@@ -103,8 +114,8 @@ defmodule Hexpm.Web.ViewIcons do
       |> Keyword.update(:class, class, &"#{class} #{&1}")
       |> Keyword.drop([:title])
 
-    content_tag(:svg, opts) do
-      content_tag(:g, transform: "translate(0, 1200) scale(1, -1)") do
+    content_tag :svg, opts do
+      content_tag :g, transform: "translate(0, 1200) scale(1, -1)" do
         [content_tag(:path, "", d: d), title]
       end
     end

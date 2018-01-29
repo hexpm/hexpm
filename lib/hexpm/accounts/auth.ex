@@ -13,15 +13,18 @@ defmodule Hexpm.Accounts.Auth do
       |> Base.encode16(case: :lower)
 
     result =
-      from(k in Key,
-           where: k.secret_first == ^first,
-           join: u in assoc(k, :user),
-           preload: [user: {u, [:owned_packages, :emails, :repositories]}])
+      from(
+        k in Key,
+        where: k.secret_first == ^first,
+        join: u in assoc(k, :user),
+        preload: [user: {u, [:owned_packages, :emails, :repositories]}]
+      )
       |> Hexpm.Repo.one()
 
     case result do
       nil ->
         :error
+
       key ->
         if Hexpm.Utils.secure_check(key.secret_second, second) do
           if is_nil(key.revoked_at) do
@@ -37,6 +40,7 @@ defmodule Hexpm.Accounts.Auth do
 
   def password_auth(username_or_email, password) do
     user = Users.get(username_or_email, [:owned_packages, :emails, :repositories])
+
     if user && Bcrypt.verify_pass(password, user.password) do
       {:ok, {user, nil, find_email(user, username_or_email), :password}}
     else

@@ -51,73 +51,85 @@ defmodule Hexpm.ThrottleTest do
     # First time unit
     start = :erlang.monotonic_time(:milli_seconds)
 
-    spawn_link fn ->
+    spawn_link(fn ->
       Throttle.wait(context.pid, 1)
       assert diff(start) < 10
-    end
-    spawn_link fn ->
+    end)
+
+    spawn_link(fn ->
       Throttle.wait(context.pid, 1)
       assert diff(start) < 10
-    end
-    spawn_link fn ->
+    end)
+
+    spawn_link(fn ->
       Throttle.wait(context.pid, 1)
       assert diff(start) < 10
-    end
-    spawn_link fn ->
+    end)
+
+    spawn_link(fn ->
       Throttle.wait(context.pid, 1)
       assert diff(start) < 10
-    end
-    spawn_link fn ->
+    end)
+
+    spawn_link(fn ->
       Throttle.wait(context.pid, 1)
       assert diff(start) < 10
-    end
+    end)
 
     :timer.sleep(10)
 
-    spawn_link fn ->
+    spawn_link(fn ->
       Throttle.wait(context.pid, 1)
       assert_in_delta(90, 110, diff(start))
-    end
-    spawn_link fn ->
+    end)
+
+    spawn_link(fn ->
       Throttle.wait(context.pid, 1)
       assert_in_delta(90, 110, diff(start))
-    end
-    spawn_link fn ->
+    end)
+
+    spawn_link(fn ->
       Throttle.wait(context.pid, 1)
       assert_in_delta(90, 110, diff(start))
-    end
-    spawn_link fn ->
+    end)
+
+    spawn_link(fn ->
       Throttle.wait(context.pid, 1)
       assert_in_delta(90, 110, diff(start))
-    end
-    spawn_link fn ->
+    end)
+
+    spawn_link(fn ->
       Throttle.wait(context.pid, 1)
       assert_in_delta(90, 110, diff(start))
-    end
+    end)
 
     :timer.sleep(10)
 
     # Third time unit
-    spawn_link fn ->
+    spawn_link(fn ->
       Throttle.wait(context.pid, 1)
       assert_in_delta(190, 210, diff(start))
-    end
-    spawn_link fn ->
+    end)
+
+    spawn_link(fn ->
       Throttle.wait(context.pid, 1)
       assert_in_delta(190, 210, diff(start))
-    end
-    spawn_link fn ->
+    end)
+
+    spawn_link(fn ->
       Throttle.wait(context.pid, 1)
       assert_in_delta(190, 210, diff(start))
-    end
-    spawn_link fn ->
+    end)
+
+    spawn_link(fn ->
       Throttle.wait(context.pid, 1)
       assert_in_delta(190, 210, diff(start))
-    end
-    spawn_link fn ->
+    end)
+
+    spawn_link(fn ->
       Throttle.wait(context.pid, 1)
       assert_in_delta(190, 210, diff(start))
-    end
+    end)
 
     :timer.sleep(300)
   end

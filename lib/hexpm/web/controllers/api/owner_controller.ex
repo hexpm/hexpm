@@ -41,8 +41,12 @@ defmodule Hexpm.Web.API.OwnerController do
             conn
             |> api_cache(:private)
             |> send_resp(204, "")
+
           {:error, :not_member} ->
-            validation_failed(conn, %{"email" => "cannot add owner that is not a member of the repository"})
+            validation_failed(conn, %{
+              "email" => "cannot add owner that is not a member of the repository"
+            })
+
           {:error, changeset} ->
             validation_failed(conn, changeset)
         end
@@ -61,8 +65,10 @@ defmodule Hexpm.Web.API.OwnerController do
             conn
             |> api_cache(:private)
             |> send_resp(204, "")
+
           {:error, :not_owner} ->
             validation_failed(conn, %{"email" => "user is not an owner of package"})
+
           {:error, :last_owner} ->
             validation_failed(conn, %{"email" => "cannot remove last owner of package"})
         end

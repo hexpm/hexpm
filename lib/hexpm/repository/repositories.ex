@@ -17,6 +17,7 @@ defmodule Hexpm.Repository.Repositories do
   def access?(%Repository{public: false}, nil, _role) do
     false
   end
+
   def access?(%Repository{public: false} = repository, user, role) do
     Repo.one!(Repository.has_access(repository, user, role))
   end
@@ -26,7 +27,12 @@ defmodule Hexpm.Repository.Repositories do
       Multi.new()
       |> Multi.insert(:repository, Repository.changeset(%Repository{name: name}, %{}))
       |> Multi.merge(fn %{repository: repository} ->
-        repository_user = %RepositoryUser{repository_id: repository.id, user_id: user.id, role: "admin"}
+        repository_user = %RepositoryUser{
+          repository_id: repository.id,
+          user_id: user.id,
+          role: "admin"
+        }
+
         Multi.insert(Multi.new(), :repository_user, Repository.add_member(repository_user, %{}))
       end)
       |> Repo.transaction()
@@ -46,6 +52,7 @@ defmodule Hexpm.Repository.Repositories do
         {:ok, repository_user} ->
           send_invite_email(repository, user)
           {:ok, repository_user}
+
         {:error, changeset} ->
           {:error, changeset}
       end
@@ -79,8 +86,10 @@ defmodule Hexpm.Repository.Repositories do
     cond do
       !repo_user ->
         {:error, :unknown_user}
+
       repo_user.role == "admin" and number_admins == 1 ->
         {:error, :last_admin}
+
       true ->
         repo_user
         |> Repository.change_role(params)

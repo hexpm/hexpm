@@ -16,6 +16,7 @@ defmodule Hexpm.CDN.Fastly do
 
   def public_ips() do
     {:ok, 200, _, body} = get("public-ip-list")
+
     Enum.map(body["addresses"], fn range ->
       [ip, mask] = String.split(range, "/")
       {Hexpm.Utils.parse_ip(ip), String.to_integer(mask)}
@@ -28,21 +29,22 @@ defmodule Hexpm.CDN.Fastly do
 
   defp post(url, body) do
     url = @fastly_url <> url
+
     headers = [
       "fastly-key": auth(),
-      "accept": "application/json",
-      "content-type": "application/json"]
+      accept: "application/json",
+      "content-type": "application/json"
+    ]
 
     body = Hexpm.Web.Jiffy.encode!(body)
+
     retry(fn -> :hackney.post(url, headers, body, []) end, @retry_times)
     |> read_body()
   end
 
   defp get(url) do
     url = @fastly_url <> url
-    headers = [
-      "fastly-key": auth(),
-      "accept": "application/json"]
+    headers = ["fastly-key": auth(), accept: "application/json"]
 
     retry(fn -> :hackney.get(url, headers, []) end, @retry_times)
     |> read_body()
@@ -51,12 +53,14 @@ defmodule Hexpm.CDN.Fastly do
   defp retry(fun, times) do
     case fun.() do
       {:error, reason} ->
-        Logger.warn("Fastly API ERROR: #{inspect reason}")
+        Logger.warn("Fastly API ERROR: #{inspect(reason)}")
+
         if times > 0 do
           retry(fun, times - 1)
         else
           {:error, reason}
         end
+
       result ->
         result
     end
@@ -64,10 +68,13 @@ defmodule Hexpm.CDN.Fastly do
 
   defp read_body({:ok, status, headers, client}) do
     {:ok, body} = :hackney.body(client)
-    body = case Hexpm.Web.Jiffy.decode(body) do
-      {:ok, map}  -> map
-      {:error, _} -> body
-    end
+
+    body =
+      case Hexpm.Web.Jiffy.decode(body) do
+        {:ok, map} -> map
+        {:error, _} -> body
+      end
+
     {:ok, status, headers, body}
   end
 end

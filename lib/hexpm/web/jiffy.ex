@@ -1,15 +1,14 @@
 defmodule Hexpm.Web.Jiffy do
-  def decode(binary),
-    do: {:ok, decode!(binary)}
+  def decode(binary), do: {:ok, decode!(binary)}
 
   def decode!(binary) do
     :jiffy.decode(binary, [:return_maps, :use_nil])
   rescue
     exception ->
-      reraise exception, System.stacktrace
+      reraise exception, System.stacktrace()
   catch
     :throw, error ->
-      stacktrace = System.stacktrace
+      stacktrace = System.stacktrace()
       reraise Exception.normalize(:error, error, stacktrace), stacktrace
   end
 
@@ -31,10 +30,10 @@ defmodule Hexpm.Web.Jiffy do
     :jiffy.encode(term, [:use_nil])
   rescue
     exception ->
-      reraise exception, System.stacktrace
+      reraise exception, System.stacktrace()
   catch
     :throw, error ->
-      stacktrace = System.stacktrace
+      stacktrace = System.stacktrace()
       reraise Exception.normalize(:error, error, stacktrace), stacktrace
   end
 
@@ -47,9 +46,9 @@ defmodule Hexpm.Web.Jiffy do
   end
 
   defp transform(%Ecto.Association.NotLoaded{__owner__: owner, __field__: field}) do
-    raise "cannot encode association #{inspect field} from #{inspect owner} to " <>
-          "JSON because the association was not loaded. Please make sure you have " <>
-          "preloaded the association or remove it from the data to be encoded"
+    raise "cannot encode association #{inspect(field)} from #{inspect(owner)} to " <>
+            "JSON because the association was not loaded. Please make sure you have " <>
+            "preloaded the association or remove it from the data to be encoded"
   end
 
   defp transform(%NaiveDateTime{} = struct) do
@@ -70,7 +69,7 @@ defmodule Hexpm.Web.Jiffy do
 
   defp transform(term) when is_map(term) do
     Enum.map(term, fn {k, v} -> {transform(k), transform(v)} end)
-    |> :maps.from_list
+    |> :maps.from_list()
   end
 
   defp transform(other) do

@@ -7,7 +7,7 @@ defmodule Hexpm.Web.SitemapControllerTest do
   end
 
   test "GET /sitemap.xml", %{package: package} do
-    conn = get build_conn(), "/sitemap.xml"
+    conn = get(build_conn(), "/sitemap.xml")
     sitemap = read_fixture("sitemap.xml") |> String.replace("{package}", package.name)
     assert response(conn, 200) == sitemap
   end

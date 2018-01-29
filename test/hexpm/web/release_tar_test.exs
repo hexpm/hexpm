@@ -3,9 +3,11 @@ defmodule Hexpm.Web.ReleaseTarTest do
   import Hexpm.TestHelpers
 
   test "retrieve metadata" do
-    meta  = %{"app" => "ecto", "version" => "1.2.3"}
+    meta = %{"app" => "ecto", "version" => "1.2.3"}
     files = [{"README", "pls read me"}]
-    tar   = create_tar(meta, files)
-    assert {:ok, %{"app" => "ecto", "version" => "1.2.3"}, _checksum} = Hexpm.Web.ReleaseTar.metadata(tar)
+    tar = create_tar(meta, files)
+
+    assert {:ok, %{"app" => "ecto", "version" => "1.2.3"}, _checksum} =
+             Hexpm.Web.ReleaseTar.metadata(tar)
   end
 end

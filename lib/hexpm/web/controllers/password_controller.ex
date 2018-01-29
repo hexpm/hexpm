@@ -25,7 +25,13 @@ defmodule Hexpm.Web.PasswordController do
     key = params["key"]
     revoke_all_keys? = (params["revoke_all_keys"] || "yes") == "yes"
 
-    case Users.password_reset_finish(username, key, params, revoke_all_keys?, audit: audit_data(conn)) do
+    case Users.password_reset_finish(
+           username,
+           key,
+           params,
+           revoke_all_keys?,
+           audit: audit_data(conn)
+         ) do
       :ok ->
         conn
         |> clear_session()
@@ -33,23 +39,27 @@ defmodule Hexpm.Web.PasswordController do
         |> put_flash(:info, "Your account password has been changed to your new password.")
         |> put_flash(:custom_location, true)
         |> redirect(to: Routes.page_path(Hexpm.Web.Endpoint, :index))
+
       :error ->
         conn
         |> put_flash(:error, "Failed to change your password.")
         |> put_flash(:custom_location, true)
         |> redirect(to: Routes.page_path(Hexpm.Web.Endpoint, :index))
+
       {:error, changeset} ->
         render_show(conn, username, key, changeset)
     end
   end
 
   defp render_show(conn, username, key, changeset) do
-    render(conn, "show.html", [
+    render(
+      conn,
+      "show.html",
       title: "Choose a new password",
       container: "container page password-view",
       username: username,
       key: key,
       changeset: changeset
-    ])
+    )
   end
 end

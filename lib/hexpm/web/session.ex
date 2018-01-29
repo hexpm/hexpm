@@ -26,10 +26,14 @@ defmodule Hexpm.Web.Session do
   end
 
   def put(_conn, {id, token}, data, _opts) do
-    Repo.update_all(Session.by_id(id), [set: [
-      data: data,
-      updated_at: NaiveDateTime.utc_now()
-    ]])
+    Repo.update_all(
+      Session.by_id(id),
+      set: [
+        data: data,
+        updated_at: NaiveDateTime.utc_now()
+      ]
+    )
+
     build_cookie(id, token)
   end
 

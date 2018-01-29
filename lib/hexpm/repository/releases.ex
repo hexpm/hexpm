@@ -38,7 +38,7 @@ defmodule Hexpm.Repository.Releases do
     Repo.preload(release, preload)
   end
 
-  def publish(repository, package, user, body, meta, checksum, [audit: audit_data]) do
+  def publish(repository, package, user, body, meta, checksum, audit: audit_data) do
     Multi.new()
     |> Multi.run(:repository, fn _ -> {:ok, repository} end)
     |> create_package(repository, package, user, meta)
@@ -49,30 +49,35 @@ defmodule Hexpm.Repository.Releases do
     |> publish_result(body)
   end
 
-  def publish_docs(package, release, files, body, [audit: audit_data]) do
+  def publish_docs(package, release, files, body, audit: audit_data) do
     all_versions =
-      from(r in Release.all(package),
+      from(
+        r in Release.all(package),
         where: r.has_docs == true and r.version != ^to_string(release.version),
         select: r.version
       )
       |> Repo.all()
-      |> Enum.sort(&Version.compare(&1, &2) == :gt)
+      |> Enum.sort(&(Version.compare(&1, &2) == :gt))
 
     Assets.push_docs(release, files, body, all_versions)
 
     {:ok, _} =
       Multi.new()
       |> Multi.update(:release, Ecto.Changeset.change(release, has_docs: true))
-      |> Multi.update(:package, Ecto.Changeset.change(release.package, docs_updated_at: NaiveDateTime.utc_now))
+      |> Multi.update(
+        :package,
+        Ecto.Changeset.change(release.package, docs_updated_at: NaiveDateTime.utc_now())
+      )
       |> audit(audit_data, "docs.publish", {package, release})
       |> Repo.transaction()
 
     Sitemaps.publish_docs_sitemap()
   end
 
-  def revert(package, release, [audit: audit_data]) do
+  def revert(package, release, audit: audit_data) do
     delete_query =
-      from(p in Package,
+      from(
+        p in Package,
         where: p.id == ^package.id,
         where: fragment("NOT EXISTS (SELECT id FROM releases WHERE package_id = ?)", ^package.id)
       )
@@ -86,18 +91,21 @@ defmodule Hexpm.Repository.Releases do
     |> revert_result(package)
   end
 
-  def revert_docs(release, [audit: audit_data]) do
+  def revert_docs(release, audit: audit_data) do
     {:ok, _} =
       Multi.new()
       |> Multi.update(:release, Ecto.Changeset.change(release, has_docs: false))
-      |> Multi.update(:package, Ecto.Changeset.change(release.package, docs_updated_at: NaiveDateTime.utc_now))
+      |> Multi.update(
+        :package,
+        Ecto.Changeset.change(release.package, docs_updated_at: NaiveDateTime.utc_now())
+      )
       |> audit(audit_data, "docs.revert", {release.package, release})
       |> Repo.transaction()
 
     Assets.revert_docs(release)
   end
 
-  def retire(package, release, params, [audit: audit_data]) do
+  def retire(package, release, params, audit: audit_data) do
     params = %{"retirement" => params}
 
     Multi.new()
@@ -109,7 +117,7 @@ defmodule Hexpm.Repository.Releases do
     |> publish_result(nil)
   end
 
-  def unretire(package, release, [audit: audit_data]) do
+  def unretire(package, release, audit: audit_data) do
     Multi.new()
     |> Multi.run(:repository, fn _ -> {:ok, package.repository} end)
     |> Multi.run(:package, fn _ -> {:ok, package} end)
@@ -129,13 +137,17 @@ defmodule Hexpm.Repository.Releases do
     end
   end
 
-  defp publish_result({:ok, %{repository: repository, package: package, release: release} = result}, body) do
+  defp publish_result(
+         {:ok, %{repository: repository, package: package, release: release} = result},
+         body
+       ) do
     package = %{package | repository: repository}
     release = %{release | package: package}
     if body, do: Assets.push_release(release, body)
     RegistryBuilder.partial_build({:publish, package})
     {:ok, %{result | release: release, package: package}}
   end
+
   defp publish_result(result, _body), do: result
 
   defp revert_result({:ok, %{release: release}}, package) do
@@ -143,18 +155,23 @@ defmodule Hexpm.Repository.Releases do
     RegistryBuilder.partial_build({:publish, package})
     :ok
   end
+
   defp revert_result(result, _package), do: result
 
   defp create_package(multi, repository, package, user, meta) do
     params = %{"name" => meta["name"], "meta" => meta}
+
     cond do
       !package ->
         Multi.insert(multi, :package, Package.build(repository, user, params))
+
       package.name != meta["name"] ->
         changeset =
           Package.build(repository, user, params)
           |> add_error(:name, "mismatch between metadata and endpoint")
+
         Multi.update(multi, :package, changeset)
+
       true ->
         Multi.update(multi, :package, Package.update(package, params))
     end
@@ -162,11 +179,13 @@ defmodule Hexpm.Repository.Releases do
 
   defp create_release(multi, package, checksum, meta) do
     version = meta["version"]
+
     params = %{
       "app" => meta["app"],
       "version" => version,
       "requirements" => normalize_requirements(meta["requirements"]),
-      "meta" => meta}
+      "meta" => meta
+    }
 
     release = package && Repo.get_by(assoc(package, :releases), version: version)
 
@@ -218,10 +237,12 @@ defmodule Hexpm.Repository.Releases do
     Enum.map(requirements, fn
       {name, map} when is_map(map) ->
         Map.put(map, "name", name)
+
       other ->
         other
     end)
   end
+
   defp normalize_requirements(requirements), do: requirements
 
   defp preload_field(release, :requirements), do: {:requirements, Release.requirements(release)}

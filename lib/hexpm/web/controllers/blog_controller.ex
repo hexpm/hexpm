@@ -2,18 +2,22 @@ defmodule Hexpm.Web.BlogController do
   use Hexpm.Web, :controller
 
   def index(conn, _params) do
-    render(conn, "index.html", [
+    render(
+      conn,
+      "index.html",
       title: "Blog",
       container: "container page blog"
-    ])
+    )
   end
 
   def show(conn, %{"name" => name}) do
     if name in all_slugs() do
-      render(conn, "#{name}.html", [
+      render(
+        conn,
+        "#{name}.html",
         title: title(name),
         container: "container page blog"
-      ])
+      )
     else
       not_found(conn)
     end

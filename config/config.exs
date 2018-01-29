@@ -38,18 +38,15 @@ config :hexpm,
   support_email: "support@hex.pm",
   levenshtein_threshold: System.get_env("HEX_LEVENSHTEIN_THRESHOLD") || 2
 
-config :hexpm,
-  ecto_repos: [Hexpm.Repo]
+config :hexpm, ecto_repos: [Hexpm.Repo]
 
 config :ex_aws,
   access_key_id: {:system, "HEX_S3_ACCESS_KEY"},
   secret_access_key: {:system, "HEX_S3_SECRET_KEY"}
 
-config :bcrypt_elixir,
-  log_rounds: 4
+config :bcrypt_elixir, log_rounds: 4
 
-config :porcelain,
-  driver: Porcelain.Driver.Basic
+config :porcelain, driver: Porcelain.Driver.Basic
 
 config :hexpm, Hexpm.Web.Endpoint,
   url: [host: "localhost"],
@@ -63,17 +60,13 @@ config :hexpm, Hexpm.Repo,
   overload_alarm: false,
   underload_alarm: false
 
-config :sasl,
-  sasl_error_logger: false
+config :sasl, sasl_error_logger: false
 
-config :hexpm, Hexpm.Emails.Mailer,
-  adapter: Hexpm.Emails.Bamboo.SESAdapter
+config :hexpm, Hexpm.Emails.Mailer, adapter: Hexpm.Emails.Bamboo.SESAdapter
 
-config :phoenix, :template_engines,
-  md: Hexpm.Web.MarkdownEngine
+config :phoenix, :template_engines, md: Hexpm.Web.MarkdownEngine
 
-config :phoenix,
-  stacktrace_depth: 20
+config :phoenix, stacktrace_depth: 20
 
 config :phoenix, :generators,
   migration: true,
@@ -90,11 +83,10 @@ config :mime, :types, %{
   "application/vnd.hex+erlang" => ["erlang"]
 }
 
-config :ecto,
-  json_library: Hexpm.Web.Jiffy
+config :ecto, json_library: Hexpm.Web.Jiffy
 
 config :logger, :console,
   format: "$time $metadata[$level] $message\n",
   metadata: [:request_id]
 
-import_config "#{Mix.env}.exs"
+import_config "#{Mix.env()}.exs"

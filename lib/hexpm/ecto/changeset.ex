@@ -12,6 +12,7 @@ defmodule Hexpm.Changeset do
     validate_change(changeset, field, fn
       _, %Version{build: nil} ->
         []
+
       _, %Version{} ->
         [{field, "build number not allowed"}]
     end)
@@ -21,6 +22,7 @@ defmodule Hexpm.Changeset do
     validate_change(changeset, field, fn
       _, [] ->
         [{field, "can't be blank"}]
+
       _, list when is_list(list) ->
         []
     end)
@@ -30,9 +32,11 @@ defmodule Hexpm.Changeset do
     validate_change(changeset, field, fn key, req ->
       cond do
         is_nil(req) ->
-          [{key, "invalid requirement: #{inspect req}, use \">= 0.0.0\" instead"}]
+          [{key, "invalid requirement: #{inspect(req)}, use \">= 0.0.0\" instead"}]
+
         not valid_requirement?(req) ->
-          [{key, "invalid requirement: #{inspect req}"}]
+          [{key, "invalid requirement: #{inspect(req)}"}]
+
         # Wait until rebar3 has supported this for at least 2 months
         # https://github.com/hexpm/rebar3_hex/issues/69
         # String.contains?(req, "-") and not Keyword.fetch!(opts, :pre) ->
@@ -52,6 +56,7 @@ defmodule Hexpm.Changeset do
       case Hexpm.Repo.get_by(Hexpm.Accounts.Email, email: email, verified: true) do
         nil ->
           []
+
         _ ->
           [{field, opts[:message]}]
       end
@@ -61,6 +66,7 @@ defmodule Hexpm.Changeset do
   def validate_repository(changeset, field, opts) do
     validate_change(changeset, field, fn key, dependency_repository ->
       repository = Keyword.fetch!(opts, :repository)
+
       if dependency_repository in ["hexpm", repository.name] do
         []
       else
@@ -70,10 +76,13 @@ defmodule Hexpm.Changeset do
   end
 
   defp repository_error(%{id: 1}, dependency_repository) do
-    "dependencies can only belong to public repository \"hexpm\", got: #{inspect dependency_repository}"
+    "dependencies can only belong to public repository \"hexpm\", " <>
+      "got: #{inspect(dependency_repository)}"
   end
+
   defp repository_error(%{name: name}, dependency_repository) do
-    "dependencies can only belong to public repository \"hexpm\" or current repository #{inspect name}, got: #{inspect dependency_repository}"
+    "dependencies can only belong to public repository \"hexpm\" " <>
+      "or current repository #{inspect(name)}, got: #{inspect(dependency_repository)}"
   end
 
   def validate_password(changeset, field, hash, opts \\ []) do
@@ -84,17 +93,21 @@ defmodule Hexpm.Changeset do
       case Map.fetch(changeset.params, error_param) do
         {:ok, value} ->
           hash = default_hash(hash)
+
           if Bcrypt.verify_pass(value, hash),
             do: [],
-          else: [{error_field, {"is invalid", []}}]
+            else: [{error_field, {"is invalid", []}}]
 
         :error ->
           [{error_field, {"can't be blank", []}}]
       end
 
-    %{changeset | validations: [{:password, opts} | changeset.validations],
-                  errors: errors ++ changeset.errors,
-                  valid?: changeset.valid? and errors == []}
+    %{
+      changeset
+      | validations: [{:password, opts} | changeset.validations],
+        errors: errors ++ changeset.errors,
+        valid?: changeset.valid? and errors == []
+    }
   end
 
   @default_password Bcrypt.hash_pwd_salt("password")

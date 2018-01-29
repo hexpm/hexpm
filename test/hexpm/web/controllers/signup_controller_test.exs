@@ -13,7 +13,15 @@ defmodule Hexpm.Web.SignupControllerTest do
   end
 
   test "create user" do
-    conn = post(build_conn(), "signup", %{user: %{username: "jose", emails: [%{email: "jose@mail.com"}], password: "hunter42", full_name: "José"}})
+    conn =
+      post(build_conn(), "signup", %{
+        user: %{
+          username: "jose",
+          emails: [%{email: "jose@mail.com"}],
+          password: "hunter42",
+          full_name: "José"
+        }
+      })
 
     assert redirected_to(conn) == "/"
     user = Users.get("jose")
@@ -22,7 +30,16 @@ defmodule Hexpm.Web.SignupControllerTest do
   end
 
   test "create user invalid" do
-    conn = post(build_conn(), "signup", %{user: %{username: "eric", emails: [%{email: "jose@mail.com"}], password: "hunter42", full_name: "José"}})
+    conn =
+      post(build_conn(), "signup", %{
+        user: %{
+          username: "eric",
+          emails: [%{email: "jose@mail.com"}],
+          password: "hunter42",
+          full_name: "José"
+        }
+      })
+
     assert response(conn, 400) =~ "Sign up"
     assert conn.resp_body =~ "Oops, something went wrong!"
   end

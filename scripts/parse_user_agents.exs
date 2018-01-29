@@ -41,6 +41,7 @@ uas =
   Enum.reduce(files, %{}, fn file, uas ->
     contents = File.read!(file)
     lines = String.split(contents, "\n", trim: true)
+
     Enum.reduce(lines, uas, fn line, uas ->
       case Regex.run(log_regex, line) do
         [_, request, status, ua] when status >= "200" and status < "400" ->
@@ -48,12 +49,14 @@ uas =
             case Regex.run(ua_regex, ua) do
               [_, _hex, elixir] ->
                 Map.update(uas, elixir, 1, &(&1 + 1))
+
               nil ->
                 uas
             end
           else
             uas
           end
+
         _ ->
           uas
       end
@@ -62,4 +65,4 @@ uas =
 
 uas
 |> Enum.sort_by(&elem(&1, 1), &>=/2)
-|> Enum.each(fn {x, y} -> IO.puts "#{x} #{y}" end)
+|> Enum.each(fn {x, y} -> IO.puts("#{x} #{y}") end)

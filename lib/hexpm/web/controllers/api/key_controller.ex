@@ -46,6 +46,7 @@ defmodule Hexpm.Web.API.KeyController do
           |> api_cache(:private)
           |> put_status(201)
           |> render(:show, key: key, authing_key: authing_key)
+
         {:error, :key, changeset, _} ->
           validation_failed(conn, changeset)
       end
@@ -63,12 +64,13 @@ defmodule Hexpm.Web.API.KeyController do
     user = conn.assigns.current_user
     authing_key = conn.assigns.key
 
-    case Keys.remove(user, name, [audit: audit_data(conn)]) do
+    case Keys.remove(user, name, audit: audit_data(conn)) do
       {:ok, %{key: key}} ->
         conn
         |> api_cache(:private)
         |> put_status(200)
         |> render(:delete, key: key, authing_key: authing_key)
+
       _ ->
         not_found(conn)
     end

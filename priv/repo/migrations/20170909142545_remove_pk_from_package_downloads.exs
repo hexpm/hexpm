@@ -1,10 +1,10 @@
 defmodule Hexpm.Repo.Migrations.RemovePkFromPackageDownloads do
   use Ecto.Migration
 
-  def up do
-    execute "DROP MATERIALIZED VIEW package_downloads"
+  def up() do
+    execute("DROP MATERIALIZED VIEW package_downloads")
 
-    execute """
+    execute("""
       CREATE MATERIALIZED VIEW package_downloads (
         package_id,
         view,
@@ -43,16 +43,16 @@ defmodule Hexpm.Repo.Migrations.RemovePkFromPackageDownloads do
           UNION
           SELECT NULL, 'all', SUM(d.downloads)
           FROM downloads AS d
-    """
+    """)
 
-    execute "CREATE INDEX ON package_downloads (package_id)"
-    execute "CREATE INDEX ON package_downloads (view, downloads)"
+    execute("CREATE INDEX ON package_downloads (package_id)")
+    execute("CREATE INDEX ON package_downloads (view, downloads)")
   end
 
-  def down do
-    execute "DROP MATERIALIZED VIEW package_downloads"
+  def down() do
+    execute("DROP MATERIALIZED VIEW package_downloads")
 
-    execute """
+    execute("""
       CREATE MATERIALIZED VIEW package_downloads (
         id,
         package_id,
@@ -92,9 +92,9 @@ defmodule Hexpm.Repo.Migrations.RemovePkFromPackageDownloads do
           UNION
           SELECT NULL, NULL, 'all', SUM(d.downloads)
           FROM downloads AS d
-    """
+    """)
 
-    execute "CREATE INDEX ON package_downloads (package_id)"
-    execute "CREATE INDEX ON package_downloads (view, downloads)"
+    execute("CREATE INDEX ON package_downloads (package_id)")
+    execute("CREATE INDEX ON package_downloads (view, downloads)")
   end
 end

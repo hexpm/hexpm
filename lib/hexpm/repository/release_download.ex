@@ -5,12 +5,11 @@ defmodule Hexpm.Repository.ReleaseDownload do
   @primary_key false
 
   schema "release_downloads" do
-    belongs_to :release, Release, references: :id
+    belongs_to(:release, Release, references: :id)
     field :downloads, :integer
   end
 
   def release(release) do
-    from(rd in ReleaseDownload,
-         where: rd.release_id == ^release.id)
+    from(rd in ReleaseDownload, where: rd.release_id == ^release.id)
   end
 end

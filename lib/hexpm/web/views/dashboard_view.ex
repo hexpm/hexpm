@@ -38,7 +38,7 @@ defmodule Hexpm.Web.DashboardView do
   def gravatar_email_options(user) do
     emails =
       user.emails
-      |> Enum.filter(&(&1.verified))
+      |> Enum.filter(& &1.verified)
       |> Enum.map(&{&1.email, &1.email})
 
     [{"Don't show an avatar", "none"}] ++ emails
@@ -58,7 +58,7 @@ defmodule Hexpm.Web.DashboardView do
     [
       {"Admin", "admin", "This role has full control of the repository"},
       {"Write", "write", "This role has package owner access to all repository packages"},
-      {"Read", "read", "This role can fetch all repository packages"},
+      {"Read", "read", "This role can fetch all repository packages"}
     ]
   end
 

@@ -4,12 +4,15 @@ defmodule Hexpm.Web.API.UserView do
   def render("index." <> _, %{users: users}) do
     render_many(users, __MODULE__, "show")
   end
+
   def render("show." <> _, %{user: user}) do
     render_one(user, __MODULE__, "show")
   end
+
   def render("me." <> _, %{user: user}) do
     render_one(user, __MODULE__, "me")
   end
+
   def render("minimal." <> _, %{user: user}) do
     render_one(user, __MODULE__, "minimal")
   end
@@ -22,7 +25,7 @@ defmodule Hexpm.Web.API.UserView do
       email: User.email(user, :public),
       url: Routes.api_user_url(Endpoint, :show, user),
       inserted_at: user.inserted_at,
-      updated_at: user.updated_at,
+      updated_at: user.updated_at
     }
     |> include_if_loaded(:owned_packages, user.owned_packages, &owned_packages/1)
     |> include_if_loaded(:packages, user.owned_packages, &packages/1)
@@ -37,7 +40,7 @@ defmodule Hexpm.Web.API.UserView do
     %{
       username: user.username,
       email: User.email(user, :public),
-      url: Routes.api_user_url(Endpoint, :show, user),
+      url: Routes.api_user_url(Endpoint, :show, user)
     }
   end
 

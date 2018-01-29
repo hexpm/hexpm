@@ -15,7 +15,7 @@ defmodule Hexpm.Fake do
     {:word, [:words]},
     {:email, [:usernames]},
     {:full_name, [:first_names, :last_names]},
-    {:sentence, [:words]},
+    {:sentence, [:words]}
   ]
 
   def start() do
@@ -55,6 +55,7 @@ defmodule Hexpm.Fake do
     # :rand.seed(:exrop, {seed, seed, seed})
 
     path = Path.join([__DIR__, "..", "fake", "#{name}.txt"])
+
     objects =
       File.read!(path)
       |> String.split("\n", trim: true)
@@ -70,6 +71,7 @@ defmodule Hexpm.Fake do
     case :ets.lookup(__MODULE__, {key, counter}) do
       [{_key, value}] ->
         value
+
       [] ->
         raise "Ran out of fake data for #{original_key || key}"
     end
@@ -80,15 +82,18 @@ defmodule Hexpm.Fake do
   defp generator(:last_name, counter, _opts), do: get!(:last_names, counter)
   defp generator(:username, counter, _opts), do: get!(:usernames, counter)
   defp generator(:word, counter, _opts), do: get!(:words, counter)
+
   defp generator(:email, counter, _opts) do
     username = get!(:usernames, counter)
     "#{username}@example.com"
   end
+
   defp generator(:full_name, counter, _opts) do
     first_name = get!(:first_names, counter)
     last_name = get!(:last_names, counter)
     "#{first_name} #{last_name}"
   end
+
   defp generator(:sentence, counter, opts) do
     num = Keyword.get(opts, :size, 10)
     num_objects = Keyword.fetch!(opts, :num_objects)

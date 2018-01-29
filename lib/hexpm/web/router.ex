@@ -169,7 +169,7 @@ defmodule Hexpm.Web.Router do
     get "/auth", AuthController, :show
   end
 
-  if Mix.env in [:dev, :test, :hex] do
+  if Mix.env() in [:dev, :test, :hex] do
     scope "/repo", Hexpm.Web do
       get "/registry.ets.gz", TestController, :registry
       get "/registry.ets.gz.signed", TestController, :registry_signed

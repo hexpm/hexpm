@@ -21,6 +21,7 @@ defmodule Hexpm.Web.LoginController do
         |> configure_session(renew: true)
         |> put_session("user_id", user.id)
         |> redirect(to: path)
+
       {:error, reason} ->
         conn
         |> put_flash(:error, auth_error_message(reason))
@@ -36,10 +37,12 @@ defmodule Hexpm.Web.LoginController do
   end
 
   defp render_show(conn) do
-    render(conn, "show.html", [
+    render(
+      conn,
+      "show.html",
       title: "Log in",
       container: "container page login",
       return: conn.params["return"]
-    ])
+    )
   end
 end

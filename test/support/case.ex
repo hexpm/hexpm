@@ -4,12 +4,15 @@ defmodule Hexpm.Case do
   def reset_store() do
     if Application.get_env(:hexpm, :s3_bucket) do
       Application.put_env(:hexpm, :store_impl, Hexpm.Store.S3)
-      on_exit fn -> Application.put_env(:hexpm, :store_impl, Hexpm.Store.Local) end
+      on_exit(fn -> Application.put_env(:hexpm, :store_impl, Hexpm.Store.Local) end)
     end
   end
 
   def create_user(username, email, password, confirmed? \\ true) do
-    Hexpm.Accounts.User.build(%{username: username, password: password, emails: [%{email: email}]}, confirmed?)
+    Hexpm.Accounts.User.build(
+      %{username: username, password: password, emails: [%{email: email}]},
+      confirmed?
+    )
     |> Hexpm.Repo.insert!()
   end
 
@@ -24,7 +27,8 @@ defmodule Hexpm.Case do
     key =
       user
       |> Hexpm.Accounts.Key.build(%{name: "any_key_name"})
-      |> Hexpm.Repo.insert!
+      |> Hexpm.Repo.insert!()
+
     key.user_secret
   end
 

@@ -17,6 +17,7 @@ defmodule Hexpm.Web.PackageView do
     case view do
       :recent_downloads ->
         Map.get(package_downloads, "recent")
+
       _ ->
         Map.get(package_downloads, "all")
     end
@@ -27,6 +28,7 @@ defmodule Hexpm.Web.PackageView do
       :recent_downloads ->
         downloads = display_downloads(package_downloads, :all) || 0
         "total downloads: #{human_number_space(downloads)}"
+
       _ ->
         downloads = display_downloads(package_downloads, :recent_downloads) || 0
         "recent downloads: #{human_number_space(downloads)}"
@@ -71,9 +73,11 @@ defmodule Hexpm.Web.PackageView do
   def snippet_version(:mix, %Version{major: 0, minor: minor, patch: patch, pre: []}) do
     "~> 0.#{minor}.#{patch}"
   end
+
   def snippet_version(:mix, %Version{major: major, minor: minor, pre: []}) do
     "~> #{major}.#{minor}"
   end
+
   def snippet_version(:mix, %Version{major: major, minor: minor, patch: patch, pre: pre}) do
     "~> #{major}.#{minor}.#{patch}#{pre_snippet(pre)}"
   end
@@ -84,9 +88,10 @@ defmodule Hexpm.Web.PackageView do
   end
 
   defp snippet_organization("hexpm"), do: ""
-  defp snippet_organization(repository), do: ", organization: #{inspect repository}"
+  defp snippet_organization(repository), do: ", organization: #{inspect(repository)}"
 
   defp pre_snippet([]), do: ""
+
   defp pre_snippet(pre) do
     "-" <>
       Enum.map_join(pre, ".", fn
@@ -102,9 +107,10 @@ defmodule Hexpm.Web.PackageView do
     if Regex.match?(@elixir_atom_chars, name) do
       ":#{name}"
     else
-      ":#{inspect name}"
+      ":#{inspect(name)}"
     end
   end
+
   defp app_name(:rebar, name) do
     if Regex.match?(@erlang_atom_chars, name) do
       name
@@ -115,14 +121,18 @@ defmodule Hexpm.Web.PackageView do
 
   def retirement_message(retirement) do
     reason = ReleaseRetirement.reason_text(retirement.reason)
+
     ["Retired package"] ++
       cond do
         reason && retirement.message ->
           ["; reason: ", reason, " - ", retirement.message]
+
         reason ->
           ["; reason: ", reason]
+
         retirement.message ->
           ["; reason: ", retirement.message]
+
         true ->
           []
       end
@@ -130,13 +140,17 @@ defmodule Hexpm.Web.PackageView do
 
   def retirement_html(retirement) do
     reason = ReleaseRetirement.reason_text(retirement.reason)
+
     cond do
       reason && retirement.message ->
         [content_tag(:strong, "Retired package;"), " reason: ", reason, " - ", retirement.message]
+
       reason ->
         [content_tag(:strong, "Retired package;"), " reason: ", reason]
+
       retirement.message ->
         [content_tag(:strong, "Retired package;"), " reason: ", retirement.message]
+
       true ->
         [content_tag(:strong, "Retired package")]
     end

@@ -16,7 +16,7 @@ defmodule Hexpm.Web do
   below.
   """
 
-  def schema do
+  def schema() do
     quote do
       use Ecto.Schema
 
@@ -31,7 +31,7 @@ defmodule Hexpm.Web do
     end
   end
 
-  def context do
+  def context() do
     quote do
       import Ecto
       import Ecto.Changeset
@@ -46,7 +46,7 @@ defmodule Hexpm.Web do
     end
   end
 
-  def controller do
+  def controller() do
     quote do
       use Phoenix.Controller, namespace: Hexpm.Web
 
@@ -62,33 +62,40 @@ defmodule Hexpm.Web do
     end
   end
 
-  def view do
+  def view() do
     quote do
-      use Phoenix.View, root: "lib/hexpm/web/templates",
-                        namespace: Hexpm.Web
+      use Phoenix.View,
+        root: "lib/hexpm/web/templates",
+        namespace: Hexpm.Web
+
       use Phoenix.HTML
 
       # Import convenience functions from controllers
       import Phoenix.Controller, only: [get_csrf_token: 0, get_flash: 2, view_module: 1]
 
       # Use all HTML functionality (forms, tags, etc)
-      import Phoenix.HTML.Form, except: [
-        text_input: 2, text_input: 3,
-        email_input: 2, email_input: 3,
-        password_input: 2, password_input: 3,
-        select: 3, select: 4
-      ]
+      import Phoenix.HTML.Form,
+        except: [
+          text_input: 2,
+          text_input: 3,
+          email_input: 2,
+          email_input: 3,
+          password_input: 2,
+          password_input: 3,
+          select: 3,
+          select: 4
+        ]
 
       import Hexpm.Web.{ViewHelpers, ViewIcons}
 
       alias Hexpm.Web.Endpoint
       alias Hexpm.Web.Router.Helpers, as: Routes
 
-      Hexpm.Web.shared
+      Hexpm.Web.shared()
     end
   end
 
-  def router do
+  def router() do
     quote do
       use Phoenix.Router
       import Hexpm.Web.Plugs
@@ -131,7 +138,7 @@ defmodule Hexpm.Web do
         Repository.RepositoryUser,
         Repository.Requirement,
         Repository.Resolver,
-        Repository.Sitemaps,
+        Repository.Sitemaps
       }
     end
   end

@@ -4,7 +4,7 @@ defmodule Mix.Tasks.Hexpm.CheckNamesTest do
   alias Mix.Tasks.Hexpm.CheckNames
 
   setup do
-    {:ok, yesterday} = NaiveDateTime.new(Hexpm.Utils.utc_yesterday, ~T[00:00:00.000])
+    {:ok, yesterday} = NaiveDateTime.new(Hexpm.Utils.utc_yesterday(), ~T[00:00:00.000])
 
     # today's
     insert(:package, name: "hector")

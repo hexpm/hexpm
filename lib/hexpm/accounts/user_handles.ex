@@ -16,16 +16,19 @@ defmodule Hexpm.Accounts.UserHandles do
   end
 
   def services() do
-    [{:twitter, "Twitter", "https://twitter.com/{handle}"},
-     {:github, "GitHub", "https://github.com/{handle}"},
-     {:elixirforum, "Elixir Forum", "https://elixirforum.com/users/{handle}"},
-     {:freenode, "Freenode", "irc://chat.freenode.net/elixir-lang"},
-     {:slack, "Slack", "https://elixir-slackin.herokuapp.com/"}]
+    [
+      {:twitter, "Twitter", "https://twitter.com/{handle}"},
+      {:github, "GitHub", "https://github.com/{handle}"},
+      {:elixirforum, "Elixir Forum", "https://elixirforum.com/users/{handle}"},
+      {:freenode, "Freenode", "irc://chat.freenode.net/elixir-lang"},
+      {:slack, "Slack", "https://elixir-slackin.herokuapp.com/"}
+    ]
   end
 
   def render(%{handles: nil}) do
     []
   end
+
   def render(user) do
     Enum.flat_map(services(), fn {field, service, url} ->
       if handle = Map.get(user.handles, field) do

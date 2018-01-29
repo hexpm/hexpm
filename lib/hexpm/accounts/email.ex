@@ -38,12 +38,9 @@ defmodule Hexpm.Accounts.Email do
     |> put_change(:verification_key, Auth.gen_key())
   end
 
-  def verify?(nil, _key),
-    do: false
-  def verify?(%Email{verification_key: verification_key}, key),
-    do: verify?(verification_key, key)
-  def verify?(verification_key, key),
-    do: Hexpm.Utils.secure_check(verification_key, key)
+  def verify?(nil, _key), do: false
+  def verify?(%Email{verification_key: verification_key}, key), do: verify?(verification_key, key)
+  def verify?(verification_key, key), do: Hexpm.Utils.secure_check(verification_key, key)
 
   def verify(email) do
     change(email, %{verified: true, verification_key: nil})

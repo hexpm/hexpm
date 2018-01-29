@@ -8,7 +8,9 @@ defmodule Hexpm.Web.Endpoint do
   # You should set gzip to true if you are running phoenix.digest
   # when deploying your static files in production.
   plug Plug.Static,
-    at: "/", from: :hexpm, gzip: true,
+    at: "/",
+    from: :hexpm,
+    gzip: true,
     only: ~w(css fonts images js),
     only_matching: ~w(favicon robots)
 

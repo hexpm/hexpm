@@ -10,6 +10,7 @@ defmodule Hexpm.BlockAddress do
     case :ets.lookup(@ets, :loaded) do
       [{:loaded, false}] ->
         reload()
+
       _ ->
         :ok
     end
@@ -19,7 +20,7 @@ defmodule Hexpm.BlockAddress do
     records =
       Hexpm.BlockAddress.Entry
       |> Hexpm.Repo.all()
-      |> Enum.into(MapSet.new, &{:blocked, &1.ip})
+      |> Enum.into(MapSet.new(), &{:blocked, &1.ip})
 
     records = MapSet.put(records, {:allowed, Hexpm.CDN.public_ips()})
 
@@ -43,6 +44,7 @@ defmodule Hexpm.BlockAddress do
       [{:allowed, allowed}] ->
         ip = Hexpm.Utils.parse_ip(ip)
         Hexpm.Utils.in_ip_range?(allowed, ip)
+
       [] ->
         false
     end

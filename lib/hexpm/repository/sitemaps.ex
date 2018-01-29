@@ -2,7 +2,8 @@ defmodule Hexpm.Repository.Sitemaps do
   use Hexpm.Web, :context
 
   def packages() do
-    from(p in Package,
+    from(
+      p in Package,
       where: p.repository_id == 1,
       order_by: p.name,
       select: {p.name, p.updated_at}
@@ -11,7 +12,8 @@ defmodule Hexpm.Repository.Sitemaps do
   end
 
   def packages_with_docs() do
-    from(p in Package,
+    from(
+      p in Package,
       order_by: p.name,
       where: p.repository_id == 1,
       where: not is_nil(p.docs_updated_at),

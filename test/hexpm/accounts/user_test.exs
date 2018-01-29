@@ -10,7 +10,14 @@ defmodule Hexpm.Accounts.UserTest do
 
   describe "build/2" do
     test "builds user" do
-      changeset = User.build(%{username: "username", emails: [%{email: "mail@example.com"}], password: "password", full_name: "Jane Doe"})
+      changeset =
+        User.build(%{
+          username: "username",
+          emails: [%{email: "mail@example.com"}],
+          password: "password",
+          full_name: "Jane Doe"
+        })
+
       assert changeset.valid?
     end
 
@@ -28,28 +35,67 @@ defmodule Hexpm.Accounts.UserTest do
     end
 
     test "username and email are unique", %{user: user} do
-      assert {:error, changeset} = User.build(%{username: user.username, emails: [%{email: "some_other_email@example.com"}], password: "password"}, true) |> Hexpm.Repo.insert
+      assert {:error, changeset} =
+               User.build(
+                 %{
+                   username: user.username,
+                   emails: [%{email: "some_other_email@example.com"}],
+                   password: "password"
+                 },
+                 true
+               )
+               |> Hexpm.Repo.insert()
+
       assert errors_on(changeset)[:username] == "has already been taken"
-      assert {:error, changeset} = User.build(%{username: "some_other_username", emails: [%{email: hd(user.emails).email}], password: "password"}, true) |> Hexpm.Repo.insert
+
+      assert {:error, changeset} =
+               User.build(
+                 %{
+                   username: "some_other_username",
+                   emails: [%{email: hd(user.emails).email}],
+                   password: "password"
+                 },
+                 true
+               )
+               |> Hexpm.Repo.insert()
+
       assert errors_on(changeset)[:emails][:email] == "already in use"
     end
   end
 
   describe "update_password_no_check/2" do
     test "updates password", %{user: user} do
-      User.update_password_no_check(user, %{username: "ignore_this", password: "new_password", password_confirmation: "new_password"})
-      |> Hexpm.Repo.update!
+      User.update_password_no_check(user, %{
+        username: "ignore_this",
+        password: "new_password",
+        password_confirmation: "new_password"
+      })
+      |> Hexpm.Repo.update!()
 
-      assert {:ok, {auth_user, nil, _, :password}} = Auth.password_auth(user.username, "new_password")
+      assert {:ok, {auth_user, nil, _, :password}} =
+               Auth.password_auth(user.username, "new_password")
+
       assert auth_user.id == user.id
       assert :error == Auth.password_auth(user.username, "password")
     end
 
     test "validates", %{user: user} do
-      changeset = User.update_password_no_check(user, %{username: "new_username", password: "short", password_confirmation: "short"})
+      changeset =
+        User.update_password_no_check(user, %{
+          username: "new_username",
+          password: "short",
+          password_confirmation: "short"
+        })
+
       assert errors_on(changeset)[:password] == "should be at least 7 character(s)"
 
-      changeset = User.update_password_no_check(user, %{username: "new_username", password: "new_password", password_confirmation: "new_password_wrong"})
+      changeset =
+        User.update_password_no_check(user, %{
+          username: "new_username",
+          password: "new_password",
+          password_confirmation: "new_password_wrong"
+        })
+
       assert errors_on(changeset)[:password_confirmation] == "does not match password"
     end
   end
@@ -64,7 +110,7 @@ defmodule Hexpm.Accounts.UserTest do
 
     test "does not change password", %{user: user, password: password} do
       User.update_profile(user, %{full_name: "Jane", password: "ignore_this"})
-      |> Hexpm.Repo.update!
+      |> Hexpm.Repo.update!()
 
       assert {:ok, _} = Auth.password_auth(user.username, password)
       assert :error == Auth.password_auth("new_username", "ignore_this")

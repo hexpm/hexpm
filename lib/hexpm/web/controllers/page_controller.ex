@@ -4,7 +4,9 @@ defmodule Hexpm.Web.PageController do
   def index(conn, _params) do
     hexpm = Repository.hexpm()
 
-    render(conn, "index.html", [
+    render(
+      conn,
+      "index.html",
       container: "",
       custom_flash: true,
       hide_search: true,
@@ -14,13 +16,15 @@ defmodule Hexpm.Web.PageController do
       package_new: Packages.recent(hexpm, 10),
       releases_new: Releases.recent(hexpm, 10),
       total: Packages.total_downloads()
-    ])
+    )
   end
 
   def sponsors(conn, _params) do
-    render(conn, "sponsors.html", [
+    render(
+      conn,
+      "sponsors.html",
       title: "Sponsors",
       container: "container page sponsors"
-    ])
+    )
   end
 end

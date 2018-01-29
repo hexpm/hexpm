@@ -19,23 +19,18 @@ config :hexpm, Hexpm.Repo,
   queue_size: pool_size * 5,
   ssl: true
 
-config :bcrypt_elixir,
-  log_rounds: 12
+config :bcrypt_elixir, log_rounds: 12
 
 config :rollbax,
   access_token: System.get_env("ROLLBAR_ACCESS_TOKEN"),
-  environment: to_string(Mix.env),
+  environment: to_string(Mix.env()),
   enabled: !!System.get_env("ROLLBAR_ACCESS_TOKEN")
 
-config :logger,
-  backends: [Rollbax.Logger, :console]
+config :logger, backends: [Rollbax.Logger, :console]
 
-config :logger, Rollbax.Logger,
-  level: :error
+config :logger, Rollbax.Logger, level: :error
 
 # Don't include date time on heroku
-config :logger, :console,
-  format: "[$level] $message\n"
+config :logger, :console, format: "[$level] $message\n"
 
-config :logger,
-  level: :warn
+config :logger, level: :warn

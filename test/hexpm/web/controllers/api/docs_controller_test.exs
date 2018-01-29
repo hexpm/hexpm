@@ -11,6 +11,7 @@ defmodule Hexpm.Web.API.DocsControllerTest do
 
   defp path(path) do
     response = build_conn() |> get(path)
+
     if response.status == 200 do
       response.resp_body
     end
@@ -23,6 +24,7 @@ defmodule Hexpm.Web.API.DocsControllerTest do
 
       publish_docs(user, package, "0.0.1", [{'index.html', "package v0.0.1"}])
       |> response(201)
+
       assert Hexpm.Repo.get_by!(assoc(package, :releases), version: "0.0.1").has_docs
 
       log = Hexpm.Repo.one!(AuditLog)
@@ -56,7 +58,10 @@ defmodule Hexpm.Web.API.DocsControllerTest do
       insert(:release, package: package, version: "0.0.1")
       insert(:release, package: package, version: "0.5.0")
 
-      publish_docs(user, package, "0.5.0", [{'index.html', "package v0.5.0"}, {'remove.html', "dont remove me"}])
+      publish_docs(user, package, "0.5.0", [
+        {'index.html', "package v0.5.0"},
+        {'remove.html', "dont remove me"}
+      ])
       |> response(201)
 
       publish_docs(user, package, "0.0.1", [{'index.html', "package v0.0.1"}])
@@ -71,7 +76,10 @@ defmodule Hexpm.Web.API.DocsControllerTest do
       insert(:release, package: package, version: "0.0.1")
       insert(:release, package: package, version: "0.5.0")
 
-      publish_docs(user, package, "0.0.1", [{'index.html', "package v0.0.1"}, {'remove.html', "please remove me"}])
+      publish_docs(user, package, "0.0.1", [
+        {'index.html', "package v0.0.1"},
+        {'remove.html', "please remove me"}
+      ])
       |> response(201)
 
       publish_docs(user, package, "0.0.1", [{'index.html', "package v0.0.1 (updated)"}])
@@ -88,7 +96,10 @@ defmodule Hexpm.Web.API.DocsControllerTest do
       insert(:release, package: package, version: "0.5.0")
       insert(:release, package: package, version: "1.0.0-beta")
 
-      publish_docs(user, package, "0.5.0", [{'index.html', "package v0.5.0"}, {'remove.html', "dont remove me"}])
+      publish_docs(user, package, "0.5.0", [
+        {'index.html', "package v0.5.0"},
+        {'remove.html', "dont remove me"}
+      ])
       |> response(201)
 
       publish_docs(user, package, "1.0.0-beta", [{'index.html', "package v1.0.0-beta"}])
@@ -121,6 +132,7 @@ defmodule Hexpm.Web.API.DocsControllerTest do
       result =
         publish_docs(user, package, "0.0.1", [{'1.2.3', "package   v0.0.1"}])
         |> json_response(422)
+
       assert result["errors"]["tar"] == "directory name not allowed to match a semver version"
     end
   end
@@ -129,7 +141,14 @@ defmodule Hexpm.Web.API.DocsControllerTest do
     @tag :skip
     test "release docs authorizes", %{user: user} do
       repository = insert(:repository)
-      package = insert(:package, repository_id: repository.id, package_owners: [build(:package_owner, owner: user)])
+
+      package =
+        insert(
+          :package,
+          repository_id: repository.id,
+          package_owners: [build(:package_owner, owner: user)]
+        )
+
       insert(:release, package: package, version: "0.0.1")
 
       publish_docs(user, repository, package, "0.0.1", [{'index.html', "package v0.0.1"}])
@@ -141,7 +160,14 @@ defmodule Hexpm.Web.API.DocsControllerTest do
     @tag :skip
     test "release docs", %{user: user} do
       repository = insert(:repository)
-      package = insert(:package, repository_id: repository.id, package_owners: [build(:package_owner, owner: user)])
+
+      package =
+        insert(
+          :package,
+          repository_id: repository.id,
+          package_owners: [build(:package_owner, owner: user)]
+        )
+
       insert(:release, package: package, version: "0.0.1")
       insert(:repository_user, repository: repository, user: user)
 
@@ -153,7 +179,14 @@ defmodule Hexpm.Web.API.DocsControllerTest do
 
     test "private package docs disabled", %{user: user} do
       repository = insert(:repository)
-      package = insert(:package, repository_id: repository.id, package_owners: [build(:package_owner, owner: user)])
+
+      package =
+        insert(
+          :package,
+          repository_id: repository.id,
+          package_owners: [build(:package_owner, owner: user)]
+        )
+
       insert(:release, package: package, version: "0.0.1")
       insert(:repository_user, repository: repository, user: user)
 
@@ -175,6 +208,7 @@ defmodule Hexpm.Web.API.DocsControllerTest do
 
       publish_docs(user, package, "0.0.1", [{'index.html', "package v0.0.1"}])
       |> response(201)
+
       assert Hexpm.Repo.get_by!(assoc(package, :releases), version: "0.0.1").has_docs
 
       revert_release(user, package, "0.0.1")
@@ -196,8 +230,10 @@ defmodule Hexpm.Web.API.DocsControllerTest do
 
       publish_docs(user, package, "0.0.1", [{'index.html', "package v0.0.1"}])
       |> response(201)
+
       publish_docs(user, package, "0.5.0", [{'index.html', "package v0.5.0"}])
       |> response(201)
+
       publish_docs(user, package, "2.0.0", [{'index.html', "package v2.0.0"}])
       |> response(201)
 
@@ -208,7 +244,9 @@ defmodule Hexpm.Web.API.DocsControllerTest do
       # Check release was deleted
       refute Hexpm.Repo.get_by(assoc(package, :releases), version: "0.5.0").has_docs
 
-      [%{action: "docs.publish"}, %{action: "docs.publish"}, %{action: "docs.publish"}, log] = Hexpm.Repo.all(AuditLog)
+      [%{action: "docs.publish"}, %{action: "docs.publish"}, %{action: "docs.publish"}, log] =
+        Hexpm.Repo.all(AuditLog)
+
       assert log.actor_id == user.id
       assert log.action == "docs.revert"
       assert log.params["package"]["name"] == package.name
@@ -255,7 +293,17 @@ defmodule Hexpm.Web.API.DocsControllerTest do
     test "delete docs authorizes", %{user: user1} do
       user2 = insert(:user)
       repository = insert(:repository)
-      package = insert(:package, repository_id: repository.id, package_owners: [build(:package_owner, owner: user1), build(:package_owner, owner: user2)])
+
+      package =
+        insert(
+          :package,
+          repository_id: repository.id,
+          package_owners: [
+            build(:package_owner, owner: user1),
+            build(:package_owner, owner: user2)
+          ]
+        )
+
       insert(:release, package: package, version: "0.0.1")
       insert(:repository_user, repository: repository, user: user1)
 
@@ -271,7 +319,14 @@ defmodule Hexpm.Web.API.DocsControllerTest do
     @tag :skip
     test "delete docs", %{user: user} do
       repository = insert(:repository)
-      package = insert(:package, repository_id: repository.id, package_owners: [build(:package_owner, owner: user)])
+
+      package =
+        insert(
+          :package,
+          repository_id: repository.id,
+          package_owners: [build(:package_owner, owner: user)]
+        )
+
       insert(:release, package: package, version: "0.0.1")
       insert(:repository_user, repository: repository, user: user)
 

@@ -1,21 +1,21 @@
 defmodule Hexpm.Repo.Migrations.AddGravatarToEmails do
   use Ecto.Migration
 
-  def up do
+  def up() do
     alter table(:emails) do
-      add :gravatar, :boolean, default: false, null: false
+      add(:gravatar, :boolean, default: false, null: false)
     end
 
-    execute """
+    execute("""
       UPDATE emails
       SET gravatar = true
       WHERE public
-    """
+    """)
   end
 
-  def down do
+  def down() do
     alter table(:emails) do
-      remove :gravatar
+      remove(:gravatar)
     end
   end
 end

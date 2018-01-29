@@ -27,8 +27,6 @@ config :hexpm, Hexpm.Repo,
   hostname: "localhost",
   pool_size: 10
 
-config :hexpm, Hexpm.Emails.Mailer,
-  adapter: Bamboo.LocalAdapter
+config :hexpm, Hexpm.Emails.Mailer, adapter: Bamboo.LocalAdapter
 
-config :logger,
-  level: :error
+config :logger, level: :error

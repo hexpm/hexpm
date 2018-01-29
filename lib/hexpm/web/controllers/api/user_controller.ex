@@ -16,6 +16,7 @@ defmodule Hexpm.Web.API.UserController do
         |> api_cache(:private)
         |> put_status(201)
         |> render(:show, user: user)
+
       {:error, changeset} ->
         validation_failed(conn, changeset)
     end
@@ -49,8 +50,9 @@ defmodule Hexpm.Web.API.UserController do
   # TODO: enable other repository users to see private packages
   # TODO: add tests
   defp filter_packages(nil), do: nil
+
   defp filter_packages(user) do
-    %{user | owned_packages: Enum.filter(user.owned_packages, & &1.repository_id == 1)}
+    %{user | owned_packages: Enum.filter(user.owned_packages, &(&1.repository_id == 1))}
   end
 
   def test(conn, params) do

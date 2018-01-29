@@ -34,22 +34,23 @@ defmodule Hexpm.Web.DocsTar do
 
   defp unzip_inflate(stream, data, total, {:continue, uncompressed}) do
     total = total + IO.iodata_length(uncompressed)
-    unzip_inflate(stream, [data|uncompressed], total, :zlib.safeInflate(stream, []))
+    unzip_inflate(stream, [data | uncompressed], total, :zlib.safeInflate(stream, []))
   end
 
   defp unzip_inflate(_stream, data, total, {:finished, uncompressed}) do
     if total + IO.iodata_length(uncompressed) > @uncompressed_max_size do
       {:error, "too big"}
     else
-      {:ok, IO.iodata_to_binary([data|uncompressed])}
+      {:ok, IO.iodata_to_binary([data | uncompressed])}
     end
   end
 
   defp check_version_dirs(files) do
-    result = Enum.all?(files, fn {path, _data} ->
-      first = Path.split(path) |> hd()
-      Version.parse(first) == :error
-    end)
+    result =
+      Enum.all?(files, fn {path, _data} ->
+        first = Path.split(path) |> hd()
+        Version.parse(first) == :error
+      end)
 
     if result do
       :ok
