@@ -46,37 +46,37 @@ defmodule Hexpm.MixProject do
 
   defp deps() do
     [
-      {:phoenix, "~> 1.3"},
-      {:phoenix_ecto, "~> 3.1"},
-      {:phoenix_html, "~> 2.3"},
       {:bamboo, "~> 0.7"},
       {:bcrypt_elixir, "~> 1.0"},
       {:corsica, "~> 1.0"},
       {:cowboy, "~> 1.0"},
       {:earmark, "~> 1.0"},
-      {:ex_aws, "~> 2.0"},
       {:ex_aws_s3, "~> 2.0"},
       {:ex_aws_ses, "~> 2.0"},
+      {:ex_aws, "~> 2.0"},
+      {:ex_machina, "~> 2.0"},
       {:gpb, "~> 3.23"},
       {:hackney, "~> 1.7"},
       {:jiffy, "~> 0.14"},
-      {:plug, "~> 1.2"},
+      {:phoenix_ecto, "~> 3.1"},
+      {:phoenix_html, "~> 2.3"},
+      {:phoenix_live_reload, "~> 1.0", only: :dev},
+      {:phoenix, "~> 1.3"},
       {:plug_attack, "~> 0.3"},
+      {:plug, "~> 1.2"},
       {:porcelain, "~> 2.0"},
       {:postgrex, ">= 0.0.0"},
+      {:rollbax, "~> 0.5", only: :prod}
       {:sbroker, "~> 1.0"},
       {:sweet_xml, "~> 0.5"},
-      {:phoenix_live_reload, "~> 1.0", only: :dev},
-      {:ex_machina, "~> 2.0", only: [:dev, :test]},
-      {:rollbax, "~> 0.5", only: :prod}
     ]
   end
 
   defp aliases() do
     [
       "compile.gpb": &compile_gpb/1,
-      "ecto.setup": ["ecto.drop", "ecto.create", "ecto.migrate", "run priv/repo/seeds.exs"],
       "ecto.reset": ["ecto.drop", "ecto.create", "ecto.migrate"],
+      "ecto.setup": ["ecto.drop", "ecto.create", "ecto.migrate", "run priv/repo/seeds.exs"],
       test: ["ecto.migrate", "test"]
     ]
   end
