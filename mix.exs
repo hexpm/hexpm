@@ -66,7 +66,7 @@ defmodule Hexpm.MixProject do
       {:plug, "~> 1.2"},
       {:porcelain, "~> 2.0"},
       {:postgrex, ">= 0.0.0"},
-      {:rollbax, "~> 0.5", only: :prod}
+      {:rollbax, "~> 0.5", only: :prod},
       {:sbroker, "~> 1.0"},
       {:sweet_xml, "~> 0.5"},
     ]
