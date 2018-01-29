@@ -1,6 +1,6 @@
 dist: trusty
 language: elixir
-elixir: 1.6.0
+elixir: 1.6.1
 otp_release: 20.2
 addons:
   postgresql: 9.6
@@ -22,7 +22,6 @@ script:
   - mix test --include integration
   - cd hex; mix deps.get && mix test --include integration; cd ..
   - mix run priv/repo/seeds.exs
-  - mix format --check-formatted
 notifications:
   recipients:
   - eric.meadows.jonsson@gmail.com
