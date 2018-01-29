@@ -36,20 +36,20 @@ defmodule Hexpm.Repository.Package do
   )
 
   # Backwards compatible for tests, fixed in Hex at 2017-07-29
-  if Mix.env == :hex do
+  if Mix.env() == :hex do
     @generic_names []
   else
     @generic_names ~w(package repository)
   end
 
-  @reserved_names Enum.concat [
-    @elixir_names,
-    @otp_names,
-    @tool_names,
-    @app_names,
-    @windows_names,
-    @generic_names
-  ]
+  @reserved_names Enum.concat([
+                    @elixir_names,
+                    @otp_names,
+                    @tool_names,
+                    @app_names,
+                    @windows_names,
+                    @generic_names
+                  ])
 
   defp changeset(package, :create, params) do
     changeset(package, :update, params)
@@ -77,15 +77,19 @@ defmodule Hexpm.Repository.Package do
   end
 
   def is_owner(package, user) do
-    from(o in PackageOwner,
-         where: o.package_id == ^package.id,
-         where: o.owner_id == ^user.id,
-         select: count(o.id) >= 1)
+    from(
+      o in PackageOwner,
+      where: o.package_id == ^package.id,
+      where: o.owner_id == ^user.id,
+      select: count(o.id) >= 1
+    )
   end
 
   def is_owner_with_access(package, user) do
-    from(po in PackageOwner,
-      left_join: ru in RepositoryUser, on: ru.repository_id == ^package.repository_id,
+    from(
+      po in PackageOwner,
+      left_join: ru in RepositoryUser,
+      on: ru.repository_id == ^package.repository_id,
       where: ru.user_id == ^user.id or ^package.repository.public,
       where: po.package_id == ^package.id,
       where: po.owner_id == ^user.id,
@@ -99,13 +103,16 @@ defmodule Hexpm.Repository.Package do
   end
 
   def owner(package, user) do
-    from(p in PackageOwner,
-         where: p.package_id == ^package.id,
-         where: p.owner_id == ^user.id)
+    from(
+      p in PackageOwner,
+      where: p.package_id == ^package.id,
+      where: p.owner_id == ^user.id
+    )
   end
 
   def all(repositories, page, count, search, sort, fields) do
-    from(p in assoc(repositories, :packages),
+    from(
+      p in assoc(repositories, :packages),
       join: r in assoc(p, :repository),
       preload: :downloads
     )
@@ -116,7 +123,8 @@ defmodule Hexpm.Repository.Package do
   end
 
   def recent(repository, count) do
-    from(p in assoc(repository, :packages),
+    from(
+      p in assoc(repository, :packages),
       order_by: [desc: p.inserted_at],
       limit: ^count,
       select: {p.name, p.inserted_at, p.meta}
@@ -128,7 +136,8 @@ defmodule Hexpm.Repository.Package do
   end
 
   def count(repositories, search) do
-    from(p in assoc(repositories, :packages),
+    from(
+      p in assoc(repositories, :packages),
       join: r in assoc(p, :repository),
       select: count(p.id)
     )
@@ -138,6 +147,7 @@ defmodule Hexpm.Repository.Package do
   defp fields(query, nil) do
     query
   end
+
   defp fields(query, fields) do
     from(p in query, select: ^fields)
   end
@@ -171,6 +181,7 @@ defmodule Hexpm.Repository.Package do
     case parse_search(search) do
       {:ok, params} ->
         Enum.reduce(params, query, fn {k, v}, q -> search_param(k, v, q) end)
+
       :error ->
         basic_search(query, search)
     end
@@ -181,14 +192,14 @@ defmodule Hexpm.Repository.Package do
     description = description_search(search)
 
     if repository do
-      from([p, r] in query,
-        where: (name_query(p, package) and name_query(r, repository)) or
-                 description_query(p, description)
+      from(
+        [p, r] in query,
+        where:
+          (name_query(p, package) and name_query(r, repository)) or
+            description_query(p, description)
       )
     else
-      from(p in query,
-        where: name_query(p, package) or description_query(p, description)
-      )
+      from(p in query, where: name_query(p, package) or description_query(p, description))
     end
   end
 
@@ -196,7 +207,8 @@ defmodule Hexpm.Repository.Package do
   defp search_param("name", search, query) do
     case String.split(search, "/", parts: 2) do
       [repository, package] ->
-        from([p, r] in query,
+        from(
+          [p, r] in query,
           where: name_query(p, extra_name_search(package)),
           where: name_query(r, extra_name_search(repository))
         )
@@ -220,27 +232,29 @@ defmodule Hexpm.Repository.Package do
 
     extra = extra_map(keys, extra_value(value))
 
-    from(p in query,
-      where: fragment("?->'extra' @> ?", p.meta, ^extra))
+    from(p in query, where: fragment("?->'extra' @> ?", p.meta, ^extra))
   end
 
   defp search_param("depends", search, query) do
-    from(p in query,
-         join: pd in Hexpm.Repository.PackageDependant,
-         on: p.id == pd.dependant_id,
-         where: pd.name == ^search)
+    from(
+      p in query,
+      join: pd in Hexpm.Repository.PackageDependant,
+      on: p.id == pd.dependant_id,
+      where: pd.name == ^search
+    )
   end
 
   defp search_param(_, _, query) do
     query
   end
 
-  defp extra_value(<<"[", value :: binary>>) do
+  defp extra_value(<<"[", value::binary>>) do
     value
     |> String.trim_trailing("]")
     |> String.split(",")
     |> Enum.map(&try_integer/1)
   end
+
   defp extra_value(value), do: try_integer(value)
 
   defp try_integer(string) do
@@ -251,6 +265,7 @@ defmodule Hexpm.Repository.Package do
   end
 
   defp extra_map([], m), do: m
+
   defp extra_map([h | t], m) do
     extra_map(t, %{h => m})
   end
@@ -266,6 +281,7 @@ defmodule Hexpm.Repository.Package do
     case String.split(search, "/", parts: 2) do
       [repository, package] ->
         {do_name_search(repository), do_name_search(package)}
+
       _ ->
         {nil, do_name_search(search)}
     end
@@ -312,17 +328,21 @@ defmodule Hexpm.Repository.Package do
   end
 
   defp sort(query, :total_downloads) do
-    from(p in query,
+    from(
+      p in query,
       left_join: d in PackageDownload,
       on: p.id == d.package_id and (d.view == "all" or is_nil(d.view)),
-      order_by: [fragment("? DESC NULLS LAST", d.downloads)])
+      order_by: [fragment("? DESC NULLS LAST", d.downloads)]
+    )
   end
 
   defp sort(query, :recent_downloads) do
-    from(p in query,
+    from(
+      p in query,
       left_join: d in PackageDownload,
       on: p.id == d.package_id and (d.view == "recent" or is_nil(d.view)),
-      order_by: [fragment("? DESC NULLS LAST", d.downloads)])
+      order_by: [fragment("? DESC NULLS LAST", d.downloads)]
+    )
   end
 
   defp sort(query, nil) do
@@ -336,6 +356,7 @@ defmodule Hexpm.Repository.Package do
   end
 
   defp parse_params("", params), do: {:ok, Enum.reverse(params)}
+
   defp parse_params(tail, params) do
     with {:ok, key, tail} <- parse_key(tail),
          {:ok, value, tail} <- parse_value(tail) do
@@ -357,6 +378,7 @@ defmodule Hexpm.Repository.Package do
         with [v, tail] <- String.split(rest, "\"", parts: 2) do
           {:ok, v, String.trim_leading(tail)}
         end
+
       _ ->
         case String.split(string, " ", parts: 2) do
           [value] -> {:ok, value, ""}

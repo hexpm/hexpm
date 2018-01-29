@@ -14,6 +14,7 @@ defmodule Hexpm.Web.ErlangFormat do
     case Hexpm.Utils.safe_binary_to_term(binary, [:safe]) do
       {:ok, term} ->
         {:ok, term}
+
       :error ->
         {:error, "bad binary_to_term"}
     end

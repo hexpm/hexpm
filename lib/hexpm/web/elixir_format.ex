@@ -5,7 +5,7 @@ defmodule Hexpm.Web.ElixirFormat do
     |> inspect(limit: :infinity, binaries: :as_strings)
   end
 
-  @spec decode(String.t) :: term
+  @spec decode(String.t()) :: term
   def decode("") do
     {:ok, nil}
   end
@@ -14,6 +14,7 @@ defmodule Hexpm.Web.ElixirFormat do
     case Code.string_to_quoted(string, existing_atoms_only: true) do
       {:ok, ast} ->
         safe_eval(ast)
+
       _ ->
         {:error, "malformed elixir"}
     end

@@ -23,8 +23,9 @@ defmodule Hexpm.Throttle do
   end
 
   def handle_call({:run, increment}, _, %{rate: rate}) when increment > rate do
-    raise "increase must not exceed rate: #{inspect rate}, got: #{inspect increment}"
+    raise "increase must not exceed rate: #{inspect(rate)}, got: #{inspect(increment)}"
   end
+
   def handle_call({:run, increment}, from, state) do
     first_during_unit? = state.running == 0
 
@@ -45,6 +46,7 @@ defmodule Hexpm.Throttle do
 
   def handle_info(:reset, state) do
     empty? = :queue.is_empty(state.waiting)
+
     state =
       %{state | running: 0}
       |> filter_canceled()
@@ -76,23 +78,26 @@ defmodule Hexpm.Throttle do
   defp filter_canceled(state) do
     fun = fn {pid, _} -> not MapSet.member?(state.cancel, pid) end
     waiting = :queue.filter(fun, state.waiting)
-    %{state | waiting: waiting, cancel: MapSet.new}
+    %{state | waiting: waiting, cancel: MapSet.new()}
   end
 
   defp churn_queue(state) do
     case try_run(state) do
       {true, state} ->
         churn_queue(state)
+
       {false, state} ->
         state
     end
   end
 
   defp new_state(opts) do
-    %{rate: opts[:rate],
+    %{
+      rate: opts[:rate],
       unit: opts[:unit],
-      waiting: :queue.new,
-      cancel: MapSet.new,
-      running: 0}
+      waiting: :queue.new(),
+      cancel: MapSet.new(),
+      running: 0
+    }
   end
 end

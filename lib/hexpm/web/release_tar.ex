@@ -13,7 +13,9 @@ defmodule Hexpm.Web.ReleaseTar do
       case unquote(expr) do
         {:ok, var1, var2} ->
           unquote(Macro.pipe(quote(do: var1), Macro.pipe(quote(do: var2), call, 0), 0))
-        other -> other
+
+        other ->
+          other
       end
     end
   end
@@ -37,17 +39,19 @@ defmodule Hexpm.Web.ReleaseTar do
         case meta do
           {:ok, meta} ->
             {:ok, meta, files["CHECKSUM"]}
+
           error ->
             error
         end
 
       {:error, reason} ->
-        {:error, inspect reason}
+        {:error, inspect(reason)}
     end
   end
 
   defp version(files) do
     version = files["VERSION"]
+
     if version in ["3"] do
       {:ok, files, String.to_integer(version)}
     else
@@ -97,6 +101,7 @@ defmodule Hexpm.Web.ReleaseTar do
       {:ok, meta} ->
         meta = meta |> proplists_to_maps() |> guess_build_tool()
         {:ok, meta}
+
       {:error, reason} ->
         {:error, %{metadata: reason}}
     end
@@ -118,10 +123,10 @@ defmodule Hexpm.Web.ReleaseTar do
   end
 
   @build_tools [
-    {"mix.exs"     , "mix"},
+    {"mix.exs", "mix"},
     {"rebar.config", "rebar"},
-    {"rebar"       , "rebar"},
-    {"Makefile"    , "make"},
+    {"rebar", "rebar"},
+    {"Makefile", "make"},
     {"Makefile.win", "make"}
   ]
 
@@ -138,7 +143,7 @@ defmodule Hexpm.Web.ReleaseTar do
     build_tools =
       Enum.flat_map(@build_tools, fn {file, tool} ->
         if file in base_files,
-            do: [tool],
+          do: [tool],
           else: []
       end)
       |> Enum.uniq()

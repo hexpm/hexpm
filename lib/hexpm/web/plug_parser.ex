@@ -6,6 +6,7 @@ defmodule Hexpm.Web.PlugParser do
   def parse(%Conn{} = conn, "application", "vnd.hex+" <> format, _headers, opts)
       when format in @formats do
     decoder = get_decoder(format, opts)
+
     conn
     |> Conn.read_body(opts)
     |> decode(decoder)
@@ -35,8 +36,10 @@ defmodule Hexpm.Web.PlugParser do
     case decoder.decode(body) do
       {:ok, terms} when is_map(terms) ->
         {:ok, terms, conn}
+
       {:ok, terms} ->
         {:ok, %{"_json" => terms}, conn}
+
       {:error, reason} ->
         raise Plug.BadRequestError, message: reason
     end

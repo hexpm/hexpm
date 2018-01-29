@@ -3,8 +3,8 @@ use Mix.Config
 config :hexpm,
   tmp_dir: Path.expand("tmp/dev"),
   docs_url: System.get_env("HEX_DOCS_URL") || "http://localhost:4000",
-  cdn_url: System.get_env("HEX_CDN_URL")  || "http://localhost:4000",
-  secret: System.get_env("HEX_SECRET")   || "796f75666f756e64746865686578",
+  cdn_url: System.get_env("HEX_CDN_URL") || "http://localhost:4000",
+  secret: System.get_env("HEX_SECRET") || "796f75666f756e64746865686578",
   private_key: File.read!("test/fixtures/private.pem")
 
 config :hexpm, Hexpm.Web.Endpoint,
@@ -13,12 +13,14 @@ config :hexpm, Hexpm.Web.Endpoint,
   code_reloader: true,
   cache_static_lookup: false,
   check_origin: false,
-  pubsub: [
-    name: Hexpm.PubSub,
-    adapter: Phoenix.PubSub.PG2],
+  pubsub: [name: Hexpm.PubSub, adapter: Phoenix.PubSub.PG2],
   watchers: [
-    node: ["node_modules/brunch/bin/brunch", "watch", "--stdin",
-           cd: Path.expand("../assets", __DIR__)]
+    node: [
+      "node_modules/brunch/bin/brunch",
+      "watch",
+      "--stdin",
+      cd: Path.expand("../assets", __DIR__)
+    ]
   ]
 
 config :hexpm, Hexpm.Web.Endpoint,
@@ -42,5 +44,4 @@ config :hexpm, Hexpm.Repo,
   hostname: "localhost",
   pool_size: 5
 
-config :hexpm, Hexpm.Emails.Mailer,
-  adapter: Bamboo.LocalAdapter
+config :hexpm, Hexpm.Emails.Mailer, adapter: Bamboo.LocalAdapter

@@ -29,10 +29,13 @@ defmodule Hexpm.Web.AuthHelpers do
     cond do
       user && ((!email or !email.verified) && !allow_unconfirmed) ->
         error(conn, {:error, :unconfirmed})
+
       user && key && !verify_permissions?(key, domain, resource) ->
         error(conn, {:error, :domain})
+
       fun && !fun.(conn, user) ->
         error(conn, {:error, :auth})
+
       true ->
         conn
     end
@@ -41,6 +44,7 @@ defmodule Hexpm.Web.AuthHelpers do
   defp verify_permissions?(_key, nil, _resource) do
     true
   end
+
   defp verify_permissions?(key, domain, resource) do
     Key.verify_permissions?(key, domain, resource)
   end
@@ -49,20 +53,28 @@ defmodule Hexpm.Web.AuthHelpers do
     case error do
       {:error, :missing} ->
         unauthorized(conn, "missing authentication information")
+
       {:error, :invalid} ->
         unauthorized(conn, "invalid authentication information")
+
       {:error, :password} ->
         unauthorized(conn, "invalid username and password combination")
+
       {:error, :key} ->
         unauthorized(conn, "invalid API key")
+
       {:error, :unconfirmed} ->
         forbidden(conn, "email not verified")
+
       {:error, :revoked_key} ->
         unauthorized(conn, "API key revoked")
+
       {:error, :domain} ->
         unauthorized(conn, "key not authorized for this action")
+
       {:error, :auth} ->
         forbidden(conn, "account not authorized for this action")
+
       {:error, :basic_required} ->
         unauthorized(conn, "action requires password authentication")
     end
@@ -72,8 +84,10 @@ defmodule Hexpm.Web.AuthHelpers do
     case get_req_header(conn, "authorization") do
       ["Basic " <> credentials] ->
         basic_auth(credentials)
+
       [key] ->
         key_auth(key)
+
       _ ->
         {:error, :missing}
     end
@@ -113,9 +127,11 @@ defmodule Hexpm.Web.AuthHelpers do
   def package_owner?(_, nil) do
     false
   end
+
   def package_owner?(%Plug.Conn{} = conn, user) do
     package_owner?(conn.assigns.package, user)
   end
+
   def package_owner?(%Hexpm.Repository.Package{} = package, user) do
     Hexpm.Repository.Packages.owner_with_access?(package, user)
   end
@@ -123,15 +139,19 @@ defmodule Hexpm.Web.AuthHelpers do
   def maybe_package_owner?(%Plug.Conn{} = conn, user) do
     maybe_package_owner?(conn.assigns.repository, conn.assigns.package, user)
   end
+
   def maybe_package_owner(%Hexpm.Repository.Package{} = package, user) do
     maybe_package_owner?(package.repository, package, user)
   end
+
   def maybe_package_owner?(nil, nil, _user) do
     false
   end
+
   def maybe_package_owner?(repository, nil, user) do
     repository.public or Hexpm.Repository.Repositories.access?(repository, user, "write")
   end
+
   def maybe_package_owner?(_repository, %Hexpm.Repository.Package{} = package, user) do
     Hexpm.Repository.Packages.owner_with_access?(package, user)
   end
@@ -139,9 +159,11 @@ defmodule Hexpm.Web.AuthHelpers do
   def repository_access?(%Plug.Conn{} = conn, user) do
     repository_access?(conn.assigns.repository, user)
   end
+
   def repository_access?(%Hexpm.Repository.Repository{} = repository, user) do
     repository.public or Hexpm.Repository.Repositories.access?(repository, user, "read")
   end
+
   def repository_access?(nil, _user) do
     false
   end
@@ -149,6 +171,7 @@ defmodule Hexpm.Web.AuthHelpers do
   def correct_user?(%Plug.Conn{} = conn, user) do
     correct_user?(conn.params["name"], user)
   end
+
   def correct_user?(username_or_email, user) when is_binary(username_or_email) do
     username_or_email in [user.username, user.email]
   end

@@ -47,13 +47,14 @@ defmodule Hexpm.Repository.Resolver do
 
   defp guess_config(build_tools) when is_list(build_tools) do
     cond do
-      "mix" in build_tools       -> "mix.exs"
-      "rebar" in build_tools     -> "rebar.config"
-      "rebar3" in build_tools    -> "rebar.config"
+      "mix" in build_tools -> "mix.exs"
+      "rebar" in build_tools -> "rebar.config"
+      "rebar3" in build_tools -> "rebar.config"
       "erlang.mk" in build_tools -> "Makefile"
-      true                       -> "TOP CONFIG"
+      true -> "TOP CONFIG"
     end
   end
+
   defp guess_config(_), do: "TOP CONFIG"
 
   ### Hex.Registry callbacks ###
@@ -66,6 +67,7 @@ defmodule Hexpm.Repository.Resolver do
 
   def close(name \\ Process.get(__MODULE__)) do
     Process.delete(__MODULE__)
+
     if :ets.info(name) == :undefined do
       false
     else
@@ -81,15 +83,18 @@ defmodule Hexpm.Repository.Resolver do
     case :ets.lookup(name, {:deps, repository, package, version}) do
       [{_, deps}] ->
         deps
+
       [] ->
         release_id = :ets.lookup_element(name, {:release, repository, package, version}, 2)
 
         deps =
-          from(r in Hexpm.Repository.Requirement,
-               join: p in assoc(r, :dependency),
-               join: repo in assoc(p, :repository),
-               where: r.release_id == ^release_id,
-               select: {repo.name, p.name, r.app, r.requirement, r.optional})
+          from(
+            r in Hexpm.Repository.Requirement,
+            join: p in assoc(r, :dependency),
+            join: repo in assoc(p, :repository),
+            where: r.release_id == ^release_id,
+            select: {repo.name, p.name, r.app, r.requirement, r.optional}
+          )
           |> Hexpm.Repo.all()
 
         :ets.insert(name, {{:deps, repository, package, version}, deps})
@@ -110,9 +115,11 @@ defmodule Hexpm.Repository.Resolver do
 
   defp load_prefetch(name, packages) do
     packages_query =
-      from(p in Hexpm.Repository.Package,
-           join: r in assoc(p, :repository),
-           select: {p.id, {r.name, p.name}})
+      from(
+        p in Hexpm.Repository.Package,
+        join: r in assoc(p, :repository),
+        select: {p.id, {r.name, p.name}}
+      )
 
     packages =
       Enum.reduce(packages, packages_query, fn {repository, package}, query ->
@@ -122,9 +129,11 @@ defmodule Hexpm.Repository.Resolver do
       |> Map.new()
 
     releases =
-      from(r in Hexpm.Repository.Release,
-           where: r.package_id in ^Map.keys(packages),
-           select: {r.package_id, {r.id, r.version}})
+      from(
+        r in Hexpm.Repository.Release,
+        where: r.package_id in ^Map.keys(packages),
+        select: {r.package_id, {r.id, r.version}}
+      )
       |> Hexpm.Repo.all()
       |> Enum.group_by(&elem(&1, 0), &elem(&1, 1))
 
@@ -134,6 +143,7 @@ defmodule Hexpm.Repository.Resolver do
           releases[id]
           |> Enum.map(&elem(&1, 1))
           |> Enum.sort(&(Version.compare(&1, &2) != :gt))
+
         {{:versions, repo, package}, versions}
       end)
 

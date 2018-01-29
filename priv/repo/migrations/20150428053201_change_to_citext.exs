@@ -1,35 +1,35 @@
 defmodule Hexpm.Repo.Migrations.ChangeToCitext do
   use Ecto.Migration
 
-  def up do
-    execute "CREATE EXTENSION citext"
+  def up() do
+    execute("CREATE EXTENSION citext")
 
-    drop index(:users, [:username], name: :users_lower_idx)
+    drop(index(:users, [:username], name: :users_lower_idx))
 
     alter table(:users) do
-      modify :username, :citext
+      modify(:username, :citext)
     end
 
     alter table(:packages) do
-      modify :name, :citext
+      modify(:name, :citext)
     end
 
-    create index(:users, [:username])
+    create(index(:users, [:username]))
   end
 
-  def down do
-    drop index(:users, [:username])
+  def down() do
+    drop(index(:users, [:username]))
 
     alter table(:users) do
-      modify :username, :text
+      modify(:username, :text)
     end
 
     alter table(:packages) do
-      modify :name, :text
+      modify(:name, :text)
     end
 
-    create index(:users, ["lower(username)"], name: :users_lower_idx)
+    create(index(:users, ["lower(username)"], name: :users_lower_idx))
 
-    execute "DROP EXTENSION IF EXISTS citext"
+    execute("DROP EXTENSION IF EXISTS citext")
   end
 end

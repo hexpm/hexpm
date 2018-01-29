@@ -17,7 +17,8 @@ defmodule Hexpm.Repository.Repository do
   @roles ~w(admin write read)
 
   def has_access(repository, user, role) do
-    from(ro in RepositoryUser,
+    from(
+      ro in RepositoryUser,
       where: ro.repository_id == ^repository.id,
       where: ro.user_id == ^user.id,
       where: ro.role in ^role_or_higher(role),
@@ -47,7 +48,11 @@ defmodule Hexpm.Repository.Repository do
     cast(struct, params, [:role])
     |> validate_required([:role])
     |> validate_inclusion(:role, @roles)
-    |> unique_constraint(:user_id, name: "repository_users_repository_id_user_id_index", message: "is already member")
+    |> unique_constraint(
+      :user_id,
+      name: "repository_users_repository_id_user_id_index",
+      message: "is already member"
+    )
   end
 
   def change_role(struct, params) do

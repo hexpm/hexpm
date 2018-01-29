@@ -81,10 +81,10 @@ defmodule Hexpm.Accounts.User do
   end
 
   def password_reset?(nil, _key), do: false
+
   def password_reset?(user, key) do
-    !!(user.reset_key &&
-       Hexpm.Utils.secure_check(user.reset_key, key) &&
-       Hexpm.Utils.within_last_day(user.reset_expiry))
+    !!(user.reset_key && Hexpm.Utils.secure_check(user.reset_key, key) &&
+         Hexpm.Utils.within_last_day(user.reset_expiry))
   end
 
   def password_reset(user, params, revoke_all_keys \\ true) do
@@ -96,12 +96,12 @@ defmodule Hexpm.Accounts.User do
 
     if revoke_all_keys,
       do: Multi.update_all(multi, :keys, Key.revoke_all(user), []),
-    else: multi
+      else: multi
   end
 
   def email(user, :primary), do: user.emails |> Enum.find(& &1.primary) |> email()
   def email(user, :public), do: user.emails |> Enum.find(& &1.public) |> email()
-  def email(user, :gravatar), do: user.emails |> Enum.find(&(&1.gravatar)) |> email()
+  def email(user, :gravatar), do: user.emails |> Enum.find(& &1.gravatar) |> email()
 
   defp email(nil), do: nil
   defp email(email), do: email.email
@@ -109,18 +109,25 @@ defmodule Hexpm.Accounts.User do
   def get(username_or_email, preload \\ []) do
     # Somewhat crazy hack to get this done in one query
     # Makes assumptions about how Ecto choses variable names
-    from(u in Hexpm.Accounts.User,
-      where: u.username == ^username_or_email or
-             ^username_or_email in fragment("SELECT emails.email FROM emails WHERE emails.user_id = u0.id and emails.verified"),
-      preload: ^preload)
+    from(
+      u in Hexpm.Accounts.User,
+      where:
+        u.username == ^username_or_email or
+          ^username_or_email in fragment(
+            "SELECT emails.email FROM emails WHERE emails.user_id = u0.id and emails.verified"
+          ),
+      preload: ^preload
+    )
   end
 
   def verify_permissions?(_user, "api", nil) do
     true
   end
+
   def verify_permissions?(_user, "repositories", nil) do
     true
   end
+
   def verify_permissions?(user, "repository", name) do
     if repository = Repositories.get(name) do
       Repositories.access?(repository, user, "read")
@@ -128,6 +135,7 @@ defmodule Hexpm.Accounts.User do
       false
     end
   end
+
   def verify_permissions?(_user, _domain, _resource) do
     false
   end

@@ -16,7 +16,12 @@ defmodule Hexpm.Web.API.UserControllerTest do
 
   describe "POST /api/users" do
     test "create user" do
-      params = %{username: Fake.sequence(:username), email: Fake.sequence(:email), password: "passpass"}
+      params = %{
+        username: Fake.sequence(:username),
+        email: Fake.sequence(:email),
+        password: "passpass"
+      }
+
       conn = json_post(build_conn(), "api/users", params)
       assert json_response(conn, 201)["url"] =~ "/api/users/#{params.username}"
 
@@ -25,19 +30,31 @@ defmodule Hexpm.Web.API.UserControllerTest do
     end
 
     test "create user sends mails and requires confirmation" do
-      params = %{username: Fake.sequence(:username), email: Fake.sequence(:email), password: "passpass"}
+      params = %{
+        username: Fake.sequence(:username),
+        email: Fake.sequence(:email),
+        password: "passpass"
+      }
+
       conn = json_post(build_conn(), "api/users", params)
 
       assert conn.status == 201
       user = Hexpm.Repo.get_by!(User, username: params.username) |> Hexpm.Repo.preload(:emails)
       user_email = List.first(user.emails)
 
-      assert_delivered_email Hexpm.Emails.verification(user, user_email)
+      assert_delivered_email(Hexpm.Emails.verification(user, user_email))
 
       conn = publish_package(user)
       assert json_response(conn, 403)["message"] == "email not verified"
 
-      conn = get(build_conn(), "email/verify?username=#{params.username}&email=#{URI.encode_www_form(user_email.email)}&key=#{user_email.verification_key}")
+      conn =
+        get(
+          build_conn(),
+          "email/verify?username=#{params.username}&email=#{URI.encode_www_form(user_email.email)}&key=#{
+            user_email.verification_key
+          }"
+        )
+
       assert redirected_to(conn) == "/"
       assert get_flash(conn, :info) =~ "verified"
 
@@ -61,7 +78,14 @@ defmodule Hexpm.Web.API.UserControllerTest do
       user = insert(:user)
       repository = insert(:repository, users: [user])
       package1 = insert(:package, package_owners: [build(:package_owner, owner: user)])
-      package2 = insert(:package, repository_id: repository.id, package_owners: [build(:package_owner, owner: user)])
+
+      package2 =
+        insert(
+          :package,
+          repository_id: repository.id,
+          package_owners: [build(:package_owner, owner: user)]
+        )
+
       insert(:repository_user, repository: repository, user: user)
 
       body =
@@ -88,7 +112,9 @@ defmodule Hexpm.Web.API.UserControllerTest do
       # TODO: deprecated
       assert Enum.count(body["owned_packages"]) == 2
       assert body["owned_packages"][package1.name] =~ "/api/packages/#{package1.name}"
-      assert body["owned_packages"][package2.name] =~ "/api/repos/#{repository.name}/packages/#{package2.name}"
+
+      assert body["owned_packages"][package2.name] =~
+               "/api/repos/#{repository.name}/packages/#{package2.name}"
     end
 
     test "return 401 if not authenticated" do
@@ -123,7 +149,7 @@ defmodule Hexpm.Web.API.UserControllerTest do
 
       # check email was sent with correct token
       user = Hexpm.Repo.get_by!(User, username: user.username) |> Hexpm.Repo.preload(:emails)
-      assert_delivered_email Hexpm.Emails.password_reset_request(user)
+      assert_delivered_email(Hexpm.Emails.password_reset_request(user))
 
       # check reset will succeed
       assert User.password_reset?(user, user.reset_key) == true
@@ -134,16 +160,18 @@ defmodule Hexpm.Web.API.UserControllerTest do
     test "test auth" do
       user = insert(:user)
 
-      conn = build_conn()
-             |> put_req_header("authorization", key_for(user))
-             |> get("api/users/#{user.username}/test")
+      conn =
+        build_conn()
+        |> put_req_header("authorization", key_for(user))
+        |> get("api/users/#{user.username}/test")
 
       body = json_response(conn, 200)
       assert body["username"] == user.username
 
-      conn = build_conn()
-             |> put_req_header("authorization", "badkey")
-             |> get("api/users/#{user.username}/test")
+      conn =
+        build_conn()
+        |> put_req_header("authorization", "badkey")
+        |> get("api/users/#{user.username}/test")
 
       assert conn.status == 401
     end

@@ -9,7 +9,13 @@ defmodule Hexpm.Web.API.ReleaseController do
   plug :authorize, [domain: "api", fun: &maybe_package_owner?/2] when action in [:create]
 
   def create(conn, %{"body" => body}) do
-    handle_tarball(conn, conn.assigns.repository, conn.assigns.package, conn.assigns.current_user, body)
+    handle_tarball(
+      conn,
+      conn.assigns.repository,
+      conn.assigns.package,
+      conn.assigns.current_user,
+      body
+    )
   end
 
   def show(conn, params) do
@@ -37,6 +43,7 @@ defmodule Hexpm.Web.API.ReleaseController do
         conn
         |> api_cache(:private)
         |> send_resp(204, "")
+
       {:error, _, changeset, _} ->
         validation_failed(conn, changeset)
     end
@@ -62,27 +69,30 @@ defmodule Hexpm.Web.API.ReleaseController do
     |> put_status(201)
     |> render(:show, release: release)
   end
+
   defp publish_result({:ok, %{action: :update, release: release}}, conn) do
     conn
     |> api_cache(:public)
     |> render(:show, release: release)
   end
+
   defp publish_result({:error, errors}, conn) do
     validation_failed(conn, errors)
   end
+
   defp publish_result({:error, _, changeset, _}, conn) do
     validation_failed(conn, normalize_errors(changeset))
   end
 
   defp normalize_errors(%{changes: %{requirements: requirements}} = changeset) do
     requirements =
-      Enum.map(requirements, fn
-        %{errors: errors} = req ->
-          name = Ecto.Changeset.get_field(req, :name)
-          %{req | errors: for({_, v} <- errors, do: {name, v}, into: %{})}
+      Enum.map(requirements, fn %{errors: errors} = req ->
+        name = Ecto.Changeset.get_field(req, :name)
+        %{req | errors: for({_, v} <- errors, do: {name, v}, into: %{})}
       end)
 
     put_in(changeset.changes.requirements, requirements)
   end
+
   defp normalize_errors(changeset), do: changeset
 end

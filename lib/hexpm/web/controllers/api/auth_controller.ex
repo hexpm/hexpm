@@ -12,10 +12,13 @@ defmodule Hexpm.Web.API.AuthController do
     cond do
       not Key.valid_permission_request?(domain, resource) ->
         render_error(conn, 400, message: "invalid permissions")
+
       not Key.verify_permissions?(key, domain, resource) ->
         error(conn, {:error, :domain})
+
       not User.verify_permissions?(user, domain, resource) ->
         error(conn, {:error, :auth})
+
       true ->
         send_resp(conn, 204, "")
     end

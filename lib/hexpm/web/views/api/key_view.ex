@@ -5,9 +5,11 @@ defmodule Hexpm.Web.API.KeyView do
   def render("index." <> _, %{keys: keys, authing_key: authing_key}) do
     render_many(keys, __MODULE__, "show", authing_key: authing_key)
   end
+
   def render("show." <> _, %{key: key, authing_key: authing_key}) do
     render_one(key, __MODULE__, "show", authing_key: authing_key)
   end
+
   def render("delete." <> _, %{key: key, authing_key: authing_key}) do
     render_one(key, __MODULE__, "show", authing_key: authing_key)
   end

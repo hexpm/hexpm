@@ -46,7 +46,7 @@ defmodule Hexpm.Factory do
   def repository_factory() do
     %Hexpm.Repository.Repository{
       name: Fake.sequence(:package),
-      public: false,
+      public: false
     }
   end
 

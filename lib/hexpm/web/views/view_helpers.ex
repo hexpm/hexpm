@@ -15,6 +15,7 @@ defmodule Hexpm.Web.ViewHelpers do
   def package_name("hexpm", package) do
     package
   end
+
   def package_name(repository, package) do
     repository <> " / " <> package
   end
@@ -30,6 +31,7 @@ defmodule Hexpm.Web.ViewHelpers do
   def path_for_package("hexpm", package) do
     Routes.package_path(Endpoint, :show, package, [])
   end
+
   def path_for_package(repository, package) do
     Routes.package_path(Endpoint, :show, repository, package, [])
   end
@@ -45,6 +47,7 @@ defmodule Hexpm.Web.ViewHelpers do
   def html_url_for_package(%Package{repository_id: 1} = package) do
     Routes.package_url(Endpoint, :show, package, [])
   end
+
   def html_url_for_package(%Package{} = package) do
     Routes.package_url(Endpoint, :show, package.repository, package, [])
   end
@@ -52,13 +55,22 @@ defmodule Hexpm.Web.ViewHelpers do
   def html_url_for_release(%Package{repository_id: 1} = package, release) do
     Routes.package_url(Endpoint, :show, package, to_string(release.version), [])
   end
+
   def html_url_for_release(%Package{} = package, release) do
-    Routes.package_url(Endpoint, :show, package.repository, package, to_string(release.version), [])
+    Routes.package_url(
+      Endpoint,
+      :show,
+      package.repository,
+      package,
+      to_string(release.version),
+      []
+    )
   end
 
   def url_for_package(%Package{repository_id: 1} = package) do
     Routes.api_package_url(Endpoint, :show, package, [])
   end
+
   def url_for_package(package) do
     Routes.api_package_url(Endpoint, :show, package.repository, package, [])
   end
@@ -66,17 +78,27 @@ defmodule Hexpm.Web.ViewHelpers do
   def url_for_release(%Package{repository_id: 1} = package, release) do
     Routes.api_release_url(Endpoint, :show, package, to_string(release.version), [])
   end
+
   def url_for_release(%Package{} = package, release) do
-    Routes.api_release_url(Endpoint, :show, package.repository, package, to_string(release.version), [])
+    Routes.api_release_url(
+      Endpoint,
+      :show,
+      package.repository,
+      package,
+      to_string(release.version),
+      []
+    )
   end
 
   def gravatar_url(nil, size) do
     "https://www.gravatar.com/avatar?s=#{gravatar_size(size)}&d=mm"
   end
+
   def gravatar_url(email, size) do
     hash =
       :crypto.hash(:md5, String.trim(email))
       |> Base.encode16(case: :lower)
+
     "https://www.gravatar.com/avatar/#{hash}?s=#{gravatar_size(size)}&d=retro"
   end
 
@@ -85,7 +107,7 @@ defmodule Hexpm.Web.ViewHelpers do
 
   def changeset_error(changeset) do
     if changeset.action do
-      content_tag(:div, class: "alert alert-danger") do
+      content_tag :div, class: "alert alert-danger" do
         "Oops, something went wrong! Please check the errors below."
       end
     end
@@ -144,16 +166,18 @@ defmodule Hexpm.Web.ViewHelpers do
   end
 
   def paginate(page, count, opts) do
-    per_page  = opts[:items_per_page]
-    max_links = opts[:page_links] # Needs to be odd number
+    per_page = opts[:items_per_page]
+    # Needs to be odd number
+    max_links = opts[:page_links]
 
-    all_pages    = div(count - 1, per_page) + 1
+    all_pages = div(count - 1, per_page) + 1
     middle_links = div(max_links, 2) + 1
 
     page_links =
       cond do
         page < middle_links ->
           Enum.take(1..max_links, all_pages)
+
         page > all_pages - middle_links ->
           start =
             if all_pages > middle_links + 1 do
@@ -161,14 +185,14 @@ defmodule Hexpm.Web.ViewHelpers do
             else
               1
             end
+
           Enum.to_list(start..all_pages)
+
         true ->
           Enum.to_list((page - 2)..(page + 2))
       end
 
-    %{prev: page != 1,
-      next: page != all_pages,
-      page_links: page_links}
+    %{prev: page != 1, next: page != all_pages, page_links: page_links}
   end
 
   def params(list) do
@@ -200,8 +224,10 @@ defmodule Hexpm.Web.ViewHelpers do
       length(string) > max ->
         string = Enum.drop(string, -3)
         human_number_space(string, max, count + 1)
+
       count == 0 ->
         human_number_space(:erlang.list_to_binary(string))
+
       true ->
         human_number_space(:erlang.list_to_binary(string)) <> Enum.at(@number_unit, count - 1)
     end
@@ -223,11 +249,11 @@ defmodule Hexpm.Web.ViewHelpers do
   end
 
   def human_relative_time_from_now(datetime) do
-    ts = NaiveDateTime.to_erl(datetime) |> :calendar.datetime_to_gregorian_seconds
-    diff = :calendar.datetime_to_gregorian_seconds(:calendar.universal_time) - ts
+    ts = NaiveDateTime.to_erl(datetime) |> :calendar.datetime_to_gregorian_seconds()
+    diff = :calendar.datetime_to_gregorian_seconds(:calendar.universal_time()) - ts
     rel = rel_from_now(:calendar.seconds_to_daystime(diff))
 
-    content_tag :span, rel, title: pretty_datetime(datetime)
+    content_tag(:span, rel, title: pretty_datetime(datetime))
   end
 
   defp rel_from_now({0, {0, 0, sec}}) when sec < 30, do: "about now"
@@ -243,22 +269,22 @@ defmodule Hexpm.Web.ViewHelpers do
     "#{pretty_month(month)} #{day}, #{year}"
   end
 
-  defp pretty_month(1),  do: "January"
-  defp pretty_month(2),  do: "February"
-  defp pretty_month(3),  do: "March"
-  defp pretty_month(4),  do: "April"
-  defp pretty_month(5),  do: "May"
-  defp pretty_month(6),  do: "June"
-  defp pretty_month(7),  do: "July"
-  defp pretty_month(8),  do: "August"
-  defp pretty_month(9),  do: "September"
+  defp pretty_month(1), do: "January"
+  defp pretty_month(2), do: "February"
+  defp pretty_month(3), do: "March"
+  defp pretty_month(4), do: "April"
+  defp pretty_month(5), do: "May"
+  defp pretty_month(6), do: "June"
+  defp pretty_month(7), do: "July"
+  defp pretty_month(8), do: "August"
+  defp pretty_month(9), do: "September"
   defp pretty_month(10), do: "October"
   defp pretty_month(11), do: "November"
   defp pretty_month(12), do: "December"
 
-  def if_value(arg, nil, _fun),   do: arg
+  def if_value(arg, nil, _fun), do: arg
   def if_value(arg, false, _fun), do: arg
-  def if_value(arg, _true, fun),  do: fun.(arg)
+  def if_value(arg, _true, fun), do: fun.(arg)
 
   def safe_join(enum, separator, fun \\ & &1) do
     Enum.map_join(enum, separator, &safe_to_string(fun.(&1)))
@@ -270,12 +296,15 @@ defmodule Hexpm.Web.ViewHelpers do
   def include_if_loaded(output, _key, %Ecto.Association.NotLoaded{}, _view, _name, _assigns) do
     output
   end
+
   def include_if_loaded(output, key, structs, fun, _name, _assigns) when is_function(fun, 1) do
     Map.put(output, key, fun.(structs))
   end
+
   def include_if_loaded(output, key, structs, view, name, assigns) when is_list(structs) do
     Map.put(output, key, Phoenix.View.render_many(structs, view, name, assigns))
   end
+
   def include_if_loaded(output, key, struct, view, name, assigns) do
     Map.put(output, key, Phoenix.View.render_one(struct, view, name, assigns))
   end

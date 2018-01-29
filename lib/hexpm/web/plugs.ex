@@ -1,6 +1,8 @@
 defmodule Hexpm.Web.Plugs do
   import Plug.Conn, except: [read_body: 1]
 
+  alias Hexpm.Web.ControllerHelpers
+
   # Max filesize: ~10mb
   # Min upload speed: ~10kb/s
   # Read 100kb every 10s
@@ -13,7 +15,7 @@ defmodule Hexpm.Web.Plugs do
   def validate_url(conn, _opts) do
     if String.contains?(conn.request_path <> conn.query_string, "%00") do
       conn
-      |> Hexpm.Web.ControllerHelpers.render_error(400)
+      |> ControllerHelpers.render_error(400)
       |> halt()
     else
       conn
@@ -45,10 +47,13 @@ defmodule Hexpm.Web.Plugs do
     case read_body(conn, @read_body_opts) do
       {:ok, body, conn} ->
         {conn, body}
+
       {:error, :timeout} ->
         raise Plug.TimeoutError
+
       {:error, _} ->
         raise Plug.BadRequestError
+
       {:more, _, _} ->
         raise Plug.Parsers.RequestTooLargeError
     end
@@ -58,9 +63,10 @@ defmodule Hexpm.Web.Plugs do
     case get_req_header(conn, "user-agent") do
       [value | _] ->
         assign(conn, :user_agent, value)
+
       [] ->
         if Application.get_env(:hexpm, :user_agent_req) do
-          Hexpm.Web.ControllerHelpers.render_error(conn, 400, message: "User-Agent header is requried")
+          ControllerHelpers.render_error(conn, 400, message: "User-Agent header is requried")
         else
           assign(conn, :user_agent, "missing")
         end
@@ -77,8 +83,10 @@ defmodule Hexpm.Web.Plugs do
     case conn.path_info do
       ["api", "packages" | _] when not param_set? ->
         put_in(conn.params["repository"], "hexpm")
+
       ["packages" | _] when not param_set? ->
         put_in(conn.params["repository"], "hexpm")
+
       _ ->
         conn
     end
@@ -102,6 +110,7 @@ defmodule Hexpm.Web.Plugs do
         ["Basic " <> credentials | _] ->
           possible = String.split(possible, ",")
           basic_auth(conn, credentials, possible)
+
         _ ->
           auth_error(conn)
       end
@@ -133,6 +142,7 @@ defmodule Hexpm.Web.Plugs do
 
   defp basic_auth(conn, credentials, possible) do
     credentials = Base.decode64!(credentials)
+
     if credentials in possible do
       update_auth_header(conn)
     else
@@ -152,7 +162,7 @@ defmodule Hexpm.Web.Plugs do
   defp auth_error(conn) do
     conn
     |> put_resp_header("www-authenticate", "Basic realm=hex")
-    |> Hexpm.Web.ControllerHelpers.render_error(401)
+    |> ControllerHelpers.render_error(401)
     |> halt()
   end
 end

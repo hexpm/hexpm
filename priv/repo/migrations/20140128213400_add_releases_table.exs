@@ -1,8 +1,8 @@
 defmodule Hexpm.Repo.Migrations.AddReleasesTable do
   use Ecto.Migration
 
-  def up do
-    execute """
+  def up() do
+    execute("""
       CREATE TABLE releases (
         id serial PRIMARY KEY,
         package_id integer REFERENCES packages,
@@ -10,12 +10,12 @@ defmodule Hexpm.Repo.Migrations.AddReleasesTable do
         created_at timestamp,
         updated_at timestamp,
         UNIQUE (package_id, version))
-    """
+    """)
 
-    execute "CREATE INDEX ON releases (package_id)"
+    execute("CREATE INDEX ON releases (package_id)")
   end
 
-  def down do
-    execute "DROP TABLE IF EXISTS releases"
+  def down() do
+    execute("DROP TABLE IF EXISTS releases")
   end
 end

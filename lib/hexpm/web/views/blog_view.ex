@@ -2,19 +2,24 @@ defmodule Hexpm.Web.BlogView do
   use Hexpm.Web, :view
 
   def render("index.html", _assigns) do
-    posts = Enum.flat_map(all_templates(), fn
-      "index.html" ->
-        []
-      name ->
-        content = render(name, %{})
-        content = Phoenix.HTML.safe_to_string(content)
-        [%{
-          slug: Path.rootname(name),
-          title: title(content),
-          subtitle: subtitle(content),
-          paragraph: first_paragraph(content),
-        }]
-    end)
+    posts =
+      Enum.flat_map(all_templates(), fn
+        "index.html" ->
+          []
+
+        name ->
+          content = render(name, %{})
+          content = Phoenix.HTML.safe_to_string(content)
+
+          [
+            %{
+              slug: Path.rootname(name),
+              title: title(content),
+              subtitle: subtitle(content),
+              paragraph: first_paragraph(content)
+            }
+          ]
+      end)
 
     render_template("index.html", posts: posts)
   end

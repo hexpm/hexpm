@@ -1,24 +1,24 @@
 defmodule Hexpm.MixProject do
   use Mix.Project
 
-  def project do
+  def project() do
     [
       app: :hexpm,
       version: "0.0.1",
-      elixir: "~> 1.4",
-      elixirc_paths: elixirc_paths(Mix.env),
+      elixir: "~> 1.6",
+      elixirc_paths: elixirc_paths(Mix.env()),
       gpb_options: gpb_options(),
       xref: xref(),
-      compilers: [:phoenix, :gpb] ++ Mix.compilers,
-      build_embedded: Mix.env == :prod,
-      start_permanent: Mix.env == :prod,
+      compilers: [:phoenix, :gpb] ++ Mix.compilers(),
+      build_embedded: Mix.env() == :prod,
+      start_permanent: Mix.env() == :prod,
       aliases: aliases(),
       deps: deps(),
       test_coverage: [tool: ExCoveralls]
     ]
   end
 
-  def application do
+  def application() do
     [
       mod: {Hexpm.Application, []},
       extra_applications: [:logger]
@@ -29,7 +29,7 @@ defmodule Hexpm.MixProject do
   defp elixirc_paths(:dev), do: ["lib", "test/support/fake.ex", "test/support/factory.ex"]
   defp elixirc_paths(_), do: ["lib"]
 
-  defp gpb_options do
+  defp gpb_options() do
     [
       verify: :always,
       strings_as_binaries: true,
@@ -40,11 +40,11 @@ defmodule Hexpm.MixProject do
     ]
   end
 
-  defp xref do
+  defp xref() do
     [exclude: [Hex.Registry, Hex.Resolver]]
   end
 
-  defp deps do
+  defp deps() do
     [
       {:phoenix, "~> 1.3"},
       {:phoenix_ecto, "~> 3.1"},
@@ -72,12 +72,12 @@ defmodule Hexpm.MixProject do
     ]
   end
 
-  defp aliases do
+  defp aliases() do
     [
       "compile.gpb": &compile_gpb/1,
       "ecto.setup": ["ecto.drop", "ecto.create", "ecto.migrate", "run priv/repo/seeds.exs"],
       "ecto.reset": ["ecto.drop", "ecto.create", "ecto.migrate"],
-      "test": ["ecto.migrate", "test"]
+      test: ["ecto.migrate", "test"]
     ]
   end
 
@@ -91,13 +91,13 @@ defmodule Hexpm.MixProject do
     mappings = Enum.zip(proto_paths, Stream.repeatedly(fn -> erlc_path end))
     options = project[:gpb_options] || []
     options = options ++ [o: erlc_path]
-    manifest = Path.join(Mix.Project.manifest_path, ".compile.gpb")
+    manifest = Path.join(Mix.Project.manifest_path(), ".compile.gpb")
 
     Erlang.compile(manifest, mappings, :proto, :erl, opts, fn input, output ->
       Erlang.ensure_application!(:gpb, input)
 
       file = Path.basename(input)
-      import_path = input |> Path.relative_to_cwd |> Path.dirname
+      import_path = input |> Path.relative_to_cwd() |> Path.dirname()
       options = options ++ [i: import_path]
 
       case :gpb_compile.file(Erlang.to_erl_file(file), options) do

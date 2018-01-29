@@ -47,6 +47,7 @@ defmodule Hexpm.ConnCase do
 
   def last_session() do
     import Ecto.Query
+
     from(s in Hexpm.Accounts.Session, order_by: [desc: s.id], limit: 1)
     |> Hexpm.Repo.one()
   end

@@ -3,6 +3,7 @@ defmodule Hexpm.Web.EmailController do
 
   def verify(conn, %{"username" => username, "email" => email, "key" => key}) do
     success = Users.verify_email(username, email, key) == :ok
+
     conn =
       if success do
         put_flash(conn, :info, "Your email #{email} has been verified.")

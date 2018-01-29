@@ -13,21 +13,24 @@ defmodule Hexpm.Web.DashboardControllerTest do
     %{
       user: create_user("eric", "eric@mail.com", "hunter42"),
       password: "hunter42",
-      repository: insert(:repository),
+      repository: insert(:repository)
     }
   end
 
   test "show index page", context do
-    conn = build_conn()
-           |> test_login(context.user)
-           |> get("dashboard")
+    conn =
+      build_conn()
+      |> test_login(context.user)
+      |> get("dashboard")
+
     assert redirected_to(conn) == "/dashboard/profile"
   end
 
   test "show profile", c do
-    conn = build_conn()
-           |> test_login(c.user)
-           |> get("dashboard/profile")
+    conn =
+      build_conn()
+      |> test_login(c.user)
+      |> get("dashboard/profile")
 
     assert response(conn, 200) =~ "Public profile"
   end
@@ -38,9 +41,10 @@ defmodule Hexpm.Web.DashboardControllerTest do
   end
 
   test "update profile", c do
-    conn = build_conn()
-           |> test_login(c.user)
-           |> post("dashboard/profile", %{user: %{full_name: "New Name"}})
+    conn =
+      build_conn()
+      |> test_login(c.user)
+      |> post("dashboard/profile", %{user: %{full_name: "New Name"}})
 
     assert redirected_to(conn) == "/dashboard/profile"
     assert get_flash(conn, :info) =~ "Profile updated successfully"
@@ -50,10 +54,12 @@ defmodule Hexpm.Web.DashboardControllerTest do
   test "update profile change public email", c do
     user = add_email(c.user, "new@mail.com")
     email = Enum.find(user.emails, &(&1.email == "new@mail.com"))
-    Ecto.Changeset.change(email, %{verified: true}) |> Hexpm.Repo.update!
-    conn = build_conn()
-           |> test_login(c.user)
-           |> post("dashboard/profile", %{user: %{public_email: "new@mail.com"}})
+    Ecto.Changeset.change(email, %{verified: true}) |> Hexpm.Repo.update!()
+
+    conn =
+      build_conn()
+      |> test_login(c.user)
+      |> post("dashboard/profile", %{user: %{public_email: "new@mail.com"}})
 
     assert redirected_to(conn) == "/dashboard/profile"
     assert get_flash(conn, :info) =~ "Profile updated successfully"
@@ -66,7 +72,8 @@ defmodule Hexpm.Web.DashboardControllerTest do
   test "update profile change gravatar email", c do
     user = add_email(c.user, "gravatar@mail.com")
     email = Enum.find(user.emails, &(&1.email == "gravatar@mail.com"))
-    Ecto.Changeset.change(email, %{verified: true}) |> Hexpm.Repo.update!
+    Ecto.Changeset.change(email, %{verified: true}) |> Hexpm.Repo.update!()
+
     conn =
       build_conn()
       |> test_login(c.user)
@@ -81,9 +88,10 @@ defmodule Hexpm.Web.DashboardControllerTest do
   end
 
   test "update profile don't show public email", c do
-    conn = build_conn()
-           |> test_login(c.user)
-           |> post("dashboard/profile", %{user: %{public_email: "none"}})
+    conn =
+      build_conn()
+      |> test_login(c.user)
+      |> post("dashboard/profile", %{user: %{public_email: "none"}})
 
     assert redirected_to(conn) == "/dashboard/profile"
     assert get_flash(conn, :info) =~ "Profile updated successfully"
@@ -93,48 +101,63 @@ defmodule Hexpm.Web.DashboardControllerTest do
   test "update profile with no emails", c do
     Hexpm.Repo.delete_all(Hexpm.Accounts.Email)
 
-    conn = build_conn()
-           |> test_login(c.user)
-           |> post("dashboard/profile", %{user: %{public_email: "none"}})
+    conn =
+      build_conn()
+      |> test_login(c.user)
+      |> post("dashboard/profile", %{user: %{public_email: "none"}})
 
     assert redirected_to(conn) == "/dashboard/profile"
     assert get_flash(conn, :info) =~ "Profile updated successfully"
   end
 
   test "show password", c do
-    conn = build_conn()
-           |> test_login(c.user)
-           |> get("dashboard/password")
+    conn =
+      build_conn()
+      |> test_login(c.user)
+      |> get("dashboard/password")
 
     assert response(conn, 200) =~ "Change password"
   end
 
   test "update password", c do
-    conn = build_conn()
-           |> test_login(c.user)
-           |> post("dashboard/password", %{user: %{password_current: c.password, password: "newpass", password_confirmation: "newpass"}})
+    conn =
+      build_conn()
+      |> test_login(c.user)
+      |> post("dashboard/password", %{
+        user: %{
+          password_current: c.password,
+          password: "newpass",
+          password_confirmation: "newpass"
+        }
+      })
 
     assert redirected_to(conn) == "/dashboard/password"
     assert get_flash(conn, :info) =~ "Your password has been updated"
     assert {:ok, _} = Auth.password_auth(c.user.username, "newpass")
     assert :error = Auth.password_auth(c.user.username, c.password)
 
-    assert_delivered_email Hexpm.Emails.password_changed(c.user)
+    assert_delivered_email(Hexpm.Emails.password_changed(c.user))
   end
 
   test "update password invalid current password", c do
-    conn = build_conn()
-           |> test_login(c.user)
-           |> post("dashboard/password", %{user: %{password_current: "WRONG", password: "newpass", password_confirmation: "newpass"}})
+    conn =
+      build_conn()
+      |> test_login(c.user)
+      |> post("dashboard/password", %{
+        user: %{password_current: "WRONG", password: "newpass", password_confirmation: "newpass"}
+      })
 
     assert response(conn, 400) =~ "Change password"
     assert {:ok, _} = Auth.password_auth(c.user.username, c.password)
   end
 
   test "update password invalid confirmation password", c do
-    conn = build_conn()
-           |> test_login(c.user)
-           |> post("dashboard/password", %{user: %{password_current: c.password, password: "newpass", password_confirmation: "WRONG"}})
+    conn =
+      build_conn()
+      |> test_login(c.user)
+      |> post("dashboard/password", %{
+        user: %{password_current: c.password, password: "newpass", password_confirmation: "WRONG"}
+      })
 
     assert response(conn, 400) =~ "Change password"
     assert {:ok, _} = Auth.password_auth(c.user.username, c.password)
@@ -142,9 +165,12 @@ defmodule Hexpm.Web.DashboardControllerTest do
   end
 
   test "update password missing current password", c do
-    conn = build_conn()
-           |> test_login(c.user)
-           |> post("dashboard/password", %{user: %{password: "newpass", password_confirmation: "newpass"}})
+    conn =
+      build_conn()
+      |> test_login(c.user)
+      |> post("dashboard/password", %{
+        user: %{password: "newpass", password_confirmation: "newpass"}
+      })
 
     assert response(conn, 400) =~ "Change password"
     assert {:ok, _} = Auth.password_auth(c.user.username, c.password)
@@ -152,9 +178,10 @@ defmodule Hexpm.Web.DashboardControllerTest do
   end
 
   test "add email", c do
-    conn = build_conn()
-           |> test_login(c.user)
-           |> post("dashboard/email", %{email: %{email: "new@mail.com"}})
+    conn =
+      build_conn()
+      |> test_login(c.user)
+      |> post("dashboard/email", %{email: %{email: "new@mail.com"}})
 
     assert redirected_to(conn) == "/dashboard/email"
     assert get_flash(conn, :info) =~ "A verification email has been sent"
@@ -168,9 +195,10 @@ defmodule Hexpm.Web.DashboardControllerTest do
   test "cannot add existing email", c do
     email = hd(c.user.emails).email
 
-    conn = build_conn()
-           |> test_login(c.user)
-           |> post("dashboard/email", %{email: %{email: email}})
+    conn =
+      build_conn()
+      |> test_login(c.user)
+      |> post("dashboard/email", %{email: %{email: email}})
 
     response(conn, 400)
     assert conn.resp_body =~ "Add email"
@@ -178,31 +206,46 @@ defmodule Hexpm.Web.DashboardControllerTest do
   end
 
   test "can add existing email which is not verified", c do
-    u2 = %{user: create_user("techgaun", "techgaun@example.com", "hunter24", false), password: "hunter24"}
+    u2 = %{
+      user: create_user("techgaun", "techgaun@example.com", "hunter24", false),
+      password: "hunter24"
+    }
+
     email = hd(u2.user.emails).email
 
-    conn = build_conn()
-           |> test_login(c.user)
-           |> post("dashboard/email", %{email: %{email: email}})
+    conn =
+      build_conn()
+      |> test_login(c.user)
+      |> post("dashboard/email", %{email: %{email: email}})
 
     assert redirected_to(conn) == "/dashboard/email"
     assert get_flash(conn, :info) =~ "A verification email has been sent"
   end
 
   test "verified email logs appropriate user correctly", c do
-    u2 = %{user: create_user("techgaun", "techgaun@example.com", "hunter24", false), password: "hunter24"}
+    u2 = %{
+      user: create_user("techgaun", "techgaun@example.com", "hunter24", false),
+      password: "hunter24"
+    }
+
     user = add_email(c.user, hd(u2.user.emails).email)
     [dup_email] = tl(user.emails)
 
-    conn = build_conn()
-      |> get("email/verify", %{username: c.user.username, email: dup_email.email, key: dup_email.verification_key})
+    conn =
+      build_conn()
+      |> get("email/verify", %{
+        username: c.user.username,
+        email: dup_email.email,
+        key: dup_email.verification_key
+      })
 
     assert redirected_to(conn) == "/"
     assert get_flash(conn, :info) =~ "has been verified"
 
-    conn = build_conn()
-           |> test_login(c.user)
-           |> post("dashboard/email/primary", %{email: dup_email.email})
+    conn =
+      build_conn()
+      |> test_login(c.user)
+      |> post("dashboard/email/primary", %{email: dup_email.email})
 
     assert redirected_to(conn) == "/dashboard/email"
     assert get_flash(conn, :info) =~ "primary email was changed"
@@ -211,8 +254,13 @@ defmodule Hexpm.Web.DashboardControllerTest do
     assert redirected_to(conn) == "/users/#{c.user.username}"
     assert get_session(conn, "user_id") == c.user.id
 
-    conn = build_conn()
-           |> get("email/verify", %{username: u2.user.username, email: dup_email.email, key: hd(u2.user.emails).verification_key})
+    conn =
+      build_conn()
+      |> get("email/verify", %{
+        username: u2.user.username,
+        email: dup_email.email,
+        key: hd(u2.user.emails).verification_key
+      })
 
     assert redirected_to(conn) == "/"
     assert get_flash(conn, :error) =~ "failed to verify."
@@ -221,9 +269,10 @@ defmodule Hexpm.Web.DashboardControllerTest do
   test "remove email", c do
     add_email(c.user, "new@mail.com")
 
-    conn = build_conn()
-           |> test_login(c.user)
-           |> delete("dashboard/email", %{email: "new@mail.com"})
+    conn =
+      build_conn()
+      |> test_login(c.user)
+      |> delete("dashboard/email", %{email: "new@mail.com"})
 
     assert redirected_to(conn) == "/dashboard/email"
     assert get_flash(conn, :info) =~ "Removed email"
@@ -232,9 +281,10 @@ defmodule Hexpm.Web.DashboardControllerTest do
   end
 
   test "cannot remove primary email", c do
-    conn = build_conn()
-           |> test_login(c.user)
-           |> delete("dashboard/email", %{email: "eric@mail.com"})
+    conn =
+      build_conn()
+      |> test_login(c.user)
+      |> delete("dashboard/email", %{email: "eric@mail.com"})
 
     assert redirected_to(conn) == "/dashboard/email"
     assert get_flash(conn, :error) =~ "Cannot remove primary email"
@@ -245,11 +295,12 @@ defmodule Hexpm.Web.DashboardControllerTest do
   test "make email primary", c do
     user = add_email(c.user, "new@mail.com")
     email = Enum.find(user.emails, &(&1.email == "new@mail.com"))
-    Ecto.Changeset.change(email, %{verified: true}) |> Hexpm.Repo.update!
+    Ecto.Changeset.change(email, %{verified: true}) |> Hexpm.Repo.update!()
 
-    conn = build_conn()
-           |> test_login(c.user)
-           |> post("dashboard/email/primary", %{email: "new@mail.com"})
+    conn =
+      build_conn()
+      |> test_login(c.user)
+      |> post("dashboard/email/primary", %{email: "new@mail.com"})
 
     assert redirected_to(conn) == "/dashboard/email"
     assert get_flash(conn, :info) =~ "primary email was changed"
@@ -262,9 +313,10 @@ defmodule Hexpm.Web.DashboardControllerTest do
   test "cannot make unverified email primary", c do
     add_email(c.user, "new@mail.com")
 
-    conn = build_conn()
-           |> test_login(c.user)
-           |> post("dashboard/email/primary", %{email: "new@mail.com"})
+    conn =
+      build_conn()
+      |> test_login(c.user)
+      |> post("dashboard/email/primary", %{email: "new@mail.com"})
 
     assert redirected_to(conn) == "/dashboard/email"
     assert get_flash(conn, :error) =~ "not verified"
@@ -276,11 +328,12 @@ defmodule Hexpm.Web.DashboardControllerTest do
   test "make email public", c do
     user = add_email(c.user, "new@mail.com")
     email = Enum.find(user.emails, &(&1.email == "new@mail.com"))
-    Ecto.Changeset.change(email, %{verified: true}) |> Hexpm.Repo.update!
+    Ecto.Changeset.change(email, %{verified: true}) |> Hexpm.Repo.update!()
 
-    conn = build_conn()
-           |> test_login(c.user)
-           |> post("dashboard/email/public", %{email: "new@mail.com"})
+    conn =
+      build_conn()
+      |> test_login(c.user)
+      |> post("dashboard/email/public", %{email: "new@mail.com"})
 
     assert redirected_to(conn) == "/dashboard/email"
     assert get_flash(conn, :info) =~ "public email was changed"
@@ -293,7 +346,7 @@ defmodule Hexpm.Web.DashboardControllerTest do
   test "set email for gravatar", c do
     user = add_email(c.user, "gravatar@mail.com")
     email = Enum.find(user.emails, &(&1.email == "gravatar@mail.com"))
-    Ecto.Changeset.change(email, %{verified: true}) |> Hexpm.Repo.update!
+    Ecto.Changeset.change(email, %{verified: true}) |> Hexpm.Repo.update!()
 
     conn =
       build_conn()
@@ -310,7 +363,8 @@ defmodule Hexpm.Web.DashboardControllerTest do
 
   test "unknown email cannot be gravatar email", c do
     email = Enum.find(c.user.emails, &(&1.email == "eric@mail.com"))
-    Hexpm.Accounts.Email.toggle_flag(email, :gravatar, true) |> Hexpm.Repo.update!
+    Hexpm.Accounts.Email.toggle_flag(email, :gravatar, true) |> Hexpm.Repo.update!()
+
     conn =
       build_conn()
       |> test_login(c.user)
@@ -342,15 +396,16 @@ defmodule Hexpm.Web.DashboardControllerTest do
   test "resend verify email", c do
     user = add_email(c.user, "new@mail.com")
 
-    conn = build_conn()
-           |> test_login(user)
-           |> post("dashboard/email/resend", %{email: "new@mail.com"})
+    conn =
+      build_conn()
+      |> test_login(user)
+      |> post("dashboard/email/resend", %{email: "new@mail.com"})
 
     assert redirected_to(conn) == "/dashboard/email"
     assert get_flash(conn, :info) =~ "verification email has been sent"
 
-    assert_delivered_email Hexpm.Emails.verification(user, List.last(user.emails))
-    assert_delivered_email Hexpm.Emails.verification(user, List.last(user.emails))
+    assert_delivered_email(Hexpm.Emails.verification(user, List.last(user.emails)))
+    assert_delivered_email(Hexpm.Emails.verification(user, List.last(user.emails)))
   end
 
   test "show repository", %{user: user, repository: repository} do
@@ -380,13 +435,16 @@ defmodule Hexpm.Web.DashboardControllerTest do
     conn =
       build_conn()
       |> test_login(user)
-      |> post("dashboard/repos/#{repository.name}", %{"action" => "add_member", "repository_user" => params})
+      |> post("dashboard/repos/#{repository.name}", %{
+        "action" => "add_member",
+        "repository_user" => params
+      })
 
     assert redirected_to(conn) == "/dashboard/repos/#{repository.name}"
     assert repo_user = Repo.get_by(assoc(repository, :repository_users), user_id: new_user.id)
     assert repo_user.role == "write"
 
-    assert_delivered_email Hexpm.Emails.repository_invite(repository, new_user)
+    assert_delivered_email(Hexpm.Emails.repository_invite(repository, new_user))
   end
 
   test "remove member from repository", %{user: user, repository: repository} do
@@ -398,7 +456,10 @@ defmodule Hexpm.Web.DashboardControllerTest do
     conn =
       build_conn()
       |> test_login(user)
-      |> post("dashboard/repos/#{repository.name}", %{"action" => "remove_member", "repository_user" => params})
+      |> post("dashboard/repos/#{repository.name}", %{
+        "action" => "remove_member",
+        "repository_user" => params
+      })
 
     assert redirected_to(conn) == "/dashboard/repos/#{repository.name}"
     refute Repo.get_by(assoc(repository, :repository_users), user_id: new_user.id)
@@ -413,7 +474,10 @@ defmodule Hexpm.Web.DashboardControllerTest do
     conn =
       build_conn()
       |> test_login(user)
-      |> post("dashboard/repos/#{repository.name}", %{"action" => "change_role", "repository_user" => params})
+      |> post("dashboard/repos/#{repository.name}", %{
+        "action" => "change_role",
+        "repository_user" => params
+      })
 
     assert redirected_to(conn) == "/dashboard/repos/#{repository.name}"
     assert repo_user = Repo.get_by(assoc(repository, :repository_users), user_id: new_user.id)

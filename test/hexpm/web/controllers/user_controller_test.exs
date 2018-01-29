@@ -11,7 +11,10 @@ defmodule Hexpm.Web.UserControllerTest do
 
     owners = [build(:package_owner, owner: user1)]
     package1 = insert(:package, name: "package1", package_owners: owners)
-    package2 = insert(:package, name: "package2", package_owners: owners, repository_id: repository1.id)
+
+    package2 =
+      insert(:package, name: "package2", package_owners: owners, repository_id: repository1.id)
+
     package3 = insert(:package, name: "package3", repository_id: repository2.id)
 
     insert(:repository_user, user: user1, repository: repository1)
@@ -30,35 +33,39 @@ defmodule Hexpm.Web.UserControllerTest do
   end
 
   test "show profile page", c do
-    conn = build_conn()
-           |> test_login(c.user1)
-           |> get("users/#{c.user1.username}")
+    conn =
+      build_conn()
+      |> test_login(c.user1)
+      |> get("users/#{c.user1.username}")
 
     assert response(conn, 200) =~ c.user1.username
   end
 
   test "show owned packages as owner", c do
-    conn = build_conn()
-           |> test_login(c.user1)
-           |> get("users/#{c.user1.username}")
+    conn =
+      build_conn()
+      |> test_login(c.user1)
+      |> get("users/#{c.user1.username}")
 
     assert response(conn, 200) =~ c.package1.name
     assert response(conn, 200) =~ c.package2.name
   end
 
   test "show owned packages as user from the same repository", c do
-    conn = build_conn()
-           |> test_login(c.user2)
-           |> get("users/#{c.user1.username}")
+    conn =
+      build_conn()
+      |> test_login(c.user2)
+      |> get("users/#{c.user1.username}")
 
     assert response(conn, 200) =~ c.package1.name
     assert response(conn, 200) =~ c.package2.name
   end
 
   test "show owned packages as other user", c do
-    conn = build_conn()
-           |> test_login(c.user3)
-           |> get("users/#{c.user1.username}")
+    conn =
+      build_conn()
+      |> test_login(c.user3)
+      |> get("users/#{c.user1.username}")
 
     assert response(conn, 200) =~ c.package1.name
     refute response(conn, 200) =~ c.package2.name

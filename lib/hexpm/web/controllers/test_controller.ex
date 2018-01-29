@@ -32,6 +32,7 @@ defmodule Hexpm.Web.TestController do
     Hexpm.Store.get(nil, :s3_bucket, "repos/#{repository}/packages/#{package}", [])
     |> send_object(conn)
   end
+
   def package(conn, %{"package" => package}) do
     Hexpm.Store.get(nil, :s3_bucket, "packages/#{package}", [])
     |> send_object(conn)
@@ -41,6 +42,7 @@ defmodule Hexpm.Web.TestController do
     Hexpm.Store.get(nil, :s3_bucket, "repos/#{repository}/tarballs/#{ball}", [])
     |> send_object(conn)
   end
+
   def tarball(conn, %{"ball" => ball}) do
     Hexpm.Store.get(nil, :s3_bucket, "tarballs/#{ball}", [])
     |> send_object(conn)
@@ -53,6 +55,7 @@ defmodule Hexpm.Web.TestController do
 
   def docs_page(conn, params) do
     path = Path.join([params["package"], params["version"], params["page"]])
+
     Hexpm.Store.get(nil, :docs_bucket, path, [])
     |> send_object(conn)
   end

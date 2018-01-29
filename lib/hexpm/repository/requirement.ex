@@ -21,7 +21,10 @@ defmodule Hexpm.Repository.Requirement do
     cast(requirement, params, ~w(repository name app requirement optional))
     |> put_assoc(:dependency, dependencies[{params["repository"] || "hexpm", params["name"]}])
     |> validate_required(~w(name app requirement optional)a)
-    |> validate_required(:dependency, message: "package does not exist in repository #{inspect package.repository.name}")
+    |> validate_required(
+      :dependency,
+      message: "package does not exist in repository #{inspect(package.repository.name)}"
+    )
     |> validate_requirement(:requirement, pre: version_pre(release_changeset) != [])
     |> validate_repository(:repository, repository: package.repository)
   end
@@ -29,11 +32,12 @@ defmodule Hexpm.Repository.Requirement do
   def build_all(release_changeset, package) do
     dependencies = preload_dependencies(release_changeset.params["requirements"])
 
-    release_changeset = cast_assoc(
-      release_changeset,
-      :requirements,
-      with: &changeset(&1, &2, dependencies, release_changeset, package)
-    )
+    release_changeset =
+      cast_assoc(
+        release_changeset,
+        :requirements,
+        with: &changeset(&1, &2, dependencies, release_changeset, package)
+      )
 
     if release_changeset.valid? do
       requirements =
@@ -49,24 +53,29 @@ defmodule Hexpm.Repository.Requirement do
   defp validate_resolver(release_changeset, requirements) do
     build_tools = get_field(release_changeset, :meta).build_tools
 
-    {time, release_changeset} = :timer.tc(fn ->
-      case Resolver.run(requirements, build_tools) do
-        :ok ->
-          release_changeset
-        {:error, reason} ->
-          release_changeset = update_in(release_changeset.changes.requirements, fn req_changesets ->
-            Enum.map(req_changesets, &add_error(&1, :requirement, reason))
-          end)
-          %{release_changeset | valid?: false}
-      end
-    end)
+    {time, release_changeset} =
+      :timer.tc(fn ->
+        case Resolver.run(requirements, build_tools) do
+          :ok ->
+            release_changeset
 
-    Logger.warn "DEPENDENCY_RESOLUTION_COMPLETED (#{div time, 1000}ms)"
+          {:error, reason} ->
+            release_changeset =
+              update_in(release_changeset.changes.requirements, fn req_changesets ->
+                Enum.map(req_changesets, &add_error(&1, :requirement, reason))
+              end)
+
+            %{release_changeset | valid?: false}
+        end
+      end)
+
+    Logger.warn("DEPENDENCY_RESOLUTION_COMPLETED (#{div(time, 1000)}ms)")
     release_changeset
   end
 
-  defp preload_dependencies(requirements)  do
+  defp preload_dependencies(requirements) do
     names = requirement_names(requirements)
+
     from(
       p in Package,
       join: r in assoc(p, :repository),
@@ -78,8 +87,10 @@ defmodule Hexpm.Repository.Requirement do
   defp filter_dependencies(_query, []) do
     %{}
   end
+
   defp filter_dependencies(query, names) do
     import Ecto.Query, only: [or_where: 3]
+
     Enum.reduce(names, query, fn {repository, package}, query ->
       or_where(query, [p, r], r.name == ^repository and p.name == ^package)
     end)
@@ -98,10 +109,12 @@ defmodule Hexpm.Repository.Requirement do
         else
           []
         end
+
       _ ->
         []
     end)
   end
+
   defp requirement_names(_requirements), do: []
 
   defp version_pre(release_changeset) do

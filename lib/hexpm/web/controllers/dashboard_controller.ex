@@ -20,6 +20,7 @@ defmodule Hexpm.Web.DashboardController do
         conn
         |> put_flash(:info, "Profile updated successfully.")
         |> redirect(to: Routes.dashboard_path(conn, :profile))
+
       {:error, changeset} ->
         conn
         |> put_status(400)
@@ -40,6 +41,7 @@ defmodule Hexpm.Web.DashboardController do
         conn
         |> put_flash(:info, "Your password has been updated.")
         |> redirect(to: Routes.dashboard_path(conn, :password))
+
       {:error, changeset} ->
         conn
         |> put_status(400)
@@ -57,9 +59,11 @@ defmodule Hexpm.Web.DashboardController do
     case Users.add_email(user, email_params, audit: audit_data(conn)) do
       {:ok, _user} ->
         email = email_params["email"]
+
         conn
         |> put_flash(:info, "A verification email has been sent to #{email}.")
         |> redirect(to: Routes.dashboard_path(conn, :email))
+
       {:error, changeset} ->
         conn
         |> put_status(400)
@@ -73,6 +77,7 @@ defmodule Hexpm.Web.DashboardController do
         conn
         |> put_flash(:info, "Removed email #{email} from your account.")
         |> redirect(to: Routes.dashboard_path(conn, :email))
+
       {:error, reason} ->
         conn
         |> put_flash(:error, email_error_message(reason, email))
@@ -86,6 +91,7 @@ defmodule Hexpm.Web.DashboardController do
         conn
         |> put_flash(:info, "Your primary email was changed to #{email}.")
         |> redirect(to: Routes.dashboard_path(conn, :email))
+
       {:error, reason} ->
         conn
         |> put_flash(:error, email_error_message(reason, email))
@@ -99,6 +105,7 @@ defmodule Hexpm.Web.DashboardController do
         conn
         |> put_flash(:info, "Your public email was changed to #{email}.")
         |> redirect(to: Routes.dashboard_path(conn, :email))
+
       {:error, reason} ->
         conn
         |> put_flash(:error, email_error_message(reason, email))
@@ -112,6 +119,7 @@ defmodule Hexpm.Web.DashboardController do
         conn
         |> put_flash(:info, "Your gravatar email was changed to #{email}.")
         |> redirect(to: Routes.dashboard_path(conn, :email))
+
       {:error, reason} ->
         conn
         |> put_flash(:error, email_error_message(reason, email))
@@ -125,6 +133,7 @@ defmodule Hexpm.Web.DashboardController do
         conn
         |> put_flash(:info, "A verification email has been sent to #{email}.")
         |> redirect(to: Routes.dashboard_path(conn, :email))
+
       {:error, reason} ->
         conn
         |> put_flash(:error, email_error_message(reason, email))
@@ -138,19 +147,26 @@ defmodule Hexpm.Web.DashboardController do
     end)
   end
 
-  def update_repository(conn, %{"dashboard_repo" => repository, "action" => "add_member", "repository_user" => params}) do
+  def update_repository(conn, %{
+        "dashboard_repo" => repository,
+        "action" => "add_member",
+        "repository_user" => params
+      }) do
     username = params["username"]
+
     access_repository(conn, repository, "admin", fn repository ->
       case Repositories.add_member(repository, username, params) do
         {:ok, _} ->
           conn
           |> put_flash(:info, "User #{username} has been added to the organization.")
           |> redirect(to: Routes.dashboard_path(conn, :repository, repository))
+
         {:error, :unknown_user} ->
           conn
           |> put_status(400)
           |> put_flash(:error, "Unknown user #{username}.")
           |> render_repository(repository)
+
         {:error, changeset} ->
           conn
           |> put_status(400)
@@ -159,15 +175,21 @@ defmodule Hexpm.Web.DashboardController do
     end)
   end
 
-  def update_repository(conn, %{"dashboard_repo" => repository, "action" => "remove_member", "repository_user" => params}) do
+  def update_repository(conn, %{
+        "dashboard_repo" => repository,
+        "action" => "remove_member",
+        "repository_user" => params
+      }) do
     # TODO: Also remove all package ownerships on repository for removed member
     username = params["username"]
+
     access_repository(conn, repository, "admin", fn repository ->
       case Repositories.remove_member(repository, username) do
         :ok ->
           conn
           |> put_flash(:info, "User #{username} has been removed from the repository.")
           |> redirect(to: Routes.dashboard_path(conn, :repository, repository))
+
         {:error, reason} ->
           conn
           |> put_status(400)
@@ -177,24 +199,32 @@ defmodule Hexpm.Web.DashboardController do
     end)
   end
 
-  def update_repository(conn, %{"dashboard_repo" => repository, "action" => "change_role", "repository_user" => params}) do
+  def update_repository(conn, %{
+        "dashboard_repo" => repository,
+        "action" => "change_role",
+        "repository_user" => params
+      }) do
     username = params["username"]
+
     access_repository(conn, repository, "admin", fn repository ->
       case Repositories.change_role(repository, username, params) do
         {:ok, _} ->
           conn
           |> put_flash(:info, "User #{username}'s role has been changed to #{params["role"]}.")
           |> redirect(to: Routes.dashboard_path(conn, :repository, repository))
+
         {:error, :unknown_user} ->
           conn
           |> put_status(400)
           |> put_flash(:error, "Unknown user #{username}.")
           |> render_repository(repository)
+
         {:error, :last_admin} ->
           conn
           |> put_status(400)
           |> put_flash(:error, "Cannot demote last admin member.")
           |> render_repository(repository)
+
         {:error, changeset} ->
           conn
           |> put_status(400)
@@ -204,60 +234,78 @@ defmodule Hexpm.Web.DashboardController do
   end
 
   def repository_signup(conn, _params) do
-    render conn, "repository_signup.html", [
+    render(
+      conn,
+      "repository_signup.html",
       title: "Dashboard - Repository sign up",
-      container: "container page dashboard",
-    ]
+      container: "container page dashboard"
+    )
   end
 
-  def new_repository_signup(conn, %{"name" => name, "members" => members, "opensource" => opensource}) do
+  def new_repository_signup(conn, %{
+        "name" => name,
+        "members" => members,
+        "opensource" => opensource
+      }) do
     Emails.repository_signup(conn.assigns.current_user, name, members, opensource)
     |> Mailer.deliver_now_throttled()
 
     conn
-    |> put_flash(:info, "You have requested access to the organization beta. We will get back to you shortly.")
+    |> put_flash(
+      :info,
+      "You have requested access to the organization beta. We will get back to you shortly."
+    )
     |> redirect(to: Routes.dashboard_path(conn, :repository_signup))
   end
 
   defp render_profile(conn, changeset) do
-    render conn, "profile.html", [
+    render(
+      conn,
+      "profile.html",
       title: "Dashboard - Public profile",
       container: "container page dashboard",
       changeset: changeset
-    ]
+    )
   end
 
   defp render_password(conn, changeset) do
-    render conn, "password.html", [
+    render(
+      conn,
+      "password.html",
       title: "Dashboard - Change password",
       container: "container page dashboard",
       changeset: changeset
-    ]
+    )
   end
 
   defp render_email(conn, user, add_email_changeset \\ add_email_changeset()) do
     emails = Email.order_emails(user.emails)
 
-    render conn, "email.html", [
+    render(
+      conn,
+      "email.html",
       title: "Dashboard - Email",
       container: "container page dashboard",
       add_email_changeset: add_email_changeset,
       emails: emails
-    ]
+    )
   end
 
   defp render_repository(conn, repository, opts \\ []) do
-    render conn, "repository.html", [
+    render(
+      conn,
+      "repository.html",
       title: "Dashboard - Repository",
       container: "container page dashboard",
       repository: repository,
-      add_member_changeset: opts[:add_member_changeset] || add_member_changeset(),
-    ]
+      add_member_changeset: opts[:add_member_changeset] || add_member_changeset()
+    )
   end
 
   defp access_repository(conn, repository, role, fun) do
     user = conn.assigns.current_user
     repository = Repositories.get(repository, [:packages, :repository_users, users: :emails])
+
     if repository do
       if repo_user = Enum.find(repository.repository_users, &(&1.user_id == user.id)) do
         if repo_user.role in Repository.role_or_higher(role) do
@@ -290,5 +338,7 @@ defmodule Hexpm.Web.DashboardController do
   defp email_error_message(:primary, email), do: "Cannot remove primary email #{email}."
 
   defp remove_member_error_message(:unknown_user, username), do: "Unknown user #{username}."
-  defp remove_member_error_message(:last_member, _username), do: "Cannot remove last member from organization."
+
+  defp remove_member_error_message(:last_member, _username),
+    do: "Cannot remove last member from organization."
 end

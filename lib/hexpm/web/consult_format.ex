@@ -8,6 +8,7 @@ defmodule Hexpm.Web.ConsultFormat do
 
   def decode(string) when is_binary(string) do
     string = String.to_charlist(string)
+
     case :safe_erl_term.string(string) do
       {:ok, tokens, _line} ->
         try do
@@ -17,12 +18,13 @@ defmodule Hexpm.Web.ConsultFormat do
         rescue
           FunctionClauseError ->
             {:error, "invalid terms"}
+
           ArgumentError ->
             {:error, "not in key-value format"}
         end
 
       {:error, reason} ->
-        {:error, inspect reason}
+        {:error, inspect(reason)}
     end
   end
 end

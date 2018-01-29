@@ -45,13 +45,19 @@ defmodule Hexpm.Accounts.AuditLogTest do
 
   describe "audit/4" do
     test "with params", %{user: user, package: package, release: release} do
-      multi = AuditLog.audit(Ecto.Multi.new(), {user, "user_agent"}, "docs.publish", {package, release})
+      multi =
+        AuditLog.audit(Ecto.Multi.new(), {user, "user_agent"}, "docs.publish", {package, release})
+
       assert {:insert, changeset, []} = Ecto.Multi.to_list(multi)[:"log.docs.publish"]
       assert changeset.valid?
     end
 
     test "with fun", %{user: user} do
-      multi = AuditLog.audit(Ecto.Multi.new(), {user, "user_agent"}, "key.generate", fn %{} -> build(:key) end)
+      multi =
+        AuditLog.audit(Ecto.Multi.new(), {user, "user_agent"}, "key.generate", fn %{} ->
+          build(:key)
+        end)
+
       assert {:merge, merge} = Ecto.Multi.to_list(multi)[:merge]
       multi = merge.(multi)
       assert {:insert, changeset, []} = Ecto.Multi.to_list(multi)[:"log.key.generate"]
@@ -61,7 +67,9 @@ defmodule Hexpm.Accounts.AuditLogTest do
 
   describe "audit_with_user/4" do
     test "action user.create", %{user: user} do
-      multi = AuditLog.audit_with_user(Ecto.Multi.new(), {nil, "user_agent"}, "user.create", fn %{user: user} -> user end)
+      fun = fn %{user: user} -> user end
+      multi = AuditLog.audit_with_user(Ecto.Multi.new(), {nil, "user_agent"}, "user.create", fun)
+
       assert {:merge, merge} = Ecto.Multi.to_list(multi)[:merge]
       multi = merge.(%{user: user})
       assert {:insert, changeset, []} = Ecto.Multi.to_list(multi)[:"log.user.create"]
@@ -73,7 +81,9 @@ defmodule Hexpm.Accounts.AuditLogTest do
     test "action key.remove", %{user: user} do
       keys = build_list(2, :key)
       multi = AuditLog.audit_many(Ecto.Multi.new(), {user, "user_agent"}, "key.remove", keys)
-      assert {:insert_all, AuditLog, [params1, params2], []} = Ecto.Multi.to_list(multi)[:"log.key.remove"]
+
+      assert {:insert_all, AuditLog, [params1, params2], []} =
+               Ecto.Multi.to_list(multi)[:"log.key.remove"]
 
       assert params1.action == "key.remove"
       assert params1.actor_id == user.id

@@ -10,7 +10,9 @@ defmodule Hexpm.Accounts.AuthTest do
 
   describe "password_auth/2" do
     test "authorizes correct password", %{user: user, password: password} do
-      assert {:ok, {auth_user, nil, email, :password}} = Auth.password_auth(user.username, password)
+      assert {:ok, {auth_user, nil, email, :password}} =
+               Auth.password_auth(user.username, password)
+
       assert auth_user.id == user.id
       assert email.id == hd(user.emails).id
     end

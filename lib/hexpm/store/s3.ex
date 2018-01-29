@@ -41,6 +41,7 @@ defmodule Hexpm.Store.S3 do
   defp bucket(atom) when is_atom(atom) do
     Application.get_env(:hexpm, atom)
   end
+
   defp bucket(binary) when is_binary(binary) do
     binary
   end
@@ -48,6 +49,7 @@ defmodule Hexpm.Store.S3 do
   defp region(nil) do
     "us-east-1"
   end
+
   defp region(binary) when is_binary(binary) do
     binary
   end

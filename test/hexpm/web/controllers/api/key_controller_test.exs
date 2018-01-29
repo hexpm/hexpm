@@ -14,6 +14,7 @@ defmodule Hexpm.Web.API.KeyControllerTest do
 
   test "create api key", c do
     body = %{name: "macbook"}
+
     conn =
       build_conn()
       |> put_req_header("content-type", "application/json")
@@ -31,18 +32,20 @@ defmodule Hexpm.Web.API.KeyControllerTest do
   end
 
   test "create api key requires password authentication", c do
-    key = Key.build(c.eric, %{name: "computer"}) |> Hexpm.Repo.insert!
+    key = Key.build(c.eric, %{name: "computer"}) |> Hexpm.Repo.insert!()
 
     body = %{name: "macbook"}
+
     build_conn()
     |> put_req_header("content-type", "application/json")
-           |> put_req_header("authorization", key.user_secret)
+    |> put_req_header("authorization", key.user_secret)
     |> post("api/keys", Poison.encode!(body))
     |> json_response(401)
   end
 
   test "create repo key", c do
     body = %{name: "macbook", permissions: [%{domain: "repository", resource: c.repo.name}]}
+
     build_conn()
     |> put_req_header("content-type", "application/json")
     |> put_req_header("authorization", "Basic " <> Base.encode64("eric:ericeric"))
@@ -55,9 +58,10 @@ defmodule Hexpm.Web.API.KeyControllerTest do
   end
 
   test "create repo key with api key", c do
-    key = Key.build(c.eric, %{name: "computer"}) |> Hexpm.Repo.insert!
+    key = Key.build(c.eric, %{name: "computer"}) |> Hexpm.Repo.insert!()
 
     body = %{name: "macbook", permissions: [%{domain: "repository", resource: c.repo.name}]}
+
     build_conn()
     |> put_req_header("content-type", "application/json")
     |> put_req_header("authorization", key.user_secret)
@@ -70,7 +74,11 @@ defmodule Hexpm.Web.API.KeyControllerTest do
   end
 
   test "create repo key for repository unknown repository is not allowed", c do
-    body = %{name: "macbook", permissions: [%{domain: "repository", resource: "SOME_UNKNOWN_REPO"}]}
+    body = %{
+      name: "macbook",
+      permissions: [%{domain: "repository", resource: "SOME_UNKNOWN_REPO"}]
+    }
+
     build_conn()
     |> put_req_header("content-type", "application/json")
     |> put_req_header("authorization", "Basic " <> Base.encode64("eric:ericeric"))
@@ -82,6 +90,7 @@ defmodule Hexpm.Web.API.KeyControllerTest do
 
   test "create repo key for all repositories", c do
     body = %{name: "macbook", permissions: [%{domain: "repositories"}]}
+
     build_conn()
     |> put_req_header("content-type", "application/json")
     |> put_req_header("authorization", "Basic " <> Base.encode64("eric:ericeric"))
@@ -95,11 +104,12 @@ defmodule Hexpm.Web.API.KeyControllerTest do
   test "get key", c do
     c.eric
     |> Key.build(%{name: "macbook"})
-    |> Hexpm.Repo.insert!
+    |> Hexpm.Repo.insert!()
 
-    conn = build_conn()
-           |> put_req_header("authorization", key_for(c.eric))
-           |> get("api/keys/macbook")
+    conn =
+      build_conn()
+      |> put_req_header("authorization", key_for(c.eric))
+      |> get("api/keys/macbook")
 
     assert conn.status == 200
     body = Poison.decode!(conn.resp_body)
@@ -111,17 +121,21 @@ defmodule Hexpm.Web.API.KeyControllerTest do
   end
 
   test "all keys", c do
-    Key.build(c.eric, %{name: "macbook"}) |> Hexpm.Repo.insert!
-    key = Key.build(c.eric, %{name: "computer"}) |> Hexpm.Repo.insert!
+    Key.build(c.eric, %{name: "macbook"}) |> Hexpm.Repo.insert!()
+    key = Key.build(c.eric, %{name: "computer"}) |> Hexpm.Repo.insert!()
 
-    conn = build_conn()
-           |> put_req_header("authorization", key.user_secret)
-           |> get("api/keys")
+    conn =
+      build_conn()
+      |> put_req_header("authorization", key.user_secret)
+      |> get("api/keys")
 
     assert conn.status == 200
-    body = conn.resp_body
+
+    body =
+      conn.resp_body
       |> Poison.decode!()
-      |> Enum.sort_by(fn (%{"name" => name}) -> name end)
+      |> Enum.sort_by(fn %{"name" => name} -> name end)
+
     assert length(body) == 2
     [a, b] = body
     assert a["name"] == "computer"
@@ -135,12 +149,13 @@ defmodule Hexpm.Web.API.KeyControllerTest do
   end
 
   test "delete key", c do
-    Key.build(c.eric, %{name: "macbook"}) |> Hexpm.Repo.insert!
-    Key.build(c.eric, %{name: "computer"}) |> Hexpm.Repo.insert!
+    Key.build(c.eric, %{name: "macbook"}) |> Hexpm.Repo.insert!()
+    Key.build(c.eric, %{name: "computer"}) |> Hexpm.Repo.insert!()
 
-    conn = build_conn()
-           |> put_req_header("authorization", key_for(c.eric))
-           |> delete("api/keys/computer")
+    conn =
+      build_conn()
+      |> put_req_header("authorization", key_for(c.eric))
+      |> delete("api/keys/computer")
 
     assert conn.status == 200
     body = Poison.decode!(conn.resp_body)
@@ -162,11 +177,12 @@ defmodule Hexpm.Web.API.KeyControllerTest do
   end
 
   test "delete current key notifies client", c do
-    key = Key.build(c.eric, %{name: "current"}) |> Hexpm.Repo.insert!
+    key = Key.build(c.eric, %{name: "current"}) |> Hexpm.Repo.insert!()
 
-    conn = build_conn()
-           |> put_req_header("authorization", key.user_secret)
-           |> delete("api/keys/current")
+    conn =
+      build_conn()
+      |> put_req_header("authorization", key.user_secret)
+      |> delete("api/keys/current")
 
     assert conn.status == 200
     body = Poison.decode!(conn.resp_body)
@@ -185,9 +201,10 @@ defmodule Hexpm.Web.API.KeyControllerTest do
     assert log.action == "key.remove"
     assert %{"name" => "current"} = log.params
 
-    conn = build_conn()
-           |> put_req_header("authorization", key.user_secret)
-           |> get("api/keys")
+    conn =
+      build_conn()
+      |> put_req_header("authorization", key.user_secret)
+      |> get("api/keys")
 
     assert conn.status == 401
     body = Poison.decode!(conn.resp_body)
@@ -195,12 +212,13 @@ defmodule Hexpm.Web.API.KeyControllerTest do
   end
 
   test "delete all keys", c do
-    key_a = Key.build(c.eric, %{name: "key_a"}) |> Hexpm.Repo.insert!
-    key_b = Key.build(c.eric, %{name: "key_b"}) |> Hexpm.Repo.insert!
+    key_a = Key.build(c.eric, %{name: "key_a"}) |> Hexpm.Repo.insert!()
+    key_b = Key.build(c.eric, %{name: "key_b"}) |> Hexpm.Repo.insert!()
 
-    conn = build_conn()
-           |> put_req_header("authorization", key_a.user_secret)
-           |> delete("api/keys")
+    conn =
+      build_conn()
+      |> put_req_header("authorization", key_a.user_secret)
+      |> delete("api/keys")
 
     assert conn.status == 200
     body = Poison.decode!(conn.resp_body)
@@ -217,9 +235,10 @@ defmodule Hexpm.Web.API.KeyControllerTest do
     assert Hexpm.Repo.one(Key.get_revoked(c.eric, "key_b"))
 
     assert [log_a, log_b] =
-      AuditLog
-      |> Hexpm.Repo.all()
-      |> Enum.sort_by(fn (%{params: %{"name" => name}}) -> name end)
+             AuditLog
+             |> Hexpm.Repo.all()
+             |> Enum.sort_by(fn %{params: %{"name" => name}} -> name end)
+
     assert log_a.actor_id == c.eric.id
     assert log_a.action == "key.remove"
     key_a_name = key_a.name
@@ -229,9 +248,10 @@ defmodule Hexpm.Web.API.KeyControllerTest do
     key_b_name = key_b.name
     assert %{"name" => ^key_b_name} = log_b.params
 
-    conn = build_conn()
-           |> put_req_header("authorization", key_a.user_secret)
-           |> get("api/keys")
+    conn =
+      build_conn()
+      |> put_req_header("authorization", key_a.user_secret)
+      |> get("api/keys")
 
     assert conn.status == 401
     body = Poison.decode!(conn.resp_body)
@@ -239,18 +259,20 @@ defmodule Hexpm.Web.API.KeyControllerTest do
   end
 
   test "key authorizes", c do
-    key = Key.build(c.eric, %{name: "macbook"}) |> Hexpm.Repo.insert!
+    key = Key.build(c.eric, %{name: "macbook"}) |> Hexpm.Repo.insert!()
 
-    conn = build_conn()
-           |> put_req_header("authorization", key.user_secret)
-           |> get("api/keys")
+    conn =
+      build_conn()
+      |> put_req_header("authorization", key.user_secret)
+      |> get("api/keys")
 
     assert conn.status == 200
     assert length(Poison.decode!(conn.resp_body)) == 1
 
-    conn = build_conn()
-           |> put_req_header("authorization", "wrong")
-           |> get("api/keys")
+    conn =
+      build_conn()
+      |> put_req_header("authorization", "wrong")
+      |> get("api/keys")
 
     assert conn.status == 401
   end

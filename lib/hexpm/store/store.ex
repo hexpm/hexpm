@@ -1,10 +1,10 @@
 defmodule Hexpm.Store do
-  @type region :: String.t
-  @type bucket :: String.t
+  @type region :: String.t()
+  @type bucket :: String.t()
   @type prefix :: key
-  @type key :: String.t
+  @type key :: String.t()
   @type body :: binary
-  @type opts :: Keyword.t
+  @type opts :: Keyword.t()
 
   @callback list(region, bucket, prefix) :: [key]
   @callback get(region, bucket, key, opts) :: body

@@ -1,6 +1,6 @@
 defmodule Hexpm.CDN do
   @type service :: atom
-  @type key :: String.t
+  @type key :: String.t()
   @type ip :: <<_::32>>
   @type mask :: 0..32
 

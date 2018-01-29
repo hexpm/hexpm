@@ -5,9 +5,11 @@ defmodule Hexpm.Store.Local do
 
   def list(region, bucket, prefix) do
     relative = Path.join([dir(), region(region), bucket(bucket)])
-    paths = Path.join(relative, "**") |> Path.wildcard
+    paths = Path.join(relative, "**") |> Path.wildcard()
+
     Enum.flat_map(paths, fn path ->
       relative = Path.relative_to(path, relative)
+
       if String.starts_with?(relative, prefix) and File.regular?(path) do
         [relative]
       else
@@ -18,6 +20,7 @@ defmodule Hexpm.Store.Local do
 
   def get(region, bucket, key, _opts) do
     path = Path.join([dir(), region(region), bucket(bucket), key])
+
     case File.read(path) do
       {:ok, contents} -> contents
       {:error, :enoent} -> nil
@@ -43,6 +46,7 @@ defmodule Hexpm.Store.Local do
   defp bucket(atom) when is_atom(atom) do
     Application.get_env(:hexpm, atom) || Atom.to_string(atom)
   end
+
   defp bucket(binary) when is_binary(binary) do
     binary
   end
@@ -50,11 +54,12 @@ defmodule Hexpm.Store.Local do
   defp region(nil) do
     "us-east-1"
   end
+
   defp region(binary) when is_binary(binary) do
     binary
   end
 
-  defp dir do
+  defp dir() do
     Application.get_env(:hexpm, :tmp_dir)
     |> Path.join("store")
   end

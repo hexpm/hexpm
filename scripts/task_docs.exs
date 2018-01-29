@@ -29,12 +29,13 @@ defmodule Hexpm.Script.TaskDocs do
 
   def run() do
     Mix.Task.load_all()
+
     html =
       Mix.Task.all_modules()
       |> get_docs()
       |> Enum.sort(&(elem(&1, 0) < elem(&2, 0)))
 
-    html = EEx.eval_string(@template, [tasks: html])
+    html = EEx.eval_string(@template, tasks: html)
 
     File.mkdir_p!(Path.dirname(@output_path))
     File.write!(@output_path, html)
@@ -43,6 +44,7 @@ defmodule Hexpm.Script.TaskDocs do
   defp get_docs(tasks) do
     Enum.flat_map(tasks, fn task ->
       name = Mix.Task.task_name(task)
+
       if String.starts_with?(name, "hex") && Mix.Task.shortdoc(task) do
         {_line, doc} = Code.get_docs(task, :moduledoc)
         if doc, do: [{name, to_html(doc)}]

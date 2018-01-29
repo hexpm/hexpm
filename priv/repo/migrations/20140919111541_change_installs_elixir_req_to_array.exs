@@ -1,37 +1,37 @@
 defmodule Hexpm.Repo.Migrations.ChangeInstallsElixirReqToArray do
   use Ecto.Migration
 
-  def up do
-    execute """
+  def up() do
+    execute("""
       ALTER TABLE installs
         ADD elixirs text[]
-    """
+    """)
 
-    execute """
+    execute("""
       UPDATE installs
         SET elixirs = ARRAY[elixir]
-    """
+    """)
 
-    execute """
+    execute("""
       ALTER TABLE installs
         DROP elixir
-    """
+    """)
   end
 
-  def down do
-    execute """
+  def down() do
+    execute("""
       ALTER TABLE installs
         ADD elixir text
-    """
+    """)
 
-    execute """
+    execute("""
       UPDATE installs
         SET elixir = elixirs[1]
-    """
+    """)
 
-    execute """
+    execute("""
       ALTER TABLE installs
         DROP elixirs
-    """
+    """)
   end
 end

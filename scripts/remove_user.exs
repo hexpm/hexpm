@@ -1,19 +1,19 @@
-[name] = System.argv
+[name] = System.argv()
 
 user = Hexpm.Users.get(name, [:emails])
 
 unless user do
-  IO.puts "No user: #{name}"
+  IO.puts("No user: #{name}")
   System.halt(1)
 end
 
-IO.inspect user
+IO.inspect(user)
 
-answer = IO.gets "Remove? [Yn] "
+answer = IO.gets("Remove? [Yn] ")
 
 if answer =~ ~r/^(Y(es)?)?$/i do
   Hexpm.Repo.delete!(user)
-  IO.puts "Removed"
+  IO.puts("Removed")
 else
-  IO.puts "Not removed"
+  IO.puts("Not removed")
 end

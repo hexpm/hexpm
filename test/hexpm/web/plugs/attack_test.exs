@@ -46,7 +46,9 @@ defmodule Hexpm.Web.Plugs.AttackTest do
 
       conn = request_ip({1, 1, 1, 1})
       assert conn.status == 429
-      assert conn.resp_body == Poison.encode!(%{status: 429, message: "API rate limit exceeded for IP 1.1.1.1"})
+
+      assert conn.resp_body ==
+               Poison.encode!(%{status: 429, message: "API rate limit exceeded for IP 1.1.1.1"})
     end
 
     test "halts requests when user limit is exceeded", %{user: user} do
@@ -58,7 +60,12 @@ defmodule Hexpm.Web.Plugs.AttackTest do
 
       conn = request_user(user)
       assert conn.status == 429
-      assert conn.resp_body == Poison.encode!(%{status: 429, message: "API rate limit exceeded for user #{user.id}"})
+
+      assert conn.resp_body ==
+               Poison.encode!(%{
+                 status: 429,
+                 message: "API rate limit exceeded for user #{user.id}"
+               })
     end
 
     test "allows requests again when limit expired" do

@@ -23,7 +23,7 @@ defmodule Hexpm.Repository.PackageMetadata do
       links
       |> Map.values()
       |> Enum.reject(&valid_url?/1)
-      |> Enum.map(&{:links, "invalid link #{inspect &1}"})
+      |> Enum.map(&{:links, "invalid link #{inspect(&1)}"})
     end)
   end
 

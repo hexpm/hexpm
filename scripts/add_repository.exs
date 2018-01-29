@@ -1,4 +1,4 @@
-[username, name] = System.argv
+[username, name] = System.argv()
 
 user = Hexpm.Accounts.Users.get(username, [:emails])
 

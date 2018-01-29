@@ -35,7 +35,7 @@ defmodule Hexpm.Web.LoginControllerTest do
   end
 
   test "log in with unconfirmed email", c do
-    Ecto.Changeset.change(hd(c.user.emails), verified: false) |> Hexpm.Repo.update!
+    Ecto.Changeset.change(hd(c.user.emails), verified: false) |> Hexpm.Repo.update!()
 
     conn = post(build_conn(), "login", %{username: c.user.username, password: c.password})
     assert response(conn, 400) =~ "Log in"

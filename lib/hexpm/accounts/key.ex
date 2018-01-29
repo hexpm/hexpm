@@ -53,21 +53,29 @@ defmodule Hexpm.Accounts.Key do
   end
 
   def revoke_by_name(user, key_name, revoked_at \\ NaiveDateTime.utc_now()) do
-    from(k in assoc(user, :keys),
+    from(
+      k in assoc(user, :keys),
       where: k.name == ^key_name and is_nil(k.revoked_at),
-      update: [set: [
-        revoked_at: fragment("?", ^revoked_at),
-        updated_at: ^NaiveDateTime.utc_now()
-      ]])
+      update: [
+        set: [
+          revoked_at: fragment("?", ^revoked_at),
+          updated_at: ^NaiveDateTime.utc_now()
+        ]
+      ]
+    )
   end
 
   def revoke_all(user, revoked_at \\ NaiveDateTime.utc_now()) do
-    from(k in assoc(user, :keys),
+    from(
+      k in assoc(user, :keys),
       where: is_nil(k.revoked_at),
-      update: [set: [
-        revoked_at: fragment("?", ^revoked_at),
-        updated_at: ^NaiveDateTime.utc_now()
-      ]])
+      update: [
+        set: [
+          revoked_at: fragment("?", ^revoked_at),
+          updated_at: ^NaiveDateTime.utc_now()
+        ]
+      ]
+    )
   end
 
   def gen_key() do
@@ -94,12 +102,14 @@ defmodule Hexpm.Accounts.Key do
     {:ok, name} = fetch_change(changeset, :name)
 
     names =
-      from(u in assoc(changeset.data, :user),
-           join: k in assoc(u, :keys),
-           where: is_nil(k.revoked_at),
-           select: k.name)
+      from(
+        u in assoc(changeset.data, :user),
+        join: k in assoc(u, :keys),
+        where: is_nil(k.revoked_at),
+        select: k.name
+      )
       |> changeset.repo.all
-      |> Enum.into(MapSet.new)
+      |> Enum.into(MapSet.new())
 
     name = if MapSet.member?(names, name), do: find_unique_name(name, names), else: name
 
@@ -108,6 +118,7 @@ defmodule Hexpm.Accounts.Key do
 
   defp find_unique_name(name, names, counter \\ 2) do
     name_counter = "#{name}-#{counter}"
+
     if MapSet.member?(names, name_counter) do
       find_unique_name(name, names, counter + 1)
     else
@@ -118,12 +129,14 @@ defmodule Hexpm.Accounts.Key do
   def verify_permissions?(key, "api", _resource) do
     Enum.any?(key.permissions, &(&1.domain == "api"))
   end
+
   def verify_permissions?(key, "repository", resource) do
     Enum.any?(key.permissions, fn permission ->
       (permission.domain == "repository" and permission.resource == resource) or
         permission.domain == "repositories"
     end)
   end
+
   def verify_permissions?(_key, nil, _resource) do
     false
   end

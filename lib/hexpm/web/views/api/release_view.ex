@@ -5,6 +5,7 @@ defmodule Hexpm.Web.API.ReleaseView do
   def render("show." <> _, %{release: release}) do
     render_one(release, __MODULE__, "show")
   end
+
   def render("minimal." <> _, %{release: release, package: package}) do
     render_one(release, __MODULE__, "minimal", %{package: package})
   end
@@ -23,7 +24,7 @@ defmodule Hexpm.Web.API.ReleaseView do
       meta: %{
         app: release.meta.app,
         build_tools: Enum.uniq(release.meta.build_tools),
-        elixir: release.meta.elixir,
+        elixir: release.meta.elixir
       },
       downloads: downloads(release.downloads)
     }
@@ -32,7 +33,7 @@ defmodule Hexpm.Web.API.ReleaseView do
   def render("minimal", %{release: release, package: package}) do
     %{
       version: release.version,
-      url: url_for_release(package, release),
+      url: url_for_release(package, release)
     }
   end
 
@@ -43,9 +44,11 @@ defmodule Hexpm.Web.API.ReleaseView do
   end
 
   defp downloads(%Ecto.Association.NotLoaded{}), do: nil
+
   defp downloads(%Download{downloads: downloads}) do
     downloads
   end
+
   defp downloads(downloads) when is_list(downloads) do
     Enum.map(downloads, fn download ->
       [download.day, download.downloads]

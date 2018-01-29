@@ -9,46 +9,46 @@ defmodule SafeErlTermTest do
   end
 
   test "works as erl_scan:string/1" do
-    string! '''
+    string!('''
     {}.
-    '''
+    ''')
 
-    string! '''
+    string!('''
     {1, 23, -456}.
-    '''
+    ''')
 
-    string! '''
+    string!('''
     {foo, bar, baz}.
-    '''
+    ''')
 
-    string! ~C'''
+    string!(~C'''
     {"foo", "bar"}.
     [1, 2, 3].
-    '''
+    ''')
 
-    string! ~C'''
+    string!(~C'''
     "foo\nbar\tbaz\123".
-    '''
+    ''')
 
-    string! ~C'''
+    string!(~C'''
     'foo\nbar\tbaz\123'.
-    '''
+    ''')
 
-    string! ~C'''
+    string!(~C'''
     <<1, 2, "three", 4, 5>>.
-    '''
+    ''')
 
-    string! ~C'''
+    string!(~C'''
     <<"åäö"/utf8>>.
-    '''
+    ''')
   end
 
   test "fails on unknown atoms" do
     assert :safe_erl_term.string('this_should_not_be_known.') ==
-           {:error, {1, :safe_erl_term, {:user, 'illegal atom this_should_not_be_known'}}, 1}
+             {:error, {1, :safe_erl_term, {:user, 'illegal atom this_should_not_be_known'}}, 1}
 
     assert :safe_erl_term.string('\'this_should_not_be_known\'.') ==
-           {:error, {1, :safe_erl_term, {:user, 'illegal atom this_should_not_be_known'}}, 1}
+             {:error, {1, :safe_erl_term, {:user, 'illegal atom this_should_not_be_known'}}, 1}
   end
 
   test "convert terms" do

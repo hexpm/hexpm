@@ -10,7 +10,14 @@ defmodule Hexpm.Web.API.PackageControllerTest do
     package4 = insert(:package)
     insert(:release, package: package1, version: "0.0.1")
     insert(:release, package: package3, version: "0.0.1")
-    insert(:release, package: package4, version: "0.0.1", retirement: %{reason: "other", message: "not backward compatible"})
+
+    insert(
+      :release,
+      package: package4,
+      version: "0.0.1",
+      retirement: %{reason: "other", message: "not backward compatible"}
+    )
+
     insert(:release, package: package4, version: "1.0.0")
     insert(:repository_user, repository: repository, user: user)
 
@@ -26,7 +33,7 @@ defmodule Hexpm.Web.API.PackageControllerTest do
 
   describe "GET /api/packages" do
     test "multiple packages", %{package1: package1} do
-      conn = get build_conn(), "api/packages"
+      conn = get(build_conn(), "api/packages")
       result = json_response(conn, 200)
       assert length(result) == 3
       releases = List.first(result)["releases"]
@@ -37,29 +44,29 @@ defmodule Hexpm.Web.API.PackageControllerTest do
         assert Map.has_key?(release, "version")
       end
 
-      conn = get build_conn(), "api/packages?search=#{package1.name}"
+      conn = get(build_conn(), "api/packages?search=#{package1.name}")
       result = json_response(conn, 200)
       assert length(result) == 1
 
-      conn = get build_conn(), "api/packages?search=name%3A#{package1.name}*"
+      conn = get(build_conn(), "api/packages?search=name%3A#{package1.name}*")
       result = json_response(conn, 200)
       assert length(result) == 1
 
-      conn = get build_conn(), "api/packages?page=1"
+      conn = get(build_conn(), "api/packages?page=1")
       result = json_response(conn, 200)
       assert length(result) == 3
 
-      conn = get build_conn(), "api/packages?page=2"
+      conn = get(build_conn(), "api/packages?page=2")
       result = json_response(conn, 200)
       assert length(result) == 0
     end
 
     test "sort order", %{package1: package1, package2: package2} do
-      conn = get build_conn(), "api/packages?sort=updated_at"
+      conn = get(build_conn(), "api/packages?sort=updated_at")
       result = json_response(conn, 200)
       assert hd(result)["name"] == package2.name
 
-      conn = get build_conn(), "api/packages?sort=inserted_at"
+      conn = get(build_conn(), "api/packages?sort=inserted_at")
       result = json_response(conn, 200)
       assert hd(result)["name"] == package1.name
     end
@@ -79,7 +86,7 @@ defmodule Hexpm.Web.API.PackageControllerTest do
 
   describe "GET /api/packages/:name" do
     test "get package", %{package1: package1} do
-      conn = get build_conn(), "api/packages/#{package1.name}"
+      conn = get(build_conn(), "api/packages/#{package1.name}")
       result = json_response(conn, 200)
       assert result["name"] == package1.name
       assert result["url"] =~ "/api/packages/#{package1.name}"
@@ -97,7 +104,10 @@ defmodule Hexpm.Web.API.PackageControllerTest do
       |> json_response(404)
     end
 
-    test "get package for unautenticated private repository", %{repository: repository, package3: package3} do
+    test "get package for unautenticated private repository", %{
+      repository: repository,
+      package3: package3
+    } do
       build_conn()
       |> get("api/repos/#{repository.name}/packages/#{package3.name}")
       |> json_response(403)
@@ -109,20 +119,29 @@ defmodule Hexpm.Web.API.PackageControllerTest do
       |> json_response(403)
     end
 
-    test "get package returns 403 for unknown package if you are not authorized", %{repository: repository} do
+    test "get package returns 403 for unknown package if you are not authorized", %{
+      repository: repository
+    } do
       build_conn()
       |> get("api/repos/#{repository.name}/packages/UNKNOWN_PACKAGE")
       |> json_response(403)
     end
 
-    test "get package returns 404 for unknown package if you are authorized", %{user: user, repository: repository} do
+    test "get package returns 404 for unknown package if you are authorized", %{
+      user: user,
+      repository: repository
+    } do
       build_conn()
       |> put_req_header("authorization", key_for(user))
       |> get("api/repos/#{repository.name}/packages/UNKNOWN_PACKAGE")
       |> json_response(404)
     end
 
-    test "get package for autenticated private repository", %{user: user, repository: repository, package3: package3} do
+    test "get package for autenticated private repository", %{
+      user: user,
+      repository: repository,
+      package3: package3
+    } do
       result =
         build_conn()
         |> put_req_header("authorization", key_for(user))
@@ -136,9 +155,12 @@ defmodule Hexpm.Web.API.PackageControllerTest do
     end
 
     test "get package with retired versions", %{package4: package4} do
-      conn = get build_conn(), "api/packages/#{package4.name}"
+      conn = get(build_conn(), "api/packages/#{package4.name}")
       result = json_response(conn, 200)
-      assert result["retirements"] == %{"0.0.1" => %{"message" => "not backward compatible", "reason" => "other"}}
+
+      assert result["retirements"] == %{
+               "0.0.1" => %{"message" => "not backward compatible", "reason" => "other"}
+             }
     end
   end
 end
