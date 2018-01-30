@@ -110,6 +110,10 @@ defmodule Hexpm.Accounts.AuditLog do
   defp extract_params("repository.member.role", {repository, user, role}),
     do: %{repository: serialize(repository), user: serialize(user), role: role}
 
+  defp extract_params("password.reset.init", nil), do: %{}
+  defp extract_params("password.reset.finish", nil), do: %{}
+  defp extract_params("password.update", nil), do: %{}
+
   defp serialize(%Key{} = key) do
     key
     |> do_serialize()

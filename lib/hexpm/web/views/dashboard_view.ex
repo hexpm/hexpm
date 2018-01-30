@@ -99,7 +99,7 @@ defmodule Hexpm.Web.DashboardView do
   defp invoice_status(%{"paid" => false, "attempted" => false}), do: "Pending"
 
   def payment_date(date) do
-    date |> NaiveDateTime.from_iso8601!() |> pretty_date()
+    date |> NaiveDateTime.from_iso8601!() |> pretty_datetime()
   end
 
   defp money(integer) when is_integer(integer) and integer >= 0 do
