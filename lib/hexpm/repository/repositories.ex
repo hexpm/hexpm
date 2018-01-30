@@ -22,7 +22,7 @@ defmodule Hexpm.Repository.Repositories do
     Repo.one!(Repository.has_access(repository, user, role))
   end
 
-  def create(user, params, [audit: audit_data]) do
+  def create(user, params, audit: audit_data) do
     multi =
       Multi.new()
       |> Multi.insert(:repository, Repository.changeset(%Repository{}, params))
@@ -40,12 +40,13 @@ defmodule Hexpm.Repository.Repositories do
     case Repo.transaction(multi) do
       {:ok, result} ->
         {:ok, result.repository}
+
       {:error, :repository, changeset, _} ->
         {:error, changeset}
     end
   end
 
-  def add_member(repository, username, params, [audit: audit_data]) do
+  def add_member(repository, username, params, audit: audit_data) do
     if user = Users.get(username, [:emails]) do
       repository_user = %RepositoryUser{repository_id: repository.id, user_id: user.id}
 
@@ -58,6 +59,7 @@ defmodule Hexpm.Repository.Repositories do
         {:ok, result} ->
           send_invite_email(repository, user)
           {:ok, result.repository_user}
+
         {:error, :repository_user, changeset, _} ->
           {:error, changeset}
       end
@@ -66,7 +68,7 @@ defmodule Hexpm.Repository.Repositories do
     end
   end
 
-  def remove_member(repository, username, [audit: audit_data]) do
+  def remove_member(repository, username, audit: audit_data) do
     if user = Users.get(username) do
       count = Repo.aggregate(assoc(repository, :repository_users), :count, :id)
 
@@ -90,7 +92,7 @@ defmodule Hexpm.Repository.Repositories do
     end
   end
 
-  def change_role(repository, username, params, [audit: audit_data]) do
+  def change_role(repository, username, params, audit: audit_data) do
     user = Users.get(username)
     repository_users = Repo.all(assoc(repository, :repository_users))
     repository_user = Enum.find(repository_users, &(&1.user_id == user.id))
@@ -99,6 +101,7 @@ defmodule Hexpm.Repository.Repositories do
     cond do
       !repository_user ->
         {:error, :unknown_user}
+
       repository_user.role == "admin" and number_admins == 1 ->
         {:error, :last_admin}
 
@@ -111,6 +114,7 @@ defmodule Hexpm.Repository.Repositories do
         case Repo.transaction(multi) do
           {:ok, result} ->
             {:ok, result.repository_user}
+
           {:error, :repository_user, changeset, _} ->
             {:error, changeset}
         end

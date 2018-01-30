@@ -19,12 +19,15 @@ defmodule Hexpm.Billing.Report do
 
     Enum.each(report, fn %{"token" => token, "active" => billing_active} ->
       billing_active = !!billing_active
+
       case Map.fetch(repositories, token) do
         {:ok, ^billing_active} ->
           :ok
+
         {:ok, _active} ->
           from(r in Repository, where: r.name == ^token)
           |> Repo.update_all(set: [billing_active: billing_active])
+
         :error ->
           :ok
       end

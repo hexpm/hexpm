@@ -269,8 +269,10 @@ defmodule Hexpm.Web.DashboardController do
       id = String.to_integer(id)
       billing = Hexpm.Billing.dashboard(repository.name)
       invoice_ids = Enum.map(billing["invoices"], & &1["id"])
+
       if id in invoice_ids do
         invoice = Hexpm.Billing.invoice(id)
+
         conn
         |> put_resp_header("content-type", "text/html")
         |> send_resp(200, invoice)
@@ -283,7 +285,14 @@ defmodule Hexpm.Web.DashboardController do
   def update_billing(conn, %{"dashboard_repo" => repository} = params) do
     access_repository(conn, repository, "admin", fn repository ->
       billing = Hexpm.Billing.dashboard(repository.name)
-      update_billing(conn, repository, billing, params, &Hexpm.Billing.update(repository.name, &1))
+
+      update_billing(
+        conn,
+        repository,
+        billing,
+        params,
+        &Hexpm.Billing.update(repository.name, &1)
+      )
     end)
   end
 
@@ -306,7 +315,11 @@ defmodule Hexpm.Web.DashboardController do
 
     if params["email"] in emails do
       Hexpm.Repo.transaction(fn ->
-        case Repositories.create(conn.assigns.current_user, params["repository"], audit: audit_data(conn)) do
+        case Repositories.create(
+               conn.assigns.current_user,
+               params["repository"],
+               audit: audit_data(conn)
+             ) do
           {:ok, repository} ->
             billing_params =
               Map.take(params, ["email", "person", "company"])
@@ -319,15 +332,21 @@ defmodule Hexpm.Web.DashboardController do
                 conn
                 |> put_flash(:info, "Organization created.")
                 |> redirect(to: Routes.dashboard_path(conn, :repository, repository))
+
               {:error, reason} ->
                 changeset = Repository.changeset(%Repository{}, params["repository"])
 
                 conn
                 |> put_status(400)
                 |> put_flash(:error, "Oops, something went wrong! Please check the errors below.")
-                |> render_new_repository(changeset: changeset, params: params, errors: reason["errors"])
+                |> render_new_repository(
+                  changeset: changeset,
+                  params: params,
+                  errors: reason["errors"]
+                )
                 |> Hexpm.Repo.rollback()
             end
+
           {:error, changeset} ->
             conn
             |> put_status(400)
@@ -361,6 +380,7 @@ defmodule Hexpm.Web.DashboardController do
           conn
           |> put_flash(:info, "Updated your billing information.")
           |> redirect(to: Routes.dashboard_path(conn, :repository, repository))
+
         {:error, reason} ->
           conn
           |> put_status(400)
@@ -376,7 +396,9 @@ defmodule Hexpm.Web.DashboardController do
   end
 
   defp render_new_repository(conn, opts \\ []) do
-    render conn, "repository_signup.html", [
+    render(
+      conn,
+      "repository_signup.html",
       title: "Dashboard - Organization sign up",
       container: "container page dashboard",
       billing_email: nil,
@@ -385,7 +407,7 @@ defmodule Hexpm.Web.DashboardController do
       params: opts[:params],
       errors: opts[:errors],
       changeset: opts[:changeset] || create_repository_changeset()
-    ]
+    )
   end
 
   defp render_profile(conn, changeset) do
@@ -434,7 +456,7 @@ defmodule Hexpm.Web.DashboardController do
     ]
 
     assigns = Keyword.merge(assigns, billing_assigns(billing, repository))
-    render conn, "repository.html", assigns
+    render(conn, "repository.html", assigns)
   end
 
   defp billing_assigns(nil, _repository) do

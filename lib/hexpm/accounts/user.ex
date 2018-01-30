@@ -127,14 +127,17 @@ defmodule Hexpm.Accounts.User do
   def verify_permissions(%User{}, "api", _resource) do
     {:ok, nil}
   end
+
   def verify_permissions(%User{} = user, "repository", name) do
     repository = Repositories.get(name)
+
     if repository && Repositories.access?(repository, user, "read") do
       {:ok, repository}
     else
       :error
     end
   end
+
   def verify_permissions(%User{}, _domain, _resource) do
     :error
   end
