@@ -32,11 +32,13 @@ defmodule Hexpm.Web.AuthHelpers do
 
       user && key && !verify_permissions?(key, domain, resource) ->
         error(conn, {:error, :domain})
+
       fun ->
         case fun.(conn, user) do
           :ok -> conn
           other -> error(conn, other)
         end
+
       true ->
         conn
     end
@@ -131,9 +133,11 @@ defmodule Hexpm.Web.AuthHelpers do
   def package_owner(_, nil) do
     {:error, :auth}
   end
+
   def package_owner(%Plug.Conn{} = conn, user) do
     package_owner(conn.assigns.package, user)
   end
+
   def package_owner(%Package{} = package, user) do
     Packages.owner_with_access?(package, user)
     |> boolean_to_auth_error()
@@ -142,16 +146,20 @@ defmodule Hexpm.Web.AuthHelpers do
   def maybe_package_owner(%Plug.Conn{} = conn, user) do
     maybe_package_owner(conn.assigns.repository, conn.assigns.package, user)
   end
+
   def maybe_package_owner(%Package{} = package, user) do
     maybe_package_owner(package.repository, package, user)
   end
+
   def maybe_package_owner(nil, nil, _user) do
     {:error, :auth}
   end
+
   def maybe_package_owner(repository, nil, user) do
     (repository.public or Repositories.access?(repository, user, "write"))
     |> boolean_to_auth_error()
   end
+
   def maybe_package_owner(_repository, %Package{} = package, user) do
     Packages.owner_with_access?(package, user)
     |> boolean_to_auth_error()
@@ -160,10 +168,12 @@ defmodule Hexpm.Web.AuthHelpers do
   def repository_access(%Plug.Conn{} = conn, user) do
     repository_access(conn.assigns.repository, user)
   end
+
   def repository_access(%Repository{} = repository, user) do
     (repository.public or Repositories.access?(repository, user, "read"))
     |> boolean_to_auth_error()
   end
+
   def repository_access(nil, _user) do
     {:error, :auth}
   end
@@ -190,10 +200,6 @@ defmodule Hexpm.Web.AuthHelpers do
     else
       {:error, :auth, "repository has no active billing subscription"}
     end
-  end
-
-  def correct_user?(%Plug.Conn{} = conn, user) do
-    correct_user?(conn.params["name"], user)
   end
 
   def correct_user(%Plug.Conn{} = conn, user) do

@@ -445,7 +445,12 @@ defmodule Hexpm.Web.API.ReleaseControllerTest do
 
   describe "POST /api/repos/:repository/packages/:name/releases" do
     test "new package authorizes", %{user: user, repository: repository} do
-      meta = %{name: Fake.sequence(:package), version: "1.0.0", description: "Domain-specific language."}
+      meta = %{
+        name: Fake.sequence(:package),
+        version: "1.0.0",
+        description: "Domain-specific language."
+      }
+
       build_conn()
       |> put_req_header("content-type", "application/octet-stream")
       |> put_req_header("authorization", key_for(user))
@@ -454,7 +459,12 @@ defmodule Hexpm.Web.API.ReleaseControllerTest do
     end
 
     test "existing package authorizes", %{user: user, repository: repository} do
-      package = insert(:package, repository_id: repository.id, package_owners: [build(:package_owner, owner: user)])
+      package =
+        insert(
+          :package,
+          repository_id: repository.id,
+          package_owners: [build(:package_owner, owner: user)]
+        )
 
       meta = %{name: package.name, version: "1.0.0", description: "Domain-specific language."}
 
@@ -489,7 +499,12 @@ defmodule Hexpm.Web.API.ReleaseControllerTest do
       repository = insert(:repository, billing_active: false)
       insert(:repository_user, repository: repository, user: user, role: "write")
 
-      meta = %{name: Fake.sequence(:package), version: "1.0.0", description: "Domain-specific language."}
+      meta = %{
+        name: Fake.sequence(:package),
+        version: "1.0.0",
+        description: "Domain-specific language."
+      }
+
       build_conn()
       |> put_req_header("content-type", "application/octet-stream")
       |> put_req_header("authorization", key_for(user))
@@ -525,7 +540,13 @@ defmodule Hexpm.Web.API.ReleaseControllerTest do
     end
 
     test "existing package", %{user: user, repository: repository} do
-      package = insert(:package, repository_id: repository.id, package_owners: [build(:package_owner, owner: user)])
+      package =
+        insert(
+          :package,
+          repository_id: repository.id,
+          package_owners: [build(:package_owner, owner: user)]
+        )
+
       insert(:repository_user, repository: repository, user: user)
 
       meta = %{name: package.name, version: "1.0.0", description: "Domain-specific language."}
@@ -620,7 +641,13 @@ defmodule Hexpm.Web.API.ReleaseControllerTest do
   describe "DELETE /api/repos/:repository/packages/:name/releases/:version" do
     @tag isolation: :serializable
     test "authorizes", %{user: user, repository: repository} do
-      package = insert(:package, repository_id: repository.id, package_owners: [build(:package_owner, owner: user)])
+      package =
+        insert(
+          :package,
+          repository_id: repository.id,
+          package_owners: [build(:package_owner, owner: user)]
+        )
+
       insert(:release, package: package, version: "0.0.1")
 
       build_conn()
@@ -638,7 +665,14 @@ defmodule Hexpm.Web.API.ReleaseControllerTest do
     test "repository needs to have active billing", %{user: user} do
       repository = insert(:repository, billing_active: false)
       insert(:repository_user, repository: repository, user: user, role: "write")
-      package = insert(:package, repository_id: repository.id, package_owners: [build(:package_owner, owner: user)])
+
+      package =
+        insert(
+          :package,
+          repository_id: repository.id,
+          package_owners: [build(:package_owner, owner: user)]
+        )
+
       insert(:release, package: package, version: "0.0.1")
 
       build_conn()

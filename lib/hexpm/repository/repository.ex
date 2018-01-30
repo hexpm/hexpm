@@ -28,7 +28,11 @@ defmodule Hexpm.Repository.Repository do
     cast(struct, params, [:role])
     |> validate_required([:role])
     |> validate_inclusion(:role, @roles)
-    |> unique_constraint(:user_id, name: "repository_users_repository_id_user_id_index", message: "is already member")
+    |> unique_constraint(
+      :user_id,
+      name: "repository_users_repository_id_user_id_index",
+      message: "is already member"
+    )
   end
 
   def change_role(struct, params) do

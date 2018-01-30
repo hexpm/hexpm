@@ -411,6 +411,7 @@ defmodule Hexpm.Web.DashboardControllerTest do
   test "show repository", %{user: user, repository: repository} do
     Mox.expect(Hexpm.Billing.Mock, :dashboard, fn token ->
       assert repository.name == token
+
       %{
         "checkout_html" => "",
         "monthly_cost" => 800,
@@ -508,6 +509,7 @@ defmodule Hexpm.Web.DashboardControllerTest do
   test "cancel billing", %{user: user, repository: repository} do
     Mox.expect(Hexpm.Billing.Mock, :cancel, fn token ->
       assert repository.name == token
+
       %{
         "subscription" => %{
           "cancel_at_period_end" => true,
@@ -525,7 +527,7 @@ defmodule Hexpm.Web.DashboardControllerTest do
 
     message =
       "Your subscription is cancelled, you will have access to the repository until " <>
-          "the end of your billing period at December 12, 2017"
+        "the end of your billing period at December 12, 2017"
 
     assert redirected_to(conn) == "/dashboard/repos/#{repository.name}"
     assert get_flash(conn, :info) == message
@@ -534,6 +536,7 @@ defmodule Hexpm.Web.DashboardControllerTest do
   test "update billing email", %{user: user, repository: repository} do
     Mox.expect(Hexpm.Billing.Mock, :dashboard, 2, fn token ->
       assert repository.name == token
+
       %{
         "checkout_html" => "",
         "monthly_cost" => 800,
@@ -552,7 +555,9 @@ defmodule Hexpm.Web.DashboardControllerTest do
     conn =
       build_conn()
       |> test_login(user)
-      |> post("dashboard/repos/#{repository.name}/update-billing", %{"email" => hd(user.emails).email})
+      |> post("dashboard/repos/#{repository.name}/update-billing", %{
+        "email" => hd(user.emails).email
+      })
 
     assert redirected_to(conn) == "/dashboard/repos/#{repository.name}"
     assert get_flash(conn, :info) == "Updated your billing information."
@@ -561,6 +566,7 @@ defmodule Hexpm.Web.DashboardControllerTest do
   test "cannot update billing email that you do not own", %{user: user, repository: repository} do
     Mox.expect(Hexpm.Billing.Mock, :dashboard, 2, fn token ->
       assert repository.name == token
+
       %{
         "checkout_html" => "",
         "monthly_cost" => 800,
@@ -573,7 +579,9 @@ defmodule Hexpm.Web.DashboardControllerTest do
     conn =
       build_conn()
       |> test_login(user)
-      |> post("dashboard/repos/#{repository.name}/update-billing", %{"email" => "nonexistant@example.com"})
+      |> post("dashboard/repos/#{repository.name}/update-billing", %{
+        "email" => "nonexistant@example.com"
+      })
 
     response(conn, 400)
     assert get_flash(conn, :error) == "Invalid billing email."
@@ -581,11 +589,21 @@ defmodule Hexpm.Web.DashboardControllerTest do
 
   test "create repository", %{user: user} do
     Mox.expect(Hexpm.Billing.Mock, :create, 1, fn params ->
-      assert params == %{"person" => %{"country" => "SE"}, "token" => "createrepo", "company" => nil, "email" => "eric@mail.com"}
+      assert params == %{
+               "person" => %{"country" => "SE"},
+               "token" => "createrepo",
+               "company" => nil,
+               "email" => "eric@mail.com"
+             }
+
       {:ok, %{}}
     end)
 
-    params = %{"repository" => %{"name" => "createrepo"}, "person" => %{"country" => "SE"}, "email" => "eric@mail.com"}
+    params = %{
+      "repository" => %{"name" => "createrepo"},
+      "person" => %{"country" => "SE"},
+      "email" => "eric@mail.com"
+    }
 
     conn =
       build_conn()
@@ -599,7 +617,12 @@ defmodule Hexpm.Web.DashboardControllerTest do
 
   test "create repository validates name", %{user: user} do
     insert(:repository, name: "createrepovalidates")
-    params = %{"repository" => %{"name" => "createrepovalidates"}, "person" => %{"country" => "SE"}, "email" => "eric@mail.com"}
+
+    params = %{
+      "repository" => %{"name" => "createrepovalidates"},
+      "person" => %{"country" => "SE"},
+      "email" => "eric@mail.com"
+    }
 
     conn =
       build_conn()
@@ -612,12 +635,23 @@ defmodule Hexpm.Web.DashboardControllerTest do
 
   test "create billing customer after repository", %{user: user, repository: repository} do
     Mox.expect(Hexpm.Billing.Mock, :create, 1, fn params ->
-      assert params == %{"person" => %{"country" => "SE"}, "token" => repository.name, "company" => nil, "email" => "eric@mail.com"}
+      assert params == %{
+               "person" => %{"country" => "SE"},
+               "token" => repository.name,
+               "company" => nil,
+               "email" => "eric@mail.com"
+             }
+
       {:ok, %{}}
     end)
 
     insert(:repository_user, repository: repository, user: user, role: "admin")
-    params = %{"repository" => %{"name" => repository.name}, "person" => %{"country" => "SE"}, "email" => "eric@mail.com"}
+
+    params = %{
+      "repository" => %{"name" => repository.name},
+      "person" => %{"country" => "SE"},
+      "email" => "eric@mail.com"
+    }
 
     conn =
       build_conn()

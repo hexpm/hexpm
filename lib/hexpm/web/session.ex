@@ -52,9 +52,10 @@ defmodule Hexpm.Web.Session do
   end
 
   # Hack around transaction being rolled back in tests
-  if Mix.env == :test do
+  if Mix.env() == :test do
     defp run?() do
       conn = Process.get({Ecto.Adapters.SQL, Hexpm.Repo.Pool})
+
       case conn && Process.get({DBConnection, conn.conn_ref}) do
         {:failed, _} -> false
         _ -> true

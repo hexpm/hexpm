@@ -13,6 +13,7 @@ defmodule Hexpm.Web.API.AuthController do
       case User.verify_permissions(user, domain, resource) do
         {:ok, nil} ->
           send_resp(conn, 204, "")
+
         {:ok, _repository} ->
           # TODO: Change when billing is required
           # if repository.public or repository.billing_active do
@@ -21,6 +22,7 @@ defmodule Hexpm.Web.API.AuthController do
           #   {:error, :auth, "repository has no active billing subscription"}
           # end
           send_resp(conn, 204, "")
+
         :error ->
           error(conn, {:error, :auth})
       end

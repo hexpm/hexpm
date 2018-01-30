@@ -4,7 +4,9 @@ defmodule Hexpm.Web.API.OwnerController do
   plug :maybe_fetch_package
   plug :authorize, [domain: "api", fun: &repository_access/2] when action in [:index, :show]
   plug :authorize, [domain: "api", fun: &maybe_package_owner/2] when action in [:create, :delete]
-  plug :authorize, [domain: "api", fun: &repository_billing_active/2] when action in [:create, :delete]
+
+  plug :authorize,
+       [domain: "api", fun: &repository_billing_active/2] when action in [:create, :delete]
 
   def index(conn, _params) do
     if package = conn.assigns.package do
