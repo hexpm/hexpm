@@ -87,7 +87,7 @@
           <%= if @subscription do %>
             <dl>
               <dt>Plan</dt>
-              <dd>Hex.pm Organization ($8.00 per user / month)</dd>
+              <dd>Hex.pm Organization ($7.00 per user / month)</dd>
               <dt>Payment</dt>
               <dd><%= payment_card(@card) %></dd>
               <dt>Next invoice</dt>
@@ -110,7 +110,7 @@
             <%# Subscription is not active. Organization will be disabled until a payment method has been added. %>
             Subscription is not active. <strong>Organization will be disabled</strong> on the 1st of March
             unless a payment method has been added.<br><br>
-            Subscription cost is <strong>$8.00 per user / month</strong> + VAT.<br><br>
+            Subscription cost is <strong>$7.00 per user / month</strong> + VAT.<br><br>
             <%= raw(@checkout_html) %>
           <% end %>
         </div>
@@ -173,7 +173,7 @@
         <%# Subscription is not active. Organization will be disabled until a payment method has been added. %>
         Subscription is not active. <strong>Organization will be disabled</strong> on the 1st of March
         unless a payment method has been added.<br><br>
-        Subscription cost is <strong>$8.00 per user / month</strong> + VAT.<br><br>
+        Subscription cost is <strong>$7.00 per user / month</strong> + VAT.<br><br>
         Enter your billing information below to enable the payment method form:<br><br>
 
         <h4>Billing information</h4>
