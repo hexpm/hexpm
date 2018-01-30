@@ -54,7 +54,7 @@ defmodule Hexpm.MixProject do
       {:ex_aws_s3, "~> 2.0"},
       {:ex_aws_ses, "~> 2.0"},
       {:ex_aws, "~> 2.0"},
-      {:ex_machina, "~> 2.0"},
+      {:ex_machina, "~> 2.0", only: [:dev, :test]},
       {:gpb, "~> 3.23"},
       {:hackney, "~> 1.7"},
       {:jiffy, "~> 0.14"},

@@ -14,7 +14,7 @@
           control to packages for your organization members. For more information see the
           <a href="<%= Routes.docs_path(Endpoint, :private) %>">private package documentation</a>.
         </p>
-        <p>The cost for organizations is <strong>$8.00 per user / month</strong>.</p>
+        <p>The cost for organizations is <strong>$7.00 per user / month</strong>.</p>
         <br>
 
         <ul class="nav nav-tabs" role="tablist">
