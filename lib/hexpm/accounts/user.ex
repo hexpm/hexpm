@@ -120,11 +120,11 @@ defmodule Hexpm.Accounts.User do
     )
   end
 
-  def verify_permissions?(_user, "api", nil) do
-    true
+  def verify_permissions(%User{}, "api", _resource) do
+    {:ok, nil}
   end
 
-  def verify_permissions(%User{}, "api", _resource) do
+  def verify_permissions(%User{}, "repository", nil) do
     {:ok, nil}
   end
 
