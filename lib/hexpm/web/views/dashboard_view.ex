@@ -89,6 +89,12 @@ defmodule Hexpm.Web.DashboardView do
       "organization will be disabled"
   end
 
+  # NOTE: For now this is only beta test discount, change after beta trial is over
+  defp subscription_status(%{"status" => "trialing", "current_period_end" => trial_end}) do
+    trial_end = NaiveDateTime.from_iso8601!(trial_end)
+    "Active (beta user discount until #{pretty_datetime(trial_end)})"
+  end
+
   # TODO: Check if last invoice was unpaid and add note about it?
   defp subscription_status(%{"status" => "canceled"}) do
     "Not active"
