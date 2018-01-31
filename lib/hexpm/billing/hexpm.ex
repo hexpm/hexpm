@@ -2,8 +2,10 @@ defmodule Hexpm.Billing.Hexpm do
   @behaviour Hexpm.Billing
 
   def checkout(repository, data) do
-    {:ok, 204, _headers, body} = post("api/customers/#{repository}/payment_source", data)
-    body
+    case post("api/customers/#{repository}/payment_source", data) do
+      {:ok, 204, _headers, body} -> {:ok, body}
+      {:ok, 422, _headers, body} -> {:error, body}
+    end
   end
 
   def dashboard(repository) do
