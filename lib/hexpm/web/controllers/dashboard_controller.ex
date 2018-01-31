@@ -241,8 +241,16 @@ defmodule Hexpm.Web.DashboardController do
 
   def billing_token(conn, %{"dashboard_repo" => repository, "token" => token}) do
     access_repository(conn, repository, "admin", fn repository ->
-      Hexpm.Billing.checkout(repository.name, %{payment_source: token})
-      send_resp(conn, 204, "")
+      case Hexpm.Billing.checkout(repository.name, %{payment_source: token}) do
+        {:ok, _} ->
+          conn
+          |> put_resp_header("content-type", "application/json")
+          |> send_resp(204, Hexpm.Web.Jiffy.encode!(%{}))
+        {:error, reason} ->
+          conn
+          |> put_resp_header("content-type", "application/json")
+          |> send_resp(422, Hexpm.Web.Jiffy.encode!(reason))
+      end
     end)
   end
 
