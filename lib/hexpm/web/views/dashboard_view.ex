@@ -70,6 +70,16 @@ defmodule Hexpm.Web.DashboardView do
     end)
   end
 
+  @no_card_message "No credit card on file"
+
+  defp payment_card(nil) do
+    @no_card_message
+  end
+
+  defp payment_card(%{"brand" => nil}) do
+    @no_card_message
+  end
+
   defp payment_card(card) do
     card_exp_month = String.pad_leading(card["exp_month"], 2, "0")
     expires = "#{card_exp_month}/#{card["exp_year"]}"
