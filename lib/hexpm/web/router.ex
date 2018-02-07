@@ -17,6 +17,7 @@ defmodule Hexpm.Web.Router do
   end
 
   pipeline :upload do
+    plug :read_body_finally
     plug :accepts, @accepted_formats
     plug :auth_gate
     plug :user_agent
@@ -24,7 +25,6 @@ defmodule Hexpm.Web.Router do
     plug :validate_url
     plug Hexpm.Web.Plugs.Attack
     plug :fetch_body
-    plug :read_body_finally
     plug :default_repository
   end
 
