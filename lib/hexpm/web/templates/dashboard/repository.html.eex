@@ -96,6 +96,10 @@
               <% else %>
                 <dd><%= payment_date(@subscription["current_period_end"]) %></dd>
               <% end %>
+              <%= if @tax_rate && @tax_rate != 0 do %>
+                <dt>VAT rate</dt>
+                <dd><%= @tax_rate %>%</dd>
+              <% end %>
               <dt>Monthly cost</dt>
               <dd>$<%= money(@amount_with_tax) %></dd>
               <dt>Status</dt>
