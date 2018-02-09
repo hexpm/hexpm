@@ -498,6 +498,7 @@ defmodule Hexpm.Web.DashboardController do
       monthly_cost: billing["monthly_cost"],
       amount_with_tax: billing["amount_with_tax"],
       tax_rate: billing["tax_rate"],
+      discount: billing["discount"],
       card: billing["card"],
       invoices: billing["invoices"],
       person: billing["person"],
