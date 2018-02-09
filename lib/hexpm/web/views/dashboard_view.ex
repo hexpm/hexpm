@@ -110,6 +110,14 @@ defmodule Hexpm.Web.DashboardView do
     "Not active"
   end
 
+  defp discount_status(nil) do
+    ""
+  end
+
+  defp discount_status(%{"name" => name, "percent_off" => percent_off}) do
+    "(\"#{name}\" discount for #{percent_off}% of cost)"
+  end
+
   defp invoice_status(%{"paid" => true}), do: "Paid"
   defp invoice_status(%{"paid" => false, "attempted" => true}), do: "Past due"
   defp invoice_status(%{"paid" => false, "attempted" => false}), do: "Pending"

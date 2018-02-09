@@ -103,7 +103,10 @@
               <dt>Monthly cost</dt>
               <dd>$<%= money(@amount_with_tax) %></dd>
               <dt>Status</dt>
-              <dd><%= subscription_status(@subscription) %></dd>
+              <dd>
+                <%= subscription_status(@subscription) %>
+                <%= discount_status(@discount) %>
+              </dd>
             </dl>
 
             <%= raw(@checkout_html) %>
