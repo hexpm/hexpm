@@ -101,7 +101,13 @@
                 <dd><%= @tax_rate %>%</dd>
               <% end %>
               <dt>Monthly cost</dt>
-              <dd>$<%= money(@amount_with_tax) %></dd>
+              <dd>
+                <span class="monthly-cost-calc">
+                  $7.00 x <%= @quantity %> user(s)
+                  <%= if @tax_rate && @tax_rate != 0 do %>x <%= @tax_rate %>% VAT<% end %> =
+                </span>
+                $<%= money(@amount_with_tax) %>
+              </dd>
               <dt>Status</dt>
               <dd>
                 <%= subscription_status(@subscription) %>
