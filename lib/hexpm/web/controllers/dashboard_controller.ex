@@ -193,7 +193,7 @@ defmodule Hexpm.Web.DashboardController do
           {:ok, _customer} = Hexpm.Billing.update(repository.name, %{"quantity" => members_count})
 
           conn
-          |> put_flash(:info, "User #{username} has been removed from the repository.")
+          |> put_flash(:info, "User #{username} has been removed from the organization.")
           |> redirect(to: Routes.dashboard_path(conn, :repository, repository))
 
         {:error, reason} ->
@@ -497,6 +497,7 @@ defmodule Hexpm.Web.DashboardController do
       subscription: billing["subscription"],
       monthly_cost: billing["monthly_cost"],
       amount_with_tax: billing["amount_with_tax"],
+      tax_rate: billing["tax_rate"],
       card: billing["card"],
       invoices: billing["invoices"],
       person: billing["person"],
