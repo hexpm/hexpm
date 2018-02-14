@@ -3,5 +3,6 @@
     <h3><a href="<%= Routes.blog_path(Endpoint, :show, post.slug) %>"><%= post.title %></a></h3>
     <div class="subtitle"><%= post.subtitle %></div>
     <p class="content"><%= raw post.paragraph %></p>
+    <a href="<%= Routes.blog_path(Endpoint, :show, post.slug) %>">Read more...</a>
   </div>
 <% end %>
