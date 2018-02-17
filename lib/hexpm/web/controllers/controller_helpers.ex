@@ -206,12 +206,16 @@ defmodule Hexpm.Web.ControllerHelpers do
   defp time_to_erl(%Date{} = date), do: {Date.to_erl(date), {0, 0, 0}}
 
   def fetch_repository(conn, _opts) do
-    if repository = Repositories.get(conn.params["repository"]) do
-      assign(conn, :repository, repository)
+    if param = conn.params["repository"] do
+      if repository = Repositories.get(param) do
+        assign(conn, :repository, repository)
+      else
+        conn
+        |> Hexpm.Web.AuthHelpers.forbidden("account not authorized for this action")
+        |> halt()
+      end
     else
-      conn
-      |> Hexpm.Web.AuthHelpers.forbidden("account not authorized for this action")
-      |> halt()
+      assign(conn, :repository, nil)
     end
   end
 

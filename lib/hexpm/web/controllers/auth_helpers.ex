@@ -168,6 +168,18 @@ defmodule Hexpm.Web.AuthHelpers do
     false
   end
 
+  def maybe_repository_access?(%Plug.Conn{} = conn, user) do
+    maybe_repository_access?(conn.assigns.repository, user)
+  end
+
+  def maybe_repository_access?(%Hexpm.Repository.Repository{} = repository, user) do
+    repository.public or Hexpm.Repository.Repositories.access?(repository, user, "read")
+  end
+
+  def maybe_repository_access?(nil, _user) do
+    true
+  end
+
   def correct_user?(%Plug.Conn{} = conn, user) do
     correct_user?(conn.params["name"], user)
   end
