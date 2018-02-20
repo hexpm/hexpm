@@ -1,0 +1,60 @@
+.pricing {
+  margin-top: 10px;
+  text-align: center;
+
+  h3 {
+    margin-top: 10px;
+    margin-bottom: 0;
+  }
+
+  .boxes {
+    width: 800px;
+    margin: 0 auto;
+    overflow: auto;
+
+    h3 {
+      margin-top: 10px;
+      margin-bottom: 10px;
+    }
+  }
+
+  .box {
+    float: left;
+    width: 350px;
+    padding: 20px;
+    margin: 25px;
+    background-color: #eaecf3;
+    border-radius: 5px;
+  }
+
+  .price {
+    margin-top: 50px;
+  }
+
+  .price-amount {
+    margin: 30px;
+    font-size: 60px;
+    font-weight: bold;
+  }
+
+  .price-details {
+    margin: 0;
+  }
+
+  .features {
+    padding: 0;
+    margin-top: 35px;
+    text-align: left;
+    list-style-position: inside;
+    list-style-type: none;
+
+    li {
+      padding: 0;
+      font-weight: 400;
+    }
+  }
+
+  .action {
+    margin-top: 40px;
+  }
+}

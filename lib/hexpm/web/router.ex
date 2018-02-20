@@ -47,6 +47,7 @@ defmodule Hexpm.Web.Router do
     pipe_through :browser
 
     get "/", PageController, :index
+    get "/pricing", PageController, :pricing
     get "/sponsors", PageController, :sponsors
 
     get "/login", LoginController, :show
@@ -105,7 +106,7 @@ defmodule Hexpm.Web.Router do
     get "/packages/:repository/:name/:version", PackageController, :show
 
     get "/blog", BlogController, :index
-    get "/blog/:name", BlogController, :show
+    get "/blog/:slug", BlogController, :show
   end
 
   scope "/", Hexpm.Web do
