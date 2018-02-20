@@ -11,7 +11,7 @@ have to go to the [organization dashboard](/dashboard) and enter a payment metho
 details to continue using organizations. You have **40 days** (until 12th of March) to enter a
 payment method.
 
-The pricing will be **$8.00 per user / month** + local VAT where applicable. If you are using private
+The pricing will be **$7 per user / month** + local VAT where applicable. If you are using private
 packages for open source please contact [support@hex.pm](mailto:support@hex.pm). Check out the
 documentation for more information about [using private packages](/docs/private) and check out
 the [FAQ](/docs/faq) for more information about how organizations are billed.
