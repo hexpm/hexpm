@@ -68,7 +68,7 @@ defmodule Hexpm.MixProject do
       {:postgrex, ">= 0.0.0"},
       {:rollbax, "~> 0.5", only: :prod},
       {:sbroker, "~> 1.0"},
-      {:sweet_xml, "~> 0.5"},
+      {:sweet_xml, "~> 0.5"}
     ]
   end
 

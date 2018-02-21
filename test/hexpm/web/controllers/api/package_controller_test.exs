@@ -3,6 +3,7 @@ defmodule Hexpm.Web.API.PackageControllerTest do
 
   setup do
     user = insert(:user)
+    unauthorized_user = insert(:user)
     repository = insert(:repository)
     package1 = insert(:package, inserted_at: ~N[2030-01-01 00:00:00])
     package2 = insert(:package, updated_at: ~N[2030-01-01 00:00:00])
@@ -27,7 +28,8 @@ defmodule Hexpm.Web.API.PackageControllerTest do
       package3: package3,
       package4: package4,
       repository: repository,
-      user: user
+      user: user,
+      unauthorized_user: unauthorized_user
     }
   end
 
@@ -81,6 +83,37 @@ defmodule Hexpm.Web.API.PackageControllerTest do
 
       assert length(result) == 4
       assert package3.name in Enum.map(result, & &1["name"])
+    end
+
+    test "show private packages in organization", %{
+      user: user,
+      repository: repository,
+      package3: package3
+    } do
+      result =
+        build_conn()
+        # TODO: change to web_login/api_login helper
+        |> put_req_header("authorization", key_for(user))
+        |> get("api/repos/#{repository.name}/packages")
+        |> json_response(200)
+
+      assert length(result) == 1
+      assert package3.name in Enum.map(result, & &1["name"])
+    end
+
+    test "show private packages in organization authorizes", %{
+      repository: repository,
+      unauthorized_user: unauthorized_user
+    } do
+      build_conn()
+      |> get("api/repos/#{repository.name}/packages")
+      |> json_response(403)
+
+      build_conn()
+      # TODO: change to web_login/api_login helper
+      |> put_req_header("authorization", key_for(unauthorized_user))
+      |> get("api/repos/#{repository.name}/packages")
+      |> json_response(403)
     end
   end
 

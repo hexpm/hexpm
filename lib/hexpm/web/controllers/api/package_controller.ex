@@ -1,14 +1,15 @@
 defmodule Hexpm.Web.API.PackageController do
   use Hexpm.Web, :controller
 
+  plug :fetch_repository when action in [:index]
   plug :maybe_fetch_package when action in [:show]
   plug :maybe_authorize, [domain: "api", fun: &repository_access?/2] when action in [:show]
+  plug :maybe_authorize, [domain: "api", fun: &maybe_repository_access?/2] when action in [:index]
 
   @sort_params ~w(name recent_downloads total_downloads inserted_at updated_at)
 
   def index(conn, params) do
-    # TODO: Handle /repos/:repo/ and /
-    repositories = Users.all_repositories(conn.assigns.current_user)
+    repositories = repositories(conn)
     page = Hexpm.Utils.safe_int(params["page"])
     search = Hexpm.Utils.parse_search(params["search"])
     sort = sort(params["sort"])
@@ -39,4 +40,12 @@ defmodule Hexpm.Web.API.PackageController do
   defp sort(nil), do: sort("name")
   defp sort("downloads"), do: sort("total_downloads")
   defp sort(param), do: Hexpm.Utils.safe_to_atom(param, @sort_params)
+
+  defp repositories(conn) do
+    if repository = conn.assigns.repository do
+      [repository]
+    else
+      Users.all_repositories(conn.assigns.current_user)
+    end
+  end
 end
