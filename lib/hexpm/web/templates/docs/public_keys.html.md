@@ -34,4 +34,4 @@ No public keys have been revoked yet.
 
 #### Mix
 
-Run `mix help hex.public_keys` in your terminal for instructions or go to [`hex.public_keys`](/docs/tasks#hex_public_keys).
+Run `mix help hex.repo` in your terminal for instructions or go to [`hex.repo`](/docs/tasks#hex_repo).
