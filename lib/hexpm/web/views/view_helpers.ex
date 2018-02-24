@@ -1,6 +1,6 @@
 defmodule Hexpm.Web.ViewHelpers do
   use Phoenix.HTML
-  alias Hexpm.Repository.Package
+  alias Hexpm.Repository.{Package, Release}
   alias Hexpm.Web.Endpoint
   alias Hexpm.Web.Router.Helpers, as: Routes
 
@@ -65,6 +65,30 @@ defmodule Hexpm.Web.ViewHelpers do
       to_string(release.version),
       []
     )
+  end
+
+  def docs_html_url_for_package(%Package{repository_id: 1, releases: releases} = package) do
+    if Enum.any?(releases, & &1.has_docs) do
+      Hexpm.Utils.docs_html_url([package.name])
+    end
+  end
+
+  # TODO: private package docs
+  def docs_html_url_for_package(_package) do
+    nil
+  end
+
+  def docs_html_url_for_release(_package, %Release{has_docs: false}) do
+    nil
+  end
+
+  def docs_html_url_for_release(%Package{repository_id: 1} = package, release) do
+    Hexpm.Utils.docs_html_url(package, release)
+  end
+
+  # TODO: private package docs
+  def docs_html_url_for_release(_package, _release) do
+    nil
   end
 
   def url_for_package(%Package{repository_id: 1} = package) do

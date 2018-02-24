@@ -8,7 +8,7 @@ defmodule Hexpm.Web.API.ReleaseControllerTest do
     user = insert(:user)
     repository = insert(:repository)
     package = insert(:package, package_owners: [build(:package_owner, owner: user)])
-    release = insert(:release, package: package, version: "0.0.1")
+    release = insert(:release, package: package, version: "0.0.1", has_docs: true)
 
     %{
       user: user,
@@ -699,6 +699,7 @@ defmodule Hexpm.Web.API.ReleaseControllerTest do
 
       assert result["url"] =~ "/api/packages/#{package.name}/releases/#{release.version}"
       assert result["html_url"] =~ "/packages/#{package.name}/#{release.version}"
+      assert result["docs_html_url"] =~ "/#{package.name}/#{release.version}"
       assert result["version"] == "#{release.version}"
     end
 

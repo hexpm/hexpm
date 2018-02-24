@@ -57,11 +57,11 @@ tools = Keyword.take(tools, compatible_tools)
       <span class="maintainers"><%= Enum.join(maintains, ", ") %></span>
     <% end %>
 
-    <%= if links != [] || (@hexdocs_url && @docs_tarball_url) do %>
+    <%= if links != [] || (@docs_html_url && @docs_tarball_url) do %>
       <h3>Links</h3>
       <ul class="links">
-        <%= if @hexdocs_url && @docs_tarball_url do %>
-          <li><a href="<%= @hexdocs_url %>">Online documentation</a> (<a href="<%= @docs_tarball_url %>">download</a>)</li>
+        <%= if @docs_html_url && @docs_tarball_url do %>
+          <li><a href="<%= @docs_html_url %>">Online documentation</a> (<a href="<%= @docs_tarball_url %>">download</a>)</li>
         <% end %>
         <%= for {name, link} <- links do %>
           <li><a href="<%= link %>" rel="nofollow"><%= name %></a></li>

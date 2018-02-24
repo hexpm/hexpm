@@ -88,18 +88,18 @@ defmodule Hexpm.Web.PackageController do
       cond do
         type == :package && latest_release_with_docs ->
           [
-            hexdocs_url: Hexpm.Utils.docs_url([package.name]),
+            docs_html_url: Hexpm.Utils.docs_html_url([package.name]),
             docs_tarball_url: Hexpm.Utils.docs_tarball_url(package, latest_release_with_docs)
           ]
 
         type == :release and release.has_docs ->
           [
-            hexdocs_url: Hexpm.Utils.docs_url(package, release),
+            docs_html_url: Hexpm.Utils.docs_html_url(package, release),
             docs_tarball_url: Hexpm.Utils.docs_tarball_url(package, release)
           ]
 
         true ->
-          [hexdocs_url: nil, docs_tarball_url: nil]
+          [docs_html_url: nil, docs_tarball_url: nil]
       end
 
     downloads = Packages.package_downloads(package)

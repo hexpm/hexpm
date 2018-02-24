@@ -45,7 +45,8 @@ defmodule Hexpm.Repository.Packages do
             :version,
             :inserted_at,
             :updated_at,
-            :retirement
+            :retirement,
+            :has_docs
           ])
       )
 

@@ -242,13 +242,13 @@ defmodule Hexpm.Utils do
   @doc """
   Returns a url to a resource on the docs site from a list of path components.
   """
-  @spec docs_url(Hexpm.Repository.Package.t(), Hexpm.Repository.Release.t()) :: String.t()
-  @spec docs_url([String.t()] | String.t()) :: String.t()
-  def docs_url(package, release) do
-    docs_url([package.name, to_string(release.version)])
+  @spec docs_html_url(Hexpm.Repository.Package.t(), Hexpm.Repository.Release.t()) :: String.t()
+  @spec docs_html_url([String.t()] | String.t()) :: String.t()
+  def docs_html_url(package, release) do
+    docs_html_url([package.name, to_string(release.version)])
   end
 
-  def docs_url(path) do
+  def docs_html_url(path) do
     Application.get_env(:hexpm, :docs_url) <> "/" <> Path.join(List.wrap(path)) <> "/"
   end
 

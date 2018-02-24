@@ -18,6 +18,7 @@ defmodule Hexpm.Web.API.PackageView do
       updated_at: package.updated_at,
       url: url_for_package(package),
       html_url: html_url_for_package(package),
+      docs_html_url: docs_html_url_for_package(package),
       meta: %{
         description: package.meta.description,
         licenses: package.meta.licenses,
