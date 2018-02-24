@@ -20,6 +20,7 @@ defmodule Hexpm.Web.API.ReleaseView do
       package_url: url_for_package(release.package),
       url: url_for_release(release.package, release),
       html_url: html_url_for_release(release.package, release),
+      docs_html_url: docs_html_url_for_release(release.package, release),
       requirements: requirements(release.requirements),
       meta: %{
         app: release.meta.app,

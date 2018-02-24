@@ -9,7 +9,7 @@ defmodule Hexpm.Web.API.PackageControllerTest do
     package2 = insert(:package, updated_at: ~N[2030-01-01 00:00:00])
     package3 = insert(:package, repository_id: repository.id, updated_at: ~N[2030-01-01 00:00:00])
     package4 = insert(:package)
-    insert(:release, package: package1, version: "0.0.1")
+    insert(:release, package: package1, version: "0.0.1", has_docs: true)
     insert(:release, package: package3, version: "0.0.1")
 
     insert(
@@ -124,6 +124,7 @@ defmodule Hexpm.Web.API.PackageControllerTest do
       assert result["name"] == package1.name
       assert result["url"] =~ "/api/packages/#{package1.name}"
       assert result["html_url"] =~ "/packages/#{package1.name}"
+      assert result["docs_html_url"] =~ "/#{package1.name}"
 
       release = List.first(result["releases"])
       assert release["url"] =~ "/api/packages/#{package1.name}/releases/0.0.1"
