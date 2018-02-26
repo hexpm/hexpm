@@ -268,7 +268,6 @@ defmodule Hexpm.Repository.RegistryBuilder do
     (v2_objects(v2, repository) ++ v1_objects(v1, repository))
     |> Task.async_stream(
       fn {key, data, opts} ->
-        opts = [acl: store_acl(repository)] ++ opts
         Hexpm.Store.put(nil, :s3_bucket, key, data, opts)
       end,
       max_concurrency: 10,
@@ -453,7 +452,4 @@ defmodule Hexpm.Repository.RegistryBuilder do
   defp repository_store_key(%Repository{name: name}, key) do
     "repos/#{name}/#{key}"
   end
-
-  defp store_acl(%Repository{public: true}), do: :public_read
-  defp store_acl(%Repository{public: false}), do: :private
 end
