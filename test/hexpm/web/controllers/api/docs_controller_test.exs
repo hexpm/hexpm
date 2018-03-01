@@ -35,7 +35,7 @@ defmodule Hexpm.Web.API.DocsControllerTest do
 
       assert path("docs/#{package.name}/index.html") == "package v0.0.1"
       assert path("docs/#{package.name}/0.0.1/index.html") == "package v0.0.1"
-      assert path("docs/sitemap.xml") =~ "https://hexdocs.pm/#{package.name}"
+      assert path("docs/sitemap.xml") =~ Hexpm.Utils.docs_html_url([package.name])
     end
 
     test "update main docs", %{user: user} do
