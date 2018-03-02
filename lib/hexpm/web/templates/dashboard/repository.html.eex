@@ -121,9 +121,9 @@
             <% end %>
           <% else %>
             <%# Subscription is not active. Organization will be disabled until a payment method has been added. %>
-            Subscription is not active. <strong>Organization will be disabled</strong> on the 1st of March
+            Subscription is not active. <strong>Organization will be disabled</strong> on the 13th of April
             unless a payment method has been added.<br><br>
-            Subscription cost is <strong>$7.00 per user / month</strong> + VAT.<br><br>
+            Subscription cost is <strong>$7.00 per user / month</strong> + local VAT when applicable.<br><br>
             <%= raw(@checkout_html) %>
           <% end %>
         </div>
@@ -184,10 +184,10 @@
         <% end %>
       <% else %>
         <%# Subscription is not active. Organization will be disabled until a payment method has been added. %>
-        Subscription is not active. <strong>Organization will be disabled</strong> on the 1st of March
-        unless a payment method has been added.<br><br>
-        Subscription cost is <strong>$7.00 per user / month</strong> + VAT.<br><br>
         Enter your billing information below to enable the payment method form:<br><br>
+          Subscription is not active. <strong>Organization will be disabled</strong> on the 13th of April
+          unless a payment method has been added.<br><br>
+          Subscription cost is <strong>$7.00 per user / month</strong> + local VAT when applicable.<br><br>
 
         <h4>Billing information</h4>
         <div>
