@@ -1,0 +1,20 @@
+<p>
+  Hello <%= @username %>,
+</p>
+
+<p>
+  We are emailing you because you have been beta testing organizations and private packages.
+  We want to remind you to enter a payment method on the <a href="<%= raw Routes.dashboard_url(Endpoint, :index) %>">organization dashboard</a>
+  to continue using your organization. You have <strong>40 days</strong> (until 13th of April) to
+  enter a payment method after which you will lose access to it.
+</p>
+
+<p>
+  Check our <a href="<%= raw Routes.blog_url(Endpoint, :show, "002-organizations-going-live") %>">announcement blog post</a>
+  for more details.
+</p>
+
+<p>
+  --<br>
+  Hex.pm
+</p>
