@@ -14,14 +14,11 @@ defmodule Hexpm.Web.API.AuthController do
         {:ok, nil} ->
           send_resp(conn, 204, "")
 
-        {:ok, _repository} ->
-          # TODO: Change when billing is required
-          # if repository.public or repository.billing_active do
-          #   :ok
-          # else
-          #   {:error, :auth, "repository has no active billing subscription"}
-          # end
-          send_resp(conn, 204, "")
+        {:ok, repository} ->
+          case repository_billing_active(repository, user) do
+            :ok -> send_resp(conn, 204, "")
+            error -> error(conn, error)
+          end
 
         :error ->
           error(conn, {:error, :auth})

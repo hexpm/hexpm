@@ -299,8 +299,6 @@ defmodule Hexpm.Web.API.OwnerControllerTest do
       assert Hexpm.Repo.aggregate(assoc(package, :owners), :count, :id) == 1
     end
 
-    # TODO: Change when billing is required
-    @tag :skip
     test "returns 403 if repository does not have active billing", %{user1: user1, user2: user2} do
       repository = insert(:repository, billing_active: false)
       insert(:repository_user, repository: repository, user: user1)
