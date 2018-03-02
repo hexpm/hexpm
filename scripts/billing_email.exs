@@ -16,5 +16,5 @@ end)
   # |> Hexpm.Emails.billing_reminder()
   |> Hexpm.Emails.Mailer.deliver_now_throttled()
 
-  IO.puts user.username
+  IO.puts(user.username)
 end)
