@@ -82,8 +82,8 @@
   <div class="col-sm-9 repository">
     <div class="panel panel-default">
       <div class="panel-heading">Billing</div>
-      <div class="panel-body">
-        <%= if @billing_started? do %>
+      <%= if @billing_started? do %>
+        <div class="panel-body">
           <%= if @subscription do %>
             <dl>
               <dt>Plan</dt>
@@ -183,31 +183,33 @@
           </div>
         <% end %>
       <% else %>
-        <%# Subscription is not active. Organization will be disabled until a payment method has been added. %>
-        Enter your billing information below to enable the payment method form:<br><br>
+        <div class="panel-body">
+          <%# Subscription is not active. Organization will be disabled until a payment method has been added. %>
           Subscription is not active. <strong>Organization will be disabled</strong> on the 13th of April
           unless a payment method has been added.<br><br>
           Subscription cost is <strong>$7.00 per user / month</strong> + local VAT when applicable.<br><br>
+          Enter your billing information below to enable the payment method form:<br><br>
 
-        <h4>Billing information</h4>
-        <div>
-          <ul class="nav nav-tabs" role="tablist">
-            <li role="presentation" class="active"><a href="#person" aria-controls="person" role="tab" data-toggle="tab">Person</a></li>
-            <li role="presentation"><a href="#company" aria-controls="company" role="tab" data-toggle="tab">Company</a></li>
-          </ul>
+          <h4>Billing information</h4>
+          <div>
+            <ul class="nav nav-tabs" role="tablist">
+              <li role="presentation" class="active"><a href="#person" aria-controls="person" role="tab" data-toggle="tab">Person</a></li>
+              <li role="presentation"><a href="#company" aria-controls="company" role="tab" data-toggle="tab">Company</a></li>
+            </ul>
 
-          <div class="tab-content">
-            <div role="tabpanel" class="tab-pane active" id="person">
-              <%= form_tag(Routes.dashboard_path(Endpoint, :create_billing, @repository)) do %>
-                <%= render "_billing_person.html", assigns %>
-                <%= submit "Save", class: "btn btn-primary" %>
-              <% end %>
-            </div>
-            <div role="tabpanel" class="tab-pane" id="company">
-              <%= form_tag(Routes.dashboard_path(Endpoint, :create_billing, @repository)) do %>
-                <%= render "_billing_company.html", assigns %>
-                <%= submit "Save", class: "btn btn-primary" %>
-              <% end %>
+            <div class="tab-content">
+              <div role="tabpanel" class="tab-pane active" id="person">
+                <%= form_tag(Routes.dashboard_path(Endpoint, :create_billing, @repository)) do %>
+                  <%= render "_billing_person.html", assigns %>
+                  <%= submit "Save", class: "btn btn-primary" %>
+                <% end %>
+              </div>
+              <div role="tabpanel" class="tab-pane" id="company">
+                <%= form_tag(Routes.dashboard_path(Endpoint, :create_billing, @repository)) do %>
+                  <%= render "_billing_company.html", assigns %>
+                  <%= submit "Save", class: "btn btn-primary" %>
+                <% end %>
+              </div>
             </div>
           </div>
         </div>
