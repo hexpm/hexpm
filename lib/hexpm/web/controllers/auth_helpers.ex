@@ -183,11 +183,12 @@ defmodule Hexpm.Web.AuthHelpers do
   end
 
   def maybe_repository_access(%Hexpm.Repository.Repository{} = repository, user) do
-    repository.public or Hexpm.Repository.Repositories.access?(repository, user, "read")
+    (repository.public or Hexpm.Repository.Repositories.access?(repository, user, "read"))
+    |> boolean_to_auth_error()
   end
 
   def maybe_repository_access(nil, _user) do
-    {:error, :auth}
+    :ok
   end
 
   def repository_billing_active(%Plug.Conn{} = conn, user) do
