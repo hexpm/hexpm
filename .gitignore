@@ -1,6 +1,6 @@
 /tmp
 /logs
-/src/*.erl
+/src
 
 /_build
 /db

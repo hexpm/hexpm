@@ -55,6 +55,8 @@ defmodule Hexpm.Web.API.ReleaseController do
   defp handle_tarball(conn, repository, package, user, body) do
     case Hexpm.Web.ReleaseTar.metadata(body) do
       {:ok, meta, checksum} ->
+        # TODO: pass around and store in DB as binary instead
+        checksum = :hex_tarball.format_checksum(checksum)
         Releases.publish(repository, package, user, body, meta, checksum, audit: audit_data(conn))
 
       {:error, errors} ->

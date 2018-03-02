@@ -69,7 +69,9 @@ defmodule Hexpm.MixProject do
       {:postgrex, ">= 0.0.0"},
       {:rollbax, "~> 0.5", only: :prod},
       {:sbroker, "~> 1.0"},
-      {:sweet_xml, "~> 0.5"}
+      {:sweet_xml, "~> 0.5"},
+      # TODO: switch to master
+      {:hex_erl, github: "hexpm/hex_erl", branch: "wm-tarball"}
     ]
   end
 
@@ -78,7 +80,8 @@ defmodule Hexpm.MixProject do
       "compile.gpb": &compile_gpb/1,
       "ecto.reset": ["ecto.drop", "ecto.create", "ecto.migrate"],
       "ecto.setup": ["ecto.drop", "ecto.create", "ecto.migrate", "run priv/repo/seeds.exs"],
-      test: ["ecto.migrate", "test"]
+      test: ["ecto.migrate", "test"],
+      vendor_hex_erl: &vendor_hex_erl/1
     ]
   end
 
@@ -106,5 +109,26 @@ defmodule Hexpm.MixProject do
         {:error, _} -> :error
       end
     end)
+  end
+
+  defp vendor_hex_erl(_) do
+    filenames = ~w(
+      hex_tarball.erl
+      hex_erl_tar.erl
+      hex_erl_tar.hrl
+      safe_erl_term.xrl
+    )
+
+    module_names = filenames |> Enum.map(&Path.basename(&1, Path.extname(&1))) |> Enum.uniq()
+    Enum.each(Path.wildcard("src/vendored_*"), &File.rm!/1)
+
+    for filename <- filenames do
+      original_filename = Path.join(["..", "hex_erl", "src", filename])
+      vendored_filename = Path.join(["src", "vendored_" <> filename])
+
+      contents = "%% Vendored from hex_erl, do not edit manually\n\n" <> File.read!(original_filename)
+      contents = Enum.reduce(module_names, contents, &String.replace(&2, &1, "vendored_" <> &1))
+      File.write!(vendored_filename, contents)
+    end
   end
 end
