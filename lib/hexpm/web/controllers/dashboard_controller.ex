@@ -246,6 +246,7 @@ defmodule Hexpm.Web.DashboardController do
           conn
           |> put_resp_header("content-type", "application/json")
           |> send_resp(204, Hexpm.Web.Jiffy.encode!(%{}))
+
         {:error, reason} ->
           conn
           |> put_resp_header("content-type", "application/json")
