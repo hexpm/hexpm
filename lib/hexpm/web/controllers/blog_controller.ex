@@ -1,12 +1,8 @@
 defmodule Hexpm.Web.BlogController do
   use Hexpm.Web, :controller
 
-  @skip_slugs ~w(002-organizations-going-live)
-
   Enum.each(Hexpm.Web.BlogView.all_templates(), fn {slug, template} ->
-    unless slug in @skip_slugs do
-      defp slug_to_template(unquote(slug)), do: unquote(Path.rootname(template))
-    end
+    defp slug_to_template(unquote(slug)), do: unquote(Path.rootname(template))
   end)
 
   defp slug_to_template(_other), do: nil
@@ -21,9 +17,7 @@ defmodule Hexpm.Web.BlogController do
   end
 
   def show(conn, %{"slug" => slug}) do
-    template = slug_to_template(slug)
-
-    if slug not in @skip_slugs && template do
+    if template = slug_to_template(slug) do
       render(
         conn,
         "#{template}.html",
