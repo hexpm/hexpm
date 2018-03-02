@@ -35,8 +35,7 @@
         <li><strong>&gt;</strong> Republish and delete packages</li>
       </ul>
       <div class="action">
-        <%# TODO: Fix link %>
-        <a class="btn btn-primary" href="/dashboard/repo-signup" role="button">Create organization</a>
+        <a class="btn btn-primary" href="<%= Routes.dashboard_path(Endpoint, :new_repository) %>" role="button">Create organization</a>
       </div>
     </div>
   </div>
