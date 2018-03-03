@@ -11,7 +11,7 @@
   </ul>
   <div class="panel-heading">Organization settings</div>
   <ul class="list-group">
-    <%= for repository <- @current_user.repositories do %>
+    <%= for repository <- Enum.sort_by(@current_user.repositories, & &1.name) do %>
       <li class="list-group-item <%= selected_repository(@conn, repository.name) %>">
         <a href="<%= Routes.dashboard_path(Endpoint, :repository, repository) %>">
           <%= repository.name %>
