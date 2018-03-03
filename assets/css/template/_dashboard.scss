@@ -99,6 +99,8 @@
 }
 
 .dashboard .repository {
+  float: right;
+
   form.remove-role,
   form.cancel-billing {
     display: inline-block;
