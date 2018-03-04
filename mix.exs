@@ -91,6 +91,7 @@ defmodule Hexpm.MixProject do
     project = Mix.Project.config()
     proto_paths = project[:proto_paths] || ["priv/proto"]
     erlc_path = project[:erlc_paths] |> List.first()
+    File.mkdir_p!(erlc_path)
     mappings = Enum.zip(proto_paths, Stream.repeatedly(fn -> erlc_path end))
     options = project[:gpb_options] || []
     options = options ++ [o: erlc_path]
