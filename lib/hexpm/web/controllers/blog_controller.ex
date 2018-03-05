@@ -16,6 +16,10 @@ defmodule Hexpm.Web.BlogController do
     )
   end
 
+  def show(conn, %{"slug" => "002-organizations-going-live"}) do
+    redirect(conn, to: Routes.blog_path(Endpoint, :show, "organizations-going-live"))
+  end
+
   def show(conn, %{"slug" => slug}) do
     if template = slug_to_template(slug) do
       render(
