@@ -40,23 +40,17 @@ defmodule Hexpm.Repository.RegistryBuilderTest do
 
   defp v2_map(path) do
     nonrepo_path = Regex.replace(~r"^repos/\w+/", path, "")
-    {module, message} = path_to_protobuf(nonrepo_path)
 
     if contents = Hexpm.Store.get(nil, :s3_bucket, path, []) do
-      %{payload: payload, signature: signature} =
-        contents
-        |> :zlib.gunzip()
-        |> :hex_pb_signed.decode_msg(:Signed)
-
       public_key = Application.fetch_env!(:hexpm, :public_key)
-      assert Hexpm.Utils.verify(payload, signature, public_key)
-      module.decode_msg(payload, message)
+      {:ok, payload} = :hex_registry.decode_and_verify_signed(:zlib.gunzip(contents), public_key)
+      path_to_decoder(nonrepo_path).(payload)
     end
   end
 
-  defp path_to_protobuf("names"), do: {:hex_pb_names, :Names}
-  defp path_to_protobuf("versions"), do: {:hex_pb_versions, :Versions}
-  defp path_to_protobuf("packages/" <> _), do: {:hex_pb_package, :Package}
+  defp path_to_decoder("names"), do: &:hex_registry.decode_names/1
+  defp path_to_decoder("versions"), do: &:hex_registry.decode_versions/1
+  defp path_to_decoder("packages/" <> _), do: &:hex_registry.decode_package/1
 
   describe "full_build/0" do
     test "registry is in correct format", %{packages: [p1, p2, p3]} do

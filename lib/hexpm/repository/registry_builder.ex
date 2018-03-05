@@ -165,8 +165,8 @@ defmodule Hexpm.Repository.RegistryBuilder do
   end
 
   defp sign_protobuf(contents) do
-    signature = sign(contents)
-    :hex_pb_signed.encode_msg(%{payload: contents, signature: signature}, :Signed)
+    private_key = Application.fetch_env!(:hexpm, :private_key)
+    :hex_registry.sign_protobuf(contents, private_key)
   end
 
   defp build_new(repository, packages, releases) do
@@ -183,7 +183,7 @@ defmodule Hexpm.Repository.RegistryBuilder do
     packages = Enum.map(packages, fn {name, _versions} -> %{name: name} end)
 
     %{packages: packages}
-    |> :hex_pb_names.encode_msg(:Names)
+    |> :hex_registry.encode_names()
     |> sign_protobuf()
     |> :zlib.gzip()
   end
@@ -199,7 +199,7 @@ defmodule Hexpm.Repository.RegistryBuilder do
       end)
 
     %{packages: packages}
-    |> :hex_pb_versions.encode_msg(:Versions)
+    |> :hex_registry.encode_versions()
     |> sign_protobuf()
     |> :zlib.gzip()
   end
@@ -253,7 +253,7 @@ defmodule Hexpm.Repository.RegistryBuilder do
       end)
 
     %{releases: releases}
-    |> :hex_pb_package.encode_msg(:Package)
+    |> :hex_registry.encode_package()
     |> sign_protobuf()
     |> :zlib.gzip()
   end
