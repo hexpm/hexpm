@@ -1,7 +1,7 @@
 defmodule Hexpm.Web.BlogView do
   use Hexpm.Web, :view
 
-  @skip_slugs ~w(organizations-going-live)
+  @skip_slugs ~w()
 
   def render("index.html", _assigns) do
     posts =
