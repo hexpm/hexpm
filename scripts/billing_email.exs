@@ -1,5 +1,7 @@
+# TODO: Filter organizations that already entered billing details
+
 Hexpm.Repo.all(Hexpm.Repository.Repository)
-|> Hexpm.Repo.preload(repository_users: :user)
+|> Hexpm.Repo.preload([repository_users: [user: :emails]])
 |> Enum.flat_map(fn repository ->
   Enum.flat_map(repository.repository_users, fn ru ->
     if ru.role == "admin" do

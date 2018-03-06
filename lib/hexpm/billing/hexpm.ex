@@ -30,6 +30,7 @@ defmodule Hexpm.Billing.Hexpm do
   def update(repository, params) do
     case patch("api/customers/#{repository}", params) do
       {:ok, 200, _headers, body} -> {:ok, body}
+      {:ok, 404, _headers, _body} -> {:ok, nil}
       {:ok, 422, _headers, body} -> {:error, body}
     end
   end
