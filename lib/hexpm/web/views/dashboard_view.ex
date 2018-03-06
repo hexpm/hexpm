@@ -132,13 +132,15 @@ defmodule Hexpm.Web.DashboardView do
     "#{whole}.#{float}"
   end
 
-  defp billing_emails(user, billing_email) do
+  defp default_billing_emails(user, billing_email) do
     emails =
       user.emails
       |> Enum.filter(& &1.verified)
       |> Enum.map(& &1.email)
 
-    Enum.uniq([billing_email | emails])
+    [billing_email | emails]
+    |> Enum.reject(&is_nil/1)
+    |> Enum.uniq()
   end
 
   # From Hexpm.Billing.Country

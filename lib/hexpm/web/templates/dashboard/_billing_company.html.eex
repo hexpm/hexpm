@@ -1,10 +1,11 @@
 <div class="form-group">
   <label for="billing_email">Billing email</label>
-  <select id="billing_email" name="email" class="form-control" required>
-    <%= for email <- billing_emails(@current_user, @billing_email) do %>
+  <input type="text" id="billing_email" name="email" class="form-control" required list="billing-emails">
+  <datalist id="billing-emails">
+    <%= for email <- default_billing_emails(@current_user, @billing_email) do %>
       <option value="<%= email %>" <%= if email == (@params["email"] || @billing_email) do %>selected<% end %>><%= email %></option>
     <% end %>
-  </select>
+  </datalist>
 </div>
 <div class="form-group">
   <label for="company_name">Company name</label>

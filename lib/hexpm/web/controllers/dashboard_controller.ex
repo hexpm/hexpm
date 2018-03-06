@@ -293,12 +293,9 @@ defmodule Hexpm.Web.DashboardController do
 
   def update_billing(conn, %{"dashboard_repo" => repository} = params) do
     access_repository(conn, repository, "admin", fn repository ->
-      billing = Hexpm.Billing.dashboard(repository.name)
-
       update_billing(
         conn,
         repository,
-        billing,
         params,
         &Hexpm.Billing.update(repository.name, &1)
       )
@@ -308,7 +305,7 @@ defmodule Hexpm.Web.DashboardController do
   def create_billing(conn, %{"dashboard_repo" => repository} = params) do
     access_repository(conn, repository, "admin", fn repository ->
       params = Map.put(params, "token", repository.name)
-      update_billing(conn, repository, nil, params, &Hexpm.Billing.create/1)
+      update_billing(conn, repository, params, &Hexpm.Billing.create/1)
     end)
   end
 
@@ -372,35 +369,23 @@ defmodule Hexpm.Web.DashboardController do
     end
   end
 
-  defp update_billing(conn, repository, billing, params, fun) do
-    emails =
-      conn.assigns.current_user.emails
-      |> Enum.filter(& &1.verified)
-      |> Enum.map(& &1.email)
+  defp update_billing(conn, repository, params, fun) do
+    billing_params =
+      Map.take(params, ["email", "person", "company", "token"])
+      |> Map.put_new("person", nil)
+      |> Map.put_new("company", nil)
 
-    if params["email"] in emails or params["email"] == billing["email"] do
-      billing_params =
-        Map.take(params, ["email", "person", "company", "token"])
-        |> Map.put_new("person", nil)
-        |> Map.put_new("company", nil)
+    case fun.(billing_params) do
+      {:ok, _} ->
+        conn
+        |> put_flash(:info, "Updated your billing information.")
+        |> redirect(to: Routes.dashboard_path(conn, :repository, repository))
 
-      case fun.(billing_params) do
-        {:ok, _} ->
-          conn
-          |> put_flash(:info, "Updated your billing information.")
-          |> redirect(to: Routes.dashboard_path(conn, :repository, repository))
-
-        {:error, reason} ->
-          conn
-          |> put_status(400)
-          |> put_flash(:error, "Failed to update billing information.")
-          |> render_repository(repository, params: params, errors: reason["errors"])
-      end
-    else
-      conn
-      |> put_status(400)
-      |> put_flash(:error, "Invalid billing email.")
-      |> render_repository(repository)
+      {:error, reason} ->
+        conn
+        |> put_status(400)
+        |> put_flash(:error, "Failed to update billing information.")
+        |> render_repository(repository, params: params, errors: reason["errors"])
     end
   end
 
