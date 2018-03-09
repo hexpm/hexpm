@@ -304,7 +304,7 @@ defmodule Hexpm.Repository.RegistryBuilder do
         " " <> repository_cdn_key(repository, "registry-index")
 
     meta = [{"surrogate-key", surrogate_key}]
-    opts = [cache_control: "public, max-age=600", meta: meta]
+    opts = [cache_control: "public, max-age=600", content_encoding: "gzip", meta: meta]
     index_opts = Keyword.put(opts, :meta, meta)
 
     names_object = {repository_store_key(repository, "names"), names, index_opts}
