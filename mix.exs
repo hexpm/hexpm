@@ -69,7 +69,8 @@ defmodule Hexpm.MixProject do
       {:postgrex, ">= 0.0.0"},
       {:rollbax, "~> 0.5", only: :prod},
       {:sbroker, "~> 1.0"},
-      {:sweet_xml, "~> 0.5"}
+      {:sweet_xml, "~> 0.5"},
+      {:hex_erl, github: "hexpm/hex_erl", branch: "master"}
     ]
   end
 
@@ -89,6 +90,7 @@ defmodule Hexpm.MixProject do
     project = Mix.Project.config()
     proto_paths = project[:proto_paths] || ["priv/proto"]
     erlc_path = project[:erlc_paths] |> List.first()
+    File.mkdir_p!(erlc_path)
     mappings = Enum.zip(proto_paths, Stream.repeatedly(fn -> erlc_path end))
     options = project[:gpb_options] || []
     options = options ++ [o: erlc_path]
