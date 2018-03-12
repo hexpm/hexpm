@@ -70,8 +70,7 @@ defmodule Hexpm.MixProject do
       {:rollbax, "~> 0.5", only: :prod},
       {:sbroker, "~> 1.0"},
       {:sweet_xml, "~> 0.5"},
-      # TODO: switch to master
-      {:hex_erl, github: "hexpm/hex_erl", branch: "wm-tarball"}
+      {:hex_erl, github: "hexpm/hex_erl", branch: "master"}
     ]
   end
 
