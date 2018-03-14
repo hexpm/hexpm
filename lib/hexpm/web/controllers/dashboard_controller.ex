@@ -314,59 +314,47 @@ defmodule Hexpm.Web.DashboardController do
   end
 
   def create_repository(conn, params) do
-    emails =
-      conn.assigns.current_user.emails
-      |> Enum.filter(& &1.verified)
-      |> Enum.map(& &1.email)
+    Hexpm.Repo.transaction(fn ->
+      case Repositories.create(
+             conn.assigns.current_user,
+             params["repository"],
+             audit: audit_data(conn)
+           ) do
+        {:ok, repository} ->
+          billing_params =
+            Map.take(params, ["email", "person", "company"])
+            |> Map.put_new("person", nil)
+            |> Map.put_new("company", nil)
+            |> Map.put("token", params["repository"]["name"])
 
-    if params["email"] in emails do
-      Hexpm.Repo.transaction(fn ->
-        case Repositories.create(
-               conn.assigns.current_user,
-               params["repository"],
-               audit: audit_data(conn)
-             ) do
-          {:ok, repository} ->
-            billing_params =
-              Map.take(params, ["email", "person", "company"])
-              |> Map.put_new("person", nil)
-              |> Map.put_new("company", nil)
-              |> Map.put("token", params["repository"]["name"])
+          case Hexpm.Billing.create(billing_params) do
+            {:ok, _} ->
+              conn
+              |> put_flash(:info, "Organization created.")
+              |> redirect(to: Routes.dashboard_path(conn, :repository, repository))
 
-            case Hexpm.Billing.create(billing_params) do
-              {:ok, _} ->
-                conn
-                |> put_flash(:info, "Organization created.")
-                |> redirect(to: Routes.dashboard_path(conn, :repository, repository))
+            {:error, reason} ->
+              changeset = Repository.changeset(%Repository{}, params["repository"])
 
-              {:error, reason} ->
-                changeset = Repository.changeset(%Repository{}, params["repository"])
+              conn
+              |> put_status(400)
+              |> put_flash(:error, "Oops, something went wrong! Please check the errors below.")
+              |> render_new_repository(
+                changeset: changeset,
+                params: params,
+                errors: reason["errors"]
+              )
+              |> Hexpm.Repo.rollback()
+          end
 
-                conn
-                |> put_status(400)
-                |> put_flash(:error, "Oops, something went wrong! Please check the errors below.")
-                |> render_new_repository(
-                  changeset: changeset,
-                  params: params,
-                  errors: reason["errors"]
-                )
-                |> Hexpm.Repo.rollback()
-            end
-
-          {:error, changeset} ->
-            conn
-            |> put_status(400)
-            |> render_new_repository(changeset: changeset, params: params)
-            |> Hexpm.Repo.rollback()
-        end
-      end)
-      |> elem(1)
-    else
-      conn
-      |> put_status(400)
-      |> put_flash(:error, "Invalid billing email.")
-      |> render_new_repository(params: params)
-    end
+        {:error, changeset} ->
+          conn
+          |> put_status(400)
+          |> render_new_repository(changeset: changeset, params: params)
+          |> Hexpm.Repo.rollback()
+      end
+    end)
+    |> elem(1)
   end
 
   defp update_billing(conn, repository, params, fun) do
