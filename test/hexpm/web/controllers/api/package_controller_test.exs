@@ -138,7 +138,7 @@ defmodule Hexpm.Web.API.PackageControllerTest do
       |> json_response(404)
     end
 
-    test "get package for unautenticated private repository", %{
+    test "get package for unauthenticated private repository", %{
       repository: repository,
       package3: package3
     } do
@@ -171,7 +171,7 @@ defmodule Hexpm.Web.API.PackageControllerTest do
       |> json_response(404)
     end
 
-    test "get package for autenticated private repository", %{
+    test "get package for authenticated private repository", %{
       user: user,
       repository: repository,
       package3: package3
