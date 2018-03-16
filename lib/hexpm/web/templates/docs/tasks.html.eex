@@ -265,7 +265,7 @@ and want to authenticate on a CI server or similar system
 </ul>
 <h3>Deauthorize and remove an organization</h3>
 <pre><code>mix hex.organization deauth NAME</code></pre>
-<h3>Generate a repository autentication key</h3>
+<h3>Generate a repository authentication key</h3>
 <p>This command is useful to pre-generate keys for use with <code class="inline">mix hex.organization auth NAME --key KEY</code>
 on CI servers or similar systems. It returns the hash of the generated key that you can pass to
 <code class="inline">auth NAME --key KEY</code></p>
