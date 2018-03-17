@@ -8,6 +8,16 @@ To contribute to Hexpm you need to properly set up your development environment.
 
 Also see the client repository: [hex](https://github.com/hexpm/hex). The client uses `hexpm` for integration tests, so `hexpm` needs to support all versions the client supports. Travis tests ensures that tests are run on all supported versions.
 
+### Setup
+
+1. Run `mix setup` to install dependencies, create and seed database etc
+2. Run `mix test`
+3. Run `iex -S mix phx.server` and visit [http://localhost:4000/](http://localhost:4000/)
+
+After this succeeds you should be good to go!
+
+See [`setup` alias in mix.exs](./mix.exs) and sections below for more information or when you run into issues.
+
 ### PostgreSQL Modules And Version
 
 PostgreSQL version should be >= 9.4, as Hexpm uses the `jsonb` type, that is available from PostgreSQL 9.4 onward.
@@ -32,7 +42,6 @@ ALTER USER postgres WITH SUPERUSER;
 -- if you also want to setup the test database
 CREATE DATABASE hexpm_test;
 GRANT ALL PRIVILEGES ON DATABASE hexpm_test TO postgres;
-ALTER DATABASE hexpm_test SET timezone TO 'UTC';
 ```
 
 Now you are fine to run the ecto migrations:
@@ -49,21 +58,15 @@ Using the following command you can seed your local Hexpm instance with some sam
 mix run priv/repo/seeds.exs
 ```
 
-Also, all of the steps above (creating, migrating, and seeding the database) can be achieved by running:
-
-```shell
-mix ecto.setup
-```
-
 ### Node Dependencies
 
-All the Node dependencies can be installed with `npm`:
+For assets compilation we need to install Node dependencies:
 
 ```shell
-cd assets && npm install
+cd assets && yarn install
 ```
 
-These are needed for asset compilation.
+If you don't have yarn installed, `cd assets && npm install` will work too.
 
 ### Running Hexpm
 
@@ -78,10 +81,6 @@ mix phx.server
 ```
 
 Hexpm will be available at [http://localhost:4000/](http://localhost:4000/).
-
-### Running Tests
-
-By default, tests use a PostgreSQL called `hexpm_test` see above for setup.
 
 ## License
 
