@@ -86,7 +86,7 @@ defmodule Hexpm.Repository.RegistryBuilderTest do
 
       public_key = Application.fetch_env!(:hexpm, :public_key)
       signature = Base.decode16!(signature, case: :lower)
-      assert Hexpm.Utils.verify(registry, signature, public_key)
+      assert :hex_registry.verify(registry, signature, public_key)
     end
 
     test "registry v2 is in correct format", %{packages: [p1, p2, p3] = packages} do

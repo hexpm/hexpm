@@ -161,7 +161,7 @@ defmodule Hexpm.Repository.RegistryBuilder do
 
   defp sign(contents) do
     key = Application.fetch_env!(:hexpm, :private_key)
-    Hexpm.Utils.sign(contents, key)
+    :hex_registry.sign(contents, key)
   end
 
   defp sign_protobuf(contents) do
