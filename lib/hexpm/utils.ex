@@ -284,18 +284,6 @@ defmodule Hexpm.Utils do
     result.status
   end
 
-  def sign(payload, key) do
-    [entry | _] = :public_key.pem_decode(key)
-    key = :public_key.pem_entry_decode(entry)
-    :public_key.sign(payload, :sha512, key)
-  end
-
-  def verify(payload, signature, key) do
-    [entry | _] = :public_key.pem_decode(key)
-    key = :public_key.pem_entry_decode(entry)
-    :public_key.verify(payload, :sha512, signature, key)
-  end
-
   def parse_ip(ip) do
     parts = String.split(ip, ".")
 
