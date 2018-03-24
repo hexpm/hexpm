@@ -27,6 +27,9 @@ defmodule Hexpm.ThrottleTest do
 
     Throttle.wait(context.pid, 1)
     assert diff(start) < 10
+
+    # Avoid duplicate responses
+    refute_received {_ref, :yes}
   end
 
   test "reset based on time unit", context do
@@ -45,6 +48,9 @@ defmodule Hexpm.ThrottleTest do
     assert diff(start) < 10
     Throttle.wait(context.pid, 1)
     assert diff(start) > 90
+
+    # Avoid duplicate responses
+    refute_received {_ref, :yes}
   end
 
   test "only churn through rate after reset", context do
