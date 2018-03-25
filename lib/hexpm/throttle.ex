@@ -66,7 +66,6 @@ defmodule Hexpm.Throttle do
           GenServer.reply(from, :yes)
           {true, %{state | running: state.running + increment, waiting: waiting}}
         else
-          state = %{state | waiting: :queue.in({from, increment}, state.waiting)}
           {false, state}
         end
 
