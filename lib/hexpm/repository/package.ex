@@ -29,6 +29,7 @@ defmodule Hexpm.Repository.Package do
     sasl snmp ssh ssl stdlib syntax_tools test_server toolbar tools tv typer
     webtool wx xmerl
   )
+  @inets_names ~w(ftp tftp httpc httpd http_uri)
   @app_names ~w(firenest toucan net http net_http gen_http xhttp)
   @windows_names ~w(
     nul con prn aux com1 com2 com3 com4 com5 com6 com7 com8 com9 lpt1 lpt2
@@ -45,6 +46,7 @@ defmodule Hexpm.Repository.Package do
   @reserved_names Enum.concat([
                     @elixir_names,
                     @otp_names,
+                    @inets_names,
                     @tool_names,
                     @app_names,
                     @windows_names,
