@@ -569,7 +569,8 @@ defmodule Hexpm.Web.DashboardControllerTest do
                "person" => %{"country" => "SE"},
                "token" => "createrepo",
                "company" => nil,
-               "email" => "eric@mail.com"
+               "email" => "eric@mail.com",
+               "quantity" => 1
              }
 
       {:ok, %{}}

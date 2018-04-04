@@ -304,7 +304,13 @@ defmodule Hexpm.Web.DashboardController do
 
   def create_billing(conn, %{"dashboard_repo" => repository} = params) do
     access_repository(conn, repository, "admin", fn repository ->
-      params = Map.put(params, "token", repository.name)
+      members_count = Repositories.members_count(repository)
+
+      params =
+        params
+        |> Map.put("token", repository.name)
+        |> Map.put("quantity", members_count)
+
       update_billing(conn, repository, params, &Hexpm.Billing.create/1)
     end)
   end
@@ -326,6 +332,7 @@ defmodule Hexpm.Web.DashboardController do
             |> Map.put_new("person", nil)
             |> Map.put_new("company", nil)
             |> Map.put("token", params["repository"]["name"])
+            |> Map.put("quantity", 1)
 
           case Hexpm.Billing.create(billing_params) do
             {:ok, _} ->
