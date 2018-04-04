@@ -1,6 +1,6 @@
 [name] = System.argv()
 
-user = Hexpm.Users.get(name, [:emails])
+user = Hexpm.Accounts.Users.get(name, [:emails])
 
 unless user do
   IO.puts("No user: #{name}")
