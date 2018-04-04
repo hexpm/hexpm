@@ -140,8 +140,4 @@ defmodule Hexpm.Accounts.Key do
   def verify_permissions?(_key, nil, _resource) do
     false
   end
-
-  def valid_permission_request?("api", nil), do: true
-  def valid_permission_request?("repository", repository) when is_binary(repository), do: true
-  def valid_permission_request?(_domain, _resource), do: false
 end
