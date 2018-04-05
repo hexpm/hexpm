@@ -366,7 +366,8 @@ defmodule Hexpm.Web.DashboardController do
 
   defp update_billing(conn, repository, params, fun) do
     billing_params =
-      Map.take(params, ["email", "person", "company", "token"])
+      params
+      |> Map.take(["email", "person", "company", "token", "quantity"])
       |> Map.put_new("person", nil)
       |> Map.put_new("company", nil)
 
