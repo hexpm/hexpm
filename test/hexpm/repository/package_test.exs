@@ -43,6 +43,11 @@ defmodule Hexpm.Repository.PackageTest do
   test "validate blank description in metadata", %{user: user, repository: repository} do
     changeset = Package.build(repository, user, pkg_meta(%{name: "ecto", description: ""}))
     assert changeset.errors == []
+    assert changeset.changes.meta.errors == []
+
+    repository = %{repository | id: 1}
+    changeset = Package.build(repository, user, pkg_meta(%{name: "ecto", description: ""}))
+    assert changeset.errors == []
     assert [description: {"can't be blank", _}] = changeset.changes.meta.errors
   end
 

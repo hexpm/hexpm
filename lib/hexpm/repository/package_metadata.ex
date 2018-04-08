@@ -11,11 +11,18 @@ defmodule Hexpm.Repository.PackageMetadata do
     field :extra, :map
   end
 
-  # TODO: licenses not required for private packages
-  def changeset(meta, params) do
+  def changeset(meta, params, package) do
     cast(meta, params, ~w(description licenses links maintainers extra))
-    |> validate_required(~w(description licenses)a)
+    |> validate_required_meta(package)
     |> validate_links()
+  end
+
+  defp validate_required_meta(changeset, package) do
+    if package.repository_id == 1 do
+      validate_required(changeset, ~w(description licenses)a)
+    else
+      changeset
+    end
   end
 
   defp validate_links(changeset) do
