@@ -60,7 +60,8 @@ tools = Keyword.take(tools, compatible_tools)
     <%= if links != [] || (@docs_html_url && @docs_tarball_url) do %>
       <h3>Links</h3>
       <ul class="links">
-        <%= if @docs_html_url && @docs_tarball_url do %>
+        <%# TODO: Remove check when private hexdocs is live %>
+        <%= if @package.repository_id == 1 && @docs_html_url && @docs_tarball_url do %>
           <li><a href="<%= @docs_html_url %>">Online documentation</a> (<a href="<%= @docs_tarball_url %>">download</a>)</li>
         <% end %>
         <%= for {name, link} <- links do %>

@@ -138,7 +138,6 @@ defmodule Hexpm.Web.API.DocsControllerTest do
   end
 
   describe "POST /api/repos/:repository/packages/:name/releases/:version/docs" do
-    @tag :skip
     test "release docs authorizes", %{user: user} do
       repository = insert(:repository)
 
@@ -157,7 +156,6 @@ defmodule Hexpm.Web.API.DocsControllerTest do
       refute Hexpm.Repo.get_by!(assoc(package, :releases), version: "0.0.1").has_docs
     end
 
-    @tag :skip
     test "release docs", %{user: user} do
       repository = insert(:repository)
 
@@ -175,28 +173,6 @@ defmodule Hexpm.Web.API.DocsControllerTest do
       |> response(201)
 
       assert Hexpm.Repo.get_by!(assoc(package, :releases), version: "0.0.1").has_docs
-    end
-
-    test "private package docs disabled", %{user: user} do
-      repository = insert(:repository)
-
-      package =
-        insert(
-          :package,
-          repository_id: repository.id,
-          package_owners: [build(:package_owner, owner: user)]
-        )
-
-      insert(:release, package: package, version: "0.0.1")
-      insert(:repository_user, repository: repository, user: user)
-
-      result =
-        publish_docs(user, repository, package, "0.0.1", [{'index.html', "package v0.0.1"}])
-        |> json_response(400)
-
-      assert result["message"] == "publishing docs for private packages is disabled"
-
-      refute Hexpm.Repo.get_by!(assoc(package, :releases), version: "0.0.1").has_docs
     end
   end
 
@@ -289,7 +265,6 @@ defmodule Hexpm.Web.API.DocsControllerTest do
   end
 
   describe "DELETE /api/repos/:repository/packages/:name/releases/:version/docs" do
-    @tag :skip
     test "delete docs authorizes", %{user: user1} do
       user2 = insert(:user)
       repository = insert(:repository)
@@ -316,7 +291,6 @@ defmodule Hexpm.Web.API.DocsControllerTest do
       assert Hexpm.Repo.get_by(assoc(package, :releases), version: "0.0.1").has_docs
     end
 
-    @tag :skip
     test "delete docs", %{user: user} do
       repository = insert(:repository)
 
