@@ -1,9 +1,14 @@
 defmodule Hexpm.Web.API.KeyController do
   use Hexpm.Web, :controller
 
-  plug :authorize, [domain: "api"] when action != :create
-  plug :authorize, [domain: "api", allow_unconfirmed: true] when action == :create
+  plug :authorize,
+       [domain: "api", resource: "write", allow_unconfirmed: true]
+       when action == :create
 
+  plug :authorize, [domain: "api", resource: "write"] when action in [:delete, :delete_all]
+  plug :authorize, [domain: "api", resource: "read"] when action in [:index, :show]
+
+  # TODO: Add filtering on domain and resource
   def index(conn, _params) do
     user = conn.assigns.current_user
     authing_key = conn.assigns.key

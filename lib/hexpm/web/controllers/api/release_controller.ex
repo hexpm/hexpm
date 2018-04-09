@@ -4,13 +4,22 @@ defmodule Hexpm.Web.API.ReleaseController do
   plug :maybe_fetch_release when action in [:show]
   plug :fetch_release when action in [:delete]
   plug :maybe_fetch_package when action in [:create]
-  plug :maybe_authorize, [domain: "api", fun: &repository_access/2] when action in [:show]
-  plug :authorize, [domain: "api", fun: &package_owner/2] when action in [:delete]
-  plug :authorize, [domain: "api", fun: &maybe_package_owner/2] when action in [:create]
+
+  plug :maybe_authorize,
+       [domain: "api", resource: "read", fun: &repository_access/2]
+       when action in [:show]
 
   plug :authorize,
-       [domain: "api", fun: &repository_billing_active/2]
-       when action in [:create, :delete]
+       [
+         domain: "api",
+         resource: "write",
+         fun: [&maybe_package_owner/2, &repository_billing_active/2]
+       ]
+       when action in [:create]
+
+  plug :authorize,
+       [domain: "api", resource: "write", fun: [&package_owner/2, &repository_billing_active/2]]
+       when action in [:delete]
 
   def create(conn, %{"body" => body}) do
     handle_tarball(
@@ -24,9 +33,12 @@ defmodule Hexpm.Web.API.ReleaseController do
 
   def show(conn, params) do
     if release = conn.assigns.release do
+      downloads = Releases.downloads_by_period(release.id, params["downloads"])
+
       release =
-        Releases.preload(release, [:requirements])
-        |> Map.put(:downloads, Releases.downloads_by_period(release.id, params["downloads"]))
+        release
+        |> Releases.preload([:requirements])
+        |> Map.put(:downloads, downloads)
 
       when_stale(conn, release, fn conn ->
         conn

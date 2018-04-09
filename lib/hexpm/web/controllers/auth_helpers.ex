@@ -19,7 +19,7 @@ defmodule Hexpm.Web.AuthHelpers do
     authorized(conn, conn.assigns.current_user, opts[:fun], opts)
   end
 
-  defp authorized(conn, user, fun, opts) do
+  defp authorized(conn, user, funs, opts) do
     allow_unconfirmed = Keyword.get(opts, :allow_unconfirmed, false)
     domain = Keyword.get(opts, :domain)
     resource = Keyword.get(opts, :resource)
@@ -33,11 +33,13 @@ defmodule Hexpm.Web.AuthHelpers do
       user && key && !verify_permissions?(key, domain, resource) ->
         error(conn, {:error, :domain})
 
-      fun ->
-        case fun.(conn, user) do
-          :ok -> conn
-          other -> error(conn, other)
-        end
+      funs ->
+        Enum.find_value(List.wrap(funs), fn fun ->
+          case fun.(conn, user) do
+            :ok -> nil
+            other -> error(conn, other)
+          end
+        end) || conn
 
       true ->
         conn

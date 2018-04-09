@@ -2,11 +2,17 @@ defmodule Hexpm.Web.API.DocsController do
   use Hexpm.Web, :controller
 
   plug :fetch_release
-  plug :maybe_authorize, [domain: "api", fun: &repository_access/2] when action in [:show]
-  plug :authorize, [domain: "api", fun: &package_owner/2] when action in [:create, :delete]
+
+  plug :maybe_authorize,
+       [
+         domain: "api",
+         resource: "read",
+         fun: [&repository_access/2, &repository_billing_active/2]
+       ]
+       when action in [:show]
 
   plug :authorize,
-       [domain: "api", fun: &repository_billing_active/2]
+       [domain: "api", resource: "write", fun: [&package_owner/2, &repository_billing_active/2]]
        when action in [:create, :delete]
 
   def show(conn, _params) do
