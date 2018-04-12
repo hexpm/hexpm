@@ -76,7 +76,7 @@ defmodule Hexpm.Emails do
   def billing_reminder(user) do
     email()
     |> to(user)
-    |> subject("Hex.pm - Reminder to enter payment method for organization")
+    |> subject("Hex.pm - Organization free beta period is ending")
     |> assign(:username, user.username)
     |> render("billing_reminder.html")
   end

@@ -1,5 +1,3 @@
-# TODO: Filter organizations that already entered billing details
-
 Hexpm.Repo.all(Hexpm.Repository.Repository)
 |> Hexpm.Repo.preload([repository_users: [user: :emails]])
 |> Enum.reject(fn repository ->
