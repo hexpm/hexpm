@@ -8,7 +8,8 @@ defmodule Hexpm.Web.ErrorView do
       error: true,
       status: status,
       message: message(status),
-      container: "container error-view"
+      container: "container error-view",
+      current_user: assigns.conn.assigns.current_user
     )
   end
 
