@@ -26,6 +26,8 @@ Hexpm requires the PostgreSQL modules [pg_trgm](http://www.postgresql.org/docs/9
 
 This is located in the "postgresql-contrib" package, however the package name can vary depending on your operating system. If the module is not installed the ecto migrations will fail.
 
+If you want to use PostgreSQL with docker, run: `docker run --name hexpm-db -p 5432:5432 -e POSTGRES_PASSWORD=postgres -e POSTGRES_USER=postgres -d postgres:10.3`
+
 ### Database
 
 By default, Hexpm connects to a localhost PostgreSQL database `hexpm_dev` using the username `postgres` with the password `postgres`.
