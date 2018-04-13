@@ -460,8 +460,7 @@ defmodule Hexpm.Web.DashboardController do
       card: nil,
       invoices: nil,
       person: nil,
-      company: nil,
-      beta?: nil
+      company: nil
     ]
   end
 
@@ -486,8 +485,7 @@ defmodule Hexpm.Web.DashboardController do
       card: billing["card"],
       invoices: billing["invoices"],
       person: billing["person"],
-      company: billing["company"],
-      beta?: billing["beta?"]
+      company: billing["company"]
     ]
   end
 

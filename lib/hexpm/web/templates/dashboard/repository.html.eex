@@ -120,16 +120,8 @@
               <%= submit "Cancel", class: "btn btn-danger", disabled: !@subscription || @subscription["cancel_at_period_end"] %>
             <% end %>
           <% else %>
-            <%= if @beta? do %>
-              <%# TODO: Remove this when we no longer have beta customers %>
-              Subscription is not active. <strong>Organization will be disabled</strong> on the 13th of April
-              unless a payment method has been added. Since you have been a beta tester you will receive
-              a full discount until the 13th of April regardless of when you enter your payment information.<br><br>
-              Subscription cost is <strong>$7.00 per user / month</strong> + local VAT when applicable.<br><br>
-            <% else %>
-              Subscription is not active. <strong>Organization will be disabled</strong> until a payment method has been added.<br><br>
-              Subscription cost is <strong>$7.00 per user / month</strong> + local VAT when applicable.<br><br>
-            <% end %>
+            Subscription is not active. <strong>Organization will be disabled</strong> until a payment method has been added.<br><br>
+            Subscription cost is <strong>$7.00 per user / month</strong> + local VAT when applicable.<br><br>
             <%= raw(@checkout_html) %>
           <% end %>
         </div>
@@ -190,11 +182,7 @@
         <% end %>
       <% else %>
         <div class="panel-body">
-          <%# TODO: Remove this when we no longer have beta customers %>
-          <%# Subscription is not active. Organization will be disabled until a payment method has been added. %>
-          Subscription is not active. <strong>Organization will be disabled</strong> on the 13th of April
-          unless a payment method has been added. Since you have been a beta tester you will receive
-          a full discount until the 13th of April regardless of when you enter your payment information.<br><br>
+          Subscription is not active. Organization will be disabled until a payment method has been added.<br><br>
           Subscription cost is <strong>$7.00 per user / month</strong> + local VAT when applicable.<br><br>
           First enter your billing information below to enable the payment method form:<br><br>
 
