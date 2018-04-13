@@ -65,22 +65,6 @@ defmodule Hexpm.Emails do
     |> render("repository_invite.html")
   end
 
-  def organizations_live(user) do
-    email()
-    |> to(user)
-    |> subject("Hex.pm - Private packages and organizations going live")
-    |> assign(:username, user.username)
-    |> render("organizations_live.html")
-  end
-
-  def billing_reminder(user) do
-    email()
-    |> to(user)
-    |> subject("Hex.pm - Organization free beta period is ending")
-    |> assign(:username, user.username)
-    |> render("billing_reminder.html")
-  end
-
   defp email() do
     new_email()
     |> from(source())
