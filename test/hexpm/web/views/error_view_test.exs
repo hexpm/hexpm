@@ -40,6 +40,7 @@ defmodule Hexpm.Web.ErrorViewTest do
   end
 
   defp conn() do
-    put_in(build_conn().private[:phoenix_flash], %{})
+    conn = put_in(build_conn().private[:phoenix_flash], %{})
+    put_in(conn.assigns, %{current_user: nil})
   end
 end
