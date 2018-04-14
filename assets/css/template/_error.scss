@@ -3,9 +3,16 @@
   margin-bottom: 100px;
 
   h1 {
-    margin-bottom: 30px;
-    font-size: 140px;
+    font-size: 300px;
     font-weight: bold;
+    line-height: 280px;
+    color: #5c676d;
+    text-align: center;
+
+    @media only screen and (min-device-width : 320px) and (max-device-width : 480px) {
+      font-size: 150px;
+      line-height: 150px;
+    }
   }
 
   .letter_1 {
@@ -20,8 +27,30 @@
     color: #89b551;
   }
 
+  .call-to-action {
+    display: block;
+    font-size: 70px;
+    font-weight: bold;
+    line-height: 100px;
+    color: #000;
+    text-align: center;
+
+    @media only screen and (min-device-width : 320px) and (max-device-width : 480px) {
+      font-size: 50px;
+      line-height: 100px;
+    }
+  }
+
   .message {
-    font-size: 100px;
-    color: $color-text-grey;
+    display: block;
+    font-size: 30px;
+    font-weight: 100;
+    color: #4b4b4c;
+    text-align: center;
+
+    @media only screen and (min-device-width : 320px) and (max-device-width : 480px) {
+      font-size: 30px;
+      line-height: 40px;
+    }
   }
 }
