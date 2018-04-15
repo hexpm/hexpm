@@ -6,7 +6,8 @@
     <%= if release.retirement do %>
       (<span class="version-retirement">retired</span>)
     <% else %>
-      <%= if release.has_docs do %>
+      <%# TODO: Remove check when private hexdocs is live %>
+      <%= if @package.repository_id == 1 && release.has_docs do %>
         (<a href="<%= raw Hexpm.Utils.docs_html_url(@package, release) %>">docs</a>)
       <% end %>
     <% end %>

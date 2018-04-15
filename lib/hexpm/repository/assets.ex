@@ -37,7 +37,7 @@ defmodule Hexpm.Repository.Assets do
     Hexpm.CDN.purge_key(:fastly_hexdocs, "sitemap")
   end
 
-  def push_docs(release, files, body, all_versions) do
+  def push_hexdocs(release, files, all_versions) do
     name = release.package.name
     version = release.version
     latest_version = List.first(all_versions)
@@ -68,9 +68,13 @@ defmodule Hexpm.Repository.Assets do
     paths = MapSet.new(files, &elem(&1, 0))
 
     delete_old_docs(release, paths, publish_unversioned?)
-    put_docs_tarball(release, body)
     upload_new_files(files)
-    purge_cache(release, publish_unversioned?)
+    purge_hexdocs_cache(release, publish_unversioned?)
+  end
+
+  def push_docs_tarball(release, body) do
+    put_docs_tarball(release, body)
+    purge_docs_tarball_cache(release)
   end
 
   def revert_docs(release) do
@@ -154,23 +158,27 @@ defmodule Hexpm.Repository.Assets do
     |> Stream.run()
   end
 
-  defp purge_cache(release, publish_unversioned?) do
-    purge_tasks = [
-      fn -> Hexpm.CDN.purge_key(:fastly_hexrepo, docs_cdn_key(release)) end,
-      fn -> Hexpm.CDN.purge_key(:fastly_hexdocs, docspage_versioned_cdn_key(release)) end
-    ]
+  defp purge_hexdocs_cache(release, publish_unversioned?) do
+    if publish_unversioned? do
+      Hexpm.Utils.multi_task([
+        fn -> purge_versioned_docspage(release) end,
+        fn -> purge_unversioned_docspage(release) end
+      ])
+    else
+      Hexpm.Utils.multi_task([fn -> purge_versioned_docspage(release) end])
+    end
+  end
 
-    purge_tasks =
-      if publish_unversioned? do
-        [
-          fn -> Hexpm.CDN.purge_key(:fastly_hexdocs, docspage_unversioned_cdn_key(release)) end
-          | purge_tasks
-        ]
-      else
-        purge_tasks
-      end
+  defp purge_versioned_docspage(release) do
+    Hexpm.CDN.purge_key(:fastly_hexdocs, docspage_versioned_cdn_key(release))
+  end
 
-    Hexpm.Utils.multi_task(purge_tasks)
+  defp purge_unversioned_docspage(release) do
+    Hexpm.CDN.purge_key(:fastly_hexdocs, docspage_unversioned_cdn_key(release))
+  end
+
+  defp purge_docs_tarball_cache(release) do
+    Hexpm.CDN.purge_key(:fastly_hexrepo, docs_cdn_key(release))
   end
 
   defp content_type(path) do

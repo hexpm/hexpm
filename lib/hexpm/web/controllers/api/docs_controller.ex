@@ -2,7 +2,12 @@ defmodule Hexpm.Web.API.DocsController do
   use Hexpm.Web, :controller
 
   plug :fetch_release
-  plug :authorize, [fun: &package_owner/2, domain: "api"] when action in [:create, :delete]
+  plug :maybe_authorize, [domain: "api", fun: &repository_access/2] when action in [:show]
+  plug :authorize, [domain: "api", fun: &package_owner/2] when action in [:create, :delete]
+
+  plug :authorize,
+       [domain: "api", fun: &repository_billing_active/2]
+       when action in [:create, :delete]
 
   def show(conn, _params) do
     package = conn.assigns.package
@@ -16,32 +21,28 @@ defmodule Hexpm.Web.API.DocsController do
   end
 
   def create(conn, %{"body" => body}) do
-    if conn.assigns.repository.id == 1 do
-      package = conn.assigns.package
-      release = conn.assigns.release
+    package = conn.assigns.package
+    release = conn.assigns.release
 
-      case Hexpm.Web.DocsTar.parse(body) do
-        {:ok, {files, body}} ->
-          Hexpm.Repository.Releases.publish_docs(
-            package,
-            release,
-            files,
-            body,
-            audit: audit_data(conn)
-          )
+    case Hexpm.Web.DocsTar.parse(body) do
+      {:ok, {files, body}} ->
+        Hexpm.Repository.Releases.publish_docs(
+          package,
+          release,
+          files,
+          body,
+          audit: audit_data(conn)
+        )
 
-          location = Hexpm.Utils.docs_tarball_url(package, release)
+        location = Hexpm.Utils.docs_tarball_url(package, release)
 
-          conn
-          |> put_resp_header("location", location)
-          |> api_cache(:public)
-          |> send_resp(201, "")
+        conn
+        |> put_resp_header("location", location)
+        |> api_cache(:public)
+        |> send_resp(201, "")
 
-        {:error, errors} ->
-          validation_failed(conn, %{tar: errors})
-      end
-    else
-      render_error(conn, 400, message: "publishing docs for private packages is disabled")
+      {:error, errors} ->
+        validation_failed(conn, %{tar: errors})
     end
   end
 

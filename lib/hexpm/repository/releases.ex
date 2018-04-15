@@ -59,7 +59,12 @@ defmodule Hexpm.Repository.Releases do
       |> Repo.all()
       |> Enum.sort(&(Version.compare(&1, &2) == :gt))
 
-    Assets.push_docs(release, files, body, all_versions)
+    # TODO: Remove check when private hexdocs is live
+    if package.repository_id == 1 do
+      Assets.push_hexdocs(release, files, all_versions)
+    end
+
+    Assets.push_docs_tarball(release, body)
 
     {:ok, _} =
       Multi.new()
@@ -71,7 +76,10 @@ defmodule Hexpm.Repository.Releases do
       |> audit(audit_data, "docs.publish", {package, release})
       |> Repo.transaction()
 
-    Sitemaps.publish_docs_sitemap()
+    # TODO: Remove check when private hexdocs is live
+    if package.repository_id == 1 do
+      Sitemaps.publish_docs_sitemap()
+    end
   end
 
   def revert(package, release, audit: audit_data) do
