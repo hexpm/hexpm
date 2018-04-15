@@ -39,20 +39,28 @@ defmodule Hexpm.Repository.Assets do
 
   def push_hexdocs(release, files, all_versions) do
     name = release.package.name
-    version = release.version
-    latest_version = List.first(all_versions)
-    pre_release? = version.pre != []
+    pre_release? = release.version.pre != []
     first_release? = all_versions == []
     all_pre_releases? = Enum.all?(all_versions, &(&1.pre != []))
 
-    latest_release? =
-      first_release? or Version.compare(release.version, latest_version) in [:eq, :gt]
-
-    publish_unversioned? = latest_release? and (not pre_release? or all_pre_releases?)
+    publish_unversioned? =
+      cond do
+        first_release? ->
+          true
+        all_pre_releases? ->
+          latest_version = List.first(all_versions)
+          Version.compare(release.version, latest_version) in [:eq, :gt]
+        pre_release? ->
+          false
+        true ->
+          nonpre_versions = Enum.filter(all_versions, &(&1.pre == []))
+          latest_version = List.first(nonpre_versions)
+          Version.compare(release.version, latest_version) in [:eq, :gt]
+      end
 
     files =
       Enum.flat_map(files, fn {path, data} ->
-        versioned_path = Path.join([name, to_string(version), path])
+        versioned_path = Path.join([name, to_string(release.version), path])
         versioned = {versioned_path, docspage_versioned_cdn_key(release), data}
 
         unversioned_path = Path.join(name, path)

@@ -110,6 +110,27 @@ defmodule Hexpm.Web.API.DocsControllerTest do
       assert path("docs/#{package.name}/1.0.0-beta/index.html") == "package v1.0.0-beta"
     end
 
+    test "update main docs even with beta docs", %{user: user} do
+      package = insert(:package, package_owners: [build(:package_owner, owner: user)])
+      insert(:release, package: package, version: "0.0.1")
+      insert(:release, package: package, version: "1.0.0-beta")
+      insert(:release, package: package, version: "0.5.0")
+
+      publish_docs(user, package, "0.0.1", [{'index.html', "package v0.0.1"}])
+      |> response(201)
+
+      publish_docs(user, package, "1.0.0-beta", [{'index.html', "package v1.0.0-beta"}])
+      |> response(201)
+
+      publish_docs(user, package, "0.5.0", [{'index.html', "package v0.5.0"}])
+      |> response(201)
+
+      assert path("docs/#{package.name}/index.html") == "package v0.5.0"
+      assert path("docs/#{package.name}/0.0.1/index.html") == "package v0.0.1"
+      assert path("docs/#{package.name}/1.0.0-beta/index.html") == "package v1.0.0-beta"
+      assert path("docs/#{package.name}/0.5.0/index.html") == "package v0.5.0"
+    end
+
     test "beta docs can overwrite beta main docs", %{user: user} do
       package = insert(:package, package_owners: [build(:package_owner, owner: user)])
       insert(:release, package: package, version: "0.0.1-beta")
