@@ -211,7 +211,8 @@ defmodule Hexpm.Web.API.OwnerControllerTest do
       assert first.username in [user1.username, user2.username]
       assert second.username in [user1.username, user2.username]
 
-      assert_delivered_email(Hexpm.Emails.owner_added(package, [user1, user2], user2))
+      recipients = Enum.sort([user1, user2])
+      assert_delivered_email(Hexpm.Emails.owner_added(package, recipients, user2))
 
       log = Hexpm.Repo.one!(AuditLog)
       assert log.actor_id == user1.id
@@ -400,7 +401,8 @@ defmodule Hexpm.Web.API.OwnerControllerTest do
       assert [user] = assoc(package, :owners) |> Hexpm.Repo.all()
       assert user.id == user1.id
 
-      assert_delivered_email(Hexpm.Emails.owner_removed(package, [user1, user2], user2))
+      recipients = Enum.sort([user1, user2])
+      assert_delivered_email(Hexpm.Emails.owner_removed(package, recipients, user2))
 
       log = Hexpm.Repo.one!(AuditLog)
       assert log.actor_id == user1.id
