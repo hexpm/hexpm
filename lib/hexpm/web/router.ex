@@ -205,25 +205,30 @@ defmodule Hexpm.Web.Router do
   end
 
   defp handle_errors(conn, %{kind: kind, reason: reason, stack: stacktrace}) do
-    endpoint_url = Hexpm.Web.Endpoint.config(:url)
-    conn = maybe_fetch_params(conn)
+    if report?(kind, reason) do
+      endpoint_url = Hexpm.Web.Endpoint.config(:url)
+      conn = maybe_fetch_params(conn)
 
-    conn_data = %{
-      "request" => %{
-        "url" => "#{conn.scheme}://#{conn.host}:#{conn.port}#{conn.request_path}",
-        "user_ip" => List.to_string(:inet.ntoa(conn.remote_ip)),
-        "headers" => Enum.into(conn.req_headers, %{}),
-        "params" => conn.params,
-        "method" => conn.method
-      },
-      "server" => %{
-        "host" => endpoint_url[:host],
-        "root" => endpoint_url[:path]
+      conn_data = %{
+        "request" => %{
+          "url" => "#{conn.scheme}://#{conn.host}:#{conn.port}#{conn.request_path}",
+          "user_ip" => List.to_string(:inet.ntoa(conn.remote_ip)),
+          "headers" => Enum.into(conn.req_headers, %{}),
+          "params" => conn.params,
+          "method" => conn.method
+        },
+        "server" => %{
+          "host" => endpoint_url[:host],
+          "root" => endpoint_url[:path]
+        }
       }
-    }
 
-    Rollbax.report(kind, reason, stacktrace, %{}, conn_data)
+      Rollbax.report(kind, reason, stacktrace, %{}, conn_data)
+    end
   end
+
+  defp report?(:error, exception), do: Plug.Exception.status(exception) == 500
+  defp report?(_kind, _reason), do: true
 
   defp maybe_fetch_params(conn) do
     try do
