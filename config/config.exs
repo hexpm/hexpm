@@ -89,6 +89,8 @@ config :mime, :types, %{
 
 config :ecto, json_library: Hexpm.Web.Jiffy
 
+config :rollbax, enabled: false
+
 config :logger, :console,
   format: "$time $metadata[$level] $message\n",
   metadata: [:request_id]

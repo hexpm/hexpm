@@ -24,11 +24,8 @@ config :bcrypt_elixir, log_rounds: 12
 config :rollbax,
   access_token: System.get_env("ROLLBAR_ACCESS_TOKEN"),
   environment: to_string(Mix.env()),
-  enabled: !!System.get_env("ROLLBAR_ACCESS_TOKEN")
-
-config :logger, backends: [Rollbax.Logger, :console]
-
-config :logger, Rollbax.Logger, level: :error
+  enabled: !!System.get_env("ROLLBAR_ACCESS_TOKEN"),
+  enable_crash_reports: true
 
 # Don't include date time on heroku
 config :logger, :console, format: "[$level] $message\n"

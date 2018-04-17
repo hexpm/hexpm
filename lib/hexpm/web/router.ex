@@ -1,5 +1,6 @@
 defmodule Hexpm.Web.Router do
   use Hexpm.Web, :router
+  use Plug.ErrorHandler
 
   @accepted_formats ~w(json elixir erlang)
 
@@ -200,6 +201,36 @@ defmodule Hexpm.Web.Router do
     scope "/docs", Hexpm.Web do
       get "/:package/:version/*page", TestController, :docs_page
       get "/sitemap.xml", TestController, :docs_sitemap
+    end
+  end
+
+  defp handle_errors(conn, %{kind: kind, reason: reason, stack: stacktrace}) do
+    endpoint_url = Hexpm.Web.Endpoint.config(:url)
+    conn = maybe_fetch_params(conn)
+
+    conn_data = %{
+      "request" => %{
+        "url" => "#{conn.scheme}://#{conn.host}:#{conn.port}#{conn.request_path}",
+        "user_ip" => List.to_string(:inet.ntoa(conn.remote_ip)),
+        "headers" => Enum.into(conn.req_headers, %{}),
+        "params" => conn.params,
+        "method" => conn.method
+      },
+      "server" => %{
+        "host" => endpoint_url[:host],
+        "root" => endpoint_url[:path]
+      }
+    }
+
+    Rollbax.report(kind, reason, stacktrace, %{}, conn_data)
+  end
+
+  defp maybe_fetch_params(conn) do
+    try do
+      Plug.Conn.fetch_query_params(conn)
+    rescue
+      _ ->
+        %{conn | params: "unfetched"}
     end
   end
 end
