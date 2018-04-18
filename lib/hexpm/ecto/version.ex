@@ -16,10 +16,3 @@ end
 defimpl Poison.Encoder, for: Version do
   def encode(version, _), do: ~s("#{version}")
 end
-
-defimpl Ecto.DataType, for: Version do
-  def dump(version), do: cast(version, Hexpm.Version)
-
-  def cast(version, Hexpm.Version), do: {:ok, struct(Hexpm.Version, version)}
-  def cast(_, _), do: :error
-end
