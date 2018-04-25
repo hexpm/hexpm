@@ -17,8 +17,8 @@ defmodule Hexpm.Accounts.KeyPermission do
   end
 
   defp validate_permission(changeset, user) do
-    validate_change(changeset, :domain, fn _, domain ->
-      resource = get_change(changeset, :resource)
+    validate_change(changeset, :resource, fn _, resource ->
+      domain = get_change(changeset, :domain)
 
       case User.verify_permissions(user, domain, resource) do
         {:ok, _} ->
