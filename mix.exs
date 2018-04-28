@@ -48,7 +48,7 @@ defmodule Hexpm.MixProject do
       {:phoenix_ecto, "~> 3.1"},
       {:phoenix_html, "~> 2.3"},
       {:phoenix_live_reload, "~> 1.0", only: :dev},
-      {:phoenix, "~> 1.3"},
+      {:phoenix, github: "phoenixframework/phoenix", override: true},
       {:plug_attack, "~> 0.3"},
       {:plug, "~> 1.2"},
       {:porcelain, "~> 2.0"},
