@@ -46,7 +46,8 @@ config :hexpm, ecto_repos: [Hexpm.Repo]
 
 config :ex_aws,
   access_key_id: {:system, "HEX_S3_ACCESS_KEY"},
-  secret_access_key: {:system, "HEX_S3_SECRET_KEY"}
+  secret_access_key: {:system, "HEX_S3_SECRET_KEY"},
+  json_codec: Jason
 
 config :bcrypt_elixir, log_rounds: 4
 
@@ -79,7 +80,7 @@ config :phoenix, :generators,
 config :phoenix, :format_encoders,
   elixir: Hexpm.Web.ElixirFormat,
   erlang: Hexpm.Web.ErlangFormat,
-  json: Hexpm.Web.Jiffy
+  json: Jason
 
 config :mime, :types, %{
   "application/vnd.hex+json" => ["json"],
@@ -87,7 +88,7 @@ config :mime, :types, %{
   "application/vnd.hex+erlang" => ["erlang"]
 }
 
-config :ecto, json_library: Hexpm.Web.Jiffy
+config :ecto, json_library: Jason
 
 config :rollbax, enabled: false
 

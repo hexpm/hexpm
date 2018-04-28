@@ -27,7 +27,7 @@ defmodule Hexpm.Web.Endpoint do
   plug Plug.Parsers,
     parsers: [:urlencoded, :json, Hexpm.Web.PlugParser],
     pass: ["*/*"],
-    json_decoder: Hexpm.Web.Jiffy
+    json_decoder: Jason
 
   plug Plug.MethodOverride
   plug Plug.Head

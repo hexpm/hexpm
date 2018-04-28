@@ -44,7 +44,6 @@ defmodule Hexpm.MixProject do
       {:ex_aws, "~> 2.0"},
       {:ex_machina, "~> 2.0", only: [:dev, :test]},
       {:hackney, "~> 1.7"},
-      {:jiffy, "~> 0.14"},
       {:mox, "~> 0.3.1", only: :test},
       {:phoenix_ecto, "~> 3.1"},
       {:phoenix_html, "~> 2.3"},

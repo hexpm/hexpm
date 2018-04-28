@@ -58,7 +58,7 @@ defmodule Hexpm.Billing.Hexpm do
       {"content-type", "application/json"}
     ]
 
-    body = Hexpm.Web.Jiffy.encode!(body)
+    body = Jason.encode!(body)
 
     :hackney.post(url, headers, body, opts)
     |> read_request()
@@ -73,7 +73,7 @@ defmodule Hexpm.Billing.Hexpm do
       {"content-type", "application/json"}
     ]
 
-    body = Hexpm.Web.Jiffy.encode!(body)
+    body = Jason.encode!(body)
 
     :hackney.patch(url, headers, body, opts)
     |> read_request()
@@ -119,7 +119,7 @@ defmodule Hexpm.Billing.Hexpm do
 
       {_, content_type} ->
         if String.contains?(content_type, "application/json") do
-          Hexpm.Web.Jiffy.decode(body)
+          Jason.decode(body)
         else
           {:ok, body}
         end

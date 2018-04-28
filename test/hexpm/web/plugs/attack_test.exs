@@ -48,7 +48,7 @@ defmodule Hexpm.Web.Plugs.AttackTest do
       assert conn.status == 429
 
       assert conn.resp_body ==
-               Poison.encode!(%{status: 429, message: "API rate limit exceeded for IP 1.1.1.1"})
+               Jason.encode!(%{status: 429, message: "API rate limit exceeded for IP 1.1.1.1"})
     end
 
     test "halts requests when user limit is exceeded", %{user: user} do
@@ -62,7 +62,7 @@ defmodule Hexpm.Web.Plugs.AttackTest do
       assert conn.status == 429
 
       assert conn.resp_body ==
-               Poison.encode!(%{
+               Jason.encode!(%{
                  status: 429,
                  message: "API rate limit exceeded for user #{user.id}"
                })
@@ -105,7 +105,7 @@ defmodule Hexpm.Web.Plugs.AttackTest do
 
       conn = request_ip({10, 1, 1, 1})
       assert conn.status == 403
-      assert conn.resp_body == Poison.encode!(%{status: 403, message: "Blocked"})
+      assert conn.resp_body == Jason.encode!(%{status: 403, message: "Blocked"})
     end
 
     test "allows requests again when the IP is unblocked" do
@@ -114,7 +114,7 @@ defmodule Hexpm.Web.Plugs.AttackTest do
 
       conn = request_ip({20, 2, 2, 2})
       assert conn.status == 403
-      assert conn.resp_body == Poison.encode!(%{status: 403, message: "Blocked"})
+      assert conn.resp_body == Jason.encode!(%{status: 403, message: "Blocked"})
 
       Hexpm.Repo.delete!(blocked_address)
       Hexpm.BlockAddress.reload()
