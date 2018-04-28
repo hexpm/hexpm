@@ -13,6 +13,6 @@ defmodule Hexpm.Version do
   def dump(version) when is_binary(version), do: {:ok, version}
 end
 
-defimpl Poison.Encoder, for: Version do
+defimpl Jason.Encoder, for: Version do
   def encode(version, _), do: ~s("#{version}")
 end

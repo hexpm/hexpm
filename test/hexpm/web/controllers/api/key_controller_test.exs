@@ -19,7 +19,7 @@ defmodule Hexpm.Web.API.KeyControllerTest do
       build_conn()
       |> put_req_header("content-type", "application/json")
       |> put_req_header("authorization", "Basic " <> Base.encode64("eric:ericeric"))
-      |> post("api/keys", Poison.encode!(body))
+      |> post("api/keys", Jason.encode!(body))
 
     assert conn.status == 201
     key = Hexpm.Repo.one!(Key.get(c.eric, "macbook"))
@@ -39,7 +39,7 @@ defmodule Hexpm.Web.API.KeyControllerTest do
     build_conn()
     |> put_req_header("content-type", "application/json")
     |> put_req_header("authorization", key.user_secret)
-    |> post("api/keys", Poison.encode!(body))
+    |> post("api/keys", Jason.encode!(body))
     |> json_response(401)
   end
 
@@ -49,7 +49,7 @@ defmodule Hexpm.Web.API.KeyControllerTest do
     build_conn()
     |> put_req_header("content-type", "application/json")
     |> put_req_header("authorization", "Basic " <> Base.encode64("eric:ericeric"))
-    |> post("api/keys", Poison.encode!(body))
+    |> post("api/keys", Jason.encode!(body))
     |> json_response(201)
 
     key = Hexpm.Repo.one!(Key.get(c.eric, "macbook"))
@@ -65,7 +65,7 @@ defmodule Hexpm.Web.API.KeyControllerTest do
     build_conn()
     |> put_req_header("content-type", "application/json")
     |> put_req_header("authorization", key.user_secret)
-    |> post("api/keys", Poison.encode!(body))
+    |> post("api/keys", Jason.encode!(body))
     |> json_response(201)
 
     key = Hexpm.Repo.one!(Key.get(c.eric, "macbook"))
@@ -82,7 +82,7 @@ defmodule Hexpm.Web.API.KeyControllerTest do
     build_conn()
     |> put_req_header("content-type", "application/json")
     |> put_req_header("authorization", "Basic " <> Base.encode64("eric:ericeric"))
-    |> post("api/keys", Poison.encode!(body))
+    |> post("api/keys", Jason.encode!(body))
     |> json_response(422)
 
     refute Hexpm.Repo.one(Key.get(c.eric, "macbook"))
@@ -94,7 +94,7 @@ defmodule Hexpm.Web.API.KeyControllerTest do
     build_conn()
     |> put_req_header("content-type", "application/json")
     |> put_req_header("authorization", "Basic " <> Base.encode64("eric:ericeric"))
-    |> post("api/keys", Poison.encode!(body))
+    |> post("api/keys", Jason.encode!(body))
     |> json_response(201)
 
     key = Hexpm.Repo.one!(Key.get(c.eric, "macbook"))
@@ -112,7 +112,7 @@ defmodule Hexpm.Web.API.KeyControllerTest do
       |> get("api/keys/macbook")
 
     assert conn.status == 200
-    body = Poison.decode!(conn.resp_body)
+    body = Jason.decode!(conn.resp_body)
     assert body["name"] == "macbook"
     assert body["secret"] == nil
     assert body["url"] =~ "/api/keys/macbook"
@@ -133,7 +133,7 @@ defmodule Hexpm.Web.API.KeyControllerTest do
 
     body =
       conn.resp_body
-      |> Poison.decode!()
+      |> Jason.decode!()
       |> Enum.sort_by(fn %{"name" => name} -> name end)
 
     assert length(body) == 2
@@ -158,7 +158,7 @@ defmodule Hexpm.Web.API.KeyControllerTest do
       |> delete("api/keys/computer")
 
     assert conn.status == 200
-    body = Poison.decode!(conn.resp_body)
+    body = Jason.decode!(conn.resp_body)
     assert body["name"] == "computer"
     assert body["revoked_at"]
     assert body["updated_at"]
@@ -185,7 +185,7 @@ defmodule Hexpm.Web.API.KeyControllerTest do
       |> delete("api/keys/current")
 
     assert conn.status == 200
-    body = Poison.decode!(conn.resp_body)
+    body = Jason.decode!(conn.resp_body)
     assert body["name"] == "current"
     assert body["revoked_at"]
     assert body["updated_at"]
@@ -207,7 +207,7 @@ defmodule Hexpm.Web.API.KeyControllerTest do
       |> get("api/keys")
 
     assert conn.status == 401
-    body = Poison.decode!(conn.resp_body)
+    body = Jason.decode!(conn.resp_body)
     assert %{"message" => "API key revoked", "status" => 401} == body
   end
 
@@ -221,7 +221,7 @@ defmodule Hexpm.Web.API.KeyControllerTest do
       |> delete("api/keys")
 
     assert conn.status == 200
-    body = Poison.decode!(conn.resp_body)
+    body = Jason.decode!(conn.resp_body)
     assert body["name"] == key_a.name
     assert body["revoked_at"]
     assert body["updated_at"]
@@ -254,7 +254,7 @@ defmodule Hexpm.Web.API.KeyControllerTest do
       |> get("api/keys")
 
     assert conn.status == 401
-    body = Poison.decode!(conn.resp_body)
+    body = Jason.decode!(conn.resp_body)
     assert %{"message" => "API key revoked", "status" => 401} == body
   end
 
@@ -267,7 +267,7 @@ defmodule Hexpm.Web.API.KeyControllerTest do
       |> get("api/keys")
 
     assert conn.status == 200
-    assert length(Poison.decode!(conn.resp_body)) == 1
+    assert length(Jason.decode!(conn.resp_body)) == 1
 
     conn =
       build_conn()

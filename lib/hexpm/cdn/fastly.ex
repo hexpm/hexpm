@@ -36,7 +36,7 @@ defmodule Hexpm.CDN.Fastly do
       "content-type": "application/json"
     ]
 
-    body = Hexpm.Web.Jiffy.encode!(body)
+    body = Jason.encode!(body)
 
     retry(fn -> :hackney.post(url, headers, body, []) end, @retry_times)
     |> read_body()
@@ -70,7 +70,7 @@ defmodule Hexpm.CDN.Fastly do
     {:ok, body} = :hackney.body(client)
 
     body =
-      case Hexpm.Web.Jiffy.decode(body) do
+      case Jason.decode(body) do
         {:ok, map} -> map
         {:error, _} -> body
       end

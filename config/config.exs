@@ -79,7 +79,7 @@ config :phoenix, :generators,
 config :phoenix, :format_encoders,
   elixir: Hexpm.Web.ElixirFormat,
   erlang: Hexpm.Web.ErlangFormat,
-  json: Hexpm.Web.Jiffy
+  json: Jason
 
 config :mime, :types, %{
   "application/vnd.hex+json" => ["json"],
@@ -87,7 +87,7 @@ config :mime, :types, %{
   "application/vnd.hex+erlang" => ["erlang"]
 }
 
-config :ecto, json_library: Hexpm.Web.Jiffy
+config :ecto, json_library: Jason
 
 config :rollbax, enabled: false
 

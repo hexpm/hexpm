@@ -55,6 +55,6 @@ defmodule Hexpm.ConnCase do
   def json_post(conn, path, params) do
     conn
     |> Plug.Conn.put_req_header("content-type", "application/json")
-    |> Phoenix.ConnTest.dispatch(Hexpm.Web.Endpoint, :post, path, Poison.encode!(params))
+    |> Phoenix.ConnTest.dispatch(Hexpm.Web.Endpoint, :post, path, Jason.encode!(params))
   end
 end
