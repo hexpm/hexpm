@@ -20,8 +20,8 @@ defmodule Hexpm.Accounts.Key do
   end
 
   def changeset(key, user, params) do
-    cast(key, params, ~w(name))
-    |> validate_required(:name)
+    cast(key, params, ~w(name)a)
+    |> validate_required(~w(name)a)
     |> add_keys()
     |> prepare_changes(&unique_name/1)
     |> cast_embed(:permissions, with: &KeyPermission.changeset(&1, user, &2))

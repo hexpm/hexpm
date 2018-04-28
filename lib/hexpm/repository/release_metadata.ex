@@ -10,7 +10,7 @@ defmodule Hexpm.Repository.ReleaseMetadata do
   end
 
   def changeset(meta, params) do
-    cast(meta, params, ~w(app build_tools elixir))
+    cast(meta, params, ~w(app build_tools elixir)a)
     |> validate_required(~w(app build_tools)a)
     |> validate_list_required(:build_tools)
     |> update_change(:build_tools, &Enum.uniq/1)

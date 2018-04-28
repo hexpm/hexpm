@@ -12,7 +12,7 @@ defmodule Hexpm.Accounts.UserHandles do
   end
 
   def changeset(handles, params) do
-    cast(handles, params, ~w(twitter github elixirforum freenode slack))
+    cast(handles, params, ~w(twitter github elixirforum freenode slack)a)
   end
 
   def services() do

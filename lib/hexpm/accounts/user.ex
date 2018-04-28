@@ -29,7 +29,7 @@ defmodule Hexpm.Accounts.User do
   @reserved_names ~w(me hex hexpm elixir erlang otp)
 
   defp changeset(user, :create, params, confirmed?) do
-    cast(user, params, ~w(username full_name password))
+    cast(user, params, ~w(username full_name password)a)
     |> validate_required(~w(username password)a)
     |> cast_assoc(:emails, required: true, with: &Email.changeset(&1, :first, &2, confirmed?))
     |> update_change(:username, &String.downcase/1)
@@ -47,12 +47,12 @@ defmodule Hexpm.Accounts.User do
   end
 
   def update_profile(user, params) do
-    cast(user, params, ~w(full_name))
+    cast(user, params, ~w(full_name)a)
     |> cast_embed(:handles)
   end
 
   def update_password_no_check(user, params) do
-    cast(user, params, ~w(password))
+    cast(user, params, ~w(password)a)
     |> validate_required(~w(password)a)
     |> validate_length(:password, min: 7)
     |> validate_confirmation(:password, message: "does not match password")
@@ -63,7 +63,7 @@ defmodule Hexpm.Accounts.User do
     password = user.password
     user = %{user | password: nil}
 
-    cast(user, params, ~w(password))
+    cast(user, params, ~w(password)a)
     |> validate_required(~w(password)a)
     |> validate_length(:password, min: 7)
     |> validate_password(:password, password)

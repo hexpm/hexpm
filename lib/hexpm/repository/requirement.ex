@@ -18,7 +18,7 @@ defmodule Hexpm.Repository.Requirement do
   end
 
   def changeset(requirement, params, dependencies, release_changeset, package) do
-    cast(requirement, params, ~w(repository name app requirement optional))
+    cast(requirement, params, ~w(repository name app requirement optional)a)
     |> put_assoc(:dependency, dependencies[{params["repository"] || "hexpm", params["name"]}])
     |> validate_required(~w(name app requirement optional)a)
     |> validate_required(

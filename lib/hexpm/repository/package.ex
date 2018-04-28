@@ -59,7 +59,7 @@ defmodule Hexpm.Repository.Package do
   end
 
   defp changeset(package, :update, params) do
-    cast(package, params, ~w(name))
+    cast(package, params, ~w(name)a)
     |> cast_embed(:meta, with: &PackageMetadata.changeset(&1, &2, package), required: true)
     |> validate_required(:name)
     |> validate_length(:name, min: 2)

@@ -18,15 +18,15 @@ defmodule Hexpm.Repository.Repository do
   @roles ~w(admin write read)
 
   def changeset(struct, params) do
-    cast(struct, params, [:name])
-    |> validate_required([:name])
+    cast(struct, params, ~w(name)a)
+    |> validate_required(~w(name)a)
     |> unique_constraint(:name)
     |> put_change(:public, false)
   end
 
   def add_member(struct, params) do
-    cast(struct, params, [:role])
-    |> validate_required([:role])
+    cast(struct, params, ~w(role)a)
+    |> validate_required(~w(role)a)
     |> validate_inclusion(:role, @roles)
     |> unique_constraint(
       :user_id,
@@ -36,8 +36,8 @@ defmodule Hexpm.Repository.Repository do
   end
 
   def change_role(struct, params) do
-    cast(struct, params, [:role])
-    |> validate_required([:role])
+    cast(struct, params, ~w(role)a)
+    |> validate_required(~w(role)a)
     |> validate_inclusion(:role, @roles)
   end
 

@@ -26,7 +26,7 @@ defmodule Hexpm.Accounts.Email do
   end
 
   def changeset(email, :create, params, verified?) do
-    cast(email, params, ~w(email))
+    cast(email, params, ~w(email)a)
     |> validate_required(~w(email)a)
     |> update_change(:email, &String.downcase/1)
     |> validate_format(:email, @email_regex)

@@ -10,7 +10,7 @@ defmodule Hexpm.Accounts.KeyPermission do
   end
 
   def changeset(struct, user, params) do
-    cast(struct, params, ~w(domain resource))
+    cast(struct, params, ~w(domain resource)a)
     |> validate_inclusion(:domain, @domains)
     |> validate_resource()
     |> validate_permission(user)
