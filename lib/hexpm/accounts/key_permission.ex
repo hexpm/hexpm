@@ -33,12 +33,11 @@ defmodule Hexpm.Accounts.KeyPermission do
 
   defp validate_resource(changeset) do
     validate_change(changeset, :resource, fn _, resource ->
-      domain = get_change(changeset, :domain)
-
-      cond do
-        !domain -> []
-        domain in ["api", "repositories"] and is_nil(resource) -> []
-        domain == "repository" and is_binary(resource) -> []
+      case get_change(changeset, :domain) do
+        nil -> []
+        "api" when resource in [nil, "read", "write"] -> []
+        "repository" when is_binary(resource) -> []
+        "repositories" when is_nil(resource) -> []
         true -> [resource: "invalid resource for given domain"]
       end
     end)

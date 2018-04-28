@@ -126,8 +126,15 @@ defmodule Hexpm.Accounts.Key do
     end
   end
 
-  def verify_permissions?(key, domain, _resource) when domain in ["api", "repositories"] do
-    Enum.any?(key.permissions, &(&1.domain == domain))
+  def verify_permissions?(key, "api", resource) do
+    Enum.any?(key.permissions, fn permission ->
+      permission.domain == "api" and
+        (is_nil(permission.resource) or permission.resource == resource)
+    end)
+  end
+
+  def verify_permissions?(key, "repositories", _resource) do
+    Enum.any?(key.permissions, &(&1.domain == "repositories"))
   end
 
   def verify_permissions?(key, "repository", resource) do
