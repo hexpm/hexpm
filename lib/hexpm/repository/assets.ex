@@ -47,11 +47,14 @@ defmodule Hexpm.Repository.Assets do
       cond do
         first_release? ->
           true
+
         all_pre_releases? ->
           latest_version = List.first(all_versions)
           Version.compare(release.version, latest_version) in [:eq, :gt]
+
         pre_release? ->
           false
+
         true ->
           nonpre_versions = Enum.filter(all_versions, &(&1.pre == []))
           latest_version = List.first(nonpre_versions)

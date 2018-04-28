@@ -3,6 +3,6 @@ defmodule Hexpm.Repo.Migrations.SetUtc do
 
   def change do
     database_name = Keyword.fetch!(Hexpm.Repo.config(), :database)
-    execute "ALTER DATABASE #{database_name} SET timezone TO 'UTC'"
+    execute("ALTER DATABASE #{database_name} SET timezone TO 'UTC'")
   end
 end

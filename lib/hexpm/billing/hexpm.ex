@@ -2,7 +2,7 @@ defmodule Hexpm.Billing.Hexpm do
   @behaviour Hexpm.Billing
 
   def checkout(repository, data) do
-    case post("api/customers/#{repository}/payment_source", data, [recv_timeout: 15_000]) do
+    case post("api/customers/#{repository}/payment_source", data, recv_timeout: 15_000) do
       {:ok, 204, _headers, body} -> {:ok, body}
       {:ok, 422, _headers, body} -> {:error, body}
     end

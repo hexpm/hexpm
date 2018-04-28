@@ -409,7 +409,7 @@ defmodule Hexpm.Web.DashboardControllerTest do
   end
 
   test "show repository", %{user: user, repository: repository} do
-    Mox.expect(Hexpm.Billing.Mock, :dashboard, fn token ->
+    Mox.stub(Hexpm.Billing.Mock, :dashboard, fn token ->
       assert repository.name == token
 
       %{
@@ -437,7 +437,7 @@ defmodule Hexpm.Web.DashboardControllerTest do
   end
 
   test "add member to repository", %{user: user, repository: repository} do
-    Mox.expect(Hexpm.Billing.Mock, :update, fn repository_name, map ->
+    Mox.stub(Hexpm.Billing.Mock, :update, fn repository_name, map ->
       assert repository_name == repository.name
       assert map == %{"quantity" => 2}
       {:ok, %{}}
@@ -464,7 +464,7 @@ defmodule Hexpm.Web.DashboardControllerTest do
   end
 
   test "remove member from repository", %{user: user, repository: repository} do
-    Mox.expect(Hexpm.Billing.Mock, :update, fn repository_name, map ->
+    Mox.stub(Hexpm.Billing.Mock, :update, fn repository_name, map ->
       assert repository_name == repository.name
       assert map == %{"quantity" => 1}
       {:ok, %{}}
@@ -507,7 +507,7 @@ defmodule Hexpm.Web.DashboardControllerTest do
   end
 
   test "cancel billing", %{user: user, repository: repository} do
-    Mox.expect(Hexpm.Billing.Mock, :cancel, fn token ->
+    Mox.stub(Hexpm.Billing.Mock, :cancel, fn token ->
       assert repository.name == token
 
       %{
@@ -534,7 +534,7 @@ defmodule Hexpm.Web.DashboardControllerTest do
   end
 
   test "update billing email", %{user: user, repository: repository} do
-    Mox.expect(Hexpm.Billing.Mock, :dashboard, 2, fn token ->
+    Mox.stub(Hexpm.Billing.Mock, :dashboard, fn token ->
       assert repository.name == token
 
       %{
@@ -544,7 +544,7 @@ defmodule Hexpm.Web.DashboardControllerTest do
       }
     end)
 
-    Mox.expect(Hexpm.Billing.Mock, :update, fn token, params ->
+    Mox.stub(Hexpm.Billing.Mock, :update, fn token, params ->
       assert repository.name == token
       assert %{"email" => "billing@example.com"} = params
       {:ok, %{}}
@@ -564,7 +564,7 @@ defmodule Hexpm.Web.DashboardControllerTest do
   end
 
   test "create repository", %{user: user} do
-    Mox.expect(Hexpm.Billing.Mock, :create, 1, fn params ->
+    Mox.stub(Hexpm.Billing.Mock, :create, fn params ->
       assert params == %{
                "person" => %{"country" => "SE"},
                "token" => "createrepo",
@@ -611,7 +611,7 @@ defmodule Hexpm.Web.DashboardControllerTest do
   end
 
   test "create billing customer after repository", %{user: user, repository: repository} do
-    Mox.expect(Hexpm.Billing.Mock, :create, 1, fn params ->
+    Mox.stub(Hexpm.Billing.Mock, :create, fn params ->
       assert params == %{
                "person" => %{"country" => "SE"},
                "token" => repository.name,

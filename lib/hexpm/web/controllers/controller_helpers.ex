@@ -16,7 +16,7 @@ defmodule Hexpm.Web.ControllerHelpers do
   end
 
   def api_cache(conn, privacy) do
-    control = [logged_in_privacy(conn, privacy)] ++ ["max-age": @max_cache_age]
+    control = [logged_in_privacy(conn, privacy), "max-age": @max_cache_age]
     vary = ["accept", "accept-encoding"]
     cache(conn, control, vary)
   end

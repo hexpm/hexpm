@@ -9,7 +9,7 @@ defmodule Hexpm.Billing.ReportTest do
     repository2 = insert(:repository, billing_active: false)
     repository3 = insert(:repository, billing_active: false)
 
-    Mox.expect(Billing.Mock, :report, fn ->
+    Mox.stub(Billing.Mock, :report, fn ->
       [
         %{"token" => repository1.name, "active" => true},
         %{"token" => repository2.name, "active" => true}
@@ -32,7 +32,7 @@ defmodule Hexpm.Billing.ReportTest do
     repository2 = insert(:repository, billing_active: false)
     repository3 = insert(:repository, billing_active: true)
 
-    Mox.expect(Billing.Mock, :report, fn ->
+    Mox.stub(Billing.Mock, :report, fn ->
       [
         %{"token" => repository1.name, "active" => false},
         %{"token" => repository2.name, "active" => false}
