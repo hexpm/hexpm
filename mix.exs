@@ -34,7 +34,7 @@ defmodule Hexpm.MixProject do
 
   defp deps() do
     [
-      {:bamboo, github: "wojtekmach/bamboo", branch: "wm-json-library"},
+      {:bamboo, "~> 0.7"},
       {:bcrypt_elixir, "~> 1.0"},
       {:corsica, "~> 1.0"},
       {:cowboy, "~> 1.0"},
@@ -48,7 +48,7 @@ defmodule Hexpm.MixProject do
       {:phoenix_ecto, "~> 3.1"},
       {:phoenix_html, "~> 2.3"},
       {:phoenix_live_reload, "~> 1.0", only: :dev},
-      {:phoenix, github: "phoenixframework/phoenix", override: true},
+      {:phoenix, "~> 1.3"},
       {:plug_attack, "~> 0.3"},
       {:plug, "~> 1.2"},
       {:porcelain, "~> 2.0"},

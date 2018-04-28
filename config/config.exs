@@ -76,8 +76,6 @@ config :phoenix, :generators,
   migration: true,
   binary_id: false
 
-config :phoenix, json_library: Jason
-
 config :phoenix, :format_encoders,
   elixir: Hexpm.Web.ElixirFormat,
   erlang: Hexpm.Web.ErlangFormat,
@@ -90,8 +88,6 @@ config :mime, :types, %{
 }
 
 config :ecto, json_library: Jason
-
-config :bamboo, json_library: Jason
 
 config :rollbax, enabled: false
 
