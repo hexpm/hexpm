@@ -89,6 +89,8 @@ config :mime, :types, %{
 
 config :ecto, json_library: Jason
 
+config :bamboo, json_library: Jason
+
 config :rollbax, enabled: false
 
 config :logger, :console,
