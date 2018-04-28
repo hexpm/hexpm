@@ -75,7 +75,7 @@ to the repository. An app named <code class="inline">foo</code> at version <code
 <h3>Dependencies</h3>
 <p>Dependencies are defined in mix’s dependency format. But instead of using
 <code class="inline">:git</code> or <code class="inline">:path</code> as the SCM <code class="inline">:package</code> is used.</p>
-<pre><code>defp deps do
+<pre><code>defp deps() do
   [
     {:ecto, &quot;~&gt; 0.1.0&quot;},
     {:postgrex, &quot;~&gt; 0.3.0&quot;},
@@ -84,7 +84,7 @@ to the repository. An app named <code class="inline">foo</code> at version <code
 end</code></pre>
 <p>As can be seen Hex package dependencies works alongside git dependencies.
 Important to note is that non-Hex dependencies will not be used during
-dependency resolution and neither will be they listed as dependencies of the
+dependency resolution and neither will they be listed as dependencies of the
 package.</p>
 <h3>Package configuration</h3>
 <p>Additional package metadata is optional, but highly recommended.</p>
@@ -93,8 +93,12 @@ package.</p>
  name.
 </li>
 <li><code class="inline">:files</code> - List of files and directories to include in the package,
-can include wildcards. Defaults to <code class="inline">[&quot;lib&quot;, &quot;priv&quot;, &quot;mix.exs&quot;, &quot;README*&quot;,
-&quot;readme*&quot;, &quot;LICENSE*&quot;, &quot;license*&quot;, &quot;CHANGELOG*&quot;, &quot;changelog*&quot;, &quot;src&quot;]</code>.
+can include wildcards. Defaults to <code class="inline">[&quot;lib&quot;, &quot;priv&quot;, &quot;.formatter.exs&quot;,
+&quot;mix.exs&quot;, &quot;README*&quot;, &quot;readme*&quot;, &quot;LICENSE*&quot;, &quot;license*&quot;, &quot;CHANGELOG*&quot;,
+&quot;changelog*&quot;, &quot;src&quot;]</code>.
+</li>
+<li><code class="inline">:exclude_patterns</code> - List of patterns matching files and directories to
+exclude from the package.
 </li>
 <li><code class="inline">:maintainers</code> - List of names and/or emails of maintainers.
 </li>
@@ -107,6 +111,17 @@ try to automatically detect the build tools based on the files in the
 package. If a “rebar” or “rebar.config” file is present Hex will mark it
 as able to build with rebar. This detection can be overridden by setting
 this field.
+</li>
+</ul>
+<h4>Command line options</h4>
+<ul>
+<li><p><code class="inline">--unpack</code> - Builds the tarball and unpacks contents into a directory.
+Useful for making sure the tarball contains all needed files before
+publishing. See <code class="inline">--output</code> below for setting the output path.</p>
+</li>
+<li><p><code class="inline">-o</code>, <code class="inline">--output</code> - Sets output path. When used with <code class="inline">--unpack</code> it means
+the directory (Default: <code class="inline">&lt;app&gt;-&lt;version&gt;</code>). Otherwise, it specifies
+tarball path (Default: <code class="inline">&lt;app&gt;-&lt;version&gt;.tar</code>)</p>
 </li>
 </ul>
 
@@ -160,6 +175,8 @@ flight. Can be overridden by setting the environment variable
 overridden by setting the environment variable <code class="inline">HEX_HTTP_TIMEOUT</code>
 </li>
 </ul>
+<p><code class="inline">HEX_HOME</code> environment variable can be set to point to the directory where Hex
+stores the cache and configuration (Default: <code class="inline">~/.hex</code>)</p>
 <h3>Command line options</h3>
 <ul>
 <li><code class="inline">--delete</code> - Remove a specific config key
@@ -182,23 +199,28 @@ overridden by setting the environment variable <code class="inline">HEX_HTTP_TIM
     </div>
     <div class="panel-body">
       <p><em>Fetches or opens documentation of a package.</em></p>
+<p>If no version is specified, defaults to version used in the current mix project.
+If called outside of a mix project or the dependency is not used in the
+current mix project, defaults to the latest version.</p>
+<h3>Fetch documentation for all dependencies in the current mix project</h3>
+<p>  mix hex.docs fetch</p>
+<h3>Fetch documentation for offline use</h3>
+<p>Fetches documentation for the specified package that you can later open with
+<code class="inline">mix hex.docs offline</code>.</p>
 <pre><code>mix hex.docs fetch PACKAGE [VERSION]</code></pre>
-<p>It will retrieve and decompress the specified version of the documentation
-for a package. If you do not specify the <code class="inline">version</code> argument, this task will
-retrieve the latest documentation available in the mirror.</p>
-<pre><code>mix hex.docs open PACKAGE [VERSION]</code></pre>
+<h3>Open a browser window with offline documentation</h3>
+<pre><code>mix hex.docs offline PACKAGE [VERSION]</code></pre>
+<h3>Open a browser window with online documentation</h3>
+<pre><code>mix hex.docs online PACKAGE [VERSION]</code></pre>
 <h3>Command line options</h3>
 <ul>
-<li><code class="inline">--offline</code> - Open a local version available in your filesystem
-</li>
 <li><code class="inline">--module Some.Module</code> - Open a specified module documentation page inside desired package
 </li>
 <li><code class="inline">--organization ORGANIZATION</code> - The organization the package belongs to
 </li>
+<li><code class="inline">--latest</code> - Looks for the latest release of a package
+</li>
 </ul>
-<p>It will open the specified version of the documentation for a package in a
-Web browser. If you do not specify the <code class="inline">version</code> argument, this task will
-open the latest documentation.</p>
 
     </div>
   </div>
@@ -221,8 +243,7 @@ open the latest documentation.</p>
 registry was last updated and current system version.</p>
 <p>If <code class="inline">package</code> is given, print information about the package. This includes all
 released versions and package metadata.</p>
-<p>If <code class="inline">package</code> and <code class="inline">version</code> is given print release information. This includes
-remote Git URL and Git ref, and all package dependencies.</p>
+<p>If <code class="inline">package</code> and <code class="inline">version</code> is given, print release information.</p>
 <h3>Command line options</h3>
 <ul>
 <li><code class="inline">--organization ORGANIZATION</code> - The organization the package belongs to
@@ -254,24 +275,29 @@ local machine.</p>
 dependency declaration in <code class="inline">mix.exs</code>:</p>
 <pre><code>{:plug, &quot;~&gt; 1.0&quot;, organization: &quot;my_organization&quot;}</code></pre>
 <h3>Authorize an organization</h3>
-<pre><code>mix hex.organization auth NAME</code></pre>
-<h4>Command line options</h4>
-<ul>
-<li><code class="inline">--key KEY</code> - Hash of key used to authenticate HTTP requests to repository, if
-omitted will generate a new key with your account credentials. This flag
-is useful if you have a key pre-generated with <code class="inline">mix hex.organization key</code>
-and want to authenticate on a CI server or similar system
-</li>
-</ul>
+<p>This command will generate an API key used to authenticate access to the organization.
+See the <code class="inline">hex.user</code> tasks to list and control all your active API keys.</p>
+<pre><code>mix hex.organization auth ORGANIZATION  [--key KEY] [--key-name KEY_NAME]</code></pre>
 <h3>Deauthorize and remove an organization</h3>
 <pre><code>mix hex.organization deauth NAME</code></pre>
 <h3>Generate a repository authentication key</h3>
-<p>This command is useful to pre-generate keys for use with <code class="inline">mix hex.organization auth NAME --key KEY</code>
+<p>This command is useful to pre-generate keys for use with <code class="inline">mix hex.organization auth ORGANIZATION --key KEY</code>
 on CI servers or similar systems. It returns the hash of the generated key that you can pass to
-<code class="inline">auth NAME --key KEY</code></p>
-<pre><code>mix hex.organization key NAME</code></pre>
+<code class="inline">auth ORGANIZATION --key KEY</code>. This key allows read-only access to the repository</p>
+<pre><code>mix hex.organization key ORGANIZATION [--key-name KEY_NAME]</code></pre>
 <h3>List all authorized organizations</h3>
 <pre><code>mix hex.organization list</code></pre>
+<h3>Command line options</h3>
+<ul>
+<li><p><code class="inline">--key KEY</code> - Hash of key used to authenticate HTTP requests to repository, if
+omitted will generate a new key with your account credentials. This flag
+is useful if you have a key pre-generated with <code class="inline">mix hex.organization key</code>
+and want to authenticate on a CI server or similar system</p>
+</li>
+<li><p><code class="inline">--key-name KEY_NAME</code> - By default Hex will base the key name on your machine’s
+hostname and the organization name, use this option to give your own name.</p>
+</li>
+</ul>
 
     </div>
   </div>
@@ -322,18 +348,18 @@ to figure why a package isn’t updating when you run <code class="inline">mix d
       <p><em>Adds, removes or lists package owners.</em></p>
 <p>Package owners have full permissions to the package. They can publish and
 revert releases and even remove other package owners.</p>
-<h4>Add owner</h4>
+<h3>Add owner</h3>
 <p>Adds an owner to package by specifying the package name and email of the new
 owner.</p>
 <pre><code>mix hex.owner add PACKAGE EMAIL</code></pre>
-<h4>Remove owner</h4>
+<h3>Remove owner</h3>
 <p>Removes an owner to package by specifying the package name and email of the new
 owner.</p>
 <pre><code>mix hex.owner remove PACKAGE EMAIL</code></pre>
-<h4>List owners</h4>
+<h3>List owners</h3>
 <p>Lists all owners of given package.</p>
 <pre><code>mix hex.owner list PACKAGE</code></pre>
-<h4>List owned packages</h4>
+<h3>List owned packages</h3>
 <p>Lists all packages owned by the current user.</p>
 <pre><code>mix hex.owner packages</code></pre>
 <h3>Command line options</h3>
@@ -399,7 +425,7 @@ documentation in one step, you can use the following shorthand:</p>
 <h3>Dependencies</h3>
 <p>Dependencies are defined in mix’s dependency format. But instead of using
 <code class="inline">:git</code> or <code class="inline">:path</code> as the SCM <code class="inline">:package</code> is used.</p>
-<pre><code>defp deps do
+<pre><code>defp deps() do
   [
     {:ecto, &quot;~&gt; 0.1.0&quot;},
     {:postgrex, &quot;~&gt; 0.3.0&quot;},
@@ -408,7 +434,7 @@ documentation in one step, you can use the following shorthand:</p>
 end</code></pre>
 <p>As can be seen Hex package dependencies works alongside git dependencies.
 Important to note is that non-Hex dependencies will not be used during
-dependency resolution and neither will be they listed as dependencies of the
+dependency resolution and neither will they be listed as dependencies of the
 package.</p>
 <h3>Package configuration</h3>
 <p>Additional metadata of the package can optionally be defined, but it is very
@@ -463,7 +489,7 @@ dependency declaration in <code class="inline">mix.exs</code>:</p>
 <p>By default all dependencies of plug will also be fetched from <code class="inline">my_repo</code>
 unless plug has declared otherwise in its dependency definition.</p>
 <p>To use packages from <code class="inline">my_repo</code> you need to add it to your configuration
-first. You do that by calling <code class="inline">mix hex.repo my_repo https://myrepo.example.com</code>.</p>
+first. You do that by calling <code class="inline">mix hex.repo add my_repo https://myrepo.example.com</code>.</p>
 <p>The default repo is called <code class="inline">hexpm</code> and points to https://repo.hex.pm. This
 can be overridden by using <code class="inline">mix hex.repo set ...</code>.</p>
 <p>A repository configured from an organization will have <code class="inline">hexpm:</code> prefixed to
@@ -510,7 +536,7 @@ mix hex.repo set NAME --auth-key KEY</code></pre>
 
 mix hex.retire PACKAGE VERSION --unretire</code></pre>
 <p>Mark a package as retired when you no longer recommend it’s usage. A retired
-is still resolvable and usable but it will be flagged as retired in the
+package is still resolvable and usable but it will be flagged as retired in the
 repository and a message will be displayed to users when they use the package.</p>
 <h3>Retirement reasons</h3>
 <ul>
@@ -558,6 +584,8 @@ the retirement reason
 <ul>
 <li><code class="inline">--organization ORGANIZATION</code> - The organization the package belongs to
 </li>
+<li><code class="inline">--all-organizations</code> - Search all organizations you have access to
+</li>
 </ul>
 
     </div>
@@ -576,36 +604,46 @@ the retirement reason
     </div>
     <div class="panel-body">
       <p><em>Hex user tasks.</em></p>
-<h4>Register a new user</h4>
+<h3>Register a new user</h3>
 <pre><code>mix hex.user register</code></pre>
-<h4>Print the current user</h4>
+<h3>Print the current user</h3>
 <pre><code>mix hex.user whoami</code></pre>
-<h4>Authorize a new user</h4>
+<h3>Authorize a new user</h3>
 <p>Authorizes a new user on the local machine by generating a new API key and
 storing it in the Hex config.</p>
-<pre><code>mix hex.user auth</code></pre>
-<h4>Deauthorize the user</h4>
-<p>Deauthorizes the user from the local machine by removing the API key from the
-Hex config.</p>
-<pre><code>mix hex.user deauth</code></pre>
-<h4>Reencrypt API key</h4>
-<p>Updates the passphrase for the locally stored API key.</p>
-<pre><code>mix hex.user passphrase</code></pre>
-<h4>Revoke key</h4>
+<pre><code>mix hex.user auth [--key-name KEY_NAME] [--skip-organizations]</code></pre>
+<h3>Command line options</h3>
+<ul>
+<li><code class="inline">--key-name KEY_NAME</code> - By default Hex will base the key name on your machine’s
+hostname, use this option to give your own name.
+</li>
+<li><code class="inline">--skip-organizations</code> - Skip authorizing all organizations your account has access to.
+</li>
+</ul>
+<h3>Deauthorize the user</h3>
+<p>Deauthorizes the user from the local machine by removing the API key from the Hex config.</p>
+<pre><code>mix hex.user deauth [--skip-organizations]</code></pre>
+<h3>Command line options</h3>
+<ul>
+<li><code class="inline">--skip-organizations</code> - Skip deauthorizing all organizations.
+</li>
+</ul>
+<h3>Revoke key</h3>
 <p>Removes given API key from account.</p>
 <p>The key can no longer be used to authenticate API requests.</p>
-<pre><code>mix hex.user key --revoke key_name</code></pre>
-<h4>Revoke all keys</h4>
+<pre><code>mix hex.user key --revoke KEY_NAME</code></pre>
+<h3>Revoke all keys</h3>
 <p>Revoke all API keys from your account.</p>
 <pre><code>mix hex.user key --revoke-all</code></pre>
-<h4>List keys</h4>
+<h3>List keys</h3>
 <p>Lists all API keys associated with your account.</p>
 <pre><code>mix hex.user key --list</code></pre>
-<h4>Test authentication</h4>
-<p>Tests if authentication works with the stored API key.</p>
-<pre><code>mix hex.user test</code></pre>
-<h4>Reset user password</h4>
-<pre><code>mix hex.user reset password</code></pre>
+<h3>Reset user account password</h3>
+<p>Starts the process for reseting account password.</p>
+<pre><code>mix hex.user reset_password account</code></pre>
+<h3>Reset local password</h3>
+<p>Updates the local password for your local authentication credentials.</p>
+<pre><code>mix hex.user reset_password local</code></pre>
 
     </div>
   </div>
