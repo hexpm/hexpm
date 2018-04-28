@@ -42,24 +42,6 @@ defmodule Mix.Tasks.Hexpm.StatsTest do
 
     logfile1 =
       read_log(
-        "s3_logs_1.txt",
-        repository1: repository1.name,
-        package1: package1.name,
-        package2: package2.name,
-        package4: package4.name
-      )
-
-    logfile2 =
-      read_log(
-        "s3_logs_2.txt",
-        repository1: repository1.name,
-        package1: package1.name,
-        package2: package2.name,
-        package4: package4.name
-      )
-
-    logfile3 =
-      read_log(
         "fastly_logs_1.txt",
         repository1: repository1.name,
         package1: package1.name,
@@ -68,7 +50,7 @@ defmodule Mix.Tasks.Hexpm.StatsTest do
       )
       |> :zlib.gzip()
 
-    logfile4 =
+    logfile2 =
       read_log(
         "fastly_logs_2.txt",
         repository1: repository1.name,
@@ -78,16 +60,11 @@ defmodule Mix.Tasks.Hexpm.StatsTest do
       )
       |> :zlib.gzip()
 
-    Store.put(region, bucket, "hex/2013-11-01-21-32-16-E568B2907131C0C0", logfile1, [])
-    Store.put(region, bucket, "hex/2013-11-02-21-32-17-E568B2907131C0C0", logfile1, [])
-    Store.put(region, bucket, "hex/2013-11-03-21-32-18-E568B2907131C0C0", logfile1, [])
-    Store.put(region, bucket, "hex/2013-11-01-21-32-19-E568B2907131C0C0", logfile2, [])
-
     Store.put(
       region,
       bucket,
       "fastly_hex/2013-11-01T14:00:00.000-tzletcEGGiI7atIAAAAA.log.gz",
-      logfile3,
+      logfile1,
       []
     )
 
@@ -95,7 +72,7 @@ defmodule Mix.Tasks.Hexpm.StatsTest do
       region,
       bucket,
       "fastly_hex/2013-11-01T15:00:00.000-tzletcEGGiI7atIAAAAA.log.gz",
-      logfile4,
+      logfile2,
       []
     )
 
@@ -108,13 +85,13 @@ defmodule Mix.Tasks.Hexpm.StatsTest do
     rel5 = Repo.get_by!(assoc(package4, :releases), version: "0.0.1")
 
     downloads = Hexpm.Repo.all(Download)
-    assert length(downloads) == 6
+    assert length(downloads) == 4
 
-    assert Enum.find(downloads, &(&1.release_id == rel1.id)).downloads == 11
+    assert Enum.find(downloads, &(&1.release_id == rel1.id)).downloads == 6
     assert Enum.find(downloads, &(&1.release_id == rel2.id)).downloads == 3
-    assert Enum.find(downloads, &(&1.release_id == rel3.id)).downloads == 3
-    assert Enum.find(downloads, &(&1.release_id == rel4.id)).downloads == 1
+    assert Enum.find(downloads, &(&1.release_id == rel3.id)).downloads == 1
     assert Enum.find(downloads, &(&1.release_id == rel5.id)).downloads == 1
+    refute Enum.find(downloads, &(&1.release_id == rel4.id))
   end
 
   defp read_log(path, replaces) do
