@@ -165,7 +165,7 @@ defmodule Hexpm.Web.API.AuthControllerTest do
 
       build_conn()
       |> put_req_header("authorization", key.user_secret)
-      |> get("api/auth", domain: "repository")
+      |> get("api/auth", domain: "repositories")
       |> response(204)
 
       build_conn()

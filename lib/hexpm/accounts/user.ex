@@ -124,8 +124,12 @@ defmodule Hexpm.Accounts.User do
     {:ok, nil}
   end
 
-  def verify_permissions(%User{}, "repository", nil) do
+  def verify_permissions(%User{}, "repositories", nil) do
     {:ok, nil}
+  end
+
+  def verify_permissions(%User{}, "repository", nil) do
+    :error
   end
 
   def verify_permissions(%User{} = user, "repository", name) do

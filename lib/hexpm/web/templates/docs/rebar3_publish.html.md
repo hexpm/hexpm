@@ -35,11 +35,11 @@ Before publishing, you will have to choose the name of your package. Remember th
 * Avoid using offensive or harassing package names, nicknames, or other identifiers that might detract from a friendly, safe, and welcoming environment for all.
 * If you are providing functionality on top of an existing package, consider using that package name as a prefix. For example, if you you are creating a plugin for [Rebar3](https://github.com/erlang/rebar3), consider calling your package `rebar3_plugin` (or `rebar3_somename`) instead of `plugin` (or `somename`).
 
-With a name in hand, it is time to add the proper metadata to your `.app.src` file.
+With a name in hand, it is time to add the proper metadata to your `<myapp>.app.src` file.
 
-### Adding metadata to `.app.src`
+### Adding metadata to `src/<myapp>.app.src`
 
-The package is configured in the `.app.src` file. [See below](#example-app-src-file) for an example file. While the dependencies of the application are in `rebar.config`, [as seen below](#example-rebar-config-file) as well.
+The package is configured in the `src/<myapp>.app.src` file. [See below](#example-app-src-file) for an example file. While the dependencies of the application are in `rebar.config`, [as seen below](#example-rebar-config-file) as well.
 
 First, make sure that the `vsn` property is correct. All Hex packages are required to follow [semantic versioning](http://semver.org/). `vsn` and the app name are the only required properties.
 
@@ -84,7 +84,7 @@ Only Hex packages will be included as dependencies of the package, for example G
 
 <a id="example-app-src-file"></a>
 
-#### Example .app.src file
+#### Example <myapp>.app.src file
 
 ```erlang
 {application, relx,
@@ -107,7 +107,7 @@ Only Hex packages will be included as dependencies of the package, for example G
 
 ### Submitting the package
 
-After the package metadata and dependencies have been added to `.app.src`, we are ready to publish the package with the `rebar3 hex publish` command:
+After the package metadata and dependencies have been added to `src/<myapp>.app.src`, we are ready to publish the package with the `rebar3 hex publish` command:
 
 ```nohighlight
 $ rebar3 hex publish

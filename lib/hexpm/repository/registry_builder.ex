@@ -283,7 +283,7 @@ defmodule Hexpm.Repository.RegistryBuilder do
       repository_cdn_key(repository, "registry") <>
         " " <> repository_cdn_key(repository, "registry-index")
 
-    meta = [{"surrogate-key", surrogate_key}]
+    meta = [{"surrogate-key", surrogate_key}, {"surrogate-control", "public, max-age=604800"}]
     index_meta = [{"signature", signature} | meta]
     opts = [cache_control: "public, max-age=600", meta: meta]
     index_opts = Keyword.put(opts, :meta, index_meta)
@@ -303,8 +303,8 @@ defmodule Hexpm.Repository.RegistryBuilder do
       repository_cdn_key(repository, "registry") <>
         " " <> repository_cdn_key(repository, "registry-index")
 
-    meta = [{"surrogate-key", surrogate_key}]
-    opts = [cache_control: "public, max-age=600", meta: meta]
+    meta = [{"surrogate-key", surrogate_key}, {"surrogate-control", "public, max-age=604800"}]
+    opts = [cache_control: cache_control(repository), meta: meta]
     index_opts = Keyword.put(opts, :meta, meta)
 
     names_object = {repository_store_key(repository, "names"), names, index_opts}
@@ -323,6 +323,9 @@ defmodule Hexpm.Repository.RegistryBuilder do
 
     package_objects ++ [names_object, versions_object]
   end
+
+  defp cache_control(%Repository{id: 1}), do: "public, max-age=600"
+  defp cache_control(%Repository{}), do: "private, max-age=600"
 
   defp package_tuples(packages, releases) do
     Enum.reduce(releases, %{}, fn {_, vsn, pkg_id, _, _, _}, map ->
