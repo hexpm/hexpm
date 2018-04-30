@@ -34,9 +34,15 @@ defmodule Hexpm.Repository.Resolver do
   end
 
   defp resolve_deps(requirements) do
-    Enum.map(requirements, fn %{repository: repository, app: app} ->
-      {repository || "hexpm", app, false, []}
-    end)
+    if Version.compare(Hex.version(), "0.17.7") == :gt do
+      Map.new(requirements, fn %{app: app} ->
+        {app, {false, %{}}}
+      end)
+    else
+      Enum.map(requirements, fn %{repository: repository, app: app} ->
+        {repository || "hexpm", app, false, []}
+      end)
+    end
   end
 
   defp resolve_new_requests(requirements, config) do
