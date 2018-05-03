@@ -9,7 +9,11 @@ defmodule Hexpm.Billing.Hexpm do
   end
 
   def dashboard(repository) do
-    case get_json("api/customers/#{repository}", []) do
+    result =
+      fn -> get_json("api/customers/#{repository}", recv_timeout: 10_000) end
+      |> Hexpm.HTTP.retry("billing")
+
+    case result do
       {:ok, 200, _headers, body} -> body
       {:ok, 404, _headers, _body} -> nil
     end
@@ -36,12 +40,18 @@ defmodule Hexpm.Billing.Hexpm do
   end
 
   def invoice(id) do
-    {:ok, 200, _headers, body} = get_html("api/invoices/html/#{id}", [])
+    {:ok, 200, _headers, body} =
+      fn -> get_html("api/invoices/html/#{id}", recv_timeout: 10_000) end
+      |> Hexpm.HTTP.retry("billing")
+
     body
   end
 
   def report() do
-    {:ok, 200, _headers, body} = get_json("api/reports/customers", [])
+    {:ok, 200, _headers, body} =
+      fn -> get_json("api/reports/customers", []) end
+      |> Hexpm.HTTP.retry("billing")
+
     body
   end
 
