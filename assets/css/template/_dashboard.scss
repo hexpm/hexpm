@@ -10,9 +10,19 @@
   margin-top: 20px;
 }
 
-table, th, td {
-  border: 1px solid black;
+table {
   padding: 15px;
+  border: 1px solid #000000;
+}
+
+th {
+  padding: 15px;
+  border: 1px solid #000000;
+}
+
+td {
+  padding: 15px;
+  border: 1px solid #000000;
 }
 
 .dashboard .sidebar .list-group-item {
