@@ -97,7 +97,7 @@ defmodule Hexpm.Billing.Hexpm do
       {"accept", "application/json"}
     ]
 
-    :hackney.get(url, headers, opts)
+    :hackney.get(url, headers, "", opts)
     |> read_request()
   end
 
