@@ -32,8 +32,7 @@ defmodule Hexpm.Web.DashboardController do
     user = conn.assigns.current_user
     keys = Keys.all(user)
 
-    conn
-    |> render_keys(keys)
+    render_keys(conn, keys)
   end
 
   def password(conn, _params) do
