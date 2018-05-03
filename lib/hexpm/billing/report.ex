@@ -14,32 +14,51 @@ defmodule Hexpm.Billing.Report do
   end
 
   def handle_info(:update, opts) do
-    report = Hexpm.Billing.report()
+    report = report()
     repositories = repositories()
 
-    Enum.each(report, fn %{"token" => token, "active" => billing_active} ->
-      billing_active = !!billing_active
-
-      case Map.fetch(repositories, token) do
-        {:ok, ^billing_active} ->
-          :ok
-
-        {:ok, _active} ->
-          from(r in Repository, where: r.name == ^token)
-          |> Repo.update_all(set: [billing_active: billing_active])
-
-        :error ->
-          :ok
-      end
-    end)
+    set_active(repositories, report)
+    set_inactive(repositories, report)
 
     Process.send_after(self(), :update, opts[:interval])
     {:noreply, opts}
   end
 
+  defp report() do
+     Hexpm.Billing.report()
+     |> MapSet.new()
+  end
+
   defp repositories() do
-    from(r in Repository, where: not r.public, select: {r.name, r.billing_active})
+    from(r in Repository, select: {r.name, r.billing_active})
     |> Repo.all()
-    |> Map.new()
+  end
+
+  defp set_active(repositories, report) do
+    to_update =
+      Enum.flat_map(repositories, fn {name, active} ->
+        if not active and name in report do
+          [name]
+        else
+          []
+        end
+      end)
+
+    from(r in Repository, where: r.name in ^to_update)
+    |> Repo.update_all(set: [billing_active: true])
+  end
+
+  defp set_inactive(repositories, report) do
+    to_update =
+      Enum.flat_map(repositories, fn {name, active} ->
+        if active and name not in report do
+          [name]
+        else
+          []
+        end
+      end)
+
+    from(r in Repository, where: r.name in ^to_update)
+    |> Repo.update_all(set: [billing_active: false])
   end
 end

@@ -6,14 +6,12 @@ defmodule Hexpm.Billing.ReportTest do
 
   test "set repository to active" do
     repository1 = insert(:repository, billing_active: true)
-    repository2 = insert(:repository, billing_active: false)
+    repository2 = insert(:repository, billing_active: true)
     repository3 = insert(:repository, billing_active: false)
+    repository4 = insert(:repository, billing_active: false)
 
     Mox.stub(Billing.Mock, :report, fn ->
-      [
-        %{"token" => repository1.name, "active" => true},
-        %{"token" => repository2.name, "active" => true}
-      ]
+      [repository1.name, repository3.name]
     end)
 
     {:ok, pid} = Billing.Report.start_link(interval: 60_000)
@@ -23,21 +21,18 @@ defmodule Hexpm.Billing.ReportTest do
     :sys.get_state(pid)
 
     assert Repositories.get(repository1.name).billing_active
-    assert Repositories.get(repository2.name).billing_active
-    refute Repositories.get(repository3.name).billing_active
+    refute Repositories.get(repository2.name).billing_active
+    assert Repositories.get(repository3.name).billing_active
+    refute Repositories.get(repository4.name).billing_active
   end
 
   test "set repository to unactive" do
     repository1 = insert(:repository, billing_active: true)
-    repository2 = insert(:repository, billing_active: false)
-    repository3 = insert(:repository, billing_active: true)
+    repository2 = insert(:repository, billing_active: true)
+    repository3 = insert(:repository, billing_active: false)
+    repository4 = insert(:repository, billing_active: false)
 
-    Mox.stub(Billing.Mock, :report, fn ->
-      [
-        %{"token" => repository1.name, "active" => false},
-        %{"token" => repository2.name, "active" => false}
-      ]
-    end)
+    Mox.stub(Billing.Mock, :report, fn -> [] end)
 
     {:ok, pid} = Billing.Report.start_link(interval: 60_000)
     Sandbox.allow(Repo, self(), pid)
@@ -47,6 +42,7 @@ defmodule Hexpm.Billing.ReportTest do
 
     refute Repositories.get(repository1.name).billing_active
     refute Repositories.get(repository2.name).billing_active
-    assert Repositories.get(repository3.name).billing_active
+    refute Repositories.get(repository3.name).billing_active
+    refute Repositories.get(repository4.name).billing_active
   end
 end
