@@ -89,6 +89,7 @@ defmodule Hexpm.Web.Router do
     get "/dashboard/repos/:dashboard_repo/invoices/:id", DashboardController, :show_invoice
     get "/dashboard/repo-signup", DashboardController, :new_repository
     post "/dashboard/repo-signup", DashboardController, :create_repository
+    get "/dashboard/keys", DashboardController, :keys
 
     get "/docs/usage", DocsController, :usage
     get "/docs/rebar3_usage", DocsController, :rebar3_usage

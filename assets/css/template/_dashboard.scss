@@ -10,6 +10,11 @@
   margin-top: 20px;
 }
 
+table, th, td {
+  border: 1px solid black;
+  padding: 15px;
+}
+
 .dashboard .sidebar .list-group-item {
   font-weight: 400;
 

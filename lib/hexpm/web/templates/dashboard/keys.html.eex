@@ -1,0 +1,25 @@
+<div class="row">
+  <div class="col-sm-3">
+    <%= render "_sidebar.html", assigns %>
+  </div>
+  <div class="col-sm-9 email">
+    <div class="panel panel-default">
+      <div class="panel-heading">API Keys</div>
+      <div class="panel-body">
+        <p>API keys are used to authenticate and authorize clients to interact with the server. </p>
+        <br/>
+        <table>
+          <tr>
+            <th>Key Name</th>
+          </tr>
+          <%= for key <- @keys do %>
+            <tr>
+              <td><%= key.name %></td>
+            </tr>
+          <% end %>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
