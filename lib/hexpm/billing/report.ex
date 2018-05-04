@@ -44,8 +44,10 @@ defmodule Hexpm.Billing.Report do
         end
       end)
 
-    from(r in Repository, where: r.name in ^to_update)
-    |> Repo.update_all(set: [billing_active: true])
+    if to_update != [] do
+      from(r in Repository, where: r.name in ^to_update)
+      |> Repo.update_all(set: [billing_active: true])
+    end
   end
 
   defp set_inactive(repositories, report) do
@@ -58,7 +60,9 @@ defmodule Hexpm.Billing.Report do
         end
       end)
 
-    from(r in Repository, where: r.name in ^to_update)
-    |> Repo.update_all(set: [billing_active: false])
+    if to_update != [] do
+      from(r in Repository, where: r.name in ^to_update)
+      |> Repo.update_all(set: [billing_active: false])
+    end
   end
 end
