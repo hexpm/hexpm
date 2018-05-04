@@ -206,15 +206,19 @@ defmodule Hexpm.Web.Router do
 
   defp handle_errors(conn, %{kind: kind, reason: reason, stack: stacktrace}) do
     if report?(kind, reason) do
-      endpoint_url = Hexpm.Web.Endpoint.config(:url)
       conn = maybe_fetch_params(conn)
+      url = "#{conn.scheme}://#{conn.host}:#{conn.port}#{conn.request_path}"
+      user_ip = conn.remote_ip |> List.to_string() |> :inet.ntoa()
+      headers = conn.req_headers |> Map.new() |> filter_headers()
+      params = filter_params(conn.params)
+      endpoint_url = Hexpm.Web.Endpoint.config(:url)
 
       conn_data = %{
         "request" => %{
-          "url" => "#{conn.scheme}://#{conn.host}:#{conn.port}#{conn.request_path}",
-          "user_ip" => List.to_string(:inet.ntoa(conn.remote_ip)),
-          "headers" => Enum.into(conn.req_headers, %{}),
-          "params" => conn.params,
+          "url" => url,
+          "user_ip" => user_ip,
+          "headers" => headers,
+          "params" => params,
           "method" => conn.method
         },
         "server" => %{
@@ -235,7 +239,33 @@ defmodule Hexpm.Web.Router do
       Plug.Conn.fetch_query_params(conn)
     rescue
       _ ->
-        %{conn | params: "unfetched"}
+        %{conn | params: "[UNFETCHED]"}
     end
+  end
+
+  @filter_headers ~w(authorization)
+
+  defp filter_headers(headers) do
+    Map.drop(headers, @filter_headers)
+  end
+
+  @filter_params ~w(password password_confirmation)
+
+  defp filter_params(params) when is_map(params) do
+    Map.new(params, fn {key, value} ->
+      if key in @filter_params do
+        [{key, "[FILTERED]"}]
+      else
+        [{key, filter_params(value)}]
+      end
+    end)
+  end
+
+  defp filter_params(params) when is_list(params) do
+    Enum.map(params, &filter_params/1)
+  end
+
+  defp filter_params(other) do
+    other
   end
 end
