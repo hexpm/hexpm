@@ -8,7 +8,7 @@
       <div class="panel-body">
         <p>API keys are used to authenticate and authorize clients to interact with the server. </p>
         <br/>
-        <table class="table-condensed table-bordered">
+        <table class="table table-striped">
           <tr>
             <th>Key Name</th>
           </tr>
