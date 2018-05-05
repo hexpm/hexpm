@@ -91,6 +91,7 @@ defmodule Hexpm.Web.Router do
     post "/dashboard/repo-signup", DashboardController, :create_repository
     get "/dashboard/keys", DashboardController, :keys
     patch "/dashboard/keys", DashboardController, :revoke_key
+    post "/dashboard/keys", DashboardController, :generate_key
 
     get "/docs/usage", DocsController, :usage
     get "/docs/rebar3_usage", DocsController, :rebar3_usage

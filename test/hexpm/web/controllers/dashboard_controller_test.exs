@@ -215,6 +215,16 @@ defmodule Hexpm.Web.DashboardControllerTest do
     assert get_flash(conn, :error) =~ "The key computer does not exist"
   end
 
+  test "generate a new key", c do
+    conn =
+      build_conn()
+      |> test_login(c.user)
+      |> post("dashboard/keys", %{name: "computer"})
+
+    assert redirected_to(conn) == "/dashboard/keys"
+    assert get_flash(conn, :info) =~ "The key computer was successfully generated"
+  end
+
   test "add email", c do
     conn =
       build_conn()

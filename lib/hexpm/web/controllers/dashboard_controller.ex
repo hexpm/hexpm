@@ -57,6 +57,21 @@ defmodule Hexpm.Web.DashboardController do
     end
   end
 
+  def generate_key(conn, %{"name" => name} = params) do
+    user = conn.assigns.current_user
+
+    case Key.build(user, %{name: params["name"]}) |> Hexpm.Repo.insert() do
+      {:ok, key} ->
+        conn
+        |> put_flash(:info, "The key #{key.name} was successfully generated")
+        |> redirect(to: Routes.dashboard_path(conn, :keys))
+      {:error, _changeset} ->
+        conn
+        |> put_flash(:error, "The key #{params["name"]} was not generated successfully")
+        |> redirect(to: Routes.dashboard_path(conn, :keys))
+    end
+  end
+
   def password(conn, _params) do
     user = conn.assigns.current_user
     render_password(conn, User.update_password(user, %{}))
