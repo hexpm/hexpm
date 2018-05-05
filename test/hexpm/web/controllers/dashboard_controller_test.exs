@@ -186,6 +186,35 @@ defmodule Hexpm.Web.DashboardControllerTest do
     assert :error = Auth.password_auth(c.user.username, "newpass")
   end
 
+  test "revoke key", c do
+    Hexpm.Accounts.Key.build(c.user, %{name: "computer"}) |> Hexpm.Repo.insert!()
+
+    conn =
+      build_conn()
+      |> test_login(c.user)
+      |> patch("dashboard/keys", %{name: "computer"})
+
+    assert redirected_to(conn) == "/dashboard/keys"
+    assert get_flash(conn, :info) =~ "The key computer was revoked successfully"
+  end
+
+  test "revoking an already revoked key throws an error", c do
+    Hexpm.Accounts.Key.build(c.user, %{name: "computer"}) |> Hexpm.Repo.insert!()
+
+    conn =
+      build_conn()
+      |> test_login(c.user)
+      |> patch("dashboard/keys", %{name: "computer"})
+
+    conn =
+      build_conn()
+      |> test_login(c.user)
+      |> patch("dashboard/keys", %{name: "computer"})
+
+    assert redirected_to(conn) == "/dashboard/keys"
+    assert get_flash(conn, :error) =~ "The key computer does not exist"
+  end
+
   test "add email", c do
     conn =
       build_conn()

@@ -35,6 +35,28 @@ defmodule Hexpm.Web.DashboardController do
     render_keys(conn, keys)
   end
 
+  def revoke_key(conn, %{"name" => name} = params) do
+    user = conn.assigns.current_user
+    key = Hexpm.Repo.one(Key.get(user, params["name"]))
+
+    if key do
+      case Hexpm.Repo.update(Key.revoke(key)) do
+        {:ok, _struct} ->
+          conn
+          |> put_flash(:info, "The key #{params["name"]} was revoked successfully")
+          |> redirect(to: Routes.dashboard_path(conn, :keys))
+        {:error, _changeset} ->
+          conn
+          |> put_flash(:error, "The key #{params["name"]} was not revoked successfully")
+          |> redirect(to: Routes.dashboard_path(conn, :keys))
+      end
+    else
+      conn
+      |> put_flash(:error, "The key #{params["name"]} does not exist")
+      |> redirect(to: Routes.dashboard_path(conn, :keys))
+    end
+  end
+
   def password(conn, _params) do
     user = conn.assigns.current_user
     render_password(conn, User.update_password(user, %{}))
