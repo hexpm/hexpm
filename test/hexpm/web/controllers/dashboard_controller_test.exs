@@ -145,7 +145,7 @@ defmodule Hexpm.Web.DashboardControllerTest do
       |> test_login(c.user)
       |> get("dashboard/keys")
 
-      assert response(conn, 200) =~ "API Keys"
+    assert response(conn, 200) =~ "API Keys"
   end
 
   test "update password invalid current password", c do
