@@ -187,7 +187,7 @@ defmodule Hexpm.Web.DashboardControllerTest do
   end
 
   test "revoke key", c do
-    Hexpm.Accounts.Key.build(c.user, %{name: "computer"}) |> Hexpm.Repo.insert!()
+    insert(:key, user: c.user, name: "computer")
 
     conn =
       build_conn()
@@ -199,7 +199,7 @@ defmodule Hexpm.Web.DashboardControllerTest do
   end
 
   test "revoking an already revoked key throws an error", c do
-    Hexpm.Accounts.Key.build(c.user, %{name: "computer"}) |> Hexpm.Repo.insert!()
+    insert(:key, user: c.user, name: "computer", revoked_at: ~N"2017-01-01 00:00:00")
 
     conn =
       build_conn()
@@ -211,8 +211,7 @@ defmodule Hexpm.Web.DashboardControllerTest do
       |> test_login(c.user)
       |> patch("dashboard/keys", %{name: "computer"})
 
-    assert redirected_to(conn) == "/dashboard/keys"
-    assert get_flash(conn, :error) =~ "The key computer does not exist"
+    assert response(conn, 400) =~ "The key computer was not found"
   end
 
   test "generate a new key", c do

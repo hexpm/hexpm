@@ -37,38 +37,34 @@ defmodule Hexpm.Web.DashboardController do
 
   def revoke_key(conn, %{"name" => name} = params) do
     user = conn.assigns.current_user
-    key = Hexpm.Repo.one(Key.get(user, params["name"]))
 
-    if key do
-      case Hexpm.Repo.update(Key.revoke(key)) do
-        {:ok, _struct} ->
-          conn
-          |> put_flash(:info, "The key #{params["name"]} was revoked successfully")
-          |> redirect(to: Routes.dashboard_path(conn, :keys))
-        {:error, _changeset} ->
-          conn
-          |> put_flash(:error, "The key #{params["name"]} was not revoked successfully")
-          |> redirect(to: Routes.dashboard_path(conn, :keys))
-      end
-    else
-      conn
-      |> put_flash(:error, "The key #{params["name"]} does not exist")
-      |> redirect(to: Routes.dashboard_path(conn, :keys))
+    case Keys.remove(user, params["name"], audit: audit_data(conn)) do
+      {:ok, _struct} ->
+        conn
+        |> put_flash(:info, "The key #{params["name"]} was revoked successfully")
+        |> redirect(to: Routes.dashboard_path(conn, :keys))
+
+      {:error, _} ->
+        conn
+        |> put_status(400)
+        |> put_flash(:error, "The key #{params["name"]} was not found")
+        |> render_keys(Keys.all(user))
     end
   end
 
   def generate_key(conn, %{"name" => name} = params) do
     user = conn.assigns.current_user
 
-    case Key.build(user, %{name: params["name"]}) |> Hexpm.Repo.insert() do
-      {:ok, key} ->
+    case Keys.add(user, params, audit: audit_data(conn)) do
+      {:ok, %{key: key}} ->
         conn
         |> put_flash(:info, "The key #{key.name} was successfully generated")
         |> redirect(to: Routes.dashboard_path(conn, :keys))
-      {:error, _changeset} ->
+
+      {:error, _} ->
         conn
         |> put_flash(:error, "The key #{params["name"]} was not generated successfully")
-        |> redirect(to: Routes.dashboard_path(conn, :keys))
+        |> render_keys(Keys.all(user))
     end
   end
 
