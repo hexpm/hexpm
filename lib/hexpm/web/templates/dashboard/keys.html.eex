@@ -25,7 +25,7 @@
             </tr>
           <% end %>
         </table>
-          <%= form_for @conn, Routes.dashboard_path(Endpoint, :keys), [method: :post], fn f -> %>
+          <%= form_for @changeset, Routes.dashboard_path(Endpoint, :keys), [method: :post], fn f -> %>
             <%= label f, :name, "Generate new key" %>
             <div class="form-group">
               <%= text_input f, :name, class: "form-control" %>

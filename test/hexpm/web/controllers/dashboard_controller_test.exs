@@ -218,7 +218,7 @@ defmodule Hexpm.Web.DashboardControllerTest do
     conn =
       build_conn()
       |> test_login(c.user)
-      |> post("dashboard/keys", %{name: "computer"})
+      |> post("dashboard/keys", %{key: %{name: "computer"}})
 
     assert redirected_to(conn) == "/dashboard/keys"
     assert get_flash(conn, :info) =~ "The key computer was successfully generated"

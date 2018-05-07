@@ -52,19 +52,19 @@ defmodule Hexpm.Web.DashboardController do
     end
   end
 
-  def generate_key(conn, %{"name" => name} = params) do
+  def generate_key(conn, %{"key" => %{"name" => name}} = params) do
     user = conn.assigns.current_user
 
-    case Keys.add(user, params, audit: audit_data(conn)) do
+    case Keys.add(user, params["key"], audit: audit_data(conn)) do
       {:ok, %{key: key}} ->
         conn
         |> put_flash(:info, "The key #{key.name} was successfully generated")
         |> redirect(to: Routes.dashboard_path(conn, :keys))
 
-      {:error, _} ->
+      {:error, :key, changeset, _} ->
         conn
-        |> put_flash(:error, "The key #{params["name"]} was not generated successfully")
-        |> render_keys(Keys.all(user))
+        |> put_status(400)
+        |> render_keys(Keys.all(user), changeset)
     end
   end
 
@@ -450,13 +450,14 @@ defmodule Hexpm.Web.DashboardController do
     )
   end
 
-  defp render_keys(conn, keys) do
+  defp render_keys(conn, keys, changeset \\ key_changeset)  do
     render(
       conn,
       "keys.html",
       title: "Dashboard - User API keys",
       container: "container page dashboard",
-      keys: keys
+      keys: keys,
+      changeset: changeset
     )
   end
 
@@ -571,6 +572,10 @@ defmodule Hexpm.Web.DashboardController do
 
   defp create_repository_changeset() do
     Repository.changeset(%Repository{}, %{})
+  end
+
+  defp key_changeset do
+    Key.changeset(%Key{}, %{}, %{})
   end
 
   defp email_error_message(:unknown_email, email), do: "Unknown email #{email}."
