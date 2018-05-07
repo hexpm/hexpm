@@ -38,7 +38,7 @@ defmodule Hexpm.Web.DashboardController do
   def revoke_key(conn, %{"name" => name} = params) do
     user = conn.assigns.current_user
 
-    case Keys.remove(user, params["name"], audit: audit_data(conn)) do
+    case Keys.remove(user, name, audit: audit_data(conn)) do
       {:ok, _struct} ->
         conn
         |> put_flash(:info, "The key #{params["name"]} was revoked successfully")
@@ -52,7 +52,7 @@ defmodule Hexpm.Web.DashboardController do
     end
   end
 
-  def generate_key(conn, %{"key" => %{"name" => name}} = params) do
+  def generate_key(conn, %{"key" => %{"name" => _}} = params) do
     user = conn.assigns.current_user
 
     case Keys.add(user, params["key"], audit: audit_data(conn)) do
@@ -450,7 +450,7 @@ defmodule Hexpm.Web.DashboardController do
     )
   end
 
-  defp render_keys(conn, keys, changeset \\ key_changeset)  do
+  defp render_keys(conn, keys, changeset \\ key_changeset())  do
     render(
       conn,
       "keys.html",
