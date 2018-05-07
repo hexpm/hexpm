@@ -206,11 +206,6 @@ defmodule Hexpm.Web.DashboardControllerTest do
       |> test_login(c.user)
       |> patch("dashboard/keys", %{name: "computer"})
 
-    conn =
-      build_conn()
-      |> test_login(c.user)
-      |> patch("dashboard/keys", %{name: "computer"})
-
     assert response(conn, 400) =~ "The key computer was not found"
   end
 
