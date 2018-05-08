@@ -1,19 +1,19 @@
 [old_name, new_name] = System.argv()
 
-repository = Hexpm.Repository.Repositories.get(old_name)
+user = Hexpm.Accounts.Users.get(old_name)
 
-unless repository do
-  IO.puts("No repository: #{old_name}")
+unless user do
+  IO.puts("No user: #{old_name}")
   System.halt(1)
 end
 
-IO.inspect(repository)
+IO.inspect(user)
 
 answer = IO.gets("Rename? [Yn] ")
 
 if answer =~ ~r/^(Y(es)?)?$/i do
-  repository
-  |> Ecto.Changeset.change(name: new_name)
+  user
+  |> Ecto.Changeset.change(username: new_name)
   |> Hexpm.Repo.update!()
 
   IO.puts("Renamed")
