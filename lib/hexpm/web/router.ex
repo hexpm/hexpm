@@ -208,7 +208,7 @@ defmodule Hexpm.Web.Router do
     if report?(kind, reason) do
       conn = maybe_fetch_params(conn)
       url = "#{conn.scheme}://#{conn.host}:#{conn.port}#{conn.request_path}"
-      user_ip = conn.remote_ip |> List.to_string() |> :inet.ntoa()
+      user_ip = conn.remote_ip |> :inet.ntoa() |> List.to_string()
       headers = conn.req_headers |> Map.new() |> filter_headers()
       params = filter_params(conn.params)
       endpoint_url = Hexpm.Web.Endpoint.config(:url)
