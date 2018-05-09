@@ -254,9 +254,9 @@ defmodule Hexpm.Web.Router do
   defp filter_params(params) when is_map(params) do
     Map.new(params, fn {key, value} ->
       if key in @filter_params do
-        [{key, "[FILTERED]"}]
+        {key, "[FILTERED]"}
       else
-        [{key, filter_params(value)}]
+        {key, filter_params(value)}
       end
     end)
   end
