@@ -30,4 +30,18 @@
       </p>
     </div>
   </div>
+
+  <div class="row">
+    <div class="col-md-4 image">
+      <a href="https://www.fastly.com/"><img src="<%= Routes.static_path(Endpoint, "/images/travis-ci.png") %>" alt="TRAVIS CI logo"></a>
+    </div>
+    <div class="col-md-8">
+      <p>
+        Travis CI aims to empower people to build and ship great software. As a leading provider of hosted CI, Travis CI has been helping build and test open source and private projects since 2011. Easily sync your GitHub projects with Travis CI and you'll be testing your code in minutes.
+      </p>
+      <p>
+        Travis CI provides continuous integration services for Hex.
+      </p>
+    </div>
+  </div>
 </div>
