@@ -33,7 +33,7 @@
 
   <div class="row">
     <div class="col-md-4 image">
-      <a href="https://www.fastly.com/"><img src="<%= Routes.static_path(Endpoint, "/images/travis-ci.png") %>" alt="TRAVIS CI logo"></a>
+      <a href="https://travis-ci.com/"><img src="<%= Routes.static_path(Endpoint, "/images/travis-ci.png") %>" alt="TRAVIS CI logo"></a>
     </div>
     <div class="col-md-8">
       <p>
