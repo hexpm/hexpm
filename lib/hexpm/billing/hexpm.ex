@@ -9,7 +9,11 @@ defmodule Hexpm.Billing.Hexpm do
   end
 
   def dashboard(repository) do
-    case get_json("api/customers/#{repository}", []) do
+    result =
+      fn -> get_json("api/customers/#{repository}", recv_timeout: 10_000) end
+      |> Hexpm.HTTP.retry("billing")
+
+    case result do
       {:ok, 200, _headers, body} -> body
       {:ok, 404, _headers, _body} -> nil
     end
@@ -36,12 +40,29 @@ defmodule Hexpm.Billing.Hexpm do
   end
 
   def invoice(id) do
-    {:ok, 200, _headers, body} = get_html("api/invoices/html/#{id}", [])
+    {:ok, 200, _headers, body} =
+      fn -> get_html("api/invoices/#{id}/html", recv_timeout: 10_000) end
+      |> Hexpm.HTTP.retry("billing")
+
     body
   end
 
+  def pay_invoice(id) do
+    result =
+      fn -> post("api/invoices/#{id}/pay", %{}, recv_timeout: 10_000) end
+      |> Hexpm.HTTP.retry("billing")
+
+    case result do
+      {:ok, 204, _headers, _body} -> :ok
+      {:ok, 422, _headers, body} -> {:error, body}
+    end
+  end
+
   def report() do
-    {:ok, 200, _headers, body} = get_json("api/reports/customers", [])
+    {:ok, 200, _headers, body} =
+      fn -> get_json("api/reports/customers", []) end
+      |> Hexpm.HTTP.retry("billing")
+
     body
   end
 
@@ -87,7 +108,7 @@ defmodule Hexpm.Billing.Hexpm do
       {"accept", "application/json"}
     ]
 
-    :hackney.get(url, headers, opts)
+    :hackney.get(url, headers, "", opts)
     |> read_request()
   end
 
@@ -99,7 +120,7 @@ defmodule Hexpm.Billing.Hexpm do
       {"accept", "text/html"}
     ]
 
-    :hackney.get(url, headers, opts)
+    :hackney.get(url, headers, "", opts)
     |> read_request()
   end
 

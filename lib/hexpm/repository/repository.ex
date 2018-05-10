@@ -15,12 +15,16 @@ defmodule Hexpm.Repository.Repository do
     has_many :users, through: [:repository_users, :user]
   end
 
+  @name_regex ~r"^[a-z0-9_\-\.]+$"
   @roles ~w(admin write read)
 
   def changeset(struct, params) do
     cast(struct, params, ~w(name)a)
     |> validate_required(~w(name)a)
     |> unique_constraint(:name)
+    |> update_change(:name, &String.downcase/1)
+    |> validate_length(:name, min: 3)
+    |> validate_format(:name, @name_regex)
     |> put_change(:public, false)
   end
 

@@ -29,6 +29,10 @@ defmodule Hexpm.Billing.Local do
     %{}
   end
 
+  def pay_invoice(_id) do
+    :ok
+  end
+
   def report() do
     []
   end

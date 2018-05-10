@@ -331,6 +331,31 @@ defmodule Hexpm.Web.DashboardController do
     end)
   end
 
+  def pay_invoice(conn, %{"dashboard_repo" => repository, "id" => id}) do
+    access_repository(conn, repository, "admin", fn repository ->
+      id = String.to_integer(id)
+      billing = Hexpm.Billing.dashboard(repository.name)
+      invoice_ids = Enum.map(billing["invoices"], & &1["id"])
+
+      if id in invoice_ids do
+        case Hexpm.Billing.pay_invoice(id) do
+          :ok ->
+            conn
+            |> put_flash(:info, "Invoice paid.")
+            |> redirect(to: Routes.dashboard_path(conn, :repository, repository))
+
+          {:error, reason} ->
+            conn
+            |> put_status(400)
+            |> put_flash(:error, "Failed to pay invoice: #{reason["errors"]}.")
+            |> render_repository(repository)
+        end
+      else
+        not_found(conn)
+      end
+    end)
+  end
+
   def update_billing(conn, %{"dashboard_repo" => repository} = params) do
     access_repository(conn, repository, "admin", fn repository ->
       update_billing(

@@ -1,9 +1,6 @@
 defmodule Hexpm.CDN.Fastly do
-  require Logger
-
   @behaviour Hexpm.CDN
   @fastly_url "https://api.fastly.com/"
-  @retry_times 10
 
   def purge_key(service, keys) do
     keys = keys |> List.wrap() |> Enum.uniq()
@@ -38,7 +35,8 @@ defmodule Hexpm.CDN.Fastly do
 
     body = Jason.encode!(body)
 
-    retry(fn -> :hackney.post(url, headers, body, []) end, @retry_times)
+    fn -> :hackney.post(url, headers, body, []) end
+    |> Hexpm.HTTP.retry("fastly")
     |> read_body()
   end
 
@@ -46,24 +44,9 @@ defmodule Hexpm.CDN.Fastly do
     url = @fastly_url <> url
     headers = ["fastly-key": auth(), accept: "application/json"]
 
-    retry(fn -> :hackney.get(url, headers, []) end, @retry_times)
+    fn -> :hackney.get(url, headers, []) end
+    |> Hexpm.HTTP.retry("fastly")
     |> read_body()
-  end
-
-  defp retry(fun, times) do
-    case fun.() do
-      {:error, reason} ->
-        Logger.warn("Fastly API ERROR: #{inspect(reason)}")
-
-        if times > 0 do
-          retry(fun, times - 1)
-        else
-          {:error, reason}
-        end
-
-      result ->
-        result
-    end
   end
 
   defp read_body({:ok, status, headers, client}) do

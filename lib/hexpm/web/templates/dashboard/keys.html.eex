@@ -25,14 +25,14 @@
             </tr>
           <% end %>
         </table>
-          <%= form_for @changeset, Routes.dashboard_path(Endpoint, :keys), [method: :post], fn f -> %>
-            <%= label f, :name, "Generate new key" %>
-            <div class="form-group">
-              <%= text_input f, :name, class: "form-control" %>
-              <%= error_tag f, :name %>
-            </div>
-            <button type="submit" class="btn btn-primary">Generate key</button>
-          <% end %>
+        <%= form_for @changeset, Routes.dashboard_path(Endpoint, :keys), [method: :post], fn f -> %>
+          <%= label f, :name, "Generate new key" %>
+          <div class="form-group">
+            <%= text_input f, :name, class: "form-control" %>
+            <%= error_tag f, :name %>
+          </div>
+          <button type="submit" class="btn btn-primary">Generate key</button>
+        <% end %>
       </div>
     </div>
   </div>

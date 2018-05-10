@@ -145,7 +145,7 @@ defmodule Hexpm.Web.DashboardControllerTest do
       |> test_login(c.user)
       |> get("dashboard/keys")
 
-      assert response(conn, 200) =~ "API Keys"
+    assert response(conn, 200) =~ "API Keys"
   end
 
   test "update password invalid current password", c do
@@ -573,6 +573,87 @@ defmodule Hexpm.Web.DashboardControllerTest do
 
     assert redirected_to(conn) == "/dashboard/repos/#{repository.name}"
     assert get_flash(conn, :info) == message
+  end
+
+  test "show invoice", %{user: user, repository: repository} do
+    Mox.stub(Hexpm.Billing.Mock, :dashboard, fn token ->
+      assert repository.name == token
+      %{"invoices" => [%{"id" => 123}]}
+    end)
+
+    Mox.stub(Hexpm.Billing.Mock, :invoice, fn id ->
+      assert id == 123
+      "Invoice"
+    end)
+
+    insert(:repository_user, repository: repository, user: user, role: "admin")
+
+    conn =
+      build_conn()
+      |> test_login(user)
+      |> get("dashboard/repos/#{repository.name}/invoices/123")
+
+    assert response(conn, 200) == "Invoice"
+  end
+
+  test "pay invoice", %{user: user, repository: repository} do
+    Mox.stub(Hexpm.Billing.Mock, :dashboard, fn token ->
+      assert repository.name == token
+
+      invoice = %{
+        "id" => 123,
+        "date" => "2020-01-01T00:00:00Z",
+        "amount_due" => 700,
+        "paid" => true
+      }
+
+      %{"invoices" => [invoice]}
+    end)
+
+    Mox.stub(Hexpm.Billing.Mock, :pay_invoice, fn id ->
+      assert id == 123
+      :ok
+    end)
+
+    insert(:repository_user, repository: repository, user: user, role: "admin")
+
+    conn =
+      build_conn()
+      |> test_login(user)
+      |> post("dashboard/repos/#{repository.name}/invoices/123/pay")
+
+    assert redirected_to(conn) == "/dashboard/repos/#{repository.name}"
+    assert get_flash(conn, :info) == "Invoice paid."
+  end
+
+  test "pay invoice failed", %{user: user, repository: repository} do
+    Mox.stub(Hexpm.Billing.Mock, :dashboard, fn token ->
+      assert repository.name == token
+
+      invoice = %{
+        "id" => 123,
+        "date" => "2020-01-01T00:00:00Z",
+        "amount_due" => 700,
+        "paid" => true
+      }
+
+      %{"invoices" => [invoice], "checkout_html" => ""}
+    end)
+
+    Mox.stub(Hexpm.Billing.Mock, :pay_invoice, fn id ->
+      assert id == 123
+      {:error, %{"errors" => "Card failure"}}
+    end)
+
+    insert(:repository_user, repository: repository, user: user, role: "admin")
+
+    conn =
+      build_conn()
+      |> test_login(user)
+      |> post("dashboard/repos/#{repository.name}/invoices/123/pay")
+
+    response(conn, 400)
+    assert get_flash(conn, :error) == "Failed to pay invoice: Card failure."
   end
 
   test "update billing email", %{user: user, repository: repository} do
