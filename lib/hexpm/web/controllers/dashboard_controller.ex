@@ -35,6 +35,39 @@ defmodule Hexpm.Web.DashboardController do
     render_keys(conn, keys)
   end
 
+  def revoke_key(conn, %{"name" => name} = params) do
+    user = conn.assigns.current_user
+
+    case Keys.remove(user, name, audit: audit_data(conn)) do
+      {:ok, _struct} ->
+        conn
+        |> put_flash(:info, "The key #{params["name"]} was revoked successfully")
+        |> redirect(to: Routes.dashboard_path(conn, :keys))
+
+      {:error, _} ->
+        conn
+        |> put_status(400)
+        |> put_flash(:error, "The key #{params["name"]} was not found")
+        |> render_keys(Keys.all(user))
+    end
+  end
+
+  def generate_key(conn, %{"key" => %{"name" => _}} = params) do
+    user = conn.assigns.current_user
+
+    case Keys.add(user, params["key"], audit: audit_data(conn)) do
+      {:ok, %{key: key}} ->
+        conn
+        |> put_flash(:info, "The key #{key.name} was successfully generated")
+        |> redirect(to: Routes.dashboard_path(conn, :keys))
+
+      {:error, :key, changeset, _} ->
+        conn
+        |> put_status(400)
+        |> render_keys(Keys.all(user), changeset)
+    end
+  end
+
   def password(conn, _params) do
     user = conn.assigns.current_user
     render_password(conn, User.update_password(user, %{}))
@@ -442,13 +475,14 @@ defmodule Hexpm.Web.DashboardController do
     )
   end
 
-  defp render_keys(conn, keys) do
+  defp render_keys(conn, keys, changeset \\ key_changeset())  do
     render(
       conn,
       "keys.html",
       title: "Dashboard - User API keys",
       container: "container page dashboard",
-      keys: keys
+      keys: keys,
+      changeset: changeset
     )
   end
 
@@ -563,6 +597,10 @@ defmodule Hexpm.Web.DashboardController do
 
   defp create_repository_changeset() do
     Repository.changeset(%Repository{}, %{})
+  end
+
+  defp key_changeset do
+    Key.changeset(%Key{}, %{}, %{})
   end
 
   defp email_error_message(:unknown_email, email), do: "Unknown email #{email}."

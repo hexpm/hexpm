@@ -10,14 +10,29 @@
         <br/>
         <table class="table table-striped">
           <tr>
-            <th>Key Name</th>
+            <td>Key Name</td>
+            <td>Revoke Key</td>
           </tr>
           <%= for key <- @keys do %>
             <tr>
               <td><%= key.name %></td>
+              <td style="float: left">
+                <%= form_tag(Routes.dashboard_path(Endpoint, :revoke_key), method: :patch, class: "action") do %>
+                  <input type="hidden" name="name" value="<%= key.name %>">
+                  <button type="submit" class="btn btn-primary">Revoke Key</button>
+                <% end %>
+              </td>
             </tr>
           <% end %>
         </table>
+        <%= form_for @changeset, Routes.dashboard_path(Endpoint, :keys), [method: :post], fn f -> %>
+          <%= label f, :name, "Generate new key" %>
+          <div class="form-group">
+            <%= text_input f, :name, class: "form-control" %>
+            <%= error_tag f, :name %>
+          </div>
+          <button type="submit" class="btn btn-primary">Generate key</button>
+        <% end %>
       </div>
     </div>
   </div>
