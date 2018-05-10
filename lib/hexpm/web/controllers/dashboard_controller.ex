@@ -41,13 +41,13 @@ defmodule Hexpm.Web.DashboardController do
     case Keys.remove(user, name, audit: audit_data(conn)) do
       {:ok, _struct} ->
         conn
-        |> put_flash(:info, "The key #{params["name"]} was revoked successfully")
+        |> put_flash(:info, "The key #{params["name"]} was revoked successfully.")
         |> redirect(to: Routes.dashboard_path(conn, :keys))
 
       {:error, _} ->
         conn
         |> put_status(400)
-        |> put_flash(:error, "The key #{params["name"]} was not found")
+        |> put_flash(:error, "The key #{params["name"]} was not found.")
         |> render_keys(Keys.all(user))
     end
   end
@@ -57,8 +57,12 @@ defmodule Hexpm.Web.DashboardController do
 
     case Keys.add(user, params["key"], audit: audit_data(conn)) do
       {:ok, %{key: key}} ->
+        flash =
+          "The key #{key.name} was successfully generated, " <>
+            "copy the secret \"#{key.user_secret}\", you won't be able to see it again."
+
         conn
-        |> put_flash(:info, "The key #{key.name} was successfully generated")
+        |> put_flash(:info, flash)
         |> redirect(to: Routes.dashboard_path(conn, :keys))
 
       {:error, :key, changeset, _} ->
@@ -475,7 +479,7 @@ defmodule Hexpm.Web.DashboardController do
     )
   end
 
-  defp render_keys(conn, keys, changeset \\ key_changeset())  do
+  defp render_keys(conn, keys, changeset \\ key_changeset()) do
     render(
       conn,
       "keys.html",

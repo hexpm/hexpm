@@ -139,15 +139,6 @@ defmodule Hexpm.Web.DashboardControllerTest do
     assert_delivered_email(Hexpm.Emails.password_changed(c.user))
   end
 
-  test "Show user API keys", c do
-    conn =
-      build_conn()
-      |> test_login(c.user)
-      |> get("dashboard/keys")
-
-    assert response(conn, 200) =~ "API Keys"
-  end
-
   test "update password invalid current password", c do
     conn =
       build_conn()
@@ -184,6 +175,15 @@ defmodule Hexpm.Web.DashboardControllerTest do
     assert response(conn, 400) =~ "Change password"
     assert {:ok, _} = Auth.password_auth(c.user.username, c.password)
     assert :error = Auth.password_auth(c.user.username, "newpass")
+  end
+
+  test "show keys", c do
+    conn =
+      build_conn()
+      |> test_login(c.user)
+      |> get("dashboard/keys")
+
+    assert response(conn, 200) =~ "Keys"
   end
 
   test "revoke key", c do
