@@ -4,37 +4,40 @@
   </div>
   <div class="col-sm-9 email">
     <div class="panel panel-default">
-      <div class="panel-heading">API Keys</div>
+      <div class="panel-heading">Keys</div>
       <div class="panel-body">
-        <p>API keys are used to authenticate and authorize clients to interact with the server. </p>
+        <p>Keys are used to authenticate and authorize clients to interact with the Hex API and repository. </p>
         <br/>
+
         <table class="table table-striped">
           <tr>
-            <td>Key Name</td>
-            <td>Revoke Key</td>
+            <td>Name</td>
+            <td></td>
           </tr>
           <%= for key <- @keys do %>
             <tr>
               <td><%= key.name %></td>
-              <td style="float: left">
+              <td>
                 <%= form_tag(Routes.dashboard_path(Endpoint, :revoke_key), method: :patch, class: "action") do %>
                   <input type="hidden" name="name" value="<%= key.name %>">
-                  <button type="submit" class="btn btn-primary">Revoke Key</button>
+                  <button type="submit" class="btn btn-primary btn-xs">Revoke</button>
                 <% end %>
               </td>
             </tr>
           <% end %>
         </table>
+      </div>
+
+      <div class="panel-body-part">
         <%= form_for @changeset, Routes.dashboard_path(Endpoint, :keys), [method: :post], fn f -> %>
-          <%= label f, :name, "Generate new key" %>
+          <%= label f, :name, "Generate API key" %>
           <div class="form-group">
-            <%= text_input f, :name, class: "form-control" %>
+            <%= text_input f, :name, class: "form-control", placeholder: "Name" %>
             <%= error_tag f, :name %>
           </div>
-          <button type="submit" class="btn btn-primary">Generate key</button>
+          <button type="submit" class="btn btn-primary">Generate</button>
         <% end %>
       </div>
     </div>
   </div>
 </div>
-
