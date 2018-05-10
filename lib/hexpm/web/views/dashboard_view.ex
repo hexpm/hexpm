@@ -5,7 +5,8 @@ defmodule Hexpm.Web.DashboardView do
     [
       profile: "Profile",
       password: "Password",
-      email: "Email"
+      email: "Email",
+      keys: "API Keys"
     ]
   end
 

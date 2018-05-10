@@ -139,6 +139,15 @@ defmodule Hexpm.Web.DashboardControllerTest do
     assert_delivered_email(Hexpm.Emails.password_changed(c.user))
   end
 
+  test "Show user API keys", c do
+    conn =
+      build_conn()
+      |> test_login(c.user)
+      |> get("dashboard/keys")
+
+    assert response(conn, 200) =~ "API Keys"
+  end
+
   test "update password invalid current password", c do
     conn =
       build_conn()

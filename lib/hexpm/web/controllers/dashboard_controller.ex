@@ -28,6 +28,13 @@ defmodule Hexpm.Web.DashboardController do
     end
   end
 
+  def keys(conn, _params) do
+    user = conn.assigns.current_user
+    keys = Keys.all(user)
+
+    render_keys(conn, keys)
+  end
+
   def password(conn, _params) do
     user = conn.assigns.current_user
     render_password(conn, User.update_password(user, %{}))
@@ -432,6 +439,16 @@ defmodule Hexpm.Web.DashboardController do
       title: "Dashboard - Public profile",
       container: "container page dashboard",
       changeset: changeset
+    )
+  end
+
+  defp render_keys(conn, keys) do
+    render(
+      conn,
+      "keys.html",
+      title: "Dashboard - User API keys",
+      container: "container page dashboard",
+      keys: keys
     )
   end
 
