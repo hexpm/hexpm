@@ -1,6 +1,6 @@
 <div class="row">
   <div class="col-sm-3">
-    <%= render "_sidebar.html", assigns %>
+    <%= render DashboardView, "_sidebar.html", assigns %>
   </div>
   <div class="col-sm-9 email">
     <div class="panel panel-default">
@@ -18,7 +18,7 @@
             <tr>
               <td><%= key.name %></td>
               <td>
-                <%= form_tag(Routes.dashboard_path(Endpoint, :revoke_key), method: :patch, class: "action") do %>
+                <%= form_tag(Routes.key_path(Endpoint, :delete), method: :delete, class: "action") do %>
                   <input type="hidden" name="name" value="<%= key.name %>">
                   <button type="submit" class="btn btn-primary btn-xs">Revoke</button>
                 <% end %>
@@ -29,7 +29,7 @@
       </div>
 
       <div class="panel-body-part">
-        <%= form_for @changeset, Routes.dashboard_path(Endpoint, :keys), [method: :post], fn f -> %>
+        <%= form_for @changeset, Routes.key_path(Endpoint, :create), [method: :post], fn f -> %>
           <%= label f, :name, "Generate API key" %>
           <div class="form-group">
             <%= text_input f, :name, class: "form-control", placeholder: "Name" %>

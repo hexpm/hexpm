@@ -1,6 +1,6 @@
 <p>You have been added as a member to the <strong><%= @repository %></strong> repository.</p>
 
-<p>Go check out the <a href="<%= raw Routes.dashboard_url(Endpoint, :repository, @repository) %>">repository</a>, if you do not want to join the repository you can leave it from the dashboard. You need to be logged in as <strong><%= @username %></strong> to access it.</p>
+<p>Go check out the <a href="<%= raw Routes.repository_url(Endpoint, :show, @repository) %>">repository</a>, if you do not want to join the repository you can leave it from the dashboard. You need to be logged in as <strong><%= @username %></strong> to access it.</p>
 
 <p>Authenticate to the repository by running <pre>mix hex.organization auth <%= @repository %></pre> in your shell. To learn more about private packages and organizations go to the <a href="<%= raw Routes.docs_url(Endpoint, :private) %>">documentation</a>.
 

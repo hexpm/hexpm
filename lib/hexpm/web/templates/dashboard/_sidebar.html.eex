@@ -1,11 +1,9 @@
 <div class="panel panel-default sidebar">
   <div class="panel-heading">Account settings</div>
   <ul class="list-group">
-    <%= for {id, name} <- account_settings() do %>
+    <%= for {id, {name, path}} <- account_settings() do %>
       <li class="list-group-item <%= selected_setting(@conn, id) %>">
-        <a href="<%= Routes.dashboard_path(Endpoint, id) %>">
-          <%= name %>
-        </a>
+        <a href="<%= path %>"><%= name %></a>
       </li>
     <% end %>
   </ul>
@@ -13,13 +11,13 @@
   <ul class="list-group">
     <%= for repository <- Enum.sort_by(@current_user.repositories, & &1.name) do %>
       <li class="list-group-item <%= selected_repository(@conn, repository.name) %>">
-        <a href="<%= Routes.dashboard_path(Endpoint, :repository, repository) %>">
+        <a href="<%= Routes.repository_path(Endpoint, :show, repository) %>">
           <%= repository.name %>
         </a>
       </li>
     <% end %>
   </ul>
   <div class="panel-body">
-    <small><a href="<%= Routes.dashboard_path(Endpoint, :new_repository) %>">New organization</a></small>
+    <small><a href="<%= Routes.repository_path(Endpoint, :new) %>">New organization</a></small>
   </div>
 </div>

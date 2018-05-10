@@ -2,7 +2,7 @@
 
 <div class="row">
   <div class="col-sm-3">
-    <%= render "_sidebar.html", assigns %>
+    <%= render DashboardView, "_sidebar.html", assigns %>
   </div>
 
   <div class="col-sm-9 repository-signup">
@@ -24,7 +24,7 @@
 
         <div class="tab-content">
           <div role="tabpanel" class="tab-pane <%= if !@params["company"] do %>active<% end %>" id="person">
-            <%= form_for @changeset, Routes.dashboard_path(Endpoint, :create_repository), fn f -> %>
+            <%= form_for @changeset, Routes.repository_path(Endpoint, :create), fn f -> %>
               <div class="form-group">
                 <%= label f, :password_current, "Organization name" %>
                 <%= text_input f, :name, [placeholder: "Only allows lowercase letters and underscore", required: true, pattern: "[a-z]\\w*", "aria-describedby": "name-helpblock"] %>
@@ -36,7 +36,7 @@
             <% end %>
           </div>
           <div role="tabpanel" class="tab-pane <%= if @params["company"] do %>active<% end %>" id="company">
-            <%= form_for @changeset, Routes.dashboard_path(Endpoint, :create_repository), fn f -> %>
+            <%= form_for @changeset, Routes.repository_path(Endpoint, :create), fn f -> %>
               <div class="form-group">
                 <%= label f, :password_current, "Organization name" %>
                 <%= text_input f, :name, [placeholder: "Only allows lowercase letters and underscore", required: true, pattern: "[a-z]\\w*", "aria-describedby": "name-helpblock"] %>

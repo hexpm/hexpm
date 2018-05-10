@@ -66,33 +66,9 @@ defmodule Hexpm.Web.Router do
 
     get "/email/verify", EmailController, :verify
 
-    get "/users/:username", UserController, :show
-
     get "/dashboard", DashboardController, :index
-    get "/dashboard/profile", DashboardController, :profile
-    post "/dashboard/profile", DashboardController, :update_profile
-    get "/dashboard/password", DashboardController, :password
-    post "/dashboard/password", DashboardController, :update_password
-    get "/dashboard/email", DashboardController, :email
-    post "/dashboard/email", DashboardController, :add_email
-    delete "/dashboard/email", DashboardController, :remove_email
-    post "/dashboard/email/primary", DashboardController, :primary_email
-    post "/dashboard/email/public", DashboardController, :public_email
-    post "/dashboard/email/resend", DashboardController, :resend_verify_email
-    post "/dashboard/email/gravatar", DashboardController, :gravatar_email
-    get "/dashboard/repos/:dashboard_repo", DashboardController, :repository
-    post "/dashboard/repos/:dashboard_repo", DashboardController, :update_repository
-    post "/dashboard/repos/:dashboard_repo/billing-token", DashboardController, :billing_token
-    post "/dashboard/repos/:dashboard_repo/cancel-billing", DashboardController, :cancel_billing
-    post "/dashboard/repos/:dashboard_repo/update-billing", DashboardController, :update_billing
-    post "/dashboard/repos/:dashboard_repo/create-billing", DashboardController, :create_billing
-    get "/dashboard/repos/:dashboard_repo/invoices/:id", DashboardController, :show_invoice
-    post "/dashboard/repos/:dashboard_repo/invoices/:id/pay", DashboardController, :pay_invoice
-    get "/dashboard/repo-signup", DashboardController, :new_repository
-    post "/dashboard/repo-signup", DashboardController, :create_repository
-    get "/dashboard/keys", DashboardController, :keys
-    patch "/dashboard/keys", DashboardController, :revoke_key
-    post "/dashboard/keys", DashboardController, :generate_key
+
+    get "/users/:username", UserController, :show
 
     get "/docs/usage", DocsController, :usage
     get "/docs/rebar3_usage", DocsController, :rebar3_usage
@@ -117,6 +93,39 @@ defmodule Hexpm.Web.Router do
 
     get "/blog", BlogController, :index
     get "/blog/:slug", BlogController, :show
+  end
+
+  scope "/dashboard", Hexpm.Web.Dashboard do
+    pipe_through :browser
+
+    get "/profile", ProfileController, :index
+    post "/profile", ProfileController, :update
+
+    get "/password", PasswordController, :index
+    post "/password", PasswordController, :update
+
+    get "/email", EmailController, :index
+    post "/email", EmailController, :create
+    delete "/email", EmailController, :delete
+    post "/email/primary", EmailController, :primary
+    post "/email/public", EmailController, :public
+    post "/email/resend", EmailController, :resend_verify
+    post "/email/gravatar", EmailController, :gravatar
+
+    get "/repos/:dashboard_repo", RepositoryController, :show
+    post "/repos/:dashboard_repo", RepositoryController, :update
+    post "/repos/:dashboard_repo/billing-token", RepositoryController, :billing_token
+    post "/repos/:dashboard_repo/cancel-billing", RepositoryController, :cancel_billing
+    post "/repos/:dashboard_repo/update-billing", RepositoryController, :update_billing
+    post "/repos/:dashboard_repo/create-billing", RepositoryController, :create_billing
+    get "/repos/:dashboard_repo/invoices/:id", RepositoryController, :show_invoice
+    post "/repos/:dashboard_repo/invoices/:id/pay", RepositoryController, :pay_invoice
+    get "/repos", RepositoryController, :new
+    post "/repos", RepositoryController, :create
+
+    get "/keys", KeyController, :index
+    delete "/keys", KeyController, :delete
+    post "/keys", KeyController, :create
   end
 
   scope "/", Hexpm.Web do
