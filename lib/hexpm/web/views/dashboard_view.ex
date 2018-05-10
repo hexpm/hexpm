@@ -112,9 +112,15 @@ defmodule Hexpm.Web.DashboardView do
     "(\"#{name}\" discount for #{percent_off}% of cost)"
   end
 
-  defp invoice_status(%{"paid" => true}), do: "Paid"
-  defp invoice_status(%{"paid" => false, "attempted" => true}), do: "Past due"
-  defp invoice_status(%{"paid" => false, "attempted" => false}), do: "Pending"
+  defp invoice_status(%{"paid" => true}, _repository), do: "Paid"
+  defp invoice_status(%{"forgiven" => true}, _repository), do: "Forgiven"
+  defp invoice_status(%{"paid" => false, "attempted" => false}, _repository), do: "Pending"
+
+  defp invoice_status(%{"paid" => false, "attempted" => true, "id" => invoice_id}, repository) do
+    form_tag(Routes.dashboard_path(Endpoint, :pay_invoice, repository, invoice_id)) do
+      submit("Pay now", class: "btn btn-primary")
+    end
+  end
 
   def payment_date(date) do
     date |> NaiveDateTime.from_iso8601!() |> pretty_datetime()

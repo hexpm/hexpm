@@ -25,8 +25,8 @@ defmodule Hexpm.Billing.Report do
   end
 
   defp report() do
-     Hexpm.Billing.report()
-     |> MapSet.new()
+    Hexpm.Billing.report()
+    |> MapSet.new()
   end
 
   defp repositories() do

@@ -41,10 +41,21 @@ defmodule Hexpm.Billing.Hexpm do
 
   def invoice(id) do
     {:ok, 200, _headers, body} =
-      fn -> get_html("api/invoices/html/#{id}", recv_timeout: 10_000) end
+      fn -> get_html("api/invoices/#{id}/html", recv_timeout: 10_000) end
       |> Hexpm.HTTP.retry("billing")
 
     body
+  end
+
+  def pay_invoice(id) do
+    result =
+      fn -> post("api/invoices/#{id}/pay", %{}, recv_timeout: 10_000) end
+      |> Hexpm.HTTP.retry("billing")
+
+    case result do
+      {:ok, 204, _headers, _body} -> :ok
+      {:ok, 422, _headers, body} -> {:error, body}
+    end
   end
 
   def report() do

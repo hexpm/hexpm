@@ -7,6 +7,7 @@ defmodule Hexpm.Billing do
   @callback create(map()) :: {:ok, map()} | {:error, map()}
   @callback update(repository(), map()) :: {:ok, map()} | {:error, map()}
   @callback invoice(id :: pos_integer()) :: binary()
+  @callback pay_invoice(id :: pos_integer()) :: :ok | {:error, map()}
   @callback report() :: [map()]
 
   defp impl(), do: Application.get_env(:hexpm, :billing_impl)
@@ -17,5 +18,6 @@ defmodule Hexpm.Billing do
   def create(params), do: impl().create(params)
   def update(repository, params), do: impl().update(repository, params)
   def invoice(id), do: impl().invoice(id)
+  def pay_invoice(id), do: impl().pay_invoice(id)
   def report(), do: impl().report()
 end

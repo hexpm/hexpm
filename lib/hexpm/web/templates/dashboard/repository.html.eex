@@ -173,7 +173,7 @@
                       </td>
                     <td>$<%= money(invoice["amount_due"])%></td>
                     <td><%= payment_card(invoice["card"]) %></td>
-                    <td><%= invoice_status(invoice) %></td>
+                    <td><%= invoice_status(invoice, @repository) %></td>
                   </tr>
                 <% end %>
               </tbody>
