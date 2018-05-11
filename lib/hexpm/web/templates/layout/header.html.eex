@@ -83,7 +83,7 @@
                 </a>
                 <ul class="dropdown-menu">
                   <li><a href="<%= Routes.user_path(Endpoint, :show, @current_user) %>">Profile</a></li>
-                  <li><a href="<%= Routes.dashboard_path(Endpoint, :profile) %>">Dashboard</a></li>
+                  <li><a href="<%= Routes.profile_path(Endpoint, :index) %>">Dashboard</a></li>
                   <li role="separator" class="divider"></li>
                   <li>
                     <%= form_tag(Routes.login_path(Endpoint, :delete)) do %>

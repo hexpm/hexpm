@@ -35,7 +35,7 @@
         <li><strong>&gt;</strong> Republish and delete packages</li>
       </ul>
       <div class="action">
-        <a class="btn btn-primary" href="<%= Routes.dashboard_path(Endpoint, :new_repository) %>" role="button">Create organization</a>
+        <a class="btn btn-primary" href="<%= Routes.repository_path(Endpoint, :new) %>" role="button">Create organization</a>
       </div>
     </div>
   </div>

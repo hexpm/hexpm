@@ -1,6 +1,6 @@
 <div class="row">
   <div class="col-sm-3">
-    <%= render "_sidebar.html", assigns %>
+    <%= render DashboardView, "_sidebar.html", assigns %>
   </div>
 
   <div class="col-sm-9 repository members">
@@ -23,7 +23,7 @@
                 <ul class="dropdown-menu dropdown-menu-right">
                   <%= for {name, id, title} <- repository_roles() do %>
                     <li>
-                      <%= form_tag Routes.dashboard_path(Endpoint, :update_repository, @repository), class: "change-role" do %>
+                      <%= form_tag Routes.repository_path(Endpoint, :update, @repository), class: "change-role" do %>
                         <input type="hidden" name="action" value="change_role">
                         <input type="hidden" name="repository_user[username]" value="<%= repository_user.user.username %>">
                         <input type="hidden" name="repository_user[role]" value="<%= id %>">
@@ -32,7 +32,7 @@
                     </li>
                   <% end %>
                 </ul>
-                  <%= form_tag Routes.dashboard_path(Endpoint, :update_repository, @repository), class: "remove-role" do %>
+                  <%= form_tag Routes.repository_path(Endpoint, :update, @repository), class: "remove-role" do %>
                     <input type="hidden" name="action" value="remove_member">
                     <input type="hidden" name="repository_user[username]" value="<%= repository_user.user.username %>">
                     <%= submit "Remove", class: "btn btn-danger", disabled: repository_user.user.id == @current_user.id %>
@@ -42,7 +42,7 @@
           </li>
         <% end %>
         <li class="list-group-item clearfix">
-          <%= form_for @add_member_changeset, Routes.dashboard_path(Endpoint, :update_repository, @repository), [method: :post, class: "form-inline"], fn f -> %>
+          <%= form_for @add_member_changeset, Routes.repository_path(Endpoint, :update, @repository), [method: :post, class: "form-inline"], fn f -> %>
             <input type="hidden" name="action" value="add_member">
             <div class="form-group">
               <%= text_input f, :username, class: "form-control", style: "width: 250px", placeholder: "Username or email address", required: true %>
@@ -116,7 +116,7 @@
             </dl>
 
             <%= raw(@checkout_html) %>
-            <%= form_tag(Routes.dashboard_path(Endpoint, :cancel_billing, @repository), class: "cancel-billing") do %>
+            <%= form_tag(Routes.repository_path(Endpoint, :cancel_billing, @repository), class: "cancel-billing") do %>
               <%= submit "Cancel", class: "btn btn-danger", disabled: !@subscription || @subscription["cancel_at_period_end"] %>
             <% end %>
           <% else %>
@@ -136,13 +136,13 @@
 
             <div class="tab-content">
               <div role="tabpanel" class="tab-pane <%= if show_person?(@person, @errors) do %>active<% end %>" id="person">
-                <%= form_tag(Routes.dashboard_path(Endpoint, :update_billing, @repository)) do %>
+                <%= form_tag(Routes.repository_path(Endpoint, :update_billing, @repository)) do %>
                   <%= render "_billing_person.html", assigns %>
                   <%= submit "Save", class: "btn btn-primary" %>
                 <% end %>
               </div>
               <div role="tabpanel" class="tab-pane <%= if show_company?(@company, @errors) do %>active<% end %>" id="company">
-                <%= form_tag(Routes.dashboard_path(Endpoint, :update_billing, @repository)) do %>
+                <%= form_tag(Routes.repository_path(Endpoint, :update_billing, @repository)) do %>
                   <%= render "_billing_company.html", assigns %>
                   <%= submit "Save", class: "btn btn-primary" %>
                 <% end %>
@@ -167,7 +167,7 @@
                 <%= for invoice <- @invoices do %>
                   <tr>
                     <td>
-                      <a href="<%= Routes.dashboard_path(Endpoint, :show_invoice, @repository, invoice["id"]) %>" target="_blank">
+                      <a href="<%= Routes.repository_path(Endpoint, :show_invoice, @repository, invoice["id"]) %>" target="_blank">
                         <%= payment_date(invoice["date"]) %>
                       </a>
                       </td>
@@ -195,13 +195,13 @@
 
             <div class="tab-content">
               <div role="tabpanel" class="tab-pane active" id="person">
-                <%= form_tag(Routes.dashboard_path(Endpoint, :create_billing, @repository)) do %>
+                <%= form_tag(Routes.repository_path(Endpoint, :create_billing, @repository)) do %>
                   <%= render "_billing_person.html", assigns %>
                   <%= submit "Save", class: "btn btn-primary" %>
                 <% end %>
               </div>
               <div role="tabpanel" class="tab-pane" id="company">
-                <%= form_tag(Routes.dashboard_path(Endpoint, :create_billing, @repository)) do %>
+                <%= form_tag(Routes.repository_path(Endpoint, :create_billing, @repository)) do %>
                   <%= render "_billing_company.html", assigns %>
                   <%= submit "Save", class: "btn btn-primary" %>
                 <% end %>
