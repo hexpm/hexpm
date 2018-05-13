@@ -21,7 +21,7 @@ defmodule Hexpm.Accounts.User do
     has_many :repository_users, RepositoryUser
     has_many :repositories, through: [:repository_users, :repository]
     has_many :keys, Key
-    has_many :audit_logs, AuditLog, foreign_key: :actor_id
+    has_many :audit_logs, AuditLog, foreign_key: :user_id
   end
 
   @username_regex ~r"^[a-z0-9_\-\.]+$"

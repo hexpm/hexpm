@@ -14,7 +14,7 @@ defmodule Hexpm.Accounts.AuditLogTest do
     test "action password.reset.init" do
       audit = AuditLog.build(nil, "user_agent", "password.reset.init", nil)
       assert audit.action == "password.reset.init"
-      assert audit.actor_id == nil
+      assert audit.user_id == nil
       assert audit.user_agent == "user_agent"
       assert audit.params == %{}
     end
@@ -22,7 +22,7 @@ defmodule Hexpm.Accounts.AuditLogTest do
     test "action password.reset.finish" do
       audit = AuditLog.build(nil, "user_agent", "password.reset.finish", nil)
       assert audit.action == "password.reset.finish"
-      assert audit.actor_id == nil
+      assert audit.user_id == nil
       assert audit.user_agent == "user_agent"
       assert audit.params == %{}
     end
@@ -32,7 +32,7 @@ defmodule Hexpm.Accounts.AuditLogTest do
       audit = AuditLog.build(user, "user_agent", "owner.add", {package, user})
 
       assert audit.action == "owner.add"
-      assert audit.actor_id == user.id
+      assert audit.user_id == user.id
       assert audit.user_agent == "user_agent"
       assert audit.params.package.id == package.id
       assert audit.params.package.name == package.name
@@ -86,9 +86,9 @@ defmodule Hexpm.Accounts.AuditLogTest do
                Ecto.Multi.to_list(multi)[:"log.key.remove"]
 
       assert params1.action == "key.remove"
-      assert params1.actor_id == user.id
+      assert params1.user_id == user.id
       assert params2.action == "key.remove"
-      assert params2.actor_id == user.id
+      assert params2.user_id == user.id
     end
   end
 end

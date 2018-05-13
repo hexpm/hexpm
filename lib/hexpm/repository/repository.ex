@@ -13,6 +13,7 @@ defmodule Hexpm.Repository.Repository do
     has_many :packages, Package
     has_many :repository_users, RepositoryUser
     has_many :users, through: [:repository_users, :user]
+    has_many :audit_logs, AuditLog, foreign_key: :repository_id
   end
 
   @name_regex ~r"^[a-z0-9_\-\.]+$"

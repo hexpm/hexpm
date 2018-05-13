@@ -215,7 +215,7 @@ defmodule Hexpm.Web.API.OwnerControllerTest do
       assert_delivered_email(Hexpm.Emails.owner_added(package, recipients, user2))
 
       log = Hexpm.Repo.one!(AuditLog)
-      assert log.actor_id == user1.id
+      assert log.user_id == user1.id
       assert log.action == "owner.add"
       assert log.params["package"]["name"] == package.name
       assert log.params["user"]["username"] == user2.username
@@ -405,7 +405,7 @@ defmodule Hexpm.Web.API.OwnerControllerTest do
       assert_delivered_email(Hexpm.Emails.owner_removed(package, recipients, user2))
 
       log = Hexpm.Repo.one!(AuditLog)
-      assert log.actor_id == user1.id
+      assert log.user_id == user1.id
       assert log.action == "owner.remove"
       assert log.params["package"]["name"] == package.name
       assert log.params["user"]["username"] == user2.username
