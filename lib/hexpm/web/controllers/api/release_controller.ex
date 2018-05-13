@@ -1,9 +1,10 @@
 defmodule Hexpm.Web.API.ReleaseController do
   use Hexpm.Web, :controller
 
+  plug :parse_tarball when action in [:publish]
   plug :maybe_fetch_release when action in [:show]
   plug :fetch_release when action in [:delete]
-  plug :maybe_fetch_package when action in [:create]
+  plug :maybe_fetch_package when action in [:create, :publish]
 
   plug :maybe_authorize,
        [domain: "api", resource: "read", fun: &repository_access/2]
@@ -15,11 +16,27 @@ defmodule Hexpm.Web.API.ReleaseController do
          resource: "write",
          fun: [&maybe_package_owner/2, &repository_billing_active/2]
        ]
-       when action in [:create]
+       when action in [:create, :publish]
 
   plug :authorize,
        [domain: "api", resource: "write", fun: [&package_owner/2, &repository_billing_active/2]]
        when action in [:delete]
+
+  def publish(conn, %{"body" => body}) do
+    # TODO: pass around and store in DB as binary instead
+    checksum = :hex_tarball.format_checksum(conn.assigns.checksum)
+
+    Releases.publish(
+      conn.assigns.repository,
+      conn.assigns.package,
+      conn.assigns.current_user,
+      body,
+      conn.assigns.meta,
+      checksum,
+      audit: audit_data(conn)
+    )
+    |> publish_result(conn)
+  end
 
   def create(conn, %{"body" => body}) do
     handle_tarball(
@@ -62,6 +79,20 @@ defmodule Hexpm.Web.API.ReleaseController do
 
       {:error, _, changeset, _} ->
         validation_failed(conn, changeset)
+    end
+  end
+
+  defp parse_tarball(conn, _opts) do
+    case Hexpm.Web.ReleaseTar.metadata(conn.params["body"]) do
+      {:ok, meta, checksum} ->
+        params = Map.put(conn.params, "name", meta["name"])
+
+        %{conn | params: params}
+        |> assign(:meta, meta)
+        |> assign(:checksum, checksum)
+
+      {:error, errors} ->
+        validation_failed(conn, %{tar: errors})
     end
   end
 

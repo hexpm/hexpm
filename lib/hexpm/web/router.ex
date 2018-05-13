@@ -141,6 +141,7 @@ defmodule Hexpm.Web.Router do
 
     for prefix <- ["/", "/repos/:repository"] do
       scope prefix do
+        post "/publish", ReleaseController, :publish
         post "/packages/:name/releases", ReleaseController, :create
         post "/packages/:name/releases/:version/docs", DocsController, :create
       end

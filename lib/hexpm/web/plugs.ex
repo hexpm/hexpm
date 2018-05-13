@@ -81,17 +81,11 @@ defmodule Hexpm.Web.Plugs do
     param_set? = Map.has_key?(conn.params, "repository")
 
     case conn.path_info do
-      ["api", "packages"] ->
-        conn
-
-      ["api", "packages" | _] when not param_set? ->
-        put_in(conn.params["repository"], "hexpm")
-
-      ["packages" | _] when not param_set? ->
-        put_in(conn.params["repository"], "hexpm")
-
-      _ ->
-        conn
+      ["api", "packages"] -> conn
+      ["api", "publish"] when not param_set? -> put_in(conn.params["repository"], "hexpm")
+      ["api", "packages" | _] when not param_set? -> put_in(conn.params["repository"], "hexpm")
+      ["packages" | _] when not param_set? -> put_in(conn.params["repository"], "hexpm")
+      _ -> conn
     end
   end
 
