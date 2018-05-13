@@ -28,7 +28,7 @@ defmodule Hexpm.Web.API.DocsControllerTest do
       assert Hexpm.Repo.get_by!(assoc(package, :releases), version: "0.0.1").has_docs
 
       log = Hexpm.Repo.one!(AuditLog)
-      assert log.actor_id == user.id
+      assert log.user_id == user.id
       assert log.action == "docs.publish"
       assert log.params["package"]["name"] == package.name
       assert log.params["release"]["version"] == "0.0.1"
@@ -244,7 +244,7 @@ defmodule Hexpm.Web.API.DocsControllerTest do
       [%{action: "docs.publish"}, %{action: "docs.publish"}, %{action: "docs.publish"}, log] =
         Hexpm.Repo.all(AuditLog)
 
-      assert log.actor_id == user.id
+      assert log.user_id == user.id
       assert log.action == "docs.revert"
       assert log.params["package"]["name"] == package.name
       assert log.params["release"]["version"] == "0.5.0"

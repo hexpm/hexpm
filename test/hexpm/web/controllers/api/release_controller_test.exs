@@ -41,7 +41,8 @@ defmodule Hexpm.Web.API.ReleaseControllerTest do
       assert package_owner.id == user.id
 
       log = Hexpm.Repo.one!(AuditLog)
-      assert log.actor_id == user.id
+      assert log.user_id == user.id
+      assert log.repository_id == 1
       assert log.action == "release.publish"
       assert log.params["package"]["name"] == meta.name
       assert log.params["release"]["version"] == "1.0.0"
@@ -629,7 +630,7 @@ defmodule Hexpm.Web.API.ReleaseControllerTest do
       refute Hexpm.Repo.get_by(assoc(package, :releases), version: "0.0.1")
 
       [log] = Hexpm.Repo.all(AuditLog)
-      assert log.actor_id == user.id
+      assert log.user_id == user.id
       assert log.action == "release.revert"
       assert log.params["package"]["name"] == package.name
       assert log.params["release"]["version"] == "0.0.1"

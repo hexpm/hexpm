@@ -26,7 +26,7 @@ defmodule Hexpm.Web.API.KeyControllerTest do
     assert [%KeyPermission{domain: "api"}] = key.permissions
 
     log = Hexpm.Repo.one!(AuditLog)
-    assert log.actor_id == c.eric.id
+    assert log.user_id == c.eric.id
     assert log.action == "key.generate"
     assert %{"name" => "macbook"} = log.params
   end
@@ -171,7 +171,7 @@ defmodule Hexpm.Web.API.KeyControllerTest do
     assert Hexpm.Repo.one(Key.get_revoked(c.eric, "computer"))
 
     log = Hexpm.Repo.one!(AuditLog)
-    assert log.actor_id == c.eric.id
+    assert log.user_id == c.eric.id
     assert log.action == "key.remove"
     assert %{"name" => "computer"} = log.params
   end
@@ -197,7 +197,7 @@ defmodule Hexpm.Web.API.KeyControllerTest do
     assert Hexpm.Repo.one(Key.get_revoked(c.eric, "current"))
 
     log = Hexpm.Repo.one!(AuditLog)
-    assert log.actor_id == c.eric.id
+    assert log.user_id == c.eric.id
     assert log.action == "key.remove"
     assert %{"name" => "current"} = log.params
 
@@ -239,11 +239,11 @@ defmodule Hexpm.Web.API.KeyControllerTest do
              |> Hexpm.Repo.all()
              |> Enum.sort_by(fn %{params: %{"name" => name}} -> name end)
 
-    assert log_a.actor_id == c.eric.id
+    assert log_a.user_id == c.eric.id
     assert log_a.action == "key.remove"
     key_a_name = key_a.name
     assert %{"name" => ^key_a_name} = log_a.params
-    assert log_b.actor_id == c.eric.id
+    assert log_b.user_id == c.eric.id
     assert log_b.action == "key.remove"
     key_b_name = key_b.name
     assert %{"name" => ^key_b_name} = log_b.params

@@ -2,29 +2,38 @@ defmodule Hexpm.Accounts.AuditLog do
   use Hexpm.Web, :schema
 
   schema "audit_logs" do
-    belongs_to :actor, User
     field :user_agent, :string
     field :action, :string
     field :params, :map
+
+    belongs_to :user, User
+    belongs_to :repository, Repository
+
     timestamps(updated_at: false)
   end
 
   def build(nil, user_agent, action, params)
       when action in ~w(password.reset.init password.reset.finish) do
+    params = extract_params(action, params)
+
     %AuditLog{
-      actor_id: nil,
+      user_id: nil,
+      repository_id: params[:repository][:id] || params[:package][:repository_id],
       user_agent: user_agent,
       action: action,
-      params: extract_params(action, params)
+      params: params
     }
   end
 
   def build(%User{id: user_id}, user_agent, action, params) do
+    params = extract_params(action, params)
+
     %AuditLog{
-      actor_id: user_id,
+      user_id: user_id,
+      repository_id: params[:repository][:id] || params[:package][:repository_id],
       user_agent: user_agent,
       action: action,
-      params: extract_params(action, params)
+      params: params
     }
   end
 
