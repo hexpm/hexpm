@@ -65,12 +65,8 @@ defmodule Hexpm.Accounts.Users do
       Multi.new()
       |> Multi.update(:user, User.update_profile(user, params))
       |> audit(audit_data, "user.update", fn %{user: user} -> user end)
-      |> Multi.merge(fn %{user: user} ->
-        public_email_multi(user, %{"email" => params["public_email"]}, audit: audit_data)
-      end)
-      |> Multi.merge(fn %{user: user} ->
-        gravatar_email_multi(user, %{"email" => params["gravatar_email"]}, audit: audit_data)
-      end)
+      |> public_email_multi(user, %{"email" => params["public_email"]}, audit: audit_data)
+      |> gravatar_email_multi(user, %{"email" => params["gravatar_email"]}, audit: audit_data)
 
     case Repo.transaction(multi) do
       {:ok, %{user: user}} ->
@@ -203,98 +199,89 @@ defmodule Hexpm.Accounts.Users do
 
   def primary_email(user, params, opts) do
     multi =
-      email_flag_multi(user, params, :primary, opts)
+      Multi.new()
+      |> email_flag_multi(user, params, :primary, opts)
       |> Multi.update(:reset, User.disable_password_reset(user))
 
     case Repo.transaction(multi) do
-      {:ok, _} ->
-        :ok
-
-      {:error, :primary_email, reason, _} ->
-        {:error, reason}
+      {:ok, _} -> :ok
+      {:error, :primary_email, reason, _} -> {:error, reason}
     end
   end
 
   def gravatar_email(user, params, opts) do
-    case Repo.transaction(gravatar_email_multi(user, params, opts)) do
-      {:ok, _} ->
-        :ok
+    multi = gravatar_email_multi(Multi.new(), user, params, opts)
 
-      {:error, :gravatar_email, reason, _} ->
-        {:error, reason}
+    case Repo.transaction(multi) do
+      {:ok, _} -> :ok
+      {:error, :gravatar_email, reason, _} -> {:error, reason}
     end
   end
 
-  defp gravatar_email_multi(user, %{"email" => "none"}, opts) do
-    unset_email_flag_multi(user, :gravatar, opts)
+  defp gravatar_email_multi(multi, user, %{"email" => "none"}, opts) do
+    unset_email_flag_multi(multi, user, :gravatar, opts)
   end
 
-  defp gravatar_email_multi(user, params, opts) do
-    email_flag_multi(user, params, :gravatar, opts)
+  defp gravatar_email_multi(multi, user, params, opts) do
+    email_flag_multi(multi, user, params, :gravatar, opts)
   end
 
   def public_email(user, params, opts) do
-    case Repo.transaction(public_email_multi(user, params, opts)) do
-      {:ok, _} ->
-        :ok
+    multi = public_email_multi(Multi.new(), user, params, opts)
 
-      {:error, :public_email, reason, _} ->
-        {:error, reason}
+    case Repo.transaction(multi) do
+      {:ok, _} -> :ok
+      {:error, :public_email, reason, _} -> {:error, reason}
     end
   end
 
-  defp public_email_multi(user, %{"email" => "none"}, opts) do
-    unset_email_flag_multi(user, :public, opts)
+  defp public_email_multi(multi, user, %{"email" => "none"}, opts) do
+    unset_email_flag_multi(multi, user, :public, opts)
   end
 
-  defp public_email_multi(user, params, opts) do
-    email_flag_multi(user, params, :public, opts)
+  defp public_email_multi(multi, user, params, opts) do
+    email_flag_multi(multi, user, params, :public, opts)
   end
 
-  defp unset_email_flag_multi(user, flag, audit: audit_data) do
+  defp unset_email_flag_multi(multi, user, flag, audit: audit_data) do
     if old_email = Enum.find(user.emails, &Map.get(&1, flag)) do
       old_email_op = String.to_atom("old_#{flag}")
 
-      Multi.new()
+      multi
       |> Multi.update(old_email_op, Email.toggle_flag(old_email, flag, false))
       |> audit(audit_data, "email.#{flag}", {old_email, nil})
     else
-      Multi.new()
+      multi
     end
   end
 
-  defp email_flag_multi(_user, %{"email" => nil}, _flag, _opts) do
-    Multi.new()
+  defp email_flag_multi(multi, _user, %{"email" => nil}, _flag, _opts) do
+    multi
   end
 
-  defp email_flag_multi(user, params, flag, audit: audit_data) do
+  defp email_flag_multi(multi, user, params, flag, audit: audit_data) do
     new_email = find_email(user, params)
     old_email = Enum.find(user.emails, &Map.get(&1, flag))
-
     error_op_name = String.to_atom("#{flag}_email")
 
     cond do
       !new_email ->
-        Multi.run(Multi.new(), error_op_name, fn _ -> {:error, :unknown_email} end)
+        Multi.error(multi, error_op_name, :unknown_email)
 
       !new_email.verified ->
-        Multi.run(Multi.new(), error_op_name, fn _ -> {:error, :not_verified} end)
+        Multi.error(multi, error_op_name, :not_verified)
 
       old_email && new_email.id == old_email.id ->
-        Multi.new()
+        multi
 
       true ->
         multi =
           if old_email do
             old_email_op_name = String.to_atom("old_#{flag}")
-
-            Multi.update(
-              Multi.new(),
-              old_email_op_name,
-              Email.toggle_flag(old_email, flag, false)
-            )
+            toggle_changeset = Email.toggle_flag(old_email, flag, false)
+            Multi.update(multi, old_email_op_name, toggle_changeset)
           else
-            Multi.new()
+            multi
           end
 
         new_email_op_name = String.to_atom("new_#{flag}")
@@ -316,7 +303,9 @@ defmodule Hexpm.Accounts.Users do
         {:error, :already_verified}
 
       true ->
-        Emails.verification(user, email) |> Mailer.deliver_now_throttled()
+        Emails.verification(user, email)
+        |> Mailer.deliver_now_throttled()
+
         :ok
     end
   end

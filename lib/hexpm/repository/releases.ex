@@ -213,6 +213,7 @@ defmodule Hexpm.Repository.Releases do
   end
 
   defp build_release(multi, params, checksum) do
+    # TODO: Use new Multi.insert with functions
     Multi.merge(multi, fn %{package: package} ->
       Multi.insert(Multi.new(), :release, Release.build(package, params, checksum))
     end)

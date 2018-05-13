@@ -28,13 +28,13 @@ defmodule Hexpm.Accounts.AuditLog do
     }
   end
 
-  def audit(%Multi{} = multi, {user, user_agent}, action, fun) when is_function(fun, 1) do
+  def audit(multi, {user, user_agent}, action, fun) when is_function(fun, 1) do
     Multi.merge(multi, fn data ->
       Multi.insert(Multi.new(), multi_key(action), build(user, user_agent, action, fun.(data)))
     end)
   end
 
-  def audit(%Multi{} = multi, {user, user_agent}, action, params) do
+  def audit(multi, {user, user_agent}, action, params) do
     Multi.insert(multi, multi_key(action), build(user, user_agent, action, params))
   end
 
@@ -53,6 +53,7 @@ defmodule Hexpm.Accounts.AuditLog do
   end
 
   def audit_with_user(multi, {_user, user_agent}, action, fun) do
+    # TODO: Use new Multi.insert with functions
     Multi.merge(multi, fn %{user: user} = data ->
       Multi.insert(Multi.new(), multi_key(action), build(user, user_agent, action, fun.(data)))
     end)

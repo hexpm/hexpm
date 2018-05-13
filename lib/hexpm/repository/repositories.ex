@@ -23,6 +23,8 @@ defmodule Hexpm.Repository.Repositories do
   end
 
   def create(user, params, audit: audit_data) do
+    # TODO: Use new Multi.insert with functions
+
     multi =
       Multi.new()
       |> Multi.insert(:repository, Repository.changeset(%Repository{}, params))
