@@ -16,12 +16,12 @@ defmodule Hexpm.Accounts.User do
     embeds_one :handles, UserHandles, on_replace: :delete
 
     has_many :emails, Email
-    has_many :package_owners, PackageOwner, foreign_key: :owner_id
+    has_many :package_owners, PackageOwner
     has_many :owned_packages, through: [:package_owners, :package]
     has_many :repository_users, RepositoryUser
     has_many :repositories, through: [:repository_users, :repository]
     has_many :keys, Key
-    has_many :audit_logs, AuditLog, foreign_key: :user_id
+    has_many :audit_logs, AuditLog
   end
 
   @username_regex ~r"^[a-z0-9_\-\.]+$"

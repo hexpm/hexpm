@@ -29,11 +29,12 @@ defmodule Hexpm.Accounts.AuditLogTest do
 
     test "action owner.add", %{user: user, package: package} do
       user = %{user | handles: build(:user_handles, github: user.username)}
-      audit = AuditLog.build(user, "user_agent", "owner.add", {package, user})
+      audit = AuditLog.build(user, "user_agent", "owner.add", {package, "full", user})
 
       assert audit.action == "owner.add"
       assert audit.user_id == user.id
       assert audit.user_agent == "user_agent"
+      assert audit.params.level == "full"
       assert audit.params.package.id == package.id
       assert audit.params.package.name == package.name
       assert audit.params.package.meta.description == package.meta.description

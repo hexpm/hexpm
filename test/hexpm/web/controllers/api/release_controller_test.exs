@@ -7,7 +7,7 @@ defmodule Hexpm.Web.API.ReleaseControllerTest do
   setup do
     user = insert(:user)
     repository = insert(:repository)
-    package = insert(:package, package_owners: [build(:package_owner, owner: user)])
+    package = insert(:package, package_owners: [build(:package_owner, user: user)])
     release = insert(:release, package: package, version: "0.0.1", has_docs: true)
 
     %{
@@ -464,7 +464,7 @@ defmodule Hexpm.Web.API.ReleaseControllerTest do
         insert(
           :package,
           repository_id: repository.id,
-          package_owners: [build(:package_owner, owner: user)]
+          package_owners: [build(:package_owner, user: user)]
         )
 
       meta = %{name: package.name, version: "1.0.0", description: "Domain-specific language."}
@@ -543,7 +543,7 @@ defmodule Hexpm.Web.API.ReleaseControllerTest do
         insert(
           :package,
           repository_id: repository.id,
-          package_owners: [build(:package_owner, owner: user)]
+          package_owners: [build(:package_owner, user: user)]
         )
 
       insert(:repository_user, repository: repository, user: user)
@@ -570,7 +570,7 @@ defmodule Hexpm.Web.API.ReleaseControllerTest do
       package =
         insert(
           :package,
-          package_owners: [build(:package_owner, owner: user)],
+          package_owners: [build(:package_owner, user: user)],
           repository_id: repository.id
         )
 
@@ -644,7 +644,7 @@ defmodule Hexpm.Web.API.ReleaseControllerTest do
         insert(
           :package,
           repository_id: repository.id,
-          package_owners: [build(:package_owner, owner: user)]
+          package_owners: [build(:package_owner, user: user)]
         )
 
       insert(:release, package: package, version: "0.0.1")
@@ -667,7 +667,7 @@ defmodule Hexpm.Web.API.ReleaseControllerTest do
         insert(
           :package,
           repository_id: repository.id,
-          package_owners: [build(:package_owner, owner: user)]
+          package_owners: [build(:package_owner, user: user)]
         )
 
       insert(:release, package: package, version: "0.0.1")
@@ -687,7 +687,7 @@ defmodule Hexpm.Web.API.ReleaseControllerTest do
         insert(
           :package,
           repository_id: repository.id,
-          package_owners: [build(:package_owner, owner: user)]
+          package_owners: [build(:package_owner, user: user)]
         )
 
       insert(:release, package: package, version: "0.0.1")
@@ -711,7 +711,7 @@ defmodule Hexpm.Web.API.ReleaseControllerTest do
         insert(
           :package,
           repository_id: repository.id,
-          package_owners: [build(:package_owner, owner: user)]
+          package_owners: [build(:package_owner, user: user)]
         )
 
       insert(
@@ -811,7 +811,7 @@ defmodule Hexpm.Web.API.ReleaseControllerTest do
     setup do
       user = insert(:user)
       repository = insert(:repository)
-      package = insert(:package, package_owners: [build(:package_owner, owner: user)])
+      package = insert(:package, package_owners: [build(:package_owner, user: user)])
       relprev = insert(:release, package: package, version: "0.0.1")
       release = insert(:release, package: package, version: "0.0.2")
 

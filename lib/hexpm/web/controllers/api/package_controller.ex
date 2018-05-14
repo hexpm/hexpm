@@ -33,7 +33,8 @@ defmodule Hexpm.Web.API.PackageController do
     if package = conn.assigns.package do
       when_stale(conn, package, fn conn ->
         package = Packages.preload(package)
-        package = %{package | owners: Owners.all(package, :emails)}
+        owners = Enum.map(Owners.all(package, user: :emails), & &1.user)
+        package = %{package | owners: owners}
 
         conn
         |> api_cache(:public)

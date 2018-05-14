@@ -77,13 +77,13 @@ defmodule Hexpm.Web.API.UserControllerTest do
     test "get current user" do
       user = insert(:user)
       repository = insert(:repository, users: [user])
-      package1 = insert(:package, package_owners: [build(:package_owner, owner: user)])
+      package1 = insert(:package, package_owners: [build(:package_owner, user: user)])
 
       package2 =
         insert(
           :package,
           repository_id: repository.id,
-          package_owners: [build(:package_owner, owner: user)]
+          package_owners: [build(:package_owner, user: user)]
         )
 
       insert(:repository_user, repository: repository, user: user)

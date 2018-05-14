@@ -77,11 +77,11 @@ defmodule Hexpm.Accounts.AuditLog do
   defp extract_params("key.generate", key), do: serialize(key)
   defp extract_params("key.remove", key), do: serialize(key)
 
-  defp extract_params("owner.add", {package, user}),
-    do: %{package: serialize(package), user: serialize(user)}
+  defp extract_params("owner.add", {package, level, user}),
+    do: %{package: serialize(package), level: level, user: serialize(user)}
 
-  defp extract_params("owner.remove", {package, user}),
-    do: %{package: serialize(package), user: serialize(user)}
+  defp extract_params("owner.remove", {package, level, user}),
+    do: %{package: serialize(package), level: level, user: serialize(user)}
 
   defp extract_params("release.publish", {package, release}),
     do: %{package: serialize(package), release: serialize(release)}

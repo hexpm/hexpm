@@ -19,7 +19,7 @@ defmodule Hexpm.Web.API.DocsControllerTest do
 
   describe "POST /api/packages/:name/releases/:version/docs" do
     test "release docs", %{user: user} do
-      package = insert(:package, package_owners: [build(:package_owner, owner: user)])
+      package = insert(:package, package_owners: [build(:package_owner, user: user)])
       insert(:release, package: package, version: "0.0.1")
 
       publish_docs(user, package, "0.0.1", [{'index.html', "package v0.0.1"}])
@@ -39,7 +39,7 @@ defmodule Hexpm.Web.API.DocsControllerTest do
     end
 
     test "update main docs", %{user: user} do
-      package = insert(:package, package_owners: [build(:package_owner, owner: user)])
+      package = insert(:package, package_owners: [build(:package_owner, user: user)])
       insert(:release, package: package, version: "0.0.1")
       insert(:release, package: package, version: "0.5.0")
 
@@ -54,7 +54,7 @@ defmodule Hexpm.Web.API.DocsControllerTest do
     end
 
     test "dont update main docs for older versions", %{user: user} do
-      package = insert(:package, package_owners: [build(:package_owner, owner: user)])
+      package = insert(:package, package_owners: [build(:package_owner, user: user)])
       insert(:release, package: package, version: "0.0.1")
       insert(:release, package: package, version: "0.5.0")
 
@@ -72,7 +72,7 @@ defmodule Hexpm.Web.API.DocsControllerTest do
     end
 
     test "overwrite docs", %{user: user} do
-      package = insert(:package, package_owners: [build(:package_owner, owner: user)])
+      package = insert(:package, package_owners: [build(:package_owner, user: user)])
       insert(:release, package: package, version: "0.0.1")
       insert(:release, package: package, version: "0.5.0")
 
@@ -92,7 +92,7 @@ defmodule Hexpm.Web.API.DocsControllerTest do
     end
 
     test "beta docs do not overwrite stable main docs", %{user: user} do
-      package = insert(:package, package_owners: [build(:package_owner, owner: user)])
+      package = insert(:package, package_owners: [build(:package_owner, user: user)])
       insert(:release, package: package, version: "0.5.0")
       insert(:release, package: package, version: "1.0.0-beta")
 
@@ -111,7 +111,7 @@ defmodule Hexpm.Web.API.DocsControllerTest do
     end
 
     test "update main docs even with beta docs", %{user: user} do
-      package = insert(:package, package_owners: [build(:package_owner, owner: user)])
+      package = insert(:package, package_owners: [build(:package_owner, user: user)])
       insert(:release, package: package, version: "0.0.1")
       insert(:release, package: package, version: "1.0.0-beta")
       insert(:release, package: package, version: "0.5.0")
@@ -132,7 +132,7 @@ defmodule Hexpm.Web.API.DocsControllerTest do
     end
 
     test "beta docs can overwrite beta main docs", %{user: user} do
-      package = insert(:package, package_owners: [build(:package_owner, owner: user)])
+      package = insert(:package, package_owners: [build(:package_owner, user: user)])
       insert(:release, package: package, version: "0.0.1-beta")
       insert(:release, package: package, version: "1.0.0-beta")
 
@@ -147,7 +147,7 @@ defmodule Hexpm.Web.API.DocsControllerTest do
     end
 
     test "dont allow version directories in docs", %{user: user} do
-      package = insert(:package, package_owners: [build(:package_owner, owner: user)])
+      package = insert(:package, package_owners: [build(:package_owner, user: user)])
       insert(:release, package: package, version: "0.0.1")
 
       result =
@@ -166,7 +166,7 @@ defmodule Hexpm.Web.API.DocsControllerTest do
         insert(
           :package,
           repository_id: repository.id,
-          package_owners: [build(:package_owner, owner: user)]
+          package_owners: [build(:package_owner, user: user)]
         )
 
       insert(:release, package: package, version: "0.0.1")
@@ -184,7 +184,7 @@ defmodule Hexpm.Web.API.DocsControllerTest do
         insert(
           :package,
           repository_id: repository.id,
-          package_owners: [build(:package_owner, owner: user)]
+          package_owners: [build(:package_owner, user: user)]
         )
 
       insert(:release, package: package, version: "0.0.1")
@@ -200,7 +200,7 @@ defmodule Hexpm.Web.API.DocsControllerTest do
   describe "DELETE /api/packages/:name/releases/:version/docs" do
     @tag isolation: :serializable
     test "delete release with docs", %{user: user} do
-      package = insert(:package, package_owners: [build(:package_owner, owner: user)])
+      package = insert(:package, package_owners: [build(:package_owner, user: user)])
       insert(:release, package: package, version: "0.0.1")
 
       publish_docs(user, package, "0.0.1", [{'index.html', "package v0.0.1"}])
@@ -220,7 +220,7 @@ defmodule Hexpm.Web.API.DocsControllerTest do
     end
 
     test "delete docs", %{user: user} do
-      package = insert(:package, package_owners: [build(:package_owner, owner: user)])
+      package = insert(:package, package_owners: [build(:package_owner, user: user)])
       insert(:release, package: package, version: "0.0.1")
       insert(:release, package: package, version: "0.5.0")
       insert(:release, package: package, version: "2.0.0")
@@ -295,8 +295,8 @@ defmodule Hexpm.Web.API.DocsControllerTest do
           :package,
           repository_id: repository.id,
           package_owners: [
-            build(:package_owner, owner: user1),
-            build(:package_owner, owner: user2)
+            build(:package_owner, user: user1),
+            build(:package_owner, user: user2)
           ]
         )
 
@@ -319,7 +319,7 @@ defmodule Hexpm.Web.API.DocsControllerTest do
         insert(
           :package,
           repository_id: repository.id,
-          package_owners: [build(:package_owner, owner: user)]
+          package_owners: [build(:package_owner, user: user)]
         )
 
       insert(:release, package: package, version: "0.0.1")

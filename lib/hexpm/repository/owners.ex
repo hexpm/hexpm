@@ -2,30 +2,40 @@ defmodule Hexpm.Repository.Owners do
   use Hexpm.Web, :context
 
   def all(package, preload \\ []) do
-    from(u in assoc(package, :owners), preload: ^preload)
+    assoc(package, :package_owners)
     |> Repo.all()
+    |> Repo.preload(preload)
   end
 
-  def add(package, owner, audit: audit_data) do
-    repository = package.repository
+  def get(package, user) do
+    if owner = Repo.get_by(PackageOwner, package_id: package.id, user_id: user.id) do
+      %{owner | package: package, user: user}
+    end
+  end
 
-    if repository.public or Repositories.access?(repository, owner, "read") do
+  def add(package, user, params, audit: audit_data) do
+    repository = package.repository
+    owners = all(package, user: :emails)
+    owner = Enum.find(owners, &(&1.user_id == user.id))
+    owner = owner || %PackageOwner{package_id: package.id, user_id: user.id}
+    changeset = PackageOwner.changeset(owner, params)
+
+    if repository.public or Repositories.access?(repository, user, "read") do
       multi =
         Multi.new()
-        |> Multi.insert(
-          :owner,
-          Package.build_owner(package, owner),
-          on_conflict: :nothing,
-          conflict_target: [:package_id, :owner_id]
-        )
-        |> audit(audit_data, "owner.add", {package, owner})
+        |> Multi.insert_or_update(:owner, changeset)
+        |> audit(audit_data, "owner.add", fn %{owner: owner} ->
+          {package, owner.level, user}
+        end)
 
       case Repo.transaction(multi) do
-        {:ok, _} ->
-          owners = package |> all([:emails])
-          owner = Enum.find(owners, &(&1.id == owner.id))
-          Emails.owner_added(package, owners, owner) |> Mailer.deliver_now_throttled()
-          :ok
+        {:ok, %{owner: owner}} ->
+          # TODO: Separate email for the affected person
+          owners = Enum.map(owners, & &1.user)
+          Emails.owner_added(package, [user | owners], user)
+          |> Mailer.deliver_now_throttled()
+
+          {:ok, %{owner | user: user}}
 
         {:error, :owner, changeset, _} ->
           {:error, changeset}
@@ -35,9 +45,9 @@ defmodule Hexpm.Repository.Owners do
     end
   end
 
-  def remove(package, owner, audit: audit_data) do
-    owners = all(package, [:emails])
-    owner = Enum.find(owners, &(&1.id == owner.id))
+  def remove(package, user, audit: audit_data) do
+    owners = all(package, user: :emails)
+    owner = Enum.find(owners, &(&1.user_id == user.id))
 
     cond do
       !owner ->
@@ -49,13 +59,16 @@ defmodule Hexpm.Repository.Owners do
       true ->
         multi =
           Multi.new()
-          |> Multi.delete_all(:package_owner, Package.owner(package, owner))
-          |> audit(audit_data, "owner.remove", {package, owner})
+          |> Multi.delete(:owner, owner)
+          |> audit(audit_data, "owner.remove", fn %{owner: owner} ->
+            {package, owner.level, owner.user}
+          end)
 
         {:ok, _} = Repo.transaction(multi)
-        owner = Enum.find(owners, &(&1.id == owner.id))
 
-        Emails.owner_removed(package, owners, owner)
+        # TODO: Separate email for the affected person
+        owners = Enum.map(owners, & &1.user)
+        Emails.owner_removed(package, owners, owner.user)
         |> Mailer.deliver_now_throttled()
 
         :ok
