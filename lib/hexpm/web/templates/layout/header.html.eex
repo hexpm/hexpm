@@ -19,7 +19,7 @@
       <p class="browserupgrade">You are using an <strong>outdated</strong> browser. Please <a href="http://browsehappy.com/">upgrade your browser</a> to improve your experience.</p>
     <![endif]-->
 
-    <nav class="navbar navbar-default navbar-fixed-top">
+    <nav class="navbar navbar-default">
       <div class="container">
         <div class="navbar-header">
           <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar" aria-expanded="false" aria-controls="navbar">
@@ -51,28 +51,7 @@
           <ul class="nav navbar-nav navbar-right">
             <li><a href="<%= Routes.package_path(Endpoint, :index) %>">Packages</a></li>
             <li><a href="<%= Routes.page_path(Endpoint, :pricing) %>">Pricing</a></li>
-
-            <li class="dropdown">
-              <a href="#" class="dropdown-toggle" data-toggle="dropdown">Documentation <b class="caret"></b></a>
-              <ul class="dropdown-menu">
-                <li class="dropdown-header menu-dropdown-header">Mix</li>
-                <li><a href="<%= Routes.docs_path(Endpoint, :usage) %>">Usage</a></li>
-                <li><a href="<%= Routes.docs_path(Endpoint, :publish) %>">Publishing packages</a></li>
-                <li><a href="<%= Routes.docs_path(Endpoint, :tasks) %>">Tasks</a></li>
-                <li role="separator" class="divider"></li>
-                <li class="dropdown-header menu-dropdown-header">Rebar3</li>
-                <li><a href="<%= Routes.docs_path(Endpoint, :rebar3_usage) %>">Usage</a></li>
-                <li><a href="<%= Routes.docs_path(Endpoint, :rebar3_publish) %>">Publishing packages</a></li>
-                <li><a href="https://www.rebar3.org/v3.0/docs/hex-package-management" target="_blank">Tasks</a></li>
-                <li role="separator" class="divider"></li>
-                <li><a href="<%= Routes.docs_path(Endpoint, :faq) %>">FAQ</a></li>
-                <li><a href="<%= Routes.docs_path(Endpoint, :private) %>">Private packages</a></li>
-                <li><a href="<%= Routes.policy_path(Endpoint, :index) %>">Policies</a></li>
-                <li><a href="<%= Routes.docs_path(Endpoint, :mirrors) %>">Mirrors</a></li>
-                <li><a href="<%= Routes.docs_path(Endpoint, :public_keys) %>">Public keys</a></li>
-                <li><a href="https://github.com/hexpm/specifications" target="_blank">Specifications</a></li>
-              </ul>
-            </li>
+            <li><a href="<%= Routes.docs_path(Endpoint, :index) %>">Docs</a></li>
 
             <%= if logged_in?(assigns) do %>
               <li class="dropdown">

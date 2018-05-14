@@ -45,9 +45,9 @@ end
   <dt><code>:hex</code></dt>
   <dd>The name of the package. Defaults to the dependency application name.</dd>
   <dt><code>:repo</code></dt>
-  <dd>The repository to fetch the package from, the repository needs to be configured with the <code>`mix hex.repo`</code> task. Defaults to the global <code>"hexpm"</code> repository.</dd>
+  <dd>The repository to fetch the package from, the repository needs to be configured with the <code>mix hex.repo</code> task. Defaults to the global <code>"hexpm"</code> repository.</dd>
   <dt><code>:organization</code></dt>
-  <dd>The organization repository to fetch the package from, the organization needs to be configured with the <code>`mix hex.organization`</code> task.</dd>
+  <dd>The organization repository to fetch the package from, the organization needs to be configured with the <code>mix hex.organization</code> task.</dd>
 </dl>
 
 ### Fetching dependencies

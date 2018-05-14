@@ -33,7 +33,7 @@ defmodule Hexpm.Web.SignupController do
       conn,
       "show.html",
       title: "Sign up",
-      container: "container page signup",
+      container: "container page page-xs signup",
       changeset: changeset
     )
   end

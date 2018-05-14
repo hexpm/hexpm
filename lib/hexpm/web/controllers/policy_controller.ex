@@ -1,21 +1,12 @@
 defmodule Hexpm.Web.PolicyController do
   use Hexpm.Web, :controller
 
-  def index(conn, _params) do
-    render(
-      conn,
-      "index.html",
-      title: "Policies",
-      container: "container page policies"
-    )
-  end
-
   def coc(conn, _params) do
     render(
       conn,
       "coc.html",
       title: "Code of Conduct",
-      container: "container page policies"
+      container: "container page page-sm policies"
     )
   end
 
@@ -24,7 +15,7 @@ defmodule Hexpm.Web.PolicyController do
       conn,
       "copyright.html",
       title: "Copyright Policy",
-      container: "container page policies"
+      container: "container page page-sm policies"
     )
   end
 
@@ -33,7 +24,7 @@ defmodule Hexpm.Web.PolicyController do
       conn,
       "privacy.html",
       title: "Privacy Policy",
-      container: "container page policies"
+      container: "container page page-sm policies"
     )
   end
 
@@ -42,7 +33,7 @@ defmodule Hexpm.Web.PolicyController do
       conn,
       "tos.html",
       title: "Terms of Service",
-      container: "container page policies"
+      container: "container page page-sm policies"
     )
   end
 end

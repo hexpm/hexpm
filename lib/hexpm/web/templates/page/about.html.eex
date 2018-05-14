@@ -1,0 +1,18 @@
+<h2>About Hex</h2>
+
+<p>
+  Hex is a package manager for the BEAM ecosystem, any language that compiles to run on the BEAM VM, such as <a href="https://elixir-lang.org/">Elixir</a> and <a href="http://www.erlang.org/">Erlang</a>, can be used to build Hex packages.
+  Hex consists of the <a href="https://github.com/hexpm/specifications/blob/master/http_api.md">HTTP API</a>, <a href="/">this website</a>, the repository serving packages and indexes, <a href="https://hexdocs.pm">HexDocs</a>, the <a href="https://github.com/hexpm/hex">Mix build-tool integration</a>, and <a href="https://github.com/hexpm">other services</a>.
+  Many build tools support Hex packages including <a href="https://hexdocs.pm/mix">Mix</a> for Elixir projects, <a href="https://www.rebar3.org/">Rebar</a> and <a href="https://erlang.mk/">erlang.mk</a> for Erlang projects.
+</p>
+
+<h3>About Six Colors AB</h3>
+
+<p>
+  Hex was started as an open-source project early 2014, it is still and open-source project but today it is operated by the Swedish limited company "Six Colors AB".
+  The company was founded in 2018 by the creator of Hex, Eric Meadows-Jönsson, Six Colors supports the development of Hex and operates all services required to run Hex.
+</p>
+
+<p>
+  By charging for private packages we can fund free open-source development and run reliable services for both paying customers and the open-source community.
+</p>

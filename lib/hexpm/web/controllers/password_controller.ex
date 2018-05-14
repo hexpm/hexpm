@@ -56,7 +56,7 @@ defmodule Hexpm.Web.PasswordController do
       conn,
       "show.html",
       title: "Choose a new password",
-      container: "container page password-view",
+      container: "container page page-xs password-view",
       username: username,
       key: key,
       changeset: changeset

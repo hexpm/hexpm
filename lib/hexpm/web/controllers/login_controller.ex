@@ -41,7 +41,7 @@ defmodule Hexpm.Web.LoginController do
       conn,
       "show.html",
       title: "Log in",
-      container: "container page login",
+      container: "container page page-xs login",
       return: conn.params["return"]
     )
   end

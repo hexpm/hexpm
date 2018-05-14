@@ -1,14 +1,6 @@
 defmodule Hexpm.Web.PolicyControllerTest do
   use Hexpm.ConnCase, async: true
 
-  test "show policy index" do
-    conn =
-      build_conn()
-      |> get("policies")
-
-    assert response(conn, 200) =~ "Policies"
-  end
-
   test "show policy code of conduct" do
     conn =
       build_conn()

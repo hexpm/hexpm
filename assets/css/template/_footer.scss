@@ -2,36 +2,24 @@
   position: absolute;
   bottom: 0;
   width: 100%;
-  height: 88px;
-  padding-top: 50px;
+  height: 190px;
+  overflow: scroll;
+  color: $color-white;
+  background: #a4a6af;
+  border-top: 1px solid #cbccd2;
 
   .footer-nav {
-    background: #a4a6af;
+    padding: 20px;
 
     ul {
       padding: 0;
       margin: 0;
-      text-align: center;
+      font-size: .8em;
       list-style: none;
+    }
 
-      li {
-        display: inline-block;
-
-        &:hover {
-          background: #9799a5;
-        }
-
-        a {
-          display: block;
-          padding: 10px;
-          font-size: 15px;
-          color: $color-white;
-
-          &:hover {
-            text-decoration: none;
-          }
-        }
-      }
+    a {
+      color: $color-white;
     }
   }
 }

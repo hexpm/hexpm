@@ -48,6 +48,7 @@ defmodule Hexpm.Web.Router do
     pipe_through :browser
 
     get "/", PageController, :index
+    get "/about", PageController, :about
     get "/pricing", PageController, :pricing
     get "/sponsors", PageController, :sponsors
 
@@ -70,17 +71,18 @@ defmodule Hexpm.Web.Router do
 
     get "/users/:username", UserController, :show
 
+    get "/docs", DocsController, :index
     get "/docs/usage", DocsController, :usage
-    get "/docs/rebar3_usage", DocsController, :rebar3_usage
     get "/docs/publish", DocsController, :publish
-    get "/docs/rebar3_publish", DocsController, :rebar3_publish
     get "/docs/tasks", DocsController, :tasks
+    get "/docs/rebar3_usage", DocsController, :rebar3_usage
+    get "/docs/rebar3_publish", DocsController, :rebar3_publish
+    get "/docs/rebar3_tasks", DocsController, :rebar3_tasks
     get "/docs/private", DocsController, :private
     get "/docs/faq", DocsController, :faq
     get "/docs/mirrors", DocsController, :mirrors
     get "/docs/public_keys", DocsController, :public_keys
 
-    get "/policies", PolicyController, :index
     get "/policies/codeofconduct", PolicyController, :coc
     get "/policies/privacy", PolicyController, :privacy
     get "/policies/termsofservice", PolicyController, :tos
