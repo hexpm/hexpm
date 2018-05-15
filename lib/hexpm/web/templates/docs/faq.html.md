@@ -44,11 +44,13 @@ Organizations are billed monthly on the day of the month the subscription was st
 subscription is invoiced and charged in advance when the next billing period starts.
 Changes in the number of members in the organizations are pro-rated on the next invoice.
 
+Invoices are sent by the company Six Colors AB, see the [about page](/about) for more information.
+
 #### Do listed prices include VAT?
 
-All prices are listed excluding VAT. Private EU citizens are required to pay VAT based on the VAT
-rate of their country of origin. EU companies registered for VAT need to supply a valid VAT number.
-VAT is not included for customers outside of the EU.
+All prices are listed excluding VAT. Private EU citizens and Swedish companies are required to pay
+VAT based on the VAT rate of their country of origin. EU companies registered for VAT need to
+supply a valid VAT number. VAT is not included for customers outside of the EU.
 
 #### Can I cancel at any time?
 

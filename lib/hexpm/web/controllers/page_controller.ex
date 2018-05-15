@@ -19,6 +19,15 @@ defmodule Hexpm.Web.PageController do
     )
   end
 
+  def about(conn, _params) do
+    render(
+      conn,
+      "about.html",
+      title: "About Hex",
+      container: "container page page-sm"
+    )
+  end
+
   def pricing(conn, _params) do
     render(
       conn,
@@ -33,7 +42,7 @@ defmodule Hexpm.Web.PageController do
       conn,
       "sponsors.html",
       title: "Sponsors",
-      container: "container page sponsors"
+      container: "container page page-sm sponsors"
     )
   end
 end

@@ -6,7 +6,7 @@ defmodule Hexpm.Web.PasswordResetController do
       conn,
       "show.html",
       title: "Reset your password",
-      container: "container page password-view"
+      container: "container page page-xs password-view"
     )
   end
 
@@ -17,7 +17,7 @@ defmodule Hexpm.Web.PasswordResetController do
       conn,
       "create.html",
       title: "Reset your password",
-      container: "container page password-view"
+      container: "container page page-xs password-view"
     )
   end
 end

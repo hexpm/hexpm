@@ -1,5 +1,7 @@
 <%= render(Hexpm.Web.LayoutView, "simple-header.html", assigns) %>
-  <h1><%= @status %></h1>
-  <span class="call-to-action">Whoops!</span>
-  <span class="message"><%= @message %></span>
+  <div class="error-view">
+    <h1><%= @status %></h1>
+    <span class="call-to-action">Whoops!</span>
+    <span class="message"><%= @message %></span>
+  </div>
 <%= render(Hexpm.Web.LayoutView, "footer.html", assigns) %>

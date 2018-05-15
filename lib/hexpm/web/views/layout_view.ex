@@ -34,7 +34,7 @@ defmodule Hexpm.Web.LayoutView do
   end
 
   def container_class(assigns) do
-    Map.get(assigns, :container, "container page")
+    Map.get(assigns, :container, "container")
   end
 
   def og_tags(assigns) do

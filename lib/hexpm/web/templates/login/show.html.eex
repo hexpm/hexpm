@@ -1,26 +1,21 @@
-<div class="row">
-  <div class="col-md-8 col-md-offset-2">
-    <%= form_tag(Routes.login_path(Endpoint, :create)) do %>
-      <h2>Log in</h2>
-
-      <div class="form-group">
-        <label for="username">Username or Email</label>
-        <input type="text" class="form-control" name="username">
-      </div>
-
-      <div class="form-group">
-        <label for="password">Password</label>
-        <span style="float: right;"><a href="<%= Routes.password_reset_path(Endpoint, :show) %>">Forgot your password?</a></span>
-        <input type="password" class="form-control" name="password">
-      </div>
-
-      <input type="hidden" name="return" value="<%= @return %>">
-
-      <button type="submit" class="btn btn-primary">Log in</button>
-
-      <br><br>
-
-      <p><a href="<%= Routes.signup_path(Endpoint, :show) %>">Don't have an account?</a></p>
-    <% end %>
+<h2>Log in</h2>
+<%= form_tag(Routes.login_path(Endpoint, :create)) do %>
+  <div class="form-group">
+    <label for="username">Username or Email</label>
+    <input type="text" class="form-control" name="username">
   </div>
-</div>
+
+  <div class="form-group">
+    <label for="password">Password</label>
+    <span style="float: right;"><a href="<%= Routes.password_reset_path(Endpoint, :show) %>">Forgot your password?</a></span>
+    <input type="password" class="form-control" name="password">
+  </div>
+
+  <input type="hidden" name="return" value="<%= @return %>">
+
+  <button type="submit" class="btn btn-primary">Log in</button>
+
+  <br><br>
+
+  <p><a href="<%= Routes.signup_path(Endpoint, :show) %>">Don't have an account?</a></p>
+<% end %>

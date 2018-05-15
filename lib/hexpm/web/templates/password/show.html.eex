@@ -1,36 +1,32 @@
 <%= changeset_error(@changeset) %>
+<h2>Choose a new password</h2>
 
-<div class="row">
-  <div class="col-md-8 col-md-offset-2">
-    <%= form_for @changeset, Routes.password_path(Endpoint, :update), [method: :post], fn f -> %>
-      <h2>Choose a new password</h2>
+<%= form_for @changeset, Routes.password_path(Endpoint, :update), [method: :post], fn f -> %>
 
-      <div class="form-group">
-        <%= label f, :password %>
-        <%= password_input f, :password %>
-        <%= error_tag f, :password %>
-      </div>
-
-      <div class="form-group">
-        <%= label f, :password_confirmation %>
-        <%= password_input f, :password_confirmation %>
-        <%= error_tag f, :password_confirmation %>
-      </div>
-
-      <div class="form-group">
-        <div class="checkbox">
-          <input type="hidden" name="user[revoke_all_keys]" value="no">
-          <label>
-            <input type="checkbox" name="user[revoke_all_keys]" value="yes" checked>
-            Revoke all API keys
-          </label>
-        </div>
-      </div>
-
-      <input type="hidden" name="user[username]" value="<%= @username %>">
-      <input type="hidden" name="user[key]" value="<%= @key %>">
-
-      <button type="submit" class="btn btn-primary">Submit</button>
-    <% end %>
+  <div class="form-group">
+    <%= label f, :password %>
+    <%= password_input f, :password %>
+    <%= error_tag f, :password %>
   </div>
-</div>
+
+  <div class="form-group">
+    <%= label f, :password_confirmation %>
+    <%= password_input f, :password_confirmation %>
+    <%= error_tag f, :password_confirmation %>
+  </div>
+
+  <div class="form-group">
+    <div class="checkbox">
+      <input type="hidden" name="user[revoke_all_keys]" value="no">
+      <label>
+        <input type="checkbox" name="user[revoke_all_keys]" value="yes" checked>
+        Revoke all API keys
+      </label>
+    </div>
+  </div>
+
+  <input type="hidden" name="user[username]" value="<%= @username %>">
+  <input type="hidden" name="user[key]" value="<%= @key %>">
+
+  <button type="submit" class="btn btn-primary">Submit</button>
+<% end %>

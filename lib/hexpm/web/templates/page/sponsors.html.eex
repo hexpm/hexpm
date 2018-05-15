@@ -2,12 +2,12 @@
 
 <h3 class="sponsors-preamble"><small>The following companies provide resources and services that make running Hex possible.</small></h3>
 
-<div class="sponsors container">
+<div class="sponsors">
   <div class="row">
-    <div class="col-md-4 image">
+    <div class="col-md-5 image">
       <a href="http://pages.plataformatec.com.br/elixir-phoenix-consulting"><img src="<%= Routes.static_path(Endpoint, "/images/plataformatec.png") %>" alt="Plataformatec logo"></a>
     </div>
-    <div class="col-md-8">
+    <div class="col-md-7">
       <p>
         Plataformatec is the company behind Elixir. They are an agile software consultancy specialized in Elixir and Ruby. They provide custom software development for startups and Fortune 1000 companies mainly in USA and Brazil.
       </p>
@@ -18,10 +18,10 @@
   </div>
 
   <div class="row">
-    <div class="col-md-4 image">
+    <div class="col-md-5 image">
       <a href="https://www.fastly.com/"><img src="<%= Routes.static_path(Endpoint, "/images/fastly.png") %>" alt="Fastly logo"></a>
     </div>
-    <div class="col-md-8">
+    <div class="col-md-7">
       <p>
         Founded in 2011, Fastly is the only content delivery network that gives businesses complete control over how they serve content, unprecedented access to real-time performance analytics, and the ability to cache frequently changing content at the edge. Our secure, global network allows enterprises to increase revenue and improve customer experiences across their websites and mobile applications while maintaining fast, consistent, and reliable performance.
       </p>
@@ -32,10 +32,10 @@
   </div>
 
   <div class="row">
-    <div class="col-md-4 image">
+    <div class="col-md-5 image">
       <a href="https://travis-ci.com/"><img src="<%= Routes.static_path(Endpoint, "/images/travis-ci.png") %>" alt="TRAVIS CI logo"></a>
     </div>
-    <div class="col-md-8">
+    <div class="col-md-7">
       <p>
         Travis CI aims to empower people to build and ship great software. As a leading provider of hosted CI, Travis CI has been helping build and test open source and private projects since 2011. Easily sync your GitHub projects with Travis CI and you'll be testing your code in minutes.
       </p>
