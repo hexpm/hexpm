@@ -46,7 +46,7 @@ Hexpm.Repo.transaction(fn ->
     insert(
       :package,
       name: "decimal",
-      package_owners: [build(:package_owner, owner: eric)],
+      package_owners: [build(:package_owner, user: eric)],
       meta:
         build(
           :package_metadata,
@@ -124,7 +124,7 @@ Hexpm.Repo.transaction(fn ->
     insert(
       :package,
       name: "postgrex",
-      package_owners: [build(:package_owner, owner: eric), build(:package_owner, owner: jose)],
+      package_owners: [build(:package_owner, user: eric), build(:package_owner, user: jose)],
       meta:
         build(
           :package_metadata,
@@ -216,7 +216,7 @@ Hexpm.Repo.transaction(fn ->
     insert(
       :package,
       name: "ecto",
-      package_owners: [build(:package_owner, owner: jose)],
+      package_owners: [build(:package_owner, user: jose)],
       meta:
         build(
           :package_metadata,
@@ -393,7 +393,7 @@ Hexpm.Repo.transaction(fn ->
       :package,
       repository_id: myrepo.id,
       name: "private",
-      package_owners: [build(:package_owner, owner: eric)],
+      package_owners: [build(:package_owner, user: eric)],
       meta:
         build(
           :package_metadata,
@@ -421,7 +421,7 @@ Hexpm.Repo.transaction(fn ->
       :package,
       repository_id: myrepo.id,
       name: "other_private",
-      package_owners: [build(:package_owner, owner: eric)],
+      package_owners: [build(:package_owner, user: eric)],
       meta:
         build(
           :package_metadata,
@@ -459,7 +459,7 @@ Hexpm.Repo.transaction(fn ->
       insert(
         :package,
         name: "ups_#{index}",
-        package_owners: [build(:package_owner, owner: joe)],
+        package_owners: [build(:package_owner, user: joe)],
         meta:
           build(
             :package_metadata,
@@ -520,7 +520,7 @@ Hexpm.Repo.transaction(fn ->
     insert(
       :package,
       name: "nerves",
-      package_owners: [build(:package_owner, owner: justin)],
+      package_owners: [build(:package_owner, user: justin)],
       meta:
         build(
           :package_metadata,
@@ -552,7 +552,7 @@ Hexpm.Repo.transaction(fn ->
       insert(
         :package,
         name: "nerves_pkg_#{index}",
-        package_owners: [build(:package_owner, owner: justin)],
+        package_owners: [build(:package_owner, user: justin)],
         meta:
           build(
             :package_metadata,

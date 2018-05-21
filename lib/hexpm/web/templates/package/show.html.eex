@@ -216,10 +216,10 @@ tools = Keyword.take(tools, compatible_tools)
 
     <h3>Owners</h3>
     <ul class="owners-list">
-      <%= for user <- @owners do %>
+      <%= for owner <- @owners do %>
         <li>
-          <a href="<%= Routes.user_path(Endpoint, :show, user) %>">
-            <img src="<%= gravatar_url(User.email(user, :gravatar), :small) %>" class="owner-avatar"><%= user.username %>
+          <a href="<%= Routes.user_path(Endpoint, :show, owner.user) %>">
+            <img src="<%= gravatar_url(User.email(owner.user, :gravatar), :small) %>" class="owner-avatar"><%= owner.user.username %>
           </a>
         </li>
       <% end %>

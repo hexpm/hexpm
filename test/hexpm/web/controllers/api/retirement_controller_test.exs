@@ -4,13 +4,13 @@ defmodule Hexpm.Web.API.RetirementControllerTest do
   setup do
     user = insert(:user)
     repository = insert(:repository)
-    package = insert(:package, package_owners: [build(:package_owner, owner: user)])
+    package = insert(:package, package_owners: [build(:package_owner, user: user)])
 
     repository_package =
       insert(
         :package,
         repository_id: repository.id,
-        package_owners: [build(:package_owner, owner: user)]
+        package_owners: [build(:package_owner, user: user)]
       )
 
     insert(:release, package: package, version: "1.0.0")

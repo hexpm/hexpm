@@ -1,5 +1,6 @@
 defmodule Hexpm.Repository.Package do
   use Hexpm.Web, :schema
+  import Ecto.Query, only: [from: 2, where: 3]
 
   @derive {Hexpm.Web.Stale, assocs: [:releases, :owners, :downloads]}
   @derive {Phoenix.Param, key: :name}
@@ -13,7 +14,7 @@ defmodule Hexpm.Repository.Package do
     belongs_to :repository, Repository
     has_many :releases, Release
     has_many :package_owners, PackageOwner
-    has_many :owners, through: [:package_owners, :owner]
+    has_many :owners, through: [:package_owners, :user]
     has_many :downloads, PackageDownload
     embeds_one :meta, PackageMetadata, on_replace: :delete
   end
@@ -67,49 +68,46 @@ defmodule Hexpm.Repository.Package do
     |> validate_exclusion(:name, @reserved_names)
   end
 
-  def build(repository, owner, params) do
+  def build(repository, user, params) do
     build_assoc(repository, :packages)
     |> Map.put(:repository, repository)
     |> changeset(:create, params)
-    |> put_assoc(:package_owners, [%PackageOwner{owner_id: owner.id}])
+    |> put_assoc(:package_owners, [%PackageOwner{user_id: user.id}])
   end
 
   def update(package, params) do
     changeset(package, :update, params)
   end
 
-  def is_owner(package, user) do
+  def owner(package, user) do
     from(
       o in PackageOwner,
       where: o.package_id == ^package.id,
-      where: o.owner_id == ^user.id,
+      where: o.user_id == ^user.id,
       select: count(o.id) >= 1
     )
   end
 
-  def is_owner_with_access(package, user) do
+  def owner(package, user, level) do
+    owner(package, user)
+    |> where([o], o.level == ^level)
+  end
+
+  def owner_with_access(package, user) do
     from(
       po in PackageOwner,
       left_join: ru in RepositoryUser,
       on: ru.repository_id == ^package.repository_id,
       where: ru.user_id == ^user.id or ^package.repository.public,
       where: po.package_id == ^package.id,
-      where: po.owner_id == ^user.id,
+      where: po.user_id == ^user.id,
       select: count(po.id) >= 1
     )
   end
 
-  def build_owner(package, user) do
-    change(%PackageOwner{}, package_id: package.id, owner_id: user.id)
-    |> unique_constraint(:owner_id, name: "package_owners_unique", message: "is already owner")
-  end
-
-  def owner(package, user) do
-    from(
-      p in PackageOwner,
-      where: p.package_id == ^package.id,
-      where: p.owner_id == ^user.id
-    )
+  def owner_with_access(package, user, level) do
+    owner_with_access(package, user)
+    |> where([o], o.level == ^level)
   end
 
   def all(repositories, page, count, search, sort, fields) do

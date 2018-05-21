@@ -145,6 +145,28 @@ defmodule Hexpm.Web.AuthHelpers do
     |> boolean_to_auth_error()
   end
 
+  def maybe_full_package_owner(%Plug.Conn{} = conn, user) do
+    maybe_full_package_owner(conn.assigns.repository, conn.assigns.package, user)
+  end
+
+  def maybe_full_package_owner(%Package{} = package, user) do
+    maybe_full_package_owner(package.repository, package, user)
+  end
+
+  def maybe_full_package_owner(nil, nil, _user) do
+    {:error, :auth}
+  end
+
+  def maybe_full_package_owner(repository, nil, user) do
+    (repository.public or Repositories.access?(repository, user, "admin"))
+    |> boolean_to_auth_error()
+  end
+
+  def maybe_full_package_owner(_repository, %Package{} = package, user) do
+    Packages.owner_with_full_access?(package, user)
+    |> boolean_to_auth_error()
+  end
+
   def maybe_package_owner(%Plug.Conn{} = conn, user) do
     maybe_package_owner(conn.assigns.repository, conn.assigns.package, user)
   end

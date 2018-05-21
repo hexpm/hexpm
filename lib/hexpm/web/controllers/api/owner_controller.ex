@@ -11,13 +11,13 @@ defmodule Hexpm.Web.API.OwnerController do
        [
          domain: "api",
          resource: "write",
-         fun: [&maybe_package_owner/2, &repository_billing_active/2]
+         fun: [&maybe_full_package_owner/2, &repository_billing_active/2]
        ]
        when action in [:create, :delete]
 
   def index(conn, _params) do
     if package = conn.assigns.package do
-      owners = Owners.all(package, [:emails])
+      owners = Owners.all(package, user: :emails)
 
       conn
       |> api_cache(:private)
@@ -28,40 +28,48 @@ defmodule Hexpm.Web.API.OwnerController do
   end
 
   def show(conn, %{"email" => email}) do
-    if package = conn.assigns.package do
-      email = URI.decode_www_form(email)
-      owner = Users.get(email)
+    package = conn.assigns.package
+    email = URI.decode_www_form(email)
+    user = Users.get(email, [:emails])
 
-      if package_owner(package, owner) == :ok do
+    if package && user do
+      if owner = Owners.get(package, user) do
         conn
         |> api_cache(:private)
-        |> send_resp(204, "")
+        |> render(:show, owner: owner)
+      else
+        not_found(conn)
       end
-    end || not_found(conn)
+    else
+      not_found(conn)
+    end
   end
 
-  def create(conn, %{"email" => email}) do
+  def create(conn, %{"email" => email} = params) do
     if package = conn.assigns.package do
       email = URI.decode_www_form(email)
-      new_owner = Users.get(email)
+      new_owner = Users.get(email, [:emails])
 
       if new_owner do
-        case Owners.add(package, new_owner, audit: audit_data(conn)) do
-          :ok ->
+        case Owners.add(package, new_owner, params, audit: audit_data(conn)) do
+          {:ok, owner} ->
             conn
             |> api_cache(:private)
-            |> send_resp(204, "")
+            |> render(:show, owner: owner)
 
           {:error, :not_member} ->
-            validation_failed(conn, %{
-              "email" => "cannot add owner that is not a member of the repository"
-            })
+            errors = %{"email" => "cannot add owner that is not a member of the repository"}
+            validation_failed(conn, errors)
 
           {:error, changeset} ->
             validation_failed(conn, changeset)
         end
+      else
+        not_found(conn)
       end
-    end || not_found(conn)
+    else
+      not_found(conn)
+    end
   end
 
   def delete(conn, %{"email" => email}) do
@@ -82,7 +90,11 @@ defmodule Hexpm.Web.API.OwnerController do
           {:error, :last_owner} ->
             validation_failed(conn, %{"email" => "cannot remove last owner of package"})
         end
+      else
+        not_found(conn)
       end
-    end || not_found(conn)
+    else
+      not_found(conn)
+    end
   end
 end
