@@ -1,37 +1,39 @@
-.sidebar {
-  padding-top: 30px;
-  list-style: none;
+.docs {
+  .sidebar {
+    padding-top: 30px;
+    list-style: none;
 
-  .sidebar-header {
-    margin-top: 15px;
-    margin-bottom: 2px;
-    font-weight: bold;
-  }
-
-  .sidebar-item {
-    padding-left: 7px;
-
-    &.selected > a {
-      font-weight: bold;
-      text-decoration: underline;
-    }
-
-    > a:hover {
+    .sidebar-header {
+      margin-top: 15px;
+      margin-bottom: 2px;
       font-weight: bold;
     }
+
+    .sidebar-item {
+      padding-left: 7px;
+
+      &.selected > a {
+        font-weight: bold;
+        text-decoration: underline;
+      }
+
+      > a:hover {
+        font-weight: bold;
+      }
+    }
   }
-}
 
-a.anchor {
-  position: relative;
-  top: -90px;
-  display: block;
-  visibility: hidden;
-}
+  a.anchor {
+    position: relative;
+    top: -90px;
+    display: block;
+    visibility: hidden;
+  }
 
-a code.inline,
-a:hover code.inline,
-a:focus code.inline {
-  font-weight: normal;
-  color: $color-link;
+  a code.inline,
+  a:hover code.inline,
+  a:focus code.inline {
+    font-weight: normal;
+    color: $color-link;
+  }
 }
