@@ -36,6 +36,20 @@ functionality of the plug package, then its name should be something like `plug_
 `Plug.`: if your project extends plug, then its modules should be called `PlugExtension` instead
 of `Plug.Extension`.
 
+### Organizations
+
+#### Can I publish public packages to an organization?
+
+Not yet, this feature is currently being developed. You will be able to publish public packages
+through your organization and manage permissions the same way you do for private packages. Keep in
+mind that in contrast to private packages your public organization packages will be published to
+the global namespace like all other public packages.
+
+#### Are self-hosted or "enterprise" solutions available?
+
+No, but we are currently gauging in the interest in this feature, please contact
+[support@hex.pm](mailto:support@hex.pm) if you are interested.
+
 ### Billing
 
 #### How are organizations billed?
@@ -66,9 +80,7 @@ and start the subscription again your organization will again be enabled.
 We will keep all your data for a minimum of 90 days. You can contact
 [support@hex.pm](mailto:support@hex.pm) to retrieve a dump of all your packages and documentation.
 
-### Organizations
+#### Can I pay annually instead of monthly?
 
-#### Can I publish public packages to an organization?
-
-No, organizations are only for private packages, public packages should be published to the global
-repository.
+Not yet, but this feature is in progress. Check back on the [pricing page](/pricing) in a few
+weeks.
