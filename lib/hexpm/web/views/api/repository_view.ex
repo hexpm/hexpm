@@ -8,6 +8,8 @@ defmodule Hexpm.Web.API.RepositoryView do
     do: render_one(repository, __MODULE__, "show")
 
   def render("show", %{repository: repository}) do
+    # TODO: Add url
+
     Map.take(repository, [
       :name,
       :public,

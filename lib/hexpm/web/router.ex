@@ -155,6 +155,7 @@ defmodule Hexpm.Web.Router do
     post "/users", UserController, :create
     get "/users/me", UserController, :me
     get "/users/:name", UserController, :show
+    # NOTE: Deprecated (2018-05-21)
     get "/users/:name/test", UserController, :test
     post "/users/:name/reset", UserController, :reset
 
