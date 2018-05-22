@@ -38,7 +38,7 @@ defmodule Hexpm.Accounts.KeyPermission do
         "api" when resource in [nil, "read", "write"] -> []
         "repository" when is_binary(resource) -> []
         "repositories" when is_nil(resource) -> []
-        true -> [resource: "invalid resource for given domain"]
+        _ -> [resource: "invalid resource for given domain"]
       end
     end)
   end
