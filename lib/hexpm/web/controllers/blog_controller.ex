@@ -11,7 +11,8 @@ defmodule Hexpm.Web.BlogController do
     render(
       conn,
       "index.html",
-      title: "Blog"
+      title: "Blog",
+      container: "container page page-sm blog"
     )
   end
 
@@ -24,7 +25,8 @@ defmodule Hexpm.Web.BlogController do
       render(
         conn,
         "#{template}.html",
-        title: title(slug)
+        title: title(slug),
+        container: "container page page-sm blog"
       )
     else
       not_found(conn)
