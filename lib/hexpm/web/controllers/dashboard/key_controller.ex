@@ -4,10 +4,7 @@ defmodule Hexpm.Web.Dashboard.KeyController do
   plug :requires_login
 
   def index(conn, _params) do
-    user = conn.assigns.current_user
-    keys = Keys.all(user)
-
-    render_index(conn, keys)
+    render_index(conn)
   end
 
   def delete(conn, %{"name" => name} = params) do
@@ -23,14 +20,15 @@ defmodule Hexpm.Web.Dashboard.KeyController do
         conn
         |> put_status(400)
         |> put_flash(:error, "The key #{params["name"]} was not found.")
-        |> render_index(Keys.all(user))
+        |> render_index()
     end
   end
 
-  def create(conn, %{"key" => %{"name" => _}} = params) do
+  def create(conn, params) do
     user = conn.assigns.current_user
+    key_params = fixup_permissions(params["key"])
 
-    case Keys.add(user, params["key"], audit: audit_data(conn)) do
+    case Keys.add(user, key_params, audit: audit_data(conn)) do
       {:ok, %{key: key}} ->
         flash =
           "The key #{key.name} was successfully generated, " <>
@@ -43,22 +41,39 @@ defmodule Hexpm.Web.Dashboard.KeyController do
       {:error, :key, changeset, _} ->
         conn
         |> put_status(400)
-        |> render_index(Keys.all(user), changeset)
+        |> render_index(changeset)
     end
   end
 
-  defp render_index(conn, keys, changeset \\ changeset()) do
+  defp render_index(conn, changeset \\ changeset()) do
+    user = conn.assigns.current_user
+    keys = Keys.all(user)
+    repositories = Repositories.all_by_user(user)
+
     render(
       conn,
       "index.html",
       title: "Dashboard - User keys",
       container: "container page dashboard",
       keys: keys,
+      repositories: repositories,
       changeset: changeset
     )
   end
 
   defp changeset do
     Key.changeset(%Key{}, %{}, %{})
+  end
+
+  defp fixup_permissions(params) do
+    update_in(params["permissions"], fn permissions ->
+      Map.new(permissions || [], fn {index, permission} ->
+        if permission["domain"] == "repository" and permission["resource"] == "All" do
+          {index, %{permission | "domain" => "repositories", "resource" => nil}}
+        else
+          {index, permission}
+        end
+      end)
+    end)
   end
 end

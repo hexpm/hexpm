@@ -1,3 +1,5 @@
+<%= changeset_error(@changeset) %>
+
 <div class="row">
   <div class="col-sm-3">
     <%= render DashboardView, "_sidebar.html", assigns %>
@@ -9,18 +11,24 @@
         <p>Keys are used to authenticate and authorize clients to interact with the Hex API and repository. </p>
         <br/>
 
-        <table class="table table-striped">
+        <table class="table table-condensed table-striped">
           <tr>
             <td>Name</td>
+            <td>Permissions</td>
             <td></td>
           </tr>
           <%= for key <- @keys do %>
             <tr>
               <td><%= key.name %></td>
               <td>
+                <%= for permission <- key.permissions do %>
+                  <span class="label label-success"><%= permission_name(permission) %></span>
+                <% end %>
+              </td>
+              <td>
                 <%= form_tag(Routes.key_path(Endpoint, :delete), method: :delete, class: "action") do %>
                   <input type="hidden" name="name" value="<%= key.name %>">
-                  <button type="submit" class="btn btn-primary btn-xs">Revoke</button>
+                  <button type="submit" class="btn btn-danger btn-xs">Revoke</button>
                 <% end %>
               </td>
             </tr>
@@ -30,11 +38,43 @@
 
       <div class="panel-body-part">
         <%= form_for @changeset, Routes.key_path(Endpoint, :create), [method: :post], fn f -> %>
-          <%= label f, :name, "Generate API key" %>
+          <%= label f, :name, "Key name" %>
           <div class="form-group">
             <%= text_input f, :name, class: "form-control", placeholder: "Name" %>
             <%= error_tag f, :name %>
           </div>
+          <%= inputs_for f, :permissions, fn f -> %>
+            <%= label f, :domain, "Permission domain" %>
+            <div class="form-group">
+              <%=
+                select(
+                  f,
+                  :domain,
+                  [
+                    API: "api",
+                    "Organization": "repository"
+                  ],
+                  class: "form-control"
+                )
+              %>
+              <%= error_tag f, :domain %>
+            </div>
+            <%= label f, :domain, "Domain resource" %>
+            <div class="form-group">
+              <%=
+                select(
+                  f,
+                  :resource,
+                  [
+                    API: ["Read": "read", "Write": "write"],
+                    "Organization": ["All"] ++ Enum.map(@repositories, & &1.name),
+                  ],
+                  class: "form-control"
+                )
+              %>
+              <%= error_tag f, :resource %>
+            </div>
+          <% end %>
           <button type="submit" class="btn btn-primary">Generate</button>
         <% end %>
       </div>

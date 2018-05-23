@@ -23,8 +23,13 @@ a:focus {
   color: $color-link;
 }
 
+pre {
+  background-color: #f8f8f8;
+}
+
 code {
   padding: 0 4px;
+  background-color: #f8f8f8;
 }
 
 .glyphicon {
