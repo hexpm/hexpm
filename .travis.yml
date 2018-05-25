@@ -20,7 +20,7 @@ before_script:
   - git clone https://github.com/hexpm/hex hex -b ${HEX_VERSION} --depth 1
 script:
   - mix test --include integration
-  - cd hex; mix deps.get && mix test --include integration; cd ..
+  - cd hex; mix deps.get && mix test --include integration
   - mix run priv/repo/seeds.exs
 notifications:
   recipients:
