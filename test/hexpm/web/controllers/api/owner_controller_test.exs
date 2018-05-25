@@ -196,7 +196,7 @@ defmodule Hexpm.Web.API.OwnerControllerTest do
       build_conn()
       |> put_req_header("authorization", key_for(user1))
       |> put("api/packages/#{package.name}/owners/#{user2.username}")
-      |> response(200)
+      |> response(204)
 
       assert [first, second] = assoc(package, :owners) |> Hexpm.Repo.all()
       assert first.username in [user1.username, user2.username]
@@ -217,7 +217,7 @@ defmodule Hexpm.Web.API.OwnerControllerTest do
       build_conn()
       |> put_req_header("authorization", key_for(user1))
       |> put("api/packages/#{package.name}/owners/#{user2.username}", %{level: "maintainer"})
-      |> response(200)
+      |> response(204)
 
       assert Owners.get(package, user2).level == "maintainer"
     end
@@ -243,12 +243,12 @@ defmodule Hexpm.Web.API.OwnerControllerTest do
       build_conn()
       |> put_req_header("authorization", key_for(user1))
       |> put("api/packages/#{package.name}/owners/#{hd(user2.emails).email}")
-      |> response(200)
+      |> response(204)
 
       build_conn()
       |> put_req_header("authorization", key_for(user1))
       |> put("api/packages/#{package.name}/owners/#{hd(user2.emails).email}")
-      |> response(200)
+      |> response(204)
     end
 
     test "add package owner authorizes", %{user2: user2, package: package} do
@@ -368,7 +368,7 @@ defmodule Hexpm.Web.API.OwnerControllerTest do
       build_conn()
       |> put_req_header("authorization", key_for(user1))
       |> put("api/repos/#{repository.name}/packages/#{package.name}/owners/#{user2.username}")
-      |> response(200)
+      |> response(204)
 
       assert Hexpm.Repo.aggregate(assoc(package, :owners), :count, :id) == 2
     end
@@ -385,7 +385,7 @@ defmodule Hexpm.Web.API.OwnerControllerTest do
       build_conn()
       |> put_req_header("authorization", key_for(user2))
       |> put("api/repos/#{repository.name}/packages/#{package.name}/owners/#{user3.username}")
-      |> response(200)
+      |> response(204)
 
       assert Hexpm.Repo.aggregate(assoc(package, :owners), :count, :id) == 2
     end

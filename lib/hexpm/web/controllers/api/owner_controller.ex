@@ -52,10 +52,10 @@ defmodule Hexpm.Web.API.OwnerController do
 
       if new_owner do
         case Owners.add(package, new_owner, params, audit: audit_data(conn)) do
-          {:ok, owner} ->
+          {:ok, _owner} ->
             conn
             |> api_cache(:private)
-            |> render(:show, owner: owner)
+            |> send_resp(204, "")
 
           {:error, :not_member} ->
             errors = %{"email" => "cannot add owner that is not a member of the repository"}
