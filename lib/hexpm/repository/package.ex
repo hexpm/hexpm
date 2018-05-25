@@ -54,29 +54,26 @@ defmodule Hexpm.Repository.Package do
                     @generic_names
                   ])
 
-  defp changeset(package, :create, params) do
-    changeset(package, :update, params)
-    |> unique_constraint(:name, name: "packages_repository_id_name_index")
-  end
+  def build(repository, user, params) do
+    package =
+      build_assoc(repository, :packages)
+      |> Map.put(:repository, repository)
 
-  defp changeset(package, :update, params) do
-    cast(package, params, ~w(name)a)
-    |> cast_embed(:meta, with: &PackageMetadata.changeset(&1, &2, package), required: true)
+    package
+    |> cast(params, ~w(name)a)
+    |> unique_constraint(:name, name: "packages_repository_id_name_index")
     |> validate_required(:name)
     |> validate_length(:name, min: 2)
     |> validate_format(:name, ~r"^[a-z]\w*$")
     |> validate_exclusion(:name, @reserved_names)
-  end
-
-  def build(repository, user, params) do
-    build_assoc(repository, :packages)
-    |> Map.put(:repository, repository)
-    |> changeset(:create, params)
+    |> cast_embed(:meta, with: &PackageMetadata.changeset(&1, &2, package), required: true)
     |> put_assoc(:package_owners, [%PackageOwner{user_id: user.id}])
   end
 
   def update(package, params) do
-    changeset(package, :update, params)
+    cast(package, params, [])
+    |> cast_embed(:meta, with: &PackageMetadata.changeset(&1, &2, package), required: true)
+    |> validate_metadata_name()
   end
 
   def owner(package, user) do
@@ -142,6 +139,17 @@ defmodule Hexpm.Repository.Package do
       select: count(p.id)
     )
     |> search(search)
+  end
+
+  defp validate_metadata_name(changeset) do
+    name = get_field(changeset, :name)
+    meta_name = changeset.params["meta"]["name"]
+
+    if !meta_name || name == meta_name do
+      changeset
+    else
+      add_error(changeset, :name, "metadata does not match package name")
+    end
   end
 
   defp fields(query, nil) do
