@@ -13,12 +13,12 @@ defmodule Hexpm.Web.SignupController do
   def create(conn, params) do
     case Users.add(params["user"], audit: audit_data(conn)) do
       {:ok, _user} ->
+        flash =
+          "A confirmation email has been sent, " <>
+            "you will have access to your account shortly."
+
         conn
-        |> put_flash(
-          :info,
-          "A confirmation email has been sent, you will have access to your account shortly."
-        )
-        |> put_flash(:custom_location, true)
+        |> put_flash(:info, flash)
         |> redirect(to: Routes.page_path(Hexpm.Web.Endpoint, :index))
 
       {:error, changeset} ->

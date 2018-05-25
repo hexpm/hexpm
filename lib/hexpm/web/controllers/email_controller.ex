@@ -11,8 +11,6 @@ defmodule Hexpm.Web.EmailController do
         put_flash(conn, :error, "Your email #{email} failed to verify.")
       end
 
-    conn
-    |> put_flash(:custom_location, true)
-    |> redirect(to: Routes.page_path(Hexpm.Web.Endpoint, :index))
+    redirect(conn, to: Routes.page_path(Hexpm.Web.Endpoint, :index))
   end
 end

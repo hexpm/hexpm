@@ -11,12 +11,19 @@ defmodule Hexpm.Web.PasswordController do
   def show(conn, _params) do
     username = get_session(conn, "reset_username")
     key = get_session(conn, "reset_key")
-    changeset = User.update_password(%User{}, %{})
 
-    conn
-    |> delete_session("reset_username")
-    |> delete_session("reset_key")
-    |> render_show(username, key, changeset)
+    if username && key do
+      changeset = User.update_password(%User{}, %{})
+
+      conn
+      |> delete_session("reset_username")
+      |> delete_session("reset_key")
+      |> render_show(username, key, changeset)
+    else
+      conn
+      |> put_flash(:error, "Invalid password reset key.")
+      |> redirect(to: Routes.page_path(Hexpm.Web.Endpoint, :index))
+    end
   end
 
   def update(conn, params) do
@@ -37,13 +44,11 @@ defmodule Hexpm.Web.PasswordController do
         |> clear_session()
         |> configure_session(renew: true)
         |> put_flash(:info, "Your account password has been changed to your new password.")
-        |> put_flash(:custom_location, true)
         |> redirect(to: Routes.page_path(Hexpm.Web.Endpoint, :index))
 
       :error ->
         conn
         |> put_flash(:error, "Failed to change your password.")
-        |> put_flash(:custom_location, true)
         |> redirect(to: Routes.page_path(Hexpm.Web.Endpoint, :index))
 
       {:error, changeset} ->
