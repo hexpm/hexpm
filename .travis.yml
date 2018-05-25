@@ -21,7 +21,7 @@ before_script:
 script:
   - mix test --include integration
   - cd hex; mix deps.get && mix test --include integration
-  - mix run priv/repo/seeds.exs
+  - cd ..; mix run priv/repo/seeds.exs
 notifications:
   recipients:
   - eric.meadows.jonsson@gmail.com
