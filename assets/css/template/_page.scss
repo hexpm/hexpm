@@ -20,6 +20,10 @@
     @include font-size(16, 35);
     font-weight: 300;
     color: #555;
+
+    p {
+      margin-bottom: 0;
+    }
   }
 
   .first-header {
