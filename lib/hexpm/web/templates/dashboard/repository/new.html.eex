@@ -39,7 +39,7 @@
             <%= form_for @changeset, Routes.repository_path(Endpoint, :create), fn f -> %>
               <div class="form-group">
                 <%= label f, :password_current, "Organization name" %>
-                <%= text_input f, :name, [placeholder: "Only allows lowercase letters and underscore", required: true, pattern: "[a-z]\\w*", "aria-describedby": "name-helpblock"] %>
+                <%= text_input f, :name, [placeholder: "Only lowercase letters and underscore", required: true, pattern: "[a-z]\\w*", "aria-describedby": "name-helpblock"] %>
                 <%= error_tag f, :name %>
                 <span id="name-helpbox" class="help-block">This name will be used when you declare your dependencies in <code>mix.exs</code>.</span>
               </div>
