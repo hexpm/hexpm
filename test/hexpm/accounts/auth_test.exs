@@ -2,6 +2,7 @@ defmodule Hexpm.Accounts.AuthTest do
   use Hexpm.DataCase, async: true
 
   alias Hexpm.Accounts.Auth
+  alias Hexpm.Accounts.Key
 
   setup do
     user = insert(:user, password: Auth.gen_password("password"))
@@ -31,6 +32,16 @@ defmodule Hexpm.Accounts.AuthTest do
       assert auth_key.id == key.id
       assert auth_user.id == user.id
       assert email.id == hd(user.emails).id
+    end
+
+    test "stores key usage information when used", %{user: user} do
+      key = insert(:key, user: user)
+      {:ok, _} = Auth.key_auth(key.user_secret)
+
+      key = Repo.get(Key, key.id)
+      assert key.last_timestamp == "a"
+      assert key.last_user_agent == "Chrome"
+      assert key.last_ip == "127.0.0.1"
     end
 
     test "does not authorize wrong key" do
