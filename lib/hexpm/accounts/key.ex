@@ -9,6 +9,9 @@ defmodule Hexpm.Accounts.Key do
     field :secret_first, :string
     field :secret_second, :string
     field :revoked_at, :naive_datetime
+    field :last_used_at, :naive_datetime
+    field :last_user_agent, :string
+    field :last_ip, :string
     timestamps()
 
     belongs_to :user, User
@@ -26,6 +29,10 @@ defmodule Hexpm.Accounts.Key do
     |> prepare_changes(&unique_name/1)
     |> cast_embed(:permissions, with: &KeyPermission.changeset(&1, user, &2))
     |> put_default_embed(:permissions, [%KeyPermission{domain: "api"}])
+  end
+
+  def usage_info_changeset(key, params) do
+    cast(key, params, ~w(last_used_at last_user_agent last_ip)a)
   end
 
   def build(user, params) do

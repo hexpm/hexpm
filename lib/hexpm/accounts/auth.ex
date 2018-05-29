@@ -3,7 +3,7 @@ defmodule Hexpm.Accounts.Auth do
 
   alias Hexpm.Accounts.{Key, Users}
 
-  def key_auth(user_secret) do
+  def key_auth(user_secret, usage_info \\ %{}) do
     # Database index lookup on the first part of the key and then
     # secure compare on the second part to avoid timing attacks
     app_secret = Application.get_env(:hexpm, :secret)
@@ -28,6 +28,12 @@ defmodule Hexpm.Accounts.Auth do
       key ->
         if Hexpm.Utils.secure_check(key.secret_second, second) do
           if is_nil(key.revoked_at) do
+            changeset = Key.usage_info_changeset(key, %{
+              last_ip: usage_info[:ip],
+              last_used_at: usage_info[:used_at],
+              last_user_agent: usage_info[:user_agent],
+              })
+            Hexpm.Repo.update(changeset)
             {:ok, {key.user, key, find_email(key.user, nil), :key}}
           else
             :revoked

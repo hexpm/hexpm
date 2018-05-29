@@ -94,7 +94,7 @@ defmodule Hexpm.Web.AuthHelpers do
         basic_auth(credentials)
 
       [key] ->
-        key_auth(key)
+        key_auth(key, conn)
 
       _ ->
         {:error, :missing}
@@ -114,12 +114,20 @@ defmodule Hexpm.Web.AuthHelpers do
     end
   end
 
-  defp key_auth(key) do
-    case Auth.key_auth(key) do
+  defp key_auth(key, conn) do
+    case Auth.key_auth(key, usage_info(conn)) do
       {:ok, result} -> {:ok, result}
       :error -> {:error, :key}
       :revoked -> {:error, :revoked_key}
     end
+  end
+
+  defp usage_info(%{remote_ip: remote_ip} = conn) do
+    %{
+      ip: remote_ip,
+      used_at: NaiveDateTime.utc_now(),
+      user_agent: get_req_header(conn, "user-agent")
+    }
   end
 
   def unauthorized(conn, reason) do
