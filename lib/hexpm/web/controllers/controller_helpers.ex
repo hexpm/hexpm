@@ -61,14 +61,10 @@ defmodule Hexpm.Web.ControllerHelpers do
     render_error(conn, 422, errors: errors)
   end
 
-  defp pretty_type({:array, type}), do: "list(#{pretty_type(type)})"
-  defp pretty_type({:map, type}), do: "map(#{pretty_type(type)})"
-  defp pretty_type(type), do: to_string(type)
-
   def translate_errors(changeset) do
     Ecto.Changeset.traverse_errors(changeset, fn
       {"is invalid", opts} ->
-        "expected type #{pretty_type(opts[:type])}"
+        type_error(opts[:type])
 
       {msg, opts} ->
         Enum.reduce(opts, msg, fn {key, value}, msg ->
@@ -81,6 +77,13 @@ defmodule Hexpm.Web.ControllerHelpers do
     end)
     |> normalize_errors()
   end
+
+  defp type_error(Hexpm.Version), do: "is invalid SemVer"
+  defp type_error(type), do: "expected type #{pretty_type(type)}"
+
+  defp pretty_type({:array, type}), do: "list(#{pretty_type(type)})"
+  defp pretty_type({:map, type}), do: "map(#{pretty_type(type)})"
+  defp pretty_type(type), do: type |> inspect() |> String.trim_leading(":")
 
   # Since Changeset.traverse_errors returns `{field: [err], ...}`
   # but Hex client expects `{field: err1, ...}` we normalize to the latter.

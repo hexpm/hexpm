@@ -172,14 +172,10 @@ defmodule Hexpm.Repository.ReleaseTest do
       })
 
     assert %{
-             requirements: [
-               %{
-                 repository: [
-                   {"dependencies can only belong to public repository \"hexpm\"" <> _, []}
-                 ]
-               }
-             ]
-           } = Release.build(package1, meta, "") |> extract_errors()
+             requirements: %{
+               repository: "dependencies can only belong to public repository \"hexpm\"" <> _
+             }
+           } = Release.build(package1, meta, "") |> errors_on()
 
     meta =
       rel_meta(%{
@@ -197,14 +193,10 @@ defmodule Hexpm.Repository.ReleaseTest do
       })
 
     assert %{
-             requirements: [
-               %{
-                 repository: [
-                   {"dependencies can only belong to public repository \"hexpm\"" <> _, []}
-                 ]
-               }
-             ]
-           } = Release.build(package1, meta, "") |> extract_errors()
+             requirements: %{
+               repository: "dependencies can only belong to public repository \"hexpm\"" <> _
+             }
+           } = Release.build(package1, meta, "") |> errors_on()
 
     meta =
       rel_meta(%{
@@ -221,11 +213,8 @@ defmodule Hexpm.Repository.ReleaseTest do
         version: "0.0.1"
       })
 
-    assert %{
-             requirements: [
-               %{dependency: [{"package does not exist" <> _, [validation: :required]}]}
-             ]
-           } = Release.build(package1, meta, "") |> extract_errors()
+    assert %{requirements: %{dependency: "package does not exist" <> _}} =
+             Release.build(package1, meta, "") |> errors_on()
 
     meta =
       rel_meta(%{
@@ -241,11 +230,7 @@ defmodule Hexpm.Repository.ReleaseTest do
         version: "0.0.1"
       })
 
-    assert %{
-             requirements: [
-               %{dependency: [{"package does not exist" <> _, [validation: :required]}]}
-             ]
-           } = Release.build(package1, meta, "") |> extract_errors()
+    assert %{requirements: %{dependency: "package does not exist" <> _}} = Release.build(package1, meta, "") |> errors_on()
 
     meta =
       rel_meta(%{
@@ -262,11 +247,7 @@ defmodule Hexpm.Repository.ReleaseTest do
         version: "0.0.1"
       })
 
-    assert %{
-             requirements: [
-               %{dependency: [{"package does not exist" <> _, [validation: :required]}]}
-             ]
-           } = Release.build(package3_repo, meta, "") |> extract_errors()
+    assert %{requirements: %{dependency: "package does not exist" <> _}} = Release.build(package3_repo, meta, "") |> errors_on()
 
     meta =
       rel_meta(%{
@@ -282,11 +263,7 @@ defmodule Hexpm.Repository.ReleaseTest do
         version: "0.0.1"
       })
 
-    assert %{
-             requirements: [
-               %{dependency: [{"package does not exist" <> _, [validation: :required]}]}
-             ]
-           } = Release.build(package3_repo, meta, "") |> extract_errors()
+    assert %{requirements: %{dependency: "package does not exist" <> _}} = Release.build(package3_repo, meta, "") |> errors_on()
   end
 
   test "validate release", %{packages: [_, package2, package3]} do
@@ -308,15 +285,13 @@ defmodule Hexpm.Repository.ReleaseTest do
 
     meta = %{"version" => "0.1.0", "requirements" => [], "build_tools" => ["mix"]}
 
-    assert %{meta: %{app: [{"can't be blank", _}]}} =
-             Release.build(package3, %{"meta" => meta}, "")
-             |> extract_errors()
+    assert %{meta: %{app: "can't be blank"}} =
+             Release.build(package3, %{"meta" => meta}, "") |> errors_on()
 
     meta = %{"app" => package3.name, "version" => "0.1.0", "requirements" => []}
 
-    assert %{meta: %{build_tools: [{"can't be blank", _}]}} =
-             Release.build(package3, %{"meta" => meta}, "")
-             |> extract_errors()
+    assert %{meta: %{build_tools: "can't be blank"}} =
+             Release.build(package3, %{"meta" => meta}, "") |> errors_on()
 
     meta = %{
       "app" => package3.name,
@@ -325,9 +300,8 @@ defmodule Hexpm.Repository.ReleaseTest do
       "build_tools" => []
     }
 
-    assert %{meta: %{build_tools: [{"can't be blank", _}]}} =
-             Release.build(package3, %{"meta" => meta}, "")
-             |> extract_errors()
+    assert %{meta: %{build_tools: "can't be blank"}} =
+             Release.build(package3, %{"meta" => meta}, "") |> errors_on()
 
     meta = %{
       "app" => package3.name,
@@ -337,35 +311,32 @@ defmodule Hexpm.Repository.ReleaseTest do
       "elixir" => "== == 0.0.1"
     }
 
-    assert %{meta: %{elixir: [{"invalid requirement: \"== == 0.0.1\"", _}]}} =
-             Release.build(package3, %{"meta" => meta}, "")
-             |> extract_errors()
+    assert %{meta: %{elixir: "invalid requirement: \"== == 0.0.1\""}} =
+             Release.build(package3, %{"meta" => meta}, "") |> errors_on()
 
-    assert %{version: [{"is invalid", _}]} =
+    assert %{version: "is invalid SemVer"} =
              Release.build(package2, rel_meta(%{version: "0.1", app: package2.name}), "")
-             |> extract_errors()
+             |> errors_on()
 
     reqs = [%{name: package3.name, app: package3.name, requirement: "~> fail", optional: false}]
 
-    assert %{requirements: [%{requirement: [{"invalid requirement: \"~> fail\"", []}]}]} =
+    assert %{requirements: %{requirement: "invalid requirement: \"~> fail\""}} =
              Release.build(
                package2,
                rel_meta(%{version: "0.1.1", app: package2.name, requirements: reqs}),
                ""
              )
-             |> extract_errors()
+             |> errors_on()
 
     reqs = [%{name: package3.name, app: package3.name, requirement: "~> 1.0", optional: false}]
 
-    errors =
+    assert %{requirements: %{requirement: "Failed to use" <> _}} =
       Release.build(
         package2,
         rel_meta(%{version: "0.1.1", app: package2.name, requirements: reqs}),
         ""
       )
-      |> extract_errors()
-
-    assert [{~s(Failed to use) <> _, []}] = hd(errors[:requirements])[:requirement]
+      |> errors_on()
   end
 
   test "ensure unique build tools", %{packages: [_, _, package3]} do
@@ -473,9 +444,5 @@ defmodule Hexpm.Repository.ReleaseTest do
 
     Release.delete(release) |> Hexpm.Repo.delete!()
     refute Hexpm.Repo.get_by(assoc(package2, :releases), version: "0.0.1")
-  end
-
-  defp extract_errors(%Ecto.Changeset{} = changeset) do
-    Ecto.Changeset.traverse_errors(changeset, fn err -> err end)
   end
 end
