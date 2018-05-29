@@ -41,6 +41,7 @@ defmodule Hexpm.Repository.Releases do
   def publish(repository, package, user, body, meta, checksum, audit: audit_data) do
     Multi.new()
     |> Multi.run(:repository, fn _ -> {:ok, repository} end)
+    |> Multi.run(:reserved_packages, fn _ -> {:ok, reserved_packages(repository, meta)} end)
     |> create_package(repository, package, user, meta)
     |> create_release(package, checksum, meta)
     |> audit_publish(audit_data)
@@ -169,7 +170,12 @@ defmodule Hexpm.Repository.Releases do
         Package.build(repository, user, params)
       end
 
-    Multi.insert_or_update(multi, :package, changeset)
+    # TODO: Use new Multi.insert_or_update with functions
+    Multi.run(multi, :package, fn %{reserved_packages: reserved_packages} ->
+      changeset
+      |> validate_reserved_package(reserved_packages)
+      |> Repo.insert_or_update()
+    end)
   end
 
   defp create_release(multi, package, checksum, meta) do
@@ -184,27 +190,23 @@ defmodule Hexpm.Repository.Releases do
 
     release = package && Repo.get_by(assoc(package, :releases), version: version)
 
-    if release do
-      changeset =
-        %{release | package: package}
-        |> Repo.preload(requirements: Release.requirements(release))
-        |> Release.update(params, checksum)
-
-      multi
-      |> Multi.update(:release, changeset)
-      |> Multi.run(:action, fn _ -> {:ok, :update} end)
-    else
-      multi
-      |> build_release(params, checksum)
-      |> Multi.run(:action, fn _ -> {:ok, :insert} end)
-    end
-  end
-
-  defp build_release(multi, params, checksum) do
     # TODO: Use new Multi.insert with functions
-    Multi.merge(multi, fn %{package: package} ->
-      Multi.insert(Multi.new(), :release, Release.build(package, params, checksum))
+    multi
+    |> Multi.run(:release, fn %{package: package, reserved_packages: reserved_packages} ->
+      changeset =
+        if release do
+          %{release | package: package}
+          |> Repo.preload(requirements: Release.requirements(release))
+          |> Release.update(params, checksum)
+        else
+          Release.build(package, params, checksum)
+        end
+
+      changeset
+      |> validate_reserved_version(reserved_packages)
+      |> Repo.insert_or_update()
     end)
+    |> Multi.run(:action, fn _ -> {:ok, if(release, do: :update, else: :insert)} end)
   end
 
   defp refresh_package_dependants(multi) do
@@ -220,6 +222,38 @@ defmodule Hexpm.Repository.Releases do
       where: p.id == ^package.id,
       where: fragment("NOT EXISTS (SELECT id FROM releases WHERE package_id = ?)", ^package.id)
     )
+  end
+
+  defp reserved_packages(repository, %{"name" => name}) when is_binary(name) do
+    from(
+      r in "reserved_packages",
+      where: r.repository_id == ^repository.id,
+      where: r.name == ^name,
+      select: r.version
+    )
+    |> Repo.all()
+    |> Enum.map(fn version ->
+      if version do
+        {:ok, version} = Version.parse(version)
+        version
+      end
+    end)
+  end
+
+  defp reserved_packages(_repository, _meta) do
+    []
+  end
+
+  defp validate_reserved_package(changeset, reserved) do
+    if nil in reserved do
+      validate_exclusion(changeset, :name, [get_field(changeset, :name)])
+    else
+      changeset
+    end
+  end
+
+  defp validate_reserved_version(changeset, reserved) do
+    validate_exclusion(changeset, :version, reserved)
   end
 
   defp audit_publish(multi, audit_data) do

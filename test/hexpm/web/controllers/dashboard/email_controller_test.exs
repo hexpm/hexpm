@@ -5,7 +5,7 @@ defmodule Hexpm.Web.Dashboard.EmailControllerTest do
   alias Hexpm.Accounts.Users
 
   defp add_email(user, email) do
-    {:ok, user} = Users.add_email(user, %{email: email}, audit: {user, "TEST"})
+    {:ok, user} = Users.add_email(user, %{email: email}, audit: audit_data(user))
     user
   end
 

@@ -36,4 +36,20 @@ defmodule Hexpm.Case do
     Path.join([__DIR__, "..", "fixtures", path])
     |> File.read!()
   end
+
+  def audit_data(user) do
+    {user, "TEST"}
+  end
+
+  def default_meta(name, version) do
+    %{
+      "name" => name,
+      "description" => "description",
+      "licenses" => [],
+      "version" => version,
+      "requirements" => [],
+      "app" => name,
+      "build_tools" => ["mix"]
+    }
+  end
 end
