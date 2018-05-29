@@ -14,17 +14,30 @@ may be case-insensitive.
 You can always republish old documentation with `mix hex.publish docs` to update it. Finally make
 sure you clear your browser cache to ensure you are viewing the latest version.
 
-#### How do I delete a release of my package?
+#### Can packages be removed from the repository?
 
-A package version can be reverted with `mix hex.publish --revert VERSION`. A version can only be
-deleted after an hour of the last release or within 24 hours of the first release of the package.
-This restriction is to ensure the stability of the package ecosystem and so that important,
-depended upon packages are not removed from the repository.
+The Hex repository is immutable, this means that in general you cannot remove or change an already
+published package. This restriction exists to ensure a stable and reliable ecosystem where
+depended on packages suddenly disappear.
 
-A package release can be retired if you do not recommend its use because it does not work, has
-security issues, been deprecated or any other reason. A package is retired with the
-`mix hex.retire` task. A retired package will still be resolvable and fetchable but users of
-the package will get a warning a message and the website will show the release as retired.
+There are exceptions to the immutability rule, a package can be changed or unpublished within 60
+minutes of the package version release or within 24 hours of initial release of the package.
+Packages are unpublished with `mix hex.publish --revert VERSION` and republished by running
+`mix hex.publish` for the same version again.
+
+Instead of unpublishing we recommend to instead retire a package or release. This sholud be done
+if the maintainers no longer recommend its use, because it does not work, has security issues,
+been deprecated or any other reason. A package is retired with the `mix hex.retire` task. A
+retired package will still be resolvable and fetchable but users of the package will get a warning
+a message and the website will show the release as retired.
+
+Additionally, we reserve the right to remove any package for legal or security reasons at any
+time, this decision is made at the sole discretion of the Hex team.
+
+Package checksums ensure that if a package was changed within the 60 minute window that end-users
+are informed if they get a changed version of a package that they have already fetched and locked
+in their lockfile. Packages or package versions that are removed by admins get automatically
+reserved and can never be reused by users.
 
 #### How should I name my packages?
 
