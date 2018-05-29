@@ -53,8 +53,6 @@ You can also add any of the following to the list of application attributes:
   <dd>A list of licenses the project is licensed under. This attribute is required.</dd>
   <dt><code>pkg_name</code></dt>
   <dd>The name of the package in case you want to publish the package with a different name than the application name.</dd>
-  <dt><code>maintainers</code></dt>
-  <dd>A list of names (and/or emails) of maintainers to the project. Optional but highly recommended.</dd>
   <dt><code>links</code></dt>
   <dd>A map where the key is a link name and the value is the link URL. Optional but highly recommended.</dd>
   <dt><code>files</code></dt>

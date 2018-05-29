@@ -50,7 +50,6 @@ Hexpm.Repo.transaction(fn ->
       meta:
         build(
           :package_metadata,
-          maintainers: ["Eric Meadows-Jönsson"],
           licenses: ["Apache 2.0", "MIT"],
           links: %{
             "Github" => "http://example.com/github",
@@ -128,7 +127,6 @@ Hexpm.Repo.transaction(fn ->
       meta:
         build(
           :package_metadata,
-          maintainers: ["Eric Meadows-Jönsson", "José Valim"],
           licenses: ["Apache 2.0"],
           links: %{"Github" => "http://example.com/github"},
           description: lorem
@@ -220,7 +218,6 @@ Hexpm.Repo.transaction(fn ->
       meta:
         build(
           :package_metadata,
-          maintainers: ["Eric Meadows-Jönsson", "José Valim"],
           licenses: [],
           links: %{"Github" => "http://example.com/github"},
           description: lorem
@@ -397,7 +394,6 @@ Hexpm.Repo.transaction(fn ->
       meta:
         build(
           :package_metadata,
-          maintainers: [],
           licenses: [],
           links: %{"Github" => "http://example.com/github"},
           description: lorem
@@ -425,7 +421,6 @@ Hexpm.Repo.transaction(fn ->
       meta:
         build(
           :package_metadata,
-          maintainers: [],
           licenses: [],
           links: %{"Github" => "http://example.com/github"},
           description: lorem
@@ -463,7 +458,6 @@ Hexpm.Repo.transaction(fn ->
         meta:
           build(
             :package_metadata,
-            maintainers: ["Joe Somebody"],
             licenses: [],
             links: %{"Github" => "http://example.com/github"},
             description: lorem
@@ -524,7 +518,6 @@ Hexpm.Repo.transaction(fn ->
       meta:
         build(
           :package_metadata,
-          maintainers: ["Justin Schneck", "Frank Hunleth"],
           licenses: ["Apache 2.0"],
           links: %{"Github" => "http://example.com/github"},
           description: lorem,
@@ -556,7 +549,6 @@ Hexpm.Repo.transaction(fn ->
         meta:
           build(
             :package_metadata,
-            maintainers: ["Justin Schneck", "Frank Hunleth"],
             licenses: ["Apache 2.0"],
             links: %{"Github" => "http://example.com/github"},
             description: lorem,

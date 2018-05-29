@@ -46,8 +46,6 @@ Under the `:package` property are some additional configuration options:
   <dd>The organization the package belongs to. The package will be published to the organization repository, defaults to the global <code>"hexpm"</code> repository.</dd>
   <dt><code>:licenses</code></dt>
   <dd>A list of licenses the project is licensed under. This attribute is required.</dd>
-  <dt><code>:maintainers</code></dt>
-  <dd>A list of names (and/or emails) of maintainers to the project. Optional but highly recommended.</dd>
   <dt><code>:links</code></dt>
   <dd>A map where the key is a link name and the value is the link URL. Optional but highly recommended.</dd>
   <dt><code>:files</code></dt>
@@ -116,8 +114,7 @@ defmodule Postgrex.MixProject do
       # This option is only needed when you don't want to use the OTP application name
       name: "postgrex",
       # These are the default files included in the package
-      files: ["lib", "priv", "mix.exs", "README*", "readme*", "LICENSE*", "license*"],
-      maintainers: ["Eric Meadows-Jönsson", "José Valim"],
+      files: ["lib", "priv", "mix.exs", "README*", "readme*", "LICENSE*", "license*"],=
       licenses: ["Apache 2.0"],
       links: %{"GitHub" => "https://github.com/elixir-ecto/postgrex"}
     ]
