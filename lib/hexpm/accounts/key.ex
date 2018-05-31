@@ -31,10 +31,6 @@ defmodule Hexpm.Accounts.Key do
     |> put_default_embed(:permissions, [%KeyPermission{domain: "api"}])
   end
 
-  def usage_info_changeset(key, params) do
-    cast(key, params, ~w(last_used_at last_user_agent last_ip)a)
-  end
-
   def build(user, params) do
     build_assoc(user, :keys)
     |> changeset(user, params)
@@ -94,6 +90,10 @@ defmodule Hexpm.Accounts.Key do
       |> Base.encode16(case: :lower)
 
     {user_secret, first, second}
+  end
+
+  def update_usage_info(key, params) do
+    cast(key, params, ~w(last_used_at last_user_agent last_ip)a)
   end
 
   defp add_keys(changeset) do

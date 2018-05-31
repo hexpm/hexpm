@@ -39,8 +39,8 @@ defmodule Hexpm.Accounts.AuthTest do
       timestamp = NaiveDateTime.utc_now()
       usage_info = %{
         used_at: timestamp,
-        user_agent: "Chrome",
-        ip: "127.0.0.1"
+        user_agent: ["Chrome"],
+        ip: {127, 0, 0, 1}
       }
       {:ok, _} = Auth.key_auth(key.user_secret, usage_info)
 
