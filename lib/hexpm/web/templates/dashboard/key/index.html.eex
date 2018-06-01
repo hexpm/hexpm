@@ -32,6 +32,15 @@
                 <% end %>
               </td>
             </tr>
+            <tr>
+              <td colspan=3>
+                <small>
+                  Last used: <%= key.last_used_at || "never" %><br>
+                  Last IP: <%= key.last_ip || "N/A" %><br>
+                  Last user agent: <%= key.last_user_agent || "N/A" %>
+                </small>
+              </td>
+            </tr>
           <% end %>
         </table>
       </div>
