@@ -1,6 +1,5 @@
 <%
 description = @package.meta.description
-maintains = @package.meta.maintainers || []
 licenses = @package.meta.licenses || []
 links = Enum.to_list(@package.meta.links || [])
 build_tools = @current_release && @current_release.meta.build_tools || []
@@ -52,11 +51,6 @@ tools = Keyword.take(tools, compatible_tools)
 
 <div class="row">
   <div class="col-md-9">
-    <%= if maintains != [] do %>
-      <h3>Maintainers</h3>
-      <span class="maintainers"><%= Enum.join(maintains, ", ") %></span>
-    <% end %>
-
     <%= if links != [] || (@docs_html_url && @docs_tarball_url) do %>
       <h3>Links</h3>
       <ul class="links">

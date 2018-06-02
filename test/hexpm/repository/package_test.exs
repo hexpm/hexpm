@@ -24,20 +24,19 @@ defmodule Hexpm.Repository.PackageTest do
 
   test "update package", %{user: user, repository: repository} do
     package =
-      Package.build(repository, user, pkg_meta(%{name: "ecto", description: "DSL"}))
+      Package.build(repository, user, pkg_meta(%{name: "ecto", description: "original"}))
       |> Hexpm.Repo.insert!()
 
     Package.update(package, %{
       "meta" => %{
-        "maintainers" => ["eric", "josé"],
-        "description" => "description",
+        "description" => "updated",
         "licenses" => ["Apache"]
       }
     })
     |> Hexpm.Repo.update!()
 
     package = Hexpm.Repo.get_by(Package, name: "ecto")
-    assert length(package.meta.maintainers) == 2
+    assert package.meta.description == "updated"
   end
 
   test "validate blank description in metadata", %{user: user, repository: repository} do
@@ -110,7 +109,6 @@ defmodule Hexpm.Repository.PackageTest do
 
   test "search extra metadata", %{user: user, repository: repository} do
     meta = %{
-      "maintainers" => ["justin"],
       "licenses" => ["apache", "BSD"],
       "links" => %{"github" => "https://github.com", "docs" => "https://hexdocs.pm"},
       "description" => "description",

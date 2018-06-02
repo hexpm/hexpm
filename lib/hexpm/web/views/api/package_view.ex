@@ -21,9 +21,9 @@ defmodule Hexpm.Web.API.PackageView do
       docs_html_url: docs_html_url_for_package(package),
       meta: %{
         description: package.meta.description,
-        licenses: package.meta.licenses,
-        links: package.meta.links,
-        maintainers: package.meta.maintainers
+        licenses: package.meta.licenses || [],
+        links: package.meta.links || %{},
+        maintainers: package.meta.maintainers || []
       }
     }
     |> include_if_loaded(
