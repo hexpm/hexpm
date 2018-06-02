@@ -1,8 +1,7 @@
 defmodule Hexpm.Accounts.AuthTest do
   use Hexpm.DataCase, async: true
 
-  alias Hexpm.Accounts.Auth
-  alias Hexpm.Accounts.Key
+  alias Hexpm.Accounts.{Auth, Key}
 
   setup do
     user = insert(:user, password: Auth.gen_password("password"))
@@ -28,7 +27,7 @@ defmodule Hexpm.Accounts.AuthTest do
     test "authorizes correct key", %{user: user} do
       key = insert(:key, user: user)
 
-      assert {:ok, {auth_user, auth_key, email, :key}} = Auth.key_auth(key.user_secret)
+      assert {:ok, {auth_user, auth_key, email, :key}} = Auth.key_auth(key.user_secret, %{})
       assert auth_key.id == key.id
       assert auth_user.id == user.id
       assert email.id == hd(user.emails).id
@@ -51,12 +50,12 @@ defmodule Hexpm.Accounts.AuthTest do
     end
 
     test "does not authorize wrong key" do
-      assert Auth.key_auth("0123456789abcdef") == :error
+      assert Auth.key_auth("0123456789abcdef", %{}) == :error
     end
 
     test "does not authorize revoked key", %{user: user} do
       key = insert(:key, user: user, revoked_at: ~N"2017-01-01 00:00:00")
-      assert Auth.key_auth(key.user_secret) == :revoked
+      assert Auth.key_auth(key.user_secret, %{}) == :revoked
     end
   end
 end

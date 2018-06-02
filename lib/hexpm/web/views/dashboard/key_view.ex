@@ -25,6 +25,6 @@ defmodule Hexpm.Web.Dashboard.KeyView do
   defp zero_pad(number) do
     number
     |> Integer.to_string
-    |> String.rjust(2, ?0)
+    |> String.pad_leading(2, "0")
   end
 end

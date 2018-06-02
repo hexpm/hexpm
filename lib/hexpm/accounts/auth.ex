@@ -3,7 +3,7 @@ defmodule Hexpm.Accounts.Auth do
 
   alias Hexpm.Accounts.{Key, Users}
 
-  def key_auth(user_secret, usage_info \\ %{}) do
+  def key_auth(user_secret, usage_info) do
     # Database index lookup on the first part of the key and then
     # secure compare on the second part to avoid timing attacks
     app_secret = Application.get_env(:hexpm, :secret)
