@@ -13,4 +13,18 @@ defmodule Hexpm.Web.Dashboard.KeyView do
 
   def permission_name(%KeyPermission{domain: "repositories"}),
     do: "ORGS"
+
+  def formatted_used_at(nil),
+    do: "never"
+
+  def formatted_used_at(%{year: year, month: month, day: day, hour: hour, minute: minute, second: second}) do
+    "#{day |> zero_pad}/#{month |> zero_pad}/#{year |> zero_pad} " <>
+    "#{hour |> zero_pad}:#{minute |> zero_pad}:#{second |> zero_pad}"
+  end
+
+  defp zero_pad(number) do
+    number
+    |> Integer.to_string
+    |> String.rjust(2, ?0)
+  end
 end
