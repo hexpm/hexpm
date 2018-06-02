@@ -87,6 +87,7 @@ defmodule Hexpm.Web.Router do
     get "/policies/privacy", PolicyController, :privacy
     get "/policies/termsofservice", PolicyController, :tos
     get "/policies/copyright", PolicyController, :copyright
+    get "/policies/dispute", PolicyController, :dispute
 
     get "/packages", PackageController, :index
     get "/packages/:name", PackageController, :show

@@ -36,4 +36,13 @@ defmodule Hexpm.Web.PolicyController do
       container: "container page page-sm policies"
     )
   end
+
+  def dispute(conn, _params) do
+    render(
+      conn,
+      "dispute.html",
+      title: "Dispute policy",
+      container: "container page page-sm policies"
+    )
+  end
 end

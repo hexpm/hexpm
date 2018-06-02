@@ -14,7 +14,7 @@ The websites uses Google Analytics to monitor and analyze user behavior. This se
 
 A cookie is a string of information that a website stores on a visitor’s computer, and that the visitor’s browser provides to the website each time the visitor returns.
 
-The websites uses cookies to help identify and track visitors, and their usage of the websites. Website visitors who do not wish to have cookies placed on their computers should set their browsers to refuse cookies before using the websites.
+The websites uses cookies to help identify logged in users. Website visitors who do not wish to have cookies placed on their computers should not log in to the websites.
 
 ### API
 
