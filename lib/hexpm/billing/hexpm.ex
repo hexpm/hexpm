@@ -49,7 +49,7 @@ defmodule Hexpm.Billing.Hexpm do
 
   def pay_invoice(id) do
     result =
-      fn -> post("api/invoices/#{id}/pay", %{}, recv_timeout: 10_000) end
+      fn -> post("api/invoices/#{id}/pay", %{}, recv_timeout: 15_000) end
       |> Hexpm.HTTP.retry("billing")
 
     case result do
