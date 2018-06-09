@@ -118,14 +118,13 @@ defmodule Hexpm.Accounts.Users do
 
   def password_reset_init(name, audit: audit_data) do
     if user = get(name, [:emails]) do
-      {:ok, %{user: user}} =
+      {:ok, %{reset: reset}} =
         Multi.new()
-        |> Multi.update(:user, User.init_password_reset(user))
+        |> Multi.insert(:reset, PasswordReset.changeset(build_assoc(user, :password_resets)))
         |> audit(audit_data, "password.reset.init", nil)
         |> Repo.transaction()
 
-      user
-      |> Emails.password_reset_request()
+      Emails.password_reset_request(user, reset)
       |> Mailer.deliver_now_throttled()
 
       :ok
@@ -135,11 +134,11 @@ defmodule Hexpm.Accounts.Users do
   end
 
   def password_reset_finish(username, key, params, revoke_all_keys?, audit: audit_data) do
-    user = get(username)
+    user = get(username) |> Repo.preload(:password_resets)
 
-    if user && User.password_reset?(user, key) do
+    if user && User.can_reset_password?(user, key) do
       multi =
-        User.password_reset(user, params, revoke_all_keys?)
+        password_reset(user, params, revoke_all_keys?)
         |> audit(audit_data, "password.reset.finish", nil)
 
       case Repo.transaction(multi) do
@@ -152,6 +151,18 @@ defmodule Hexpm.Accounts.Users do
     else
       :error
     end
+  end
+
+  defp password_reset(user, params, revoke_all_keys) do
+    multi =
+      Multi.new()
+      |> Multi.update(:password, User.update_password_no_check(user, params))
+      |> Multi.delete_all(:reset, assoc(user, :password_resets))
+      |> Multi.delete_all(:reset_sessions, Session.by_user(user))
+
+    if revoke_all_keys,
+      do: Multi.update_all(multi, :keys, Key.revoke_all(user), []),
+      else: multi
   end
 
   def add_email(user, params, audit: audit_data) do
@@ -201,7 +212,7 @@ defmodule Hexpm.Accounts.Users do
     multi =
       Multi.new()
       |> email_flag_multi(user, params, :primary, opts)
-      |> Multi.update(:reset, User.disable_password_reset(user))
+      |> Multi.delete_all(:reset, assoc(user, :password_resets))
 
     case Repo.transaction(multi) do
       {:ok, _} -> :ok

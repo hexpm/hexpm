@@ -30,12 +30,12 @@ defmodule Hexpm.Emails do
     |> render("verification.html")
   end
 
-  def password_reset_request(user) do
+  def password_reset_request(user, reset) do
     email()
     |> email_to(user)
     |> subject("Hex.pm - Password reset request")
     |> assign(:username, user.username)
-    |> assign(:key, user.reset_key)
+    |> assign(:key, reset.key)
     |> render("password_reset_request.html")
   end
 
