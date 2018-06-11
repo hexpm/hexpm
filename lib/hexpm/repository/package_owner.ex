@@ -6,6 +6,8 @@ defmodule Hexpm.Repository.PackageOwner do
 
     belongs_to :package, Package
     belongs_to :user, User
+
+    timestamps()
   end
 
   @valid_levels ["full", "maintainer"]
