@@ -118,9 +118,11 @@ defmodule Hexpm.Accounts.Users do
 
   def password_reset_init(name, audit: audit_data) do
     if user = get(name, [:emails]) do
+      changeset = PasswordReset.changeset(build_assoc(user, :password_resets), user)
+
       {:ok, %{reset: reset}} =
         Multi.new()
-        |> Multi.insert(:reset, PasswordReset.changeset(build_assoc(user, :password_resets)))
+        |> Multi.insert(:reset, changeset)
         |> audit(audit_data, "password.reset.init", nil)
         |> Repo.transaction()
 
@@ -134,7 +136,7 @@ defmodule Hexpm.Accounts.Users do
   end
 
   def password_reset_finish(username, key, params, revoke_all_keys?, audit: audit_data) do
-    user = get(username) |> Repo.preload(:password_resets)
+    user = get(username, [:emails, :password_resets])
 
     if user && User.can_reset_password?(user, key) do
       multi =

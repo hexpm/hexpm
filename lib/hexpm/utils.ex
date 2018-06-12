@@ -110,9 +110,9 @@ defmodule Hexpm.Utils do
   @doc """
   Determine if a given timestamp is less than a day (86400 seconds) old
   """
-  def within_last_day(nil), do: false
+  def within_last_day?(nil), do: false
 
-  def within_last_day(a) do
+  def within_last_day?(a) do
     diff = diff(NaiveDateTime.to_erl(a), :calendar.universal_time())
 
     diff < 24 * 60 * 60

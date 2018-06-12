@@ -70,7 +70,11 @@ defmodule Hexpm.Accounts.User do
   end
 
   def can_reset_password?(user, key) do
-    Enum.any?(user.password_resets, &PasswordReset.can_reset?(&1, key))
+    primary_email = email(user, :primary)
+
+    Enum.any?(user.password_resets, fn reset ->
+      PasswordReset.can_reset?(reset, primary_email, key)
+    end)
   end
 
   def email(user, :primary), do: user.emails |> Enum.find(& &1.primary) |> email()
