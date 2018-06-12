@@ -52,7 +52,9 @@ defmodule Hexpm.Web.PasswordController do
         |> redirect(to: Routes.page_path(Hexpm.Web.Endpoint, :index))
 
       {:error, changeset} ->
-        render_show(conn, username, key, changeset)
+        conn
+        |> put_status(400)
+        |> render_show(username, key, changeset)
     end
   end
 

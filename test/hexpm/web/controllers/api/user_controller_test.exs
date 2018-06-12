@@ -143,16 +143,28 @@ defmodule Hexpm.Web.API.UserControllerTest do
   describe "POST /api/users/:name/reset" do
     test "email is sent with reset_token when password is reset" do
       user = insert(:user)
-      # initiate reset request
+
+      # initiate reset requests
       conn = post(build_conn(), "api/users/#{user.username}/reset", %{})
       assert conn.status == 204
 
+      # initiate second reset request
+      conn = post(build_conn(), "api/users/#{user.username}/reset", %{})
+      assert conn.status == 204
+
+      user =
+        Hexpm.Repo.get_by!(User, username: user.username)
+        |> Hexpm.Repo.preload([:emails, :password_resets])
+
+      assert [reset1, reset2] = user.password_resets
+
       # check email was sent with correct token
-      user = Hexpm.Repo.get_by!(User, username: user.username) |> Hexpm.Repo.preload(:emails)
-      assert_delivered_email(Hexpm.Emails.password_reset_request(user))
+      assert_delivered_email(Hexpm.Emails.password_reset_request(user, reset1))
+      assert_delivered_email(Hexpm.Emails.password_reset_request(user, reset2))
 
       # check reset will succeed
-      assert User.password_reset?(user, user.reset_key) == true
+      assert User.can_reset_password?(user, reset1.key)
+      assert User.can_reset_password?(user, reset2.key)
     end
   end
 

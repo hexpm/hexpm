@@ -111,6 +111,7 @@ defmodule Hexpm.Web do
         Accounts.Key,
         Accounts.KeyPermission,
         Accounts.Keys,
+        Accounts.PasswordReset,
         Accounts.Session,
         Accounts.User,
         Accounts.UserHandles,

@@ -1,6 +1,6 @@
 defmodule Hexpm.Web.PasswordControllerTest do
   use Hexpm.ConnCase
-  alias Hexpm.Accounts.{Auth, Session, User}
+  alias Hexpm.Accounts.{Auth, User, Users}
   alias Hexpm.Repo
 
   setup do
@@ -39,11 +39,10 @@ defmodule Hexpm.Web.PasswordControllerTest do
       assert {:ok, {%User{username: ^username}, _, _, :password}} =
                Auth.password_auth(username, "hunter42")
 
-      Repo.insert!(Session.build(%{"user_id" => c.user.id}))
-      Repo.insert!(Session.build(%{"user_id" => c.user.id}))
-
       # initiate password reset (usually done via api)
-      user = User.init_password_reset(c.user) |> Repo.update!()
+      Users.password_reset_init(username, audit: audit_data(c.user))
+
+      user = Repo.preload(c.user, :password_resets)
 
       # chose new password (using token) to `abcd1234`
       conn =
@@ -52,8 +51,9 @@ defmodule Hexpm.Web.PasswordControllerTest do
         |> post("password/new", %{
           "user" => %{
             "username" => user.username,
-            "key" => user.reset_key,
-            "password" => "abcd1234"
+            "key" => hd(user.password_resets).key,
+            "password" => "abcd1234",
+            "password_confirmation" => "abcd1234"
           }
         })
 
@@ -66,6 +66,50 @@ defmodule Hexpm.Web.PasswordControllerTest do
                Auth.password_auth(username, "abcd1234")
 
       refute last_session().data["user_id"]
+    end
+
+    test "do not allow changing password with wrong key", c do
+      username = c.user.username
+      Users.password_reset_init(username, audit: audit_data(c.user))
+      user = Repo.preload(c.user, :password_resets)
+
+      conn =
+        build_conn()
+        |> test_login(user)
+        |> post("password/new", %{
+          "user" => %{
+            "username" => user.username,
+            "key" => "WRONG",
+            "password" => "abcd1234",
+            "password_confirmation" => "abcd1234"
+          }
+        })
+
+      response(conn, 302)
+      assert get_flash(conn, :error) == "Failed to change your password."
+    end
+
+    test "do not allow changing password with changed primary email", c do
+      username = c.user.username
+      Users.password_reset_init(username, audit: audit_data(c.user))
+      user = Repo.preload(c.user, :password_resets)
+      Repo.delete!(hd(c.user.emails))
+      insert(:email, user: user)
+
+      conn =
+        build_conn()
+        |> test_login(user)
+        |> post("password/new", %{
+          "user" => %{
+            "username" => user.username,
+            "key" => hd(user.password_resets).key,
+            "password" => "abcd1234",
+            "password_confirmation" => "abcd1234"
+          }
+        })
+
+      response(conn, 302)
+      assert get_flash(conn, :error) == "Failed to change your password."
     end
   end
 end
