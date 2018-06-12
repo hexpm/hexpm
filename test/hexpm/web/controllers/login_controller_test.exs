@@ -39,7 +39,7 @@ defmodule Hexpm.Web.LoginControllerTest do
 
     conn = post(build_conn(), "login", %{username: c.user.username, password: c.password})
     assert response(conn, 400) =~ "Log in"
-    assert get_flash(conn, "error") == "Email has not been verified yet."
+    assert get_flash(conn, "error") =~ "Email has not been verified yet."
     refute get_session(conn, "user_id")
     refute last_session().data["user_id"]
   end

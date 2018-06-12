@@ -1,0 +1,10 @@
+<h2>Verify email</h2>
+
+<%= form_tag Routes.email_verification_path(Endpoint, :create) do %>
+  <div class="form-group">
+    <label for="email">Email</label>
+    <input type="email" class="form-control" name="email" required>
+  </div>
+
+  <button type="submit" class="btn btn-primary">Submit</button>
+<% end %>

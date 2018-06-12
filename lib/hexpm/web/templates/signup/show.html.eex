@@ -44,5 +44,8 @@
 
   <br><br>
 
-  <p><a href="<%= Routes.login_path(Endpoint, :show) %>">Already have an account?</a></p>
+  <p>
+    <a href="<%= Routes.login_path(Endpoint, :show) %>">Already have an account?</a> |
+    <a href="<%= Routes.email_verification_path(Endpoint, :show) %>">Resend verification email</a>
+  </p>
 <% end %>
