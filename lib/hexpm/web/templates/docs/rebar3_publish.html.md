@@ -65,7 +65,7 @@ You can also add any of the following to the list of application attributes:
 
 A dependency defined with no SCM (`git` or `hg`) will be automatically treated as a Hex dependency. See the [Usage guide](/docs/rebar3_usage) for more details.
 
-Only Hex packages will be included as dependencies of the package, for example Git dependencies will not be included. Additionally, only `default` dependencies will be included, just like how rebar3 will only fetch `default` dependencies when fetching the dependencies of your dependencies.
+Only Hex packages may be used as dependencies of the package. It is not possible to upload packages with Git dependencies. Additionally, only `default` dependencies will be included, just like how rebar3 will only fetch `default` dependencies when fetching the dependencies of your dependencies.
 
 <a id="example-rebar-config-file"></a>
 
