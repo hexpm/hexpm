@@ -11,6 +11,7 @@ defmodule Hexpm.Accounts.Email do
     field :public, :boolean, default: false
     field :gravatar, :boolean, default: false
     field :verification_key, :string
+    field :verification_expiry, :naive_datetime
 
     belongs_to :user, User
 
@@ -36,14 +37,31 @@ defmodule Hexpm.Accounts.Email do
     |> unique_constraint(:email, name: "emails_email_user_key")
     |> put_change(:verified, verified?)
     |> put_change(:verification_key, Auth.gen_key())
+    |> put_change(:verification_expiry, NaiveDateTime.utc_now())
+  end
+
+  def verification(email) do
+    change(email, %{
+      verification_key: Auth.gen_key(),
+      verification_expiry: NaiveDateTime.utc_now()
+    })
   end
 
   def verify?(nil, _key), do: false
-  def verify?(%Email{verification_key: verification_key}, key), do: verify?(verification_key, key)
-  def verify?(verification_key, key), do: Hexpm.Utils.secure_check(verification_key, key)
+
+  def verify?(email, key) do
+    email_key = email.verification_key
+    valid_key? = !!(email_key && Hexpm.Utils.secure_check(email_key, key))
+    within_time? = Hexpm.Utils.within_last_day?(email.verification_expiry)
+    valid_key? and within_time?
+  end
 
   def verify(email) do
-    change(email, %{verified: true, verification_key: nil})
+    change(email, %{
+      verified: true,
+      verification_key: nil,
+      verification_expiry: nil
+    })
     |> unique_constraint(:email, name: "emails_email_key", message: "already in use")
   end
 

@@ -16,6 +16,11 @@ defmodule Hexpm.Accounts.Users do
     |> Repo.preload(preload)
   end
 
+  def get_email(email, preload \\ []) do
+    Repo.get_by(Email, email: email)
+    |> Repo.preload(preload)
+  end
+
   def put_repositories(user) do
     repositories = Map.new(user.repositories, &{&1.id, &1})
 
@@ -58,6 +63,17 @@ defmodule Hexpm.Accounts.Users do
       {:error, :user, changeset, _} ->
         {:error, changeset}
     end
+  end
+
+  def email_verification(user, email) do
+    email =
+      Email.verification(email)
+      |> Repo.update!()
+
+    Emails.verification(user, email)
+    |> Mailer.deliver_now_throttled()
+
+    email
   end
 
   def update_profile(user, params, audit: audit_data) do

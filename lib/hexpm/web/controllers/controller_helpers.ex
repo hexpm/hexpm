@@ -294,7 +294,9 @@ defmodule Hexpm.Web.ControllerHelpers do
   end
 
   def auth_error_message(:wrong), do: "Invalid username, email or password."
-  def auth_error_message(:unconfirmed), do: "Email has not been verified yet."
+
+  def auth_error_message(:unconfirmed),
+    do: "Email has not been verified yet. You can resend the verification email below."
 
   def requires_login(conn, _opts) do
     if logged_in?(conn) do

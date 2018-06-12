@@ -84,7 +84,7 @@ defmodule Hexpm.Accounts.User do
 
   def password_reset?(user, key) do
     !!(user.reset_key && Hexpm.Utils.secure_check(user.reset_key, key) &&
-         Hexpm.Utils.within_last_day(user.reset_expiry))
+         Hexpm.Utils.within_last_day?(user.reset_expiry))
   end
 
   def password_reset(user, params, revoke_all_keys \\ true) do

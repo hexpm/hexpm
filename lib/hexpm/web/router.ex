@@ -65,7 +65,9 @@ defmodule Hexpm.Web.Router do
     get "/password/reset", PasswordResetController, :show
     post "/password/reset", PasswordResetController, :create
 
-    get "/email/verify", EmailController, :verify
+    get "/email/verify", EmailVerificationController, :verify
+    get "/email/verification", EmailVerificationController, :show
+    post "/email/verification", EmailVerificationController, :create
 
     get "/dashboard", DashboardController, :index
 
