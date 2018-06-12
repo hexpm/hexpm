@@ -32,6 +32,7 @@ defmodule Hexpm.Repository.Owners do
         {:ok, %{owner: owner}} ->
           # TODO: Separate email for the affected person
           owners = Enum.map(owners, & &1.user)
+
           Emails.owner_added(package, [user | owners], user)
           |> Mailer.deliver_now_throttled()
 
@@ -68,6 +69,7 @@ defmodule Hexpm.Repository.Owners do
 
         # TODO: Separate email for the affected person
         owners = Enum.map(owners, & &1.user)
+
         Emails.owner_removed(package, owners, owner.user)
         |> Mailer.deliver_now_throttled()
 

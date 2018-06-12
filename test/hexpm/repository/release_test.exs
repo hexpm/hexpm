@@ -230,7 +230,8 @@ defmodule Hexpm.Repository.ReleaseTest do
         version: "0.0.1"
       })
 
-    assert %{requirements: %{dependency: "package does not exist" <> _}} = Release.build(package1, meta, "") |> errors_on()
+    assert %{requirements: %{dependency: "package does not exist" <> _}} =
+             Release.build(package1, meta, "") |> errors_on()
 
     meta =
       rel_meta(%{
@@ -247,7 +248,8 @@ defmodule Hexpm.Repository.ReleaseTest do
         version: "0.0.1"
       })
 
-    assert %{requirements: %{dependency: "package does not exist" <> _}} = Release.build(package3_repo, meta, "") |> errors_on()
+    assert %{requirements: %{dependency: "package does not exist" <> _}} =
+             Release.build(package3_repo, meta, "") |> errors_on()
 
     meta =
       rel_meta(%{
@@ -263,7 +265,8 @@ defmodule Hexpm.Repository.ReleaseTest do
         version: "0.0.1"
       })
 
-    assert %{requirements: %{dependency: "package does not exist" <> _}} = Release.build(package3_repo, meta, "") |> errors_on()
+    assert %{requirements: %{dependency: "package does not exist" <> _}} =
+             Release.build(package3_repo, meta, "") |> errors_on()
   end
 
   test "validate release", %{packages: [_, package2, package3]} do
@@ -331,12 +334,12 @@ defmodule Hexpm.Repository.ReleaseTest do
     reqs = [%{name: package3.name, app: package3.name, requirement: "~> 1.0", optional: false}]
 
     assert %{requirements: %{requirement: "Failed to use" <> _}} =
-      Release.build(
-        package2,
-        rel_meta(%{version: "0.1.1", app: package2.name, requirements: reqs}),
-        ""
-      )
-      |> errors_on()
+             Release.build(
+               package2,
+               rel_meta(%{version: "0.1.1", app: package2.name, requirements: reqs}),
+               ""
+             )
+             |> errors_on()
   end
 
   test "ensure unique build tools", %{packages: [_, _, package3]} do

@@ -28,7 +28,7 @@ if answer =~ ~r/^(Y(es)?)?$/i do
       if yes? do
         permissions =
           Enum.map(key.permissions, fn permission ->
-            if permission.domain == "repository"  do
+            if permission.domain == "repository" do
               Ecto.Changeset.change(permission, resource: new_name)
             else
               permission
@@ -40,7 +40,7 @@ if answer =~ ~r/^(Y(es)?)?$/i do
         |> Ecto.Changeset.put_embed(:permissions, permissions)
         |> Repo.update!()
 
-        IO.puts "#{key.name} - #{key.id}"
+        IO.puts("#{key.name} - #{key.id}")
       end
     end)
   end)
