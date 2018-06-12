@@ -69,7 +69,7 @@ Consult the [ExDoc documentation](https://github.com/elixir-lang/ex_doc#using-ex
 
 A dependency defined with no SCM (`:git` or `:path`) will be automatically treated as a Hex dependency. See the [Usage guide](/docs/usage) for more details.
 
-Only Hex packages will be included as dependencies of the package, for example Git dependencies will not be included. Additionally, only production dependencies will be included, just like how Mix will only fetch production dependencies when fetching the dependencies of your dependencies. Dependencies will be treated as production dependencies when they are defined with no `:only` property or with `only: :prod`.
+Only Hex packages may be used as dependencies of the package. It is not possible to upload packages with Git dependencies. Additionally, only production dependencies will be included, just like how Mix will only fetch production dependencies when fetching the dependencies of your dependencies. Dependencies will be treated as production dependencies when they are defined with no `:only` property or with `only: :prod`.
 
 <a id="example-mix-exs-file"></a>
 
