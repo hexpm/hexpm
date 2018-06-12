@@ -10,9 +10,6 @@ defmodule Hexpm.Accounts.User do
     field :password, :string
     timestamps()
 
-    field :reset_key, :string
-    field :reset_expiry, :naive_datetime
-
     embeds_one :handles, UserHandles, on_replace: :delete
 
     has_many :emails, Email
@@ -22,6 +19,7 @@ defmodule Hexpm.Accounts.User do
     has_many :repositories, through: [:repository_users, :repository]
     has_many :keys, Key
     has_many :audit_logs, AuditLog
+    has_many :password_resets, PasswordReset
   end
 
   @username_regex ~r"^[a-z0-9_\-\.]+$"
@@ -71,32 +69,12 @@ defmodule Hexpm.Accounts.User do
     |> update_change(:password, &Auth.gen_password/1)
   end
 
-  def init_password_reset(user) do
-    key = Auth.gen_key()
-    change(user, %{reset_key: key, reset_expiry: NaiveDateTime.utc_now()})
-  end
+  def can_reset_password?(user, key) do
+    primary_email = email(user, :primary)
 
-  def disable_password_reset(user) do
-    change(user, %{reset_key: nil, reset_expiry: nil})
-  end
-
-  def password_reset?(nil, _key), do: false
-
-  def password_reset?(user, key) do
-    !!(user.reset_key && Hexpm.Utils.secure_check(user.reset_key, key) &&
-         Hexpm.Utils.within_last_day?(user.reset_expiry))
-  end
-
-  def password_reset(user, params, revoke_all_keys \\ true) do
-    multi =
-      Multi.new()
-      |> Multi.update(:password, update_password_no_check(user, params))
-      |> Multi.update(:reset, disable_password_reset(user))
-      |> Multi.delete_all(:reset_sessions, Session.by_user(user))
-
-    if revoke_all_keys,
-      do: Multi.update_all(multi, :keys, Key.revoke_all(user), []),
-      else: multi
+    Enum.any?(user.password_resets, fn reset ->
+      PasswordReset.can_reset?(reset, primary_email, key)
+    end)
   end
 
   def email(user, :primary), do: user.emails |> Enum.find(& &1.primary) |> email()
