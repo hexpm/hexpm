@@ -1,0 +1,10 @@
+<p>You have been added as a member to the <strong><%= @organization %></strong> organization.</p>
+
+<p>Go check out the <a href="<%= raw Routes.organization_url(Endpoint, :show, @organization) %>">organization</a>, if you do not want to join the organization you can leave it from the dashboard. You need to be logged in as <strong><%= @username %></strong> to access it.</p>
+
+<p>Authenticate to the organization by running <pre>mix hex.organization auth <%= @organization %></pre> in your shell. To learn more about private packages and organizations go to the <a href="<%= raw Routes.docs_url(Endpoint, :private) %>">documentation</a>.
+
+<p>
+  --<br>
+  Hex.pm
+</p>

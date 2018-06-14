@@ -97,7 +97,7 @@ defmodule Hexpm.Repository.Resolver do
           from(
             r in Hexpm.Repository.Requirement,
             join: p in assoc(r, :dependency),
-            join: repo in assoc(p, :repository),
+            join: repo in assoc(p, :organization),
             where: r.release_id == ^release_id,
             select: {repo.name, p.name, r.app, r.requirement, r.optional}
           )
@@ -123,7 +123,7 @@ defmodule Hexpm.Repository.Resolver do
     packages_query =
       from(
         p in Hexpm.Repository.Package,
-        join: r in assoc(p, :repository),
+        join: r in assoc(p, :organization),
         select: {p.id, {r.name, p.name}}
       )
 

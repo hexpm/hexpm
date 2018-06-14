@@ -77,7 +77,7 @@ defmodule Hexpm.Web.Plugs do
     assign(conn, :user_agent, "WEB")
   end
 
-  def default_repository(conn, _opts) do
+  def default_organization(conn, _opts) do
     param_set? = Map.has_key?(conn.params, "repository")
 
     case conn.path_info do
@@ -92,7 +92,7 @@ defmodule Hexpm.Web.Plugs do
   def login(conn, _opts) do
     user_id = get_session(conn, "user_id")
 
-    user = user_id && Hexpm.Accounts.Users.get_by_id(user_id, [:emails, :repositories])
+    user = user_id && Hexpm.Accounts.Users.get_by_id(user_id, [:emails, :organizations])
 
     if user do
       assign(conn, :current_user, user)

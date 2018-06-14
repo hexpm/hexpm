@@ -2,10 +2,10 @@ defmodule Hexpm.Web.API.AuthControllerTest do
   use Hexpm.ConnCase, async: true
 
   setup do
-    owned_repo = insert(:repository, public: false)
-    unowned_repo = insert(:repository, public: false)
+    owned_repo = insert(:organization, public: false)
+    unowned_repo = insert(:organization, public: false)
     user = insert(:user)
-    insert(:repository_user, repository: owned_repo, user: user)
+    insert(:organization_user, organization: owned_repo, user: user)
 
     full_key =
       insert(
@@ -195,8 +195,8 @@ defmodule Hexpm.Web.API.AuthControllerTest do
     end
 
     test "authenticate repository key against repository without active billing", %{user: user} do
-      repo = insert(:repository, billing_active: false)
-      insert(:repository_user, repository: repo, user: user)
+      repo = insert(:organization, billing_active: false)
+      insert(:organization_user, organization: repo, user: user)
 
       key =
         insert(

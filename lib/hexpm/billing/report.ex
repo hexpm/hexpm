@@ -2,7 +2,7 @@ defmodule Hexpm.Billing.Report do
   use GenServer
   import Ecto.Query, only: [from: 2]
   alias Hexpm.Repo
-  alias Hexpm.Repository.Repository
+  alias Hexpm.Accounts.Organization
 
   def start_link(opts \\ []) do
     GenServer.start_link(__MODULE__, opts, opts)
@@ -15,10 +15,10 @@ defmodule Hexpm.Billing.Report do
 
   def handle_info(:update, opts) do
     report = report()
-    repositories = repositories()
+    organizations = organizations()
 
-    set_active(repositories, report)
-    set_inactive(repositories, report)
+    set_active(organizations, report)
+    set_inactive(organizations, report)
 
     Process.send_after(self(), :update, opts[:interval])
     {:noreply, opts}
@@ -29,14 +29,14 @@ defmodule Hexpm.Billing.Report do
     |> MapSet.new()
   end
 
-  defp repositories() do
-    from(r in Repository, select: {r.name, r.billing_active})
+  defp organizations() do
+    from(r in Organization, select: {r.name, r.billing_active})
     |> Repo.all()
   end
 
-  defp set_active(repositories, report) do
+  defp set_active(organizations, report) do
     to_update =
-      Enum.flat_map(repositories, fn {name, active} ->
+      Enum.flat_map(organizations, fn {name, active} ->
         if not active and name in report do
           [name]
         else
@@ -45,14 +45,14 @@ defmodule Hexpm.Billing.Report do
       end)
 
     if to_update != [] do
-      from(r in Repository, where: r.name in ^to_update)
+      from(r in Organization, where: r.name in ^to_update)
       |> Repo.update_all(set: [billing_active: true])
     end
   end
 
-  defp set_inactive(repositories, report) do
+  defp set_inactive(organizations, report) do
     to_update =
-      Enum.flat_map(repositories, fn {name, active} ->
+      Enum.flat_map(organizations, fn {name, active} ->
         if active and name not in report do
           [name]
         else
@@ -61,7 +61,7 @@ defmodule Hexpm.Billing.Report do
       end)
 
     if to_update != [] do
-      from(r in Repository, where: r.name in ^to_update)
+      from(r in Organization, where: r.name in ^to_update)
       |> Repo.update_all(set: [billing_active: false])
     end
   end

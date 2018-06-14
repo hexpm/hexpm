@@ -81,7 +81,7 @@ defmodule Hexpm.Repository.Release do
     do: "can only delete a release up to one hour after creation"
 
   defp editable?(%Release{inserted_at: nil}), do: true
-  defp editable?(%Release{package: %Package{repository_id: id}}) when id != 1, do: true
+  defp editable?(%Release{package: %Package{organization_id: id}}) when id != 1, do: true
 
   defp editable?(release) do
     within_seconds?(release.inserted_at, @one_hour) or
@@ -163,7 +163,7 @@ defmodule Hexpm.Repository.Release do
     from(
       req in assoc(release, :requirements),
       join: package in assoc(req, :dependency),
-      join: repo in assoc(package, :repository),
+      join: repo in assoc(package, :organization),
       order_by: [repo.name, package.name],
       select: %{req | name: package.name, repository: repo.name}
     )
@@ -173,11 +173,11 @@ defmodule Hexpm.Repository.Release do
     from(r in Release, select: count(r.id))
   end
 
-  def recent(repository, count) do
+  def recent(organization, count) do
     from(
       r in Hexpm.Repository.Release,
       join: p in assoc(r, :package),
-      where: p.repository_id == ^repository.id,
+      where: p.organization_id == ^organization.id,
       order_by: [desc: r.inserted_at],
       limit: ^count,
       select: {p.name, r.version, r.inserted_at, p.meta}

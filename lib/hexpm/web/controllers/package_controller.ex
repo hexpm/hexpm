@@ -21,14 +21,14 @@ defmodule Hexpm.Web.PackageController do
           nil
       end
 
-    repositories = Users.all_repositories(conn.assigns.current_user)
+    organizations = Users.all_organizations(conn.assigns.current_user)
     sort = sort(params["sort"])
     page_param = Hexpm.Utils.safe_int(params["page"]) || 1
-    package_count = Packages.count(repositories, filter)
+    package_count = Packages.count(organizations, filter)
     page = Hexpm.Utils.safe_page(page_param, package_count, @packages_per_page)
-    packages = fetch_packages(repositories, page, @packages_per_page, filter, sort)
+    packages = fetch_packages(organizations, page, @packages_per_page, filter, sort)
     downloads = Packages.packages_downloads_with_all_views(packages)
-    exact_match = exact_match(repositories, search)
+    exact_match = exact_match(organizations, search)
 
     render(
       conn,
@@ -51,13 +51,13 @@ defmodule Hexpm.Web.PackageController do
   def show(conn, params) do
     params = fixup_params(params)
     %{"repository" => repository, "name" => name} = params
-    repositories = Users.all_repositories(conn.assigns.current_user)
+    organizations = Users.all_organizations(conn.assigns.current_user)
 
-    if repository in Enum.map(repositories, & &1.name) do
-      repository = Repositories.get(repository)
-      package = repository && Packages.get(repository, name)
+    if repository in Enum.map(organizations, & &1.name) do
+      organization = Organizations.get(repository)
+      package = organization && Packages.get(organization, name)
 
-      # Should have access even though repository does not have active billing
+      # Should have access even though organization does not have active billing
       if package do
         releases = Releases.all(package)
 
@@ -70,7 +70,7 @@ defmodule Hexpm.Web.PackageController do
           end
 
         if release do
-          package(conn, repositories, package, releases, release, type)
+          package(conn, organizations, package, releases, release, type)
         end
       end
     end || not_found(conn)
@@ -84,7 +84,7 @@ defmodule Hexpm.Web.PackageController do
     Enum.find(releases, &(to_string(&1.version) == version))
   end
 
-  defp package(conn, repositories, package, releases, release, type) do
+  defp package(conn, organizations, package, releases, release, type) do
     release = Releases.preload(release, [:requirements, :downloads])
     latest_release_with_docs = Enum.find(releases, & &1.has_docs)
 
@@ -110,12 +110,12 @@ defmodule Hexpm.Web.PackageController do
     owners = Owners.all(package, user: :emails)
 
     dependants =
-      Packages.search(repositories, 1, 20, "depends:#{package.name}", :recent_downloads, [
+      Packages.search(organizations, 1, 20, "depends:#{package.name}", :recent_downloads, [
         :name,
-        :repository_id
+        :organization_id
       ])
 
-    dependants_count = Packages.count(repositories, "depends:#{package.name}")
+    dependants_count = Packages.count(organizations, "depends:#{package.name}")
 
     render(
       conn,
@@ -136,25 +136,25 @@ defmodule Hexpm.Web.PackageController do
     )
   end
 
-  defp fetch_packages(repositories, page, packages_per_page, search, sort) do
-    packages = Packages.search(repositories, page, packages_per_page, search, sort, nil)
+  defp fetch_packages(organizations, page, packages_per_page, search, sort) do
+    packages = Packages.search(organizations, page, packages_per_page, search, sort, nil)
     Packages.attach_versions(packages)
   end
 
-  defp exact_match(_repositories, nil) do
+  defp exact_match(_organizations, nil) do
     nil
   end
 
-  defp exact_match(repositories, search) do
+  defp exact_match(organizations, search) do
     case String.split(search, "/", parts: 2) do
-      [repository, package] ->
-        if repository in Enum.map(repositories, & &1.name) do
-          Packages.get(repository, package)
+      [organization, package] ->
+        if organization in Enum.map(organizations, & &1.name) do
+          Packages.get(organization, package)
         end
 
       _ ->
         try do
-          Packages.get(repositories, search)
+          Packages.get(organizations, search)
         rescue
           Ecto.MultipleResultsError ->
             nil

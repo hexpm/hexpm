@@ -14,13 +14,13 @@ defmodule Hexpm.Repository.Owners do
   end
 
   def add(package, user, params, audit: audit_data) do
-    repository = package.repository
+    organization = package.organization
     owners = all(package, user: :emails)
     owner = Enum.find(owners, &(&1.user_id == user.id))
     owner = owner || %PackageOwner{package_id: package.id, user_id: user.id}
     changeset = PackageOwner.changeset(owner, params)
 
-    if repository.public or Repositories.access?(repository, user, "read") do
+    if organization.public or Organizations.access?(organization, user, "read") do
       multi =
         Multi.new()
         |> Multi.insert_or_update(:owner, changeset)
@@ -54,7 +54,7 @@ defmodule Hexpm.Repository.Owners do
       !owner ->
         {:error, :not_owner}
 
-      length(owners) == 1 and package.repository.public ->
+      length(owners) == 1 and package.organization.public ->
         {:error, :last_owner}
 
       true ->

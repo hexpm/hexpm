@@ -1,24 +1,24 @@
-defmodule Hexpm.Web.Dashboard.RepositoryView do
+defmodule Hexpm.Web.Dashboard.OrganizationView do
   use Hexpm.Web, :view
   alias Hexpm.Web.DashboardView
 
-  defp repository_roles_selector() do
-    Enum.map(repository_roles(), fn {name, id, _title} ->
+  defp organization_roles_selector() do
+    Enum.map(organization_roles(), fn {name, id, _title} ->
       {name, id}
     end)
   end
 
-  defp repository_roles() do
+  defp organization_roles() do
     [
-      {"Admin", "admin", "This role has full control of the repository"},
-      {"Write", "write", "This role has package owner access to all repository packages"},
-      {"Read", "read", "This role can fetch all repository packages"}
+      {"Admin", "admin", "This role has full control of the organization"},
+      {"Write", "write", "This role has package owner access to all organization packages"},
+      {"Read", "read", "This role can fetch all organization packages"}
     ]
   end
 
-  defp repository_role(id) do
-    Enum.find_value(repository_roles(), fn {name, repository_id, _title} ->
-      if id == repository_id do
+  defp organization_role(id) do
+    Enum.find_value(organization_roles(), fn {name, organization_id, _title} ->
+      if id == organization_id do
         name
       end
     end)
@@ -66,12 +66,12 @@ defmodule Hexpm.Web.Dashboard.RepositoryView do
     "(\"#{name}\" discount for #{percent_off}% of cost)"
   end
 
-  defp invoice_status(%{"paid" => true}, _repository), do: "Paid"
-  defp invoice_status(%{"forgiven" => true}, _repository), do: "Forgiven"
-  defp invoice_status(%{"paid" => false, "attempted" => false}, _repository), do: "Pending"
+  defp invoice_status(%{"paid" => true}, _organization), do: "Paid"
+  defp invoice_status(%{"forgiven" => true}, _organization), do: "Forgiven"
+  defp invoice_status(%{"paid" => false, "attempted" => false}, _organization), do: "Pending"
 
-  defp invoice_status(%{"paid" => false, "attempted" => true, "id" => invoice_id}, repository) do
-    form_tag(Routes.repository_path(Endpoint, :pay_invoice, repository, invoice_id)) do
+  defp invoice_status(%{"paid" => false, "attempted" => true, "id" => invoice_id}, organization) do
+    form_tag(Routes.organization_path(Endpoint, :pay_invoice, organization, invoice_id)) do
       submit("Pay now", class: "btn btn-primary")
     end
   end

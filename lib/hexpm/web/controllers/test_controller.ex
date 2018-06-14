@@ -49,10 +49,10 @@ defmodule Hexpm.Web.TestController do
   end
 
   def repo(conn, params) do
-    {:ok, repository} =
-      Repositories.create(conn.assigns.current_user, params, audit: {%User{}, "TEST"})
+    {:ok, organization} =
+      Organizations.create(conn.assigns.current_user, params, audit: {%User{}, "TEST"})
 
-    repository
+    organization
     |> Ecto.Changeset.change(%{billing_active: true})
     |> Hexpm.Repo.update!()
 

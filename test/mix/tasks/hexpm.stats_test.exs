@@ -5,9 +5,9 @@ defmodule Mix.Tasks.Hexpm.StatsTest do
   alias Hexpm.Store
 
   setup do
-    repository1 = insert(:repository)
+    organization1 = insert(:organization)
     [package1, package2, package3] = insert_list(3, :package)
-    package4 = insert(:package, repository_id: repository1.id)
+    package4 = insert(:package, organization_id: organization1.id)
     insert(:release, package: package1, version: "0.0.1")
     insert(:release, package: package1, version: "0.0.2")
     insert(:release, package: package1, version: "0.1.0")
@@ -18,7 +18,7 @@ defmodule Mix.Tasks.Hexpm.StatsTest do
     insert(:release, package: package4, version: "0.0.1")
 
     %{
-      repository1: repository1,
+      organization1: organization1,
       package1: package1,
       package2: package2,
       package3: package3,
@@ -27,7 +27,7 @@ defmodule Mix.Tasks.Hexpm.StatsTest do
   end
 
   test "counts all downloads", %{
-    repository1: repository1,
+    organization1: organization1,
     package1: package1,
     package2: package2,
     package4: package4
@@ -43,7 +43,7 @@ defmodule Mix.Tasks.Hexpm.StatsTest do
     logfile1 =
       read_log(
         "fastly_logs_1.txt",
-        repository1: repository1.name,
+        repository1: organization1.name,
         package1: package1.name,
         package2: package2.name,
         package4: package4.name
@@ -53,7 +53,7 @@ defmodule Mix.Tasks.Hexpm.StatsTest do
     logfile2 =
       read_log(
         "fastly_logs_2.txt",
-        repository1: repository1.name,
+        repository1: organization1.name,
         package1: package1.name,
         package2: package2.name,
         package4: package4.name

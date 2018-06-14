@@ -8,15 +8,16 @@ defmodule Hexpm.Repository.RegistryBuilder do
   import Ecto.Query, only: [from: 2]
   require Hexpm.Repo
   require Logger
-  alias Hexpm.Repository.{Package, Release, Repository, Requirement, Install}
+  alias Hexpm.Accounts.Organization
+  alias Hexpm.Repository.{Package, Release, Requirement, Install}
 
   @ets_table :hex_registry
   @version 4
   @lock_timeout 30_000
   @transaction_timeout 60_000
 
-  def full_build(repository) do
-    locked_build(fn -> full(repository) end)
+  def full_build(organization) do
+    locked_build(fn -> full(organization) end)
   end
 
   def partial_build(action) do
@@ -33,42 +34,42 @@ defmodule Hexpm.Repository.RegistryBuilder do
     )
   end
 
-  defp full(repository) do
+  defp full(organization) do
     log(:full, fn ->
-      {packages, releases, installs} = tuples(repository)
+      {packages, releases, installs} = tuples(organization)
 
-      ets = if repository.id == 1, do: build_ets(packages, releases, installs)
-      new = build_new(repository, packages, releases)
-      upload_files(repository, ets, new)
+      ets = if organization.id == 1, do: build_ets(packages, releases, installs)
+      new = build_new(organization, packages, releases)
+      upload_files(organization, ets, new)
 
       {_, _, packages} = new
 
       new_keys =
-        Enum.map(packages, &repository_store_key(repository, "packages/#{elem(&1, 0)}"))
+        Enum.map(packages, &organization_store_key(organization, "packages/#{elem(&1, 0)}"))
         |> Enum.sort()
 
       old_keys =
-        Hexpm.Store.list(nil, :s3_bucket, repository_store_key(repository, "packages/"))
+        Hexpm.Store.list(nil, :s3_bucket, organization_store_key(organization, "packages/"))
         |> Enum.sort()
 
       Hexpm.Store.delete_many(nil, :s3_bucket, old_keys -- new_keys)
 
       Hexpm.CDN.purge_key(:fastly_hexrepo, [
         "registry",
-        repository_cdn_key(repository, "registry")
+        organization_cdn_key(organization, "registry")
       ])
     end)
   end
 
-  defp partial({:v1, %Repository{id: 1} = repository}) do
+  defp partial({:v1, %Organization{id: 1} = organization}) do
     log(:v1, fn ->
-      {packages, releases, installs} = tuples(repository)
+      {packages, releases, installs} = tuples(organization)
       ets = build_ets(packages, releases, installs)
-      upload_files(repository, ets, nil)
+      upload_files(organization, ets, nil)
 
       Hexpm.CDN.purge_key(:fastly_hexrepo, [
         "registry-index",
-        repository_cdn_key(repository, "registry-index")
+        organization_cdn_key(organization, "registry-index")
       ])
     end)
   end
@@ -76,43 +77,45 @@ defmodule Hexpm.Repository.RegistryBuilder do
   defp partial({:publish, package}) do
     log(:publish, fn ->
       package_name = package.name
-      repository = package.repository
-      {packages, releases, installs} = tuples(repository)
+      organization = package.organization
+      {packages, releases, installs} = tuples(organization)
       release_map = Map.new(releases)
 
-      ets = if repository.id == 1, do: build_ets(packages, releases, installs)
+      ets = if organization.id == 1, do: build_ets(packages, releases, installs)
       names = build_names(packages)
       versions = build_versions(packages, release_map)
 
       case Enum.find(packages, &match?({^package_name, _}, &1)) do
         {^package_name, [package_versions]} ->
-          package_object = build_package(repository, package_name, package_versions, release_map)
-          upload_files(repository, ets, {names, versions, [{package_name, package_object}]})
+          package_object =
+            build_package(organization, package_name, package_versions, release_map)
+
+          upload_files(organization, ets, {names, versions, [{package_name, package_object}]})
 
         nil ->
-          upload_files(repository, ets, {names, versions, []})
+          upload_files(organization, ets, {names, versions, []})
 
           Hexpm.Store.delete(
             nil,
             :s3_bucket,
-            repository_store_key(repository, "packages/#{package_name}")
+            organization_store_key(organization, "packages/#{package_name}")
           )
       end
 
       Hexpm.CDN.purge_key(:fastly_hexrepo, [
         "registry-index",
         "registry-package-#{package_name}",
-        repository_cdn_key(repository, "registry-index"),
-        repository_cdn_key(repository, "registry-package", package_name)
+        organization_cdn_key(organization, "registry-index"),
+        organization_cdn_key(organization, "registry-package", package_name)
       ])
     end)
   end
 
-  defp tuples(repository) do
-    installs = installs(repository)
-    requirements = requirements(repository)
-    releases = releases(repository)
-    packages = packages(repository)
+  defp tuples(organization) do
+    installs = installs(organization)
+    requirements = requirements(organization)
+    releases = releases(organization)
+    packages = packages(organization)
     package_tuples = package_tuples(packages, releases)
     release_tuples = release_tuples(packages, releases, requirements)
 
@@ -169,13 +172,13 @@ defmodule Hexpm.Repository.RegistryBuilder do
     :hex_registry.sign_protobuf(contents, private_key)
   end
 
-  defp build_new(repository, packages, releases) do
+  defp build_new(organization, packages, releases) do
     release_map = Map.new(releases)
 
     {
       build_names(packages),
       build_versions(packages, release_map),
-      build_packages(repository, packages, release_map)
+      build_packages(organization, packages, release_map)
     }
   end
 
@@ -213,14 +216,14 @@ defmodule Hexpm.Repository.RegistryBuilder do
     end)
   end
 
-  defp build_packages(repository, packages, release_map) do
+  defp build_packages(organization, packages, release_map) do
     Enum.map(packages, fn {name, [versions]} ->
-      contents = build_package(repository, name, versions, release_map)
+      contents = build_package(organization, name, versions, release_map)
       {name, contents}
     end)
   end
 
-  defp build_package(repository, name, versions, release_map) do
+  defp build_package(organization, name, versions, release_map) do
     releases =
       Enum.map(versions, fn version ->
         [deps, checksum, _tools, retirement] = release_map[{name, version}]
@@ -230,7 +233,7 @@ defmodule Hexpm.Repository.RegistryBuilder do
             map = %{package: dep, requirement: req || ">= 0.0.0"}
             map = if opt, do: Map.put(map, :optional, true), else: map
             map = if app != dep, do: Map.put(map, :app, app), else: map
-            map = if repository.name != repo, do: Map.put(map, :repository, repo), else: map
+            map = if organization.name != repo, do: Map.put(map, :organization, repo), else: map
             map
           end)
 
@@ -264,8 +267,8 @@ defmodule Hexpm.Repository.RegistryBuilder do
   defp retirement_reason("deprecated"), do: :RETIRED_DEPRECATED
   defp retirement_reason("renamed"), do: :RETIRED_RENAMED
 
-  defp upload_files(repository, v1, v2) do
-    (v2_objects(v2, repository) ++ v1_objects(v1, repository))
+  defp upload_files(organization, v1, v2) do
+    (v2_objects(v2, organization) ++ v1_objects(v1, organization))
     |> Task.async_stream(
       fn {key, data, opts} ->
         Hexpm.Store.put(nil, :s3_bucket, key, data, opts)
@@ -276,56 +279,56 @@ defmodule Hexpm.Repository.RegistryBuilder do
     |> Stream.run()
   end
 
-  defp v1_objects(nil, _repository), do: []
+  defp v1_objects(nil, _organization), do: []
 
-  defp v1_objects({ets, signature}, repository) do
+  defp v1_objects({ets, signature}, organization) do
     surrogate_key =
-      repository_cdn_key(repository, "registry") <>
-        " " <> repository_cdn_key(repository, "registry-index")
+      organization_cdn_key(organization, "registry") <>
+        " " <> organization_cdn_key(organization, "registry-index")
 
     meta = [{"surrogate-key", surrogate_key}, {"surrogate-control", "public, max-age=604800"}]
     index_meta = [{"signature", signature} | meta]
     opts = [cache_control: "public, max-age=600", meta: meta]
     index_opts = Keyword.put(opts, :meta, index_meta)
 
-    ets_object = {repository_store_key(repository, "registry.ets.gz"), ets, index_opts}
+    ets_object = {organization_store_key(organization, "registry.ets.gz"), ets, index_opts}
 
     signature_object =
-      {repository_store_key(repository, "registry.ets.gz.signed"), signature, opts}
+      {organization_store_key(organization, "registry.ets.gz.signed"), signature, opts}
 
     [ets_object, signature_object]
   end
 
-  defp v2_objects(nil, _repository), do: []
+  defp v2_objects(nil, _organization), do: []
 
-  defp v2_objects({names, versions, packages}, repository) do
+  defp v2_objects({names, versions, packages}, organization) do
     surrogate_key =
-      repository_cdn_key(repository, "registry") <>
-        " " <> repository_cdn_key(repository, "registry-index")
+      organization_cdn_key(organization, "registry") <>
+        " " <> organization_cdn_key(organization, "registry-index")
 
     meta = [{"surrogate-key", surrogate_key}, {"surrogate-control", "public, max-age=604800"}]
-    opts = [cache_control: cache_control(repository), meta: meta]
+    opts = [cache_control: cache_control(organization), meta: meta]
     index_opts = Keyword.put(opts, :meta, meta)
 
-    names_object = {repository_store_key(repository, "names"), names, index_opts}
-    versions_object = {repository_store_key(repository, "versions"), versions, index_opts}
+    names_object = {organization_store_key(organization, "names"), names, index_opts}
+    versions_object = {organization_store_key(organization, "versions"), versions, index_opts}
 
     package_objects =
       Enum.map(packages, fn {name, contents} ->
         surrogate_key =
-          repository_cdn_key(repository, "registry") <>
-            " " <> repository_cdn_key(repository, "registry-package", name)
+          organization_cdn_key(organization, "registry") <>
+            " " <> organization_cdn_key(organization, "registry-package", name)
 
         meta = [{"surrogate-key", surrogate_key}]
         opts = Keyword.put(opts, :meta, meta)
-        {repository_store_key(repository, "packages/#{name}"), contents, opts}
+        {organization_store_key(organization, "packages/#{name}"), contents, opts}
       end)
 
     package_objects ++ [names_object, versions_object]
   end
 
-  defp cache_control(%Repository{id: 1}), do: "public, max-age=600"
-  defp cache_control(%Repository{}), do: "private, max-age=600"
+  defp cache_control(%Organization{id: 1}), do: "public, max-age=600"
+  defp cache_control(%Organization{}), do: "private, max-age=600"
 
   defp package_tuples(packages, releases) do
     Enum.reduce(releases, %{}, fn {_, vsn, pkg_id, _, _, _}, map ->
@@ -369,21 +372,21 @@ defmodule Hexpm.Repository.RegistryBuilder do
     |> Enum.sort()
   end
 
-  defp packages(repository) do
+  defp packages(organization) do
     from(
       p in Package,
-      where: p.repository_id == ^repository.id,
+      where: p.organization_id == ^organization.id,
       select: {p.id, p.name}
     )
     |> Hexpm.Repo.all()
     |> Enum.into(%{})
   end
 
-  defp releases(repository) do
+  defp releases(organization) do
     from(
       r in Release,
       join: p in assoc(r, :package),
-      where: p.repository_id == ^repository.id,
+      where: p.organization_id == ^organization.id,
       select: {
         r.id,
         r.version,
@@ -396,15 +399,15 @@ defmodule Hexpm.Repository.RegistryBuilder do
     |> Hexpm.Repo.all()
   end
 
-  defp requirements(repository) do
+  defp requirements(organization) do
     reqs =
       from(
         req in Requirement,
         join: rel in assoc(req, :release),
         join: parent in assoc(rel, :package),
         join: dep in assoc(req, :dependency),
-        join: dep_repo in assoc(dep, :repository),
-        where: parent.repository_id == ^repository.id,
+        join: dep_repo in assoc(dep, :organization),
+        where: parent.organization_id == ^organization.id,
         select: {
           req.release_id,
           dep_repo.name,
@@ -422,37 +425,37 @@ defmodule Hexpm.Repository.RegistryBuilder do
     end)
   end
 
-  defp installs(%Repository{id: 1}) do
+  defp installs(%Organization{id: 1}) do
     Install.all()
     |> Hexpm.Repo.all()
     |> Enum.map(&{&1.hex, &1.elixirs})
   end
 
-  defp installs(%Repository{}) do
+  defp installs(%Organization{}) do
     []
   end
 
-  defp repository_cdn_key(%Repository{id: 1}, key) do
+  defp organization_cdn_key(%Organization{id: 1}, key) do
     key
   end
 
-  defp repository_cdn_key(%Repository{name: name}, key) do
+  defp organization_cdn_key(%Organization{name: name}, key) do
     "#{key}/#{name}"
   end
 
-  defp repository_cdn_key(%Repository{id: 1}, prefix, suffix) do
+  defp organization_cdn_key(%Organization{id: 1}, prefix, suffix) do
     "#{prefix}/#{suffix}"
   end
 
-  defp repository_cdn_key(%Repository{name: name}, prefix, suffix) do
+  defp organization_cdn_key(%Organization{name: name}, prefix, suffix) do
     "#{prefix}/#{name}/#{suffix}"
   end
 
-  defp repository_store_key(%Repository{id: 1}, key) do
+  defp organization_store_key(%Organization{id: 1}, key) do
     key
   end
 
-  defp repository_store_key(%Repository{name: name}, key) do
+  defp organization_store_key(%Organization{name: name}, key) do
     "repos/#{name}/#{key}"
   end
 end

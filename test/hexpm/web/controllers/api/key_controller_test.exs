@@ -6,9 +6,9 @@ defmodule Hexpm.Web.API.KeyControllerTest do
   setup do
     eric = create_user("eric", "eric@mail.com", "ericeric")
     other = create_user("other", "other@mail.com", "otherother")
-    repo = insert(:repository)
-    unowned_repo = insert(:repository)
-    insert(:repository_user, repository: repo, user: eric)
+    repo = insert(:organization)
+    unowned_repo = insert(:organization)
+    insert(:organization_user, organization: repo, user: eric)
     {:ok, repo: repo, unowned_repo: unowned_repo, eric: eric, other: other}
   end
 

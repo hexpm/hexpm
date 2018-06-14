@@ -7,7 +7,7 @@ defmodule Hexpm.Accounts.AuditLog do
     field :params, :map
 
     belongs_to :user, User
-    belongs_to :repository, Repository
+    belongs_to :organization, Organization
 
     timestamps(updated_at: false)
   end
@@ -18,7 +18,7 @@ defmodule Hexpm.Accounts.AuditLog do
 
     %AuditLog{
       user_id: nil,
-      repository_id: params[:repository][:id] || params[:package][:repository_id],
+      organization_id: params[:organization][:id] || params[:package][:organization_id],
       user_agent: user_agent,
       action: action,
       params: params
@@ -30,7 +30,7 @@ defmodule Hexpm.Accounts.AuditLog do
 
     %AuditLog{
       user_id: user_id,
-      repository_id: params[:repository][:id] || params[:package][:repository_id],
+      organization_id: params[:organization][:id] || params[:package][:organization_id],
       user_agent: user_agent,
       action: action,
       params: params
@@ -109,16 +109,16 @@ defmodule Hexpm.Accounts.AuditLog do
 
   defp extract_params("user.create", user), do: serialize(user)
   defp extract_params("user.update", user), do: serialize(user)
-  defp extract_params("repository.create", repository), do: serialize(repository)
+  defp extract_params("organization.create", organization), do: serialize(organization)
 
-  defp extract_params("repository.member.add", {repository, user}),
-    do: %{repository: serialize(repository), user: serialize(user)}
+  defp extract_params("organization.member.add", {organization, user}),
+    do: %{organization: serialize(organization), user: serialize(user)}
 
-  defp extract_params("repository.member.remove", {repository, user}),
-    do: %{repository: serialize(repository), user: serialize(user)}
+  defp extract_params("organization.member.remove", {organization, user}),
+    do: %{organization: serialize(organization), user: serialize(user)}
 
-  defp extract_params("repository.member.role", {repository, user, role}),
-    do: %{repository: serialize(repository), user: serialize(user), role: role}
+  defp extract_params("organization.member.role", {organization, user, role}),
+    do: %{organization: serialize(organization), user: serialize(user), role: role}
 
   defp extract_params("password.reset.init", nil), do: %{}
   defp extract_params("password.reset.finish", nil), do: %{}
@@ -157,12 +157,12 @@ defmodule Hexpm.Accounts.AuditLog do
   defp fields(%Email{}), do: [:email, :primary, :public, :primary, :gravatar]
   defp fields(%Key{}), do: [:id, :name]
   defp fields(%KeyPermission{}), do: [:resource, :domain]
-  defp fields(%Package{}), do: [:id, :name, :repository_id]
+  defp fields(%Package{}), do: [:id, :name, :organization_id]
   defp fields(%PackageMetadata{}), do: [:description, :licenses, :links, :maintainers, :extra]
   defp fields(%Release{}), do: [:id, :version, :checksum, :has_docs, :package_id]
   defp fields(%ReleaseMetadata{}), do: [:app, :build_tools, :elixir]
   defp fields(%ReleaseRetirement{}), do: [:status, :message]
-  defp fields(%Repository{}), do: [:name, :public, :active, :billing_active]
+  defp fields(%Organization{}), do: [:name, :public, :active, :billing_active]
   defp fields(%User{}), do: [:id, :username]
   defp fields(%UserHandles{}), do: [:github, :twitter, :freenode]
 

@@ -65,12 +65,12 @@ defmodule Hexpm.Changeset do
 
   def validate_repository(changeset, field, opts) do
     validate_change(changeset, field, fn key, dependency_repository ->
-      repository = Keyword.fetch!(opts, :repository)
+      organization = Keyword.fetch!(opts, :repository)
 
-      if dependency_repository in ["hexpm", repository.name] do
+      if dependency_repository in ["hexpm", organization.name] do
         []
       else
-        [{key, {repository_error(repository, dependency_repository), []}}]
+        [{key, {repository_error(organization, dependency_repository), []}}]
       end
     end)
   end

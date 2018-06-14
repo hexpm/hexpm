@@ -11,7 +11,7 @@ defmodule Hexpm.Repository.Package do
     field :latest_version, Hexpm.Version, virtual: true
     timestamps()
 
-    belongs_to :repository, Repository
+    belongs_to :organization, Organization
     has_many :releases, Release
     has_many :package_owners, PackageOwner
     has_many :owners, through: [:package_owners, :user]
@@ -41,7 +41,7 @@ defmodule Hexpm.Repository.Package do
   if Mix.env() == :hex do
     @generic_names []
   else
-    @generic_names ~w(package repository)
+    @generic_names ~w(package organization)
   end
 
   @reserved_names Enum.concat([
@@ -54,14 +54,14 @@ defmodule Hexpm.Repository.Package do
                     @generic_names
                   ])
 
-  def build(repository, user, params) do
+  def build(organization, user, params) do
     package =
-      build_assoc(repository, :packages)
-      |> Map.put(:repository, repository)
+      build_assoc(organization, :packages)
+      |> Map.put(:organization, organization)
 
     package
     |> cast(params, ~w(name)a)
-    |> unique_constraint(:name, name: "packages_repository_id_name_index")
+    |> unique_constraint(:name, name: "packages_organization_id_name_index")
     |> validate_required(:name)
     |> validate_length(:name, min: 2)
     |> validate_format(:name, ~r"^[a-z]\w*$")
@@ -93,9 +93,9 @@ defmodule Hexpm.Repository.Package do
   def owner_with_access(package, user) do
     from(
       po in PackageOwner,
-      left_join: ru in RepositoryUser,
-      on: ru.repository_id == ^package.repository_id,
-      where: ru.user_id == ^user.id or ^package.repository.public,
+      left_join: ru in OrganizationUser,
+      on: ru.organization_id == ^package.organization_id,
+      where: ru.user_id == ^user.id or ^package.organization.public,
       where: po.package_id == ^package.id,
       where: po.user_id == ^user.id,
       select: count(po.id) >= 1
@@ -107,10 +107,10 @@ defmodule Hexpm.Repository.Package do
     |> where([o], o.level == ^level)
   end
 
-  def all(repositories, page, count, search, sort, fields) do
+  def all(organizations, page, count, search, sort, fields) do
     from(
-      p in assoc(repositories, :packages),
-      join: r in assoc(p, :repository),
+      p in assoc(organizations, :packages),
+      join: r in assoc(p, :organization),
       preload: :downloads
     )
     |> sort(sort)
@@ -119,9 +119,9 @@ defmodule Hexpm.Repository.Package do
     |> fields(fields)
   end
 
-  def recent(repository, count) do
+  def recent(organization, count) do
     from(
-      p in assoc(repository, :packages),
+      p in assoc(organization, :packages),
       order_by: [desc: p.inserted_at],
       limit: ^count,
       select: {p.name, p.inserted_at, p.meta}
@@ -132,10 +132,10 @@ defmodule Hexpm.Repository.Package do
     from(p in Package, select: count(p.id))
   end
 
-  def count(repositories, search) do
+  def count(organizations, search) do
     from(
-      p in assoc(repositories, :packages),
-      join: r in assoc(p, :repository),
+      p in assoc(organizations, :packages),
+      join: r in assoc(p, :organization),
       select: count(p.id)
     )
     |> search(search)
@@ -196,14 +196,14 @@ defmodule Hexpm.Repository.Package do
   end
 
   defp basic_search(query, search) do
-    {repository, package} = name_search(search)
+    {organization, package} = name_search(search)
     description = description_search(search)
 
-    if repository do
+    if organization do
       from(
         [p, r] in query,
         where:
-          (name_query(p, package) and name_query(r, repository)) or
+          (name_query(p, package) and name_query(r, organization)) or
             description_query(p, description)
       )
     else
@@ -211,14 +211,14 @@ defmodule Hexpm.Repository.Package do
     end
   end
 
-  # TODO: add repository param
+  # TODO: add organization param
   defp search_param("name", search, query) do
     case String.split(search, "/", parts: 2) do
-      [repository, package] ->
+      [organization, package] ->
         from(
           [p, r] in query,
           where: name_query(p, extra_name_search(package)),
-          where: name_query(r, extra_name_search(repository))
+          where: name_query(r, extra_name_search(organization))
         )
 
       _ ->
@@ -287,8 +287,8 @@ defmodule Hexpm.Repository.Package do
 
   defp name_search(search) do
     case String.split(search, "/", parts: 2) do
-      [repository, package] ->
-        {do_name_search(repository), do_name_search(package)}
+      [organization, package] ->
+        {do_name_search(organization), do_name_search(package)}
 
       _ ->
         {nil, do_name_search(search)}

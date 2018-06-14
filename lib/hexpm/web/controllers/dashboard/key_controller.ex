@@ -48,7 +48,7 @@ defmodule Hexpm.Web.Dashboard.KeyController do
   defp render_index(conn, changeset \\ changeset()) do
     user = conn.assigns.current_user
     keys = Keys.all(user)
-    repositories = Repositories.all_by_user(user)
+    organizations = Organizations.all_by_user(user)
 
     render(
       conn,
@@ -56,7 +56,7 @@ defmodule Hexpm.Web.Dashboard.KeyController do
       title: "Dashboard - User keys",
       container: "container page dashboard",
       keys: keys,
-      repositories: repositories,
+      organizations: organizations,
       changeset: changeset
     )
   end

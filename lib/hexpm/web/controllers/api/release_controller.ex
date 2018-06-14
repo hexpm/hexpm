@@ -7,19 +7,19 @@ defmodule Hexpm.Web.API.ReleaseController do
   plug :maybe_fetch_package when action in [:create, :publish]
 
   plug :maybe_authorize,
-       [domain: "api", resource: "read", fun: &repository_access/2]
+       [domain: "api", resource: "read", fun: &organization_access/2]
        when action in [:show]
 
   plug :authorize,
        [
          domain: "api",
          resource: "write",
-         fun: [&maybe_package_owner/2, &repository_billing_active/2]
+         fun: [&maybe_package_owner/2, &organization_billing_active/2]
        ]
        when action in [:create, :publish]
 
   plug :authorize,
-       [domain: "api", resource: "write", fun: [&package_owner/2, &repository_billing_active/2]]
+       [domain: "api", resource: "write", fun: [&package_owner/2, &organization_billing_active/2]]
        when action in [:delete]
 
   def publish(conn, %{"body" => body}) do
@@ -27,7 +27,7 @@ defmodule Hexpm.Web.API.ReleaseController do
     checksum = :hex_tarball.format_checksum(conn.assigns.checksum)
 
     Releases.publish(
-      conn.assigns.repository,
+      conn.assigns.organization,
       conn.assigns.package,
       conn.assigns.current_user,
       body,
@@ -41,7 +41,7 @@ defmodule Hexpm.Web.API.ReleaseController do
   def create(conn, %{"body" => body}) do
     handle_tarball(
       conn,
-      conn.assigns.repository,
+      conn.assigns.organization,
       conn.assigns.package,
       conn.assigns.current_user,
       body
@@ -96,12 +96,21 @@ defmodule Hexpm.Web.API.ReleaseController do
     end
   end
 
-  defp handle_tarball(conn, repository, package, user, body) do
+  defp handle_tarball(conn, organization, package, user, body) do
     case Hexpm.Web.ReleaseTar.metadata(body) do
       {:ok, meta, checksum} ->
         # TODO: pass around and store in DB as binary instead
         checksum = :hex_tarball.format_checksum(checksum)
-        Releases.publish(repository, package, user, body, meta, checksum, audit: audit_data(conn))
+
+        Releases.publish(
+          organization,
+          package,
+          user,
+          body,
+          meta,
+          checksum,
+          audit: audit_data(conn)
+        )
 
       {:error, errors} ->
         {:error, %{tar: errors}}

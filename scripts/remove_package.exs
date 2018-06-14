@@ -1,21 +1,21 @@
 destructure [name, repo], Enum.reverse(System.argv())
 
-repository =
+organization =
   if repo do
-    Hexpm.Repo.get_by!(Hexpm.Repository.Repository, name: repo)
+    Hexpm.Repo.get_by!(Hexpm.Organization.Repository, name: repo)
   else
-    Hexpm.Repo.get!(Hexpm.Repository.Repository, 1)
+    Hexpm.Repo.get!(Hexpm.Organization.Repository, 1)
   end
 
-unless repository do
+unless organization do
   IO.puts("No package: #{repo}")
   System.halt(1)
 end
 
 package =
   Hexpm.Repository.Package
-  |> Hexpm.Repo.get_by!(name: name, repository_id: repository.id)
-  |> Hexpm.Repo.preload(:repository)
+  |> Hexpm.Repo.get_by!(name: name, organization_id: organization.id)
+  |> Hexpm.Repo.preload(:organization)
 
 unless package do
   IO.puts("No package: #{name}")
@@ -25,7 +25,7 @@ end
 releases =
   Hexpm.Repository.Release.all(package)
   |> Hexpm.Repo.all()
-  |> Hexpm.Repo.preload(package: :repository)
+  |> Hexpm.Repo.preload(package: :organization)
 
 owners =
   Ecto.assoc(package, :owners)

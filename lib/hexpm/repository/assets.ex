@@ -224,22 +224,22 @@ defmodule Hexpm.Repository.Assets do
   end
 
   defp repository_cdn_key(release) do
-    repo = release.package.repository
+    organization = release.package.organization
 
-    if repo.id == 1 do
+    if organization.id == 1 do
       ""
     else
-      "#{repo.name}-"
+      "#{organization.name}-"
     end
   end
 
   defp repository_store_key(release) do
-    repo = release.package.repository
+    organization = release.package.organization
 
-    if repo.id == 1 do
+    if organization.id == 1 do
       ""
     else
-      "repos/#{repo.name}/"
+      "repos/#{organization.name}/"
     end
   end
 end

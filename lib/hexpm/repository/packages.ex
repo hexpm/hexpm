@@ -5,23 +5,23 @@ defmodule Hexpm.Repository.Packages do
     Repo.one!(Package.count())
   end
 
-  def count(repositories, filter) do
-    Repo.one!(Package.count(repositories, filter))
+  def count(organizations, filter) do
+    Repo.one!(Package.count(organizations, filter))
   end
 
-  def get(repository, name) when is_binary(repository) do
-    repository = Repositories.get(repository)
-    repository && get(repository, name)
+  def get(organization, name) when is_binary(organization) do
+    organization = Organizations.get(organization)
+    organization && get(organization, name)
   end
 
-  def get(repositories, name) when is_list(repositories) do
-    Repo.get_by(assoc(repositories, :packages), name: name)
-    |> Repo.preload(:repository)
+  def get(organizations, name) when is_list(organizations) do
+    Repo.get_by(assoc(organizations, :packages), name: name)
+    |> Repo.preload(:organization)
   end
 
-  def get(repository, name) do
-    package = Repo.get_by(assoc(repository, :packages), name: name)
-    package && %{package | repository: repository}
+  def get(organization, name) do
+    package = Repo.get_by(assoc(organization, :packages), name: name)
+    package && %{package | organization: organization}
   end
 
   def owner?(package, user) do
@@ -30,17 +30,17 @@ defmodule Hexpm.Repository.Packages do
   end
 
   def owner_with_access?(package, user) do
-    repository = package.repository
+    organization = package.organization
 
     Repo.one!(Package.owner_with_access(package, user)) or
-      (not repository.public and Repositories.access?(repository, user, "write"))
+      (not organization.public and Organizations.access?(organization, user, "write"))
   end
 
   def owner_with_full_access?(package, user) do
-    repository = package.repository
+    organization = package.organization
 
     Repo.one!(Package.owner_with_access(package, user, "full")) or
-      (not repository.public and Repositories.access?(repository, user, "admin"))
+      (not organization.public and Organizations.access?(organization, user, "admin"))
   end
 
   def preload(package) do
@@ -77,33 +77,33 @@ defmodule Hexpm.Repository.Packages do
     end)
   end
 
-  def search(repositories, page, packages_per_page, query, sort, fields) do
-    Package.all(repositories, page, packages_per_page, query, sort, fields)
+  def search(organizations, page, packages_per_page, query, sort, fields) do
+    Package.all(organizations, page, packages_per_page, query, sort, fields)
     |> Repo.all()
-    |> attach_repositories(repositories)
+    |> attach_organizations(organizations)
   end
 
-  def search_with_versions(repositories, page, packages_per_page, query, sort) do
-    Package.all(repositories, page, packages_per_page, query, sort, nil)
+  def search_with_versions(organizations, page, packages_per_page, query, sort) do
+    Package.all(organizations, page, packages_per_page, query, sort, nil)
     |> Ecto.Query.preload(
       releases: ^from(r in Release, select: struct(r, [:id, :version, :updated_at]))
     )
     |> Repo.all()
     |> Enum.map(fn package -> update_in(package.releases, &Release.sort/1) end)
-    |> attach_repositories(repositories)
+    |> attach_organizations(organizations)
   end
 
-  defp attach_repositories(packages, repositories) do
-    repositories = Map.new(repositories, &{&1.id, &1})
+  defp attach_organizations(packages, organizations) do
+    organizations = Map.new(organizations, &{&1.id, &1})
 
     Enum.map(packages, fn package ->
-      repository = Map.fetch!(repositories, package.repository_id)
-      %{package | repository: repository}
+      organization = Map.fetch!(organizations, package.organization_id)
+      %{package | organization: organization}
     end)
   end
 
-  def recent(repository, count) do
-    Repo.all(Package.recent(repository, count))
+  def recent(organization, count) do
+    Repo.all(Package.recent(organization, count))
   end
 
   def package_downloads(package) do
@@ -126,8 +126,8 @@ defmodule Hexpm.Repository.Packages do
     |> Enum.into(%{})
   end
 
-  def top_downloads(repository, view, count) do
-    Repo.all(PackageDownload.top(repository, view, count))
+  def top_downloads(organization, view, count) do
+    Repo.all(PackageDownload.top(organization, view, count))
   end
 
   def total_downloads() do

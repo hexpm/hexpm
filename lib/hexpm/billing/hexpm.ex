@@ -1,16 +1,16 @@
 defmodule Hexpm.Billing.Hexpm do
   @behaviour Hexpm.Billing
 
-  def checkout(repository, data) do
-    case post("api/customers/#{repository}/payment_source", data, recv_timeout: 15_000) do
+  def checkout(organization, data) do
+    case post("api/customers/#{organization}/payment_source", data, recv_timeout: 15_000) do
       {:ok, 204, _headers, body} -> {:ok, body}
       {:ok, 422, _headers, body} -> {:error, body}
     end
   end
 
-  def dashboard(repository) do
+  def dashboard(organization) do
     result =
-      fn -> get_json("api/customers/#{repository}", recv_timeout: 10_000) end
+      fn -> get_json("api/customers/#{organization}", recv_timeout: 10_000) end
       |> Hexpm.HTTP.retry("billing")
 
     case result do
@@ -19,8 +19,8 @@ defmodule Hexpm.Billing.Hexpm do
     end
   end
 
-  def cancel(repository) do
-    {:ok, 200, _headers, body} = post("api/customers/#{repository}/cancel", %{}, [])
+  def cancel(organization) do
+    {:ok, 200, _headers, body} = post("api/customers/#{organization}/cancel", %{}, [])
     body
   end
 
@@ -31,8 +31,8 @@ defmodule Hexpm.Billing.Hexpm do
     end
   end
 
-  def update(repository, params) do
-    case patch("api/customers/#{repository}", params, []) do
+  def update(organization, params) do
+    case patch("api/customers/#{organization}", params, []) do
       {:ok, 200, _headers, body} -> {:ok, body}
       {:ok, 404, _headers, _body} -> {:ok, nil}
       {:ok, 422, _headers, body} -> {:error, body}

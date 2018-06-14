@@ -1,11 +1,11 @@
 defmodule Hexpm.Billing.Local do
   @behaviour Hexpm.Billing
 
-  def checkout(_repository, _data) do
+  def checkout(_organization, _data) do
     %{}
   end
 
-  def dashboard(_repository) do
+  def dashboard(_organization) do
     %{
       "checkout_html" => "",
       "monthly_cost" => 800,
@@ -13,7 +13,7 @@ defmodule Hexpm.Billing.Local do
     }
   end
 
-  def cancel(_repository) do
+  def cancel(_organization) do
     %{}
   end
 
@@ -21,7 +21,7 @@ defmodule Hexpm.Billing.Local do
     {:ok, %{}}
   end
 
-  def update(_repository, _params) do
+  def update(_organization, _params) do
     {:ok, %{}}
   end
 

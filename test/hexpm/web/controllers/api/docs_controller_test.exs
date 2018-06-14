@@ -1,8 +1,8 @@
 defmodule Hexpm.Web.API.DocsControllerTest do
   use Hexpm.ConnCase, async: true
 
-  alias Hexpm.Accounts.AuditLog
-  alias Hexpm.Repository.{Package, Repository}
+  alias Hexpm.Accounts.{AuditLog, Organization}
+  alias Hexpm.Repository.Package
 
   setup do
     user = insert(:user)
@@ -160,37 +160,37 @@ defmodule Hexpm.Web.API.DocsControllerTest do
 
   describe "POST /api/repos/:repository/packages/:name/releases/:version/docs" do
     test "release docs authorizes", %{user: user} do
-      repository = insert(:repository)
+      organization = insert(:organization)
 
       package =
         insert(
           :package,
-          repository_id: repository.id,
+          organization_id: organization.id,
           package_owners: [build(:package_owner, user: user)]
         )
 
       insert(:release, package: package, version: "0.0.1")
 
-      publish_docs(user, repository, package, "0.0.1", [{'index.html', "package v0.0.1"}])
+      publish_docs(user, organization, package, "0.0.1", [{'index.html', "package v0.0.1"}])
       |> response(403)
 
       refute Hexpm.Repo.get_by!(assoc(package, :releases), version: "0.0.1").has_docs
     end
 
     test "release docs", %{user: user} do
-      repository = insert(:repository)
+      organization = insert(:organization)
 
       package =
         insert(
           :package,
-          repository_id: repository.id,
+          organization_id: organization.id,
           package_owners: [build(:package_owner, user: user)]
         )
 
       insert(:release, package: package, version: "0.0.1")
-      insert(:repository_user, repository: repository, user: user)
+      insert(:organization_user, organization: organization, user: user)
 
-      publish_docs(user, repository, package, "0.0.1", [{'index.html', "package v0.0.1"}])
+      publish_docs(user, organization, package, "0.0.1", [{'index.html', "package v0.0.1"}])
       |> response(201)
 
       assert Hexpm.Repo.get_by!(assoc(package, :releases), version: "0.0.1").has_docs
@@ -288,12 +288,12 @@ defmodule Hexpm.Web.API.DocsControllerTest do
   describe "DELETE /api/repos/:repository/packages/:name/releases/:version/docs" do
     test "delete docs authorizes", %{user: user1} do
       user2 = insert(:user)
-      repository = insert(:repository)
+      organization = insert(:organization)
 
       package =
         insert(
           :package,
-          repository_id: repository.id,
+          organization_id: organization.id,
           package_owners: [
             build(:package_owner, user: user1),
             build(:package_owner, user: user2)
@@ -301,34 +301,34 @@ defmodule Hexpm.Web.API.DocsControllerTest do
         )
 
       insert(:release, package: package, version: "0.0.1")
-      insert(:repository_user, repository: repository, user: user1)
+      insert(:organization_user, organization: organization, user: user1)
 
-      publish_docs(user1, repository, package, "0.0.1", [{'index.html', "package v0.0.1"}])
+      publish_docs(user1, organization, package, "0.0.1", [{'index.html', "package v0.0.1"}])
       |> response(201)
 
-      revert_docs(user2, repository, package, "0.0.1")
+      revert_docs(user2, organization, package, "0.0.1")
       |> response(403)
 
       assert Hexpm.Repo.get_by(assoc(package, :releases), version: "0.0.1").has_docs
     end
 
     test "delete docs", %{user: user} do
-      repository = insert(:repository)
+      organization = insert(:organization)
 
       package =
         insert(
           :package,
-          repository_id: repository.id,
+          organization_id: organization.id,
           package_owners: [build(:package_owner, user: user)]
         )
 
       insert(:release, package: package, version: "0.0.1")
-      insert(:repository_user, repository: repository, user: user)
+      insert(:organization_user, organization: organization, user: user)
 
-      publish_docs(user, repository, package, "0.0.1", [{'index.html', "package v0.0.1"}])
+      publish_docs(user, organization, package, "0.0.1", [{'index.html', "package v0.0.1"}])
       |> response(201)
 
-      revert_docs(user, repository, package, "0.0.1")
+      revert_docs(user, organization, package, "0.0.1")
       |> response(204)
 
       refute Hexpm.Repo.get_by(assoc(package, :releases), version: "0.0.1").has_docs
@@ -350,19 +350,19 @@ defmodule Hexpm.Web.API.DocsControllerTest do
     |> delete("api/packages/#{name}/releases/#{version}/docs")
   end
 
-  defp publish_docs(user, %Repository{name: repository}, %Package{name: name}, version, files) do
+  defp publish_docs(user, %Organization{name: organization}, %Package{name: name}, version, files) do
     body = create_tarball(files)
 
     build_conn()
     |> put_req_header("content-type", "application/octet-stream")
     |> put_req_header("authorization", key_for(user))
-    |> post("api/repos/#{repository}/packages/#{name}/releases/#{version}/docs", body)
+    |> post("api/repos/#{organization}/packages/#{name}/releases/#{version}/docs", body)
   end
 
-  def revert_docs(user, %Repository{name: repository}, %Package{name: name}, version) do
+  def revert_docs(user, %Organization{name: organization}, %Package{name: name}, version) do
     build_conn()
     |> put_req_header("authorization", key_for(user))
-    |> delete("api/repos/#{repository}/packages/#{name}/releases/#{version}/docs")
+    |> delete("api/repos/#{organization}/packages/#{name}/releases/#{version}/docs")
   end
 
   def revert_release(user, %Package{name: name}, version) do

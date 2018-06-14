@@ -1,18 +1,18 @@
 defmodule Hexpm.Web.API.ReleaseControllerTest do
   use Hexpm.ConnCase, async: true
 
-  alias Hexpm.Accounts.AuditLog
-  alias Hexpm.Repository.{Package, RegistryBuilder, Release, Repository}
+  alias Hexpm.Accounts.{AuditLog, Organization}
+  alias Hexpm.Repository.{Package, RegistryBuilder, Release}
 
   setup do
     user = insert(:user)
-    repository = insert(:repository)
+    organization = insert(:organization)
     package = insert(:package, package_owners: [build(:package_owner, user: user)])
     release = insert(:release, package: package, version: "0.0.1", has_docs: true)
 
     %{
       user: user,
-      repository: repository,
+      organization: organization,
       package: package,
       release: release
     }
@@ -42,7 +42,7 @@ defmodule Hexpm.Web.API.ReleaseControllerTest do
 
       log = Hexpm.Repo.one!(AuditLog)
       assert log.user_id == user.id
-      assert log.repository_id == 1
+      assert log.organization_id == 1
       assert log.action == "release.publish"
       assert log.params["package"]["name"] == meta.name
       assert log.params["release"]["version"] == "1.0.0"
@@ -116,7 +116,7 @@ defmodule Hexpm.Web.API.ReleaseControllerTest do
 
       log = Hexpm.Repo.one!(AuditLog)
       assert log.user_id == user.id
-      assert log.repository_id == 1
+      assert log.organization_id == 1
       assert log.action == "release.publish"
       assert log.params["package"]["name"] == meta.name
       assert log.params["release"]["version"] == "1.0.0"
@@ -468,7 +468,7 @@ defmodule Hexpm.Web.API.ReleaseControllerTest do
     end
 
     test "create release updates registry", %{user: user, package: package} do
-      RegistryBuilder.full_build(Repository.hexpm())
+      RegistryBuilder.full_build(Organization.hexpm())
       registry_before = Hexpm.Store.get(nil, :s3_bucket, "registry.ets.gz", [])
 
       reqs = [%{name: package.name, app: "app", requirement: "~> 0.0.1", optional: false}]
@@ -493,7 +493,7 @@ defmodule Hexpm.Web.API.ReleaseControllerTest do
   end
 
   describe "POST /api/repos/:repository/packages/:name/releases" do
-    test "new package authorizes", %{user: user, repository: repository} do
+    test "new package authorizes", %{user: user, organization: organization} do
       meta = %{
         name: Fake.sequence(:package),
         version: "1.0.0",
@@ -503,15 +503,18 @@ defmodule Hexpm.Web.API.ReleaseControllerTest do
       build_conn()
       |> put_req_header("content-type", "application/octet-stream")
       |> put_req_header("authorization", key_for(user))
-      |> post("api/repos/#{repository.name}/packages/#{meta.name}/releases", create_tar(meta, []))
+      |> post(
+        "api/repos/#{organization.name}/packages/#{meta.name}/releases",
+        create_tar(meta, [])
+      )
       |> json_response(403)
     end
 
-    test "existing package authorizes", %{user: user, repository: repository} do
+    test "existing package authorizes", %{user: user, organization: organization} do
       package =
         insert(
           :package,
-          repository_id: repository.id,
+          organization_id: organization.id,
           package_owners: [build(:package_owner, user: user)]
         )
 
@@ -520,13 +523,16 @@ defmodule Hexpm.Web.API.ReleaseControllerTest do
       build_conn()
       |> put_req_header("content-type", "application/octet-stream")
       |> put_req_header("authorization", key_for(user))
-      |> post("api/repos/#{repository.name}/packages/#{meta.name}/releases", create_tar(meta, []))
+      |> post(
+        "api/repos/#{organization.name}/packages/#{meta.name}/releases",
+        create_tar(meta, [])
+      )
       |> json_response(403)
     end
   end
 
   describe "POST /api/repos/:repository/publish" do
-    test "new package authorizes", %{user: user, repository: repository} do
+    test "new package authorizes", %{user: user, organization: organization} do
       meta = %{
         name: Fake.sequence(:package),
         version: "1.0.0",
@@ -536,15 +542,15 @@ defmodule Hexpm.Web.API.ReleaseControllerTest do
       build_conn()
       |> put_req_header("content-type", "application/octet-stream")
       |> put_req_header("authorization", key_for(user))
-      |> post("api/repos/#{repository.name}/publish", create_tar(meta, []))
+      |> post("api/repos/#{organization.name}/publish", create_tar(meta, []))
       |> json_response(403)
     end
 
-    test "existing package authorizes", %{user: user, repository: repository} do
+    test "existing package authorizes", %{user: user, organization: organization} do
       package =
         insert(
           :package,
-          repository_id: repository.id,
+          organization_id: organization.id,
           package_owners: [build(:package_owner, user: user)]
         )
 
@@ -553,12 +559,12 @@ defmodule Hexpm.Web.API.ReleaseControllerTest do
       build_conn()
       |> put_req_header("content-type", "application/octet-stream")
       |> put_req_header("authorization", key_for(user))
-      |> post("api/repos/#{repository.name}/publish", create_tar(meta, []))
+      |> post("api/repos/#{organization.name}/publish", create_tar(meta, []))
       |> json_response(403)
     end
 
-    test "new package requries write permission", %{user: user, repository: repository} do
-      insert(:repository_user, repository: repository, user: user, role: "read")
+    test "new package requries write permission", %{user: user, organization: organization} do
+      insert(:organization_user, organization: organization, user: user, role: "read")
 
       meta = %{
         name: Fake.sequence(:package),
@@ -569,15 +575,15 @@ defmodule Hexpm.Web.API.ReleaseControllerTest do
       build_conn()
       |> put_req_header("content-type", "application/octet-stream")
       |> put_req_header("authorization", key_for(user))
-      |> post("api/repos/#{repository.name}/publish", create_tar(meta, []))
+      |> post("api/repos/#{organization.name}/publish", create_tar(meta, []))
       |> json_response(403)
 
       refute Hexpm.Repo.get_by(Package, name: meta.name)
     end
 
-    test "repository needs to have active billing", %{user: user} do
-      repository = insert(:repository, billing_active: false)
-      insert(:repository_user, repository: repository, user: user, role: "write")
+    test "organization needs to have active billing", %{user: user} do
+      organization = insert(:organization, billing_active: false)
+      insert(:organization_user, organization: organization, user: user, role: "write")
 
       meta = %{
         name: Fake.sequence(:package),
@@ -588,14 +594,14 @@ defmodule Hexpm.Web.API.ReleaseControllerTest do
       build_conn()
       |> put_req_header("content-type", "application/octet-stream")
       |> put_req_header("authorization", key_for(user))
-      |> post("api/repos/#{repository.name}/publish", create_tar(meta, []))
+      |> post("api/repos/#{organization.name}/publish", create_tar(meta, []))
       |> json_response(403)
 
       refute Hexpm.Repo.get_by(Package, name: meta.name)
     end
 
-    test "new package", %{user: user, repository: repository} do
-      insert(:repository_user, repository: repository, user: user, role: "write")
+    test "new package", %{user: user, organization: organization} do
+      insert(:organization_user, organization: organization, user: user, role: "write")
 
       meta = %{
         name: Fake.sequence(:package),
@@ -607,24 +613,25 @@ defmodule Hexpm.Web.API.ReleaseControllerTest do
         build_conn()
         |> put_req_header("content-type", "application/octet-stream")
         |> put_req_header("authorization", key_for(user))
-        |> post("api/repos/#{repository.name}/publish", create_tar(meta, []))
+        |> post("api/repos/#{organization.name}/publish", create_tar(meta, []))
         |> json_response(201)
 
-      assert result["url"] =~ "api/repos/#{repository.name}/packages/#{meta.name}/releases/1.0.0"
+      assert result["url"] =~
+               "api/repos/#{organization.name}/packages/#{meta.name}/releases/1.0.0"
 
       package = Hexpm.Repo.get_by!(Package, name: meta.name)
-      assert package.repository_id == repository.id
+      assert package.organization_id == organization.id
     end
 
-    test "existing package", %{user: user, repository: repository} do
+    test "existing package", %{user: user, organization: organization} do
       package =
         insert(
           :package,
-          repository_id: repository.id,
+          organization_id: organization.id,
           package_owners: [build(:package_owner, user: user)]
         )
 
-      insert(:repository_user, repository: repository, user: user)
+      insert(:organization_user, organization: organization, user: user)
 
       meta = %{name: package.name, version: "1.0.0", description: "Domain-specific language."}
 
@@ -632,21 +639,25 @@ defmodule Hexpm.Web.API.ReleaseControllerTest do
         build_conn()
         |> put_req_header("content-type", "application/octet-stream")
         |> put_req_header("authorization", key_for(user))
-        |> post("api/repos/#{repository.name}/publish", create_tar(meta, []))
+        |> post("api/repos/#{organization.name}/publish", create_tar(meta, []))
         |> json_response(201)
 
-      assert result["url"] =~ "api/repos/#{repository.name}/packages/#{meta.name}/releases/1.0.0"
+      assert result["url"] =~
+               "api/repos/#{organization.name}/packages/#{meta.name}/releases/1.0.0"
 
       package = Hexpm.Repo.get_by!(Package, name: meta.name)
-      assert package.repository_id == repository.id
+      assert package.organization_id == organization.id
     end
 
-    test "can update private package after grace period", %{user: user, repository: repository} do
+    test "can update private package after grace period", %{
+      user: user,
+      organization: organization
+    } do
       package =
         insert(
           :package,
           package_owners: [build(:package_owner, user: user)],
-          repository_id: repository.id
+          organization_id: organization.id
         )
 
       insert(
@@ -656,14 +667,14 @@ defmodule Hexpm.Web.API.ReleaseControllerTest do
         inserted_at: %{NaiveDateTime.utc_now() | year: 2000}
       )
 
-      insert(:repository_user, repository: repository, user: user)
+      insert(:organization_user, organization: organization, user: user)
 
       meta = %{name: package.name, version: "0.0.1", description: "description"}
 
       build_conn()
       |> put_req_header("content-type", "application/octet-stream")
       |> put_req_header("authorization", key_for(user))
-      |> post("api/repos/#{repository.name}/publish", create_tar(meta, []))
+      |> post("api/repos/#{organization.name}/publish", create_tar(meta, []))
       |> json_response(200)
     end
   end
@@ -711,11 +722,11 @@ defmodule Hexpm.Web.API.ReleaseControllerTest do
 
   describe "DELETE /api/repos/:repository/packages/:name/releases/:version" do
     @tag isolation: :serializable
-    test "authorizes", %{user: user, repository: repository} do
+    test "authorizes", %{user: user, organization: organization} do
       package =
         insert(
           :package,
-          repository_id: repository.id,
+          organization_id: organization.id,
           package_owners: [build(:package_owner, user: user)]
         )
 
@@ -723,7 +734,7 @@ defmodule Hexpm.Web.API.ReleaseControllerTest do
 
       build_conn()
       |> put_req_header("authorization", key_for(user))
-      |> delete("api/repos/#{repository.name}/packages/#{package.name}/releases/0.0.1")
+      |> delete("api/repos/#{organization.name}/packages/#{package.name}/releases/0.0.1")
       |> response(403)
 
       assert Hexpm.Repo.get_by(Package, name: package.name)
@@ -731,14 +742,14 @@ defmodule Hexpm.Web.API.ReleaseControllerTest do
     end
 
     @tag isolation: :serializable
-    test "repository needs to have active billing", %{user: user} do
-      repository = insert(:repository, billing_active: false)
-      insert(:repository_user, repository: repository, user: user, role: "write")
+    test "organization needs to have active billing", %{user: user} do
+      organization = insert(:organization, billing_active: false)
+      insert(:organization_user, organization: organization, user: user, role: "write")
 
       package =
         insert(
           :package,
-          repository_id: repository.id,
+          organization_id: organization.id,
           package_owners: [build(:package_owner, user: user)]
         )
 
@@ -746,7 +757,7 @@ defmodule Hexpm.Web.API.ReleaseControllerTest do
 
       build_conn()
       |> put_req_header("authorization", key_for(user))
-      |> delete("api/repos/#{repository.name}/packages/#{package.name}/releases/0.0.1")
+      |> delete("api/repos/#{organization.name}/packages/#{package.name}/releases/0.0.1")
       |> response(403)
 
       assert Hexpm.Repo.get_by(Package, name: package.name)
@@ -754,20 +765,20 @@ defmodule Hexpm.Web.API.ReleaseControllerTest do
     end
 
     @tag isolation: :serializable
-    test "delete release", %{user: user, repository: repository} do
+    test "delete release", %{user: user, organization: organization} do
       package =
         insert(
           :package,
-          repository_id: repository.id,
+          organization_id: organization.id,
           package_owners: [build(:package_owner, user: user)]
         )
 
       insert(:release, package: package, version: "0.0.1")
-      insert(:repository_user, repository: repository, user: user)
+      insert(:organization_user, organization: organization, user: user)
 
       build_conn()
       |> put_req_header("authorization", key_for(user))
-      |> delete("api/repos/#{repository.name}/packages/#{package.name}/releases/0.0.1")
+      |> delete("api/repos/#{organization.name}/packages/#{package.name}/releases/0.0.1")
       |> response(204)
 
       refute Hexpm.Repo.get_by(Package, name: package.name)
@@ -777,12 +788,12 @@ defmodule Hexpm.Web.API.ReleaseControllerTest do
     @tag isolation: :serializable
     test "can delete private package release after grace period", %{
       user: user,
-      repository: repository
+      organization: organization
     } do
       package =
         insert(
           :package,
-          repository_id: repository.id,
+          organization_id: organization.id,
           package_owners: [build(:package_owner, user: user)]
         )
 
@@ -793,11 +804,11 @@ defmodule Hexpm.Web.API.ReleaseControllerTest do
         inserted_at: %{NaiveDateTime.utc_now() | year: 2000}
       )
 
-      insert(:repository_user, repository: repository, user: user)
+      insert(:organization_user, organization: organization, user: user)
 
       build_conn()
       |> put_req_header("authorization", key_for(user))
-      |> delete("api/repos/#{repository.name}/packages/#{package.name}/releases/0.0.1")
+      |> delete("api/repos/#{organization.name}/packages/#{package.name}/releases/0.0.1")
       |> response(204)
     end
   end
@@ -841,13 +852,13 @@ defmodule Hexpm.Web.API.ReleaseControllerTest do
   end
 
   describe "GET /api/repos/:repository/packages/:name/releases/:version" do
-    test "get release authorizes", %{user: user, repository: repository} do
-      package = insert(:package, repository_id: repository.id)
+    test "get release authorizes", %{user: user, organization: organization} do
+      package = insert(:package, organization_id: organization.id)
       insert(:release, package: package, version: "0.0.1")
 
       build_conn()
       |> put_req_header("authorization", key_for(user))
-      |> get("api/repos/#{repository.name}/packages/#{package.name}/releases/0.0.1")
+      |> get("api/repos/#{organization.name}/packages/#{package.name}/releases/0.0.1")
       |> json_response(403)
     end
 
@@ -861,19 +872,19 @@ defmodule Hexpm.Web.API.ReleaseControllerTest do
       |> json_response(403)
     end
 
-    test "get release", %{user: user, repository: repository} do
-      package = insert(:package, repository_id: repository.id)
+    test "get release", %{user: user, organization: organization} do
+      package = insert(:package, organization_id: organization.id)
       insert(:release, package: package, version: "0.0.1")
-      insert(:repository_user, repository: repository, user: user)
+      insert(:organization_user, organization: organization, user: user)
 
       result =
         build_conn()
         |> put_req_header("authorization", key_for(user))
-        |> get("api/repos/#{repository.name}/packages/#{package.name}/releases/0.0.1")
+        |> get("api/repos/#{organization.name}/packages/#{package.name}/releases/0.0.1")
         |> json_response(200)
 
       assert result["url"] =~
-               "/api/repos/#{repository.name}/packages/#{package.name}/releases/0.0.1"
+               "/api/repos/#{organization.name}/packages/#{package.name}/releases/0.0.1"
 
       assert result["version"] == "0.0.1"
     end
@@ -882,7 +893,7 @@ defmodule Hexpm.Web.API.ReleaseControllerTest do
   describe "GET /api/packages/:name/releases/:version/downloads" do
     setup do
       user = insert(:user)
-      repository = insert(:repository)
+      organization = insert(:organization)
       package = insert(:package, package_owners: [build(:package_owner, user: user)])
       relprev = insert(:release, package: package, version: "0.0.1")
       release = insert(:release, package: package, version: "0.0.2")
@@ -897,7 +908,7 @@ defmodule Hexpm.Web.API.ReleaseControllerTest do
 
       %{
         user: user,
-        repository: repository,
+        organization: organization,
         package: package,
         release: release
       }

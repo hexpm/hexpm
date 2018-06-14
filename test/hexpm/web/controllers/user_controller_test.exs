@@ -6,26 +6,31 @@ defmodule Hexpm.Web.UserControllerTest do
     user2 = insert(:user)
     user3 = insert(:user)
 
-    repository1 = insert(:repository)
-    repository2 = insert(:repository)
+    organization1 = insert(:organization)
+    organization2 = insert(:organization)
 
     owners = [build(:package_owner, user: user1)]
     package1 = insert(:package, name: "package1", package_owners: owners)
 
     package2 =
-      insert(:package, name: "package2", package_owners: owners, repository_id: repository1.id)
+      insert(
+        :package,
+        name: "package2",
+        package_owners: owners,
+        organization_id: organization1.id
+      )
 
-    package3 = insert(:package, name: "package3", repository_id: repository2.id)
+    package3 = insert(:package, name: "package3", organization_id: organization2.id)
 
-    insert(:repository_user, user: user1, repository: repository1)
-    insert(:repository_user, user: user2, repository: repository1)
+    insert(:organization_user, user: user1, organization: organization1)
+    insert(:organization_user, user: user2, organization: organization1)
 
     %{
       package1: package1,
       package2: package2,
       package3: package3,
-      repository1: repository1,
-      repository2: repository2,
+      organization1: organization1,
+      organization2: organization2,
       user1: user1,
       user2: user2,
       user3: user3
@@ -51,7 +56,7 @@ defmodule Hexpm.Web.UserControllerTest do
     assert response(conn, 200) =~ c.package2.name
   end
 
-  test "show owned packages as user from the same repository", c do
+  test "show owned packages as user from the same organization", c do
     conn =
       build_conn()
       |> test_login(c.user2)

@@ -4,13 +4,14 @@ defmodule Mix.Tasks.Hexpm.Stats do
   import Ecto.Query, only: [from: 2]
   alias Hexpm.{Repo, Store, Utils}
 
+  alias Hexpm.Accounts.Organization
+
   alias Hexpm.Repository.{
     Download,
     Package,
     PackageDownload,
     Release,
-    ReleaseDownload,
-    Repository
+    ReleaseDownload
   }
 
   @shortdoc "Calculates yesterdays download stats"
@@ -73,7 +74,7 @@ defmodule Mix.Tasks.Hexpm.Stats do
 
     try do
       process_buckets(buckets, formats)
-      repositories = repositories()
+      organizations = organizations()
       packages = packages()
       releases = releases()
 
@@ -87,9 +88,9 @@ defmodule Mix.Tasks.Hexpm.Stats do
 
           @ets
           |> ets_stream()
-          |> Stream.flat_map(fn {{repository, package, version}, count} ->
-            repository_id = repositories[repository]
-            package_id = packages[{repository_id, package}]
+          |> Stream.flat_map(fn {{organization, package, version}, count} ->
+            organization_id = organizations[organization]
+            package_id = packages[{organization_id, package}]
 
             if release_id = releases[{package_id, version}] do
               [%{release_id: release_id, downloads: count, day: date}]
@@ -174,14 +175,14 @@ defmodule Mix.Tasks.Hexpm.Stats do
     end
   end
 
-  defp repositories() do
-    from(r in Repository, select: {r.name, r.id})
+  defp organizations() do
+    from(r in Organization, select: {r.name, r.id})
     |> Repo.all()
     |> Enum.into(%{})
   end
 
   defp packages() do
-    from(p in Package, select: {{p.repository_id, p.name}, p.id})
+    from(p in Package, select: {{p.organization_id, p.name}, p.id})
     |> Repo.all()
     |> Enum.into(%{})
   end

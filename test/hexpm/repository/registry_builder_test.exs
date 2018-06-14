@@ -1,7 +1,8 @@
-defmodule Hexpm.Repository.RegistryBuilderTest do
+defmodule Hexpm.Organization.RegistryBuilderTest do
   use Hexpm.DataCase
 
-  alias Hexpm.Repository.{RegistryBuilder, Release, Repository}
+  alias Hexpm.Accounts.Organization
+  alias Hexpm.Repository.{RegistryBuilder, Release}
 
   @checksum "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855"
 
@@ -9,7 +10,7 @@ defmodule Hexpm.Repository.RegistryBuilderTest do
     packages =
       [p1, p2, p3] =
       insert_list(3, :package)
-      |> Hexpm.Repo.preload(:repository)
+      |> Hexpm.Repo.preload(:organization)
 
     r1 = insert(:release, package: p1, version: "0.0.1")
     r2 = insert(:release, package: p2, version: "0.0.1")
@@ -54,7 +55,7 @@ defmodule Hexpm.Repository.RegistryBuilderTest do
 
   describe "full_build/0" do
     test "registry is in correct format", %{packages: [p1, p2, p3]} do
-      RegistryBuilder.full_build(Repository.hexpm())
+      RegistryBuilder.full_build(Organization.hexpm())
       tid = open_table()
 
       assert :ets.lookup(tid, :"$$version$$") == [{:"$$version$$", 4}]
@@ -79,7 +80,7 @@ defmodule Hexpm.Repository.RegistryBuilderTest do
     end
 
     test "registry is uploaded alongside signature" do
-      RegistryBuilder.full_build(Repository.hexpm())
+      RegistryBuilder.full_build(Organization.hexpm())
 
       registry = Hexpm.Store.get(nil, :s3_bucket, "registry.ets.gz", [])
       signature = Hexpm.Store.get(nil, :s3_bucket, "registry.ets.gz.signed", [])
@@ -90,7 +91,7 @@ defmodule Hexpm.Repository.RegistryBuilderTest do
     end
 
     test "registry v2 is in correct format", %{packages: [p1, p2, p3] = packages} do
-      RegistryBuilder.full_build(Repository.hexpm())
+      RegistryBuilder.full_build(Organization.hexpm())
       first = packages |> Enum.map(& &1.name) |> Enum.sort() |> List.first()
 
       names = v2_map("names")
@@ -123,11 +124,11 @@ defmodule Hexpm.Repository.RegistryBuilderTest do
     end
 
     test "remove package", %{packages: [p1, p2, p3], releases: [_, _, _, r4]} do
-      RegistryBuilder.full_build(Repository.hexpm())
+      RegistryBuilder.full_build(Organization.hexpm())
 
       Hexpm.Repo.delete!(r4)
       Hexpm.Repo.delete!(p3)
-      RegistryBuilder.full_build(Repository.hexpm())
+      RegistryBuilder.full_build(Organization.hexpm())
 
       assert length(v2_map("names").packages) == 2
       assert v2_map("packages/#{p1.name}")
@@ -136,23 +137,23 @@ defmodule Hexpm.Repository.RegistryBuilderTest do
     end
 
     test "registry builds for multiple repositories" do
-      repository = insert(:repository)
-      package = insert(:package, repository_id: repository.id, repository: repository)
+      organization = insert(:organization)
+      package = insert(:package, organization_id: organization.id, organization: organization)
       insert(:release, package: package, version: "0.0.1")
-      RegistryBuilder.full_build(repository)
+      RegistryBuilder.full_build(organization)
 
-      refute open_table(repository.name)
+      refute open_table(organization.name)
 
-      names = v2_map("repos/#{repository.name}/names")
+      names = v2_map("repos/#{organization.name}/names")
       assert length(names.packages) == 1
 
-      assert v2_map("repos/#{repository.name}/packages/#{package.name}")
+      assert v2_map("repos/#{organization.name}/packages/#{package.name}")
     end
   end
 
   describe "partial_build/1" do
     test "add release", %{packages: [_, p2, _]} do
-      RegistryBuilder.full_build(Repository.hexpm())
+      RegistryBuilder.full_build(Organization.hexpm())
 
       release = insert(:release, package: p2, version: "0.0.3")
 
@@ -181,7 +182,7 @@ defmodule Hexpm.Repository.RegistryBuilderTest do
     end
 
     test "remove release", %{packages: [_, p2, _], releases: [_, _, r3, _]} do
-      RegistryBuilder.full_build(Repository.hexpm())
+      RegistryBuilder.full_build(Organization.hexpm())
 
       Hexpm.Repo.delete!(r3)
       RegistryBuilder.partial_build({:publish, p2})
@@ -202,9 +203,9 @@ defmodule Hexpm.Repository.RegistryBuilderTest do
     end
 
     test "add package" do
-      RegistryBuilder.full_build(Repository.hexpm())
+      RegistryBuilder.full_build(Organization.hexpm())
 
-      p = insert(:package) |> Hexpm.Repo.preload(:repository)
+      p = insert(:package) |> Hexpm.Repo.preload(:organization)
       insert(:release, package: p, version: "0.0.1")
       RegistryBuilder.partial_build({:publish, p})
 
@@ -226,7 +227,7 @@ defmodule Hexpm.Repository.RegistryBuilderTest do
     end
 
     test "remove package", %{packages: [_, _, p3], releases: [_, _, _, r4]} do
-      RegistryBuilder.full_build(Repository.hexpm())
+      RegistryBuilder.full_build(Organization.hexpm())
 
       Hexpm.Repo.delete!(r4)
       Hexpm.Repo.delete!(p3)
@@ -242,22 +243,22 @@ defmodule Hexpm.Repository.RegistryBuilderTest do
     end
 
     test "add package for multiple repositories" do
-      repository = insert(:repository)
-      package1 = insert(:package, repository_id: repository.id, repository: repository)
+      organization = insert(:organization)
+      package1 = insert(:package, organization_id: organization.id, organization: organization)
       insert(:release, package: package1, version: "0.0.1")
-      RegistryBuilder.full_build(repository)
+      RegistryBuilder.full_build(organization)
 
-      package2 = insert(:package, repository_id: repository.id, repository: repository)
+      package2 = insert(:package, organization_id: organization.id, organization: organization)
       insert(:release, package: package2, version: "0.0.1")
       RegistryBuilder.partial_build({:publish, package2})
 
-      refute open_table(repository.name)
+      refute open_table(organization.name)
 
-      names = v2_map("repos/#{repository.name}/names")
+      names = v2_map("repos/#{organization.name}/names")
       assert length(names.packages) == 2
 
-      assert v2_map("repos/#{repository.name}/packages/#{package1.name}")
-      assert v2_map("repos/#{repository.name}/packages/#{package2.name}")
+      assert v2_map("repos/#{organization.name}/packages/#{package1.name}")
+      assert v2_map("repos/#{organization.name}/packages/#{package2.name}")
     end
   end
 end

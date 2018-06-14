@@ -7,12 +7,12 @@ defmodule Hexpm.Web.API.DocsController do
        [
          domain: "api",
          resource: "read",
-         fun: [&repository_access/2, &repository_billing_active/2]
+         fun: [&organization_access/2, &organization_billing_active/2]
        ]
        when action in [:show]
 
   plug :authorize,
-       [domain: "api", resource: "write", fun: [&package_owner/2, &repository_billing_active/2]]
+       [domain: "api", resource: "write", fun: [&package_owner/2, &organization_billing_active/2]]
        when action in [:create, :delete]
 
   def show(conn, _params) do

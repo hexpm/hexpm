@@ -383,12 +383,12 @@ Hexpm.Repo.transaction(fn ->
   insert(:download, release: rel, downloads: 1, day: Hexpm.Utils.utc_days_ago(2))
   insert(:download, release: rel, downloads: 42, day: Hexpm.Utils.utc_yesterday())
 
-  myrepo = insert(:repository, name: "myrepo")
+  myrepo = insert(:organization, name: "myrepo")
 
   private =
     insert(
       :package,
-      repository_id: myrepo.id,
+      organization_id: myrepo.id,
       name: "private",
       package_owners: [build(:package_owner, user: eric)],
       meta:
@@ -415,7 +415,7 @@ Hexpm.Repo.transaction(fn ->
   other_private =
     insert(
       :package,
-      repository_id: myrepo.id,
+      organization_id: myrepo.id,
       name: "other_private",
       package_owners: [build(:package_owner, user: eric)],
       meta:
@@ -447,7 +447,7 @@ Hexpm.Repo.transaction(fn ->
     ]
   )
 
-  insert(:repository_user, repository: myrepo, user: eric, role: "admin")
+  insert(:organization_user, organization: myrepo, user: eric, role: "admin")
 
   Enum.each(1..100, fn index ->
     ups =
