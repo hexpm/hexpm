@@ -1,18 +1,19 @@
 destructure([version, name, repo], Enum.reverse(System.argv()))
 
-repository =
+organization =
   if repo do
-    Hexpm.Repo.get_by!(Hexpm.Repository.Repository, name: repo)
+    Hexpm.Repo.get_by!(Hexpm.Accounts.Organization, name: repo)
   else
-    Hexpm.Repo.get!(Hexpm.Repository.Repository, 1)
+    Hexpm.Repo.get!(Hexpm.Accounts.Organization, 1)
   end
 
-unless repository do
+unless organization do
   IO.puts("No package: #{repo}")
   System.halt(1)
 end
 
-package = Hexpm.Repo.get_by!(Hexpm.Repository.Package, name: name, repository_id: repository.id)
+package =
+  Hexpm.Repo.get_by!(Hexpm.Repository.Package, name: name, organization_id: organization.id)
 
 unless package do
   IO.puts("No package: #{name}")

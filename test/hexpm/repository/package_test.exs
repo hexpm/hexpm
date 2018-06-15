@@ -6,14 +6,14 @@ defmodule Hexpm.Repository.PackageTest do
 
   setup do
     user = insert(:user)
-    repository = insert(:repository)
-    %{user: user, repository: repository}
+    organization = insert(:organization)
+    %{user: user, organization: organization}
   end
 
-  test "create package and get", %{user: user, repository: repository} do
+  test "create package and get", %{user: user, organization: organization} do
     user_id = user.id
 
-    Package.build(repository, user, pkg_meta(%{name: "ecto", description: "DSL"}))
+    Package.build(organization, user, pkg_meta(%{name: "ecto", description: "DSL"}))
     |> Hexpm.Repo.insert!()
 
     assert [%User{id: ^user_id}] =
@@ -22,9 +22,9 @@ defmodule Hexpm.Repository.PackageTest do
     assert is_nil(Hexpm.Repo.get_by(Package, name: "postgrex"))
   end
 
-  test "update package", %{user: user, repository: repository} do
+  test "update package", %{user: user, organization: organization} do
     package =
-      Package.build(repository, user, pkg_meta(%{name: "ecto", description: "original"}))
+      Package.build(organization, user, pkg_meta(%{name: "ecto", description: "original"}))
       |> Hexpm.Repo.insert!()
 
     Package.update(package, %{
@@ -39,18 +39,18 @@ defmodule Hexpm.Repository.PackageTest do
     assert package.meta.description == "updated"
   end
 
-  test "validate blank description in metadata", %{user: user, repository: repository} do
-    changeset = Package.build(repository, user, pkg_meta(%{name: "ecto", description: ""}))
+  test "validate blank description in metadata", %{user: user, organization: organization} do
+    changeset = Package.build(organization, user, pkg_meta(%{name: "ecto", description: ""}))
     assert changeset.errors == []
     assert changeset.changes.meta.errors == []
 
-    repository = %{repository | id: 1}
-    changeset = Package.build(repository, user, pkg_meta(%{name: "ecto", description: ""}))
+    organization = %{organization | id: 1}
+    changeset = Package.build(organization, user, pkg_meta(%{name: "ecto", description: ""}))
     assert changeset.errors == []
     assert [description: {"can't be blank", _}] = changeset.changes.meta.errors
   end
 
-  test "validate invalid link in metadata", %{user: user, repository: repository} do
+  test "validate invalid link in metadata", %{user: user, organization: organization} do
     meta =
       pkg_meta(%{
         name: "ecto",
@@ -58,7 +58,7 @@ defmodule Hexpm.Repository.PackageTest do
         links: %{"docs" => "https://hexdocs.pm", "a" => "aaa", "b" => "bbb"}
       })
 
-    changeset = Package.build(repository, user, meta)
+    changeset = Package.build(organization, user, meta)
 
     assert changeset.errors == []
 
@@ -66,48 +66,55 @@ defmodule Hexpm.Repository.PackageTest do
              changeset.changes.meta.errors
   end
 
-  test "packages are unique", %{user: user, repository: repository} do
-    Package.build(repository, user, pkg_meta(%{name: "ecto", description: "DSL"}))
+  test "packages are unique", %{user: user, organization: organization} do
+    Package.build(organization, user, pkg_meta(%{name: "ecto", description: "DSL"}))
     |> Hexpm.Repo.insert!()
 
     assert {:error, _} =
              Package.build(
-               repository,
+               organization,
                user,
                pkg_meta(%{name: "ecto", description: "Domain-specific language"})
              )
              |> Hexpm.Repo.insert()
   end
 
-  test "reserved names", %{user: user, repository: repository} do
+  test "reserved names", %{user: user, organization: organization} do
     assert {:error, %{errors: [name: {"is reserved", _}]}} =
              Package.build(
-               repository,
+               organization,
                user,
                pkg_meta(%{name: "elixir", description: "Awesomeness."})
              )
              |> Hexpm.Repo.insert()
   end
 
-  test "search repository", %{repository: repository} do
-    other_repository = insert(:repository)
-    package1 = insert(:package, repository_id: repository.id)
+  test "search organization", %{organization: organization} do
+    other_organization = insert(:organization)
+    package1 = insert(:package, organization_id: organization.id)
     package2 = insert(:package)
 
-    assert Package.all([repository], 1, 10, "#{repository.name}/#{package1.name}", nil, nil)
+    assert Package.all([organization], 1, 10, "#{organization.name}/#{package1.name}", nil, nil)
            |> Repo.pluck(:name) == [package1.name]
 
-    assert Package.all([repository], 1, 10, "#{repository.name}/#{package2.name}", nil, nil)
+    assert Package.all([organization], 1, 10, "#{organization.name}/#{package2.name}", nil, nil)
            |> Repo.pluck(:name) != [package2.name]
 
-    assert Package.all([other_repository], 1, 10, "#{repository.name}/#{package1.name}", nil, nil)
+    assert Package.all(
+             [other_organization],
+             1,
+             10,
+             "#{organization.name}/#{package1.name}",
+             nil,
+             nil
+           )
            |> Repo.pluck(:name) == []
 
-    assert Package.all([other_repository], 1, 10, "#{package1.name}", nil, nil)
+    assert Package.all([other_organization], 1, 10, "#{package1.name}", nil, nil)
            |> Repo.pluck(:name) == []
   end
 
-  test "search extra metadata", %{user: user, repository: repository} do
+  test "search extra metadata", %{user: user, organization: organization} do
     meta = %{
       "licenses" => ["apache", "BSD"],
       "links" => %{"github" => "https://github.com", "docs" => "https://hexdocs.pm"},
@@ -117,12 +124,12 @@ defmodule Hexpm.Repository.PackageTest do
 
     meta2 = Map.put(meta, "extra", %{"foo" => %{"bar" => "baz"}, "list" => ["b", 2]})
 
-    Package.build(repository, user, pkg_meta(%{name: "nerves", description: "DSL"}))
+    Package.build(organization, user, pkg_meta(%{name: "nerves", description: "DSL"}))
     |> Hexpm.Repo.insert!()
     |> Package.update(%{"meta" => meta})
     |> Hexpm.Repo.update!()
 
-    Package.build(repository, user, pkg_meta(%{name: "nerves_pkg", description: "DSL"}))
+    Package.build(organization, user, pkg_meta(%{name: "nerves_pkg", description: "DSL"}))
     |> Hexpm.Repo.insert!()
     |> Package.update(%{"meta" => meta2})
     |> Hexpm.Repo.update!()
@@ -134,16 +141,16 @@ defmodule Hexpm.Repository.PackageTest do
     ]
 
     for {s, len} <- search do
-      p = Package.all([repository], 1, 10, s, nil, nil) |> Hexpm.Repo.all()
+      p = Package.all([organization], 1, 10, s, nil, nil) |> Hexpm.Repo.all()
       assert length(p) == len
     end
   end
 
-  test "search dependants", %{repository: repository} do
-    insert(:package, name: "nerves", repository_id: repository.id)
-    poison = insert(:package, name: "poison", repository_id: repository.id)
-    ecto = insert(:package, name: "ecto", repository_id: repository.id)
-    phoenix = insert(:package, name: "phoenix", repository_id: repository.id)
+  test "search dependants", %{organization: organization} do
+    insert(:package, name: "nerves", organization_id: organization.id)
+    poison = insert(:package, name: "poison", organization_id: organization.id)
+    ecto = insert(:package, name: "ecto", organization_id: organization.id)
+    phoenix = insert(:package, name: "phoenix", organization_id: organization.id)
 
     rel = insert(:release, package: ecto)
     insert(:requirement, release: rel, dependency: poison, requirement: "~> 1.0")
@@ -154,29 +161,29 @@ defmodule Hexpm.Repository.PackageTest do
     Hexpm.Repo.refresh_view(Hexpm.Repository.PackageDependant)
 
     assert ["ecto", "phoenix"] =
-             Package.all([repository], 1, 10, "depends:poison", :name, nil) |> Repo.pluck(:name)
+             Package.all([organization], 1, 10, "depends:poison", :name, nil) |> Repo.pluck(:name)
 
     assert ["phoenix"] =
-             Package.all([repository], 1, 10, "depends:poison depends:ecto", nil, nil)
+             Package.all([organization], 1, 10, "depends:poison depends:ecto", nil, nil)
              |> Repo.pluck(:name)
   end
 
-  test "sort packages by total downloads", %{repository: repository} do
-    %{id: ecto_id} = insert(:package, repository_id: repository.id)
-    %{id: phoenix_id} = insert(:package, repository_id: repository.id)
+  test "sort packages by total downloads", %{organization: organization} do
+    %{id: ecto_id} = insert(:package, organization_id: organization.id)
+    %{id: phoenix_id} = insert(:package, organization_id: organization.id)
     insert(:release, package_id: phoenix_id, daily_downloads: [build(:download, downloads: 10)])
     insert(:release, package_id: ecto_id, daily_downloads: [build(:download, downloads: 5)])
 
     :ok = Hexpm.Repo.refresh_view(Hexpm.Repository.PackageDownload)
 
     assert [^phoenix_id, ^ecto_id] =
-             Package.all([repository], 1, 10, nil, :total_downloads, nil) |> Repo.pluck(:id)
+             Package.all([organization], 1, 10, nil, :total_downloads, nil) |> Repo.pluck(:id)
   end
 
-  test "sort packages by recent downloads", %{repository: repository} do
-    %{id: ecto_id} = insert(:package, repository_id: repository.id)
-    %{id: phoenix_id} = insert(:package, repository_id: repository.id)
-    %{id: decimal_id} = insert(:package, repository_id: repository.id)
+  test "sort packages by recent downloads", %{organization: organization} do
+    %{id: ecto_id} = insert(:package, organization_id: organization.id)
+    %{id: phoenix_id} = insert(:package, organization_id: organization.id)
+    %{id: decimal_id} = insert(:package, organization_id: organization.id)
 
     insert(
       :release,
@@ -199,6 +206,6 @@ defmodule Hexpm.Repository.PackageTest do
     :ok = Hexpm.Repo.refresh_view(Hexpm.Repository.PackageDownload)
 
     assert [^decimal_id, ^ecto_id, ^phoenix_id] =
-             Package.all([repository], 1, 10, nil, :recent_downloads, nil) |> Repo.pluck(:id)
+             Package.all([organization], 1, 10, nil, :recent_downloads, nil) |> Repo.pluck(:id)
   end
 end

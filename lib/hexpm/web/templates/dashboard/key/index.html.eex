@@ -67,7 +67,7 @@
                   :resource,
                   [
                     API: ["Read": "read", "Write": "write"],
-                    "Organization": ["All"] ++ Enum.map(@repositories, & &1.name),
+                    "Organization": ["All"] ++ Enum.map(@organizations, & &1.name),
                   ],
                   class: "form-control"
                 )

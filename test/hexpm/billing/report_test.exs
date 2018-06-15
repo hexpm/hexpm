@@ -2,16 +2,16 @@ defmodule Hexpm.Billing.ReportTest do
   use Hexpm.DataCase, async: true
   alias Ecto.Adapters.SQL.Sandbox
   alias Hexpm.Billing
-  alias Hexpm.Repository.Repositories
+  alias Hexpm.Accounts.Organizations
 
-  test "set repository to active" do
-    repository1 = insert(:repository, billing_active: true)
-    repository2 = insert(:repository, billing_active: true)
-    repository3 = insert(:repository, billing_active: false)
-    repository4 = insert(:repository, billing_active: false)
+  test "set organization to active" do
+    organization1 = insert(:organization, billing_active: true)
+    organization2 = insert(:organization, billing_active: true)
+    organization3 = insert(:organization, billing_active: false)
+    organization4 = insert(:organization, billing_active: false)
 
     Mox.stub(Billing.Mock, :report, fn ->
-      [repository1.name, repository3.name]
+      [organization1.name, organization3.name]
     end)
 
     {:ok, pid} = Billing.Report.start_link(interval: 60_000)
@@ -20,17 +20,17 @@ defmodule Hexpm.Billing.ReportTest do
     send(pid, :update)
     :sys.get_state(pid)
 
-    assert Repositories.get(repository1.name).billing_active
-    refute Repositories.get(repository2.name).billing_active
-    assert Repositories.get(repository3.name).billing_active
-    refute Repositories.get(repository4.name).billing_active
+    assert Organizations.get(organization1.name).billing_active
+    refute Organizations.get(organization2.name).billing_active
+    assert Organizations.get(organization3.name).billing_active
+    refute Organizations.get(organization4.name).billing_active
   end
 
-  test "set repository to unactive" do
-    repository1 = insert(:repository, billing_active: true)
-    repository2 = insert(:repository, billing_active: true)
-    repository3 = insert(:repository, billing_active: false)
-    repository4 = insert(:repository, billing_active: false)
+  test "set organization to inactive" do
+    organization1 = insert(:organization, billing_active: true)
+    organization2 = insert(:organization, billing_active: true)
+    organization3 = insert(:organization, billing_active: false)
+    organization4 = insert(:organization, billing_active: false)
 
     Mox.stub(Billing.Mock, :report, fn -> [] end)
 
@@ -40,9 +40,9 @@ defmodule Hexpm.Billing.ReportTest do
     send(pid, :update)
     :sys.get_state(pid)
 
-    refute Repositories.get(repository1.name).billing_active
-    refute Repositories.get(repository2.name).billing_active
-    refute Repositories.get(repository3.name).billing_active
-    refute Repositories.get(repository4.name).billing_active
+    refute Organizations.get(organization1.name).billing_active
+    refute Organizations.get(organization2.name).billing_active
+    refute Organizations.get(organization3.name).billing_active
+    refute Organizations.get(organization4.name).billing_active
   end
 end

@@ -56,13 +56,13 @@ defmodule Hexpm.Emails do
     |> render("typosquat_candidates.html")
   end
 
-  def repository_invite(repository, user) do
+  def organization_invite(organization, user) do
     email()
     |> email_to(user)
-    |> subject("Hex.pm - You have been added to the #{repository.name} repository")
-    |> assign(:repository, repository.name)
+    |> subject("Hex.pm - You have been added to the #{organization.name} organization")
+    |> assign(:organization, organization.name)
     |> assign(:username, user.username)
-    |> render("repository_invite.html")
+    |> render("organization_invite.html")
   end
 
   defp email_to(email, to) do

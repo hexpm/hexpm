@@ -16,8 +16,8 @@ defmodule Hexpm.Web.DashboardView do
     end
   end
 
-  defp selected_repository(conn, name) do
-    if Enum.take(conn.path_info, -2) == ["repos", name] do
+  defp selected_organization(conn, name) do
+    if Enum.take(conn.path_info, -2) == ["orgs", name] do
       "selected"
     end
   end

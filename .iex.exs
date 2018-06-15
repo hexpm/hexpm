@@ -1,10 +1,15 @@
 alias Hexpm.Repo
+
 alias Hexpm.{
   Accounts.AuditLog,
+  Accounts.Auth,
   Accounts.Email,
   Accounts.Key,
   Accounts.KeyPermission,
   Accounts.Keys,
+  Accounts.Organization,
+  Accounts.Organizations,
+  Accounts.OrganizationUser,
   Accounts.PasswordReset,
   Accounts.Session,
   Accounts.User,
@@ -28,12 +33,10 @@ alias Hexpm.{
   Repository.ReleaseMetadata,
   Repository.ReleaseRetirement,
   Repository.Releases,
-  Repository.Repositories,
   Repository.Repository,
-  Repository.RepositoryUser,
   Repository.Requirement,
   Repository.Resolver,
-  Repository.Sitemaps,
+  Repository.Sitemaps
 }
 
-import_if_available Ecto.Query, only: [from: 1, from: 2]
+import_if_available(Ecto.Query, only: [from: 1, from: 2])

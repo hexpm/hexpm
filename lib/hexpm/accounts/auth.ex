@@ -17,7 +17,7 @@ defmodule Hexpm.Accounts.Auth do
         k in Key,
         where: k.secret_first == ^first,
         join: u in assoc(k, :user),
-        preload: [user: {u, [:owned_packages, :emails, :repositories]}]
+        preload: [user: {u, [:owned_packages, :emails, :organizations]}]
       )
       |> Hexpm.Repo.one()
 
@@ -39,7 +39,7 @@ defmodule Hexpm.Accounts.Auth do
   end
 
   def password_auth(username_or_email, password) do
-    user = Users.get(username_or_email, [:owned_packages, :emails, :repositories])
+    user = Users.get(username_or_email, [:owned_packages, :emails, :organizations])
 
     if user && Bcrypt.verify_pass(password, user.password) do
       {:ok, {user, nil, find_email(user, username_or_email), :password}}

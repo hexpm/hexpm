@@ -3,11 +3,11 @@ defmodule Hexpm.Web.API.RepositoryControllerTest do
 
   setup do
     user = insert(:user)
-    repository1 = insert(:repository, public: true)
-    repository2 = insert(:repository, public: false)
-    insert(:repository, public: false)
-    insert(:repository_user, user: user, repository: repository2)
-    %{user: user, repository1: repository1, repository2: repository2}
+    organization1 = insert(:organization, public: true)
+    organization2 = insert(:organization, public: false)
+    insert(:organization, public: false)
+    insert(:organization_user, user: user, organization: organization2)
+    %{user: user, organization1: organization1, organization2: organization2}
   end
 
   describe "GET /api/repos" do
@@ -29,23 +29,23 @@ defmodule Hexpm.Web.API.RepositoryControllerTest do
   end
 
   describe "GET /api/repos/:repository" do
-    test "not authorized", %{repository1: repository1, repository2: repository2} do
-      conn = get(build_conn(), "api/repos/#{repository1.name}")
+    test "not authorized", %{organization1: organization1, organization2: organization2} do
+      conn = get(build_conn(), "api/repos/#{organization1.name}")
       result = json_response(conn, 200)
-      assert result["name"] == repository1.name
+      assert result["name"] == organization1.name
 
-      conn = get(build_conn(), "api/repos/#{repository2.name}")
+      conn = get(build_conn(), "api/repos/#{organization2.name}")
       response(conn, 403)
     end
 
-    test "authorized", %{user: user, repository2: repository2} do
+    test "authorized", %{user: user, organization2: organization2} do
       result =
         build_conn()
         |> put_req_header("authorization", key_for(user))
-        |> get("api/repos/#{repository2.name}")
+        |> get("api/repos/#{organization2.name}")
         |> json_response(200)
 
-      assert result["name"] == repository2.name
+      assert result["name"] == organization2.name
     end
   end
 end

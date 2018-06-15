@@ -1,19 +1,19 @@
-defmodule Hexpm.Repository.Repository do
+defmodule Hexpm.Accounts.Organization do
   use Hexpm.Web, :schema
 
   @derive Hexpm.Web.Stale
   @derive {Phoenix.Param, key: :name}
 
-  schema "repositories" do
+  schema "organizations" do
     field :name, :string
     field :public, :boolean
     field :billing_active, :boolean, default: false
     timestamps()
 
     has_many :packages, Package
-    has_many :repository_users, RepositoryUser
-    has_many :users, through: [:repository_users, :user]
-    has_many :audit_logs, AuditLog, foreign_key: :repository_id
+    has_many :organization_users, OrganizationUser
+    has_many :users, through: [:organization_users, :user]
+    has_many :audit_logs, AuditLog, foreign_key: :organization_id
   end
 
   @name_regex ~r"^[a-z0-9_\-\.]+$"
@@ -35,7 +35,7 @@ defmodule Hexpm.Repository.Repository do
     |> validate_inclusion(:role, @roles)
     |> unique_constraint(
       :user_id,
-      name: "repository_users_repository_id_user_id_index",
+      name: "organization_users_organization_id_user_id_index",
       message: "is already member"
     )
   end
@@ -46,10 +46,10 @@ defmodule Hexpm.Repository.Repository do
     |> validate_inclusion(:role, @roles)
   end
 
-  def has_access(repository, user, role) do
+  def has_access(organization, user, role) do
     from(
-      ro in RepositoryUser,
-      where: ro.repository_id == ^repository.id,
+      ro in OrganizationUser,
+      where: ro.organization_id == ^organization.id,
       where: ro.user_id == ^user.id,
       where: ro.role in ^role_or_higher(role),
       select: count(ro.id) >= 1

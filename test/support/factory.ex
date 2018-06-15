@@ -43,8 +43,8 @@ defmodule Hexpm.Factory do
     %Hexpm.Accounts.UserHandles{}
   end
 
-  def repository_factory() do
-    %Hexpm.Repository.Repository{
+  def organization_factory() do
+    %Hexpm.Accounts.Organization{
       name: Fake.sequence(:package),
       public: false,
       billing_active: true
@@ -55,7 +55,7 @@ defmodule Hexpm.Factory do
     %Hexpm.Repository.Package{
       name: Fake.sequence(:package),
       meta: build(:package_metadata),
-      repository_id: 1
+      organization_id: 1
     }
   end
 
@@ -70,8 +70,8 @@ defmodule Hexpm.Factory do
     %Hexpm.Repository.PackageOwner{}
   end
 
-  def repository_user_factory() do
-    %Hexpm.Repository.RepositoryUser{
+  def organization_user_factory() do
+    %Hexpm.Accounts.OrganizationUser{
       role: "read"
     }
   end

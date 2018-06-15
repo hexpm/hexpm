@@ -15,7 +15,7 @@ defmodule Hexpm.Web.API.AuthController do
           send_resp(conn, 204, "")
 
         {:ok, repository} ->
-          case repository_billing_active(repository, user) do
+          case organization_billing_active(repository, user) do
             :ok -> send_resp(conn, 204, "")
             error -> error(conn, error)
           end

@@ -14,7 +14,7 @@ defmodule Hexpm.Web.Router do
     plug :web_user_agent
     plug :validate_url
     plug :login
-    plug :default_repository
+    plug :default_organization
   end
 
   pipeline :upload do
@@ -26,7 +26,7 @@ defmodule Hexpm.Web.Router do
     plug :validate_url
     plug Hexpm.Web.Plugs.Attack
     plug :fetch_body
-    plug :default_repository
+    plug :default_organization
   end
 
   pipeline :api do
@@ -37,7 +37,7 @@ defmodule Hexpm.Web.Router do
     plug :validate_url
     plug Hexpm.Web.Plugs.Attack
     plug Corsica, origins: "*", allow_methods: ["HEAD", "GET"]
-    plug :default_repository
+    plug :default_organization
   end
 
   if Mix.env() == :dev do
@@ -117,16 +117,18 @@ defmodule Hexpm.Web.Router do
     post "/email/resend", EmailController, :resend_verify
     post "/email/gravatar", EmailController, :gravatar
 
-    get "/repos/:dashboard_repo", RepositoryController, :show
-    post "/repos/:dashboard_repo", RepositoryController, :update
-    post "/repos/:dashboard_repo/billing-token", RepositoryController, :billing_token
-    post "/repos/:dashboard_repo/cancel-billing", RepositoryController, :cancel_billing
-    post "/repos/:dashboard_repo/update-billing", RepositoryController, :update_billing
-    post "/repos/:dashboard_repo/create-billing", RepositoryController, :create_billing
-    get "/repos/:dashboard_repo/invoices/:id", RepositoryController, :show_invoice
-    post "/repos/:dashboard_repo/invoices/:id/pay", RepositoryController, :pay_invoice
-    get "/repos", RepositoryController, :new
-    post "/repos", RepositoryController, :create
+    get "/repos", OrganizationController, :redirect_repo
+    get "/repos/*glob", OrganizationController, :redirect_repo
+    get "/orgs/:dashboard_org", OrganizationController, :show
+    post "/orgs/:dashboard_org", OrganizationController, :update
+    post "/orgs/:dashboard_org/billing-token", OrganizationController, :billing_token
+    post "/orgs/:dashboard_org/cancel-billing", OrganizationController, :cancel_billing
+    post "/orgs/:dashboard_org/update-billing", OrganizationController, :update_billing
+    post "/orgs/:dashboard_org/create-billing", OrganizationController, :create_billing
+    get "/orgs/:dashboard_org/invoices/:id", OrganizationController, :show_invoice
+    post "/orgs/:dashboard_org/invoices/:id/pay", OrganizationController, :pay_invoice
+    get "/orgs", OrganizationController, :new
+    post "/orgs", OrganizationController, :create
 
     get "/keys", KeyController, :index
     delete "/keys", KeyController, :delete
@@ -162,6 +164,9 @@ defmodule Hexpm.Web.Router do
     # NOTE: Deprecated (2018-05-21)
     get "/users/:name/test", UserController, :test
     post "/users/:name/reset", UserController, :reset
+
+    # get "/orgs", OrganizationController, :index
+    # get "/orgs/:organization", OrganizationController, :show
 
     get "/repos", RepositoryController, :index
     get "/repos/:repository", RepositoryController, :show

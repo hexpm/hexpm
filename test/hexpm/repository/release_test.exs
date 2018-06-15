@@ -6,7 +6,7 @@ defmodule Hexpm.Repository.ReleaseTest do
   setup do
     packages =
       insert_list(3, :package)
-      |> Hexpm.Repo.preload(:repository)
+      |> Hexpm.Repo.preload(:organization)
 
     %{packages: packages}
   end
@@ -87,9 +87,9 @@ defmodule Hexpm.Repository.ReleaseTest do
   end
 
   test "create release in other repository with deps", %{packages: [_, package2, package3]} do
-    repository = insert(:repository)
-    package1_repo = insert(:package, repository_id: repository.id)
-    package2_repo = insert(:package, repository_id: repository.id, repository: repository)
+    organization = insert(:organization)
+    package1_repo = insert(:package, organization_id: organization.id)
+    package2_repo = insert(:package, organization_id: organization.id, organization: organization)
 
     Release.build(package1_repo, rel_meta(%{version: "0.0.1", app: package1_repo.name}), "")
     |> Hexpm.Repo.insert!()
@@ -105,7 +105,7 @@ defmodule Hexpm.Repository.ReleaseTest do
         requirements: [
           %{
             name: package1_repo.name,
-            repository: repository.name,
+            repository: organization.name,
             app: package2_repo.name,
             requirement: "~> 0.0.1",
             optional: false
@@ -142,11 +142,13 @@ defmodule Hexpm.Repository.ReleaseTest do
   end
 
   test "create release does not allow deps from other repositories", %{packages: [package1, _, _]} do
-    repository1 = insert(:repository)
-    repository2 = insert(:repository)
-    package1_repo = insert(:package, repository_id: repository1.id)
-    package2_repo = insert(:package, repository_id: repository2.id)
-    package3_repo = insert(:package, repository_id: repository2.id, repository: repository2)
+    organization1 = insert(:organization)
+    organization2 = insert(:organization)
+    package1_repo = insert(:package, organization_id: organization1.id)
+    package2_repo = insert(:package, organization_id: organization2.id)
+
+    package3_repo =
+      insert(:package, organization_id: organization2.id, organization: organization2)
 
     Release.build(package1_repo, rel_meta(%{version: "0.0.1", app: package1_repo.name}), "")
     |> Hexpm.Repo.insert!()
@@ -154,14 +156,14 @@ defmodule Hexpm.Repository.ReleaseTest do
     Release.build(package2_repo, rel_meta(%{version: "0.0.1", app: package2_repo.name}), "")
     |> Hexpm.Repo.insert!()
 
-    package1 = Repo.preload(package1, :repository)
+    package1 = Repo.preload(package1, :organization)
 
     meta =
       rel_meta(%{
         requirements: [
           %{
             name: package1_repo.name,
-            repository: repository1.name,
+            repository: organization1.name,
             app: package1_repo.name,
             requirement: "~> 0.0.1",
             optional: false
@@ -182,7 +184,7 @@ defmodule Hexpm.Repository.ReleaseTest do
         requirements: [
           %{
             name: package2_repo.name,
-            repository: repository1.name,
+            repository: organization1.name,
             app: package2_repo.name,
             requirement: "~> 0.0.1",
             optional: false

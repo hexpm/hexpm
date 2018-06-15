@@ -11,12 +11,12 @@ defmodule Hexpm.Repository.PackageDownload do
     field :downloads, :integer
   end
 
-  def top(repository, view, count) do
+  def top(organization, view, count) do
     from(
       pd in PackageDownload,
       join: p in assoc(pd, :package),
       where: not is_nil(pd.package_id),
-      where: p.repository_id == ^repository.id,
+      where: p.organization_id == ^organization.id,
       where: pd.view == ^view,
       order_by: [desc: pd.downloads],
       limit: ^count,

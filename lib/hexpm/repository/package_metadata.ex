@@ -18,7 +18,7 @@ defmodule Hexpm.Repository.PackageMetadata do
   end
 
   defp validate_required_meta(changeset, package) do
-    if package.repository_id == 1 do
+    if package.organization_id == 1 do
       validate_required(changeset, ~w(description licenses)a)
     else
       changeset

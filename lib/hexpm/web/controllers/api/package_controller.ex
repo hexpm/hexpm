@@ -1,25 +1,25 @@
 defmodule Hexpm.Web.API.PackageController do
   use Hexpm.Web, :controller
 
-  plug :fetch_repository when action in [:index]
+  plug :fetch_organization when action in [:index]
   plug :maybe_fetch_package when action in [:show]
 
   plug :maybe_authorize,
-       [domain: "api", resource: "read", fun: &maybe_repository_access/2]
+       [domain: "api", resource: "read", fun: &maybe_organization_access/2]
        when action in [:index]
 
   plug :maybe_authorize,
-       [domain: "api", resource: "read", fun: &repository_access/2]
+       [domain: "api", resource: "read", fun: &organization_access/2]
        when action in [:show]
 
   @sort_params ~w(name recent_downloads total_downloads inserted_at updated_at)
 
   def index(conn, params) do
-    repositories = repositories(conn)
+    organizations = organizations(conn)
     page = Hexpm.Utils.safe_int(params["page"])
     search = Hexpm.Utils.parse_search(params["search"])
     sort = sort(params["sort"])
-    packages = Packages.search_with_versions(repositories, page, 100, search, sort)
+    packages = Packages.search_with_versions(organizations, page, 100, search, sort)
 
     when_stale(conn, packages, [modified: false], fn conn ->
       conn
@@ -29,7 +29,7 @@ defmodule Hexpm.Web.API.PackageController do
   end
 
   def show(conn, _params) do
-    # TODO: Show flash if private package and repository does not have active billing
+    # TODO: Show flash if private package and organization does not have active billing
     if package = conn.assigns.package do
       when_stale(conn, package, fn conn ->
         package = Packages.preload(package)
@@ -49,11 +49,11 @@ defmodule Hexpm.Web.API.PackageController do
   defp sort("downloads"), do: sort("total_downloads")
   defp sort(param), do: Hexpm.Utils.safe_to_atom(param, @sort_params)
 
-  defp repositories(conn) do
-    if repository = conn.assigns.repository do
-      [repository]
+  defp organizations(conn) do
+    if organization = conn.assigns.organization do
+      [organization]
     else
-      Users.all_repositories(conn.assigns.current_user)
+      Users.all_organizations(conn.assigns.current_user)
     end
   end
 end

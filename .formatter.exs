@@ -7,7 +7,6 @@
     "scripts/*.exs",
     "test/**/*.{ex,exs}"
   ],
-
   locals_without_parens: [
     belongs_to: 2,
     delete: 3,

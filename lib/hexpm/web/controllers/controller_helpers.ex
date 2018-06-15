@@ -2,8 +2,8 @@ defmodule Hexpm.Web.ControllerHelpers do
   import Plug.Conn
   import Phoenix.Controller
 
-  alias Hexpm.Accounts.Auth
-  alias Hexpm.Repository.{Releases, Repositories}
+  alias Hexpm.Accounts.{Auth, Organizations}
+  alias Hexpm.Repository.{Packages, Releases}
   alias Hexpm.Web.Router.Helpers, as: Routes
 
   @max_cache_age 60
@@ -208,37 +208,37 @@ defmodule Hexpm.Web.ControllerHelpers do
   defp time_to_erl(%NaiveDateTime{} = datetime), do: NaiveDateTime.to_erl(datetime)
   defp time_to_erl(%Date{} = date), do: {Date.to_erl(date), {0, 0, 0}}
 
-  def fetch_repository(conn, _opts) do
+  def fetch_organization(conn, _opts) do
     if param = conn.params["repository"] do
-      if repository = Repositories.get(param) do
-        assign(conn, :repository, repository)
+      if organization = Organizations.get(param) do
+        assign(conn, :organization, organization)
       else
         conn
         |> Hexpm.Web.AuthHelpers.forbidden("account not authorized for this action")
         |> halt()
       end
     else
-      assign(conn, :repository, nil)
+      assign(conn, :organization, nil)
     end
   end
 
   def maybe_fetch_package(conn, _opts) do
-    repository = Repositories.get(conn.params["repository"])
-    package = repository && Hexpm.Repository.Packages.get(repository, conn.params["name"])
+    organization = Organizations.get(conn.params["repository"])
+    package = organization && Packages.get(organization, conn.params["name"])
 
     conn
-    |> assign(:repository, repository)
+    |> assign(:organization, organization)
     |> assign(:package, package)
   end
 
   def fetch_release(conn, _opts) do
-    repository = Repositories.get(conn.params["repository"])
-    package = repository && Hexpm.Repository.Packages.get(repository, conn.params["name"])
+    organization = Organizations.get(conn.params["repository"])
+    package = organization && Packages.get(organization, conn.params["name"])
     release = package && Releases.get(package, conn.params["version"])
 
     if release do
       conn
-      |> assign(:repository, repository)
+      |> assign(:organization, organization)
       |> assign(:package, package)
       |> assign(:release, release)
     else
@@ -247,12 +247,12 @@ defmodule Hexpm.Web.ControllerHelpers do
   end
 
   def maybe_fetch_release(conn, _opts) do
-    repository = Repositories.get(conn.params["repository"])
-    package = repository && Hexpm.Repository.Packages.get(repository, conn.params["name"])
+    organization = Organizations.get(conn.params["repository"])
+    package = organization && Packages.get(organization, conn.params["name"])
     release = package && Releases.get(package, conn.params["version"])
 
     conn
-    |> assign(:repository, repository)
+    |> assign(:organization, organization)
     |> assign(:package, package)
     |> assign(:release, release)
   end

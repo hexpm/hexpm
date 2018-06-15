@@ -4,14 +4,14 @@ defmodule Hexpm.Web.API.OwnerController do
   plug :maybe_fetch_package
 
   plug :authorize,
-       [domain: "api", resource: "read", fun: &repository_access/2]
+       [domain: "api", resource: "read", fun: &organization_access/2]
        when action in [:index, :show]
 
   plug :authorize,
        [
          domain: "api",
          resource: "write",
-         fun: [&maybe_full_package_owner/2, &repository_billing_active/2]
+         fun: [&maybe_full_package_owner/2, &organization_billing_active/2]
        ]
        when action in [:create, :delete]
 
@@ -58,7 +58,7 @@ defmodule Hexpm.Web.API.OwnerController do
             |> send_resp(204, "")
 
           {:error, :not_member} ->
-            errors = %{"email" => "cannot add owner that is not a member of the repository"}
+            errors = %{"email" => "cannot add owner that is not a member of the organization"}
             validation_failed(conn, errors)
 
           {:error, changeset} ->

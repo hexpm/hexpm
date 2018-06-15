@@ -23,7 +23,7 @@ defmodule Hexpm.Web.API.UserController do
   end
 
   def me(conn, _params) do
-    user = Users.put_repositories(conn.assigns.current_user)
+    user = Users.put_organizations(conn.assigns.current_user)
 
     when_stale(conn, user, fn conn ->
       conn
@@ -47,12 +47,12 @@ defmodule Hexpm.Web.API.UserController do
     end
   end
 
-  # TODO: enable other repository users to see private packages
+  # TODO: enable other organization users to see private packages
   # TODO: add tests
   defp filter_packages(nil), do: nil
 
   defp filter_packages(user) do
-    %{user | owned_packages: Enum.filter(user.owned_packages, &(&1.repository_id == 1))}
+    %{user | owned_packages: Enum.filter(user.owned_packages, &(&1.organization_id == 1))}
   end
 
   def test(conn, params) do

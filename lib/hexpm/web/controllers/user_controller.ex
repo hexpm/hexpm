@@ -2,15 +2,15 @@ defmodule Hexpm.Web.UserController do
   use Hexpm.Web, :controller
 
   def show(conn, %{"username" => username}) do
-    if user = Users.get_by_username(username, [:emails, owned_packages: :repository]) do
-      repositories = Users.all_repositories(conn.assigns.current_user)
-      repository_ids = Enum.map(repositories, & &1.id)
+    if user = Users.get_by_username(username, [:emails, owned_packages: :organization]) do
+      organizations = Users.all_organizations(conn.assigns.current_user)
+      organization_ids = Enum.map(organizations, & &1.id)
 
       packages =
         user.owned_packages
-        |> Enum.filter(&(&1.repository_id in repository_ids))
+        |> Enum.filter(&(&1.organization_id in organization_ids))
         |> Packages.attach_versions()
-        |> Enum.sort_by(&[repository_sort(&1.repository), &1.name])
+        |> Enum.sort_by(&[organization_sort(&1.organization), &1.name])
 
       public_email = User.email(user, :public)
       gravatar_email = User.email(user, :gravatar)
@@ -32,6 +32,6 @@ defmodule Hexpm.Web.UserController do
 
   # TODO: DRY up
   # Atoms sort before strings
-  defp repository_sort(%Repository{id: 1}), do: :first
-  defp repository_sort(%Repository{name: name}), do: name
+  defp organization_sort(%Organization{id: 1}), do: :first
+  defp organization_sort(%Organization{name: name}), do: name
 end

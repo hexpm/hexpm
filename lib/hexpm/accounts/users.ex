@@ -21,23 +21,23 @@ defmodule Hexpm.Accounts.Users do
     |> Repo.preload(preload)
   end
 
-  def put_repositories(user) do
-    repositories = Map.new(user.repositories, &{&1.id, &1})
+  def put_organizations(user) do
+    organizations = Map.new(user.organizations, &{&1.id, &1})
 
-    %{
-      user
-      | owned_packages:
-          Enum.map(user.owned_packages, &%{&1 | repository: repositories[&1.repository_id]})
-    }
+    owned_packages =
+      Enum.map(user.owned_packages, fn package ->
+        %{package | organization: organizations[package.organization_id]}
+      end)
+
+    %{user | owned_packages: owned_packages}
   end
 
-  def all_repositories(%User{repositories: repositories})
-      when is_list(repositories) do
-    [Repository.hexpm() | repositories]
+  def all_organizations(%User{organizations: organizations}) when is_list(organizations) do
+    [Organization.hexpm() | organizations]
   end
 
-  def all_repositories(nil) do
-    [Repository.hexpm()]
+  def all_organizations(nil) do
+    [Organization.hexpm()]
   end
 
   def add(params, audit: audit_data) do

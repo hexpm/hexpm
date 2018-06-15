@@ -1,7 +1,7 @@
 defmodule Hexpm.Accounts.User do
   use Hexpm.Web, :schema
 
-  @derive {Hexpm.Web.Stale, assocs: [:emails, :owned_packages, :repositories, :keys]}
+  @derive {Hexpm.Web.Stale, assocs: [:emails, :owned_packages, :organizations, :keys]}
   @derive {Phoenix.Param, key: :username}
 
   schema "users" do
@@ -15,8 +15,8 @@ defmodule Hexpm.Accounts.User do
     has_many :emails, Email
     has_many :package_owners, PackageOwner
     has_many :owned_packages, through: [:package_owners, :package]
-    has_many :repository_users, RepositoryUser
-    has_many :repositories, through: [:repository_users, :repository]
+    has_many :organization_users, OrganizationUser
+    has_many :organizations, through: [:organization_users, :organization]
     has_many :keys, Key
     has_many :audit_logs, AuditLog
     has_many :password_resets, PasswordReset
@@ -111,10 +111,10 @@ defmodule Hexpm.Accounts.User do
   end
 
   def verify_permissions(%User{} = user, "repository", name) do
-    repository = Repositories.get(name)
+    organization = Organizations.get(name)
 
-    if repository && Repositories.access?(repository, user, "read") do
-      {:ok, repository}
+    if organization && Organizations.access?(organization, user, "read") do
+      {:ok, organization}
     else
       :error
     end
