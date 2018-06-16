@@ -1707,7 +1707,6 @@ html_entities
 html_sanitize_ex
 html_to_pdf
 htpasswd
-http
 http2
 http_basic_auth
 http_client
