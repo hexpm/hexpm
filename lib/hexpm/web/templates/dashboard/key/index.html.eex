@@ -15,6 +15,7 @@
           <tr>
             <td>Name</td>
             <td>Permissions</td>
+            <td>Last use</td>
             <td></td>
           </tr>
           <%= for key <- @keys do %>
@@ -26,19 +27,13 @@
                 <% end %>
               </td>
               <td>
+                <small><%= formatted_usage_info(key) %></small>
+              </td>
+              <td>
                 <%= form_tag(Routes.key_path(Endpoint, :delete), method: :delete, class: "action") do %>
                   <input type="hidden" name="name" value="<%= key.name %>">
                   <button type="submit" class="btn btn-danger btn-xs">Revoke</button>
                 <% end %>
-              </td>
-            </tr>
-            <tr>
-              <td colspan=3>
-                <small>
-                  Last used: <%= formatted_used_at(key.last_used_at) %><br>
-                  Last IP: <%= key.last_ip || "N/A" %><br>
-                  Last user agent: <%= key.last_user_agent || "N/A" %>
-                </small>
               </td>
             </tr>
           <% end %>
