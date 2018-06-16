@@ -24,7 +24,7 @@ defmodule Hexpm.Web.Dashboard.KeyView do
     |> Enum.join(", ")
   end
 
-  defp formatted_used_at(%{year: year, month: month, day: day, hour: hour, minute: minute, second: second}) do
+  defp formatted_used_at(%{year: year, month: month, day: day}) do
     "#{year |> zero_pad}-#{month |> zero_pad}-#{day |> zero_pad}"
   end
 
