@@ -1,6 +1,7 @@
 defmodule Hexpm.Web.API.DocsControllerTest do
   use Hexpm.ConnCase, async: true
 
+  import Ecto.Query, only: [from: 2]
   alias Hexpm.Accounts.{AuditLog, Organization}
   alias Hexpm.Repository.Package
 
@@ -242,7 +243,7 @@ defmodule Hexpm.Web.API.DocsControllerTest do
       refute Hexpm.Repo.get_by(assoc(package, :releases), version: "0.5.0").has_docs
 
       [%{action: "docs.publish"}, %{action: "docs.publish"}, %{action: "docs.publish"}, log] =
-        Hexpm.Repo.all(AuditLog)
+        Hexpm.Repo.all(from(al in AuditLog, order_by: al.id))
 
       assert log.user_id == user.id
       assert log.action == "docs.revert"
