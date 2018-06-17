@@ -16,9 +16,9 @@ defmodule Hexpm.ThrottleTest do
     start = :erlang.monotonic_time(:milli_seconds)
 
     Throttle.wait(context.pid, 1)
-    assert diff(start) < 10
+    assert diff(start) < 50
     Throttle.wait(context.pid, 4)
-    assert diff(start) < 10
+    assert diff(start) < 50
     Throttle.wait(context.pid, 1)
     assert diff(start) > 90
 
@@ -26,7 +26,7 @@ defmodule Hexpm.ThrottleTest do
     start = :erlang.monotonic_time(:milli_seconds)
 
     Throttle.wait(context.pid, 1)
-    assert diff(start) < 10
+    assert diff(start) < 50
 
     # Avoid duplicate responses
     refute_received {_ref, :yes}
@@ -37,7 +37,7 @@ defmodule Hexpm.ThrottleTest do
     start = :erlang.monotonic_time(:milli_seconds)
 
     Throttle.wait(context.pid, 1)
-    assert diff(start) < 10
+    assert diff(start) < 50
 
     Process.sleep(110)
 
@@ -45,7 +45,7 @@ defmodule Hexpm.ThrottleTest do
     start = :erlang.monotonic_time(:milli_seconds)
 
     Throttle.wait(context.pid, 5)
-    assert diff(start) < 10
+    assert diff(start) < 50
     Throttle.wait(context.pid, 1)
     assert diff(start) > 90
 
@@ -59,54 +59,54 @@ defmodule Hexpm.ThrottleTest do
 
     spawn_link(fn ->
       Throttle.wait(context.pid, 1)
-      assert diff(start) < 10
+      assert diff(start) < 50
     end)
 
     spawn_link(fn ->
       Throttle.wait(context.pid, 1)
-      assert diff(start) < 10
+      assert diff(start) < 50
     end)
 
     spawn_link(fn ->
       Throttle.wait(context.pid, 1)
-      assert diff(start) < 10
+      assert diff(start) < 50
     end)
 
     spawn_link(fn ->
       Throttle.wait(context.pid, 1)
-      assert diff(start) < 10
+      assert diff(start) < 50
     end)
 
     spawn_link(fn ->
       Throttle.wait(context.pid, 1)
-      assert diff(start) < 10
+      assert diff(start) < 50
     end)
 
     Process.sleep(10)
 
     spawn_link(fn ->
       Throttle.wait(context.pid, 1)
-      assert_in_delta(90, 110, diff(start))
+      assert_in_delta(50, 150, diff(start))
     end)
 
     spawn_link(fn ->
       Throttle.wait(context.pid, 1)
-      assert_in_delta(90, 110, diff(start))
+      assert_in_delta(50, 150, diff(start))
     end)
 
     spawn_link(fn ->
       Throttle.wait(context.pid, 1)
-      assert_in_delta(90, 110, diff(start))
+      assert_in_delta(90, 150, diff(start))
     end)
 
     spawn_link(fn ->
       Throttle.wait(context.pid, 1)
-      assert_in_delta(90, 110, diff(start))
+      assert_in_delta(90, 150, diff(start))
     end)
 
     spawn_link(fn ->
       Throttle.wait(context.pid, 1)
-      assert_in_delta(90, 110, diff(start))
+      assert_in_delta(50, 150, diff(start))
     end)
 
     Process.sleep(10)
@@ -114,27 +114,27 @@ defmodule Hexpm.ThrottleTest do
     # Third time unit
     spawn_link(fn ->
       Throttle.wait(context.pid, 1)
-      assert_in_delta(190, 210, diff(start))
+      assert_in_delta(150, 250, diff(start))
     end)
 
     spawn_link(fn ->
       Throttle.wait(context.pid, 1)
-      assert_in_delta(190, 210, diff(start))
+      assert_in_delta(150, 250, diff(start))
     end)
 
     spawn_link(fn ->
       Throttle.wait(context.pid, 1)
-      assert_in_delta(190, 210, diff(start))
+      assert_in_delta(150, 250, diff(start))
     end)
 
     spawn_link(fn ->
       Throttle.wait(context.pid, 1)
-      assert_in_delta(190, 210, diff(start))
+      assert_in_delta(150, 250, diff(start))
     end)
 
     spawn_link(fn ->
       Throttle.wait(context.pid, 1)
-      assert_in_delta(190, 210, diff(start))
+      assert_in_delta(150, 250, diff(start))
     end)
 
     Process.sleep(300)
