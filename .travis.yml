@@ -20,8 +20,9 @@ before_script:
   - git clone https://github.com/hexpm/hex hex -b ${HEX_VERSION} --depth 1
 script:
   - mix test --include integration
+  - sudo cat /var/log/postgresql/postgresql-9.6-main.log
+  - mix run priv/repo/seeds.exs
   - cd hex; mix deps.get && mix test --include integration
-  - cd ..; mix run priv/repo/seeds.exs
 notifications:
   recipients:
   - eric.meadows.jonsson@gmail.com
