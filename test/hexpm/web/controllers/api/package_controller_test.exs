@@ -5,7 +5,14 @@ defmodule Hexpm.Web.API.PackageControllerTest do
     user = insert(:user)
     unauthorized_user = insert(:user)
     organization = insert(:organization)
-    package1 = insert(:package, inserted_at: ~N[2030-01-01 00:00:00])
+
+    package1 =
+      insert(
+        :package,
+        name: "Hexpm.Web.API.PackageControllerTest",
+        inserted_at: ~N[2030-01-01 00:00:00]
+      )
+
     package2 = insert(:package, updated_at: ~N[2030-01-01 00:00:00])
 
     package3 =
