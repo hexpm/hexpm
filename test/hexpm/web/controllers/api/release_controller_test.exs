@@ -680,7 +680,6 @@ defmodule Hexpm.Web.API.ReleaseControllerTest do
   end
 
   describe "DELETE /api/packages/:name/releases/:version" do
-    @tag isolation: :serializable
     test "delete release validates release age", %{user: user, package: package, release: release} do
       Ecto.Changeset.change(package, inserted_at: %{NaiveDateTime.utc_now() | year: 2000})
       |> Hexpm.Repo.update!()
@@ -699,7 +698,6 @@ defmodule Hexpm.Web.API.ReleaseControllerTest do
                "can only delete a release up to one hour after creation"
     end
 
-    @tag isolation: :serializable
     test "delete release", %{user: user, package: package, release: release} do
       Ecto.Changeset.change(release, inserted_at: %{NaiveDateTime.utc_now() | year: 2030})
       |> Hexpm.Repo.update!()
@@ -721,7 +719,6 @@ defmodule Hexpm.Web.API.ReleaseControllerTest do
   end
 
   describe "DELETE /api/repos/:repository/packages/:name/releases/:version" do
-    @tag isolation: :serializable
     test "authorizes", %{user: user, organization: organization} do
       package =
         insert(
@@ -741,7 +738,6 @@ defmodule Hexpm.Web.API.ReleaseControllerTest do
       assert Hexpm.Repo.get_by(assoc(package, :releases), version: "0.0.1")
     end
 
-    @tag isolation: :serializable
     test "organization needs to have active billing", %{user: user} do
       organization = insert(:organization, billing_active: false)
       insert(:organization_user, organization: organization, user: user, role: "write")
@@ -764,7 +760,6 @@ defmodule Hexpm.Web.API.ReleaseControllerTest do
       assert Hexpm.Repo.get_by(assoc(package, :releases), version: "0.0.1")
     end
 
-    @tag isolation: :serializable
     test "delete release", %{user: user, organization: organization} do
       package =
         insert(
@@ -785,7 +780,6 @@ defmodule Hexpm.Web.API.ReleaseControllerTest do
       refute Hexpm.Repo.get_by(assoc(package, :releases), version: "0.0.1")
     end
 
-    @tag isolation: :serializable
     test "can delete private package release after grace period", %{
       user: user,
       organization: organization

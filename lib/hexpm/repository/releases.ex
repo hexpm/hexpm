@@ -90,7 +90,7 @@ defmodule Hexpm.Repository.Releases do
     |> audit_revert(audit_data, package, release)
     |> Multi.delete_all(:package, package_without_releases(package))
     |> refresh_package_dependants()
-    |> Repo.transaction_with_isolation(level: :serializable, timeout: @publish_timeout)
+    |> Repo.transaction(timeout: @publish_timeout)
     |> revert_result(package)
   end
 

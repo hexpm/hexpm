@@ -28,24 +28,6 @@ defmodule Hexpm.Repo do
     :ok
   end
 
-  def transaction_with_isolation(fun_or_multi, opts) do
-    false = Hexpm.Repo.in_transaction?()
-    level = Keyword.fetch!(opts, :level)
-
-    transaction(
-      fn ->
-        query = "SET TRANSACTION ISOLATION LEVEL #{level}"
-        {:ok, _} = Ecto.Adapters.SQL.query(Hexpm.Repo, query, [])
-        transaction(fun_or_multi, opts)
-      end,
-      opts
-    )
-    |> unwrap_transaction_result
-  end
-
-  defp unwrap_transaction_result({:ok, result}), do: result
-  defp unwrap_transaction_result(other), do: other
-
   def advisory_lock(key, opts \\ []) do
     {:ok, _} =
       Ecto.Adapters.SQL.query(
