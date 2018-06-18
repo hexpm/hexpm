@@ -46,11 +46,23 @@ defmodule Hexpm.Repo do
   defp unwrap_transaction_result({:ok, result}), do: result
   defp unwrap_transaction_result(other), do: other
 
-  def advisory_lock(key, opts) do
+  def advisory_lock(key, opts \\ []) do
     {:ok, _} =
       Ecto.Adapters.SQL.query(
         Hexpm.Repo,
-        "SELECT pg_advisory_xact_lock($1)",
+        "SELECT pg_advisory_lock($1)",
+        [Map.fetch!(@advisory_locks, key)],
+        opts
+      )
+
+    :ok
+  end
+
+  def advisory_unlock(key, opts \\ []) do
+    {:ok, _} =
+      Ecto.Adapters.SQL.query(
+        Hexpm.Repo,
+        "SELECT pg_advisory_unlock($1)",
         [Map.fetch!(@advisory_locks, key)],
         opts
       )

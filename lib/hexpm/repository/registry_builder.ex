@@ -29,6 +29,7 @@ defmodule Hexpm.Repository.RegistryBuilder do
       fn ->
         Hexpm.Repo.advisory_lock(:registry, timeout: @lock_timeout)
         fun.()
+        Hexpm.Repo.advisory_unlock(:registry)
       end,
       timeout: @transaction_timeout
     )
