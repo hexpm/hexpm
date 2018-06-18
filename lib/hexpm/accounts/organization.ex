@@ -13,6 +13,7 @@ defmodule Hexpm.Accounts.Organization do
     has_many :packages, Package
     has_many :organization_users, OrganizationUser
     has_many :users, through: [:organization_users, :user]
+    has_many :keys, Key
     has_many :audit_logs, AuditLog, foreign_key: :organization_id
   end
 
@@ -66,5 +67,17 @@ defmodule Hexpm.Accounts.Organization do
       name: "hexpm",
       public: true
     }
+  end
+
+  def verify_permissions(%Organization{}, "api", _resource) do
+    {:ok, nil}
+  end
+
+  def verify_permissions(%Organization{name: name} = organization, "repository", name) do
+    {:ok, organization}
+  end
+
+  def verify_permissions(%Organization{}, _domain, _resource) do
+    :error
   end
 end

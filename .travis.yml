@@ -16,7 +16,6 @@ env:
     - HEX_VERSION=v0.15.0
     - HEX_VERSION=v0.14.1
 before_script:
-  - mix ecto.create
   - git clone https://github.com/hexpm/hex hex -b ${HEX_VERSION} --depth 1
 script:
   - mix test --include integration

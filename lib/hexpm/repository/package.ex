@@ -67,7 +67,15 @@ defmodule Hexpm.Repository.Package do
     |> validate_format(:name, ~r"^[a-z]\w*$")
     |> validate_exclusion(:name, @reserved_names)
     |> cast_embed(:meta, with: &PackageMetadata.changeset(&1, &2, package), required: true)
-    |> put_assoc(:package_owners, [%PackageOwner{user_id: user.id}])
+    |> put_first_owner(user, organization)
+  end
+
+  defp put_first_owner(changeset, %User{id: id}, _organization) do
+    put_assoc(changeset, :package_owners, [%PackageOwner{user_id: id}])
+  end
+
+  defp put_first_owner(changeset, nil, %Organization{id: id}) when id != 1 do
+    changeset
   end
 
   def update(package, params) do

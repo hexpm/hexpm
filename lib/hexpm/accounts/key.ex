@@ -18,6 +18,7 @@ defmodule Hexpm.Accounts.Key do
     end
 
     belongs_to :user, User
+    belongs_to :organization, Organization
     embeds_many :permissions, KeyPermission
 
     # Only used after key creation to hold the user's key (not hashed)
@@ -25,30 +26,40 @@ defmodule Hexpm.Accounts.Key do
     field :user_secret, :string, virtual: true
   end
 
-  def changeset(key, user, params) do
+  def changeset(key, user_or_organization, params) do
     cast(key, params, ~w(name)a)
     |> validate_required(~w(name)a)
     |> add_keys()
     |> prepare_changes(&unique_name/1)
-    |> cast_embed(:permissions, with: &KeyPermission.changeset(&1, user, &2))
+    |> cast_embed(:permissions, with: &KeyPermission.changeset(&1, user_or_organization, &2))
     |> put_default_embed(:permissions, [%KeyPermission{domain: "api"}])
   end
 
-  def build(user, params) do
-    build_assoc(user, :keys)
-    |> changeset(user, params)
+  def build(user_or_organization, params) do
+    build_assoc(user_or_organization, :keys)
+    |> associate_owner(user_or_organization)
+    |> changeset(user_or_organization, params)
   end
 
-  def all(user) do
-    from(k in assoc(user, :keys), where: is_nil(k.revoked_at))
+  def all(user_or_organization) do
+    from(
+      k in assoc(user_or_organization, :keys),
+      where: is_nil(k.revoked_at)
+    )
   end
 
-  def get(user, name) do
-    from(k in assoc(user, :keys), where: k.name == ^name and is_nil(k.revoked_at))
+  def get(user_or_organization, name) do
+    from(
+      k in assoc(user_or_organization, :keys),
+      where: k.name == ^name and is_nil(k.revoked_at)
+    )
   end
 
-  def get_revoked(user, name) do
-    from(k in assoc(user, :keys), where: k.name == ^name and not is_nil(k.revoked_at))
+  def get_revoked(user_or_organization, name) do
+    from(
+      k in assoc(user_or_organization, :keys),
+      where: k.name == ^name and not is_nil(k.revoked_at)
+    )
   end
 
   def revoke(key, revoked_at \\ NaiveDateTime.utc_now()) do
@@ -58,9 +69,9 @@ defmodule Hexpm.Accounts.Key do
     |> validate_required(:revoked_at)
   end
 
-  def revoke_by_name(user, key_name, revoked_at \\ NaiveDateTime.utc_now()) do
+  def revoke_by_name(user_or_organization, key_name, revoked_at \\ NaiveDateTime.utc_now()) do
     from(
-      k in assoc(user, :keys),
+      k in assoc(user_or_organization, :keys),
       where: k.name == ^key_name and is_nil(k.revoked_at),
       update: [
         set: [
@@ -71,9 +82,9 @@ defmodule Hexpm.Accounts.Key do
     )
   end
 
-  def revoke_all(user, revoked_at \\ NaiveDateTime.utc_now()) do
+  def revoke_all(user_or_organization, revoked_at \\ NaiveDateTime.utc_now()) do
     from(
-      k in assoc(user, :keys),
+      k in assoc(user_or_organization, :keys),
       where: is_nil(k.revoked_at),
       update: [
         set: [
@@ -113,10 +124,17 @@ defmodule Hexpm.Accounts.Key do
   defp unique_name(changeset) do
     {:ok, name} = fetch_change(changeset, :name)
 
+    source =
+      if changeset.data.organization_id do
+        assoc(changeset.data, :organization)
+      else
+        assoc(changeset.data, :user)
+      end
+
     names =
       from(
-        u in assoc(changeset.data, :user),
-        join: k in assoc(u, :keys),
+        s in source,
+        join: k in assoc(s, :keys),
         where: is_nil(k.revoked_at),
         select: k.name
       )
@@ -159,4 +177,10 @@ defmodule Hexpm.Accounts.Key do
   def verify_permissions?(_key, nil, _resource) do
     false
   end
+
+  def associate_owner(nil, _owner), do: nil
+  def associate_owner(%Key{} = key, %User{} = user), do: %{key | user: user, organization: nil}
+
+  def associate_owner(%Key{} = key, %Organization{} = organization),
+    do: %{key | user: nil, organization: organization}
 end

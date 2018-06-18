@@ -122,6 +122,15 @@ defmodule Hexpm.Web.API.UserControllerTest do
       |> get("api/users/me")
       |> json_response(401)
     end
+
+    test "return 404 for organization keys" do
+      organization = insert(:organization)
+
+      build_conn()
+      |> put_req_header("authorization", key_for(organization))
+      |> get("api/users/me")
+      |> json_response(404)
+    end
   end
 
   describe "GET /api/users/:name" do

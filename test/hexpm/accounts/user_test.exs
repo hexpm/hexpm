@@ -72,8 +72,7 @@ defmodule Hexpm.Accounts.UserTest do
       })
       |> Hexpm.Repo.update!()
 
-      assert {:ok, {auth_user, nil, _, :password}} =
-               Auth.password_auth(user.username, "new_password")
+      assert {:ok, %{user: auth_user}} = Auth.password_auth(user.username, "new_password")
 
       assert auth_user.id == user.id
       assert :error == Auth.password_auth(user.username, "password")

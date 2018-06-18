@@ -16,16 +16,9 @@ defmodule Hexpm.Case do
     |> Hexpm.Repo.insert!()
   end
 
-  def key_for(user, type \\ :api)
-
-  def key_for(username, type) when is_binary(username) do
-    Hexpm.Repo.get_by!(Hexpm.Accounts.User, username: username)
-    |> key_for(type)
-  end
-
-  def key_for(user, _type) do
+  def key_for(user_or_organization) do
     key =
-      user
+      user_or_organization
       |> Hexpm.Accounts.Key.build(%{name: "any_key_name"})
       |> Hexpm.Repo.insert!()
 

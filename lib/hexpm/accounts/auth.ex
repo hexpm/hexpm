@@ -16,8 +16,10 @@ defmodule Hexpm.Accounts.Auth do
       from(
         k in Key,
         where: k.secret_first == ^first,
-        join: u in assoc(k, :user),
-        preload: [user: {u, [:owned_packages, :emails, :organizations]}]
+        left_join: u in assoc(k, :user),
+        left_join: o in assoc(k, :organization),
+        preload: [user: {u, [:owned_packages, :emails, :organizations]}],
+        preload: [organization: o]
       )
       |> Hexpm.Repo.one()
 
@@ -29,7 +31,15 @@ defmodule Hexpm.Accounts.Auth do
         if Hexpm.Utils.secure_check(key.secret_second, second) do
           if is_nil(key.revoked_at) do
             update_last_use(key, usage_info)
-            {:ok, {key.user, key, find_email(key.user, nil), :key}}
+
+            {:ok,
+             %{
+               key: key,
+               user: key.user,
+               organization: key.organization,
+               email: find_email(key.user, nil),
+               source: :key
+             }}
           else
             :revoked
           end
@@ -43,7 +53,14 @@ defmodule Hexpm.Accounts.Auth do
     user = Users.get(username_or_email, [:owned_packages, :emails, :organizations])
 
     if user && Bcrypt.verify_pass(password, user.password) do
-      {:ok, {user, nil, find_email(user, username_or_email), :password}}
+      {:ok,
+       %{
+         key: nil,
+         user: user,
+         organization: nil,
+         email: find_email(user, username_or_email),
+         source: :password
+       }}
     else
       :error
     end
@@ -55,6 +72,10 @@ defmodule Hexpm.Accounts.Auth do
   def gen_key() do
     :crypto.strong_rand_bytes(16)
     |> Base.encode16(case: :lower)
+  end
+
+  defp find_email(nil, _email) do
+    nil
   end
 
   defp find_email(user, email) do

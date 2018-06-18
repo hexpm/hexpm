@@ -1,18 +1,31 @@
 defmodule Hexpm.Web.API.KeyController do
   use Hexpm.Web, :controller
 
+  plug :fetch_organization
+
   plug :authorize,
-       [domain: "api", resource: "write", allow_unconfirmed: true]
+       [
+         domain: "api",
+         resource: "write",
+         allow_unconfirmed: true,
+         fun: &maybe_organization_access_write/2
+       ]
        when action == :create
 
-  plug :authorize, [domain: "api", resource: "write"] when action in [:delete, :delete_all]
-  plug :authorize, [domain: "api", resource: "read"] when action in [:index, :show]
+  plug :authorize,
+       [domain: "api", resource: "write", fun: &maybe_organization_access_write/2]
+       when action in [:delete, :delete_all]
 
-  # TODO: Add filtering on domain and resource
+  plug :authorize,
+       [domain: "api", resource: "read", fun: &maybe_organization_access/2]
+       when action in [:index, :show]
+
+  plug :require_organization_path
+
   def index(conn, _params) do
-    user = conn.assigns.current_user
+    user_or_organization = conn.assigns.organization || conn.assigns.current_user
     authing_key = conn.assigns.key
-    keys = Keys.all(user)
+    keys = Keys.all(user_or_organization)
 
     conn
     |> api_cache(:private)
@@ -20,9 +33,9 @@ defmodule Hexpm.Web.API.KeyController do
   end
 
   def show(conn, %{"name" => name}) do
-    user = conn.assigns.current_user
+    user_or_organization = conn.assigns.organization || conn.assigns.current_user
     authing_key = conn.assigns.key
-    key = Keys.get(user, name)
+    key = Keys.get(user_or_organization, name)
 
     if key do
       when_stale(conn, key, fn conn ->
@@ -36,40 +49,29 @@ defmodule Hexpm.Web.API.KeyController do
   end
 
   def create(conn, params) do
-    user = conn.assigns.current_user
+    user_or_organization = conn.assigns.organization || conn.assigns.current_user
     authing_key = conn.assigns.key
 
-    if api_key?(params) and conn.assigns.auth_source == :key do
-      Hexpm.Web.AuthHelpers.error(conn, {:error, :basic_required})
-    else
-      case Keys.add(user, params, audit: audit_data(conn)) do
-        {:ok, %{key: key}} ->
-          location = Routes.api_key_url(conn, :show, params["name"])
+    case Keys.add(user_or_organization, params, audit: audit_data(conn)) do
+      {:ok, %{key: key}} ->
+        location = Routes.api_key_url(conn, :show, params["name"])
 
-          conn
-          |> put_resp_header("location", location)
-          |> api_cache(:private)
-          |> put_status(201)
-          |> render(:show, key: key, authing_key: authing_key)
+        conn
+        |> put_resp_header("location", location)
+        |> api_cache(:private)
+        |> put_status(201)
+        |> render(:show, key: key, authing_key: authing_key)
 
-        {:error, :key, changeset, _} ->
-          validation_failed(conn, changeset)
-      end
+      {:error, :key, changeset, _} ->
+        validation_failed(conn, changeset)
     end
   end
 
-  defp api_key?(params) do
-    params["permissions"] in [nil, []] or
-      Enum.any?(params["permissions"], fn permission ->
-        permission["domain"] == "api"
-      end)
-  end
-
   def delete(conn, %{"name" => name}) do
-    user = conn.assigns.current_user
+    user_or_organization = conn.assigns.organization || conn.assigns.current_user
     authing_key = conn.assigns.key
 
-    case Keys.remove(user, name, audit: audit_data(conn)) do
+    case Keys.remove(user_or_organization, name, audit: audit_data(conn)) do
       {:ok, %{key: key}} ->
         conn
         |> api_cache(:private)
@@ -82,12 +84,20 @@ defmodule Hexpm.Web.API.KeyController do
   end
 
   def delete_all(conn, _params) do
-    user = conn.assigns.current_user
+    user_or_organization = conn.assigns.organization || conn.assigns.current_user
     key = conn.assigns.key
-    {:ok, _} = Keys.remove_all(user, audit: audit_data(conn))
+    {:ok, _} = Keys.remove_all(user_or_organization, audit: audit_data(conn))
 
     conn
     |> put_status(200)
     |> render(:delete, key: Keys.get(key.id), authing_key: key)
+  end
+
+  defp require_organization_path(conn, _opts) do
+    if conn.assigns.current_organization && !conn.assigns.organization do
+      not_found(conn)
+    else
+      conn
+    end
   end
 end
