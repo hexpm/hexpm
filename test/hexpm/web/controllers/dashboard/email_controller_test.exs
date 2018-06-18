@@ -10,8 +10,10 @@ defmodule Hexpm.Web.Dashboard.EmailControllerTest do
   end
 
   setup do
+    email = Fake.sequence(:email)
     %{
-      user: create_user("eric", "eric@mail.com", "hunter42"),
+      user: create_user(Fake.sequence(:username), email, "hunter42"),
+      email: email,
       password: "hunter42"
     }
   end
@@ -31,15 +33,17 @@ defmodule Hexpm.Web.Dashboard.EmailControllerTest do
   end
 
   test "add email", c do
+    email = Fake.sequence(:email)
+
     conn =
       build_conn()
       |> test_login(c.user)
-      |> post("dashboard/email", %{email: %{email: "new@mail.com"}})
+      |> post("dashboard/email", %{email: %{email: email}})
 
     assert redirected_to(conn) == "/dashboard/email"
     assert get_flash(conn, :info) =~ "A verification email has been sent"
     user = Hexpm.Repo.get!(Hexpm.Accounts.User, c.user.id) |> Hexpm.Repo.preload(:emails)
-    email = Enum.find(user.emails, &(&1.email == "new@mail.com"))
+    email = Enum.find(user.emails, &(&1.email == email))
     refute email.verified
     refute email.primary
     refute email.public
@@ -60,7 +64,7 @@ defmodule Hexpm.Web.Dashboard.EmailControllerTest do
 
   test "can add existing email which is not verified", c do
     u2 = %{
-      user: create_user("techgaun", "techgaun@example.com", "hunter24", false),
+      user: create_user(Fake.sequence(:username), Fake.sequence(:email), "hunter24", false),
       password: "hunter24"
     }
 
@@ -77,7 +81,7 @@ defmodule Hexpm.Web.Dashboard.EmailControllerTest do
 
   test "verified email logs appropriate user correctly", c do
     u2 = %{
-      user: create_user("techgaun", "techgaun@example.com", "hunter24", false),
+      user: create_user(Fake.sequence(:username), Fake.sequence(:email), "hunter24", false),
       password: "hunter24"
     }
 
@@ -120,139 +124,147 @@ defmodule Hexpm.Web.Dashboard.EmailControllerTest do
   end
 
   test "remove email", c do
-    add_email(c.user, "new@mail.com")
+    email = Fake.sequence(:email)
+    add_email(c.user, email)
 
     conn =
       build_conn()
       |> test_login(c.user)
-      |> delete("dashboard/email", %{email: "new@mail.com"})
+      |> delete("dashboard/email", %{email: email})
 
     assert redirected_to(conn) == "/dashboard/email"
     assert get_flash(conn, :info) =~ "Removed email"
     user = Hexpm.Repo.get!(Hexpm.Accounts.User, c.user.id) |> Hexpm.Repo.preload(:emails)
-    refute Enum.find(user.emails, &(&1.email == "new@mail.com"))
+    refute Enum.find(user.emails, &(&1.email == email))
   end
 
   test "cannot remove primary email", c do
     conn =
       build_conn()
       |> test_login(c.user)
-      |> delete("dashboard/email", %{email: "eric@mail.com"})
+      |> delete("dashboard/email", %{email: c.email})
 
     assert redirected_to(conn) == "/dashboard/email"
     assert get_flash(conn, :error) =~ "Cannot remove primary email"
     user = Hexpm.Repo.get!(Hexpm.Accounts.User, c.user.id) |> Hexpm.Repo.preload(:emails)
-    assert Enum.find(user.emails, &(&1.email == "eric@mail.com"))
+    assert Enum.find(user.emails, &(&1.email == c.email))
   end
 
   test "make email primary", c do
-    user = add_email(c.user, "new@mail.com")
-    email = Enum.find(user.emails, &(&1.email == "new@mail.com"))
+    new_email = Fake.sequence(:email)
+    user = add_email(c.user, new_email)
+    email = Enum.find(user.emails, &(&1.email == new_email))
     Ecto.Changeset.change(email, %{verified: true}) |> Hexpm.Repo.update!()
 
     conn =
       build_conn()
       |> test_login(c.user)
-      |> post("dashboard/email/primary", %{email: "new@mail.com"})
+      |> post("dashboard/email/primary", %{email: new_email})
 
     assert redirected_to(conn) == "/dashboard/email"
     assert get_flash(conn, :info) =~ "primary email was changed"
 
     user = Hexpm.Repo.get!(Hexpm.Accounts.User, c.user.id) |> Hexpm.Repo.preload(:emails)
-    assert Enum.find(user.emails, &(&1.email == "new@mail.com")).primary
-    refute Enum.find(user.emails, &(&1.email == "eric@mail.com")).primary
+    assert Enum.find(user.emails, &(&1.email == new_email)).primary
+    refute Enum.find(user.emails, &(&1.email == c.email)).primary
   end
 
   test "cannot make unverified email primary", c do
-    add_email(c.user, "new@mail.com")
+    email = Fake.sequence(:email)
+    add_email(c.user, email)
 
     conn =
       build_conn()
       |> test_login(c.user)
-      |> post("dashboard/email/primary", %{email: "new@mail.com"})
+      |> post("dashboard/email/primary", %{email: email})
 
     assert redirected_to(conn) == "/dashboard/email"
     assert get_flash(conn, :error) =~ "not verified"
 
     user = Hexpm.Repo.get!(Hexpm.Accounts.User, c.user.id) |> Hexpm.Repo.preload(:emails)
-    refute Enum.find(user.emails, &(&1.email == "new@mail.com")).primary
+    refute Enum.find(user.emails, &(&1.email == email)).primary
   end
 
   test "make email public", c do
-    user = add_email(c.user, "new@mail.com")
-    email = Enum.find(user.emails, &(&1.email == "new@mail.com"))
+    new_email = Fake.sequence(:email)
+    user = add_email(c.user, new_email)
+    email = Enum.find(user.emails, &(&1.email == new_email))
     Ecto.Changeset.change(email, %{verified: true}) |> Hexpm.Repo.update!()
 
     conn =
       build_conn()
       |> test_login(c.user)
-      |> post("dashboard/email/public", %{email: "new@mail.com"})
+      |> post("dashboard/email/public", %{email: new_email})
 
     assert redirected_to(conn) == "/dashboard/email"
     assert get_flash(conn, :info) =~ "public email was changed"
 
     user = Hexpm.Repo.get!(Hexpm.Accounts.User, c.user.id) |> Hexpm.Repo.preload(:emails)
-    assert Enum.find(user.emails, &(&1.email == "new@mail.com")).public
-    refute Enum.find(user.emails, &(&1.email == "eric@mail.com")).public
+    assert Enum.find(user.emails, &(&1.email == new_email)).public
+    refute Enum.find(user.emails, &(&1.email == c.email)).public
   end
 
   test "set email for gravatar", c do
-    user = add_email(c.user, "gravatar@mail.com")
-    email = Enum.find(user.emails, &(&1.email == "gravatar@mail.com"))
+    new_email = Fake.sequence(:email)
+    user = add_email(c.user, new_email)
+    email = Enum.find(user.emails, &(&1.email == new_email))
     Ecto.Changeset.change(email, %{verified: true}) |> Hexpm.Repo.update!()
 
     conn =
       build_conn()
       |> test_login(c.user)
-      |> post("dashboard/email/gravatar", %{email: "gravatar@mail.com"})
+      |> post("dashboard/email/gravatar", %{email: new_email})
 
     assert redirected_to(conn) == "/dashboard/email"
     assert get_flash(conn, :info) =~ "gravatar email was changed"
 
     user = Hexpm.Repo.get!(Hexpm.Accounts.User, c.user.id) |> Hexpm.Repo.preload(:emails)
-    assert Enum.find(user.emails, &(&1.email == "gravatar@mail.com")).gravatar
-    refute Enum.find(user.emails, &(&1.email == "eric@mail.com")).gravatar
+    assert Enum.find(user.emails, &(&1.email == new_email)).gravatar
+    refute Enum.find(user.emails, &(&1.email == c.email)).gravatar
   end
 
   test "unknown email cannot be gravatar email", c do
-    email = Enum.find(c.user.emails, &(&1.email == "eric@mail.com"))
+    unknown_email = Fake.sequence(:email)
+    email = Enum.find(c.user.emails, &(&1.email == c.email))
     Hexpm.Accounts.Email.toggle_flag(email, :gravatar, true) |> Hexpm.Repo.update!()
 
     conn =
       build_conn()
       |> test_login(c.user)
-      |> post("dashboard/email/gravatar", %{email: "gravatar@mail.com"})
+      |> post("dashboard/email/gravatar", %{email: unknown_email})
 
     assert redirected_to(conn) == "/dashboard/email"
     assert get_flash(conn, :error) =~ "Unknown email"
 
     user = Hexpm.Repo.get!(Hexpm.Accounts.User, c.user.id) |> Hexpm.Repo.preload(:emails)
-    assert Enum.find(user.emails, &(&1.email == "eric@mail.com")).gravatar
-    refute Enum.find(user.emails, &(&1.email == "gravatar@mail.com"))
+    assert Enum.find(user.emails, &(&1.email == c.email)).gravatar
+    refute Enum.find(user.emails, &(&1.email == unknown_email))
   end
 
   test "unverified email cannot be gravatar email", c do
-    add_email(c.user, "gravatar@mail.com")
+    unverified_email = Fake.sequence(:email)
+    add_email(c.user, unverified_email)
 
     conn =
       build_conn()
       |> test_login(c.user)
-      |> post("dashboard/email/gravatar", %{email: "gravatar@mail.com"})
+      |> post("dashboard/email/gravatar", %{email: unverified_email})
 
     assert redirected_to(conn) == "/dashboard/email"
     assert get_flash(conn, :error) =~ "not verified"
 
     user = Hexpm.Repo.get!(Hexpm.Accounts.User, c.user.id) |> Hexpm.Repo.preload(:emails)
-    refute Enum.find(user.emails, &(&1.email == "gravatar@mail.com")).gravatar
+    refute Enum.find(user.emails, &(&1.email == unverified_email)).gravatar
   end
 
   test "resend verify email", c do
-    user = add_email(c.user, "new@mail.com")
+    new_email = Fake.sequence(:email)
+    user = add_email(c.user, new_email)
 
     conn =
       build_conn()
       |> test_login(user)
-      |> post("dashboard/email/resend", %{email: "new@mail.com"})
+      |> post("dashboard/email/resend", %{email: new_email})
 
     assert redirected_to(conn) == "/dashboard/email"
     assert get_flash(conn, :info) =~ "verification email has been sent"
