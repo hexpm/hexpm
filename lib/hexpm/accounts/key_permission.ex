@@ -9,18 +9,18 @@ defmodule Hexpm.Accounts.KeyPermission do
     field :resource, :string
   end
 
-  def changeset(struct, user, params) do
+  def changeset(struct, user_or_organization, params) do
     cast(struct, params, ~w(domain resource)a)
     |> validate_inclusion(:domain, @domains)
     |> validate_resource()
-    |> validate_permission(user)
+    |> validate_permission(user_or_organization)
   end
 
-  defp validate_permission(changeset, user) do
+  defp validate_permission(changeset, user_or_organization) do
     validate_change(changeset, :resource, fn _, resource ->
       domain = get_change(changeset, :domain)
 
-      case User.verify_permissions(user, domain, resource) do
+      case verify_permissions(user_or_organization, domain, resource) do
         {:ok, _} ->
           []
 
@@ -42,4 +42,10 @@ defmodule Hexpm.Accounts.KeyPermission do
       end
     end)
   end
+
+  def verify_permissions(%User{} = user, domain, resource),
+    do: User.verify_permissions(user, domain, resource)
+
+  def verify_permissions(%Organization{} = organization, domain, resource),
+    do: Organization.verify_permissions(organization, domain, resource)
 end

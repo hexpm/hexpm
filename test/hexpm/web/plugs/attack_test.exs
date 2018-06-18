@@ -129,6 +129,7 @@ defmodule Hexpm.Web.Plugs.AttackTest do
     conn(:get, "/")
     |> Map.put(:remote_ip, remote_ip)
     |> assign(:current_user, nil)
+    |> assign(:current_organization, nil)
     |> Hello.call(:index)
   end
 
@@ -136,6 +137,7 @@ defmodule Hexpm.Web.Plugs.AttackTest do
     conn(:get, "/")
     |> Map.put(:remote_ip, {10, 0, 0, 1})
     |> assign(:current_user, user)
+    |> assign(:current_organization, nil)
     |> Hello.call(:index)
   end
 end

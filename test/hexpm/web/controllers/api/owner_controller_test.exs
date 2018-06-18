@@ -62,9 +62,18 @@ defmodule Hexpm.Web.API.OwnerControllerTest do
       |> json_response(403)
     end
 
-    test "returns 403 for unknown organization", %{user1: user1, organization_package: package} do
+    test "returns 403 for unknown organization", %{
+      user1: user1,
+      organization: organization,
+      organization_package: package
+    } do
       build_conn()
       |> put_req_header("authorization", key_for(user1))
+      |> get("api/repos/UNKNOWN_REPOSITORY/packages/#{package.name}/owners")
+      |> json_response(403)
+
+      build_conn()
+      |> put_req_header("authorization", key_for(organization))
       |> get("api/repos/UNKNOWN_REPOSITORY/packages/#{package.name}/owners")
       |> json_response(403)
     end
@@ -75,6 +84,13 @@ defmodule Hexpm.Web.API.OwnerControllerTest do
     } do
       build_conn()
       |> put_req_header("authorization", key_for(user1))
+      |> get("api/repos/#{organization.name}/packages/UNKNOWN_PACKAGE/owners")
+      |> json_response(403)
+
+      other_organization = insert(:organization)
+
+      build_conn()
+      |> put_req_header("authorization", key_for(other_organization))
       |> get("api/repos/#{organization.name}/packages/UNKNOWN_PACKAGE/owners")
       |> json_response(403)
     end
@@ -89,6 +105,11 @@ defmodule Hexpm.Web.API.OwnerControllerTest do
       |> put_req_header("authorization", key_for(user1))
       |> get("api/repos/#{organization.name}/packages/UNKNOWN_PACKAGE/owners")
       |> json_response(404)
+
+      build_conn()
+      |> put_req_header("authorization", key_for(organization))
+      |> get("api/repos/#{organization.name}/packages/UNKNOWN_PACKAGE/owners")
+      |> json_response(404)
     end
 
     test "get all package owners", %{
@@ -101,6 +122,22 @@ defmodule Hexpm.Web.API.OwnerControllerTest do
       result =
         build_conn()
         |> put_req_header("authorization", key_for(user1))
+        |> get("api/repos/#{organization.name}/packages/#{package.name}/owners")
+        |> json_response(200)
+
+      assert List.first(result)["username"] == user1.username
+    end
+
+    test "get all package owners for organization key", %{
+      user1: user1,
+      organization: organization,
+      organization_package: package
+    } do
+      insert(:organization_user, organization: organization, user: user1)
+
+      result =
+        build_conn()
+        |> put_req_header("authorization", key_for(organization))
         |> get("api/repos/#{organization.name}/packages/#{package.name}/owners")
         |> json_response(200)
 

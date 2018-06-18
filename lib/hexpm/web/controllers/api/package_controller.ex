@@ -1,7 +1,7 @@
 defmodule Hexpm.Web.API.PackageController do
   use Hexpm.Web, :controller
 
-  plug :fetch_organization when action in [:index]
+  plug :fetch_repository when action in [:index]
   plug :maybe_fetch_package when action in [:show]
 
   plug :maybe_authorize,
@@ -50,10 +50,18 @@ defmodule Hexpm.Web.API.PackageController do
   defp sort(param), do: Hexpm.Utils.safe_to_atom(param, @sort_params)
 
   defp organizations(conn) do
-    if organization = conn.assigns.organization do
-      [organization]
-    else
-      Users.all_organizations(conn.assigns.current_user)
+    cond do
+      organization = conn.assigns.organization ->
+        [organization]
+
+      user = conn.assigns.current_user ->
+        Users.all_organizations(user)
+
+      organization = conn.assigns.current_organization ->
+        [Organization.hexpm(), organization]
+
+      true ->
+        [Organization.hexpm()]
     end
   end
 end

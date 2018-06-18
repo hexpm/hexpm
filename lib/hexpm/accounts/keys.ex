@@ -1,22 +1,25 @@
 defmodule Hexpm.Accounts.Keys do
   use Hexpm.Web, :context
 
-  def all(user) do
-    Key.all(user)
+  def all(user_or_organization) do
+    Key.all(user_or_organization)
     |> Repo.all()
+    |> Enum.map(&Key.associate_owner(&1, user_or_organization))
   end
 
   def get(id) do
     Repo.get(Key, id)
+    |> Repo.preload([:organization, :user])
   end
 
-  def get(user, name) do
-    Repo.one(Key.get(user, name))
+  def get(user_or_organization, name) do
+    Repo.one(Key.get(user_or_organization, name))
+    |> Key.associate_owner(user_or_organization)
   end
 
-  def add(user, params, audit: audit_data) do
+  def add(user_or_organization, params, audit: audit_data) do
     Multi.new()
-    |> Multi.insert(:key, Key.build(user, params))
+    |> Multi.insert(:key, Key.build(user_or_organization, params))
     |> audit(audit_data, "key.generate", fn %{key: key} -> key end)
     |> Repo.transaction()
   end
@@ -28,18 +31,18 @@ defmodule Hexpm.Accounts.Keys do
     |> Repo.transaction()
   end
 
-  def remove(user, name, audit: audit_data) do
-    if key = Repo.one(Key.get(user, name)) do
+  def remove(user_or_organization, name, audit: audit_data) do
+    if key = get(user_or_organization, name) do
       remove(key, audit: audit_data)
     else
       {:error, :not_found}
     end
   end
 
-  def remove_all(user, audit: audit_data) do
+  def remove_all(user_or_organization, audit: audit_data) do
     Multi.new()
-    |> Multi.update_all(:keys, Key.revoke_all(user), [])
-    |> audit_many(audit_data, "key.remove", all(user))
+    |> Multi.update_all(:keys, Key.revoke_all(user_or_organization), [])
+    |> audit_many(audit_data, "key.remove", all(user_or_organization))
     |> Repo.transaction()
   end
 end

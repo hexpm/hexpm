@@ -91,8 +91,8 @@ defmodule Hexpm.Web.Plugs do
 
   def login(conn, _opts) do
     user_id = get_session(conn, "user_id")
-
     user = user_id && Hexpm.Accounts.Users.get_by_id(user_id, [:emails, :organizations])
+    conn = assign(conn, :current_organization, nil)
 
     if user do
       assign(conn, :current_user, user)
@@ -118,17 +118,19 @@ defmodule Hexpm.Web.Plugs do
 
   def authenticate(conn, _opts) do
     case Hexpm.Web.AuthHelpers.authenticate(conn) do
-      {:ok, {user, key, email, source}} ->
+      {:ok, %{key: key, user: user, organization: organization, email: email, source: source}} ->
         conn
-        |> assign(:current_user, user)
         |> assign(:key, key)
+        |> assign(:current_user, user)
+        |> assign(:current_organization, organization)
         |> assign(:email, email)
         |> assign(:auth_source, source)
 
       {:error, :missing} ->
         conn
-        |> assign(:current_user, nil)
         |> assign(:key, nil)
+        |> assign(:current_user, nil)
+        |> assign(:current_organization, nil)
         |> assign(:email, nil)
         |> assign(:auth_source, nil)
 

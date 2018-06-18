@@ -211,8 +211,16 @@ defmodule Hexpm.Web.ControllerHelpers do
   defp time_to_erl(%NaiveDateTime{} = datetime), do: NaiveDateTime.to_erl(datetime)
   defp time_to_erl(%Date{} = date), do: {Date.to_erl(date), {0, 0, 0}}
 
+  def fetch_repository(conn, _opts) do
+    fetch_organization_param(conn, "repository")
+  end
+
   def fetch_organization(conn, _opts) do
-    if param = conn.params["repository"] do
+    fetch_organization_param(conn, "organization")
+  end
+
+  defp fetch_organization_param(conn, param) do
+    if param = conn.params[param] do
       if organization = Organizations.get(param) do
         assign(conn, :organization, organization)
       else
@@ -281,12 +289,13 @@ defmodule Hexpm.Web.ControllerHelpers do
   end
 
   def audit_data(conn) do
-    {conn.assigns.current_user, conn.assigns.user_agent}
+    user_or_organization = conn.assigns.current_user || conn.assigns.current_organization
+    {user_or_organization, conn.assigns.user_agent}
   end
 
   def password_auth(username, password) do
     case Auth.password_auth(username, password) do
-      {:ok, {user, nil, email, :password}} ->
+      {:ok, %{user: user, email: email}} ->
         if email.verified,
           do: {:ok, user},
           else: {:error, :unconfirmed}

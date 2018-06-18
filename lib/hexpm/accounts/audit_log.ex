@@ -37,6 +37,18 @@ defmodule Hexpm.Accounts.AuditLog do
     }
   end
 
+  def build(%Organization{id: organization_id}, user_agent, action, params) do
+    params = extract_params(action, params)
+
+    %AuditLog{
+      user_id: nil,
+      organization_id: organization_id,
+      user_agent: user_agent,
+      action: action,
+      params: params
+    }
+  end
+
   def audit(multi, {user, user_agent}, action, fun) when is_function(fun, 1) do
     Multi.merge(multi, fn data ->
       Multi.insert(Multi.new(), multi_key(action), build(user, user_agent, action, fun.(data)))
@@ -128,6 +140,8 @@ defmodule Hexpm.Accounts.AuditLog do
     key
     |> do_serialize()
     |> Map.put(:permissions, Enum.map(key.permissions, &serialize/1))
+    |> Map.put(:user, serialize(key.user))
+    |> Map.put(:organization, serialize(key.organization))
   end
 
   defp serialize(%Package{} = package) do

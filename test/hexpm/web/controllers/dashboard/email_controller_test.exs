@@ -11,6 +11,7 @@ defmodule Hexpm.Web.Dashboard.EmailControllerTest do
 
   setup do
     email = Fake.sequence(:email)
+
     %{
       user: create_user(Fake.sequence(:username), email, "hunter42"),
       email: email,

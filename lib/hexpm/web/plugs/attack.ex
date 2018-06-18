@@ -34,6 +34,17 @@ defmodule Hexpm.Web.Plugs.Attack do
     end
   end
 
+  rule "organization throttle", conn do
+    if organization = conn.assigns.current_organization do
+      throttle(
+        {:organization, organization.id},
+        storage: @storage,
+        limit: 500,
+        period: 60_000
+      )
+    end
+  end
+
   rule "ip throttle", conn do
     throttle(
       {:ip, conn.remote_ip},
@@ -73,10 +84,15 @@ defmodule Hexpm.Web.Plugs.Attack do
   end
 
   defp throttled_user(conn) do
-    if user = conn.assigns.current_user do
-      "user #{user.id}"
-    else
-      "IP #{ip_string(conn.remote_ip)}"
+    cond do
+      user = conn.assigns.current_user ->
+        "user #{user.id}"
+
+      organization = conn.assigns.current_organization ->
+        "organization #{organization.id}"
+
+      true ->
+        "IP #{ip_string(conn.remote_ip)}"
     end
   end
 

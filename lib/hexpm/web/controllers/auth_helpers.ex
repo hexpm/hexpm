@@ -2,40 +2,40 @@ defmodule Hexpm.Web.AuthHelpers do
   import Plug.Conn
   import Hexpm.Web.ControllerHelpers, only: [render_error: 3]
 
-  alias Hexpm.Accounts.{Auth, Key, Organization, Organizations}
+  alias Hexpm.Accounts.{Auth, Key, Organization, Organizations, User}
   alias Hexpm.Repository.{Package, Packages}
 
   def authorized(conn, opts) do
-    user = conn.assigns.current_user
+    user_or_organization = conn.assigns.current_user || conn.assigns.current_organization
 
-    if user do
-      authorized(conn, user, opts[:fun], opts)
+    if user_or_organization do
+      authorized(conn, user_or_organization, opts[:fun], opts)
     else
       error(conn, {:error, :missing})
     end
   end
 
   def maybe_authorized(conn, opts) do
-    authorized(conn, conn.assigns.current_user, opts[:fun], opts)
+    user_or_organization = conn.assigns.current_user || conn.assigns.current_organization
+    authorized(conn, user_or_organization, opts[:fun], opts)
   end
 
-  defp authorized(conn, user, funs, opts) do
-    allow_unconfirmed = Keyword.get(opts, :allow_unconfirmed, false)
+  defp authorized(conn, user_or_organization, funs, opts) do
     domain = Keyword.get(opts, :domain)
     resource = Keyword.get(opts, :resource)
     key = conn.assigns.key
     email = conn.assigns.email
 
     cond do
-      user && ((!email or !email.verified) && !allow_unconfirmed) ->
+      not verified_user?(user_or_organization, email, opts) ->
         error(conn, {:error, :unconfirmed})
 
-      user && key && !verify_permissions?(key, domain, resource) ->
+      user_or_organization && !verify_permissions?(key, domain, resource) ->
         error(conn, {:error, :domain})
 
       funs ->
         Enum.find_value(List.wrap(funs), fn fun ->
-          case fun.(conn, user) do
+          case fun.(conn, user_or_organization) do
             :ok -> nil
             other -> error(conn, other)
           end
@@ -44,6 +44,23 @@ defmodule Hexpm.Web.AuthHelpers do
       true ->
         conn
     end
+  end
+
+  defp verified_user?(%User{}, email, opts) do
+    allow_unconfirmed = Keyword.get(opts, :allow_unconfirmed, false)
+    allow_unconfirmed || (email && email.verified)
+  end
+
+  defp verified_user?(%Organization{}, _email, _opts) do
+    true
+  end
+
+  defp verified_user?(nil, _email, _opts) do
+    true
+  end
+
+  defp verify_permissions?(nil, _domain, _resource) do
+    true
   end
 
   defp verify_permissions?(_key, nil, _resource) do
@@ -144,90 +161,134 @@ defmodule Hexpm.Web.AuthHelpers do
     {:error, :auth}
   end
 
-  def package_owner(%Plug.Conn{} = conn, user) do
-    package_owner(conn.assigns.package, user)
+  def package_owner(%Plug.Conn{} = conn, user_or_organization) do
+    package_owner(conn.assigns.package, user_or_organization)
   end
 
-  def package_owner(%Package{} = package, user) do
+  def package_owner(%Package{} = package, %User{} = user) do
     Packages.owner_with_access?(package, user)
     |> boolean_to_auth_error()
   end
 
-  def maybe_full_package_owner(%Plug.Conn{} = conn, user) do
-    maybe_full_package_owner(conn.assigns.organization, conn.assigns.package, user)
+  def package_owner(%Package{} = package, %Organization{} = organization) do
+    boolean_to_auth_error(package.organization_id == organization.id)
   end
 
-  def maybe_full_package_owner(%Package{} = package, user) do
-    maybe_full_package_owner(package.organization, package, user)
+  def maybe_full_package_owner(%Plug.Conn{} = conn, user_or_organization) do
+    maybe_full_package_owner(
+      conn.assigns.organization,
+      conn.assigns.package,
+      user_or_organization
+    )
   end
 
-  def maybe_full_package_owner(nil, nil, _user) do
+  def maybe_full_package_owner(%Package{} = package, user_or_organization) do
+    maybe_full_package_owner(package.organization, package, user_or_organization)
+  end
+
+  def maybe_full_package_owner(nil, nil, _user_or_organization) do
     {:error, :auth}
   end
 
-  def maybe_full_package_owner(organization, nil, user) do
+  def maybe_full_package_owner(_organization, _package, %Organization{}) do
+    {:error, :auth}
+  end
+
+  def maybe_full_package_owner(organization, nil, %User{} = user) do
     (organization.public or Organizations.access?(organization, user, "admin"))
     |> boolean_to_auth_error()
   end
 
-  def maybe_full_package_owner(_organization, %Package{} = package, user) do
+  def maybe_full_package_owner(_organization, %Package{} = package, %User{} = user) do
     Packages.owner_with_full_access?(package, user)
     |> boolean_to_auth_error()
   end
 
-  def maybe_package_owner(%Plug.Conn{} = conn, user) do
-    maybe_package_owner(conn.assigns.organization, conn.assigns.package, user)
+  def maybe_package_owner(%Plug.Conn{} = conn, user_or_organization) do
+    maybe_package_owner(conn.assigns.organization, conn.assigns.package, user_or_organization)
   end
 
-  def maybe_package_owner(%Package{} = package, user) do
-    maybe_package_owner(package.organization, package, user)
+  def maybe_package_owner(%Package{} = package, user_or_organization) do
+    maybe_package_owner(package.organization, package, user_or_organization)
   end
 
   def maybe_package_owner(nil, nil, _user) do
     {:error, :auth}
   end
 
-  def maybe_package_owner(organization, nil, user) do
+  def maybe_package_owner(organization, _package, %Organization{id: id}) do
+    boolean_to_auth_error(organization.id == id)
+  end
+
+  def maybe_package_owner(organization, nil, %User{} = user) do
     (organization.public or Organizations.access?(organization, user, "write"))
     |> boolean_to_auth_error()
   end
 
-  def maybe_package_owner(_organization, %Package{} = package, user) do
+  def maybe_package_owner(_organization, %Package{} = package, %User{} = user) do
     Packages.owner_with_access?(package, user)
     |> boolean_to_auth_error()
   end
 
-  def organization_access(%Plug.Conn{} = conn, user) do
-    organization_access(conn.assigns.organization, user)
+  def organization_access_write(conn, user_or_organization) do
+    organization_access(conn, user_or_organization, "write")
   end
 
-  def organization_access(%Organization{} = organization, user) do
-    (organization.public or Organizations.access?(organization, user, "read"))
+  def organization_access(conn, user_or_organization, role \\ "read")
+
+  def organization_access(%Plug.Conn{} = conn, user_or_organization, role) do
+    organization_access(conn.assigns.organization, user_or_organization, role)
+  end
+
+  def organization_access(%Organization{} = organization, %User{} = user, role) do
+    (organization.public or Organizations.access?(organization, user, role))
     |> boolean_to_auth_error()
   end
 
-  def organization_access(nil, _user) do
+  def organization_access(%Organization{} = organization, %Organization{id: id}, _role) do
+    boolean_to_auth_error(organization.id == id)
+  end
+
+  def organization_access(%Organization{} = organization, nil, _role) do
+    boolean_to_auth_error(organization.public)
+  end
+
+  def organization_access(nil, _user_or_organization, _role) do
     {:error, :auth}
   end
 
-  def maybe_organization_access(%Plug.Conn{} = conn, user) do
-    maybe_organization_access(conn.assigns.organization, user)
+  def maybe_organization_access_write(conn, user_or_organization) do
+    maybe_organization_access(conn, user_or_organization, "write")
   end
 
-  def maybe_organization_access(%Organization{} = organization, user) do
-    (organization.public or Organizations.access?(organization, user, "read"))
+  def maybe_organization_access(conn, user_or_organization, role \\ "read")
+
+  def maybe_organization_access(%Plug.Conn{} = conn, user_or_organization, role) do
+    maybe_organization_access(conn.assigns.organization, user_or_organization, role)
+  end
+
+  def maybe_organization_access(%Organization{} = organization, %User{} = user, role) do
+    (organization.public or Organizations.access?(organization, user, role))
     |> boolean_to_auth_error()
   end
 
-  def maybe_organization_access(nil, _user) do
+  def maybe_organization_access(%Organization{} = organization, %Organization{id: id}, _role) do
+    boolean_to_auth_error(organization.id == id)
+  end
+
+  def maybe_organization_access(%Organization{} = organization, nil, _role) do
+    boolean_to_auth_error(organization.public)
+  end
+
+  def maybe_organization_access(nil, _user_or_organization, _role) do
     :ok
   end
 
-  def organization_billing_active(%Plug.Conn{} = conn, user) do
-    organization_billing_active(conn.assigns.organization, user)
+  def organization_billing_active(%Plug.Conn{} = conn, _user_or_organization) do
+    organization_billing_active(conn.assigns.organization, nil)
   end
 
-  def organization_billing_active(%Organization{} = organization, _user) do
+  def organization_billing_active(%Organization{} = organization, _user_or_organization) do
     if organization.public or organization.billing_active do
       :ok
     else

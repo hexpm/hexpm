@@ -23,13 +23,17 @@ defmodule Hexpm.Web.API.UserController do
   end
 
   def me(conn, _params) do
-    user = Users.put_organizations(conn.assigns.current_user)
+    if user = conn.assigns.current_user do
+      user = Users.put_organizations(user)
 
-    when_stale(conn, user, fn conn ->
-      conn
-      |> api_cache(:private)
-      |> render(:me, user: user)
-    end)
+      when_stale(conn, user, fn conn ->
+        conn
+        |> api_cache(:private)
+        |> render(:me, user: user)
+      end)
+    else
+      not_found(conn)
+    end
   end
 
   def show(conn, %{"name" => username}) do

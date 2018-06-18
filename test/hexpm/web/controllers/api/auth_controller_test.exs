@@ -2,50 +2,73 @@ defmodule Hexpm.Web.API.AuthControllerTest do
   use Hexpm.ConnCase, async: true
 
   setup do
-    owned_repo = insert(:organization, public: false)
-    unowned_repo = insert(:organization, public: false)
+    owned_org = insert(:organization, public: false)
+    unowned_org = insert(:organization, public: false)
     user = insert(:user)
-    insert(:organization_user, organization: owned_repo, user: user)
+    insert(:organization_user, organization: owned_org, user: user)
 
-    full_key =
+    user_full_key =
       insert(
         :key,
         user: user,
         permissions: [
           build(:key_permission, domain: "api"),
-          build(:key_permission, domain: "repository", resource: owned_repo.name)
+          build(:key_permission, domain: "repository", resource: owned_org.name)
         ]
       )
 
-    api_key = insert(:key, user: user, permissions: [build(:key_permission, domain: "api")])
-
-    repo_key =
+    organization_full_key =
       insert(
         :key,
-        user: user,
-        permissions: [build(:key_permission, domain: "repository", resource: owned_repo.name)]
+        organization: owned_org,
+        permissions: [
+          build(:key_permission, domain: "api"),
+          build(:key_permission, domain: "repository", resource: owned_org.name)
+        ]
       )
 
-    all_repos_key =
-      insert(:key, user: user, permissions: [build(:key_permission, domain: "repositories")])
+    user_api_key = insert(:key, user: user, permissions: [build(:key_permission, domain: "api")])
 
-    unowned_repo_key =
+    organization_api_key =
+      insert(:key, organization: owned_org, permissions: [build(:key_permission, domain: "api")])
+
+    user_repo_key =
       insert(
         :key,
         user: user,
-        permissions: [build(:key_permission, domain: "repository", resource: unowned_repo.name)]
+        permissions: [build(:key_permission, domain: "repository", resource: owned_org.name)]
+      )
+
+    organization_repo_key =
+      insert(
+        :key,
+        organization: owned_org,
+        permissions: [build(:key_permission, domain: "repository", resource: owned_org.name)]
+      )
+
+    user_all_repos_key =
+      insert(:key, user: user, permissions: [build(:key_permission, domain: "repositories")])
+
+    unowned_user_repo_key =
+      insert(
+        :key,
+        user: user,
+        permissions: [build(:key_permission, domain: "repository", resource: unowned_org.name)]
       )
 
     {:ok,
      [
-       owned_repo: owned_repo,
-       unowned_repo: unowned_repo,
+       owned_org: owned_org,
+       unowned_org: unowned_org,
        user: user,
-       full_key: full_key,
-       api_key: api_key,
-       repo_key: repo_key,
-       all_repos_key: all_repos_key,
-       unowned_repo_key: unowned_repo_key
+       user_full_key: user_full_key,
+       user_api_key: user_api_key,
+       user_repo_key: user_repo_key,
+       user_all_repos_key: user_all_repos_key,
+       unowned_user_repo_key: unowned_user_repo_key,
+       organization_full_key: organization_full_key,
+       organization_api_key: organization_api_key,
+       organization_repo_key: organization_repo_key
      ]}
   end
 
@@ -63,17 +86,17 @@ defmodule Hexpm.Web.API.AuthControllerTest do
       |> response(401)
     end
 
-    test "without domain returns 400", %{full_key: key} do
+    test "without domain returns 400", %{user_full_key: key} do
       build_conn()
       |> put_req_header("authorization", key.user_secret)
       |> get("api/auth")
       |> response(400)
     end
 
-    test "authenticate full key", %{
-      full_key: key,
-      owned_repo: owned_repo,
-      unowned_repo: unowned_repo
+    test "authenticate full user key", %{
+      user_full_key: key,
+      owned_org: owned_org,
+      unowned_org: unowned_org
     } do
       build_conn()
       |> put_req_header("authorization", key.user_secret)
@@ -82,12 +105,12 @@ defmodule Hexpm.Web.API.AuthControllerTest do
 
       build_conn()
       |> put_req_header("authorization", key.user_secret)
-      |> get("api/auth", domain: "repository", resource: owned_repo.name)
+      |> get("api/auth", domain: "repository", resource: owned_org.name)
       |> response(204)
 
       build_conn()
       |> put_req_header("authorization", key.user_secret)
-      |> get("api/auth", domain: "repository", resource: unowned_repo.name)
+      |> get("api/auth", domain: "repository", resource: unowned_org.name)
       |> response(401)
 
       build_conn()
@@ -101,7 +124,38 @@ defmodule Hexpm.Web.API.AuthControllerTest do
       |> response(401)
     end
 
-    test "authenticate api key", %{api_key: key} do
+    test "authenticate full organization key", %{
+      organization_full_key: key,
+      owned_org: owned_org,
+      unowned_org: unowned_org
+    } do
+      build_conn()
+      |> put_req_header("authorization", key.user_secret)
+      |> get("api/auth", domain: "api")
+      |> response(204)
+
+      build_conn()
+      |> put_req_header("authorization", key.user_secret)
+      |> get("api/auth", domain: "repository", resource: owned_org.name)
+      |> response(204)
+
+      build_conn()
+      |> put_req_header("authorization", key.user_secret)
+      |> get("api/auth", domain: "repository", resource: unowned_org.name)
+      |> response(401)
+
+      build_conn()
+      |> put_req_header("authorization", key.user_secret)
+      |> get("api/auth", domain: "repository", resource: "BADREPO")
+      |> response(401)
+
+      build_conn()
+      |> put_req_header("authorization", key.user_secret)
+      |> get("api/auth", domain: "repository")
+      |> response(401)
+    end
+
+    test "authenticate user api key", %{user_api_key: key} do
       build_conn()
       |> put_req_header("authorization", key.user_secret)
       |> get("api/auth", domain: "api")
@@ -123,7 +177,29 @@ defmodule Hexpm.Web.API.AuthControllerTest do
       |> response(401)
     end
 
-    test "authenticate read api key", %{user: user} do
+    test "authenticate organization api key", %{organization_api_key: key} do
+      build_conn()
+      |> put_req_header("authorization", key.user_secret)
+      |> get("api/auth", domain: "api")
+      |> response(204)
+
+      build_conn()
+      |> put_req_header("authorization", key.user_secret)
+      |> get("api/auth", domain: "api", resource: "read")
+      |> response(204)
+
+      build_conn()
+      |> put_req_header("authorization", key.user_secret)
+      |> get("api/auth", domain: "api", resource: "write")
+      |> response(204)
+
+      build_conn()
+      |> put_req_header("authorization", key.user_secret)
+      |> get("api/auth", domain: "repository", resource: "myrepo")
+      |> response(401)
+    end
+
+    test "authenticate user read api key", %{user: user} do
       permission = build(:key_permission, domain: "api", resource: "read")
       key = insert(:key, user: user, permissions: [permission])
 
@@ -138,7 +214,7 @@ defmodule Hexpm.Web.API.AuthControllerTest do
       |> response(401)
     end
 
-    test "authenticate write api key", %{user: user} do
+    test "authenticate user write api key", %{user: user} do
       permission = build(:key_permission, domain: "api", resource: "write")
       key = insert(:key, user: user, permissions: [permission])
 
@@ -153,10 +229,40 @@ defmodule Hexpm.Web.API.AuthControllerTest do
       |> response(401)
     end
 
-    test "authenticate repo key with all repositories", %{
-      all_repos_key: key,
-      owned_repo: owned_repo,
-      unowned_repo: unowned_repo
+    test "authenticate organization read api key", %{owned_org: owned_org} do
+      permission = build(:key_permission, domain: "api", resource: "read")
+      key = insert(:key, organization: owned_org, permissions: [permission])
+
+      build_conn()
+      |> put_req_header("authorization", key.user_secret)
+      |> get("api/auth", domain: "api", resource: "read")
+      |> response(204)
+
+      build_conn()
+      |> put_req_header("authorization", key.user_secret)
+      |> get("api/auth", domain: "api", resource: "write")
+      |> response(401)
+    end
+
+    test "authenticate organization write api key", %{owned_org: owned_org} do
+      permission = build(:key_permission, domain: "api", resource: "write")
+      key = insert(:key, organization: owned_org, permissions: [permission])
+
+      build_conn()
+      |> put_req_header("authorization", key.user_secret)
+      |> get("api/auth", domain: "api", resource: "write")
+      |> response(204)
+
+      build_conn()
+      |> put_req_header("authorization", key.user_secret)
+      |> get("api/auth", domain: "api", resource: "read")
+      |> response(401)
+    end
+
+    test "authenticate user repo key with all repositories", %{
+      user_all_repos_key: key,
+      owned_org: owned_org,
+      unowned_org: unowned_org
     } do
       build_conn()
       |> put_req_header("authorization", key.user_secret)
@@ -170,12 +276,12 @@ defmodule Hexpm.Web.API.AuthControllerTest do
 
       build_conn()
       |> put_req_header("authorization", key.user_secret)
-      |> get("api/auth", domain: "repository", resource: owned_repo.name)
+      |> get("api/auth", domain: "repository", resource: owned_org.name)
       |> response(204)
 
       build_conn()
       |> put_req_header("authorization", key.user_secret)
-      |> get("api/auth", domain: "repository", resource: unowned_repo.name)
+      |> get("api/auth", domain: "repository", resource: unowned_org.name)
       |> response(403)
 
       build_conn()
@@ -185,29 +291,45 @@ defmodule Hexpm.Web.API.AuthControllerTest do
     end
 
     test "authenticate repository key against repository without access permissions", %{
-      unowned_repo_key: key,
-      unowned_repo: unowned_repo
+      unowned_user_repo_key: key,
+      unowned_org: unowned_org
     } do
       build_conn()
       |> put_req_header("authorization", key.user_secret)
-      |> get("api/auth", domain: "repository", resource: unowned_repo.name)
+      |> get("api/auth", domain: "repository", resource: unowned_org.name)
       |> response(403)
     end
 
-    test "authenticate repository key against repository without active billing", %{user: user} do
-      repo = insert(:organization, billing_active: false)
-      insert(:organization_user, organization: repo, user: user)
+    test "authenticate user repository key without active billing", %{user: user} do
+      organization = insert(:organization, billing_active: false)
+      insert(:organization_user, organization: organization, user: user)
 
       key =
         insert(
           :key,
           user: user,
-          permissions: [build(:key_permission, domain: "repository", resource: repo.name)]
+          permissions: [build(:key_permission, domain: "repository", resource: organization.name)]
         )
 
       build_conn()
       |> put_req_header("authorization", key.user_secret)
-      |> get("api/auth", domain: "repository", resource: repo.name)
+      |> get("api/auth", domain: "repository", resource: organization.name)
+      |> response(403)
+    end
+
+    test "authenticate organization repository key without active billing" do
+      organization = insert(:organization, billing_active: false)
+
+      key =
+        insert(
+          :key,
+          organization: organization,
+          permissions: [build(:key_permission, domain: "repository", resource: organization.name)]
+        )
+
+      build_conn()
+      |> put_req_header("authorization", key.user_secret)
+      |> get("api/auth", domain: "repository", resource: organization.name)
       |> response(403)
     end
   end
