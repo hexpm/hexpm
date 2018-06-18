@@ -52,4 +52,8 @@ defmodule Hexpm.Case do
       "build_tools" => ["mix"]
     }
   end
+
+  def default_requirement(name, requirement) do
+    %{"name" => name, "app" => name, "requirement" => requirement, "optional" => false}
+  end
 end

@@ -233,7 +233,7 @@ defmodule Hexpm.Repository.RegistryBuilder do
             map = %{package: dep, requirement: req || ">= 0.0.0"}
             map = if opt, do: Map.put(map, :optional, true), else: map
             map = if app != dep, do: Map.put(map, :app, app), else: map
-            map = if organization.name != repo, do: Map.put(map, :organization, repo), else: map
+            map = if organization.name != repo, do: Map.put(map, :repository, repo), else: map
             map
           end)
 
