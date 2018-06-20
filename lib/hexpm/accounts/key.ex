@@ -9,10 +9,13 @@ defmodule Hexpm.Accounts.Key do
     field :secret_first, :string
     field :secret_second, :string
     field :revoked_at, :naive_datetime
-    field :last_used_at, :naive_datetime
-    field :last_user_agent, :string
-    field :last_ip, :string
     timestamps()
+
+    embeds_one :last_use, Use, on_replace: :delete do
+      field :used_at, :naive_datetime
+      field :user_agent, :string
+      field :ip, :string
+    end
 
     belongs_to :user, User
     embeds_many :permissions, KeyPermission
@@ -92,8 +95,10 @@ defmodule Hexpm.Accounts.Key do
     {user_secret, first, second}
   end
 
-  def update_usage_info(key, params) do
-    cast(key, params, ~w(last_used_at last_user_agent last_ip)a)
+  def update_last_use(key, params) do
+    key
+    |> change()
+    |> put_embed(:last_use, struct(Key.Use, params))
   end
 
   defp add_keys(changeset) do

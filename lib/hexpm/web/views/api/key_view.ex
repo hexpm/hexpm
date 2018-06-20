@@ -20,15 +20,19 @@ defmodule Hexpm.Web.API.KeyView do
       authing_key: !!(authing_key && key.id == authing_key.id),
       secret: key.user_secret,
       permissions: render_many(key.permissions, KeyPermissionView, "show.json"),
-      last_use: %{
-        timestamp: key.last_used_at,
-        ip: key.last_ip,
-        user_agent: key.last_user_agent,
-      },
       revoked_at: key.revoked_at,
       inserted_at: key.inserted_at,
       updated_at: key.updated_at,
       url: Routes.api_key_url(Endpoint, :show, key)
+    }
+    |> include_if_loaded(:last_use, key.last_use, &render_use/1)
+  end
+
+  defp render_use(use) do
+    %{
+      used_at: use.used_at,
+      ip: use.ip,
+      user_agent: use.user_agent
     }
   end
 end

@@ -36,17 +36,19 @@ defmodule Hexpm.Accounts.AuthTest do
     test "stores key usage information when used", %{user: user} do
       key = insert(:key, user: user)
       timestamp = NaiveDateTime.utc_now()
+
       usage_info = %{
         used_at: timestamp,
         user_agent: ["Chrome"],
         ip: {127, 0, 0, 1}
       }
+
       {:ok, _} = Auth.key_auth(key.user_secret, usage_info)
 
       key = Repo.get(Key, key.id)
-      assert key.last_used_at == timestamp
-      assert key.last_user_agent == "Chrome"
-      assert key.last_ip == "127.0.0.1"
+      assert key.last_use.used_at == timestamp
+      assert key.last_use.user_agent == "Chrome"
+      assert key.last_use.ip == "127.0.0.1"
     end
 
     test "does not authorize wrong key" do

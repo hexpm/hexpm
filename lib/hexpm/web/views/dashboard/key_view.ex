@@ -14,23 +14,19 @@ defmodule Hexpm.Web.Dashboard.KeyView do
   def permission_name(%KeyPermission{domain: "repositories"}),
     do: "ORGS"
 
-  def formatted_usage_info(%Key{last_used_at: nil, last_ip: nil, last_user_agent: nil}),
+  def formatted_usage_info(%Key{last_use: nil}),
     do: "never"
 
-  def formatted_usage_info(%Key{last_used_at: timestamp, last_ip: ip, last_user_agent: user_agent}) do
-    [formatted_used_at(timestamp), ip, user_agent]
-    |> Enum.filter(&(&1))
+  def formatted_usage_info(%Key{last_use: last_use}) do
+    [formatted_used_at(last_use.used_at), last_use.ip, last_use.user_agent]
+    |> Enum.filter(& &1)
     |> Enum.filter(&(String.length(&1) > 0))
-    |> Enum.join(", ")
+    |> Enum.join(" ")
   end
 
-  defp formatted_used_at(%{year: year, month: month, day: day}) do
-    "#{year |> zero_pad}-#{month |> zero_pad}-#{day |> zero_pad}"
-  end
-
-  defp zero_pad(number) do
-    number
-    |> Integer.to_string
-    |> String.pad_leading(2, "0")
+  defp formatted_used_at(datetime) do
+    datetime
+    |> NaiveDateTime.to_date()
+    |> Date.to_string()
   end
 end

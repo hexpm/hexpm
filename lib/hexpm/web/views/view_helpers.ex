@@ -321,8 +321,12 @@ defmodule Hexpm.Web.ViewHelpers do
     output
   end
 
-  def include_if_loaded(output, key, structs, fun, _name, _assigns) when is_function(fun, 1) do
-    Map.put(output, key, fun.(structs))
+  def include_if_loaded(output, _key, nil, _view, _name, _assigns) do
+    output
+  end
+
+  def include_if_loaded(output, key, struct, fun, _name, _assigns) when is_function(fun, 1) do
+    Map.put(output, key, fun.(struct))
   end
 
   def include_if_loaded(output, key, structs, view, name, assigns) when is_list(structs) do
