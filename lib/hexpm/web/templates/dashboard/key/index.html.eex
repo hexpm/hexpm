@@ -11,33 +11,48 @@
         <p>Keys are used to authenticate and authorize clients to interact with the Hex API and repository. </p>
         <br/>
 
-        <table class="table table-condensed table-striped">
-          <tr>
-            <td>Name</td>
-            <td>Permissions</td>
-            <td>Last use</td>
-            <td></td>
-          </tr>
-          <%= for key <- @keys do %>
+        <%= if @keys != [] do %>
+          <table class="table table-condensed table-striped">
             <tr>
-              <td><%= key.name %></td>
-              <td>
-                <%= for permission <- key.permissions do %>
-                  <span class="label label-success"><%= permission_name(permission) %></span>
-                <% end %>
-              </td>
-              <td>
-                <small><%= formatted_usage_info(key) %></small>
-              </td>
-              <td>
-                <%= form_tag(Routes.key_path(Endpoint, :delete), method: :delete, class: "action") do %>
-                  <input type="hidden" name="name" value="<%= key.name %>">
-                  <button type="submit" class="btn btn-danger btn-xs">Revoke</button>
-                <% end %>
-              </td>
+              <td>Name</td>
+              <td>Permissions</td>
+              <td>Last use</td>
+              <td></td>
             </tr>
-          <% end %>
-        </table>
+            <%= for key <- @keys do %>
+              <tr>
+                <td><%= key.name %></td>
+                <td>
+                  <%= for permission <- key.permissions do %>
+                    <span class="label label-success"><%= permission_name(permission) %></span>
+                  <% end %>
+                </td>
+                <td>
+                  <small>
+                    <%= if last_use = key.last_use do %>
+                      <a
+                        tabindex="0"
+                        role="button"
+                        data-toggle="popover"
+                        data-trigger="focus"
+                        data-placement="bottom"
+                        title="Last use"
+                        data-content="<strong>Used at:</strong> <%= last_use.used_at %><br><strong>IP:</strong> <%= last_use.ip %><br><strong>User agent:</strong> <%= last_use.user_agent %>">
+                          <%= pretty_datetime(last_use.used_at) %> ...
+                      </a>
+                    <% end %>
+                  </small>
+                </td>
+                <td>
+                  <%= form_tag(Routes.key_path(Endpoint, :delete), method: :delete, class: "action") do %>
+                    <input type="hidden" name="name" value="<%= key.name %>">
+                    <button type="submit" class="btn btn-danger btn-xs">Revoke</button>
+                  <% end %>
+                </td>
+              </tr>
+            <% end %>
+          </table>
+        <% end %>
       </div>
 
       <div class="panel-body-part">
