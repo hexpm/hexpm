@@ -3,7 +3,7 @@ defmodule Hexpm.Accounts.Auth do
 
   alias Hexpm.Accounts.{Key, Users}
 
-  def key_auth(user_secret) do
+  def key_auth(user_secret, usage_info) do
     # Database index lookup on the first part of the key and then
     # secure compare on the second part to avoid timing attacks
     app_secret = Application.get_env(:hexpm, :secret)
@@ -28,6 +28,7 @@ defmodule Hexpm.Accounts.Auth do
       key ->
         if Hexpm.Utils.secure_check(key.secret_second, second) do
           if is_nil(key.revoked_at) do
+            update_last_use(key, usage_info)
             {:ok, {key.user, key, find_email(key.user, nil), :key}}
           else
             :revoked
@@ -59,4 +60,26 @@ defmodule Hexpm.Accounts.Auth do
   defp find_email(user, email) do
     Enum.find(user.emails, &(&1.email == email)) || Enum.find(user.emails, & &1.primary)
   end
+
+  defp update_last_use(key, usage_info) do
+    key
+    |> Key.update_last_use(%{
+      ip: parse_ip(usage_info[:ip]),
+      used_at: usage_info[:used_at],
+      user_agent: parse_user_agent(usage_info[:user_agent])
+    })
+    |> Hexpm.Repo.update!()
+  end
+
+  defp parse_ip(nil), do: nil
+
+  defp parse_ip(ip_tuple) do
+    ip_tuple
+    |> Tuple.to_list()
+    |> Enum.join(".")
+  end
+
+  defp parse_user_agent(nil), do: nil
+  defp parse_user_agent([]), do: nil
+  defp parse_user_agent([value | _]), do: value
 end

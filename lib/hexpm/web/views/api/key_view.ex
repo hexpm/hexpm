@@ -25,5 +25,14 @@ defmodule Hexpm.Web.API.KeyView do
       updated_at: key.updated_at,
       url: Routes.api_key_url(Endpoint, :show, key)
     }
+    |> include_if_loaded(:last_use, key.last_use, &render_use/1)
+  end
+
+  defp render_use(use) do
+    %{
+      used_at: use.used_at,
+      ip: use.ip,
+      user_agent: use.user_agent
+    }
   end
 end
