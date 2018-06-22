@@ -62,20 +62,23 @@ defmodule Hexpm.Web.ControllerHelpers do
   end
 
   def translate_errors(changeset) do
-    Ecto.Changeset.traverse_errors(changeset, fn
-      {"is invalid", opts} ->
-        type_error(opts[:type])
-
-      {msg, opts} ->
-        Enum.reduce(opts, msg, fn {key, value}, msg ->
-          if String.Chars.impl_for(key) && String.Chars.impl_for(value) do
-            String.replace(msg, "%{#{key}}", to_string(value))
-          else
-            raise "Unable to translate error: #{inspect({msg, opts})}"
-          end
-        end)
+    Ecto.Changeset.traverse_errors(changeset, fn {message, opts} ->
+      case {message, Keyword.fetch(opts, :type)} do
+        {"is invalid", {:ok, type}} -> type_error(type)
+        _ -> interpolate_errors(message, opts)
+      end
     end)
     |> normalize_errors()
+  end
+
+  defp interpolate_errors(message, opts) do
+    Enum.reduce(opts, message, fn {key, value}, message ->
+      if String.Chars.impl_for(key) && String.Chars.impl_for(value) do
+        String.replace(message, "%{#{key}}", to_string(value))
+      else
+        raise "Unable to translate error: #{inspect({message, opts})}"
+      end
+    end)
   end
 
   defp type_error(Hexpm.Version), do: "is invalid SemVer"
