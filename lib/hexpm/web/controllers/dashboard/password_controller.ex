@@ -15,7 +15,7 @@ defmodule Hexpm.Web.Dashboard.PasswordController do
       {:ok, _user} ->
         conn
         |> put_flash(:info, "Your password has been updated.")
-        |> redirect(to: Routes.password_path(conn, :index))
+        |> redirect(to: Routes.dashboard_password_path(conn, :index))
 
       {:error, changeset} ->
         conn

@@ -106,8 +106,8 @@ defmodule Hexpm.Web.Router do
     get "/profile", ProfileController, :index
     post "/profile", ProfileController, :update
 
-    get "/password", PasswordController, :index
-    post "/password", PasswordController, :update
+    get "/password", PasswordController, :index, as: :dashboard_password
+    post "/password", PasswordController, :update, as: :dashboard_password
 
     get "/email", EmailController, :index
     post "/email", EmailController, :create
