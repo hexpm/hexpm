@@ -27,6 +27,7 @@ defmodule Hexpm.Repository.Resolver do
 
   defp resolve_result({:ok, _}), do: :ok
   defp resolve_result({:error, {:version, messages}}), do: {:error, remove_ansi_escapes(messages)}
+  defp resolve_result({:error, {:repo, messages}}), do: {:error, remove_ansi_escapes(messages)}
   defp resolve_result({:error, messages}), do: {:error, remove_ansi_escapes(messages)}
 
   defp remove_ansi_escapes(string) do
