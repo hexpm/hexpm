@@ -197,6 +197,6 @@ defmodule Hexpm.Web.PackageControllerTest do
 
   defp escape(html) do
     {:safe, safe} = Phoenix.HTML.html_escape(html)
-    safe
+    IO.iodata_to_binary(safe)
   end
 end
