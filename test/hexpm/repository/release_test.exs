@@ -335,7 +335,7 @@ defmodule Hexpm.Repository.ReleaseTest do
 
     reqs = [%{name: package3.name, app: package3.name, requirement: "~> 1.0", optional: false}]
 
-    assert %{requirements: %{requirement: "Failed to use" <> _}} =
+    assert %{requirements: "Failed to use" <> _} =
              Release.build(
                package2,
                rel_meta(%{version: "0.1.1", app: package2.name, requirements: reqs}),
