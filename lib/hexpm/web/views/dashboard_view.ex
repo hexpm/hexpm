@@ -21,4 +21,22 @@ defmodule Hexpm.Web.DashboardView do
       "selected"
     end
   end
+
+  defp permission_name(%KeyPermission{domain: "api", resource: nil}),
+    do: "API"
+
+  defp permission_name(%KeyPermission{domain: "api", resource: resource}),
+    do: "API:#{resource}"
+
+  defp permission_name(%KeyPermission{domain: "repository", resource: resource}),
+    do: "ORG:#{resource}"
+
+  defp permission_name(%KeyPermission{domain: "repositories"}),
+    do: "ORGS"
+
+  defp organization_resources(%{organizations: organizations}),
+    do: ["All"] ++ Enum.map(organizations, & &1.name)
+
+  defp organization_resources(%{organization: organization}),
+    do: [organization.name]
 end

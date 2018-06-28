@@ -1,5 +1,6 @@
 defmodule Hexpm.Web.Dashboard.OrganizationController do
   use Hexpm.Web, :controller
+  alias Hexpm.Web.Dashboard.KeyController
 
   plug :requires_login
 
@@ -285,6 +286,45 @@ defmodule Hexpm.Web.Dashboard.OrganizationController do
     end
   end
 
+  def create_key(conn, %{"dashboard_org" => organization} = params) do
+    access_organization(conn, organization, "write", fn organization ->
+      key_params = KeyController.fixup_permissions(params["key"])
+
+      case Keys.add(organization, key_params, audit: audit_data(conn)) do
+        {:ok, %{key: key}} ->
+          flash =
+            "The key #{key.name} was successfully generated, " <>
+              "copy the secret \"#{key.user_secret}\", you won't be able to see it again."
+
+          conn
+          |> put_flash(:info, flash)
+          |> redirect(to: Routes.organization_path(conn, :show, organization))
+
+        {:error, :key, changeset, _} ->
+          conn
+          |> put_status(400)
+          |> render_index(organization, key_changeset: changeset)
+      end
+    end)
+  end
+
+  def delete_key(conn, %{"dashboard_org" => organization, "name" => name}) do
+    access_organization(conn, organization, "write", fn organization ->
+      case Keys.remove(organization, name, audit: audit_data(conn)) do
+        {:ok, _struct} ->
+          conn
+          |> put_flash(:info, "The key #{name} was revoked successfully.")
+          |> redirect(to: Routes.organization_path(conn, :show, organization))
+
+        {:error, _} ->
+          conn
+          |> put_status(400)
+          |> put_flash(:error, "The key #{name} was not found.")
+          |> render_index(organization)
+      end
+    end)
+  end
+
   defp render_new(conn, opts \\ []) do
     render(
       conn,
@@ -302,13 +342,20 @@ defmodule Hexpm.Web.Dashboard.OrganizationController do
 
   defp render_index(conn, organization, opts \\ []) do
     billing = Hexpm.Billing.dashboard(organization.name)
+    keys = Keys.all(organization)
+    delete_key_path = Routes.organization_path(Endpoint, :delete_key, organization)
+    create_key_path = Routes.organization_path(Endpoint, :create_key, organization)
 
     assigns = [
       title: "Dashboard - Organization",
       container: "container page dashboard",
       organization: organization,
+      keys: keys,
       params: opts[:params],
       errors: opts[:errors],
+      delete_key_path: delete_key_path,
+      create_key_path: create_key_path,
+      key_changeset: opts[:key_changeset] || key_changeset(),
       add_member_changeset: opts[:add_member_changeset] || add_member_changeset()
     ]
 
@@ -386,6 +433,10 @@ defmodule Hexpm.Web.Dashboard.OrganizationController do
 
   defp create_changeset() do
     Organization.changeset(%Organization{}, %{})
+  end
+
+  defp key_changeset() do
+    Key.changeset(%Key{}, %{}, %{})
   end
 
   defp remove_member_error_message(:unknown_user, username), do: "Unknown user #{username}."

@@ -7,19 +7,19 @@ defmodule Hexpm.Web.Dashboard.KeyController do
     render_index(conn)
   end
 
-  def delete(conn, %{"name" => name} = params) do
+  def delete(conn, %{"name" => name}) do
     user = conn.assigns.current_user
 
     case Keys.remove(user, name, audit: audit_data(conn)) do
       {:ok, _struct} ->
         conn
-        |> put_flash(:info, "The key #{params["name"]} was revoked successfully.")
+        |> put_flash(:info, "The key #{name} was revoked successfully.")
         |> redirect(to: Routes.key_path(conn, :index))
 
       {:error, _} ->
         conn
         |> put_status(400)
-        |> put_flash(:error, "The key #{params["name"]} was not found.")
+        |> put_flash(:error, "The key #{name} was not found.")
         |> render_index()
     end
   end
@@ -57,15 +57,17 @@ defmodule Hexpm.Web.Dashboard.KeyController do
       container: "container page dashboard",
       keys: keys,
       organizations: organizations,
-      changeset: changeset
+      delete_key_path: Routes.key_path(Endpoint, :delete),
+      create_key_path: Routes.key_path(Endpoint, :create),
+      key_changeset: changeset
     )
   end
 
-  defp changeset do
+  defp changeset() do
     Key.changeset(%Key{}, %{}, %{})
   end
 
-  defp fixup_permissions(params) do
+  def fixup_permissions(params) do
     update_in(params["permissions"], fn permissions ->
       Map.new(permissions || [], fn {index, permission} ->
         if permission["domain"] == "repository" and permission["resource"] == "All" do
