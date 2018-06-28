@@ -1,3 +1,5 @@
+<%= changeset_error(@key_changeset) %>
+
 <div class="row">
   <div class="col-sm-3">
     <%= render DashboardView, "_sidebar.html", assigns %>
@@ -77,6 +79,10 @@
         <% end %>
       </div>
     </div>
+  </div>
+
+  <div class="col-sm-9 organization keys">
+    <%= render DashboardView, "_keys.html", assigns %>
   </div>
 
   <div class="col-sm-9 organization">

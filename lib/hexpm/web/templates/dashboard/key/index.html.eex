@@ -1,102 +1,10 @@
-<%= changeset_error(@changeset) %>
+<%= changeset_error(@key_changeset) %>
 
 <div class="row">
   <div class="col-sm-3">
     <%= render DashboardView, "_sidebar.html", assigns %>
   </div>
-  <div class="col-sm-9 email">
-    <div class="panel panel-default">
-      <div class="panel-heading">Keys</div>
-      <div class="panel-body">
-        <p>Keys are used to authenticate and authorize clients to interact with the Hex API and repository. </p>
-        <br/>
-
-        <%= if @keys != [] do %>
-          <table class="table table-condensed table-striped">
-            <tr>
-              <td>Name</td>
-              <td>Permissions</td>
-              <td>Last use</td>
-              <td></td>
-            </tr>
-            <%= for key <- @keys do %>
-              <tr>
-                <td><%= key.name %></td>
-                <td>
-                  <%= for permission <- key.permissions do %>
-                    <span class="label label-success"><%= permission_name(permission) %></span>
-                  <% end %>
-                </td>
-                <td>
-                  <small>
-                    <%= if last_use = key.last_use do %>
-                      <a
-                        tabindex="0"
-                        role="button"
-                        data-toggle="popover"
-                        data-trigger="focus"
-                        data-placement="bottom"
-                        title="Last use"
-                        data-content="<strong>Used at:</strong> <%= last_use.used_at %><br><strong>IP:</strong> <%= last_use.ip %><br><strong>User agent:</strong> <%= last_use.user_agent %>">
-                          <%= pretty_datetime(last_use.used_at) %> ...
-                      </a>
-                    <% end %>
-                  </small>
-                </td>
-                <td>
-                  <%= form_tag(Routes.key_path(Endpoint, :delete), method: :delete, class: "action") do %>
-                    <input type="hidden" name="name" value="<%= key.name %>">
-                    <button type="submit" class="btn btn-danger btn-xs">Revoke</button>
-                  <% end %>
-                </td>
-              </tr>
-            <% end %>
-          </table>
-        <% end %>
-      </div>
-
-      <div class="panel-body-part">
-        <%= form_for @changeset, Routes.key_path(Endpoint, :create), [method: :post], fn f -> %>
-          <%= label f, :name, "Key name" %>
-          <div class="form-group">
-            <%= text_input f, :name, class: "form-control", placeholder: "Name" %>
-            <%= error_tag f, :name %>
-          </div>
-          <%= inputs_for f, :permissions, fn f -> %>
-            <%= label f, :domain, "Permission domain" %>
-            <div class="form-group">
-              <%=
-                select(
-                  f,
-                  :domain,
-                  [
-                    API: "api",
-                    "Organization": "repository"
-                  ],
-                  class: "form-control"
-                )
-              %>
-              <%= error_tag f, :domain %>
-            </div>
-            <%= label f, :domain, "Domain resource" %>
-            <div class="form-group">
-              <%=
-                select(
-                  f,
-                  :resource,
-                  [
-                    API: ["Read": "read", "Write": "write"],
-                    "Organization": ["All"] ++ Enum.map(@organizations, & &1.name),
-                  ],
-                  class: "form-control"
-                )
-              %>
-              <%= error_tag f, :resource %>
-            </div>
-          <% end %>
-          <button type="submit" class="btn btn-primary">Generate</button>
-        <% end %>
-      </div>
-    </div>
+  <div class="col-sm-9 keys">
+    <%= render DashboardView, "_keys.html", assigns %>
   </div>
-</div>
+</div

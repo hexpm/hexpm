@@ -17,18 +17,21 @@ defmodule Hexpm.Web.Dashboard.RepositoryControllerTest do
     }
   end
 
-  test "show organization", %{user: user, organization: organization} do
+  defp mock_billing_dashboard(organization) do
     Mox.stub(Hexpm.Billing.Mock, :dashboard, fn token ->
       assert organization.name == token
 
       %{
         "checkout_html" => "",
-        "monthly_cost" => 800,
         "invoices" => []
       }
     end)
+  end
 
+  test "show organization", %{user: user, organization: organization} do
     insert(:organization_user, organization: organization, user: user)
+
+    mock_billing_dashboard(organization)
 
     conn =
       build_conn()
@@ -229,15 +232,7 @@ defmodule Hexpm.Web.Dashboard.RepositoryControllerTest do
   end
 
   test "update billing email", %{user: user, organization: organization} do
-    Mox.stub(Hexpm.Billing.Mock, :dashboard, fn token ->
-      assert organization.name == token
-
-      %{
-        "checkout_html" => "",
-        "monthly_cost" => 800,
-        "invoices" => []
-      }
-    end)
+    mock_billing_dashboard(organization)
 
     Mox.stub(Hexpm.Billing.Mock, :update, fn token, params ->
       assert organization.name == token
@@ -334,5 +329,50 @@ defmodule Hexpm.Web.Dashboard.RepositoryControllerTest do
     response(conn, 302)
     assert get_resp_header(conn, "location") == ["/dashboard/orgs/#{organization.name}"]
     assert get_flash(conn, :info) == "Updated your billing information."
+  end
+
+  describe "POST /dashboard/orgs/:dashboard_org/keys" do
+    test "generate a new key", c do
+      insert(:organization_user, organization: c.organization, user: c.user, role: "admin")
+
+      conn =
+        build_conn()
+        |> test_login(c.user)
+        |> post("/dashboard/orgs/#{c.organization.name}/keys", %{key: %{name: "computer"}})
+
+      assert redirected_to(conn) == "/dashboard/orgs/#{c.organization.name}"
+      assert get_flash(conn, :info) =~ "The key computer was successfully generated"
+    end
+  end
+
+  describe "DELETE /dashboard/orgs/:dashboard_org/keys" do
+    test "revoke key", c do
+      insert(:organization_user, organization: c.organization, user: c.user, role: "admin")
+      insert(:key, organization: c.organization, name: "computer")
+
+      mock_billing_dashboard(c.organization)
+
+      conn =
+        build_conn()
+        |> test_login(c.user)
+        |> delete("/dashboard/orgs/#{c.organization.name}/keys", %{name: "computer"})
+
+      assert redirected_to(conn) == "/dashboard/orgs/#{c.organization.name}"
+      assert get_flash(conn, :info) =~ "The key computer was revoked successfully"
+    end
+
+    test "revoking an already revoked key throws an error", c do
+      insert(:organization_user, organization: c.organization, user: c.user, role: "admin")
+      insert(:key, organization: c.organization, name: "computer", revoked_at: ~N"2017-01-01 00:00:00")
+
+      mock_billing_dashboard(c.organization)
+
+      conn =
+        build_conn()
+        |> test_login(c.user)
+        |> delete("/dashboard/orgs/#{c.organization.name}/keys", %{name: "computer"})
+
+      assert response(conn, 400) =~ "The key computer was not found"
+    end
   end
 end
