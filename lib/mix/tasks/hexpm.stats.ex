@@ -43,13 +43,13 @@ defmodule Mix.Tasks.Hexpm.Stats do
     buckets = Application.get_env(:hexpm, :logs_buckets)
 
     try do
-      {time, {memory, size}} =
+      {time, size} =
         :timer.tc(fn ->
           run(Utils.utc_yesterday(), buckets)
         end)
 
       Logger.warn(
-        "STATS_JOB_COMPLETED #{size} downloads (#{div(time, 1000)}ms, #{div(memory, 1024)}kb)"
+        "STATS_JOB_COMPLETED #{size} downloads (#{div(time, 1000)}ms)"
       )
     catch
       exception ->
