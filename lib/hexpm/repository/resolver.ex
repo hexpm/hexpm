@@ -35,7 +35,7 @@ defmodule Hexpm.Repository.Resolver do
   end
 
   defp resolve_deps(requirements) do
-    if Version.compare(Hex.version(), "0.17.7") == :gt do
+    if Version.compare(Hex.version(), "0.18.0-dev") in [:eq, :gt] do
       Map.new(requirements, fn %{app: app} ->
         {app, {false, %{}}}
       end)
