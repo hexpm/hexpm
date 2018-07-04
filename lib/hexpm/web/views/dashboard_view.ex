@@ -5,7 +5,7 @@ defmodule Hexpm.Web.DashboardView do
     [
       profile: {"Profile", Routes.profile_path(Endpoint, :index)},
       password: {"Password", Routes.dashboard_password_path(Endpoint, :index)},
-      email: {"Email", Routes.email_path(Endpoint, :index)},
+      email: {"Emails", Routes.email_path(Endpoint, :index)},
       keys: {"Keys", Routes.key_path(Endpoint, :index)}
     ]
   end
