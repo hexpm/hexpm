@@ -20,6 +20,8 @@ defmodule Hexpm.Accounts.Organization do
   @name_regex ~r"^[a-z0-9_\-\.]+$"
   @roles ~w(admin write read)
 
+  @reserved_names ~w(www elixir erlang otp rebar rebar3 nerves phoenix)
+
   def changeset(struct, params) do
     cast(struct, params, ~w(name)a)
     |> validate_required(~w(name)a)
@@ -27,6 +29,7 @@ defmodule Hexpm.Accounts.Organization do
     |> update_change(:name, &String.downcase/1)
     |> validate_length(:name, min: 3)
     |> validate_format(:name, @name_regex)
+    |> validate_exclusion(:name, @reserved_names)
     |> put_change(:public, false)
   end
 

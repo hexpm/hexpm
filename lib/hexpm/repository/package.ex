@@ -41,7 +41,7 @@ defmodule Hexpm.Repository.Package do
   if Mix.env() == :hex do
     @generic_names []
   else
-    @generic_names ~w(package organization)
+    @generic_names ~w(package organization www)
   end
 
   @reserved_names Enum.concat([
