@@ -91,9 +91,6 @@ defmodule Hexpm.Web.AuthHelpers do
       {:error, :domain} ->
         unauthorized(conn, "key not authorized for this action")
 
-      {:error, :basic_required} ->
-        unauthorized(conn, "action requires password authentication")
-
       {:error, :unconfirmed} ->
         forbidden(conn, "email not verified")
 
