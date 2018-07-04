@@ -49,10 +49,12 @@ You can generate repository authentication keys manually with the `mix hex.organ
 Run the following command on your local machine:
 
 ```nohighlight
-$ mix hex.organization key acme
+$ mix hex.organization key acme generate
 Passphrase: ...
 126d49fb3014bd26457471ebae97c625
 ```
+
+You can also generate organizations keys on your organization's [dashboard](/dashboard).
 
 Copy the returned hash and authenticate with it on your build server:
 
