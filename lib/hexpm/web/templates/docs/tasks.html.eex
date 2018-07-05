@@ -9,7 +9,7 @@
         <a class="anchor" id="hex"></a>
         hex
         <a href="#hex">
-          <svg aria-hidden="aria-hidden" class="glyphicon glyphicon-link pull-right" version="1.1" viewBox="0 0 1200 1200"><g transform="translate(0, 1200) scale(1, -1)"><path d="M776.5 1214q93.5 0 159.5 -66l141 -141q66 -66 66 -160q0 -42 -28 -95.5t-62 -87.5l-29 -29q-31 53 -77 99l-18 18l95 95l-247 248l-389 -389l212 -212l-105 -106l-19 18l-141 141q-66 66 -66 159t66 159l283 283q65 66 158.5 66zM600 706l105 105q10 -8 19 -17l141 -141 q66 -66 66 -159t-66 -159l-283 -283q-66 -66 -159 -66t-159 66l-141 141q-66 66 -66 159.5t66 159.5l55 55q29 -55 75 -102l18 -17l-95 -95l247 -248l389 389z"></path></g></svg>
+          <svg class="glyphicon glyphicon-link pull-right" version="1.1" viewBox="0 0 1200 1200" aria-hidden><g transform="translate(0, 1200) scale(1, -1)"><path d="M776.5 1214q93.5 0 159.5 -66l141 -141q66 -66 66 -160q0 -42 -28 -95.5t-62 -87.5l-29 -29q-31 53 -77 99l-18 18l95 95l-247 248l-389 -389l212 -212l-105 -106l-19 18l-141 141q-66 66 -66 159t66 159l283 283q65 66 158.5 66zM600 706l105 105q10 -8 19 -17l141 -141 q66 -66 66 -159t-66 -159l-283 -283q-66 -66 -159 -66t-159 66l-141 141q-66 66 -66 159.5t66 159.5l55 55q29 -55 75 -102l18 -17l-95 -95l247 -248l389 389z"></path></g></svg>
         </a>
       </h3>
     </div>
@@ -28,7 +28,7 @@
         <a class="anchor" id="hex_audit"></a>
         hex.audit
         <a href="#hex_audit">
-          <svg aria-hidden="aria-hidden" class="glyphicon glyphicon-link pull-right" version="1.1" viewBox="0 0 1200 1200"><g transform="translate(0, 1200) scale(1, -1)"><path d="M776.5 1214q93.5 0 159.5 -66l141 -141q66 -66 66 -160q0 -42 -28 -95.5t-62 -87.5l-29 -29q-31 53 -77 99l-18 18l95 95l-247 248l-389 -389l212 -212l-105 -106l-19 18l-141 141q-66 66 -66 159t66 159l283 283q65 66 158.5 66zM600 706l105 105q10 -8 19 -17l141 -141 q66 -66 66 -159t-66 -159l-283 -283q-66 -66 -159 -66t-159 66l-141 141q-66 66 -66 159.5t66 159.5l55 55q29 -55 75 -102l18 -17l-95 -95l247 -248l389 389z"></path></g></svg>
+          <svg class="glyphicon glyphicon-link pull-right" version="1.1" viewBox="0 0 1200 1200" aria-hidden><g transform="translate(0, 1200) scale(1, -1)"><path d="M776.5 1214q93.5 0 159.5 -66l141 -141q66 -66 66 -160q0 -42 -28 -95.5t-62 -87.5l-29 -29q-31 53 -77 99l-18 18l95 95l-247 248l-389 -389l212 -212l-105 -106l-19 18l-141 141q-66 66 -66 159t66 159l283 283q65 66 158.5 66zM600 706l105 105q10 -8 19 -17l141 -141 q66 -66 66 -159t-66 -159l-283 -283q-66 -66 -159 -66t-159 66l-141 141q-66 66 -66 159.5t66 159.5l55 55q29 -55 75 -102l18 -17l-95 -95l247 -248l389 389z"></path></g></svg>
         </a>
       </h3>
     </div>
@@ -49,7 +49,7 @@ if any retired dependencies are found.</p>
         <a class="anchor" id="hex_build"></a>
         hex.build
         <a href="#hex_build">
-          <svg aria-hidden="aria-hidden" class="glyphicon glyphicon-link pull-right" version="1.1" viewBox="0 0 1200 1200"><g transform="translate(0, 1200) scale(1, -1)"><path d="M776.5 1214q93.5 0 159.5 -66l141 -141q66 -66 66 -160q0 -42 -28 -95.5t-62 -87.5l-29 -29q-31 53 -77 99l-18 18l95 95l-247 248l-389 -389l212 -212l-105 -106l-19 18l-141 141q-66 66 -66 159t66 159l283 283q65 66 158.5 66zM600 706l105 105q10 -8 19 -17l141 -141 q66 -66 66 -159t-66 -159l-283 -283q-66 -66 -159 -66t-159 66l-141 141q-66 66 -66 159.5t66 159.5l55 55q29 -55 75 -102l18 -17l-95 -95l247 -248l389 389z"></path></g></svg>
+          <svg class="glyphicon glyphicon-link pull-right" version="1.1" viewBox="0 0 1200 1200" aria-hidden><g transform="translate(0, 1200) scale(1, -1)"><path d="M776.5 1214q93.5 0 159.5 -66l141 -141q66 -66 66 -160q0 -42 -28 -95.5t-62 -87.5l-29 -29q-31 53 -77 99l-18 18l95 95l-247 248l-389 -389l212 -212l-105 -106l-19 18l-141 141q-66 66 -66 159t66 159l283 283q65 66 158.5 66zM600 706l105 105q10 -8 19 -17l141 -141 q66 -66 66 -159t-66 -159l-283 -283q-66 -66 -159 -66t-159 66l-141 141q-66 66 -66 159.5t66 159.5l55 55q29 -55 75 -102l18 -17l-95 -95l247 -248l389 389z"></path></g></svg>
         </a>
       </h3>
     </div>
@@ -100,8 +100,6 @@ can include wildcards. Defaults to <code class="inline">[&quot;lib&quot;, &quot;
 <li><code class="inline">:exclude_patterns</code> - List of patterns matching files and directories to
 exclude from the package.
 </li>
-<li><code class="inline">:maintainers</code> - List of names and/or emails of maintainers.
-</li>
 <li><code class="inline">:licenses</code> - List of licenses used by the package.
 </li>
 <li><code class="inline">:links</code> - Map of links relevant to the package.
@@ -135,7 +133,7 @@ tarball path (Default: <code class="inline">&lt;app&gt;-&lt;version&gt;.tar</cod
         <a class="anchor" id="hex_config"></a>
         hex.config
         <a href="#hex_config">
-          <svg aria-hidden="aria-hidden" class="glyphicon glyphicon-link pull-right" version="1.1" viewBox="0 0 1200 1200"><g transform="translate(0, 1200) scale(1, -1)"><path d="M776.5 1214q93.5 0 159.5 -66l141 -141q66 -66 66 -160q0 -42 -28 -95.5t-62 -87.5l-29 -29q-31 53 -77 99l-18 18l95 95l-247 248l-389 -389l212 -212l-105 -106l-19 18l-141 141q-66 66 -66 159t66 159l283 283q65 66 158.5 66zM600 706l105 105q10 -8 19 -17l141 -141 q66 -66 66 -159t-66 -159l-283 -283q-66 -66 -159 -66t-159 66l-141 141q-66 66 -66 159.5t66 159.5l55 55q29 -55 75 -102l18 -17l-95 -95l247 -248l389 389z"></path></g></svg>
+          <svg class="glyphicon glyphicon-link pull-right" version="1.1" viewBox="0 0 1200 1200" aria-hidden><g transform="translate(0, 1200) scale(1, -1)"><path d="M776.5 1214q93.5 0 159.5 -66l141 -141q66 -66 66 -160q0 -42 -28 -95.5t-62 -87.5l-29 -29q-31 53 -77 99l-18 18l95 95l-247 248l-389 -389l212 -212l-105 -106l-19 18l-141 141q-66 66 -66 159t66 159l283 283q65 66 158.5 66zM600 706l105 105q10 -8 19 -17l141 -141 q66 -66 66 -159t-66 -159l-283 -283q-66 -66 -159 -66t-159 66l-141 141q-66 66 -66 159.5t66 159.5l55 55q29 -55 75 -102l18 -17l-95 -95l247 -248l389 389z"></path></g></svg>
         </a>
       </h3>
     </div>
@@ -144,6 +142,10 @@ tarball path (Default: <code class="inline">&lt;app&gt;-&lt;version&gt;.tar</cod
 <pre><code>mix hex.config KEY [VALUE]</code></pre>
 <h3>Config keys</h3>
 <ul>
+<li><code class="inline">api_key</code> - Your API key. If you are authenticated this config will override
+the API key used for your authenticated user. Can be also be overridden by
+setting the environment variable <code class="inline">HEX_API_KEY</code>
+</li>
 <li><code class="inline">api_url</code> - Hex API URL. Can be overridden by setting the environment
 variable <code class="inline">HEX_API_URL</code> (Default: <code class="inline">&quot;https://hex.pm/api&quot;</code>)
 </li>
@@ -193,7 +195,7 @@ stores the cache and configuration (Default: <code class="inline">~/.hex</code>)
         <a class="anchor" id="hex_docs"></a>
         hex.docs
         <a href="#hex_docs">
-          <svg aria-hidden="aria-hidden" class="glyphicon glyphicon-link pull-right" version="1.1" viewBox="0 0 1200 1200"><g transform="translate(0, 1200) scale(1, -1)"><path d="M776.5 1214q93.5 0 159.5 -66l141 -141q66 -66 66 -160q0 -42 -28 -95.5t-62 -87.5l-29 -29q-31 53 -77 99l-18 18l95 95l-247 248l-389 -389l212 -212l-105 -106l-19 18l-141 141q-66 66 -66 159t66 159l283 283q65 66 158.5 66zM600 706l105 105q10 -8 19 -17l141 -141 q66 -66 66 -159t-66 -159l-283 -283q-66 -66 -159 -66t-159 66l-141 141q-66 66 -66 159.5t66 159.5l55 55q29 -55 75 -102l18 -17l-95 -95l247 -248l389 389z"></path></g></svg>
+          <svg class="glyphicon glyphicon-link pull-right" version="1.1" viewBox="0 0 1200 1200" aria-hidden><g transform="translate(0, 1200) scale(1, -1)"><path d="M776.5 1214q93.5 0 159.5 -66l141 -141q66 -66 66 -160q0 -42 -28 -95.5t-62 -87.5l-29 -29q-31 53 -77 99l-18 18l95 95l-247 248l-389 -389l212 -212l-105 -106l-19 18l-141 141q-66 66 -66 159t66 159l283 283q65 66 158.5 66zM600 706l105 105q10 -8 19 -17l141 -141 q66 -66 66 -159t-66 -159l-283 -283q-66 -66 -159 -66t-159 66l-141 141q-66 66 -66 159.5t66 159.5l55 55q29 -55 75 -102l18 -17l-95 -95l247 -248l389 389z"></path></g></svg>
         </a>
       </h3>
     </div>
@@ -203,7 +205,7 @@ stores the cache and configuration (Default: <code class="inline">~/.hex</code>)
 If called outside of a mix project or the dependency is not used in the
 current mix project, defaults to the latest version.</p>
 <h3>Fetch documentation for all dependencies in the current mix project</h3>
-<p>  mix hex.docs fetch</p>
+<pre><code>mix hex.docs fetch</code></pre>
 <h3>Fetch documentation for offline use</h3>
 <p>Fetches documentation for the specified package that you can later open with
 <code class="inline">mix hex.docs offline</code>.</p>
@@ -232,7 +234,7 @@ current mix project, defaults to the latest version.</p>
         <a class="anchor" id="hex_info"></a>
         hex.info
         <a href="#hex_info">
-          <svg aria-hidden="aria-hidden" class="glyphicon glyphicon-link pull-right" version="1.1" viewBox="0 0 1200 1200"><g transform="translate(0, 1200) scale(1, -1)"><path d="M776.5 1214q93.5 0 159.5 -66l141 -141q66 -66 66 -160q0 -42 -28 -95.5t-62 -87.5l-29 -29q-31 53 -77 99l-18 18l95 95l-247 248l-389 -389l212 -212l-105 -106l-19 18l-141 141q-66 66 -66 159t66 159l283 283q65 66 158.5 66zM600 706l105 105q10 -8 19 -17l141 -141 q66 -66 66 -159t-66 -159l-283 -283q-66 -66 -159 -66t-159 66l-141 141q-66 66 -66 159.5t66 159.5l55 55q29 -55 75 -102l18 -17l-95 -95l247 -248l389 389z"></path></g></svg>
+          <svg class="glyphicon glyphicon-link pull-right" version="1.1" viewBox="0 0 1200 1200" aria-hidden><g transform="translate(0, 1200) scale(1, -1)"><path d="M776.5 1214q93.5 0 159.5 -66l141 -141q66 -66 66 -160q0 -42 -28 -95.5t-62 -87.5l-29 -29q-31 53 -77 99l-18 18l95 95l-247 248l-389 -389l212 -212l-105 -106l-19 18l-141 141q-66 66 -66 159t66 159l283 283q65 66 158.5 66zM600 706l105 105q10 -8 19 -17l141 -141 q66 -66 66 -159t-66 -159l-283 -283q-66 -66 -159 -66t-159 66l-141 141q-66 66 -66 159.5t66 159.5l55 55q29 -55 75 -102l18 -17l-95 -95l247 -248l389 389z"></path></g></svg>
         </a>
       </h3>
     </div>
@@ -260,7 +262,7 @@ released versions and package metadata.</p>
         <a class="anchor" id="hex_organization"></a>
         hex.organization
         <a href="#hex_organization">
-          <svg aria-hidden="aria-hidden" class="glyphicon glyphicon-link pull-right" version="1.1" viewBox="0 0 1200 1200"><g transform="translate(0, 1200) scale(1, -1)"><path d="M776.5 1214q93.5 0 159.5 -66l141 -141q66 -66 66 -160q0 -42 -28 -95.5t-62 -87.5l-29 -29q-31 53 -77 99l-18 18l95 95l-247 248l-389 -389l212 -212l-105 -106l-19 18l-141 141q-66 66 -66 159t66 159l283 283q65 66 158.5 66zM600 706l105 105q10 -8 19 -17l141 -141 q66 -66 66 -159t-66 -159l-283 -283q-66 -66 -159 -66t-159 66l-141 141q-66 66 -66 159.5t66 159.5l55 55q29 -55 75 -102l18 -17l-95 -95l247 -248l389 389z"></path></g></svg>
+          <svg class="glyphicon glyphicon-link pull-right" version="1.1" viewBox="0 0 1200 1200" aria-hidden><g transform="translate(0, 1200) scale(1, -1)"><path d="M776.5 1214q93.5 0 159.5 -66l141 -141q66 -66 66 -160q0 -42 -28 -95.5t-62 -87.5l-29 -29q-31 53 -77 99l-18 18l95 95l-247 248l-389 -389l212 -212l-105 -106l-19 18l-141 141q-66 66 -66 159t66 159l283 283q65 66 158.5 66zM600 706l105 105q10 -8 19 -17l141 -141 q66 -66 66 -159t-66 -159l-283 -283q-66 -66 -159 -66t-159 66l-141 141q-66 66 -66 159.5t66 159.5l55 55q29 -55 75 -102l18 -17l-95 -95l247 -248l389 389z"></path></g></svg>
         </a>
       </h3>
     </div>
@@ -268,8 +270,12 @@ released versions and package metadata.</p>
       <p><em>Manages the list of authorized Hex.pm organizations.</em></p>
 <p>Organizations is a feature of Hex.pm to host and manage private packages. See
 <a href="https://hex.pm/docs/private">https://hex.pm/docs/private</a> for more information.</p>
+<p>By default you will be authorized to all your applications when running
+<code class="inline">mix hex.user auth</code> and this is the recommended approach. This task is mainly
+provided for a CI and build systems where access to an organization is needed
+without authorizing a user.</p>
 <p>By authorizing a new organization a new key is created for fetching packages
-from the organizations repository and the repository and key is stored on the
+from the organizations repository and the repository key is stored on the
 local machine.</p>
 <p>To use a package from an organization add <code class="inline">organization: &quot;my_organization&quot;</code> to the
 dependency declaration in <code class="inline">mix.exs</code>:</p>
@@ -280,13 +286,30 @@ See the <code class="inline">hex.user</code> tasks to list and control all your 
 <pre><code>mix hex.organization auth ORGANIZATION  [--key KEY] [--key-name KEY_NAME]</code></pre>
 <h3>Deauthorize and remove an organization</h3>
 <pre><code>mix hex.organization deauth NAME</code></pre>
-<h3>Generate a repository authentication key</h3>
+<h3>List all authorized organizations</h3>
+<p>This command will only list organizations you have authorized with this task, it will not
+list organizations you have access to by having authorized with <code class="inline">mix hex.user auth</code>.</p>
+<pre><code>mix hex.organization list</code></pre>
+<h3>Generate organization key</h3>
 <p>This command is useful to pre-generate keys for use with <code class="inline">mix hex.organization auth ORGANIZATION --key KEY</code>
 on CI servers or similar systems. It returns the hash of the generated key that you can pass to
-<code class="inline">auth ORGANIZATION --key KEY</code>. This key allows read-only access to the repository</p>
-<pre><code>mix hex.organization key ORGANIZATION [--key-name KEY_NAME]</code></pre>
-<h3>List all authorized organizations</h3>
-<pre><code>mix hex.organization list</code></pre>
+<code class="inline">auth ORGANIZATION --key KEY</code>. Unlike the <code class="inline">hex.user key</code> commands, a key generated with this
+command is owned by the organization directly, and not the user that generated it. This makes it
+ideal for shared environments such as CI where you don’t want to give access to user-specific
+resources and the user’s organization membership status won’t affect key. By default this command
+sets the <code class="inline">repository</code> permission which allows read-only access to the repository, it can be
+overriden with the <code class="inline">--permission</code> flag.</p>
+<pre><code>mix hex.organization key ORGANIZATION generate [--key-name KEY_NAME] [--permission PERMISSION]</code></pre>
+<h3>Revoke key</h3>
+<p>Removes given key from organization.</p>
+<p>The key can no longer be used to authenticate API requests.</p>
+<pre><code>mix hex.organization key ORGANIZATION revoke KEY_NAME</code></pre>
+<h3>Revoke all keys</h3>
+<p>Revoke all keys from the organization.</p>
+<pre><code>mix hex.organization key ORGANIZATION revoke --all</code></pre>
+<h3>List keys</h3>
+<p>Lists all keys associated with the organization.</p>
+<pre><code>mix hex.organization key ORGANIZATION list</code></pre>
 <h3>Command line options</h3>
 <ul>
 <li><p><code class="inline">--key KEY</code> - Hash of key used to authenticate HTTP requests to repository, if
@@ -296,6 +319,17 @@ and want to authenticate on a CI server or similar system</p>
 </li>
 <li><p><code class="inline">--key-name KEY_NAME</code> - By default Hex will base the key name on your machine’s
 hostname and the organization name, use this option to give your own name.</p>
+</li>
+<li><p><code class="inline">--permission PERMISSION</code> - Sets the permissions on the key, this option can be given
+multiple times, possibly values are:</p>
+<ul>
+<li><code class="inline">api:read</code> - API read access.
+</li>
+<li><code class="inline">api:write</code> - API write access.
+</li>
+<li><code class="inline">repository</code> - Access to the organization’s repository.
+</li>
+</ul>
 </li>
 </ul>
 
@@ -309,7 +343,7 @@ hostname and the organization name, use this option to give your own name.</p>
         <a class="anchor" id="hex_outdated"></a>
         hex.outdated
         <a href="#hex_outdated">
-          <svg aria-hidden="aria-hidden" class="glyphicon glyphicon-link pull-right" version="1.1" viewBox="0 0 1200 1200"><g transform="translate(0, 1200) scale(1, -1)"><path d="M776.5 1214q93.5 0 159.5 -66l141 -141q66 -66 66 -160q0 -42 -28 -95.5t-62 -87.5l-29 -29q-31 53 -77 99l-18 18l95 95l-247 248l-389 -389l212 -212l-105 -106l-19 18l-141 141q-66 66 -66 159t66 159l283 283q65 66 158.5 66zM600 706l105 105q10 -8 19 -17l141 -141 q66 -66 66 -159t-66 -159l-283 -283q-66 -66 -159 -66t-159 66l-141 141q-66 66 -66 159.5t66 159.5l55 55q29 -55 75 -102l18 -17l-95 -95l247 -248l389 389z"></path></g></svg>
+          <svg class="glyphicon glyphicon-link pull-right" version="1.1" viewBox="0 0 1200 1200" aria-hidden><g transform="translate(0, 1200) scale(1, -1)"><path d="M776.5 1214q93.5 0 159.5 -66l141 -141q66 -66 66 -160q0 -42 -28 -95.5t-62 -87.5l-29 -29q-31 53 -77 99l-18 18l95 95l-247 248l-389 -389l212 -212l-105 -106l-19 18l-141 141q-66 66 -66 159t66 159l283 283q65 66 158.5 66zM600 706l105 105q10 -8 19 -17l141 -141 q66 -66 66 -159t-66 -159l-283 -283q-66 -66 -159 -66t-159 66l-141 141q-66 66 -66 159.5t66 159.5l55 55q29 -55 75 -102l18 -17l-95 -95l247 -248l389 389z"></path></g></svg>
         </a>
       </h3>
     </div>
@@ -340,7 +374,7 @@ to figure why a package isn’t updating when you run <code class="inline">mix d
         <a class="anchor" id="hex_owner"></a>
         hex.owner
         <a href="#hex_owner">
-          <svg aria-hidden="aria-hidden" class="glyphicon glyphicon-link pull-right" version="1.1" viewBox="0 0 1200 1200"><g transform="translate(0, 1200) scale(1, -1)"><path d="M776.5 1214q93.5 0 159.5 -66l141 -141q66 -66 66 -160q0 -42 -28 -95.5t-62 -87.5l-29 -29q-31 53 -77 99l-18 18l95 95l-247 248l-389 -389l212 -212l-105 -106l-19 18l-141 141q-66 66 -66 159t66 159l283 283q65 66 158.5 66zM600 706l105 105q10 -8 19 -17l141 -141 q66 -66 66 -159t-66 -159l-283 -283q-66 -66 -159 -66t-159 66l-141 141q-66 66 -66 159.5t66 159.5l55 55q29 -55 75 -102l18 -17l-95 -95l247 -248l389 389z"></path></g></svg>
+          <svg class="glyphicon glyphicon-link pull-right" version="1.1" viewBox="0 0 1200 1200" aria-hidden><g transform="translate(0, 1200) scale(1, -1)"><path d="M776.5 1214q93.5 0 159.5 -66l141 -141q66 -66 66 -160q0 -42 -28 -95.5t-62 -87.5l-29 -29q-31 53 -77 99l-18 18l95 95l-247 248l-389 -389l212 -212l-105 -106l-19 18l-141 141q-66 66 -66 159t66 159l283 283q65 66 158.5 66zM600 706l105 105q10 -8 19 -17l141 -141 q66 -66 66 -159t-66 -159l-283 -283q-66 -66 -159 -66t-159 66l-141 141q-66 66 -66 159.5t66 159.5l55 55q29 -55 75 -102l18 -17l-95 -95l247 -248l389 389z"></path></g></svg>
         </a>
       </h3>
     </div>
@@ -378,7 +412,7 @@ owner.</p>
         <a class="anchor" id="hex_publish"></a>
         hex.publish
         <a href="#hex_publish">
-          <svg aria-hidden="aria-hidden" class="glyphicon glyphicon-link pull-right" version="1.1" viewBox="0 0 1200 1200"><g transform="translate(0, 1200) scale(1, -1)"><path d="M776.5 1214q93.5 0 159.5 -66l141 -141q66 -66 66 -160q0 -42 -28 -95.5t-62 -87.5l-29 -29q-31 53 -77 99l-18 18l95 95l-247 248l-389 -389l212 -212l-105 -106l-19 18l-141 141q-66 66 -66 159t66 159l283 283q65 66 158.5 66zM600 706l105 105q10 -8 19 -17l141 -141 q66 -66 66 -159t-66 -159l-283 -283q-66 -66 -159 -66t-159 66l-141 141q-66 66 -66 159.5t66 159.5l55 55q29 -55 75 -102l18 -17l-95 -95l247 -248l389 389z"></path></g></svg>
+          <svg class="glyphicon glyphicon-link pull-right" version="1.1" viewBox="0 0 1200 1200" aria-hidden><g transform="translate(0, 1200) scale(1, -1)"><path d="M776.5 1214q93.5 0 159.5 -66l141 -141q66 -66 66 -160q0 -42 -28 -95.5t-62 -87.5l-29 -29q-31 53 -77 99l-18 18l95 95l-247 248l-389 -389l212 -212l-105 -106l-19 18l-141 141q-66 66 -66 159t66 159l283 283q65 66 158.5 66zM600 706l105 105q10 -8 19 -17l141 -141 q66 -66 66 -159t-66 -159l-283 -283q-66 -66 -159 -66t-159 66l-141 141q-66 66 -66 159.5t66 159.5l55 55q29 -55 75 -102l18 -17l-95 -95l247 -248l389 389z"></path></g></svg>
         </a>
       </h3>
     </div>
@@ -404,9 +438,12 @@ documentation in one step, you can use the following shorthand:</p>
 <pre><code>mix hex.publish</code></pre>
 <h3>Command line options</h3>
 <ul>
-<li><code class="inline">--revert VERSION</code> - Revert given version
+<li><code class="inline">--revert VERSION</code> - Revert given version, if the last version is reverted
+the package is removed
 </li>
 <li><code class="inline">--organization ORGANIZATION</code> - The organization the package belongs to
+</li>
+<li><code class="inline">--no-confirm</code> - Disables confirmation message before publishing
 </li>
 </ul>
 <h3>Configuration</h3>
@@ -450,8 +487,6 @@ of the default public hex.pm.
 can include wildcards. Defaults to <code class="inline">[&quot;lib&quot;, &quot;priv&quot;, &quot;mix.exs&quot;, &quot;README*&quot;,
 &quot;readme*&quot;, &quot;LICENSE*&quot;, &quot;license*&quot;, &quot;CHANGELOG*&quot;, &quot;changelog*&quot;, &quot;src&quot;]</code>.
 </li>
-<li><code class="inline">:maintainers</code> - List of names and/or emails of maintainers.
-</li>
 <li><code class="inline">:licenses</code> - List of licenses used by the package.
 </li>
 <li><code class="inline">:links</code> - Map of links relevant to the package.
@@ -474,7 +509,7 @@ by setting this field.
         <a class="anchor" id="hex_repo"></a>
         hex.repo
         <a href="#hex_repo">
-          <svg aria-hidden="aria-hidden" class="glyphicon glyphicon-link pull-right" version="1.1" viewBox="0 0 1200 1200"><g transform="translate(0, 1200) scale(1, -1)"><path d="M776.5 1214q93.5 0 159.5 -66l141 -141q66 -66 66 -160q0 -42 -28 -95.5t-62 -87.5l-29 -29q-31 53 -77 99l-18 18l95 95l-247 248l-389 -389l212 -212l-105 -106l-19 18l-141 141q-66 66 -66 159t66 159l283 283q65 66 158.5 66zM600 706l105 105q10 -8 19 -17l141 -141 q66 -66 66 -159t-66 -159l-283 -283q-66 -66 -159 -66t-159 66l-141 141q-66 66 -66 159.5t66 159.5l55 55q29 -55 75 -102l18 -17l-95 -95l247 -248l389 389z"></path></g></svg>
+          <svg class="glyphicon glyphicon-link pull-right" version="1.1" viewBox="0 0 1200 1200" aria-hidden><g transform="translate(0, 1200) scale(1, -1)"><path d="M776.5 1214q93.5 0 159.5 -66l141 -141q66 -66 66 -160q0 -42 -28 -95.5t-62 -87.5l-29 -29q-31 53 -77 99l-18 18l95 95l-247 248l-389 -389l212 -212l-105 -106l-19 18l-141 141q-66 66 -66 159t66 159l283 283q65 66 158.5 66zM600 706l105 105q10 -8 19 -17l141 -141 q66 -66 66 -159t-66 -159l-283 -283q-66 -66 -159 -66t-159 66l-141 141q-66 66 -66 159.5t66 159.5l55 55q29 -55 75 -102l18 -17l-95 -95l247 -248l389 389z"></path></g></svg>
         </a>
       </h3>
     </div>
@@ -526,7 +561,7 @@ mix hex.repo set NAME --auth-key KEY</code></pre>
         <a class="anchor" id="hex_retire"></a>
         hex.retire
         <a href="#hex_retire">
-          <svg aria-hidden="aria-hidden" class="glyphicon glyphicon-link pull-right" version="1.1" viewBox="0 0 1200 1200"><g transform="translate(0, 1200) scale(1, -1)"><path d="M776.5 1214q93.5 0 159.5 -66l141 -141q66 -66 66 -160q0 -42 -28 -95.5t-62 -87.5l-29 -29q-31 53 -77 99l-18 18l95 95l-247 248l-389 -389l212 -212l-105 -106l-19 18l-141 141q-66 66 -66 159t66 159l283 283q65 66 158.5 66zM600 706l105 105q10 -8 19 -17l141 -141 q66 -66 66 -159t-66 -159l-283 -283q-66 -66 -159 -66t-159 66l-141 141q-66 66 -66 159.5t66 159.5l55 55q29 -55 75 -102l18 -17l-95 -95l247 -248l389 389z"></path></g></svg>
+          <svg class="glyphicon glyphicon-link pull-right" version="1.1" viewBox="0 0 1200 1200" aria-hidden><g transform="translate(0, 1200) scale(1, -1)"><path d="M776.5 1214q93.5 0 159.5 -66l141 -141q66 -66 66 -160q0 -42 -28 -95.5t-62 -87.5l-29 -29q-31 53 -77 99l-18 18l95 95l-247 248l-389 -389l212 -212l-105 -106l-19 18l-141 141q-66 66 -66 159t66 159l283 283q65 66 158.5 66zM600 706l105 105q10 -8 19 -17l141 -141 q66 -66 66 -159t-66 -159l-283 -283q-66 -66 -159 -66t-159 66l-141 141q-66 66 -66 159.5t66 159.5l55 55q29 -55 75 -102l18 -17l-95 -95l247 -248l389 389z"></path></g></svg>
         </a>
       </h3>
     </div>
@@ -573,18 +608,17 @@ the retirement reason
         <a class="anchor" id="hex_search"></a>
         hex.search
         <a href="#hex_search">
-          <svg aria-hidden="aria-hidden" class="glyphicon glyphicon-link pull-right" version="1.1" viewBox="0 0 1200 1200"><g transform="translate(0, 1200) scale(1, -1)"><path d="M776.5 1214q93.5 0 159.5 -66l141 -141q66 -66 66 -160q0 -42 -28 -95.5t-62 -87.5l-29 -29q-31 53 -77 99l-18 18l95 95l-247 248l-389 -389l212 -212l-105 -106l-19 18l-141 141q-66 66 -66 159t66 159l283 283q65 66 158.5 66zM600 706l105 105q10 -8 19 -17l141 -141 q66 -66 66 -159t-66 -159l-283 -283q-66 -66 -159 -66t-159 66l-141 141q-66 66 -66 159.5t66 159.5l55 55q29 -55 75 -102l18 -17l-95 -95l247 -248l389 389z"></path></g></svg>
+          <svg class="glyphicon glyphicon-link pull-right" version="1.1" viewBox="0 0 1200 1200" aria-hidden><g transform="translate(0, 1200) scale(1, -1)"><path d="M776.5 1214q93.5 0 159.5 -66l141 -141q66 -66 66 -160q0 -42 -28 -95.5t-62 -87.5l-29 -29q-31 53 -77 99l-18 18l95 95l-247 248l-389 -389l212 -212l-105 -106l-19 18l-141 141q-66 66 -66 159t66 159l283 283q65 66 158.5 66zM600 706l105 105q10 -8 19 -17l141 -141 q66 -66 66 -159t-66 -159l-283 -283q-66 -66 -159 -66t-159 66l-141 141q-66 66 -66 159.5t66 159.5l55 55q29 -55 75 -102l18 -17l-95 -95l247 -248l389 389z"></path></g></svg>
         </a>
       </h3>
     </div>
     <div class="panel-body">
       <p><em>Displays packages matching the given search query.</em></p>
+<p>If you are authenticated it will additionally search all organizations you are member of.</p>
 <pre><code>mix hex.search PACKAGE</code></pre>
 <h3>Command line options</h3>
 <ul>
-<li><code class="inline">--organization ORGANIZATION</code> - The organization the package belongs to
-</li>
-<li><code class="inline">--all-organizations</code> - Search all organizations you have access to
+<li><code class="inline">--organization ORGANIZATION</code> - Search packages in specific organization
 </li>
 </ul>
 
@@ -598,7 +632,7 @@ the retirement reason
         <a class="anchor" id="hex_user"></a>
         hex.user
         <a href="#hex_user">
-          <svg aria-hidden="aria-hidden" class="glyphicon glyphicon-link pull-right" version="1.1" viewBox="0 0 1200 1200"><g transform="translate(0, 1200) scale(1, -1)"><path d="M776.5 1214q93.5 0 159.5 -66l141 -141q66 -66 66 -160q0 -42 -28 -95.5t-62 -87.5l-29 -29q-31 53 -77 99l-18 18l95 95l-247 248l-389 -389l212 -212l-105 -106l-19 18l-141 141q-66 66 -66 159t66 159l283 283q65 66 158.5 66zM600 706l105 105q10 -8 19 -17l141 -141 q66 -66 66 -159t-66 -159l-283 -283q-66 -66 -159 -66t-159 66l-141 141q-66 66 -66 159.5t66 159.5l55 55q29 -55 75 -102l18 -17l-95 -95l247 -248l389 389z"></path></g></svg>
+          <svg class="glyphicon glyphicon-link pull-right" version="1.1" viewBox="0 0 1200 1200" aria-hidden><g transform="translate(0, 1200) scale(1, -1)"><path d="M776.5 1214q93.5 0 159.5 -66l141 -141q66 -66 66 -160q0 -42 -28 -95.5t-62 -87.5l-29 -29q-31 53 -77 99l-18 18l95 95l-247 248l-389 -389l212 -212l-105 -106l-19 18l-141 141q-66 66 -66 159t66 159l283 283q65 66 158.5 66zM600 706l105 105q10 -8 19 -17l141 -141 q66 -66 66 -159t-66 -159l-283 -283q-66 -66 -159 -66t-159 66l-141 141q-66 66 -66 159.5t66 159.5l55 55q29 -55 75 -102l18 -17l-95 -95l247 -248l389 389z"></path></g></svg>
         </a>
       </h3>
     </div>
@@ -611,33 +645,52 @@ the retirement reason
 <h3>Authorize a new user</h3>
 <p>Authorizes a new user on the local machine by generating a new API key and
 storing it in the Hex config.</p>
-<pre><code>mix hex.user auth [--key-name KEY_NAME] [--skip-organizations]</code></pre>
-<h3>Command line options</h3>
+<pre><code>mix hex.user auth [--key-name KEY_NAME]</code></pre>
+<h4>Command line options</h4>
 <ul>
 <li><code class="inline">--key-name KEY_NAME</code> - By default Hex will base the key name on your machine’s
 hostname, use this option to give your own name.
 </li>
-<li><code class="inline">--skip-organizations</code> - Skip authorizing all organizations your account has access to.
-</li>
 </ul>
 <h3>Deauthorize the user</h3>
 <p>Deauthorizes the user from the local machine by removing the API key from the Hex config.</p>
-<pre><code>mix hex.user deauth [--skip-organizations]</code></pre>
-<h3>Command line options</h3>
+<pre><code>mix hex.user deauth</code></pre>
+<h3>Generate user key</h3>
+<p>Generates an unencrypted API key for your account. Keys generated by this command will be owned
+by you and will give access to your private resources, do not share this key with anyone. For
+keys that will be shared by organization members use <code class="inline">mix hex.organization key</code> instead. By
+default this command sets the <code class="inline">api:write</code> permission which allows write access to the API,
+it can be overriden with the <code class="inline">--permission</code> flag.</p>
+<pre><code>mix hex.user key generate</code></pre>
+<h4>Command line options</h4>
 <ul>
-<li><code class="inline">--skip-organizations</code> - Skip deauthorizing all organizations.
+<li><p><code class="inline">--key-name KEY_NAME</code> - By default Hex will base the key name on your machine’s
+hostname, use this option to give your own name.</p>
+</li>
+<li><p><code class="inline">--permission PERMISSION</code> - Sets the permissions on the key, this option can be given
+multiple times, possible values are:</p>
+<ul>
+<li><code class="inline">api:read</code> - API read access.
+</li>
+<li><code class="inline">api:write</code> - API write access.
+</li>
+<li><code class="inline">repository:ORGANIZATION_NAME</code> - Access to given organization repository.
+</li>
+<li><code class="inline">repositories</code> - Access to repositories for all organizations you are member of.
+</li>
+</ul>
 </li>
 </ul>
 <h3>Revoke key</h3>
-<p>Removes given API key from account.</p>
+<p>Removes given key from account.</p>
 <p>The key can no longer be used to authenticate API requests.</p>
-<pre><code>mix hex.user key --revoke KEY_NAME</code></pre>
+<pre><code>mix hex.user key revoke KEY_NAME</code></pre>
 <h3>Revoke all keys</h3>
-<p>Revoke all API keys from your account.</p>
-<pre><code>mix hex.user key --revoke-all</code></pre>
+<p>Revoke all keys from your account.</p>
+<pre><code>mix hex.user key revoke --all</code></pre>
 <h3>List keys</h3>
-<p>Lists all API keys associated with your account.</p>
-<pre><code>mix hex.user key --list</code></pre>
+<p>Lists all keys associated with your account.</p>
+<pre><code>mix hex.user key list</code></pre>
 <h3>Reset user account password</h3>
 <p>Starts the process for reseting account password.</p>
 <pre><code>mix hex.user reset_password account</code></pre>
