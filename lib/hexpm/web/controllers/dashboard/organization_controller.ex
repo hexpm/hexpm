@@ -290,7 +290,7 @@ defmodule Hexpm.Web.Dashboard.OrganizationController do
     access_organization(conn, organization, "write", fn organization ->
       key_params = KeyController.fixup_permissions(params["key"])
 
-      case Keys.add(organization, key_params, audit: audit_data(conn)) do
+      case Keys.create(organization, key_params, audit: audit_data(conn)) do
         {:ok, %{key: key}} ->
           flash =
             "The key #{key.name} was successfully generated, " <>
@@ -310,7 +310,7 @@ defmodule Hexpm.Web.Dashboard.OrganizationController do
 
   def delete_key(conn, %{"dashboard_org" => organization, "name" => name}) do
     access_organization(conn, organization, "write", fn organization ->
-      case Keys.remove(organization, name, audit: audit_data(conn)) do
+      case Keys.revoke(organization, name, audit: audit_data(conn)) do
         {:ok, _struct} ->
           conn
           |> put_flash(:info, "The key #{name} was revoked successfully.")

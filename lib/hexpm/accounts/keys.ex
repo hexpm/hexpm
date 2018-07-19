@@ -17,29 +17,29 @@ defmodule Hexpm.Accounts.Keys do
     |> Key.associate_owner(user_or_organization)
   end
 
-  def add(user_or_organization, params, audit: audit_data) do
+  def create(user_or_organization, params, audit: audit_data) do
     Multi.new()
     |> Multi.insert(:key, Key.build(user_or_organization, params))
     |> audit(audit_data, "key.generate", fn %{key: key} -> key end)
     |> Repo.transaction()
   end
 
-  def remove(key, audit: audit_data) do
+  def revoke(key, audit: audit_data) do
     Multi.new()
     |> Multi.update(:key, Key.revoke(key))
     |> audit(audit_data, "key.remove", key)
     |> Repo.transaction()
   end
 
-  def remove(user_or_organization, name, audit: audit_data) do
+  def revoke(user_or_organization, name, audit: audit_data) do
     if key = get(user_or_organization, name) do
-      remove(key, audit: audit_data)
+      revoke(key, audit: audit_data)
     else
       {:error, :not_found}
     end
   end
 
-  def remove_all(user_or_organization, audit: audit_data) do
+  def revoke_all(user_or_organization, audit: audit_data) do
     Multi.new()
     |> Multi.update_all(:keys, Key.revoke_all(user_or_organization), [])
     |> audit_many(audit_data, "key.remove", all(user_or_organization))
