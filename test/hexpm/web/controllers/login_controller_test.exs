@@ -2,7 +2,10 @@ defmodule Hexpm.Web.LoginControllerTest do
   use Hexpm.ConnCase
 
   setup do
-    %{user: create_user("eric", "eric@mail.com", "hunter42"), password: "hunter42"}
+    user = insert(:user)
+    organization = insert(:organization)
+    insert(:organization_user, organization: organization, user: user)
+    %{user: user, organization: organization}
   end
 
   test "show log in page" do
@@ -11,7 +14,7 @@ defmodule Hexpm.Web.LoginControllerTest do
   end
 
   test "log in with correct password", c do
-    conn = post(build_conn(), "login", %{username: c.user.username, password: c.password})
+    conn = post(build_conn(), "login", %{username: c.user.username, password: "password"})
     assert redirected_to(conn) == "/users/#{c.user.username}"
 
     assert get_session(conn, "user_id") == c.user.id
@@ -19,7 +22,7 @@ defmodule Hexpm.Web.LoginControllerTest do
   end
 
   test "log in keeps you logged in", c do
-    conn = post(build_conn(), "login", %{username: c.user.username, password: c.password})
+    conn = post(build_conn(), "login", %{username: c.user.username, password: "password"})
     assert redirected_to(conn) == "/users/#{c.user.username}"
 
     conn = conn |> recycle() |> get("/")
@@ -37,7 +40,7 @@ defmodule Hexpm.Web.LoginControllerTest do
   test "log in with unconfirmed email", c do
     Ecto.Changeset.change(hd(c.user.emails), verified: false) |> Hexpm.Repo.update!()
 
-    conn = post(build_conn(), "login", %{username: c.user.username, password: c.password})
+    conn = post(build_conn(), "login", %{username: c.user.username, password: "password"})
     assert response(conn, 400) =~ "Log in"
     assert get_flash(conn, "error") =~ "Email has not been verified yet."
     refute get_session(conn, "user_id")
@@ -45,7 +48,7 @@ defmodule Hexpm.Web.LoginControllerTest do
   end
 
   test "log out", c do
-    conn = post(build_conn(), "login", %{username: c.user.username, password: c.password})
+    conn = post(build_conn(), "login", %{username: c.user.username, password: "password"})
     assert redirected_to(conn) == "/users/#{c.user.username}"
 
     conn =
