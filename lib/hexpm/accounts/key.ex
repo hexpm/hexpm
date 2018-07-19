@@ -8,6 +8,8 @@ defmodule Hexpm.Accounts.Key do
     field :name, :string
     field :secret_first, :string
     field :secret_second, :string
+    field :public, :boolean, default: true
+    field :revoke_at, :naive_datetime
     field :revoked_at, :naive_datetime
     timestamps()
 
@@ -41,24 +43,34 @@ defmodule Hexpm.Accounts.Key do
     |> changeset(user_or_organization, params)
   end
 
+  defmacrop query_revoked(key) do
+    quote do
+      not is_nil(unquote(key).revoked_at) or
+        (not is_nil(unquote(key).revoke_at) and unquote(key).revoke_at < fragment("NOW()"))
+    end
+  end
+
   def all(user_or_organization) do
     from(
       k in assoc(user_or_organization, :keys),
-      where: is_nil(k.revoked_at)
+      where: not query_revoked(k),
+      where: k.public
     )
   end
 
   def get(user_or_organization, name) do
     from(
       k in assoc(user_or_organization, :keys),
-      where: k.name == ^name and is_nil(k.revoked_at)
+      where: k.name == ^name,
+      where: not query_revoked(k)
     )
   end
 
   def get_revoked(user_or_organization, name) do
     from(
       k in assoc(user_or_organization, :keys),
-      where: k.name == ^name and not is_nil(k.revoked_at)
+      where: k.name == ^name,
+      where: query_revoked(k)
     )
   end
 
@@ -72,7 +84,7 @@ defmodule Hexpm.Accounts.Key do
   def revoke_by_name(user_or_organization, key_name, revoked_at \\ NaiveDateTime.utc_now()) do
     from(
       k in assoc(user_or_organization, :keys),
-      where: k.name == ^key_name and is_nil(k.revoked_at),
+      where: k.name == ^key_name and not query_revoked(k),
       update: [
         set: [
           revoked_at: fragment("?", ^revoked_at),
@@ -85,7 +97,7 @@ defmodule Hexpm.Accounts.Key do
   def revoke_all(user_or_organization, revoked_at \\ NaiveDateTime.utc_now()) do
     from(
       k in assoc(user_or_organization, :keys),
-      where: is_nil(k.revoked_at),
+      where: not query_revoked(k),
       update: [
         set: [
           revoked_at: fragment("?", ^revoked_at),
@@ -135,7 +147,7 @@ defmodule Hexpm.Accounts.Key do
       from(
         s in source,
         join: k in assoc(s, :keys),
-        where: is_nil(k.revoked_at),
+        where: not query_revoked(k),
         select: k.name
       )
       |> changeset.repo.all
@@ -176,6 +188,12 @@ defmodule Hexpm.Accounts.Key do
 
   def verify_permissions?(_key, nil, _resource) do
     false
+  end
+
+  def revoked?(%Key{} = key) do
+    not is_nil(key.revoked_at) or
+      (not is_nil(key.revoke_at) and
+         NaiveDateTime.compare(key.revoke_at, NaiveDateTime.utc_now()) == :lt)
   end
 
   def associate_owner(nil, _owner), do: nil
