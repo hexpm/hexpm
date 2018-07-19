@@ -34,7 +34,8 @@ defmodule Hexpm.Web.API.ReleaseView do
   def render("minimal", %{release: release, package: package}) do
     %{
       version: release.version,
-      url: url_for_release(package, release)
+      url: url_for_release(package, release),
+      has_docs: release.has_docs
     }
   end
 
