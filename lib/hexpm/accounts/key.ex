@@ -4,6 +4,8 @@ defmodule Hexpm.Accounts.Key do
   @derive Hexpm.Web.Stale
   @derive {Phoenix.Param, key: :name}
 
+  @days_30 60 * 60 * 24 * 30
+
   schema "keys" do
     field :name, :string
     field :secret_first, :string
@@ -41,6 +43,22 @@ defmodule Hexpm.Accounts.Key do
     build_assoc(user_or_organization, :keys)
     |> associate_owner(user_or_organization)
     |> changeset(user_or_organization, params)
+  end
+
+  def build_for_docs(user, organization) do
+    permission =
+      KeyPermission.changeset(%KeyPermission{}, user, %{
+        "domain" => "docs",
+        "resource" => organization
+      })
+
+    revoke_at = NaiveDateTime.add(NaiveDateTime.utc_now(), @days_30)
+
+    build_assoc(user, :keys)
+    |> change()
+    |> add_keys()
+    |> put_change(:revoke_at, revoke_at)
+    |> put_embed(:permissions, [permission])
   end
 
   defmacrop query_revoked(key) do
@@ -183,6 +201,12 @@ defmodule Hexpm.Accounts.Key do
     Enum.any?(key.permissions, fn permission ->
       (permission.domain == "repository" and permission.resource == resource) or
         permission.domain == "repositories"
+    end)
+  end
+
+  def verify_permissions?(key, "docs", resource) do
+    Enum.any?(key.permissions, fn permission ->
+      permission.domain == "docs" and permission.resource == resource
     end)
   end
 
