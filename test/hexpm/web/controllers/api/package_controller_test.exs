@@ -112,6 +112,23 @@ defmodule Hexpm.Web.API.PackageControllerTest do
       assert package3.name in Enum.map(result, & &1["name"])
     end
 
+    test "show private packages in organization with service account", %{
+      organization: organization,
+      package3: package3
+    } do
+      user = insert(:user, service: true)
+
+      result =
+        build_conn()
+        # TODO: change to web_login/api_login helper
+        |> put_req_header("authorization", key_for(user))
+        |> get("api/repos/#{organization.name}/packages")
+        |> json_response(200)
+
+      assert length(result) == 1
+      assert package3.name in Enum.map(result, & &1["name"])
+    end
+
     test "show private packages in organization authorizes", %{
       organization: organization,
       unauthorized_user: unauthorized_user

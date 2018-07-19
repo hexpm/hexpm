@@ -8,6 +8,7 @@ defmodule Hexpm.Accounts.User do
     field :username, :string
     field :full_name, :string
     field :password, :string
+    field :service, :boolean, default: false
     timestamps()
 
     embeds_one :handles, UserHandles, on_replace: :delete
