@@ -10,6 +10,19 @@ lorem =
 password = &Bcrypt.hash_pwd_salt/1
 
 Hexpm.Repo.transaction(fn ->
+  hexdocs =
+    insert(
+      :user,
+      username: "hexdocs",
+      service: true
+    )
+
+  # user_secret: "2cd6d09334d4b00a2be4d532342b799b"
+  insert(:key,
+    secret_first: "e65e2dbb7e22694dc577e7b3d3328ff4",
+    secret_second: "aebb59509b50226077c81216c2eba85b"
+  )
+
   eric =
     insert(
       :user,
