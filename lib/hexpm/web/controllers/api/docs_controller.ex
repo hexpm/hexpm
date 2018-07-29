@@ -27,8 +27,12 @@ defmodule Hexpm.Web.API.DocsController do
   end
 
   def create(conn, %{"body" => body}) do
+    organization = conn.assigns.organization
     package = conn.assigns.package
     release = conn.assigns.release
+    request_id = List.first(get_req_header(conn, "x-request-id"))
+
+    log_tarball(organization.name, package.name, release.version, request_id, body)
 
     case Hexpm.Web.DocsTar.parse(body) do
       {:ok, {files, body}} ->
@@ -58,5 +62,11 @@ defmodule Hexpm.Web.API.DocsController do
     conn
     |> api_cache(:private)
     |> send_resp(204, "")
+  end
+
+  defp log_tarball(organization, package, version, request_id, body) do
+    filename = "#{organization}-#{package}-#{version}-#{request_id}.tar.gz"
+    key = Path.join(["debug", "docs", filename])
+    Hexpm.Store.put(nil, :s3_bucket, key, body, [])
   end
 end

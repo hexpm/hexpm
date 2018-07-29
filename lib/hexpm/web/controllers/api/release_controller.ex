@@ -23,6 +23,16 @@ defmodule Hexpm.Web.API.ReleaseController do
        when action in [:delete]
 
   def publish(conn, %{"body" => body}) do
+    request_id = List.first(get_req_header(conn, "x-request-id"))
+
+    log_tarball(
+      conn.assigns.organization.name,
+      conn.assigns.meta["name"],
+      conn.assigns.meta["version"],
+      request_id,
+      body
+    )
+
     # TODO: pass around and store in DB as binary instead
     checksum = :hex_tarball.format_checksum(conn.assigns.checksum)
 
@@ -99,6 +109,9 @@ defmodule Hexpm.Web.API.ReleaseController do
   defp handle_tarball(conn, organization, package, user, body) do
     case Hexpm.Web.ReleaseTar.metadata(body) do
       {:ok, meta, checksum} ->
+        request_id = List.first(get_req_header(conn, "x-request-id"))
+        log_tarball(organization.name, meta["name"], meta["version"], request_id, body)
+
         # TODO: pass around and store in DB as binary instead
         checksum = :hex_tarball.format_checksum(checksum)
 
@@ -153,4 +166,10 @@ defmodule Hexpm.Web.API.ReleaseController do
   end
 
   defp normalize_errors(changeset), do: changeset
+
+  defp log_tarball(organization, package, version, request_id, body) do
+    filename = "#{organization}-#{package}-#{version}-#{request_id}.tar.gz"
+    key = Path.join(["debug", "tarballs", filename])
+    Hexpm.Store.put(nil, :s3_bucket, key, body, [])
+  end
 end
