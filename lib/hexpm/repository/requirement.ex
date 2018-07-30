@@ -50,27 +50,32 @@ defmodule Hexpm.Repository.Requirement do
     end
   end
 
-  defp validate_resolver(%{valid?: true} = release_changeset, requirements) do
-    build_tools = get_field(release_changeset, :meta).build_tools
-
-    {time, release_changeset} =
-      :timer.tc(fn ->
-        case Resolver.run(requirements, build_tools) do
-          :ok ->
-            release_changeset
-
-          {:error, reason} ->
-            add_error(release_changeset, :requirements, reason)
-        end
-      end)
-
-    Logger.warn("DEPENDENCY_RESOLUTION_COMPLETED (#{div(time, 1000)}ms)")
+  defp validate_resolver(release_changeset, _requirements) do
     release_changeset
   end
 
-  defp validate_resolver(%{valid?: false} = release_changeset, _requirements) do
-    release_changeset
-  end
+  # Disabled because of bug
+  # defp validate_resolver(%{valid?: true} = release_changeset, requirements) do
+  #   build_tools = get_field(release_changeset, :meta).build_tools
+  #
+  #   {time, release_changeset} =
+  #     :timer.tc(fn ->
+  #       case Resolver.run(requirements, build_tools) do
+  #         :ok ->
+  #           release_changeset
+  #
+  #         {:error, reason} ->
+  #           add_error(release_changeset, :requirements, reason)
+  #       end
+  #     end)
+  #
+  #   Logger.warn("DEPENDENCY_RESOLUTION_COMPLETED (#{div(time, 1000)}ms)")
+  #   release_changeset
+  # end
+  #
+  # defp validate_resolver(%{valid?: false} = release_changeset, _requirements) do
+  #   release_changeset
+  # end
 
   defp preload_dependencies(requirements) do
     names = requirement_names(requirements)
