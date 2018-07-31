@@ -93,6 +93,44 @@ defmodule Hexpm.Web.API.AuthControllerTest do
       |> response(400)
     end
 
+    test "with revoked key", %{user: user} do
+      key =
+        insert(:key,
+          user: user,
+          permissions: [build(:key_permission, domain: "api")],
+          revoked_at: ~N[2018-01-01 00:00:00]
+        )
+
+      build_conn()
+      |> put_req_header("authorization", key.user_secret)
+      |> get("api/auth", domain: "api")
+      |> response(401)
+
+      key =
+        insert(:key,
+          user: user,
+          permissions: [build(:key_permission, domain: "api")],
+          revoke_at: ~N[2018-01-01 00:00:00]
+        )
+
+      build_conn()
+      |> put_req_header("authorization", key.user_secret)
+      |> get("api/auth", domain: "api")
+      |> response(401)
+
+      key =
+        insert(:key,
+          user: user,
+          permissions: [build(:key_permission, domain: "api")],
+          revoke_at: ~N[2030-01-01 00:00:00]
+        )
+
+      build_conn()
+      |> put_req_header("authorization", key.user_secret)
+      |> get("api/auth", domain: "api")
+      |> response(204)
+    end
+
     test "authenticate full user key", %{
       user_full_key: key,
       owned_org: owned_org,
@@ -288,6 +326,21 @@ defmodule Hexpm.Web.API.AuthControllerTest do
       |> put_req_header("authorization", key.user_secret)
       |> get("api/auth", domain: "repository", resource: "BADREPO")
       |> response(403)
+    end
+
+    test "authenticate docs key", %{user: user, owned_org: owned_org} do
+      permission = build(:key_permission, domain: "docs", resource: owned_org.name)
+      key = insert(:key, user: user, permissions: [permission])
+
+      build_conn()
+      |> put_req_header("authorization", key.user_secret)
+      |> get("api/auth", domain: "docs", resource: owned_org.name)
+      |> response(204)
+
+      build_conn()
+      |> put_req_header("authorization", key.user_secret)
+      |> get("api/auth", domain: "docs", resource: "not_my_org")
+      |> response(401)
     end
 
     test "authenticate repository key against repository without access permissions", %{

@@ -18,6 +18,7 @@
     field: 3,
     forward: 2,
     get: 3,
+    get: 4,
     has_one: 2,
     has_many: 2,
     has_many: 3,
@@ -26,6 +27,7 @@
     plug: 1,
     plug: 2,
     post: 3,
+    post: 4,
     put: 3,
     socket: 2
   ]

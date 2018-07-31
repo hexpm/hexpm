@@ -8,6 +8,7 @@ defmodule Hexpm.Accounts.User do
     field :username, :string
     field :full_name, :string
     field :password, :string
+    field :service, :boolean, default: false
     timestamps()
 
     embeds_one :handles, UserHandles, on_replace: :delete
@@ -110,7 +111,7 @@ defmodule Hexpm.Accounts.User do
     :error
   end
 
-  def verify_permissions(%User{} = user, "repository", name) do
+  def verify_permissions(%User{} = user, domain, name) when domain in ["repository", "docs"] do
     organization = Organizations.get(name)
 
     if organization && Organizations.access?(organization, user, "read") do

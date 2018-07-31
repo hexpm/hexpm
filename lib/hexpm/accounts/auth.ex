@@ -29,7 +29,9 @@ defmodule Hexpm.Accounts.Auth do
 
       key ->
         if Hexpm.Utils.secure_check(key.secret_second, second) do
-          if is_nil(key.revoked_at) do
+          if Key.revoked?(key) do
+            :revoked
+          else
             update_last_use(key, usage_info)
 
             {:ok,
@@ -40,8 +42,6 @@ defmodule Hexpm.Accounts.Auth do
                email: find_email(key.user, nil),
                source: :key
              }}
-          else
-            :revoked
           end
         else
           :error
@@ -52,7 +52,7 @@ defmodule Hexpm.Accounts.Auth do
   def password_auth(username_or_email, password) do
     user = Users.get(username_or_email, [:owned_packages, :emails, :organizations])
 
-    if user && Bcrypt.verify_pass(password, user.password) do
+    if user && user.password && Bcrypt.verify_pass(password, user.password) do
       {:ok,
        %{
          key: nil,
@@ -82,7 +82,7 @@ defmodule Hexpm.Accounts.Auth do
     Enum.find(user.emails, &(&1.email == email)) || Enum.find(user.emails, & &1.primary)
   end
 
-  defp update_last_use(key, usage_info) do
+  defp update_last_use(%Key{public: true} = key, usage_info) do
     key
     |> Key.update_last_use(%{
       ip: parse_ip(usage_info[:ip]),
@@ -90,6 +90,10 @@ defmodule Hexpm.Accounts.Auth do
       user_agent: parse_user_agent(usage_info[:user_agent])
     })
     |> Hexpm.Repo.update!()
+  end
+
+  defp update_last_use(%Key{public: false} = key, _usage_info) do
+    key
   end
 
   defp parse_ip(nil), do: nil

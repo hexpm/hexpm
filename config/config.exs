@@ -24,23 +24,23 @@ config :hexpm,
   cookie_sign_salt: "lYEJ7Wc8jFwNrPke",
   cookie_encr_salt: "TZDiyTeFQ819hsC3",
   store_impl: store,
-  s3_url: System.get_env("HEX_S3_URL") || "https://s3.amazonaws.com",
+  s3_url: System.get_env("HEX_S3_URL"),
   s3_bucket: System.get_env("HEX_S3_BUCKET"),
   docs_bucket: System.get_env("HEX_DOCS_BUCKET"),
   logs_buckets: logs_buckets,
   docs_url: System.get_env("HEX_DOCS_URL"),
   cdn_url: System.get_env("HEX_CDN_URL"),
   email_host: System.get_env("HEX_EMAIL_HOST"),
-  ses_rate: System.get_env("HEX_SES_RATE") || "1000",
+  ses_rate: System.get_env("HEX_SES_RATE"),
   cdn_impl: cdn,
   fastly_key: System.get_env("HEX_FASTLY_KEY"),
   fastly_hexdocs: System.get_env("HEX_FASTLY_HEXDOCS"),
   fastly_hexrepo: System.get_env("HEX_FASTLY_HEXREPO"),
   billing_impl: billing,
-  billing_key: System.get_env("HEX_BILLING_KEY") || "hex_billing_key",
-  billing_url: System.get_env("HEX_BILLING_URL") || "http://localhost:4010/",
+  billing_key: System.get_env("HEX_BILLING_KEY"),
+  billing_url: System.get_env("HEX_BILLING_URL"),
   support_email: "support@hex.pm",
-  levenshtein_threshold: System.get_env("HEX_LEVENSHTEIN_THRESHOLD") || 2
+  levenshtein_threshold: System.get_env("HEX_LEVENSHTEIN_THRESHOLD")
 
 config :hexpm, ecto_repos: [Hexpm.Repo]
 

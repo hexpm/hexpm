@@ -48,9 +48,7 @@ defmodule Mix.Tasks.Hexpm.Stats do
           run(Utils.utc_yesterday(), buckets)
         end)
 
-      Logger.warn(
-        "STATS_JOB_COMPLETED #{size} downloads (#{div(time, 1000)}ms)"
-      )
+      Logger.warn("STATS_JOB_COMPLETED #{size} downloads (#{div(time, 1000)}ms)")
     catch
       exception ->
         stacktrace = System.stacktrace()

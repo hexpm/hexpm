@@ -4,21 +4,18 @@ defmodule Hexpm.Application do
   def start(_type, _args) do
     import Supervisor.Spec, warn: false
 
-    tmp_dir = Application.get_env(:hexpm, :tmp_dir)
-    ses_rate = Application.get_env(:hexpm, :ses_rate) |> String.to_integer()
-
     Hexpm.BlockAddress.start()
 
     children = [
       supervisor(Hexpm.Repo, []),
       supervisor(Task.Supervisor, [[name: Hexpm.Tasks]]),
       worker(PlugAttack.Storage.Ets, [Hexpm.Web.Plugs.Attack, [clean_period: 60_000]]),
-      worker(Hexpm.Throttle, [[name: Hexpm.SESThrottle, rate: ses_rate, unit: 1000]]),
+      worker(Hexpm.Throttle, [[name: Hexpm.SESThrottle, rate: ses_rate(), unit: 1000]]),
       worker(Hexpm.Billing.Report, [[name: Hexpm.Billing.Report, interval: 60_000]]),
       supervisor(Hexpm.Web.Endpoint, [])
     ]
 
-    File.mkdir_p(tmp_dir)
+    File.mkdir_p(Application.get_env(:hexpm, :tmp_dir))
     shutdown_on_eof()
 
     opts = [strategy: :one_for_one, name: Hexpm.Supervisor]
@@ -28,6 +25,14 @@ defmodule Hexpm.Application do
   def config_change(changed, _new, removed) do
     Hexpm.Web.Endpoint.config_change(changed, removed)
     :ok
+  end
+
+  def ses_rate() do
+    if rate = Application.get_env(:hexpm, :ses_rate) do
+      String.to_integer(rate)
+    else
+      :infinity
+    end
   end
 
   # Make sure we exit after hex client tests are finished running

@@ -20,6 +20,10 @@ defmodule Hexpm.Web.AuthHelpers do
     authorized(conn, user_or_organization, opts[:fun], opts)
   end
 
+  defp authorized(conn, %User{service: true}, _funs, _opts) do
+    conn
+  end
+
   defp authorized(conn, user_or_organization, funs, opts) do
     domain = Keyword.get(opts, :domain)
     resource = Keyword.get(opts, :resource)

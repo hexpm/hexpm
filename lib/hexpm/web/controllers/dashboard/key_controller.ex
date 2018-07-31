@@ -10,7 +10,7 @@ defmodule Hexpm.Web.Dashboard.KeyController do
   def delete(conn, %{"name" => name}) do
     user = conn.assigns.current_user
 
-    case Keys.remove(user, name, audit: audit_data(conn)) do
+    case Keys.revoke(user, name, audit: audit_data(conn)) do
       {:ok, _struct} ->
         conn
         |> put_flash(:info, "The key #{name} was revoked successfully.")
@@ -28,7 +28,7 @@ defmodule Hexpm.Web.Dashboard.KeyController do
     user = conn.assigns.current_user
     key_params = fixup_permissions(params["key"])
 
-    case Keys.add(user, key_params, audit: audit_data(conn)) do
+    case Keys.create(user, key_params, audit: audit_data(conn)) do
       {:ok, %{key: key}} ->
         flash =
           "The key #{key.name} was successfully generated, " <>

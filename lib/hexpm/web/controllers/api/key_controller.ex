@@ -52,7 +52,7 @@ defmodule Hexpm.Web.API.KeyController do
     user_or_organization = conn.assigns.organization || conn.assigns.current_user
     authing_key = conn.assigns.key
 
-    case Keys.add(user_or_organization, params, audit: audit_data(conn)) do
+    case Keys.create(user_or_organization, params, audit: audit_data(conn)) do
       {:ok, %{key: key}} ->
         location = Routes.api_key_url(conn, :show, params["name"])
 
@@ -71,7 +71,7 @@ defmodule Hexpm.Web.API.KeyController do
     user_or_organization = conn.assigns.organization || conn.assigns.current_user
     authing_key = conn.assigns.key
 
-    case Keys.remove(user_or_organization, name, audit: audit_data(conn)) do
+    case Keys.revoke(user_or_organization, name, audit: audit_data(conn)) do
       {:ok, %{key: key}} ->
         conn
         |> api_cache(:private)
@@ -86,7 +86,7 @@ defmodule Hexpm.Web.API.KeyController do
   def delete_all(conn, _params) do
     user_or_organization = conn.assigns.organization || conn.assigns.current_user
     key = conn.assigns.key
-    {:ok, _} = Keys.remove_all(user_or_organization, audit: audit_data(conn))
+    {:ok, _} = Keys.revoke_all(user_or_organization, audit: audit_data(conn))
 
     conn
     |> put_status(200)

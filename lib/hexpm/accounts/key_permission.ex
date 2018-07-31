@@ -2,7 +2,7 @@ defmodule Hexpm.Accounts.KeyPermission do
   use Hexpm.Web, :schema
 
   @derive Hexpm.Web.Stale
-  @domains ~w(api repository repositories)
+  @domains ~w(api repository repositories docs)
 
   embedded_schema do
     field :domain, :string
@@ -37,6 +37,7 @@ defmodule Hexpm.Accounts.KeyPermission do
         nil -> []
         "api" when resource in [nil, "read", "write"] -> []
         "repository" when is_binary(resource) -> []
+        "docs" when is_binary(resource) -> []
         "repositories" when is_nil(resource) -> []
         _ -> [resource: "invalid resource for given domain"]
       end
