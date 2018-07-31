@@ -280,7 +280,7 @@ defmodule Hexpm.Web.Router do
     Map.drop(headers, @filter_headers)
   end
 
-  @filter_params ~w(password password_confirmation)
+  @filter_params ~w(body password password_confirmation)
 
   defp filter_params(params) when is_map(params) do
     Map.new(params, fn {key, value} ->
