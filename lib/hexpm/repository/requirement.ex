@@ -23,7 +23,7 @@ defmodule Hexpm.Repository.Requirement do
     |> validate_required(~w(name app requirement optional)a)
     |> validate_required(
       :dependency,
-      message: "package does not exist in repository #{inspect(package.organization.name)}"
+      message: "package does not exist in repository \"#{params["repository"] || "hexpm"}\""
     )
     |> validate_requirement(:requirement, pre: version_pre(release_changeset) != [])
     |> validate_repository(:repository, repository: package.organization)
