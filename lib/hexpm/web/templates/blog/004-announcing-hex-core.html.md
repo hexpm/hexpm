@@ -29,7 +29,7 @@ Erlang:
 
    ```
    $ rebar3 shell
-   erl> Options = hex_core:default_options(),
+   erl> Config = hex_core:default_config(),
    erl> {ok, {200, _, #{packages := Packages}}} = hex_repo:get_names(Options),
    erl> length(Packages).
    6764
@@ -50,7 +50,7 @@ Elixir:
 
    ```
    $ iex -S mix
-   iex> options = :hex_core.default_options()
+   iex> config = :hex_core.default_config()
    iex> {:ok, {200, _, packages}} = :hex_api_package.search("riak", [sort: :downloads], options)
    iex> Enum.map(packages, & &1["name"])
    ["riak_pb", "riakc", ...]
@@ -62,5 +62,5 @@ See README at <https://github.com/hexpm/hex_core> for more usage examples.
 
 After the initial release we plan to work with the community to integrate hex_core into their projects and respond to feedback.
 
-We will be also focusing on releasing a minimal Hex server, built on top of hex_core, to be a starting point for people wanting
+We will also be focused on releasing a minimal Hex server, built on top of hex_core, to be a starting point for people wanting
 to run Hex on their own infrastructure. Stay tuned!
