@@ -29,8 +29,9 @@ Erlang:
 
    ```
    $ rebar3 shell
+   erl> inets:start(), ssl:start(),
    erl> Config = hex_core:default_config(),
-   erl> {ok, {200, _, #{packages := Packages}}} = hex_repo:get_names(Options),
+   erl> {ok, {200, _, #{packages := Packages}}} = hex_repo:get_names(Config),
    erl> length(Packages).
    6764
    ```
@@ -50,8 +51,9 @@ Elixir:
 
    ```
    $ iex -S mix
+   iex> :inets.start() ; :ssl.start()
    iex> config = :hex_core.default_config()
-   iex> {:ok, {200, _, packages}} = :hex_api_package.search("riak", [sort: :downloads], options)
+   iex> {:ok, {200, _, packages}} = :hex_api_package.search(config, "riak", [sort: :downloads])
    iex> Enum.map(packages, & &1["name"])
    ["riak_pb", "riakc", ...]
    ```
