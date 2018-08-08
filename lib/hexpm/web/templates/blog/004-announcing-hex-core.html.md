@@ -11,7 +11,7 @@ Before talking about hex_core, let's ask a simple question: What is Hex? The sho
 
 The goal of hex_core is to be the reference implementation of Hex specifications used by Hex clients and servers.
 
-As of this announcement the hex_core package itself is available on [Hex.pm](https://hex.pm/packages/hex_core].
+As of this announcement the hex_core package itself is available on [Hex.pm](https://hex.pm/packages/hex_core).
 
 ### Usage in an Erlang project
 
