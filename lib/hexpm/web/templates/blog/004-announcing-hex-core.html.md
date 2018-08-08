@@ -25,7 +25,7 @@ As of this announcement the hex_core package itself is available on [Hex.pm](htt
    ```
 3. Start the shell to and count all packages published to Hex.pm:
 
-   ```
+   ```erlang
    $ rebar3 shell
    erl> inets:start(), ssl:start(),
    erl> Config = hex_core:default_config(),
@@ -47,11 +47,12 @@ As of this announcement the hex_core package itself is available on [Hex.pm](htt
 
 3. Start the shell to and search for all packages matching query "riak":
 
-   ```
+   ```elixir
    $ iex -S mix
    iex> :inets.start() ; :ssl.start()
    iex> config = :hex_core.default_config()
-   iex> {:ok, {200, _, packages}} = :hex_api_package.search(config, "riak", [sort: :downloads])
+   iex> options = [sort: :downloads]
+   iex> {:ok, {200, _, packages}} = :hex_api_package.search(config, "riak", options)
    iex> Enum.map(packages, & &1["name"])
    ["riak_pb", "riakc", ...]
    ```
