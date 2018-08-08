@@ -5,8 +5,8 @@
 Today we are releasing the first version of hex_core, an Erlang library to interact with Hex.pm and other servers implementing Hex specifications.
 
 Before talking about hex_core, let's ask a simple question: What is Hex? The short answer is, it's a package manager for the Erlang ecosystem. The long answer is that by Hex we may mean a few different things:
-1. A set of specifications of building clients and servers that can interact with each other: https://github.com/hexpm/specifications
-2. A server for hosting packages like the official server located at https://hex.pm
+1. A set of specifications of building clients and servers that can interact with each other: <https://github.com/hexpm/specifications>
+2. A server for hosting packages like the official server located at <https://hex.pm>
 3. Clients for interacting with servers, e.g. [Hex](https://github.com/hexpm/hex) for Elixir and [rebar3_hex](https://github.com/tsloughter/rebar3_hex) for Erlang projects
 
 The goal of hex_core is to be the reference implementation of Hex specifications used by Hex clients and servers.
