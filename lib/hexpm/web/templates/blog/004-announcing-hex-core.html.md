@@ -4,18 +4,16 @@
 
 Today we are releasing the first version of hex_core, an Erlang library to interact with Hex.pm and other servers implementing Hex specifications.
 
-Before talking about hex_core, let's ask a simple question: What is Hex? The short answer is: it's a package manager for the Erlang ecosystem. The long answer is: well, by Hex we may mean a few different things:
+Before talking about hex_core, let's ask a simple question: What is Hex? The short answer is, it's a package manager for the Erlang ecosystem. The long answer is that by Hex we may mean a few different things:
 1. A set of specifications of building clients and servers that can interact with each other: https://github.com/hexpm/specifications
 2. A server for hosting packages like the official server located at https://hex.pm
 3. Clients for interacting with servers, e.g. [Hex](https://github.com/hexpm/hex) for Elixir and [rebar3_hex](https://github.com/tsloughter/rebar3_hex) for Erlang projects
 
-The goal of hex_core is to be the reference implementation of Hex specifications and be used by Hex clients and servers.
+The goal of hex_core is to be the reference implementation of Hex specifications used by Hex clients and servers.
 
-As of this announcement the hex_core package is available on Hex.pm :-)
+As of this announcement the hex_core package itself is available on [Hex.pm](https://hex.pm/packages/hex_core].
 
-### Usage
-
-Erlang:
+### Usage in an Erlang project
 
 1. Create a new project: `rebar3 new lib example`
 2. Add `hex_core` to `rebar.config`:
@@ -25,7 +23,7 @@ Erlang:
      {hex_core, "0.1.0"}
    ]}
    ```
-3. Start the shell to e.g. count all packages published to Hex.pm:
+3. Start the shell to and count all packages published to Hex.pm:
 
    ```
    $ rebar3 shell
@@ -36,7 +34,7 @@ Erlang:
    6764
    ```
 
-Elixir:
+### Usage in an Elixir project
 
 1. Create a new project: `mix new example`
 2. Add `hex_core` to `mix.exs`:
@@ -47,7 +45,7 @@ Elixir:
    end
    ```
 
-3. Start the shell to e.g. search for all packages matching query "riak":
+3. Start the shell to and search for all packages matching query "riak":
 
    ```
    $ iex -S mix
