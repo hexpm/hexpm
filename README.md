@@ -84,7 +84,7 @@ Hexpm will be available at [http://localhost:4000/](http://localhost:4000/).
 
 ## License
 
-    Copyright 2015 Eric Meadows-Jönsson
+    Copyright 2015 Six Colors AB
 
     Licensed under the Apache License, Version 2.0 (the "License");
     you may not use this file except in compliance with the License.
