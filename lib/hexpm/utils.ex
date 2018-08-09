@@ -6,6 +6,8 @@ defmodule Hexpm.Utils do
   @timeout 60 * 60 * 1000
 
   import Ecto.Query, only: [from: 2]
+  alias Hexpm.Accounts.Organization
+  alias Hexpm.Repository.{Package, Release}
   require Logger
 
   def secure_check(left, right) do
@@ -242,25 +244,39 @@ defmodule Hexpm.Utils do
   @doc """
   Returns a url to a resource on the docs site from a list of path components.
   """
-  @spec docs_html_url(Hexpm.Repository.Package.t(), Hexpm.Repository.Release.t()) :: String.t()
-  @spec docs_html_url([String.t()] | String.t()) :: String.t()
-  def docs_html_url(package, release) do
-    docs_html_url([package.name, to_string(release.version)])
+  @spec docs_html_url(Organization.t(), Package.t(), Release.t() | nil) :: String.t()
+  def docs_html_url(%Organization{id: 1}, package, release) do
+    docs_url = Application.get_env(:hexpm, :docs_url)
+    package = package.name
+    version = release && "#{release.version}/"
+    "#{docs_url}/#{package}/#{version}"
   end
 
-  def docs_html_url(path) do
-    Application.get_env(:hexpm, :docs_url) <> "/" <> Path.join(List.wrap(path)) <> "/"
+  def docs_html_url(organization, package, release) do
+    docs_url = URI.parse(Application.get_env(:hexpm, :docs_url))
+    docs_url = %{docs_url | host: "#{organization.name}.#{docs_url.host}"}
+    package = package.name
+    version = release && "#{release.version}/"
+    "#{docs_url}/#{package}/#{version}"
   end
 
   @doc """
   Returns a url to the documentation tarball in the Amazon S3 Hex.pm bucket.
   """
-  @spec docs_tarball_url(Hexpm.Repository.Package.t(), Hexpm.Repository.Release.t()) :: String.t()
-  def docs_tarball_url(package, release) do
+  @spec docs_tarball_url(Organization.t(), Package.t(), Release.t()) :: String.t()
+  def docs_tarball_url(%Organization{id: 1}, package, release) do
     repo = Application.get_env(:hexpm, :cdn_url)
     package = package.name
-    version = to_string(release.version)
+    version = release.version
     "#{repo}/docs/#{package}-#{version}.tar.gz"
+  end
+
+  def docs_tarball_url(organization, package, release) do
+    cdn_url = Application.get_env(:hexpm, :cdn_url)
+    organization = organization.name
+    package = package.name
+    version = release.version
+    "#{cdn_url}/repos/#{organization}/docs/#{package}-#{version}.tar.gz"
   end
 
   def paginate(query, page, count) when is_integer(page) and page > 0 do

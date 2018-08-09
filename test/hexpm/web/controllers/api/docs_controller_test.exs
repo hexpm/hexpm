@@ -36,7 +36,9 @@ defmodule Hexpm.Web.API.DocsControllerTest do
 
       assert path("docs/#{package.name}/index.html") == "package v0.0.1"
       assert path("docs/#{package.name}/0.0.1/index.html") == "package v0.0.1"
-      assert path("docs/sitemap.xml") =~ Hexpm.Utils.docs_html_url([package.name])
+
+      docs_url = Hexpm.Utils.docs_html_url(Organization.hexpm(), package, nil)
+      assert path("docs/sitemap.xml") =~ docs_url
     end
 
     test "update main docs", %{user: user} do
@@ -199,7 +201,6 @@ defmodule Hexpm.Web.API.DocsControllerTest do
   end
 
   describe "DELETE /api/packages/:name/releases/:version/docs" do
-    @tag isolation: :serializable
     test "delete release with docs", %{user: user} do
       package = insert(:package, package_owners: [build(:package_owner, user: user)])
       insert(:release, package: package, version: "0.0.1")

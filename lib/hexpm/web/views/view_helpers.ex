@@ -67,28 +67,18 @@ defmodule Hexpm.Web.ViewHelpers do
     )
   end
 
-  def docs_html_url_for_package(%Package{organization_id: 1, releases: releases} = package) do
-    if Enum.any?(releases, & &1.has_docs) do
-      Hexpm.Utils.docs_html_url([package.name])
+  def docs_html_url_for_package(package) do
+    if Enum.any?(package.releases, & &1.has_docs) do
+      Hexpm.Utils.docs_html_url(package.organization, package, nil)
     end
-  end
-
-  # TODO: private package docs
-  def docs_html_url_for_package(_package) do
-    nil
   end
 
   def docs_html_url_for_release(_package, %Release{has_docs: false}) do
     nil
   end
 
-  def docs_html_url_for_release(%Package{organization_id: 1} = package, release) do
-    Hexpm.Utils.docs_html_url(package, release)
-  end
-
-  # TODO: private package docs
-  def docs_html_url_for_release(_package, _release) do
-    nil
+  def docs_html_url_for_release(package, release) do
+    Hexpm.Utils.docs_html_url(package.organization, package, release)
   end
 
   def url_for_package(%Package{organization_id: 1} = package) do
