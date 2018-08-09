@@ -86,14 +86,12 @@ defmodule Hexpm.Accounts.User do
   defp email(email), do: email.email
 
   def get(username_or_email, preload \\ []) do
-    # Somewhat crazy hack to get this done in one query
-    # Makes assumptions about how Ecto choses variable names
     from(
       u in Hexpm.Accounts.User,
       where:
         u.username == ^username_or_email or
           ^username_or_email in fragment(
-            "SELECT emails.email FROM emails WHERE emails.user_id = u0.id and emails.verified"
+            "SELECT emails.email FROM emails WHERE emails.user_id = ? and emails.verified", u.id
           ),
       preload: ^preload
     )

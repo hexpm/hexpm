@@ -63,6 +63,20 @@ defmodule Hexpm.Accounts.UserTest do
     end
   end
 
+  describe "get/2" do
+    test "gets the user by email", %{user: user} do
+      email = User.email(user, :primary)
+
+      fetched_user = User.get(email) |> Repo.one
+      assert user.id == fetched_user.id
+    end
+
+    test "gets the user by username", %{user: user} do
+      fetched_user = User.get(user.username) |> Repo.one
+      assert user.id == fetched_user.id
+    end
+  end
+
   describe "update_password_no_check/2" do
     test "updates password", %{user: user} do
       User.update_password_no_check(user, %{
