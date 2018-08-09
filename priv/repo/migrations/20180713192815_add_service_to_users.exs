@@ -14,7 +14,7 @@ defmodule Hexpm.Repo.Migrations.AddServiceToUsers do
     """)
   end
 
-  def drop do
+  def down do
     execute("DELETE FROM users WHERE username = 'hexdocs'")
 
     execute("ALTER TABLE users ALTER password SET NOT NULL")
