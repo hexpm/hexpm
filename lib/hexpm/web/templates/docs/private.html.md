@@ -25,8 +25,6 @@ defp package() do
 end
 ```
 
-*You can publish documentation for private packages, but this feature is still in beta and they will currently not be visible on [hexdocs.pm](https://hexdocs.pm).*
-
 ### Using private packages as dependencies
 
 A private package can only depend on packages from its own repository and from the global `"hexpm"` repository where all public packages belong. You specify a package should be fetched from a specific organization's repository with the `:organization` option on the dependency declaration, if this option is not included it is assumed the package belongs to the global repository. For example:

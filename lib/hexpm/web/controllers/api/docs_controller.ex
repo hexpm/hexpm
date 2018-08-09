@@ -16,11 +16,12 @@ defmodule Hexpm.Web.API.DocsController do
        when action in [:create, :delete]
 
   def show(conn, _params) do
+    organization = conn.assigns.organization
     package = conn.assigns.package
     release = conn.assigns.release
 
     if release.has_docs do
-      redirect(conn, external: Hexpm.Utils.docs_tarball_url(package, release))
+      redirect(conn, external: Hexpm.Utils.docs_tarball_url(organization, package, release))
     else
       not_found(conn)
     end
@@ -44,7 +45,7 @@ defmodule Hexpm.Web.API.DocsController do
           audit: audit_data(conn)
         )
 
-        location = Hexpm.Utils.docs_tarball_url(package, release)
+        location = Hexpm.Utils.docs_tarball_url(organization, package, release)
 
         conn
         |> put_resp_header("location", location)

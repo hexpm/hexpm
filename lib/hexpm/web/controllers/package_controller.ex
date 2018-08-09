@@ -85,6 +85,7 @@ defmodule Hexpm.Web.PackageController do
   end
 
   defp package(conn, organizations, package, releases, release, type) do
+    organization = package.organization
     release = Releases.preload(release, [:requirements, :downloads])
     latest_release_with_docs = Enum.find(releases, & &1.has_docs)
 
@@ -92,14 +93,14 @@ defmodule Hexpm.Web.PackageController do
       cond do
         type == :package && latest_release_with_docs ->
           [
-            docs_html_url: Hexpm.Utils.docs_html_url([package.name]),
-            docs_tarball_url: Hexpm.Utils.docs_tarball_url(package, latest_release_with_docs)
+            docs_html_url: Hexpm.Utils.docs_html_url(organization, package, nil),
+            docs_tarball_url: Hexpm.Utils.docs_tarball_url(organization, package, latest_release_with_docs)
           ]
 
         type == :release and release.has_docs ->
           [
-            docs_html_url: Hexpm.Utils.docs_html_url(package, release),
-            docs_tarball_url: Hexpm.Utils.docs_tarball_url(package, release)
+            docs_html_url: Hexpm.Utils.docs_html_url(organization, package, release),
+            docs_tarball_url: Hexpm.Utils.docs_tarball_url(organization, package, release)
           ]
 
         true ->

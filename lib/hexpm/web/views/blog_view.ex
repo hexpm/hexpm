@@ -36,7 +36,7 @@ defmodule Hexpm.Web.BlogView do
         []
     end)
     |> Enum.reject(fn {slug, _template} -> slug in @skip_slugs end)
-    |> Enum.sort_by(&elem(&1, 0), &</2)
+    |> Enum.sort_by(&elem(&1, 1), &>=/2)
   end
 
   defp first_paragraph(content) do

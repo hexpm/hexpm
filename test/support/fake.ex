@@ -50,9 +50,8 @@ defmodule Hexpm.Fake do
   end)
 
   defp load_file(name) do
-    # TODO: Wait for 1.5.0
-    # seed = ExUnit.configuration()[:seed]
-    # :rand.seed(:exrop, {seed, seed, seed})
+    seed = ExUnit.configuration()[:seed]
+    :rand.seed(:exrop, {seed, seed, seed})
 
     path = Path.join([__DIR__, "..", "fake", "#{name}.txt"])
 

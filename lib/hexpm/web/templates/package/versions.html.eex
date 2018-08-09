@@ -8,7 +8,7 @@
     <% else %>
       <%# TODO: Remove check when private hexdocs is live %>
       <%= if @package.organization_id == 1 && release.has_docs do %>
-        (<a href="<%= raw Hexpm.Utils.docs_html_url(@package, release) %>">docs</a>)
+        (<a href="<%= raw Hexpm.Utils.docs_html_url(@package.organization, @package, release) %>">docs</a>)
       <% end %>
     <% end %>
   </li>

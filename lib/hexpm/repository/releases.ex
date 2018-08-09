@@ -60,7 +60,8 @@ defmodule Hexpm.Repository.Releases do
       |> Repo.all()
       |> Enum.sort(&(Version.compare(&1, &2) == :gt))
 
-    # TODO: Remove check when private hexdocs is live
+    # NOTE: Private hexdocs tails S3 update queue and uploads docs itself
+    # TODO: Do the same for public docs
     if package.organization_id == 1 do
       Assets.push_hexdocs(release, files, all_versions)
     end
@@ -78,7 +79,6 @@ defmodule Hexpm.Repository.Releases do
       |> audit(audit_data, "docs.publish", {package, release})
       |> Repo.transaction()
 
-    # TODO: Remove check when private hexdocs is live
     if package.organization_id == 1 do
       Sitemaps.publish_docs_sitemap()
     end
