@@ -3,14 +3,9 @@ defmodule Hexpm.Web.UserController do
 
   def show(conn, %{"username" => username}) do
     if user = Users.get_by_username(username, [:emails, owned_packages: :organization]) do
-      organizations = Users.all_organizations(conn.assigns.current_user)
-      organization_ids = Enum.map(organizations, & &1.id)
-
       packages =
-        user.owned_packages
-        |> Enum.filter(&(&1.organization_id in organization_ids))
+        Packages.accessible_user_owned_packages(user, conn.assigns.current_user)
         |> Packages.attach_versions()
-        |> Enum.sort_by(&[organization_sort(&1.organization), &1.name])
 
       public_email = User.email(user, :public)
       gravatar_email = User.email(user, :gravatar)
@@ -29,9 +24,4 @@ defmodule Hexpm.Web.UserController do
       not_found(conn)
     end
   end
-
-  # TODO: DRY up
-  # Atoms sort before strings
-  defp organization_sort(%Organization{id: 1}), do: :first
-  defp organization_sort(%Organization{name: name}), do: name
 end
