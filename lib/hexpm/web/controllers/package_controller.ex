@@ -94,7 +94,8 @@ defmodule Hexpm.Web.PackageController do
         type == :package && latest_release_with_docs ->
           [
             docs_html_url: Hexpm.Utils.docs_html_url(organization, package, nil),
-            docs_tarball_url: Hexpm.Utils.docs_tarball_url(organization, package, latest_release_with_docs)
+            docs_tarball_url:
+              Hexpm.Utils.docs_tarball_url(organization, package, latest_release_with_docs)
           ]
 
         type == :release and release.has_docs ->

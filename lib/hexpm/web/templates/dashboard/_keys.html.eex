@@ -2,9 +2,9 @@
   <div class="panel-heading">Keys</div>
   <div class="panel-body">
     <p>Keys are used to authenticate and authorize clients to interact with the Hex API and repository. </p>
-    <br/>
 
     <%= if @keys != [] do %>
+      <br>
       <table class="table table-condensed table-striped">
         <tr>
           <td>Name</td>

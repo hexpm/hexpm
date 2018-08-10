@@ -1,16 +1,17 @@
 .pricing {
   margin-top: 10px;
-  text-align: center;
 
   h3 {
     margin-top: 10px;
     margin-bottom: 0;
+    text-align: center;
   }
 
   .boxes {
     width: 800px;
     margin: 0 auto;
     overflow: auto;
+    text-align: center;
 
     h3 {
       margin-top: 10px;
@@ -56,5 +57,15 @@
 
   .action {
     margin-top: 40px;
+  }
+
+  .info {
+    width: 800px;
+    margin: 20px auto 0;
+    overflow: auto;
+
+    p {
+      margin-bottom: 10px;
+    }
   }
 }

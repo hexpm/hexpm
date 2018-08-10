@@ -24,7 +24,7 @@ defmodule Hexpm.Web.Dashboard.OrganizationView do
     end)
   end
 
-  @no_card_message "No credit card on file"
+  @no_card_message "No payment method on file"
 
   defp payment_card(nil) do
     @no_card_message
@@ -40,22 +40,57 @@ defmodule Hexpm.Web.Dashboard.OrganizationView do
     "#{card["brand"]} **** **** **** #{card["last4"]}, Expires: #{expires}"
   end
 
-  defp subscription_status(%{"status" => "active", "cancel_at_period_end" => false}) do
+  defp subscription_status(%{"status" => "active", "cancel_at_period_end" => false}, _card) do
     "Active"
   end
 
-  defp subscription_status(%{"status" => "active", "cancel_at_period_end" => true}) do
+  defp subscription_status(%{"status" => "active", "cancel_at_period_end" => true}, _card) do
     "Ends after current subscription period"
   end
 
-  defp subscription_status(%{"status" => "past_due"}) do
+  defp subscription_status(
+         %{
+           "status" => "trialing",
+           "trial_end" => trial_end,
+           "cancel_at_period_end" => cancel_at_period_end
+         },
+         card
+       ) do
+    trial_end = trial_end |> NaiveDateTime.from_iso8601!() |> pretty_datetime()
+    raw("Trial ends on #{trial_end}, #{trial_status_message(cancel_at_period_end, card)}")
+  end
+
+  defp subscription_status(%{"status" => "past_due"}, _card) do
     "Active with past due invoice, if the invoice is not paid the " <>
       "organization will be disabled"
   end
 
   # TODO: Check if last invoice was unpaid and add note about it?
-  defp subscription_status(%{"status" => "canceled"}) do
+  defp subscription_status(%{"status" => "canceled"}, _card) do
     "Not active"
+  end
+
+  @trial_ends_no_card_message """
+  your subscription will end after the trial period because we have no payment method on file for you,
+  please enter a payment method if you wish to continue using organizations after the trial period,
+  or if you wish to contine testing with a longer trial period please contact
+  <a href="mailto:support@hex.pm">support@hex.pm</a>
+  """
+
+  defp trial_status_message(true, _card) do
+    "subscription will end after trial period"
+  end
+
+  defp trial_status_message(false, %{"brand" => nil}) do
+    @trial_ends_no_card_message
+  end
+
+  defp trial_status_message(false, nil) do
+    @trial_ends_no_card_message
+  end
+
+  defp trial_status_message(false, _card) do
+    "a payment method is on file and your subscription will continue after the trial period"
   end
 
   defp discount_status(nil) do

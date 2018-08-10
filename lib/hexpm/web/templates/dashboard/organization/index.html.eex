@@ -66,7 +66,8 @@
       <div class="panel-heading">Packages</div>
       <div class="panel-body">
         <%= if @organization.packages == [] do %>
-          No packages in organization organization.
+          No packages in organization.
+          Check out the docs for <a href="<%= Routes.docs_path(Endpoint, :private) %>">publishing private packages</a>.
         <% else %>
           <ul class="organization-package-list">
             <%= for package <- @organization.packages do %>
@@ -116,7 +117,7 @@
               </dd>
               <dt>Status</dt>
               <dd>
-                <%= subscription_status(@subscription) %>
+                <%= subscription_status(@subscription, @card) %>
                 <%= discount_status(@discount) %>
               </dd>
             </dl>
