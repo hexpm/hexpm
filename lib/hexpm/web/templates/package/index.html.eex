@@ -41,13 +41,12 @@
 <nav>
   <div class="pagination-info">
     <h4 class="results-found"><%= @package_count %> Results Found</h4>
-    <%= show_sort_info(@sort) %>
   </div>
   <div class="navbar-right pagination-sort">
     <%= unless @letter do %>
       <div class="dropdown">
         <button class="btn btn-default dropdown-toggle" type="button" id="sort_dropdown" data-toggle="dropdown">
-          Sort By
+          <%= show_sort_info(@sort) %>
           <span class="caret"></span>
         </button>
         <ul class="dropdown-menu dropdown-menu-right" role="menu">
@@ -55,10 +54,10 @@
             <a role="menuitem" tabindex="-1" href="<%= Routes.package_path(Endpoint, :index, sort_name_params) %>">Name</a>
           </li>
           <li role="presentation">
-            <a role="menuitem" tabindex="-1" href="<%= Routes.package_path(Endpoint, :index, sort_total_downloads_params) %>">Total Downloads</a>
+            <a role="menuitem" tabindex="-1" href="<%= Routes.package_path(Endpoint, :index, sort_total_downloads_params) %>">Total downloads</a>
           </li>
           <li role="presentation">
-            <a role="menuitem" tabindex="-1" href="<%= Routes.package_path(Endpoint, :index, sort_recent_downloads_params) %>">Recent Downloads</a>
+            <a role="menuitem" tabindex="-1" href="<%= Routes.package_path(Endpoint, :index, sort_recent_downloads_params) %>">Recent downloads</a>
           </li>
           <li role="presentation">
             <a role="menuitem" tabindex="-1" href="<%= Routes.package_path(Endpoint, :index, sort_created_params) %>">Recently created</a>
