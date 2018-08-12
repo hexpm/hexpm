@@ -135,4 +135,20 @@ defmodule Hexpm.Repository.Packages do
     |> Repo.all()
     |> Enum.into(%{})
   end
+
+  def accessible_user_owned_packages(nil, _) do
+    []
+  end
+  
+  def accessible_user_owned_packages(user, for_user) do
+    organizations = Users.all_organizations(for_user)
+    organization_ids = Enum.map(organizations, & &1.id)
+
+    # Atoms sort before strings
+    sorter = fn org -> if(org.name == "hexpm", do: :first, else: org.name) end
+
+    user.owned_packages
+    |> Enum.filter(&(&1.organization_id in organization_ids))
+    |> Enum.sort_by(&[sorter.(&1.organization), &1.name])
+  end
 end

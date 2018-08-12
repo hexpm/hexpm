@@ -134,6 +134,37 @@ defmodule Hexpm.Web.API.UserControllerTest do
   end
 
   describe "GET /api/users/:name" do
+    setup do
+      user1 = insert(:user)
+      user2 = insert(:user)
+      user3 = insert(:user)
+
+      organization1 = insert(:organization)
+      organization2 = insert(:organization)
+      insert(:organization_user, user: user1, organization: organization1)
+      insert(:organization_user, user: user2, organization: organization1)
+      insert(:organization_user, user: user3, organization: organization2)
+
+      # public package
+      package1 = insert(:package, package_owners: [build(:package_owner, user: user1)])
+
+      # private package
+      package2 =
+        insert(
+          :package,
+          organization_id: organization1.id,
+          package_owners: [build(:package_owner, user: user1)]
+        )
+
+      %{
+        user1: user1,
+        user2: user2,
+        user3: user3,
+        package1: package1,
+        package2: package2
+      }
+    end
+
     test "get user" do
       user = insert(:user)
       conn = get(build_conn(), "api/users/#{user.username}")
@@ -146,6 +177,36 @@ defmodule Hexpm.Web.API.UserControllerTest do
 
       conn = get(build_conn(), "api/users/bad")
       assert conn.status == 404
+    end
+
+    test "show owned packages as owner", data do
+      conn =
+        build_conn()
+        |> put_req_header("authorization", key_for(data.user1))
+        |> get("api/users/#{data.user1.username}")
+
+      assert response(conn, 200) =~ data.package1.name
+      assert response(conn, 200) =~ data.package2.name
+    end
+
+    test "show owned packages as user from the same organization", data do
+      conn =
+        build_conn()
+        |> put_req_header("authorization", key_for(data.user2))
+        |> get("api/users/#{data.user1.username}")
+
+      assert response(conn, 200) =~ data.package1.name
+      assert response(conn, 200) =~ data.package2.name
+    end
+
+    test "show owned packages as other user", data do
+      conn =
+        build_conn()
+        |> put_req_header("authorization", key_for(data.user3))
+        |> get("api/users/#{data.user1.username}")
+
+      assert response(conn, 200) =~ data.package1.name
+      refute response(conn, 200) =~ data.package2.name
     end
   end
 
