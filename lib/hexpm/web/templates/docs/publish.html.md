@@ -75,11 +75,11 @@ Only Hex packages may be used as dependencies of the package. It is not possible
 
 #### Documentation
 
-Documentation is automatically published to (hexdocs.pm)[https://hexdocs.pm] when you publish your package. If you only want to publish the package itself you can pass the `--package` flag `mix hex.publish`, similarly if you want (re)publish the documentation of an existing package version you can pass `--docs`.
+Documentation is automatically published to [hexdocs.pm](https://hexdocs.pm) when you publish your package. If you only want to publish the package itself you can run `mix hex.publish package`, similarly if you want to (re)publish the documentation of an existing package version you can run `mix hex.publish docs`.
 
-Before publishing documentation, Hex will build the documentation by running the `mix docs` task to make sure it is up to date. The main documentation tool for Elixir, `ex_doc` provides this task so if you add it as a dependency you don't have to do anything else to get automatic documentation builds when you publish your package. Check out the (documentation for ex_doc)[https://hexdocs.pm/ex_doc/readme.html] for information on how to configure your docs, we recommend building your docs locally with `mix docs` before publishing them to Hex. Finally also take a look at the (Elixir guide for writing documentation)[https://hexdocs.pm/elixir/writing-documentation.html] for suggestions and best practices.
+Before publishing documentation, Hex will build the documentation by running the `mix docs` task to make sure it is up to date. The main documentation tool for Elixir, `ex_doc` provides this task so if you add it as a dependency you don't have to do anything else to get automatic documentation builds when you publish your package. Check out the [documentation for ex_doc](https://hexdocs.pm/ex_doc/readme.html) for information on how to configure your docs, we recommend building your docs locally with `mix docs` before publishing them to Hex. Finally also take a look at the [Elixir guide for writing documentation](https://hexdocs.pm/elixir/writing-documentation.html) for suggestions and best practices.
 
-If want to use another documentation tool or do post-processing on the build from ex_doc you can alias the `docs` task, check the (task alias docs)[https://hexdocs.pm/mix/Mix.html#module-aliases] for more information. Built documentation should be put in the `doc/` directory with at least an `index.html` file.
+If want to use another documentation tool or do post-processing on the build from ex_doc you can alias the `docs` task, check the [task alias docs](https://hexdocs.pm/mix/Mix.html#module-aliases) for more information. Built documentation should be put in the `doc/` directory with at least an `index.html` file.
 
 #### Example mix.exs file
 
@@ -154,7 +154,7 @@ Proceed? [Yn] Y
 Published postgrex v0.4.0
 ```
 
-Congratulations, you've published your package! It will appear on the [https://hex.pm](https://hex.pm/) site and will be available to add as a dependency in other Mix projects.
+Congratulations, you've published your package! It will appear on the [hex.pm](https://hex.pm/) site and will be available to add as a dependency in other Mix projects.
 
 Please test your package after publishing by adding it as dependency to a Mix project and fetching and compiling it. If there are any issues, you can publish the package again for up to one hour after first publication. A publication can also be reverted with `mix hex.publish --revert VERSION`.
 
