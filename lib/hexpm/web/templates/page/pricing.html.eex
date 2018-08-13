@@ -40,8 +40,18 @@
     </div>
   </div>
 
-  <p>
-    For more information about pricing and billing read the <a href="<%= Routes.docs_path(Endpoint, :faq) %>">FAQ</a>.<br>
-    * Local VAT is added for private EU citizens.
-  </p>
+  <div class="info">
+    <p>
+      The first month of organizations is free, you can try it out without providing any payment
+      information, if you wish to continue your trial after the first month please contact
+      <a href="mailto:support@hex.pm">support@hex.pm</a>.
+    </p>
+    <p>
+      For more information about pricing and billing read the
+      <a href="<%= Routes.docs_path(Endpoint, :faq) %>">FAQ</a>.
+    </p>
+    <p>
+      <small>* Local VAT is added for private EU citizens and Swedish companies.</small>
+    </p>
+  </div>
 </div>

@@ -67,12 +67,12 @@ defmodule Hexpm.Accounts.UserTest do
     test "gets the user by email", %{user: user} do
       email = User.email(user, :primary)
 
-      fetched_user = User.get(email) |> Repo.one
+      fetched_user = User.get(email) |> Repo.one()
       assert user.id == fetched_user.id
     end
 
     test "gets the user by username", %{user: user} do
-      fetched_user = User.get(user.username) |> Repo.one
+      fetched_user = User.get(user.username) |> Repo.one()
       assert user.id == fetched_user.id
     end
   end
