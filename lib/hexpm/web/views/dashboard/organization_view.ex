@@ -73,7 +73,7 @@ defmodule Hexpm.Web.Dashboard.OrganizationView do
   @trial_ends_no_card_message """
   your subscription will end after the trial period because we have no payment method on file for you,
   please enter a payment method if you wish to continue using organizations after the trial period,
-  or if you wish to contine testing with a longer trial period please contact
+  or if you wish to continue testing with a longer trial period please contact
   <a href="mailto:support@hex.pm">support@hex.pm</a>
   """
 
