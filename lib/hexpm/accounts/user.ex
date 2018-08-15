@@ -97,6 +97,18 @@ defmodule Hexpm.Accounts.User do
     )
   end
 
+  def public_get(username_or_email, preload \\ []) do
+    from(
+      u in Hexpm.Accounts.User,
+      where:
+        u.username == ^username_or_email or
+          ^username_or_email in fragment(
+            "SELECT emails.email FROM emails WHERE emails.user_id = ? and emails.verified and emails.public", u.id
+          ),
+      preload: ^preload
+    )
+  end
+
   def verify_permissions(%User{}, "api", _resource) do
     {:ok, nil}
   end
