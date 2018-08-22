@@ -6,6 +6,11 @@ defmodule Hexpm.Accounts.Users do
     |> Repo.one()
   end
 
+  def public_get(username_or_email, preload \\ []) do
+    User.public_get(username_or_email, preload)
+    |> Repo.one()
+  end
+
   def get_by_id(id, preload \\ []) do
     Repo.get(User, id)
     |> Repo.preload(preload)

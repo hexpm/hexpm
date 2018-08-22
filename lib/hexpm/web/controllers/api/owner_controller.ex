@@ -30,7 +30,7 @@ defmodule Hexpm.Web.API.OwnerController do
   def show(conn, %{"email" => email}) do
     package = conn.assigns.package
     email = URI.decode_www_form(email)
-    user = Users.get(email, [:emails])
+    user = Users.public_get(email, [:emails])
 
     if package && user do
       if owner = Owners.get(package, user) do
@@ -48,7 +48,7 @@ defmodule Hexpm.Web.API.OwnerController do
   def create(conn, %{"email" => email} = params) do
     if package = conn.assigns.package do
       email = URI.decode_www_form(email)
-      new_owner = Users.get(email, [:emails])
+      new_owner = Users.public_get(email, [:emails])
 
       if new_owner do
         case Owners.add(package, new_owner, params, audit: audit_data(conn)) do

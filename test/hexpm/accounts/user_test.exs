@@ -71,9 +71,41 @@ defmodule Hexpm.Accounts.UserTest do
       assert user.id == fetched_user.id
     end
 
+    test "gets the user by private email" do
+      user = insert(
+        :user,
+        password: Auth.gen_password("password"),
+        emails: [build(:email, public: false)]
+      )
+      email = User.email(user, :primary)
+
+      fetched_user = User.get(email) |> Repo.one
+      assert user.id == fetched_user.id
+    end
+
     test "gets the user by username", %{user: user} do
       fetched_user = User.get(user.username) |> Repo.one()
       assert user.id == fetched_user.id
+    end
+  end
+
+  describe "public_get/2" do
+    test "gets the user by public email", %{user: user} do
+      email = User.email(user, :primary)
+
+      fetched_user = User.public_get(email) |> Repo.one
+      assert user.id == fetched_user.id
+    end
+
+    test "doesn't get the user by private email" do
+      user = insert(
+        :user,
+        password: Auth.gen_password("password"),
+        emails: [build(:email, public: false)]
+      )
+      email = User.email(user, :primary)
+
+      refute Repo.one(User.public_get(email))
     end
   end
 
