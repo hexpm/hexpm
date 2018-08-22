@@ -125,6 +125,9 @@ defmodule Hexpm.Web.Router do
     post "/orgs/:dashboard_org/cancel-billing", OrganizationController, :cancel_billing
     post "/orgs/:dashboard_org/update-billing", OrganizationController, :update_billing
     post "/orgs/:dashboard_org/create-billing", OrganizationController, :create_billing
+    post "/orgs/:dashboard_org/add-seats", OrganizationController, :add_seats
+    post "/orgs/:dashboard_org/remove-seats", OrganizationController, :remove_seats
+    post "/orgs/:dashboard_org/change-plan", OrganizationController, :change_plan
     post "/orgs/:dashboard_org/keys", OrganizationController, :create_key
     delete "/orgs/:dashboard_org/keys", OrganizationController, :delete_key
     get "/orgs/:dashboard_org/invoices/:id", OrganizationController, :show_invoice

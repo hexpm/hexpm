@@ -68,9 +68,13 @@ No, but we are currently gauging in the interest in this feature, please contact
 
 #### How are organizations billed?
 
-Organizations are billed monthly on the day of the month the subscription was started. The
-subscription is invoiced and charged in advance when the next billing period starts.
-Changes in the number of members in the organizations are pro-rated on the next invoice.
+Organizations on the monthly plan are billed each month on the day of the month the subscription
+was started. The subscription is invoiced and charged in advance when the next billing period
+starts. Changes in the number of open seats in the plan are pro-rated on the next invoice.
+
+Organizations on the annual plan are billed each year from the day the subscription was started.
+The subscription is invoiced and charged in advance when the next billing period starts. Changes
+in the number of open seats in the plan are pro-rated and charged when the number of seats change.
 
 Invoices are sent by the company Six Colors AB, see the [about page](/about) for more information.
 
@@ -96,5 +100,5 @@ We will keep all your data for a minimum of 90 days. You can contact
 
 #### Can I pay annually instead of monthly?
 
-Not yet, but this feature is in progress. Check back on the [pricing page](/pricing) in a few
-weeks.
+Yes, we offer an annual plan that is billed once a year and includes a 2 month discount over the
+monthly plan for a price of $70 / per user / per year.

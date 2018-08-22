@@ -54,10 +54,14 @@ defmodule Hexpm.Web.Dashboard.RepositoryControllerTest do
   end
 
   test "add member to organization", %{user: user, organization: organization} do
-    Mox.stub(Hexpm.Billing.Mock, :update, fn organization_name, map ->
-      assert organization_name == organization.name
-      assert map == %{"quantity" => 2}
-      {:ok, %{}}
+    Mox.stub(Hexpm.Billing.Mock, :dashboard, fn token ->
+      assert organization.name == token
+
+      %{
+        "checkout_html" => "",
+        "invoices" => [],
+        "quantity" => 2
+      }
     end)
 
     insert(:organization_user, organization: organization, user: user, role: "admin")
@@ -80,13 +84,38 @@ defmodule Hexpm.Web.Dashboard.RepositoryControllerTest do
     assert_delivered_email(Hexpm.Emails.organization_invite(organization, new_user))
   end
 
-  test "remove member from organization", %{user: user, organization: organization} do
-    Mox.stub(Hexpm.Billing.Mock, :update, fn organization_name, map ->
-      assert organization_name == organization.name
-      assert map == %{"quantity" => 1}
-      {:ok, %{}}
+  test "add member to organization without enough seats", %{
+    user: user,
+    organization: organization
+  } do
+    Mox.stub(Hexpm.Billing.Mock, :dashboard, fn token ->
+      assert organization.name == token
+
+      %{
+        "checkout_html" => "",
+        "invoices" => [],
+        "quantity" => 1
+      }
     end)
 
+    insert(:organization_user, organization: organization, user: user, role: "admin")
+    new_user = insert(:user)
+    add_email(new_user, "new@mail.com")
+    params = %{"username" => new_user.username, role: "write"}
+
+    conn =
+      build_conn()
+      |> test_login(user)
+      |> post("dashboard/orgs/#{organization.name}", %{
+        "action" => "add_member",
+        "organization_user" => params
+      })
+
+    response(conn, 400)
+    assert get_flash(conn, :error) == "Not enough seats in organization to add member."
+  end
+
+  test "remove member from organization", %{user: user, organization: organization} do
     insert(:organization_user, organization: organization, user: user, role: "admin")
     new_user = insert(:user)
     insert(:organization_user, organization: organization, user: new_user)
@@ -279,7 +308,9 @@ defmodule Hexpm.Web.Dashboard.RepositoryControllerTest do
 
     response(conn, 302)
     assert get_resp_header(conn, "location") == ["/dashboard/orgs/createrepo"]
-    assert get_flash(conn, :info) == "Organization created."
+
+    assert get_flash(conn, :info) ==
+             "Organization created with one month free trial period active."
   end
 
   test "create organization validates name", %{user: user} do
@@ -329,6 +360,113 @@ defmodule Hexpm.Web.Dashboard.RepositoryControllerTest do
     response(conn, 302)
     assert get_resp_header(conn, "location") == ["/dashboard/orgs/#{organization.name}"]
     assert get_flash(conn, :info) == "Updated your billing information."
+  end
+
+  describe "POST /dashboard/orgs/:dashboard_org/add-seats" do
+    test "increase number of seats", %{organization: organization, user: user} do
+      Mox.stub(Hexpm.Billing.Mock, :update, fn organization_name, map ->
+        assert organization_name == organization.name
+        assert map == %{"quantity" => 3}
+        {:ok, %{}}
+      end)
+
+      insert(:organization_user, organization: organization, user: user, role: "admin")
+
+      conn =
+        build_conn()
+        |> test_login(user)
+        |> post("dashboard/orgs/#{organization.name}/add-seats", %{
+          "current-seats" => "1",
+          "add-seats" => "2"
+        })
+
+      assert redirected_to(conn) == "/dashboard/orgs/#{organization.name}"
+      assert get_flash(conn, :info) == "The number of open seats have been increased."
+    end
+
+    test "seats cannot be less than number of members", %{organization: organization, user: user} do
+      mock_billing_dashboard(organization)
+
+      insert(:organization_user, organization: organization, user: user, role: "admin")
+      insert(:organization_user, organization: organization, user: build(:user))
+      insert(:organization_user, organization: organization, user: build(:user))
+
+      conn =
+        build_conn()
+        |> test_login(user)
+        |> post("dashboard/orgs/#{organization.name}/add-seats", %{
+          "current-seats" => "1",
+          "add-seats" => "1"
+        })
+
+      response(conn, 400)
+
+      assert get_flash(conn, :error) ==
+               "The number of open seats cannot be less than the number of organization members."
+    end
+  end
+
+  describe "POST /dashboard/orgs/:dashboard_org/remove-seats" do
+    test "increase number of seats", %{organization: organization, user: user} do
+      Mox.stub(Hexpm.Billing.Mock, :update, fn organization_name, map ->
+        assert organization_name == organization.name
+        assert map == %{"quantity" => 3}
+        {:ok, %{}}
+      end)
+
+      insert(:organization_user, organization: organization, user: user, role: "admin")
+
+      conn =
+        build_conn()
+        |> test_login(user)
+        |> post("dashboard/orgs/#{organization.name}/remove-seats", %{
+          "seats" => "3"
+        })
+
+      assert redirected_to(conn) == "/dashboard/orgs/#{organization.name}"
+      assert get_flash(conn, :info) == "The number of open seats have been reduced."
+    end
+
+    test "seats cannot be less than number of members", %{organization: organization, user: user} do
+      mock_billing_dashboard(organization)
+
+      insert(:organization_user, organization: organization, user: build(:user))
+      insert(:organization_user, organization: organization, user: user, role: "admin")
+
+      conn =
+        build_conn()
+        |> test_login(user)
+        |> post("dashboard/orgs/#{organization.name}/remove-seats", %{
+          "seats" => "1"
+        })
+
+      response(conn, 400)
+
+      assert get_flash(conn, :error) ==
+               "The number of open seats cannot be less than the number of organization members."
+    end
+  end
+
+  describe "POST /dashboard/orgs/:dashboard_org/change-plan" do
+    test "change plan", %{organization: organization, user: user} do
+      Mox.stub(Hexpm.Billing.Mock, :change_plan, fn organization_name, map ->
+        assert organization_name == organization.name
+        assert map == %{"plan_id" => "organization-annually"}
+        {:ok, %{}}
+      end)
+
+      insert(:organization_user, organization: organization, user: user, role: "admin")
+
+      conn =
+        build_conn()
+        |> test_login(user)
+        |> post("dashboard/orgs/#{organization.name}/change-plan", %{
+          "plan_id" => "organization-annually"
+        })
+
+      assert redirected_to(conn) == "/dashboard/orgs/#{organization.name}"
+      assert get_flash(conn, :info) == "You have switched to the annual organization plan."
+    end
   end
 
   describe "POST /dashboard/orgs/:dashboard_org/keys" do

@@ -44,18 +44,21 @@
           </li>
         <% end %>
         <li class="list-group-item clearfix">
-          <%= form_for @add_member_changeset, Routes.organization_path(Endpoint, :update, @organization), [method: :post, class: "form-inline"], fn f -> %>
-            <input type="hidden" name="action" value="add_member">
-            <div class="form-group">
-              <%= text_input f, :username, class: "form-control", style: "width: 250px", placeholder: "Username or email address", required: true %>
-              <%= error_tag f, :username %>
-            </div>
-            <div class="form-group">
-              <%= select f, :role, organization_roles_selector(), style: "width: 80px" %>
-              <%= error_tag f, :role %>
-            </div>
-            <button type="submit" class="btn btn-primary">Add member</button>
+          <%= form_for @add_member_changeset, Routes.organization_path(Endpoint, :update, @organization), [method: :post, class: "form-inline add-member"], fn f -> %>
+            <%= content_tag :fieldset, disabled: @quantity >= @max_period_quantity do %>
+              <input type="hidden" name="action" value="add_member">
+              <div class="form-group">
+                <%= text_input f, :username, style: "width: 250px", placeholder: "Username or email address", required: true %>
+                <%= error_tag f, :username %>
+              </div>
+              <div class="form-group">
+                <%= select f, :role, organization_roles_selector(), style: "width: 80px" %>
+                <%= error_tag f, :role %>
+              </div>
+              <button type="submit" class="btn btn-primary">Add member</button>
+            <% end %>
           <% end %>
+          <%= length(@organization.organization_users) %> of <%= @quantity %> seats are in use. Add more seats on the billing panel below.
         </li>
       </ul>
     </div>
@@ -94,12 +97,21 @@
           <%= if @subscription do %>
             <dl>
               <dt>Plan</dt>
-              <dd>Hex.pm Organization ($7.00 per user / month)</dd>
+              <dd>
+                <%= plan(@plan_id) %>
+                <button type="button" class="btn btn-xs btn-default billing-button" data-toggle="modal" data-target="#change-plan">
+                  <%= if @plan_id == "organization-monthly" do %>
+                    Switch to annual plan
+                  <% else %>
+                    Switch to monthly plan
+                  <% end %>
+                </button>
+              </dd>
               <dt>Payment</dt>
               <dd><%= payment_card(@card) %></dd>
               <dt>Next invoice</dt>
               <%= if @subscription["cancel_at_period_end"] do %>
-                <dd>Subscription ends at <%= payment_date(@subscription["current_period_end"]) %></dd>
+                <dd>Subscription ends on <%= payment_date(@subscription["current_period_end"]) %></dd>
               <% else %>
                 <dd><%= payment_date(@subscription["current_period_end"]) %></dd>
               <% end %>
@@ -110,7 +122,7 @@
               <dt>Monthly cost</dt>
               <dd>
                 <span class="monthly-cost-calc">
-                  $7.00 x <%= @quantity %> user(s)
+                  <%= plan_price(@plan_id) %> x <%= @quantity %> user(s)
                   <%= if @tax_rate && @tax_rate != 0 do %>x <%= @tax_rate %>% VAT<% end %> =
                 </span>
                 $<%= money(@amount_with_tax) %>
@@ -120,16 +132,95 @@
                 <%= subscription_status(@subscription, @card) %>
                 <%= discount_status(@discount) %>
               </dd>
+              <dt>Usage</dt>
+              <dd>
+                <%= length(@organization.organization_users) %> of <%= @quantity %> seats are in use.
+                <div class="btn-group btn-group-xs billing-button" role="group">
+                  <button type="button" class="btn btn-default" data-toggle="modal" data-target="#add-seats">Add seats</button>
+                  <button type="button" class="btn btn-default" data-toggle="modal" data-target="#remove-seats">Remove seats</button>
+                </div>
+              </dd>
             </dl>
+            <br>
 
             <%= raw(@checkout_html) %>
             <%= form_tag(Routes.organization_path(Endpoint, :cancel_billing, @organization), class: "cancel-billing") do %>
-              <%= submit "Cancel", class: "btn btn-danger", disabled: !@subscription || @subscription["cancel_at_period_end"] %>
+              <%= submit "Cancel subscription", class: "btn btn-danger", disabled: !@subscription || @subscription["cancel_at_period_end"] %>
             <% end %>
+
+            <div class="modal fade" id="add-seats" tabindex="-1" role="dialog" >
+              <div class="modal-dialog" role="document">
+                <div class="modal-content">
+                  <%= form_tag(Routes.organization_path(Endpoint, :add_seats, @organization)) do %>
+                    <input type="hidden" name="current-seats" value="<%= @quantity %>">
+
+                    <div class="modal-header">
+                      <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                      <h4 class="modal-title">Add seats</h4>
+                    </div>
+                    <div class="modal-body">
+                      You have <%= @quantity %> seats of which <%= length(@organization.organization_users) %> are in use.
+                      <br><br>
+                      <input type="text" class="form-control change-seats" name="add-seats" placeholder="1">
+                      new seat(s) @ <%= plan_price(@plan_id) %>
+                      <%= if @proration_amount > 0 do %>
+                        <br><br>
+                        <%= proration_description(@plan_id, @proration_amount, @proration_days, @quantity, @max_period_quantity) %>
+                      <% end %>
+                    </div>
+                    <div class="modal-footer">
+                      <button type="button" class="btn btn-default" data-dismiss="modal">Cancel</button>
+                      <button type="submit" class="btn btn-primary">Add seats</button>
+                    </div>
+                  <% end %>
+                </div>
+              </div>
+            </div>
+
+            <div class="modal fade" id="remove-seats" tabindex="-1" role="dialog" >
+              <div class="modal-dialog" role="document">
+                <div class="modal-content">
+                  <%= form_tag(Routes.organization_path(Endpoint, :remove_seats, @organization)) do %>
+                    <div class="modal-header">
+                      <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                      <h4 class="modal-title">Remove seats</h4>
+                    </div>
+                    <div class="modal-body">
+                      You have <%= @quantity %> seats of which <%= length(@organization.organization_users) %> are in use.
+                      <br><br>
+
+                      <%= if @quantity <= length(@organization.organization_users) do %>
+                        <strong>You are already at the minimum number of seats.</strong>
+                      <% else %>
+                        From <%= @quantity %> to
+                        <select class="form-control change-seats" name="seats">
+                          <%= for number <- Enum.uniq(max(@quantity - 1, 1)..length(@organization.organization_users)) do %>
+                            <option value="<%= number %>"><%= number %></option>
+                          <% end %>
+                        </select>
+                        seat(s) @ <%= plan_price(@plan_id) %>.
+                      <% end %>
+                    </div>
+                    <div class="modal-footer">
+                      <button type="button" class="btn btn-default" data-dismiss="modal">Cancel</button>
+                      <button type="submit" class="btn btn-primary" <%= if @quantity <= length(@organization.organization_users) do %>disabled<% end %>>Remove seats</button>
+                    </div>
+                  <% end %>
+                </div>
+              </div>
+            </div>
+
           <% else %>
             Subscription is not active. <strong>Organization will be disabled</strong> until a payment method has been added.<br><br>
             Subscription cost is <strong>$7.00 per user / month</strong> + local VAT when applicable.<br><br>
             <%= raw(@checkout_html) %>
+            <button type="button" class="btn btn-default" data-toggle="modal" data-target="#change-plan">
+              <%= if @plan_id == "organization-monthly" do %>
+                Switch to annual plan
+              <% else %>
+                Switch to monthly plan
+              <% end %>
+            </button>
           <% end %>
         </div>
 
@@ -217,6 +308,51 @@
           </div>
         </div>
       <% end %>
+    </div>
+  </div>
+</div>
+
+<div class="modal fade" id="change-plan" tabindex="-1" role="dialog" >
+  <div class="modal-dialog" role="document">
+    <div class="modal-content">
+      <input type="hidden" name="current-seats" value="<%= @quantity %>">
+
+      <div class="modal-header">
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+        <h4 class="modal-title">
+          <%= if @plan_id == "organization-monthly" do %>
+            Switch to annual plan
+          <% else %>
+            Switch to monthly plan
+          <% end %>
+        </h4>
+      </div>
+      <div class="modal-body">
+        <%= if @plan_id == "organization-monthly" do %>
+          The annual plan is billed each year for a price of <strong>$70 per user / year</strong>.
+        <% else %>
+          The monthly plan is billed each month for a price of <strong>$7 per user / month</strong>.
+        <% end %>
+        <br><br>
+        <%= if @subscription do %>
+          You will receive the first invoice at the end of your current billing period on
+          <%= payment_date(@subscription["current_period_end"]) %>.
+        <% else %>
+          You do not have an active subscription, after changing plan you will have to
+          activate your subscription to start using the organization.
+        <% end %>
+      </div>
+      <div class="modal-footer">
+        <%= form_tag(Routes.organization_path(Endpoint, :change_plan, @organization)) do %>
+          <%= if @plan_id == "organization-monthly" do %>
+            <input type="hidden" name="plan_id" value="organization-annually">
+          <% else %>
+            <input type="hidden" name="plan_id" value="organization-monthly">
+          <% end %>
+          <button type="button" class="btn btn-default" data-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-primary">Change plan</button>
+        <% end %>
+      </div>
     </div>
   </div>
 </div>

@@ -106,6 +106,21 @@
     display: inline-block;
   }
 
+  form.add-member {
+    margin-bottom: .5em;
+  }
+
+  input.change-seats,
+  select.change-seats, {
+    display: inline-block;
+    width: 50px;
+    vertical-align: middle;
+  }
+
+  .billing-button {
+    display: block;
+  }
+
   .member-avatar {
     float: left;
     width: 32px;
