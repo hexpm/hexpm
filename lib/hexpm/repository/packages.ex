@@ -139,7 +139,7 @@ defmodule Hexpm.Repository.Packages do
   def accessible_user_owned_packages(nil, _) do
     []
   end
-  
+
   def accessible_user_owned_packages(user, for_user) do
     organizations = Users.all_organizations(for_user)
     organization_ids = Enum.map(organizations, & &1.id)

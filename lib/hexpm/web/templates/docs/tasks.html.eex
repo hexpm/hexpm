@@ -443,7 +443,7 @@ the package is removed
 </li>
 <li><code class="inline">--organization ORGANIZATION</code> - The organization the package belongs to
 </li>
-<li><code class="inline">--no-confirm</code> - Disables confirmation message before publishing
+<li><code class="inline">--yes</code> - Publishes the package without any confirmation prompts
 </li>
 </ul>
 <h3>Configuration</h3>

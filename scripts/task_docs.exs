@@ -46,9 +46,13 @@ defmodule Hexpm.Script.TaskDocs do
       name = Mix.Task.task_name(task)
 
       if String.starts_with?(name, "hex") && Mix.Task.shortdoc(task) do
-        {_line, doc} = Code.get_docs(task, :moduledoc)
-        if doc, do: [{name, to_html(doc)}]
-      end || []
+        case Code.fetch_docs(task) do
+          {:docs_v1, _, :elixir, _, %{"en" => module_doc}, _, _} -> [{name, to_html(module_doc)}]
+          {:docs_v1, _, :elixir, _, :none, _, _} -> []
+        end
+      else
+        []
+      end
     end)
   end
 
