@@ -39,6 +39,11 @@ defmodule Hexpm.Billing.Hexpm do
     end
   end
 
+  def change_plan(organization, params) do
+    {:ok, 204, _headers, _body} = post("/api/customers/#{organization}/plan", params, [])
+    :ok
+  end
+
   def invoice(id) do
     {:ok, 200, _headers, body} =
       fn -> get_html("/api/invoices/#{id}/html", recv_timeout: 10_000) end

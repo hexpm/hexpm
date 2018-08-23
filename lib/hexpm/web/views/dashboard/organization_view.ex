@@ -24,6 +24,47 @@ defmodule Hexpm.Web.Dashboard.OrganizationView do
     end)
   end
 
+  defp plan("organization-monthly"), do: "Organization, monthly billed ($7.00 per user / month)"
+  defp plan("organization-annually"), do: "Organization, annually billed ($70.00 per user / year)"
+  defp plan_price("organization-monthly"), do: "$7.00"
+  defp plan_price("organization-annually"), do: "$70.00"
+
+  defp proration_description("organization-monthly", price, days, quantity, quantity) do
+    """
+    Each new seat will be prorated on the next invoice for
+    <strong>#{days}</strong> day(s) @ <strong>$#{money(price)}</strong>."
+    """
+    |> raw()
+  end
+
+  defp proration_description("organization-annually", price, days, quantity, quantity) do
+    """
+    Each new seat will be charged a proration for
+    <strong>#{days}</strong> day(s) @ <strong>$#{money(price)}</strong>."
+    """
+    |> raw()
+  end
+
+  defp proration_description("organization-monthly", price, days, quantity, max_period_quantity)
+       when quantity < max_period_quantity do
+    """
+    You have already used <strong>#{max_period_quantity}</strong> seats in your current billing period.
+    If adding seats over this amount, each new seat will be prorated on the next invoice for
+    <strong>#{days}</strong> day(s) @ <strong>$#{money(price)}</strong>."
+    """
+    |> raw()
+  end
+
+  defp proration_description("organization-annually", price, days, quantity, max_period_quantity)
+       when quantity < max_period_quantity do
+    """
+    You have already used <strong>#{max_period_quantity}</strong> seats in your current billing period.
+    If adding seats over this amount, each new seat will be charged a proration for
+    <strong>#{days}</strong> day(s) @ <strong>$#{money(price)}</strong>."
+    """
+    |> raw()
+  end
+
   @no_card_message "No payment method on file"
 
   defp payment_card(nil) do
@@ -51,13 +92,12 @@ defmodule Hexpm.Web.Dashboard.OrganizationView do
   defp subscription_status(
          %{
            "status" => "trialing",
-           "trial_end" => trial_end,
-           "cancel_at_period_end" => cancel_at_period_end
+           "trial_end" => trial_end
          },
          card
        ) do
     trial_end = trial_end |> NaiveDateTime.from_iso8601!() |> pretty_datetime()
-    raw("Trial ends on #{trial_end}, #{trial_status_message(cancel_at_period_end, card)}")
+    raw("Trial ends on #{trial_end}, #{trial_status_message(card)}")
   end
 
   defp subscription_status(%{"status" => "past_due"}, _card) do
@@ -72,24 +112,18 @@ defmodule Hexpm.Web.Dashboard.OrganizationView do
 
   @trial_ends_no_card_message """
   your subscription will end after the trial period because we have no payment method on file for you,
-  please enter a payment method if you wish to continue using organizations after the trial period,
-  or if you wish to continue testing with a longer trial period please contact
-  <a href="mailto:support@hex.pm">support@hex.pm</a>
+  please enter a payment method if you wish to continue using organizations after the trial period
   """
 
-  defp trial_status_message(true, _card) do
-    "subscription will end after trial period"
-  end
-
-  defp trial_status_message(false, %{"brand" => nil}) do
+  defp trial_status_message(%{"brand" => nil}) do
     @trial_ends_no_card_message
   end
 
-  defp trial_status_message(false, nil) do
+  defp trial_status_message(nil) do
     @trial_ends_no_card_message
   end
 
-  defp trial_status_message(false, _card) do
+  defp trial_status_message(_card) do
     "a payment method is on file and your subscription will continue after the trial period"
   end
 
@@ -98,7 +132,7 @@ defmodule Hexpm.Web.Dashboard.OrganizationView do
   end
 
   defp discount_status(%{"name" => name, "percent_off" => percent_off}) do
-    "(\"#{name}\" discount for #{percent_off}% of cost)"
+    "(\"#{name}\" discount for #{percent_off}% of price)"
   end
 
   defp invoice_status(%{"paid" => true}, _organization), do: "Paid"

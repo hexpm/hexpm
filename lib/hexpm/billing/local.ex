@@ -25,6 +25,10 @@ defmodule Hexpm.Billing.Local do
     {:ok, %{}}
   end
 
+  def change_plan(_organization, _params) do
+    :ok
+  end
+
   def invoice(_id) do
     %{}
   end

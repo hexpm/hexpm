@@ -27,27 +27,32 @@ defmodule Hexpm.Web.Dashboard.OrganizationController do
     username = params["username"]
 
     access_organization(conn, organization, "admin", fn organization ->
-      case Organizations.add_member(organization, username, params, audit: audit_data(conn)) do
-        {:ok, _} ->
-          members_count = Organizations.members_count(organization)
+      members_count = Organizations.members_count(organization)
+      billing = Hexpm.Billing.dashboard(organization.name)
 
-          {:ok, _customer} =
-            Hexpm.Billing.update(organization.name, %{"quantity" => members_count})
+      if billing["quantity"] > members_count do
+        case Organizations.add_member(organization, username, params, audit: audit_data(conn)) do
+          {:ok, _} ->
+            conn
+            |> put_flash(:info, "User #{username} has been added to the organization.")
+            |> redirect(to: Routes.organization_path(conn, :show, organization))
 
-          conn
-          |> put_flash(:info, "User #{username} has been added to the organization.")
-          |> redirect(to: Routes.organization_path(conn, :show, organization))
+          {:error, :unknown_user} ->
+            conn
+            |> put_status(400)
+            |> put_flash(:error, "Unknown user #{username}.")
+            |> render_index(organization)
 
-        {:error, :unknown_user} ->
-          conn
-          |> put_status(400)
-          |> put_flash(:error, "Unknown user #{username}.")
-          |> render_index(organization)
-
-        {:error, changeset} ->
-          conn
-          |> put_status(400)
-          |> render_index(organization, add_member: changeset)
+          {:error, changeset} ->
+            conn
+            |> put_status(400)
+            |> render_index(organization, add_member: changeset)
+        end
+      else
+        conn
+        |> put_status(400)
+        |> put_flash(:error, "Not enough seats in organization to add member.")
+        |> render_index(organization)
       end
     end)
   end
@@ -63,11 +68,6 @@ defmodule Hexpm.Web.Dashboard.OrganizationController do
     access_organization(conn, organization, "admin", fn organization ->
       case Organizations.remove_member(organization, username, audit: audit_data(conn)) do
         :ok ->
-          members_count = Organizations.members_count(organization)
-
-          {:ok, _customer} =
-            Hexpm.Billing.update(organization.name, %{"quantity" => members_count})
-
           conn
           |> put_flash(:info, "User #{username} has been removed from the organization.")
           |> redirect(to: Routes.organization_path(conn, :show, organization))
@@ -216,6 +216,63 @@ defmodule Hexpm.Web.Dashboard.OrganizationController do
     end)
   end
 
+  @not_enough_seats "The number of open seats cannot be less than the number of organization members."
+
+  def add_seats(conn, %{"dashboard_org" => organization} = params) do
+    access_organization(conn, organization, "admin", fn organization ->
+      members_count = Organizations.members_count(organization)
+      current_seats = String.to_integer(params["current-seats"])
+      add_seats = String.to_integer(params["add-seats"])
+      seats = current_seats + add_seats
+
+      if seats >= members_count do
+        {:ok, _customer} = Hexpm.Billing.update(organization.name, %{"quantity" => seats})
+
+        conn
+        |> put_flash(:info, "The number of open seats have been increased.")
+        |> redirect(to: Routes.organization_path(conn, :show, organization))
+      else
+        conn
+        |> put_status(400)
+        |> put_flash(:error, @not_enough_seats)
+        |> render_index(organization)
+      end
+    end)
+  end
+
+  def remove_seats(conn, %{"dashboard_org" => organization} = params) do
+    access_organization(conn, organization, "admin", fn organization ->
+      members_count = Organizations.members_count(organization)
+      seats = String.to_integer(params["seats"])
+
+      if seats >= members_count do
+        {:ok, _customer} = Hexpm.Billing.update(organization.name, %{"quantity" => seats})
+
+        conn
+        |> put_flash(:info, "The number of open seats have been reduced.")
+        |> redirect(to: Routes.organization_path(conn, :show, organization))
+      else
+        conn
+        |> put_status(400)
+        |> put_flash(:error, @not_enough_seats)
+        |> render_index(organization)
+      end
+    end)
+  end
+
+  def change_plan(conn, %{"dashboard_org" => organization} = params) do
+    access_organization(conn, organization, "admin", fn organization ->
+      Hexpm.Billing.change_plan(organization.name, %{"plan_id" => params["plan_id"]})
+
+      conn
+      |> put_flash(:info, "You have switched to the #{plan_name(params["plan_id"])} plan.")
+      |> redirect(to: Routes.organization_path(conn, :show, organization))
+    end)
+  end
+
+  defp plan_name("organization-monthly"), do: "monthly organization"
+  defp plan_name("organization-annually"), do: "annual organization"
+
   def new(conn, _params) do
     render_new(conn)
   end
@@ -238,7 +295,7 @@ defmodule Hexpm.Web.Dashboard.OrganizationController do
           case Hexpm.Billing.create(billing_params) do
             {:ok, _} ->
               conn
-              |> put_flash(:info, "Organization created.")
+              |> put_flash(:info, "Organization created with one month free trial period active.")
               |> redirect(to: Routes.organization_path(conn, :show, organization))
 
             {:error, reason} ->
@@ -368,9 +425,12 @@ defmodule Hexpm.Web.Dashboard.OrganizationController do
       billing_started?: false,
       checkout_html: nil,
       billing_email: nil,
+      plan_id: "organization-monthly",
       subscription: nil,
       monthly_cost: nil,
       amount_with_tax: nil,
+      quantity: nil,
+      max_period_quantity: nil,
       card: nil,
       invoices: nil,
       person: nil,
@@ -390,10 +450,14 @@ defmodule Hexpm.Web.Dashboard.OrganizationController do
       billing_started?: true,
       checkout_html: checkout_html,
       billing_email: billing["email"],
+      plan_id: billing["plan_id"],
+      proration_amount: billing["proration_amount"],
+      proration_days: billing["proration_days"],
       subscription: billing["subscription"],
       monthly_cost: billing["monthly_cost"],
       amount_with_tax: billing["amount_with_tax"],
       quantity: billing["quantity"],
+      max_period_quantity: billing["max_period_quantity"],
       tax_rate: billing["tax_rate"],
       discount: billing["discount"],
       card: billing["card"],

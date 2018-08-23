@@ -35,16 +35,15 @@
         <li><strong>&gt;</strong> Republish and delete packages</li>
       </ul>
       <div class="action">
-        <a class="btn btn-primary" href="<%= Routes.organization_path(Endpoint, :new) %>" role="button">Create organization</a>
+        <a class="btn btn-primary" href="<%= Routes.organization_path(Endpoint, :new) %>" role="button">Try for 30 days</a>
       </div>
     </div>
   </div>
 
   <div class="info">
     <p>
-      The first month of organizations is free, you can try it out without providing any payment
-      information, if you wish to continue your trial after the first month please contact
-      <a href="mailto:support@hex.pm">support@hex.pm</a>.
+      We also offer an annual plan at a 17% discount over the monthly plan (2 months free) for
+      <strong>$70 / per user / per year</strong> .
     </p>
     <p>
       For more information about pricing and billing read the
