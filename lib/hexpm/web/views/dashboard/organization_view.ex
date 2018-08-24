@@ -32,7 +32,7 @@ defmodule Hexpm.Web.Dashboard.OrganizationView do
   defp proration_description("organization-monthly", price, days, quantity, quantity) do
     """
     Each new seat will be prorated on the next invoice for
-    <strong>#{days}</strong> day(s) @ <strong>$#{money(price)}</strong>."
+    <strong>#{days}</strong> day(s) @ <strong>$#{money(price)}</strong>.
     """
     |> raw()
   end
@@ -40,7 +40,7 @@ defmodule Hexpm.Web.Dashboard.OrganizationView do
   defp proration_description("organization-annually", price, days, quantity, quantity) do
     """
     Each new seat will be charged a proration for
-    <strong>#{days}</strong> day(s) @ <strong>$#{money(price)}</strong>."
+    <strong>#{days}</strong> day(s) @ <strong>$#{money(price)}</strong>.
     """
     |> raw()
   end
@@ -50,7 +50,7 @@ defmodule Hexpm.Web.Dashboard.OrganizationView do
     """
     You have already used <strong>#{max_period_quantity}</strong> seats in your current billing period.
     If adding seats over this amount, each new seat will be prorated on the next invoice for
-    <strong>#{days}</strong> day(s) @ <strong>$#{money(price)}</strong>."
+    <strong>#{days}</strong> day(s) @ <strong>$#{money(price)}</strong>.
     """
     |> raw()
   end
@@ -60,7 +60,7 @@ defmodule Hexpm.Web.Dashboard.OrganizationView do
     """
     You have already used <strong>#{max_period_quantity}</strong> seats in your current billing period.
     If adding seats over this amount, each new seat will be charged a proration for
-    <strong>#{days}</strong> day(s) @ <strong>$#{money(price)}</strong>."
+    <strong>#{days}</strong> day(s) @ <strong>$#{money(price)}</strong>.
     """
     |> raw()
   end

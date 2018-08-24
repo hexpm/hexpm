@@ -190,7 +190,7 @@
                       <br><br>
 
                       <%= if @quantity <= length(@organization.organization_users) do %>
-                        <strong>You are already at the minimum number of seats.</strong>
+                        <strong>You are already at the minimum number of seats, remove members to free up seats.</strong>
                       <% else %>
                         From <%= @quantity %> to
                         <select class="form-control change-seats" name="seats">
