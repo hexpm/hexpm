@@ -161,7 +161,7 @@
                     <div class="modal-body">
                       You have <%= @quantity %> seats of which <%= length(@organization.organization_users) %> are in use.
                       <br><br>
-                      <input type="text" class="form-control change-seats" name="add-seats" placeholder="1">
+                      <input type="number" class="form-control change-seats" name="add-seats" min="1" step="1" value="1" required>
                       new seat(s) @ <%= plan_price(@plan_id) %>
                       <%= if @proration_amount > 0 do %>
                         <br><br>
@@ -193,7 +193,7 @@
                         <strong>You are already at the minimum number of seats, remove members to free up seats.</strong>
                       <% else %>
                         From <%= @quantity %> to
-                        <select class="form-control change-seats" name="seats">
+                        <select class="form-control change-seats" name="seats" required>
                           <%= for number <- Enum.uniq(max(@quantity - 1, 1)..length(@organization.organization_users)) do %>
                             <option value="<%= number %>"><%= number %></option>
                           <% end %>
