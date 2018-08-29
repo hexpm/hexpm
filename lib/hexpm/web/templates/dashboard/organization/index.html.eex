@@ -45,7 +45,7 @@
         <% end %>
         <li class="list-group-item clearfix">
           <%= form_for @add_member_changeset, Routes.organization_path(Endpoint, :update, @organization), [method: :post, class: "form-inline add-member"], fn f -> %>
-            <%= content_tag :fieldset, disabled: @quantity >= @max_period_quantity do %>
+            <%= content_tag :fieldset, disabled: @quantity <= length(@organization.organization_users) do %>
               <input type="hidden" name="action" value="add_member">
               <div class="form-group">
                 <%= text_input f, :username, style: "width: 250px", placeholder: "Username or email address", required: true %>
