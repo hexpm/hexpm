@@ -10,6 +10,8 @@ Towards this end, certain behaviors and practices will not be tolerated.
 
 Hex is the set of formats and APIs that makes up the specification of Hex. Hex.pm is an implementation of the Hex specifications, it is comprised of this website and associated HTTP API, the package repository including packages published to Hex.pm and the website hexdocs.pm. In this document Hex and Hex.pm is used interchangeably but it refers to Hex.pm.
 
+The goal of the Code of Conduct is to specify a baseline standard of behavior so that people with different social values and communication styles can talk about Hex effectively, productively, and respectfully, even in face of disagreements. The Code of Conduct also provides a mechanism for resolving conflicts in the community when they arise.
+
 ### tl;dr
 
   * Be respectful.
@@ -22,7 +24,7 @@ Hex is the set of formats and APIs that makes up the specification of Hex. Hex.p
 
 We expect all members of the Hex community, including paid and unpaid agents, administrators, and users to abide by this Code of Conduct at all times in all Hex community venues, online and in person, and in one-on-one communications pertaining to Hex affairs.
 
-This policy covers the usage of the Hex registry, as well as the Hex website, Hex related events, and any other services offered by or on behalf of Hex (collectively, the "Service"). It also applies to behavior in the context of the Hex Open Source project communities, including but not limited to public GitHub repositories, IRC channels, social media, mailing lists, and public events.
+This policy covers the usage of the Hex registry, as well as the Hex website, and any other services offered by or on behalf of Hex (collectively, the "Service"). It also applies to behavior in the context of the Hex open source project communities, including but not limited to public GitHub repositories, IRC channels, discussion forums and mailing lists when they relate to the Service or Hex communities.
 
 This Code of Conduct is in addition to, and does not in any way nullify or invalidate, any other terms or conditions related to use of the Service.
 
@@ -30,17 +32,13 @@ The definitions of various subjective terms such as "discriminatory", "hateful",
 
 ### Friendly Harassment-Free Space
 
-We are committed to providing a friendly, safe and welcoming environment for all, regardless of gender identity, sexual orientation, disability, ethnicity, religion, age, physical appearance, body size, race, or similar personal characteristics.
-
-We ask that you please respect that people have differences of opinion regarding technical choices, and that every design or implementation choice carries a trade-off and numerous costs. There is seldom a single right answer. A difference of technology preferences is not a license to be rude.
+We are committed to providing a friendly, safe and welcoming environment for all. We ask that you please respect that people have differences of opinion regarding technical choices, and that every design or implementation choice carries a trade-off and numerous costs. There is seldom a single right answer. A difference of technology preferences is not a license to be rude.
 
 Any spamming, trolling, flaming, baiting, or other attention-stealing behaviour is not welcome, and will not be tolerated.
 
-Harassing other users of the Service is never tolerated, whether via public or private media.
+Harassing other users of the Service is never tolerated, including via package names, description, other metadata, nicknames, or other visible identifiers or content that might detract from a friendly, safe, and welcoming environment for all.
 
-Avoid using offensive or harassing package names, nicknames, or other identifiers that might detract from a friendly, safe, and welcoming environment for all.
-
-Harassment includes, but is not limited to: harmful or prejudicial verbal or written comments related to gender identity, sexual orientation, disability, ethnicity, religion, age, physical appearance, body size, race, or similar personal characteristics; inappropriate use of nudity, sexual images, and/or sexually explicit language in public spaces; threats of physical or non-physical harm; deliberate intimidation, stalking or following; harassing photography or recording; sustained disruption of talks or other events; inappropriate physical contact; and unwelcome sexual attention.
+Furthermore, abusing, threatening, or inciting violence against any groups or individuals, including Hex team members or other users is not tolerated.
 
 ### Acceptable Package Content
 
@@ -55,8 +53,6 @@ Packages must not contain illegal or infringing content. You should only publish
 Packages must have a license that allows any users access to the package and it's contents for use as a dependency in their project. The license may impose sensible restrictions on how the package can be used or add requirements to the project using it. Examples of licenses that can be used is (but not limited to): MIT, Apache, BSD, GPL, WTFPL and Unlicense.
 
 Packages must not be malware. For example, a package which is designed to maliciously exploit or damage computer systems, is not allowed. However, an explicitly documented penetration testing library designed to be used for white-hat security research would most likely be fine.
-
-Package name, description, and other visible metadata must not include abusive, inappropriate, or harassing content.
 
 ### Reporting Violations of this Code of Conduct
 
