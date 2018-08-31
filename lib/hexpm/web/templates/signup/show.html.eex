@@ -40,6 +40,11 @@
     <%= error_tag f, :password_confirmation %>
   </div>
 
+  <p>
+    By clicking "Sign up" below, you agree to our
+    <a href="<%= Routes.policy_path(Endpoint, :tos) %>">Terms of Service</a>.
+  </p>
+
   <button type="submit" class="btn btn-primary">Sign up</button>
 
   <br><br>
