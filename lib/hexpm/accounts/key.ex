@@ -58,6 +58,7 @@ defmodule Hexpm.Accounts.Key do
     |> change()
     |> add_keys()
     |> put_change(:revoke_at, revoke_at)
+    |> put_change(:public, false)
     |> put_embed(:permissions, [permission])
   end
 

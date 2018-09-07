@@ -77,6 +77,7 @@ defmodule Hexpm.Web.LoginControllerTest do
 
     assert {:ok, %{key: key}} = Auth.key_auth(key, [])
     assert key.revoke_at
+    refute key.public
     assert hd(key.permissions).domain == "docs"
     assert hd(key.permissions).resource == c.organization.name
 
