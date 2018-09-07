@@ -12,6 +12,7 @@
   </div>
 
   <input type="hidden" name="return" value="<%= @return %>">
+  <input type="hidden" name="hexdocs" value="<%= @hexdocs %>">
 
   <button type="submit" class="btn btn-primary">Log in</button>
 
