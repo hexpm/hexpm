@@ -12,7 +12,9 @@
   </div>
 
   <input type="hidden" name="return" value="<%= @return %>">
-  <input type="hidden" name="hexdocs" value="<%= @hexdocs %>">
+  <%= if @hexdocs not in [nil, ""] do %>
+    <input type="hidden" name="hexdocs" value="<%= @hexdocs %>">
+  <% end %>
 
   <button type="submit" class="btn btn-primary">Log in</button>
 
