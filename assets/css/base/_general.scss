@@ -1,12 +1,15 @@
 html {
   position: relative;
+  height: 100%;
   min-height: 100%;
 }
 
 body {
   @include font-size(16, 30);
-  margin-bottom: 230px;
+  display: flex;
+  height: 100%;
   font-family: $base-font-family;
+  flex-direction: column;
 }
 
 .browserupgrade {
