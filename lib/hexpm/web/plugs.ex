@@ -101,21 +101,6 @@ defmodule Hexpm.Web.Plugs do
     end
   end
 
-  def auth_gate(conn, _opts) do
-    if possible = Application.get_env(:hexpm, :auth_gate) do
-      case get_req_header(conn, "authorization") do
-        ["Basic " <> credentials | _] ->
-          possible = String.split(possible, ",")
-          basic_auth(conn, credentials, possible)
-
-        _ ->
-          auth_error(conn)
-      end
-    else
-      conn
-    end
-  end
-
   def authenticate(conn, _opts) do
     case Hexpm.Web.AuthHelpers.authenticate(conn) do
       {:ok, %{key: key, user: user, organization: organization, email: email, source: source}} ->
@@ -137,31 +122,5 @@ defmodule Hexpm.Web.Plugs do
       {:error, _} = error ->
         Hexpm.Web.AuthHelpers.error(conn, error)
     end
-  end
-
-  defp basic_auth(conn, credentials, possible) do
-    credentials = Base.decode64!(credentials)
-
-    if credentials in possible do
-      update_auth_header(conn)
-    else
-      auth_error(conn)
-    end
-  end
-
-  # Try to enable use of  multiple auth headers for API
-  defp update_auth_header(conn) do
-    if authorization = get_req_header(conn, "authorization") |> Enum.at(1) do
-      put_req_header(conn, "authorization", authorization)
-    else
-      %{conn | req_headers: List.keydelete(conn.req_headers, "authorization", 0)}
-    end
-  end
-
-  defp auth_error(conn) do
-    conn
-    |> put_resp_header("www-authenticate", "Basic realm=hex")
-    |> ControllerHelpers.render_error(401)
-    |> halt()
   end
 end

@@ -1,33 +1,44 @@
 use Mix.Config
 
-pool_size = String.to_integer(System.get_env("HEX_POOL_SIZE") || "20")
-
 config :hexpm,
-  cookie_sign_salt: System.get_env("HEX_COOKIE_SIGNING_SALT"),
-  cookie_encr_salt: System.get_env("HEX_COOKIE_ENCRYPTION_SALT")
+  secret: "${HEXPM_SECRET}",
+  private_key: "${HEXPM_SIGNING_KEY}",
+  s3_bucket: "${HEXPM_S3_BUCKET}",
+  docs_bucket: "${HEXPM_DOCS_BUCKET}",
+  logs_buckets: "${HEXPM_LOGS_BUCKETS}",
+  docs_url: "${HEXPM_DOCS_URL}",
+  cdn_url: "${HEXPM_CDN_URL}",
+  email_host: "${HEXPM_EMAIL_HOST}",
+  ses_rate: "${HEXPM_SES_RATE}",
+  fastly_key: "${HEXPM_FASTLY_KEY}",
+  fastly_hexdocs: "${HEXPM_FASTLY_HEXDOCS}",
+  fastly_hexrepo: "${HEXPM_FASTLY_HEXREPO}",
+  billing_key: "${HEXPM_BILLING_KEY}",
+  billing_url: "${HEXPM_BILLING_URL}",
+  levenshtein_threshold: "${HEXPM_LEVENSHTEIN_THRESHOLD}",
+  store_impl: Hexpm.Store.S3,
+  billing_impl: Hexpm.Billing.Hexpm,
+  cdn_impl: Hexpm.CDN.Fastly,
+  tmp_dir: "tmp"
 
 config :hexpm, Hexpm.Web.Endpoint,
   http: [compress: true],
   url: [scheme: "https", port: 443],
-  force_ssl: [hsts: true, host: nil, rewrite_on: [:x_forwarded_proto]],
   load_from_system_env: true,
   cache_static_manifest: "priv/static/cache_manifest.json"
 
 config :hexpm, Hexpm.Repo,
   adapter: Ecto.Adapters.Postgres,
-  pool_size: pool_size,
-  queue_size: pool_size * 5,
   ssl: true
 
 config :bcrypt_elixir, log_rounds: 12
 
 config :rollbax,
-  access_token: System.get_env("ROLLBAR_ACCESS_TOKEN"),
+  access_token: "${HEXPM_ROLLBAR_ACCESS_TOKEN}",
   environment: to_string(Mix.env()),
-  enabled: !!System.get_env("ROLLBAR_ACCESS_TOKEN"),
+  enabled: true,
   enable_crash_reports: true
 
-# Don't include date time on heroku
-config :logger, :console, format: "[$level] $message\n"
+config :phoenix, :serve_endpoints, true
 
-config :logger, level: :warn
+config :sasl, sasl_error_logger: false

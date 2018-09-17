@@ -1,8 +1,9 @@
-defmodule Mix.Tasks.Hexpm.StatsTest do
+defmodule Hexpm.ReleaseTasks.StatsTest do
   use Hexpm.DataCase
 
   alias Hexpm.Repository.Download
   alias Hexpm.Store
+  alias Hexpm.ReleaseTasks.Stats
 
   setup do
     organization1 = insert(:organization)
@@ -32,13 +33,10 @@ defmodule Mix.Tasks.Hexpm.StatsTest do
     package2: package2,
     package4: package4
   } do
-    {bucket, region} =
-      case Application.get_env(:hexpm, :logs_buckets) do
-        [[bucket, region]] -> {bucket, region}
-        _other -> {nil, nil}
-      end
 
-    buckets = [[bucket, region]]
+    buckets = [[nil, nil]]
+    region = nil
+    bucket = nil
 
     logfile1 =
       read_log(
@@ -76,7 +74,7 @@ defmodule Mix.Tasks.Hexpm.StatsTest do
       []
     )
 
-    Mix.Tasks.Hexpm.Stats.run(~D[2013-11-01], buckets)
+    Stats.run(~D[2013-11-01], buckets)
 
     rel1 = Repo.get_by!(assoc(package1, :releases), version: "0.0.1")
     rel2 = Repo.get_by!(assoc(package1, :releases), version: "0.0.2")

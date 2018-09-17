@@ -39,13 +39,19 @@ defmodule Hexpm.Web.Endpoint do
     key: "_hexpm_key",
     max_age: 60 * 60 * 24 * 30
 
+  plug Hexpm.Web.Plugs.Status
+
+  if Mix.env == :prod do
+    plug Plug.SSL, rewrite_on: [:x_forwarded_proto]
+  end
+
   plug Hexpm.Web.Router
 
   def init(_key, config) do
     if config[:load_from_system_env] do
-      port = System.get_env("PORT")
-      host = System.get_env("HEX_URL")
-      secret_key_base = System.get_env("HEX_SECRET_KEY_BASE")
+      port = System.get_env("HEXPM_PORT")
+      host = System.get_env("HEXPM_HOST")
+      secret_key_base = System.get_env("HEXPM_SECRET_KEY_BASE")
       config = put_in(config[:http][:port], port)
       config = put_in(config[:url][:host], host)
       config = put_in(config[:secret_key_base], secret_key_base)

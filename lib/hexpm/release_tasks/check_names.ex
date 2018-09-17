@@ -1,12 +1,7 @@
-defmodule Mix.Tasks.Hexpm.CheckNames do
-  use Mix.Task
+defmodule Hexpm.ReleaseTasks.CheckNames do
   require Logger
 
-  @shortdoc "Check package names for typosquatters"
-
-  def run(_args) do
-    Mix.Task.run("app.start")
-
+  def run() do
     threshold = Application.get_env(:hexpm, :levenshtein_threshold)
 
     threshold

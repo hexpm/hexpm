@@ -13,8 +13,18 @@ defmodule Hexpm.Repo do
     registry: 1
   }
 
+  # TODO: certs
+
   def init(_reason, opts) do
-    if url = System.get_env("DATABASE_URL") do
+    if url = System.get_env("HEXPM_DATABASE_URL") do
+      pool_size = String.to_integer(System.get_env("HEXPM_DATABASE_POOL_SIZE"))
+
+      opts =
+        opts
+        |> Keyword.put(:url, url)
+        |> Keyword.put(:pool_size, pool_size)
+        |> Keyword.put(:queue_size, pool_size * 5)
+
       {:ok, Keyword.put(opts, :url, url)}
     else
       {:ok, opts}

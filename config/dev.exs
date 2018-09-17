@@ -2,12 +2,11 @@ use Mix.Config
 
 config :hexpm,
   tmp_dir: Path.expand("tmp/dev"),
+  private_key: File.read!("test/fixtures/private.pem"),
   docs_url: "http://localhost:4002",
   cdn_url: "http://localhost:4000",
-  secret: "796f75666f756e64746865686578",
-  private_key: File.read!("test/fixtures/private.pem"),
-  billing_key: "hex_billing_key",
-  billing_url: "http://localhost:4001"
+  billing_url: "http://localhost:4001",
+  billing_key: "hex_billing_key"
 
 config :hexpm, Hexpm.Web.Endpoint,
   http: [port: 4000],

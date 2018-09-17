@@ -1,5 +1,4 @@
-defmodule Mix.Tasks.Hexpm.Stats do
-  use Mix.Task
+defmodule Hexpm.ReleaseTasks.Stats do
   require Logger
   import Ecto.Query, only: [from: 2]
   alias Hexpm.{Repo, Store, Utils}
@@ -13,8 +12,6 @@ defmodule Mix.Tasks.Hexpm.Stats do
     Release,
     ReleaseDownload
   }
-
-  @shortdoc "Calculates yesterdays download stats"
 
   @fastly_regex ~r<
     [^\040]+\040 # syslog
@@ -37,10 +34,11 @@ defmodule Mix.Tasks.Hexpm.Stats do
 
   @ets __MODULE__
 
-  def run(_args) do
-    Mix.Task.run("app.start")
-
-    buckets = Application.get_env(:hexpm, :logs_buckets)
+  def run() do
+    buckets =
+      Application.get_env(:hexpm, :logs_buckets)
+      |> String.split(";")
+      |> Enum.map(&String.split(&1, ","))
 
     try do
       {time, size} =

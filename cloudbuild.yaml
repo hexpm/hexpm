@@ -1,0 +1,45 @@
+steps:
+- name: 'gcr.io/cloud-builders/docker'
+  args: ['pull', 'gcr.io/$PROJECT_ID/hexpm-build:latest']
+  id: pull-build
+  waitFor: ['-']
+- name: 'gcr.io/cloud-builders/docker'
+  args: ['pull', 'gcr.io/$PROJECT_ID/hexpm:latest']
+  id: pull-app
+  waitFor: ['-']
+- name: 'gcr.io/cloud-builders/docker'
+  args:
+  - 'build'
+  - '-t'
+  - 'gcr.io/$PROJECT_ID/hexpm-build:latest'
+  - '-t'
+  - 'gcr.io/$PROJECT_ID/hexpm-build:$SHORT_SHA'
+  - '--cache-from'
+  - 'gcr.io/$PROJECT_ID/hexpm-build:latest'
+  - '--target'
+  - 'build'
+  - '.'
+  id: build-build
+  waitFor: ['pull-build']
+- name: 'gcr.io/cloud-builders/docker'
+  args:
+  - 'build'
+  - '-t'
+  - 'gcr.io/$PROJECT_ID/hexpm:latest'
+  - '-t'
+  - 'gcr.io/$PROJECT_ID/hexpm:$SHORT_SHA'
+  - '--cache-from'
+  - 'gcr.io/$PROJECT_ID/hexpm-build:latest'
+  - '--cache-from'
+  - 'gcr.io/$PROJECT_ID/hexpm:latest'
+  - '--target'
+  - 'app'
+  - '.'
+  id: build-app
+  waitFor: ['build-build', 'pull-app']
+
+images:
+- 'gcr.io/$PROJECT_ID/hexpm-build:latest'
+- 'gcr.io/$PROJECT_ID/hexpm:latest'
+- 'gcr.io/$PROJECT_ID/hexpm-build:$SHORT_SHA'
+- 'gcr.io/$PROJECT_ID/hexpm:$SHORT_SHA'
