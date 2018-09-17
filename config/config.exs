@@ -1,62 +1,26 @@
 use Mix.Config
 
-store = if System.get_env("HEX_S3_BUCKET"), do: Hexpm.Store.S3, else: Hexpm.Store.Local
-cdn = if System.get_env("HEX_FASTLY_KEY"), do: Hexpm.CDN.Fastly, else: Hexpm.CDN.Local
-billing = if System.get_env("HEX_BILLING_URL"), do: Hexpm.Billing.Hexpm, else: Hexpm.Billing.Local
-
-logs_buckets =
-  if value = System.get_env("HEX_LOGS_BUCKETS") do
-    value
-    |> String.split(";")
-    |> Enum.map(&String.split(&1, ","))
-  end
-
-smtp_port = String.to_integer(System.get_env("HEX_SES_PORT") || "587")
-
 config :hexpm,
   user_confirm: true,
   user_agent_req: true,
-  tmp_dir: Path.expand("tmp"),
-  app_host: System.get_env("APP_HOST"),
-  auth_gate: System.get_env("HEX_AUTH_GATE"),
-  secret: System.get_env("HEX_SECRET"),
-  private_key: System.get_env("HEX_SIGNING_KEY"),
-  cookie_sign_salt: "lYEJ7Wc8jFwNrPke",
-  cookie_encr_salt: "TZDiyTeFQ819hsC3",
-  store_impl: store,
-  s3_url: System.get_env("HEX_S3_URL"),
-  s3_bucket: System.get_env("HEX_S3_BUCKET"),
-  docs_bucket: System.get_env("HEX_DOCS_BUCKET"),
-  logs_buckets: logs_buckets,
-  docs_url: System.get_env("HEX_DOCS_URL"),
-  cdn_url: System.get_env("HEX_CDN_URL"),
-  email_host: System.get_env("HEX_EMAIL_HOST"),
-  ses_rate: System.get_env("HEX_SES_RATE"),
-  cdn_impl: cdn,
-  fastly_key: System.get_env("HEX_FASTLY_KEY"),
-  fastly_hexdocs: System.get_env("HEX_FASTLY_HEXDOCS"),
-  fastly_hexrepo: System.get_env("HEX_FASTLY_HEXREPO"),
-  billing_impl: billing,
-  billing_key: System.get_env("HEX_BILLING_KEY"),
-  billing_url: System.get_env("HEX_BILLING_URL"),
+  secret: "796f75666f756e64746865686578",
   support_email: "support@hex.pm",
-  levenshtein_threshold: System.get_env("HEX_LEVENSHTEIN_THRESHOLD")
+  store_impl: Hexpm.Store.Local,
+  cdn_impl: Hexpm.CDN.Local,
+  billing_impl: Hexpm.Billing.Local
 
 config :hexpm, ecto_repos: [Hexpm.Repo]
 
 config :ex_aws,
-  access_key_id: {:system, "HEX_S3_ACCESS_KEY"},
-  secret_access_key: {:system, "HEX_S3_SECRET_KEY"},
+  access_key_id: {:system, "HEXPM_S3_ACCESS_KEY"},
+  secret_access_key: {:system, "HEXPM_S3_SECRET_KEY"},
   json_codec: Jason
 
 config :bcrypt_elixir, log_rounds: 4
 
-config :porcelain, driver: Porcelain.Driver.Basic
-
 config :hexpm, Hexpm.Web.Endpoint,
   url: [host: "localhost"],
   root: Path.dirname(__DIR__),
-  secret_key_base: "Cc2cUvbm9x/uPD01xnKmpmU93mgZuht5cTejKf/Z2x0MmfqE1ZgHJ1/hSZwd8u4L",
   render_errors: [view: Hexpm.Web.ErrorView, accepts: ~w(html json elixir erlang)]
 
 config :hexpm, Hexpm.Repo,

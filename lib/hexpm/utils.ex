@@ -296,13 +296,6 @@ defmodule Hexpm.Utils do
     paginate(query, 1, count)
   end
 
-  def shell(cmd) do
-    IO.puts("$ " <> cmd)
-    stream = IO.binstream(:standard_io, :line)
-    result = Porcelain.shell(cmd, out: stream, err: :out)
-    result.status
-  end
-
   def parse_ip(ip) do
     parts = String.split(ip, ".")
 

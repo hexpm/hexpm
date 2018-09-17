@@ -2,10 +2,10 @@ use Mix.Config
 
 config :hexpm,
   tmp_dir: Path.expand("tmp/hex"),
+  private_key: File.read!("test/fixtures/private.pem"),
   user_confirm: false,
   docs_url: "http://localhost:4043",
-  cdn_url: "http://localhost:4043",
-  secret: "796f75666f756e64746865686578"
+  cdn_url: "http://localhost:4043"
 
 config :hexpm, Hexpm.Web.Endpoint,
   http: [port: 4043, protocol_options: [max_keepalive: :infinity]],

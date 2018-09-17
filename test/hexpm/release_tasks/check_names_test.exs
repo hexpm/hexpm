@@ -1,7 +1,7 @@
-defmodule Mix.Tasks.Hexpm.CheckNamesTest do
+defmodule Hexpm.ReleaseTasks.CheckNamesTest do
   use Hexpm.DataCase, async: true
 
-  alias Mix.Tasks.Hexpm.CheckNames
+  alias Hexpm.ReleaseTasks.CheckNames
 
   setup do
     {:ok, yesterday} = NaiveDateTime.new(Hexpm.Utils.utc_yesterday(), ~T[00:00:00.000])

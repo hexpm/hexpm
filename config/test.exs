@@ -3,11 +3,10 @@ use Mix.Config
 config :hexpm,
   user_agent_req: false,
   tmp_dir: Path.expand("tmp/test"),
-  cdn_url: "http://localhost:5000",
-  docs_url: "http://localhost:5002",
-  secret: "796f75666f756e64746865686578",
   private_key: File.read!("test/fixtures/private.pem"),
   public_key: File.read!("test/fixtures/public.pem"),
+  cdn_url: "http://localhost:5000",
+  docs_url: "http://localhost:5002",
   billing_impl: Hexpm.Billing.Mock
 
 config :hexpm, Hexpm.Web.Endpoint,

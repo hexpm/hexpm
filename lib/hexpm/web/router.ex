@@ -6,7 +6,6 @@ defmodule Hexpm.Web.Router do
 
   pipeline :browser do
     plug :accepts, ["html"]
-    plug :auth_gate
     plug :fetch_session
     plug :fetch_flash
     plug :protect_from_forgery
@@ -20,7 +19,6 @@ defmodule Hexpm.Web.Router do
   pipeline :upload do
     plug :read_body_finally
     plug :accepts, @accepted_formats
-    plug :auth_gate
     plug :user_agent
     plug :authenticate
     plug :validate_url
@@ -31,7 +29,6 @@ defmodule Hexpm.Web.Router do
 
   pipeline :api do
     plug :accepts, @accepted_formats
-    plug :auth_gate
     plug :user_agent
     plug :authenticate
     plug :validate_url
