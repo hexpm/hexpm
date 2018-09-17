@@ -10,20 +10,17 @@ defmodule Hexpm.Web.Plugs.Forwarded do
   end
 
   defp ip([ip | _]) do
-    ip = :binary.split(ip, ",", [:global]) |> List.last()
+    ip = String.split(ip, ",") |> List.last()
 
     if ip do
       ip = String.trim(ip)
-      parts = :binary.split(ip, ".", [:global])
-      parts = Enum.map(parts, &Integer.parse/1)
-      valid = Enum.all?(parts, &match?({int, ""} when int in 0..255, &1))
 
-      if length(parts) == 4 and valid do
-        parts = Enum.map(parts, &elem(&1, 0))
-        List.to_tuple(parts)
-      else
-        Logger.warn("Invalid IP: #{inspect(ip)}")
-        nil
+      case :inet.parse_address(to_charlist(ip)) do
+        {:ok, parsed_ip} ->
+          parsed_ip
+        {:error, _} ->
+          Logger.warn("Invalid IP: #{inspect(ip)}")
+          nil
       end
     end
   end
