@@ -145,8 +145,8 @@ defmodule Hexpm.Web.Dashboard.OrganizationView do
     end
   end
 
-  def payment_date(date) do
-    date |> NaiveDateTime.from_iso8601!() |> pretty_datetime()
+  def payment_date(iso_8601_datetime_string) do
+    iso_8601_datetime_string |> NaiveDateTime.from_iso8601!() |> pretty_datetime()
   end
 
   defp money(integer) when is_integer(integer) and integer >= 0 do

@@ -6,7 +6,7 @@
   <%= for {name, updated_at} <- @packages do %>
     <url>
       <loc>https://hex.pm<%= Routes.package_path(Endpoint, :show, name) %></loc>
-      <lastmod><%= Hexpm.Utils.binarify(updated_at) %>Z</lastmod>
+      <lastmod><%= Hexpm.Utils.binarify(updated_at) %></lastmod>
       <changefreq>daily</changefreq>
       <priority>0.8</priority>
     </url>

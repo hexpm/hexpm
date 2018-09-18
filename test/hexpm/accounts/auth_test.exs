@@ -37,7 +37,7 @@ defmodule Hexpm.Accounts.AuthTest do
 
     test "stores key usage information when used", %{user: user} do
       key = insert(:key, user: user)
-      timestamp = NaiveDateTime.utc_now()
+      timestamp = DateTime.utc_now()
 
       usage_info = %{
         used_at: timestamp,

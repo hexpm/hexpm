@@ -10,7 +10,7 @@ defmodule Hexpm.Web.EmailVerificationControllerTest do
           :email,
           verified: false,
           verification_key: Hexpm.Accounts.Auth.gen_key(),
-          verification_expiry: NaiveDateTime.utc_now()
+          verification_expiry: DateTime.utc_now()
         )
 
       user = insert(:user, emails: [email])

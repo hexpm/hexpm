@@ -209,6 +209,7 @@ defmodule Hexpm.Web.ControllerHelpers do
   end
 
   defp time_to_erl(%NaiveDateTime{} = datetime), do: NaiveDateTime.to_erl(datetime)
+  defp time_to_erl(%DateTime{} = datetime), do: NaiveDateTime.to_erl(datetime)
   defp time_to_erl(%Date{} = date), do: {Date.to_erl(date), {0, 0, 0}}
 
   def fetch_repository(conn, _opts) do
