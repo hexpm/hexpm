@@ -1,11 +1,11 @@
 # TODO: Don't rate limit conditional requests that return 304 Not Modified
-# NOTE: Does not rate limit accross multiple hosts
 
 defmodule Hexpm.Web.Plugs.Attack do
   use PlugAttack
   import Hexpm.Web.ControllerHelpers
   import Plug.Conn
   alias Hexpm.BlockAddress
+  alias Hexpm.Web.RateLimitPubSub
 
   @storage {PlugAttack.Storage.Ets, Hexpm.Web.Plugs.Attack}
 
@@ -25,33 +25,18 @@ defmodule Hexpm.Web.Plugs.Attack do
 
   rule "user throttle", conn do
     if user = conn.assigns.current_user do
-      throttle(
-        {:user, user.id},
-        storage: @storage,
-        limit: 500,
-        period: 60_000
-      )
+      user_throttle(user.id)
     end
   end
 
   rule "organization throttle", conn do
     if organization = conn.assigns.current_organization do
-      throttle(
-        {:organization, organization.id},
-        storage: @storage,
-        limit: 500,
-        period: 60_000
-      )
+      organization_throttle(organization.id)
     end
   end
 
   rule "ip throttle", conn do
-    throttle(
-      {:ip, conn.remote_ip},
-      storage: @storage,
-      limit: 100,
-      period: 60_000
-    )
+    ip_throttle(conn.remote_ip)
   end
 
   def allow_action(conn, {:throttle, data}, _opts) do
@@ -98,5 +83,77 @@ defmodule Hexpm.Web.Plugs.Attack do
 
   defp ip_string({a, b, c, d}) do
     "#{a}.#{b}.#{c}.#{d}"
+  end
+
+  def user_throttle(user_id, opts \\ []) do
+    key = {:user, user_id}
+    time = opts[:time] || System.system_time(:millisecond)
+    unless opts[:time], do: RateLimitPubSub.broadcast(key, time)
+
+    timed_throttle(
+      key,
+      time: time,
+      storage: @storage,
+      limit: 500,
+      period: 60_000
+    )
+  end
+
+  def organization_throttle(organization_id, opts \\ []) do
+    key = {:organization, organization_id}
+    time = opts[:time] || System.system_time(:millisecond)
+    unless opts[:time], do: RateLimitPubSub.broadcast(key, time)
+
+    timed_throttle(
+      key,
+      time: time,
+      storage: @storage,
+      limit: 500,
+      period: 60_000
+    )
+  end
+
+  def ip_throttle(ip, opts \\ []) do
+    key = {:ip, ip}
+    time = opts[:time] || System.system_time(:millisecond)
+    unless opts[:time], do: RateLimitPubSub.broadcast(key, time)
+
+    timed_throttle(
+      key,
+      time: time,
+      storage: @storage,
+      limit: 100,
+      period: 60_000
+    )
+  end
+
+  # From https://github.com/michalmuskala/plug_attack/blob/812ff857d0958f1a00a711273887d7187ae80a23/lib/rule.ex#L62
+  # Adding an option for `now`
+  defp timed_throttle(key, opts) do
+    if key do
+      do_throttle(key, opts)
+    else
+      nil
+    end
+  end
+
+  defp do_throttle(key, opts) do
+    storage = Keyword.fetch!(opts, :storage)
+    limit = Keyword.fetch!(opts, :limit)
+    period = Keyword.fetch!(opts, :period)
+    now = Keyword.fetch!(opts, :time)
+
+    expires_at = expires_at(now, period)
+    count = do_throttle(storage, key, now, period, expires_at)
+    rem = limit - count
+    data = [period: period, expires_at: expires_at, limit: limit, remaining: max(rem, 0)]
+    {if(rem >= 0, do: :allow, else: :block), {:throttle, data}}
+  end
+
+  defp expires_at(now, period), do: (div(now, period) + 1) * period
+
+  defp do_throttle({mod, opts}, key, now, period, expires_at) do
+    full_key = {:throttle, key, div(now, period)}
+    mod.increment(opts, full_key, 1, expires_at)
   end
 end

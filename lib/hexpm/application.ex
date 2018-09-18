@@ -9,6 +9,8 @@ defmodule Hexpm.Application do
     children = [
       supervisor(Hexpm.Repo, []),
       supervisor(Task.Supervisor, [[name: Hexpm.Tasks]]),
+      supervisor(Phoenix.PubSub.PG2, [[name: Hexpm.PubSub]]),
+      worker(Hexpm.Web.RateLimitPubSub, []),
       worker(PlugAttack.Storage.Ets, [Hexpm.Web.Plugs.Attack, [clean_period: 60_000]]),
       worker(Hexpm.Throttle, [[name: Hexpm.SESThrottle, rate: ses_rate(), unit: 1000]]),
       worker(Hexpm.Billing.Report, [[name: Hexpm.Billing.Report, interval: 60_000]]),

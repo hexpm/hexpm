@@ -49,6 +49,7 @@ defmodule Hexpm.MixProject do
       {:phoenix_ecto, "~> 3.1"},
       {:phoenix_html, "~> 2.3"},
       {:phoenix_live_reload, "~> 1.0", only: :dev},
+      {:phoenix_pubsub, "~> 1.0"},
       {:phoenix, "~> 1.3"},
       {:plug_attack, "~> 0.3"},
       {:plug, "~> 1.2"},
