@@ -217,10 +217,10 @@ defmodule Hexpm.Utils do
   def binarify(%Version{} = version, _opts), do: to_string(version)
 
   def binarify(%DateTime{} = dt, _opts),
-    do: dt |> Map.put(:microsecond, {0, 0}) |> DateTime.to_iso8601()
+    do: dt |> DateTime.truncate(:second) |> DateTime.to_iso8601()
 
   def binarify(%NaiveDateTime{} = ndt, _opts),
-    do: ndt |> Map.put(:microsecond, {0, 0}) |> NaiveDateTime.to_iso8601()
+    do: ndt |> NaiveDateTime.truncate(:second) |> NaiveDateTime.to_iso8601()
 
   def binarify(%{__struct__: atom}, _opts) when is_atom(atom),
     do: raise("not able to binarify %#{inspect(atom)}{}")
