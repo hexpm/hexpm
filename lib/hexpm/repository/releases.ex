@@ -68,7 +68,7 @@ defmodule Hexpm.Repository.Releases do
 
     Assets.push_docs_tarball(release, body)
 
-    now = NaiveDateTime.utc_now()
+    now = DateTime.utc_now()
     release_changeset = Ecto.Changeset.change(release, has_docs: true)
     package_changeset = Ecto.Changeset.change(release.package, docs_updated_at: now)
 
@@ -95,7 +95,7 @@ defmodule Hexpm.Repository.Releases do
   end
 
   def revert_docs(release, audit: audit_data) do
-    now = NaiveDateTime.utc_now()
+    now = DateTime.utc_now()
     release_changeset = Ecto.Changeset.change(release, has_docs: false)
     package_changeset = Ecto.Changeset.change(release.package, docs_updated_at: now)
 
