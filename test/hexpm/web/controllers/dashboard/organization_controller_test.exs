@@ -502,7 +502,8 @@ defmodule Hexpm.Web.Dashboard.RepositoryControllerTest do
     test "revoking an already revoked key throws an error", c do
       insert(:organization_user, organization: c.organization, user: c.user, role: "admin")
 
-      insert(:key,
+      insert(
+        :key,
         organization: c.organization,
         name: "computer",
         revoked_at: ~N"2017-01-01 00:00:00"

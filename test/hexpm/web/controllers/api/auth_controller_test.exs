@@ -95,7 +95,8 @@ defmodule Hexpm.Web.API.AuthControllerTest do
 
     test "with revoked key", %{user: user} do
       key =
-        insert(:key,
+        insert(
+          :key,
           user: user,
           permissions: [build(:key_permission, domain: "api")],
           revoked_at: ~N[2018-01-01 00:00:00]
@@ -107,7 +108,8 @@ defmodule Hexpm.Web.API.AuthControllerTest do
       |> response(401)
 
       key =
-        insert(:key,
+        insert(
+          :key,
           user: user,
           permissions: [build(:key_permission, domain: "api")],
           revoke_at: ~N[2018-01-01 00:00:00]
@@ -119,7 +121,8 @@ defmodule Hexpm.Web.API.AuthControllerTest do
       |> response(401)
 
       key =
-        insert(:key,
+        insert(
+          :key,
           user: user,
           permissions: [build(:key_permission, domain: "api")],
           revoke_at: ~N[2030-01-01 00:00:00]

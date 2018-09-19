@@ -33,7 +33,6 @@ defmodule Hexpm.ReleaseTasks.StatsTest do
     package2: package2,
     package4: package4
   } do
-
     buckets = [[nil, nil]]
     region = nil
     bucket = nil
