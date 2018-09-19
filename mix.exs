@@ -20,7 +20,7 @@ defmodule Hexpm.MixProject do
   def application() do
     [
       mod: {Hexpm.Application, []},
-      extra_applications: [:logger]
+      extra_applications: [:logger, :runtime_tools]
     ]
   end
 
@@ -45,6 +45,7 @@ defmodule Hexpm.MixProject do
       {:ex_aws, "~> 2.0"},
       {:ex_machina, "~> 2.0", only: [:dev, :test]},
       {:hackney, "~> 1.7"},
+      {:libcluster, "~> 3.0"},
       {:mox, "~> 0.3.1", only: :test},
       {:phoenix_ecto, "~> 3.1"},
       {:phoenix_html, "~> 2.3"},
