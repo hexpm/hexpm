@@ -10,7 +10,8 @@ defmodule Hexpm.Web.Plugs.Forwarded do
   end
 
   defp ip([ip | _]) do
-    ip = String.split(ip, ",") |> List.last()
+    # According to https://cloud.google.com/load-balancing/docs/https/#components
+    ip = String.split(ip, ",") |> Enum.at(-2)
 
     if ip do
       ip = String.trim(ip)
