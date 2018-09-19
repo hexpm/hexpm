@@ -38,6 +38,8 @@ defmodule Hexpm.Web.API.KeyControllerTest do
       assert a["url"] =~ "/api/keys/computer"
       assert a["authing_key"]
       assert b["name"] == "macbook"
+      # inserted_at ISO8601 datetime string should include a Z to indicate UTC
+      assert String.slice(b["inserted_at"], -1, 1) == "Z"
       assert b["secret"] == nil
       assert b["url"] =~ "/api/keys/macbook"
       refute b["authing_key"]

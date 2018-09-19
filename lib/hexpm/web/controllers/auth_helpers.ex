@@ -143,7 +143,7 @@ defmodule Hexpm.Web.AuthHelpers do
   defp usage_info(%{remote_ip: remote_ip} = conn) do
     %{
       ip: remote_ip,
-      used_at: NaiveDateTime.utc_now(),
+      used_at: DateTime.utc_now(),
       user_agent: get_req_header(conn, "user-agent")
     }
   end

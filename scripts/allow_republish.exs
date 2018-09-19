@@ -27,5 +27,5 @@ unless release do
   System.halt(1)
 end
 
-Ecto.Changeset.change(release, %{inserted_at: NaiveDateTime.utc_now()})
+Ecto.Changeset.change(release, %{inserted_at: DateTime.utc_now()})
 |> Hexpm.Repo.update!()

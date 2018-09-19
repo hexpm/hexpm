@@ -11,7 +11,7 @@ defmodule Hexpm.Accounts.Email do
     field :public, :boolean, default: false
     field :gravatar, :boolean, default: false
     field :verification_key, :string
-    field :verification_expiry, :naive_datetime
+    field :verification_expiry, :utc_datetime
 
     belongs_to :user, User
 
@@ -37,13 +37,13 @@ defmodule Hexpm.Accounts.Email do
     |> unique_constraint(:email, name: "emails_email_user_key")
     |> put_change(:verified, verified?)
     |> put_change(:verification_key, Auth.gen_key())
-    |> put_change(:verification_expiry, NaiveDateTime.utc_now())
+    |> put_change(:verification_expiry, DateTime.utc_now())
   end
 
   def verification(email) do
     change(email, %{
       verification_key: Auth.gen_key(),
-      verification_expiry: NaiveDateTime.utc_now()
+      verification_expiry: DateTime.utc_now()
     })
   end
 

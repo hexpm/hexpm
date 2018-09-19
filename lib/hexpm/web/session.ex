@@ -31,7 +31,7 @@ defmodule Hexpm.Web.Session do
       Session.by_id(id),
       set: [
         data: data,
-        updated_at: NaiveDateTime.utc_now()
+        updated_at: DateTime.utc_now()
       ]
     )
 

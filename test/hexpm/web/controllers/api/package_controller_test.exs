@@ -150,6 +150,9 @@ defmodule Hexpm.Web.API.PackageControllerTest do
       conn = get(build_conn(), "api/packages/#{package1.name}")
       result = json_response(conn, 200)
       assert result["name"] == package1.name
+      assert result["inserted_at"] == "2030-01-01T00:00:00.000000Z"
+      # updated_at ISO8601 datetime string should include a Z to indicate UTC
+      assert String.slice(result["updated_at"], -1, 1) == "Z"
       assert result["url"] =~ "/api/packages/#{package1.name}"
       assert result["html_url"] =~ "/packages/#{package1.name}"
       assert result["docs_html_url"] =~ "/#{package1.name}"

@@ -6,7 +6,7 @@
   <%= for {name, docs_updated_at} <- @packages do %>
     <url>
       <loc><%= Hexpm.Utils.docs_html_url(Organization.hexpm(), %Package{name: name}, nil) %></loc>
-      <lastmod><%= Hexpm.Utils.binarify(docs_updated_at) %>Z</lastmod>
+      <lastmod><%= Hexpm.Utils.binarify(docs_updated_at) %></lastmod>
       <changefreq>daily</changefreq>
       <priority>0.8</priority>
     </url>

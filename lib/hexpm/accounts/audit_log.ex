@@ -61,7 +61,7 @@ defmodule Hexpm.Accounts.AuditLog do
 
   def audit_many(multi, {user, user_agent}, action, list, opts \\ []) do
     fields = AuditLog.__schema__(:fields) -- [:id]
-    extra = %{inserted_at: NaiveDateTime.utc_now()}
+    extra = %{inserted_at: DateTime.utc_now()}
 
     entries =
       Enum.map(list, fn entry ->

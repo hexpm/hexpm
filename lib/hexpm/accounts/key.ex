@@ -11,12 +11,12 @@ defmodule Hexpm.Accounts.Key do
     field :secret_first, :string
     field :secret_second, :string
     field :public, :boolean, default: true
-    field :revoke_at, :naive_datetime
-    field :revoked_at, :naive_datetime
+    field :revoke_at, :utc_datetime
+    field :revoked_at, :utc_datetime
     timestamps()
 
     embeds_one :last_use, Use, on_replace: :delete do
-      field :used_at, :naive_datetime
+      field :used_at, :utc_datetime
       field :user_agent, :string
       field :ip, :string
     end
@@ -52,7 +52,8 @@ defmodule Hexpm.Accounts.Key do
         "resource" => organization
       })
 
-    revoke_at = NaiveDateTime.add(NaiveDateTime.utc_now(), @days_30)
+    revoke_at =
+      NaiveDateTime.add(NaiveDateTime.utc_now(), @days_30) |> DateTime.from_naive!("Etc/UTC")
 
     build_assoc(user, :keys)
     |> change()
@@ -93,34 +94,34 @@ defmodule Hexpm.Accounts.Key do
     )
   end
 
-  def revoke(key, revoked_at \\ NaiveDateTime.utc_now()) do
+  def revoke(key, revoked_at \\ DateTime.utc_now()) do
     key
     |> change()
     |> put_change(:revoked_at, key.revoked_at || revoked_at)
     |> validate_required(:revoked_at)
   end
 
-  def revoke_by_name(user_or_organization, key_name, revoked_at \\ NaiveDateTime.utc_now()) do
+  def revoke_by_name(user_or_organization, key_name, revoked_at \\ DateTime.utc_now()) do
     from(
       k in assoc(user_or_organization, :keys),
       where: k.name == ^key_name and not query_revoked(k),
       update: [
         set: [
           revoked_at: fragment("?", ^revoked_at),
-          updated_at: ^NaiveDateTime.utc_now()
+          updated_at: ^DateTime.utc_now()
         ]
       ]
     )
   end
 
-  def revoke_all(user_or_organization, revoked_at \\ NaiveDateTime.utc_now()) do
+  def revoke_all(user_or_organization, revoked_at \\ DateTime.utc_now()) do
     from(
       k in assoc(user_or_organization, :keys),
       where: not query_revoked(k),
       update: [
         set: [
           revoked_at: fragment("?", ^revoked_at),
-          updated_at: ^NaiveDateTime.utc_now()
+          updated_at: ^DateTime.utc_now()
         ]
       ]
     )
@@ -217,8 +218,7 @@ defmodule Hexpm.Accounts.Key do
 
   def revoked?(%Key{} = key) do
     not is_nil(key.revoked_at) or
-      (not is_nil(key.revoke_at) and
-         NaiveDateTime.compare(key.revoke_at, NaiveDateTime.utc_now()) == :lt)
+      (not is_nil(key.revoke_at) and DateTime.compare(key.revoke_at, DateTime.utc_now()) == :lt)
   end
 
   def associate_owner(nil, _owner), do: nil

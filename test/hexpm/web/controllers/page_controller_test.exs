@@ -46,8 +46,8 @@ defmodule Hexpm.Web.PageControllerTest do
     assert Enum.count(conn.assigns.package_new) == 3
 
     assert [
-             {^package1_name, %NaiveDateTime{}, %Hexpm.Repository.PackageMetadata{}, 7},
-             {^package2_name, %NaiveDateTime{}, %Hexpm.Repository.PackageMetadata{}, 2}
+             {^package1_name, %DateTime{}, %Hexpm.Repository.PackageMetadata{}, 7},
+             {^package2_name, %DateTime{}, %Hexpm.Repository.PackageMetadata{}, 2}
            ] = conn.assigns.package_top
   end
 end
