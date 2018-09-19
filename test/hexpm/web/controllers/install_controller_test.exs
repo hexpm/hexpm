@@ -1,22 +1,6 @@
 defmodule Hexpm.Web.InstallControllerTest do
   use Hexpm.ConnCase, async: true
 
-  test "forwarding" do
-    conn =
-      build_conn()
-      |> put_req_header("x-forwarded-for", "1.2.3.4")
-      |> get("installs/hex.ez")
-
-    assert conn.remote_ip == {1, 2, 3, 4}
-
-    conn =
-      build_conn()
-      |> put_req_header("x-forwarded-for", "1.2.3.4 , 5.6.7.8")
-      |> get("installs/hex.ez")
-
-    assert conn.remote_ip == {5, 6, 7, 8}
-  end
-
   test "installs" do
     cdn_url = Application.get_env(:hexpm, :cdn_url)
     Application.put_env(:hexpm, :cdn_url, "http://s3.hex.pm")
