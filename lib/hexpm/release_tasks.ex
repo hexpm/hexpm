@@ -36,7 +36,7 @@ defmodule Hexpm.ReleaseTasks do
   end
 
   defp start_app() do
-    Application.put_env(:phoenix, :serve_endpoints, true)
+    Application.put_env(:phoenix, :serve_endpoints, false)
     {:ok, _} = Application.ensure_all_started(:hexpm)
   end
 
@@ -48,6 +48,7 @@ defmodule Hexpm.ReleaseTasks do
     end)
 
     IO.puts("Starting repos...")
+    :ok = Application.load(:hexpm)
 
     Enum.each(@repos, fn repo ->
       {:ok, _} = repo.start_link(pool_size: 1)
