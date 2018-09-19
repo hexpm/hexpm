@@ -104,7 +104,8 @@ defmodule Hexpm.Accounts.User do
       where:
         u.username == ^username_or_email or
           ^username_or_email in fragment(
-            "SELECT emails.email FROM emails WHERE emails.user_id = ? and emails.verified and emails.public", u.id
+            "SELECT emails.email FROM emails WHERE emails.user_id = ? and emails.verified and emails.public",
+            u.id
           ),
       preload: ^preload
     )

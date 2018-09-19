@@ -3,7 +3,7 @@ defmodule Hexpm.Web.RateLimitPubSub do
   alias Hexpm.Web.Plugs.Attack
 
   def start_link() do
-    GenServer.start_link(__MODULE__, [], [name: __MODULE__])
+    GenServer.start_link(__MODULE__, [], name: __MODULE__)
   end
 
   def broadcast(key, time) do

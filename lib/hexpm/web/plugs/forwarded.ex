@@ -18,6 +18,7 @@ defmodule Hexpm.Web.Plugs.Forwarded do
       case :inet.parse_address(to_charlist(ip)) do
         {:ok, parsed_ip} ->
           parsed_ip
+
         {:error, _} ->
           Logger.warn("Invalid IP: #{inspect(ip)}")
           nil
