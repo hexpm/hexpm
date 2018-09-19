@@ -4,11 +4,13 @@ defmodule Hexpm.Application do
   def start(_type, _args) do
     import Supervisor.Spec, warn: false
 
+    topologies = Application.get_env(:hexpm, :topologies) || []
     Hexpm.BlockAddress.start()
 
     children = [
       supervisor(Hexpm.Repo, []),
       supervisor(Task.Supervisor, [[name: Hexpm.Tasks]]),
+      supervisor(Cluster.Supervisor, [[topologies, [name: Hexpm.ClusterSupervisor]]]),
       supervisor(Phoenix.PubSub.PG2, [[name: Hexpm.PubSub]]),
       worker(Hexpm.Web.RateLimitPubSub, []),
       worker(PlugAttack.Storage.Ets, [Hexpm.Web.Plugs.Attack, [clean_period: 60_000]]),

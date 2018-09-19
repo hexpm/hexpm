@@ -44,7 +44,6 @@ USER nobody
 
 COPY --from=build /app/_build/prod/rel/hexpm ./
 
-ENV HOME=/app
-ENV REPLACE_OS_VARS=true
+ENV HOME=/app REPLACE_OS_VARS=true BEAM_PORT=14000
 
-ENTRYPOINT ["/app/bin/hexpm"]
+EXPOSE $BEAM_PORT

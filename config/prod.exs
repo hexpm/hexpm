@@ -39,6 +39,19 @@ config :rollbax,
   enabled: true,
   enable_crash_reports: true
 
+config :hexpm,
+  topologies: [
+    kubernetes: [
+      strategy: Cluster.Strategy.Kubernetes,
+      config: [
+        mode: :dns,
+        kubernetes_node_basename: "hexpm",
+        kubernetes_selector: "app=hexpm",
+        polling_interval: 10_000
+      ]
+    ]
+  ]
+
 config :phoenix, :serve_endpoints, true
 
 config :sasl, sasl_error_logger: false

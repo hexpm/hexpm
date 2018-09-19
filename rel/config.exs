@@ -15,4 +15,6 @@ release :hexpm do
     seed: "rel/commands/seed.sh",
     stats: "rel/commands/stats.sh"
   ])
+  set(cookie: "")
+  set(vm_args: "rel/vm.args")
 end
