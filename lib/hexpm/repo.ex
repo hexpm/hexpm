@@ -17,7 +17,8 @@ defmodule Hexpm.Repo do
 
   def init(_reason, opts) do
     if url = System.get_env("HEXPM_DATABASE_URL") do
-      pool_size = String.to_integer(System.get_env("HEXPM_DATABASE_POOL_SIZE"))
+      pool_size_env = System.get_env("HEXPM_DATABASE_POOL_SIZE")
+      pool_size = opts[:pool_size] || String.to_integer(pool_size_env)
 
       opts =
         opts
