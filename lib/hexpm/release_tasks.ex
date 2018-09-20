@@ -37,6 +37,7 @@ defmodule Hexpm.ReleaseTasks do
 
   defp start_app() do
     Application.put_env(:phoenix, :serve_endpoints, false)
+    Application.put_env(:hexpm, :topologies, [])
     {:ok, _} = Application.ensure_all_started(:hexpm)
   end
 
@@ -65,7 +66,7 @@ defmodule Hexpm.ReleaseTasks do
   end
 
   defp run_migrations_for(repo) do
-    app = Keyword.get(repo.config, :otp_app)
+    app = Keyword.get(repo.config(), :otp_app)
     IO.puts("Running migrations for #{app}")
     migrations_path = priv_path_for(repo, "migrations")
     Ecto.Migrator.run(repo, migrations_path, :up, all: true)
@@ -86,7 +87,7 @@ defmodule Hexpm.ReleaseTasks do
   end
 
   defp priv_path_for(repo, filename) do
-    app = Keyword.get(repo.config, :otp_app)
+    app = Keyword.get(repo.config(), :otp_app)
     priv_dir = Application.app_dir(app, "priv")
 
     Path.join([priv_dir, "repo", filename])
