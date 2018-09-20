@@ -101,7 +101,7 @@ defmodule Mix.Tasks.Hexpm.Stats do
 
           Repo.refresh_view(PackageDownload)
           Repo.refresh_view(ReleaseDownload)
-        end)
+        end, timeout: 60_000)
       end
 
       num
