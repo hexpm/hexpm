@@ -1,5 +1,6 @@
 defmodule Hexpm.ReleaseTasks do
   alias Hexpm.ReleaseTasks.{CheckNames, Stats}
+  require Logger
 
   @repo_apps [
     :crypto,
@@ -11,27 +12,47 @@ defmodule Hexpm.ReleaseTasks do
   @repos Application.get_env(:hexpm, :ecto_repos, [])
 
   def check_names() do
+    {:ok, _} = Application.ensure_all_started(:logger)
+    Logger.info("[job] running check_names")
     start_app()
+
     CheckNames.run()
+
+    Logger.info("[job] finished check_names")
     stop()
   end
 
   def migrate() do
+    {:ok, _} = Application.ensure_all_started(:logger)
+    Logger.info("[task] running migrate")
     start_repo()
+
     run_migrations()
+
+    Logger.info("[task] finished migrate")
     stop()
   end
 
   def seed() do
+    {:ok, _} = Application.ensure_all_started(:logger)
+    Logger.info("[task] running seed")
     start_repo()
+
     run_migrations()
+
+    Logger.info("[task] finished seed")
     run_seeds()
     stop()
   end
 
   def stats() do
+    {:ok, _} = Application.ensure_all_started(:logger)
+    Logger.info("[job] running stats")
     start_app()
+
     Stats.run()
+
+    Logger.info("[job] finished stats")
     stop()
   end
 
