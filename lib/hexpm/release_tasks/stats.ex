@@ -46,17 +46,11 @@ defmodule Hexpm.ReleaseTasks.Stats do
           run(Utils.utc_yesterday(), buckets)
         end)
 
-      Logger.warn("STATS_JOB_COMPLETED #{size} downloads (#{div(time, 1000)}ms)")
+      Logger.info("[stats] completed #{size} downloads (#{div(time, 1000)}ms)")
     catch
       exception ->
         stacktrace = System.stacktrace()
-        Logger.error("STATS_JOB_FAILED")
-
-        System.at_exit(fn
-          0 -> System.halt(1)
-          _ -> :ok
-        end)
-
+        Logger.error("[stats] failed")
         reraise exception, stacktrace
     end
   end

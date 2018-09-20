@@ -7,9 +7,15 @@ defmodule Hexpm.ReleaseTasks.CheckNames do
     threshold
     |> to_integer()
     |> find_candidates()
+    |> log_result()
     |> send_email(threshold)
 
     :ok
+  end
+
+  defp log_result(candidates) do
+    Logger.info("[check_names] job found #{length(candidates)} candidates")
+    candidates
   end
 
   defp send_email([], _threshold), do: :ok
