@@ -57,7 +57,6 @@ config :ecto, json_library: Jason
 config :rollbax, enabled: false
 
 config :logger, :console,
-  format: "$time $metadata[$level] $message\n",
-  metadata: [:request_id]
+  format: "$time $metadata[$level] $message\n"
 
 import_config "#{Mix.env()}.exs"
