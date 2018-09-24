@@ -93,7 +93,7 @@ defmodule Hexpm.Web.API.ReleaseController do
   end
 
   defp parse_tarball(conn, _opts) do
-    case Hexpm.Web.ReleaseTar.metadata(conn.params["body"]) do
+    case release_metadata(conn.params["body"]) do
       {:ok, meta, checksum} ->
         params = Map.put(conn.params, "name", meta["name"])
 
@@ -107,7 +107,7 @@ defmodule Hexpm.Web.API.ReleaseController do
   end
 
   defp handle_tarball(conn, organization, package, user, body) do
-    case Hexpm.Web.ReleaseTar.metadata(body) do
+    case release_metadata(body) do
       {:ok, meta, checksum} ->
         request_id = List.first(get_req_header(conn, "x-request-id"))
         log_tarball(organization.name, meta["name"], meta["version"], request_id, body)
@@ -171,5 +171,15 @@ defmodule Hexpm.Web.API.ReleaseController do
     filename = "#{organization}-#{package}-#{version}-#{request_id}.tar.gz"
     key = Path.join(["debug", "tarballs", filename])
     Hexpm.Store.put(nil, :s3_bucket, key, body, [])
+  end
+
+  defp release_metadata(tarball) do
+    case :hex_tarball.unpack(tarball, :memory) do
+      {:ok, %{checksum: checksum, metadata: metadata}} ->
+        {:ok, metadata, checksum}
+
+      {:error, reason} ->
+        {:error, List.to_string(:hex_tarball.format_error(reason))}
+    end
   end
 end
