@@ -5,10 +5,11 @@ defmodule Hexpm.Application do
     import Supervisor.Spec, warn: false
 
     topologies = Application.get_env(:hexpm, :topologies) || []
+    read_only_mode()
     Hexpm.BlockAddress.start()
 
     children = [
-      supervisor(Hexpm.Repo, []),
+      supervisor(Hexpm.RepoBase, []),
       supervisor(Task.Supervisor, [[name: Hexpm.Tasks]]),
       supervisor(Cluster.Supervisor, [[topologies, [name: Hexpm.ClusterSupervisor]]]),
       supervisor(Phoenix.PubSub.PG2, [[name: Hexpm.PubSub]]),
@@ -48,5 +49,10 @@ defmodule Hexpm.Application do
     end
   else
     def shutdown_on_eof(), do: nil
+  end
+
+  defp read_only_mode() do
+    mode = System.get_env("HEXPM_READ_ONLY_MODE") == 1
+    Application.put_env(:hexpm, :read_only_mode, mode)
   end
 end

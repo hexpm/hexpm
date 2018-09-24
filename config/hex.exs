@@ -19,7 +19,7 @@ config :hexpm, HexWeb.Repo,
   hostname: "localhost",
   pool_size: 10
 
-config :hexpm, Hexpm.Repo,
+config :hexpm, Hexpm.RepoBase,
   adapter: Ecto.Adapters.Postgres,
   username: "postgres",
   password: "postgres",

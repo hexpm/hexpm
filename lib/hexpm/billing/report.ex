@@ -14,11 +14,13 @@ defmodule Hexpm.Billing.Report do
   end
 
   def handle_info(:update, opts) do
-    report = report()
-    organizations = organizations()
+    if Repo.write_mode?() do
+      report = report()
+      organizations = organizations()
 
-    set_active(organizations, report)
-    set_inactive(organizations, report)
+      set_active(organizations, report)
+      set_inactive(organizations, report)
+    end
 
     Process.send_after(self(), :update, opts[:interval])
     {:noreply, opts}

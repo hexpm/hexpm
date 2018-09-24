@@ -50,4 +50,16 @@ defmodule Hexpm.Accounts.Keys do
     |> audit_many(audit_data, "key.remove", all(user_or_organization))
     |> Repo.transaction()
   end
+
+  def update_last_use(%Key{public: true} = key, usage_info) do
+    if Repo.write_mode?() do
+      key
+      |> Key.update_last_use(usage_info)
+      |> Repo.update!()
+    end
+  end
+
+  def update_last_use(%Key{public: false} = key, _usage_info) do
+    key
+  end
 end

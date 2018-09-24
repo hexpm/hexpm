@@ -37,7 +37,7 @@ defmodule Hexpm.ReleaseTasks.CheckNames do
     ORDER BY pall.name, dist
     """
 
-    Ecto.Adapters.SQL.query!(Hexpm.Repo, query, [threshold])
+    Hexpm.Repo.query!(query, [threshold])
     |> Map.fetch!(:rows)
     |> Enum.uniq_by(fn [a, b, _] -> if a > b, do: "#{a}-#{b}", else: "#{b}-#{a}" end)
   end

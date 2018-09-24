@@ -10,6 +10,7 @@ defmodule Hexpm.Repository.RegistryBuilder do
   require Logger
   alias Hexpm.Accounts.Organization
   alias Hexpm.Repository.{Package, Release, Requirement, Install}
+  alias Hexpm.Repo
 
   @ets_table :hex_registry
   @version 4
@@ -25,11 +26,11 @@ defmodule Hexpm.Repository.RegistryBuilder do
   end
 
   defp locked_build(fun) do
-    Hexpm.Repo.transaction(
+    Repo.transaction(
       fn ->
-        Hexpm.Repo.advisory_lock(:registry, timeout: @lock_timeout)
+        Repo.advisory_lock(:registry, timeout: @lock_timeout)
         fun.()
-        Hexpm.Repo.advisory_unlock(:registry)
+        Repo.advisory_unlock(:registry)
       end,
       timeout: @transaction_timeout
     )
@@ -379,7 +380,7 @@ defmodule Hexpm.Repository.RegistryBuilder do
       where: p.organization_id == ^organization.id,
       select: {p.id, p.name}
     )
-    |> Hexpm.Repo.all()
+    |> Repo.all()
     |> Enum.into(%{})
   end
 
@@ -418,7 +419,7 @@ defmodule Hexpm.Repository.RegistryBuilder do
           req.optional
         }
       )
-      |> Hexpm.Repo.all()
+      |> Repo.all()
 
     Enum.reduce(reqs, %{}, fn {rel_id, repo, dep_name, app, req, opt}, map ->
       tuple = {repo, dep_name, app, req, opt}
@@ -428,7 +429,7 @@ defmodule Hexpm.Repository.RegistryBuilder do
 
   defp installs(%Organization{id: 1}) do
     Install.all()
-    |> Hexpm.Repo.all()
+    |> Repo.all()
     |> Enum.map(&{&1.hex, &1.elixirs})
   end
 

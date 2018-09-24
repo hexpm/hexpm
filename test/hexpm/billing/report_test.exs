@@ -1,7 +1,7 @@
 defmodule Hexpm.Billing.ReportTest do
   use Hexpm.DataCase, async: true
   alias Ecto.Adapters.SQL.Sandbox
-  alias Hexpm.Billing
+  alias Hexpm.{Billing, RepoBase}
   alias Hexpm.Accounts.Organizations
 
   test "set organization to active" do
@@ -15,7 +15,7 @@ defmodule Hexpm.Billing.ReportTest do
     end)
 
     {:ok, pid} = Billing.Report.start_link(interval: 60_000)
-    Sandbox.allow(Repo, self(), pid)
+    Sandbox.allow(RepoBase, self(), pid)
     Mox.allow(Billing.Mock, self(), pid)
     send(pid, :update)
     :sys.get_state(pid)
@@ -35,7 +35,7 @@ defmodule Hexpm.Billing.ReportTest do
     Mox.stub(Billing.Mock, :report, fn -> [] end)
 
     {:ok, pid} = Billing.Report.start_link(interval: 60_000)
-    Sandbox.allow(Repo, self(), pid)
+    Sandbox.allow(RepoBase, self(), pid)
     Mox.allow(Billing.Mock, self(), pid)
     send(pid, :update)
     :sys.get_state(pid)
