@@ -14,7 +14,7 @@ config :hexpm, Hexpm.Web.Endpoint,
   code_reloader: true,
   cache_static_lookup: false,
   check_origin: false,
-  pubsub: [name: Hexpm.PubSub, adapter: Phoenix.PubSub.PG2],
+  pubsub: [name: Hexpm.PubSub],
   watchers: [
     node: [
       "node_modules/brunch/bin/brunch",
