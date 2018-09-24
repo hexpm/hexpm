@@ -20,6 +20,8 @@
     <![endif]-->
 
     <section class="content-wrapper">
+    <%= render "_read_only_mode.html" %>
+
     <nav class="navbar navbar-default">
       <div class="container">
         <div class="navbar-header">
