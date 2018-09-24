@@ -21,29 +21,37 @@ defmodule Hexpm.Web.Session do
   end
 
   def put(_conn, nil, data, _opts) do
-    Repo.write_mode!()
     session = Session.build(data)
-    session = if run?(), do: Repo.insert!(session), else: Ecto.Changeset.apply_changes(session)
+
+    session =
+      if run?() and Repo.write_mode?() do
+        Repo.insert!(session)
+      else
+        Ecto.Changeset.apply_changes(session)
+      end
+
     build_cookie(session)
   end
 
   def put(_conn, {id, token}, data, _opts) do
-    Repo.write_mode!()
-
-    Repo.update_all(
-      Session.by_id(id),
-      set: [
-        data: data,
-        updated_at: DateTime.utc_now()
-      ]
-    )
+    if Repo.write_mode?() do
+      Repo.update_all(
+        Session.by_id(id),
+        set: [
+          data: data,
+          updated_at: DateTime.utc_now()
+        ]
+      )
+    end
 
     build_cookie(id, token)
   end
 
   def delete(_conn, {id, _token}, _opts) do
-    Repo.write_mode!()
-    Repo.delete_all(Session.by_id(id))
+    if Repo.write_mode?() do
+      Repo.delete_all(Session.by_id(id))
+    end
+
     :ok
   end
 
