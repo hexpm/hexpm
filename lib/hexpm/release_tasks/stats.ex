@@ -73,27 +73,30 @@ defmodule Hexpm.ReleaseTasks.Stats do
       num = @ets |> ets_stream() |> Enum.reduce(0, fn {_, count}, acc -> count + acc end)
 
       unless dryrun? do
-        Repo.transaction(fn ->
-          Repo.delete_all(from(d in Download, where: d.day == ^date))
+        Repo.transaction(
+          fn ->
+            Repo.delete_all(from(d in Download, where: d.day == ^date))
 
-          @ets
-          |> ets_stream()
-          |> Stream.flat_map(fn {{organization, package, version}, count} ->
-            organization_id = organizations[organization]
-            package_id = packages[{organization_id, package}]
+            @ets
+            |> ets_stream()
+            |> Stream.flat_map(fn {{organization, package, version}, count} ->
+              organization_id = organizations[organization]
+              package_id = packages[{organization_id, package}]
 
-            if release_id = releases[{package_id, version}] do
-              [%{release_id: release_id, downloads: count, day: date}]
-            else
-              []
-            end
-          end)
-          |> Stream.chunk_every(1000, 1000, [])
-          |> Enum.each(&Repo.insert_all(Download, &1))
+              if release_id = releases[{package_id, version}] do
+                [%{release_id: release_id, downloads: count, day: date}]
+              else
+                []
+              end
+            end)
+            |> Stream.chunk_every(1000, 1000, [])
+            |> Enum.each(&Repo.insert_all(Download, &1))
 
-          Repo.refresh_view(PackageDownload)
-          Repo.refresh_view(ReleaseDownload)
-        end, timeout: 60_000)
+            Repo.refresh_view(PackageDownload)
+            Repo.refresh_view(ReleaseDownload)
+          end,
+          timeout: 60_000
+        )
       end
 
       num
