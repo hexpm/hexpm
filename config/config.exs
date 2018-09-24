@@ -12,8 +12,8 @@ config :hexpm,
 config :hexpm, ecto_repos: [Hexpm.RepoBase]
 
 config :ex_aws,
-  access_key_id: {:system, "HEXPM_S3_ACCESS_KEY"},
-  secret_access_key: {:system, "HEXPM_S3_SECRET_KEY"},
+  access_key_id: {:system, "HEXPM_AWS_ACCESS_KEY_ID"},
+  secret_access_key: {:system, "HEXPM_AWS_ACCESS_KEY_SECRET"},
   json_codec: Jason
 
 config :bcrypt_elixir, log_rounds: 4
