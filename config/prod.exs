@@ -27,7 +27,7 @@ config :hexpm, Hexpm.Web.Endpoint,
   load_from_system_env: true,
   cache_static_manifest: "priv/static/cache_manifest.json"
 
-config :hexpm, Hexpm.Repo,
+config :hexpm, Hexpm.RepoBase,
   adapter: Ecto.Adapters.Postgres,
   ssl: true
 

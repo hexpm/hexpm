@@ -37,7 +37,7 @@ config :logger, :console, format: "[$level] $message\n"
 
 config :phoenix, :stacktrace_depth, 20
 
-config :hexpm, Hexpm.Repo,
+config :hexpm, Hexpm.RepoBase,
   adapter: Ecto.Adapters.Postgres,
   username: "postgres",
   password: "postgres",

@@ -18,7 +18,7 @@ defmodule Hexpm.Web.Plugs.AttackTest do
   end
 
   setup do
-    :ok = Ecto.Adapters.SQL.Sandbox.checkout(Hexpm.Repo)
+    :ok = Ecto.Adapters.SQL.Sandbox.checkout(Hexpm.RepoBase)
     PlugAttack.Storage.Ets.clean(Hexpm.Web.Plugs.Attack)
     %{user: insert(:user)}
   end

@@ -21,12 +21,15 @@ defmodule Hexpm.Web.Session do
   end
 
   def put(_conn, nil, data, _opts) do
+    Repo.write_mode!()
     session = Session.build(data)
     session = if run?(), do: Repo.insert!(session), else: Ecto.Changeset.apply_changes(session)
     build_cookie(session)
   end
 
   def put(_conn, {id, token}, data, _opts) do
+    Repo.write_mode!()
+
     Repo.update_all(
       Session.by_id(id),
       set: [
@@ -39,6 +42,7 @@ defmodule Hexpm.Web.Session do
   end
 
   def delete(_conn, {id, _token}, _opts) do
+    Repo.write_mode!()
     Repo.delete_all(Session.by_id(id))
     :ok
   end
@@ -54,7 +58,7 @@ defmodule Hexpm.Web.Session do
   # Hack around transaction being rolled back in tests
   if Mix.env() == :test do
     defp run?() do
-      conn = Process.get({Ecto.Adapters.SQL, Hexpm.Repo.Pool})
+      conn = Process.get({Ecto.Adapters.SQL, Hexpm.RepoBase.Pool})
 
       case conn && Process.get({DBConnection, conn.conn_ref}) do
         {:failed, _} -> false

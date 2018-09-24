@@ -94,24 +94,32 @@ defmodule Hexpm.Repository.PackageTest do
     package1 = insert(:package, organization_id: organization.id)
     package2 = insert(:package)
 
-    assert Package.all([organization], 1, 10, "#{organization.name}/#{package1.name}", nil, nil)
-           |> Repo.pluck(:name) == [package1.name]
+    assert [package1.name] ==
+             Package.all([organization], 1, 10, "#{organization.name}/#{package1.name}", nil, nil)
+             |> Repo.all()
+             |> Enum.map(& &1.name)
 
-    assert Package.all([organization], 1, 10, "#{organization.name}/#{package2.name}", nil, nil)
-           |> Repo.pluck(:name) != [package2.name]
+    assert [package2.name] !=
+             Package.all([organization], 1, 10, "#{organization.name}/#{package2.name}", nil, nil)
+             |> Repo.all()
+             |> Enum.map(& &1.name)
 
-    assert Package.all(
-             [other_organization],
-             1,
-             10,
-             "#{organization.name}/#{package1.name}",
-             nil,
-             nil
-           )
-           |> Repo.pluck(:name) == []
+    assert [] ==
+             Package.all(
+               [other_organization],
+               1,
+               10,
+               "#{organization.name}/#{package1.name}",
+               nil,
+               nil
+             )
+             |> Repo.all()
+             |> Enum.map(& &1.name)
 
-    assert Package.all([other_organization], 1, 10, "#{package1.name}", nil, nil)
-           |> Repo.pluck(:name) == []
+    assert [] ==
+             Package.all([other_organization], 1, 10, "#{package1.name}", nil, nil)
+             |> Repo.all()
+             |> Enum.map(& &1.name)
   end
 
   test "search extra metadata", %{user: user, organization: organization} do
@@ -161,11 +169,14 @@ defmodule Hexpm.Repository.PackageTest do
     Hexpm.Repo.refresh_view(Hexpm.Repository.PackageDependant)
 
     assert ["ecto", "phoenix"] =
-             Package.all([organization], 1, 10, "depends:poison", :name, nil) |> Repo.pluck(:name)
+             Package.all([organization], 1, 10, "depends:poison", :name, nil)
+             |> Repo.all()
+             |> Enum.map(& &1.name)
 
     assert ["phoenix"] =
              Package.all([organization], 1, 10, "depends:poison depends:ecto", nil, nil)
-             |> Repo.pluck(:name)
+             |> Repo.all()
+             |> Enum.map(& &1.name)
   end
 
   test "sort packages by total downloads", %{organization: organization} do
@@ -176,8 +187,10 @@ defmodule Hexpm.Repository.PackageTest do
 
     :ok = Hexpm.Repo.refresh_view(Hexpm.Repository.PackageDownload)
 
-    assert [^phoenix_id, ^ecto_id] =
-             Package.all([organization], 1, 10, nil, :total_downloads, nil) |> Repo.pluck(:id)
+    assert [phoenix_id, ecto_id] ==
+             Package.all([organization], 1, 10, nil, :total_downloads, nil)
+             |> Repo.all()
+             |> Enum.map(& &1.id)
   end
 
   test "sort packages by recent downloads", %{organization: organization} do
@@ -205,7 +218,9 @@ defmodule Hexpm.Repository.PackageTest do
 
     :ok = Hexpm.Repo.refresh_view(Hexpm.Repository.PackageDownload)
 
-    assert [^decimal_id, ^ecto_id, ^phoenix_id] =
-             Package.all([organization], 1, 10, nil, :recent_downloads, nil) |> Repo.pluck(:id)
+    assert [decimal_id, ecto_id, phoenix_id] ==
+             Package.all([organization], 1, 10, nil, :recent_downloads, nil)
+             |> Repo.all()
+             |> Enum.map(& &1.id)
   end
 end

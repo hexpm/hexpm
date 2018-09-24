@@ -5,5 +5,5 @@ File.rm_rf(tmp_dir)
 File.mkdir_p(tmp_dir)
 
 Hexpm.BlockAddress.reload()
-Ecto.Adapters.SQL.Sandbox.mode(Hexpm.Repo, :manual)
+Ecto.Adapters.SQL.Sandbox.mode(Hexpm.RepoBase, :manual)
 Hexpm.Fake.start()

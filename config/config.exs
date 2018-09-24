@@ -9,7 +9,7 @@ config :hexpm,
   cdn_impl: Hexpm.CDN.Local,
   billing_impl: Hexpm.Billing.Local
 
-config :hexpm, ecto_repos: [Hexpm.Repo]
+config :hexpm, ecto_repos: [Hexpm.RepoBase]
 
 config :ex_aws,
   access_key_id: {:system, "HEXPM_S3_ACCESS_KEY"},
@@ -23,7 +23,8 @@ config :hexpm, Hexpm.Web.Endpoint,
   root: Path.dirname(__DIR__),
   render_errors: [view: Hexpm.Web.ErrorView, accepts: ~w(html json elixir erlang)]
 
-config :hexpm, Hexpm.Repo,
+config :hexpm, Hexpm.RepoBase,
+  priv: "priv/repo",
   pool: DBConnection.Sojourn,
   protector: false,
   overload_alarm: false,
@@ -56,7 +57,6 @@ config :ecto, json_library: Jason
 
 config :rollbax, enabled: false
 
-config :logger, :console,
-  format: "$time $metadata[$level] $message\n"
+config :logger, :console, format: "$time $metadata[$level] $message\n"
 
 import_config "#{Mix.env()}.exs"

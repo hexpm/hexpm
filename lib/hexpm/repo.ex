@@ -5,9 +5,65 @@ if Mix.env() == :hex do
   end
 end
 
+defmodule Hexpm.RepoHelpers do
+  defmacro defwrite(fun) do
+    # Please don't yell at me =(
+    {name, args, as, as_args} = Kernel.Utils.defdelegate(fun, to: RepoBase)
+
+    quote do
+      def unquote(name)(unquote_splicing(args)) do
+        write_mode!()
+        Hexpm.RepoBase.unquote(as)(unquote_splicing(as_args))
+      end
+    end
+  end
+end
+
 defmodule Hexpm.Repo do
+  import Hexpm.RepoHelpers
+  alias Hexpm.RepoBase
+
+  defdelegate aggregate(queryable, aggregate, field, opts \\ []), to: RepoBase
+  defdelegate all(queryable, opts \\ []), to: RepoBase
+  defdelegate get_by!(queryable, clauses, opts \\ []), to: RepoBase
+  defdelegate get_by(queryable, clauses, opts \\ []), to: RepoBase
+  defdelegate get!(queryable, id, opts \\ []), to: RepoBase
+  defdelegate get(queryable, id, opts \\ []), to: RepoBase
+  defdelegate one!(queryable, opts \\ []), to: RepoBase
+  defdelegate one(queryable, opts \\ []), to: RepoBase
+  defdelegate preload(structs_or_struct_or_nil, preloads, opts \\ []), to: RepoBase
+
+  defwrite(advisory_lock(key, opts \\ []))
+  defwrite(advisory_unlock(key, opts \\ []))
+  defwrite(delete_all(queryable, opts \\ []))
+  defwrite(delete!(struct_or_changeset, opts \\ []))
+  defwrite(delete(struct_or_changeset, opts \\ []))
+  defwrite(insert_all(queryable, opts \\ []))
+  defwrite(insert_or_update(changeset, opts \\ []))
+  defwrite(insert!(struct_or_changeset, opts \\ []))
+  defwrite(insert(struct_or_changeset, opts \\ []))
+  defwrite(query!(sql, params \\ [], opts \\ []))
+  defwrite(query(sql, params \\ [], opts \\ []))
+  defwrite(refresh_view(schema))
+  defwrite(rollback(value))
+  defwrite(transaction(fun_or_multi, opts \\ []))
+  defwrite(update_all(queryable, opts \\ []))
+  defwrite(update!(changeset, opts \\ []))
+  defwrite(update(changeset, opts \\ []))
+
+  def write_mode?() do
+    not Application.get_env(:hexpm, :read_only_mode, false)
+  end
+
+  def write_mode!() do
+    unless write_mode?() do
+      raise Hexpm.WriteInReadOnlyMode
+    end
+  end
+end
+
+defmodule Hexpm.RepoBase do
   use Ecto.Repo, otp_app: :hexpm
-  import Ecto.Query
 
   @advisory_locks %{
     registry: 1
@@ -35,14 +91,13 @@ defmodule Hexpm.Repo do
   def refresh_view(schema) do
     source = schema.__schema__(:source)
 
-    {:ok, _} = Ecto.Adapters.SQL.query(Hexpm.Repo, ~s(REFRESH MATERIALIZED VIEW "#{source}"), [])
+    {:ok, _} = Hexpm.Repo.query(~s(REFRESH MATERIALIZED VIEW "#{source}"), [])
     :ok
   end
 
   def advisory_lock(key, opts \\ []) do
     {:ok, _} =
-      Ecto.Adapters.SQL.query(
-        Hexpm.Repo,
+      query(
         "SELECT pg_advisory_lock($1)",
         [Map.fetch!(@advisory_locks, key)],
         opts
@@ -53,8 +108,7 @@ defmodule Hexpm.Repo do
 
   def advisory_unlock(key, opts \\ []) do
     {:ok, _} =
-      Ecto.Adapters.SQL.query(
-        Hexpm.Repo,
+      query(
         "SELECT pg_advisory_unlock($1)",
         [Map.fetch!(@advisory_locks, key)],
         opts
@@ -62,16 +116,12 @@ defmodule Hexpm.Repo do
 
     :ok
   end
+end
 
-  def pluck(q, field) when is_atom(field) do
-    pluck(q, [field]) |> Enum.map(&List.first/1)
-  end
+defmodule Hexpm.WriteInReadOnlyMode do
+  defexception []
 
-  def pluck(q, fields) when is_list(fields) do
-    select(q, [x], map(x, ^fields)) |> all() |> Enum.map(&take_values(&1, fields))
-  end
-
-  defp take_values(map, fields) when is_map(map) and is_list(fields) do
-    Enum.map(fields, &Map.fetch!(map, &1))
+  def message(_) do
+    "tried to write in read-only mode"
   end
 end

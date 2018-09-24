@@ -15,7 +15,7 @@ config :hexpm, Hexpm.Web.Endpoint,
 
 config :hexpm, Hexpm.Emails.Mailer, adapter: Bamboo.TestAdapter
 
-config :hexpm, Hexpm.Repo,
+config :hexpm, Hexpm.RepoBase,
   adapter: Ecto.Adapters.Postgres,
   username: "postgres",
   password: "postgres",

@@ -1,7 +1,7 @@
 defmodule Hexpm.Accounts.Auth do
   import Ecto.Query, only: [from: 2]
 
-  alias Hexpm.Accounts.{Key, Users}
+  alias Hexpm.Accounts.{Key, Keys, Users}
 
   def key_auth(user_secret, usage_info) do
     # Database index lookup on the first part of the key and then
@@ -32,7 +32,7 @@ defmodule Hexpm.Accounts.Auth do
           if Key.revoked?(key) do
             :revoked
           else
-            update_last_use(key, usage_info)
+            Keys.update_last_use(key, usage_info(usage_info))
 
             {:ok,
              %{
@@ -82,18 +82,12 @@ defmodule Hexpm.Accounts.Auth do
     Enum.find(user.emails, &(&1.email == email)) || Enum.find(user.emails, & &1.primary)
   end
 
-  defp update_last_use(%Key{public: true} = key, usage_info) do
-    key
-    |> Key.update_last_use(%{
-      ip: parse_ip(usage_info[:ip]),
-      used_at: usage_info[:used_at],
-      user_agent: parse_user_agent(usage_info[:user_agent])
-    })
-    |> Hexpm.Repo.update!()
-  end
-
-  defp update_last_use(%Key{public: false} = key, _usage_info) do
-    key
+  defp usage_info(info) do
+    %{
+      ip: parse_ip(info[:ip]),
+      used_at: info[:used_at],
+      user_agent: parse_user_agent(info[:user_agent])
+    }
   end
 
   defp parse_ip(nil), do: nil
