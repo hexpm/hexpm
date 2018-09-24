@@ -262,6 +262,7 @@ defmodule Hexpm.Web.Router do
     end
   end
 
+  defp report?(:error, %Hexpm.WriteInReadOnlyMode{}), do: false
   defp report?(:error, exception), do: Plug.Exception.status(exception) == 500
   defp report?(_kind, _reason), do: true
 
