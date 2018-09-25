@@ -5,6 +5,7 @@ use Mix.Releases.Config,
 environment :prod do
   set(include_erts: true)
   set(include_src: false)
+  set(pre_configure_hook: "rel/hooks/pre_configure")
 end
 
 release :hexpm do
