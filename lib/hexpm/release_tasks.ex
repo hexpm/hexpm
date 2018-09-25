@@ -11,6 +11,17 @@ defmodule Hexpm.ReleaseTasks do
 
   @repos Application.get_env(:hexpm, :ecto_repos, [])
 
+  def script() do
+    {:ok, _} = Application.ensure_all_started(:logger)
+    Logger.info("[task] running script")
+    start_app()
+
+    run_script()
+
+    Logger.info("[task] finished script")
+    stop()
+  end
+
   def check_names() do
     {:ok, _} = Application.ensure_all_started(:logger)
     Logger.info("[job] running check_names")
@@ -112,5 +123,23 @@ defmodule Hexpm.ReleaseTasks do
     priv_dir = Application.app_dir(app, "priv")
 
     Path.join([priv_dir, "repo", filename])
+  end
+
+  defp run_script() do
+    [script | args] = argv()
+    System.argv(args)
+
+    priv_dir = Application.app_dir(:hexpm, "priv")
+    script_dir = Path.join(priv_dir, "scripts")
+
+    Logger.info("[script] running #{script} #{inspect(args)}")
+    {result, bindings} = Code.eval_file(script, script_dir)
+    IO.inspect(result, label: :result)
+    IO.inspect(bindings, label: :bindings)
+    Logger.info("[script] finished #{script} #{inspect(args)}")
+  end
+
+  defp argv() do
+    Enum.map(:init.get_plain_arguments(), &List.to_string/1)
   end
 end
