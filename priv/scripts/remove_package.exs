@@ -1,14 +1,14 @@
-destructure [name, repo], Enum.reverse(System.argv())
+destructure [name, org], Enum.reverse(System.argv())
 
 organization =
-  if repo do
-    Hexpm.Repo.get_by!(Hexpm.Organization.Repository, name: repo)
+  if org do
+    Hexpm.Repo.get_by!(Hexpm.Accounts.Organization, name: org)
   else
-    Hexpm.Repo.get!(Hexpm.Organization.Repository, 1)
+    Hexpm.Repo.get!(Hexpm.Accounts.Organization, 1)
   end
 
 unless organization do
-  IO.puts("No package: #{repo}")
+  IO.puts("No organzation: #{org}")
   System.halt(1)
 end
 
@@ -26,6 +26,10 @@ releases =
   Hexpm.Repository.Release.all(package)
   |> Hexpm.Repo.all()
   |> Hexpm.Repo.preload(package: :organization)
+
+package_owners =
+  Ecto.assoc(package, :package_owners)
+  |> Hexpm.Repo.all()
 
 owners =
   Ecto.assoc(package, :owners)
@@ -48,7 +52,7 @@ Enum.each(releases, &IO.puts(&1.version))
 answer = IO.gets("Remove? [Yn] ")
 
 if answer =~ ~r/^(Y(es)?)?$/i do
-  Enum.each(owners, &(Hexpm.Repository.Package.owner(package, &1) |> Hexpm.Repo.delete_all()))
+  Enum.each(package_owners, &(Hexpm.Repo.delete!/1))
   Enum.each(releases, &(Hexpm.Repository.Release.delete(&1, force: true) |> Hexpm.Repo.delete!()))
   Hexpm.Repo.delete!(package)
   Enum.each(releases, &Hexpm.Repository.Assets.revert_release/1)
