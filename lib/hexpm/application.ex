@@ -4,7 +4,7 @@ defmodule Hexpm.Application do
   def start(_type, _args) do
     import Supervisor.Spec, warn: false
 
-    topologies = Application.get_env(:hexpm, :topologies) || []
+    topologies = cluster_topologies()
     read_only_mode()
     Hexpm.BlockAddress.start()
 
@@ -52,7 +52,15 @@ defmodule Hexpm.Application do
   end
 
   defp read_only_mode() do
-    mode = System.get_env("HEXPM_READ_ONLY_MODE") == 1
+    mode = System.get_env("HEXPM_READ_ONLY_MODE") == "1"
     Application.put_env(:hexpm, :read_only_mode, mode)
+  end
+
+  defp cluster_topologies() do
+    if System.get_env("HEXPM_CLUSTER") == "1" do
+      Application.get_env(:hexpm, :topologies) || []
+    else
+      []
+    end
   end
 end
