@@ -2,10 +2,10 @@
 -name <%= release_name %>@${POD_A_RECORD}.${POD_NAMESPACE}.pod.cluster.local
 
 ## Cookie for distributed erlang
--setcookie ${HEXPM_COOKIE}
+-setcookie ${COOKIE}
 
 ## Setup ports
--kernel inet_dist_listen_min ${HEXPM_BEAM_PORT} inet_dist_listen_max ${HEXPM_BEAM_PORT}
+-kernel inet_dist_listen_min ${BEAM_PORT} inet_dist_listen_max ${BEAM_PORT}
 
 ## Heartbeat management; auto-restarts VM if it dies or becomes unresponsive
 ## (Disabled by default..use with caution!)
