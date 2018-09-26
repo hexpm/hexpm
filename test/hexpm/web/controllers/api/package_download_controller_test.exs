@@ -44,7 +44,7 @@ defmodule Hexpm.Web.API.PackageDownloadControllerTest do
   end
 
   describe "GET /api/packages/:name/downloads" do
-    test "get package downloads", %{package1: package1} do
+    test "get package downloads with no downloads", %{package1: package1} do
       conn = get(build_conn(), "api/packages/#{package1.name}/downloads")
       result = json_response(conn, 200)
       assert result["name"] == package1.name
@@ -53,6 +53,32 @@ defmodule Hexpm.Web.API.PackageDownloadControllerTest do
       assert result["url"] =~ "/api/packages/#{package1.name}"
       assert result["html_url"] =~ "/packages/#{package1.name}"
       assert result["docs_html_url"] =~ "/#{package1.name}"
+      assert result["downloads"] == []
+    end
+
+    test "get package downloads with some downloads", %{package2: package2} do
+      days_ago_10 = Hexpm.Utils.utc_days_ago(10)
+      days_ago_11 = Hexpm.Utils.utc_days_ago(11)
+      days_ago_92 = Hexpm.Utils.utc_days_ago(92)
+
+      insert(
+        :release,
+        package_id: package2.id,
+        daily_downloads: [
+          build(:download, downloads: 12, day: days_ago_10),
+          build(:download, downloads: 317, day: days_ago_11),
+          build(:download, downloads: 0, day: days_ago_92)
+        ]
+      )
+
+      conn = get(build_conn(), "api/packages/#{package2.name}/downloads")
+      result = json_response(conn, 200)
+
+      assert result["downloads"] == [
+               ["#{days_ago_92}", 0],
+               ["#{days_ago_11}", 317],
+               ["#{days_ago_10}", 12]
+             ]
     end
 
     test "get package downloads for non namespaced private organization", %{
@@ -113,6 +139,7 @@ defmodule Hexpm.Web.API.PackageDownloadControllerTest do
       assert result["repository"] == organization.name
       assert result["url"] =~ "/api/repos/#{organization.name}/packages/#{package3.name}"
       assert result["html_url"] =~ "/packages/#{organization.name}/#{package3.name}"
+      assert result["downloads"] == []
     end
   end
 end

@@ -15,8 +15,8 @@ defmodule Hexpm.Web.API.PackageDownloadController do
     if package = conn.assigns.package do
       when_stale(conn, package, fn conn ->
         package = Packages.preload(package)
-        owners = Enum.map(Owners.all(package, user: :emails), & &1.user)
-        package = %{package | owners: owners}
+        downloads = Packages.downloads(package)
+        package = %{package | downloads: downloads}
 
         conn
         |> api_cache(:public)

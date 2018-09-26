@@ -23,7 +23,18 @@ defmodule Hexpm.Web.API.PackageDownloadView do
         licenses: package.meta.licenses || [],
         links: package.meta.links || %{},
         maintainers: package.meta.maintainers || []
-      }
+      },
+      downloads: downloads(package.downloads)
     }
+  end
+
+  defp downloads(downloads) when is_list(downloads) do
+    Enum.map(downloads, fn download ->
+      [download.day, download.downloads]
+    end)
+  end
+
+  defp downloads(_) do
+    []
   end
 end

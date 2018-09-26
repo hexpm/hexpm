@@ -53,7 +53,8 @@ defmodule Hexpm.Repository.Packages do
             :inserted_at,
             :updated_at,
             :retirement,
-            :has_docs
+            :has_docs,
+            :id
           ])
       )
 
@@ -64,6 +65,28 @@ defmodule Hexpm.Repository.Packages do
       ])
 
     update_in(package.releases, &Release.sort/1)
+  end
+
+  def releases(package) do
+    package
+    |> preload()
+    |> Map.get(:releases)
+  end
+
+  def downloads(package) do
+    release_ids =
+      package
+      |> releases()
+      |> Enum.map(& &1.id)
+
+    Repo.all(
+      from(
+        d in Download,
+        where: d.release_id in ^release_ids,
+        select: struct(d, [:downloads, :day]),
+        order_by: [desc: d.id]
+      )
+    )
   end
 
   def attach_versions(packages) do
