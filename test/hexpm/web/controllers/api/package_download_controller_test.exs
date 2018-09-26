@@ -75,9 +75,9 @@ defmodule Hexpm.Web.API.PackageDownloadControllerTest do
       result = json_response(conn, 200)
 
       assert result["downloads"] == [
-               ["#{days_ago_92}", 0],
-               ["#{days_ago_11}", 317],
-               ["#{days_ago_10}", 12]
+               %{"#{days_ago_92}" => 0},
+               %{"#{days_ago_11}" => 317},
+               %{"#{days_ago_10}" => 12}
              ]
     end
 

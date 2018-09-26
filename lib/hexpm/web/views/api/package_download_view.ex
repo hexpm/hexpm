@@ -30,7 +30,7 @@ defmodule Hexpm.Web.API.PackageDownloadView do
 
   defp downloads(downloads) when is_list(downloads) do
     Enum.map(downloads, fn download ->
-      [download.day, download.downloads]
+      %{download.day => download.downloads}
     end)
   end
 
