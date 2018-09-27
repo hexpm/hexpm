@@ -18,25 +18,15 @@ defmodule Hexpm.Web.API.PackageDownloadControllerTest do
     package3 =
       insert(:package, organization_id: organization.id, updated_at: ~N[2030-01-01 00:00:00])
 
-    package4 = insert(:package)
     insert(:release, package: package1, version: "0.0.1", has_docs: true)
     insert(:release, package: package3, version: "0.0.1")
 
-    insert(
-      :release,
-      package: package4,
-      version: "0.0.1",
-      retirement: %{reason: "other", message: "not backward compatible"}
-    )
-
-    insert(:release, package: package4, version: "1.0.0")
     insert(:organization_user, organization: organization, user: user)
 
     %{
       package1: package1,
       package2: package2,
       package3: package3,
-      package4: package4,
       organization: organization,
       user: user,
       unauthorized_user: unauthorized_user

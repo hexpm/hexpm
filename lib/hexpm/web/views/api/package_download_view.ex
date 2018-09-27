@@ -1,10 +1,6 @@
 defmodule Hexpm.Web.API.PackageDownloadView do
   use Hexpm.Web, :view
 
-  def render("index." <> _, %{package_download: packages}) do
-    render_many(packages, __MODULE__, "show")
-  end
-
   def render("show." <> _, %{package_download: package}) do
     render_one(package, __MODULE__, "show")
   end

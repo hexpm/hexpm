@@ -4,10 +4,6 @@ defmodule Hexpm.Web.API.PackageDownloadController do
   plug :maybe_fetch_package when action in [:show]
 
   plug :maybe_authorize,
-       [domain: "api", resource: "read", fun: &maybe_organization_access/2]
-       when action in [:index]
-
-  plug :maybe_authorize,
        [domain: "api", resource: "read", fun: &organization_access/2]
        when action in [:show]
 
