@@ -178,6 +178,8 @@ defmodule Hexpm.Web.Router do
         get "/packages", PackageController, :index
         get "/packages/:name", PackageController, :show
 
+        get "/packages/:name/downloads", PackageDownloadController, :show
+
         get "/packages/:name/releases/:version", ReleaseController, :show
         delete "/packages/:name/releases/:version", ReleaseController, :delete
 
