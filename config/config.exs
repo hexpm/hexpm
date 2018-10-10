@@ -52,8 +52,6 @@ config :mime, :types, %{
   "application/vnd.hex+erlang" => ["erlang"]
 }
 
-config :postgrex, json_library: Jason
-
 config :rollbax, enabled: false
 
 config :logger, :console, format: "$time $metadata[$level] $message\n"
