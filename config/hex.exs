@@ -12,7 +12,6 @@ config :hexpm, Hexpm.Web.Endpoint,
   debug_errors: false
 
 config :hexpm, HexWeb.Repo,
-  adapter: Ecto.Adapters.Postgres,
   username: "postgres",
   password: "postgres",
   database: "hexpm_hex",
@@ -20,7 +19,6 @@ config :hexpm, HexWeb.Repo,
   pool_size: 10
 
 config :hexpm, Hexpm.RepoBase,
-  adapter: Ecto.Adapters.Postgres,
   username: "postgres",
   password: "postgres",
   database: "hexpm_hex",

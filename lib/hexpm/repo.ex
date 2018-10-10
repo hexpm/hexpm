@@ -1,7 +1,9 @@
 # Needed to support old hex clients for CI testing
 if Mix.env() == :hex do
   defmodule HexWeb.Repo do
-    use Ecto.Repo, otp_app: :hexpm
+    use Ecto.Repo,
+      otp_app: :hexpm,
+      adapter: Ecto.Adapters.Postgres
   end
 end
 
@@ -63,7 +65,9 @@ defmodule Hexpm.Repo do
 end
 
 defmodule Hexpm.RepoBase do
-  use Ecto.Repo, otp_app: :hexpm
+  use Ecto.Repo,
+    otp_app: :hexpm,
+    adapter: Ecto.Adapters.Postgres
 
   @advisory_locks %{
     registry: 1
