@@ -11,12 +11,12 @@ defmodule Hexpm.Accounts.Key do
     field :secret_first, :string
     field :secret_second, :string
     field :public, :boolean, default: true
-    field :revoke_at, :utc_datetime
-    field :revoked_at, :utc_datetime
+    field :revoke_at, :utc_datetime_usec
+    field :revoked_at, :utc_datetime_usec
     timestamps()
 
     embeds_one :last_use, Use, on_replace: :delete do
-      field :used_at, :utc_datetime
+      field :used_at, :utc_datetime_usec
       field :user_agent, :string
       field :ip, :string
     end

@@ -322,16 +322,15 @@ defmodule Hexpm.Web.API.ReleaseControllerTest do
       package: package,
       release: release
     } do
-      Ecto.Changeset.change(
-        package,
-        inserted_at: NaiveDateTime.add(NaiveDateTime.utc_now(), -36000, :second)
-      )
+      datetime =
+        NaiveDateTime.utc_now()
+        |> NaiveDateTime.add(-36000, :second)
+        |> DateTime.from_naive!("Etc/UTC")
+
+      Ecto.Changeset.change(package, inserted_at: datetime)
       |> Hexpm.Repo.update!()
 
-      Ecto.Changeset.change(
-        release,
-        inserted_at: NaiveDateTime.add(NaiveDateTime.utc_now(), -36000, :second)
-      )
+      Ecto.Changeset.change(release, inserted_at: datetime)
       |> Hexpm.Repo.update!()
 
       meta = %{name: package.name, version: "0.0.1", description: "description"}
@@ -348,10 +347,10 @@ defmodule Hexpm.Web.API.ReleaseControllerTest do
       package: package,
       release: release
     } do
-      Ecto.Changeset.change(package, inserted_at: %{NaiveDateTime.utc_now() | year: 2000})
+      Ecto.Changeset.change(package, inserted_at: %{DateTime.utc_now() | year: 2000})
       |> Hexpm.Repo.update!()
 
-      Ecto.Changeset.change(release, inserted_at: %{NaiveDateTime.utc_now() | year: 2000})
+      Ecto.Changeset.change(release, inserted_at: %{DateTime.utc_now() | year: 2000})
       |> Hexpm.Repo.update!()
 
       meta = %{name: package.name, version: "0.0.1", description: "description"}
@@ -665,7 +664,7 @@ defmodule Hexpm.Web.API.ReleaseControllerTest do
         :release,
         package: package,
         version: "0.0.1",
-        inserted_at: %{NaiveDateTime.utc_now() | year: 2000}
+        inserted_at: %{DateTime.utc_now() | year: 2000}
       )
 
       insert(:organization_user, organization: organization, user: user)
@@ -682,10 +681,10 @@ defmodule Hexpm.Web.API.ReleaseControllerTest do
 
   describe "DELETE /api/packages/:name/releases/:version" do
     test "delete release validates release age", %{user: user, package: package, release: release} do
-      Ecto.Changeset.change(package, inserted_at: %{NaiveDateTime.utc_now() | year: 2000})
+      Ecto.Changeset.change(package, inserted_at: %{DateTime.utc_now() | year: 2000})
       |> Hexpm.Repo.update!()
 
-      Ecto.Changeset.change(release, inserted_at: %{NaiveDateTime.utc_now() | year: 2000})
+      Ecto.Changeset.change(release, inserted_at: %{DateTime.utc_now() | year: 2000})
       |> Hexpm.Repo.update!()
 
       conn =
@@ -700,7 +699,7 @@ defmodule Hexpm.Web.API.ReleaseControllerTest do
     end
 
     test "delete release", %{user: user, package: package, release: release} do
-      Ecto.Changeset.change(release, inserted_at: %{NaiveDateTime.utc_now() | year: 2030})
+      Ecto.Changeset.change(release, inserted_at: %{DateTime.utc_now() | year: 2030})
       |> Hexpm.Repo.update!()
 
       build_conn()
@@ -796,7 +795,7 @@ defmodule Hexpm.Web.API.ReleaseControllerTest do
         :release,
         package: package,
         version: "0.0.1",
-        inserted_at: %{NaiveDateTime.utc_now() | year: 2000}
+        inserted_at: %{DateTime.utc_now() | year: 2000}
       )
 
       insert(:organization_user, organization: organization, user: user)

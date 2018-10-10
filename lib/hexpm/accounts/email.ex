@@ -11,7 +11,7 @@ defmodule Hexpm.Accounts.Email do
     field :public, :boolean, default: false
     field :gravatar, :boolean, default: false
     field :verification_key, :string
-    field :verification_expiry, :utc_datetime
+    field :verification_expiry, :utc_datetime_usec
 
     belongs_to :user, User
 
