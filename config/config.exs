@@ -25,7 +25,6 @@ config :hexpm, Hexpm.Web.Endpoint,
 
 config :hexpm, Hexpm.RepoBase,
   priv: "priv/repo",
-  pool: DBConnection.Sojourn,
   protector: false,
   overload_alarm: false,
   underload_alarm: false

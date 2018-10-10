@@ -57,7 +57,6 @@ defmodule Hexpm.MixProject do
       {:plug_attack, "~> 0.3"},
       {:plug, "~> 1.2"},
       {:rollbax, "~> 0.5"},
-      {:sbroker, "~> 1.0"},
       {:sweet_xml, "~> 0.5"},
       {:hex_core, "~> 0.1"}
     ]
