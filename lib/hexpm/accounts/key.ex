@@ -107,7 +107,7 @@ defmodule Hexpm.Accounts.Key do
       where: k.name == ^key_name and not query_revoked(k),
       update: [
         set: [
-          revoked_at: fragment("?", ^revoked_at),
+          revoked_at: ^revoked_at,
           updated_at: ^DateTime.utc_now()
         ]
       ]
@@ -120,7 +120,7 @@ defmodule Hexpm.Accounts.Key do
       where: not query_revoked(k),
       update: [
         set: [
-          revoked_at: fragment("?", ^revoked_at),
+          revoked_at: ^revoked_at,
           updated_at: ^DateTime.utc_now()
         ]
       ]
