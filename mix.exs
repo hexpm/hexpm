@@ -42,7 +42,7 @@ defmodule Hexpm.MixProject do
       {:ex_aws_s3, "~> 2.0"},
       {:ex_aws_ses, "~> 2.0"},
       {:ex_aws, "~> 2.0"},
-      {:ex_machina, "~> 2.0", only: [:dev, :test]},
+      {:ex_machina, "~> 2.0"},
       {:hackney, "~> 1.7"},
       {:libcluster, "~> 3.0"},
       {:mox, "~> 0.3.1", only: :test},

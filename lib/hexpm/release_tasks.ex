@@ -50,9 +50,9 @@ defmodule Hexpm.ReleaseTasks do
     start_repo()
 
     run_migrations()
+    run_seeds()
 
     Logger.info("[task] finished seed")
-    run_seeds()
     stop()
   end
 
