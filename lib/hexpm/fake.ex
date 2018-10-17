@@ -50,10 +50,10 @@ defmodule Hexpm.Fake do
   end)
 
   defp load_file(name) do
-    seed = ExUnit.configuration()[:seed]
+    seed = seed()
     :rand.seed(:exrop, {seed, seed, seed})
 
-    path = Path.join([__DIR__, "..", "fake", "#{name}.txt"])
+    path = Path.join(Application.app_dir(:hexpm, "priv/fake"), "#{name}.txt")
 
     objects =
       File.read!(path)
@@ -64,6 +64,14 @@ defmodule Hexpm.Fake do
 
     :ets.insert(__MODULE__, objects)
     :ets.insert(__MODULE__, {{name, :size}, length(objects)})
+  end
+
+  defp seed() do
+    if Code.ensure_loaded?(ExUnit) do
+      ExUnit.configuration()[:seed]
+    else
+      0
+    end
   end
 
   defp get!(key, counter, original_key \\ nil) do

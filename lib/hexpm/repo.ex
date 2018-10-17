@@ -77,9 +77,22 @@ defmodule Hexpm.RepoBase do
     if url = System.get_env("HEXPM_DATABASE_URL") do
       pool_size_env = System.get_env("HEXPM_DATABASE_POOL_SIZE")
       pool_size = opts[:pool_size] || String.to_integer(pool_size_env)
+      ca_cert = System.get_env("HEXPM_DATABASE_CA_CERT")
+      client_key = System.get_env("HEXPM_DATABASE_CLIENT_KEY")
+      client_cert = System.get_env("HEXPM_DATABASE_CLIENT_CERT")
+
+      ssl_opts =
+        if ca_cert do
+          [
+            cacerts: [decode_cert(ca_cert)],
+            key: decode_key(client_key),
+            cert: decode_cert(client_cert)
+          ]
+        end
 
       opts =
         opts
+        |> Keyword.put(:ssl_opts, ssl_opts)
         |> Keyword.put(:url, url)
         |> Keyword.put(:pool_size, pool_size)
         |> Keyword.put(:queue_size, pool_size * 5)
@@ -88,6 +101,16 @@ defmodule Hexpm.RepoBase do
     else
       {:ok, opts}
     end
+  end
+
+  defp decode_cert(cert) do
+    [{:Certificate, der, _}] = :public_key.pem_decode(cert)
+    der
+  end
+
+  defp decode_key(cert) do
+    [{:RSAPrivateKey, key, :not_encrypted}] = :public_key.pem_decode(cert)
+    {:RSAPrivateKey, key}
   end
 
   def refresh_view(schema) do
