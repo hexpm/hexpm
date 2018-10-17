@@ -204,7 +204,7 @@ defmodule Hexpm.Repository.Releases do
 
       changeset
       |> validate_reserved_version(reserved_packages)
-      |> Repo.insert_or_update()
+      |> repo.insert_or_update()
     end)
     |> Multi.run(:action, fn _, _ -> {:ok, if(release, do: :update, else: :insert)} end)
   end
