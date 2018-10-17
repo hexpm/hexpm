@@ -25,9 +25,6 @@ config :hexpm, Hexpm.Web.Endpoint,
 
 config :hexpm, Hexpm.RepoBase,
   priv: "priv/repo",
-  protector: false,
-  overload_alarm: false,
-  underload_alarm: false,
   migration_timestamps: [type: :utc_datetime_usec]
 
 config :sasl, sasl_error_logger: false
