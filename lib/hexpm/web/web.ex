@@ -19,7 +19,7 @@ defmodule Hexpm.Web do
   def schema() do
     quote do
       use Ecto.Schema
-      @timestamps_opts [type: :utc_datetime, usec: true]
+      @timestamps_opts [type: :utc_datetime_usec]
 
       import Ecto
       import Ecto.Changeset

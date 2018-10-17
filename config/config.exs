@@ -25,10 +25,7 @@ config :hexpm, Hexpm.Web.Endpoint,
 
 config :hexpm, Hexpm.RepoBase,
   priv: "priv/repo",
-  pool: DBConnection.Sojourn,
-  protector: false,
-  overload_alarm: false,
-  underload_alarm: false
+  migration_timestamps: [type: :utc_datetime_usec]
 
 config :sasl, sasl_error_logger: false
 
@@ -52,8 +49,6 @@ config :mime, :types, %{
   "application/vnd.hex+elixir" => ["elixir"],
   "application/vnd.hex+erlang" => ["erlang"]
 }
-
-config :ecto, json_library: Jason
 
 config :rollbax, enabled: false
 

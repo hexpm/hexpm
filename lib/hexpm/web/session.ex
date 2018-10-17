@@ -24,7 +24,7 @@ defmodule Hexpm.Web.Session do
     session = Session.build(data)
 
     session =
-      if run?() and Repo.write_mode?() do
+      if Repo.write_mode?() do
         Repo.insert!(session)
       else
         Ecto.Changeset.apply_changes(session)
@@ -61,19 +61,5 @@ defmodule Hexpm.Web.Session do
 
   defp build_cookie(id, token) do
     "#{id}++#{Base.url_encode64(token)}"
-  end
-
-  # Hack around transaction being rolled back in tests
-  if Mix.env() == :test do
-    defp run?() do
-      conn = Process.get({Ecto.Adapters.SQL, Hexpm.RepoBase.Pool})
-
-      case conn && Process.get({DBConnection, conn.conn_ref}) do
-        {:failed, _} -> false
-        _ -> true
-      end
-    end
-  else
-    defp run?(), do: true
   end
 end

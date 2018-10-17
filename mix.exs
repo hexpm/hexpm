@@ -46,6 +46,9 @@ defmodule Hexpm.MixProject do
       {:hackney, "~> 1.7"},
       {:libcluster, "~> 3.0"},
       {:mox, "~> 0.3.1", only: :test},
+      {:ecto, "~> 3.0-rc", override: true},
+      {:ecto_sql, "~> 3.0-rc"},
+      {:postgrex, "~> 0.14-rc", override: true},
       {:phoenix_ecto, "~> 3.1"},
       {:phoenix_html, "~> 2.3"},
       {:phoenix_live_reload, "~> 1.0", only: :dev},
@@ -53,9 +56,7 @@ defmodule Hexpm.MixProject do
       {:phoenix, "~> 1.3"},
       {:plug_attack, "~> 0.3"},
       {:plug, "~> 1.2"},
-      {:postgrex, ">= 0.0.0"},
       {:rollbax, "~> 0.5"},
-      {:sbroker, "~> 1.0"},
       {:sweet_xml, "~> 0.5"},
       {:hex_core, "~> 0.1"}
     ]

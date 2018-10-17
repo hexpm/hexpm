@@ -11,12 +11,12 @@ defmodule Hexpm.Accounts.Key do
     field :secret_first, :string
     field :secret_second, :string
     field :public, :boolean, default: true
-    field :revoke_at, :utc_datetime
-    field :revoked_at, :utc_datetime
+    field :revoke_at, :utc_datetime_usec
+    field :revoked_at, :utc_datetime_usec
     timestamps()
 
     embeds_one :last_use, Use, on_replace: :delete do
-      field :used_at, :utc_datetime
+      field :used_at, :utc_datetime_usec
       field :user_agent, :string
       field :ip, :string
     end
@@ -107,7 +107,7 @@ defmodule Hexpm.Accounts.Key do
       where: k.name == ^key_name and not query_revoked(k),
       update: [
         set: [
-          revoked_at: fragment("?", ^revoked_at),
+          revoked_at: ^revoked_at,
           updated_at: ^DateTime.utc_now()
         ]
       ]
@@ -120,7 +120,7 @@ defmodule Hexpm.Accounts.Key do
       where: not query_revoked(k),
       update: [
         set: [
-          revoked_at: fragment("?", ^revoked_at),
+          revoked_at: ^revoked_at,
           updated_at: ^DateTime.utc_now()
         ]
       ]

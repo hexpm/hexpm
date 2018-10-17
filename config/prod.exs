@@ -28,7 +28,6 @@ config :hexpm, Hexpm.Web.Endpoint,
   cache_static_manifest: "priv/static/cache_manifest.json"
 
 config :hexpm, Hexpm.RepoBase,
-  adapter: Ecto.Adapters.Postgres,
   ssl: true
 
 config :bcrypt_elixir, log_rounds: 12

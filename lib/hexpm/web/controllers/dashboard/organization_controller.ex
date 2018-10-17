@@ -278,12 +278,34 @@ defmodule Hexpm.Web.Dashboard.OrganizationController do
   end
 
   def create(conn, params) do
+    case do_create(conn.assigns.current_user, params, audit_data(conn)) do
+      {:ok, organization} ->
+        conn
+        |> put_flash(:info, "Organization created with one month free trial period active.")
+        |> redirect(to: Routes.organization_path(conn, :show, organization))
+
+      {:error, {:organization, changeset}} ->
+        conn
+        |> put_status(400)
+        |> render_new(changeset: changeset, params: params)
+
+      {:error, {:billing, reason}} ->
+        changeset = Organization.changeset(%Organization{}, params["organization"])
+
+        conn
+        |> put_status(400)
+        |> put_flash(:error, "Oops, something went wrong! Please check the errors below.")
+        |> render_new(
+          changeset: changeset,
+          params: params,
+          errors: reason["errors"]
+        )
+    end
+  end
+
+  defp do_create(user, params, audit_data) do
     Hexpm.Repo.transaction(fn ->
-      case Organizations.create(
-             conn.assigns.current_user,
-             params["organization"],
-             audit: audit_data(conn)
-           ) do
+      case Organizations.create(user, params["organization"], audit: audit_data) do
         {:ok, organization} ->
           billing_params =
             Map.take(params, ["email", "person", "company"])
@@ -294,32 +316,16 @@ defmodule Hexpm.Web.Dashboard.OrganizationController do
 
           case Hexpm.Billing.create(billing_params) do
             {:ok, _} ->
-              conn
-              |> put_flash(:info, "Organization created with one month free trial period active.")
-              |> redirect(to: Routes.organization_path(conn, :show, organization))
+              organization
 
             {:error, reason} ->
-              changeset = Organization.changeset(%Organization{}, params["organization"])
-
-              conn
-              |> put_status(400)
-              |> put_flash(:error, "Oops, something went wrong! Please check the errors below.")
-              |> render_new(
-                changeset: changeset,
-                params: params,
-                errors: reason["errors"]
-              )
-              |> Hexpm.Repo.rollback()
+              Hexpm.Repo.rollback({:billing, reason})
           end
 
         {:error, changeset} ->
-          conn
-          |> put_status(400)
-          |> render_new(changeset: changeset, params: params)
-          |> Hexpm.Repo.rollback()
+          Hexpm.Repo.rollback({:organization, changeset})
       end
     end)
-    |> elem(1)
   end
 
   defp update_billing(conn, organization, params, fun) do

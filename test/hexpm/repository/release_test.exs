@@ -363,7 +363,7 @@ defmodule Hexpm.Repository.ReleaseTest do
     Release.build(package2, rel_meta(%{version: "0.0.1", app: package2.name}), "")
     |> Hexpm.Repo.insert!()
 
-    assert {:error, %{errors: [version: {"has already been published", []}]}} =
+    assert {:error, %{errors: [version: {"has already been published", _}]}} =
              Release.build(package1, rel_meta(%{version: "0.0.1", app: package1.name}), "")
              |> Hexpm.Repo.insert()
   end

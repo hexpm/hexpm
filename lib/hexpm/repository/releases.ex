@@ -40,8 +40,8 @@ defmodule Hexpm.Repository.Releases do
 
   def publish(organization, package, user, body, meta, checksum, audit: audit_data) do
     Multi.new()
-    |> Multi.run(:organization, fn _ -> {:ok, organization} end)
-    |> Multi.run(:reserved_packages, fn _ -> {:ok, reserved_packages(organization, meta)} end)
+    |> Multi.run(:organization, fn _, _ -> {:ok, organization} end)
+    |> Multi.run(:reserved_packages, fn _, _ -> {:ok, reserved_packages(organization, meta)} end)
     |> create_package(organization, package, user, meta)
     |> create_release(package, checksum, meta)
     |> audit_publish(audit_data)
@@ -113,8 +113,8 @@ defmodule Hexpm.Repository.Releases do
     params = %{"retirement" => params}
 
     Multi.new()
-    |> Multi.run(:organization, fn _ -> {:ok, package.organization} end)
-    |> Multi.run(:package, fn _ -> {:ok, package} end)
+    |> Multi.run(:organization, fn _, _ -> {:ok, package.organization} end)
+    |> Multi.run(:package, fn _, _ -> {:ok, package} end)
     |> Multi.update(:release, Release.retire(release, params))
     |> audit_retire(audit_data, package)
     |> Repo.transaction()
@@ -123,8 +123,8 @@ defmodule Hexpm.Repository.Releases do
 
   def unretire(package, release, audit: audit_data) do
     Multi.new()
-    |> Multi.run(:organization, fn _ -> {:ok, package.organization} end)
-    |> Multi.run(:package, fn _ -> {:ok, package} end)
+    |> Multi.run(:organization, fn _, _ -> {:ok, package.organization} end)
+    |> Multi.run(:package, fn _, _ -> {:ok, package} end)
     |> Multi.update(:release, Release.unretire(release))
     |> audit_unretire(audit_data, package)
     |> Repo.transaction()
@@ -171,10 +171,10 @@ defmodule Hexpm.Repository.Releases do
       end
 
     # TODO: Use new Multi.insert_or_update with functions
-    Multi.run(multi, :package, fn %{reserved_packages: reserved_packages} ->
+    Multi.run(multi, :package, fn repo, %{reserved_packages: reserved_packages} ->
       changeset
       |> validate_reserved_package(reserved_packages)
-      |> Repo.insert_or_update()
+      |> repo.insert_or_update()
     end)
   end
 
@@ -192,11 +192,11 @@ defmodule Hexpm.Repository.Releases do
 
     # TODO: Use new Multi.insert with functions
     multi
-    |> Multi.run(:release, fn %{package: package, reserved_packages: reserved_packages} ->
+    |> Multi.run(:release, fn repo, %{package: package, reserved_packages: reserved_packages} ->
       changeset =
         if release do
           %{release | package: package}
-          |> Repo.preload(requirements: Release.requirements(release))
+          |> repo.preload(requirements: Release.requirements(release))
           |> Release.update(params, checksum)
         else
           Release.build(package, params, checksum)
@@ -204,14 +204,14 @@ defmodule Hexpm.Repository.Releases do
 
       changeset
       |> validate_reserved_version(reserved_packages)
-      |> Repo.insert_or_update()
+      |> repo.insert_or_update()
     end)
-    |> Multi.run(:action, fn _ -> {:ok, if(release, do: :update, else: :insert)} end)
+    |> Multi.run(:action, fn _, _ -> {:ok, if(release, do: :update, else: :insert)} end)
   end
 
   defp refresh_package_dependants(multi) do
-    Multi.run(multi, :refresh, fn _ ->
-      :ok = Hexpm.Repo.refresh_view(Hexpm.Repository.PackageDependant)
+    Multi.run(multi, :refresh, fn repo, _ ->
+      :ok = repo.refresh_view(Hexpm.Repository.PackageDependant)
       {:ok, :refresh}
     end)
   end
