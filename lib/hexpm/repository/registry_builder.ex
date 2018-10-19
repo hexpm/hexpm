@@ -321,7 +321,7 @@ defmodule Hexpm.Repository.RegistryBuilder do
           organization_cdn_key(organization, "registry") <>
             " " <> organization_cdn_key(organization, "registry-package", name)
 
-        meta = [{"surrogate-key", surrogate_key}]
+        meta = [{"surrogate-key", surrogate_key}, {"surrogate-control", "public, max-age=604800"}]
         opts = Keyword.put(opts, :meta, meta)
         {organization_store_key(organization, "packages/#{name}"), contents, opts}
       end)
@@ -329,8 +329,8 @@ defmodule Hexpm.Repository.RegistryBuilder do
     package_objects ++ [names_object, versions_object]
   end
 
-  defp cache_control(%Organization{id: 1}), do: "public, max-age=600"
-  defp cache_control(%Organization{}), do: "private, max-age=600"
+  defp cache_control(%Organization{id: 1}), do: "public, max-age=3600"
+  defp cache_control(%Organization{}), do: "private, max-age=3600"
 
   defp package_tuples(packages, releases) do
     Enum.reduce(releases, %{}, fn {_, vsn, pkg_id, _, _, _}, map ->
