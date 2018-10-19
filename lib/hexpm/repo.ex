@@ -115,8 +115,9 @@ defmodule Hexpm.RepoBase do
 
   def refresh_view(schema) do
     source = schema.__schema__(:source)
+    query = ~s(REFRESH MATERIALIZED VIEW CONCURRENTLY "#{source}")
 
-    {:ok, _} = Hexpm.Repo.query(~s(REFRESH MATERIALIZED VIEW "#{source}"), [])
+    {:ok, _} = Hexpm.Repo.query(query, [])
     :ok
   end
 
