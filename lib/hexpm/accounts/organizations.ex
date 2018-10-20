@@ -1,5 +1,5 @@
 defmodule Hexpm.Accounts.Organizations do
-  use Hexpm.Web, :context
+  use HexpmWeb, :context
 
   def all_public() do
     Repo.all(from(r in Organization, where: r.public))

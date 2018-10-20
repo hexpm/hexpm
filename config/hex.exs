@@ -7,7 +7,7 @@ config :hexpm,
   docs_url: "http://localhost:4043",
   cdn_url: "http://localhost:4043"
 
-config :hexpm, Hexpm.Web.Endpoint,
+config :hexpm, HexpmWeb.Endpoint,
   http: [port: 4043, protocol_options: [max_keepalive: :infinity]],
   debug_errors: false
 

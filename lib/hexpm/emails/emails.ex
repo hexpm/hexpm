@@ -1,6 +1,6 @@
 defmodule Hexpm.Emails do
   import Bamboo.Email
-  use Bamboo.Phoenix, view: Hexpm.Web.EmailView
+  use Bamboo.Phoenix, view: HexpmWeb.EmailView
 
   def owner_added(package, owners, owner) do
     email()
@@ -73,7 +73,7 @@ defmodule Hexpm.Emails do
   defp email() do
     new_email()
     |> from(source())
-    |> put_html_layout({Hexpm.Web.EmailView, "layout.html"})
+    |> put_html_layout({HexpmWeb.EmailView, "layout.html"})
   end
 
   defp source() do

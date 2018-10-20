@@ -58,6 +58,6 @@ defmodule Hexpm.DataCase do
   end
 
   def errors_on(%Ecto.Changeset{} = changeset) do
-    Hexpm.Web.ControllerHelpers.translate_errors(changeset)
+    HexpmWeb.ControllerHelpers.translate_errors(changeset)
   end
 end

@@ -1,8 +1,8 @@
 defmodule Hexpm.Repository.Package do
-  use Hexpm.Web, :schema
+  use HexpmWeb, :schema
   import Ecto.Query, only: [from: 2, where: 3]
 
-  @derive {Hexpm.Web.Stale, assocs: [:releases, :owners, :downloads]}
+  @derive {HexpmWeb.Stale, assocs: [:releases, :owners, :downloads]}
   @derive {Phoenix.Param, key: :name}
 
   schema "packages" do

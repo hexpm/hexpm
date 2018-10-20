@@ -1,5 +1,5 @@
 defmodule Hexpm.Accounts.Session do
-  use Hexpm.Web, :schema
+  use HexpmWeb, :schema
 
   schema "sessions" do
     field :token, :binary

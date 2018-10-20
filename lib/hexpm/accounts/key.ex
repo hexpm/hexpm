@@ -1,7 +1,7 @@
 defmodule Hexpm.Accounts.Key do
-  use Hexpm.Web, :schema
+  use HexpmWeb, :schema
 
-  @derive Hexpm.Web.Stale
+  @derive HexpmWeb.Stale
   @derive {Phoenix.Param, key: :name}
 
   @days_30 60 * 60 * 24 * 30

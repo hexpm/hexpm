@@ -13,11 +13,11 @@ defmodule Hexpm.Application do
       supervisor(Task.Supervisor, [[name: Hexpm.Tasks]]),
       supervisor(Cluster.Supervisor, [[topologies, [name: Hexpm.ClusterSupervisor]]]),
       supervisor(Phoenix.PubSub.PG2, [[name: Hexpm.PubSub]]),
-      worker(Hexpm.Web.RateLimitPubSub, []),
-      worker(PlugAttack.Storage.Ets, [Hexpm.Web.Plugs.Attack, [clean_period: 60_000]]),
+      worker(HexpmWeb.RateLimitPubSub, []),
+      worker(PlugAttack.Storage.Ets, [HexpmWeb.Plugs.Attack, [clean_period: 60_000]]),
       worker(Hexpm.Throttle, [[name: Hexpm.SESThrottle, rate: ses_rate(), unit: 1000]]),
       worker(Hexpm.Billing.Report, [[name: Hexpm.Billing.Report, interval: 60_000]]),
-      supervisor(Hexpm.Web.Endpoint, [])
+      supervisor(HexpmWeb.Endpoint, [])
     ]
 
     File.mkdir_p(Application.get_env(:hexpm, :tmp_dir))
@@ -28,7 +28,7 @@ defmodule Hexpm.Application do
   end
 
   def config_change(changed, _new, removed) do
-    Hexpm.Web.Endpoint.config_change(changed, removed)
+    HexpmWeb.Endpoint.config_change(changed, removed)
     :ok
   end
 

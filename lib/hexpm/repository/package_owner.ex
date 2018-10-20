@@ -1,5 +1,5 @@
 defmodule Hexpm.Repository.PackageOwner do
-  use Hexpm.Web, :schema
+  use HexpmWeb, :schema
 
   schema "package_owners" do
     field :level, :string, default: "full"
