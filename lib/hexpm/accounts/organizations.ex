@@ -23,24 +23,18 @@ defmodule Hexpm.Accounts.Organizations do
   end
 
   def create(user, params, audit: audit_data) do
-    # TODO: Use new Multi.insert with functions
-
     multi =
       Multi.new()
       |> Multi.insert(:organization, Organization.changeset(%Organization{}, params))
-      |> Multi.merge(fn %{organization: organization} ->
-        organization_user = %OrganizationUser{
-          organization_id: organization.id,
-          user_id: user.id,
-          role: "admin"
-        }
+      |> Multi.insert(:organization_user, fn %{organization: organization} ->
+           organization_user = %OrganizationUser{
+             organization_id: organization.id,
+             user_id: user.id,
+             role: "admin"
+           }
 
-        Multi.insert(
-          Multi.new(),
-          :organization_user,
-          Organization.add_member(organization_user, %{})
-        )
-      end)
+           Organization.add_member(organization_user, %{})
+         end)
       |> audit(audit_data, "organization.create", fn %{organization: organization} ->
         organization
       end)

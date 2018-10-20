@@ -71,10 +71,8 @@ defmodule Hexpm.Accounts.AuditLogTest do
       fun = fn %{user: user} -> user end
       multi = AuditLog.audit_with_user(Ecto.Multi.new(), {nil, "user_agent"}, "user.create", fun)
 
-      assert {:merge, merge} = Ecto.Multi.to_list(multi)[:merge]
-      multi = merge.(%{user: user})
-      assert {:insert, changeset, []} = Ecto.Multi.to_list(multi)[:"log.user.create"]
-      assert changeset.valid?
+      assert {_, fun} = Ecto.Multi.to_list(multi)[:"log.user.create"]
+      assert {:ok, %AuditLog{action: "user.create"}} = fun.(Hexpm.Repo, %{user: user})
     end
   end
 

@@ -170,11 +170,8 @@ defmodule Hexpm.Repository.Releases do
         Package.build(organization, user, params)
       end
 
-    # TODO: Use new Multi.insert_or_update with functions
-    Multi.run(multi, :package, fn repo, %{reserved_packages: reserved_packages} ->
-      changeset
-      |> validate_reserved_package(reserved_packages)
-      |> repo.insert_or_update()
+    Multi.insert_or_update(multi, :package, fn %{reserved_packages: reserved_packages} ->
+      validate_reserved_package(changeset, reserved_packages)
     end)
   end
 
@@ -190,21 +187,18 @@ defmodule Hexpm.Repository.Releases do
 
     release = package && Repo.get_by(assoc(package, :releases), version: version)
 
-    # TODO: Use new Multi.insert with functions
     multi
-    |> Multi.run(:release, fn repo, %{package: package, reserved_packages: reserved_packages} ->
+    |> Multi.insert_or_update(:release, fn %{package: package, reserved_packages: reserved_packages} ->
       changeset =
         if release do
           %{release | package: package}
-          |> repo.preload(requirements: Release.requirements(release))
+          |> Repo.preload(requirements: Release.requirements(release))
           |> Release.update(params, checksum)
         else
           Release.build(package, params, checksum)
         end
 
-      changeset
-      |> validate_reserved_version(reserved_packages)
-      |> repo.insert_or_update()
+      validate_reserved_version(changeset, reserved_packages)
     end)
     |> Multi.run(:action, fn _, _ -> {:ok, if(release, do: :update, else: :insert)} end)
   end
