@@ -66,7 +66,7 @@ defmodule HexpmWeb do
   def view() do
     quote do
       use Phoenix.View,
-        root: "lib/hexpm/web/templates",
+        root: "lib/hexpm_web/templates",
         namespace: HexpmWeb
 
       use Phoenix.HTML
