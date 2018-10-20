@@ -2,22 +2,20 @@ defmodule Hexpm.Application do
   use Application
 
   def start(_type, _args) do
-    import Supervisor.Spec, warn: false
-
     topologies = cluster_topologies()
     read_only_mode()
     Hexpm.BlockAddress.start()
 
     children = [
-      supervisor(Hexpm.RepoBase, []),
-      supervisor(Task.Supervisor, [[name: Hexpm.Tasks]]),
-      supervisor(Cluster.Supervisor, [[topologies, [name: Hexpm.ClusterSupervisor]]]),
-      supervisor(Phoenix.PubSub.PG2, [[name: Hexpm.PubSub]]),
-      worker(HexpmWeb.RateLimitPubSub, []),
-      worker(PlugAttack.Storage.Ets, [HexpmWeb.Plugs.Attack, [clean_period: 60_000]]),
-      worker(Hexpm.Throttle, [[name: Hexpm.SESThrottle, rate: ses_rate(), unit: 1000]]),
-      worker(Hexpm.Billing.Report, [[name: Hexpm.Billing.Report, interval: 60_000]]),
-      supervisor(HexpmWeb.Endpoint, [])
+      Hexpm.RepoBase,
+      {Task.Supervisor, name: Hexpm.Tasks},
+      {Cluster.Supervisor, [topologies, [name: Hexpm.ClusterSupervisor]]},
+      {Phoenix.PubSub.PG2, name: Hexpm.PubSub},
+      HexpmWeb.RateLimitPubSub,
+      HexpmWeb.Plugs.Attack.child_spec(PlugAttack.Storage.Ets, clean_period: 60_000),
+      {Hexpm.Throttle, name: Hexpm.SESThrottle, rate: ses_rate(), unit: 1000},
+      {Hexpm.Billing.Report, name: Hexpm.Billing.Report, interval: 60_000},
+      HexpmWeb.Endpoint
     ]
 
     File.mkdir_p(Application.get_env(:hexpm, :tmp_dir))
