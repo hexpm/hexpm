@@ -85,7 +85,7 @@ defmodule Hexpm.ReleaseTasks do
     :ok = Application.load(:hexpm)
 
     Enum.each(@repos, fn repo ->
-      {:ok, _} = repo.start_link(pool_size: 1)
+      {:ok, _} = repo.start_link(pool_size: 2)
     end)
   end
 
