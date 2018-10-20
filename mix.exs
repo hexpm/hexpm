@@ -36,7 +36,6 @@ defmodule Hexpm.MixProject do
       {:bamboo, "~> 1.0"},
       {:bcrypt_elixir, "~> 1.0"},
       {:corsica, "~> 1.0"},
-      {:cowboy, "~> 1.0"},
       {:distillery, "~> 1.5", runtime: false},
       {:earmark, "~> 1.0"},
       {:ex_aws_s3, "~> 2.0"},
