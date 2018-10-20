@@ -6,7 +6,7 @@ defmodule Hexpm.ReleaseTasks do
     :crypto,
     :ssl,
     :postgrex,
-    :ecto
+    :ecto_sql
   ]
 
   @repos Application.get_env(:hexpm, :ecto_repos, [])
