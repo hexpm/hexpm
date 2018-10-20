@@ -1,5 +1,5 @@
 defmodule HexpmWeb.PolicyControllerTest do
-  use Hexpm.ConnCase, async: true
+  use HexpmWeb.ConnCase, async: true
 
   test "show policy code of conduct" do
     conn =

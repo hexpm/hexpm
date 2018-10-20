@@ -1,5 +1,5 @@
 defmodule HexpmWeb.API.IndexControllerTest do
-  use Hexpm.ConnCase, async: true
+  use HexpmWeb.ConnCase, async: true
 
   test "index" do
     conn = get(build_conn(), "/api")

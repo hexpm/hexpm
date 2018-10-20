@@ -1,5 +1,5 @@
 defmodule HexpmWeb.PasswordControllerTest do
-  use Hexpm.ConnCase
+  use HexpmWeb.ConnCase
   alias Hexpm.Accounts.{Auth, User, Users}
   alias Hexpm.Repo
 

@@ -1,5 +1,5 @@
 defmodule HexpmWeb.PackageViewTest do
-  use Hexpm.ConnCase, async: true
+  use HexpmWeb.ConnCase, async: true
 
   alias HexpmWeb.PackageView
 

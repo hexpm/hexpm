@@ -1,5 +1,5 @@
 defmodule HexpmWeb.Dashboard.EmailViewTest do
-  use Hexpm.ConnCase, async: true
+  use HexpmWeb.ConnCase, async: true
 
   alias HexpmWeb.Dashboard.EmailView
 

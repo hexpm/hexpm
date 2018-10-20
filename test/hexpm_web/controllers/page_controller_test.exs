@@ -1,5 +1,5 @@
 defmodule HexpmWeb.PageControllerTest do
-  use Hexpm.ConnCase
+  use HexpmWeb.ConnCase
 
   alias Hexpm.Repository.{
     PackageDownload,

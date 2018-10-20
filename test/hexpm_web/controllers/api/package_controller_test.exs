@@ -1,5 +1,5 @@
 defmodule HexpmWeb.API.PackageControllerTest do
-  use Hexpm.ConnCase, async: true
+  use HexpmWeb.ConnCase, async: true
 
   setup do
     user = insert(:user)

@@ -1,5 +1,5 @@
 defmodule HexpmWeb.TestControllerTest do
-  use Hexpm.ConnCase, async: true
+  use HexpmWeb.ConnCase, async: true
 
   alias Hexpm.Accounts.Organization
   alias Hexpm.Repository.RegistryBuilder

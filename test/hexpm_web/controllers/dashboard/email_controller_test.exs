@@ -1,5 +1,5 @@
 defmodule HexpmWeb.Dashboard.EmailControllerTest do
-  use Hexpm.ConnCase, async: true
+  use HexpmWeb.ConnCase, async: true
   use Bamboo.Test
 
   alias Hexpm.Accounts.Users

@@ -1,5 +1,5 @@
 defmodule HexpmWeb.API.DocsControllerTest do
-  use Hexpm.ConnCase, async: true
+  use HexpmWeb.ConnCase, async: true
 
   import Ecto.Query, only: [from: 2]
   alias Hexpm.Accounts.{AuditLog, Organization}

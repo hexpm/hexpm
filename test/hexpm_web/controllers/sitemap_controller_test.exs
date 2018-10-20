@@ -1,5 +1,5 @@
 defmodule HexpmWeb.SitemapControllerTest do
-  use Hexpm.ConnCase, async: true
+  use HexpmWeb.ConnCase, async: true
 
   setup do
     package = insert(:package, updated_at: ~N[2014-04-17 14:00:00.000])

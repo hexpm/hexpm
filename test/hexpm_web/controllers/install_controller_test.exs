@@ -1,5 +1,5 @@
 defmodule HexpmWeb.InstallControllerTest do
-  use Hexpm.ConnCase, async: true
+  use HexpmWeb.ConnCase, async: true
 
   test "installs" do
     cdn_url = Application.get_env(:hexpm, :cdn_url)

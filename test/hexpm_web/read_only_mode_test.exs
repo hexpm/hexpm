@@ -1,5 +1,5 @@
 defmodule HexpmWeb.ReadOnlyModeTest do
-  use Hexpm.ConnCase
+  use HexpmWeb.ConnCase
 
   test "GET /api/auth" do
     user = insert(:user)

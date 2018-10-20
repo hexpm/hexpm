@@ -1,5 +1,5 @@
 defmodule HexpmWeb.ErrorViewTest do
-  use Hexpm.ConnCase, async: true
+  use HexpmWeb.ConnCase, async: true
   import Phoenix.ConnTest, except: [conn: 0]
 
   import Phoenix.View

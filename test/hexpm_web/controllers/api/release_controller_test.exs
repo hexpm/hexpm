@@ -1,5 +1,5 @@
 defmodule HexpmWeb.API.ReleaseControllerTest do
-  use Hexpm.ConnCase, async: true
+  use HexpmWeb.ConnCase, async: true
 
   alias Hexpm.Accounts.{AuditLog, Organization}
   alias Hexpm.Repository.{Package, RegistryBuilder, Release}

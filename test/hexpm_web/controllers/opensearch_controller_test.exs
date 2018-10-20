@@ -1,5 +1,5 @@
 defmodule HexpmWeb.OpenSearchControllerTest do
-  use Hexpm.ConnCase, async: true
+  use HexpmWeb.ConnCase, async: true
 
   test "opensearch" do
     conn = get(build_conn(), "/hexsearch.xml")

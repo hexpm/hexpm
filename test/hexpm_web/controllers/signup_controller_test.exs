@@ -1,5 +1,5 @@
 defmodule HexpmWeb.SignupControllerTest do
-  use Hexpm.ConnCase, async: true
+  use HexpmWeb.ConnCase, async: true
 
   alias Hexpm.Accounts.Users
 
