@@ -55,6 +55,7 @@ defmodule Hexpm.MixProject do
       {:phoenix_pubsub, "~> 1.0"},
       {:phoenix, "~> 1.3"},
       {:plug_attack, "~> 0.3"},
+      {:plug_cowboy, "~> 1.0"},
       {:plug, "~> 1.2"},
       {:rollbax, "~> 0.5"},
       {:sweet_xml, "~> 0.5"},
