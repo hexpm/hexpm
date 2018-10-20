@@ -1,5 +1,5 @@
-defmodule Hexpm.Web.PackageController do
-  use Hexpm.Web, :controller
+defmodule HexpmWeb.PackageController do
+  use HexpmWeb, :controller
 
   @packages_per_page 30
   @sort_params ~w(name recent_downloads total_downloads inserted_at updated_at)

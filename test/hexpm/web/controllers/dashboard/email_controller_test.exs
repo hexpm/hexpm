@@ -1,4 +1,4 @@
-defmodule Hexpm.Web.Dashboard.EmailControllerTest do
+defmodule HexpmWeb.Dashboard.EmailControllerTest do
   use Hexpm.ConnCase, async: true
   use Bamboo.Test
 

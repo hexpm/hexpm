@@ -1,5 +1,5 @@
-defmodule Hexpm.Web.API.ReleaseController do
-  use Hexpm.Web, :controller
+defmodule HexpmWeb.API.ReleaseController do
+  use HexpmWeb, :controller
 
   plug :parse_tarball when action in [:publish]
   plug :maybe_fetch_release when action in [:show]

@@ -1,4 +1,4 @@
-defmodule Hexpm.Web.API.DocsControllerTest do
+defmodule HexpmWeb.API.DocsControllerTest do
   use Hexpm.ConnCase, async: true
 
   import Ecto.Query, only: [from: 2]

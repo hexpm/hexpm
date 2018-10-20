@@ -1,4 +1,4 @@
-defmodule Hexpm.Web.Dashboard.PasswordControllerTest do
+defmodule HexpmWeb.Dashboard.PasswordControllerTest do
   use Hexpm.ConnCase, async: true
   use Bamboo.Test
 

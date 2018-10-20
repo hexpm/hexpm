@@ -1,5 +1,5 @@
-defmodule Hexpm.Web.PageController do
-  use Hexpm.Web, :controller
+defmodule HexpmWeb.PageController do
+  use HexpmWeb, :controller
 
   def index(conn, _params) do
     hexpm = Organization.hexpm()

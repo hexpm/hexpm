@@ -1,8 +1,8 @@
-defmodule Hexpm.Web.Dashboard.ProfileView do
-  use Hexpm.Web, :view
-  alias Hexpm.Web.DashboardView
+defmodule HexpmWeb.Dashboard.ProfileView do
+  use HexpmWeb, :view
+  alias HexpmWeb.DashboardView
 
-  import Hexpm.Web.Dashboard.EmailView,
+  import HexpmWeb.Dashboard.EmailView,
     only: [
       public_email_options: 1,
       public_email_value: 1,

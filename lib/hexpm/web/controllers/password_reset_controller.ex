@@ -1,5 +1,5 @@
-defmodule Hexpm.Web.PasswordResetController do
-  use Hexpm.Web, :controller
+defmodule HexpmWeb.PasswordResetController do
+  use HexpmWeb, :controller
 
   def show(conn, _params) do
     render(

@@ -1,4 +1,4 @@
-defmodule Hexpm.Web.API.RepositoryControllerTest do
+defmodule HexpmWeb.API.RepositoryControllerTest do
   use Hexpm.ConnCase, async: true
 
   setup do

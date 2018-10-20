@@ -1,3 +1,3 @@
-defmodule Hexpm.Web.SitemapView do
-  use Hexpm.Web, :view
+defmodule HexpmWeb.SitemapView do
+  use HexpmWeb, :view
 end

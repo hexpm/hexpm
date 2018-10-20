@@ -1,5 +1,5 @@
-defmodule Hexpm.Web.PageView do
-  use Hexpm.Web, :view
+defmodule HexpmWeb.PageView do
+  use HexpmWeb, :view
 
   def render_package(data) do
     data =

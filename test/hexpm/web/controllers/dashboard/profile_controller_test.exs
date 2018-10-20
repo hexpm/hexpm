@@ -1,4 +1,4 @@
-defmodule Hexpm.Web.Dashboard.ProfileControllerTest do
+defmodule HexpmWeb.Dashboard.ProfileControllerTest do
   use Hexpm.ConnCase, async: true
   use Bamboo.Test
 

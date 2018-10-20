@@ -1,7 +1,7 @@
-defmodule Hexpm.Web.BlogController do
-  use Hexpm.Web, :controller
+defmodule HexpmWeb.BlogController do
+  use HexpmWeb, :controller
 
-  Enum.each(Hexpm.Web.BlogView.all_templates(), fn {slug, template} ->
+  Enum.each(HexpmWeb.BlogView.all_templates(), fn {slug, template} ->
     defp slug_to_template(unquote(slug)), do: unquote(Path.rootname(template))
   end)
 

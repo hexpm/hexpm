@@ -1,4 +1,4 @@
-defmodule Hexpm.Web.ErlangFormat do
+defmodule HexpmWeb.ErlangFormat do
   def encode_to_iodata!(term) do
     term
     |> Hexpm.Utils.binarify()

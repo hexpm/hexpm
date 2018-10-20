@@ -21,7 +21,7 @@ defmodule Hexpm.ConnCase do
       use Phoenix.ConnTest
 
       alias Hexpm.{Fake, Repo}
-      alias Hexpm.Web.Router.Helpers, as: Routes
+      alias HexpmWeb.Router.Helpers, as: Routes
 
       import Ecto
       import Ecto.Query, only: [from: 2]
@@ -29,7 +29,7 @@ defmodule Hexpm.ConnCase do
       import unquote(__MODULE__)
 
       # The default endpoint for testing
-      @endpoint Hexpm.Web.Endpoint
+      @endpoint HexpmWeb.Endpoint
     end
   end
 
@@ -54,6 +54,6 @@ defmodule Hexpm.ConnCase do
   def json_post(conn, path, params) do
     conn
     |> Plug.Conn.put_req_header("content-type", "application/json")
-    |> Phoenix.ConnTest.dispatch(Hexpm.Web.Endpoint, :post, path, Jason.encode!(params))
+    |> Phoenix.ConnTest.dispatch(HexpmWeb.Endpoint, :post, path, Jason.encode!(params))
   end
 end

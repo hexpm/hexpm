@@ -1,5 +1,5 @@
-defmodule Hexpm.Web.API.IndexView do
-  use Hexpm.Web, :view
+defmodule HexpmWeb.API.IndexView do
+  use HexpmWeb, :view
 
   def render("index." <> _format, _assigns) do
     %{

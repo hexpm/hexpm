@@ -1,3 +1,3 @@
-defmodule Hexpm.Web.LoginView do
-  use Hexpm.Web, :view
+defmodule HexpmWeb.LoginView do
+  use HexpmWeb, :view
 end

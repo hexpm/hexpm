@@ -1,5 +1,5 @@
-defmodule Hexpm.Web.InstallController do
-  use Hexpm.Web, :controller
+defmodule HexpmWeb.InstallController do
+  use HexpmWeb, :controller
 
   def archive(conn, params) do
     user_agent = get_req_header(conn, "user-agent")

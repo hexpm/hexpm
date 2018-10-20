@@ -1,4 +1,4 @@
-defmodule Hexpm.Web.PackageControllerTest do
+defmodule HexpmWeb.PackageControllerTest do
   use Hexpm.ConnCase, async: true
 
   setup do

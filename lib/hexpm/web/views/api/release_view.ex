@@ -1,6 +1,6 @@
-defmodule Hexpm.Web.API.ReleaseView do
-  use Hexpm.Web, :view
-  alias Hexpm.Web.API.RetirementView
+defmodule HexpmWeb.API.ReleaseView do
+  use HexpmWeb, :view
+  alias HexpmWeb.API.RetirementView
 
   def render("show." <> _, %{release: release}) do
     render_one(release, __MODULE__, "show")

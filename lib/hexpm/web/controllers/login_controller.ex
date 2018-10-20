@@ -1,5 +1,5 @@
-defmodule Hexpm.Web.LoginController do
-  use Hexpm.Web, :controller
+defmodule HexpmWeb.LoginController do
+  use HexpmWeb, :controller
 
   plug :nillify_params, ["return"]
 
@@ -30,7 +30,7 @@ defmodule Hexpm.Web.LoginController do
   def delete(conn, _params) do
     conn
     |> delete_session("user_id")
-    |> redirect(to: Routes.page_path(Hexpm.Web.Endpoint, :index))
+    |> redirect(to: Routes.page_path(HexpmWeb.Endpoint, :index))
   end
 
   defp redirect_return(%{params: %{"hexdocs" => organization}} = conn, user) do

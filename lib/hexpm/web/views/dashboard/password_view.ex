@@ -1,4 +1,4 @@
-defmodule Hexpm.Web.Dashboard.PasswordView do
-  use Hexpm.Web, :view
-  alias Hexpm.Web.DashboardView
+defmodule HexpmWeb.Dashboard.PasswordView do
+  use HexpmWeb, :view
+  alias HexpmWeb.DashboardView
 end

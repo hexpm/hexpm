@@ -1,10 +1,10 @@
-defmodule Hexpm.Web.ControllerHelpers do
+defmodule HexpmWeb.ControllerHelpers do
   import Plug.Conn
   import Phoenix.Controller
 
   alias Hexpm.Accounts.{Auth, Organizations}
   alias Hexpm.Repository.{Packages, Releases}
-  alias Hexpm.Web.Router.Helpers, as: Routes
+  alias HexpmWeb.Router.Helpers, as: Routes
 
   @max_cache_age 60
 
@@ -48,7 +48,7 @@ defmodule Hexpm.Web.ControllerHelpers do
     conn
     |> put_status(status)
     |> put_layout(false)
-    |> render(Hexpm.Web.ErrorView, :"#{status}", assigns)
+    |> render(HexpmWeb.ErrorView, :"#{status}", assigns)
     |> halt()
   end
 
@@ -190,7 +190,7 @@ defmodule Hexpm.Web.ControllerHelpers do
     binary =
       schemas
       |> List.wrap()
-      |> Enum.map(&Hexpm.Web.Stale.etag/1)
+      |> Enum.map(&HexpmWeb.Stale.etag/1)
       |> List.flatten()
       |> :erlang.term_to_binary()
 
@@ -201,7 +201,7 @@ defmodule Hexpm.Web.ControllerHelpers do
   def last_modified(schemas) do
     schemas
     |> List.wrap()
-    |> Enum.map(&Hexpm.Web.Stale.last_modified/1)
+    |> Enum.map(&HexpmWeb.Stale.last_modified/1)
     |> List.flatten()
     |> Enum.reject(&is_nil/1)
     |> Enum.map(&time_to_erl/1)
@@ -226,7 +226,7 @@ defmodule Hexpm.Web.ControllerHelpers do
         assign(conn, :organization, organization)
       else
         conn
-        |> Hexpm.Web.AuthHelpers.forbidden("account not authorized for this action")
+        |> HexpmWeb.AuthHelpers.forbidden("account not authorized for this action")
         |> halt()
       end
     else
@@ -282,11 +282,11 @@ defmodule Hexpm.Web.ControllerHelpers do
   end
 
   def authorize(conn, opts) do
-    Hexpm.Web.AuthHelpers.authorized(conn, opts)
+    HexpmWeb.AuthHelpers.authorized(conn, opts)
   end
 
   def maybe_authorize(conn, opts) do
-    Hexpm.Web.AuthHelpers.maybe_authorized(conn, opts)
+    HexpmWeb.AuthHelpers.maybe_authorized(conn, opts)
   end
 
   def audit_data(conn) do

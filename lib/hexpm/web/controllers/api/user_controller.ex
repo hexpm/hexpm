@@ -1,5 +1,5 @@
-defmodule Hexpm.Web.API.UserController do
-  use Hexpm.Web, :controller
+defmodule HexpmWeb.API.UserController do
+  use HexpmWeb, :controller
 
   plug :authorize, [domain: "api", resource: "read"] when action in [:test]
   plug :authorize, [domain: "api", resource: "read"] when action in [:me]

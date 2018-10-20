@@ -1,4 +1,4 @@
-defmodule Hexpm.Web.API.KeyControllerTest do
+defmodule HexpmWeb.API.KeyControllerTest do
   use Hexpm.ConnCase, async: true
 
   alias Hexpm.Repo

@@ -1,4 +1,4 @@
-defmodule Hexpm.Web.ElixirFormat do
+defmodule HexpmWeb.ElixirFormat do
   def encode_to_iodata!(term) do
     term
     |> Hexpm.Utils.binarify()

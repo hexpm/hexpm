@@ -1,3 +1,3 @@
-defmodule Hexpm.Web.PasswordView do
-  use Hexpm.Web, :view
+defmodule HexpmWeb.PasswordView do
+  use HexpmWeb, :view
 end

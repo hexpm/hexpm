@@ -1,4 +1,4 @@
-defmodule Hexpm.Web.API.AuthControllerTest do
+defmodule HexpmWeb.API.AuthControllerTest do
   use Hexpm.ConnCase, async: true
 
   setup do

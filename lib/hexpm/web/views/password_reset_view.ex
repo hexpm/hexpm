@@ -1,3 +1,3 @@
-defmodule Hexpm.Web.PasswordResetView do
-  use Hexpm.Web, :view
+defmodule HexpmWeb.PasswordResetView do
+  use HexpmWeb, :view
 end

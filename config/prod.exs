@@ -21,7 +21,7 @@ config :hexpm,
   cdn_impl: Hexpm.CDN.Fastly,
   tmp_dir: "tmp"
 
-config :hexpm, Hexpm.Web.Endpoint,
+config :hexpm, HexpmWeb.Endpoint,
   http: [compress: true],
   url: [scheme: "https", port: 443],
   load_from_system_env: true,

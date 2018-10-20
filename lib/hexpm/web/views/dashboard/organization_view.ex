@@ -1,6 +1,6 @@
-defmodule Hexpm.Web.Dashboard.OrganizationView do
-  use Hexpm.Web, :view
-  alias Hexpm.Web.DashboardView
+defmodule HexpmWeb.Dashboard.OrganizationView do
+  use HexpmWeb, :view
+  alias HexpmWeb.DashboardView
 
   defp organization_roles_selector() do
     Enum.map(organization_roles(), fn {name, id, _title} ->

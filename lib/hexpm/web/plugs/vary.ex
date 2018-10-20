@@ -1,4 +1,4 @@
-defmodule Hexpm.Web.Plugs.Vary do
+defmodule HexpmWeb.Plugs.Vary do
   import Plug.Conn
 
   def init(opts), do: opts

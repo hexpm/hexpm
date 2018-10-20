@@ -1,4 +1,4 @@
-defmodule Hexpm.Web.Dashboard.KeyControllerTest do
+defmodule HexpmWeb.Dashboard.KeyControllerTest do
   use Hexpm.ConnCase, async: true
 
   setup do

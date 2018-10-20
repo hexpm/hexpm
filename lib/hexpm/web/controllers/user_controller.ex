@@ -1,5 +1,5 @@
-defmodule Hexpm.Web.UserController do
-  use Hexpm.Web, :controller
+defmodule HexpmWeb.UserController do
+  use HexpmWeb, :controller
 
   def show(conn, %{"username" => username}) do
     if user = Users.get_by_username(username, [:emails, owned_packages: :organization]) do

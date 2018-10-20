@@ -1,5 +1,5 @@
-defmodule Hexpm.Web.API.PackageController do
-  use Hexpm.Web, :controller
+defmodule HexpmWeb.API.PackageController do
+  use HexpmWeb, :controller
 
   plug :fetch_repository when action in [:index]
   plug :maybe_fetch_package when action in [:show]

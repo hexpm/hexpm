@@ -1,7 +1,7 @@
-defmodule Hexpm.Web.PackageViewTest do
+defmodule HexpmWeb.PackageViewTest do
   use Hexpm.ConnCase, async: true
 
-  alias Hexpm.Web.PackageView
+  alias HexpmWeb.PackageView
 
   defp parse_html_list_to_string(html_map) do
     Enum.map_join(html_map, fn x ->

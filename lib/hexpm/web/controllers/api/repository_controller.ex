@@ -1,5 +1,5 @@
-defmodule Hexpm.Web.API.RepositoryController do
-  use Hexpm.Web, :controller
+defmodule HexpmWeb.API.RepositoryController do
+  use HexpmWeb, :controller
 
   plug :fetch_repository when action in [:show]
   plug :maybe_authorize, [domain: "api", resource: "read"] when action in [:index]

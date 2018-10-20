@@ -1,6 +1,6 @@
-defmodule Hexpm.Web.Dashboard.OrganizationController do
-  use Hexpm.Web, :controller
-  alias Hexpm.Web.Dashboard.KeyController
+defmodule HexpmWeb.Dashboard.OrganizationController do
+  use HexpmWeb, :controller
+  alias HexpmWeb.Dashboard.KeyController
 
   plug :requires_login
 
@@ -137,7 +137,7 @@ defmodule Hexpm.Web.Dashboard.OrganizationController do
 
       cancel_date =
         billing["subscription"]["current_period_end"]
-        |> Hexpm.Web.Dashboard.OrganizationView.payment_date()
+        |> HexpmWeb.Dashboard.OrganizationView.payment_date()
 
       message =
         "Your subscription is cancelled, you will have access to the organization until " <>

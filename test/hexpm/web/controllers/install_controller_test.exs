@@ -1,4 +1,4 @@
-defmodule Hexpm.Web.InstallControllerTest do
+defmodule HexpmWeb.InstallControllerTest do
   use Hexpm.ConnCase, async: true
 
   test "installs" do

@@ -1,5 +1,5 @@
-defmodule Hexpm.Web.API.UserView do
-  use Hexpm.Web, :view
+defmodule HexpmWeb.API.UserView do
+  use HexpmWeb, :view
 
   def render("index." <> _, %{users: users}) do
     render_many(users, __MODULE__, "show")

@@ -1,5 +1,5 @@
-defmodule Hexpm.Web.LayoutView do
-  use Hexpm.Web, :view
+defmodule HexpmWeb.LayoutView do
+  use HexpmWeb, :view
 
   def show_search?(assigns) do
     Map.get(assigns, :hide_search) != true
@@ -45,7 +45,7 @@ defmodule Hexpm.Web.LayoutView do
       tag(
         :meta,
         property: "og:image",
-        content: Routes.static_url(Hexpm.Web.Endpoint, "/images/favicon-160.png")
+        content: Routes.static_url(HexpmWeb.Endpoint, "/images/favicon-160.png")
       ),
       tag(:meta, property: "og:image:width", content: "160"),
       tag(:meta, property: "og:image:height", content: "160"),

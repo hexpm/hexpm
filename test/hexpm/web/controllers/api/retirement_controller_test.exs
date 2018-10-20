@@ -1,4 +1,4 @@
-defmodule Hexpm.Web.API.RetirementControllerTest do
+defmodule HexpmWeb.API.RetirementControllerTest do
   use Hexpm.ConnCase, async: true
 
   setup do

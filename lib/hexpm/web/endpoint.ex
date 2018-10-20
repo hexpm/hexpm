@@ -1,7 +1,7 @@
-defmodule Hexpm.Web.Endpoint do
+defmodule HexpmWeb.Endpoint do
   use Phoenix.Endpoint, otp_app: :hexpm
 
-  plug Hexpm.Web.Plugs.Forwarded
+  plug HexpmWeb.Plugs.Forwarded
 
   # Serve at "/" the static files from "priv/static" directory.
   #
@@ -26,26 +26,26 @@ defmodule Hexpm.Web.Endpoint do
   plug Plug.Logger
 
   plug Plug.Parsers,
-    parsers: [:urlencoded, :json, Hexpm.Web.PlugParser],
+    parsers: [:urlencoded, :json, HexpmWeb.PlugParser],
     pass: ["*/*"],
     json_decoder: Jason
 
   plug Plug.MethodOverride
   plug Plug.Head
-  plug Hexpm.Web.Plugs.Vary, ["accept-encoding"]
+  plug HexpmWeb.Plugs.Vary, ["accept-encoding"]
 
   plug Plug.Session,
-    store: Hexpm.Web.Session,
+    store: HexpmWeb.Session,
     key: "_hexpm_key",
     max_age: 60 * 60 * 24 * 30
 
-  plug Hexpm.Web.Plugs.Status
+  plug HexpmWeb.Plugs.Status
 
   if Mix.env() == :prod do
     plug Plug.SSL, rewrite_on: [:x_forwarded_proto]
   end
 
-  plug Hexpm.Web.Router
+  plug HexpmWeb.Router
 
   def init(_key, config) do
     if config[:load_from_system_env] do

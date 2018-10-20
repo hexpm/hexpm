@@ -1,6 +1,6 @@
-defmodule Hexpm.Web.API.KeyView do
-  use Hexpm.Web, :view
-  alias Hexpm.Web.API.KeyPermissionView
+defmodule HexpmWeb.API.KeyView do
+  use HexpmWeb, :view
+  alias HexpmWeb.API.KeyPermissionView
 
   def render("index." <> _, %{keys: keys, authing_key: authing_key}) do
     render_many(keys, __MODULE__, "show", authing_key: authing_key)

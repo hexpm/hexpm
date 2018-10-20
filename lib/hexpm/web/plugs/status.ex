@@ -1,4 +1,4 @@
-defmodule Hexpm.Web.Plugs.Status do
+defmodule HexpmWeb.Plugs.Status do
   import Plug.Conn
   alias Plug.Conn
 

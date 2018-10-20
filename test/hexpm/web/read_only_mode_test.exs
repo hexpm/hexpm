@@ -1,4 +1,4 @@
-defmodule Hexpm.Web.ReadOnlyModeTest do
+defmodule HexpmWeb.ReadOnlyModeTest do
   use Hexpm.ConnCase
 
   test "GET /api/auth" do

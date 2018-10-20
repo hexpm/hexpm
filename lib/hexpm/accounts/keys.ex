@@ -1,5 +1,5 @@
 defmodule Hexpm.Accounts.Keys do
-  use Hexpm.Web, :context
+  use HexpmWeb, :context
 
   def all(user_or_organization) do
     Key.all(user_or_organization)

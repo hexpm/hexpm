@@ -1,5 +1,5 @@
-defmodule Hexpm.Web.API.RepositoryView do
-  use Hexpm.Web, :view
+defmodule HexpmWeb.API.RepositoryView do
+  use HexpmWeb, :view
 
   def render("index." <> _, %{organizations: organizations}),
     do: render_many(organizations, __MODULE__, "show", as: :organization)

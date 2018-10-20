@@ -1,4 +1,4 @@
-defmodule Hexpm.Web.ViewIcons do
+defmodule HexpmWeb.ViewIcons do
   use Phoenix.HTML
   import SweetXml
 

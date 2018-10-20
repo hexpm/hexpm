@@ -1,5 +1,5 @@
-defmodule Hexpm.Web.SignupController do
-  use Hexpm.Web, :controller
+defmodule HexpmWeb.SignupController do
+  use HexpmWeb, :controller
 
   def show(conn, _params) do
     if logged_in?(conn) do
@@ -19,7 +19,7 @@ defmodule Hexpm.Web.SignupController do
 
         conn
         |> put_flash(:info, flash)
-        |> redirect(to: Routes.page_path(Hexpm.Web.Endpoint, :index))
+        |> redirect(to: Routes.page_path(HexpmWeb.Endpoint, :index))
 
       {:error, changeset} ->
         conn

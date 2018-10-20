@@ -1,3 +1,3 @@
-defmodule Hexpm.Web.SignupView do
-  use Hexpm.Web, :view
+defmodule HexpmWeb.SignupView do
+  use HexpmWeb, :view
 end

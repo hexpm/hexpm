@@ -16,7 +16,7 @@ defmodule Hexpm.Script.TaskDocs do
           <a class="anchor" id="<%= id %>"></a>
           <%= name %>
           <a href="#<%= id %>">
-            <%= Phoenix.HTML.safe_to_string Hexpm.Web.ViewIcons.icon(:glyphicon, :link, class: "pull-right") %>
+            <%= Phoenix.HTML.safe_to_string HexpmWeb.ViewIcons.icon(:glyphicon, :link, class: "pull-right") %>
           </a>
         </h3>
       </div>

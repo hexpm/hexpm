@@ -1,4 +1,4 @@
-defmodule Hexpm.Web.OpenSearchControllerTest do
+defmodule HexpmWeb.OpenSearchControllerTest do
   use Hexpm.ConnCase, async: true
 
   test "opensearch" do

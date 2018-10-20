@@ -1,5 +1,5 @@
-defmodule Hexpm.Web.DocsController do
-  use Hexpm.Web, :controller
+defmodule HexpmWeb.DocsController do
+  use HexpmWeb, :controller
 
   def index(conn, _params) do
     redirect(conn, to: Routes.docs_path(conn, :usage))

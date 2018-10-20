@@ -1,3 +1,3 @@
-defmodule Hexpm.Web.EmailVerificationView do
-  use Hexpm.Web, :view
+defmodule HexpmWeb.EmailVerificationView do
+  use HexpmWeb, :view
 end

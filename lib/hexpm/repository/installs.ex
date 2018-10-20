@@ -1,5 +1,5 @@
 defmodule Hexpm.Repository.Installs do
-  use Hexpm.Web, :context
+  use HexpmWeb, :context
 
   def all() do
     Repo.all(Install.all())

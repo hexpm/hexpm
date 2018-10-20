@@ -1,8 +1,8 @@
-defmodule Hexpm.Web.ViewHelpers do
+defmodule HexpmWeb.ViewHelpers do
   use Phoenix.HTML
   alias Hexpm.Repository.{Package, Release}
-  alias Hexpm.Web.Endpoint
-  alias Hexpm.Web.Router.Helpers, as: Routes
+  alias HexpmWeb.Endpoint
+  alias HexpmWeb.Router.Helpers, as: Routes
 
   def logged_in?(assigns) do
     !!assigns[:current_user]

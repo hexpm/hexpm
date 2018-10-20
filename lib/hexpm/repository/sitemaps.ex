@@ -1,5 +1,5 @@
 defmodule Hexpm.Repository.Sitemaps do
-  use Hexpm.Web, :context
+  use HexpmWeb, :context
 
   def packages() do
     from(
@@ -23,7 +23,7 @@ defmodule Hexpm.Repository.Sitemaps do
   end
 
   def publish_docs_sitemap() do
-    sitemap = Hexpm.Web.SitemapView.render("docs_sitemap.xml", packages: packages_with_docs())
+    sitemap = HexpmWeb.SitemapView.render("docs_sitemap.xml", packages: packages_with_docs())
     Hexpm.Repository.Assets.push_docs_sitemap(sitemap)
   end
 end

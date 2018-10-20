@@ -1,4 +1,4 @@
-defmodule Hexpm.Web.SitemapControllerTest do
+defmodule HexpmWeb.SitemapControllerTest do
   use Hexpm.ConnCase, async: true
 
   setup do

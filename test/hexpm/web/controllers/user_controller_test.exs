@@ -1,4 +1,4 @@
-defmodule Hexpm.Web.UserControllerTest do
+defmodule HexpmWeb.UserControllerTest do
   use Hexpm.ConnCase, async: true
 
   setup do

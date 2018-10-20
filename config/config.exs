@@ -18,10 +18,10 @@ config :ex_aws,
 
 config :bcrypt_elixir, log_rounds: 4
 
-config :hexpm, Hexpm.Web.Endpoint,
+config :hexpm, HexpmWeb.Endpoint,
   url: [host: "localhost"],
   root: Path.dirname(__DIR__),
-  render_errors: [view: Hexpm.Web.ErrorView, accepts: ~w(html json elixir erlang)]
+  render_errors: [view: HexpmWeb.ErrorView, accepts: ~w(html json elixir erlang)]
 
 config :hexpm, Hexpm.RepoBase,
   priv: "priv/repo",
@@ -31,7 +31,7 @@ config :sasl, sasl_error_logger: false
 
 config :hexpm, Hexpm.Emails.Mailer, adapter: Hexpm.Emails.Bamboo.SESAdapter
 
-config :phoenix, :template_engines, md: Hexpm.Web.MarkdownEngine
+config :phoenix, :template_engines, md: HexpmWeb.MarkdownEngine
 
 config :phoenix, stacktrace_depth: 20
 
@@ -40,8 +40,8 @@ config :phoenix, :generators,
   binary_id: false
 
 config :phoenix, :format_encoders,
-  elixir: Hexpm.Web.ElixirFormat,
-  erlang: Hexpm.Web.ErlangFormat,
+  elixir: HexpmWeb.ElixirFormat,
+  erlang: HexpmWeb.ErlangFormat,
   json: Jason
 
 config :mime, :types, %{

@@ -1,4 +1,4 @@
-defmodule Hexpm.Web.Dashboard.KeyView do
-  use Hexpm.Web, :view
-  alias Hexpm.Web.DashboardView
+defmodule HexpmWeb.Dashboard.KeyView do
+  use HexpmWeb, :view
+  alias HexpmWeb.DashboardView
 end

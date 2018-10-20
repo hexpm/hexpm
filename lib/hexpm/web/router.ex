@@ -1,5 +1,5 @@
-defmodule Hexpm.Web.Router do
-  use Hexpm.Web, :router
+defmodule HexpmWeb.Router do
+  use HexpmWeb, :router
   use Plug.ErrorHandler
 
   @accepted_formats ~w(json elixir erlang)
@@ -22,7 +22,7 @@ defmodule Hexpm.Web.Router do
     plug :user_agent
     plug :authenticate
     plug :validate_url
-    plug Hexpm.Web.Plugs.Attack
+    plug HexpmWeb.Plugs.Attack
     plug :fetch_body
     plug :default_organization
   end
@@ -32,7 +32,7 @@ defmodule Hexpm.Web.Router do
     plug :user_agent
     plug :authenticate
     plug :validate_url
-    plug Hexpm.Web.Plugs.Attack
+    plug HexpmWeb.Plugs.Attack
     plug Corsica, origins: "*", allow_methods: ["HEAD", "GET"]
     plug :default_organization
   end
@@ -41,7 +41,7 @@ defmodule Hexpm.Web.Router do
     forward "/sent_emails", Bamboo.SentEmailViewerPlug
   end
 
-  scope "/", Hexpm.Web do
+  scope "/", HexpmWeb do
     pipe_through :browser
 
     get "/", PageController, :index
@@ -97,7 +97,7 @@ defmodule Hexpm.Web.Router do
     get "/blog/:slug", BlogController, :show
   end
 
-  scope "/dashboard", Hexpm.Web.Dashboard do
+  scope "/dashboard", HexpmWeb.Dashboard do
     pipe_through :browser
 
     get "/profile", ProfileController, :index
@@ -137,13 +137,13 @@ defmodule Hexpm.Web.Router do
     post "/keys", KeyController, :create
   end
 
-  scope "/", Hexpm.Web do
+  scope "/", HexpmWeb do
     get "/sitemap.xml", SitemapController, :sitemap
     get "/hexsearch.xml", OpenSearchController, :opensearch
     get "/installs/hex.ez", InstallController, :archive
   end
 
-  scope "/api", Hexpm.Web.API, as: :api do
+  scope "/api", HexpmWeb.API, as: :api do
     pipe_through :upload
 
     for prefix <- ["/", "/repos/:repository"] do
@@ -155,7 +155,7 @@ defmodule Hexpm.Web.Router do
     end
   end
 
-  scope "/api", Hexpm.Web.API, as: :api do
+  scope "/api", HexpmWeb.API, as: :api do
     pipe_through :api
 
     get "/", IndexController, :index
@@ -208,7 +208,7 @@ defmodule Hexpm.Web.Router do
   end
 
   if Mix.env() in [:dev, :test, :hex] do
-    scope "/repo", Hexpm.Web do
+    scope "/repo", HexpmWeb do
       get "/registry.ets.gz", TestController, :registry
       get "/registry.ets.gz.signed", TestController, :registry_signed
       get "/names", TestController, :names
@@ -223,13 +223,13 @@ defmodule Hexpm.Web.Router do
       end
     end
 
-    scope "/api", Hexpm.Web do
+    scope "/api", HexpmWeb do
       pipe_through :api
 
       post "/repo", TestController, :repo
     end
 
-    scope "/docs", Hexpm.Web do
+    scope "/docs", HexpmWeb do
       get "/:package/:version/*page", TestController, :docs_page
       get "/sitemap.xml", TestController, :docs_sitemap
     end
@@ -242,7 +242,7 @@ defmodule Hexpm.Web.Router do
       user_ip = conn.remote_ip |> :inet.ntoa() |> List.to_string()
       headers = conn.req_headers |> Map.new() |> filter_headers()
       params = filter_params(conn.params)
-      endpoint_url = Hexpm.Web.Endpoint.config(:url)
+      endpoint_url = HexpmWeb.Endpoint.config(:url)
 
       conn_data = %{
         "request" => %{

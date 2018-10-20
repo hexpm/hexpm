@@ -1,5 +1,5 @@
-defmodule Hexpm.Web.TestController do
-  use Hexpm.Web, :controller
+defmodule HexpmWeb.TestController do
+  use HexpmWeb, :controller
 
   def registry(conn, _params) do
     registry = Hexpm.Store.get(nil, :s3_bucket, "registry.ets.gz", [])
@@ -67,7 +67,7 @@ defmodule Hexpm.Web.TestController do
   end
 
   def docs_sitemap(conn, _params) do
-    Hexpm.Store.get(nil, :docs_bucket, Routes.sitemap_path(Hexpm.Web.Endpoint, :sitemap), [])
+    Hexpm.Store.get(nil, :docs_bucket, Routes.sitemap_path(HexpmWeb.Endpoint, :sitemap), [])
     |> send_object(conn)
   end
 

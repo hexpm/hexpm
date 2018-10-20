@@ -1,7 +1,7 @@
 defmodule Hexpm.Repository.Release do
-  use Hexpm.Web, :schema
+  use HexpmWeb, :schema
 
-  @derive {Hexpm.Web.Stale, assocs: [:requirements, :downloads]}
+  @derive {HexpmWeb.Stale, assocs: [:requirements, :downloads]}
   @one_hour 60 * 60
   @one_day @one_hour * 24
 

@@ -8,7 +8,7 @@ config :hexpm,
   billing_url: "http://localhost:4001",
   billing_key: "hex_billing_key"
 
-config :hexpm, Hexpm.Web.Endpoint,
+config :hexpm, HexpmWeb.Endpoint,
   http: [port: 4000],
   debug_errors: true,
   code_reloader: true,
@@ -24,7 +24,7 @@ config :hexpm, Hexpm.Web.Endpoint,
     ]
   ]
 
-config :hexpm, Hexpm.Web.Endpoint,
+config :hexpm, HexpmWeb.Endpoint,
   live_reload: [
     patterns: [
       ~r{priv/static/.*(js|css|png|jpeg|jpg|gif|svg)$},

@@ -1,4 +1,4 @@
-defmodule Hexpm.Web.MarkdownEngine do
+defmodule HexpmWeb.MarkdownEngine do
   @behaviour Phoenix.Template.Engine
 
   def compile(path, _name) do
@@ -14,7 +14,7 @@ defmodule Hexpm.Web.MarkdownEngine do
 
   defp header_anchors(html, tag) do
     icon =
-      Hexpm.Web.ViewIcons.icon(:glyphicon, :link, class: "icon-link")
+      HexpmWeb.ViewIcons.icon(:glyphicon, :link, class: "icon-link")
       |> Phoenix.HTML.safe_to_string()
 
     Regex.replace(~r"<#{tag}>(.*)</#{tag}>", html, fn _, header ->

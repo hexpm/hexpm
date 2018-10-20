@@ -1,4 +1,4 @@
-defmodule Hexpm.Web.ConsultFormat do
+defmodule HexpmWeb.ConsultFormat do
   def encode(map) when is_map(map) do
     map
     |> Hexpm.Utils.binarify(maps: false)

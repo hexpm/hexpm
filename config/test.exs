@@ -9,7 +9,7 @@ config :hexpm,
   docs_url: "http://localhost:5002",
   billing_impl: Hexpm.Billing.Mock
 
-config :hexpm, Hexpm.Web.Endpoint,
+config :hexpm, HexpmWeb.Endpoint,
   http: [port: 5000],
   server: false
 

@@ -1,4 +1,4 @@
-defmodule Hexpm.Web.API.PackageControllerTest do
+defmodule HexpmWeb.API.PackageControllerTest do
   use Hexpm.ConnCase, async: true
 
   setup do
@@ -9,7 +9,7 @@ defmodule Hexpm.Web.API.PackageControllerTest do
     package1 =
       insert(
         :package,
-        name: "Hexpm.Web.API.PackageControllerTest",
+        name: "HexpmWeb.API.PackageControllerTest",
         inserted_at: ~N[2030-01-01 00:00:00]
       )
 

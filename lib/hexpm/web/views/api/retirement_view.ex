@@ -1,5 +1,5 @@
-defmodule Hexpm.Web.API.RetirementView do
-  use Hexpm.Web, :view
+defmodule HexpmWeb.API.RetirementView do
+  use HexpmWeb, :view
 
   def render("show." <> _, %{retirement: retirement}) do
     render_one(retirement, __MODULE__, "show")

@@ -1,5 +1,5 @@
-defmodule Hexpm.Web.BlogView do
-  use Hexpm.Web, :view
+defmodule HexpmWeb.BlogView do
+  use HexpmWeb, :view
 
   skip_slugs = ~w()
 

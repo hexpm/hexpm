@@ -1,5 +1,5 @@
-defmodule Hexpm.Web.Dashboard.EmailController do
-  use Hexpm.Web, :controller
+defmodule HexpmWeb.Dashboard.EmailController do
+  use HexpmWeb, :controller
 
   plug :requires_login
 

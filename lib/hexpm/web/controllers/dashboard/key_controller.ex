@@ -1,5 +1,5 @@
-defmodule Hexpm.Web.Dashboard.KeyController do
-  use Hexpm.Web, :controller
+defmodule HexpmWeb.Dashboard.KeyController do
+  use HexpmWeb, :controller
 
   plug :requires_login
 

@@ -1,4 +1,4 @@
-defmodule Hexpm.Web.PasswordResetControllerTest do
+defmodule HexpmWeb.PasswordResetControllerTest do
   use Hexpm.ConnCase, async: true
   use Bamboo.Test
   alias Hexpm.Accounts.User

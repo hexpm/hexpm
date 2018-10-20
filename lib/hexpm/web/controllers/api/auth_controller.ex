@@ -1,5 +1,5 @@
-defmodule Hexpm.Web.API.AuthController do
-  use Hexpm.Web, :controller
+defmodule HexpmWeb.API.AuthController do
+  use HexpmWeb, :controller
 
   plug :required_params, ["domain"]
   plug :authorize

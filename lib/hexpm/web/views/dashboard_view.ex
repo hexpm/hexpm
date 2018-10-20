@@ -1,5 +1,5 @@
-defmodule Hexpm.Web.DashboardView do
-  use Hexpm.Web, :view
+defmodule HexpmWeb.DashboardView do
+  use HexpmWeb, :view
 
   defp account_settings() do
     [

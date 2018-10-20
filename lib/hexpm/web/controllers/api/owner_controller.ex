@@ -1,5 +1,5 @@
-defmodule Hexpm.Web.API.OwnerController do
-  use Hexpm.Web, :controller
+defmodule HexpmWeb.API.OwnerController do
+  use HexpmWeb, :controller
 
   plug :maybe_fetch_package
 

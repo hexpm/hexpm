@@ -1,5 +1,5 @@
-defmodule Hexpm.Web.SitemapController do
-  use Hexpm.Web, :controller
+defmodule HexpmWeb.SitemapController do
+  use HexpmWeb, :controller
 
   def sitemap(conn, _params) do
     conn

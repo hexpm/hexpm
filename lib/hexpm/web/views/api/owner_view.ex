@@ -1,6 +1,6 @@
-defmodule Hexpm.Web.API.OwnerView do
-  use Hexpm.Web, :view
-  alias Hexpm.Web.API.{OwnerView, UserView}
+defmodule HexpmWeb.API.OwnerView do
+  use HexpmWeb, :view
+  alias HexpmWeb.API.{OwnerView, UserView}
 
   def render("index." <> _format, %{owners: owners}) do
     render_many(owners, OwnerView, "show")

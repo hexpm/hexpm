@@ -1,5 +1,5 @@
-defmodule Hexpm.Web.API.DocsController do
-  use Hexpm.Web, :controller
+defmodule HexpmWeb.API.DocsController do
+  use HexpmWeb, :controller
 
   plug :fetch_release
 
@@ -35,7 +35,7 @@ defmodule Hexpm.Web.API.DocsController do
 
     log_tarball(organization.name, package.name, release.version, request_id, body)
 
-    case Hexpm.Web.DocsTar.parse(body) do
+    case HexpmWeb.DocsTar.parse(body) do
       {:ok, {files, body}} ->
         Hexpm.Repository.Releases.publish_docs(
           package,

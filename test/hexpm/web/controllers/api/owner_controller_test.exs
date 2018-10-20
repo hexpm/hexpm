@@ -1,4 +1,4 @@
-defmodule Hexpm.Web.API.OwnerControllerTest do
+defmodule HexpmWeb.API.OwnerControllerTest do
   use Hexpm.ConnCase, async: true
   use Bamboo.Test
 

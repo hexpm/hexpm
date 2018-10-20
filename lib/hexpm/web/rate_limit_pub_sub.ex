@@ -1,6 +1,6 @@
-defmodule Hexpm.Web.RateLimitPubSub do
+defmodule HexpmWeb.RateLimitPubSub do
   use GenServer
-  alias Hexpm.Web.Plugs.Attack
+  alias HexpmWeb.Plugs.Attack
 
   def start_link() do
     GenServer.start_link(__MODULE__, [], name: __MODULE__)

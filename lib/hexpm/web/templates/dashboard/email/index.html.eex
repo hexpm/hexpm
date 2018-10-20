@@ -32,7 +32,7 @@
             <%= form_tag(Routes.email_path(Endpoint, :delete), method: :delete, class: "action") do %>
               <input type="hidden" name="email" value="<%= email.email %>">
               <button type="submit" class="btn btn-link btn-svg" <%= if email.primary do %>disabled<% end %>>
-                <%= Hexpm.Web.ViewIcons.icon(:octicon, :trashcan) %>
+                <%= HexpmWeb.ViewIcons.icon(:octicon, :trashcan) %>
               </button>
             <% end %>
 

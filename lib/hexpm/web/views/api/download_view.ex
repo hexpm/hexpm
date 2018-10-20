@@ -1,5 +1,5 @@
-defmodule Hexpm.Web.API.DownloadView do
-  use Hexpm.Web, :view
+defmodule HexpmWeb.API.DownloadView do
+  use HexpmWeb, :view
 
   def render("show." <> _, %{download: download}) do
     render_one(download, __MODULE__, "show")

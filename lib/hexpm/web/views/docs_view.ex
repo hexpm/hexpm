@@ -1,6 +1,6 @@
-defmodule Hexpm.Web.DocsView do
-  use Hexpm.Web, :view
-  alias Hexpm.Web.DocsView
+defmodule HexpmWeb.DocsView do
+  use HexpmWeb, :view
+  alias HexpmWeb.DocsView
 
   def selected_docs(conn, view) do
     if conn.assigns.view_name == view do

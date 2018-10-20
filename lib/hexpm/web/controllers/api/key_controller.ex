@@ -1,5 +1,5 @@
-defmodule Hexpm.Web.API.KeyController do
-  use Hexpm.Web, :controller
+defmodule HexpmWeb.API.KeyController do
+  use HexpmWeb, :controller
 
   plug :fetch_organization
 

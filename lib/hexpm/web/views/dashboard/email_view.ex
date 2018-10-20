@@ -1,6 +1,6 @@
-defmodule Hexpm.Web.Dashboard.EmailView do
-  use Hexpm.Web, :view
-  alias Hexpm.Web.DashboardView
+defmodule HexpmWeb.Dashboard.EmailView do
+  use HexpmWeb, :view
+  alias HexpmWeb.DashboardView
 
   def public_email_options(user) do
     emails =

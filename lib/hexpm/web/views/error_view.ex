@@ -1,5 +1,5 @@
-defmodule Hexpm.Web.ErrorView do
-  use Hexpm.Web, :view
+defmodule HexpmWeb.ErrorView do
+  use HexpmWeb, :view
 
   def render(<<status::binary-3>> <> ".html", assigns) when status != "all" do
     render(

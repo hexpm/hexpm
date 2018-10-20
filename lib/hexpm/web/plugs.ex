@@ -1,7 +1,7 @@
-defmodule Hexpm.Web.Plugs do
+defmodule HexpmWeb.Plugs do
   import Plug.Conn, except: [read_body: 1]
 
-  alias Hexpm.Web.ControllerHelpers
+  alias HexpmWeb.ControllerHelpers
 
   # Max filesize: ~10mb
   # Min upload speed: ~10kb/s
@@ -102,7 +102,7 @@ defmodule Hexpm.Web.Plugs do
   end
 
   def authenticate(conn, _opts) do
-    case Hexpm.Web.AuthHelpers.authenticate(conn) do
+    case HexpmWeb.AuthHelpers.authenticate(conn) do
       {:ok, %{key: key, user: user, organization: organization, email: email, source: source}} ->
         conn
         |> assign(:key, key)
@@ -120,7 +120,7 @@ defmodule Hexpm.Web.Plugs do
         |> assign(:auth_source, nil)
 
       {:error, _} = error ->
-        Hexpm.Web.AuthHelpers.error(conn, error)
+        HexpmWeb.AuthHelpers.error(conn, error)
     end
   end
 end

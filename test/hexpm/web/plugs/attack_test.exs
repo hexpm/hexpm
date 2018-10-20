@@ -1,8 +1,8 @@
-defmodule Hexpm.Web.Plugs.AttackTest do
+defmodule HexpmWeb.Plugs.AttackTest do
   use ExUnit.Case, async: true
   use Plug.Test
   import Hexpm.Factory
-  alias Hexpm.Web.RateLimitPubSub
+  alias HexpmWeb.RateLimitPubSub
 
   defmodule Hello do
     # need to use Phoenix.Controller because RateLimit.Plug uses ErrorView
@@ -10,7 +10,7 @@ defmodule Hexpm.Web.Plugs.AttackTest do
     use Phoenix.Controller
 
     plug :accepts, ~w(json)
-    plug Hexpm.Web.Plugs.Attack
+    plug HexpmWeb.Plugs.Attack
 
     def index(conn, _params) do
       send_resp(conn, 200, "Hello, World!")
@@ -19,7 +19,7 @@ defmodule Hexpm.Web.Plugs.AttackTest do
 
   setup do
     :ok = Ecto.Adapters.SQL.Sandbox.checkout(Hexpm.RepoBase)
-    PlugAttack.Storage.Ets.clean(Hexpm.Web.Plugs.Attack)
+    PlugAttack.Storage.Ets.clean(HexpmWeb.Plugs.Attack)
     %{user: insert(:user)}
   end
 
@@ -99,7 +99,7 @@ defmodule Hexpm.Web.Plugs.AttackTest do
       conn = request_ip({2, 2, 2, 2})
       assert get_resp_header(conn, "x-ratelimit-remaining") == ["99"]
 
-      PlugAttack.Storage.Ets.clean(Hexpm.Web.Plugs.Attack)
+      PlugAttack.Storage.Ets.clean(HexpmWeb.Plugs.Attack)
 
       conn = request_ip({2, 2, 2, 2})
       assert get_resp_header(conn, "x-ratelimit-remaining") == ["99"]

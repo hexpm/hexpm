@@ -1,7 +1,7 @@
 defmodule Hexpm.Accounts.Organization do
-  use Hexpm.Web, :schema
+  use HexpmWeb, :schema
 
-  @derive Hexpm.Web.Stale
+  @derive HexpmWeb.Stale
   @derive {Phoenix.Param, key: :name}
 
   schema "organizations" do

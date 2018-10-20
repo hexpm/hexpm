@@ -1,12 +1,12 @@
-defmodule Hexpm.Web do
+defmodule HexpmWeb do
   @moduledoc """
   A module that keeps using definitions for controllers,
   views and so on.
 
   This can be used in your application as:
 
-      use Hexpm.Web, :controller
-      use Hexpm.Web, :view
+      use HexpmWeb, :controller
+      use HexpmWeb, :view
 
   The definitions below will be executed for every view,
   controller, etc, so keep them short and clean, focused
@@ -28,7 +28,7 @@ defmodule Hexpm.Web do
 
       alias Ecto.Multi
 
-      Hexpm.Web.shared()
+      HexpmWeb.shared()
     end
   end
 
@@ -43,23 +43,23 @@ defmodule Hexpm.Web do
 
       alias Hexpm.{Emails, Emails.Mailer, Repo}
 
-      Hexpm.Web.shared()
+      HexpmWeb.shared()
     end
   end
 
   def controller() do
     quote do
-      use Phoenix.Controller, namespace: Hexpm.Web
+      use Phoenix.Controller, namespace: HexpmWeb
 
       import Ecto
       import Ecto.Query, only: [from: 1, from: 2]
 
-      import Hexpm.Web.{ControllerHelpers, AuthHelpers}
+      import HexpmWeb.{ControllerHelpers, AuthHelpers}
 
-      alias Hexpm.Web.Endpoint
-      alias Hexpm.Web.Router.Helpers, as: Routes
+      alias HexpmWeb.Endpoint
+      alias HexpmWeb.Router.Helpers, as: Routes
 
-      Hexpm.Web.shared()
+      HexpmWeb.shared()
     end
   end
 
@@ -67,7 +67,7 @@ defmodule Hexpm.Web do
     quote do
       use Phoenix.View,
         root: "lib/hexpm/web/templates",
-        namespace: Hexpm.Web
+        namespace: HexpmWeb
 
       use Phoenix.HTML
 
@@ -87,19 +87,19 @@ defmodule Hexpm.Web do
           select: 4
         ]
 
-      import Hexpm.Web.{ViewHelpers, ViewIcons}
+      import HexpmWeb.{ViewHelpers, ViewIcons}
 
-      alias Hexpm.Web.Endpoint
-      alias Hexpm.Web.Router.Helpers, as: Routes
+      alias HexpmWeb.Endpoint
+      alias HexpmWeb.Router.Helpers, as: Routes
 
-      Hexpm.Web.shared()
+      HexpmWeb.shared()
     end
   end
 
   def router() do
     quote do
       use Phoenix.Router
-      import Hexpm.Web.Plugs
+      import HexpmWeb.Plugs
     end
   end
 

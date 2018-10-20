@@ -1,5 +1,5 @@
-defmodule Hexpm.Web.PolicyController do
-  use Hexpm.Web, :controller
+defmodule HexpmWeb.PolicyController do
+  use HexpmWeb, :controller
 
   def coc(conn, _params) do
     render(

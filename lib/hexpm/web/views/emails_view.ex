@@ -1,3 +1,3 @@
-defmodule Hexpm.Web.EmailsView do
-  use Hexpm.Web, :view
+defmodule HexpmWeb.EmailsView do
+  use HexpmWeb, :view
 end

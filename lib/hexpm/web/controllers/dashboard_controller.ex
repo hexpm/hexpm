@@ -1,5 +1,5 @@
-defmodule Hexpm.Web.DashboardController do
-  use Hexpm.Web, :controller
+defmodule HexpmWeb.DashboardController do
+  use HexpmWeb, :controller
 
   plug :requires_login
 

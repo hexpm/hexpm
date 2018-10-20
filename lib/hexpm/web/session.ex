@@ -1,4 +1,4 @@
-defmodule Hexpm.Web.Session do
+defmodule HexpmWeb.Session do
   alias Hexpm.Accounts.Session
   alias Hexpm.Repo
 

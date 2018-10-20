@@ -1,4 +1,4 @@
-defmodule Hexpm.Web.PolicyControllerTest do
+defmodule HexpmWeb.PolicyControllerTest do
   use Hexpm.ConnCase, async: true
 
   test "show policy code of conduct" do

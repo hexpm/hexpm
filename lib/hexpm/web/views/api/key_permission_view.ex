@@ -1,5 +1,5 @@
-defmodule Hexpm.Web.API.KeyPermissionView do
-  use Hexpm.Web, :view
+defmodule HexpmWeb.API.KeyPermissionView do
+  use HexpmWeb, :view
 
   def render("show." <> _, %{key_permission: key_permission}) do
     render_one(key_permission, __MODULE__, "show")

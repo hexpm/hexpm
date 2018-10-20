@@ -1,5 +1,5 @@
-defmodule Hexpm.Web.Dashboard.PasswordController do
-  use Hexpm.Web, :controller
+defmodule HexpmWeb.Dashboard.PasswordController do
+  use HexpmWeb, :controller
 
   plug :requires_login
 

@@ -1,8 +1,8 @@
 defmodule Hexpm.Repository.Requirement do
-  use Hexpm.Web, :schema
+  use HexpmWeb, :schema
   require Logger
 
-  @derive {Hexpm.Web.Stale, last_modified: nil}
+  @derive {HexpmWeb.Stale, last_modified: nil}
 
   schema "requirements" do
     field :app, :string

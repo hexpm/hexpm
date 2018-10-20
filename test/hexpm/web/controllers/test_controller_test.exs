@@ -1,4 +1,4 @@
-defmodule Hexpm.Web.TestControllerTest do
+defmodule HexpmWeb.TestControllerTest do
   use Hexpm.ConnCase, async: true
 
   alias Hexpm.Accounts.Organization

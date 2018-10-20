@@ -1,6 +1,6 @@
-defmodule Hexpm.Web.API.PackageView do
-  use Hexpm.Web, :view
-  alias Hexpm.Web.API.{DownloadView, ReleaseView, RetirementView, UserView}
+defmodule HexpmWeb.API.PackageView do
+  use HexpmWeb, :view
+  alias HexpmWeb.API.{DownloadView, ReleaseView, RetirementView, UserView}
 
   def render("index." <> _, %{packages: packages}) do
     render_many(packages, __MODULE__, "show")

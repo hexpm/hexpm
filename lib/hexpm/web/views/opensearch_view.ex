@@ -1,3 +1,3 @@
-defmodule Hexpm.Web.OpenSearchView do
-  use Hexpm.Web, :view
+defmodule HexpmWeb.OpenSearchView do
+  use HexpmWeb, :view
 end
