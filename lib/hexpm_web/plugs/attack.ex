@@ -7,15 +7,7 @@ defmodule HexpmWeb.Plugs.Attack do
   alias Hexpm.BlockAddress
   alias HexpmWeb.RateLimitPubSub
 
-  @storage {PlugAttack.Storage.Ets, HexpmWeb.Plugs.Attack}
-
-  # TODO: add child_spec to plug_attack instead
-  def child_spec(storage, opts) do
-    %{
-      id: __MODULE__,
-      start: {storage, :start_link, [__MODULE__, opts]}
-    }
-  end
+  @storage {PlugAttack.Storage.Ets, HexpmWeb.Plugs.Attack.Storage}
 
   rule "allow local", conn do
     allow(conn.remote_ip == {127, 0, 0, 1})

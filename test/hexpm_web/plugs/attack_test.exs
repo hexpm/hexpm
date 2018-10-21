@@ -19,7 +19,7 @@ defmodule HexpmWeb.Plugs.AttackTest do
 
   setup do
     :ok = Ecto.Adapters.SQL.Sandbox.checkout(Hexpm.RepoBase)
-    PlugAttack.Storage.Ets.clean(HexpmWeb.Plugs.Attack)
+    PlugAttack.Storage.Ets.clean(HexpmWeb.Plugs.Attack.Storage)
     %{user: insert(:user)}
   end
 
@@ -99,7 +99,7 @@ defmodule HexpmWeb.Plugs.AttackTest do
       conn = request_ip({2, 2, 2, 2})
       assert get_resp_header(conn, "x-ratelimit-remaining") == ["99"]
 
-      PlugAttack.Storage.Ets.clean(HexpmWeb.Plugs.Attack)
+      PlugAttack.Storage.Ets.clean(HexpmWeb.Plugs.Attack.Storage)
 
       conn = request_ip({2, 2, 2, 2})
       assert get_resp_header(conn, "x-ratelimit-remaining") == ["99"]

@@ -12,7 +12,7 @@ defmodule Hexpm.Application do
       {Cluster.Supervisor, [topologies, [name: Hexpm.ClusterSupervisor]]},
       {Phoenix.PubSub.PG2, name: Hexpm.PubSub},
       HexpmWeb.RateLimitPubSub,
-      HexpmWeb.Plugs.Attack.child_spec(PlugAttack.Storage.Ets, clean_period: 60_000),
+      {PlugAttack.Storage.Ets, name: HexpmWeb.Plugs.Attack.Storage, clean_period: 60_000},
       {Hexpm.Throttle, name: Hexpm.SESThrottle, rate: ses_rate(), unit: 1000},
       {Hexpm.Billing.Report, name: Hexpm.Billing.Report, interval: 60_000},
       HexpmWeb.Endpoint
