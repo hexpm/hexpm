@@ -76,7 +76,7 @@ defmodule Hexpm.RepoBase do
   def init(_reason, opts) do
     if url = System.get_env("HEXPM_DATABASE_URL") do
       pool_size_env = System.get_env("HEXPM_DATABASE_POOL_SIZE")
-      pool_size = opts[:pool_size] || String.to_integer(pool_size_env)
+      pool_size = if pool_size_env, do: String.to_integer(pool_size_env), else: opts[:pool_size]
       ca_cert = System.get_env("HEXPM_DATABASE_CA_CERT")
       client_key = System.get_env("HEXPM_DATABASE_CLIENT_KEY")
       client_cert = System.get_env("HEXPM_DATABASE_CLIENT_CERT")
@@ -95,7 +95,6 @@ defmodule Hexpm.RepoBase do
         |> Keyword.put(:ssl_opts, ssl_opts)
         |> Keyword.put(:url, url)
         |> Keyword.put(:pool_size, pool_size)
-        |> Keyword.put(:queue_size, pool_size * 5)
 
       {:ok, Keyword.put(opts, :url, url)}
     else
