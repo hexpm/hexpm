@@ -288,7 +288,11 @@ defmodule Hexpm.Repository.RegistryBuilder do
       organization_cdn_key(organization, "registry") <>
         " " <> organization_cdn_key(organization, "registry-index")
 
-    meta = [{"surrogate-key", surrogate_key}, {"surrogate-control", "public, max-age=604800"}]
+    meta = [
+      {"surrogate-key", surrogate_key},
+      {"surrogate-control", "public, max-age=604800"}
+    ]
+
     index_meta = [{"signature", signature} | meta]
     opts = [cache_control: "public, max-age=600", meta: meta]
     index_opts = Keyword.put(opts, :meta, index_meta)
@@ -308,7 +312,11 @@ defmodule Hexpm.Repository.RegistryBuilder do
       organization_cdn_key(organization, "registry") <>
         " " <> organization_cdn_key(organization, "registry-index")
 
-    meta = [{"surrogate-key", surrogate_key}, {"surrogate-control", "public, max-age=604800"}]
+    meta = [
+      {"surrogate-key", surrogate_key},
+      {"surrogate-control", "public, max-age=604800"}
+    ]
+
     opts = [cache_control: cache_control(organization), meta: meta]
     index_opts = Keyword.put(opts, :meta, meta)
 
@@ -321,7 +329,11 @@ defmodule Hexpm.Repository.RegistryBuilder do
           organization_cdn_key(organization, "registry") <>
             " " <> organization_cdn_key(organization, "registry-package", name)
 
-        meta = [{"surrogate-key", surrogate_key}, {"surrogate-control", "public, max-age=604800"}]
+        meta = [
+          {"surrogate-key", surrogate_key},
+          {"surrogate-control", "public, max-age=604800"}
+        ]
+
         opts = Keyword.put(opts, :meta, meta)
         {organization_store_key(organization, "packages/#{name}"), contents, opts}
       end)

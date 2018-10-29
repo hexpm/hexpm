@@ -188,7 +188,10 @@ defmodule Hexpm.Repository.Releases do
     release = package && Repo.get_by(assoc(package, :releases), version: version)
 
     multi
-    |> Multi.insert_or_update(:release, fn %{package: package, reserved_packages: reserved_packages} ->
+    |> Multi.insert_or_update(:release, fn %{
+                                             package: package,
+                                             reserved_packages: reserved_packages
+                                           } ->
       changeset =
         if release do
           %{release | package: package}

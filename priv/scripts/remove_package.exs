@@ -52,7 +52,7 @@ Enum.each(releases, &IO.puts(&1.version))
 answer = IO.gets("Remove? [Yn] ")
 
 if answer =~ ~r/^(Y(es)?)?$/i do
-  Enum.each(package_owners, &(Hexpm.Repo.delete!/1))
+  Enum.each(package_owners, &Hexpm.Repo.delete!/1)
   Enum.each(releases, &(Hexpm.Repository.Release.delete(&1, force: true) |> Hexpm.Repo.delete!()))
   Hexpm.Repo.delete!(package)
   Enum.each(releases, &Hexpm.Repository.Assets.revert_release/1)

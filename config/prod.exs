@@ -27,8 +27,7 @@ config :hexpm, HexpmWeb.Endpoint,
   load_from_system_env: true,
   cache_static_manifest: "priv/static/cache_manifest.json"
 
-config :hexpm, Hexpm.RepoBase,
-  ssl: true
+config :hexpm, Hexpm.RepoBase, ssl: true
 
 config :bcrypt_elixir, log_rounds: 12
 

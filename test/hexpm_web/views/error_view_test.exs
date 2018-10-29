@@ -26,8 +26,7 @@ defmodule HexpmWeb.ErrorViewTest do
   end
 
   test "renders 422.html" do
-    assert render_to_string(HexpmWeb.ErrorView, "422.html", conn: conn()) =~
-             "Validation error(s)"
+    assert render_to_string(HexpmWeb.ErrorView, "422.html", conn: conn()) =~ "Validation error(s)"
   end
 
   test "render 500.html" do
