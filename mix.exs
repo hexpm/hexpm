@@ -39,7 +39,7 @@ defmodule Hexpm.MixProject do
       {:distillery, "~> 1.5", runtime: false},
       {:earmark, "~> 1.0"},
       {:ecto_sql, "~> 3.0-rc"},
-      {:ecto, "~> 3.0-rc", override: true},
+      {:ecto, "~> 3.0", override: true},
       {:ex_aws_s3, "~> 2.0"},
       {:ex_aws_ses, "~> 2.0"},
       {:ex_aws, "~> 2.0"},
@@ -56,7 +56,7 @@ defmodule Hexpm.MixProject do
       {:plug_attack, "~> 0.3"},
       {:plug_cowboy, "~> 1.0"},
       {:plug, "~> 1.2"},
-      {:postgrex, "~> 0.14-rc", override: true},
+      {:postgrex, "~> 0.14"},
       {:rollbax, "~> 0.5"},
       {:sweet_xml, "~> 0.5"}
     ]
