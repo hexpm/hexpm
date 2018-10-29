@@ -155,7 +155,7 @@ defmodule Hexpm.Repository.Assets do
   defp upload_new_files(files) do
     Enum.map(files, fn {store_key, cdn_key, data} ->
       surrogate_key = {"surrogate-key", cdn_key}
-      surrogate_control = {"surrogate-control", "max-age=604800"}
+      surrogate_control = {"surrogate-control", "public, max-age=604800"}
 
       opts =
         content_type(store_key)
