@@ -138,7 +138,8 @@ defmodule HexpmWeb.Router do
   end
 
   scope "/", HexpmWeb do
-    get "/sitemap.xml", SitemapController, :sitemap
+    get "/sitemap.xml", SitemapController, :main
+    get "/docs_sitemap.xml", SitemapController, :docs
     get "/hexsearch.xml", OpenSearchController, :opensearch
     get "/installs/hex.ez", InstallController, :archive
   end
