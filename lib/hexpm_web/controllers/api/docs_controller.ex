@@ -34,27 +34,14 @@ defmodule HexpmWeb.API.DocsController do
     request_id = List.first(get_req_header(conn, "x-request-id"))
 
     log_tarball(organization.name, package.name, release.version, request_id, body)
+    Hexpm.Repository.Releases.publish_docs(package, release, body, audit: audit_data(conn))
 
-    case HexpmWeb.DocsTar.parse(body) do
-      {:ok, {files, body}} ->
-        Hexpm.Repository.Releases.publish_docs(
-          package,
-          release,
-          files,
-          body,
-          audit: audit_data(conn)
-        )
+    location = Hexpm.Utils.docs_tarball_url(organization, package, release)
 
-        location = Hexpm.Utils.docs_tarball_url(organization, package, release)
-
-        conn
-        |> put_resp_header("location", location)
-        |> api_cache(:public)
-        |> send_resp(201, "")
-
-      {:error, errors} ->
-        validation_failed(conn, %{tar: errors})
-    end
+    conn
+    |> put_resp_header("location", location)
+    |> api_cache(:public)
+    |> send_resp(201, "")
   end
 
   def delete(conn, _params) do

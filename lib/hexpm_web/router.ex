@@ -229,11 +229,6 @@ defmodule HexpmWeb.Router do
 
       post "/repo", TestController, :repo
     end
-
-    scope "/docs", HexpmWeb do
-      get "/:package/:version/*page", TestController, :docs_page
-      get "/sitemap.xml", TestController, :docs_sitemap
-    end
   end
 
   defp handle_errors(conn, %{kind: kind, reason: reason, stack: stacktrace}) do

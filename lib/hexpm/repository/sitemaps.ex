@@ -24,9 +24,4 @@ defmodule Hexpm.Repository.Sitemaps do
     )
     |> Repo.all()
   end
-
-  def publish_docs_sitemap() do
-    sitemap = HexpmWeb.SitemapView.render("docs_sitemap.xml", packages: packages_with_docs())
-    Hexpm.Repository.Assets.push_docs_sitemap(sitemap)
-  end
 end

@@ -10,14 +10,6 @@ defmodule HexpmWeb.API.DocsControllerTest do
     {:ok, user: user}
   end
 
-  defp path(path) do
-    response = build_conn() |> get(path)
-
-    if response.status == 200 do
-      response.resp_body
-    end
-  end
-
   describe "POST /api/packages/:name/releases/:version/docs" do
     test "release docs", %{user: user} do
       package = insert(:package, package_owners: [build(:package_owner, user: user)])
@@ -27,137 +19,13 @@ defmodule HexpmWeb.API.DocsControllerTest do
       |> response(201)
 
       assert Hexpm.Repo.get_by!(assoc(package, :releases), version: "0.0.1").has_docs
+      assert Hexpm.Store.get(nil, :s3_bucket, "docs/#{package.name}-0.0.1.tar.gz", [])
 
       log = Hexpm.Repo.one!(AuditLog)
       assert log.user_id == user.id
       assert log.action == "docs.publish"
       assert log.params["package"]["name"] == package.name
       assert log.params["release"]["version"] == "0.0.1"
-
-      assert path("docs/#{package.name}/index.html") == "package v0.0.1"
-      assert path("docs/#{package.name}/0.0.1/index.html") == "package v0.0.1"
-
-      docs_url = Hexpm.Utils.docs_html_url(Organization.hexpm(), package, nil)
-      assert path("docs/sitemap.xml") =~ docs_url
-    end
-
-    test "update main docs", %{user: user} do
-      package = insert(:package, package_owners: [build(:package_owner, user: user)])
-      insert(:release, package: package, version: "0.0.1")
-      insert(:release, package: package, version: "0.5.0")
-
-      publish_docs(user, package, "0.0.1", [{'index.html', "package v0.0.1"}])
-      |> response(201)
-
-      publish_docs(user, package, "0.5.0", [{'index.html', "package v0.5.0"}])
-      |> response(201)
-
-      assert path("docs/#{package.name}/index.html") == "package v0.5.0"
-      assert path("docs/#{package.name}/0.0.1/index.html") == "package v0.0.1"
-    end
-
-    test "dont update main docs for older versions", %{user: user} do
-      package = insert(:package, package_owners: [build(:package_owner, user: user)])
-      insert(:release, package: package, version: "0.0.1")
-      insert(:release, package: package, version: "0.5.0")
-
-      publish_docs(user, package, "0.5.0", [
-        {'index.html', "package v0.5.0"},
-        {'remove.html', "dont remove me"}
-      ])
-      |> response(201)
-
-      publish_docs(user, package, "0.0.1", [{'index.html', "package v0.0.1"}])
-      |> response(201)
-
-      assert path("docs/#{package.name}/index.html") == "package v0.5.0"
-      assert path("docs/#{package.name}/remove.html") == "dont remove me"
-    end
-
-    test "overwrite docs", %{user: user} do
-      package = insert(:package, package_owners: [build(:package_owner, user: user)])
-      insert(:release, package: package, version: "0.0.1")
-      insert(:release, package: package, version: "0.5.0")
-
-      publish_docs(user, package, "0.0.1", [
-        {'index.html', "package v0.0.1"},
-        {'remove.html', "please remove me"}
-      ])
-      |> response(201)
-
-      publish_docs(user, package, "0.0.1", [{'index.html', "package v0.0.1 (updated)"}])
-      |> response(201)
-
-      assert path("docs/#{package.name}/index.html") == "package v0.0.1 (updated)"
-      assert path("docs/#{package.name}/0.0.1/index.html") == "package v0.0.1 (updated)"
-      refute path("docs/#{package.name}/remove.html")
-      refute path("docs/#{package.name}/0.0.1/remove.html")
-    end
-
-    test "beta docs do not overwrite stable main docs", %{user: user} do
-      package = insert(:package, package_owners: [build(:package_owner, user: user)])
-      insert(:release, package: package, version: "0.5.0")
-      insert(:release, package: package, version: "1.0.0-beta")
-
-      publish_docs(user, package, "0.5.0", [
-        {'index.html', "package v0.5.0"},
-        {'remove.html', "dont remove me"}
-      ])
-      |> response(201)
-
-      publish_docs(user, package, "1.0.0-beta", [{'index.html', "package v1.0.0-beta"}])
-      |> response(201)
-
-      assert path("docs/#{package.name}/index.html") == "package v0.5.0"
-      assert path("docs/#{package.name}/remove.html") == "dont remove me"
-      assert path("docs/#{package.name}/1.0.0-beta/index.html") == "package v1.0.0-beta"
-    end
-
-    test "update main docs even with beta docs", %{user: user} do
-      package = insert(:package, package_owners: [build(:package_owner, user: user)])
-      insert(:release, package: package, version: "0.0.1")
-      insert(:release, package: package, version: "1.0.0-beta")
-      insert(:release, package: package, version: "0.5.0")
-
-      publish_docs(user, package, "0.0.1", [{'index.html', "package v0.0.1"}])
-      |> response(201)
-
-      publish_docs(user, package, "1.0.0-beta", [{'index.html', "package v1.0.0-beta"}])
-      |> response(201)
-
-      publish_docs(user, package, "0.5.0", [{'index.html', "package v0.5.0"}])
-      |> response(201)
-
-      assert path("docs/#{package.name}/index.html") == "package v0.5.0"
-      assert path("docs/#{package.name}/0.0.1/index.html") == "package v0.0.1"
-      assert path("docs/#{package.name}/1.0.0-beta/index.html") == "package v1.0.0-beta"
-      assert path("docs/#{package.name}/0.5.0/index.html") == "package v0.5.0"
-    end
-
-    test "beta docs can overwrite beta main docs", %{user: user} do
-      package = insert(:package, package_owners: [build(:package_owner, user: user)])
-      insert(:release, package: package, version: "0.0.1-beta")
-      insert(:release, package: package, version: "1.0.0-beta")
-
-      publish_docs(user, package, "0.0.1-beta", [{'index.html', "package v0.0.1-beta"}])
-      |> response(201)
-
-      publish_docs(user, package, "1.0.0-beta", [{'index.html', "package v1.0.0-beta"}])
-      |> response(201)
-
-      assert path("docs/#{package.name}/index.html") == "package v1.0.0-beta"
-      assert path("docs/#{package.name}/1.0.0-beta/index.html") == "package v1.0.0-beta"
-    end
-
-    test "dont allow version directories in docs", %{user: user} do
-      package = insert(:package, package_owners: [build(:package_owner, user: user)])
-      insert(:release, package: package, version: "0.0.1")
-
-      result =
-        publish_docs(user, package, "0.0.1", [{'1.2.3', "package   v0.0.1"}])
-        |> json_response(422)
-
-      assert result["errors"]["tar"] == "directory name not allowed to match a semver version"
     end
   end
 
@@ -197,6 +65,9 @@ defmodule HexpmWeb.API.DocsControllerTest do
       |> response(201)
 
       assert Hexpm.Repo.get_by!(assoc(package, :releases), version: "0.0.1").has_docs
+
+      tar_key = "repos/#{organization.name}/docs/#{package.name}-0.0.1.tar.gz"
+      assert Hexpm.Store.get(nil, :s3_bucket, tar_key, [])
     end
   end
 
@@ -215,75 +86,34 @@ defmodule HexpmWeb.API.DocsControllerTest do
 
       # Check release was deleted
       refute Hexpm.Repo.get_by(assoc(package, :releases), version: "0.0.1")
+      refute Hexpm.Store.get(nil, :s3_bucket, "docs/#{package.name}-0.0.1.tar.gz", [])
 
       # Check docs were deleted
       assert get(build_conn(), "api/packages/#{package.name}/releases/0.0.1/docs").status in 400..499
-      assert get(build_conn(), "docs/#{package.name}/0.0.1/index.html").status in 400..499
     end
 
     test "delete docs", %{user: user} do
       package = insert(:package, package_owners: [build(:package_owner, user: user)])
       insert(:release, package: package, version: "0.0.1")
-      insert(:release, package: package, version: "0.5.0")
-      insert(:release, package: package, version: "2.0.0")
 
       publish_docs(user, package, "0.0.1", [{'index.html', "package v0.0.1"}])
       |> response(201)
 
-      publish_docs(user, package, "0.5.0", [{'index.html', "package v0.5.0"}])
-      |> response(201)
-
-      publish_docs(user, package, "2.0.0", [{'index.html', "package v2.0.0"}])
-      |> response(201)
-
-      # Revert middle release
-      revert_docs(user, package, "0.5.0")
+      # Revert docs
+      revert_docs(user, package, "0.0.1")
       |> response(204)
 
-      # Check release was deleted
-      refute Hexpm.Repo.get_by(assoc(package, :releases), version: "0.5.0").has_docs
+      # Check docs were deleted
+      refute Hexpm.Repo.get_by(assoc(package, :releases), version: "0.0.1").has_docs
+      refute Hexpm.Store.get(nil, :s3_bucket, "docs/#{package.name}-0.0.1.tar.gz", [])
 
-      [%{action: "docs.publish"}, %{action: "docs.publish"}, %{action: "docs.publish"}, log] =
+      [%{action: "docs.publish"}, log] =
         Hexpm.Repo.all(from(al in AuditLog, order_by: al.id))
 
       assert log.user_id == user.id
       assert log.action == "docs.revert"
       assert log.params["package"]["name"] == package.name
-      assert log.params["release"]["version"] == "0.5.0"
-
-      # Check docs were deleted
-      assert get(build_conn(), "api/packages/#{package.name}/releases/0.5.0/docs").status in 400..499
-      assert get(build_conn(), "docs/#{package.name}/0.5.0/index.html").status in 400..499
-
-      assert path("docs/#{package.name}/index.html") == "package v2.0.0"
-
-      # Revert latest release
-      revert_docs(user, package, "2.0.0")
-      |> response(204)
-
-      # Check release was deleted
-      refute Hexpm.Repo.get_by(assoc(package, :releases), version: "2.0.0").has_docs
-
-      # Check docs were deleted
-      assert get(build_conn(), "api/packages/#{package.name}/releases/2.0.0/docs").status in 400..499
-      assert get(build_conn(), "docs/#{package.name}/2.0.0/index.html").status in 400..499
-
-      # TODO: update top-level docs to the next-to-last version
-      assert path("docs/#{package.name}/index.html") == "package v2.0.0"
-
-      # Revert remaining release
-      revert_docs(user, package, "0.0.1")
-      |> response(204)
-
-      # Check release was deleted
-      refute Hexpm.Repo.get_by(assoc(package, :releases), version: "0.0.1").has_docs
-
-      # Check docs were deleted
-      assert get(build_conn(), "api/packages/#{package.name}/releases/0.0.1/docs").status in 400..499
-      assert get(build_conn(), "docs/#{package.name}/0.0.1/index.html").status in 400..499
-
-      # TODO: deleting last version should remove top-level docs
-      assert path("docs/#{package.name}/index.html") == "package v2.0.0"
+      assert log.params["release"]["version"] == "0.0.1"
     end
   end
 
@@ -312,6 +142,9 @@ defmodule HexpmWeb.API.DocsControllerTest do
       |> response(403)
 
       assert Hexpm.Repo.get_by(assoc(package, :releases), version: "0.0.1").has_docs
+
+      tar_key = "repos/#{organization.name}/docs/#{package.name}-0.0.1.tar.gz"
+      assert Hexpm.Store.get(nil, :s3_bucket, tar_key, [])
     end
 
     test "delete docs", %{user: user} do
@@ -334,6 +167,9 @@ defmodule HexpmWeb.API.DocsControllerTest do
       |> response(204)
 
       refute Hexpm.Repo.get_by(assoc(package, :releases), version: "0.0.1").has_docs
+
+      tar_key = "repos/#{organization.name}/docs/#{package.name}-0.0.1.tar.gz"
+      refute Hexpm.Store.get(nil, :s3_bucket, tar_key, [])
     end
   end
 
