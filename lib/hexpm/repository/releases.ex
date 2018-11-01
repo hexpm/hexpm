@@ -50,23 +50,8 @@ defmodule Hexpm.Repository.Releases do
     |> publish_result(body)
   end
 
-  def publish_docs(package, release, files, body, audit: audit_data) do
-    all_versions =
-      from(
-        r in Release.all(package),
-        where: r.has_docs == true and r.version != ^to_string(release.version),
-        select: r.version
-      )
-      |> Repo.all()
-      |> Enum.sort(&(Version.compare(&1, &2) == :gt))
-
-    # NOTE: Private hexdocs tails S3 update queue and uploads docs itself
-    # TODO: Do the same for public docs
-    if package.organization_id == 1 do
-      Assets.push_hexdocs(release, files, all_versions)
-    end
-
-    Assets.push_docs_tarball(release, body)
+  def publish_docs(package, release, body, audit: audit_data) do
+    Assets.push_docs(release, body)
 
     now = DateTime.utc_now()
     release_changeset = Ecto.Changeset.change(release, has_docs: true)
@@ -78,10 +63,6 @@ defmodule Hexpm.Repository.Releases do
       |> Multi.update(:package, package_changeset)
       |> audit(audit_data, "docs.publish", {package, release})
       |> Repo.transaction()
-
-    if package.organization_id == 1 do
-      Sitemaps.publish_docs_sitemap()
-    end
   end
 
   def revert(package, release, audit: audit_data) do

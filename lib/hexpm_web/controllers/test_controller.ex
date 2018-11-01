@@ -59,18 +59,6 @@ defmodule HexpmWeb.TestController do
     send_resp(conn, 204, "")
   end
 
-  def docs_page(conn, params) do
-    path = Path.join([params["package"], params["version"], params["page"]])
-
-    Hexpm.Store.get(nil, :docs_bucket, path, [])
-    |> send_object(conn)
-  end
-
-  def docs_sitemap(conn, _params) do
-    Hexpm.Store.get(nil, :docs_bucket, "sitemap.xml", [])
-    |> send_object(conn)
-  end
-
   def installs_csv(conn, _params) do
     send_resp(conn, 200, "")
   end
