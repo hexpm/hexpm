@@ -69,8 +69,8 @@ defmodule Hexpm.ReleaseTasks do
 
   defp start_app() do
     IO.puts("Starting app...")
-    Application.put_env(:phoenix, :serve_endpoints, false)
-    Application.put_env(:hexpm, :topologies, [])
+    Application.put_env(:phoenix, :serve_endpoints, false, persistent: true)
+    Application.put_env(:hexpm, :topologies, [], persistent: true)
     {:ok, _} = Application.ensure_all_started(:hexpm)
   end
 
