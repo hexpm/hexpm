@@ -1,18 +1,8 @@
-[action, dir, date] = System.argv()
+[action, date] = System.argv()
 
-buckets =
-  case dir do
-    "hex" ->
-      [
-        {"logs.hex.pm", "us-east-1"},
-        {"eu.logs.hex.pm", "eu-west-1"}
-      ]
-
-    "fastly_hex" ->
-      [{"logs.hex.pm", "us-east-1"}]
-  end
-
-filename = "#{dir}-#{date}.txt.gz"
+buckets = [{"logs.hex.pm", "us-east-1"}]
+tmp = Application.get_env(:hexpm, :tmp_dir)
+filename = Path.join([tmp, "logs", "#{dir}-#{date}.txt.gz"])
 
 uncompress = fn data, key ->
   if String.ends_with?(key, ".gz") do
@@ -48,7 +38,7 @@ if action == "count" do
   |> IO.inspect()
 end
 
-if action == "persist" do
+if action == "fetch" || action == "fetch-and-upload" do
   File.open!(filename, [:write, :delayed_write, :compressed], fn file ->
     keys
     |> Task.async_stream(
@@ -70,7 +60,7 @@ if action == "persist" do
 
         IO.binwrite(file, data)
       end,
-      max_concurrency: 40,
+      max_concurrency: 20,
       ordered: false,
       timeout: 60_000
     )
@@ -78,7 +68,7 @@ if action == "persist" do
   end)
 end
 
-if action == "upload" do
+if action == "upload" || action == "fetch-and-upload" do
   key = "logs/monthly/#{filename}"
 
   ExAws.S3.Upload.stream_file(filename, [:read_ahead])
