@@ -134,9 +134,7 @@ defmodule Hexpm.ReleaseTasks do
     script_dir = Path.join(priv_dir, "scripts")
 
     Logger.info("[script] running #{script} #{inspect(args)}")
-    {result, bindings} = Code.eval_file(script, script_dir)
-    IO.inspect(result, label: :result)
-    IO.inspect(bindings, label: :bindings)
+    Code.eval_file(script, script_dir)
     Logger.info("[script] finished #{script} #{inspect(args)}")
   end
 
