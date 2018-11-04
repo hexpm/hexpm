@@ -1,6 +1,7 @@
 [action, date] = System.argv()
 
 buckets = [{"logs.hex.pm", "us-east-1"}]
+dir = "fastly_hex"
 tmp = Application.get_env(:hexpm, :tmp_dir)
 filename = Path.join([tmp, "logs", "#{dir}-#{date}.txt.gz"])
 
