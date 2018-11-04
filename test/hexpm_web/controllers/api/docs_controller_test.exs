@@ -107,8 +107,7 @@ defmodule HexpmWeb.API.DocsControllerTest do
       refute Hexpm.Repo.get_by(assoc(package, :releases), version: "0.0.1").has_docs
       refute Hexpm.Store.get(nil, :s3_bucket, "docs/#{package.name}-0.0.1.tar.gz", [])
 
-      [%{action: "docs.publish"}, log] =
-        Hexpm.Repo.all(from(al in AuditLog, order_by: al.id))
+      [%{action: "docs.publish"}, log] = Hexpm.Repo.all(from(al in AuditLog, order_by: al.id))
 
       assert log.user_id == user.id
       assert log.action == "docs.revert"

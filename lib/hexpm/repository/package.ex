@@ -70,6 +70,15 @@ defmodule Hexpm.Repository.Package do
     |> put_first_owner(user, organization)
   end
 
+  def delete(package) do
+    foreign_key_constraint(
+      change(package),
+      :name,
+      name: "requirements_dependency_id_fkey",
+      message: "you cannot delete this package because other packages depend on it"
+    )
+  end
+
   defp put_first_owner(changeset, %User{id: id}, _organization) do
     put_assoc(changeset, :package_owners, [%PackageOwner{user_id: id}])
   end

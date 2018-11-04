@@ -69,7 +69,7 @@ defmodule Hexpm.Repository.Releases do
     Multi.new()
     |> Multi.delete(:release, Release.delete(release))
     |> audit_revert(audit_data, package, release)
-    |> Multi.delete_all(:package, package_without_releases(package))
+    |> Multi.run(:package, &maybe_delete_package/2)
     |> refresh_package_dependants()
     |> Repo.transaction(timeout: @publish_timeout)
     |> revert_result(package)
@@ -194,12 +194,16 @@ defmodule Hexpm.Repository.Releases do
     end)
   end
 
-  defp package_without_releases(package) do
-    from(
-      p in Package,
-      where: p.id == ^package.id,
-      where: fragment("NOT EXISTS (SELECT id FROM releases WHERE package_id = ?)", ^package.id)
-    )
+  defp maybe_delete_package(repo, %{release: release}) do
+    count = repo.aggregate(assoc(release.package, :releases), :count, :id)
+
+    if count == 0 do
+      release.package
+      |> Package.delete()
+      |> repo.delete()
+    else
+      :ok
+    end
   end
 
   defp reserved_packages(organization, %{"name" => name}) when is_binary(name) do

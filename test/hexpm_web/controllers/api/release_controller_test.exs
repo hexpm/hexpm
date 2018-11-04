@@ -698,6 +698,21 @@ defmodule HexpmWeb.API.ReleaseControllerTest do
                "can only delete a release up to one hour after creation"
     end
 
+    test "delete package validates dependants", %{user: user, package: package} do
+      package2 = insert(:package)
+      release2 = insert(:release, package: package2, version: "0.0.1")
+      insert(:requirement, release: release2, dependency: package, requirement: "~> 0.0.1")
+
+      result =
+        build_conn()
+        |> put_req_header("authorization", key_for(user))
+        |> delete("api/packages/#{package.name}/releases/0.0.1")
+        |> json_response(422)
+
+      assert result["errors"]["name"] ==
+               "you cannot delete this package because other packages depend on it"
+    end
+
     test "delete release", %{user: user, package: package, release: release} do
       Ecto.Changeset.change(release, inserted_at: %{DateTime.utc_now() | year: 2030})
       |> Hexpm.Repo.update!()
