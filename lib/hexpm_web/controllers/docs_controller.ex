@@ -28,14 +28,7 @@ defmodule HexpmWeb.DocsController do
   end
 
   def tasks(conn, _params) do
-    render(
-      conn,
-      "layout.html",
-      view: "tasks.html",
-      view_name: :tasks,
-      title: "Mix tasks",
-      container: "container page docs"
-    )
+    redirect(conn, external: "https://hexdocs.pm/hex")
   end
 
   def rebar3_usage(conn, _params) do
