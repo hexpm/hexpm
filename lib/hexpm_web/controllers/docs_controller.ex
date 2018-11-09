@@ -53,17 +53,6 @@ defmodule HexpmWeb.DocsController do
     )
   end
 
-  def rebar3_tasks(conn, _params) do
-    render(
-      conn,
-      "layout.html",
-      view: "rebar3_tasks.html",
-      view_name: :rebar3_tasks,
-      title: "Rebar3 tasks",
-      container: "container page docs"
-    )
-  end
-
   def private(conn, _params) do
     render(
       conn,
