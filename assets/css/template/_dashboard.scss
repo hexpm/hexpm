@@ -99,7 +99,9 @@
 }
 
 .dashboard .organization {
-  float: right;
+  @media (min-width: 768px) {
+    float: right;
+  }
 
   form.remove-role,
   form.cancel-billing {

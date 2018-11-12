@@ -12,6 +12,13 @@ body {
   flex-direction: column;
 }
 
+h1,
+h2 {
+  font-family: $base-title-font-family;
+  font-weight: 300;
+  text-align: center;
+}
+
 .browserupgrade {
   padding: .2em 0;
   margin: .2em 0;
@@ -167,4 +174,10 @@ input[type="checkbox"] {
   font-weight: bold;
   color: #721c24;
   background-color: #f8d7da;
+}
+
+.pull-left-non-mobile {
+  @media (min-width: 768px) {
+    float: left !important;
+  }
 }

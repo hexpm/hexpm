@@ -1,6 +1,7 @@
 .package-title {
   @include font-size(50);
-  padding: 20px 0 0;
+  margin-bottom: 10px;
+  font-weight: 300;
   color: $color-purple;
   word-wrap: break-word;
 
@@ -28,7 +29,7 @@
   }
 
   .description {
-    padding: 28px 0 15px;
+    padding: 15px 0 10px;
     font-weight: 300;
     line-height: 20px;
     border-bottom: #ccc 1px solid;
