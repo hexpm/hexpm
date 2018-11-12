@@ -125,13 +125,13 @@ defmodule HexpmWeb.PackageView do
     ["Retired package"] ++
       cond do
         reason && retirement.message ->
-          ["; reason: ", reason, " - ", retirement.message]
+          [": ", reason, " - ", retirement.message]
 
         reason ->
-          ["; reason: ", reason]
+          [": ", reason]
 
         retirement.message ->
-          ["; reason: ", retirement.message]
+          [": ", retirement.message]
 
         true ->
           []
@@ -143,13 +143,13 @@ defmodule HexpmWeb.PackageView do
 
     cond do
       reason && retirement.message ->
-        [content_tag(:strong, "Retired package;"), " reason: ", reason, " - ", retirement.message]
+        [content_tag(:strong, "Retired package:"), " ", reason, " - ", retirement.message]
 
       reason ->
-        [content_tag(:strong, "Retired package;"), " reason: ", reason]
+        [content_tag(:strong, "Retired package:"), " ", reason]
 
       retirement.message ->
-        [content_tag(:strong, "Retired package;"), " reason: ", retirement.message]
+        [content_tag(:strong, "Retired package:"), " ", retirement.message]
 
       true ->
         [content_tag(:strong, "Retired package")]

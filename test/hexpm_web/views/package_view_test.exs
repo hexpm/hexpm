@@ -123,38 +123,27 @@ defmodule HexpmWeb.PackageViewTest do
     test "reason is 'other', message contains text" do
       retirement = %{reason: "other", message: "something went terribly wrong"}
 
-      assert PackageView.retirement_message(retirement) == [
-               "Retired package",
-               "; reason: ",
-               "something went terribly wrong"
-             ]
+      assert IO.iodata_to_binary(PackageView.retirement_message(retirement)) ==
+               "Retired package: something went terribly wrong"
     end
 
     test "reason is 'other', message is empty" do
       retirement = %{reason: "other", message: nil}
-      assert PackageView.retirement_message(retirement) == ["Retired package"]
+      assert IO.iodata_to_binary(PackageView.retirement_message(retirement)) == "Retired package"
     end
 
     test "reason is not 'other', message contains text" do
       retirement = %{reason: "security", message: "something went terribly wrong"}
 
-      assert PackageView.retirement_message(retirement) == [
-               "Retired package",
-               "; reason: ",
-               "Security issue",
-               " - ",
-               "something went terribly wrong"
-             ]
+      assert IO.iodata_to_binary(PackageView.retirement_message(retirement)) ==
+               "Retired package: Security issue - something went terribly wrong"
     end
 
     test "reason is not 'other', message is empty" do
       retirement = %{reason: "security", message: nil}
 
-      assert PackageView.retirement_message(retirement) == [
-               "Retired package",
-               "; reason: ",
-               "Security issue"
-             ]
+      assert IO.iodata_to_binary(PackageView.retirement_message(retirement)) ==
+               "Retired package: Security issue"
     end
   end
 
@@ -164,7 +153,7 @@ defmodule HexpmWeb.PackageViewTest do
         PackageView.retirement_html(%{reason: "other", message: "something went terribly wrong"})
 
       assert parse_html_list_to_string(retirement) ==
-               "<strong>Retired package;</strong> reason: something went terribly wrong"
+               "<strong>Retired package:</strong> something went terribly wrong"
     end
 
     test "reason is 'other', message is empty" do
@@ -180,14 +169,14 @@ defmodule HexpmWeb.PackageViewTest do
         })
 
       assert parse_html_list_to_string(retirement) ==
-               "<strong>Retired package;</strong> reason: Security issue - something went terribly wrong"
+               "<strong>Retired package:</strong> Security issue - something went terribly wrong"
     end
 
     test "reason is not 'other', message is empty" do
       retirement = PackageView.retirement_html(%{reason: "security", message: nil})
 
       assert parse_html_list_to_string(retirement) ==
-               "<strong>Retired package;</strong> reason: Security issue"
+               "<strong>Retired package:</strong> Security issue"
     end
   end
 end
