@@ -5,6 +5,8 @@ dir = "fastly_hex"
 tmp = Application.get_env(:hexpm, :tmp_dir)
 filename = Path.join([tmp, "logs", "#{dir}-#{date}.txt.gz"])
 
+File.mkdir_p!(Path.dirname(filename))
+
 uncompress = fn data, key ->
   if String.ends_with?(key, ".gz") do
     :zlib.gunzip(data)
@@ -78,14 +80,7 @@ if action == "upload" || action == "fetch-and-upload" do
 end
 
 if action == "delete" do
-  buckets
-  |> Enum.flat_map(fn {bucket, region} ->
-    Enum.map(1..31, &{bucket, region, &1})
-  end)
-  |> Enum.each(fn {bucket, region, day} ->
-    day = day |> Integer.to_string() |> String.pad_leading(2, "0")
-    prefix = "#{dir}/#{date}-#{day}"
-    keys = Hexpm.Store.S3.list(region, bucket, prefix)
+  Enum.each(keys, fn {bucket, region, keys} ->
     Hexpm.Store.S3.delete_many(region, bucket, keys)
   end)
 end
