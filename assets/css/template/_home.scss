@@ -1,67 +1,62 @@
 .featured-home {
-  background: #3e424d url("../images/bg-featured-home.png") no-repeat right bottom;
-  background-size: 1154px;
+  background: #3e424d url("../images/bg-featured-home.png") no-repeat bottom;
+  background-size: 750px;
 
   @include hdpi(2) {
-    background: #3e424d url("../images/bg-featured-home@2.png") no-repeat right bottom;
-    background-size: 1154px;
+    background: #3e424d url("../images/bg-featured-home@2.png") no-repeat bottom;
+    background-size: 750px;
   }
 
   @include hdpi(3) {
-    background: #3e424d url("../images/bg-featured-home@3.png") no-repeat right bottom;
-    background-size: 1154px;
+    background: #3e424d url("../images/bg-featured-home@3.png") no-repeat bottom;
+    background-size: 750px;
   }
 
   .alert {
     margin-bottom: -20px;
   }
-}
-
-.search-form {
-  padding: 20px 0 0;
-  margin-bottom: 60px;
-  text-align: center;
 
   h2 {
+    margin-top: 30px;
     margin-bottom: 30px;
     font-size: 45px;
     font-weight: 100;
     color: #ededed;
-  }
 
-  .input-group {
-    padding: 1px 2px;
-    background: #fff;
-    border-radius: 4px;
-  }
-
-  .btn-search {
-    color: #adb3b6;
-    background: $color-white;
-  }
-
-  input {
-    border: 0;
-    box-shadow: none;
-
-    ::-webkit-input-placeholder {
-      color: #8e899c;
-    }
-
-    ::-moz-placeholder {
-      color: #8e899c;
-    }
-
-    :-ms-input-placeholder {
-      color: #8e899c;
+    @include general-mobile {
+      font-size: 30px;
     }
   }
 }
 
-// How to use Boxes
+.using-with-boxes {
+  margin: 0 auto;
+  overflow: auto;
+
+  @media (min-width: 1040px) {
+    display: flex;
+    width: 1040px;
+    height: 240px;
+    justify-content: center;
+  }
+
+  @media (max-width: 1039px) {
+    padding-right: 15px;
+    padding-left: 15px;
+  }
+}
+
 .using-with-box {
+  @media (min-width: 1040px) {
+    width: 45%;
+    margin: 0 20px;
+  }
+
+  @media (max-width: 1039px) {
+    margin-bottom: 20px;
+  }
+
   position: relative;
-  margin-bottom: 40px;
 
   h3 a {
     color: #4f2e85;
@@ -74,7 +69,7 @@
   left: -1%;
   z-index: 200;
   width: 102%;
-  height: 180px;
+  height: 170px;
   background: #8f9198;
 
   @include general-mobile {
@@ -91,7 +86,7 @@
     position: relative;
     float: left;
     width: 90px;
-    min-height: 200px;
+    min-height: 190px;
 
     @include general-mobile {
       width: 0;
@@ -99,15 +94,14 @@
 
     .lang-symbol {
       position: absolute;
-      top: 50%;
-      left: 25px;
-      width: 124px;
-      height: 124px;
-      margin-top: -62px;
+      top: 40px;
+      left: 35px;
+      width: 110px;
+      height: 110px;
       border-radius: 50%;
 
       @include general-mobile {
-        top: 35%;
+        top: 5px;
         left: 5px;
         width: 40px;
         height: 40px;
@@ -116,8 +110,8 @@
   }
 
   .instructions {
-    padding-right: 20px;
-    padding-left: 180px;
+    padding-right: 15px;
+    padding-left: 165px;
 
     @include general-mobile {
       padding-left: 20px;
@@ -125,7 +119,7 @@
 
     h3 {
       @include font-size(22, 30);
-      margin-bottom: 25px;
+      margin: 16px 0;
       font-weight: bold;
       color: #1e1c17;
 
@@ -150,16 +144,16 @@
 
   .lang-symbol {
     background: $color-purple-light url("../images/elixir.png") center no-repeat;
-    background-size: 52px;
+    background-size: 46px;
 
     @include hdpi(2) {
       background: $color-purple-light url("../images/elixir@2.png") center no-repeat;
-      background-size: 52px;
+      background-size: 46px;
     }
 
     @include hdpi(3) {
       background: $color-purple-light url("../images/elixir@3.png") center no-repeat;
-      background-size: 52px;
+      background-size: 46px;
     }
 
     @include general-mobile {
@@ -173,16 +167,16 @@
 
   .lang-symbol {
     background: $color-erl-red-light url("../images/erlang.png") center no-repeat;
-    background-size: 66px;
+    background-size: 60px;
 
     @include hdpi(2) {
       background: $color-erl-red-light url("../images/erlang@2.png") center no-repeat;
-      background-size: 66px;
+      background-size: 60px;
     }
 
     @include hdpi(3) {
       background: $color-erl-red-light url("../images/erlang@3.png") center no-repeat;
-      background-size: 66px;
+      background-size: 60px;
     }
 
     @include general-mobile {
@@ -191,7 +185,23 @@
   }
 }
 
-.log-head {
+.search-form {
+  margin-bottom: 40px;
+  text-align: center;
+
+  .input-group {
+    border: 10px solid rgba(0, 0, 0, .1);
+    border-radius: 8px;
+
+    #search {
+      border: 0;
+      border-radius: 4px 0 0 4px;
+    }
+  }
+}
+
+.log-head,
+.gs-head {
   padding-bottom: 10px;
   margin-bottom: 20px;
   font-size: 18px;
@@ -201,8 +211,23 @@
   border-bottom: #4f2e85 1px solid;
 }
 
+.getting-started {
+  padding-top: 30px;
+
+  p {
+    font-weight: 300;
+    line-height: 1.4em;
+  }
+}
+
+h3 > .header-icon {
+  height: 1em;
+  margin-right: .1em;
+  vertical-align: middle;
+}
+
 .log-body {
-  padding-bottom: 20px;
+  padding: 20px 0;
 
   ul {
     padding: 0;

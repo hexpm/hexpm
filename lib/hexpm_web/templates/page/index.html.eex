@@ -1,10 +1,10 @@
 <div class="featured-home">
-  <div class="container">
-    <%= render HexpmWeb.LayoutView, "_flash.html", conn: @conn %>
+  <%= render HexpmWeb.LayoutView, "_flash.html", conn: @conn %>
 
-    <div class="search-form">
-      <h2>The package manager for the Erlang ecosystem</h2>
+  <h2>The package manager for the Erlang ecosystem</h2>
 
+  <div class="search-form">
+    <div class="container">
       <div class="row">
         <div class="col-md-8 col-md-offset-2">
           <%= form_tag(Routes.package_path(Endpoint, :index), method: "get", role: "search") do %>
@@ -22,7 +22,9 @@
         </div>
       </div>
     </div>
+  </div>
 
+  <div class="using-with-boxes">
     <div class="using-with-box elixir">
       <div class="shadow"></div>
       <div class="text-content clearfix">
@@ -32,8 +34,8 @@
         <div class="instructions">
           <h3><a href="<%= Routes.docs_path(Endpoint, :usage) %>">Using with Elixir</a></h3>
           <p>
-            Simply specify your Mix dependencies as two-item tuples like <code>{:plug, "~> 1.1.0"}</code> and Elixir will ask if you want to install Hex if you haven't already.
-            After installed, you can run <code>$ mix local </code> to see all available Hex tasks and  <code>$ mix help TASK</code> for more information about a specific task.
+            Specify your Mix dependencies as two-item tuples like <code>{:plug, "~> 1.1.0"}</code>
+            in your dependency list, Elixir will ask if you want to install Hex if you haven't already.
           </p>
         </div>
       </div>
@@ -52,6 +54,52 @@
             Now you can specify Hex dependencies in your rebar.config like <code>{deps, [hackney]}</code>.
           </p>
         </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="getting-started">
+  <div class="container">
+    <div class="row">
+      <div class="col-md-4">
+        <h3 class="gs-head">
+          <%= icon(:octicon, :"cloud-download", class: "header-icon") %>
+          Getting started
+        </h3>
+        <p>
+          Fetch dependencies from Hex without creating an account.
+          Hex is usable out of the box in Elixir with <a href="<%= Routes.docs_path(@conn, :usage) %>">Mix</a>
+          and in Erlang with <a href="<%= Routes.docs_path(@conn, :rebar3_usage) %>">Rebar3</a>.
+          Check our <a href="<%= Routes.docs_path(@conn, :faq) %>">FAQ</a> for commonly asked questions.
+        </p>
+      </div>
+
+      <div class="col-md-4">
+        <h3 class="gs-head">
+          <%= icon(:octicon, :"cloud-upload", class: "header-icon") %>
+          Publish packages
+        </h3>
+        <p>
+          <a href="<%= Routes.signup_path(@conn, :show) %>">Create an account</a> and follow the
+          <a href="<%= Routes.docs_path(@conn, :publish) %>">publishing guide</a>. Your package
+          will be immediately available to all Elixir and Erlang users and the documentation will
+          be available on <a href="https://hexdocs.pm">HexDocs</a>.
+        </p>
+      </div>
+
+      <div class="col-md-4">
+        <h3 class="gs-head">
+          <%= icon(:octicon, :lock, class: "header-icon") %>
+          Private packages
+        </h3>
+        <p>
+          Publish private packages by <a href="<%= Routes.organization_path(@conn, :new) %>">creating an organization</a>.
+          Your private packages
+          will get the same features as public packages such as fast dependency fetching, HexDocs,
+          and run on the same reliable infrastructure that serves millions of packages
+          daily. See our <a href="<%= Routes.page_path(@conn, :pricing) %>">pricing page</a> for more details.
+        </p>
       </div>
     </div>
   </div>
@@ -126,7 +174,10 @@
   <div class="container">
     <div class="row">
       <div class="col-md-4">
-        <h3 class="log-head">Most Downloaded</h3>
+        <h3 class="log-head">
+          <%= icon(:octicon, :package, class: "header-icon") %>
+          Most Downloaded
+        </h3>
         <ul>
           <%= for {package, inserted_at, meta, downloads} <- @package_top do %>
             <%= render_package package: package, downloads: downloads, inserted_at: inserted_at, description: meta.description %>
@@ -134,7 +185,10 @@
         </ul>
       </div>
       <div class="col-md-4">
-        <h3 class="log-head">New Packages</h3>
+        <h3 class="log-head">
+          <%= icon(:octicon, :package, class: "header-icon") %>
+          New Packages
+        </h3>
         <ul>
           <%= for {package, inserted_at, %PackageMetadata{} = meta} <- @package_new do %>
             <%= render_package package: package, inserted_at: inserted_at, description: meta.description %>
@@ -142,7 +196,10 @@
         </ul>
       </div>
       <div class="col-md-4">
-        <h3 class="log-head">Recently Updated</h3>
+        <h3 class="log-head">
+          <%= icon(:octicon, :package, class: "header-icon") %>
+          Recently Updated
+        </h3>
         <ul>
           <%= for {package, version, inserted_at, %PackageMetadata{} = meta} <- @releases_new do %>
             <%= render_package version: version, package: package, inserted_at: inserted_at, description: meta.description %>

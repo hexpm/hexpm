@@ -38,7 +38,7 @@ tools = Keyword.take(tools, compatible_tools)
 </h2>
 
 <%= if retirement = @current_release && @current_release.retirement do %>
-  <div class="alert alert-danger" style="margin-top: 40px" role="alert">
+  <div class="alert alert-danger" role="alert">
     <%= retirement_html(retirement) %>
   </div>
 <% end %>

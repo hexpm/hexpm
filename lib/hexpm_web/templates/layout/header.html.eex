@@ -37,7 +37,7 @@
         </div>
         <div id="navbar" class="navbar-collapse collapse">
           <%= if show_search?(assigns) do %>
-          <form class="navbar-form pull-left" role="search" action="<%= Routes.package_path(Endpoint, :index) %>">
+          <form class="navbar-form pull-left-non-mobile" role="search" action="<%= Routes.package_path(Endpoint, :index) %>">
              <div class="input-group">
                 <input placeholder="Find packages" name="search" type="text" class="form-control" value="<%= search(assigns) %>">
                 <input type="hidden" name="sort" value="recent_downloads">
@@ -50,7 +50,6 @@
              </div>
           </form>
           <% end %>
-
           <ul class="nav navbar-nav navbar-right">
             <li><a href="<%= Routes.package_path(Endpoint, :index) %>">Packages</a></li>
             <li><a href="<%= Routes.page_path(Endpoint, :pricing) %>">Pricing</a></li>
