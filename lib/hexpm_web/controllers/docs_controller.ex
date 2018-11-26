@@ -53,6 +53,10 @@ defmodule HexpmWeb.DocsController do
     )
   end
 
+  def rebar3_tasks(conn, _params) do
+    redirect(conn, external: "https://www.rebar3.org/v3.0/docs/hex-package-management")
+  end
+
   def private(conn, _params) do
     render(
       conn,
