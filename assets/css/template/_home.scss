@@ -61,75 +61,75 @@
   h3 a {
     color: #4f2e85;
   }
-}
 
-.shadow {
-  position: absolute;
-  top: 10px;
-  left: -1%;
-  z-index: 200;
-  width: 102%;
-  height: 170px;
-  background: #8f9198;
+  .shadow {
+    position: absolute;
+    top: 10px;
+    left: -1%;
+    z-index: 200;
+    width: 102%;
+    height: 170px;
+    background: #8f9198;
 
-  @include general-mobile {
-    height: 92%;
+    @include general-mobile {
+      height: 92%;
+    }
   }
-}
 
-.text-content {
-  position: relative;
-  z-index: 300;
-  background: $color-white;
-
-  .side-box {
+  .text-content {
     position: relative;
-    float: left;
-    width: 90px;
-    min-height: 190px;
+    z-index: 300;
+    background: $color-white;
 
-    @include general-mobile {
-      width: 0;
-    }
-
-    .lang-symbol {
-      position: absolute;
-      top: 40px;
-      left: 35px;
-      width: 110px;
-      height: 110px;
-      border-radius: 50%;
+    .side-box {
+      position: relative;
+      float: left;
+      width: 90px;
+      min-height: 190px;
 
       @include general-mobile {
-        top: 5px;
-        left: 5px;
-        width: 40px;
-        height: 40px;
+        width: 0;
       }
-    }
-  }
 
-  .instructions {
-    padding-right: 15px;
-    padding-left: 165px;
+      .lang-symbol {
+        position: absolute;
+        top: 40px;
+        left: 35px;
+        width: 110px;
+        height: 110px;
+        border-radius: 50%;
 
-    @include general-mobile {
-      padding-left: 20px;
-    }
-
-    h3 {
-      @include font-size(22, 30);
-      margin: 16px 0;
-      font-weight: bold;
-      color: #1e1c17;
-
-      @include general-mobile {
-        text-align: right;
+        @include general-mobile {
+          top: 5px;
+          left: 5px;
+          width: 40px;
+          height: 40px;
+        }
       }
     }
 
-    p {
-      @include font-size(16, 40);
+    .instructions {
+      padding-right: 15px;
+      padding-left: 165px;
+
+      @include general-mobile {
+        padding-left: 20px;
+      }
+
+      h3 {
+        @include font-size(22, 30);
+        margin: 16px 0;
+        font-weight: bold;
+        color: #1e1c17;
+
+        @include general-mobile {
+          text-align: right;
+        }
+      }
+
+      p {
+        @include font-size(16, 40);
+      }
 
       code {
         display: inline-block;
@@ -212,7 +212,7 @@
 }
 
 .getting-started {
-  padding-top: 30px;
+  padding-top: 20px;
 
   p {
     font-weight: 300;
@@ -227,7 +227,7 @@ h3 > .header-icon {
 }
 
 .log-body {
-  padding: 20px 0;
+  padding: 10px 0;
 
   ul {
     padding: 0;

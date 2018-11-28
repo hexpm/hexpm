@@ -25,6 +25,9 @@ export default class App {
     // Copy button
     $(".copy-button").click(this.onCopy.bind(this))
 
+    // Pricing selector
+    $(".pricing-button").click(this.onPricing.bind(this))
+
     // Show show-versions button if JS is enabled
     $(".show-versions").show()
 
@@ -47,7 +50,6 @@ export default class App {
     hljs.initHighlightingOnLoad()
   }
 
-  // Package: copy config snippet to clipboard
   onCopy(event) {
     var button = $(event.currentTarget)
     var succeeded = false
@@ -85,6 +87,20 @@ export default class App {
       button.children(".glyphicon-copy").show()
       button.tooltip("hide")
     }, 1500)
+  }
+
+  onPricing(event) {
+    var button = $(event.currentTarget)
+    $(".pricing .btn-selected").removeClass("btn-selected")
+    button.addClass("btn-selected")
+
+    if (button.text() === "Monthly") {
+      $(".price.price-monthly").show()
+      $(".price.price-yearly").hide()
+    } else if (button.text() === "Yearly") {
+      $(".price.price-monthly").hide()
+      $(".price.price-yearly").show()
+    }
   }
 }
 
