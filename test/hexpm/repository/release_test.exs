@@ -30,6 +30,38 @@ defmodule Hexpm.Repository.ReleaseTest do
            ] = Release.all(package) |> Hexpm.Repo.all() |> Release.sort()
   end
 
+  test "create release and set its publisher", %{packages: [package, _, _]} do
+    publisher = insert(:user)
+    publisher_id = publisher.id
+
+    assert %Release{publisher_id: ^publisher_id} =
+             Release.build(
+               package,
+               rel_meta(%{publisher_id: publisher.id, version: "0.0.1", app: package.name}),
+               ""
+             )
+             |> Hexpm.Repo.insert!()
+  end
+
+  test "update release and update its publisher", %{packages: [package, _, _]} do
+    old_publisher = insert(:user)
+    new_publisher = insert(:user)
+    new_publisher_id = new_publisher.id
+
+    release =
+      Release.build(
+        package,
+        rel_meta(%{publisher_id: old_publisher.id, version: "0.0.1", app: package.name}),
+        ""
+      )
+      |> Hexpm.Repo.insert!()
+
+    updated_release =
+      release |> Release.update(%{publisher_id: new_publisher.id}, "") |> Hexpm.Repo.update!()
+
+    assert %Release{publisher_id: ^new_publisher_id} = updated_release
+  end
+
   test "create release with deps", %{packages: [package1, package2, package3]} do
     Release.build(package3, rel_meta(%{version: "0.0.1", app: package3.name}), "")
     |> Hexpm.Repo.insert!()

@@ -31,7 +31,7 @@ defmodule Hexpm.Repository.Release do
   end
 
   defp changeset(release, :update, params, package, checksum) do
-    cast(release, params, ~w(version)a)
+    cast(release, params, ~w(version publisher_id)a)
     |> cast_embed(:meta, required: true)
     |> validate_version(:version)
     |> validate_editable(:update, false)
