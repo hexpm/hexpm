@@ -43,7 +43,7 @@ defmodule Hexpm.Repository.Releases do
     |> Multi.run(:organization, fn _, _ -> {:ok, organization} end)
     |> Multi.run(:reserved_packages, fn _, _ -> {:ok, reserved_packages(organization, meta)} end)
     |> create_package(organization, package, user, meta)
-    |> create_release(package, checksum, meta)
+    |> create_release(package, user, checksum, meta)
     |> audit_publish(audit_data)
     |> refresh_package_dependants()
     |> Repo.transaction(timeout: @publish_timeout)
@@ -156,14 +156,15 @@ defmodule Hexpm.Repository.Releases do
     end)
   end
 
-  defp create_release(multi, package, checksum, meta) do
+  defp create_release(multi, package, user, checksum, meta) do
     version = meta["version"]
 
     params = %{
       "app" => meta["app"],
       "version" => version,
       "requirements" => normalize_requirements(meta["requirements"]),
-      "meta" => meta
+      "meta" => meta,
+      "publisher_id" => user.id
     }
 
     release = package && Repo.get_by(assoc(package, :releases), version: version)
