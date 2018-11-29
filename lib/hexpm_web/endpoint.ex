@@ -23,7 +23,7 @@ defmodule HexpmWeb.Endpoint do
   end
 
   plug Plug.RequestId
-  plug Plug.Logger
+  plug Logster.Plugs.Logger, excludes: [:params]
 
   plug Plug.Parsers,
     parsers: [:urlencoded, :json, HexpmWeb.PlugParser],
