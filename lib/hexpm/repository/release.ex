@@ -12,6 +12,7 @@ defmodule Hexpm.Repository.Release do
     timestamps()
 
     belongs_to :package, Package
+    belongs_to :publisher, User
     has_many :requirements, Requirement, on_replace: :delete
     has_many :daily_downloads, Download
     has_one :downloads, ReleaseDownload
