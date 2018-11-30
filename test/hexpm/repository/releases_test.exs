@@ -49,15 +49,7 @@ defmodule Hexpm.Repository.ReleasesTest do
       audit = audit_data(user)
 
       {:ok, %{release: release}} =
-        Releases.publish(
-          organization,
-          nil,
-          user,
-          "BODY",
-          meta,
-          "00",
-          audit: audit
-        )
+        Releases.publish(organization, nil, user, "BODY", meta, "00", audit: audit)
 
       assert release.publisher_id == user.id
     end
