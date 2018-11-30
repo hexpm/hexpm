@@ -5,7 +5,5 @@ defmodule Hexpm.RepoBase.Migrations.AddPublisherIdToReleases do
     alter table(:releases) do
       add(:publisher_id, references(:users))
     end
-
-    create(index(:releases, [:publisher_id]))
   end
 end
