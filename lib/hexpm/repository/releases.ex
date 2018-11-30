@@ -163,8 +163,7 @@ defmodule Hexpm.Repository.Releases do
       "app" => meta["app"],
       "version" => version,
       "requirements" => normalize_requirements(meta["requirements"]),
-      "meta" => meta,
-      "publisher_id" => user.id
+      "meta" => meta
     }
 
     release = package && Repo.get_by(assoc(package, :releases), version: version)
@@ -178,9 +177,10 @@ defmodule Hexpm.Repository.Releases do
         if release do
           %{release | package: package}
           |> Repo.preload(requirements: Release.requirements(release))
-          |> Release.update(params, checksum)
+          |> Repo.preload(:publisher)
+          |> Release.update(user, params, checksum)
         else
-          Release.build(package, params, checksum)
+          Release.build(package, user, params, checksum)
         end
 
       validate_reserved_version(changeset, reserved_packages)
