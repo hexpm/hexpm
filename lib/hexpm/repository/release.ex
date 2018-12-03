@@ -12,7 +12,6 @@ defmodule Hexpm.Repository.Release do
     timestamps()
 
     belongs_to :package, Package
-    belongs_to(:publisher, User, on_replace: :nilify)
     has_many :requirements, Requirement, on_replace: :delete
     has_many :daily_downloads, Download
     has_one :downloads, ReleaseDownload
@@ -21,8 +20,8 @@ defmodule Hexpm.Repository.Release do
     embeds_one :retirement, ReleaseRetirement, on_replace: :delete
   end
 
-  defp changeset(release, :create, params, package, publisher, checksum) do
-    changeset(release, :update, params, package, publisher, checksum)
+  defp changeset(release, :create, params, package, checksum) do
+    changeset(release, :update, params, package, checksum)
     |> unique_constraint(
       :version,
       name: "releases_package_id_version_key",
@@ -30,23 +29,22 @@ defmodule Hexpm.Repository.Release do
     )
   end
 
-  defp changeset(release, :update, params, package, publisher, checksum) do
+  defp changeset(release, :update, params, package, checksum) do
     cast(release, params, ~w(version)a)
     |> cast_embed(:meta, required: true)
     |> validate_version(:version)
     |> validate_editable(:update, false)
     |> put_change(:checksum, String.upcase(checksum))
-    |> put_assoc(:publisher, publisher)
     |> Requirement.build_all(package)
   end
 
-  def build(package, publisher, params, checksum) do
+  def build(package, params, checksum) do
     build_assoc(package, :releases)
-    |> changeset(:create, params, package, publisher, checksum)
+    |> changeset(:create, params, package, checksum)
   end
 
-  def update(release, publisher, params, checksum) do
-    changeset(release, :update, params, release.package, publisher, checksum)
+  def update(release, params, checksum) do
+    changeset(release, :update, params, release.package, checksum)
   end
 
   def delete(release, opts \\ []) do

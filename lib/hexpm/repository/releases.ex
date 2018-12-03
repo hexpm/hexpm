@@ -43,7 +43,7 @@ defmodule Hexpm.Repository.Releases do
     |> Multi.run(:organization, fn _, _ -> {:ok, organization} end)
     |> Multi.run(:reserved_packages, fn _, _ -> {:ok, reserved_packages(organization, meta)} end)
     |> create_package(organization, package, user, meta)
-    |> create_release(package, user, checksum, meta)
+    |> create_release(package, checksum, meta)
     |> audit_publish(audit_data)
     |> refresh_package_dependants()
     |> Repo.transaction(timeout: @publish_timeout)
@@ -156,7 +156,7 @@ defmodule Hexpm.Repository.Releases do
     end)
   end
 
-  defp create_release(multi, package, user, checksum, meta) do
+  defp create_release(multi, package, checksum, meta) do
     version = meta["version"]
 
     params = %{
@@ -177,10 +177,9 @@ defmodule Hexpm.Repository.Releases do
         if release do
           %{release | package: package}
           |> Repo.preload(requirements: Release.requirements(release))
-          |> Repo.preload(:publisher)
-          |> Release.update(user, params, checksum)
+          |> Release.update(params, checksum)
         else
-          Release.build(package, user, params, checksum)
+          Release.build(package, params, checksum)
         end
 
       validate_reserved_version(changeset, reserved_packages)
