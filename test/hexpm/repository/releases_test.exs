@@ -43,6 +43,18 @@ defmodule Hexpm.Repository.ReleasesTest do
                )
     end
 
+    test "sets release.publisher to user when publish a new release" do
+      organization = insert(:organization)
+      user = insert(:user)
+      meta = default_meta(Fake.sequence(:package), "0.1.0")
+      audit = audit_data(user)
+
+      {:ok, %{release: release}} =
+        Releases.publish(organization, nil, user, "BODY", meta, "00", audit: audit)
+
+      assert release.publisher_id == user.id
+    end
+
     test "cant publish reserved package name", %{user: user} do
       Repo.insert_all("reserved_packages", [
         %{"organization_id" => 1, "name" => "reserved_name"}
