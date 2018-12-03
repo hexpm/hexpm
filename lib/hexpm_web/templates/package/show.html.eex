@@ -130,14 +130,8 @@ tools = Keyword.take(tools, compatible_tools)
         </ul>
 
         <%= if length(@releases)> show_latest_versions do %>
-          <ul id="older-versions" class="collapse version-dependency-list">
-            <%= render "versions.html", [package: @package, releases: Enum.drop(@releases, show_latest_versions)] %>
-          </ul>
           <p class="show-versions">
-            <span class="toggle-text" role="button" data-toggle="collapse" data-target="#older-versions" aria-expanded="false" aria-controls="versions">
-              <a>Show All Versions</a>
-              <a class="invisible">Show Recent Versions</a>
-            </span>
+            <a href="<%= path_for_releases(@package) %>">Show All Versions</a>
           </p>
         <% end %>
       </div>

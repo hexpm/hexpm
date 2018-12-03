@@ -2,17 +2,18 @@ defmodule Hexpm.Repository.ReleasesTest do
   use Hexpm.DataCase, async: true
 
   alias Hexpm.Accounts.Organization
-  alias Hexpm.Repository.Releases
+  alias Hexpm.Repository.{Packages, Releases}
 
   setup do
     organization = insert(:organization, public: false)
-    package = insert(:package)
+    package = %{insert(:package) | organization: Organization.hexpm()}
+    release = insert(:release, package: package, version: "0.1.0")
     user = insert(:user)
-    insert(:release, package: package, version: "0.1.0")
 
     %{
       organization: organization,
       package: package,
+      release: release,
       user: user
     }
   end
@@ -40,6 +41,18 @@ defmodule Hexpm.Repository.ReleasesTest do
                  "00",
                  audit: audit
                )
+    end
+
+    test "sets release.publisher to user when publish a new release" do
+      organization = insert(:organization)
+      user = insert(:user)
+      meta = default_meta(Fake.sequence(:package), "0.1.0")
+      audit = audit_data(user)
+
+      {:ok, %{release: release}} =
+        Releases.publish(organization, nil, user, "BODY", meta, "00", audit: audit)
+
+      assert release.publisher_id == user.id
     end
 
     test "cant publish reserved package name", %{user: user} do
@@ -84,6 +97,32 @@ defmodule Hexpm.Repository.ReleasesTest do
                )
 
       assert %{version: "is reserved"} = errors_on(changeset)
+    end
+  end
+
+  describe "revert/3" do
+    test "revert release and package", %{
+      package: package,
+      release: release,
+      user: user
+    } do
+      audit = audit_data(user)
+
+      assert Releases.revert(package, release, audit: audit) == :ok
+      refute Releases.get(package, "0.1.0")
+      refute Packages.get(Organization.hexpm(), package.name)
+    end
+
+    test "revert only release", %{
+      package: package,
+      user: user
+    }  do
+      audit = audit_data(user)
+      release = insert(:release, package: package, version: "0.2.0")
+
+      assert Releases.revert(package, release, audit: audit) == :ok
+      refute Releases.get(package, "0.2.0")
+      assert Packages.get(Organization.hexpm(), package.name)
     end
   end
 end
