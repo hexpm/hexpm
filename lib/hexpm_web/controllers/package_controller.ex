@@ -56,7 +56,6 @@ defmodule HexpmWeb.PackageController do
     if repository in Enum.map(organizations, & &1.name) do
       organization = Organizations.get(repository)
       package = organization && Packages.get(organization, name)
-
       # Should have access even though organization does not have active billing
       if package do
         releases = Releases.all(package)
