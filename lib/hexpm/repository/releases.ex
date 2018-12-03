@@ -203,7 +203,7 @@ defmodule Hexpm.Repository.Releases do
       |> Package.delete()
       |> repo.delete()
     else
-      :ok
+      {:ok, release.package}
     end
   end
 
