@@ -1,4 +1,4 @@
-defmodule HexpmWeb.VersionsController do
+defmodule HexpmWeb.VersionController do
   use HexpmWeb, :controller
 
   def index(conn, params) do

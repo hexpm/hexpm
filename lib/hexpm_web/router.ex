@@ -88,8 +88,8 @@ defmodule HexpmWeb.Router do
     get "/policies/copyright", PolicyController, :copyright
     get "/policies/dispute", PolicyController, :dispute
 
-    get "/packages/:name/versions", VersionsController, :index
-    get "/packages/:repository/:name/versions", VersionsController, :index
+    get "/packages/:name/versions", VersionController, :index
+    get "/packages/:repository/:name/versions", VersionController, :index
 
     get "/packages", PackageController, :index
     get "/packages/:name", PackageController, :show

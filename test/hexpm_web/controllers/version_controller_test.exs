@@ -1,4 +1,4 @@
-defmodule HexpmWeb.VersionsControllerTest do
+defmodule HexpmWeb.VersionControllerTest do
   use HexpmWeb.ConnCase, async: true
 
   setup do
