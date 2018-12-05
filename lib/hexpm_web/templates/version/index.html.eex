@@ -1,0 +1,11 @@
+<h2 class="versions-title">
+  All available versions of <%= link package_name(@package), to: path_for_package(@package), class: "version-package-title" %>
+</h2>
+<div class="clearfix"></div>
+<div class="version-list">
+  <ul>
+    <%= for release <- @releases do %>
+      <%= render "_version.html", release: release, package: @package %>
+    <% end %>
+  </ul>
+</div>
