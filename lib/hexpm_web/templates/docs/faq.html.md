@@ -18,7 +18,7 @@ sure you clear your browser cache to ensure you are viewing the latest version.
 
 The Hex repository is immutable, this means that in general you cannot remove or change an already
 published package. This restriction exists to ensure a stable and reliable ecosystem where
-depended on packages suddenly disappear.
+depended on packages can't suddenly disappear.
 
 There are exceptions to the immutability rule, a package can be changed or unpublished within 60
 minutes of the package version release or within 24 hours of initial release of the package.
