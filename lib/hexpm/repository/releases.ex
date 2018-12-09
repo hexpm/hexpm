@@ -177,7 +177,7 @@ defmodule Hexpm.Repository.Releases do
         if release do
           %{release | package: package}
           |> Repo.preload(requirements: Release.requirements(release))
-          |> Repo.preload(:publisher)
+          |> Repo.preload(publisher: :emails)
           |> Release.update(user, params, checksum)
         else
           Release.build(package, user, params, checksum)
