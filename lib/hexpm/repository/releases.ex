@@ -176,8 +176,7 @@ defmodule Hexpm.Repository.Releases do
       changeset =
         if release do
           %{release | package: package}
-          |> Repo.preload(requirements: Release.requirements(release))
-          |> Repo.preload(:publisher)
+          |> preload([:requirements, :publisher])
           |> Release.update(user, params, checksum)
         else
           Release.build(package, user, params, checksum)
@@ -269,4 +268,5 @@ defmodule Hexpm.Repository.Releases do
 
   defp preload_field(release, :requirements), do: {:requirements, Release.requirements(release)}
   defp preload_field(release, :downloads), do: {:downloads, ReleaseDownload.release(release)}
+  defp preload_field(_release, :publisher), do: {:publisher, :emails}
 end

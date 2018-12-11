@@ -1,6 +1,6 @@
 defmodule HexpmWeb.API.ReleaseView do
   use HexpmWeb, :view
-  alias HexpmWeb.API.RetirementView
+  alias HexpmWeb.API.{RetirementView, UserView}
 
   def render("show." <> _, %{release: release}) do
     render_one(release, __MODULE__, "show")
@@ -27,7 +27,8 @@ defmodule HexpmWeb.API.ReleaseView do
         build_tools: Enum.uniq(release.meta.build_tools),
         elixir: release.meta.elixir
       },
-      downloads: downloads(release.downloads)
+      downloads: downloads(release.downloads),
+      publisher: render_one(release.publisher, UserView, "minimal.json")
     }
   end
 

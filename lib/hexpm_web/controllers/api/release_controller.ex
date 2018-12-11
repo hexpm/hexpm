@@ -64,7 +64,7 @@ defmodule HexpmWeb.API.ReleaseController do
 
       release =
         release
-        |> Releases.preload([:requirements])
+        |> Releases.preload([:requirements, :publisher])
         |> Map.put(:downloads, downloads)
 
       when_stale(conn, release, fn conn ->
