@@ -35,6 +35,7 @@ defmodule HexpmWeb.API.ReleaseControllerTest do
       result = json_response(conn, 201)
       assert result["url"] =~ "api/packages/#{meta.name}/releases/1.0.0"
       assert result["html_url"] =~ "packages/#{meta.name}/1.0.0"
+      assert result["publisher"]["username"] == user.username
 
       package = Hexpm.Repo.get_by!(Package, name: meta.name)
       package_owner = Hexpm.Repo.one!(assoc(package, :owners))
