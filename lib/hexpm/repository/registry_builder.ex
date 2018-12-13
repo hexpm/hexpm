@@ -84,8 +84,8 @@ defmodule Hexpm.Repository.RegistryBuilder do
       release_map = Map.new(releases)
 
       ets = if organization.id == 1, do: build_ets(packages, releases, installs)
-      names = build_names(packages)
-      versions = build_versions(packages, release_map)
+      names = build_names(organization, packages)
+      versions = build_versions(organization, packages, release_map)
 
       case Enum.find(packages, &match?({^package_name, _}, &1)) do
         {^package_name, [package_versions]} ->
@@ -178,22 +178,22 @@ defmodule Hexpm.Repository.RegistryBuilder do
     release_map = Map.new(releases)
 
     {
-      build_names(packages),
-      build_versions(packages, release_map),
+      build_names(organization, packages),
+      build_versions(organization, packages, release_map),
       build_packages(organization, packages, release_map)
     }
   end
 
-  defp build_names(packages) do
+  defp build_names(organization, packages) do
     packages = Enum.map(packages, fn {name, _versions} -> %{name: name} end)
 
-    %{packages: packages}
+    %{packages: packages, repository: organization.name}
     |> :hex_registry.encode_names()
     |> sign_protobuf()
     |> :zlib.gzip()
   end
 
-  defp build_versions(packages, release_map) do
+  defp build_versions(organization, packages, release_map) do
     packages =
       Enum.map(packages, fn {name, [versions]} ->
         %{
@@ -203,7 +203,7 @@ defmodule Hexpm.Repository.RegistryBuilder do
         }
       end)
 
-    %{packages: packages}
+    %{packages: packages, repository: organization.name}
     |> :hex_registry.encode_versions()
     |> sign_protobuf()
     |> :zlib.gzip()
@@ -257,7 +257,11 @@ defmodule Hexpm.Repository.RegistryBuilder do
         end
       end)
 
-    %{releases: releases}
+   %{
+      name: name,
+      repository: organization.name,
+      releases: releases
+    }
     |> :hex_registry.encode_package()
     |> sign_protobuf()
     |> :zlib.gzip()

@@ -95,10 +95,12 @@ defmodule Hexpm.Organization.RegistryBuilderTest do
       first = packages |> Enum.map(& &1.name) |> Enum.sort() |> List.first()
 
       names = v2_map("names")
+      assert names.repository == "hexpm"
       assert length(names.packages) == 3
       assert List.first(names.packages) == %{name: first}
 
       versions = v2_map("versions")
+      assert versions.repository == "hexpm"
       assert length(versions.packages) == 3
 
       assert Enum.find(versions.packages, &(&1.name == p2.name)) == %{
@@ -108,6 +110,8 @@ defmodule Hexpm.Organization.RegistryBuilderTest do
              }
 
       package2 = v2_map("packages/#{p2.name}")
+      assert package2.name == p2.name
+      assert package2.repository == "hexpm"
       assert length(package2.releases) == 2
 
       assert List.first(package2.releases) == %{
@@ -145,9 +149,16 @@ defmodule Hexpm.Organization.RegistryBuilderTest do
       refute open_table(organization.name)
 
       names = v2_map("repos/#{organization.name}/names")
+      assert names.repository == organization.name
       assert length(names.packages) == 1
 
-      assert v2_map("repos/#{organization.name}/packages/#{package.name}")
+      versions = v2_map("repos/#{organization.name}/versions")
+      assert versions.repository == organization.name
+      assert length(versions.packages) == 1
+
+      package = v2_map("repos/#{organization.name}/packages/#{package.name}")
+      assert package.name == package.name
+      assert package.repository == organization.name
     end
   end
 
