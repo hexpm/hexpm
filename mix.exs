@@ -45,7 +45,7 @@ defmodule Hexpm.MixProject do
       {:ex_aws, "~> 2.0"},
       {:ex_machina, "~> 2.0"},
       {:hackney, "~> 1.7"},
-      {:hex_core, "~> 0.1"},
+      {:hex_core, "~> 0.1", hex_core_opts()},
       {:libcluster, "~> 3.0"},
       {:logster, "~> 0.10.0"},
       {:mox, "~> 0.3.1", only: :test},
@@ -61,6 +61,14 @@ defmodule Hexpm.MixProject do
       {:rollbax, "~> 0.5"},
       {:sweet_xml, "~> 0.5"}
     ]
+  end
+
+  defp hex_core_opts() do
+    if path = System.get_env("HEX_CORE_PATH") do
+      [path: path]
+    else
+      []
+    end
   end
 
   defp aliases() do
