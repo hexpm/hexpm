@@ -31,7 +31,7 @@ defmodule HexpmWeb.API.DocsController do
     organization = conn.assigns.organization
     package = conn.assigns.package
     release = conn.assigns.release
-    request_id = List.first(get_req_header(conn, "x-request-id"))
+    request_id = List.first(get_resp_header(conn, "x-request-id"))
 
     log_tarball(organization.name, package.name, release.version, request_id, body)
     Hexpm.Repository.Releases.publish_docs(package, release, body, audit: audit_data(conn))
