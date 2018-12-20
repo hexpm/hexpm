@@ -72,7 +72,7 @@ if action == "fetch" || action == "fetch-and-upload" do
 end
 
 if action == "upload" || action == "fetch-and-upload" do
-  key = "logs/monthly/#{filename}"
+  key = "logs/monthly/#{filename}/#{dir}-#{date}.txt.gz"
 
   ExAws.S3.Upload.stream_file(filename, [:read_ahead])
   |> ExAws.S3.upload("backup.hex.pm", key, timeout: 600_000)
