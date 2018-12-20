@@ -352,6 +352,15 @@ defmodule Hexpm.Repository.Package do
     from(p in query, order_by: [desc: p.updated_at])
   end
 
+  defp sort(query, :recently_released) do
+    from(
+      p in query,
+      left_join: r in Release,
+      on: p.id == r.package_id,
+      order_by: [desc: r.inserted_at]
+    )
+  end
+
   defp sort(query, :total_downloads) do
     from(
       p in query,
