@@ -46,9 +46,9 @@ defmodule HexpmWeb.ViewHelpers do
 
   def path_for_releases(package) do
     if package.organization.name == "hexpm" do
-      Routes.version_path(Endpoint, :index, package)
+      Routes.version_path(Endpoint, :index, package, [])
     else
-      Routes.version_path(Endpoint, :index, package.organization, package)
+      Routes.version_path(Endpoint, :index, package.organization, package, [])
     end
   end
 
@@ -61,18 +61,11 @@ defmodule HexpmWeb.ViewHelpers do
   end
 
   def html_url_for_release(%Package{organization_id: 1} = package, release) do
-    Routes.package_url(Endpoint, :show, package, to_string(release.version), [])
+    Routes.package_url(Endpoint, :show, package, release, [])
   end
 
   def html_url_for_release(%Package{} = package, release) do
-    Routes.package_url(
-      Endpoint,
-      :show,
-      package.organization,
-      package,
-      to_string(release.version),
-      []
-    )
+    Routes.package_url(Endpoint, :show, package.organization, package, release, [])
   end
 
   def docs_html_url_for_package(package) do

@@ -129,7 +129,7 @@ tools = Keyword.take(tools, compatible_tools)
           <%= render "versions.html", [package: @package, releases: Enum.take(@releases, show_latest_versions)] %>
         </ul>
 
-        <%= if length(@releases)> show_latest_versions do %>
+        <%= if length(@releases) > show_latest_versions do %>
           <p class="show-versions">
             <a href="<%= path_for_releases(@package) %>">Show All Versions</a>
           </p>
