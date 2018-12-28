@@ -1,10 +1,4 @@
 defmodule Hexpm.Repository.RegistryBuilder do
-  @doc """
-  Builds the ets registry file. Only one build process should run at a given
-  time, but if a rebuild request comes in during building we need to rebuild
-  immediately after again.
-  """
-
   import Ecto.Query, only: [from: 2]
   require Hexpm.Repo
   require Logger
@@ -34,7 +28,7 @@ defmodule Hexpm.Repository.RegistryBuilder do
     )
   end
 
-  defp full(organization) do
+  def full(organization) do
     log(:full, fn ->
       {packages, releases, installs} = tuples(organization)
 
@@ -61,7 +55,7 @@ defmodule Hexpm.Repository.RegistryBuilder do
     end)
   end
 
-  defp partial({:v1, %Organization{id: 1} = organization}) do
+  def partial({:v1, %Organization{id: 1} = organization}) do
     log(:v1, fn ->
       {packages, releases, installs} = tuples(organization)
       ets = build_ets(packages, releases, installs)
@@ -74,7 +68,7 @@ defmodule Hexpm.Repository.RegistryBuilder do
     end)
   end
 
-  defp partial({:publish, package}) do
+  def partial({:publish, package}) do
     log(:publish, fn ->
       package_name = package.name
       organization = package.organization
