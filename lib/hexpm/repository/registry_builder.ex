@@ -14,25 +14,23 @@ defmodule Hexpm.Repository.RegistryBuilder do
 
   @ets_table :hex_registry
   @version 4
-  @lock_timeout 30_000
-  @transaction_timeout 60_000
 
   def full_build(organization) do
-    locked_build(fn -> full(organization) end)
+    locked_build(fn -> full(organization) end, 300_000, 600_000)
   end
 
   def partial_build(action) do
-    locked_build(fn -> partial(action) end)
+    locked_build(fn -> partial(action) end, 30_000, 60_000)
   end
 
-  defp locked_build(fun) do
+  defp locked_build(fun, lock_timeout, transaction_timeout) do
     Repo.transaction(
       fn ->
-        Repo.advisory_lock(:registry, timeout: @lock_timeout)
+        Repo.advisory_lock(:registry, timeout: lock_timeout)
         fun.()
         Repo.advisory_unlock(:registry)
       end,
-      timeout: @transaction_timeout
+      timeout: transaction_timeout
     )
   end
 
