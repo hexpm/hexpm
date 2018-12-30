@@ -48,13 +48,7 @@ defmodule Hexpm.Organization.RegistryBuilderTest do
 
       fun = path_to_decoder(nonrepo_path)
 
-      {:ok, decoded} =
-        cond do
-          args != [] -> apply(fun, [payload | args])
-          is_function(fun, 2) -> fun.(payload, :no_verify)
-          is_function(fun, 3) -> fun.(payload, :no_verify, :no_verify)
-        end
-
+      {:ok, decoded} = apply(fun, [payload | args])
       decoded
     end
   end
