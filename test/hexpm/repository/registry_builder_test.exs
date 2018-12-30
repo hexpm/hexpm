@@ -45,9 +45,7 @@ defmodule Hexpm.Organization.RegistryBuilderTest do
     if contents = Hexpm.Store.get(nil, :s3_bucket, path, []) do
       public_key = Application.fetch_env!(:hexpm, :public_key)
       {:ok, payload} = :hex_registry.decode_and_verify_signed(:zlib.gunzip(contents), public_key)
-
       fun = path_to_decoder(nonrepo_path)
-
       {:ok, decoded} = apply(fun, [payload | args])
       decoded
     end
