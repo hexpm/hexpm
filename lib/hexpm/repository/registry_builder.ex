@@ -257,7 +257,7 @@ defmodule Hexpm.Repository.RegistryBuilder do
         end
       end)
 
-   %{
+    %{
       name: name,
       repository: organization.name,
       releases: releases

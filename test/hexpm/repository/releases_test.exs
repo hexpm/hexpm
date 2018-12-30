@@ -116,7 +116,7 @@ defmodule Hexpm.Repository.ReleasesTest do
     test "revert only release", %{
       package: package,
       user: user
-    }  do
+    } do
       audit = audit_data(user)
       release = insert(:release, package: package, version: "0.2.0")
 

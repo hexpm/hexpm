@@ -154,7 +154,12 @@ defmodule Hexpm.Organization.RegistryBuilderTest do
       versions = v2_map("repos/#{organization.name}/versions", [organization.name])
       assert length(versions) == 1
 
-      releases = v2_map("repos/#{organization.name}/packages/#{package.name}", [organization.name, package.name])
+      releases =
+        v2_map("repos/#{organization.name}/packages/#{package.name}", [
+          organization.name,
+          package.name
+        ])
+
       assert length(releases) == 1
     end
   end
@@ -265,8 +270,15 @@ defmodule Hexpm.Organization.RegistryBuilderTest do
       names = v2_map("repos/#{organization.name}/names", [organization.name])
       assert length(names) == 2
 
-      assert v2_map("repos/#{organization.name}/packages/#{package1.name}", [organization.name, package1.name])
-      assert v2_map("repos/#{organization.name}/packages/#{package2.name}", [organization.name, package2.name])
+      assert v2_map("repos/#{organization.name}/packages/#{package1.name}", [
+               organization.name,
+               package1.name
+             ])
+
+      assert v2_map("repos/#{organization.name}/packages/#{package2.name}", [
+               organization.name,
+               package2.name
+             ])
     end
   end
 end
