@@ -4,8 +4,18 @@ defmodule Hexpm.Version do
   def type(), do: :string
 
   def cast(%Version{} = version), do: {:ok, version}
-  def cast(string) when is_binary(string), do: Version.parse(string)
-  def cast(_), do: :error
+
+  def cast(string) when is_binary(string) do
+    case Version.parse(string) do
+      {:ok, _} = ok ->
+        ok
+
+      :error ->
+        {:error, message: "is invalid SemVer"}
+    end
+  end
+
+  def cast(_), do: {:error, message: "is invalid SemVer"}
 
   def load(string), do: Version.parse(string)
 

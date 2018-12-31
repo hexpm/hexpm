@@ -81,7 +81,6 @@ defmodule HexpmWeb.ControllerHelpers do
     end)
   end
 
-  defp type_error(Hexpm.Version), do: "is invalid SemVer"
   defp type_error(type), do: "expected type #{pretty_type(type)}"
 
   defp pretty_type({:array, type}), do: "list(#{pretty_type(type)})"
