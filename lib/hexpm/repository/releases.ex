@@ -166,25 +166,32 @@ defmodule Hexpm.Repository.Releases do
       "meta" => meta
     }
 
-    release = package && Repo.get_by(assoc(package, :releases), version: version)
+    case Version.parse(version) do 
+      :error ->
+        hex_ver = %{version: Hexpm.Version}
+        change = Ecto.Changeset.cast({%{}, hex_ver}, %{version: version}, ~w(version)a)
+        Ecto.Multi.error(multi, :version, change)
+      {:ok, _} -> 
+        release = package && Repo.get_by(assoc(package, :releases), version: version)
 
-    multi
-    |> Multi.insert_or_update(:release, fn %{
+        multi
+        |> Multi.insert_or_update(:release, fn %{
                                              package: package,
                                              reserved_packages: reserved_packages
                                            } ->
-      changeset =
-        if release do
-          %{release | package: package}
-          |> preload([:requirements, :publisher])
-          |> Release.update(user, params, checksum)
-        else
-          Release.build(package, user, params, checksum)
-        end
+        changeset =
+          if release do
+            %{release | package: package}
+            |> preload([:requirements, :publisher])
+            |> Release.update(user, params, checksum)
+          else
+            Release.build(package, user, params, checksum)
+          end
 
-      validate_reserved_version(changeset, reserved_packages)
-    end)
-    |> Multi.run(:action, fn _, _ -> {:ok, if(release, do: :update, else: :insert)} end)
+        validate_reserved_version(changeset, reserved_packages)
+      end)
+      |> Multi.run(:action, fn _, _ -> {:ok, if(release, do: :update, else: :insert)} end)
+    end
   end
 
   defp refresh_package_dependants(multi) do

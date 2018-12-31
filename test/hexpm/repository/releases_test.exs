@@ -98,6 +98,28 @@ defmodule Hexpm.Repository.ReleasesTest do
 
       assert %{version: "is reserved"} = errors_on(changeset)
     end
+
+    test "cant publish using non-semantic version", %{package: package, user: user} do
+      Repo.insert_all("reserved_packages", [
+        %{"organization_id" => 1, "name" => package.name, "version" => "0.2.0"}
+      ])
+
+      meta = default_meta(package.name, "0.2")
+      audit = audit_data(user)
+
+      assert {:error, :version, changeset, _} =
+               Releases.publish(
+                 Organization.hexpm(),
+                 package,
+                 user,
+                 "BODY",
+                 meta,
+                 "CHECKSUM",
+                 audit: audit
+               )
+
+      assert %{version: "is invalid SemVer"} = errors_on(changeset)
+    end
   end
 
   describe "revert/3" do
