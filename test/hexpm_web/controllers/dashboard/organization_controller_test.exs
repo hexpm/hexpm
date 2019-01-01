@@ -179,6 +179,24 @@ defmodule HexpmWeb.Dashboard.RepositoryControllerTest do
     assert get_flash(conn, :info) == message
   end
 
+  # This can happen when the subscription is cancelled before the trial is over
+  test "cancel billing without subscription", %{user: user, organization: organization} do
+    Mox.stub(Hexpm.Billing.Mock, :cancel, fn token ->
+      assert organization.name == token
+      %{}
+    end)
+
+    insert(:organization_user, organization: organization, user: user, role: "admin")
+
+    conn =
+      build_conn()
+      |> test_login(user)
+      |> post("dashboard/orgs/#{organization.name}/cancel-billing")
+
+    assert redirected_to(conn) == "/dashboard/orgs/#{organization.name}"
+    assert get_flash(conn, :info) == "Your subscription is cancelled"
+  end
+
   test "show invoice", %{user: user, organization: organization} do
     Mox.stub(Hexpm.Billing.Mock, :dashboard, fn token ->
       assert organization.name == token

@@ -134,14 +134,7 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
   def cancel_billing(conn, %{"dashboard_org" => organization}) do
     access_organization(conn, organization, "admin", fn organization ->
       billing = Hexpm.Billing.cancel(organization.name)
-
-      cancel_date =
-        billing["subscription"]["current_period_end"]
-        |> HexpmWeb.Dashboard.OrganizationView.payment_date()
-
-      message =
-        "Your subscription is cancelled, you will have access to the organization until " <>
-          "the end of your billing period at #{cancel_date}"
+      message = cancel_message(billing["subscription"]["current_period_end"])
 
       conn
       |> put_flash(:info, message)
@@ -513,4 +506,15 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
 
   defp remove_member_error_message(:last_member, _username),
     do: "Cannot remove last member from organization."
+
+  defp cancel_message(nil = _cancel_date)  do
+    "Your subscription is cancelled"
+  end
+
+  defp cancel_message(cancel_date)  do
+    date = HexpmWeb.Dashboard.OrganizationView.payment_date(cancel_date)
+
+    "Your subscription is cancelled, you will have access to the organization until " <>
+      "the end of your billing period at #{date}"
+  end
 end
