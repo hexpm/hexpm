@@ -483,7 +483,10 @@ defmodule Hexpm.Repository.ReleaseTest do
            ] = release.requirements
   end
 
-  test "update release fails with invalid version", %{publisher: publisher, packages: [_, package2, package3]} do
+  test "update release fails with invalid version", %{
+    publisher: publisher,
+    packages: [_, package2, package3]
+  } do
     Release.build(package3, publisher, rel_meta(%{version: "0.0.1", app: package3.name}), "")
     |> Hexpm.Repo.insert!()
 
@@ -501,11 +504,11 @@ defmodule Hexpm.Repository.ReleaseTest do
     params =
       params(%{
         app: package2.name,
-        version: "1.0",
+        version: "1.0"
       })
 
-      assert %Ecto.Changeset{} = error =  Release.update(%{release | package: package2}, publisher, params, "") 
-      assert [version: {"is invalid SemVer", _}] = error.errors
+    changeset = Release.update(%{release | package: package2}, publisher, params, "")
+    assert [version: {"is invalid SemVer", _}] = changeset.errors
   end
 
   @tag :skip
