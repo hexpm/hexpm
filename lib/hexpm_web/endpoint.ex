@@ -22,6 +22,7 @@ defmodule HexpmWeb.Endpoint do
     plug Phoenix.CodeReloader
   end
 
+  plug HexpmWeb.Plugs.Status
   plug Plug.RequestId
   plug Logster.Plugs.Logger, excludes: [:params]
 
@@ -38,8 +39,6 @@ defmodule HexpmWeb.Endpoint do
     store: HexpmWeb.Session,
     key: "_hexpm_key",
     max_age: 60 * 60 * 24 * 30
-
-  plug HexpmWeb.Plugs.Status
 
   if Mix.env() == :prod do
     plug Plug.SSL, rewrite_on: [:x_forwarded_proto]
