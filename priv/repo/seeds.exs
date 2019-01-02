@@ -72,6 +72,7 @@ Hexpm.Repo.transaction(fn ->
     :release,
     package: decimal,
     version: "0.0.1",
+    publisher: eric,
     meta:
       build(
         :release_metadata,
@@ -84,6 +85,7 @@ Hexpm.Repo.transaction(fn ->
     :release,
     package: decimal,
     version: "0.0.2",
+    publisher: eric,
     meta:
       build(
         :release_metadata,
@@ -97,6 +99,7 @@ Hexpm.Repo.transaction(fn ->
       :release,
       package: decimal,
       version: "0.1.0",
+      publisher: eric,
       meta:
         build(
           :release_metadata,
@@ -146,6 +149,7 @@ Hexpm.Repo.transaction(fn ->
     :release,
     package: postgrex,
     version: "0.0.1",
+    publisher: jose,
     meta:
       build(
         :release_metadata,
@@ -158,6 +162,7 @@ Hexpm.Repo.transaction(fn ->
     :release,
     package: postgrex,
     version: "0.0.2",
+    publisher: eric,
     requirements: [
       build(
         :requirement,
@@ -180,6 +185,7 @@ Hexpm.Repo.transaction(fn ->
       :release,
       package: postgrex,
       version: "0.1.0",
+      publisher: eric,
       requirements: [
         build(
           :requirement,
@@ -237,6 +243,7 @@ Hexpm.Repo.transaction(fn ->
     :release,
     package: ecto,
     version: "0.0.1",
+    publisher: jose,
     meta:
       build(
         :release_metadata,
@@ -249,6 +256,7 @@ Hexpm.Repo.transaction(fn ->
     :release,
     package: ecto,
     version: "0.0.2",
+    publisher: jose,
     requirements: [
       build(
         :requirement,
@@ -269,6 +277,7 @@ Hexpm.Repo.transaction(fn ->
     :release,
     package: ecto,
     version: "0.1.0",
+    publisher: jose,
     requirements: [
       build(
         :requirement,
@@ -289,6 +298,7 @@ Hexpm.Repo.transaction(fn ->
     :release,
     package: ecto,
     version: "0.1.1",
+    publisher: jose,
     requirements: [
       build(
         :requirement,
@@ -309,6 +319,7 @@ Hexpm.Repo.transaction(fn ->
     :release,
     package: ecto,
     version: "0.1.2",
+    publisher: jose,
     requirements: [
       build(
         :requirement,
@@ -335,6 +346,7 @@ Hexpm.Repo.transaction(fn ->
     :release,
     package: ecto,
     version: "0.1.3",
+    publisher: jose,
     requirements: [
       build(
         :requirement,
@@ -362,6 +374,7 @@ Hexpm.Repo.transaction(fn ->
       :release,
       package: ecto,
       version: "0.2.0",
+      publisher: jose,
       requirements: [
         build(
           :requirement,
@@ -413,6 +426,7 @@ Hexpm.Repo.transaction(fn ->
     :release,
     package: private,
     version: "0.0.1",
+    publisher: eric,
     meta:
       build(
         :release_metadata,
@@ -440,6 +454,7 @@ Hexpm.Repo.transaction(fn ->
     :release,
     package: other_private,
     version: "0.0.1",
+    publisher: eric,
     meta:
       build(
         :release_metadata,
@@ -478,6 +493,7 @@ Hexpm.Repo.transaction(fn ->
         :release,
         package: ups,
         version: "0.0.1",
+        publisher: joe,
         meta:
           build(
             :release_metadata,
@@ -491,6 +507,7 @@ Hexpm.Repo.transaction(fn ->
         :release,
         package: ups,
         version: "0.2.0",
+        publisher: joe,
         requirements: [
           build(
             :requirement,
@@ -539,6 +556,7 @@ Hexpm.Repo.transaction(fn ->
       :release,
       package: nerves,
       version: "0.0.1",
+      publisher: justin,
       meta:
         build(
           :release_metadata,
@@ -570,6 +588,7 @@ Hexpm.Repo.transaction(fn ->
         :release,
         package: nerves_pkg,
         version: "0.0.1",
+        publisher: justin,
         meta:
           build(
             :release_metadata,
