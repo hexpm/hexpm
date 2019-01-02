@@ -212,6 +212,13 @@ tools = Keyword.take(tools, compatible_tools)
       <% end %>
     </ul>
 
+    <%= if @current_release.publisher do %>
+      <h3>Publisher</h3>
+      <a href="<%= Routes.user_path(Endpoint, :show, @current_release.publisher) %>">
+        <img src="<%= gravatar_url(User.email(@current_release.publisher, :gravatar), :small) %>" class="owner-avatar"><%= @current_release.publisher.username %>
+      </a>
+    <% end %>
+
     <h3>Dependents (<%= @dependants_count %>)</h3>
     <%= safe_join(@dependants, ", ", fn package ->
       link(package_name(package), to: path_for_package(package))

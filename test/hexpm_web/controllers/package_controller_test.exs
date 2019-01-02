@@ -130,6 +130,19 @@ defmodule HexpmWeb.PackageControllerTest do
       assert response(conn, 200) =~ escape(~s({:#{package1.name}, "~> 0.0.1"}))
     end
 
+    test "show publisher info", %{package1: package1} do
+      insert(
+        :release,
+        package: package1,
+        publisher: build(:user, username: "Publisher"),
+        version: "0.1.0",
+        meta: build(:release_metadata, app: package1.name)
+      )
+
+      conn = get(build_conn(), "/packages/#{package1.name}/0.1.0")
+      assert response(conn, 200) =~ "Publisher"
+    end
+
     test "show package from other repository", %{
       user1: user1,
       organization1: organization1,
