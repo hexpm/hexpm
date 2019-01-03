@@ -205,12 +205,15 @@ tools = Keyword.take(tools, compatible_tools)
     <ul class="owners-list">
       <%= for owner <- @owners do %>
         <li>
-          <a href="<%= Routes.user_path(Endpoint, :show, owner.user) %>">
-            <img src="<%= gravatar_url(User.email(owner.user, :gravatar), :small) %>" class="owner-avatar"><%= owner.user.username %>
-          </a>
+          <%= render "_user.html", user: owner.user %>
         </li>
       <% end %>
     </ul>
+
+    <%= if @current_release.publisher do %>
+      <h3>Publisher</h3>
+      <%= render "_user.html", user: @current_release.publisher %>
+    <% end %>
 
     <h3>Dependents (<%= @dependants_count %>)</h3>
     <%= safe_join(@dependants, ", ", fn package ->

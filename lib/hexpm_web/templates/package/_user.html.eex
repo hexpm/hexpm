@@ -1,0 +1,3 @@
+<a href="<%= Routes.user_path(Endpoint, :show, @user) %>">
+  <img src="<%= gravatar_url(User.email(@user, :gravatar), :small) %>" class="user-avatar"><%= @user.username %>
+</a>
