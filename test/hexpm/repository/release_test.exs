@@ -483,6 +483,34 @@ defmodule Hexpm.Repository.ReleaseTest do
            ] = release.requirements
   end
 
+  test "update release fails with invalid version", %{
+    publisher: publisher,
+    packages: [_, package2, package3]
+  } do
+    Release.build(package3, publisher, rel_meta(%{version: "0.0.1", app: package3.name}), "")
+    |> Hexpm.Repo.insert!()
+
+    reqs = [%{name: package3.name, app: package3.name, requirement: "~> 0.0.1", optional: false}]
+
+    release =
+      Release.build(
+        package2,
+        publisher,
+        rel_meta(%{version: "0.0.1", app: package2.name, requirements: reqs}),
+        ""
+      )
+      |> Hexpm.Repo.insert!()
+
+    params =
+      params(%{
+        app: package2.name,
+        version: "1.0"
+      })
+
+    changeset = Release.update(%{release | package: package2}, publisher, params, "")
+    assert [version: {"is invalid SemVer", _}] = changeset.errors
+  end
+
   @tag :skip
   test "do not allow pre-release dependencies of stable releases", %{
     publisher: publisher,

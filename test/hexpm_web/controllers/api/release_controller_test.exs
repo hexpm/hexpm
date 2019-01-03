@@ -66,6 +66,21 @@ defmodule HexpmWeb.API.ReleaseControllerTest do
       assert Hexpm.Repo.get_by(Package, name: package.name).meta.description == "awesomeness"
     end
 
+    test "update package fails when version is invalid", %{user: user, package: package} do
+      meta = %{name: package.name, version: "1.0-dev", description: "not-so-awesome"}
+
+      conn =
+        build_conn()
+        |> put_req_header("content-type", "application/octet-stream")
+        |> put_req_header("authorization", key_for(user))
+        |> post("api/packages/#{package.name}/releases", create_tar(meta, []))
+
+      assert conn.status == 422
+      result = json_response(conn, 422)
+      assert result["message"] =~ "Validation error" 
+      assert result["errors"] == %{"version" => "is invalid SemVer"}
+    end
+
     test "create release checks if package name is correct", %{user: user, package: package} do
       meta = %{name: Fake.sequence(:package), version: "0.1.0", description: "description"}
 

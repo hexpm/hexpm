@@ -159,32 +159,41 @@ defmodule Hexpm.Repository.Releases do
   defp create_release(multi, package, user, checksum, meta) do
     version = meta["version"]
 
-    params = %{
-      "app" => meta["app"],
-      "version" => version,
-      "requirements" => normalize_requirements(meta["requirements"]),
-      "meta" => meta
-    }
+    # Validate version manually to avoid an Ecto.Query.CastError exception
+    # which would return an opaque 400 HTTP status
+    case Version.parse(version) do
+      {:ok, version} ->
+        params = %{
+          "app" => meta["app"],
+          "version" => version,
+          "requirements" => normalize_requirements(meta["requirements"]),
+          "meta" => meta
+        }
 
-    release = package && Repo.get_by(assoc(package, :releases), version: version)
+        release = package && Repo.get_by(assoc(package, :releases), version: version)
 
-    multi
-    |> Multi.insert_or_update(:release, fn %{
-                                             package: package,
-                                             reserved_packages: reserved_packages
-                                           } ->
-      changeset =
-        if release do
-          %{release | package: package}
-          |> preload([:requirements, :publisher])
-          |> Release.update(user, params, checksum)
-        else
-          Release.build(package, user, params, checksum)
-        end
+        multi
+        |> Multi.insert_or_update(:release, fn changes ->
+          %{package: package, reserved_packages: reserved_packages} = changes
 
-      validate_reserved_version(changeset, reserved_packages)
-    end)
-    |> Multi.run(:action, fn _, _ -> {:ok, if(release, do: :update, else: :insert)} end)
+          changeset =
+            if release do
+              %{release | package: package}
+              |> preload([:requirements, :publisher])
+              |> Release.update(user, params, checksum)
+            else
+              Release.build(package, user, params, checksum)
+            end
+
+          validate_reserved_version(changeset, reserved_packages)
+        end)
+        |> Multi.run(:action, fn _, _ -> {:ok, if(release, do: :update, else: :insert)} end)
+
+      :error ->
+        params = %{version: Hexpm.Version}
+        change = Ecto.Changeset.cast({%{}, params}, %{version: version}, ~w(version)a)
+        Ecto.Multi.error(multi, :version, change)
+    end
   end
 
   defp refresh_package_dependants(multi) do
