@@ -2,7 +2,7 @@ defmodule HexpmWeb.PackageController do
   use HexpmWeb, :controller
 
   @packages_per_page 30
-  @sort_params ~w(name recent_downloads total_downloads inserted_at updated_at recently_released)
+  @sort_params ~w(name recent_downloads total_downloads inserted_at updated_at recently_published)
   @letters for letter <- ?A..?Z, do: <<letter>>
 
   def index(conn, params) do

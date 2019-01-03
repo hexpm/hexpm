@@ -229,14 +229,13 @@ defmodule Hexpm.Repository.PackageTest do
     %{id: phoenix_id} = insert(:package, organization_id: organization.id)
     %{id: decimal_id} = insert(:package, organization_id: organization.id)
 
-    insert(:release, package_id: phoenix_id)
-    insert(:release, package_id: decimal_id)
-    insert(:release, package_id: ecto_id)
+    insert(:release, package_id: decimal_id, version: "0.0.1")
+    insert(:release, package_id: phoenix_id, version: "0.0.1")
+    insert(:release, package_id: ecto_id, version: "0.0.1")
+    insert(:release, package_id: decimal_id, version: "0.0.2")
 
-    :ok = Hexpm.Repo.refresh_view(Hexpm.Repository.PackageDownload)
-
-    assert [ecto_id, decimal_id, phoenix_id] ==
-             Package.all([organization], 1, 10, nil, :recently_released, nil)
+    assert [decimal_id, ecto_id, phoenix_id] ==
+             Package.all([organization], 1, 10, nil, :recently_published, nil)
              |> Repo.all()
              |> Enum.map(& &1.id)
   end
