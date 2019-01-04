@@ -52,6 +52,6 @@ config :mime, :types, %{
 
 config :rollbax, enabled: false
 
-config :logger, :console, format: "$time $metadata[$level] $message\n"
+config :logger, :console, format: "$metadata[$level] $message\n"
 
 import_config "#{Mix.env()}.exs"
