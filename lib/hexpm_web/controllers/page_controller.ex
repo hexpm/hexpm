@@ -12,7 +12,7 @@ defmodule HexpmWeb.PageController do
       hide_search: true,
       num_packages: Packages.count(),
       num_releases: Releases.count(),
-      package_top: Packages.top_downloads(hexpm, "all", 8),
+      package_top: Packages.top_downloads(hexpm, "recent", 8),
       package_new: Packages.recent(hexpm, 10),
       releases_new: Releases.recent(hexpm, 10),
       total: Packages.total_downloads()
