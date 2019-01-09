@@ -39,19 +39,21 @@ defmodule Hexpm.Organization.RegistryBuilderTest do
     end
   end
 
-  defp v2_map(path) do
+  defp v2_map(path, args) when is_list(args) do
     nonrepo_path = Regex.replace(~r"^repos/\w+/", path, "")
 
     if contents = Hexpm.Store.get(nil, :s3_bucket, path, []) do
       public_key = Application.fetch_env!(:hexpm, :public_key)
       {:ok, payload} = :hex_registry.decode_and_verify_signed(:zlib.gunzip(contents), public_key)
-      path_to_decoder(nonrepo_path).(payload)
+      fun = path_to_decoder(nonrepo_path)
+      {:ok, decoded} = apply(fun, [payload | args])
+      decoded
     end
   end
 
-  defp path_to_decoder("names"), do: &:hex_registry.decode_names/1
-  defp path_to_decoder("versions"), do: &:hex_registry.decode_versions/1
-  defp path_to_decoder("packages/" <> _), do: &:hex_registry.decode_package/1
+  defp path_to_decoder("names"), do: &:hex_registry.decode_names/2
+  defp path_to_decoder("versions"), do: &:hex_registry.decode_versions/2
+  defp path_to_decoder("packages/" <> _), do: &:hex_registry.decode_package/3
 
   describe "full_build/0" do
     test "registry is in correct format", %{packages: [p1, p2, p3]} do
@@ -94,34 +96,30 @@ defmodule Hexpm.Organization.RegistryBuilderTest do
       RegistryBuilder.full_build(Organization.hexpm())
       first = packages |> Enum.map(& &1.name) |> Enum.sort() |> List.first()
 
-      names = v2_map("names")
-      assert names.repository == "hexpm"
-      assert length(names.packages) == 3
-      assert List.first(names.packages) == %{name: first}
+      names = v2_map("names", ["hexpm"])
+      assert length(names) == 3
+      assert List.first(names) == %{name: first}
 
-      versions = v2_map("versions")
-      assert versions.repository == "hexpm"
-      assert length(versions.packages) == 3
+      versions = v2_map("versions", ["hexpm"])
+      assert length(versions) == 3
 
-      assert Enum.find(versions.packages, &(&1.name == p2.name)) == %{
+      assert Enum.find(versions, &(&1.name == p2.name)) == %{
                name: p2.name,
                versions: ["0.0.1", "0.0.2"],
                retired: []
              }
 
-      package2 = v2_map("packages/#{p2.name}")
-      assert package2.name == p2.name
-      assert package2.repository == "hexpm"
-      assert length(package2.releases) == 2
+      package2_releases = v2_map("packages/#{p2.name}", ["hexpm", p2.name])
+      assert length(package2_releases) == 2
 
-      assert List.first(package2.releases) == %{
+      assert List.first(package2_releases) == %{
                version: "0.0.1",
                checksum: Base.decode16!(@checksum),
                dependencies: []
              }
 
-      package3 = v2_map("packages/#{p3.name}")
-      assert [%{version: "0.0.2", dependencies: deps}] = package3.releases
+      package3_releases = v2_map("packages/#{p3.name}", ["hexpm", p3.name])
+      assert [%{version: "0.0.2", dependencies: deps}] = package3_releases
       assert length(deps) == 2
       assert %{package: p2.name, requirement: "~> 0.0.1"} in deps
       assert %{package: p1.name, requirement: "0.0.1"} in deps
@@ -134,10 +132,10 @@ defmodule Hexpm.Organization.RegistryBuilderTest do
       Hexpm.Repo.delete!(p3)
       RegistryBuilder.full_build(Organization.hexpm())
 
-      assert length(v2_map("names").packages) == 2
-      assert v2_map("packages/#{p1.name}")
-      assert v2_map("packages/#{p2.name}")
-      refute v2_map("packages/#{p3.name}")
+      assert length(v2_map("names", ["hexpm"])) == 2
+      assert v2_map("packages/#{p1.name}", ["hexpm", p1.name])
+      assert v2_map("packages/#{p2.name}", ["hexpm", p2.name])
+      refute v2_map("packages/#{p3.name}", ["hexpm", p3.name])
     end
 
     test "registry builds for multiple repositories" do
@@ -148,17 +146,19 @@ defmodule Hexpm.Organization.RegistryBuilderTest do
 
       refute open_table(organization.name)
 
-      names = v2_map("repos/#{organization.name}/names")
-      assert names.repository == organization.name
-      assert length(names.packages) == 1
+      names = v2_map("repos/#{organization.name}/names", [organization.name])
+      assert length(names) == 1
 
-      versions = v2_map("repos/#{organization.name}/versions")
-      assert versions.repository == organization.name
-      assert length(versions.packages) == 1
+      versions = v2_map("repos/#{organization.name}/versions", [organization.name])
+      assert length(versions) == 1
 
-      package = v2_map("repos/#{organization.name}/packages/#{package.name}")
-      assert package.name == package.name
-      assert package.repository == organization.name
+      releases =
+        v2_map("repos/#{organization.name}/packages/#{package.name}", [
+          organization.name,
+          package.name
+        ])
+
+      assert length(releases) == 1
     end
   end
 
@@ -176,17 +176,17 @@ defmodule Hexpm.Organization.RegistryBuilderTest do
       tid = open_table()
       assert length(:ets.match_object(tid, :_)) == 10
 
-      versions = v2_map("versions")
+      versions = v2_map("versions", ["hexpm"])
 
-      assert Enum.find(versions.packages, &(&1.name == p2.name)) == %{
+      assert Enum.find(versions, &(&1.name == p2.name)) == %{
                name: p2.name,
                versions: ["0.0.1", "0.0.2", "0.0.3"],
                retired: [2]
              }
 
-      package = v2_map("packages/#{p2.name}")
-      assert length(package.releases) == 3
-      release = List.last(package.releases)
+      releases = v2_map("packages/#{p2.name}", ["hexpm", p2.name])
+      assert length(releases) == 3
+      release = List.last(releases)
       assert release.version == "0.0.3"
       assert release.retired.reason == :RETIRED_INVALID
       assert release.retired.message == "message"
@@ -201,16 +201,16 @@ defmodule Hexpm.Organization.RegistryBuilderTest do
       tid = open_table()
       assert length(:ets.match_object(tid, :_)) == 8
 
-      versions = v2_map("versions")
+      versions = v2_map("versions", ["hexpm"])
 
-      assert Enum.find(versions.packages, &(&1.name == p2.name)) == %{
+      assert Enum.find(versions, &(&1.name == p2.name)) == %{
                name: p2.name,
                versions: ["0.0.1"],
                retired: []
              }
 
-      package2 = v2_map("packages/#{p2.name}")
-      assert length(package2.releases) == 1
+      releases = v2_map("packages/#{p2.name}", ["hexpm", p2.name])
+      assert length(releases) == 1
     end
 
     test "add package" do
@@ -223,18 +223,18 @@ defmodule Hexpm.Organization.RegistryBuilderTest do
       tid = open_table()
       assert length(:ets.match_object(tid, :_)) == 11
 
-      assert length(v2_map("names").packages) == 4
+      assert length(v2_map("names", ["hexpm"])) == 4
 
-      versions = v2_map("versions")
+      versions = v2_map("versions", ["hexpm"])
 
-      assert Enum.find(versions.packages, &(&1.name == p.name)) == %{
+      assert Enum.find(versions, &(&1.name == p.name)) == %{
                name: p.name,
                versions: ["0.0.1"],
                retired: []
              }
 
-      ecto = v2_map("packages/#{p.name}")
-      assert length(ecto.releases) == 1
+      ecto_releases = v2_map("packages/#{p.name}", ["hexpm", p.name])
+      assert length(ecto_releases) == 1
     end
 
     test "remove package", %{packages: [_, _, p3], releases: [_, _, _, r4]} do
@@ -247,10 +247,10 @@ defmodule Hexpm.Organization.RegistryBuilderTest do
       tid = open_table()
       assert length(:ets.match_object(tid, :_)) == 7
 
-      assert length(v2_map("names").packages) == 2
-      assert length(v2_map("versions").packages) == 2
+      assert length(v2_map("names", ["hexpm"])) == 2
+      assert length(v2_map("versions", ["hexpm"])) == 2
 
-      refute v2_map("packages/#{p3.name}")
+      refute v2_map("packages/#{p3.name}", ["hexpm"])
     end
 
     test "add package for multiple repositories" do
@@ -265,11 +265,18 @@ defmodule Hexpm.Organization.RegistryBuilderTest do
 
       refute open_table(organization.name)
 
-      names = v2_map("repos/#{organization.name}/names")
-      assert length(names.packages) == 2
+      names = v2_map("repos/#{organization.name}/names", [organization.name])
+      assert length(names) == 2
 
-      assert v2_map("repos/#{organization.name}/packages/#{package1.name}")
-      assert v2_map("repos/#{organization.name}/packages/#{package2.name}")
+      assert v2_map("repos/#{organization.name}/packages/#{package1.name}", [
+               organization.name,
+               package1.name
+             ])
+
+      assert v2_map("repos/#{organization.name}/packages/#{package2.name}", [
+               organization.name,
+               package2.name
+             ])
     end
   end
 end
