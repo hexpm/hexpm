@@ -67,8 +67,7 @@ defmodule Hexpm.MixProject do
     if path = System.get_env("HEX_CORE_PATH") do
       [path: path]
     else
-      # TODO: remove before merging
-      [github: "hexpm/hex_core"]
+      []
     end
   end
 
