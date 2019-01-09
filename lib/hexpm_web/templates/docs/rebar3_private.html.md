@@ -13,36 +13,6 @@ For publishing or using a private repository you must use the [rebar3_hex](https
 
 ```elixir
 {repos, [
-   %% A self-hosted repository that allows publishing may look like this
-   #{name => <<"my_hexpm">>,
-     api_url => <<"https://localhost:8080/api">>,
-     repo_url => <<"https://localhost:8080/repo">>,
-     repo_public_key => <<"-----BEGIN PUBLIC KEY-----
-     ...
-     -----END PUBLIC KEY-----">>
-   },
-   %% A mirror looks like a standard repo definition, but uses the same
-   %% public key as hex itself. Note that the API URL is not required
-   %% if all you do is fetch information
-   #{name => <<"jsDelivr">>,
-     repo_url => <<"https://cdn.jsdelivr.net/hex">>,
-     ...
-    },
-    %% If you are a paying hex.pm user with a private organisation, your
-    %% private repository can be declared as:
-    #{name => <<"hexpm:private_repo">>}
-    %% and authenticate with the hex plugin, rebar3 hex auth
-]}.
-
-%% The default Hex config is always implicitly present.
-%% You could however replace it wholesale by using a 'replace' value,
-%% which in this case would redirect to a local index with no signature
-%% validation being done. Any repository can be replaced.
-{repos, replace, [
-   #{name => <<"hexpm">>,
-     api_url => <<"https://localhost:8080/api">>,
-     repo_url => <<"https://localhost:8080/repo">>,
-     ...
-    }               
+  #{name => <<"hexpm:private_org">>}
 ]}.
 ```
