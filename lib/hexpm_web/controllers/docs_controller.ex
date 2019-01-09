@@ -53,6 +53,17 @@ defmodule HexpmWeb.DocsController do
     )
   end
 
+  def rebar3_private(conn, _params) do
+    render(
+      conn,
+      "layout.html",
+      view: "rebar3_private.html",
+      view_name: :rebar3_private,
+      title: "Rebar3 private packages",
+      container: "container page docs"
+    )
+  end
+
   def rebar3_tasks(conn, _params) do
     redirect(conn, external: "https://www.rebar3.org/v3.0/docs/hex-package-management")
   end

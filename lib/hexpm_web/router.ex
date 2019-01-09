@@ -76,6 +76,7 @@ defmodule HexpmWeb.Router do
     get "/docs/tasks", DocsController, :tasks
     get "/docs/rebar3_usage", DocsController, :rebar3_usage
     get "/docs/rebar3_publish", DocsController, :rebar3_publish
+    get "/docs/rebar3_private", DocsController, :rebar3_private
     get "/docs/rebar3_tasks", DocsController, :rebar3_tasks
     get "/docs/private", DocsController, :private
     get "/docs/faq", DocsController, :faq
