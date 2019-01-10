@@ -11,7 +11,7 @@ This allows the same mechanism to be used for both mirrors, private repositories
 For publishing or using a private repository you must use the [rebar3_hex](https://github.com/tsloughter/rebar3_hex) plugin to authenticate, `rebar3 hex auth` after declaring the private organization (defined as `parent_repo:organization`, see the example is below) as a repository in the rebar3 config. Authenticating then creates a separate config file `~/.config/rebar3/hex.config` storing the keys.
 
 
-```elixir
+```erlang
 {repos, [
   #{name => <<"hexpm:private_org">>}
 ]}.
