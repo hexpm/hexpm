@@ -137,7 +137,7 @@ Published relx 3.5.0
 
 Congratulations, you've published your package! It will appear on the [https://hex.pm](https://hex.pm/) site and will be available to add as a dependency in other rebar3 or mix projects.
 
-Please test your package after publishing by adding it as dependency to a rebar3 project and fetching and compiling it. If there are any issues, you can publish the package again for up to one hour after first publication. A publication can also be reverted with `rebar3 hex publish --revert VERSION`.
+Please test your package after publishing by adding it as dependency to a rebar3 project and fetching and compiling it. If there are any issues, you can publish the package again for up to one hour after first publication. A publication can also be reverted with `rebar3 hex revert NAME VERSION`.
 
 When running the command to publish a package, Hex will create a tar file of all the files and directories listed in the `files` property. When the tarball has been pushed to the Hex servers, it will be uploaded to a CDN for fast and reliable access for users. Hex will also recompile the registry file that all clients will update automatically when fetching dependencies.
 
