@@ -21,6 +21,7 @@ To publish to a private repository, use `rebar3 hex publish -r hexpm:private_org
 
 
 ### Authenticating on CI and build servers
+You can generate organizations keys on your organization's [dashboard](/dashboard).
 
 ```nohighlight
 $ rebar3 hex repo auth private_org -k <key>
