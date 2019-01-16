@@ -16,3 +16,14 @@ For publishing or using a private repository you must use the [rebar3_hex](https
   #{name => <<"hexpm:private_org">>}
 ]}.
 ```
+
+To publish to a private repository, use `rebar3 hex publish -r hexpm:private_org`.
+
+
+### Authenticating on CI and build servers
+
+```nohighlight
+$ rebar3 hex repo auth private_org -k <key>
+```
+
+This can then be used to fetch packages on your CI servers without requiring manual authentication with username and password.
