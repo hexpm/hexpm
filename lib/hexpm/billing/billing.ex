@@ -2,7 +2,7 @@ defmodule Hexpm.Billing do
   @type organization() :: String.t()
 
   @callback checkout(organization(), data :: map()) :: map()
-  @callback dashboard(organization()) :: map() | nil
+  @callback get(organization()) :: map() | nil
   @callback cancel(organization()) :: map()
   @callback create(map()) :: {:ok, map()} | {:error, map()}
   @callback update(organization(), map()) :: {:ok, map()} | {:error, map()}
@@ -14,7 +14,7 @@ defmodule Hexpm.Billing do
   defp impl(), do: Application.get_env(:hexpm, :billing_impl)
 
   def checkout(organization, data), do: impl().checkout(organization, data)
-  def dashboard(organization), do: impl().dashboard(organization)
+  def get(organization), do: impl().get(organization)
   def cancel(organization), do: impl().cancel(organization)
   def create(params), do: impl().create(params)
   def update(organization, params), do: impl().update(organization, params)

@@ -8,7 +8,7 @@ defmodule Hexpm.Billing.Hexpm do
     end
   end
 
-  def dashboard(organization) do
+  def get(organization) do
     result =
       fn -> get_json("/api/customers/#{organization}", recv_timeout: 10_000) end
       |> Hexpm.HTTP.retry("billing")

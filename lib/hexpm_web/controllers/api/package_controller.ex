@@ -29,7 +29,6 @@ defmodule HexpmWeb.API.PackageController do
   end
 
   def show(conn, _params) do
-    # TODO: Show flash if private package and organization does not have active billing
     if package = conn.assigns.package do
       when_stale(conn, package, fn conn ->
         package = Packages.preload(package)

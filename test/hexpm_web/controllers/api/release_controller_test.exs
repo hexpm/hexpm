@@ -77,7 +77,7 @@ defmodule HexpmWeb.API.ReleaseControllerTest do
 
       assert conn.status == 422
       result = json_response(conn, 422)
-      assert result["message"] =~ "Validation error" 
+      assert result["message"] =~ "Validation error"
       assert result["errors"] == %{"version" => "is invalid SemVer"}
     end
 

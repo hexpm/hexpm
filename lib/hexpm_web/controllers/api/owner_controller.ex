@@ -27,10 +27,10 @@ defmodule HexpmWeb.API.OwnerController do
     end
   end
 
-  def show(conn, %{"email" => email}) do
+  def show(conn, %{"username" => name}) do
     package = conn.assigns.package
-    email = URI.decode_www_form(email)
-    user = Users.public_get(email, [:emails])
+    name = URI.decode_www_form(name)
+    user = Users.public_get(name, [:emails])
 
     if package && user do
       if owner = Owners.get(package, user) do
@@ -45,10 +45,10 @@ defmodule HexpmWeb.API.OwnerController do
     end
   end
 
-  def create(conn, %{"email" => email} = params) do
+  def create(conn, %{"username" => name} = params) do
     if package = conn.assigns.package do
-      email = URI.decode_www_form(email)
-      new_owner = Users.public_get(email, [:emails])
+      name = URI.decode_www_form(name)
+      new_owner = Users.public_get(name, [:emails])
 
       if new_owner do
         case Owners.add(package, new_owner, params, audit: audit_data(conn)) do
@@ -58,7 +58,7 @@ defmodule HexpmWeb.API.OwnerController do
             |> send_resp(204, "")
 
           {:error, :not_member} ->
-            errors = %{"email" => "cannot add owner that is not a member of the organization"}
+            errors = %{"username" => "cannot add owner that is not a member of the organization"}
             validation_failed(conn, errors)
 
           {:error, changeset} ->
@@ -72,10 +72,10 @@ defmodule HexpmWeb.API.OwnerController do
     end
   end
 
-  def delete(conn, %{"email" => email}) do
+  def delete(conn, %{"username" => name}) do
     if package = conn.assigns.package do
-      email = URI.decode_www_form(email)
-      remove_owner = Users.get(email)
+      name = URI.decode_www_form(name)
+      remove_owner = Users.get(name)
 
       if remove_owner do
         case Owners.remove(package, remove_owner, audit: audit_data(conn)) do
@@ -85,10 +85,10 @@ defmodule HexpmWeb.API.OwnerController do
             |> send_resp(204, "")
 
           {:error, :not_owner} ->
-            validation_failed(conn, %{"email" => "user is not an owner of package"})
+            validation_failed(conn, %{"username" => "user is not an owner of package"})
 
           {:error, :last_owner} ->
-            validation_failed(conn, %{"email" => "cannot remove last owner of package"})
+            validation_failed(conn, %{"username" => "cannot remove last owner of package"})
         end
       else
         not_found(conn)

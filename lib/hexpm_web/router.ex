@@ -13,7 +13,7 @@ defmodule HexpmWeb.Router do
     plug :web_user_agent
     plug :validate_url
     plug :login
-    plug :default_organization
+    plug :default_repository
   end
 
   pipeline :upload do
@@ -24,7 +24,7 @@ defmodule HexpmWeb.Router do
     plug :validate_url
     plug HexpmWeb.Plugs.Attack
     plug :fetch_body
-    plug :default_organization
+    plug :default_repository
   end
 
   pipeline :api do
@@ -34,7 +34,7 @@ defmodule HexpmWeb.Router do
     plug :validate_url
     plug HexpmWeb.Plugs.Attack
     plug Corsica, origins: "*", allow_methods: ["HEAD", "GET"]
-    plug :default_organization
+    plug :default_repository
   end
 
   if Mix.env() == :dev do
@@ -172,8 +172,15 @@ defmodule HexpmWeb.Router do
     get "/users/:name/test", UserController, :test
     post "/users/:name/reset", UserController, :reset
 
-    # get "/orgs", OrganizationController, :index
-    # get "/orgs/:organization", OrganizationController, :show
+    get "/orgs", OrganizationController, :index
+    get "/orgs/:organization", OrganizationController, :show
+    post "/orgs/:organization", OrganizationController, :update
+
+    get "/orgs/:organization/users", OrganizationUserController, :index
+    post "/orgs/:organization/users", OrganizationUserController, :create
+    get "/orgs/:organization/users/:name", OrganizationUserController, :show
+    post "/orgs/:organization/users/:name", OrganizationUserController, :update
+    delete "/orgs/:organization/users/:name", OrganizationUserController, :delete
 
     get "/repos", RepositoryController, :index
     get "/repos/:repository", RepositoryController, :show
@@ -193,9 +200,9 @@ defmodule HexpmWeb.Router do
         delete "/packages/:name/releases/:version/docs", DocsController, :delete
 
         get "/packages/:name/owners", OwnerController, :index
-        get "/packages/:name/owners/:email", OwnerController, :show
-        put "/packages/:name/owners/:email", OwnerController, :create
-        delete "/packages/:name/owners/:email", OwnerController, :delete
+        get "/packages/:name/owners/:username", OwnerController, :show
+        put "/packages/:name/owners/:username", OwnerController, :create
+        delete "/packages/:name/owners/:username", OwnerController, :delete
       end
     end
 

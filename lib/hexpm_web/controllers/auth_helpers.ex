@@ -235,6 +235,10 @@ defmodule HexpmWeb.AuthHelpers do
     organization_access(conn, user_or_organization, "write")
   end
 
+  def organization_access_admin(conn, user_or_organization) do
+    organization_access(conn, user_or_organization, "admin")
+  end
+
   def organization_access(conn, user_or_organization, role \\ "read")
 
   def organization_access(%Plug.Conn{} = conn, user_or_organization, role) do

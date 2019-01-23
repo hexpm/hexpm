@@ -36,8 +36,8 @@ defmodule HexpmWeb.API.UserController do
     end
   end
 
-  def show(conn, %{"name" => username}) do
-    user = Users.public_get(username, [:emails, owned_packages: :organization])
+  def show(conn, %{"name" => name}) do
+    user = Users.public_get(name, [:emails, owned_packages: :organization])
     accessible_packages = Packages.accessible_user_owned_packages(user, conn.assigns.current_user)
 
     user = user && %{user | owned_packages: accessible_packages}

@@ -9,14 +9,12 @@ defmodule HexpmWeb.API.RepositoryView do
 
   def render("show", %{organization: organization}) do
     # TODO: Add url
+    # TODO: Add packages
 
-    Map.take(organization, [
-      :name,
-      :public,
-      :active,
-      :billing_active,
-      :inserted_at,
-      :updated_at
-    ])
+    %{
+      name: organization.name,
+      inserted_at: organization.inserted_at,
+      updated_at: organization.updated_at
+    }
   end
 end
