@@ -24,7 +24,7 @@ defmodule Hexpm.Repository.Package do
   @otp_names ~w(
     appmon asn1 common_test compiler cosEvent cosEventDomain cosFileTransfer
     cosNotification cosProperty cosTime cosTransactions crypto debugger
-    dialyzer diameter edoc eldap erl_docgen erl_interface et eunit gs hipe
+    dialyzer diameter edoc eldap erl_docgen erl_interface erts et eunit gs hipe
     ic inets jinterface kernel Makefile megaco mnesia observer odbc orber
     os_mon ose otp_mibs parsetools percept pman public_key reltool runtime_tools
     sasl snmp ssh ssl stdlib syntax_tools test_server toolbar tools tv typer
