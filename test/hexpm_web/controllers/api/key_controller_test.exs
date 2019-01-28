@@ -125,7 +125,7 @@ defmodule HexpmWeb.API.KeyControllerTest do
         build_conn()
         |> put_req_header("content-type", "application/json")
         |> put_req_header("authorization", "Basic " <> Base.encode64("eric:ericeric"))
-        |> post("api/keys", Jason.encode!(body))
+        |> post("api/keys", body)
 
       assert conn.status == 201
       key = Repo.one!(Key.get(c.eric, "macbook"))
@@ -146,7 +146,7 @@ defmodule HexpmWeb.API.KeyControllerTest do
       build_conn()
       |> put_req_header("content-type", "application/json")
       |> put_req_header("authorization", "Basic " <> Base.encode64("eric:ericeric"))
-      |> post("api/keys", Jason.encode!(body))
+      |> post("api/keys", body)
       |> json_response(201)
 
       key = Repo.one!(Key.get(c.eric, "macbook"))
@@ -165,7 +165,7 @@ defmodule HexpmWeb.API.KeyControllerTest do
       build_conn()
       |> put_req_header("content-type", "application/json")
       |> put_req_header("authorization", key.user_secret)
-      |> post("api/keys", Jason.encode!(body))
+      |> post("api/keys", body)
       |> json_response(201)
 
       key = Repo.one!(Key.get(c.eric, "macbook"))
@@ -182,7 +182,7 @@ defmodule HexpmWeb.API.KeyControllerTest do
       build_conn()
       |> put_req_header("content-type", "application/json")
       |> put_req_header("authorization", "Basic " <> Base.encode64("eric:ericeric"))
-      |> post("api/keys", Jason.encode!(body))
+      |> post("api/keys", body)
       |> json_response(422)
 
       refute Repo.one(Key.get(c.eric, "macbook"))
@@ -194,7 +194,7 @@ defmodule HexpmWeb.API.KeyControllerTest do
       build_conn()
       |> put_req_header("content-type", "application/json")
       |> put_req_header("authorization", "Basic " <> Base.encode64("eric:ericeric"))
-      |> post("api/keys", Jason.encode!(body))
+      |> post("api/keys", body)
       |> json_response(201)
 
       key = Repo.one!(Key.get(c.eric, "macbook"))

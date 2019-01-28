@@ -14,6 +14,11 @@ defmodule Hexpm.Accounts.Organizations do
     |> Repo.preload(preload)
   end
 
+  def get_role(organization, user) do
+    org_user = Repo.get_by(OrganizationUser, organization_id: organization.id, user_id: user.id)
+    org_user && org_user.role
+  end
+
   def access?(%Organization{public: false}, nil, _role) do
     false
   end
@@ -48,55 +53,45 @@ defmodule Hexpm.Accounts.Organizations do
     end
   end
 
-  def add_member(organization, username, params, audit: audit_data) do
-    if user = Users.get(username, [:emails]) do
-      organization_user = %OrganizationUser{organization_id: organization.id, user_id: user.id}
+  def add_member(organization, user, params, audit: audit_data) do
+    organization_user = %OrganizationUser{organization_id: organization.id, user_id: user.id}
 
-      multi =
-        Multi.new()
-        |> Multi.insert(:organization_user, Organization.add_member(organization_user, params))
-        |> audit(audit_data, "organization.member.add", {organization, user})
+    multi =
+      Multi.new()
+      |> Multi.insert(:organization_user, Organization.add_member(organization_user, params))
+      |> audit(audit_data, "organization.member.add", {organization, user})
 
-      case Repo.transaction(multi) do
-        {:ok, result} ->
-          send_invite_email(organization, user)
-          {:ok, result.organization_user}
+    case Repo.transaction(multi) do
+      {:ok, result} ->
+        send_invite_email(organization, user)
+        {:ok, result.organization_user}
 
-        {:error, :organization_user, changeset, _} ->
-          {:error, changeset}
-      end
-    else
-      {:error, :unknown_user}
+      {:error, :organization_user, changeset, _} ->
+        {:error, changeset}
     end
   end
 
-  def remove_member(organization, username, audit: audit_data) do
-    if user = Users.get(username) do
-      count = Repo.aggregate(assoc(organization, :organization_users), :count, :id)
+  def remove_member(organization, user, audit: audit_data) do
+    count = Repo.aggregate(assoc(organization, :organization_users), :count, :id)
 
-      if count == 1 do
-        {:error, :last_member}
-      else
-        organization_user =
-          Repo.get_by(assoc(organization, :organization_users), user_id: user.id)
-
-        if organization_user do
-          {:ok, _result} =
-            Multi.new()
-            |> Multi.delete(:organization_user, organization_user)
-            |> audit(audit_data, "organization.member.remove", {organization, user})
-            |> Repo.transaction()
-        end
-
-        :ok
-      end
+    if count == 1 do
+      {:error, :last_member}
     else
-      {:error, :unknown_user}
+      organization_user = Repo.get_by(assoc(organization, :organization_users), user_id: user.id)
+
+      if organization_user do
+        {:ok, _result} =
+          Multi.new()
+          |> Multi.delete(:organization_user, organization_user)
+          |> audit(audit_data, "organization.member.remove", {organization, user})
+          |> Repo.transaction()
+      end
+
+      :ok
     end
   end
 
-  def change_role(organization, username, params, audit: audit_data) do
-    user = Users.get(username)
+  def change_role(organization, user, params, audit: audit_data) do
     organization_users = Repo.all(assoc(organization, :organization_users))
     organization_user = Enum.find(organization_users, &(&1.user_id == user.id))
     number_admins = Enum.count(organization_users, &(&1.role == "admin"))
@@ -124,7 +119,7 @@ defmodule Hexpm.Accounts.Organizations do
     end
   end
 
-  def members_count(organization) do
+  def user_count(organization) do
     Repo.aggregate(assoc(organization, :organization_users), :count, :id)
   end
 

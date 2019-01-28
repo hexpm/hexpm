@@ -9,16 +9,8 @@ defmodule HexpmWeb.Dashboard.RepositoryControllerTest do
     user
   end
 
-  setup do
-    %{
-      user: create_user("eric", "eric@mail.com", "hunter42"),
-      password: "hunter42",
-      organization: insert(:organization)
-    }
-  end
-
-  defp mock_billing_dashboard(organization) do
-    Mox.stub(Hexpm.Billing.Mock, :dashboard, fn token ->
+  defp mock_customer(organization) do
+    Mox.stub(Hexpm.Billing.Mock, :get, fn token ->
       assert organization.name == token
 
       %{
@@ -28,10 +20,18 @@ defmodule HexpmWeb.Dashboard.RepositoryControllerTest do
     end)
   end
 
+  setup do
+    %{
+      user: create_user("eric", "eric@mail.com", "hunter42"),
+      password: "hunter42",
+      organization: insert(:organization)
+    }
+  end
+
   test "show organization", %{user: user, organization: organization} do
     insert(:organization_user, organization: organization, user: user)
 
-    mock_billing_dashboard(organization)
+    mock_customer(organization)
 
     conn =
       build_conn()
@@ -54,7 +54,7 @@ defmodule HexpmWeb.Dashboard.RepositoryControllerTest do
   end
 
   test "add member to organization", %{user: user, organization: organization} do
-    Mox.stub(Hexpm.Billing.Mock, :dashboard, fn token ->
+    Mox.stub(Hexpm.Billing.Mock, :get, fn token ->
       assert organization.name == token
 
       %{
@@ -88,7 +88,7 @@ defmodule HexpmWeb.Dashboard.RepositoryControllerTest do
     user: user,
     organization: organization
   } do
-    Mox.stub(Hexpm.Billing.Mock, :dashboard, fn token ->
+    Mox.stub(Hexpm.Billing.Mock, :get, fn token ->
       assert organization.name == token
 
       %{
@@ -198,7 +198,7 @@ defmodule HexpmWeb.Dashboard.RepositoryControllerTest do
   end
 
   test "show invoice", %{user: user, organization: organization} do
-    Mox.stub(Hexpm.Billing.Mock, :dashboard, fn token ->
+    Mox.stub(Hexpm.Billing.Mock, :get, fn token ->
       assert organization.name == token
       %{"invoices" => [%{"id" => 123}]}
     end)
@@ -219,7 +219,7 @@ defmodule HexpmWeb.Dashboard.RepositoryControllerTest do
   end
 
   test "pay invoice", %{user: user, organization: organization} do
-    Mox.stub(Hexpm.Billing.Mock, :dashboard, fn token ->
+    Mox.stub(Hexpm.Billing.Mock, :get, fn token ->
       assert organization.name == token
 
       invoice = %{
@@ -249,7 +249,7 @@ defmodule HexpmWeb.Dashboard.RepositoryControllerTest do
   end
 
   test "pay invoice failed", %{user: user, organization: organization} do
-    Mox.stub(Hexpm.Billing.Mock, :dashboard, fn token ->
+    Mox.stub(Hexpm.Billing.Mock, :get, fn token ->
       assert organization.name == token
 
       invoice = %{
@@ -279,7 +279,7 @@ defmodule HexpmWeb.Dashboard.RepositoryControllerTest do
   end
 
   test "update billing email", %{user: user, organization: organization} do
-    mock_billing_dashboard(organization)
+    mock_customer(organization)
 
     Mox.stub(Hexpm.Billing.Mock, :update, fn token, params ->
       assert organization.name == token
@@ -403,7 +403,7 @@ defmodule HexpmWeb.Dashboard.RepositoryControllerTest do
     end
 
     test "seats cannot be less than number of members", %{organization: organization, user: user} do
-      mock_billing_dashboard(organization)
+      mock_customer(organization)
 
       insert(:organization_user, organization: organization, user: user, role: "admin")
       insert(:organization_user, organization: organization, user: build(:user))
@@ -446,7 +446,7 @@ defmodule HexpmWeb.Dashboard.RepositoryControllerTest do
     end
 
     test "seats cannot be less than number of members", %{organization: organization, user: user} do
-      mock_billing_dashboard(organization)
+      mock_customer(organization)
 
       insert(:organization_user, organization: organization, user: build(:user))
       insert(:organization_user, organization: organization, user: user, role: "admin")
@@ -506,7 +506,7 @@ defmodule HexpmWeb.Dashboard.RepositoryControllerTest do
       insert(:organization_user, organization: c.organization, user: c.user, role: "admin")
       insert(:key, organization: c.organization, name: "computer")
 
-      mock_billing_dashboard(c.organization)
+      mock_customer(c.organization)
 
       conn =
         build_conn()
@@ -527,7 +527,7 @@ defmodule HexpmWeb.Dashboard.RepositoryControllerTest do
         revoked_at: ~N"2017-01-01 00:00:00"
       )
 
-      mock_billing_dashboard(c.organization)
+      mock_customer(c.organization)
 
       conn =
         build_conn()

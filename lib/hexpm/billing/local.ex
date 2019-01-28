@@ -5,7 +5,7 @@ defmodule Hexpm.Billing.Local do
     %{}
   end
 
-  def dashboard(_organization) do
+  def get(_organization) do
     %{
       "checkout_html" => "",
       "monthly_cost" => 800,

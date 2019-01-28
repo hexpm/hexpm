@@ -253,7 +253,9 @@ defmodule HexpmWeb.ControllerHelpers do
       |> assign(:package, package)
       |> assign(:release, release)
     else
-      conn |> not_found() |> halt()
+      conn
+      |> not_found()
+      |> halt()
     end
   end
 

@@ -77,7 +77,7 @@ defmodule HexpmWeb.Plugs do
     assign(conn, :user_agent, "WEB")
   end
 
-  def default_organization(conn, _opts) do
+  def default_repository(conn, _opts) do
     param_set? = Map.has_key?(conn.params, "repository")
 
     case conn.path_info do

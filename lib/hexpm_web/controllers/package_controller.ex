@@ -49,6 +49,8 @@ defmodule HexpmWeb.PackageController do
   end
 
   def show(conn, params) do
+    # TODO: Show flash if private package and organization does not have active billing
+
     params = fixup_params(params)
     %{"repository" => repository, "name" => name} = params
     organizations = Users.all_organizations(conn.assigns.current_user)

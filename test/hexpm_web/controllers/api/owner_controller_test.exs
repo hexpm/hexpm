@@ -27,7 +27,7 @@ defmodule HexpmWeb.API.OwnerControllerTest do
     }
   end
 
-  describe "GET /packages/:name/owners" do
+  describe "GET /api/packages/:name/owners" do
     test "get all package owners", %{user1: user1, user2: user2, package: package} do
       conn =
         build_conn()
@@ -50,7 +50,7 @@ defmodule HexpmWeb.API.OwnerControllerTest do
     end
   end
 
-  describe "GET /repos/:organization/packages/:name/owners" do
+  describe "GET /api/repos/:organization/packages/:name/owners" do
     test "returns 403 if you are not authorized", %{
       user1: user1,
       organization: organization,
@@ -145,7 +145,7 @@ defmodule HexpmWeb.API.OwnerControllerTest do
     end
   end
 
-  describe "GET /packages/:name/owners/:email" do
+  describe "GET /api/packages/:name/owners/:email" do
     test "check if user is package owner", %{user1: user1, user2: user2, package: package} do
       build_conn()
       |> put_req_header("authorization", key_for(user1))
@@ -164,7 +164,7 @@ defmodule HexpmWeb.API.OwnerControllerTest do
     end
   end
 
-  describe "GET /repos/:organization/packages/:name/owners/:email" do
+  describe "GET /api/repos/:organization/packages/:name/owners/:email" do
     test "returns 403 if you are not authorized", %{
       user1: user1,
       organization: organization,
