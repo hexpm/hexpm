@@ -76,17 +76,17 @@ defmodule HexpmWeb.API.UserControllerTest do
   describe "GET /api/users/me" do
     test "get current user" do
       user = insert(:user)
-      organization = insert(:organization, users: [user])
+      repository = insert(:repository)
       package1 = insert(:package, package_owners: [build(:package_owner, user: user)])
 
       package2 =
         insert(
           :package,
-          organization_id: organization.id,
+          repository_id: repository.id,
           package_owners: [build(:package_owner, user: user)]
         )
 
-      insert(:organization_user, organization: organization, user: user)
+      insert(:organization_user, organization: repository.organization, user: user)
 
       body =
         build_conn()
@@ -98,23 +98,23 @@ defmodule HexpmWeb.API.UserControllerTest do
       assert body["email"] == hd(user.emails).email
       refute body["emails"]
       refute body["password"]
-      assert hd(body["organizations"])["name"] == organization.name
+      assert hd(body["organizations"])["name"] == repository.organization.name
       assert hd(body["organizations"])["role"] == "read"
 
       assert [json1, json2] = body["packages"]
       assert json1["url"] =~ "/api/packages/#{package1.name}"
       assert json1["html_url"] =~ "/packages/#{package1.name}"
       assert json1["repository"] =~ "hexpm"
-      assert json2["url"] =~ "/api/repos/#{organization.name}/packages/#{package2.name}"
-      assert json2["html_url"] =~ "/packages/#{organization.name}/#{package2.name}"
-      assert json2["repository"] =~ organization.name
+      assert json2["url"] =~ "/api/repos/#{repository.name}/packages/#{package2.name}"
+      assert json2["html_url"] =~ "/packages/#{repository.name}/#{package2.name}"
+      assert json2["repository"] =~ repository.name
 
       # TODO: deprecated
       assert Enum.count(body["owned_packages"]) == 2
       assert body["owned_packages"][package1.name] =~ "/api/packages/#{package1.name}"
 
       assert body["owned_packages"][package2.name] =~
-               "/api/repos/#{organization.name}/packages/#{package2.name}"
+               "/api/repos/#{repository.name}/packages/#{package2.name}"
     end
 
     test "return 401 if not authenticated" do
@@ -139,11 +139,11 @@ defmodule HexpmWeb.API.UserControllerTest do
       user2 = insert(:user)
       user3 = insert(:user)
 
-      organization1 = insert(:organization)
-      organization2 = insert(:organization)
-      insert(:organization_user, user: user1, organization: organization1)
-      insert(:organization_user, user: user2, organization: organization1)
-      insert(:organization_user, user: user3, organization: organization2)
+      repository1 = insert(:repository)
+      repository2 = insert(:repository)
+      insert(:organization_user, user: user1, organization: repository1.organization)
+      insert(:organization_user, user: user2, organization: repository1.organization)
+      insert(:organization_user, user: user3, organization: repository2.organization)
 
       # public package
       package1 = insert(:package, package_owners: [build(:package_owner, user: user1)])
@@ -152,7 +152,7 @@ defmodule HexpmWeb.API.UserControllerTest do
       package2 =
         insert(
           :package,
-          organization_id: organization1.id,
+          repository_id: repository1.id,
           package_owners: [build(:package_owner, user: user1)]
         )
 

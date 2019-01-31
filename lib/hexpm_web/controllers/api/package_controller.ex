@@ -5,21 +5,21 @@ defmodule HexpmWeb.API.PackageController do
   plug :maybe_fetch_package when action in [:show]
 
   plug :maybe_authorize,
-       [domain: "api", resource: "read", fun: &maybe_organization_access/2]
+       [domain: "api", resource: "read", fun: &maybe_repository_access/2]
        when action in [:index]
 
   plug :maybe_authorize,
-       [domain: "api", resource: "read", fun: &organization_access/2]
+       [domain: "api", resource: "read", fun: &repository_access/2]
        when action in [:show]
 
   @sort_params ~w(name recent_downloads total_downloads inserted_at updated_at)
 
   def index(conn, params) do
-    organizations = organizations(conn)
+    repositories = repositories(conn)
     page = Hexpm.Utils.safe_int(params["page"])
     search = Hexpm.Utils.parse_search(params["search"])
     sort = sort(params["sort"])
-    packages = Packages.search_with_versions(organizations, page, 100, search, sort)
+    packages = Packages.search_with_versions(repositories, page, 100, search, sort)
 
     when_stale(conn, packages, [modified: false], fn conn ->
       conn
@@ -48,19 +48,19 @@ defmodule HexpmWeb.API.PackageController do
   defp sort("downloads"), do: sort("total_downloads")
   defp sort(param), do: Hexpm.Utils.safe_to_atom(param, @sort_params)
 
-  defp organizations(conn) do
+  defp repositories(conn) do
     cond do
-      organization = conn.assigns.organization ->
-        [organization]
+      repository = conn.assigns.repository ->
+        [repository]
 
       user = conn.assigns.current_user ->
-        Users.all_organizations(user)
+        Enum.map(Users.all_organizations(user), & &1.repository)
 
       organization = conn.assigns.current_organization ->
-        [Organization.hexpm(), organization]
+        [Repository.hexpm(), organization.repository]
 
       true ->
-        [Organization.hexpm()]
+        [Repository.hexpm()]
     end
   end
 end

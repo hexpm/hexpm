@@ -4,7 +4,7 @@ defmodule HexpmWeb.API.OwnerController do
   plug :maybe_fetch_package
 
   plug :authorize,
-       [domain: "api", resource: "read", fun: &organization_access/2]
+       [domain: "api", resource: "read", fun: &repository_access/2]
        when action in [:index, :show]
 
   plug :authorize,

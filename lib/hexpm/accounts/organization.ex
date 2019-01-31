@@ -6,11 +6,10 @@ defmodule Hexpm.Accounts.Organization do
 
   schema "organizations" do
     field :name, :string
-    field :public, :boolean
     field :billing_active, :boolean, default: false
     timestamps()
 
-    has_many :packages, Package
+    has_one :repository, Repository
     has_many :organization_users, OrganizationUser
     has_many :users, through: [:organization_users, :user]
     has_many :keys, Key
@@ -30,7 +29,6 @@ defmodule Hexpm.Accounts.Organization do
     |> validate_length(:name, min: 3)
     |> validate_format(:name, @name_regex)
     |> validate_exclusion(:name, @reserved_names)
-    |> put_change(:public, false)
   end
 
   def add_member(struct, params) do
@@ -64,11 +62,19 @@ defmodule Hexpm.Accounts.Organization do
   def role_or_higher("write"), do: ["write", "admin"]
   def role_or_higher("admin"), do: ["admin"]
 
-  def hexpm() do
+  def hexpm(opts \\ []) do
+    repository =
+      if Keyword.get(opts, :recursive, true) do
+        Repository.hexpm(recursive: false)
+      else
+        %Ecto.Association.NotLoaded{}
+      end
+
     %__MODULE__{
       id: 1,
       name: "hexpm",
-      public: true
+      billing_active: true,
+      repository: repository
     }
   end
 

@@ -2,7 +2,7 @@ defmodule HexpmWeb.PageController do
   use HexpmWeb, :controller
 
   def index(conn, _params) do
-    hexpm = Organization.hexpm()
+    hexpm = Repository.hexpm()
 
     render(
       conn,

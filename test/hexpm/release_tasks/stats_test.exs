@@ -6,9 +6,9 @@ defmodule Hexpm.ReleaseTasks.StatsTest do
   alias Hexpm.ReleaseTasks.Stats
 
   setup do
-    organization1 = insert(:organization)
+    repository1 = insert(:repository)
     [package1, package2, package3] = insert_list(3, :package)
-    package4 = insert(:package, organization_id: organization1.id)
+    package4 = insert(:package, repository_id: repository1.id)
     insert(:release, package: package1, version: "0.0.1")
     insert(:release, package: package1, version: "0.0.2")
     insert(:release, package: package1, version: "0.1.0")
@@ -19,7 +19,7 @@ defmodule Hexpm.ReleaseTasks.StatsTest do
     insert(:release, package: package4, version: "0.0.1")
 
     %{
-      organization1: organization1,
+      repository1: repository1,
       package1: package1,
       package2: package2,
       package3: package3,
@@ -28,7 +28,7 @@ defmodule Hexpm.ReleaseTasks.StatsTest do
   end
 
   test "counts all downloads", %{
-    organization1: organization1,
+    repository1: repository1,
     package1: package1,
     package2: package2,
     package4: package4
@@ -40,7 +40,7 @@ defmodule Hexpm.ReleaseTasks.StatsTest do
     logfile1 =
       read_log(
         "fastly_logs_1.txt",
-        repository1: organization1.name,
+        repository1: repository1.name,
         package1: package1.name,
         package2: package2.name,
         package4: package4.name
@@ -50,7 +50,7 @@ defmodule Hexpm.ReleaseTasks.StatsTest do
     logfile2 =
       read_log(
         "fastly_logs_2.txt",
-        repository1: organization1.name,
+        repository1: repository1.name,
         package1: package1.name,
         package2: package2.name,
         package4: package4.name

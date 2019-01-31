@@ -12,7 +12,7 @@ defmodule HexpmWeb.API.PackageView do
 
   def render("show", %{package: package}) do
     %{
-      repository: package.organization.name,
+      repository: package.repository.name,
       name: package.name,
       inserted_at: package.inserted_at,
       updated_at: package.updated_at,

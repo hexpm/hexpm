@@ -3,18 +3,17 @@ defmodule HexpmWeb.API.RepositoryControllerTest do
 
   setup do
     user = insert(:user)
-    organization1 = insert(:organization, public: true)
-    organization2 = insert(:organization, public: false)
-    insert(:organization, public: false)
-    insert(:organization_user, user: user, organization: organization2)
-    %{user: user, organization1: organization1, organization2: organization2}
+    repository1 = insert(:repository, public: false)
+    repository2 = insert(:repository, public: false)
+    insert(:organization_user, user: user, organization: repository1.organization)
+    %{user: user, repository1: repository1, repository2: repository2}
   end
 
   describe "GET /api/repos" do
     test "not authorized" do
       conn = get(build_conn(), "api/repos")
       result = json_response(conn, 200)
-      assert length(result) == 2
+      assert length(result) == 1
     end
 
     test "authorized", %{user: user} do
@@ -24,28 +23,28 @@ defmodule HexpmWeb.API.RepositoryControllerTest do
         |> get("api/repos")
         |> json_response(200)
 
-      assert length(result) == 3
+      assert length(result) == 2
     end
   end
 
   describe "GET /api/repos/:repository" do
-    test "not authorized", %{organization1: organization1, organization2: organization2} do
-      conn = get(build_conn(), "api/repos/#{organization1.name}")
+    test "not authorized", %{repository2: repository2} do
+      conn = get(build_conn(), "api/repos/hexpm")
       result = json_response(conn, 200)
-      assert result["name"] == organization1.name
+      assert result["name"] == "hexpm"
 
-      conn = get(build_conn(), "api/repos/#{organization2.name}")
+      conn = get(build_conn(), "api/repos/#{repository2.name}")
       response(conn, 403)
     end
 
-    test "authorized", %{user: user, organization2: organization2} do
+    test "authorized", %{user: user, repository1: repository1} do
       result =
         build_conn()
         |> put_req_header("authorization", key_for(user))
-        |> get("api/repos/#{organization2.name}")
+        |> get("api/repos/#{repository1.name}")
         |> json_response(200)
 
-      assert result["name"] == organization2.name
+      assert result["name"] == repository1.name
     end
   end
 end

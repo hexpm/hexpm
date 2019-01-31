@@ -70,13 +70,13 @@ defmodule HexpmWeb.API.UserView do
     end)
   end
 
-  defp repository_name(%Package{organization_id: 1}), do: "hexpm"
-  defp repository_name(%Package{organization: %{name: name}}), do: name
+  defp repository_name(%Package{repository_id: 1}), do: "hexpm"
+  defp repository_name(%Package{repository: %Repository{name: name}}), do: name
 
   # TODO: DRY up
   # Atoms sort before strings
-  defp repository_sort(%Package{organization_id: 1}), do: :first
-  defp repository_sort(%Package{organization: %{name: name}}), do: name
+  defp repository_sort(%Package{repository_id: 1}), do: :first
+  defp repository_sort(%Package{repository: %Repository{name: name}}), do: name
 
   defp organizations(user) do
     Enum.map(user.organization_users, fn ru ->

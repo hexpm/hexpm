@@ -9,8 +9,8 @@ defmodule Hexpm.Repository.Releases do
     |> Release.sort()
   end
 
-  def recent(organization, count) do
-    Repo.all(Release.recent(organization, count))
+  def recent(repository, count) do
+    Repo.all(Release.recent(repository, count))
   end
 
   def count() do
@@ -22,8 +22,8 @@ defmodule Hexpm.Repository.Releases do
     release && %{release | package: package}
   end
 
-  def get(organization, package, version) when is_binary(package) do
-    package = Packages.get(organization, package)
+  def get(repository, package, version) when is_binary(package) do
+    package = Packages.get(repository, package)
     package && get(package, version)
   end
 
@@ -38,11 +38,11 @@ defmodule Hexpm.Repository.Releases do
     Repo.preload(release, preload)
   end
 
-  def publish(organization, package, user, body, meta, checksum, audit: audit_data) do
+  def publish(repository, package, user, body, meta, checksum, audit: audit_data) do
     Multi.new()
-    |> Multi.run(:organization, fn _, _ -> {:ok, organization} end)
-    |> Multi.run(:reserved_packages, fn _, _ -> {:ok, reserved_packages(organization, meta)} end)
-    |> create_package(organization, package, user, meta)
+    |> Multi.run(:repository, fn _, _ -> {:ok, repository} end)
+    |> Multi.run(:reserved_packages, fn _, _ -> {:ok, reserved_packages(repository, meta)} end)
+    |> create_package(repository, package, user, meta)
     |> create_release(package, user, checksum, meta)
     |> audit_publish(audit_data)
     |> refresh_package_dependants()
@@ -94,7 +94,7 @@ defmodule Hexpm.Repository.Releases do
     params = %{"retirement" => params}
 
     Multi.new()
-    |> Multi.run(:organization, fn _, _ -> {:ok, package.organization} end)
+    |> Multi.run(:repository, fn _, _ -> {:ok, package.repository} end)
     |> Multi.run(:package, fn _, _ -> {:ok, package} end)
     |> Multi.update(:release, Release.retire(release, params))
     |> audit_retire(audit_data, package)
@@ -104,7 +104,7 @@ defmodule Hexpm.Repository.Releases do
 
   def unretire(package, release, audit: audit_data) do
     Multi.new()
-    |> Multi.run(:organization, fn _, _ -> {:ok, package.organization} end)
+    |> Multi.run(:repository, fn _, _ -> {:ok, package.repository} end)
     |> Multi.run(:package, fn _, _ -> {:ok, package} end)
     |> Multi.update(:release, Release.unretire(release))
     |> audit_unretire(audit_data, package)
@@ -123,7 +123,7 @@ defmodule Hexpm.Repository.Releases do
   end
 
   defp publish_result({:ok, result}, body) do
-    package = %{result.package | organization: result.organization}
+    package = %{result.package | repository: result.repository}
     release = %{result.release | package: package}
 
     if body, do: Assets.push_release(release, body)
@@ -141,14 +141,14 @@ defmodule Hexpm.Repository.Releases do
 
   defp revert_result(result, _package), do: result
 
-  defp create_package(multi, organization, package, user, meta) do
+  defp create_package(multi, repository, package, user, meta) do
     changeset =
       if package do
         params = %{"meta" => meta}
         Package.update(package, params)
       else
         params = %{"name" => meta["name"], "meta" => meta}
-        Package.build(organization, user, params)
+        Package.build(repository, user, params)
       end
 
     Multi.insert_or_update(multi, :package, fn %{reserved_packages: reserved_packages} ->
@@ -215,10 +215,10 @@ defmodule Hexpm.Repository.Releases do
     end
   end
 
-  defp reserved_packages(organization, %{"name" => name}) when is_binary(name) do
+  defp reserved_packages(repository, %{"name" => name}) when is_binary(name) do
     from(
       r in "reserved_packages",
-      where: r.organization_id == ^organization.id,
+      where: r.repository_id == ^repository.id,
       where: r.name == ^name,
       select: r.version
     )
@@ -231,7 +231,7 @@ defmodule Hexpm.Repository.Releases do
     end)
   end
 
-  defp reserved_packages(_organization, _meta) do
+  defp reserved_packages(_repository, _meta) do
     []
   end
 

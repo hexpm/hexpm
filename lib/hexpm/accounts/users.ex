@@ -27,11 +27,11 @@ defmodule Hexpm.Accounts.Users do
   end
 
   def put_organizations(user) do
-    organizations = Map.new(user.organizations, &{&1.id, &1})
+    repositories = Map.new(user.organizations, &{&1.repository.id, &1.repository})
 
     owned_packages =
       Enum.map(user.owned_packages, fn package ->
-        %{package | organization: organizations[package.organization_id]}
+        %{package | repository: repositories[package.repository_id]}
       end)
 
     %{user | owned_packages: owned_packages}

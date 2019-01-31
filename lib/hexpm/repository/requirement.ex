@@ -26,7 +26,7 @@ defmodule Hexpm.Repository.Requirement do
       message: "package does not exist in repository \"#{params["repository"] || "hexpm"}\""
     )
     |> validate_requirement(:requirement, pre: version_pre(release_changeset) != [])
-    |> validate_repository(:repository, repository: package.organization)
+    |> validate_repository(:repository, repository: package.repository)
   end
 
   def build_all(release_changeset, package) do
@@ -82,8 +82,8 @@ defmodule Hexpm.Repository.Requirement do
 
     from(
       p in Package,
-      join: r in assoc(p, :organization),
-      select: {{r.name, p.name}, %{p | organization: r}}
+      join: r in assoc(p, :repository),
+      select: {{r.name, p.name}, %{p | repository: r}}
     )
     |> filter_dependencies(names)
   end

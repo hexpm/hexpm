@@ -3,7 +3,7 @@ defmodule HexpmWeb.AuthHelpers do
   import HexpmWeb.ControllerHelpers, only: [render_error: 3]
 
   alias Hexpm.Accounts.{Auth, Key, Organization, Organizations, User}
-  alias Hexpm.Repository.{Package, Packages}
+  alias Hexpm.Repository.{Package, Packages, Repository}
 
   def authorized(conn, opts) do
     user_or_organization = conn.assigns.current_user || conn.assigns.current_organization
@@ -177,56 +177,56 @@ defmodule HexpmWeb.AuthHelpers do
 
   def maybe_full_package_owner(%Plug.Conn{} = conn, user_or_organization) do
     maybe_full_package_owner(
-      conn.assigns.organization,
+      conn.assigns.repository,
       conn.assigns.package,
       user_or_organization
     )
   end
 
   def maybe_full_package_owner(%Package{} = package, user_or_organization) do
-    maybe_full_package_owner(package.organization, package, user_or_organization)
+    maybe_full_package_owner(package.repository, package, user_or_organization)
   end
 
-  def maybe_full_package_owner(nil, nil, _user_or_organization) do
+  def maybe_full_package_owner(nil = _repository, nil = _package, _user_or_organization) do
     {:error, :auth}
   end
 
-  def maybe_full_package_owner(_organization, _package, %Organization{}) do
+  def maybe_full_package_owner(_repository, _package, %Organization{}) do
     {:error, :auth}
   end
 
-  def maybe_full_package_owner(organization, nil, %User{} = user) do
-    (organization.public or Organizations.access?(organization, user, "admin"))
+  def maybe_full_package_owner(repository, nil = _package, %User{} = user) do
+    (repository.public or Organizations.access?(repository.organization, user, "admin"))
     |> boolean_to_auth_error()
   end
 
-  def maybe_full_package_owner(_organization, %Package{} = package, %User{} = user) do
+  def maybe_full_package_owner(_repository, %Package{} = package, %User{} = user) do
     Packages.owner_with_full_access?(package, user)
     |> boolean_to_auth_error()
   end
 
   def maybe_package_owner(%Plug.Conn{} = conn, user_or_organization) do
-    maybe_package_owner(conn.assigns.organization, conn.assigns.package, user_or_organization)
+    maybe_package_owner(conn.assigns.repository, conn.assigns.package, user_or_organization)
   end
 
   def maybe_package_owner(%Package{} = package, user_or_organization) do
-    maybe_package_owner(package.organization, package, user_or_organization)
+    maybe_package_owner(package.repository, package, user_or_organization)
   end
 
-  def maybe_package_owner(nil, nil, _user) do
+  def maybe_package_owner(nil = _repository, nil = _package, _user) do
     {:error, :auth}
   end
 
-  def maybe_package_owner(organization, _package, %Organization{id: id}) do
-    boolean_to_auth_error(organization.id == id)
+  def maybe_package_owner(repository, _package, %Organization{id: id}) do
+    boolean_to_auth_error(repository.organization_id == id)
   end
 
-  def maybe_package_owner(organization, nil, %User{} = user) do
-    (organization.public or Organizations.access?(organization, user, "write"))
+  def maybe_package_owner(repository, nil = _package, %User{} = user) do
+    (repository.public or Organizations.access?(repository.organization, user, "write"))
     |> boolean_to_auth_error()
   end
 
-  def maybe_package_owner(_organization, %Package{} = package, %User{} = user) do
+  def maybe_package_owner(_repository, %Package{} = package, %User{} = user) do
     Packages.owner_with_access?(package, user)
     |> boolean_to_auth_error()
   end
@@ -246,7 +246,7 @@ defmodule HexpmWeb.AuthHelpers do
   end
 
   def organization_access(%Organization{} = organization, %User{} = user, role) do
-    (organization.public or Organizations.access?(organization, user, role))
+    Organizations.access?(organization, user, role)
     |> boolean_to_auth_error()
   end
 
@@ -254,11 +254,11 @@ defmodule HexpmWeb.AuthHelpers do
     boolean_to_auth_error(organization.id == id)
   end
 
-  def organization_access(%Organization{} = organization, nil, _role) do
-    boolean_to_auth_error(organization.public)
+  def organization_access(%Organization{}, nil = _user_or_organization, _role) do
+    {:error, :auth}
   end
 
-  def organization_access(nil, _user_or_organization, _role) do
+  def organization_access(nil = _organization, _user_or_organization, _role) do
     {:error, :auth}
   end
 
@@ -273,7 +273,7 @@ defmodule HexpmWeb.AuthHelpers do
   end
 
   def maybe_organization_access(%Organization{} = organization, %User{} = user, role) do
-    (organization.public or Organizations.access?(organization, user, role))
+    Organizations.access?(organization, user, role)
     |> boolean_to_auth_error()
   end
 
@@ -281,11 +281,7 @@ defmodule HexpmWeb.AuthHelpers do
     boolean_to_auth_error(organization.id == id)
   end
 
-  def maybe_organization_access(%Organization{} = organization, nil, _role) do
-    boolean_to_auth_error(organization.public)
-  end
-
-  def maybe_organization_access(nil, _user_or_organization, _role) do
+  def maybe_organization_access(nil = _organization, _user_or_organization, _role) do
     :ok
   end
 
@@ -293,12 +289,52 @@ defmodule HexpmWeb.AuthHelpers do
     organization_billing_active(conn.assigns.organization, nil)
   end
 
-  def organization_billing_active(%Organization{} = organization, _user_or_organization) do
-    if organization.public or organization.billing_active do
-      :ok
-    else
-      {:error, :auth, "organization has no active billing subscription"}
-    end
+  def organization_billing_active(%Organization{billing_active: true}, _user_or_organization),
+    do: :ok
+
+  def organization_billing_active(%Organization{billing_active: false}, _user_or_organization),
+    do: {:error, :auth, "organization has no active billing subscription"}
+
+  def repository_access(%Plug.Conn{} = conn, user_or_organization) do
+    repository_access(conn.assigns.repository, user_or_organization)
+  end
+
+  def repository_access(%Repository{public: false} = repository, %User{} = user) do
+    Organizations.access?(repository.organization, user, "read")
+    |> boolean_to_auth_error()
+  end
+
+  def repository_access(%Repository{public: false} = repository, %Organization{id: id}) do
+    boolean_to_auth_error(repository.organization_id == id)
+  end
+
+  def repository_access(%Repository{} = repository, _user_or_organization) do
+    boolean_to_auth_error(repository.public)
+  end
+
+  def repository_access(nil = _repository, _user_or_organization) do
+    {:error, :auth}
+  end
+
+  def maybe_repository_access(%Plug.Conn{} = conn, user_or_organization) do
+    maybe_repository_access(conn.assigns.repository, user_or_organization)
+  end
+
+  def maybe_repository_access(%Repository{public: false} = repository, %User{} = user) do
+    Organizations.access?(repository.organization, user, "read")
+    |> boolean_to_auth_error()
+  end
+
+  def maybe_repository_access(%Repository{public: false} = repository, %Organization{id: id}) do
+    boolean_to_auth_error(repository.organization_id == id)
+  end
+
+  def maybe_repository_access(%Repository{} = repository, nil = _user_or_organization) do
+    boolean_to_auth_error(repository.public)
+  end
+
+  def maybe_repository_access(nil = _repository, _user_or_organization) do
+    :ok
   end
 
   def correct_user(%Plug.Conn{} = conn, user) do

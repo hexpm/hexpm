@@ -90,10 +90,7 @@ defmodule HexpmWeb.Dashboard.OrganizationView do
   end
 
   defp subscription_status(
-         %{
-           "status" => "trialing",
-           "trial_end" => trial_end
-         },
+         %{"status" => "trialing", "trial_end" => trial_end},
          card
        ) do
     trial_end = trial_end |> NaiveDateTime.from_iso8601!() |> pretty_datetime()

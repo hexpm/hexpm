@@ -7,7 +7,7 @@ defmodule HexpmWeb.API.DocsController do
        [
          domain: "api",
          resource: "read",
-         fun: [&organization_access/2, &organization_billing_active/2]
+         fun: [&repository_access/2, &organization_billing_active/2]
        ]
        when action in [:show]
 

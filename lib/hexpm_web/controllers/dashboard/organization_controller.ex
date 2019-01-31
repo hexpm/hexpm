@@ -410,6 +410,7 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
       title: "Dashboard - Organization",
       container: "container page dashboard",
       organization: organization,
+      repository: organization.repository,
       keys: keys,
       params: opts[:params],
       errors: opts[:errors],
@@ -474,7 +475,7 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
     user = conn.assigns.current_user
 
     organization =
-      Organizations.get(organization, [:packages, :organization_users, users: :emails])
+      Organizations.get(organization, [:organization_users, users: :emails, repository: :packages])
 
     if organization do
       if repo_user = Enum.find(organization.organization_users, &(&1.user_id == user.id)) do

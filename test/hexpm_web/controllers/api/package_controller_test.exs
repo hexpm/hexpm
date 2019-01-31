@@ -4,7 +4,7 @@ defmodule HexpmWeb.API.PackageControllerTest do
   setup do
     user = insert(:user)
     unauthorized_user = insert(:user)
-    organization = insert(:organization)
+    repository = insert(:repository)
 
     package1 =
       insert(
@@ -15,8 +15,7 @@ defmodule HexpmWeb.API.PackageControllerTest do
 
     package2 = insert(:package, updated_at: ~N[2030-01-01 00:00:00])
 
-    package3 =
-      insert(:package, organization_id: organization.id, updated_at: ~N[2030-01-01 00:00:00])
+    package3 = insert(:package, repository_id: repository.id, updated_at: ~N[2030-01-01 00:00:00])
 
     package4 = insert(:package)
     insert(:release, package: package1, version: "0.0.1", has_docs: true)
@@ -30,14 +29,14 @@ defmodule HexpmWeb.API.PackageControllerTest do
     )
 
     insert(:release, package: package4, version: "1.0.0")
-    insert(:organization_user, organization: organization, user: user)
+    insert(:organization_user, organization: repository.organization, user: user)
 
     %{
       package1: package1,
       package2: package2,
       package3: package3,
       package4: package4,
-      organization: organization,
+      repository: repository,
       user: user,
       unauthorized_user: unauthorized_user
     }
@@ -98,14 +97,14 @@ defmodule HexpmWeb.API.PackageControllerTest do
 
     test "show private packages in organization", %{
       user: user,
-      organization: organization,
+      repository: repository,
       package3: package3
     } do
       result =
         build_conn()
         # TODO: change to web_login/api_login helper
         |> put_req_header("authorization", key_for(user))
-        |> get("api/repos/#{organization.name}/packages")
+        |> get("api/repos/#{repository.name}/packages")
         |> json_response(200)
 
       assert length(result) == 1
@@ -113,7 +112,7 @@ defmodule HexpmWeb.API.PackageControllerTest do
     end
 
     test "show private packages in organization with service account", %{
-      organization: organization,
+      repository: repository,
       package3: package3
     } do
       user = insert(:user, service: true)
@@ -122,7 +121,7 @@ defmodule HexpmWeb.API.PackageControllerTest do
         build_conn()
         # TODO: change to web_login/api_login helper
         |> put_req_header("authorization", key_for(user))
-        |> get("api/repos/#{organization.name}/packages")
+        |> get("api/repos/#{repository.name}/packages")
         |> json_response(200)
 
       assert length(result) == 1
@@ -130,17 +129,17 @@ defmodule HexpmWeb.API.PackageControllerTest do
     end
 
     test "show private packages in organization authorizes", %{
-      organization: organization,
+      repository: repository,
       unauthorized_user: unauthorized_user
     } do
       build_conn()
-      |> get("api/repos/#{organization.name}/packages")
+      |> get("api/repos/#{repository.name}/packages")
       |> json_response(403)
 
       build_conn()
       # TODO: change to web_login/api_login helper
       |> put_req_header("authorization", key_for(unauthorized_user))
-      |> get("api/repos/#{organization.name}/packages")
+      |> get("api/repos/#{repository.name}/packages")
       |> json_response(403)
     end
   end
@@ -170,11 +169,11 @@ defmodule HexpmWeb.API.PackageControllerTest do
     end
 
     test "get package for unauthenticated private organization", %{
-      organization: organization,
+      repository: repository,
       package3: package3
     } do
       build_conn()
-      |> get("api/repos/#{organization.name}/packages/#{package3.name}")
+      |> get("api/repos/#{repository.name}/packages/#{package3.name}")
       |> json_response(403)
     end
 
@@ -185,38 +184,38 @@ defmodule HexpmWeb.API.PackageControllerTest do
     end
 
     test "get package returns 403 for unknown package if you are not authorized", %{
-      organization: organization
+      repository: repository
     } do
       build_conn()
-      |> get("api/repos/#{organization.name}/packages/UNKNOWN_PACKAGE")
+      |> get("api/repos/#{repository.name}/packages/UNKNOWN_PACKAGE")
       |> json_response(403)
     end
 
     test "get package returns 404 for unknown package if you are authorized", %{
       user: user,
-      organization: organization
+      repository: repository
     } do
       build_conn()
       |> put_req_header("authorization", key_for(user))
-      |> get("api/repos/#{organization.name}/packages/UNKNOWN_PACKAGE")
+      |> get("api/repos/#{repository.name}/packages/UNKNOWN_PACKAGE")
       |> json_response(404)
     end
 
     test "get package for authenticated private organization", %{
       user: user,
-      organization: organization,
+      repository: repository,
       package3: package3
     } do
       result =
         build_conn()
         |> put_req_header("authorization", key_for(user))
-        |> get("api/repos/#{organization.name}/packages/#{package3.name}")
+        |> get("api/repos/#{repository.name}/packages/#{package3.name}")
         |> json_response(200)
 
       assert result["name"] == package3.name
-      assert result["repository"] == organization.name
-      assert result["url"] =~ "/api/repos/#{organization.name}/packages/#{package3.name}"
-      assert result["html_url"] =~ "/packages/#{organization.name}/#{package3.name}"
+      assert result["repository"] == repository.name
+      assert result["url"] =~ "/api/repos/#{repository.name}/packages/#{package3.name}"
+      assert result["html_url"] =~ "/packages/#{repository.name}/#{package3.name}"
     end
 
     test "get package with retired versions", %{package4: package4} do

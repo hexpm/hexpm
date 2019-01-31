@@ -2,8 +2,8 @@ defmodule HexpmWeb.API.AuthControllerTest do
   use HexpmWeb.ConnCase, async: true
 
   setup do
-    owned_org = insert(:organization, public: false)
-    unowned_org = insert(:organization, public: false)
+    owned_org = insert(:organization)
+    unowned_org = insert(:organization)
     user = insert(:user)
     insert(:organization_user, organization: owned_org, user: user)
 
