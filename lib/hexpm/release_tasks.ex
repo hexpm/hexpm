@@ -44,6 +44,17 @@ defmodule Hexpm.ReleaseTasks do
     stop()
   end
 
+  def rollback() do
+    {:ok, _} = Application.ensure_all_started(:logger)
+    Logger.info("[task] running rollback")
+    start_repo()
+
+    run_rollback()
+
+    Logger.info("[task] finished rollback")
+    stop()
+  end
+
   def seed() do
     {:ok, _} = Application.ensure_all_started(:logger)
     Logger.info("[task] running seed")
@@ -95,14 +106,38 @@ defmodule Hexpm.ReleaseTasks do
   end
 
   defp run_migrations() do
-    Enum.each(@repos, &run_migrations_for/1)
+    Enum.each(@repos, fn repo ->
+      app = Keyword.get(repo.config(), :otp_app)
+      IO.puts("Running migrations for #{app}")
+
+      case argv() do
+        ["--step", n] -> migrate(repo, :up, step: String.to_integer(n))
+        ["-n", n] -> migrate(repo, :up, step: String.to_integer(n))
+        ["--to", to] -> migrate(repo, :up, to: to)
+        ["--all"] -> migrate(repo, :up, all: true)
+        [] -> migrate(repo, :up, all: true)
+      end
+    end)
   end
 
-  defp run_migrations_for(repo) do
-    app = Keyword.get(repo.config(), :otp_app)
-    IO.puts("Running migrations for #{app}")
+  defp run_rollback() do
+    Enum.each(@repos, fn repo ->
+      app = Keyword.get(repo.config(), :otp_app)
+      IO.puts("Running rollback for #{app}")
+
+      case argv() do
+        ["--step", n] -> migrate(repo, :down, step: String.to_integer(n))
+        ["-n", n] -> migrate(repo, :down, step: String.to_integer(n))
+        ["--to", to] -> migrate(repo, :down, to: to)
+        ["--all"] -> migrate(repo, :down, all: true)
+        [] -> migrate(repo, :down, step: 1)
+      end
+    end)
+  end
+
+  defp migrate(repo, direction, opts) do
     migrations_path = priv_path_for(repo, "migrations")
-    Ecto.Migrator.run(repo, migrations_path, :up, all: true)
+    Ecto.Migrator.run(repo, migrations_path, direction, opts)
   end
 
   defp run_seeds() do

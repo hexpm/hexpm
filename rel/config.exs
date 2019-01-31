@@ -13,6 +13,7 @@ release :hexpm do
   set(commands: [
     check_names: "rel/commands/check_names.sh",
     migrate: "rel/commands/migrate.sh",
+    rollback: "rel/commands/rollback.sh",
     script: "rel/commands/script.sh",
     seed: "rel/commands/seed.sh",
     stats: "rel/commands/stats.sh"
