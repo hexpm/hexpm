@@ -2,7 +2,7 @@ defmodule HexpmWeb.UserController do
   use HexpmWeb, :controller
 
   def show(conn, %{"username" => username}) do
-    if user = Users.get_by_username(username, [:emails, owned_packages: :organization]) do
+    if user = Users.get_by_username(username, [:emails, owned_packages: :repository]) do
       packages =
         Packages.accessible_user_owned_packages(user, conn.assigns.current_user)
         |> Packages.attach_versions()

@@ -4,7 +4,7 @@ defmodule Hexpm.Repository.Sitemaps do
   def packages() do
     from(
       p in Package,
-      where: p.organization_id == 1,
+      where: p.repository_id == 1,
       order_by: p.name,
       select: {p.name, p.updated_at}
     )
@@ -16,7 +16,7 @@ defmodule Hexpm.Repository.Sitemaps do
       p in Package,
       join: r in assoc(p, :releases),
       order_by: p.name,
-      where: p.organization_id == 1,
+      where: p.repository_id == 1,
       where: not is_nil(p.docs_updated_at),
       where: r.has_docs,
       select: {p.name, p.docs_updated_at},

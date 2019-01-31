@@ -29,6 +29,7 @@ defmodule Hexpm.Billing.Report do
   defp report() do
     Hexpm.Billing.report()
     |> MapSet.new()
+    |> MapSet.put("hexpm")
   end
 
   defp organizations() do

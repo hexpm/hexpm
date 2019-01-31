@@ -7,7 +7,7 @@ defmodule HexpmWeb.API.ReleaseController do
   plug :maybe_fetch_package when action in [:create, :publish]
 
   plug :maybe_authorize,
-       [domain: "api", resource: "read", fun: &organization_access/2]
+       [domain: "api", resource: "read", fun: &repository_access/2]
        when action in [:show]
 
   plug :authorize,
@@ -26,7 +26,7 @@ defmodule HexpmWeb.API.ReleaseController do
     request_id = List.first(get_resp_header(conn, "x-request-id"))
 
     log_tarball(
-      conn.assigns.organization.name,
+      conn.assigns.repository.name,
       conn.assigns.meta["name"],
       conn.assigns.meta["version"],
       request_id,
@@ -37,7 +37,7 @@ defmodule HexpmWeb.API.ReleaseController do
     checksum = :hex_tarball.format_checksum(conn.assigns.checksum)
 
     Releases.publish(
-      conn.assigns.organization,
+      conn.assigns.repository,
       conn.assigns.package,
       conn.assigns.current_user,
       body,
@@ -51,7 +51,7 @@ defmodule HexpmWeb.API.ReleaseController do
   def create(conn, %{"body" => body}) do
     handle_tarball(
       conn,
-      conn.assigns.organization,
+      conn.assigns.repository,
       conn.assigns.package,
       conn.assigns.current_user,
       body
@@ -106,17 +106,17 @@ defmodule HexpmWeb.API.ReleaseController do
     end
   end
 
-  defp handle_tarball(conn, organization, package, user, body) do
+  defp handle_tarball(conn, repository, package, user, body) do
     case release_metadata(body) do
       {:ok, meta, checksum} ->
         request_id = List.first(get_resp_header(conn, "x-request-id"))
-        log_tarball(organization.name, meta["name"], meta["version"], request_id, body)
+        log_tarball(repository.name, meta["name"], meta["version"], request_id, body)
 
         # TODO: pass around and store in DB as binary instead
         checksum = :hex_tarball.format_checksum(checksum)
 
         Releases.publish(
-          organization,
+          repository,
           package,
           user,
           body,
@@ -167,8 +167,8 @@ defmodule HexpmWeb.API.ReleaseController do
 
   defp normalize_errors(changeset), do: changeset
 
-  defp log_tarball(organization, package, version, request_id, body) do
-    filename = "#{organization}-#{package}-#{version}-#{request_id}.tar.gz"
+  defp log_tarball(repository, package, version, request_id, body) do
+    filename = "#{repository}-#{package}-#{version}-#{request_id}.tar.gz"
     key = Path.join(["debug", "tarballs", filename])
     Hexpm.Store.put(nil, :s3_bucket, key, body, [])
   end

@@ -1,12 +1,9 @@
 defmodule Hexpm.Accounts.Organizations do
   use HexpmWeb, :context
 
-  def all_public() do
-    Repo.all(from(r in Organization, where: r.public))
-  end
-
-  def all_by_user(user) do
+  def all_by_user(user, preload \\ []) do
     Repo.all(assoc(user, :organizations))
+    |> Repo.preload(preload)
   end
 
   def get(name, preload \\ []) do
@@ -19,11 +16,11 @@ defmodule Hexpm.Accounts.Organizations do
     org_user && org_user.role
   end
 
-  def access?(%Organization{public: false}, nil, _role) do
+  def access?(_organization, nil = _user, _role) do
     false
   end
 
-  def access?(%Organization{public: false} = organization, user, role) do
+  def access?(organization, user, role) do
     Repo.one!(Organization.has_access(organization, user, role))
   end
 

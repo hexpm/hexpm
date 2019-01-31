@@ -1,20 +1,20 @@
 defmodule HexpmWeb.API.RepositoryView do
   use HexpmWeb, :view
 
-  def render("index." <> _, %{organizations: organizations}),
-    do: render_many(organizations, __MODULE__, "show", as: :organization)
+  def render("index." <> _, %{repositories: repositories}),
+    do: render_many(repositories, __MODULE__, "show")
 
-  def render("show." <> _, %{organization: organization}),
-    do: render_one(organization, __MODULE__, "show", as: :organization)
+  def render("show." <> _, %{repository: repository}),
+    do: render_one(repository, __MODULE__, "show")
 
-  def render("show", %{organization: organization}) do
+  def render("show", %{repository: repository}) do
     # TODO: Add url
     # TODO: Add packages
 
     %{
-      name: organization.name,
-      inserted_at: organization.inserted_at,
-      updated_at: organization.updated_at
+      name: repository.name,
+      inserted_at: repository.inserted_at,
+      updated_at: repository.updated_at
     }
   end
 end

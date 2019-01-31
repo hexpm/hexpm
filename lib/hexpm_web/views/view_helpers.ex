@@ -9,7 +9,7 @@ defmodule HexpmWeb.ViewHelpers do
   end
 
   def package_name(package) do
-    package_name(package.organization.name, package.name)
+    package_name(package.repository.name, package.name)
   end
 
   def package_name("hexpm", package) do
@@ -21,10 +21,10 @@ defmodule HexpmWeb.ViewHelpers do
   end
 
   def path_for_package(package) do
-    if package.organization.name == "hexpm" do
+    if package.repository.id == 1 do
       Routes.package_path(Endpoint, :show, package, [])
     else
-      Routes.package_path(Endpoint, :show, package.organization, package, [])
+      Routes.package_path(Endpoint, :show, package.repository, package, [])
     end
   end
 
@@ -37,40 +37,40 @@ defmodule HexpmWeb.ViewHelpers do
   end
 
   def path_for_release(package, release) do
-    if package.organization.name == "hexpm" do
+    if package.repository.id == 1 do
       Routes.package_path(Endpoint, :show, package, release, [])
     else
-      Routes.package_path(Endpoint, :show, package.organization, package, release, [])
+      Routes.package_path(Endpoint, :show, package.repository, package, release, [])
     end
   end
 
   def path_for_releases(package) do
-    if package.organization.name == "hexpm" do
+    if package.repository.id == 1 do
       Routes.version_path(Endpoint, :index, package, [])
     else
-      Routes.version_path(Endpoint, :index, package.organization, package, [])
+      Routes.version_path(Endpoint, :index, package.repository, package, [])
     end
   end
 
-  def html_url_for_package(%Package{organization_id: 1} = package) do
+  def html_url_for_package(%Package{repository_id: 1} = package) do
     Routes.package_url(Endpoint, :show, package, [])
   end
 
   def html_url_for_package(%Package{} = package) do
-    Routes.package_url(Endpoint, :show, package.organization, package, [])
+    Routes.package_url(Endpoint, :show, package.repository, package, [])
   end
 
-  def html_url_for_release(%Package{organization_id: 1} = package, release) do
+  def html_url_for_release(%Package{repository_id: 1} = package, release) do
     Routes.package_url(Endpoint, :show, package, release, [])
   end
 
   def html_url_for_release(%Package{} = package, release) do
-    Routes.package_url(Endpoint, :show, package.organization, package, release, [])
+    Routes.package_url(Endpoint, :show, package.repository, package, release, [])
   end
 
   def docs_html_url_for_package(package) do
     if Enum.any?(package.releases, & &1.has_docs) do
-      Hexpm.Utils.docs_html_url(package.organization, package, nil)
+      Hexpm.Utils.docs_html_url(package.repository, package, nil)
     end
   end
 
@@ -79,18 +79,18 @@ defmodule HexpmWeb.ViewHelpers do
   end
 
   def docs_html_url_for_release(package, release) do
-    Hexpm.Utils.docs_html_url(package.organization, package, release)
+    Hexpm.Utils.docs_html_url(package.repository, package, release)
   end
 
-  def url_for_package(%Package{organization_id: 1} = package) do
+  def url_for_package(%Package{repository_id: 1} = package) do
     Routes.api_package_url(Endpoint, :show, package, [])
   end
 
   def url_for_package(package) do
-    Routes.api_package_url(Endpoint, :show, package.organization, package, [])
+    Routes.api_package_url(Endpoint, :show, package.repository, package, [])
   end
 
-  def url_for_release(%Package{organization_id: 1} = package, release) do
+  def url_for_release(%Package{repository_id: 1} = package, release) do
     Routes.api_release_url(Endpoint, :show, package, to_string(release.version), [])
   end
 
@@ -98,7 +98,7 @@ defmodule HexpmWeb.ViewHelpers do
     Routes.api_release_url(
       Endpoint,
       :show,
-      package.organization,
+      package.repository,
       package,
       to_string(release.version),
       []

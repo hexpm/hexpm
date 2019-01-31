@@ -138,6 +138,7 @@ defmodule HexpmWeb do
         Repository.ReleaseMetadata,
         Repository.ReleaseRetirement,
         Repository.Releases,
+        Repository.Repositories,
         Repository.Repository,
         Repository.Requirement,
         Repository.Resolver,

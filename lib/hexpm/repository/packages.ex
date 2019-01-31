@@ -5,23 +5,23 @@ defmodule Hexpm.Repository.Packages do
     Repo.one!(Package.count())
   end
 
-  def count(organizations, filter) do
-    Repo.one!(Package.count(organizations, filter))
+  def count(repositories, filter) do
+    Repo.one!(Package.count(repositories, filter))
   end
 
-  def get(organization, name) when is_binary(organization) do
-    organization = Organizations.get(organization)
-    organization && get(organization, name)
+  def get(repository, name) when is_binary(repository) do
+    repository = Repositories.get(repository)
+    repository && get(repository, name)
   end
 
-  def get(organizations, name) when is_list(organizations) do
-    Repo.get_by(assoc(organizations, :packages), name: name)
-    |> Repo.preload(:organization)
+  def get(repositories, name) when is_list(repositories) do
+    Repo.get_by(assoc(repositories, :packages), name: name)
+    |> Repo.preload(:repository)
   end
 
-  def get(organization, name) do
-    package = Repo.get_by(assoc(organization, :packages), name: name)
-    package && %{package | organization: organization}
+  def get(repository, name) do
+    package = Repo.get_by(assoc(repository, :packages), name: name)
+    package && %{package | repository: repository}
   end
 
   def owner?(package, user) do
@@ -30,17 +30,17 @@ defmodule Hexpm.Repository.Packages do
   end
 
   def owner_with_access?(package, user) do
-    organization = package.organization
+    repository = package.repository
 
     Repo.one!(Package.owner_with_access(package, user)) or
-      (not organization.public and Organizations.access?(organization, user, "write"))
+      (not repository.public and Organizations.access?(repository.organization, user, "write"))
   end
 
   def owner_with_full_access?(package, user) do
-    organization = package.organization
+    repository = package.repository
 
     Repo.one!(Package.owner_with_access(package, user, "full")) or
-      (not organization.public and Organizations.access?(organization, user, "admin"))
+      (not repository.public and Organizations.access?(repository.organization, user, "admin"))
   end
 
   def preload(package) do
@@ -77,33 +77,33 @@ defmodule Hexpm.Repository.Packages do
     end)
   end
 
-  def search(organizations, page, packages_per_page, query, sort, fields) do
-    Package.all(organizations, page, packages_per_page, query, sort, fields)
+  def search(repositories, page, packages_per_page, query, sort, fields) do
+    Package.all(repositories, page, packages_per_page, query, sort, fields)
     |> Repo.all()
-    |> attach_organizations(organizations)
+    |> attach_repositories(repositories)
   end
 
-  def search_with_versions(organizations, page, packages_per_page, query, sort) do
-    Package.all(organizations, page, packages_per_page, query, sort, nil)
+  def search_with_versions(repositories, page, packages_per_page, query, sort) do
+    Package.all(repositories, page, packages_per_page, query, sort, nil)
     |> Ecto.Query.preload(
       releases: ^from(r in Release, select: struct(r, [:id, :version, :updated_at]))
     )
     |> Repo.all()
     |> Enum.map(fn package -> update_in(package.releases, &Release.sort/1) end)
-    |> attach_organizations(organizations)
+    |> attach_repositories(repositories)
   end
 
-  defp attach_organizations(packages, organizations) do
-    organizations = Map.new(organizations, &{&1.id, &1})
+  defp attach_repositories(packages, repositories) do
+    repositories = Map.new(repositories, &{&1.id, &1})
 
     Enum.map(packages, fn package ->
-      organization = Map.fetch!(organizations, package.organization_id)
-      %{package | organization: organization}
+      repository = Map.fetch!(repositories, package.repository_id)
+      %{package | repository: repository}
     end)
   end
 
-  def recent(organization, count) do
-    Repo.all(Package.recent(organization, count))
+  def recent(repository, count) do
+    Repo.all(Package.recent(repository, count))
   end
 
   def package_downloads(package) do
@@ -126,8 +126,8 @@ defmodule Hexpm.Repository.Packages do
     |> Enum.into(%{})
   end
 
-  def top_downloads(organization, view, count) do
-    Repo.all(PackageDownload.top(organization, view, count))
+  def top_downloads(repository, view, count) do
+    Repo.all(PackageDownload.top(repository, view, count))
   end
 
   def total_downloads() do
@@ -141,14 +141,14 @@ defmodule Hexpm.Repository.Packages do
   end
 
   def accessible_user_owned_packages(user, for_user) do
-    organizations = Users.all_organizations(for_user)
-    organization_ids = Enum.map(organizations, & &1.id)
+    repositories = Enum.map(Users.all_organizations(for_user), & &1.repository)
+    repository_ids = Enum.map(repositories, & &1.id)
 
     # Atoms sort before strings
-    sorter = fn org -> if(org.name == "hexpm", do: :first, else: org.name) end
+    sorter = fn repo -> if(repo.id == 1, do: :first, else: repo.name) end
 
     user.owned_packages
-    |> Enum.filter(&(&1.organization_id in organization_ids))
-    |> Enum.sort_by(&[sorter.(&1.organization), &1.name])
+    |> Enum.filter(&(&1.repository_id in repository_ids))
+    |> Enum.sort_by(&[sorter.(&1.repository), &1.name])
   end
 end

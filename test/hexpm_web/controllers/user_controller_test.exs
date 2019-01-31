@@ -6,8 +6,8 @@ defmodule HexpmWeb.UserControllerTest do
     user2 = insert(:user)
     user3 = insert(:user)
 
-    organization1 = insert(:organization)
-    organization2 = insert(:organization)
+    repository1 = insert(:repository)
+    repository2 = insert(:repository)
 
     owners = [build(:package_owner, user: user1)]
     package1 = insert(:package, name: "package1", package_owners: owners)
@@ -17,20 +17,17 @@ defmodule HexpmWeb.UserControllerTest do
         :package,
         name: "package2",
         package_owners: owners,
-        organization_id: organization1.id
+        repository_id: repository1.id
       )
 
-    package3 = insert(:package, name: "package3", organization_id: organization2.id)
+    insert(:package, name: "package3", repository_id: repository2.id)
 
-    insert(:organization_user, user: user1, organization: organization1)
-    insert(:organization_user, user: user2, organization: organization1)
+    insert(:organization_user, user: user1, organization: repository1.organization)
+    insert(:organization_user, user: user2, organization: repository1.organization)
 
     %{
       package1: package1,
       package2: package2,
-      package3: package3,
-      organization1: organization1,
-      organization2: organization2,
       user1: user1,
       user2: user2,
       user3: user3

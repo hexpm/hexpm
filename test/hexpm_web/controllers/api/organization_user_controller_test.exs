@@ -67,7 +67,10 @@ defmodule HexpmWeb.API.OrganizationUserControllerTest do
       refute Organizations.get_role(organization, user2)
     end
 
-    test "new organization member validates number of seats", %{user1: user1, organization: organization} do
+    test "new organization member validates number of seats", %{
+      user1: user1,
+      organization: organization
+    } do
       user2 = insert(:user)
       user3 = insert(:user)
       insert(:organization_user, organization: organization, user: user1, role: "admin")
@@ -84,7 +87,10 @@ defmodule HexpmWeb.API.OrganizationUserControllerTest do
       refute Organizations.get_role(organization, user3)
     end
 
-    test "new organization member validates already member", %{user1: user1, organization: organization} do
+    test "new organization member validates already member", %{
+      user1: user1,
+      organization: organization
+    } do
       insert(:organization_user, organization: organization, user: user1, role: "admin")
       params = %{"name" => user1.username, "role" => "read"}
 
@@ -161,7 +167,10 @@ defmodule HexpmWeb.API.OrganizationUserControllerTest do
       assert Organizations.get_role(organization, user2) == "read"
     end
 
-    test "update organization member validates demote last admin", %{user1: user1, organization: organization} do
+    test "update organization member validates demote last admin", %{
+      user1: user1,
+      organization: organization
+    } do
       insert(:organization_user, organization: organization, user: user1, role: "admin")
 
       conn =
@@ -213,7 +222,10 @@ defmodule HexpmWeb.API.OrganizationUserControllerTest do
       assert Organizations.get_role(organization, user2) == "read"
     end
 
-    test "delete organization member validates remove last member", %{user1: user1, organization: organization} do
+    test "delete organization member validates remove last member", %{
+      user1: user1,
+      organization: organization
+    } do
       insert(:organization_user, organization: organization, user: user1, role: "admin")
 
       conn =

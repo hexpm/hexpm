@@ -5,13 +5,13 @@ defmodule HexpmWeb.PackageControllerTest do
     user1 = insert(:user)
     user2 = insert(:user)
 
-    organization1 = insert(:organization)
-    organization2 = insert(:organization)
+    repository1 = insert(:repository)
+    repository2 = insert(:repository)
 
     package1 = insert(:package)
     package2 = insert(:package)
-    package3 = insert(:package, organization_id: organization1.id)
-    package4 = insert(:package, organization_id: organization2.id)
+    package3 = insert(:package, repository_id: repository1.id)
+    package4 = insert(:package, repository_id: repository2.id)
 
     insert(
       :release,
@@ -55,15 +55,15 @@ defmodule HexpmWeb.PackageControllerTest do
       meta: build(:release_metadata, app: package4.name)
     )
 
-    insert(:organization_user, user: user1, organization: organization1)
+    insert(:organization_user, user: user1, organization: repository1.organization)
 
     %{
       package1: package1,
       package2: package2,
       package3: package3,
       package4: package4,
-      organization1: organization1,
-      organization2: organization2,
+      repository1: repository1,
+      repository2: repository2,
       user1: user1,
       user2: user2
     }
@@ -97,8 +97,8 @@ defmodule HexpmWeb.PackageControllerTest do
       user1: user1,
       package3: package3,
       package4: package4,
-      organization1: organization1,
-      organization2: organization2
+      repository1: repository1,
+      repository2: repository2
     } do
       conn =
         build_conn()
@@ -106,8 +106,8 @@ defmodule HexpmWeb.PackageControllerTest do
         |> get("/packages")
 
       result = response(conn, 200)
-      assert result =~ "#{organization1.name} / #{package3.name}"
-      refute result =~ "#{organization2.name} / #{package4.name}"
+      assert result =~ "#{repository1.name} / #{package3.name}"
+      refute result =~ "#{repository2.name} / #{package4.name}"
     end
   end
 
@@ -146,26 +146,26 @@ defmodule HexpmWeb.PackageControllerTest do
 
     test "show package from other repository", %{
       user1: user1,
-      organization1: organization1,
+      repository1: repository1,
       package3: package3
     } do
       conn =
         build_conn()
         |> test_login(user1)
-        |> get("/packages/#{organization1.name}/#{package3.name}")
+        |> get("/packages/#{repository1.name}/#{package3.name}")
 
       assert response(conn, 200) =~
-               escape(~s({:#{package3.name}, "~> 0.0.1", organization: "#{organization1.name}"}))
+               escape(~s({:#{package3.name}, "~> 0.0.1", organization: "#{repository1.name}"}))
     end
 
     test "dont show private package", %{
       user2: user2,
-      organization1: organization1,
+      repository1: repository1,
       package3: package3
     } do
       build_conn()
       |> test_login(user2)
-      |> get("/packages/#{organization1.name}/#{package3.name}")
+      |> get("/packages/#{repository1.name}/#{package3.name}")
       |> response(404)
     end
 
@@ -187,24 +187,24 @@ defmodule HexpmWeb.PackageControllerTest do
       assert response(conn, 200) =~ escape(~s({:#{package1.name}, "~> 0.0.1"}))
     end
 
-    test "show package", %{user1: user1, organization1: organization1, package3: package3} do
+    test "show package", %{user1: user1, repository1: repository1, package3: package3} do
       conn =
         build_conn()
         |> test_login(user1)
-        |> get("/packages/#{organization1.name}/#{package3.name}/0.0.1")
+        |> get("/packages/#{repository1.name}/#{package3.name}/0.0.1")
 
       assert response(conn, 200) =~
-               escape(~s({:#{package3.name}, "~> 0.0.1", organization: "#{organization1.name}"}))
+               escape(~s({:#{package3.name}, "~> 0.0.1", organization: "#{repository1.name}"}))
     end
 
     test "dont show private package", %{
       user2: user2,
-      organization1: organization1,
+      repository1: repository1,
       package3: package3
     } do
       build_conn()
       |> test_login(user2)
-      |> get("/packages/#{organization1.name}/#{package3.name}/0.0.1")
+      |> get("/packages/#{repository1.name}/#{package3.name}/0.0.1")
       |> response(404)
     end
   end

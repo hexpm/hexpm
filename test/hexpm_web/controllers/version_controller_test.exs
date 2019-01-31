@@ -4,10 +4,10 @@ defmodule HexpmWeb.VersionControllerTest do
   setup do
     user1 = insert(:user)
 
-    organization1 = insert(:organization)
+    repository1 = insert(:repository)
 
     package1 = insert(:package)
-    package2 = insert(:package, organization_id: organization1.id)
+    package2 = insert(:package, repository_id: repository1.id)
 
     insert(
       :release,
@@ -44,12 +44,12 @@ defmodule HexpmWeb.VersionControllerTest do
       meta: build(:release_metadata, app: package2.name)
     )
 
-    insert(:organization_user, user: user1, organization: organization1)
+    insert(:organization_user, user: user1, organization: repository1.organization)
 
     %{
       package1: package1,
       package2: package2,
-      organization1: organization1,
+      repository1: repository1,
       user1: user1
     }
   end
@@ -67,12 +67,12 @@ defmodule HexpmWeb.VersionControllerTest do
     test "list private package versions", %{
       user1: user1,
       package2: package2,
-      organization1: organization1
+      repository1: repository1
     } do
       conn =
         build_conn()
         |> test_login(user1)
-        |> get("/packages/#{organization1.name}/#{package2.name}/versions")
+        |> get("/packages/#{repository1.name}/#{package2.name}/versions")
 
       result = response(conn, 200)
       assert result =~ ~r/0.1.0/

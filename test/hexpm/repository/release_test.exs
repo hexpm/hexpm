@@ -6,7 +6,7 @@ defmodule Hexpm.Repository.ReleaseTest do
   setup do
     packages =
       insert_list(3, :package)
-      |> Hexpm.Repo.preload(:organization)
+      |> Hexpm.Repo.preload(:repository)
 
     publisher = insert(:user)
 
@@ -58,7 +58,11 @@ defmodule Hexpm.Repository.ReleaseTest do
       Release.build(package, old_publisher, rel_meta(%{version: "0.0.1", app: package.name}), "")
       |> Hexpm.Repo.insert!()
 
-    updated_release = release |> Release.update(new_publisher, %{}, "") |> Hexpm.Repo.update!()
+    updated_release =
+      release
+      |> Map.put(:package, package)
+      |> Release.update(new_publisher, %{}, "")
+      |> Hexpm.Repo.update!()
 
     assert updated_release.publisher_id == new_publisher.id
   end
@@ -126,9 +130,9 @@ defmodule Hexpm.Repository.ReleaseTest do
     publisher: publisher,
     packages: [_, package2, package3]
   } do
-    organization = insert(:organization)
-    package1_repo = insert(:package, organization_id: organization.id)
-    package2_repo = insert(:package, organization_id: organization.id, organization: organization)
+    repository = insert(:repository)
+    package1_repo = insert(:package, repository_id: repository.id)
+    package2_repo = insert(:package, repository_id: repository.id, repository: repository)
 
     Release.build(
       package1_repo,
@@ -149,7 +153,7 @@ defmodule Hexpm.Repository.ReleaseTest do
         requirements: [
           %{
             name: package1_repo.name,
-            repository: organization.name,
+            repository: repository.name,
             app: package2_repo.name,
             requirement: "~> 0.0.1",
             optional: false
@@ -189,13 +193,12 @@ defmodule Hexpm.Repository.ReleaseTest do
     publisher: publisher,
     packages: [package1, _, _]
   } do
-    organization1 = insert(:organization)
-    organization2 = insert(:organization)
-    package1_repo = insert(:package, organization_id: organization1.id)
-    package2_repo = insert(:package, organization_id: organization2.id)
+    repository1 = insert(:repository)
+    repository2 = insert(:repository)
+    package1_repo = insert(:package, repository_id: repository1.id)
+    package2_repo = insert(:package, repository_id: repository2.id)
 
-    package3_repo =
-      insert(:package, organization_id: organization2.id, organization: organization2)
+    package3_repo = insert(:package, repository_id: repository2.id, repository: repository2)
 
     Release.build(
       package1_repo,
@@ -213,14 +216,14 @@ defmodule Hexpm.Repository.ReleaseTest do
     )
     |> Hexpm.Repo.insert!()
 
-    package1 = Repo.preload(package1, :organization)
+    package1 = Repo.preload(package1, :repository)
 
     meta =
       rel_meta(%{
         requirements: [
           %{
             name: package1_repo.name,
-            repository: organization1.name,
+            repository: repository1.name,
             app: package1_repo.name,
             requirement: "~> 0.0.1",
             optional: false
@@ -241,7 +244,7 @@ defmodule Hexpm.Repository.ReleaseTest do
         requirements: [
           %{
             name: package2_repo.name,
-            repository: organization1.name,
+            repository: repository1.name,
             app: package2_repo.name,
             requirement: "~> 0.0.1",
             optional: false
@@ -551,6 +554,7 @@ defmodule Hexpm.Repository.ReleaseTest do
     release =
       Release.build(package3, publisher, rel_meta(%{version: "0.0.1", app: package3.name}), "")
       |> Hexpm.Repo.insert!()
+      |> Map.put(:package, package3)
 
     Release.delete(release) |> Hexpm.Repo.delete!()
     refute Hexpm.Repo.get_by(assoc(package2, :releases), version: "0.0.1")

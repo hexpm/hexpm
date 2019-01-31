@@ -68,14 +68,14 @@
     <div class="panel panel-default">
       <div class="panel-heading">Packages</div>
       <div class="panel-body">
-        <%= if @organization.packages == [] do %>
+        <%= if @repository.packages == [] do %>
           No packages in organization.
           Check out the docs for <a href="<%= Routes.docs_path(Endpoint, :private) %>">publishing private packages</a>.
         <% else %>
           <ul class="organization-package-list">
-            <%= for package <- @organization.packages do %>
+            <%= for package <- @repository.packages do %>
               <li>
-                <a href="<%= path_for_package(@organization.name, package.name) %>"><%= package.name %></a>
+                <a href="<%= path_for_package(@repository.name, package.name) %>"><%= package.name %></a>
                 <%= package.latest_version %>
               </li>
             <% end %>

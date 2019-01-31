@@ -48,8 +48,17 @@ defmodule Hexpm.Factory do
   def organization_factory() do
     %Hexpm.Accounts.Organization{
       name: Fake.sequence(:package),
-      public: false,
       billing_active: true
+    }
+  end
+
+  def repository_factory() do
+    name = Fake.sequence(:package)
+
+    %Hexpm.Repository.Repository{
+      name: name,
+      public: false,
+      organization: build(:organization, name: name)
     }
   end
 
@@ -57,7 +66,7 @@ defmodule Hexpm.Factory do
     %Hexpm.Repository.Package{
       name: Fake.sequence(:package),
       meta: build(:package_metadata),
-      organization_id: 1
+      repository_id: 1
     }
   end
 

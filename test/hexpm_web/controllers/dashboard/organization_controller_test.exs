@@ -21,10 +21,12 @@ defmodule HexpmWeb.Dashboard.RepositoryControllerTest do
   end
 
   setup do
+    repository = insert(:repository)
+
     %{
       user: create_user("eric", "eric@mail.com", "hunter42"),
       password: "hunter42",
-      organization: insert(:organization)
+      organization: repository.organization
     }
   end
 

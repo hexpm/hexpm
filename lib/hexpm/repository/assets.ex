@@ -1,5 +1,5 @@
 defmodule Hexpm.Repository.Assets do
-  alias Hexpm.Accounts.Organization
+  alias Hexpm.Repository.Repository
 
   def push_release(release, body) do
     meta = [
@@ -7,7 +7,7 @@ defmodule Hexpm.Repository.Assets do
       {"surrogate-control", "public, max-age=604800"}
     ]
 
-    cache_control = tarball_cache_control(release.package.organization)
+    cache_control = tarball_cache_control(release.package.repository)
     opts = [cache_control: cache_control, meta: meta]
 
     Hexpm.Store.put(nil, :s3_bucket, tarball_store_key(release), body, opts)
@@ -26,7 +26,7 @@ defmodule Hexpm.Repository.Assets do
       {"surrogate-control", "public, max-age=604800"}
     ]
 
-    cache_control = docs_cache_control(release.package.organization)
+    cache_control = docs_cache_control(release.package.repository)
     opts = [cache_control: cache_control, meta: meta]
 
     Hexpm.Store.put(nil, :s3_bucket, docs_store_key(release), body, opts)
@@ -40,11 +40,11 @@ defmodule Hexpm.Repository.Assets do
     end
   end
 
-  defp tarball_cache_control(%Organization{id: 1}), do: "public, max-age=604800"
-  defp tarball_cache_control(%Organization{}), do: "private, max-age=86400"
+  defp tarball_cache_control(%Repository{public: true}), do: "public, max-age=604800"
+  defp tarball_cache_control(%Repository{public: false}), do: "private, max-age=86400"
 
-  defp docs_cache_control(%Organization{id: 1}), do: "public, max-age=86400"
-  defp docs_cache_control(%Organization{}), do: "private, max-age=86400"
+  defp docs_cache_control(%Repository{public: true}), do: "public, max-age=86400"
+  defp docs_cache_control(%Repository{public: false}), do: "private, max-age=86400"
 
   def tarball_cdn_key(release) do
     "tarballs/#{repository_cdn_key(release)}#{release.package.name}-#{release.version}"
@@ -63,22 +63,22 @@ defmodule Hexpm.Repository.Assets do
   end
 
   defp repository_cdn_key(release) do
-    organization = release.package.organization
+    repository = release.package.repository
 
-    if organization.id == 1 do
+    if repository.id == 1 do
       ""
     else
-      "#{organization.name}-"
+      "#{repository.name}-"
     end
   end
 
   defp repository_store_key(release) do
-    organization = release.package.organization
+    repository = release.package.repository
 
-    if organization.id == 1 do
+    if repository.id == 1 do
       ""
     else
-      "repos/#{organization.name}/"
+      "repos/#{repository.name}/"
     end
   end
 end

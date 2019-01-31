@@ -1,17 +1,17 @@
 defmodule Hexpm.Repository.ReleasesTest do
   use Hexpm.DataCase, async: true
 
-  alias Hexpm.Accounts.Organization
+  alias Hexpm.Repository.Repository
   alias Hexpm.Repository.{Packages, Releases}
 
   setup do
-    organization = insert(:organization, public: false)
-    package = %{insert(:package) | organization: Organization.hexpm()}
+    repository = insert(:repository, public: false)
+    package = %{insert(:package) | repository: Repository.hexpm()}
     release = insert(:release, package: package, version: "0.1.0")
     user = insert(:user)
 
     %{
-      organization: organization,
+      repository: repository,
       package: package,
       release: release,
       user: user
@@ -20,7 +20,7 @@ defmodule Hexpm.Repository.ReleasesTest do
 
   describe "publish/7" do
     test "publish private package with public dependency", %{
-      organization: organization,
+      repository: repository,
       package: package,
       user: user
     } do
@@ -33,7 +33,7 @@ defmodule Hexpm.Repository.ReleasesTest do
 
       assert {:ok, _} =
                Releases.publish(
-                 organization,
+                 repository,
                  nil,
                  user,
                  "BODY",
@@ -44,20 +44,20 @@ defmodule Hexpm.Repository.ReleasesTest do
     end
 
     test "sets release.publisher to user when publish a new release" do
-      organization = insert(:organization)
+      repository = insert(:repository)
       user = insert(:user)
       meta = default_meta(Fake.sequence(:package), "0.1.0")
       audit = audit_data(user)
 
       {:ok, %{release: release}} =
-        Releases.publish(organization, nil, user, "BODY", meta, "00", audit: audit)
+        Releases.publish(repository, nil, user, "BODY", meta, "00", audit: audit)
 
       assert release.publisher_id == user.id
     end
 
     test "cant publish reserved package name", %{user: user} do
       Repo.insert_all("reserved_packages", [
-        %{"organization_id" => 1, "name" => "reserved_name"}
+        %{"repository_id" => 1, "name" => "reserved_name"}
       ])
 
       meta = default_meta("reserved_name", "0.1.0")
@@ -65,7 +65,7 @@ defmodule Hexpm.Repository.ReleasesTest do
 
       assert {:error, :package, changeset, _} =
                Releases.publish(
-                 Organization.hexpm(),
+                 Repository.hexpm(),
                  nil,
                  user,
                  "BODY",
@@ -79,7 +79,7 @@ defmodule Hexpm.Repository.ReleasesTest do
 
     test "cant publish reserved package version", %{package: package, user: user} do
       Repo.insert_all("reserved_packages", [
-        %{"organization_id" => 1, "name" => package.name, "version" => "0.2.0"}
+        %{"repository_id" => 1, "name" => package.name, "version" => "0.2.0"}
       ])
 
       meta = default_meta(package.name, "0.2.0")
@@ -87,7 +87,7 @@ defmodule Hexpm.Repository.ReleasesTest do
 
       assert {:error, :release, changeset, _} =
                Releases.publish(
-                 Organization.hexpm(),
+                 Repository.hexpm(),
                  package,
                  user,
                  "BODY",
@@ -101,7 +101,7 @@ defmodule Hexpm.Repository.ReleasesTest do
 
     test "cant publish using non-semantic version", %{package: package, user: user} do
       Repo.insert_all("reserved_packages", [
-        %{"organization_id" => 1, "name" => package.name, "version" => "0.2.0"}
+        %{"repository_id" => 1, "name" => package.name, "version" => "0.2.0"}
       ])
 
       meta = default_meta(package.name, "0.2")
@@ -109,7 +109,7 @@ defmodule Hexpm.Repository.ReleasesTest do
 
       assert {:error, :version, changeset, _} =
                Releases.publish(
-                 Organization.hexpm(),
+                 Repository.hexpm(),
                  package,
                  user,
                  "BODY",
@@ -132,7 +132,7 @@ defmodule Hexpm.Repository.ReleasesTest do
 
       assert Releases.revert(package, release, audit: audit) == :ok
       refute Releases.get(package, "0.1.0")
-      refute Packages.get(Organization.hexpm(), package.name)
+      refute Packages.get(Repository.hexpm(), package.name)
     end
 
     test "revert only release", %{
@@ -144,7 +144,7 @@ defmodule Hexpm.Repository.ReleasesTest do
 
       assert Releases.revert(package, release, audit: audit) == :ok
       refute Releases.get(package, "0.2.0")
-      assert Packages.get(Organization.hexpm(), package.name)
+      assert Packages.get(Repository.hexpm(), package.name)
     end
   end
 end

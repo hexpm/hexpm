@@ -12,7 +12,7 @@ defmodule HexpmWeb.API.OrganizationUserController do
        when action in [:create, :update, :delete]
 
   def index(conn, %{"organization" => name}) do
-    organization = Organizations.get(name, [users: :emails])
+    organization = Organizations.get(name, users: :emails)
 
     conn
     |> api_cache(:private)
