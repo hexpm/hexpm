@@ -19,7 +19,7 @@ defmodule HexpmWeb.API.PackageControllerTest do
 
     package4 = insert(:package)
     insert(:release, package: package1, version: "0.0.1", has_docs: true)
-    insert(:release, package: package3, version: "0.0.1")
+    insert(:release, package: package3, version: "0.0.1", has_docs: true)
 
     insert(
       :release,
@@ -152,12 +152,12 @@ defmodule HexpmWeb.API.PackageControllerTest do
       assert result["inserted_at"] == "2030-01-01T00:00:00.000000Z"
       # updated_at ISO8601 datetime string should include a Z to indicate UTC
       assert String.slice(result["updated_at"], -1, 1) == "Z"
-      assert result["url"] =~ "/api/packages/#{package1.name}"
-      assert result["html_url"] =~ "/packages/#{package1.name}"
-      assert result["docs_html_url"] =~ "/#{package1.name}"
+      assert result["url"] == "http://localhost:5000/api/packages/#{package1.name}"
+      assert result["html_url"] == "http://localhost:5000/packages/#{package1.name}"
+      assert result["docs_html_url"] == "http://localhost:5002/#{package1.name}/"
 
       release = List.first(result["releases"])
-      assert release["url"] =~ "/api/packages/#{package1.name}/releases/0.0.1"
+      assert release["url"] == "http://localhost:5000/api/packages/#{package1.name}/releases/0.0.1"
       assert release["version"] == "0.0.1"
     end
 
@@ -214,8 +214,9 @@ defmodule HexpmWeb.API.PackageControllerTest do
 
       assert result["name"] == package3.name
       assert result["repository"] == repository.name
-      assert result["url"] =~ "/api/repos/#{repository.name}/packages/#{package3.name}"
-      assert result["html_url"] =~ "/packages/#{repository.name}/#{package3.name}"
+      assert result["url"] == "http://localhost:5000/api/repos/#{repository.name}/packages/#{package3.name}"
+      assert result["html_url"] == "http://localhost:5000/packages/#{repository.name}/#{package3.name}"
+      assert result["docs_html_url"] == "http://#{repository.name}.localhost:5002/#{package3.name}/"
     end
 
     test "get package with retired versions", %{package4: package4} do

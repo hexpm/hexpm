@@ -16,27 +16,27 @@ defmodule HexpmWeb.API.DocsController do
        when action in [:create, :delete]
 
   def show(conn, _params) do
-    organization = conn.assigns.organization
+    repository = conn.assigns.repository
     package = conn.assigns.package
     release = conn.assigns.release
 
     if release.has_docs do
-      redirect(conn, external: Hexpm.Utils.docs_tarball_url(organization, package, release))
+      redirect(conn, external: Hexpm.Utils.docs_tarball_url(repository, package, release))
     else
       not_found(conn)
     end
   end
 
   def create(conn, %{"body" => body}) do
-    organization = conn.assigns.organization
+    repository = conn.assigns.repository
     package = conn.assigns.package
     release = conn.assigns.release
     request_id = List.first(get_resp_header(conn, "x-request-id"))
 
-    log_tarball(organization.name, package.name, release.version, request_id, body)
+    log_tarball(repository.name, package.name, release.version, request_id, body)
     Hexpm.Repository.Releases.publish_docs(package, release, body, audit: audit_data(conn))
 
-    location = Hexpm.Utils.docs_tarball_url(organization, package, release)
+    location = Hexpm.Utils.docs_tarball_url(repository, package, release)
 
     conn
     |> put_resp_header("location", location)
@@ -52,8 +52,8 @@ defmodule HexpmWeb.API.DocsController do
     |> send_resp(204, "")
   end
 
-  defp log_tarball(organization, package, version, request_id, body) do
-    filename = "#{organization}-#{package}-#{version}-#{request_id}.tar.gz"
+  defp log_tarball(repository, package, version, request_id, body) do
+    filename = "#{repository}-#{package}-#{version}-#{request_id}.tar.gz"
     key = Path.join(["debug", "docs", filename])
     Hexpm.Store.put(nil, :s3_bucket, key, body, [])
   end
