@@ -10,6 +10,57 @@ defmodule HexpmWeb.API.DocsControllerTest do
     {:ok, user: user}
   end
 
+  describe "GET /api/packages/:name/releases/:version/docs" do
+    test "return 404 on no docs" do
+      package = insert(:package)
+      insert(:release, package: package, version: "0.0.1", has_docs: false)
+
+      build_conn()
+      |> get("api/packages/#{package.name}/releases/0.0.1/docs")
+      |> response(404)
+    end
+
+    test "redirects to tarball" do
+      package = insert(:package)
+      insert(:release, package: package, version: "0.0.1", has_docs: true)
+
+      conn = get(build_conn(), "api/packages/#{package.name}/releases/0.0.1/docs")
+      assert redirected_to(conn) == "http://localhost:5000/docs/#{package.name}-0.0.1.tar.gz"
+    end
+  end
+
+  describe "GET /api/repos/:repo/packages/:name/releases/:version/docs" do
+    test "authorizes", %{user: user} do
+      repository = insert(:repository)
+      package = insert(:package, repository_id: repository.id)
+      insert(:release, package: package, version: "0.0.1", has_docs: true)
+
+      build_conn()
+      |> get("api/repos/#{repository.name}/packages/#{package.name}/releases/0.0.1/docs")
+      |> response(403)
+
+      build_conn()
+      |> put_req_header("authorization", key_for(user))
+      |> get("api/repos/#{repository.name}/packages/#{package.name}/releases/0.0.1/docs")
+      |> response(403)
+    end
+
+    test "redirects to tarball", %{user: user} do
+      repository = insert(:repository)
+      package = insert(:package, repository_id: repository.id)
+      insert(:release, package: package, version: "0.0.1", has_docs: true)
+      insert(:organization_user, organization: repository.organization, user: user)
+
+      conn =
+        build_conn()
+        |> put_req_header("authorization", key_for(user))
+        |> get("api/repos/#{repository.name}/packages/#{package.name}/releases/0.0.1/docs")
+
+      assert redirected_to(conn) ==
+               "http://localhost:5000/repos/#{repository.name}/docs/#{package.name}-0.0.1.tar.gz"
+    end
+  end
+
   describe "POST /api/packages/:name/releases/:version/docs" do
     test "release docs", %{user: user} do
       package = insert(:package, package_owners: [build(:package_owner, user: user)])
