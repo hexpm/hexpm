@@ -7,7 +7,7 @@
       (<span class="version-retirement">retired</span>)
     <% else %>
       <%= if release.has_docs do %>
-        (<a href="<%= raw Hexpm.Utils.docs_html_url(@package.organization, @package, release) %>">docs</a>)
+        (<a href="<%= raw Hexpm.Utils.docs_html_url(@package.repository, @package, release) %>">docs</a>)
       <% end %>
     <% end %>
   </li>
