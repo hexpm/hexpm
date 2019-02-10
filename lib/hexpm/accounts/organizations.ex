@@ -28,6 +28,9 @@ defmodule Hexpm.Accounts.Organizations do
     multi =
       Multi.new()
       |> Multi.insert(:organization, Organization.changeset(%Organization{}, params))
+      |> Multi.insert(:repository, fn %{organization: organization} ->
+        %Repository{name: organization.name, public: false, organization_id: organization.id}
+      end)
       |> Multi.insert(:organization_user, fn %{organization: organization} ->
         organization_user = %OrganizationUser{
           organization_id: organization.id,

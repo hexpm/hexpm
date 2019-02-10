@@ -2,7 +2,7 @@ defmodule HexpmWeb.Dashboard.RepositoryControllerTest do
   use HexpmWeb.ConnCase, async: true
   use Bamboo.Test
 
-  alias Hexpm.Accounts.Users
+  alias Hexpm.Accounts.{Organizations, Users}
 
   defp add_email(user, email) do
     {:ok, user} = Users.add_email(user, %{email: email}, audit: audit_data(user))
@@ -331,6 +331,9 @@ defmodule HexpmWeb.Dashboard.RepositoryControllerTest do
 
     assert get_flash(conn, :info) ==
              "Organization created with one month free trial period active."
+
+    assert organization = Organizations.get("createrepo", [:repository])
+    assert organization.repository.name == "createrepo"
   end
 
   test "create organization validates name", %{user: user} do
