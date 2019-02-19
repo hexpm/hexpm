@@ -109,7 +109,7 @@ defmodule Postgrex.MixProject do
   defp deps() do
     [
       {:decimal, "~> 1.0"},
-      {:ex_doc, "~> 0.14", only: :dev},
+      {:ex_doc, "~> 0.14", only: :dev, runtime: false}
     ]
   end
 
