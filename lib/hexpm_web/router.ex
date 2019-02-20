@@ -176,11 +176,11 @@ defmodule HexpmWeb.Router do
     get "/orgs/:organization", OrganizationController, :show
     post "/orgs/:organization", OrganizationController, :update
 
-    get "/orgs/:organization/users", OrganizationUserController, :index
-    post "/orgs/:organization/users", OrganizationUserController, :create
-    get "/orgs/:organization/users/:name", OrganizationUserController, :show
-    post "/orgs/:organization/users/:name", OrganizationUserController, :update
-    delete "/orgs/:organization/users/:name", OrganizationUserController, :delete
+    get "/orgs/:organization/members", OrganizationUserController, :index
+    post "/orgs/:organization/members", OrganizationUserController, :create
+    get "/orgs/:organization/members/:name", OrganizationUserController, :show
+    post "/orgs/:organization/members/:name", OrganizationUserController, :update
+    delete "/orgs/:organization/members/:name", OrganizationUserController, :delete
 
     get "/repos", RepositoryController, :index
     get "/repos/:repository", RepositoryController, :show
