@@ -41,7 +41,7 @@ With a name in hand, it is time to add the proper metadata to your `<myapp>.app.
 
 The package is configured in the `src/<myapp>.app.src` file. [See below](#example-app-src-file) for an example file. While the dependencies of the application are in `rebar.config`, [as seen below](#example-rebar-config-file) as well.
 
-First, make sure that the `vsn` property is correct. All Hex packages are required to follow [semantic versioning](http://semver.org/). `vsn` and the app name are the only required properties.
+First, make sure that the `vsn` property is correct. All Hex packages are required to follow [semantic versioning](http://semver.org/). `vsn` and the app name are the only required properties. While your package version is at major version "0", any breaking changes should be indicated by incrementing the minor version. For example, `0.1.0 -> 0.2.0`.
 
 Then fill in the `description` property. It should be a sentence, or a few sentences, describing the package. The `description` is optional but highly recommended.
 
