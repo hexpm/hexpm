@@ -845,9 +845,15 @@ defmodule HexpmWeb.API.ReleaseControllerTest do
         |> get("api/packages/#{package.name}/releases/#{release.version}")
         |> json_response(200)
 
-      assert result["url"] == "http://localhost:5000/api/packages/#{package.name}/releases/#{release.version}"
-      assert result["html_url"] == "http://localhost:5000/packages/#{package.name}/#{release.version}"
-      assert result["docs_html_url"] == "http://localhost:5002/#{package.name}/#{release.version}/"
+      assert result["url"] ==
+               "http://localhost:5000/api/packages/#{package.name}/releases/#{release.version}"
+
+      assert result["html_url"] ==
+               "http://localhost:5000/packages/#{package.name}/#{release.version}"
+
+      assert result["docs_html_url"] ==
+               "http://localhost:5002/#{package.name}/#{release.version}/"
+
       assert result["version"] == "#{release.version}"
     end
 
@@ -911,8 +917,12 @@ defmodule HexpmWeb.API.ReleaseControllerTest do
       assert result["url"] ==
                "http://localhost:5000/api/repos/#{repository.name}/packages/#{package.name}/releases/0.0.1"
 
-      assert result["html_url"] == "http://localhost:5000/packages/#{repository.name}/#{package.name}/0.0.1"
-      assert result["docs_html_url"] == "http://#{repository.name}.localhost:5002/#{package.name}/0.0.1/"
+      assert result["html_url"] ==
+               "http://localhost:5000/packages/#{repository.name}/#{package.name}/0.0.1"
+
+      assert result["docs_html_url"] ==
+               "http://#{repository.name}.localhost:5002/#{package.name}/0.0.1/"
+
       assert result["version"] == "0.0.1"
     end
   end

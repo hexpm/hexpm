@@ -157,7 +157,10 @@ defmodule HexpmWeb.API.PackageControllerTest do
       assert result["docs_html_url"] == "http://localhost:5002/#{package1.name}/"
 
       release = List.first(result["releases"])
-      assert release["url"] == "http://localhost:5000/api/packages/#{package1.name}/releases/0.0.1"
+
+      assert release["url"] ==
+               "http://localhost:5000/api/packages/#{package1.name}/releases/0.0.1"
+
       assert release["version"] == "0.0.1"
     end
 
@@ -214,9 +217,15 @@ defmodule HexpmWeb.API.PackageControllerTest do
 
       assert result["name"] == package3.name
       assert result["repository"] == repository.name
-      assert result["url"] == "http://localhost:5000/api/repos/#{repository.name}/packages/#{package3.name}"
-      assert result["html_url"] == "http://localhost:5000/packages/#{repository.name}/#{package3.name}"
-      assert result["docs_html_url"] == "http://#{repository.name}.localhost:5002/#{package3.name}/"
+
+      assert result["url"] ==
+               "http://localhost:5000/api/repos/#{repository.name}/packages/#{package3.name}"
+
+      assert result["html_url"] ==
+               "http://localhost:5000/packages/#{repository.name}/#{package3.name}"
+
+      assert result["docs_html_url"] ==
+               "http://#{repository.name}.localhost:5002/#{package3.name}/"
     end
 
     test "get package with retired versions", %{package4: package4} do
