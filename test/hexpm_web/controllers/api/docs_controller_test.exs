@@ -81,7 +81,7 @@ defmodule HexpmWeb.API.DocsControllerTest do
   end
 
   describe "POST /api/repos/:repository/packages/:name/releases/:version/docs" do
-    test "release docs authorizes", %{user: user} do
+    test "release docs authorizes user", %{user: user} do
       repository = insert(:repository)
 
       package =
@@ -97,6 +97,36 @@ defmodule HexpmWeb.API.DocsControllerTest do
       |> response(403)
 
       refute Hexpm.Repo.get_by!(assoc(package, :releases), version: "0.0.1").has_docs
+    end
+
+    test "release docs authorizes organization" do
+      repository = insert(:repository)
+      organization = repository.organization
+      other_organization = insert(:organization)
+
+      package =
+        insert(
+          :package,
+          repository_id: repository.id
+        )
+
+      insert(:release, package: package, version: "0.0.1")
+
+      publish_docs(
+        other_organization,
+        repository,
+        package,
+        "0.0.1",
+        [{'index.html', "package v0.0.1"}]
+      )
+      |> response(403)
+
+      refute Hexpm.Repo.get_by!(assoc(package, :releases), version: "0.0.1").has_docs
+
+      publish_docs(organization, repository, package, "0.0.1", [{'index.html', "package v0.0.1"}])
+      |> response(201)
+
+      assert Hexpm.Repo.get_by!(assoc(package, :releases), version: "0.0.1").has_docs
     end
 
     test "release docs", %{user: user} do
