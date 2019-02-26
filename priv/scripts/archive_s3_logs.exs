@@ -3,9 +3,10 @@
 buckets = [{"logs.hex.pm", "us-east-1"}]
 dir = "fastly_hex"
 tmp = Application.get_env(:hexpm, :tmp_dir)
-filename = Path.join([tmp, "logs", "#{dir}-#{date}.txt.gz"])
+filename = "#{dir}-#{date}.txt.gz"
+filepath = Path.join([tmp, "logs", "#{dir}-#{date}.txt.gz"])
 
-File.mkdir_p!(Path.dirname(filename))
+File.mkdir_p!(Path.dirname(filepath))
 
 uncompress = fn data, key ->
   if String.ends_with?(key, ".gz") do
@@ -42,7 +43,7 @@ if action == "count" do
 end
 
 if action == "fetch" || action == "fetch-and-upload" do
-  File.open!(filename, [:write, :delayed_write, :compressed], fn file ->
+  File.open!(filepath, [:write, :delayed_write, :compressed], fn file ->
     keys
     |> Task.async_stream(
       fn {bucket, region, stream} ->
@@ -72,9 +73,9 @@ if action == "fetch" || action == "fetch-and-upload" do
 end
 
 if action == "upload" || action == "fetch-and-upload" do
-  key = "logs/monthly/#{filename}/#{dir}-#{date}.txt.gz"
+  key = "logs/monthly/#{filename}"
 
-  ExAws.S3.Upload.stream_file(filename, [:read_ahead])
+  ExAws.S3.Upload.stream_file(filepath, [:read_ahead])
   |> ExAws.S3.upload("backup.hex.pm", key, timeout: 600_000)
   |> ExAws.request!(region: "us-east-1")
 end
