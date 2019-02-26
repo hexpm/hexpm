@@ -172,7 +172,7 @@ defmodule HexpmWeb.AuthHelpers do
   end
 
   def package_owner(%Package{} = package, %Organization{} = organization) do
-    boolean_to_auth_error(package.organization_id == organization.id)
+    boolean_to_auth_error(package.repository.organization_id == organization.id)
   end
 
   def maybe_full_package_owner(%Plug.Conn{} = conn, user_or_organization) do
