@@ -190,8 +190,7 @@ defmodule Hexpm.Accounts.Key do
 
   def verify_permissions?(key, "api", resource) do
     Enum.any?(key.permissions, fn permission ->
-      permission.domain == "api" and
-        (is_nil(permission.resource) or permission.resource == resource)
+      permission.domain == "api" and match_api_resource?(permission.resource, resource)
     end)
   end
 
@@ -215,6 +214,12 @@ defmodule Hexpm.Accounts.Key do
   def verify_permissions?(_key, nil, _resource) do
     false
   end
+
+  defp match_api_resource?(nil, _resource), do: true
+  defp match_api_resource?("write", "write"), do: true
+  defp match_api_resource?("write", "read"), do: true
+  defp match_api_resource?("read", "read"), do: true
+  defp match_api_resource?(_key_resource, _resource), do: false
 
   def revoked?(%Key{} = key) do
     not is_nil(key.revoked_at) or
