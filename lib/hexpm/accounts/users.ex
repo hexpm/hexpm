@@ -2,12 +2,12 @@ defmodule Hexpm.Accounts.Users do
   use HexpmWeb, :context
 
   def get(username_or_email, preload \\ []) do
-    User.get(username_or_email, preload)
+    User.get(String.downcase(username_or_email), preload)
     |> Repo.one()
   end
 
   def public_get(username_or_email, preload \\ []) do
-    User.public_get(username_or_email, preload)
+    User.public_get(String.downcase(username_or_email), preload)
     |> Repo.one()
   end
 
@@ -17,12 +17,12 @@ defmodule Hexpm.Accounts.Users do
   end
 
   def get_by_username(username, preload \\ []) do
-    Repo.get_by(User, username: username)
+    Repo.get_by(User, username: String.downcase(username))
     |> Repo.preload(preload)
   end
 
   def get_email(email, preload \\ []) do
-    Repo.get_by(Email, email: email)
+    Repo.get_by(Email, email: String.downcase(email))
     |> Repo.preload(preload)
   end
 
