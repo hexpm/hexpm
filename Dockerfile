@@ -1,4 +1,4 @@
-FROM elixir:1.6.6-alpine as build
+FROM elixir:1.8.1-alpine as build
 
 # install build dependencies
 RUN apk add --update git build-base nodejs yarn python
@@ -35,7 +35,7 @@ COPY rel rel
 RUN mix release --no-tar
 
 # prepare release image
-FROM alpine:3.6 AS app
+FROM alpine:3.9 AS app
 RUN apk add --update bash openssl
 
 RUN mkdir /app && chown -R nobody: /app

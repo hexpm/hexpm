@@ -1,7 +1,7 @@
 dist: trusty
 language: elixir
-elixir: 1.7.2
-otp_release: 21.0
+elixir: 1.8.1
+otp_release: 21.3
 addons:
   postgresql: 9.6
 env:
@@ -13,7 +13,8 @@ env:
     - HEX_ELIXIR_PATH=hex_elixir
   matrix:
     - HEX_VERSION=master
-    - HEX_VERSION=v0.18.1
+    - HEX_VERSION=v0.19.0
+    - HEX_VERSION=v0.18.2
     - HEX_VERSION=v0.17.8
     - HEX_VERSION=v0.16.1
     - HEX_VERSION=v0.15.0
