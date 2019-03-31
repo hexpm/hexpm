@@ -1,0 +1,6 @@
+<p><%= @username %> has recently published package <%= @package %>.</p>
+
+<p>
+  --<br>
+  Hex.pm
+</p>
