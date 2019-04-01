@@ -11,6 +11,10 @@ defmodule HexpmWeb.ViewIcons do
   @external_resource @glyphicons_svg
   @external_resource @glyphicons_less
 
+  :ok = Application.load(:xmerl)
+  {:ok, xmerl_version} = :application.get_key(:xmerl, :vsn)
+  broken_xmerl? = Version.compare(List.to_string(xmerl_version), "1.3.20") == :lt
+
   doc = File.read!(@octicons_svg)
 
   octicons =
@@ -34,7 +38,7 @@ defmodule HexpmWeb.ViewIcons do
     SweetXml.xpath(
       doc,
       ~x"//glyph[@unicode][@d]"l,
-      unicode: ~x"./@unicode",
+      unicode: if(broken_xmerl?, do: ~x"./@unicode", else: ~x"./@unicode"s),
       d: ~x"./@d"s,
       x: ~x"./@horiz-adv-x"s
     )
@@ -58,8 +62,7 @@ defmodule HexpmWeb.ViewIcons do
   defp glyphicon(name) when is_atom(name), do: glyphicon(Atom.to_string(name))
 
   Enum.each(glyphicons, fn %{unicode: unicode, d: d, x: x} ->
-    # LOL xmerl
-    unicode = unicode |> Enum.reverse() |> IO.iodata_to_binary()
+    unicode = if broken_xmerl?, do: IO.iodata_to_binary(Enum.reverse(unicode)), else: unicode
 
     name =
       case unicode do
