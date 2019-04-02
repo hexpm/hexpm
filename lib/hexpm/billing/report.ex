@@ -27,9 +27,14 @@ defmodule Hexpm.Billing.Report do
   end
 
   defp report() do
-    Hexpm.Billing.report()
+    report_request()
     |> MapSet.new()
     |> MapSet.put("hexpm")
+  end
+
+  defp report_request() do
+    Task.async(fn -> Hexpm.Billing.report() end)
+    |> Task.await()
   end
 
   defp organizations() do
