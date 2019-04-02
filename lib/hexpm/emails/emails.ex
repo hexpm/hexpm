@@ -65,12 +65,12 @@ defmodule Hexpm.Emails do
     |> render("organization_invite.html")
   end
 
-  def package_published(user, package) do
+  def package_published(user, name, version) do
     email()
-    |> email_to(Enum.map(user.emails, fn email -> email.email end))
-    |> subject("Hex.pm - Package #{package.name} published")
-    |> assign(:username, user.username)
-    |> assign(:package, package.name)
+    |> email_to(user)
+    |> subject("Hex.pm - Package #{name} v#{version} published")
+    |> assign(:version, version)
+    |> assign(:package, name)
     |> render("package_published.html")
   end
 
