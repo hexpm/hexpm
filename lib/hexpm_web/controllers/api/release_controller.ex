@@ -133,7 +133,7 @@ defmodule HexpmWeb.API.ReleaseController do
 
   defp publish_result({:ok, %{action: :insert, package: package, release: release}}, conn) do
     location = Routes.api_release_url(conn, :show, package, release)
-    email_package_publisher(conn)
+    email_package_publisher(conn, package.name, release.version)
 
     conn
     |> put_resp_header("location", location)
@@ -143,7 +143,7 @@ defmodule HexpmWeb.API.ReleaseController do
   end
 
   defp publish_result({:ok, %{action: :update, release: release}}, conn) do
-    email_package_publisher(conn)
+    email_package_publisher(conn, release.package.name, release.version)
 
     conn
     |> api_cache(:public)
@@ -186,9 +186,9 @@ defmodule HexpmWeb.API.ReleaseController do
     end
   end
 
-  defp email_package_publisher(conn) do
+  defp email_package_publisher(conn, name, version) do
     conn.assigns.current_user
-    |> Emails.package_published(conn.assigns.meta["name"], conn.assigns.meta["version"])
+    |> Emails.package_published(name, version)
     |> Mailer.deliver_now_throttled()
   end
 end
