@@ -65,6 +65,15 @@ defmodule Hexpm.Emails do
     |> render("organization_invite.html")
   end
 
+  def package_published(user, name, version) do
+    email()
+    |> email_to(user)
+    |> subject("Hex.pm - Package #{name} v#{version} published")
+    |> assign(:version, version)
+    |> assign(:package, name)
+    |> render("package_published.html")
+  end
+
   defp email_to(email, to) do
     to = to |> List.wrap() |> Enum.sort()
     to(email, to)
