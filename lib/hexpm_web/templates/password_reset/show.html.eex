@@ -3,7 +3,7 @@
 <%= form_tag(Routes.password_reset_path(Endpoint, :create)) do %>
   <div class="form-group">
     <label for="username">Username or Email</label>
-    <input type="text" class="form-control" name="username">
+    <input id="username" type="text" class="form-control" name="username">
   </div>
 
   <button type="submit" class="btn btn-primary">Submit</button>
