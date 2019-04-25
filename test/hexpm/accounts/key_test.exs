@@ -43,7 +43,9 @@ defmodule Hexpm.Accounts.KeyTest do
     assert Key.verify_permissions?(key, "repository", "foo")
     assert Key.verify_permissions?(key, "repositories", nil)
 
-    key = build(:key, permissions: [build(:key_permission, domain: "repository", resource: "foo")])
+    key =
+      build(:key, permissions: [build(:key_permission, domain: "repository", resource: "foo")])
+
     refute Key.verify_permissions?(key, "api", "read")
     refute Key.verify_permissions?(key, "api", "write")
     assert Key.verify_permissions?(key, "repository", "foo")
