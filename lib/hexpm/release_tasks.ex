@@ -11,12 +11,12 @@ defmodule Hexpm.ReleaseTasks do
 
   @repos Application.get_env(:hexpm, :ecto_repos, [])
 
-  def script() do
+  def script(args) do
     {:ok, _} = Application.ensure_all_started(:logger)
     Logger.info("[task] running script")
     start_app()
 
-    run_script()
+    run_script(args)
 
     Logger.info("[task] finished script")
     stop()
@@ -33,34 +33,34 @@ defmodule Hexpm.ReleaseTasks do
     stop()
   end
 
-  def migrate() do
+  def migrate(args \\ []) do
     {:ok, _} = Application.ensure_all_started(:logger)
     Logger.info("[task] running migrate")
     start_repo()
 
-    run_migrations()
+    run_migrations(args)
 
     Logger.info("[task] finished migrate")
     stop()
   end
 
-  def rollback() do
+  def rollback(args \\ []) do
     {:ok, _} = Application.ensure_all_started(:logger)
     Logger.info("[task] running rollback")
     start_repo()
 
-    run_rollback()
+    run_rollback(args)
 
     Logger.info("[task] finished rollback")
     stop()
   end
 
-  def seed() do
+  def seed(args \\ []) do
     {:ok, _} = Application.ensure_all_started(:logger)
     Logger.info("[task] running seed")
     start_repo()
 
-    run_migrations()
+    run_migrations(args)
     run_seeds()
 
     Logger.info("[task] finished seed")
@@ -105,12 +105,12 @@ defmodule Hexpm.ReleaseTasks do
     :init.stop()
   end
 
-  defp run_migrations() do
+  defp run_migrations(args) do
     Enum.each(@repos, fn repo ->
       app = Keyword.get(repo.config(), :otp_app)
       IO.puts("Running migrations for #{app}")
 
-      case argv() do
+      case args do
         ["--step", n] -> migrate(repo, :up, step: String.to_integer(n))
         ["-n", n] -> migrate(repo, :up, step: String.to_integer(n))
         ["--to", to] -> migrate(repo, :up, to: to)
@@ -120,12 +120,12 @@ defmodule Hexpm.ReleaseTasks do
     end)
   end
 
-  defp run_rollback() do
+  defp run_rollback(args) do
     Enum.each(@repos, fn repo ->
       app = Keyword.get(repo.config(), :otp_app)
       IO.puts("Running rollback for #{app}")
 
-      case argv() do
+      case args do
         ["--step", n] -> migrate(repo, :down, step: String.to_integer(n))
         ["-n", n] -> migrate(repo, :down, step: String.to_integer(n))
         ["--to", to] -> migrate(repo, :down, to: to)
@@ -161,9 +161,8 @@ defmodule Hexpm.ReleaseTasks do
     Path.join([priv_dir, "repo", filename])
   end
 
-  defp run_script() do
-    [script | args] = argv()
-    System.argv(args)
+  defp run_script(args) do
+    [script | args] = args
 
     priv_dir = Application.app_dir(:hexpm, "priv")
     script_dir = Path.join(priv_dir, "scripts")
@@ -171,9 +170,5 @@ defmodule Hexpm.ReleaseTasks do
     Logger.info("[script] running #{script} #{inspect(args)}")
     Code.eval_file(script, script_dir)
     Logger.info("[script] finished #{script} #{inspect(args)}")
-  end
-
-  defp argv() do
-    Enum.map(:init.get_plain_arguments(), &List.to_string/1)
   end
 end

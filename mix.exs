@@ -12,6 +12,7 @@ defmodule Hexpm.MixProject do
       build_embedded: Mix.env() == :prod,
       start_permanent: Mix.env() == :prod,
       aliases: aliases(),
+      releases: releases(),
       deps: deps()
     ]
   end
@@ -36,7 +37,6 @@ defmodule Hexpm.MixProject do
       {:bamboo, "~> 1.0"},
       {:bcrypt_elixir, "~> 1.0"},
       {:corsica, "~> 1.0"},
-      {:distillery, "~> 1.5", runtime: false},
       {:earmark, "~> 1.0"},
       {:ecto_sql, "~> 3.0"},
       {:ecto, "~> 3.0", override: true},
@@ -77,6 +77,14 @@ defmodule Hexpm.MixProject do
       "ecto.setup": ["ecto.reset", "run priv/repo/seeds.exs"],
       "ecto.reset": ["ecto.drop", "ecto.create", "ecto.migrate"],
       test: ["ecto.create --quiet", "ecto.migrate", "test"]
+    ]
+  end
+
+  defp releases() do
+    [
+      hexpm: [
+        include_executables_for: [:unix]
+      ]
     ]
   end
 

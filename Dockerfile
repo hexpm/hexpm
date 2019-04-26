@@ -57,16 +57,18 @@ RUN mix compile
 
 # build release
 COPY rel rel
-RUN mix release --no-tar
+RUN mix release
 
 # prepare release image
 FROM alpine:3.9 AS app
 RUN apk add --update bash openssl
 
-RUN mkdir /app && chown -R nobody: /app
+RUN mkdir /app
 WORKDIR /app
-USER nobody
 
 COPY --from=build /app/_build/prod/rel/hexpm ./
+RUN chown -R nobody: /app
+USER nobody
 
-ENV HOME=/app REPLACE_OS_VARS=true
+ENV HOME=/app
+CMD bin/start
