@@ -28,13 +28,6 @@ export default class App {
     // Pricing selector
     $(".pricing-button").click(this.onPricing.bind(this))
 
-    // Show show-versions button if JS is enabled
-    $(".show-versions").show()
-
-    // Package: toggle text in "All Versions / Recent Version" buttons
-    $(".show-versions .invisible").removeClass("invisible").toggle()
-    $(".show-versions .toggle-text").click((event) => $(event.target).parent().find("a").toggle())
-
     // Focus search field
     $("[name='search']").focus()
 
