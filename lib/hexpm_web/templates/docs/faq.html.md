@@ -1,5 +1,14 @@
 ## FAQ
 
+### Accounts
+
+#### Can I change my username?
+
+For security reasons, your username cannot be changed. However, if you would like to adopt a new
+username we recommend [creating a new account](/signup).
+
+You can transfer ownership of your packages using the [`hex.owner`](https://hexdocs.pm/hex/Mix.Tasks.Hex.Owner.html) task.
+
 ### Packages
 
 #### Why is my package documentation returning "page not found"?
@@ -39,6 +48,11 @@ Package checksums ensure that if a package was changed within the 60 minute wind
 are informed if they get a changed version of a package that they have already fetched and locked
 in their lockfile. Packages or package versions that are removed by admins get automatically
 reserved and can never be reused by users.
+
+#### Can I transfer ownership of a package?
+
+Yes, if you would like to reassign ownership of a package to a different user or to another
+username, you can use the [`hex.owner`](https://hexdocs.pm/hex/Mix.Tasks.Hex.Owner.html) task.
 
 #### How should I name my packages?
 
