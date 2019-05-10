@@ -32,7 +32,7 @@ The definitions of various subjective terms such as "discriminatory", "hateful",
 
 ### Friendly Harassment-Free Space
 
-We are committed to providing a friendly, safe and welcoming environment for all. We ask that you please respect that people have differences of opinion regarding technical choices, and that every design or implementation choice carries a trade-off and numerous costs. There is seldom a single right answer. A difference of technology preferences is not a license to be rude.
+We are committed to providing a friendly, safe, and welcoming environment for all. We ask that you please respect that people have differences of opinion regarding technical choices, and that every design or implementation choice carries a trade-off and numerous costs. There is seldom a single right answer. A difference of technology preferences is not a license to be rude.
 
 Any spamming, trolling, flaming, baiting, or other attention-stealing behaviour is not welcome, and will not be tolerated.
 
