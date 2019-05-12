@@ -44,20 +44,8 @@ end
 
 if action == "fetch" || action == "fetch-and-upload" do
   File.open!(filepath, [:write, :delayed_write, :compressed], fn file ->
-    keys
-    |> Task.async_stream(
-      fn {bucket, region, stream} ->
-        {bucket, region, Enum.to_list(stream)}
-      end,
-      max_concurrency: 5,
-      ordered: false,
-      timeout: 600_000
-    )
-    |> Stream.flat_map(fn {:ok, {bucket, region, keys}} ->
-      for key <- keys, do: {bucket, region, key}
-    end)
-    |> Task.async_stream(
-      fn {bucket, region, key} ->
+    Enum.each(keys, fn {bucket, region, stream} ->
+      Task.async_stream(stream, fn key ->
         data =
           Hexpm.Store.S3.get(region, bucket, key, [])
           |> uncompress.(key)
@@ -66,9 +54,9 @@ if action == "fetch" || action == "fetch-and-upload" do
       end,
       max_concurrency: 20,
       ordered: false,
-      timeout: 60_000
-    )
-    |> Stream.run()
+      timeout: 60_000)
+      |> Stream.run()
+    end)
   end)
 end
 
