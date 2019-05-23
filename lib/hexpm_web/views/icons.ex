@@ -13,7 +13,11 @@ defmodule HexpmWeb.ViewIcons do
 
   :ok = Application.load(:xmerl)
   {:ok, xmerl_version} = :application.get_key(:xmerl, :vsn)
-  broken_xmerl? = Version.compare(List.to_string(xmerl_version), "1.3.20") == :lt
+
+  xmerl_version =
+    xmerl_version |> List.to_string() |> String.split(".") |> Enum.take(3) |> Enum.join(".")
+
+  broken_xmerl? = Version.compare(xmerl_version, "1.3.20") == :lt
 
   doc = File.read!(@octicons_svg)
 
