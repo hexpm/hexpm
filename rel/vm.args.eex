@@ -1,8 +1,5 @@
 ## Customize flags given to the VM: http://erlang.org/doc/man/erl.html
-## -name/-sname/-setcookie are given via the CLI, do not set them here
-
-## Preloads all modules instead of loading them dynamically
--mode embedded
+## -mode/-name/-sname/-setcookie are configured via env vars, do not set them here
 
 ## Number of dirty schedulers doing IO work (file, sockets, etc)
 ##+SDio 5
