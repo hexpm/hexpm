@@ -45,16 +45,19 @@ end
 if action == "fetch" || action == "fetch-and-upload" do
   File.open!(filepath, [:write, :delayed_write, :compressed], fn file ->
     Enum.each(keys, fn {bucket, region, stream} ->
-      Task.async_stream(stream, fn key ->
-        data =
-          Hexpm.Store.S3.get(region, bucket, key, [])
-          |> uncompress.(key)
+      Task.async_stream(
+        stream,
+        fn key ->
+          data =
+            Hexpm.Store.S3.get(region, bucket, key, [])
+            |> uncompress.(key)
 
-        IO.binwrite(file, data)
-      end,
-      max_concurrency: 20,
-      ordered: false,
-      timeout: 60_000)
+          IO.binwrite(file, data)
+        end,
+        max_concurrency: 20,
+        ordered: false,
+        timeout: 60_000
+      )
       |> Stream.run()
     end)
   end)
