@@ -275,54 +275,19 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
   end
 
   def create(conn, params) do
-    case do_create(conn.assigns.current_user, params, audit_data(conn)) do
+    user = conn.assigns.current_user
+
+    case Organizations.create(user, params["organization"], audit: audit_data(conn)) do
       {:ok, organization} ->
         conn
         |> put_flash(:info, "Organization created with one month free trial period active.")
         |> redirect(to: Routes.organization_path(conn, :show, organization))
 
-      {:error, {:organization, changeset}} ->
+      {:error, changeset} ->
         conn
         |> put_status(400)
         |> render_new(changeset: changeset, params: params)
-
-      {:error, {:billing, reason}} ->
-        changeset = Organization.changeset(%Organization{}, params["organization"])
-
-        conn
-        |> put_status(400)
-        |> put_flash(:error, "Oops, something went wrong! Please check the errors below.")
-        |> render_new(
-          changeset: changeset,
-          params: params,
-          errors: reason["errors"]
-        )
     end
-  end
-
-  defp do_create(user, params, audit_data) do
-    Hexpm.Repo.transaction(fn ->
-      case Organizations.create(user, params["organization"], audit: audit_data) do
-        {:ok, organization} ->
-          customer_params =
-            Map.take(params, ["email", "person", "company"])
-            |> Map.put_new("person", nil)
-            |> Map.put_new("company", nil)
-            |> Map.put("token", params["organization"]["name"])
-            |> Map.put("quantity", 1)
-
-          case Hexpm.Billing.create(customer_params) do
-            {:ok, _} ->
-              organization
-
-            {:error, reason} ->
-              Hexpm.Repo.rollback({:billing, reason})
-          end
-
-        {:error, changeset} ->
-          Hexpm.Repo.rollback({:organization, changeset})
-      end
-    end)
   end
 
   defp update_billing(conn, organization, params, fun) do

@@ -1,6 +1,6 @@
 defmodule Hexpm.Repository.Package do
   use HexpmWeb, :schema
-  import Ecto.Query, only: [from: 2, where: 3]
+  import Ecto.Query, only: [from: 2]
 
   @derive {HexpmWeb.Stale, assocs: [:releases, :owners, :downloads]}
   @derive {Phoenix.Param, key: :name}
@@ -93,21 +93,9 @@ defmodule Hexpm.Repository.Package do
     |> validate_metadata_name()
   end
 
-  def owner(package, user) do
-    from(
-      o in PackageOwner,
-      where: o.package_id == ^package.id,
-      where: o.user_id == ^user.id,
-      select: count(o.id) >= 1
-    )
-  end
+  def package_owner(package, user, level \\ "maintainer") do
+    levels = PackageOwner.level_or_higher(level)
 
-  def owner(package, user, level) do
-    owner(package, user)
-    |> where([o], o.level == ^level)
-  end
-
-  def owner_with_access(package, user) do
     from(
       po in PackageOwner,
       left_join: ou in OrganizationUser,
@@ -115,13 +103,25 @@ defmodule Hexpm.Repository.Package do
       where: ou.user_id == ^user.id or ^package.repository.public,
       where: po.package_id == ^package.id,
       where: po.user_id == ^user.id,
+      where: po.level in ^levels,
       select: count(po.id) >= 1
     )
   end
 
-  def owner_with_access(package, user, level) do
-    owner_with_access(package, user)
-    |> where([o], o.level == ^level)
+  def organization_owner(package, user, level \\ "maintainer") do
+    role = PackageOwner.level_to_organization_role(level)
+    roles = Organization.role_or_higher(role)
+
+    from(
+      po in PackageOwner,
+      join: u in assoc(po, :user),
+      join: ou in OrganizationUser,
+      on: u.organization_id == ou.organization_id,
+      where: po.package_id == ^package.id,
+      where: ou.user_id == ^user.id,
+      where: ou.role in ^roles,
+      select: count(po.id) >= 1
+    )
   end
 
   def all(repositories, page, count, search, sort, fields) do

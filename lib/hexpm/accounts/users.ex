@@ -70,6 +70,10 @@ defmodule Hexpm.Accounts.Users do
     end
   end
 
+  def email_verification(%User{organization_id: id}, email) when not is_nil(id) do
+    email
+  end
+
   def email_verification(user, email) do
     email =
       Email.verification(email)
@@ -79,6 +83,10 @@ defmodule Hexpm.Accounts.Users do
     |> Mailer.deliver_now_throttled()
 
     email
+  end
+
+  def update_profile(%User{organization_id: id} = user, _params, _opts) when not is_nil(id) do
+    organization_error(user, "cannot update profile of organizations")
   end
 
   def update_profile(user, params, audit: audit_data) do
@@ -107,6 +115,10 @@ defmodule Hexpm.Accounts.Users do
     end
   end
 
+  def update_password(%User{organization_id: id} = user, _params, _opts) when not is_nil(id) do
+    organization_error(user, "cannot change password of organizations")
+  end
+
   def update_password(user, params, audit: audit_data) do
     multi =
       Multi.new()
@@ -127,7 +139,7 @@ defmodule Hexpm.Accounts.Users do
   end
 
   def verify_email(username, email, key) do
-    with %User{emails: emails} <- get(username, :emails),
+    with %User{organization_id: nil, emails: emails} <- get(username, :emails),
          %Email{} = email <- Enum.find(emails, &(&1.email == email)),
          true <- Email.verify?(email, key),
          {:ok, _} <- Email.verify(email) |> Repo.update() do
@@ -138,7 +150,9 @@ defmodule Hexpm.Accounts.Users do
   end
 
   def password_reset_init(name, audit: audit_data) do
-    if user = get(name, [:emails]) do
+    user = get(name, [:emails])
+
+    if user && !User.organization?(user) do
       changeset = PasswordReset.changeset(build_assoc(user, :password_resets), user)
 
       {:ok, %{reset: reset}} =
@@ -159,7 +173,7 @@ defmodule Hexpm.Accounts.Users do
   def password_reset_finish(username, key, params, revoke_all_keys?, audit: audit_data) do
     user = get(username, [:emails, :password_resets])
 
-    if user && User.can_reset_password?(user, key) do
+    if user && !User.organization?(user) && User.can_reset_password?(user, key) do
       multi =
         password_reset(user, params, revoke_all_keys?)
         |> audit(audit_data, "password.reset.finish", nil)
@@ -188,6 +202,10 @@ defmodule Hexpm.Accounts.Users do
       else: multi
   end
 
+  def add_email(%User{organization_id: id} = user, _params, _opts) when not is_nil(id) do
+    organization_error(user, "cannot add email to organizations")
+  end
+
   def add_email(user, params, audit: audit_data) do
     email = build_assoc(user, :emails)
 
@@ -208,6 +226,10 @@ defmodule Hexpm.Accounts.Users do
       {:error, :email, changeset, _} ->
         {:error, changeset}
     end
+  end
+
+  def remove_email(%User{organization_id: id} = user, _params, _opts) when not is_nil(id) do
+    organization_error(user, "cannot remove email of organizations")
   end
 
   def remove_email(user, params, audit: audit_data) do
@@ -231,6 +253,10 @@ defmodule Hexpm.Accounts.Users do
     end
   end
 
+  def primary_email(%User{organization_id: id} = user, _params, _opts) when not is_nil(id) do
+    organization_error(user, "cannot set email of organizations")
+  end
+
   def primary_email(user, params, opts) do
     multi =
       Multi.new()
@@ -241,6 +267,10 @@ defmodule Hexpm.Accounts.Users do
       {:ok, _} -> :ok
       {:error, :primary_email, reason, _} -> {:error, reason}
     end
+  end
+
+  def gravatar_email(%User{organization_id: id} = user, _params, _opts) when not is_nil(id) do
+    organization_error(user, "cannot set email of organizations")
   end
 
   def gravatar_email(user, params, opts) do
@@ -258,6 +288,10 @@ defmodule Hexpm.Accounts.Users do
 
   defp gravatar_email_multi(multi, user, params, opts) do
     email_flag_multi(multi, user, params, :gravatar, opts)
+  end
+
+  def public_email(%User{organization_id: id} = user, _params, _opts) when not is_nil(id) do
+    organization_error(user, "cannot set email of organizations")
   end
 
   def public_email(user, params, opts) do
@@ -346,5 +380,14 @@ defmodule Hexpm.Accounts.Users do
 
   defp find_email(user, params) do
     Enum.find(user.emails, &(&1.email == params["email"]))
+  end
+
+  defp organization_error(user, message) do
+    {:error,
+     %Ecto.Changeset{
+       data: user,
+       errors: [organization: {message, []}],
+       valid?: false
+     }}
   end
 end

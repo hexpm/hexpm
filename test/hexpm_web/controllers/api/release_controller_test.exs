@@ -13,6 +13,7 @@ defmodule HexpmWeb.API.ReleaseControllerTest do
     %{
       user: user,
       repository: repository,
+      organization: repository.organization,
       package: package,
       release: release
     }
@@ -191,6 +192,80 @@ defmodule HexpmWeb.API.ReleaseControllerTest do
       assert conn.status == 401
       assert get_resp_header(conn, "www-authenticate") == ["Basic realm=hex"]
     end
+
+    test "organization owned package", %{user: user, organization: organization} do
+      package =
+        insert(
+          :package,
+          package_owners: [build(:package_owner, user: organization.user)]
+        )
+
+      meta = %{name: package.name, version: "1.0.0", description: "Domain-specific language."}
+
+      insert(:organization_user, organization: organization, user: user, role: "write")
+
+      build_conn()
+      |> put_req_header("content-type", "application/octet-stream")
+      |> put_req_header("authorization", key_for(user))
+      |> post("api/publish", create_tar(meta, []))
+      |> json_response(201)
+    end
+
+    test "organization owned package authorizes", %{user: user, organization: organization} do
+      package =
+        insert(
+          :package,
+          package_owners: [build(:package_owner, user: organization.user)]
+        )
+
+      meta = %{name: package.name, version: "1.0.0", description: "Domain-specific language."}
+
+      build_conn()
+      |> put_req_header("content-type", "application/octet-stream")
+      |> put_req_header("authorization", key_for(user))
+      |> post("api/publish", create_tar(meta, []))
+      |> json_response(403)
+    end
+
+    test "organization owned package requries write permission", %{
+      user: user,
+      organization: organization
+    } do
+      package =
+        insert(
+          :package,
+          package_owners: [build(:package_owner, user: organization.user)]
+        )
+
+      meta = %{name: package.name, version: "1.0.0", description: "Domain-specific language."}
+
+      insert(:organization_user, organization: organization, user: user, role: "read")
+
+      build_conn()
+      |> put_req_header("content-type", "application/octet-stream")
+      |> put_req_header("authorization", key_for(user))
+      |> post("api/publish", create_tar(meta, []))
+      |> json_response(403)
+    end
+
+    # test "organization needs to have active billing", %{user: user} do
+    #   organization = insert(:organization, billing_active: false)
+    #   insert(:organization_user, organization: organization, user: user, role: "write")
+    #
+    #   package =
+    #     insert(
+    #       :package,
+    #       package_owners: [build(:package_owner, user: organization.user)]
+    #     )
+    #
+    #   meta = %{name: package.name, version: "1.0.0", description: "Domain-specific language."}
+    #
+    #   build_conn()
+    #   |> put_req_header("content-type", "application/octet-stream")
+    #   |> put_req_header("authorization", key_for(user))
+    #   |> post("api/publish", create_tar(meta, []))
+    #   |> json_response(403)
+    # end
 
     test "create package validates", %{user: user, package: package} do
       meta = %{name: package.name, version: "1.0.0", links: "invalid", description: "description"}
@@ -508,7 +583,7 @@ defmodule HexpmWeb.API.ReleaseControllerTest do
     end
   end
 
-  describe "POST /api/repos/:repository/packages/:name/releases" do
+  describe "POST /api/:repository/packages/:name/releases" do
     test "new package authorizes", %{user: user, repository: repository} do
       meta = %{
         name: Fake.sequence(:package),

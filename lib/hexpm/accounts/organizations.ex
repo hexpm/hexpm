@@ -16,12 +16,16 @@ defmodule Hexpm.Accounts.Organizations do
     org_user && org_user.role
   end
 
+  def preload(organization, preload) do
+    Repo.preload(organization, preload)
+  end
+
   def access?(_organization, nil = _user, _role) do
     false
   end
 
   def access?(organization, user, role) do
-    Repo.one!(Organization.has_access(organization, user, role))
+    Repo.one!(Organization.access(organization, user, role))
   end
 
   def create(user, params, audit: audit_data) do
@@ -31,6 +35,7 @@ defmodule Hexpm.Accounts.Organizations do
       |> Multi.insert(:repository, fn %{organization: organization} ->
         %Repository{name: organization.name, public: false, organization_id: organization.id}
       end)
+      |> Multi.insert(:user, &User.build_organization(&1.organization))
       |> Multi.insert(:organization_user, fn %{organization: organization} ->
         organization_user = %OrganizationUser{
           organization_id: organization.id,
@@ -40,16 +45,12 @@ defmodule Hexpm.Accounts.Organizations do
 
         Organization.add_member(organization_user, %{})
       end)
-      |> audit(audit_data, "organization.create", fn %{organization: organization} ->
-        organization
-      end)
+      |> audit(audit_data, "organization.create", & &1.organization)
 
     case Repo.transaction(multi) do
-      {:ok, result} ->
-        {:ok, result.organization}
-
-      {:error, :organization, changeset, _} ->
-        {:error, changeset}
+      {:ok, result} -> {:ok, result.organization}
+      {:error, :user, changeset, _} -> {:error, changeset}
+      {:error, :organization, changeset, _} -> {:error, changeset}
     end
   end
 

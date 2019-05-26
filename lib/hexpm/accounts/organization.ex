@@ -10,6 +10,7 @@ defmodule Hexpm.Accounts.Organization do
     timestamps()
 
     has_one :repository, Repository
+    has_one :user, User
     has_many :organization_users, OrganizationUser
     has_many :users, through: [:organization_users, :user]
     has_many :keys, Key
@@ -48,13 +49,13 @@ defmodule Hexpm.Accounts.Organization do
     |> validate_inclusion(:role, @roles)
   end
 
-  def has_access(organization, user, role) do
+  def access(organization, user, role) do
     from(
-      ro in OrganizationUser,
-      where: ro.organization_id == ^organization.id,
-      where: ro.user_id == ^user.id,
-      where: ro.role in ^role_or_higher(role),
-      select: count(ro.id) >= 1
+      ou in OrganizationUser,
+      where: ou.organization_id == ^organization.id,
+      where: ou.user_id == ^user.id,
+      where: ou.role in ^role_or_higher(role),
+      select: count(ou.id) >= 1
     )
   end
 

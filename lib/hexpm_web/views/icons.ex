@@ -15,7 +15,11 @@ defmodule HexpmWeb.ViewIcons do
   {:ok, xmerl_version} = :application.get_key(:xmerl, :vsn)
 
   xmerl_version =
-    xmerl_version |> List.to_string() |> String.split(".") |> Enum.take(3) |> Enum.join(".")
+    xmerl_version
+    |> List.to_string()
+    |> String.split(".")
+    |> Enum.take(3)
+    |> Enum.join(".")
 
   broken_xmerl? = Version.compare(xmerl_version, "1.3.20") == :lt
 

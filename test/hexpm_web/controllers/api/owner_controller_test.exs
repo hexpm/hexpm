@@ -259,6 +259,78 @@ defmodule HexpmWeb.API.OwnerControllerTest do
       assert Owners.get(package, user2).level == "maintainer"
     end
 
+    test "transfer ownership", %{user1: user1, user2: user2, package: package} do
+      build_conn()
+      |> put_req_header("authorization", key_for(user1))
+      |> put("api/packages/#{package.name}/owners/#{user2.username}", %{"transfer" => true})
+      |> response(204)
+
+      assert [owner] = assoc(package, :owners) |> Hexpm.Repo.all()
+      assert owner.id == user2.id
+    end
+
+    test "transfer organization ownership", %{user1: user1, package: package} do
+      organization = insert(:organization)
+
+      build_conn()
+      |> put_req_header("authorization", key_for(user1))
+      |> put("api/packages/#{package.name}/owners/#{organization.name}", %{"transfer" => true})
+      |> response(204)
+
+      assert [owner] = assoc(package, :owners) |> Hexpm.Repo.all()
+      assert owner.id == organization.user.id
+    end
+
+    test "cannot add organization owner", %{user1: user1, package: package} do
+      organization = insert(:organization)
+
+      build_conn()
+      |> put_req_header("authorization", key_for(user1))
+      |> put("api/packages/#{package.name}/owners/#{organization.name}")
+      |> response(422)
+    end
+
+    test "organization members can add owners" do
+      user1 = insert(:user)
+      user2 = insert(:user)
+      organization = insert(:organization)
+      package = insert(:package, package_owners: [build(:package_owner, user: organization.user)])
+      insert(:organization_user, organization: organization, user: user1, role: "admin")
+      insert(:organization_user, organization: organization, user: user2, role: "read")
+
+      build_conn()
+      |> put_req_header("authorization", key_for(user1))
+      |> put("api/packages/#{package.name}/owners/#{user2.username}")
+      |> response(204)
+    end
+
+    test "organization members cannot add outside owners" do
+      user1 = insert(:user)
+      user2 = insert(:user)
+      organization = insert(:organization)
+      package = insert(:package, package_owners: [build(:package_owner, user: organization.user)])
+      insert(:organization_user, organization: organization, user: user1, role: "admin")
+
+      build_conn()
+      |> put_req_header("authorization", key_for(user1))
+      |> put("api/packages/#{package.name}/owners/#{user2.username}")
+      |> response(422)
+    end
+
+    test "only organization admins can add owners" do
+      user1 = insert(:user)
+      user2 = insert(:user)
+      organization = insert(:organization)
+      package = insert(:package, package_owners: [build(:package_owner, user: organization.user)])
+      insert(:organization_user, organization: organization, user: user1, role: "write")
+      insert(:organization_user, organization: organization, user: user2, role: "read")
+
+      build_conn()
+      |> put_req_header("authorization", key_for(user1))
+      |> put("api/packages/#{package.name}/owners/#{user2.username}")
+      |> response(403)
+    end
+
     test "cannot add package owner with maintainer level", %{user2: user2, package: package} do
       insert(:package_owner, package: package, user: user2, level: "maintainer")
       user3 = insert(:user)

@@ -18,4 +18,10 @@ defmodule Hexpm.Repository.PackageOwner do
     |> validate_required(:level)
     |> validate_inclusion(:level, @valid_levels)
   end
+
+  def level_to_organization_role("maintainer"), do: "write"
+  def level_to_organization_role("full"), do: "admin"
+
+  def level_or_higher("maintainer"), do: ["maintainer", "full"]
+  def level_or_higher("full"), do: ["full"]
 end
