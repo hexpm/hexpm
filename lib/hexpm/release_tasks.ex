@@ -161,14 +161,23 @@ defmodule Hexpm.ReleaseTasks do
     Path.join([priv_dir, "repo", filename])
   end
 
+  # TODO: Move all scripts to release tasks
   defp run_script(args) do
     [script | args] = args
 
     priv_dir = Application.app_dir(:hexpm, "priv")
     script_dir = Path.join(priv_dir, "scripts")
+    original_argv = System.argv()
 
     Logger.info("[script] running #{script} #{inspect(args)}")
-    Code.eval_file(script, script_dir)
+
+    try do
+      System.argv(args)
+      Code.eval_file(script, script_dir)
+    after
+      System.argv(original_argv)
+    end
+
     Logger.info("[script] finished #{script} #{inspect(args)}")
   end
 end
