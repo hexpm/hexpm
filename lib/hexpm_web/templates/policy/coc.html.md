@@ -52,7 +52,7 @@ Packages must contain some functionality. "Squatting", that is, publishing an em
 
 Packages must not contain illegal or infringing content. You should only publish packages or other materials to the Service if you have the right to do so. This includes complying with all software license agreements or other intellectual property restrictions. For example, redistributing an MIT-licensed module with the copyright notice removed, would not be allowed. You will be responsible for any violation of laws or others’ intellectual property rights.
 
-Packages must have a license that allows any users access to the package and it's contents for use as a dependency in their project. The license may impose sensible restrictions on how the package can be used or add requirements to the project using it. Examples of licenses that can be used is (but not limited to): MIT, Apache, BSD, GPL, WTFPL and Unlicense.
+Packages must specify a license under which users can access and use the package and its contents as a dependency in their project. The license may impose sensible restrictions on how the package can be used or add requirements to the project using it. Examples of licenses that can be used is (but not limited to): MIT, Apache-2.0, BSD-3-Clause, GPL-3.0-or-later, WTFPL and Unlicense. See [Open Source Initiative](https://opensource.org/) and [SPDX License List](https://spdx.org/licenses/).
 
 Packages must not be malware. For example, a package which is designed to maliciously exploit or damage computer systems, is not allowed. However, an explicitly documented penetration testing library designed to be used for white-hat security research would most likely be fine.
 

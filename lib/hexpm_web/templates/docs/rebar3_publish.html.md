@@ -96,7 +96,7 @@ Only Hex packages may be used as dependencies of the package. It is not possible
                    erlware_commons,
                    bbmustache,
                    providers]},
-   {licenses, ["Apache"]},
+   {licenses, ["Apache-2.0"]},
    {links, [{"GitHub", "https://github.com/erlware/relx"}]}]}.
 
 ```

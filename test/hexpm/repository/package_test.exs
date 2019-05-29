@@ -39,7 +39,7 @@ defmodule Hexpm.Repository.PackageTest do
     Package.update(package, %{
       "meta" => %{
         "description" => "updated",
-        "licenses" => ["Apache"]
+        "licenses" => ["Apache-2.0"]
       }
     })
     |> Hexpm.Repo.update!()
@@ -141,7 +141,7 @@ defmodule Hexpm.Repository.PackageTest do
 
   test "search extra metadata", %{user: user, repository: repository} do
     meta = %{
-      "licenses" => ["apache", "BSD"],
+      "licenses" => ["Apache-2.0", "BSD-3-Clause"],
       "links" => %{"github" => "https://github.com", "docs" => "https://hexdocs.pm"},
       "description" => "description",
       "extra" => %{"foo" => %{"bar" => "baz"}, "list" => ["a", 1]}

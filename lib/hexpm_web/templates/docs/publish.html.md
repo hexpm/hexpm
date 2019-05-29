@@ -45,7 +45,7 @@ Under the `:package` property are some additional configuration options:
   <dt><code>:organization</code></dt>
   <dd>The organization the package belongs to. The package will be published to the organization repository, defaults to the global <code>"hexpm"</code> repository.</dd>
   <dt><code>:licenses</code></dt>
-  <dd>A list of licenses the project is licensed under. This attribute is required.</dd>
+  <dd>A list of licenses the project is licensed under. This attribute is required. It is recommended to use <a href="https://spdx.org/licenses/">SPDX License identifier</a>.</dd>
   <dt><code>:links</code></dt>
   <dd>A map where the key is a link name and the value is the link URL. Optional but highly recommended.</dd>
   <dt><code>:files</code></dt>
@@ -124,7 +124,7 @@ defmodule Postgrex.MixProject do
       # These are the default files included in the package
       files: ~w(lib priv .formatter.exs mix.exs README* readme* LICENSE*
                 license* CHANGELOG* changelog* src),
-      licenses: ["Apache 2.0"],
+      licenses: ["Apache-2.0"],
       links: %{"GitHub" => "https://github.com/elixir-ecto/postgrex"}
     ]
   end
