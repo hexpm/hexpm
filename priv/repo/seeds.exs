@@ -59,7 +59,7 @@ Hexpm.Repo.transaction(fn ->
       meta:
         build(
           :package_metadata,
-          licenses: ["Apache 2.0", "MIT"],
+          licenses: ["Apache-2.0", "MIT"],
           links: %{
             "Github" => "http://example.com/github",
             "Documentation" => "http://example.com/documentation"
@@ -139,7 +139,7 @@ Hexpm.Repo.transaction(fn ->
       meta:
         build(
           :package_metadata,
-          licenses: ["Apache 2.0"],
+          licenses: ["Apache-2.0"],
           links: %{"Github" => "http://example.com/github"},
           description: lorem
         )
@@ -544,7 +544,7 @@ Hexpm.Repo.transaction(fn ->
       meta:
         build(
           :package_metadata,
-          licenses: ["Apache 2.0"],
+          licenses: ["Apache-2.0"],
           links: %{"Github" => "http://example.com/github"},
           description: lorem,
           extra: %{"foo" => %{"bar" => "baz"}, "key" => "value 1"}
@@ -576,7 +576,7 @@ Hexpm.Repo.transaction(fn ->
         meta:
           build(
             :package_metadata,
-            licenses: ["Apache 2.0"],
+            licenses: ["Apache-2.0"],
             links: %{"Github" => "http://example.com/github"},
             description: lorem,
             extra: %{"list" => ["a", "b", "c"], "foo" => %{"bar" => "baz"}, "key" => "value"}

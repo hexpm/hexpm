@@ -6,7 +6,7 @@ defmodule Hexpm.TestHelpers do
       meta
       |> Map.put_new(:app, meta[:name])
       |> Map.put_new(:build_tools, ["mix"])
-      |> Map.put_new(:licenses, ["Apache"])
+      |> Map.put_new(:licenses, ["Apache-2.0"])
       |> Map.put_new(:requirements, %{})
 
     contents_path = Path.join(@tmp, "#{meta[:name]}-#{meta[:version]}-contents.tar.gz")
@@ -42,7 +42,7 @@ defmodule Hexpm.TestHelpers do
 
   def pkg_meta(meta) do
     params = params(meta)
-    meta = Map.put_new(params, "licenses", ["Apache"])
+    meta = Map.put_new(params, "licenses", ["Apache-2.0"])
     Map.put(params, "meta", meta)
   end
 
