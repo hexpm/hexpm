@@ -42,6 +42,8 @@ config :phoenix, :format_encoders,
   erlang: HexpmWeb.ErlangFormat,
   json: Jason
 
+config :phoenix, :json_library, Jason
+
 config :mime, :types, %{
   "application/vnd.hex+json" => ["json"],
   "application/vnd.hex+elixir" => ["elixir"],

@@ -2,14 +2,19 @@
   "repository": {},
   "license": "Apache-2.0",
   "devDependencies": {
-    "babel-brunch": "^6.0.0",
-    "brunch": "^2.0.0",
-    "clean-css-brunch": "^2.0.0",
-    "css-brunch": "^2.0.0",
-    "javascript-brunch": "^2.0.0",
+    "@babel/core": "^7.0.0",
+    "@babel/preset-env": "^7.0.0",
+    "babel-loader": "^8.0.0",
+    "copy-webpack-plugin": "^4.5.0",
+    "css-loader": "^0.28.10",
+    "mini-css-extract-plugin": "^0.4.0",
+    "node-sass": "^4.12.0",
+    "optimize-css-assets-webpack-plugin": "^4.0.0",
     "phoenix": "file:../deps/phoenix",
-    "sass-brunch": "^2.0.0",
-    "uglify-js-brunch": "^2.0.0"
+    "sass-loader": "^7.1.0",
+    "uglifyjs-webpack-plugin": "^1.2.4",
+    "webpack": "4.4.0",
+    "webpack-cli": "^2.0.10"
   },
   "dependencies": {
     "phoenix_html": "file:../deps/phoenix_html"
