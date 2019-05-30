@@ -18,3 +18,4 @@ exclude_paths:
   - test
   - assets/vendor
   - assets/css/vendor
+  - assets/webpack.config.js
