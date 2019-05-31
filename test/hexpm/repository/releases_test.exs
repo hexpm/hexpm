@@ -79,7 +79,6 @@ defmodule Hexpm.Repository.ReleasesTest do
       assert %{name: "is reserved"} = errors_on(changeset)
     end
 
-    @tag :only
     test "cant publish reserved package version", %{package: package, user: user} do
       Repo.insert_all("reserved_packages", [
         %{"repository_id" => 1, "name" => package.name, "version" => "0.2.0"}
