@@ -11,6 +11,7 @@ defmodule HexpmWeb.Dashboard.EmailControllerTest do
 
   setup do
     email = Fake.sequence(:email)
+    mock_pwned()
 
     %{
       user: create_user(Fake.sequence(:username), email, "hunter42"),

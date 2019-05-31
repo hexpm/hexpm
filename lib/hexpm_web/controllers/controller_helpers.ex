@@ -325,6 +325,10 @@ defmodule HexpmWeb.ControllerHelpers do
   def auth_error_message(:unconfirmed),
     do: "Email has not been verified yet. You can resend the verification email below."
 
+  def password_breached_message(),
+    do: "The password you provided has previously been breached.
+      To increase your security, please change your password."
+
   def requires_login(conn, _opts) do
     if logged_in?(conn) do
       conn
