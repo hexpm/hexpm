@@ -74,7 +74,7 @@ defmodule HexpmWeb.ControllerHelpers do
   defp interpolate_errors(message, opts) do
     Enum.reduce(opts, message, fn {key, value}, message ->
       if String.Chars.impl_for(key) && String.Chars.impl_for(value) do
-        String.replace(message, "%{#{key}}", to_string(value))
+        String.replace(message, "%{#{key}}", inspect(value))
       else
         raise "Unable to translate error: #{inspect({message, opts})}"
       end
