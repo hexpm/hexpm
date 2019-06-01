@@ -3,6 +3,7 @@ defmodule Hexpm.Accounts.Pwned.Hexpm do
 
   @base_url "https://api.pwnedpasswords.com/"
   @weakness_threshold 1
+  @timeout 500
 
   @spec password_breached?(String.t()) :: boolean
   def password_breached?(string_password) do
@@ -23,11 +24,13 @@ defmodule Hexpm.Accounts.Pwned.Hexpm do
     url = @base_url <> "range/#{searchable_range}"
     headers = [{"User-Agent", "hexpm"}]
 
-    with {:ok, 200, _headers, ref} <- :hackney.get(url, headers, "", []),
-         {:ok, body} <- :hackney.body(ref) do
-      String.split(body, "\r\n")
-    else
-      []
+    case :hackney.get(url, headers, "", connect_timeout: @timeout, recv_timeout: @timeout) do
+      {:ok, 200, _headers, ref} ->
+        {:ok, body} = :hackney.body(ref)
+        String.split(body, "\r\n")
+
+      {:error, _} ->
+        []
     end
   end
 
