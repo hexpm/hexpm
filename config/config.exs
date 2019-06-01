@@ -8,7 +8,7 @@ config :hexpm,
   store_impl: Hexpm.Store.Local,
   cdn_impl: Hexpm.CDN.Local,
   billing_impl: Hexpm.Billing.Local,
-  pwned_impl: Hexpm.Accounts.Pwned
+  pwned_impl: Hexpm.Accounts.Pwned.Hexpm
 
 config :hexpm, ecto_repos: [Hexpm.RepoBase]
 

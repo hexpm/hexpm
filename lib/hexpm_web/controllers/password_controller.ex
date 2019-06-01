@@ -40,9 +40,12 @@ defmodule HexpmWeb.PasswordController do
            audit: audit_data(conn)
          ) do
       :ok ->
+        breached? = Hexpm.Accounts.Pwned.password_breached?(params["password"])
+
         conn
         |> clear_session()
         |> configure_session(renew: true)
+        |> maybe_put_flash(breached?)
         |> put_flash(:info, "Your account password has been changed to your new password.")
         |> redirect(to: Routes.page_path(HexpmWeb.Endpoint, :index))
 
@@ -68,5 +71,11 @@ defmodule HexpmWeb.PasswordController do
       key: key,
       changeset: changeset
     )
+  end
+
+  defp maybe_put_flash(conn, false), do: conn
+
+  defp maybe_put_flash(conn, true) do
+    put_flash(conn, :error, password_breached_message())
   end
 end
