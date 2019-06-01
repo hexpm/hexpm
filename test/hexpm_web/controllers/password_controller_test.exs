@@ -4,6 +4,7 @@ defmodule HexpmWeb.PasswordControllerTest do
   alias Hexpm.Repo
 
   setup do
+    mock_pwned()
     user = insert(:user, password: Auth.gen_password("hunter42"))
     %{user: user}
   end
