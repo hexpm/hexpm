@@ -57,7 +57,7 @@ defmodule Hexpm.TestHelpers do
   def params(other), do: other
 
   def mock_pwned() do
-    Mox.stub(Hexpm.Accounts.Pwned.Mock, :password_breached?, fn _password -> false end)
+    Mox.stub(Hexpm.Pwned.Mock, :password_breached?, fn _password -> false end)
   end
 
   defp requirements_meta(list) do

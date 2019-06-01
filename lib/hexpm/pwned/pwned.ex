@@ -1,7 +1,7 @@
-defmodule Hexpm.Accounts.Pwned do
+defmodule Hexpm.Pwned do
   @moduledoc """
-    This module acts as an interface to the haveibeenpwned API
-    https://haveibeenpwned.com/API/v2
+  This module acts as an interface to the haveibeenpwned API
+  https://haveibeenpwned.com/API/v2
   """
 
   @callback password_breached?(String.t()) :: boolean()

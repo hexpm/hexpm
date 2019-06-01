@@ -40,7 +40,7 @@ defmodule HexpmWeb.PasswordController do
            audit: audit_data(conn)
          ) do
       :ok ->
-        breached? = Hexpm.Accounts.Pwned.password_breached?(params["password"])
+        breached? = Hexpm.Pwned.password_breached?(params["password"])
 
         conn
         |> clear_session()

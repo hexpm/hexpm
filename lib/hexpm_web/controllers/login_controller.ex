@@ -14,7 +14,7 @@ defmodule HexpmWeb.LoginController do
   def create(conn, %{"username" => username, "password" => password}) do
     case password_auth(username, password) do
       {:ok, user} ->
-        breached? = Hexpm.Accounts.Pwned.password_breached?(password)
+        breached? = Hexpm.Pwned.password_breached?(password)
 
         conn
         |> configure_session(renew: true)

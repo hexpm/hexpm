@@ -1,5 +1,5 @@
-defmodule Hexpm.Accounts.Pwned.Hexpm do
-  @behaviour Hexpm.Accounts.Pwned
+defmodule Hexpm.Pwned.Hexpm do
+  @behaviour Hexpm.Pwned
 
   @base_url "https://api.pwnedpasswords.com/"
   @weakness_threshold 1
@@ -17,16 +17,18 @@ defmodule Hexpm.Accounts.Pwned.Hexpm do
     :sha
     |> :crypto.hash(string_password)
     |> Base.encode16()
-    |> String.upcase()
   end
 
   defp range(searchable_range) do
     url = @base_url <> "range/#{searchable_range}"
     headers = [{"User-Agent", "hexpm"}]
 
-    case :hackney.get(url, headers, "", connect_timeout: @timeout, recv_timeout: @timeout) do
-      {:ok, 200, _headers, ref} ->
-        {:ok, body} = :hackney.body(ref)
+    case :hackney.get(url, headers, "",
+           connect_timeout: @timeout,
+           recv_timeout: @timeout,
+           with_body: true
+         ) do
+      {:ok, 200, _headers, body} ->
         String.split(body, "\r\n")
 
       {:error, _} ->

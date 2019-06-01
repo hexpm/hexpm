@@ -13,7 +13,7 @@ defmodule HexpmWeb.Dashboard.PasswordController do
 
     case Users.update_password(user, params["user"], audit: audit_data(conn)) do
       {:ok, _user} ->
-        breached? = Hexpm.Accounts.Pwned.password_breached?(params["user"]["password"])
+        breached? = Hexpm.Pwned.password_breached?(params["user"]["password"])
 
         conn
         |> put_flash(:info, "Your password has been updated.")
