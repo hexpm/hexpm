@@ -39,21 +39,11 @@ defmodule Hexpm.Pwned.Hexpm do
   defp occurrences_of_hash(<<searchable_range::bytes-5, remainder::binary>>) do
     searchable_range
     |> range()
-    |> Enum.find(fn data ->
-      [hash | _t] = String.split(data, ":")
-      hash == remainder
+    |> Enum.map(&String.split(&1, ":"))
+    |> Enum.find_value("0", fn
+      [^remainder, occurrences] -> occurrences
+      _ -> nil
     end)
-    |> number_of_occurrences()
-  end
-
-  defp number_of_occurrences(nil), do: 0
-
-  defp number_of_occurrences(str) do
-    [_hash, occurrences] = String.split(str, ":")
-
-    case Integer.parse(occurrences) do
-      {number, _extra} -> number
-      _ -> 0
-    end
+    |> String.to_integer()
   end
 end
