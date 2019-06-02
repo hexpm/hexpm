@@ -13,6 +13,7 @@ defmodule Hexpm.Accounts.User do
 
     embeds_one :handles, UserHandles, on_replace: :delete
 
+    belongs_to :organization, Organization
     has_many :emails, Email
     has_many :package_owners, PackageOwner
     has_many :owned_packages, through: [:package_owners, :package]
@@ -27,8 +28,8 @@ defmodule Hexpm.Accounts.User do
 
   @reserved_names ~w(me hex hexpm elixir erlang otp)
 
-  defp changeset(user, :create, params, confirmed?) do
-    cast(user, params, ~w(username full_name password)a)
+  def build(params, confirmed? \\ not Application.get_env(:hexpm, :user_confirm)) do
+    cast(%User{}, params, ~w(username full_name password)a)
     |> validate_required(~w(username password)a)
     |> cast_assoc(:emails, required: true, with: &Email.changeset(&1, :first, &2, confirmed?))
     |> update_change(:username, &String.downcase/1)
@@ -41,8 +42,13 @@ defmodule Hexpm.Accounts.User do
     |> update_change(:password, &Auth.gen_password/1)
   end
 
-  def build(params, confirmed? \\ not Application.get_env(:hexpm, :user_confirm)) do
-    changeset(%Hexpm.Accounts.User{}, :create, params, confirmed?)
+  def build_organization(organization) do
+    change(%User{username: organization.name, organization_id: organization.id}, %{})
+    |> update_change(:username, &String.downcase/1)
+    |> validate_length(:username, min: 3)
+    |> validate_format(:username, @username_regex)
+    |> validate_exclusion(:username, @reserved_names)
+    |> unique_constraint(:username, name: "users_username_idx")
   end
 
   def update_profile(user, params) do
@@ -136,4 +142,6 @@ defmodule Hexpm.Accounts.User do
   def verify_permissions(%User{}, _domain, _resource) do
     :error
   end
+
+  def organization?(user), do: user.organization_id != nil
 end

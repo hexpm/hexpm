@@ -1,6 +1,7 @@
 defmodule Hexpm.Emails do
-  import Bamboo.Email
   use Bamboo.Phoenix, view: HexpmWeb.EmailView
+  import Bamboo.Email
+  alias Hexpm.Accounts.{Email, User}
 
   def owner_added(package, owners, owner) do
     email()
@@ -75,9 +76,17 @@ defmodule Hexpm.Emails do
   end
 
   defp email_to(email, to) do
-    to = to |> List.wrap() |> Enum.sort()
+    to =
+      to
+      |> List.wrap()
+      |> Enum.reject(&organization?/1)
+      |> Enum.sort()
+
     to(email, to)
   end
+
+  defp organization?(%Email{user: user}), do: organization?(user)
+  defp organization?(%User{} = user), do: User.organization?(user)
 
   defp email() do
     new_email()

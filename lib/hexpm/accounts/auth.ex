@@ -1,7 +1,7 @@
 defmodule Hexpm.Accounts.Auth do
   import Ecto.Query, only: [from: 2]
 
-  alias Hexpm.Accounts.{Key, Keys, Users}
+  alias Hexpm.Accounts.{Key, Keys, User, Users}
 
   def key_auth(user_secret, usage_info) do
     # Database index lookup on the first part of the key and then
@@ -28,7 +28,9 @@ defmodule Hexpm.Accounts.Auth do
         :error
 
       key ->
-        if Hexpm.Utils.secure_check(key.secret_second, second) do
+        valid_auth = !key.user || !User.organization?(key.user)
+
+        if valid_auth && Hexpm.Utils.secure_check(key.secret_second, second) do
           if Key.revoked?(key) do
             :revoked
           else
@@ -51,8 +53,9 @@ defmodule Hexpm.Accounts.Auth do
 
   def password_auth(username_or_email, password) do
     user = Users.get(username_or_email, [:owned_packages, :emails, organizations: :repository])
+    valid_user = user && !User.organization?(user) && user.password
 
-    if user && user.password && Bcrypt.verify_pass(password, user.password) do
+    if valid_user && Bcrypt.verify_pass(password, user.password) do
       {:ok,
        %{
          key: nil,

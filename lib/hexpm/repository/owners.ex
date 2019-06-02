@@ -15,35 +15,84 @@ defmodule Hexpm.Repository.Owners do
 
   def add(package, user, params, audit: audit_data) do
     repository = package.repository
-    owners = all(package, user: :emails)
+    owners = all(package, user: [:emails, :organization])
+    organization_owner = Enum.find(owners, &User.organization?(&1.user))
+    repository_access = Organizations.access?(repository.organization, user, "read")
+    owner_organization = organization_owner && organization_owner.user.organization
+
+    organization_access =
+      owner_organization && Organizations.access?(owner_organization, user, "read")
+
+    cond do
+      !repository.public && !repository_access ->
+        {:error, :not_member}
+
+      # Outside collaborators are not allowed at this time
+      owner_organization && !organization_access ->
+        {:error, :not_member}
+
+      User.organization?(user) && Map.get(params, "transfer", false) != true ->
+        {:error, :not_organization_transfer}
+
+      User.organization?(user) && Map.get(params, "level", "full") != "full" ->
+        {:error, :organization_level}
+
+      !User.organization?(user) && Organizations.get(user.username) ->
+        {:error, :organization_user_conflict}
+
+      true ->
+        add_owner(package, owners, user, params, audit_data)
+    end
+  end
+
+  defp add_owner(package, owners, user, params, audit_data) do
     owner = Enum.find(owners, &(&1.user_id == user.id))
     owner = owner || %PackageOwner{package_id: package.id, user_id: user.id}
     changeset = PackageOwner.changeset(owner, params)
 
-    if repository.public or Organizations.access?(repository.organization, user, "read") do
-      multi =
-        Multi.new()
-        |> Multi.insert_or_update(:owner, changeset)
-        |> audit(audit_data, "owner.add", fn %{owner: owner} ->
-          {package, owner.level, user}
-        end)
+    multi =
+      Multi.new()
+      |> Multi.insert_or_update(:owner, changeset)
+      |> remove_existing_owners(owners, params)
+      |> audit(audit_data, add_owner_audit_log_action(params), fn %{owner: owner} ->
+        {package, owner.level, user}
+      end)
 
-      case Repo.transaction(multi) do
-        {:ok, %{owner: owner}} ->
-          # TODO: Separate email for the affected person
-          owners = Enum.map(owners, & &1.user)
+    case Repo.transaction(multi) do
+      {:ok, %{owner: owner}} ->
+        # TODO: Separate email for the affected person
+        owners = Enum.map(owners, & &1.user)
 
-          Emails.owner_added(package, [user | owners], user)
-          |> Mailer.deliver_now_throttled()
+        Emails.owner_added(package, [user | owners], user)
+        |> Mailer.deliver_now_throttled()
 
-          {:ok, %{owner | user: user}}
+        {:ok, %{owner | user: user}}
 
-        {:error, :owner, changeset, _} ->
-          {:error, changeset}
-      end
-    else
-      {:error, :not_member}
+      {:error, :owner, changeset, _} ->
+        {:error, changeset}
     end
+  end
+
+  defp add_owner_audit_log_action(%{"transfer" => true}), do: "owner.transfer"
+  defp add_owner_audit_log_action(_params), do: "owner.add"
+
+  defp remove_existing_owners(multi, owners, %{"transfer" => true}) do
+    Multi.run(multi, :removed_owners, fn repo, %{owner: owner} ->
+      owner_ids =
+        owners
+        |> Enum.filter(&(&1.id != owner.id))
+        |> Enum.map(& &1.id)
+
+      {num_rows, _} =
+        from(po in PackageOwner, where: po.id in ^owner_ids)
+        |> repo.delete_all()
+
+      {:ok, num_rows}
+    end)
+  end
+
+  defp remove_existing_owners(multi, _owners, _params) do
+    multi
   end
 
   def remove(package, user, audit: audit_data) do

@@ -10,48 +10,31 @@
       <div class="panel-heading">Create new organization</div>
       <div class="panel-body">
         <p>
-          With organizations you can publish and host private packages with fine-grained access
-          control to packages for your organization members. For more information see the
+          With organizations you can manage public packages with fine-grained access control to
+          packages for your organization members. With a paid organization you can publish and
+          host private packages, or more information see the
           <a href="<%= Routes.docs_path(Endpoint, :private) %>">private package documentation</a>.
         </p>
         <p>
           The first month is free and you don't need to enter any payment information to try out
-          organizations. After the first month the cost for organizations is
-          <strong>$7.00 per user / month</strong>.
+          private packages. After the first month the cost to use private packages with
+          organizations is <strong>$7.00 per user / month</strong>. If you wish to continue with
+          private packages after the trial period add your billing details on the
+          <a href="<%= Routes.organization_path(Endpoint, :new) %>">organization dashboard</a>.
         </p>
         <br>
 
-        <ul class="nav nav-tabs" role="tablist">
-          <li role="presentation" class="<%= if !@params["company"] do %>active<% end %>"><a href="#person" aria-controls="person" role="tab" data-toggle="tab">Person</a></li>
-          <li role="presentation" class="<%= if @params["company"] do %>active<% end %>"><a href="#company" aria-controls="company" role="tab" data-toggle="tab">Company</a></li>
-        </ul>
-
-        <div class="tab-content">
-          <div role="tabpanel" class="tab-pane <%= if !@params["company"] do %>active<% end %>" id="person">
-            <%= form_for @changeset, Routes.organization_path(Endpoint, :create), fn f -> %>
-              <div class="form-group">
-                <%= label f, :password_current, "Organization name" %>
-                <%= text_input f, :name, [placeholder: "Only allows lowercase letters and underscore", required: true, pattern: "[a-z]\\w*", "aria-describedby": "name-helpblock"] %>
-                <%= error_tag f, :name %>
-                <span id="name-helpbox" class="help-block">This name will be used when you declare your dependencies in <code>mix.exs</code>.</span>
-              </div>
-              <%= render "_billing_person.html", assigns %>
-              <%= submit "Submit", class: "btn btn-primary" %>
-            <% end %>
+        <%= form_for @changeset, Routes.organization_path(Endpoint, :create), fn f -> %>
+          <div class="form-group">
+            <%= label f, :password_current, "Organization name" %>
+            <%= text_input f, :name, [placeholder: "Only allows lowercase letters and underscore", required: true, pattern: "[a-z]\\w*", "aria-describedby": "name-helpblock"] %>
+            <%= error_tag f, :name %>
+            <%# from User.username unique constraint %>
+            <%= error_tag f, :username %>
+            <span id="name-helpbox" class="help-block">This name will be used when you declare your dependencies in <code>mix.exs</code>.</span>
           </div>
-          <div role="tabpanel" class="tab-pane <%= if @params["company"] do %>active<% end %>" id="company">
-            <%= form_for @changeset, Routes.organization_path(Endpoint, :create), fn f -> %>
-              <div class="form-group">
-                <%= label f, :password_current, "Organization name" %>
-                <%= text_input f, :name, [placeholder: "Only lowercase letters and underscore", required: true, pattern: "[a-z]\\w*", "aria-describedby": "name-helpblock"] %>
-                <%= error_tag f, :name %>
-                <span id="name-helpbox" class="help-block">This name will be used when you declare your dependencies in <code>mix.exs</code>.</span>
-              </div>
-              <%= render "_billing_company.html", assigns %>
-              <%= submit "Submit", class: "btn btn-primary" %>
-            <% end %>
-          </div>
-        </div>
+          <%= submit "Submit", class: "btn btn-primary" %>
+        <% end %>
       </div>
     </div>
   </div>

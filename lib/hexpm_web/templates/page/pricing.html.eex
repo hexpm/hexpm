@@ -35,7 +35,7 @@
     <div class="box">
       <div class="shadow"></div>
       <div class="text-content">
-        <h3>Organization</h3>
+        <h3>Private packages</h3>
         <p>For private projects with teams of users.</p>
         <div class="price price-monthly">
           <div class="price-amount">$7</div>
@@ -48,8 +48,6 @@
         <ul class="features">
           <li><strong>&gt;</strong> Unlimited number of <strong>private</strong> packages</li>
           <li><strong>&gt;</strong> <strong>Private</strong> package documentation</li>
-          <li><strong>&gt;</strong> Multiple package owners</li>
-          <li><strong>&gt;</strong> Organization-wide user permissions</li>
           <li><strong>&gt;</strong> Republish and delete packages</li>
         </ul>
         <div class="action">

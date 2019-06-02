@@ -25,7 +25,7 @@ defmodule HexpmWeb.API.DocsControllerTest do
       insert(:release, package: package, version: "0.0.1", has_docs: true)
 
       conn = get(build_conn(), "api/packages/#{package.name}/releases/0.0.1/docs")
-      assert redirected_to(conn) == "http://localhost:5000/docs/#{package.name}-0.0.1.tar.gz"
+      assert redirected_to(conn) =~ "/docs/#{package.name}-0.0.1.tar.gz"
     end
   end
 
@@ -56,8 +56,7 @@ defmodule HexpmWeb.API.DocsControllerTest do
         |> put_req_header("authorization", key_for(user))
         |> get("api/repos/#{repository.name}/packages/#{package.name}/releases/0.0.1/docs")
 
-      assert redirected_to(conn) ==
-               "http://localhost:5000/repos/#{repository.name}/docs/#{package.name}-0.0.1.tar.gz"
+      assert redirected_to(conn) =~ "/repos/#{repository.name}/docs/#{package.name}-0.0.1.tar.gz"
     end
   end
 

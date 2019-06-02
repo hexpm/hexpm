@@ -91,6 +91,9 @@ defmodule Hexpm.Accounts.AuditLog do
   defp extract_params("owner.add", {package, level, user}),
     do: %{package: serialize(package), level: level, user: serialize(user)}
 
+  defp extract_params("owner.transfer", {package, level, user}),
+    do: %{package: serialize(package), level: level, user: serialize(user)}
+
   defp extract_params("owner.remove", {package, level, user}),
     do: %{package: serialize(package), level: level, user: serialize(user)}
 

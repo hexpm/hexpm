@@ -24,22 +24,19 @@ defmodule Hexpm.Repository.Packages do
     package && %{package | repository: repository}
   end
 
-  def owner?(package, user) do
-    Package.owner(package, user)
-    |> Repo.one!()
-  end
-
   def owner_with_access?(package, user) do
     repository = package.repository
 
-    Repo.one!(Package.owner_with_access(package, user)) or
+    Repo.one!(Package.package_owner(package, user)) or
+      Repo.one!(Package.organization_owner(package, user)) or
       (not repository.public and Organizations.access?(repository.organization, user, "write"))
   end
 
   def owner_with_full_access?(package, user) do
     repository = package.repository
 
-    Repo.one!(Package.owner_with_access(package, user, "full")) or
+    Repo.one!(Package.package_owner(package, user, "full")) or
+      Repo.one!(Package.organization_owner(package, user, "full")) or
       (not repository.public and Organizations.access?(repository.organization, user, "admin"))
   end
 
