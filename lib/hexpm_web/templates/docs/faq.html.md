@@ -9,6 +9,12 @@ username we recommend [creating a new account](/signup).
 
 You can transfer ownership of your packages using the [`hex.owner`](https://hexdocs.pm/hex/Mix.Tasks.Hex.Owner.html) task.
 
+#### Password security
+
+When you type a password to sign in, create an account, or change your password, we will check if the password you entered is considered weak according to [HaveIBeenPwned](https://haveibeenpwned.com/). The password may be identified as weak even if you have never used that password before.
+
+We only inspect the password at the time you type it, and never store your password in plain text.
+
 ### Packages
 
 #### Why is my package documentation returning "page not found"?
