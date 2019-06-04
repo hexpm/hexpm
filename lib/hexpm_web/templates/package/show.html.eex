@@ -4,6 +4,9 @@ licenses = @package.meta.licenses || []
 links = Enum.to_list(@package.meta.links || [])
 build_tools = @current_release && @current_release.meta.build_tools || []
 downloads = if @current_release.downloads, do: @current_release.downloads.downloads, else: 0
+releases = @releases
+
+Enum.map(releases, &IO.inspect(&1.daily_downloads))
 
 tools = [
   mix: "mix.exs",
@@ -120,13 +123,13 @@ tools = Keyword.take(tools, compatible_tools)
         </li>
       </ul>
     </div>
-
+   
     <div class="row">
       <div class="col-md-6">
         <h3>Versions (<%= Enum.count(@releases) %>)</h3>
         <ul id="versions" class="version-dependency-list">
           <% show_latest_versions = 5 %>
-          <%= render "versions.html", [package: @package, releases: Enum.take(@releases, show_latest_versions)] %>
+          <%= render "versions.html", [package: @package, releases: Enum.take(releases, show_latest_versions)] %>
         </ul>
 
         <%= if length(@releases) > show_latest_versions do %>
