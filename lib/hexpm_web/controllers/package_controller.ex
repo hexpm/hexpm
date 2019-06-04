@@ -93,6 +93,11 @@ defmodule HexpmWeb.PackageController do
     release = Releases.preload(release, [:requirements, :downloads, :publisher])
     latest_release_with_docs = Enum.find(releases, & &1.has_docs)
 
+    releases =
+      releases
+      |> Enum.map(&Releases.preload(&1, [:daily_downloads]))
+      |> clean_releases()
+
     docs_assigns =
       cond do
         type == :package && latest_release_with_docs ->
@@ -169,6 +174,18 @@ defmodule HexpmWeb.PackageController do
           Ecto.MultipleResultsError ->
             nil
         end
+    end
+  end
+
+  defp clean_releases(releases) do
+    for rel <- releases do
+      rel = %{rel | daily_downloads: clean_downloads(rel.daily_downloads)}
+    end
+  end
+
+  defp clean_downloads(downloads) do
+    for dl <- downloads do
+      %{day: Date.to_string(dl.day), downloads: dl.downloads}
     end
   end
 
