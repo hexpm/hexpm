@@ -38,4 +38,22 @@ defmodule Hexpm.Accounts.AuditLogsTest do
       assert [] = AuditLogs.all_by(this_org)
     end
   end
+
+  describe "all_by(package)" do
+    test "returns audit_logs that have are created for this package" do
+      this_package = insert(:package)
+      audit_log = insert(:audit_log, params: %{package: %{id: this_package.id}})
+
+      assert [audit_log_fetched] = AuditLogs.all_by(this_package)
+      assert audit_log_fetched.id == audit_log.id
+    end
+
+    test "does not return audit_logs that are NOT created for this package" do
+      this_package = insert(:package)
+      other_package = insert(:package)
+      _audit_log = insert(:audit_log, params: %{package: %{id: other_package.id}})
+
+      assert [] = AuditLogs.all_by(this_package)
+    end
+  end
 end
