@@ -12,12 +12,12 @@
         <p>
           With organizations you can manage public packages with fine-grained access control to
           packages for your organization members. With a paid organization you can publish and
-          host private packages, or more information see the
+          host private packages, for more information see the
           <a href="<%= Routes.docs_path(Endpoint, :private) %>">private package documentation</a>.
         </p>
         <p>
-          The first month is free and you don't need to enter any payment information to try out
-          private packages. After the first month the cost to use private packages with
+          For private packages the first month is free and you don't need to enter any payment
+          information to try it out. After the first month the cost to use private packages with
           organizations is <strong>$7.00 per user / month</strong>. If you wish to continue with
           private packages after the trial period add your billing details on the
           <a href="<%= Routes.organization_path(Endpoint, :new) %>">organization dashboard</a>.

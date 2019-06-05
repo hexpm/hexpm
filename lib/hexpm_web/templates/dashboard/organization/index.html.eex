@@ -45,7 +45,7 @@
         <% end %>
         <li class="list-group-item clearfix">
           <%= form_for @add_member_changeset, Routes.organization_path(Endpoint, :update, @organization), [method: :post, class: "form-inline add-member"], fn f -> %>
-            <%= content_tag :fieldset, disabled: @quantity <= length(@organization.organization_users) do %>
+            <%= content_tag :fieldset, disabled: not @billing_started? or @quantity <= length(@organization.organization_users) do %>
               <input type="hidden" name="action" value="add_member">
               <div class="form-group">
                 <%= text_input f, :username, style: "width: 250px", placeholder: "Username or email address", required: true %>
@@ -58,7 +58,9 @@
               <button type="submit" class="btn btn-primary">Add member</button>
             <% end %>
           <% end %>
-          <%= length(@organization.organization_users) %> of <%= @quantity %> seats are in use. Add more seats on the billing panel below.
+          <%= if @billing_started? do %>
+            <%= length(@organization.organization_users) %> of <%= @quantity %> seats are in use. Add more seats on the billing panel below.
+          <% end %>
         </li>
       </ul>
     </div>
@@ -66,10 +68,10 @@
 
   <div class="col-sm-9 organization">
     <div class="panel panel-default">
-      <div class="panel-heading">Packages</div>
+      <div class="panel-heading">Private packages</div>
       <div class="panel-body">
         <%= if @repository.packages == [] do %>
-          No packages in organization.
+          No private packages in organization.
           Check out the docs for <a href="<%= Routes.docs_path(Endpoint, :private) %>">publishing private packages</a>.
         <% else %>
           <ul class="organization-package-list">
@@ -211,7 +213,7 @@
             </div>
 
           <% else %>
-            Subscription is not active. <strong>Organization will be disabled</strong> until a payment method has been added.<br><br>
+            Subscription is not active. <strong>Private packages will not be available</strong> until a payment method has been added.<br><br>
             Subscription cost is <strong>$7.00 per user / month</strong> + local VAT when applicable.<br><br>
             <%= raw(@checkout_html) %>
             <button type="button" class="btn btn-default" data-toggle="modal" data-target="#change-plan">
@@ -280,7 +282,7 @@
         <% end %>
       <% else %>
         <div class="panel-body">
-          Subscription is not active. Organization will be disabled until a payment method has been added.<br><br>
+          Subscription is not active. Private packages will not be available until a payment method has been added.<br><br>
           Subscription cost is <strong>$7.00 per user / month</strong> + local VAT when applicable.<br><br>
           First enter your billing information below to enable the payment method form:<br><br>
 
