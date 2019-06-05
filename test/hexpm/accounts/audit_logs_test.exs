@@ -20,4 +20,22 @@ defmodule Hexpm.Accounts.AuditLogsTest do
       assert [] = AuditLogs.all_by(this_user)
     end
   end
+
+  describe "all_by(organization)" do
+    test "returns audit_logs belong to this organization" do
+      this_org = insert(:organization)
+      audit_log = insert(:audit_log, organization: this_org)
+
+      assert [audit_log_fetched] = AuditLogs.all_by(this_org)
+      assert audit_log_fetched.id == audit_log.id
+    end
+
+    test "does not return audit_logs that do not belong to this organization" do
+      this_org = insert(:organization)
+      other_org = insert(:organization)
+      _audit_log = insert(:audit_log, organization: other_org)
+
+      assert [] = AuditLogs.all_by(this_org)
+    end
+  end
 end
