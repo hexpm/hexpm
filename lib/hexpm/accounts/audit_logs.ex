@@ -8,7 +8,7 @@ defmodule Hexpm.Accounts.AuditLogs do
     |> Repo.all()
   end
 
-  def all_by(user) do
+  def all_by(%Hexpm.Accounts.User{} = user) do
     from(l in AuditLog, where: l.user_id == ^user.id)
     |> Repo.all()
   end
