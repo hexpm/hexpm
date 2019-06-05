@@ -79,14 +79,21 @@ defmodule Hexpm.Emails do
     to =
       to
       |> List.wrap()
-      |> Enum.reject(&organization?/1)
+      |> Enum.flat_map(&expand_organization/1)
       |> Enum.sort()
 
     to(email, to)
   end
 
-  defp organization?(%Email{user: user}), do: organization?(user)
-  defp organization?(%User{} = user), do: User.organization?(user)
+  defp expand_organization(%Email{} = email), do: [email]
+  defp expand_organization(%User{organization: nil} = user), do: [user]
+  defp expand_organization(%User{organization: %Ecto.Association.NotLoaded{}} = user), do: [user]
+
+  defp expand_organization(%User{organization: organization}) do
+    organization.organization_users
+    |> Enum.filter(& &1.role == "admin")
+    |> Enum.map(&User.email(&1.user, :primary))
+  end
 
   defp email() do
     new_email()

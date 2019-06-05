@@ -47,7 +47,7 @@ defmodule Hexpm.Repository.Releases do
     |> audit_publish(audit_data)
     |> refresh_package_dependants()
     |> Repo.transaction(timeout: @publish_timeout)
-    |> publish_result(body)
+    |> publish_result(user, body)
   end
 
   def publish_docs(package, release, body, audit: audit_data) do
@@ -99,7 +99,7 @@ defmodule Hexpm.Repository.Releases do
     |> Multi.update(:release, Release.retire(release, params))
     |> audit_retire(audit_data, package)
     |> Repo.transaction()
-    |> publish_result(nil)
+    |> retire_result()
   end
 
   def unretire(package, release, audit: audit_data) do
@@ -109,7 +109,7 @@ defmodule Hexpm.Repository.Releases do
     |> Multi.update(:release, Release.unretire(release))
     |> audit_unretire(audit_data, package)
     |> Repo.transaction()
-    |> publish_result(nil)
+    |> retire_result()
   end
 
   def downloads_by_period(package, filter) do
@@ -122,16 +122,28 @@ defmodule Hexpm.Repository.Releases do
     end
   end
 
-  defp publish_result({:ok, result}, body) do
+  defp publish_result({:ok, result}, user, body) do
     package = %{result.package | repository: result.repository}
     release = %{result.release | package: package}
 
-    if body, do: Assets.push_release(release, body)
+    Assets.push_release(release, body)
+    RegistryBuilder.partial_build({:publish, package})
+    email_package_publisher(user, package, release)
+
+    {:ok, %{result | release: release, package: package}}
+  end
+
+  defp publish_result(result, _user, _body), do: result
+
+  defp retire_result({:ok, result}) do
+    package = %{result.package | repository: result.repository}
+    release = %{result.release | package: package}
+
     RegistryBuilder.partial_build({:publish, package})
     {:ok, %{result | release: release, package: package}}
   end
 
-  defp publish_result(result, _body), do: result
+  defp retire_result(result), do: result
 
   defp revert_result({:ok, %{release: release}}, package) do
     Assets.revert_release(release)
@@ -213,6 +225,13 @@ defmodule Hexpm.Repository.Releases do
     else
       {:ok, release.package}
     end
+  end
+
+  defp email_package_publisher(user, package, release) do
+    user
+    |> Hexpm.Repo.preload(organization: [users: :emails])
+    |> Emails.package_published(package.name, release.version)
+    |> Mailer.deliver_now_throttled()
   end
 
   defp reserved_packages(repository, %{"name" => name}) when is_binary(name) do

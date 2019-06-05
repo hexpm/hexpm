@@ -61,9 +61,13 @@ defmodule Hexpm.Repository.Owners do
     case Repo.transaction(multi) do
       {:ok, %{owner: owner}} ->
         # TODO: Separate email for the affected person
-        owners = Enum.map(owners, & &1.user)
+        owners =
+          owners
+          |> Enum.map(& &1.user)
+          |> Kernel.++([user])
+          |> Repo.preload(organization: [organization_users: [user: :emails]])
 
-        Emails.owner_added(package, [user | owners], user)
+        Emails.owner_added(package, owners, user)
         |> Mailer.deliver_now_throttled()
 
         {:ok, %{owner | user: user}}
@@ -117,7 +121,10 @@ defmodule Hexpm.Repository.Owners do
         {:ok, _} = Repo.transaction(multi)
 
         # TODO: Separate email for the affected person
-        owners = Enum.map(owners, & &1.user)
+        owners =
+          owners
+          |> Enum.map(& &1.user)
+          |> Repo.preload(organization: [users: :emails])
 
         Emails.owner_removed(package, owners, owner.user)
         |> Mailer.deliver_now_throttled()
