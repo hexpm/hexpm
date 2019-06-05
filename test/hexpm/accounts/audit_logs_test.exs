@@ -55,5 +55,12 @@ defmodule Hexpm.Accounts.AuditLogsTest do
 
       assert [] = AuditLogs.all_by(this_package)
     end
+
+    test "does not return audit_logs that do not have package in params" do
+      this_package = insert(:package)
+      _audit_log = insert(:audit_log, params: %{})
+
+      assert [] = AuditLogs.all_by(this_package)
+    end
   end
 end
