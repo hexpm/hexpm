@@ -2,26 +2,43 @@ defmodule HexpmWeb.UserController do
   use HexpmWeb, :controller
 
   def show(conn, %{"username" => username}) do
-    if user = Users.get_by_username(username, [:emails, owned_packages: :repository]) do
-      packages =
-        Packages.accessible_user_owned_packages(user, conn.assigns.current_user)
-        |> Packages.attach_versions()
+    user = Users.get_by_username(username, [:emails, :organization, owned_packages: :repository])
 
-      public_email = User.email(user, :public)
-      gravatar_email = User.email(user, :gravatar)
+    if user do
+      organization = user.organization
 
-      render(
-        conn,
-        "show.html",
-        title: user.username,
-        container: "container page user",
-        user: user,
-        packages: packages,
-        public_email: public_email,
-        gravatar_email: gravatar_email
-      )
+      case conn.path_info do
+        ["users"] when not is_nil(organization) ->
+          redirect(conn, to: Routes.organization_path(Endpoint, :show, organization))
+
+        ["orgs"] when is_nil(organization) ->
+          redirect(conn, to: Routes.user_path(Endpoint, :show, user))
+
+        _ ->
+          show_user(conn, user)
+        end
     else
       not_found(conn)
     end
+  end
+
+  defp show_user(conn, user) do
+    packages =
+      Packages.accessible_user_owned_packages(user, conn.assigns.current_user)
+      |> Packages.attach_versions()
+
+    public_email = User.email(user, :public)
+    gravatar_email = User.email(user, :gravatar)
+
+    render(
+      conn,
+      "show.html",
+      title: user.username,
+      container: "container page user",
+      user: user,
+      packages: packages,
+      public_email: public_email,
+      gravatar_email: gravatar_email
+    )
   end
 end

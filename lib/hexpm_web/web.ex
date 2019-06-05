@@ -56,7 +56,7 @@ defmodule HexpmWeb do
 
       import HexpmWeb.{ControllerHelpers, AuthHelpers}
 
-      alias HexpmWeb.Endpoint
+      alias HexpmWeb.{Endpoint, Router}
       alias HexpmWeb.Router.Helpers, as: Routes
 
       HexpmWeb.shared()
@@ -89,7 +89,7 @@ defmodule HexpmWeb do
 
       import HexpmWeb.{ViewHelpers, ViewIcons}
 
-      alias HexpmWeb.Endpoint
+      alias HexpmWeb.{Endpoint, Router}
       alias HexpmWeb.Router.Helpers, as: Routes
 
       HexpmWeb.shared()
@@ -100,6 +100,9 @@ defmodule HexpmWeb do
     quote do
       use Phoenix.Router
       import HexpmWeb.Plugs
+
+      alias HexpmWeb.{Endpoint, Router}
+      alias HexpmWeb.Router.Helpers, as: Routes
     end
   end
 

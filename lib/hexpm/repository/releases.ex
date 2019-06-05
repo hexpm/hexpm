@@ -296,5 +296,5 @@ defmodule Hexpm.Repository.Releases do
 
   defp preload_field(release, :requirements), do: {:requirements, Release.requirements(release)}
   defp preload_field(release, :downloads), do: {:downloads, ReleaseDownload.release(release)}
-  defp preload_field(_release, :publisher), do: {:publisher, :emails}
+  defp preload_field(_release, :publisher), do: {:publisher, [:emails, :organization]}
 end

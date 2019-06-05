@@ -113,7 +113,7 @@ defmodule HexpmWeb.PackageController do
       end
 
     downloads = Packages.package_downloads(package)
-    owners = Owners.all(package, user: :emails)
+    owners = Owners.all(package, [user: :organization])
 
     dependants =
       Packages.search(

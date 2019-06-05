@@ -1,6 +1,7 @@
 defmodule HexpmWeb.Router do
   use HexpmWeb, :router
   use Plug.ErrorHandler
+  alias Hexpm.Accounts.{Organization, User}
 
   @accepted_formats ~w(json elixir erlang)
 
@@ -69,6 +70,8 @@ defmodule HexpmWeb.Router do
     get "/dashboard", DashboardController, :index
 
     get "/users/:username", UserController, :show
+
+    get "/orgs/:username", UserController, :show
 
     get "/docs", DocsController, :index
     get "/docs/usage", DocsController, :usage
@@ -240,6 +243,14 @@ defmodule HexpmWeb.Router do
 
       post "/repo", TestController, :repo
     end
+  end
+
+  def user_path(%User{organization: nil} = user) do
+    Routes.user_path(Endpoint, :show, user)
+  end
+
+  def user_path(%User{organization: %Organization{} = organization}) do
+    Routes.organization_path(Endpoint, :show, organization)
   end
 
   defp handle_errors(conn, %{kind: kind, reason: reason, stack: stacktrace}) do
