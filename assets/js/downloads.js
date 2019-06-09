@@ -6,7 +6,7 @@ function drawGraph(context, versionData) {
 
   versionData.dd.forEach(function(dataPoint){
     labels.push(dataPoint.day)
-	data.push(dataPoint.downloads)
+    data.push(dataPoint.downloads)
   })
 
   new Chart(context,{
