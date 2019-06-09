@@ -1,8 +1,12 @@
+<script type="text/javascript">
+window.graph_data = <%= raw Poison.encode!(@gd)%> 
+</script>
 <%= for release <- @releases do %>
   <li>
     <a href="<%= path_for_release(@package, release) %>"><strong><%= release.version %></strong></a>
+    <% can_id = "line-chart-" <> inspect(release.version)%>
+    <canvas id=<%= can_id %> width="45" height="15"></canvas>
     <%= pretty_datetime(release.inserted_at) %>
-
     <%= if release.retirement do %>
       (<span class="version-retirement">retired</span>)
     <% else %>
