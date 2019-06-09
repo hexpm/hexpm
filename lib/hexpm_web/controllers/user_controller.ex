@@ -8,15 +8,15 @@ defmodule HexpmWeb.UserController do
       organization = user.organization
 
       case conn.path_info do
-        ["users"] when not is_nil(organization) ->
-          redirect(conn, to: Routes.organization_path(Endpoint, :show, organization))
+        ["users" | _] when not is_nil(organization) ->
+          redirect(conn, to: Router.user_path(user))
 
-        ["orgs"] when is_nil(organization) ->
-          redirect(conn, to: Routes.user_path(Endpoint, :show, user))
+        ["orgs" | _] when is_nil(organization) ->
+          redirect(conn, to: Router.user_path(user))
 
         _ ->
           show_user(conn, user)
-        end
+      end
     else
       not_found(conn)
     end

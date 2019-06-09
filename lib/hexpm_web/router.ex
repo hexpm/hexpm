@@ -250,7 +250,8 @@ defmodule HexpmWeb.Router do
   end
 
   def user_path(%User{organization: %Organization{} = organization}) do
-    Routes.organization_path(Endpoint, :show, organization)
+    # Work around for path helpers with duplicate routes
+    "/orgs/#{organization.name}"
   end
 
   defp handle_errors(conn, %{kind: kind, reason: reason, stack: stacktrace}) do

@@ -405,7 +405,12 @@ Hexpm.Repo.transaction(fn ->
   insert(:download, release: rel, downloads: 1, day: Hexpm.Utils.utc_days_ago(2))
   insert(:download, release: rel, downloads: 42, day: Hexpm.Utils.utc_yesterday())
 
-  myrepo = insert(:repository, name: "myrepo", organization: build(:organization, name: "myrepo"))
+  myrepo =
+    insert(
+      :repository,
+      name: "myrepo",
+      organization: build(:organization, name: "myrepo", user: build(:user, username: "myrepo"))
+    )
 
   private =
     insert(
