@@ -46,8 +46,8 @@ export default class App {
 
 	// Download Charts
 	window.graph_data.forEach(function(dp) {
-		let con = document.getElementById('line-chart-' + dp.r).getContext('2d');
-		Grapher.drawGraph(con, dp)
+	  let con = document.getElementById("line-chart-" + dp.r).getContext("2d")
+	  Grapher.drawGraph(con, dp)
 	})
   }
 
