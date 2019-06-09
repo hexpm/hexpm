@@ -19,6 +19,7 @@ import "phoenix_html"
 // paths "./socket" or full ones "web/static/js/socket".
 
 // import socket from "./socket"
+import * as Grapher from "./downloads"
 
 export default class App {
   constructor() {
@@ -41,7 +42,15 @@ export default class App {
 
     // Highlight syntax
     hljs.initHighlightingOnLoad()
+	
+
+	// Download Charts
+	window.graph_data.forEach(function(dp) {
+		let con = document.getElementById('line-chart-' + dp.r).getContext('2d');
+		Grapher.drawGraph(con, dp)
+	})
   }
+
 
   onCopy(event) {
     var button = $(event.currentTarget)
