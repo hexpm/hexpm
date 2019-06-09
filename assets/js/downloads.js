@@ -15,7 +15,7 @@ function drawGraph(context, versionData) {
     data: {
       labels: labels,
       datasets: [{
-		label: versionData.r,
+        label: versionData.r,
         backgroundColor: "rgb(79,40,167)",
         borderColor: "rgb(79,40,167)",
         data: data
