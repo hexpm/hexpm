@@ -66,12 +66,31 @@ of `Plug.Extension`.
 
 ### Organizations
 
-#### Can I publish public packages to an organization?
+#### Can I publish public packages with an organization?
 
-Not yet, this feature is currently being developed. You will be able to publish public packages
-through your organization and manage permissions the same way you do for private packages. Keep in
-mind that in contrast to private packages your public organization packages will be published to
-the global namespace like all other public packages.
+Yes, you can publish public packages through your organization and manage permissions the same way
+you do for private packages. Unlike when using private packages, which is a paid feature, you can
+publish public packages through your organization for free.
+
+Keep in mind that in contrast to private packages your public organization packages will be
+published to the global repository namespace like all other public packages.
+
+The first time you publish a package you will be asked if one of your organizations should manage
+the package or if you wish to own it yourself:
+
+```
+You are a member of organizations, select if you wish to publish the package with
+yourself as owner or an organization as owner. If you publish with an organization
+as owner your package will be public but managed by the organization.
+
+  [1] Yourself
+  [2] acme
+
+Your selection: _
+```
+
+You can also transfer ownership to an organization after the package has been published by
+running `mix hex.owner transfer PACKAGE ORGANIZATION`.
 
 #### Are self-hosted or "enterprise" solutions available?
 
