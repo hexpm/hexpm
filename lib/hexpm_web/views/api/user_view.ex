@@ -17,6 +17,10 @@ defmodule HexpmWeb.API.UserView do
     render_one(user, __MODULE__, "minimal")
   end
 
+  def render("audit_logs." <> _, %{audit_logs: audit_logs}) do
+    render_many(audit_logs, HexpmWeb.API.AuditLogView, "show")
+  end
+
   def render("show", %{user: user}) do
     %{
       username: user.username,
