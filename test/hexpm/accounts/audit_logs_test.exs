@@ -63,4 +63,25 @@ defmodule Hexpm.Accounts.AuditLogsTest do
       assert [] = AuditLogs.all_by(this_package)
     end
   end
+
+  describe "all_by(user, page)" do
+    test "returns 10 audit logs per page" do
+      user = insert(:user)
+      insert_list(11, :audit_log, user: user)
+
+      results = AuditLogs.all_by(user, 1)
+
+      assert length(results) == 10
+    end
+
+    test "returns audit_logs in page 2" do
+      user = insert(:user)
+      # NOTE: the order is desc: :inserted_at by default,
+      # so we insert audit_log in second page first
+      insert(:audit_log, action: "test.second.page", user: user)
+      insert_list(10, :audit_log, action: "test.first.page", user: user)
+
+      assert [%{action: "test.second.page"}] = AuditLogs.all_by(user, 2)
+    end
+  end
 end
