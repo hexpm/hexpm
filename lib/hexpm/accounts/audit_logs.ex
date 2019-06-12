@@ -3,18 +3,8 @@ defmodule Hexpm.Accounts.AuditLogs do
 
   alias Hexpm.Accounts.AuditLog
 
-  def all_by(%Hexpm.Repository.Package{} = package) do
-    AuditLog.all_by(package)
-    |> Repo.all()
-  end
-
-  def all_by(%Hexpm.Accounts.Organization{} = organization) do
-    AuditLog.all_by(organization)
-    |> Repo.all()
-  end
-
-  def all_by(%Hexpm.Accounts.User{} = user) do
-    AuditLog.all_by(user)
+  def all_by(schema) do
+    AuditLog.all_by(schema)
     |> Repo.all()
   end
 end
