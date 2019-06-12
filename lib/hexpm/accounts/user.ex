@@ -51,6 +51,10 @@ defmodule Hexpm.Accounts.User do
     |> unique_constraint(:username, name: "users_username_idx")
   end
 
+  def to_organization(user, organization) do
+    change(user, %{password: nil, organization_id: organization.id})
+  end
+
   def update_profile(user, params) do
     cast(user, params, ~w(full_name)a)
     |> cast_embed(:handles)

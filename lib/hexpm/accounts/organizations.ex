@@ -54,6 +54,34 @@ defmodule Hexpm.Accounts.Organizations do
     end
   end
 
+  def create_from_user(organization_user, admin_user) do
+    multi =
+      Multi.new()
+      |> Multi.insert(:organization, Organization.build_from_user(organization_user))
+      |> Multi.insert(:repository, fn %{organization: organization} ->
+        %Repository{name: organization.name, public: false, organization_id: organization.id}
+      end)
+      |> Multi.update(:user, &User.to_organization(organization_user, &1.organization))
+      |> Multi.insert(:organization_user, fn %{organization: organization} ->
+        organization_user = %OrganizationUser{
+          organization_id: organization.id,
+          user_id: admin_user.id,
+          role: "admin"
+        }
+
+        Organization.add_member(organization_user, %{})
+      end)
+
+    Repo.transaction(multi)
+  end
+
+  def merge_with_user(
+        %Organization{name: name} = organization,
+        %User{username: name, organization_id: nil} = user
+      ) do
+    Repo.update(User.to_organization(user, organization))
+  end
+
   def add_member(organization, user, params, audit: audit_data) do
     organization_user = %OrganizationUser{organization_id: organization.id, user_id: user.id}
 

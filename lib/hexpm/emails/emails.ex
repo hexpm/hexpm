@@ -91,7 +91,7 @@ defmodule Hexpm.Emails do
 
   defp expand_organization(%User{organization: organization}) do
     organization.organization_users
-    |> Enum.filter(& &1.role == "admin")
+    |> Enum.filter(&(&1.role == "admin"))
     |> Enum.map(&User.email(&1.user, :primary))
   end
 

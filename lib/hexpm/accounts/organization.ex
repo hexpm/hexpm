@@ -32,6 +32,10 @@ defmodule Hexpm.Accounts.Organization do
     |> validate_exclusion(:name, @reserved_names)
   end
 
+  def build_from_user(user) do
+    changeset(%Organization{}, %{name: user.username})
+  end
+
   def add_member(struct, params) do
     cast(struct, params, ~w(role)a)
     |> validate_required(~w(role)a)
