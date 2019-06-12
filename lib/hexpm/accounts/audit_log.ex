@@ -189,10 +189,10 @@ defmodule Hexpm.Accounts.AuditLog do
   end
 
   def all_by(%Hexpm.Accounts.Organization{} = organization) do
-    from(l in AuditLog, where: l.organization_id == ^organization.id)
+    Ecto.assoc(organization, :audit_logs)
   end
 
   def all_by(%Hexpm.Accounts.User{} = user) do
-    from(l in AuditLog, where: l.user_id == ^user.id)
+    Ecto.assoc(user, :audit_logs)
   end
 end
