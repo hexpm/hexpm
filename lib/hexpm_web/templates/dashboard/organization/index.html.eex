@@ -94,7 +94,7 @@
   <div class="col-sm-9 organization">
     <div class="panel panel-default">
       <div class="panel-heading">Billing</div>
-      <%= if @billing_active? do %>
+      <%= if @billing_started? do %>
         <div class="panel-body">
           <%= if @subscription do %>
             <dl>

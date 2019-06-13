@@ -391,6 +391,7 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
 
   defp customer_assigns(nil, _organization) do
     [
+      billing_started?: false,
       billing_active?: false,
       checkout_html: nil,
       billing_email: nil,
@@ -416,6 +417,7 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
       |> String.replace("${csrf_token}", get_csrf_token())
 
     [
+      billing_started?: true,
       billing_active?: !!customer["subscription"],
       checkout_html: checkout_html,
       billing_email: customer["email"],
