@@ -23,7 +23,7 @@ RUN set -xe \
 	&& cd /usr/local/src/elixir \
 	&& make install clean \
 	&& apk del .build-deps
-# end cusom Elixir image
+# end custom Elixir image
 
 # install build dependencies
 RUN apk add --update git build-base nodejs yarn python
