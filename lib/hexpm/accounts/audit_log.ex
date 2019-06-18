@@ -186,7 +186,7 @@ defmodule Hexpm.Accounts.AuditLog do
 
   def all_by(%Hexpm.Repository.Package{} = package) do
     from(l in AuditLog,
-      where: fragment("? -> 'package' ->> 'id' = ?", l.params, ^to_string(package.id))
+      where: fragment("(? -> 'package' ->> 'id')::integer", l.params) == ^package.id
     )
   end
 
