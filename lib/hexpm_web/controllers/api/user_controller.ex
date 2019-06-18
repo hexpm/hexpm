@@ -53,10 +53,9 @@ defmodule HexpmWeb.API.UserController do
     end
   end
 
-  def audit_logs(conn, %{"name" => name}) do
+  def audit_logs(conn, params = %{"name" => name}) do
     user = Users.public_get(name)
-    # TODO: audit_logs pagination
-    audit_logs = AuditLogs.all_by(user)
+    audit_logs = AuditLogs.all_by(user, Hexpm.Utils.safe_int(params["page"]))
 
     conn
     |> render(:audit_logs, audit_logs: audit_logs)

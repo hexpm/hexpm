@@ -227,6 +227,22 @@ defmodule HexpmWeb.API.UserControllerTest do
                }
              ] = json_response(conn, :ok)
     end
+
+    test "returns the second page of audit_logs when params page is 2" do
+      user = insert(:user, username: "tester")
+      insert(:audit_log, user: user, action: "test.second.page")
+      insert_list(10, :audit_log, user: user)
+
+      conn =
+        build_conn()
+        |> get("/api/users/tester/audit_logs?page=2")
+
+      assert [
+               %{
+                 "action" => "test.second.page"
+               }
+             ] = json_response(conn, :ok)
+    end
   end
 
   describe "POST /api/users/:name/reset" do
