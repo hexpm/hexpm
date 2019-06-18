@@ -185,7 +185,9 @@ defmodule Hexpm.Accounts.AuditLog do
   defp multi_key(action), do: :"log.#{action}"
 
   def all_by(%Hexpm.Repository.Package{} = package) do
-    from(l in AuditLog, where: fragment("? @> ?", l.params, ^%{package: %{id: package.id}}))
+    from(l in AuditLog,
+      where: fragment("? -> 'package' ->> 'id' = ?", l.params, ^to_string(package.id))
+    )
   end
 
   def all_by(%Hexpm.Accounts.Organization{} = organization) do
