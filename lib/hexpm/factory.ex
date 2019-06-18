@@ -57,10 +57,8 @@ defmodule Hexpm.Factory do
 
   def audit_log_factory() do
     %Hexpm.Accounts.AuditLog{
-      action: "NOTE: this is the default value set in Hexpm.Factory.audit_log_factory/0",
-      params: %{
-        notice: "NOTE: this is the default value set in Hexpm.Factory.audit_log_factory/0"
-      }
+      action: "",
+      params: %{}
     }
   end
 
