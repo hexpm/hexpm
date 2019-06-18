@@ -55,6 +55,13 @@ defmodule Hexpm.Factory do
     }
   end
 
+  def audit_log_factory() do
+    %Hexpm.Accounts.AuditLog{
+      action: "",
+      params: %{}
+    }
+  end
+
   def repository_factory() do
     name = Fake.sequence(:package)
 

@@ -183,4 +183,18 @@ defmodule Hexpm.Accounts.AuditLog do
   defp fields(%UserHandles{}), do: [:github, :twitter, :freenode]
 
   defp multi_key(action), do: :"log.#{action}"
+
+  def all_by(%Hexpm.Repository.Package{} = package) do
+    from(l in AuditLog,
+      where: fragment("(? -> 'package' ->> 'id')::integer", l.params) == ^package.id
+    )
+  end
+
+  def all_by(%Hexpm.Accounts.Organization{} = organization) do
+    Ecto.assoc(organization, :audit_logs)
+  end
+
+  def all_by(%Hexpm.Accounts.User{} = user) do
+    Ecto.assoc(user, :audit_logs)
+  end
 end
