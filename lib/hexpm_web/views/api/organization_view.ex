@@ -23,4 +23,8 @@ defmodule HexpmWeb.API.OrganizationView do
     }
     |> include_if_loaded(:users, organization.organization_users, OrganizationUserView, "show")
   end
+
+  def render("audit_logs." <> _, %{audit_logs: audit_logs}) do
+    render_many(audit_logs, HexpmWeb.API.AuditLogView, "show")
+  end
 end

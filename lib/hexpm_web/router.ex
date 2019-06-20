@@ -179,6 +179,7 @@ defmodule HexpmWeb.Router do
     get "/orgs", OrganizationController, :index
     get "/orgs/:organization", OrganizationController, :show
     post "/orgs/:organization", OrganizationController, :update
+    get "/orgs/:organization/audit_logs", OrganizationController, :audit_logs
 
     get "/orgs/:organization/members", OrganizationUserController, :index
     post "/orgs/:organization/members", OrganizationUserController, :create
