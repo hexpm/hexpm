@@ -10,7 +10,7 @@ defmodule HexpmWeb.API.OrganizationController do
 
   plug :authorize,
        [domain: "api", resource: "read", fun: &organization_access/2]
-       when action == :show
+       when action in [:show, :audit_logs]
 
   plug :authorize,
        [domain: "api", resource: "write", fun: &organization_access_write/2]
