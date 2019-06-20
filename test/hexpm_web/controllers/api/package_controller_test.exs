@@ -237,4 +237,43 @@ defmodule HexpmWeb.API.PackageControllerTest do
              }
     end
   end
+
+  describe "GET /api/packages/:name/audit_logs" do
+    # TODO: add test cases for
+    # /api/repos/:repository/packages/:name/audit_logs as well?
+    test "returns the first page of audit_logs related to this package when params page is not specified",
+         %{package1: package} do
+      insert(:audit_log,
+        action: "test.package.audit_logs",
+        params: %{package: %{id: package.id}}
+      )
+
+      conn =
+        build_conn()
+        |> get("/api/packages/HexpmWeb.API.PackageControllerTest/audit_logs")
+
+      assert [
+               %{
+                 "action" => "test.package.audit_logs"
+               }
+             ] = json_response(conn, :ok)
+    end
+
+    test "returns the second page of audit_logs related to this package when params page is 2", %{
+      package1: package
+    } do
+      insert(:audit_log, action: "package.second.page", params: %{package: %{id: package.id}})
+      insert_list(10, :audit_log, params: %{package: %{id: package.id}})
+
+      conn =
+        build_conn()
+        |> get("/api/packages/HexpmWeb.API.PackageControllerTest/audit_logs?page=2")
+
+      assert [
+               %{
+                 "action" => "package.second.page"
+               }
+             ] = json_response(conn, :ok)
+    end
+  end
 end

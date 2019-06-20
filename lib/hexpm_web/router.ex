@@ -193,6 +193,7 @@ defmodule HexpmWeb.Router do
       scope prefix do
         get "/packages", PackageController, :index
         get "/packages/:name", PackageController, :show
+        get "/packages/:name/audit_logs", PackageController, :audit_logs
 
         get "/packages/:name/releases/:version", ReleaseController, :show
         delete "/packages/:name/releases/:version", ReleaseController, :delete
