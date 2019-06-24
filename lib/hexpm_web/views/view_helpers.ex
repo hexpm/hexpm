@@ -91,7 +91,7 @@ defmodule HexpmWeb.ViewHelpers do
   end
 
   def url_for_release(%Package{repository_id: 1} = package, release) do
-    Routes.api_release_url(Endpoint, :show, package, to_string(release.version), [])
+    Routes.api_release_url(Endpoint, :show, package, release, [])
   end
 
   def url_for_release(%Package{} = package, release) do

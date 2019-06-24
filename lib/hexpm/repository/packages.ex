@@ -41,25 +41,7 @@ defmodule Hexpm.Repository.Packages do
   end
 
   def preload(package) do
-    releases =
-      from(
-        r in Release,
-        select:
-          map(r, [
-            :version,
-            :inserted_at,
-            :updated_at,
-            :retirement,
-            :has_docs
-          ])
-      )
-
-    package =
-      Repo.preload(package, [
-        :downloads,
-        releases: releases
-      ])
-
+    package = Repo.preload(package, [:downloads, :releases])
     update_in(package.releases, &Release.sort/1)
   end
 
