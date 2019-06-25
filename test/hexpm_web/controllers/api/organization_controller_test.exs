@@ -105,6 +105,13 @@ defmodule HexpmWeb.API.OrganizationControllerTest do
   end
 
   describe "GET /api/orgs/:organization/audit_logs" do
+    test "returns 403 FORBIDDEN when unauthorized", %{user1: user1, organization: organization} do
+      build_conn()
+      |> put_req_header("authorization", key_for(user1))
+      |> get("api/orgs/#{organization.name}/audit_logs")
+      |> response(403)
+    end
+
     test "returns the first page of audit_logs related to this organization when params page is not specified",
          %{user1: user1, organization: organization} do
       insert(:organization_user, organization: organization, user: user1, role: "read")
