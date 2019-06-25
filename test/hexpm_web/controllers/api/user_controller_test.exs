@@ -210,33 +210,6 @@ defmodule HexpmWeb.API.UserControllerTest do
     end
   end
 
-  describe "GET /api/users/:name/audit_logs" do
-    test "returns the first page of audit_logs for this user" do
-      insert(:audit_log,
-        user: insert(:user, username: "tester"),
-        action: "test.action"
-      )
-
-      conn =
-        build_conn()
-        |> get("/api/users/tester/audit_logs")
-
-      assert [%{"action" => "test.action"}] = json_response(conn, :ok)
-    end
-
-    test "returns the second page of audit_logs when params page is 2" do
-      user = insert(:user, username: "tester")
-      insert(:audit_log, user: user, action: "test.second.page")
-      insert_list(10, :audit_log, user: user)
-
-      conn =
-        build_conn()
-        |> get("/api/users/tester/audit_logs?page=2")
-
-      assert [%{"action" => "test.second.page"}] = json_response(conn, :ok)
-    end
-  end
-
   describe "POST /api/users/:name/reset" do
     test "email is sent with reset_token when password is reset" do
       user = insert(:user)
