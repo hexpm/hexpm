@@ -116,11 +116,7 @@ defmodule HexpmWeb.API.OrganizationControllerTest do
         |> put_req_header("authorization", key_for(user1))
         |> get("api/orgs/#{organization.name}/audit_logs")
 
-      assert [
-               %{
-                 "action" => "organization.test"
-               }
-             ] = json_response(conn, :ok)
+      assert [%{"action" => "organization.test"}] = json_response(conn, :ok)
     end
 
     test "returns the second page of audit_logs related to this organization when params page is 2",
@@ -135,11 +131,7 @@ defmodule HexpmWeb.API.OrganizationControllerTest do
         |> put_req_header("authorization", key_for(user1))
         |> get("api/orgs/#{organization.name}/audit_logs?page=2")
 
-      assert [
-               %{
-                 "action" => "organization.test"
-               }
-             ] = json_response(conn, :ok)
+      assert [%{"action" => "organization.test"}] = json_response(conn, :ok)
     end
   end
 end

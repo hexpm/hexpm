@@ -221,11 +221,7 @@ defmodule HexpmWeb.API.UserControllerTest do
         build_conn()
         |> get("/api/users/tester/audit_logs")
 
-      assert [
-               %{
-                 "action" => "test.action"
-               }
-             ] = json_response(conn, :ok)
+      assert [%{"action" => "test.action"}] = json_response(conn, :ok)
     end
 
     test "returns the second page of audit_logs when params page is 2" do
@@ -237,11 +233,7 @@ defmodule HexpmWeb.API.UserControllerTest do
         build_conn()
         |> get("/api/users/tester/audit_logs?page=2")
 
-      assert [
-               %{
-                 "action" => "test.second.page"
-               }
-             ] = json_response(conn, :ok)
+      assert [%{"action" => "test.second.page"}] = json_response(conn, :ok)
     end
   end
 
