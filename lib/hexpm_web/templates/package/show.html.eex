@@ -221,5 +221,14 @@ tools = Keyword.take(tools, compatible_tools)
     end) %><%= if @dependants_count != 0 do %>,
     <a href="<%= Routes.package_path(Endpoint, :index, search: "depends:#{@package.name}") %>">show all...</a>
     <% end %>
+
+    <h3>Audit Logs</h3>
+    <ul>
+      <%= for audit_log <- @audit_logs do %>
+        <li>
+          <%= humanize_audit_log_info(audit_log) %>
+        </li>
+      <% end %>
+    </ul>
   </div>
 </div>

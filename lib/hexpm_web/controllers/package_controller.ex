@@ -127,6 +127,8 @@ defmodule HexpmWeb.PackageController do
 
     dependants_count = Packages.count(repositories, "depends:#{package.name}")
 
+    audit_logs = AuditLogs.all_by(package, 1)
+
     render(
       conn,
       "show.html",
@@ -141,7 +143,8 @@ defmodule HexpmWeb.PackageController do
         downloads: downloads,
         owners: owners,
         dependants: dependants,
-        dependants_count: dependants_count
+        dependants_count: dependants_count,
+        audit_logs: audit_logs
       ] ++ docs_assigns
     )
   end

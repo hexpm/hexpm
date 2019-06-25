@@ -156,4 +156,36 @@ defmodule HexpmWeb.PackageView do
         [content_tag(:strong, "Retired package")]
     end
   end
+
+  def humanize_audit_log_info(audit_log = %{action: "docs.publish"}) do
+    "Published documentation on #{pretty_datetime(audit_log.inserted_at)}"
+  end
+
+  def humanize_audit_log_info(audit_log = %{action: "docs.revert"}) do
+    "Reverted documentation on #{pretty_datetime(audit_log.inserted_at)}"
+  end
+
+  def humanize_audit_log_info(audit_log = %{action: "owner.add"}) do
+    "Added owner on #{pretty_datetime(audit_log.inserted_at)}"
+  end
+
+  def humanize_audit_log_info(audit_log = %{action: "owner.remove"}) do
+    "Removed owner on #{pretty_datetime(audit_log.inserted_at)}"
+  end
+
+  def humanize_audit_log_info(audit_log = %{action: "release.publish"}) do
+    "Published release on #{pretty_datetime(audit_log.inserted_at)}"
+  end
+
+  def humanize_audit_log_info(audit_log = %{action: "release.revert"}) do
+    "Reverted release on #{pretty_datetime(audit_log.inserted_at)}"
+  end
+
+  def humanize_audit_log_info(audit_log = %{action: "release.retire"}) do
+    "Retired release on #{pretty_datetime(audit_log.inserted_at)}"
+  end
+
+  def humanize_audit_log_info(audit_log = %{action: "release.unretire"}) do
+    "Unretired release on #{pretty_datetime(audit_log.inserted_at)}"
+  end
 end
