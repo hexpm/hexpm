@@ -170,6 +170,7 @@ defmodule HexpmWeb.Router do
 
     post "/users", UserController, :create
     get "/users/me", UserController, :me
+    get "/users/me/audit_logs", UserController, :audit_logs
     get "/users/:name", UserController, :show
     # NOTE: Deprecated (2018-05-21)
     get "/users/:name/test", UserController, :test

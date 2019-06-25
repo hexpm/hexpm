@@ -2,7 +2,7 @@ defmodule HexpmWeb.API.UserController do
   use HexpmWeb, :controller
 
   plug :authorize, [domain: "api", resource: "read"] when action in [:test]
-  plug :authorize, [domain: "api", resource: "read"] when action in [:me]
+  plug :authorize, [domain: "api", resource: "read"] when action in [:me, :audit_logs]
 
   def create(conn, params) do
     params = email_param(params)
@@ -31,6 +31,16 @@ defmodule HexpmWeb.API.UserController do
         |> api_cache(:private)
         |> render(:me, user: user)
       end)
+    else
+      not_found(conn)
+    end
+  end
+
+  def audit_logs(conn, params) do
+    if user = conn.assigns.current_user do
+      audit_logs = AuditLogs.all_by(user, Hexpm.Utils.safe_int(params["page"]))
+
+      render(conn, :audit_logs, audit_logs: audit_logs)
     else
       not_found(conn)
     end
