@@ -67,7 +67,7 @@ defmodule HexpmWeb.Plugs do
 
       [] ->
         if Application.get_env(:hexpm, :user_agent_req) do
-          ControllerHelpers.render_error(conn, 400, message: "User-Agent header is requried")
+          ControllerHelpers.render_error(conn, 400, message: "User-Agent header is required")
         else
           assign(conn, :user_agent, "missing")
         end
