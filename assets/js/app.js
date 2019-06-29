@@ -28,8 +28,13 @@ export default class App {
     // Pricing selector
     $(".pricing-button").click(this.onPricing.bind(this))
 
-    // Focus search field
-    $("[name='search']").focus()
+    // Focus username or search field
+    if($("#username").length > 0){
+      $("#username").focus()
+    }else{
+      $("[name='search']").focus()
+    }
+
 
     // Switch tabs
     $(".nav-tabs a").click(function (e) {
