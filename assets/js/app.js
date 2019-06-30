@@ -31,7 +31,7 @@ export default class App {
     // Focus username or search field
     if ($("#username").length > 0) {
       $("#username").focus()
-    }else{
+    } else {
       $("[name='search']").focus()
     }
 
