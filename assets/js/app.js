@@ -29,7 +29,7 @@ export default class App {
     $(".pricing-button").click(this.onPricing.bind(this))
 
     // Focus username or search field
-    if($("#username").length > 0){
+    if ($("#username").length > 0) {
       $("#username").focus()
     }else{
       $("[name='search']").focus()
