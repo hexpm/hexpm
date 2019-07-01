@@ -30,7 +30,7 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
       user_count = Organizations.user_count(organization)
       customer = Hexpm.Billing.get(organization.name)
 
-      if !customer || customer["quantity"] > user_count do
+      if !customer["subscription"] || customer["quantity"] > user_count do
         if user = Users.public_get(username, [:emails]) do
           case Organizations.add_member(organization, user, params, audit: audit_data(conn)) do
             {:ok, _} ->

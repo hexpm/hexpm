@@ -96,7 +96,15 @@ defmodule HexpmWeb.Dashboard.RepositoryControllerTest do
       %{
         "checkout_html" => "",
         "invoices" => [],
-        "quantity" => 1
+        "quantity" => 1,
+        "subscription" => %{
+          "current_period_end" => "2017-12-12T00:00:00Z",
+          "status" => "active",
+          "cancel_at_period_end" => false
+        },
+        "plan_id" => "organization-monthly",
+        "amount_with_tax" => 700,
+        "proration_amount" => 0
       }
     end)
 
