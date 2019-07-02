@@ -1,4 +1,4 @@
-use Mix.Config
+import Config
 
 config :hexpm,
   user_agent_req: false,

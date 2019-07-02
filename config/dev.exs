@@ -1,4 +1,4 @@
-use Mix.Config
+import Config
 
 config :hexpm,
   tmp_dir: Path.expand("tmp/dev"),

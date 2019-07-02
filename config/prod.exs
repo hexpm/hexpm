@@ -1,4 +1,4 @@
-use Mix.Config
+import Config
 
 config :hexpm,
   store_impl: Hexpm.Store.S3,
