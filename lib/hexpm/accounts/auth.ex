@@ -52,7 +52,13 @@ defmodule Hexpm.Accounts.Auth do
   end
 
   def password_auth(username_or_email, password) do
-    user = Users.get(username_or_email, [:emails, owned_packages: :repository, organizations: :repository])
+    user =
+      Users.get(username_or_email, [
+        :emails,
+        owned_packages: :repository,
+        organizations: :repository
+      ])
+
     valid_user = user && !User.organization?(user) && user.password
 
     if valid_user && Bcrypt.verify_pass(password, user.password) do
