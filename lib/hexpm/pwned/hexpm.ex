@@ -1,4 +1,4 @@
-defmodule Hexpm.Pwned.Hexpm do
+defmodule Hexpm.Pwned.HaveIBeenPwned do
   @behaviour Hexpm.Pwned
 
   @base_url "https://api.pwnedpasswords.com/"
