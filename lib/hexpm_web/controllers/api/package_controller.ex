@@ -48,8 +48,7 @@ defmodule HexpmWeb.API.PackageController do
     if package = conn.assigns.package do
       audit_logs = AuditLogs.all_by(package, Hexpm.Utils.safe_int(params["page"]))
 
-      conn
-      |> render(:audit_logs, audit_logs: audit_logs)
+      render(conn, :audit_logs, audit_logs: audit_logs)
     else
       not_found(conn)
     end

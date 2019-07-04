@@ -115,7 +115,6 @@ defmodule HexpmWeb.API.OrganizationControllerTest do
     test "returns the first page of audit_logs related to this organization when params page is not specified",
          %{user1: user1, organization: organization} do
       insert(:organization_user, organization: organization, user: user1, role: "read")
-
       insert(:audit_log, action: "organization.test", organization: organization)
 
       conn =
@@ -129,7 +128,6 @@ defmodule HexpmWeb.API.OrganizationControllerTest do
     test "returns the second page of audit_logs related to this organization when params page is 2",
          %{user1: user1, organization: organization} do
       insert(:organization_user, organization: organization, user: user1, role: "read")
-
       insert(:audit_log, action: "organization.test", organization: organization)
       insert_list(10, :audit_log, organization: organization)
 

@@ -239,8 +239,6 @@ defmodule HexpmWeb.API.PackageControllerTest do
   end
 
   describe "GET /api/packages/:name/audit_logs" do
-    # TODO: add test cases for
-    # /api/repos/:repository/packages/:name/audit_logs as well?
     test "returns the first page of audit_logs related to this package when params page is not specified",
          %{package1: package} do
       insert(:audit_log,
