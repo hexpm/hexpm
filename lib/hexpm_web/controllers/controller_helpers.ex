@@ -330,7 +330,7 @@ defmodule HexpmWeb.ControllerHelpers do
     do:
       "The password you provided has previously been breached.
       To increase your security, please change your password." <>
-        "<br /><a href=\"#{Routes.docs_path(conn, :faq)}#password-security\">Learn more about our password security.</a>"
+        "<br /><a class=\"small\" href=\"#{Routes.docs_path(conn, :faq)}#password-security\">Learn more about our password security.</a>"
 
   def requires_login(conn, _opts) do
     if logged_in?(conn) do
