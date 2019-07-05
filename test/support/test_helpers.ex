@@ -56,6 +56,10 @@ defmodule Hexpm.TestHelpers do
   def params(params) when is_list(params), do: Enum.map(params, &params/1)
   def params(other), do: other
 
+  def mock_pwned() do
+    Mox.stub(Hexpm.Pwned.Mock, :password_breached?, fn _password -> false end)
+  end
+
   defp requirements_meta(list) do
     Enum.map(list, fn req ->
       req

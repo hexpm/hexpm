@@ -3,6 +3,7 @@ defmodule HexpmWeb.LoginControllerTest do
   alias Hexpm.Accounts.Auth
 
   setup do
+    mock_pwned()
     user = insert(:user)
     organization = insert(:organization)
     insert(:organization_user, organization: organization, user: user)

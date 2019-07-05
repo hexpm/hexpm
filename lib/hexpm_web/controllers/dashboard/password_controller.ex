@@ -13,8 +13,11 @@ defmodule HexpmWeb.Dashboard.PasswordController do
 
     case Users.update_password(user, params["user"], audit: audit_data(conn)) do
       {:ok, _user} ->
+        breached? = Hexpm.Pwned.password_breached?(params["user"]["password"])
+
         conn
         |> put_flash(:info, "Your password has been updated.")
+        |> maybe_put_flash(breached?)
         |> redirect(to: Routes.dashboard_password_path(conn, :index))
 
       {:error, changeset} ->
@@ -32,5 +35,11 @@ defmodule HexpmWeb.Dashboard.PasswordController do
       container: "container page dashboard",
       changeset: changeset
     )
+  end
+
+  defp maybe_put_flash(conn, false), do: conn
+
+  defp maybe_put_flash(conn, true) do
+    put_flash(conn, :error, password_breached_message(conn, []))
   end
 end

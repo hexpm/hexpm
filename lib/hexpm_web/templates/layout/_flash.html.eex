@@ -1,6 +1,6 @@
 <div class="container flash">
   <%= if flash = get_flash(@conn, :error) do %>
-    <div class="alert alert-danger" role="alert"><%= flash %></div>
+    <div class="alert alert-danger" role="alert"><%=raw flash %></div>
   <% end %>
   <%= if flash = get_flash(@conn, :warning) do %>
     <div class="alert alert-warning" role="alert"><%= flash %></div>

@@ -5,6 +5,8 @@ defmodule HexpmWeb.Dashboard.PasswordControllerTest do
   alias Hexpm.Accounts.Auth
 
   setup do
+    mock_pwned()
+
     %{
       user: create_user("eric", "eric@mail.com", "hunter42"),
       password: "hunter42"

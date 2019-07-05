@@ -14,9 +14,12 @@ defmodule HexpmWeb.LoginController do
   def create(conn, %{"username" => username, "password" => password}) do
     case password_auth(username, password) do
       {:ok, user} ->
+        breached? = Hexpm.Pwned.password_breached?(password)
+
         conn
         |> configure_session(renew: true)
         |> put_session("user_id", user.id)
+        |> maybe_put_flash(breached?)
         |> redirect_return(user)
 
       {:error, reason} ->
@@ -69,5 +72,11 @@ defmodule HexpmWeb.LoginController do
       return: conn.params["return"],
       hexdocs: conn.params["hexdocs"]
     )
+  end
+
+  defp maybe_put_flash(conn, false), do: conn
+
+  defp maybe_put_flash(conn, true) do
+    put_flash(conn, :error, password_breached_message(conn, []))
   end
 end

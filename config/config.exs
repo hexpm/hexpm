@@ -7,7 +7,8 @@ config :hexpm,
   support_email: "support@hex.pm",
   store_impl: Hexpm.Store.Local,
   cdn_impl: Hexpm.CDN.Local,
-  billing_impl: Hexpm.Billing.Local
+  billing_impl: Hexpm.Billing.Local,
+  pwned_impl: Hexpm.Pwned.Local
 
 config :hexpm, ecto_repos: [Hexpm.RepoBase]
 
