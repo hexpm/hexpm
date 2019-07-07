@@ -10,6 +10,10 @@ defmodule HexpmWeb.API.PackageView do
     render_one(package, __MODULE__, "show")
   end
 
+  def render("audit_logs." <> _, %{audit_logs: audit_logs}) do
+    render_many(audit_logs, HexpmWeb.API.AuditLogView, "show")
+  end
+
   def render("show", %{package: package}) do
     %{
       repository: package.repository.name,

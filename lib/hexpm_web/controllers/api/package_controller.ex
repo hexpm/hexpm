@@ -2,7 +2,7 @@ defmodule HexpmWeb.API.PackageController do
   use HexpmWeb, :controller
 
   plug :fetch_repository when action in [:index]
-  plug :maybe_fetch_package when action in [:show]
+  plug :maybe_fetch_package when action in [:show, :audit_logs]
 
   plug :maybe_authorize,
        [domain: "api", resource: "read", fun: &maybe_repository_access/2]
@@ -39,6 +39,16 @@ defmodule HexpmWeb.API.PackageController do
         |> api_cache(:public)
         |> render(:show, package: package)
       end)
+    else
+      not_found(conn)
+    end
+  end
+
+  def audit_logs(conn, params) do
+    if package = conn.assigns.package do
+      audit_logs = AuditLogs.all_by(package, Hexpm.Utils.safe_int(params["page"]))
+
+      render(conn, :audit_logs, audit_logs: audit_logs)
     else
       not_found(conn)
     end

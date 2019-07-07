@@ -3,7 +3,7 @@ defmodule Hexpm.Accounts.AuditLogs do
 
   alias Hexpm.Accounts.AuditLog
 
-  @audit_logs_per_page 10
+  @audit_logs_per_page 100
 
   def all_by(schema) do
     AuditLog.all_by(schema)

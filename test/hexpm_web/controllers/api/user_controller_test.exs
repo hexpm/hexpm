@@ -133,6 +133,46 @@ defmodule HexpmWeb.API.UserControllerTest do
     end
   end
 
+  describe "GET /api/users/me/audit_logs" do
+    test "returns audit_logs created by this current user" do
+      user = insert(:user)
+      insert(:audit_log, user: user, action: "test.user")
+
+      assert [%{"action" => "test.user"}] =
+               build_conn()
+               |> put_req_header("authorization", key_for(user))
+               |> get("/api/users/me/audit_logs")
+               |> json_response(200)
+    end
+
+    test "returns the second page of audit_logs created by this user when params page is 2" do
+      user = insert(:user)
+      insert(:audit_log, user: user, action: "test.user")
+      insert_list(10, :audit_log, user: user)
+
+      assert [%{"action" => "test.user"}] =
+               build_conn()
+               |> put_req_header("authorization", key_for(user))
+               |> get("/api/users/me/audit_logs?page=2")
+               |> json_response(200)
+    end
+
+    test "returns 401 if not authenticated" do
+      build_conn()
+      |> get("/api/users/me/audit_logs")
+      |> json_response(401)
+    end
+
+    test "returns 404 for organization keys" do
+      organization = insert(:organization)
+
+      build_conn()
+      |> put_req_header("authorization", key_for(organization))
+      |> get("api/users/me/audit_logs")
+      |> json_response(404)
+    end
+  end
+
   describe "GET /api/users/:name" do
     setup do
       user1 = insert(:user)

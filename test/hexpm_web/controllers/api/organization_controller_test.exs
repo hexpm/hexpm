@@ -103,4 +103,40 @@ defmodule HexpmWeb.API.OrganizationControllerTest do
       assert result["errors"] == "number of seats cannot be less than number of members"
     end
   end
+
+  describe "GET /api/orgs/:organization/audit_logs" do
+    test "returns 403 FORBIDDEN when unauthorized", %{user1: user1, organization: organization} do
+      build_conn()
+      |> put_req_header("authorization", key_for(user1))
+      |> get("api/orgs/#{organization.name}/audit_logs")
+      |> response(403)
+    end
+
+    test "returns the first page of audit_logs related to this organization when params page is not specified",
+         %{user1: user1, organization: organization} do
+      insert(:organization_user, organization: organization, user: user1, role: "read")
+      insert(:audit_log, action: "organization.test", organization: organization)
+
+      conn =
+        build_conn()
+        |> put_req_header("authorization", key_for(user1))
+        |> get("api/orgs/#{organization.name}/audit_logs")
+
+      assert [%{"action" => "organization.test"}] = json_response(conn, :ok)
+    end
+
+    test "returns the second page of audit_logs related to this organization when params page is 2",
+         %{user1: user1, organization: organization} do
+      insert(:organization_user, organization: organization, user: user1, role: "read")
+      insert(:audit_log, action: "organization.test", organization: organization)
+      insert_list(10, :audit_log, organization: organization)
+
+      conn =
+        build_conn()
+        |> put_req_header("authorization", key_for(user1))
+        |> get("api/orgs/#{organization.name}/audit_logs?page=2")
+
+      assert [%{"action" => "organization.test"}] = json_response(conn, :ok)
+    end
+  end
 end

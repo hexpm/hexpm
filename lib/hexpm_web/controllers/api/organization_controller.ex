@@ -10,7 +10,7 @@ defmodule HexpmWeb.API.OrganizationController do
 
   plug :authorize,
        [domain: "api", resource: "read", fun: &organization_access/2]
-       when action == :show
+       when action in [:show, :audit_logs]
 
   plug :authorize,
        [domain: "api", resource: "write", fun: &organization_access_write/2]
@@ -48,6 +48,13 @@ defmodule HexpmWeb.API.OrganizationController do
     else
       validation_failed(conn, "number of seats cannot be less than number of members")
     end
+  end
+
+  def audit_logs(conn, params) do
+    organization = conn.assigns.organization
+    audit_logs = AuditLogs.all_by(organization, Hexpm.Utils.safe_int(params["page"]))
+
+    render(conn, :audit_logs, audit_logs: audit_logs)
   end
 
   defp current_organization(nil), do: []

@@ -170,6 +170,7 @@ defmodule HexpmWeb.Router do
 
     post "/users", UserController, :create
     get "/users/me", UserController, :me
+    get "/users/me/audit_logs", UserController, :audit_logs
     get "/users/:name", UserController, :show
     # NOTE: Deprecated (2018-05-21)
     get "/users/:name/test", UserController, :test
@@ -178,6 +179,7 @@ defmodule HexpmWeb.Router do
     get "/orgs", OrganizationController, :index
     get "/orgs/:organization", OrganizationController, :show
     post "/orgs/:organization", OrganizationController, :update
+    get "/orgs/:organization/audit_logs", OrganizationController, :audit_logs
 
     get "/orgs/:organization/members", OrganizationUserController, :index
     post "/orgs/:organization/members", OrganizationUserController, :create
@@ -192,6 +194,7 @@ defmodule HexpmWeb.Router do
       scope prefix do
         get "/packages", PackageController, :index
         get "/packages/:name", PackageController, :show
+        get "/packages/:name/audit_logs", PackageController, :audit_logs
 
         get "/packages/:name/releases/:version", ReleaseController, :show
         delete "/packages/:name/releases/:version", ReleaseController, :delete
