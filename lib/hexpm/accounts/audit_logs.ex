@@ -10,9 +10,9 @@ defmodule Hexpm.Accounts.AuditLogs do
     |> Repo.all()
   end
 
-  def all_by(schema, page) do
+  def all_by(schema, page, per_page \\ @default_per_page) do
     AuditLog.all_by(schema)
-    |> Hexpm.Utils.paginate(page, @default_per_page)
+    |> Hexpm.Utils.paginate(page, per_page)
     |> Repo.all()
   end
 end
