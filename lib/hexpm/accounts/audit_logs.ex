@@ -3,7 +3,7 @@ defmodule Hexpm.Accounts.AuditLogs do
 
   alias Hexpm.Accounts.AuditLog
 
-  @audit_logs_per_page 100
+  @default_per_page 100
 
   def all_by(schema) do
     AuditLog.all_by(schema)
@@ -12,7 +12,7 @@ defmodule Hexpm.Accounts.AuditLogs do
 
   def all_by(schema, page) do
     AuditLog.all_by(schema)
-    |> Hexpm.Utils.paginate(page, @audit_logs_per_page)
+    |> Hexpm.Utils.paginate(page, @default_per_page)
     |> Repo.all()
   end
 end
