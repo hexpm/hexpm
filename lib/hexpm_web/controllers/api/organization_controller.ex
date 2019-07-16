@@ -52,7 +52,7 @@ defmodule HexpmWeb.API.OrganizationController do
 
   def audit_logs(conn, params) do
     organization = conn.assigns.organization
-    audit_logs = AuditLogs.all_by(organization, Hexpm.Utils.safe_int(params["page"]))
+    audit_logs = AuditLogs.all_by(organization, Hexpm.Utils.safe_int(params["page"]), 100)
 
     render(conn, :audit_logs, audit_logs: audit_logs)
   end
