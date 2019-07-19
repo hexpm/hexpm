@@ -145,18 +145,6 @@ defmodule HexpmWeb.API.UserControllerTest do
                |> json_response(200)
     end
 
-    test "returns the second page of audit_logs created by this user when params page is 2" do
-      user = insert(:user)
-      insert(:audit_log, user: user, action: "test.user")
-      insert_list(10, :audit_log, user: user)
-
-      assert [%{"action" => "test.user"}] =
-               build_conn()
-               |> put_req_header("authorization", key_for(user))
-               |> get("/api/users/me/audit_logs?page=2")
-               |> json_response(200)
-    end
-
     test "returns 401 if not authenticated" do
       build_conn()
       |> get("/api/users/me/audit_logs")

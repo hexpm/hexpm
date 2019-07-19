@@ -38,7 +38,7 @@ defmodule HexpmWeb.API.UserController do
 
   def audit_logs(conn, params) do
     if user = conn.assigns.current_user do
-      audit_logs = AuditLogs.all_by(user, Hexpm.Utils.safe_int(params["page"]))
+      audit_logs = AuditLogs.all_by(user, Hexpm.Utils.safe_int(params["page"]), 100)
 
       render(conn, :audit_logs, audit_logs: audit_logs)
     else

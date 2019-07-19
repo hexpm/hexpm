@@ -252,18 +252,5 @@ defmodule HexpmWeb.API.PackageControllerTest do
 
       assert [%{"action" => "test.package.audit_logs"}] = json_response(conn, :ok)
     end
-
-    test "returns the second page of audit_logs related to this package when params page is 2", %{
-      package1: package
-    } do
-      insert(:audit_log, action: "package.second.page", params: %{package: %{id: package.id}})
-      insert_list(10, :audit_log, params: %{package: %{id: package.id}})
-
-      conn =
-        build_conn()
-        |> get("/api/packages/HexpmWeb.API.PackageControllerTest/audit_logs?page=2")
-
-      assert [%{"action" => "package.second.page"}] = json_response(conn, :ok)
-    end
   end
 end
