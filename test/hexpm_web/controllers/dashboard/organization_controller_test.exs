@@ -1,4 +1,4 @@
-defmodule HexpmWeb.Dashboard.RepositoryControllerTest do
+defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
   use HexpmWeb.ConnCase, async: true
   use Bamboo.Test
 
