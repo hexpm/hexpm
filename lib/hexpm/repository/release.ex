@@ -7,7 +7,8 @@ defmodule Hexpm.Repository.Release do
 
   schema "releases" do
     field :version, Hexpm.Version
-    field :checksum, :string
+    field :inner_checksum, :string
+    field :outer_checksum, :string
     field :has_docs, :boolean, default: false
     timestamps()
 
@@ -21,8 +22,8 @@ defmodule Hexpm.Repository.Release do
     embeds_one :retirement, ReleaseRetirement, on_replace: :delete
   end
 
-  defp changeset(release, :create, params, package, publisher, checksum) do
-    changeset(release, :update, params, package, publisher, checksum)
+  defp changeset(release, :create, params, package, publisher, inner_checksum, outer_checksum) do
+    changeset(release, :update, params, package, publisher, inner_checksum, outer_checksum)
     |> unique_constraint(
       :version,
       name: "releases_package_id_version_key",
@@ -30,23 +31,32 @@ defmodule Hexpm.Repository.Release do
     )
   end
 
-  defp changeset(release, :update, params, package, publisher, checksum) do
+  defp changeset(release, :update, params, package, publisher, inner_checksum, outer_checksum) do
     cast(release, params, ~w(version)a)
     |> cast_embed(:meta, required: true)
     |> validate_version(:version)
     |> validate_editable(:update, false)
-    |> put_change(:checksum, String.upcase(checksum))
+    |> put_change(:inner_checksum, String.upcase(inner_checksum))
+    |> put_change(:outer_checksum, String.upcase(outer_checksum))
     |> put_assoc(:publisher, publisher)
     |> Requirement.build_all(package)
   end
 
-  def build(package, publisher, params, checksum) do
+  def build(package, publisher, params, inner_checksum, outer_checksum) do
     build_assoc(package, :releases)
-    |> changeset(:create, params, package, publisher, checksum)
+    |> changeset(:create, params, package, publisher, inner_checksum, outer_checksum)
   end
 
-  def update(release, publisher, params, checksum) do
-    changeset(release, :update, params, release.package, publisher, checksum)
+  def update(release, publisher, params, inner_checksum, outer_checksum) do
+    changeset(
+      release,
+      :update,
+      params,
+      release.package,
+      publisher,
+      inner_checksum,
+      outer_checksum
+    )
   end
 
   def delete(release, opts \\ []) do

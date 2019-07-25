@@ -144,13 +144,13 @@ defmodule Hexpm.Repository.RegistryBuilder do
   end
 
   defp trim_releases(releases) do
-    Enum.map(releases, fn {key, [deps, checksum, tools, _retirement]} ->
+    Enum.map(releases, fn {key, [deps, inner_checksum, _outer_checksum, tools, _retirement]} ->
       deps =
         Enum.map(deps, fn [_repo, dep, req, opt, app] ->
           [dep, req, opt, app]
         end)
 
-      {key, [deps, checksum, tools]}
+      {key, [deps, inner_checksum, tools]}
     end)
   end
 
@@ -203,7 +203,7 @@ defmodule Hexpm.Repository.RegistryBuilder do
     versions
     |> Enum.with_index()
     |> Enum.flat_map(fn {version, ix} ->
-      [_deps, _checksum, _tools, retirement] = release_map[{name, version}]
+      [_deps, _inner_checksum, _outer_checksum, _tools, retirement] = release_map[{name, version}]
       if retirement, do: [ix], else: []
     end)
   end
@@ -218,7 +218,7 @@ defmodule Hexpm.Repository.RegistryBuilder do
   defp build_package(repository, name, versions, release_map) do
     releases =
       Enum.map(versions, fn version ->
-        [deps, checksum, _tools, retirement] = release_map[{name, version}]
+        [deps, inner_checksum, outer_checksum, _tools, retirement] = release_map[{name, version}]
 
         deps =
           Enum.map(deps, fn [repo, dep, req, opt, app] ->
@@ -231,7 +231,8 @@ defmodule Hexpm.Repository.RegistryBuilder do
 
         release = %{
           version: version,
-          checksum: Base.decode16!(checksum),
+          inner_checksum: Base.decode16!(inner_checksum),
+          outer_checksum: Base.decode16!(outer_checksum),
           dependencies: deps
         }
 
@@ -339,7 +340,7 @@ defmodule Hexpm.Repository.RegistryBuilder do
   defp cache_control(%Repository{public: false}), do: "private, max-age=3600"
 
   defp package_tuples(packages, releases) do
-    Enum.reduce(releases, %{}, fn {_, vsn, pkg_id, _, _, _}, map ->
+    Enum.reduce(releases, %{}, fn {_, vsn, pkg_id, _, _, _, _}, map ->
       case Map.fetch(packages, pkg_id) do
         {:ok, package} -> Map.update(map, package, [vsn], &[vsn | &1])
         :error -> map
@@ -361,11 +362,13 @@ defmodule Hexpm.Repository.RegistryBuilder do
   end
 
   defp release_tuples(packages, releases, requirements) do
-    Enum.flat_map(releases, fn {id, version, pkg_id, checksum, tools, retirement} ->
+    Enum.flat_map(releases, fn {id, version, pkg_id, inner_checksum, outer_checksum, tools, retirement} ->
       case Map.fetch(packages, pkg_id) do
         {:ok, package} ->
+          key = {package, to_string(version)}
           deps = deps_list(requirements[id] || [])
-          [{{package, to_string(version)}, [deps, checksum, tools, retirement]}]
+          value = [deps, inner_checksum, outer_checksum, tools, retirement]
+          [{key, value}]
 
         :error ->
           []
@@ -399,7 +402,8 @@ defmodule Hexpm.Repository.RegistryBuilder do
         r.id,
         r.version,
         r.package_id,
-        r.checksum,
+        r.inner_checksum,
+        r.outer_checksum,
         fragment("?->'build_tools'", r.meta),
         r.retirement
       }

@@ -38,12 +38,14 @@ defmodule Hexpm.Repository.Releases do
     Repo.preload(release, preload)
   end
 
-  def publish(repository, package, user, body, meta, checksum, audit: audit_data) do
+  def publish(repository, package, user, body, meta, inner_checksum, outer_checksum,
+        audit: audit_data
+      ) do
     Multi.new()
     |> Multi.run(:repository, fn _, _ -> {:ok, repository} end)
     |> Multi.run(:reserved_packages, fn _, _ -> {:ok, reserved_packages(repository, meta)} end)
     |> create_package(repository, package, user, meta)
-    |> create_release(package, user, checksum, meta)
+    |> create_release(package, user, inner_checksum, outer_checksum, meta)
     |> audit_publish(audit_data)
     |> refresh_package_dependants()
     |> Repo.transaction(timeout: @publish_timeout)
@@ -168,7 +170,7 @@ defmodule Hexpm.Repository.Releases do
     end)
   end
 
-  defp create_release(multi, package, user, checksum, meta) do
+  defp create_release(multi, package, user, inner_checksum, outer_checksum, meta) do
     version = meta["version"]
 
     # Validate version manually to avoid an Ecto.Query.CastError exception
@@ -192,9 +194,9 @@ defmodule Hexpm.Repository.Releases do
             if release do
               %{release | package: package}
               |> preload([:requirements, :publisher])
-              |> Release.update(user, params, checksum)
+              |> Release.update(user, params, inner_checksum, outer_checksum)
             else
-              Release.build(package, user, params, checksum)
+              Release.build(package, user, params, inner_checksum, outer_checksum)
             end
 
           validate_reserved_version(changeset, reserved_packages)

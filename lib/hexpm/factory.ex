@@ -100,7 +100,8 @@ defmodule Hexpm.Factory do
   def release_factory() do
     %Hexpm.Repository.Release{
       version: "1.0.0",
-      checksum: "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855",
+      inner_checksum: "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855",
+      outer_checksum: "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855",
       meta: build(:release_metadata)
     }
   end

@@ -34,7 +34,8 @@ defmodule HexpmWeb.API.ReleaseController do
     )
 
     # TODO: pass around and store in DB as binary instead
-    checksum = :hex_tarball.format_checksum(conn.assigns.checksum)
+    inner_checksum = :hex_tarball.format_checksum(conn.assigns.inner_checksum)
+    outer_checksum = :hex_tarball.format_checksum(conn.assigns.outer_checksum)
 
     Releases.publish(
       conn.assigns.repository,
@@ -42,7 +43,8 @@ defmodule HexpmWeb.API.ReleaseController do
       conn.assigns.current_user,
       body,
       conn.assigns.meta,
-      checksum,
+      inner_checksum,
+      outer_checksum,
       audit: audit_data(conn)
     )
     |> publish_result(conn)
@@ -94,12 +96,13 @@ defmodule HexpmWeb.API.ReleaseController do
 
   defp parse_tarball(conn, _opts) do
     case release_metadata(conn.params["body"]) do
-      {:ok, meta, checksum} ->
+      {:ok, meta, inner_checksum, outer_checksum} ->
         params = Map.put(conn.params, "name", meta["name"])
 
         %{conn | params: params}
         |> assign(:meta, meta)
-        |> assign(:checksum, checksum)
+        |> assign(:inner_checksum, inner_checksum)
+        |> assign(:outer_checksum, outer_checksum)
 
       {:error, errors} ->
         validation_failed(conn, %{tar: errors})
@@ -108,12 +111,13 @@ defmodule HexpmWeb.API.ReleaseController do
 
   defp handle_tarball(conn, repository, package, user, body) do
     case release_metadata(body) do
-      {:ok, meta, checksum} ->
+      {:ok, meta, inner_checksum, outer_checksum} ->
         request_id = List.first(get_resp_header(conn, "x-request-id"))
         log_tarball(repository.name, meta["name"], meta["version"], request_id, body)
 
         # TODO: pass around and store in DB as binary instead
-        checksum = :hex_tarball.format_checksum(checksum)
+        inner_checksum = :hex_tarball.format_checksum(inner_checksum)
+        outer_checksum = :hex_tarball.format_checksum(outer_checksum)
 
         Releases.publish(
           repository,
@@ -121,7 +125,8 @@ defmodule HexpmWeb.API.ReleaseController do
           user,
           body,
           meta,
-          checksum,
+          inner_checksum,
+          outer_checksum,
           audit: audit_data(conn)
         )
 
@@ -175,8 +180,8 @@ defmodule HexpmWeb.API.ReleaseController do
 
   defp release_metadata(tarball) do
     case :hex_tarball.unpack(tarball, :memory) do
-      {:ok, %{checksum: checksum, metadata: metadata}} ->
-        {:ok, metadata, checksum}
+      {:ok, %{inner_checksum: inner_checksum, outer_checksum: outer_checksum, metadata: metadata}} ->
+        {:ok, metadata, inner_checksum, outer_checksum}
 
       {:error, reason} ->
         {:error, List.to_string(:hex_tarball.format_error(reason))}
