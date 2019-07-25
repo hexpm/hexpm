@@ -3,6 +3,7 @@ defmodule Hexpm.Factory do
   alias Hexpm.Fake
 
   @password Bcrypt.hash_pwd_salt("password")
+  @checksum "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855"
 
   def user_factory() do
     %Hexpm.Accounts.User{
@@ -100,9 +101,9 @@ defmodule Hexpm.Factory do
   def release_factory() do
     %Hexpm.Repository.Release{
       version: "1.0.0",
-      checksum: "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855",
-      inner_checksum: Base.decode16!("E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855"),
-      outer_checksum: Base.decode16!("E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855"),
+      checksum: @checksum,
+      inner_checksum: Base.decode16!(@checksum),
+      outer_checksum: Base.decode16!(@checksum),
       meta: build(:release_metadata)
     }
   end

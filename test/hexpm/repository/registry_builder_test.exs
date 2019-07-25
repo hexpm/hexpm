@@ -114,6 +114,7 @@ defmodule Hexpm.Organization.RegistryBuilderTest do
       assert List.first(package2_releases) == %{
                version: "0.0.1",
                inner_checksum: Base.decode16!(@checksum),
+               outer_checksum: Base.decode16!(@checksum),
                dependencies: []
              }
 

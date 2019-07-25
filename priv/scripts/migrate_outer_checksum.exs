@@ -6,24 +6,29 @@ releases =
 
 num = length(releases)
 
-Task.async_stream(releases, fn {release, ix} ->
-  key = "tarballs/#{release.package.name}-#{release.version}.tar"
+Task.async_stream(
+  releases,
+  fn {release, ix} ->
+    key = "tarballs/#{release.package.name}-#{release.version}.tar"
 
-  key =
-    if release.package.repository_id == 1 do
-      key
-    else
-      "repos/#{release.package.repository.name}/#{key}"
-    end
+    key =
+      if release.package.repository_id == 1 do
+        key
+      else
+        "repos/#{release.package.repository.name}/#{key}"
+      end
 
-  object = Hexpm.Store.S3.get(nil, :s3_bucket, key, [])
-  checksum = :crypto.hash(:sha256, object)
+    object = Hexpm.Store.S3.get(nil, :s3_bucket, key, [])
+    checksum = :crypto.hash(:sha256, object)
 
-  release
-  |> Ecto.Changeset.change(outer_checksum: checksum)
-  |> Hexpm.Repo.update!()
+    release
+    |> Ecto.Changeset.change(outer_checksum: checksum)
+    |> Hexpm.Repo.update!()
 
-
-  IO.puts "#{ix + 1}/#{num}"
-end, ordered: false, max_concurrency: 10, on_timeout: :kill_task)
+    IO.puts("#{ix + 1}/#{num}")
+  end,
+  ordered: false,
+  max_concurrency: 10,
+  on_timeout: :kill_task
+)
 |> Stream.run()
