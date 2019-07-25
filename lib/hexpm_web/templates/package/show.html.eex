@@ -179,7 +179,7 @@ tools = Keyword.take(tools, compatible_tools)
     <div class="config-input">
       <div class="input-group">
         <input type="text" class="form-control snippet"
-          value="<%= String.downcase(@current_release.checksum) %>"
+          value="<%= Base.encode16(@current_release.outer_checksum, case: :lower) %>"
           onfocus="this.select();"
           readonly="readonly" id="checksum-snippet" />
         <span class="input-group-btn">
