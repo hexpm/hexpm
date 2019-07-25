@@ -13,6 +13,7 @@ defmodule HexpmWeb.API.ReleaseView do
   def render("show", %{release: release}) do
     %{
       version: release.version,
+      checksum: Base.encode16(release.outer_checksum, case: :lower),
       has_docs: release.has_docs,
       inserted_at: release.inserted_at,
       updated_at: release.updated_at,
