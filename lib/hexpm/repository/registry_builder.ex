@@ -150,7 +150,7 @@ defmodule Hexpm.Repository.RegistryBuilder do
           [dep, req, opt, app]
         end)
 
-      {key, [deps, inner_checksum, tools]}
+      {key, [deps, Base.encode16(inner_checksum), tools]}
     end)
   end
 
@@ -231,8 +231,8 @@ defmodule Hexpm.Repository.RegistryBuilder do
 
         release = %{
           version: version,
-          inner_checksum: Base.decode16!(inner_checksum),
-          outer_checksum: Base.decode16!(outer_checksum),
+          inner_checksum: inner_checksum,
+          outer_checksum: outer_checksum,
           dependencies: deps
         }
 

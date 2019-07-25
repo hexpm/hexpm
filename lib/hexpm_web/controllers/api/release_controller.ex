@@ -33,18 +33,14 @@ defmodule HexpmWeb.API.ReleaseController do
       body
     )
 
-    # TODO: pass around and store in DB as binary instead
-    inner_checksum = :hex_tarball.format_checksum(conn.assigns.inner_checksum)
-    outer_checksum = :hex_tarball.format_checksum(conn.assigns.outer_checksum)
-
     Releases.publish(
       conn.assigns.repository,
       conn.assigns.package,
       conn.assigns.current_user,
       body,
       conn.assigns.meta,
-      inner_checksum,
-      outer_checksum,
+      conn.assigns.inner_checksum,
+      conn.assigns.outer_checksum,
       audit: audit_data(conn)
     )
     |> publish_result(conn)
@@ -114,10 +110,6 @@ defmodule HexpmWeb.API.ReleaseController do
       {:ok, meta, inner_checksum, outer_checksum} ->
         request_id = List.first(get_resp_header(conn, "x-request-id"))
         log_tarball(repository.name, meta["name"], meta["version"], request_id, body)
-
-        # TODO: pass around and store in DB as binary instead
-        inner_checksum = :hex_tarball.format_checksum(inner_checksum)
-        outer_checksum = :hex_tarball.format_checksum(outer_checksum)
 
         Releases.publish(
           repository,

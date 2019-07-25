@@ -7,8 +7,8 @@ defmodule Hexpm.Repository.Release do
 
   schema "releases" do
     field :version, Hexpm.Version
-    field :inner_checksum, :string
-    field :outer_checksum, :string
+    field :inner_checksum, :binary
+    field :outer_checksum, :binary
     field :has_docs, :boolean, default: false
     timestamps()
 
