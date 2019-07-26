@@ -36,8 +36,8 @@ defmodule Hexpm.Repository.Release do
     |> cast_embed(:meta, required: true)
     |> validate_version(:version)
     |> validate_editable(:update, false)
-    |> put_change(:inner_checksum, String.upcase(inner_checksum))
-    |> put_change(:outer_checksum, String.upcase(outer_checksum))
+    |> put_change(:inner_checksum, inner_checksum)
+    |> put_change(:outer_checksum, outer_checksum)
     |> put_assoc(:publisher, publisher)
     |> Requirement.build_all(package)
   end
