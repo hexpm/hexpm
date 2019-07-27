@@ -21,6 +21,7 @@ defmodule Hexpm.Repository.ReleaseTest do
                package,
                publisher,
                rel_meta(%{version: "0.0.1", app: package.name}),
+               "",
                ""
              )
              |> Hexpm.Repo.insert!()
@@ -28,7 +29,7 @@ defmodule Hexpm.Repository.ReleaseTest do
     assert %Release{package_id: ^package_id, version: %Version{major: 0, minor: 0, patch: 1}} =
              Hexpm.Repo.get_by!(assoc(package, :releases), version: "0.0.1")
 
-    Release.build(package, publisher, rel_meta(%{version: "0.0.2", app: package.name}), "")
+    Release.build(package, publisher, rel_meta(%{version: "0.0.2", app: package.name}), "", "")
     |> Hexpm.Repo.insert!()
 
     assert [
@@ -43,6 +44,7 @@ defmodule Hexpm.Repository.ReleaseTest do
         package,
         publisher,
         rel_meta(%{publisher_id: publisher.id, version: "0.0.1", app: package.name}),
+        "",
         ""
       )
       |> Hexpm.Repo.insert!()
@@ -55,13 +57,19 @@ defmodule Hexpm.Repository.ReleaseTest do
     new_publisher = insert(:user)
 
     release =
-      Release.build(package, old_publisher, rel_meta(%{version: "0.0.1", app: package.name}), "")
+      Release.build(
+        package,
+        old_publisher,
+        rel_meta(%{version: "0.0.1", app: package.name}),
+        "",
+        ""
+      )
       |> Hexpm.Repo.insert!()
 
     updated_release =
       release
       |> Map.put(:package, package)
-      |> Release.update(new_publisher, %{}, "")
+      |> Release.update(new_publisher, %{}, "", "")
       |> Hexpm.Repo.update!()
 
     assert updated_release.publisher_id == new_publisher.id
@@ -71,10 +79,10 @@ defmodule Hexpm.Repository.ReleaseTest do
     publisher: publisher,
     packages: [package1, package2, package3]
   } do
-    Release.build(package3, publisher, rel_meta(%{version: "0.0.1", app: package3.name}), "")
+    Release.build(package3, publisher, rel_meta(%{version: "0.0.1", app: package3.name}), "", "")
     |> Hexpm.Repo.insert!()
 
-    Release.build(package3, publisher, rel_meta(%{version: "0.0.2", app: package3.name}), "")
+    Release.build(package3, publisher, rel_meta(%{version: "0.0.2", app: package3.name}), "", "")
     |> Hexpm.Repo.insert!()
 
     meta =
@@ -86,7 +94,7 @@ defmodule Hexpm.Repository.ReleaseTest do
         version: "0.0.1"
       })
 
-    Release.build(package2, publisher, meta, "") |> Hexpm.Repo.insert!()
+    Release.build(package2, publisher, meta, "", "") |> Hexpm.Repo.insert!()
 
     meta =
       rel_meta(%{
@@ -98,7 +106,7 @@ defmodule Hexpm.Repository.ReleaseTest do
         version: "0.0.1"
       })
 
-    Release.build(package1, publisher, meta, "") |> Hexpm.Repo.insert!()
+    Release.build(package1, publisher, meta, "", "") |> Hexpm.Repo.insert!()
 
     release =
       assoc(package1, :releases)
@@ -138,14 +146,15 @@ defmodule Hexpm.Repository.ReleaseTest do
       package1_repo,
       publisher,
       rel_meta(%{version: "0.0.1", app: package1_repo.name}),
+      "",
       ""
     )
     |> Hexpm.Repo.insert!()
 
-    Release.build(package2, publisher, rel_meta(%{version: "0.0.1", app: package2.name}), "")
+    Release.build(package2, publisher, rel_meta(%{version: "0.0.1", app: package2.name}), "", "")
     |> Hexpm.Repo.insert!()
 
-    Release.build(package3, publisher, rel_meta(%{version: "0.0.1", app: package3.name}), "")
+    Release.build(package3, publisher, rel_meta(%{version: "0.0.1", app: package3.name}), "", "")
     |> Hexpm.Repo.insert!()
 
     meta =
@@ -171,7 +180,7 @@ defmodule Hexpm.Repository.ReleaseTest do
         version: "0.0.1"
       })
 
-    Release.build(package2_repo, publisher, meta, "") |> Hexpm.Repo.insert!()
+    Release.build(package2_repo, publisher, meta, "", "") |> Hexpm.Repo.insert!()
 
     release =
       assoc(package2_repo, :releases)
@@ -204,6 +213,7 @@ defmodule Hexpm.Repository.ReleaseTest do
       package1_repo,
       publisher,
       rel_meta(%{version: "0.0.1", app: package1_repo.name}),
+      "",
       ""
     )
     |> Hexpm.Repo.insert!()
@@ -212,6 +222,7 @@ defmodule Hexpm.Repository.ReleaseTest do
       package2_repo,
       publisher,
       rel_meta(%{version: "0.0.1", app: package2_repo.name}),
+      "",
       ""
     )
     |> Hexpm.Repo.insert!()
@@ -237,7 +248,7 @@ defmodule Hexpm.Repository.ReleaseTest do
              requirements: %{
                repository: "dependencies can only belong to public repository \"hexpm\"" <> _
              }
-           } = Release.build(package1, publisher, meta, "") |> errors_on()
+           } = Release.build(package1, publisher, meta, "", "") |> errors_on()
 
     meta =
       rel_meta(%{
@@ -258,7 +269,7 @@ defmodule Hexpm.Repository.ReleaseTest do
              requirements: %{
                repository: "dependencies can only belong to public repository \"hexpm\"" <> _
              }
-           } = Release.build(package1, publisher, meta, "") |> errors_on()
+           } = Release.build(package1, publisher, meta, "", "") |> errors_on()
 
     meta =
       rel_meta(%{
@@ -276,7 +287,7 @@ defmodule Hexpm.Repository.ReleaseTest do
       })
 
     assert %{requirements: %{dependency: "package does not exist" <> _}} =
-             Release.build(package1, publisher, meta, "") |> errors_on()
+             Release.build(package1, publisher, meta, "", "") |> errors_on()
 
     meta =
       rel_meta(%{
@@ -293,7 +304,7 @@ defmodule Hexpm.Repository.ReleaseTest do
       })
 
     assert %{requirements: %{dependency: "package does not exist" <> _}} =
-             Release.build(package1, publisher, meta, "") |> errors_on()
+             Release.build(package1, publisher, meta, "", "") |> errors_on()
 
     meta =
       rel_meta(%{
@@ -311,7 +322,7 @@ defmodule Hexpm.Repository.ReleaseTest do
       })
 
     assert %{requirements: %{dependency: "package does not exist" <> _}} =
-             Release.build(package3_repo, publisher, meta, "") |> errors_on()
+             Release.build(package3_repo, publisher, meta, "", "") |> errors_on()
 
     meta =
       rel_meta(%{
@@ -328,7 +339,7 @@ defmodule Hexpm.Repository.ReleaseTest do
       })
 
     assert %{requirements: %{dependency: "package does not exist" <> _}} =
-             Release.build(package3_repo, publisher, meta, "") |> errors_on()
+             Release.build(package3_repo, publisher, meta, "", "") |> errors_on()
   end
 
   test "validate release", %{publisher: publisher, packages: [_, package2, package3]} do
@@ -336,6 +347,7 @@ defmodule Hexpm.Repository.ReleaseTest do
       package3,
       publisher,
       rel_meta(%{version: "0.1.0", app: package3.name, requirements: []}),
+      "",
       ""
     )
     |> Hexpm.Repo.insert!()
@@ -346,6 +358,7 @@ defmodule Hexpm.Repository.ReleaseTest do
       package2,
       publisher,
       rel_meta(%{version: "0.1.0", app: package2.name, requirements: reqs}),
+      "",
       ""
     )
     |> Hexpm.Repo.insert!()
@@ -353,12 +366,12 @@ defmodule Hexpm.Repository.ReleaseTest do
     meta = %{"version" => "0.1.0", "requirements" => [], "build_tools" => ["mix"]}
 
     assert %{meta: %{app: "can't be blank"}} =
-             Release.build(package3, publisher, %{"meta" => meta}, "") |> errors_on()
+             Release.build(package3, publisher, %{"meta" => meta}, "", "") |> errors_on()
 
     meta = %{"app" => package3.name, "version" => "0.1.0", "requirements" => []}
 
     assert %{meta: %{build_tools: "can't be blank"}} =
-             Release.build(package3, publisher, %{"meta" => meta}, "") |> errors_on()
+             Release.build(package3, publisher, %{"meta" => meta}, "", "") |> errors_on()
 
     meta = %{
       "app" => package3.name,
@@ -368,7 +381,7 @@ defmodule Hexpm.Repository.ReleaseTest do
     }
 
     assert %{meta: %{build_tools: "can't be blank"}} =
-             Release.build(package3, publisher, %{"meta" => meta}, "") |> errors_on()
+             Release.build(package3, publisher, %{"meta" => meta}, "", "") |> errors_on()
 
     meta = %{
       "app" => package3.name,
@@ -379,13 +392,14 @@ defmodule Hexpm.Repository.ReleaseTest do
     }
 
     assert %{meta: %{elixir: "invalid requirement: \"== == 0.0.1\""}} =
-             Release.build(package3, publisher, %{"meta" => meta}, "") |> errors_on()
+             Release.build(package3, publisher, %{"meta" => meta}, "", "") |> errors_on()
 
     assert %{version: "is invalid SemVer"} =
              Release.build(
                package2,
                publisher,
                rel_meta(%{version: "0.1", app: package2.name}),
+               "",
                ""
              )
              |> errors_on()
@@ -397,6 +411,7 @@ defmodule Hexpm.Repository.ReleaseTest do
                package2,
                publisher,
                rel_meta(%{version: "0.1.1", app: package2.name, requirements: reqs}),
+               "",
                ""
              )
              |> errors_on()
@@ -409,6 +424,7 @@ defmodule Hexpm.Repository.ReleaseTest do
     #            package2,
     #            publisher,
     #            rel_meta(%{version: "0.1.1", app: package2.name, requirements: reqs}),
+    #            "",
     #            ""
     #          )
     #          |> errors_on()
@@ -420,6 +436,7 @@ defmodule Hexpm.Repository.ReleaseTest do
         package3,
         publisher,
         rel_meta(%{version: "0.1.0", app: package3.name, build_tools: ["mix", "make", "make"]}),
+        "",
         ""
       )
 
@@ -427,10 +444,10 @@ defmodule Hexpm.Repository.ReleaseTest do
   end
 
   test "release version is unique", %{publisher: publisher, packages: [package1, package2, _]} do
-    Release.build(package1, publisher, rel_meta(%{version: "0.0.1", app: package1.name}), "")
+    Release.build(package1, publisher, rel_meta(%{version: "0.0.1", app: package1.name}), "", "")
     |> Hexpm.Repo.insert!()
 
-    Release.build(package2, publisher, rel_meta(%{version: "0.0.1", app: package2.name}), "")
+    Release.build(package2, publisher, rel_meta(%{version: "0.0.1", app: package2.name}), "", "")
     |> Hexpm.Repo.insert!()
 
     assert {:error, %{errors: [version: {"has already been published", _}]}} =
@@ -438,13 +455,14 @@ defmodule Hexpm.Repository.ReleaseTest do
                package1,
                publisher,
                rel_meta(%{version: "0.0.1", app: package1.name}),
+               "",
                ""
              )
              |> Hexpm.Repo.insert()
   end
 
   test "update release", %{publisher: publisher, packages: [_, package2, package3]} do
-    Release.build(package3, publisher, rel_meta(%{version: "0.0.1", app: package3.name}), "")
+    Release.build(package3, publisher, rel_meta(%{version: "0.0.1", app: package3.name}), "", "")
     |> Hexpm.Repo.insert!()
 
     reqs = [%{name: package3.name, app: package3.name, requirement: "~> 0.0.1", optional: false}]
@@ -454,6 +472,7 @@ defmodule Hexpm.Repository.ReleaseTest do
         package2,
         publisher,
         rel_meta(%{version: "0.0.1", app: package2.name, requirements: reqs}),
+        "",
         ""
       )
       |> Hexpm.Repo.insert!()
@@ -466,7 +485,8 @@ defmodule Hexpm.Repository.ReleaseTest do
         ]
       })
 
-    Release.update(%{release | package: package2}, publisher, params, "") |> Hexpm.Repo.update!()
+    Release.update(%{release | package: package2}, publisher, params, "", "")
+    |> Hexpm.Repo.update!()
 
     package3_id = package3.id
     package3_name = package3.name
@@ -490,7 +510,7 @@ defmodule Hexpm.Repository.ReleaseTest do
     publisher: publisher,
     packages: [_, package2, package3]
   } do
-    Release.build(package3, publisher, rel_meta(%{version: "0.0.1", app: package3.name}), "")
+    Release.build(package3, publisher, rel_meta(%{version: "0.0.1", app: package3.name}), "", "")
     |> Hexpm.Repo.insert!()
 
     reqs = [%{name: package3.name, app: package3.name, requirement: "~> 0.0.1", optional: false}]
@@ -500,6 +520,7 @@ defmodule Hexpm.Repository.ReleaseTest do
         package2,
         publisher,
         rel_meta(%{version: "0.0.1", app: package2.name, requirements: reqs}),
+        "",
         ""
       )
       |> Hexpm.Repo.insert!()
@@ -510,7 +531,7 @@ defmodule Hexpm.Repository.ReleaseTest do
         version: "1.0"
       })
 
-    changeset = Release.update(%{release | package: package2}, publisher, params, "")
+    changeset = Release.update(%{release | package: package2}, publisher, params, "", "")
     assert [version: {"is invalid SemVer", _}] = changeset.errors
   end
 
@@ -519,7 +540,13 @@ defmodule Hexpm.Repository.ReleaseTest do
     publisher: publisher,
     packages: [_, package2, package3]
   } do
-    Release.build(package3, publisher, rel_meta(%{version: "0.0.1-dev", app: package3.name}), "")
+    Release.build(
+      package3,
+      publisher,
+      rel_meta(%{version: "0.0.1-dev", app: package3.name}),
+      "",
+      ""
+    )
     |> Hexpm.Repo.insert!()
 
     reqs = [
@@ -531,6 +558,7 @@ defmodule Hexpm.Repository.ReleaseTest do
                package2,
                publisher,
                rel_meta(%{version: "0.0.1", app: package2.name, requirements: reqs}),
+               "",
                ""
              )
              |> Hexpm.Repo.insert()
@@ -545,6 +573,7 @@ defmodule Hexpm.Repository.ReleaseTest do
       package2,
       publisher,
       rel_meta(%{version: "0.0.1-dev", app: package2.name, requirements: reqs}),
+      "",
       ""
     )
     |> Hexpm.Repo.insert!()
@@ -552,7 +581,13 @@ defmodule Hexpm.Repository.ReleaseTest do
 
   test "delete release", %{publisher: publisher, packages: [_, package2, package3]} do
     release =
-      Release.build(package3, publisher, rel_meta(%{version: "0.0.1", app: package3.name}), "")
+      Release.build(
+        package3,
+        publisher,
+        rel_meta(%{version: "0.0.1", app: package3.name}),
+        "",
+        ""
+      )
       |> Hexpm.Repo.insert!()
       |> Map.put(:package, package3)
 
