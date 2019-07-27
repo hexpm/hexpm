@@ -39,6 +39,7 @@ defmodule Hexpm.Repository.ReleasesTest do
                  "BODY",
                  meta,
                  "00",
+                 "00",
                  audit: audit
                )
     end
@@ -50,7 +51,7 @@ defmodule Hexpm.Repository.ReleasesTest do
       audit = audit_data(user)
 
       {:ok, %{release: release}} =
-        Releases.publish(repository, nil, user, "BODY", meta, "00", audit: audit)
+        Releases.publish(repository, nil, user, "BODY", meta, "00", "00", audit: audit)
 
       assert release.publisher_id == user.id
     end
@@ -70,7 +71,8 @@ defmodule Hexpm.Repository.ReleasesTest do
                  user,
                  "BODY",
                  meta,
-                 "CHECKSUM",
+                 "123abc",
+                 "123abc",
                  audit: audit
                )
 
@@ -92,7 +94,8 @@ defmodule Hexpm.Repository.ReleasesTest do
                  user,
                  "BODY",
                  meta,
-                 "CHECKSUM",
+                 "123abc",
+                 "123abc",
                  audit: audit
                )
 
@@ -114,7 +117,8 @@ defmodule Hexpm.Repository.ReleasesTest do
                  user,
                  "BODY",
                  meta,
-                 "CHECKSUM",
+                 "123abc",
+                 "123abc",
                  audit: audit
                )
 

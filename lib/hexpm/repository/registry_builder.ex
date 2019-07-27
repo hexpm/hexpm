@@ -231,7 +231,7 @@ defmodule Hexpm.Repository.RegistryBuilder do
 
         release = %{
           version: version,
-          checksum: Base.decode16!(checksum),
+          inner_checksum: Base.decode16!(checksum),
           dependencies: deps
         }
 
