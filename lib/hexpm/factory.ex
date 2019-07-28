@@ -101,7 +101,6 @@ defmodule Hexpm.Factory do
   def release_factory() do
     %Hexpm.Repository.Release{
       version: "1.0.0",
-      checksum: @checksum,
       inner_checksum: Base.decode16!(@checksum),
       outer_checksum: Base.decode16!(@checksum),
       meta: build(:release_metadata)
