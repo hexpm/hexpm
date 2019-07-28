@@ -7,7 +7,6 @@ defmodule Hexpm.Repository.Release do
 
   schema "releases" do
     field :version, Hexpm.Version
-    field :checksum, :string
     field :inner_checksum, :binary
     field :outer_checksum, :binary
     field :has_docs, :boolean, default: false
@@ -37,7 +36,6 @@ defmodule Hexpm.Repository.Release do
     |> cast_embed(:meta, required: true)
     |> validate_version(:version)
     |> validate_editable(:update, false)
-    |> put_change(:checksum, Base.encode16(inner_checksum, case: :upper))
     |> put_change(:inner_checksum, inner_checksum)
     |> put_change(:outer_checksum, outer_checksum)
     |> put_assoc(:publisher, publisher)
