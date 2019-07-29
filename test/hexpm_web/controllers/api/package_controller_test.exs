@@ -57,20 +57,18 @@ defmodule HexpmWeb.API.PackageControllerTest do
       end
 
       conn = get(build_conn(), "api/packages?search=#{package1.name}")
-      result = json_response(conn, 200)
-      assert length(result) == 1
+      [package] = json_response(conn, 200)
+      [release] = package["releases"]
+      assert release["has_docs"] == true
 
       conn = get(build_conn(), "api/packages?search=name%3A#{package1.name}*")
-      result = json_response(conn, 200)
-      assert length(result) == 1
+      assert [_] = json_response(conn, 200)
 
       conn = get(build_conn(), "api/packages?page=1")
-      result = json_response(conn, 200)
-      assert length(result) == 3
+      assert [_, _, _] = json_response(conn, 200)
 
       conn = get(build_conn(), "api/packages?page=2")
-      result = json_response(conn, 200)
-      assert length(result) == 0
+      assert [] = json_response(conn, 200)
     end
 
     test "sort order", %{package1: package1, package2: package2} do
