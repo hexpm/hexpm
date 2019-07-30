@@ -11,10 +11,10 @@ lorem =
 password = &Bcrypt.hash_pwd_salt/1
 
 Hexpm.Repo.transaction(fn ->
-  # user_secret: "2cd6d09334d4b00a2be4d532342b799b"
   insert(
     :key,
     user_id: Users.get("hexdocs").id,
+    # user_secret: "2cd6d09334d4b00a2be4d532342b799b"
     secret_first: "e65e2dbb7e22694dc577e7b3d3328ff4",
     secret_second: "aebb59509b50226077c81216c2eba85b"
   )
@@ -24,7 +24,15 @@ Hexpm.Repo.transaction(fn ->
       :user,
       username: "eric",
       emails: [build(:email, email: "eric@example.com")],
-      password: password.("ericric")
+      password: password.("ericric"),
+      keys: [
+        build(
+          :key,
+          # user_secret: "95f956c30a9e7b02409e5df12ad684bd"
+          secret_first: "2c140dfe1429db3d449cf4265dc4cd1e",
+          secret_second: "5bcf597057c2d04a1d228cd8c3254450"
+        )
+      ]
     )
 
   jose =
