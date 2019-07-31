@@ -209,7 +209,14 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
         |> Map.put("token", organization.name)
         |> Map.put("quantity", user_count)
 
-      update_billing(conn, organization, params, &Hexpm.Billing.create/1)
+      update_billing(
+        conn,
+        organization,
+        params,
+        # TODO: call fun.(customer_params, audit: audit_data(conn)) in
+        # update_billing/4 directly after Hexpm.Billing.update/2 is added
+        &Hexpm.Billing.create(&1, audit: audit_data(conn))
+      )
     end)
   end
 

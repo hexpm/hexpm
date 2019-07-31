@@ -2,7 +2,7 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
   use HexpmWeb.ConnCase, async: true
   use Bamboo.Test
 
-  alias Hexpm.Accounts.{Organizations, Users}
+  alias Hexpm.Accounts.{Organizations, Users, AuditLogs}
 
   defp add_email(user, email) do
     {:ok, user} = Users.add_email(user, %{email: email}, audit: audit_data(user))
@@ -392,6 +392,20 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
       response(conn, 302)
       assert get_resp_header(conn, "location") == ["/dashboard/orgs/#{organization.name}"]
       assert get_flash(conn, :info) == "Updated your billing information."
+    end
+
+    test "create audit_log with action billing.create", %{user: user, organization: organization} do
+      Mox.stub(Hexpm.Billing.Mock, :create, fn _ -> {:ok, %{}} end)
+
+      insert(:organization_user, organization: organization, user: user, role: "admin")
+
+      params = %{"company" => nil, "person" => nil}
+
+      build_conn()
+      |> test_login(user)
+      |> post("dashboard/orgs/#{organization.name}/create-billing", params)
+
+      assert [%{action: "billing.create"}] = AuditLogs.all_by(user)
     end
   end
 
