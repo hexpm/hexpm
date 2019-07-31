@@ -1,4 +1,6 @@
 defmodule Hexpm.Billing do
+  use Hexpm.Context
+
   @type organization() :: String.t()
 
   @callback checkout(organization(), data :: map()) :: map()
