@@ -138,6 +138,15 @@ defmodule Hexpm.Accounts.AuditLog do
   defp extract_params("password.reset.finish", nil), do: %{}
   defp extract_params("password.update", nil), do: %{}
 
+  defp extract_params("billing.create", params),
+    do: %{
+      email: params["email"],
+      person: params["person"],
+      company: params["company"],
+      token: params["token"],
+      quantity: params["quantity"]
+    }
+
   defp serialize(%Key{} = key) do
     key
     |> do_serialize()
