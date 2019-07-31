@@ -24,4 +24,16 @@ defmodule Hexpm.Billing do
   def invoice(id), do: impl().invoice(id)
   def pay_invoice(id), do: impl().pay_invoice(id)
   def report(), do: impl().report()
+
+  def create(params, audit: audit_data) do
+    Multi.new()
+    |> Multi.run(:create, fn _, _ -> impl().create(params) end)
+    |> audit(audit_data, "billing.create", params)
+    |> Repo.transaction()
+    |> case do
+      # NOTE: Do we need to handle the case when audit/4 failed?
+      {:ok, %{create: result}} -> {:ok, result}
+      {:error, :create, reason, _changes_so_far} -> {:error, reason}
+    end
+  end
 end
