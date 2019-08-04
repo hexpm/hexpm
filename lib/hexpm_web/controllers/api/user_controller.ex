@@ -24,8 +24,6 @@ defmodule HexpmWeb.API.UserController do
 
   def me(conn, _params) do
     if user = conn.assigns.current_user do
-      user = Users.put_organizations(user)
-
       when_stale(conn, user, fn conn ->
         conn
         |> api_cache(:private)

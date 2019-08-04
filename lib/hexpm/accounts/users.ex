@@ -26,17 +26,6 @@ defmodule Hexpm.Accounts.Users do
     |> Repo.preload(preload)
   end
 
-  def put_organizations(user) do
-    repositories = Map.new(user.organizations, &{&1.repository.id, &1.repository})
-
-    owned_packages =
-      Enum.map(user.owned_packages, fn package ->
-        %{package | repository: repositories[package.repository_id]}
-      end)
-
-    %{user | owned_packages: owned_packages}
-  end
-
   def all_organizations(%User{organizations: organizations}) when is_list(organizations) do
     [Organization.hexpm() | organizations]
   end
