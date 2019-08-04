@@ -2,16 +2,17 @@
   "repository": {},
   "license": "Apache-2.0",
   "devDependencies": {
-    "babel-brunch": "^6.0.0",
-    "brunch": "^2.0.0",
-    "clean-css-brunch": "^2.0.0",
-    "css-brunch": "^2.0.0",
-    "javascript-brunch": "^2.0.0",
-    "phoenix": "file:../deps/phoenix",
-    "sass-brunch": "^2.0.0",
-    "uglify-js-brunch": "^2.0.0"
+    "phoenix": "file:../deps/phoenix"
   },
   "dependencies": {
-    "phoenix_html": "file:../deps/phoenix_html"
+    "babel-brunch": "^7.0.1",
+    "brunch": "^2.10.17",
+    "clean-css-brunch": "^2.10.0",
+    "css-brunch": "^2.10.0",
+    "javascript-brunch": "^2.10.0",
+    "node-sass": "^4.12.0",
+    "phoenix_html": "file:../deps/phoenix_html",
+    "sass-brunch": "^2.10.8",
+    "uglify-js-brunch": "^2.10.0"
   }
 }
