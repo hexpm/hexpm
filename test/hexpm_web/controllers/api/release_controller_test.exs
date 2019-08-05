@@ -559,7 +559,7 @@ defmodule HexpmWeb.API.ReleaseControllerTest do
     # end
 
     test "create release updates registry", %{user: user, package: package} do
-      RegistryBuilder.full_build(Repository.hexpm())
+      RegistryBuilder.full(Repository.hexpm())
       registry_before = Hexpm.Store.get(nil, :s3_bucket, "registry.ets.gz", [])
 
       reqs = [%{name: package.name, app: "app", requirement: "~> 0.0.1", optional: false}]

@@ -129,7 +129,7 @@ defmodule Hexpm.Repository.Releases do
     release = %{result.release | package: package}
 
     Assets.push_release(release, body)
-    RegistryBuilder.partial_build({:publish, package})
+    add_package_to_registry(package)
     email_package_publisher(user, package, release)
 
     {:ok, %{result | release: release, package: package}}
@@ -141,15 +141,15 @@ defmodule Hexpm.Repository.Releases do
     package = %{result.package | repository: result.repository}
     release = %{result.release | package: package}
 
-    RegistryBuilder.partial_build({:publish, package})
+    RegistryBuilder.v2_package(package)
     {:ok, %{result | release: release, package: package}}
   end
 
   defp retire_result(result), do: result
 
   defp revert_result({:ok, %{release: release}}, package) do
+    remove_package_from_registry(package)
     Assets.revert_release(release)
-    RegistryBuilder.partial_build({:publish, package})
     :ok
   end
 
@@ -234,6 +234,38 @@ defmodule Hexpm.Repository.Releases do
     |> Hexpm.Repo.preload(organization: [users: :emails])
     |> Emails.package_published(package.name, release.version)
     |> Mailer.deliver_now_throttled()
+  end
+
+  if Mix.env() == :test do
+    defp add_package_to_registry(package) do
+      RegistryBuilder.v2_package(package)
+      RegistryBuilder.repository(package.repository)
+    end
+
+    defp remove_package_from_registry(package) do
+      RegistryBuilder.v2_package_delete(package)
+      RegistryBuilder.repository(package.repository)
+    end
+  else
+    defp add_package_to_registry(package) do
+      RegistryBuilder.v2_package(package)
+      metadata = Logger.metadata()
+
+      Task.Supervisor.start_child(Hexpm.Tasks, fn ->
+        Logger.metadata(metadata)
+        RegistryBuilder.repository(package.repository)
+      end)
+    end
+
+    defp remove_package_from_registry(package) do
+      RegistryBuilder.v2_package_delete(package)
+      metadata = Logger.metadata()
+
+      Task.Supervisor.start_child(Hexpm.Tasks, fn ->
+        Logger.metadata(metadata)
+        RegistryBuilder.repository(package.repository)
+      end)
+    end
   end
 
   defp reserved_packages(repository, %{"name" => name}) when is_binary(name) do
