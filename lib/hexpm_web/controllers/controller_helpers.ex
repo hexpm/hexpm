@@ -74,10 +74,16 @@ defmodule HexpmWeb.ControllerHelpers do
 
   defp interpolate_errors(message, opts) do
     Enum.reduce(opts, message, fn {key, value}, message ->
-      if String.Chars.impl_for(key) && String.Chars.impl_for(value) do
-        String.replace(message, "%{#{key}}", deep_to_string(value))
+      pattern = "%{#{key}}"
+
+      if String.contains?(message, pattern) do
+        if String.Chars.impl_for(key) && String.Chars.impl_for(value) do
+          String.replace(message, pattern, to_string(value))
+        else
+          raise "Unable to translate error: #{inspect({message, opts})}"
+        end
       else
-        raise "Unable to translate error: #{inspect({message, opts})}"
+        message
       end
     end)
   end
@@ -87,9 +93,6 @@ defmodule HexpmWeb.ControllerHelpers do
   defp pretty_type({:array, type}), do: "list(#{pretty_type(type)})"
   defp pretty_type({:map, type}), do: "map(#{pretty_type(type)})"
   defp pretty_type(type), do: type |> inspect() |> String.trim_leading(":")
-
-  defp deep_to_string(value) when is_list(value), do: Enum.join(value, ", ")
-  defp deep_to_string(value), do: to_string(value)
 
   # Since Changeset.traverse_errors returns `{field: [err], ...}`
   # but Hex client expects `{field: err1, ...}` we normalize to the latter.
