@@ -48,7 +48,8 @@ defmodule HexpmWeb.ControllerHelpers do
     conn
     |> put_status(status)
     |> put_layout(false)
-    |> render(HexpmWeb.ErrorView, :"#{status}", assigns)
+    |> put_view(HexpmWeb.ErrorView)
+    |> render(:"#{status}", assigns)
     |> halt()
   end
 
@@ -73,10 +74,16 @@ defmodule HexpmWeb.ControllerHelpers do
 
   defp interpolate_errors(message, opts) do
     Enum.reduce(opts, message, fn {key, value}, message ->
-      if String.Chars.impl_for(key) && String.Chars.impl_for(value) do
-        String.replace(message, "%{#{key}}", to_string(value))
+      pattern = "%{#{key}}"
+
+      if String.contains?(message, pattern) do
+        if String.Chars.impl_for(key) && String.Chars.impl_for(value) do
+          String.replace(message, pattern, to_string(value))
+        else
+          raise "Unable to translate error: #{inspect({message, opts})}"
+        end
       else
-        raise "Unable to translate error: #{inspect({message, opts})}"
+        message
       end
     end)
   end
