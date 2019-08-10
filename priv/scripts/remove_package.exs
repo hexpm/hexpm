@@ -52,7 +52,7 @@ if answer =~ ~r/^(Y(es)?)?$/i do
   Hexpm.Repo.delete!(package)
   Enum.each(releases, &Hexpm.Repository.Assets.revert_release/1)
   Hexpm.Repository.RegistryBuilder.v2_package_delete(package)
-  Hexpm.Repository.RegistryBuilder.repository(package.repository)
+  Hexpm.Repository.RegistryBuilder.v1_and_v2_repository(package.repository)
   IO.puts("Removed")
 else
   IO.puts("Not removed")

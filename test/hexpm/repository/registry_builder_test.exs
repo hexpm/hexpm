@@ -162,9 +162,9 @@ defmodule Hexpm.Organization.RegistryBuilderTest do
     end
   end
 
-  describe "repository/1" do
+  describe "v1_and_v2_repository/1" do
     test "ets registry is in correct format", %{packages: [p1, p2, p3]} do
-      RegistryBuilder.repository(Repository.hexpm())
+      RegistryBuilder.v1_and_v2_repository(Repository.hexpm())
       tid = open_table()
 
       assert :ets.lookup(tid, :"$$version$$") == [{:"$$version$$", 4}]
@@ -189,7 +189,7 @@ defmodule Hexpm.Organization.RegistryBuilderTest do
     end
 
     test "ets registry is uploaded alongside signature" do
-      RegistryBuilder.repository(Repository.hexpm())
+      RegistryBuilder.v1_and_v2_repository(Repository.hexpm())
 
       registry = Hexpm.Store.get(nil, :s3_bucket, "registry.ets.gz", [])
       signature = Hexpm.Store.get(nil, :s3_bucket, "registry.ets.gz.signed", [])
@@ -200,7 +200,7 @@ defmodule Hexpm.Organization.RegistryBuilderTest do
     end
 
     test "v2 registry is in correct format", %{packages: [_, p2, _] = packages} do
-      RegistryBuilder.repository(Repository.hexpm())
+      RegistryBuilder.v1_and_v2_repository(Repository.hexpm())
       first = packages |> Enum.map(& &1.name) |> Enum.sort() |> List.first()
 
       names = v2_map("names", ["hexpm"])
@@ -218,11 +218,11 @@ defmodule Hexpm.Organization.RegistryBuilderTest do
     end
 
     test "remove package", %{packages: [_, _, p3], releases: [_, _, _, r4]} do
-      RegistryBuilder.repository(Repository.hexpm())
+      RegistryBuilder.v1_and_v2_repository(Repository.hexpm())
 
       Hexpm.Repo.delete!(r4)
       Hexpm.Repo.delete!(p3)
-      RegistryBuilder.repository(Repository.hexpm())
+      RegistryBuilder.v1_and_v2_repository(Repository.hexpm())
 
       assert length(v2_map("names", ["hexpm"])) == 2
     end
@@ -231,7 +231,7 @@ defmodule Hexpm.Organization.RegistryBuilderTest do
       repository = insert(:repository)
       package = insert(:package, repository_id: repository.id, repository: repository)
       insert(:release, package: package, version: "0.0.1")
-      RegistryBuilder.repository(repository)
+      RegistryBuilder.v1_and_v2_repository(repository)
 
       refute open_table(repository.name)
 

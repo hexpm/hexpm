@@ -239,12 +239,12 @@ defmodule Hexpm.Repository.Releases do
   if Mix.env() == :test do
     defp add_package_to_registry(package) do
       RegistryBuilder.v2_package(package)
-      RegistryBuilder.repository(package.repository)
+      RegistryBuilder.v1_and_v2_repository(package.repository)
     end
 
     defp remove_package_from_registry(package) do
       RegistryBuilder.v2_package_delete(package)
-      RegistryBuilder.repository(package.repository)
+      RegistryBuilder.v1_and_v2_repository(package.repository)
     end
   else
     defp add_package_to_registry(package) do
@@ -253,7 +253,7 @@ defmodule Hexpm.Repository.Releases do
 
       Task.Supervisor.start_child(Hexpm.Tasks, fn ->
         Logger.metadata(metadata)
-        RegistryBuilder.repository(package.repository)
+        RegistryBuilder.v1_and_v2_repository(package.repository)
       end)
     end
 
@@ -263,7 +263,7 @@ defmodule Hexpm.Repository.Releases do
 
       Task.Supervisor.start_child(Hexpm.Tasks, fn ->
         Logger.metadata(metadata)
-        RegistryBuilder.repository(package.repository)
+        RegistryBuilder.v1_and_v2_repository(package.repository)
       end)
     end
   end

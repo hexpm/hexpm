@@ -12,8 +12,8 @@ defmodule Hexpm.Repository.RegistryBuilder do
     locked_build(fn -> build_full(repository) end, 300_000, 600_000)
   end
 
-  def repository(repository) do
-    locked_build(fn -> build_repository(repository) end, 30_000, 60_000)
+  def v1_and_v2_repository(repository) do
+    locked_build(fn -> build_v1_and_v2_repository(repository) end, 30_000, 60_000)
   end
 
   def v1_repository(repository) do
@@ -92,7 +92,7 @@ defmodule Hexpm.Repository.RegistryBuilder do
     end)
   end
 
-  defp build_repository(repository) do
+  defp build_v1_and_v2_repository(repository) do
     log(:repository, fn ->
       {packages, releases} = tuples(repository, nil)
       ets = if repository.id == 1, do: build_ets(packages, releases, installs())
