@@ -1,5 +1,5 @@
 defmodule Hexpm.Accounts.Email do
-  use HexpmWeb, :schema
+  use Hexpm.Schema
 
   @derive HexpmWeb.Stale
   @email_regex ~r"^.+@.+\..+$"

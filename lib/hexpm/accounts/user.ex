@@ -1,5 +1,5 @@
 defmodule Hexpm.Accounts.User do
-  use HexpmWeb, :schema
+  use Hexpm.Schema
 
   @derive {HexpmWeb.Stale, assocs: [:emails, :owned_packages, :organizations, :keys]}
   @derive {Phoenix.Param, key: :username}

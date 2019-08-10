@@ -1,5 +1,5 @@
 defmodule Hexpm.Accounts.Organizations do
-  use HexpmWeb, :context
+  use Hexpm.Context
 
   def all_by_user(user, preload \\ []) do
     Repo.all(assoc(user, :organizations))

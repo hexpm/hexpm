@@ -1,5 +1,5 @@
 defmodule Hexpm.Repository.Repositories do
-  use HexpmWeb, :context
+  use Hexpm.Context
 
   def all_public() do
     [Repository.hexpm()]

@@ -1,5 +1,5 @@
 defmodule Hexpm.Repository.Install do
-  use HexpmWeb, :schema
+  use Hexpm.Schema
 
   schema "installs" do
     field :hex, :string

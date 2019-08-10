@@ -1,5 +1,5 @@
 defmodule Hexpm.Repository.Packages do
-  use HexpmWeb, :context
+  use Hexpm.Context
 
   def count() do
     Repo.one!(Package.count())

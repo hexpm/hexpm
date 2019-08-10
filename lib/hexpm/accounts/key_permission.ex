@@ -1,5 +1,5 @@
 defmodule Hexpm.Accounts.KeyPermission do
-  use HexpmWeb, :schema
+  use Hexpm.Schema
 
   @derive HexpmWeb.Stale
   @domains ~w(api repository repositories docs)

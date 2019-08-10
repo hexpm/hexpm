@@ -1,5 +1,5 @@
 defmodule Hexpm.Repository.Releases do
-  use HexpmWeb, :context
+  use Hexpm.Context
 
   @publish_timeout 60_000
 

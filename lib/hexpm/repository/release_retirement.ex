@@ -1,5 +1,5 @@
 defmodule Hexpm.Repository.ReleaseRetirement do
-  use HexpmWeb, :schema
+  use Hexpm.Schema
 
   @derive HexpmWeb.Stale
 

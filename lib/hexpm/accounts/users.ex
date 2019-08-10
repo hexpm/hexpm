@@ -1,5 +1,5 @@
 defmodule Hexpm.Accounts.Users do
-  use HexpmWeb, :context
+  use Hexpm.Context
 
   def get(username_or_email, preload \\ []) do
     User.get(String.downcase(username_or_email), preload)

@@ -1,5 +1,5 @@
 defmodule Hexpm.Accounts.AuditLogs do
-  use HexpmWeb, :context
+  use Hexpm.Context
 
   alias Hexpm.Accounts.AuditLog
 

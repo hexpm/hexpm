@@ -16,37 +16,6 @@ defmodule HexpmWeb do
   below.
   """
 
-  def schema() do
-    quote do
-      use Ecto.Schema
-      @timestamps_opts [type: :utc_datetime_usec]
-
-      import Ecto
-      import Ecto.Changeset
-      import Ecto.Query, only: [from: 1, from: 2]
-      import Hexpm.Changeset
-
-      alias Ecto.Multi
-
-      HexpmWeb.shared()
-    end
-  end
-
-  def context() do
-    quote do
-      import Ecto
-      import Ecto.Changeset
-      import Ecto.Query, only: [from: 1, from: 2]
-      import Hexpm.Accounts.AuditLog, only: [audit: 4, audit_many: 4, audit_with_user: 4]
-
-      alias Ecto.Multi
-
-      alias Hexpm.{Emails, Emails.Mailer, Repo}
-
-      HexpmWeb.shared()
-    end
-  end
-
   def controller() do
     quote do
       use Phoenix.Controller, namespace: HexpmWeb
@@ -59,7 +28,7 @@ defmodule HexpmWeb do
       alias HexpmWeb.{Endpoint, Router}
       alias HexpmWeb.Router.Helpers, as: Routes
 
-      HexpmWeb.shared()
+      use Hexpm.Shared
     end
   end
 
@@ -92,7 +61,7 @@ defmodule HexpmWeb do
       alias HexpmWeb.{Endpoint, Router}
       alias HexpmWeb.Router.Helpers, as: Routes
 
-      HexpmWeb.shared()
+      use Hexpm.Shared
     end
   end
 
@@ -103,51 +72,6 @@ defmodule HexpmWeb do
 
       alias HexpmWeb.{Endpoint, Router}
       alias HexpmWeb.Router.Helpers, as: Routes
-    end
-  end
-
-  defmacro shared do
-    quote do
-      alias Hexpm.{
-        Accounts.AuditLog,
-        Accounts.AuditLogs,
-        Accounts.Auth,
-        Accounts.Email,
-        Accounts.Key,
-        Accounts.KeyPermission,
-        Accounts.Keys,
-        Accounts.Organization,
-        Accounts.Organizations,
-        Accounts.OrganizationUser,
-        Accounts.PasswordReset,
-        Accounts.Session,
-        Accounts.User,
-        Accounts.UserHandles,
-        Accounts.Users,
-        Emails,
-        Emails.Mailer,
-        Repository.Assets,
-        Repository.Download,
-        Repository.Install,
-        Repository.Installs,
-        Repository.Owners,
-        Repository.Package,
-        Repository.PackageDownload,
-        Repository.PackageMetadata,
-        Repository.PackageOwner,
-        Repository.Packages,
-        Repository.RegistryBuilder,
-        Repository.Release,
-        Repository.ReleaseDownload,
-        Repository.ReleaseMetadata,
-        Repository.ReleaseRetirement,
-        Repository.Releases,
-        Repository.Repositories,
-        Repository.Repository,
-        Repository.Requirement,
-        Repository.Resolver,
-        Repository.Sitemaps
-      }
     end
   end
 
