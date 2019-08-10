@@ -174,7 +174,7 @@ defmodule HexpmWeb.ControllerHelpers do
 
   defp modified_since?(header, last_modified) do
     if header && last_modified do
-      modified_since = :cowboy_http.rfc1123_date(header)
+      modified_since = :httpd_util.convert_request_date(String.to_charlist(header))
       modified_since = :calendar.datetime_to_gregorian_seconds(modified_since)
       last_modified = :calendar.datetime_to_gregorian_seconds(last_modified)
       last_modified > modified_since

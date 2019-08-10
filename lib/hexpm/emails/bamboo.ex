@@ -26,6 +26,10 @@ defmodule Hexpm.Emails.Bamboo.SESAdapter do
     config
   end
 
+  def supports_attachments?() do
+    false
+  end
+
   defp send_email(request, email, times) do
     request
     |> ExAws.request()
