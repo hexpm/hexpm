@@ -1,5 +1,5 @@
 defmodule Hexpm.Repository.Download do
-  use HexpmWeb, :schema
+  use Hexpm.Schema
 
   @derive HexpmWeb.Stale
 

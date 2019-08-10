@@ -1,5 +1,5 @@
 defmodule Hexpm.Accounts.OrganizationUser do
-  use HexpmWeb, :schema
+  use Hexpm.Schema
 
   schema "organization_users" do
     field :role, :string

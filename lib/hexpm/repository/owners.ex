@@ -1,5 +1,5 @@
 defmodule Hexpm.Repository.Owners do
-  use HexpmWeb, :context
+  use Hexpm.Context
 
   def all(package, preload \\ []) do
     assoc(package, :package_owners)

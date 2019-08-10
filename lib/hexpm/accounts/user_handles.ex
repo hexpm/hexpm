@@ -1,5 +1,5 @@
 defmodule Hexpm.Accounts.UserHandles do
-  use HexpmWeb, :schema
+  use Hexpm.Schema
 
   @derive HexpmWeb.Stale
 

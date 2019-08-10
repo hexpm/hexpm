@@ -1,5 +1,5 @@
 defmodule Hexpm.BlockAddress.Entry do
-  use HexpmWeb, :schema
+  use Hexpm.Schema
 
   # TODO: rename to block_address_entries
   schema "blocked_addresses" do

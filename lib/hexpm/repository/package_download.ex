@@ -1,5 +1,5 @@
 defmodule Hexpm.Repository.PackageDownload do
-  use HexpmWeb, :schema
+  use Hexpm.Schema
 
   @derive HexpmWeb.Stale
   @primary_key false

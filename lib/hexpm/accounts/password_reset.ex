@@ -1,5 +1,5 @@
 defmodule Hexpm.Accounts.PasswordReset do
-  use HexpmWeb, :schema
+  use Hexpm.Schema
 
   schema "password_resets" do
     field :key, :string

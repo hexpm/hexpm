@@ -1,5 +1,5 @@
 defmodule Hexpm.Repository.Sitemaps do
-  use HexpmWeb, :context
+  use Hexpm.Context
 
   def packages() do
     from(

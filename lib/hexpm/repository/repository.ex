@@ -1,5 +1,5 @@
 defmodule Hexpm.Repository.Repository do
-  use HexpmWeb, :schema
+  use Hexpm.Schema
 
   @derive HexpmWeb.Stale
   @derive {Phoenix.Param, key: :name}

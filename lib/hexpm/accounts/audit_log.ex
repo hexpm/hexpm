@@ -1,5 +1,5 @@
 defmodule Hexpm.Accounts.AuditLog do
-  use HexpmWeb, :schema
+  use Hexpm.Schema
 
   schema "audit_logs" do
     field :user_agent, :string

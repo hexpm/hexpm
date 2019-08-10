@@ -1,5 +1,5 @@
 defmodule Hexpm.Repository.ReleaseMetadata do
-  use HexpmWeb, :schema
+  use Hexpm.Schema
 
   @derive HexpmWeb.Stale
 
