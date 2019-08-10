@@ -9,7 +9,7 @@ defmodule HexpmWeb.TestControllerTest do
   end
 
   test "fetch registry" do
-    RegistryBuilder.partial_build({:v1, Repository.hexpm()})
+    RegistryBuilder.v1_repository(Repository.hexpm())
     conn = get(build_conn(), "repo/registry.ets.gz")
     assert conn.status in 200..399
   end

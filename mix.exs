@@ -46,7 +46,7 @@ defmodule Hexpm.MixProject do
       {:hackney, "~> 1.7"},
       {:hex_core, "~> 0.2", hex_core_opts()},
       {:libcluster, "~> 3.0"},
-      {:logster, "~> 0.10.0"},
+      {:logster, "~> 1.0.0"},
       {:mox, "~> 0.3.1", only: :test},
       {:phoenix_ecto, "~> 3.1"},
       {:phoenix_html, "~> 2.3"},

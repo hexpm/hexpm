@@ -27,6 +27,6 @@ Hexpm.CDN.purge_key(:fastly_hexrepo, "installs")
 
 IO.puts("Uploaded installs/list.csv")
 
-Hexpm.Repository.RegistryBuilder.partial_build({:v1, Hexpm.Repository.Repository.hexpm()})
+Hexpm.Repository.RegistryBuilder.v1_repository(Hexpm.Repository.Repository.hexpm())
 
 IO.puts("Rebuilt registry")
