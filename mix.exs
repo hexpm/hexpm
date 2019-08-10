@@ -34,7 +34,7 @@ defmodule Hexpm.MixProject do
   defp deps() do
     [
       {:bamboo, "~> 1.0"},
-      {:bcrypt_elixir, "~> 1.0"},
+      {:bcrypt_elixir, "~> 2.0"},
       {:corsica, "~> 1.0"},
       {:earmark, "~> 1.0"},
       {:ecto_sql, "~> 3.0"},
@@ -48,7 +48,7 @@ defmodule Hexpm.MixProject do
       {:jason, "~> 1.0"},
       {:libcluster, "~> 3.0"},
       {:logster, "~> 1.0.0"},
-      {:mox, "~> 0.3.1", only: :test},
+      {:mox, "~> 0.5.0", only: :test},
       {:phoenix_ecto, "~> 4.0"},
       {:phoenix_html, "~> 2.3"},
       {:phoenix_live_reload, "~> 1.0", only: :dev},
