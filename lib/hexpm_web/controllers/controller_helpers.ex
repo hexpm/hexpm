@@ -77,7 +77,7 @@ defmodule HexpmWeb.ControllerHelpers do
       pattern = "%{#{key}}"
 
       if String.contains?(message, pattern) do
-        if String.Chars.impl_for(key) && String.Chars.impl_for(value) do
+        if String.Chars.impl_for(value) do
           String.replace(message, pattern, to_string(value))
         else
           raise "Unable to translate error: #{inspect({message, opts})}"
