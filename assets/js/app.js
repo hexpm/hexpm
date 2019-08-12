@@ -105,6 +105,24 @@ export default class App {
       $(".price.price-yearly").show()
     }
   }
+
+  billing_checkout(token) {
+    $.post(window.hexpm_billing_post_action, {token: token, _csrf_token: window.hexpm_billing_csrf_token})
+      .done(function (data) {
+        window.location.reload()
+      })
+      .fail(function (data) {
+        var response = JSON.parse(data.responseText);
+        $('div.flash').html(
+          '<div class="alert alert-danger" role="alert">' +
+          '<strong>Failed to update payment method</strong><br>' +
+          response.errors +
+          '</div>'
+        )
+      })
+  }
 }
 
-new App()
+window.app = new App()
+window.hexpm_billing_checkout = app.billing_checkout
+window.$ = $

@@ -102,6 +102,10 @@ defmodule HexpmWeb.Dashboard.OrganizationView do
       "organization will be disabled"
   end
 
+  defp subscription_status(%{"status" => "incomplete"}, _card) do
+    "TODO"
+  end
+
   # TODO: Check if last invoice was unpaid and add note about it?
   defp subscription_status(%{"status" => "canceled"}, _card) do
     "Not active"
@@ -133,7 +137,7 @@ defmodule HexpmWeb.Dashboard.OrganizationView do
   end
 
   defp invoice_status(%{"paid" => true}, _organization), do: "Paid"
-  defp invoice_status(%{"forgiven" => true}, _organization), do: "Forgiven"
+  defp invoice_status(%{"status" => "uncollectible"}, _organization), do: "Forgiven"
   defp invoice_status(%{"paid" => false, "attempted" => false}, _organization), do: "Pending"
 
   defp invoice_status(%{"paid" => false, "attempted" => true, "id" => invoice_id}, organization) do

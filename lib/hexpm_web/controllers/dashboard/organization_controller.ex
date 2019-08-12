@@ -404,22 +404,19 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
       card: nil,
       invoices: nil,
       person: nil,
-      company: nil
+      company: nil,
+      post_action: nil,
+      csrf_token: nil
     ]
   end
 
   defp customer_assigns(customer, organization) do
     post_action = Routes.organization_path(Endpoint, :billing_token, organization)
 
-    checkout_html =
-      customer["checkout_html"]
-      |> String.replace("${post_action}", post_action)
-      |> String.replace("${csrf_token}", get_csrf_token())
-
     [
       billing_started?: true,
       billing_active?: !!customer["subscription"],
-      checkout_html: checkout_html,
+      checkout_html: customer["checkout_html"],
       billing_email: customer["email"],
       plan_id: customer["plan_id"],
       proration_amount: customer["proration_amount"],
@@ -434,7 +431,9 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
       card: customer["card"],
       invoices: customer["invoices"],
       person: customer["person"],
-      company: customer["company"]
+      company: customer["company"],
+      post_action: post_action,
+      csrf_token: get_csrf_token()
     ]
   end
 
