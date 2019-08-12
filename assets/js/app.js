@@ -21,7 +21,9 @@ import "phoenix_html"
 
 import $ from "jquery"
 import "bootstrap"
-import hljs from "highlight.js"
+import hljs from 'highlight.js/lib/highlight';
+import elixir from 'highlight.js/lib/languages/elixir';
+
 
 export default class App {
   constructor() {
@@ -38,16 +40,16 @@ export default class App {
       $("[name='search']").focus()
     }
 
-
     // Switch tabs
     $(".nav-tabs a").click(function (e) {
       e.preventDefault()
       $(this).tab("show")
     })
 
-    $("[data-toggle='popover']").popover({container: "body", html: true})
+    $("[data-toggle='popover']").popover({container: "body", html: true, animation: false})
 
     // Highlight syntax
+    hljs.registerLanguage('elixir', elixir);
     hljs.initHighlightingOnLoad()
   }
 

@@ -175,7 +175,7 @@
     }
 
     @include hdpi(3) {
-      background: $color-erl-red-light url("../images/erlang@3.png") center no-repeat;
+      background: $color-erl-red-light url("../static/images/erlang@3.png") center no-repeat;
       background-size: 60px;
     }
 

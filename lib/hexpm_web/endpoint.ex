@@ -11,7 +11,7 @@ defmodule HexpmWeb.Endpoint do
     at: "/",
     from: :hexpm,
     gzip: true,
-    only: ~w(css fonts images js),
+    only: ~w(css images js),
     only_matching: ~w(favicon robots)
 
   # Code reloading can be explicitly enabled under the
