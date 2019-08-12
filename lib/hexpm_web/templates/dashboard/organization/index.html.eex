@@ -268,7 +268,7 @@
                   <tr>
                     <td>
                       <a href="<%= Routes.organization_path(Endpoint, :show_invoice, @organization, invoice["id"]) %>" target="_blank">
-                        <%= payment_date(invoice["date"]) %>
+                        <%= payment_date(invoice["date"] || invoice["created"]) %>
                       </a>
                       </td>
                     <td>$<%= money(invoice["amount_due"])%></td>
