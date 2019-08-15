@@ -138,14 +138,14 @@ defmodule HexpmWeb.PackageControllerTest do
         |> get("/packages/#{package.name}")
         |> html_response(200)
 
-      assert html_response =~ "Published documentation"
-      assert html_response =~ "Reverted documentation"
-      assert html_response =~ "Added owner"
-      assert html_response =~ "Removed owner"
-      assert html_response =~ "Published release"
-      assert html_response =~ "Reverted release"
-      assert html_response =~ "Retired release"
-      assert html_response =~ "Unretired release"
+      assert html_response =~ "Publish doc"
+      assert html_response =~ "Revert doc"
+      assert html_response =~ "Add owner"
+      assert html_response =~ "Remove owner"
+      assert html_response =~ "Publish release"
+      assert html_response =~ "Revert release"
+      assert html_response =~ "Retire release"
+      assert html_response =~ "Unretire release"
     end
   end
 

@@ -158,34 +158,34 @@ defmodule HexpmWeb.PackageView do
   end
 
   def humanize_audit_log_info(%{action: "docs.publish"} = audit_log) do
-    "Published documentation on #{pretty_datetime(audit_log.inserted_at)}"
+    "#{DateTime.to_date(audit_log.inserted_at)} Publish doc"
   end
 
   def humanize_audit_log_info(%{action: "docs.revert"} = audit_log) do
-    "Reverted documentation on #{pretty_datetime(audit_log.inserted_at)}"
+    "#{DateTime.to_date(audit_log.inserted_at)} Revert doc"
   end
 
   def humanize_audit_log_info(%{action: "owner.add"} = audit_log) do
-    "Added owner on #{pretty_datetime(audit_log.inserted_at)}"
+    "#{DateTime.to_date(audit_log.inserted_at)} Add owner"
   end
 
   def humanize_audit_log_info(%{action: "owner.remove"} = audit_log) do
-    "Removed owner on #{pretty_datetime(audit_log.inserted_at)}"
+    "#{DateTime.to_date(audit_log.inserted_at)} Remove owner"
   end
 
   def humanize_audit_log_info(%{action: "release.publish"} = audit_log) do
-    "Published release on #{pretty_datetime(audit_log.inserted_at)}"
+    "#{DateTime.to_date(audit_log.inserted_at)} Publish release"
   end
 
   def humanize_audit_log_info(%{action: "release.revert"} = audit_log) do
-    "Reverted release on #{pretty_datetime(audit_log.inserted_at)}"
+    "#{DateTime.to_date(audit_log.inserted_at)} Revert release"
   end
 
   def humanize_audit_log_info(%{action: "release.retire"} = audit_log) do
-    "Retired release on #{pretty_datetime(audit_log.inserted_at)}"
+    "#{DateTime.to_date(audit_log.inserted_at)} Retire release"
   end
 
   def humanize_audit_log_info(%{action: "release.unretire"} = audit_log) do
-    "Unretired release on #{pretty_datetime(audit_log.inserted_at)}"
+    "#{DateTime.to_date(audit_log.inserted_at)} Unretire release"
   end
 end
