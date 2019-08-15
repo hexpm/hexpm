@@ -223,7 +223,7 @@ tools = Keyword.take(tools, compatible_tools)
     <% end %>
 
     <h3>Audit Logs</h3>
-    <ul>
+    <ul class="audit-logs-list">
       <%= for audit_log <- @audit_logs do %>
         <li>
           <%= humanize_audit_log_info(audit_log) %>
