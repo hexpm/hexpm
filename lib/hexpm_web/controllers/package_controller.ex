@@ -2,6 +2,7 @@ defmodule HexpmWeb.PackageController do
   use HexpmWeb, :controller
 
   @packages_per_page 30
+  @audit_logs_per_page 10
   @sort_params ~w(name recent_downloads total_downloads inserted_at updated_at recently_published)
   @letters for letter <- ?A..?Z, do: <<letter>>
 
@@ -127,7 +128,7 @@ defmodule HexpmWeb.PackageController do
 
     dependants_count = Packages.count(repositories, "depends:#{package.name}")
 
-    audit_logs = AuditLogs.all_by(package, 1)
+    audit_logs = AuditLogs.all_by(package, 1, @audit_logs_per_page)
 
     render(
       conn,
