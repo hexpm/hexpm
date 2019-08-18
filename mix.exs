@@ -43,6 +43,7 @@ defmodule Hexpm.MixProject do
       {:ex_aws_ses, "~> 2.0"},
       {:ex_aws, "~> 2.0"},
       {:ex_machina, "~> 2.0"},
+      {:eqrcode, "~> 0.1.6"},
       {:hackney, "~> 1.7"},
       {:hex_core, "~> 0.2", hex_core_opts()},
       {:jason, "~> 1.0"},
@@ -58,6 +59,7 @@ defmodule Hexpm.MixProject do
       {:plug_cowboy, "~> 2.0"},
       {:plug, "~> 1.7"},
       {:postgrex, "~> 0.14"},
+      {:pot, "~> 0.10.1"},
       {:rollbax, "~> 0.5"},
       {:sweet_xml, "~> 0.5"}
     ]
