@@ -10,6 +10,7 @@ defmodule Hexpm.Accounts.User do
     field :password, :string
     field :service, :boolean, default: false
     field :deactivated_at, :utc_datetime_usec
+    field :auth_secret, :string
     timestamps()
 
     embeds_one :handles, UserHandles, on_replace: :delete
