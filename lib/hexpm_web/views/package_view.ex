@@ -157,35 +157,39 @@ defmodule HexpmWeb.PackageView do
     end
   end
 
+  def pretty_date(datetime) do
+    "#{DateTime.to_date(datetime)}"
+  end
+
   def humanize_audit_log_info(%{action: "docs.publish"} = audit_log) do
-    "#{DateTime.to_date(audit_log.inserted_at)} Publish doc"
+    "Publish doc"
   end
 
   def humanize_audit_log_info(%{action: "docs.revert"} = audit_log) do
-    "#{DateTime.to_date(audit_log.inserted_at)} Revert doc"
+    "Revert doc"
   end
 
   def humanize_audit_log_info(%{action: "owner.add"} = audit_log) do
-    "#{DateTime.to_date(audit_log.inserted_at)} Add owner"
+    "Add owner"
   end
 
   def humanize_audit_log_info(%{action: "owner.remove"} = audit_log) do
-    "#{DateTime.to_date(audit_log.inserted_at)} Remove owner"
+    "Remove owner"
   end
 
   def humanize_audit_log_info(%{action: "release.publish"} = audit_log) do
-    "#{DateTime.to_date(audit_log.inserted_at)} Publish release"
+    "Publish release"
   end
 
   def humanize_audit_log_info(%{action: "release.revert"} = audit_log) do
-    "#{DateTime.to_date(audit_log.inserted_at)} Revert release"
+    "Revert release"
   end
 
   def humanize_audit_log_info(%{action: "release.retire"} = audit_log) do
-    "#{DateTime.to_date(audit_log.inserted_at)} Retire release"
+    "Retire release"
   end
 
   def humanize_audit_log_info(%{action: "release.unretire"} = audit_log) do
-    "#{DateTime.to_date(audit_log.inserted_at)} Unretire release"
+    "Unretire release"
   end
 end
