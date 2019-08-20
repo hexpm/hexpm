@@ -8,7 +8,7 @@ defmodule Hexpm.BillingTest do
       Mox.stub(Hexpm.Billing.Mock, :create, fn _params -> {:ok, :whatever} end)
 
       assert Hexpm.Billing.create(%{},
-               audit: %{audit_data: {insert(:user), "Test User Agent"}, organization_name: ""}
+               audit: %{audit_data: {insert(:user), "Test User Agent"}, organization: nil}
              ) ==
                {:ok, :whatever}
     end
@@ -19,7 +19,7 @@ defmodule Hexpm.BillingTest do
       user = insert(:user)
 
       Hexpm.Billing.create(%{},
-        audit: %{audit_data: {user, "Test User Agent"}, organization_name: ""}
+        audit: %{audit_data: {user, "Test User Agent"}, organization: nil}
       )
 
       assert [audit_log] = AuditLogs.all_by(user)
@@ -29,7 +29,7 @@ defmodule Hexpm.BillingTest do
       Mox.stub(Hexpm.Billing.Mock, :create, fn _params -> {:error, :reason} end)
 
       assert Hexpm.Billing.create(%{},
-               audit: %{audit_data: {insert(:user), "Test User Agent"}, organization_name: ""}
+               audit: %{audit_data: {insert(:user), "Test User Agent"}, organization: nil}
              ) ==
                {:error, :reason}
     end
@@ -40,7 +40,7 @@ defmodule Hexpm.BillingTest do
       user = insert(:user)
 
       Hexpm.Billing.create(%{},
-        audit: %{audit_data: {user, "Test User Agent"}, organization_name: ""}
+        audit: %{audit_data: {user, "Test User Agent"}, organization: nil}
       )
 
       assert [] = AuditLogs.all_by(user)
