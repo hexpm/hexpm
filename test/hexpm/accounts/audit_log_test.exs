@@ -64,6 +64,14 @@ defmodule Hexpm.Accounts.AuditLogTest do
     end
   end
 
+  describe "audit/3" do
+    test "with params", %{user: user, package: package, release: release} do
+      audit_log = AuditLog.audit({user, "user_agent"}, "docs.revert", {package, release})
+
+      assert %AuditLog{action: "docs.revert"} = audit_log
+    end
+  end
+
   describe "audit/4" do
     test "with params", %{user: user, package: package, release: release} do
       multi =
