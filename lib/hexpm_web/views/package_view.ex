@@ -161,6 +161,12 @@ defmodule HexpmWeb.PackageView do
     "#{DateTime.to_date(datetime)}"
   end
 
+  @doc """
+  This function turns an audit_log struct into a short description.
+
+  Please check Hexpm.Accounts.AuditLog.extract_params/2 to see all the
+  package related actions and their params structures.
+  """
   def humanize_audit_log_info(%{action: "docs.publish"} = audit_log) do
     if release_version = audit_log.params["release"]["version"] do
       "Publish documentation for release #{release_version}"
