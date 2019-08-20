@@ -236,6 +236,24 @@ defmodule HexpmWeb.PackageViewTest do
                "Add New User as a level 2 owner"
     end
 
+    test "owner.transfer with no params" do
+      audit_log = build(:audit_log, action: "owner.transfer")
+
+      assert PackageView.humanize_audit_log_info(audit_log) ==
+               "Transfer owner"
+    end
+
+    test "owner.transfer with params" do
+      audit_log =
+        build(:audit_log,
+          action: "owner.transfer",
+          params: %{"user" => %{"username" => "New Owner"}}
+        )
+
+      assert PackageView.humanize_audit_log_info(audit_log) ==
+               "Transfer owner to New Owner"
+    end
+
     test "owner.remove with no params" do
       audit_log = build(:audit_log, action: "owner.remove")
 

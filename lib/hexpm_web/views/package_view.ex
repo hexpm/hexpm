@@ -188,6 +188,14 @@ defmodule HexpmWeb.PackageView do
     end
   end
 
+  def humanize_audit_log_info(%{action: "owner.transfer"} = audit_log) do
+    if username = audit_log.params["user"]["username"] do
+      "Transfer owner to #{username}"
+    else
+      "Transfer owner"
+    end
+  end
+
   def humanize_audit_log_info(%{action: "owner.remove"} = audit_log) do
     username = audit_log.params["user"]["username"]
     level = audit_log.params["level"]
