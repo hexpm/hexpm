@@ -1,0 +1,12 @@
+<%= PackagePublished.intro(@package, @version) %>
+
+For mix:
+
+<%= PackagePublished.mix_code(@package, @version) %>
+
+For rebar3:
+
+<%= PackagePublished.rebar3_code(@package, @version) %>
+
+--
+Hex.pm

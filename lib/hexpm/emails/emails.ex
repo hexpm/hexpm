@@ -72,7 +72,7 @@ defmodule Hexpm.Emails do
     |> subject("Hex.pm - Package #{name} v#{version} published")
     |> assign(:version, version)
     |> assign(:package, name)
-    |> render("package_published.html")
+    |> render(:package_published)
   end
 
   defp email_to(email, to) do
@@ -98,7 +98,7 @@ defmodule Hexpm.Emails do
   defp email() do
     new_email()
     |> from(source())
-    |> put_html_layout({HexpmWeb.EmailView, "layout.html"})
+    |> put_layout({HexpmWeb.EmailView, :layout})
   end
 
   defp source() do
