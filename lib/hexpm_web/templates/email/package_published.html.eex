@@ -15,8 +15,3 @@
         <%= PackagePublished.rebar3_code(@package, @version) %>
     </pre>
 </p>
-
-<p>
-    --<br>
-    Hex.pm
-</p>

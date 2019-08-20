@@ -3,14 +3,9 @@ verify_url = Routes.email_verification_url(Endpoint, :verify, username: @usernam
 %>
 
 <p>
-  To begin using your email, we require you to verify your email address.
+    <%= Verification.intro() %>
 </p>
 
 <p>
-  You can do so by following <a href="<%= raw verify_url %>">this link</a> or by pasting this link in your web browser: <%= raw verify_url %>
-</p>
-
-<p>
-  --<br>
-  Hex.pm
+    You can do so by following <a href="<%= verify_url %>">this link</a> or by pasting this link in your web browser: <%= verify_url %>
 </p>

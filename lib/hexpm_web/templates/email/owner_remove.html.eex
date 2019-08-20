@@ -1,6 +1,1 @@
-<p><%= @username %> has been removed from owners of package <%= @package %>.</p>
-
-<p>
-  --<br>
-  Hex.pm
-</p>
+<p><%= OwnerRemove.message(@username, @package) %></p>

@@ -9,7 +9,7 @@ defmodule Hexpm.Emails do
     |> subject("Hex.pm - Owner added to package #{package.name}")
     |> assign(:username, owner.username)
     |> assign(:package, package.name)
-    |> render("owner_add.html")
+    |> render(:owner_add)
   end
 
   def owner_removed(package, owners, owner) do
@@ -18,7 +18,7 @@ defmodule Hexpm.Emails do
     |> subject("Hex.pm - Owner removed from package #{package.name}")
     |> assign(:username, owner.username)
     |> assign(:package, package.name)
-    |> render("owner_remove.html")
+    |> render(:owner_remove)
   end
 
   def verification(user, email) do
@@ -28,7 +28,7 @@ defmodule Hexpm.Emails do
     |> assign(:username, user.username)
     |> assign(:email, email.email)
     |> assign(:key, email.verification_key)
-    |> render("verification.html")
+    |> render(:verification)
   end
 
   def password_reset_request(user, reset) do

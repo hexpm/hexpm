@@ -5,5 +5,10 @@
   </head>
   <body>
     <%= render @view_module, @view_template, assigns %>
+
+    <p>
+      --<br>
+      Hex.pm
+    </p>
   </body>
 </html>

@@ -1,0 +1,9 @@
+<%
+verify_url = Routes.email_verification_url(Endpoint, :verify, username: @username, email: @email, key: @key)
+%>
+
+<%= Verification.intro() %>
+
+You can do so by following this link:
+
+<%= verify_url %>

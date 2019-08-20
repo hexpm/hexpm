@@ -1,6 +1,24 @@
 defmodule HexpmWeb.EmailView do
   use HexpmWeb, :view
 
+  defmodule OwnerAdd do
+    def message(username, package) do
+      "#{username} has been added as an owner to package #{package}."
+    end
+  end
+
+  defmodule OwnerRemove do
+    def message(username, package) do
+      "#{username} has been removed from owners of package #{package}."
+    end
+  end
+
+  defmodule Verification do
+    def intro() do
+      "To begin using your email, we require you to verify your email address."
+    end
+  end
+
   defmodule PackagePublished do
     def intro(package, version) do
       """
