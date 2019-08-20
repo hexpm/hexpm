@@ -162,34 +162,72 @@ defmodule HexpmWeb.PackageView do
   end
 
   def humanize_audit_log_info(%{action: "docs.publish"} = audit_log) do
-    "Publish doc"
+    if release_version = audit_log.params["release"]["version"] do
+      "Publish documentation for release #{release_version}"
+    else
+      "Publish documentation"
+    end
   end
 
   def humanize_audit_log_info(%{action: "docs.revert"} = audit_log) do
-    "Revert doc"
+    if release_version = audit_log.params["release"]["version"] do
+      "Revert documentation for release #{release_version}"
+    else
+      "Revert documentation"
+    end
   end
 
   def humanize_audit_log_info(%{action: "owner.add"} = audit_log) do
-    "Add owner"
+    username = audit_log.params["user"]["username"]
+    level = audit_log.params["level"]
+
+    if username && level do
+      "Add #{username} as a level #{level} owner"
+    else
+      "Add owner"
+    end
   end
 
   def humanize_audit_log_info(%{action: "owner.remove"} = audit_log) do
-    "Remove owner"
+    username = audit_log.params["user"]["username"]
+    level = audit_log.params["level"]
+
+    if username && level do
+      "Remove level #{level} owner #{username}"
+    else
+      "Remove owner"
+    end
   end
 
   def humanize_audit_log_info(%{action: "release.publish"} = audit_log) do
-    "Publish release"
+    if version = audit_log.params["release"]["version"] do
+      "Publish release #{version}"
+    else
+      "Publish release"
+    end
   end
 
   def humanize_audit_log_info(%{action: "release.revert"} = audit_log) do
-    "Revert release"
+    if version = audit_log.params["release"]["version"] do
+      "Revert release #{version}"
+    else
+      "Revert release"
+    end
   end
 
   def humanize_audit_log_info(%{action: "release.retire"} = audit_log) do
-    "Retire release"
+    if version = audit_log.params["release"]["version"] do
+      "Retire release #{version}"
+    else
+      "Retire release"
+    end
   end
 
   def humanize_audit_log_info(%{action: "release.unretire"} = audit_log) do
-    "Unretire release"
+    if version = audit_log.params["release"]["version"] do
+      "Unretire release #{version}"
+    else
+      "Unretire release"
+    end
   end
 end
