@@ -405,7 +405,8 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
       |> test_login(user)
       |> post("dashboard/orgs/#{organization.name}/create-billing", params)
 
-      assert [%{action: "billing.create"}] = AuditLogs.all_by(user)
+      assert [%{action: "billing.create"} = audit_log] = AuditLogs.all_by(user)
+      assert audit_log.params["organization"] == organization.name
     end
   end
 

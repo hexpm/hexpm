@@ -142,8 +142,9 @@ defmodule Hexpm.Accounts.AuditLog do
   defp extract_params("password.reset.finish", nil), do: %{}
   defp extract_params("password.update", nil), do: %{}
 
-  defp extract_params("billing.create", params),
+  defp extract_params("billing.create", {organization_name, params}),
     do: %{
+      organization: organization_name,
       email: params["email"],
       person: params["person"],
       company: params["company"],

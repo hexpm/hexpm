@@ -25,10 +25,10 @@ defmodule Hexpm.Billing do
   def pay_invoice(id), do: impl().pay_invoice(id)
   def report(), do: impl().report()
 
-  def create(params, audit: audit_data) do
+  def create(params, audit: %{audit_data: audit_data, organization_name: organization_name}) do
     with {:create, {:ok, result}} <- {:create, impl().create(params)},
          {:audit, {:ok, _audit_log}} <-
-           {:audit, Repo.insert(audit(audit_data, "billing.create", params))} do
+           {:audit, Repo.insert(audit(audit_data, "billing.create", {organization_name, params}))} do
       {:ok, result}
     else
       {:create, {:error, reason}} -> {:error, reason}

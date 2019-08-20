@@ -7,7 +7,9 @@ defmodule Hexpm.BillingTest do
     test "returns {:ok, whatever} when impl().create/1 succeeds" do
       Mox.stub(Hexpm.Billing.Mock, :create, fn _params -> {:ok, :whatever} end)
 
-      assert Hexpm.Billing.create(%{}, audit: {insert(:user), "Test User Agent"}) ==
+      assert Hexpm.Billing.create(%{},
+               audit: %{audit_data: {insert(:user), "Test User Agent"}, organization_name: ""}
+             ) ==
                {:ok, :whatever}
     end
 
@@ -16,7 +18,9 @@ defmodule Hexpm.BillingTest do
 
       user = insert(:user)
 
-      Hexpm.Billing.create(%{}, audit: {user, "Test User Agent"})
+      Hexpm.Billing.create(%{},
+        audit: %{audit_data: {user, "Test User Agent"}, organization_name: ""}
+      )
 
       assert [audit_log] = AuditLogs.all_by(user)
     end
@@ -24,7 +28,9 @@ defmodule Hexpm.BillingTest do
     test "returns {:error, reason} when impl().create/1 fails" do
       Mox.stub(Hexpm.Billing.Mock, :create, fn _params -> {:error, :reason} end)
 
-      assert Hexpm.Billing.create(%{}, audit: {insert(:user), "Test User Agent"}) ==
+      assert Hexpm.Billing.create(%{},
+               audit: %{audit_data: {insert(:user), "Test User Agent"}, organization_name: ""}
+             ) ==
                {:error, :reason}
     end
 
@@ -33,7 +39,9 @@ defmodule Hexpm.BillingTest do
 
       user = insert(:user)
 
-      Hexpm.Billing.create(%{}, audit: {user, "Test User Agent"})
+      Hexpm.Billing.create(%{},
+        audit: %{audit_data: {user, "Test User Agent"}, organization_name: ""}
+      )
 
       assert [] = AuditLogs.all_by(user)
     end
