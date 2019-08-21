@@ -288,26 +288,28 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
     assert get_flash(conn, :error) == "Failed to pay invoice: Card failure."
   end
 
-  test "update billing email", %{user: user, organization: organization} do
-    mock_customer(organization)
+  describe "POST /dashboard/orgs/:dashboard_org/update-billing" do
+    test "update billing email", %{user: user, organization: organization} do
+      mock_customer(organization)
 
-    Mox.stub(Hexpm.Billing.Mock, :update, fn token, params ->
-      assert organization.name == token
-      assert %{"email" => "billing@example.com"} = params
-      {:ok, %{}}
-    end)
+      Mox.stub(Hexpm.Billing.Mock, :update, fn token, params ->
+        assert organization.name == token
+        assert %{"email" => "billing@example.com"} = params
+        {:ok, %{}}
+      end)
 
-    insert(:organization_user, organization: organization, user: user, role: "admin")
+      insert(:organization_user, organization: organization, user: user, role: "admin")
 
-    conn =
-      build_conn()
-      |> test_login(user)
-      |> post("dashboard/orgs/#{organization.name}/update-billing", %{
-        "email" => "billing@example.com"
-      })
+      conn =
+        build_conn()
+        |> test_login(user)
+        |> post("dashboard/orgs/#{organization.name}/update-billing", %{
+          "email" => "billing@example.com"
+        })
 
-    assert redirected_to(conn) == "/dashboard/orgs/#{organization.name}"
-    assert get_flash(conn, :info) == "Updated your billing information."
+      assert redirected_to(conn) == "/dashboard/orgs/#{organization.name}"
+      assert get_flash(conn, :info) == "Updated your billing information."
+    end
   end
 
   test "create organization", %{user: user} do
