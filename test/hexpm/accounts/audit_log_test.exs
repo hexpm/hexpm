@@ -81,6 +81,36 @@ defmodule Hexpm.Accounts.AuditLogTest do
 
       assert %AuditLog{action: "docs.revert"} = audit_log
     end
+
+    test "billing.update", %{user: user} do
+      organization = build(:organization, name: "Organization Name")
+
+      audit =
+        AuditLog.audit(
+          {user, "user_agent"},
+          "billing.update",
+          {
+            organization,
+            %{
+              "email" => "test@example.com",
+              "person" => "Test Person",
+              "company" => "Test Company",
+              "token" => "Test Token",
+              "quantity" => 11
+            }
+          }
+        )
+
+      assert audit.action == "billing.update"
+      assert audit.user_id == user.id
+      assert audit.user_agent == "user_agent"
+      assert audit.params.organization.name == "Organization Name"
+      assert audit.params.email == "test@example.com"
+      assert audit.params.person == "Test Person"
+      assert audit.params.company == "Test Company"
+      assert audit.params.token == "Test Token"
+      assert audit.params.quantity == 11
+    end
   end
 
   describe "audit/4" do
