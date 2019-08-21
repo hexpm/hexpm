@@ -1,0 +1,12 @@
+You have been added as a member to the <%= @organization %> organization.
+
+Go check out the organization[0], if you do not want to join the organization you can leave it from the dashboard. You need to be logged in as <%= @username %> to access it.
+
+<%= OrganizationInvite.access_organization() %>
+
+<%= OrganizationInvite.mix_code() %>
+
+To learn more about private packages and organizations go to the documentation[1].
+
+[0] <%= Routes.organization_url(Endpoint, :show, @organization) %>
+[1] <%= Routes.docs_url(Endpoint, :private) %>

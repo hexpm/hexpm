@@ -1,6 +1,4 @@
 <pre>
-Using Levenshtein Distance with a threshold of <%= @threshold %>
---------------------
-new_package,current_package,distance
-  <%= raw Enum.map(@candidates, fn([n, c, d]) -> "#{n},#{c},#{d}" end) |> Enum.join("\n") %>
+    <%= TyposquatCandidates.intro(@threshold) %>
+    <%= TyposquatCandidates.table(@candidates) %>
 </pre>

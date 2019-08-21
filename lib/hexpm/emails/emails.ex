@@ -37,7 +37,7 @@ defmodule Hexpm.Emails do
     |> subject("Hex.pm - Password reset request")
     |> assign(:username, user.username)
     |> assign(:key, reset.key)
-    |> render("password_reset_request.html")
+    |> render(:password_reset_request)
   end
 
   def password_changed(user) do
@@ -45,7 +45,7 @@ defmodule Hexpm.Emails do
     |> email_to(user)
     |> subject("Hex.pm - Your password has changed")
     |> assign(:username, user.username)
-    |> render("password_changed.html")
+    |> render(:password_changed)
   end
 
   def typosquat_candidates(candidates, threshold) do
@@ -54,7 +54,7 @@ defmodule Hexpm.Emails do
     |> subject("[TYPOSQUAT CANDIDATES]")
     |> assign(:candidates, candidates)
     |> assign(:threshold, threshold)
-    |> render("typosquat_candidates.html")
+    |> render(:typosquat_candidates)
   end
 
   def organization_invite(organization, user) do
@@ -63,7 +63,7 @@ defmodule Hexpm.Emails do
     |> subject("Hex.pm - You have been added to the #{organization.name} organization")
     |> assign(:organization, organization.name)
     |> assign(:username, user.username)
-    |> render("organization_invite.html")
+    |> render(:organization_invite)
   end
 
   def package_published(user, name, version) do

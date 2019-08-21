@@ -19,6 +19,64 @@ defmodule HexpmWeb.EmailView do
     end
   end
 
+  defmodule PasswordResetRequest do
+    def title() do
+      "Reset your Hex.pm password"
+    end
+
+    def message() do
+      "We heard you've lost your password to Hex.pm. Sorry about that!"
+    end
+
+    def mix_code() do
+      "mix hex.user auth"
+    end
+
+    def before_code() do
+      "Once this is complete, your existing keys may be invalidated, you will need to regenerate them by running:"
+    end
+
+    def after_code() do
+      "and entering your username and password."
+    end
+  end
+
+  defmodule PasswordChanged do
+    def greeting(username) do
+      "Hello #{username}"
+    end
+
+    def title() do
+      "Your password on Hex.pm has been changed."
+    end
+  end
+
+  defmodule TyposquatCandidates do
+    def intro(threshold) do
+      """
+      Using Levenshtein Distance with a threshold of #{threshold}
+      --------------------
+      new_package,current_package,distance
+      """
+    end
+
+    def table(candidates) do
+      candidates
+      |> Enum.map(fn([n, c, d]) -> "#{n},#{c},#{d}" end)
+      |> Enum.join("\n")
+    end
+  end
+
+  defmodule OrganizationInvite do
+    def access_organization() do
+      "You can access organization packages after authenticating in your shell:"
+    end
+
+    def mix_code() do
+      "mix hex.user auth"
+    end
+  end
+
   defmodule PackagePublished do
     def intro(package, version) do
       """
