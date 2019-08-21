@@ -195,7 +195,9 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
         conn,
         organization,
         params,
-        &Hexpm.Billing.update(organization.name, &1)
+        &Hexpm.Billing.update(organization.name, &1,
+          audit: %{audit_data: audit_data(conn), organization: organization}
+        )
       )
     end)
   end

@@ -310,6 +310,24 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
       assert redirected_to(conn) == "/dashboard/orgs/#{organization.name}"
       assert get_flash(conn, :info) == "Updated your billing information."
     end
+
+    test "create audit_log with action billing.update", %{user: user, organization: organization} do
+      mock_customer(organization)
+      Mox.stub(Hexpm.Billing.Mock, :update, fn _, _ -> {:ok, %{}} end)
+
+      insert(:organization_user, organization: organization, user: user, role: "admin")
+
+      build_conn()
+      |> test_login(user)
+      |> post("dashboard/orgs/#{organization.name}/update-billing", %{
+        "email" => "billing@example.com"
+      })
+
+      assert [audit_log] = AuditLogs.all_by(user)
+      assert audit_log.action == "billing.update"
+      assert audit_log.params["email"] == "billing@example.com"
+      assert audit_log.params["organization"]["name"] == organization.name
+    end
   end
 
   test "create organization", %{user: user} do
