@@ -71,10 +71,11 @@ defmodule Hexpm.Repository.Releases do
     Multi.new()
     |> Multi.delete(:release, Release.delete(release))
     |> audit_revert(audit_data, package, release)
+    |> Multi.run(:release_count, &release_count/2)
     |> Multi.run(:package, &maybe_delete_package/2)
     |> refresh_package_dependants()
     |> Repo.transaction(timeout: @publish_timeout)
-    |> revert_result(package)
+    |> revert_result()
   end
 
   def revert_docs(release, audit: audit_data) do
@@ -129,7 +130,7 @@ defmodule Hexpm.Repository.Releases do
     release = %{result.release | package: package}
 
     Assets.push_release(release, body)
-    add_package_to_registry(package)
+    update_package_in_registry(package)
     email_package_publisher(user, package, release)
 
     {:ok, %{result | release: release, package: package}}
@@ -147,13 +148,16 @@ defmodule Hexpm.Repository.Releases do
 
   defp retire_result(result), do: result
 
-  defp revert_result({:ok, %{release: release}}, package) do
-    remove_package_from_registry(package)
+  defp revert_result({:ok, %{release: release, release_count: release_count}}) do
+    if release_count == 0 do
+      remove_package_from_registry(release.package)
+    end
+
     Assets.revert_release(release)
     :ok
   end
 
-  defp revert_result(result, _package), do: result
+  defp revert_result(result), do: result
 
   defp create_package(multi, repository, package, user, meta) do
     changeset =
@@ -217,10 +221,12 @@ defmodule Hexpm.Repository.Releases do
     end)
   end
 
-  defp maybe_delete_package(repo, %{release: release}) do
-    count = repo.aggregate(assoc(release.package, :releases), :count, :id)
+  defp release_count(repo, %{release: release}) do
+    {:ok, repo.aggregate(assoc(release.package, :releases), :count, :id)}
+  end
 
-    if count == 0 do
+  defp maybe_delete_package(repo, %{release_count: release_count, release: release}) do
+    if release_count == 0 do
       release.package
       |> Package.delete()
       |> repo.delete()
@@ -237,7 +243,7 @@ defmodule Hexpm.Repository.Releases do
   end
 
   if Mix.env() == :test do
-    defp add_package_to_registry(package) do
+    defp update_package_in_registry(package) do
       RegistryBuilder.v2_package(package)
       RegistryBuilder.v1_and_v2_repository(package.repository)
     end
@@ -247,7 +253,7 @@ defmodule Hexpm.Repository.Releases do
       RegistryBuilder.v1_and_v2_repository(package.repository)
     end
   else
-    defp add_package_to_registry(package) do
+    defp update_package_in_registry(package) do
       RegistryBuilder.v2_package(package)
       metadata = Logger.metadata()
 

@@ -42,6 +42,8 @@ defmodule HexpmWeb.API.ReleaseControllerTest do
       package_owner = Hexpm.Repo.one!(assoc(package, :owners))
       assert package_owner.id == user.id
 
+      assert Hexpm.Store.get(nil, :s3_bucket, "packages/#{package.name}", [])
+
       log = Hexpm.Repo.one!(AuditLog)
       assert log.user_id == user.id
       assert log.organization_id == nil
@@ -65,6 +67,8 @@ defmodule HexpmWeb.API.ReleaseControllerTest do
       assert result["html_url"] =~ "packages/#{package.name}/1.0.0"
 
       assert Hexpm.Repo.get_by(Package, name: package.name).meta.description == "awesomeness"
+
+      assert Hexpm.Store.get(nil, :s3_bucket, "packages/#{package.name}", [])
     end
 
     test "update package fails when version is invalid", %{user: user, package: package} do
@@ -808,6 +812,8 @@ defmodule HexpmWeb.API.ReleaseControllerTest do
       Ecto.Changeset.change(release, inserted_at: %{DateTime.utc_now() | year: 2030})
       |> Hexpm.Repo.update!()
 
+      RegistryBuilder.full(Repository.hexpm())
+
       build_conn()
       |> put_req_header("authorization", key_for(user))
       |> delete("api/packages/#{package.name}/releases/0.0.1")
@@ -816,11 +822,32 @@ defmodule HexpmWeb.API.ReleaseControllerTest do
       refute Hexpm.Repo.get_by(Package, name: package.name)
       refute Hexpm.Repo.get_by(assoc(package, :releases), version: "0.0.1")
 
+      refute Hexpm.Store.get(nil, :s3_bucket, "packages/#{package.name}", [])
+
       [log] = Hexpm.Repo.all(AuditLog)
       assert log.user_id == user.id
       assert log.action == "release.revert"
       assert log.params["package"]["name"] == package.name
       assert log.params["release"]["version"] == "0.0.1"
+    end
+
+    test "delete non-last package release", %{user: user, package: package, release: release} do
+      Ecto.Changeset.change(release, inserted_at: %{DateTime.utc_now() | year: 2030})
+      |> Hexpm.Repo.update!()
+
+      insert(:release, package: package)
+
+      RegistryBuilder.full(Repository.hexpm())
+
+      build_conn()
+      |> put_req_header("authorization", key_for(user))
+      |> delete("api/packages/#{package.name}/releases/0.0.1")
+      |> response(204)
+
+      assert Hexpm.Repo.get_by(Package, name: package.name)
+      refute Hexpm.Repo.get_by(assoc(package, :releases), version: "0.0.1")
+
+      assert Hexpm.Store.get(nil, :s3_bucket, "packages/#{package.name}", [])
     end
   end
 
