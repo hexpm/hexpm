@@ -226,31 +226,23 @@ defmodule HexpmWeb.ViewHelpers do
     text
   end
 
-  @number_unit ["K", "M", "B"]
+  def human_number_space(0, _max), do: "0"
+  def human_number_space(int, max) when is_integer(int) do
+    unit =
+      cond do
+        int >= 1_000_000_000 -> {"B", 9}
+        int >= 1_000_000 -> {"M", 6}
+        int >= 1_000 -> {"K", 3}
+        true -> {"", 1}
+      end
 
-  def human_number_space(integer, max, count \\ 0)
-
-  def human_number_space(integer, max, count) when is_integer(integer) do
-    integer |> Integer.to_charlist() |> human_number_space(max, count)
+    do_human_number(int, max, trunc(:math.log10(int)) + 1, unit)
   end
 
-  def human_number_space(string, max, count) when is_list(string) do
-    cond do
-      length(string) > max ->
-        string = Enum.drop(string, -3)
-        human_number_space(string, max, count + 1)
-
-      count == 0 ->
-        human_number_space(:erlang.list_to_binary(string))
-
-      true ->
-        human_number_space(:erlang.list_to_binary(string)) <> Enum.at(@number_unit, count - 1)
-    end
-  end
-
-  def human_number_space(string) when is_binary(string) do
-    string
-    |> :erlang.binary_to_list()
+  def human_number_space(number) do
+    number
+    |> to_string()
+    |> String.to_charlist()
     |> Enum.reverse()
     |> Enum.chunk_every(3)
     |> Enum.intersperse(?\s)
@@ -259,8 +251,19 @@ defmodule HexpmWeb.ViewHelpers do
     |> :erlang.list_to_binary()
   end
 
-  def human_number_space(integer) when is_integer(integer) do
-    integer |> Integer.to_string() |> human_number_space()
+  defp do_human_number(int, max, digits, _unit) when is_integer(int) and digits <= max do
+    human_number_space(int)
+  end
+
+  defp do_human_number(int, max, digits, {unit, mag}) when is_integer(int) and digits > max do
+    shifted = int / :math.pow(10, mag)
+    len = trunc(:math.log10(shifted)) + 2
+    float = Float.round(shifted, max - len)
+
+    case Float.ratio(float) do
+      {_, 1} -> human_number_space(trunc(float)) <> unit
+      {_, _} -> to_string(float) <> unit
+    end
   end
 
   def human_relative_time_from_now(datetime) do
