@@ -42,6 +42,45 @@ defmodule Hexpm.Accounts.AuditLogTest do
       assert audit.params.user.username == user.username
       assert audit.params.user.handles.github == user.handles.github
     end
+
+    test "action billing.create", %{user: user} do
+      organization = build(:organization, name: "Organization Name")
+
+      audit =
+        AuditLog.build(
+          user,
+          "user_agent",
+          "billing.create",
+          {
+            organization,
+            %{
+              "email" => "test@example.com",
+              "person" => "Test Person",
+              "company" => "Test Company",
+              "token" => "Test Token",
+              "quantity" => 11
+            }
+          }
+        )
+
+      assert audit.action == "billing.create"
+      assert audit.user_id == user.id
+      assert audit.user_agent == "user_agent"
+      assert audit.params.organization.name == "Organization Name"
+      assert audit.params.email == "test@example.com"
+      assert audit.params.person == "Test Person"
+      assert audit.params.company == "Test Company"
+      assert audit.params.token == "Test Token"
+      assert audit.params.quantity == 11
+    end
+  end
+
+  describe "audit/3" do
+    test "with params", %{user: user, package: package, release: release} do
+      audit_log = AuditLog.audit({user, "user_agent"}, "docs.revert", {package, release})
+
+      assert %AuditLog{action: "docs.revert"} = audit_log
+    end
   end
 
   describe "audit/4" do

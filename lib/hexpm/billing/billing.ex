@@ -1,4 +1,6 @@
 defmodule Hexpm.Billing do
+  use Hexpm.Context
+
   @type organization() :: String.t()
 
   @callback checkout(organization(), data :: map()) :: map()
@@ -22,4 +24,15 @@ defmodule Hexpm.Billing do
   def invoice(id), do: impl().invoice(id)
   def pay_invoice(id), do: impl().pay_invoice(id)
   def report(), do: impl().report()
+
+  def create(params, audit: %{audit_data: audit_data, organization: organization}) do
+    case impl().create(params) do
+      {:ok, result} ->
+        Repo.insert!(audit(audit_data, "billing.create", {organization, params}))
+        {:ok, result}
+
+      {:error, reason} ->
+        {:error, reason}
+    end
+  end
 end

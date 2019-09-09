@@ -2,7 +2,7 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
   use HexpmWeb.ConnCase, async: true
   use Bamboo.Test
 
-  alias Hexpm.Accounts.{Organizations, Users}
+  alias Hexpm.Accounts.{Organizations, Users, AuditLogs}
 
   defp add_email(user, email) do
     {:ok, user} = Users.add_email(user, %{email: email}, audit: audit_data(user))
@@ -362,35 +362,52 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
     assert response(conn, 400) =~ "has already been taken"
   end
 
-  test "create billing customer after organization", %{user: user, organization: organization} do
-    Mox.stub(Hexpm.Billing.Mock, :create, fn params ->
-      assert params == %{
-               "person" => %{"country" => "SE"},
-               "token" => organization.name,
-               "company" => nil,
-               "email" => "eric@mail.com",
-               "quantity" => 1
-             }
+  describe "POST /dashboard/orgs/:dashboard_org/create-billing" do
+    test "create billing customer after organization", %{user: user, organization: organization} do
+      Mox.stub(Hexpm.Billing.Mock, :create, fn params ->
+        assert params == %{
+                 "person" => %{"country" => "SE"},
+                 "token" => organization.name,
+                 "company" => nil,
+                 "email" => "eric@mail.com",
+                 "quantity" => 1
+               }
 
-      {:ok, %{}}
-    end)
+        {:ok, %{}}
+      end)
 
-    insert(:organization_user, organization: organization, user: user, role: "admin")
+      insert(:organization_user, organization: organization, user: user, role: "admin")
 
-    params = %{
-      "organization" => %{"name" => organization.name},
-      "person" => %{"country" => "SE"},
-      "email" => "eric@mail.com"
-    }
+      params = %{
+        "organization" => %{"name" => organization.name},
+        "person" => %{"country" => "SE"},
+        "email" => "eric@mail.com"
+      }
 
-    conn =
+      conn =
+        build_conn()
+        |> test_login(user)
+        |> post("dashboard/orgs/#{organization.name}/create-billing", params)
+
+      response(conn, 302)
+      assert get_resp_header(conn, "location") == ["/dashboard/orgs/#{organization.name}"]
+      assert get_flash(conn, :info) == "Updated your billing information."
+    end
+
+    test "create audit_log with action billing.create", %{user: user, organization: organization} do
+      Mox.stub(Hexpm.Billing.Mock, :create, fn _ -> {:ok, %{}} end)
+
+      insert(:organization_user, organization: organization, user: user, role: "admin")
+
+      params = %{"company" => nil, "person" => nil}
+
       build_conn()
       |> test_login(user)
       |> post("dashboard/orgs/#{organization.name}/create-billing", params)
 
-    response(conn, 302)
-    assert get_resp_header(conn, "location") == ["/dashboard/orgs/#{organization.name}"]
-    assert get_flash(conn, :info) == "Updated your billing information."
+      assert [%{action: "billing.create"} = audit_log] = AuditLogs.all_by(user)
+      assert audit_log.params["organization"]["name"] == organization.name
+    end
   end
 
   describe "POST /dashboard/orgs/:dashboard_org/add-seats" do
