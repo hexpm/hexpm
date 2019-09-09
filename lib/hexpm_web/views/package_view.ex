@@ -156,4 +156,92 @@ defmodule HexpmWeb.PackageView do
         [content_tag(:strong, "Retired package")]
     end
   end
+
+  def pretty_date(datetime) do
+    "#{DateTime.to_date(datetime)}"
+  end
+
+  @doc """
+  This function turns an audit_log struct into a short description.
+
+  Please check Hexpm.Accounts.AuditLog.extract_params/2 to see all the
+  package related actions and their params structures.
+  """
+  def humanize_audit_log_info(%{action: "docs.publish"} = audit_log) do
+    if release_version = audit_log.params["release"]["version"] do
+      "Publish documentation for release #{release_version}"
+    else
+      "Publish documentation"
+    end
+  end
+
+  def humanize_audit_log_info(%{action: "docs.revert"} = audit_log) do
+    if release_version = audit_log.params["release"]["version"] do
+      "Revert documentation for release #{release_version}"
+    else
+      "Revert documentation"
+    end
+  end
+
+  def humanize_audit_log_info(%{action: "owner.add"} = audit_log) do
+    username = audit_log.params["user"]["username"]
+    level = audit_log.params["level"]
+
+    if username && level do
+      "Add #{username} as a level #{level} owner"
+    else
+      "Add owner"
+    end
+  end
+
+  def humanize_audit_log_info(%{action: "owner.transfer"} = audit_log) do
+    if username = audit_log.params["user"]["username"] do
+      "Transfer owner to #{username}"
+    else
+      "Transfer owner"
+    end
+  end
+
+  def humanize_audit_log_info(%{action: "owner.remove"} = audit_log) do
+    username = audit_log.params["user"]["username"]
+    level = audit_log.params["level"]
+
+    if username && level do
+      "Remove level #{level} owner #{username}"
+    else
+      "Remove owner"
+    end
+  end
+
+  def humanize_audit_log_info(%{action: "release.publish"} = audit_log) do
+    if version = audit_log.params["release"]["version"] do
+      "Publish release #{version}"
+    else
+      "Publish release"
+    end
+  end
+
+  def humanize_audit_log_info(%{action: "release.revert"} = audit_log) do
+    if version = audit_log.params["release"]["version"] do
+      "Revert release #{version}"
+    else
+      "Revert release"
+    end
+  end
+
+  def humanize_audit_log_info(%{action: "release.retire"} = audit_log) do
+    if version = audit_log.params["release"]["version"] do
+      "Retire release #{version}"
+    else
+      "Retire release"
+    end
+  end
+
+  def humanize_audit_log_info(%{action: "release.unretire"} = audit_log) do
+    if version = audit_log.params["release"]["version"] do
+      "Unretire release #{version}"
+    else
+      "Unretire release"
+    end
+  end
 end

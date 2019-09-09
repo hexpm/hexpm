@@ -108,6 +108,21 @@
   }
 }
 
+.audit-logs-list {
+  padding: 0;
+  list-style: none;
+
+  li {
+    @include font-size(18);
+    margin: 0 0 10px;
+    overflow: hidden;
+    font-weight: 300;
+    line-height: 1.06;  // Just enough for e.g. the bottom of a "g" not to be cut off.
+    color: #000;
+    text-overflow: ellipsis;
+  }
+}
+
 .user-avatar {
   width: 30px;
   margin: 0 7px;

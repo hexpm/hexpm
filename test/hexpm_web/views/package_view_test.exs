@@ -180,4 +180,168 @@ defmodule HexpmWeb.PackageViewTest do
                "<strong>Retired package:</strong> Security issue"
     end
   end
+
+  describe "humanize_audit_log_info/1" do
+    test "docs.publish with no params" do
+      audit_log = build(:audit_log, action: "docs.publish")
+
+      assert PackageView.humanize_audit_log_info(audit_log) ==
+               "Publish documentation"
+    end
+
+    test "docs.publish with params" do
+      audit_log =
+        build(:audit_log,
+          action: "docs.publish",
+          params: %{"release" => %{"version" => "1.0.2"}}
+        )
+
+      assert PackageView.humanize_audit_log_info(audit_log) ==
+               "Publish documentation for release 1.0.2"
+    end
+
+    test "docs.revert with no params" do
+      audit_log = build(:audit_log, action: "docs.revert")
+
+      assert PackageView.humanize_audit_log_info(audit_log) ==
+               "Revert documentation"
+    end
+
+    test "docs.revert with params" do
+      audit_log =
+        build(:audit_log,
+          action: "docs.revert",
+          params: %{"release" => %{"version" => "0.3.4"}}
+        )
+
+      assert PackageView.humanize_audit_log_info(audit_log) ==
+               "Revert documentation for release 0.3.4"
+    end
+
+    test "owner.add with no params" do
+      audit_log = build(:audit_log, action: "owner.add")
+
+      assert PackageView.humanize_audit_log_info(audit_log) ==
+               "Add owner"
+    end
+
+    test "owner.add with params" do
+      audit_log =
+        build(:audit_log,
+          action: "owner.add",
+          params: %{"level" => 2, "user" => %{"username" => "New User"}}
+        )
+
+      assert PackageView.humanize_audit_log_info(audit_log) ==
+               "Add New User as a level 2 owner"
+    end
+
+    test "owner.transfer with no params" do
+      audit_log = build(:audit_log, action: "owner.transfer")
+
+      assert PackageView.humanize_audit_log_info(audit_log) ==
+               "Transfer owner"
+    end
+
+    test "owner.transfer with params" do
+      audit_log =
+        build(:audit_log,
+          action: "owner.transfer",
+          params: %{"user" => %{"username" => "New Owner"}}
+        )
+
+      assert PackageView.humanize_audit_log_info(audit_log) ==
+               "Transfer owner to New Owner"
+    end
+
+    test "owner.remove with no params" do
+      audit_log = build(:audit_log, action: "owner.remove")
+
+      assert PackageView.humanize_audit_log_info(audit_log) ==
+               "Remove owner"
+    end
+
+    test "owner.remove with params" do
+      audit_log =
+        build(:audit_log,
+          action: "owner.remove",
+          params: %{"level" => 3, "user" => %{"username" => "Removee"}}
+        )
+
+      assert PackageView.humanize_audit_log_info(audit_log) ==
+               "Remove level 3 owner Removee"
+    end
+
+    test "release.publish with no params" do
+      audit_log = build(:audit_log, action: "release.publish")
+
+      assert PackageView.humanize_audit_log_info(audit_log) ==
+               "Publish release"
+    end
+
+    test "release.publish with params" do
+      audit_log =
+        build(:audit_log,
+          action: "release.publish",
+          params: %{"release" => %{"version" => "10.2.8"}}
+        )
+
+      assert PackageView.humanize_audit_log_info(audit_log) ==
+               "Publish release 10.2.8"
+    end
+
+    test "release.revert with no params" do
+      audit_log = build(:audit_log, action: "release.revert")
+
+      assert PackageView.humanize_audit_log_info(audit_log) ==
+               "Revert release"
+    end
+
+    test "release.revert with params" do
+      audit_log =
+        build(:audit_log,
+          action: "release.revert",
+          params: %{"release" => %{"version" => "0.2.7"}}
+        )
+
+      assert PackageView.humanize_audit_log_info(audit_log) ==
+               "Revert release 0.2.7"
+    end
+
+    test "release.retire with no params" do
+      audit_log = build(:audit_log, action: "release.retire")
+
+      assert PackageView.humanize_audit_log_info(audit_log) ==
+               "Retire release"
+    end
+
+    test "release.retire with params" do
+      audit_log =
+        build(:audit_log,
+          action: "release.retire",
+          params: %{"release" => %{"version" => "8.3.1"}}
+        )
+
+      assert PackageView.humanize_audit_log_info(audit_log) ==
+               "Retire release 8.3.1"
+    end
+
+    test "release.unretire with no params" do
+      audit_log = build(:audit_log, action: "release.unretire")
+
+      assert PackageView.humanize_audit_log_info(audit_log) ==
+               "Unretire release"
+    end
+
+    test "release.unretire with params" do
+      audit_log =
+        build(:audit_log,
+          action: "release.unretire",
+          params: %{"release" => %{"version" => "3.7.21"}}
+        )
+
+      assert PackageView.humanize_audit_log_info(audit_log) ==
+               "Unretire release 3.7.21"
+    end
+  end
 end

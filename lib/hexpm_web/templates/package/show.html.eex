@@ -150,6 +150,19 @@ tools = Keyword.take(tools, compatible_tools)
         </ul>
       </div>
     </div>
+
+    <div class="row">
+      <div class="col-md-12">
+        <h3>Audit Logs</h3>
+        <ul class="audit-logs-list">
+          <%= for audit_log <- @audit_logs do %>
+            <li>
+              <%= pretty_date(audit_log.inserted_at) %> <%= humanize_audit_log_info(audit_log) %>
+            </li>
+          <% end %>
+        </ul>
+      </div>
+    </div>
   </div>
 
   <div class="col-md-3">
