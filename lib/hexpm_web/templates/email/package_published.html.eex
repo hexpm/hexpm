@@ -1,27 +1,17 @@
-<p>You have recently published package <%= @package %> v<%= @version %>.
-  If this wasn't done by you, you should reset your account and revert or retire the version.
-</p>
-<p>
-For mix:
+<p><%= PackagePublished.intro(@package, @version) %></p>
 
-<pre>
-  cd <%= @package %>; mix hex.publish --revert <%= @version %>
-  # or
-  mix hex.retire <%= @package %> <%= @version %> security --message "Not published by owners"
-</pre>
+<p>
+    For mix:
+
+    <pre>
+        <%= PackagePublished.mix_code(@package, @version) %>
+    </pre>
 </p>
 
 <p>
-For rebar3:
+    For rebar3:
 
-<pre>
-  cd <%= @package %>; rebar3 hex publish --revert <%= @version %>
-  # or
-  rebar3 hex retire --pkg <%= @package %> --vsn <%= @version %> --reason security --message "Not published by owners"
-</pre>
-</p>
-
-<p>
-  --<br>
-  Hex.pm
+    <pre>
+        <%= PackagePublished.rebar3_code(@package, @version) %>
+    </pre>
 </p>

@@ -1,6 +1,1 @@
-<p><%= @username %> has been added as an owner to package <%= @package %>.</p>
-
-<p>
-  --<br>
-  Hex.pm
-</p>
+<p><%= OwnerAdd.message(@username, @package) %></p>

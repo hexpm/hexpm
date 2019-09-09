@@ -9,7 +9,7 @@ defmodule Hexpm.Emails do
     |> subject("Hex.pm - Owner added to package #{package.name}")
     |> assign(:username, owner.username)
     |> assign(:package, package.name)
-    |> render("owner_add.html")
+    |> render(:owner_add)
   end
 
   def owner_removed(package, owners, owner) do
@@ -18,7 +18,7 @@ defmodule Hexpm.Emails do
     |> subject("Hex.pm - Owner removed from package #{package.name}")
     |> assign(:username, owner.username)
     |> assign(:package, package.name)
-    |> render("owner_remove.html")
+    |> render(:owner_remove)
   end
 
   def verification(user, email) do
@@ -28,7 +28,7 @@ defmodule Hexpm.Emails do
     |> assign(:username, user.username)
     |> assign(:email, email.email)
     |> assign(:key, email.verification_key)
-    |> render("verification.html")
+    |> render(:verification)
   end
 
   def password_reset_request(user, reset) do
@@ -37,7 +37,7 @@ defmodule Hexpm.Emails do
     |> subject("Hex.pm - Password reset request")
     |> assign(:username, user.username)
     |> assign(:key, reset.key)
-    |> render("password_reset_request.html")
+    |> render(:password_reset_request)
   end
 
   def password_changed(user) do
@@ -45,7 +45,7 @@ defmodule Hexpm.Emails do
     |> email_to(user)
     |> subject("Hex.pm - Your password has changed")
     |> assign(:username, user.username)
-    |> render("password_changed.html")
+    |> render(:password_changed)
   end
 
   def typosquat_candidates(candidates, threshold) do
@@ -54,7 +54,7 @@ defmodule Hexpm.Emails do
     |> subject("[TYPOSQUAT CANDIDATES]")
     |> assign(:candidates, candidates)
     |> assign(:threshold, threshold)
-    |> render("typosquat_candidates.html")
+    |> render(:typosquat_candidates)
   end
 
   def organization_invite(organization, user) do
@@ -63,7 +63,7 @@ defmodule Hexpm.Emails do
     |> subject("Hex.pm - You have been added to the #{organization.name} organization")
     |> assign(:organization, organization.name)
     |> assign(:username, user.username)
-    |> render("organization_invite.html")
+    |> render(:organization_invite)
   end
 
   def package_published(user, name, version) do
@@ -72,7 +72,7 @@ defmodule Hexpm.Emails do
     |> subject("Hex.pm - Package #{name} v#{version} published")
     |> assign(:version, version)
     |> assign(:package, name)
-    |> render("package_published.html")
+    |> render(:package_published)
   end
 
   defp email_to(email, to) do
@@ -98,7 +98,7 @@ defmodule Hexpm.Emails do
   defp email() do
     new_email()
     |> from(source())
-    |> put_html_layout({HexpmWeb.EmailView, "layout.html"})
+    |> put_layout({HexpmWeb.EmailView, :layout})
   end
 
   defp source() do
