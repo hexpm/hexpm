@@ -1,4 +1,4 @@
 <%= render @view_module, @view_template, assigns %>
 
---
+<%= "-- " %>
 Hex.pm
