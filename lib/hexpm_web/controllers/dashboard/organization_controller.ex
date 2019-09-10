@@ -215,8 +215,6 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
         conn,
         organization,
         params,
-        # TODO: call fun.(customer_params, audit: audit_data(conn)) in
-        # update_billing/4 directly after Hexpm.Billing.update/2 is added
         &Hexpm.Billing.create(&1,
           audit: %{audit_data: audit_data(conn), organization: organization}
         )
