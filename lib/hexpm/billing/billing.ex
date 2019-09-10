@@ -37,13 +37,13 @@ defmodule Hexpm.Billing do
   end
 
   def update(organization, params, audit: audit) do
-    with {:update, {:ok, result}} <- {:update, impl().update(organization, params)},
-         {:audit, {:ok, _audit_log}} <-
-           {:audit,
-            Repo.insert(audit(audit.audit_data, "billing.update", {audit.organization, params}))} do
-      {:ok, result}
-    else
-      {:update, {:error, reason}} -> {:error, reason}
+    case impl().update(organization, params) do
+      {:ok, result} ->
+        Repo.insert!(audit(audit.audit_data, "billing.update", {audit.organization, params}))
+        {:ok, result}
+
+      {:error, reason} ->
+        {:error, reason}
     end
   end
 end
