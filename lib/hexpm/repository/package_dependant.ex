@@ -4,5 +4,6 @@ defmodule Hexpm.Repository.PackageDependant do
   schema "package_dependants" do
     belongs_to :package, Package
     field :name, :string
+    field :repo, :string
   end
 end

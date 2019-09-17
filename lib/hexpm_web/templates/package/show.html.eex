@@ -232,7 +232,7 @@ tools = Keyword.take(tools, compatible_tools)
     <%= safe_join(@dependants, ", ", fn package ->
       link(package_name(package), to: path_for_package(package))
     end) %><%= if @dependants_count != 0 do %>,
-    <a href="<%= Routes.package_path(Endpoint, :index, search: "depends:#{@package.name}") %>">show all...</a>
+    <a href="<%= Routes.package_path(Endpoint, :index, search: "depends:#{@repository_name}:#{@package.name}") %>">show all...</a>
     <% end %>
   </div>
 </div>
