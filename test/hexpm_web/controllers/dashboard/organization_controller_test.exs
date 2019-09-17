@@ -472,6 +472,24 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
       assert get_flash(conn, :error) ==
                "The number of open seats cannot be less than the number of organization members."
     end
+
+    test "create audit_log with action billing.update", %{organization: organization, user: user} do
+      Mox.stub(Hexpm.Billing.Mock, :update, fn _organization_name, _map -> {:ok, %{}} end)
+
+      insert(:organization_user, organization: organization, user: user, role: "admin")
+
+      build_conn()
+      |> test_login(user)
+      |> post("dashboard/orgs/#{organization.name}/add-seats", %{
+        "current-seats" => "1",
+        "add-seats" => "1"
+      })
+
+      assert [audit_log] = AuditLogs.all_by(user)
+      assert audit_log.action == "billing.update"
+      assert audit_log.params["quantity"] == 2
+      assert audit_log.params["organization"]["name"] == organization.name
+    end
   end
 
   describe "POST /dashboard/orgs/:dashboard_org/remove-seats" do
@@ -512,6 +530,23 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
 
       assert get_flash(conn, :error) ==
                "The number of open seats cannot be less than the number of organization members."
+    end
+
+    test "create audit_log with action billing.update", %{organization: organization, user: user} do
+      Mox.stub(Hexpm.Billing.Mock, :update, fn _organization_name, _map -> {:ok, %{}} end)
+
+      insert(:organization_user, organization: organization, user: user, role: "admin")
+
+      build_conn()
+      |> test_login(user)
+      |> post("dashboard/orgs/#{organization.name}/remove-seats", %{
+        "seats" => "4"
+      })
+
+      assert [audit_log] = AuditLogs.all_by(user)
+      assert audit_log.action == "billing.update"
+      assert audit_log.params["quantity"] == 4
+      assert audit_log.params["organization"]["name"] == organization.name
     end
   end
 

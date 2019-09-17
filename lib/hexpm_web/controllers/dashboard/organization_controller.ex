@@ -232,7 +232,10 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
       seats = current_seats + add_seats
 
       if seats >= user_count do
-        {:ok, _customer} = Hexpm.Billing.update(organization.name, %{"quantity" => seats})
+        {:ok, _customer} =
+          Hexpm.Billing.update(organization.name, %{"quantity" => seats},
+            audit: %{audit_data: audit_data(conn), organization: organization}
+          )
 
         conn
         |> put_flash(:info, "The number of open seats have been increased.")
@@ -252,7 +255,10 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
       seats = String.to_integer(params["seats"])
 
       if seats >= user_count do
-        {:ok, _customer} = Hexpm.Billing.update(organization.name, %{"quantity" => seats})
+        {:ok, _customer} =
+          Hexpm.Billing.update(organization.name, %{"quantity" => seats},
+            audit: %{audit_data: audit_data(conn), organization: organization}
+          )
 
         conn
         |> put_flash(:info, "The number of open seats have been reduced.")
