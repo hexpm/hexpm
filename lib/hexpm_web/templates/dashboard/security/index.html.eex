@@ -1,0 +1,22 @@
+<%= changeset_error(@changeset) %>
+
+<div class="row">
+  <div class="col-sm-3">
+    <%= render DashboardView, "_sidebar.html", assigns %>
+  </div>
+
+  <div class="col-sm-9">
+    <div class="panel panel-default">
+      <div class="panel-heading">Security</div>
+      <div class="panel-body">
+        <%= form_for @changeset, Routes.dashboard_security_path(Endpoint, :update), [method: :post], fn f -> %>
+          <div class="form-group">
+            <%= checkbox f, :tfa_enabled, style: "margin-right:1em" %>
+            <%= label f, :tfa_enabled, "Enable two-factor authentication" %>
+          </div>
+          <button type="submit" class="btn btn-primary">Save</button>
+        <% end %>
+      </div>
+    </div>
+  </div>
+</div>

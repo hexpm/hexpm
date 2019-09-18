@@ -10,6 +10,7 @@ defmodule Hexpm.Accounts.User do
     field :password, :string
     field :service, :boolean, default: false
     field :auth_secret, :string
+    field :tfa_enabled, :boolean, default: false
     timestamps()
 
     embeds_one :handles, UserHandles, on_replace: :delete
@@ -79,6 +80,10 @@ defmodule Hexpm.Accounts.User do
     |> validate_password(:password, password)
     |> validate_confirmation(:password, message: "does not match password")
     |> update_change(:password, &Auth.gen_password/1)
+  end
+
+  def update_security(user, params) do
+    cast(user, params, ~w(tfa_enabled)a)
   end
 
   def can_reset_password?(user, key) do
