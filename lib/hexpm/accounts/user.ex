@@ -86,7 +86,9 @@ defmodule Hexpm.Accounts.User do
   end
 
   def update_security(user, params) do
-    cast(user, params, ~w(tfa_enabled)a)
+    user
+    |> cast(params, ~w(tfa_enabled)a)
+    |> maybe_update_auth_secret()
   end
 
   def can_reset_password?(user, key) do
@@ -164,4 +166,12 @@ defmodule Hexpm.Accounts.User do
   else
     defp organization_name(organization), do: organization.name
   end
+
+  defp maybe_update_auth_secret(%{changes: %{tfa_enabled: true}} = changeset),
+    do: put_change(changeset, :auth_secret, Hexpm.Accounts.TwoFactorAuth.generate_secret())
+
+  defp maybe_update_auth_secret(%{changes: %{tfa_enabled: false}} = changeset),
+    do: put_change(changeset, :auth_secret, nil)
+
+  defp maybe_update_auth_secret(changeset), do: changeset
 end
