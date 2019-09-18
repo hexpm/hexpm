@@ -261,12 +261,24 @@ defmodule Hexpm.Repository.Package do
   end
 
   defp search_param("depends", search, query) do
-    from(
-      p in query,
-      join: pd in Hexpm.Repository.PackageDependant,
-      on: p.id == pd.dependant_id,
-      where: pd.name == ^search
-    )
+    case String.split(search, ":", parts: 2) do
+      [repository, package] ->
+        from(
+          p in query,
+          join: pd in Hexpm.Repository.PackageDependant,
+          on: p.id == pd.dependant_id,
+          where: pd.name == ^package,
+          where: pd.repo == ^repository
+        )
+
+      _ ->
+        from(
+          p in query,
+          join: pd in Hexpm.Repository.PackageDependant,
+          on: p.id == pd.dependant_id,
+          where: pd.name == ^search
+        )
+    end
   end
 
   defp search_param(_, _, query) do

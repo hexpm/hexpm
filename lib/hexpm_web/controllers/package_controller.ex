@@ -121,7 +121,7 @@ defmodule HexpmWeb.PackageController do
         repositories,
         1,
         20,
-        "depends:#{package.name}",
+        "depends:#{repository.name}:#{package.name}",
         :recent_downloads,
         [:name, :repository_id]
       )
@@ -139,6 +139,7 @@ defmodule HexpmWeb.PackageController do
         container: "container package-view",
         canonical_url: Routes.package_url(conn, :show, package),
         package: package,
+        repository_name: repository.name,
         releases: releases,
         current_release: release,
         downloads: downloads,

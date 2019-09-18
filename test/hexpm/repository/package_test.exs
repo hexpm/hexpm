@@ -186,12 +186,40 @@ defmodule Hexpm.Repository.PackageTest do
     Hexpm.Repo.refresh_view(Hexpm.Repository.PackageDependant)
 
     assert ["ecto", "phoenix"] =
-             Package.all([repository], 1, 10, "depends:poison", :name, nil)
+             Package.all([repository], 1, 10, "depends:#{repository.name}:poison", :name, nil)
              |> Repo.all()
              |> Enum.map(& &1.name)
 
     assert ["phoenix"] =
-             Package.all([repository], 1, 10, "depends:poison depends:ecto", nil, nil)
+             Package.all(
+               [repository],
+               1,
+               10,
+               "depends:#{repository.name}:poison depends:#{repository.name}:ecto",
+               nil,
+               nil
+             )
+             |> Repo.all()
+             |> Enum.map(& &1.name)
+  end
+
+  test "search dependants is scoped to current repo", %{repository: repository} do
+    private_repo = insert(:repository)
+    insert(:package, name: "nerves", repository_id: repository.id)
+    poison = insert(:package, name: "poison", repository_id: repository.id)
+    ecto = insert(:package, name: "ecto", repository_id: private_repo.id)
+    phoenix = insert(:package, name: "phoenix", repository_id: repository.id)
+
+    rel = insert(:release, package: ecto)
+    insert(:requirement, release: rel, dependency: poison, requirement: "~> 1.0")
+    rel = insert(:release, package: phoenix)
+    insert(:requirement, release: rel, dependency: poison, requirement: "~> 1.0")
+    insert(:requirement, release: rel, dependency: ecto, requirement: "~> 1.0")
+
+    Hexpm.Repo.refresh_view(Hexpm.Repository.PackageDependant)
+
+    assert ["phoenix"] =
+             Package.all([repository], 1, 10, "depends:#{repository.name}:poison", :name, nil)
              |> Repo.all()
              |> Enum.map(& &1.name)
   end
