@@ -127,6 +127,22 @@ defmodule Hexpm.Accounts.Users do
     end
   end
 
+  def update_security(%User{organization_id: id} = user, _params, _opts) when not is_nil(id) do
+    organization_error(user, "cannot update security of organizations")
+  end
+
+  def update_security(user, params, audit: audit_data) do
+    multi =
+      Multi.new()
+      |> Multi.update(:user, User.update_security(user, params))
+      |> audit(audit_data, "security.update", fn %{user: user} -> user end)
+
+    case Repo.transaction(multi) do
+      {:ok, %{user: user}} -> {:ok, user}
+      {:error, :user, changeset, _} -> {:error, changeset}
+    end
+  end
+
   def verify_email(username, email, key) do
     with %User{organization_id: nil, emails: emails} <- get(username, :emails),
          %Email{} = email <- Enum.find(emails, &(&1.email == email)),
