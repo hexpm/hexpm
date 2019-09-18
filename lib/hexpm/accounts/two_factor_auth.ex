@@ -7,9 +7,8 @@ defmodule Hexpm.Accounts.TwoFactorAuth do
     content |> EQRCode.encode() |> EQRCode.svg(width: 400)
   end
 
-  def generate_secret(user) do
+  def generate_secret() do
     32 |> :crypto.strong_rand_bytes() |> Base.encode32() |> String.slice(0..15)
-    # save to user record
   end
 
   def time_based_token(secret) do
