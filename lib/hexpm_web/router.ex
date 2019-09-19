@@ -116,6 +116,12 @@ defmodule HexpmWeb.Router do
     get "/security", SecurityController, :index, as: :dashboard_security
     post "/security", SecurityController, :update, as: :dashboard_security
 
+    get "/two_factor_auth/setup", TwoFactorAuthSetupController, :index,
+      as: :dashboard_two_factor_auth_setup
+
+    post "/two_factor_auth/setup", TwoFactorAuthSetupController, :update,
+      as: :dashboard_two_factor_auth_setup
+
     get "/email", EmailController, :index
     post "/email", EmailController, :create
     delete "/email", EmailController, :delete
