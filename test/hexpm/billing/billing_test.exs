@@ -114,4 +114,29 @@ defmodule Hexpm.BillingTest do
       assert [] = AuditLogs.all_by(user)
     end
   end
+
+  describe "change_plan/3" do
+    test "returns :ok when impl().change_plan/2 returns :ok" do
+      Mox.stub(Hexpm.Billing.Mock, :change_plan, fn "organization token",
+                                                    %{"plan_id" => "new_plan"} ->
+        :ok
+      end)
+
+      assert Hexpm.Billing.change_plan("organization token", %{"plan_id" => "new_plan"},
+               audit: %{audit_data: {insert(:user), "Test User Agent"}, organization: nil}
+             ) == :ok
+    end
+
+    test "creates an Audit Log for billing.change_plan" do
+      Mox.stub(Hexpm.Billing.Mock, :change_plan, fn _, _ -> :ok end)
+
+      user = insert(:user)
+
+      Hexpm.Billing.change_plan("organization token", %{"plan_id" => "new_plan"},
+        audit: %{audit_data: {user, "Test User Agent"}, organization: nil}
+      )
+
+      assert [audit_log] = AuditLogs.all_by(user)
+    end
+  end
 end
