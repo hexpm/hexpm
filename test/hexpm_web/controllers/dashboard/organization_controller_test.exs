@@ -162,49 +162,51 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
     assert repo_user.role == "read"
   end
 
-  test "cancel billing", %{user: user, organization: organization} do
-    Mox.stub(Hexpm.Billing.Mock, :cancel, fn token ->
-      assert organization.name == token
+  describe "cancel billing" do
+    test "with subscription", %{user: user, organization: organization} do
+      Mox.stub(Hexpm.Billing.Mock, :cancel, fn token ->
+        assert organization.name == token
 
-      %{
-        "subscription" => %{
-          "cancel_at_period_end" => true,
-          "current_period_end" => "2017-12-12T00:00:00Z"
+        %{
+          "subscription" => %{
+            "cancel_at_period_end" => true,
+            "current_period_end" => "2017-12-12T00:00:00Z"
+          }
         }
-      }
-    end)
+      end)
 
-    insert(:organization_user, organization: organization, user: user, role: "admin")
+      insert(:organization_user, organization: organization, user: user, role: "admin")
 
-    conn =
-      build_conn()
-      |> test_login(user)
-      |> post("dashboard/orgs/#{organization.name}/cancel-billing")
+      conn =
+        build_conn()
+        |> test_login(user)
+        |> post("dashboard/orgs/#{organization.name}/cancel-billing")
 
-    message =
-      "Your subscription is cancelled, you will have access to the organization until " <>
-        "the end of your billing period at December 12, 2017"
+      message =
+        "Your subscription is cancelled, you will have access to the organization until " <>
+          "the end of your billing period at December 12, 2017"
 
-    assert redirected_to(conn) == "/dashboard/orgs/#{organization.name}"
-    assert get_flash(conn, :info) == message
-  end
+      assert redirected_to(conn) == "/dashboard/orgs/#{organization.name}"
+      assert get_flash(conn, :info) == message
+    end
 
-  # This can happen when the subscription is cancelled before the trial is over
-  test "cancel billing without subscription", %{user: user, organization: organization} do
-    Mox.stub(Hexpm.Billing.Mock, :cancel, fn token ->
-      assert organization.name == token
-      %{}
-    end)
+    # This can happen when the subscription is cancelled before the trial is over
+    test "without subscription", %{user: user, organization: organization} do
+      Mox.stub(Hexpm.Billing.Mock, :cancel, fn token ->
+        assert organization.name == token
+        %{}
+      end)
 
-    insert(:organization_user, organization: organization, user: user, role: "admin")
+      insert(:organization_user, organization: organization, user: user, role: "admin")
 
-    conn =
-      build_conn()
-      |> test_login(user)
-      |> post("dashboard/orgs/#{organization.name}/cancel-billing")
+      conn =
+        build_conn()
+        |> test_login(user)
+        |> post("dashboard/orgs/#{organization.name}/cancel-billing")
 
-    assert redirected_to(conn) == "/dashboard/orgs/#{organization.name}"
-    assert get_flash(conn, :info) == "Your subscription is cancelled"
+      assert redirected_to(conn) == "/dashboard/orgs/#{organization.name}"
+      assert get_flash(conn, :info) == "Your subscription is cancelled"
+    end
   end
 
   test "show invoice", %{user: user, organization: organization} do
