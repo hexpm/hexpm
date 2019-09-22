@@ -3,6 +3,28 @@ defmodule Hexpm.BillingTest do
 
   alias Hexpm.Accounts.AuditLogs
 
+  describe "cancel/2" do
+    test "returns whatever impl().cancel/1 returns" do
+      Mox.stub(Hexpm.Billing.Mock, :cancel, fn "organization token" -> :whatever end)
+
+      assert Hexpm.Billing.cancel("organization token",
+               audit: %{audit_data: {insert(:user), "Test User Agent"}, organization: nil}
+             ) == :whatever
+    end
+
+    test "creates an Audit Log for billing.cancel" do
+      Mox.stub(Hexpm.Billing.Mock, :cancel, fn "organization token" -> :whatever end)
+
+      user = insert(:user)
+
+      Hexpm.Billing.cancel("organization token",
+        audit: %{audit_data: {user, "Test User Agent"}, organization: nil}
+      )
+
+      assert [audit_log] = AuditLogs.all_by(user)
+    end
+  end
+
   describe "create/2" do
     test "returns {:ok, whatever} when impl().create/1 succeeds" do
       Mox.stub(Hexpm.Billing.Mock, :create, fn _params -> {:ok, :whatever} end)

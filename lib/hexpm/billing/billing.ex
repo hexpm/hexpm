@@ -25,6 +25,12 @@ defmodule Hexpm.Billing do
   def pay_invoice(id), do: impl().pay_invoice(id)
   def report(), do: impl().report()
 
+  def cancel(params, audit: %{audit_data: audit_data, organization: organization}) do
+    result = impl().cancel(params)
+    Repo.insert!(audit(audit_data, "billing.cancel", {organization, params}))
+    result
+  end
+
   def create(params, audit: %{audit_data: audit_data, organization: organization}) do
     case impl().create(params) do
       {:ok, result} ->
