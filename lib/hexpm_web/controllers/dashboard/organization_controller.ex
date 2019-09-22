@@ -137,7 +137,11 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
 
   def cancel_billing(conn, %{"dashboard_org" => organization}) do
     access_organization(conn, organization, "admin", fn organization ->
-      customer = Hexpm.Billing.cancel(organization.name)
+      customer =
+        Hexpm.Billing.cancel(organization.name,
+          audit: %{audit_data: audit_data(conn), organization: organization}
+        )
+
       message = cancel_message(customer["subscription"]["current_period_end"])
 
       conn

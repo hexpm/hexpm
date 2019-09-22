@@ -207,6 +207,29 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
       assert redirected_to(conn) == "/dashboard/orgs/#{organization.name}"
       assert get_flash(conn, :info) == "Your subscription is cancelled"
     end
+
+    test "create audit_log with action billing.cancel", %{user: user, organization: organization} do
+      Mox.stub(Hexpm.Billing.Mock, :cancel, fn token ->
+        assert organization.name == token
+
+        %{
+          "subscription" => %{
+            "cancel_at_period_end" => true,
+            "current_period_end" => "2017-12-12T00:00:00Z"
+          }
+        }
+      end)
+
+      insert(:organization_user, organization: organization, user: user, role: "admin")
+
+      build_conn()
+      |> test_login(user)
+      |> post("dashboard/orgs/#{organization.name}/cancel-billing")
+
+      assert [audit_log] = AuditLogs.all_by(user)
+      assert audit_log.action == "billing.cancel"
+      assert audit_log.params["organization"]["name"] == organization.name
+    end
   end
 
   test "show invoice", %{user: user, organization: organization} do
