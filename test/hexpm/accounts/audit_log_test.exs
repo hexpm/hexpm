@@ -43,6 +43,26 @@ defmodule Hexpm.Accounts.AuditLogTest do
       assert audit.params.user.handles.github == user.handles.github
     end
 
+    test "action billing.cancel", %{user: user} do
+      organization = build(:organization, name: "Organization Name")
+
+      audit =
+        AuditLog.build(
+          user,
+          "user_agent",
+          "billing.cancel",
+          {
+            organization,
+            "Organization Name"
+          }
+        )
+
+      assert audit.action == "billing.cancel"
+      assert audit.user_id == user.id
+      assert audit.user_agent == "user_agent"
+      assert audit.params.organization.name == "Organization Name"
+    end
+
     test "action billing.create", %{user: user} do
       organization = build(:organization, name: "Organization Name")
 
