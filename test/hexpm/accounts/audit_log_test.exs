@@ -93,6 +93,27 @@ defmodule Hexpm.Accounts.AuditLogTest do
       assert audit.params.token == "Test Token"
       assert audit.params.quantity == 11
     end
+
+    test "action billing.change_plan", %{user: user} do
+      organization = build(:organization, name: "Organization Name")
+
+      audit =
+        AuditLog.build(
+          user,
+          "user_agent",
+          "billing.change_plan",
+          {
+            organization,
+            %{"plan_id" => "test plan"}
+          }
+        )
+
+      assert audit.action == "billing.change_plan"
+      assert audit.user_id == user.id
+      assert audit.user_agent == "user_agent"
+      assert audit.params.organization.name == "Organization Name"
+      assert audit.params.plan_id == "test plan"
+    end
   end
 
   describe "audit/3" do

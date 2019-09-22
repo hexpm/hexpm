@@ -165,6 +165,12 @@ defmodule Hexpm.Accounts.AuditLog do
       quantity: params["quantity"]
     }
 
+  defp extract_params("billing.change_plan", {organization, params}),
+    do: %{
+      organization: serialize(organization),
+      plan_id: params["plan_id"]
+    }
+
   defp serialize(%Key{} = key) do
     key
     |> do_serialize()
