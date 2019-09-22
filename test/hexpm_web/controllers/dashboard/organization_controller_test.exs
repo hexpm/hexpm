@@ -595,6 +595,26 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
       assert redirected_to(conn) == "/dashboard/orgs/#{organization.name}"
       assert get_flash(conn, :info) == "You have switched to the annual organization plan."
     end
+
+    test "create audit_log with action billing.change_plan", %{
+      organization: organization,
+      user: user
+    } do
+      Mox.stub(Hexpm.Billing.Mock, :change_plan, fn _organization_name, _map -> {:ok, %{}} end)
+
+      insert(:organization_user, organization: organization, user: user, role: "admin")
+
+      build_conn()
+      |> test_login(user)
+      |> post("dashboard/orgs/#{organization.name}/change-plan", %{
+        "plan_id" => "organization-annually"
+      })
+
+      assert [audit_log] = AuditLogs.all_by(user)
+      assert audit_log.action == "billing.change_plan"
+      assert audit_log.params["organization"]["name"] == organization.name
+      assert audit_log.params["plan_id"] == "organization-annually"
+    end
   end
 
   describe "POST /dashboard/orgs/:dashboard_org/keys" do
