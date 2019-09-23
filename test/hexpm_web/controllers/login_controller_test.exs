@@ -112,4 +112,12 @@ defmodule HexpmWeb.LoginControllerTest do
 
     assert conn.status == 400
   end
+
+  test "deactivated", c do
+    Ecto.Changeset.change(c.user, deactivated_at: DateTime.utc_now()) |> Repo.update!()
+    conn = post(build_conn(), "login", %{username: c.user.username, password: "password"})
+    assert redirected_to(conn) == "/users/#{c.user.username}"
+    conn = get(conn, "/")
+    assert response(conn, 400)
+  end
 end

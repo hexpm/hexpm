@@ -102,6 +102,16 @@ defmodule HexpmWeb.Plugs do
     end
   end
 
+  def disable_deactivated(conn, _opts) do
+    if conn.assigns.current_user && conn.assigns.current_user.deactivated_at do
+      conn
+      |> ControllerHelpers.render_error(400)
+      |> halt()
+    else
+      conn
+    end
+  end
+
   def authenticate(conn, _opts) do
     case HexpmWeb.AuthHelpers.authenticate(conn) do
       {:ok, %{key: key, user: user, organization: organization, email: email, source: source}} ->

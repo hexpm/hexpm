@@ -14,6 +14,7 @@ defmodule HexpmWeb.Router do
     plug :web_user_agent
     plug :validate_url
     plug :login
+    plug :disable_deactivated
     plug :default_repository
   end
 
@@ -22,6 +23,7 @@ defmodule HexpmWeb.Router do
     plug :accepts, @accepted_formats
     plug :user_agent
     plug :authenticate
+    plug :disable_deactivated
     plug :validate_url
     plug HexpmWeb.Plugs.Attack
     plug :fetch_body
@@ -32,6 +34,7 @@ defmodule HexpmWeb.Router do
     plug :accepts, @accepted_formats
     plug :user_agent
     plug :authenticate
+    plug :disable_deactivated
     plug :validate_url
     plug HexpmWeb.Plugs.Attack
     plug Corsica, origins: "*", allow_methods: ["HEAD", "GET"]
