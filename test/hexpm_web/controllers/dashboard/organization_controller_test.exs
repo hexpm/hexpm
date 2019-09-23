@@ -313,6 +313,25 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
       response(conn, 400)
       assert get_flash(conn, :error) == "Failed to pay invoice: Card failure."
     end
+
+    test "create audit_log with action billing.pay_invoice", %{
+      user: user,
+      organization: organization
+    } do
+      Mox.stub(Hexpm.Billing.Mock, :get, fn _token -> %{"invoices" => [%{"id" => 123}]} end)
+      Mox.stub(Hexpm.Billing.Mock, :pay_invoice, fn _id -> :ok end)
+
+      insert(:organization_user, organization: organization, user: user, role: "admin")
+
+      build_conn()
+      |> test_login(user)
+      |> post("dashboard/orgs/#{organization.name}/invoices/123/pay")
+
+      assert [audit_log] = AuditLogs.all_by(user)
+      assert audit_log.action == "billing.pay_invoice"
+      assert audit_log.params["invoice_id"] == 123
+      assert audit_log.params["organization"]["name"] == organization.name
+    end
   end
 
   describe "POST /dashboard/orgs/:dashboard_org/update-billing" do

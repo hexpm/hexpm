@@ -175,7 +175,9 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
       invoice_ids = Enum.map(customer["invoices"], & &1["id"])
 
       if id in invoice_ids do
-        case Hexpm.Billing.pay_invoice(id) do
+        case Hexpm.Billing.pay_invoice(id,
+               audit: %{audit_data: audit_data(conn), organization: organization}
+             ) do
           :ok ->
             conn
             |> put_flash(:info, "Invoice paid.")
