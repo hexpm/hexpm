@@ -31,8 +31,10 @@ defmodule Hexpm.Emails.Bamboo.SESAdapter do
   end
 
   defp send_email(request, email, times) do
+    opts = [region: "us-west-2"]
+
     request
-    |> ExAws.request()
+    |> ExAws.request(opts)
     |> maybe_retry(request, email, times)
   end
 
