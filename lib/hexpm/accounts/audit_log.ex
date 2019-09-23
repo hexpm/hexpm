@@ -171,6 +171,12 @@ defmodule Hexpm.Accounts.AuditLog do
       plan_id: params["plan_id"]
     }
 
+  defp extract_params("billing.pay_invoice", {organization, invoice_id}),
+    do: %{
+      organization: serialize(organization),
+      invoice_id: invoice_id
+    }
+
   defp serialize(%Key{} = key) do
     key
     |> do_serialize()
