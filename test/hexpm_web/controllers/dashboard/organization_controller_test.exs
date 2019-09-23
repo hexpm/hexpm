@@ -253,64 +253,66 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
     assert response(conn, 200) == "Invoice"
   end
 
-  test "pay invoice", %{user: user, organization: organization} do
-    Mox.stub(Hexpm.Billing.Mock, :get, fn token ->
-      assert organization.name == token
+  describe "pay invoice" do
+    test "pay invoice succeed", %{user: user, organization: organization} do
+      Mox.stub(Hexpm.Billing.Mock, :get, fn token ->
+        assert organization.name == token
 
-      invoice = %{
-        "id" => 123,
-        "date" => "2020-01-01T00:00:00Z",
-        "amount_due" => 700,
-        "paid" => true
-      }
+        invoice = %{
+          "id" => 123,
+          "date" => "2020-01-01T00:00:00Z",
+          "amount_due" => 700,
+          "paid" => true
+        }
 
-      %{"invoices" => [invoice]}
-    end)
+        %{"invoices" => [invoice]}
+      end)
 
-    Mox.stub(Hexpm.Billing.Mock, :pay_invoice, fn id ->
-      assert id == 123
-      :ok
-    end)
+      Mox.stub(Hexpm.Billing.Mock, :pay_invoice, fn id ->
+        assert id == 123
+        :ok
+      end)
 
-    insert(:organization_user, organization: organization, user: user, role: "admin")
+      insert(:organization_user, organization: organization, user: user, role: "admin")
 
-    conn =
-      build_conn()
-      |> test_login(user)
-      |> post("dashboard/orgs/#{organization.name}/invoices/123/pay")
+      conn =
+        build_conn()
+        |> test_login(user)
+        |> post("dashboard/orgs/#{organization.name}/invoices/123/pay")
 
-    assert redirected_to(conn) == "/dashboard/orgs/#{organization.name}"
-    assert get_flash(conn, :info) == "Invoice paid."
-  end
+      assert redirected_to(conn) == "/dashboard/orgs/#{organization.name}"
+      assert get_flash(conn, :info) == "Invoice paid."
+    end
 
-  test "pay invoice failed", %{user: user, organization: organization} do
-    Mox.stub(Hexpm.Billing.Mock, :get, fn token ->
-      assert organization.name == token
+    test "pay invoice failed", %{user: user, organization: organization} do
+      Mox.stub(Hexpm.Billing.Mock, :get, fn token ->
+        assert organization.name == token
 
-      invoice = %{
-        "id" => 123,
-        "date" => "2020-01-01T00:00:00Z",
-        "amount_due" => 700,
-        "paid" => true
-      }
+        invoice = %{
+          "id" => 123,
+          "date" => "2020-01-01T00:00:00Z",
+          "amount_due" => 700,
+          "paid" => true
+        }
 
-      %{"invoices" => [invoice], "checkout_html" => ""}
-    end)
+        %{"invoices" => [invoice], "checkout_html" => ""}
+      end)
 
-    Mox.stub(Hexpm.Billing.Mock, :pay_invoice, fn id ->
-      assert id == 123
-      {:error, %{"errors" => "Card failure"}}
-    end)
+      Mox.stub(Hexpm.Billing.Mock, :pay_invoice, fn id ->
+        assert id == 123
+        {:error, %{"errors" => "Card failure"}}
+      end)
 
-    insert(:organization_user, organization: organization, user: user, role: "admin")
+      insert(:organization_user, organization: organization, user: user, role: "admin")
 
-    conn =
-      build_conn()
-      |> test_login(user)
-      |> post("dashboard/orgs/#{organization.name}/invoices/123/pay")
+      conn =
+        build_conn()
+        |> test_login(user)
+        |> post("dashboard/orgs/#{organization.name}/invoices/123/pay")
 
-    response(conn, 400)
-    assert get_flash(conn, :error) == "Failed to pay invoice: Card failure."
+      response(conn, 400)
+      assert get_flash(conn, :error) == "Failed to pay invoice: Card failure."
+    end
   end
 
   describe "POST /dashboard/orgs/:dashboard_org/update-billing" do
