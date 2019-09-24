@@ -211,4 +211,8 @@ defmodule Hexpm.Accounts.AuditLog do
   def all_by(%Hexpm.Accounts.User{} = user) do
     Ecto.assoc(user, :audit_logs)
   end
+
+  def newest_first(query) do
+    Ecto.Query.order_by(query, desc: :inserted_at)
+  end
 end

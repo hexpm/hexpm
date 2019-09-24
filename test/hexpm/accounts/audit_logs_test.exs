@@ -62,6 +62,23 @@ defmodule Hexpm.Accounts.AuditLogsTest do
 
       assert [] = AuditLogs.all_by(this_package)
     end
+
+    test "orders audit_logs by inserted_at timestamp" do
+      this_package = insert(:package)
+
+      insert(:audit_log,
+        params: %{identifier: "new", package: %{id: this_package.id}},
+        inserted_at: ~N{2019-08-10 10:00:00}
+      )
+
+      insert(:audit_log,
+        params: %{identifier: "old", package: %{id: this_package.id}},
+        inserted_at: ~N{2019-07-10 10:00:00}
+      )
+
+      assert [%{params: %{"identifier" => "new"}}, %{params: %{"identifier" => "old"}}] =
+               AuditLogs.all_by(this_package)
+    end
   end
 
   describe "all_by(user, page, per_page)" do
