@@ -241,8 +241,7 @@ h3 > .header-icon {
       }
 
       span {
-        display: block;
-        line-height: 17px;
+        line-height: 15px;
       }
 
       .title-container {
@@ -258,6 +257,7 @@ h3 > .header-icon {
       }
 
       .description {
+        display: block;
         overflow: hidden;
         font-size: 12px;
         font-weight: 300;
