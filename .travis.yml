@@ -33,15 +33,10 @@ jobs:
 
     - env: HEX_VERSION=v0.16
 
-    # - env: HEX_VERSION=v0.15.0
-
-    # - env: HEX_VERSION=v0.14.1
-
 env:
   global:
     - MIX_ENV=test
     - HEXPM_PATH=..
-    - HEXWEB_PATH=..
 
 notifications:
   recipients:
