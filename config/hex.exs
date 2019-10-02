@@ -11,13 +11,6 @@ config :hexpm, HexpmWeb.Endpoint,
   http: [port: 4043, protocol_options: [max_keepalive: :infinity]],
   debug_errors: false
 
-config :hexpm, HexWeb.Repo,
-  username: "postgres",
-  password: "postgres",
-  database: "hexpm_hex",
-  hostname: "localhost",
-  pool_size: 10
-
 config :hexpm, Hexpm.RepoBase,
   username: "postgres",
   password: "postgres",

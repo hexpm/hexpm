@@ -1,12 +1,3 @@
-# Needed to support old hex clients for CI testing
-if Mix.env() == :hex do
-  defmodule HexWeb.Repo do
-    use Ecto.Repo,
-      otp_app: :hexpm,
-      adapter: Ecto.Adapters.Postgres
-  end
-end
-
 defmodule Hexpm.RepoHelpers do
   defmacro defwrite(fun) do
     # Please don't yell at me =(
