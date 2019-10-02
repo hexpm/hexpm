@@ -37,7 +37,8 @@ defmodule HexpmWeb.API.ReleaseView do
     %{
       version: release.version,
       url: url_for_release(package, release),
-      has_docs: release.has_docs
+      has_docs: release.has_docs,
+      inserted_at: release.inserted_at
     }
   end
 
