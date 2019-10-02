@@ -50,7 +50,7 @@ defmodule HexpmWeb.API.PackageControllerTest do
       releases = List.first(result)["releases"]
 
       for release <- releases do
-        assert length(Map.keys(release)) == 3
+        assert length(Map.keys(release)) == 4
         assert Map.has_key?(release, "url")
         assert Map.has_key?(release, "version")
         assert Map.has_key?(release, "has_docs")
