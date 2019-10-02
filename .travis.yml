@@ -19,12 +19,12 @@ env:
     - HEX_VERSION=v0.14.1
 before_script:
   - git clone https://github.com/hexpm/hex hex -b ${HEX_VERSION} --depth 1
+  - cd hex && mix deps.get && cd ..
 script:
   - mix test --include integration
   - sudo cat /var/log/postgresql/postgresql-9.6-main.log
   - mix run priv/repo/seeds.exs
-  - cd hex; mix deps.get; cd ..
-  - cd hex; mix test --include integration; cd ..
+  - cd hex && mix test --include integration && cd ..
 notifications:
   recipients:
   - eric.meadows.jonsson@gmail.com
