@@ -44,7 +44,9 @@ defmodule Hexpm.Accounts.User do
   end
 
   def build_organization(organization) do
-    change(%User{username: organization.name, organization_id: organization.id}, %{})
+    username = organization_name(organization)
+
+    change(%User{username: username, organization_id: organization.id}, %{})
     |> update_change(:username, &String.downcase/1)
     |> validate_length(:username, min: 3)
     |> validate_format(:username, @username_regex)
@@ -149,4 +151,11 @@ defmodule Hexpm.Accounts.User do
   end
 
   def organization?(user), do: user.organization_id != nil
+
+  # Workaround for compatability with older Hex client tests, fixed in Hex v0.20.1
+  if Mix.env == :hex do
+    defp organization_name(organization), do: organization.name <> "-orguser"
+  else
+    defp organization_name(organization), do: organization.name
+  end
 end
