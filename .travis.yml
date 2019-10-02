@@ -11,6 +11,7 @@ env:
     - HEXWEB_PATH=..
   matrix:
     - HEX_VERSION=master
+    - HEX_VERSION=v0.20.1
     - HEX_VERSION=v0.19.0
     - HEX_VERSION=v0.18.2
     - HEX_VERSION=v0.17.8
