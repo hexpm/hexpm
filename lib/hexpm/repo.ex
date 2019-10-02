@@ -36,6 +36,8 @@ defmodule Hexpm.Repo do
   defdelegate preload(structs_or_struct_or_nil, preloads, opts \\ []), to: RepoBase
 
   defwrite(try_advisory_xact_lock?(key, opts \\ []))
+  defwrite(try_advisory_lock?(key, opts \\ []))
+  defwrite(advisory_unlock(key, opts \\ []))
   defwrite(delete_all(queryable, opts \\ []))
   defwrite(delete!(struct_or_changeset, opts \\ []))
   defwrite(delete(struct_or_changeset, opts \\ []))
@@ -128,6 +130,28 @@ defmodule Hexpm.RepoBase do
       )
 
     result
+  end
+
+  def try_advisory_lock?(key, opts \\ []) do
+    %Postgrex.Result{rows: [[result]]} =
+      query!(
+        "SELECT pg_try_advisory_lock($1)",
+        [Map.fetch!(@advisory_locks, key)],
+        opts
+      )
+
+    result
+  end
+
+  def advisory_unlock(key, opts \\ []) do
+    %Postgrex.Result{rows: [[true]]} =
+      query!(
+        "SELECT pg_advisory_unlock($1)",
+        [Map.fetch!(@advisory_locks, key)],
+        opts
+      )
+
+    :ok
   end
 end
 
