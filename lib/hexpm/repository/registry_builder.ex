@@ -9,19 +9,19 @@ defmodule Hexpm.Repository.RegistryBuilder do
   @version 4
 
   def full(repository) do
-    locked_build(fn -> build_full(repository) end, 300_000, 600_000)
+    locked_build(fn -> build_full(repository) end, 300_000)
   end
 
   def v1_and_v2_repository(repository) do
-    locked_build(fn -> build_v1_and_v2_repository(repository) end, 30_000, 60_000)
+    locked_build(fn -> build_v1_and_v2_repository(repository) end, 30_000)
   end
 
   def v1_repository(repository) do
-    locked_build(fn -> build_v1_repository(repository) end, 30_000, 60_000)
+    locked_build(fn -> build_v1_repository(repository) end, 30_000)
   end
 
   def v2_repository(repository) do
-    locked_build(fn -> build_v2_repository(repository) end, 30_000, 60_000)
+    locked_build(fn -> build_v2_repository(repository) end, 30_000)
   end
 
   def v2_package(package) do
@@ -32,36 +32,55 @@ defmodule Hexpm.Repository.RegistryBuilder do
     delete_v2_package(package)
   end
 
-  defp locked_build(fun, lock_timeout, transaction_timeout) do
+  defp locked_build(fun, timeout) do
     start_time = System.monotonic_time(:millisecond)
-    lock(fun, start_time, lock_timeout, transaction_timeout)
+    lock(fun, start_time, timeout)
   end
 
-  defp lock(fun, start_time, lock_timeout, transaction_timeout) do
+  defp lock(fun, start_time, timeout) do
     now = System.monotonic_time(:millisecond)
 
-    if now > start_time + lock_timeout do
+    if now > start_time + timeout do
       raise "lock timeout"
     end
 
-    {:ok, aquired?} =
+    {:ok, ran?} =
       Repo.transaction(
-        fn ->
-          if Repo.try_advisory_xact_lock?(:registry) do
-            Logger.warn("REGISTRY_BUILDER aquired_lock (#{now - start_time}ms)")
-            fun.()
-            true
-          else
-            Logger.warn("REGISTRY_BUILDER failed_aquire_lock (#{now - start_time}ms)")
-            false
-          end
-        end,
-        timeout: transaction_timeout
+        fn -> run_with_lock(fun, now - start_time) end,
+        timeout: timeout
       )
 
-    unless aquired? do
+    unless ran? do
       Process.sleep(1000)
-      lock(fun, start_time, lock_timeout, transaction_timeout)
+      lock(fun, start_time, timeout)
+    end
+  end
+
+  if Mix.env() == :test do
+    defp run_with_lock(fun, time) do
+      if Repo.try_advisory_lock?(:registry) do
+        try do
+          Logger.warn("REGISTRY_BUILDER aquired_lock (#{time}ms)")
+          fun.()
+          true
+        after
+          Repo.advisory_unlock(:registry)
+        end
+      else
+        Logger.warn("REGISTRY_BUILDER failed_aquire_lock (#{time}ms)")
+        false
+      end
+    end
+  else
+    defp run_with_lock(fun, time) do
+      if Repo.try_advisory_xact_lock?(:registry) do
+        Logger.warn("REGISTRY_BUILDER aquired_lock (#{time}ms)")
+        fun.()
+        true
+      else
+        Logger.warn("REGISTRY_BUILDER failed_aquire_lock (#{time}ms)")
+        false
+      end
     end
   end
 
