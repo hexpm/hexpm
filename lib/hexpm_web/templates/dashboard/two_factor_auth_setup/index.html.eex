@@ -9,6 +9,17 @@
       <div class="panel-body">
         <h1>Scan this barcode with your app</h1>
         <div style="text-align:center"><%= raw @qr_code %></div>
+
+        <%= form_for @changeset, Routes.dashboard_security_path(Endpoint, :update), [method: :post], fn f -> %>
+            <div class="form-group">
+              <%= label f, :verification_code %>
+              <%= text_input f, :verification_code %>
+              <%= error_tag f, :verification_code %>
+            </div>
+
+          <button type="submit" class="btn btn-primary">Enable</button>
+        <% end %>
+      </div>
       </div>
     </div>
   </div>
