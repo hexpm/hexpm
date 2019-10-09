@@ -137,10 +137,8 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
 
   def cancel_billing(conn, %{"dashboard_org" => organization}) do
     access_organization(conn, organization, "admin", fn organization ->
-      customer =
-        Hexpm.Billing.cancel(organization.name,
-          audit: %{audit_data: audit_data(conn), organization: organization}
-        )
+      audit = %{audit_data: audit_data(conn), organization: organization}
+      customer = Hexpm.Billing.cancel(organization.name, audit: audit)
 
       message = cancel_message(customer["subscription"]["current_period_end"])
 
@@ -174,10 +172,10 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
       customer = Hexpm.Billing.get(organization.name)
       invoice_ids = Enum.map(customer["invoices"], & &1["id"])
 
+      audit = %{audit_data: audit_data(conn), organization: organization}
+
       if id in invoice_ids do
-        case Hexpm.Billing.pay_invoice(id,
-               audit: %{audit_data: audit_data(conn), organization: organization}
-             ) do
+        case Hexpm.Billing.pay_invoice(id, audit: audit) do
           :ok ->
             conn
             |> put_flash(:info, "Invoice paid.")
@@ -197,13 +195,13 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
 
   def update_billing(conn, %{"dashboard_org" => organization} = params) do
     access_organization(conn, organization, "admin", fn organization ->
+      audit = %{audit_data: audit_data(conn), organization: organization}
+
       update_billing(
         conn,
         organization,
         params,
-        &Hexpm.Billing.update(organization.name, &1,
-          audit: %{audit_data: audit_data(conn), organization: organization}
-        )
+        &Hexpm.Billing.update(organization.name, &1, audit: audit)
       )
     end)
   end
@@ -217,14 +215,9 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
         |> Map.put("token", organization.name)
         |> Map.put("quantity", user_count)
 
-      update_billing(
-        conn,
-        organization,
-        params,
-        &Hexpm.Billing.create(&1,
-          audit: %{audit_data: audit_data(conn), organization: organization}
-        )
-      )
+      audit = %{audit_data: audit_data(conn), organization: organization}
+
+      update_billing(conn, organization, params, &Hexpm.Billing.create(&1, audit: audit))
     end)
   end
 
@@ -238,10 +231,10 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
       seats = current_seats + add_seats
 
       if seats >= user_count do
+        audit = %{audit_data: audit_data(conn), organization: organization}
+
         {:ok, _customer} =
-          Hexpm.Billing.update(organization.name, %{"quantity" => seats},
-            audit: %{audit_data: audit_data(conn), organization: organization}
-          )
+          Hexpm.Billing.update(organization.name, %{"quantity" => seats}, audit: audit)
 
         conn
         |> put_flash(:info, "The number of open seats have been increased.")
@@ -261,10 +254,10 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
       seats = String.to_integer(params["seats"])
 
       if seats >= user_count do
+        audit = %{audit_data: audit_data(conn), organization: organization}
+
         {:ok, _customer} =
-          Hexpm.Billing.update(organization.name, %{"quantity" => seats},
-            audit: %{audit_data: audit_data(conn), organization: organization}
-          )
+          Hexpm.Billing.update(organization.name, %{"quantity" => seats}, audit: audit)
 
         conn
         |> put_flash(:info, "The number of open seats have been reduced.")
@@ -280,9 +273,9 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
 
   def change_plan(conn, %{"dashboard_org" => organization} = params) do
     access_organization(conn, organization, "admin", fn organization ->
-      Hexpm.Billing.change_plan(organization.name, %{"plan_id" => params["plan_id"]},
-        audit: %{audit_data: audit_data(conn), organization: organization}
-      )
+      audit = %{audit_data: audit_data(conn), organization: organization}
+
+      Hexpm.Billing.change_plan(organization.name, %{"plan_id" => params["plan_id"]}, audit: audit)
 
       conn
       |> put_flash(:info, "You have switched to the #{plan_name(params["plan_id"])} plan.")
