@@ -162,49 +162,74 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
     assert repo_user.role == "read"
   end
 
-  test "cancel billing", %{user: user, organization: organization} do
-    Mox.stub(Hexpm.Billing.Mock, :cancel, fn token ->
-      assert organization.name == token
+  describe "cancel billing" do
+    test "with subscription", %{user: user, organization: organization} do
+      Mox.stub(Hexpm.Billing.Mock, :cancel, fn token ->
+        assert organization.name == token
 
-      %{
-        "subscription" => %{
-          "cancel_at_period_end" => true,
-          "current_period_end" => "2017-12-12T00:00:00Z"
+        %{
+          "subscription" => %{
+            "cancel_at_period_end" => true,
+            "current_period_end" => "2017-12-12T00:00:00Z"
+          }
         }
-      }
-    end)
+      end)
 
-    insert(:organization_user, organization: organization, user: user, role: "admin")
+      insert(:organization_user, organization: organization, user: user, role: "admin")
 
-    conn =
+      conn =
+        build_conn()
+        |> test_login(user)
+        |> post("dashboard/orgs/#{organization.name}/cancel-billing")
+
+      message =
+        "Your subscription is cancelled, you will have access to the organization until " <>
+          "the end of your billing period at December 12, 2017"
+
+      assert redirected_to(conn) == "/dashboard/orgs/#{organization.name}"
+      assert get_flash(conn, :info) == message
+    end
+
+    # This can happen when the subscription is cancelled before the trial is over
+    test "without subscription", %{user: user, organization: organization} do
+      Mox.stub(Hexpm.Billing.Mock, :cancel, fn token ->
+        assert organization.name == token
+        %{}
+      end)
+
+      insert(:organization_user, organization: organization, user: user, role: "admin")
+
+      conn =
+        build_conn()
+        |> test_login(user)
+        |> post("dashboard/orgs/#{organization.name}/cancel-billing")
+
+      assert redirected_to(conn) == "/dashboard/orgs/#{organization.name}"
+      assert get_flash(conn, :info) == "Your subscription is cancelled"
+    end
+
+    test "create audit_log with action billing.cancel", %{user: user, organization: organization} do
+      Mox.stub(Hexpm.Billing.Mock, :cancel, fn token ->
+        assert organization.name == token
+
+        %{
+          "subscription" => %{
+            "cancel_at_period_end" => true,
+            "current_period_end" => "2017-12-12T00:00:00Z"
+          }
+        }
+      end)
+
+      insert(:organization_user, organization: organization, user: user, role: "admin")
+
       build_conn()
       |> test_login(user)
       |> post("dashboard/orgs/#{organization.name}/cancel-billing")
 
-    message =
-      "Your subscription is cancelled, you will have access to the organization until " <>
-        "the end of your billing period at December 12, 2017"
-
-    assert redirected_to(conn) == "/dashboard/orgs/#{organization.name}"
-    assert get_flash(conn, :info) == message
-  end
-
-  # This can happen when the subscription is cancelled before the trial is over
-  test "cancel billing without subscription", %{user: user, organization: organization} do
-    Mox.stub(Hexpm.Billing.Mock, :cancel, fn token ->
-      assert organization.name == token
-      %{}
-    end)
-
-    insert(:organization_user, organization: organization, user: user, role: "admin")
-
-    conn =
-      build_conn()
-      |> test_login(user)
-      |> post("dashboard/orgs/#{organization.name}/cancel-billing")
-
-    assert redirected_to(conn) == "/dashboard/orgs/#{organization.name}"
-    assert get_flash(conn, :info) == "Your subscription is cancelled"
+      assert [audit_log] = AuditLogs.all_by(user)
+      assert audit_log.action == "billing.cancel"
+      assert audit_log.params["organization"]["name"] == organization.name
+    end
   end
 
   test "show invoice", %{user: user, organization: organization} do
@@ -228,86 +253,127 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
     assert response(conn, 200) == "Invoice"
   end
 
-  test "pay invoice", %{user: user, organization: organization} do
-    Mox.stub(Hexpm.Billing.Mock, :get, fn token ->
-      assert organization.name == token
+  describe "pay invoice" do
+    test "pay invoice succeed", %{user: user, organization: organization} do
+      Mox.stub(Hexpm.Billing.Mock, :get, fn token ->
+        assert organization.name == token
 
-      invoice = %{
-        "id" => 123,
-        "date" => "2020-01-01T00:00:00Z",
-        "amount_due" => 700,
-        "paid" => true
-      }
+        invoice = %{
+          "id" => 123,
+          "date" => "2020-01-01T00:00:00Z",
+          "amount_due" => 700,
+          "paid" => true
+        }
 
-      %{"invoices" => [invoice]}
-    end)
+        %{"invoices" => [invoice]}
+      end)
 
-    Mox.stub(Hexpm.Billing.Mock, :pay_invoice, fn id ->
-      assert id == 123
-      :ok
-    end)
+      Mox.stub(Hexpm.Billing.Mock, :pay_invoice, fn id ->
+        assert id == 123
+        :ok
+      end)
 
-    insert(:organization_user, organization: organization, user: user, role: "admin")
+      insert(:organization_user, organization: organization, user: user, role: "admin")
 
-    conn =
+      conn =
+        build_conn()
+        |> test_login(user)
+        |> post("dashboard/orgs/#{organization.name}/invoices/123/pay")
+
+      assert redirected_to(conn) == "/dashboard/orgs/#{organization.name}"
+      assert get_flash(conn, :info) == "Invoice paid."
+    end
+
+    test "pay invoice failed", %{user: user, organization: organization} do
+      Mox.stub(Hexpm.Billing.Mock, :get, fn token ->
+        assert organization.name == token
+
+        invoice = %{
+          "id" => 123,
+          "date" => "2020-01-01T00:00:00Z",
+          "amount_due" => 700,
+          "paid" => true
+        }
+
+        %{"invoices" => [invoice], "checkout_html" => ""}
+      end)
+
+      Mox.stub(Hexpm.Billing.Mock, :pay_invoice, fn id ->
+        assert id == 123
+        {:error, %{"errors" => "Card failure"}}
+      end)
+
+      insert(:organization_user, organization: organization, user: user, role: "admin")
+
+      conn =
+        build_conn()
+        |> test_login(user)
+        |> post("dashboard/orgs/#{organization.name}/invoices/123/pay")
+
+      response(conn, 400)
+      assert get_flash(conn, :error) == "Failed to pay invoice: Card failure."
+    end
+
+    test "create audit_log with action billing.pay_invoice", %{
+      user: user,
+      organization: organization
+    } do
+      Mox.stub(Hexpm.Billing.Mock, :get, fn _token -> %{"invoices" => [%{"id" => 123}]} end)
+      Mox.stub(Hexpm.Billing.Mock, :pay_invoice, fn _id -> :ok end)
+
+      insert(:organization_user, organization: organization, user: user, role: "admin")
+
       build_conn()
       |> test_login(user)
       |> post("dashboard/orgs/#{organization.name}/invoices/123/pay")
 
-    assert redirected_to(conn) == "/dashboard/orgs/#{organization.name}"
-    assert get_flash(conn, :info) == "Invoice paid."
+      assert [audit_log] = AuditLogs.all_by(user)
+      assert audit_log.action == "billing.pay_invoice"
+      assert audit_log.params["invoice_id"] == 123
+      assert audit_log.params["organization"]["name"] == organization.name
+    end
   end
 
-  test "pay invoice failed", %{user: user, organization: organization} do
-    Mox.stub(Hexpm.Billing.Mock, :get, fn token ->
-      assert organization.name == token
+  describe "POST /dashboard/orgs/:dashboard_org/update-billing" do
+    test "update billing email", %{user: user, organization: organization} do
+      mock_customer(organization)
 
-      invoice = %{
-        "id" => 123,
-        "date" => "2020-01-01T00:00:00Z",
-        "amount_due" => 700,
-        "paid" => true
-      }
+      Mox.stub(Hexpm.Billing.Mock, :update, fn token, params ->
+        assert organization.name == token
+        assert %{"email" => "billing@example.com"} = params
+        {:ok, %{}}
+      end)
 
-      %{"invoices" => [invoice], "checkout_html" => ""}
-    end)
+      insert(:organization_user, organization: organization, user: user, role: "admin")
 
-    Mox.stub(Hexpm.Billing.Mock, :pay_invoice, fn id ->
-      assert id == 123
-      {:error, %{"errors" => "Card failure"}}
-    end)
+      conn =
+        build_conn()
+        |> test_login(user)
+        |> post("dashboard/orgs/#{organization.name}/update-billing", %{
+          "email" => "billing@example.com"
+        })
 
-    insert(:organization_user, organization: organization, user: user, role: "admin")
+      assert redirected_to(conn) == "/dashboard/orgs/#{organization.name}"
+      assert get_flash(conn, :info) == "Updated your billing information."
+    end
 
-    conn =
-      build_conn()
-      |> test_login(user)
-      |> post("dashboard/orgs/#{organization.name}/invoices/123/pay")
+    test "create audit_log with action billing.update", %{user: user, organization: organization} do
+      mock_customer(organization)
+      Mox.stub(Hexpm.Billing.Mock, :update, fn _, _ -> {:ok, %{}} end)
 
-    response(conn, 400)
-    assert get_flash(conn, :error) == "Failed to pay invoice: Card failure."
-  end
+      insert(:organization_user, organization: organization, user: user, role: "admin")
 
-  test "update billing email", %{user: user, organization: organization} do
-    mock_customer(organization)
-
-    Mox.stub(Hexpm.Billing.Mock, :update, fn token, params ->
-      assert organization.name == token
-      assert %{"email" => "billing@example.com"} = params
-      {:ok, %{}}
-    end)
-
-    insert(:organization_user, organization: organization, user: user, role: "admin")
-
-    conn =
       build_conn()
       |> test_login(user)
       |> post("dashboard/orgs/#{organization.name}/update-billing", %{
         "email" => "billing@example.com"
       })
 
-    assert redirected_to(conn) == "/dashboard/orgs/#{organization.name}"
-    assert get_flash(conn, :info) == "Updated your billing information."
+      assert [audit_log] = AuditLogs.all_by(user)
+      assert audit_log.action == "billing.update"
+      assert audit_log.params["email"] == "billing@example.com"
+      assert audit_log.params["organization"]["name"] == organization.name
+    end
   end
 
   test "create organization", %{user: user} do
@@ -452,6 +518,24 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
       assert get_flash(conn, :error) ==
                "The number of open seats cannot be less than the number of organization members."
     end
+
+    test "create audit_log with action billing.update", %{organization: organization, user: user} do
+      Mox.stub(Hexpm.Billing.Mock, :update, fn _organization_name, _map -> {:ok, %{}} end)
+
+      insert(:organization_user, organization: organization, user: user, role: "admin")
+
+      build_conn()
+      |> test_login(user)
+      |> post("dashboard/orgs/#{organization.name}/add-seats", %{
+        "current-seats" => "1",
+        "add-seats" => "1"
+      })
+
+      assert [audit_log] = AuditLogs.all_by(user)
+      assert audit_log.action == "billing.update"
+      assert audit_log.params["quantity"] == 2
+      assert audit_log.params["organization"]["name"] == organization.name
+    end
   end
 
   describe "POST /dashboard/orgs/:dashboard_org/remove-seats" do
@@ -493,6 +577,23 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
       assert get_flash(conn, :error) ==
                "The number of open seats cannot be less than the number of organization members."
     end
+
+    test "create audit_log with action billing.update", %{organization: organization, user: user} do
+      Mox.stub(Hexpm.Billing.Mock, :update, fn _organization_name, _map -> {:ok, %{}} end)
+
+      insert(:organization_user, organization: organization, user: user, role: "admin")
+
+      build_conn()
+      |> test_login(user)
+      |> post("dashboard/orgs/#{organization.name}/remove-seats", %{
+        "seats" => "4"
+      })
+
+      assert [audit_log] = AuditLogs.all_by(user)
+      assert audit_log.action == "billing.update"
+      assert audit_log.params["quantity"] == 4
+      assert audit_log.params["organization"]["name"] == organization.name
+    end
   end
 
   describe "POST /dashboard/orgs/:dashboard_org/change-plan" do
@@ -514,6 +615,26 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
 
       assert redirected_to(conn) == "/dashboard/orgs/#{organization.name}"
       assert get_flash(conn, :info) == "You have switched to the annual organization plan."
+    end
+
+    test "create audit_log with action billing.change_plan", %{
+      organization: organization,
+      user: user
+    } do
+      Mox.stub(Hexpm.Billing.Mock, :change_plan, fn _organization_name, _map -> {:ok, %{}} end)
+
+      insert(:organization_user, organization: organization, user: user, role: "admin")
+
+      build_conn()
+      |> test_login(user)
+      |> post("dashboard/orgs/#{organization.name}/change-plan", %{
+        "plan_id" => "organization-annually"
+      })
+
+      assert [audit_log] = AuditLogs.all_by(user)
+      assert audit_log.action == "billing.change_plan"
+      assert audit_log.params["organization"]["name"] == organization.name
+      assert audit_log.params["plan_id"] == "organization-annually"
     end
   end
 

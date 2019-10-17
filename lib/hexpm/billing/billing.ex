@@ -25,11 +25,49 @@ defmodule Hexpm.Billing do
   def pay_invoice(id), do: impl().pay_invoice(id)
   def report(), do: impl().report()
 
+  def cancel(params, audit: %{audit_data: audit_data, organization: organization}) do
+    result = impl().cancel(params)
+    Repo.insert!(audit(audit_data, "billing.cancel", {organization, params}))
+    result
+  end
+
   def create(params, audit: %{audit_data: audit_data, organization: organization}) do
     case impl().create(params) do
       {:ok, result} ->
         Repo.insert!(audit(audit_data, "billing.create", {organization, params}))
         {:ok, result}
+
+      {:error, reason} ->
+        {:error, reason}
+    end
+  end
+
+  def update(organization_name, params,
+        audit: %{audit_data: audit_data, organization: organization}
+      ) do
+    case impl().update(organization_name, params) do
+      {:ok, result} ->
+        Repo.insert!(audit(audit_data, "billing.update", {organization, params}))
+        {:ok, result}
+
+      {:error, reason} ->
+        {:error, reason}
+    end
+  end
+
+  def change_plan(organization_name, params,
+        audit: %{audit_data: audit_data, organization: organization}
+      ) do
+    impl().change_plan(organization_name, params)
+    Repo.insert!(audit(audit_data, "billing.change_plan", {organization, params}))
+    :ok
+  end
+
+  def pay_invoice(id, audit: %{audit_data: audit_data, organization: organization}) do
+    case impl().pay_invoice(id) do
+      :ok ->
+        Repo.insert!(audit(audit_data, "billing.pay_invoice", {organization, id}))
+        :ok
 
       {:error, reason} ->
         {:error, reason}

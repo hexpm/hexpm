@@ -142,6 +142,9 @@ defmodule Hexpm.Accounts.AuditLog do
   defp extract_params("password.reset.finish", nil), do: %{}
   defp extract_params("password.update", nil), do: %{}
 
+  defp extract_params("billing.cancel", {organization, _params}),
+    do: %{organization: serialize(organization)}
+
   defp extract_params("billing.create", {organization, params}),
     do: %{
       organization: serialize(organization),
@@ -150,6 +153,28 @@ defmodule Hexpm.Accounts.AuditLog do
       company: params["company"],
       token: params["token"],
       quantity: params["quantity"]
+    }
+
+  defp extract_params("billing.update", {organization, params}),
+    do: %{
+      organization: serialize(organization),
+      email: params["email"],
+      person: params["person"],
+      company: params["company"],
+      token: params["token"],
+      quantity: params["quantity"]
+    }
+
+  defp extract_params("billing.change_plan", {organization, params}),
+    do: %{
+      organization: serialize(organization),
+      plan_id: params["plan_id"]
+    }
+
+  defp extract_params("billing.pay_invoice", {organization, invoice_id}),
+    do: %{
+      organization: serialize(organization),
+      invoice_id: invoice_id
     }
 
   defp serialize(%Key{} = key) do
