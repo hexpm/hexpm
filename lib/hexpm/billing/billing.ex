@@ -3,7 +3,7 @@ defmodule Hexpm.Billing do
 
   @type organization() :: String.t()
 
-  @callback checkout(organization(), data :: map()) :: map()
+  @callback checkout(organization(), data :: map()) :: {:ok, map()} | {:error, map()}
   @callback get(organization()) :: map() | nil
   @callback cancel(organization()) :: map()
   @callback create(map()) :: {:ok, map()} | {:error, map()}
