@@ -121,7 +121,9 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
 
   def billing_token(conn, %{"dashboard_org" => organization, "token" => token}) do
     access_organization(conn, organization, "admin", fn organization ->
-      case Hexpm.Billing.checkout(organization.name, %{payment_source: token}) do
+      audit = %{audit_data: audit_data(conn), organization: organization}
+
+      case Hexpm.Billing.checkout(organization.name, %{payment_source: token}, audit: audit) do
         {:ok, _} ->
           conn
           |> put_resp_header("content-type", "application/json")
