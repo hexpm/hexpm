@@ -162,6 +162,28 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
     assert repo_user.role == "read"
   end
 
+  describe "update payment method" do
+    test "calls Hexpm.Billing.checkout/2 when user is admin", %{
+      user: user,
+      organization: organization
+    } do
+      insert(:organization_user, organization: organization, user: user, role: "admin")
+
+      Mox.expect(Hexpm.Billing.Mock, :checkout, fn organization_name, params ->
+        assert organization_name == organization.name
+        assert params == %{payment_source: "Test Token"}
+        {:ok, :whatever}
+      end)
+
+      conn =
+        build_conn()
+        |> test_login(user)
+        |> post("dashboard/orgs/#{organization.name}/billing-token", %{"token" => "Test Token"})
+
+      assert json_response(conn, :no_content)
+    end
+  end
+
   describe "cancel billing" do
     test "with subscription", %{user: user, organization: organization} do
       Mox.stub(Hexpm.Billing.Mock, :cancel, fn token ->
