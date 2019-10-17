@@ -3,6 +3,52 @@ defmodule Hexpm.BillingTest do
 
   alias Hexpm.Accounts.AuditLogs
 
+  describe "checkout/3" do
+    test "returns {:ok, whatever} when impl().checkout/2 succeeds" do
+      Mox.stub(Hexpm.Billing.Mock, :checkout, fn "name", %{payment_source: :anything} ->
+        {:ok, :whatever}
+      end)
+
+      assert Hexpm.Billing.checkout("name", %{payment_source: :anything},
+               audit: %{audit_data: {insert(:user), "Test User Agent"}, organization: nil}
+             ) == {:ok, :whatever}
+    end
+
+    test "creates an Audit Log when impl().checkout/2 succeeds" do
+      Mox.stub(Hexpm.Billing.Mock, :checkout, fn _, _ -> {:ok, :whatever} end)
+
+      user = insert(:user)
+
+      Hexpm.Billing.checkout("name", %{},
+        audit: %{audit_data: {user, "Test User Agent"}, organization: nil}
+      )
+
+      assert [audit_log] = AuditLogs.all_by(user)
+    end
+
+    test "returns {:error, reason} when impl().checkout/2 fails" do
+      Mox.stub(Hexpm.Billing.Mock, :checkout, fn "name", %{payment_source: :anything} ->
+        {:error, :reason}
+      end)
+
+      assert Hexpm.Billing.checkout("name", %{payment_source: :anything},
+               audit: %{audit_data: {insert(:user), "Test User Agent"}, organization: nil}
+             ) == {:error, :reason}
+    end
+
+    test "does not create an Audit Log when impl().checkout/2 fails" do
+      Mox.stub(Hexpm.Billing.Mock, :checkout, fn _, _ -> {:error, :reason} end)
+
+      user = insert(:user)
+
+      Hexpm.Billing.checkout("name", %{payment_source: :anything},
+        audit: %{audit_data: {user, "Test User Agent"}, organization: nil}
+      )
+
+      assert [] == AuditLogs.all_by(user)
+    end
+  end
+
   describe "cancel/2" do
     test "returns whatever impl().cancel/1 returns" do
       Mox.stub(Hexpm.Billing.Mock, :cancel, fn "organization token" -> :whatever end)

@@ -25,6 +25,22 @@ defmodule Hexpm.Billing do
   def pay_invoice(id), do: impl().pay_invoice(id)
   def report(), do: impl().report()
 
+  @doc """
+  Change payment method used by an organization.
+  """
+  def checkout(organization_name, data,
+        audit: %{audit_data: audit_data, organization: organization}
+      ) do
+    case impl().checkout(organization_name, data) do
+      {:ok, body} ->
+        Repo.insert!(audit(audit_data, "billing.checkout", {organization, data}))
+        {:ok, body}
+
+      {:error, reason} ->
+        {:error, reason}
+    end
+  end
+
   def cancel(params, audit: %{audit_data: audit_data, organization: organization}) do
     result = impl().cancel(params)
     Repo.insert!(audit(audit_data, "billing.cancel", {organization, params}))
