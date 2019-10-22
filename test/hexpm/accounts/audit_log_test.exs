@@ -43,6 +43,27 @@ defmodule Hexpm.Accounts.AuditLogTest do
       assert audit.params.user.handles.github == user.handles.github
     end
 
+    test "action billing.checkout", %{user: user} do
+      organization = build(:organization, name: "Organization Name")
+
+      audit =
+        AuditLog.build(
+          user,
+          "user_agent",
+          "billing.checkout",
+          {
+            organization,
+            %{payment_source: "a token"}
+          }
+        )
+
+      assert audit.action == "billing.checkout"
+      assert audit.user_id == user.id
+      assert audit.user_agent == "user_agent"
+      assert audit.params.organization.name == "Organization Name"
+      assert audit.params.payment_source == "a token"
+    end
+
     test "action billing.cancel", %{user: user} do
       organization = build(:organization, name: "Organization Name")
 

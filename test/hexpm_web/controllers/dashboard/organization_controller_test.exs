@@ -162,6 +162,46 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
     assert repo_user.role == "read"
   end
 
+  describe "update payment method" do
+    test "calls Hexpm.Billing.checkout/2 when user is admin", %{
+      user: user,
+      organization: organization
+    } do
+      insert(:organization_user, organization: organization, user: user, role: "admin")
+
+      Mox.expect(Hexpm.Billing.Mock, :checkout, fn organization_name, params ->
+        assert organization_name == organization.name
+        assert params == %{payment_source: "Test Token"}
+        {:ok, :whatever}
+      end)
+
+      conn =
+        build_conn()
+        |> test_login(user)
+        |> post("dashboard/orgs/#{organization.name}/billing-token", %{"token" => "Test Token"})
+
+      assert json_response(conn, :no_content)
+    end
+
+    test "create audit_log with action billing.checkout", %{
+      user: user,
+      organization: organization
+    } do
+      insert(:organization_user, organization: organization, user: user, role: "admin")
+
+      Mox.expect(Hexpm.Billing.Mock, :checkout, fn _, _ -> {:ok, :whatever} end)
+
+      build_conn()
+      |> test_login(user)
+      |> post("dashboard/orgs/#{organization.name}/billing-token", %{"token" => "Test Token"})
+
+      assert [audit_log] = AuditLogs.all_by(user)
+      assert audit_log.action == "billing.checkout"
+      assert audit_log.params["organization"]["name"] == organization.name
+      assert audit_log.params["payment_source"] == "Test Token"
+    end
+  end
+
   describe "cancel billing" do
     test "with subscription", %{user: user, organization: organization} do
       Mox.stub(Hexpm.Billing.Mock, :cancel, fn token ->
