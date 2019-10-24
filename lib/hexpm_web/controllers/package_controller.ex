@@ -184,7 +184,7 @@ defmodule HexpmWeb.PackageController do
 
       :error ->
         params
-        |> Map.put("repository", name)
+        |> Map.put("repository", String.downcase(name))
         |> Map.put("name", version)
         |> Map.delete("version")
     end
