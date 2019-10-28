@@ -261,33 +261,45 @@ defmodule HexpmWeb.ControllerHelpers do
   end
 
   def fetch_release(conn, _opts) do
-    repository = Repositories.get(conn.params["repository"], [:organization])
-    package = repository && Packages.get(repository, conn.params["name"])
-    release = package && Releases.get(package, conn.params["version"])
+    case Version.parse(conn.params["version"]) do
+      {:ok, version} ->
+        repository = Repositories.get(conn.params["repository"], [:organization])
+        package = repository && Packages.get(repository, conn.params["name"])
+        release = package && Releases.get(package, version)
 
-    if release do
-      conn
-      |> assign(:repository, repository)
-      |> assign(:package, package)
-      |> assign(:release, release)
-      |> assign(:organization, repository && repository.organization)
-    else
-      conn
-      |> not_found()
-      |> halt()
+        if release do
+          conn
+          |> assign(:repository, repository)
+          |> assign(:package, package)
+          |> assign(:release, release)
+          |> assign(:organization, repository && repository.organization)
+        else
+          conn
+          |> not_found()
+          |> halt()
+        end
+
+      :error ->
+        render_error(conn, 400, message: "invalid version: #{conn.params["version"]}")
     end
   end
 
   def maybe_fetch_release(conn, _opts) do
-    repository = Repositories.get(conn.params["repository"], [:organization])
-    package = repository && Packages.get(repository, conn.params["name"])
-    release = package && Releases.get(package, conn.params["version"])
+    case Version.parse(conn.params["version"]) do
+      {:ok, version} ->
+        repository = Repositories.get(conn.params["repository"], [:organization])
+        package = repository && Packages.get(repository, conn.params["name"])
+        release = package && Releases.get(package, version)
 
-    conn
-    |> assign(:repository, repository)
-    |> assign(:package, package)
-    |> assign(:release, release)
-    |> assign(:organization, repository && repository.organization)
+        conn
+        |> assign(:repository, repository)
+        |> assign(:package, package)
+        |> assign(:release, release)
+        |> assign(:organization, repository && repository.organization)
+
+      :error ->
+        render_error(conn, 400, message: "invalid version: #{conn.params["version"]}")
+    end
   end
 
   def required_params(conn, required_param_names) do

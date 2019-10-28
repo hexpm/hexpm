@@ -967,6 +967,11 @@ defmodule HexpmWeb.API.ReleaseControllerTest do
       assert conn.status == 404
     end
 
+    test "get release with invalid version", %{package: package} do
+      conn = get(build_conn(), "api/packages/#{package.name}/releases/v1.2.3")
+      assert json_response(conn, 400)["message"] == "invalid version: v1.2.3"
+    end
+
     test "get release with requirements", %{package: package, release: release} do
       package2 = insert(:package)
       insert(:release, package: package2, version: "0.0.1")
