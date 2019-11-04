@@ -1,5 +1,6 @@
 defmodule Hexpm.Repository.Package do
   use Hexpm.Schema
+  alias Hexpm.Repository.PackageDependant
   import Ecto.Query, only: [from: 2]
 
   @derive {HexpmWeb.Stale, assocs: [:releases, :owners, :downloads]}
@@ -380,6 +381,16 @@ defmodule Hexpm.Repository.Package do
       left_join: d in PackageDownload,
       on: p.id == d.package_id and (d.view == "all" or is_nil(d.view)),
       order_by: [fragment("? DESC NULLS LAST", d.downloads)]
+    )
+  end
+
+  defp sort(query, :total_dependants) do
+    from(
+      p in query,
+      join: d in PackageDependant,
+      on: p.name == d.name,
+      group_by: [p.name, p.id],
+      order_by: [desc: count(p.name)]
     )
   end
 

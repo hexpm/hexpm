@@ -3,7 +3,7 @@ defmodule HexpmWeb.PackageController do
 
   @packages_per_page 30
   @audit_logs_per_page 10
-  @sort_params ~w(name recent_downloads total_downloads inserted_at updated_at recently_published)
+  @sort_params ~w(name recent_downloads total_downloads inserted_at updated_at recently_published total_dependants)
   @letters for letter <- ?A..?Z, do: <<letter>>
 
   def index(conn, params) do
