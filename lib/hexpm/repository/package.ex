@@ -1,6 +1,5 @@
 defmodule Hexpm.Repository.Package do
   use Hexpm.Schema
-  alias Hexpm.Repository.PackageDependant
   import Ecto.Query, only: [from: 2]
 
   @derive {HexpmWeb.Stale, assocs: [:releases, :owners, :downloads]}
