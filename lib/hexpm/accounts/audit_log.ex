@@ -18,7 +18,7 @@ defmodule Hexpm.Accounts.AuditLog do
 
     %AuditLog{
       user_id: nil,
-      organization_id: params[:repository][:organization_id],
+      organization_id: nil,
       user_agent: user_agent,
       action: action,
       params: params
