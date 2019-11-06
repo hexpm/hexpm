@@ -13,6 +13,7 @@ defmodule Hexpm.Accounts.AuditLogTest do
   describe "build/4" do
     test "action password.reset.init" do
       audit = AuditLog.build(nil, "user_agent", "password.reset.init", nil)
+      assert audit.organization_id == nil
       assert audit.action == "password.reset.init"
       assert audit.user_id == nil
       assert audit.user_agent == "user_agent"
@@ -21,6 +22,7 @@ defmodule Hexpm.Accounts.AuditLogTest do
 
     test "action password.reset.finish" do
       audit = AuditLog.build(nil, "user_agent", "password.reset.finish", nil)
+      assert audit.organization_id == nil
       assert audit.action == "password.reset.finish"
       assert audit.user_id == nil
       assert audit.user_agent == "user_agent"
