@@ -388,8 +388,8 @@ defmodule Hexpm.Repository.Package do
       p in query,
       join: d in PackageDependant,
       on: p.name == d.name,
-      group_by: [p.name, p.id],
-      order_by: [desc: count(p.name)]
+      group_by: [p.id],
+      order_by: [desc: count(d.dependant_id)]
     )
   end
 
