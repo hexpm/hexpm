@@ -6,7 +6,7 @@ defmodule HexpmWeb.API.UserControllerTest do
 
   defp publish_package(user) do
     meta = %{name: "ecto", version: "1.0.0", description: "Domain-specific language."}
-    body = create_tar(meta, [])
+    body = create_tar(meta)
 
     build_conn()
     |> put_req_header("content-type", "application/octet-stream")

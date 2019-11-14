@@ -42,7 +42,8 @@ defmodule Hexpm.Case do
       "version" => version,
       "requirements" => [],
       "app" => name,
-      "build_tools" => ["mix"]
+      "build_tools" => ["mix"],
+      "files" => ["mix.exs"]
     }
   end
 

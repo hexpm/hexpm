@@ -416,6 +416,17 @@ defmodule Hexpm.Repository.ReleaseTest do
              )
              |> errors_on()
 
+    meta = %{
+      "app" => package3.name,
+      "version" => "0.1.0",
+      "requirements" => [],
+      "build_tools" => ["mix"],
+      "files" => []
+    }
+
+    assert %{meta: %{files: "package can't be empty"}} =
+             Release.build(package3, publisher, %{"meta" => meta}, "", "") |> errors_on()
+
     # Disabled because of resolver bug
     # reqs = [%{name: package3.name, app: package3.name, requirement: "~> 1.0", optional: false}]
 
