@@ -18,10 +18,10 @@ defmodule Hexpm.Changeset do
     end)
   end
 
-  def validate_list_required(changeset, field) do
+  def validate_list_required(changeset, field, opts \\ []) do
     validate_change(changeset, field, fn
       _, [] ->
-        [{field, "can't be blank"}]
+        [{field, Keyword.get(opts, :message, "can't be blank")}]
 
       _, list when is_list(list) ->
         []

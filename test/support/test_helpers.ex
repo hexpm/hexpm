@@ -1,13 +1,14 @@
 defmodule Hexpm.TestHelpers do
   @tmp Application.get_env(:hexpm, :tmp_dir)
 
-  def create_tar(meta, files) do
+  def create_tar(meta, files \\ [{"mix.exs", "mix.exs"}]) do
     meta =
       meta
       |> Map.put_new(:app, meta[:name])
       |> Map.put_new(:build_tools, ["mix"])
       |> Map.put_new(:licenses, ["Apache-2.0"])
       |> Map.put_new(:requirements, %{})
+      |> Map.put_new(:files, Enum.map(files, &elem(&1, 0)))
 
     contents_path = Path.join(@tmp, "#{meta[:name]}-#{meta[:version]}-contents.tar.gz")
     files = Enum.map(files, fn {name, bin} -> {String.to_charlist(name), bin} end)
@@ -33,7 +34,11 @@ defmodule Hexpm.TestHelpers do
 
   def rel_meta(params) do
     params = params(params)
-    meta = Map.put_new(params, "build_tools", ["mix"])
+
+    meta =
+      params
+      |> Map.put_new("build_tools", ["mix"])
+      |> Map.put_new("files", ["mix.exs"])
 
     params
     |> Map.put("meta", meta)
