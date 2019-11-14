@@ -24,14 +24,44 @@ jobs:
         - sudo cat /var/log/postgresql/postgresql-9.6-main.log
 
     - env: HEX_VERSION=v0.20
+      before_script:
+        - git clone https://github.com/hexpm/hex hex -b ${HEX_VERSION} --depth 1
+        - cd hex && mix deps.get && cd ..
+      script:
+        - cd hex && mix test --include integration && cd ..
+        - sudo cat /var/log/postgresql/postgresql-9.6-main.log
 
     - env: HEX_VERSION=v0.19
+      before_script:
+        - git clone https://github.com/hexpm/hex hex -b ${HEX_VERSION} --depth 1
+        - cd hex && mix deps.get && cd ..
+      script:
+        - cd hex && mix test --include integration && cd ..
+        - sudo cat /var/log/postgresql/postgresql-9.6-main.log
 
     - env: HEX_VERSION=v0.18
+      before_script:
+        - git clone https://github.com/hexpm/hex hex -b ${HEX_VERSION} --depth 1
+        - cd hex && mix deps.get && cd ..
+      script:
+        - cd hex && mix test --include integration && cd ..
+        - sudo cat /var/log/postgresql/postgresql-9.6-main.log
 
     - env: HEX_VERSION=v0.17
+      before_script:
+        - git clone https://github.com/hexpm/hex hex -b ${HEX_VERSION} --depth 1
+        - cd hex && mix deps.get && cd ..
+      script:
+        - cd hex && mix test --include integration && cd ..
+        - sudo cat /var/log/postgresql/postgresql-9.6-main.log
 
     - env: HEX_VERSION=v0.16
+      before_script:
+        - git clone https://github.com/hexpm/hex hex -b ${HEX_VERSION} --depth 1
+        - cd hex && mix deps.get && cd ..
+      script:
+        - cd hex && mix test --include integration && cd ..
+        - sudo cat /var/log/postgresql/postgresql-9.6-main.log
 
 env:
   global:
