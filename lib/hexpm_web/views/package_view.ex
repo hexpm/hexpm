@@ -6,6 +6,7 @@ defmodule HexpmWeb.PackageView do
   def show_sort_info(:inserted_at), do: "Sort: Recently created"
   def show_sort_info(:updated_at), do: "Sort: Recently updated"
   def show_sort_info(:total_downloads), do: "Sort: Total downloads"
+  def show_sort_info(:total_dependants), do: "Sort: Total dependants"
   def show_sort_info(:recent_downloads), do: "Sort: Recent downloads"
   def show_sort_info(:recently_published), do: "Sort: Recently published"
   def show_sort_info(_param), do: nil

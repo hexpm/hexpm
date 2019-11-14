@@ -383,6 +383,16 @@ defmodule Hexpm.Repository.Package do
     )
   end
 
+  defp sort(query, :total_dependants) do
+    from(
+      p in query,
+      join: d in PackageDependant,
+      on: p.name == d.name,
+      group_by: [p.id],
+      order_by: [desc: count(d.dependant_id)]
+    )
+  end
+
   defp sort(query, :recent_downloads) do
     from(
       p in query,

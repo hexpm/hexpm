@@ -31,6 +31,7 @@
 
   sort_name_params = params(search: @search, page: page, sort: "name")
   sort_total_downloads_params = params(search: @search, page: page, sort: "total_downloads")
+  sort_total_dependants_params = params(search: @search, page: page, sort: "total_dependants")
   sort_recent_downloads_params = params(search: @search, page: page, sort: "recent_downloads")
   sort_created_params = params(search: @search, page: page, sort: "inserted_at")
   sort_updated_params = params(search: @search, page: page, sort: "updated_at")
@@ -56,6 +57,9 @@
           </li>
           <li role="presentation">
             <a role="menuitem" tabindex="-1" href="<%= Routes.package_path(Endpoint, :index, sort_total_downloads_params) %>">Total downloads</a>
+          </li>
+          <li role="presentation">
+            <a role="menuitem" tabindex="-1" href="<%= Routes.package_path(Endpoint, :index, sort_total_dependants_params) %>">Total dependants</a>
           </li>
           <li role="presentation">
             <a role="menuitem" tabindex="-1" href="<%= Routes.package_path(Endpoint, :index, sort_recent_downloads_params) %>">Recent downloads</a>
