@@ -25,15 +25,14 @@ defmodule Hexpm.Accounts.AuditLog do
     }
   end
 
-  def build(%User{id: user_id}, user_agent, action, organization)
-      when action == "organization.create" do
-    params = extract_params(action, organization)
+  def build(%User{id: user_id}, user_agent, "organization.create", organization) do
+    params = extract_params("organization.create", organization)
 
     %AuditLog{
       user_id: user_id,
       organization_id: organization.id,
       user_agent: user_agent,
-      action: action,
+      action: "organization.create",
       params: params
     }
   end
