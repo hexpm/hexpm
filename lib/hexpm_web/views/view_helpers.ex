@@ -227,6 +227,7 @@ defmodule HexpmWeb.ViewHelpers do
   end
 
   def human_number_space(0, _max), do: "0"
+
   def human_number_space(int, max) when is_integer(int) do
     unit =
       cond do
