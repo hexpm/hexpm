@@ -22,31 +22,28 @@ defmodule Hexpm.Accounts.Recovery do
 
   def hash_recovery_codes(codes), do: Enum.map(codes, &hash_code/1)
 
-  # It is not clear whether this should take a binary or a list of binaries at this point.
-  # It depends how the form in UI is implemented as well as plans for the CLI.
   def verify_code(<<code::binary-size(19)>>, hash) do
     code
     |> String.split("-")
-    |> verify_code(hash)
+    |> do_verify_code(hash)
   end
 
-  def verify_code([_p1, _p2, _p3, _p4] = parts, hash) do
+  defp do_verify_code([_p1, _p2, _p3, _p4] = parts, hash) do
     parts
     |> Enum.join("-")
     |> Bcrypt.verify_pass(hash)
   end
 
-  def verify_code(_, _), do: false
+  defp do_verify_code(_, _), do: false
 
   def hash_code(code), do: Bcrypt.hash_pwd_salt(code)
 
-  defp gen_code do
+  def gen_code do
     :crypto.strong_rand_bytes(@rand_bytes)
-    |> Base.hex_encode32()
-    |> String.downcase()
-    |> String.codepoints()
+    |> Base.hex_encode32(case: :lower)
+    |> String.to_charlist()
     |> Enum.chunk_every(@part_size)
-    |> Enum.reduce("", fn s, acc -> Enum.join(s) <> "-" <> acc end)
-    |> String.trim_trailing("-")
+    |> Enum.intersperse("-")
+    |> List.to_string()
   end
 end
