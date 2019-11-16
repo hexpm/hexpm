@@ -25,6 +25,7 @@ defmodule Hexpm.Accounts.User do
     has_many :keys, Key
     has_many :audit_logs, AuditLog
     has_many :password_resets, PasswordReset
+    has_many :recovery_codes, Hexpm.Accounts.RecoveryCode
   end
 
   @username_regex ~r"^[a-z0-9_\-\.]+$"
