@@ -1,13 +1,16 @@
 defmodule Hexpm.Billing.Local do
   @behaviour Hexpm.Billing
 
-  def checkout(_organization, _data) do
-    {:ok, %{}}
+  def create_session(_organization, _success_url, _cancel_url) do
+    %{javascript: ""}
+  end
+
+  def complete_session(_organization, _session_id, _client_ip) do
+    :ok
   end
 
   def get(_organization) do
     %{
-      "checkout_html" => "",
       "monthly_cost" => 800,
       "invoices" => []
     }

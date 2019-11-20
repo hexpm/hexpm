@@ -72,7 +72,8 @@ defmodule Hexpm.Accounts.AuditLogTest do
           "billing.checkout",
           {
             organization,
-            %{payment_source: "a token"}
+            "SESSION_ID",
+            "127.0.0.1"
           }
         )
 
@@ -80,7 +81,8 @@ defmodule Hexpm.Accounts.AuditLogTest do
       assert audit.user_id == user.id
       assert audit.user_agent == "user_agent"
       assert audit.params.organization.name == "Organization Name"
-      assert audit.params.payment_source == "a token"
+      assert audit.params.session_id == "SESSION_ID"
+      assert audit.params.client_ip == "127.0.0.1"
     end
 
     test "action billing.cancel", %{user: user} do

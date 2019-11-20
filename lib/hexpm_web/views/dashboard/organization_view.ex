@@ -24,8 +24,11 @@ defmodule HexpmWeb.Dashboard.OrganizationView do
     end)
   end
 
-  defp plan("organization-monthly"), do: "Organization, monthly billed ($7.00 per user / month)"
-  defp plan("organization-annually"), do: "Organization, annually billed ($70.00 per user / year)"
+  defp plan("organization-monthly"), do: "Organization, monthly billed ($7.00 per user / month)."
+
+  defp plan("organization-annually"),
+    do: "Organization, annually billed ($70.00 per user / year)."
+
   defp plan_price("organization-monthly"), do: "$7.00"
   defp plan_price("organization-annually"), do: "$70.00"
 
@@ -49,7 +52,7 @@ defmodule HexpmWeb.Dashboard.OrganizationView do
        when quantity < max_period_quantity do
     """
     You have already used <strong>#{max_period_quantity}</strong> seats in your current billing period.
-    If adding seats over this amount, each new seat will be prorated on the next invoice for
+    If you add seats over this amount, each new seat will be prorated on the next invoice for
     <strong>#{days}</strong> day(s) @ <strong>$#{money(price)}</strong>.
     """
     |> raw()
@@ -59,13 +62,13 @@ defmodule HexpmWeb.Dashboard.OrganizationView do
        when quantity < max_period_quantity do
     """
     You have already used <strong>#{max_period_quantity}</strong> seats in your current billing period.
-    If adding seats over this amount, each new seat will be charged a proration for
+    If you add seats over this amount, each new seat will be charged a proration for
     <strong>#{days}</strong> day(s) @ <strong>$#{money(price)}</strong>.
     """
     |> raw()
   end
 
-  @no_card_message "No payment method on file"
+  @no_card_message "No payment method on file."
 
   defp payment_card(nil) do
     @no_card_message
@@ -76,17 +79,18 @@ defmodule HexpmWeb.Dashboard.OrganizationView do
   end
 
   defp payment_card(card) do
-    card_exp_month = String.pad_leading(card["exp_month"], 2, "0")
+    brand = String.capitalize(card["brand"])
+    card_exp_month = String.pad_leading(Integer.to_string(card["exp_month"]), 2, "0")
     expires = "#{card_exp_month}/#{card["exp_year"]}"
-    "#{card["brand"]} **** **** **** #{card["last4"]}, Expires: #{expires}"
+    "#{brand} **** **** **** #{card["last4"]}, Expires: #{expires}."
   end
 
   defp subscription_status(%{"status" => "active", "cancel_at_period_end" => false}, _card) do
-    "Active"
+    "Active."
   end
 
   defp subscription_status(%{"status" => "active", "cancel_at_period_end" => true}, _card) do
-    "Ends after current subscription period"
+    "Ends after current subscription period."
   end
 
   defp subscription_status(
@@ -94,34 +98,36 @@ defmodule HexpmWeb.Dashboard.OrganizationView do
          card
        ) do
     trial_end = trial_end |> NaiveDateTime.from_iso8601!() |> pretty_datetime()
-    raw("Trial ends on #{trial_end}, #{trial_status_message(card)}")
+    raw("Trial ends on #{trial_end}, #{trial_status_message(card)}.")
   end
 
   defp subscription_status(%{"status" => "past_due"}, _card) do
     "Active with past due invoice, if the invoice is not paid the " <>
-      "organization will be disabled"
+      "organization will be disabled."
   end
 
   defp subscription_status(%{"status" => "incomplete"}, _card) do
-    "TODO"
+    "Active, but requires payment confirmation, check your email to " <>
+      "complete the payment flow."
+  end
+
+  defp subscription_status(%{"status" => "incomplete_expired"}, _card) do
+    "Not active, failed to confirm payment, please enter a new " <>
+      "payment method if you wish to continue the subscription."
   end
 
   # TODO: Check if last invoice was unpaid and add note about it?
   defp subscription_status(%{"status" => "canceled"}, _card) do
-    "Not active"
+    "Not active."
   end
 
-  @trial_ends_no_card_message """
-  your subscription will end after the trial period because we have no payment method on file for you,
-  please enter a payment method if you wish to continue using organizations after the trial period
-  """
-
   defp trial_status_message(%{"brand" => nil}) do
-    @trial_ends_no_card_message
+    trial_status_message(nil)
   end
 
   defp trial_status_message(nil) do
-    @trial_ends_no_card_message
+    "your subscription will end after the trial period because we have no payment method on file for you, " <>
+      "please enter a payment method if you wish to continue using organizations after the trial period"
   end
 
   defp trial_status_message(_card) do
@@ -165,6 +171,15 @@ defmodule HexpmWeb.Dashboard.OrganizationView do
     [billing_email | emails]
     |> Enum.reject(&is_nil/1)
     |> Enum.uniq()
+  end
+
+  defp payment_button_text(card, subscription) do
+    cond do
+      !card -> "Add payment method"
+      !subscription -> "Renew subscription"
+      subscription["cancel_at_period_end"] -> "Renew subscription"
+      true -> "Update payment method"
+    end
   end
 
   # From Hexpm.Billing.Country

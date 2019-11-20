@@ -3,7 +3,8 @@ defmodule Hexpm.Billing do
 
   @type organization() :: String.t()
 
-  @callback checkout(organization(), data :: map()) :: {:ok, map()} | {:error, map()}
+  @callback create_session(organization(), String.t(), String.t()) :: map()
+  @callback complete_session(organization(), String.t(), String.t()) :: :ok | {:error, map()}
   @callback get(organization()) :: map() | nil
   @callback cancel(organization()) :: map()
   @callback create(map()) :: {:ok, map()} | {:error, map()}
@@ -15,7 +16,12 @@ defmodule Hexpm.Billing do
 
   defp impl(), do: Application.get_env(:hexpm, :billing_impl)
 
-  def checkout(organization, data), do: impl().checkout(organization, data)
+  def create_session(organization, success_url, cancel_url),
+    do: impl().create_session(organization, success_url, cancel_url)
+
+  def complete_session(organization, session_id, client_ip),
+    do: impl().complete_session(organization, session_id, client_ip)
+
   def get(organization), do: impl().get(organization)
   def cancel(organization), do: impl().cancel(organization)
   def create(params), do: impl().create(params)
@@ -28,13 +34,13 @@ defmodule Hexpm.Billing do
   @doc """
   Change payment method used by an organization.
   """
-  def checkout(organization_name, data,
+  def complete_session(organization_name, session_id, client_ip,
         audit: %{audit_data: audit_data, organization: organization}
       ) do
-    case impl().checkout(organization_name, data) do
-      {:ok, body} ->
-        Repo.insert!(audit(audit_data, "billing.checkout", {organization, data}))
-        {:ok, body}
+    case complete_session(organization_name, session_id, client_ip) do
+      :ok ->
+        Repo.insert!(audit(audit_data, "billing.checkout", {organization, session_id, client_ip}))
+        :ok
 
       {:error, reason} ->
         {:error, reason}

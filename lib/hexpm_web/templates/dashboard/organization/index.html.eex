@@ -113,7 +113,7 @@
               <dd><%= payment_card(@card) %></dd>
               <dt>Next invoice</dt>
               <%= if @subscription["cancel_at_period_end"] do %>
-                <dd>Subscription ends on <%= payment_date(@subscription["current_period_end"]) %></dd>
+                <dd>Subscription ends on <%= payment_date(@subscription["current_period_end"]) %>.</dd>
               <% else %>
                 <dd><%= payment_date(@subscription["current_period_end"]) %></dd>
               <% end %>
@@ -127,7 +127,7 @@
                   <%= plan_price(@plan_id) %> x <%= @quantity %> user(s)
                   <%= if @tax_rate && @tax_rate != 0 do %>x <%= @tax_rate %>% VAT<% end %> =
                 </span>
-                $<%= money(@amount_with_tax) %>
+                $<%= money(@amount_with_tax) %>.
               </dd>
               <dt>Status</dt>
               <dd>
@@ -145,11 +145,9 @@
             </dl>
             <br>
 
-            <script>
-              window.hexpm_billing_post_action = "<%= @post_action %>";
-              window.hexpm_billing_csrf_token = "<%= @csrf_token %>";
-            </script>
-            <%= raw(@checkout_html) %>
+            <button class="btn btn-primary" type="button" onclick="window.app.onUpdatePayment('<%= Routes.organization_path(Endpoint, :update_payment, @organization) %>')">
+              <%= payment_button_text(@card, @subscription) %>
+            </button>
 
             <%= form_tag(Routes.organization_path(Endpoint, :cancel_billing, @organization), class: "cancel-billing") do %>
               <%= submit "Cancel subscription", class: "btn btn-danger", disabled: !@subscription || @subscription["cancel_at_period_end"] %>
@@ -218,14 +216,12 @@
             </div>
 
           <% else %>
-            Subscription is not active. <strong>Private packages will not be available</strong> until a payment method has been added.<br><br>
+            Subscription is not active. <strong>Private packages will not be available</strong> until your subscription is started by entering a payment method.<br><br>
             Subscription cost is <strong>$7.00 per user / month</strong> + local VAT when applicable.<br><br>
 
-            <script>
-              window.hexpm_billing_post_action = "<%= @post_action %>";
-              window.hexpm_billing_csrf_token = "<%= @csrf_token %>";
-            </script>
-            <%= raw(@checkout_html) %>
+            <button class="btn btn-primary" type="button" onclick="window.app.onUpdatePayment('<%= Routes.organization_path(Endpoint, :update_payment, @organization) %>')">
+              <%= payment_button_text(@card, @subscription) %>
+            </button>
 
             <button type="button" class="btn btn-default" data-toggle="modal" data-target="#change-plan">
               <%= if @plan_id == "organization-monthly" do %>

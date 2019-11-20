@@ -128,13 +128,15 @@ defmodule HexpmWeb.Router do
     get "/repos/*glob", OrganizationController, :redirect_repo
     get "/orgs/:dashboard_org", OrganizationController, :show
     post "/orgs/:dashboard_org", OrganizationController, :update
-    post "/orgs/:dashboard_org/billing-token", OrganizationController, :billing_token
     post "/orgs/:dashboard_org/cancel-billing", OrganizationController, :cancel_billing
     post "/orgs/:dashboard_org/update-billing", OrganizationController, :update_billing
     post "/orgs/:dashboard_org/create-billing", OrganizationController, :create_billing
     post "/orgs/:dashboard_org/add-seats", OrganizationController, :add_seats
     post "/orgs/:dashboard_org/remove-seats", OrganizationController, :remove_seats
     post "/orgs/:dashboard_org/change-plan", OrganizationController, :change_plan
+    get "/orgs/:dashboard_org/update-payment", OrganizationController, :update_payment
+    get "/orgs/:dashboard_org/payment-success", OrganizationController, :payment_success
+    get "/orgs/:dashboard_org/payment-cancel", OrganizationController, :payment_cancel
     post "/orgs/:dashboard_org/keys", OrganizationController, :create_key
     delete "/orgs/:dashboard_org/keys", OrganizationController, :delete_key
     get "/orgs/:dashboard_org/invoices/:id", OrganizationController, :show_invoice

@@ -154,10 +154,11 @@ defmodule Hexpm.Accounts.AuditLog do
   defp extract_params("password.reset.finish", nil), do: %{}
   defp extract_params("password.update", nil), do: %{}
 
-  defp extract_params("billing.checkout", {organization, data}),
+  defp extract_params("billing.checkout", {organization, session_id, client_ip}),
     do: %{
       organization: serialize(organization),
-      payment_source: data[:payment_source]
+      session_id: session_id,
+      client_ip: client_ip
     }
 
   defp extract_params("billing.cancel", {organization, _params}),

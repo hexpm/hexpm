@@ -13,10 +13,7 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
     Mox.stub(Hexpm.Billing.Mock, :get, fn token ->
       assert organization.name == token
 
-      %{
-        "checkout_html" => "",
-        "invoices" => []
-      }
+      %{"invoices" => []}
     end)
   end
 
@@ -60,7 +57,6 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
       assert organization.name == token
 
       %{
-        "checkout_html" => "",
         "invoices" => [],
         "quantity" => 2
       }
@@ -94,7 +90,6 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
       assert organization.name == token
 
       %{
-        "checkout_html" => "",
         "invoices" => [],
         "quantity" => 1,
         "subscription" => %{
@@ -163,24 +158,74 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
   end
 
   describe "update payment method" do
-    test "calls Hexpm.Billing.checkout/2 when user is admin", %{
+    test "starts updating payment flow", %{
       user: user,
       organization: organization
     } do
       insert(:organization_user, organization: organization, user: user, role: "admin")
 
-      Mox.expect(Hexpm.Billing.Mock, :checkout, fn organization_name, params ->
+      Mox.expect(Hexpm.Billing.Mock, :create_session, fn organization_name,
+                                                         success_url,
+                                                         cancel_url ->
         assert organization_name == organization.name
-        assert params == %{payment_source: "Test Token"}
-        {:ok, :whatever}
+
+        assert success_url ==
+                 "http://localhost:5000/dashboard/orgs/#{organization_name}/payment-success?session_id={CHECKOUT_SESSION_ID}"
+
+        assert cancel_url ==
+                 "http://localhost:5000/dashboard/orgs/#{organization_name}/payment-cancel"
+
+        %{"javascript" => "JAVASCRIPT"}
       end)
 
       conn =
         build_conn()
         |> test_login(user)
-        |> post("dashboard/orgs/#{organization.name}/billing-token", %{"token" => "Test Token"})
+        |> get("dashboard/orgs/#{organization.name}/update-payment")
 
-      assert json_response(conn, :no_content)
+      assert response(conn, 200) =~ "JAVASCRIPT"
+      assert get_resp_header(conn, "content-type") == ["application/javascript; charset=utf-8"]
+    end
+
+    test "cancel payment flow", %{
+      user: user,
+      organization: organization
+    } do
+      insert(:organization_user, organization: organization, user: user, role: "admin")
+
+      conn =
+        build_conn()
+        |> test_login(user)
+        |> get("dashboard/orgs/#{organization.name}/payment-cancel")
+
+      assert redirected_to(conn) == "/dashboard/orgs/#{organization.name}"
+      assert get_flash(conn, :error) == "Updating payment method was cancelled by user."
+    end
+
+    test "calls Hexpm.Billing.complete_session/3 when user is admin", %{
+      user: user,
+      organization: organization
+    } do
+      insert(:organization_user, organization: organization, user: user, role: "admin")
+
+      Mox.expect(Hexpm.Billing.Mock, :complete_session, fn organization_name,
+                                                           session_id,
+                                                           client_ip ->
+        assert organization_name == organization.name
+        assert session_id == "SESSION_ID"
+        assert client_ip == "127.0.0.1"
+        :ok
+      end)
+
+      conn =
+        build_conn()
+        |> test_login(user)
+        |> get("dashboard/orgs/#{organization.name}/payment-success", %{
+          "session_id" => "SESSION_ID"
+        })
+
+      assert redirected_to(conn) == "/dashboard/orgs/#{organization.name}"
+      assert get_flash(conn, :info) == "Successfully updated your payment method."
     end
 
     test "create audit_log with action billing.checkout", %{
@@ -189,16 +234,19 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
     } do
       insert(:organization_user, organization: organization, user: user, role: "admin")
 
-      Mox.expect(Hexpm.Billing.Mock, :checkout, fn _, _ -> {:ok, :whatever} end)
+      Mox.expect(Hexpm.Billing.Mock, :complete_session, fn _, _, _ -> :ok end)
 
       build_conn()
       |> test_login(user)
-      |> post("dashboard/orgs/#{organization.name}/billing-token", %{"token" => "Test Token"})
+      |> get("dashboard/orgs/#{organization.name}/payment-success", %{
+        "session_id" => "SESSION_ID"
+      })
 
       assert [audit_log] = AuditLogs.all_by(user)
       assert audit_log.action == "billing.checkout"
       assert audit_log.params["organization"]["name"] == organization.name
-      assert audit_log.params["payment_source"] == "Test Token"
+      assert audit_log.params["session_id"] == "SESSION_ID"
+      assert audit_log.params["client_ip"] == "127.0.0.1"
     end
   end
 
@@ -335,7 +383,7 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
           "paid" => true
         }
 
-        %{"invoices" => [invoice], "checkout_html" => ""}
+        %{"invoices" => [invoice]}
       end)
 
       Mox.stub(Hexpm.Billing.Mock, :pay_invoice, fn id ->
@@ -443,8 +491,7 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
     response(conn, 302)
     assert get_resp_header(conn, "location") == ["/dashboard/orgs/createrepo"]
 
-    assert get_flash(conn, :info) ==
-             "Organization created with one month free trial period active."
+    assert get_flash(conn, :info) =~ "Organization created with access to public packages."
 
     assert organization = Organizations.get("createrepo", [:repository])
     assert organization.repository.name == "createrepo"

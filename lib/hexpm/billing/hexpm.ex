@@ -1,9 +1,17 @@
 defmodule Hexpm.Billing.Hexpm do
   @behaviour Hexpm.Billing
 
-  def checkout(organization, data) do
-    case post("/api/customers/#{organization}/payment_source", data, recv_timeout: 15_000) do
-      {:ok, 204, _headers, body} -> {:ok, body}
+  def create_session(organization, success_url, cancel_url) do
+    data = %{success_url: success_url, cancel_url: cancel_url}
+    {:ok, 200, _headers, body} = post("/api/customers/#{organization}/create-session", data, [])
+    body
+  end
+
+  def complete_session(organization, session_id, client_ip) do
+    data = %{session_id: session_id, client_ip: client_ip}
+
+    case post("/api/customers/#{organization}/complete-session", data, []) do
+      {:ok, 204, _headers, _body} -> :ok
       {:ok, 422, _headers, body} -> {:error, body}
     end
   end

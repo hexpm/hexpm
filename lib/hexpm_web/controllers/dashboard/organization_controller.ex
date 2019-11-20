@@ -119,24 +119,6 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
     end)
   end
 
-  def billing_token(conn, %{"dashboard_org" => organization, "token" => token}) do
-    access_organization(conn, organization, "admin", fn organization ->
-      audit = %{audit_data: audit_data(conn), organization: organization}
-
-      case Hexpm.Billing.checkout(organization.name, %{payment_source: token}, audit: audit) do
-        {:ok, _} ->
-          conn
-          |> put_resp_header("content-type", "application/json")
-          |> send_resp(204, Jason.encode!(%{}))
-
-        {:error, reason} ->
-          conn
-          |> put_resp_header("content-type", "application/json")
-          |> send_resp(422, Jason.encode!(reason))
-      end
-    end)
-  end
-
   def cancel_billing(conn, %{"dashboard_org" => organization}) do
     access_organization(conn, organization, "admin", fn organization ->
       audit = %{audit_data: audit_data(conn), organization: organization}
@@ -288,6 +270,49 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
   defp plan_name("organization-monthly"), do: "monthly organization"
   defp plan_name("organization-annually"), do: "annual organization"
 
+  def update_payment(conn, %{"dashboard_org" => organization}) do
+    access_organization(conn, organization, "admin", fn organization ->
+      # Avoid escaping of query parameteres
+      success_url =
+        Routes.organization_url(conn, :payment_success, organization) <>
+          "?session_id={CHECKOUT_SESSION_ID}"
+
+      cancel_url = Routes.organization_url(conn, :payment_cancel, organization)
+      result = Hexpm.Billing.create_session(organization.name, success_url, cancel_url)
+
+      conn
+      |> Plug.Conn.put_resp_content_type("application/javascript")
+      |> Plug.Conn.send_resp(200, result["javascript"])
+    end)
+  end
+
+  def payment_success(conn, %{"dashboard_org" => organization, "session_id" => session_id}) do
+    access_organization(conn, organization, "admin", fn organization ->
+      client_ip = conn.remote_ip |> :inet.ntoa() |> List.to_string()
+      audit = %{audit_data: audit_data(conn), organization: organization}
+
+      case Hexpm.Billing.complete_session(organization.name, session_id, client_ip, audit: audit) do
+        :ok ->
+          conn
+          |> put_flash(:info, "Successfully updated your payment method.")
+          |> redirect(to: Routes.organization_path(conn, :show, organization))
+
+        {:error, reason} ->
+          errors = Jason.encode!(reason["errors"])
+
+          conn
+          |> put_flash(:error, "Failed to update payment method: #{errors}")
+          |> redirect(to: Routes.organization_path(conn, :show, organization))
+      end
+    end)
+  end
+
+  def payment_cancel(conn, %{"dashboard_org" => organization}) do
+    conn
+    |> put_flash(:error, "Updating payment method was cancelled by user.")
+    |> redirect(to: Routes.organization_path(conn, :show, organization))
+  end
+
   def new(conn, _params) do
     render_new(conn)
   end
@@ -297,8 +322,13 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
 
     case Organizations.create(user, params["organization"], audit: audit_data(conn)) do
       {:ok, organization} ->
+        message =
+          "Organization created with access to public packages. " <>
+            "Enter your billing details below to activate your one month " <>
+            "trial period of private packages."
+
         conn
-        |> put_flash(:info, "Organization created with one month free trial period active.")
+        |> put_flash(:info, message)
         |> redirect(to: Routes.organization_path(conn, :show, organization))
 
       {:error, changeset} ->
@@ -403,15 +433,14 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
       add_member_changeset: opts[:add_member_changeset] || add_member_changeset()
     ]
 
-    assigns = Keyword.merge(assigns, customer_assigns(customer, organization))
+    assigns = Keyword.merge(assigns, customer_assigns(customer))
     render(conn, "index.html", assigns)
   end
 
-  defp customer_assigns(nil, _organization) do
+  defp customer_assigns(nil) do
     [
       billing_started?: false,
       billing_active?: false,
-      checkout_html: nil,
       billing_email: nil,
       plan_id: "organization-monthly",
       subscription: nil,
@@ -422,19 +451,14 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
       card: nil,
       invoices: nil,
       person: nil,
-      company: nil,
-      post_action: nil,
-      csrf_token: nil
+      company: nil
     ]
   end
 
-  defp customer_assigns(customer, organization) do
-    post_action = Routes.organization_path(Endpoint, :billing_token, organization)
-
+  defp customer_assigns(customer) do
     [
       billing_started?: true,
       billing_active?: !!customer["subscription"],
-      checkout_html: customer["checkout_html"],
       billing_email: customer["email"],
       plan_id: customer["plan_id"],
       proration_amount: customer["proration_amount"],
@@ -449,9 +473,7 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
       card: customer["card"],
       invoices: customer["invoices"],
       person: customer["person"],
-      company: customer["company"],
-      post_action: post_action,
-      csrf_token: get_csrf_token()
+      company: customer["company"]
     ]
   end
 
