@@ -5,12 +5,11 @@ config :hexpm,
   user_agent_req: true,
   secret: "796f75666f756e64746865686578",
   support_email: "support@hex.pm",
+  ecto_repos: [Hexpm.RepoBase],
   store_impl: Hexpm.Store.Local,
   cdn_impl: Hexpm.CDN.Local,
   billing_impl: Hexpm.Billing.Local,
   pwned_impl: Hexpm.Pwned.Local
-
-config :hexpm, ecto_repos: [Hexpm.RepoBase]
 
 config :ex_aws,
   json_codec: Jason

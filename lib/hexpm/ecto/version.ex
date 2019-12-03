@@ -3,6 +3,10 @@ defmodule Hexpm.Version do
 
   def type(), do: :string
 
+  def embed_as(_format), do: :self
+
+  def equal?(left, right), do: left == right
+
   def cast(%Version{} = version), do: {:ok, version}
 
   def cast(string) when is_binary(string) do
