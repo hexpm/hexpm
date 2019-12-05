@@ -368,6 +368,12 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
     end)
   end
 
+  def add_email(conn, %{"dashboard_org" => organization, "email" => _email}) do
+    access_organization(conn, organization, "admin", fn _organization ->
+      nil
+    end)
+  end
+
   defp render_new(conn, opts \\ []) do
     render(
       conn,

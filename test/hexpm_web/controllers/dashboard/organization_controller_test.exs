@@ -728,4 +728,18 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
       assert response(conn, 400) =~ "The key computer was not found"
     end
   end
+
+  describe "POST /dashboard/orgs/:dashboard_org/emails" do
+    test "returns 400 if current user is not admin in this org", c do
+      insert(:organization_user, organization: c.organization, user: c.user, role: "write")
+      mock_customer(c.organization)
+
+      conn =
+        build_conn()
+        |> test_login(c.user)
+        |> post("/dashboard/orgs/#{c.organization.name}/emails", %{"email" => "test@example.com"})
+
+      assert response(conn, 400) =~ "You do not have permission for this action."
+    end
+  end
 end
