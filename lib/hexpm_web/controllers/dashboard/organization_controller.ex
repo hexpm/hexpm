@@ -465,7 +465,12 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
     user = conn.assigns.current_user
 
     organization =
-      Organizations.get(organization, [:organization_users, users: :emails, repository: :packages])
+      Organizations.get(organization, [
+        :user,
+        :organization_users,
+        users: :emails,
+        repository: :packages
+      ])
 
     if organization do
       if repo_user = Enum.find(organization.organization_users, &(&1.user_id == user.id)) do
