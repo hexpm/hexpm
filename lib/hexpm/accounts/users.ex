@@ -191,10 +191,6 @@ defmodule Hexpm.Accounts.Users do
       else: multi
   end
 
-  def add_email(%User{organization_id: id} = user, _params, _opts) when not is_nil(id) do
-    organization_error(user, "cannot add email to organizations")
-  end
-
   def add_email(user, params, audit: audit_data) do
     email = build_assoc(user, :emails)
 
