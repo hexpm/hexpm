@@ -741,5 +741,34 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
 
       assert response(conn, 400) =~ "You do not have permission for this action."
     end
+
+    test "adds email to organization user if current user is admin", c do
+      insert(:organization_user, organization: c.organization, user: c.user, role: "admin")
+      mock_customer(c.organization)
+
+      build_conn()
+      |> test_login(c.user)
+      |> post("/dashboard/orgs/#{c.organization.name}/emails", %{
+        "email" => %{"email" => "test@example.com"}
+      })
+
+      email = Users.get_email("test@example.com", [:user])
+      assert email.user.id == c.organization.user.id
+    end
+
+    test "sets info flash and redirects to dashboard organization show page", c do
+      insert(:organization_user, organization: c.organization, user: c.user, role: "admin")
+      mock_customer(c.organization)
+
+      conn =
+        build_conn()
+        |> test_login(c.user)
+        |> post("/dashboard/orgs/#{c.organization.name}/emails", %{
+          "email" => %{"email" => "test@example.com"}
+        })
+
+      assert redirected_to(conn) == "/dashboard/orgs/#{c.organization.name}"
+      assert get_flash(conn, :info) == "A verification email has been sent to test@example.com."
+    end
   end
 end

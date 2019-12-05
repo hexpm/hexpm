@@ -368,9 +368,14 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
     end)
   end
 
-  def add_email(conn, %{"dashboard_org" => organization, "email" => _email}) do
-    access_organization(conn, organization, "admin", fn _organization ->
-      nil
+  def add_email(conn, %{"dashboard_org" => organization, "email" => email_params}) do
+    access_organization(conn, organization, "admin", fn organization ->
+      case Users.add_email(organization.user, email_params, audit: audit_data(conn)) do
+        {:ok, _user} ->
+          conn
+          |> put_flash(:info, "A verification email has been sent to #{email_params["email"]}.")
+          |> redirect(to: Routes.organization_path(conn, :show, organization))
+      end
     end)
   end
 
