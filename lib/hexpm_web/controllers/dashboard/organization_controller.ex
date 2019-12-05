@@ -375,6 +375,11 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
           conn
           |> put_flash(:info, "A verification email has been sent to #{email_params["email"]}.")
           |> redirect(to: Routes.organization_path(conn, :show, organization))
+
+        {:error, _changset} ->
+          conn
+          |> put_flash(:error, "Oops, something went wrong!")
+          |> redirect(to: Routes.organization_path(conn, :show, organization))
       end
     end)
   end

@@ -770,5 +770,20 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
       assert redirected_to(conn) == "/dashboard/orgs/#{c.organization.name}"
       assert get_flash(conn, :info) == "A verification email has been sent to test@example.com."
     end
+
+    test "sets error flash and redirects to show page when add_email fails", c do
+      insert(:organization_user, organization: c.organization, user: c.user, role: "admin")
+      mock_customer(c.organization)
+
+      conn =
+        build_conn()
+        |> test_login(c.user)
+        |> post("/dashboard/orgs/#{c.organization.name}/emails", %{
+          "email" => %{"email" => "invalid_email"}
+        })
+
+      assert redirected_to(conn) == "/dashboard/orgs/#{c.organization.name}"
+      assert get_flash(conn, :error) == "Oops, something went wrong!"
+    end
   end
 end
