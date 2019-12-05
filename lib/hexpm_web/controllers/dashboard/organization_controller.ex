@@ -410,12 +410,14 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
       container: "container page dashboard",
       organization: organization,
       repository: organization.repository,
+      emails: organization.user.emails,
       keys: keys,
       params: opts[:params],
       errors: opts[:errors],
       delete_key_path: delete_key_path,
       create_key_path: create_key_path,
       key_changeset: opts[:key_changeset] || key_changeset(),
+      email_changeset: opts[:email_changeset] || email_changeset(),
       add_member_changeset: opts[:add_member_changeset] || add_member_changeset()
     ]
 
@@ -478,6 +480,7 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
       Organizations.get(organization, [
         :user,
         :organization_users,
+        user: :emails,
         users: :emails,
         repository: :packages
       ])
@@ -510,6 +513,10 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
 
   defp key_changeset() do
     Key.changeset(%Key{}, %{}, %{})
+  end
+
+  defp email_changeset() do
+    Email.changeset(%Email{}, :create, %{}, false)
   end
 
   defp cancel_message(nil = _cancel_date) do
