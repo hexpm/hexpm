@@ -786,4 +786,127 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
       assert get_flash(conn, :error) == "Oops, something went wrong!"
     end
   end
+
+  describe "POST /dashboard/orgs/:dashboard_org/emails/flag" do
+    test "returns 400 if current user is not admin in this org", c do
+      insert(:organization_user, organization: c.organization, user: c.user, role: "write")
+      mock_customer(c.organization)
+
+      conn =
+        build_conn()
+        |> test_login(c.user)
+        |> post("/dashboard/orgs/#{c.organization.name}/emails/flag", %{
+          "email" => "test@example.com",
+          "flag" => "public"
+        })
+
+      assert response(conn, 400) =~ "You do not have permission for this action."
+    end
+
+    test "sets primary email if current user is admin", c do
+      insert(:organization_user, organization: c.organization, user: c.user, role: "admin")
+
+      insert(:email,
+        email: "test@example.com",
+        user: c.organization.user,
+        public: false,
+        primary: false,
+        gravatar: false
+      )
+
+      mock_customer(c.organization)
+
+      conn =
+        build_conn()
+        |> test_login(c.user)
+        |> post("/dashboard/orgs/#{c.organization.name}/emails/flag", %{
+          "email" => "test@example.com",
+          "flag" => "primary"
+        })
+
+      email = Users.get_email("test@example.com")
+      assert email.primary == true
+
+      assert redirected_to(conn) == "/dashboard/orgs/#{c.organization.name}"
+
+      assert get_flash(conn, :info) ==
+               "This organization's primary email was changed to test@example.com."
+    end
+
+    test "sets public email if current user is admin", c do
+      insert(:organization_user, organization: c.organization, user: c.user, role: "admin")
+
+      insert(:email,
+        email: "test@example.com",
+        user: c.organization.user,
+        public: false,
+        primary: false,
+        gravatar: false
+      )
+
+      mock_customer(c.organization)
+
+      conn =
+        build_conn()
+        |> test_login(c.user)
+        |> post("/dashboard/orgs/#{c.organization.name}/emails/flag", %{
+          "email" => "test@example.com",
+          "flag" => "public"
+        })
+
+      email = Users.get_email("test@example.com")
+      assert email.public == true
+
+      assert redirected_to(conn) == "/dashboard/orgs/#{c.organization.name}"
+
+      assert get_flash(conn, :info) ==
+               "This organization's public email was changed to test@example.com."
+    end
+
+    test "sets gravatar email if current user is admin", c do
+      insert(:organization_user, organization: c.organization, user: c.user, role: "admin")
+
+      insert(:email,
+        email: "test@example.com",
+        user: c.organization.user,
+        public: false,
+        primary: false,
+        gravatar: false
+      )
+
+      mock_customer(c.organization)
+
+      conn =
+        build_conn()
+        |> test_login(c.user)
+        |> post("/dashboard/orgs/#{c.organization.name}/emails/flag", %{
+          "email" => "test@example.com",
+          "flag" => "gravatar"
+        })
+
+      email = Users.get_email("test@example.com")
+      assert email.gravatar == true
+
+      assert redirected_to(conn) == "/dashboard/orgs/#{c.organization.name}"
+
+      assert get_flash(conn, :info) ==
+               "This organization's gravatar email was changed to test@example.com."
+    end
+
+    test "sets error flash and redirects to show page when update email flag fails", c do
+      insert(:organization_user, organization: c.organization, user: c.user, role: "admin")
+      mock_customer(c.organization)
+
+      conn =
+        build_conn()
+        |> test_login(c.user)
+        |> post("/dashboard/orgs/#{c.organization.name}/emails/flag", %{
+          "email" => "invalid_email",
+          "flag" => "primary"
+        })
+
+      assert redirected_to(conn) == "/dashboard/orgs/#{c.organization.name}"
+      assert get_flash(conn, :error) == "Oops, something went wrong!"
+    end
+  end
 end

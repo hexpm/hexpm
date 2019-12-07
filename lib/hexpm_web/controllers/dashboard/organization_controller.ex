@@ -384,6 +384,29 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
     end)
   end
 
+  def update_email_flag(conn, %{"dashboard_org" => organization, "email" => email, "flag" => flag}) do
+    access_organization(conn, organization, "admin", fn organization ->
+      update_flag_fn =
+        case flag do
+          "primary" -> &Users.primary_email/3
+          "public" -> &Users.public_email/3
+          "gravatar" -> &Users.gravatar_email/3
+        end
+
+      case update_flag_fn.(organization.user, %{"email" => email}, audit: audit_data(conn)) do
+        :ok ->
+          conn
+          |> put_flash(:info, "This organization's #{flag} email was changed to #{email}.")
+          |> redirect(to: Routes.organization_path(conn, :show, organization))
+
+        {:error, _} ->
+          conn
+          |> put_flash(:error, "Oops, something went wrong!")
+          |> redirect(to: Routes.organization_path(conn, :show, organization))
+      end
+    end)
+  end
+
   defp render_new(conn, opts \\ []) do
     render(
       conn,
