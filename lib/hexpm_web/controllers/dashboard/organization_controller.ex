@@ -423,6 +423,22 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
     end)
   end
 
+  def resend_verification(conn, %{"dashboard_org" => organization, "email" => email}) do
+    access_organization(conn, organization, "admin", fn organization ->
+      case Users.resend_verify_email(organization.user, %{"email" => email}) do
+        :ok ->
+          conn
+          |> put_flash(:info, "A verification email has been sent to #{email}.")
+          |> redirect(to: Routes.organization_path(conn, :show, organization))
+
+        {:error, _reason} ->
+          conn
+          |> put_flash(:error, "Oops, something went wrong!")
+          |> redirect(to: Routes.organization_path(conn, :show, organization))
+      end
+    end)
+  end
+
   defp render_new(conn, opts \\ []) do
     render(
       conn,
