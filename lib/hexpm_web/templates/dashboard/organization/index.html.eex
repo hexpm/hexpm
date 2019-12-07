@@ -59,6 +59,13 @@
                 <button type="submit" class="btn btn-primary btn-xs">Set as gravatar</button>
               <% end %>
             <% end %>
+
+            <%= unless email.verified do %>
+              <%= form_tag(Routes.organization_path(Endpoint, :resend_verification, @organization.name), class: "action") do %>
+                <input type="hidden" name="email" value="<%= email.email %>">
+                <button type="submit" class="btn btn-link">Resend verification email</button>
+              <% end %>
+            <% end %>
           </li>
         <% end %>
 
