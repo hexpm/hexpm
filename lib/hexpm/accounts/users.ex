@@ -238,10 +238,6 @@ defmodule Hexpm.Accounts.Users do
     end
   end
 
-  def primary_email(%User{organization_id: id} = user, _params, _opts) when not is_nil(id) do
-    organization_error(user, "cannot set email of organizations")
-  end
-
   def primary_email(user, params, opts) do
     multi =
       Multi.new()
@@ -252,10 +248,6 @@ defmodule Hexpm.Accounts.Users do
       {:ok, _} -> :ok
       {:error, :primary_email, reason, _} -> {:error, reason}
     end
-  end
-
-  def gravatar_email(%User{organization_id: id} = user, _params, _opts) when not is_nil(id) do
-    organization_error(user, "cannot set email of organizations")
   end
 
   def gravatar_email(user, params, opts) do
@@ -273,10 +265,6 @@ defmodule Hexpm.Accounts.Users do
 
   defp gravatar_email_multi(multi, user, params, opts) do
     email_flag_multi(multi, user, params, :gravatar, opts)
-  end
-
-  def public_email(%User{organization_id: id} = user, _params, _opts) when not is_nil(id) do
-    organization_error(user, "cannot set email of organizations")
   end
 
   def public_email(user, params, opts) do
