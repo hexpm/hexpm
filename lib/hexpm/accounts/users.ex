@@ -235,7 +235,7 @@ defmodule Hexpm.Accounts.Users do
         {:ok, _} =
           Multi.new()
           |> Ecto.Multi.delete(:email, email)
-          |> audit(audit_data, "email.add", email)
+          |> audit(audit_data, "email.remove", email)
           |> Repo.transaction()
 
         :ok
