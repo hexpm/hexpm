@@ -28,6 +28,30 @@
             <%= if email.gravatar do %>
               <span class="label label-success">Gravatar</span>
             <% end %>
+
+            <%= if email.verified and not email.primary do %>
+              <%= form_tag(Routes.organization_path(Endpoint, :update_email_flag, @organization.name), class: "action") do %>
+                <input type="hidden" name="email" value="<%= email.email %>">
+                <input type="hidden" name="flag" value="primary">
+                <button type="submit" class="btn btn-primary btn-xs">Set as primary</button>
+              <% end %>
+            <% end %>
+
+            <%= if email.verified and not email.public do %>
+              <%= form_tag(Routes.organization_path(Endpoint, :update_email_flag, @organization.name), class: "action") do %>
+                <input type="hidden" name="email" value="<%= email.email %>">
+                <input type="hidden" name="flag" value="public">
+                <button type="submit" class="btn btn-primary btn-xs">Set as public</button>
+              <% end %>
+            <% end %>
+
+            <%= if email.verified and not email.gravatar do %>
+              <%= form_tag(Routes.organization_path(Endpoint, :update_email_flag, @organization.name), class: "action") do %>
+                <input type="hidden" name="email" value="<%= email.email %>">
+                <input type="hidden" name="flag" value="gravatar">
+                <button type="submit" class="btn btn-primary btn-xs">Set as gravatar</button>
+              <% end %>
+            <% end %>
           </li>
         <% end %>
 
