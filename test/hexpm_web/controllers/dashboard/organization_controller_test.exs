@@ -909,4 +909,79 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
       assert get_flash(conn, :error) == "Oops, something went wrong!"
     end
   end
+
+  describe "DELETE /dashboard/orgs/:dashboard_org/emails" do
+    test "returns 400 if current user is not admin in this org", c do
+      insert(:organization_user, organization: c.organization, user: c.user, role: "write")
+      mock_customer(c.organization)
+
+      conn =
+        build_conn()
+        |> test_login(c.user)
+        |> delete("/dashboard/orgs/#{c.organization.name}/emails", %{
+          "email" => "test@example.com"
+        })
+
+      assert response(conn, 400) =~ "You do not have permission for this action."
+    end
+
+    test "remove email from organization user if current user is admin", c do
+      insert(:organization_user, organization: c.organization, user: c.user, role: "admin")
+
+      insert(:email,
+        email: "test@example.com",
+        user: c.organization.user,
+        primary: false,
+        public: false
+      )
+
+      mock_customer(c.organization)
+
+      build_conn()
+      |> test_login(c.user)
+      |> delete("/dashboard/orgs/#{c.organization.name}/emails", %{
+        "email" => "test@example.com"
+      })
+
+      assert Users.get_email("test@example.com", [:user]) == nil
+    end
+
+    test "sets info flash and redirects to dashboard organization show page", c do
+      insert(:organization_user, organization: c.organization, user: c.user, role: "admin")
+
+      insert(:email,
+        email: "test@example.com",
+        user: c.organization.user,
+        primary: false,
+        public: false
+      )
+
+      mock_customer(c.organization)
+
+      conn =
+        build_conn()
+        |> test_login(c.user)
+        |> delete("/dashboard/orgs/#{c.organization.name}/emails", %{
+          "email" => "test@example.com"
+        })
+
+      assert redirected_to(conn) == "/dashboard/orgs/#{c.organization.name}"
+      assert get_flash(conn, :info) == "Removed email test@example.com from this organization."
+    end
+
+    test "sets error flash and redirects to show page when add_email fails", c do
+      insert(:organization_user, organization: c.organization, user: c.user, role: "admin")
+      mock_customer(c.organization)
+
+      conn =
+        build_conn()
+        |> test_login(c.user)
+        |> delete("/dashboard/orgs/#{c.organization.name}/emails", %{
+          "email" => "invalid_email"
+        })
+
+      assert redirected_to(conn) == "/dashboard/orgs/#{c.organization.name}"
+      assert get_flash(conn, :error) == "Oops, something went wrong!"
+    end
+  end
 end

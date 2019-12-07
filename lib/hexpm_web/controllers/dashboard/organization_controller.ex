@@ -407,6 +407,22 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
     end)
   end
 
+  def delete_email(conn, %{"dashboard_org" => organization, "email" => email}) do
+    access_organization(conn, organization, "admin", fn organization ->
+      case Users.remove_email(organization.user, %{"email" => email}, audit: audit_data(conn)) do
+        :ok ->
+          conn
+          |> put_flash(:info, "Removed email #{email} from this organization.")
+          |> redirect(to: Routes.organization_path(conn, :show, organization))
+
+        {:error, _reason} ->
+          conn
+          |> put_flash(:error, "Oops, something went wrong!")
+          |> redirect(to: Routes.organization_path(conn, :show, organization))
+      end
+    end)
+  end
+
   defp render_new(conn, opts \\ []) do
     render(
       conn,
