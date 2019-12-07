@@ -213,10 +213,6 @@ defmodule Hexpm.Accounts.Users do
     end
   end
 
-  def remove_email(%User{organization_id: id} = user, _params, _opts) when not is_nil(id) do
-    organization_error(user, "cannot remove email of organizations")
-  end
-
   def remove_email(user, params, audit: audit_data) do
     email = find_email(user, params)
 
