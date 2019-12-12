@@ -40,6 +40,22 @@ defmodule Hexpm.Accounts.Email do
     |> put_change(:verification_expiry, DateTime.utc_now())
   end
 
+  def changeset(email, :create_for_org, params, false) do
+    cast(email, params, ~w(email public gravatar)a)
+    |> validate_required(~w(email)a)
+    |> update_change(:email, &String.downcase/1)
+    |> validate_format(:email, @email_regex)
+    # TODO: these comments are for code review, need to be removed before merge
+    # |> validate_confirmation(:email, message: "does not match email")
+    # |> validate_verified_email_exists(:email, message: "already in use")
+    |> unique_constraint(:email, name: "emails_email_key")
+    |> unique_constraint(:email, name: "emails_email_user_key")
+    |> put_change(:verified, false)
+
+    # |> put_change(:verification_key, Auth.gen_key())
+    # |> put_change(:verification_expiry, DateTime.utc_now())
+  end
+
   def verification(email) do
     change(email, %{
       verification_key: Auth.gen_key(),
