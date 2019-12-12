@@ -81,6 +81,14 @@ defmodule Hexpm.Accounts.Email do
     |> unique_constraint(:email, name: "emails_email_key", message: "already in use")
   end
 
+  def update_email(email, new_address) do
+    change(email, %{email: new_address})
+    |> validate_required(~w(email)a)
+    |> validate_format(:email, @email_regex)
+    |> unique_constraint(:email, name: "emails_email_key")
+    |> unique_constraint(:email, name: "emails_email_user_key")
+  end
+
   def toggle_flag(email, flag, value) do
     change(email, %{flag => value})
   end
