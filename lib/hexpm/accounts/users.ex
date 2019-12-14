@@ -1,6 +1,8 @@
 defmodule Hexpm.Accounts.Users do
   use Hexpm.Context
 
+  alias Hexpm.Accounts.{Recovery, RecoveryCode}
+
   def get(username_or_email, preload \\ []) do
     User.get(String.downcase(username_or_email), preload)
     |> Repo.one()
@@ -380,6 +382,18 @@ defmodule Hexpm.Accounts.Users do
         |> Mailer.deliver_now_throttled()
 
         :ok
+    end
+  end
+
+  def tfa_recover(%User{} = user, code_str) do
+    case Recovery.verify(user.tfa.recovery_codes, code_str) do
+      {:ok, %RecoveryCode{} = code} ->
+        user
+        |> User.recovery_code_used(code)
+        |> Repo.update!()
+
+      err ->
+        err
     end
   end
 

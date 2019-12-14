@@ -1,18 +1,15 @@
 defmodule Hexpm.Accounts.RecoveryCode do
   use Hexpm.Schema
 
-  schema "user_recovery_codes" do
-    field :code_digest, :string
-    field :used_at, :utc_datetime_usec
-    timestamps()
+  @derive {Jason.Encoder, only: []}
 
-    belongs_to :user, User
+  @primary_key false
+  embedded_schema do
+    field :code, :string
+    field :used_at, :utc_datetime_usec
   end
 
   def changeset(recovery_code, params) do
-    cast(recovery_code, params, [:code_digest, :used_at])
-    |> validate_required([:code_digest, :used_at])
-    |> unique_constraint(:code_digest)
+    cast(recovery_code, params, [:code, :used_at])
   end
-
 end
