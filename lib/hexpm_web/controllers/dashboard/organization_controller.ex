@@ -368,6 +368,23 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
     end)
   end
 
+  def update_profile(conn, %{"dashboard_org" => organization, "profile" => profile_params}) do
+    access_organization(conn, organization, "admin", fn organization ->
+      case Users.update_profile(organization.user, profile_params, audit: audit_data(conn)) do
+        {:ok, _updated_user} ->
+          conn
+          |> put_flash(:info, "Profile updated successfully.")
+          |> redirect(to: Routes.organization_path(conn, :show, organization))
+
+        {:error, _} ->
+          conn
+          |> put_status(400)
+          |> put_flash(:error, "Oops, something went wrong!")
+          |> render_index(organization)
+      end
+    end)
+  end
+
   defp render_new(conn, opts \\ []) do
     render(
       conn,

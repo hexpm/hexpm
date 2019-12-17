@@ -728,4 +728,46 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
       assert response(conn, 400) =~ "The key computer was not found"
     end
   end
+
+  describe "POST /dashboard/orgs/:dashboard_org/profile" do
+    test "requires admin role", c do
+      insert(:organization_user, organization: c.organization, user: c.user, role: "write")
+      mock_customer(c.organization)
+
+      conn =
+        build_conn()
+        |> test_login(c.user)
+        |> post("/dashboard/orgs/#{c.organization.name}/profile", %{profile: %{}})
+
+      assert response(conn, 400) =~ "You do not have permission for this action."
+    end
+
+    test "when update succeeds", c do
+      insert(:organization_user, organization: c.organization, user: c.user, role: "admin")
+      mock_customer(c.organization)
+
+      conn =
+        build_conn()
+        |> test_login(c.user)
+        |> post("/dashboard/orgs/#{c.organization.name}/profile", %{profile: %{}})
+
+      assert redirected_to(conn) == "/dashboard/orgs/#{c.organization.name}"
+      assert get_flash(conn, :info) == "Profile updated successfully."
+    end
+
+    test "when update fails", c do
+      insert(:organization_user, organization: c.organization, user: c.user, role: "admin")
+      mock_customer(c.organization)
+
+      conn =
+        build_conn()
+        |> test_login(c.user)
+        |> post("/dashboard/orgs/#{c.organization.name}/profile", %{
+          profile: %{public_email: "invalid_email"}
+        })
+
+      assert get_flash(conn, :error) == "Oops, something went wrong!"
+      assert response(conn, 400)
+    end
+  end
 end
