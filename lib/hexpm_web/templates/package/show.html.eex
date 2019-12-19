@@ -49,27 +49,32 @@ tools = Keyword.take(tools, compatible_tools)
   </div>
 <% end %>
 
-<div class="row">
-  <div class="col-md-9">
+<div class="col-md-9 no-padding">
+  <div class="col-md-11 with-divider no-padding">
+  <div class="col-md-6 no-padding">
     <%= if links != [] || (@docs_html_url && @docs_tarball_url) do %>
       <h3>Links</h3>
       <ul class="links">
         <%= if @docs_html_url && @docs_tarball_url do %>
-          <li><a href="<%= @docs_html_url %>">Online documentation</a> (<a href="<%= @docs_tarball_url %>">download</a>)</li>
+          <li><a href="<%= @docs_html_url %>">Online documentation</a> <a href="<%= @docs_tarball_url %>"><%= icon(:octicon, :"cloud-download") %></a></li>
         <% end %>
         <%= for {name, link} <- links do %>
           <li><a href="<%= link %>" rel="nofollow"><%= name %></a></li>
         <% end %>
       </ul>
     <% end %>
-
+  </div>
+  <div class="col-md-6 no-padding">
     <%= if licenses != [] do %>
       <h3>License</h3>
       <span class="license"><%= Enum.join(licenses, ", ") %></span>
     <% end %>
+  </div>
+</div>
 
+  <div class="col-md-11 with-divider no-padding">
     <div class="stats package-stats clearfix">
-      <ul>
+      <ul class="no-padding">
         <li>
           <%= icon(:octicon, :calendar, class: "stat-icon stat-icon-calendar") %>
           <span class="stat-info">
@@ -120,50 +125,49 @@ tools = Keyword.take(tools, compatible_tools)
         </li>
       </ul>
     </div>
-
-    <div class="row">
-      <div class="col-md-6">
-        <h3>Versions (<%= Enum.count(@releases) %>)</h3>
-        <ul id="versions" class="version-dependency-list">
-          <% show_latest_versions = 5 %>
-          <%= render "versions.html", [package: @package, releases: Enum.take(@releases, show_latest_versions)] %>
-        </ul>
-
-        <%= if length(@releases) > show_latest_versions do %>
-          <p class="show-versions">
-            <a href="<%= path_for_releases(@package) %>">Show All Versions</a>
-          </p>
-        <% end %>
-      </div>
-      <div class="col-md-6">
-        <h3>Dependencies (<%= if @current_release, do: Enum.count(@current_release.requirements), else: 0 %>)</h3>
-        <ul class="version-dependency-list">
-          <%= if @current_release do %>
-            <%= for %{repository: repository, name: name, requirement: req, app: app, optional: optional} <- @current_release.requirements do %>
-            <li>
-              <a href="<%= path_for_package(repository, name) %>"><%= package_name(repository, name) %></a> <%= req %>
-              <%= if app != name do %>(app: <%= app %>)<% end %>
-              <%= if optional do %>(optional)<% end %>
-            </li>
-            <% end %>
-          <% end %>
-        </ul>
-      </div>
-    </div>
-
-    <div class="row">
-      <div class="col-md-12">
-        <h3>Audit Logs</h3>
-        <ul class="audit-logs-list">
-          <%= for audit_log <- @audit_logs do %>
-            <li>
-              <%= pretty_date(audit_log.inserted_at) %> <%= humanize_audit_log_info(audit_log) %>
-            </li>
-          <% end %>
-        </ul>
-      </div>
-    </div>
   </div>
+
+  <div class="col-md-11 with-divider no-padding">
+  <div class="col-md-6 no-padding">
+    <h3>Versions <span class="attr-count">(<%= Enum.count(@releases) %>)</span></h3>
+    <ul id="versions" class="version-dependency-list">
+      <% show_latest_versions = 5 %>
+      <%= render "versions.html", [package: @package, releases: Enum.take(@releases, show_latest_versions)] %>
+    </ul>
+
+    <%= if length(@releases) > show_latest_versions do %>
+      <p class="show-versions">
+        <a href="<%= path_for_releases(@package) %>">Show All Versions</a>
+      </p>
+    <% end %>
+  </div>
+  <div class="col-md-6 no-padding">
+    <h3>Dependencies <span class="attr-count">(<%= if @current_release, do: Enum.count(@current_release.requirements), else: 0 %>)</span></h3>
+    <ul class="version-dependency-list">
+      <%= if @current_release do %>
+        <%= for %{repository: repository, name: name, requirement: req, app: app, optional: optional} <- @current_release.requirements do %>
+        <li>
+          <a href="<%= path_for_package(repository, name) %>"><%= package_name(repository, name) %></a> <%= req %>
+          <%= if app != name do %>(app: <%= app %>)<% end %>
+          <%= if optional do %><span class="attr-optional">(optional)</span><% end %>
+        </li>
+        <% end %>
+      <% end %>
+    </ul>
+  </div>
+  </div>
+
+  <div class="col-md-11 no-padding">
+    <h3>Recent Activity</h3>
+    <ul class="audit-logs-list">
+      <%= for audit_log <- @audit_logs do %>
+        <li>
+          <%= pretty_datetime(audit_log.inserted_at, :short) %> <%= humanize_audit_log_info(audit_log) %>
+        </li>
+      <% end %>
+    </ul>
+  </div>
+</div>
 
   <div class="col-md-3">
     <h3>Config</h3>

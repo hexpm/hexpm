@@ -20,16 +20,30 @@
   }
 }
 
+.no-padding {
+  padding-right:0; padding-left: 0;
+}
+
+.with-divider {
+    border-bottom: 1px solid #ccc;
+    padding-bottom: 1em;
+}
+
 .package-view {
   h3 {
     @include font-size(20, $base-line-height);
     margin-bottom: 15px;
     font-weight: bold;
     color: #000;
+
+    span.attr-count{
+      font-weight: 300;
+      font-size: 88%;
+    }
   }
 
   .description {
-    padding: 15px 0 10px;
+    padding: 1em 0;
     font-weight: 300;
     line-height: 20px;
     border-bottom: #ccc 1px solid;
@@ -42,7 +56,25 @@
 
   li {
     margin-bottom: 5px;
+
+    svg{
+      height: 16px;
+      margin-bottom: -2px;
+      margin-bottom: -2px;
+      fill: #4f28a7;
+      margin-left: 4px;
+    }
   }
+}
+
+.package-stats{
+  svg.stat-icon{
+    height:24px;
+  }
+  &.stats ul {
+    text-align: left;
+  }
+
 }
 
 .build-tool {
@@ -96,6 +128,20 @@
     line-height: 1.06;  // Just enough for e.g. the bottom of a "g" not to be cut off.
     color: #000;
     text-overflow: ellipsis;
+
+    span.attr-optional{
+      font-weight: 300;
+      font-style: italic;
+      font-size: 88%;
+    }
+
+    svg{
+      height: 16px;
+      margin-bottom: -2px;
+      margin-bottom: -2px;
+      fill: #4f28a7;
+      margin-left: 4px;
+    }
   }
 }
 

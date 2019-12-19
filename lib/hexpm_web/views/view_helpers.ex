@@ -288,6 +288,10 @@ defmodule HexpmWeb.ViewHelpers do
     "#{pretty_month(month)} #{day}, #{year}"
   end
 
+  def pretty_datetime(%{year: year, month: month, day: day}, :short) do
+    "#{pretty_month_short(month)} #{day}, #{year}"
+  end
+
   defp pretty_month(1), do: "January"
   defp pretty_month(2), do: "February"
   defp pretty_month(3), do: "March"
@@ -300,6 +304,19 @@ defmodule HexpmWeb.ViewHelpers do
   defp pretty_month(10), do: "October"
   defp pretty_month(11), do: "November"
   defp pretty_month(12), do: "December"
+
+  defp pretty_month_short(1), do: "Jan"
+  defp pretty_month_short(2), do: "Feb"
+  defp pretty_month_short(3), do: "Mar"
+  defp pretty_month_short(4), do: "Apr"
+  defp pretty_month_short(5), do: "May"
+  defp pretty_month_short(6), do: "June"
+  defp pretty_month_short(7), do: "July"
+  defp pretty_month_short(8), do: "Aug"
+  defp pretty_month_short(9), do: "Sept"
+  defp pretty_month_short(10), do: "Oct"
+  defp pretty_month_short(11), do: "Nov"
+  defp pretty_month_short(12), do: "Dec"
 
   def if_value(arg, nil, _fun), do: arg
   def if_value(arg, false, _fun), do: arg
