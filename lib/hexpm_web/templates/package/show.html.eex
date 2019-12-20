@@ -44,7 +44,7 @@ tools = Keyword.take(tools, compatible_tools)
 <% end %>
 
 <%= if description do %>
-  <div class="description">
+  <div class="description with-divider">
     <%= text_length(description, 300) |> text_to_html(insert_brs: false) %>
   </div>
 <% end %>
