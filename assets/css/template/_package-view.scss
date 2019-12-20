@@ -21,13 +21,14 @@
 }
 
 .no-padding {
-  padding-right:0; padding-left: 0;
+  padding-right:0;
+  padding-left: 0;
 }
 
 .with-divider {
-    border-bottom: 1px solid #ccc;
-    padding-bottom: 1em;
-    margin-bottom: 0.66em;
+  padding-bottom: 1em;
+  margin-bottom: .66em;
+  border-bottom: 1px solid #ccc;
 }
 
 .package-view {
@@ -37,9 +38,9 @@
     font-weight: bold;
     color: #000;
 
-    span.attr-count{
-      font-weight: 300;
+    span.attr-count {
       font-size: 88%;
+      font-weight: 300;
     }
   }
 
@@ -57,20 +58,21 @@
   li {
     margin-bottom: 5px;
 
-    svg{
+    svg {
       height: 16px;
       margin-bottom: -2px;
-      margin-bottom: -2px;
-      fill: #4f28a7;
       margin-left: 4px;
+      fill: #4f28a7;
     }
   }
 }
 
-.package-stats{
-  svg.stat-icon{
+.package-stats {
+
+  svg.stat-icon {
     height:24px;
   }
+
   &.stats ul {
     text-align: left;
   }
@@ -129,18 +131,17 @@
     color: #000;
     text-overflow: ellipsis;
 
-    span.attr-optional{
-      font-weight: 300;
-      font-style: italic;
+    span.attr-optional {
       font-size: 88%;
+      font-style: italic;
+      font-weight: 300;
     }
 
-    svg{
+    svg {
       height: 16px;
       margin-bottom: -2px;
-      margin-bottom: -2px;
-      fill: #4f28a7;
       margin-left: 4px;
+      fill: #4f28a7;
     }
   }
 }
