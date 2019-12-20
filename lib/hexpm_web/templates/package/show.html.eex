@@ -56,7 +56,7 @@ tools = Keyword.take(tools, compatible_tools)
       <h3>Links</h3>
       <ul class="links">
         <%= if @docs_html_url && @docs_tarball_url do %>
-          <li><a href="<%= @docs_html_url %>">Online documentation</a> <a href="<%= @docs_tarball_url %>"><%= icon(:octicon, :"cloud-download") %></a></li>
+          <li><a href="<%= @docs_html_url %>">Online documentation</a> <a href="<%= @docs_tarball_url %>" title="Download"><%= icon(:octicon, :"cloud-download") %></a></li>
         <% end %>
         <%= for {name, link} <- links do %>
           <li><a href="<%= link %>" rel="nofollow"><%= name %></a></li>
@@ -162,7 +162,7 @@ tools = Keyword.take(tools, compatible_tools)
     <ul class="audit-logs-list">
       <%= for audit_log <- @audit_logs do %>
         <li>
-          <%= pretty_datetime(audit_log.inserted_at, :short) %> <%= humanize_audit_log_info(audit_log) %>
+          <%= pretty_date(audit_log.inserted_at, :short) %> <%= humanize_audit_log_info(audit_log) %>
         </li>
       <% end %>
     </ul>

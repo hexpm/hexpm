@@ -272,7 +272,7 @@ defmodule HexpmWeb.ViewHelpers do
     diff = :calendar.datetime_to_gregorian_seconds(:calendar.universal_time()) - ts
     rel = rel_from_now(:calendar.seconds_to_daystime(diff))
 
-    content_tag(:span, rel, title: pretty_datetime(datetime))
+    content_tag(:span, rel, title: pretty_date(datetime))
   end
 
   defp rel_from_now({0, {0, 0, sec}}) when sec < 30, do: "about now"
@@ -284,11 +284,11 @@ defmodule HexpmWeb.ViewHelpers do
   defp rel_from_now({day, {_, _, _}}) when day < 0, do: "about now"
   defp rel_from_now({day, {_, _, _}}), do: "#{day} days ago"
 
-  def pretty_datetime(%{year: year, month: month, day: day}) do
+  def pretty_date(%{year: year, month: month, day: day}) do
     "#{pretty_month(month)} #{day}, #{year}"
   end
 
-  def pretty_datetime(%{year: year, month: month, day: day}, :short) do
+  def pretty_date(%{year: year, month: month, day: day}, :short) do
     "#{pretty_month_short(month)} #{day}, #{year}"
   end
 
@@ -310,10 +310,10 @@ defmodule HexpmWeb.ViewHelpers do
   defp pretty_month_short(3), do: "Mar"
   defp pretty_month_short(4), do: "Apr"
   defp pretty_month_short(5), do: "May"
-  defp pretty_month_short(6), do: "June"
-  defp pretty_month_short(7), do: "July"
+  defp pretty_month_short(6), do: "Jun"
+  defp pretty_month_short(7), do: "Jul"
   defp pretty_month_short(8), do: "Aug"
-  defp pretty_month_short(9), do: "Sept"
+  defp pretty_month_short(9), do: "Sep"
   defp pretty_month_short(10), do: "Oct"
   defp pretty_month_short(11), do: "Nov"
   defp pretty_month_short(12), do: "Dec"

@@ -157,10 +157,6 @@ defmodule HexpmWeb.PackageView do
     end
   end
 
-  def pretty_date(datetime) do
-    "#{DateTime.to_date(datetime)}"
-  end
-
   @doc """
   This function turns an audit_log struct into a short description.
 
