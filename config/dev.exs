@@ -29,8 +29,8 @@ config :hexpm, HexpmWeb.Endpoint,
   live_reload: [
     patterns: [
       ~r{priv/static/.*(js|css|png|jpeg|jpg|gif|svg)$},
-      ~r{lib/hexpm/web/views/.*(ex)$},
-      ~r{lib/hexpm/web/templates/.*(eex|md)$}
+      ~r{lib/hexpm_web/views/.*(ex)$},
+      ~r{lib/hexpm_web/templates/.*(eex|md)$}
     ]
   ]
 
