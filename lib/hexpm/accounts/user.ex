@@ -13,6 +13,7 @@ defmodule Hexpm.Accounts.User do
     field :service, :boolean, default: false
     field :deactivated_at, :utc_datetime_usec
     field :tfa_enabled, :boolean, default: false
+    field :verification_code, :string, virtual: true
     timestamps()
 
     embeds_one :handles, UserHandles, on_replace: :delete
@@ -94,6 +95,10 @@ defmodule Hexpm.Accounts.User do
     |> maybe_update_tfa()
   end
 
+  def update_two_factor_auth(user, params) do
+    cast(user, params, ~w(verification_code)a)
+  end
+
   def can_reset_password?(user, key) do
     primary_email = email(user, :primary)
 
@@ -170,8 +175,11 @@ defmodule Hexpm.Accounts.User do
     defp organization_name(organization), do: organization.name
   end
 
-  defp maybe_update_auth_secret(%{changes: %{tfa_enabled: true}} = changeset),
-    do: put_change(changeset, :auth_secret, Hexpm.Accounts.TwoFactorAuth.generate_secret())
+  defp maybe_update_auth_secret(%{changes: %{tfa_enabled: true}} = changeset) do
+    secret = Hexpm.Accounts.TwoFactorAuth.generate_secret()
+    # are the codes being deleted here?
+    put_change(changeset, :tfa, %{secret: secret})
+  end
 
   def recovery_code_used(user, code) do
     updated_codes = Enum.map(user.tfa.recovery_codes, &set_recovery_code_used(&1, code))
@@ -180,7 +188,7 @@ defmodule Hexpm.Accounts.User do
 
   defp maybe_update_tfa(%{changes: %{tfa_enabled: true}} = changeset) do
     secret = Hexpm.Accounts.TwoFactorAuth.generate_secret()
-    codes = Enum.map(Hexpm.Accounts.Recovery.gen_code_set(), fn c -> %{code: c} end)
+    codes = Hexpm.Accounts.Recovery.gen_code_set()
     put_change(changeset, :tfa, %{secret: secret, recovery_codes: codes})
   end
 

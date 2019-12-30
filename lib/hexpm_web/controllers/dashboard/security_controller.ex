@@ -10,8 +10,35 @@ defmodule HexpmWeb.Dashboard.SecurityController do
 
   def update(conn, params) do
     user = conn.assigns.current_user
+    updated_setting = params["user"]["tfa_enabled"]
 
-    case Users.update_security(user, params["user"], audit: audit_data(conn)) do
+    case {user.tfa_enabled, updated_setting} do
+      {false, "true"} ->
+        # need to redirect to the QR code setup page
+        update_tfa_setting(user, conn, false, true)
+
+      {true, "false"} ->
+        update_tfa_setting(user, conn, true, false)
+
+      change ->
+        conn
+        |> put_flash(:info, "Your security preference has been updated.")
+        |> redirect(to: Routes.dashboard_security_path(conn, :index))
+    end
+  end
+
+  defp render_index(conn, changeset) do
+    render(
+      conn,
+      "index.html",
+      title: "Dashboard - Security",
+      container: "container page dashboard",
+      changeset: changeset
+    )
+  end
+
+  defp update_tfa_setting(user, conn, true, false) do
+    case Users.update_security(user, %{"tfa_enabled" => "false"}, audit: audit_data(conn)) do
       {:ok, _user} ->
         conn
         |> put_flash(:info, "Your security preference has been updated.")
@@ -24,13 +51,17 @@ defmodule HexpmWeb.Dashboard.SecurityController do
     end
   end
 
-  defp render_index(conn, changeset) do
-    render(
-      conn,
-      "index.html",
-      title: "Dashboard - Security",
-      container: "container page dashboard",
-      changeset: changeset
-    )
+  defp update_tfa_setting(user, conn, false, true) do
+    case Users.update_security(user, %{"tfa_enabled" => "true"}, audit: audit_data(conn)) do
+      {:ok, _user} ->
+        conn
+        |> put_flash(:info, "Your security preference has been updated.")
+        |> redirect(to: Routes.dashboard_two_factor_auth_setup_path(conn, :index))
+
+      {:error, changeset} ->
+        conn
+        |> put_status(400)
+        |> render_index(changeset)
+    end
   end
 end

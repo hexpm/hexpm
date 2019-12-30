@@ -1,6 +1,7 @@
 defmodule Hexpm.Accounts.TwoFactorAuth do
   def qr_code_content(user) do
-    "otpauth://totp/#{user.username}?issuer=hex.pm&secret=#{user.auth_secret}"
+    secret = Map.fetch!(user.tfa, :secret)
+    "otpauth://totp/#{user.username}?issuer=hex.pm&secret=#{secret}"
   end
 
   def qr_code_svg(content) do
