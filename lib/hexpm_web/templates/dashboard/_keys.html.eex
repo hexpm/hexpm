@@ -31,7 +31,7 @@
                     data-placement="bottom"
                     title="Last use"
                     data-content="<strong>Used at:</strong> <%= last_use.used_at %><br><strong>IP:</strong> <%= last_use.ip %><br><strong>User agent:</strong> <%= last_use.user_agent %>">
-                      <%= pretty_datetime(last_use.used_at) %> ...
+                      <%= pretty_date(last_use.used_at) %> ...
                   </a>
                 <% end %>
               </small>

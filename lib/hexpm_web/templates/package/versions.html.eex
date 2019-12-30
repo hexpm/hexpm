@@ -1,13 +1,13 @@
 <%= for release <- @releases do %>
   <li>
     <a href="<%= path_for_release(@package, release) %>"><strong><%= release.version %></strong></a>
-    <%= pretty_datetime(release.inserted_at) %>
+    <%= pretty_date(release.inserted_at, :short) %>
 
     <%= if release.retirement do %>
       (<span class="version-retirement">retired</span>)
     <% else %>
       <%= if release.has_docs do %>
-        (<a href="<%= raw Hexpm.Utils.docs_html_url(@package.repository, @package, release) %>">docs</a>)
+        <a href="<%= raw Hexpm.Utils.docs_html_url(@package.repository, @package, release) %>" title="Docs"><%= icon(:octicon, :"book") %></a>
       <% end %>
     <% end %>
   </li>
