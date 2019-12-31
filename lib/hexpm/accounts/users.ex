@@ -388,9 +388,12 @@ defmodule Hexpm.Accounts.Users do
   def tfa_recover(%User{} = user, code_str) do
     case Recovery.verify(user.tfa.recovery_codes, code_str) do
       {:ok, %RecoveryCode{} = code} ->
-        user
-        |> User.recovery_code_used(code)
-        |> Repo.update!()
+        user =
+          user
+          |> User.recovery_code_used(code)
+          |> Repo.update!()
+
+        {:ok, user}
 
       err ->
         err

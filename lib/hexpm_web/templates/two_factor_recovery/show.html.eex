@@ -1,0 +1,17 @@
+  <h2>Enter a recovery code</h2>
+  <%= form_tag(Routes.two_factor_recovery_path(Endpoint, :create)) do %>
+    <div class="row">
+      <div class="col-md-4 col-md-offset-4">
+        <input id="code" name="code" type="text" value="" class="form-control" maxlength="19" pattern="\d{4}-\d{4}-\d{4}-\d{4}" title="Recovery code in xxxx-xxxx-xxxx-xxxx format." value="" autocomplete="off"/>
+      </div>
+     </div>
+
+    <br/>
+
+    <div class="form-row">
+      <div class="col-md-4 col-md-offset-4">
+        <button type="submit"  class="btn btn-primary">Submit</button>
+      </div>
+    </div>
+
+  <% end %>

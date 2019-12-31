@@ -121,6 +121,14 @@ input[type="checkbox"] {
   }
 }
 
+.otp-code {
+  width: 5.5em;
+  height: 1.5em;
+  font-size: 40px;
+  text-align: center;
+  -webkit-text-security: disc;
+}
+
 .panel-body-part {
   padding: 15px;
   border-top: 1px solid #ddd;

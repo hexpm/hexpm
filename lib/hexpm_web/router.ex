@@ -57,6 +57,12 @@ defmodule HexpmWeb.Router do
     post "/login", LoginController, :create
     post "/logout", LoginController, :delete
 
+    get "/two_factor_auth", TwoFactorAuthController, :show
+    post "/two_factor_auth", TwoFactorAuthController, :create
+
+    get "/two_factor_auth/recovery", TwoFactorRecoveryController, :show
+    post "/two_factor_auth/recovery", TwoFactorRecoveryController, :create
+
     get "/signup", SignupController, :show
     post "/signup", SignupController, :create
 

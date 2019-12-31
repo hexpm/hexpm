@@ -1,0 +1,26 @@
+  <h2>Enter your One Time Password</h2>
+  <%= form_tag(Routes.two_factor_auth_path(Endpoint, :create)) do %>
+    <div class="row">
+      <div class="col-md-4 col-md-offset-4">
+      <input id="code" name="code" type="text" pattern="\d{6}"
+                                                 title="Must be 6 digits and digits only"
+                                                 class="form-control otp-code"  value="" maxlength="6"
+                                                                                         inputmode="numeric" autocomplete="off"/>
+      </div>
+     </div>
+
+
+    <br/>
+
+    <div class="form-row">
+      <div class="col-md-4 col-md-offset-4">
+        <button type="submit"  class="btn btn-primary">Submit</button>
+      </div>
+    </div>
+
+      <div class="form-row">
+      <div class="col-md-6 col-md-offset-4">
+        <a href="<%= Routes.two_factor_recovery_path(Endpoint, :show) %>" class="">Use a recovery code instead</a>
+      </div>
+    </div>
+  <% end %>

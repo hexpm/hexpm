@@ -5,7 +5,7 @@ defmodule HexpmWeb.LoginController do
 
   def show(conn, _params) do
     if logged_in?(conn) do
-      redirect_return(conn, conn.assigns.current_user)
+      redirect_return(conn, conn.assigns.current_user, conn.params["return"])
     else
       render_show(conn)
     end
@@ -15,12 +15,7 @@ defmodule HexpmWeb.LoginController do
     case password_auth(username, password) do
       {:ok, user} ->
         breached? = Hexpm.Pwned.password_breached?(password)
-
-        conn
-        |> configure_session(renew: true)
-        |> put_session("user_id", user.id)
-        |> maybe_put_flash(breached?)
-        |> redirect_return(user)
+        login(conn, user, password_breached: breached?)
 
       {:error, reason} ->
         conn
@@ -36,14 +31,21 @@ defmodule HexpmWeb.LoginController do
     |> redirect(to: Routes.page_path(HexpmWeb.Endpoint, :index))
   end
 
-  defp redirect_return(%{params: %{"hexdocs" => organization}} = conn, user) do
+  def start_session(conn, user, return) do
+    conn
+    |> configure_session(renew: true)
+    |> put_session("user_id", user.id)
+    |> redirect_return(user, return)
+  end
+
+  defp redirect_return(%{params: %{"hexdocs" => organization}} = conn, user, return) do
     case generate_hexdocs_key(user, organization) do
       {:ok, key} ->
         docs_url =
           Application.get_env(:hexpm, :docs_url)
           |> String.replace("://", "://#{organization}.")
 
-        url = "#{docs_url}#{conn.params["return"]}?key=#{key.user_secret}"
+        url = "#{docs_url}#{return}?key=#{key.user_secret}"
         redirect(conn, external: url)
 
       {:error, _changeset} ->
@@ -54,8 +56,8 @@ defmodule HexpmWeb.LoginController do
     end
   end
 
-  defp redirect_return(conn, user) do
-    path = conn.params["return"] || Routes.user_path(conn, :show, user)
+  defp redirect_return(conn, user, return) do
+    path = return || Routes.user_path(conn, :show, user)
     redirect(conn, to: path)
   end
 
@@ -72,6 +74,20 @@ defmodule HexpmWeb.LoginController do
       return: conn.params["return"],
       hexdocs: conn.params["hexdocs"]
     )
+  end
+
+  defp login(conn, %User{id: user_id, tfa_enabled: true}, password_breached: breached?) do
+    conn
+    |> configure_session(renew: true)
+    |> put_session("two_factor_user_id", %{uid: user_id, return: conn.params["return"]})
+    |> maybe_put_flash(breached?)
+    |> redirect(to: Routes.two_factor_auth_path(conn, :show))
+  end
+
+  defp login(conn, user, password_breached: breached?) do
+    conn
+    |> maybe_put_flash(breached?)
+    |> start_session(user, conn.params["return"])
   end
 
   defp maybe_put_flash(conn, false), do: conn
