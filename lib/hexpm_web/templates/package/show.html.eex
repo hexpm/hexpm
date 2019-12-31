@@ -50,27 +50,29 @@ tools = Keyword.take(tools, compatible_tools)
 <% end %>
 
 <div class="col-md-9 no-padding">
-  <div class="col-md-11 with-divider no-padding">
-  <div class="col-md-6 no-padding">
-    <%= if links != [] || (@docs_html_url && @docs_tarball_url) do %>
-      <h3>Links</h3>
-      <ul class="links">
-        <%= if @docs_html_url && @docs_tarball_url do %>
-          <li><a href="<%= @docs_html_url %>">Online documentation</a> <a href="<%= @docs_tarball_url %>" title="Download"><%= icon(:octicon, :"cloud-download") %></a></li>
+  <%= if links != [] || (@docs_html_url && @docs_tarball_url) || licenses != [] do %>
+    <div class="col-md-11 with-divider no-padding">
+      <div class="col-md-6 no-padding">
+        <%= if links != [] || (@docs_html_url && @docs_tarball_url) do %>
+          <h3>Links</h3>
+          <ul class="links">
+            <%= if @docs_html_url && @docs_tarball_url do %>
+              <li><a href="<%= @docs_html_url %>">Online documentation</a> <a href="<%= @docs_tarball_url %>" title="Download"><%= icon(:octicon, :"cloud-download") %></a></li>
+            <% end %>
+            <%= for {name, link} <- links do %>
+              <li><a href="<%= link %>" rel="nofollow"><%= name %></a></li>
+            <% end %>
+          </ul>
         <% end %>
-        <%= for {name, link} <- links do %>
-          <li><a href="<%= link %>" rel="nofollow"><%= name %></a></li>
+      </div>
+      <div class="col-md-6 no-padding">
+        <%= if licenses != [] do %>
+          <h3>License</h3>
+          <span class="license"><%= Enum.join(licenses, ", ") %></span>
         <% end %>
-      </ul>
-    <% end %>
-  </div>
-  <div class="col-md-6 no-padding">
-    <%= if licenses != [] do %>
-      <h3>License</h3>
-      <span class="license"><%= Enum.join(licenses, ", ") %></span>
-    <% end %>
-  </div>
-</div>
+      </div>
+    </div>
+  <% end %>
 
   <div class="col-md-11 with-divider no-padding">
     <div class="stats package-stats clearfix">
