@@ -27,6 +27,22 @@ defmodule HexpmWeb.Dashboard.SecurityController do
     end
   end
 
+  def rotate_recovery_codes(conn, _params) do
+    user = conn.assigns.current_user
+
+    case Users.rotate_recovery_codes(user, audit: audit_data(conn)) do
+      {:ok, _user} ->
+        conn
+        |> put_flash(:info, "New two-factor recovery codes successfully generated.")
+        |> redirect(to: Routes.dashboard_security_path(conn, :index))
+
+      {:error, changeset} ->
+        conn
+        |> put_status(400)
+        |> render_index(changeset)
+    end
+  end
+
   defp render_index(conn, changeset) do
     render(
       conn,

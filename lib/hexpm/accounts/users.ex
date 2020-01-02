@@ -129,6 +129,18 @@ defmodule Hexpm.Accounts.Users do
     end
   end
 
+  def rotate_recovery_codes(user, audit: audit_data) do
+    multi =
+      Multi.new()
+      |> Multi.update(:user, User.rotate_recovery_codes(user))
+      |> audit(audit_data, "security.rotate_recovery_codes", fn %{user: user} -> user end)
+
+    case Repo.transaction(multi) do
+      {:ok, %{user: user}} -> {:ok, user}
+      {:error, :user, changeset, _} -> {:error, changeset}
+    end
+  end
+
   def update_security(%User{organization_id: id} = user, _params, _opts) when not is_nil(id) do
     organization_error(user, "cannot update security of organizations")
   end

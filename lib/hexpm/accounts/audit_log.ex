@@ -140,6 +140,7 @@ defmodule Hexpm.Accounts.AuditLog do
   defp extract_params("user.create", user), do: serialize(user)
   defp extract_params("user.update", user), do: serialize(user)
   defp extract_params("security.update", user), do: serialize(user)
+  defp extract_params("security.rotate_recovery_codes", user), do: serialize(user)
   defp extract_params("organization.create", organization), do: serialize(organization)
 
   defp extract_params("organization.member.add", {organization, user}),

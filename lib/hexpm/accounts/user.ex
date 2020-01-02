@@ -186,6 +186,11 @@ defmodule Hexpm.Accounts.User do
     change(user, %{tfa: %{recovery_codes: updated_codes}})
   end
 
+  def rotate_recovery_codes(user) do
+    codes = Hexpm.Accounts.Recovery.gen_code_set()
+    change(user, %{tfa: %{secret: user.tfa.secret, recovery_codes: codes}})
+  end
+
   defp maybe_update_tfa(%{changes: %{tfa_enabled: true}} = changeset) do
     secret = Hexpm.Accounts.TwoFactorAuth.generate_secret()
     codes = Hexpm.Accounts.Recovery.gen_code_set()
