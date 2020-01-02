@@ -5,7 +5,7 @@
     <%= render DashboardView, "_sidebar.html", assigns %>
   </div>
 
-  <div class="col-sm-9">
+  <div class="col-sm-9 security">
     <div class="panel panel-default">
       <div class="panel-heading">Security</div>
       <div class="panel-body">
@@ -18,5 +18,41 @@
         <% end %>
       </div>
     </div>
+    <%= if @current_user.tfa_enabled do %>
+      <div class="panel panel-default recovery-codes-container">
+        <div class="panel-heading">Two-factor recovery codes</div>
+        <div class="panel-body">
+          <p>
+            Recovery codes can be used to access your account in the event you lose access to your device and cannot receive two-factor authentication codes. 
+          </p>
+        </div>
+        <%= if show_recovery_codes?(@current_user) do %>
+          <div class="panel-body recovery-codes-panel">
+            <div class="recovery-codes" id="recovery-codes" data-value="<%= aggregate_recovery_codes(@current_user.tfa.recovery_codes) %>"> 
+              <%= for code <- @current_user.tfa.recovery_codes do %>
+                <div class="recovery-code">
+                  <span class="<%= class_for_code(code) %>"><%= code.code %></span>
+                  <%= if code.used_at do %>
+                    <span class="label label-info">Used</span>
+                  <% end %>
+                </div>
+              <% end %>
+            </div>
+            <button type="button" class="btn btn-primary download-data-button" data-input-id="recovery-codes">Download</button>
+            <button type="button" class="btn btn-primary print-data-button" data-input-id="recovery-codes">Print</button>
+            <button type="button" class="btn btn-primary copy-data-button" data-input-id="recovery-codes">Copy</button>
+          </div>
+        <% end %>
+        <div class="panel-body">
+            <label>Generate new recovery codes</label>
+            <p>
+            When you generate new recovery codes, you must download or print the new codes. Your old codes won’t work anymore. 
+            </p>
+            <%= form_for @changeset, Routes.dashboard_security_path(Endpoint, :rotate_recovery_codes), [method: :post], fn f -> %>
+              <button type="submit" class="btn btn-primary">Generate new recovery codes</button>
+            <% end %>
+          </div>
+      </div>
+    <% end %>
   </div>
 </div>
