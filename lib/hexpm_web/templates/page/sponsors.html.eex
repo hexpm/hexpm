@@ -47,14 +47,14 @@
 
   <div class="row">
     <div class="col-md-5 image">
-      <a href="https://weedmaps.com/"><img src="<%= Routes.static_path(Endpoint, "/images/weedmaps.png") %>" alt="Weedmaps logo"></a>
+      <a href="https://simplebet.com/"><img src="<%= Routes.static_path(Endpoint, "/images/simplebet.png") %>" alt="SimpleBet logo"></a>
     </div>
     <div class="col-md-7">
       <p>
-        Founded in 2008, Weedmaps is a leading technology and software infrastructure provider to the cannabis industry. Our suite of cloud-based software and data solutions includes point of sale, logistics and ordering solutions that enable customers to scale their businesses while complying with the complex and disparate regulations applicable to the cannabis industry.
+        SimpleBet is using modern technology to enable sports betting market creation and trading to become entirely automatic and algorithmic for the first time. This will allow for the creation of more betting opportunities, enable more efficient pricing for existing betting activity, and reduce operating expenses via automation.
       </p>
       <p>
-        Weedmaps provides development help for Hex.
+        SimpleBet provides development help for Hex.
       </p>
     </div>
   </div>
