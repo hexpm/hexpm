@@ -78,6 +78,7 @@ defmodule Hexpm.Accounts.Email do
   def update_email(email, new_address) do
     change(email, %{email: new_address})
     |> validate_required(~w(email)a)
+    |> update_change(:email, &String.downcase/1)
     |> validate_format(:email, @email_regex)
     |> unique_constraint(:email, name: "emails_email_key")
     |> unique_constraint(:email, name: "emails_email_user_key")
