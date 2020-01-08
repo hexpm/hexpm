@@ -28,13 +28,9 @@ defmodule Hexpm.Accounts.Email do
 
   def changeset(email, :create, params, verified?) do
     cast(email, params, ~w(email)a)
-    |> validate_required(~w(email)a)
-    |> update_change(:email, &String.downcase/1)
-    |> validate_format(:email, @email_regex)
     |> validate_confirmation(:email, message: "does not match email")
+    |> downcase_and_validate_email()
     |> validate_verified_email_exists(:email, message: "already in use")
-    |> unique_constraint(:email, name: "emails_email_key")
-    |> unique_constraint(:email, name: "emails_email_user_key")
     |> put_change(:verified, verified?)
     |> put_change(:verification_key, Auth.gen_key())
     |> put_change(:verification_expiry, DateTime.utc_now())
@@ -42,11 +38,7 @@ defmodule Hexpm.Accounts.Email do
 
   def changeset(email, :create_for_org, params, false) do
     cast(email, params, ~w(email public gravatar)a)
-    |> validate_required(~w(email)a)
-    |> update_change(:email, &String.downcase/1)
-    |> validate_format(:email, @email_regex)
-    |> unique_constraint(:email, name: "emails_email_key")
-    |> unique_constraint(:email, name: "emails_email_user_key")
+    |> downcase_and_validate_email()
     |> put_change(:verified, false)
   end
 
@@ -77,11 +69,7 @@ defmodule Hexpm.Accounts.Email do
 
   def update_email(email, new_address) do
     change(email, %{email: new_address})
-    |> validate_required(~w(email)a)
-    |> update_change(:email, &String.downcase/1)
-    |> validate_format(:email, @email_regex)
-    |> unique_constraint(:email, name: "emails_email_key")
-    |> unique_constraint(:email, name: "emails_email_user_key")
+    |> downcase_and_validate_email()
   end
 
   def toggle_flag(email, flag, value) do
@@ -90,5 +78,14 @@ defmodule Hexpm.Accounts.Email do
 
   def order_emails(emails) do
     Enum.sort_by(emails, &[not &1.primary, not &1.public, not &1.verified, -&1.id])
+  end
+
+  defp downcase_and_validate_email(changeset) do
+    changeset
+    |> validate_required(~w(email)a)
+    |> update_change(:email, &String.downcase/1)
+    |> validate_format(:email, @email_regex)
+    |> unique_constraint(:email, name: "emails_email_key")
+    |> unique_constraint(:email, name: "emails_email_user_key")
   end
 end
