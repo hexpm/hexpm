@@ -77,9 +77,22 @@ defmodule Hexpm.Accounts.UsersTest do
       assert email.user_id == organization.user.id
       assert email.public == true
 
+      current_user_id = current_user.id
+      organization_id = organization.id
       # TODO: these audit_logs shall belong to organization or organization user?
-      assert [%{action: "email.public"}, %{action: "email.add"}, _user_update] =
-               Hexpm.Accounts.AuditLogs.all_by(current_user)
+      assert [
+               %{
+                 action: "email.public",
+                 user_id: ^current_user_id,
+                 organization_id: ^organization_id
+               },
+               %{
+                 action: "email.add",
+                 user_id: ^current_user_id,
+                 organization_id: ^organization_id
+               },
+               _user_update
+             ] = Hexpm.Accounts.AuditLogs.all_by(current_user)
     end
 
     test "updates public email if it exists" do
@@ -101,8 +114,17 @@ defmodule Hexpm.Accounts.UsersTest do
       assert email.user_id == organization.user.id
       assert email.public == true
 
-      assert [%{action: "email.public"}, _user_update] =
-               Hexpm.Accounts.AuditLogs.all_by(current_user)
+      current_user_id = current_user.id
+      organization_id = organization.id
+
+      assert [
+               %{
+                 action: "email.public",
+                 user_id: ^current_user_id,
+                 organization_id: ^organization_id
+               },
+               _user_update
+             ] = Hexpm.Accounts.AuditLogs.all_by(current_user)
     end
 
     test "inserts gravatar email if it doesn't exist yet" do
@@ -121,8 +143,22 @@ defmodule Hexpm.Accounts.UsersTest do
       assert email.gravatar == true
 
       # TODO: these audit_logs shall belong to organization or organization user?
-      assert [%{action: "email.gravatar"}, %{action: "email.add"}, _user_update] =
-               Hexpm.Accounts.AuditLogs.all_by(current_user)
+      current_user_id = current_user.id
+      organization_id = organization.id
+
+      assert [
+               %{
+                 action: "email.gravatar",
+                 user_id: ^current_user_id,
+                 organization_id: ^organization_id
+               },
+               %{
+                 action: "email.add",
+                 user_id: ^current_user_id,
+                 organization_id: ^organization_id
+               },
+               _user_update
+             ] = Hexpm.Accounts.AuditLogs.all_by(current_user)
     end
 
     test "updates gravatar email if it exists" do
@@ -144,8 +180,17 @@ defmodule Hexpm.Accounts.UsersTest do
       assert email.user_id == organization.user.id
       assert email.gravatar == true
 
-      assert [%{action: "email.gravatar"}, _user_update] =
-               Hexpm.Accounts.AuditLogs.all_by(current_user)
+      current_user_id = current_user.id
+      organization_id = organization.id
+
+      assert [
+               %{
+                 action: "email.gravatar",
+                 user_id: ^current_user_id,
+                 organization_id: ^organization_id
+               },
+               _user_update
+             ] = Hexpm.Accounts.AuditLogs.all_by(current_user)
     end
 
     test "returns {:error, changeset} when public_email is invalid" do
@@ -187,8 +232,17 @@ defmodule Hexpm.Accounts.UsersTest do
 
       assert Users.get_email("old@example.com") == nil
 
-      assert [%{action: "email.remove"}, _user_update] =
-               Hexpm.Accounts.AuditLogs.all_by(current_user)
+      current_user_id = current_user.id
+      organization_id = organization.id
+
+      assert [
+               %{
+                 action: "email.remove",
+                 user_id: ^current_user_id,
+                 organization_id: ^organization_id
+               },
+               _user_update
+             ] = Hexpm.Accounts.AuditLogs.all_by(current_user)
     end
 
     test "does nothing to emails when public_email is empty" do
@@ -219,8 +273,17 @@ defmodule Hexpm.Accounts.UsersTest do
 
       assert Users.get_email("old@example.com") == nil
 
-      assert [%{action: "email.remove"}, _user_update] =
-               Hexpm.Accounts.AuditLogs.all_by(current_user)
+      current_user_id = current_user.id
+      organization_id = organization.id
+
+      assert [
+               %{
+                 action: "email.remove",
+                 user_id: ^current_user_id,
+                 organization_id: ^organization_id
+               },
+               _user_update
+             ] = Hexpm.Accounts.AuditLogs.all_by(current_user)
     end
 
     test "does nothing to emails when gravatar_email is empty" do

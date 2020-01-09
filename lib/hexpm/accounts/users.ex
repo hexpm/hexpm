@@ -381,12 +381,14 @@ defmodule Hexpm.Accounts.Users do
   end
 
   def insert_or_update_or_delete_email_multi(multi, user, flag, "", audit: audit_data) do
+    user = Repo.preload(user, :organization)
+
     if old_email = Enum.find(user.emails, &Map.get(&1, flag)) do
       email_op = String.to_atom("#{flag}_email")
 
       multi
       |> Multi.delete(email_op, old_email)
-      |> audit(audit_data, "email.remove", old_email)
+      |> audit(audit_data, "email.remove", {user.organization, old_email})
     else
       multi
     end
@@ -394,12 +396,13 @@ defmodule Hexpm.Accounts.Users do
 
   def insert_or_update_or_delete_email_multi(multi, user, flag, email_address, audit: audit_data) do
     email_op = String.to_atom("#{flag}_email")
+    user = Repo.preload(user, :organization)
 
     if old_email = Enum.find(user.emails, &Map.get(&1, flag)) do
       multi
       |> Multi.update(email_op, Email.update_email(old_email, email_address))
       |> audit(audit_data, "email.#{flag}", fn %{^email_op => new_email} ->
-        {old_email, new_email}
+        {user.organization, {old_email, new_email}}
       end)
     else
       multi
@@ -412,8 +415,10 @@ defmodule Hexpm.Accounts.Users do
           false
         )
       )
-      |> audit(audit_data, "email.add", fn %{^email_op => email} -> email end)
-      |> audit(audit_data, "email.#{flag}", fn %{^email_op => email} -> {nil, email} end)
+      |> audit(audit_data, "email.add", fn %{^email_op => email} -> {user.organization, email} end)
+      |> audit(audit_data, "email.#{flag}", fn %{^email_op => email} ->
+        {user.organization, {nil, email}}
+      end)
     end
   end
 
