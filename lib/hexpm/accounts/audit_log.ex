@@ -235,7 +235,7 @@ defmodule Hexpm.Accounts.AuditLog do
   defp fields(%Release{}), do: [:id, :version, :checksum, :has_docs, :package_id]
   defp fields(%ReleaseMetadata{}), do: [:app, :build_tools, :elixir]
   defp fields(%ReleaseRetirement{}), do: [:status, :message]
-  defp fields(%Organization{}), do: [:name, :public, :active, :billing_active]
+  defp fields(%Organization{}), do: [:id, :name, :public, :active, :billing_active]
   defp fields(%User{}), do: [:id, :username]
   defp fields(%UserHandles{}), do: [:github, :twitter, :freenode]
 
