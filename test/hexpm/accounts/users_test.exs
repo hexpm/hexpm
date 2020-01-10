@@ -57,7 +57,6 @@ defmodule Hexpm.Accounts.UsersTest do
           audit: {current_user, "UA"}
         )
 
-      # TODO: attach this audit_log to organization as well?
       assert [%{action: "user.update", params: %{"username" => "organization.user"}}] =
                Hexpm.Accounts.AuditLogs.all_by(current_user)
     end
@@ -79,7 +78,7 @@ defmodule Hexpm.Accounts.UsersTest do
 
       current_user_id = current_user.id
       organization_id = organization.id
-      # TODO: these audit_logs shall belong to organization or organization user?
+
       assert [
                %{
                  action: "email.public",
@@ -142,7 +141,6 @@ defmodule Hexpm.Accounts.UsersTest do
       assert email.user_id == organization.user.id
       assert email.gravatar == true
 
-      # TODO: these audit_logs shall belong to organization or organization user?
       current_user_id = current_user.id
       organization_id = organization.id
 
