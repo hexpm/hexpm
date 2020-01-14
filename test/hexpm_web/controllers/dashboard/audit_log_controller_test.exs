@@ -17,5 +17,34 @@ defmodule HexpmWeb.Dashboard.AuditLogControllerTest do
 
       assert html_response(conn, :ok) =~ "Recent activities"
     end
+
+    test "shows the most recent audit logs for current user" do
+      user = insert(:user)
+
+      insert(:audit_log, user: user, action: "docs.publish")
+
+      response =
+        build_conn()
+        |> test_login(user)
+        |> get("/dashboard/audit_logs")
+        |> html_response(:ok)
+
+      assert response =~ "Publish doc"
+    end
+
+    test "shows the second page of audit logs for current user" do
+      user = insert(:user)
+
+      insert(:audit_log, user: user, action: "user.create")
+      insert_list(10, :audit_log, action: "user.update", user: user)
+
+      response =
+        build_conn()
+        |> test_login(user)
+        |> get("/dashboard/audit_logs?page=2")
+        |> html_response(:ok)
+
+      assert response =~ "Create user"
+    end
   end
 end

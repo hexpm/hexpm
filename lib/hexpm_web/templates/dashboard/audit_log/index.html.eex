@@ -6,6 +6,54 @@
   <div class="col-sm-9">
     <div class="panel panel-default">
       <div class="panel-heading">Recent activities</div>
+
+      <div class="panel-body">
+        <table class="table table-striped">
+          <tr>
+            <th class="col-sm-3" scope="col">Date</th>
+            <th scope="col">Activity</th>
+          </tr>
+
+          <%= for audit_log <- @audit_logs do %>
+            <tr>
+              <td class="col-sm-3"><%= pretty_date(audit_log.inserted_at, :short) %></td>
+              <td><%= humanize_audit_log_info(audit_log) %></td>
+            </tr>
+          <% end %>
+        </table>
+
+        <% paginate = paginate(@page, @total_count, items_per_page: @per_page, page_links: 5) %>
+
+        <div class="pagination-wrapper">
+          <nav class="pagination-widget">
+            <ul class="pagination pagination-sm">
+              <%= if paginate[:prev] do %>
+                <li><a href="<%= Routes.audit_log_path(Endpoint, :index, page: @page - 1) %>" aria-label="Previous">&laquo;</a></li>
+              <% else %>
+                <li class="disabled"><span>&laquo;</span></li>
+              <% end %>
+              <%= for page <- paginate[:page_links] do %>
+                <%= if page == @page do %>
+                  <li class="active">
+                    <span><%= page %></span>
+                  </li>
+                <% else %>
+                  <li>
+                    <a href="<%= Routes.audit_log_path(Endpoint, :index, page: page) %>">
+                      <%= page %>
+                    </a>
+                  </li>
+                <% end %>
+              <% end %>
+              <%= if paginate[:next] do %>
+                <li><a href="<%= Routes.audit_log_path(Endpoint, :index, page: @page + 1) %>" aria-label="Next" >&raquo;</a></li>
+              <% else %>
+                <li class="disabled"><span>&raquo;</span></li>
+              <% end %>
+            </ul>
+          </nav>
+        </div>
+      </div>
     </div>
   </div>
 </div>
