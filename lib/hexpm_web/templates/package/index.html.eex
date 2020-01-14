@@ -97,41 +97,19 @@
   </ul>
 </div>
 
-<div class="pagination-wrapper">
-  <div class="pagination-info">
-    <%= if shown_packages == 1 do %>
-      Showing last package of <%= @package_count %> total
-    <% else %>
-      Showing <%= range_start %>&ndash;<%= range_end %> packages of <%= @package_count %> total
-    <% end %>
-  </div>
-  <nav class="pagination-widget">
-    <ul class="pagination pagination-sm">
-      <%= if paginate[:prev] do %>
-        <li><a href="<%= Routes.package_path(Endpoint, :index, prev_page_params) %>" aria-label="Previous">&laquo;</a></li>
-      <% else %>
-        <li class="disabled"><span>&laquo;</span></li>
-      <% end %>
-      <%= for counter <- paginate[:page_links] do %>
-        <%= if counter == @page do %>
-          <li class="active">
-            <span><%= counter %></span>
-          </li>
-        <% else %>
-          <li>
-            <a href="<%= Routes.package_path(Endpoint, :index, params(search: @search, page: counter, sort: @sort, letter: @letter)) %>">
-              <%= counter %>
-            </a>
-          </li>
-        <% end %>
-      <% end %>
-      <%= if paginate[:next] do %>
-        <li><a href="<%= Routes.package_path(Endpoint, :index, next_page_params) %>" aria-label="Next" >&raquo;</a></li>
-      <% else %>
-        <li class="disabled"><span>&raquo;</span></li>
-      <% end %>
-    </ul>
-  </nav>
-</div>
+<%=
+render HexpmWeb.LayoutView,
+       "_pagination.html",
+       items: @packages,
+       page: @page,
+       total_count: @package_count,
+       per_page: @per_page,
+       unit: "package",
+       units: "packages",
+       path_fn: &Routes.package_path(Endpoint, :index, &1),
+       prev_page_params: prev_page_params,
+       page_params_fn: &params(search: @search, page: &1, sort: @sort, letter: @letter),
+       next_page_params: next_page_params
+%>
 
 <% end %>
