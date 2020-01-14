@@ -22,9 +22,21 @@
           <% end %>
         </table>
 
-        <% paginate = paginate(@page, @total_count, items_per_page: @per_page, page_links: 5) %>
+        <%
+        paginate = paginate(@page, @total_count, items_per_page: @per_page, page_links: 5)
+        shown_audit_logs = length(@audit_logs)
+        range_start = (@page - 1) * @per_page + 1
+        range_end = range_start + shown_audit_logs - 1
+        %>
 
         <div class="pagination-wrapper">
+          <div class="pagination-info">
+            <%= if shown_audit_logs == 1 do %>
+              Showing last activity of <%= @total_count %> total
+            <% else %>
+              Showing <%= range_start %>&ndash;<%= range_end %> activities of <%= @total_count %> total
+            <% end %>
+          </div>
           <nav class="pagination-widget">
             <ul class="pagination pagination-sm">
               <%= if paginate[:prev] do %>
