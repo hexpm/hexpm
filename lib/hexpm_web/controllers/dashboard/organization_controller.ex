@@ -368,6 +368,23 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
     end)
   end
 
+  def update_profile(conn, %{"dashboard_org" => organization, "profile" => profile_params}) do
+    access_organization(conn, organization, "admin", fn organization ->
+      case Users.update_profile(organization.user, profile_params, audit: audit_data(conn)) do
+        {:ok, _updated_user} ->
+          conn
+          |> put_flash(:info, "Profile updated successfully.")
+          |> redirect(to: Routes.organization_path(conn, :show, organization))
+
+        {:error, _} ->
+          conn
+          |> put_status(400)
+          |> put_flash(:error, "Oops, something went wrong!")
+          |> render_index(organization)
+      end
+    end)
+  end
+
   defp render_new(conn, opts \\ []) do
     render(
       conn,
@@ -384,6 +401,9 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
   end
 
   defp render_index(conn, organization, opts \\ []) do
+    user = organization.user
+    public_email = Enum.find(user.emails, & &1.public)
+    gravatar_email = Enum.find(user.emails, & &1.gravatar)
     customer = Hexpm.Billing.get(organization.name)
     keys = Keys.all(organization)
     delete_key_path = Routes.organization_path(Endpoint, :delete_key, organization)
@@ -392,6 +412,9 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
     assigns = [
       title: "Dashboard - Organization",
       container: "container page dashboard",
+      changeset: User.update_profile(user, %{}),
+      public_email: public_email && public_email.email,
+      gravatar_email: gravatar_email && gravatar_email.email,
       organization: organization,
       repository: organization.repository,
       keys: keys,
@@ -459,7 +482,13 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
     user = conn.assigns.current_user
 
     organization =
-      Organizations.get(organization, [:organization_users, users: :emails, repository: :packages])
+      Organizations.get(organization, [
+        :user,
+        :organization_users,
+        user: :emails,
+        users: :emails,
+        repository: :packages
+      ])
 
     if organization do
       if repo_user = Enum.find(organization.organization_users, &(&1.user_id == user.id)) do
