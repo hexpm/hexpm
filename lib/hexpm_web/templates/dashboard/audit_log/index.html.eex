@@ -31,10 +31,7 @@
                per_page: @per_page,
                unit: "activity",
                units: "activities",
-               path_fn: &Routes.audit_log_path(Endpoint, :index, &1),
-               prev_page_params: [page: @page - 1],
-               page_params_fn: &([page: &1]),
-               next_page_params: [page: @page + 1]
+               path_fn: &Routes.audit_log_path(Endpoint, :index, page: &1)
         %>
       </div>
     </div>

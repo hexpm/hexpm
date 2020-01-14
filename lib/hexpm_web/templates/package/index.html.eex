@@ -104,10 +104,7 @@ render HexpmWeb.LayoutView,
        per_page: @per_page,
        unit: "package",
        units: "packages",
-       path_fn: &Routes.package_path(Endpoint, :index, &1),
-       prev_page_params: params(search: @search, page: @page-1, sort: @sort, letter: @letter),
-       page_params_fn: &params(search: @search, page: &1, sort: @sort, letter: @letter),
-       next_page_params: params(search: @search, page: @page+1, sort: @sort, letter: @letter)
+       path_fn: &Routes.package_path(Endpoint, :index, params(search: @search, page: &1, sort: @sort, letter: @letter))
 %>
 
 <% end %>

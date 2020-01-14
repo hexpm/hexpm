@@ -16,7 +16,7 @@ range_end = range_start + shown_items - 1
   <nav class="pagination-widget">
     <ul class="pagination pagination-sm">
       <%= if paginate[:prev] do %>
-        <li><a href="<%= @path_fn.(@prev_page_params) %>" aria-label="Previous">&laquo;</a></li>
+        <li><a href="<%= @path_fn.(@page - 1) %>" aria-label="Previous">&laquo;</a></li>
       <% else %>
         <li class="disabled"><span>&laquo;</span></li>
       <% end %>
@@ -27,14 +27,14 @@ range_end = range_start + shown_items - 1
           </li>
         <% else %>
           <li>
-            <a href="<%= @path_fn.(@page_params_fn.(page)) %>">
+            <a href="<%= @path_fn.(page) %>">
               <%= page %>
             </a>
           </li>
         <% end %>
       <% end %>
       <%= if paginate[:next] do %>
-        <li><a href="<%= @path_fn.(@next_page_params) %>" aria-label="Next" >&raquo;</a></li>
+        <li><a href="<%= @path_fn.(@page + 1) %>" aria-label="Next" >&raquo;</a></li>
       <% else %>
         <li class="disabled"><span>&raquo;</span></li>
       <% end %>
