@@ -1,4 +1,4 @@
-<%= changeset_error(@key_changeset) %>
+<%= ViewHelpers.changeset_error(@key_changeset) %>
 
 <div class="row">
   <div class="col-sm-3">

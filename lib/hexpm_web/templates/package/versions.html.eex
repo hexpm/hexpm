@@ -1,7 +1,7 @@
 <%= for release <- @releases do %>
   <li>
-    <a href="<%= path_for_release(@package, release) %>"><strong><%= release.version %></strong></a>
-    <%= pretty_date(release.inserted_at, :short) %>
+    <a href="<%= ViewHelpers.path_for_release(@package, release) %>"><strong><%= release.version %></strong></a>
+    <%= ViewHelpers.pretty_date(release.inserted_at, :short) %>
 
     <%= if release.retirement do %>
       (<span class="version-retirement">retired</span>)

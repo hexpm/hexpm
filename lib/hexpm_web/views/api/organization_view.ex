@@ -21,7 +21,12 @@ defmodule HexpmWeb.API.OrganizationView do
       updated_at: organization.updated_at,
       seats: customer["quantity"]
     }
-    |> include_if_loaded(:users, organization.organization_users, OrganizationUserView, "show")
+    |> ViewHelpers.include_if_loaded(
+      :users,
+      organization.organization_users,
+      OrganizationUserView,
+      "show"
+    )
   end
 
   def render("audit_logs." <> _, %{audit_logs: audit_logs}) do

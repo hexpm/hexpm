@@ -27,7 +27,7 @@ compatible_tools =
 tools = Keyword.take(tools, compatible_tools)
 %>
 
-<h2 class="package-title"><%= package_name(@package) %>
+<h2 class="package-title"><%= ViewHelpers.package_name(@package) %>
   <%= if @current_release do %>
     <%= if @current_release.retirement do %>
       <span class="version retired"><%= @current_release.version %> (retired)</span>
@@ -45,7 +45,7 @@ tools = Keyword.take(tools, compatible_tools)
 
 <%= if description do %>
   <div class="description with-divider">
-    <%= text_length(description, 300) |> text_to_html(insert_brs: false) %>
+    <%= ViewHelpers.text_length(description, 300) |> text_to_html(insert_brs: false) %>
   </div>
 <% end %>
 
@@ -81,10 +81,10 @@ tools = Keyword.take(tools, compatible_tools)
           <%= icon(:octicon, :calendar, class: "stat-icon stat-icon-calendar") %>
           <span class="stat-info">
             <span class="count-info wrap">
-              <%= human_number_space(downloads, 5) %>
+              <%= ViewHelpers.human_number_space(downloads, 5) %>
             </span>
             <span class="count-info no-wrap">
-              <%= human_number_space(downloads) %>
+              <%= ViewHelpers.human_number_space(downloads) %>
             </span>
             <br> <span class="stat-text">downloads <br> this version</span>
           </span>
@@ -93,10 +93,10 @@ tools = Keyword.take(tools, compatible_tools)
           <%= icon(:octicon, :calendar, class: "stat-icon stat-icon-calendar") %>
           <span class="stat-info">
             <span class="count-info wrap">
-              <%= human_number_space(@downloads["day"] || 0, 5) %>
+              <%= ViewHelpers.human_number_space(@downloads["day"] || 0, 5) %>
             </span>
             <span class="count-info no-wrap">
-              <%= human_number_space(@downloads["day"] || 0) %>
+              <%= ViewHelpers.human_number_space(@downloads["day"] || 0) %>
             </span>
             <br> <span class="stat-text">downloads <br> yesterday</span>
           </span>
@@ -105,10 +105,10 @@ tools = Keyword.take(tools, compatible_tools)
           <%= icon(:octicon, :calendar, class: "stat-icon stat-icon-calendar") %>
           <span class="stat-info">
             <span class="count-info wrap">
-              <%= human_number_space(@downloads["week"] || 0, 5) %>
+              <%= ViewHelpers.human_number_space(@downloads["week"] || 0, 5) %>
             </span>
             <span class="count-info no-wrap">
-              <%= human_number_space(@downloads["week"] || 0) %>
+              <%= ViewHelpers.human_number_space(@downloads["week"] || 0) %>
             </span>
             <br> <span class="stat-text">downloads <br> last 7 days</span>
           </span>
@@ -117,10 +117,10 @@ tools = Keyword.take(tools, compatible_tools)
           <%= icon(:octicon, :calendar, class: "stat-icon stat-icon-calendar") %>
           <span class="stat-info">
             <span class="count-info wrap">
-              <%= human_number_space(@downloads["all"] || 0, 5) %>
+              <%= ViewHelpers.human_number_space(@downloads["all"] || 0, 5) %>
             </span>
             <span class="count-info no-wrap">
-              <%= human_number_space(@downloads["all"] || 0) %>
+              <%= ViewHelpers.human_number_space(@downloads["all"] || 0) %>
             </span>
             <br> <span class="stat-text">downloads <br> all time</span>
           </span>
@@ -139,7 +139,7 @@ tools = Keyword.take(tools, compatible_tools)
 
     <%= if length(@releases) > show_latest_versions do %>
       <p class="show-versions">
-        <a href="<%= path_for_releases(@package) %>">Show All Versions</a>
+        <a href="<%= ViewHelpers.path_for_releases(@package) %>">Show All Versions</a>
       </p>
     <% end %>
   </div>
@@ -149,7 +149,7 @@ tools = Keyword.take(tools, compatible_tools)
       <%= if @current_release do %>
         <%= for %{repository: repository, name: name, requirement: req, app: app, optional: optional} <- @current_release.requirements do %>
         <li>
-          <a href="<%= path_for_package(repository, name) %>"><%= package_name(repository, name) %></a> <%= req %>
+          <a href="<%= ViewHelpers.path_for_package(repository, name) %>"><%= ViewHelpers.package_name(repository, name) %></a> <%= req %>
           <%= if app != name do %>(app: <%= app %>)<% end %>
           <%= if optional do %><span class="attr-optional">(optional)</span><% end %>
         </li>
@@ -164,7 +164,7 @@ tools = Keyword.take(tools, compatible_tools)
     <ul class="audit-logs-list">
       <%= for audit_log <- @audit_logs do %>
         <li>
-          <%= pretty_date(audit_log.inserted_at, :short) %> <%= humanize_audit_log_info(audit_log) %>
+          <%= ViewHelpers.pretty_date(audit_log.inserted_at, :short) %> <%= humanize_audit_log_info(audit_log) %>
         </li>
       <% end %>
     </ul>
@@ -235,8 +235,8 @@ tools = Keyword.take(tools, compatible_tools)
     <% end %>
 
     <h3>Dependents (<%= @dependants_count %>)</h3>
-    <%= safe_join(@dependants, ", ", fn package ->
-      link(package_name(package), to: path_for_package(package))
+    <%= ViewHelpers.safe_join(@dependants, ", ", fn package ->
+      link(ViewHelpers.package_name(package), to: ViewHelpers.path_for_package(package))
     end) %><%= if @dependants_count != 0 do %>,
     <a href="<%= Routes.package_path(Endpoint, :index, search: "depends:#{@repository_name}:#{@package.name}") %>">show all...</a>
     <% end %>

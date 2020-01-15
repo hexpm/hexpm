@@ -20,9 +20,9 @@ defmodule HexpmWeb.API.PackageView do
       name: package.name,
       inserted_at: package.inserted_at,
       updated_at: package.updated_at,
-      url: url_for_package(package),
-      html_url: html_url_for_package(package),
-      docs_html_url: docs_html_url_for_package(package),
+      url: ViewHelpers.url_for_package(package),
+      html_url: ViewHelpers.html_url_for_package(package),
+      docs_html_url: ViewHelpers.docs_html_url_for_package(package),
       meta: %{
         description: package.meta.description,
         licenses: package.meta.licenses || [],
@@ -30,16 +30,21 @@ defmodule HexpmWeb.API.PackageView do
         maintainers: package.meta.maintainers || []
       }
     }
-    |> include_if_loaded(
+    |> ViewHelpers.include_if_loaded(
       :releases,
       package.releases,
       ReleaseView,
       "minimal.json",
       package: package
     )
-    |> include_if_loaded(:retirements, package.releases, RetirementView, "package.json")
-    |> include_if_loaded(:downloads, package.downloads, DownloadView, "show.json")
-    |> include_if_loaded(:owners, package.owners, UserView, "minimal.json")
+    |> ViewHelpers.include_if_loaded(
+      :retirements,
+      package.releases,
+      RetirementView,
+      "package.json"
+    )
+    |> ViewHelpers.include_if_loaded(:downloads, package.downloads, DownloadView, "show.json")
+    |> ViewHelpers.include_if_loaded(:owners, package.owners, UserView, "minimal.json")
     |> group_downloads()
     |> group_retirements()
   end

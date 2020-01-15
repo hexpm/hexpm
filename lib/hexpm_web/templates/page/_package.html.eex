@@ -4,17 +4,17 @@
   </div>
   <p>
     <%= if @downloads do %>
-      <span class="info"><%= human_number_space @downloads %> downloads</span>
+      <span class="info"><%= ViewHelpers.human_number_space @downloads %> downloads</span>
     <% end %>
     <%= if @description do %>
-      <span class="description"><%= text_length(@description, 100) %></span>
+      <span class="description"><%= ViewHelpers.text_length(@description, 100) %></span>
     <% end %>
     <%= if @inserted_at do %>
       <span class="published-at">
         <%= if @version do %>
           <a href="<%= Routes.package_path(Endpoint, :show, @package) %>"><%= @version %></a>
         <% end %>
-        published <%= human_relative_time_from_now(@inserted_at) %>
+        published <%= ViewHelpers.human_relative_time_from_now(@inserted_at) %>
       </span>
     <% end %>
   </p>

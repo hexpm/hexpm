@@ -1,5 +1,5 @@
 <h2 class="versions-title">
-  All available versions of <%= link package_name(@package), to: path_for_package(@package), class: "version-package-title" %>
+  All available versions of <%= link ViewHelpers.package_name(@package), to: ViewHelpers.path_for_package(@package), class: "version-package-title" %>
 </h2>
 <div class="clearfix"></div>
 <div class="version-list">

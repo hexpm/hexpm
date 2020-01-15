@@ -31,8 +31,8 @@ defmodule HexpmWeb.API.UserView do
       inserted_at: user.inserted_at,
       updated_at: user.updated_at
     }
-    |> include_if_loaded(:owned_packages, user.owned_packages, &owned_packages/1)
-    |> include_if_loaded(:packages, user.owned_packages, &packages/1)
+    |> ViewHelpers.include_if_loaded(:owned_packages, user.owned_packages, &owned_packages/1)
+    |> ViewHelpers.include_if_loaded(:packages, user.owned_packages, &packages/1)
   end
 
   def render("me", %{user: user}) do
@@ -57,7 +57,7 @@ defmodule HexpmWeb.API.UserView do
   # TODO: deprecated
   defp owned_packages(packages) do
     Enum.into(packages, %{}, fn package ->
-      {package.name, url_for_package(package)}
+      {package.name, ViewHelpers.url_for_package(package)}
     end)
   end
 
@@ -68,8 +68,8 @@ defmodule HexpmWeb.API.UserView do
       %{
         name: package.name,
         repository: repository_name(package),
-        url: url_for_package(package),
-        html_url: html_url_for_package(package)
+        url: ViewHelpers.url_for_package(package),
+        html_url: ViewHelpers.html_url_for_package(package)
       }
     end)
   end

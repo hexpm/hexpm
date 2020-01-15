@@ -1,4 +1,4 @@
-<%= changeset_error(@changeset) %>
+<%= ViewHelpers.changeset_error(@changeset) %>
 
 <div class="row">
   <div class="col-sm-3">
@@ -11,7 +11,7 @@
       <div class="panel-body">
         <div class="form-group">
           <label>Profile picture</label>
-          <img src="<%= gravatar_url(User.email(@current_user, :gravatar), :large) %>">
+          <img src="<%= ViewHelpers.gravatar_url(User.email(@current_user, :gravatar), :large) %>">
           <p>
             <small>
               <%= if User.email(@current_user, :gravatar) do %>
@@ -28,14 +28,14 @@
         <%= form_for @changeset, Routes.profile_path(Endpoint, :update), [method: :post], fn f -> %>
           <div class="form-group">
             <%= label f, :full_name %>
-            <%= text_input f, :full_name %>
-            <%= error_tag f, :full_name %>
+            <%= ViewHelpers.text_input f, :full_name %>
+            <%= ViewHelpers.error_tag f, :full_name %>
           </div>
 
           <div class="form-group">
             <%= label f, :public_email %>
-            <%= select f, :public_email, public_email_options(@changeset.data), value: public_email_value(@changeset.data) %>
-            <%= error_tag f, :public_email %>
+            <%= ViewHelpers.select f, :public_email, public_email_options(@changeset.data), value: public_email_value(@changeset.data) %>
+            <%= ViewHelpers.error_tag f, :public_email %>
             <small>
               You can add or remove email address on the <a href="<%= Routes.email_path(Endpoint, :index) %>">email settings page</a>.
             </small>
@@ -43,8 +43,8 @@
 
           <div class="form-group">
             <%= label f, :gravatar_email %>
-            <%= select f, :gravatar_email, gravatar_email_options(@changeset.data), value: gravatar_email_value(@changeset.data) %>
-            <%= error_tag f, :gravatar_email %>
+            <%= ViewHelpers.select f, :gravatar_email, gravatar_email_options(@changeset.data), value: gravatar_email_value(@changeset.data) %>
+            <%= ViewHelpers.error_tag f, :gravatar_email %>
           </div>
 
           <%= inputs_for f, :handles, fn f -> %>
@@ -52,46 +52,46 @@
               <%= label f, :twitter %>
               <div class="input-group">
                 <div class="input-group-addon">twitter.com/</div>
-                <%= text_input f, :twitter, placeholder: "your_twitter_id" %>
+                <%= ViewHelpers.text_input f, :twitter, placeholder: "your_twitter_id" %>
               </div>
 
-              <%= error_tag f, :twitter %>
+              <%= ViewHelpers.error_tag f, :twitter %>
             </div>
 
             <div class="form-group">
               <%= label f, :github, "GitHub" %>
               <div class="input-group">
                 <div class="input-group-addon">github.com/</div>
-                <%= text_input f, :github, placeholder: "your_github_id" %>
+                <%= ViewHelpers.text_input f, :github, placeholder: "your_github_id" %>
               </div>
-              <%= error_tag f, :github %>
+              <%= ViewHelpers.error_tag f, :github %>
             </div>
 
             <div class="form-group">
               <%= label f, :elixirforum, "Elixir Forum" %>
               <div class="input-group">
                 <div class="input-group-addon">elixirforum.com/users/</div>
-                <%= text_input f, :elixirforum, placeholder: "your_elixir_forum_id" %>
+                <%= ViewHelpers.text_input f, :elixirforum, placeholder: "your_elixir_forum_id" %>
               </div>
-              <%= error_tag f, :elixirforum %>
+              <%= ViewHelpers.error_tag f, :elixirforum %>
             </div>
 
             <div class="form-group">
               <%= label f, :freenode %>
-              <%= text_input f, :freenode, placeholder: "Your nickname on Elixir IRC channel" %>
+              <%= ViewHelpers.text_input f, :freenode, placeholder: "Your nickname on Elixir IRC channel" %>
               <span class="help-block">Elixir IRC channel:
                 <a href="irc://chat.freenode.net/elixir-lang">irc://chat.freenode.net/elixir-lang</a>
               </span>
-              <%= error_tag f, :freenode %>
+              <%= ViewHelpers.error_tag f, :freenode %>
             </div>
 
             <div class="form-group">
               <%= label f, :slack %>
-              <%= text_input f, :slack, placeholder: "Your nickname on Elixir Slack channel" %>
+              <%= ViewHelpers.text_input f, :slack, placeholder: "Your nickname on Elixir Slack channel" %>
               <span class="help-block">Elixir Slack channel:
                 <a href="https://elixir-slackin.herokuapp.com">elixir-slackin.herokuapp.com</a>
               </span>
-              <%= error_tag f, :slack %>
+              <%= ViewHelpers.error_tag f, :slack %>
             </div>
           <% end %>
 
