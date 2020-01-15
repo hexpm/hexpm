@@ -43,19 +43,19 @@ defmodule HexpmWeb.Dashboard.AuditLogView do
   end
 
   def humanize_audit_log_info(log = %{action: "release.publish"}) do
-    "Publish package #{log.params["package"]["name"]} version #{log.params["release"]["version"]}"
+    "Publish package #{log.params["package"]["name"]} (#{log.params["release"]["version"]})"
   end
 
   def humanize_audit_log_info(log = %{action: "release.revert"}) do
-    "Revert package #{log.params["package"]["name"]} version #{log.params["release"]["version"]}"
+    "Revert package #{log.params["package"]["name"]} (#{log.params["release"]["version"]})"
   end
 
   def humanize_audit_log_info(log = %{action: "release.retire"}) do
-    "Retire package #{log.params["package"]["name"]} version #{log.params["release"]["version"]}"
+    "Retire package #{log.params["package"]["name"]} (#{log.params["release"]["version"]})"
   end
 
   def humanize_audit_log_info(log = %{action: "release.unretire"}) do
-    "Unretire package #{log.params["package"]["name"]} version #{log.params["release"]["version"]}"
+    "Unretire package #{log.params["package"]["name"]} (#{log.params["release"]["version"]})"
   end
 
   def humanize_audit_log_info(log = %{action: "email.add"}) do

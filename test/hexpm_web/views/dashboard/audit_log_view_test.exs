@@ -77,7 +77,7 @@ defmodule HexpmWeb.Dashboard.AuditLogViewTest do
           params: %{"package" => %{"name" => "Awesome"}, "release" => %{"version" => "1.0.0"}}
         )
 
-      assert AuditLogView.humanize_audit_log_info(log) == "Publish package Awesome version 1.0.0"
+      assert AuditLogView.humanize_audit_log_info(log) == "Publish package Awesome (1.0.0)"
     end
 
     test "release.revert" do
@@ -87,7 +87,7 @@ defmodule HexpmWeb.Dashboard.AuditLogViewTest do
           params: %{"package" => %{"name" => "Awesome"}, "release" => %{"version" => "1.0.0"}}
         )
 
-      assert AuditLogView.humanize_audit_log_info(log) == "Revert package Awesome version 1.0.0"
+      assert AuditLogView.humanize_audit_log_info(log) == "Revert package Awesome (1.0.0)"
     end
 
     test "release.retire" do
@@ -97,7 +97,7 @@ defmodule HexpmWeb.Dashboard.AuditLogViewTest do
           params: %{"package" => %{"name" => "Awesome"}, "release" => %{"version" => "1.0.0"}}
         )
 
-      assert AuditLogView.humanize_audit_log_info(log) == "Retire package Awesome version 1.0.0"
+      assert AuditLogView.humanize_audit_log_info(log) == "Retire package Awesome (1.0.0)"
     end
 
     test "release.unretire" do
@@ -107,7 +107,7 @@ defmodule HexpmWeb.Dashboard.AuditLogViewTest do
           params: %{"package" => %{"name" => "Awesome"}, "release" => %{"version" => "1.0.0"}}
         )
 
-      assert AuditLogView.humanize_audit_log_info(log) == "Unretire package Awesome version 1.0.0"
+      assert AuditLogView.humanize_audit_log_info(log) == "Unretire package Awesome (1.0.0)"
     end
 
     test "email.add" do
