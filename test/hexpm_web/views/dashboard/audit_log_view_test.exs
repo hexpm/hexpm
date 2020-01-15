@@ -155,6 +155,55 @@ defmodule HexpmWeb.Dashboard.AuditLogViewTest do
       assert AuditLogView.humanize_audit_log_info(log) == "Update user profile"
     end
 
+    test "organization.create" do
+      log = build(:audit_log, action: "organization.create", params: %{"name" => "Test Inc."})
+
+      assert AuditLogView.humanize_audit_log_info(log) == "Create organization Test Inc."
+    end
+
+    test "organization.member.add" do
+      log =
+        build(:audit_log,
+          action: "organization.member.add",
+          params: %{
+            "organization" => %{"name" => "Test Inc."},
+            "user" => %{"username" => "John"}
+          }
+        )
+
+      assert AuditLogView.humanize_audit_log_info(log) ==
+               "Add user John to organization Test Inc."
+    end
+
+    test "organization.member.remove" do
+      log =
+        build(:audit_log,
+          action: "organization.member.remove",
+          params: %{
+            "organization" => %{"name" => "Test Inc."},
+            "user" => %{"username" => "John"}
+          }
+        )
+
+      assert AuditLogView.humanize_audit_log_info(log) ==
+               "Remove user John from organization Test Inc."
+    end
+
+    test "organization.member.role" do
+      log =
+        build(:audit_log,
+          action: "organization.member.role",
+          params: %{
+            "organization" => %{"name" => "Test Inc."},
+            "user" => %{"username" => "John"},
+            "role" => "admin"
+          }
+        )
+
+      assert AuditLogView.humanize_audit_log_info(log) ==
+               "Change user John's role to admin in organization Test Inc."
+    end
+
     test "password.reset.init" do
       log = build(:audit_log, action: "password.reset.init")
 

@@ -86,6 +86,28 @@ defmodule HexpmWeb.Dashboard.AuditLogView do
     "Update user profile"
   end
 
+  def humanize_audit_log_info(log = %{action: "organization.create"}) do
+    "Create organization #{log.params["name"]}"
+  end
+
+  def humanize_audit_log_info(log = %{action: "organization.member.add"}) do
+    "Add user #{log.params["user"]["username"]} to organization #{
+      log.params["organization"]["name"]
+    }"
+  end
+
+  def humanize_audit_log_info(log = %{action: "organization.member.remove"}) do
+    "Remove user #{log.params["user"]["username"]} from organization #{
+      log.params["organization"]["name"]
+    }"
+  end
+
+  def humanize_audit_log_info(log = %{action: "organization.member.role"}) do
+    "Change user #{log.params["user"]["username"]}'s role to #{log.params["role"]} in organization #{
+      log.params["organization"]["name"]
+    }"
+  end
+
   def humanize_audit_log_info(_log = %{action: "password.reset.init"}) do
     "Request to reset password"
   end
