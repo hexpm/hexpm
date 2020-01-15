@@ -23,7 +23,7 @@
         </table>
 
         <%=
-        render HexpmWeb.LayoutView,
+        render HexpmWeb.SharedView,
                "_pagination.html",
                items: @audit_logs,
                page: @page,

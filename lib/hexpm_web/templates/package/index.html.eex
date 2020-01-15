@@ -22,11 +22,6 @@
   </div>
 <% else %>
   <%
-  shown_packages = length(@packages)
-  paginate = paginate(@page, @package_count, items_per_page: @per_page, page_links: 5)
-
-  range_start = (@page - 1) * @per_page + 1
-  range_end = range_start + shown_packages - 1
   page = if @page == 1, do: nil, else: @page
 
   sort_name_params = params(search: @search, page: page, sort: "name")
@@ -96,7 +91,7 @@
 </div>
 
 <%=
-render HexpmWeb.LayoutView,
+render HexpmWeb.SharedView,
        "_pagination.html",
        items: @packages,
        page: @page,
