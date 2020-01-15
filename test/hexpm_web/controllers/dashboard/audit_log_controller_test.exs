@@ -36,7 +36,7 @@ defmodule HexpmWeb.Dashboard.AuditLogControllerTest do
       user = insert(:user)
 
       insert(:audit_log, user: user, action: "user.create")
-      insert_list(10, :audit_log, action: "user.update", user: user)
+      insert_list(100, :audit_log, action: "user.update", user: user)
 
       response =
         build_conn()
