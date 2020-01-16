@@ -1,4 +1,4 @@
-<%= changeset_error(@changeset) %>
+<%= ViewHelpers.changeset_error(@changeset) %>
 
 <div class="row">
   <div class="col-sm-3">
@@ -12,20 +12,20 @@
         <%= form_for @changeset, Routes.dashboard_password_path(Endpoint, :update), [method: :post], fn f -> %>
           <div class="form-group">
             <%= label f, :password_current, "Current password" %>
-            <%= password_input f, :password_current %>
-            <%= error_tag f, :password_current %>
+            <%= ViewHelpers.password_input f, :password_current %>
+            <%= ViewHelpers.error_tag f, :password_current %>
           </div>
 
           <div class="form-group">
             <%= label f, :password %>
-            <%= password_input f, :password %>
-            <%= error_tag f, :password %>
+            <%= ViewHelpers.password_input f, :password %>
+            <%= ViewHelpers.error_tag f, :password %>
           </div>
 
           <div class="form-group">
             <%= label f, :password_confirmation %>
-            <%= password_input f, :password_confirmation %>
-            <%= error_tag f, :password_confirmation %>
+            <%= ViewHelpers.password_input f, :password_confirmation %>
+            <%= ViewHelpers.error_tag f, :password_confirmation %>
           </div>
 
           <button type="submit" class="btn btn-primary">Save</button>

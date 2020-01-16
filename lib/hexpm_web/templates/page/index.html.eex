@@ -111,10 +111,10 @@
       <%= icon(:octicon, :package, class: "stat-icon stat-icon-package") %>
       <span class="stat-info">
         <span class="count-info wrap">
-          <%= human_number_space(@num_packages, 5) %>
+          <%= ViewHelpers.human_number_space(@num_packages, 5) %>
         </span>
         <span class="count-info no-wrap">
-          <%= human_number_space(@num_packages) %>
+          <%= ViewHelpers.human_number_space(@num_packages) %>
         </span>
         <br> packages <br> available
       </span>
@@ -123,10 +123,10 @@
       <%= icon(:octicon, :versions, class: "stat-icon stat-icon-versions") %>
       <span class="stat-info">
         <span class="count-info wrap">
-          <%= human_number_space(@num_releases, 5) %>
+          <%= ViewHelpers.human_number_space(@num_releases, 5) %>
         </span>
         <span class="count-info no-wrap">
-          <%= human_number_space(@num_releases) %>
+          <%= ViewHelpers.human_number_space(@num_releases) %>
         </span>
         <br> package <br> versions
       </span>
@@ -135,10 +135,10 @@
       <%= icon(:octicon, :calendar, class: "stat-icon stat-icon-calendar") %>
       <span class="stat-info">
         <span class="count-info wrap">
-          <%= human_number_space(@total["day"], 5) %>
+          <%= ViewHelpers.human_number_space(@total["day"], 5) %>
         </span>
         <span class="count-info no-wrap">
-          <%= human_number_space(@total["day"]) %>
+          <%= ViewHelpers.human_number_space(@total["day"]) %>
         </span>
         <br> downloads <br> yesterday
       </span>
@@ -147,10 +147,10 @@
       <%= icon(:octicon, :calendar, class: "stat-icon stat-icon-calendar") %>
       <span class="stat-info">
         <span class="count-info wrap">
-          <%= human_number_space(@total["week"], 5) %>
+          <%= ViewHelpers.human_number_space(@total["week"], 5) %>
         </span>
         <span class="count-info no-wrap">
-          <%= human_number_space(@total["week"]) %>
+          <%= ViewHelpers.human_number_space(@total["week"]) %>
         </span>
         <br> downloads <br> last 7 days
       </span>
@@ -159,10 +159,10 @@
       <%= icon(:octicon, :calendar, class: "stat-icon stat-icon-calendar") %>
       <span class="stat-info">
         <span class="count-info wrap">
-          <%= human_number_space(@total["all"], 5) %>
+          <%= ViewHelpers.human_number_space(@total["all"], 5) %>
         </span>
         <span class="count-info no-wrap">
-          <%= human_number_space(@total["all"]) %>
+          <%= ViewHelpers.human_number_space(@total["all"]) %>
         </span>
         <br> downloads <br> all time
       </span>

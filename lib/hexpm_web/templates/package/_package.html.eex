@@ -1,12 +1,12 @@
 <li>
   <div class="downloads-info">
-    <span class="download-count"><%= human_number_space(display_downloads(@package_downloads, @view)|| 0) %></span> <br>
+    <span class="download-count"><%= ViewHelpers.human_number_space(display_downloads(@package_downloads, @view)|| 0) %></span> <br>
     <div class="downloads-count-wrapper">
       <span class="downloads-count-desc"><%= display_downloads_view_title(@view) %></span><br>
       <span class="tooltiptext"><%= display_downloads_for_opposite_views(@package_downloads, @view) %></span>
     </div>
   </div>
-  <a href="<%= path_for_package(@package) %>"><%= package_name(@package) %></a>
+  <a href="<%= ViewHelpers.path_for_package(@package) %>"><%= ViewHelpers.package_name(@package) %></a>
   <span class="version"><%= @package.latest_version %></span>
-  <p><%= text_length(@package.meta.description, 140) %></p>
+  <p><%= ViewHelpers.text_length(@package.meta.description, 140) %></p>
 </li>

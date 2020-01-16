@@ -56,8 +56,9 @@ defmodule HexpmWeb do
           select: 4
         ]
 
-      import HexpmWeb.{ViewHelpers, ViewIcons}
+      import HexpmWeb.ViewIcons
 
+      alias HexpmWeb.ViewHelpers
       alias HexpmWeb.{Endpoint, Router}
       alias HexpmWeb.Router.Helpers, as: Routes
 

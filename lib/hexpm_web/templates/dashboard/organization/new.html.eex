@@ -1,4 +1,4 @@
-<%= changeset_error(@changeset) %>
+<%= ViewHelpers.changeset_error(@changeset) %>
 
 <div class="row">
   <div class="col-sm-3">
@@ -27,10 +27,10 @@
         <%= form_for @changeset, Routes.organization_path(Endpoint, :create), fn f -> %>
           <div class="form-group">
             <%= label f, :password_current, "Organization name" %>
-            <%= text_input f, :name, [placeholder: "Only allows lowercase letters and underscore", required: true, pattern: "[a-z]\\w*", "aria-describedby": "name-helpblock"] %>
-            <%= error_tag f, :name %>
+            <%= ViewHelpers.text_input f, :name, [placeholder: "Only allows lowercase letters and underscore", required: true, pattern: "[a-z]\\w*", "aria-describedby": "name-helpblock"] %>
+            <%= ViewHelpers.error_tag f, :name %>
             <%# from User.username unique constraint %>
-            <%= error_tag f, :username %>
+            <%= ViewHelpers.error_tag f, :username %>
             <span id="name-helpbox" class="help-block">This name will be used when you declare your dependencies in <code>mix.exs</code>.</span>
           </div>
           <%= submit "Submit", class: "btn btn-primary" %>

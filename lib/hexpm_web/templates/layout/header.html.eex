@@ -55,11 +55,11 @@
             <li><a href="<%= Routes.page_path(Endpoint, :pricing) %>">Pricing</a></li>
             <li><a href="<%= Routes.docs_path(Endpoint, :index) %>">Docs</a></li>
 
-            <%= if logged_in?(assigns) do %>
+            <%= if ViewHelpers.logged_in?(assigns) do %>
               <li class="dropdown">
                 <a href="#" class="dropdown-toggle" data-toggle="dropdown">
                   <%= @current_user.username %>
-                  <img src="<%= gravatar_url(User.email(@current_user, :gravatar), :small) %>" class="navbar-avatar">
+                  <img src="<%= ViewHelpers.gravatar_url(User.email(@current_user, :gravatar), :small) %>" class="navbar-avatar">
                   <b class="caret"></b>
                 </a>
                 <ul class="dropdown-menu">

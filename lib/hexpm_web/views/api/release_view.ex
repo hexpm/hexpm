@@ -18,10 +18,10 @@ defmodule HexpmWeb.API.ReleaseView do
       inserted_at: release.inserted_at,
       updated_at: release.updated_at,
       retirement: render_one(release.retirement, RetirementView, "show.json"),
-      package_url: url_for_package(release.package),
-      url: url_for_release(release.package, release),
-      html_url: html_url_for_release(release.package, release),
-      docs_html_url: docs_html_url_for_release(release.package, release),
+      package_url: ViewHelpers.url_for_package(release.package),
+      url: ViewHelpers.url_for_release(release.package, release),
+      html_url: ViewHelpers.html_url_for_release(release.package, release),
+      docs_html_url: ViewHelpers.docs_html_url_for_release(release.package, release),
       requirements: requirements(release.requirements),
       meta: %{
         app: release.meta.app,
@@ -36,7 +36,7 @@ defmodule HexpmWeb.API.ReleaseView do
   def render("minimal", %{release: release, package: package}) do
     %{
       version: release.version,
-      url: url_for_release(package, release),
+      url: ViewHelpers.url_for_release(package, release),
       has_docs: release.has_docs,
       inserted_at: release.inserted_at
     }

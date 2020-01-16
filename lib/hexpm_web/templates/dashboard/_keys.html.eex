@@ -31,7 +31,7 @@
                     data-placement="bottom"
                     title="Last use"
                     data-content="<strong>Used at:</strong> <%= last_use.used_at %><br><strong>IP:</strong> <%= last_use.ip %><br><strong>User agent:</strong> <%= last_use.user_agent %>">
-                      <%= pretty_date(last_use.used_at) %> ...
+                      <%= ViewHelpers.pretty_date(last_use.used_at) %> ...
                   </a>
                 <% end %>
               </small>
@@ -52,14 +52,14 @@
     <%= form_for @key_changeset, @create_key_path, [method: :post], fn f -> %>
       <%= label f, :name, "Key name" %>
       <div class="form-group">
-        <%= text_input f, :name, class: "form-control", placeholder: "Name" %>
-        <%= error_tag f, :name %>
+        <%= ViewHelpers.text_input f, :name, class: "form-control", placeholder: "Name" %>
+        <%= ViewHelpers.error_tag f, :name %>
       </div>
       <%= inputs_for f, :permissions, fn f -> %>
         <%= label f, :domain, "Permission domain" %>
         <div class="form-group">
           <%=
-            select(
+            ViewHelpers.select(
               f,
               :domain,
               [
@@ -69,12 +69,12 @@
               class: "form-control"
             )
           %>
-          <%= error_tag f, :domain %>
+          <%= ViewHelpers.error_tag f, :domain %>
         </div>
         <%= label f, :domain, "Domain resource" %>
         <div class="form-group">
           <%=
-            select(
+            ViewHelpers.select(
               f,
               :resource,
               [
@@ -84,7 +84,7 @@
               class: "form-control"
             )
           %>
-          <%= error_tag f, :resource %>
+          <%= ViewHelpers.error_tag f, :resource %>
         </div>
       <% end %>
       <button type="submit" class="btn btn-primary">Generate</button>

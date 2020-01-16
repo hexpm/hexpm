@@ -1,4 +1,4 @@
-<%= changeset_error(@key_changeset) %>
+<%= ViewHelpers.changeset_error(@key_changeset) %>
 
 <div class="row">
   <div class="col-sm-3">
@@ -11,7 +11,7 @@
       <div class="panel-body">
         <div class="form-group">
           <label>Profile picture</label>
-          <img src="<%= gravatar_url(User.email(@organization.user, :gravatar), :large) %>">
+          <img src="<%= ViewHelpers.gravatar_url(User.email(@organization.user, :gravatar), :large) %>">
           <p>
             <small>
               Gravatar is used to display organization profile picture. You can update the Gravatar email below or
@@ -23,20 +23,20 @@
         <%= form_for @changeset, Routes.organization_path(Endpoint, :update_profile, @organization), [method: :post, as: :profile], fn f -> %>
           <div class="form-group">
             <%= label f, :full_name %>
-            <%= text_input f, :full_name %>
-            <%= error_tag f, :full_name %>
+            <%= ViewHelpers.text_input f, :full_name %>
+            <%= ViewHelpers.error_tag f, :full_name %>
           </div>
 
           <div class="form-group">
             <%= label f, :public_email %>
-            <%= text_input f, :public_email, placeholder: "Your organization's public email", value: @public_email %>
-            <%= error_tag f, :public_email %>
+            <%= ViewHelpers.text_input f, :public_email, placeholder: "Your organization's public email", value: @public_email %>
+            <%= ViewHelpers.error_tag f, :public_email %>
           </div>
 
           <div class="form-group">
             <%= label f, :gravatar_email %>
-            <%= text_input f, :gravatar_email, placeholder: "Your organization's gravatar email", value: @gravatar_email %>
-            <%= error_tag f, :gravatar_email %>
+            <%= ViewHelpers.text_input f, :gravatar_email, placeholder: "Your organization's gravatar email", value: @gravatar_email %>
+            <%= ViewHelpers.error_tag f, :gravatar_email %>
           </div>
 
           <%= inputs_for f, :handles, fn f -> %>
@@ -44,46 +44,46 @@
               <%= label f, :twitter %>
               <div class="input-group">
                 <div class="input-group-addon">twitter.com/</div>
-                <%= text_input f, :twitter, placeholder: "organization_twitter_id" %>
+                <%= ViewHelpers.text_input f, :twitter, placeholder: "organization_twitter_id" %>
               </div>
 
-              <%= error_tag f, :twitter %>
+              <%= ViewHelpers.error_tag f, :twitter %>
             </div>
 
             <div class="form-group">
               <%= label f, :github, "GitHub" %>
               <div class="input-group">
                 <div class="input-group-addon">github.com/</div>
-                <%= text_input f, :github, placeholder: "organization_github_id" %>
+                <%= ViewHelpers.text_input f, :github, placeholder: "organization_github_id" %>
               </div>
-              <%= error_tag f, :github %>
+              <%= ViewHelpers.error_tag f, :github %>
             </div>
 
             <div class="form-group">
               <%= label f, :elixirforum, "Elixir Forum" %>
               <div class="input-group">
                 <div class="input-group-addon">elixirforum.com/users/</div>
-                <%= text_input f, :elixirforum, placeholder: "organization_elixir_forum_id" %>
+                <%= ViewHelpers.text_input f, :elixirforum, placeholder: "organization_elixir_forum_id" %>
               </div>
-              <%= error_tag f, :elixirforum %>
+              <%= ViewHelpers.error_tag f, :elixirforum %>
             </div>
 
             <div class="form-group">
               <%= label f, :freenode %>
-              <%= text_input f, :freenode, placeholder: "Your organization's nickname on Elixir IRC channel" %>
+              <%= ViewHelpers.text_input f, :freenode, placeholder: "Your organization's nickname on Elixir IRC channel" %>
               <span class="help-block">Elixir IRC channel:
                 <a href="irc://chat.freenode.net/elixir-lang">irc://chat.freenode.net/elixir-lang</a>
               </span>
-              <%= error_tag f, :freenode %>
+              <%= ViewHelpers.error_tag f, :freenode %>
             </div>
 
             <div class="form-group">
               <%= label f, :slack %>
-              <%= text_input f, :slack, placeholder: "Your organization's nickname on Elixir Slack channel" %>
+              <%= ViewHelpers.text_input f, :slack, placeholder: "Your organization's nickname on Elixir Slack channel" %>
               <span class="help-block">Elixir Slack channel:
                 <a href="https://elixir-slackin.herokuapp.com">elixir-slackin.herokuapp.com</a>
               </span>
-              <%= error_tag f, :slack %>
+              <%= ViewHelpers.error_tag f, :slack %>
             </div>
           <% end %>
 
@@ -100,7 +100,7 @@
       <ul class="list-group clearfix">
         <%= for organization_user <- @organization.organization_users do %>
           <li class="list-group-item clearfix">
-            <img src="<%= gravatar_url(User.email(organization_user.user, :gravatar), :small) %>" class="member-avatar">
+            <img src="<%= ViewHelpers.gravatar_url(User.email(organization_user.user, :gravatar), :small) %>" class="member-avatar">
             <a class="member-username" href="<%= Routes.user_path(Endpoint, :show, organization_user.user) %>"><%= organization_user.user.username %></a>
             <div style="float: right">
               <div class="dropdown role-dropdown">
@@ -134,12 +134,12 @@
             <%= content_tag :fieldset, disabled: @billing_active? and @quantity <= length(@organization.organization_users) do %>
               <input type="hidden" name="action" value="add_member">
               <div class="form-group">
-                <%= text_input f, :username, style: "width: 250px", placeholder: "Username or email address", required: true %>
-                <%= error_tag f, :username %>
+                <%= ViewHelpers.text_input f, :username, style: "width: 250px", placeholder: "Username or email address", required: true %>
+                <%= ViewHelpers.error_tag f, :username %>
               </div>
               <div class="form-group">
-                <%= select f, :role, organization_roles_selector(), style: "width: 80px" %>
-                <%= error_tag f, :role %>
+                <%= ViewHelpers.select f, :role, organization_roles_selector(), style: "width: 80px" %>
+                <%= ViewHelpers.error_tag f, :role %>
               </div>
               <button type="submit" class="btn btn-primary">Add member</button>
             <% end %>
@@ -163,7 +163,7 @@
           <ul class="organization-package-list">
             <%= for package <- @repository.packages do %>
               <li>
-                <a href="<%= path_for_package(@repository.name, package.name) %>"><%= package.name %></a>
+                <a href="<%= ViewHelpers.path_for_package(@repository.name, package.name) %>"><%= package.name %></a>
                 <%= package.latest_version %>
               </li>
             <% end %>
