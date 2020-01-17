@@ -1,5 +1,5 @@
 <%
-version_map = Enum.map(@releases, & &1.version)
+version_map = Enum.map(@all_releases, & &1.version)
 %>
 <%= for release <- @releases do %>
   <li>
