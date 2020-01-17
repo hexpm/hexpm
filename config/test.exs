@@ -7,6 +7,7 @@ config :hexpm,
   public_key: File.read!("test/fixtures/public.pem"),
   cdn_url: "http://localhost:5000",
   docs_url: "http://localhost:5002",
+  diff_url: "http://localhost:5004",
   billing_impl: Hexpm.Billing.Mock,
   pwned_impl: Hexpm.Pwned.Mock
 

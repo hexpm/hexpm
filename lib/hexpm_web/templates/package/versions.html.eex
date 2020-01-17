@@ -1,3 +1,6 @@
+<%
+version_map = Enum.map(@releases, & &1.version)
+%>
 <%= for release <- @releases do %>
   <li>
     <a href="<%= ViewHelpers.path_for_release(@package, release) %>"><strong><%= release.version %></strong></a>
@@ -8,6 +11,9 @@
     <% else %>
       <%= if release.has_docs do %>
         <a href="<%= raw Hexpm.Utils.docs_html_url(@package.repository, @package, release) %>" title="Docs"><%= icon(:octicon, :book) %></a>
+      <% end %>
+      <%= if previous_version = Hexpm.Utils.previous_version(release.version, version_map) do %>
+        <a href="<%= raw Hexpm.Utils.diff_html_url(@package.name, release.version, previous_version) %>" title="Diff"><%= icon(:octicon, :diff) %></a>
       <% end %>
     <% end %>
   </li>

@@ -142,6 +142,12 @@
       margin-bottom: -2px;
       margin-left: 4px;
       fill: #4f28a7;
+
+      &.octicon-diff {
+        height: 14px;
+        margin-bottom: 0;
+      }
+
     }
   }
 }
