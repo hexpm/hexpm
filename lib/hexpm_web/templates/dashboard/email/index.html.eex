@@ -1,4 +1,4 @@
-<%= changeset_error(@create_changeset) %>
+<%= ViewHelpers.changeset_error(@create_changeset) %>
 
 <div class="row">
   <div class="col-sm-3">
@@ -70,8 +70,8 @@
           <%= form_for @create_changeset, Routes.email_path(Endpoint, :create), [method: :post], fn f -> %>
             <%= label f, :email, "Add email address" %>
             <div class="form-group">
-              <%= email_input f, :email, class: "form-control" %>
-              <%= error_tag f, :email %>
+              <%= ViewHelpers.email_input f, :email, class: "form-control" %>
+              <%= ViewHelpers.error_tag f, :email %>
             </div>
             <button type="submit" class="btn btn-primary">Add</button>
           <% end %>

@@ -1,18 +1,18 @@
-<%= changeset_error(@changeset) %>
+<%= ViewHelpers.changeset_error(@changeset) %>
 <h2>Choose a new password</h2>
 
 <%= form_for @changeset, Routes.password_path(Endpoint, :update), [method: :post], fn f -> %>
 
   <div class="form-group">
     <%= label f, :password %>
-    <%= password_input f, :password %>
-    <%= error_tag f, :password %>
+    <%= ViewHelpers.password_input f, :password %>
+    <%= ViewHelpers.error_tag f, :password %>
   </div>
 
   <div class="form-group">
     <%= label f, :password_confirmation %>
-    <%= password_input f, :password_confirmation %>
-    <%= error_tag f, :password_confirmation %>
+    <%= ViewHelpers.password_input f, :password_confirmation %>
+    <%= ViewHelpers.error_tag f, :password_confirmation %>
   </div>
 
   <div class="form-group">

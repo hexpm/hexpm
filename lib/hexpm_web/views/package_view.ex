@@ -28,11 +28,11 @@ defmodule HexpmWeb.PackageView do
     case view do
       :recent_downloads ->
         downloads = display_downloads(package_downloads, :all) || 0
-        "total downloads: #{human_number_space(downloads)}"
+        "total downloads: #{ViewHelpers.human_number_space(downloads)}"
 
       _ ->
         downloads = display_downloads(package_downloads, :recent_downloads) || 0
-        "recent downloads: #{human_number_space(downloads)}"
+        "recent downloads: #{ViewHelpers.human_number_space(downloads)}"
     end
   end
 

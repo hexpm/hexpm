@@ -74,8 +74,35 @@ defmodule Hexpm.Accounts.Users do
     email
   end
 
-  def update_profile(%User{organization_id: id} = user, _params, _opts) when not is_nil(id) do
-    organization_error(user, "cannot update profile of organizations")
+  def update_profile(%User{organization_id: id} = user, params, audit: audit_data)
+      when not is_nil(id) do
+    multi =
+      Multi.new()
+      |> Multi.update(:user, User.update_profile(user, params))
+      |> audit(audit_data, "user.update", fn %{user: user} -> user end)
+      |> insert_or_update_or_delete_email_multi(user, :public, params["public_email"],
+        audit: audit_data
+      )
+      |> insert_or_update_or_delete_email_multi(user, :gravatar, params["gravatar_email"],
+        audit: audit_data
+      )
+
+    case Repo.transaction(multi) do
+      {:ok, %{user: user}} ->
+        {:ok, user}
+
+      {:error, :public_email, _, _} ->
+        {:error,
+         %Ecto.Changeset{data: user, errors: [public_email: {"unknown error", []}], valid?: false}}
+
+      {:error, :gravatar_email, _, _} ->
+        {:error,
+         %Ecto.Changeset{
+           data: user,
+           errors: [gravatar_email: {"unknown error", []}],
+           valid?: false
+         }}
+    end
   end
 
   def update_profile(user, params, audit: audit_data) do
@@ -346,6 +373,52 @@ defmodule Hexpm.Accounts.Users do
         multi
         |> Multi.update(new_email_op_name, Email.toggle_flag(new_email, flag, true))
         |> audit(audit_data, "email.#{flag}", {old_email, new_email})
+    end
+  end
+
+  def insert_or_update_or_delete_email_multi(multi, _user, _flag, nil, _params) do
+    multi
+  end
+
+  def insert_or_update_or_delete_email_multi(multi, user, flag, "", audit: audit_data) do
+    user = Repo.preload(user, :organization)
+
+    if old_email = Enum.find(user.emails, &Map.get(&1, flag)) do
+      email_op = String.to_atom("#{flag}_email")
+
+      multi
+      |> Multi.delete(email_op, old_email)
+      |> audit(audit_data, "email.remove", {user.organization, old_email})
+    else
+      multi
+    end
+  end
+
+  def insert_or_update_or_delete_email_multi(multi, user, flag, email_address, audit: audit_data) do
+    email_op = String.to_atom("#{flag}_email")
+    user = Repo.preload(user, :organization)
+
+    if old_email = Enum.find(user.emails, &Map.get(&1, flag)) do
+      multi
+      |> Multi.update(email_op, Email.update_email(old_email, email_address))
+      |> audit(audit_data, "email.#{flag}", fn %{^email_op => new_email} ->
+        {user.organization, {old_email, new_email}}
+      end)
+    else
+      multi
+      |> Multi.insert(
+        email_op,
+        Email.changeset(
+          build_assoc(user, :emails),
+          :create_for_org,
+          %{:email => email_address, flag => true},
+          false
+        )
+      )
+      |> audit(audit_data, "email.add", fn %{^email_op => email} -> {user.organization, email} end)
+      |> audit(audit_data, "email.#{flag}", fn %{^email_op => email} ->
+        {user.organization, {nil, email}}
+      end)
     end
   end
 

@@ -1,6 +1,6 @@
 <li>
-  <a href="<%= path_for_release(@package, @release) %>" class="version-number"><strong><%= @release.version %></strong></a>
-  <span class="release-date"><%= pretty_date(@release.inserted_at) %></span>
+  <a href="<%= ViewHelpers.path_for_release(@package, @release) %>" class="version-number"><strong><%= @release.version %></strong></a>
+  <span class="release-date"><%= ViewHelpers.pretty_date(@release.inserted_at) %></span>
 
   <%= if @release.retirement do %>
     (<span class="version-retirement">retired</span>)

@@ -93,7 +93,7 @@ defmodule HexpmWeb.Dashboard.OrganizationView do
          %{"status" => "trialing", "trial_end" => trial_end},
          card
        ) do
-    trial_end = trial_end |> NaiveDateTime.from_iso8601!() |> pretty_date()
+    trial_end = trial_end |> NaiveDateTime.from_iso8601!() |> ViewHelpers.pretty_date()
     raw("Trial ends on #{trial_end}, #{trial_status_message(card)}")
   end
 
@@ -147,7 +147,7 @@ defmodule HexpmWeb.Dashboard.OrganizationView do
   end
 
   def payment_date(iso_8601_datetime_string) do
-    iso_8601_datetime_string |> NaiveDateTime.from_iso8601!() |> pretty_date()
+    iso_8601_datetime_string |> NaiveDateTime.from_iso8601!() |> ViewHelpers.pretty_date()
   end
 
   defp money(integer) when is_integer(integer) and integer >= 0 do

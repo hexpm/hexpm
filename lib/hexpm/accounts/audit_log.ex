@@ -125,14 +125,35 @@ defmodule Hexpm.Accounts.AuditLog do
   defp extract_params("release.unretire", {package, release}),
     do: %{package: serialize(package), release: serialize(release)}
 
+  defp extract_params("email.add", {organization, email}),
+    do: Map.merge(%{organization: serialize(organization)}, serialize(email))
+
   defp extract_params("email.add", email), do: serialize(email)
+
+  defp extract_params("email.remove", {organization, email}),
+    do: Map.merge(%{organization: serialize(organization)}, serialize(email))
+
   defp extract_params("email.remove", email), do: serialize(email)
 
   defp extract_params("email.primary", {old_email, new_email}),
     do: %{old_email: serialize(old_email), new_email: serialize(new_email)}
 
+  defp extract_params("email.public", {organization, {old_email, new_email}}),
+    do: %{
+      organization: serialize(organization),
+      old_email: serialize(old_email),
+      new_email: serialize(new_email)
+    }
+
   defp extract_params("email.public", {old_email, new_email}),
     do: %{old_email: serialize(old_email), new_email: serialize(new_email)}
+
+  defp extract_params("email.gravatar", {organization, {old_email, new_email}}),
+    do: %{
+      organization: serialize(organization),
+      old_email: serialize(old_email),
+      new_email: serialize(new_email)
+    }
 
   defp extract_params("email.gravatar", {old_email, new_email}),
     do: %{old_email: serialize(old_email), new_email: serialize(new_email)}
@@ -235,7 +256,7 @@ defmodule Hexpm.Accounts.AuditLog do
   defp fields(%Release{}), do: [:id, :version, :checksum, :has_docs, :package_id]
   defp fields(%ReleaseMetadata{}), do: [:app, :build_tools, :elixir]
   defp fields(%ReleaseRetirement{}), do: [:status, :message]
-  defp fields(%Organization{}), do: [:name, :public, :active, :billing_active]
+  defp fields(%Organization{}), do: [:id, :name, :public, :active, :billing_active]
   defp fields(%User{}), do: [:id, :username]
   defp fields(%UserHandles{}), do: [:github, :twitter, :freenode]
 

@@ -1,43 +1,43 @@
-<%= changeset_error(@changeset) %>
+<%= ViewHelpers.changeset_error(@changeset) %>
 <h2>Sign up</h2>
 
 <%= form_for @changeset, Routes.signup_path(Endpoint, :create), fn f -> %>
   <div class="form-group">
     <%= label f, :full_name %>
-    <%= text_input f, :full_name %>
-    <%= error_tag f, :full_name %>
+    <%= ViewHelpers.text_input f, :full_name %>
+    <%= ViewHelpers.error_tag f, :full_name %>
   </div>
 
   <div class="form-group">
     <%= label f, :username %>
-    <%= text_input f, :username %>
-    <%= error_tag f, :username %>
+    <%= ViewHelpers.text_input f, :username %>
+    <%= ViewHelpers.error_tag f, :username %>
   </div>
 
   <%= inputs_for f, :emails, [append: [%Email{}]], fn f -> %>
     <div class="form-group">
       <%= label f, :email %>
-      <%= email_input f, :email %>
-      <%= error_tag f, :email %>
+      <%= ViewHelpers.email_input f, :email %>
+      <%= ViewHelpers.error_tag f, :email %>
     </div>
 
     <div class="form-group">
       <%= label f, :email_confirmation %>
-      <%= email_input f, :email_confirmation %>
-      <%= error_tag f, :email_confirmation %>
+      <%= ViewHelpers.email_input f, :email_confirmation %>
+      <%= ViewHelpers.error_tag f, :email_confirmation %>
     </div>
   <% end %>
 
   <div class="form-group">
     <%= label f, :password %>
-    <%= password_input f, :password %>
-    <%= error_tag f, :password %>
+    <%= ViewHelpers.password_input f, :password %>
+    <%= ViewHelpers.error_tag f, :password %>
   </div>
 
   <div class="form-group">
     <%= label f, :password_confirmation %>
-    <%= password_input f, :password_confirmation %>
-    <%= error_tag f, :password_confirmation %>
+    <%= ViewHelpers.password_input f, :password_confirmation %>
+    <%= ViewHelpers.error_tag f, :password_confirmation %>
   </div>
 
   <p>

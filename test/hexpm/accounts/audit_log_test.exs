@@ -59,7 +59,7 @@ defmodule Hexpm.Accounts.AuditLogTest do
       assert audit.user_id == user.id
       assert audit.user_agent == "user_agent"
       assert audit.organization_id == 5
-      assert audit.params == %{billing_active: false, name: "Test"}
+      assert audit.params == %{billing_active: false, name: "Test", id: 5}
     end
 
     test "action billing.checkout", %{user: user} do

@@ -139,6 +139,7 @@ defmodule HexpmWeb.Router do
     delete "/orgs/:dashboard_org/keys", OrganizationController, :delete_key
     get "/orgs/:dashboard_org/invoices/:id", OrganizationController, :show_invoice
     post "/orgs/:dashboard_org/invoices/:id/pay", OrganizationController, :pay_invoice
+    post "/orgs/:dashboard_org/profile", OrganizationController, :update_profile
     get "/orgs", OrganizationController, :new
     post "/orgs", OrganizationController, :create
 
