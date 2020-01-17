@@ -257,16 +257,14 @@ defmodule Hexpm.Utils do
   end
 
   def previous_version(version, all_versions) do
-    all_versions
-    |> Enum.find_index(&(&1 == version))
-    |> case do
+    case Enum.find_index(all_versions, &(&1 == version)) do
       nil -> nil
       version_index -> Enum.at(all_versions, version_index + 1)
     end
   end
 
   def diff_html_url(package_name, version, previous_version) do
-    diff_url = Application.get_env(:hexpm, :diff_url)
+    diff_url = Application.fetch_env!(:hexpm, :diff_url)
     "#{diff_url}/diff/#{package_name}/#{previous_version}..#{version}"
   end
 end
