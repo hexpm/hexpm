@@ -5,6 +5,7 @@ config :hexpm,
   private_key: File.read!("test/fixtures/private.pem"),
   user_confirm: false,
   docs_url: "http://localhost:4043",
+  diff_url: "http://localhost:4004",
   cdn_url: "http://localhost:4043"
 
 config :hexpm, HexpmWeb.Endpoint,

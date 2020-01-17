@@ -4,6 +4,7 @@ config :hexpm,
   tmp_dir: Path.expand("tmp/dev"),
   private_key: File.read!("test/fixtures/private.pem"),
   docs_url: "http://localhost:4002",
+  diff_url: "http://localhost:4004",
   cdn_url: "http://localhost:4000",
   billing_url: "http://localhost:4001",
   billing_key: "hex_billing_key"
