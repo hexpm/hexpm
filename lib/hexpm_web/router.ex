@@ -146,6 +146,8 @@ defmodule HexpmWeb.Router do
     get "/keys", KeyController, :index
     delete "/keys", KeyController, :delete
     post "/keys", KeyController, :create
+
+    get "/audit_logs", AuditLogController, :index
   end
 
   scope "/", HexpmWeb do

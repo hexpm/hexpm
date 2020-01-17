@@ -262,6 +262,10 @@ defmodule Hexpm.Accounts.AuditLog do
 
   defp multi_key(action), do: :"log.#{action}"
 
+  def count_by(schema) do
+    from(l in all_by(schema), select: count(l))
+  end
+
   def all_by(%Hexpm.Repository.Package{} = package) do
     from(l in AuditLog,
       where: fragment("(? -> 'package' ->> 'id')::integer", l.params) == ^package.id

@@ -15,4 +15,12 @@ defmodule Hexpm.Accounts.AuditLogs do
     |> Hexpm.Utils.paginate(page, per_page)
     |> Repo.all()
   end
+
+  @doc """
+  Return the number of audit_logs belong to the schema (user/organization/package)
+  """
+  def count_by(schema) do
+    AuditLog.count_by(schema)
+    |> Repo.one()
+  end
 end

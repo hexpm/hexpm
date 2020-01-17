@@ -1,0 +1,43 @@
+<%
+paginate = ViewHelpers.paginate(@page, @total_count, items_per_page: @per_page, page_links: 5)
+shown_items = length(@items)
+range_start = (@page - 1) * @per_page + 1
+range_end = range_start + shown_items - 1
+%>
+
+<div class="pagination-wrapper">
+  <div class="pagination-info">
+    <%= if shown_items == 1 do %>
+      Showing last <%= @unit %> of <%= @total_count %> total
+    <% else %>
+      Showing <%= range_start %>&ndash;<%= range_end %> <%= @units %> of <%= @total_count %> total
+    <% end %>
+  </div>
+  <nav class="pagination-widget">
+    <ul class="pagination pagination-sm">
+      <%= if paginate[:prev] do %>
+        <li><a href="<%= @path_fn.(@page - 1) %>" aria-label="Previous">&laquo;</a></li>
+      <% else %>
+        <li class="disabled"><span>&laquo;</span></li>
+      <% end %>
+      <%= for page <- paginate[:page_links] do %>
+        <%= if page == @page do %>
+          <li class="active">
+            <span><%= page %></span>
+          </li>
+        <% else %>
+          <li>
+            <a href="<%= @path_fn.(page) %>">
+              <%= page %>
+            </a>
+          </li>
+        <% end %>
+      <% end %>
+      <%= if paginate[:next] do %>
+        <li><a href="<%= @path_fn.(@page + 1) %>" aria-label="Next" >&raquo;</a></li>
+      <% else %>
+        <li class="disabled"><span>&raquo;</span></li>
+      <% end %>
+    </ul>
+  </nav>
+</div>
