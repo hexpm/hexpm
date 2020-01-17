@@ -134,7 +134,7 @@ tools = Keyword.take(tools, compatible_tools)
     <h3>Versions <span class="attr-count">(<%= Enum.count(@releases) %>)</span></h3>
     <ul id="versions" class="version-dependency-list">
       <% show_latest_versions = 5 %>
-      <%= render "versions.html", [package: @package, releases: Enum.take(@releases, show_latest_versions)] %>
+      <%= render "versions.html", [package: @package, releases: Enum.take(@releases, show_latest_versions), all_releases: @releases] %>
     </ul>
 
     <%= if length(@releases) > show_latest_versions do %>
