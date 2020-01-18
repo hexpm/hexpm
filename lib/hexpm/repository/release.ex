@@ -69,7 +69,7 @@ defmodule Hexpm.Repository.Release do
     |> Requirement.build_all(package)
   end
 
-  def build(package, publisher, params, inner_checksum, outer_checksum, replace?) do
+  def build(package, publisher, params, inner_checksum, outer_checksum, replace? \\ false) do
     build_assoc(package, :releases)
     |> changeset(:create, params, package, publisher, inner_checksum, outer_checksum, replace?)
   end
