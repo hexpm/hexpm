@@ -26,7 +26,7 @@ defmodule HexpmWeb.API.ReleaseController do
     publish(conn, %{"body" => body}, true)
   end
 
-  def publish(conn, %{"body" => body}, replace \\ false) do
+  def publish(conn, %{"body" => body}, replace? \\ false) do
     request_id = List.first(get_resp_header(conn, "x-request-id"))
 
     log_tarball(
@@ -46,7 +46,7 @@ defmodule HexpmWeb.API.ReleaseController do
       conn.assigns.inner_checksum,
       conn.assigns.outer_checksum,
       audit: audit_data(conn),
-      replace: replace
+      replace: replace?
     )
     |> publish_result(conn)
   end
@@ -110,7 +110,7 @@ defmodule HexpmWeb.API.ReleaseController do
     end
   end
 
-  defp handle_tarball(conn, repository, package, user, body, replace \\ false) do
+  defp handle_tarball(conn, repository, package, user, body, replace? \\ false) do
     case release_metadata(body) do
       {:ok, meta, inner_checksum, outer_checksum} ->
         request_id = List.first(get_resp_header(conn, "x-request-id"))
@@ -125,7 +125,7 @@ defmodule HexpmWeb.API.ReleaseController do
           inner_checksum,
           outer_checksum,
           audit: audit_data(conn),
-          replace: replace
+          replace: replace?
         )
 
       {:error, errors} ->
