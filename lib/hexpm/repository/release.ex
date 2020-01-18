@@ -74,7 +74,7 @@ defmodule Hexpm.Repository.Release do
     |> changeset(:create, params, package, publisher, inner_checksum, outer_checksum, replace?)
   end
 
-  def update(release, publisher, params, inner_checksum, outer_checksum, replace?) do
+  def update(release, publisher, params, inner_checksum, outer_checksum, replace? \\ false) do
     changeset(
       release,
       :update,
