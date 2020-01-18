@@ -22,8 +22,26 @@ defmodule Hexpm.Repository.Release do
     embeds_one :retirement, ReleaseRetirement, on_replace: :delete
   end
 
-  defp changeset(release, :create, params, package, publisher, inner_checksum, outer_checksum) do
-    changeset(release, :update, params, package, publisher, inner_checksum, outer_checksum)
+  defp changeset(
+         release,
+         :create,
+         params,
+         package,
+         publisher,
+         inner_checksum,
+         outer_checksum,
+         replace?
+       ) do
+    changeset(
+      release,
+      :update,
+      params,
+      package,
+      publisher,
+      inner_checksum,
+      outer_checksum,
+      replace?
+    )
     |> unique_constraint(
       :version,
       name: "releases_package_id_version_key",
@@ -31,23 +49,32 @@ defmodule Hexpm.Repository.Release do
     )
   end
 
-  defp changeset(release, :update, params, package, publisher, inner_checksum, outer_checksum) do
+  defp changeset(
+         release,
+         :update,
+         params,
+         package,
+         publisher,
+         inner_checksum,
+         outer_checksum,
+         replace?
+       ) do
     cast(release, params, ~w(version)a)
     |> cast_embed(:meta, required: true)
     |> validate_version(:version)
-    |> validate_editable(:update, false)
+    |> validate_editable(:update, false, replace?)
     |> put_change(:inner_checksum, inner_checksum)
     |> put_change(:outer_checksum, outer_checksum)
     |> put_assoc(:publisher, publisher)
     |> Requirement.build_all(package)
   end
 
-  def build(package, publisher, params, inner_checksum, outer_checksum) do
+  def build(package, publisher, params, inner_checksum, outer_checksum, replace?) do
     build_assoc(package, :releases)
-    |> changeset(:create, params, package, publisher, inner_checksum, outer_checksum)
+    |> changeset(:create, params, package, publisher, inner_checksum, outer_checksum, replace?)
   end
 
-  def update(release, publisher, params, inner_checksum, outer_checksum) do
+  def update(release, publisher, params, inner_checksum, outer_checksum, replace?) do
     changeset(
       release,
       :update,
@@ -55,7 +82,8 @@ defmodule Hexpm.Repository.Release do
       release.package,
       publisher,
       inner_checksum,
-      outer_checksum
+      outer_checksum,
+      replace?
     )
   end
 
@@ -76,10 +104,11 @@ defmodule Hexpm.Repository.Release do
     |> put_embed(:retirement, nil)
   end
 
-  defp validate_editable(changeset, _action, true), do: changeset
+  defp validate_editable(changeset, action, force?, replace? \\ false)
+  defp validate_editable(changeset, _action, true, _replace?), do: changeset
 
-  defp validate_editable(changeset, action, false) do
-    if editable?(changeset.data) do
+  defp validate_editable(changeset, action, false, replace?) do
+    if editable?(changeset.data, replace?) do
       changeset
     else
       add_error(changeset, :inserted_at, editable_error_message(action))
@@ -92,11 +121,15 @@ defmodule Hexpm.Repository.Release do
   defp editable_error_message(:delete),
     do: "can only delete a release up to one hour after creation"
 
-  defp editable?(release) do
+  defp editable?(release, replace?) do
     is_nil(release.inserted_at) or
-      not release.package.repository.public or
+      private_repo_and_replaceable?(release, replace?) or
       within_seconds?(release.inserted_at, @one_hour) or
       within_seconds?(release.package.inserted_at, @one_day)
+  end
+
+  defp private_repo_and_replaceable?(release, replace?) do
+    not release.package.repository.public and replace?
   end
 
   defp within_seconds?(datetime, within_seconds) do

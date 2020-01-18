@@ -22,7 +22,11 @@ defmodule HexpmWeb.API.ReleaseController do
        [domain: "api", resource: "write", fun: [&package_owner/2, &organization_billing_active/2]]
        when action in [:delete]
 
-  def publish(conn, %{"body" => body}) do
+  def replace(conn, %{"body" => body}) do
+    publish(conn, %{"body" => body}, true)
+  end
+
+  def publish(conn, %{"body" => body}, replace \\ false) do
     request_id = List.first(get_resp_header(conn, "x-request-id"))
 
     log_tarball(
@@ -41,7 +45,8 @@ defmodule HexpmWeb.API.ReleaseController do
       conn.assigns.meta,
       conn.assigns.inner_checksum,
       conn.assigns.outer_checksum,
-      audit: audit_data(conn)
+      audit: audit_data(conn),
+      replace: replace
     )
     |> publish_result(conn)
   end
@@ -105,7 +110,7 @@ defmodule HexpmWeb.API.ReleaseController do
     end
   end
 
-  defp handle_tarball(conn, repository, package, user, body) do
+  defp handle_tarball(conn, repository, package, user, body, replace \\ false) do
     case release_metadata(body) do
       {:ok, meta, inner_checksum, outer_checksum} ->
         request_id = List.first(get_resp_header(conn, "x-request-id"))
@@ -119,7 +124,8 @@ defmodule HexpmWeb.API.ReleaseController do
           meta,
           inner_checksum,
           outer_checksum,
-          audit: audit_data(conn)
+          audit: audit_data(conn),
+          replace: replace
         )
 
       {:error, errors} ->
