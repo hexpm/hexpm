@@ -81,6 +81,32 @@ defmodule HexpmWeb.PackageController do
     end || not_found(conn)
   end
 
+  def audit_logs(conn, params) do
+    %{"repository" => repository, "name" => name} = params
+    organizations = Users.all_organizations(conn.assigns.current_user)
+    repositories = Map.new(organizations, &{&1.repository.name, &1.repository})
+
+    if repository = repositories[repository] do
+      package = repository && Packages.get(repository, name)
+
+      if package do
+        page = Hexpm.Utils.safe_int(params["page"]) || 1
+        audit_logs = AuditLogs.all_by(package, 1, 100)
+        total_count = AuditLogs.count_by(package)
+
+        render(conn, "audit_logs.html",
+          title: "Recent Activities for #{package.name}",
+          container: "container package-view",
+          package: package,
+          audit_logs: audit_logs,
+          page: page,
+          per_page: 100,
+          total_count: total_count
+        )
+      end
+    end || not_found(conn)
+  end
+
   defp sort(nil), do: sort("recent_downloads")
   defp sort("downloads"), do: sort("recent_downloads")
   defp sort(param), do: Hexpm.Utils.safe_to_atom(param, @sort_params)
