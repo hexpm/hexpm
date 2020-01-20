@@ -13,7 +13,9 @@ version_map = Enum.map(@all_releases, & &1.version)
         <a href="<%= raw Hexpm.Utils.docs_html_url(@package.repository, @package, release) %>" title="Docs"><%= icon(:octicon, :book) %></a>
       <% end %>
       <%= if previous_version = Hexpm.Utils.previous_version(release.version, version_map) do %>
-        <a href="<%= raw Hexpm.Utils.diff_html_url(@package.name, release.version, previous_version) %>" title="Diff"><%= icon(:octicon, :diff) %></a>
+        <%= if Application.fetch_env!(:hexpm, :diff_url) != "" do %>
+          <a href="<%= raw Hexpm.Utils.diff_html_url(@package.name, release.version, previous_version) %>" title="Diff"><%= icon(:octicon, :diff) %></a>
+        <% end %>
       <% end %>
     <% end %>
   </li>
