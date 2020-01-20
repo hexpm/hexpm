@@ -240,4 +240,8 @@ defmodule HexpmWeb.PackageView do
       "Unretire release"
     end
   end
+
+  def humanize_audit_log_info(%{action: action}) do
+    action
+  end
 end

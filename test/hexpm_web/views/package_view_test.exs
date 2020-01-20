@@ -343,5 +343,11 @@ defmodule HexpmWeb.PackageViewTest do
       assert PackageView.humanize_audit_log_info(audit_log) ==
                "Unretire release 3.7.21"
     end
+
+    test "unrecognized audit log" do
+      audit_log = build(:audit_log, action: "unknown")
+
+      assert PackageView.humanize_audit_log_info(audit_log) == "unknown"
+    end
   end
 end
