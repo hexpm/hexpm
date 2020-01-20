@@ -221,5 +221,11 @@ defmodule HexpmWeb.Dashboard.AuditLogViewTest do
 
       assert AuditLogView.humanize_audit_log_info(log) == "Update password"
     end
+
+    test "unrecognized action" do
+      log = build(:audit_log, action: "unknown")
+
+      assert AuditLogView.humanize_audit_log_info(log) == "unknown"
+    end
   end
 end

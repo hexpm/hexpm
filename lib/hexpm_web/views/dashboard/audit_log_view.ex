@@ -119,4 +119,8 @@ defmodule HexpmWeb.Dashboard.AuditLogView do
   def humanize_audit_log_info(_log = %{action: "password.update"}) do
     "Update password"
   end
+
+  def humanize_audit_log_info(%{action: action} = _log) do
+    action
+  end
 end
