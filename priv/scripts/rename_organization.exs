@@ -1,6 +1,8 @@
-[old_name, new_name] = System.argv()
+switches = [dry_run: :boolean]
+{opts, [old_name, new_name]} = OptionParser.parse!(System.argv(), strict: switches)
+dry_run? = opts[:dry_run]
 
-organization = Hexpm.Accounts.Organizations.get(old_name)
+organization = Hexpm.Accounts.Organizations.get(old_name, [:user])
 
 unless organization do
   IO.puts("No organization: #{old_name}")
@@ -12,12 +14,21 @@ IO.inspect(organization)
 answer = IO.gets("Rename? [Yn] ")
 
 if answer =~ ~r/^(Y(es)?)?$/i do
-  Hexpm.Repo.transaction(fn ->
+  user_changeset = Ecto.Changeset.change(organization.user, username: new_name)
+
+  changeset =
     organization
     |> Ecto.Changeset.change(name: new_name)
-    |> Hexpm.Repo.update!()
+    |> Ecto.Changeset.put_assoc(:user, user_changeset)
 
-    keys = Repo.all(Key)
+  Hexpm.Repo.transaction(fn ->
+    if dry_run? do
+      IO.inspect(changeset)
+    else
+      Hexpm.Repo.update!(changeset)
+    end
+
+    keys = Hexpm.Repo.all(Hexpm.Accounts.Key)
 
     Enum.each(keys, fn key ->
       yes? =
@@ -35,10 +46,16 @@ if answer =~ ~r/^(Y(es)?)?$/i do
             end
           end)
 
-        key
-        |> Ecto.Changeset.change()
-        |> Ecto.Changeset.put_embed(:permissions, permissions)
-        |> Repo.update!()
+        changeset =
+          key
+          |> Ecto.Changeset.change()
+          |> Ecto.Changeset.put_embed(:permissions, permissions)
+
+        if dry_run? do
+          IO.inspect(changeset)
+        else
+          Hexpm.Repo.update!(changeset)
+        end
 
         IO.puts("#{key.name} - #{key.id}")
       end
