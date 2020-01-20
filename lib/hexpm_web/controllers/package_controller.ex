@@ -54,6 +54,42 @@ defmodule HexpmWeb.PackageController do
     # TODO: Show flash if private package and organization does not have active billing
 
     params = fixup_params(params)
+
+    access_package(conn, params, fn package, repositories ->
+      releases = Releases.all(package)
+
+      {release, type} =
+        if version = params["version"] do
+          {matching_release(releases, version), :release}
+        else
+          {Release.latest_version(releases, only_stable: true, unstable_fallback: true), :package}
+        end
+
+      if release do
+        package(conn, repositories, package, releases, release, type)
+      end || not_found(conn)
+    end)
+  end
+
+  def audit_logs(conn, params) do
+    access_package(conn, params, fn package, _ ->
+      page = Hexpm.Utils.safe_int(params["page"]) || 1
+      audit_logs = AuditLogs.all_by(package, 1, 100)
+      total_count = AuditLogs.count_by(package)
+
+      render(conn, "audit_logs.html",
+        title: "Recent Activities for #{package.name}",
+        container: "container package-view",
+        package: package,
+        audit_logs: audit_logs,
+        page: page,
+        per_page: 100,
+        total_count: total_count
+      )
+    end)
+  end
+
+  defp access_package(conn, params, fun) do
     %{"repository" => repository, "name" => name} = params
     organizations = Users.all_organizations(conn.assigns.current_user)
     repositories = Map.new(organizations, &{&1.repository.name, &1.repository})
@@ -63,46 +99,7 @@ defmodule HexpmWeb.PackageController do
 
       # Should have access even though organization does not have active billing
       if package do
-        releases = Releases.all(package)
-
-        {release, type} =
-          if version = params["version"] do
-            {matching_release(releases, version), :release}
-          else
-            {Release.latest_version(releases, only_stable: true, unstable_fallback: true),
-             :package}
-          end
-
-        if release do
-          repositories = Enum.map(organizations, & &1.repository)
-          package(conn, repositories, package, releases, release, type)
-        end
-      end
-    end || not_found(conn)
-  end
-
-  def audit_logs(conn, params) do
-    %{"repository" => repository, "name" => name} = params
-    organizations = Users.all_organizations(conn.assigns.current_user)
-    repositories = Map.new(organizations, &{&1.repository.name, &1.repository})
-
-    if repository = repositories[repository] do
-      package = repository && Packages.get(repository, name)
-
-      if package do
-        page = Hexpm.Utils.safe_int(params["page"]) || 1
-        audit_logs = AuditLogs.all_by(package, 1, 100)
-        total_count = AuditLogs.count_by(package)
-
-        render(conn, "audit_logs.html",
-          title: "Recent Activities for #{package.name}",
-          container: "container package-view",
-          package: package,
-          audit_logs: audit_logs,
-          page: page,
-          per_page: 100,
-          total_count: total_count
-        )
+        fun.(package, Enum.map(organizations, & &1.repository))
       end
     end || not_found(conn)
   end
