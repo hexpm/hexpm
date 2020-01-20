@@ -1,6 +1,5 @@
-<h2 class="package-title">
-  <%= ViewHelpers.package_name(@package) %>
-  <span class="version">Recent Activities</span>
+<h2 class="audit-log-title">
+  Recent Activities of <%= link ViewHelpers.package_name(@package), to: ViewHelpers.path_for_package(@package), class: "audit-log-package-title" %>
 </h2>
 
 <div class="col-md-12 no-padding">
