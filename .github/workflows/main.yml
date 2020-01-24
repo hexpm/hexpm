@@ -1,0 +1,101 @@
+name: CI
+
+on: [push, pull_request]
+
+jobs:
+  format:
+    name: Format
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v1
+
+      - name: Install OTP and Elixir
+        uses: actions/setup-elixir@v1
+        with:
+          otp-version: 22.2
+          elixir-version: 1.9.4
+
+      - name: Install dependencies
+        run: mix deps.get
+
+      - name: Check mix format
+        run: mix format --check-formatted
+
+  test-hexpm:
+    name: Test Hexpm
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:9.6
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: --health-cmd pg_isready --health-interval 10s --health-timeout 5s --health-retries 5
+
+    steps:
+      - uses: actions/checkout@v1
+
+      - name: Install OTP and Elixir
+        uses: actions/setup-elixir@v1
+        with:
+          otp-version: 22.2
+          elixir-version: 1.9.4
+
+      - name: Install dependencies
+        run: |
+          mix deps.get
+          mix deps.compile
+
+      - name: Run tests
+        run: |
+          mix test
+          mix ecto.setup
+
+  test-hex:
+    name: Test Hex
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:9.6
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: --health-cmd pg_isready --health-interval 10s --health-timeout 5s --health-retries 5
+
+    strategy:
+      fail-fast: false
+      matrix:
+        hex-version: [master, v0.20, v0.19, v0.18]
+
+    env:
+      HEXPM_PATH: ..
+
+    steps:
+      - uses: actions/checkout@v1
+
+      - name: Install OTP and Elixir
+        uses: actions/setup-elixir@v1
+        with:
+          otp-version: 22.2
+          elixir-version: 1.9.4
+
+      - name: Install hexpm dependencies
+        run: |
+          mix deps.get
+          mix deps.compile
+
+      - name: Clone hex and install dependencies
+        run: |
+          git clone https://github.com/hexpm/hex hex -b ${{ matrix.hex-version }} --depth 1
+          cd hex && mix deps.get && mix deps.compile && cd ..
+
+      - name: Run tests
+        run: cd hex && mix test --include integration && cd ..
