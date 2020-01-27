@@ -225,7 +225,7 @@ defmodule HexpmWeb.Dashboard.AuditLogViewTest do
     test "unrecognized action" do
       log = build(:audit_log, action: "unknown")
 
-      assert AuditLogView.humanize_audit_log_info(log) == "unknown"
+      assert AuditLogView.humanize_audit_log_info(log) == ""
     end
   end
 end

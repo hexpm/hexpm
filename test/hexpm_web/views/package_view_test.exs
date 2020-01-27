@@ -347,7 +347,7 @@ defmodule HexpmWeb.PackageViewTest do
     test "unrecognized audit log" do
       audit_log = build(:audit_log, action: "unknown")
 
-      assert PackageView.humanize_audit_log_info(audit_log) == "unknown"
+      assert PackageView.humanize_audit_log_info(audit_log) == ""
     end
   end
 end

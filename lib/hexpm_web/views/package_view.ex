@@ -241,7 +241,7 @@ defmodule HexpmWeb.PackageView do
     end
   end
 
-  def humanize_audit_log_info(%{action: action}) do
-    action
+  def humanize_audit_log_info(_log) do
+    ""
   end
 end
