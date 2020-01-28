@@ -132,6 +132,6 @@ defmodule HexpmWeb.Dashboard.AuditLogView do
     "Manually pay invoice for organization #{params["organization"]["name"]}"
   end
 
-  defp plan_id("organization-monthly"), do: "montly"
+  defp plan_id("organization-monthly"), do: "monthly"
   defp plan_id("organization-annually"), do: "annually"
 end
