@@ -6,117 +6,132 @@ defmodule HexpmWeb.Dashboard.AuditLogView do
   @doc """
   Translate an audit_log to user readable descriptions
   """
-  def humanize_audit_log_info(log = %{action: "docs.publish"}) do
-    "Publish documentation for #{log.params["package"]["name"]} (#{
-      log.params["release"]["version"]
-    })"
+  def humanize_audit_log_info(%AuditLog{action: "docs.publish", params: params}) do
+    "Publish documentation for #{params["package"]["name"]} (#{params["release"]["version"]})"
   end
 
-  def humanize_audit_log_info(log = %{action: "docs.revert"}) do
-    "Revert documentation for #{log.params["package"]["name"]} (#{
-      log.params["release"]["version"]
-    })"
+  def humanize_audit_log_info(%AuditLog{action: "docs.revert", params: params}) do
+    "Revert documentation for #{params["package"]["name"]} (#{params["release"]["version"]})"
   end
 
-  def humanize_audit_log_info(log = %{action: "key.generate"}) do
-    "Generate key #{log.params["name"]}"
+  def humanize_audit_log_info(%AuditLog{action: "key.generate", params: params}) do
+    "Generate key #{params["name"]}"
   end
 
-  def humanize_audit_log_info(log = %{action: "key.remove"}) do
-    "Remove key #{log.params["name"]}"
+  def humanize_audit_log_info(%AuditLog{action: "key.remove", params: params}) do
+    "Remove key #{params["name"]}"
   end
 
-  def humanize_audit_log_info(log = %{action: "owner.add"}) do
-    "Add #{log.params["user"]["username"]} as a new owner of package #{
-      log.params["package"]["name"]
-    }"
+  def humanize_audit_log_info(%AuditLog{action: "owner.add", params: params}) do
+    "Add #{params["user"]["username"]} as a new owner of package #{params["package"]["name"]}"
   end
 
-  def humanize_audit_log_info(log = %{action: "owner.transfer"}) do
-    "Transfer package #{log.params["package"]["name"]} to #{log.params["user"]["username"]}"
+  def humanize_audit_log_info(%AuditLog{action: "owner.transfer", params: params}) do
+    "Transfer package #{params["package"]["name"]} to #{params["user"]["username"]}"
   end
 
-  def humanize_audit_log_info(log = %{action: "owner.remove"}) do
-    "Remove #{log.params["user"]["username"]} from owners of package #{
-      log.params["package"]["name"]
-    }"
+  def humanize_audit_log_info(%AuditLog{action: "owner.remove", params: params}) do
+    "Remove #{params["user"]["username"]} from owners of package #{params["package"]["name"]}"
   end
 
-  def humanize_audit_log_info(log = %{action: "release.publish"}) do
-    "Publish package #{log.params["package"]["name"]} (#{log.params["release"]["version"]})"
+  def humanize_audit_log_info(%AuditLog{action: "release.publish", params: params}) do
+    "Publish package #{params["package"]["name"]} (#{params["release"]["version"]})"
   end
 
-  def humanize_audit_log_info(log = %{action: "release.revert"}) do
-    "Revert package #{log.params["package"]["name"]} (#{log.params["release"]["version"]})"
+  def humanize_audit_log_info(%AuditLog{action: "release.revert", params: params}) do
+    "Revert package #{params["package"]["name"]} (#{params["release"]["version"]})"
   end
 
-  def humanize_audit_log_info(log = %{action: "release.retire"}) do
-    "Retire package #{log.params["package"]["name"]} (#{log.params["release"]["version"]})"
+  def humanize_audit_log_info(%AuditLog{action: "release.retire", params: params}) do
+    "Retire package #{params["package"]["name"]} (#{params["release"]["version"]})"
   end
 
-  def humanize_audit_log_info(log = %{action: "release.unretire"}) do
-    "Unretire package #{log.params["package"]["name"]} (#{log.params["release"]["version"]})"
+  def humanize_audit_log_info(%AuditLog{action: "release.unretire", params: params}) do
+    "Unretire package #{params["package"]["name"]} (#{params["release"]["version"]})"
   end
 
-  def humanize_audit_log_info(log = %{action: "email.add"}) do
-    "Add email #{log.params["email"]}"
+  def humanize_audit_log_info(%AuditLog{action: "email.add", params: params}) do
+    "Add email #{params["email"]}"
   end
 
-  def humanize_audit_log_info(log = %{action: "email.remove"}) do
-    "Remove email #{log.params["email"]}"
+  def humanize_audit_log_info(%AuditLog{action: "email.remove", params: params}) do
+    "Remove email #{params["email"]}"
   end
 
-  def humanize_audit_log_info(log = %{action: "email.primary"}) do
-    "Set email #{log.params["email"]} as primary email"
+  def humanize_audit_log_info(%AuditLog{action: "email.primary", params: params}) do
+    "Set email #{params["email"]} as primary email"
   end
 
-  def humanize_audit_log_info(log = %{action: "email.public"}) do
-    "Set email #{log.params["email"]} as public email"
+  def humanize_audit_log_info(%AuditLog{action: "email.public", params: params}) do
+    "Set email #{params["email"]} as public email"
   end
 
-  def humanize_audit_log_info(log = %{action: "email.gravatar"}) do
-    "Set email #{log.params["email"]} as gravatar email"
+  def humanize_audit_log_info(%AuditLog{action: "email.gravatar", params: params}) do
+    "Set email #{params["email"]} as gravatar email"
   end
 
-  def humanize_audit_log_info(_log = %{action: "user.create"}) do
+  def humanize_audit_log_info(%AuditLog{action: "user.create"}) do
     "Create user account"
   end
 
-  def humanize_audit_log_info(_log = %{action: "user.update"}) do
+  def humanize_audit_log_info(%AuditLog{action: "user.update"}) do
     "Update user profile"
   end
 
-  def humanize_audit_log_info(log = %{action: "organization.create"}) do
-    "Create organization #{log.params["name"]}"
+  def humanize_audit_log_info(%AuditLog{action: "organization.create", params: params}) do
+    "Create organization #{params["name"]}"
   end
 
-  def humanize_audit_log_info(log = %{action: "organization.member.add"}) do
-    "Add user #{log.params["user"]["username"]} to organization #{
-      log.params["organization"]["name"]
-    }"
+  def humanize_audit_log_info(%AuditLog{action: "organization.member.add", params: params}) do
+    "Add user #{params["user"]["username"]} to organization #{params["organization"]["name"]}"
   end
 
-  def humanize_audit_log_info(log = %{action: "organization.member.remove"}) do
-    "Remove user #{log.params["user"]["username"]} from organization #{
-      log.params["organization"]["name"]
-    }"
+  def humanize_audit_log_info(%AuditLog{action: "organization.member.remove", params: params}) do
+    "Remove user #{params["user"]["username"]} from organization #{params["organization"]["name"]}"
   end
 
-  def humanize_audit_log_info(log = %{action: "organization.member.role"}) do
-    "Change user #{log.params["user"]["username"]}'s role to #{log.params["role"]} in organization #{
-      log.params["organization"]["name"]
-    }"
+  def humanize_audit_log_info(%AuditLog{action: "organization.member.role", params: params}) do
+    "Change user #{params["user"]["username"]}'s role to #{params["role"]} " <>
+      "in organization #{params["organization"]["name"]}"
   end
 
-  def humanize_audit_log_info(_log = %{action: "password.reset.init"}) do
+  def humanize_audit_log_info(%AuditLog{action: "password.reset.init"}) do
     "Request to reset password"
   end
 
-  def humanize_audit_log_info(_log = %{action: "password.reset.finish"}) do
+  def humanize_audit_log_info(%AuditLog{action: "password.reset.finish"}) do
     "Reset password successfully"
   end
 
-  def humanize_audit_log_info(_log = %{action: "password.update"}) do
+  def humanize_audit_log_info(%AuditLog{action: "password.update"}) do
     "Update password"
   end
+
+  def humanize_audit_log_info(%AuditLog{action: "billing.checkout", params: params}) do
+    "Update payment method for organization #{params["organization"]["name"]}"
+  end
+
+  def humanize_audit_log_info(%AuditLog{action: "billing.cancel", params: params}) do
+    "Cancel billing on organization #{params["organization"]["name"]}"
+  end
+
+  def humanize_audit_log_info(%AuditLog{action: "billing.create", params: params}) do
+    "Add billing information to organization #{params["organization"]["name"]}"
+  end
+
+  def humanize_audit_log_info(%AuditLog{action: "billing.update", params: params}) do
+    "Update billing information for organization #{params["organization"]["name"]}"
+  end
+
+  def humanize_audit_log_info(%AuditLog{action: "billing.change_plan", params: params}) do
+    "Change billing plan on organization #{params["organization"]["name"]} to " <>
+      "#{plan_id(params["plan_id"])}"
+  end
+
+  def humanize_audit_log_info(%AuditLog{action: "billing.pay_invoice", params: params}) do
+    "Manually pay invoice for organization #{params["organization"]["name"]}"
+  end
+
+  defp plan_id("organization-monthly"), do: "montly"
+  defp plan_id("organization-annually"), do: "annually"
 end
