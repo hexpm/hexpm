@@ -1,0 +1,44 @@
+<div class="form-group">
+  <label for="billing_email">Billing email</label>
+  <input type="text" id="billing_email" name="email" class="form-control" required value="<%= @params["email"] || @billing_email %>" list="billing-emails">
+  <datalist id="billing-emails">
+    <%= for email <- default_billing_emails(@current_user, @billing_email) do %>
+      <option value="<%= email %>">
+    <% end %>
+  </datalist>
+</div>
+<div class="form-group">
+  <label for="company_name">Company name (optional)</label>
+  <input id="company_name" name="billing[company_name]" class="form-control" type="text" value="<%= (@params["billing"]["company_name"] || @billing["company_name"]) %>">
+</div>
+<div class="form-group <%= if @errors["billing"]["vat"] do %>has-error<% end %>">
+  <label for="billing_vat">VAT number (optional)</label>
+  <input id="billing_vat" name="[vat]" class="form-control" type="text" placeholder="Only applicable to EU companies" value="<%= (@params["billing"]["vat"] || @billing["vat"]) %>">
+  <%= if @errors["billing"]["vat"] do %>
+    <span class="help-block"><%= @errors["billing"]["vat"] %></span>
+  <% end %>
+</div>
+<div class="form-group">
+  <label for="billing_address_street">Address</label>
+  <input id="billing_address_street" name="billing[address_street]" class="form-control" type="text" value="<%= (@params["billing"]["address_street"] || @billing["address_street"]) %>" required>
+</div>
+<div class="form-group">
+  <label for="billing_address_zip">Zip code</label>
+  <input id="billing_address_zip" name="billing[address_zip]" class="form-control" type="text" value="<%= (@params["billing"]["address_zip"] || @billing["address_zip"]) %>" required>
+</div>
+<div class="form-group">
+  <label for="billing_address_city">City</label>
+  <input id="billing_address_city" name="billing[address_city]" class="form-control" type="text" value="<%= (@params["billing"]["address_city"] || @billing["address_city"]) %>" required>
+</div>
+<div class="form-group">
+  <label for="billing_address_state">State (optional)</label>
+  <input id="billing_address_state" name="billing[address_state]" class="form-control" type="text" value="<%= (@params["billing"]["address_state"] || @billing["address_state"]) %>">
+</div>
+<div class="form-group">
+  <label for="billing_address_country">Country</label>
+  <select id="billing_address_country" name="billing[address_country]" class="form-control" required>
+    <%= for {code, country} <- countries() do %>
+      <option value="<%= code %>" <%= if code ==  (@params["billing"]["address_country"] || @billing["address_country"]) do %>selected<% end %>><%= country %></option>
+    <% end %>
+  </select>
+</div>

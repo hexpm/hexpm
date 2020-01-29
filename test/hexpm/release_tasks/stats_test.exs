@@ -33,10 +33,6 @@ defmodule Hexpm.ReleaseTasks.StatsTest do
     package2: package2,
     package4: package4
   } do
-    buckets = [[nil, nil]]
-    region = nil
-    bucket = nil
-
     logfile1 =
       read_log(
         "fastly_logs_1.txt",
@@ -58,22 +54,20 @@ defmodule Hexpm.ReleaseTasks.StatsTest do
       |> :zlib.gzip()
 
     Store.put(
-      region,
-      bucket,
+      :logs_bucket,
       "fastly_hex/2013-11-01T14:00:00.000-tzletcEGGiI7atIAAAAA.log.gz",
       logfile1,
       []
     )
 
     Store.put(
-      region,
-      bucket,
+      :logs_bucket,
       "fastly_hex/2013-11-01T15:00:00.000-tzletcEGGiI7atIAAAAA.log.gz",
       logfile2,
       []
     )
 
-    Stats.run(~D[2013-11-01], buckets)
+    Stats.run(~D[2013-11-01])
 
     rel1 = Repo.get_by!(assoc(package1, :releases), version: "0.0.1")
     rel2 = Repo.get_by!(assoc(package1, :releases), version: "0.0.2")

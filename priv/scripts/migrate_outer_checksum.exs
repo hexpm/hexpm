@@ -18,7 +18,7 @@ Task.async_stream(
         "repos/#{release.package.repository.name}/#{key}"
       end
 
-    object = Hexpm.Store.S3.get(nil, :s3_bucket, key, [])
+    object = Hexpm.Store.S3.get(:repo_bucket, key, [])
     checksum = :crypto.hash(:sha256, object)
 
     release

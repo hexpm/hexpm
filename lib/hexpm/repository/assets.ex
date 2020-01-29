@@ -10,13 +10,13 @@ defmodule Hexpm.Repository.Assets do
     cache_control = tarball_cache_control(release.package.repository)
     opts = [cache_control: cache_control, meta: meta]
 
-    Hexpm.Store.put(nil, :s3_bucket, tarball_store_key(release), body, opts)
+    Hexpm.Store.put(:repo_bucket, tarball_store_key(release), body, opts)
     Hexpm.CDN.purge_key(:fastly_hexrepo, tarball_cdn_key(release))
   end
 
   def revert_release(release) do
     Hexpm.CDN.purge_key(:fastly_hexrepo, tarball_cdn_key(release))
-    Hexpm.Store.delete(nil, :s3_bucket, tarball_store_key(release))
+    Hexpm.Store.delete(:repo_bucket, tarball_store_key(release))
     revert_docs(release)
   end
 
@@ -29,13 +29,13 @@ defmodule Hexpm.Repository.Assets do
     cache_control = docs_cache_control(release.package.repository)
     opts = [cache_control: cache_control, meta: meta]
 
-    Hexpm.Store.put(nil, :s3_bucket, docs_store_key(release), body, opts)
+    Hexpm.Store.put(:repo_bucket, docs_store_key(release), body, opts)
     Hexpm.CDN.purge_key(:fastly_hexrepo, docs_cdn_key(release))
   end
 
   def revert_docs(release) do
     if release.has_docs do
-      Hexpm.Store.delete(nil, :s3_bucket, docs_store_key(release))
+      Hexpm.Store.delete(:repo_bucket, docs_store_key(release))
       Hexpm.CDN.purge_key(:fastly_hexrepo, docs_cdn_key(release))
     end
   end

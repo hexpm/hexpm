@@ -34,15 +34,10 @@ defmodule Hexpm.ReleaseTasks.Stats do
   @ets __MODULE__
 
   def run() do
-    buckets =
-      Application.get_env(:hexpm, :logs_buckets)
-      |> String.split(";")
-      |> Enum.map(&String.split(&1, ","))
-
     try do
       {time, size} =
         :timer.tc(fn ->
-          run(Utils.utc_yesterday(), buckets)
+          run(Utils.utc_yesterday())
         end)
 
       Logger.info("[stats] completed #{size} downloads (#{div(time, 1000)}ms)")
@@ -55,14 +50,11 @@ defmodule Hexpm.ReleaseTasks.Stats do
   end
 
   @doc false
-  def run(date, buckets, dryrun? \\ false) do
-    fastly_prefix = "fastly_hex/#{date}"
-    formats = [{fastly_prefix, @fastly_regex}]
-
+  def run(date, dryrun? \\ false) do
     :ets.new(@ets, [:named_table, :public])
 
     try do
-      process_buckets(buckets, formats)
+      process_buckets(date)
       repositories = repositories()
       packages = packages()
       releases = releases()
@@ -116,23 +108,18 @@ defmodule Hexpm.ReleaseTasks.Stats do
     Stream.resource(start_fun, next_fun, after_fun)
   end
 
-  defp process_buckets(buckets, formats) do
-    jobs =
-      for b <- buckets,
-          f <- formats,
-          do: {b, f}
-
-    Enum.each(jobs, fn {[bucket, region], {prefix, regex}} ->
-      keys = Store.list(region, bucket, prefix) |> Enum.to_list()
-      process_keys(region, bucket, regex, keys)
-    end)
+  defp process_buckets(date) do
+    bucket = Application.get_env(:hexpm, :logs_bucket)
+    prefix = "fastly_hex/#{date}"
+    keys = Store.list(bucket, prefix) |> Enum.to_list()
+    process_keys(bucket, @fastly_regex, keys)
   end
 
-  defp process_keys(region, bucket, regex, keys) do
+  defp process_keys(bucket, regex, keys) do
     Task.async_stream(
       keys,
       fn key ->
-        Store.get(region, bucket, key, [])
+        Store.get(bucket, key, [])
         |> maybe_unzip(key)
         |> process_file(regex)
       end,

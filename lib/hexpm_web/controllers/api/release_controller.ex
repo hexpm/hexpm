@@ -167,7 +167,7 @@ defmodule HexpmWeb.API.ReleaseController do
   defp log_tarball(repository, package, version, request_id, body) do
     filename = "#{repository}-#{package}-#{version}-#{request_id}.tar.gz"
     key = Path.join(["debug", "tarballs", filename])
-    Hexpm.Store.put(nil, :s3_bucket, key, body, [])
+    Hexpm.Store.put(:repo_bucket, key, body, [])
   end
 
   defp release_metadata(tarball) do

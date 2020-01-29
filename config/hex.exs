@@ -22,3 +22,5 @@ config :hexpm, Hexpm.RepoBase,
 config :hexpm, Hexpm.Emails.Mailer, adapter: Bamboo.LocalAdapter
 
 config :logger, level: :error
+
+config :goth, config: %{"project_id" => "hexpm"}

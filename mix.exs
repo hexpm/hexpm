@@ -43,6 +43,7 @@ defmodule Hexpm.MixProject do
       {:ex_aws_ses, "~> 2.0"},
       {:ex_aws, "~> 2.0"},
       {:ex_machina, "~> 2.0"},
+      {:goth, "~> 1.2"},
       {:hackney, "~> 1.7"},
       {:hex_core, "~> 0.2", hex_core_opts()},
       {:jason, "~> 1.0"},

@@ -2,9 +2,9 @@ defmodule HexpmWeb.TestController do
   use HexpmWeb, :controller
 
   def registry(conn, _params) do
-    registry = Hexpm.Store.get(nil, :s3_bucket, "registry.ets.gz", [])
+    registry = Hexpm.Store.get(:repo_bucket, "registry.ets.gz", [])
 
-    if signature = Hexpm.Store.get(nil, :s3_bucket, "registry.ets.gz.signed", []) do
+    if signature = Hexpm.Store.get(:repo_bucket, "registry.ets.gz.signed", []) do
       conn
       |> put_resp_header("x-hex-signature", signature)
       |> send_resp(200, registry)
@@ -14,37 +14,37 @@ defmodule HexpmWeb.TestController do
   end
 
   def registry_signed(conn, _params) do
-    Hexpm.Store.get(nil, :s3_bucket, "registry.ets.gz.signed", [])
+    Hexpm.Store.get(:repo_bucket, "registry.ets.gz.signed", [])
     |> send_object(conn)
   end
 
   def names(conn, _params) do
-    Hexpm.Store.get(nil, :s3_bucket, "names", [])
+    Hexpm.Store.get(:repo_bucket, "names", [])
     |> send_object(conn)
   end
 
   def versions(conn, _params) do
-    Hexpm.Store.get(nil, :s3_bucket, "versions", [])
+    Hexpm.Store.get(:repo_bucket, "versions", [])
     |> send_object(conn)
   end
 
   def package(conn, %{"repository" => repository, "package" => package}) do
-    Hexpm.Store.get(nil, :s3_bucket, "repos/#{repository}/packages/#{package}", [])
+    Hexpm.Store.get(:repo_bucket, "repos/#{repository}/packages/#{package}", [])
     |> send_object(conn)
   end
 
   def package(conn, %{"package" => package}) do
-    Hexpm.Store.get(nil, :s3_bucket, "packages/#{package}", [])
+    Hexpm.Store.get(:repo_bucket, "packages/#{package}", [])
     |> send_object(conn)
   end
 
   def tarball(conn, %{"repository" => repository, "ball" => ball}) do
-    Hexpm.Store.get(nil, :s3_bucket, "repos/#{repository}/tarballs/#{ball}", [])
+    Hexpm.Store.get(:repo_bucket, "repos/#{repository}/tarballs/#{ball}", [])
     |> send_object(conn)
   end
 
   def tarball(conn, %{"ball" => ball}) do
-    Hexpm.Store.get(nil, :s3_bucket, "tarballs/#{ball}", [])
+    Hexpm.Store.get(:repo_bucket, "tarballs/#{ball}", [])
     |> send_object(conn)
   end
 
