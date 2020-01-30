@@ -69,7 +69,7 @@ defmodule HexpmWeb.API.DocsControllerTest do
       |> response(201)
 
       assert Hexpm.Repo.get_by!(assoc(package, :releases), version: "0.0.1").has_docs
-      assert Hexpm.Store.get(nil, :s3_bucket, "docs/#{package.name}-0.0.1.tar.gz", [])
+      assert Hexpm.Store.get(:repo_bucket, "docs/#{package.name}-0.0.1.tar.gz", [])
 
       log = Hexpm.Repo.one!(AuditLog)
       assert log.user_id == user.id
@@ -147,7 +147,7 @@ defmodule HexpmWeb.API.DocsControllerTest do
       assert Hexpm.Repo.get_by!(assoc(package, :releases), version: "0.0.1").has_docs
 
       tar_key = "repos/#{repository.name}/docs/#{package.name}-0.0.1.tar.gz"
-      assert Hexpm.Store.get(nil, :s3_bucket, tar_key, [])
+      assert Hexpm.Store.get(:repo_bucket, tar_key, [])
     end
   end
 
@@ -166,7 +166,7 @@ defmodule HexpmWeb.API.DocsControllerTest do
 
       # Check release was deleted
       refute Hexpm.Repo.get_by(assoc(package, :releases), version: "0.0.1")
-      refute Hexpm.Store.get(nil, :s3_bucket, "docs/#{package.name}-0.0.1.tar.gz", [])
+      refute Hexpm.Store.get(:repo_bucket, "docs/#{package.name}-0.0.1.tar.gz", [])
 
       # Check docs were deleted
       assert get(build_conn(), "api/packages/#{package.name}/releases/0.0.1/docs").status in 400..499
@@ -185,7 +185,7 @@ defmodule HexpmWeb.API.DocsControllerTest do
 
       # Check docs were deleted
       refute Hexpm.Repo.get_by(assoc(package, :releases), version: "0.0.1").has_docs
-      refute Hexpm.Store.get(nil, :s3_bucket, "docs/#{package.name}-0.0.1.tar.gz", [])
+      refute Hexpm.Store.get(:repo_bucket, "docs/#{package.name}-0.0.1.tar.gz", [])
 
       [%{action: "docs.publish"}, log] = Hexpm.Repo.all(from(al in AuditLog, order_by: al.id))
 
@@ -223,7 +223,7 @@ defmodule HexpmWeb.API.DocsControllerTest do
       assert Hexpm.Repo.get_by(assoc(package, :releases), version: "0.0.1").has_docs
 
       tar_key = "repos/#{repository.name}/docs/#{package.name}-0.0.1.tar.gz"
-      assert Hexpm.Store.get(nil, :s3_bucket, tar_key, [])
+      assert Hexpm.Store.get(:repo_bucket, tar_key, [])
     end
 
     test "delete docs", %{user: user} do
@@ -248,7 +248,7 @@ defmodule HexpmWeb.API.DocsControllerTest do
       refute Hexpm.Repo.get_by(assoc(package, :releases), version: "0.0.1").has_docs
 
       tar_key = "repos/#{repository.name}/docs/#{package.name}-0.0.1.tar.gz"
-      refute Hexpm.Store.get(nil, :s3_bucket, tar_key, [])
+      refute Hexpm.Store.get(:repo_bucket, tar_key, [])
     end
   end
 

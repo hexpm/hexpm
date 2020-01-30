@@ -99,10 +99,10 @@ defmodule Hexpm.Repository.RegistryBuilder do
         |> Enum.sort()
 
       old_keys =
-        Hexpm.Store.list(nil, :s3_bucket, repository_store_key(repository, "packages/"))
+        Hexpm.Store.list(:repo_bucket, repository_store_key(repository, "packages/"))
         |> Enum.sort()
 
-      Hexpm.Store.delete_many(nil, :s3_bucket, old_keys -- new_keys)
+      Hexpm.Store.delete_many(:repo_bucket, old_keys -- new_keys)
 
       Hexpm.CDN.purge_key(:fastly_hexrepo, [
         "registry",
@@ -183,8 +183,7 @@ defmodule Hexpm.Repository.RegistryBuilder do
       repository = package.repository
 
       Hexpm.Store.delete(
-        nil,
-        :s3_bucket,
+        :repo_bucket,
         repository_store_key(repository, "packages/#{package.name}")
       )
 
@@ -363,7 +362,7 @@ defmodule Hexpm.Repository.RegistryBuilder do
     Task.async_stream(
       objects,
       fn {key, data, opts} ->
-        Hexpm.Store.put(nil, :s3_bucket, key, data, opts)
+        Hexpm.Store.put(:repo_bucket, key, data, opts)
       end,
       max_concurrency: 10,
       timeout: 60_000

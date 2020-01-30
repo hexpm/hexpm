@@ -29,7 +29,7 @@ defmodule Hexpm.Organization.RegistryBuilderTest do
   defp open_table(repo \\ nil) do
     path = if repo, do: "repos/#{repo}/registry.ets.gz", else: "registry.ets.gz"
 
-    if contents = Hexpm.Store.get(nil, :s3_bucket, path, []) do
+    if contents = Hexpm.Store.get(:repo_bucket, path, []) do
       contents = :zlib.gunzip(contents)
       path = Path.join(Application.get_env(:hexpm, :tmp_dir), "registry_builder_test.ets")
       File.write!(path, contents)
@@ -41,7 +41,7 @@ defmodule Hexpm.Organization.RegistryBuilderTest do
   defp v2_map(path, args) when is_list(args) do
     nonrepo_path = Regex.replace(~r"^repos/\w+/", path, "")
 
-    if contents = Hexpm.Store.get(nil, :s3_bucket, path, []) do
+    if contents = Hexpm.Store.get(:repo_bucket, path, []) do
       public_key = Application.fetch_env!(:hexpm, :public_key)
       {:ok, payload} = :hex_registry.decode_and_verify_signed(:zlib.gunzip(contents), public_key)
       fun = path_to_decoder(nonrepo_path)
@@ -83,8 +83,8 @@ defmodule Hexpm.Organization.RegistryBuilderTest do
     test "ets registry is uploaded alongside signature" do
       RegistryBuilder.full(Repository.hexpm())
 
-      registry = Hexpm.Store.get(nil, :s3_bucket, "registry.ets.gz", [])
-      signature = Hexpm.Store.get(nil, :s3_bucket, "registry.ets.gz.signed", [])
+      registry = Hexpm.Store.get(:repo_bucket, "registry.ets.gz", [])
+      signature = Hexpm.Store.get(:repo_bucket, "registry.ets.gz.signed", [])
 
       public_key = Application.fetch_env!(:hexpm, :public_key)
       signature = Base.decode16!(signature, case: :lower)
@@ -191,8 +191,8 @@ defmodule Hexpm.Organization.RegistryBuilderTest do
     test "ets registry is uploaded alongside signature" do
       RegistryBuilder.v1_and_v2_repository(Repository.hexpm())
 
-      registry = Hexpm.Store.get(nil, :s3_bucket, "registry.ets.gz", [])
-      signature = Hexpm.Store.get(nil, :s3_bucket, "registry.ets.gz.signed", [])
+      registry = Hexpm.Store.get(:repo_bucket, "registry.ets.gz", [])
+      signature = Hexpm.Store.get(:repo_bucket, "registry.ets.gz.signed", [])
 
       public_key = Application.fetch_env!(:hexpm, :public_key)
       signature = Base.decode16!(signature, case: :lower)
@@ -272,8 +272,8 @@ defmodule Hexpm.Organization.RegistryBuilderTest do
     test "ets registry is uploaded alongside signature" do
       RegistryBuilder.v1_repository(Repository.hexpm())
 
-      registry = Hexpm.Store.get(nil, :s3_bucket, "registry.ets.gz", [])
-      signature = Hexpm.Store.get(nil, :s3_bucket, "registry.ets.gz.signed", [])
+      registry = Hexpm.Store.get(:repo_bucket, "registry.ets.gz", [])
+      signature = Hexpm.Store.get(:repo_bucket, "registry.ets.gz.signed", [])
 
       public_key = Application.fetch_env!(:hexpm, :public_key)
       signature = Base.decode16!(signature, case: :lower)

@@ -3,9 +3,8 @@ import Config
 config :hexpm,
   secret: System.fetch_env!("HEXPM_SECRET"),
   private_key: System.fetch_env!("HEXPM_SIGNING_KEY"),
-  s3_bucket: System.fetch_env!("HEXPM_S3_BUCKET"),
-  docs_bucket: System.fetch_env!("HEXPM_DOCS_BUCKET"),
-  logs_buckets: System.fetch_env!("HEXPM_LOGS_BUCKETS"),
+  repo_bucket: System.fetch_env!("HEXPM_REPO_BUCKET"),
+  logs_bucket: System.fetch_env!("HEXPM_LOGS_BUCKET"),
   docs_url: System.fetch_env!("HEXPM_DOCS_URL"),
   diff_url: System.fetch_env!("HEXPM_DIFF_URL"),
   cdn_url: System.fetch_env!("HEXPM_CDN_URL"),
@@ -20,6 +19,9 @@ config :hexpm,
 config :ex_aws,
   access_key_id: System.fetch_env!("HEXPM_AWS_ACCESS_KEY_ID"),
   secret_access_key: System.fetch_env!("HEXPM_AWS_ACCESS_KEY_SECRET")
+
+config :goth,
+  json: System.fetch_env!("HEXPM_GCP_CREDENTIALS")
 
 config :rollbax,
   access_token: System.fetch_env!("HEXPM_ROLLBAR_ACCESS_TOKEN")

@@ -26,7 +26,6 @@ defmodule Hexpm.DataCase do
 
   setup do
     :ok = Ecto.Adapters.SQL.Sandbox.checkout(Hexpm.RepoBase)
-    Hexpm.Case.reset_store()
 
     :ok
   end

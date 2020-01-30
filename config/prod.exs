@@ -1,7 +1,6 @@
 import Config
 
 config :hexpm,
-  store_impl: Hexpm.Store.S3,
   billing_impl: Hexpm.Billing.Hexpm,
   cdn_impl: Hexpm.CDN.Fastly,
   pwned_impl: Hexpm.Pwned.HaveIBeenPwned,

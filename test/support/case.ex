@@ -1,13 +1,4 @@
 defmodule Hexpm.Case do
-  import ExUnit.Callbacks
-
-  def reset_store() do
-    if Application.get_env(:hexpm, :s3_bucket) do
-      Application.put_env(:hexpm, :store_impl, Hexpm.Store.S3)
-      on_exit(fn -> Application.put_env(:hexpm, :store_impl, Hexpm.Store.Local) end)
-    end
-  end
-
   def create_user(username, email, password, confirmed? \\ true) do
     Hexpm.Accounts.User.build(
       %{username: username, password: password, emails: [%{email: email}]},

@@ -47,3 +47,5 @@ config :hexpm, Hexpm.RepoBase,
   pool_size: 5
 
 config :hexpm, Hexpm.Emails.Mailer, adapter: Bamboo.LocalAdapter
+
+config :goth, config: %{"project_id" => "hexpm"}

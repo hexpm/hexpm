@@ -4,6 +4,28 @@ defmodule Hexpm.HTTP do
   @max_retry_times 3
   @base_sleep_time 100
 
+  def get(url, headers) do
+    :hackney.get(url, headers)
+    |> read_response()
+  end
+
+  def put(url, headers, body) do
+    :hackney.put(url, headers, body)
+    |> read_response()
+  end
+
+  def delete(url, headers) do
+    :hackney.delete(url, headers)
+    |> read_response()
+  end
+
+  defp read_response(result) do
+    with {:ok, status, headers, ref} <- result,
+         {:ok, body} <- :hackney.body(ref) do
+      {:ok, status, headers, body}
+    end
+  end
+
   def retry(fun, name) do
     retry(fun, name, 0)
   end

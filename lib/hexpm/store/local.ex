@@ -3,8 +3,8 @@ defmodule Hexpm.Store.Local do
 
   # only used during development (not safe)
 
-  def list(region, bucket, prefix) do
-    relative = Path.join([dir(), region(region), bucket(bucket)])
+  def list(bucket, prefix) do
+    relative = Path.join([dir(), bucket])
     paths = Path.join(relative, "**") |> Path.wildcard()
 
     Enum.flat_map(paths, fn path ->
@@ -18,8 +18,8 @@ defmodule Hexpm.Store.Local do
     end)
   end
 
-  def get(region, bucket, key, _opts) do
-    path = Path.join([dir(), region(region), bucket(bucket), key])
+  def get(bucket, key, _opts) do
+    path = Path.join([dir(), bucket, key])
 
     case File.read(path) do
       {:ok, contents} -> contents
@@ -27,36 +27,20 @@ defmodule Hexpm.Store.Local do
     end
   end
 
-  def put(region, bucket, key, blob, _opts) do
-    path = Path.join([dir(), region(region), bucket(bucket), key])
+  def put(bucket, key, blob, _opts) do
+    path = Path.join([dir(), bucket, key])
     File.mkdir_p!(Path.dirname(path))
     File.write!(path, blob)
   end
 
-  def delete(region, bucket, key) do
-    [dir(), region(region), bucket(bucket), key]
+  def delete(bucket, key) do
+    [dir(), bucket, key]
     |> Path.join()
     |> File.rm()
   end
 
-  def delete_many(region, bucket, keys) do
-    Enum.each(keys, &delete(region, bucket, &1))
-  end
-
-  defp bucket(atom) when is_atom(atom) do
-    Application.get_env(:hexpm, atom) || Atom.to_string(atom)
-  end
-
-  defp bucket(binary) when is_binary(binary) do
-    binary
-  end
-
-  defp region(nil) do
-    "us-east-1"
-  end
-
-  defp region(binary) when is_binary(binary) do
-    binary
+  def delete_many(bucket, keys) do
+    Enum.each(keys, &delete(bucket, &1))
   end
 
   defp dir() do

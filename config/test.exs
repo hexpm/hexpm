@@ -27,3 +27,5 @@ config :hexpm, Hexpm.RepoBase,
   ownership_timeout: 61_000
 
 config :logger, level: :error
+
+config :goth, config: %{"project_id" => "hexpm"}
