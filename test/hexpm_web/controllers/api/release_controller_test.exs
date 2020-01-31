@@ -367,7 +367,7 @@ defmodule HexpmWeb.API.ReleaseControllerTest do
       build_conn()
       |> put_req_header("content-type", "application/octet-stream")
       |> put_req_header("authorization", key_for(user))
-      |> post("api/publish", create_tar(meta))
+      |> post("api/publish?replace=true", create_tar(meta))
       |> json_response(200)
 
       package = Hexpm.Repo.get_by!(Package, name: meta.name)
@@ -433,7 +433,7 @@ defmodule HexpmWeb.API.ReleaseControllerTest do
       build_conn()
       |> put_req_header("content-type", "application/octet-stream")
       |> put_req_header("authorization", key_for(user))
-      |> post("api/publish", create_tar(meta))
+      |> post("api/publish?replace=true", create_tar(meta))
       |> json_response(200)
     end
 
@@ -459,7 +459,7 @@ defmodule HexpmWeb.API.ReleaseControllerTest do
       result = json_response(conn, 422)
 
       assert result["errors"]["inserted_at"] ==
-               "can only modify a release up to one hour after creation"
+               "can only modify a release up to one hour after creation and must include the --replace option"
     end
 
     test "create releases with requirements", %{user: user, package: package} do

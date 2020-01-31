@@ -91,7 +91,7 @@ defmodule Hexpm.Repository.Release do
     force? = Keyword.get(opts, :force, false)
 
     change(release)
-    |> validate_editable(:delete, force?)
+    |> validate_editable(:delete, force?, true)
   end
 
   def retire(release, params) do
