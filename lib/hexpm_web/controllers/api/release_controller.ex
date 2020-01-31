@@ -1,10 +1,10 @@
 defmodule HexpmWeb.API.ReleaseController do
   use HexpmWeb, :controller
 
-  plug :parse_tarball when action in [:publish, :replace]
+  plug :parse_tarball when action in [:publish]
   plug :maybe_fetch_release when action in [:show]
   plug :fetch_release when action in [:delete]
-  plug :maybe_fetch_package when action in [:create, :publish, :replace]
+  plug :maybe_fetch_package when action in [:create, :publish]
 
   plug :maybe_authorize,
        [domain: "api", resource: "read", fun: &repository_access/2]
@@ -16,17 +16,14 @@ defmodule HexpmWeb.API.ReleaseController do
          resource: "write",
          fun: [&maybe_package_owner/2, &organization_billing_active/2]
        ]
-       when action in [:create, :publish, :replace]
+       when action in [:create, :publish]
 
   plug :authorize,
        [domain: "api", resource: "write", fun: [&package_owner/2, &organization_billing_active/2]]
        when action in [:delete]
 
-  def replace(conn, %{"body" => body}) do
-    publish(conn, %{"body" => body}, true)
-  end
-
-  def publish(conn, %{"body" => body}, replace? \\ false) do
+  def publish(conn, %{"body" => body} = params) do
+    replace? = Map.get(params, "replace", false)
     request_id = List.first(get_resp_header(conn, "x-request-id"))
 
     log_tarball(

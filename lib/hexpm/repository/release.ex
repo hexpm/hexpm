@@ -111,26 +111,39 @@ defmodule Hexpm.Repository.Release do
     if editable?(changeset.data, replace?) do
       changeset
     else
-      add_error(changeset, :inserted_at, editable_error_message(action))
+      add_error(changeset, :inserted_at, editable_error_message(changeset.data, action))
     end
   end
 
-  defp editable_error_message(:update),
-    do: "can only modify a release up to one hour after creation"
+  defp editable_error_message(release, :update) do
+    if release.package.repository.public do
+      "can only modify a release up to one hour after creation and must include the --replace option"
+    else
+      "must include the --replace flag to update an existing release"
+    end
+  end
 
-  defp editable_error_message(:delete),
+  defp editable_error_message(_release, :delete),
     do: "can only delete a release up to one hour after creation"
 
   defp editable?(release, replace?) do
     is_nil(release.inserted_at) or
       private_repo_and_replaceable?(release, replace?) or
-      within_seconds?(release.inserted_at, @one_hour) or
+      public_repo_and_replaceable?(release, replace?)
+  end
+
+  defp private_repo_and_replaceable?(release, replace?) when replace? in [true, "true"] do
+    not release.package.repository.public
+  end
+
+  defp private_repo_and_replaceable?(_release, _replace?), do: false
+
+  defp public_repo_and_replaceable?(release, replace?) when replace? in [true, "true"] do
+    within_seconds?(release.inserted_at, @one_hour) or
       within_seconds?(release.package.inserted_at, @one_day)
   end
 
-  defp private_repo_and_replaceable?(release, replace?) do
-    not release.package.repository.public and replace?
-  end
+  defp public_repo_and_replaceable?(_release, _replace?), do: false
 
   defp within_seconds?(datetime, within_seconds) do
     at =
