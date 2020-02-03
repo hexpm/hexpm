@@ -22,7 +22,7 @@ opts = [
   meta: [{"surrogate-key", "installs"}]
 ]
 
-Hexpm.Store.S3.put(:repo_bucket, "installs/list.csv", csv, opts)
+Hexpm.Store.put(:repo_bucket, "installs/list.csv", csv, opts)
 Hexpm.CDN.purge_key(:fastly_hexrepo, "installs")
 
 IO.puts("Uploaded installs/list.csv")
