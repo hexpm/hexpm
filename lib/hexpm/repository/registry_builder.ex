@@ -12,6 +12,7 @@ defmodule Hexpm.Repository.RegistryBuilder do
     locked_build(fn -> build_full(repository) end, 300_000)
   end
 
+  # NOTE: Does not rebuild package indexes, use full/1 instead
   def v1_and_v2_repository(repository) do
     locked_build(fn -> build_v1_and_v2_repository(repository) end, 30_000)
   end
@@ -20,6 +21,7 @@ defmodule Hexpm.Repository.RegistryBuilder do
     locked_build(fn -> build_v1_repository(repository) end, 30_000)
   end
 
+  # NOTE: Does not rebuild package indexes, use full/1 instead
   def v2_repository(repository) do
     locked_build(fn -> build_v2_repository(repository) end, 30_000)
   end
