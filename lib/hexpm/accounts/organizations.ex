@@ -82,7 +82,11 @@ defmodule Hexpm.Accounts.Organizations do
     Repo.update(User.to_organization(user, organization))
   end
 
-  def add_member(organization, user, params, audit: audit_data) do
+  def add_member(_organization, %User{organization_id: id}, _params, _opts) when is_integer(id) do
+    {:error, :organization_user}
+  end
+
+  def add_member(organization, %User{organization_id: nil} = user, params, audit: audit_data) do
     organization_user = %OrganizationUser{organization_id: organization.id, user_id: user.id}
 
     multi =
