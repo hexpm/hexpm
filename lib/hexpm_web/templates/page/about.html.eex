@@ -6,6 +6,12 @@
   Many build tools support Hex packages including <a href="https://hexdocs.pm/mix">Mix</a> for Elixir projects, <a href="https://www.rebar3.org/">Rebar</a> and <a href="https://erlang.mk/">erlang.mk</a> for Erlang projects.
 </p>
 
+<p>
+  Hex's source code is licensed under the <a href="https://www.apache.org/licenses/LICENSE-2.0">Apache 2 License</a> and is maintained by the Hex core team.
+  The team consists of three members: Eric Meadows-Jönsson, Todd Resudek, and Wojtek Mach.
+  The core team maintains the code bases, infrastructure, and services required to run Hex.
+</p>
+
 <h3>About Six Colors AB</h3>
 
 <p>
