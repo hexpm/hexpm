@@ -51,6 +51,9 @@ defmodule HexpmWeb.API.OrganizationUserController do
             |> put_resp_header("location", location)
             |> render(:show, user: user, role: organization_user.role)
 
+          {:error, :organization_user} ->
+            validation_failed(conn, "cannot add an organization as member to an organization")
+
           {:error, changeset} ->
             validation_failed(conn, changeset)
         end

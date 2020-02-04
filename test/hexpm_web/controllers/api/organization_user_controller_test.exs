@@ -67,6 +67,24 @@ defmodule HexpmWeb.API.OrganizationUserControllerTest do
       refute Organizations.get_role(organization, user2)
     end
 
+    test "new organization member validates new member isn't also an organization", %{
+      user1: user1,
+      organization: organization
+    } do
+      insert(:organization_user, organization: organization, user: user1, role: "admin")
+      organization2 = insert(:organization)
+      params = %{"name" => organization2.user.username, "role" => "read"}
+
+      conn =
+        build_conn()
+        |> put_req_header("authorization", key_for(user1))
+        |> post("api/orgs/#{organization.name}/members", params)
+
+      result = json_response(conn, 422)
+      assert result["errors"] == "cannot add an organization as member to an organization"
+      refute Organizations.get_role(organization, organization2.user)
+    end
+
     test "new organization member validates number of seats", %{
       user1: user1,
       organization: organization
