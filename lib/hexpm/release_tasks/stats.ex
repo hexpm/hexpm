@@ -61,15 +61,14 @@ defmodule Hexpm.ReleaseTasks.Stats do
 
       # May not be a perfect count since it counts downloads without a release
       # in the database. Should be uncommon
-      num = @ets |> ets_stream() |> Enum.reduce(0, fn {_, count}, acc -> count + acc end)
+      num = ets_stream() |> Enum.reduce(0, fn {_, count}, acc -> count + acc end)
 
       unless dryrun? do
         Repo.transaction(
           fn ->
             Repo.delete_all(from(d in Download, where: d.day == ^date))
 
-            @ets
-            |> ets_stream()
+            ets_stream()
             |> Stream.flat_map(fn {{repository, package, version}, count} ->
               repository_id = repositories[repository]
               package_id = packages[{repository_id, package}]
@@ -96,13 +95,13 @@ defmodule Hexpm.ReleaseTasks.Stats do
     end
   end
 
-  defp ets_stream(ets) do
-    start_fun = fn -> :ets.first(ets) end
+  def ets_stream() do
+    start_fun = fn -> :ets.first(@ets) end
     after_fun = fn _ -> :ok end
 
     next_fun = fn
       :"$end_of_table" -> {:halt, nil}
-      key -> {:ets.lookup(ets, key), :ets.next(ets, key)}
+      key -> {:ets.lookup(@ets, key), :ets.next(@ets, key)}
     end
 
     Stream.resource(start_fun, next_fun, after_fun)
@@ -112,16 +111,16 @@ defmodule Hexpm.ReleaseTasks.Stats do
     bucket = Application.get_env(:hexpm, :logs_bucket)
     prefix = "fastly_hex/#{date}"
     keys = Store.list(bucket, prefix) |> Enum.to_list()
-    process_keys(bucket, @fastly_regex, keys)
+    process_keys(bucket, keys)
   end
 
-  defp process_keys(bucket, regex, keys) do
+  defp process_keys(bucket, keys) do
     Task.async_stream(
       keys,
       fn key ->
         Store.get(bucket, key, [])
         |> maybe_unzip(key)
-        |> process_file(regex)
+        |> process_file()
       end,
       max_concurrency: 10,
       timeout: 600_000
@@ -129,11 +128,11 @@ defmodule Hexpm.ReleaseTasks.Stats do
     |> Stream.run()
   end
 
-  defp process_file(file, regex) do
+  defp process_file(file) do
     lines = String.split(file, "\n")
 
     Enum.each(lines, fn line ->
-      case parse_line(line, regex) do
+      case parse_line(line) do
         {repository, package, version} ->
           key = {repository, package, version}
           :ets.update_counter(@ets, key, 1, {key, 0})
@@ -144,8 +143,8 @@ defmodule Hexpm.ReleaseTasks.Stats do
     end)
   end
 
-  defp parse_line(line, regex) do
-    case Regex.run(regex, line) do
+  defp parse_line(line) do
+    case Regex.run(@fastly_regex, line) do
       [_, repository, package, version, status] when status in ~w(200 304) ->
         {copy(nillify(repository)) || "hexpm", copy(package), copy(version)}
 
