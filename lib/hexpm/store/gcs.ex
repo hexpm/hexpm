@@ -79,7 +79,7 @@ defmodule Hexpm.Store.GCS do
     {:ok, 200, _headers, body} = Hexpm.HTTP.retry(fn -> Hexpm.HTTP.get(url, headers()) end, "gcs")
 
     doc = SweetXml.parse(body)
-    marker = SweetXml.xpath(doc, ~x"/ListBucketResult/Marker/text()"s)
+    marker = SweetXml.xpath(doc, ~x"/ListBucketResult/NextMarker/text()"s)
     items = SweetXml.xpath(doc, ~x"/ListBucketResult/Contents/Key/text()"ls)
     marker = if marker != "", do: marker
 
