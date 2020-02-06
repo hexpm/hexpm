@@ -541,28 +541,31 @@ defmodule HexpmWeb.API.ReleaseControllerTest do
     end
 
     # Disabled because of resolver bug
-    # test "create releases with requirements validates resolution", %{user: user, package: package} do
-    #   reqs = [%{name: package.name, requirement: "~> 1.0", app: "app", optional: false}]
-    #
-    #   meta = %{
-    #     name: Fake.sequence(:package),
-    #     version: "0.1.0",
-    #     requirements: reqs,
-    #     description: "description"
-    #   }
-    #
-    #   conn =
-    #     build_conn()
-    #     |> put_req_header("content-type", "application/octet-stream")
-    #     |> put_req_header("authorization", key_for(user))
-    #     |> post("api/publish", create_tar(meta))
-    #
-    #   result = json_response(conn, 422)
-    #
-    #   assert result["errors"]["requirements"] =~ ~s(Failed to use "#{package.name}" because)
-    # end
+    @tag :skip
+    test "create releases with requirements validates resolution", %{user: user, package: package} do
+      reqs = [%{name: package.name, requirement: "~> 1.0", app: "app", optional: false}]
 
-    test "create release updates registry", %{user: user, package: package} do
+      meta = %{
+        name: Fake.sequence(:package),
+        version: "0.1.0",
+        requirements: reqs,
+        description: "description"
+      }
+
+      conn =
+        build_conn()
+        |> put_req_header("content-type", "application/octet-stream")
+        |> put_req_header("authorization", key_for(user))
+        |> post("api/publish", create_tar(meta))
+
+      result = json_response(conn, 422)
+
+      assert result["errors"]["requirements"] =~ ~s(Failed to use "#{package.name}" because)
+    end
+
+    # Disabled because we stopped updating old registry
+    @tag :skip
+    test "create release updates old registry", %{user: user, package: package} do
       RegistryBuilder.full(Repository.hexpm())
       registry_before = Hexpm.Store.get(:repo_bucket, "registry.ets.gz", [])
 
@@ -584,6 +587,26 @@ defmodule HexpmWeb.API.ReleaseControllerTest do
 
       registry_after = Hexpm.Store.get(:repo_bucket, "registry.ets.gz", [])
       assert registry_before != registry_after
+    end
+
+    test "create release updates new registry", %{user: user, package: package} do
+      reqs = [%{name: package.name, app: "app", requirement: "~> 0.0.1", optional: false}]
+
+      meta = %{
+        name: Fake.sequence(:package),
+        app: "app",
+        version: "0.0.1",
+        requirements: reqs,
+        description: "description"
+      }
+
+      build_conn()
+      |> put_req_header("content-type", "application/octet-stream")
+      |> put_req_header("authorization", key_for(user))
+      |> post("api/publish", create_tar(meta))
+      |> json_response(201)
+
+      assert Hexpm.Store.get(:repo_bucket, "packages/#{meta.name}", [])
     end
   end
 
