@@ -40,7 +40,8 @@ defmodule Hexpm.Repository.ReleasesTest do
                  meta,
                  "00",
                  "00",
-                 audit: audit
+                 audit: audit,
+                 replace: false
                )
     end
 
@@ -51,7 +52,10 @@ defmodule Hexpm.Repository.ReleasesTest do
       audit = audit_data(user)
 
       {:ok, %{release: release}} =
-        Releases.publish(repository, nil, user, "BODY", meta, "00", "00", audit: audit)
+        Releases.publish(repository, nil, user, "BODY", meta, "00", "00",
+          audit: audit,
+          replace: false
+        )
 
       assert release.publisher_id == user.id
     end
@@ -73,7 +77,8 @@ defmodule Hexpm.Repository.ReleasesTest do
                  meta,
                  "123abc",
                  "123abc",
-                 audit: audit
+                 audit: audit,
+                 replace: false
                )
 
       assert %{name: "is reserved"} = errors_on(changeset)
@@ -96,7 +101,8 @@ defmodule Hexpm.Repository.ReleasesTest do
                  meta,
                  "123abc",
                  "123abc",
-                 audit: audit
+                 audit: audit,
+                 replace: false
                )
 
       assert %{version: "is reserved"} = errors_on(changeset)
@@ -119,7 +125,8 @@ defmodule Hexpm.Repository.ReleasesTest do
                  meta,
                  "123abc",
                  "123abc",
-                 audit: audit
+                 audit: audit,
+                 replace: false
                )
 
       assert %{version: "is invalid SemVer"} = errors_on(changeset)

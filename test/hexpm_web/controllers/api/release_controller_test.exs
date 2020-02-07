@@ -367,7 +367,7 @@ defmodule HexpmWeb.API.ReleaseControllerTest do
       build_conn()
       |> put_req_header("content-type", "application/octet-stream")
       |> put_req_header("authorization", key_for(user))
-      |> post("api/publish", create_tar(meta))
+      |> post("api/publish?replace=true", create_tar(meta))
       |> json_response(200)
 
       package = Hexpm.Repo.get_by!(Package, name: meta.name)
@@ -433,7 +433,7 @@ defmodule HexpmWeb.API.ReleaseControllerTest do
       build_conn()
       |> put_req_header("content-type", "application/octet-stream")
       |> put_req_header("authorization", key_for(user))
-      |> post("api/publish", create_tar(meta))
+      |> post("api/publish?replace=true", create_tar(meta))
       |> json_response(200)
     end
 
@@ -459,7 +459,7 @@ defmodule HexpmWeb.API.ReleaseControllerTest do
       result = json_response(conn, 422)
 
       assert result["errors"]["inserted_at"] ==
-               "can only modify a release up to one hour after creation"
+               "can only modify a release up to one hour after creation and must include the --replace option"
     end
 
     test "create releases with requirements", %{user: user, package: package} do
@@ -792,8 +792,68 @@ defmodule HexpmWeb.API.ReleaseControllerTest do
       build_conn()
       |> put_req_header("content-type", "application/octet-stream")
       |> put_req_header("authorization", key_for(user))
-      |> post("api/repos/#{repository.name}/publish", create_tar(meta))
+      |> post("api/repos/#{repository.name}/publish?replace=true", create_tar(meta))
       |> json_response(200)
+    end
+
+    test "cannot update release after grace period even when given replace flag", %{
+      user: user,
+      package: package,
+      release: release
+    } do
+      Ecto.Changeset.change(package, inserted_at: %{DateTime.utc_now() | year: 2000})
+      |> Hexpm.Repo.update!()
+
+      Ecto.Changeset.change(release, inserted_at: %{DateTime.utc_now() | year: 2000})
+      |> Hexpm.Repo.update!()
+
+      meta = %{name: package.name, version: "0.0.1", description: "description"}
+
+      conn =
+        build_conn()
+        |> put_req_header("content-type", "application/octet-stream")
+        |> put_req_header("authorization", key_for(user))
+        |> post("api/publish?replace=true", create_tar(meta))
+
+      result = json_response(conn, 422)
+
+      assert result["errors"]["inserted_at"] ==
+               "can only modify a release up to one hour after creation and must include the --replace option"
+    end
+
+    test "cannot update private package after grace period if replace flag is missing or false",
+         %{
+           user: user,
+           repository: repository
+         } do
+      package =
+        insert(
+          :package,
+          package_owners: [build(:package_owner, user: user)],
+          repository_id: repository.id
+        )
+
+      insert(
+        :release,
+        package: package,
+        version: "0.0.1",
+        inserted_at: %{DateTime.utc_now() | year: 2000}
+      )
+
+      insert(:organization_user, organization: repository.organization, user: user)
+
+      meta = %{name: package.name, version: "0.0.1", description: "description"}
+
+      conn =
+        build_conn()
+        |> put_req_header("content-type", "application/octet-stream")
+        |> put_req_header("authorization", key_for(user))
+        |> post("api/repos/#{repository.name}/publish", create_tar(meta))
+
+      result = json_response(conn, 422)
+
+      assert result["errors"]["inserted_at"] ==
+               "must include the --replace flag to update an existing release"
     end
   end
 

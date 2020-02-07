@@ -69,7 +69,7 @@ defmodule Hexpm.Repository.ReleaseTest do
     updated_release =
       release
       |> Map.put(:package, package)
-      |> Release.update(new_publisher, %{}, "", "")
+      |> Release.update(new_publisher, %{}, "", "", true)
       |> Hexpm.Repo.update!()
 
     assert updated_release.publisher_id == new_publisher.id
@@ -496,7 +496,7 @@ defmodule Hexpm.Repository.ReleaseTest do
         ]
       })
 
-    Release.update(%{release | package: package2}, publisher, params, "", "")
+    Release.update(%{release | package: package2}, publisher, params, "", "", true)
     |> Hexpm.Repo.update!()
 
     package3_id = package3.id
@@ -542,7 +542,7 @@ defmodule Hexpm.Repository.ReleaseTest do
         version: "1.0"
       })
 
-    changeset = Release.update(%{release | package: package2}, publisher, params, "", "")
+    changeset = Release.update(%{release | package: package2}, publisher, params, "", "", true)
     assert [version: {"is invalid SemVer", _}] = changeset.errors
   end
 
