@@ -12,6 +12,11 @@
   The core team maintains the code bases, infrastructure, and services required to run Hex.
 </p>
 
+<p>
+  To report an issue in Hex or its services open an issue on the appropriate repository in the <a href="https://github.com/hexpm">GitHub organization</a> or on the <a href="https://github.com/hexpm/hexpm/issues">hexpm repository</a>.
+  To get in direct contact with Hex core team email <a href="mailto:support@hex.pm">support@hex.pm</a>. Security vulnerabilities should be disclosed to <a href="mailto:security@hex.pm">security@hex.pm</a>.
+</p>
+
 <h3>About Six Colors AB</h3>
 
 <p>

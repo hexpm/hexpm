@@ -1,5 +1,16 @@
 ## FAQ
 
+### Contact
+
+#### How do I contact Hex?
+
+To report an issue in Hex or its services open an issue on the appropriate repository in the [GitHub organization](https://github.com/hexpm) or on the [hexpm repository](https://github.com/hexpm/hexpm/issues).
+To get in direct contact with Hex core team email [support@hex.pm](mailto:support@hex.pm).
+
+### How do I report a security issue?
+
+Security vulnerabilities should be disclosed to [security@hex.pm](mailto:security@hex.pm).
+
 ### Accounts
 
 #### Can I change my username?
