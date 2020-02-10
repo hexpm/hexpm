@@ -23,6 +23,7 @@
                 <li><a href="https://github.com/hexpm/specifications">Specifications</a></li>
                 <li><a href="https://github.com/hexpm/hex/issues">Report Client Issue</a></li>
                 <li><a href="https://github.com/hexpm/hexpm/issues">Report General Issue</a></li>
+                <li><a href="mailto:security@hex.pm">Report Security Issue</a></li>
                 <li><a href="mailto:support@hex.pm">Contact Support</a></li>
               </ul>
             </div>
