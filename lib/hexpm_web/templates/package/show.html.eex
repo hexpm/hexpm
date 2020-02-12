@@ -168,6 +168,10 @@ tools = Keyword.take(tools, compatible_tools)
         </li>
       <% end %>
     </ul>
+
+    <p>
+      <a href="<%= path_for_audit_logs(@package, page: 1) %>">Show All Activities</a>
+    </p>
   </div>
 </div>
 

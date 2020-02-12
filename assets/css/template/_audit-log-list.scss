@@ -1,0 +1,10 @@
+.audit-log-title {
+  @include font-size(38, $base-line-height);
+  margin: 40px 0;
+  color: $color-text-grey;
+
+  .audit-log-package-title {
+    color: $color-purple;
+  }
+}
+

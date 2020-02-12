@@ -157,6 +157,14 @@ defmodule HexpmWeb.PackageView do
     end
   end
 
+  def path_for_audit_logs(package, options) do
+    if package.repository.id == 1 do
+      Routes.package_path(Endpoint, :audit_logs, package, options)
+    else
+      Routes.package_path(Endpoint, :audit_logs, package.repository, package, options)
+    end
+  end
+
   @doc """
   This function turns an audit_log struct into a short description.
 

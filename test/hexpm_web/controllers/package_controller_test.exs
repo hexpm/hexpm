@@ -234,6 +234,36 @@ defmodule HexpmWeb.PackageControllerTest do
     end
   end
 
+  describe "GET /packages/:name/audit_logs" do
+    test "sets title correctly" do
+      _package = insert(:package, name: "Test")
+
+      conn = get(build_conn(), "/packages/Test/audit_logs")
+
+      assert response(conn, :ok) =~ "Recent Activities for Test"
+    end
+
+    test "renders audit_logs correctly" do
+      package = insert(:package, name: "Test")
+      insert(:audit_log, action: "docs.publish", params: %{package: %{id: package.id}})
+
+      conn = get(build_conn(), "/packages/Test/audit_logs")
+
+      assert response(conn, :ok) =~ "Publish documentation"
+    end
+  end
+
+  describe "GET /packages/:repository/:name/audit_logs" do
+    test "requires access to this repository" do
+      repository = insert(:repository, name: "Repo")
+      _package = insert(:package, repository_id: repository.id, name: "Test")
+
+      conn = get(build_conn(), "/packages/Repo/Test/audit_logs")
+
+      assert response(conn, :not_found)
+    end
+  end
+
   defp escape(html) do
     {:safe, safe} = Phoenix.HTML.html_escape(html)
     IO.iodata_to_binary(safe)

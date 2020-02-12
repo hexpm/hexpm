@@ -1,0 +1,31 @@
+<h2 class="audit-log-title">
+  Recent Activities of <%= link ViewHelpers.package_name(@package), to: ViewHelpers.path_for_package(@package), class: "audit-log-package-title" %>
+</h2>
+
+<div class="col-md-12 no-padding">
+  <table class="table table-striped">
+    <tr>
+      <th class="col-sm-3" scope="col">Date</th>
+      <th scope="col">Activity</th>
+    </tr>
+
+    <%= for audit_log <- @audit_logs do %>
+      <tr>
+        <td class="col-sm-3"><%= ViewHelpers.pretty_date(audit_log.inserted_at, :short) %></td>
+        <td><%= humanize_audit_log_info(audit_log) %></td>
+      </tr>
+    <% end %>
+  </table>
+
+  <%=
+  render HexpmWeb.SharedView,
+         "_pagination.html",
+         items: @audit_logs,
+         page: @page,
+         total_count: @total_count,
+         per_page: @per_page,
+         unit: "activity",
+         units: "activities",
+         path_fn: &path_for_audit_logs(@package, page: &1)
+  %>
+</div>
