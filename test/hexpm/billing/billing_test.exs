@@ -1,7 +1,7 @@
 defmodule Hexpm.BillingTest do
   use Hexpm.DataCase, async: true
 
-  alias Hexpm.Accounts.AuditLogs
+  alias Hexpm.Accounts.{AuditLog, AuditLogs}
 
   describe "checkout/3" do
     test "returns {:ok, whatever} when impl().checkout/2 succeeds" do
@@ -23,7 +23,7 @@ defmodule Hexpm.BillingTest do
         audit: %{audit_data: {user, "Test User Agent"}, organization: nil}
       )
 
-      assert [audit_log] = AuditLogs.all_by(user)
+      assert [%AuditLog{action: "billing.checkout"}] = AuditLogs.all_by(user)
     end
 
     test "returns {:error, reason} when impl().checkout/2 fails" do
@@ -67,7 +67,7 @@ defmodule Hexpm.BillingTest do
         audit: %{audit_data: {user, "Test User Agent"}, organization: nil}
       )
 
-      assert [audit_log] = AuditLogs.all_by(user)
+      assert [%AuditLog{action: "billing.cancel"}] = AuditLogs.all_by(user)
     end
   end
 
@@ -90,7 +90,7 @@ defmodule Hexpm.BillingTest do
         audit: %{audit_data: {user, "Test User Agent"}, organization: nil}
       )
 
-      assert [audit_log] = AuditLogs.all_by(user)
+      assert [%AuditLog{action: "billing.create"}] = AuditLogs.all_by(user)
     end
 
     test "returns {:error, reason} when impl().create/1 fails" do
@@ -136,7 +136,7 @@ defmodule Hexpm.BillingTest do
         audit: %{audit_data: {user, "Test User Agent"}, organization: nil}
       )
 
-      assert [audit_log] = AuditLogs.all_by(user)
+      assert [%AuditLog{action: "billing.update"}] = AuditLogs.all_by(user)
     end
 
     test "returns {:error, reason} when impl().update/1 fails" do
@@ -182,7 +182,7 @@ defmodule Hexpm.BillingTest do
         audit: %{audit_data: {user, "Test User Agent"}, organization: nil}
       )
 
-      assert [audit_log] = AuditLogs.all_by(user)
+      assert [%AuditLog{action: "billing.change_plan"}] = AuditLogs.all_by(user)
     end
   end
 
@@ -204,7 +204,7 @@ defmodule Hexpm.BillingTest do
         audit: %{audit_data: {user, "Test User Agent"}, organization: nil}
       )
 
-      assert [audit_log] = AuditLogs.all_by(user)
+      assert [%AuditLog{action: "billing.pay_invoice"}] = AuditLogs.all_by(user)
     end
 
     test "returns {:error, map} when impl().pay_invoice/1 fails" do
