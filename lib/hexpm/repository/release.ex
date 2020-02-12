@@ -104,8 +104,9 @@ defmodule Hexpm.Repository.Release do
     |> put_embed(:retirement, nil)
   end
 
-  defp validate_editable(changeset, action, force?, replace? \\ false)
-  defp validate_editable(changeset, _action, true, _replace?), do: changeset
+  defp validate_editable(changeset, _action, true, _replace?) do
+    changeset
+  end
 
   defp validate_editable(changeset, action, false, replace?) do
     if editable?(changeset.data, replace?) do
