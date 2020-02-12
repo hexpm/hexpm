@@ -26,7 +26,7 @@ defmodule HexpmWeb.Dashboard.KeyController do
 
   def create(conn, params) do
     user = conn.assigns.current_user
-    key_params = fixup_permissions(params["key"])
+    key_params = munge_permissions(params["key"])
 
     case Keys.create(user, key_params, audit: audit_data(conn)) do
       {:ok, %{key: key}} ->
@@ -67,14 +67,17 @@ defmodule HexpmWeb.Dashboard.KeyController do
     Key.changeset(%Key{}, %{}, %{})
   end
 
-  def fixup_permissions(params) do
+  def munge_permissions(params) do
     update_in(params["permissions"], fn permissions ->
-      Map.new(permissions || [], fn {index, permission} ->
-        if permission["domain"] == "repository" and permission["resource"] == "All" do
-          {index, %{permission | "domain" => "repositories", "resource" => nil}}
-        else
-          {index, permission}
-        end
+      Enum.flat_map(permissions || [], fn
+        {"repositories", "on"} ->
+          [%{"domain" => "repositories", "resource" => nil}]
+
+        {"api", resources} ->
+          Enum.map(Map.keys(resources), &%{"domain" => "api", "resource" => &1})
+
+        {"repository", resources} ->
+          Enum.map(Map.keys(resources), &%{"domain" => "repository", "resource" => &1})
       end)
     end)
   end

@@ -331,7 +331,7 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
 
   def create_key(conn, %{"dashboard_org" => organization} = params) do
     access_organization(conn, organization, "write", fn organization ->
-      key_params = KeyController.fixup_permissions(params["key"])
+      key_params = KeyController.munge_permissions(params["key"])
 
       case Keys.create(organization, key_params, audit: audit_data(conn)) do
         {:ok, %{key: key}} ->
