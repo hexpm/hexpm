@@ -19,7 +19,7 @@ defmodule Hexpm.ReleaseTasks.Stats do
     [^\040]+\040 # IP address
     (?:(?:"[^"]+")|(?:\[[^\]]+\]))\040 # time
     "GET\040/
-    (?:([^/]+)/)? # repository
+    (?:repos/([^/]+)/)? # repository
     tarballs/
     ([^-]+) # package
     -
@@ -156,19 +156,19 @@ defmodule Hexpm.ReleaseTasks.Stats do
   defp repositories() do
     from(r in Repository, select: {r.name, r.id})
     |> Repo.all()
-    |> Enum.into(%{})
+    |> Map.new()
   end
 
   defp packages() do
     from(p in Package, select: {{p.repository_id, p.name}, p.id})
     |> Repo.all()
-    |> Enum.into(%{})
+    |> Map.new()
   end
 
   defp releases() do
     from(r in Release, select: {{r.package_id, r.version}, r.id})
     |> Repo.all()
-    |> Enum.into(%{}, fn {{pid, vsn}, rid} -> {{pid, to_string(vsn)}, rid} end)
+    |> Map.new(fn {{pid, vsn}, rid} -> {{pid, to_string(vsn)}, rid} end)
   end
 
   defp maybe_unzip(data, key) do
