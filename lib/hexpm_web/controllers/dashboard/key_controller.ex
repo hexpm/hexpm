@@ -26,7 +26,7 @@ defmodule HexpmWeb.Dashboard.KeyController do
 
   def create(conn, params) do
     user = conn.assigns.current_user
-    key_params = fixup_permissions(params["key"])
+    key_params = munge_permissions(params["key"])
 
     case Keys.create(user, key_params, audit: audit_data(conn)) do
       {:ok, %{key: key}} ->
@@ -67,15 +67,38 @@ defmodule HexpmWeb.Dashboard.KeyController do
     Key.changeset(%Key{}, %{}, %{})
   end
 
-  def fixup_permissions(params) do
-    update_in(params["permissions"], fn permissions ->
-      Map.new(permissions || [], fn {index, permission} ->
-        if permission["domain"] == "repository" and permission["resource"] == "All" do
-          {index, %{permission | "domain" => "repositories", "resource" => nil}}
-        else
-          {index, permission}
-        end
+  def munge_permissions(params) do
+    permissions = params["permissions"] || []
+
+    permissions =
+      if {"repositories", "on"} in permissions do
+        Enum.reject(permissions, &match?({"repository", _}, &1))
+      else
+        permissions
+      end
+
+    permissions =
+      if {"apis", "on"} in permissions do
+        Enum.reject(permissions, &match?({"api", _}, &1))
+      else
+        permissions
+      end
+
+    permissions =
+      Enum.flat_map(permissions, fn
+        {"repositories", "on"} ->
+          [%{"domain" => "repositories", "resource" => nil}]
+
+        {"apis", "on"} ->
+          [%{"domain" => "api", "resource" => nil}]
+
+        {"api", resources} ->
+          Enum.map(Map.keys(resources), &%{"domain" => "api", "resource" => &1})
+
+        {"repository", resources} ->
+          Enum.map(Map.keys(resources), &%{"domain" => "repository", "resource" => &1})
       end)
-    end)
+
+    put_in(params["permissions"], permissions)
   end
 end

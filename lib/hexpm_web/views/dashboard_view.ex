@@ -30,14 +30,8 @@ defmodule HexpmWeb.DashboardView do
     do: "API:#{resource}"
 
   defp permission_name(%KeyPermission{domain: "repository", resource: resource}),
-    do: "ORG:#{resource}"
+    do: "REPO:#{resource}"
 
   defp permission_name(%KeyPermission{domain: "repositories"}),
-    do: "ORGS"
-
-  defp organization_resources(%{organizations: organizations}),
-    do: ["All"] ++ Enum.map(organizations, & &1.name)
-
-  defp organization_resources(%{organization: organization}),
-    do: [organization.name]
+    do: "REPOS"
 end

@@ -55,36 +55,20 @@
         <%= ViewHelpers.text_input f, :name, class: "form-control", placeholder: "Name" %>
         <%= ViewHelpers.error_tag f, :name %>
       </div>
-      <%= inputs_for f, :permissions, fn f -> %>
-        <%= label f, :domain, "Permission domain" %>
-        <div class="form-group">
-          <%=
-            ViewHelpers.select(
-              f,
-              :domain,
-              [
-                API: "api",
-                "Organization": "repository"
-              ],
-              class: "form-control"
-            )
-          %>
-          <%= ViewHelpers.error_tag f, :domain %>
-        </div>
-        <%= label f, :domain, "Domain resource" %>
-        <div class="form-group">
-          <%=
-            ViewHelpers.select(
-              f,
-              :resource,
-              [
-                API: ["Read": "read", "Write": "write"],
-                "Organization": organization_resources(assigns),
-              ],
-              class: "form-control"
-            )
-          %>
-          <%= ViewHelpers.error_tag f, :resource %>
+      <span class="form-label">Key permissions</span>
+      <div class="permission-group">
+        <div class="checkbox group-owner"><label><input type="checkbox" name="key[permissions][apis]">API</label></div>
+        <div class="checkbox group-child"><label><input type="checkbox" name="key[permissions][api][read]">Read</label></div>
+        <div class="checkbox group-child"><label><input type="checkbox" name="key[permissions][api][write]">Write</label></div>
+      </div>
+      <%= if assigns[:organization] do %>
+        <div class="checkbox"><label><input type="checkbox" name="key[permissions][repository][<%= @organization.name %>]">Organization repository</label></div>
+      <% else %>
+        <div class="permission-group">
+          <div class="checkbox group-owner"><label><input type="checkbox" name="key[permissions][repositories]">All Repositories</label></div>
+          <%= for organization <- @organizations do %>
+            <div class="checkbox group-child"><label><input type="checkbox" name="key[permissions][repository][<%= organization.name %>]">Repository: <%= organization.name %></label></div>
+          <% end %>
         </div>
       <% end %>
       <button type="submit" class="btn btn-primary">Generate</button>
