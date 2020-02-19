@@ -402,8 +402,8 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
 
   defp render_index(conn, organization, opts \\ []) do
     user = organization.user
-    public_email = Enum.find(user.emails, & &1.public)
-    gravatar_email = Enum.find(user.emails, & &1.gravatar)
+    public_email = user && Enum.find(user.emails, & &1.public)
+    gravatar_email = user && Enum.find(user.emails, & &1.gravatar)
     customer = Hexpm.Billing.get(organization.name)
     keys = Keys.all(organization)
     delete_key_path = Routes.organization_path(Endpoint, :delete_key, organization)
@@ -412,7 +412,7 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
     assigns = [
       title: "Dashboard - Organization",
       container: "container page dashboard",
-      changeset: User.update_profile(user, %{}),
+      changeset: user && User.update_profile(user, %{}),
       public_email: public_email && public_email.email,
       gravatar_email: gravatar_email && gravatar_email.email,
       organization: organization,
