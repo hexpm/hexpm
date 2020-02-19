@@ -24,8 +24,7 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
     repository = insert(:repository)
 
     %{
-      user: create_user("eric", "eric@mail.com", "hunter42"),
-      password: "hunter42",
+      user: insert(:user),
       organization: repository.organization
     }
   end

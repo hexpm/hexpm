@@ -4,7 +4,7 @@ defmodule Hexpm.Accounts.KeyTest do
   alias Hexpm.Accounts.Key
 
   setup do
-    %{user: create_user("eric", "eric@mail.com", "ericeric")}
+    %{user: insert(:user)}
   end
 
   test "create key and get", %{user: user} do
@@ -17,15 +17,15 @@ defmodule Hexpm.Accounts.KeyTest do
     assert %Key{name: "computer-2"} = Key.build(user, %{name: "computer"}) |> Hexpm.Repo.insert!()
   end
 
-  test "all user keys", %{user: eric} do
-    jose = create_user("jose", "jose@mail.com", "josejose")
+  test "all user keys", %{user: user1} do
+    user2 = insert(:user)
 
-    assert %Key{name: "computer"} = Key.build(eric, %{name: "computer"}) |> Hexpm.Repo.insert!()
-    assert %Key{name: "macbook"} = Key.build(eric, %{name: "macbook"}) |> Hexpm.Repo.insert!()
-    assert %Key{name: "macbook"} = Key.build(jose, %{name: "macbook"}) |> Hexpm.Repo.insert!()
+    assert %Key{name: "computer"} = Key.build(user1, %{name: "computer"}) |> Hexpm.Repo.insert!()
+    assert %Key{name: "macbook"} = Key.build(user1, %{name: "macbook"}) |> Hexpm.Repo.insert!()
+    assert %Key{name: "macbook"} = Key.build(user2, %{name: "macbook"}) |> Hexpm.Repo.insert!()
 
-    assert Key.all(eric) |> Hexpm.Repo.all() |> length == 2
-    assert Key.all(jose) |> Hexpm.Repo.all() |> length == 1
+    assert Key.all(user1) |> Hexpm.Repo.all() |> length == 2
+    assert Key.all(user2) |> Hexpm.Repo.all() |> length == 1
   end
 
   test "delete keys", %{user: user} do

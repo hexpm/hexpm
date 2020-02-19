@@ -11,8 +11,7 @@ defmodule HexpmWeb.Dashboard.ProfileControllerTest do
 
   setup do
     %{
-      user: create_user("eric", "eric@mail.com", "hunter42"),
-      password: "hunter42"
+      user: insert(:user)
     }
   end
 
@@ -42,6 +41,7 @@ defmodule HexpmWeb.Dashboard.ProfileControllerTest do
   end
 
   test "update profile change public email", c do
+    original_email = hd(c.user.emails)
     user = add_email(c.user, "new@mail.com")
     email = Enum.find(user.emails, &(&1.email == "new@mail.com"))
     Ecto.Changeset.change(email, %{verified: true}) |> Hexpm.Repo.update!()
@@ -56,11 +56,12 @@ defmodule HexpmWeb.Dashboard.ProfileControllerTest do
 
     user = Hexpm.Repo.get!(Hexpm.Accounts.User, c.user.id) |> Hexpm.Repo.preload(:emails)
     assert Enum.find(user.emails, &(&1.email == "new@mail.com")).public
-    refute Enum.find(user.emails, &(&1.email == "eric@mail.com")).public
+    refute Enum.find(user.emails, &(&1.email == original_email.email)).public
   end
 
   test "update profile change gravatar email", c do
     user = add_email(c.user, "gravatar@mail.com")
+    original_email = hd(c.user.emails)
     email = Enum.find(user.emails, &(&1.email == "gravatar@mail.com"))
     Ecto.Changeset.change(email, %{verified: true}) |> Hexpm.Repo.update!()
 
@@ -74,7 +75,7 @@ defmodule HexpmWeb.Dashboard.ProfileControllerTest do
 
     user = Hexpm.Repo.get!(Hexpm.Accounts.User, c.user.id) |> Hexpm.Repo.preload(:emails)
     assert Enum.find(user.emails, &(&1.email == "gravatar@mail.com")).gravatar
-    refute Enum.find(user.emails, &(&1.email == "eric@mail.com")).gravatar
+    refute Enum.find(user.emails, &(&1.email == original_email.email)).gravatar
   end
 
   test "update profile don't show public email", c do

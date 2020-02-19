@@ -1,12 +1,4 @@
 defmodule Hexpm.Case do
-  def create_user(username, email, password, confirmed? \\ true) do
-    Hexpm.Accounts.User.build(
-      %{username: username, password: password, emails: [%{email: email}]},
-      confirmed?
-    )
-    |> Hexpm.Repo.insert!()
-  end
-
   def key_for(user_or_organization) do
     key =
       user_or_organization

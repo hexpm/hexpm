@@ -5,8 +5,8 @@ defmodule HexpmWeb.API.KeyControllerTest do
   alias Hexpm.Accounts.{AuditLog, Key, KeyPermission}
 
   setup do
-    eric = create_user("eric", "eric@mail.com", "ericeric")
-    other = create_user("other", "other@mail.com", "otherother")
+    eric = insert(:user)
+    other = insert(:user)
     organization = insert(:organization)
     unowned_organization = insert(:organization)
     insert(:organization_user, organization: organization, user: eric)
@@ -17,6 +17,10 @@ defmodule HexpmWeb.API.KeyControllerTest do
       eric: eric,
       other: other
     }
+  end
+
+  defp basic_auth(user) do
+    "Basic " <> Base.encode64("#{user.username}:password")
   end
 
   describe "GET /api/keys" do
@@ -124,7 +128,7 @@ defmodule HexpmWeb.API.KeyControllerTest do
       conn =
         build_conn()
         |> put_req_header("content-type", "application/json")
-        |> put_req_header("authorization", "Basic " <> Base.encode64("eric:ericeric"))
+        |> put_req_header("authorization", basic_auth(c.eric))
         |> post("api/keys", body)
 
       assert conn.status == 201
@@ -145,7 +149,7 @@ defmodule HexpmWeb.API.KeyControllerTest do
 
       build_conn()
       |> put_req_header("content-type", "application/json")
-      |> put_req_header("authorization", "Basic " <> Base.encode64("eric:ericeric"))
+      |> put_req_header("authorization", basic_auth(c.eric))
       |> post("api/keys", body)
       |> json_response(201)
 
@@ -181,7 +185,7 @@ defmodule HexpmWeb.API.KeyControllerTest do
 
       build_conn()
       |> put_req_header("content-type", "application/json")
-      |> put_req_header("authorization", "Basic " <> Base.encode64("eric:ericeric"))
+      |> put_req_header("authorization", basic_auth(c.eric))
       |> post("api/keys", body)
       |> json_response(422)
 
@@ -193,7 +197,7 @@ defmodule HexpmWeb.API.KeyControllerTest do
 
       build_conn()
       |> put_req_header("content-type", "application/json")
-      |> put_req_header("authorization", "Basic " <> Base.encode64("eric:ericeric"))
+      |> put_req_header("authorization", basic_auth(c.eric))
       |> post("api/keys", body)
       |> json_response(201)
 
