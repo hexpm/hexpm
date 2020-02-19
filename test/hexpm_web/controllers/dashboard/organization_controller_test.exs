@@ -43,6 +43,20 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
     assert response(conn, 200) =~ "Members"
   end
 
+  test "show organization without associated user", %{user: user} do
+    repository = insert(:repository, organization: build(:organization, user: nil))
+    insert(:organization_user, organization: repository.organization, user: user)
+
+    mock_customer(repository.organization)
+
+    conn =
+      build_conn()
+      |> test_login(user)
+      |> get("dashboard/orgs/#{repository.organization.name}")
+
+    assert response(conn, 200) =~ "Members"
+  end
+
   test "requires login" do
     conn = get(build_conn(), "dashboard/orgs")
     assert redirected_to(conn) == "/login?return=dashboard%2Forgs"

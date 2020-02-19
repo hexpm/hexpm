@@ -9,85 +9,90 @@
     <div class="panel panel-default">
       <div class="panel-heading">Public profile</div>
       <div class="panel-body">
-        <div class="form-group">
-          <label>Profile picture</label>
-          <img src="<%= ViewHelpers.gravatar_url(User.email(@organization.user, :gravatar), :large) %>">
-          <p>
-            <small>
-              Gravatar is used to display organization profile picture. You can update the Gravatar email below or
-              go to <a href="https://en.gravatar.com/emails/">Gravatar</a> to change the image.
-            </small>
-          </p>
-        </div>
-
-        <%= form_for @changeset, Routes.organization_path(Endpoint, :update_profile, @organization), [method: :post, as: :profile], fn f -> %>
+        <%= if @organization.user do %>
           <div class="form-group">
-            <%= label f, :full_name %>
-            <%= ViewHelpers.text_input f, :full_name %>
-            <%= ViewHelpers.error_tag f, :full_name %>
+            <label>Profile picture</label>
+            <img src="<%= ViewHelpers.gravatar_url(User.email(@organization.user, :gravatar), :large) %>">
+            <p>
+              <small>
+                Gravatar is used to display organization profile picture. You can update the Gravatar email below or
+                go to <a href="https://en.gravatar.com/emails/">Gravatar</a> to change the image.
+              </small>
+            </p>
           </div>
 
-          <div class="form-group">
-            <%= label f, :public_email %>
-            <%= ViewHelpers.text_input f, :public_email, placeholder: "Your organization's public email", value: @public_email %>
-            <%= ViewHelpers.error_tag f, :public_email %>
-          </div>
-
-          <div class="form-group">
-            <%= label f, :gravatar_email %>
-            <%= ViewHelpers.text_input f, :gravatar_email, placeholder: "Your organization's gravatar email", value: @gravatar_email %>
-            <%= ViewHelpers.error_tag f, :gravatar_email %>
-          </div>
-
-          <%= inputs_for f, :handles, fn f -> %>
+          <%= form_for @changeset, Routes.organization_path(Endpoint, :update_profile, @organization), [method: :post, as: :profile], fn f -> %>
             <div class="form-group">
-              <%= label f, :twitter %>
-              <div class="input-group">
-                <div class="input-group-addon">twitter.com/</div>
-                <%= ViewHelpers.text_input f, :twitter, placeholder: "organization_twitter_id" %>
+              <%= label f, :full_name %>
+              <%= ViewHelpers.text_input f, :full_name %>
+              <%= ViewHelpers.error_tag f, :full_name %>
+            </div>
+
+            <div class="form-group">
+              <%= label f, :public_email %>
+              <%= ViewHelpers.text_input f, :public_email, placeholder: "Your organization's public email", value: @public_email %>
+              <%= ViewHelpers.error_tag f, :public_email %>
+            </div>
+
+            <div class="form-group">
+              <%= label f, :gravatar_email %>
+              <%= ViewHelpers.text_input f, :gravatar_email, placeholder: "Your organization's gravatar email", value: @gravatar_email %>
+              <%= ViewHelpers.error_tag f, :gravatar_email %>
+            </div>
+
+            <%= inputs_for f, :handles, fn f -> %>
+              <div class="form-group">
+                <%= label f, :twitter %>
+                <div class="input-group">
+                  <div class="input-group-addon">twitter.com/</div>
+                  <%= ViewHelpers.text_input f, :twitter, placeholder: "organization_twitter_id" %>
+                </div>
+
+                <%= ViewHelpers.error_tag f, :twitter %>
               </div>
 
-              <%= ViewHelpers.error_tag f, :twitter %>
-            </div>
-
-            <div class="form-group">
-              <%= label f, :github, "GitHub" %>
-              <div class="input-group">
-                <div class="input-group-addon">github.com/</div>
-                <%= ViewHelpers.text_input f, :github, placeholder: "organization_github_id" %>
+              <div class="form-group">
+                <%= label f, :github, "GitHub" %>
+                <div class="input-group">
+                  <div class="input-group-addon">github.com/</div>
+                  <%= ViewHelpers.text_input f, :github, placeholder: "organization_github_id" %>
+                </div>
+                <%= ViewHelpers.error_tag f, :github %>
               </div>
-              <%= ViewHelpers.error_tag f, :github %>
-            </div>
 
-            <div class="form-group">
-              <%= label f, :elixirforum, "Elixir Forum" %>
-              <div class="input-group">
-                <div class="input-group-addon">elixirforum.com/users/</div>
-                <%= ViewHelpers.text_input f, :elixirforum, placeholder: "organization_elixir_forum_id" %>
+              <div class="form-group">
+                <%= label f, :elixirforum, "Elixir Forum" %>
+                <div class="input-group">
+                  <div class="input-group-addon">elixirforum.com/users/</div>
+                  <%= ViewHelpers.text_input f, :elixirforum, placeholder: "organization_elixir_forum_id" %>
+                </div>
+                <%= ViewHelpers.error_tag f, :elixirforum %>
               </div>
-              <%= ViewHelpers.error_tag f, :elixirforum %>
-            </div>
 
-            <div class="form-group">
-              <%= label f, :freenode %>
-              <%= ViewHelpers.text_input f, :freenode, placeholder: "Your organization's nickname on Elixir IRC channel" %>
-              <span class="help-block">Elixir IRC channel:
-                <a href="irc://chat.freenode.net/elixir-lang">irc://chat.freenode.net/elixir-lang</a>
-              </span>
-              <%= ViewHelpers.error_tag f, :freenode %>
-            </div>
+              <div class="form-group">
+                <%= label f, :freenode %>
+                <%= ViewHelpers.text_input f, :freenode, placeholder: "Your organization's nickname on Elixir IRC channel" %>
+                <span class="help-block">Elixir IRC channel:
+                  <a href="irc://chat.freenode.net/elixir-lang">irc://chat.freenode.net/elixir-lang</a>
+                </span>
+                <%= ViewHelpers.error_tag f, :freenode %>
+              </div>
 
-            <div class="form-group">
-              <%= label f, :slack %>
-              <%= ViewHelpers.text_input f, :slack, placeholder: "Your organization's nickname on Elixir Slack channel" %>
-              <span class="help-block">Elixir Slack channel:
-                <a href="https://elixir-slackin.herokuapp.com">elixir-slackin.herokuapp.com</a>
-              </span>
-              <%= ViewHelpers.error_tag f, :slack %>
-            </div>
+              <div class="form-group">
+                <%= label f, :slack %>
+                <%= ViewHelpers.text_input f, :slack, placeholder: "Your organization's nickname on Elixir Slack channel" %>
+                <span class="help-block">Elixir Slack channel:
+                  <a href="https://elixir-slackin.herokuapp.com">elixir-slackin.herokuapp.com</a>
+                </span>
+                <%= ViewHelpers.error_tag f, :slack %>
+              </div>
+            <% end %>
+
+            <button type="submit" class="btn btn-primary">Save</button>
           <% end %>
-
-          <button type="submit" class="btn btn-primary">Save</button>
+        <% else %>
+          There is no profile associated with your organization. To enable the profile for your account your organization needs to be migrated.
+          Please contact <a href="mailto:support@hex.pm">support@hex.pm</a> to migrate your organization and enable the public profile.
         <% end %>
       </div>
     </div>
