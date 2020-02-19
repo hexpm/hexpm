@@ -56,8 +56,11 @@
         <%= ViewHelpers.error_tag f, :name %>
       </div>
       <span class="form-label">Key permissions</span>
-      <div class="checkbox"><label><input type="checkbox" name="key[permissions][api][read]">API: read</label></div>
-      <div class="checkbox"><label><input type="checkbox" name="key[permissions][api][write]">API: write</label></div>
+      <div class="permission-group">
+        <div class="checkbox group-owner"><label><input type="checkbox" name="key[permissions][api][all]">API</label></div>
+        <div class="checkbox group-child"><label><input type="checkbox" name="key[permissions][api][read]">Read</label></div>
+        <div class="checkbox group-child"><label><input type="checkbox" name="key[permissions][api][write]">Write</label></div>
+      </div>
       <%= if assigns[:organization] do %>
         <div class="checkbox"><label><input type="checkbox" name="key[permissions][repository][<%= @organization.name %>]">Organization repository</label></div>
       <% else %>

@@ -51,6 +51,15 @@ export default class App {
     // Highlight syntax
     hljs.registerLanguage('elixir', elixir);
     hljs.initHighlightingOnLoad()
+
+    //API permissions checkboxes
+    $(".permission-group .group-owner input").change(function(){
+      if (this.checked) {
+        $(this).parents(".permission-group").find(".group-child label input").each(function(idx, value){ $(this).prop("disabled", true); $(this).prop("checked", true)})
+      }else{
+        $(this).parents(".permission-group").find(".group-child label input").each(function(idx, value){ $(this).prop("disabled", false); $(this).prop("checked", false)})
+      }
+    });
   }
 
   onCopy(event) {
