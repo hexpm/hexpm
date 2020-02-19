@@ -8,8 +8,7 @@ defmodule HexpmWeb.Dashboard.PasswordControllerTest do
     mock_pwned()
 
     %{
-      user: create_user("eric", "eric@mail.com", "hunter42"),
-      password: "hunter42"
+      user: insert(:user)
     }
   end
 
@@ -33,7 +32,7 @@ defmodule HexpmWeb.Dashboard.PasswordControllerTest do
       |> test_login(c.user)
       |> post("dashboard/password", %{
         user: %{
-          password_current: c.password,
+          password_current: "password",
           password: "newpass",
           password_confirmation: "newpass"
         }
@@ -42,7 +41,7 @@ defmodule HexpmWeb.Dashboard.PasswordControllerTest do
     assert redirected_to(conn) == "/dashboard/password"
     assert get_flash(conn, :info) =~ "Your password has been updated"
     assert {:ok, _} = Auth.password_auth(c.user.username, "newpass")
-    assert :error = Auth.password_auth(c.user.username, c.password)
+    assert :error = Auth.password_auth(c.user.username, "password")
 
     assert_delivered_email(Hexpm.Emails.password_changed(c.user))
   end
@@ -56,7 +55,7 @@ defmodule HexpmWeb.Dashboard.PasswordControllerTest do
       })
 
     assert response(conn, 400) =~ "Change password"
-    assert {:ok, _} = Auth.password_auth(c.user.username, c.password)
+    assert {:ok, _} = Auth.password_auth(c.user.username, "password")
   end
 
   test "update password invalid confirmation password", c do
@@ -64,11 +63,11 @@ defmodule HexpmWeb.Dashboard.PasswordControllerTest do
       build_conn()
       |> test_login(c.user)
       |> post("dashboard/password", %{
-        user: %{password_current: c.password, password: "newpass", password_confirmation: "WRONG"}
+        user: %{password_current: "password", password: "newpass", password_confirmation: "WRONG"}
       })
 
     assert response(conn, 400) =~ "Change password"
-    assert {:ok, _} = Auth.password_auth(c.user.username, c.password)
+    assert {:ok, _} = Auth.password_auth(c.user.username, "password")
     assert :error = Auth.password_auth(c.user.username, "newpass")
   end
 
@@ -81,7 +80,7 @@ defmodule HexpmWeb.Dashboard.PasswordControllerTest do
       })
 
     assert response(conn, 400) =~ "Change password"
-    assert {:ok, _} = Auth.password_auth(c.user.username, c.password)
+    assert {:ok, _} = Auth.password_auth(c.user.username, "password")
     assert :error = Auth.password_auth(c.user.username, "newpass")
   end
 end

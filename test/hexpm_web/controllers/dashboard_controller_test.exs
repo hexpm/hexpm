@@ -4,8 +4,7 @@ defmodule HexpmWeb.DashboardControllerTest do
 
   setup do
     %{
-      user: create_user("eric", "eric@mail.com", "hunter42"),
-      password: "hunter42"
+      user: insert(:user)
     }
   end
 

@@ -14,9 +14,8 @@ defmodule HexpmWeb.Dashboard.EmailControllerTest do
     mock_pwned()
 
     %{
-      user: create_user(Fake.sequence(:username), email, "hunter42"),
-      email: email,
-      password: "hunter42"
+      user: insert(:user, emails: [build(:email, email: email)]),
+      email: email
     }
   end
 
@@ -65,12 +64,8 @@ defmodule HexpmWeb.Dashboard.EmailControllerTest do
   end
 
   test "can add existing email which is not verified", c do
-    u2 = %{
-      user: create_user(Fake.sequence(:username), Fake.sequence(:email), "hunter24", false),
-      password: "hunter24"
-    }
-
-    email = hd(u2.user.emails).email
+    user2 = insert(:user, emails: [build(:email, verified: false)])
+    email = hd(user2.emails).email
 
     conn =
       build_conn()
@@ -82,12 +77,8 @@ defmodule HexpmWeb.Dashboard.EmailControllerTest do
   end
 
   test "verified email logs appropriate user correctly", c do
-    u2 = %{
-      user: create_user(Fake.sequence(:username), Fake.sequence(:email), "hunter24", false),
-      password: "hunter24"
-    }
-
-    user = add_email(c.user, hd(u2.user.emails).email)
+    user2 = insert(:user, emails: [build(:email, verified: false)])
+    user = add_email(c.user, hd(user2.emails).email)
     [dup_email] = tl(user.emails)
 
     conn =
@@ -109,16 +100,16 @@ defmodule HexpmWeb.Dashboard.EmailControllerTest do
     assert redirected_to(conn) == "/dashboard/email"
     assert get_flash(conn, :info) =~ "primary email was changed"
 
-    conn = post(build_conn(), "login", %{username: dup_email.email, password: c.password})
+    conn = post(build_conn(), "login", %{username: dup_email.email, password: "password"})
     assert redirected_to(conn) == "/users/#{c.user.username}"
     assert get_session(conn, "user_id") == c.user.id
 
     conn =
       build_conn()
       |> get("email/verify", %{
-        username: u2.user.username,
+        username: user2.username,
         email: dup_email.email,
-        key: hd(u2.user.emails).verification_key
+        key: hd(user2.emails).verification_key
       })
 
     assert redirected_to(conn) == "/"
