@@ -57,17 +57,19 @@
       </div>
       <span class="form-label">Key permissions</span>
       <div class="permission-group">
-        <div class="checkbox group-owner"><label><input type="checkbox" name="key[permissions][api][all]">API</label></div>
+        <div class="checkbox group-owner"><label><input type="checkbox" name="key[permissions][apis]">API</label></div>
         <div class="checkbox group-child"><label><input type="checkbox" name="key[permissions][api][read]">Read</label></div>
         <div class="checkbox group-child"><label><input type="checkbox" name="key[permissions][api][write]">Write</label></div>
       </div>
       <%= if assigns[:organization] do %>
         <div class="checkbox"><label><input type="checkbox" name="key[permissions][repository][<%= @organization.name %>]">Organization repository</label></div>
       <% else %>
-        <div class="checkbox"><label><input type="checkbox" name="key[permissions][repositories]">All Repositories</label></div>
-        <%= for organization <- @organizations do %>
-          <div class="checkbox"><label><input type="checkbox" name="key[permissions][repository][<%= organization.name %>]">Repository: <%= organization.name %></label></div>
-        <% end %>
+        <div class="permission-group">
+          <div class="checkbox group-owner"><label><input type="checkbox" name="key[permissions][repositories]">All Repositories</label></div>
+          <%= for organization <- @organizations do %>
+            <div class="checkbox group-child"><label><input type="checkbox" name="key[permissions][repository][<%= organization.name %>]">Repository: <%= organization.name %></label></div>
+          <% end %>
+        </div>
       <% end %>
       <button type="submit" class="btn btn-primary">Generate</button>
     <% end %>

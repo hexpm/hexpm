@@ -68,10 +68,29 @@ defmodule HexpmWeb.Dashboard.KeyController do
   end
 
   def munge_permissions(params) do
-    update_in(params["permissions"], fn permissions ->
-      Enum.flat_map(permissions || [], fn
+    permissions = params["permissions"] || []
+
+    permissions =
+      if {"repositories", "on"} in permissions do
+        Enum.reject(permissions, &match?({"repository", _}, &1))
+      else
+        permissions
+      end
+
+    permissions =
+      if {"apis", "on"} in permissions do
+        Enum.reject(permissions, &match?({"api", _}, &1))
+      else
+        permissions
+      end
+
+    permissions =
+      Enum.flat_map(permissions, fn
         {"repositories", "on"} ->
           [%{"domain" => "repositories", "resource" => nil}]
+
+        {"apis", "on"} ->
+          [%{"domain" => "api", "resource" => nil}]
 
         {"api", resources} ->
           Enum.map(Map.keys(resources), &%{"domain" => "api", "resource" => &1})
@@ -79,6 +98,7 @@ defmodule HexpmWeb.Dashboard.KeyController do
         {"repository", resources} ->
           Enum.map(Map.keys(resources), &%{"domain" => "repository", "resource" => &1})
       end)
-    end)
+
+    put_in(params["permissions"], permissions)
   end
 end
