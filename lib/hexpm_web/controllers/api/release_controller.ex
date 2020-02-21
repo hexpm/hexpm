@@ -107,9 +107,10 @@ defmodule HexpmWeb.API.ReleaseController do
     end
   end
 
-  defp handle_tarball(conn, repository, package, user, body, replace? \\ false) do
+  defp handle_tarball(conn, repository, package, user, body) do
     case release_metadata(body) do
       {:ok, meta, inner_checksum, outer_checksum} ->
+        replace? = Map.get(conn.params, "replace", false)
         request_id = List.first(get_resp_header(conn, "x-request-id"))
         log_tarball(repository.name, meta["name"], meta["version"], request_id, body)
 
