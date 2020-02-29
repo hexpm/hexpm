@@ -270,8 +270,8 @@ defmodule Hexpm.Utils do
 
   @doc """
   Returns a RFC 2822 format string from a UTC datetime.
-  # TODO: Replace with `Calendar.strftime(datetime, "%a, %b %d %Y %H:%H:%S GMT")` on Elixir v1.11
   """
+  # TODO: Replace with `Calendar.strftime(datetime, "%a, %b %d %Y %H:%H:%S GMT")` on Elixir v1.11
   def datetime_to_rfc2822(%DateTime{calendar: Calendar.ISO, time_zone: "Etc/UTC"} = datetime) do
     %{year: year, month: month, day: day} = datetime
 
