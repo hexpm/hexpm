@@ -892,7 +892,7 @@ defmodule HexpmWeb.API.ReleaseControllerTest do
     end
 
     test "delete release", %{user: user, package: package, release: release} do
-      Ecto.Changeset.change(release, inserted_at: %{DateTime.utc_now() | year: 2030})
+      Ecto.Changeset.change(release, inserted_at: DateTime.add(DateTime.utc_now(), 60, :second))
       |> Hexpm.Repo.update!()
 
       RegistryBuilder.full(Repository.hexpm())
@@ -915,7 +915,7 @@ defmodule HexpmWeb.API.ReleaseControllerTest do
     end
 
     test "delete non-last package release", %{user: user, package: package, release: release} do
-      Ecto.Changeset.change(release, inserted_at: %{DateTime.utc_now() | year: 2030})
+      Ecto.Changeset.change(release, inserted_at: DateTime.add(DateTime.utc_now(), 60, :second))
       |> Hexpm.Repo.update!()
 
       insert(:release, package: package)
