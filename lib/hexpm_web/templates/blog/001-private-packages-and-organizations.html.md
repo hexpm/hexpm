@@ -1,6 +1,6 @@
 ## Private packages and organizations
 
-<div class="subtitle">August 28, 2017 · by Eric Meadows-Jönsson</div>
+<div class="subtitle"><time datetime="2017-08-28T00:00:00Z">August 28, 2017</time> · by Eric Meadows-Jönsson</div>
 
 We are announcing the addition of private packages on Hex.pm. With private packages you can publish
 packages to Hex.pm that only your organization members can access and download. With your organization

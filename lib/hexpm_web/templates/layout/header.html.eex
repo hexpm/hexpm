@@ -12,6 +12,7 @@
 
     <link rel="search" type="application/opensearchdescription+xml" title="Hex" href="/hexsearch.xml">
     <link rel="stylesheet" href="<%= Routes.static_path(Endpoint, "/css/app.css") %>">
+    <link rel="alternate" type="application/rss+xml" title="RSS - Blog" href="/feeds/blog.xml">
   </head>
   <body>
     <!--[if lt IE 10]>

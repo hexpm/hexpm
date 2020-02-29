@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<rss version="2.0">
+
+  <channel>
+
+    <title>Blog posts on hex.pm</title>
+    <link><%= Routes.blog_url(Endpoint, :index) %></link>
+    <description>Blog posts on hex.pm</description>
+    <language>en</language>
+
+    <%= for post <- @posts do %>
+    <item>
+      <title><%= post.title %></title>
+      <description><![CDATA[<%= post.paragraph %>]]></description>
+      <link><%= Routes.blog_url(Endpoint, :show, post.slug) %></link>
+      <pubDate><%= post.published %></pubDate>
+    </item>
+    <% end %>
+
+  </channel>
+
+</rss>

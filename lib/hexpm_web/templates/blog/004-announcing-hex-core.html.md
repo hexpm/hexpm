@@ -1,6 +1,6 @@
 ## Announcing hex_core
 
-<div class="subtitle">August 8, 2018 · by Wojtek Mach</div>
+<div class="subtitle"><time datetime="2018-08-08T00:00:00Z">August 8, 2018</time> · by Wojtek Mach</div>
 
 Today we are releasing the first version of hex_core, an Erlang library to interact with Hex.pm and other servers implementing Hex specifications.
 

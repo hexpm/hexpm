@@ -267,4 +267,46 @@ defmodule Hexpm.Utils do
     diff_url = Application.fetch_env!(:hexpm, :diff_url)
     "#{diff_url}/diff/#{package_name}/#{previous_version}..#{version}"
   end
+
+  @doc """
+  Returns a RFC 2822 format string from a UTC datetime.
+  # TODO: Replace with `Calendar.strftime(datetime, "%a, %b %d %Y %H:%H:%S GMT")` on Elixir v1.11
+  """
+  def datetime_to_rfc2822(%DateTime{calendar: Calendar.ISO, time_zone: "Etc/UTC"} = datetime) do
+    %{year: year, month: month, day: day} = datetime
+
+    day_of_week = Calendar.ISO.day_of_week(year, month, day)
+    time = datetime |> DateTime.to_time() |> Time.to_iso8601()
+
+    [
+      (day_of_week |> day_name_abbr()) <> ",",
+      day |> Integer.to_string() |> String.pad_leading(2, "0"),
+      month |> month_name_abbr(),
+      year |> Integer.to_string(),
+      time,
+      "GMT"
+    ]
+    |> Enum.join(" ")
+  end
+
+  defp day_name_abbr(1), do: "Mon"
+  defp day_name_abbr(2), do: "Tue"
+  defp day_name_abbr(3), do: "Wed"
+  defp day_name_abbr(4), do: "Thu"
+  defp day_name_abbr(5), do: "Fri"
+  defp day_name_abbr(6), do: "Sat"
+  defp day_name_abbr(7), do: "Sun"
+
+  defp month_name_abbr(1), do: "Jan"
+  defp month_name_abbr(2), do: "Feb"
+  defp month_name_abbr(3), do: "Mar"
+  defp month_name_abbr(4), do: "Apr"
+  defp month_name_abbr(5), do: "May"
+  defp month_name_abbr(6), do: "Jun"
+  defp month_name_abbr(7), do: "Jul"
+  defp month_name_abbr(8), do: "Aug"
+  defp month_name_abbr(9), do: "Sep"
+  defp month_name_abbr(10), do: "Oct"
+  defp month_name_abbr(11), do: "Nov"
+  defp month_name_abbr(12), do: "Dec"
 end
