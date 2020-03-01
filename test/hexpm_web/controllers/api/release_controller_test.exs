@@ -412,6 +412,31 @@ defmodule HexpmWeb.API.ReleaseControllerTest do
       # assert result["errors"]["requirements"] =~ ~s(Failed to use "#{package.name}")
     end
 
+    test "default to replace release if repalce option is not set", %{
+      user: user,
+      package: package,
+      release: release
+    } do
+      datetime =
+        NaiveDateTime.utc_now()
+        |> NaiveDateTime.add(-36000, :second)
+        |> DateTime.from_naive!("Etc/UTC")
+
+      Ecto.Changeset.change(package, inserted_at: datetime)
+      |> Hexpm.Repo.update!()
+
+      Ecto.Changeset.change(release, inserted_at: datetime)
+      |> Hexpm.Repo.update!()
+
+      meta = %{name: package.name, version: "0.0.1", description: "description"}
+
+      build_conn()
+      |> put_req_header("content-type", "application/octet-stream")
+      |> put_req_header("authorization", key_for(user))
+      |> post("api/publish", create_tar(meta))
+      |> json_response(200)
+    end
+
     test "can update release within package one hour grace period", %{
       user: user,
       package: package,
@@ -454,12 +479,12 @@ defmodule HexpmWeb.API.ReleaseControllerTest do
         build_conn()
         |> put_req_header("content-type", "application/octet-stream")
         |> put_req_header("authorization", key_for(user))
-        |> post("api/publish", create_tar(meta))
+        |> post("api/publish?replace=false", create_tar(meta))
 
       result = json_response(conn, 422)
 
       assert result["errors"]["inserted_at"] ==
-               "can only modify a release up to one hour after creation and must include the --replace option"
+               "can only modify a release up to one hour after creation"
     end
 
     test "create releases with requirements", %{user: user, package: package} do
@@ -818,10 +843,40 @@ defmodule HexpmWeb.API.ReleaseControllerTest do
       result = json_response(conn, 422)
 
       assert result["errors"]["inserted_at"] ==
-               "can only modify a release up to one hour after creation and must include the --replace option"
+               "can only modify a release up to one hour after creation"
     end
 
-    test "cannot update private package after grace period if replace flag is missing or false",
+    test "deafult to replace private package after grace period if replace param is not set",
+         %{
+           user: user,
+           repository: repository
+         } do
+      package =
+        insert(
+          :package,
+          package_owners: [build(:package_owner, user: user)],
+          repository_id: repository.id
+        )
+
+      insert(
+        :release,
+        package: package,
+        version: "0.0.1",
+        inserted_at: %{DateTime.utc_now() | year: 2000}
+      )
+
+      insert(:organization_user, organization: repository.organization, user: user)
+
+      meta = %{name: package.name, version: "0.0.1", description: "description"}
+
+      build_conn()
+      |> put_req_header("content-type", "application/octet-stream")
+      |> put_req_header("authorization", key_for(user))
+      |> post("api/repos/#{repository.name}/publish", create_tar(meta))
+      |> json_response(200)
+    end
+
+    test "cannot update private package after grace period if replace param is set to false",
          %{
            user: user,
            repository: repository
@@ -848,7 +903,7 @@ defmodule HexpmWeb.API.ReleaseControllerTest do
         build_conn()
         |> put_req_header("content-type", "application/octet-stream")
         |> put_req_header("authorization", key_for(user))
-        |> post("api/repos/#{repository.name}/publish", create_tar(meta))
+        |> post("api/repos/#{repository.name}/publish?replace=false", create_tar(meta))
 
       result = json_response(conn, 422)
 

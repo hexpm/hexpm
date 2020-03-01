@@ -69,12 +69,12 @@ defmodule Hexpm.Repository.Release do
     |> Requirement.build_all(package)
   end
 
-  def build(package, publisher, params, inner_checksum, outer_checksum, replace? \\ true) do
+  def build(package, publisher, params, inner_checksum, outer_checksum, replace? \\ false) do
     build_assoc(package, :releases)
     |> changeset(:create, params, package, publisher, inner_checksum, outer_checksum, replace?)
   end
 
-  def update(release, publisher, params, inner_checksum, outer_checksum, replace? \\ true) do
+  def update(release, publisher, params, inner_checksum, outer_checksum, replace? \\ false) do
     changeset(
       release,
       :update,
@@ -118,7 +118,7 @@ defmodule Hexpm.Repository.Release do
 
   defp editable_error_message(release, :update) do
     if release.package.repository.public do
-      "can only modify a release up to one hour after creation and must include the --replace option"
+      "can only modify a release up to one hour after creation"
     else
       "must include the --replace flag to update an existing release"
     end

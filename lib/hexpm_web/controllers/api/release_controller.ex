@@ -23,7 +23,7 @@ defmodule HexpmWeb.API.ReleaseController do
        when action in [:delete]
 
   def publish(conn, %{"body" => body} = params) do
-    replace? = Map.get(params, "replace", false)
+    replace? = Map.get(params, "replace", true)
     request_id = List.first(get_resp_header(conn, "x-request-id"))
 
     log_tarball(
@@ -110,7 +110,7 @@ defmodule HexpmWeb.API.ReleaseController do
   defp handle_tarball(conn, repository, package, user, body) do
     case release_metadata(body) do
       {:ok, meta, inner_checksum, outer_checksum} ->
-        replace? = Map.get(conn.params, "replace", false)
+        replace? = Map.get(conn.params, "replace", true)
         request_id = List.first(get_resp_header(conn, "x-request-id"))
         log_tarball(repository.name, meta["name"], meta["version"], request_id, body)
 
