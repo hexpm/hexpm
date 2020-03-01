@@ -43,9 +43,8 @@ defmodule Hexpm.ReleaseTasks.Stats do
       Logger.info("[stats] completed #{size} downloads (#{div(time, 1000)}ms)")
     catch
       exception ->
-        stacktrace = System.stacktrace()
         Logger.error("[stats] failed")
-        reraise exception, stacktrace
+        reraise exception, __STACKTRACE__
     end
   end
 

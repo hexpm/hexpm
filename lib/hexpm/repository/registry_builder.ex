@@ -212,9 +212,8 @@ defmodule Hexpm.Repository.RegistryBuilder do
       Logger.warn("REGISTRY_BUILDER completed #{type} (#{div(time, 1000)}ms)")
     catch
       exception ->
-        stacktrace = System.stacktrace()
         Logger.error("REGISTRY_BUILDER failed #{type}")
-        reraise exception, stacktrace
+        reraise exception, __STACKTRACE__
     end
   end
 
