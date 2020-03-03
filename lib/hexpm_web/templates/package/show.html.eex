@@ -10,21 +10,6 @@ tools = [
   rebar: "rebar.config",
   erlang_mk: "erlang.mk"
 ]
-
-tool_compatibility = %{
-  "mix" => [:mix],
-  "rebar" => [:mix, :rebar, :erlang_mk],
-  "rebar3"=> [:mix, :rebar, :erlang_mk],
-  "make" => [:mix, :erlang_mk],
-  "erlang.mk" => [:mix, :erlang_mk]
-}
-
-compatible_tools =
-  build_tools
-  |> Enum.flat_map(&(Map.get(tool_compatibility, &1, [])))
-  |> Enum.uniq()
-
-tools = Keyword.take(tools, compatible_tools)
 %>
 
 <h2 class="package-title"><%= ViewHelpers.package_name(@package) %>
