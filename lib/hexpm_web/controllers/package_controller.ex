@@ -149,7 +149,7 @@ defmodule HexpmWeb.PackageController do
         [:name, :repository_id]
       )
 
-    dependants_count = Packages.count(repositories, "depends:#{package.name}")
+    dependants_count = Packages.count(repositories, "depends:#{repository.name}:#{package.name}")
 
     audit_logs = AuditLogs.all_by(package, 1, @audit_logs_per_page)
 
