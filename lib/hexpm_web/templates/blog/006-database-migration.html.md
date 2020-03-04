@@ -1,6 +1,6 @@
 ## Database migration
 
-<div class="subtitle">September 28, 2018 · by Eric Meadows-Jönsson</div>
+<div class="subtitle"><time datetime="2018-09-28T00:00:00Z">September 28, 2018</time> · by Eric Meadows-Jönsson</div>
 
 We are changing hosting provider from Heroku to Google Cloud. All applications have already been moved to Google Kubernetes Engine, but we sill have to move the database for hex.pm itself.
 

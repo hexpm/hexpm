@@ -157,6 +157,7 @@ defmodule HexpmWeb.Router do
     get "/docs_sitemap.xml", SitemapController, :docs
     get "/hexsearch.xml", OpenSearchController, :opensearch
     get "/installs/hex.ez", InstallController, :archive
+    get "/feeds/blog.xml", FeedsController, :blog
   end
 
   scope "/api", HexpmWeb.API, as: :api do

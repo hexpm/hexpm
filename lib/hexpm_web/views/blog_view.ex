@@ -1,6 +1,8 @@
 defmodule HexpmWeb.BlogView do
   use HexpmWeb, :view
 
+  alias Hexpm.Utils
+
   skip_slugs = ~w()
 
   all_templates =
@@ -18,20 +20,11 @@ defmodule HexpmWeb.BlogView do
     |> Enum.sort_by(&elem(&1, 1), &>=/2)
 
   def render("index.html", _assigns) do
-    posts =
-      Enum.map(all_templates(), fn {slug, template} ->
-        content = render(template, %{})
-        content = Phoenix.HTML.safe_to_string(content)
+    render_template("index.html", posts: posts())
+  end
 
-        %{
-          slug: slug,
-          title: title(content),
-          subtitle: subtitle(content),
-          paragraph: first_paragraph(content)
-        }
-      end)
-
-    render_template("index.html", posts: posts)
+  def render("index.xml", _assigns) do
+    render_template("index.xml", posts: posts())
   end
 
   def render(other, _assigns) do
@@ -40,6 +33,21 @@ defmodule HexpmWeb.BlogView do
 
   def all_templates() do
     unquote(all_templates)
+  end
+
+  defp posts() do
+    Enum.map(all_templates(), fn {slug, template} ->
+      content = render(template, %{})
+      content = Phoenix.HTML.safe_to_string(content)
+
+      %{
+        slug: slug,
+        title: title(content),
+        subtitle: subtitle(content),
+        paragraph: first_paragraph(content),
+        published: published(content)
+      }
+    end)
   end
 
   defp first_paragraph(content) do
@@ -58,5 +66,15 @@ defmodule HexpmWeb.BlogView do
     ~r[<div class="subtitle">(.*)</div>]
     |> Regex.run(content)
     |> Enum.at(1)
+  end
+
+  defp published(content) do
+    {:ok, datetime, _utc_offset} =
+      ~r[<time datetime="(.+)">(.+)</time>]
+      |> Regex.run(content)
+      |> Enum.at(1)
+      |> DateTime.from_iso8601()
+
+    Utils.datetime_to_rfc2822(datetime)
   end
 end
