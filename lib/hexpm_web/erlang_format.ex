@@ -10,8 +10,12 @@ defmodule HexpmWeb.ErlangFormat do
     {:ok, nil}
   end
 
+  def decode(<<131, 80, _rest::binary>>) do
+    {:error, "bad binary_to_term"}
+  end
+
   def decode(binary) do
-    term = Plug.Crypto.safe_binary_to_term(binary, [:safe])
+    term = Plug.Crypto.non_executable_binary_to_term(binary, [:safe])
     {:ok, term}
   rescue
     ArgumentError ->
