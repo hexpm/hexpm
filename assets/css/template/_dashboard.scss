@@ -57,6 +57,27 @@
   color: #555;
 }
 
+.dashboard .security {
+  .recovery-codes-panel {
+    border-bottom: $base-border;
+  }
+
+  .recovery-code {
+    margin-bottom: 1em;
+    font-family: monospace;
+    font-weight: 600;
+  }
+
+  .recovery-code .recovery-code-used {
+    color: $color-grey;
+  }
+
+  .recovery-codes-container button {
+    margin-top: 15px;
+    margin-right: 8px;
+  }
+}
+
 .dashboard .email .panel .label {
   margin-left: 4px;
   font-size: .7em;

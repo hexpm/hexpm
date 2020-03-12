@@ -30,6 +30,10 @@ export default class App {
     // Copy button
     $(".copy-button").click(this.onCopy.bind(this))
 
+    $(".copy-data-button").click(this.onDataCopy.bind(this))
+    $(".print-data-button").click(this.onDataPrint.bind(this))
+    $(".download-data-button").click(this.onDataDownload.bind(this))
+
     // Pricing selector
     $(".pricing-button").click(this.onPricing.bind(this))
 
@@ -66,6 +70,55 @@ export default class App {
         })
       }
     })
+  }
+
+  onDataCopy(event) {
+    let succeeded = false
+    const targetElement = $(event.currentTarget)
+    const value = this.getAssociatedValueFromElement(targetElement)
+    const textarea = document.createElement("textarea")
+    textarea.textContent = value
+    document.body.appendChild(textarea)
+    textarea.select()
+    succeeded = document.execCommand("copy")
+    document.body.removeChild(textarea)
+
+    succeeded
+      ? this.copySucceeded(targetElement)
+      : this.copyFailed(targetElement)
+  }
+
+  onDataPrint(event) {
+    const value = this.getAssociatedValueFromElement($(event.currentTarget))
+    const printWindow = window.open("", "")
+    const div = printWindow.document.createElement("div")
+    div.innerHTML = `<p>${value}</p>`
+    div.setAttribute("style", "white-space:pre-line; font-family:monospace")
+
+    printWindow.document.body.appendChild(div)
+    printWindow.document.close()
+    printWindow.focus()
+    printWindow.print()
+    printWindow.close()
+  }
+
+  onDataDownload(event) {
+    const value = this.getAssociatedValueFromElement($(event.currentTarget))
+    const data = new Blob([value], { type: "text/plain" })
+    const container = document.createElement("a")
+    container.href = URL.createObjectURL(data)
+    container.download = "hex-recovery-codes"
+    container.click()
+  }
+
+  getAssociatedValueFromElement(element) {
+    try {
+      const dataId = element.attr("data-input-id")
+      const associatedElement = document.getElementById(dataId)
+      return associatedElement.dataset.value
+    } catch (error) {
+      return null
+    }
   }
 
   onCopy(event) {

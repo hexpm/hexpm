@@ -4,15 +4,21 @@ defmodule Hexpm.Accounts.User do
   @derive {HexpmWeb.Stale, assocs: [:emails, :owned_packages, :organizations, :keys]}
   @derive {Phoenix.Param, key: :username}
 
+  alias Hexpm.Accounts.{RecoveryCode, TFA}
+
   schema "users" do
     field :username, :string
     field :full_name, :string
     field :password, :string
     field :service, :boolean, default: false
     field :deactivated_at, :utc_datetime_usec
+    field :tfa_enabled, :boolean, virtual: true
+    field :app_enabled, :boolean, virtual: true
+    field :verification_code, :string, virtual: true
     timestamps()
 
     embeds_one :handles, UserHandles, on_replace: :delete
+    embeds_one :tfa, TFA, on_replace: :delete
 
     belongs_to :organization, Organization
     has_many :emails, Email
@@ -33,6 +39,7 @@ defmodule Hexpm.Accounts.User do
     cast(%User{}, params, ~w(username full_name password)a)
     |> validate_required(~w(username password)a)
     |> cast_assoc(:emails, required: true, with: &Email.changeset(&1, :first, &2, confirmed?))
+    |> cast_embed(:tfa)
     |> update_change(:username, &String.downcase/1)
     |> validate_length(:username, min: 3)
     |> validate_format(:username, @username_regex)
@@ -81,6 +88,16 @@ defmodule Hexpm.Accounts.User do
     |> validate_password(:password, password)
     |> validate_confirmation(:password, message: "does not match password")
     |> update_change(:password, &Auth.gen_password/1)
+  end
+
+  def update_security(user, params) do
+    user
+    |> cast(params, ~w(tfa_enabled app_enabled)a)
+    |> maybe_update_tfa()
+  end
+
+  def update_two_factor_auth(user, params) do
+    cast(user, params, ~w(verification_code)a)
   end
 
   def can_reset_password?(user, key) do
@@ -158,4 +175,45 @@ defmodule Hexpm.Accounts.User do
   else
     defp organization_name(organization), do: organization.name
   end
+
+  def recovery_code_used(user, code) do
+    updated_codes = Enum.map(user.tfa.recovery_codes, &set_recovery_code_used(&1, code))
+    change(user, %{tfa: %{user.tfa | recovery_codes: updated_codes}})
+  end
+
+  def rotate_recovery_codes(user) do
+    updated_codes = Hexpm.Accounts.RecoveryCode.gen_code_set()
+    change(user, %{tfa: %{user.tfa | recovery_codes: updated_codes}})
+  end
+
+  def tfa_enabled?(%{tfa: nil}), do: false
+  def tfa_enabled?(%{tfa: %{tfa_enabled: true}}), do: true
+  def tfa_enabled?(%{tfa: %{tfa_enabled: _value}}), do: false
+
+  def app_enabled?(%{tfa: nil}), do: false
+  def app_enabled?(%{tfa: %{app_enabled: true}}), do: true
+  def app_enabled?(%{tfa: %{app_enabled: _value}}), do: false
+
+  defp maybe_update_tfa(%{changes: %{tfa_enabled: true}} = changeset) do
+    secret = Hexpm.Accounts.TFA.generate_secret()
+    codes = Hexpm.Accounts.RecoveryCode.gen_code_set()
+    put_change(changeset, :tfa, %{tfa_enabled: true, secret: secret, recovery_codes: codes})
+  end
+
+  defp maybe_update_tfa(%{changes: %{tfa_enabled: false}} = changeset),
+    do: put_change(changeset, :tfa, nil)
+
+  defp maybe_update_tfa(%{changes: %{app_enabled: true}} = changeset) do
+    {:data, existing_data} = fetch_field(changeset, :tfa)
+    new_tfa_setting = Map.merge(Map.from_struct(existing_data), %{app_enabled: true})
+    put_change(changeset, :tfa, new_tfa_setting)
+  end
+
+  defp maybe_update_tfa(changeset), do: changeset
+
+  defp set_recovery_code_used(%RecoveryCode{code: code_str}, %RecoveryCode{code: code_str} = code) do
+    %{code | used_at: DateTime.utc_now()}
+  end
+
+  defp set_recovery_code_used(code, _other), do: code
 end

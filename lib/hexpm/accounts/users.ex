@@ -1,6 +1,8 @@
 defmodule Hexpm.Accounts.Users do
   use Hexpm.Context
 
+  alias Hexpm.Accounts.RecoveryCode
+
   def get(username_or_email, preload \\ []) do
     User.get(String.downcase(username_or_email), preload)
     |> Repo.one()
@@ -151,6 +153,34 @@ defmodule Hexpm.Accounts.Users do
 
       {:error, :user, changeset, _} ->
         {:error, changeset}
+    end
+  end
+
+  def rotate_recovery_codes(user, audit: audit_data) do
+    multi =
+      Multi.new()
+      |> Multi.update(:user, User.rotate_recovery_codes(user))
+      |> audit(audit_data, "security.rotate_recovery_codes", fn %{user: user} -> user end)
+
+    case Repo.transaction(multi) do
+      {:ok, %{user: user}} -> {:ok, user}
+      {:error, :user, changeset, _} -> {:error, changeset}
+    end
+  end
+
+  def update_security(%User{organization_id: id} = user, _params, _opts) when not is_nil(id) do
+    organization_error(user, "cannot update security of organizations")
+  end
+
+  def update_security(user, params, audit: audit_data) do
+    multi =
+      Multi.new()
+      |> Multi.update(:user, User.update_security(user, params))
+      |> audit(audit_data, "security.update", fn %{user: user} -> user end)
+
+    case Repo.transaction(multi) do
+      {:ok, %{user: user}} -> {:ok, user}
+      {:error, :user, changeset, _} -> {:error, changeset}
     end
   end
 
@@ -437,6 +467,21 @@ defmodule Hexpm.Accounts.Users do
         |> Mailer.deliver_now_throttled()
 
         :ok
+    end
+  end
+
+  def tfa_recover(%User{} = user, code_str) do
+    case RecoveryCode.verify(user.tfa.recovery_codes, code_str) do
+      {:ok, %RecoveryCode{} = code} ->
+        user =
+          user
+          |> User.recovery_code_used(code)
+          |> Repo.update!()
+
+        {:ok, user}
+
+      err ->
+        err
     end
   end
 

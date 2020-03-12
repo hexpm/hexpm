@@ -348,6 +348,14 @@ defmodule HexpmWeb.ViewHelpers do
   def include_if_loaded(output, key, struct, view, name, assigns) do
     Map.put(output, key, Phoenix.View.render_one(struct, view, name, assigns))
   end
+
+  def auth_qr_code_svg(user) do
+    secret = Map.fetch!(user.tfa, :secret)
+
+    "otpauth://totp/hex.pm:#{user.username}?issuer=hex.pm&secret=#{secret}"
+    |> EQRCode.encode()
+    |> EQRCode.svg(width: 400)
+  end
 end
 
 defimpl Phoenix.HTML.Safe, for: Version do

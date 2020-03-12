@@ -1,0 +1,27 @@
+<div class="row">
+  <div class="col-sm-3">
+    <%= render DashboardView, "_sidebar.html", assigns %>
+  </div>
+
+  <div class="col-sm-9 security">
+    <div class="panel panel-default">
+      <div class="panel-heading">Setup Security App</div>
+      <div class="panel-body recovery-codes-panel">
+        <h1>Scan this barcode with your app</h1>
+        <div style="text-align:center"><%= raw ViewHelpers.auth_qr_code_svg(@current_user) %></div>
+      </div>
+      <div class="panel-body">
+        <%= form_for @changeset, Routes.dashboard_security_path(Endpoint, :update), [method: :post], fn f -> %>
+            <div class="form-group">
+              <%= label f, :verification_code %>
+              <%= ViewHelpers.text_input f, :verification_code %>
+              <%= ViewHelpers.error_tag f, :verification_code %>
+            </div>
+
+          <button type="submit" class="btn btn-primary">Enable</button>
+        <% end %>
+      </div>
+      </div>
+    </div>
+  </div>
+</div>
