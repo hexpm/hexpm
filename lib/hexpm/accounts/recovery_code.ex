@@ -32,8 +32,8 @@ defmodule Hexpm.Accounts.RecoveryCode do
     |> List.to_string()
   end
 
-  @spec verify([RecoveryCode.t()], recovery_code()) ::
-          {:ok, RecoveryCode.t()} | {:error, :invalid_code}
+  @spec verify([recovery_code()], recovery_code()) ::
+          {:ok, recovery_code()} | {:error, :invalid_code}
   def verify(recovery_codes, code_str) do
     case find_valid_code(recovery_codes, code_str) do
       %RecoveryCode{code: ^code_str} = code -> {:ok, code}
