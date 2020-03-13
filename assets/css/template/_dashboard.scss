@@ -66,6 +66,8 @@
     margin-bottom: 1em;
     font-family: monospace;
     font-weight: 600;
+    width: 50%;
+    float: left;
   }
 
   .recovery-code .recovery-code-used {
@@ -134,7 +136,7 @@
   }
 
   input.change-seats,
-  select.change-seats, {
+  select.change-seats {
     display: inline-block;
     width: 50px;
     padding: 6px 3px 6px 6px;

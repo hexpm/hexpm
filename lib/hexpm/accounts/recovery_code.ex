@@ -20,7 +20,7 @@ defmodule Hexpm.Accounts.RecoveryCode do
   end
 
   @spec gen_code_set() :: [%RecoveryCode{}]
-  def gen_code_set, do: Enum.map(1..5, fn _ -> %RecoveryCode{code: gen_code()} end)
+  def gen_code_set, do: Enum.map(1..10, fn _ -> %RecoveryCode{code: gen_code()} end)
 
   @spec gen_code() :: recovery_code()
   def gen_code do
@@ -42,6 +42,8 @@ defmodule Hexpm.Accounts.RecoveryCode do
   end
 
   defp find_valid_code(recovery_codes, code_str) do
-    Enum.find(recovery_codes, fn rc -> is_nil(rc.used_at) and code_str == rc.code end)
+    Enum.find(recovery_codes, fn rc ->
+      is_nil(rc.used_at) and Plug.Crypto.secure_compare(code_str, rc.code)
+    end)
   end
 end

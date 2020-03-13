@@ -350,11 +350,9 @@ defmodule HexpmWeb.ViewHelpers do
   end
 
   def auth_qr_code_svg(user) do
-    secret = Map.fetch!(user.tfa, :secret)
-
-    "otpauth://totp/hex.pm:#{user.username}?issuer=hex.pm&secret=#{secret}"
+    "otpauth://totp/hex.pm:#{user.username}?issuer=hex.pm&secret=#{user.tfa.secret}"
     |> EQRCode.encode()
-    |> EQRCode.svg(width: 400)
+    |> EQRCode.svg(width: 250)
   end
 end
 
