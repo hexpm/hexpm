@@ -172,7 +172,7 @@ defmodule Hexpm.Accounts.UserTest do
       assert changeset.valid?
       refute is_nil(changeset.changes.tfa)
       refute is_nil(changeset.changes.tfa.changes.recovery_codes)
-      assert Enum.count(changeset.changes.tfa.changes.recovery_codes) == 5
+      assert Enum.count(changeset.changes.tfa.changes.recovery_codes) == 10
     end
 
     test "disables tfa", %{user: user} do
@@ -184,7 +184,7 @@ defmodule Hexpm.Accounts.UserTest do
       refute is_nil(user.tfa)
       refute is_nil(user.tfa.secret)
       refute is_nil(user.tfa.recovery_codes)
-      assert Enum.count(user.tfa.recovery_codes) == 5
+      assert Enum.count(user.tfa.recovery_codes) == 10
 
       changeset = User.update_security(user, %{tfa_enabled: false})
       assert changeset.valid?
