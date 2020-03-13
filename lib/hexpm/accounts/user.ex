@@ -96,7 +96,7 @@ defmodule Hexpm.Accounts.User do
     |> maybe_update_tfa()
   end
 
-  def update_two_factor_auth(user, params) do
+  def update_tfa_auth(user, params) do
     cast(user, params, ~w(verification_code)a)
   end
 

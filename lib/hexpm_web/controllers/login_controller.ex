@@ -81,9 +81,9 @@ defmodule HexpmWeb.LoginController do
        ) do
     conn
     |> configure_session(renew: true)
-    |> put_session("two_factor_user_id", %{uid: user_id, return: conn.params["return"]})
+    |> put_session("tfa_user_id", %{uid: user_id, return: conn.params["return"]})
     |> maybe_put_flash(breached?)
-    |> redirect(to: Routes.two_factor_auth_path(conn, :show))
+    |> redirect(to: Routes.tfa_auth_path(conn, :show))
   end
 
   defp login(conn, user, password_breached: breached?) do

@@ -1,4 +1,4 @@
-defmodule HexpmWeb.Dashboard.TwoFactorAuthSetupController do
+defmodule HexpmWeb.Dashboard.TFAAuthSetupController do
   use HexpmWeb, :controller
 
   alias Hexpm.Accounts.User
@@ -7,7 +7,7 @@ defmodule HexpmWeb.Dashboard.TwoFactorAuthSetupController do
 
   def index(conn, params) do
     user = conn.assigns.current_user
-    changeset = User.update_two_factor_auth(user, params)
+    changeset = User.update_tfa_auth(user, params)
 
     render(
       conn,

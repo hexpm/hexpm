@@ -1,4 +1,4 @@
-defmodule HexpmWeb.TwoFactorAuthController do
+defmodule HexpmWeb.TFAAuthController do
   use HexpmWeb, :controller
 
   plug :authenticate
@@ -6,14 +6,14 @@ defmodule HexpmWeb.TwoFactorAuthController do
   def show(conn, _params), do: render_show(conn)
 
   def create(conn, %{"code" => code}) do
-    %{"uid" => uid} = session = get_session(conn, "two_factor_user_id")
+    %{"uid" => uid} = session = get_session(conn, "tfa_user_id")
     user = Hexpm.Accounts.Users.get_by_id(uid)
     secret = user.tfa.secret
 
     with {_int, ""} <- Integer.parse(code),
          true <- Hexpm.Accounts.TFA.token_valid?(secret, code) do
       conn
-      |> delete_session("two_factor_user_id")
+      |> delete_session("tfa_user_id")
       |> HexpmWeb.LoginController.start_session(user, session["return"])
     else
       _ ->
@@ -39,7 +39,7 @@ defmodule HexpmWeb.TwoFactorAuthController do
   end
 
   defp authenticate(conn, _opts) do
-    case get_session(conn, "two_factor_user_id") do
+    case get_session(conn, "tfa_user_id") do
       nil ->
         conn |> redirect(to: "/") |> halt()
 

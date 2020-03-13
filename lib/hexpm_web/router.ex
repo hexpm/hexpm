@@ -57,11 +57,11 @@ defmodule HexpmWeb.Router do
     post "/login", LoginController, :create
     post "/logout", LoginController, :delete
 
-    get "/two_factor_auth", TwoFactorAuthController, :show
-    post "/two_factor_auth", TwoFactorAuthController, :create
+    get "/two_factor_auth", TFAAuthController, :show
+    post "/two_factor_auth", TFAAuthController, :create
 
-    get "/two_factor_auth/recovery", TwoFactorRecoveryController, :show
-    post "/two_factor_auth/recovery", TwoFactorRecoveryController, :create
+    get "/two_factor_auth/recovery", TFARecoveryController, :show
+    post "/two_factor_auth/recovery", TFARecoveryController, :create
 
     get "/signup", SignupController, :show
     post "/signup", SignupController, :create
@@ -130,11 +130,11 @@ defmodule HexpmWeb.Router do
     post "/security/rotate_recovery_codes", SecurityController, :rotate_recovery_codes,
       as: :dashboard_security
 
-    get "/two_factor_auth/setup", TwoFactorAuthSetupController, :index,
-      as: :dashboard_two_factor_auth_setup
+    get "/two_factor_auth/setup", TFAAuthSetupController, :index,
+      as: :dashboard_tfa_setup
 
-    post "/two_factor_auth/setup", TwoFactorAuthSetupController, :update,
-      as: :dashboard_two_factor_auth_setup
+    post "/two_factor_auth/setup", TFAAuthSetupController, :update,
+      as: :dashboard_tfa_setup
 
     post "/security/reset_auth_app", SecurityController, :reset_auth_app,
       as: :dashboard_security_reset

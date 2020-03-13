@@ -1,4 +1,4 @@
-defmodule HexpmWeb.Dashboard.TwoFactorAuthSetupView do
+defmodule HexpmWeb.Dashboard.TFAAuthSetupView do
   use HexpmWeb, :view
   alias HexpmWeb.DashboardView
 end

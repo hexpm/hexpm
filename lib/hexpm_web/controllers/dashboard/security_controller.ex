@@ -9,7 +9,7 @@ defmodule HexpmWeb.Dashboard.SecurityController do
     if User.tfa_enabled?(user) and not User.app_enabled?(user) do
       conn
       |> put_flash(:error, "Please complete your two-factor authentication setup")
-      |> redirect(to: Routes.dashboard_two_factor_auth_setup_path(conn, :index))
+      |> redirect(to: Routes.dashboard_tfa_setup_path(conn, :index))
     else
       render_index(conn, User.update_security(user, %{}))
     end
@@ -41,7 +41,7 @@ defmodule HexpmWeb.Dashboard.SecurityController do
     else
       conn
       |> put_flash(:error, "Your verification code was incorrect.")
-      |> redirect(to: Routes.dashboard_two_factor_auth_setup_path(conn, :index))
+      |> redirect(to: Routes.dashboard_tfa_setup_path(conn, :index))
     end
   end
 
@@ -95,7 +95,7 @@ defmodule HexpmWeb.Dashboard.SecurityController do
       {:ok, _user} ->
         conn
         |> put_flash(:info, "Your security preference has been updated.")
-        |> redirect(to: Routes.dashboard_two_factor_auth_setup_path(conn, :index))
+        |> redirect(to: Routes.dashboard_tfa_setup_path(conn, :index))
 
       {:error, changeset} ->
         conn
@@ -123,7 +123,7 @@ defmodule HexpmWeb.Dashboard.SecurityController do
       {:ok, _user} ->
         conn
         |> put_flash(:info, "Your security preference has been updated.")
-        |> redirect(to: Routes.dashboard_two_factor_auth_setup_path(conn, :index))
+        |> redirect(to: Routes.dashboard_tfa_setup_path(conn, :index))
 
       {:error, changeset} ->
         conn

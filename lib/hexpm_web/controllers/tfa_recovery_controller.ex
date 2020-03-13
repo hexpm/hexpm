@@ -1,4 +1,4 @@
-defmodule HexpmWeb.TwoFactorRecoveryController do
+defmodule HexpmWeb.TFARecoveryController do
   use HexpmWeb, :controller
 
   plug :authenticate
@@ -6,13 +6,13 @@ defmodule HexpmWeb.TwoFactorRecoveryController do
   def show(conn, _params), do: render_show(conn)
 
   def create(conn, %{"code" => code}) do
-    %{"uid" => uid} = session = get_session(conn, "two_factor_user_id")
+    %{"uid" => uid} = session = get_session(conn, "tfa_user_id")
     user = Hexpm.Accounts.Users.get_by_id(uid)
 
     with true <- valid_code?(code),
          {:ok, updated_user} <- Hexpm.Accounts.Users.tfa_recover(user, code) do
       conn
-      |> delete_session("two_factor_user_id")
+      |> delete_session("tfa_user_id")
       |> HexpmWeb.LoginController.start_session(updated_user, session["return"])
     else
       _ ->
@@ -38,7 +38,7 @@ defmodule HexpmWeb.TwoFactorRecoveryController do
   end
 
   defp authenticate(conn, _opts) do
-    case get_session(conn, "two_factor_user_id") do
+    case get_session(conn, "tfa_user_id") do
       nil ->
         conn |> redirect(to: "/") |> halt()
 
