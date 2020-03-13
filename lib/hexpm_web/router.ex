@@ -130,11 +130,9 @@ defmodule HexpmWeb.Router do
     post "/security/rotate_recovery_codes", SecurityController, :rotate_recovery_codes,
       as: :dashboard_security
 
-    get "/two_factor_auth/setup", TFAAuthSetupController, :index,
-      as: :dashboard_tfa_setup
+    get "/two_factor_auth/setup", TFAAuthSetupController, :index, as: :dashboard_tfa_setup
 
-    post "/two_factor_auth/setup", TFAAuthSetupController, :update,
-      as: :dashboard_tfa_setup
+    post "/two_factor_auth/setup", TFAAuthSetupController, :update, as: :dashboard_tfa_setup
 
     post "/security/reset_auth_app", SecurityController, :reset_auth_app,
       as: :dashboard_security_reset
