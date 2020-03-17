@@ -37,7 +37,7 @@ defmodule Hexpm.Accounts.RecoveryCode do
   def verify(recovery_codes, code_str) do
     case find_valid_code(recovery_codes, code_str) do
       %RecoveryCode{code: ^code_str} = code -> {:ok, code}
-      _otherwise -> {:error, :invalid_code}
+      nil -> {:error, :invalid_code}
     end
   end
 
