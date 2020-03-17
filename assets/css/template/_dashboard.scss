@@ -63,11 +63,11 @@
   }
 
   .recovery-code {
+    float: left;
+    width: 50%;
     margin-bottom: 1em;
     font-family: monospace;
     font-weight: 600;
-    width: 50%;
-    float: left;
   }
 
   .recovery-code .recovery-code-used {
