@@ -16,7 +16,7 @@ defmodule Hexpm.Accounts.TFA do
   end
 
   def generate_secret do
-    9 |> :crypto.strong_rand_bytes() |> Base.encode32(padding: false)
+    32 |> :crypto.strong_rand_bytes() |> Base.encode32() |> String.slice(0..15)
   end
 
   # addwindow 1 creates a token 30 seconds ahead

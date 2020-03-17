@@ -5,15 +5,16 @@
 
   <div class="col-sm-9 security">
     <div class="panel panel-default">
-      <div class="panel-heading">Security</div>
-      <div class="panel-body">
-        <%= form_for @changeset, Routes.dashboard_security_path(Endpoint, :update), [method: :post], fn f -> %>
-          <div class="form-group">
-            <%= checkbox f, :tfa_enabled, style: "margin-right:1em", checked: Hexpm.Accounts.User.tfa_enabled?(@current_user) %>
-            <%= label f, :tfa_enabled, "Enable two-factor authentication" %>
-          </div>
-          <button type="submit" class="btn btn-primary">Save</button>
+      <div class="panel-heading with-button">Two-factor security
+      <%= form_for @changeset, Routes.dashboard_security_path(Endpoint, :update), [method: :post], fn f -> %>
+        <%= if Hexpm.Accounts.User.tfa_enabled?(@current_user) do %>
+          <%= hidden_input f, :tfa_enabled, value: false %>
+          <button type="submit" class="btn btn-primary">Disable</button>
+        <% else %>
+          <%= hidden_input f, :tfa_enabled, value: true %>
+          <button type="submit" class="btn btn-primary">Enable</button>
         <% end %>
+      <% end %>
       </div>
     </div>
     <%= if Hexpm.Accounts.User.tfa_enabled?(@current_user) do %>

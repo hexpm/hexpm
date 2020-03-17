@@ -205,3 +205,12 @@
     margin-left: 2rem;
   }
 }
+
+.panel-heading.with-button {
+  padding: 15px;
+
+  form {
+    float: right;
+    margin-top: -8px;
+  }
+}

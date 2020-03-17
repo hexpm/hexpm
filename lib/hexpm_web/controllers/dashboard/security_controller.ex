@@ -80,7 +80,7 @@ defmodule HexpmWeb.Dashboard.SecurityController do
       {:ok, _user} ->
         conn
         |> put_flash(:info, "Your security preference has been updated.")
-        |> redirect(to: Routes.dashboard_tfa_setup_path(conn, :index))
+        |> redirect(to: update_tfa_redirect(conn, tfa_enabled?))
 
       {:error, changeset} ->
         conn
@@ -102,4 +102,7 @@ defmodule HexpmWeb.Dashboard.SecurityController do
         |> render_index(changeset)
     end
   end
+
+  defp update_tfa_redirect(conn, false), do: Routes.dashboard_security_path(conn, :index)
+  defp update_tfa_redirect(conn, true), do: Routes.dashboard_tfa_setup_path(conn, :index)
 end
