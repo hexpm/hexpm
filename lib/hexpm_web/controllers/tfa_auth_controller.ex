@@ -10,14 +10,12 @@ defmodule HexpmWeb.TFAAuthController do
     user = Hexpm.Accounts.Users.get_by_id(uid)
     secret = user.tfa.secret
 
-    with {_int, ""} <- Integer.parse(code),
-         true <- Hexpm.Accounts.TFA.token_valid?(secret, code) do
+    if Hexpm.Accounts.TFA.token_valid?(secret, code) do
       conn
       |> delete_session("tfa_user_id")
       |> HexpmWeb.LoginController.start_session(user, session["return"])
     else
-      _ ->
-        render_show_error(conn)
+      render_show_error(conn)
     end
   end
 
