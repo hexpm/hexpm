@@ -20,11 +20,10 @@ defmodule HexpmWeb.Dashboard.SecurityController do
 
     case {User.tfa_enabled?(user), tfa_enabled} do
       {false, "true"} ->
-        # need to redirect to the QR code setup page
-        update_tfa_setting(user, conn, false, true)
+        update_tfa_setting(conn, user, true)
 
       {true, "false"} ->
-        update_tfa_setting(user, conn, true, false)
+        update_tfa_setting(conn, user, false)
 
       _unchanged ->
         conn
@@ -37,7 +36,7 @@ defmodule HexpmWeb.Dashboard.SecurityController do
     user = conn.assigns.current_user
 
     if Hexpm.Accounts.TFA.token_valid?(user.tfa.secret, verification_code) do
-      update_app_enabled(user, conn, true)
+      update_app_enabled(conn, user, true)
     else
       conn
       |> put_flash(:error, "Your verification code was incorrect.")
@@ -63,7 +62,7 @@ defmodule HexpmWeb.Dashboard.SecurityController do
 
   def reset_auth_app(conn, _params) do
     user = conn.assigns.current_user
-    reset_tfa_setting(user, conn)
+    update_tfa_setting(conn, user, true)
   end
 
   defp render_index(conn, changeset) do
@@ -76,22 +75,8 @@ defmodule HexpmWeb.Dashboard.SecurityController do
     )
   end
 
-  defp update_tfa_setting(user, conn, true, false) do
-    case Users.update_security(user, %{"tfa_enabled" => "false"}, audit: audit_data(conn)) do
-      {:ok, _user} ->
-        conn
-        |> put_flash(:info, "Your security preference has been updated.")
-        |> redirect(to: Routes.dashboard_security_path(conn, :index))
-
-      {:error, changeset} ->
-        conn
-        |> put_status(400)
-        |> render_index(changeset)
-    end
-  end
-
-  defp update_tfa_setting(user, conn, false, true) do
-    case Users.update_security(user, %{"tfa_enabled" => "true"}, audit: audit_data(conn)) do
+  defp update_tfa_setting(conn, user, tfa_enabled?) do
+    case Users.update_security(user, %{tfa_enabled: tfa_enabled?}, audit: audit_data(conn)) do
       {:ok, _user} ->
         conn
         |> put_flash(:info, "Your security preference has been updated.")
@@ -104,26 +89,12 @@ defmodule HexpmWeb.Dashboard.SecurityController do
     end
   end
 
-  defp update_app_enabled(user, conn, app_enabled?) do
-    case Users.update_security(user, %{"app_enabled" => app_enabled?}, audit: audit_data(conn)) do
+  defp update_app_enabled(conn, user, app_enabled?) do
+    case Users.update_security(user, %{app_enabled: app_enabled?}, audit: audit_data(conn)) do
       {:ok, _user} ->
         conn
         |> put_flash(:info, "Your security preference has been updated.")
         |> redirect(to: Routes.dashboard_security_path(conn, :index))
-
-      {:error, changeset} ->
-        conn
-        |> put_status(400)
-        |> render_index(changeset)
-    end
-  end
-
-  defp reset_tfa_setting(user, conn) do
-    case Users.update_security(user, %{"tfa_enabled" => "true"}, audit: audit_data(conn)) do
-      {:ok, _user} ->
-        conn
-        |> put_flash(:info, "Your security preference has been updated.")
-        |> redirect(to: Routes.dashboard_tfa_setup_path(conn, :index))
 
       {:error, changeset} ->
         conn
