@@ -192,7 +192,7 @@ defmodule Hexpm.Accounts.User do
 
   def app_enabled?(%{tfa: nil}), do: false
   def app_enabled?(%{tfa: %{app_enabled: true}}), do: true
-  def app_enabled?(%{tfa: %{app_enabled: _value}}), do: false
+  def app_enabled?(%{tfa: %{app_enabled: false}}), do: false
 
   defp maybe_update_tfa(%{changes: %{tfa_enabled: true}} = changeset) do
     secret = Hexpm.Accounts.TFA.generate_secret()
