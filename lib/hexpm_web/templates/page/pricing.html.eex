@@ -49,6 +49,8 @@
           <li><strong>&gt;</strong> Unlimited number of <strong>private</strong> packages</li>
           <li><strong>&gt;</strong> <strong>Private</strong> package documentation</li>
           <li><strong>&gt;</strong> Republish and delete packages</li>
+          <li>&nbsp;</li>
+          <li>&nbsp;</li>
         </ul>
         <div class="action">
           <a class="btn btn-primary" href="<%= Routes.organization_path(Endpoint, :new) %>" role="button">Try for 30 days</a>
@@ -59,8 +61,17 @@
 
   <div class="info">
     <p>
-      For more information about pricing and billing read the
-      <a href="<%= Routes.docs_path(Endpoint, :faq) %>">FAQ</a>.
+      <strong>
+        For more information about pricing and billing read the
+        <a href="<%= Routes.docs_path(Endpoint, :faq) %>">FAQ</a>.
+      </strong>
+    </p>
+    <p>
+      <strong>
+        Are you interested in self-hosted Hex or "enterprise" solutions?
+        Please contact us on <a href="mailto:support@hex.pm">support@hex.pm</a>
+        to hear what we are planning and let us know what you are looking for.
+      </strong>
     </p>
     <p>
       <small>* Local VAT may apply.</small>
