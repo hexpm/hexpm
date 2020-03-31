@@ -11,12 +11,14 @@ defmodule Hexpm.Accounts.TFA do
 
   def changeset(tfa, params) do
     tfa
-    |> cast(params, ~w[secret app_enabled tfa_enabled]a)
+    |> cast(params, ~w(secret app_enabled tfa_enabled)a)
     |> cast_embed(:recovery_codes)
   end
 
-  def generate_secret do
-    32 |> :crypto.strong_rand_bytes() |> Base.encode32() |> String.slice(0..15)
+  def generate_secret() do
+    10
+    |> :crypto.strong_rand_bytes()
+    |> Base.encode32()
   end
 
   # addwindow 1 creates a token 30 seconds ahead

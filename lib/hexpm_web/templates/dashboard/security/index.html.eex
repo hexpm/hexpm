@@ -6,31 +6,31 @@
   <div class="col-sm-9 security">
     <div class="panel panel-default">
       <div class="panel-heading with-button">Two-factor security
-      <%= form_for @changeset, Routes.dashboard_security_path(Endpoint, :update), [method: :post], fn f -> %>
-        <%= if Hexpm.Accounts.User.tfa_enabled?(@current_user) do %>
-          <%= hidden_input f, :tfa_enabled, value: false %>
+      <%= if Hexpm.Accounts.User.tfa_enabled?(@current_user) do %>
+        <%= form_tag(Routes.dashboard_security_path(Endpoint, :disable_tfa)) do %>
           <button type="submit" class="btn btn-primary">Disable</button>
-        <% else %>
-          <%= hidden_input f, :tfa_enabled, value: true %>
+        <% end %>
+      <% else %>
+        <%= form_tag(Routes.dashboard_security_path(Endpoint, :enable_tfa)) do %>
           <button type="submit" class="btn btn-primary">Enable</button>
         <% end %>
       <% end %>
       </div>
     </div>
     <%= if Hexpm.Accounts.User.tfa_enabled?(@current_user) do %>
-    <div class="panel panel-default">
-      <div class="panel-heading">Edit authenticator app</div>
-      <div class="panel-body">
-        <p>
-          This will invalidate your current two-factor device and recovery codes.
-        </p>
+      <div class="panel panel-default">
+        <div class="panel-heading">Edit authenticator app</div>
+        <div class="panel-body">
+          <p>
+            This will invalidate your current two-factor device and recovery codes.
+          </p>
+        </div>
+        <div class="panel-body">
+          <%= form_tag(Routes.dashboard_security_path(Endpoint, :reset_auth_app)) do %>
+            <button type="submit" class="btn btn-primary">Setup new app</button>
+          <% end %>
+        </div>
       </div>
-      <div class="panel-body">
-        <%= form_for @changeset, Routes.dashboard_security_reset_path(Endpoint, :reset_auth_app), [method: :post], fn _f -> %>
-          <button type="submit" class="btn btn-primary">Setup new app</button>
-        <% end %>
-      </div>
-    </div>
 
       <div class="panel panel-default recovery-codes-container">
         <div class="panel-heading">Two-factor recovery codes</div>
@@ -59,9 +59,9 @@
         <div class="panel-body">
             <label>Generate new recovery codes</label>
             <p>
-            When you generate new recovery codes, you must download or print the new codes. Your old codes won’t work anymore.
+              When you generate new recovery codes, you must download or print the new codes. Your old codes won’t work anymore.
             </p>
-            <%= form_for @changeset, Routes.dashboard_security_path(Endpoint, :rotate_recovery_codes), [method: :post], fn _f -> %>
+            <%= form_tag(Routes.dashboard_security_path(Endpoint, :rotate_recovery_codes)) do %>
               <button type="submit" class="btn btn-primary">Generate new recovery codes</button>
             <% end %>
           </div>

@@ -1,108 +1,63 @@
 defmodule HexpmWeb.Dashboard.SecurityController do
   use HexpmWeb, :controller
   alias Hexpm.Accounts.User
+
   plug :requires_login
 
   def index(conn, _params) do
     user = conn.assigns.current_user
 
-    if User.tfa_enabled?(user) and not User.app_enabled?(user) do
+    if User.tfa_enabled?(user) and not user.tfa.app_enabled do
       conn
       |> put_flash(:error, "Please complete your two-factor authentication setup")
       |> redirect(to: Routes.dashboard_tfa_setup_path(conn, :index))
     else
-      render_index(conn, User.update_security(user, %{}))
+      render_index(conn)
     end
   end
 
-  def update(conn, %{"user" => %{"tfa_enabled" => tfa_enabled}}) do
+  def enable_tfa(conn, _params) do
     user = conn.assigns.current_user
+    Users.tfa_enable(user, audit: audit_data(conn))
 
-    case {User.tfa_enabled?(user), tfa_enabled} do
-      {false, "true"} ->
-        update_tfa_setting(conn, user, true)
-
-      {true, "false"} ->
-        update_tfa_setting(conn, user, false)
-
-      _unchanged ->
-        conn
-        |> put_flash(:info, "Your security preference has been updated.")
-        |> redirect(to: Routes.dashboard_security_path(conn, :index))
-    end
+    conn
+    |> put_flash(:info, "Two factor authentication has been enabled.")
+    |> redirect(to: Routes.dashboard_tfa_setup_path(conn, :index))
   end
 
-  def update(conn, %{"user" => %{"verification_code" => verification_code}} = _params) do
+  def disable_tfa(conn, _params) do
     user = conn.assigns.current_user
+    Users.tfa_disable(user, audit: audit_data(conn))
 
-    if Hexpm.Accounts.TFA.token_valid?(user.tfa.secret, verification_code) do
-      update_app_enabled(conn, user, true)
-    else
-      conn
-      |> put_flash(:error, "Your verification code was incorrect.")
-      |> redirect(to: Routes.dashboard_tfa_setup_path(conn, :index))
-    end
+    conn
+    |> put_flash(:info, "Two factor authentication has been disabled.")
+    |> redirect(to: Routes.dashboard_security_path(conn, :index))
   end
 
   def rotate_recovery_codes(conn, _params) do
     user = conn.assigns.current_user
+    Users.tfa_rotate_recovery_codes(user, audit: audit_data(conn))
 
-    case Users.rotate_recovery_codes(user, audit: audit_data(conn)) do
-      {:ok, _user} ->
-        conn
-        |> put_flash(:info, "New two-factor recovery codes successfully generated.")
-        |> redirect(to: Routes.dashboard_security_path(conn, :index))
-
-      {:error, changeset} ->
-        conn
-        |> put_status(400)
-        |> render_index(changeset)
-    end
+    conn
+    |> put_flash(:info, "New two-factor recovery codes successfully generated.")
+    |> redirect(to: Routes.dashboard_security_path(conn, :index))
   end
 
   def reset_auth_app(conn, _params) do
     user = conn.assigns.current_user
-    update_tfa_setting(conn, user, true)
+    Users.tfa_disable_app(user, audit: audit_data(conn))
+
+    conn
+    |> put_flash(:info, "Please complete your two-factor authentication setup")
+    |> redirect(to: Routes.dashboard_tfa_setup_path(conn, :index))
   end
 
-  defp render_index(conn, changeset) do
+  defp render_index(conn) do
     render(
       conn,
       "index.html",
       title: "Dashboard - Security",
-      container: "container page dashboard",
-      changeset: changeset
+      container: "container page dashboard"
     )
   end
-
-  defp update_tfa_setting(conn, user, tfa_enabled?) do
-    case Users.update_security(user, %{tfa_enabled: tfa_enabled?}, audit: audit_data(conn)) do
-      {:ok, _user} ->
-        conn
-        |> put_flash(:info, "Your security preference has been updated.")
-        |> redirect(to: update_tfa_redirect(conn, tfa_enabled?))
-
-      {:error, changeset} ->
-        conn
-        |> put_status(400)
-        |> render_index(changeset)
-    end
-  end
-
-  defp update_app_enabled(conn, user, app_enabled?) do
-    case Users.update_security(user, %{app_enabled: app_enabled?}, audit: audit_data(conn)) do
-      {:ok, _user} ->
-        conn
-        |> put_flash(:info, "Your security preference has been updated.")
-        |> redirect(to: Routes.dashboard_security_path(conn, :index))
-
-      {:error, changeset} ->
-        conn
-        |> put_status(400)
-        |> render_index(changeset)
-    end
-  end
-
-  defp update_tfa_redirect(conn, false), do: Routes.dashboard_security_path(conn, :index)
-  defp update_tfa_redirect(conn, true), do: Routes.dashboard_tfa_setup_path(conn, :index)
 end
