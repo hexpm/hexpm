@@ -169,7 +169,6 @@ defmodule Hexpm.Accounts.Users do
       |> audit(audit_data, "security.update", fn %{user: user} -> user end)
 
     {:ok, %{user: user}} = Repo.transaction(multi)
-    IO.inspect(user)
   end
 
   def tfa_disable(user, audit: audit_data) do
@@ -193,7 +192,6 @@ defmodule Hexpm.Accounts.Users do
         |> audit(audit_data, "security.update", fn %{user: user} -> user end)
 
       {:ok, %{user: user}} = Repo.transaction(multi)
-      IO.inspect(user)
       {:ok, user}
     else
       :error

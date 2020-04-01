@@ -1,8 +1,6 @@
 defmodule HexpmWeb.Dashboard.TFAAuthSetupController do
   use HexpmWeb, :controller
 
-  alias Hexpm.Accounts.TFA
-
   plug :requires_login
 
   def index(conn, _params) do

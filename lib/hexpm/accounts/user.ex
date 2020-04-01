@@ -168,7 +168,8 @@ defmodule Hexpm.Accounts.User do
   def tfa_enabled?(%{tfa: %{tfa_enabled: _value}}), do: false
 
   def update_tfa(user, changes) do
-    put_embed(change(user, %{}), :tfa, Map.merge(user.tfa, changes))
+    current_tfa = user.tfa || %{}
+    put_embed(change(user, %{}), :tfa, Map.merge(current_tfa, changes))
   end
 
   def recovery_code_used(user, code) do
