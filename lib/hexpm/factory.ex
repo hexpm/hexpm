@@ -136,4 +136,34 @@ defmodule Hexpm.Factory do
       comment: "blocked"
     }
   end
+
+  def user_with_tfa_factory() do
+    %Hexpm.Accounts.User{
+      username: Fake.sequence(:username),
+      password: @password,
+      full_name: Fake.random(:full_name),
+      emails: [build(:email)],
+      tfa: build(:tfa)
+    }
+  end
+
+  def tfa_factory() do
+    %Hexpm.Accounts.TFA{
+      secret: "OZIH4PZP53MCYZ6Z",
+      app_enabled: true,
+      tfa_enabled: true,
+      recovery_codes: [
+        %{
+          id: Ecto.UUID.generate(),
+          code: "1234-1234-1234-1234",
+          used_at: nil
+        },
+        %{
+          id: Ecto.UUID.generate(),
+          code: "4321-4321-4321-4321",
+          used_at: ~U[2020-01-01 00:00:00Z]
+        }
+      ]
+    }
+  end
 end
