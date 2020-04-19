@@ -23,6 +23,15 @@ defmodule HexpmWeb.LoginControllerTest do
     assert last_session().data["user_id"] == c.user.id
   end
 
+  @tag :focus
+  test "log in when tfa enabled" do
+    user = insert(:user_with_tfa)
+    conn = post(build_conn(), "login", %{username: user.username, password: "password"})
+    assert redirected_to(conn) == "/two_factor_auth"
+
+    assert get_session(conn, "tfa_user_id") == %{return: nil, uid: user.id}
+  end
+
   test "log in keeps you logged in", c do
     conn = post(build_conn(), "login", %{username: c.user.username, password: "password"})
     assert redirected_to(conn) == "/users/#{c.user.username}"
