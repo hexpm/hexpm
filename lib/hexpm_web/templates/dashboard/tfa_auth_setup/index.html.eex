@@ -1,0 +1,25 @@
+<div class="row">
+  <div class="col-sm-3">
+    <%= render DashboardView, "_sidebar.html", assigns %>
+  </div>
+
+  <div class="col-sm-9 security">
+    <div class="panel panel-default">
+      <div class="panel-heading">Setup Security App</div>
+      <div class="panel-body recovery-codes-panel">
+        <h1>Scan this barcode with your app</h1>
+        <div style="text-align:center"><%= raw ViewHelpers.auth_qr_code_svg(@current_user) %></div>
+      </div>
+      <div class="panel-body">
+        <%= form_tag(Routes.dashboard_tfa_setup_path(Endpoint, :create)) do %>
+          <div class="form-group">
+            <label for="verification_code">Verification code</label>
+            <input id="verification_code" type="text" class="form-control" name="verification_code">
+          </div>
+
+          <button type="submit" class="btn btn-primary">Enable</button>
+        <% end %>
+      </div>
+    </div>
+  </div>
+</div>

@@ -5,6 +5,7 @@ defmodule HexpmWeb.DashboardView do
     [
       profile: {"Profile", Routes.profile_path(Endpoint, :index)},
       password: {"Password", Routes.dashboard_password_path(Endpoint, :index)},
+      security: {"Security", Routes.dashboard_security_path(Endpoint, :index)},
       email: {"Emails", Routes.email_path(Endpoint, :index)},
       keys: {"Keys", Routes.key_path(Endpoint, :index)},
       audit_logs: {"Recent activities", Routes.audit_log_path(Endpoint, :index)}

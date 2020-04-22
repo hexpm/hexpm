@@ -57,6 +57,12 @@ defmodule HexpmWeb.Router do
     post "/login", LoginController, :create
     post "/logout", LoginController, :delete
 
+    get "/two_factor_auth", TFAAuthController, :show
+    post "/two_factor_auth", TFAAuthController, :create
+
+    get "/two_factor_auth/recovery", TFARecoveryController, :show
+    post "/two_factor_auth/recovery", TFARecoveryController, :create
+
     get "/signup", SignupController, :show
     post "/signup", SignupController, :create
 
@@ -117,6 +123,18 @@ defmodule HexpmWeb.Router do
 
     get "/password", PasswordController, :index, as: :dashboard_password
     post "/password", PasswordController, :update, as: :dashboard_password
+
+    get "/security", SecurityController, :index, as: :dashboard_security
+    post "/security/enable_tfa", SecurityController, :enable_tfa, as: :dashboard_security
+    post "/security/disable_tfa", SecurityController, :disable_tfa, as: :dashboard_security
+
+    post "/security/rotate_recovery_codes", SecurityController, :rotate_recovery_codes,
+      as: :dashboard_security
+
+    post "/security/reset_auth_app", SecurityController, :reset_auth_app, as: :dashboard_security
+
+    get "/two_factor_auth/setup", TFAAuthSetupController, :index, as: :dashboard_tfa_setup
+    post "/two_factor_auth/setup", TFAAuthSetupController, :create, as: :dashboard_tfa_setup
 
     get "/email", EmailController, :index
     post "/email", EmailController, :create

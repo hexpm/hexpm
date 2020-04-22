@@ -1,6 +1,8 @@
 defmodule Hexpm.Accounts.Users do
   use Hexpm.Context
 
+  alias Hexpm.Accounts.{RecoveryCode, TFA}
+
   def get(username_or_email, preload \\ []) do
     User.get(String.downcase(username_or_email), preload)
     |> Repo.one()
@@ -152,6 +154,70 @@ defmodule Hexpm.Accounts.Users do
       {:error, :user, changeset, _} ->
         {:error, changeset}
     end
+  end
+
+  def tfa_enable(user, audit: audit_data) do
+    secret = Hexpm.Accounts.TFA.generate_secret()
+    codes = Hexpm.Accounts.RecoveryCode.generate_set()
+
+    multi =
+      Multi.new()
+      |> Multi.update(
+        :user,
+        User.update_tfa(user, %{tfa_enabled: true, secret: secret, recovery_codes: codes})
+      )
+      |> audit(audit_data, "security.update", fn %{user: user} -> user end)
+
+    {:ok, %{user: user}} = Repo.transaction(multi)
+  end
+
+  def tfa_disable(user, audit: audit_data) do
+    multi =
+      Multi.new()
+      |> Multi.update(
+        :user,
+        User.update_tfa(user, %{tfa_enabled: false, secret: nil, recovery_codes: []})
+      )
+      |> audit(audit_data, "security.update", fn %{user: user} -> user end)
+
+    {:ok, %{user: user}} = Repo.transaction(multi)
+    user
+  end
+
+  def tfa_enable_app(user, verification_code, audit: audit_data) do
+    if TFA.token_valid?(user.tfa.secret, verification_code) do
+      multi =
+        Multi.new()
+        |> Multi.update(:user, User.update_tfa(user, %{app_enabled: true}))
+        |> audit(audit_data, "security.update", fn %{user: user} -> user end)
+
+      {:ok, %{user: user}} = Repo.transaction(multi)
+      {:ok, user}
+    else
+      :error
+    end
+  end
+
+  def tfa_disable_app(user, audit: audit_data) do
+    secret = Hexpm.Accounts.TFA.generate_secret()
+
+    multi =
+      Multi.new()
+      |> Multi.update(:user, User.update_tfa(user, %{app_enabled: false, secret: secret}))
+      |> audit(audit_data, "security.update", fn %{user: user} -> user end)
+
+    {:ok, %{user: user}} = Repo.transaction(multi)
+    user
+  end
+
+  def tfa_rotate_recovery_codes(user, audit: audit_data) do
+    multi =
+      Multi.new()
+      |> Multi.update(:user, User.rotate_recovery_codes(user))
+      |> audit(audit_data, "security.rotate_recovery_codes", fn %{user: user} -> user end)
+
+    {:ok, %{user: user}} = Repo.transaction(multi)
+    user
   end
 
   def verify_email(username, email, key) do
@@ -437,6 +503,21 @@ defmodule Hexpm.Accounts.Users do
         |> Mailer.deliver_now_throttled()
 
         :ok
+    end
+  end
+
+  def tfa_recover(%User{} = user, code_str) do
+    case RecoveryCode.verify(user.tfa.recovery_codes, code_str) do
+      {:ok, %RecoveryCode{} = code} ->
+        user =
+          user
+          |> User.recovery_code_used(code)
+          |> Repo.update!()
+
+        {:ok, user}
+
+      err ->
+        err
     end
   end
 

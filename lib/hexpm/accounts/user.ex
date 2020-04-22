@@ -4,6 +4,8 @@ defmodule Hexpm.Accounts.User do
   @derive {HexpmWeb.Stale, assocs: [:emails, :owned_packages, :organizations, :keys]}
   @derive {Phoenix.Param, key: :username}
 
+  alias Hexpm.Accounts.{RecoveryCode, TFA}
+
   schema "users" do
     field :username, :string
     field :full_name, :string
@@ -13,6 +15,7 @@ defmodule Hexpm.Accounts.User do
     timestamps()
 
     embeds_one :handles, UserHandles, on_replace: :delete
+    embeds_one :tfa, TFA, on_replace: :delete
 
     belongs_to :organization, Organization
     has_many :emails, Email
@@ -33,6 +36,7 @@ defmodule Hexpm.Accounts.User do
     cast(%User{}, params, ~w(username full_name password)a)
     |> validate_required(~w(username password)a)
     |> cast_assoc(:emails, required: true, with: &Email.changeset(&1, :first, &2, confirmed?))
+    |> cast_embed(:tfa)
     |> update_change(:username, &String.downcase/1)
     |> validate_length(:username, min: 3)
     |> validate_format(:username, @username_regex)
@@ -158,4 +162,29 @@ defmodule Hexpm.Accounts.User do
   else
     defp organization_name(organization), do: organization.name
   end
+
+  def tfa_enabled?(%{tfa: nil}), do: false
+  def tfa_enabled?(%{tfa: %{tfa_enabled: true}}), do: true
+  def tfa_enabled?(%{tfa: %{tfa_enabled: _value}}), do: false
+
+  def update_tfa(user, changes) do
+    current_tfa = user.tfa || %{}
+    put_embed(change(user, %{}), :tfa, Map.merge(current_tfa, changes))
+  end
+
+  def recovery_code_used(user, code) do
+    codes = Enum.map(user.tfa.recovery_codes, &use_recovery_code(&1, code))
+    update_tfa(user, %{recovery_codes: codes})
+  end
+
+  def rotate_recovery_codes(user) do
+    codes = Hexpm.Accounts.RecoveryCode.generate_set()
+    update_tfa(user, %{recovery_codes: codes})
+  end
+
+  defp use_recovery_code(%RecoveryCode{code: code_str}, %RecoveryCode{code: code_str} = code) do
+    %{code | used_at: DateTime.utc_now()}
+  end
+
+  defp use_recovery_code(code, _other), do: code
 end

@@ -57,6 +57,29 @@
   color: #555;
 }
 
+.dashboard .security {
+  .recovery-codes-panel {
+    border-bottom: $base-border;
+  }
+
+  .recovery-code {
+    float: left;
+    width: 50%;
+    margin-bottom: 1em;
+    font-family: monospace;
+    font-weight: 600;
+  }
+
+  .recovery-code .recovery-code-used {
+    color: $color-grey;
+  }
+
+  .recovery-codes-container button {
+    margin-top: 15px;
+    margin-right: 8px;
+  }
+}
+
 .dashboard .email .panel .label {
   margin-left: 4px;
   font-size: .7em;
@@ -113,7 +136,7 @@
   }
 
   input.change-seats,
-  select.change-seats, {
+  select.change-seats {
     display: inline-block;
     width: 50px;
     padding: 6px 3px 6px 6px;
@@ -180,5 +203,14 @@
 .permission-group {
   .group-child {
     margin-left: 2rem;
+  }
+}
+
+.panel-heading.with-button {
+  padding: 15px;
+
+  form {
+    float: right;
+    margin-top: -8px;
   }
 }

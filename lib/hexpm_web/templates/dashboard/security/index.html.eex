@@ -1,0 +1,71 @@
+<div class="row">
+  <div class="col-sm-3">
+    <%= render DashboardView, "_sidebar.html", assigns %>
+  </div>
+
+  <div class="col-sm-9 security">
+    <div class="panel panel-default">
+      <div class="panel-heading with-button">Two-factor security
+      <%= if Hexpm.Accounts.User.tfa_enabled?(@current_user) do %>
+        <%= form_tag(Routes.dashboard_security_path(Endpoint, :disable_tfa)) do %>
+          <button type="submit" class="btn btn-primary">Disable</button>
+        <% end %>
+      <% else %>
+        <%= form_tag(Routes.dashboard_security_path(Endpoint, :enable_tfa)) do %>
+          <button type="submit" class="btn btn-primary">Enable</button>
+        <% end %>
+      <% end %>
+      </div>
+    </div>
+    <%= if Hexpm.Accounts.User.tfa_enabled?(@current_user) do %>
+      <div class="panel panel-default">
+        <div class="panel-heading">Edit authenticator app</div>
+        <div class="panel-body">
+          <p>
+            This will invalidate your current two-factor device and recovery codes.
+          </p>
+        </div>
+        <div class="panel-body">
+          <%= form_tag(Routes.dashboard_security_path(Endpoint, :reset_auth_app)) do %>
+            <button type="submit" class="btn btn-primary">Setup new app</button>
+          <% end %>
+        </div>
+      </div>
+
+      <div class="panel panel-default recovery-codes-container">
+        <div class="panel-heading">Two-factor recovery codes</div>
+        <div class="panel-body">
+          <p>
+            Recovery codes can be used to access your account in the event you lose access to your device and cannot receive two-factor authentication codes.
+          </p>
+        </div>
+        <%= if show_recovery_codes?(@current_user) do %>
+          <div class="panel-body recovery-codes-panel">
+            <div class="recovery-codes" id="recovery-codes" data-value="<%= aggregate_recovery_codes(@current_user.tfa.recovery_codes) %>">
+              <%= for code <- @current_user.tfa.recovery_codes do %>
+                <div class="recovery-code">
+                  <span class="<%= class_for_code(code) %>"><%= code.code %></span>
+                  <%= if code.used_at do %>
+                    <span class="label label-info">Used</span>
+                  <% end %>
+                </div>
+              <% end %>
+            </div>
+            <button type="button" class="btn btn-primary download-data-button" data-input-id="recovery-codes">Download</button>
+            <button type="button" class="btn btn-primary print-data-button" data-input-id="recovery-codes">Print</button>
+            <button type="button" class="btn btn-primary copy-data-button" data-input-id="recovery-codes">Copy</button>
+          </div>
+        <% end %>
+        <div class="panel-body">
+            <label>Generate new recovery codes</label>
+            <p>
+              When you generate new recovery codes, you must download or print the new codes. Your old codes won’t work anymore.
+            </p>
+            <%= form_tag(Routes.dashboard_security_path(Endpoint, :rotate_recovery_codes)) do %>
+              <button type="submit" class="btn btn-primary">Generate new recovery codes</button>
+            <% end %>
+          </div>
+      </div>
+    <% end %>
+  </div>
+</div>

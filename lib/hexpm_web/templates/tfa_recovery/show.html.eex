@@ -1,0 +1,8 @@
+  <h2>Enter a recovery code</h2>
+  <%= form_tag(Routes.tfa_recovery_path(Endpoint, :create)) do %>
+    <div class="form-group">
+      <label for="code">Recovery Code</label>
+      <input id="code" name="code" type="text" value="" class="form-control" maxlength="19" pattern="\w{4}-\w{4}-\w{4}-\w{4}" title="Recovery code in xxxx-xxxx-xxxx-xxxx format." value="" autocomplete="off"/>
+    </div>
+    <button type="submit"  class="btn btn-primary">Verify</button>
+  <% end %>
