@@ -31,7 +31,7 @@ defmodule Hexpm.ShortURLs.ShortURL do
   defp generate_random(_length, 0), do: nil
 
   defp generate_random(length, retries) do
-    short_code = Enum.reduce(1..length, "", fn _x, acc -> acc <> Enum.random(charset()) end)
+    short_code = IO.iodata_to_binary(Enum.map(1..length, fn _ -> Enum.random(charset()) end))
     # Make sure this short_code is unique before continuing
     if short_code_unique?(short_code), do: short_code, else: generate_random(length, retries - 1)
   end
