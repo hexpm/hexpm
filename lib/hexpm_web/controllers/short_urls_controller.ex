@@ -1,0 +1,17 @@
+defmodule HexpmWeb.ShortURLsController do
+  use HexpmWeb, :controller
+  alias Hexpm.ShortURLs
+  alias Hexpm.ShortURLs.ShortURL
+
+  def show(conn, %{"short_code" => short_code}) do
+    case ShortURLs.get_by_short_code(short_code) do
+      nil ->
+        not_found(conn)
+
+      %ShortURL{url: url} ->
+        conn
+        |> put_status(301)
+        |> redirect(external: url)
+    end
+  end
+end

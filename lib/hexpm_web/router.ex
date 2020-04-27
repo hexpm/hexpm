@@ -113,6 +113,8 @@ defmodule HexpmWeb.Router do
 
     get "/blog", BlogController, :index
     get "/blog/:slug", BlogController, :show
+
+    get "/l/:short_code", ShortURLsController, :show
   end
 
   scope "/dashboard", HexpmWeb.Dashboard do
@@ -249,6 +251,7 @@ defmodule HexpmWeb.Router do
       end
     end
 
+    post "/short_url", ShortURLsController, :create
     get "/auth", AuthController, :show
   end
 
