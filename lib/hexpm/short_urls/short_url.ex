@@ -14,6 +14,7 @@ defmodule Hexpm.ShortURLs.ShortURL do
     %ShortURL{}
     |> cast(params, [:url])
     |> validate_required([:url])
+    |> ensure_url_domain()
     |> put_change(:short_code, generate_random(5))
     |> validate_required(:short_code, message: "could not generate a unique short code")
     |> unique_constraint(:short_code)
@@ -38,5 +39,20 @@ defmodule Hexpm.ShortURLs.ShortURL do
 
   defp short_code_unique?(short_code) do
     short_code |> ShortURLs.get_by_short_code() |> is_nil()
+  end
+
+  defp ensure_url_domain(changeset) do
+    validate_change(changeset, :url, fn :url, url -> hexpm_url?(url) end)
+  end
+
+  defp hexpm_url?(nil), do: []
+
+  defp hexpm_url?(url) do
+    with %{host: host} <- URI.parse(url),
+         true <- host =~ ~r/^[\w\.]*hex.pm$/ do
+      []
+    else
+      _error -> [url: "domain must match hex.pm or *.hex.pm"]
+    end
   end
 end
