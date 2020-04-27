@@ -15,7 +15,7 @@ defmodule Hexpm.ShortURLs.ShortURL do
     |> cast(params, [:url])
     |> validate_required([:url])
     |> put_change(:short_code, generate_random(5))
-    |> validate_required(:short_code, message: "Could not generate a unique short code")
+    |> validate_required(:short_code, message: "could not generate a unique short code")
     |> unique_constraint(:short_code)
   end
 
