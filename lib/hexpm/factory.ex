@@ -137,6 +137,13 @@ defmodule Hexpm.Factory do
     }
   end
 
+  def short_url_factory() do
+    %Hexpm.ShortURLs.ShortURL{
+      url: "",
+      short_code: ""
+    }
+  end
+
   def user_with_tfa_factory() do
     %Hexpm.Accounts.User{
       username: Fake.sequence(:username),
