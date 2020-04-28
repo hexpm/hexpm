@@ -74,7 +74,8 @@ defmodule HexpmWeb.PackageController do
   def audit_logs(conn, params) do
     access_package(conn, params, fn package, _ ->
       page = Hexpm.Utils.safe_int(params["page"]) || 1
-      audit_logs = AuditLogs.all_by(package, 1, 100)
+      per_page = 100
+      audit_logs = AuditLogs.all_by(package, page, per_page)
       total_count = AuditLogs.count_by(package)
 
       render(conn, "audit_logs.html",
@@ -83,7 +84,7 @@ defmodule HexpmWeb.PackageController do
         package: package,
         audit_logs: audit_logs,
         page: page,
-        per_page: 100,
+        per_page: per_page,
         total_count: total_count
       )
     end)
