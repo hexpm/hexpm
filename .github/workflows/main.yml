@@ -51,9 +51,10 @@ jobs:
         run: MIX_ENV=test mix compile
 
       - name: Run tests
-        run: |
-          mix test
-          mix ecto.setup
+        run: mix test
+
+      - name: Verify seeds
+        run: MIX_ENV=test mix run priv/repo/seeds.exs
 
   test-hex:
     name: Test Hex
