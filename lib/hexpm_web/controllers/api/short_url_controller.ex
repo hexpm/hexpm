@@ -1,4 +1,4 @@
-defmodule HexpmWeb.API.ShortURLsController do
+defmodule HexpmWeb.API.ShortURLController do
   use HexpmWeb, :controller
   alias Hexpm.ShortURLs
 

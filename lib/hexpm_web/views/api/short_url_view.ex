@@ -1,4 +1,4 @@
-defmodule HexpmWeb.API.ShortURLsView do
+defmodule HexpmWeb.API.ShortURLView do
   use HexpmWeb, :view
 
   def render("show." <> _, %{short_url: short_url}) do

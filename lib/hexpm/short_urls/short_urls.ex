@@ -8,7 +8,7 @@ defmodule Hexpm.ShortURLs do
     |> Repo.insert()
   end
 
-  def get_by_short_code(short_code) do
-    Repo.one(from(s in ShortURL, where: s.short_code == ^short_code))
+  def get(short_code) do
+    Repo.get_by(ShortURL, short_code: short_code)
   end
 end

@@ -13,7 +13,7 @@ defmodule Hexpm.ShortURLsTest do
     end
   end
 
-  describe "get_by_short_code/1" do
+  describe "get/1" do
     setup do
       Repo.insert(%ShortURL{
         short_code: "abcde",
@@ -24,11 +24,11 @@ defmodule Hexpm.ShortURLsTest do
     end
 
     test "given a short_code that exists, returns a record" do
-      assert ShortURLs.get_by_short_code("abcde")
+      assert ShortURLs.get("abcde")
     end
 
     test "given a short_code that does not exist, returns nil" do
-      refute ShortURLs.get_by_short_code("zyxwv")
+      refute ShortURLs.get("zyxwv")
     end
   end
 end

@@ -5,7 +5,7 @@ defmodule Hexpm.RepoBase.Migrations.AddShortUrlsTable do
     create table(:short_urls) do
       add(:url, :text, null: false)
       add(:short_code, :string, null: false)
-      timestamps()
+      timestamps(updated_at: false)
     end
 
     create(index(:short_urls, [:url]))

@@ -1,10 +1,10 @@
-defmodule HexpmWeb.ShortURLsController do
+defmodule HexpmWeb.ShortURLController do
   use HexpmWeb, :controller
   alias Hexpm.ShortURLs
   alias Hexpm.ShortURLs.ShortURL
 
   def show(conn, %{"short_code" => short_code}) do
-    case ShortURLs.get_by_short_code(short_code) do
+    case ShortURLs.get(short_code) do
       nil ->
         not_found(conn)
 
