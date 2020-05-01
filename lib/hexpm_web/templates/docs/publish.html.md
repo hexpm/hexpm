@@ -31,7 +31,7 @@ With a name in hand, it is time to add the proper metadata to your `mix.exs` fil
 
 ### Adding metadata to `mix.exs`
 
-The package is configured in the `project` function in the project's `mix.exs` file. [See below](#example-mix-exs-file) for an example file.
+The package is configured in the `project` function in the project's `mix.exs` file. [See below](#example-mixexs-file) for an example file.
 
 First, make sure that the `:version` property is correct. All Hex packages are required to follow [semantic versioning](http://semver.org/). While your package version is at major version "0", any breaking changes should be indicated by incrementing the minor version. For example, `0.1.0 -> 0.2.0`.
 
