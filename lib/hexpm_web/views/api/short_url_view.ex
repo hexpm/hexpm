@@ -6,6 +6,6 @@ defmodule HexpmWeb.API.ShortURLView do
   end
 
   def render("show", %{short_url: short_url}) do
-    %{short_code: short_url.short_code}
+    %{short_url: short_url}
   end
 end
