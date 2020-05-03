@@ -28,7 +28,8 @@ defmodule HexpmWeb.ErrorView do
       conn: assigns.conn,
       error: true,
       status: "500",
-      message: "Internal server error"
+      message: "Internal server error",
+      current_user: assigns[:current_user]
     )
   end
 
