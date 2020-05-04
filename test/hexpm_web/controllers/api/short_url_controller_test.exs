@@ -6,8 +6,7 @@ defmodule HexpmWeb.API.ShortURLControllerTest do
       assert %{"url" => url} =
                build_conn()
                |> post("api/short_url", %{"url" => "https://diff.hex.pm?diff[]=ecto:3.0.0:3.0.1"})
-               |> response(201)
-               |> Jason.decode!()
+               |> json_response(201)
 
       assert url =~ ~r/\/l\/[\w\d]{5}/
     end
