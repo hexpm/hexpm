@@ -8,7 +8,8 @@ defmodule HexpmWeb.ErrorView do
       error: true,
       status: status,
       message: message(status),
-      container: "container error-view"
+      container: "container error-view",
+      current_user: assigns[:current_user]
     )
   end
 
@@ -20,14 +21,15 @@ defmodule HexpmWeb.ErrorView do
   end
 
   # In case no render clause matches or no
-  # template is found, let's render it as 500
+  # template is found, let's render it as a 500
   def template_not_found(_template, assigns) do
     render(
       "all.html",
       conn: assigns.conn,
       error: true,
       status: "500",
-      message: "Internal server error"
+      message: "Internal server error",
+      current_user: assigns[:current_user]
     )
   end
 
