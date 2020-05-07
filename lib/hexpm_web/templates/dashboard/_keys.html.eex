@@ -49,7 +49,7 @@
   </div>
 
   <div class="panel-body-part">
-    <%= form_for @key_changeset, @create_key_path, [method: :post], fn f -> %>
+    <%= form_for @key_changeset, @create_key_path, fn f -> %>
       <%= label f, :name, "Key name" %>
       <div class="form-group">
         <%= ViewHelpers.text_input f, :name, class: "form-control", placeholder: "Name" %>

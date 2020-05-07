@@ -67,7 +67,7 @@
         <% end %>
 
         <li class="list-group-item">
-          <%= form_for @create_changeset, Routes.email_path(Endpoint, :create), [method: :post], fn f -> %>
+          <%= form_for @create_changeset, Routes.email_path(Endpoint, :create), fn f -> %>
             <%= label f, :email, "Add email address" %>
             <div class="form-group">
               <%= ViewHelpers.email_input f, :email, class: "form-control" %>
