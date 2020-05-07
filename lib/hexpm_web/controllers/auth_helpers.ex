@@ -171,8 +171,11 @@ defmodule HexpmWeb.AuthHelpers do
     |> boolean_to_auth_error()
   end
 
-  def package_owner(%Package{} = package, %Organization{} = organization) do
-    boolean_to_auth_error(package.repository.organization_id == organization.id)
+  def package_owner(%Package{} = package, %Organization{id: id} = organization) do
+    boolean_to_auth_error(
+      package.repository.organization_id == id or
+        Packages.owner_with_access?(package, organization.user)
+    )
   end
 
   def maybe_full_package_owner(%Plug.Conn{} = conn, user_or_organization) do
@@ -217,8 +220,13 @@ defmodule HexpmWeb.AuthHelpers do
     {:error, :auth}
   end
 
-  def maybe_package_owner(repository, _package, %Organization{id: id}) do
+  def maybe_package_owner(repository, nil, %Organization{id: id}) do
     boolean_to_auth_error(repository.organization_id == id)
+  end
+
+  def maybe_package_owner(repository, %Package{} = package, %Organization{id: id} = organization) do
+    (repository.organization_id == id or Packages.owner_with_access?(package, organization.user))
+    |> boolean_to_auth_error()
   end
 
   def maybe_package_owner(repository, nil = _package, %User{} = user) do
