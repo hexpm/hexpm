@@ -11,13 +11,29 @@ defmodule HexpmWeb.SitemapControllerTest do
 
   test "GET /sitemap.xml", %{package: package} do
     conn = get(build_conn(), "/sitemap.xml")
-    sitemap = read_fixture("packages_sitemap.xml") |> String.replace("{package}", package.name)
-    assert response(conn, 200) == sitemap
+
+    expected =
+      read_fixture("packages_sitemap.xml")
+      |> String.replace("{package}", package.name)
+      |> fixup_inconsistent_whitespace()
+
+    assert fixup_inconsistent_whitespace(response(conn, 200)) == expected
   end
 
   test "GET /docs_sitemap.xml", %{package: package} do
     conn = get(build_conn(), "/docs_sitemap.xml")
-    sitemap = read_fixture("docs_sitemap.xml") |> String.replace("{package}", package.name)
-    assert response(conn, 200) == sitemap
+
+    expected =
+      read_fixture("docs_sitemap.xml")
+      |> String.replace("{package}", package.name)
+      |> fixup_inconsistent_whitespace()
+
+    assert fixup_inconsistent_whitespace(response(conn, 200)) == expected
+  end
+
+  defp fixup_inconsistent_whitespace(text) do
+    text
+    |> String.replace("\n", "")
+    |> String.replace(" ", "")
   end
 end
