@@ -19,7 +19,7 @@ defmodule Hexpm.Accounts.Auth do
         left_join: u in assoc(k, :user),
         left_join: o in assoc(k, :organization),
         preload: [user: {u, [:emails, owned_packages: :repository, organizations: :repository]}],
-        preload: [organization: {o, [:repository]}]
+        preload: [organization: {o, [:repository, :user]}]
       )
       |> Hexpm.Repo.one()
 

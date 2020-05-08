@@ -105,6 +105,8 @@ defmodule Hexpm.Accounts.Organizations do
   end
 
   def remove_member(organization, user, audit: audit_data) do
+    # TODO: Remove package ownerships to packages in organization repository
+
     count = Repo.aggregate(assoc(organization, :organization_users), :count, :id)
 
     if count == 1 do

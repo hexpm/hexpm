@@ -16,6 +16,10 @@ defmodule Hexpm.Emails.Mailer do
     end)
   end
 
+  defp recipient_chunks([], _limit) do
+    []
+  end
+
   defp recipient_chunks(recipients, :infinity) do
     [recipients]
   end

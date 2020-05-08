@@ -252,24 +252,21 @@ defmodule HexpmWeb.API.ReleaseControllerTest do
       |> json_response(403)
     end
 
-    # test "organization needs to have active billing", %{user: user} do
-    #   organization = insert(:organization, billing_active: false)
-    #   insert(:organization_user, organization: organization, user: user, role: "write")
-    #
-    #   package =
-    #     insert(
-    #       :package,
-    #       package_owners: [build(:package_owner, user: organization.user)]
-    #     )
-    #
-    #   meta = %{name: package.name, version: "1.0.0", description: "Domain-specific language."}
-    #
-    #   build_conn()
-    #   |> put_req_header("content-type", "application/octet-stream")
-    #   |> put_req_header("authorization", key_for(user))
-    #   |> post("api/publish", create_tar(meta))
-    #   |> json_response(403)
-    # end
+    test "organization can publish package", %{organization: organization} do
+      package =
+        insert(
+          :package,
+          package_owners: [build(:package_owner, user: organization.user)]
+        )
+
+      meta = %{name: package.name, version: "1.0.0", description: "Domain-specific language."}
+
+      build_conn()
+      |> put_req_header("content-type", "application/octet-stream")
+      |> put_req_header("authorization", key_for(organization))
+      |> post("api/publish", create_tar(meta))
+      |> json_response(201)
+    end
 
     test "create package validates", %{user: user, package: package} do
       meta = %{name: package.name, version: "1.0.0", links: "invalid", description: "description"}
