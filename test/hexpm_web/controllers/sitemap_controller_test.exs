@@ -26,6 +26,7 @@ defmodule HexpmWeb.SitemapControllerTest do
     expected =
       read_fixture("docs_sitemap.xml")
       |> String.replace("{package}", package.name)
+      # TODO: remove when we use Elixir v1.11.
       |> fixup_inconsistent_whitespace()
 
     assert fixup_inconsistent_whitespace(response(conn, 200)) == expected
