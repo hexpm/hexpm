@@ -15,7 +15,7 @@ config :hexpm, HexpmWeb.Endpoint,
   code_reloader: true,
   cache_static_lookup: false,
   check_origin: false,
-  pubsub: [name: Hexpm.PubSub],
+  pubsub_server: Hexpm.PubSub,
   watchers: [
     node: [
       "node_modules/webpack/bin/webpack.js",
