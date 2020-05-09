@@ -21,6 +21,9 @@ defmodule Hexpm.Version do
 
   def dump(%Version{} = version), do: {:ok, to_string(version)}
   def dump(version) when is_binary(version), do: {:ok, version}
+
+  def embed_as(_format), do: :self
+  def equal?(term1, term2), do: term1 == term2
 end
 
 defimpl Jason.Encoder, for: Version do
