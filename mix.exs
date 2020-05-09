@@ -5,7 +5,7 @@ defmodule Hexpm.MixProject do
     [
       app: :hexpm,
       version: "0.0.1",
-      elixir: "~> 1.9",
+      elixir: "~> 1.10",
       elixirc_paths: elixirc_paths(Mix.env()),
       xref: xref(),
       compilers: [:phoenix] ++ Mix.compilers(),
