@@ -60,7 +60,7 @@ defmodule Hexpm.MixProject do
       {:plug_cowboy, "~> 2.0"},
       {:plug, "~> 1.7"},
       {:postgrex, "~> 0.14"},
-      {:pot, "~> 0.10.1"},
+      {:pot, "~> 0.11.0"},
       {:rollbax, "~> 0.5"},
       {:sweet_xml, "~> 0.5"}
     ]
