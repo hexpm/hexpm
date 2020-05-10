@@ -18,13 +18,13 @@ defmodule HexpmWeb.ConnCase do
   using do
     quote do
       # Import conveniences for testing with connections
-      use Phoenix.ConnTest
-
       alias Hexpm.{Fake, Repo}
       alias HexpmWeb.Router.Helpers, as: Routes
 
       import Ecto
       import Ecto.Query, only: [from: 2]
+      import Plug.Conn
+      import Phoenix.ConnTest
       import Hexpm.{Case, Factory, TestHelpers}
       import unquote(__MODULE__)
 

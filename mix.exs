@@ -5,7 +5,7 @@ defmodule Hexpm.MixProject do
     [
       app: :hexpm,
       version: "0.0.1",
-      elixir: "~> 1.9",
+      elixir: "~> 1.10",
       elixirc_paths: elixirc_paths(Mix.env()),
       xref: xref(),
       compilers: [:phoenix] ++ Mix.compilers(),
@@ -54,13 +54,13 @@ defmodule Hexpm.MixProject do
       {:phoenix_ecto, "~> 4.0"},
       {:phoenix_html, "~> 2.3"},
       {:phoenix_live_reload, "~> 1.0", only: :dev},
-      {:phoenix_pubsub, "~> 1.0"},
-      {:phoenix, "~> 1.4"},
+      {:phoenix_pubsub, "~> 2.0"},
+      {:phoenix, "~> 1.5"},
       {:plug_attack, "~> 0.3"},
-      {:plug_cowboy, "~> 2.0"},
+      {:plug_cowboy, "~> 2.1"},
       {:plug, "~> 1.7"},
       {:postgrex, "~> 0.14"},
-      {:pot, "~> 0.10.1"},
+      {:pot, "~> 0.11.0"},
       {:rollbax, "~> 0.5"},
       {:sweet_xml, "~> 0.5"}
     ]
