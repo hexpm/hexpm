@@ -14,7 +14,9 @@ config :hexpm,
   fastly_hexrepo: System.fetch_env!("HEXPM_FASTLY_HEXREPO"),
   billing_key: System.fetch_env!("HEXPM_BILLING_KEY"),
   billing_url: System.fetch_env!("HEXPM_BILLING_URL"),
-  levenshtein_threshold: System.fetch_env!("HEXPM_LEVENSHTEIN_THRESHOLD")
+  levenshtein_threshold: System.fetch_env!("HEXPM_LEVENSHTEIN_THRESHOLD"),
+  dashboard_user: System.fetch_env!("HEXPM_DASHBOARD_USER"),
+  dashboard_password: System.fetch_env!("HEXPM_DASHBOARD_PASSWORD")
 
 config :ex_aws,
   access_key_id: System.fetch_env!("HEXPM_AWS_ACCESS_KEY_ID"),

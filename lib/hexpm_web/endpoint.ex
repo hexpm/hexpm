@@ -14,6 +14,8 @@ defmodule HexpmWeb.Endpoint do
     only: ~w(css images js),
     only_matching: ~w(favicon robots)
 
+  socket "/live", Phoenix.LiveView.Socket
+
   # Code reloading can be explicitly enabled under the
   # :code_reloader configuration of your endpoint.
   if code_reloading? do

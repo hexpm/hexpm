@@ -53,6 +53,7 @@ defmodule Hexpm.MixProject do
       {:mox, "~> 0.5.0", only: :test},
       {:phoenix_ecto, "~> 4.0"},
       {:phoenix_html, "~> 2.3"},
+      {:phoenix_live_dashboard, "~> 0.1"},
       {:phoenix_live_reload, "~> 1.0", only: :dev},
       {:phoenix_pubsub, "~> 2.0"},
       {:phoenix, "~> 1.5"},

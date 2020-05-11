@@ -1,6 +1,7 @@
 defmodule HexpmWeb.Router do
   use HexpmWeb, :router
   use Plug.ErrorHandler
+  import Phoenix.LiveDashboard.Router
   alias Hexpm.Accounts.{Organization, User}
 
   @accepted_formats ~w(json elixir erlang)
@@ -39,6 +40,10 @@ defmodule HexpmWeb.Router do
     plug HexpmWeb.Plugs.Attack
     plug Corsica, origins: "*", allow_methods: ["HEAD", "GET"]
     plug :default_repository
+  end
+
+  pipeline :admin do
+    plug HexpmWeb.Plugs.DashboardAuth
   end
 
   if Mix.env() == :dev do
@@ -276,6 +281,11 @@ defmodule HexpmWeb.Router do
 
       post "/repo", TestController, :repo
     end
+  end
+
+  scope "/" do
+    pipe_through [:browser, :admin]
+    live_dashboard("/db")
   end
 
   def user_path(%User{organization: nil} = user) do
