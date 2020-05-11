@@ -49,6 +49,7 @@ defmodule HexpmWeb.Endpoint do
   plug HexpmWeb.Router
 
   def init(_key, config) do
+IO.inspect(config)
     if config[:load_from_system_env] do
       port = System.get_env("HEXPM_PORT")
 
