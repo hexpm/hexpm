@@ -9,7 +9,9 @@ config :hexpm,
   logs_bucket: {Hexpm.Store.Local, "logs_bucket"},
   cdn_impl: Hexpm.CDN.Local,
   billing_impl: Hexpm.Billing.Local,
-  pwned_impl: Hexpm.Pwned.Local
+  pwned_impl: Hexpm.Pwned.Local,
+  dashboard_user: "hex_user",
+  dashboard_password: "hex_password"
 
 config :hexpm, ecto_repos: [Hexpm.RepoBase]
 

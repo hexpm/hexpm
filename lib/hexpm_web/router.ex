@@ -44,9 +44,7 @@ defmodule HexpmWeb.Router do
   end
 
   pipeline :admin do
-    plug :basic_auth,
-      username: System.fetch_env!("HEXPM_DASHBOARD_USER"),
-      password: System.fetch_env!("HEXPM_DASHBOARD_PASSWORD")
+    plug HexpmWeb.Plugs.DashboardAuth
   end
 
   if Mix.env() == :dev do
