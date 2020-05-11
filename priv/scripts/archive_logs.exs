@@ -1,6 +1,6 @@
 [action, date] = System.argv()
 
-buckets = [{"logs.hex.pm", "us-east-1"}]
+buckets = ["gcs,hexpm-logs-prod"]
 dir = "fastly_hex"
 tmp = Application.get_env(:hexpm, :tmp_dir)
 filename = "#{dir}-#{date}.txt.gz"
@@ -18,13 +18,13 @@ end
 
 keys =
   buckets
-  |> Enum.flat_map(fn {bucket, region} ->
-    for day <- 1..31, do: {bucket, region, day}
+  |> Enum.flat_map(fn bucket ->
+    for day <- 1..31, do: {bucket, day}
   end)
-  |> Stream.map(fn {bucket, region, day} ->
+  |> Stream.map(fn {bucket, day} ->
     day = day |> Integer.to_string() |> String.pad_leading(2, "0")
     prefix = "#{dir}/#{date}-#{day}"
-    {bucket, region, Hexpm.Store.S3.list(region, bucket, prefix)}
+    {bucket, Hexpm.Store.list(bucket, prefix)}
   end)
 
 if action == "count" do
@@ -44,12 +44,12 @@ end
 
 if action == "fetch" || action == "fetch-and-upload" do
   File.open!(filepath, [:write, :delayed_write, :compressed], fn file ->
-    Enum.each(keys, fn {bucket, region, stream} ->
+    Enum.each(keys, fn {bucket, stream} ->
       Task.async_stream(
         stream,
         fn key ->
           data =
-            Hexpm.Store.S3.get(region, bucket, key, [])
+            Hexpm.Store.get(bucket, key, [])
             |> uncompress.(key)
 
           IO.binwrite(file, data)
@@ -74,7 +74,7 @@ if action == "upload" || action == "fetch-and-upload" do
 end
 
 if action == "delete" do
-  Enum.each(keys, fn {bucket, region, keys} ->
-    Hexpm.Store.S3.delete_many(region, bucket, keys)
+  Enum.each(keys, fn {bucket, keys} ->
+    Hexpm.Store.delete_many(bucket, keys)
   end)
 end
