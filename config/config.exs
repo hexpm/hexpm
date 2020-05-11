@@ -21,7 +21,9 @@ config :bcrypt_elixir, log_rounds: 4
 config :hexpm, HexpmWeb.Endpoint,
   url: [host: "localhost"],
   root: Path.dirname(__DIR__),
-  render_errors: [view: HexpmWeb.ErrorView, accepts: ~w(html json elixir erlang)]
+  render_errors: [view: HexpmWeb.ErrorView, accepts: ~w(html json elixir erlang)],
+  secret_key_base: "38K8orQfRHMC6ZWXIdgItQEiumeY+L2Ls0fvYfTMt4AoG5+DSFsLG6vMajNcd5Td",
+  live_view: [signing_salt: "2UTSB72sZsF9KTlxefkIrFFPXTO7d+Ep"]
 
 config :hexpm, Hexpm.RepoBase,
   priv: "priv/repo",
