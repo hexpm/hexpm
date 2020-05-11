@@ -1,7 +1,6 @@
 defmodule HexpmWeb.Router do
   use HexpmWeb, :router
   use Plug.ErrorHandler
-  import Plug.BasicAuth
   import Phoenix.LiveDashboard.Router
   alias Hexpm.Accounts.{Organization, User}
 
