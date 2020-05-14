@@ -16,6 +16,14 @@ import "phoenix_html"
 //
 // Local files can be imported directly using relative
 // paths "./socket" or full ones "web/static/js/socket".
+import { Socket } from "phoenix"
+import LiveSocket from "phoenix_live_view"
+
+let csrfToken = document.querySelector("meta[name='csrf-token']").getAttribute("content");
+let liveSocket = new LiveSocket("/live", Socket, { params: { _csrf_token: csrfToken } });
+
+// connect if there are any LiveViews on the page
+liveSocket.connect()
 
 // import socket from "./socket"
 
@@ -50,21 +58,21 @@ export default class App {
       $(this).tab("show")
     })
 
-    $("[data-toggle='popover']").popover({container: "body", html: true, animation: false})
+    $("[data-toggle='popover']").popover({ container: "body", html: true, animation: false })
 
     // Highlight syntax
     hljs.registerLanguage('elixir', elixir);
     hljs.initHighlightingOnLoad()
 
     // API permissions checkboxes
-    $(".permission-group .group-owner input").change(function() {
+    $(".permission-group .group-owner input").change(function () {
       if (this.checked) {
-        $(this).parents(".permission-group").find(".group-child label input").each(function() {
+        $(this).parents(".permission-group").find(".group-child label input").each(function () {
           $(this).prop("disabled", true)
           $(this).prop("checked", true)
         })
       } else {
-        $(this).parents(".permission-group").find(".group-child label input").each(function() {
+        $(this).parents(".permission-group").find(".group-child label input").each(function () {
           $(this).prop("disabled", false)
           $(this).prop("checked", false)
         })
@@ -139,7 +147,7 @@ export default class App {
   copySucceeded(button) {
     button.children(".glyphicon-copy").hide()
     button.children(".glyphicon-ok").show()
-    button.tooltip({title: "Copied!", container: "body", placement: "bottom", trigger: "manual"}).tooltip("show")
+    button.tooltip({ title: "Copied!", container: "body", placement: "bottom", trigger: "manual" }).tooltip("show")
 
     setTimeout(() => {
       button.children(".glyphicon-ok").hide()
@@ -151,7 +159,7 @@ export default class App {
   copyFailed(button) {
     button.children(".glyphicon-copy").hide()
     button.children(".glyphicon-remove").show()
-    button.tooltip({title: "Copy not supported in your browser", container: "body", placement: "bottom", trigger: "manual"}).tooltip("show")
+    button.tooltip({ title: "Copy not supported in your browser", container: "body", placement: "bottom", trigger: "manual" }).tooltip("show")
 
     setTimeout(() => {
       button.children(".glyphicon-remove").hide()
@@ -175,7 +183,7 @@ export default class App {
   }
 
   billing_checkout(token) {
-    $.post(window.hexpm_billing_post_action, {token: token, _csrf_token: window.hexpm_billing_csrf_token})
+    $.post(window.hexpm_billing_post_action, { token: token, _csrf_token: window.hexpm_billing_csrf_token })
       .done(function (data) {
         window.location.reload()
       })
@@ -194,3 +202,4 @@ export default class App {
 window.app = new App()
 window.hexpm_billing_checkout = app.billing_checkout
 window.$ = $
+window.liveSocket = liveSocket

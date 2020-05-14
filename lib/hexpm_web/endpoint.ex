@@ -3,6 +3,13 @@ defmodule HexpmWeb.Endpoint do
 
   plug HexpmWeb.Plugs.Forwarded
 
+  @session_options [
+    signing_salt: "NOcCmerj",
+    store: HexpmWeb.Session,
+    key: "_hexpm_key",
+    max_age: 60 * 60 * 24 * 30
+  ]
+
   # Serve at "/" the static files from "priv/static" directory.
   #
   # You should set gzip to true if you are running phoenix.digest
@@ -14,7 +21,7 @@ defmodule HexpmWeb.Endpoint do
     only: ~w(css images js),
     only_matching: ~w(favicon robots)
 
-  socket "/live", Phoenix.LiveView.Socket
+  socket("/live", Phoenix.LiveView.Socket, websocket: [connect_info: [session: @session_options]])
 
   # Code reloading can be explicitly enabled under the
   # :code_reloader configuration of your endpoint.
@@ -37,10 +44,7 @@ defmodule HexpmWeb.Endpoint do
   plug Plug.Head
   plug HexpmWeb.Plugs.Vary, ["accept-encoding"]
 
-  plug Plug.Session,
-    store: HexpmWeb.Session,
-    key: "_hexpm_key",
-    max_age: 60 * 60 * 24 * 30
+  plug Plug.Session, @session_options
 
   if Mix.env() == :prod do
     plug Plug.SSL, rewrite_on: [:x_forwarded_proto]
