@@ -21,7 +21,7 @@
             </p>
           </div>
 
-          <%= form_for @changeset, Routes.organization_path(Endpoint, :update_profile, @organization), [as: :profile], fn f -> %>
+          <%= form_for @changeset, Routes.organization_path(Endpoint, :update_profile, @organization), [method: :post, as: :profile], fn f -> %>
             <div class="form-group">
               <%= label f, :full_name %>
               <%= ViewHelpers.text_input f, :full_name %>
@@ -135,7 +135,7 @@
           </li>
         <% end %>
         <li class="list-group-item clearfix">
-          <%= form_for @add_member_changeset, Routes.organization_path(Endpoint, :update, @organization), [class: "form-inline add-member"], fn f -> %>
+          <%= form_for @add_member_changeset, Routes.organization_path(Endpoint, :update, @organization), [method: :post, class: "form-inline add-member"], fn f -> %>
             <%= content_tag :fieldset, disabled: @billing_active? and @quantity <= length(@organization.organization_users) do %>
               <input type="hidden" name="action" value="add_member">
               <div class="form-group">
