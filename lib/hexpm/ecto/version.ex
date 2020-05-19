@@ -23,7 +23,11 @@ defmodule Hexpm.Version do
   def dump(version) when is_binary(version), do: {:ok, version}
 
   def embed_as(_format), do: :self
-  def equal?(term1, term2), do: term1 == term2
+
+  def equal?(nil, nil), do: true
+  def equal?(nil, _right), do: false
+  def equal?(_left, nil), do: false
+  def equal?(left, right), do: Version.compare(left, right) == :eq
 end
 
 defimpl Jason.Encoder, for: Version do
