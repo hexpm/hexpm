@@ -63,6 +63,8 @@ defmodule HexpmWeb.Endpoint do
           config = put_in(config[:http][:port], port)
           config = put_in(config[:url][:host], host)
           config = put_in(config[:secret_key_base], secret_key_base)
+          config = put_in(config[:check_origin], ["//#{host}"])
+
           {:ok, config}
 
         :error ->
