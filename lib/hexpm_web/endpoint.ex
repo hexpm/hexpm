@@ -54,15 +54,20 @@ defmodule HexpmWeb.Endpoint do
 
   def init(_key, config) do
     if config[:load_from_system_env] do
-      port = System.get_env("HEXPM_PORT")
+      port = System.fetch_env!("HEXPM_PORT")
 
       case Integer.parse(port) do
         {_int, ""} ->
-          host = System.get_env("HEXPM_HOST")
-          secret_key_base = System.get_env("HEXPM_SECRET_KEY_BASE")
+          host = System.fetch_env!("HEXPM_HOST")
+          secret_key_base = System.fetch_env!("HEXPM_SECRET_KEY_BASE")
+          live_view_signing_salt = System.fetch_env!("HEXPM_LIVE_VIEW_SIGNING_SALT")
+
           config = put_in(config[:http][:port], port)
           config = put_in(config[:url][:host], host)
           config = put_in(config[:secret_key_base], secret_key_base)
+          config = put_in(config[:live_view][:signing_salt], live_view_signing_salt)
+          config = put_in(config[:check_origin], ["//#{host}"])
+
           {:ok, config}
 
         :error ->

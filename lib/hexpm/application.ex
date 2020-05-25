@@ -10,7 +10,7 @@ defmodule Hexpm.Application do
       Hexpm.RepoBase,
       {Task.Supervisor, name: Hexpm.Tasks},
       {Cluster.Supervisor, [topologies, [name: Hexpm.ClusterSupervisor]]},
-      {Phoenix.PubSub, name: Hexpm.PubSub},
+      {Phoenix.PubSub, name: Hexpm.PubSub, adapter: Phoenix.PubSub.PG2},
       HexpmWeb.RateLimitPubSub,
       {PlugAttack.Storage.Ets, name: HexpmWeb.Plugs.Attack.Storage, clean_period: 60_000},
       {Hexpm.Throttle, name: Hexpm.SESThrottle, rate: ses_rate(), unit: 1000},
