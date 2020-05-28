@@ -126,9 +126,8 @@ defmodule Hexpm.Repository.Releases do
     end
   end
 
-  defp publish_result({:ok, result}, user, body) do
-    package = %{result.package | repository: result.repository}
-    release = %{result.release | package: package}
+  defp publish_result({:ok, %{package: package, release: release} = result}, user, body) do
+    release = %{release | package: package}
 
     Assets.push_release(release, body)
     update_package_in_registry(package)
@@ -139,21 +138,21 @@ defmodule Hexpm.Repository.Releases do
 
   defp publish_result(result, _user, _body), do: result
 
-  defp retire_result({:ok, result}) do
-    package = %{result.package | repository: result.repository}
-    release = %{result.release | package: package}
-
+  defp retire_result({:ok, %{package: package}}) do
     RegistryBuilder.v2_package(package)
-    {:ok, %{result | release: release, package: package}}
+    :ok
   end
 
   defp retire_result(result), do: result
 
-  defp revert_result({:ok, %{release: release, release_count: release_count}}) do
-    if release_count == 0 do
-      remove_package_from_registry(release.package)
-    end
+  defp revert_result({:ok, %{package: package, release: release, release_count: 0}}) do
+    remove_package_from_registry(package)
+    Assets.revert_release(release)
+    :ok
+  end
 
+  defp revert_result({:ok, %{package: package, release: release, release_count: _}}) do
+    update_package_in_registry(package)
     Assets.revert_release(release)
     :ok
   end

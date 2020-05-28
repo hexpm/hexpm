@@ -12,7 +12,7 @@ defmodule HexpmWeb.API.RetirementController do
 
     if release = conn.assigns.release do
       case Releases.retire(package, release, params, audit: audit_data(conn)) do
-        {:ok, _} ->
+        :ok ->
           conn
           |> api_cache(:private)
           |> send_resp(204, "")
