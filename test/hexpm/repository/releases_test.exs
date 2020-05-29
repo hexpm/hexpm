@@ -9,16 +9,44 @@ defmodule Hexpm.Repository.ReleasesTest do
     package = %{insert(:package) | repository: Repository.hexpm()}
     release = insert(:release, package: package, version: "0.1.0")
     user = insert(:user)
+    hexpm = Hexpm.Repo.get(Repository, 1)
 
     %{
       repository: repository,
       package: package,
       release: release,
-      user: user
+      user: user,
+      hexpm: hexpm
     }
   end
 
   describe "publish/7" do
+    test "publish package pushes artifacts", %{hexpm: hexpm, user: user} do
+      name = Fake.sequence(:package)
+      meta = default_meta(name, "0.1.0")
+      audit = audit_data(user)
+
+      Hexpm.Store.delete(:repo_bucket, "tarballs/#{name}-0.1.0.tar")
+      Hexpm.Store.delete(:repo_bucket, "packages/#{name}")
+
+      assert {:ok, _} =
+               Releases.publish(
+                 hexpm,
+                 nil,
+                 user,
+                 "BODY",
+                 meta,
+                 "00",
+                 "00",
+                 audit: audit,
+                 replace: false
+               )
+
+      assert Hexpm.Store.get(:repo_bucket, "tarballs/#{name}-0.1.0.tar", [])
+      assert registry = Hexpm.Store.get(:repo_bucket, "packages/#{name}", [])
+      assert Enum.any?(decode_registry_package(registry), &match?(%{version: "0.1.0"}, &1))
+    end
+
     test "publish private package with public dependency", %{
       repository: repository,
       package: package,
@@ -146,6 +174,21 @@ defmodule Hexpm.Repository.ReleasesTest do
       refute Packages.get(Repository.hexpm(), package.name)
     end
 
+    test "revert release and package removes artifacts", %{
+      package: package,
+      release: release,
+      user: user
+    } do
+      Hexpm.Store.put(:repo_bucket, "tarballs/#{package.name}-#{release.version}.tar", "DATA", [])
+      Hexpm.Store.put(:repo_bucket, "packages/#{package.name}", "DATA", [])
+
+      audit = audit_data(user)
+      assert Releases.revert(package, release, audit: audit) == :ok
+
+      refute Hexpm.Store.get(:repo_bucket, "tarballs/#{package.name}-#{release.version}.tar", [])
+      refute Hexpm.Store.get(:repo_bucket, "packages/#{package.name}", [])
+    end
+
     test "revert only release", %{
       package: package,
       user: user
@@ -157,5 +200,36 @@ defmodule Hexpm.Repository.ReleasesTest do
       refute Releases.get(package, "0.2.0")
       assert Packages.get(Repository.hexpm(), package.name)
     end
+
+    test "revert release and package removes and updates artifacts", %{
+      package: package,
+      user: user
+    } do
+      Hexpm.Store.put(:repo_bucket, "tarballs/#{package.name}-0.2.0.tar", "DATA", [])
+
+      audit = audit_data(user)
+      release = insert(:release, package: package, version: "0.2.0")
+
+      Hexpm.Repository.RegistryBuilder.v2_package(package)
+
+      assert Releases.revert(package, release, audit: audit) == :ok
+
+      refute Hexpm.Store.get(:repo_bucket, "tarballs/#{package.name}-0.2.0.tar", [])
+      assert registry = Hexpm.Store.get(:repo_bucket, "packages/#{package.name}", [])
+
+      assert Enum.any?(decode_registry_package(registry), &match?(%{version: "0.1.0"}, &1))
+      refute Enum.any?(decode_registry_package(registry), &match?(%{version: "0.2.0"}, &1))
+    end
+  end
+
+  defp decode_registry_package(registry) do
+    assert {:ok, releases} =
+             registry
+             |> :zlib.gunzip()
+             |> :hex_registry.decode_signed()
+             |> Map.fetch!(:payload)
+             |> :hex_registry.decode_package(:no_verify, :no_verify)
+
+    releases
   end
 end
