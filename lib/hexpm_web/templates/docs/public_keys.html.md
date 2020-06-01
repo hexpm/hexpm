@@ -10,6 +10,8 @@ If you have been linked to this page from an error message, it means the public 
 
 #### Active keys
 
+<!-- NOTE: When adding new public key, remember to update https://repo.hex.pm/public_key -->
+
 * **Public key released:** 03/Mar/2016
 * **Last changed:** never
 
