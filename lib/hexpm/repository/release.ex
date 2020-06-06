@@ -16,6 +16,7 @@ defmodule Hexpm.Repository.Release do
     belongs_to(:publisher, User, on_replace: :nilify)
     has_many :requirements, Requirement, on_replace: :delete
     has_many :daily_downloads, Download
+    has_many :package_reports, PackageReport
     has_one :downloads, ReleaseDownload
 
     embeds_one :meta, ReleaseMetadata, on_replace: :delete
