@@ -1,5 +1,6 @@
 defmodule Hexpm.Repository.PackageReport do
   use Hexpm.Schema
+  import Ecto.Query, only: [from: 2]
 
   schema "package_reports" do
     field :state, :string, default: "to_accept"
@@ -32,5 +33,17 @@ defmodule Hexpm.Repository.PackageReport do
     cast(package_report, params, ~w(state)a)
     |> validate_required(:state)
     |> validate_inclusion(:state, @valid_states)
+  end
+
+  def all(count) do
+    from(
+      r in PackageReport,
+      select: r
+    )
+    |>Hexpm.Utils.paginate(1,count)
+  end
+
+  def count() do
+    from(r in PackageReport, select: count(r.id))
   end
 end

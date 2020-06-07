@@ -119,7 +119,13 @@ defmodule HexpmWeb.Router do
     get "/blog", BlogController, :index
     get "/blog/:slug", BlogController, :show
 
+<<<<<<< HEAD
     get "/l/:short_code", ShortURLController, :show
+=======
+    get "/reports", PackageReportController, :index
+    get "/reports/new", PackageReportController, :new
+    post "/reports/create", PackageReportController, :create
+>>>>>>> Add partial create PackageReport functionality
   end
 
   scope "/dashboard", HexpmWeb.Dashboard do

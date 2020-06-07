@@ -1,0 +1,24 @@
+
+<h2 class="packages-title">
+  Package Reports
+</h2>
+
+<%= if @total == 0 do %>
+  <div class="package-list no-results">
+    <h4>No Results Found</h4>
+  </div>
+<% else %>
+    <div>List of package reports</div>
+
+    <div>
+      <h3>Displaying 
+        <%= if @total < @per_page do %>
+          <%= @total %>
+        <% else %>
+          <%= @per_page %>
+        <% end %>
+        of <%= @total %> reports.
+      </h3>
+    </div>
+
+<% end %>

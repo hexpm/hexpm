@@ -28,6 +28,8 @@ defmodule Hexpm.Shared do
         Repository.PackageDownload,
         Repository.PackageMetadata,
         Repository.PackageOwner,
+        Repository.PackageReport,
+        Repository.PackageReports,
         Repository.Packages,
         Repository.RegistryBuilder,
         Repository.Release,
