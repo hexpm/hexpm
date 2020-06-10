@@ -3,6 +3,8 @@
 </h2>
 
 <%= form_tag Routes.package_report_path(Endpoint, :create) do %>
+  <input type = "hidden" name = "package" value = "<%= @package_name %>"/>
+  <input type = "hidden" name = "repository" value = "<%= @repository %>"/>
   <textarea name = "description" placeholder = "Enter report description here..."></textarea>
   Select affected versions: From
   <select name="from_version">

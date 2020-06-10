@@ -6,9 +6,12 @@ defmodule Hexpm.RepoBase.Migrations.AddPackageReportsTable do
       CREATE TABLE package_reports (
         id serial PRIMARY KEY,
         description text,
+        state text,
+        package_id integer REFERENCES packages,
         author_id integer REFERENCES users,
         release_id integer REFERENCES releases,
-        created_at timestamp
+        updated_at timestamp,
+        inserted_at timestamp
       )
     """)
 

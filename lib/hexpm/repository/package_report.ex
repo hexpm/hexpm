@@ -8,28 +8,27 @@ defmodule Hexpm.Repository.PackageReport do
 
     belongs_to :author, Hexpm.Accounts.User
     belongs_to :package, Package
-    field :requirement, :string
-    has_many :releases, Release
+    #field :requirement, :string
+    has_many :affected_releases, AffectedRelease
+    has_many :releases, through: [:affected_releases, :release]
 
     timestamps()
   end
 
   @valid_states ["to_accept","accepted","rejected","solved"]
 
-  def build(release, user, params) do
-    package_report =
-      build_assoc(release, :package_reports)
-      |> Map.put(:release, release)
-      |> put_assoc(:author, user)
-
-    package_report
+  def build(releases, user, package, params) do
+    %PackageReport{}
     |> cast(params, ~w(state description)a)
     |> validate_required(:state)
     |> validate_inclusion(:state, @valid_states)
-    |> validate_length(:description, min: 100, max: 500)    
+    |> validate_length(:description, min: 2, max: 500)
+    |> put_assoc(:affected_releases, get_list_of_affected(releases))
+    |> put_assoc(:author, user)
+    |> put_assoc(:package, package)   
   end
 
-  def update(package_report,params) do
+  def change_state(package_report,params) do
     cast(package_report, params, ~w(state)a)
     |> validate_required(:state)
     |> validate_inclusion(:state, @valid_states)
@@ -37,13 +36,21 @@ defmodule Hexpm.Repository.PackageReport do
 
   def all(count) do
     from(
-      r in PackageReport,
-      select: r
+      p in PackageReport,
+      join: r in assoc(p, :releases),
+      preload: :author,
+      preload: :releases,
+      preload: :package,
+      select: p
     )
     |>Hexpm.Utils.paginate(1,count)
   end
 
   def count() do
     from(r in PackageReport, select: count(r.id))
+  end
+
+  defp get_list_of_affected(releases) do
+    Enum.map(releases, fn r -> %AffectedRelease{release_id: r.id} end)
   end
 end
