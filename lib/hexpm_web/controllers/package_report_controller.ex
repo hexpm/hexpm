@@ -1,7 +1,7 @@
 defmodule HexpmWeb.PackageReportController do
     use HexpmWeb, :controller
 
-    @package_reports_per_page 4
+    @package_reports_per_page 10
     @sort_params ~w(timestamp)
     @new_report_msg "Package report generated"
 

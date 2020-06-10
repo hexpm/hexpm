@@ -1,5 +1,6 @@
 <li>    
-    <a href=""><%= @report.package.name %></a>
+    <%= @report.id%> <%= @report.package.name %>
+    by: <%= @report.author.username %>
     <span class="version">
         <%= for ar <- @report.affected_releases do %>
             <button><%= ar.release.version %></button>

@@ -37,7 +37,7 @@ defmodule Hexpm.Repository.PackageReport do
   def all(count) do
     from(
       p in PackageReport,
-      join: r in assoc(p, :releases),
+      preload: :affected_releases,
       preload: :author,
       preload: :releases,
       preload: :package,
