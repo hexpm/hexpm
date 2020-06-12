@@ -12,13 +12,18 @@ defmodule Hexpm.Repository.PackageReports do
         )
     end
     
-    def search(count) do
-        PackageReport.all(count)
+    def search(count, page) do
+        PackageReport.all(count, page)
         |> Repo.all()
     end
 
     def count() do
         PackageReport.count()
+        |> Repo.one()
+    end
+
+    def get(id) do
+        PackageReport.get(id)
         |> Repo.one()
     end
 end

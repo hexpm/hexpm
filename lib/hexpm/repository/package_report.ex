@@ -34,7 +34,19 @@ defmodule Hexpm.Repository.PackageReport do
     |> validate_inclusion(:state, @valid_states)
   end
 
-  def all(count) do
+  def get(id) do
+    from(
+      r in PackageReport,
+      preload: :author,
+      preload: :package,
+      preload: :releases,
+      preload: :affected_releases,
+      where: r.id == ^id,
+      select: r
+    )
+  end
+
+  def all(count, page) do
     from(
       p in PackageReport,
       preload: :affected_releases,
@@ -43,7 +55,7 @@ defmodule Hexpm.Repository.PackageReport do
       preload: :package,
       select: p
     )
-    |>Hexpm.Utils.paginate(1,count)
+    |>Hexpm.Utils.paginate(page, count)
   end
 
   def count() do

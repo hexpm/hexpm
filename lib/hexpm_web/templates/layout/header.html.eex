@@ -52,7 +52,7 @@
           </form>
           <% end %>
           <ul class="nav navbar-nav navbar-right">
-            <li><a href="<%= Routes.package_report_path(Endpoint, :index) %>">Package Reports</a></li>
+            <li><a href="<%= Routes.package_report_path(Endpoint, :index, page: 1) %>">Package Reports</a></li>
             <li><a href="<%= Routes.package_path(Endpoint, :index) %>">Packages</a></li>
             <li><a href="<%= Routes.page_path(Endpoint, :pricing) %>">Pricing</a></li>
             <li><a href="<%= Routes.docs_path(Endpoint, :index) %>">Docs</a></li>

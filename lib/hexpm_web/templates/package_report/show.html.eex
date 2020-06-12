@@ -1,0 +1,9 @@
+<p> Report with id <%= @report.id %></p>
+<p> on <%= @report.package.name %> package </p>
+<p> Affected releases: -
+<%= for ar <- @report.affected_releases do %>
+    <%= ar.release.version %> - 
+<% end %>
+<p> Submitted by <%= @report.author.username %> <%= ViewHelpers.human_relative_time_from_now(@report.inserted_at) %></p>
+<p> <%= @report.description %>
+<p> Report status: <%= @report.state %>

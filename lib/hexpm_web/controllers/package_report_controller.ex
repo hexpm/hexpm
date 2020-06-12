@@ -1,20 +1,23 @@
 defmodule HexpmWeb.PackageReportController do
     use HexpmWeb, :controller
 
-    @package_reports_per_page 10
+    @package_reports_per_page 30
     @sort_params ~w(timestamp)
     @new_report_msg "Package report generated"
 
     def index(conn, params) do
-        reports = fetch_package_reports(@package_reports_per_page)
-        count = PackageReports.count()
-
+        package_count = PackageReports.count()
+        page_param = Hexpm.Utils.safe_int(params["page"]) || 1
+        page = Hexpm.Utils.safe_page(page_param, package_count, @packages_per_page)
+        reports = fetch_package_reports(@package_reports_per_page, page)
+        
         render(
             conn,
             "index.html",
             reports: reports,
             per_page: @package_reports_per_page,
-            total: count
+            page: page,
+            total: package_count
         )
     end
 
@@ -59,7 +62,17 @@ defmodule HexpmWeb.PackageReportController do
         |> redirect(to: Routes.page_path(HexpmWeb.Endpoint, :index))
     end
 
-    defp slice_releases(releases,from,to) do
+    def show(conn, params) do
+        report = PackageReports.get(params["id"])
+
+        render(
+            conn,
+            "show.html",
+            report: report
+        )
+    end
+
+    defp slice_releases(releases, from, to) do
         a = Enum.filter(releases, fn r -> 
             clean_dots(r.version) >= clean_dots(from) 
             && clean_dots(r.version) <= clean_dots(to) 
@@ -71,8 +84,8 @@ defmodule HexpmWeb.PackageReportController do
         String.replace("#{version}",".","")
     end
 
-    defp fetch_package_reports(count) do
-        PackageReports.search(count)
+    defp fetch_package_reports(count, page) do
+        PackageReports.search(count, page)
     end
 
     defp fail_with(conn, msg) do
@@ -81,7 +94,7 @@ defmodule HexpmWeb.PackageReportController do
         |> redirect(to: Routes.page_path(HexpmWeb.Endpoint, :index))
     end
 
-    defp build_report_form(conn,params) do
+    defp build_report_form(conn, params) do
         %{"repository" => repository, "package" => name} = params
         package = repository && Packages.get(repository, name)
         releases = Releases.all(package)

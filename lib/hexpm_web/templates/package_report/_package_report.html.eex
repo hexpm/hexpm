@@ -1,11 +1,12 @@
-<li>    
-    <%= @report.id%> <%= @report.package.name %>
-    by: <%= @report.author.username %>
-    <span class="version">
-        <%= for ar <- @report.affected_releases do %>
-            <button><%= ar.release.version %></button>
-        <% end %>
-        <%= ViewHelpers.text_length(@report.description, 140) %>
-    </span>
-
-</li>
+<tr>    
+        <td><a href="<%= ViewHelpers.path_for_package_report(@report) %>"><%= @report.id%></a></td>
+        <td><%= @report.package.name %></td>
+        <td>
+            <%= for ar <- @report.affected_releases do %>
+                <%= ar.release.version %> 
+            <% end %>
+        </td>
+        <td><%= @report.state%>
+        <td><%= @report.author.username %></td>
+        <td><%= ViewHelpers.text_length(@report.description, 50) %></td>
+</tr>
