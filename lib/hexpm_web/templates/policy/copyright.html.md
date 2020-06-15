@@ -60,4 +60,4 @@ In order to file a counter notice, you must have "a good faith belief that the m
 
 ### Changes
 
-This is a living document and may be updated from time to time. Please refer to the [git history](https://github.com/hexpm/hexpm/blob/master/lib/hexpm/web/templates/policy/copyright.html.md) for this document to view the changes.
+This is a living document and may be updated from time to time. Please refer to the [git history](https://github.com/hexpm/hexpm/blob/main/lib/hexpm/web/templates/policy/copyright.html.md) for this document to view the changes.

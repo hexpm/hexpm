@@ -40,4 +40,4 @@ Keep in mind that the resolution of all name disputes are at the sole discretion
 
 ### Changes
 
-This is a living document and may be updated from time to time. Please refer to the [git history](https://github.com/hexpm/hexpm/blob/master/lib/hexpm_web/templates/policy/dispute.html.md) for this document to view the changes.
+This is a living document and may be updated from time to time. Please refer to the [git history](https://github.com/hexpm/hexpm/blob/main/lib/hexpm_web/templates/policy/dispute.html.md) for this document to view the changes.
