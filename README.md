@@ -1,6 +1,6 @@
 # Hexpm
 
-[![Build Status](https://travis-ci.org/hexpm/hexpm.svg?branch=master "Build Status")](http://travis-ci.org/hexpm/hexpm)
+[![Build Status](https://travis-ci.org/hexpm/hexpm.svg?branch=main "Build Status")](http://travis-ci.org/hexpm/hexpm)
 
 ## Contributing
 
