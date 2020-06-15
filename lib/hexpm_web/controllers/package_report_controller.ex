@@ -66,11 +66,17 @@ defmodule HexpmWeb.PackageReportController do
     def show(conn, params) do
         report = PackageReports.get(params["id"])
 
-        render(
-            conn,
-            "show.html",
-            report: report
-        )
+        if report == nil or
+        (report.state == "to_accept" and !Users.has_role(conn.assigns.current_user, "moderator"))
+        do
+            fail_with(conn, "Requested report not available.")
+        else
+            render(
+                conn,
+                "show.html",
+                report: report
+            )
+        end
     end
 
     defp slice_releases(releases, from, to) do
@@ -86,15 +92,8 @@ defmodule HexpmWeb.PackageReportController do
     end
 
     defp fetch_package_reports(count, page, user) do
-        if user != nil do
-            case user.role do
-                "moderator" -> PackageReports.search(count, page, nil)
-                _ -> PackageReports.search(
-                        count, 
-                        page,
-                        "state:not_equal:to_accept"
-                    )
-            end
+        if Users.has_role(user, "moderator") do
+            PackageReports.search(count, page, nil)
         else
             PackageReports.search(
                         count, 
