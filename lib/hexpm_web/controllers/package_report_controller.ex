@@ -6,10 +6,11 @@ defmodule HexpmWeb.PackageReportController do
     @new_report_msg "Package report generated"
 
     def index(conn, params) do
-        package_count = PackageReports.count()
         page_param = Hexpm.Utils.safe_int(params["page"]) || 1
-        page = Hexpm.Utils.safe_page(page_param, package_count, @packages_per_page)
-        reports = fetch_package_reports(@package_reports_per_page, page)
+        reports = fetch_package_reports(@package_reports_per_page, page_param, conn.assigns.current_user)
+        reports_count = Enum.count(reports)
+        page = Hexpm.Utils.safe_page(page_param, reports_count, @packages_per_page)
+        
         
         render(
             conn,
@@ -17,7 +18,7 @@ defmodule HexpmWeb.PackageReportController do
             reports: reports,
             per_page: @package_reports_per_page,
             page: page,
-            total: package_count
+            total: reports_count
         )
     end
 
@@ -84,8 +85,23 @@ defmodule HexpmWeb.PackageReportController do
         String.replace("#{version}",".","")
     end
 
-    defp fetch_package_reports(count, page) do
-        PackageReports.search(count, page)
+    defp fetch_package_reports(count, page, user) do
+        if user != nil do
+            case user.role do
+                "moderator" -> PackageReports.search(count, page, nil)
+                _ -> PackageReports.search(
+                        count, 
+                        page,
+                        "state:not_equal:to_accept"
+                    )
+            end
+        else
+            PackageReports.search(
+                        count, 
+                        page,
+                        "state:not_equal:to_accept"
+                    )
+        end
     end
 
     defp fail_with(conn, msg) do

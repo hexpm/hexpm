@@ -12,6 +12,7 @@ defmodule Hexpm.Accounts.User do
     field :password, :string
     field :service, :boolean, default: false
     field :deactivated_at, :utc_datetime_usec
+    field :role, :string, default: "basic"
     timestamps()
 
     embeds_one :handles, UserHandles, on_replace: :delete
@@ -32,6 +33,8 @@ defmodule Hexpm.Accounts.User do
   @username_regex ~r"^[a-z0-9_\-\.]+$"
 
   @reserved_names ~w(me hex hexpm elixir erlang otp)
+
+  @possible_roles ~w(basic mod)
 
   def build(params, confirmed? \\ not Application.get_env(:hexpm, :user_confirm)) do
     cast(%User{}, params, ~w(username full_name password)a)
@@ -94,6 +97,12 @@ defmodule Hexpm.Accounts.User do
     Enum.any?(user.password_resets, fn reset ->
       PasswordReset.can_reset?(reset, primary_email, key)
     end)
+  end
+
+  def set_role(user, params) do
+    cast(user, params, ~w(role)a)
+    |> validate_required(~w(role)a)
+    |> validate_inclusion(:role, @possible_roles)
   end
 
   def email(user, :primary), do: user.emails |> Enum.find(& &1.primary) |> email()

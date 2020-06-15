@@ -28,6 +28,7 @@
       <%= for {service, handle, url} <- UserHandles.render(@user) do %>
         <li><a href="<%= url %>"><%= handle %></a> on <%= service %></li>
       <% end %>
+      <li><%= @user.role %> role</div></li>
     </ul>
   </div>
 </div>
