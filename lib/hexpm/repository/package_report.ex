@@ -53,6 +53,7 @@ defmodule Hexpm.Repository.PackageReport do
       preload: :author,
       preload: :releases,
       preload: :package,
+      order_by: [desc: p.updated_at]
     )
     |>Hexpm.Utils.paginate(page, count)
     |>search(search)
