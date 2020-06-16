@@ -4,6 +4,7 @@ defmodule HexpmWeb.PackageReportController do
     @package_reports_per_page 30
     @sort_params ~w(timestamp)
     @new_report_msg "Package report generated"
+    @report_updated_msg "Package report updated"
 
     def index(conn, params) do
         page_param = Hexpm.Utils.safe_int(params["page"]) || 1
@@ -65,18 +66,39 @@ defmodule HexpmWeb.PackageReportController do
 
     def show(conn, params) do
         report = PackageReports.get(params["id"])
+        to_moderator = Users.has_role(conn.assigns.current_user, "moderator")
 
         if report == nil or
-        (report.state == "to_accept" and !Users.has_role(conn.assigns.current_user, "moderator"))
+        (report.state == "to_accept" and !to_moderator)
         do
             fail_with(conn, "Requested report not available.")
         else
             render(
                 conn,
                 "show.html",
-                report: report
+                report: report,
+                to_moderator: to_moderator
             )
         end
+    end
+
+    def mod_review(conn, params) do
+        report_id = params["report_id"]
+        comment = params["comment"]
+        operation = String.downcase(params["operation"])
+        
+        new_state = case operation do
+            "accept" -> "accepted"
+            "reject" -> "rejected"
+        end
+
+        report = PackageReports.get(report_id)
+
+        PackageReports.change_state(report, comment, new_state )
+
+        conn
+        |> put_flash(:info, @report_updated_msg)
+        |> redirect(to: Routes.page_path(HexpmWeb.Endpoint, :index))
     end
 
     defp slice_releases(releases, from, to) do

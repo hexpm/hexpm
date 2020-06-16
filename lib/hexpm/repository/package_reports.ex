@@ -26,4 +26,9 @@ defmodule Hexpm.Repository.PackageReports do
         PackageReport.get(id)
         |> Repo.one()
     end
+
+    def change_state(report, comment, state) do
+        PackageReport.change_state(report, %{"comment" => comment, "state" => state})
+        |> Repo.update()
+    end
 end

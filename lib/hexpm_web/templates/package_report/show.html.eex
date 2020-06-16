@@ -7,3 +7,7 @@
 <p> Submitted by <%= @report.author.username %> <%= ViewHelpers.human_relative_time_from_now(@report.inserted_at) %></p>
 <p> <%= @report.description %>
 <p> Report status: <%= @report.state %>
+
+<%= if @to_moderator do %>
+    <%= render "_moderator_pannel.html", report_id: @report.id, author: @report.author %>
+<% end%>

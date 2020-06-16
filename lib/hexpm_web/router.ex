@@ -124,6 +124,11 @@ defmodule HexpmWeb.Router do
     get "/reports", PackageReportController, :index
     get "/reports/new", PackageReportController, :new
     post "/reports/create", PackageReportController, :create
+<<<<<<< HEAD
+=======
+    get "/reports/:id", PackageReportController, :show
+    post "/reports/:id/mod_review", PackageReportController, :mod_review
+>>>>>>> Add accept/reject report functionality
   end
 
   scope "/dashboard", HexpmWeb.Dashboard do

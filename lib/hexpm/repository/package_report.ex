@@ -28,8 +28,8 @@ defmodule Hexpm.Repository.PackageReport do
     |> put_assoc(:package, package)   
   end
 
-  def change_state(package_report,params) do
-    cast(package_report, params, ~w(state)a)
+  def change_state(report, params) do
+    cast(report, params, ~w(state)a)
     |> validate_required(:state)
     |> validate_inclusion(:state, @valid_states)
   end
