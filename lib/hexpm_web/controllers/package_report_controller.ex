@@ -1,24 +1,22 @@
 defmodule HexpmWeb.PackageReportController do
     use HexpmWeb, :controller
 
-    @package_reports_per_page 30
+    plug :requires_login
+
     @sort_params ~w(timestamp)
     @new_report_msg "Package report generated"
     @report_updated_msg "Package report updated"
+    @report_badupdate_msg "Package report can not be updated"
 
     def index(conn, params) do
-        page_param = Hexpm.Utils.safe_int(params["page"]) || 1
-        reports = fetch_package_reports(@package_reports_per_page, page_param, conn.assigns.current_user)
+        reports = fetch_package_reports()
         reports_count = Enum.count(reports)
-        page = Hexpm.Utils.safe_page(page_param, reports_count, @packages_per_page)
         
         
         render(
             conn,
             "index.html",
             reports: reports,
-            per_page: @package_reports_per_page,
-            page: page,
             total: reports_count
         )
     end
@@ -82,23 +80,39 @@ defmodule HexpmWeb.PackageReportController do
         end
     end
 
-    def mod_review(conn, params) do
+    def accept_report(conn, params) do
         report_id = params["report_id"]
         comment = params["comment"]
-        operation = String.downcase(params["operation"])
-        
-        new_state = case operation do
-            "accept" -> "accepted"
-            "reject" -> "rejected"
-        end
 
+        update_report_state(conn, report_id, comment, "accepted")
+    end
+
+    def reject_report(conn, params) do
+        report_id = params["report_id"]
+        comment = params["comment"]
+
+        update_report_state(conn, report_id, comment, "rejected")
+    end
+
+    defp update_report_state(conn, report_id, comment, state) do
         report = PackageReports.get(report_id)
 
-        PackageReports.change_state(report, comment, new_state )
+        if valid_state_change(state, report) do
+            PackageReports.change_state(report, comment, state)
 
-        conn
-        |> put_flash(:info, @report_updated_msg)
-        |> redirect(to: Routes.page_path(HexpmWeb.Endpoint, :index))
+            conn
+            |> put_flash(:info, @report_updated_msg)
+            |> redirect(to: Routes.page_path(HexpmWeb.Endpoint, :index))
+        else
+            conn
+            |> put_flash(:error, @report_badupdate_msg)
+            |> redirect(to: Routes.page_path(HexpmWeb.Endpoint, :index))
+        end
+    end
+
+    defp valid_state_change(state, report) do
+        # TODO: check valid state change based on conn.user too
+        True
     end
 
     defp slice_releases(releases, from, to) do
@@ -113,16 +127,8 @@ defmodule HexpmWeb.PackageReportController do
         String.replace("#{version}",".","")
     end
 
-    defp fetch_package_reports(count, page, user) do
-        if Users.has_role(user, "moderator") do
-            PackageReports.search(count, page, nil)
-        else
-            PackageReports.search(
-                        count, 
-                        page,
-                        "state:not_equal:to_accept"
-                    )
-        end
+    defp fetch_package_reports() do
+        PackageReports.search()
     end
 
     defp fail_with(conn, msg) do
@@ -135,12 +141,14 @@ defmodule HexpmWeb.PackageReportController do
         %{"repository" => repository, "package" => name} = params
         package = repository && Packages.get(repository, name)
         releases = Releases.all(package)
+        
+        version_map = Enum.map(releases, fn r -> { "#{r.version}","#{r.version}" } end)
         render(
             conn,
             "new_report.html",
             package_name: name,
             repository: repository,
-            releases: releases
+            version_map: version_map
         )
     end
 end

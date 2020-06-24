@@ -1,9 +1,13 @@
 <div style="background-color: coral; width: 300px">
     <h2>Moderator pannel </h2>
-    <%= form_tag Routes.package_report_path(Endpoint, :mod_review, @report_id) do %>
+    <%= form_tag Routes.package_report_path(Endpoint, :accept_report, @report_id) do %>
         <input type="hidden" name="report_id" value="<%= @report_id %>"/>
         <textarea name="comment"> </textarea>
         <input type="submit" name="operation" value="Accept"/>
+    <% end %>
+    <%= form_tag Routes.package_report_path(Endpoint, :reject_report, @report_id) do %>
+        <input type="hidden" name="report_id" value="<%= @report_id %>"/>
+        <textarea name="comment"> </textarea>
         <input type="submit" name="operation" value="Reject"/>
     <% end %>
 </div>

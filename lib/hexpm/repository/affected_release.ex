@@ -1,7 +1,7 @@
-defmodule Hexpm.Repository.AffectedRelease do
+defmodule Hexpm.Repository.PackageReportRelease do
     use Hexpm.Schema
 
-    schema "affected_releases" do
+    schema "package_report_releases" do
         belongs_to :release, Release
         belongs_to :package_report, PackageReport
 

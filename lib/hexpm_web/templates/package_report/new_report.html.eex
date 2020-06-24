@@ -8,15 +8,11 @@
   <textarea name = "description" placeholder = "Enter report description here..."></textarea>
   Select affected versions: From
   <select name="from_version">
-    <%= for ver <- @releases do %>
-      <option value="<%= ver.version %>"> <%= ver.version %> </option>
-    <% end %>
+    <%= options_for_select(@version_map, nil) %>
   </select>
   to
   <select name="to_version">
-    <%= for ver <- @releases do %>
-      <option value="<%= ver.version %>"> <%= ver.version %> </option>
-    <% end %>
+    <%= options_for_select(@version_map, nil) %>
   </select>
   <button type = "submit" class = "btn">
     Submit Report.

@@ -19,7 +19,7 @@ defmodule Hexpm.Shared do
         Accounts.Users,
         Emails,
         Emails.Mailer,
-        Repository.AffectedRelease,
+        Repository.PackageReportRelease,
         Repository.Assets,
         Repository.Download,
         Repository.Install,

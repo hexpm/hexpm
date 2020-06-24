@@ -12,8 +12,8 @@ defmodule Hexpm.Repository.PackageReports do
         )
     end
     
-    def search(count, page, search) do
-        PackageReport.all(count, page, search)
+    def search() do
+        PackageReport.all()
         |> Repo.all()
     end
 

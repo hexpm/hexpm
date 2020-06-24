@@ -2,7 +2,7 @@
         <td><a href="<%= ViewHelpers.path_for_package_report(@report) %>"><%= @report.id%></a></td>
         <td><%= @report.package.name %></td>
         <td>
-            <%= for ar <- @report.affected_releases do %>
+            <%= for ar <- @report.package_report_releases do %>
                 <%= ar.release.version %> 
             <% end %>
         </td>

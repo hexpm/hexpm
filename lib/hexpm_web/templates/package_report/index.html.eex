@@ -26,18 +26,4 @@
       <% end %>
     </table>
   </div>
-
-
-  <%=
-  render HexpmWeb.SharedView,
-        "_pagination.html",
-        items: @reports,
-        page: @page,
-        total_count: @total,
-        per_page: @per_page,
-        unit: "package report",
-        units: "package reports",
-        path_fn: &Routes.package_report_path(Endpoint, :index, ViewHelpers.params(page: &1))
-  %>
-
 <% end %>
