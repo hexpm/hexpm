@@ -48,6 +48,7 @@ defmodule HexpmWeb.PackageReportController do
         user = conn.assigns.current_user
         all_releases = Releases.all(package)
 
+
         %{
             "package" => package,
             "releases" => slice_releases(all_releases, from_version, to_version),
@@ -116,11 +117,11 @@ defmodule HexpmWeb.PackageReportController do
     end
 
     defp slice_releases(releases, from, to) do
-        a = Enum.filter(releases, fn r -> 
-            clean_dots(r.version) >= clean_dots(from) 
-            && clean_dots(r.version) <= clean_dots(to) 
+        requirement = ">= " <> from <> " and <= " <> to
+        rs = Enum.filter(releases, fn r -> 
+            Version.match?(r.version, requirement)
         end)
-        a    
+        rs    
     end
 
     defp clean_dots(version) do
