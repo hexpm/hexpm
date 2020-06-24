@@ -8,14 +8,14 @@ defmodule Hexpm.Repository.PackageReport do
 
     belongs_to :author, Hexpm.Accounts.User
     belongs_to :package, Package
-    #field :requirement, :string
+    # field :requirement, :string
     has_many :package_report_releases, PackageReportRelease
     has_many :releases, through: [:package_report_releases, :release]
 
     timestamps()
   end
 
-  @valid_states ["to_accept","accepted","rejected","solved"]
+  @valid_states ["to_accept", "accepted", "rejected", "solved"]
 
   def build(releases, user, package, params) do
     %PackageReport{}
@@ -25,7 +25,7 @@ defmodule Hexpm.Repository.PackageReport do
     |> validate_length(:description, min: 2, max: 500)
     |> put_assoc(:package_report_releases, get_list_of_affected(releases))
     |> put_assoc(:author, user)
-    |> put_assoc(:package, package)   
+    |> put_assoc(:package, package)
   end
 
   def change_state(report, params) do
@@ -55,8 +55,7 @@ defmodule Hexpm.Repository.PackageReport do
       preload: :package,
       order_by: [desc: p.updated_at]
     )
-    |>fields()
-    
+    |> fields()
   end
 
   def count() do

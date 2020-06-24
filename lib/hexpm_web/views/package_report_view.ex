@@ -1,3 +1,3 @@
 defmodule HexpmWeb.PackageReportView do
-    use HexpmWeb, :view
+  use HexpmWeb, :view
 end

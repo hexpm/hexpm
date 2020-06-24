@@ -358,7 +358,6 @@ defmodule HexpmWeb.ViewHelpers do
     |> EQRCode.encode()
     |> EQRCode.svg(width: 250)
   end
-  
 end
 
 defimpl Phoenix.HTML.Safe, for: Version do

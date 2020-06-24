@@ -14,10 +14,9 @@ defmodule Hexpm.RepoBase.Migrations.AddPackageReportReleaseTable do
     """)
 
     execute("CREATE INDEX ON package_report_releases (package_report_id)")
-
   end
 
   def drop() do
-    execute ("DROP TABLE IF EXISTS package_report_releases")
+    execute("DROP TABLE IF EXISTS package_report_releases")
   end
 end

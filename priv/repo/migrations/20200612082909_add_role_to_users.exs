@@ -3,8 +3,7 @@ defmodule Hexpm.RepoBase.Migrations.AddRoleToUsers do
 
   def change do
     alter table(:users) do
-      add :role, :string, default: "basic"
+      add(:role, :string, default: "basic")
     end
   end
-
 end
