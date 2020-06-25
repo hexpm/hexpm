@@ -6,7 +6,8 @@ defmodule HexpmWeb.PackageReportController do
   @sort_params ~w(timestamp)
   @new_report_msg "Package report generated"
   @report_updated_msg "Package report updated"
-  @report_badupdate_msg "Package report can not be updated"
+  @report_bad_update_msg "Package report can not be updated"
+  @report_bad_version_msg "No release matchs given requirement"
 
   def index(conn, params) do
     reports = fetch_package_reports()
@@ -38,8 +39,7 @@ defmodule HexpmWeb.PackageReportController do
     description = params["description"]
     package_name = params["package"]
     state = "to_accept"
-    from_version = params["from_version"]
-    to_version = params["to_version"]
+    requirement = params["requirement"]
     repository = params["repository"]
 
     package = Packages.get(repository, package_name)
@@ -47,18 +47,22 @@ defmodule HexpmWeb.PackageReportController do
     user = conn.assigns.current_user
     all_releases = Releases.all(package)
 
-    %{
-      "package" => package,
-      "releases" => slice_releases(all_releases, from_version, to_version),
-      "user" => user,
-      "description" => description,
-      "state" => state
-    }
-    |> PackageReports.add()
+    report_releases = slice_releases(all_releases, requirement)
 
-    conn
-    |> put_flash(:info, @new_report_msg)
-    |> redirect(to: Routes.page_path(HexpmWeb.Endpoint, :index))
+    if report_releases == [] do 
+      conn
+      |> put_flash(:error, @report_bad_version_msg)
+      |> redirect(to: Routes.page_path(HexpmWeb.Endpoint, :index))
+    else 
+      %{
+        "package" => package,
+        "releases" => report_releases,
+        "user" => user,
+        "description" => description,
+        "state" => state
+      }
+      |> PackageReports.add()
+    end    
   end
 
   def show(conn, params) do
@@ -113,14 +117,11 @@ defmodule HexpmWeb.PackageReportController do
     True
   end
 
-  defp slice_releases(releases, from, to) do
-    requirement = ">= " <> from <> " and <= " <> to
-
+  defp slice_releases(releases, requirement) do
     rs =
       Enum.filter(releases, fn r ->
         Version.match?(r.version, requirement)
       end)
-
     rs
   end
 
@@ -141,16 +142,12 @@ defmodule HexpmWeb.PackageReportController do
   defp build_report_form(conn, params) do
     %{"repository" => repository, "package" => name} = params
     package = repository && Packages.get(repository, name)
-    releases = Releases.all(package)
-
-    version_map = Enum.map(releases, fn r -> {"#{r.version}", "#{r.version}"} end)
 
     render(
       conn,
       "new_report.html",
       package_name: name,
       repository: repository,
-      version_map: version_map
     )
   end
 end

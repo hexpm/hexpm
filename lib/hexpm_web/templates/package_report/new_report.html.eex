@@ -6,14 +6,7 @@
   <input type = "hidden" name = "package" value = "<%= @package_name %>"/>
   <input type = "hidden" name = "repository" value = "<%= @repository %>"/>
   <textarea name = "description" placeholder = "Enter report description here..."></textarea>
-  Select affected versions: From
-  <select name="from_version">
-    <%= options_for_select(@version_map, nil) %>
-  </select>
-  to
-  <select name="to_version">
-    <%= options_for_select(@version_map, nil) %>
-  </select>
+  <input type = "text" name = "requirement"/>
   <button type = "submit" class = "btn">
     Submit Report.
   </button>
