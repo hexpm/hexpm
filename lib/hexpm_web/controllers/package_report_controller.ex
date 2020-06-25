@@ -114,7 +114,7 @@ defmodule HexpmWeb.PackageReportController do
 
   defp valid_state_change(state, report) do
     # TODO: check valid state change based on conn.user too
-    True
+    true
   end
 
   defp slice_releases(releases, requirement) do
