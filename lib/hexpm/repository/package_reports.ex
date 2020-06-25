@@ -12,7 +12,7 @@ defmodule Hexpm.Repository.PackageReports do
     )
   end
 
-  def search() do
+  def all() do
     PackageReport.all()
     |> Repo.all()
   end

@@ -129,7 +129,7 @@ defmodule HexpmWeb.PackageReportController do
   end
 
   defp fetch_package_reports() do
-    PackageReports.search()
+    PackageReports.all()
   end
 
   defp fail_with(conn, msg) do
