@@ -111,7 +111,7 @@ defmodule HexpmWeb.PackageReportController do
     comment = params["comment"]
 
     if valid_state_change("solved", report) do
-      PackageReports.reject(conn, report_id, comment)
+      PackageReports.solve(conn, report_id, comment)
       notify_good_update()
     else
       notify_bad_update()
