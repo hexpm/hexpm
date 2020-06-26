@@ -86,35 +86,52 @@ defmodule HexpmWeb.PackageReportController do
     report_id = params["report_id"]
     comment = params["comment"]
 
-    update_report_state(conn, report_id, comment, "accepted")
+    report = PackageReports.get(report_id)
+
+    if valid_state_change("accepted", report) do
+      PackageReports.accept(conn, report_id, comment)
+      notify_good_update()
+    else
+      notify_bad_update()
   end
 
   def reject_report(conn, params) do
     report_id = params["report_id"]
     comment = params["comment"]
 
-    update_report_state(conn, report_id, comment, "rejected")
+    if valid_state_change("rejected", report) do
+      PackageReports.reject(conn, report_id, comment)
+      notify_good_update()
+    else
+      notify_bad_update()
   end
 
-  defp update_report_state(conn, report_id, comment, state) do
-    report = PackageReports.get(report_id)
+  def solve_report(conn, params) do
+    report_id = params["report_id"]
+    comment = params["comment"]
 
-    if valid_state_change(state, report) do
-      PackageReports.change_state(report, comment, state)
+    if valid_state_change("solved", report) do
+      PackageReports.reject(conn, report_id, comment)
+      notify_good_update()
+    else
+      notify_bad_update()
+  end
 
+  defp notify_good_update() do
       conn
       |> put_flash(:info, @report_updated_msg)
       |> redirect(to: Routes.page_path(HexpmWeb.Endpoint, :index))
-    else
-      conn
-      |> put_flash(:error, @report_badupdate_msg)
-      |> redirect(to: Routes.page_path(HexpmWeb.Endpoint, :index))
-    end
+  end
+  
+  defp notify_bad_update() do
+    conn
+    |> put_flash(:error, @report_badupdate_msg)
+    |> redirect(to: Routes.page_path(HexpmWeb.Endpoint, :index))
   end
 
   defp valid_state_change(state, report) do
     # TODO: check valid state change based on conn.user too
-    True
+    true
   end
 
   defp slice_releases(releases, requirement) do

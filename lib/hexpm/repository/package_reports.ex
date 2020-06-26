@@ -27,8 +27,18 @@ defmodule Hexpm.Repository.PackageReports do
     |> Repo.one()
   end
 
-  def change_state(report, comment, state) do
-    PackageReport.change_state(report, %{"comment" => comment, "state" => state})
+  def accept(report, comment) do
+    PackageReport.change_state(report, %{"comment" => comment, "state" => "accepted"})
+    |> Repo.update()
+  end
+
+  def reject(report, comment) do
+    PackageReport.change_state(report, %{"comment" => comment, "state" => "rejected"})
+    |> Repo.update()
+  end
+
+  def solve(report, comment) do
+    PackageReport.change_state(report, %{"comment" => comment, "state" => "solved"})
     |> Repo.update()
   end
 end
