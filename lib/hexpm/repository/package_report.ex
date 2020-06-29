@@ -1,6 +1,5 @@
 defmodule Hexpm.Repository.PackageReport do
   use Hexpm.Schema
-  import Ecto.Query, only: [from: 2]
 
   schema "package_reports" do
     field :state, :string, default: "to_accept"
