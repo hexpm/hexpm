@@ -54,7 +54,6 @@ defmodule Hexpm.Repository.PackageReport do
       preload: :package,
       order_by: [desc: p.updated_at]
     )
-    |> fields()
   end
 
   def count() do
@@ -63,9 +62,5 @@ defmodule Hexpm.Repository.PackageReport do
 
   defp get_list_of_affected(releases) do
     Enum.map(releases, &%PackageReportRelease{release_id: &1.id})
-  end
-
-  defp fields(query) do
-    from(p in query, select: p)
   end
 end
