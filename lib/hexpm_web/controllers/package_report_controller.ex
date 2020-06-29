@@ -158,10 +158,6 @@ defmodule HexpmWeb.PackageReportController do
     rs
   end
 
-  defp clean_dots(version) do
-    String.replace("#{version}", ".", "")
-  end
-
   defp fetch_package_reports() do
     PackageReports.all()
   end
