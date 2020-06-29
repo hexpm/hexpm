@@ -63,7 +63,7 @@ defmodule Hexpm.Repository.PackageReport do
   end
 
   defp get_list_of_affected(releases) do
-    Enum.map(releases, fn r -> %PackageReportRelease{release_id: r.id} end)
+    Enum.map(releases, &%PackageReportRelease{release_id: &1.id})
   end
 
   defp fields(query) do
