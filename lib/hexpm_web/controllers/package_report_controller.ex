@@ -9,6 +9,7 @@ defmodule HexpmWeb.PackageReportController do
   @report_bad_update_msg "Package report can not be updated"
   @report_bad_version_msg "No release matchs given requirement"
   @report_not_accessible "Requested package report not accessible"
+  @no_possible_transition_msg "This report's state is final and can not be changed"
 
   def index(conn, params) do
     reports = fetch_package_reports()
@@ -71,20 +72,34 @@ defmodule HexpmWeb.PackageReportController do
 
   def show(conn, params) do
     report = PackageReports.get(params["id"])
-    to_moderator = Users.has_role(conn.assigns.current_user, "moderator")
+    for_moderator = Users.has_role(conn.assigns.current_user, "moderator")
+    user = conn.assigns.current_user
 
-    if report == nil or
-         (report.state == "to_accept" and !to_moderator) do
+    if report == nil do
       conn
       |> put_flash(:error, @report_not_accessible)
       |> put_status(400)
       |> redirect(to: Routes.package_path(HexpmWeb.Endpoint, :index))
     else
+      {show_accept, show_reject, show_solve} =
+        case report.state do
+          "to_accept" -> {true, true, false}
+          "accepted" -> {false, true, true}
+          _ -> {false, false, false}
+        end
+
+      no_posible_transition = not (show_accept or show_reject or show_solve)
+
       render(
         conn,
         "show.html",
         report: report,
-        to_moderator: to_moderator
+        for_moderator: for_moderator,
+        show_accept: show_accept,
+        show_reject: show_reject,
+        show_solve: show_solve,
+        no_posible_transition: no_posible_transition,
+        no_possible_transition_msg: @no_possible_transition_msg
       )
     end
   end
@@ -95,8 +110,9 @@ defmodule HexpmWeb.PackageReportController do
 
     report = PackageReports.get(report_id)
 
-    if valid_state_change("accepted", report) do
-      PackageReports.accept(conn, report_id, comment)
+    if valid_state_change("accepted", report) and
+         Users.has_role(conn.assigns.current_user, "moderator") do
+      PackageReports.accept(report_id, comment)
       notify_good_update(conn)
     else
       notify_bad_update(conn, %{"id" => report_id})
@@ -109,8 +125,9 @@ defmodule HexpmWeb.PackageReportController do
 
     report = PackageReports.get(report_id)
 
-    if valid_state_change("rejected", report) do
-      PackageReports.reject(conn, report_id, comment)
+    if valid_state_change("rejected", report) and
+         Users.has_role(conn.assigns.current_user, "moderator") do
+      PackageReports.reject(report_id, comment)
       notify_good_update(conn)
     else
       notify_bad_update(conn, %{"id" => report_id})
@@ -123,8 +140,9 @@ defmodule HexpmWeb.PackageReportController do
 
     report = PackageReports.get(report_id)
 
-    if valid_state_change("solved", report) do
-      PackageReports.solve(conn, report_id, comment)
+    if valid_state_change("solved", report) and
+         Users.has_role(conn.assigns.current_user, "moderator") do
+      PackageReports.solve(report_id, comment)
       notify_good_update(conn)
     else
       notify_bad_update(conn, %{"id" => report_id})
@@ -144,9 +162,15 @@ defmodule HexpmWeb.PackageReportController do
     |> show(params)
   end
 
-  defp valid_state_change(state, report) do
-    # TODO: check valid state change based on previous state and conn.user
-    false
+  defp valid_state_change(new, report) do
+    actual = report.state
+
+    valid_changes = %{
+      "to_accept" => ["accepted", "rejected"],
+      "accepted" => ["solved", "rejected"]
+    }
+
+    new in Map.get(valid_changes, actual)
   end
 
   defp slice_releases(releases, requirement) do

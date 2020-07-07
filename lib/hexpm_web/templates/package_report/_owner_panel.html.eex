@@ -1,8 +1,0 @@
-<div style="background-color: cyan; width: 300px">
-  <h2>Owner pannel </h2>
-  <%= form_tag Routes.package_report_path(Endpoint, :owner_review, @report_id) do %>
-    <input type="hidden" name="report_id" value="<%= @report_id %>"/>
-    <textarea name="comment"> </textarea>
-    <input type="submit" name="operation" value="Solve"/>
-  <% end %>
-</div>

@@ -128,6 +128,7 @@ defmodule HexpmWeb.Router do
     get "/reports/:id", PackageReportController, :show
     post "/reports/:id/accept", PackageReportController, :accept_report
     post "/reports/:id/reject", PackageReportController, :reject_report
+    post "/reports/:id/solve", PackageReportController, :solve_report
   end
 
   scope "/dashboard", HexpmWeb.Dashboard do
