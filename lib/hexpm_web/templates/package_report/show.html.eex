@@ -9,7 +9,7 @@
 <p> Report status: <%= @report.state %>
 
 <%= if @for_moderator do %>
-    <%= render "_moderator_pannel.html", report_id: @report.id, author: @report.author, show_accept: @show_accept, show_reject: @show_reject, show_solve: @show_solve, no_posible_transition: @no_posible_transition, no_possible_transition_msg: @no_possible_transition_msg %>
+    <%= render "_moderator_pannel.html", report: @report, author: @report.author%>
 <% end%>
 
 

@@ -9,7 +9,6 @@ defmodule HexpmWeb.PackageReportController do
   @report_bad_update_msg "Package report can not be updated"
   @report_bad_version_msg "No release matchs given requirement"
   @report_not_accessible "Requested package report not accessible"
-  @no_possible_transition_msg "This report's state is final and can not be changed"
 
   def index(conn, params) do
     reports = fetch_package_reports()
@@ -81,25 +80,12 @@ defmodule HexpmWeb.PackageReportController do
       |> put_status(400)
       |> redirect(to: Routes.package_path(HexpmWeb.Endpoint, :index))
     else
-      {show_accept, show_reject, show_solve} =
-        case report.state do
-          "to_accept" -> {true, true, false}
-          "accepted" -> {false, true, true}
-          _ -> {false, false, false}
-        end
-
-      no_posible_transition = not (show_accept or show_reject or show_solve)
 
       render(
         conn,
         "show.html",
         report: report,
-        for_moderator: for_moderator,
-        show_accept: show_accept,
-        show_reject: show_reject,
-        show_solve: show_solve,
-        no_posible_transition: no_posible_transition,
-        no_possible_transition_msg: @no_possible_transition_msg
+        for_moderator: for_moderator
       )
     end
   end
@@ -162,16 +148,10 @@ defmodule HexpmWeb.PackageReportController do
     |> show(params)
   end
 
-  defp valid_state_change(new, report) do
-    actual = report.state
+  defp valid_state_change(new, %{state: "to_accept"}), do: new in ["accepted", "rejected"]
+  defp valid_state_change(new, %{state: "accepted"}), do: new in ["solved", "rejected"]
+  defp valid_state_change(new, _), do: false
 
-    valid_changes = %{
-      "to_accept" => ["accepted", "rejected"],
-      "accepted" => ["solved", "rejected"]
-    }
-
-    new in Map.get(valid_changes, actual)
-  end
 
   defp slice_releases(releases, requirement) do
     rs =
