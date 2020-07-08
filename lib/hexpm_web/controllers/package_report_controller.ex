@@ -80,7 +80,6 @@ defmodule HexpmWeb.PackageReportController do
       |> put_status(400)
       |> redirect(to: Routes.package_path(HexpmWeb.Endpoint, :index))
     else
-
       render(
         conn,
         "show.html",
@@ -151,7 +150,6 @@ defmodule HexpmWeb.PackageReportController do
   defp valid_state_change(new, %{state: "to_accept"}), do: new in ["accepted", "rejected"]
   defp valid_state_change(new, %{state: "accepted"}), do: new in ["solved", "rejected"]
   defp valid_state_change(new, _), do: false
-
 
   defp slice_releases(releases, requirement) do
     rs =
