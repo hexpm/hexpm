@@ -2,14 +2,18 @@
 <p> on <%= @report.package.name %> package </p>
 <p> Affected releases: -
 <%= for ar <- @report.package_report_releases do %>
-    <%= ar.release.version %> - 
+  <%= ar.release.version %> - 
 <% end %>
 <p> Submitted by <%= @report.author.username %> <%= ViewHelpers.human_relative_time_from_now(@report.inserted_at) %></p>
 <p> <%= @report.description %>
 <p> Report status: <%= @report.state %>
 
 <%= if @for_moderator do %>
-    <%= render "_moderator_pannel.html", report: @report, author: @report.author%>
+  <%= render "_moderator_panel.html", report: @report, author: @report.author%>
 <% end%>
+
+<%= if @for_moderator or @for_owner do %>
+  <%= render "_comments_section.html", report: @report, author: @report.author%>
+<% end %>
 
 
