@@ -8,6 +8,8 @@
 <p> <%= @report.description %>
 <p> Report status: <%= @report.state %>
 
-<%= if @to_moderator do %>
-    <%= render "_moderator_pannel.html", report_id: @report.id, author: @report.author %>
+<%= if @for_moderator do %>
+    <%= render "_moderator_pannel.html", report: @report, author: @report.author%>
 <% end%>
+
+

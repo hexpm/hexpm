@@ -71,10 +71,10 @@ defmodule HexpmWeb.PackageReportController do
 
   def show(conn, params) do
     report = PackageReports.get(params["id"])
-    to_moderator = Users.has_role(conn.assigns.current_user, "moderator")
+    for_moderator = Users.has_role(conn.assigns.current_user, "moderator")
+    user = conn.assigns.current_user
 
-    if report == nil or
-         (report.state == "to_accept" and !to_moderator) do
+    if report == nil do
       conn
       |> put_flash(:error, @report_not_accessible)
       |> put_status(400)
@@ -84,7 +84,7 @@ defmodule HexpmWeb.PackageReportController do
         conn,
         "show.html",
         report: report,
-        to_moderator: to_moderator
+        for_moderator: for_moderator
       )
     end
   end
@@ -95,8 +95,9 @@ defmodule HexpmWeb.PackageReportController do
 
     report = PackageReports.get(report_id)
 
-    if valid_state_change("accepted", report) do
-      PackageReports.accept(conn, report_id, comment)
+    if valid_state_change("accepted", report) and
+         Users.has_role(conn.assigns.current_user, "moderator") do
+      PackageReports.accept(report_id, comment)
       notify_good_update(conn)
     else
       notify_bad_update(conn, %{"id" => report_id})
@@ -109,8 +110,9 @@ defmodule HexpmWeb.PackageReportController do
 
     report = PackageReports.get(report_id)
 
-    if valid_state_change("rejected", report) do
-      PackageReports.reject(conn, report_id, comment)
+    if valid_state_change("rejected", report) and
+         Users.has_role(conn.assigns.current_user, "moderator") do
+      PackageReports.reject(report_id, comment)
       notify_good_update(conn)
     else
       notify_bad_update(conn, %{"id" => report_id})
@@ -123,8 +125,9 @@ defmodule HexpmWeb.PackageReportController do
 
     report = PackageReports.get(report_id)
 
-    if valid_state_change("solved", report) do
-      PackageReports.solve(conn, report_id, comment)
+    if valid_state_change("solved", report) and
+         Users.has_role(conn.assigns.current_user, "moderator") do
+      PackageReports.solve(report_id, comment)
       notify_good_update(conn)
     else
       notify_bad_update(conn, %{"id" => report_id})
@@ -144,10 +147,9 @@ defmodule HexpmWeb.PackageReportController do
     |> show(params)
   end
 
-  defp valid_state_change(state, report) do
-    # TODO: check valid state change based on previous state and conn.user
-    false
-  end
+  defp valid_state_change(new, %{state: "to_accept"}), do: new in ["accepted", "rejected"]
+  defp valid_state_change(new, %{state: "accepted"}), do: new in ["solved", "rejected"]
+  defp valid_state_change(new, _), do: false
 
   defp slice_releases(releases, requirement) do
     rs =
