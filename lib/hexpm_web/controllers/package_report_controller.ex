@@ -9,6 +9,14 @@ defmodule HexpmWeb.PackageReportController do
   @report_bad_update_msg "Package report can not be updated"
   @report_bad_version_msg "No release matchs given requirement"
   @report_not_accessible "Requested package report not accessible"
+  
+  def new_comment(conn, params) do
+    report = params["report"]
+    comment = Comments.new(params)
+
+    conn
+    |> redirect(to: Routes.package_report_path(HexpmWeb.Endpoint, :show, id: report.id))
+  end
 
   def index(conn, params) do
     reports = fetch_package_reports()
@@ -81,12 +89,23 @@ defmodule HexpmWeb.PackageReportController do
       |> put_status(400)
       |> redirect(to: Routes.package_path(HexpmWeb.Endpoint, :index))
     else
+      has_comments = Comments.count(report.id) != 0
+
+      comments =
+        if has_comments do
+          Comments.all_for_report(report.id)
+        else
+          []
+        end
+
       render(
         conn,
         "show.html",
         report: report,
         for_moderator: for_moderator,
-        for_owner: for_owner
+        for_owner: for_owner,
+        has_comments: has_comments,
+        comments: comments
       )
     end
   end

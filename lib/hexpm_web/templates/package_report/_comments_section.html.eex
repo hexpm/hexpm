@@ -1,6 +1,10 @@
-<div style="background-color: pink">
-  <p>------------A comment form </p>
-  <p>---A root comment <button>Reply</button></p>
-  <p>-----A reply comment <button>Reply</button></p>
-  <p>---Another root comment <button>Reply</button></p>
+<div>
+  <%= render "_new_comment.html", report: @report %>
+  <%= if @has_comments do %>
+    <% for comment <- @comments do %>
+      <%= render "_comment.html", comment: comment%>
+    <% end %>
+  <% else %>
+    No comments for this report
+  <% end%>
 </div>
