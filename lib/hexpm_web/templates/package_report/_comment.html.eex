@@ -1,3 +1,5 @@
-<div>
-  A comment.
-<div>
+
+<div style="background-color: gray; margin-top: 10px">
+  <%= @comment.author.username %> says <br>
+  <%= @comment.text %>
+</div>

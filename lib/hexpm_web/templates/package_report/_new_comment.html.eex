@@ -1,3 +1,7 @@
 <div>
-  A form to create new comments.
+  <%= form_tag Routes.package_report_path(Endpoint, :new_comment, @report.id) %>
+    <textarea name="text" placeholder="Enter comment here..."></textarea>
+    <button type="submit" class="btn">
+      Comment
+    </button>
 </div>
