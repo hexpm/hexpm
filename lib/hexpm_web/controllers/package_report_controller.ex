@@ -100,13 +100,8 @@ defmodule HexpmWeb.PackageReportController do
     else
       has_comments = Comments.count(report.id) != 0
 
-      comments =
-        if has_comments do
-          Comments.all_for_report(report.id)
-        else
-          []
-        end
-
+      comments = Comments.all_for_report(report.id)
+      
       render(
         conn,
         "show.html",
