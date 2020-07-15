@@ -1,4 +1,4 @@
-defmodule Hexpm.Repository.Comment do
+defmodule Hexpm.Repository.PackageReportComment do
   use Hexpm.Schema
   import Ecto.Query, only: [from: 2]
 
