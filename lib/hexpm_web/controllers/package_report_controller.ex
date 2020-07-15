@@ -23,8 +23,7 @@ defmodule HexpmWeb.PackageReportController do
       }
       |> Comments.new()
 
-    conn
-    |> redirect(to: Routes.package_report_path(HexpmWeb.Endpoint, :show, report.id))
+    redirect(conn, to: Routes.package_report_path(HexpmWeb.Endpoint, :show, report.id))
   end
 
   def index(conn, params) do
