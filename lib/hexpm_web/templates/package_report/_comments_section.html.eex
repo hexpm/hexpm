@@ -1,6 +1,6 @@
 <div>
   <%= render "_new_comment.html", report: @report %>
-  <%= if @has_comments do %>
+  <%= if @comments != [] do %>
     Comments:
     <%= for comment <- @comments do %>
       <%= render "_comment.html", comment: comment%>

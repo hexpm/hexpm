@@ -13,7 +13,7 @@
 <% end%>
 
 <%= if @for_moderator or @for_owner do %>
-  <%= render "_comments_section.html", report: @report, author: @report.author, has_comments: @has_comments, comments: @comments%>
+  <%= render "_comments_section.html", report: @report, author: @report.author, comments: @comments%>
 <% end %>
 
 
