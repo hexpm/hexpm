@@ -15,13 +15,12 @@ defmodule HexpmWeb.PackageReportController do
     report = PackageReports.get(report_id)
     author = conn.assigns.current_user
 
-    comments =
-      %{
-        "report" => report,
-        "author" => author,
-        "text" => params["text"]
-      }
-      |> Comments.new()
+
+    PackageReports.new_comment(%{
+      "report" => report,
+      "author" => author,
+      "text" => params["text"]
+    })
 
     redirect(conn, to: Routes.package_report_path(HexpmWeb.Endpoint, :show, report.id))
   end
@@ -97,10 +96,10 @@ defmodule HexpmWeb.PackageReportController do
       |> put_status(400)
       |> redirect(to: Routes.package_path(HexpmWeb.Endpoint, :index))
     else
-      has_comments = Comments.count(report.id) != 0
+      has_comments = PackageReports.count_comments(report.id) != 0
 
-      comments = Comments.all_for_report(report.id)
-      
+      comments = PackageReports.all_comments_for_report(report.id)
+
       render(
         conn,
         "show.html",
