@@ -117,6 +117,11 @@ defmodule HexpmWeb.PackageControllerTest do
       assert response(conn, 200) =~ escape(~s({:#{package1.name}, "~> 0.0.2"}))
     end
 
+    test "package name is case sensitive", %{package1: package1} do
+      get(build_conn(), "/packages/#{String.upcase(package1.name)}")
+      |> response(404)
+    end
+
     test "show package requires repository", %{package3: package3} do
       build_conn()
       |> get("/packages/#{package3.name}")
