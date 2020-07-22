@@ -10,6 +10,20 @@ defmodule HexpmWeb.PackageReportController do
   @report_bad_version_msg "No release matchs given requirement"
   @report_not_accessible "Requested package report not accessible"
 
+  def new_comment(conn, params) do
+    report_id = params["id"]
+    report = PackageReports.get(report_id)
+    author = conn.assigns.current_user
+
+    PackageReports.new_comment(%{
+      "report" => report,
+      "author" => author,
+      "text" => params["text"]
+    })
+
+    redirect(conn, to: Routes.package_report_path(HexpmWeb.Endpoint, :show, report.id))
+  end
+
   def index(conn, params) do
     reports = fetch_package_reports()
     reports_count = Enum.count(reports)
@@ -71,20 +85,29 @@ defmodule HexpmWeb.PackageReportController do
 
   def show(conn, params) do
     report = PackageReports.get(params["id"])
-    for_moderator = Users.has_role(conn.assigns.current_user, "moderator")
     user = conn.assigns.current_user
+    for_moderator = Users.has_role(user, "moderator")
+    for_owner = Owners.get(report.package, user) != nil
+    for_author = user.id == report.author.id
+    for_basic = not (for_moderator or for_owner or for_author)
 
-    if report == nil do
+    if report == nil or (report.state == "to_accept" and (for_owner or for_basic)) or
+         (report.state not in ["to_accept", "solved"] and for_basic) do
       conn
       |> put_flash(:error, @report_not_accessible)
-      |> put_status(400)
-      |> redirect(to: Routes.package_path(HexpmWeb.Endpoint, :index))
+      |> put_status(302)
+      |> redirect(to: Routes.package_report_path(HexpmWeb.Endpoint, :index))
     else
+      comments = PackageReports.all_comments_for_report(report.id)
+
       render(
         conn,
         "show.html",
         report: report,
-        for_moderator: for_moderator
+        for_moderator: for_moderator,
+        for_owner: for_owner,
+        for_author: for_author,
+        comments: comments
       )
     end
   end

@@ -47,4 +47,19 @@ defmodule Hexpm.Repository.PackageReports do
     |> PackageReport.change_state(%{"state" => "solved"})
     |> Repo.update()
   end
+
+  def new_comment(params) do
+    PackageReportComment.build(params["report"], params["author"], params)
+    |> Repo.insert()
+  end
+
+  def count_comments(report_id) do
+    PackageReportComment.count(report_id)
+    |> Repo.one()
+  end
+
+  def all_comments_for_report(report_id) do
+    PackageReportComment.all_for_report(report_id)
+    |> Repo.all()
+  end
 end
