@@ -2,14 +2,19 @@ defmodule Hexpm.Repository.PackageReports do
   use Hexpm.Context
 
   def add(params) do
-    Repo.insert(
-      PackageReport.build(
-        params["releases"],
-        params["user"],
-        params["package"],
-        params
+    package_report =
+      Repo.insert(
+        PackageReport.build(
+          params["releases"],
+          params["user"],
+          params["package"],
+          params
+        )
       )
-    )
+
+    Enum.each(Users.get_by_role("moderator"), fn user ->
+      email_user_about_new_report(package_report, user)
+    end)
   end
 
   def all() do
@@ -61,5 +66,16 @@ defmodule Hexpm.Repository.PackageReports do
   def all_comments_for_report(report_id) do
     PackageReportComment.all_for_report(report_id)
     |> Repo.all()
+  end
+
+  defp email_user_about_new_report({:ok, package_report}, user) do
+    user
+    |> Hexpm.Repo.preload(emails: [user: :emails])
+    |> Emails.report_submitted(
+      package_report.author.username,
+      package_report.package.name,
+      package_report.id
+    )
+    |> Mailer.deliver_now_throttled()
   end
 end

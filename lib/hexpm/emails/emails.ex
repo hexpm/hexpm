@@ -75,6 +75,16 @@ defmodule Hexpm.Emails do
     |> render(:package_published)
   end
 
+  def report_submitted(receiver, author_name, package_name, report_id) do
+    email()
+    |> email_to(receiver)
+    |> subject("Hex.pm - Package report on #{package_name} published ")
+    |> assign(:package, package_name)
+    |> assign(:user, author_name)
+    |> assign(:report_id, report_id)
+    |> render(:report_submitted)
+  end
+
   defp email_to(email, to) do
     to =
       to

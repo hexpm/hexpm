@@ -138,6 +138,14 @@ defmodule Hexpm.Accounts.User do
     )
   end
 
+  def get_by_role(role, preload \\ []) do
+    from(
+      u in Hexpm.Accounts.User,
+      where: u.role == ^role,
+      preload: ^preload
+    )
+  end
+
   def verify_permissions(%User{}, "api", _resource) do
     {:ok, nil}
   end
