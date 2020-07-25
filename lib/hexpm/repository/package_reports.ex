@@ -12,9 +12,20 @@ defmodule Hexpm.Repository.PackageReports do
         )
       )
 
-    Enum.each(Users.get_by_role("moderator"), fn user ->
-      email_user_about_new_report(package_report, user)
-    end)
+    Enum.each(
+      Owners.all(Kernel.elem(package_report, 1).package),
+      fn owner ->
+        owner = Hexpm.Repo.preload(owner, user: [])
+        email_user_about_new_report(package_report, owner.user)
+      end
+    )
+
+    Enum.each(
+      Users.get_by_role("moderator"),
+      fn user ->
+        email_user_about_new_report(package_report, user)
+      end
+    )
   end
 
   def all() do
@@ -37,6 +48,29 @@ defmodule Hexpm.Repository.PackageReports do
     |> Repo.one()
     |> PackageReport.change_state(%{"state" => "accepted"})
     |> Repo.update()
+
+    report = PackageReport.get(report_id)
+
+    report =
+      PackageReport.get(report_id)
+      |> Repo.one()
+
+    email_user_about_state_change(report, report.author)
+
+    Enum.each(
+      Owners.all(report.package),
+      fn owner ->
+        owner = Hexpm.Repo.preload(owner, user: [])
+        email_user_about_state_change(report, owner.user)
+      end
+    )
+
+    Enum.each(
+      Users.get_by_role("moderator"),
+      fn user ->
+        email_user_about_state_change(report, user)
+      end
+    )
   end
 
   def reject(report_id, comment) do
@@ -44,18 +78,80 @@ defmodule Hexpm.Repository.PackageReports do
     |> Repo.one()
     |> PackageReport.change_state(%{"state" => "rejected"})
     |> Repo.update()
+
+    report =
+      PackageReport.get(report_id)
+      |> Repo.one()
+
+    email_user_about_state_change(report, report.author)
+
+    Enum.each(
+      Owners.all(report.package),
+      fn owner ->
+        owner = Hexpm.Repo.preload(owner, user: [])
+        email_user_about_state_change(report, owner.user)
+      end
+    )
+
+    Enum.each(
+      Users.get_by_role("moderator"),
+      fn user ->
+        email_user_about_state_change(report, user)
+      end
+    )
   end
 
   def solve(report_id, comment) do
-    PackageReport.get(report_id)
+    report = PackageReport.get(report_id)
+
+    report
     |> Repo.one()
     |> PackageReport.change_state(%{"state" => "solved"})
     |> Repo.update()
+
+    report =
+      PackageReport.get(report_id)
+      |> Repo.one()
+
+    email_user_about_state_change(report, report.author)
+
+    Enum.each(
+      Owners.all(report.package),
+      fn owner ->
+        owner = Hexpm.Repo.preload(owner, user: [])
+        email_user_about_state_change(report, owner.user)
+      end
+    )
+
+    Enum.each(
+      Users.get_by_role("moderator"),
+      fn user ->
+        email_user_about_state_change(report, user)
+      end
+    )
   end
 
   def new_comment(params) do
-    PackageReportComment.build(params["report"], params["author"], params)
-    |> Repo.insert()
+    comment = Repo.insert(PackageReportComment.build(params["report"], params["author"], params))
+    comment = Hexpm.Repo.preload(Kernel.elem(comment, 1), report: [])
+    author = comment.report.author
+
+    email_user_about_new_comment(comment, author)
+
+    Enum.each(
+      Owners.all(comment.report.package),
+      fn owner ->
+        owner = Hexpm.Repo.preload(owner, user: [])
+        email_user_about_new_comment(comment, owner.user)
+      end
+    )
+
+    Enum.each(
+      Users.get_by_role("moderator"),
+      fn user ->
+        email_user_about_new_comment(comment, user)
+      end
+    )
   end
 
   def count_comments(report_id) do
@@ -74,7 +170,30 @@ defmodule Hexpm.Repository.PackageReports do
     |> Emails.report_submitted(
       package_report.author.username,
       package_report.package.name,
-      package_report.id
+      package_report.id,
+      package_report.inserted_at
+    )
+    |> Mailer.deliver_now_throttled()
+  end
+
+  defp email_user_about_new_comment(comment, user) do
+    user
+    |> Hexpm.Repo.preload(emails: [user: :emails])
+    |> Emails.report_commented(
+      comment.author.username,
+      comment.report.id,
+      comment.inserted_at
+    )
+    |> Mailer.deliver_now_throttled()
+  end
+
+  defp email_user_about_state_change(package_report, user) do
+    user
+    |> Hexpm.Repo.preload(emails: [user: :emails])
+    |> Emails.report_state_changed(
+      package_report.id,
+      package_report.state,
+      package_report.updated_at
     )
     |> Mailer.deliver_now_throttled()
   end
