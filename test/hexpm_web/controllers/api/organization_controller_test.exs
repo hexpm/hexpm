@@ -64,6 +64,15 @@ defmodule HexpmWeb.API.OrganizationControllerTest do
       org = json_response(conn, 200)
       assert org["name"] == organization.name
     end
+
+    test "organization name is case sensitive", %{user1: user1, organization: organization} do
+      insert(:organization_user, organization: organization, user: user1)
+
+      build_conn()
+      |> put_req_header("authorization", key_for(user1))
+      |> get("api/orgs/#{String.upcase(organization.name)}")
+      |> response(403)
+    end
   end
 
   describe "POST /api/orgs/:name" do

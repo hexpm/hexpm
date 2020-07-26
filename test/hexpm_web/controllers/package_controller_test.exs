@@ -227,6 +227,17 @@ defmodule HexpmWeb.PackageControllerTest do
                escape(~s({:#{package3.name}, "~> 0.0.1", organization: "#{repository1.name}"}))
     end
 
+    test "repository name is case sensitive", %{
+      user1: user1,
+      repository1: repository1,
+      package3: package3
+    } do
+      build_conn()
+      |> test_login(user1)
+      |> get("/packages/#{String.upcase(repository1.name)}/#{package3.name}/0.0.1")
+      |> response(404)
+    end
+
     test "dont show private package", %{
       user2: user2,
       repository1: repository1,
