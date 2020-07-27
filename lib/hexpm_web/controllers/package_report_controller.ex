@@ -91,7 +91,7 @@ defmodule HexpmWeb.PackageReportController do
     for_author = user.id == report.author.id
     for_basic = not (for_moderator or for_owner or for_author)
 
-    if report == nil or (report.state == "to_accept" and (for_owner or for_basic)) or
+    if report == nil or (report.state == "to_accept" and (for_owner and not (for_moderator or for_author))) or
          (report.state not in ["to_accept", "solved"] and for_basic) do
       conn
       |> put_flash(:error, @report_not_accessible)
