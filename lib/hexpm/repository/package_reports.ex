@@ -13,14 +13,6 @@ defmodule Hexpm.Repository.PackageReports do
       )
 
     Enum.each(
-      Owners.all(Kernel.elem(package_report, 1).package),
-      fn owner ->
-        owner = Hexpm.Repo.preload(owner, user: [])
-        email_user_about_new_report(package_report, owner.user)
-      end
-    )
-
-    Enum.each(
       Users.get_by_role("moderator"),
       fn user ->
         email_user_about_new_report(package_report, user)
