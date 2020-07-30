@@ -110,6 +110,7 @@ defmodule HexpmWeb.EmailView do
       Only the report author and moderators can see the report description.
       """
     end
+
     def state_explain("accepted") do
       """
       The report has now state \"accepted\".

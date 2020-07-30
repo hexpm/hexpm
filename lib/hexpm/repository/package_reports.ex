@@ -43,18 +43,13 @@ defmodule Hexpm.Repository.PackageReports do
 
     report = PackageReport.get(report_id)
 
-    report =
-      PackageReport.get(report_id)
-      |> Repo.one()
+    report = Repo.one(PackageReport.get(report_id))
 
     email_user_about_state_change(report, report.author)
 
     Enum.each(
-      Owners.all(report.package),
-      fn owner ->
-        owner = Hexpm.Repo.preload(owner, user: [])
-        email_user_about_state_change(report, owner.user)
-      end
+      Owners.all(report.package, user: []),
+      &email_user_about_state_change(report, &1.user)
     )
 
     Enum.each(
@@ -76,14 +71,6 @@ defmodule Hexpm.Repository.PackageReports do
       |> Repo.one()
 
     email_user_about_state_change(report, report.author)
-
-    Enum.each(
-      Owners.all(report.package),
-      fn owner ->
-        owner = Hexpm.Repo.preload(owner, user: [])
-        email_user_about_state_change(report, owner.user)
-      end
-    )
 
     Enum.each(
       Users.get_by_role("moderator"),
