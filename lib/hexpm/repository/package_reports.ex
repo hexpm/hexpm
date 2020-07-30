@@ -12,12 +12,7 @@ defmodule Hexpm.Repository.PackageReports do
         )
       )
 
-    Enum.each(
-      Users.get_by_role("moderator"),
-      fn user ->
-        email_user_about_new_report(package_report, user)
-      end
-    )
+    Enum.each(Users.get_by_role("moderator"), &email_user_about_new_report(package_report, &1))
   end
 
   def all() do
