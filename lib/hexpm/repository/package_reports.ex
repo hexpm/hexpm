@@ -119,8 +119,8 @@ defmodule Hexpm.Repository.PackageReports do
   end
 
   def new_comment(params) do
-    comment = Repo.insert(PackageReportComment.build(params["report"], params["author"], params))
-    comment = Hexpm.Repo.preload(Kernel.elem(comment, 1), report: [])
+    comment = Repo.insert!(PackageReportComment.build(params["report"], params["author"], params))
+    comment = Hexpm.Repo.preload(comment, :report)
     author = comment.report.author
 
     email_user_about_new_comment(comment, author)
