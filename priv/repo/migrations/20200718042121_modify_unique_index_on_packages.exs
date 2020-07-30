@@ -27,15 +27,14 @@ defmodule Hexpm.RepoBase.Migrations.ModifyUniqueIndexOnPackages do
     execute("CREATE INDEX ON package_dependants (name, repo)")
     execute("CREATE UNIQUE INDEX ON package_dependants (name, repo, dependant_id)")
 
-    create(
-      unique_index(:packages, [:repository_id, "(lower(name))"],
-        name: :packages_repository_id_name_index
-      )
-    )
+    create(unique_index(:packages, [:repository_id, "(lower(name))"]))
+
+    create(index(:packages, [:repository_id, :name]))
   end
 
   def down() do
     drop_if_exists(index(:packages, [:repository_id_name]))
+    drop_if_exists(index(:packages, [:repository_id__lower_name]))
 
     execute("DROP MATERIALIZED VIEW IF EXISTS package_dependants")
 

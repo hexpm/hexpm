@@ -3,11 +3,13 @@ defmodule Hexpm.RepoBase.Migrations.ModifyUniqueIndexOnOrganizations do
 
   def up do
     drop_if_exists(index(:organizations, [:name]))
-    create(unique_index(:organizations, ["(lower(name))"], name: :organizations_name_index))
+    create(unique_index(:organizations, ["(lower(name))"]))
+    create(index(:organizations, [:name]))
   end
 
   def down do
     drop_if_exists(index(:organizations, [:name]))
+    drop_if_exists(index(:organizations, [:_lower_name]))
     create(unique_index(:organizations, [:name]))
   end
 end
