@@ -38,15 +38,12 @@ defmodule Hexpm.Repository.PackageReports do
     |> Repo.one()
     |> PackageReport.change_state(%{"state" => "accepted"})
     |> Repo.update()
+
     report = Repo.one(PackageReport.get(report_id))
 
     Enum.each(
-      Owners.all(report.package, user: []),
-      &email_user_about_state_change(report, &1.user)
-    )
-
-    Enum.each(
-      [report.author] ++ Users.get_by_role("moderator"),
+      Enum.map(Owners.all(report.package, user: []), & &1.user) ++
+        [report.author] ++ Users.get_by_role("moderator"),
       &email_user_about_state_change(report, &1)
     )
   end
@@ -76,13 +73,8 @@ defmodule Hexpm.Repository.PackageReports do
     report = Repo.one(PackageReport.get(report_id))
 
     Enum.each(
-      Owners.all(report.package, user: []),
+      Enum.map(Owners.all(report.package, user: []), & &1.user) ++ Users.get_by_role("moderator"),
       &email_user_about_state_change(report, &1.user)
-    )
-
-    Enum.each(
-      Users.get_by_role("moderator"),
-      &email_user_about_state_change(report, &1)
     )
   end
 
@@ -91,12 +83,8 @@ defmodule Hexpm.Repository.PackageReports do
     comment = Hexpm.Repo.preload(Kernel.elem(comment, 1), report: [])
 
     Enum.each(
-      Owners.all(comment.report.package, user: []),
-      &email_user_about_new_comment(comment, &1.user)
-    )
-
-    Enum.each(
-      [comment.report.author] ++ Users.get_by_role("moderator"),
+      Enum.map(Owners.all(comment.report.package, user: []), & &1.user) ++
+        [comment.report.author] ++ Users.get_by_role("moderator"),
       &email_user_about_new_comment(comment, &1)
     )
   end
