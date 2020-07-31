@@ -2,6 +2,12 @@ defmodule Hexpm.ReleaseTasks.CheckNames do
   require Logger
 
   def run() do
+    # Trigger error_handler and rollbar reporting on 'hexpm eval ...'
+    Task.async(&do_run/0)
+    |> Task.await(:infinity)
+  end
+
+  def do_run() do
     threshold = Application.get_env(:hexpm, :levenshtein_threshold)
 
     threshold
@@ -9,8 +15,10 @@ defmodule Hexpm.ReleaseTasks.CheckNames do
     |> find_candidates()
     |> log_result()
     |> send_email(threshold)
-
-    :ok
+  catch
+    exception ->
+      Logger.error("[check_names] failed")
+      reraise exception, __STACKTRACE__
   end
 
   defp log_result(candidates) do
