@@ -1,0 +1,5 @@
+<%= @author_name %> submitted a report on <%= @package_name %> package at <%= @inserted_at %>.
+
+The report id is <%= @report_id %>.
+
+<%= ReportState.state_explain("to_accept") %>

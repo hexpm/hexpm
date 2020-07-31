@@ -23,6 +23,12 @@ defmodule Hexpm.Accounts.Users do
     |> Repo.preload(preload)
   end
 
+  def get_by_role(role, preload \\ []) do
+    User.get_by_role(String.downcase(role))
+    |> Repo.all()
+    |> Repo.preload(preload)
+  end
+
   def get_email(email, preload \\ []) do
     Repo.get_by(Email, email: String.downcase(email))
     |> Repo.preload(preload)

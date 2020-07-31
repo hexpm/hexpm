@@ -1,0 +1,1 @@
+<%= @author_name %> wrote a comment on report with id <%= @report_id %> at <%= @inserted_at %>

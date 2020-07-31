@@ -1,0 +1,3 @@
+<p> A moderator modified the package report #<%= @report_id %> state to <%= @new_state%> at <%= @updated_at %>.</p>
+
+<p><%= ReportState.state_explain(@new_state) %></p>
