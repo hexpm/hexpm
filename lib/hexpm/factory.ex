@@ -92,6 +92,10 @@ defmodule Hexpm.Factory do
     %Hexpm.Repository.PackageOwner{}
   end
 
+  def package_report_factory() do
+    %Hexpm.Repository.PackageReport{}
+  end
+
   def organization_user_factory() do
     %Hexpm.Accounts.OrganizationUser{
       role: "read"
