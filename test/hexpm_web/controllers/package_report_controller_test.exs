@@ -123,8 +123,8 @@ defmodule HexpmWeb.PackageReportControllerTest do
       
       result = response(conn, 200)
       assert result =~ "#{report1.id}"
-      assert result =~ "#{report1.package.name}"
-      assert result =~ "#{report1.description}"
+      assert result =~ report1.package.name
+      assert result =~ report1.description
       refute result =~ "comments" # Verify commnets section is not visible
     end
 
