@@ -110,7 +110,7 @@ defmodule HexpmWeb.PackageReportControllerTest do
       conn = 
         build_conn()
         |> test_login(user1)
-        |> get("/reports/-1")
+        |> get("/reports/1000")
 
       response(conn, 302)
     end
