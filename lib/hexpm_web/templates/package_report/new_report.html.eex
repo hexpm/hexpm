@@ -5,7 +5,7 @@
 <%= form_tag Routes.package_report_path(Endpoint, :create) do %>
   <input type="hidden" name="package" value="<%= @package_name %>"/>
   <input type="hidden" name="repository" value="<%= @repository %>"/>
-  <textarea name="description" placeholder="Enter report description here..."></textarea>
+  <textarea name="description" placeholder="Enter report description here..."><%= @description %></textarea>
   <input type="text" name="requirement"/>
   <button type="submit" class="btn">
     Submit Report.
