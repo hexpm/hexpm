@@ -1,4 +1,4 @@
-<p> Report with id <%= @report.id %></p>
+<p> Report with id <%= @report.id %> </p>
 <p> on <%= @report.package.name %> package </p>
 <p> Affected releases: -
 <%= for ar <- @report.package_report_releases do %>

@@ -101,7 +101,7 @@ defmodule HexpmWeb.PackageReportControllerTest do
         |> get("/reports")
 
       result = response(conn, 200)
-      assert result =~ ~r/#{report1.id}/s
+      assert result =~ "#{report1.id}<\/a><\/td>"
     end
   end
 
@@ -112,7 +112,7 @@ defmodule HexpmWeb.PackageReportControllerTest do
         |> test_login(user1)
         |> get("/reports/1000")
 
-      response(conn, 302)
+      response(conn, 404)
     end
 
     test "get to_accept for author", %{user3: user3, report1: report1} do
@@ -122,10 +122,10 @@ defmodule HexpmWeb.PackageReportControllerTest do
         |> get("/reports/#{report1.id}")
       
       result = response(conn, 200)
-      assert result =~ "#{report1.id}"
-      assert result =~ report1.package.name
-      assert result =~ report1.description
-      refute result =~ "comments" # Verify commnets section is not visible
+      assert result =~ "id #{report1.id} <\/p>"
+      assert result =~ "on #{report1.package.name} package <\/p>"
+      assert result =~ "<p> #{report1.description} <\/p>"
+      refute result =~ "comments-section-div" # Verify commets section is not visible
     end
 
     test "get to_accept for moderator", %{user2: user2, report1: report1} do
@@ -135,10 +135,10 @@ defmodule HexpmWeb.PackageReportControllerTest do
         |> get("/reports/#{report1.id}")
       
       result = response(conn, 200)
-      assert result =~ "#{report1.id}"
-      assert result =~ "#{report1.package.name}"
-      assert result =~ "#{report1.description}"
-      refute result =~ "comments" # Verify commnets section is not visible
+      assert result =~ "id #{report1.id} <\/p>"
+      assert result =~ "on #{report1.package.name} package <\/p>"
+      assert result =~ "<p> #{report1.description} <\/p>"
+      refute result =~ "comments-section-div" # Verify commnets section is not visible
     end
 
     test "get to_accept for owner", %{user1: user1, report1: report1} do
@@ -147,7 +147,7 @@ defmodule HexpmWeb.PackageReportControllerTest do
         |> test_login(user1)
         |> get("/reports/#{report1.id}")
       
-      response(conn, 302)
+      response(conn, 404)
     end
 
     test "get to_accept for others", %{user4: user4, report1: report1} do
@@ -156,7 +156,7 @@ defmodule HexpmWeb.PackageReportControllerTest do
         |> test_login(user4)
         |> get("/reports/#{report1.id}")
       
-      response(conn, 302)
+      response(conn, 404)
     end
 
     test "get rejected for author", %{user3: user3, report4: report4} do
@@ -166,10 +166,10 @@ defmodule HexpmWeb.PackageReportControllerTest do
         |> get("/reports/#{report4.id}")
       
       result = response(conn, 200)
-      assert result =~ "#{report4.id}"
-      assert result =~ "#{report4.package.name}"
-      assert result =~ "#{report4.description}"
-      assert result =~ "comments" # Verify commnets section is not visible
+      assert result =~ "id #{report4.id} <\/p>"
+      assert result =~ "on #{report4.package.name} package <\/p>"
+      assert result =~ "<p> #{report4.description} <\/p>"
+      assert result =~ "comments-section-div" # Verify commnets section is not visible
     end
 
     test "get rejected for moderator", %{user2: user2, report4: report4} do
@@ -179,10 +179,10 @@ defmodule HexpmWeb.PackageReportControllerTest do
         |> get("/reports/#{report4.id}")
       
       result = response(conn, 200)
-      assert result =~ "#{report4.id}"
-      assert result =~ "#{report4.package.name}"
-      assert result =~ "#{report4.description}"
-      assert result =~ "comments" # Verify commnets section is not visible
+      assert result =~ "id #{report4.id} <\/p>"
+      assert result =~ "on #{report4.package.name} package <\/p>"
+      assert result =~ "<p> #{report4.description} <\/p>"
+      assert result =~ "comments-section-div" # Verify commnets section is not visible
     end
 
     test "get rejected for owner", %{user1: user1, report4: report4} do
@@ -191,7 +191,7 @@ defmodule HexpmWeb.PackageReportControllerTest do
         |> test_login(user1)
         |> get("/reports/#{report4.id}")
       
-      response(conn, 302)
+      response(conn, 404)
     end
 
     test "get rejected for others", %{user4: user4, report4: report4} do
@@ -200,7 +200,7 @@ defmodule HexpmWeb.PackageReportControllerTest do
         |> test_login(user4)
         |> get("/reports/#{report4.id}")
       
-      response(conn, 302)
+      response(conn, 404)
     end
 
     test "get accepted for author", %{user3: user3, report2: report2} do
@@ -210,10 +210,10 @@ defmodule HexpmWeb.PackageReportControllerTest do
         |> get("/reports/#{report2.id}")
       
       result = response(conn, 200)
-      assert result =~ "#{report2.id}"
-      assert result =~ "#{report2.package.name}"
-      assert result =~ "#{report2.description}"
-      assert result =~ "comments" # Verify commnets section is visible
+      assert result =~ "id #{report2.id} <\/p>"
+      assert result =~ "on #{report2.package.name} package <\/p>"
+      assert result =~ "<p> #{report2.description} <\/p>"
+      assert result =~ "comments-section-div" # Verify commnets section is visible
     end
 
     test "get accepted for moderator", %{user2: user2, report2: report2} do
@@ -223,10 +223,10 @@ defmodule HexpmWeb.PackageReportControllerTest do
         |> get("/reports/#{report2.id}")
       
       result = response(conn, 200)
-      assert result =~ "#{report2.id}"
-      assert result =~ "#{report2.package.name}"
-      assert result =~ "#{report2.description}"
-      assert result =~ "comments" # Verify commnets section is visible
+      assert result =~ "id #{report2.id} <\/p>"
+      assert result =~ "on #{report2.package.name} package <\/p>"
+      assert result =~ "<p> #{report2.description} <\/p>"
+      assert result =~ "comments-section-div" # Verify commnets section is visible
     end
 
     test "get accepted for owner", %{user1: user1, report2: report2} do
@@ -236,10 +236,10 @@ defmodule HexpmWeb.PackageReportControllerTest do
         |> get("/reports/#{report2.id}")
       
       result = response(conn, 200)
-      assert result =~ "#{report2.id}"
-      assert result =~ "#{report2.package.name}"
-      assert result =~ "#{report2.description}"
-      assert result =~ "comments" # Verify commnets section is visible
+      assert result =~ "id #{report2.id} <\/p>"
+      assert result =~ "on #{report2.package.name} package <\/p>"
+      assert result =~ "<p> #{report2.description} <\/p>"
+      assert result =~ "comments-section-div" # Verify commnets section is visible
     end
 
     test "get accepted for others", %{user4: user4, report2: report2} do
@@ -247,7 +247,7 @@ defmodule HexpmWeb.PackageReportControllerTest do
         build_conn()
         |> test_login(user4)
         |> get("/reports/#{report2.id}")
-      response(conn, 302)
+      response(conn, 404)
     end
 
     test "get solved for author", %{user3: user3, report3: report3} do
@@ -257,10 +257,10 @@ defmodule HexpmWeb.PackageReportControllerTest do
         |> get("/reports/#{report3.id}")
       
       result = response(conn, 200)
-      assert result =~ "#{report3.id}"
-      assert result =~ "#{report3.package.name}"
-      assert result =~ "#{report3.description}"
-      assert result =~ "comments" # Verify commnets section is visible
+      assert result =~ "id #{report3.id} <\/p>"
+      assert result =~ "on #{report3.package.name} package <\/p>"
+      assert result =~ "<p> #{report3.description} <\/p>"
+      assert result =~ "comments-section-div" # Verify commnets section is visible
     end
 
     test "get solved for moderator", %{user2: user2, report3: report3} do
@@ -270,10 +270,10 @@ defmodule HexpmWeb.PackageReportControllerTest do
         |> get("/reports/#{report3.id}")
       
       result = response(conn, 200)
-      assert result =~ "#{report3.id}"
-      assert result =~ "#{report3.package.name}"
-      assert result =~ "#{report3.description}"
-      assert result =~ "comments" # Verify commnets section is visible
+      assert result =~ "id #{report3.id} <\/p>"
+      assert result =~ "on #{report3.package.name} package <\/p>"
+      assert result =~ "<p> #{report3.description} <\/p>"
+      assert result =~ "comments-section-div" # Verify commnets section is visible
     end
 
     test "get solved for owner", %{user1: user1, report3: report3} do
@@ -283,10 +283,10 @@ defmodule HexpmWeb.PackageReportControllerTest do
         |> get("/reports/#{report3.id}")
       
       result = response(conn, 200)
-      assert result =~ "#{report3.id}"
-      assert result =~ "#{report3.package.name}"
-      assert result =~ "#{report3.description}"
-      assert result =~ "comments" # Verify commnets section is visible
+      assert result =~ "id #{report3.id} <\/p>"
+      assert result =~ "on #{report3.package.name} package <\/p>"
+      assert result =~ "<p> #{report3.description} <\/p>"
+      assert result =~ "comments-section-div" # Verify commnets section is visible
     end
 
     test "get solved for others", %{user4: user4, report3: report3} do
@@ -296,10 +296,10 @@ defmodule HexpmWeb.PackageReportControllerTest do
         |> get("/reports/#{report3.id}")
       
       result = response(conn, 200)
-      assert result =~ "#{report3.id}"
-      assert result =~ "#{report3.package.name}"
-      assert result =~ "#{report3.description}"
-      refute result =~ "comments" # Verify commnets section is not visible
+      assert result =~ "id #{report3.id} <\/p>"
+      assert result =~ "on #{report3.package.name} package <\/p>"
+      assert result =~ "<p> #{report3.description} <\/p>"
+      refute result =~ "comments-section-div" # Verify commnets section is not visible
     end
   end
 end

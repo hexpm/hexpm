@@ -1,4 +1,4 @@
-<div>
+<div id = "comments-section-div">
   <%= if (not @report.state in ["to_accept"]) and (@for_author or @for_moderator or @for_owner) do %>
     <%= render "_new_comment.html", report: @report %>
     <%= if @comments != [] do %>

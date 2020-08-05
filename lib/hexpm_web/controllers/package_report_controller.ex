@@ -98,7 +98,7 @@ defmodule HexpmWeb.PackageReportController do
         conn
         |> put_flash(:error, @report_not_accessible)
         |> put_status(404)
-        |> redirect(to: Routes.package_report_path(HexpmWeb.Endpoint, :index))
+        |> index([])
       else
         comments = PackageReports.all_comments_for_report(report.id)
 
