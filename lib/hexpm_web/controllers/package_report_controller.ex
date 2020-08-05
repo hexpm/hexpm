@@ -86,7 +86,7 @@ defmodule HexpmWeb.PackageReportController do
   def show(conn, params) do
     report = PackageReports.get(params["id"])
     user = conn.assigns.current_user
-    if report != nil do
+    if report do
       for_moderator = Users.has_role(user, "moderator")
       for_owner = Owners.get(report.package, user) != nil
       for_author = user.id == report.author.id
