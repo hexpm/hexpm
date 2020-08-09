@@ -1,17 +1,18 @@
 .user {
   .user-package-info {
-    h3 {
+    h3 { 
       float: right;
       font-size: 16px;
       text-align: center;
 
       em {
-        font-size: 24px;
         font-style: normal;
         font-weight: bold;
       }
     }
-    h3:first-child {float: left;}
+    h3:first-child {
+      float: left;
+    }
   }
 
   .user-package-list {
