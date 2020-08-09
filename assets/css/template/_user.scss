@@ -1,18 +1,19 @@
 .user {
   .user-package-info {
-    h3 { 
+    h3 {
       float: right;
       font-size: 16px;
       text-align: center;
 
       em {
+        font-size: 24px;
         font-style: normal;
         font-weight: bold;
-        font-size: 24px;
       }
     }
     h3:first-child {float: left;}
   }
+
   .user-package-list {
     padding: 0;
     margin: 0;
@@ -22,28 +23,30 @@
       margin-bottom: 5px;
 
       h1 {
-        text-align: left;
         float: left;
+        text-align: left;
 
         em {
+          padding-left: .5em;
+          font-size: 24px;
           font-style: normal;
           font-weight: normal;
-          font-size: 24px;
-          padding-left: 0.5em;
         }
       }
+
       h3 {
         float: right;
+        padding: 0 1em;
         font-size: 16px;
         line-height: 48px;
         border: 1px solid #eee;
-        padding: 0 1em;
         border-radius: 4px;
       }
+
       p {
         float: left;
-        clear: both;
         margin-bottom: 1em;
+        clear: both;
       }
     }
   }
