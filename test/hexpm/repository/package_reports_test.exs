@@ -214,7 +214,13 @@ defmodule Hexpm.Repository.PackageReportsTests do
 
       PackageReports.accept(id)
       report = PackageReports.get(id)
-      comment = PackageReports.new_comment(%{"report" => report, "author" => other, "text" => "We need to solve this."})
+
+      comment =
+        PackageReports.new_comment(%{
+          "report" => report,
+          "author" => other,
+          "text" => "We need to solve this."
+        })
 
       assert_delivered_email(
         Hexpm.Emails.report_commented(
