@@ -5,8 +5,8 @@
   <%= ar.release.version %> - 
 <% end %>
 <p> Submitted by <%= @report.author.username %> <%= ViewHelpers.human_relative_time_from_now(@report.inserted_at) %></p>
-<p> <%= @report.description %>
-<p> Report status: <%= @report.state %>
+<p> <%= @report.description %> </p>
+<p> Report status: <%= @report.state %> </p>
 
 <%= if @for_moderator do %>
   <%= render "_moderator_panel.html", report: @report, author: @report.author%>
