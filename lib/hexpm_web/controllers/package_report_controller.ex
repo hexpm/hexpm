@@ -194,12 +194,7 @@ defmodule HexpmWeb.PackageReportController do
         []
 
       _ ->
-        rs =
-          Enum.filter(releases, fn r ->
-            Version.match?(r.version, requirement)
-          end)
-
-        rs
+        Enum.filter(releases, &Version.match?(&1.version, requirement))
     end
   end
 
