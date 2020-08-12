@@ -205,12 +205,7 @@ defmodule HexpmWeb.PackageReportController do
   defp build_report_form(conn, params) do
     %{"repository" => repository, "package" => name} = params
 
-    description =
-      if params["description"] == nil do
-        " "
-      else
-        params["description"]
-      end
+    description = params["description"]
 
     package = repository && Packages.get(repository, name)
 

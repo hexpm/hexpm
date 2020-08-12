@@ -40,14 +40,12 @@ defmodule Hexpm.Repository.PackageReportsTests do
       description: description
     } do
       report =
-        PackageReports.get(
-          PackageReports.add(%{
-            "releases" => [release],
-            "user" => author,
-            "package" => package,
-            "description" => description
-          })
-        )
+        PackageReports.add(%{
+          "releases" => [release],
+          "user" => author,
+          "package" => package,
+          "description" => description
+        })
 
       assert report.state == "to_accept"
 
@@ -78,7 +76,7 @@ defmodule Hexpm.Repository.PackageReportsTests do
           "user" => author,
           "package" => package,
           "description" => description
-        })
+        }).id
 
       PackageReports.accept(id)
       report = PackageReports.get(id)
@@ -127,7 +125,7 @@ defmodule Hexpm.Repository.PackageReportsTests do
           "user" => author,
           "package" => package,
           "description" => description
-        })
+        }).id
 
       PackageReports.reject(id)
       report = PackageReports.get(id)
@@ -168,7 +166,7 @@ defmodule Hexpm.Repository.PackageReportsTests do
           "user" => author,
           "package" => package,
           "description" => description
-        })
+        }).id
 
       PackageReports.accept(id)
       PackageReports.solve(id)
@@ -210,7 +208,7 @@ defmodule Hexpm.Repository.PackageReportsTests do
           "user" => author,
           "package" => package,
           "description" => description
-        })
+        }).id
 
       PackageReports.accept(id)
       report = PackageReports.get(id)

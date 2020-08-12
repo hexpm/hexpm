@@ -17,7 +17,7 @@ defmodule Hexpm.Repository.PackageReports do
       &email_user_about_new_report(package_report, &1)
     )
 
-    package_report.id
+    package_report
   end
 
   def all() do
