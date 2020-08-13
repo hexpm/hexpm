@@ -16,6 +16,8 @@ defmodule Hexpm.Repository.PackageReports do
       Users.get_by_role("moderator"),
       &email_user_about_new_report(package_report, &1)
     )
+
+    package_report
   end
 
   def all() do
@@ -33,7 +35,7 @@ defmodule Hexpm.Repository.PackageReports do
     |> Repo.one()
   end
 
-  def accept(report_id, comment) do
+  def accept(report_id) do
     PackageReport.get(report_id)
     |> Repo.one()
     |> PackageReport.change_state(%{"state" => "accepted"})
@@ -48,7 +50,7 @@ defmodule Hexpm.Repository.PackageReports do
     )
   end
 
-  def reject(report_id, comment) do
+  def reject(report_id) do
     PackageReport.get(report_id)
     |> Repo.one()
     |> PackageReport.change_state(%{"state" => "rejected"})
@@ -62,7 +64,7 @@ defmodule Hexpm.Repository.PackageReports do
     )
   end
 
-  def solve(report_id, comment) do
+  def solve(report_id) do
     report = PackageReport.get(report_id)
 
     report
@@ -74,7 +76,7 @@ defmodule Hexpm.Repository.PackageReports do
 
     Enum.each(
       Enum.map(Owners.all(report.package, user: []), & &1.user) ++ Users.get_by_role("moderator"),
-      &email_user_about_state_change(report, &1.user)
+      &email_user_about_state_change(report, &1)
     )
   end
 
@@ -87,6 +89,8 @@ defmodule Hexpm.Repository.PackageReports do
         [comment.report.author] ++ Users.get_by_role("moderator"),
       &email_user_about_new_comment(comment, &1)
     )
+
+    comment
   end
 
   def count_comments(report_id) do

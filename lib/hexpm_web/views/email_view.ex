@@ -131,7 +131,8 @@ defmodule HexpmWeb.EmailView do
       """
       The report has now state \"rejected\".
       This means that the vulnerability reported has not been recognized as such a vulnerability by a moderator.
-      The report will not be made public, so users other than the report author, moderators and the reported package owners will not be able to read the report description or the comments section.
+      The report will not be made public, so users other than the report author and moderators will not be able to read the report description or the comments section.
+      Moderators and the report author can still comment about the report on the report's comment section.
       """
     end
   end

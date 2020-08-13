@@ -44,8 +44,8 @@ defmodule HexpmWeb.PackageReportController do
     else
       conn
       |> put_flash(:error, @report_not_accessible)
-      |> put_status(400)
-      |> redirect(to: Routes.package_path(HexpmWeb.Endpoint, :index))
+      |> put_status(404)
+      |> index([])
     end
   end
 
@@ -67,7 +67,11 @@ defmodule HexpmWeb.PackageReportController do
       conn
       |> put_flash(:error, @report_bad_version_msg)
       |> put_status(400)
-      |> new(%{"package" => package_name})
+      |> new(%{
+        "repository" => repository,
+        "package" => package_name,
+        "description" => description
+      })
     else
       %{
         "package" => package,
@@ -86,30 +90,38 @@ defmodule HexpmWeb.PackageReportController do
   def show(conn, params) do
     report = PackageReports.get(params["id"])
     user = conn.assigns.current_user
-    for_moderator = Users.has_role(user, "moderator")
-    for_owner = Owners.get(report.package, user) != nil
-    for_author = user.id == report.author.id
-    for_basic = not (for_moderator or for_owner or for_author)
 
-    if report == nil or
-         (report.state == "to_accept" and (for_owner and not (for_moderator or for_author))) or
-         (report.state not in ["to_accept", "solved"] and for_basic) do
+    if report do
+      for_moderator = Users.has_role(user, "moderator")
+      for_owner = Owners.get(report.package, user) != nil
+      for_author = user.id == report.author.id
+      for_basic = not (for_moderator or for_owner or for_author)
+
+      if (report.state in ["to_accept", "rejected"] and not for_moderator and
+            (for_owner or for_basic)) or
+           (report.state == "accepted" and for_basic) do
+        conn
+        |> put_flash(:error, @report_not_accessible)
+        |> put_status(404)
+        |> index([])
+      else
+        comments = PackageReports.all_comments_for_report(report.id)
+
+        render(
+          conn,
+          "show.html",
+          report: report,
+          for_moderator: for_moderator,
+          for_owner: for_owner,
+          for_author: for_author,
+          comments: comments
+        )
+      end
+    else
       conn
       |> put_flash(:error, @report_not_accessible)
-      |> put_status(302)
-      |> redirect(to: Routes.package_report_path(HexpmWeb.Endpoint, :index))
-    else
-      comments = PackageReports.all_comments_for_report(report.id)
-
-      render(
-        conn,
-        "show.html",
-        report: report,
-        for_moderator: for_moderator,
-        for_owner: for_owner,
-        for_author: for_author,
-        comments: comments
-      )
+      |> put_status(404)
+      |> index([])
     end
   end
 
@@ -173,15 +185,17 @@ defmodule HexpmWeb.PackageReportController do
 
   defp valid_state_change(new, %{state: "to_accept"}), do: new in ["accepted", "rejected"]
   defp valid_state_change(new, %{state: "accepted"}), do: new in ["solved", "rejected"]
+  defp valid_state_change(new, %{state: "rejected"}), do: new in ["accepted"]
   defp valid_state_change(new, _), do: false
 
   defp slice_releases(releases, requirement) do
-    rs =
-      Enum.filter(releases, fn r ->
-        Version.match?(r.version, requirement)
-      end)
+    case Version.parse_requirement(requirement) do
+      :error ->
+        []
 
-    rs
+      _ ->
+        Enum.filter(releases, &Version.match?(&1.version, requirement))
+    end
   end
 
   defp fetch_package_reports() do
@@ -190,13 +204,17 @@ defmodule HexpmWeb.PackageReportController do
 
   defp build_report_form(conn, params) do
     %{"repository" => repository, "package" => name} = params
+
+    description = params["description"]
+
     package = repository && Packages.get(repository, name)
 
     render(
       conn,
       "new_report.html",
       package_name: name,
-      repository: repository
+      repository: repository,
+      description: description
     )
   end
 end
