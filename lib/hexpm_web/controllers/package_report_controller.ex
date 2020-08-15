@@ -126,14 +126,42 @@ defmodule HexpmWeb.PackageReportController do
   end
 
   def accept_report(conn, params) do
-    report_id = params["report_id"]
-    comment = params["comment"]
+    report_id = params["id"]
 
     report = PackageReports.get(report_id)
 
     if valid_state_change("accepted", report) and
          Users.has_role(conn.assigns.current_user, "moderator") do
       PackageReports.accept(report_id)
+      notify_good_update(conn)
+    else
+      notify_bad_update(conn, %{"id" => report_id})
+    end
+  end
+
+  def reject_report(conn, params) do
+    report_id = params["id"]
+
+    report = PackageReports.get(report_id)
+
+    if valid_state_change("rejected", report) and
+         Users.has_role(conn.assigns.current_user, "moderator") do
+      PackageReports.reject(report_id)
+      
+      notify_good_update(conn)
+    else
+      notify_bad_update(conn, %{"id" => report_id})
+    end
+  end
+
+  def solve_report(conn, params) do
+    report_id = params["id"]
+
+    report = PackageReports.get(report_id)
+
+    if valid_state_change("solved", report) and
+         Users.has_role(conn.assigns.current_user, "moderator") do
+      PackageReports.solve(report_id)
 
       Enum.each(report.releases, fn r ->
         PackageReports.mark_release(r)
@@ -145,30 +173,19 @@ defmodule HexpmWeb.PackageReportController do
     end
   end
 
-  def reject_report(conn, params) do
-    report_id = params["report_id"]
-    comment = params["comment"]
+  def set_unresolved_report(conn, params) do
+    report_id = params["id"]
 
     report = PackageReports.get(report_id)
 
-    if valid_state_change("rejected", report) and
+    if valid_state_change("unresolved", report) and
          Users.has_role(conn.assigns.current_user, "moderator") do
-      PackageReports.reject(report_id)
-      notify_good_update(conn)
-    else
-      notify_bad_update(conn, %{"id" => report_id})
-    end
-  end
+      PackageReports.set_unresolved(report_id)
 
-  def solve_report(conn, params) do
-    report_id = params["report_id"]
-    comment = params["comment"]
+      Enum.each(report.releases, fn r ->
+        PackageReports.mark_release(r)
+      end)
 
-    report = PackageReports.get(report_id)
-
-    if valid_state_change("solved", report) and
-         Users.has_role(conn.assigns.current_user, "moderator") do
-      PackageReports.solve(report_id)
       notify_good_update(conn)
     else
       notify_bad_update(conn, %{"id" => report_id})
@@ -189,7 +206,7 @@ defmodule HexpmWeb.PackageReportController do
   end
 
   defp valid_state_change(new, %{state: "to_accept"}), do: new in ["accepted", "rejected"]
-  defp valid_state_change(new, %{state: "accepted"}), do: new in ["solved", "rejected"]
+  defp valid_state_change(new, %{state: "accepted"}), do: new in ["solved", "rejected", "unresolved"]
   defp valid_state_change(new, %{state: "rejected"}), do: new in ["accepted"]
   defp valid_state_change(new, _), do: false
 
