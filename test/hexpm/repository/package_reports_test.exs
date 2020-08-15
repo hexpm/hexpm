@@ -192,6 +192,48 @@ defmodule Hexpm.Repository.PackageReportsTests do
     end
   end
 
+  describe "set_unresolved/2" do
+    test "check emails sent", %{
+      package: package,
+      release: release,
+      owner: owner,
+      author: author,
+      other: other,
+      moderator: moderator,
+      description: description
+    } do
+      id =
+        PackageReports.add(%{
+          "releases" => [release],
+          "user" => author,
+          "package" => package,
+          "description" => description
+        }).id
+
+      PackageReports.accept(id)
+      PackageReports.set_unresolved(id)
+      report = PackageReports.get(id)
+
+      assert_delivered_email(
+        Hexpm.Emails.report_state_changed(
+          owner,
+          report.id,
+          "unresolved",
+          report.updated_at
+        )
+      )
+
+      assert_delivered_email(
+        Hexpm.Emails.report_state_changed(
+          moderator,
+          report.id,
+          "unresolved",
+          report.updated_at
+        )
+      )
+    end
+  end
+
   describe "new_comment/1" do
     test "check emails sent", %{
       package: package,

@@ -135,5 +135,13 @@ defmodule HexpmWeb.EmailView do
       Moderators and the report author can still comment about the report on the report's comment section.
       """
     end
+
+    def state_explain("unresolved") do
+      """
+      The report has now state \"unresolved\".
+      This means the report has been on a revision state (\"accepted\") for too long.
+      Now the report is public, so users other than the report author, moderators and the reported package owners can read the report description.
+      """
+    end
   end
 end

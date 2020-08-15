@@ -80,6 +80,22 @@ defmodule Hexpm.Repository.PackageReports do
     )
   end
 
+  def set_unresolved(report_id) do
+    report = PackageReport.get(report_id)
+
+    report
+    |> Repo.one()
+    |> PackageReport.change_state(%{"state" => "unresolved"})
+    |> Repo.update()
+
+    report = Repo.one(PackageReport.get(report_id))
+
+    Enum.each(
+      Enum.map(Owners.all(report.package, user: []), & &1.user) ++ Users.get_by_role("moderator"),
+      &email_user_about_state_change(report, &1)
+    )
+  end
+
   def new_comment(params) do
     comment = Repo.insert(PackageReportComment.build(params["report"], params["author"], params))
     comment = Hexpm.Repo.preload(Kernel.elem(comment, 1), report: [])
@@ -110,7 +126,7 @@ defmodule Hexpm.Repository.PackageReports do
         "message" => "security vulnerability reported"
       }
     })
-    |> Repo.update()
+    |> Repo.update!()
   end
 
   defp email_user_about_new_report(package_report, user) do

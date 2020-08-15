@@ -129,6 +129,7 @@ defmodule HexpmWeb.Router do
     post "/reports/:id/accept", PackageReportController, :accept_report
     post "/reports/:id/reject", PackageReportController, :reject_report
     post "/reports/:id/solve", PackageReportController, :solve_report
+    post "/reports/:id/set-unresolved", PackageReportController, :set_unresolved_report
     post "/reports/:id/comment", PackageReportController, :new_comment
   end
 

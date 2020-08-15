@@ -72,6 +72,15 @@ defmodule HexpmWeb.PackageReportControllerTest do
         description: "report for first package"
       )
 
+    report5 =
+      insert(
+        :package_report,
+        package: package1,
+        author: user3,
+        state: "unresolved",
+        description: "report for first package"
+      )
+
     %{
       package1: package1,
       package2: package2,
@@ -79,6 +88,7 @@ defmodule HexpmWeb.PackageReportControllerTest do
       report2: report2,
       report3: report3,
       report4: report4,
+      report5: report5,
       release1: release1,
       repository1: repository1,
       repository2: repository2,
@@ -309,18 +319,80 @@ defmodule HexpmWeb.PackageReportControllerTest do
       # Verify commnets section is not visible
       refute result =~ "comments-section-div"
     end
-  end
 
-  describe "accept_report/2" do
-    test "get marked package after accept report", %{report1: report1, package1: package1, user1: user1, user3: user3, release1: release1} do
-      conn = 
+    test "get unresolved for author", %{user3: user3, report5: report5} do
+      conn =
         build_conn()
-        |> test_login(user1)
-        |> post("/reports/#{report1.id}/accept")
         |> test_login(user3)
-        |> get("/package/#{package1.name}")
+        |> get("/reports/#{report5.id}")
 
       result = response(conn, 200)
+      assert result =~ "id #{report5.id}<\/p>"
+      assert result =~ "on #{report5.package.name} package<\/p>"
+      assert result =~ "<p>#{report5.description}<\/p>"
+      # Verify commnets section is visible
+      assert result =~ "comments-section-div"
+    end
+
+    test "get unresolved for moderator", %{user2: user2, report5: report5} do
+      conn =
+        build_conn()
+        |> test_login(user2)
+        |> get("/reports/#{report5.id}")
+
+      result = response(conn, 200)
+      assert result =~ "id #{report5.id}<\/p>"
+      assert result =~ "on #{report5.package.name} package<\/p>"
+      assert result =~ "<p>#{report5.description}<\/p>"
+      # Verify commnets section is visible
+      assert result =~ "comments-section-div"
+    end
+
+    test "get unresolved for owner", %{user1: user1, report5: report5} do
+      conn =
+        build_conn()
+        |> test_login(user1)
+        |> get("/reports/#{report5.id}")
+
+      result = response(conn, 200)
+      assert result =~ "id #{report5.id}<\/p>"
+      assert result =~ "on #{report5.package.name} package<\/p>"
+      assert result =~ "<p>#{report5.description}<\/p>"
+      # Verify commnets section is visible
+      assert result =~ "comments-section-div"
+    end
+
+    test "get unresolved for others", %{user4: user4, report5: report5} do
+      conn =
+        build_conn()
+        |> test_login(user4)
+        |> get("/reports/#{report5.id}")
+
+      result = response(conn, 200)
+      assert result =~ "id #{report5.id}<\/p>"
+      assert result =~ "on #{report5.package.name} package<\/p>"
+      assert result =~ "<p>#{report5.description}<\/p>"
+      # Verify commnets section is not visible
+      refute result =~ "comments-section-div"
+    end
+  end
+
+  describe "solve/2" do
+    test "get marked package after solve report", %{report2: report2, package1: package1, user2: user2, release1: release1} do
+      conn = 
+        build_conn()
+        |> test_login(user2)
+        |> post("/reports/#{report2.id}/solve")
+        
+      result = response(conn, 302)
+
+      conn1 =
+        build_conn()
+        |> test_login(user2)
+        |> get("/packages/#{package1.name}")
+      
+      result = response(conn1, 200)
+      
       assert result =~ "<h2 class=\"package-title\">#{package1.name}"
       assert result =~ "<strong>#{release1.version}</strong>"
       assert result =~ "(<span class=\"version-retirement\">reported</span>)"
