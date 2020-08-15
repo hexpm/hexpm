@@ -8,7 +8,7 @@ defmodule Hexpm.Repository.ReleaseRetirement do
     field :message, :string
   end
 
-  @reasons ~w(other invalid security deprecated renamed)
+  @reasons ~w(other invalid security deprecated renamed report)
 
   def changeset(meta, params) do
     cast(meta, params, ~w(reason message)a)
@@ -22,4 +22,5 @@ defmodule Hexpm.Repository.ReleaseRetirement do
   def reason_text("security"), do: "Security issue"
   def reason_text("deprecated"), do: "Deprecated"
   def reason_text("renamed"), do: "Renamed"
+  def reason_text("report"), do: "Reported vulnerability"
 end

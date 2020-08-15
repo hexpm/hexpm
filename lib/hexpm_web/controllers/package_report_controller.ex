@@ -133,7 +133,12 @@ defmodule HexpmWeb.PackageReportController do
 
     if valid_state_change("accepted", report) and
          Users.has_role(conn.assigns.current_user, "moderator") do
-      PackageReports.accept(report_id, comment)
+      PackageReports.accept(report_id)
+
+      Enum.each(report.releases, fn r ->
+        PackageReports.mark_release(r)
+      end)
+
       notify_good_update(conn)
     else
       notify_bad_update(conn, %{"id" => report_id})
@@ -148,7 +153,7 @@ defmodule HexpmWeb.PackageReportController do
 
     if valid_state_change("rejected", report) and
          Users.has_role(conn.assigns.current_user, "moderator") do
-      PackageReports.reject(report_id, comment)
+      PackageReports.reject(report_id)
       notify_good_update(conn)
     else
       notify_bad_update(conn, %{"id" => report_id})
@@ -163,7 +168,7 @@ defmodule HexpmWeb.PackageReportController do
 
     if valid_state_change("solved", report) and
          Users.has_role(conn.assigns.current_user, "moderator") do
-      PackageReports.solve(report_id, comment)
+      PackageReports.solve(report_id)
       notify_good_update(conn)
     else
       notify_bad_update(conn, %{"id" => report_id})

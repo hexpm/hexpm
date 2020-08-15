@@ -103,6 +103,16 @@ defmodule Hexpm.Repository.PackageReports do
     |> Repo.all()
   end
 
+  def mark_release(release) do
+    Release.retire(release, %{
+      "retirement" => %{
+        "reason" => "report",
+        "message" => "security vulnerability reported"
+      }
+    })
+    |> Repo.update()
+  end
+
   defp email_user_about_new_report(package_report, user) do
     user
     |> Hexpm.Repo.preload(emails: [])
