@@ -147,7 +147,7 @@ defmodule HexpmWeb.PackageReportController do
     if valid_state_change("rejected", report) and
          Users.has_role(conn.assigns.current_user, "moderator") do
       PackageReports.reject(report_id)
-      
+
       notify_good_update(conn)
     else
       notify_bad_update(conn, %{"id" => report_id})
@@ -206,7 +206,10 @@ defmodule HexpmWeb.PackageReportController do
   end
 
   defp valid_state_change(new, %{state: "to_accept"}), do: new in ["accepted", "rejected"]
-  defp valid_state_change(new, %{state: "accepted"}), do: new in ["solved", "rejected", "unresolved"]
+
+  defp valid_state_change(new, %{state: "accepted"}),
+    do: new in ["solved", "rejected", "unresolved"]
+
   defp valid_state_change(new, %{state: "rejected"}), do: new in ["accepted"]
   defp valid_state_change(new, _), do: false
 

@@ -19,19 +19,21 @@ defmodule HexpmWeb.PackageReportControllerTest do
 
     package2 = insert(:package, owners: [user2])
 
-    release1 = insert(
-      :release,
-      package: package1,
-      version: "0.0.1",
-      meta: build(:release_metadata, app: package1.name)
-    )
+    release1 =
+      insert(
+        :release,
+        package: package1,
+        version: "0.0.1",
+        meta: build(:release_metadata, app: package1.name)
+      )
 
-    release2 = insert(
-      :release,
-      package: package1,
-      version: "0.0.2",
-      meta: build(:release_metadata, app: package1.name)
-    )
+    release2 =
+      insert(
+        :release,
+        package: package1,
+        version: "0.0.2",
+        meta: build(:release_metadata, app: package1.name)
+      )
 
     insert(:organization_user, user: user1, organization: repository1.organization)
 
@@ -49,6 +51,7 @@ defmodule HexpmWeb.PackageReportControllerTest do
       insert(
         :package_report,
         package: package1,
+        releases: [release1],
         author: user3,
         state: "accepted",
         description: "report for first package"
@@ -378,21 +381,26 @@ defmodule HexpmWeb.PackageReportControllerTest do
   end
 
   describe "solve/2" do
-    test "get marked package after solve report", %{report2: report2, package1: package1, user2: user2, release1: release1} do
-      conn = 
+    test "get marked package after solve report", %{
+      report2: report2,
+      package1: package1,
+      user2: user2,
+      release1: release1
+    } do
+      conn =
         build_conn()
         |> test_login(user2)
         |> post("/reports/#{report2.id}/solve")
-        
+
       result = response(conn, 302)
 
       conn1 =
         build_conn()
         |> test_login(user2)
         |> get("/packages/#{package1.name}")
-      
+
       result = response(conn1, 200)
-      
+
       assert result =~ "<h2 class=\"package-title\">#{package1.name}"
       assert result =~ "<strong>#{release1.version}</strong>"
       assert result =~ "(<span class=\"version-retirement\">reported</span>)"

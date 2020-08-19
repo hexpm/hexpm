@@ -272,4 +272,19 @@ defmodule Hexpm.Repository.PackageReportsTests do
       )
     end
   end
+
+  describe "mark_release/1" do
+    test "", %{
+      package: package,
+      release: release
+    } do
+      PackageReports.mark_release(release)
+
+      new_package =
+        Packages.get(package.repository, package.name)
+        |> Packages.preload()
+
+      assert release.version in for(r <- new_package.releases, r.retirement != nil, do: r.version)
+    end
+  end
 end
