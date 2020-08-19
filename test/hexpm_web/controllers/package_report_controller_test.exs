@@ -42,20 +42,22 @@ defmodule HexpmWeb.PackageReportControllerTest do
         :package_report,
         package: package1,
         author: user3,
-        releases: [release1],
         state: "to_accept",
         description: "report for first package"
       )
+
+    insert(:package_report_release, release: release1, package_report: report1)
 
     report2 =
       insert(
         :package_report,
         package: package1,
-        releases: [release1],
         author: user3,
         state: "accepted",
         description: "report for first package"
       )
+    
+    insert(:package_report_release, release: release1, package_report: report2)
 
     report3 =
       insert(
