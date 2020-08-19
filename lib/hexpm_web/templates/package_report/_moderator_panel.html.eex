@@ -3,13 +3,13 @@
   <%= if @report.state in ["solved","unresolved"] do %>
     <p>"This report's state is final and can not be changed"</p>
   <% else %>
-    <%= if @report.state in ["to_accept", "rejected"] do%>
+    <%= if @report.state in ["to_accept", "rejected"] do %>
       <%= form_tag Routes.package_report_path(Endpoint, :accept_report, @report.id) do %>
         <input type="hidden" name="report_id" value="<%= @report.id %>"/>
         <input type="submit" name="operation" value="Accept"/>
       <% end %>
     <% end %>
-    <%= if @report.state in ["to_accept","accepted"] do%>
+    <%= if @report.state in ["to_accept","accepted"] do %>
       <%= form_tag Routes.package_report_path(Endpoint, :reject_report, @report.id) do %>
         <input type="hidden" name="report_id" value="<%= @report.id %>"/>
         <input type="submit" name="operation" value="Reject"/>

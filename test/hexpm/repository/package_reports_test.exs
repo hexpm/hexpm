@@ -13,7 +13,7 @@ defmodule Hexpm.Repository.PackageReportsTests do
     author = insert(:user)
     moderator = insert(:user, role: "moderator")
     owner = insert(:user)
-    other = insert(:user)
+    other_user = insert(:user)
 
     owners = [build(:package_owner, user: owner)]
     package = %{insert(:package, package_owners: owners) | repository: Repository.hexpm()}
@@ -27,7 +27,7 @@ defmodule Hexpm.Repository.PackageReportsTests do
       moderator: moderator,
       description: description,
       owner: owner,
-      other: other
+      other_user: other_user
     }
   end
 
@@ -114,7 +114,6 @@ defmodule Hexpm.Repository.PackageReportsTests do
     test "check emails sent", %{
       package: package,
       release: release,
-      owner: owner,
       author: author,
       moderator: moderator,
       description: description
@@ -156,7 +155,6 @@ defmodule Hexpm.Repository.PackageReportsTests do
       release: release,
       owner: owner,
       author: author,
-      other: other,
       moderator: moderator,
       description: description
     } do
@@ -198,7 +196,6 @@ defmodule Hexpm.Repository.PackageReportsTests do
       release: release,
       owner: owner,
       author: author,
-      other: other,
       moderator: moderator,
       description: description
     } do
@@ -238,10 +235,9 @@ defmodule Hexpm.Repository.PackageReportsTests do
     test "check emails sent", %{
       package: package,
       release: release,
-      owner: owner,
       author: author,
       moderator: moderator,
-      other: other,
+      other_user: other_user,
       description: description
     } do
       id =
@@ -258,7 +254,7 @@ defmodule Hexpm.Repository.PackageReportsTests do
       comment =
         PackageReports.new_comment(%{
           "report" => report,
-          "author" => other,
+          "author" => other_user,
           "text" => "We need to solve this."
         })
 
