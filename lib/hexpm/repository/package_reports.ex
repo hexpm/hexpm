@@ -91,7 +91,7 @@ defmodule Hexpm.Repository.PackageReports do
     report = Repo.one(PackageReport.get(report_id))
 
     Enum.each(
-      Enum.map(Owners.all(report.package, user: []), & &1.user) ++ Users.get_by_role("moderator"),
+      Enum.map(Owners.all(report.package, [:user]), & &1.user) ++ Users.get_by_role("moderator"),
       &email_user_about_state_change(report, &1)
     )
   end
