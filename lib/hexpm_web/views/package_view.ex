@@ -145,10 +145,13 @@ defmodule HexpmWeb.PackageView do
   def retirement_html(retirement) do
     reason = ReleaseRetirement.reason_text(retirement.reason)
 
-    case retirement.reason do
-      "report" -> [content_tag(:strong, "Marked package:")]
-      _ -> [content_tag(:strong, "Retired package:")]
-    end ++
+    msg_head =
+      case retirement.reason do
+        "report" -> [content_tag(:strong, "Marked package:")]
+        _ -> [content_tag(:strong, "Retired package:")]
+      end
+
+    msg_body =
       cond do
         reason && retirement.message ->
           [" ", reason, " - ", retirement.message]
@@ -162,6 +165,8 @@ defmodule HexpmWeb.PackageView do
         true ->
           []
       end
+
+    msg_head ++ msg_body
   end
 
   def path_for_audit_logs(package, options) do

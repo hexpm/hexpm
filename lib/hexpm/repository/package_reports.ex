@@ -74,13 +74,17 @@ defmodule Hexpm.Repository.PackageReports do
 
     report = Repo.one(PackageReport.get(report_id))
 
+    Enum.each(report.releases, fn r ->
+      PackageReports.mark_release(r)
+    end)
+
     Enum.each(
       Enum.map(Owners.all(report.package, user: []), & &1.user) ++ Users.get_by_role("moderator"),
       &email_user_about_state_change(report, &1)
     )
   end
 
-  def set_unresolved(report_id) do
+  def unresolve(report_id) do
     report = PackageReport.get(report_id)
 
     report
@@ -89,6 +93,10 @@ defmodule Hexpm.Repository.PackageReports do
     |> Repo.update()
 
     report = Repo.one(PackageReport.get(report_id))
+
+    Enum.each(report.releases, fn r ->
+      PackageReports.mark_release(r)
+    end)
 
     Enum.each(
       Enum.map(Owners.all(report.package, [:user]), & &1.user) ++ Users.get_by_role("moderator"),
@@ -120,12 +128,16 @@ defmodule Hexpm.Repository.PackageReports do
   end
 
   def mark_release(release) do
-    Release.retire(release, %{
-      "retirement" => %{
-        "reason" => "report",
-        "message" => "security vulnerability reported"
-      }
-    })
+    Release.retire(
+      release,
+      %{
+        "retirement" => %{
+          "reason" => "report",
+          "message" => "security vulnerability reported"
+        }
+      },
+      true
+    )
     |> Repo.update!()
   end
 

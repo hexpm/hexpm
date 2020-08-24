@@ -163,28 +163,20 @@ defmodule HexpmWeb.PackageReportController do
          Users.has_role(conn.assigns.current_user, "moderator") do
       PackageReports.solve(report_id)
 
-      Enum.each(report.releases, fn r ->
-        PackageReports.mark_release(r)
-      end)
-
       notify_good_update(conn)
     else
       notify_bad_update(conn, %{"id" => report_id})
     end
   end
 
-  def set_unresolved_report(conn, params) do
+  def unresolve_report(conn, params) do
     report_id = params["id"]
 
     report = PackageReports.get(report_id)
 
     if valid_state_change("unresolved", report) and
          Users.has_role(conn.assigns.current_user, "moderator") do
-      PackageReports.set_unresolved(report_id)
-
-      Enum.each(report.releases, fn r ->
-        PackageReports.mark_release(r)
-      end)
+      PackageReports.unresolve(report_id)
 
       notify_good_update(conn)
     else

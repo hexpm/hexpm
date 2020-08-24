@@ -190,7 +190,7 @@ defmodule Hexpm.Repository.PackageReportsTests do
     end
   end
 
-  describe "set_unresolved/2" do
+  describe "unresolve/1" do
     test "check emails sent", %{
       package: package,
       release: release,
@@ -208,7 +208,7 @@ defmodule Hexpm.Repository.PackageReportsTests do
         }).id
 
       PackageReports.accept(id)
-      PackageReports.set_unresolved(id)
+      PackageReports.unresolve(id)
       report = PackageReports.get(id)
 
       assert_delivered_email(
