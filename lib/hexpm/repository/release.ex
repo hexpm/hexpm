@@ -109,9 +109,9 @@ defmodule Hexpm.Repository.Release do
     end
   end
 
-  defp validate_not_for_report(changeset, cause) do
+  defp validate_not_for(changeset, cause) do
     case Ecto.Changeset.get_change(changeset, :retirement) do
-      %{reason: "report"} -> add_error(changeset, :retirement, "Unexpected retirement reason")
+      %{reason: ^cause} -> add_error(changeset, :retirement, "Unexpected retirement reason")
       _ -> changeset
     end
   end
