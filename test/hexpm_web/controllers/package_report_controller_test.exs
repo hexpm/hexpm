@@ -19,6 +19,16 @@ defmodule HexpmWeb.PackageReportControllerTest do
 
     package2 = insert(:package, owners: [user2])
 
+    release1 =
+      insert(
+        :release,
+        package: package1,
+        version: "0.0.1",
+        meta: build(:release_metadata, app: package1.name)
+      )
+
+    insert(:organization_user, user: user1, organization: repository1.organization)
+
     report1 =
       insert(
         :package_report,
@@ -28,6 +38,8 @@ defmodule HexpmWeb.PackageReportControllerTest do
         description: "report for first package"
       )
 
+    insert(:package_report_release, release: release1, package_report: report1)
+
     report2 =
       insert(
         :package_report,
@@ -36,6 +48,8 @@ defmodule HexpmWeb.PackageReportControllerTest do
         state: "accepted",
         description: "report for first package"
       )
+
+    insert(:package_report_release, release: release1, package_report: report2)
 
     report3 =
       insert(
@@ -55,35 +69,14 @@ defmodule HexpmWeb.PackageReportControllerTest do
         description: "report for first package"
       )
 
-    insert(
-      :release,
-      package: package1,
-      version: "0.0.1",
-      meta: build(:release_metadata, app: package1.name)
-    )
-
-    insert(
-      :release,
-      package: package1,
-      version: "0.0.2",
-      meta: build(:release_metadata, app: package1.name)
-    )
-
-    insert(
-      :release,
-      package: package1,
-      version: "0.0.3-dev",
-      meta: build(:release_metadata, app: package1.name)
-    )
-
-    insert(
-      :release,
-      package: package2,
-      version: "1.0.0",
-      meta: build(:release_metadata, app: package2.name)
-    )
-
-    insert(:organization_user, user: user1, organization: repository1.organization)
+    report5 =
+      insert(
+        :package_report,
+        package: package1,
+        author: user3,
+        state: "unresolved",
+        description: "report for first package"
+      )
 
     %{
       package1: package1,
@@ -92,6 +85,8 @@ defmodule HexpmWeb.PackageReportControllerTest do
       report2: report2,
       report3: report3,
       report4: report4,
+      report5: report5,
+      release1: release1,
       repository1: repository1,
       repository2: repository2,
       user1: user1,
@@ -130,9 +125,9 @@ defmodule HexpmWeb.PackageReportControllerTest do
         |> get("/reports/#{report1.id}")
 
       result = response(conn, 200)
-      assert result =~ "id #{report1.id} <\/p>"
-      assert result =~ "on #{report1.package.name} package <\/p>"
-      assert result =~ "<p> #{report1.description} <\/p>"
+      assert result =~ "id #{report1.id}<\/p>"
+      assert result =~ "on #{report1.package.name} package<\/p>"
+      assert result =~ "<p>#{report1.description}<\/p>"
       # Verify commets section is not visible
       refute result =~ "comments-section-div"
     end
@@ -144,9 +139,9 @@ defmodule HexpmWeb.PackageReportControllerTest do
         |> get("/reports/#{report1.id}")
 
       result = response(conn, 200)
-      assert result =~ "id #{report1.id} <\/p>"
-      assert result =~ "on #{report1.package.name} package <\/p>"
-      assert result =~ "<p> #{report1.description} <\/p>"
+      assert result =~ "id #{report1.id}<\/p>"
+      assert result =~ "on #{report1.package.name} package<\/p>"
+      assert result =~ "<p>#{report1.description}<\/p>"
       # Verify commnets section is not visible
       refute result =~ "comments-section-div"
     end
@@ -176,9 +171,9 @@ defmodule HexpmWeb.PackageReportControllerTest do
         |> get("/reports/#{report4.id}")
 
       result = response(conn, 200)
-      assert result =~ "id #{report4.id} <\/p>"
-      assert result =~ "on #{report4.package.name} package <\/p>"
-      assert result =~ "<p> #{report4.description} <\/p>"
+      assert result =~ "id #{report4.id}<\/p>"
+      assert result =~ "on #{report4.package.name} package<\/p>"
+      assert result =~ "<p>#{report4.description}<\/p>"
       # Verify commnets section is not visible
       assert result =~ "comments-section-div"
     end
@@ -190,9 +185,9 @@ defmodule HexpmWeb.PackageReportControllerTest do
         |> get("/reports/#{report4.id}")
 
       result = response(conn, 200)
-      assert result =~ "id #{report4.id} <\/p>"
-      assert result =~ "on #{report4.package.name} package <\/p>"
-      assert result =~ "<p> #{report4.description} <\/p>"
+      assert result =~ "id #{report4.id}<\/p>"
+      assert result =~ "on #{report4.package.name} package<\/p>"
+      assert result =~ "<p>#{report4.description}<\/p>"
       # Verify commnets section is not visible
       assert result =~ "comments-section-div"
     end
@@ -222,9 +217,9 @@ defmodule HexpmWeb.PackageReportControllerTest do
         |> get("/reports/#{report2.id}")
 
       result = response(conn, 200)
-      assert result =~ "id #{report2.id} <\/p>"
-      assert result =~ "on #{report2.package.name} package <\/p>"
-      assert result =~ "<p> #{report2.description} <\/p>"
+      assert result =~ "id #{report2.id}<\/p>"
+      assert result =~ "on #{report2.package.name} package<\/p>"
+      assert result =~ "<p>#{report2.description}<\/p>"
       # Verify commnets section is visible
       assert result =~ "comments-section-div"
     end
@@ -236,9 +231,9 @@ defmodule HexpmWeb.PackageReportControllerTest do
         |> get("/reports/#{report2.id}")
 
       result = response(conn, 200)
-      assert result =~ "id #{report2.id} <\/p>"
-      assert result =~ "on #{report2.package.name} package <\/p>"
-      assert result =~ "<p> #{report2.description} <\/p>"
+      assert result =~ "id #{report2.id}<\/p>"
+      assert result =~ "on #{report2.package.name} package<\/p>"
+      assert result =~ "<p>#{report2.description}<\/p>"
       # Verify commnets section is visible
       assert result =~ "comments-section-div"
     end
@@ -250,9 +245,9 @@ defmodule HexpmWeb.PackageReportControllerTest do
         |> get("/reports/#{report2.id}")
 
       result = response(conn, 200)
-      assert result =~ "id #{report2.id} <\/p>"
-      assert result =~ "on #{report2.package.name} package <\/p>"
-      assert result =~ "<p> #{report2.description} <\/p>"
+      assert result =~ "id #{report2.id}<\/p>"
+      assert result =~ "on #{report2.package.name} package<\/p>"
+      assert result =~ "<p>#{report2.description}<\/p>"
       # Verify commnets section is visible
       assert result =~ "comments-section-div"
     end
@@ -273,9 +268,9 @@ defmodule HexpmWeb.PackageReportControllerTest do
         |> get("/reports/#{report3.id}")
 
       result = response(conn, 200)
-      assert result =~ "id #{report3.id} <\/p>"
-      assert result =~ "on #{report3.package.name} package <\/p>"
-      assert result =~ "<p> #{report3.description} <\/p>"
+      assert result =~ "id #{report3.id}<\/p>"
+      assert result =~ "on #{report3.package.name} package<\/p>"
+      assert result =~ "<p>#{report3.description}<\/p>"
       # Verify commnets section is visible
       assert result =~ "comments-section-div"
     end
@@ -287,9 +282,9 @@ defmodule HexpmWeb.PackageReportControllerTest do
         |> get("/reports/#{report3.id}")
 
       result = response(conn, 200)
-      assert result =~ "id #{report3.id} <\/p>"
-      assert result =~ "on #{report3.package.name} package <\/p>"
-      assert result =~ "<p> #{report3.description} <\/p>"
+      assert result =~ "id #{report3.id}<\/p>"
+      assert result =~ "on #{report3.package.name} package<\/p>"
+      assert result =~ "<p>#{report3.description}<\/p>"
       # Verify commnets section is visible
       assert result =~ "comments-section-div"
     end
@@ -301,9 +296,9 @@ defmodule HexpmWeb.PackageReportControllerTest do
         |> get("/reports/#{report3.id}")
 
       result = response(conn, 200)
-      assert result =~ "id #{report3.id} <\/p>"
-      assert result =~ "on #{report3.package.name} package <\/p>"
-      assert result =~ "<p> #{report3.description} <\/p>"
+      assert result =~ "id #{report3.id}<\/p>"
+      assert result =~ "on #{report3.package.name} package<\/p>"
+      assert result =~ "<p>#{report3.description}<\/p>"
       # Verify commnets section is visible
       assert result =~ "comments-section-div"
     end
@@ -315,11 +310,84 @@ defmodule HexpmWeb.PackageReportControllerTest do
         |> get("/reports/#{report3.id}")
 
       result = response(conn, 200)
-      assert result =~ "id #{report3.id} <\/p>"
-      assert result =~ "on #{report3.package.name} package <\/p>"
-      assert result =~ "<p> #{report3.description} <\/p>"
+      assert result =~ "id #{report3.id}<\/p>"
+      assert result =~ "on #{report3.package.name} package<\/p>"
+      assert result =~ "<p>#{report3.description}<\/p>"
       # Verify commnets section is not visible
       refute result =~ "comments-section-div"
+    end
+
+    test "get unresolved for author", %{user3: user3, report5: report5} do
+      conn =
+        build_conn()
+        |> test_login(user3)
+        |> get("/reports/#{report5.id}")
+
+      result = response(conn, 200)
+      assert result =~ "id #{report5.id}<\/p>"
+      assert result =~ "on #{report5.package.name} package<\/p>"
+      assert result =~ "<p>#{report5.description}<\/p>"
+      # Verify commnets section is visible
+      assert result =~ "comments-section-div"
+    end
+
+    test "get unresolved for moderator", %{user2: user2, report5: report5} do
+      conn =
+        build_conn()
+        |> test_login(user2)
+        |> get("/reports/#{report5.id}")
+
+      result = response(conn, 200)
+      assert result =~ "id #{report5.id}<\/p>"
+      assert result =~ "on #{report5.package.name} package<\/p>"
+      assert result =~ "<p>#{report5.description}<\/p>"
+      # Verify commnets section is visible
+      assert result =~ "comments-section-div"
+    end
+
+    test "get unresolved for owner", %{user1: user1, report5: report5} do
+      conn =
+        build_conn()
+        |> test_login(user1)
+        |> get("/reports/#{report5.id}")
+
+      result = response(conn, 200)
+      assert result =~ "id #{report5.id}<\/p>"
+      assert result =~ "on #{report5.package.name} package<\/p>"
+      assert result =~ "<p>#{report5.description}<\/p>"
+      # Verify commnets section is visible
+      assert result =~ "comments-section-div"
+    end
+
+    test "get unresolved for others", %{user4: user4, report5: report5} do
+      conn =
+        build_conn()
+        |> test_login(user4)
+        |> get("/reports/#{report5.id}")
+
+      result = response(conn, 200)
+      assert result =~ "id #{report5.id}<\/p>"
+      assert result =~ "on #{report5.package.name} package<\/p>"
+      assert result =~ "<p>#{report5.description}<\/p>"
+      # Verify commnets section is not visible
+      refute result =~ "comments-section-div"
+    end
+  end
+
+  describe "solve/2" do
+    test "get marked package after solve report", %{
+      report2: report2,
+      user2: user2,
+      release1: release1
+    } do
+      build_conn()
+      |> test_login(user2)
+      |> post("/reports/#{report2.id}/solve")
+      |> response(conn, 302)
+
+      release = Hexpm.Repo.get(Hexpm.Repository.Release, release1.id)
+
+      assert release.retirement.reason == "report"
     end
   end
 end

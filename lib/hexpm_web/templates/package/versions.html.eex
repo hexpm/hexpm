@@ -7,7 +7,11 @@ version_map = Enum.map(@all_releases, & &1.version)
     <%= ViewHelpers.pretty_date(release.inserted_at, :short) %>
 
     <%= if release.retirement do %>
-      (<span class="version-retirement">retired</span>)
+      <%= if release.retirement.reason == "report" do %>
+        (<span class="version-retirement">reported</span>)
+      <% else %>
+        (<span class="version-retirement">retired</span>)
+      <% end %>
     <% else %>
       <%= if release.has_docs do %>
         <a href="<%= raw Hexpm.Utils.docs_html_url(@package.repository, @package, release) %>" title="Docs"><%= icon(:octicon, :book) %></a>

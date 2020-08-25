@@ -13,7 +13,7 @@ defmodule Hexpm.Repository.PackageReportsTests do
     author = insert(:user)
     moderator = insert(:user, role: "moderator")
     owner = insert(:user)
-    other = insert(:user)
+    other_user = insert(:user)
 
     owners = [build(:package_owner, user: owner)]
     package = %{insert(:package, package_owners: owners) | repository: Repository.hexpm()}
@@ -27,7 +27,7 @@ defmodule Hexpm.Repository.PackageReportsTests do
       moderator: moderator,
       description: description,
       owner: owner,
-      other: other
+      other_user: other_user
     }
   end
 
@@ -114,7 +114,6 @@ defmodule Hexpm.Repository.PackageReportsTests do
     test "check emails sent", %{
       package: package,
       release: release,
-      owner: owner,
       author: author,
       moderator: moderator,
       description: description
@@ -156,7 +155,6 @@ defmodule Hexpm.Repository.PackageReportsTests do
       release: release,
       owner: owner,
       author: author,
-      other: other,
       moderator: moderator,
       description: description
     } do
@@ -192,14 +190,54 @@ defmodule Hexpm.Repository.PackageReportsTests do
     end
   end
 
-  describe "new_comment/1" do
+  describe "unresolve/1" do
     test "check emails sent", %{
       package: package,
       release: release,
       owner: owner,
       author: author,
       moderator: moderator,
-      other: other,
+      description: description
+    } do
+      id =
+        PackageReports.add(%{
+          "releases" => [release],
+          "user" => author,
+          "package" => package,
+          "description" => description
+        }).id
+
+      PackageReports.accept(id)
+      PackageReports.unresolve(id)
+      report = PackageReports.get(id)
+
+      assert_delivered_email(
+        Hexpm.Emails.report_state_changed(
+          owner,
+          report.id,
+          "unresolved",
+          report.updated_at
+        )
+      )
+
+      assert_delivered_email(
+        Hexpm.Emails.report_state_changed(
+          moderator,
+          report.id,
+          "unresolved",
+          report.updated_at
+        )
+      )
+    end
+  end
+
+  describe "new_comment/1" do
+    test "check emails sent", %{
+      package: package,
+      release: release,
+      author: author,
+      moderator: moderator,
+      other_user: other_user,
       description: description
     } do
       id =
@@ -216,7 +254,7 @@ defmodule Hexpm.Repository.PackageReportsTests do
       comment =
         PackageReports.new_comment(%{
           "report" => report,
-          "author" => other,
+          "author" => other_user,
           "text" => "We need to solve this."
         })
 
@@ -228,6 +266,21 @@ defmodule Hexpm.Repository.PackageReportsTests do
           comment.inserted_at
         )
       )
+    end
+  end
+
+  describe "mark_release/1" do
+    test "", %{
+      package: package,
+      release: release
+    } do
+      PackageReports.mark_release(release)
+
+      new_package =
+        Packages.get(package.repository, package.name)
+        |> Packages.preload()
+
+      assert release.version in for(r <- new_package.releases, r.retirement != nil, do: r.version)
     end
   end
 end

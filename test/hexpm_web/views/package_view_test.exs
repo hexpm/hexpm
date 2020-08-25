@@ -159,7 +159,7 @@ defmodule HexpmWeb.PackageViewTest do
 
     test "reason is 'other', message is empty" do
       retirement = PackageView.retirement_html(%{reason: "other", message: nil})
-      assert parse_html_list_to_string(retirement) == "<strong>Retired package</strong>"
+      assert parse_html_list_to_string(retirement) == "<strong>Retired package:</strong>"
     end
 
     test "reason is not 'other', message contains text" do

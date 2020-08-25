@@ -97,8 +97,30 @@ defmodule Hexpm.Repository.Release do
   end
 
   def retire(release, params) do
-    cast(release, params, [])
-    |> cast_embed(:retirement, required: true)
+    cast_embed(
+      cast(release, params, []),
+      :retirement,
+      required: true,
+      with: &ReleaseRetirement.changeset(&1, &2, public: true)
+    )
+  end
+
+  def reported_retire(release) do
+    cast(
+      release,
+      %{
+        "retirement" => %{
+          "reason" => "report",
+          "message" => "security vulnerability reported"
+        }
+      },
+      []
+    )
+    |> cast_embed(
+      :retirement,
+      required: true,
+      with: &ReleaseRetirement.changeset(&1, &2, public: false)
+    )
   end
 
   def unretire(release) do

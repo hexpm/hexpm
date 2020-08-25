@@ -14,7 +14,7 @@ defmodule Hexpm.Repository.PackageReport do
     timestamps()
   end
 
-  @valid_states ["to_accept", "accepted", "rejected", "solved"]
+  @valid_states ["to_accept", "accepted", "rejected", "solved", "unresolved"]
 
   def build(releases, user, package, params) do
     %PackageReport{}

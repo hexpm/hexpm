@@ -74,8 +74,32 @@ defmodule Hexpm.Repository.PackageReports do
 
     report = Repo.one(PackageReport.get(report_id))
 
+    Enum.each(report.releases, fn r ->
+      PackageReports.mark_release(r)
+    end)
+
     Enum.each(
       Enum.map(Owners.all(report.package, user: []), & &1.user) ++ Users.get_by_role("moderator"),
+      &email_user_about_state_change(report, &1)
+    )
+  end
+
+  def unresolve(report_id) do
+    report = PackageReport.get(report_id)
+
+    report
+    |> Repo.one()
+    |> PackageReport.change_state(%{"state" => "unresolved"})
+    |> Repo.update()
+
+    report = Repo.one(PackageReport.get(report_id))
+
+    Enum.each(report.releases, fn r ->
+      PackageReports.mark_release(r)
+    end)
+
+    Enum.each(
+      Enum.map(Owners.all(report.package, [:user]), & &1.user) ++ Users.get_by_role("moderator"),
       &email_user_about_state_change(report, &1)
     )
   end
@@ -101,6 +125,11 @@ defmodule Hexpm.Repository.PackageReports do
   def all_comments_for_report(report_id) do
     PackageReportComment.all_for_report(report_id)
     |> Repo.all()
+  end
+
+  def mark_release(release) do
+    Release.reported_retire(release)
+    |> Repo.update!()
   end
 
   defp email_user_about_new_report(package_report, user) do
