@@ -383,7 +383,7 @@ defmodule HexpmWeb.PackageReportControllerTest do
       build_conn()
       |> test_login(user2)
       |> post("/reports/#{report2.id}/solve")
-      |> response(conn, 302)
+      |> response(302)
 
       release = Hexpm.Repo.get(Hexpm.Repository.Release, release1.id)
 
