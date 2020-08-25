@@ -96,24 +96,31 @@ defmodule Hexpm.Repository.Release do
     |> validate_editable(:delete, force?, true)
   end
 
-  def retire(release, params, reported? \\ false) do
-    case reported? do
-      true ->
-        cast(release, params, [])
-        |> cast_embed(:retirement, required: true)
-
-      _ ->
-        cast(release, params, [])
-        |> validate_not_for("report")
-        |> cast_embed(:retirement, required: true)
-    end
+  def retire(release, params) do
+    cast_embed(
+      cast(release, params, []),
+      :retirement,
+      required: true,
+      with: &ReleaseRetirement.changeset(&1, &2, public: true)
+    )
   end
 
-  defp validate_not_for(changeset, cause) do
-    case Ecto.Changeset.get_change(changeset, :retirement) do
-      %{reason: ^cause} -> add_error(changeset, :retirement, "Unexpected retirement reason")
-      _ -> changeset
-    end
+  def reported_retire(release) do
+    cast(
+      release,
+      %{
+        "retirement" => %{
+          "reason" => "report",
+          "message" => "security vulnerability reported"
+        }
+      },
+      []
+    )
+    |> cast_embed(
+      :retirement,
+      required: true,
+      with: &ReleaseRetirement.changeset(&1, &2, public: false)
+    )
   end
 
   def unretire(release) do

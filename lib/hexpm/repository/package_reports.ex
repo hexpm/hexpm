@@ -128,16 +128,7 @@ defmodule Hexpm.Repository.PackageReports do
   end
 
   def mark_release(release) do
-    Release.retire(
-      release,
-      %{
-        "retirement" => %{
-          "reason" => "report",
-          "message" => "security vulnerability reported"
-        }
-      },
-      true
-    )
+    Release.reported_retire(release)
     |> Repo.update!()
   end
 

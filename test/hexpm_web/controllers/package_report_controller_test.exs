@@ -380,12 +380,10 @@ defmodule HexpmWeb.PackageReportControllerTest do
       user2: user2,
       release1: release1
     } do
-      conn =
-        build_conn()
-        |> test_login(user2)
-        |> post("/reports/#{report2.id}/solve")
-
-      assert result = response(conn, 302)
+      build_conn()
+      |> test_login(user2)
+      |> post("/reports/#{report2.id}/solve")
+      |> response(conn, 302)
 
       release = Hexpm.Repo.get(Hexpm.Repository.Release, release1.id)
 
