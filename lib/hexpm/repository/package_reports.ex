@@ -85,14 +85,11 @@ defmodule Hexpm.Repository.PackageReports do
   end
 
   def unresolve(report_id) do
-    report = PackageReport.get(report_id)
-
-    report
-    |> Repo.one()
-    |> PackageReport.change_state(%{"state" => "unresolved"})
-    |> Repo.update()
-
-    report = Repo.one(PackageReport.get(report_id))
+    report =
+      PackageReport.get(report_id)
+      |> Repo.one()
+      |> PackageReport.change_state(%{"state" => "unresolved"})
+      |> Repo.update!()
 
     Enum.each(report.releases, fn r ->
       PackageReports.mark_release(r)
