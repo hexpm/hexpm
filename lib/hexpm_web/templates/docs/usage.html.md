@@ -43,7 +43,7 @@ end
 
 <dl class="dl-horizontal">
   <dt><code>:hex</code></dt>
-  <dd>The name of the package. Defaults to the dependency application name.</dd>
+  <dd>The name of the package on Hex. Defaults to the dependency application name. Use this option to override if the dependency sets different <code>name</code> (mix) or <code>pkg_name</code> (rebar3).</dd>
   <dt><code>:repo</code></dt>
   <dd>The repository to fetch the package from, the repository needs to be configured with the <code>mix hex.repo</code> task. Defaults to the global <code>"hexpm"</code> repository.</dd>
   <dt><code>:organization</code></dt>
