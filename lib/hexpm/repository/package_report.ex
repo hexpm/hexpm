@@ -1,6 +1,8 @@
 defmodule Hexpm.Repository.PackageReport do
   use Hexpm.Schema
 
+  @derive Phoenix.Param
+
   schema "package_reports" do
     field :state, :string, default: "to_accept"
     field :description, :string
