@@ -539,8 +539,4 @@ defmodule Hexpm.Accounts.Users do
        valid?: false
      }}
   end
-
-  def has_role(user, role) do
-    user != nil and user.role == role
-  end
 end

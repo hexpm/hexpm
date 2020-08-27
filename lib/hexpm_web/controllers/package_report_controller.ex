@@ -7,24 +7,17 @@ defmodule HexpmWeb.PackageReportController do
   @report_updated_msg "Package report updated"
   @report_bad_update_msg "Package report can not be updated"
   @report_bad_version_msg "No release matchs given requirement"
-  @report_not_accessible "Requested package report not accessible"
 
   def new_comment(conn, params) do
-    report_id = params["id"]
-    report = PackageReports.get(report_id)
+    report = PackageReports.get(params["id"])
     author = conn.assigns.current_user
-
-    PackageReports.new_comment(%{
-      "report" => report,
-      "author" => author,
-      "text" => params["text"]
-    })
+    PackageReports.new_comment(report, author, params)
 
     redirect(conn, to: Routes.package_report_path(HexpmWeb.Endpoint, :show, report.id))
   end
 
   def index(conn, _params) do
-    reports = fetch_package_reports()
+    reports = PackageReports.all()
     reports_count = Enum.count(reports)
 
     render(
@@ -41,10 +34,7 @@ defmodule HexpmWeb.PackageReportController do
     if package do
       build_report_form(conn, params)
     else
-      conn
-      |> put_flash(:error, @report_not_accessible)
-      |> put_status(404)
-      |> index([])
+      not_found(conn)
     end
   end
 
@@ -92,20 +82,12 @@ defmodule HexpmWeb.PackageReportController do
     user = conn.assigns.current_user
 
     if report do
-      for_moderator = Users.has_role(user, "moderator")
+      for_moderator = User.has_role?(user, "moderator")
       for_owner = Owners.get(report.package, user) != nil
       for_author = user.id == report.author.id
-      for_basic = not (for_moderator or for_owner or for_author)
 
-      if (report.state in ["to_accept", "rejected"] and not for_moderator and
-            (for_owner or for_basic)) or
-           (report.state == "accepted" and for_basic) do
-        conn
-        |> put_flash(:error, @report_not_accessible)
-        |> put_status(404)
-        |> index([])
-      else
-        comments = PackageReports.all_comments_for_report(report.id)
+      if visible_report?(report, user, for_owner) do
+        comments = PackageReports.all_comments(report.id)
 
         render(
           conn,
@@ -116,12 +98,22 @@ defmodule HexpmWeb.PackageReportController do
           for_author: for_author,
           comments: comments
         )
+      else
+        not_found(conn)
       end
     else
-      conn
-      |> put_flash(:error, @report_not_accessible)
-      |> put_status(404)
-      |> index([])
+      not_found(conn)
+    end
+  end
+
+  defp visible_report?(report, user, owner?) do
+    moderator? = User.has_role?(user, "moderator")
+    author? = user.id == report.author.id
+
+    cond do
+      report.state in ["to_accept", "rejected"] -> moderator? or author?
+      report.state == "accepted" -> moderator? or author? or owner?
+      report.state in ["solved", "unresolved"] -> true
     end
   end
 
@@ -130,8 +122,8 @@ defmodule HexpmWeb.PackageReportController do
 
     report = PackageReports.get(report_id)
 
-    if valid_state_change("accepted", report) and
-         Users.has_role(conn.assigns.current_user, "moderator") do
+    if valid_state_change?("accepted", report) and
+         User.has_role?(conn.assigns.current_user, "moderator") do
       PackageReports.accept(report_id)
       notify_good_update(conn)
     else
@@ -144,8 +136,8 @@ defmodule HexpmWeb.PackageReportController do
 
     report = PackageReports.get(report_id)
 
-    if valid_state_change("rejected", report) and
-         Users.has_role(conn.assigns.current_user, "moderator") do
+    if valid_state_change?("rejected", report) and
+         User.has_role?(conn.assigns.current_user, "moderator") do
       PackageReports.reject(report_id)
 
       notify_good_update(conn)
@@ -159,8 +151,8 @@ defmodule HexpmWeb.PackageReportController do
 
     report = PackageReports.get(report_id)
 
-    if valid_state_change("solved", report) and
-         Users.has_role(conn.assigns.current_user, "moderator") do
+    if valid_state_change?("solved", report) and
+         User.has_role?(conn.assigns.current_user, "moderator") do
       PackageReports.solve(report_id)
 
       notify_good_update(conn)
@@ -174,8 +166,8 @@ defmodule HexpmWeb.PackageReportController do
 
     report = PackageReports.get(report_id)
 
-    if valid_state_change("unresolved", report) and
-         Users.has_role(conn.assigns.current_user, "moderator") do
+    if valid_state_change?("unresolved", report) and
+         User.has_role?(conn.assigns.current_user, "moderator") do
       PackageReports.unresolve(report_id)
 
       notify_good_update(conn)
@@ -197,26 +189,22 @@ defmodule HexpmWeb.PackageReportController do
     |> show(params)
   end
 
-  defp valid_state_change(new, %{state: "to_accept"}), do: new in ["accepted", "rejected"]
+  defp valid_state_change?(new, %{state: "to_accept"}), do: new in ["accepted", "rejected"]
 
-  defp valid_state_change(new, %{state: "accepted"}),
+  defp valid_state_change?(new, %{state: "accepted"}),
     do: new in ["solved", "rejected", "unresolved"]
 
-  defp valid_state_change(new, %{state: "rejected"}), do: new in ["accepted"]
-  defp valid_state_change(_new, _), do: false
+  defp valid_state_change?(new, %{state: "rejected"}), do: new in ["accepted"]
+  defp valid_state_change?(_new, _), do: false
 
   defp slice_releases(releases, requirement) do
     case Version.parse_requirement(requirement) do
+      {:ok, requirement} ->
+        Enum.filter(releases, &Version.match?(&1.version, requirement))
+
       :error ->
         []
-
-      _ ->
-        Enum.filter(releases, &Version.match?(&1.version, requirement))
     end
-  end
-
-  defp fetch_package_reports() do
-    PackageReports.all()
   end
 
   defp build_report_form(conn, params) do

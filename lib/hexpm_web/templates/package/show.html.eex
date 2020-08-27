@@ -162,11 +162,11 @@ tools = [
 
   <div class="col-md-3">
     <h3>Report</h3>
-      <form action = "<%= Routes.package_report_path(Endpoint, :new) %>">
-        <input type = "hidden" name = "package" value = "<%= @package.name %>"/>
-        <input type = "hidden" name = "repository" value = "<%= @package.repository.name %>"/>
-        <button type = "submit"> Report <%= ViewHelpers.package_name(@package) %> </button>
-      </a>
+      <form action="<%= Routes.package_report_path(Endpoint, :new) %>">
+        <input type="hidden" name="package" value="<%= @package.name %>"/>
+        <input type="hidden" name="repository" value="<%= @package.repository.name %>"/>
+        <button type="submit"> Report <%= ViewHelpers.package_name(@package) %></button>
+      </form>
     <h3>Config</h3>
     <%= for {tool, file} <- tools do %>
       <div class="package-snippet">

@@ -123,10 +123,13 @@ defmodule HexpmWeb.PackageView do
   def retirement_message(retirement) do
     reason = ReleaseRetirement.reason_text(retirement.reason)
 
-    case retirement.reason do
-      "report" -> ["Marked package"]
-      _ -> ["Retired package"]
-    end ++
+    head =
+      case retirement.reason do
+        "report" -> ["Marked package"]
+        _ -> ["Retired package"]
+      end
+
+    body =
       cond do
         reason && retirement.message ->
           [": ", reason, " - ", retirement.message]
@@ -140,6 +143,8 @@ defmodule HexpmWeb.PackageView do
         true ->
           []
       end
+
+    head ++ body
   end
 
   def retirement_html(retirement) do

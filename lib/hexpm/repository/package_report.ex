@@ -22,7 +22,7 @@ defmodule Hexpm.Repository.PackageReport do
     |> validate_required(:state)
     |> validate_inclusion(:state, @valid_states)
     |> validate_length(:description, min: 2, max: 500)
-    |> put_assoc(:package_report_releases, get_list_of_affected(releases))
+    |> put_assoc(:package_report_releases, package_report_releases(releases))
     |> put_assoc(:author, user)
     |> put_assoc(:package, package)
   end
@@ -56,11 +56,7 @@ defmodule Hexpm.Repository.PackageReport do
     )
   end
 
-  def count() do
-    from(r in PackageReport, select: count(r.id))
-  end
-
-  defp get_list_of_affected(releases) do
+  defp package_report_releases(releases) do
     Enum.map(releases, &%PackageReportRelease{release_id: &1.id})
   end
 end

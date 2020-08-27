@@ -2,16 +2,16 @@
 <p>on <%= @report.package.name %> package</p>
 <p>Affected releases: -
 <%= for ar <- @report.package_report_releases do %>
-  <%= ar.release.version %> - 
+  <%= ar.release.version %> -
 <% end %>
 <p>Submitted by <%= @report.author.username %> <%= ViewHelpers.human_relative_time_from_now(@report.inserted_at) %></p>
 <p><%= @report.description %></p>
 <p>Report status: <%= @report.state %></p>
 
 <%= if @for_moderator do %>
-  <%= render "_moderator_panel.html", report: @report, author: @report.author%>
+  <%= render "_moderator_panel.html", report: @report, author: @report.author %>
 <% end%>
 
-<%= if @for_moderator or @for_owner or @for_author do %>
-  <%= render "_comments_section.html", report: @report, for_moderator: @for_moderator, for_owner: @for_owner, for_author: @for_author, comments: @comments%>
+<%= if (@report.state not in ["to_accept"]) and (@for_moderator or @for_owner or @for_author) do %>
+  <%= render "_comments_section.html", report: @report, comments: @comments %>
 <% end %>
