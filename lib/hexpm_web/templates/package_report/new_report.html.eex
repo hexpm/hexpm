@@ -15,7 +15,7 @@
   <input type="text" name="requirement"/>
   <p class = "report-info-section-title">Submit report.</p>
   <p>Make sure the report description and affected releases fields are correct.</p>
-  <p>You will not be able to modify after the report has been submitted.</p>
+  <p>You will not be able to modify the report after it has been submitted.</p>
   <button type="submit" class="btn">
     Submit Report
   </button>
