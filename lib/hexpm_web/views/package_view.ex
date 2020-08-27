@@ -45,7 +45,7 @@ defmodule HexpmWeb.PackageView do
 
   def dep_snippet(:mix, package, release) do
     version = snippet_version(:mix, release.version)
-    app_name = release.meta.app || package.name
+    app_name = (release.meta && release.meta.app) || package.name
     organization = snippet_organization(package.repository.name)
 
     if package.name == app_name do
@@ -57,7 +57,7 @@ defmodule HexpmWeb.PackageView do
 
   def dep_snippet(:rebar, package, release) do
     version = snippet_version(:rebar, release.version)
-    app_name = release.meta.app || package.name
+    app_name = (release.meta && release.meta.app) || package.name
 
     if package.name == app_name do
       "{#{package.name}, \"#{version}\"}"

@@ -8,7 +8,14 @@ defmodule HexpmWeb.API.ReleaseControllerTest do
     user = insert(:user)
     repository = insert(:repository)
     package = insert(:package, package_owners: [build(:package_owner, user: user)])
-    release = insert(:release, package: package, version: "0.0.1", has_docs: true)
+
+    release =
+      insert(:release,
+        package: package,
+        version: "0.0.1",
+        has_docs: true,
+        meta: build(:release_metadata, app: package.name)
+      )
 
     %{
       user: user,
@@ -1081,6 +1088,8 @@ defmodule HexpmWeb.API.ReleaseControllerTest do
         build_conn()
         |> get("api/packages/#{package.name}/releases/#{release.version}")
         |> json_response(200)
+
+      assert result["configs"]["mix.exs"] == ~s({:#{package.name}, "~> 0.0.1"})
 
       assert result["url"] ==
                "http://localhost:5000/api/packages/#{package.name}/releases/#{release.version}"
