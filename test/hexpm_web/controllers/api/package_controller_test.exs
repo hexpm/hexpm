@@ -1,5 +1,6 @@
 defmodule HexpmWeb.API.PackageControllerTest do
   use HexpmWeb.ConnCase, async: true
+  alias Hexpm.Repository.Packages
 
   setup do
     user = insert(:user)
@@ -9,16 +10,15 @@ defmodule HexpmWeb.API.PackageControllerTest do
     package1 =
       insert(
         :package,
-        name: "HexpmWeb.API.PackageControllerTest",
         inserted_at: ~N[2030-01-01 00:00:00]
       )
 
     package2 = insert(:package, updated_at: ~N[2030-01-01 00:00:00])
-
     package3 = insert(:package, repository_id: repository.id, updated_at: ~N[2030-01-01 00:00:00])
-
     package4 = insert(:package)
-    insert(:release, package: package1, version: "0.0.1", has_docs: true)
+
+    insert(:release, package: package1, version: "0.0.1", has_docs: true, meta: build(:release_metadata, app: package1.name))
+    insert(:release, package: package2, version: "0.0.1", has_docs: true)
     insert(:release, package: package3, version: "0.0.1", has_docs: true)
 
     insert(
@@ -32,10 +32,10 @@ defmodule HexpmWeb.API.PackageControllerTest do
     insert(:organization_user, organization: repository.organization, user: user)
 
     %{
-      package1: package1,
-      package2: package2,
-      package3: package3,
-      package4: package4,
+      package1: Packages.preload(package1),
+      package2: Packages.preload(package2),
+      package3: Packages.preload(package3),
+      package4: Packages.preload(package4),
       repository: repository,
       user: user,
       unauthorized_user: unauthorized_user
@@ -154,6 +154,10 @@ defmodule HexpmWeb.API.PackageControllerTest do
       assert result["html_url"] == "http://localhost:5000/packages/#{package1.name}"
       assert result["docs_html_url"] == "http://localhost:5002/#{package1.name}/"
 
+      assert result["latest_version"] == "0.0.1"
+      assert result["latest_stable_version"] == "0.0.1"
+      assert result["configs"]["mix.exs"] == ~s({:#{package1.name}, "~> 0.0.1"})
+
       release = List.first(result["releases"])
 
       assert release["url"] ==
@@ -246,7 +250,7 @@ defmodule HexpmWeb.API.PackageControllerTest do
 
       conn =
         build_conn()
-        |> get("/api/packages/HexpmWeb.API.PackageControllerTest/audit_logs")
+        |> get("/api/packages/#{package.name}/audit_logs")
 
       assert [%{"action" => "test.package.audit_logs"}] = json_response(conn, :ok)
     end

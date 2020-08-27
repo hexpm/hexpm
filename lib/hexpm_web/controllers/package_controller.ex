@@ -67,7 +67,9 @@ defmodule HexpmWeb.PackageController do
 
       if release do
         package(conn, repositories, package, releases, release, type)
-      end || not_found(conn)
+      else
+        not_found(conn)
+      end
     end)
   end
 
