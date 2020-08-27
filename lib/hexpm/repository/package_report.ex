@@ -21,7 +21,6 @@ defmodule Hexpm.Repository.PackageReport do
     |> cast(params, ~w(state description)a)
     |> validate_required(:state)
     |> validate_inclusion(:state, @valid_states)
-    |> validate_length(:description, min: 2, max: 500)
     |> put_assoc(:package_report_releases, get_list_of_affected(releases))
     |> put_assoc(:author, user)
     |> put_assoc(:package, package)

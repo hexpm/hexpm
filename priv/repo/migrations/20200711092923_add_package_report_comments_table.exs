@@ -3,7 +3,7 @@ defmodule Hexpm.RepoBase.Migrations.AddCommentsTable do
 
   def up do
     create table(:package_report_comments) do
-      add(:text, :string, null: false)
+      add(:text, :text, null: false)
       add(:author_id, references(:users), null: false)
       add(:report_id, references(:package_reports), null: false)
 

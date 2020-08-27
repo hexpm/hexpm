@@ -1,4 +1,6 @@
-<div style="background-color: gray; margin-top: 10px">
-  <%= @comment.author.username %> says <br>
-  <%= @comment.text %>
+<div class="comment-div">
+  <p><%= @comment.author.username %> commented · <%= ViewHelpers.human_relative_time_from_now(@comment.inserted_at) %> </p> 
+  <div>
+    <p><%= @comment.text %></p>
+  </div>
 </div>

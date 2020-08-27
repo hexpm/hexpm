@@ -3,26 +3,27 @@
 </h2>
 
 <%= if @total == 0 do %>
-  <div class="package-list no-results">
+  <div class="no-results clearfix pagination-info">
     <h4>No Results Found</h4>
   </div>
 <% else %>
-  <div>
-    <%= @total %> results found
+  <div class="clearfix pagination-info reports-count">
+    <h4 class="results-found"><%= @total %> results found</h4>
   </div>
-  <div>
+  <div class="reports-table">
     <table>
       <tr>
-        <td>Report Identifier</td>
-        <td>Package Name</td>
-        <td>Affected Versions</td>
-        <td>Report Status</td>
-        <td>Reporting User</td>
+        <td>ID</td>
+        <td>On Package</td>
+        <td>On Versions</td>
+        <td>State</td>
+        <td>By user</td>
         <td>Description</td>
       <tr>
       <%= for report <- @reports do %>
         <%= render "_package_report.html", report: report %>
       <% end %>
+      </tr>
     </table>
   </div>
 <% end %>

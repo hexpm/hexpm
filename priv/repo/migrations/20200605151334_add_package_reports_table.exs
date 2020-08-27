@@ -3,7 +3,7 @@ defmodule Hexpm.RepoBase.Migrations.AddPackageReportsTable do
 
   def up() do
     create table(:package_reports) do
-      add(:description, :string, null: false)
+      add(:description, :text, null: false)
       add(:state, :string, null: false)
       add(:package_id, references(:packages), null: false)
       add(:author_id, references(:users), null: false)
