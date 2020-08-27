@@ -106,15 +106,14 @@ defmodule Hexpm.Repository.Release do
   end
 
   def reported_retire(release) do
-    cast(
+    change(
       release,
       %{
-        "retirement" => %{
-          "reason" => "report",
-          "message" => "security vulnerability reported"
+        retirement: %{
+          reason: "report",
+          message: "security vulnerability reported"
         }
-      },
-      []
+      }
     )
     |> cast_embed(
       :retirement,
@@ -128,11 +127,11 @@ defmodule Hexpm.Repository.Release do
     |> put_embed(:retirement, nil)
   end
 
-  defp validate_editable(changeset, _action, true, _replace?) do
+  defp validate_editable(changeset, _action, true = _force?, _replace?) do
     changeset
   end
 
-  defp validate_editable(changeset, action, false, replace?) do
+  defp validate_editable(changeset, action, false = _force?, replace?) do
     if editable?(changeset.data, replace?) do
       changeset
     else

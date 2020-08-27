@@ -1,13 +1,11 @@
-<%= if (@report.state not in ["to_accept"]) and (@for_author or @for_moderator or @for_owner) do %>
-  <div id = "comments-section-div">
-    <%= render "_new_comment.html", report: @report %>
-    <%= if @comments != [] do %>
-      Comments:
-      <%= for comment <- @comments do %>
-        <%= render "_comment.html", comment: comment%>
-      <% end %>
-    <% else %>
-      No comments for this report
-    <% end%>
-  </div>
-<% end %>
+<div id = "comments-section-div">
+  <%= render "_new_comment.html", report: @report %>
+  <%= if @comments != [] do %>
+    Comments:
+    <%= for comment <- @comments do %>
+      <%= render "_comment.html", comment: comment%>
+    <% end %>
+  <% else %>
+    No comments for this report
+  <% end%>
+</div>

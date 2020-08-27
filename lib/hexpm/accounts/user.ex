@@ -205,4 +205,8 @@ defmodule Hexpm.Accounts.User do
   end
 
   defp use_recovery_code(code, _other), do: code
+
+  def has_role?(user, role) do
+    user != nil and user.role == role
+  end
 end

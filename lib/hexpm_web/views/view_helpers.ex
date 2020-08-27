@@ -36,10 +36,6 @@ defmodule HexpmWeb.ViewHelpers do
     Routes.package_path(Endpoint, :show, repository, package, [])
   end
 
-  def path_for_package_report(report) do
-    Routes.package_report_path(Endpoint, :show, report)
-  end
-
   def path_for_release(package, release) do
     if package.repository.id == 1 do
       Routes.package_path(Endpoint, :show, package, release, [])
