@@ -17,7 +17,13 @@ defmodule HexpmWeb.API.PackageControllerTest do
     package3 = insert(:package, repository_id: repository.id, updated_at: ~N[2030-01-01 00:00:00])
     package4 = insert(:package)
 
-    insert(:release, package: package1, version: "0.0.1", has_docs: true, meta: build(:release_metadata, app: package1.name))
+    insert(:release,
+      package: package1,
+      version: "0.0.1",
+      has_docs: true,
+      meta: build(:release_metadata, app: package1.name)
+    )
+
     insert(:release, package: package2, version: "0.0.1", has_docs: true)
     insert(:release, package: package3, version: "0.0.1", has_docs: true)
 

@@ -33,7 +33,7 @@ defmodule HexpmWeb.API.PackageView do
       configs: %{
         "mix.exs": PackageView.dep_snippet(:mix, package, release),
         "rebar.config": PackageView.dep_snippet(:rebar, package, release),
-        "erlang.mk": PackageView.dep_snippet(:erlang_mk, package, release),
+        "erlang.mk": PackageView.dep_snippet(:erlang_mk, package, release)
       },
       meta: %{
         description: package.meta.description,
