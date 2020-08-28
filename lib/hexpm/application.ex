@@ -15,6 +15,7 @@ defmodule Hexpm.Application do
       {PlugAttack.Storage.Ets, name: HexpmWeb.Plugs.Attack.Storage, clean_period: 60_000},
       {Hexpm.Throttle, name: Hexpm.SESThrottle, rate: ses_rate(), unit: 1000},
       {Hexpm.Billing.Report, name: Hexpm.Billing.Report, interval: 60_000},
+      HexpmWeb.Telemetry,
       HexpmWeb.Endpoint
     ]
 

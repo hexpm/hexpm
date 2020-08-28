@@ -20,7 +20,7 @@ defmodule Hexpm.MixProject do
   def application() do
     [
       mod: {Hexpm.Application, []},
-      extra_applications: [:logger, :runtime_tools]
+      extra_applications: [:logger, :runtime_tools, :os_mon]
     ]
   end
 
@@ -63,7 +63,9 @@ defmodule Hexpm.MixProject do
       {:postgrex, "~> 0.14"},
       {:pot, "~> 0.11.0"},
       {:rollbax, "~> 0.5"},
-      {:sweet_xml, "~> 0.5"}
+      {:sweet_xml, "~> 0.5"},
+      {:telemetry_poller, "~> 0.4"},
+      {:telemetry_metrics, "~> 0.4"}
     ]
   end
 
