@@ -252,35 +252,30 @@ defmodule Hexpm.Repository.PackageReportsTests do
       report = PackageReports.get(id)
 
       comment =
-        PackageReports.new_comment(%{
-          "report" => report,
-          "author" => other_user,
-          "text" => "We need to solve this."
-        })
+        PackageReports.new_comment(
+          report,
+          other_user,
+          %{"text" => "We need to solve this."}
+        )
 
       assert_delivered_email(
         Hexpm.Emails.report_commented(
           moderator,
           comment.author.username,
-          comment.report.id,
+          report.id,
           comment.inserted_at
         )
       )
     end
   end
 
-  describe "mark_release/1" do
-    test "", %{
-      package: package,
-      release: release
-    } do
-      PackageReports.mark_release(release)
+  test "mark_release/1", %{package: package, release: release} do
+    PackageReports.mark_release(release)
 
-      new_package =
-        Packages.get(package.repository, package.name)
-        |> Packages.preload()
+    new_package =
+      Packages.get(package.repository, package.name)
+      |> Packages.preload()
 
-      assert release.version in for(r <- new_package.releases, r.retirement != nil, do: r.version)
-    end
+    assert release.version in for(r <- new_package.releases, r.retirement != nil, do: r.version)
   end
 end

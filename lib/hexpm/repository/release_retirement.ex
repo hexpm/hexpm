@@ -18,8 +18,11 @@ defmodule Hexpm.Repository.ReleaseRetirement do
     |> validate_reason(Keyword.fetch!(opts, :public))
   end
 
-  defp validate_reason(changeset, true = _public?), do: validate_inclusion(changeset, :reason, @public_reasons)
-  defp validate_reason(changeset, false = _public?), do: validate_inclusion(changeset, :reason, @private_reasons)
+  defp validate_reason(changeset, true = _public?),
+    do: validate_inclusion(changeset, :reason, @public_reasons)
+
+  defp validate_reason(changeset, false = _public?),
+    do: validate_inclusion(changeset, :reason, @private_reasons)
 
   def reason_text("other"), do: nil
   def reason_text("invalid"), do: "Release invalid"
