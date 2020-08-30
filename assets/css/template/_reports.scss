@@ -1,0 +1,131 @@
+.reports-count {
+  width: 100%;
+}
+
+.reports-table {
+  padding: 20px 0;
+}
+
+.reports-table table {
+  width: 100%;
+}
+
+.reports-table tr {
+  padding: 0;
+  list-style: none;
+}
+.reports-table tr td{
+  padding: 5px 10px;
+}
+.reports-table tr td{
+  text-align: center;
+}
+.reports-table tr td:last-child{
+  text-align: left;
+  width: 40%;
+}
+.reports-table tr:nth-child(1) td {
+  background: #5C676D;
+  color: white;
+}
+.reports-table tr:nth-child(1) td:first-child {
+  background: #5C676D;
+  color: white;
+  border-top-left-radius: 10px;
+}
+.reports-table tr:nth-child(1) td:last-child{
+  background: #5C676D;
+  color: white;
+  border-top-right-radius: 10px;
+}
+.reports-table tr:nth-child(even) {
+  background: #f4f4f4;
+}
+
+.release-button{
+  padding: 0px 0px;
+  pointer-events: none;
+  font-size: 1.25rem;
+}
+
+.report-info-row {
+  padding-bottom: 20px;
+  border-bottom: #ccc 1px solid;
+}
+
+.report-info div{
+  margin-bottom: 10px;
+}
+
+.report-info-title{
+  font-size: 3rem;
+  text-align: center;
+  line-height: 2rem;
+  padding: 20px 0;
+  font-weight: 400;
+  color: #714a94;
+  border-bottom: #ccc 1px solid;
+  font-family: "Lato", sans-serif;
+}
+
+.report-info-subtitle{
+  padding-bottom: 10px;
+  font-style: italic;
+  font-size: 1.6rem;
+  line-height: 1.875rem;
+  font-family: "Lato", sans-serif;
+  color: #333333;
+}
+
+.report-info-section-title{
+  font-size: 2.5rem;
+  line-height: 2rem;
+  padding: 20px 0;
+  font-weight: 400;
+  color: #000;
+  font-family: "Lato", sans-serif;
+}
+
+.report-info-moderator-panel input  {
+  width: 50%;
+}
+
+.comments-section-div {
+  padding: 10px 0;
+  width: 80%;
+}
+
+.new-comment-div {
+  padding: 10px;
+  border: 1px solid #e5e1e8;
+  border-radius: 5px;
+}
+
+.comment-div{
+  margin: 10px;
+  background-color: #e5e1e8a2;
+  border: 1px solid #e5e1e8;
+  border-radius: 2px;
+}
+
+.comment-div p{
+  padding: 5px;
+  margin: 0px;
+}
+
+.comment-div div{
+  padding: 5px;
+  background-color: #fff;
+  border: 1px solid #e5e1e8;
+  border-radius: 2px;
+}
+
+.new-comment-box {
+  width: 100%;
+  height: 100px;
+  font-size: 20px;
+  border-radius: 5px;
+  margin-bottom: 5px;
+  resize: none;
+  padding: 10px;
+}
