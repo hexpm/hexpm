@@ -13,8 +13,7 @@ config :hexpm,
   dashboard_user: "hex_user",
   dashboard_password: "hex_password"
 
-config :hexpm, :features,
-  package_reports: true
+config :hexpm, :features, package_reports: true
 
 config :hexpm, ecto_repos: [Hexpm.RepoBase]
 

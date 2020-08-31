@@ -6,8 +6,7 @@ config :hexpm,
   pwned_impl: Hexpm.Pwned.HaveIBeenPwned,
   tmp_dir: "tmp"
 
-config :hexpm, :features,
-  package_reports: false
+config :hexpm, :features, package_reports: false
 
 config :hexpm, HexpmWeb.Endpoint,
   http: [compress: true],
