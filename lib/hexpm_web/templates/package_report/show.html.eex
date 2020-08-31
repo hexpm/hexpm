@@ -1,0 +1,31 @@
+<div class="row">
+  <p class="report-info-title"> Report <b>#<%= @report.id %></b> - affects <b><%= @report.package.name %></b> package</p>
+  <p class="report-info-subtitle"> <%= ViewHelpers.human_relative_time_from_now(@report.inserted_at) %> · by <%= @report.author.username %></p>
+</div>
+<div class="row report-info-row">
+  <div class="col-sm-5 report-info">
+    <p class="report-info-section-title"> Information</p>
+    <p class="report-info-state"> Current state is <b><%= @report.state %></b> </p>
+    <p>Affected releases: 
+      <%= for ar <- @report.package_report_releases do %>
+        <button class="release-button"><%= ar.release.version %></button>
+      <% end %>
+    </p>
+    
+    <div class="report-info-moderator-panel">
+      <%= if @for_moderator do %>
+        <%= render "_moderator_panel.html", report: @report, author: @report.author%>
+      <% end%>
+    </div>
+  </div>
+
+  <div class="col-sm-7">
+    <div class="row report-description">
+      <p class="report-info-section-title">Description</p>
+      <%= @report.description %>
+    </div>
+  </div>
+</div>
+
+<%= render "_comments_section.html", report: @report, for_moderator: @for_moderator, for_owner: @for_owner, for_author: @for_author, comments: @comments%>
+

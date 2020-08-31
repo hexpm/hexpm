@@ -25,6 +25,7 @@ Hexpm.Repo.transaction(fn ->
       username: "eric",
       emails: [build(:email, email: "eric@example.com")],
       password: password.("ericric"),
+      role: "moderator",
       keys: [
         build(
           :key,

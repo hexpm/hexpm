@@ -101,4 +101,47 @@ defmodule HexpmWeb.EmailView do
       """
     end
   end
+
+  defmodule ReportState do
+    def state_explain("to_accept") do
+      """
+      The report has now state \"to_accept\".
+      This means that the vulnerability reported has to be reviewed by a moderator in order to be recognized or not as a real vulnerability.
+      Only the report author and moderators can see the report description.
+      """
+    end
+
+    def state_explain("accepted") do
+      """
+      The report has now state \"accepted\".
+      This means that the vulnerability reported has been recognized by a moderator as real.
+      A comments section has been enabled on the report for moderators, owners and the report author to discuss the vulnerability.
+      """
+    end
+
+    def state_explain("solved") do
+      """
+      The report has now state \"solved\".
+      This means that the vulnerability reported has been solved.
+      Now the report is public, so users other than the report author, moderators and the reported package owners can read the report description.
+      """
+    end
+
+    def state_explain("rejected") do
+      """
+      The report has now state \"rejected\".
+      This means that the vulnerability reported has not been recognized as such a vulnerability by a moderator.
+      The report will not be made public, so users other than the report author and moderators will not be able to read the report description or the comments section.
+      Moderators and the report author can still comment about the report on the report's comment section.
+      """
+    end
+
+    def state_explain("unresolved") do
+      """
+      The report has now state \"unresolved\".
+      This means the report has been on a revision state (\"accepted\") for too long.
+      Now the report is public, so users other than the report author, moderators and the reported package owners can read the report description.
+      """
+    end
+  end
 end

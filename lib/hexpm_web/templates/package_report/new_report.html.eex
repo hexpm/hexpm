@@ -1,0 +1,22 @@
+<h2 class="report-info-title">
+  Package Report for <%= @package_name %>
+</h2>
+
+<%= form_tag Routes.package_report_path(Endpoint, :create) do %>
+  <p class = "report-info-section-title">Description </p>
+  <p> Provide a description of the vulnerability you have detected.</p>
+  <input type="hidden" name="package" value="<%= @package_name %>"/>
+  <input type="hidden" name="repository" value="<%= @repository %>"/>
+  <textarea class="new-comment-box" name="description" placeholder="Enter report description here..."><%= @description %></textarea>
+  <p class = "report-info-section-title">Affected Releases</p>
+  <p> Indicate in which releases have you detected the described vulnerability.</p>
+  <p> You must provide a <a href="https://hexdocs.pm/elixir/Version.html#module-requirements"> requirement</a> representing the affected releases.</p>
+  <p class="report-info-subtitle"> i.e. "== 2.0.0" selects only 2.0.0 version; ">= 2.0.0 and <= 3.0.0" selects all versions between 2.0.0 and 3.0.0 both included.</p>
+  <input type="text" name="requirement"/>
+  <p class = "report-info-section-title">Submit report.</p>
+  <p>Make sure the report description and affected releases fields are correct.</p>
+  <p>You will not be able to modify the report after it has been submitted.</p>
+  <button type="submit" class="btn">
+    Submit Report
+  </button>
+<% end %>

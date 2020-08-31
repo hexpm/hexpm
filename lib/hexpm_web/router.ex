@@ -120,6 +120,19 @@ defmodule HexpmWeb.Router do
     get "/blog/:slug", BlogController, :show
 
     get "/l/:short_code", ShortURLController, :show
+
+    if Application.fetch_env!(:hexpm, :features)[:package_reports] do
+      get "/reports", PackageReportController, :index
+      get "/reports/new", PackageReportController, :new
+      post "/reports/create", PackageReportController, :create
+
+      get "/reports/:id", PackageReportController, :show
+      post "/reports/:id/accept", PackageReportController, :accept_report
+      post "/reports/:id/reject", PackageReportController, :reject_report
+      post "/reports/:id/solve", PackageReportController, :solve_report
+      post "/reports/:id/unresolve", PackageReportController, :unresolve_report
+      post "/reports/:id/comment", PackageReportController, :new_comment
+    end
   end
 
   scope "/dashboard", HexpmWeb.Dashboard do

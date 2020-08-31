@@ -1,0 +1,29 @@
+<h2 class="packages-title">
+  Package Reports
+</h2>
+
+<%= if @total == 0 do %>
+  <div class="no-results clearfix pagination-info">
+    <h4>No Results Found</h4>
+  </div>
+<% else %>
+  <div class="clearfix pagination-info reports-count">
+    <h4 class="results-found"><%= @total %> results found</h4>
+  </div>
+  <div class="reports-table">
+    <table>
+      <tr>
+        <td>ID</td>
+        <td>On Package</td>
+        <td>On Versions</td>
+        <td>State</td>
+        <td>By user</td>
+        <td>Description</td>
+      <tr>
+      <%= for report <- @reports do %>
+        <%= render "_package_report.html", report: report %>
+      <% end %>
+      </tr>
+    </table>
+  </div>
+<% end %>

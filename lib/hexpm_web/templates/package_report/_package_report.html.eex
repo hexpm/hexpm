@@ -1,0 +1,14 @@
+<tr>
+  <td><a href="<%= Routes.package_report_path(Endpoint, :show, @report) %>"><%= @report.id%></a></td>
+  <td><%= @report.package.name %></td>
+  <td >
+  <span>
+    <%= for ar <- @report.package_report_releases do %>
+      <%= ar.release.version %>
+    <% end %>
+  </span>
+  </td>
+  <td><%= @report.state%>
+  <td><%= @report.author.username %></td>
+  <td><%= ViewHelpers.text_length(@report.description, 50) %></td>
+</tr>

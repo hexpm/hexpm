@@ -1,0 +1,135 @@
+.reports-count {
+  width: 100%;
+}
+
+.reports-table {
+  padding: 20px 0;
+}
+
+.reports-table table {
+  width: 100%;
+}
+
+.reports-table tr {
+  padding: 0;
+  list-style: none;
+}
+
+.reports-table tr td {
+  padding: 5px 10px;
+  text-align: center;
+}
+
+.reports-table tr td:last-child {
+  width: 40%;
+  text-align: left;
+}
+
+.reports-table tr:nth-child(1) td {
+  color: #fff;
+  background: #5c676d;
+}
+
+.reports-table tr:nth-child(1) td:first-child {
+  color: #fff;
+  background: #5c676d;
+  border-top-left-radius: 10px;
+}
+
+.reports-table tr:nth-child(1) td:last-child {
+  color: #fff;
+  background: #5c676d;
+  border-top-right-radius: 10px;
+}
+
+.reports-table tr:nth-child(even) {
+  background: #f4f4f4;
+}
+
+.release-button {
+  padding: 0;
+  font-size: 1.25rem;
+  pointer-events: none;
+}
+
+.report-info-row {
+  padding-bottom: 20px;
+  border-bottom: #ccc 1px solid;
+}
+
+.report-info div {
+  margin-bottom: 10px;
+}
+
+.report-info-title {
+  padding: 20px 0;
+  font-family: "Lato", sans-serif;
+  font-size: 3rem;
+  font-weight: 400;
+  line-height: 2rem;
+  color: #714a94;
+  text-align: center;
+  border-bottom: #ccc 1px solid;
+}
+
+.report-info-subtitle {
+  padding-bottom: 10px;
+  font-family: "Lato", sans-serif;
+  font-size: 1.6rem;
+  font-style: italic;
+  line-height: 1.875rem;
+  color: #333;
+}
+
+.report-info-section-title {
+  padding: 20px 0;
+  font-family: "Lato", sans-serif;
+  font-size: 2.5rem;
+  font-weight: 400;
+  line-height: 2rem;
+  color: #000;
+}
+
+.report-info-moderator-panel input {
+  width: 50%;
+}
+
+.comments-section-div {
+  width: 80%;
+  padding: 10px 0;
+}
+
+.new-comment-div {
+  padding: 10px;
+  border: 1px solid #e5e1e8;
+  border-radius: 5px;
+}
+
+.comment-div {
+  margin: 10px;
+  background-color: #e5e1e8a2;
+  border: 1px solid #e5e1e8;
+  border-radius: 2px;
+}
+
+.comment-div p {
+  padding: 5px;
+  margin: 0;
+}
+
+.comment-div div {
+  padding: 5px;
+  background-color: #fff;
+  border: 1px solid #e5e1e8;
+  border-radius: 2px;
+}
+
+.new-comment-box {
+  width: 100%;
+  height: 100px;
+  padding: 10px;
+  margin-bottom: 5px;
+  font-size: 20px;
+  resize: none;
+  border-radius: 5px;
+}

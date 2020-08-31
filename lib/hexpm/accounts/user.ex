@@ -12,6 +12,7 @@ defmodule Hexpm.Accounts.User do
     field :password, :string
     field :service, :boolean, default: false
     field :deactivated_at, :utc_datetime_usec
+    field :role, :string, default: "basic"
     timestamps()
 
     embeds_one :handles, UserHandles, on_replace: :delete
@@ -26,11 +27,14 @@ defmodule Hexpm.Accounts.User do
     has_many :keys, Key
     has_many :audit_logs, AuditLog
     has_many :password_resets, PasswordReset
+    has_many :package_reports, Hexpm.Repository.PackageReport, foreign_key: :author_id
   end
 
   @username_regex ~r"^[a-z0-9_\-\.]+$"
 
   @reserved_names ~w(me hex hexpm elixir erlang otp)
+
+  @possible_roles ~w(basic mod)
 
   def build(params, confirmed? \\ not Application.get_env(:hexpm, :user_confirm)) do
     cast(%User{}, params, ~w(username full_name password)a)
@@ -95,6 +99,12 @@ defmodule Hexpm.Accounts.User do
     end)
   end
 
+  def set_role(user, params) do
+    cast(user, params, ~w(role)a)
+    |> validate_required(~w(role)a)
+    |> validate_inclusion(:role, @possible_roles)
+  end
+
   def email(user, :primary), do: user.emails |> Enum.find(& &1.primary) |> email()
   def email(user, :public), do: user.emails |> Enum.find(& &1.public) |> email()
   def email(user, :gravatar), do: user.emails |> Enum.find(& &1.gravatar) |> email()
@@ -124,6 +134,14 @@ defmodule Hexpm.Accounts.User do
             "SELECT emails.email FROM emails WHERE emails.user_id = ? and emails.verified and emails.public",
             u.id
           ),
+      preload: ^preload
+    )
+  end
+
+  def get_by_role(role, preload \\ []) do
+    from(
+      u in Hexpm.Accounts.User,
+      where: u.role == ^role,
       preload: ^preload
     )
   end
@@ -187,4 +205,8 @@ defmodule Hexpm.Accounts.User do
   end
 
   defp use_recovery_code(code, _other), do: code
+
+  def has_role?(user, role) do
+    user != nil and user.role == role
+  end
 end

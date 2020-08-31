@@ -16,6 +16,8 @@ defmodule Hexpm.Repository.Release do
     belongs_to(:publisher, User, on_replace: :nilify)
     has_many :requirements, Requirement, on_replace: :delete
     has_many :daily_downloads, Download
+    has_many :package_report_releases, PackageReportRelease
+    has_many :package_reports, through: [:package_report_releases, :package_report]
     has_one :downloads, ReleaseDownload
 
     embeds_one :meta, ReleaseMetadata, on_replace: :delete
@@ -95,8 +97,29 @@ defmodule Hexpm.Repository.Release do
   end
 
   def retire(release, params) do
-    cast(release, params, [])
-    |> cast_embed(:retirement, required: true)
+    cast_embed(
+      cast(release, params, []),
+      :retirement,
+      required: true,
+      with: &ReleaseRetirement.changeset(&1, &2, public: true)
+    )
+  end
+
+  def reported_retire(release) do
+    change(
+      release,
+      %{
+        retirement: %{
+          reason: "report",
+          message: "security vulnerability reported"
+        }
+      }
+    )
+    |> cast_embed(
+      :retirement,
+      required: true,
+      with: &ReleaseRetirement.changeset(&1, &2, public: false)
+    )
   end
 
   def unretire(release) do
@@ -104,11 +127,11 @@ defmodule Hexpm.Repository.Release do
     |> put_embed(:retirement, nil)
   end
 
-  defp validate_editable(changeset, _action, true, _replace?) do
+  defp validate_editable(changeset, _action, true = _force?, _replace?) do
     changeset
   end
 
-  defp validate_editable(changeset, action, false, replace?) do
+  defp validate_editable(changeset, action, false = _force?, replace?) do
     if editable?(changeset.data, replace?) do
       changeset
     else

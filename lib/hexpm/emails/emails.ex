@@ -75,6 +75,37 @@ defmodule Hexpm.Emails do
     |> render(:package_published)
   end
 
+  def report_submitted(receiver, author_name, package_name, report_id, inserted_at) do
+    email()
+    |> email_to(receiver)
+    |> subject("Hex.pm - Package report on #{package_name} published ")
+    |> assign(:package_name, package_name)
+    |> assign(:author_name, author_name)
+    |> assign(:report_id, report_id)
+    |> assign(:inserted_at, inserted_at)
+    |> render(:report_submitted)
+  end
+
+  def report_commented(receiver, author_name, report_id, inserted_at) do
+    email()
+    |> email_to(receiver)
+    |> subject("Hex.pm - New comment on package report ##{report_id}")
+    |> assign(:author_name, author_name)
+    |> assign(:report_id, report_id)
+    |> assign(:inserted_at, inserted_at)
+    |> render(:report_commented)
+  end
+
+  def report_state_changed(receiver, report_id, new_state, updated_at) do
+    email()
+    |> email_to(receiver)
+    |> subject("Hex.pm - Package report ##{report_id} has been reviewed by a moderator")
+    |> assign(:report_id, report_id)
+    |> assign(:new_state, new_state)
+    |> assign(:updated_at, updated_at)
+    |> render(:report_state_changed)
+  end
+
   defp email_to(email, to) do
     to =
       to

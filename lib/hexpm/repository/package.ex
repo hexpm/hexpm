@@ -16,6 +16,7 @@ defmodule Hexpm.Repository.Package do
     has_many :package_owners, PackageOwner
     has_many :owners, through: [:package_owners, :user]
     has_many :downloads, PackageDownload
+    has_many :package_reports, PackageReport
     embeds_one :meta, PackageMetadata, on_replace: :delete
   end
 

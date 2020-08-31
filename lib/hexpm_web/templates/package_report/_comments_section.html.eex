@@ -1,0 +1,14 @@
+<%= if (@report.state not in ["to_accept"]) and (@for_author or @for_moderator or @for_owner) do %>
+  <div class = "comments-section-div row report-row">
+    <p class="report-info-section-title">Comments section</p>
+    <%= if @comments != [] do %>
+      <p class="report-info-subtitle"><%= length(@comments) %> comment(s) found</p>
+      <%= for comment <- @comments do %>
+        <%= render "_comment.html", comment: comment%>
+      <% end %>
+    <% else %>
+      <p class="report-info-subtitle">No comments yet</p>
+    <% end%>
+    <%= render "_new_comment.html", report: @report %>
+  </div>
+<% end %>
