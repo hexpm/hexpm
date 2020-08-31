@@ -42,10 +42,10 @@
   background: #f4f4f4;
 }
 
-.release-button{
-  padding: 0px 0px;
-  pointer-events: none;
+.release-button {
+  padding: 0;
   font-size: 1.25rem;
+  pointer-events: none;
 }
 
 .report-info-row {
@@ -53,46 +53,46 @@
   border-bottom: #ccc 1px solid;
 }
 
-.report-info div{
+.report-info div {
   margin-bottom: 10px;
 }
 
-.report-info-title{
+.report-info-title {
+  padding: 20px 0;
+  font-family: "Lato", sans-serif;
   font-size: 3rem;
-  text-align: center;
-  line-height: 2rem;
-  padding: 20px 0;
   font-weight: 400;
+  line-height: 2rem;
   color: #714a94;
+  text-align: center;
   border-bottom: #ccc 1px solid;
-  font-family: "Lato", sans-serif;
 }
 
-.report-info-subtitle{
+.report-info-subtitle {
   padding-bottom: 10px;
-  font-style: italic;
+  font-family: "Lato", sans-serif;
   font-size: 1.6rem;
+  font-style: italic;
   line-height: 1.875rem;
-  font-family: "Lato", sans-serif;
-  color: #333333;
+  color: #333;
 }
 
-.report-info-section-title{
-  font-size: 2.5rem;
-  line-height: 2rem;
+.report-info-section-title {
   padding: 20px 0;
+  font-family: "Lato", sans-serif;  
+  font-size: 2.5rem;
   font-weight: 400;
+  line-height: 2rem;
   color: #000;
-  font-family: "Lato", sans-serif;
 }
 
-.report-info-moderator-panel input  {
+.report-info-moderator-panel input {
   width: 50%;
 }
 
 .comments-section-div {
-  padding: 10px 0;
   width: 80%;
+  padding: 10px 0;
 }
 
 .new-comment-div {
@@ -101,7 +101,7 @@
   border-radius: 5px;
 }
 
-.comment-div{
+.comment-div {
   margin: 10px;
   background-color: #e5e1e8a2;
   border: 1px solid #e5e1e8;
@@ -110,10 +110,10 @@
 
 .comment-div p{
   padding: 5px;
-  margin: 0px;
+  margin: 0;
 }
 
-.comment-div div{
+.comment-div div {
   padding: 5px;
   background-color: #fff;
   border: 1px solid #e5e1e8;
@@ -123,9 +123,9 @@
 .new-comment-box {
   width: 100%;
   height: 100px;
-  font-size: 20px;
-  border-radius: 5px;
-  margin-bottom: 5px;
-  resize: none;
   padding: 10px;
+  margin-bottom: 5px;
+  font-size: 20px;
+  resize: none;
+  border-radius: 5px;
 }
