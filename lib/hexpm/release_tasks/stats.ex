@@ -33,23 +33,20 @@ defmodule Hexpm.ReleaseTasks.Stats do
 
   @ets __MODULE__
 
-  def run() do
-    try do
+  def run(date \\ Utils.utc_yesterday(), dryrun? \\ false) do
+    # Trigger error_handler and rollbar reporting on 'hexpm eval ...'
+    Task.async(fn ->
       {time, size} =
         :timer.tc(fn ->
-          run(Utils.utc_yesterday())
+          do_run(date, dryrun?)
         end)
 
       Logger.info("[stats] completed #{size} downloads (#{div(time, 1000)}ms)")
-    catch
-      exception ->
-        Logger.error("[stats] failed")
-        reraise exception, __STACKTRACE__
-    end
+    end)
+    |> Task.await(:infinity)
   end
 
-  @doc false
-  def run(date, dryrun? \\ false) do
+  def do_run(date, dryrun?) do
     :ets.new(@ets, [:named_table, :public])
 
     try do
@@ -92,6 +89,10 @@ defmodule Hexpm.ReleaseTasks.Stats do
     after
       :ets.delete(@ets)
     end
+  catch
+    exception ->
+      Logger.error("[stats] failed")
+      reraise exception, __STACKTRACE__
   end
 
   def ets_stream() do

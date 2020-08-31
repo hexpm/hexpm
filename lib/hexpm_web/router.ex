@@ -298,7 +298,7 @@ defmodule HexpmWeb.Router do
 
   scope "/" do
     pipe_through [:browser, :admin]
-    live_dashboard("/db")
+    live_dashboard("/db", metrics: HexpmWeb.Telemetry)
   end
 
   def user_path(%User{organization: nil} = user) do

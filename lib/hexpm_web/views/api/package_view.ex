@@ -1,6 +1,7 @@
 defmodule HexpmWeb.API.PackageView do
   use HexpmWeb, :view
   alias HexpmWeb.API.{DownloadView, ReleaseView, RetirementView, UserView}
+  alias HexpmWeb.PackageView
 
   def render("index." <> _, %{packages: packages}) do
     render_many(packages, __MODULE__, "show")
@@ -15,6 +16,10 @@ defmodule HexpmWeb.API.PackageView do
   end
 
   def render("show", %{package: package}) do
+    latest_release = Release.latest_version(package.releases, only_stable: false)
+    latest_stable_release = Release.latest_version(package.releases, only_stable: true)
+    release = latest_stable_release || latest_release
+
     %{
       repository: package.repository.name,
       name: package.name,
@@ -23,6 +28,13 @@ defmodule HexpmWeb.API.PackageView do
       url: ViewHelpers.url_for_package(package),
       html_url: ViewHelpers.html_url_for_package(package),
       docs_html_url: ViewHelpers.docs_html_url_for_package(package),
+      latest_version: latest_release.version,
+      latest_stable_version: latest_stable_release && latest_stable_release.version,
+      configs: %{
+        "mix.exs": PackageView.dep_snippet(:mix, package, release),
+        "rebar.config": PackageView.dep_snippet(:rebar, package, release),
+        "erlang.mk": PackageView.dep_snippet(:erlang_mk, package, release)
+      },
       meta: %{
         description: package.meta.description,
         licenses: package.meta.licenses || [],

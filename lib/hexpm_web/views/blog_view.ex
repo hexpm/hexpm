@@ -51,30 +51,30 @@ defmodule HexpmWeb.BlogView do
   end
 
   defp first_paragraph(content) do
-    ~r[<p>(.*)</p>]sU
-    |> Regex.run(content)
-    |> Enum.at(1)
+    regex_run(~r[<p>(.*)</p>]sU, content)
   end
 
   defp title(content) do
-    ~r[<h2>(.*)</h2>]
-    |> Regex.run(content)
-    |> Enum.at(1)
+    regex_run(~r[<h2>(.*)</h2>]sU, content)
   end
 
   defp subtitle(content) do
-    ~r[<div class="subtitle">(.*)</div>]
-    |> Regex.run(content)
-    |> Enum.at(1)
+    regex_run(~r[<div class="subtitle">(.*)</div>]sU, content)
   end
 
   defp published(content) do
     {:ok, datetime, _utc_offset} =
-      ~r[<time datetime="(.+)">(.+)</time>]
-      |> Regex.run(content)
-      |> Enum.at(1)
+      ~r[<time datetime="(.+)">(.+)</time>]sU
+      |> regex_run(content)
       |> DateTime.from_iso8601()
 
     Utils.datetime_to_rfc2822(datetime)
+  end
+
+  defp regex_run(regex, string) do
+    regex
+    |> Regex.run(string)
+    |> Enum.at(1)
+    |> String.trim()
   end
 end

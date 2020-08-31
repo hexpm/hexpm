@@ -116,6 +116,7 @@ defmodule Hexpm.Emails do
     to(email, to)
   end
 
+  defp expand_organization(email) when is_binary(email), do: [email]
   defp expand_organization(%Email{} = email), do: [email]
   defp expand_organization(%User{organization: nil} = user), do: [user]
   defp expand_organization(%User{organization: %Ecto.Association.NotLoaded{}} = user), do: [user]

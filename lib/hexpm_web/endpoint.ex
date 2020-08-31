@@ -29,9 +29,15 @@ defmodule HexpmWeb.Endpoint do
     socket "/phoenix/live_reload/socket", Phoenix.LiveReloader.Socket
     plug Phoenix.LiveReloader
     plug Phoenix.CodeReloader
+    plug Phoenix.Ecto.CheckRepoStatus, otp_app: :hexpm
   end
 
   plug HexpmWeb.Plugs.Status
+
+  plug Phoenix.LiveDashboard.RequestLogger,
+    param_key: "request_logger",
+    cookie_key: "request_logger"
+
   plug Plug.RequestId
   plug Logster.Plugs.Logger, excludes: [:params]
 
