@@ -4,10 +4,13 @@ defmodule HexpmWeb.Endpoint do
   plug HexpmWeb.Plugs.Forwarded
 
   @session_options [
+    encryption_salt: "q1QBAsxhxzlBSxa6kMUiY6bNmZu0LzVL",
+    same_site: "Strict",
     signing_salt: "NOcCmerj",
-    store: HexpmWeb.Session,
+    serializer: HexpmWeb.Session,
+    store: :cookie,
     key: "_hexpm_key",
-    max_age: 60 * 60 * 24 * 30
+    max_age: HexpmWeb.Session.max_age()
   ]
 
   # Serve at "/" the static files from "priv/static" directory.

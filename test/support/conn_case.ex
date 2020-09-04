@@ -40,13 +40,15 @@ defmodule HexpmWeb.ConnCase do
   end
 
   def test_login(conn, user) do
-    Plug.Test.init_test_session(conn, %{"user_id" => user.id})
+    conn
+    |> Plug.Test.init_test_session(%{})
+    |> HexpmWeb.Session.create(user)
   end
 
   def last_session() do
     import Ecto.Query
 
-    from(s in Hexpm.Accounts.Session, order_by: [desc: s.id], limit: 1)
+    from(s in Hexpm.Accounts.Session, where: [active: true], order_by: [desc: s.id], limit: 1)
     |> Hexpm.Repo.one()
   end
 

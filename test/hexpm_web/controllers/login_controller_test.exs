@@ -19,8 +19,8 @@ defmodule HexpmWeb.LoginControllerTest do
     conn = post(build_conn(), "login", %{username: c.user.username, password: "password"})
     assert redirected_to(conn) == "/users/#{c.user.username}"
 
-    assert get_session(conn, "user_id") == c.user.id
-    assert last_session().data["user_id"] == c.user.id
+    assert get_session(conn, "session_id")
+    assert last_session().user_id == c.user.id
   end
 
   @tag :focus
@@ -37,15 +37,16 @@ defmodule HexpmWeb.LoginControllerTest do
     assert redirected_to(conn) == "/users/#{c.user.username}"
 
     conn = conn |> recycle() |> get("/")
-    assert get_session(conn, "user_id") == c.user.id
+    assert get_session(conn, "session_id")
+    assert last_session().user_id == c.user.id
   end
 
   test "log in with wrong password", c do
     conn = post(build_conn(), "login", %{username: c.user.username, password: "WRONG"})
     assert response(conn, 400) =~ "Log in"
     assert get_flash(conn, "error") == "Invalid username, email or password."
-    refute get_session(conn, "user_id")
-    refute last_session().data["user_id"]
+    refute get_session(conn, "session_id")
+    refute last_session()
   end
 
   test "log in with unconfirmed email", c do
@@ -54,8 +55,8 @@ defmodule HexpmWeb.LoginControllerTest do
     conn = post(build_conn(), "login", %{username: c.user.username, password: "password"})
     assert response(conn, 400) =~ "Log in"
     assert get_flash(conn, "error") =~ "Email has not been verified yet."
-    refute get_session(conn, "user_id")
-    refute last_session().data["user_id"]
+    refute get_session(conn, "session_id")
+    refute last_session()
   end
 
   test "log out", c do
@@ -68,8 +69,8 @@ defmodule HexpmWeb.LoginControllerTest do
       |> post("logout")
 
     assert redirected_to(conn) == "/"
-    refute get_session(conn, "user_id")
-    refute last_session().data["user_id"]
+    refute get_session(conn, "session_id")
+    refute last_session()
   end
 
   test "login, create hexdocs key and redirect", c do
@@ -91,8 +92,8 @@ defmodule HexpmWeb.LoginControllerTest do
     assert hd(key.permissions).domain == "docs"
     assert hd(key.permissions).resource == c.organization.name
 
-    assert get_session(conn, "user_id") == c.user.id
-    assert last_session().data["user_id"] == c.user.id
+    assert get_session(conn, "session_id")
+    assert last_session().user_id == c.user.id
   end
 
   test "already logged in, create hexdocs key and redirect", c do

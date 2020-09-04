@@ -102,7 +102,8 @@ defmodule HexpmWeb.Dashboard.EmailControllerTest do
 
     conn = post(build_conn(), "login", %{username: dup_email.email, password: "password"})
     assert redirected_to(conn) == "/users/#{c.user.username}"
-    assert get_session(conn, "user_id") == c.user.id
+    assert get_session(conn, "session_id")
+    assert last_session().user_id == c.user.id
 
     conn =
       build_conn()

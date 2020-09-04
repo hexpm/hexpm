@@ -1,7 +1,6 @@
 defmodule HexpmWeb.Plugs do
   import Plug.Conn, except: [read_body: 1]
 
-  alias Hexpm.Accounts.Users
   alias HexpmWeb.ControllerHelpers
 
   # Max filesize: ~10mb
@@ -91,14 +90,14 @@ defmodule HexpmWeb.Plugs do
   end
 
   def login(conn, _opts) do
-    user_id = get_session(conn, "user_id")
-    user = user_id && Users.get_by_id(user_id, [:emails, organizations: :repository])
     conn = assign(conn, :current_organization, nil)
 
-    if user do
-      assign(conn, :current_user, user)
-    else
-      assign(conn, :current_user, nil)
+    case HexpmWeb.Session.get(get_session(conn, "session_id")) do
+      {:ok, session} ->
+        assign(conn, :current_user, session.user)
+
+      _ ->
+        assign(conn, :current_user, nil)
     end
   end
 

@@ -27,14 +27,14 @@ defmodule HexpmWeb.LoginController do
 
   def delete(conn, _params) do
     conn
-    |> delete_session("user_id")
+    |> HexpmWeb.Session.delete()
     |> redirect(to: Routes.page_path(HexpmWeb.Endpoint, :index))
   end
 
   def start_session(conn, user, return) do
     conn
     |> configure_session(renew: true)
-    |> put_session("user_id", user.id)
+    |> HexpmWeb.Session.create(user)
     |> redirect_return(user, return)
   end
 
