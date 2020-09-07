@@ -14,15 +14,9 @@ defmodule HexpmWeb.Router do
     plug :put_secure_browser_headers
     plug :web_user_agent
     plug :validate_url
-  end
-
-  pipeline :defaults do
+    plug HexpmWeb.Session
     plug :disable_deactivated
     plug :default_repository
-  end
-
-  pipeline :session do
-    plug HexpmWeb.Session
   end
 
   pipeline :upload do
@@ -57,7 +51,7 @@ defmodule HexpmWeb.Router do
   end
 
   scope "/", HexpmWeb do
-    pipe_through [:browser, :login, :defaults]
+    pipe_through [:browser]
 
     get "/", PageController, :index
     get "/about", PageController, :about
@@ -142,7 +136,7 @@ defmodule HexpmWeb.Router do
   end
 
   scope "/dashboard", HexpmWeb.Dashboard do
-    pipe_through [:browser, :session, :defaults]
+    pipe_through [:browser]
 
     get "/profile", ProfileController, :index
     post "/profile", ProfileController, :update

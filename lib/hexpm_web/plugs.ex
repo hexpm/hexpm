@@ -89,18 +89,6 @@ defmodule HexpmWeb.Plugs do
     end
   end
 
-  def login(conn, _opts) do
-    conn = assign(conn, :current_organization, nil)
-
-    case HexpmWeb.Session.get(get_session(conn, "session_id")) do
-      {:ok, session} ->
-        assign(conn, :current_user, session.user)
-
-      _ ->
-        assign(conn, :current_user, nil)
-    end
-  end
-
   def disable_deactivated(conn, _opts) do
     if conn.assigns.current_user && conn.assigns.current_user.deactivated_at do
       conn

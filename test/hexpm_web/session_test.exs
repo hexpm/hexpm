@@ -33,10 +33,13 @@ defmodule HexpmWeb.SessionTest do
       assert %Plug.Conn{} = conn = Session.delete(conn)
       refute conn.private.plug_session["id"]
 
-      conn
-      |> fetch_flash()
-      |> Session.call([])
-      |> html_response(302)
+      conn =
+        conn
+        |> fetch_flash()
+        |> Session.call([])
+
+      refute conn.assigns.current_user
+      refute conn.assigns.current_organization
     end
 
     test "when session is expired", %{conn: conn, user: user} do
@@ -63,20 +66,26 @@ defmodule HexpmWeb.SessionTest do
 
       expire_session(session)
 
-      conn
-      |> fetch_flash()
-      |> Session.call([])
-      |> html_response(302)
+      conn =
+        conn
+        |> fetch_flash()
+        |> Session.call([])
+
+      refute conn.assigns.current_user
+      refute conn.assigns.current_organization
     end
 
     test "when session id is invalid", %{conn: conn, user: user} do
       assert %Plug.Conn{} = conn = Session.create(conn, user)
 
-      conn
-      |> put_session("session_id", "42")
-      |> fetch_flash()
-      |> Session.call([])
-      |> html_response(302)
+      conn =
+        conn
+        |> put_session("session_id", "42")
+        |> fetch_flash()
+        |> Session.call([])
+
+      refute conn.assigns.current_user
+      refute conn.assigns.current_organization
     end
 
     test "when session token is invalid", %{conn: conn, user: user} do
@@ -86,11 +95,14 @@ defmodule HexpmWeb.SessionTest do
 
       bad_session_str = session.uuid <> Base.url_encode64(:crypto.strong_rand_bytes(64))
 
-      conn
-      |> put_session("session_id", bad_session_str)
-      |> fetch_flash()
-      |> Session.call([])
-      |> html_response(302)
+      conn =
+        conn
+        |> put_session("session_id", bad_session_str)
+        |> fetch_flash()
+        |> Session.call([])
+
+      refute conn.assigns.current_user
+      refute conn.assigns.current_organization
     end
   end
 

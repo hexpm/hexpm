@@ -3,11 +3,6 @@ defmodule HexpmWeb.Session do
 
   alias Hexpm.Accounts.{Session, User}
   alias Hexpm.Repo
-  alias HexpmWeb.Router.Helpers, as: Routes
-  require Logger
-
-  defdelegate redirect(conn, params), to: Phoenix.Controller
-  defdelegate put_flash(conn, atom, message), to: Phoenix.Controller
 
   @type token() :: <<_::64>>
   @type session_id() :: binary()
@@ -197,23 +192,15 @@ defmodule HexpmWeb.Session do
 
   defp not_found(conn) do
     conn
-    |> clear_session()
     |> configure_session(renew: true)
-    |> put_flash(:error, "You must be signed in to access that page.")
-    |> put_return()
-    |> halt()
+    |> assign(:current_user, nil)
+    |> assign(:current_organization, nil)
   end
 
   defp expired(conn) do
     conn
-    |> clear_session()
     |> configure_session(renew: true)
-    |> put_flash(:error, "Your session has expired. Please sign back in.")
-    |> put_return()
-    |> halt()
-  end
-
-  defp put_return(conn) do
-    redirect(conn, to: Routes.login_path(conn, :show, return: conn.request_path))
+    |> assign(:current_user, nil)
+    |> assign(:current_organization, nil)
   end
 end
