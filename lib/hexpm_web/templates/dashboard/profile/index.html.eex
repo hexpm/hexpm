@@ -70,7 +70,7 @@
             <div class="form-group">
               <%= label f, :elixirforum, "Elixir Forum" %>
               <div class="input-group">
-                <div class="input-group-addon">elixirforum.com/users/</div>
+                <div class="input-group-addon">elixirforum.com/u/</div>
                 <%= ViewHelpers.text_input f, :elixirforum, placeholder: "your_elixir_forum_id" %>
               </div>
               <%= ViewHelpers.error_tag f, :elixirforum %>
