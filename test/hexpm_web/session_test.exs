@@ -86,6 +86,20 @@ defmodule HexpmWeb.SessionTest do
 
       refute conn.assigns.current_user
       refute conn.assigns.current_organization
+
+      # Right length, but not a UUID
+      bogus_id = Base.url_encode64(:crypto.strong_rand_bytes(26))
+
+      bad_session_id = bogus_id <> Base.url_encode64(:crypto.strong_rand_bytes(64))
+
+      conn =
+        conn
+        |> put_session("session_id", bad_session_id)
+        |> fetch_flash()
+        |> Session.call([])
+
+      refute conn.assigns.current_user
+      refute conn.assigns.current_organization
     end
 
     test "when session token is invalid", %{conn: conn, user: user} do

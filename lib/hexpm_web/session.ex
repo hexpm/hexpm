@@ -128,7 +128,13 @@ defmodule HexpmWeb.Session do
   end
 
   defp parse_id(<<uuid::binary-size(36), base64::binary-size(88)>>) do
-    {:ok, {uuid, base64}}
+    case Ecto.UUID.dump(uuid) do
+      {:ok, _raw} ->
+        {:ok, {uuid, base64}}
+
+      _ ->
+        {:error, :invalid_session_id}
+    end
   end
 
   defp parse_id(_), do: {:error, :invalid_session_id}
