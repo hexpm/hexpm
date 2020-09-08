@@ -19,7 +19,7 @@ defmodule Hexpm.Accounts.UserHandles do
     [
       {:twitter, "Twitter", "https://twitter.com/{handle}"},
       {:github, "GitHub", "https://github.com/{handle}"},
-      {:elixirforum, "Elixir Forum", "https://elixirforum.com/users/{handle}"},
+      {:elixirforum, "Elixir Forum", "https://elixirforum.com/u/{handle}"},
       {:freenode, "Freenode", "irc://chat.freenode.net/elixir-lang"},
       {:slack, "Slack", "https://elixir-slackin.herokuapp.com/"}
     ]
@@ -43,7 +43,7 @@ defmodule Hexpm.Accounts.UserHandles do
 
   def handle(:twitter, handle), do: unuri(handle, "twitter.com", "/")
   def handle(:github, handle), do: unuri(handle, "github.com", "/")
-  def handle(:elixirforum, handle), do: unuri(handle, "elixirforum.com", "/users/")
+  def handle(:elixirforum, handle), do: unuri(handle, "elixirforum.com", "/u/")
   def handle(_service, handle), do: handle
 
   defp unuri(handle, host, path) do
