@@ -19,10 +19,7 @@ defmodule HexpmWeb.SessionTest do
       assert %Plug.Conn{} = conn = Session.create(conn, user)
       assert <<session_id::binary>> = conn.private.plug_session["session_id"]
 
-      conn =
-        conn
-        |> fetch_flash()
-        |> Session.call([])
+      conn = Session.call(conn, [])
 
       assert conn.assigns.current_user.id == user.id
     end
@@ -33,10 +30,7 @@ defmodule HexpmWeb.SessionTest do
       assert %Plug.Conn{} = conn = Session.delete(conn)
       refute conn.private.plug_session["session_id"]
 
-      conn =
-        conn
-        |> fetch_flash()
-        |> Session.call([])
+      conn = Session.call(conn, [])
 
       refute conn.assigns.current_user
       refute conn.assigns.current_organization
@@ -67,10 +61,7 @@ defmodule HexpmWeb.SessionTest do
 
       expire_session(session)
 
-      conn =
-        conn
-        |> fetch_flash()
-        |> Session.call([])
+      conn = Session.call(conn, [])
 
       refute conn.assigns.current_user
       refute conn.assigns.current_organization
@@ -83,7 +74,6 @@ defmodule HexpmWeb.SessionTest do
       conn =
         conn
         |> put_session("session_id", "42")
-        |> fetch_flash()
         |> Session.call([])
 
       refute conn.assigns.current_user
@@ -98,7 +88,6 @@ defmodule HexpmWeb.SessionTest do
       conn =
         conn
         |> put_session("session_id", bad_session_id)
-        |> fetch_flash()
         |> Session.call([])
 
       refute conn.assigns.current_user
@@ -116,7 +105,6 @@ defmodule HexpmWeb.SessionTest do
       conn =
         conn
         |> put_session("session_id", bad_session_str)
-        |> fetch_flash()
         |> Session.call([])
 
       refute conn.assigns.current_user
