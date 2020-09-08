@@ -31,7 +31,7 @@ defmodule HexpmWeb.SessionTest do
       assert %Plug.Conn{} = conn = Session.create(conn, user)
       assert <<session_id::binary>> = conn.private.plug_session["session_id"]
       assert %Plug.Conn{} = conn = Session.delete(conn)
-      refute conn.private.plug_session["id"]
+      refute conn.private.plug_session["session_id"]
 
       conn =
         conn
@@ -40,6 +40,7 @@ defmodule HexpmWeb.SessionTest do
 
       refute conn.assigns.current_user
       refute conn.assigns.current_organization
+      refute conn.private.plug_session["session_id"]
     end
 
     test "when session is expired", %{conn: conn, user: user} do
@@ -73,6 +74,7 @@ defmodule HexpmWeb.SessionTest do
 
       refute conn.assigns.current_user
       refute conn.assigns.current_organization
+      refute conn.private.plug_session["session_id"]
     end
 
     test "when session id is invalid", %{conn: conn, user: user} do
@@ -86,6 +88,7 @@ defmodule HexpmWeb.SessionTest do
 
       refute conn.assigns.current_user
       refute conn.assigns.current_organization
+      refute conn.private.plug_session["session_id"]
 
       # Right length, but not a UUID
       bogus_id = Base.url_encode64(:crypto.strong_rand_bytes(26))
@@ -100,6 +103,7 @@ defmodule HexpmWeb.SessionTest do
 
       refute conn.assigns.current_user
       refute conn.assigns.current_organization
+      refute conn.private.plug_session["session_id"]
     end
 
     test "when session token is invalid", %{conn: conn, user: user} do
@@ -117,6 +121,7 @@ defmodule HexpmWeb.SessionTest do
 
       refute conn.assigns.current_user
       refute conn.assigns.current_organization
+      refute conn.private.plug_session["session_id"]
     end
   end
 

@@ -199,6 +199,7 @@ defmodule HexpmWeb.Session do
   defp not_found(conn) do
     conn
     |> configure_session(renew: true)
+    |> delete_session("session_id")
     |> assign(:current_user, nil)
     |> assign(:current_organization, nil)
   end
@@ -206,6 +207,7 @@ defmodule HexpmWeb.Session do
   defp expired(conn) do
     conn
     |> configure_session(renew: true)
+    |> delete_session("session_id")
     |> assign(:current_user, nil)
     |> assign(:current_organization, nil)
   end
