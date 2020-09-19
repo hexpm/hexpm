@@ -1,6 +1,6 @@
 ## Publishing a package
 
-Erlang packages can be published through the [rebar3](http://rebar3.org) Hex plugin. It is suggested to place the entry in the global rebar3 config which should be made as `~/.config/rebar3/rebar.config`.
+Erlang packages can be published through the [rebar3](https://rebar3.org) Hex plugin. It is suggested to place the entry in the global rebar3 config which should be made as `~/.config/rebar3/rebar.config`.
 
 #### Example rebar.config file
 
@@ -139,4 +139,4 @@ Please test your package after publishing by adding it as dependency to a rebar3
 
 When running the command to publish a package, Hex will create a tar file of all the files and directories listed in the `files` property. When the tarball has been pushed to the Hex servers, it will be uploaded to a CDN for fast and reliable access for users. Hex will also recompile the registry file that all clients will update automatically when fetching dependencies.
 
-The [rebar3 hex plugin's documentation](http://www.rebar3.org/v3.0/docs/hex-package-management) contains more information about the hex plugin itself and publishing packages.
+The [rebar3 hex plugin's documentation](https://rebar3.org/docs/hex_package_management/) contains more information about the hex plugin itself and publishing packages.
