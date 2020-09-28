@@ -5,7 +5,12 @@
 <p>
     <%= OrganizationInvite.access_organization() %>
 
+    For mix:
+
     <pre><%= OrganizationInvite.mix_code() %></pre>
+
+    For rebar3:
+    <pre><%= OrganizationInvite.rebar_code() %></pre>
 
     To learn more about private packages and organizations go to the <a href="<%= Routes.docs_url(Endpoint, :private) %>">documentation</a>.
 </p>
