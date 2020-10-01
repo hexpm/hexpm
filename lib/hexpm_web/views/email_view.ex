@@ -32,6 +32,10 @@ defmodule HexpmWeb.EmailView do
       "mix hex.user auth"
     end
 
+    def rebar_code() do
+      "rebar3 hex user auth"
+    end
+
     def before_code() do
       "Once this is complete, your existing keys may be invalidated, you will need to regenerate them by running:"
     end
@@ -74,6 +78,10 @@ defmodule HexpmWeb.EmailView do
 
     def mix_code() do
       "mix hex.user auth"
+    end
+
+    def rebar_code() do
+      "rebar3 hex user auth"
     end
   end
 

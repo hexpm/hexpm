@@ -4,7 +4,11 @@ Go check out the organization[0], if you do not want to join the organization yo
 
 <%= OrganizationInvite.access_organization() %>
 
+For mix:
 <%= OrganizationInvite.mix_code() %>
+
+For rebar3:
+<%= OrganizationInvite.rebar_code() %>
 
 To learn more about private packages and organizations go to the documentation[1].
 
