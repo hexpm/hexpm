@@ -277,6 +277,12 @@ defmodule Hexpm.Repository.Release do
     end
   end
 
+  def downloads_for_last_n_days(release_id, num_of_days) do
+    base_query = downloads_by_period(release_id, "day")
+    date_start = Date.add(Date.utc_today(), -1 * num_of_days)
+    from(d in base_query, where: d.day > ^date_start)
+  end
+
   def downloads_by_period(release_id, filter) do
     query = from(d in Download, where: d.release_id == ^release_id)
 

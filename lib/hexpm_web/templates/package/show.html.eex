@@ -4,6 +4,8 @@ licenses = @package.meta.licenses || []
 links = Enum.to_list(@package.meta.links || [])
 build_tools = @current_release && @current_release.meta.build_tools || []
 downloads = if @current_release.downloads, do: @current_release.downloads.downloads, else: 0
+{graph_labels, points} = ViewHelpers.time_series_graph(@daily_graph)
+y_axis_labels = Enum.zip(graph_labels, [192, 152, 112, 72, 32])
 
 tools = [
   mix: "mix.exs",
@@ -112,6 +114,21 @@ tools = [
         </li>
       </ul>
     </div>
+  </div>
+
+  <div class="col-md-11 no-padding">
+    <svg viewBox="0 0 800 200" class="chart">
+      <%= for {l, y} <- y_axis_labels do%>
+      <text x="0" y="<%= y %>" fill="#aaa"><%= l %></text>
+      <% end %>
+      <line x1="0" y1="40" x2="800" y2="40" stroke="#ddd"></line>
+      <line x1="0" y1="80" x2="800" y2="80" stroke="#ddd"></line>
+      <line x1="0" y1="120" x2="800" y2="120" stroke="#ddd"></line>
+      <line x1="0" y1="160" x2="800" y2="160" stroke="#ddd"></line>
+      <line x1="0" y1="200" x2="800" y2="200" stroke="#ddd"></line>
+      <!-- end y-axis labels -->
+      <polyline fill="none" stroke="#f72585" stroke-width="5" points="<%= points %>"></polyline>
+    </svg>
   </div>
 
   <div class="col-md-11 with-divider no-padding">

@@ -140,6 +140,21 @@ defmodule HexpmWeb.PackageController do
       end
 
     downloads = Packages.package_downloads(package)
+
+    graph_downloads = Releases.downloads_for_last_n_days(release.id, 30)
+
+    daily_graph =
+      Date.utc_today()
+      |> Date.add(-30)
+      |> Date.range(Date.add(Date.utc_today(), -1))
+      |> Enum.map(fn date ->
+        Enum.find(graph_downloads, fn dl -> date == Date.from_iso8601!(dl.day) end)
+      end)
+      |> Enum.map(fn
+        nil -> 0
+        %{downloads: dl} -> dl
+      end)
+
     owners = Owners.all(package, user: [:emails, :organization])
 
     dependants =
@@ -172,7 +187,8 @@ defmodule HexpmWeb.PackageController do
         owners: owners,
         dependants: dependants,
         dependants_count: dependants_count,
-        audit_logs: audit_logs
+        audit_logs: audit_logs,
+        daily_graph: daily_graph
       ] ++ docs_assigns
     )
   end

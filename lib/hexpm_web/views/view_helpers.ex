@@ -354,6 +354,48 @@ defmodule HexpmWeb.ViewHelpers do
     |> EQRCode.encode()
     |> EQRCode.svg(width: 250)
   end
+
+  # assumes positive values only, and graph dimensions of 800 x 200
+  def time_series_graph(points) do
+    max = Enum.max(points ++ [5])
+
+    y_axis_labels = y_axis_labels(0, max)
+
+    polyline_points =
+      points
+      |> Enum.map(fn p -> points_to_graph(max, p) end)
+      |> Enum.zip(x_axis_points(length(points)))
+      |> to_polyline_points()
+
+    {y_axis_labels, polyline_points}
+  end
+
+  defp points_to_graph(max, data) do
+    px_per_point = 200 / max
+    200 - (data |> Kernel.*(px_per_point) |> Float.round(3))
+  end
+
+  defp x_axis_points(total_points) do
+    # width / points captured
+    px_per_point = Float.round(800 / total_points, 2)
+    Enum.map(0..total_points, &Kernel.*(&1, px_per_point))
+  end
+
+  defp to_polyline_points(list) do
+    Enum.reduce(list, "", fn {y, x}, acc -> acc <> "#{x}, #{y} " end)
+  end
+
+  defp y_axis_labels(min, max) do
+    div = (max - min) / 5
+
+    [
+      min,
+      Float.round(div, 1),
+      Float.round(div * 2, 1),
+      Float.round(div * 3, 1),
+      Float.round(div * 4, 1)
+    ]
+  end
 end
 
 defimpl Phoenix.HTML.Safe, for: Version do
