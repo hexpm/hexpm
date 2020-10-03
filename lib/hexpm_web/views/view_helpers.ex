@@ -361,13 +361,15 @@ defmodule HexpmWeb.ViewHelpers do
 
     y_axis_labels = y_axis_labels(0, max)
 
-    polyline_points =
+    calculated_points =
       points
       |> Enum.map(fn p -> points_to_graph(max, p) end)
       |> Enum.zip(x_axis_points(length(points)))
-      |> to_polyline_points()
 
-    {y_axis_labels, polyline_points}
+    polyline_points = to_polyline_points(calculated_points)
+    polyline_fill = to_polyline_fill(calculated_points)
+
+    {y_axis_labels, polyline_points, polyline_fill}
   end
 
   defp points_to_graph(max, data) do
@@ -378,11 +380,18 @@ defmodule HexpmWeb.ViewHelpers do
   defp x_axis_points(total_points) do
     # width / points captured
     px_per_point = Float.round(800 / total_points, 2)
-    Enum.map(0..total_points, &Kernel.*(&1, px_per_point))
+    Enum.map(0..total_points, &Kernel.*(&1, px_per_point)) |> IO.inspect()
   end
 
   defp to_polyline_points(list) do
     Enum.reduce(list, "", fn {y, x}, acc -> acc <> "#{x}, #{y} " end)
+  end
+
+  defp to_polyline_fill(list) do
+    top = Enum.reduce(list, "", fn {y, x}, acc -> acc <> "#{x}, #{y} " end)
+    {_last_y, last_x} = List.last(list)
+    fill = "#{last_x}, 200 0, 200"
+    top <> fill
   end
 
   defp y_axis_labels(min, max) do
@@ -390,10 +399,10 @@ defmodule HexpmWeb.ViewHelpers do
 
     [
       min,
-      Float.round(div, 1),
-      Float.round(div * 2, 1),
-      Float.round(div * 3, 1),
-      Float.round(div * 4, 1)
+      round(div),
+      round(div * 2),
+      round(div * 3),
+      round(div * 4)
     ]
   end
 end

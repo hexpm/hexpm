@@ -141,11 +141,11 @@ defmodule HexpmWeb.PackageController do
 
     downloads = Packages.package_downloads(package)
 
-    graph_downloads = Releases.downloads_for_last_n_days(release.id, 30)
+    graph_downloads = Releases.downloads_for_last_n_days(release.id, 31)
 
     daily_graph =
       Date.utc_today()
-      |> Date.add(-30)
+      |> Date.add(-31)
       |> Date.range(Date.add(Date.utc_today(), -1))
       |> Enum.map(fn date ->
         Enum.find(graph_downloads, fn dl -> date == Date.from_iso8601!(dl.day) end)
