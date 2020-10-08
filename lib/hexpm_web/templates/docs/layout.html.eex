@@ -10,7 +10,7 @@
       <li class="sidebar-item <%= selected_docs(@conn, :rebar3_usage) %>"><a href="<%= Routes.docs_path(Endpoint, :rebar3_usage) %>">Usage</a></li>
       <li class="sidebar-item <%= selected_docs(@conn, :rebar3_publish) %>"><a href="<%= Routes.docs_path(Endpoint, :rebar3_publish) %>">Publishing packages</a></li>
       <li class="sidebar-item <%= selected_docs(@conn, :rebar3_private) %>"><a href="<%= Routes.docs_path(Endpoint, :rebar3_private) %>">Private packages</a></li>
-      <li class="sidebar-item"><a target="_blank" rel="noopener" href="https://rebar3.org/docs/hex_package_management/">Tasks <%= icon(:glyphicon, "new-window") %></a></li>
+      <li class="sidebar-item"><a target="_blank" rel="noopener" href="https://www.rebar3.org/docs/package_management/hex_package_management/">Tasks <%= icon(:glyphicon, "new-window") %></a></li>
       <li class="sidebar-header">Hex</li>
       <li class="sidebar-item <%= selected_docs(@conn, :faq) %>"><a href="<%= Routes.docs_path(Endpoint, :faq) %>">FAQ</a></li>
       <li class="sidebar-item <%= selected_docs(@conn, :mirrors) %>"><a href="<%= Routes.docs_path(Endpoint, :mirrors) %>">Mirrors</a></li>
