@@ -5,7 +5,7 @@ links = Enum.to_list(@package.meta.links || [])
 build_tools = @current_release && @current_release.meta.build_tools || []
 downloads = if @current_release.downloads, do: @current_release.downloads.downloads, else: 0
 {graph_labels, points, points_fill} = ViewHelpers.time_series_graph(@daily_graph)
-y_axis_labels = Enum.zip(graph_labels, [192, 152, 112, 72, 32])
+y_axis_labels = Enum.zip(graph_labels, [196, 156, 116, 76, 36])
 
 tools = [
   mix: "mix.exs",
@@ -81,6 +81,7 @@ tools = [
       <%= for {l, y} <- y_axis_labels do%>
         <text x="0" y="<%= y %>" fill="#aaa"><%= l %></text>
       <% end %>
+      <text x="0" y="12" fill="#aaa">Last 30 days</text>
     </svg>
   </div>
 <div class="col-md-11 with-divider no-padding">
@@ -182,11 +183,10 @@ tools = [
 
   <div class="col-md-3">
     <%= if Application.fetch_env!(:hexpm, :features)[:package_reports] do %>
-      <h3>Report</h3>
       <form action="<%= Routes.package_report_path(Endpoint, :new) %>">
         <input type="hidden" name="package" value="<%= @package.name %>"/>
         <input type="hidden" name="repository" value="<%= @package.repository.name %>"/>
-        <button type="submit"> Report <%= ViewHelpers.package_name(@package) %></button>
+        <button type="submit" class="full-width"> Report <%= ViewHelpers.package_name(@package) %></button>
       </form>
     <% end %>
     <h3>Config</h3>

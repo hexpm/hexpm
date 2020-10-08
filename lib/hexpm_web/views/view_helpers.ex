@@ -380,7 +380,7 @@ defmodule HexpmWeb.ViewHelpers do
   defp x_axis_points(total_points) do
     # width / points captured
     px_per_point = Float.round(800 / total_points, 2)
-    Enum.map(0..total_points, &Kernel.*(&1, px_per_point)) |> IO.inspect()
+    Enum.map(0..total_points, &Kernel.*(&1, px_per_point))
   end
 
   defp to_polyline_points(list) do
