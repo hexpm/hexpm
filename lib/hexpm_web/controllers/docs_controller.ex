@@ -65,7 +65,8 @@ defmodule HexpmWeb.DocsController do
   end
 
   def rebar3_tasks(conn, _params) do
-    redirect(conn, external: "https://www.rebar3.org/docs/package_management/hex_package_management/")
+    url = "https://www.rebar3.org/docs/package_management/hex_package_management/"
+    redirect(conn, external: url)
   end
 
   def private(conn, _params) do
