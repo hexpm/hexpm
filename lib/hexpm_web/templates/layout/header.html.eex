@@ -14,6 +14,8 @@
     <link rel="search" type="application/opensearchdescription+xml" title="Hex" href="/hexsearch.xml">
     <link rel="stylesheet" href="<%= Routes.static_path(Endpoint, "/css/app.css") %>">
     <link rel="alternate" type="application/rss+xml" title="RSS - Blog" href="/feeds/blog.xml">
+
+    <script async defer data-domain="<%= Application.get_env(:hexpm, :host) %>" src="https://plausible.io/js/plausible.js"></script>
   </head>
   <body>
     <!--[if lt IE 10]>

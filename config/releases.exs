@@ -1,6 +1,10 @@
 import Config
 
 config :hexpm,
+  host: System.fetch_env!("HEXPM_HOST"),
+  port: System.fetch_env!("HEXPM_PORT"),
+  secret_key_base: System.fetch_env!("HEXPM_SECRET_KEY_BASE"),
+  live_view_signing_salt: System.fetch_env!("HEXPM_LIVE_VIEW_SIGNING_SALT"),
   secret: System.fetch_env!("HEXPM_SECRET"),
   private_key: System.fetch_env!("HEXPM_SIGNING_KEY"),
   repo_bucket: System.fetch_env!("HEXPM_REPO_BUCKET"),

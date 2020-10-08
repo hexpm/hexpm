@@ -49,7 +49,7 @@ defmodule Hexpm.MixProject do
       {:hex_core, "~> 0.2", hex_core_opts()},
       {:jason, "~> 1.0"},
       {:libcluster, "~> 3.0"},
-      {:logster, "~> 1.0.0"},
+      {:logster, "~> 1.0"},
       {:mox, "~> 0.5.0", only: :test},
       {:phoenix_ecto, "~> 4.0"},
       {:phoenix_html, "~> 2.3"},
