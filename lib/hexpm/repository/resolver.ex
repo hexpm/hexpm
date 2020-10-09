@@ -34,7 +34,6 @@ defmodule Hexpm.Repository.Resolver do
     String.replace(string, ~r"\e\[[0-9]+[a-zA-Z]", "")
   end
 
-
   defp resolve_deps(requirements) do
     if Version.compare(Hex.version(), "0.18.0-dev") in [:eq, :gt] do
       Map.new(requirements, fn %{app: app} ->
