@@ -5,7 +5,7 @@ defmodule Hexpm.MixProject do
     [
       app: :hexpm,
       version: "0.0.1",
-      elixir: "~> 1.10",
+      elixir: "~> 1.11",
       elixirc_paths: elixirc_paths(Mix.env()),
       xref: xref(),
       compilers: [:phoenix] ++ Mix.compilers(),
@@ -20,7 +20,7 @@ defmodule Hexpm.MixProject do
   def application() do
     [
       mod: {Hexpm.Application, []},
-      extra_applications: [:logger, :runtime_tools, :os_mon]
+      extra_applications: [:logger, :runtime_tools, :os_mon, :hex]
     ]
   end
 
