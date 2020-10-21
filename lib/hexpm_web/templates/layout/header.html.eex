@@ -9,6 +9,7 @@
     <title><%= title(assigns) %></title>
 
     <%= og_tags(assigns) %>
+    <%= canonical_url(assigns) %>
     <%= csrf_meta_tag() %>
 
     <link rel="search" type="application/opensearchdescription+xml" title="Hex" href="/hexsearch.xml">
