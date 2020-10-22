@@ -9,7 +9,7 @@ defmodule Hexpm.Store do
   @callback get(bucket, key, opts) :: body | nil
   @callback put(bucket, key, body, opts) :: term
   @callback delete(bucket, key) :: term
-  @callback delete_many(bucket, [key]) :: [term]
+  @callback delete_many(bucket, [key]) :: :ok
 
   defp impl_bucket(atom) when is_atom(atom) do
     impl_bucket(Application.get_env(:hexpm, atom))
