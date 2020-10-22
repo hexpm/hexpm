@@ -71,12 +71,12 @@ defmodule Hexpm.Repository.Release do
     |> Requirement.build_all(package)
   end
 
-  def build(package, publisher, params, inner_checksum, outer_checksum, replace? \\ false) do
+  def build(package, publisher, params, inner_checksum, outer_checksum, replace? \\ true) do
     build_assoc(package, :releases)
     |> changeset(:create, params, package, publisher, inner_checksum, outer_checksum, replace?)
   end
 
-  def update(release, publisher, params, inner_checksum, outer_checksum, replace? \\ false) do
+  def update(release, publisher, params, inner_checksum, outer_checksum, replace? \\ true) do
     changeset(
       release,
       :update,
@@ -131,43 +131,35 @@ defmodule Hexpm.Repository.Release do
     changeset
   end
 
-  defp validate_editable(changeset, action, false = _force?, replace?) do
-    if editable?(changeset.data, replace?) do
-      changeset
-    else
-      add_error(changeset, :inserted_at, editable_error_message(changeset.data, action))
+  defp validate_editable(changeset, action, _force?, replace?) do
+    cond do
+      is_nil(changeset.data.inserted_at) ->
+        changeset
+
+      not editable?(changeset.data) ->
+        add_error(changeset, :inserted_at, editable_error_message(action))
+
+      replace? not in [true, "true"] ->
+        message = "must include the --replace flag to update an existing release"
+        add_error(changeset, :inserted_at, message)
+
+      true ->
+        changeset
     end
   end
 
-  defp editable_error_message(release, :update) do
-    if release.package.repository.public do
-      "can only modify a release up to one hour after creation"
-    else
-      "must include the --replace flag to update an existing release"
-    end
+  defp editable_error_message(:update) do
+    "can only modify a release up to one hour after publication"
   end
 
-  defp editable_error_message(_release, :delete),
-    do: "can only delete a release up to one hour after creation"
+  defp editable_error_message(:delete),
+    do: "can only delete a release up to one hour after publication"
 
-  defp editable?(release, replace?) do
-    is_nil(release.inserted_at) or
-      private_repo_and_replaceable?(release, replace?) or
-      public_repo_and_replaceable?(release, replace?)
-  end
-
-  defp private_repo_and_replaceable?(release, replace?) when replace? in [true, "true"] do
-    not release.package.repository.public
-  end
-
-  defp private_repo_and_replaceable?(_release, _replace?), do: false
-
-  defp public_repo_and_replaceable?(release, replace?) when replace? in [true, "true"] do
-    within_seconds?(release.inserted_at, @one_hour) or
+  defp editable?(release) do
+    not release.package.repository.public or
+      within_seconds?(release.inserted_at, @one_hour) or
       within_seconds?(release.package.inserted_at, @one_day)
   end
-
-  defp public_repo_and_replaceable?(_release, _replace?), do: false
 
   defp within_seconds?(datetime, within_seconds) do
     at =
