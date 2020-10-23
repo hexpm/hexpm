@@ -49,14 +49,15 @@ depended on packages can't suddenly disappear.
 There are exceptions to the immutability rule, a package can be changed or unpublished within 60
 minutes of the package version release or within 24 hours of initial release of the package.
 Packages are unpublished with `mix hex.publish --revert VERSION` and republished by running
-`mix hex.publish` for the same version again. Private packages can be modified and deleted at any
-time since those changes only affect the user's own repository.
+`mix hex.publish` for the same version again. If you revert the last version, the package is deleted.
+Private packages can be modified and deleted at any time since those changes only affect the user's
+own repository.
 
 Instead of unpublishing we recommend to instead retire a package or release. This should be done
 if the maintainers no longer recommend its use, because it does not work, has security issues,
 been deprecated or any other reason. A package is retired with the `mix hex.retire` task. A
 retired package will still be resolvable and fetchable but users of the package will get a warning
-a message and the website will show the release as retired.
+message and the website will show the release as retired.
 
 Additionally, we reserve the right to remove any package for legal or security reasons at any
 time, this decision is made at the sole discretion of the Hex team.
