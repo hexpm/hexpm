@@ -4,7 +4,7 @@ licenses = @package.meta.licenses || []
 links = Enum.to_list(@package.meta.links || [])
 build_tools = @current_release && @current_release.meta.build_tools || []
 downloads = if @current_release.downloads, do: @current_release.downloads.downloads, else: 0
-{graph_labels, points, points_fill} = ViewHelpers.time_series_graph(@daily_graph)
+{graph_labels, points, _points_fill} = ViewHelpers.time_series_graph(@daily_graph)
 y_axis_labels = Enum.zip(graph_labels, [196, 156, 116, 76, 36])
 
 tools = [
