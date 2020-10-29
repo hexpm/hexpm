@@ -77,7 +77,6 @@ tools = [
         <line x1="0" y1="<%= y %>" x2="800" y2="<%= y %>" stroke="#ddd"></line>
       <% end  %>
       <polyline fill="none" stroke="url(#grad1)" stroke-width="3" stroke-linecap="round" points="<%= points %>"></polyline>
-      <polyline fill="rgba(255, 255, 255, 0.75)" points="<%= points_fill %>"></polyline>
       <%= for {l, y} <- y_axis_labels do%>
         <text x="0" y="<%= y %>" fill="#aaa"><%= l %></text>
       <% end %>

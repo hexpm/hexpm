@@ -357,7 +357,9 @@ defmodule HexpmWeb.ViewHelpers do
 
   # assumes positive values only, and graph dimensions of 800 x 200
   def time_series_graph(points) do
-    max = Enum.max(points ++ [5])
+    max =
+      Enum.max(points ++ [5])
+      |> rounded_max()
 
     y_axis_labels = y_axis_labels(0, max)
 
@@ -395,7 +397,7 @@ defmodule HexpmWeb.ViewHelpers do
   end
 
   defp y_axis_labels(min, max) do
-    div = (max - min) / 5
+    div = (rounded_max(max) - min) / 5
 
     [
       min,
@@ -404,6 +406,17 @@ defmodule HexpmWeb.ViewHelpers do
       round(div * 3),
       round(div * 4)
     ]
+  end
+
+  defp rounded_max(max) do
+    case max do
+      max when max > 1_000_000 -> max |> Kernel./(1_000_000) |> ceil |> Kernel.*(1_000_000)
+      max when max > 100_000 -> max |> Kernel./(100_000) |> ceil |> Kernel.*(100_000)
+      max when max > 10_000 -> max |> Kernel./(10_000) |> ceil |> Kernel.*(10_000)
+      max when max > 1_000 -> max |> Kernel./(1_000) |> ceil |> Kernel.*(1_000)
+      max when max > 100 -> 1_000
+      _ -> 100
+    end
   end
 end
 
