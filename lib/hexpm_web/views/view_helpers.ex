@@ -376,7 +376,7 @@ defmodule HexpmWeb.ViewHelpers do
 
   defp points_to_graph(max, data) do
     px_per_point = 200 / max
-    200 - (data |> Kernel.*(px_per_point) |> Float.round(3))
+    198 - (data |> Kernel.*(px_per_point) |> Float.round(3))
   end
 
   defp x_axis_points(total_points) do
