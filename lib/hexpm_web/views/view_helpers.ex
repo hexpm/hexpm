@@ -354,6 +354,70 @@ defmodule HexpmWeb.ViewHelpers do
     |> EQRCode.encode()
     |> EQRCode.svg(width: 250)
   end
+
+  # assumes positive values only, and graph dimensions of 800 x 200
+  def time_series_graph(points) do
+    max =
+      Enum.max(points ++ [5])
+      |> rounded_max()
+
+    y_axis_labels = y_axis_labels(0, max)
+
+    calculated_points =
+      points
+      |> Enum.map(fn p -> points_to_graph(max, p) end)
+      |> Enum.zip(x_axis_points(length(points)))
+
+    polyline_points = to_polyline_points(calculated_points)
+    polyline_fill = to_polyline_fill(calculated_points)
+
+    {y_axis_labels, polyline_points, polyline_fill}
+  end
+
+  defp points_to_graph(max, data) do
+    px_per_point = 200 / max
+    198 - (data |> Kernel.*(px_per_point) |> Float.round(3))
+  end
+
+  defp x_axis_points(total_points) do
+    # width / points captured
+    px_per_point = Float.round(800 / total_points, 2)
+    Enum.map(0..total_points, &Kernel.*(&1, px_per_point))
+  end
+
+  defp to_polyline_points(list) do
+    Enum.reduce(list, "", fn {y, x}, acc -> acc <> "#{x}, #{y} " end)
+  end
+
+  defp to_polyline_fill(list) do
+    top = Enum.reduce(list, "", fn {y, x}, acc -> acc <> "#{x}, #{y} " end)
+    {_last_y, last_x} = List.last(list)
+    fill = "#{last_x}, 200 0, 200"
+    top <> fill
+  end
+
+  defp y_axis_labels(min, max) do
+    div = (rounded_max(max) - min) / 5
+
+    [
+      min,
+      round(div),
+      round(div * 2),
+      round(div * 3),
+      round(div * 4)
+    ]
+  end
+
+  defp rounded_max(max) do
+    case max do
+      max when max > 1_000_000 -> max |> Kernel./(1_000_000) |> ceil |> Kernel.*(1_000_000)
+      max when max > 100_000 -> max |> Kernel./(100_000) |> ceil |> Kernel.*(100_000)
+      max when max > 10_000 -> max |> Kernel./(10_000) |> ceil |> Kernel.*(10_000)
+      max when max > 1_000 -> max |> Kernel./(1_000) |> ceil |> Kernel.*(1_000)
+      max when max > 100 -> 1_000
+      _ -> 100
+    end
+  end
 end
 
 defimpl Phoenix.HTML.Safe, for: Version do

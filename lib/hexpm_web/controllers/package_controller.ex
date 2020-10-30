@@ -118,6 +118,7 @@ defmodule HexpmWeb.PackageController do
   defp package(conn, repositories, package, releases, release, type) do
     repository = package.repository
     release = Releases.preload(release, [:requirements, :downloads, :publisher])
+
     latest_release_with_docs = Enum.find(releases, & &1.has_docs)
 
     docs_assigns =
@@ -140,6 +141,25 @@ defmodule HexpmWeb.PackageController do
       end
 
     downloads = Packages.package_downloads(package)
+
+    graph_downloads =
+      case type do
+        :package -> Enum.map(releases, & &1.id) |> Releases.downloads_for_last_n_days(31)
+        :release -> release.id |> Releases.downloads_for_last_n_days(31)
+      end
+
+    daily_graph =
+      Date.utc_today()
+      |> Date.add(-31)
+      |> Date.range(Date.add(Date.utc_today(), -1))
+      |> Enum.map(fn date ->
+        Enum.find(graph_downloads, fn dl -> date == Date.from_iso8601!(dl.day) end)
+      end)
+      |> Enum.map(fn
+        nil -> 0
+        %{downloads: dl} -> dl
+      end)
+
     owners = Owners.all(package, user: [:emails, :organization])
 
     dependants =
@@ -172,7 +192,9 @@ defmodule HexpmWeb.PackageController do
         owners: owners,
         dependants: dependants,
         dependants_count: dependants_count,
-        audit_logs: audit_logs
+        audit_logs: audit_logs,
+        daily_graph: daily_graph,
+        type: type
       ] ++ docs_assigns
     )
   end

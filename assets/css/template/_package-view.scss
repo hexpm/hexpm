@@ -6,7 +6,9 @@
   word-wrap: break-word;
 
   a {
-    line-height: 50px;
+    font-weight: inherit;
+    color: inherit;
+    text-decoration: inherit;
   }
 
   .version {
