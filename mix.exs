@@ -28,7 +28,7 @@ defmodule Hexpm.MixProject do
   defp elixirc_paths(_), do: ["lib"]
 
   defp xref() do
-    [exclude: [Hex.Registry, Hex.Resolver]]
+    [exclude: [Hex, Hex.Registry, Hex.Resolver]]
   end
 
   defp deps() do
