@@ -14,7 +14,8 @@ tools = [
 ]
 %>
 
-<h2 class="package-title"><%= ViewHelpers.package_name(@package) %>
+<h2 class="package-title">
+  <a href="<%= Routes.package_path(Endpoint, :show, @package) %>"><%= ViewHelpers.package_name(@package) %></a>
   <%= if @current_release do %>
     <%= if @current_release.retirement do %>
       <span class="version retired"><%= @current_release.version %> (retired)</span>
@@ -81,6 +82,13 @@ tools = [
         <text x="0" y="<%= y %>" fill="#aaa"><%= l %></text>
       <% end %>
       <text x="0" y="12" fill="#aaa">Last 30 days</text>
+      <text x="800" y="12" text-anchor="end" fill="#aaa">
+        <%= if @type == :package do %>
+          All versions
+        <% else %>
+          <%= @current_release.version %>
+        <% end %>
+      </text>
     </svg>
   </div>
 <div class="col-md-11 with-divider no-padding">

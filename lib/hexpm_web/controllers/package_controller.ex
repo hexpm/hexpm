@@ -188,7 +188,8 @@ defmodule HexpmWeb.PackageController do
         dependants: dependants,
         dependants_count: dependants_count,
         audit_logs: audit_logs,
-        daily_graph: daily_graph
+        daily_graph: daily_graph,
+        type: type
       ] ++ docs_assigns
     )
   end
