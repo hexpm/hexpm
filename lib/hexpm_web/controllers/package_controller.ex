@@ -118,6 +118,7 @@ defmodule HexpmWeb.PackageController do
   defp package(conn, repositories, package, releases, release, type) do
     repository = package.repository
     release = Releases.preload(release, [:requirements, :downloads, :publisher])
+
     latest_release_with_docs = Enum.find(releases, & &1.has_docs)
 
     docs_assigns =
@@ -141,7 +142,11 @@ defmodule HexpmWeb.PackageController do
 
     downloads = Packages.package_downloads(package)
 
-    graph_downloads = Releases.downloads_for_last_n_days(release.id, 31)
+    graph_downloads =
+      case type do
+        :package -> Enum.map(releases, & &1.id) |> Releases.downloads_for_last_n_days(31)
+        :release -> release.id |> Releases.downloads_for_last_n_days(31)
+      end
 
     daily_graph =
       Date.utc_today()

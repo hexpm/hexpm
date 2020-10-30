@@ -126,8 +126,8 @@ defmodule Hexpm.Repository.Releases do
     end
   end
 
-  def downloads_for_last_n_days(release_id, num_of_days) do
-    Release.downloads_for_last_n_days(release_id, num_of_days)
+  def downloads_for_last_n_days(release_id_or_ids, num_of_days) do
+    Release.downloads_for_last_n_days(release_id_or_ids, num_of_days)
     |> Repo.all()
   end
 
