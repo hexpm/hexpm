@@ -20,7 +20,7 @@ defmodule Hexpm.MixProject do
   def application() do
     [
       mod: {Hexpm.Application, []},
-      extra_applications: [:logger, :runtime_tools, :os_mon, :hex]
+      extra_applications: [:logger, :runtime_tools, :os_mon]
     ]
   end
 
