@@ -43,3 +43,6 @@ images:
 - 'gcr.io/$PROJECT_ID/hexpm:latest'
 - 'gcr.io/$PROJECT_ID/hexpm-build:$SHORT_SHA'
 - 'gcr.io/$PROJECT_ID/hexpm:$SHORT_SHA'
+
+options:
+  machineType: 'N1_HIGHCPU_8'
