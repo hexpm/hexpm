@@ -19,6 +19,9 @@ defmodule Hexpm.Accounts.User do
     embeds_one :tfa, TFA, on_replace: :delete
 
     belongs_to :organization, Organization
+
+    has_one :github_account, GitHubAccount
+
     has_many :emails, Email
     has_many :package_owners, PackageOwner
     has_many :owned_packages, through: [:package_owners, :package]
@@ -146,6 +149,18 @@ defmodule Hexpm.Accounts.User do
     )
   end
 
+  def get_by_github_id(github_id, preload \\ []) do
+    from(
+      u in Hexpm.Accounts.User,
+      where:
+        u.id in fragment(
+          "SELECT ga.user_id FROM github_accounts ga WHERE ga.github_user_id = ?",
+          ^github_id
+        ),
+      preload: ^preload
+    )
+  end
+
   def verify_permissions(%User{}, "api", _resource) do
     {:ok, nil}
   end
@@ -180,6 +195,9 @@ defmodule Hexpm.Accounts.User do
   else
     defp organization_name(organization), do: organization.name
   end
+
+  def github_account_linked?(%User{github_account: nil}), do: false
+  def github_account_linked?(%User{github_account: %GitHubAccount{}}), do: true
 
   def tfa_enabled?(%{tfa: nil}), do: false
   def tfa_enabled?(%{tfa: %{tfa_enabled: true}}), do: true
