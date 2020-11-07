@@ -92,7 +92,10 @@ defmodule HexpmWeb.Plugs do
 
   def login(conn, _opts) do
     user_id = get_session(conn, "user_id")
-    user = user_id && Users.get_by_id(user_id, [:emails, organizations: :repository])
+
+    user =
+      user_id && Users.get_by_id(user_id, [:emails, :github_account, organizations: :repository])
+
     conn = assign(conn, :current_organization, nil)
 
     if user do

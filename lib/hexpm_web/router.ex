@@ -58,6 +58,8 @@ defmodule HexpmWeb.Router do
     get "/pricing", PageController, :pricing
     get "/sponsors", PageController, :sponsors
 
+    get "/oauth-login", OAuthLoginController, :create
+
     get "/login", LoginController, :show
     post "/login", LoginController, :create
     post "/logout", LoginController, :delete
@@ -145,8 +147,15 @@ defmodule HexpmWeb.Router do
     post "/password", PasswordController, :update, as: :dashboard_password
 
     get "/security", SecurityController, :index, as: :dashboard_security
+
     post "/security/enable_tfa", SecurityController, :enable_tfa, as: :dashboard_security
     post "/security/disable_tfa", SecurityController, :disable_tfa, as: :dashboard_security
+
+    post "/security/link_github_account", SecurityController, :link_github_account,
+      as: :dashboard_security
+
+    post "/security/unlink_github_account", SecurityController, :unlink_github_account,
+      as: :dashboard_security
 
     post "/security/rotate_recovery_codes", SecurityController, :rotate_recovery_codes,
       as: :dashboard_security

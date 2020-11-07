@@ -5,6 +5,17 @@
 
   <div class="col-sm-9 security">
     <div class="panel panel-default">
+      <div class="panel-heading with-button">Linked GitHubAccount
+      <%= if Hexpm.Accounts.User.github_account_linked?(@current_user) do %>
+        <%= form_tag(Routes.dashboard_security_path(Endpoint, :unlink_github_account)) do %>
+          <button type="submit" class="btn btn-primary">Unlink</button>
+        <% end %>
+      <% else %>
+        <%= form_tag(Routes.dashboard_security_path(Endpoint, :link_github_account)) do %>
+          <button type="submit" class="btn btn-primary">Link</button>
+        <% end %>
+      <% end %>
+      </div>
       <div class="panel-heading with-button">Two-factor security
       <%= if Hexpm.Accounts.User.tfa_enabled?(@current_user) do %>
         <%= form_tag(Routes.dashboard_security_path(Endpoint, :disable_tfa)) do %>

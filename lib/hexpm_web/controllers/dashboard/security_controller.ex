@@ -34,6 +34,18 @@ defmodule HexpmWeb.Dashboard.SecurityController do
     |> redirect(to: Routes.dashboard_security_path(conn, :index))
   end
 
+  def link_github_account(conn, _params) do
+    redirect(conn, external: Hexpm.OAuthProviders.GitHub.authorize_uri())
+  end
+
+  def unlink_github_account(conn, _params) do
+    Users.unlink_github_account(conn.assigns.current_user)
+
+    conn
+    |> put_flash(:info, "GitHub account unlinked")
+    |> redirect(to: Routes.dashboard_security_path(conn, :index))
+  end
+
   def rotate_recovery_codes(conn, _params) do
     user = conn.assigns.current_user
     Users.tfa_rotate_recovery_codes(user, audit: audit_data(conn))

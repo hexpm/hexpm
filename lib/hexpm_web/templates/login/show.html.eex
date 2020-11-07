@@ -16,11 +16,19 @@
     <input type="hidden" name="hexdocs" value="<%= @hexdocs %>">
   <% end %>
 
+  
+  <%= if @token not in [nil, ""] do %>
+    <input type="hidden" name="token" value="<%= @token %>">
+  <% end %>
+
   <button type="submit" class="btn btn-primary">Log in</button>
 
   <br><br>
 
   <p>
+    <%= if @token in [nil, ""] do %>
+      <a href="<%= github_login_path() %>">Login with GitHub</a> |
+    <% end %>
     <a href="<%= Routes.signup_path(Endpoint, :show) %>">Don't have an account?</a> |
     <a href="<%= Routes.email_verification_path(Endpoint, :show) %>">Resend verification email</a>
   </p>
