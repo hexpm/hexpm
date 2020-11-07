@@ -4,11 +4,11 @@ defmodule Hexpm.Accounts.UserHandles do
   @derive HexpmWeb.Stale
 
   embedded_schema do
-    field :twitter, :string
-    field :github, :string
-    field :elixirforum, :string
-    field :freenode, :string
-    field :slack, :string
+    field(:twitter, :string)
+    field(:github, :string)
+    field(:elixirforum, :string)
+    field(:freenode, :string)
+    field(:slack, :string)
   end
 
   def changeset(handles, params) do
@@ -32,7 +32,7 @@ defmodule Hexpm.Accounts.UserHandles do
   def render(user) do
     Enum.flat_map(services(), fn {field, service, url} ->
       if handle = Map.get(user.handles, field) do
-        handle = UserHandles.handle(service, handle)
+        handle = UserHandles.handle(field, handle)
         full_url = String.replace(url, "{handle}", handle)
         [{service, handle, full_url}]
       else
@@ -49,14 +49,14 @@ defmodule Hexpm.Accounts.UserHandles do
   defp unuri(handle, host, path) do
     uri = URI.parse(handle)
     http? = uri.scheme in ["http", "https"]
-    host? = String.contains?(uri.host, host)
+    host? = String.contains?(uri.host || "", host)
     path? = String.starts_with?(uri.path, path)
 
     if http? and host? and path? do
       {_, handle} = String.split_at(uri.path, String.length(path))
       handle
     else
-      uri.path
+      String.replace(uri.path, host <> path, "")
     end
   end
 end
