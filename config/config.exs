@@ -63,4 +63,12 @@ config :rollbax, enabled: false
 
 config :logger, :console, format: "[$level] $metadata$message\n"
 
+config :hexpm, Hexpm.OAuthProviders.GitHub,
+  scope: "user:email",
+  redirect_uri: "https://localhost:4000/oauth-login",
+  client_id: "Iv1.3fb12a79b1606f04",
+  client_secret: "333",
+  app_id: "87424",
+  application_name: "Hex.pm Test Application"
+
 import_config "#{Mix.env()}.exs"

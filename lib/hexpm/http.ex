@@ -9,6 +9,11 @@ defmodule Hexpm.HTTP do
     |> read_response()
   end
 
+  def post(url, headers, body) do
+    :hackney.post(url, headers, body)
+    |> read_response()
+  end
+
   def put(url, headers, body) do
     :hackney.put(url, headers, body)
     |> read_response()
