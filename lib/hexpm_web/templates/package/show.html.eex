@@ -81,7 +81,7 @@ tools = [
       <%= for {l, y} <- y_axis_labels do%>
         <text x="0" y="<%= y %>" fill="#aaa"><%= l %></text>
       <% end %>
-      <text x="800" y="12" text-anchor="end" fill="#888">
+      <text x="800" y="32" text-anchor="end" fill="#888">
         Last 30 days,
         <%= if @type == :package do %>
           all versions
