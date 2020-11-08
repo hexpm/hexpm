@@ -5,7 +5,7 @@ links = Enum.to_list(@package.meta.links || [])
 build_tools = @current_release && @current_release.meta.build_tools || []
 downloads = if @current_release.downloads, do: @current_release.downloads.downloads, else: 0
 {graph_labels, points, _points_fill} = ViewHelpers.time_series_graph(@daily_graph)
-y_axis_labels = Enum.zip(graph_labels, [196, 156, 116, 76, 36])
+y_axis_labels = Enum.zip(graph_labels, [194, 154, 114, 74, 34])
 
 tools = [
   mix: "mix.exs",
@@ -64,7 +64,7 @@ tools = [
 
   <div class="col-md-11 no-padding">
     <h3>Downloads</h3>
-    <svg viewBox="0 0 800 200" class="chart">
+    <svg viewBox="0 0 800 210" class="chart">
       <defs>
         <linearGradient id="grad1" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="800" y2="200">
           <stop offset="0%" style="stop-color:#4f28a7;" />
@@ -81,10 +81,10 @@ tools = [
       <%= for {l, y} <- y_axis_labels do%>
         <text x="0" y="<%= y %>" fill="#aaa"><%= l %></text>
       <% end %>
-      <text x="0" y="12" fill="#aaa">Last 30 days</text>
-      <text x="800" y="12" text-anchor="end" fill="#aaa">
+      <text x="800" y="12" text-anchor="end" fill="#888">
+        Last 30 days,
         <%= if @type == :package do %>
-          All versions
+          all versions
         <% else %>
           <%= @current_release.version %>
         <% end %>
