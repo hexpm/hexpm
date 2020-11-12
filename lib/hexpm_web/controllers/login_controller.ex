@@ -17,10 +17,7 @@ defmodule HexpmWeb.LoginController do
     case password_auth(username, password) do
       {:ok, user} ->
         breached? = Hexpm.Pwned.password_breached?(password)
-
-        account_linked? =
-          if params["token"],
-            do: Hexpm.Accounts.Users.link_github_from_token(user, params["token"])
+        account_linked? = maybe_link_account(user, params["token"])
 
         login(conn, user, password_breached: breached?, account_linked?: account_linked?)
 
@@ -30,6 +27,13 @@ defmodule HexpmWeb.LoginController do
         |> put_status(400)
         |> render_show()
     end
+  end
+
+  defp maybe_link_account(_user, nil), do: false
+
+  defp maybe_link_account(user, token) do
+    {:ok, _account_link} = Hexpm.Accounts.Users.link_github_from_token(user, token)
+    true
   end
 
   def delete(conn, _params) do

@@ -1,7 +1,7 @@
 defmodule Hexpm.Accounts.SingleUseToken do
   use Hexpm.Schema
 
-  @token_size 32
+  @token_size 24
   @allowed_types ["github_merge_token"]
 
   schema "single_use_tokens" do
@@ -24,9 +24,8 @@ defmodule Hexpm.Accounts.SingleUseToken do
   defp put_token(changeset), do: put_change(changeset, :token, random_token())
 
   defp random_token do
-    :crypto.strong_rand_bytes(@token_size)
-    |> Base.url_encode64()
-    |> binary_part(0, @token_size)
-    |> String.replace("=", "")
+    @token_size
+    |> :crypto.strong_rand_bytes()
+    |> Base.url_encode64(padding: false)
   end
 end

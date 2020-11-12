@@ -9,7 +9,7 @@ defmodule Hexpm.OAuthProviders.GitHub do
   @base_github_access_token_uri "https://github.com/login/oauth/access_token"
 
   def authorize_uri do
-    config = Application.get_env(:hexpm, __MODULE__)
+    config = config()
 
     %URI{
       host: "github.com",
@@ -43,6 +43,8 @@ defmodule Hexpm.OAuthProviders.GitHub do
           }"
         )
 
+        {:error, :http_request_failed}
+
       {:error, %Jason.DecodeError{}} = error ->
         Logger.error(
           "[#{__MODULE__}] get_user_id failed decoding response with error: #{inspect(error)}"
@@ -51,10 +53,6 @@ defmodule Hexpm.OAuthProviders.GitHub do
         error
 
       error ->
-        Logger.error(
-          "[#{__MODULE__}] get_user_id failed with unexpected error: #{inspect(error)}"
-        )
-
         error
     end
   end

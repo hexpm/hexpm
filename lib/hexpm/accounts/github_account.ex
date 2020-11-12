@@ -9,9 +9,10 @@ defmodule Hexpm.Accounts.GitHubAccount do
     belongs_to :user, User
   end
 
-  def build(user_id, github_user_id) do
-    %__MODULE__{}
-    |> cast(%{user_id: user_id, github_user_id: github_user_id}, [:user_id, :github_user_id])
-    |> validate_required([:user_id, :github_user_id])
+  def build(user, github_user_id) do
+    user
+    |> Ecto.build_assoc(:github_account)
+    |> cast(%{github_user_id: github_user_id}, [:github_user_id])
+    |> validate_required([:github_user_id])
   end
 end

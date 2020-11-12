@@ -540,10 +540,10 @@ defmodule Hexpm.Accounts.Users do
      }}
   end
 
-  # gets a user from a github id
   def get_by_github_id(github_user_id) do
-    github_user_id
-    |> User.get_by_github_id()
+    GitHubAccount
+    |> Repo.get_by(github_user_id: github_user_id)
+    |> Ecto.assoc(:user)
     |> Repo.one()
   end
 
@@ -553,18 +553,18 @@ defmodule Hexpm.Accounts.Users do
     |> Repo.insert(returning: [:token])
   end
 
-  def link_github_from_token(%User{id: user_id}, input_token) do
+  def link_github_from_token(user, input_token) do
     %{payload: %{"github_user_id" => gh_user_id}} =
       token = Repo.get_by(SingleUseToken, token: input_token)
 
     Multi.new()
-    |> Multi.insert(:github_account, GitHubAccount.build(user_id, gh_user_id))
+    |> Multi.insert(:github_account, GitHubAccount.build(user, gh_user_id))
     |> Multi.update(:single_use_token, SingleUseToken.set_used(token))
     |> Repo.transaction()
   end
 
-  def link_github_from_id(%User{id: user_id}, github_id) do
-    user_id
+  def link_github_from_id(user, github_id) do
+    user
     |> GitHubAccount.build(github_id)
     |> Repo.insert()
   end

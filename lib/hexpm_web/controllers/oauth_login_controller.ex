@@ -8,15 +8,15 @@ defmodule HexpmWeb.OAuthLoginController do
   def create(conn, %{"code" => code}) do
     with {:ok, access_token} <- Hexpm.OAuthProviders.GitHub.get_access_token(code),
          {:ok, %{id: user_id, email: email}} <-
-           Hexpm.OAuthProviders.GitHub.get_user(access_token),
-         user <- Hexpm.Accounts.Users.get_by_github_id(user_id) do
+           Hexpm.OAuthProviders.GitHub.get_user(access_token) do
+      user = Hexpm.Accounts.Users.get_by_github_id(user_id)
       forward_to_login_or_sign_up(conn, user, user_id, email)
     else
       error ->
-        Logger.error("Error when trying to create OAuthLogin: #{inspect(error)}")
+        Logger.error("Error trying to create OAuthLogin: #{inspect(error)}")
 
         conn
-        |> put_flash(:error, "Something wrong happened, try again later")
+        |> put_flash(:error, "Something went wrong, try again later")
         |> redirect(to: Routes.login_path(conn, :show))
     end
   end
@@ -62,10 +62,7 @@ defmodule HexpmWeb.OAuthLoginController do
     |> redirect(to: Routes.tfa_auth_path(conn, :show))
   end
 
-  defp login(conn, user) do
-    conn
-    |> start_session(user, conn.params["return"])
-  end
+  defp login(conn, user), do: start_session(conn, user, conn.params["return"])
 
   def start_session(conn, user, return) do
     conn
