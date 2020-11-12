@@ -4,11 +4,11 @@ defmodule Hexpm.Accounts.UserHandles do
   @derive HexpmWeb.Stale
 
   embedded_schema do
-    field(:twitter, :string)
-    field(:github, :string)
-    field(:elixirforum, :string)
-    field(:freenode, :string)
-    field(:slack, :string)
+    field :twitter, :string
+    field :github, :string
+    field :elixirforum, :string
+    field :freenode, :string
+    field :slack, :string
   end
 
   def changeset(handles, params) do
