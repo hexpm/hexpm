@@ -1,105 +1,212 @@
-<h2 class="packages-title">
-  Packages
-</h2>
+<%
+page = if @page == 1, do: nil, else: @page
 
-<%= unless @search do %>
-  <div class="letter-sort">
-    <ul class="list">
-      <%= for letter <- @letters do %>
-      <li>
-        <a href="<%= Routes.package_path(Endpoint, :index, letter: letter) %>">
-          <%= letter %>
-        </a>
-      </li>
-      <% end %>
-    </ul>
-  </div>
-<% end %>
-
-<%= if @package_count == 0 do %>
-  <div class="package-list no-results">
-    <h4>No Results Found</h4>
-  </div>
-<% else %>
-  <%
-  page = if @page == 1, do: nil, else: @page
-
-  sort_name_params = ViewHelpers.params(search: @search, page: page, sort: "name")
-  sort_total_downloads_params = ViewHelpers.params(search: @search, page: page, sort: "total_downloads")
-  sort_recent_downloads_params = ViewHelpers.params(search: @search, page: page, sort: "recent_downloads")
-  sort_created_params = ViewHelpers.params(search: @search, page: page, sort: "inserted_at")
-  sort_updated_params = ViewHelpers.params(search: @search, page: page, sort: "updated_at")
-  sort_recently_published_params = ViewHelpers.params(search: @search, page: page, sort: "recently_published")
-  %>
-
-<nav>
-  <div class="pagination-info">
-    <h4 class="results-found"><%= @package_count %> Results Found</h4>
-  </div>
-  <div class="navbar-right pagination-sort">
-    <%= unless @letter do %>
-      <div class="dropdown">
-        <button class="btn btn-default dropdown-toggle" type="button" id="sort_dropdown" data-toggle="dropdown">
-          <%= show_sort_info(@sort) %>
-          <span class="caret"></span>
-        </button>
-        <ul class="dropdown-menu dropdown-menu-right" role="menu">
-          <li role="presentation">
-            <a role="menuitem" tabindex="-1" href="<%= Routes.package_path(Endpoint, :index, sort_name_params) %>">Name</a>
-          </li>
-          <li role="presentation">
-            <a role="menuitem" tabindex="-1" href="<%= Routes.package_path(Endpoint, :index, sort_total_downloads_params) %>">Total downloads</a>
-          </li>
-          <li role="presentation">
-            <a role="menuitem" tabindex="-1" href="<%= Routes.package_path(Endpoint, :index, sort_recent_downloads_params) %>">Recent downloads</a>
-          </li>
-          <li role="presentation">
-            <a role="menuitem" tabindex="-1" href="<%= Routes.package_path(Endpoint, :index, sort_created_params) %>">Recently created</a>
-          </li>
-          <li role="presentation">
-            <a role="menuitem" tabindex="-1" href="<%= Routes.package_path(Endpoint, :index, sort_updated_params) %>">Recently updated</a>
-          </li>
-          <li role="presentation">
-            <a role="menuitem" tabindex="-1" href="<%= Routes.package_path(Endpoint, :index, sort_recently_published_params) %>">Recently published</a>
-          </li>
-        </ul>
-      </div>
-    <% end %>
-  </div>
-</nav>
-
-<div class="clearfix"></div>
-
-<%= if @exact_match do %>
-  <div class="exact-match">
-    <h5>Exact Match:</h5>
-    <ul>
-      <%= render "_package.html", package: @exact_match, package_downloads: downloads_for_package(@exact_match, @downloads), view: @sort %>
-    </ul>
-  </div>
-<% end %>
-
-<div class="package-list">
-  <%= if @exact_match do %>
-    <h5>Search Results:</h5>
-  <% end %>
-  <ul>
-    <%= for package <- @packages do %>
-      <%= render "_package.html", package: package, package_downloads: downloads_for_package(package, @downloads), view: @sort %>
-    <% end %>
-  </ul>
-</div>
-
-<%=
-render HexpmWeb.SharedView,
-       "_pagination.html",
-       items: @packages,
-       page: @page,
-       total_count: @package_count,
-       per_page: @per_page,
-       unit: "package",
-       units: "packages",
-       path_fn: &Routes.package_path(Endpoint, :index, ViewHelpers.params(search: @search, page: &1, sort: @sort, letter: @letter))
+sort_name_params = ViewHelpers.params(search: @search, page: page, sort: "name")
+sort_total_downloads_params = ViewHelpers.params(search: @search, page: page, sort: "total_downloads")
+sort_recent_downloads_params = ViewHelpers.params(search: @search, page: page, sort: "recent_downloads")
+sort_created_params = ViewHelpers.params(search: @search, page: page, sort: "inserted_at")
+sort_updated_params = ViewHelpers.params(search: @search, page: page, sort: "updated_at")
+sort_recently_published_params = ViewHelpers.params(search: @search, page: page, sort: "recently_published")
 %>
 
-<% end %>
+<%# TODO: Exact match label. Search for 30 packages, drop one if exact match %>
+
+<div class="bg-gray-100 py-6">
+  <div class="container mx-auto flex flex-1 justify-between pb-6">
+    <div class="w-96">
+      <div class="space-y-1">
+        <label for="search" class="block text-sm leading-5 font-medium text-gray-700">
+          Find packages
+        </label>
+        <div class="max-w-lg w-full lg:max-w-xs">
+          <div class="relative">
+            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <svg class="h-5 w-5 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clip-rule="evenodd" />
+              </svg>
+            </div>
+            <form role="search" action="<%= Routes.package_path(Endpoint, :index) %>">
+              <input type="hidden" name="sort" value="recent_downloads">
+              <input type="search" name="search" id="search" value="<%= @search %>" class="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:border-blue-300 focus:shadow-outline-blue sm:text-sm transition duration-150 ease-in-out">
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="w-64">
+      <div class="space-y-1">
+        <label id="listbox-label" class="block text-sm leading-5 font-medium text-gray-700">
+          Sort packages
+        </label>
+        <div class="relative">
+          <span class="inline-block w-full rounded-md shadow-sm">
+            <button type="button" aria-haspopup="listbox" aria-expanded="true" aria-labelledby="listbox-label" class="cursor-default relative w-full rounded-md border border-gray-300 bg-white text-left focus:outline-none focus:shadow-outline-blue focus:border-blue-300 transition ease-in-out duration-150 sm:text-sm sm:leading-5">
+              <span class="flex truncate inset-y-0 items-center relative pl-8 pr-4 py-2">
+                <span class="font-normal block truncate">
+                  <%= show_sort_info(@sort) %>
+                </span>
+                <span class="absolute inset-y-0 left-0 flex items-center pl-1.5">
+                  <svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                    <path fill-rule="evenodd" d="M3 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z" clip-rule="evenodd" />
+                  </svg>
+                </span>
+              </span>
+              <span class="absolute inset-y-0 right-0 flex items-center pr-2 pointer-events-none">
+                <svg class="h-5 w-5 text-gray-400" viewBox="0 0 20 20" fill="none" stroke="currentColor">
+                  <path d="M7 7l3-3 3 3m0 6l-3 3-3-3" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+                </svg>
+              </span>
+            </button>
+          </span>
+
+          <!--
+            Select popover, show/hide based on select state.
+
+            Entering: ""
+              From: ""
+              To: ""
+            Leaving: "transition ease-in duration-100"
+              From: "opacity-100"
+              To: "opacity-0"
+          -->
+          <div class="absolute mt-1 w-full rounded-md bg-white shadow-lg">
+            <ul tabindex="-1" role="listbox" aria-labelledby="listbox-label" aria-activedescendant="listbox-item-3" class="max-h-60 rounded-md py-1 text-base leading-6 shadow-xs overflow-auto focus:outline-none sm:text-sm sm:leading-5">
+              <!--
+                Select option, manage highlight styles based on mouseenter/mouseleave and keyboard navigation.
+
+                Highlighted: "text-white bg-indigo-600", Not Highlighted: "text-gray-900"
+              -->
+              <li id="listbox-item-0" role="option" class="text-gray-900 cursor-default select-none relative py-2 pl-8 pr-4">
+                <!-- Selected: "font-semibold", Not Selected: "font-normal" -->
+                <span class="font-normal block truncate">
+                  Name
+                </span>
+
+                <!--
+                  Checkmark, only display for selected option.
+
+                  Highlighted: "text-white", Not Highlighted: "text-indigo-600"
+                -->
+                <span class="absolute inset-y-0 left-0 flex items-center pl-1.5">
+                  <!-- Heroicon name: check -->
+                  <svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                    <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
+                  </svg>
+                </span>
+              </li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="container mx-auto bg-white shadow overflow-hidden sm:rounded-md">
+    <ul>
+      <%= for {package, ix} <- Enum.with_index(@packages) do %>
+        <li <%= if ix != 0 do %>class="border-t border-gray-200" <% end %>>
+          <a href="#" class="block no-underline hover:bg-gray-50 focus:outline-none focus:bg-gray-50 transition duration-150 ease-in-out">
+            <div class="px-4 py-4 flex items-center sm:px-6">
+              <div class="min-w-0 flex-1 sm:flex sm:items-center sm:justify-between">
+                <div>
+                  <div class="leading-5 text-lg font-medium text-indigo-600 truncate">
+                    <%= ViewHelpers.package_name(package) %>
+                    <span class="text-sm ml-1 font-normal text-gray-500">
+                      <%= package.latest_version %>
+                    </span>
+                  </div>
+                  <div class="mt-2 flex">
+                    <div class="flex items-center text-sm leading-5 text-gray-500">
+                      <span>
+                        <%= ViewHelpers.text_length(package.meta.description, 140) %>
+                      </span>
+                    </div>
+                  </div>
+                  <div class="mt-2 flex">
+                    <div class="flex items-center text-sm leading-5 text-gray-500">
+                      <!-- Heroicon name: chart-bar -->
+                      <svg class="flex-shrink-0 mr-1.5 h-5 w-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                        <path d="M2 11a1 1 0 011-1h2a1 1 0 011 1v5a1 1 0 01-1 1H3a1 1 0 01-1-1v-5zM8 7a1 1 0 011-1h2a1 1 0 011 1v9a1 1 0 01-1 1H9a1 1 0 01-1-1V7zM14 4a1 1 0 011-1h2a1 1 0 011 1v12a1 1 0 01-1 1h-2a1 1 0 01-1-1V4z" />
+                      </svg>
+                      <% package_downloads = downloads_for_package(package, @downloads) %>
+                      <span>
+                        <%= ViewHelpers.human_number_space(display_downloads(package_downloads, @sort) || 0, 5) %>
+                        <%= display_downloads_view_title(@sort) %>
+                      </span>
+                    </div>
+                  </div>
+                </div>
+                <div class="ml-5 flex-shrink-0">
+                  <!-- Heroicon name: chevron-right -->
+                  <svg class="h-5 w-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                    <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd" />
+                  </svg>
+                </div>
+              </div>
+            </div>
+          </a>
+        </li>
+      <% end %>
+    </ul>
+    <div class="bg-white px-4 py-6 flex items-center justify-between border-t border-gray-200 sm:px-6">
+      <div class="flex-1 flex justify-between sm:hidden">
+        <a href="#" class="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm leading-5 font-medium rounded-md text-gray-700 bg-white hover:text-gray-500 focus:outline-none focus:shadow-outline-blue focus:border-blue-300 active:bg-gray-100 active:text-gray-700 transition ease-in-out duration-150">
+          Previous
+        </a>
+        <a href="#" class="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm leading-5 font-medium rounded-md text-gray-700 bg-white hover:text-gray-500 focus:outline-none focus:shadow-outline-blue focus:border-blue-300 active:bg-gray-100 active:text-gray-700 transition ease-in-out duration-150">
+          Next
+        </a>
+      </div>
+      <div class="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
+        <div>
+          <p class="text-sm leading-5 text-gray-700">
+            Showing
+            <span class="font-medium">1</span>
+            to
+            <span class="font-medium">10</span>
+            of
+            <span class="font-medium">97</span>
+            results
+          </p>
+        </div>
+        <div>
+          <nav class="relative z-0 inline-flex shadow-sm">
+            <a href="#" class="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm leading-5 font-medium text-gray-500 hover:text-gray-400 hover:bg-gray-50 focus:z-10 focus:outline-none focus:border-blue-300 focus:shadow-outline-blue active:bg-gray-100 active:text-gray-500 transition ease-in-out duration-150" aria-label="Previous">
+              <!-- Heroicon name: chevron-left -->
+              <svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                <path fill-rule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clip-rule="evenodd" />
+              </svg>
+            </a>
+            <a href="#" class="no-underline -ml-px relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm leading-5 font-medium text-gray-700 hover:text-gray-500 hover:bg-gray-50 focus:bg-gray-50 focus:z-10 focus:outline-none focus:border-blue-300 focus:shadow-outline-blue active:bg-gray-100 active:text-gray-700 transition ease-in-out duration-150">
+              1
+            </a>
+            <a href="#" class="no-underline -ml-px relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm leading-5 font-medium text-gray-700 hover:text-gray-500 hover:bg-gray-50 focus:bg-gray-50 focus:z-10 focus:outline-none focus:border-blue-300 focus:shadow-outline-blue active:bg-gray-100 active:text-gray-700 transition ease-in-out duration-150">
+              2
+            </a>
+            <a href="#" class="no-underline hidden md:inline-flex -ml-px relative items-center px-4 py-2 border border-gray-300 bg-white text-sm leading-5 font-medium text-gray-700 hover:text-gray-500 hover:bg-gray-50 focus:bg-gray-50 focus:z-10 focus:outline-none focus:border-blue-300 focus:shadow-outline-blue active:bg-gray-100 active:text-gray-700 transition ease-in-out duration-150">
+              3
+            </a>
+            <span class="-ml-px relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm leading-5 font-medium text-gray-700">
+              ...
+            </span>
+            <a href="#" class="no-underline hidden md:inline-flex -ml-px relative items-center px-4 py-2 border border-gray-300 bg-white text-sm leading-5 font-medium text-gray-700 hover:text-gray-500 hover:bg-gray-50 focus:bg-gray-50 focus:z-10 focus:outline-none focus:border-blue-300 focus:shadow-outline-blue active:bg-gray-100 active:text-gray-700 transition ease-in-out duration-150">
+              8
+            </a>
+            <a href="#" class="no-underline -ml-px relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm leading-5 font-medium text-gray-700 hover:text-gray-500 hover:bg-gray-50 focus:bg-gray-50 focus:z-10 focus:outline-none focus:border-blue-300 focus:shadow-outline-blue active:bg-gray-100 active:text-gray-700 transition ease-in-out duration-150">
+              9
+            </a>
+            <a href="#" class="no-underline -ml-px relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm leading-5 font-medium text-gray-700 hover:text-gray-500 hover:bg-gray-50 focus:bg-gray-50 focus:z-10 focus:outline-none focus:border-blue-300 focus:shadow-outline-blue active:bg-gray-100 active:text-gray-700 transition ease-in-out duration-150">
+              10
+            </a>
+            <a href="#" class="-ml-px relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm leading-5 font-medium text-gray-500 hover:text-gray-400 hover:bg-gray-50 focus:bg-gray-50 focus:z-10 focus:outline-none focus:border-blue-300 focus:shadow-outline-blue active:bg-gray-100 active:text-gray-500 transition ease-in-out duration-150" aria-label="Next">
+              <!-- Heroicon name: chevron-right -->
+              <svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd" />
+              </svg>
+            </a>
+          </nav>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

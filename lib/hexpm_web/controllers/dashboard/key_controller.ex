@@ -55,6 +55,7 @@ defmodule HexpmWeb.Dashboard.KeyController do
       "index.html",
       title: "Dashboard - User keys",
       container: "container page dashboard",
+      nav_page: :dashboard,
       keys: keys,
       organizations: organizations,
       delete_key_path: Routes.key_path(Endpoint, :delete),

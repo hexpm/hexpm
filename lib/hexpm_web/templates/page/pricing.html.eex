@@ -1,80 +1,188 @@
-<div class="pricing">
-  <h3>Hex is free to use for public open source packages.</h3>
-  <h3>Publish unlimited number of private packages with organizations.</h3>
-
-  <div class="btn-group-wrap">
-    <div class="btn-group btn-group-lg" role="group">
-      <button type="button" class="btn btn-default pricing-button btn-selected">Monthly</button>
-      <button type="button" class="btn btn-default pricing-button">Yearly</button>
+<div class="max-w-screen-xl mx-auto py-24 px-4 sm:px-6 lg:px-8">
+  <div class="sm:flex sm:flex-col sm:align-center">
+    <h1 class="text-5xl leading-none font-extrabold text-gray-900 sm:text-center">Pricing Plans</h1>
+    <p class="mt-5 text-xl leading-7 text-gray-500 sm:text-center">
+      Hex is free to use for public open source packages.
+      Publish unlimited number of private packages with organizations.
+    </p>
+    <div class="relative self-center mt-6 bg-gray-100 rounded-lg p-0.5 flex sm:mt-8">
+      <button type="button" class="relative w-1/2 bg-white border-gray-200 rounded-md shadow-sm py-2 text-sm leading-5 font-medium text-gray-700 whitespace-no-wrap hover:text-gray-500 focus:outline-none focus:border-blue-300 focus:shadow-outline-blue focus:z-10 active:bg-gray-50 active:text-gray-800 transition ease-in-out duration-150 sm:w-auto sm:px-8">Monthly billing</button>
+      <button type="button" class="relative w-1/2 border border-transparent rounded-md py-2 text-sm leading-5 font-medium text-gray-700 whitespace-no-wrap hover:text-gray-500 focus:outline-none focus:border-blue-300 focus:shadow-outline-blue focus:z-10 active:bg-gray-50 active:text-gray-800 transition ease-in-out duration-150 sm:w-auto sm:px-8">Yearly billing</button>
     </div>
   </div>
+  <div class="mt-12 space-y-4 sm:mt-16 sm:space-y-0 sm:grid sm:grid-cols-1 sm:gap-6 lg:max-w-4xl lg:mx-auto xl:max-w-none xl:mx-0 xl:grid-cols-3">
+    <div class="border border-gray-200 rounded-lg shadow-lg divide-y divide-gray-200">
+      <div class="p-6">
+        <h2 class="text-lg leading-6 font-medium text-gray-900">Open source</h2>
+        <p class="mt-4 text-sm leading-5 text-gray-500">For public open source projects.</p>
+        <p class="mt-8">
+          <span class="text-4xl leading-10 font-extrabold text-gray-900">$0</span>
+          <span class="text-base leading-6 font-medium text-gray-500">/mo</span>
+        </p>
+        <button type="button" class="mt-8 w-full bg-purple-600 border border-transparent rounded-md py-2 text-sm leading-5 font-semibold text-white hover:bg-purple-500 focus:outline-none focus:border-purple-700 focus:shadow-outline-purple active:bg-purple-700 transition duration-150 ease-in-out">Sign Up</button>
+      </div>
+      <div class="pt-6 pb-8 px-6">
+        <h3 class="text-xs leading-4 font-medium text-gray-900 tracking-wide uppercase">What's included</h3>
+        <ul class="mt-6 space-y-4">
+          <li class="flex space-x-3">
+            <!-- Heroicon name: check -->
+            <svg class="flex-shrink-0 h-5 w-5 text-green-500" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+              <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
+            </svg>
+            <span class="text-sm leading-5 text-gray-500">Unlimited number of public packages.</span>
+          </li>
 
-  <div class="boxes">
-    <div class="box">
-      <div class="shadow"></div>
-      <div class="text-content">
-        <h3>Open source</h3>
-        <p>For public open source projects.</p>
-        <div class="price">
-          <div class="price-amount">$0</div>
-          <div class="price-details">&nbsp;</div>
-        </div>
-        <ul class="features">
-          <li><strong>&gt;</strong> Unlimited number of <strong>public</strong> packages</li>
-          <li><strong>&gt;</strong> <strong>Public</strong> package documentation</li>
-          <li><strong>&gt;</strong> Multiple package owners</li>
-          <li>&nbsp;</li>
-          <li>&nbsp;</li>
+          <li class="flex space-x-3">
+            <!-- Heroicon name: check -->
+            <svg class="flex-shrink-0 h-5 w-5 text-green-500" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+              <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
+            </svg>
+            <span class="text-sm leading-5 text-gray-500">Public package documentation.</span>
+          </li>
+
+          <li class="flex space-x-3">
+            <!-- Heroicon name: check -->
+            <svg class="flex-shrink-0 h-5 w-5 text-green-500" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+              <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
+            </svg>
+            <span class="text-sm leading-5 text-gray-500">Multiple package owners.</span>
+          </li>
         </ul>
-        <div class="action">
-          <a class="btn btn-primary" href="<%= Routes.signup_path(Endpoint, :show) %>" role="button">Sign up</a>
-        </div>
       </div>
     </div>
 
-    <div class="box">
-      <div class="shadow"></div>
-      <div class="text-content">
-        <h3>Private packages</h3>
-        <p>For private projects with teams of users.</p>
-        <div class="price price-monthly">
-          <div class="price-amount">$7</div>
-          <div class="price-details">/ per user / per month *</div>
-        </div>
-        <div class="price price-yearly">
-          <div class="price-amount">$70</div>
-          <div class="price-details">/ per user / per year *</div>
-        </div>
-        <ul class="features">
-          <li><strong>&gt;</strong> Unlimited number of <strong>private</strong> packages</li>
-          <li><strong>&gt;</strong> <strong>Private</strong> package documentation</li>
-          <li><strong>&gt;</strong> Republish and delete packages</li>
-          <li>&nbsp;</li>
-          <li>&nbsp;</li>
+    <div class="border border-gray-200 rounded-lg shadow-lg divide-y divide-gray-200">
+      <div class="p-6">
+        <h2 class="text-lg leading-6 font-medium text-gray-900">Private packages</h2>
+        <p class="mt-4 text-sm leading-5 text-gray-500">For private projects with teams of users.</p>
+        <p class="mt-8">
+          <span class="text-4xl leading-10 font-extrabold text-gray-900">$7</span>
+          <span class="text-base leading-6 font-medium text-gray-500">/mo</span>
+        </p>
+        <button type="button" class="mt-8 w-full bg-purple-600 border border-transparent rounded-md py-2 text-sm leading-5 font-semibold text-white hover:bg-purple-500 focus:outline-none focus:border-purple-700 focus:shadow-outline-purple active:bg-purple-700 transition duration-150 ease-in-out">Try Free For 30 Days</button>
+      </div>
+      <div class="pt-6 pb-8 px-6">
+        <h3 class="text-xs leading-4 font-medium text-gray-900 tracking-wide uppercase">What's included</h3>
+        <ul class="mt-6 space-y-4">
+          <li class="flex space-x-3">
+            <!-- Heroicon name: check -->
+            <svg class="flex-shrink-0 h-5 w-5 text-green-500" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+              <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
+            </svg>
+            <span class="text-sm leading-5 text-gray-500">Unlimited number of private packages.</span>
+          </li>
+
+          <li class="flex space-x-3">
+            <!-- Heroicon name: check -->
+            <svg class="flex-shrink-0 h-5 w-5 text-green-500" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+              <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
+            </svg>
+            <span class="text-sm leading-5 text-gray-500">Private package documentation.</span>
+          </li>
+
+          <li class="flex space-x-3">
+            <!-- Heroicon name: check -->
+            <svg class="flex-shrink-0 h-5 w-5 text-green-500" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+              <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
+            </svg>
+            <span class="text-sm leading-5 text-gray-500">Republish and delete packages.</span>
+          </li>
         </ul>
-        <div class="action">
-          <a class="btn btn-primary" href="<%= Routes.organization_path(Endpoint, :new) %>" role="button">Try for 30 days</a>
-        </div>
       </div>
     </div>
-  </div>
 
-  <div class="info">
-    <p>
-      <strong>
-        For more information about pricing and billing read the
-        <a href="<%= Routes.docs_path(Endpoint, :faq) %>">FAQ</a>.
-      </strong>
-    </p>
-    <p>
-      <strong>
-        Are you interested in self-hosted Hex or "enterprise" solutions?
-        Please contact us on <a href="mailto:support@hex.pm">support@hex.pm</a>
-        to hear what we are planning and let us know what you are looking for.
-      </strong>
-    </p>
-    <p>
-      <small>* Local VAT may apply.</small>
-    </p>
+    <div class="border border-gray-200 rounded-lg shadow-lg divide-y divide-gray-200">
+      <div class="p-6">
+        <h2 class="text-lg leading-6 font-medium text-gray-900">Enterprise</h2>
+        <p class="mt-4 text-sm leading-5 text-gray-500">Self hosted Hex for public and private packages.</p>
+        <p class="mt-8">
+          <span class="text-4xl leading-10 font-extrabold text-gray-900">TBA</span>
+        </p>
+        <button type="button" class="mt-8 w-full bg-purple-600 border border-transparent rounded-md py-2 text-sm leading-5 font-semibold text-white hover:bg-purple-500 focus:outline-none focus:border-purple-700 focus:shadow-outline-purple active:bg-purple-700 transition duration-150 ease-in-out">Contact Sales</button>
+      </div>
+      <div class="pt-6 pb-8 px-6">
+        <h3 class="text-xs leading-4 font-medium text-gray-900 tracking-wide uppercase">What's included</h3>
+        <ul class="mt-6 space-y-4">
+          <li class="flex space-x-3">
+            <!-- Heroicon name: check -->
+            <svg class="flex-shrink-0 h-5 w-5 text-green-500" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+              <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
+            </svg>
+            <span class="text-sm leading-5 text-gray-500">Run on your own infrastructure.</span>
+          </li>
+
+          <li class="flex space-x-3">
+            <!-- Heroicon name: check -->
+            <svg class="flex-shrink-0 h-5 w-5 text-green-500" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+              <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
+            </svg>
+            <span class="text-sm leading-5 text-gray-500">Mirroring of hex.pm packages.</span>
+          </li>
+
+          <li class="flex space-x-3">
+            <!-- Heroicon name: check -->
+            <svg class="flex-shrink-0 h-5 w-5 text-green-500" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+              <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
+            </svg>
+            <span class="text-sm leading-5 text-gray-500">Whitelist allowed and vetted packages.</span>
+          </li>
+
+          <li class="flex space-x-3">
+            <!-- Heroicon name: check -->
+            <svg class="flex-shrink-0 h-5 w-5 text-green-500" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+              <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
+            </svg>
+            <span class="text-sm leading-5 text-gray-500">Apply security policies.</span>
+          </li>
+        </ul>
+      </div>
+    </div>
   </div>
 </div>
+
+<div class="max-w-screen-xl mx-auto pb-16 px-4 sm:px-6 lg:pb-20 lg:px-8">
+    <div class="lg:grid lg:grid-cols-3 lg:gap-8">
+      <div class="space-y-4">
+        <h2 class="text-3xl leading-9 font-extrabold text-gray-900">
+          Frequently asked questions
+        </h2>
+        <p class="text-lg leading-7 text-gray-500">Can’t find the answer you’re looking for? Reach out to our <a href="#" class="font-medium">customer support</a>.</p>
+      </div>
+      <div class="mt-12 lg:mt-0 lg:col-span-2">
+        <dl class="space-y-12">
+          <div class="space-y-2">
+            <dt class="text-lg leading-6 font-medium text-gray-900">
+              Do listed prices include VAT?
+            </dt>
+            <dd class="text-base leading-6 text-gray-500">
+              All prices are listed excluding VAT. Private EU citizens and Swedish companies are required to pay VAT based on the VAT rate of their country of origin. EU companies registered for VAT need to supply a valid VAT number. VAT is not included for customers outside of the EU.
+            </dd>
+          </div>
+          <div class="space-y-2">
+            <dt class="text-lg leading-6 font-medium text-gray-900">
+              Can I cancel at any time?
+            </dt>
+            <dd class="text-base leading-6 text-gray-500">
+              Yes, you can cancel your subscription at any time. When your subscription is cancelled you can continue to use the organization until the end of the current billing period
+            </dd>
+          </div>
+          <div class="space-y-2">
+            <dt class="text-lg leading-6 font-medium text-gray-900">
+              How are organizations billed on the monthly plan?
+            </dt>
+            <dd class="text-base leading-6 text-gray-500">
+              Organizations on the monthly plan are billed each month on the day of the month the subscription was started. The subscription is invoiced and charged in advance when the next billing period starts. Changes in the number of open seats in the plan are pro-rated on the next invoice.
+            </dd>
+          </div>
+          <div class="space-y-2">
+            <dt class="text-lg leading-6 font-medium text-gray-900">
+              How are organizations billed on the yearly plan?
+            </dt>
+            <dd class="text-base leading-6 text-gray-500">
+              Organizations on the yearly plan are billed each year from the day the subscription was started. The subscription is invoiced and charged in advance when the next billing period starts. Changes in the number of open seats in the plan are pro-rated and charged when the number of seats change.
+            </dd>
+          </div>
+        </dl>
+      </div>
+    </div>
+  </div>

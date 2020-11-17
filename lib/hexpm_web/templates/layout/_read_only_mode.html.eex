@@ -1,6 +1,6 @@
 <%= if Application.get_env(:hexpm, :read_only_mode, false) do %>
-  <div class="read-only-mode" role="alert">
-    <div class="container">
+  <div class="h-auto bg-red-200" role="alert">
+    <div class="p-5 text-center text-xl font-bold text-red-600">
       Hex.pm is currently in read only mode due to maintainence,
       parts of the website may not work as expected
       but we will be back to normal operation in a few minutes.

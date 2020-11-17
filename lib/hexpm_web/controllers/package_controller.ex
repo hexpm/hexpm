@@ -4,31 +4,16 @@ defmodule HexpmWeb.PackageController do
   @packages_per_page 30
   @audit_logs_per_page 10
   @sort_params ~w(name recent_downloads total_downloads inserted_at updated_at recently_published)
-  @letters for letter <- ?A..?Z, do: <<letter>>
 
   def index(conn, params) do
-    letter = Hexpm.Utils.parse_search(params["letter"])
     search = Hexpm.Utils.parse_search(params["search"])
-
-    filter =
-      cond do
-        letter ->
-          {:letter, letter}
-
-        search ->
-          search
-
-        true ->
-          nil
-      end
-
     organizations = Users.all_organizations(conn.assigns.current_user)
     repositories = Enum.map(organizations, & &1.repository)
     sort = sort(params["sort"])
     page_param = Hexpm.Utils.safe_int(params["page"]) || 1
-    package_count = Packages.count(repositories, filter)
+    package_count = Packages.count(repositories, search)
     page = Hexpm.Utils.safe_page(page_param, package_count, @packages_per_page)
-    packages = fetch_packages(repositories, page, @packages_per_page, filter, sort)
+    packages = fetch_packages(repositories, page, @packages_per_page, search, sort)
     downloads = Packages.packages_downloads_with_all_views(packages)
     exact_match = exact_match(repositories, search)
 
@@ -37,16 +22,16 @@ defmodule HexpmWeb.PackageController do
       "index.html",
       title: "Packages",
       container: "container",
+      nav_page: :packages,
       per_page: @packages_per_page,
       search: search,
-      letter: letter,
       sort: sort,
       package_count: package_count,
       page: page,
       packages: packages,
-      letters: @letters,
       downloads: downloads,
-      exact_match: exact_match
+      exact_match: exact_match,
+      hide_header_search: true
     )
   end
 
@@ -83,6 +68,7 @@ defmodule HexpmWeb.PackageController do
       render(conn, "audit_logs.html",
         title: "Recent Activities for #{package.name}",
         container: "container package-view",
+        nav_page: :packages,
         package: package,
         audit_logs: audit_logs,
         page: page,
@@ -184,6 +170,7 @@ defmodule HexpmWeb.PackageController do
         title: package.name,
         description: package.meta.description,
         container: "container package-view",
+        nav_page: :packages,
         canonical_url: Routes.package_url(conn, :show, package),
         package: package,
         repository_name: repository.name,

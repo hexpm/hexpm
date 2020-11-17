@@ -57,7 +57,8 @@ defmodule HexpmWeb.Dashboard.SecurityController do
       conn,
       "index.html",
       title: "Dashboard - Security",
-      container: "container page dashboard"
+      container: "container page dashboard",
+      nav_page: :dashboard
     )
   end
 end

@@ -103,6 +103,7 @@ defmodule HexpmWeb.Dashboard.EmailController do
       "index.html",
       title: "Dashboard - Email",
       container: "container page dashboard",
+      nav_page: :dashboard,
       create_changeset: create_changeset,
       emails: emails
     )

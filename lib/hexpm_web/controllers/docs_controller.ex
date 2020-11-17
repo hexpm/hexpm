@@ -12,7 +12,8 @@ defmodule HexpmWeb.DocsController do
       view: "usage.html",
       view_name: :usage,
       title: "Mix usage",
-      container: "container page docs"
+      container: "container page docs",
+      nav_page: :docs
     )
   end
 
@@ -23,7 +24,8 @@ defmodule HexpmWeb.DocsController do
       view: "publish.html",
       view_name: :publish,
       title: "Mix publish package",
-      container: "container page docs"
+      container: "container page docs",
+      nav_page: :docs
     )
   end
 
@@ -38,7 +40,8 @@ defmodule HexpmWeb.DocsController do
       view: "rebar3_usage.html",
       view_name: :rebar3_usage,
       title: "Rebar3 usage",
-      container: "container page docs"
+      container: "container page docs",
+      nav_page: :docs
     )
   end
 
@@ -49,7 +52,8 @@ defmodule HexpmWeb.DocsController do
       view: "rebar3_publish.html",
       view_name: :rebar3_publish,
       title: "Rebar3 publish package",
-      container: "container page docs"
+      container: "container page docs",
+      nav_page: :docs
     )
   end
 
@@ -60,7 +64,8 @@ defmodule HexpmWeb.DocsController do
       view: "rebar3_private.html",
       view_name: :rebar3_private,
       title: "Rebar3 private packages",
-      container: "container page docs"
+      container: "container page docs",
+      nav_page: :docs
     )
   end
 
@@ -76,7 +81,8 @@ defmodule HexpmWeb.DocsController do
       view: "private.html",
       view_name: :private,
       title: "Private packages",
-      container: "container page docs"
+      container: "container page docs",
+      nav_page: :docs
     )
   end
 
@@ -87,7 +93,8 @@ defmodule HexpmWeb.DocsController do
       view: "coc.html",
       view_name: :coc,
       title: "Code of Conduct",
-      container: "container page docs"
+      container: "container page docs",
+      nav_page: :docs
     )
   end
 
@@ -98,7 +105,8 @@ defmodule HexpmWeb.DocsController do
       view: "faq.html",
       view_name: :faq,
       title: "FAQ",
-      container: "container page docs"
+      container: "container page docs",
+      nav_page: :docs
     )
   end
 
@@ -109,7 +117,8 @@ defmodule HexpmWeb.DocsController do
       view: "mirrors.html",
       view_name: :mirrors,
       title: "Mirrors",
-      container: "container page docs"
+      container: "container page docs",
+      nav_page: :docs
     )
   end
 
@@ -120,7 +129,8 @@ defmodule HexpmWeb.DocsController do
       view: "public_keys.html",
       view_name: :public_keys,
       title: "Public keys",
-      container: "container page docs"
+      container: "container page docs",
+      nav_page: :docs
     )
   end
 

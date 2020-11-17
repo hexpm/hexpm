@@ -1,211 +1,180 @@
-<div class="featured-home">
-  <%= render HexpmWeb.LayoutView, "_flash.html", conn: @conn %>
+<div class="bg-gray-800">
+  <div class="relative">
+    <div class="container mx-auto overflow-auto pt-10">
+      <div class="page-index-header"></div>
+      <div class="relative">
+        <h1 class="text-4xl text-center font-medium text-gray-100">The <span class="text-red-400">Erlang</span> and <span class="text-purple-400">Elixir</span> package manager</h1>
 
-  <h2>The package manager for the Erlang ecosystem</h2>
-
-  <div class="search-form">
-    <div class="container">
-      <div class="row">
-        <div class="col-md-8 col-md-offset-2">
-          <%= form_tag(Routes.package_path(Endpoint, :index), method: "get", role: "search") do %>
-            <div class="input-group">
-              <input type="search" class="form-control" placeholder="Find packages" name="search" id="search" value="<% # search(assigns) %>" tabindex="1">
-              <input type="hidden" name="sort" value="recent_downloads">
-              <label class="sr-only" for="search">Find packages</label>
-              <span class="input-group-btn">
-                <button type="submit" class="btn btn-search" tabindex="1">
-                  <%= icon(:glyphicon, :search) %>
-                </button>
-              </span>
+        <div class="grid grid-cols-1 xl:grid-cols-2 gap-10 md:gap-20 mb-8 p-5 md:p-15">
+          <div class="flex p-4 md:p-8 bg-gray-50 border-t-8 border-red-400 rounded-md shadow-2xl">
+            <div class="hidden md:flex flex-col justify-center mr-8 w-32 xl:w-64">
+              <img class="w-full" src="<%= Routes.static_path(Endpoint, "/images/erlang-logo.svg") %>">
             </div>
-          <% end %>
+            <div>
+              <h3 class="mb-2 text-2xl">Using with Erlang</h3>
+              <p>
+                Download <a href="https://s3.amazonaws.com/rebar3/rebar3">rebar3</a>, put it in your <code class="font-mono">PATH</code> and give it executable permissions.
+                Now you can specify Hex dependencies in your rebar.config like <code class="font-mono">{deps, [hackney]}</code>.
+              </p>
+            </div>
+          </div>
+          <div class="flex p-4 md:p-8 bg-gray-50 border-t-8 border-purple-400 rounded-md shadow-2xl">
+            <div class="hidden md:flex flex-col justify-center mr-8 w-32 xl:w-64">
+              <img class="w-full" src="<%= Routes.static_path(Endpoint, "/images/elixir-logo.svg") %>">
+            </div>
+            <div>
+              <h3 class="mb-2 text-2xl">Using with Elixir</h3>
+              <p>
+                Specify your <a href="https://hexdocs.pm/mix/Mix.Tasks.Deps.html">Mix dependencies</a> as two-item tuples
+                like <code class="font-mono">{:plug, "~> 1.1.0"}</code> in your dependency list,
+                Elixir will ask if you want to install Hex if you haven't already.
+              </p>
+            </div>
+          </div>
         </div>
       </div>
     </div>
   </div>
 
-  <div class="using-with-boxes">
-    <div class="using-with-box elixir">
-      <div class="shadow"></div>
-      <div class="text-content clearfix">
-        <div class="side-box">
-          <div class="lang-symbol"></div>
+  <div class="mb-2 sm:mb-6">
+    <div class="relative">
+      <div class="absolute inset-x-0 bottom-0 h-1/2 bg-white"></div>
+      <div class="relative max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="max-w-4xl mx-auto">
+          <dl class="rounded-lg bg-white shadow-lg sm:grid sm:grid-cols-3">
+            <div class="flex flex-col border-b border-gray-100 p-6 text-center sm:border-0 sm:border-r">
+              <dt class="order-2 mt-2 text-lg leading-6 font-medium text-gray-500" id="item-1">
+                Packages
+              </dt>
+              <dd class="order-1 text-5xl leading-none font-extrabold text-indigo-600" aria-describedby="item-1">
+                <%= ViewHelpers.human_number_space(@num_packages, 5) %>
+              </dd>
+            </div>
+            <div class="flex flex-col border-t border-b border-gray-100 p-6 text-center sm:border-0 sm:border-l sm:border-r">
+              <dt class="order-2 mt-2 text-lg leading-6 font-medium text-gray-500">
+                Downloads last 7 days
+              </dt>
+              <dd class="order-1 text-5xl leading-none font-extrabold text-indigo-600">
+                <%= ViewHelpers.human_number_space(@total["week"], 5) %>
+              </dd>
+            </div>
+            <div class="flex flex-col border-t border-gray-100 p-6 text-center sm:border-0 sm:border-l">
+              <dt class="order-2 mt-2 text-lg leading-6 font-medium text-gray-500">
+                Downloads all time
+              </dt>
+              <dd class="order-1 text-5xl leading-none font-extrabold text-indigo-600">
+                <%= ViewHelpers.human_number_space(@total["all"], 5) %>
+              </dd>
+            </div>
+          </dl>
         </div>
-        <div class="instructions">
-          <h3><a href="<%= Routes.docs_path(Endpoint, :usage) %>">Using with Elixir</a></h3>
-          <p>
-            Specify your Mix dependencies as two-item tuples like <code>{:plug, "~> 1.1.0"}</code>
-            in your dependency list, Elixir will ask if you want to install Hex if you haven't already.
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="py-14">
+  <div class="max-w-xl mx-auto px-4 sm:px-6 lg:max-w-screen-xl lg:px-8">
+    <div class="lg:grid lg:grid-cols-3 lg:gap-8">
+      <div>
+        <div class="flex items-center justify-center h-12 w-12 rounded-md bg-indigo-500 text-white">
+          <svg class="h-6 w-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+          </svg>
+        </div>
+        <div class="mt-5">
+          <h5 class="text-lg leading-6 font-medium text-gray-900">Getting started</h5>
+          <p class="mt-2 text-base leading-6 text-gray-500">
+            Fetch dependencies from Hex without creating an account.
+            Hex is usable out of the box in Elixir with <a href="<%= Routes.docs_path(@conn, :usage) %>">Mix</a>
+            and in Erlang with <a href="<%= Routes.docs_path(@conn, :rebar3_usage) %>">Rebar3</a>.
+            Check our <a href="<%= Routes.docs_path(@conn, :faq) %>">FAQ</a> for commonly asked questions.
+          </p>
+        </div>
+      </div>
+      <div class="mt-10 lg:mt-0">
+        <div class="flex items-center justify-center h-12 w-12 rounded-md bg-indigo-500 text-white">
+          <svg class="h-6 w-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+          </svg>
+        </div>
+        <div class="mt-5">
+          <h5 class="text-lg leading-6 font-medium text-gray-900">Publish packages</h5>
+          <p class="mt-2 text-base leading-6 text-gray-500">
+            <a href="<%= Routes.signup_path(@conn, :show) %>">Create an account</a> and follow the
+            <a href="<%= Routes.docs_path(@conn, :publish) %>">publishing guide</a>. Your package
+            will be immediately available to all Elixir and Erlang users and the documentation will
+            be available on <a href="https://hexdocs.pm">HexDocs</a>.
+          </p>
+        </div>
+      </div>
+      <div class="mt-10 lg:mt-0">
+        <div class="flex items-center justify-center h-12 w-12 rounded-md bg-indigo-500 text-white">
+          <svg class="h-6 w-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+          </svg>
+        </div>
+        <div class="mt-5">
+          <h5 class="text-lg leading-6 font-medium text-gray-900">Private packages</h5>
+          <p class="mt-2 text-base leading-6 text-gray-500">
+            Publish private packages by <a href="<%= Routes.organization_path(@conn, :new) %>">creating an organization</a>.
+            Your private packages will get the same features as public packages such as fast dependency fetching,
+            HexDocs, and run on the same reliable infrastructure that serves millions of packages
+            daily. See our <a href="<%= Routes.page_path(@conn, :pricing) %>">pricing</a> for more details.
           </p>
         </div>
       </div>
     </div>
-
-    <div class="using-with-box erlang">
-      <div class="shadow"></div>
-      <div class="text-content clearfix">
-        <div class="side-box">
-          <div class="lang-symbol"></div>
-        </div>
-        <div class="instructions">
-          <h3><a href="<%= Routes.docs_path(Endpoint, :rebar3_usage) %>">Using with Erlang</a></h3>
-          <p>
-            Download <a href="https://s3.amazonaws.com/rebar3/rebar3">rebar3</a>, put it in your <code>PATH</code> and give it executable permissions.
-            Now you can specify Hex dependencies in your rebar.config like <code>{deps, [hackney]}</code>.
-          </p>
-        </div>
-      </div>
-    </div>
   </div>
 </div>
 
-<div class="getting-started">
-  <div class="container">
-    <div class="row">
-      <div class="col-md-4">
-        <h3 class="gs-head">
-          <%= icon(:octicon, :"cloud-download", class: "header-icon") %>
-          Getting started
-        </h3>
-        <p>
-          Fetch dependencies from Hex without creating an account.
-          Hex is usable out of the box in Elixir with <a href="<%= Routes.docs_path(@conn, :usage) %>">Mix</a>
-          and in Erlang with <a href="<%= Routes.docs_path(@conn, :rebar3_usage) %>">Rebar3</a>.
-          Check our <a href="<%= Routes.docs_path(@conn, :faq) %>">FAQ</a> for commonly asked questions.
-        </p>
-      </div>
-
-      <div class="col-md-4">
-        <h3 class="gs-head">
-          <%= icon(:octicon, :"cloud-upload", class: "header-icon") %>
-          Publish packages
-        </h3>
-        <p>
-          <a href="<%= Routes.signup_path(@conn, :show) %>">Create an account</a> and follow the
-          <a href="<%= Routes.docs_path(@conn, :publish) %>">publishing guide</a>. Your package
-          will be immediately available to all Elixir and Erlang users and the documentation will
-          be available on <a href="https://hexdocs.pm">HexDocs</a>.
-        </p>
-      </div>
-
-      <div class="col-md-4">
-        <h3 class="gs-head">
-          <%= icon(:octicon, :lock, class: "header-icon") %>
-          Private packages
-        </h3>
-        <p>
-          Publish private packages by <a href="<%= Routes.organization_path(@conn, :new) %>">creating an organization</a>.
-          Your private packages
-          will get the same features as public packages such as fast dependency fetching, HexDocs,
-          and run on the same reliable infrastructure that serves millions of packages
-          daily. See our <a href="<%= Routes.page_path(@conn, :pricing) %>">pricing page</a> for more details.
-        </p>
-      </div>
-    </div>
+<div class="container mx-auto mb-16 grid grid-cols-3 gap-5 p-5 border border-gray-300 rounded-md shadow-lg text-gray-800">
+  <div class="p-3">
+    <h3 class="flex items-center mb-2 border-b-2 border-red-400 text-xl uppercase pb-1">
+      <svg class="h-6 w-6 mr-2 text-gray-500" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+        <path fill-rule="evenodd" d="M12.395 2.553a1 1 0 00-1.45-.385c-.345.23-.614.558-.822.88-.214.33-.403.713-.57 1.116-.334.804-.614 1.768-.84 2.734a31.365 31.365 0 00-.613 3.58 2.64 2.64 0 01-.945-1.067c-.328-.68-.398-1.534-.398-2.654A1 1 0 005.05 6.05 6.981 6.981 0 003 11a7 7 0 1011.95-4.95c-.592-.591-.98-.985-1.348-1.467-.363-.476-.724-1.063-1.207-2.03zM12.12 15.12A3 3 0 017 13s.879.5 2.5.5c0-1 .5-4 1.25-4.5.5 1 .786 1.293 1.371 1.879A2.99 2.99 0 0113 13a2.99 2.99 0 01-.879 2.121z" clip-rule="evenodd" />
+      </svg>
+      Most popular
+    </h3>
+    <ul>
+      <%= for {package, _inserted_at, _meta, _downloads} <- @package_top do %>
+        <li class="py-3 border-b border-gray-200">
+          <a href="<%= Routes.package_path(Endpoint, :show, package) %>" class="no-underline font-medium text-gray-500 hover:text-blue-700"><%= package %></a>
+        </li>
+      <% end %>
+    </ul>
   </div>
-</div>
 
-<div class="stats home-stats">
-  <ul class="container">
-    <li>
-      <%= icon(:octicon, :package, class: "stat-icon stat-icon-package") %>
-      <span class="stat-info">
-        <span class="count-info wrap">
-          <%= ViewHelpers.human_number_space(@num_packages, 5) %>
-        </span>
-        <span class="count-info no-wrap">
-          <%= ViewHelpers.human_number_space(@num_packages) %>
-        </span>
-        <br> packages <br> available
-      </span>
-    </li>
-    <li>
-      <%= icon(:octicon, :versions, class: "stat-icon stat-icon-versions") %>
-      <span class="stat-info">
-        <span class="count-info wrap">
-          <%= ViewHelpers.human_number_space(@num_releases, 5) %>
-        </span>
-        <span class="count-info no-wrap">
-          <%= ViewHelpers.human_number_space(@num_releases) %>
-        </span>
-        <br> package <br> versions
-      </span>
-    </li>
-    <li>
-      <%= icon(:octicon, :calendar, class: "stat-icon stat-icon-calendar") %>
-      <span class="stat-info">
-        <span class="count-info wrap">
-          <%= ViewHelpers.human_number_space(@total["day"], 5) %>
-        </span>
-        <span class="count-info no-wrap">
-          <%= ViewHelpers.human_number_space(@total["day"]) %>
-        </span>
-        <br> downloads <br> yesterday
-      </span>
-    </li>
-    <li>
-      <%= icon(:octicon, :calendar, class: "stat-icon stat-icon-calendar") %>
-      <span class="stat-info">
-        <span class="count-info wrap">
-          <%= ViewHelpers.human_number_space(@total["week"], 5) %>
-        </span>
-        <span class="count-info no-wrap">
-          <%= ViewHelpers.human_number_space(@total["week"]) %>
-        </span>
-        <br> downloads <br> last 7 days
-      </span>
-    </li>
-    <li>
-      <%= icon(:octicon, :calendar, class: "stat-icon stat-icon-calendar") %>
-      <span class="stat-info">
-        <span class="count-info wrap">
-          <%= ViewHelpers.human_number_space(@total["all"], 5) %>
-        </span>
-        <span class="count-info no-wrap">
-          <%= ViewHelpers.human_number_space(@total["all"]) %>
-        </span>
-        <br> downloads <br> all time
-      </span>
-    </li>
-  </ul>
-</div>
+  <div class="p-3">
+    <h3 class="flex items-center mb-2 border-b-2 border-purple-400 text-xl uppercase pb-1">
+      <svg class="h-6 w-6 mr-2 text-gray-500" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clip-rule="evenodd" />
+      </svg>
+      New packages
+    </h3>
+    <ul>
+      <%= for {package, _inserted_at, _meta} <- @package_new do %>
+        <li class="py-3 border-b border-gray-200">
+          <a href="<%= Routes.package_path(Endpoint, :show, package) %>" class="no-underline font-medium text-gray-500 hover:text-blue-700"><%= package %></a>
+        </li>
+      <% end %>
+    </ul>
+  </div>
 
-<div class="log-body">
-  <div class="container">
-    <div class="row">
-      <div class="col-md-4">
-        <h3 class="log-head">
-          <%= icon(:octicon, :package, class: "header-icon") %>
-          Most Downloaded
-        </h3>
-        <ul>
-          <%= for {package, inserted_at, meta, downloads} <- @package_top do %>
-            <%= render_package package: package, downloads: downloads, inserted_at: inserted_at, description: meta.description %>
-          <% end %>
-        </ul>
-      </div>
-      <div class="col-md-4">
-        <h3 class="log-head">
-          <%= icon(:octicon, :package, class: "header-icon") %>
-          New Packages
-        </h3>
-        <ul>
-          <%= for {package, inserted_at, %PackageMetadata{} = meta} <- @package_new do %>
-            <%= render_package package: package, inserted_at: inserted_at, description: meta.description %>
-          <% end %>
-        </ul>
-      </div>
-      <div class="col-md-4">
-        <h3 class="log-head">
-          <%= icon(:octicon, :package, class: "header-icon") %>
-          Recently Updated
-        </h3>
-        <ul>
-          <%= for {package, version, inserted_at, %PackageMetadata{} = meta} <- @releases_new do %>
-            <%= render_package version: version, package: package, inserted_at: inserted_at, description: meta.description %>
-          <% end %>
-        </ul>
-      </div>
-    </div>
+  <div class="p-3">
+    <h3 class="flex items-center mb-2 border-b-2 border-blue-400 text-xl uppercase pb-1">
+      <svg class="h-6 w-6 mr-2 text-gray-500" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+        <path d="M2 6a2 2 0 012-2h5l2 2h5a2 2 0 012 2v6a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" />
+        <path stroke="#fff" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 11h4m-2-2v4" />
+      </svg>
+      Recently updated
+    </h3>
+    <ul>
+      <%= for {package, _version, _inserted_at, _meta} <- @releases_new do %>
+        <li class="py-3 border-b border-gray-200">
+          <a href="<%= Routes.package_path(Endpoint, :show, package) %>" class="no-underline font-medium text-gray-500 hover:text-blue-700"><%= package %></a>
+        </li>
+      <% end %>
+    </ul>
   </div>
 </div>

@@ -33,6 +33,7 @@ defmodule HexpmWeb.Dashboard.PasswordController do
       "index.html",
       title: "Dashboard - Change password",
       container: "container page dashboard",
+      nav_page: :dashboard,
       changeset: changeset
     )
   end

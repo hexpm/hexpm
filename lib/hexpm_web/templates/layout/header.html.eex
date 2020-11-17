@@ -1,5 +1,10 @@
+<%
+  nav_active = "text-white bg-gray-900"
+  nav_not_active = "text-gray-300 hover:text-white hover:bg-gray-700"
+%>
+
 <!DOCTYPE html>
-<html lang="en" prefix="og: http://ogp.me/ns#">
+<html lang="en" prefix="og: http://ogp.me/ns#" class="h-full">
   <head>
     <meta charset="utf-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
@@ -20,76 +25,136 @@
     <script async defer data-domain="<%= host %>" src="https://stats.<%= host %>/js/plausible.js"></script>
     <% end %>
   </head>
-  <body>
-    <!--[if lt IE 10]>
-      <p class="browserupgrade">You are using an <strong>outdated</strong> browser. Please <a href="http://browsehappy.com/">upgrade your browser</a> to improve your experience.</p>
-    <![endif]-->
+  <body class="antialiased h-full flex flex-col">
+    <div class="flex-auto">
+      <!--[if lt IE 10]>
+        <p class="browserupgrade">You are using an <strong>outdated</strong> browser. Please <a href="http://browsehappy.com/">upgrade your browser</a> to improve your experience.</p>
+      <![endif]-->
 
-    <section class="content-wrapper">
-    <%= render "_read_only_mode.html" %>
+      <%= render "_read_only_mode.html" %>
 
-    <nav class="navbar navbar-default">
-      <div class="container">
-        <div class="navbar-header">
-          <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar" aria-expanded="false" aria-controls="navbar">
-            <span class="sr-only">Toggle navigation</span>
-            <span class="icon-bar"></span>
-            <span class="icon-bar"></span>
-            <span class="icon-bar"></span>
-          </button>
-          <a class="navbar-brand" href="/">
-            <img src="<%= Routes.static_path(Endpoint, "/images/hex.png") %>" srcset="<%= Routes.static_path(Endpoint, "/images/hex.png") %> 1x, <%= Routes.static_path(Endpoint, "/images/hex@2.png") %> 2x, <%= Routes.static_path(Endpoint, "/images/hex@3.png") %> 3x" alt="hex logo">
-          </a>
-        </div>
-        <div id="navbar" class="navbar-collapse collapse">
-          <%= if show_search?(assigns) do %>
-          <form class="navbar-form pull-left-non-mobile" role="search" action="<%= Routes.package_path(Endpoint, :index) %>">
-             <div class="input-group">
-                <input placeholder="Find packages" name="search" type="text" class="form-control" value="<%= search(assigns) %>">
-                <input type="hidden" name="sort" value="recent_downloads">
-
-                <div class="input-group-btn">
-                  <button type="submit" class="btn btn-search" tabindex="1">
-                    <%= icon(:glyphicon, :search) %>
-                  </button>
-                </div>
-             </div>
-          </form>
-          <% end %>
-          <ul class="nav navbar-nav navbar-right">
-            <li><a href="<%= Routes.package_path(Endpoint, :index) %>">Packages</a></li>
-            <li><a href="<%= Routes.page_path(Endpoint, :pricing) %>">Pricing</a></li>
-            <li><a href="<%= Routes.docs_path(Endpoint, :index) %>">Docs</a></li>
-
-            <%= if ViewHelpers.logged_in?(assigns) do %>
-              <li class="dropdown">
-                <a href="#" class="dropdown-toggle" data-toggle="dropdown">
-                  <%= @current_user.username %>
-                  <img src="<%= ViewHelpers.gravatar_url(User.email(@current_user, :gravatar), :small) %>" class="navbar-avatar">
-                  <b class="caret"></b>
+      <nav class="bg-gray-800">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div class="flex items-center justify-between h-16">
+            <div class="flex items-center">
+              <div class="flex-shrink-0">
+                <a href="/">
+                  <img class="block lg:hidden h-8 w-auto" src="<%= Routes.static_path(Endpoint, "/images/hex-logo.svg") %>" alt="Hex logo">
+                  <img class="hidden lg:block h-8 w-auto" src="<%= Routes.static_path(Endpoint, "/images/hex-logo-text.svg") %>" alt="Hex logo">
                 </a>
-                <ul class="dropdown-menu">
-                  <li><a href="<%= Routes.user_path(Endpoint, :show, @current_user) %>">Profile</a></li>
-                  <li><a href="<%= Routes.profile_path(Endpoint, :index) %>">Dashboard</a></li>
-                  <li role="separator" class="divider"></li>
-                  <li>
-                    <%= form_tag(Routes.login_path(Endpoint, :delete)) do %>
-                      <button type="submit" class="btn btn-link">Log out</button>
-                    <% end %>
-                  </li>
-                </ul>
-              </li>
-            <% else %>
-              <li><a href="<%= Routes.login_path(Endpoint, :show) %>">Log in</a></li>
+              </div>
+              <div class="hidden lg:block lg:ml-6">
+                <div class="flex">
+                  <a href="<%= Routes.package_path(Endpoint, :index) %>" class="<%= if assigns[:nav_page] == :packages, do: nav_active, else: nav_not_active %> px-3 py-2 rounded-md text-sm font-medium no-underline leading-5 focus:outline-none focus:text-white focus:bg-gray-700 transition duration-150 ease-in-out">Packages</a>
+                  <a href="<%= Routes.page_path(Endpoint, :pricing) %>" class="<%= if assigns[:nav_page] == :pricing, do: nav_active, else: nav_not_active %> ml-4 px-3 py-2 rounded-md text-sm font-medium no-underline leading-5 hover:bg-gray-700 focus:outline-none focus:text-white focus:bg-gray-700 transition duration-150 ease-in-out">Pricing</a>
+                  <a href="<%= Routes.docs_path(Endpoint, :index) %>" class="<%= if assigns[:nav_page] == :docs, do: nav_active, else: nav_not_active %> ml-4 px-3 py-2 rounded-md text-sm font-medium no-underline leading-5 hover:bg-gray-700 focus:outline-none focus:text-white focus:bg-gray-700 transition duration-150 ease-in-out">Documentation</a>
+                  <a href="<%= Routes.profile_path(Endpoint, :index) %>" class="<%= if assigns[:nav_page] == :dashboard, do: nav_active, else: nav_not_active %> ml-4 px-3 py-2 rounded-md text-sm font-medium no-underline leading-5 hover:bg-gray-700 focus:outline-none focus:text-white focus:bg-gray-700 transition duration-150 ease-in-out">Dashboard</a>
+                </div>
+              </div>
+            </div>
+
+            <%= unless assigns[:hide_header_search] do %>
+              <div class="flex-1 flex items-center px-2 ml-6 justify-center lg:justify-end">
+                <div class="max-w-lg w-full lg:max-w-xs">
+                  <label for="search" class="sr-only">Find packages</label>
+                  <div class="relative">
+                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                      <svg class="h-5 w-5 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clip-rule="evenodd" />
+                      </svg>
+                    </div>
+                    <form role="search" action="<%= Routes.package_path(Endpoint, :index) %>">
+                      <input type="hidden" name="sort" value="recent_downloads">
+                      <input type="search" name="search" id="search" class="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:border-blue-300 focus:shadow-outline-blue sm:text-sm transition duration-150 ease-in-out" placeholder="Find packages">
+                    </form>
+                  </div>
+                </div>
+              </div>
             <% end %>
 
-          </ul>
-        </div><!--/.nav-collapse -->
-      </div>
-    </nav>
+            <%= if ViewHelpers.logged_in?(assigns) do %>
+              <div class="hidden lg:block ml-6">
+                <div class="flex items-center">
+                  <div class="ml-3 relative">
+                    <div>
+                      <button class="flex text-sm border-2 border-gray-600 rounded-full focus:outline-none focus:border-white transition duration-150 ease-in-out" id="user-menu-button" aria-label="User menu" aria-haspopup="true">
+                        <img class="h-8 w-8 rounded-full" src="<%= ViewHelpers.gravatar_url(User.email(@current_user, :gravatar), :small) %>" alt="avatar">
+                      </button>
+                    </div>
 
-    <%= unless assigns[:error] || assigns[:custom_flash] do %>
-      <%= render "_flash.html", conn: @conn %>
-    <% end %>
+                    <div class="hidden origin-top-right absolute right-0 mt-2 w-48 rounded-md shadow-lg" id="user-menu">
+                      <div class="py-1 rounded-md bg-white shadow-xs" role="menu" aria-orientation="vertical" aria-labelledby="user-menu">
+                        <a href="<%= Routes.user_path(Endpoint, :show, @current_user) %>" class="block px-4 py-2 text-sm leading-5 no-underline text-gray-700 hover:bg-gray-100 focus:outline-none focus:bg-gray-100 transition duration-150 ease-in-out" role="menuitem">Your Profile</a>
+                        <a href="<%= Routes.profile_path(Endpoint, :index) %>" class="block px-4 py-2 text-sm leading-5 no-underline text-gray-700 hover:bg-gray-100 focus:outline-none focus:bg-gray-100 transition duration-150 ease-in-out" role="menuitem">Dashboard</a>
+                        <%= form_tag(Routes.login_path(Endpoint, :delete)) do %>
+                          <button type="submit" class="block w-full text-left px-4 py-2 text-sm leading-5 text-gray-700 hover:bg-gray-100 focus:outline-none focus:bg-gray-100 transition duration-150 ease-in-out" role="menuitem">Sign out</button>
+                        <% end %>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            <% else %>
+              <div class="hidden md:block items-center justify-end whitespace-no-wrap">
+                <span class="hidden lg:inline-flex ml-10 rounded-md shadow-sm">
+                  <a href="<%= Routes.login_path(Endpoint, :show) %>" class="whitespace-no-wrap inline-flex items-center justify-center px-4 py-2 border border-transparent text-base leading-6 font-medium no-underline rounded-md text-gray-200 hover:text-white bg-gray-700 hover:bg-gray-600 focus:outline-none focus:border-gray-800 focus:shadow-outline-gray active:bg-gray-800 transition ease-in-out duration-150">
+                    Sign in
+                  </a>
+                </span>
+              </div>
+            <% end %>
 
-    <div class="<%= container_class(assigns) %>">
+            <div class="ml-10 -mr-2 flex lg:hidden">
+              <button class="inline-flex items-center justify-center p-2 rounded-md text-gray-400 hover:text-white hover:bg-gray-700 focus:outline-none focus:bg-gray-700 focus:text-white transition duration-150 ease-in-out" id="main-menu-button" aria-label="Main menu" aria-expanded="false">
+                <svg class="block h-6 w-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+                </svg>
+                <svg class="hidden h-6 w-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div class="hidden lg:hidden" id="main-menu">
+          <div class="px-2 pt-2 pb-3">
+            <a href="<%= Routes.package_path(Endpoint, :index) %>" class="<%= if assigns[:nav_page] == :packages, do: nav_active, else: nav_not_active %> block px-3 py-2 rounded-md text-base font-medium no-underline focus:outline-none focus:text-white focus:bg-gray-700 transition duration-150 ease-in-out">Packages</a>
+            <a href="<%= Routes.page_path(Endpoint, :pricing) %>" class="<%= if assigns[:nav_page] == :pricing, do: nav_active, else: nav_not_active %> mt-1 block px-3 py-2 rounded-md text-base font-medium no-underline focus:outline-none focus:text-white focus:bg-gray-700 transition duration-150 ease-in-out">Pricing</a>
+            <a href="<%= Routes.docs_path(Endpoint, :index) %>" class="<%= if assigns[:nav_page] == :docs, do: nav_active, else: nav_not_active %> mt-1 block px-3 py-2 rounded-md text-base font-medium no-underline focus:outline-none focus:text-white focus:bg-gray-700 transition duration-150 ease-in-out">Documentation</a>
+            <a href="<%= Routes.profile_path(Endpoint, :index) %>" class="<%= if assigns[:nav_page] == :dashboard, do: nav_active, else: nav_not_active %> mt-1 block px-3 py-2 rounded-md text-base font-medium no-underline focus:outline-none focus:text-white focus:bg-gray-700 transition duration-150 ease-in-out">Dashboard</a>
+          </div>
+
+          <%= if ViewHelpers.logged_in?(assigns) do %>
+            <div class="pt-4 pb-3 border-t border-gray-700">
+              <div class="flex items-center px-5">
+                <div class="flex-shrink-0">
+                  <img class="h-10 w-10 border-2 border-gray-600 rounded-full" src="<%= ViewHelpers.gravatar_url(User.email(@current_user, :gravatar), :small) %>" alt="">
+                </div>
+              </div>
+              <div class="mt-3 px-2">
+                <a href="<%= Routes.user_path(Endpoint, :show, @current_user) %>" class="block px-3 py-2 rounded-md text-base font-medium no-underline text-gray-400 hover:text-white hover:bg-gray-700 focus:outline-none focus:text-white focus:bg-gray-700 transition duration-150 ease-in-out">Your Profile</a>
+                <a href="<%= Routes.profile_path(Endpoint, :index) %>" class="mt-1 block px-3 py-2 rounded-md text-base font-medium no-underline text-gray-400 hover:text-white hover:bg-gray-700 focus:outline-none focus:text-white focus:bg-gray-700 transition duration-150 ease-in-out">Dashboard</a>
+                <%= form_tag(Routes.login_path(Endpoint, :delete)) do %>
+                  <button type="submit" class="mt-1 block w-full text-left px-3 py-2 rounded-md text-base font-medium text-gray-400 hover:text-white hover:bg-gray-700 focus:outline-none focus:text-white focus:bg-gray-700 transition duration-150 ease-in-out" role="menuitem">Sign out</button>
+                <% end %>
+              </div>
+            </div>
+          <% else %>
+            <div class="pt-4 pb-3 border-t border-gray-700">
+              <div class="mt-3 px-2">
+                <a href="<%= Routes.login_path(Endpoint, :show) %>" class="block px-3 py-2 rounded-md text-base font-medium no-underline text-gray-400 hover:text-white hover:bg-gray-700 focus:outline-none focus:text-white focus:bg-gray-700 transition duration-150 ease-in-out">
+                  Sign in
+                </a>
+                <a href="<%= Routes.signup_path(Endpoint, :show) %>" class="mt-1 block px-3 py-2 rounded-md text-base font-medium no-underline text-gray-400 hover:text-white hover:bg-gray-700 focus:outline-none focus:text-white focus:bg-gray-700 transition duration-150 ease-in-out">
+                  Sign up
+                </a>
+              </div>
+            </div>
+          <% end %>
+        </div>
+      </nav>
+
+      <%= unless assigns[:error] || assigns[:custom_flash] do %>
+        <%= render "_flash.html", conn: @conn %>
+      <% end %>

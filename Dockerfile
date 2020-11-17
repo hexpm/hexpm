@@ -22,7 +22,7 @@ RUN mix deps.compile
 
 # build assets
 COPY assets assets
-RUN cd assets && yarn install && yarn run webpack --mode production
+RUN cd assets && yarn install && NODE_ENV=production yarn run webpack --mode production
 RUN mix phx.digest
 
 # build project

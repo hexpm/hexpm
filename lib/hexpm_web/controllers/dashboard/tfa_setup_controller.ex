@@ -8,7 +8,8 @@ defmodule HexpmWeb.Dashboard.TFAAuthSetupController do
       conn,
       "index.html",
       title: "Dashboard - Two-factor authentication setup",
-      container: "container page dashboard"
+      container: "container page dashboard",
+      nav_page: :dashboard
     )
   end
 

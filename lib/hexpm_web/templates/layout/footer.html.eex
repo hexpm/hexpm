@@ -1,6 +1,6 @@
     </div>
-    </section>
 
+<<<<<<< HEAD
     <div class="footer">
       <div class="footer-nav">
         <div class="container">
@@ -44,10 +44,123 @@
               <p>2020 © Six Colors AB.</p>
               <p>Powered by the <a href="https://www.erlang.org/">Erlang VM</a> and the <a href="https://elixir-lang.org/">Elixir programming language</a>.</p>
             </div>
+=======
+    <footer class="bg-gray-800">
+      <div class="max-w-screen-xl mx-auto py-12 px-4 sm:px-6 lg:py-16 lg:px-8">
+        <div class="pb-8 grid grid-cols-1 gap-8 md:grid-cols-3">
+          <div>
+            <h4 class="text-sm leading-5 font-semibold text-gray-400 tracking-wider uppercase">
+              About Hex
+            </h4>
+            <ul class="mt-4 space-y-4">
+              <li>
+                <a href="<%= Routes.page_path(Endpoint, :about) %>" class="text-base leading-6 no-underline text-gray-300 hover:text-white">
+                  About
+                </a>
+              </li>
+              <li>
+                <a href="<%= Routes.blog_path(Endpoint, :index) %>" class="text-base leading-6 no-underline text-gray-300 hover:text-white">
+                  Blog
+                </a>
+              </li>
+              <li>
+                <a href="<%= Routes.page_path(Endpoint, :sponsors) %>" class="text-base leading-6 no-underline text-gray-300 hover:text-white">
+                  Sponsors
+                </a>
+              </li>
+              <li>
+                <a href="https://github.com/hexpm" class="text-base leading-6 no-underline text-gray-300 hover:text-white">
+                  GitHub
+                </a>
+              </li>
+              <li>
+                <a href="https://twitter.com/hexpm" class="text-base leading-6 no-underline text-gray-300 hover:text-white">
+                  Twitter
+                </a>
+              </li>
+            </ul>
+          </div>
+          <div class="">
+            <h4 class="text-sm leading-5 font-semibold text-gray-400 tracking-wider uppercase">
+              Support
+            </h4>
+            <ul class="mt-4 space-y-4">
+              <li>
+                <a href="<%= Routes.docs_path(Endpoint, :index) %>" class="text-base leading-6 no-underline text-gray-300 hover:text-white">
+                  Documentation
+                </a>
+              </li>
+              <li>
+                <a href="https://github.com/hexpm/specifications" class="text-base leading-6 no-underline text-gray-300 hover:text-white">
+                  Specifications
+                </a>
+              </li>
+              <li>
+                <a href="https://github.com/hexpm/hex/issues" class="text-base leading-6 no-underline text-gray-300 hover:text-white">
+                  Report Client Issue
+                </a>
+              </li>
+              <li>
+                <a href="https://github.com/hexpm/hexpm/issues" class="text-base leading-6 no-underline text-gray-300 hover:text-white">
+                  Report General Issue
+                </a>
+              </li>
+              <li>
+                <a href="mailto:security@hex.pm" class="text-base leading-6 no-underline text-gray-300 hover:text-white">
+                  Report Security Issue
+                </a>
+              </li>
+              <li>
+                <a href="mailto:support@hex.pm" class="text-base leading-6 no-underline text-gray-300 hover:text-white">
+                  Contact Support
+                </a>
+              </li>
+            </ul>
+>>>>>>> WIP: First redesign commit
+          </div>
+          <div class="">
+            <h4 class="text-sm leading-5 font-semibold text-gray-400 tracking-wider uppercase">
+              Policies and Terms
+            </h4>
+            <ul class="mt-4 space-y-4">
+              <li>
+                <a href="<%= Routes.policy_path(Endpoint, :coc) %>" class="text-base leading-6 no-underline text-gray-300 hover:text-white">
+                  Code of Conduct
+                </a>
+              </li>
+              <li>
+                <a href="<%= Routes.policy_path(Endpoint, :tos) %>" class="text-base leading-6 no-underline text-gray-300 hover:text-white">
+                  Terms of Service
+                </a>
+              </li>
+              <li>
+                <a href="<%= Routes.policy_path(Endpoint, :privacy) %>" class="text-base leading-6 no-underline text-gray-300 hover:text-white">
+                  Privacy Policy
+                </a>
+              </li>
+              <li>
+                <a href="<%= Routes.policy_path(Endpoint, :copyright) %>" class="text-base leading-6 no-underline text-gray-300 hover:text-white">
+                  Copyright Policy
+                </a>
+              </li>
+              <li>
+                <a href="<%= Routes.policy_path(Endpoint, :dispute) %>" class="text-base leading-6 no-underline text-gray-300 hover:text-white">
+                  Dispute Policy
+                </a>
+              </li>
+            </ul>
           </div>
         </div>
+        <div class="mt-8 border-t border-gray-700 pt-8 md:flex md:items-center md:justify-between">
+          <p class="mt-8 text-base leading-6 text-gray-400 md:mt-0 md:order-1">
+            2020 © Six Colors AB.
+          </p>
+          <p class="mt-8 text-base leading-6 text-gray-400 md:mt-0 md:order-1">
+            Powered by the <a href="https://www.erlang.org/" class="text-gray-400 hover:text-white">Erlang VM</a> and the <a href="https://elixir-lang.org/" class="text-gray-400 hover:text-white">Elixir programming language</a>.
+          </p>
+        </div>
       </div>
-    </div>
+    </footer>
 
     <script src="<%= Routes.static_path(Endpoint, "/js/app.js") %>"></script>
 

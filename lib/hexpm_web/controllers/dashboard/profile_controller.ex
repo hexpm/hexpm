@@ -30,6 +30,7 @@ defmodule HexpmWeb.Dashboard.ProfileController do
       "index.html",
       title: "Dashboard - Public profile",
       container: "container page dashboard",
+      nav_page: :dashboard,
       changeset: changeset
     )
   end

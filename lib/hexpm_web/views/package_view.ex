@@ -2,12 +2,12 @@ defmodule HexpmWeb.PackageView do
   use HexpmWeb, :view
 
   def show_sort_info(nil), do: show_sort_info(:name)
-  def show_sort_info(:name), do: "Sort: Name"
-  def show_sort_info(:inserted_at), do: "Sort: Recently created"
-  def show_sort_info(:updated_at), do: "Sort: Recently updated"
-  def show_sort_info(:total_downloads), do: "Sort: Total downloads"
-  def show_sort_info(:recent_downloads), do: "Sort: Recent downloads"
-  def show_sort_info(:recently_published), do: "Sort: Recently published"
+  def show_sort_info(:name), do: "Name"
+  def show_sort_info(:inserted_at), do: "Recently created"
+  def show_sort_info(:updated_at), do: "Recently updated"
+  def show_sort_info(:total_downloads), do: "Total downloads"
+  def show_sort_info(:recent_downloads), do: "Recent downloads"
+  def show_sort_info(:recently_published), do: "Recently published"
   def show_sort_info(_param), do: nil
 
   def downloads_for_package(package, downloads) do

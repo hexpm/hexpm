@@ -420,6 +420,7 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
       "new.html",
       title: "Dashboard - Organization sign up",
       container: "container page dashboard",
+      nav_page: :dashboard,
       billing_email: nil,
       person: nil,
       company: nil,
@@ -441,6 +442,7 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
     assigns = [
       title: "Dashboard - Organization",
       container: "container page dashboard",
+      nav_page: :dashboard,
       changeset: user && User.update_profile(user, %{}),
       public_email: public_email && public_email.email,
       gravatar_email: gravatar_email && gravatar_email.email,

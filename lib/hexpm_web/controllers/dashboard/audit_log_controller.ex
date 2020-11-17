@@ -15,6 +15,7 @@ defmodule HexpmWeb.Dashboard.AuditLogController do
       "index.html",
       title: "Dashboard - Recent activities",
       container: "container page dashboard",
+      nav_page: :dashboard,
       audit_logs: audit_logs,
       page: page,
       per_page: @per_page,
