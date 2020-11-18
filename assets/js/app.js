@@ -90,8 +90,9 @@ window.Components = {
         if (this.selected !== null)
           this.vaule = this.selected
 
-        this.open = false
+        this.$refs.listbox.children[this.selected - 1].getElementsByTagName("a")[0].click()
         this.$refs.button.focus()
+        this.open = false
       },
 
       onEscape() {
