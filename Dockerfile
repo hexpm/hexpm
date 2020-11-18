@@ -27,7 +27,7 @@ RUN cd assets && yarn install
 # build assets
 # need to copy lib/ here so PurgeCSS can look at the phoenix views and templates to find CSS classes
 COPY lib lib
-RUN NODE_ENV=production yarn run webpack --mode production
+RUN cd assets && NODE_ENV=production yarn run webpack --mode production
 RUN mix phx.digest
 
 # build project
