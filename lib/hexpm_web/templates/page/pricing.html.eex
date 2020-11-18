@@ -146,7 +146,7 @@
         <h2 class="text-3xl leading-9 font-extrabold text-gray-900">
           Frequently asked questions
         </h2>
-        <p class="text-lg leading-7 text-gray-500">Can’t find the answer you’re looking for? Reach out to our <a href="#" class="font-medium">customer support</a>.</p>
+        <p class="text-lg leading-7 text-gray-500">Can’t find the answer you’re looking for? Reach out to our <a href="#" class="font-medium link">customer support</a>.</p>
       </div>
       <div class="mt-12 lg:mt-0 lg:col-span-2">
         <dl class="space-y-12">

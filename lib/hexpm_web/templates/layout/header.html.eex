@@ -1,6 +1,6 @@
 <%
   nav_active = "text-white bg-gray-900"
-  nav_not_active = "text-gray-300 hover:text-white hover:bg-gray-700"
+  nav_not_active = "text-gray-300 hover:bg-gray-700"
 %>
 
 <!DOCTYPE html>
@@ -21,8 +21,9 @@
     <link rel="stylesheet" href="<%= Routes.static_path(Endpoint, "/css/app.css") %>">
     <link rel="alternate" type="application/rss+xml" title="RSS - Blog" href="/feeds/blog.xml">
 
-    <%= if host = Application.get_env(:hexpm, :host) do %> 
-    <script async defer data-domain="<%= host %>" src="https://stats.<%= host %>/js/plausible.js"></script>
+    <script async defer src="<%= Routes.static_path(Endpoint, "/js/app.js") %>"></script>
+    <%= if host = Application.get_env(:hexpm, :host) do %>
+      <script async defer data-domain="<%= host %>" src="https://stats.<%= host %>/js/plausible.js"></script>
     <% end %>
   </head>
   <body class="antialiased h-full flex flex-col">
@@ -45,10 +46,10 @@
               </div>
               <div class="hidden lg:block lg:ml-6">
                 <div class="flex">
-                  <a href="<%= Routes.package_path(Endpoint, :index) %>" class="<%= if assigns[:nav_page] == :packages, do: nav_active, else: nav_not_active %> px-3 py-2 rounded-md text-sm font-medium no-underline leading-5 focus:outline-none focus:text-white focus:bg-gray-700 transition duration-150 ease-in-out">Packages</a>
-                  <a href="<%= Routes.page_path(Endpoint, :pricing) %>" class="<%= if assigns[:nav_page] == :pricing, do: nav_active, else: nav_not_active %> ml-4 px-3 py-2 rounded-md text-sm font-medium no-underline leading-5 hover:bg-gray-700 focus:outline-none focus:text-white focus:bg-gray-700 transition duration-150 ease-in-out">Pricing</a>
-                  <a href="<%= Routes.docs_path(Endpoint, :index) %>" class="<%= if assigns[:nav_page] == :docs, do: nav_active, else: nav_not_active %> ml-4 px-3 py-2 rounded-md text-sm font-medium no-underline leading-5 hover:bg-gray-700 focus:outline-none focus:text-white focus:bg-gray-700 transition duration-150 ease-in-out">Documentation</a>
-                  <a href="<%= Routes.profile_path(Endpoint, :index) %>" class="<%= if assigns[:nav_page] == :dashboard, do: nav_active, else: nav_not_active %> ml-4 px-3 py-2 rounded-md text-sm font-medium no-underline leading-5 hover:bg-gray-700 focus:outline-none focus:text-white focus:bg-gray-700 transition duration-150 ease-in-out">Dashboard</a>
+                  <a href="<%= Routes.package_path(Endpoint, :index) %>" class="<%= if assigns[:nav_page] == :packages, do: nav_active, else: nav_not_active %> px-3 py-2 rounded-md text-sm font-medium no-underline leading-5 focus:outline-none focus:text-white hover:text-white focus:bg-gray-700 transition duration-150 ease-in-out">Packages</a>
+                  <a href="<%= Routes.page_path(Endpoint, :pricing) %>" class="<%= if assigns[:nav_page] == :pricing, do: nav_active, else: nav_not_active %> ml-4 px-3 py-2 rounded-md text-sm font-medium no-underline leading-5 hover:bg-gray-700 focus:outline-none focus:text-white hover:text-white focus:bg-gray-700 transition duration-150 ease-in-out">Pricing</a>
+                  <a href="<%= Routes.docs_path(Endpoint, :index) %>" class="<%= if assigns[:nav_page] == :docs, do: nav_active, else: nav_not_active %> ml-4 px-3 py-2 rounded-md text-sm font-medium no-underline leading-5 hover:bg-gray-700 focus:outline-none focus:text-white hover:text-white focus:bg-gray-700 transition duration-150 ease-in-out">Documentation</a>
+                  <a href="<%= Routes.profile_path(Endpoint, :index) %>" class="<%= if assigns[:nav_page] == :dashboard, do: nav_active, else: nav_not_active %> ml-4 px-3 py-2 rounded-md text-sm font-medium no-underline leading-5 hover:bg-gray-700 focus:outline-none focus:text-white hover:text-white focus:bg-gray-700 transition duration-150 ease-in-out">Dashboard</a>
                 </div>
               </div>
             </div>

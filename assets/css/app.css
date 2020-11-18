@@ -8,7 +8,7 @@
 
 @import "../vendor/css/github.css";
 
-a {
+.link {
   @apply underline;
   @apply text-purple-600;
   @apply transition;
