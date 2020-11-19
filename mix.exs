@@ -62,7 +62,7 @@ defmodule Hexpm.MixProject do
       {:plug_cowboy, "~> 2.1"},
       {:plug, "~> 1.7"},
       {:postgrex, "~> 0.14"},
-      {:pot, "~> 0.11.0"},
+      {:pot, "~> 1.0.0"},
       {:rollbax, "~> 0.5"},
       {:sweet_xml, "~> 0.5"},
       {:telemetry_poller, "~> 0.4"},
@@ -90,7 +90,8 @@ defmodule Hexpm.MixProject do
   defp releases() do
     [
       hexpm: [
-        include_executables_for: [:unix]
+        include_executables_for: [:unix],
+        reboot_system_after_config: true
       ]
     ]
   end
