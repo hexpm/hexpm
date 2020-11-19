@@ -16,7 +16,9 @@
     <link rel="stylesheet" href="<%= Routes.static_path(Endpoint, "/css/app.css") %>">
     <link rel="alternate" type="application/rss+xml" title="RSS - Blog" href="/feeds/blog.xml">
 
-    <script async defer data-domain="<%= Application.get_env(:hexpm, :host) %>" src="https://stats.<%= Application.get_env(:hexpm, :host) %>/js/plausible.js"></script>
+    <%= if host = Application.get_env(:hexpm, :host) do %> 
+    <script async defer data-domain="<%= host %>" src="https://stats.<%= host %>/js/plausible.js"></script>
+    <% end %>
   </head>
   <body>
     <!--[if lt IE 10]>
