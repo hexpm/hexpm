@@ -31,23 +31,9 @@
     </div>
   </div>
 
-  <div class="row travis">
-    <div class="col-md-5 image">
-      <a href="https://travis-ci.com/"><img src="<%= Routes.static_path(Endpoint, "/images/travis-ci.png") %>" alt="TRAVIS CI logo"></a>
-    </div>
-    <div class="col-md-7">
-      <p>
-        Travis CI aims to empower people to build and ship great software. As a leading provider of hosted CI, Travis CI has been helping build and test open source and private projects since 2011. Easily sync your GitHub projects with Travis CI and you'll be testing your code in minutes.
-      </p>
-      <p>
-        Travis CI provides continuous integration services for Hex.
-      </p>
-    </div>
-  </div>
-
   <div class="row simplebet">
     <div class="col-md-5 image">
-      <a href="https://simplebet.com/"><img src="<%= Routes.static_path(Endpoint, "/images/simplebet.png") %>" alt="SimpleBet logo"></a>
+      <a href="https://simplebet.io/"><img src="<%= Routes.static_path(Endpoint, "/images/simplebet.png") %>" alt="SimpleBet logo"></a>
     </div>
     <div class="col-md-7">
       <p>
