@@ -90,7 +90,8 @@ defmodule Hexpm.MixProject do
   defp releases() do
     [
       hexpm: [
-        include_executables_for: [:unix]
+        include_executables_for: [:unix],
+        reboot_system_after_config: true
       ]
     ]
   end
