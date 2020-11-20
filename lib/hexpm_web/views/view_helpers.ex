@@ -204,7 +204,7 @@ defmodule HexpmWeb.ViewHelpers do
           Enum.to_list(start..all_pages)
 
         true ->
-          Enum.to_list((page - 2)..(page + 2))
+          Enum.to_list((page - div(max_links, 2))..(page + div(max_links, 2)))
       end
 
     %{prev: page != 1, next: page != all_pages, page_links: page_links}

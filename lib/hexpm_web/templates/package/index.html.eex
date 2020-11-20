@@ -132,12 +132,18 @@ ViewHelpers.params(search: @search, page: page, sort: "name")
         </li>
       <% end %>
     </ul>
+
+    <%
+    paginate = ViewHelpers.paginate(@page, @package_count, items_per_page: 30, page_links: 7)
+    page_link = fn page -> Routes.package_path(Endpoint, :index, ViewHelpers.params(search: @search, page: page, sort: @sort)) end
+    href = fn condition, page -> if condition, do: {:safe, ~s[href="#{page_link.(page)}"]} end
+    %>
     <div class="bg-white px-4 py-3 flex items-center justify-between border-t border-gray-200 sm:px-6">
       <div class="flex-1 flex justify-between sm:hidden">
-        <a href="#" class="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm leading-5 font-medium rounded-md text-gray-700 bg-white hover:text-gray-500 focus:outline-none focus:shadow-outline-blue focus:border-blue-300 active:bg-gray-100 active:text-gray-700 transition ease-in-out duration-150">
+        <a <%= href.(paginate[:next], @page - 1) %> class="<%= if !paginate[:prev] do %>cursor-not-allowed<% else %>hover:text-gray-500 focus:outline-none focus:shadow-outline-blue focus:border-blue-300 active:bg-gray-100 active:text-gray-700<% end %> relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm leading-5 font-medium rounded-md text-gray-700 bg-white transition ease-in-out duration-150">
           Previous
         </a>
-        <a href="#" class="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm leading-5 font-medium rounded-md text-gray-700 bg-white hover:text-gray-500 focus:outline-none focus:shadow-outline-blue focus:border-blue-300 active:bg-gray-100 active:text-gray-700 transition ease-in-out duration-150">
+        <a <%= href.(paginate[:next], @page + 1) %> class="<%= if !paginate[:next] do %>cursor-not-allowed<% else %>hover:text-gray-500 focus:outline-none focus:shadow-outline-blue focus:border-blue-300 active:bg-gray-100 active:text-gray-700<% end %> ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm leading-5 font-medium rounded-md text-gray-700 bg-white transition ease-in-out duration-150">
           Next
         </a>
       </div>
@@ -145,45 +151,27 @@ ViewHelpers.params(search: @search, page: page, sort: "name")
         <div>
           <p class="text-sm leading-5 text-gray-700">
             Showing
-            <span class="font-medium">1</span>
+            <span class="font-medium"><%= @per_page * (@page - 1) + 1 %></span>
             to
-            <span class="font-medium">10</span>
+            <span class="font-medium"><%= @per_page * @page %></span>
             of
-            <span class="font-medium">97</span>
+            <span class="font-medium"><%= @package_count %></span>
             results
           </p>
         </div>
         <div>
           <nav class="relative z-0 inline-flex shadow-sm">
-            <a href="#" class="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm leading-5 font-medium text-gray-500 hover:text-gray-400 hover:bg-gray-50 focus:z-10 focus:outline-none focus:border-blue-300 focus:shadow-outline-blue active:bg-gray-100 active:text-gray-500 transition ease-in-out duration-150" aria-label="Previous">
-              <!-- Heroicon name: chevron-left -->
+            <a <%= href.(paginate[:prev], @page - 1) %> class="<%= if !paginate[:prev] do %>cursor-not-allowed<% else %>hover:text-gray-400 hover:bg-gray-50 focus:z-10 focus:outline-none focus:border-blue-300 focus:shadow-outline-blue active:bg-gray-100 active:text-gray-500<% end %> relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm leading-5 font-medium text-gray-500 transition ease-in-out duration-150" aria-label="Previous">
               <svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
                 <path fill-rule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clip-rule="evenodd" />
               </svg>
             </a>
-            <a href="#" class="-ml-px relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm leading-5 font-medium text-gray-700 hover:text-gray-500 hover:bg-gray-50 focus:bg-gray-50 focus:z-10 focus:outline-none focus:border-blue-300 focus:shadow-outline-blue active:bg-gray-100 active:text-gray-700 transition ease-in-out duration-150">
-              1
-            </a>
-            <a href="#" class="-ml-px relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm leading-5 font-medium text-gray-700 hover:text-gray-500 hover:bg-gray-50 focus:bg-gray-50 focus:z-10 focus:outline-none focus:border-blue-300 focus:shadow-outline-blue active:bg-gray-100 active:text-gray-700 transition ease-in-out duration-150">
-              2
-            </a>
-            <a href="#" class="hidden md:inline-flex -ml-px relative items-center px-4 py-2 border border-gray-300 bg-white text-sm leading-5 font-medium text-gray-700 hover:text-gray-500 hover:bg-gray-50 focus:bg-gray-50 focus:z-10 focus:outline-none focus:border-blue-300 focus:shadow-outline-blue active:bg-gray-100 active:text-gray-700 transition ease-in-out duration-150">
-              3
-            </a>
-            <span class="-ml-px relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm leading-5 font-medium text-gray-700">
-              ...
-            </span>
-            <a href="#" class="hidden md:inline-flex -ml-px relative items-center px-4 py-2 border border-gray-300 bg-white text-sm leading-5 font-medium text-gray-700 hover:text-gray-500 hover:bg-gray-50 focus:bg-gray-50 focus:z-10 focus:outline-none focus:border-blue-300 focus:shadow-outline-blue active:bg-gray-100 active:text-gray-700 transition ease-in-out duration-150">
-              8
-            </a>
-            <a href="#" class="-ml-px relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm leading-5 font-medium text-gray-700 hover:text-gray-500 hover:bg-gray-50 focus:bg-gray-50 focus:z-10 focus:outline-none focus:border-blue-300 focus:shadow-outline-blue active:bg-gray-100 active:text-gray-700 transition ease-in-out duration-150">
-              9
-            </a>
-            <a href="#" class="-ml-px relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm leading-5 font-medium text-gray-700 hover:text-gray-500 hover:bg-gray-50 focus:bg-gray-50 focus:z-10 focus:outline-none focus:border-blue-300 focus:shadow-outline-blue active:bg-gray-100 active:text-gray-700 transition ease-in-out duration-150">
-              10
-            </a>
-            <a href="#" class="-ml-px relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm leading-5 font-medium text-gray-500 hover:text-gray-400 hover:bg-gray-50 focus:bg-gray-50 focus:z-10 focus:outline-none focus:border-blue-300 focus:shadow-outline-blue active:bg-gray-100 active:text-gray-500 transition ease-in-out duration-150" aria-label="Next">
-              <!-- Heroicon name: chevron-right -->
+            <%= for page <- paginate[:page_links] do %>
+              <a href="<%= page_link.(page) %>" class="<%= if page == @page do %>font-bold bg-gray-50<% else %>font-medium hover:bg-gray-50 hover:text-gray-500<% end %> -ml-px relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm leading-5 text-gray-700 focus:bg-gray-50 focus:z-10 focus:outline-none focus:border-blue-300 focus:shadow-outline-blue transition ease-in-out duration-150">
+                <%= page %>
+              </a>
+            <% end %>
+            <a <%= href.(paginate[:next], @page + 1) %> class="<%= if !paginate[:next] do %>cursor-not-allowed<% else %>hover:text-gray-400 hover:bg-gray-50 focus:z-10 focus:outline-none focus:border-blue-300 focus:shadow-outline-blue active:bg-gray-100 active:text-gray-500<% end %> -ml-px relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm leading-5 font-medium text-gray-500 transition ease-in-out duration-150" aria-label="Next">
               <svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
                 <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd" />
               </svg>
