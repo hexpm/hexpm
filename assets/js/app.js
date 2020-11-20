@@ -53,7 +53,7 @@ window.Components = {
       optionCount: null,
       open: false,
       selected: null,
-      value: 1,
+      value: 0,
 
       init() {
         this.optionCount = this.$refs.listbox.children.length
@@ -66,7 +66,7 @@ window.Components = {
             return
           }
 
-          this.activeDescendant = this.$refs.listbox.children[this.selected - 1].id
+          this.activeDescendant = this.$refs.listbox.children[this.selected].id
         })
       },
 
@@ -82,7 +82,7 @@ window.Components = {
 
         this.$nextTick(() => {
           this.$refs.listbox.focus()
-          this.$refs.listbox.children[this.selected - 1].scrollIntoView({block: "nearest"})
+          this.$refs.listbox.children[this.selected].scrollIntoView({block: "nearest"})
         })
       },
 
@@ -90,7 +90,7 @@ window.Components = {
         if (this.selected !== null)
           this.vaule = this.selected
 
-        this.$refs.listbox.children[this.selected - 1].getElementsByTagName("a")[0].click()
+        this.$refs.listbox.children[this.selected].getElementsByTagName("a")[0].click()
         this.$refs.button.focus()
         this.open = false
       },
@@ -100,13 +100,13 @@ window.Components = {
       },
 
       onArrowUp() {
-        this.selected = this.selected - 1 < 1 ? this.optionCount : this.selected - 1
-        this.$refs.listbox.children[this.selected - 1].scrollIntoView({block: "nearest"})
+        this.selected = this.selected - 1 < 0 ? this.optionCount - 1 : this.selected - 1
+        this.$refs.listbox.children[this.selected].scrollIntoView({block: "nearest"})
       },
 
       onArrowDown() {
-        this.selected = this.selected + 1 > this.optionCount ? 1 : this.selected + 1
-        this.$refs.listbox.children[this.selected - 1].scrollIntoView({block: "nearest"})
+        this.selected = this.selected + 1 >= this.optionCount ? 0 : this.selected + 1
+        this.$refs.listbox.children[this.selected].scrollIntoView({block: "nearest"})
       },
 
       ...options

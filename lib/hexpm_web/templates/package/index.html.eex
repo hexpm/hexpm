@@ -38,7 +38,7 @@ ViewHelpers.params(search: @search, page: page, sort: "name")
       </div>
     </div>
     <div class="w-64">
-      <% value = Enum.find_index(sorting, &(elem(&1, 0) == @sort)) + 1 %>
+      <% value = Enum.find_index(sorting, &(elem(&1, 0) == @sort)) %>
       <div id="test" class="space-y-1" x-data="Components.listBox({value: <%= value %>, selected: <%= value %>})" x-init="init()">
         <label id="listbox-label" class="block text-sm leading-5 font-medium text-gray-700">
           Sort packages
@@ -47,7 +47,7 @@ ViewHelpers.params(search: @search, page: page, sort: "name")
           <span class="inline-block w-full rounded-md shadow-sm">
             <button x-ref="button" @click="onButtonClick()" type="button" aria-haspopup="listbox" aria-expanded="true" aria-labelledby="listbox-label" class="cursor-default relative w-full rounded-md border border-gray-300 bg-white text-left focus:outline-none focus:shadow-outline-blue focus:border-blue-300 transition ease-in-out duration-150 sm:text-sm sm:leading-5">
               <span class="flex truncate inset-y-0 items-center relative pl-8 pr-4 py-2">
-                <span class="font-normal block truncate" x-text='<%= inspect(Keyword.values(sorting)) %>[value - 1]'>
+                <span class="font-normal block truncate" x-text='<%= inspect(Keyword.values(sorting)) %>[value]'>
                 </span>
                 <span class="absolute inset-y-0 left-0 flex items-center pl-1.5">
                   <svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
@@ -64,7 +64,7 @@ ViewHelpers.params(search: @search, page: page, sort: "name")
           </span>
           <div x-show="open" @focusout="onEscape()" @click.away="open = false" x-transition:leave="transition ease-in duration-100" x-transition:leave-start="opacity-100" class="absolute mt-1 w-full rounded-md bg-white shadow-lg z-20">
             <ul @keydown.enter.stop.prevent="onOptionSelect()" @keydown.space.stop.prevent="onOptionSelect()" @keydown.escape="onEscape()" @keydown.arrow-up.prevent="onArrowUp()" @keydown.arrow-down.prevent="onArrowDown()" x-ref="listbox" tabindex="-1" role="listbox" aria-labelledby="listbox-label" :aria-activedescendant="activeDescendant" class="max-h-60 rounded-md py-1 text-base leading-6 shadow-xs overflow-auto focus:outline-none sm:text-sm sm:leading-5">
-              <%= for {{id, name}, ix} <- Enum.with_index(sorting, 1) do %>
+              <%= for {{id, name}, ix} <- Enum.with_index(sorting) do %>
                 <li id="listbox-item-<%= ix %>" role="option" @click="choose(<%= ix %>)" @mouseenter="selected = <%= ix %>" @mouseleave="selected = null" :class="{'text-white bg-indigo-600': selected === <%= ix %>, 'text-gray-900': !(selected === <%= ix %>)}" class="cursor-default select-none relative">
                   <a href="<%= Routes.package_path(Endpoint, :index, ViewHelpers.params(search: @search, page: page, sort: id)) %>" class="block py-2 pl-8 pr-4">
                     <span :class="{'font-semibold': value === <%= ix %>, 'font-normal': !(value === <%= ix %>)}" class="block truncate">
