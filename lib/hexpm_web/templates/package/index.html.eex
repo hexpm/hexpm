@@ -5,8 +5,8 @@ sorting = [
   name: "Name",
   recent_downloads: "Recent downloads",
   total_downloads: "Total downloads",
-  recently_created: "Recently created",
-  recently_updated: "Recently updated",
+  inserted_at: "Recently created",
+  updated_at: "Recently updated",
   recently_published: "Recently published"
 ]
 
