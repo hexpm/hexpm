@@ -15,6 +15,15 @@ jobs:
           otp-version: 23.1.1
           elixir-version: 1.11.0
 
+      - uses: actions/cache@v2
+        with:
+          path: |
+            deps
+            _build
+          key: ${{ runner.os }}-mix-${{ hashFiles(format('{0}{1}', github.workspace, '/mix.lock')) }}
+          restore-keys: |
+            ${{ runner.os }}-mix-
+
       - run: mix deps.get
       - run: mix deps.compile
       - run: mix compile --warnings-as-errors
@@ -35,26 +44,45 @@ jobs:
           - 5432:5432
         options: --health-cmd pg_isready --health-interval 10s --health-timeout 5s --health-retries 5
 
-    steps:
-      - uses: actions/checkout@v1
+    env:
+      MIX_ENV: test
 
+    steps:
       - name: Install OTP and Elixir
         uses: actions/setup-elixir@v1
         with:
           otp-version: 23.1.1
           elixir-version: 1.11.0
 
+      - uses: actions/checkout@v2
+        with:
+          fetch-depth: '0'
+
+      - uses: actions/cache@v2
+        with:
+          path: |
+            deps
+            _build
+          key: ${{ runner.os }}-mix-${{ hashFiles(format('{0}{1}', github.workspace, '/mix.lock')) }}
+          restore-keys: |
+            ${{ runner.os }}-mix-
+
       - name: Install dependencies
-        run: mix deps.get
+        run: |
+          mix deps.get
+          mix deps.compile
 
       - name: Compile
-        run: MIX_ENV=test mix compile
+        run: mix compile
 
       - name: Run tests
         run: mix test
 
+      - name: Run mutation tests
+        run: mix muzak --profile ci
+
       - name: Verify seeds
-        run: MIX_ENV=test mix run priv/repo/seeds.exs
+        run: mix run priv/repo/seeds.exs
 
   test-hex:
     name: Test Hex
@@ -78,6 +106,7 @@ jobs:
 
     env:
       HEXPM_PATH: ..
+      MIX_ENV: test
 
     steps:
       - uses: actions/checkout@v1
@@ -87,6 +116,15 @@ jobs:
         with:
           otp-version: 23.1.1
           elixir-version: 1.11.0
+
+      - uses: actions/cache@v2
+        with:
+          path: |
+            deps
+            _build
+          key: ${{ runner.os }}-mix-${{ hashFiles(format('{0}{1}', github.workspace, '/mix.lock')) }}
+          restore-keys: |
+            ${{ runner.os }}-mix-
 
       - name: Install hexpm dependencies
         run: |

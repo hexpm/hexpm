@@ -11,6 +11,7 @@ defmodule Hexpm.MixProject do
       compilers: [:phoenix] ++ Mix.compilers(),
       build_embedded: Mix.env() == :prod,
       start_permanent: Mix.env() == :prod,
+      preferred_cli_env: [muzak: :test],
       aliases: aliases(),
       releases: releases(),
       deps: deps()
@@ -66,7 +67,11 @@ defmodule Hexpm.MixProject do
       {:rollbax, "~> 0.5"},
       {:sweet_xml, "~> 0.5"},
       {:telemetry_poller, "~> 0.4"},
-      {:telemetry_metrics, "~> 0.4"}
+      {:telemetry_metrics, "~> 0.4"},
+      {:muzak,
+       git: "https://hexpm:sli_em-sl\{e91Ab@git.devonestes.com/muzak/muzak.git",
+       only: :test,
+       tag: "1.0.1"}
     ]
   end
 

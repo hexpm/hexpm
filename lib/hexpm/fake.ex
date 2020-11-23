@@ -20,7 +20,15 @@ defmodule Hexpm.Fake do
 
   def start() do
     :ets.new(__MODULE__, [:named_table, :public, read_concurrency: true])
+    load_objects()
+  end
 
+  def reset() do
+    :ets.delete_all_objects(__MODULE__)
+    load_objects()
+  end
+
+  def load_objects() do
     Enum.each(@files, &load_file/1)
 
     Enum.each(@generators, fn {key, deps} ->
