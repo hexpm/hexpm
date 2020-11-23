@@ -6,8 +6,8 @@
   "dependencies": {
     "@babel/core": "^7.12.3",
     "@babel/preset-env": "^7.12.1",
-    "@tailwindcss/ui": "^0.7.2",
     "alpinejs": "^2.7.3",
+    "autoprefixer": "^10.0.2",
     "babel-loader": "^8.1.0",
     "copy-webpack-plugin": "^6.2.1",
     "css-loader": "^5.0.0",
@@ -19,9 +19,11 @@
     "phoenix": "file:../deps/phoenix",
     "phoenix_html": "file:../deps/phoenix_html",
     "phoenix_live_view": "file:../deps/phoenix_live_view",
+    "postcss": "^8.1.9",
     "postcss-loader": "^4.0.4",
+    "postcss-nested": "^5.0.1",
     "postcss-nesting": "^7.0.1",
-    "tailwindcss": "^1.9.6",
+    "tailwindcss": "^2.0.1",
     "terser-webpack-plugin": "^5.0.3",
     "webpack": "^5.3.2",
     "webpack-cli": "^4.1.0"

@@ -1,7 +1,7 @@
 <div class="h-full bg-gray-50">
   <div class="bg-gray-800">
     <div class="relative">
-      <div class="container mx-auto overflow-auto pt-10">
+      <div class="max-w-7xl mx-auto overflow-auto pt-10">
         <div class="page-index-header"></div>
         <div class="relative">
           <h1 class="text-4xl text-center font-medium text-gray-100">The <span class="text-red-400">Erlang</span> and <span class="text-purple-400">Elixir</span> package manager</h1>
@@ -129,7 +129,7 @@
     </div>
   </div>
 
-  <div class="container mx-auto mb-16 grid grid-cols-3 gap-5 p-5 border border-gray-300 rounded-md shadow-lg text-gray-800 bg-white">
+  <div class="max-w-7xl mx-auto mb-16 grid grid-cols-3 gap-5 p-5 border border-gray-300 rounded-md shadow-lg text-gray-800 bg-white">
     <div class="p-3">
       <h3 class="flex items-center mb-2 border-b-2 border-red-400 text-xl uppercase pb-1">
         <svg class="h-6 w-6 mr-2 text-gray-500" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">

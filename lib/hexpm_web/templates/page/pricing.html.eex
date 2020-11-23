@@ -6,8 +6,8 @@
       Publish unlimited number of private packages with organizations.
     </p>
     <div class="relative self-center mt-6 bg-gray-100 rounded-lg p-0.5 flex sm:mt-8">
-      <button type="button" class="relative w-1/2 bg-white border-gray-200 rounded-md shadow-sm py-2 text-sm leading-5 font-medium text-gray-700 whitespace-no-wrap hover:text-gray-500 focus:outline-none focus:border-blue-300 focus:shadow-outline-blue focus:z-10 active:bg-gray-50 active:text-gray-800 transition ease-in-out duration-150 sm:w-auto sm:px-8">Monthly billing</button>
-      <button type="button" class="relative w-1/2 border border-transparent rounded-md py-2 text-sm leading-5 font-medium text-gray-700 whitespace-no-wrap hover:text-gray-500 focus:outline-none focus:border-blue-300 focus:shadow-outline-blue focus:z-10 active:bg-gray-50 active:text-gray-800 transition ease-in-out duration-150 sm:w-auto sm:px-8">Yearly billing</button>
+      <button type="button" class="relative w-1/2 bg-white border-gray-200 rounded-md shadow-sm py-2 text-sm leading-5 font-medium text-gray-700 whitespace-nowrap hover:text-gray-500 focus:outline-none focus:border-blue-300 focus:ring focus:ring-blue-300 focus:z-10 active:bg-gray-50 active:text-gray-800 transition ease-in-out duration-150 sm:w-auto sm:px-8">Monthly billing</button>
+      <button type="button" class="relative w-1/2 border border-transparent rounded-md py-2 text-sm leading-5 font-medium text-gray-700 whitespace-nowrap hover:text-gray-500 focus:outline-none focus:border-blue-300 focus:ring focus:ring-blue-300 focus:z-10 active:bg-gray-50 active:text-gray-800 transition ease-in-out duration-150 sm:w-auto sm:px-8">Yearly billing</button>
     </div>
   </div>
   <div class="mt-12 space-y-4 sm:mt-16 sm:space-y-0 sm:grid sm:grid-cols-1 sm:gap-6 lg:max-w-4xl lg:mx-auto xl:max-w-none xl:mx-0 xl:grid-cols-3">
@@ -19,7 +19,7 @@
           <span class="text-4xl leading-10 font-extrabold text-gray-900">$0</span>
           <span class="text-base leading-6 font-medium text-gray-500">/mo</span>
         </p>
-        <button type="button" class="mt-8 w-full bg-purple-600 border border-transparent rounded-md py-2 text-sm leading-5 font-semibold text-white hover:bg-purple-500 focus:outline-none focus:border-purple-700 focus:shadow-outline-purple active:bg-purple-700 transition duration-150 ease-in-out">Sign Up</button>
+        <button type="button" class="mt-8 w-full bg-purple-600 border border-transparent rounded-md py-2 text-sm leading-5 font-semibold text-white hover:bg-purple-500 focus:outline-none focus:border-purple-700 focus:ring focus:ring-purple-200 active:bg-purple-700 transition duration-150 ease-in-out">Sign Up</button>
       </div>
       <div class="pt-6 pb-8 px-6">
         <h3 class="text-xs leading-4 font-medium text-gray-900 tracking-wide uppercase">What's included</h3>
@@ -59,7 +59,7 @@
           <span class="text-4xl leading-10 font-extrabold text-gray-900">$7</span>
           <span class="text-base leading-6 font-medium text-gray-500">/mo</span>
         </p>
-        <button type="button" class="mt-8 w-full bg-purple-600 border border-transparent rounded-md py-2 text-sm leading-5 font-semibold text-white hover:bg-purple-500 focus:outline-none focus:border-purple-700 focus:shadow-outline-purple active:bg-purple-700 transition duration-150 ease-in-out">Try Free For 30 Days</button>
+        <button type="button" class="mt-8 w-full bg-purple-600 border border-transparent rounded-md py-2 text-sm leading-5 font-semibold text-white hover:bg-purple-500 focus:outline-none focus:border-purple-700 focus:ring focus:ring-purple-200 active:bg-purple-700 transition duration-150 ease-in-out">Try Free For 30 Days</button>
       </div>
       <div class="pt-6 pb-8 px-6">
         <h3 class="text-xs leading-4 font-medium text-gray-900 tracking-wide uppercase">What's included</h3>
@@ -98,7 +98,7 @@
         <p class="mt-8">
           <span class="text-4xl leading-10 font-extrabold text-gray-900">TBA</span>
         </p>
-        <button type="button" class="mt-8 w-full bg-purple-600 border border-transparent rounded-md py-2 text-sm leading-5 font-semibold text-white hover:bg-purple-500 focus:outline-none focus:border-purple-700 focus:shadow-outline-purple active:bg-purple-700 transition duration-150 ease-in-out">Contact Sales</button>
+        <button type="button" class="mt-8 w-full bg-purple-600 border border-transparent rounded-md py-2 text-sm leading-5 font-semibold text-white hover:bg-purple-500 focus:outline-none focus:border-purple-700 focus:ring focus:ring-purple-200 active:bg-purple-700 transition duration-150 ease-in-out">Contact Sales</button>
       </div>
       <div class="pt-6 pb-8 px-6">
         <h3 class="text-xs leading-4 font-medium text-gray-900 tracking-wide uppercase">What's included</h3>
@@ -146,7 +146,7 @@
         <h2 class="text-3xl leading-9 font-extrabold text-gray-900">
           Frequently asked questions
         </h2>
-        <p class="text-lg leading-7 text-gray-500">Can’t find the answer you’re looking for? Reach out to our <a href="#" class="font-medium link">customer support</a>.</p>
+        <p class="text-lg leading-7 text-gray-500">Can’t find the answer you’re looking for? Reach out to our <a href="mailto:support@hex.pm" class="font-medium link">customer support</a>.</p>
       </div>
       <div class="mt-12 lg:mt-0 lg:col-span-2">
         <dl class="space-y-12">

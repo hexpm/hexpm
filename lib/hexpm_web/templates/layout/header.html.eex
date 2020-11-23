@@ -66,7 +66,7 @@
                     </div>
                     <form role="search" action="<%= Routes.package_path(Endpoint, :index) %>">
                       <input type="hidden" name="sort" value="recent_downloads">
-                      <input type="search" name="search" id="search" class="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:border-blue-300 focus:shadow-outline-blue sm:text-sm transition duration-150 ease-in-out" placeholder="Find packages">
+                      <input type="search" name="search" id="search" class="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:border-blue-300 focus:ring focus:ring-blue-300 sm:text-sm transition duration-150 ease-in-out" placeholder="Find packages">
                     </form>
                   </div>
                 </div>
@@ -84,7 +84,7 @@
                     </div>
 
                     <div class="hidden origin-top-right absolute right-0 mt-2 w-48 rounded-md shadow-lg" id="user-menu">
-                      <div class="py-1 rounded-md bg-white shadow-xs" role="menu" aria-orientation="vertical" aria-labelledby="user-menu">
+                      <div class="py-1 rounded-md bg-white ring-1 ring-black ring-opacity-5" role="menu" aria-orientation="vertical" aria-labelledby="user-menu">
                         <a href="<%= Routes.user_path(Endpoint, :show, @current_user) %>" class="block px-4 py-2 text-sm leading-5 no-underline text-gray-700 hover:bg-gray-100 focus:outline-none focus:bg-gray-100 transition duration-150 ease-in-out" role="menuitem">Your Profile</a>
                         <a href="<%= Routes.profile_path(Endpoint, :index) %>" class="block px-4 py-2 text-sm leading-5 no-underline text-gray-700 hover:bg-gray-100 focus:outline-none focus:bg-gray-100 transition duration-150 ease-in-out" role="menuitem">Dashboard</a>
                         <%= form_tag(Routes.login_path(Endpoint, :delete)) do %>
@@ -96,9 +96,9 @@
                 </div>
               </div>
             <% else %>
-              <div class="hidden md:block items-center justify-end whitespace-no-wrap">
+              <div class="hidden md:block items-center justify-end whitespace-nowrap">
                 <span class="hidden lg:inline-flex ml-10 rounded-md shadow-sm">
-                  <a href="<%= Routes.login_path(Endpoint, :show) %>" class="whitespace-no-wrap inline-flex items-center justify-center px-4 py-2 border border-transparent text-base leading-6 font-medium no-underline rounded-md text-gray-200 hover:text-white bg-gray-700 hover:bg-gray-600 focus:outline-none focus:border-gray-800 focus:shadow-outline-gray active:bg-gray-800 transition ease-in-out duration-150">
+                  <a href="<%= Routes.login_path(Endpoint, :show) %>" class="whitespace-nowrap inline-flex items-center justify-center px-4 py-2 border border-transparent text-base leading-6 font-medium no-underline rounded-md text-gray-200 hover:text-white bg-gray-700 hover:bg-gray-600 focus:outline-none focus:border-gray-800 focus:ring focus:ring-gray-500 active:bg-gray-800 transition ease-in-out duration-150">
                     Sign in
                   </a>
                 </span>

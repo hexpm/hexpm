@@ -16,7 +16,7 @@ ViewHelpers.params(search: @search, page: page, sort: "name")
 <%# TODO: Exact match label. Search for 30 packages, drop one if exact match %>
 
 <div class="bg-gray-50 py-6 h-full">
-  <div class="container mx-auto flex flex-1 justify-between pb-6">
+  <div class="max-w-7xl mx-auto flex flex-1 justify-between pb-6">
     <div class="w-96">
       <div class="space-y-1">
         <label for="search" class="block text-sm leading-5 font-medium text-gray-700">
@@ -31,7 +31,7 @@ ViewHelpers.params(search: @search, page: page, sort: "name")
             </div>
             <form role="search" action="<%= Routes.package_path(Endpoint, :index) %>">
               <input type="hidden" name="sort" value="recent_downloads">
-              <input type="search" name="search" id="search" value="<%= @search %>" class="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:border-blue-300 focus:shadow-outline-blue sm:text-sm transition duration-150 ease-in-out">
+              <input type="search" name="search" id="search" value="<%= @search %>" class="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:border-blue-300 focus:ring focus:ring-blue-300 sm:text-sm transition duration-150 ease-in-out">
             </form>
           </div>
         </div>
@@ -45,7 +45,7 @@ ViewHelpers.params(search: @search, page: page, sort: "name")
         </label>
         <div class="relative">
           <span class="inline-block w-full rounded-md shadow-sm">
-            <button x-ref="button" @click="onButtonClick()" type="button" aria-haspopup="listbox" aria-expanded="true" aria-labelledby="listbox-label" class="cursor-default relative w-full rounded-md border border-gray-300 bg-white text-left focus:outline-none focus:shadow-outline-blue focus:border-blue-300 transition ease-in-out duration-150 sm:text-sm sm:leading-5">
+            <button x-ref="button" @click="onButtonClick()" type="button" aria-haspopup="listbox" aria-expanded="true" aria-labelledby="listbox-label" class="cursor-default relative w-full rounded-md border border-gray-300 bg-white text-left focus:outline-none focus:ring focus:ring-blue-300 focus:border-blue-300 transition ease-in-out duration-150 sm:text-sm sm:leading-5">
               <span class="flex truncate inset-y-0 items-center relative pl-8 pr-4 py-2">
                 <span class="font-normal block truncate" x-text='<%= inspect(Keyword.values(sorting)) %>[value]'>
                 </span>
@@ -63,7 +63,7 @@ ViewHelpers.params(search: @search, page: page, sort: "name")
             </button>
           </span>
           <div x-show="open" @focusout="onEscape()" @click.away="open = false" x-transition:leave="transition ease-in duration-100" x-transition:leave-start="opacity-100" class="absolute mt-1 w-full rounded-md bg-white shadow-lg z-20">
-            <ul @keydown.enter.stop.prevent="onOptionSelect()" @keydown.space.stop.prevent="onOptionSelect()" @keydown.escape="onEscape()" @keydown.arrow-up.prevent="onArrowUp()" @keydown.arrow-down.prevent="onArrowDown()" x-ref="listbox" tabindex="-1" role="listbox" aria-labelledby="listbox-label" :aria-activedescendant="activeDescendant" class="max-h-60 rounded-md py-1 text-base leading-6 shadow-xs overflow-auto focus:outline-none sm:text-sm sm:leading-5">
+            <ul @keydown.enter.stop.prevent="onOptionSelect()" @keydown.space.stop.prevent="onOptionSelect()" @keydown.escape="onEscape()" @keydown.arrow-up.prevent="onArrowUp()" @keydown.arrow-down.prevent="onArrowDown()" x-ref="listbox" tabindex="-1" role="listbox" aria-labelledby="listbox-label" :aria-activedescendant="activeDescendant" class="max-h-60 rounded-md py-1 text-base leading-6 ring-1 ring-black ring-opacity-5 overflow-auto focus:outline-none sm:text-sm sm:leading-5">
               <%= for {{id, name}, ix} <- Enum.with_index(sorting) do %>
                 <li id="listbox-item-<%= ix %>" role="option" @click="choose(<%= ix %>)" @mouseenter="selected = <%= ix %>" @mouseleave="selected = null" :class="{'text-white bg-indigo-600': selected === <%= ix %>, 'text-gray-900': !(selected === <%= ix %>)}" class="cursor-default select-none relative">
                   <a href="<%= Routes.package_path(Endpoint, :index, ViewHelpers.params(search: @search, page: page, sort: id)) %>" class="block py-2 pl-8 pr-4">
@@ -85,7 +85,7 @@ ViewHelpers.params(search: @search, page: page, sort: "name")
     </div>
   </div>
 
-  <div class="container mx-auto bg-white shadow-lg overflow-hidden sm:rounded-md">
+  <div class="max-w-7xl mx-auto bg-white shadow-lg overflow-hidden sm:rounded-md">
     <ul>
       <%= for {package, ix} <- Enum.with_index(@packages) do %>
         <li <%= if ix != 0 do %>class="border-t border-gray-200" <% end %>>
@@ -140,10 +140,10 @@ ViewHelpers.params(search: @search, page: page, sort: "name")
     %>
     <div class="bg-white px-4 py-3 flex items-center justify-between border-t border-gray-200 sm:px-6">
       <div class="flex-1 flex justify-between sm:hidden">
-        <a <%= href.(paginate[:next], @page - 1) %> class="<%= if !paginate[:prev] do %>cursor-not-allowed<% else %>hover:text-gray-500 focus:outline-none focus:shadow-outline-blue focus:border-blue-300 active:bg-gray-100 active:text-gray-700<% end %> relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm leading-5 font-medium rounded-md text-gray-700 bg-white transition ease-in-out duration-150">
+        <a <%= href.(paginate[:next], @page - 1) %> class="<%= if !paginate[:prev] do %>cursor-not-allowed<% else %>hover:text-gray-500 focus:outline-none focus:ring focus:ring-blue-300 focus:border-blue-300 active:bg-gray-100 active:text-gray-700<% end %> relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm leading-5 font-medium rounded-md text-gray-700 bg-white transition ease-in-out duration-150">
           Previous
         </a>
-        <a <%= href.(paginate[:next], @page + 1) %> class="<%= if !paginate[:next] do %>cursor-not-allowed<% else %>hover:text-gray-500 focus:outline-none focus:shadow-outline-blue focus:border-blue-300 active:bg-gray-100 active:text-gray-700<% end %> ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm leading-5 font-medium rounded-md text-gray-700 bg-white transition ease-in-out duration-150">
+        <a <%= href.(paginate[:next], @page + 1) %> class="<%= if !paginate[:next] do %>cursor-not-allowed<% else %>hover:text-gray-500 focus:outline-none focus:ring focus:ring-blue-300 focus:border-blue-300 active:bg-gray-100 active:text-gray-700<% end %> ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm leading-5 font-medium rounded-md text-gray-700 bg-white transition ease-in-out duration-150">
           Next
         </a>
       </div>
@@ -161,17 +161,17 @@ ViewHelpers.params(search: @search, page: page, sort: "name")
         </div>
         <div>
           <nav class="relative z-0 inline-flex shadow-sm">
-            <a <%= href.(paginate[:prev], @page - 1) %> class="<%= if !paginate[:prev] do %>cursor-not-allowed<% else %>hover:text-gray-400 hover:bg-gray-50 focus:z-10 focus:outline-none focus:border-blue-300 focus:shadow-outline-blue active:bg-gray-100 active:text-gray-500<% end %> relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm leading-5 font-medium text-gray-500 transition ease-in-out duration-150" aria-label="Previous">
+            <a <%= href.(paginate[:prev], @page - 1) %> class="<%= if !paginate[:prev] do %>cursor-not-allowed<% else %>hover:text-gray-400 hover:bg-gray-50 focus:z-10 focus:outline-none focus:border-blue-300 focus:ring focus:ring-blue-300 active:bg-gray-100 active:text-gray-500<% end %> relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm leading-5 font-medium text-gray-500 transition ease-in-out duration-150" aria-label="Previous">
               <svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
                 <path fill-rule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clip-rule="evenodd" />
               </svg>
             </a>
             <%= for page <- paginate[:page_links] do %>
-              <a href="<%= page_link.(page) %>" class="<%= if page == @page do %>font-bold bg-gray-50<% else %>font-medium hover:bg-gray-50 hover:text-gray-500<% end %> -ml-px relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm leading-5 text-gray-700 focus:bg-gray-50 focus:z-10 focus:outline-none focus:border-blue-300 focus:shadow-outline-blue transition ease-in-out duration-150">
+              <a href="<%= page_link.(page) %>" class="<%= if page == @page do %>font-bold bg-gray-50<% else %>font-medium hover:bg-gray-50 hover:text-gray-500<% end %> -ml-px relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm leading-5 text-gray-700 focus:bg-gray-50 focus:z-10 focus:outline-none focus:border-blue-300 focus:ring-blue transition ease-in-out duration-150">
                 <%= page %>
               </a>
             <% end %>
-            <a <%= href.(paginate[:next], @page + 1) %> class="<%= if !paginate[:next] do %>cursor-not-allowed<% else %>hover:text-gray-400 hover:bg-gray-50 focus:z-10 focus:outline-none focus:border-blue-300 focus:shadow-outline-blue active:bg-gray-100 active:text-gray-500<% end %> -ml-px relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm leading-5 font-medium text-gray-500 transition ease-in-out duration-150" aria-label="Next">
+            <a <%= href.(paginate[:next], @page + 1) %> class="<%= if !paginate[:next] do %>cursor-not-allowed<% else %>hover:text-gray-400 hover:bg-gray-50 focus:z-10 focus:outline-none focus:border-blue-300 focus:ring focus:ring-blue-300 active:bg-gray-100 active:text-gray-500<% end %> -ml-px relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm leading-5 font-medium text-gray-500 transition ease-in-out duration-150" aria-label="Next">
               <svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
                 <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd" />
               </svg>
