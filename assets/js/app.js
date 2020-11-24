@@ -18,18 +18,8 @@ liveSocket.connect()
 
 class App {
   constructor() {
-    this.focus()
     this.expandUserMenu()
     this.expandMobileMenu()
-  }
-
-  focus() {
-    // Focus username or search field
-    if ($("#username").length > 0) {
-      $("#username").trigger("focus")
-    } else {
-      $("[name='search']").trigger("focus")
-    }
   }
 
   expandUserMenu() {
