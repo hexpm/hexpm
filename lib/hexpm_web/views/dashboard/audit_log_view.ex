@@ -78,6 +78,14 @@ defmodule HexpmWeb.Dashboard.AuditLogView do
     "Update user profile"
   end
 
+  def humanize_audit_log_info(%AuditLog{action: "security.update"}) do
+    "Update TFA settings"
+  end
+
+  def humanize_audit_log_info(%AuditLog{action: "security.rotate_recovery_codes"}) do
+    "Rotate TFA recovery codes"
+  end
+
   def humanize_audit_log_info(%AuditLog{action: "organization.create", params: params}) do
     "Create organization #{params["name"]}"
   end
