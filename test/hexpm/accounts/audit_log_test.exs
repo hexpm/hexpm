@@ -220,7 +220,7 @@ defmodule Hexpm.Accounts.AuditLogTest do
       multi =
         AuditLog.audit(Ecto.Multi.new(), {user, "user_agent"}, "docs.publish", {package, release})
 
-      assert {:insert, changeset, []} = Ecto.Multi.to_list(multi)[:"log.docs.publish"]
+      assert {:insert, changeset, []} = Ecto.Multi.to_list(multi)[:"log.docs.publish.0"]
       assert changeset.valid?
     end
 
@@ -232,7 +232,7 @@ defmodule Hexpm.Accounts.AuditLogTest do
 
       assert {:merge, merge} = Ecto.Multi.to_list(multi)[:merge]
       multi = merge.(multi)
-      assert {:insert, changeset, []} = Ecto.Multi.to_list(multi)[:"log.key.generate"]
+      assert {:insert, changeset, []} = Ecto.Multi.to_list(multi)[:"log.key.generate.0"]
       assert changeset.valid?
     end
   end
@@ -242,7 +242,7 @@ defmodule Hexpm.Accounts.AuditLogTest do
       fun = fn %{user: user} -> user end
       multi = AuditLog.audit_with_user(Ecto.Multi.new(), {nil, "user_agent"}, "user.create", fun)
 
-      assert {_, fun} = Ecto.Multi.to_list(multi)[:"log.user.create"]
+      assert {_, fun} = Ecto.Multi.to_list(multi)[:"log.user.create.0"]
       assert {:ok, %AuditLog{action: "user.create"}} = fun.(Hexpm.Repo, %{user: user})
     end
   end
@@ -253,7 +253,7 @@ defmodule Hexpm.Accounts.AuditLogTest do
       multi = AuditLog.audit_many(Ecto.Multi.new(), {user, "user_agent"}, "key.remove", keys)
 
       assert {:insert_all, AuditLog, [params1, params2], []} =
-               Ecto.Multi.to_list(multi)[:"log.key.remove"]
+               Ecto.Multi.to_list(multi)[:"log.key.remove.0"]
 
       assert params1.action == "key.remove"
       assert params1.user_id == user.id

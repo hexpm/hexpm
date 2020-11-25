@@ -67,12 +67,16 @@ defmodule Hexpm.Accounts.AuditLog do
 
   def audit(multi, {user, user_agent}, action, fun) when is_function(fun, 1) do
     Multi.merge(multi, fn data ->
-      Multi.insert(Multi.new(), multi_key(action), build(user, user_agent, action, fun.(data)))
+      Multi.insert(
+        Multi.new(),
+        multi_key(multi, action),
+        build(user, user_agent, action, fun.(data))
+      )
     end)
   end
 
   def audit(multi, {user, user_agent}, action, params) do
-    Multi.insert(multi, multi_key(action), build(user, user_agent, action, params))
+    Multi.insert(multi, multi_key(multi, action), build(user, user_agent, action, params))
   end
 
   def audit_many(multi, {user, user_agent}, action, list, opts \\ []) do
@@ -86,11 +90,11 @@ defmodule Hexpm.Accounts.AuditLog do
         |> Map.merge(extra)
       end)
 
-    Multi.insert_all(multi, multi_key(action), AuditLog, entries, opts)
+    Multi.insert_all(multi, multi_key(multi, action), AuditLog, entries, opts)
   end
 
   def audit_with_user(multi, {_user, user_agent}, action, fun) do
-    Multi.insert(multi, multi_key(action), fn %{user: user} = data ->
+    Multi.insert(multi, multi_key(multi, action), fn %{user: user} = data ->
       build(user, user_agent, action, fun.(data))
     end)
   end
@@ -262,7 +266,9 @@ defmodule Hexpm.Accounts.AuditLog do
   defp fields(%User{}), do: [:id, :username]
   defp fields(%UserHandles{}), do: [:github, :twitter, :freenode]
 
-  defp multi_key(action), do: :"log.#{action}"
+  defp multi_key(multi, action) do
+    :"log.#{action}.#{length(Multi.to_list(multi))}"
+  end
 
   def count_by(schema) do
     from(l in all_by(schema), select: count(l))

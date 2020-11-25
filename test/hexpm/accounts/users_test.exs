@@ -294,5 +294,19 @@ defmodule Hexpm.Accounts.UsersTest do
                  audit: {build(:user), "UA"}
                )
     end
+
+    test "update two emails" do
+      organization = insert(:organization, user: build(:user, emails: []))
+
+      assert {:ok, _updated_user} =
+               Users.update_profile(
+                 organization.user,
+                 %{
+                   "public_email" => "first@example.com",
+                   "gravatar_email" => "second@example.com"
+                 },
+                 audit: {build(:user), "UA"}
+               )
+    end
   end
 end
