@@ -31,8 +31,9 @@ defmodule Hexpm.Accounts.UserHandles do
 
   def render(user) do
     Enum.flat_map(services(), fn {field, service, url} ->
-      if handle = Map.get(user.handles, field) do
-        handle = UserHandles.handle(field, handle)
+      handle = Map.get(user.handles, field)
+
+      if handle = handle && handle(field, handle) do
         full_url = String.replace(url, "{handle}", handle)
         [{service, handle, full_url}]
       else
@@ -50,13 +51,18 @@ defmodule Hexpm.Accounts.UserHandles do
     uri = URI.parse(handle)
     http? = uri.scheme in ["http", "https"]
     host? = String.contains?(uri.host || "", host)
-    path? = String.starts_with?(uri.path, path)
+    path? = String.starts_with?(uri.path || "", path)
 
-    if http? and host? and path? do
-      {_, handle} = String.split_at(uri.path, String.length(path))
-      handle
-    else
-      String.replace(uri.path, host <> path, "")
+    cond do
+      http? and host? and path? ->
+        {_, handle} = String.split_at(uri.path, String.length(path))
+        handle
+
+      uri.path ->
+        String.replace(uri.path, host <> path, "")
+
+      true ->
+        nil
     end
   end
 end

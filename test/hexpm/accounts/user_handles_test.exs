@@ -72,5 +72,10 @@ defmodule Hexpm.Accounts.UserHandlesTest do
                  {"Slack", "slack", "https://elixir-slackin.herokuapp.com/"}
                ]
     end
+
+    test "handle with full URL" do
+      user = build(:user, handles: build(:user_handles, twitter: "https://example.com"))
+      assert UserHandles.render(user) == []
+    end
   end
 end
