@@ -36,8 +36,7 @@ defmodule Hexpm.MixProject do
       {:bamboo, "~> 1.0"},
       {:bcrypt_elixir, "~> 2.0"},
       {:corsica, "~> 1.0"},
-      # TODO: use 1.4.11/1.5.0 when published
-      {:earmark, github: "pragdave/earmark"},
+      {:earmark, "~> 1.4"},
       {:ecto_sql, "~> 3.0"},
       {:ecto, "~> 3.0", override: true},
       {:ex_aws_s3, "~> 2.0"},
