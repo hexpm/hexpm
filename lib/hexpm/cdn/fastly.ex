@@ -13,11 +13,7 @@ defmodule Hexpm.CDN.Fastly do
 
   def public_ips() do
     {:ok, 200, _, body} = get("public-ip-list")
-
-    Enum.map(body["addresses"], fn range ->
-      [ip, mask] = String.split(range, "/")
-      {Hexpm.Utils.parse_ip(ip), String.to_integer(mask)}
-    end)
+    Enum.map(body["addresses"], &Hexpm.Utils.parse_ip_mask/1)
   end
 
   defp auth() do
