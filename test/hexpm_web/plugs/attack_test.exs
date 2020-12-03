@@ -135,6 +135,29 @@ defmodule HexpmWeb.Plugs.AttackTest do
       assert conn.resp_body == Jason.encode!(%{status: 403, message: "Blocked"})
     end
 
+    test "halts requests from IP masks that are blocked" do
+      insert(:block_address, ip: "10.1.1.0/24")
+      Hexpm.BlockAddress.reload()
+
+      conn = request_ip({10, 1, 1, 1})
+      assert conn.status == 403
+      assert conn.resp_body == Jason.encode!(%{status: 403, message: "Blocked"})
+
+      conn = request_ip({10, 1, 1, 127})
+      assert conn.status == 403
+      assert conn.resp_body == Jason.encode!(%{status: 403, message: "Blocked"})
+
+      conn = request_ip({10, 1, 1, 255})
+      assert conn.status == 403
+      assert conn.resp_body == Jason.encode!(%{status: 403, message: "Blocked"})
+
+      conn = request_ip({10, 1, 2, 0})
+      assert conn.status == 200
+
+      conn = request_ip({10, 1, 0, 0})
+      assert conn.status == 200
+    end
+
     test "allows requests again when the IP is unblocked" do
       blocked_address = insert(:block_address, ip: "20.2.2.2")
       Hexpm.BlockAddress.reload()

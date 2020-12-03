@@ -244,6 +244,13 @@ defmodule Hexpm.Utils do
     end
   end
 
+  def parse_ip_mask(string) do
+    case String.split(string, "/") do
+      [ip, mask] -> {Hexpm.Utils.parse_ip(ip), String.to_integer(mask)}
+      [ip] -> {Hexpm.Utils.parse_ip(ip), 32}
+    end
+  end
+
   def in_ip_range?(_range, nil) do
     false
   end
