@@ -123,4 +123,15 @@ defmodule HexpmWeb.DocsController do
       container: "container page docs"
     )
   end
+
+  def self_hosting(conn, _params) do
+    render(
+      conn,
+      "layout.html",
+      view: "self_hosting.html",
+      view_name: :self_hosting,
+      title: "Self-hosting",
+      container: "container page docs"
+    )
+  end
 end

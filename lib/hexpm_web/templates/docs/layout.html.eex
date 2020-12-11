@@ -13,6 +13,7 @@
       <li class="sidebar-item"><a target="_blank" rel="noopener" href="https://www.rebar3.org/docs/package_management/hex_package_management/">Tasks <%= icon(:glyphicon, "new-window") %></a></li>
       <li class="sidebar-header">Hex</li>
       <li class="sidebar-item <%= selected_docs(@conn, :faq) %>"><a href="<%= Routes.docs_path(Endpoint, :faq) %>">FAQ</a></li>
+      <li class="sidebar-item <%= selected_docs(@conn, :self_hosting) %>"><a href="<%= Routes.docs_path(Endpoint, :self_hosting) %>">Self-hosting</a></li>
       <li class="sidebar-item <%= selected_docs(@conn, :mirrors) %>"><a href="<%= Routes.docs_path(Endpoint, :mirrors) %>">Mirrors</a></li>
       <li class="sidebar-item <%= selected_docs(@conn, :public_keys) %>"><a href="<%= Routes.docs_path(Endpoint, :public_keys) %>">Public keys</a></li>
     </ul>
