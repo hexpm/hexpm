@@ -23,7 +23,7 @@ Hex v0.21 introduced a [`mix hex.registry build`](https://hexdocs.pm/hex/Mix.Tas
 - a directory to hold public files
 - a private key used to sign the registry.
 
-Let's create an "acme" registry. We'll create a new directory, generate a random private key, a "public" directory, and build the registry:
+Let's create an "acme" registry, generate a random private key, a `public` directory, and finally let's build the registry:
 
 ```
 $ mkdir acme
@@ -37,7 +37,7 @@ $ mix hex.registry build public --name=acme --private-key=private_key.pem
 * creating public/versions
 ```
 
-and that's it! Now, all we need to do is start a HTTP server that exposes the `public` directory and point Hex clients to it. However, let's add a package to our repository first.
+and that's it! Now, all we need to do is start a HTTP server that exposes the `public` directory and we can point Hex clients to it. However, let's add a package to our repository first.
 
 To publish a package you need to copy the tarball to `public/tarballs` and re-build the registry. You can build your own package (using [`mix hex.build`](https://hexdocs.pm/hex/Mix.Tasks.Hex.Build.html)) or simply use an existing one. Let's do the latter:
 
@@ -51,7 +51,7 @@ $ mix hex.registry build public --name=acme --private-key=private_key.pem
 * updating public/versions
 ```
 
-Now let's test the repository. We can use the built-in server that ships with Erlang/OTP to serve the `public` directory:
+Now let's test our repository. We can use the built-in server that ships with Erlang/OTP to serve the `public` directory:
 
 ```
 $ erl -s inets -eval 'inets:start(httpd,[{port,8000},{server_name,"localhost"},{server_root,"."},{document_root,"public"}]).'
@@ -82,7 +82,7 @@ $ aws s3 sync public s3://my-bucket
 
 Your repository should now be available under an URL like: `https://<bucket>.s3.<region>.amazonaws.com` or however you configured your bucket.
 
-If you don't yet have a bucket, create one. By default, files stored on S3 are not publicly accessible. You can enable public access by setting the following bucket policy in your bucket's properties:
+If you don't yet have a bucket, create one! By default, files stored on S3 are not publicly accessible. You can enable public access by setting the following bucket policy in your bucket's properties:
 
 ```json
 {
@@ -151,7 +151,7 @@ defp deps do
 end
 ```
 
-Let's update our supervision tree to start Plug.Cowboy:
+And update our supervision tree to start Cowboy:
 
 ```elixir
 # lib/my_app/application.ex
@@ -165,7 +165,6 @@ defmodule MyApp.Application do
   @impl true
   def start(_type, _args) do
     port = Application.fetch_env!(:my_app, :port)
-
     Logger.info("Starting Cowboy on port #{port}")
 
     children = [
@@ -208,13 +207,13 @@ defmodule MyApp.Plug do
 end
 ```
 
-Let's prepare our application for releases:
+We are ready to prepare our application for releases:
 
 ```
 $ mix release.init
 ```
 
-And edit the runtime configuration:
+Let's edit the runtime configuration:
 
 ```elixir
 # config/runtime.exs
@@ -277,7 +276,7 @@ And let's make sure everything works well by trying to retrieve the package one 
 $ mix hex.package fetch decimal 2.0.0 --repo=acme
 ```
 
-We're ready to put our application in a Docker container, let's define this Dockerfile:
+We're ready to put our application into a Docker container, let's define the Dockerfile:
 
 ```
 FROM hexpm/elixir:1.11.2-erlang-23.1.2-alpine-3.12.1 as build
@@ -339,13 +338,10 @@ Let's build our container and run it:
 
 ```
 $ docker build . -t my_app
-```
-
-And run it. Notice how we're configuring the container with the appropriate environment variables, shared volumes, and published ports.
-
-```
 $ docker run --env PUBLIC_DIR=/public --env PORT=8000 -v $HOME/acme/public:/public -p 8000:8000 my_app
 ```
+
+Notice how we're configuring the container with the appropriate environment variables, shared volumes, and published ports.
 
 Let's test that everything works by once again fetching a package from our local repository:
 
@@ -359,4 +355,4 @@ We skipped on many details so if you want to learn more, definitely check out:
 - https://hexdocs.pm/plug/Plug.BasicAuth.html
 - https://hexdocs.pm/plug_cowboy/Plug.Cowboy.html
 - https://hexdocs.pm/plug/https.html
-- https://hexdocs.pm/phoenix/releases.html (even though we're not using Phoenix, our Docker deployment section was based on that!)
+- https://hexdocs.pm/phoenix/releases.html (even though we're not using Phoenix, our Docker deployment section was based on that guide!)
