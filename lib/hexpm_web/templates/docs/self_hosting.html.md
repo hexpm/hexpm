@@ -80,7 +80,7 @@ like this:
 $ aws s3 sync public s3://my-bucket
 ```
 
-**Warning:** Remember to sync only the public directory and not `private_key.pem`! And if you do want to sync your private key, remember to set appropriate bucket policy.
+**Warning:** Remember to sync only the public directory and not `private_key.pem`! And if you do want to sync your private key, remember to set appropriate bucket policy so it isn't accidentally exposed.
 
 Your repository should now be available under an URL like: `https://<bucket>.s3.<region>.amazonaws.com` or however you configured your bucket.
 
@@ -127,7 +127,7 @@ You may also consider adding an IAM policy for the user accessing the bucket:
 }
 ```
 
-See [Amazon S3 docs](https://docs.aws.amazon.com/s3/index.html) for more information and customize bucket/IAM policies in a way that makes sense for your deployment.
+See [Amazon S3 docs](https://docs.aws.amazon.com/s3/index.html) for more information and remember to customize bucket/IAM policies in a way that makes sense for your deployment.
 
 ### Deploying with Plug.Cowboy & Docker
 
