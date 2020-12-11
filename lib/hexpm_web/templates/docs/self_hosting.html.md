@@ -131,7 +131,7 @@ See [Amazon S3 docs](https://docs.aws.amazon.com/s3/index.html) for more informa
 
 ### Deploying with Plug.Cowboy & Docker
 
-If you need any customizations to your Hex server, you may consider creating a proper Elixir project. Let's create one: we'll serve static files, add basic authentication, configure it via environment variables and prepare for deployment with Docker.
+If you need any customizations to your Hex server, you may consider creating a proper Elixir project. Let's do just that: we'll serve static files, add basic authentication, configure it via environment variables and prepare for deployment with Docker.
 
 Let's start a new project:
 
