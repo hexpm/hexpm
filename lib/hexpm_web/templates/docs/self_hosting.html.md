@@ -1,21 +1,21 @@
 ## Self-hosting
 
-In this guide we'll learn how to serve Hex packages using your own server. First, though, some background on what a Hex server really is.
+In this guide we'll learn how to serve Hex packages on your own package repository. First, though, some background on what a Hex repository really is.
 
 ### Hex specifications
 
-A Hex server must follow [Hex specifications](https://github.com/hexpm/specifications). An example server, and a reference implementation, is <https://github.com/hexpm/hexpm> that powers <https://hex.pm>. The Hex team also maintains a lower-level library, <https://github.com/hexpm/hex_core>, that you can use to build and interact with Hex servers.
+A Hex deployment must follow the [Hex specifications](https://github.com/hexpm/specifications). <https://hex.pm> is powered by <https://github.com/hexpm/hexpm> and related services such as <https://github.com/hexpm/hexdocs>. While you can use these projects to run your own Hex infrastructure it is generally not recommended because they include many features and complexity not required by the average deployment. The Hex team also maintains a lower-level library, <https://github.com/hexpm/hex_core>, that you can use to build and interact with Hex services.
 
-A Hex server consists of two [endpoints](https://github.com/hexpm/specifications/blob/master/endpoints.md):
+The specifications describe two [endpoints](https://github.com/hexpm/specifications/blob/master/endpoints.md):
 
 1. HTTP API - used for publishing packages, packages search, and administrative tasks.
 2. Repository - read-only endpoint that delivers registry resources and package tarballs.
 
-To run a basic Hex server you only need to implement the Repository endpoint.
+If you only wish to serve packages you only need to implement the Repository endpoint.
 
 ### Building the registry
 
-Hex v0.21 introduced a [`mix hex.registry build`](https://hexdocs.pm/hex/Mix.Tasks.Hex.Registry.html) task which provides an easy way to build a local registry.
+Hex v0.21 introduced the [`mix hex.registry build`](https://hexdocs.pm/hex/Mix.Tasks.Hex.Registry.html) task which provides an easy way to build a local registry.
 
 `mix hex.registry build` needs three things:
 
