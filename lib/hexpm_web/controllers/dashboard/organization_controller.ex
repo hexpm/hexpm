@@ -127,7 +127,7 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
         {:ok, _} ->
           conn
           |> put_resp_header("content-type", "application/json")
-          |> send_resp(204, Jason.encode!(%{}))
+          |> send_resp(200, Jason.encode!(%{}))
 
         {:error, reason} ->
           conn

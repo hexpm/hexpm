@@ -193,7 +193,7 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
         |> test_login(user)
         |> post("dashboard/orgs/#{organization.name}/billing-token", %{"token" => "Test Token"})
 
-      assert json_response(conn, :no_content)
+      assert json_response(conn, :ok) == %{}
     end
 
     test "create audit_log with action billing.checkout", %{
