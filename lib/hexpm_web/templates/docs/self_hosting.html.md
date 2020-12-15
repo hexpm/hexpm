@@ -69,6 +69,8 @@ If everything went well you should see that the package was downloaded from your
 
 In the next sections we'll cover how we can deploy our registry to production.
 
+<a name="deploying-to-s3"></a>
+
 ### Deploying to S3
 
 Deploying to Amazon S3 (or similar cloud services) is probably the easiest way to have a reliable Hex repository.
@@ -128,6 +130,8 @@ You may also consider adding an IAM policy for the user accessing the bucket:
 ```
 
 See [Amazon S3 docs](https://docs.aws.amazon.com/s3/index.html) for more information and remember to customize bucket/IAM policies in a way that makes sense for your deployment.
+
+<a name="deploying-with-plug-cowboy-docker"></a>
 
 ### Deploying with Plug.Cowboy & Docker
 
