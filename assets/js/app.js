@@ -29,7 +29,7 @@ liveSocket.connect()
 
 import $ from "jquery"
 import "bootstrap"
-import hljs from 'highlight.js/lib/highlight';
+import hljs from 'highlight.js/lib/core';
 import elixir from 'highlight.js/lib/languages/elixir';
 
 
