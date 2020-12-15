@@ -50,7 +50,7 @@ defmodule Hexpm.MixProject do
       {:jason, "~> 1.0"},
       {:libcluster, "~> 3.0"},
       {:logster, "~> 1.0"},
-      {:mox, "~> 0.5.0", only: :test},
+      {:mox, "~> 1.0", only: :test},
       {:phoenix_ecto, "~> 4.0"},
       {:phoenix_html, "~> 2.3"},
       {:phoenix_live_dashboard, "~> 0.1"},
