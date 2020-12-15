@@ -158,28 +158,20 @@ And update our supervision tree to start Cowboy:
 ```elixir
 # lib/my_app/application.ex
 
-defmodule MyApp.Application do
-  @moduledoc false
+@impl true
+def start(_type, _args) do
+  port = Application.fetch_env!(:my_app, :port)
 
-  use Application
-  require Logger
+  children = [
+    {Plug.Cowboy, scheme: :http, plug: MyApp.Plug, options: [port: port]}
+  ]
 
-  @impl true
-  def start(_type, _args) do
-    port = Application.fetch_env!(:my_app, :port)
-    Logger.info("Starting Cowboy on port #{port}")
-
-    children = [
-      {Plug.Cowboy, scheme: :http, plug: MyApp.Plug, options: [port: port]}
-    ]
-
-    opts = [strategy: :one_for_one, name: MyApp.Supervisor]
-    Supervisor.start_link(children, opts)
-  end
+  opts = [strategy: :one_for_one, name: MyApp.Supervisor]
+  Supervisor.start_link(children, opts)
 end
 ```
 
-And finally let's implement `MyApp.Plug`:
+Finally, let's implement `MyApp.Plug`:
 
 ```elixir
 # lib/my_app/plug.ex
@@ -209,13 +201,7 @@ defmodule MyApp.Plug do
 end
 ```
 
-We are ready to prepare our application for releases:
-
-```
-$ mix release.init
-```
-
-Let's edit the runtime configuration:
+We are ready to prepare our application for releases! Let's start with definining runtime configuration:
 
 ```elixir
 # config/runtime.exs
@@ -231,33 +217,10 @@ config :my_app,
   public_dir: System.get_env("PUBLIC_DIR", "tmp/public")
 ```
 
-We allow our app to be configured with environment variables but for convenience we also provide default values. We're ready to test our release!
+We allow our app to be configured with environment variables but for convenience we also provide default values. We're ready to assemble our release!
 
 ```
 $ MIX_ENV=prod mix release
-(...)
-* assembling my_app-0.1.0 on MIX_ENV=prod
-* using config/runtime.exs to configure the release at runtime
-* creating _build/prod/rel/my_app/releases/0.1.0/vm.args
-* creating _build/prod/rel/my_app/releases/0.1.0/env.sh
-* creating _build/prod/rel/my_app/releases/0.1.0/env.bat
-
-Release created at _build/prod/rel/my_app!
-
-    # To start your system
-    _build/prod/rel/my_app/bin/my_app start
-
-Once the release is running:
-
-    # To connect to it remotely
-    _build/prod/rel/my_app/bin/my_app remote
-
-    # To stop it gracefully (you may also send SIGINT/SIGTERM)
-    _build/prod/rel/my_app/bin/my_app stop
-
-To list all commands:
-
-    _build/prod/rel/my_app/bin/my_app
 ```
 
 Let's run it! We will serve the `public` directory of the local repository we've created in the first section of the guide:
@@ -282,56 +245,28 @@ We're ready to put our application into a Docker container, let's define the Doc
 
 ```
 FROM hexpm/elixir:1.11.2-erlang-23.1.2-alpine-3.12.1 as build
-
-# install build dependencies
 RUN apk add --no-cache git
-
-# prepare build dir
 WORKDIR /app
-
-# install hex + rebar
-RUN mix local.hex --force && \
-    mix local.rebar --force
-
-# set build ENV
+RUN mix local.hex --force && mix local.rebar --force
 ENV MIX_ENV=prod
-
-# install mix dependencies
 COPY mix.exs mix.lock ./
 RUN mix deps.get --only $MIX_ENV
 RUN mkdir config
-
-# Uncomment if you'll use compile-time configuration
-# # Dependencies sometimes use compile-time configuration. Copying
-# # these compile-time config files before we compile dependencies
-# # ensures that any relevant config changes will trigger the dependencies
-# # to be re-compiled.
-# COPY config/config.exs config/$MIX_ENV.exs config/
 RUN mix deps.compile
-
-# compile and build the release
 COPY lib lib
 RUN mix compile
-# changes to config/runtime.exs don't require recompiling the code
 COPY config/runtime.exs config/
-COPY rel rel
 RUN mix release
 
 # Start a new build stage so that the final image will only contain
 # the compiled release and other runtime necessities
 FROM alpine:3.12.1 AS app
 RUN apk add --no-cache openssl ncurses-libs
-
 WORKDIR /app
-
 RUN chown nobody:nobody /app
-
 USER nobody:nobody
-
 COPY --from=build --chown=nobody:nobody /app/_build/prod/rel/my_app ./
-
 ENV HOME=/app
-
 ENTRYPOINT ["bin/my_app"]
 CMD ["start"]
 ```
