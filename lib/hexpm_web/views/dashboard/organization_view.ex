@@ -136,11 +136,26 @@ defmodule HexpmWeb.Dashboard.OrganizationView do
     "(\"#{name}\" discount for #{percent_off}% of price)"
   end
 
-  defp invoice_status(%{"paid" => true}, _organization), do: "Paid"
-  defp invoice_status(%{"status" => "uncollectible"}, _organization), do: "Forgiven"
-  defp invoice_status(%{"paid" => false, "attempted" => false}, _organization), do: "Pending"
+  defp invoice_status(%{"paid" => true}, _organization, _card), do: "Paid"
+  defp invoice_status(%{"status" => "uncollectible"}, _organization, _card), do: "Forgiven"
 
-  defp invoice_status(%{"paid" => false, "attempted" => true, "id" => invoice_id}, organization) do
+  defp invoice_status(%{"paid" => false, "attempted" => false}, _organization, _card),
+    do: "Pending"
+
+  defp invoice_status(%{"paid" => false, "attempted" => true}, _organization, nil = _card) do
+    submit(
+      "Pay now",
+      class: "btn btn-primary",
+      disabled: true,
+      title: "No payment method on file"
+    )
+  end
+
+  defp invoice_status(
+         %{"paid" => false, "attempted" => true, "id" => invoice_id},
+         organization,
+         _card
+       ) do
     form_tag(Routes.organization_path(Endpoint, :pay_invoice, organization, invoice_id)) do
       submit("Pay now", class: "btn btn-primary")
     end
