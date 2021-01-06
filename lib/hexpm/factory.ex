@@ -122,6 +122,13 @@ defmodule Hexpm.Factory do
     }
   end
 
+  def release_retirement_factory() do
+    %Hexpm.Repository.ReleaseRetirement{
+      reason: "other",
+      message: "retired"
+    }
+  end
+
   def requirement_factory() do
     %Hexpm.Repository.Requirement{
       app: Fake.random(:package),
