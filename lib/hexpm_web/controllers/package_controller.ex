@@ -119,7 +119,8 @@ defmodule HexpmWeb.PackageController do
     repository = package.repository
     release = Releases.preload(release, [:requirements, :downloads, :publisher])
 
-    latest_release_with_docs = Enum.find(releases, & &1.has_docs)
+    latest_release_with_docs =
+      Release.latest_version(releases, only_stable: true, unstable_fallback: true, with_docs: true)
 
     docs_assigns =
       cond do

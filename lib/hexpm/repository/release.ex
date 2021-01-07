@@ -189,12 +189,20 @@ defmodule Hexpm.Repository.Release do
   def latest_version(releases, opts) do
     only_stable? = Keyword.fetch!(opts, :only_stable)
     unstable_fallback? = Keyword.get(opts, :unstable_fallback, false)
+    with_docs? = Keyword.get(opts, :with_docs)
+
+    with_docs_releases =
+      if with_docs? do
+        Enum.filter(releases, & &1.has_docs)
+      else
+        releases
+      end
 
     stable_releases =
       if only_stable? do
-        Enum.filter(releases, &(to_version(&1).pre == []))
+        Enum.filter(with_docs_releases, &(to_version(&1).pre == []))
       else
-        releases
+        with_docs_releases
       end
 
     if stable_releases == [] and unstable_fallback? do
