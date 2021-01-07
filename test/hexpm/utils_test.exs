@@ -12,4 +12,24 @@ defmodule Hexpm.UtilsTest do
                "Sun, 23 Feb 2020 19:47:26 GMT"
     end
   end
+
+  test "latest_valid_release_with_docs" do
+    assert Utils.latest_valid_release_with_docs([]) == nil
+
+    assert Utils.latest_valid_release_with_docs([
+             %{
+               has_docs: false,
+               version: %Version{major: 0, minor: 0, patch: 2, pre: ["dev", 0, 1]}
+             },
+             %{has_docs: false, version: %Version{major: 0, minor: 0, patch: 1}}
+           ]) == nil
+
+    assert Utils.latest_valid_release_with_docs([
+             %{
+               has_docs: true,
+               version: %Version{major: 0, minor: 0, patch: 2, pre: ["dev", 0, 1]}
+             },
+             %{has_docs: true, version: %Version{major: 0, minor: 0, patch: 1}}
+           ]) == %{has_docs: true, version: %Version{major: 0, minor: 0, patch: 1}}
+  end
 end

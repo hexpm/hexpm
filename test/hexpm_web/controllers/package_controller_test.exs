@@ -24,13 +24,14 @@ defmodule HexpmWeb.PackageControllerTest do
       :release,
       package: package1,
       version: "0.0.2",
-      meta: build(:release_metadata, app: package1.name)
+      meta: build(:release_metadata, app: package1.name),
+      has_docs: true
     )
 
     insert(
       :release,
       package: package1,
-      version: "0.0.3-dev",
+      version: %Version{major: 0, minor: 0, patch: 3, pre: ["dev", 0, 1]},
       meta: build(:release_metadata, app: package1.name),
       has_docs: true
     )
@@ -155,23 +156,13 @@ defmodule HexpmWeb.PackageControllerTest do
     end
 
     test "show latest valid version documentaion link", %{package1: package} do
-      insert(
-        :release,
-        package: package,
-        version: "0.0.4-dev",
-        meta: build(:release_metadata, app: package.name),
-        retirement: build(:release_retirement),
-        has_docs: true
-      )
-
       html_response =
         build_conn()
         |> get("/packages/#{package.name}")
         |> html_response(200)
 
-      assert html_response =~ "retired"
-      assert html_response =~ "0.0.3-dev.tar.gz"
-      refute html_response =~ "0.0.4-dev.tar.gz"
+      assert html_response =~ "0.0.2.tar.gz"
+      refute html_response =~ "0.0.3-dev.0.1.tar.gz"
     end
   end
 
