@@ -605,4 +605,40 @@ defmodule Hexpm.Repository.ReleaseTest do
     Release.delete(release) |> Hexpm.Repo.delete!()
     refute Hexpm.Repo.get_by(assoc(package2, :releases), version: "0.0.1")
   end
+
+  test "latest_version" do
+    package = insert(:package)
+
+    insert(
+      :release,
+      package: package,
+      version: "0.0.1",
+      meta: build(:release_metadata, app: package.name),
+      has_docs: true
+    )
+
+    insert(
+      :release,
+      package: package,
+      version: "0.0.2",
+      meta: build(:release_metadata, app: package.name),
+      has_docs: false
+    )
+
+    insert(
+      :release,
+      package: package,
+      version: %Version{major: 0, minor: 0, patch: 3, pre: ["dev", 0, 1]},
+      meta: build(:release_metadata, app: package.name),
+      has_docs: true
+    )
+
+    assert %Release{version: %Version{major: 0, minor: 0, patch: 2}} =
+             Release.all(package) |> Hexpm.Repo.all() |> Release.latest_version(only_stable: true)
+
+    assert %Release{version: %Version{major: 0, minor: 0, patch: 1}} =
+             Release.all(package)
+             |> Hexpm.Repo.all()
+             |> Release.latest_version(only_stable: true, with_docs: true)
+  end
 end

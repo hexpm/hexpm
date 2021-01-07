@@ -281,8 +281,4 @@ defmodule Hexpm.Utils do
   def datetime_to_rfc2822(%DateTime{calendar: Calendar.ISO, time_zone: "Etc/UTC"} = datetime) do
     Calendar.strftime(datetime, "%a, %d %b %Y %H:%M:%S GMT")
   end
-
-  def latest_valid_release_with_docs(releases) do
-    Enum.find(releases, &(&1.has_docs && &1.version.pre == []))
-  end
 end

@@ -17,7 +17,8 @@ defmodule HexpmWeb.PackageControllerTest do
       :release,
       package: package1,
       version: "0.0.1",
-      meta: build(:release_metadata, app: package1.name)
+      meta: build(:release_metadata, app: package1.name),
+      has_docs: true
     )
 
     insert(
@@ -25,7 +26,7 @@ defmodule HexpmWeb.PackageControllerTest do
       package: package1,
       version: "0.0.2",
       meta: build(:release_metadata, app: package1.name),
-      has_docs: true
+      has_docs: nil
     )
 
     insert(
@@ -161,7 +162,8 @@ defmodule HexpmWeb.PackageControllerTest do
         |> get("/packages/#{package.name}")
         |> html_response(200)
 
-      assert html_response =~ "0.0.2.tar.gz"
+      assert html_response =~ "0.0.1.tar.gz"
+      refute html_response =~ "0.0.2.tar.gz"
       refute html_response =~ "0.0.3-dev.0.1.tar.gz"
     end
   end
