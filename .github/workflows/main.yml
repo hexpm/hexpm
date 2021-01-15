@@ -36,7 +36,7 @@ jobs:
         options: --health-cmd pg_isready --health-interval 10s --health-timeout 5s --health-retries 5
 
     steps:
-      - uses: actions/checkout@v1
+      - uses: actions/checkout@v2
 
       - name: Install OTP and Elixir
         uses: actions/setup-elixir@v1
@@ -74,13 +74,13 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        hex-version: [main, v0.20, v0.19, v0.18]
+        hex-version: [main, v0.21, v0.20, v0.19, v0.18]
 
     env:
       HEXPM_PATH: ..
 
     steps:
-      - uses: actions/checkout@v1
+      - uses: actions/checkout@v2
 
       - name: Install OTP and Elixir
         uses: actions/setup-elixir@v1
