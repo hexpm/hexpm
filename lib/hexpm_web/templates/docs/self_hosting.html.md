@@ -67,6 +67,14 @@ decimal v2.0.0 downloaded to decimal-2.0.0.tar
 
 If everything went well you should see that the package was downloaded from your local server!
 
+To use the package in your Mix project, add it as a dependency and set the `:repo` option to your repository name:
+
+```elixir
+defp deps() do
+  {:decimal, "~> 2.0", repo: "acme"}
+end
+```
+
 In the next sections we'll cover how we can deploy our registry to production.
 
 <a name="deploying-to-s3"></a>
