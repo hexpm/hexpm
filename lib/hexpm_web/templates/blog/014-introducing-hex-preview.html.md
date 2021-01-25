@@ -18,7 +18,7 @@ It is important to consider any packages you bring into a project need to be vet
 
 ### How were people doing this before?
 
-The only way to audit package code before now was to download the package tarball and review it locally. This is still a totally vaalid method, but I think Hex Preview will be much simpler.
+The only way to audit package code before now was to download the package tarball and review it locally. This is still a totally valid method, but I think Hex Preview will be much simpler.
 
 ### How can I trust Hex Preview?
 
@@ -27,4 +27,3 @@ Hex Preview is maintained by the Hex team, hosted on Hex servers, and using rele
 ### Great. What's next?
 
 Hopefully, users will contribute to [the project](https://github.com/hexpm/preview) to make it even better.
-
