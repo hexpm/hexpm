@@ -12,6 +12,7 @@ if config_env() == :prod do
     logs_bucket: System.fetch_env!("HEXPM_LOGS_BUCKET"),
     docs_url: System.fetch_env!("HEXPM_DOCS_URL"),
     diff_url: System.fetch_env!("HEXPM_DIFF_URL"),
+    preview_url: System.fetch_env!("HEXPM_PREVIEW_URL"),
     cdn_url: System.fetch_env!("HEXPM_CDN_URL"),
     email_host: System.fetch_env!("HEXPM_EMAIL_HOST"),
     ses_rate: System.fetch_env!("HEXPM_SES_RATE"),

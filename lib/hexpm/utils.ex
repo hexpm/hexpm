@@ -275,6 +275,11 @@ defmodule Hexpm.Utils do
     "#{diff_url}/diff/#{package_name}/#{previous_version}..#{version}"
   end
 
+  def preview_html_url(package_name, version) do
+    preview_url = Application.fetch_env!(:hexpm, :preview_url)
+    "#{preview_url}/preview/#{package_name}/#{version}"
+  end
+
   @doc """
   Returns a RFC 2822 format string from a UTC datetime.
   """

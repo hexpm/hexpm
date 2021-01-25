@@ -8,6 +8,7 @@ config :hexpm,
   cdn_url: "http://localhost:5000",
   docs_url: "http://localhost:5002",
   diff_url: "http://localhost:5004",
+  preview_url: "http://localhost:5005",
   billing_impl: Hexpm.Billing.Mock,
   pwned_impl: Hexpm.Pwned.Mock
 
