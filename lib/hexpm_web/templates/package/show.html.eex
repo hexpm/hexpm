@@ -177,7 +177,8 @@ tools = [
     <ul class="audit-logs-list">
       <%= for audit_log <- @audit_logs do %>
         <li>
-          <%= ViewHelpers.pretty_date(audit_log.inserted_at, :short) %> <%= humanize_audit_log_info(audit_log) %>
+          <span title="<%= ViewHelpers.pretty_datetime(audit_log.inserted_at) %>"><%= ViewHelpers.pretty_date(audit_log.inserted_at, :short) %></span>
+          <%= humanize_audit_log_info(audit_log) %>
         </li>
       <% end %>
     </ul>

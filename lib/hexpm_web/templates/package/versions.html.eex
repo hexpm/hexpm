@@ -4,7 +4,7 @@ version_map = Enum.map(@all_releases, & &1.version)
 <%= for release <- @releases do %>
   <li>
     <a href="<%= ViewHelpers.path_for_release(@package, release) %>"><strong><%= release.version %></strong></a>
-    <%= ViewHelpers.pretty_date(release.inserted_at, :short) %>
+    <span title="<%= ViewHelpers.pretty_datetime(release.inserted_at) %>"><%= ViewHelpers.pretty_date(release.inserted_at, :short) %></span>
 
     <%= if release.retirement do %>
       <%= if release.retirement.reason == "report" do %>
