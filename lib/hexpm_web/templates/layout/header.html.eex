@@ -83,12 +83,22 @@
                       </button>
                     </div>
 
-                    <div class="origin-top-right absolute right-0 mt-2 w-48 rounded-md shadow-lg py-1 bg-white ring-1 ring-black ring-opacity-5" x-show="open" @click.away="open = false" x-transition:enter="transition ease-out duration-200" x-transition:enter-start="transform opacity-0 scale-95" x-transition:enter-end="transform opacity-100 scale-100" x-transition:leave="transition ease-in duration-75" x-transition:leave-start="transform opacity-100 scale-100" x-transition:leave-end="transform opacity-0 scale-95" role="menu" aria-orientation="vertical" aria-labelledby="user-menu">
-                      <a href="<%= Routes.user_path(Endpoint, :show, @current_user) %>" class="block px-4 py-2 text-sm leading-5 no-underline text-gray-700 hover:bg-gray-100 focus:outline-none focus:bg-gray-100 transition duration-150 ease-in-out" role="menuitem">Your Profile</a>
-                      <a href="<%= Routes.profile_path(Endpoint, :index) %>" class="block px-4 py-2 text-sm leading-5 no-underline text-gray-700 hover:bg-gray-100 focus:outline-none focus:bg-gray-100 transition duration-150 ease-in-out" role="menuitem">Dashboard</a>
-                      <%= form_tag(Routes.login_path(Endpoint, :delete)) do %>
-                        <button type="submit" class="block w-full text-left px-4 py-2 text-sm leading-5 text-gray-700 hover:bg-gray-100 focus:outline-none focus:bg-gray-100 transition duration-150 ease-in-out" role="menuitem">Sign out</button>
-                      <% end %>
+                    <div class="origin-top-right absolute right-0 mt-2 w-56 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 divide-y divide-gray-100 z-30" x-show="open" @click.away="open = false" x-transition:enter="transition ease-out duration-200" x-transition:enter-start="transform opacity-0 scale-95" x-transition:enter-end="transform opacity-100 scale-100" x-transition:leave="transition ease-in duration-75" x-transition:leave-start="transform opacity-100 scale-100" x-transition:leave-end="transform opacity-0 scale-95" role="menu" aria-orientation="vertical" aria-labelledby="user-menu">
+                      <div class="px-4 py-3">
+                        <p class="text-sm">
+                          Signed in as
+                        </p>
+                        <p class="text-sm font-medium text-gray-900 truncate">
+                          <%= @current_user.username %>
+                        </p>
+                      </div>
+                      <div class="py-1">
+                        <a href="<%= Routes.user_path(Endpoint, :show, @current_user) %>" class="block px-4 py-2 text-sm leading-5 no-underline text-gray-700 hover:bg-gray-100 focus:outline-none focus:bg-gray-100 transition duration-150 ease-in-out" role="menuitem">Your Profile</a>
+                        <a href="<%= Routes.profile_path(Endpoint, :index) %>" class="block px-4 py-2 text-sm leading-5 no-underline text-gray-700 hover:bg-gray-100 focus:outline-none focus:bg-gray-100 transition duration-150 ease-in-out" role="menuitem">Dashboard</a>
+                        <%= form_tag(Routes.login_path(Endpoint, :delete)) do %>
+                          <button type="submit" class="block w-full text-left px-4 py-2 text-sm leading-5 text-gray-700 hover:bg-gray-100 focus:outline-none focus:bg-gray-100 transition duration-150 ease-in-out" role="menuitem">Sign out</button>
+                        <% end %>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -129,6 +139,10 @@
               <div class="flex items-center px-5">
                 <div class="flex-shrink-0">
                   <img class="h-10 w-10 border-2 border-gray-600 rounded-full" src="<%= ViewHelpers.gravatar_url(User.email(@current_user, :gravatar), :small) %>" alt="">
+                </div>
+                <div class="ml-3">
+                  <div class="text-base font-medium text-white"><%= @current_user.full_name %></div>
+                  <div class="text-sm font-medium text-gray-400"><%= User.email(@current_user, :primary) %></div>
                 </div>
               </div>
               <div class="mt-3 px-2">
