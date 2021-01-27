@@ -3,7 +3,6 @@
 import "phoenix_html"
 import { Socket } from "phoenix"
 import LiveSocket from "phoenix_live_view"
-import $ from "jquery"
 import 'alpinejs'
 import hljs from 'highlight.js/lib/highlight'
 import elixir from 'highlight.js/lib/languages/elixir'
@@ -13,27 +12,6 @@ import "../css/app.css"
 let csrfToken = document.querySelector("meta[name='csrf-token']").getAttribute("content")
 let liveSocket = new LiveSocket("/live", Socket, { params: { _csrf_token: csrfToken } })
 liveSocket.connect()
-
-// TODO: Replace jquery with alpine.js
-
-class App {
-  constructor() {
-    this.expandUserMenu()
-    this.expandMobileMenu()
-  }
-
-  expandUserMenu() {
-    $("#user-menu-button").on("click", () =>
-      $("#user-menu").toggleClass("hidden")
-    )
-  }
-
-  expandMobileMenu() {
-    $("#main-menu-button").on("click", () =>
-      $("#main-menu").toggleClass("hidden")
-    )
-  }
-}
 
 
 window.Components = {
@@ -105,7 +83,34 @@ window.Components = {
 }
 
 
-window.app = new App()
-window.hexpm_billing_checkout = app.billing_checkout
-window.$ = $
+window.hexpmBillingCheckout = (token) => {
+  fetch(window.hexpmBillingPostAction, {
+    mode: "cors",
+    method: "POST",
+    headers: {"content-type": "application/json"},
+    body: JSON.stringify({token: token, _csrf_token: window.hexpmBillingCsrfToken})
+  })
+  .then((response) => {
+    if (response.ok) {
+      // TODO: Success flash?
+      window.location.reload()
+    } else {
+      response.json().then((json) => {
+        document.getElementById("flash").innerHTML =
+          '<div class="alert alert-danger" role="alert">' +
+          '<strong>Failed to update payment method</strong><br>' +
+          json.errors +
+          '</div>'
+      })
+    }
+  })
+  .catch((error) => {
+    document.getElementById("flash").innerHTML =
+      '<div class="alert alert-danger" role="alert">' +
+      '<strong>Network error when updating payment method</strong>' +
+      '</div>'
+    console.log(error)
+  })
+}
+
 window.liveSocket = liveSocket

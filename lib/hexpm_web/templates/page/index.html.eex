@@ -6,7 +6,7 @@
         <div class="relative">
           <h1 class="text-4xl text-center font-medium text-gray-100">The <span class="text-red-400">Erlang</span> and <span class="text-purple-400">Elixir</span> package manager</h1>
 
-          <div class="grid grid-cols-1 xl:grid-cols-2 gap-10 md:gap-20 mb-8 p-5 md:p-15">
+          <div class="grid grid-cols-1 xl:grid-cols-2 gap-10 md:gap-20 mb-8 p-5 md:p-16">
             <div class="flex p-4 md:p-8 bg-gray-50 border-t-8 border-red-400 rounded-md shadow-2xl">
               <div class="hidden md:flex flex-col justify-center mr-8 w-32 xl:w-64">
                 <img class="w-full" src="<%= Routes.static_path(Endpoint, "/images/erlang-logo.svg") %>">
