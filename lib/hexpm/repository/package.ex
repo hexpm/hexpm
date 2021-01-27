@@ -31,8 +31,8 @@ defmodule Hexpm.Repository.Package do
     sasl snmp ssh ssl stdlib syntax_tools test_server toolbar tools tv typer
     webtool wx xmerl
   )
-  @inets_names ~w(ftp tftp httpc httpd http_uri)
-  @app_names ~w(toucan exla nx nex next net http net_http mint_pool)
+  @inets_names ~w(ftp tftp httpc httpd)
+  @app_names ~w(toucan exla nx live_book axon net http net_http mint_pool)
   @windows_names ~w(
     nul con prn aux com1 com2 com3 com4 com5 com6 com7 com8 com9 lpt1 lpt2
     lpt3 lpt4 lpt5 lpt6 lpt7 lpt8 lpt9
