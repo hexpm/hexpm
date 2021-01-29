@@ -50,9 +50,10 @@ defmodule HexpmWeb.API.UserControllerTest do
       conn =
         get(
           build_conn(),
-          "email/verify?username=#{params.username}&email=#{URI.encode_www_form(user_email.email)}&key=#{
-            user_email.verification_key
-          }"
+          "email/verify",
+          username: params.username,
+          email: user_email.email,
+          key: user_email.verification_key
         )
 
       assert redirected_to(conn) == "/"

@@ -210,7 +210,7 @@ defmodule Hexpm.Repository.ReleasesTest do
       audit = audit_data(user)
       release = insert(:release, package: package, version: "0.2.0")
 
-      Hexpm.Repository.RegistryBuilder.v2_package(package)
+      Hexpm.Repository.RegistryBuilder.package(package)
 
       assert Releases.revert(package, release, audit: audit) == :ok
 

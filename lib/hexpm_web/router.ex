@@ -276,8 +276,6 @@ defmodule HexpmWeb.Router do
 
   if Mix.env() in [:dev, :test, :hex] do
     scope "/repo", HexpmWeb do
-      get "/registry.ets.gz", TestController, :registry
-      get "/registry.ets.gz.signed", TestController, :registry_signed
       get "/names", TestController, :names
       get "/versions", TestController, :version
       get "/installs/hex-1.x.csv", TestController, :installs_csv

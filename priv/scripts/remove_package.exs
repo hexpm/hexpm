@@ -51,8 +51,8 @@ if answer =~ ~r/^(Y(es)?)?$/i do
   Enum.each(releases, &(Hexpm.Repository.Release.delete(&1, force: true) |> Hexpm.Repo.delete!()))
   Hexpm.Repo.delete!(package)
   Enum.each(releases, &Hexpm.Repository.Assets.revert_release/1)
-  Hexpm.Repository.RegistryBuilder.v2_package_delete(package)
-  Hexpm.Repository.RegistryBuilder.v2_repository(package.repository)
+  Hexpm.Repository.RegistryBuilder.package_delete(package)
+  Hexpm.Repository.RegistryBuilder.repository(package.repository)
   IO.puts("Removed")
 else
   IO.puts("Not removed")

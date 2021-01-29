@@ -1,23 +1,6 @@
 defmodule HexpmWeb.TestController do
   use HexpmWeb, :controller
 
-  def registry(conn, _params) do
-    registry = Hexpm.Store.get(:repo_bucket, "registry.ets.gz", [])
-
-    if signature = Hexpm.Store.get(:repo_bucket, "registry.ets.gz.signed", []) do
-      conn
-      |> put_resp_header("x-hex-signature", signature)
-      |> send_resp(200, registry)
-    else
-      send_resp(conn, 200, registry)
-    end
-  end
-
-  def registry_signed(conn, _params) do
-    Hexpm.Store.get(:repo_bucket, "registry.ets.gz.signed", [])
-    |> send_object(conn)
-  end
-
   def names(conn, _params) do
     Hexpm.Store.get(:repo_bucket, "names", [])
     |> send_object(conn)
