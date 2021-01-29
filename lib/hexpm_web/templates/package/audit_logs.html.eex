@@ -11,7 +11,7 @@
 
     <%= for audit_log <- @audit_logs do %>
       <tr>
-        <td class="col-sm-3" title="<%= audit_log.inserted_at %>">
+        <td class="col-sm-3" title="<%= ViewHelpers.pretty_datetime(audit_log.inserted_at) %>">
           <%= ViewHelpers.pretty_date(audit_log.inserted_at, :short) %>
         </td>
         <td><%= humanize_audit_log_info(audit_log) %></td>
