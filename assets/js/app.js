@@ -14,6 +14,16 @@ let liveSocket = new LiveSocket("/live", Socket, { params: { _csrf_token: csrfTo
 liveSocket.connect()
 
 
+window.autoResizeIframe = function(id) {
+  var elem = document.getElementById(id);
+
+  var newHeight = elem.contentWindow.document.body.scrollHeight;
+  var newWidth = elem.contentWindow.document.body.scrollWidth;
+
+  elem.height = (newHeight) + "px";
+  elem.width = (newWidth) + "px";
+}
+
 window.Components = {
   listBox(options) {
     return {

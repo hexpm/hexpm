@@ -8,6 +8,10 @@
 
 @import "../vendor/css/github.css";
 
+iframe[src="/phoenix/live_reload/frame"] {
+  display: none;
+}
+
 .link {
   @apply underline;
   @apply text-purple-600;

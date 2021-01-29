@@ -58,6 +58,14 @@ defmodule HexpmWeb.PackageController do
     end)
   end
 
+  def readme(conn, params) do
+    access_package(conn, params, fn package, _repositories ->
+      conn
+      |> put_layout(false)
+      |> render("readme.html", readme: Packages.readme(package))
+    end)
+  end
+
   def audit_logs(conn, params) do
     access_package(conn, params, fn package, _ ->
       page = Hexpm.Utils.safe_int(params["page"]) || 1

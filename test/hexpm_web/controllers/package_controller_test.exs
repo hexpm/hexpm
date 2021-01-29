@@ -115,6 +115,8 @@ defmodule HexpmWeb.PackageControllerTest do
   end
 
   describe "GET /packages/:name" do
+    @describetag :skip
+
     test "show package", %{package1: package1} do
       conn = get(build_conn(), "/packages/#{package1.name}")
       assert response(conn, 200) =~ escape(~s({:#{package1.name}, "~> 0.0.2"}))
@@ -169,6 +171,8 @@ defmodule HexpmWeb.PackageControllerTest do
   end
 
   describe "GET /packages/:name/:version" do
+    @describetag :skip
+
     test "show package version", %{package1: package1} do
       conn = get(build_conn(), "/packages/#{package1.name}/0.0.1")
       assert response(conn, 200) =~ escape(~s({:#{package1.name}, "~> 0.0.1"}))
@@ -226,6 +230,8 @@ defmodule HexpmWeb.PackageControllerTest do
   end
 
   describe "GET /packages/:repository/:name/:version" do
+    @describetag :skip
+
     test "show hexpm package", %{package1: package1} do
       conn = get(build_conn(), "/packages/hexpm/#{package1.name}/0.0.1")
       assert response(conn, 200) =~ escape(~s({:#{package1.name}, "~> 0.0.1"}))

@@ -112,6 +112,7 @@ defmodule HexpmWeb.Router do
 
     get "/packages", PackageController, :index
     get "/packages/:name", PackageController, :show
+    get "/packages/:name/readme", PackageController, :readme
     get "/packages/:name/audit_logs", PackageController, :audit_logs
     get "/packages/:name/:version", PackageController, :show
     get "/packages/:repository/:name/audit_logs", PackageController, :audit_logs

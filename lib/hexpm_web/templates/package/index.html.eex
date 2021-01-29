@@ -89,7 +89,7 @@ ViewHelpers.params(search: @search, page: page, sort: "name")
     <ul>
       <%= for {package, ix} <- Enum.with_index(@packages) do %>
         <li <%= if ix != 0 do %>class="border-t border-gray-200" <% end %>>
-          <a href="#" class="block hover:bg-gray-100 focus:outline-none focus:bg-gray-100 transition duration-150 ease-in-out">
+          <a href="<%= Routes.package_path(Endpoint, :show, package) %>" class="block hover:bg-gray-100 focus:outline-none focus:bg-gray-100 transition duration-150 ease-in-out">
             <div class="px-4 py-4 flex items-center sm:px-6">
               <div class="min-w-0 flex-1 sm:flex sm:items-center sm:justify-between">
                 <div>

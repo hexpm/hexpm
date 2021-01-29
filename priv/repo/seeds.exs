@@ -622,6 +622,9 @@ Hexpm.Repo.transaction(fn ->
   Hexpm.Repo.refresh_view(PackageDependant)
   Hexpm.Repo.refresh_view(PackageDownload)
   Hexpm.Repo.refresh_view(ReleaseDownload)
+
+  readme = File.read!(Application.app_dir(:hexpm, "priv/readme/ecto-0.2.0.md"))
+  Hexpm.Store.put(:preview_bucket, "files/ecto/0.2.0/README.md", readme, [])
 end)
 
 Hexpm.Repository.RegistryBuilder.full(Hexpm.Repository.Repositories.get("hexpm"))

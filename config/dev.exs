@@ -28,9 +28,7 @@ config :hexpm, HexpmWeb.Endpoint,
       "minimal",
       cd: Path.expand("../assets", __DIR__)
     ]
-  ]
-
-config :hexpm, HexpmWeb.Endpoint,
+  ],
   live_reload: [
     patterns: [
       ~r{priv/static/.*(js|css|png|jpeg|jpg|gif|svg)$},

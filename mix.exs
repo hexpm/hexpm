@@ -35,6 +35,7 @@ defmodule Hexpm.MixProject do
     [
       {:bamboo, "~> 1.0"},
       {:bcrypt_elixir, "~> 2.0"},
+      {:cmark, github: "hexpm/cmark.ex", branch: "gfm"},
       {:corsica, "~> 1.0"},
       {:earmark, "~> 1.4"},
       {:ecto_sql, "~> 3.0"},
@@ -44,6 +45,7 @@ defmodule Hexpm.MixProject do
       {:ex_aws, "~> 2.0"},
       {:ex_machina, "~> 2.0"},
       {:eqrcode, "~> 0.1.6"},
+      {:fast_sanitize, "~> 0.2.2"},
       {:goth, "~> 1.3-rc"},
       {:hackney, "~> 1.7"},
       {:hex_core, "~> 0.2", hex_core_opts()},

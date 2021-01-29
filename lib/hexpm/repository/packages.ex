@@ -1,6 +1,8 @@
 defmodule Hexpm.Repository.Packages do
   use Hexpm.Context
 
+  @readme_filenames ["README.md", "README", "readme"]
+
   def count() do
     Repo.one!(Package.count())
   end
@@ -129,5 +131,26 @@ defmodule Hexpm.Repository.Packages do
     user.owned_packages
     |> Enum.filter(&(&1.repository_id in repository_ids))
     |> Enum.sort_by(&[sorter.(&1.repository), &1.name])
+  end
+
+  def readme(package) do
+    # TODO: Private packages needs support in HexPreview first
+
+    if package.repository_id == 1 do
+      releases = Releases.all(package)
+      release = Release.latest_version(releases, only_stable: true, unstable_fallback: true)
+
+      @readme_filenames
+      |> Enum.map(&readme_path(package.name, to_string(release.version), &1))
+      |> Enum.find_value(fn path ->
+        if readme = Hexpm.Store.get(:preview_bucket, path, []) do
+          {path, readme}
+        end
+      end)
+    end
+  end
+
+  defp readme_path(package, version, filename) do
+    Path.join(["files", package, version, filename])
   end
 end
