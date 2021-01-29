@@ -1,6 +1,6 @@
 # Hexpm
 
-[![Build Status](https://travis-ci.org/hexpm/hexpm.svg?branch=main "Build Status")](http://travis-ci.org/hexpm/hexpm)
+[![CI](https://github.com/hexpm/hexpm/workflows/CI/badge.svg)](https://github.com/hexpm/hexpm/actions?query=workflow%3ACI)
 
 ## Contributing
 
