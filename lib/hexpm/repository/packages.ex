@@ -1,7 +1,7 @@
 defmodule Hexpm.Repository.Packages do
   use Hexpm.Context
 
-  @readme_filenames ["README.md", "README", "readme"]
+  @readme_filenames ["hexpm.md", "README.md", "README", "readme"]
 
   def count() do
     Repo.one!(Package.count())
