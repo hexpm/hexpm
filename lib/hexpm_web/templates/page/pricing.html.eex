@@ -1,4 +1,4 @@
-<div class="max-w-screen-xl mx-auto py-24 px-4 sm:px-6 lg:px-8">
+<div class="max-w-screen-xl mx-auto py-24 px-4 sm:px-6 lg:px-8" x-data="{cycle: 'month'}">
   <div class="sm:flex sm:flex-col sm:align-center">
     <h1 class="text-5xl leading-none font-extrabold text-gray-900 sm:text-center">Pricing Plans</h1>
     <p class="mt-5 text-xl leading-7 text-gray-500 sm:text-center">
@@ -6,8 +6,8 @@
       Publish unlimited number of private packages with organizations.
     </p>
     <div class="relative self-center mt-6 bg-gray-100 rounded-lg p-0.5 flex sm:mt-8">
-      <button type="button" class="relative w-1/2 bg-white border-gray-200 rounded-md shadow-sm py-2 text-sm leading-5 font-medium text-gray-700 whitespace-nowrap hover:text-gray-500 focus:outline-none focus:border-blue-300 focus:ring focus:ring-blue-300 focus:z-10 active:bg-gray-50 active:text-gray-800 transition ease-in-out duration-150 sm:w-auto sm:px-8">Monthly billing</button>
-      <button type="button" class="relative w-1/2 border border-transparent rounded-md py-2 text-sm leading-5 font-medium text-gray-700 whitespace-nowrap hover:text-gray-500 focus:outline-none focus:border-blue-300 focus:ring focus:ring-blue-300 focus:z-10 active:bg-gray-50 active:text-gray-800 transition ease-in-out duration-150 sm:w-auto sm:px-8">Yearly billing</button>
+      <button type="button" class="relative w-1/2 rounded-md py-2 text-sm leading-5 font-medium text-gray-700 whitespace-nowrap hover:text-gray-500 focus:outline-none focus:border-blue-300 focus:ring focus:ring-blue-300 focus:z-10 active:bg-gray-50 active:text-gray-800 transition ease-in-out duration-150 sm:w-auto sm:px-8" @click="cycle='month'" :class="{'bg-white': cycle == 'month', 'border-gray-200': cycle == 'month', 'shadow-sm': cycle == 'month', 'border': cycle == 'year',  'border-transparent': cycle == 'year'}">Monthly billing</button>
+      <button type="button" class="relative w-1/2 rounded-md py-2 text-sm leading-5 font-medium text-gray-700 whitespace-nowrap hover:text-gray-500 focus:outline-none focus:border-blue-300 focus:ring focus:ring-blue-300 focus:z-10 active:bg-gray-50 active:text-gray-800 transition ease-in-out duration-150 sm:w-auto sm:px-8" @click="cycle='year'" :class="{'bg-white': cycle == 'year', 'border-gray-200': cycle == 'year', 'shadow-sm': cycle == 'year', 'border': cycle == 'month',  'border-transparent': cycle == 'month'}">Yearly billing</button>
     </div>
   </div>
   <div class="mt-12 space-y-4 sm:mt-16 sm:space-y-0 sm:grid sm:grid-cols-1 sm:gap-6 lg:max-w-4xl lg:mx-auto xl:max-w-none xl:mx-0 xl:grid-cols-3">
@@ -15,10 +15,18 @@
       <div class="p-6">
         <h2 class="text-lg leading-6 font-medium text-gray-900">Open source</h2>
         <p class="mt-4 text-sm leading-5 text-gray-500">For public open source projects.</p>
-        <p class="mt-8">
-          <span class="text-4xl leading-10 font-extrabold text-gray-900">$0</span>
-          <span class="text-base leading-6 font-medium text-gray-500">/mo</span>
-        </p>
+        <template x-if="cycle == 'month'">
+          <p class="mt-8">
+            <span class="text-4xl leading-10 font-extrabold text-gray-900">$0</span>
+            <span class="text-base leading-6 font-medium text-gray-500">/mo</span>
+          </p>
+        </template>
+        <template x-if="cycle == 'year'">
+          <p class="mt-8">
+            <span class="text-4xl leading-10 font-extrabold text-gray-900">$0</span>
+            <span class="text-base leading-6 font-medium text-gray-500">/year</span>
+          </p>
+        </template>
         <button type="button" class="mt-8 w-full bg-purple-600 border border-transparent rounded-md py-2 text-sm leading-5 font-semibold text-white hover:bg-purple-500 focus:outline-none focus:border-purple-700 focus:ring focus:ring-purple-200 active:bg-purple-700 transition duration-150 ease-in-out">Sign Up</button>
       </div>
       <div class="pt-6 pb-8 px-6">
@@ -55,10 +63,18 @@
       <div class="p-6">
         <h2 class="text-lg leading-6 font-medium text-gray-900">Private packages</h2>
         <p class="mt-4 text-sm leading-5 text-gray-500">For private projects with teams of users.</p>
-        <p class="mt-8">
-          <span class="text-4xl leading-10 font-extrabold text-gray-900">$7</span>
-          <span class="text-base leading-6 font-medium text-gray-500">/mo</span>
-        </p>
+        <template x-if="cycle == 'month'">
+          <p class="mt-8">
+            <span class="text-4xl leading-10 font-extrabold text-gray-900">$7</span>
+            <span class="text-base leading-6 font-medium text-gray-500">/mo</span>
+          </p>
+        </template>
+        <template x-if="cycle == 'year'">
+          <p class="mt-8">
+            <span class="text-4xl leading-10 font-extrabold text-gray-900">$70</span>
+            <span class="text-base leading-6 font-medium text-gray-500">/year</span>
+          </p>
+        </template>
         <button type="button" class="mt-8 w-full bg-purple-600 border border-transparent rounded-md py-2 text-sm leading-5 font-semibold text-white hover:bg-purple-500 focus:outline-none focus:border-purple-700 focus:ring focus:ring-purple-200 active:bg-purple-700 transition duration-150 ease-in-out">Try Free For 30 Days</button>
       </div>
       <div class="pt-6 pb-8 px-6">
