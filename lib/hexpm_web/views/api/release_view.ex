@@ -25,9 +25,9 @@ defmodule HexpmWeb.API.ReleaseView do
       docs_html_url: ViewHelpers.docs_html_url_for_release(release.package, release),
       requirements: requirements(release.requirements),
       configs: %{
-        "mix.exs": PackageView.dep_snippet(:mix, release.package, release),
-        "rebar.config": PackageView.dep_snippet(:rebar, release.package, release),
-        "erlang.mk": PackageView.dep_snippet(:erlang_mk, release.package, release)
+        "mix.exs": PackageView.config_snippet(:mix, release.package, release),
+        "rebar.config": PackageView.config_snippet(:rebar, release.package, release),
+        "erlang.mk": PackageView.config_snippet(:erlang_mk, release.package, release)
       },
       meta: %{
         app: release.meta.app,

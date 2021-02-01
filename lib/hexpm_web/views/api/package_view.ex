@@ -31,9 +31,9 @@ defmodule HexpmWeb.API.PackageView do
       latest_version: latest_release.version,
       latest_stable_version: latest_stable_release && latest_stable_release.version,
       configs: %{
-        "mix.exs": PackageView.dep_snippet(:mix, package, release),
-        "rebar.config": PackageView.dep_snippet(:rebar, package, release),
-        "erlang.mk": PackageView.dep_snippet(:erlang_mk, package, release)
+        "mix.exs": PackageView.config_snippet(:mix, package, release),
+        "rebar.config": PackageView.config_snippet(:rebar, package, release),
+        "erlang.mk": PackageView.config_snippet(:erlang_mk, package, release)
       },
       meta: %{
         description: package.meta.description,

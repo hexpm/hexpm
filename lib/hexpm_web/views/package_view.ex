@@ -43,7 +43,7 @@ defmodule HexpmWeb.PackageView do
     end
   end
 
-  def dep_snippet(:mix, package, release) do
+  def config_snippet(:mix, package, release) do
     version = snippet_version(:mix, release.version)
     app_name = (release.meta && release.meta.app) || package.name
     organization = snippet_organization(package.repository.name)
@@ -55,7 +55,7 @@ defmodule HexpmWeb.PackageView do
     end
   end
 
-  def dep_snippet(:rebar, package, release) do
+  def config_snippet(:rebar, package, release) do
     version = snippet_version(:rebar, release.version)
     app_name = (release.meta && release.meta.app) || package.name
 
@@ -66,7 +66,7 @@ defmodule HexpmWeb.PackageView do
     end
   end
 
-  def dep_snippet(:erlang_mk, package, release) do
+  def config_snippet(:erlang_mk, package, release) do
     version = snippet_version(:erlang_mk, release.version)
     "dep_#{package.name} = hex #{version}"
   end
@@ -181,6 +181,9 @@ defmodule HexpmWeb.PackageView do
       Routes.package_path(Endpoint, :audit_logs, package.repository, package, options)
     end
   end
+
+  def humanize_owner_level("full"), do: "Full owner"
+  def humanize_owner_level("maintainer"), do: "Maintainer"
 
   @doc """
   This function turns an audit_log struct into a short description.
