@@ -186,7 +186,7 @@ defmodule Hexpm.Repository.PackageTest do
     Hexpm.Repo.refresh_view(Hexpm.Repository.PackageDependant)
 
     assert ["ecto", "phoenix"] =
-             Package.all([repository], 1, 10, "depends:#{repository.name}:poison", :name, nil)
+             Package.all([repository], 1, 10, "depends:#{repository.name}/poison", :name, nil)
              |> Repo.all()
              |> Enum.map(& &1.name)
 
@@ -195,7 +195,7 @@ defmodule Hexpm.Repository.PackageTest do
                [repository],
                1,
                10,
-               "depends:#{repository.name}:poison depends:#{repository.name}:ecto",
+               "depends:#{repository.name}/poison depends:#{repository.name}/ecto",
                nil,
                nil
              )
@@ -219,7 +219,7 @@ defmodule Hexpm.Repository.PackageTest do
     Hexpm.Repo.refresh_view(Hexpm.Repository.PackageDependant)
 
     assert ["phoenix"] =
-             Package.all([repository], 1, 10, "depends:#{repository.name}:poison", :name, nil)
+             Package.all([repository], 1, 10, "depends:#{repository.name}/poison", :name, nil)
              |> Repo.all()
              |> Enum.map(& &1.name)
   end

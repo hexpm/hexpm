@@ -263,7 +263,7 @@ defmodule Hexpm.Repository.Package do
   end
 
   defp search_param("depends", search, query) do
-    case String.split(search, ":", parts: 2) do
+    case String.split(search, "/", parts: 2) do
       [repository, package] ->
         from(
           p in query,
