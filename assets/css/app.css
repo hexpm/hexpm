@@ -14,14 +14,14 @@ iframe[src="/phoenix/live_reload/frame"] {
 
 .link {
   @apply underline;
-  @apply text-purple-600;
+  @apply text-indigo-600;
   @apply transition;
   @apply duration-150;
   @apply ease-in-out;
 
   &:hover {
     @apply no-underline;
-    @apply text-purple-500;
+    @apply text-indigo-500;
   }
 }
 

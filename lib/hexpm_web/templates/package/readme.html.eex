@@ -994,6 +994,10 @@
     </style>
   </head>
   <body style="height: 100%; width: 100%; overflow: hidden" class="markdown-body">
-    <%= ViewHelpers.maybe_render_markdown(@readme) %>
+    <%= if @readme do %>
+      <%= ViewHelpers.maybe_render_markdown(@readme) %>
+    <% else %>
+      <p>This package has no readme. A readme can be included when the package is published. TODO: Add a link to documentation here.</p>
+    <% end %>
   </body>
 </html>

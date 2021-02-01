@@ -27,7 +27,7 @@
             <span class="text-base leading-6 font-medium text-gray-500">/year</span>
           </p>
         </template>
-        <button type="button" class="mt-8 w-full bg-purple-600 border border-transparent rounded-md py-2 text-sm leading-5 font-semibold text-white hover:bg-purple-500 focus:outline-none focus:border-purple-700 focus:ring focus:ring-purple-200 active:bg-purple-700 transition duration-150 ease-in-out">Sign Up</button>
+        <button type="button" class="mt-8 w-full bg-indigo-600 border border-transparent rounded-md py-2 text-sm leading-5 font-semibold text-white hover:bg-indigo-500 focus:outline-none focus:border-indigo-700 focus:ring focus:ring-indigo-200 active:bg-indigo-700 transition duration-150 ease-in-out">Sign Up</button>
       </div>
       <div class="pt-6 pb-8 px-6">
         <h3 class="text-xs leading-4 font-medium text-gray-900 tracking-wide uppercase">What's included</h3>
@@ -75,7 +75,7 @@
             <span class="text-base leading-6 font-medium text-gray-500">/year</span>
           </p>
         </template>
-        <button type="button" class="mt-8 w-full bg-purple-600 border border-transparent rounded-md py-2 text-sm leading-5 font-semibold text-white hover:bg-purple-500 focus:outline-none focus:border-purple-700 focus:ring focus:ring-purple-200 active:bg-purple-700 transition duration-150 ease-in-out">Try Free For 30 Days</button>
+        <button type="button" class="mt-8 w-full bg-indigo-600 border border-transparent rounded-md py-2 text-sm leading-5 font-semibold text-white hover:bg-indigo-500 focus:outline-none focus:border-indigo-700 focus:ring focus:ring-purple-200 active:bg-indigo-700 transition duration-150 ease-in-out">Try Free For 30 Days</button>
       </div>
       <div class="pt-6 pb-8 px-6">
         <h3 class="text-xs leading-4 font-medium text-gray-900 tracking-wide uppercase">What's included</h3>
@@ -114,7 +114,7 @@
         <p class="mt-8">
           <span class="text-4xl leading-10 font-extrabold text-gray-900">TBA</span>
         </p>
-        <button type="button" class="mt-8 w-full bg-purple-600 border border-transparent rounded-md py-2 text-sm leading-5 font-semibold text-white hover:bg-purple-500 focus:outline-none focus:border-purple-700 focus:ring focus:ring-purple-200 active:bg-purple-700 transition duration-150 ease-in-out">Contact Sales</button>
+        <button type="button" class="mt-8 w-full bg-indigo-600 border border-transparent rounded-md py-2 text-sm leading-5 font-semibold text-white hover:bg-indigo-500 focus:outline-none focus:border-indigo-700 focus:ring focus:ring-indigo-200 active:bg-indigo-700 transition duration-150 ease-in-out">Contact Sales</button>
       </div>
       <div class="pt-6 pb-8 px-6">
         <h3 class="text-xs leading-4 font-medium text-gray-900 tracking-wide uppercase">What's included</h3>

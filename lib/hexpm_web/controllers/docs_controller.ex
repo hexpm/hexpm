@@ -86,18 +86,6 @@ defmodule HexpmWeb.DocsController do
     )
   end
 
-  def coc(conn, _params) do
-    render(
-      conn,
-      "layout.html",
-      view: "coc.html",
-      view_name: :coc,
-      title: "Code of Conduct",
-      container: "container page docs",
-      nav_page: :docs
-    )
-  end
-
   def faq(conn, _params) do
     render(
       conn,

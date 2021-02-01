@@ -242,8 +242,12 @@ Hexpm.Repo.transaction(fn ->
       meta:
         build(
           :package_metadata,
-          licenses: [],
-          links: %{"Github" => "http://example.com/github"},
+          licenses: ["Apache 2.0", "MIT"],
+          links: %{
+            "Github" => "http://example.com/github",
+            "Issues" => "http://example.com/github/issues"
+          },
+          keywords: ["database", "sql", "dsl"],
           description: lorem
         )
     )

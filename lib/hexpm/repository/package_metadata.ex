@@ -6,14 +6,17 @@ defmodule Hexpm.Repository.PackageMetadata do
   embedded_schema do
     field :description, :string
     field :licenses, {:array, :string}
+    field :keywords, {:array, :string}
     field :links, {:map, :string}
     field :maintainers, {:array, :string}
     field :extra, :map
   end
 
   def changeset(meta, params, package) do
-    cast(meta, params, ~w(description licenses links maintainers extra)a)
+    cast(meta, params, ~w(description licenses keywords links maintainers extra)a)
     |> validate_required_meta(package)
+    |> validate_length(:keywords, max: 10)
+    |> validate_keywords()
     |> validate_links()
   end
 
@@ -23,6 +26,16 @@ defmodule Hexpm.Repository.PackageMetadata do
     else
       changeset
     end
+  end
+
+  defp validate_keywords(changeset) do
+    changeset
+    |> update_change(:keywords, fn keywords -> Enum.map(keywords, &String.downcase/1) end)
+    |> validate_change(:keywords, fn _, keywords ->
+      keywords
+      |> Enum.reject(&(String.length(&1) < 30))
+      |> Enum.map(&{:keywords, "invalid keyword #{inspect(&1)}"})
+    end)
   end
 
   defp validate_links(changeset) do

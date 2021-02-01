@@ -1,6 +1,14 @@
 defmodule HexpmWeb.PackageView do
   use HexpmWeb, :view
 
+  def build_tools do
+    [
+      mix: "mix.exs",
+      rebar: "rebar.config",
+      erlang_mk: "erlang.mk"
+    ]
+  end
+
   def show_sort_info(nil), do: show_sort_info(:name)
   def show_sort_info(:name), do: "Name"
   def show_sort_info(:inserted_at), do: "Recently created"
