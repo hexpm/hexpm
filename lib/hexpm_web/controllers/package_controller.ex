@@ -112,64 +112,10 @@ defmodule HexpmWeb.PackageController do
   defp package(conn, repositories, package, releases, release, type) do
     repository = package.repository
     release = Releases.preload(release, [:requirements, :downloads, :publisher])
-
-    latest_release_with_docs =
-      Release.latest_version(releases, only_stable: true, unstable_fallback: true, with_docs: true)
-
-    docs_assigns =
-      cond do
-        type == :package && latest_release_with_docs ->
-          [
-            docs_html_url: Hexpm.Utils.docs_html_url(repository, package, nil),
-            docs_tarball_url:
-              Hexpm.Utils.docs_tarball_url(repository, package, latest_release_with_docs)
-          ]
-
-        type == :release and release.has_docs ->
-          [
-            docs_html_url: Hexpm.Utils.docs_html_url(repository, package, release),
-            docs_tarball_url: Hexpm.Utils.docs_tarball_url(repository, package, release)
-          ]
-
-        true ->
-          [docs_html_url: nil, docs_tarball_url: nil]
-      end
-
     downloads = Packages.package_downloads(package)
-
-    graph_downloads =
-      case type do
-        :package -> Enum.map(releases, & &1.id) |> Releases.downloads_for_last_n_days(31)
-        :release -> release.id |> Releases.downloads_for_last_n_days(31)
-      end
-
-    daily_graph =
-      Date.utc_today()
-      |> Date.add(-31)
-      |> Date.range(Date.add(Date.utc_today(), -1))
-      |> Enum.map(fn date ->
-        Enum.find(graph_downloads, fn dl -> date == Date.from_iso8601!(dl.day) end)
-      end)
-      |> Enum.map(fn
-        nil -> 0
-        %{downloads: dl} -> dl
-      end)
-
     owners = Owners.all(package, user: [:emails, :organization])
-
-    dependants =
-      Packages.search(
-        repositories,
-        1,
-        20,
-        "depends:#{repository.name}:#{package.name}",
-        :recent_downloads,
-        [:name, :repository_id]
-      )
-
-    dependants_count = Packages.count(repositories, "depends:#{repository.name}:#{package.name}")
-
     audit_logs = AuditLogs.all_by(package, 1, @audit_logs_per_page)
+    daily_graph = daily_graph(type, release, releases)
 
     render(
       conn,
@@ -183,16 +129,79 @@ defmodule HexpmWeb.PackageController do
         package: package,
         repository_name: repository.name,
         releases: releases,
-        current_release: release,
+        release: release,
         downloads: downloads,
         owners: owners,
-        dependants: dependants,
-        dependants_count: dependants_count,
         audit_logs: audit_logs,
         daily_graph: daily_graph,
         type: type
-      ] ++ docs_assigns
+      ] ++
+        docs_assigns(repository, package, release, type, releases) ++
+        dependants_assigns(repository, package, repositories)
     )
+  end
+
+  defp docs_assigns(repository, package, release, type, releases) do
+    latest_release_with_docs =
+      Release.latest_version(releases, only_stable: true, unstable_fallback: true, with_docs: true)
+
+    cond do
+      type == :package && latest_release_with_docs ->
+        [
+          docs_html_url: Hexpm.Utils.docs_html_url(repository, package, nil),
+          docs_tarball_url:
+            Hexpm.Utils.docs_tarball_url(repository, package, latest_release_with_docs)
+        ]
+
+      type == :release and release.has_docs ->
+        [
+          docs_html_url: Hexpm.Utils.docs_html_url(repository, package, release),
+          docs_tarball_url: Hexpm.Utils.docs_tarball_url(repository, package, release)
+        ]
+
+      true ->
+        [docs_html_url: nil, docs_tarball_url: nil]
+    end
+  end
+
+  defp dependants_assigns(repository, package, repositories) do
+    query = depends_query(repository, package)
+
+    dependants =
+      Packages.search(
+        repositories,
+        1,
+        20,
+        query,
+        :recent_downloads,
+        [:name, :repository_id]
+      )
+
+    dependants_count = Packages.count(repositories, query)
+
+    [dependants: dependants, dependants_count: dependants_count]
+  end
+
+  defp depends_query(%Repository{id: 1}, package), do: "depends:#{package.name}"
+  defp depends_query(repository, package), do: "depends:#{repository.name}/#{package.name}"
+
+  defp daily_graph(type, release, releases) do
+    graph_downloads =
+      case type do
+        :package -> Releases.downloads_for_last_n_days(Enum.map(releases, & &1.id), 31)
+        :release -> Releases.downloads_for_last_n_days(release.id, 31)
+      end
+
+    Date.utc_today()
+    |> Date.add(-31)
+    |> Date.range(Date.add(Date.utc_today(), -1))
+    |> Enum.map(fn date ->
+      Enum.find(graph_downloads, fn dl -> date == Date.from_iso8601!(dl.day) end)
+    end)
+    |> Enum.map(fn
+      nil -> 0
+      %{downloads: dl} -> dl
+    end)
   end
 
   defp fetch_packages(repositories, page, packages_per_page, search, sort) do
