@@ -26,7 +26,3 @@ Hexpm.Store.put(:repo_bucket, "installs/list.csv", csv, opts)
 Hexpm.CDN.purge_key(:fastly_hexrepo, "installs")
 
 IO.puts("Uploaded installs/list.csv")
-
-Hexpm.Repository.RegistryBuilder.v1_repository(Hexpm.Repository.Repository.hexpm())
-
-IO.puts("Rebuilt registry")

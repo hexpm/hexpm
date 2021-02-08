@@ -144,7 +144,7 @@ defmodule Hexpm.Repository.Releases do
   defp publish_result(result, _user, _body), do: result
 
   defp retire_result({:ok, %{package: package}}) do
-    RegistryBuilder.v2_package(package)
+    RegistryBuilder.package(package)
     :ok
   end
 
@@ -249,32 +249,32 @@ defmodule Hexpm.Repository.Releases do
 
   if Mix.env() == :test do
     defp update_package_in_registry(package) do
-      RegistryBuilder.v2_package(package)
-      RegistryBuilder.v2_repository(package.repository)
+      RegistryBuilder.package(package)
+      RegistryBuilder.repository(package.repository)
     end
 
     defp remove_package_from_registry(package) do
-      RegistryBuilder.v2_package_delete(package)
-      RegistryBuilder.v2_repository(package.repository)
+      RegistryBuilder.package_delete(package)
+      RegistryBuilder.repository(package.repository)
     end
   else
     defp update_package_in_registry(package) do
-      RegistryBuilder.v2_package(package)
+      RegistryBuilder.package(package)
       metadata = Logger.metadata()
 
       Task.Supervisor.start_child(Hexpm.Tasks, fn ->
         Logger.metadata(metadata)
-        RegistryBuilder.v2_repository(package.repository)
+        RegistryBuilder.repository(package.repository)
       end)
     end
 
     defp remove_package_from_registry(package) do
-      RegistryBuilder.v2_package_delete(package)
+      RegistryBuilder.package_delete(package)
       metadata = Logger.metadata()
 
       Task.Supervisor.start_child(Hexpm.Tasks, fn ->
         Logger.metadata(metadata)
-        RegistryBuilder.v2_repository(package.repository)
+        RegistryBuilder.repository(package.repository)
       end)
     end
   end
