@@ -71,9 +71,15 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
 
       case Organizations.remove_member(organization, user, audit: audit_data(conn)) do
         :ok ->
-          conn
-          |> put_flash(:info, "User #{username} has been removed from the organization.")
-          |> redirect(to: Routes.organization_path(conn, :show, organization))
+          if user.id == conn.assigns.current_user.id do
+            conn
+            |> put_flash(:info, "You just left the the organization #{organization.name}.")
+            |> redirect(to: Routes.profile_path(conn, :index))
+          else
+            conn
+            |> put_flash(:info, "User #{username} has been removed from the organization.")
+            |> redirect(to: Routes.organization_path(conn, :show, organization))
+          end
 
         {:error, :last_member} ->
           conn

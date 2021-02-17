@@ -128,7 +128,7 @@
                   <%= form_tag Routes.organization_path(Endpoint, :update, @organization), class: "remove-role" do %>
                     <input type="hidden" name="action" value="remove_member">
                     <input type="hidden" name="organization_user[username]" value="<%= organization_user.user.username %>">
-                    <%= submit "Remove", class: "btn btn-danger", disabled: organization_user.user.id == @current_user.id %>
+                    <%= submit "Remove", class: "btn btn-danger" %>
                   <% end %>
               </div>
             </div>

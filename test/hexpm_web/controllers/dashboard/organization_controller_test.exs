@@ -156,6 +156,24 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
     refute Repo.get_by(assoc(organization, :organization_users), user_id: new_user.id)
   end
 
+  test "leave organization", %{user: user, organization: organization} do
+    insert(:organization_user, organization: organization, user: user, role: "admin")
+    new_user = insert(:user)
+    insert(:organization_user, organization: organization, user: new_user)
+    params = %{"username" => user.username}
+
+    conn =
+      build_conn()
+      |> test_login(user)
+      |> post("dashboard/orgs/#{organization.name}", %{
+        "action" => "remove_member",
+        "organization_user" => params
+      })
+
+    assert redirected_to(conn) == "/dashboard/profile"
+    refute Repo.get_by(assoc(organization, :organization_users), user_id: user.id)
+  end
+
   test "change role of member in organization", %{user: user, organization: organization} do
     insert(:organization_user, organization: organization, user: user, role: "admin")
     new_user = insert(:user)
