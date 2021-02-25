@@ -18,6 +18,7 @@ defmodule HexpmWeb.ViewIcons do
     xmerl_version
     |> List.to_string()
     |> String.split(".")
+    |> Enum.concat(["0"])
     |> Enum.take(3)
     |> Enum.join(".")
 
