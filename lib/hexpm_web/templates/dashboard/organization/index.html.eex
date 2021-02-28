@@ -128,7 +128,7 @@
                   <%= form_tag Routes.organization_path(Endpoint, :update, @organization), class: "remove-role" do %>
                     <input type="hidden" name="action" value="remove_member">
                     <input type="hidden" name="organization_user[username]" value="<%= organization_user.user.username %>">
-                    <%= submit "Remove", class: "btn btn-danger" %>
+                    <%= submit "Remove", class: "btn btn-danger", disabled: organization_user.user.id == @current_user.id %>
                   <% end %>
               </div>
             </div>
@@ -414,6 +414,22 @@
       <% end %>
     </div>
   </div>
+
+  <div class="col-sm-9 organization">
+    <div class="panel panel-danger">
+    <div class="panel-heading">Danger zone</div>
+      <ul class="list-group clearfix">
+        <li class="list-group-item clearfix" style="display: flex; flex-direction: row; align-items: center;">
+          <div style="flex: 1">
+            <p><strong>Leave organization</strong></p>
+            <p>Once you leave the organization there is no going back, please be certain.</p>
+          </div>
+          <button type="button" class="btn btn-danger" data-toggle="modal" data-target="#leave-organization">
+            Leave this organization
+          </button>
+        </li>
+      </ul>
+  </div>
 </div>
 
 <div class="modal fade" id="change-plan" tabindex="-1" role="dialog" >
@@ -457,6 +473,28 @@
           <button type="submit" class="btn btn-primary">Change plan</button>
         <% end %>
       </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal fade" id="leave-organization" tabindex="-1" role="dialog">
+  <div class="modal-dialog" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+        <h4 class="modal-title">Leave organization</h4>
+      </div>
+      <%= form_tag Routes.organization_path(Endpoint, :leave, @organization) do %>
+        <div class="modal-body">
+          <p>This action cannot be undone. You will permanently leave the organization <strong><%= @organization.name %>.</p>
+          <p>Please type <strong><%= @organization.name %></strong> to confirm.</p>
+          <input type="text" name="organization_name" style="width: 100%; margin-top: 15px;" autocomplete="off" required>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-default" data-dismiss="modal">Cancel</button>
+          <%= submit "Leave", class: "btn btn-danger" %>
+        </div>
+      <% end %>
     </div>
   </div>
 </div>

@@ -71,15 +71,9 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
 
       case Organizations.remove_member(organization, user, audit: audit_data(conn)) do
         :ok ->
-          if user.id == conn.assigns.current_user.id do
-            conn
-            |> put_flash(:info, "You just left the the organization #{organization.name}.")
-            |> redirect(to: Routes.profile_path(conn, :index))
-          else
-            conn
-            |> put_flash(:info, "User #{username} has been removed from the organization.")
-            |> redirect(to: Routes.organization_path(conn, :show, organization))
-          end
+          conn
+          |> put_flash(:info, "User #{username} has been removed from the organization.")
+          |> redirect(to: Routes.organization_path(conn, :show, organization))
 
         {:error, :last_member} ->
           conn
@@ -120,6 +114,35 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
         conn
         |> put_status(400)
         |> put_flash(:error, "Unknown user #{username}.")
+        |> render_index(organization)
+      end
+    end)
+  end
+
+  def leave(conn, %{
+    "dashboard_org" => organization,
+    "organization_name" => organization_name
+    }) do
+    access_organization(conn, organization, "read", fn organization ->
+      if organization.name == organization_name do
+        current_user = conn.assigns.current_user
+
+        case Organizations.remove_member(organization, current_user, audit: audit_data(conn)) do
+          :ok ->
+            conn
+            |> put_flash(:info, "You just left the the organization #{organization.name}.")
+            |> redirect(to: Routes.profile_path(conn, :index))
+
+          {:error, :last_member} ->
+            conn
+            |> put_status(400)
+            |> put_flash(:error, "The last member of a organization cannot leave.")
+            |> render_index(organization)
+        end
+      else
+        conn
+        |> put_status(400)
+        |> put_flash(:error, "Invalid organization name.")
         |> render_index(organization)
       end
     end)

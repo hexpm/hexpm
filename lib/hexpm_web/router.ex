@@ -169,6 +169,7 @@ defmodule HexpmWeb.Router do
     get "/repos/*glob", OrganizationController, :redirect_repo
     get "/orgs/:dashboard_org", OrganizationController, :show
     post "/orgs/:dashboard_org", OrganizationController, :update
+    post "/orgs/:dashboard_org/leave", OrganizationController, :leave
     post "/orgs/:dashboard_org/billing-token", OrganizationController, :billing_token
     post "/orgs/:dashboard_org/cancel-billing", OrganizationController, :cancel_billing
     post "/orgs/:dashboard_org/update-billing", OrganizationController, :update_billing
