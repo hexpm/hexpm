@@ -120,9 +120,9 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
   end
 
   def leave(conn, %{
-    "dashboard_org" => organization,
-    "organization_name" => organization_name
-    }) do
+        "dashboard_org" => organization,
+        "organization_name" => organization_name
+      }) do
     access_organization(conn, organization, "read", fn organization ->
       if organization.name == organization_name do
         current_user = conn.assigns.current_user
