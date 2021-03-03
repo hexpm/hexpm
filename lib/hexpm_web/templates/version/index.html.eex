@@ -2,10 +2,9 @@
   All available versions of <%= link ViewHelpers.package_name(@package), to: ViewHelpers.path_for_package(@package), class: "version-package-title" %>
 </h2>
 <div class="clearfix"></div>
+
 <div class="version-list">
-  <ul>
-    <%= for release <- @releases do %>
-      <%= render "_version.html", release: release, package: @package %>
-    <% end %>
+  <ul id="versions" class="version-dependency-list">
+    <%= render HexpmWeb.PackageView, "versions.html", [package: @package, releases: @releases, all_releases: @releases] %>
   </ul>
 </div>
