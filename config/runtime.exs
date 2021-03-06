@@ -28,9 +28,6 @@ if config_env() == :prod do
     access_key_id: System.fetch_env!("HEXPM_AWS_ACCESS_KEY_ID"),
     secret_access_key: System.fetch_env!("HEXPM_AWS_ACCESS_KEY_SECRET")
 
-  config :goth,
-    json: System.fetch_env!("HEXPM_GCP_CREDENTIALS")
-
   config :rollbax,
     access_token: System.fetch_env!("HEXPM_ROLLBAR_ACCESS_TOKEN")
 

@@ -5,7 +5,6 @@ defmodule Hexpm.Store.GCS do
   @behaviour Hexpm.Store
 
   @gs_xml_url "https://storage.googleapis.com"
-  @oauth_scope "https://www.googleapis.com/auth/devstorage.read_write"
 
   def list(bucket, prefix) do
     list_stream(bucket, prefix)
@@ -91,7 +90,7 @@ defmodule Hexpm.Store.GCS do
   end
 
   defp headers() do
-    {:ok, token} = Goth.Token.for_scope(@oauth_scope)
+    {:ok, token} = Goth.fetch(Hexpm.Goth)
     [{"authorization", "#{token.type} #{token.token}"}]
   end
 

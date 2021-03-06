@@ -15,6 +15,7 @@ defmodule Hexpm.Application do
       {PlugAttack.Storage.Ets, name: HexpmWeb.Plugs.Attack.Storage, clean_period: 60_000},
       {Hexpm.Throttle, name: Hexpm.SESThrottle, rate: ses_rate(), unit: 1000},
       {Hexpm.Billing.Report, name: Hexpm.Billing.Report, interval: 60_000},
+      goth_spec(),
       HexpmWeb.Telemetry,
       HexpmWeb.Endpoint
     ]
@@ -60,6 +61,23 @@ defmodule Hexpm.Application do
       Application.get_env(:hexpm, :topologies) || []
     else
       []
+    end
+  end
+
+  if Mix.env() == :prod do
+    defp goth_spec() do
+      credentials =
+        "HEXPM_GCP_CREDENTIALS"
+        |> System.fetch_env!()
+        |> Jason.decode!()
+        |> Map.put("project_id", "hexpm")
+
+      options = [scope: "https://www.googleapis.com/auth/devstorage.read_write"]
+      {Goth, source: {:service_account, credentials, options}}
+    end
+  else
+    defp goth_spec() do
+      {Task, fn -> :ok end}
     end
   end
 end
