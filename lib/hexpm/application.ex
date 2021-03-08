@@ -72,7 +72,7 @@ defmodule Hexpm.Application do
         |> Jason.decode!()
 
       options = [scope: "https://www.googleapis.com/auth/devstorage.read_write"]
-      {Goth, source: {:service_account, credentials, options}}
+      {Goth, name: Hexpm.Goth, source: {:service_account, credentials, options}}
     end
   else
     defp goth_spec() do
