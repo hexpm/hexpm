@@ -21,7 +21,7 @@ defmodule Hexpm.Repository.Package do
   end
 
   @elixir_names ~w(eex elixir ex_unit iex logger mix)
-  @tool_names ~w(rebar rebar3 hex hexpm mix_hex)
+  @tool_names ~w(erlang rebar rebar3 hex hexpm mix_hex)
   @otp_names ~w(
     appmon asn1 common_test compiler cosEvent cosEventDomain cosFileTransfer
     cosNotification cosProperty cosTime cosTransactions crypto debugger
