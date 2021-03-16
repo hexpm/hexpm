@@ -20,8 +20,8 @@ defmodule Hexpm.Repository.Package do
     embeds_one :meta, PackageMetadata, on_replace: :delete
   end
 
-  @elixir_names ~w(eex elixir ex_unit iex logger mix)
-  @tool_names ~w(erlang rebar rebar3 hex hexpm mix_hex)
+  @elixir_names ~w(eex elixir elixirc ex_unit iex logger mix)
+  @tool_names ~w(erlang typer to_erl run_erl escript erlc erl epmd dialyzer ct_run rebar rebar3 hex hexpm mix_hex)
   @otp_names ~w(
     appmon asn1 common_test compiler cosEvent cosEventDomain cosFileTransfer
     cosNotification cosProperty cosTime cosTransactions crypto debugger
