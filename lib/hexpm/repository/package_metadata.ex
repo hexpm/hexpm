@@ -36,6 +36,6 @@ defmodule Hexpm.Repository.PackageMetadata do
 
   defp valid_url?(url) do
     uri = URI.parse(url)
-    uri.scheme in ["http", "https"] && uri.host
+    uri.scheme in ["http", "https"] and !!uri.host
   end
 end
