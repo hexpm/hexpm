@@ -186,7 +186,7 @@ defmodule HexpmWeb.ControllerHelpers do
   defp none_match?(none_match, etag) do
     if none_match && etag do
       none_match = Plug.Conn.Utils.list(none_match)
-      not (etag in none_match) and not ("*" in none_match)
+      etag not in none_match and "*" not in none_match
     else
       false
     end

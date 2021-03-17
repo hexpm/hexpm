@@ -132,7 +132,7 @@ defmodule Hexpm.Accounts.Key do
     app_secret = Application.get_env(:hexpm, :secret)
 
     <<first::binary-size(32), second::binary-size(32)>> =
-      :crypto.hmac(:sha256, app_secret, user_secret)
+      :crypto.mac(:hmac, :sha256, app_secret, user_secret)
       |> Base.encode16(case: :lower)
 
     {user_secret, first, second}

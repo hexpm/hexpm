@@ -35,9 +35,7 @@ defmodule Hexpm.Repository.PackageMetadata do
   end
 
   defp valid_url?(url) do
-    case :http_uri.parse(to_charlist(url)) do
-      {:ok, _} -> true
-      _ -> false
-    end
+    uri = URI.parse(url)
+    uri.scheme in ["http", "https"] && uri.host
   end
 end
