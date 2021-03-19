@@ -7,13 +7,13 @@
     <% else %>
       <div class="with-divider user-package-info clearfix">
         <h3>Total Owned Packages<br /><em><%= length(@user.owned_packages) %></em></h3>
-        <h3>Total Downloads<br /><em><%= @total_downloads %></em></h3>
+        <h3>Total Downloads<br /><em><%= ViewHelpers.human_number_space(@total_downloads) %></em></h3>
       </div>
       <ul class="user-package-list">
         <%= for package <- @packages do %>
           <li class="with-divider clearfix">
             <h1><a href="<%= ViewHelpers.path_for_package(package) %>"><%= ViewHelpers.package_name(package) %></a><em><%= package.latest_version %></em></h1>
-            <h3><%= get_in(@downloads, [package.id, "all"]) || 0 %> Downloads</h3>
+            <h3><%= (get_in(@downloads, [package.id, "all"]) || 0) |> ViewHelpers.human_number_space() %> Downloads</h3>
             <%= ViewHelpers.text_length(package.meta.description, 300) |> to_string() |> text_to_html(insert_brs: false) %>
           </li>
         <% end %>
