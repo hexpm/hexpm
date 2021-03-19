@@ -119,6 +119,35 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
     end)
   end
 
+  def leave(conn, %{
+        "dashboard_org" => organization,
+        "organization_name" => organization_name
+      }) do
+    access_organization(conn, organization, "read", fn organization ->
+      if organization.name == organization_name do
+        current_user = conn.assigns.current_user
+
+        case Organizations.remove_member(organization, current_user, audit: audit_data(conn)) do
+          :ok ->
+            conn
+            |> put_flash(:info, "You just left the the organization #{organization.name}.")
+            |> redirect(to: Routes.profile_path(conn, :index))
+
+          {:error, :last_member} ->
+            conn
+            |> put_status(400)
+            |> put_flash(:error, "The last member of a organization cannot leave.")
+            |> render_index(organization)
+        end
+      else
+        conn
+        |> put_status(400)
+        |> put_flash(:error, "Invalid organization name.")
+        |> render_index(organization)
+      end
+    end)
+  end
+
   def billing_token(conn, %{"dashboard_org" => organization, "token" => token}) do
     access_organization(conn, organization, "admin", fn organization ->
       audit = %{audit_data: audit_data(conn), organization: organization}

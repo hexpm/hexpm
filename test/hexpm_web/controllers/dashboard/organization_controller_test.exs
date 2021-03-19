@@ -175,6 +175,21 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
     assert repo_user.role == "read"
   end
 
+  test "leave organization", %{user: user, organization: organization} do
+    insert(:organization_user, organization: organization, user: user, role: "admin")
+    new_user = insert(:user)
+    insert(:organization_user, organization: organization, user: new_user, role: "admin")
+    params = %{"organization_name" => organization.name}
+
+    conn =
+      build_conn()
+      |> test_login(user)
+      |> post("dashboard/orgs/#{organization.name}/leave", params)
+
+    assert redirected_to(conn) == "/dashboard/profile"
+    refute Repo.get_by(assoc(organization, :organization_users), user_id: user.id)
+  end
+
   describe "update payment method" do
     test "calls Hexpm.Billing.checkout/2 when user is admin", %{
       user: user,
