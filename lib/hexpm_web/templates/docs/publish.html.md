@@ -26,6 +26,7 @@ Before publishing, you will have to choose the name of your package. Remember th
   * Avoid using offensive or harassing package names, nicknames, or other identifiers that might detract from a friendly, safe, and welcoming environment for all.
   * If you are providing functionality on top of an existing package, consider using that package name as a prefix. For example, if you want to add authentication to [Plug](https://github.com/elixir-lang/plug), consider calling your package `plug_auth` (or `plug_somename`) instead of `auth` (or `somename`).
   * Avoid namespace conflicts with existing packages. Plug owns the `Plug` namespace, if you have an authentication package for Plug use the namespace `PlugAuth` instead of `Plug.Auth`.
+    * This guidelines holds for all of your modules, so if your package is `plug_auth` then all of your modules (except for special ones like mix tasks) should start with `PlugAuth.` (e.g. `PlugAuth.Utils`, `PlugAuth.User`). This is important because there can only be one module with a given name running in a BEAM system, and if multiple packages define the same module, then you cannot use both packages because only one version of the module will be used.
 
 With a name in hand, it is time to add the proper metadata to your `mix.exs` file.
 
