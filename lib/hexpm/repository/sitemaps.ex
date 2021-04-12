@@ -24,4 +24,21 @@ defmodule Hexpm.Repository.Sitemaps do
     )
     |> Repo.all()
   end
+
+  def packages_for_preview() do
+    releases_query = from(Release, select: [:version, :retirement])
+
+    query =
+      from(Package,
+        order_by: :name,
+        where: [repository_id: 1],
+        select: [:id, :name, :updated_at],
+        preload: [releases: ^releases_query]
+      )
+
+    for package <- Repo.all(query) do
+      version = Release.latest_version(package.releases, only_stable: false).version
+      {package.name, version, package.updated_at}
+    end
+  end
 end
