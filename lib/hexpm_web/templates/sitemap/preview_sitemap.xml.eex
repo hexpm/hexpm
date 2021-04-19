@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+<%= for {name, version, updated_at} <- @packages do %>
+  <sitemap>
+    <loc><%= Hexpm.Utils.preview_html_url(name, version) <> "/sitemap.xml" %></loc>
+    <lastmod><%= Hexpm.Utils.binarify(updated_at) %></lastmod>
+  </sitemap>
+<% end %>
+</sitemapindex>

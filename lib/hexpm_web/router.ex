@@ -195,6 +195,7 @@ defmodule HexpmWeb.Router do
   scope "/", HexpmWeb do
     get "/sitemap.xml", SitemapController, :main
     get "/docs_sitemap.xml", SitemapController, :docs
+    get "/preview_sitemap.xml", SitemapController, :preview
     get "/hexsearch.xml", OpenSearchController, :opensearch
     get "/installs/hex.ez", InstallController, :archive
     get "/feeds/blog.xml", FeedsController, :blog

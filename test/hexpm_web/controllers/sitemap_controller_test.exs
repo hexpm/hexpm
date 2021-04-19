@@ -30,4 +30,9 @@ defmodule HexpmWeb.SitemapControllerTest do
 
     assert response(conn, 200) == expected
   end
+
+  test "GET /preview_sitemap.xml", %{package: package} do
+    conn = get(build_conn(), "/preview_sitemap.xml")
+    assert response(conn, 200) =~ "/preview/#{package.name}/0.1.0/sitemap.xml"
+  end
 end
