@@ -20,7 +20,7 @@ defmodule Hexpm.Accounts.Organization do
   @name_regex ~r"^[a-z0-9_\-\.]+$"
   @roles ~w(admin write read)
 
-  @reserved_names ~w(www staging stats elixir erlang otp rebar rebar3 nerves phoenix acme)
+  @reserved_names ~w(www staging elixir erlang otp rebar rebar3 nerves phoenix acme)
 
   def changeset(struct, params) do
     cast(struct, params, ~w(name)a)
@@ -87,7 +87,8 @@ defmodule Hexpm.Accounts.Organization do
     {:ok, nil}
   end
 
-  def verify_permissions(%Organization{name: name} = organization, "repository", name) do
+  def verify_permissions(%Organization{name: name} = organization, domain, name)
+      when domain in ["repository", "docs"] do
     {:ok, organization}
   end
 
