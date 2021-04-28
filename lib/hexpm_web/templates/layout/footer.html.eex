@@ -1,50 +1,5 @@
     </div>
 
-<<<<<<< HEAD
-    <div class="footer">
-      <div class="footer-nav">
-        <div class="container">
-          <div class="row">
-            <div class="col-md-3">
-              <h4>About Hex</h4>
-              <ul>
-                <li><a href="<%= Routes.page_path(Endpoint, :about) %>">About</a></li>
-                <li><a href="<%= Routes.blog_path(Endpoint, :index) %>">Blog</a></li>
-                <li><a href="<%= Routes.page_path(Endpoint, :sponsors) %>">Sponsors</a></li>
-                <li><a href="https://github.com/hexpm">GitHub</a></li>
-                <li><a href="https://twitter.com/hexpm">Twitter</a></li>
-                <li><a href="https://status.hex.pm">Status</a></li>
-              </ul>
-            </div>
-
-            <div class="col-md-3">
-              <h4>Help</h4>
-              <ul>
-                <li><a href="<%= Routes.docs_path(Endpoint, :index) %>">Documentation</a></li>
-                <li><a href="https://github.com/hexpm/specifications">Specifications</a></li>
-                <li><a href="https://github.com/hexpm/hex/issues">Report Client Issue</a></li>
-                <li><a href="https://github.com/hexpm/hexpm/issues">Report General Issue</a></li>
-                <li><a href="mailto:security@hex.pm">Report Security Issue</a></li>
-                <li><a href="mailto:support@hex.pm">Contact Support</a></li>
-              </ul>
-            </div>
-
-            <div class="col-md-3">
-              <h4>Policies and Terms</h4>
-              <ul>
-                <li><a href="<%= Routes.policy_path(Endpoint, :coc) %>">Code of Conduct</a></li>
-                <li><a href="<%= Routes.policy_path(Endpoint, :tos) %>">Terms of Service</a></li>
-                <li><a href="<%= Routes.policy_path(Endpoint, :privacy) %>">Privacy Policy</a></li>
-                <li><a href="<%= Routes.policy_path(Endpoint, :copyright) %>">Copyright Policy</a></li>
-                <li><a href="<%= Routes.policy_path(Endpoint, :dispute) %>">Dispute Policy</a></li>
-              </ul>
-            </div>
-
-            <div class="col-md-3 copyright">
-              <p>2020 © Six Colors AB.</p>
-              <p>Powered by the <a href="https://www.erlang.org/">Erlang VM</a> and the <a href="https://elixir-lang.org/">Elixir programming language</a>.</p>
-            </div>
-=======
     <footer class="bg-gray-800">
       <div class="max-w-screen-xl mx-auto py-12 px-4 sm:px-6 lg:py-16 lg:px-8">
         <div class="pb-8 grid grid-cols-1 gap-8 md:grid-cols-3">
@@ -76,6 +31,11 @@
               <li>
                 <a href="https://twitter.com/hexpm" class="text-base leading-6 text-gray-300 hover:text-white">
                   Twitter
+                </a>
+              </li>
+              <li>
+                <a href="https://status.hex.pm" class="text-base leading-6 text-gray-300 hover:text-white">
+                  Status
                 </a>
               </li>
             </ul>
@@ -116,7 +76,6 @@
                 </a>
               </li>
             </ul>
->>>>>>> WIP: First redesign commit
           </div>
           <div class="">
             <h4 class="text-sm leading-5 font-semibold text-gray-400 tracking-wider uppercase">
