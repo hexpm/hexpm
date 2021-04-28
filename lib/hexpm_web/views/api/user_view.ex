@@ -26,11 +26,11 @@ defmodule HexpmWeb.API.UserView do
       username: user.username,
       full_name: user.full_name,
       handles: handles(user),
-      email: User.email(user, :public),
       url: Routes.api_user_url(Endpoint, :show, user),
       inserted_at: user.inserted_at,
       updated_at: user.updated_at
     }
+    |> put_maybe(:email, User.email(user, :public))
     |> ViewHelpers.include_if_loaded(:owned_packages, user.owned_packages, &owned_packages/1)
     |> ViewHelpers.include_if_loaded(:packages, user.owned_packages, &packages/1)
   end
@@ -43,9 +43,9 @@ defmodule HexpmWeb.API.UserView do
   def render("minimal", %{user: user}) do
     %{
       username: user.username,
-      email: User.email(user, :public),
       url: Routes.api_user_url(Endpoint, :show, user)
     }
+    |> put_maybe(:email, User.email(user, :public))
   end
 
   def handles(user) do
@@ -90,4 +90,7 @@ defmodule HexpmWeb.API.UserView do
       }
     end)
   end
+
+  defp put_maybe(map, _key, nil), do: map
+  defp put_maybe(map, key, nil), do: Map.put(map, key, value)
 end
