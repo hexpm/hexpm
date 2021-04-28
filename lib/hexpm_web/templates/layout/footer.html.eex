@@ -13,6 +13,7 @@
                 <li><a href="<%= Routes.page_path(Endpoint, :sponsors) %>">Sponsors</a></li>
                 <li><a href="https://github.com/hexpm">GitHub</a></li>
                 <li><a href="https://twitter.com/hexpm">Twitter</a></li>
+                <li><a href="https://status.hex.pm">Status</a></li>
               </ul>
             </div>
 
