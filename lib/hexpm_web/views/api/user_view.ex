@@ -92,5 +92,5 @@ defmodule HexpmWeb.API.UserView do
   end
 
   defp put_maybe(map, _key, nil), do: map
-  defp put_maybe(map, key, nil), do: Map.put(map, key, value)
+  defp put_maybe(map, key, value), do: Map.put(map, key, value)
 end
