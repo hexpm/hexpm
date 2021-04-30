@@ -186,7 +186,14 @@ defmodule Hexpm.Repository.RegistryBuilder do
   end
 
   defp build_names(repository, packages) do
-    packages = Enum.map(packages, fn {name, _versions} -> %{name: name} end)
+    packages =
+      Enum.map(packages, fn {name, _versions} ->
+        %{
+          name: name,
+          # TODO
+          updated_at: 0
+        }
+      end)
 
     %{packages: packages, repository: repository.name}
     |> :hex_registry.encode_names()

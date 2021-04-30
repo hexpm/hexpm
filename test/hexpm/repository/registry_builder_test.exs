@@ -49,7 +49,7 @@ defmodule Hexpm.Organization.RegistryBuilderTest do
 
       names = v2_map("names", ["hexpm"])
       assert length(names) == 3
-      assert List.first(names) == %{name: first}
+      assert List.first(names) == %{name: first, updated_at: 0}
 
       versions = v2_map("versions", ["hexpm"])
       assert length(versions) == 3
@@ -119,7 +119,7 @@ defmodule Hexpm.Organization.RegistryBuilderTest do
 
       names = v2_map("names", ["hexpm"])
       assert length(names) == 3
-      assert List.first(names) == %{name: first}
+      assert List.first(names) == %{name: first, updated_at: 0}
 
       versions = v2_map("versions", ["hexpm"])
       assert length(versions) == 3

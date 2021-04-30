@@ -73,7 +73,9 @@ defmodule Hexpm.MixProject do
     if path = System.get_env("HEX_CORE_PATH") do
       [path: path]
     else
-      []
+      # TODO:
+      # []
+      [github: "hexpm/hex_core", branch: "wm-names-updated-at"]
     end
   end
 
