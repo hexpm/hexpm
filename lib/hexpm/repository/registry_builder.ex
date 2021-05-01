@@ -191,7 +191,7 @@ defmodule Hexpm.Repository.RegistryBuilder do
         %{
           name: name,
           # TODO
-          updated_at: 0
+          updated_at: %{seconds: 0, nanos: 0}
         }
       end)
 
