@@ -186,7 +186,18 @@ defmodule Hexpm.Repository.RegistryBuilder do
   end
 
   defp build_names(repository, packages) do
-    packages = Enum.map(packages, fn {name, _versions} -> %{name: name} end)
+    packages =
+      Enum.map(packages, fn {name, {updated_at, _versions}} ->
+        # Currently using Package.updated_at, would be more accurate to use
+        # a timestamp that is only updated when the registry is updated by:
+        # publish, revert, or retire
+        {seconds, nanos} = to_unix_nano(updated_at)
+
+        %{
+          name: name,
+          updated_at: %{seconds: seconds, nanos: nanos}
+        }
+      end)
 
     %{packages: packages, repository: repository.name}
     |> :hex_registry.encode_names()
@@ -196,7 +207,7 @@ defmodule Hexpm.Repository.RegistryBuilder do
 
   defp build_versions(repository, packages, release_map) do
     packages =
-      Enum.map(packages, fn {name, [versions]} ->
+      Enum.map(packages, fn {name, {_updated_at, [versions]}} ->
         %{
           name: name,
           versions: versions,
@@ -220,7 +231,7 @@ defmodule Hexpm.Repository.RegistryBuilder do
   end
 
   defp build_packages(repository, packages, release_map) do
-    Enum.map(packages, fn {name, [versions]} ->
+    Enum.map(packages, fn {name, {_updated_at, [versions]}} ->
       contents = build_package(repository, name, versions, release_map)
       {name, contents}
     end)
@@ -354,21 +365,26 @@ defmodule Hexpm.Repository.RegistryBuilder do
   defp package_tuples(packages, releases) do
     Enum.reduce(releases, %{}, fn map, acc ->
       case Map.fetch(packages, map.package_id) do
-        {:ok, package} -> Map.update(acc, package, [map.version], &[map.version | &1])
-        :error -> acc
+        {:ok, {package, updated_at}} ->
+          Map.update(acc, package, {updated_at, [map.version]}, fn {^updated_at, versions} ->
+            {updated_at, [map.version | versions]}
+          end)
+
+        :error ->
+          acc
       end
     end)
     |> sort_package_tuples()
   end
 
   defp sort_package_tuples(tuples) do
-    Enum.map(tuples, fn {name, versions} ->
+    Enum.map(tuples, fn {name, {updated_at, versions}} ->
       versions =
         versions
         |> Enum.sort(&(Version.compare(&1, &2) == :lt))
         |> Enum.map(&to_string/1)
 
-      {name, [versions]}
+      {name, {updated_at, [versions]}}
     end)
     |> Enum.sort()
   end
@@ -376,7 +392,7 @@ defmodule Hexpm.Repository.RegistryBuilder do
   defp release_tuples(packages, releases, requirements) do
     Enum.flat_map(releases, fn map ->
       case Map.fetch(packages, map.package_id) do
-        {:ok, package} ->
+        {:ok, {package, _updated_at}} ->
           key = {package, to_string(map.version)}
           deps = deps_list(requirements[map.release_id] || [])
           value = [deps, map.inner_checksum, map.outer_checksum, map.build_tools, map.retirement]
@@ -399,14 +415,14 @@ defmodule Hexpm.Repository.RegistryBuilder do
     from(
       p in Package,
       where: p.repository_id == ^repository.id,
-      select: {p.id, p.name}
+      select: {p.id, {p.name, p.updated_at}}
     )
     |> Repo.all()
-    |> Enum.into(%{})
+    |> Map.new()
   end
 
   defp packages(_repository, package) do
-    %{package.id => package.name}
+    %{package.id => {package.name, package.updated_at}}
   end
 
   defp releases(repository, package) do
@@ -503,5 +519,10 @@ defmodule Hexpm.Repository.RegistryBuilder do
 
   defp repository_store_key(%Repository{name: name}, key) do
     "repos/#{name}/#{key}"
+  end
+
+  defp to_unix_nano(datetime) do
+    unix = DateTime.to_unix(datetime, :nanosecond)
+    {div(unix, 1_000_000_000), rem(unix, 1_000_000_000)}
   end
 end

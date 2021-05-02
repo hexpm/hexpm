@@ -45,11 +45,13 @@ defmodule Hexpm.Organization.RegistryBuilderTest do
   describe "full/0" do
     test "registry is in correct format", %{packages: [p1, p2, p3] = packages} do
       RegistryBuilder.full(Repository.hexpm())
-      first = packages |> Enum.map(& &1.name) |> Enum.sort() |> List.first()
+      first = packages |> Enum.sort_by(& &1.name) |> List.first()
 
       names = v2_map("names", ["hexpm"])
       assert length(names) == 3
-      assert List.first(names) == %{name: first}
+      name = first.name
+      seconds = DateTime.to_unix(first.updated_at)
+      assert %{name: ^name, updated_at: %{seconds: ^seconds}} = List.first(names)
 
       versions = v2_map("versions", ["hexpm"])
       assert length(versions) == 3
@@ -115,11 +117,13 @@ defmodule Hexpm.Organization.RegistryBuilderTest do
   describe "partial/1" do
     test "v2 registry is in correct format", %{packages: [_, p2, _] = packages} do
       RegistryBuilder.repository(Repository.hexpm())
-      first = packages |> Enum.map(& &1.name) |> Enum.sort() |> List.first()
+      first = packages |> Enum.sort_by(& &1.name) |> List.first()
 
       names = v2_map("names", ["hexpm"])
       assert length(names) == 3
-      assert List.first(names) == %{name: first}
+      name = first.name
+      seconds = DateTime.to_unix(first.updated_at)
+      assert %{name: ^name, updated_at: %{seconds: ^seconds}} = List.first(names)
 
       versions = v2_map("versions", ["hexpm"])
       assert length(versions) == 3

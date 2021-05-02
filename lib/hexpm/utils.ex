@@ -18,8 +18,7 @@ defmodule Hexpm.Utils do
   end
 
   defp secure_check(<<left, left_rest::binary>>, <<right, right_rest::binary>>, acc) do
-    import Bitwise, only: [|||: 2, ^^^: 2]
-    secure_check(left_rest, right_rest, acc ||| left ^^^ right)
+    secure_check(left_rest, right_rest, Bitwise.bor(acc, Bitwise.bxor(left, right)))
   end
 
   defp secure_check(<<>>, <<>>, acc) do

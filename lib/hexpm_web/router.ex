@@ -279,7 +279,7 @@ defmodule HexpmWeb.Router do
   if Mix.env() in [:dev, :test, :hex] do
     scope "/repo", HexpmWeb do
       get "/names", TestController, :names
-      get "/versions", TestController, :version
+      get "/versions", TestController, :versions
       get "/installs/hex-1.x.csv", TestController, :installs_csv
 
       for prefix <- ["/", "/repos/:repository"] do

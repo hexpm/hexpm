@@ -623,3 +623,5 @@ Hexpm.Repo.transaction(fn ->
   Hexpm.Repo.refresh_view(PackageDownload)
   Hexpm.Repo.refresh_view(ReleaseDownload)
 end)
+
+Hexpm.Repository.RegistryBuilder.full(Hexpm.Repository.Repositories.get("hexpm"))
