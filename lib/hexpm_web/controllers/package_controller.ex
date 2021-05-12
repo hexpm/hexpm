@@ -1,6 +1,10 @@
 defmodule HexpmWeb.PackageController do
   use HexpmWeb, :controller
 
+  plug :fixup_params
+  plug :redirect_hexpm
+  plug :put_layout, {HexpmWeb.PackageView, "layout.html"}
+
   @packages_per_page 30
   @audit_logs_per_page 10
   @sort_params ~w(name recent_downloads total_downloads inserted_at updated_at recently_published)
@@ -21,7 +25,6 @@ defmodule HexpmWeb.PackageController do
       conn,
       "index.html",
       title: "Packages",
-      container: "container",
       nav_page: :packages,
       per_page: @packages_per_page,
       search: search,
@@ -38,20 +41,16 @@ defmodule HexpmWeb.PackageController do
   def show(conn, params) do
     # TODO: Show flash if private package and organization does not have active billing
 
-    params = fixup_params(params)
-
     access_package(conn, params, fn package, repositories ->
       releases = Releases.all(package)
-
-      {release, type} =
-        if version = params["version"] do
-          {matching_release(releases, version), :release}
-        else
-          {Release.latest_version(releases, only_stable: true, unstable_fallback: true), :package}
-        end
+      {release, type} = release_type(releases, params)
 
       if release do
-        package(conn, repositories, package, releases, release, type)
+        render(
+          conn,
+          "show.html",
+          package_assigns(conn, repositories, package, releases, release, type)
+        )
       else
         not_found(conn)
       end
@@ -66,16 +65,28 @@ defmodule HexpmWeb.PackageController do
     end)
   end
 
-  def audit_logs(conn, params) do
-    access_package(conn, params, fn package, _ ->
+  def versions(conn, params) do
+    access_package(conn, params, fn package, repositories ->
+      releases = Releases.all(package)
+      {release, type} = release_type(releases, params)
+
+      render(
+        conn,
+        "versions.html",
+        package_assigns(conn, repositories, package, releases, release, type)
+      )
+    end)
+  end
+
+  def activity(conn, params) do
+    access_package(conn, params, fn package, _repositories ->
       page = Hexpm.Utils.safe_int(params["page"]) || 1
       per_page = 100
       audit_logs = AuditLogs.all_by(package, page, per_page)
       total_count = AuditLogs.count_by(package)
 
-      render(conn, "audit_logs.html",
-        title: "Recent Activities for #{package.name}",
-        container: "container package-view",
+      render(conn, "activity.html",
+        title: package.name,
         nav_page: :packages,
         package: package,
         audit_logs: audit_logs,
@@ -109,36 +120,24 @@ defmodule HexpmWeb.PackageController do
     Enum.find(releases, &(to_string(&1.version) == version))
   end
 
-  defp package(conn, repositories, package, releases, release, type) do
+  defp package_assigns(conn, repositories, package, releases, release, type) do
     repository = package.repository
     release = Releases.preload(release, [:requirements, :downloads, :publisher])
-    downloads = Packages.package_downloads(package)
     owners = Owners.all(package, user: [:emails, :organization])
-    audit_logs = AuditLogs.all_by(package, 1, @audit_logs_per_page)
-    daily_graph = daily_graph(type, release, releases)
 
-    render(
-      conn,
-      "show.html",
-      [
-        title: package.name,
-        description: package.meta.description,
-        container: "container package-view",
-        nav_page: :packages,
-        canonical_url: Routes.package_url(conn, :show, package),
-        package: package,
-        repository_name: repository.name,
-        releases: releases,
-        release: release,
-        downloads: downloads,
-        owners: owners,
-        audit_logs: audit_logs,
-        daily_graph: daily_graph,
-        type: type
-      ] ++
-        docs_assigns(repository, package, release, type, releases) ++
-        dependants_assigns(repository, package, repositories)
-    )
+    [
+      title: package.name,
+      description: package.meta.description,
+      nav_page: :packages,
+      canonical_url: Routes.package_url(conn, :show, package),
+      package: package,
+      release: release,
+      releases: releases,
+      owners: owners,
+      type: type
+    ] ++
+      docs_assigns(repository, package, release, type, releases) ++
+      dependants_assigns(repository, package, repositories)
   end
 
   defp docs_assigns(repository, package, release, type, releases) do
@@ -230,20 +229,58 @@ defmodule HexpmWeb.PackageController do
     end
   end
 
-  defp fixup_params(%{"name" => name, "version" => version} = params) do
-    case Version.parse(version) do
-      {:ok, _} ->
-        params
-
-      :error ->
-        params
-        |> Map.put("repository", name)
-        |> Map.put("name", version)
-        |> Map.delete("version")
+  defp release_type(releases, params) do
+    if version = params["version"] do
+      {matching_release(releases, version), :release}
+    else
+      {Release.latest_version(releases, only_stable: true, unstable_fallback: true), :package}
     end
   end
 
-  defp fixup_params(params) do
-    params
+  defp redirect_hexpm(conn, _opts) do
+    if path = redirect_path(conn) do
+      conn
+      |> redirect(to: path)
+      |> halt()
+
+    else
+      conn
+    end
+  end
+
+  defp redirect_path(%Plug.Conn{path_info: ["packages", "hexpm" | rest], query_string: ""}) do
+    Path.join(["/packages" | rest])
+  end
+
+  defp redirect_path(%Plug.Conn{query_string: ""}) do
+    nil
+  end
+
+  defp redirect_path(%Plug.Conn{query_string: query_string} = conn) do
+    if path = redirect_path(%Plug.Conn{conn | query_string: ""}) do
+      path <> "?" <> query_string
+    end
+  end
+
+  defp fixup_params(conn, _opts) do
+    case conn.params do
+      %{"name" => name, "version" => version} ->
+        case Version.parse(version) do
+          {:ok, _} ->
+            conn
+
+          :error ->
+            put_in(
+              conn.params,
+              conn.params
+              |> Map.put("repository", name)
+              |> Map.put("name", version)
+              |> Map.delete("version")
+            )
+        end
+
+      _ ->
+        conn
+    end
   end
 end

@@ -199,11 +199,6 @@ defmodule Hexpm.Repository.Package do
     query
   end
 
-  defp search(query, {:letter, letter}) do
-    search = letter <> "%"
-    from(p in query, where: name_query(p, search))
-  end
-
   defp search(query, search) when is_binary(search) do
     case parse_search(search) do
       {:ok, params} ->

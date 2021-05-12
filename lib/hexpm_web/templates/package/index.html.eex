@@ -85,100 +85,106 @@ ViewHelpers.params(search: @search, page: page, sort: "name")
     </div>
   </div>
 
-  <div class="max-w-7xl mx-auto bg-white shadow-lg overflow-hidden sm:rounded-md">
-    <ul>
-      <%= for {package, ix} <- Enum.with_index(@packages) do %>
-        <li <%= if ix != 0 do %>class="border-t border-gray-200" <% end %>>
-          <a href="<%= Routes.package_path(Endpoint, :show, package) %>" class="block hover:bg-gray-100 focus:outline-none focus:bg-gray-100 transition duration-150 ease-in-out">
-            <div class="px-4 py-4 flex items-center sm:px-6">
-              <div class="min-w-0 flex-1 sm:flex sm:items-center sm:justify-between">
-                <div>
-                  <div class="leading-5 text-lg font-medium text-indigo-600 truncate">
-                    <%= ViewHelpers.package_name(package) %>
-                    <span class="text-sm ml-1 font-normal text-gray-500">
-                      <%= package.latest_version %>
-                    </span>
-                  </div>
-                  <div class="mt-2 flex">
-                    <div class="flex items-center text-sm leading-5 text-gray-500">
-                      <span>
-                        <%= ViewHelpers.text_length(package.meta.description, 140) %>
+  <%= if @package_count == 0 do %>
+    <div class="max-w-7xl mx-auto">
+      <p>No packages found matching the search query.</p>
+    </div>
+  <% else %>
+    <div class="max-w-7xl mx-auto bg-white shadow-lg overflow-hidden sm:rounded-md">
+      <ul>
+        <%= for {package, ix} <- Enum.with_index(@packages) do %>
+          <li <%= if ix != 0 do %>class="border-t border-gray-200" <% end %>>
+            <a href="<%= Routes.package_path(Endpoint, :show, package) %>" class="block hover:bg-gray-100 focus:outline-none focus:bg-gray-100 transition duration-150 ease-in-out">
+              <div class="px-4 py-4 flex items-center sm:px-6">
+                <div class="min-w-0 flex-1 sm:flex sm:items-center sm:justify-between">
+                  <div>
+                    <div class="leading-5 text-lg font-medium text-indigo-600 truncate">
+                      <%= ViewHelpers.package_name(package) %>
+                      <span class="text-sm ml-1 font-normal text-gray-500">
+                        <%= package.latest_version %>
                       </span>
                     </div>
-                  </div>
-                  <div class="mt-2 flex">
-                    <div class="flex items-center text-sm leading-5 text-gray-500">
-                      <!-- Heroicon name: chart-bar -->
-                      <svg class="flex-shrink-0 mr-1.5 h-5 w-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                        <path d="M2 11a1 1 0 011-1h2a1 1 0 011 1v5a1 1 0 01-1 1H3a1 1 0 01-1-1v-5zM8 7a1 1 0 011-1h2a1 1 0 011 1v9a1 1 0 01-1 1H9a1 1 0 01-1-1V7zM14 4a1 1 0 011-1h2a1 1 0 011 1v12a1 1 0 01-1 1h-2a1 1 0 01-1-1V4z" />
-                      </svg>
-                      <% package_downloads = downloads_for_package(package, @downloads) %>
-                      <span>
-                        <%= ViewHelpers.human_number_space(display_downloads(package_downloads, @sort) || 0, 5) %>
-                        <%= display_downloads_view_title(@sort) %>
-                      </span>
+                    <div class="mt-2 flex">
+                      <div class="flex items-center text-sm leading-5 text-gray-500">
+                        <span>
+                          <%= ViewHelpers.text_length(package.meta.description, 140) %>
+                        </span>
+                      </div>
+                    </div>
+                    <div class="mt-2 flex">
+                      <div class="flex items-center text-sm leading-5 text-gray-500">
+                        <!-- Heroicon name: chart-bar -->
+                        <svg class="flex-shrink-0 mr-1.5 h-5 w-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                          <path d="M2 11a1 1 0 011-1h2a1 1 0 011 1v5a1 1 0 01-1 1H3a1 1 0 01-1-1v-5zM8 7a1 1 0 011-1h2a1 1 0 011 1v9a1 1 0 01-1 1H9a1 1 0 01-1-1V7zM14 4a1 1 0 011-1h2a1 1 0 011 1v12a1 1 0 01-1 1h-2a1 1 0 01-1-1V4z" />
+                        </svg>
+                        <% package_downloads = downloads_for_package(package, @downloads) %>
+                        <span>
+                          <%= ViewHelpers.human_number_space(display_downloads(package_downloads, @sort) || 0, 5) %>
+                          <%= display_downloads_view_title(@sort) %>
+                        </span>
+                      </div>
                     </div>
                   </div>
-                </div>
-                <div class="ml-5 flex-shrink-0">
-                  <!-- Heroicon name: chevron-right -->
-                  <svg class="h-5 w-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                    <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd" />
-                  </svg>
+                  <div class="ml-5 flex-shrink-0">
+                    <!-- Heroicon name: chevron-right -->
+                    <svg class="h-5 w-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                      <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd" />
+                    </svg>
+                  </div>
                 </div>
               </div>
-            </div>
-          </a>
-        </li>
-      <% end %>
-    </ul>
+            </a>
+          </li>
+        <% end %>
+      </ul>
 
-    <%
-    paginate = ViewHelpers.paginate(@page, @package_count, items_per_page: 30, page_links: 7)
-    page_link = fn page -> Routes.package_path(Endpoint, :index, ViewHelpers.params(search: @search, page: page, sort: @sort)) end
-    href = fn condition, page -> if condition, do: {:safe, ~s[href="#{page_link.(page)}"]} end
-    %>
-    <div class="bg-white px-4 py-3 flex items-center justify-between border-t border-gray-200 sm:px-6">
-      <div class="flex-1 flex justify-between sm:hidden">
-        <a <%= href.(paginate[:next], @page - 1) %> class="<%= if !paginate[:prev] do %>cursor-not-allowed<% else %>hover:text-gray-500 focus:outline-none focus:ring focus:ring-blue-300 focus:border-blue-300 active:bg-gray-100 active:text-gray-700<% end %> relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm leading-5 font-medium rounded-md text-gray-700 bg-white transition ease-in-out duration-150">
-          Previous
-        </a>
-        <a <%= href.(paginate[:next], @page + 1) %> class="<%= if !paginate[:next] do %>cursor-not-allowed<% else %>hover:text-gray-500 focus:outline-none focus:ring focus:ring-blue-300 focus:border-blue-300 active:bg-gray-100 active:text-gray-700<% end %> ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm leading-5 font-medium rounded-md text-gray-700 bg-white transition ease-in-out duration-150">
-          Next
-        </a>
-      </div>
-      <div class="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
-        <div>
-          <p class="text-sm leading-5 text-gray-700">
-            Showing
-            <span class="font-medium"><%= @per_page * (@page - 1) + 1 %></span>
-            to
-            <span class="font-medium"><%= @per_page * @page %></span>
-            of
-            <span class="font-medium"><%= @package_count %></span>
-            results
-          </p>
+      <%
+      paginate = ViewHelpers.paginate(@page, @package_count, items_per_page: 30, page_links: 7)
+      page_link = fn page -> Routes.package_path(Endpoint, :index, ViewHelpers.params(search: @search, page: page, sort: @sort)) end
+      href = fn condition, page -> if condition, do: {:safe, ~s[href="#{page_link.(page)}"]} end
+      %>
+      <div class="bg-white px-4 py-3 flex items-center justify-between border-t border-gray-200 sm:px-6">
+        <div class="flex-1 flex justify-between sm:hidden">
+          <a <%= href.(paginate[:next], @page - 1) %> class="<%= if !paginate[:prev] do %>cursor-not-allowed<% else %>hover:text-gray-500 focus:outline-none focus:ring focus:ring-blue-300 focus:border-blue-300 active:bg-gray-100 active:text-gray-700<% end %> relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm leading-5 font-medium rounded-md text-gray-700 bg-white transition ease-in-out duration-150">
+            Previous
+          </a>
+          <a <%= href.(paginate[:next], @page + 1) %> class="<%= if !paginate[:next] do %>cursor-not-allowed<% else %>hover:text-gray-500 focus:outline-none focus:ring focus:ring-blue-300 focus:border-blue-300 active:bg-gray-100 active:text-gray-700<% end %> ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm leading-5 font-medium rounded-md text-gray-700 bg-white transition ease-in-out duration-150">
+            Next
+          </a>
         </div>
-        <div>
-          <nav class="relative z-0 inline-flex shadow-sm">
-            <a <%= href.(paginate[:prev], @page - 1) %> class="<%= if !paginate[:prev] do %>cursor-not-allowed<% else %>hover:text-gray-400 hover:bg-gray-50 focus:z-10 focus:outline-none focus:border-blue-300 focus:ring focus:ring-blue-300 active:bg-gray-100 active:text-gray-500<% end %> relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm leading-5 font-medium text-gray-500 transition ease-in-out duration-150" aria-label="Previous">
-              <svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                <path fill-rule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clip-rule="evenodd" />
-              </svg>
-            </a>
-            <%= for page <- paginate[:page_links] do %>
-              <a href="<%= page_link.(page) %>" class="<%= if page == @page do %>font-bold bg-gray-50<% else %>font-medium hover:bg-gray-50 hover:text-gray-500<% end %> -ml-px relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm leading-5 text-gray-700 focus:bg-gray-50 focus:z-10 focus:outline-none focus:border-blue-300 focus:ring-blue transition ease-in-out duration-150">
-                <%= page %>
+        <div class="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
+          <div>
+            <p class="text-sm leading-5 text-gray-700">
+              Showing
+              <span class="font-medium"><%= @per_page * (@page - 1) + 1 %></span>
+              to
+              <span class="font-medium"><%= min(@per_page * @page, @package_count) %></span>
+              of
+              <span class="font-medium"><%= @package_count %></span>
+              results
+            </p>
+          </div>
+          <div>
+            <nav class="relative z-0 inline-flex shadow-sm">
+              <a <%= href.(paginate[:prev], @page - 1) %> class="<%= if !paginate[:prev] do %>cursor-not-allowed<% else %>hover:text-gray-400 hover:bg-gray-50 focus:z-10 focus:outline-none focus:border-blue-300 focus:ring focus:ring-blue-300 active:bg-gray-100 active:text-gray-500<% end %> relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm leading-5 font-medium text-gray-500 transition ease-in-out duration-150" aria-label="Previous">
+                <svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                  <path fill-rule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clip-rule="evenodd" />
+                </svg>
               </a>
-            <% end %>
-            <a <%= href.(paginate[:next], @page + 1) %> class="<%= if !paginate[:next] do %>cursor-not-allowed<% else %>hover:text-gray-400 hover:bg-gray-50 focus:z-10 focus:outline-none focus:border-blue-300 focus:ring focus:ring-blue-300 active:bg-gray-100 active:text-gray-500<% end %> -ml-px relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm leading-5 font-medium text-gray-500 transition ease-in-out duration-150" aria-label="Next">
-              <svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd" />
-              </svg>
-            </a>
-          </nav>
+              <%= for page <- paginate[:page_links] do %>
+                <a href="<%= page_link.(page) %>" class="<%= if page == @page do %>font-bold bg-gray-50<% else %>font-medium hover:bg-gray-50 hover:text-gray-500<% end %> -ml-px relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm leading-5 text-gray-700 focus:bg-gray-50 focus:z-10 focus:outline-none focus:border-blue-300 focus:ring-blue transition ease-in-out duration-150">
+                  <%= page %>
+                </a>
+              <% end %>
+              <a <%= href.(paginate[:next], @page + 1) %> class="<%= if !paginate[:next] do %>cursor-not-allowed<% else %>hover:text-gray-400 hover:bg-gray-50 focus:z-10 focus:outline-none focus:border-blue-300 focus:ring focus:ring-blue-300 active:bg-gray-100 active:text-gray-500<% end %> -ml-px relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm leading-5 font-medium text-gray-500 transition ease-in-out duration-150" aria-label="Next">
+                <svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                  <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd" />
+                </svg>
+              </a>
+            </nav>
+          </div>
         </div>
       </div>
     </div>
-  </div>
+  <% end %>
 </div>

@@ -107,15 +107,15 @@ defmodule HexpmWeb.Router do
     get "/policies/copyright", PolicyController, :copyright
     get "/policies/dispute", PolicyController, :dispute
 
-    get "/packages/:name/versions", VersionController, :index
-    get "/packages/:repository/:name/versions", VersionController, :index
-
     get "/packages", PackageController, :index
     get "/packages/:name", PackageController, :show
     get "/packages/:name/readme", PackageController, :readme
-    get "/packages/:name/audit_logs", PackageController, :audit_logs
+    get "/packages/:name/versions", PackageController, :versions
+    get "/packages/:name/activity", PackageController, :activity
     get "/packages/:name/:version", PackageController, :show
-    get "/packages/:repository/:name/audit_logs", PackageController, :audit_logs
+    get "/packages/:repository/:name/readme", PackageController, :readme
+    get "/packages/:repository/:name/versions", PackageController, :versions
+    get "/packages/:repository/:name/activity", PackageController, :activity
     get "/packages/:repository/:name/:version", PackageController, :show
 
     get "/blog", BlogController, :index
