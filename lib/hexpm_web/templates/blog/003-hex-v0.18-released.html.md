@@ -22,6 +22,6 @@ By passing the `--yes` flag to `mix hex.publish` you can publish your package (t
 
 This release focused on workflow improvements when working in CI environments and running commands that requires authentication. Users that have private packages will have better security because they can use specialized keys for their organizations.
 
-The work of moving functionality from the Hex client to [hex_core](https://github.com/hexpm/hex_core) is ongoing. hex_core is an effort started by Hex team member Wojtek Mach, the idea is to move the core functionality needed to create a Hex package manager client to a common Erlang library. This reduces duplicate development effort and will allow tools such as [rebar3](https://www.rebar3.org/) and [erlang.mk](https://erlang.mk/) to stay up to date with the latest changes and improvements to Hex.
+The work of moving functionality from the Hex client to [hex_core](https://github.com/hexpm/hex_core) is ongoing. hex_core is an effort started by Hex team member Wojtek Mach, the idea is to move the core functionality needed to create a Hex package manager client to a common Erlang library. This reduces duplicate development effort and will allow tools such as [rebar3](https://rebar3.org/) and [erlang.mk](https://erlang.mk/) to stay up to date with the latest changes and improvements to Hex.
 
 Next up for the core team is releasing private HexDocs and adding annual billing for organizations. The full list of changes for Hex v0.18.0 is available in our [release notes](https://github.com/hexpm/hex/releases/tag/v0.18.0).

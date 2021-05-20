@@ -139,4 +139,4 @@ Please test your package after publishing by adding it as dependency to a rebar3
 
 When running the command to publish a package, Hex will create a tar file of all the files and directories listed in the `files` property. When the tarball has been pushed to the Hex servers, it will be uploaded to a CDN for fast and reliable access for users. Hex will also recompile the registry file that all clients will update automatically when fetching dependencies.
 
-The [rebar3 hex plugin's documentation](https://www.rebar3.org/docs/package_management/hex_package_management/) contains more information about the hex plugin itself and publishing packages.
+The [rebar3 hex plugin's documentation](https://rebar3.org/docs/package_management/hex_package_management/) contains more information about the hex plugin itself and publishing packages.

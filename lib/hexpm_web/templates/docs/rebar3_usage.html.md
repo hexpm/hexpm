@@ -16,7 +16,7 @@ Hex packages as dependencies are supported by rebar3 even without the plugin. Th
 ]}.
 ```
 
-For more information on dependencies and using rebar3 see the [rebar3 documentation](https://www.rebar3.org/docs/configuration/dependencies/).
+For more information on dependencies and using rebar3 see the [rebar3 documentation](https://rebar3.org/docs/configuration/dependencies/).
 
 ### Fetching dependencies
 

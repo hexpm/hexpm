@@ -10,7 +10,7 @@ To permanently select a mirror, simply run the following command in a shell sess
 
 **Mix Example**: `$ mix hex.config mirror_url https://repo.hex.pm`
 
-**Rebar3 Example**: Add to the global or a project's top level `rebar.config`, `{rebar_packages_cdn, "https://repo.hex.pm"}.`. For more information see rebar3's package support and configuration [documentation](https://www.rebar3.org/docs/configuration/dependencies/).
+**Rebar3 Example**: Add to the global or a project's top level `rebar.config`, `{rebar_packages_cdn, "https://repo.hex.pm"}.`. For more information see rebar3's package support and configuration [documentation](https://rebar3.org/docs/configuration/dependencies/).
 
 To temporarily select a mirror, Hex commands can be prefixed with an environment variable in the shell.
 
