@@ -3,7 +3,7 @@
 <p>
   Hex is a package manager for the BEAM ecosystem, any language that compiles to run on the BEAM VM, such as <a href="https://elixir-lang.org/">Elixir</a> and <a href="http://www.erlang.org/">Erlang</a>, can be used to build Hex packages.
   Hex consists of the <a href="https://github.com/hexpm/specifications/blob/main/http_api.md">HTTP API</a>, <a href="/">this website</a>, the repository serving packages and indexes, <a href="https://hexdocs.pm">HexDocs</a>, the <a href="https://github.com/hexpm/hex">Mix build-tool integration</a>, and <a href="https://github.com/hexpm">other services</a>.
-  Many build tools support Hex packages including <a href="https://hexdocs.pm/mix">Mix</a> for Elixir projects, <a href="https://www.rebar3.org/">Rebar</a> and <a href="https://erlang.mk/">erlang.mk</a> for Erlang projects.
+  Many build tools support Hex packages including <a href="https://hexdocs.pm/mix">Mix</a> for Elixir projects, <a href="https://rebar3.org/">Rebar</a> and <a href="https://erlang.mk/">erlang.mk</a> for Erlang projects.
 </p>
 
 <p>
