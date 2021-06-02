@@ -136,7 +136,7 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
           {:error, :last_member} ->
             conn
             |> put_status(400)
-            |> put_flash(:error, "The last member of a organization cannot leave.")
+            |> put_flash(:error, "The last member of an organization cannot leave.")
             |> render_index(organization)
         end
       else
