@@ -73,7 +73,7 @@
                 <%= label f, :freenode %>
                 <%= ViewHelpers.text_input f, :freenode, placeholder: "Your organization's nickname on Elixir IRC channel" %>
                 <span class="help-block">Elixir IRC channel:
-                  <a href="irc://chat.freenode.net/elixir-lang">irc://chat.freenode.net/elixir-lang</a>
+                  <a href="irc://irc.libera.chat/elixir">irc://irc.libera.chat/elixir</a>
                 </span>
                 <%= ViewHelpers.error_tag f, :freenode %>
               </div>
