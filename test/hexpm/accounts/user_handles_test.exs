@@ -22,7 +22,7 @@ defmodule Hexpm.Accounts.UserHandlesTest do
                  {"Twitter", "eric", "https://twitter.com/eric"},
                  {"GitHub", "eric", "https://github.com/eric"},
                  {"Elixir Forum", "eric", "https://elixirforum.com/u/eric"},
-                 {"Freenode", "freenode", "irc://chat.freenode.net/elixir-lang"},
+                 {"Libera", "freenode", "irc://irc.libera.chat/elixir"},
                  {"Slack", "slack", "https://elixir-slackin.herokuapp.com/"}
                ]
     end
@@ -45,7 +45,7 @@ defmodule Hexpm.Accounts.UserHandlesTest do
                  {"Twitter", "eric", "https://twitter.com/eric"},
                  {"GitHub", "eric", "https://github.com/eric"},
                  {"Elixir Forum", "eric", "https://elixirforum.com/u/eric"},
-                 {"Freenode", "freenode", "irc://chat.freenode.net/elixir-lang"},
+                 {"Libera", "freenode", "irc://irc.libera.chat/elixir"},
                  {"Slack", "slack", "https://elixir-slackin.herokuapp.com/"}
                ]
     end
@@ -68,7 +68,7 @@ defmodule Hexpm.Accounts.UserHandlesTest do
                  {"Twitter", "eric", "https://twitter.com/eric"},
                  {"GitHub", "eric", "https://github.com/eric"},
                  {"Elixir Forum", "eric", "https://elixirforum.com/u/eric"},
-                 {"Freenode", "freenode", "irc://chat.freenode.net/elixir-lang"},
+                 {"Libera", "freenode", "irc://irc.libera.chat/elixir"},
                  {"Slack", "slack", "https://elixir-slackin.herokuapp.com/"}
                ]
     end
