@@ -63,6 +63,8 @@ defmodule HexpmWeb.Router do
     post "/login", LoginController, :create
     post "/logout", LoginController, :delete
 
+    get "/login/web_auth", WebAuthController, :show
+
     get "/two_factor_auth", TFAAuthController, :show
     post "/two_factor_auth", TFAAuthController, :create
 
@@ -200,6 +202,13 @@ defmodule HexpmWeb.Router do
     get "/hexsearch.xml", OpenSearchController, :opensearch
     get "/installs/hex.ez", InstallController, :archive
     get "/feeds/blog.xml", FeedsController, :blog
+  end
+
+  scope "/login/web_auth", HexpmWeb do
+    pipe_through :api
+
+    post "/code", WebAuthController, :code
+    post "/access_token", WebAuthController, :access_token
   end
 
   scope "/api", HexpmWeb.API, as: :api do

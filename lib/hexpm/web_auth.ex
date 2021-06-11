@@ -1,0 +1,123 @@
+defmodule Hexpm.WebAuth do
+  use GenServer
+
+  @moduledoc false
+
+  # A pool for storing and validating web auth requests.
+
+  alias HexpmWeb.Router.Helpers, as: Routes
+  import Phoenix.ConnTest, only: [build_conn: 0]
+
+  @name __MODULE__
+
+  # `device_code` refers to the code assigned to a client to identify it
+  # `user_code` refers to the code the user enters to authorize a client
+  # `verification_uri` refers to the url opened in the browser
+  # `access_token_uri` refers to the url the client polls
+  # `verification_expires_in` refers to the time a web auth request is stored in seconds
+  # `token_access_expires_in` refers to the time an access token in stored in seconds
+  # `access_token` refers to a key that the user/organization can use
+
+  @verification_uri "https://hex.pm" <> Routes.web_auth_path(build_conn(), :show)
+  @access_token_uri "https://hex.pm" <> Routes.web_auth_path(build_conn(), :access_token)
+  @verification_expires_in 900
+  @token_access_expires_in 900
+
+  # Client interface
+
+  @doc """
+  Starts the GenServer from a Supervison tree
+
+  ## Options
+
+   - `:name` - The name the Web Auth pool is locally registered as. The default is `Hexpm.WebAuth`
+   - `:verification_uri` - The URI the user enters the user code. By default, it is taken from the Router.
+   - `:access_token_uri` - The URI the client polls for the access token. By default, it is taken from the Router.
+   - `:verification_expires_in` - The time a web auth request is stored in memory. The default is 15 minutes (900 secs).
+   - `:token_access_expires_in` - The time an access token is stored in memory. The default is 15 minutes (900 secs).
+  """
+  def start_link(opts) do
+    name = opts[:name] || @name
+    verification_uri = opts[:verification_uri] || @verification_uri
+    access_token_uri = opts[:access_token_uri] || @access_token_uri
+    verification_expires_in = opts[:verification_expires_in] || @verification_expires_in
+    token_access_expires_in = opts[:token_access_expires_in] || @token_access_expires_in
+
+    GenServer.start_link(
+      __MODULE__,
+      %{
+        verification_uri: verification_uri,
+        access_token_uri: access_token_uri,
+        verification_expires_in: verification_expires_in,
+        token_access_expires_in: token_access_expires_in
+      },
+      name: name
+    )
+  end
+
+  @doc """
+  Adds a web auth request to the pool and returns the response.
+
+  ## Params
+
+    - `server` - The PID or locally registered name of the GenServer
+    - `scope` - The permission of the final access token
+  """
+  def get_code(server \\ @name, scope) do
+    GenServer.call(server, {:get_code, scope, server})
+  end
+
+  # Server side code
+
+  @impl GenServer
+  def init(opts) do
+    {:ok,
+     %{
+       verification_uri: opts.verification_uri,
+       access_token_uri: opts.access_token_uri,
+       verification_expires_in: opts.verification_expires_in,
+       token_access_expires_in: opts.token_access_expires_in,
+       requests: [],
+       access_tokens: []
+     }}
+  end
+
+  @impl GenServer
+  def handle_call({:get_code, scope, server}, _, state) do
+    {response, new_state} = code(scope, server, state)
+    {:reply, response, new_state}
+  end
+
+  # Helper functions
+
+  def code(scope, server, state) do
+    device_code = "foo"
+    user_code = "bar"
+
+    response = %{
+      device_code: device_code,
+      user_code: user_code,
+      verification_uri: state.verification_uri,
+      access_token_uri: state.access_token_uri,
+      verification_expires_in: state.verification_expires_in,
+      token_access_expires_in: state.token_access_expires_in
+    }
+
+    request = %{device_code: device_code, user_code: user_code, scope: scope}
+
+    case state.verification_expires_in do
+      0 ->
+        send(server, {:delete_request, device_code})
+
+      t ->
+        _ =
+          Process.send_after(
+            server,
+            {:delete_request, device_code},
+            t
+          )
+    end
+
+    {response, %{state | requests: [request | state.requests]}}
+  end
+end
