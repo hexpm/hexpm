@@ -17,11 +17,14 @@ defmodule Hexpm.WebAuth do
   # `verification_expires_in` refers to the time a web auth request is stored in seconds
   # `token_access_expires_in` refers to the time an access token in stored in seconds
   # `access_token` refers to a key that the user/organization can use
+  # `scope` refers to the permissions granted to an access token
+  # `scopes` refers to the list of scopes that are allowed in a web auth request
 
   @verification_uri "https://hex.pm" <> Routes.web_auth_path(build_conn(), :show)
   @access_token_uri "https://hex.pm" <> Routes.web_auth_path(build_conn(), :access_token)
   @verification_expires_in 900
   @token_access_expires_in 900
+  @scopes ["read", "write"]
 
   # Client interface
 
@@ -61,10 +64,20 @@ defmodule Hexpm.WebAuth do
   ## Params
 
     - `server` - The PID or locally registered name of the GenServer
-    - `scope` - The permission of the final access token
+    - `params` - The parameters for a web auth request.
   """
-  def get_code(server \\ @name, scope) do
+  def get_code(server \\ @name, scope)
+
+  def get_code(server, %{"scope" => scope}) when scope in @scopes do
     GenServer.call(server, {:get_code, scope, server})
+  end
+
+  def get_code(_server, %{"scope" => _scope}) do
+    {:error, "invalid scope"}
+  end
+
+  def get_code(_server, _params) do
+    {:error, "invalid parameters"}
   end
 
   # Server side code

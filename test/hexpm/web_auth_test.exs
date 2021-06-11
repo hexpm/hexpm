@@ -17,7 +17,7 @@ defmodule Hexpm.WebAuthTest do
       start_supervised!({WebAuth, name: config.test})
 
       for scope <- ["write", "read"] do
-        response = WebAuth.get_code(config.test, scope)
+        response = WebAuth.get_code(config.test, %{"scope" => scope})
 
         assert response.device_code
         assert response.user_code
@@ -26,6 +26,18 @@ defmodule Hexpm.WebAuthTest do
         assert response.verification_expires_in
         assert response.token_access_expires_in
       end
+    end
+
+    test "returns an error on invalid scope", config do
+      start_supervised!({WebAuth, name: config.test})
+
+      assert WebAuth.get_code(config.test, %{"scope" => "foo"}) == {:error, "invalid scope"}
+    end
+
+    test "returns an error on invalid parameters", config do
+      start_supervised!({WebAuth, name: config.test})
+
+      assert WebAuth.get_code(config.test, "foo") == {:error, "invalid parameters"}
     end
   end
 end
