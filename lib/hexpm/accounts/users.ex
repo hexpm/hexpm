@@ -449,7 +449,7 @@ defmodule Hexpm.Accounts.Users do
   end
 
   def private_email(user, params, audit: audit_data) do
-    public_email = Enum.find(user.emails, &Map.get(&1, :public))
+    public_email = Enum.find(user.emails, & &1.public)
 
     multi =
       if public_email.email == params["email"] do
