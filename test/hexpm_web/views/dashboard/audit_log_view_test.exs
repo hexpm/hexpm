@@ -136,6 +136,13 @@ defmodule HexpmWeb.Dashboard.AuditLogViewTest do
                "Set email test@example.com as public email"
     end
 
+    test "email.pvaite" do
+      log = build(:audit_log, action: "email.private", params: %{"email" => "test@example.com"})
+
+      assert AuditLogView.humanize_audit_log_info(log) ==
+               "Set email test@example.com as private email"
+    end
+
     test "email.gravatar" do
       log = build(:audit_log, action: "email.gravatar", params: %{"email" => "test@example.com"})
 

@@ -67,6 +67,20 @@ defmodule HexpmWeb.Dashboard.EmailController do
     end
   end
 
+  def private(conn, %{"email" => email} = params) do
+    case Users.private_email(conn.assigns.current_user, params, audit: audit_data(conn)) do
+      :ok ->
+        conn
+        |> put_flash(:info, "Your public email #{email} was changed to private.")
+        |> redirect(to: Routes.email_path(conn, :index))
+
+      {:error, reason} ->
+        conn
+        |> put_flash(:error, email_error_message(reason, email))
+        |> redirect(to: Routes.email_path(conn, :index))
+    end
+  end
+
   def gravatar(conn, %{"email" => email} = params) do
     case Users.gravatar_email(conn.assigns.current_user, params, audit: audit_data(conn)) do
       :ok ->

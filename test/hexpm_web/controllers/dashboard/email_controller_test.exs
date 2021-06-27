@@ -197,6 +197,21 @@ defmodule HexpmWeb.Dashboard.EmailControllerTest do
     refute Enum.find(user.emails, &(&1.email == c.email)).public
   end
 
+  test "make email private", c do
+    user_email = Enum.find(c.user.emails, & &1.public)
+
+    conn =
+      build_conn()
+      |> test_login(c.user)
+      |> post("dashboard/email/private", %{email: user_email.email})
+
+    assert redirected_to(conn) == "/dashboard/email"
+    assert get_flash(conn, :info) =~ "was changed to private"
+
+    user = Hexpm.Repo.get!(Hexpm.Accounts.User, c.user.id) |> Hexpm.Repo.preload(:emails)
+    refute Enum.find(user.emails, &(&1.email == user_email.email)).public
+  end
+
   test "set email for gravatar", c do
     new_email = Fake.sequence(:email)
     user = add_email(c.user, new_email)

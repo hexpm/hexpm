@@ -50,6 +50,13 @@
               <% end %>
             <% end %>
 
+            <%= if email.verified and email.public do %>
+              <%= form_tag(Routes.email_path(Endpoint, :private), class: "action") do %>
+                <input type="hidden" name="email" value="<%= email.email %>">
+                <button type="submit" class="btn btn-primary btn-xs">Set as private</button>
+              <% end %>
+            <% end %>
+
             <%= if email.verified and not email.gravatar do %>
               <%= form_tag(Routes.email_path(Endpoint, :gravatar), class: "action") do %>
                 <input type="hidden" name="email" value="<%= email.email %>">

@@ -162,6 +162,7 @@ defmodule HexpmWeb.Router do
     delete "/email", EmailController, :delete
     post "/email/primary", EmailController, :primary
     post "/email/public", EmailController, :public
+    post "/email/private", EmailController, :private
     post "/email/resend", EmailController, :resend_verify
     post "/email/gravatar", EmailController, :gravatar
 
