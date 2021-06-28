@@ -203,10 +203,10 @@ defmodule HexpmWeb.Dashboard.EmailControllerTest do
     conn =
       build_conn()
       |> test_login(c.user)
-      |> post("dashboard/email/private", %{email: user_email.email})
+      |> post("dashboard/email/public", %{email: "none"})
 
     assert redirected_to(conn) == "/dashboard/email"
-    assert get_flash(conn, :info) =~ "was changed to private"
+    assert get_flash(conn, :info) =~ "Your public email was changed to none."
 
     user = Hexpm.Repo.get!(Hexpm.Accounts.User, c.user.id) |> Hexpm.Repo.preload(:emails)
     refute Enum.find(user.emails, &(&1.email == user_email.email)).public
