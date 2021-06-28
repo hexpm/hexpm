@@ -41,7 +41,7 @@
             </div>
 
             <div class="col-md-3 copyright">
-              <p>2020 © Six Colors AB.</p>
+              <p><%= Date.utc_today().year %> © Six Colors AB.</p>
               <p>Powered by the <a href="https://www.erlang.org/">Erlang VM</a> and the <a href="https://elixir-lang.org/">Elixir programming language</a>.</p>
             </div>
           </div>
