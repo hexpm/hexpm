@@ -449,24 +449,6 @@ defmodule Hexpm.Accounts.Users do
     end
   end
 
-  def private_email(user, params, audit: audit_data) do
-    public_email = Enum.find(user.emails, & &1.public)
-
-    multi =
-      if public_email.email == params["email"] do
-        Multi.new()
-        |> Multi.update(:email_public, Email.toggle_flag(public_email, :public, false))
-        |> audit(audit_data, "email.private", public_email)
-      else
-        Multi.new()
-      end
-
-    case Repo.transaction(multi) do
-      {:ok, _} -> :ok
-      {:error, :public_email, reason, _} -> {:error, reason}
-    end
-  end
-
   def insert_or_update_or_delete_email_multi(multi, _user, _flag, nil, _params) do
     multi
   end
