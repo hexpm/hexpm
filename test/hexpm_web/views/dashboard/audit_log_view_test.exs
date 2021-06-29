@@ -135,7 +135,6 @@ defmodule HexpmWeb.Dashboard.AuditLogViewTest do
       assert AuditLogView.humanize_audit_log_info(log) ==
                "Set email test@example.com as public email"
 
-
       log =
         build(:audit_log,
           action: "email.public",
