@@ -62,12 +62,15 @@ defmodule HexpmWeb.Dashboard.AuditLogView do
     "Set email #{params["email"]} as primary email"
   end
 
-  def humanize_audit_log_info(%AuditLog{action: "email.public", params: params}) do
-    "Set email #{params["email"]} as public email"
+  def humanize_audit_log_info(%AuditLog{
+        action: "email.public",
+        params: %{"old_email" => old_email, "new_email" => nil}
+      }) do
+    "Set email #{old_email["email"]} as private email"
   end
 
-  def humanize_audit_log_info(%AuditLog{action: "email.private", params: params}) do
-    "Set email #{params["old_email"]["email"]} as private email"
+  def humanize_audit_log_info(%AuditLog{action: "email.public", params: params}) do
+    "Set email #{params["email"]} as public email"
   end
 
   def humanize_audit_log_info(%AuditLog{action: "email.gravatar", params: params}) do

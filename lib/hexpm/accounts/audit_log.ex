@@ -152,9 +152,6 @@ defmodule Hexpm.Accounts.AuditLog do
   defp extract_params("email.public", {old_email, new_email}),
     do: %{old_email: serialize(old_email), new_email: serialize(new_email)}
 
-  defp extract_params("email.private", {old_email, new_email}),
-    do: %{old_email: serialize(old_email), new_email: serialize(new_email)}
-
   defp extract_params("email.gravatar", {organization, {old_email, new_email}}),
     do: %{
       organization: serialize(organization),

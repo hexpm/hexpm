@@ -402,11 +402,10 @@ defmodule Hexpm.Accounts.Users do
   defp unset_email_flag_multi(multi, user, flag, audit: audit_data) do
     if old_email = Enum.find(user.emails, &Map.get(&1, flag)) do
       old_email_op = String.to_atom("old_#{flag}")
-      action = if flag == :public, do: :private, else: flag
 
       multi
       |> Multi.update(old_email_op, Email.toggle_flag(old_email, flag, false))
-      |> audit(audit_data, "email.#{action}", {old_email, nil})
+      |> audit(audit_data, "email.#{flag}", {old_email, nil})
     else
       multi
     end
