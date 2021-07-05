@@ -39,6 +39,8 @@ defmodule MyProject.MixProject do
 end
 ```
 
+For more information about dependencies see the [Mix documentation](https://hexdocs.pm/mix/Mix.Tasks.Deps.html#content).
+
 ### Options
 
 <dl class="dl-horizontal">
