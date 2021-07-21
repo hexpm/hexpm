@@ -40,6 +40,6 @@ defmodule HexpmWeb.Dashboard.PasswordController do
   defp maybe_put_flash(conn, false), do: conn
 
   defp maybe_put_flash(conn, true) do
-    put_flash(conn, :error, password_breached_message(conn, []))
+    put_flash(conn, :raw_error, password_breached_message(conn, []))
   end
 end
