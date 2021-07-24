@@ -230,6 +230,36 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
     end
   end
 
+  describe "show billing section" do
+    test "show for admins", %{user: user, organization: organization} do
+      insert(:organization_user, organization: organization, user: user, role: "admin")
+
+      mock_customer(organization)
+
+      conn =
+        build_conn()
+        |> test_login(user)
+        |> get("dashboard/orgs/#{organization.name}")
+
+      assert response(conn, 200) =~ "Billing"
+      assert response(conn, 200) =~ "Billing information"
+    end
+
+    test "hide for non-admins", %{user: user, organization: organization} do
+      insert(:organization_user, organization: organization, user: user, role: "read")
+
+      mock_customer(organization)
+
+      conn =
+        build_conn()
+        |> test_login(user)
+        |> get("dashboard/orgs/#{organization.name}")
+
+      refute response(conn, 200) =~ "Billing"
+      refute response(conn, 200) =~ "Billing information"
+    end
+  end
+
   describe "cancel billing" do
     test "with subscription", %{user: user, organization: organization} do
       Mox.stub(Hexpm.Billing.Mock, :cancel, fn token ->
