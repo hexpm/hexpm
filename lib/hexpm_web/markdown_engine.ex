@@ -17,7 +17,7 @@ defmodule HexpmWeb.MarkdownEngine do
       HexpmWeb.ViewIcons.icon(:glyphicon, :link, class: "icon-link")
       |> Phoenix.HTML.safe_to_string()
 
-    Regex.replace(~r"<#{tag}>(.*)</#{tag}>", html, fn _, header ->
+    Regex.replace(~r"<#{tag}>\n?(.*)<\/#{tag}>", html, fn _, header ->
       anchor =
         header
         |> String.downcase()
