@@ -32,22 +32,14 @@ By default, Hexpm connects to a localhost PostgreSQL database `hexpm_dev` using 
 
 Create the database and user 'postgres' if not already done:
 
-```sql
-CREATE USER postgres;
-ALTER USER postgres PASSWORD 'postgres';
-CREATE DATABASE hexpm_dev;
-GRANT ALL PRIVILEGES ON DATABASE hexpm_dev TO postgres;
-ALTER USER postgres WITH SUPERUSER;
-
--- if you also want to setup the test database
-CREATE DATABASE hexpm_test;
-GRANT ALL PRIVILEGES ON DATABASE hexpm_test TO postgres;
+```sh
+docker-compose up -d db
 ```
 
-Now you are fine to run the ecto migrations:
+Now you are fine to create the `hexpm_dev` database and run the ecto migrations:
 
 ```shell
-mix ecto.migrate
+mix do ecto.create, ecto.migrate
 ```
 
 ### Sample Data
