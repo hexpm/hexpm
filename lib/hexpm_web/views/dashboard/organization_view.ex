@@ -467,4 +467,9 @@ defmodule HexpmWeb.Dashboard.OrganizationView do
   defp show_company?(company, errors) do
     (company || errors["company"]) && !errors["person"]
   end
+
+  defp organization_admin?(current_user, organization) do
+    user = Enum.find(organization.organization_users, &(&1.user_id == current_user.id))
+    user.role == "admin"
+  end
 end
