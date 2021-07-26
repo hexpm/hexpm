@@ -469,11 +469,7 @@ defmodule HexpmWeb.Dashboard.OrganizationView do
   end
 
   defp organization_admin?(current_user, organization) do
-    role =
-      organization.organization_users
-      |> Enum.find(fn org_user -> org_user.user_id == current_user.id end)
-      |> Map.get(:role)
-
-    role == "admin"
+    user = Enum.find(organization.organization_users, & &1.user_id == current_user.id)
+    user.role == "admin"
   end
 end
