@@ -160,3 +160,31 @@ Congratulations, you've published your package! It will appear on the [hex.pm](h
 Please test your package after publishing by adding it as dependency to a Mix project and fetching and compiling it. If there are any issues, you can publish the package again for up to one hour after first publication. A publication can also be reverted with `mix hex.publish --revert VERSION`.
 
 When running the command to publish a package, Hex will create a tar file of all the files and directories listed in the `:files` property. When the tarball has been pushed to the Hex servers, it will be uploaded to a CDN for fast and reliable access for users. Hex will also recompile the registry file that all clients will update automatically when fetching dependencies.
+
+### Publishing from CI
+
+You can automate publishing packages from tools such as CI. You need a key with permissions to publish packages:
+
+```nohighlight
+$ mix hex.user key generate --key-name publish-ci --permission api:write
+Username:
+Account password:
+Generating key...
+f48ac236bca15c3271e077c15c5320c4
+```
+
+If you are publishing a package for your organization it is recommended to use a key for the organization instead of a personal key:
+
+```nohighlight
+$ mix hex.organization key acme generate --key-name publish-ci --permission api:write
+Local password:
+f48ac236bca15c3271e077c15c5320c4
+```
+
+Set the key in the `HEX_API_KEY` system environment variable. To publish the package without being prompted pass the `--yes` flag:
+
+```nohighlight
+$ HEX_API_KEY=f48ac236bca15c3271e077c15c5320c4 mix hex.publish --yes
+```
+
+*Note that care should be used when automating publishing because Hex can output important warnings or even recommendations on how to improve your package that will easily be missed when the process is automated. Also note that Hex is still pre 1.0 so breaking changes can happen between any releases and CI will usually install the latest version.*
