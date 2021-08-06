@@ -86,10 +86,19 @@ defmodule HexpmWeb.EmailView do
   end
 
   defmodule PackagePublished do
-    def intro(package, version) do
+    def intro(nil, package, version) do
       """
-      You have recently published package #{package} v#{version}.
-      If this wasn't done by you, you should reset your account and revert or retire the version.
+      Package #{package} v#{version} was recently published.
+      If this wasn't done by you or one of the other package owners, you should
+      reset your account and revert or retire the version.
+      """
+    end
+
+    def intro(publisher, package, version) do
+      """
+      Package #{package} v#{version} was recently published by #{publisher.username}.
+      If this wasn't done by you or one of the other package owners, you should
+      reset your account and revert or retire the version.
       """
     end
 
