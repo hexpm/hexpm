@@ -1,4 +1,4 @@
-<%= PackagePublished.intro(@package, @version) %>
+<%= PackagePublished.intro(@publisher, @package, @version) %>
 
 For mix:
 

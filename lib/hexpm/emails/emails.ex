@@ -66,10 +66,11 @@ defmodule Hexpm.Emails do
     |> render(:organization_invite)
   end
 
-  def package_published(user, name, version) do
+  def package_published(owners, publisher, name, version) do
     email()
-    |> email_to(user)
+    |> email_to(owners)
     |> subject("Hex.pm - Package #{name} v#{version} published")
+    |> assign(:publisher, publisher)
     |> assign(:version, version)
     |> assign(:package, name)
     |> render(:package_published)

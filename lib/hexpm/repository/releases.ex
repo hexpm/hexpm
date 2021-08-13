@@ -136,7 +136,7 @@ defmodule Hexpm.Repository.Releases do
 
     Assets.push_release(release, body)
     update_package_in_registry(package)
-    email_package_publisher(user, package, release)
+    email_package_owners(package, release, user)
 
     {:ok, %{result | release: release, package: package}}
   end
@@ -240,10 +240,10 @@ defmodule Hexpm.Repository.Releases do
     end
   end
 
-  defp email_package_publisher(user, package, release) do
-    user
-    |> Hexpm.Repo.preload(organization: [users: :emails])
-    |> Emails.package_published(package.name, release.version)
+  defp email_package_owners(package, release, publisher) do
+    Hexpm.Repo.all(assoc(package, :owners))
+    |> Hexpm.Repo.preload([:emails, organization: [users: :emails]])
+    |> Emails.package_published(publisher, package.name, release.version)
     |> Mailer.deliver_now_throttled()
   end
 
