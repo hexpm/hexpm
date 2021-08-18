@@ -450,7 +450,7 @@ defmodule HexpmWeb.API.OwnerControllerTest do
       assert Hexpm.Repo.aggregate(assoc(package, :owners), :count, :id) == 1
     end
 
-    test "requries owner to be member of organization", %{
+    test "requires owner to be member of organization", %{
       user1: user1,
       repository: repository,
       repository_package: package

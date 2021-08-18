@@ -242,7 +242,7 @@ defmodule HexpmWeb.Dashboard.OrganizationView do
     {"CW", "Curaçao"},
     {"CX", "Christmas Island"},
     {"CY", "Cyprus"},
-    # Czechia (Changed for Stripe compatability)
+    # Czechia (Changed for Stripe compatibility)
     {"CZ", "Czech Republic"},
     {"DE", "Germany"},
     {"DJ", "Djibouti"},

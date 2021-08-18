@@ -213,7 +213,7 @@ defmodule MyApp.Plug do
 end
 ```
 
-We are ready to prepare our application for releases! Let's start with definining runtime configuration:
+We are ready to prepare our application for releases! Let's start with defining runtime configuration:
 
 ```elixir
 # config/runtime.exs

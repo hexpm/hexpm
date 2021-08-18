@@ -88,7 +88,7 @@ defmodule Hexpm.Repository.ReleasesTest do
       assert release.publisher_id == user.id
     end
 
-    test "cant publish reserved package name", %{user: user} do
+    test "can't publish reserved package name", %{user: user} do
       Repo.insert_all("reserved_packages", [
         %{"repository_id" => 1, "name" => "reserved_name"}
       ])
@@ -112,7 +112,7 @@ defmodule Hexpm.Repository.ReleasesTest do
       assert %{name: "is reserved"} = errors_on(changeset)
     end
 
-    test "cant publish reserved package version", %{package: package, user: user} do
+    test "can't publish reserved package version", %{package: package, user: user} do
       Repo.insert_all("reserved_packages", [
         %{"repository_id" => 1, "name" => package.name, "version" => "0.2.0"}
       ])
@@ -136,7 +136,7 @@ defmodule Hexpm.Repository.ReleasesTest do
       assert %{version: "is reserved"} = errors_on(changeset)
     end
 
-    test "cant publish using non-semantic version", %{package: package, user: user} do
+    test "can't publish using non-semantic version", %{package: package, user: user} do
       Repo.insert_all("reserved_packages", [
         %{"repository_id" => 1, "name" => package.name, "version" => "0.2.0"}
       ])

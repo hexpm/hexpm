@@ -6,7 +6,7 @@ defmodule HexpmWeb.PackageReportController do
   @new_report_msg "Package report generated"
   @report_updated_msg "Package report updated"
   @report_bad_update_msg "Package report can not be updated"
-  @report_bad_version_msg "No release matchs given requirement"
+  @report_bad_version_msg "No release matches given requirement"
 
   def new_comment(conn, params) do
     report = PackageReports.get(params["id"])

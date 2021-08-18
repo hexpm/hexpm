@@ -65,7 +65,7 @@ defmodule HexpmWeb.API.OwnerController do
           {:error, :not_organization_transfer} ->
             validation_failed(conn, %{
               "username" =>
-                "organization ownership can only be transfered, removing all existing owners"
+                "organization ownership can only be transferred, removing all existing owners"
             })
 
           {:error, :organization_level} ->

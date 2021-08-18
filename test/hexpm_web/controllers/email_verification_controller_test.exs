@@ -94,7 +94,7 @@ defmodule HexpmWeb.EmailVerificationControllerTest do
       refute hd(user.emails).verification_key
     end
 
-    test "dont send verification email for non-existant email" do
+    test "dont send verification email for non-existent email" do
       conn = post(build_conn(), "email/verification", %{"email" => "foo@example.com"})
       assert redirected_to(conn) == "/"
       assert get_flash(conn, :info) =~ "A verification email has been sent"

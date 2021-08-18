@@ -2,7 +2,7 @@
 
 <div class="subtitle"><time datetime="2021-01-25T00:00:00Z">25 January, 2021</time> · by Todd Resudek</div>
 
-After months of development, I am proud to annouce the launch of [preview.hex.pm](https://preview.hex.pm)! 
+After months of development, I am proud to announce the launch of [preview.hex.pm](https://preview.hex.pm)! 
 
 It is important to note that this was built on top of all the work that was put into [diff.hex.pm](https://diff.hex.pm). Preview relies on much of the code contributed to that project (thanks, in no small part, to [Johanna Larsson](https://github.com/joladev).)
 
@@ -10,7 +10,7 @@ It is important to note that this was built on top of all the work that was put 
 
 Hex Preview is an online tool for viewing the source files of a Hex package. By searching for the package name, and then selecting a version number, you will see all of the files contained in the release.
 
-### Cant I already do this on Github?
+### Can't I already do this on Github?
 
 No, not really. While it is likely the source code of a Github project is the same as the source code in a release, there is absolutely no guarantee that is the case.
 
