@@ -195,7 +195,7 @@ defmodule Hexpm.BillingTest do
              ) == :ok
     end
 
-    test "creates an Audit Log for pay_invoice whn imp().pay_invoice/1 succeeds" do
+    test "creates an Audit Log for pay_invoice when imp().pay_invoice/1 succeeds" do
       Mox.stub(Hexpm.Billing.Mock, :pay_invoice, fn _ -> :ok end)
 
       user = insert(:user)
@@ -215,7 +215,7 @@ defmodule Hexpm.BillingTest do
              ) == {:error, %{}}
     end
 
-    test "does not create an Audit Log for pay_invoice whn imp().pay_invoice/1 fails" do
+    test "does not create an Audit Log for pay_invoice when imp().pay_invoice/1 fails" do
       Mox.stub(Hexpm.Billing.Mock, :pay_invoice, fn _ -> {:error, %{}} end)
 
       user = insert(:user)

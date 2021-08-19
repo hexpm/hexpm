@@ -17,7 +17,7 @@ defmodule HexpmWeb.TFAAuthControllerTest do
       assert result =~ "Two-factor authentication"
     end
 
-    test "redirects to homepage if tfa_user_id isnt not in the session", c do
+    test "redirects to homepage if tfa_user_id isn't not in the session", c do
       conn =
         build_conn()
         |> test_login(c.user)

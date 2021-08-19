@@ -156,7 +156,7 @@ defmodule HexpmWeb.PackageControllerTest do
       assert html_response =~ "Unretire release"
     end
 
-    test "show latest valid version documentaion link", %{package1: package} do
+    test "show latest valid version documentation link", %{package1: package} do
       html_response =
         build_conn()
         |> get("/packages/#{package.name}")

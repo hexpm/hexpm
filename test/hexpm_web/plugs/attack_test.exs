@@ -6,7 +6,7 @@ defmodule HexpmWeb.Plugs.AttackTest do
 
   defmodule Hello do
     # need to use Phoenix.Controller because RateLimit.Plug uses ErrorView
-    # which in turn requres `plug :accepts`
+    # which in turn requires `plug :accepts`
     use Phoenix.Controller
 
     plug :accepts, ~w(json)

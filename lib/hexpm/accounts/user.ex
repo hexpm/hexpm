@@ -174,7 +174,7 @@ defmodule Hexpm.Accounts.User do
 
   def organization?(user), do: user.organization_id != nil
 
-  # Workaround for compatability with older Hex client tests, fixed in Hex v0.20.1
+  # Workaround for compatibility with older Hex client tests, fixed in Hex v0.20.1
   if Mix.env() == :hex do
     defp organization_name(organization), do: organization.name <> "-orguser"
   else

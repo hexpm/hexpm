@@ -4,7 +4,7 @@ defmodule HexpmWeb.PackageReportControllerTest do
   setup do
     # Package 1 owner
     user1 = insert(:user)
-    # Pacakge 2 owner and mod
+    # Package 2 owner and mod
     user2 = insert(:user, role: "moderator")
     # Report 1 author
     user3 = insert(:user)

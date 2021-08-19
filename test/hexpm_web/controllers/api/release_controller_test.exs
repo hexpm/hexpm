@@ -238,7 +238,7 @@ defmodule HexpmWeb.API.ReleaseControllerTest do
       |> json_response(403)
     end
 
-    test "organization owned package requries write permission", %{
+    test "organization owned package requires write permission", %{
       user: user,
       organization: organization
     } do
@@ -767,7 +767,7 @@ defmodule HexpmWeb.API.ReleaseControllerTest do
       |> json_response(403)
     end
 
-    test "new package requries write permission", %{user: user, repository: repository} do
+    test "new package requires write permission", %{user: user, repository: repository} do
       insert(:organization_user, organization: repository.organization, user: user, role: "read")
 
       meta = %{
@@ -907,7 +907,7 @@ defmodule HexpmWeb.API.ReleaseControllerTest do
                "can only modify a release up to one hour after publication"
     end
 
-    test "deafult to replace private package after grace period if replace param is not set",
+    test "default to replace private package after grace period if replace param is not set",
          %{
            user: user,
            repository: repository
@@ -1201,7 +1201,7 @@ defmodule HexpmWeb.API.ReleaseControllerTest do
       |> json_response(403)
     end
 
-    test "get release returns 403 for non-existant repository", %{user: user} do
+    test "get release returns 403 for non-existent repository", %{user: user} do
       package = insert(:package)
       insert(:release, package: package, version: "0.0.1")
 
