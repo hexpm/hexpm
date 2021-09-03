@@ -88,7 +88,7 @@ defmodule Hexpm.RepoBase do
         |> Keyword.put(:url, url)
         |> Keyword.put(:pool_size, pool_size)
 
-      {:ok, Keyword.put(opts, :url, url)}
+      {:ok, opts}
     else
       {:ok, opts}
     end
