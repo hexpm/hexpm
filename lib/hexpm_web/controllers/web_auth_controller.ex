@@ -24,8 +24,22 @@ defmodule HexpmWeb.WebAuthController do
     end
   end
 
-  def show(conn, params) do
+  def show(conn, _) do
     render(conn, "show.html")
+  end
+
+  def submit(conn, params) do
+    case Hexpm.WebAuth.submit_code(IO.inspect(params)) do
+      {:error, "not found"} ->
+        "foo"
+
+      :ok ->
+        redirect(conn, to: Routes.web_auth_path(conn, :sucess))
+    end
+  end
+
+  def sucess(conn, _) do
+    json(conn, %{foo: "foo"})
   end
 
   def access_token(conn, params) do

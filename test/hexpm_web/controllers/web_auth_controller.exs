@@ -64,4 +64,41 @@ defmodule HexpmWeb.WebAuthControllerTest do
       assert response == %{"error" => "invalid parameters"}
     end
   end
+
+  describe "POST /web_auth/submit" do
+    setup :setup_users
+
+    test "redirects to sucess page on valid user code", c do
+      {:ok, user_code} =
+        post(build_conn(), Routes.web_auth_path(build_conn(), :code, @test))
+        |> json_response(200)
+        |> Map.fetch("user_code")
+
+      request = %{"user_code" => user_code, "user_id" => c.user.id}
+
+      conn = post(c.conn, Routes.web_auth_path(c.conn, :submit, request))
+
+      assert redirected_to(conn, 200) =~ Routes.web_auth_path(conn, :success)
+      assert html_response(conn, 200) =~ "Congratulations, you're all set!"
+    end
+
+    test "returns an error on an invalid user code", c do
+      _user_code = post(build_conn(), Routes.web_auth_path(build_conn(), :code, @test))
+
+      request = %{"user_code" => "bad-code", "user_id" => c.user.id}
+
+      page =
+        post(c.conn, Routes.web_auth_path(c.conn, :submit, request))
+        |> html_response(200)
+
+      assert get_flash(page) =~ "Please make sure you entered the user code correctly."
+    end
+  end
+
+  def setup_users(context) do
+    user = insert(:user)
+    organization = insert(:organization)
+    insert(:organization_user, organization: organization, user: user)
+    Map.merge(context, %{user: user, organization: organization})
+  end
 end

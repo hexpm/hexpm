@@ -209,6 +209,7 @@ defmodule HexpmWeb.Router do
 
     post "/code", WebAuthController, :code
     post "/access_token", WebAuthController, :access_token
+    post "/submit", WebAuthController, :submit
   end
 
   scope "/api", HexpmWeb.API, as: :api do

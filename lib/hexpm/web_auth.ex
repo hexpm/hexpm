@@ -80,6 +80,10 @@ defmodule Hexpm.WebAuth do
     {:error, "invalid parameters"}
   end
 
+  @doc """
+  Submits a verification and associates
+  """
+
   # Server side code
 
   @impl GenServer
