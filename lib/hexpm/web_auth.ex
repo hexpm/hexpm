@@ -6,6 +6,7 @@ defmodule Hexpm.WebAuth do
   # A pool for storing and validating web auth requests.
 
   alias HexpmWeb.Router.Helpers, as: Routes
+  alias Hexpm.Accounts.Keys
   import Phoenix.ConnTest, only: [build_conn: 0]
 
   @name __MODULE__
@@ -26,6 +27,9 @@ defmodule Hexpm.WebAuth do
   @token_access_expires_in 900
   @scopes ["read", "write"]
 
+  # `key_params` is the default params to generate a hex api key
+  @key_params %{name: nil, permissions: %{domain: "api", resource: nil}}
+
   # Client interface
 
   @doc """
@@ -33,7 +37,7 @@ defmodule Hexpm.WebAuth do
 
   ## Options
 
-   - `:name` - The name the Web Auth pool is locally registered as. The default is `Hexpm.WebAuth`
+   - `:name` - The name the Web Auth pool is locally registered as. The default is `Hexpm.WebAuth`.
    - `:verification_uri` - The URI the user enters the user code. By default, it is taken from the Router.
    - `:access_token_uri` - The URI the client polls for the access token. By default, it is taken from the Router.
    - `:verification_expires_in` - The time a web auth request is stored in memory. The default is 15 minutes (900 secs).
@@ -63,10 +67,10 @@ defmodule Hexpm.WebAuth do
 
   ## Params
 
-    - `server` - The PID or locally registered name of the GenServer
-    - `params` - The parameters for a web auth request.
+    - `server` - The PID or locally registered name of the GenServer.
+    - `params` - The parameters of a web auth request.
   """
-  def get_code(server \\ @name, scope)
+  def get_code(server \\ @name, params)
 
   def get_code(server, %{"scope" => scope}) when scope in @scopes do
     GenServer.call(server, {:get_code, scope, server})
@@ -81,8 +85,28 @@ defmodule Hexpm.WebAuth do
   end
 
   @doc """
-  Submits a verification and associates
+  Submits a verification request to the pool and returns the response.
+
+  ## Params
+
+   - `server` - The PID or locally registered name of the GenServer
+   - `params` - The parameters of a verification request.
   """
+  def submit_code(server \\ @name, params)
+
+  def submit_code(server, %{"user_id" => uid, "user_code" => code, "audit" => audit}) do
+    if Enum.any?(GenServer.call(server, {:get_state, server}), fn x ->
+         x.user_code == code
+       end) do
+      GenServer.call(server, {:submit_code, uid, code, audit, server})
+    else
+      {:error, "invalid user_code"}
+    end
+  end
+
+  def submit_code(_server, _params) do
+    {:error, "invalid parameters"}
+  end
 
   # Server side code
 
@@ -103,6 +127,17 @@ defmodule Hexpm.WebAuth do
   def handle_call({:get_code, scope, server}, _, state) do
     {response, new_state} = code(scope, server, state)
     {:reply, response, new_state}
+  end
+
+  @impl GenServer
+  def handle_call({:submit_code, uid, code, audit, server}, _, state) do
+    {response, new_state} = submit(uid, code, audit, server, state)
+    {:reply, response, new_state}
+  end
+
+  @impl GenServer
+  def handle_call({:get_state, server}, _, state) do
+    {:reply, state}
   end
 
   # Helper functions
@@ -136,5 +171,33 @@ defmodule Hexpm.WebAuth do
     end
 
     {response, %{state | requests: [request | state.requests]}}
+  end
+
+  def submit(user_id, code, audit, server, state) do
+    request = Enum.find(state.requests, fn x -> x.user_id == user_id end)
+    scope = request.scope
+    device_code = request.device_code
+
+    name = "Web Auth #{device_code} key"
+    # Add name
+    key_params = %{@params | name: name}
+    # Add permissions
+    key_params = %{key_params | permissions: %{key_params.permissions | resource: scope}}
+
+    case Keys.create(user_id, key_params, audit: audit) do
+      {:ok, %{key: key}} ->
+        token = %{device_code: device_code, access_token: key, scope: scope}
+
+        requests = List.delete(state.requests, request)
+        access_tokens = [state.access_tokens | token]
+
+        new_state = %{state | requests: requests}
+        new_state = %{new_state | access_tokens: access_tokens}
+
+        {:ok, new_state}
+
+      {:error, :key, _, _} ->
+        {{:error, "key generation failed"}, state}
+    end
   end
 end

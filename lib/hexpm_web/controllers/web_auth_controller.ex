@@ -4,6 +4,8 @@ defmodule HexpmWeb.WebAuthController do
 
   # Controller for Web Auth, a means of authenticating the cli from the website
 
+  plug :requires_login when action == :show
+
   # step one of device flow
   def code(conn, params) do
     case Hexpm.WebAuth.get_code(params) do
@@ -29,7 +31,12 @@ defmodule HexpmWeb.WebAuthController do
   end
 
   def submit(conn, params) do
-    case Hexpm.WebAuth.submit_code(IO.inspect(params)) do
+    params = Map.merge(params, %{audit: conn})
+    _ = IO.inspect(params["user_id"], label: "UID: ")
+    _ = IO.inspect(conn.assigns.organization, label: "Conn OID: ")
+    _ = IO.inspect(conn.assigns.current_user, label: "Conn UID")
+
+    case Hexpm.WebAuth.submit_code(params) do
       {:error, "not found"} ->
         "foo"
 

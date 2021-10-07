@@ -76,7 +76,10 @@ defmodule HexpmWeb.WebAuthControllerTest do
 
       request = %{"user_code" => user_code, "user_id" => c.user.id}
 
-      conn = post(c.conn, Routes.web_auth_path(c.conn, :submit, request))
+      conn =
+        c.conn
+        |> test_login(c.user)
+        |> post(Routes.web_auth_path(c.conn, :submit, request))
 
       assert redirected_to(conn, 200) =~ Routes.web_auth_path(conn, :success)
       assert html_response(conn, 200) =~ "Congratulations, you're all set!"
