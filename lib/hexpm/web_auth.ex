@@ -27,8 +27,11 @@ defmodule Hexpm.WebAuth do
   @token_access_expires_in 900
   @scopes ["read", "write"]
 
+  # `key_permission` is the default permissions given to generate a hex api key
   # `key_params` is the default params to generate a hex api key
-  @key_params %{name: nil, permissions: %{domain: "api", resource: nil}}
+
+  @key_permission %{domain: "api", resource: nil}
+  @key_params %{name: nil, permissions: [@key_permission]}
 
   # Client interface
 
@@ -65,10 +68,14 @@ defmodule Hexpm.WebAuth do
   @doc """
   Adds a web auth request to the pool and returns the response.
 
-  ## Params
+  ## Function Params
 
     - `server` - The PID or locally registered name of the GenServer.
     - `params` - The parameters of a web auth request.
+
+  ## Request Params
+
+    - `scope` - Scope of the key to be generated. One of read and write.
   """
   def get_code(server \\ @name, params)
 
@@ -94,11 +101,11 @@ defmodule Hexpm.WebAuth do
   """
   def submit_code(server \\ @name, params)
 
-  def submit_code(server, %{"user_id" => uid, "user_code" => code, "audit" => audit}) do
-    if Enum.any?(GenServer.call(server, {:get_state, server}), fn x ->
-         x.user_code == code
-       end) do
-      GenServer.call(server, {:submit_code, uid, code, audit, server})
+  def submit_code(server, %{"user" => user, "user_code" => code, "audit" => audit}) do
+    state = GenServer.call(server, {:get_state, server})
+
+    if Enum.any?(state.requests, fn x -> x.user_code == code end) do
+      GenServer.call(server, {:submit_code, user, code, audit, server})
     else
       {:error, "invalid user_code"}
     end
@@ -130,19 +137,19 @@ defmodule Hexpm.WebAuth do
   end
 
   @impl GenServer
-  def handle_call({:submit_code, uid, code, audit, server}, _, state) do
-    {response, new_state} = submit(uid, code, audit, server, state)
+  def handle_call({:submit_code, user, user_code, audit, _server}, _, state) do
+    {response, new_state} = submit(user, user_code, audit, state)
     {:reply, response, new_state}
   end
 
   @impl GenServer
-  def handle_call({:get_state, server}, _, state) do
-    {:reply, state}
+  def handle_call({:get_state, _}, _, state) do
+    {:reply, state, state}
   end
 
   # Helper functions
 
-  def code(scope, server, state) do
+  defp code(scope, server, state) do
     device_code = "foo"
     user_code = "bar"
 
@@ -173,18 +180,18 @@ defmodule Hexpm.WebAuth do
     {response, %{state | requests: [request | state.requests]}}
   end
 
-  def submit(user_id, code, audit, server, state) do
-    request = Enum.find(state.requests, fn x -> x.user_id == user_id end)
+  defp submit(user, user_code, audit, state) do
+    request = Enum.find(state.requests, fn x -> x.user_code == user_code end)
     scope = request.scope
     device_code = request.device_code
 
     name = "Web Auth #{device_code} key"
     # Add name
-    key_params = %{@params | name: name}
+    key_params = %{@key_params | name: name}
     # Add permissions
-    key_params = %{key_params | permissions: %{key_params.permissions | resource: scope}}
+    key_params = %{key_params | permissions: [%{@key_permission | resource: scope}]}
 
-    case Keys.create(user_id, key_params, audit: audit) do
+    case Keys.create(user, key_params, audit: audit) do
       {:ok, %{key: key}} ->
         token = %{device_code: device_code, access_token: key, scope: scope}
 
@@ -196,8 +203,8 @@ defmodule Hexpm.WebAuth do
 
         {:ok, new_state}
 
-      {:error, :key, _, _} ->
-        {{:error, "key generation failed"}, state}
+      {:error, :key, changeset, _} ->
+        {{:error, changeset}, state}
     end
   end
 end
