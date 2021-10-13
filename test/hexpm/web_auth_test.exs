@@ -90,6 +90,35 @@ defmodule Hexpm.WebAuthTest do
     end
   end
 
+  describe "access_token/2" do
+    setup [:start_server, :allow_db, :login, :get_code]
+
+    test "returns a key on valid request", c do
+      _ = submit_code(c)
+      params = %{"device_code" => c.request.device_code}
+
+      response = WebAuth.access_token(c.test, params)
+
+      assert response.access_token
+    end
+
+    test "returns an error on unverified request", c do
+      params = %{"device_code" => c.request.device_code}
+
+      assert WebAuth.access_token(c.test, params) == {:error, "verification pending"}
+    end
+
+    test "returns an error on invalid device code", c do
+      params = %{"device_code" => "bad code"}
+
+      assert WebAuth.access_token(c.test, params) == {:error, "invalid device code"}
+    end
+
+    test "returns an error on invalid params", c do
+      assert WebAuth.access_token(c.test, "bad params") == {:error, "invalid parameters"}
+    end
+  end
+
   def start_server(config) do
     start_supervised!({WebAuth, name: config.test})
     :ok
@@ -114,5 +143,19 @@ defmodule Hexpm.WebAuthTest do
     request = WebAuth.get_code(context.test, %{"scope" => @scope})
 
     Map.merge(context, %{request: request})
+  end
+
+  def submit_code(c) do
+    audit_data = audit_data(c.user)
+
+    params = %{
+      "user" => c.user,
+      "user_code" => c.request.user_code,
+      "audit" => audit_data
+    }
+
+    _ok = WebAuth.submit_code(c.test, params)
+
+    c
   end
 end

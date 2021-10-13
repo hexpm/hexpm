@@ -94,10 +94,16 @@ defmodule Hexpm.WebAuth do
   @doc """
   Submits a verification request to the pool and returns the response.
 
-  ## Params
+  ## Function Params
 
-   - `server` - The PID or locally registered name of the GenServer
+   - `server` - The PID or locally registered name of the GenServer.
    - `params` - The parameters of a verification request.
+
+  ## Request Params
+
+    - `user` - The user for whom the key should be generate.
+    - `user_code` - The user code entered by that user.
+    - `audit` - Audit data for generating the key.
   """
   def submit_code(server \\ @name, params)
 
@@ -112,6 +118,28 @@ defmodule Hexpm.WebAuth do
   end
 
   def submit_code(_server, _params) do
+    {:error, "invalid parameters"}
+  end
+
+  @doc """
+  Returns the access_token of a verified request
+
+  ## Function Params
+
+  - `server` - The PID or locally registered name of the GenServer.
+  - `params` - The parameters of a access_token request.
+
+  ## Request Params
+
+  - `device_code` - The device code assigned to the client
+  """
+  def access_token(server \\ @name, params)
+
+  def access_token(server, %{"device_code" => device_code}) do
+    GenServer.call(server, {:access_token, device_code, server})
+  end
+
+  def access_token(_server, _params) do
     {:error, "invalid parameters"}
   end
 
@@ -140,6 +168,12 @@ defmodule Hexpm.WebAuth do
   def handle_call({:submit_code, user, user_code, audit, _server}, _, state) do
     {response, new_state} = submit(user, user_code, audit, state)
     {:reply, response, new_state}
+  end
+
+  @impl GenServer
+  def handle_call({:access_token, device_code, _server}, _, state) do
+    response = get_token(device_code, state)
+    {:reply, response, state}
   end
 
   @impl GenServer
@@ -207,7 +241,7 @@ defmodule Hexpm.WebAuth do
         token = %{device_code: device_code, access_token: key, scope: scope}
 
         requests = List.delete(state.requests, request)
-        access_tokens = [state.access_tokens | token]
+        access_tokens = [token | state.access_tokens]
 
         new_state = %{state | requests: requests}
         new_state = %{new_state | access_tokens: access_tokens}
@@ -216,6 +250,20 @@ defmodule Hexpm.WebAuth do
 
       {:error, :key, changeset, _} ->
         {{:error, changeset}, state}
+    end
+  end
+
+  defp get_token(device_code, state) do
+    case Enum.find(state.access_tokens, fn x -> x.device_code == device_code end) do
+      nil ->
+        if Enum.any?(state.requests, fn x -> x.device_code == device_code end) do
+          {:error, "verification pending"}
+        else
+          {:error, "invalid device code"}
+        end
+
+      x ->
+        %{access_token: x.access_token}
     end
   end
 end
