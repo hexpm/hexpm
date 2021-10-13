@@ -39,25 +39,6 @@ defmodule Hexpm.WebAuthTest do
     end
   end
 
-  test "deletes request after `verification_expires_in` seconds", c do
-    start_supervised!({WebAuth, name: c.test, verification_expires_in: 0})
-
-    c =
-      c
-      |> login
-      |> get_code
-
-    audit_data = audit_data(c.user)
-
-    params = %{
-      "user" => c.user,
-      "user_code" => c.request.user_code,
-      "audit" => audit_data
-    }
-
-    assert WebAuth.submit_code(c.test, params) == {:error, "invalid user_code"}
-  end
-
   describe "submit/2" do
     setup [:start_server, :allow_db, :login, :get_code]
 
@@ -119,6 +100,40 @@ defmodule Hexpm.WebAuthTest do
     end
   end
 
+  test "deletes request after `verification_expires_in` seconds", c do
+    start_supervised!({WebAuth, name: c.test, verification_expires_in: 0})
+
+    c =
+      c
+      |> login
+      |> get_code
+
+    audit_data = audit_data(c.user)
+
+    params = %{
+      "user" => c.user,
+      "user_code" => c.request.user_code,
+      "audit" => audit_data
+    }
+
+    assert WebAuth.submit_code(c.test, params) == {:error, "invalid user_code"}
+  end
+
+  test "deletes token after `token_access_expires_in` seconds", c do
+    start_supervised!({WebAuth, name: c.test, token_access_expires_in: 0})
+
+    c =
+      c
+      |> allow_db
+      |> login
+      |> get_code
+      |> submit_code
+
+    params = %{"device_code" => c.request.device_code}
+
+    assert WebAuth.access_token(c.test, params) == {:error, "invalid device code"}
+  end
+
   def start_server(config) do
     start_supervised!({WebAuth, name: config.test})
     :ok
@@ -128,7 +143,7 @@ defmodule Hexpm.WebAuthTest do
     allow = Process.whereis(config.test)
     :ok = Ecto.Adapters.SQL.Sandbox.allow(Hexpm.RepoBase, self(), allow)
 
-    :ok
+    config
   end
 
   def login(context) do

@@ -165,8 +165,8 @@ defmodule Hexpm.WebAuth do
   end
 
   @impl GenServer
-  def handle_call({:submit_code, user, user_code, audit, _server}, _, state) do
-    {response, new_state} = submit(user, user_code, audit, state)
+  def handle_call({:submit_code, user, user_code, audit, server}, _, state) do
+    {response, new_state} = submit(user, user_code, audit, server, state)
     {:reply, response, new_state}
   end
 
@@ -184,6 +184,11 @@ defmodule Hexpm.WebAuth do
   @impl GenServer
   def handle_info({:delete_request, device_code}, state) do
     {:noreply, delete_request(device_code, state)}
+  end
+
+  @impl GenServer
+  def handle_info({:delete_token, device_code}, state) do
+    {:noreply, delete_token(device_code, state)}
   end
 
   # Helper functions
@@ -225,7 +230,7 @@ defmodule Hexpm.WebAuth do
     %{state | requests: requests}
   end
 
-  defp submit(user, user_code, audit, state) do
+  defp submit(user, user_code, audit, server, state) do
     request = Enum.find(state.requests, fn x -> x.user_code == user_code end)
     scope = request.scope
     device_code = request.device_code
@@ -246,6 +251,14 @@ defmodule Hexpm.WebAuth do
         new_state = %{state | requests: requests}
         new_state = %{new_state | access_tokens: access_tokens}
 
+        case state.token_access_expires_in do
+          0 ->
+            _ = send(server, {:delete_token, device_code})
+
+          t ->
+            Process.send_after(server, {:delete_token, device_code}, t)
+        end
+
         {:ok, new_state}
 
       {:error, :key, changeset, _} ->
@@ -265,5 +278,11 @@ defmodule Hexpm.WebAuth do
       x ->
         %{access_token: x.access_token}
     end
+  end
+
+  defp delete_token(device_code, state) do
+    tokens = Enum.reject(state.access_tokens, fn x -> x.device_code == device_code end)
+
+    %{state | access_tokens: tokens}
   end
 end
