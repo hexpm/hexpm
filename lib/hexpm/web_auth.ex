@@ -147,6 +147,11 @@ defmodule Hexpm.WebAuth do
     {:reply, state, state}
   end
 
+  @impl GenServer
+  def handle_info({:delete_request, device_code}, state) do
+    {:noreply, delete_request(device_code, state)}
+  end
+
   # Helper functions
 
   defp code(scope, server, state) do
@@ -178,6 +183,12 @@ defmodule Hexpm.WebAuth do
     end
 
     {response, %{state | requests: [request | state.requests]}}
+  end
+
+  defp delete_request(device_code, state) do
+    requests = Enum.reject(state.requests, fn x -> x.device_code == device_code end)
+
+    %{state | requests: requests}
   end
 
   defp submit(user, user_code, audit, state) do
