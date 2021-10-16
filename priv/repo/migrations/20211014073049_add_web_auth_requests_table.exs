@@ -7,7 +7,8 @@ defmodule Hexpm.RepoBase.Migrations.AddWebAuthRequestsTable do
       add(:user_code, :string)
       add(:scope, :string)
       add(:verified, :boolean)
-      add(:key, :map)
+      add(:user_id, :integer)
+      add(:audit, :string)
     end
   end
 end

@@ -15,7 +15,6 @@ defmodule Hexpm.Accounts.WebAuthTest do
         assert response.verification_uri
         assert response.access_key_uri
         assert response.verification_expires_in
-        assert response.key_access_expires_in
       end
     end
 
@@ -31,7 +30,54 @@ defmodule Hexpm.Accounts.WebAuthTest do
     test "returns ok on valid params", c do
       audit_data = audit_data(c.user)
 
-      assert WebAuth.submit(c.user, c.request.user_code, audit_data) == :ok
+      {status, _changeset} = WebAuth.submit(c.user, c.request.user_code, audit_data)
+      assert status == :ok
+    end
+
+    test "returns error on invalid user code", c do
+      audit_data = audit_data(c.user)
+
+      assert WebAuth.submit(c.user, "bad_code", audit_data) == {:error, "invalid user code"}
+    end
+  end
+
+  describe "access_key/1" do
+    setup [:get_code, :login]
+
+    test "returns a key on valid device code", c do
+      submit_code(c)
+
+      key =
+        c.request.device_code
+        |> WebAuth.access_key()
+
+      assert key.__struct__ == Hexpm.Accounts.Key
+    end
+
+    test "returns an error on unverified request", c do
+      key =
+        c.request.device_code
+        |> WebAuth.access_key()
+
+      assert key == {:error, "request to be verified"}
+    end
+
+    test "returns an error on invalid device code" do
+      key =
+        "bad code"
+        |> WebAuth.access_key()
+
+      assert key == {:error, "invalid device code"}
+    end
+
+    test "deletes request after user has accessed", c do
+      submit_code(c)
+
+      c.request.device_code |> WebAuth.access_key()
+
+      second_call = c.request.device_code |> WebAuth.access_key()
+
+      assert second_call == {:error, "invalid device code"}
     end
   end
 
@@ -47,5 +93,12 @@ defmodule Hexpm.Accounts.WebAuthTest do
     insert(:organization_user, organization: organization, user: user)
 
     Map.merge(context, %{user: user, organization: organization})
+  end
+
+  def submit_code(c) do
+    audit_data = audit_data(c.user)
+    WebAuth.submit(c.user, c.request.user_code, audit_data)
+
+    c
   end
 end

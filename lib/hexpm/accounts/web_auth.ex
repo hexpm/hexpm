@@ -40,24 +40,16 @@ defmodule Hexpm.Accounts.WebAuth do
     field :user_code, :string
     field :scope, :string
     field :verified, :boolean
-
-    embeds_one :key, Key
+    field :user_id, :integer
+    field :audit, :string
   end
 
   def changeset(request, params \\ %{}) do
     request
-    |> cast(params, [:device_code, :user_code, :scope, :verified])
+    |> cast(params, [:device_code, :user_code, :scope, :verified, :user_id, :audit])
     |> validate_inclusion(:scope, @scopes)
     |> validate_required([:device_code, :user_code, :scope, :verified])
     |> unique_constraint([:device_code, :user_code])
-  end
-
-  def submit_changeset(request, key, user, params \\ %{}) do
-    request
-    |> changeset(params)
-    |> put_embed(:key, key)
-
-    # |> cast_embed(:key, with: &Key.changeset(&2, user, Map.from_struct(&1)))
   end
 
   @doc """
@@ -106,29 +98,58 @@ defmodule Hexpm.Accounts.WebAuth do
   """
   def submit(user, user_code, audit) do
     request = WebAuth |> Repo.get_by(user_code: user_code)
-    scope = request.scope
-    device_code = request.device_code
 
-    name = "Web Auth #{device_code} key"
-    # Add name
-    key_params = %{@key_params | name: name}
-    # Add permissions
-    key_params = %{key_params | permissions: [%{@key_permission | resource: scope}]}
+    if request do
+      {_user, audit_con} = audit
 
-    case Keys.create(user, key_params, audit: audit) do
-      {:ok, %{key: key}} ->
-        change = %{verified: true, key: key}
+      change = %{verified: true, user_id: user.id, audit: audit_con}
 
-        submit_changeset(request, key, user, change)
-        |> IO.inspect()
-        |> Repo.update()
-
-      error ->
-        error
+      changeset(request, change) |> Repo.update()
+    else
+      {:error, "invalid user code"}
     end
   end
 
-  def access_key(params) do
-    ""
+  @doc """
+  Returns the key of a verified request and deletes the request.
+
+  ## Params
+
+  - `device_code` - The device code assigned to the client
+  """
+  def access_key(device_code) do
+    request = WebAuth |> Repo.get_by(device_code: device_code)
+
+    case request do
+      r when r.verified == true ->
+        user = Repo.get(Hexpm.Accounts.User, request.user_id)
+
+        audit = {user, request.audit}
+
+        scope = request.scope
+        device_code = request.device_code
+        name = "Web Auth #{device_code} key"
+
+        # Add name
+        key_params = %{@key_params | name: name}
+        # Add permissions
+        key_params = %{key_params | permissions: [%{@key_permission | resource: scope}]}
+
+        case Keys.create(user, key_params, audit: audit) do
+          {:ok, %{key: key}} ->
+            Repo.delete(request)
+
+            key
+
+          error ->
+            error
+        end
+
+      r when r.verified == false ->
+        {:error, "request to be verified"}
+
+      nil ->
+        {:error, "invalid device code"}
+    end
   end
 end
