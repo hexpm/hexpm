@@ -13,7 +13,8 @@ defmodule Hexpm.Accounts.Keys do
   end
 
   def get(user_or_organization, name) do
-    Repo.one(Key.get(user_or_organization, name))
+    Repo.all(Key.get(user_or_organization, name))
+    |> List.first()
     |> Key.associate_owner(user_or_organization)
   end
 
