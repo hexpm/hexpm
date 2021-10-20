@@ -48,19 +48,6 @@ defmodule HexpmWeb.Dashboard.KeyControllerTest do
       assert get_flash(conn, :info) =~ "The key computer was revoked successfully"
     end
 
-    test "revoke duplicate key", c do
-      insert(:key, user: c.user, name: "computer")
-      insert(:key, user: c.user, name: "computer")
-
-      conn =
-        build_conn()
-        |> test_login(c.user)
-        |> delete("dashboard/keys", %{name: "computer"})
-
-      assert redirected_to(conn) == "/dashboard/keys"
-      assert get_flash(conn, :info) =~ "The key computer was revoked successfully"
-    end
-
     test "revoking an already revoked key throws an error", c do
       insert(:key, user: c.user, name: "computer", revoked_at: ~N"2017-01-01 00:00:00")
 
