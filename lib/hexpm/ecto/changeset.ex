@@ -40,7 +40,7 @@ defmodule Hexpm.Changeset do
         String.contains?(req, "!=") ->
           [{key, "invalid requirement: #{inspect(req)}, != is not allowed in requirements"}]
 
-        String.contains?(req, "-") and not Keyword.fetch!(opts, :pre) ->
+        String.contains?(req, "-") and not Keyword.fetch!(opts, :allow_pre) ->
           [
             {key,
              "invalid requirement: #{inspect(req)}, unstable requirements are not allowed for stable releases"}

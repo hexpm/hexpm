@@ -4,11 +4,21 @@ defmodule Hexpm.Repository.ReleaseTest do
   alias Hexpm.Repository.Release
 
   setup do
-    packages =
+    publisher = insert(:user)
+
+    [_, _, package3] =
+      packages =
       insert_list(3, :package)
       |> Hexpm.Repo.preload(:repository)
 
-    publisher = insert(:user)
+    Release.build(
+      package3,
+      publisher,
+      rel_meta(%{version: "0.0.1-dev", app: package3.name}),
+      "",
+      ""
+    )
+    |> Hexpm.Repo.insert!()
 
     %{publisher: publisher, packages: packages}
   end
@@ -546,20 +556,10 @@ defmodule Hexpm.Repository.ReleaseTest do
     assert [version: {"is invalid SemVer", _}] = changeset.errors
   end
 
-  @tag :skip
   test "do not allow pre-release dependencies of stable releases", %{
     publisher: publisher,
     packages: [_, package2, package3]
   } do
-    Release.build(
-      package3,
-      publisher,
-      rel_meta(%{version: "0.0.1-dev", app: package3.name}),
-      "",
-      ""
-    )
-    |> Hexpm.Repo.insert!()
-
     reqs = [
       %{name: package3.name, app: package3.name, requirement: "~> 0.0.1-alpha", optional: false}
     ]
@@ -584,6 +584,45 @@ defmodule Hexpm.Repository.ReleaseTest do
       package2,
       publisher,
       rel_meta(%{version: "0.0.1-dev", app: package2.name, requirements: reqs}),
+      "",
+      ""
+    )
+    |> Hexpm.Repo.insert!()
+  end
+
+  test "allow pre-release dependencies of unstable releases", %{
+    publisher: publisher,
+    packages: [_, package2, package3]
+  } do
+    reqs = [
+      %{name: package3.name, app: package3.name, requirement: "~> 0.0.1-alpha", optional: false}
+    ]
+
+    Release.build(
+      package2,
+      publisher,
+      rel_meta(%{version: "0.0.1-dev", app: package2.name, requirements: reqs}),
+      "",
+      ""
+    )
+    |> Hexpm.Repo.insert!()
+  end
+
+  test "allow pre-release dependencies of stable releases in organizations", %{
+    publisher: publisher,
+    packages: [_, _, package3]
+  } do
+    repository = insert(:repository)
+    package4 = insert(:package, repository_id: repository.id, repository: repository)
+
+    reqs = [
+      %{name: package3.name, app: package3.name, requirement: "~> 0.0.1-alpha", optional: false}
+    ]
+
+    Release.build(
+      package4,
+      publisher,
+      rel_meta(%{version: "0.0.1", app: package4.name, requirements: reqs}),
       "",
       ""
     )

@@ -18,14 +18,17 @@ defmodule Hexpm.Repository.Requirement do
   end
 
   def changeset(requirement, params, dependencies, release_changeset, package) do
+    repository = params["repository"] || "hexpm"
+    allow_pre = version_pre(release_changeset) != [] or package.repository.id != 1
+
     cast(requirement, params, ~w(repository name app requirement optional)a)
-    |> put_assoc(:dependency, dependencies[{params["repository"] || "hexpm", params["name"]}])
+    |> put_assoc(:dependency, dependencies[{repository, params["name"]}])
     |> validate_required(~w(name app requirement optional)a)
     |> validate_required(
       :dependency,
-      message: "package does not exist in repository \"#{params["repository"] || "hexpm"}\""
+      message: "package does not exist in repository \"#{repository}\""
     )
-    |> validate_requirement(:requirement, pre: version_pre(release_changeset) != [])
+    |> validate_requirement(:requirement, allow_pre: allow_pre)
     |> validate_repository(:repository, repository: package.repository)
   end
 
