@@ -85,6 +85,7 @@
   display: inline-block;
   padding: 4px 6px;
   color: $color-white;
+  background: $color-text-grey;
   border-radius: 4px;
 
   &.mix {
@@ -97,10 +98,6 @@
 
   &.rebar3 {
     background: #c65252;
-  }
-
-  &.make {
-    background: $color-text-grey;
   }
 }
 
