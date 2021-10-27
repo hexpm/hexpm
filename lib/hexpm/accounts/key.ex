@@ -169,24 +169,28 @@ defmodule Hexpm.Accounts.Key do
         s in source,
         join: k in assoc(s, :keys),
         where: not query_revoked(k),
+        where: k.name == ^name or like(k.name, ^(name <> "-%")),
         select: k.name
       )
       |> changeset.repo.all
-      |> Enum.into(MapSet.new())
 
-    name = if MapSet.member?(names, name), do: find_unique_name(name, names), else: name
+    name = if name in names, do: find_unique_name(name, names), else: name
 
     put_change(changeset, :name, name)
   end
 
-  defp find_unique_name(name, names, counter \\ 2) do
-    name_counter = "#{name}-#{counter}"
+  defp find_unique_name(name, names) do
+    max =
+      names
+      |> Enum.map(fn existing_name ->
+        case Integer.parse(String.trim_leading(existing_name, name <> "-")) do
+          {num, ""} -> num
+          :error -> 1
+        end
+      end)
+      |> Enum.max()
 
-    if MapSet.member?(names, name_counter) do
-      find_unique_name(name, names, counter + 1)
-    else
-      name_counter
-    end
+    "#{name}-#{max + 1}"
   end
 
   def verify_permissions?(key, "api", resource) do
