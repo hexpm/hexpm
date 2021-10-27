@@ -35,6 +35,7 @@ defmodule Hexpm.Accounts.Key do
     |> validate_required(~w(name)a)
     |> add_keys()
     |> prepare_changes(&unique_name/1)
+    |> unique_constraint(:name, name: "_name_revoked_at_key", match: :suffix)
     |> cast_embed(:permissions, with: &KeyPermission.changeset(&1, user_or_organization, &2))
     |> put_default_embed(:permissions, [%KeyPermission{domain: "api"}])
   end

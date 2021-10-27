@@ -1,9 +1,11 @@
 defmodule Hexpm.Case do
   def key_for(user_or_organization) do
-    key =
-      user_or_organization
-      |> Hexpm.Accounts.Key.build(%{name: "any_key_name"})
-      |> Hexpm.Repo.insert!()
+    {:ok, %{key: key}} =
+      Hexpm.Accounts.Keys.create(
+        user_or_organization,
+        %{name: "any_key_name"},
+        audit: nil
+      )
 
     key.user_secret
   end
