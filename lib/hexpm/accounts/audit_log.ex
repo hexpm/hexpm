@@ -65,6 +65,10 @@ defmodule Hexpm.Accounts.AuditLog do
     build(user, user_agent, action, params)
   end
 
+  def audit(multi, nil, _action, _fun) do
+    multi
+  end
+
   def audit(multi, {user, user_agent}, action, fun) when is_function(fun, 1) do
     Multi.merge(multi, fn data ->
       Multi.insert(
@@ -79,7 +83,13 @@ defmodule Hexpm.Accounts.AuditLog do
     Multi.insert(multi, multi_key(multi, action), build(user, user_agent, action, params))
   end
 
-  def audit_many(multi, {user, user_agent}, action, list, opts \\ []) do
+  def audit_many(multi, who, action, list, opts \\ [])
+
+  def audit_many(multi, nil, _action, _list, _opts) do
+    multi
+  end
+
+  def audit_many(multi, {user, user_agent}, action, list, opts) do
     fields = AuditLog.__schema__(:fields) -- [:id]
     extra = %{inserted_at: DateTime.utc_now()}
 
@@ -91,6 +101,10 @@ defmodule Hexpm.Accounts.AuditLog do
       end)
 
     Multi.insert_all(multi, multi_key(multi, action), AuditLog, entries, opts)
+  end
+
+  def audit_with_user(multi, nil, _action, _fun) do
+    multi
   end
 
   def audit_with_user(multi, {_user, user_agent}, action, fun) do

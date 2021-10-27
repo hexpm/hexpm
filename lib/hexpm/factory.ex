@@ -28,7 +28,7 @@ defmodule Hexpm.Factory do
     {user_secret, first, second} = Hexpm.Accounts.Key.gen_key()
 
     %Hexpm.Accounts.Key{
-      name: Fake.random(:username),
+      name: "#{Fake.random(:username)}-#{:erlang.unique_integer()}",
       secret_first: first,
       secret_second: second,
       user_secret: user_secret,

@@ -22,6 +22,9 @@ defmodule Hexpm.Accounts.Keys do
     |> Multi.insert(:key, Key.build(user_or_organization, params))
     |> audit(audit_data, "key.generate", fn %{key: key} -> key end)
     |> Repo.transaction()
+    |> maybe_retry_for_unique_name(fn ->
+      create(user_or_organization, params, audit: audit_data)
+    end)
   end
 
   def create_for_docs(user, organization) do
@@ -61,5 +64,16 @@ defmodule Hexpm.Accounts.Keys do
 
   def update_last_use(%Key{public: false} = key, _usage_info) do
     key
+  end
+
+  defp maybe_retry_for_unique_name(
+         {:error, :key, %Ecto.Changeset{errors: [{:name, {"has already been taken", _}}]}, _},
+         fun
+       ) do
+    fun.()
+  end
+
+  defp maybe_retry_for_unique_name(other, _fun) do
+    other
   end
 end
