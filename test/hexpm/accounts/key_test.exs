@@ -13,8 +13,12 @@ defmodule Hexpm.Accounts.KeyTest do
   end
 
   test "create unique key name", %{user: user} do
+    Key.build(user, %{name: "computer-duplicate"}) |> Hexpm.Repo.insert!()
+    Key.build(user, %{name: "computer-2-duplicate"}) |> Hexpm.Repo.insert!()
+
     assert %Key{name: "computer"} = Key.build(user, %{name: "computer"}) |> Hexpm.Repo.insert!()
     assert %Key{name: "computer-2"} = Key.build(user, %{name: "computer"}) |> Hexpm.Repo.insert!()
+    assert %Key{name: "computer-3"} = Key.build(user, %{name: "computer"}) |> Hexpm.Repo.insert!()
   end
 
   test "all user keys", %{user: user1} do

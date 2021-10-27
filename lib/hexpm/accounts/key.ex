@@ -182,13 +182,13 @@ defmodule Hexpm.Accounts.Key do
   defp find_unique_name(name, names) do
     max =
       names
-      |> Enum.map(fn existing_name ->
+      |> Enum.flat_map(fn existing_name ->
         case Integer.parse(String.trim_leading(existing_name, name <> "-")) do
-          {num, ""} -> num
-          :error -> 1
+          {num, ""} -> [num]
+          _ -> []
         end
       end)
-      |> Enum.max()
+      |> Enum.max(&>=/2, fn -> 1 end)
 
     "#{name}-#{max + 1}"
   end
