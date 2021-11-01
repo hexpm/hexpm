@@ -12,7 +12,7 @@ defmodule Hexpm.Emails.Mailer do
 
       email
       |> Bamboo.Email.to(chunk)
-      |> deliver_now()
+      |> deliver_now!()
     end)
   end
 
