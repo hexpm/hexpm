@@ -36,12 +36,13 @@ defmodule Hexpm.MixProject do
 
   defp deps() do
     [
-      {:bamboo, "~> 1.0"},
+      {:bamboo, "~> 2.2"},
+      {:bamboo_phoenix, "~> 1.0"},
       {:bcrypt_elixir, "~> 2.0"},
       {:corsica, "~> 1.0"},
       {:earmark, "~> 1.4"},
       {:ecto_sql, "~> 3.0"},
-      {:ecto, "~> 3.0", override: true},
+      {:ecto, "~> 3.0"},
       {:ex_aws_s3, "~> 2.0"},
       {:ex_aws_ses, "~> 2.0"},
       {:ex_aws, "~> 2.0"},
@@ -55,11 +56,11 @@ defmodule Hexpm.MixProject do
       {:logster, "~> 1.0"},
       {:mox, "~> 1.0", only: :test},
       {:phoenix_ecto, "~> 4.0"},
-      {:phoenix_html, "~> 2.3"},
-      {:phoenix_live_dashboard, "~> 0.1"},
+      {:phoenix_html, "~> 3.1"},
+      {:phoenix_live_dashboard, "~> 0.6"},
       {:phoenix_live_reload, "~> 1.0", only: :dev},
       {:phoenix_pubsub, "~> 2.0"},
-      {:phoenix, "~> 1.5"},
+      {:phoenix, "~> 1.6"},
       {:plug_attack, "~> 0.3"},
       {:plug_cowboy, "~> 2.1"},
       {:plug, "~> 1.7"},
@@ -67,8 +68,8 @@ defmodule Hexpm.MixProject do
       {:pot, github: "yuce/pot"},
       {:rollbax, "~> 0.5"},
       {:sweet_xml, "~> 0.5"},
-      {:telemetry_poller, "~> 0.4"},
-      {:telemetry_metrics, "~> 0.4"}
+      {:telemetry_poller, "~> 1.0"},
+      {:telemetry_metrics, "~> 0.6"}
     ]
   end
 
