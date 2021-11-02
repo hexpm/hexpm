@@ -59,6 +59,8 @@ config :mime, :types, %{
   "application/vnd.hex+erlang" => ["erlang"]
 }
 
+config :esbuild, version: "0.13.10"
+
 config :rollbax, enabled: false
 
 config :logger, :console, format: "[$level] $metadata$message\n"

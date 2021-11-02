@@ -69,7 +69,8 @@ defmodule Hexpm.MixProject do
       {:rollbax, "~> 0.5"},
       {:sweet_xml, "~> 0.5"},
       {:telemetry_poller, "~> 1.0"},
-      {:telemetry_metrics, "~> 0.6"}
+      {:telemetry_metrics, "~> 0.6"},
+      {:esbuild, "~> 0.2", only: :dev}
     ]
   end
 
