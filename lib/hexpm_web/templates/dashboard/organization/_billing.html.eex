@@ -200,7 +200,14 @@
         <% end %>
       <% else %>
         <div class="panel-body">
-          Subscription is not active. Private packages will not be available until a payment method has been added.<br><br>
+          <%= if Organization.trialing?(@organization) do %>
+            Subscription is in trial mode until <%= ViewHelpers.pretty_date(@organization.trial_end) %>.
+            After the trial is over private packages will not be available.
+            To ensure you can still use private packages after the trial has ended add a payment method.<br><br>
+          <% else %>
+            Subscription is not active. Private packages will not be available until a payment method has been added.<br><br>
+          <% end %>
+
           Subscription cost is <strong>$7.00 per user / month</strong> + local VAT when applicable.<br><br>
           First enter your billing information below to enable the payment method form:<br><br>
 
