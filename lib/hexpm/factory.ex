@@ -52,7 +52,8 @@ defmodule Hexpm.Factory do
     %Hexpm.Accounts.Organization{
       name: name,
       user: build(:user, username: name),
-      billing_active: true
+      billing_active: true,
+      trial_end: ~U[2020-01-01T00:00:00Z]
     }
   end
 

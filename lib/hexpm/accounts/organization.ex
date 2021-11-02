@@ -3,10 +3,12 @@ defmodule Hexpm.Accounts.Organization do
 
   @derive HexpmWeb.Stale
   @derive {Phoenix.Param, key: :name}
+  @month_seconds 31 * 24 * 60 * 60
 
   schema "organizations" do
     field :name, :string
     field :billing_active, :boolean, default: false
+    field :trial_end, :utc_datetime_usec
     timestamps()
 
     has_one :repository, Repository
@@ -24,6 +26,7 @@ defmodule Hexpm.Accounts.Organization do
 
   def changeset(struct, params) do
     cast(struct, params, ~w(name)a)
+    |> put_change(:trial_end, default_trial_end())
     |> validate_required(~w(name)a)
     |> unique_constraint(:name, name: :organizations__lower_name_index)
     |> update_change(:name, &String.downcase/1)
@@ -94,5 +97,23 @@ defmodule Hexpm.Accounts.Organization do
 
   def verify_permissions(%Organization{}, _domain, _resource) do
     :error
+  end
+
+  def billing_active?(%Organization{billing_active: active} = organization) do
+    active or trialing?(organization)
+  end
+
+  def trialing?(%Organization{trial_end: trial_end}) do
+    DateTime.compare(trial_end, DateTime.utc_now()) == :gt
+  end
+
+  defp default_trial_end() do
+    DateTime.utc_now()
+    |> DateTime.add(@month_seconds)
+    |> to_start_of_day()
+  end
+
+  defp to_start_of_day(%DateTime{} = datetime) do
+    %DateTime{datetime | hour: 0, minute: 0, second: 0}
   end
 end
