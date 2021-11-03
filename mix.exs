@@ -87,7 +87,8 @@ defmodule Hexpm.MixProject do
       setup: ["deps.get", "ecto.setup", "cmd yarn install --cwd assets"],
       "ecto.setup": ["ecto.reset", "run priv/repo/seeds.exs"],
       "ecto.reset": ["ecto.drop", "ecto.create", "ecto.migrate"],
-      test: ["ecto.create --quiet", "ecto.migrate", "test"]
+      test: ["ecto.create --quiet", "ecto.migrate", "test"],
+      "assets.deploy": ["esbuild default --minify", "phx.digest"]
     ]
   end
 
