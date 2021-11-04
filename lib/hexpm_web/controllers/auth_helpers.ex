@@ -297,11 +297,13 @@ defmodule HexpmWeb.AuthHelpers do
     organization_billing_active(conn.assigns.organization, nil)
   end
 
-  def organization_billing_active(%Organization{billing_active: true}, _user_or_organization),
-    do: :ok
-
-  def organization_billing_active(%Organization{billing_active: false}, _user_or_organization),
-    do: {:error, :auth, "organization has no active billing subscription"}
+  def organization_billing_active(%Organization{} = organization, _user_or_organization) do
+    if Organization.billing_active?(organization) do
+      :ok
+    else
+      {:error, :auth, "organization has no active billing subscription"}
+    end
+  end
 
   def repository_access(%Plug.Conn{} = conn, user_or_organization) do
     repository_access(conn.assigns.repository, user_or_organization)
