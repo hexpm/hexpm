@@ -8,8 +8,6 @@ engines:
     enabled: true
   csslint:
     enabled: true
-  scss-lint:
-    enabled: true
   remark-lint:
     enabled: true
 exclude_paths:
@@ -17,5 +15,3 @@ exclude_paths:
   - priv/repo
   - test
   - assets/vendor
-  - assets/css/vendor
-  - assets/webpack.config.js

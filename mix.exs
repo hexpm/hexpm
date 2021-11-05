@@ -43,6 +43,7 @@ defmodule Hexpm.MixProject do
       {:earmark, "~> 1.4"},
       {:ecto_sql, "~> 3.0"},
       {:ecto, "~> 3.0"},
+      {:esbuild, "~> 0.2", runtime: Mix.env() == :dev},
       {:ex_aws_s3, "~> 2.0"},
       {:ex_aws_ses, "~> 2.0"},
       {:ex_aws, "~> 2.0"},
@@ -86,7 +87,8 @@ defmodule Hexpm.MixProject do
       setup: ["deps.get", "ecto.setup", "cmd yarn install --cwd assets"],
       "ecto.setup": ["ecto.reset", "run priv/repo/seeds.exs"],
       "ecto.reset": ["ecto.drop", "ecto.create", "ecto.migrate"],
-      test: ["ecto.create --quiet", "ecto.migrate", "test"]
+      test: ["ecto.create --quiet", "ecto.migrate", "test"],
+      "assets.deploy": ["esbuild default --minify", "phx.digest"]
     ]
   end
 

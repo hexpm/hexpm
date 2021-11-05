@@ -11,13 +11,14 @@
 //
 // If you no longer want to use a dependency, remember
 // to also remove its path from "config.paths.watched".
+import "../css/app.css"
 import "phoenix_html"
 // Import local files
 //
 // Local files can be imported directly using relative
 // paths "./socket" or full ones "web/static/js/socket".
 import { Socket } from "phoenix"
-import LiveSocket from "phoenix_live_view"
+import {LiveSocket} from "phoenix_live_view"
 
 let csrfToken = document.querySelector("meta[name='csrf-token']").getAttribute("content");
 let liveSocket = new LiveSocket("/live", Socket, { params: { _csrf_token: csrfToken } });
@@ -28,7 +29,6 @@ liveSocket.connect()
 // import socket from "./socket"
 
 import $ from "jquery"
-import "bootstrap"
 import hljs from 'highlight.js/lib/core';
 import elixir from 'highlight.js/lib/languages/elixir';
 

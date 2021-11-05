@@ -18,7 +18,7 @@ defmodule HexpmWeb.Endpoint do
     at: "/",
     from: :hexpm,
     gzip: true,
-    only: ~w(css images js),
+    only: ~w(assets images),
     only_matching: ~w(favicon robots)
 
   socket("/live", Phoenix.LiveView.Socket, websocket: [connect_info: [session: @session_options]])
