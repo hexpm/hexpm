@@ -84,7 +84,7 @@ defmodule Hexpm.MixProject do
 
   defp aliases() do
     [
-      setup: ["deps.get", "ecto.setup", "cmd yarn install --cwd assets"],
+      setup: ["deps.get", "ecto.setup", "cmd npm install -C assets"],
       "ecto.setup": ["ecto.reset", "run priv/repo/seeds.exs"],
       "ecto.reset": ["ecto.drop", "ecto.create", "ecto.migrate"],
       test: ["ecto.create --quiet", "ecto.migrate", "test"],

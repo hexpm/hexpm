@@ -1,7 +1,7 @@
 FROM hexpm/elixir:1.11.0-erlang-23.1.1-alpine-3.12.0 as build
 
 # install build dependencies
-RUN apk add --no-cache --update git build-base nodejs yarn
+RUN apk add --no-cache --update git build-base nodejs npm
 
 # prepare build dir
 RUN mkdir /app
@@ -22,7 +22,7 @@ RUN mix deps.compile
 
 # build assets
 COPY assets assets
-RUN cd assets && yarn install
+RUN cd assets && npm install
 RUN mix assets.deploy
 
 # build project

@@ -55,10 +55,8 @@ mix run priv/repo/seeds.exs
 For assets compilation we need to install Node dependencies:
 
 ```shell
-cd assets && yarn install
+cd assets && npm install
 ```
-
-If you don't have yarn installed, `cd assets && npm install` will work too.
 
 ### Running Hexpm
 
