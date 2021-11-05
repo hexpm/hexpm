@@ -43,6 +43,7 @@ defmodule Hexpm.MixProject do
       {:earmark, "~> 1.4"},
       {:ecto_sql, "~> 3.0"},
       {:ecto, "~> 3.0"},
+      {:esbuild, "~> 0.2", runtime: Mix.env() == :dev},
       {:ex_aws_s3, "~> 2.0"},
       {:ex_aws_ses, "~> 2.0"},
       {:ex_aws, "~> 2.0"},
@@ -69,8 +70,7 @@ defmodule Hexpm.MixProject do
       {:rollbax, "~> 0.5"},
       {:sweet_xml, "~> 0.5"},
       {:telemetry_poller, "~> 1.0"},
-      {:telemetry_metrics, "~> 0.6"},
-      {:esbuild, "~> 0.2", only: :dev}
+      {:telemetry_metrics, "~> 0.6"}
     ]
   end
 
