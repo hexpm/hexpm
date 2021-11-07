@@ -99,7 +99,7 @@ defmodule HexpmWeb.ViewIcons do
 
     opts =
       opts
-      |> Keyword.put_new(:"aria-hidden", true)
+      |> Keyword.put_new(:"aria-hidden", "true")
       |> Keyword.put_new(:version, "1.1")
       |> Keyword.put_new(:viewBox, "0 0 #{x} 1024")
       |> Keyword.update(:class, class, &"#{class} #{&1}")
@@ -120,7 +120,7 @@ defmodule HexpmWeb.ViewIcons do
 
     opts =
       opts
-      |> Keyword.put_new(:"aria-hidden", true)
+      |> Keyword.put_new(:"aria-hidden", "true")
       |> Keyword.put_new(:version, "1.1")
       |> Keyword.put_new(:viewBox, "0 0 #{x} 1200")
       |> Keyword.update(:class, class, &"#{class} #{&1}")

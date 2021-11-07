@@ -15,6 +15,7 @@
               <span class="input-group-btn">
                 <button type="submit" class="btn btn-search" tabindex="1">
                   <%= icon(:glyphicon, :search) %>
+                  <span class="sr-only">Search</span>
                 </button>
               </span>
             </div>
