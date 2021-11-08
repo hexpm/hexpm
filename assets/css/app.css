@@ -1,5 +1,3 @@
-/* This file is for your main application css. */
-/* csslint ignore:start */
-@import "./phoenix.css";
-/* csslint ignore:end */
-
+@import "tailwindcss/base";
+@import "tailwindcss/components";
+@import "tailwindcss/utilities";																																																																																																																		
