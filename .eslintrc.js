@@ -11,7 +11,8 @@ module.exports = {
   },
   "globals": {
     "hljs": false,
-    "exports": true
+    "exports": true,
+    "module": true
   },
   "rules": {
     "camelcase": 2,
