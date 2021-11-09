@@ -1,11 +1,5 @@
 /* csslint ignore:start */
 @import "tailwindcss/base";
-/* csslint ignore:end */
-
-/* csslint ignore:start */
 @import "tailwindcss/components";
+@import "tailwindcss/utilities";
 /* csslint ignore:end */
-
-/* csslint ignore:start */
-@import "tailwindcss/utilities";	
-/* csslint ignore:end */																																																																																																																	
