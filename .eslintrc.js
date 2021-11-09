@@ -12,7 +12,7 @@ module.exports = {
   "globals": {
     "hljs": false,
     "exports": true,
-    "module": true
+    "module": false
   },
   "rules": {
     "camelcase": 2,
