@@ -59,13 +59,13 @@
         <div class="flex-shrink-0 flex items-center ml-52">
          <img src="<%= Routes.static_path(Endpoint, "/images/hex.png") %>" srcset="<%= Routes.static_path(Endpoint, "/images/hex.png") %> 1x, <%= Routes.static_path(Endpoint, "/images/hex@2.png") %> 2x, <%= Routes.static_path(Endpoint, "/images/hex@3.png") %> 3x" alt="hex logo">
         </div>
-      <div class="absolute inset-y-0 right-0 flex items-center pr-2 sm:static sm:inset-auto sm:ml-6 sm:pr-0">
+      <div class="absolute right-60 flex items-center w-60 h-8">
        
-            <a href="<%= Routes.package_path(Endpoint, :index) %>" class="bg-gray-900 text-white px-3 py-2 rounded-md text-sm font-medium" aria-current="page">Packages</a>
+            <a href="<%= Routes.package_path(Endpoint, :index) %>" class="font-sans non-italic static left-0 top-0 w-28 text-gray-300 text-sm font-medium flex-none order-0 flex-grow-0 my-0 mx-14">Packages</a>
 
-            <a href="<%= Routes.page_path(Endpoint, :pricing) %>" class="text-gray-300 hover:bg-gray-700 hover:text-white px-3 py-2 rounded-md text-sm font-medium">Pricing</a>
+            <a href="<%= Routes.page_path(Endpoint, :pricing) %>" class="font-sans non-italic static left-0 top-0 w-24 text-gray-300 text-sm font-medium flex-none order-1 flex-grow-0 my-0 mx-14">Pricing</a>
 
-            <a href="<%= Routes.docs_path(Endpoint, :index) %>" class="text-gray-300 hover:bg-gray-700 hover:text-white px-3 py-2 rounded-md text-sm font-medium">Docs</a>
+            <a href="<%= Routes.docs_path(Endpoint, :index) %>" class="font-sans non-italic static left-0 top-0 text-gray-300 text-sm font-medium flex-none order-1 flex-grow-0 my-0 mx-14">Docs</a>
         </div>
       </div>
     </div>
