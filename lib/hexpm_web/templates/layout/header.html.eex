@@ -61,11 +61,35 @@
         </div>
       <div class="absolute right-60 flex items-center w-60 h-8">
        
-            <a href="<%= Routes.package_path(Endpoint, :index) %>" class="font-sans non-italic static left-0 top-0 w-28 text-gray-300 text-sm font-medium flex-none order-0 flex-grow-0 my-0 mx-14">Packages</a>
+            <a href="<%= Routes.package_path(Endpoint, :index) %>" class="nav-link w-28">Packages</a>
 
-            <a href="<%= Routes.page_path(Endpoint, :pricing) %>" class="font-sans non-italic static left-0 top-0 w-24 text-gray-300 text-sm font-medium flex-none order-1 flex-grow-0 my-0 mx-14">Pricing</a>
+            <a href="<%= Routes.page_path(Endpoint, :pricing) %>" class="nav-link w-24">Pricing</a>
 
-            <a href="<%= Routes.docs_path(Endpoint, :index) %>" class="font-sans non-italic static left-0 top-0 text-gray-300 text-sm font-medium flex-none order-1 flex-grow-0 my-0 mx-14">Docs</a>
+            <a href="<%= Routes.docs_path(Endpoint, :index) %>" class="nav-link w-20">Docs</a>
+        </div>
+        <div class="absolute inset-y-0 right-28 flex items-center">
+           <%= if ViewHelpers.logged_in?(assigns) do %>
+              <li class="dropdown">
+                <a href="#" class="dropdown-toggle" data-toggle="dropdown">
+                  <%= @current_user.username %>
+                  <img src="<%= ViewHelpers.gravatar_url(User.email(@current_user, :gravatar), :small) %>" class="navbar-avatar">
+                  <b class="caret"></b>
+                </a>
+                <ul class="dropdown-menu">
+                  <li><a href="<%= Routes.user_path(Endpoint, :show, @current_user) %>">Profile</a></li>
+                  <li><a href="<%= Routes.profile_path(Endpoint, :index) %>">Dashboard</a></li>
+                  <li role="separator" class="divider"></li>
+                  <li>
+                    <%= form_tag(Routes.login_path(Endpoint, :delete)) do %>
+                      <button type="submit" class="btn btn-link">Log out</button>
+                    <% end %>
+                  </li>
+                </ul>
+              </li>
+            <% else %>
+              <a href="<%= Routes.login_path(Endpoint, :show) %>" class="nav-link bg-gray-600 rounded-md items-center justify-center py-2.5 px-6">Log in</a>
+            <% end %>
+
         </div>
       </div>
     </div>

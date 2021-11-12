@@ -2,4 +2,5 @@
 @import "tailwindcss/base";
 @import "tailwindcss/components";
 @import "tailwindcss/utilities";
+@import "./components/navbar.css";
 /* csslint ignore:end */
