@@ -65,7 +65,7 @@ defmodule Hexpm.MixProject do
       {:plug_cowboy, "~> 2.1"},
       {:plug, "~> 1.7"},
       {:postgrex, "~> 0.14"},
-      {:pot, github: "yuce/pot"},
+      {:pot, "~> 1.0"},
       {:rollbax, "~> 0.5"},
       {:sweet_xml, "~> 0.5"},
       {:telemetry_poller, "~> 1.0"},
