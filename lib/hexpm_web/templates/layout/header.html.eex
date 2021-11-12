@@ -59,103 +59,56 @@
         <div class="flex-shrink-0 flex items-center ml-52">
          <img src="<%= Routes.static_path(Endpoint, "/images/hex.png") %>" srcset="<%= Routes.static_path(Endpoint, "/images/hex.png") %> 1x, <%= Routes.static_path(Endpoint, "/images/hex@2.png") %> 2x, <%= Routes.static_path(Endpoint, "/images/hex@3.png") %> 3x" alt="hex logo">
         </div>
-      <div class="absolute right-60 flex items-center w-60 h-8">
-       
-            <a href="<%= Routes.package_path(Endpoint, :index) %>" class="nav-link w-28">Packages</a>
-
-            <a href="<%= Routes.page_path(Endpoint, :pricing) %>" class="nav-link w-24">Pricing</a>
-
-            <a href="<%= Routes.docs_path(Endpoint, :index) %>" class="nav-link w-20">Docs</a>
-        </div>
-        <div class="absolute inset-y-0 right-28 flex items-center">
-           <%= if ViewHelpers.logged_in?(assigns) do %>
-              <li class="dropdown">
-                <a href="#" class="dropdown-toggle" data-toggle="dropdown">
-                  <%= @current_user.username %>
-                  <img src="<%= ViewHelpers.gravatar_url(User.email(@current_user, :gravatar), :small) %>" class="navbar-avatar">
-                  <b class="caret"></b>
-                </a>
-                <ul class="dropdown-menu">
-                  <li><a href="<%= Routes.user_path(Endpoint, :show, @current_user) %>">Profile</a></li>
-                  <li><a href="<%= Routes.profile_path(Endpoint, :index) %>">Dashboard</a></li>
-                  <li role="separator" class="divider"></li>
-                  <li>
-                    <%= form_tag(Routes.login_path(Endpoint, :delete)) do %>
-                      <button type="submit" class="btn btn-link">Log out</button>
-                    <% end %>
-                  </li>
-                </ul>
-              </li>
-            <% else %>
-              <a href="<%= Routes.login_path(Endpoint, :show) %>" class="nav-link bg-gray-600 rounded-md items-center justify-center py-2.5 px-6">Log in</a>
+          <div class="absolute left-96  flex items-center justify-center">
+            <%= if show_search?(assigns) do %>
+            <form role="search" action="<%= Routes.package_path(Endpoint, :index) %>" >
+              <div class="relative text-gray-600 focus-within:text-gray-400">
+                <span class="absolute inset-y-0 left-0 flex items-center pl-2">
+                  <button type="submit" class="p-1 focus:outline-none focus:shadow-outline" tabindex="1">
+                    <svg fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24" class="w-6 h-6"><path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                  </button>
+                </span>
+                <input type="search" name="search" class="py-2 text-sm text-white bg-gray-800 rounded-md pl-10 focus:outline-none focus:bg-white focus:text-gray-900" placeholder="Find packages..." value="<%= search(assigns) %>">
+                 <input type="hidden" name="sort" value="recent_downloads">
+              </div>
+            </form>
             <% end %>
+          </div>
+             <div class="absolute right-60 flex items-center w-60 h-8">
+       
+                <a href="<%= Routes.package_path(Endpoint, :index) %>" class="nav-link w-28">Packages</a>
 
+                <a href="<%= Routes.page_path(Endpoint, :pricing) %>" class="nav-link w-24">Pricing</a>
+
+                <a href="<%= Routes.docs_path(Endpoint, :index) %>" class="nav-link w-20">Docs</a>
+              </div>
+                <div class="absolute inset-y-0 right-28 flex items-center">
+                   <%= if ViewHelpers.logged_in?(assigns) do %>
+                      <li class="dropdown">
+                        <a href="#" class="dropdown-toggle" data-toggle="dropdown">
+                          <%= @current_user.username %>
+                          <img src="<%= ViewHelpers.gravatar_url(User.email(@current_user, :gravatar), :small) %>" class="navbar-avatar">
+                          <b class="caret"></b>
+                        </a>
+                        <ul class="dropdown-menu">
+                          <li><a href="<%= Routes.user_path(Endpoint, :show, @current_user) %>">Profile</a></li>
+                          <li><a href="<%= Routes.profile_path(Endpoint, :index) %>">Dashboard</a></li>
+                          <li role="separator" class="divider"></li>
+                          <li>
+                            <%= form_tag(Routes.login_path(Endpoint, :delete)) do %>
+                              <button type="submit" class="btn btn-link">Log out</button>
+                            <% end %>
+                          </li>
+                        </ul>
+                      </li>
+                    <% else %>
+                      <a href="<%= Routes.login_path(Endpoint, :show) %>" class="nav-link bg-gray-600 rounded-md items-center justify-center py-2.5 px-6">Log in</a>
+                    <% end %>
+                </div>
         </div>
-      </div>
     </div>
   </div>
 </nav>
-
-    <nav class="navbar navbar-default">
-      <div class="container">
-        <div class="navbar-header">
-          <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar" aria-expanded="false" aria-controls="navbar">
-            <span class="sr-only">Toggle navigation</span>
-            <span class="icon-bar"></span>
-            <span class="icon-bar"></span>
-            <span class="icon-bar"></span>
-          </button>
-          <a class="navbar-brand" href="/">
-            <img src="<%= Routes.static_path(Endpoint, "/images/hex.png") %>" srcset="<%= Routes.static_path(Endpoint, "/images/hex.png") %> 1x, <%= Routes.static_path(Endpoint, "/images/hex@2.png") %> 2x, <%= Routes.static_path(Endpoint, "/images/hex@3.png") %> 3x" alt="hex logo">
-          </a>
-        </div>
-        <div id="navbar" class="navbar-collapse collapse">
-          <%= if show_search?(assigns) do %>
-          <form class="navbar-form pull-left-non-mobile" role="search" action="<%= Routes.package_path(Endpoint, :index) %>">
-             <div class="input-group">
-                <input placeholder="Find packages" name="search" type="text" class="form-control" value="<%= search(assigns) %>">
-                <input type="hidden" name="sort" value="recent_downloads">
-
-                <div class="input-group-btn">
-                  <button type="submit" class="btn btn-search" tabindex="1">
-                    <%= icon(:glyphicon, :search) %>
-                  </button>
-                </div>
-             </div>
-          </form>
-          <% end %>
-          <ul class="nav navbar-nav navbar-right">
-            <li><a href="<%= Routes.package_path(Endpoint, :index) %>">Packages</a></li>
-            <li><a href="<%= Routes.page_path(Endpoint, :pricing) %>">Pricing</a></li>
-            <li><a href="<%= Routes.docs_path(Endpoint, :index) %>">Docs</a></li>
-
-            <%= if ViewHelpers.logged_in?(assigns) do %>
-              <li class="dropdown">
-                <a href="#" class="dropdown-toggle" data-toggle="dropdown">
-                  <%= @current_user.username %>
-                  <img src="<%= ViewHelpers.gravatar_url(User.email(@current_user, :gravatar), :small) %>" class="navbar-avatar">
-                  <b class="caret"></b>
-                </a>
-                <ul class="dropdown-menu">
-                  <li><a href="<%= Routes.user_path(Endpoint, :show, @current_user) %>">Profile</a></li>
-                  <li><a href="<%= Routes.profile_path(Endpoint, :index) %>">Dashboard</a></li>
-                  <li role="separator" class="divider"></li>
-                  <li>
-                    <%= form_tag(Routes.login_path(Endpoint, :delete)) do %>
-                      <button type="submit" class="btn btn-link">Log out</button>
-                    <% end %>
-                  </li>
-                </ul>
-              </li>
-            <% else %>
-              <li><a href="<%= Routes.login_path(Endpoint, :show) %>">Log in</a></li>
-            <% end %>
-
-          </ul>
-        </div><!--/.nav-collapse -->
-      </div>
-    </nav>
-
     <%= unless assigns[:error] || assigns[:custom_flash] do %>
       <%= render "_flash.html", conn: @conn %>
     <% end %>
