@@ -37,7 +37,7 @@ defmodule HexpmWeb.WebAuthController do
         |> put_status(:ok)
         |> redirect(to: Routes.web_auth_path(conn, :success))
 
-      {:error, msg} ->
+      {:error, _msg} ->
         conn
         |> put_status(400)
 
