@@ -2,22 +2,19 @@ defmodule HexpmWeb.WebAuthController do
   use HexpmWeb, :controller
   @moduledoc false
 
+  alias Hexpm.Accounts.WebAuth
+
   # Controller for Web Auth, a means of authenticating the cli from the website
 
   plug :requires_login when action == :show
 
   # step one of device flow
-  def code(conn, params) do
-    case Hexpm.WebAuth.get_code(params) do
-      {:error, "invalid scope"} ->
+  def code(conn, %{"scope" => scope}) do
+    case WebAuth.get_code(scope) do
+      {:error, _changeset} ->
         conn
         |> put_status(:unprocessable_entity)
         |> json(%{"error" => "invalid scope"})
-
-      {:error, "invalid parameters"} ->
-        conn
-        |> put_status(:bad_request)
-        |> json(%{"error" => "invalid parameters"})
 
       response ->
         conn
@@ -30,11 +27,15 @@ defmodule HexpmWeb.WebAuthController do
     render(conn, "show.html")
   end
 
-  def submit(conn, params) do
-    params = Map.merge(params, %{audit: conn})
-    _ = IO.inspect(params["user_id"], label: "UID: ")
-    _ = IO.inspect(conn.assigns.organization, label: "Conn OID: ")
-    _ = IO.inspect(conn.assigns.current_user, label: "Conn UID")
+  def submit(conn, %{"user_code" => user_code}) do
+    audit = audit_data(conn)
+    user = conn.assigns.current_user
+
+    case WebAuth.submit(user, user_code, audit) do
+      {:ok, _changeset} ->
+        conn
+        |> put_status(:ok)
+        |> redirect(to: Routes.web_auth_path(conn, :success))
 
     case Hexpm.WebAuth.submit_code(params) do
       {:error, "not found"} ->
