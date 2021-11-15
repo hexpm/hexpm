@@ -10,7 +10,6 @@ defmodule Hexpm.Accounts.WebAuth do
 
   alias HexpmWeb.Router.Helpers, as: Routes
   alias Hexpm.Accounts.Keys
-  alias Hexpm.Accounts.Key
   import Phoenix.ConnTest, only: [build_conn: 0]
 
   # `device_code` refers to the code assigned to a client to identify it
