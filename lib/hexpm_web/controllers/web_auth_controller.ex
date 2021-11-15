@@ -37,9 +37,9 @@ defmodule HexpmWeb.WebAuthController do
         |> put_status(:ok)
         |> redirect(to: Routes.web_auth_path(conn, :success))
 
-    case Hexpm.WebAuth.submit_code(params) do
-      {:error, "not found"} ->
-        "foo"
+      {:error, msg} ->
+        conn
+        |> put_status(400)
 
       :ok ->
         redirect(conn, to: Routes.web_auth_path(conn, :sucess))
