@@ -70,7 +70,7 @@ defmodule Hexpm.Accounts.WebAuth do
       verified: false
     }
 
-    case WebAuth.changeset(%WebAuth{}, request) |> Repo.insert() do
+    case changeset(%WebAuth{}, request) |> Repo.insert() do
       {:ok, _req} ->
         %{
           device_code: device_code,
