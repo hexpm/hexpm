@@ -1,6 +1,7 @@
 import Config
 
 config :hexpm,
+  billing_report: false,
   tmp_dir: Path.expand("tmp/dev"),
   private_key: File.read!("test/fixtures/private.pem"),
   docs_url: "http://localhost:4002",

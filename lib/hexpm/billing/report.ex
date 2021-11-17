@@ -14,7 +14,7 @@ defmodule Hexpm.Billing.Report do
   end
 
   def handle_info(:update, opts) do
-    if Repo.write_mode?() do
+    if Application.fetch_env!(:hexpm, :billing_report) and Repo.write_mode?() do
       report = report()
       organizations = organizations()
 

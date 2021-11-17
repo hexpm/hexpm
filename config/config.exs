@@ -3,6 +3,7 @@ import Config
 config :hexpm,
   user_confirm: true,
   user_agent_req: true,
+  billing_report: true,
   secret: "796f75666f756e64746865686578",
   support_email: "support@hex.pm",
   repo_bucket: {Hexpm.Store.Local, "repo_bucket"},
