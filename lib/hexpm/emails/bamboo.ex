@@ -31,7 +31,7 @@ defmodule Hexpm.Emails.Bamboo.SESAdapter do
   end
 
   defp send_email(request, email, times) do
-    opts = [region: "us-west-2"]
+    opts = [region: Application.fetch_env!(:hexpm, :ses_region)]
 
     request
     |> ExAws.request(opts)

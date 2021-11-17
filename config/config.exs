@@ -12,7 +12,8 @@ config :hexpm,
   billing_impl: Hexpm.Billing.Local,
   pwned_impl: Hexpm.Pwned.Local,
   dashboard_user: "hex_user",
-  dashboard_password: "hex_password"
+  dashboard_password: "hex_password",
+  ses_region: "us-east-1"
 
 config :hexpm, :features, package_reports: true
 
