@@ -1,45 +1,45 @@
-  <div class="absolute w-1/3 h-2/3 left-1/3 top-32 border border-solid border-blue-100 rounded-lg box-border">
+  <div class="absolute w-full max-w-md left-1/3 top-32 border border-solid border-blue-100 rounded-lg box-border">
     <%= form_tag(Routes.login_path(Endpoint, :create)) do %>
-      <div class="absolute w-28 h-10 inset-x-40 top-4">
+      <div class="mt-4 w-28 h-10 flex flex-wrap content-center ml-40">
         <h2 class="font-bold text-4xl text-center">Log in</h2>
       </div>
-      <div class="absolute w-96 h-6 left-6 top-16">
+      <div class="mt-6 w-96 h-6 flex flex-wrap content-center ml-12">
           <p class="font-normal text-base text-center text-gray-600 static">Use your credentials to log in to your account</p>
       </div>
-      <div class="absolute w-36 h-3.5 left-6 top-32">
+      <div class="mt-8 w-36 h-3.5 ml-8 ">
         <label class="font-medium text-sm text-gray-800" for="username">
         Username or Email
         </label>
         <input id = "username" type="text" name="username" class="rounded box-border border border-solid border-gray-200 w-96 h-10">
       </div>
-      <div class="absolute w-16 h-3.5 left-6 top-56">
-         <label class="font-medium text-sm text-gray-800" for="password">
+      <div class="mt-20 h-3.5">
+         <label class="font-medium text-sm text-gray-800 ml-8 w-16" for="password">
         Password
          </label>
+        <a href="<%= Routes.password_reset_path(Endpoint, :show) %>" class="ml-48 w-32 font-medium text-sm text-right text-blue-500">Forgot Password?</a>
+      
           <div class="relative">
             <span class="absolute inset-y-4 inset-x-80 flex items-center pr-2">
               <button>
                 <%= icon(:remixicon, :"eye-close-line", width: "20px", fill: "rgba(97,117,138,1)")%>
               </button>
             </span>
-              <input id="password" type="password" class="rounded box-border border border-solid border-gray-200 w-96 h-10" name="password">
+              <input id="password" type="password" class="ml-8 rounded box-border border border-solid border-gray-200 w-96 h-10" name="password">
           </div>
-      </div>
-      <div class="absolute w-32 h-3.5 top-56 right-2">
-        <a href="<%= Routes.password_reset_path(Endpoint, :show) %>" class="font-medium text-sm text-right text-blue-500">Forgot Password?</a>
-      </div>
+      </div> 
       <input type="hidden" name="return" value="<%= @return %>">
       <%= if @hexdocs not in [nil, ""] do %>
         <input type="hidden" name="hexdocs" value="<%= @hexdocs %>">
       <% end %>
-      <div class="absolute left-6 top-80">
+      <div class="mt-24 ml-8">
         <button type="submit" class="bg-purple-900 text-white font-bold w-96 h-10 rounded">Log in</button>
       </div>
-      <div class="absolute left-12 h-3.5 bottom-5">
-        <p class="font-medium text-sm text-center text-blue-500">
+      <br><br>
+      <div class="mt-26 mb-4 ml-20 h-3.5 flex flex-wrap content-center">
+        <p class="font-medium text-xs text-ceter text-blue-500">
           <a href="<%= Routes.signup_path(Endpoint, :show) %>">Don't have an account?</a> |
           <a href="<%= Routes.email_verification_path(Endpoint, :show) %>">Resend verification email</a>
         </p>
-      </div>
+      </div> 
     <% end %>
   </div>
