@@ -3,7 +3,7 @@
       <div class="mt-4 w-28 h-10 flex flex-wrap content-center ml-40">
         <h2 class="font-bold text-4xl text-center">Log in</h2>
       </div>
-      <div class="mt-6 w-96 h-6 flex flex-wrap content-center ml-12">
+      <div class="mt-4 w-96 h-6 flex flex-wrap content-center ml-14">
           <p class="font-normal text-base text-center text-gray-600 static">Use your credentials to log in to your account</p>
       </div>
       <div class="mt-8 w-36 h-3.5 ml-8 ">
@@ -16,7 +16,7 @@
          <label class="font-medium text-sm text-gray-800 ml-8 w-16" for="password">
         Password
          </label>
-        <a href="<%= Routes.password_reset_path(Endpoint, :show) %>" class="ml-48 w-32 font-medium text-sm text-right text-blue-500">Forgot Password?</a>
+        <a href="<%= Routes.password_reset_path(Endpoint, :show) %>" class="ml-52 w-32 font-medium text-sm text-right text-blue-500">Forgot Password?</a>
       
           <div class="relative">
             <span class="absolute inset-y-4 inset-x-80 flex items-center pr-2">
@@ -32,7 +32,7 @@
         <input type="hidden" name="hexdocs" value="<%= @hexdocs %>">
       <% end %>
       <div class="mt-24 ml-8">
-        <button type="submit" class="bg-purple-900 text-white font-bold w-96 h-10 rounded">Log in</button>
+        <button type="submit" class="bg-purple-900 text-white font-semibold text-base w-96 h-10 rounded">Log in</button>
       </div>
       <br><br>
       <div class="mt-26 mb-4 ml-20 h-3.5 flex flex-wrap content-center">
