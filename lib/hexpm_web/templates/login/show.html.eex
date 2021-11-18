@@ -19,7 +19,7 @@
         <a href="<%= Routes.password_reset_path(Endpoint, :show) %>" class="ml-52 w-32 font-medium text-sm text-right text-blue-500">Forgot Password?</a>
       
           <div class="relative">
-            <span class="absolute inset-y-4 inset-x-80 flex items-center pr-2">
+            <span class="absolute inset-y-4 inset-x-96 flex items-center pr-2">
               <button>
                 <%= icon(:remixicon, :"eye-close-line", width: "20px", fill: "rgba(97,117,138,1)")%>
               </button>
