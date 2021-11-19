@@ -6,7 +6,7 @@
 
 @layer components {
   .nav-link {
-    @apply font-sans static left-0 top-0 text-gray-300 text-sm font-medium;
+    @apply font-sans static left-0 top-0 text-sm font-medium;
   }
 }
 
