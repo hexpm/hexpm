@@ -12,9 +12,6 @@ defmodule Hexpm.Accounts.WebAuthTest do
 
         assert response.device_code
         assert response.user_code
-        assert response.verification_uri
-        assert response.access_key_uri
-        assert response.verification_expires_in
       end
     end
 

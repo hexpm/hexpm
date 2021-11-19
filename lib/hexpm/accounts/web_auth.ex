@@ -8,24 +8,13 @@ defmodule Hexpm.Accounts.WebAuth do
   alias Hexpm.Accounts.WebAuth
   alias Hexpm.Repo
 
-  alias HexpmWeb.Router.Helpers, as: Routes
   alias Hexpm.Accounts.Keys
-  import Phoenix.ConnTest, only: [build_conn: 0]
 
   # `device_code` refers to the code assigned to a client to identify it
   # `user_code` refers to the code the user enters to authorize a client
-  # `verification_uri` refers to the url opened in the browser
-  # `access_key_uri` refers to the url the client polls
-  # `verification_expires_in` refers to the time a web auth request is stored in seconds
-  # `key_access_expires_in` refers to the time a key in stored in seconds
-  # `access_key` refers to a key that the user/organization can use
   # `scope` refers to the permissions granted to a key
   # `scopes` refers to the list of scopes that are allowed in a web auth request
 
-  @verification_uri "https://hex.pm" <> Routes.web_auth_path(build_conn(), :show)
-  @access_key_uri "https://hex.pm" <> Routes.web_auth_path(build_conn(), :access_key)
-  @verification_expires_in 900
-  @key_access_expires_in 900
   @scopes ["read", "write"]
 
   # `key_permission` is the default permissions given to generate a hex api key
@@ -74,11 +63,7 @@ defmodule Hexpm.Accounts.WebAuth do
       {:ok, _req} ->
         %{
           device_code: device_code,
-          user_code: user_code,
-          verification_uri: @verification_uri,
-          access_key_uri: @access_key_uri,
-          verification_expires_in: @verification_expires_in,
-          key_access_expires_in: @key_access_expires_in
+          user_code: user_code
         }
 
       error ->
