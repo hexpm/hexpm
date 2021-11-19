@@ -1,13 +1,11 @@
 defmodule Hexpm.Accounts.WebAuth do
-  use Hexpm.Schema
+  use Hexpm.Context
 
   @moduledoc false
 
   # A pool for storing and validating web auth requests.
 
-  alias Hexpm.Accounts.WebAuth
-  alias Hexpm.Repo
-
+  alias Hexpm.Accounts.WebAuthRequest, as: Req
   alias Hexpm.Accounts.Keys
 
   # `device_code` refers to the code assigned to a client to identify it
@@ -22,23 +20,6 @@ defmodule Hexpm.Accounts.WebAuth do
 
   @key_permission %{domain: "api", resource: nil}
   @key_params %{name: nil, permissions: [@key_permission]}
-
-  schema "requests" do
-    field :device_code, :string
-    field :user_code, :string
-    field :scope, :string
-    field :verified, :boolean
-    field :user_id, :integer
-    field :audit, :string
-  end
-
-  def changeset(request, params \\ %{}) do
-    request
-    |> cast(params, [:device_code, :user_code, :scope, :verified, :user_id, :audit])
-    |> validate_inclusion(:scope, @scopes)
-    |> validate_required([:device_code, :user_code, :scope, :verified])
-    |> unique_constraint([:device_code, :user_code])
-  end
 
   @doc """
   Adds a web auth request to the pool and returns the response.
@@ -59,7 +40,7 @@ defmodule Hexpm.Accounts.WebAuth do
       verified: false
     }
 
-    case changeset(%WebAuth{}, request) |> Repo.insert() do
+    case Req.changeset(%Req{}, request) |> Repo.insert() do
       {:ok, _req} ->
         %{
           device_code: device_code,
@@ -81,14 +62,14 @@ defmodule Hexpm.Accounts.WebAuth do
     - `audit` - Audit data for generating the key.
   """
   def submit(user, user_code, audit) do
-    request = WebAuth |> Repo.get_by(user_code: user_code)
+    request = Req |> Repo.get_by(user_code: user_code)
 
     if request do
       {_user, audit_con} = audit
 
       change = %{verified: true, user_id: user.id, audit: audit_con}
 
-      changeset(request, change) |> Repo.update()
+      Req.changeset(request, change) |> Repo.update()
     else
       {:error, "invalid user code"}
     end
@@ -102,7 +83,7 @@ defmodule Hexpm.Accounts.WebAuth do
   - `device_code` - The device code assigned to the client
   """
   def access_key(device_code) do
-    request = WebAuth |> Repo.get_by(device_code: device_code)
+    request = Req |> Repo.get_by(device_code: device_code)
 
     case request do
       r when r.verified == true ->
