@@ -12,9 +12,6 @@ defmodule Hexpm.Accounts.WebAuth do
   # `user_code` refers to the code the user enters to authorize a client
   # `scope` refers to the permissions granted to a key
   # `scopes` refers to the list of scopes that are allowed in a web auth request
-
-  @scopes ["read", "write"]
-
   # `key_permission` is the default permissions given to generate a hex api key
   # `key_params` is the default params to generate a hex api key
 
