@@ -20,7 +20,7 @@
     <script async defer data-domain="<%= host %>" src="https://stats.<%= host %>/js/plausible.js"></script>
     <% end %>
   </head>
-  <body>
+  <body class="bg-current">
     <!--[if lt IE 10]>
       <p class="browserupgrade">You are using an <strong>outdated</strong> browser. Please <a href="http://browsehappy.com/">upgrade your browser</a> to improve your experience.</p>
     <![endif]-->
@@ -74,7 +74,7 @@
             </form>
             <% end %>
           </div>
-             <div class="absolute right-60 flex items-center w-60 h-8">
+             <div class="absolute right-60 flex items-center w-60 h-8 text-gray-200">
        
                 <a href="<%= Routes.package_path(Endpoint, :index) %>" class="nav-link w-28">Packages</a>
 
@@ -102,7 +102,7 @@
                         </ul>
                       </li>
                     <% else %>
-                      <a href="<%= Routes.login_path(Endpoint, :show) %>" class="nav-link bg-gray-600 rounded-md items-center justify-center py-2.5 px-6">Log in</a>
+                      <a href="<%= Routes.login_path(Endpoint, :show) %>" class="nav-link bg-gray-600 rounded-md items-center justify-center py-2.5 px-6 text-white">Log in</a>
                     <% end %>
                 </div>
         </div>
