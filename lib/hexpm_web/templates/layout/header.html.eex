@@ -16,11 +16,11 @@
     <link rel="stylesheet" href="<%= Routes.static_path(Endpoint, "/assets/app.css") %>">
     <link rel="alternate" type="application/rss+xml" title="RSS - Blog" href="/feeds/blog.xml">
 
-    <%= if host = Application.get_env(:hexpm, :host) do %> 
+    <%= if host = Application.get_env(:hexpm, :host) do %>
     <script async defer data-domain="<%= host %>" src="https://stats.<%= host %>/js/plausible.js"></script>
     <% end %>
   </head>
-  <body class="bg-current h-screen">
+  <body class="bg-gray-50 h-screen">
     <!--[if lt IE 10]>
       <p class="browserupgrade">You are using an <strong>outdated</strong> browser. Please <a href="http://browsehappy.com/">upgrade your browser</a> to improve your experience.</p>
     <![endif]-->
@@ -75,7 +75,7 @@
             <% end %>
           </div>
              <div class="absolute right-60 flex items-center w-60 h-8 text-gray-200">
-       
+
                 <a href="<%= Routes.package_path(Endpoint, :index) %>" class="nav-link w-28">Packages</a>
 
                 <a href="<%= Routes.page_path(Endpoint, :pricing) %>" class="nav-link w-24">Pricing</a>

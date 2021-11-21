@@ -9,7 +9,6 @@ module.exports = {
   darkMode: false, // or 'media' or 'class'
   theme: {
     colors: {
-      current: "#E5E5E5",
       primary: {
         900: "#85d7ff",
         800: "#3D2165",
