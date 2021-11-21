@@ -112,5 +112,3 @@
     <%= unless assigns[:error] || assigns[:custom_flash] do %>
       <%= render "_flash.html", conn: @conn %>
     <% end %>
-
-    <div class="<%= container_class(assigns) %>">
