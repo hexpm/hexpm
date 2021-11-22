@@ -1,9 +1,9 @@
 module.exports = {
   purge: [
-    "../**/*.html.eex",
-    "../**/*.html.leex",
-    "../**/views/**/*.ex",
-    "../**/live/**/*.ex",
+    "../lib/hexpm_web/**/*.html.eex",
+    "../lib/hexpm_web/**/*.html.leex",
+    "../lib/hexpm_web/**/views/**/*.ex",
+    "../lib/hexpm_web/**/live/**/*.ex",
     "./js/**/*.js"
   ],
   darkMode: false, // or 'media' or 'class'
