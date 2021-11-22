@@ -4,77 +4,68 @@
     <div class="absolute left-32 flex-shrink-0 flex items-center top-16">
          <img src="<%= Routes.static_path(Endpoint, "/images/hex.png") %>" srcset="<%= Routes.static_path(Endpoint, "/images/hex.png") %> 1x, <%= Routes.static_path(Endpoint, "/images/hex@2.png") %> 2x, <%= Routes.static_path(Endpoint, "/images/hex@3.png") %> 3x" alt="hex logo">
     </div>
-    <div class="absolute left-28 top-40 my-0 mx-4 flex-none flex-grow-0 rounded-lg bg-gray-800 w-10 h-10 p-3 items-center justify-center flex flex-col">
-      <a href="https://github.com/hexpm">
+  <div class="absolute top-40 left-32 grid grid-cols-2 gap-4 ">
+  <div class="flex-none flex-grow-0 rounded-lg bg-gray-800 w-10 h-10 items-center justify-center flex flex-col">
+    <a href="https://github.com/hexpm">
         <%= icon(:remixicon, :"github-line", width: "20px", fill: "rgba(225,232,240,1)")%>
       </a>
-    </div>
-
-    <div class="absolute left-40 top-40 my-0 mx-4 flex-none flex-grow-0 rounded-lg bg-gray-800 w-10 h-10 p-3 items-center justify-center flex flex-col">
-      <a href="https://twitter.com/hexpm">
+  </div>
+  <div class="flex-none flex-grow-0 rounded-lg bg-gray-800 w-10 h-10 items-center justify-center flex flex-col">
+    <a href="https://twitter.com/hexpm">
         <%= icon(:remixicon, :"twitter-line", width: "20px", fill: "rgba(225,232,240,1)")%>
       </a>
-    </div>
-    <div
-      class="
-        absolute
-        right-6
-        top-16
-        flex-grow flex flex-wrap
-        md:text-left
-        text-center
-        text-gray-200
-        font-medium
-        text-base
-      "
-    >
-      <div class="w-40 h-4">
-        <nav class="list-none">
+  </div>
+</div>
+  <div class="grid grid-cols-2 gap-x-8 absolute top-16 right-96 text-gray-200 font-medium text-base ">
+   <div>
+        <nav class="list-none space-y-4">
           <li>
             <a href="<%= Routes.page_path(Endpoint, :about) %>">About</a>
           </li>
-          <li class="mt-5">
+          <li>
            <a href="<%= Routes.blog_path(Endpoint, :index) %>">Blog</a>
           </li>
-          <li class="mt-5">
+          <li>
            <a href="<%= Routes.page_path(Endpoint, :sponsors) %>">Sponsors</a>
           </li>
-          <li class="mt-5">
+          <li>
             <a href="https://status.hex.pm">Status</a>
           </li>
         </nav>
       </div>
-      <div class="w-72 h-4">
-        <nav class="list-none ml-10">
+          <div>
+        <nav class="list-none space-y-4">
           <li>
             <a href="<%= Routes.docs_path(Endpoint, :index) %>">Documentation</a>
           </li>
-          <li class="mt-5">
+          <li>
             <a href="https://github.com/hexpm/specifications">Specifications</a>
           </li>
-          <li class="mt-5">
+          <li>
             <a href="https://github.com/hexpm/hex/issues">Report Client Issue</a>
           </li>
-          <li class="mt-5">
+          <li>
             <a href="https://github.com/hexpm/hexpm/issues">Report General Issue</a>
           </li>
-          <li class="mt-5"><a href="mailto:security@hex.pm">Report Security Issue</a></li>
-          <li class="mt-5"><a href="mailto:support@hex.pm">Contact Support</a></li>
+          <li><a href="mailto:security@hex.pm">Report Security Issue</a></li>
+          <li><a href="mailto:support@hex.pm">Contact Support</a></li>
         </nav>
       </div>
-      <div class="w-72 h-4">
-        <nav class="list-none ml-10">
+   </div>
+   <div class="grid grid-cols-1 absolute top-16 right-32 text-gray-200 font-medium text-base">
+     <div>
+        <nav class="list-none space-y-4">
           <li><a href="<%= Routes.policy_path(Endpoint, :coc) %>">Code of Conduct</a></li>
-          <li class="mt-5"><a href="<%= Routes.policy_path(Endpoint, :tos) %>">Terms of Service</a></li>
-          <li class="mt-5"><a href="<%= Routes.policy_path(Endpoint, :privacy) %>">Privacy Policy</a></li>
-          <li class="mt-5"><a href="<%= Routes.policy_path(Endpoint, :copyright) %>">Copyright Policy</a></li>
-          <li class="mt-5"><a href="<%= Routes.policy_path(Endpoint, :dispute) %>">Dispute Policy</a></li>
+          <li><a href="<%= Routes.policy_path(Endpoint, :tos) %>">Terms of Service</a></li>
+          <li><a href="<%= Routes.policy_path(Endpoint, :privacy) %>">Privacy Policy</a></li>
+          <li><a href="<%= Routes.policy_path(Endpoint, :copyright) %>">Copyright Policy</a></li>
+          <li><a href="<%= Routes.policy_path(Endpoint, :dispute) %>">Dispute Policy</a></li>
         </nav>
       </div>
-    </div>
+   </div>
     </div>
     <div class="relative bg-gray-800 h-20 top-full">
-      <div class="absolute left-32 inset-y-8">
+     <div class="absolute left-32 inset-y-8">
         <p class="text-gray-200 text-center font-medium text-sm">
         Copyright 2021 Six Colors AB.
         </p>
