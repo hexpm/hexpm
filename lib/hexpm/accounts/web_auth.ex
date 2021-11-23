@@ -5,7 +5,7 @@ defmodule Hexpm.Accounts.WebAuth do
 
   # A pool for storing and validating web auth requests.
 
-  alias Hexpm.Accounts.WebAuthRequest, as: Req
+  alias Hexpm.Accounts.WebAuthRequest
   alias Hexpm.Accounts.Keys
 
   # `device_code` refers to the code assigned to a client to identify it
@@ -37,7 +37,7 @@ defmodule Hexpm.Accounts.WebAuth do
       verified: false
     }
 
-    case Req.changeset(%Req{}, request) |> Repo.insert() do
+    case WebAuthRequest.changeset(%WebAuthRequest{}, request) |> Repo.insert() do
       {:ok, _req} ->
         %{
           device_code: device_code,
@@ -59,14 +59,14 @@ defmodule Hexpm.Accounts.WebAuth do
     - `audit` - Audit data for generating the key.
   """
   def submit(user, user_code, audit) do
-    request = Req |> Repo.get_by(user_code: user_code)
+    request = WebAuthRequest |> Repo.get_by(user_code: user_code)
 
     if request do
       {_user, audit_con} = audit
 
       change = %{verified: true, user_id: user.id, audit: audit_con}
 
-      Req.changeset(request, change) |> Repo.update()
+      WebAuthRequest.changeset(request, change) |> Repo.update()
     else
       {:error, "invalid user code"}
     end
@@ -80,7 +80,7 @@ defmodule Hexpm.Accounts.WebAuth do
   - `device_code` - The device code assigned to the client
   """
   def access_key(device_code) do
-    request = Req |> Repo.get_by(device_code: device_code)
+    request = WebAuthRequest |> Repo.get_by(device_code: device_code)
 
     case request do
       r when r.verified == true ->
