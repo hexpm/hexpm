@@ -37,15 +37,10 @@ defmodule Hexpm.Accounts.WebAuth do
       verified: false
     }
 
-    case WebAuthRequest.changeset(%WebAuthRequest{}, request) |> Repo.insert() do
-      {:ok, _req} ->
-        %{
-          device_code: device_code,
-          user_code: user_code
-        }
+    changeset = WebAuthRequest.changeset(%WebAuthRequest{}, request)
 
-      error ->
-        error
+    with {:ok, _} <- Repo.insert(changeset) do
+      {:ok, %{device_code: device_code, user_code: user_code}}
     end
   end
 

@@ -8,7 +8,7 @@ defmodule Hexpm.Accounts.WebAuthTest do
   describe "get_code/1" do
     test "returns a valid response on valid scope" do
       for scope <- ["write", "read"] do
-        response = WebAuth.get_code(scope)
+        {:ok, response} = WebAuth.get_code(scope)
 
         assert response.device_code
         assert response.user_code
@@ -79,7 +79,7 @@ defmodule Hexpm.Accounts.WebAuthTest do
   end
 
   def get_code(context) do
-    request = WebAuth.get_code(@scope)
+    {:ok, request} = WebAuth.get_code(@scope)
 
     Map.merge(context, %{request: request})
   end
