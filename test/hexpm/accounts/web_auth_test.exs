@@ -16,8 +16,8 @@ defmodule Hexpm.Accounts.WebAuthTest do
     end
 
     test "returns an error on invalid scope" do
-      {status, _changeset} = WebAuth.get_code("foo")
-      assert status == :error
+      assert {:error, changeset} = WebAuth.get_code("foo")
+      assert errors_on(changeset)[:scope] == "is invalid"
     end
   end
 
@@ -48,7 +48,7 @@ defmodule Hexpm.Accounts.WebAuthTest do
         c.request.device_code
         |> WebAuth.access_key()
 
-      assert key.__struct__ == Hexpm.Accounts.Key
+      assert %Hexpm.Accounts.Key{} = key
     end
 
     test "returns an error on unverified request", c do
