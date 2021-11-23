@@ -26,18 +26,18 @@ defmodule Hexpm.Accounts.WebAuth do
     - `scope` - Scope of the key to be generated. One of read and write.
   """
 
-  def get_code(scope) do
+  def get_code(params) do
     device_code = "foo"
     user_code = "bar"
 
-    request = %{
+    params = %{
       device_code: device_code,
       user_code: user_code,
-      scope: scope,
+      scope: params,
       verified: false
     }
 
-    changeset = WebAuthRequest.changeset(%WebAuthRequest{}, request)
+    changeset = WebAuthRequest.changeset(%WebAuthRequest{}, params)
 
     with {:ok, _} <- Repo.insert(changeset) do
       {:ok, %{device_code: device_code, user_code: user_code}}
