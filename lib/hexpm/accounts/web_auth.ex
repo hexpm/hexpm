@@ -80,7 +80,7 @@ defmodule Hexpm.Accounts.WebAuth do
 
     case request do
       r when r.verified == true ->
-        user = Repo.get(Hexpm.Accounts.User, request.user_id)
+        user = Repo.get!(Hexpm.Accounts.User, request.user_id)
 
         audit = {user, request.audit}
 
