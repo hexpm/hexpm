@@ -1,39 +1,44 @@
   </section>
+  <footer class="relative bg-gray-900 top-1/2" aria-labelledby="footer-heading">
+  <h2 id="footer-heading" class="sr-only">Footer</h2>
+  <div class="max-w-5xl mx-auto py-12 px-8">
+    <div class="pb-8 ">
+    <div class="grid grid-cols-5 gap-8">
+          <div class="flex flex-col space-y-16 ">
+            <div>
+              <img src="<%= Routes.static_path(Endpoint, "/images/hex.png") %>" srcset="<%= Routes.static_path(Endpoint, "/images/hex.png") %> 1x, <%= Routes.static_path(Endpoint, "/images/hex@2.png") %> 2x, <%= Routes.static_path(Endpoint, "/images/hex@3.png") %> 3x" alt="hex logo">
+            </div>
+            <div class="flex flex-row gap-4">
+              <div class="flex-none flex-grow-0 rounded-lg bg-gray-800 w-10 h-10 items-center justify-center flex flex-col">
+                <a href="https://github.com/hexpm">
+                   <%= icon(:remixicon, :"github-line", width: "20px", fill: "rgba(225,232,240,1)")%>
+                </a>
+              </div>
+              <div class="flex-none flex-grow-0 rounded-lg bg-gray-800 w-10 h-10 items-center justify-center flex flex-col">
+                <a href="https://twitter.com/hexpm">
+                 <%= icon(:remixicon, :"twitter-line", width: "20px", fill: "rgba(225,232,240,1)")%>
+                </a>
+              </div>
+            </div>
+          </div>
+          <div class="col-start-3 flex text-gray-200 font-medium text-base">
+            <nav class="list-none space-y-4">
+              <li>
+                <a href="<%= Routes.page_path(Endpoint, :about) %>">About</a>
+              </li>
+              <li>
+               <a href="<%= Routes.blog_path(Endpoint, :index) %>">Blog</a>
+              </li>
+              <li>
+               <a href="<%= Routes.page_path(Endpoint, :sponsors) %>">Sponsors</a>
+              </li>
+              <li>
+                <a href="https://status.hex.pm">Status</a>
+              </li>
+            </nav>
+          </div> 
 
-  <footer class="relative bg-gray-900 top-1/2 w-full h-96">
-    <div class="absolute left-32 flex-shrink-0 flex items-center top-16">
-         <img src="<%= Routes.static_path(Endpoint, "/images/hex.png") %>" srcset="<%= Routes.static_path(Endpoint, "/images/hex.png") %> 1x, <%= Routes.static_path(Endpoint, "/images/hex@2.png") %> 2x, <%= Routes.static_path(Endpoint, "/images/hex@3.png") %> 3x" alt="hex logo">
-    </div>
-  <div class="absolute top-40 left-32 grid grid-cols-2 gap-4 ">
-  <div class="flex-none flex-grow-0 rounded-lg bg-gray-800 w-10 h-10 items-center justify-center flex flex-col">
-    <a href="https://github.com/hexpm">
-        <%= icon(:remixicon, :"github-line", width: "20px", fill: "rgba(225,232,240,1)")%>
-      </a>
-  </div>
-  <div class="flex-none flex-grow-0 rounded-lg bg-gray-800 w-10 h-10 items-center justify-center flex flex-col">
-    <a href="https://twitter.com/hexpm">
-        <%= icon(:remixicon, :"twitter-line", width: "20px", fill: "rgba(225,232,240,1)")%>
-      </a>
-  </div>
-</div>
-  <div class="grid grid-cols-2 gap-x-8 absolute top-16 right-96 text-gray-200 font-medium text-base ">
-   <div>
-        <nav class="list-none space-y-4">
-          <li>
-            <a href="<%= Routes.page_path(Endpoint, :about) %>">About</a>
-          </li>
-          <li>
-           <a href="<%= Routes.blog_path(Endpoint, :index) %>">Blog</a>
-          </li>
-          <li>
-           <a href="<%= Routes.page_path(Endpoint, :sponsors) %>">Sponsors</a>
-          </li>
-          <li>
-            <a href="https://status.hex.pm">Status</a>
-          </li>
-        </nav>
-      </div>
-          <div>
+          <div class="text-gray-200 font-medium text-base">
         <nav class="list-none space-y-4">
           <li>
             <a href="<%= Routes.docs_path(Endpoint, :index) %>">Documentation</a>
@@ -51,9 +56,7 @@
           <li><a href="mailto:support@hex.pm">Contact Support</a></li>
         </nav>
       </div>
-   </div>
-   <div class="grid grid-cols-1 absolute top-16 right-32 text-gray-200 font-medium text-base">
-     <div>
+       <div class="text-gray-200 font-medium text-base flex justify-end">
         <nav class="list-none space-y-4">
           <li><a href="<%= Routes.policy_path(Endpoint, :coc) %>">Code of Conduct</a></li>
           <li><a href="<%= Routes.policy_path(Endpoint, :tos) %>">Terms of Service</a></li>
@@ -62,21 +65,31 @@
           <li><a href="<%= Routes.policy_path(Endpoint, :dispute) %>">Dispute Policy</a></li>
         </nav>
       </div>
-   </div>
     </div>
-    <div class="relative bg-gray-800 h-20 top-full">
-     <div class="absolute left-32 inset-y-8">
-        <p class="text-gray-200 text-center font-medium text-sm">
-        Copyright 2021 Six Colors AB.
-        </p>
-      </div>
-      <div class="absolute right-32 inset-y-8">
-        <p class="text-gray-200 text-center font-medium text-sm">
-        Powered by the Erlang VM and the Elixir Programming Language
-        </p>
+  </div>
+</div>
+    </div>
+    <div class="bg-gray-800 h-20 border-t border-gray-700 pt-8">
+      <div class="max-w-5xl mx-auto">
+        <div class="flex">
+          <div>
+            <p class="pl-5 text-gray-200 text-center font-medium text-sm flex">
+               Copyright 2021 Six Colors AB.
+            </p>
+          </div>
+          <div>
+            <p class="ml-96 text-gray-200 text-center font-medium text-sm">
+          Powered by the Erlang VM and the Elixir Programming Language
+             </p>
+          </div>
+  
+        </div>
+        
       </div>
     </div>
-  </footer>
+  </div>
+</footer>
+
 
   <script src="<%= Routes.static_path(Endpoint, "/assets/app.js") %>"></script>
 
