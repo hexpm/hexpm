@@ -28,7 +28,7 @@
     <section class="content-wrapper">
     <%= render "_read_only_mode.html" %>
 <nav class="bg-gray-900">
-  <div class="max-w-7xl mx-auto px-2 sm:px-6 lg:px-8">
+  <div class="max-w-full px-2 sm:px-6 lg:px-8">
     <div class="relative flex items-center justify-between h-20">
       <div class="absolute inset-y-0 left-0 flex items-center sm:hidden">
         <!-- Mobile menu button-->
@@ -56,11 +56,14 @@
           </svg>
         </button>
       </div>
-        <div class="flex-shrink-0 flex items-center ml-52">
-         <img src="<%= Routes.static_path(Endpoint, "/images/hex.png") %>" srcset="<%= Routes.static_path(Endpoint, "/images/hex.png") %> 1x, <%= Routes.static_path(Endpoint, "/images/hex@2.png") %> 2x, <%= Routes.static_path(Endpoint, "/images/hex@3.png") %> 3x" alt="hex logo">
+     <div class="flex flex-row items-center gap-16">
+        <div class="grid grid-cols-3 flex-shrink-0">
+          <div class="col-end-4">
+          <img src="<%= Routes.static_path(Endpoint, "/images/hex.png") %>" srcset="<%= Routes.static_path(Endpoint, "/images/hex.png") %> 1x, <%= Routes.static_path(Endpoint, "/images/hex@2.png") %> 2x, <%= Routes.static_path(Endpoint, "/images/hex@3.png") %> 3x" alt="hex logo">
+          </div>
         </div>
-          <div class="absolute left-96  flex items-center justify-center">
-            <%= if show_search?(assigns) do %>
+          <div class="flex justify-center">
+          <%= if show_search?(assigns) do %>
             <form role="search" action="<%= Routes.package_path(Endpoint, :index) %>" >
               <div class="relative text-gray-600 focus-within:text-gray-400">
                 <span class="absolute inset-y-0 left-0 flex items-center pl-2">
@@ -74,16 +77,14 @@
             </form>
             <% end %>
           </div>
-             <div class="absolute right-60 flex items-center w-60 h-8 text-gray-200">
-
-                <a href="<%= Routes.package_path(Endpoint, :index) %>" class="nav-link w-28">Packages</a>
+          <div class="absolute flex items-center right-0 text-gray-200">
+            <a href="<%= Routes.package_path(Endpoint, :index) %>" class="nav-link w-28">Packages</a>
 
                 <a href="<%= Routes.page_path(Endpoint, :pricing) %>" class="nav-link w-24">Pricing</a>
 
                 <a href="<%= Routes.docs_path(Endpoint, :index) %>" class="nav-link w-20">Docs</a>
-              </div>
-                <div class="absolute inset-y-0 right-28 flex items-center">
-                   <%= if ViewHelpers.logged_in?(assigns) do %>
+
+                <%= if ViewHelpers.logged_in?(assigns) do %>
                       <li class="dropdown">
                         <a href="#" class="dropdown-toggle" data-toggle="dropdown">
                           <%= @current_user.username %>
@@ -104,8 +105,9 @@
                     <% else %>
                       <a href="<%= Routes.login_path(Endpoint, :show) %>" class="nav-link bg-gray-600 rounded-md items-center justify-center py-2.5 px-6 text-white">Log in</a>
                     <% end %>
-                </div>
-        </div>
+          </div>
+      </div>
+      </div>
     </div>
   </div>
 </nav>
