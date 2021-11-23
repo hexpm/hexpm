@@ -33,8 +33,7 @@ defmodule Hexpm.Accounts.WebAuth do
     params = %{
       device_code: device_code,
       user_code: user_code,
-      scope: params,
-      verified: false
+      scope: params
     }
 
     changeset = WebAuthRequest.changeset(%WebAuthRequest{}, params)
@@ -59,9 +58,11 @@ defmodule Hexpm.Accounts.WebAuth do
     if request do
       {_user, audit_con} = audit
 
-      change = %{verified: true, user_id: user.id, audit: audit_con}
+      change = %{user_id: user.id, audit: audit_con}
 
-      WebAuthRequest.changeset(request, change) |> Repo.update()
+      WebAuthRequest.changeset(request, change)
+      |> put_change(:verified, true)
+      |> Repo.update()
     else
       {:error, "invalid user code"}
     end
