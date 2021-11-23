@@ -28,7 +28,7 @@
     <section class="content-wrapper">
     <%= render "_read_only_mode.html" %>
 <nav class="bg-gray-900">
-  <div class="max-w-full px-2 sm:px-6 lg:px-8">
+  <div class="max-w-5xl mx-auto px-2 sm:px-6 lg:px-8">
     <div class="relative flex items-center justify-between h-20">
       <div class="absolute inset-y-0 left-0 flex items-center sm:hidden">
         <!-- Mobile menu button-->
@@ -56,13 +56,9 @@
           </svg>
         </button>
       </div>
-     <div class="flex flex-row items-center gap-16">
-        <div class="grid grid-cols-3 flex-shrink-0">
-          <div class="col-end-4">
+     <div class="flex-1 flex items-center">
           <img src="<%= Routes.static_path(Endpoint, "/images/hex.png") %>" srcset="<%= Routes.static_path(Endpoint, "/images/hex.png") %> 1x, <%= Routes.static_path(Endpoint, "/images/hex@2.png") %> 2x, <%= Routes.static_path(Endpoint, "/images/hex@3.png") %> 3x" alt="hex logo">
-          </div>
-        </div>
-          <div class="flex justify-center">
+          <div class="flex ml-16">
           <%= if show_search?(assigns) do %>
             <form role="search" action="<%= Routes.package_path(Endpoint, :index) %>" >
               <div class="relative text-gray-600 focus-within:text-gray-400">
