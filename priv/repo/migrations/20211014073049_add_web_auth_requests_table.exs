@@ -3,12 +3,12 @@ defmodule Hexpm.RepoBase.Migrations.AddWebAuthRequestsTable do
 
   def change do
     create table(:requests) do
-      add(:device_code, :string)
-      add(:user_code, :string)
-      add(:scope, :string)
-      add(:verified, :boolean)
-      add(:user_id, :integer)
-      add(:audit, :string)
+      add(:device_code, :string, null: false)
+      add(:user_code, :string, null: false)
+      add(:scope, :string, null: false)
+      add(:verified, :boolean, null: false)
+      add(:user_id, :integer, null: false)
+      add(:audit, :string, null: false)
     end
   end
 end
