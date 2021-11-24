@@ -12,7 +12,7 @@ jobs:
       - name: Install OTP and Elixir
         uses: erlef/setup-elixir@v1
         with:
-          otp-version: 23.1.1
+          otp-version: 24.1.7
           elixir-version: 1.12.3
 
       - run: mix deps.get
@@ -41,7 +41,7 @@ jobs:
       - name: Install OTP and Elixir
         uses: erlef/setup-elixir@v1
         with:
-          otp-version: 23.1.1
+          otp-version: 24.1.7
           elixir-version: 1.12.3
 
       - name: Install dependencies
@@ -85,7 +85,7 @@ jobs:
       - name: Install OTP and Elixir
         uses: erlef/setup-elixir@v1
         with:
-          otp-version: 23.1.1
+          otp-version: 24.1.7
           elixir-version: 1.12.3
 
       - name: Install hexpm dependencies
