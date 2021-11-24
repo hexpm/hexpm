@@ -33,10 +33,6 @@ defmodule HexpmWeb.LayoutView do
     Map.get(assigns, :search)
   end
 
-  def container_class(assigns) do
-    Map.get(assigns, :container, "container")
-  end
-
   def og_tags(assigns) do
     [
       tag(:meta, property: "og:title", content: Map.get(assigns, :title)),

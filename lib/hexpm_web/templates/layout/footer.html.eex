@@ -1,55 +1,72 @@
-    </div>
-    </section>
-
-    <div class="footer">
-      <div class="footer-nav">
-        <div class="container">
-          <div class="row">
-            <div class="col-md-3">
-              <h4>About Hex</h4>
-              <ul>
-                <li><a href="<%= Routes.page_path(Endpoint, :about) %>">About</a></li>
-                <li><a href="<%= Routes.blog_path(Endpoint, :index) %>">Blog</a></li>
-                <li><a href="<%= Routes.page_path(Endpoint, :sponsors) %>">Sponsors</a></li>
-                <li><a href="https://github.com/hexpm">GitHub</a></li>
-                <li><a href="https://twitter.com/hexpm">Twitter</a></li>
-                <li><a href="https://status.hex.pm">Status</a></li>
-              </ul>
+  </section>
+  <footer class="relative bg-gray-900 top-1/2" aria-labelledby="footer-heading">
+    <h2 id="footer-heading" class="sr-only">Footer</h2>
+    <div class="max-w-7xl mx-auto py-12 px-8">
+      <div class="pb-8 ">
+        <div class="grid grid-cols-5 gap-8">
+          <div class="flex flex-col space-y-16">
+            <div>
+              <img src="<%= Routes.static_path(Endpoint, "/images/hex.png") %>" srcset="<%= Routes.static_path(Endpoint, "/images/hex.png") %> 1x, <%= Routes.static_path(Endpoint, "/images/hex@2.png") %> 2x, <%= Routes.static_path(Endpoint, "/images/hex@3.png") %> 3x" alt="hex logo">
             </div>
-
-            <div class="col-md-3">
-              <h4>Help</h4>
-              <ul>
-                <li><a href="<%= Routes.docs_path(Endpoint, :index) %>">Documentation</a></li>
-                <li><a href="https://github.com/hexpm/specifications">Specifications</a></li>
-                <li><a href="https://github.com/hexpm/hex/issues">Report Client Issue</a></li>
-                <li><a href="https://github.com/hexpm/hexpm/issues">Report General Issue</a></li>
-                <li><a href="mailto:security@hex.pm">Report Security Issue</a></li>
-                <li><a href="mailto:support@hex.pm">Contact Support</a></li>
-              </ul>
-            </div>
-
-            <div class="col-md-3">
-              <h4>Policies and Terms</h4>
-              <ul>
-                <li><a href="<%= Routes.policy_path(Endpoint, :coc) %>">Code of Conduct</a></li>
-                <li><a href="<%= Routes.policy_path(Endpoint, :tos) %>">Terms of Service</a></li>
-                <li><a href="<%= Routes.policy_path(Endpoint, :privacy) %>">Privacy Policy</a></li>
-                <li><a href="<%= Routes.policy_path(Endpoint, :copyright) %>">Copyright Policy</a></li>
-                <li><a href="<%= Routes.policy_path(Endpoint, :dispute) %>">Dispute Policy</a></li>
-              </ul>
-            </div>
-
-            <div class="col-md-3 copyright">
-              <p>2020 © Six Colors AB.</p>
-              <p>Powered by the <a href="https://www.erlang.org/">Erlang VM</a> and the <a href="https://elixir-lang.org/">Elixir programming language</a>.</p>
+            <div class="flex flex-row gap-4">
+              <div class="flex-none flex-grow-0 rounded-lg bg-gray-800 w-10 h-10 items-center justify-center flex flex-col">
+                <a href="https://github.com/hexpm">
+                   <%= icon(:remixicon, :"github-line", width: "20px", fill: "rgba(225,232,240,1)")%>
+                </a>
+              </div>
+              <div class="flex-none flex-grow-0 rounded-lg bg-gray-800 w-10 h-10 items-center justify-center flex flex-col">
+                <a href="https://twitter.com/hexpm">
+                 <%= icon(:remixicon, :"twitter-line", width: "20px", fill: "rgba(225,232,240,1)")%>
+                </a>
+              </div>
             </div>
           </div>
+          <nav class="col-start-3 text-gray-200 font-medium text-base">
+            <ul class="space-y-4 list-none">
+            <li><a href="<%= Routes.page_path(Endpoint, :about) %>">About</a></li>
+            <li><a href="<%= Routes.blog_path(Endpoint, :index) %>">Blog</a></li>
+            <li><a href="<%= Routes.page_path(Endpoint, :sponsors) %>">Sponsors</a></li>
+            <li><a href="https://status.hex.pm">Status</a></li>
+          </nav>
+          <nav class="text-gray-200 font-medium text-base">
+            <ul class="space-y-4 list-none">
+              <li><a href="<%= Routes.docs_path(Endpoint, :index) %>">Documentation</a></li>
+              <li><a href="https://github.com/hexpm/specifications">Specifications</a></li>
+              <li><a href="https://github.com/hexpm/hex/issues">Report Client Issue</a></li>
+              <li><a href="https://github.com/hexpm/hexpm/issues">Report General Issue</a></li>
+              <li><a href="mailto:security@hex.pm">Report Security Issue</a></li>
+              <li><a href="mailto:support@hex.pm">Contact Support</a></li>
+            </ul>
+          </nav>
+          <nav class="text-gray-200 font-medium text-base">
+            <ul class="space-y-4 list-none">
+              <li><a href="<%= Routes.policy_path(Endpoint, :coc) %>">Code of Conduct</a></li>
+              <li><a href="<%= Routes.policy_path(Endpoint, :tos) %>">Terms of Service</a></li>
+              <li><a href="<%= Routes.policy_path(Endpoint, :privacy) %>">Privacy Policy</a></li>
+              <li><a href="<%= Routes.policy_path(Endpoint, :copyright) %>">Copyright Policy</a></li>
+              <li><a href="<%= Routes.policy_path(Endpoint, :dispute) %>">Dispute Policy</a></li>
+            </ul>
+          </nav>
         </div>
       </div>
     </div>
+    <div class="bg-gray-800 h-20 border-t border-gray-700 pt-8 font-medium text-sm">
+      <div class="max-w-7xl mx-auto">
+        <div class="">
+          <p class="inline-block float-left pl-5 text-gray-200">
+            Copyright 2021 Six Colors AB
+          </p>
+          <p class="inline-block float-right pr-5 text-gray-200">
+            Powered by the Erlang VM and the Elixir Programming Language
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+</footer>
 
-    <script src="<%= Routes.static_path(Endpoint, "/assets/app.js") %>"></script>
+
+  <script src="<%= Routes.static_path(Endpoint, "/assets/app.js") %>"></script>
 
   </body>
 </html>

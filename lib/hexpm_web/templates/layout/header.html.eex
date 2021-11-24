@@ -16,80 +16,94 @@
     <link rel="stylesheet" href="<%= Routes.static_path(Endpoint, "/assets/app.css") %>">
     <link rel="alternate" type="application/rss+xml" title="RSS - Blog" href="/feeds/blog.xml">
 
-    <%= if host = Application.get_env(:hexpm, :host) do %> 
+    <%= if host = Application.get_env(:hexpm, :host) do %>
     <script async defer data-domain="<%= host %>" src="https://stats.<%= host %>/js/plausible.js"></script>
     <% end %>
   </head>
-  <body>
+  <body class="bg-gray-50 h-screen">
     <!--[if lt IE 10]>
       <p class="browserupgrade">You are using an <strong>outdated</strong> browser. Please <a href="http://browsehappy.com/">upgrade your browser</a> to improve your experience.</p>
     <![endif]-->
 
     <section class="content-wrapper">
     <%= render "_read_only_mode.html" %>
+    <nav class="bg-gray-900">
+      <div class="max-w-7xl mx-auto px-2 sm:px-6 lg:px-8">
+        <div class="relative flex items-center justify-between h-20">
+          <div class="absolute inset-y-0 left-0 flex items-center sm:hidden">
+            <!-- Mobile menu button-->
+            <button type="button" class="inline-flex items-center justify-center p-2 rounded-md text-gray-400 hover:text-white hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-white" aria-controls="mobile-menu" aria-expanded="false">
+              <span class="sr-only">Open main menu</span>
+              <!--
+                Icon when menu is closed.
 
-    <nav class="navbar navbar-default">
-      <div class="container">
-        <div class="navbar-header">
-          <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar" aria-expanded="false" aria-controls="navbar">
-            <span class="sr-only">Toggle navigation</span>
-            <span class="icon-bar"></span>
-            <span class="icon-bar"></span>
-            <span class="icon-bar"></span>
-          </button>
-          <a class="navbar-brand" href="/">
-            <img src="<%= Routes.static_path(Endpoint, "/images/hex.png") %>" srcset="<%= Routes.static_path(Endpoint, "/images/hex.png") %> 1x, <%= Routes.static_path(Endpoint, "/images/hex@2.png") %> 2x, <%= Routes.static_path(Endpoint, "/images/hex@3.png") %> 3x" alt="hex logo">
-          </a>
-        </div>
-        <div id="navbar" class="navbar-collapse collapse">
-          <%= if show_search?(assigns) do %>
-          <form class="navbar-form pull-left-non-mobile" role="search" action="<%= Routes.package_path(Endpoint, :index) %>">
-             <div class="input-group">
-                <input placeholder="Find packages" name="search" type="text" class="form-control" value="<%= search(assigns) %>">
-                <input type="hidden" name="sort" value="recent_downloads">
+                Heroicon name: outline/menu
 
-                <div class="input-group-btn">
-                  <button type="submit" class="btn btn-search" tabindex="1">
-                    <%= icon(:glyphicon, :search) %>
-                  </button>
-                </div>
-             </div>
-          </form>
-          <% end %>
-          <ul class="nav navbar-nav navbar-right">
-            <li><a href="<%= Routes.package_path(Endpoint, :index) %>">Packages</a></li>
-            <li><a href="<%= Routes.page_path(Endpoint, :pricing) %>">Pricing</a></li>
-            <li><a href="<%= Routes.docs_path(Endpoint, :index) %>">Docs</a></li>
+                Menu open: "hidden", Menu closed: "block"
+              -->
+              <svg class="block h-6 w-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+              </svg>
+              <!--
+                Icon when menu is open.
 
-            <%= if ViewHelpers.logged_in?(assigns) do %>
-              <li class="dropdown">
-                <a href="#" class="dropdown-toggle" data-toggle="dropdown">
-                  <%= @current_user.username %>
-                  <img src="<%= ViewHelpers.gravatar_url(User.email(@current_user, :gravatar), :small) %>" class="navbar-avatar">
-                  <b class="caret"></b>
-                </a>
-                <ul class="dropdown-menu">
-                  <li><a href="<%= Routes.user_path(Endpoint, :show, @current_user) %>">Profile</a></li>
-                  <li><a href="<%= Routes.profile_path(Endpoint, :index) %>">Dashboard</a></li>
-                  <li role="separator" class="divider"></li>
-                  <li>
-                    <%= form_tag(Routes.login_path(Endpoint, :delete)) do %>
-                      <button type="submit" class="btn btn-link">Log out</button>
-                    <% end %>
+                Heroicon name: outline/x
+
+                Menu open: "block", Menu closed: "hidden"
+              -->
+              <svg class="hidden h-6 w-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+          <div class="flex-1 flex items-center">
+          <img src="<%= Routes.static_path(Endpoint, "/images/hex.png") %>" srcset="<%= Routes.static_path(Endpoint, "/images/hex.png") %> 1x, <%= Routes.static_path(Endpoint, "/images/hex@2.png") %> 2x, <%= Routes.static_path(Endpoint, "/images/hex@3.png") %> 3x" alt="hex logo">
+            <div class="flex ml-20">
+              <%= if show_search?(assigns) do %>
+                <form role="search" action="<%= Routes.package_path(Endpoint, :index) %>" >
+                  <div class="relative text-gray-600 focus-within:text-gray-400">
+                    <span class="absolute inset-y-0 left-0 flex items-center pl-2">
+                      <button type="submit" class="p-1 focus:outline-none focus:shadow-outline" tabindex="1">
+                        <%= icon(:remixicon, :"search-line", width: "20px", fill: "rgba(145,164,183,1)")%>
+                      </button>
+                    </span>
+                    <input type="search" name="search" class="w-96 py-2 text-sm text-white bg-gray-800 rounded-md pl-10 focus:outline-none focus:bg-white focus:text-gray-900 border border-solid border-gray-600" placeholder="Find packages..." value="<%= search(assigns) %>">
+                      <input type="hidden" name="sort" value="recent_downloads">
+                  </div>
+                </form>
+              <% end %>
+            </div>
+              <div class="absolute flex items-center right-0 text-gray-200">
+                <a href="<%= Routes.package_path(Endpoint, :index) %>" class="nav-link w-28">Packages</a>
+                <a href="<%= Routes.page_path(Endpoint, :pricing) %>" class="nav-link w-24">Pricing</a>
+                <a href="<%= Routes.docs_path(Endpoint, :index) %>" class="nav-link w-20">Docs</a>
+                <%= if ViewHelpers.logged_in?(assigns) do %>
+                  <li class="dropdown">
+                    <a href="#" class="dropdown-toggle" data-toggle="dropdown">
+                      <%= @current_user.username %>
+                      <img src="<%= ViewHelpers.gravatar_url(User.email(@current_user, :gravatar), :small) %>" class="navbar-avatar">
+                      <b class="caret"></b>
+                    </a>
+                    <ul class="dropdown-menu">
+                      <li><a href="<%= Routes.user_path(Endpoint, :show, @current_user) %>">Profile</a></li>
+                      <li><a href="<%= Routes.profile_path(Endpoint, :index) %>">Dashboard</a></li>
+                      <li role="separator" class="divider"></li>
+                      <li>
+                        <%= form_tag(Routes.login_path(Endpoint, :delete)) do %>
+                          <button type="submit" class="btn btn-link">Log out</button>
+                        <% end %>
+                      </li>
+                    </ul>
                   </li>
-                </ul>
-              </li>
-            <% else %>
-              <li><a href="<%= Routes.login_path(Endpoint, :show) %>">Log in</a></li>
-            <% end %>
-
-          </ul>
-        </div><!--/.nav-collapse -->
+                <% else %>
+                  <a href="<%= Routes.login_path(Endpoint, :show) %>" class="nav-link bg-gray-600 rounded-md items-center justify-center py-2.5 px-6 text-white">Log in</a>
+                <% end %>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     </nav>
-
     <%= unless assigns[:error] || assigns[:custom_flash] do %>
       <%= render "_flash.html", conn: @conn %>
     <% end %>
-
-    <div class="<%= container_class(assigns) %>">
