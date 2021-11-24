@@ -69,22 +69,16 @@
   </div>
 </div>
     </div>
-    <div class="bg-gray-800 h-20 border-t border-gray-700 pt-8">
-      <div class="max-w-5xl mx-auto">
-        <div class="flex">
-          <div>
-            <p class="pl-5 text-gray-200 text-center font-medium text-sm flex">
-               Copyright 2021 Six Colors AB.
-            </p>
-          </div>
-          <div>
-            <p class="ml-96 text-gray-200 text-center font-medium text-sm">
-          Powered by the Erlang VM and the Elixir Programming Language
-             </p>
-          </div>
-  
+    <div class="bg-gray-800 h-20 border-t border-gray-700 pt-8 font-medium text-sm">
+      <div class="max-w-7xl mx-auto">
+        <div class="">
+          <p class="inline-block float-left pl-5 text-gray-200">
+            Copyright 2021 Six Colors AB
+          </p>
+          <p class="inline-block float-right pr-5 text-gray-200">
+            Powered by the Erlang VM and the Elixir Programming Language
+          </p>
         </div>
-        
       </div>
     </div>
   </div>
