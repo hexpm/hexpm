@@ -1,7 +1,7 @@
   </section>
   <footer class="relative bg-gray-900 top-1/2" aria-labelledby="footer-heading">
   <h2 id="footer-heading" class="sr-only">Footer</h2>
-  <div class="max-w-5xl mx-auto py-12 px-8">
+  <div class="max-w-7xl mx-auto py-12 px-8">
     <div class="pb-8 ">
     <div class="grid grid-cols-5 gap-8">
           <div class="flex flex-col space-y-16 ">
@@ -36,7 +36,7 @@
                 <a href="https://status.hex.pm">Status</a>
               </li>
             </nav>
-          </div> 
+          </div>
 
           <div class="text-gray-200 font-medium text-base">
         <nav class="list-none space-y-4">

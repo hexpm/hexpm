@@ -28,7 +28,7 @@
     <section class="content-wrapper">
     <%= render "_read_only_mode.html" %>
 <nav class="bg-gray-900">
-  <div class="max-w-5xl mx-auto px-2 sm:px-6 lg:px-8">
+  <div class="max-w-7xl mx-auto px-2 sm:px-6 lg:px-8">
     <div class="relative flex items-center justify-between h-20">
       <div class="absolute inset-y-0 left-0 flex items-center sm:hidden">
         <!-- Mobile menu button-->
@@ -58,7 +58,7 @@
       </div>
      <div class="flex-1 flex items-center">
           <img src="<%= Routes.static_path(Endpoint, "/images/hex.png") %>" srcset="<%= Routes.static_path(Endpoint, "/images/hex.png") %> 1x, <%= Routes.static_path(Endpoint, "/images/hex@2.png") %> 2x, <%= Routes.static_path(Endpoint, "/images/hex@3.png") %> 3x" alt="hex logo">
-          <div class="flex ml-16">
+          <div class="flex ml-20">
           <%= if show_search?(assigns) do %>
             <form role="search" action="<%= Routes.package_path(Endpoint, :index) %>" >
               <div class="relative text-gray-600 focus-within:text-gray-400">
@@ -67,7 +67,7 @@
                     <%= icon(:remixicon, :"search-line", width: "20px", fill: "rgba(145,164,183,1)")%>
                   </button>
                 </span>
-                <input type="search" name="search" class="py-2 text-sm text-white bg-gray-800 rounded-md pl-10 focus:outline-none focus:bg-white focus:text-gray-900" placeholder="Find packages..." value="<%= search(assigns) %>">
+                <input type="search" name="search" class="w-96 py-2 text-sm text-white bg-gray-800 rounded-md pl-10 focus:outline-none focus:bg-white focus:text-gray-900 border border-solid border-gray-600" placeholder="Find packages..." value="<%= search(assigns) %>">
                  <input type="hidden" name="sort" value="recent_downloads">
               </div>
             </form>
