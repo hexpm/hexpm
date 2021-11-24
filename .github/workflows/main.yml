@@ -13,7 +13,7 @@ jobs:
         uses: erlef/setup-elixir@v1
         with:
           otp-version: 23.1.1
-          elixir-version: 1.12
+          elixir-version: 1.12.3
 
       - run: mix deps.get
       - run: mix deps.compile
@@ -42,7 +42,7 @@ jobs:
         uses: erlef/setup-elixir@v1
         with:
           otp-version: 23.1.1
-          elixir-version: 1.12
+          elixir-version: 1.12.3
 
       - name: Install dependencies
         run: mix deps.get
@@ -86,7 +86,7 @@ jobs:
         uses: erlef/setup-elixir@v1
         with:
           otp-version: 23.1.1
-          elixir-version: 1.12
+          elixir-version: 1.12.3
 
       - name: Install hexpm dependencies
         run: |
