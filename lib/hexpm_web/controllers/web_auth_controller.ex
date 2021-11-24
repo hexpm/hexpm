@@ -17,9 +17,7 @@ defmodule HexpmWeb.WebAuthController do
         |> json(%{"error" => "invalid scope"})
 
       response ->
-        conn
-        |> put_status(:ok)
-        |> json(response)
+        json(conn, response)
     end
   end
 
