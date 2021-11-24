@@ -19,6 +19,14 @@ defmodule Hexpm.Accounts.WebAuthTest do
       assert {:error, changeset} = WebAuth.get_code("foo")
       assert errors_on(changeset)[:scope] == "is invalid"
     end
+
+    test "returns unique codes" do
+      {:ok, response1} = WebAuth.get_code(@scope)
+      {:ok, response2} = WebAuth.get_code(@scope)
+
+      assert response1.device_code != response2.device_code
+      assert response1.user_code != response2.user_code
+    end
   end
 
   describe "submit/3" do

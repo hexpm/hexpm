@@ -27,8 +27,17 @@ defmodule Hexpm.Accounts.WebAuth do
   """
 
   def get_code(scope) do
-    device_code = "foo"
-    user_code = "bar"
+    device_code =
+      32
+      |> :crypto.strong_rand_bytes()
+      |> Base.url_encode64(padding: false)
+
+    user_code =
+      5
+      |> :crypto.strong_rand_bytes()
+      |> Base.hex_encode32(padding: false)
+      |> String.split_at(4)
+      |> then(fn {x, y} -> x <> "-" <> y end)
 
     params = %{
       device_code: device_code,
