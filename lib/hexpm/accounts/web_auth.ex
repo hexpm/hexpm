@@ -61,15 +61,20 @@ defmodule Hexpm.Accounts.WebAuth do
     - `audit` - Audit data for generating the key.
   """
   def submit(user, user_code, audit) do
-    request = WebAuthRequest |> Repo.get_by(user_code: user_code)
+    request =
+      WebAuthRequest
+      |> Repo.get_by(user_code: user_code)
+      |> Repo.preload(:user)
 
     if request do
       {_user, audit_con} = audit
 
-      change = %{user_id: user.id, audit: audit_con}
+      change = %{audit: audit_con, user: user}
 
       WebAuthRequest.changeset(request, change)
+      |> Ecto.Changeset.change()
       |> put_change(:verified, true)
+      |> put_change(:user, user)
       |> Repo.update()
     else
       {:error, "invalid user code"}
