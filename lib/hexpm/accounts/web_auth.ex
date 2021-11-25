@@ -5,8 +5,7 @@ defmodule Hexpm.Accounts.WebAuth do
 
   # A pool for storing and validating web auth requests.
 
-  alias Hexpm.Accounts.WebAuthRequest
-  alias Hexpm.Accounts.Keys
+  alias Hexpm.Accounts.{WebAuthRequest, Keys}
 
   # `device_code` refers to the code assigned to a client to identify it
   # `user_code` refers to the code the user enters to authorize a client
