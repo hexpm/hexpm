@@ -3,9 +3,13 @@ defmodule Hexpm.Accounts.WebAuthRequest do
 
   @moduledoc false
 
+  alias Hexpm.Accounts.Keys
+
   # See `lib/hexpm/accounts/web_auth.ex` for an explanation of the terminology used.
 
   @scopes ["read", "write"]
+  @key_permission %{domain: "api", resource: nil}
+  @key_params %{name: nil, permissions: [@key_permission]}
 
   schema "requests" do
     field :device_code, :string
@@ -30,5 +34,24 @@ defmodule Hexpm.Accounts.WebAuthRequest do
     |> put_change(:audit, audit)
     |> put_change(:verified, true)
     |> put_assoc(:user, user)
+  end
+
+  def access_key(request) do
+    user = request.user
+
+    audit = {user, request.audit}
+
+    scope = request.scope
+    device_code = request.device_code
+    name = "Web Auth #{device_code} key"
+
+    # Add name
+    key_params = %{@key_params | name: name}
+    # Add permissions
+    key_params = %{key_params | permissions: [%{@key_permission | resource: scope}]}
+
+    Multi.new()
+    |> Multi.run(:key_gen, fn _repo, _changes -> Keys.create(user, key_params, audit: audit) end)
+    |> Multi.delete(:delete, request)
   end
 end

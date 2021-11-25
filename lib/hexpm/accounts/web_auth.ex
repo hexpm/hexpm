@@ -5,7 +5,7 @@ defmodule Hexpm.Accounts.WebAuth do
 
   # A pool for storing and validating web auth requests.
 
-  alias Hexpm.Accounts.{WebAuthRequest, Keys}
+  alias Hexpm.Accounts.WebAuthRequest
 
   # `device_code` refers to the code assigned to a client to identify it
   # `user_code` refers to the code the user enters to authorize a client
@@ -13,9 +13,6 @@ defmodule Hexpm.Accounts.WebAuth do
   # `scopes` refers to the list of scopes that are allowed in a web auth request
   # `key_permission` is the default permissions given to generate a hex api key
   # `key_params` is the default params to generate a hex api key
-
-  @key_permission %{domain: "api", resource: nil}
-  @key_params %{name: nil, permissions: [@key_permission]}
 
   @doc """
   Adds a web auth request to the pool and returns the response.
@@ -90,27 +87,17 @@ defmodule Hexpm.Accounts.WebAuth do
 
     case request do
       r when r.verified ->
-        user = request.user
+        result =
+          request
+          |> WebAuthRequest.access_key()
+          |> Repo.transaction()
 
-        audit = {user, request.audit}
-
-        scope = request.scope
-        device_code = request.device_code
-        name = "Web Auth #{device_code} key"
-
-        # Add name
-        key_params = %{@key_params | name: name}
-        # Add permissions
-        key_params = %{key_params | permissions: [%{@key_permission | resource: scope}]}
-
-        case Keys.create(user, key_params, audit: audit) do
-          {:ok, %{key: key}} ->
-            Repo.delete(request)
-
+        case result do
+          {:ok, %{key_gen: %{key: key}}} ->
             key
 
-          error ->
-            error
+          {:error, _, _, _} ->
+            {:error, "key generation failed"}
         end
 
       r when not r.verified ->
