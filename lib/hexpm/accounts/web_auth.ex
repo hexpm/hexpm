@@ -44,7 +44,7 @@ defmodule Hexpm.Accounts.WebAuth do
       scope: scope
     }
 
-    changeset = WebAuthRequest.changeset(%WebAuthRequest{}, params)
+    changeset = WebAuthRequest.create(%WebAuthRequest{}, params)
 
     with {:ok, _} <- Repo.insert(changeset) do
       {:ok, %{device_code: device_code, user_code: user_code}}
@@ -69,13 +69,7 @@ defmodule Hexpm.Accounts.WebAuth do
     if request do
       {_user, audit_con} = audit
 
-      change = %{audit: audit_con, user: user}
-
-      WebAuthRequest.changeset(request, change)
-      |> Ecto.Changeset.change()
-      |> put_change(:verified, true)
-      |> put_change(:user, user)
-      |> Repo.update()
+      WebAuthRequest.verify(request, user, audit_con) |> Repo.update()
     else
       {:error, "invalid user code"}
     end
