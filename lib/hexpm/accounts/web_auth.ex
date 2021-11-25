@@ -89,11 +89,14 @@ defmodule Hexpm.Accounts.WebAuth do
   - `device_code` - The device code assigned to the client
   """
   def access_key(device_code) do
-    request = WebAuthRequest |> Repo.get_by(device_code: device_code)
+    request =
+      WebAuthRequest
+      |> Repo.get_by(device_code: device_code)
+      |> Repo.preload(:user)
 
     case request do
       r when r.verified ->
-        user = Repo.get!(Hexpm.Accounts.User, request.user_id)
+        user = request.user
 
         audit = {user, request.audit}
 
