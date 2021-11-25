@@ -88,7 +88,7 @@ defmodule Hexpm.Accounts.WebAuth do
     request = WebAuthRequest |> Repo.get_by(device_code: device_code)
 
     case request do
-      r when r.verified == true ->
+      r when r.verified ->
         user = Repo.get!(Hexpm.Accounts.User, request.user_id)
 
         audit = {user, request.audit}
@@ -112,7 +112,7 @@ defmodule Hexpm.Accounts.WebAuth do
             error
         end
 
-      r when r.verified == false ->
+      r when not r.verified ->
         {:error, "request to be verified"}
 
       nil ->
