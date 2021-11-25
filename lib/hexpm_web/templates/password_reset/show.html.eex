@@ -19,7 +19,7 @@
             </div>
             <% end %>
         </div>
-        <div class="pb-8 space-y-16 font-medium text-sm text-center">
+        <div class="pb-8 space-y-10 font-medium text-sm text-center">
             <p class="inline-block  text-gray-800">Already have an Account?</p>
             <a class="inline-block text-blue-600" href="<%= Routes.login_path(Endpoint, :show) %>">Log in</a>
         </div>
