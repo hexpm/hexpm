@@ -18,7 +18,7 @@ defmodule Hexpm.Accounts.WebAuthRequest do
 
   def create(request, params \\ %{}) do
     request
-    |> cast(params, [:device_code, :user_code, :scope, :audit])
+    |> cast(params, [:device_code, :user_code, :scope])
     |> validate_inclusion(:scope, @scopes)
     |> validate_required([:device_code, :user_code, :scope, :verified])
     |> unique_constraint([:device_code, :user_code])
