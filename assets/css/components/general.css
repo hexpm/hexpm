@@ -1,0 +1,15 @@
+/* csslint ignore:start */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+/* csslint ignore:end */
+
+@layer components {
+  .heading-h2 {
+    @apply font-bold text-4xl text-center text-gray-900;
+  }
+
+  .form-label {
+    @apply font-medium text-sm text-gray-800;
+  }
+}
