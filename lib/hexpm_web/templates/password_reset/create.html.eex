@@ -1,5 +1,22 @@
-<h2>Reset your password</h2>
-
-<p>
-  If this account has been registered in Hex, you should receive an email shortly with a link to reset your password.
-</p>
+<div class="flex place-content-center">
+  <div class="relative top-36 grid justify-items-center w-full max-w-md gap-4 rounded-lg box-border border border-solid border-gray-200 bg-white">
+    <div class="pt-8">
+      <div class="rounded-full bg-primary-100 h-24 w-24 flex items-center justify-center">
+        <span>
+          <%= icon(:remixicon, :"mail-send-line", width: "32px", height: "32px", fill: "rgba(105, 67, 141, 1)")%>
+        </span>
+      </div>
+    </div>
+    <div>
+      <h2 class="mt-4 font-bold text-4xl text-center text-gray-900">Check your email</h2>
+    </div>
+    <div>
+      <p class="px-12 font-normal text-base text-center text-gray-600">If this account has been registered in Hex, you should receive an email shortly with a link to reset your password.</p>
+    </div>
+    <div class="mt-6 pb-8">
+      <button class="btn-primary text-center w-96 h-10">
+        <a href="<%= Routes.login_path(Endpoint, :show) %>">Back to Log In</a>
+      </button>
+    </div>
+  </div>
+</div>

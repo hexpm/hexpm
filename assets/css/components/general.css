@@ -8,6 +8,6 @@
   }
 
   .btn-primary{
-    @apply bg-primary-600 text-white font-semibold text-base rounded
+    @apply bg-primary-600 text-white font-semibold text-base rounded;
   }
 }
