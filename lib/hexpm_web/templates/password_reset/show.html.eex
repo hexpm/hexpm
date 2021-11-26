@@ -1,27 +1,29 @@
-<div class="flex place-content-center">
-    <div class="relative top-36 grid justify-items-center w-full max-w-md gap-4 rounded-lg box-border border border-solid border-gray-200 bg-white">
-        <div>
-            <h2 class="pt-8 font-bold text-4xl text-center text-gray-900">Forgot Password</h2>
+        <div class="flex place-content-center">
+                <div class="relative top-36 grid justify-items-center w-full max-w-md gap-4 rounded-lg box-border border border-solid border-gray-200 bg-white">
+                        <div>
+                            <h2 class="pt-8 heading-h2">Forgot Password</h2>
+                        </div>
+                        <div>
+                            <p class="px-12 font-normal text-base text-center text-gray-600 flex-grow-0 flex-none order-1">Don’t worry! We have your back. Simply enter your username or email you signed up with</p>
+                        </div>
+                        <div>
+                            <%= form_tag(Routes.password_reset_path(Endpoint, :create)) do %>
+                            <div class="mt-6 w-36 h-3.5">
+                                <label class="form-label" for="username">
+                                        Username or Email
+                                </label>
+                                <input id="username" type="text" name="username" class="rounded box-border border border-solid border-gray-200 w-96 h-10">
+                            </div>
+                            <div class="mt-24">
+                                <button type="submit" class="bg-primary-600 text-white text-center font-semibold text-base w-96 h-10 rounded">Reset my Password</button>
+                            </div>
+                            <% end %>
+                        </div>
+                        <div class="pb-8 space-y-10 font-medium text-sm text-center">
+                            <p class="inline-block  text-gray-800">Already have an Account?</p>
+                            <a class="inline-block text-blue-600" href="<%= Routes.login_path(Endpoint, :show) %>">Log in</a>
+                        </div>
+                </div>
         </div>
-        <div>
-            <p class="px-12 font-normal text-base text-center text-gray-600 flex-grow-0 flex-none order-1">Don’t worry! We have your back. Simply enter your username or email you signed up with</p>
-        </div>
-        <div>
-            <%= form_tag(Routes.password_reset_path(Endpoint, :create)) do %>
-            <div class="mt-6 w-36 h-3.5">
-                <label class="font-medium text-sm text-gray-800" for="username">
-                    Username or Email
-                </label>
-                <input id="username" type="text" name="username" class="rounded box-border border border-solid border-gray-200 w-96 h-10">
-            </div>
-            <div class="mt-24">
-                <button type="submit" class="bg-primary-600 text-white text-center font-semibold text-base w-96 h-10 rounded">Reset my Password</button>
-            </div>
-            <% end %>
-        </div>
-        <div class="pb-8 space-y-10 font-medium text-sm text-center">
-            <p class="inline-block  text-gray-800">Already have an Account?</p>
-            <a class="inline-block text-blue-600" href="<%= Routes.login_path(Endpoint, :show) %>">Log in</a>
-        </div>
-    </div>
-</div>
+
+
