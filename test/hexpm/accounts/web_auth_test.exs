@@ -16,8 +16,7 @@ defmodule Hexpm.Accounts.WebAuthTest do
     end
 
     test "returns an error on invalid scope" do
-      assert {:error, changeset} = WebAuth.get_code("foo")
-      assert errors_on(changeset)[:scope] == "is invalid"
+      assert {:error, "invalid scope"} = WebAuth.get_code("foo")
     end
 
     test "returns unique codes" do

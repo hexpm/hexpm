@@ -45,6 +45,8 @@ defmodule Hexpm.Accounts.WebAuth do
 
     with {:ok, _} <- Repo.insert(changeset) do
       {:ok, %{device_code: device_code, user_code: user_code}}
+    else
+      {:error, _changeset} -> {:error, "invalid scope"}
     end
   end
 
