@@ -1,16 +1,16 @@
 <div class="grid">
   <div class="relative grid place-content-center w-full max-w-md place-self-center top-36 border border-solid border-gray-200 bg-white rounded-lg box-border">
     <%= form_tag(Routes.login_path(Endpoint, :create)) do %>
-      <h2 class="mt-4 font-bold text-4xl text-center text-gray-900">Log in</h2>
+      <h2 class="mt-4 heading-h2">Log in</h2>
       <p class="mt-4 font-normal text-base text-center text-gray-600 static">Use your credentials to log in to your account</p>
       <div class="mt-8 w-36 h-3.5">
-        <label class="font-medium text-sm text-gray-800" for="username">
+        <label class="form-label" for="username">
         Username or Email
         </label>
         <input id = "username" type="text" name="username" class="rounded box-border border border-solid border-gray-200 w-96 h-10">
       </div>
       <div class="mt-20 h-3.5">
-         <label class="font-medium text-sm text-gray-800 w-16" for="password">
+         <label class="form-label w-16" for="password">
         Password
          </label>
         <a href="<%= Routes.password_reset_path(Endpoint, :show) %>" class="mw-32 font-medium text-sm float-right text-blue-600">Forgot Password?</a>
@@ -29,7 +29,7 @@
         <input type="hidden" name="hexdocs" value="<%= @hexdocs %>">
       <% end %>
       <div class="mt-24">
-        <button type="submit" class="bg-primary-600 text-white font-semibold text-base w-96 h-10 rounded">Log in</button>
+        <button type="submit" class="btn-primary w-96 h-10">Log in</button>
       </div>
       <br><br>
       <p class="mt-26 mb-4 font-medium text-xs text-center">
@@ -39,3 +39,4 @@
     <% end %>
   </div>
 </div>
+

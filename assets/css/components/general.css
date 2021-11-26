@@ -1,0 +1,13 @@
+@layer components {
+  .heading-h2 {
+    @apply font-bold text-4xl text-center text-gray-900;
+  }
+
+  .form-label {
+    @apply font-medium text-sm text-gray-800;
+  }
+
+  .btn-primary{
+    @apply bg-primary-600 text-white font-semibold text-base rounded
+  }
+}
