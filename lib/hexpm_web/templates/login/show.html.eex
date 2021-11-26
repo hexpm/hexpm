@@ -29,7 +29,7 @@
         <input type="hidden" name="hexdocs" value="<%= @hexdocs %>">
       <% end %>
       <div class="mt-24">
-        <button type="submit" class="bg-primary-600 text-white font-semibold text-base w-96 h-10 rounded">Log in</button>
+        <button type="submit" class="btn-primary w-96 h-10">Log in</button>
       </div>
       <br><br>
       <p class="mt-26 mb-4 font-medium text-xs text-center">
@@ -39,3 +39,4 @@
     <% end %>
   </div>
 </div>
+

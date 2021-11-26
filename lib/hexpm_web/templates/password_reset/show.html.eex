@@ -15,7 +15,7 @@
         <input id="username" type="text" name="username" class="rounded box-border border border-solid border-gray-200 w-96 h-10">
       </div>
       <div class="mt-24">
-        <button type="submit" class="bg-primary-600 text-white text-center font-semibold text-base w-96 h-10 rounded">Reset my Password</button>
+        <button type="submit" class="btn-primary text-center w-96 h-10">Reset my Password</button>
       </div>
       <% end %>
     </div>
@@ -25,3 +25,6 @@
     </div>
   </div>
 </div>
+
+
+
