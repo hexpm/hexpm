@@ -45,9 +45,7 @@ defmodule Hexpm.Accounts.WebAuthRequest do
     device_code = request.device_code
     name = "Web Auth #{device_code} key"
 
-    # Add name
     key_params = %{@key_params | name: name}
-    # Add permissions
     key_params = %{key_params | permissions: [%{@key_permission | resource: scope}]}
 
     Multi.new()
