@@ -34,7 +34,8 @@ defmodule Hexpm.Accounts.WebAuthTest do
     test "returns ok on valid params", c do
       audit_data = audit_data(c.user)
 
-      assert :ok = WebAuth.submit(c.user, c.request.user_code, audit_data)
+      {status, _changeset} = WebAuth.submit(c.user, c.request.user_code, audit_data)
+      assert status == :ok
     end
 
     test "returns error on invalid user code", c do

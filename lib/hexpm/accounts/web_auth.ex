@@ -68,15 +68,7 @@ defmodule Hexpm.Accounts.WebAuth do
     if request do
       {_user, audit_con} = audit
 
-      response =
-        request
-        |> WebAuthRequest.verify(user, audit_con)
-        |> Repo.update()
-
-      case response do
-        {:ok, _request} -> :ok
-        {:error, _changeset} -> {:error, "verification fails"}
-      end
+      WebAuthRequest.verify(request, user, audit_con) |> Repo.update()
     else
       {:error, "invalid user code"}
     end
