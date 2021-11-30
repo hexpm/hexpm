@@ -28,7 +28,6 @@ defmodule Hexpm.Accounts.User do
     has_many :audit_logs, AuditLog
     has_many :password_resets, PasswordReset
     has_many :package_reports, Hexpm.Repository.PackageReport, foreign_key: :author_id
-    has_many :web_auth_requests, Hexpm.Accounts.WebAuthRequest
   end
 
   @username_regex ~r"^[a-z0-9_\-\.]+$"
