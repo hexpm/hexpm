@@ -170,7 +170,7 @@ defmodule HexpmWeb.ViewHelpers do
 
   def error_tag(form, field) do
     if error = form.errors[field] do
-      content_tag(:span, translate_error(error), class: "form-error")
+      content_tag(:span, translate_error(error), class: "form-input-error")
     end
   end
 
