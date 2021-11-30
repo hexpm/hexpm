@@ -10,4 +10,12 @@
   .btn-primary{
     @apply bg-primary-600 text-white font-semibold text-base rounded;
   }
+
+  .form-input{
+    @apply rounded box-border border border-solid border-gray-200 w-96 h-10
+  }
+
+  .form-input-error{
+    @apply italic font-medium text-sm text-red-600 mt-1
+  }
 }
