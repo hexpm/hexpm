@@ -1,4 +1,5 @@
 @layer components {
+  
   .heading-h2 {
     @apply font-bold text-4xl text-center text-gray-900;
   }
@@ -7,15 +8,15 @@
     @apply font-medium text-sm text-gray-800;
   }
 
-  .btn-primary{
+  .btn-primary {
     @apply bg-primary-600 text-white font-semibold text-base rounded;
   }
 
-  .form-input{
-    @apply rounded box-border border border-solid border-gray-200 w-96 h-10
+  .form-input {
+    @apply rounded box-border border border-solid border-gray-200 w-96 h-10;
   }
 
-  .form-input-error{
-    @apply italic font-medium text-sm text-red-600 
+  .form-input-error {
+    @apply italic font-medium text-sm text-red-600;
   }
 }
