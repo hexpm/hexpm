@@ -7,14 +7,13 @@ defmodule Hexpm.Accounts.WebAuthRequest do
 
   # See `lib/hexpm/accounts/web_auth.ex` for an explanation of the terminology used.
 
-  @scopes ["read", "write"]
   @key_permission %{domain: "api", resource: nil}
   @key_params %{name: nil, permissions: [@key_permission]}
 
   schema "requests" do
     field :device_code, :string
     field :user_code, :string
-    field :scope, :string
+    field :key_name, :string
     field :verified, :boolean, default: false
     belongs_to :user, Hexpm.Accounts.User
     field :audit, :string
@@ -22,9 +21,8 @@ defmodule Hexpm.Accounts.WebAuthRequest do
 
   def create(request, params \\ %{}) do
     request
-    |> cast(params, [:device_code, :user_code, :scope])
-    |> validate_inclusion(:scope, @scopes)
-    |> validate_required([:device_code, :user_code, :scope, :verified])
+    |> cast(params, [:device_code, :user_code, :key_name])
+    |> validate_required([:device_code, :user_code, :key_name, :verified])
     |> unique_constraint([:device_code, :user_code])
   end
 
@@ -41,15 +39,16 @@ defmodule Hexpm.Accounts.WebAuthRequest do
 
     audit = {user, request.audit}
 
-    scope = request.scope
-    device_code = request.device_code
-    name = "Web Auth #{device_code} key"
+    key_name = request.key_name
 
-    key_params = %{@key_params | name: name}
-    key_params = %{key_params | permissions: [%{@key_permission | resource: scope}]}
+    key_params = %{@key_params | name: key_name}
+
+    write_key = %{key_params | permissions: [%{@key_permission | resource: "write"}]}
+    read_key = %{key_params | permissions: [%{@key_permission | resource: "read"}]}
 
     Multi.new()
-    |> Multi.run(:key_gen, fn _repo, _changes -> Keys.create(user, key_params, audit: audit) end)
+    |> Multi.run(:write_key_gen, fn _, _ -> Keys.create(user, write_key, audit: audit) end)
+    |> Multi.run(:read_key_gen, fn _, _ -> Keys.create(user, read_key, audit: audit) end)
     |> Multi.delete(:delete, request)
   end
 end

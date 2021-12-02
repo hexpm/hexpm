@@ -9,7 +9,7 @@ defmodule Hexpm.Accounts.WebAuth do
 
   # `device_code` refers to the code assigned to a client to identify it
   # `user_code` refers to the code the user enters to authorize a client
-  # `scope` refers to the permissions granted to a key
+  # `name` refers to the name given to a key
   # `scopes` refers to the list of scopes that are allowed in a web auth request
   # `key_permission` is the default permissions given to generate a hex api key
   # `key_params` is the default params to generate a hex api key
@@ -19,10 +19,10 @@ defmodule Hexpm.Accounts.WebAuth do
 
   ## Params
 
-    - `scope` - Scope of the key to be generated. One of read and write.
+    - `name` - Name of the keys to be generated.
   """
 
-  def get_code(scope) do
+  def get_code(key_name) do
     device_code =
       32
       |> :crypto.strong_rand_bytes()
@@ -38,15 +38,13 @@ defmodule Hexpm.Accounts.WebAuth do
     params = %{
       device_code: device_code,
       user_code: user_code,
-      scope: scope
+      key_name: key_name
     }
 
     changeset = WebAuthRequest.create(%WebAuthRequest{}, params)
 
     with {:ok, _} <- Repo.insert(changeset) do
       {:ok, %{device_code: device_code, user_code: user_code}}
-    else
-      {:error, _changeset} -> {:error, "invalid scope"}
     end
   end
 
@@ -95,8 +93,8 @@ defmodule Hexpm.Accounts.WebAuth do
           |> Repo.transaction()
 
         case result do
-          {:ok, %{key_gen: %{key: key}}} ->
-            key
+          {:ok, %{write_key_gen: %{key: write_key}, read_key_gen: %{key: read_key}}} ->
+            %{write_key: write_key, read_key: read_key}
 
           {:error, _, _, _} ->
             {:error, "key generation failed"}

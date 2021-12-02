@@ -8,14 +8,9 @@ defmodule HexpmWeb.WebAuthController do
 
   def code(conn, params)
 
-  def code(conn, %{"scope" => scope}) do
-    case WebAuth.get_code(scope) do
-      {:error, msg} ->
-        invalid_parameter(conn, msg)
-
-      {:ok, response} ->
-        json(conn, response)
-    end
+  def code(conn, %{"key_name" => key_name}) do
+    {:ok, response} = WebAuth.get_code(key_name)
+    json(conn, response)
   end
 
   def code(conn, _params), do: invalid_params(conn)
@@ -54,9 +49,9 @@ defmodule HexpmWeb.WebAuthController do
       {:error, msg} ->
         invalid_parameter(conn, msg)
 
-      key ->
+      keys ->
         conn
-        |> render(:show, key: key)
+        |> render(:show, keys)
     end
   end
 

@@ -3,25 +3,19 @@ defmodule Hexpm.Accounts.WebAuthTest do
 
   alias Hexpm.Accounts.WebAuth
 
-  @scope "write"
+  @key_name "test-key"
 
   describe "get_code/1" do
-    test "returns a valid response on valid scope" do
-      for scope <- ["write", "read"] do
-        {:ok, response} = WebAuth.get_code(scope)
+    test "returns a valid response" do
+      {:ok, response} = WebAuth.get_code(@key_name)
 
-        assert response.device_code
-        assert response.user_code
-      end
-    end
-
-    test "returns an error on invalid scope" do
-      assert {:error, "invalid scope"} = WebAuth.get_code("foo")
+      assert response.device_code
+      assert response.user_code
     end
 
     test "returns unique codes" do
-      {:ok, response1} = WebAuth.get_code(@scope)
-      {:ok, response2} = WebAuth.get_code(@scope)
+      {:ok, response1} = WebAuth.get_code(@key_name)
+      {:ok, response2} = WebAuth.get_code(@key_name)
 
       assert response1.device_code != response2.device_code
       assert response1.user_code != response2.user_code
@@ -48,30 +42,30 @@ defmodule Hexpm.Accounts.WebAuthTest do
   describe "access_key/1" do
     setup [:get_code, :login]
 
-    test "returns a key on valid device code", c do
+    test "returns keys on valid device code", c do
       submit_code(c)
 
-      key =
+      keys =
         c.request.device_code
         |> WebAuth.access_key()
 
-      assert %Hexpm.Accounts.Key{} = key
+      assert %{write_key: %Hexpm.Accounts.Key{}, read_key: %Hexpm.Accounts.Key{}} = keys
     end
 
     test "returns an error on unverified request", c do
-      key =
+      response =
         c.request.device_code
         |> WebAuth.access_key()
 
-      assert key == {:error, "request to be verified"}
+      assert response == {:error, "request to be verified"}
     end
 
     test "returns an error on invalid device code" do
-      key =
+      response =
         "bad code"
         |> WebAuth.access_key()
 
-      assert key == {:error, "invalid device code"}
+      assert response == {:error, "invalid device code"}
     end
 
     test "deletes request after user has accessed", c do
@@ -86,7 +80,7 @@ defmodule Hexpm.Accounts.WebAuthTest do
   end
 
   def get_code(context) do
-    {:ok, request} = WebAuth.get_code(@scope)
+    {:ok, request} = WebAuth.get_code(@key_name)
 
     Map.merge(context, %{request: request})
   end
