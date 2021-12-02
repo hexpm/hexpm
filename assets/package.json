@@ -8,5 +8,8 @@
     "postcss-import": "^14.0.2",
     "postcss-loader": "^4.2.0",
     "tailwindcss": "^2.2.19"
+  },
+  "dependencies": {
+    "@tailwindcss/forms": "^0.3.4"
   }
 }
