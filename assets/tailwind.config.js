@@ -8,6 +8,9 @@ module.exports = {
   ],
   darkMode: false, // or 'media' or 'class'
   theme: {
+    boxShadow: {
+      DEFAULT: "0 4px 15px rgba(3, 9, 19, 0.15)"
+    },
     colors: {
       primary: {
         900: "#85d7ff",

@@ -122,9 +122,21 @@ defmodule HexpmWeb.ViewHelpers do
 
   def changeset_error(changeset) do
     if changeset.action do
-      content_tag :div, class: "alert alert-danger" do
-        "Oops, something went wrong! Please check the errors below."
-      end
+      ~E"""
+
+      <div class="relative top-2">
+        <div class="flex flex-row items-center justify-center w-full h-11 max-w-xl mx-auto overflow-hidden bg-white rounded-lg
+      shadow bg-white">
+          <div class="flex items-center space-x-4">
+            <div class="inline-flex rounded-full h-3.5 w-3.5 flex bg-red-600"></div>
+            <p class="inline-flex font-medium text-base text-gray-700">
+              Oops, something went wrong! Please check the errors below
+            </p>
+          </div>
+        </div>
+      </div>
+
+      """
     end
   end
 
