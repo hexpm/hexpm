@@ -33,7 +33,7 @@
           </span>
         </div>
       </div>
-      <div class="mt-6 font-normal text-sm">
+      <div class="mt-8 font-normal text-sm">
         <label class="inline-flex space-x-2 items-center">
           <input type="hidden" name="user[revoke_all_keys]" value="no">
           <input type="checkbox" class="form-checkbox rounded border-box border border-solid border-gray-200 w-5 h-5 text-primary-600" name="user[revoke_all_keys]" value="yes" checked>
