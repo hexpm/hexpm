@@ -10,7 +10,7 @@ defmodule HexpmWeb.WebAuthController do
 
   def code(conn, %{"key_name" => key_name}) do
     {:ok, response} = WebAuth.get_code(key_name)
-    json(conn, response)
+    render(conn, :code, response)
   end
 
   def code(conn, _params), do: invalid_params(conn)
@@ -51,7 +51,7 @@ defmodule HexpmWeb.WebAuthController do
 
       keys ->
         conn
-        |> render(:show, keys)
+        |> render(:access, keys)
     end
   end
 
