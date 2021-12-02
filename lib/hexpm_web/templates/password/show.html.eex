@@ -1,32 +1,61 @@
 <%= ViewHelpers.changeset_error(@changeset) %>
-<h2>Choose a new password</h2>
-
-<%= form_for @changeset, Routes.password_path(Endpoint, :update), [method: :post], fn f -> %>
-
-  <div class="form-group">
-    <%= label f, :password %>
-    <%= ViewHelpers.password_input f, :password %>
-    <%= ViewHelpers.error_tag f, :password %>
-  </div>
-
-  <div class="form-group">
-    <%= label f, :password_confirmation %>
-    <%= ViewHelpers.password_input f, :password_confirmation %>
-    <%= ViewHelpers.error_tag f, :password_confirmation %>
-  </div>
-
-  <div class="form-group">
-    <div class="checkbox">
-      <input type="hidden" name="user[revoke_all_keys]" value="no">
-      <label>
-        <input type="checkbox" name="user[revoke_all_keys]" value="yes" checked>
-        Revoke all API keys
-      </label>
+<div class="flex place-content-center">
+  <div class="relative top-36 grid justify-items-center w-full max-w-md gap-4 rounded-lg box-border border border-solid border-gray-200 bg-white">
+    <div>
+      <h2 class="pt-8 heading-h2">Create Password</h2>
+    </div>
+    <div>
+      <p class="px-12 font-normal text-base text-center text-gray-600">Enter your new password and confirm it below.</p>
+    </div>
+    <div>
+      <%= form_for @changeset, Routes.password_path(Endpoint, :update), [method: :post], fn f -> %>      
+      <div class="mt-6 ">
+        <%= label f, :password, "Create New Password", class: "form-label w-36 h-3.5" %>
+        <div class="relative w-96 h-10">
+          <%= ViewHelpers.password_input f, :password, class: "form-input" %> 
+          <%= ViewHelpers.error_tag f, :password %>
+          <span class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+            <button>
+              <%= icon(:remixicon, :"eye-close-line", width: "20px", fill: "rgba(97,117,138,1)")%>
+            </button>
+          </span>
+        </div>
+      </div>
+      <div class="mt-8">
+        <%= label f, :password_confirmation, "Confirm New Password", class: "form-label w-36 h-3.5" %>
+        <div class="relative w-96 h-10">
+          <%= ViewHelpers.password_input f, :password_confirmation, class: "form-input" %>
+          <%= ViewHelpers.error_tag f, :password_confirmation %>
+          <span class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+            <button>
+              <%= icon(:remixicon, :"eye-close-line", width: "20px", fill: "rgba(97,117,138,1)")%>
+            </button>
+          </span>
+        </div>
+      </div>
+      <div class="mt-8 font-normal text-sm">
+        <label class="inline-flex space-x-2 items-center">
+          <input type="hidden" name="user[revoke_all_keys]" value="no">
+          <input type="checkbox" class="form-checkbox rounded border-box border border-solid border-gray-200 w-5 h-5 text-primary-600" name="user[revoke_all_keys]" value="yes" checked>
+          <span class="font-medium text-gray-800 text-base">Revoke all API keys</span>
+        </label>
+      </div>
+      <input type="hidden" name="user[username]" value="<%= @username %>">
+      <input type="hidden" name="user[key]" value="<%= @key %>">
+      <div class="mt-4">
+        <button type="submit" class="btn-primary text-center w-96 h-10">Create New Password
+        </button>
+      </div>
+      <% end %>
+    </div>
+    <div class="pb-8 space-y-10 font-medium text-sm text-center">
+      <p class="inline-block  text-gray-800">Don’t have an account?</p>
+      <a class="inline-block text-blue-600" href="<%= Routes.login_path(Endpoint, :show) %>">Register Now</a>
     </div>
   </div>
+</div>
 
-  <input type="hidden" name="user[username]" value="<%= @username %>">
-  <input type="hidden" name="user[key]" value="<%= @key %>">
 
-  <button type="submit" class="btn btn-primary">Submit</button>
-<% end %>
+
+
+

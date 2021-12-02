@@ -13,7 +13,7 @@
   }
 
   .form-input {
-    @apply rounded box-border border border-solid border-gray-200 w-96 h-10;
+    @apply rounded box-border border border-solid border-gray-200 w-96 h-10 focus:ring-primary-600;
   }
 
   .form-input-error {
