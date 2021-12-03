@@ -2,8 +2,9 @@
 <html>
   <head>
     <meta charset="utf-8">
+      <link rel="stylesheet" href="<%= Routes.static_path(Endpoint, "/assets/app.css") %>">
   </head>
-  <body>
+  <body class="bg-gray-50 h-screen">
     <%= @inner_content %>
 
     <p>
