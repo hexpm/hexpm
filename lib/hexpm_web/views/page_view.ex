@@ -1,6 +1,8 @@
 defmodule HexpmWeb.PageView do
   use HexpmWeb, :view
 
+  import Phoenix.LiveView.Helpers
+
   def render_package(data) do
     data =
       [

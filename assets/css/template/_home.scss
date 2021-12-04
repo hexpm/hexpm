@@ -200,6 +200,18 @@
   }
 }
 
+.matches {
+  padding: 4px;
+  margin: 8px;
+  text-align: initial;
+  background-color: #f5f5f5;
+  border-radius: 4px;
+
+  p {
+    margin: 4px;
+  }
+}
+
 .log-head,
 .gs-head {
   padding-bottom: 10px;

@@ -1,0 +1,33 @@
+<form phx-change="suggest" phx-submit="search"
+      role="search"
+      action={Routes.package_path(Endpoint, :index)}
+      method="get">
+  <div class="input-group">
+    <input type="text"
+           list="matches"
+           class="form-control"
+           name="search"
+           id="search"
+           phx-debounce="1000"
+           tabindex="1"
+           value={@query}
+           list="matches"
+           placeholder="Start typing..."/>
+        <label class="sr-only" for="search">Find packages</label>
+    <span class="input-group-btn">
+      <button type="submit" class="btn btn-search" tabindex="1">
+        <%= icon(:glyphicon, :search) %>
+        <span class="sr-only">Search</span>
+      </button>
+    </span> 
+  </div>
+  <%= unless @matches == [] do %>
+    <div id="matches" class="matches">
+      <%= for match <- @matches do %>
+        <p>
+          <%= link(match.name, to: Routes.package_path(@socket, :show, match.name), class: "text option") %>
+        </p>
+      <% end %>
+    </div>
+  <% end %>
+</form>
