@@ -13,10 +13,14 @@
   }
 
   .form-input {
-    @apply rounded box-border border border-solid border-gray-200 w-96 h-10 focus:ring-primary-600;
+    @apply rounded box-border border border-solid border-gray-200 w-96 h-10 focus:ring-primary-600 focus:shadow-inner focus:border focus:border-primary-600 focus:border-solid focus:outline-none;
   }
 
-  .form-input-error {
+  .form-error {
     @apply italic font-medium text-sm text-red-600;
+  }
+
+   .form-input-error {
+    @apply border-red-600;
   }
 }

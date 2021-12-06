@@ -12,11 +12,11 @@
       <div class="mt-6 ">
         <%= label f, :password, "Create New Password", class: "form-label w-36 h-3.5" %>
         <div class="relative w-96 h-10">
-          <%= ViewHelpers.password_input f, :password, class: "form-input" %> 
+          <%= ViewHelpers.password_input f, :password %> 
           <%= ViewHelpers.error_tag f, :password %>
           <span class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
             <button>
-              <%= icon(:remixicon, :"eye-close-line", width: "20px", fill: "rgba(97,117,138,1)")%>
+              <%= ViewHelpers.password_input_icon(f, :password_confirmation) %>
             </button>
           </span>
         </div>
@@ -24,11 +24,11 @@
       <div class="mt-8">
         <%= label f, :password_confirmation, "Confirm New Password", class: "form-label w-36 h-3.5" %>
         <div class="relative w-96 h-10">
-          <%= ViewHelpers.password_input f, :password_confirmation, class: "form-input" %>
+          <%= ViewHelpers.password_input f, :password_confirmation %>
           <%= ViewHelpers.error_tag f, :password_confirmation %>
           <span class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
             <button>
-              <%= icon(:remixicon, :"eye-close-line", width: "20px", fill: "rgba(97,117,138,1)")%>
+              <%= ViewHelpers.password_input_icon(f, :password_confirmation) %>
             </button>
           </span>
         </div>
@@ -50,7 +50,7 @@
     </div>
     <div class="pb-8 space-y-10 font-medium text-sm text-center">
       <p class="inline-block  text-gray-800">Don’t have an account?</p>
-      <a class="inline-block text-blue-600" href="<%= Routes.login_path(Endpoint, :show) %>">Register Now</a>
+      <a class="inline-block text-blue-600" href="<%= Routes.signup_path(Endpoint, :show) %>">Register Now</a>
     </div>
   </div>
 </div>

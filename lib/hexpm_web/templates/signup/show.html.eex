@@ -10,29 +10,50 @@
       <%= form_for @changeset, Routes.signup_path(Endpoint, :create), fn f -> %>
       <div class="mt-6 w-36 h-3.5">
         <%= label f, :full_name, "Your Full Name", class: "form-label" %>
-        <%= ViewHelpers.text_input f, :full_name, class: "form-input" %>
-        <%= ViewHelpers.error_tag f, :full_name %>
+        <div class="relative w-96 h-10">
+          <%= ViewHelpers.text_input f, :full_name %>
+          <%= ViewHelpers.error_tag f, :full_name %>
+          <span class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+            <button>
+              <%= ViewHelpers.add_input_icon(f, :full_name) %>
+            </button>
+          </span>
+        </div> 
       </div>
       <div class="mt-20 w-36 h-3.5">
         <%= label f, :username, "Create a Username", class: "form-label" %>
-        <%= ViewHelpers.text_input f, :username, class: "form-input" %>
-        <%= ViewHelpers.error_tag f, :username %>
+        <div class="relative w-96 h-10">
+          <%= ViewHelpers.text_input f, :username %>
+          <%= ViewHelpers.error_tag f, :username %>
+          <span class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+            <button>
+              <%= ViewHelpers.add_input_icon(f, :username) %>
+            </button>
+          </span>
+        </div> 
       </div>
       <%= inputs_for f, :emails, [append: [%Email{}]], fn f -> %>
       <div class="mt-20 w-36 h-3.5">
         <%= label f, :email, "Your Email Address", class: "form-label" %>
-        <%= ViewHelpers.email_input f, :email, class: "form-input" %>
-        <%= ViewHelpers.error_tag f, :email %>
+        <div class="relative w-96 h-10">
+          <%= ViewHelpers.email_input f, :email %>
+          <%= ViewHelpers.error_tag f, :email %>
+          <span class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+            <button>
+              <%= ViewHelpers.add_input_icon(f, :email) %>
+            </button>
+          </span>
+        </div> 
       </div>
       <% end %>
       <div class="mt-20 ">
         <%= label f, :password, "Create Password", class: "form-label w-36 h-3.5" %>
         <div class="relative w-96 h-10">
-          <%= ViewHelpers.password_input f, :password, class: "form-input" %> 
+          <%= ViewHelpers.password_input f, :password %> 
           <%= ViewHelpers.error_tag f, :password %>
           <span class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
             <button>
-              <%= icon(:remixicon, :"eye-close-line", width: "20px", fill: "rgba(97,117,138,1)")%>
+               <%= ViewHelpers.password_input_icon(f, :password) %>
             </button>
           </span>
         </div>
@@ -40,11 +61,11 @@
       <div class="mt-8">
         <%= label f, :password_confirmation, "Confirm Password", class: "form-label w-36 h-3.5" %>
         <div class="relative w-96 h-10">
-          <%= ViewHelpers.password_input f, :password_confirmation, class: "form-input" %>
+          <%= ViewHelpers.password_input f, :password_confirmation %>
           <%= ViewHelpers.error_tag f, :password_confirmation %>
           <span class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
             <button>
-              <%= icon(:remixicon, :"eye-close-line", width: "20px", fill: "rgba(97,117,138,1)")%>
+               <%= ViewHelpers.password_input_icon(f, :password_confirmation) %>
             </button>
           </span>
         </div>
