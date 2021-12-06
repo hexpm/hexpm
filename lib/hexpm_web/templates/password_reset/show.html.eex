@@ -12,7 +12,7 @@
         <label class="form-label" for="username">
           Username or Email
         </label>
-        <input id="username" type="text" name="username" class="rounded box-border border border-solid border-gray-200 w-96 h-10">
+        <input id="username" type="text" name="username" class="form-input">
       </div>
       <div class="mt-24">
         <button type="submit" class="btn-primary text-center w-96 h-10">Reset my Password</button>
