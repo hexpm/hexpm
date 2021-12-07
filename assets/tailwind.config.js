@@ -1,4 +1,5 @@
 module.exports = {
+  mode: 'jit',
   purge: [
     "../lib/hexpm_web/**/*.html.eex",
     "../lib/hexpm_web/**/*.html.leex",
