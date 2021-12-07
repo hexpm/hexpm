@@ -173,9 +173,14 @@ defmodule HexpmWeb.ViewHelpers do
     Phoenix.HTML.Form.select(form, field, options, opts)
   end
 
+  defp validation_input_border(form, field) do
+    value = form.params[Atom.to_string(field)]
+    unless is_nil(value), do: "border-green-600", else: ""
+  end
+
   defp add_error_class(opts, form, field) do
     error? = Keyword.has_key?(form.errors, field)
-    error_class = if error?, do: "form-input-error", else: ""
+    error_class = if error?, do: "form-input-error", else: validation_input_border(form, field)
     class = "form-input #{error_class} #{opts[:class]}"
 
     Keyword.put(opts, :class, class)

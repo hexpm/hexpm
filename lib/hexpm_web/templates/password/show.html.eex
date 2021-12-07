@@ -16,7 +16,7 @@
           <%= ViewHelpers.error_tag f, :password %>
           <span class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
             <button>
-              <%= ViewHelpers.password_input_icon(f, :password_confirmation) %>
+              <%= ViewHelpers.password_input_icon(f, :password) %>
             </button>
           </span>
         </div>
