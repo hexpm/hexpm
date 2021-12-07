@@ -9,6 +9,9 @@
     "postcss-loader": "^4.2.0",
     "tailwindcss": "^2.2.19",
     "@tailwindcss/forms": "^0.3.4"
+  },
+  "scripts": {
+    "deploy": "NODE_ENV=production tailwindcss --postcss --minify --input=css/app.css --output=../priv/static/assets/app.css"
   }
   
 }
