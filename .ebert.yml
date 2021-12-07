@@ -6,8 +6,6 @@ engines:
     enabled: true
   eslint:
     enabled: true
-  csslint:
-    enabled: true
   remark-lint:
     enabled: true
 exclude_paths:
