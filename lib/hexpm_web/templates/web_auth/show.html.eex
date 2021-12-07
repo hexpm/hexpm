@@ -1,0 +1,13 @@
+<h2>Device Activation</h2>
+
+<%= form_for @conn, Routes.web_auth_path(Endpoint, :submit), fn f -> %>
+    <div class="form-group">
+      <%= label f, :user_code, "Enter the code displayed on your device" %>
+      <%= ViewHelpers.text_input f, :user_code %>
+      <%= error_tag :user_code, @error %>
+    </div>
+
+    <button type="submit" class="btn btn-primary">Continue</button>
+
+    <br><br>
+<% end %>

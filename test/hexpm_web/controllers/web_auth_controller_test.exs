@@ -43,9 +43,9 @@ defmodule HexpmWeb.WebAuthControllerTest do
       response =
         conn
         |> post(Routes.web_auth_path(conn, :submit, %{"user_code" => "bad-code"}))
-        |> json_response(:unprocessable_entity)
+        |> html_response(:bad_request)
 
-      assert response["error"] == "invalid user code"
+      assert response =~ "invalid user code"
     end
 
     test "returns an error on invalid parameters", %{conn: conn} do

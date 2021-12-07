@@ -6,6 +6,8 @@ defmodule HexpmWeb.WebAuthController do
 
   # Controller for Web Auth, a means of authenticating the cli from the website
 
+  plug :requires_login when action == :show
+
   def code(conn, params)
 
   def code(conn, %{"key_name" => key_name}) do
@@ -28,12 +30,14 @@ defmodule HexpmWeb.WebAuthController do
         |> json(%{"ok" => "ok"})
 
       {:error, msg} when msg == "invalid user code" ->
-        invalid_parameter(conn, msg)
+        conn
+        |> put_status(:bad_request)
+        |> render_show(msg)
 
       {:error, msg} ->
         conn
         |> put_status(:internal_server_error)
-        |> json(%{"error" => msg})
+        |> render_show(msg)
     end
   end
 
@@ -73,5 +77,17 @@ defmodule HexpmWeb.WebAuthController do
     conn
     |> put_status(:internal_server_error)
     |> json(%{"error" => msg})
+  end
+
+  def show(conn, _), do: render_show(conn, nil)
+
+  def render_show(conn, error) do
+    render(
+      conn,
+      "show.html",
+      title: "WebAuth",
+      container: "container page page-xs",
+      error: error
+    )
   end
 end
