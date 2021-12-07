@@ -198,7 +198,7 @@ defmodule HexpmWeb.ViewHelpers do
     add_input_icon(form, field, error?)
   end
 
-  defp add_input_icon(form, field, true = _error?) do
+  defp add_input_icon(_form, _field, _error? = true) do
     ~E"""
      <%= error_icon() %>
     """
