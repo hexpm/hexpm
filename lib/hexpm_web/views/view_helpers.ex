@@ -204,7 +204,7 @@ defmodule HexpmWeb.ViewHelpers do
     """
   end
 
-  defp add_input_icon(form, field, _error?) do
+  defp add_input_icon(form, field, _error? = false) do
     value = form.params[Atom.to_string(field)]
 
     ~E"""
