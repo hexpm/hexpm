@@ -3,6 +3,7 @@ defmodule HexpmWeb.ViewHelpers do
   alias Hexpm.Repository.{Package, Release}
   alias HexpmWeb.Endpoint
   alias HexpmWeb.Router.Helpers, as: Routes
+  alias HexpmWeb.ViewIcons
 
   def logged_in?(assigns) do
     !!assigns[:current_user]
@@ -172,17 +173,67 @@ defmodule HexpmWeb.ViewHelpers do
     Phoenix.HTML.Form.select(form, field, options, opts)
   end
 
+  defp validation_input_border(form, field) do
+    value = form.params[Atom.to_string(field)]
+    unless is_nil(value), do: "border-green-600", else: ""
+  end
+
   defp add_error_class(opts, form, field) do
     error? = Keyword.has_key?(form.errors, field)
-    error_class = if error?, do: "form-input-error", else: ""
-    class = "form-control #{error_class} #{opts[:class]}"
+    error_class = if error?, do: "form-input-error", else: validation_input_border(form, field)
+    class = "form-input #{error_class} #{opts[:class]}"
 
     Keyword.put(opts, :class, class)
   end
 
+  def password_input_icon(form, field) do
+    error? = Keyword.has_key?(form.errors, field)
+
+    ~E"""
+    <%= if error? do %>
+    <%= error_icon() %>
+    <% else %>       
+    <%= ViewIcons.icon(:remixicon, :"eye-close-line", width: "20px", fill: "rgba(97,117,138,1)")%>     
+    <% end %>
+    """
+  end
+
+  def add_input_icon(form, field) do
+    error? = Keyword.has_key?(form.errors, field)
+    add_input_icon(form, field, error?)
+  end
+
+  defp add_input_icon(_form, _field, _error? = true) do
+    ~E"""
+     <%= error_icon() %>
+    """
+  end
+
+  defp add_input_icon(form, field, _error? = false) do
+    value = form.params[Atom.to_string(field)]
+
+    ~E"""
+     <%= unless is_nil(value) do %>
+     <%= check_icon() %>
+     <% end %>
+    """
+  end
+
+  defp check_icon do
+    ~E"""
+    <%= ViewIcons.icon(:remixicon, :"checkbox-circle-fill", width: "20px", fill: "rgba(17, 117, 61, 1)")%>
+    """
+  end
+
+  defp error_icon do
+    ~E"""
+    <%= ViewIcons.icon(:remixicon, :"error-warning-fill", width: "20px", fill: "rgba(170, 44, 63, 1)")%>
+    """
+  end
+
   def error_tag(form, field) do
     if error = form.errors[field] do
-      content_tag(:span, translate_error(error), class: "form-input-error")
+      content_tag(:span, translate_error(error), class: "form-error")
     end
   end
 
