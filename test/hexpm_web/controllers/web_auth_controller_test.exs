@@ -109,7 +109,6 @@ defmodule HexpmWeb.WebAuthControllerTest do
     organization = insert(:organization)
     insert(:organization_user, organization: organization, user: user)
 
-    # test login
     conn = test_login(context.conn, user)
 
     Map.merge(context, %{user: user, organization: organization, conn: conn})

@@ -3,8 +3,6 @@ defmodule Hexpm.Accounts.WebAuth do
 
   @moduledoc false
 
-  # A pool for storing and validating web auth requests.
-
   alias Hexpm.Accounts.WebAuthRequest
 
   # `device_code` refers to the code assigned to a client to identify it
