@@ -1,26 +1,26 @@
 <div class="container flash">
   <%= if flash = get_flash(@conn, :raw_error) do %>
-    <div class="alert alert-danger" role="alert"><%= raw flash %></div>
+    <%= toaster_notification(flash, :raw_error) %>
   <% end %>
   <%= if flash = get_flash(@conn, :error) do %>
-    <div class="alert alert-danger" role="alert"><%= flash %></div>
+     <%= toaster_notification(flash, :error) %>
   <% end %>
   <%= if flash = get_flash(@conn, :raw_warning) do %>
-    <div class="alert alert-warning" role="alert"><%= raw flash %></div>
+   <%=  toaster_notification(flash, :raw_warning) %>
   <% end %>
   <%= if flash = get_flash(@conn, :warning) do %>
-    <div class="alert alert-warning" role="alert"><%= flash %></div>
+     <%= toaster_notification(flash, :warning) %>
   <% end %>
   <%= if flash = get_flash(@conn, :raw_info) do %>
-    <div class="alert alert-info" role="alert"><%= raw flash %></div>
+    <%= toaster_notification(flash, :raw_info) %>
   <% end %>
   <%= if flash = get_flash(@conn, :info) do %>
-    <div class="alert alert-info" role="alert"><%= flash %></div>
+      <%= toaster_notification(flash, :info) %>
   <% end %>
   <%= if flash = get_flash(@conn, :raw_success) do %>
-    <div class="alert alert-success" role="alert"><%= raw flash %></div>
+     <%= toaster_notification(flash, :raw_success) %>
   <% end %>
   <%= if flash = get_flash(@conn, :success) do %>
-    <div class="alert alert-success" role="alert"><%= flash %></div>
+     <%= toaster_notification(flash, :success) %>
   <% end %>
 </div>
