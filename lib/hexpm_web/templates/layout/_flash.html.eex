@@ -3,24 +3,24 @@
     <%= toaster_notification(flash, :raw_error) %>
   <% end %>
   <%= if flash = get_flash(@conn, :error) do %>
-     <%= toaster_notification(flash, :error) %>
+    <%= toaster_notification(flash, :error) %>
   <% end %>
   <%= if flash = get_flash(@conn, :raw_warning) do %>
-   <%=  toaster_notification(flash, :raw_warning) %>
+    <%=  toaster_notification(flash, :raw_warning) %>
   <% end %>
   <%= if flash = get_flash(@conn, :warning) do %>
-     <%= toaster_notification(flash, :warning) %>
+    <%= toaster_notification(flash, :warning) %>
   <% end %>
   <%= if flash = get_flash(@conn, :raw_info) do %>
     <%= toaster_notification(flash, :raw_info) %>
   <% end %>
   <%= if flash = get_flash(@conn, :info) do %>
-      <%= toaster_notification(flash, :info) %>
+    <%= toaster_notification(flash, :info) %>
   <% end %>
   <%= if flash = get_flash(@conn, :raw_success) do %>
-     <%= toaster_notification(flash, :raw_success) %>
+    <%= toaster_notification(flash, :raw_success) %>
   <% end %>
   <%= if flash = get_flash(@conn, :success) do %>
-     <%= toaster_notification(flash, :success) %>
+    <%= toaster_notification(flash, :success) %>
   <% end %>
 </div>

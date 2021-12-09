@@ -53,7 +53,7 @@ defmodule HexpmWeb.LayoutView do
 
   def toaster_notification(flash, alert_type) do
     ~E"""
-     <div class="relative top-2">
+      <div class="relative top-2">
         <div class="flex flex-row items-center justify-center h-11 max-w-2xl mx-auto overflow-hidden bg-white rounded-lg
       shadow bg-white">
           <div class="flex items-center space-x-4">
