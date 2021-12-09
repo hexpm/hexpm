@@ -12,6 +12,9 @@ defmodule Hexpm.Accounts.WebAuth do
   # `key_permission` is the default permissions given to generate a hex api key
   # `key_params` is the default params to generate a hex api key
 
+  @key_permission %{domain: "api", resource: nil}
+  @key_params %{name: nil, permissions: [@key_permission]}
+
   @doc """
   Adds a web auth request to the pool and returns the response.
 
@@ -85,9 +88,22 @@ defmodule Hexpm.Accounts.WebAuth do
 
     case request do
       r when r.verified ->
+        user = request.user
+
+        audit = {user, request.audit}
+
+        key_name = request.key_name
+
+        key_params = %{@key_params | name: key_name}
+
+        write_key = %{key_params | permissions: [%{@key_permission | resource: "write"}]}
+        read_key = %{key_params | permissions: [%{@key_permission | resource: "read"}]}
+
         result =
-          request
-          |> WebAuthRequest.access_key()
+          Multi.new()
+          |> Multi.run(:write_key_gen, fn _, _ -> Keys.create(user, write_key, audit: audit) end)
+          |> Multi.run(:read_key_gen, fn _, _ -> Keys.create(user, read_key, audit: audit) end)
+          |> Multi.delete(:delete, request)
           |> Repo.transaction()
 
         case result do
