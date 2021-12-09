@@ -45,25 +45,19 @@ defmodule Hexpm.Accounts.WebAuthTest do
     test "returns keys on valid device code", c do
       submit_code(c)
 
-      keys =
-        c.request.device_code
-        |> WebAuth.access_key()
+      keys = WebAuth.access_key(c.request.device_code)
 
       assert %{write_key: %Hexpm.Accounts.Key{}, read_key: %Hexpm.Accounts.Key{}} = keys
     end
 
     test "returns an error on unverified request", c do
-      response =
-        c.request.device_code
-        |> WebAuth.access_key()
+      response = WebAuth.access_key(c.request.device_code)
 
       assert response == {:error, "request to be verified"}
     end
 
     test "returns an error on invalid device code" do
-      response =
-        "bad code"
-        |> WebAuth.access_key()
+      response = WebAuth.access_key("bad code")
 
       assert response == {:error, "invalid device code"}
     end
@@ -71,9 +65,8 @@ defmodule Hexpm.Accounts.WebAuthTest do
     test "deletes request after user has accessed", c do
       submit_code(c)
 
-      c.request.device_code |> WebAuth.access_key()
-
-      second_call = c.request.device_code |> WebAuth.access_key()
+      WebAuth.access_key(c.request.device_code)
+      second_call = WebAuth.access_key(c.request.device_code)
 
       assert second_call == {:error, "invalid device code"}
     end
