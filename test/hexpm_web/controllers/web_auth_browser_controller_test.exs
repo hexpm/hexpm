@@ -8,15 +8,15 @@ defmodule HexpmWeb.WebAuthBrowserControllerTest do
   describe "POST /web_auth/submit" do
     setup [:get_code]
 
-    test "returns ok on valid parameters", c do
+    test "returns found on valid parameters", c do
       request = %{"user_code" => c.request.user_code}
 
       response =
         c.conn
         |> post(Routes.web_auth_browser_path(c.conn, :submit, request))
-        |> json_response(:ok)
+        |> html_response(:found)
 
-      assert response["ok"]
+      assert response =~ "success"
     end
 
     test "returns an error on an invalid user code", %{conn: conn} do

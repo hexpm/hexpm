@@ -13,8 +13,8 @@ defmodule HexpmWeb.WebAuthBrowserController do
     case Hexpm.Accounts.WebAuth.submit(user, user_code, audit) do
       {:ok, _request} ->
         conn
-        |> put_status(:ok)
-        |> json(%{"ok" => "ok"})
+        |> put_status(:found)
+        |> redirect(to: Routes.web_auth_browser_path(conn, :success))
 
       {:error, msg} when msg == "invalid user code" ->
         conn
@@ -43,6 +43,15 @@ defmodule HexpmWeb.WebAuthBrowserController do
       title: "WebAuth",
       container: "container page page-xs",
       error: error
+    )
+  end
+
+  def success(conn, _) do
+    render(
+      conn,
+      "success.html",
+      title: WebAuth,
+      container: "container page page-xs"
     )
   end
 end
