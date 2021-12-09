@@ -1,6 +1,8 @@
 defmodule HexpmWeb.WebAuthControllerTest do
   use HexpmWeb.ConnCase, async: true
 
+  alias Hexpm.Accounts.WebAuth
+
   @test %{key_name: "test-key"}
 
   setup [:build_conn, :login]
@@ -29,7 +31,7 @@ defmodule HexpmWeb.WebAuthControllerTest do
     setup [:get_code]
 
     test "returns ok on valid parameters", c do
-      request = %{"user_code" => c.request["user_code"]}
+      request = %{"user_code" => c.request.user_code}
 
       response =
         c.conn
@@ -62,7 +64,7 @@ defmodule HexpmWeb.WebAuthControllerTest do
     setup [:get_code, :submit]
 
     test "returns valid keys on valid device code", c do
-      request = %{"device_code" => c.request["device_code"]}
+      request = %{"device_code" => c.request.device_code}
 
       response =
         c.conn
@@ -115,17 +117,17 @@ defmodule HexpmWeb.WebAuthControllerTest do
   end
 
   def get_code(context) do
-    request =
-      post(context.conn, Routes.web_auth_path(context.conn, :code, @test))
-      |> json_response(200)
+    {:ok, request} = WebAuth.get_code(@test.key_name)
 
     Map.merge(context, %{request: request})
   end
 
   def submit(c) do
-    request = %{"user_code" => c.request["user_code"]}
+    user = c.user
+    user_code = c.request.user_code
+    audit = audit_data(c.conn)
 
-    post(c.conn, Routes.web_auth_path(c.conn, :submit, request))
+    WebAuth.submit(user, user_code, audit)
 
     c
   end
