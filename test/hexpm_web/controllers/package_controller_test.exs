@@ -12,6 +12,7 @@ defmodule HexpmWeb.PackageControllerTest do
     package2 = insert(:package)
     package3 = insert(:package, repository_id: repository1.id)
     package4 = insert(:package, repository_id: repository2.id)
+    package5 = insert(:package, name: "with_underscore")
 
     insert(
       :release,
@@ -58,6 +59,13 @@ defmodule HexpmWeb.PackageControllerTest do
       meta: build(:release_metadata, app: package4.name)
     )
 
+    insert(
+      :release,
+      package: package5,
+      version: "0.0.1",
+      meta: build(:release_metadata, app: package5.name)
+    )
+
     insert(:organization_user, user: user1, organization: repository1.organization)
 
     %{
@@ -65,6 +73,7 @@ defmodule HexpmWeb.PackageControllerTest do
       package2: package2,
       package3: package3,
       package4: package4,
+      package5: package5,
       repository1: repository1,
       repository2: repository2,
       user1: user1,
@@ -94,6 +103,19 @@ defmodule HexpmWeb.PackageControllerTest do
 
       conn = get(build_conn(), "/packages?search=#{package2.name}")
       assert response(conn, 200) =~ ~r/#{package2.name}.*1.0.0/s
+    end
+
+    test "search with whitespace", %{package5: package5} do
+      conn = get(build_conn(), "/packages?search=with underscore")
+      assert response(conn, 200) =~ "exact-match"
+      assert response(conn, 200) =~ package5.name
+      refute response(conn, 200) =~ "no-results"
+    end
+
+    test "search without match" do
+      conn = get(build_conn(), "/packages?search=nonexistent")
+      assert response(conn, 200) =~ "no-results"
+      refute response(conn, 200) =~ "exact-match"
     end
 
     test "list private packages", %{

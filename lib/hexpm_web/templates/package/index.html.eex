@@ -16,11 +16,22 @@
   </div>
 <% end %>
 
-<%= if @package_count == 0 do %>
+<%= if @exact_match do %>
+  <div class="exact-match">
+    <h5>Exact Match:</h5>
+    <ul>
+      <%= render "_package.html", package: @exact_match, package_downloads: downloads_for_package(@exact_match, @downloads), view: @sort %>
+    </ul>
+  </div>
+<% end %>
+
+<%= if !@exact_match and @package_count == 0 do %>
   <div class="package-list no-results">
     <h4>No Results Found</h4>
   </div>
-<% else %>
+<% end %>
+
+<%= if @package_count > 0 do %>
   <%
   page = if @page == 1, do: nil, else: @page
 
@@ -69,15 +80,6 @@
 </nav>
 
 <div class="clearfix"></div>
-
-<%= if @exact_match do %>
-  <div class="exact-match">
-    <h5>Exact Match:</h5>
-    <ul>
-      <%= render "_package.html", package: @exact_match, package_downloads: downloads_for_package(@exact_match, @downloads), view: @sort %>
-    </ul>
-  </div>
-<% end %>
 
 <div class="package-list">
   <%= if @exact_match do %>
