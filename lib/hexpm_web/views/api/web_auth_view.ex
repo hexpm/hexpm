@@ -1,4 +1,4 @@
-defmodule HexpmWeb.WebAuthView do
+defmodule HexpmWeb.API.WebAuthView do
   use HexpmWeb, :view
 
   def render("code.json", reponse) do
@@ -10,9 +10,5 @@ defmodule HexpmWeb.WebAuthView do
       write_key: Routes.api_key_url(Endpoint, :show, write_key),
       read_key: Routes.api_key_url(Endpoint, :show, read_key)
     }
-  end
-
-  def error_tag(field, error) do
-    content_tag(:span, error, class: "form-error")
   end
 end

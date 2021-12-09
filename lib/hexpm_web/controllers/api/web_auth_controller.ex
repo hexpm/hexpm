@@ -1,12 +1,10 @@
-defmodule HexpmWeb.WebAuthController do
+defmodule HexpmWeb.API.WebAuthController do
   use HexpmWeb, :controller
   @moduledoc false
 
   alias Hexpm.Accounts.WebAuth
 
   # Controller for Web Auth, a means of authenticating the cli from the website
-
-  plug :requires_login when action == :show
 
   def code(conn, params)
 
@@ -16,32 +14,6 @@ defmodule HexpmWeb.WebAuthController do
   end
 
   def code(conn, _params), do: invalid_params(conn)
-
-  def submit(conn, params)
-
-  def submit(conn, %{"user_code" => user_code}) do
-    audit = audit_data(conn)
-    user = conn.assigns.current_user
-
-    case WebAuth.submit(user, user_code, audit) do
-      {:ok, _request} ->
-        conn
-        |> put_status(:ok)
-        |> json(%{"ok" => "ok"})
-
-      {:error, msg} when msg == "invalid user code" ->
-        conn
-        |> put_status(:bad_request)
-        |> render_show(msg)
-
-      {:error, msg} ->
-        conn
-        |> put_status(:internal_server_error)
-        |> render_show(msg)
-    end
-  end
-
-  def submit(conn, _params), do: invalid_params(conn)
 
   def access_key(conn, params)
 
@@ -77,17 +49,5 @@ defmodule HexpmWeb.WebAuthController do
     conn
     |> put_status(:internal_server_error)
     |> json(%{"error" => msg})
-  end
-
-  def show(conn, _), do: render_show(conn, nil)
-
-  def render_show(conn, error) do
-    render(
-      conn,
-      "show.html",
-      title: "WebAuth",
-      container: "container page page-xs",
-      error: error
-    )
   end
 end

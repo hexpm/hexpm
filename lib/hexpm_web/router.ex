@@ -63,8 +63,8 @@ defmodule HexpmWeb.Router do
     post "/login", LoginController, :create
     post "/logout", LoginController, :delete
 
-    get "/login/web_auth", WebAuthController, :show
-    post "/login/web_auth/submit", WebAuthController, :submit
+    get "/login/web_auth", WebAuthBrowserController, :show
+    post "/login/web_auth/submit", WebAuthBrowserController, :submit
 
     get "/two_factor_auth", TFAAuthController, :show
     post "/two_factor_auth", TFAAuthController, :create
@@ -205,7 +205,7 @@ defmodule HexpmWeb.Router do
     get "/feeds/blog.xml", FeedsController, :blog
   end
 
-  scope "/login/web_auth", HexpmWeb do
+  scope "/login/web_auth", HexpmWeb.API do
     pipe_through :api
 
     post "/code", WebAuthController, :code

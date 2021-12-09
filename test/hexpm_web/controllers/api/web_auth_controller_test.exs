@@ -1,4 +1,4 @@
-defmodule HexpmWeb.WebAuthControllerTest do
+defmodule HexpmWeb.API.WebAuthControllerTest do
   use HexpmWeb.ConnCase, async: true
 
   alias Hexpm.Accounts.WebAuth
@@ -21,39 +21,6 @@ defmodule HexpmWeb.WebAuthControllerTest do
     test "returns an error on invalid parameters", %{conn: conn} do
       response =
         post(conn, Routes.web_auth_path(conn, :code, %{"foo" => "bar"}))
-        |> json_response(:bad_request)
-
-      assert response == %{"error" => "invalid parameters"}
-    end
-  end
-
-  describe "POST /web_auth/submit" do
-    setup [:get_code]
-
-    test "returns ok on valid parameters", c do
-      request = %{"user_code" => c.request.user_code}
-
-      response =
-        c.conn
-        |> post(Routes.web_auth_path(c.conn, :submit, request))
-        |> json_response(:ok)
-
-      assert response["ok"]
-    end
-
-    test "returns an error on an invalid user code", %{conn: conn} do
-      response =
-        conn
-        |> post(Routes.web_auth_path(conn, :submit, %{"user_code" => "bad-code"}))
-        |> html_response(:bad_request)
-
-      assert response =~ "invalid user code"
-    end
-
-    test "returns an error on invalid parameters", %{conn: conn} do
-      response =
-        conn
-        |> post(Routes.web_auth_path(conn, :code, %{"foo" => "bar"}))
         |> json_response(:bad_request)
 
       assert response == %{"error" => "invalid parameters"}
