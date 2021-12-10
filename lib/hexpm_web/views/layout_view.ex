@@ -59,7 +59,7 @@ defmodule HexpmWeb.LayoutView do
           <div class="flex items-center space-x-4">
             <div class="inline-flex rounded-full h-3.5 w-3.5 flex <%= notification_color(alert_type) %>"></div>
             <p class="inline-flex font-medium text-base text-gray-700">
-             <%= raw flash %>
+              <%= raw flash %>
             </p>
           </div>
         </div>
