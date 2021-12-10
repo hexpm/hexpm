@@ -78,6 +78,15 @@
                 <a href="<%= Routes.page_path(Endpoint, :pricing) %>" class="nav-link w-24">Pricing</a>
                 <a href="<%= Routes.docs_path(Endpoint, :index) %>" class="nav-link w-20">Docs</a>
                 <%= if ViewHelpers.logged_in?(assigns) do %>
+                  <button class="text-white bg-gray-600 font-medium rounded-lg text-sm px-6 py-2.5 flex flex-row items-center justify-center" type="button" data-dropdown-toggle="dropdown">
+                    <!--<div>
+                      <img src="<%= ViewHelpers.gravatar_url(User.email(@current_user, :gravatar), :small) %>" class="navbar-avatar">
+                    </div> -->
+                    <%= @current_user.username %>
+                    <div class="-rotate-180">
+                      <%= icon(:remixicon, :"arrow-up-s-line", width: "16px", height: "16px", fill: "rgba(255,255,255,1)")%>
+                    </div>
+                  </button>
                   <li class="dropdown">
                     <a href="#" class="dropdown-toggle" data-toggle="dropdown">
                       <%= @current_user.username %>
