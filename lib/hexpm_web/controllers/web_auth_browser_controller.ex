@@ -28,12 +28,6 @@ defmodule HexpmWeb.WebAuthBrowserController do
     end
   end
 
-  def submit(conn, _params) do
-    conn
-    |> put_status(:bad_request)
-    |> json(%{"error" => "invalid parameters"})
-  end
-
   def show(conn, _), do: render_show(conn, nil)
 
   def render_show(conn, error) do
