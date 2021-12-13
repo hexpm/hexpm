@@ -78,7 +78,7 @@
                 <a href="<%= Routes.page_path(Endpoint, :pricing) %>" class="nav-link w-24">Pricing</a>
                 <a href="<%= Routes.docs_path(Endpoint, :index) %>" class="nav-link w-20">Docs</a>
                 <%= if ViewHelpers.logged_in?(assigns) do %>
-                  <button class="text-white bg-gray-600 font-medium rounded-lg text-sm px-6 py-2.5 flex flex-row items-center justify-center" type="button" data-dropdown-toggle="dropdown">  
+                  <button class="text-white bg-gray-600 font-medium rounded-lg text-sm px-6 py-2.5 flex flex-row items-center justify-center" type="button" data-dropdown-toggle="dropdown" data-dropdown-placement="bottom">  
                     <div class="flex space-x-2">
                       <div>
                         <img src="<%= ViewHelpers.gravatar_url(User.email(@current_user, :gravatar), :small) %>" class="w-5 h-5 rounded-2xl">
@@ -92,45 +92,28 @@
                     </div>
                   </button>
                   <!-- Dropdown menu -->
-                  <div class="hidden bg-white text-base rounded-lg h-40 w-44" id="dropdown">
-                    <ul class="py-4" aria-labelledby="dropdown">
-                      <li class="inline-flex px-6 font-medium text-base text-gray-500">
+                  <div class="hidden bg-white text-base z-50 rounded-lg h-36 w-40" id="dropdown">
+                    <ul class="py-6" aria-labelledby="dropdown">
+                      <li class="inline-flex px-6 font-medium text-sm text-gray-500">
                        <%= icon(:remixicon, :"user-smile-line", width: "16px", fill: "rgba(68, 86, 104, 1)")%>
                         <a href="<%= Routes.user_path(Endpoint, :show, @current_user) %>" class="px-2">My Profile</a>
                       </li>
-                      <li class="inline-flex px-6 font-medium text-base text-gray-500">
+                      <li class="inline-flex px-6 font-medium text-sm text-gray-500">
                           <%= icon(:remixicon, :"building-4-line", width: "16px", fill: "rgba(68, 86, 104, 1)")%>
                         <a href="#" class="px-2">Organization</a>
                       </li>
-                      <li class="inline-flex px-6 font-medium text-base text-gray-500">
+                      <li class="inline-flex px-6 font-medium text-sm text-gray-500">
                         <%= icon(:remixicon, :"settings-3-line", width: "16px", fill: "rgba(68, 86, 104, 1)")%>
-                        <a href="#" class="px-2">Settings</a>
+                        <a href="<%= Routes.profile_path(Endpoint, :index) %>" class="px-2">Settings</a>
                       </li>
-                      <li class="inline-flex px-6 font-medium text-base text-gray-500">
+                      <li class="inline-flex px-6">
                          <%= icon(:remixicon, :"logout-box-line", width: "16px", fill: "rgba(68, 86, 104, 1)")%>
                         <%= form_tag(Routes.login_path(Endpoint, :delete)) do %>
-                          <button type="submit" class="px-2">Log out</button>
+                          <button type="submit" class="px-2  text-gray-500 font-medium text-sm">Log out</button>
                         <% end %>
                       </li>
                     </ul>
                   </div>
-                 <!-- <li class="dropdown">
-                    <a href="#" class="dropdown-toggle" data-toggle="dropdown">
-                      <%= @current_user.username %>
-                      <img src="<%= ViewHelpers.gravatar_url(User.email(@current_user, :gravatar), :small) %>" class="navbar-avatar">
-                      <b class="caret"></b>
-                    </a>
-                    <ul class="dropdown-menu">
-                      <li><a href="<%= Routes.user_path(Endpoint, :show, @current_user) %>">Profile</a></li>
-                      <li><a href="<%= Routes.profile_path(Endpoint, :index) %>">Dashboard</a></li>
-                      <li role="separator" class="divider"></li>
-                      <li>
-                        <%= form_tag(Routes.login_path(Endpoint, :delete)) do %>
-                          <button type="submit" class="btn btn-link">Log out</button>
-                        <% end %>
-                      </li>
-                    </ul>
-                  </li>-->
                 <% else %>
                   <a href="<%= Routes.login_path(Endpoint, :show) %>" class="nav-link bg-gray-600 rounded-md items-center justify-center py-2.5 px-6 text-white">Log in</a>
                 <% end %>

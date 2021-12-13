@@ -1,37 +1,64 @@
-<h2><%= @user.username %></h2>
-
-<div class="row">
-  <div class="col-sm-9">
-    <%= if @user.owned_packages == [] do %>
-      <h3>No owned packages</h3>
-    <% else %>
-      <div class="with-divider user-package-info clearfix">
-        <h3>Total Owned Packages<br /><em><%= length(@user.owned_packages) %></em></h3>
-        <h3>Total Downloads<br /><em><%= ViewHelpers.human_number_space(@total_downloads) %></em></h3>
+<div class="relative top-10">
+  <div class="max-w-7xl mx-auto">
+    <div class="col-sm-9">
+      <%= if @user.owned_packages == [] do %>
+        <h3>No owned packages</h3>
+      <% else %>
+      <div class="grid grid-cols-3">
+        <div class="flex flex-col items-center justify-center">
+          <div>
+            <img src="<%= ViewHelpers.gravatar_url(@gravatar_email, :large) %>" class="h-28 w-28 rounded-full">
+          </div>
+          <div class="mt-6">
+            <h4 class="font-semibold text-lg text-gray-900"><%= @user.full_name %></h4>
+          </div>
+          <div class="text-sm text-gray-500 font-normal">
+            <%= if @public_email do %>
+              <a href="mailto:<%= @public_email %>"><%= @public_email %></a>
+            <% end %>
+            <%= for {service, handle, url} <- UserHandles.render(@user) do %>
+              <a href="<%= url %>"><%= handle %></a> on<%= service %>
+            <% end %>
+          </div>
+          <div class="border-t border-gray-200 mt-14">
+            <div class="grid grid-cols-2 flex flex-row gap-4 mt-4">
+              <div class="bg-gray-100 border border-solid border-gray-200 box-border rounded-lg w-36 h-16 pt-2 pl-2">
+                <p class="text-sm text-gray-500 font-medium">Total Packages</p>
+                <h3 class="text-xl font-bold text-gray-900"><%= length(@user.owned_packages) %></h3>
+              </div>
+              <div class="bg-gray-100 border border-solid border-gray-200 box-border rounded-lg w-36 h-16 pt-2 pl-2">
+                <p class="text-sm text-gray-500 font-medium">Total Downloads</p>
+                <h3 class="text-xl font-bold text-gray-900"><%= ViewHelpers.human_number_space(@total_downloads) %></h3>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="col-span-2">
+          <h3 class="text-xl font-semibold text-gray-900">Packages</h3>
+          <div class="grid grid-cols-2 gap-4">
+            <%= for package <- @packages do %>
+              <div class="bg-white border border-solid border-gray-200 box-border rounded-lg">
+                <div class="pt-4 px-4">
+                  <span class="inline-flex items-baseline float-left space-x-2">
+                    <span class="font-medium text-lg text-gray-900"><a href="<%= ViewHelpers.path_for_package(package) %>"><%= ViewHelpers.package_name(package) %></a></span>
+                    <span class="text-xs font-normal text-gray-500"><%= package.latest_version %></span>
+                  </span>
+                  <span class="inline-flex items-baseline float-right space-x-2 pt-1">
+                    <%= icon(:remixicon, :"download-line", width: "14px", fill: "rgba(97, 117, 138, 1)")%>
+                    <span class="text-sm font-medium text-gray-400">
+                      <%= (get_in(@downloads, [package.id, "all"]) || 0) |> ViewHelpers.human_number_space() %>
+                    </span>
+                  </span>
+                </div>
+                <div class="font-medium text-sm text-gray-500 mt-8 px-4 text-justify">
+                  <%= ViewHelpers.text_length(package.meta.description, 300) |> to_string() |> text_to_html(insert_brs: false) %>
+                </div>
+              </div>
+            <% end %>
+          </div>
+        </div>
       </div>
-      <ul class="user-package-list">
-        <%= for package <- @packages do %>
-          <li class="with-divider clearfix">
-            <h1><a href="<%= ViewHelpers.path_for_package(package) %>"><%= ViewHelpers.package_name(package) %></a><em><%= package.latest_version %></em></h1>
-            <h3><%= (get_in(@downloads, [package.id, "all"]) || 0) |> ViewHelpers.human_number_space() %> Downloads</h3>
-            <%= ViewHelpers.text_length(package.meta.description, 300) |> to_string() |> text_to_html(insert_brs: false) %>
-          </li>
-        <% end %>
-      </ul>
-    <% end %>
-  </div>
-
-  <div class="col-sm-3">
-    <img src="<%= ViewHelpers.gravatar_url(@gravatar_email, :large) %>" class="avatar">
-
-    <h4><%= @user.full_name %></h4>
-    <ul class="user-profile-list">
-      <%= if @public_email do %>
-        <li><a href="mailto:<%= @public_email %>"><%= @public_email %></a></li>
       <% end %>
-      <%= for {service, handle, url} <- UserHandles.render(@user) do %>
-        <li><a href="<%= url %>"><%= handle %></a> on <%= service %></li>
-      <% end %>
-    </ul>
+    </div>
   </div>
 </div>
