@@ -38,12 +38,8 @@ defmodule HexpmWeb.API.WebAuthControllerTest do
         |> post(Routes.web_auth_path(c.conn, :access_key, request))
         |> json_response(:ok)
 
-      for key <- ["write_key", "read_key"] do
-        url = response[key]
-
-        assert url
-        assert get(c.conn, url)
-      end
+      assert response["write_key"]
+      assert response["read_key"]
     end
 
     test "returns an error on invalid device code", c do
