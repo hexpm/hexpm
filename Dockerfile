@@ -35,8 +35,8 @@ COPY rel rel
 RUN mix release
 
 # prepare release image
-FROM alpine:3.12.0 AS app
-RUN apk add --no-cache --update bash openssl
+FROM alpine:3.14.2 AS app
+RUN apk add --no-cache --update bash openssl libstdc++
 
 RUN mkdir /app
 WORKDIR /app
