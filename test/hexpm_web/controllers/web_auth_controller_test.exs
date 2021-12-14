@@ -1,4 +1,4 @@
-defmodule HexpmWeb.WebAuthBrowserControllerTest do
+defmodule HexpmWeb.WebAuthControllerTest do
   use HexpmWeb.ConnCase, async: true
 
   alias Hexpm.Accounts.WebAuth
@@ -13,7 +13,7 @@ defmodule HexpmWeb.WebAuthBrowserControllerTest do
 
       response =
         c.conn
-        |> post(Routes.web_auth_browser_path(c.conn, :submit, request))
+        |> post(Routes.web_auth_path(c.conn, :submit, request))
         |> html_response(:found)
 
       assert response =~ "success"
@@ -22,7 +22,7 @@ defmodule HexpmWeb.WebAuthBrowserControllerTest do
     test "returns an error on an invalid user code", %{conn: conn} do
       response =
         conn
-        |> post(Routes.web_auth_browser_path(conn, :submit, %{"user_code" => "bad-code"}))
+        |> post(Routes.web_auth_path(conn, :submit, %{"user_code" => "bad-code"}))
         |> html_response(:bad_request)
 
       assert response =~ "invalid user code"

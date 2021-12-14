@@ -1,4 +1,4 @@
-defmodule HexpmWeb.WebAuthBrowserController do
+defmodule HexpmWeb.WebAuthController do
   use HexpmWeb, :controller
   @moduledoc false
 
@@ -14,7 +14,7 @@ defmodule HexpmWeb.WebAuthBrowserController do
       {:ok, _request} ->
         conn
         |> put_status(:found)
-        |> redirect(to: Routes.web_auth_browser_path(conn, :success))
+        |> redirect(to: Routes.web_auth_path(conn, :success))
 
       {:error, msg} when msg == "invalid user code" ->
         conn

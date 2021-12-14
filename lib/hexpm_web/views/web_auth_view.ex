@@ -1,4 +1,4 @@
-defmodule HexpmWeb.WebAuthBrowserView do
+defmodule HexpmWeb.WebAuthView do
   use HexpmWeb, :view
 
   def error_tag(error) do

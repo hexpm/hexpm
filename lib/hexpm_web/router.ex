@@ -63,9 +63,9 @@ defmodule HexpmWeb.Router do
     post "/login", LoginController, :create
     post "/logout", LoginController, :delete
 
-    get "/login/web_auth", WebAuthBrowserController, :show
-    post "/login/web_auth/submit", WebAuthBrowserController, :submit
-    get "/login/web_auth/success", WebAuthBrowserController, :success
+    get "/login/web_auth", WebAuthController, :show
+    post "/login/web_auth/submit", WebAuthController, :submit
+    get "/login/web_auth/success", WebAuthController, :success
 
     get "/two_factor_auth", TFAAuthController, :show
     post "/two_factor_auth", TFAAuthController, :create
