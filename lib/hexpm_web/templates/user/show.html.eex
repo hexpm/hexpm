@@ -1,61 +1,100 @@
 <div class="relative top-10">
-  <div class="max-w-7xl mx-auto">
-    <div class="col-sm-9">
-      <%= if @user.owned_packages == [] do %>
-        <h3>No owned packages</h3>
-      <% else %>
-      <div class="grid grid-cols-3">
-        <div class="flex flex-col items-center justify-center">
-          <div>
-            <img src="<%= ViewHelpers.gravatar_url(@gravatar_email, :large) %>" class="h-28 w-28 rounded-full">
-          </div>
-          <div class="mt-6">
-            <h4 class="font-semibold text-lg text-gray-900"><%= @user.full_name %></h4>
-          </div>
-          <div class="text-sm text-gray-500 font-normal">
-            <%= if @public_email do %>
-              <a href="mailto:<%= @public_email %>"><%= @public_email %></a>
-            <% end %>
-            <%= for {service, handle, url} <- UserHandles.render(@user) do %>
-              <a href="<%= url %>"><%= handle %></a> on<%= service %>
-            <% end %>
-          </div>
-          <div class="border-t border-gray-200 mt-14">
-            <div class="grid grid-cols-2 flex flex-row gap-4 mt-4">
-              <div class="bg-gray-100 border border-solid border-gray-200 box-border rounded-lg w-36 h-16 pt-2 pl-2">
-                <p class="text-sm text-gray-500 font-medium">Total Packages</p>
-                <h3 class="text-xl font-bold text-gray-900"><%= length(@user.owned_packages) %></h3>
-              </div>
-              <div class="bg-gray-100 border border-solid border-gray-200 box-border rounded-lg w-36 h-16 pt-2 pl-2">
-                <p class="text-sm text-gray-500 font-medium">Total Downloads</p>
-                <h3 class="text-xl font-bold text-gray-900"><%= ViewHelpers.human_number_space(@total_downloads) %></h3>
-              </div>
+  <div class="max-w-7xl mx-auto">  
+    <div class="grid grid-cols-3">
+      <div class="flex flex-col items-center justify-center">
+        <div>
+          <img src="<%= ViewHelpers.gravatar_url(@gravatar_email, :large) %>" class="h-28 w-28 rounded-full">
+        </div>
+        <div class="mt-6">
+          <h4 class="font-semibold text-lg text-gray-900"><%= @user.full_name %></h4>
+        </div>
+        <div class="text-sm text-gray-500 font-normal">
+          <%= if @public_email do %>
+            <a href="mailto:<%= @public_email %>"><%= @public_email %></a>
+          <% end %>
+          <%= for {service, handle, url} <- UserHandles.render(@user) do %>
+            <a href="<%= url %>"><%= handle %></a> on<%= service %>
+          <% end %>
+        </div>
+        <div class="border-t border-gray-200 mt-14">
+          <div class="grid grid-cols-2 flex flex-row gap-4 mt-4">
+            <div class="bg-gray-100 border border-solid border-gray-200 box-border rounded-lg w-36 h-16 pt-2 pl-2">
+              <p class="text-sm text-gray-500 font-medium">Total Packages</p>
+              <h3 class="text-xl font-bold text-gray-900"><%= length(@user.owned_packages) %></h3>
+            </div>
+            <div class="bg-gray-100 border border-solid border-gray-200 box-border rounded-lg w-36 h-16 pt-2 pl-2">
+              <p class="text-sm text-gray-500 font-medium">Total Downloads</p>
+              <h3 class="text-xl font-bold text-gray-900"><%= ViewHelpers.human_number_space(@total_downloads) %></h3>
             </div>
           </div>
         </div>
-        <div class="col-span-2">
-          <h3 class="text-xl font-semibold text-gray-900">Packages</h3>
-          <div class="grid grid-cols-2 gap-4">
-            <%= for package <- @packages do %>
-              <div class="bg-white border border-solid border-gray-200 box-border rounded-lg">
-                <div class="pt-4 px-4">
-                  <span class="inline-flex items-baseline float-left space-x-2">
-                    <span class="font-medium text-lg text-gray-900"><a href="<%= ViewHelpers.path_for_package(package) %>"><%= ViewHelpers.package_name(package) %></a></span>
-                    <span class="text-xs font-normal text-gray-500"><%= package.latest_version %></span>
-                  </span>
-                  <span class="inline-flex items-baseline float-right space-x-2 pt-1">
-                    <%= icon(:remixicon, :"download-line", width: "14px", fill: "rgba(97, 117, 138, 1)")%>
-                    <span class="text-sm font-medium text-gray-400">
-                      <%= (get_in(@downloads, [package.id, "all"]) || 0) |> ViewHelpers.human_number_space() %>
-                    </span>
-                  </span>
-                </div>
-                <div class="font-medium text-sm text-gray-500 mt-8 px-4 text-justify">
-                  <%= ViewHelpers.text_length(package.meta.description, 300) |> to_string() |> text_to_html(insert_brs: false) %>
+      </div>
+      <%= if @user.owned_packages == [] do %>
+      <div class="col-span-2">
+        <div><h3 class="text-xl font-semibold text-gray-900">Packages</h3></div>
+        <div class="bg-white flex flex-col items-center justify-center rounded-lg border-box border border-solid border-gray-200 h-full">
+          <div class="mix-blend-luminosity">
+            <%= icon(:remixicon, :"arrow-up-s-line", width: "48px", height: "48px", fill: "rgba(97, 117, 138, 1)")%>
+          </div>
+          <div>
+            <h3 class="text-gray-900 font-semibold text-lg">No Packages</h3>
+          </div>
+          <div>
+            <p class="text-gray-500 text-sm font-normal">The author hasn’t added any packages.</p>
+          </div>
+        </div>
+      </div>
+      <% else %>
+      <div class="col-span-2">
+        <div class="flex justify-between">
+          <div class="pt-2">
+            <h3 class="text-xl font-semibold text-gray-900">Packages</h3>
+          </div>
+          <div class="order-last pb-5">
+            <button class="border-box border border-solid border-gray-200 rounded-lg text-sm px-2 py-1 items-center justify-center" type="button" data-dropdown-toggle="package-dropdown">  
+              <div class="flex space-x-2">
+                <div class="font-medium text-sm text-gray-400">Most Popular</div>
+                <div class="-rotate-180">
+                  <%= icon(:remixicon, :"arrow-up-s-line", width: "14px", height: "14px", fill: "rgba(97, 117, 138, 1)")%>
                 </div>
               </div>
-            <% end %>
+            </button>
           </div>
+        </div>
+        <!-- Dropdown menu -->
+        <div class="hidden bg-white text-base z-50 rounded-lg h-28 w-40" id="package-dropdown">
+          <ul class="space-y-2 py-4" aria-labelledby="dropdown">
+            <li class="inline-flex px-4 font-semibold text-sm text-gray-700">
+              <a href="#">Most Popular</a>
+            </li>
+            <li class="inline-flex px-4 font-medium text-sm text-gray-400">
+              <a href="#">Most Downloaded</a>
+            </li>
+            <li class="inline-flex px-4 font-medium text-sm text-gray-400">
+              <a href="#">Newest First</a>
+            </li>
+          </ul>
+        </div>
+        <div class="grid grid-cols-2 gap-4">
+          <%= for package <- @packages do %>
+            <div class="bg-white border border-solid border-gray-200 box-border rounded-lg">
+              <div class="pt-4 px-4">
+                <span class="inline-flex items-baseline float-left space-x-2">
+                  <span class="font-medium text-lg text-gray-900"><a href="<%= ViewHelpers.path_for_package(package) %>"><%= ViewHelpers.package_name(package) %></a></span>
+                  <span class="text-xs font-normal text-gray-500"><%= package.latest_version %></span>
+                </span>
+                <span class="inline-flex items-baseline float-right space-x-2 pt-1">
+                  <%= icon(:remixicon, :"download-line", width: "14px", fill: "rgba(97, 117, 138, 1)")%>
+                  <span class="text-sm font-medium text-gray-400">
+                    <%= (get_in(@downloads, [package.id, "all"]) || 0) |> ViewHelpers.human_number_space() %>
+                  </span>
+                </span>
+              </div>
+              <div class="font-medium text-sm text-gray-500 mt-8 px-4 text-justify">
+                <%= ViewHelpers.text_length(package.meta.description, 300) |> to_string() |> text_to_html(insert_brs: false) %>
+              </div>
+            </div>
+          <% end %>
         </div>
       </div>
       <% end %>
