@@ -206,7 +206,7 @@ defmodule HexpmWeb.Router do
     get "/feeds/blog.xml", FeedsController, :blog
   end
 
-  scope "/login/web_auth", HexpmWeb.API do
+  scope "/api/web_auth", HexpmWeb.API do
     pipe_through :api
 
     post "/code", WebAuthController, :code
