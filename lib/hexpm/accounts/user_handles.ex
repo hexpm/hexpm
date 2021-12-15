@@ -35,7 +35,7 @@ defmodule Hexpm.Accounts.UserHandles do
 
       if handle = handle && handle(field, handle) do
         full_url = String.replace(url, "{handle}", handle)
-        [{service, handle, full_url}]
+        [{handle_icon(field), full_url}]
       else
         []
       end
@@ -46,6 +46,12 @@ defmodule Hexpm.Accounts.UserHandles do
   def handle(:github, handle), do: unuri(handle, "github.com", "/")
   def handle(:elixirforum, handle), do: unuri(handle, "elixirforum.com", "/u/")
   def handle(_service, handle), do: handle
+
+  def handle_icon(:twitter), do: "twitter-fill"
+  def handle_icon(:github), do: "github-fill"
+  def handle_icon(:elixirforum), do: ""
+  def handle_icon(:freenode), do: ""
+  def handle_icon(:slack), do: "slack-fill"
 
   defp unuri(handle, host, path) do
     uri = URI.parse(handle)
