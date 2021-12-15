@@ -1,4 +1,4 @@
-<div class="relative top-10">
+<div class="relative">
   <div class="max-w-7xl mx-auto">  
     <div class="grid grid-cols-3">
       <div class="flex flex-col items-center justify-center">
@@ -12,29 +12,52 @@
           <%= if @public_email do %>
             <a href="mailto:<%= @public_email %>"><%= @public_email %></a>
           <% end %>
-          <%= for {service, handle, url} <- UserHandles.render(@user) do %>
-            <a href="<%= url %>"><%= handle %></a> on<%= service %>
+        </div>
+        <div class="flex flex-row gap-2 py-6">
+          <%= for {icon, url} <- UserHandles.render(@user) do %>
+            <a href="#{url}">
+              <%= icon(:remixicon, :"#{icon}", width: "14px", fill: "rgba(48, 66, 84, 1)")%>
+            </a>
           <% end %>
         </div>
-        <div class="border-t border-gray-200 mt-14">
-          <div class="grid grid-cols-2 flex flex-row gap-4 mt-4">
+        <div class="border-t border-gray-200 pt-6">
+          <div class="grid grid-cols-2 flex flex-row gap-4">
             <div class="bg-gray-100 border border-solid border-gray-200 box-border rounded-lg w-36 h-16 pt-2 pl-2">
               <p class="text-sm text-gray-500 font-medium">Total Packages</p>
               <h3 class="text-xl font-bold text-gray-900"><%= length(@user.owned_packages) %></h3>
             </div>
             <div class="bg-gray-100 border border-solid border-gray-200 box-border rounded-lg w-36 h-16 pt-2 pl-2">
               <p class="text-sm text-gray-500 font-medium">Total Downloads</p>
-              <h3 class="text-xl font-bold text-gray-900"><%= ViewHelpers.human_number_space(@total_downloads) %></h3>
+              <h3 class="text-xl font-bold text-gray-900">
+                <%= if  ViewHelpers.digits(@total_downloads) < 2 do %>
+                  <%= ViewHelpers.human_number_space(@total_downloads) %>
+                <% else %>
+                  <%= ViewHelpers.human_number_space(@total_downloads, ViewHelpers.digits(@total_downloads)) %>+
+                <% end%>
+              </h3>
             </div>
           </div>
         </div>
       </div>
+      <div class="col-span-2 pt-12">
       <%= if @user.owned_packages == [] do %>
-      <div class="col-span-2">
         <div><h3 class="text-xl font-semibold text-gray-900">Packages</h3></div>
-        <div class="bg-white flex flex-col items-center justify-center rounded-lg border-box border border-solid border-gray-200 h-full">
+        <div class="bg-white flex flex-col items-center justify-center rounded-lg border-box border border-solid border-gray-200 pt-32 pb-28">
           <div class="mix-blend-luminosity">
-            <%= icon(:remixicon, :"arrow-up-s-line", width: "48px", height: "48px", fill: "rgba(97, 117, 138, 1)")%>
+            <svg width="48" height="48" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <g>
+                <path d="M24 0.75L0.75 8.25V39.75L24 47.25L47.25 39.75V8.25L24 0.75Z" fill="#EFC665"/>
+                <path d="M0.75 8.25L24 15.75V47.25L0.75 39.75V8.25Z" fill="#EFC665"/>
+                <path d="M0.75 8.25L24 15.75V21.75L0.75 14.25V8.25Z" fill="#FFED83"/>
+                <path d="M47.25 8.25L24 15.75V47.25L47.25 39.75V8.25Z" fill="#D3AA4A"/>
+                <path d="M47.25 8.25L24 15.75V21.75L47.25 14.25V8.25Z" fill="#FAE25C"/>
+                <path d="M15.75 34.5L6.75 31.5V25.5L15.75 28.5V34.5Z" fill="#FFED83"/>
+                <path d="M35.25 40.5L44.25 37.5V34.5L35.25 37.5V40.5Z" fill="#FAE25C"/>
+                <path d="M35.25 34.5L44.25 31.5V28.5L35.25 31.5V34.5Z" fill="#FAE25C"/>
+                <path d="M8.25 10.6732L14.25 12.6082L37.6725 5.1607L30.885 2.9707L8.25 10.6732Z" fill="#D15850"/>
+                <path d="M8.25 10.6719V21.7494L14.25 23.9994V12.6069L8.25 10.6719Z" fill="#F7716A"/>
+              </g>
+            </svg>
           </div>
           <div>
             <h3 class="text-gray-900 font-semibold text-lg">No Packages</h3>
@@ -43,9 +66,7 @@
             <p class="text-gray-500 text-sm font-normal">The author hasn’t added any packages.</p>
           </div>
         </div>
-      </div>
       <% else %>
-      <div class="col-span-2">
         <div class="flex justify-between">
           <div class="pt-2">
             <h3 class="text-xl font-semibold text-gray-900">Packages</h3>
@@ -86,7 +107,12 @@
                 <span class="inline-flex items-baseline float-right space-x-2 pt-1">
                   <%= icon(:remixicon, :"download-line", width: "14px", fill: "rgba(97, 117, 138, 1)")%>
                   <span class="text-sm font-medium text-gray-400">
-                    <%= (get_in(@downloads, [package.id, "all"]) || 0) |> ViewHelpers.human_number_space() %>
+                    <p class="hidden"><%= downloads = (get_in(@downloads, [package.id, "all"]) || 0)%></p>
+                    <%= if  ViewHelpers.digits(downloads) < 2 do %>
+                      <%= ViewHelpers.human_number_space(downloads) %>
+                    <% else %>
+                      <%= ViewHelpers.human_number_space(downloads, ViewHelpers.digits(downloads)) %>+
+                    <% end%>
                   </span>
                 </span>
               </div>
@@ -96,8 +122,12 @@
             </div>
           <% end %>
         </div>
-      </div>
       <% end %>
+    </div>
     </div>
   </div>
 </div>
+
+
+
+

@@ -315,6 +315,14 @@ defmodule HexpmWeb.ViewHelpers do
     |> :erlang.list_to_binary()
   end
 
+  def digits(0), do: 0
+
+  def digits(int) do
+    int
+    |> :math.log10()
+    |> trunc()
+  end
+
   defp do_human_number(int, max, digits, _unit) when is_integer(int) and digits <= max do
     human_number_space(int)
   end
