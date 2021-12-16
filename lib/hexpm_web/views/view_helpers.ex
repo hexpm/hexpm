@@ -339,8 +339,7 @@ defmodule HexpmWeb.ViewHelpers do
   end
 
   def human_relative_time_from_now(datetime) do
-    ts =
-      NaiveDateTime.to_erl(datetime) |> :calendar.datetime_to_gregorian_seconds() |> IO.inspect()
+    ts = NaiveDateTime.to_erl(datetime) |> :calendar.datetime_to_gregorian_seconds()
 
     diff = :calendar.datetime_to_gregorian_seconds(:calendar.universal_time()) - ts
     rel = rel_from_now(:calendar.seconds_to_daystime(diff), datetime)
