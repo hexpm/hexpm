@@ -1,7 +1,7 @@
-<div class="relative top-10">
-  <div class="max-w-7xl mx-auto">  
-    <div class="grid grid-cols-3">
-      <div class="flex flex-col items-center justify-center">
+<div class="relative">
+  <div class="max-w-7xl mx-auto">
+    <div class="flex flex-row gap-8 px-8">
+      <div class="flex flex-col items-center justify-center w-4/12 h-96 pt-10">
         <div>
           <img src="<%= ViewHelpers.gravatar_url(@gravatar_email, :large) %>" class="h-28 w-28 rounded-full">
         </div>
@@ -13,11 +13,13 @@
             <a href="mailto:<%= @public_email %>"><%= @public_email %></a>
           <% end %>
         </div>
-        <div class="flex flex-row gap-2 py-6">
+        <div class="flex flex-row gap-4 py-6">
           <%= for {icon, url} <- UserHandles.render(@user) do %>
-            <a href="#{url}">
-              <%= icon(:remixicon, :"#{icon}", width: "14px", fill: "rgba(48, 66, 84, 1)")%>
-            </a>
+            <%= if icon == :elixirforum or icon == :freenode do%>
+              <a href="<%= url %>"><%= UserHandles.handle_svg_icon(icon) %></a>
+            <% else %>
+              <a href="<%= url %>"><%= icon(:remixicon, :"#{icon}", width: "16px", fill: "rgba(48, 66, 84, 1)")%></a>
+            <% end %>
           <% end %>
         </div>
         <div class="border-t border-gray-200 pt-6">
@@ -39,98 +41,98 @@
           </div>
         </div>
       </div>
-      <div class="col-span-2">
-      <%= if @user.owned_packages == [] do %>
-        <div><h3 class="text-xl font-semibold text-gray-900">Packages</h3></div>
-        <div class="bg-white flex flex-col items-center justify-center rounded-lg border-box border border-solid border-gray-200 h-full">
-          <div class="mix-blend-luminosity">
-            <svg width="48" height="48" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <g>
-                <path d="M24 0.75L0.75 8.25V39.75L24 47.25L47.25 39.75V8.25L24 0.75Z" fill="#EFC665"/>
-                <path d="M0.75 8.25L24 15.75V47.25L0.75 39.75V8.25Z" fill="#EFC665"/>
-                <path d="M0.75 8.25L24 15.75V21.75L0.75 14.25V8.25Z" fill="#FFED83"/>
-                <path d="M47.25 8.25L24 15.75V47.25L47.25 39.75V8.25Z" fill="#D3AA4A"/>
-                <path d="M47.25 8.25L24 15.75V21.75L47.25 14.25V8.25Z" fill="#FAE25C"/>
-                <path d="M15.75 34.5L6.75 31.5V25.5L15.75 28.5V34.5Z" fill="#FFED83"/>
-                <path d="M35.25 40.5L44.25 37.5V34.5L35.25 37.5V40.5Z" fill="#FAE25C"/>
-                <path d="M35.25 34.5L44.25 31.5V28.5L35.25 31.5V34.5Z" fill="#FAE25C"/>
-                <path d="M8.25 10.6732L14.25 12.6082L37.6725 5.1607L30.885 2.9707L8.25 10.6732Z" fill="#D15850"/>
-                <path d="M8.25 10.6719V21.7494L14.25 23.9994V12.6069L8.25 10.6719Z" fill="#F7716A"/>
-              </g>
-            </svg>
-          </div>
-          <div>
-            <h3 class="text-gray-900 font-semibold text-lg">No Packages</h3>
-          </div>
-          <div>
-            <p class="text-gray-500 text-sm font-normal">The author hasn’t added any packages.</p>
-          </div>
-        </div>
-      <% else %>
-        <div class="flex justify-between">
-          <div class="pt-2">
-            <h3 class="text-xl font-semibold text-gray-900">Packages</h3>
-          </div>
-          <div class="order-last pb-5">
-            <button class="border-box border border-solid border-gray-200 rounded-lg text-sm px-2 py-1 items-center justify-center" type="button" data-dropdown-toggle="package-dropdown">  
-              <div class="flex space-x-2">
-                <div class="font-medium text-sm text-gray-400">Most Popular</div>
-                <div class="-rotate-180">
-                  <%= icon(:remixicon, :"arrow-up-s-line", width: "14px", height: "14px", fill: "rgba(97, 117, 138, 1)")%>
-                </div>
-              </div>
-            </button>
-          </div>
-        </div>
-        <!-- Dropdown menu -->
-        <div class="hidden bg-white text-base z-50 rounded-lg h-28 w-40" id="package-dropdown">
-          <ul class="space-y-2 py-4" aria-labelledby="dropdown">
-            <li class="inline-flex px-4 font-semibold text-sm text-gray-700">
-              <a href="#">Most Popular</a>
-            </li>
-            <li class="inline-flex px-4 font-medium text-sm text-gray-400">
-              <a href="#">Most Downloaded</a>
-            </li>
-            <li class="inline-flex px-4 font-medium text-sm text-gray-400">
-              <a href="#">Newest First</a>
-            </li>
-          </ul>
-        </div>
-        <div class="grid grid-cols-2 gap-4">
-          <%= for package <- @packages do %>
-            <div class="bg-white border border-solid border-gray-200 box-border rounded-lg h-28">
-              <div class="pt-4 px-4">
-                <span class="inline-flex items-baseline float-left space-x-2">
-                  <span class="font-medium text-lg text-gray-900"><a href="<%= ViewHelpers.path_for_package(package) %>"><%= ViewHelpers.package_name(package) %></a></span>
-                  <span class="text-xs font-normal text-gray-500"><%= package.latest_version %></span>
-                </span>
-                <span class="inline-flex items-baseline float-right space-x-2 pt-1">
-                  <%= icon(:remixicon, :"download-line", width: "14px", fill: "rgba(97, 117, 138, 1)")%>
-                  <span class="text-sm font-medium text-gray-400">
-                    <p class="hidden"><%= downloads = (get_in(@downloads, [package.id, "all"]) || 0)%></p>
-                    <%= if  ViewHelpers.digits(downloads) < 2 do %>
-                      <%= ViewHelpers.human_number_space(downloads) %>
-                    <% else %>
-                      <%= ViewHelpers.human_number_space(downloads, ViewHelpers.digits(downloads)) %>+
-                    <% end%>
-                  </span>
-                </span>
-              </div>
-              <div class="font-medium text-sm text-gray-500 mt-8 px-4 text-justify">
-                <%= ViewHelpers.text_length(package.meta.description, 300) |> to_string() |> text_to_html([insert_brs: false,  attributes: [class: "truncate"]]) %>
-              </div>
-              <div class="inline-flex text-gray-400 text-xs font-medium px-4 py-4 space-x-2">
-                <p>Last Updated:</p>
-                <span class="text-gray-600 text-xs font-semibold">
-                <%= ViewHelpers.human_relative_time_from_now(~U[2021-10-16 13:45:31.541200Z]) %>
-              </span>
-              </div>  
+      <div class="pt-10 w-full">
+        <%= if @user.owned_packages == [] do %>
+          <div><h3 class="text-xl font-semibold text-gray-900">Packages</h3></div>
+          <div class="bg-white flex flex-col items-center justify-center rounded-lg border-box border border-solid border-gray-200 h-full">
+            <div class="mix-blend-luminosity">
+              <svg width="48" height="48" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <g>
+                  <path d="M24 0.75L0.75 8.25V39.75L24 47.25L47.25 39.75V8.25L24 0.75Z" fill="#EFC665"/>
+                  <path d="M0.75 8.25L24 15.75V47.25L0.75 39.75V8.25Z" fill="#EFC665"/>
+                  <path d="M0.75 8.25L24 15.75V21.75L0.75 14.25V8.25Z" fill="#FFED83"/>
+                  <path d="M47.25 8.25L24 15.75V47.25L47.25 39.75V8.25Z" fill="#D3AA4A"/>
+                  <path d="M47.25 8.25L24 15.75V21.75L47.25 14.25V8.25Z" fill="#FAE25C"/>
+                  <path d="M15.75 34.5L6.75 31.5V25.5L15.75 28.5V34.5Z" fill="#FFED83"/>
+                  <path d="M35.25 40.5L44.25 37.5V34.5L35.25 37.5V40.5Z" fill="#FAE25C"/>
+                  <path d="M35.25 34.5L44.25 31.5V28.5L35.25 31.5V34.5Z" fill="#FAE25C"/>
+                  <path d="M8.25 10.6732L14.25 12.6082L37.6725 5.1607L30.885 2.9707L8.25 10.6732Z" fill="#D15850"/>
+                  <path d="M8.25 10.6719V21.7494L14.25 23.9994V12.6069L8.25 10.6719Z" fill="#F7716A"/>
+                </g>
+              </svg>
             </div>
-          <% end %>
-        </div>
-      <% end %>
-    </div>
-    </div>
+            <div>
+              <h3 class="text-gray-900 font-semibold text-lg">No Packages</h3>
+            </div>
+            <div>
+              <p class="text-gray-500 text-sm font-normal">The author hasn’t added any packages.</p>
+            </div>
+          </div>
+        <% else %>
+          <div class="flex justify-between">
+            <div class="pt-2">
+              <h3 class="text-xl font-semibold text-gray-900">Packages</h3>
+            </div>
+            <div class="order-last pb-5">
+              <button class="border-box border border-solid border-gray-200 rounded-lg text-sm px-2 py-1 items-center justify-center" type="button" data-dropdown-toggle="package-dropdown">  
+                <div class="flex space-x-2">
+                  <div class="font-medium text-sm text-gray-400">Most Popular</div>
+                  <div class="-rotate-180">
+                    <%= icon(:remixicon, :"arrow-up-s-line", width: "14px", height: "14px", fill: "rgba(97, 117, 138, 1)")%>
+                  </div>
+                </div>
+              </button>
+            </div>
+          </div>
+          <!-- Dropdown menu -->
+          <div class="hidden bg-white text-base z-50 rounded-lg h-28 w-40" id="package-dropdown">
+            <ul class="space-y-2 py-4" aria-labelledby="dropdown">
+              <li class="inline-flex px-4 font-semibold text-sm text-gray-700">
+                <a href="#">Most Popular</a>
+              </li>
+              <li class="inline-flex px-4 font-medium text-sm text-gray-400">
+                <a href="#">Most Downloaded</a>
+              </li>
+              <li class="inline-flex px-4 font-medium text-sm text-gray-400">
+                <a href="#">Newest First</a>
+              </li>
+            </ul>
+          </div>
+          <div class="grid grid-cols-2 gap-4">
+            <%= for package <- @packages do %>
+              <div class="bg-white border border-solid border-gray-200 box-border rounded-lg h-28">
+                <div class="pt-4 px-4">
+                  <span class="inline-flex items-baseline float-left space-x-2">
+                    <span class="font-medium text-lg text-gray-900"><a href="<%= ViewHelpers.path_for_package(package) %>"><%= ViewHelpers.package_name(package) %></a></span>
+                    <span class="text-xs font-normal text-gray-500"><%= package.latest_version %></span>
+                  </span>
+                  <span class="inline-flex items-baseline float-right space-x-2 pt-1">
+                    <%= icon(:remixicon, :"download-line", width: "14px", fill: "rgba(97, 117, 138, 1)")%>
+                    <span class="text-sm font-medium text-gray-400">
+                      <p class="hidden"><%= downloads = (get_in(@downloads, [package.id, "all"]) || 0)%></p>
+                      <%= if  ViewHelpers.digits(downloads) < 2 do %>
+                        <%= ViewHelpers.human_number_space(downloads) %>
+                      <% else %>
+                        <%= ViewHelpers.human_number_space(downloads, ViewHelpers.digits(downloads)) %>+
+                      <% end%>
+                    </span>
+                  </span>
+                </div>
+                <div class="font-medium text-sm text-gray-500 mt-8 px-4 text-justify">
+                  <%= ViewHelpers.text_length(package.meta.description, 300) |> to_string() |> text_to_html([insert_brs: false,  attributes: [class: "truncate"]]) %>
+                </div>
+                <div class="inline-flex text-gray-400 text-xs font-medium px-4 py-4 space-x-2">
+                  <p>Last Updated:</p>
+                  <span class="text-gray-600 text-xs font-semibold">
+                    <%= ViewHelpers.human_relative_time_from_now(~U[2021-10-16 13:45:31.541200Z]) %>
+                  </span>
+                </div>  
+              </div>
+            <% end %>
+          </div>
+        <% end %>
+      </div>
+    </div> 
   </div>
 </div>
 
