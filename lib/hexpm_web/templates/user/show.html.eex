@@ -1,4 +1,4 @@
-<div class="relative">
+<div class="relative top-10">
   <div class="max-w-7xl mx-auto">  
     <div class="grid grid-cols-3">
       <div class="flex flex-col items-center justify-center">
@@ -39,10 +39,10 @@
           </div>
         </div>
       </div>
-      <div class="col-span-2 pt-12">
+      <div class="col-span-2">
       <%= if @user.owned_packages == [] do %>
         <div><h3 class="text-xl font-semibold text-gray-900">Packages</h3></div>
-        <div class="bg-white flex flex-col items-center justify-center rounded-lg border-box border border-solid border-gray-200 pt-32 pb-28">
+        <div class="bg-white flex flex-col items-center justify-center rounded-lg border-box border border-solid border-gray-200 h-full">
           <div class="mix-blend-luminosity">
             <svg width="48" height="48" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
               <g>
@@ -98,7 +98,7 @@
         </div>
         <div class="grid grid-cols-2 gap-4">
           <%= for package <- @packages do %>
-            <div class="bg-white border border-solid border-gray-200 box-border rounded-lg">
+            <div class="bg-white border border-solid border-gray-200 box-border rounded-lg h-28">
               <div class="pt-4 px-4">
                 <span class="inline-flex items-baseline float-left space-x-2">
                   <span class="font-medium text-lg text-gray-900"><a href="<%= ViewHelpers.path_for_package(package) %>"><%= ViewHelpers.package_name(package) %></a></span>
@@ -117,8 +117,14 @@
                 </span>
               </div>
               <div class="font-medium text-sm text-gray-500 mt-8 px-4 text-justify">
-                <%= ViewHelpers.text_length(package.meta.description, 300) |> to_string() |> text_to_html(insert_brs: false) %>
+                <%= ViewHelpers.text_length(package.meta.description, 300) |> to_string() |> text_to_html([insert_brs: false,  attributes: [class: "truncate"]]) %>
               </div>
+              <div class="inline-flex text-gray-400 text-xs font-medium px-4 py-4 space-x-2">
+                <p>Last Updated:</p>
+                <span class="text-gray-600 text-xs font-semibold">
+                <%= ViewHelpers.human_relative_time_from_now(~U[2021-10-16 13:45:31.541200Z]) %>
+              </span>
+              </div>  
             </div>
           <% end %>
         </div>
