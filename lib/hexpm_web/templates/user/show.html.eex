@@ -5,7 +5,7 @@
         <div>
           <img src="<%= ViewHelpers.gravatar_url(@gravatar_email, :large) %>" class="h-28 w-28 rounded-full">
         </div>
-        <div class="mt-6">
+        <div class="pt-6">
           <h4 class="font-semibold text-lg text-gray-900"><%= @user.full_name %></h4>
         </div>
         <div class="text-sm text-gray-500 font-normal">
@@ -118,7 +118,7 @@
                     </span>
                   </span>
                 </div>
-                <div class="font-medium text-sm text-gray-500 mt-8 px-4 text-justify">
+                <div class="font-medium text-sm text-gray-500 pt-8 px-4 text-justify">
                   <%= ViewHelpers.text_length(package.meta.description, 300) |> to_string() |> text_to_html([insert_brs: false,  attributes: [class: "truncate"]]) %>
                 </div>
                 <div class="inline-flex text-gray-400 text-xs font-medium px-4 py-4 space-x-2">
