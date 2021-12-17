@@ -95,7 +95,7 @@
                   <div class="hidden bg-white text-base z-50 rounded-lg h-36 w-40" id="dropdown">
                     <ul class="py-6" aria-labelledby="dropdown">
                       <li class="inline-flex px-6 font-medium text-sm text-gray-500">
-                       <%= icon(:remixicon, :"user-smile-line", width: "16px", fill: "rgba(68, 86, 104, 1)")%>
+                        <%= icon(:remixicon, :"user-smile-line", width: "16px", fill: "rgba(68, 86, 104, 1)")%>
                         <a href="<%= Routes.user_path(Endpoint, :show, @current_user) %>" class="px-2">My Profile</a>
                       </li>
                       <li class="inline-flex px-6 font-medium text-sm text-gray-500">
