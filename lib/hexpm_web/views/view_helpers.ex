@@ -192,8 +192,8 @@ defmodule HexpmWeb.ViewHelpers do
     ~E"""
     <%= if error? do %>
     <%= error_icon() %>
-    <% else %>       
-    <%= ViewIcons.icon(:remixicon, :"eye-close-line", width: "20px", fill: "rgba(97,117,138,1)")%>     
+    <% else %>
+    <%= ViewIcons.icon(:remixicon, :"eye-close-line", width: "20px", fill: "rgba(97,117,138,1)")%>
     <% end %>
     """
   end
@@ -323,6 +323,10 @@ defmodule HexpmWeb.ViewHelpers do
     |> trunc()
   end
 
+  defp do_human_number(int, _max, _digits, {_unit, 1}) do
+    human_number_space(int)
+  end
+
   defp do_human_number(int, max, digits, _unit) when is_integer(int) and digits <= max do
     human_number_space(int)
   end
@@ -330,7 +334,7 @@ defmodule HexpmWeb.ViewHelpers do
   defp do_human_number(int, max, digits, {unit, mag}) when is_integer(int) and digits > max do
     shifted = int / :math.pow(10, mag)
     len = trunc(:math.log10(shifted)) + 2
-    float = Float.round(shifted, max - len)
+    float = Float.round(shifted, max(max - len, 0))
 
     case Float.ratio(float) do
       {_, 1} -> human_number_space(trunc(float)) <> unit

@@ -31,10 +31,10 @@
             <div class="bg-gray-100 border border-solid border-gray-200 box-border rounded-lg w-36 h-16 pt-2 pl-2">
               <p class="text-sm text-gray-500 font-medium">Total Downloads</p>
               <h3 class="text-xl font-bold text-gray-900">
-                <%= if  ViewHelpers.digits(@total_downloads) < 2 do %>
+                <%= if ViewHelpers.digits(@total_downloads) <= 3 do %>
                   <%= ViewHelpers.human_number_space(@total_downloads) %>
                 <% else %>
-                  <%= ViewHelpers.human_number_space(@total_downloads, ViewHelpers.digits(@total_downloads)) %>+
+                  <%= ViewHelpers.human_number_space(@total_downloads, 2) %>+
                 <% end%>
               </h3>
             </div>
@@ -74,7 +74,7 @@
               <h3 class="text-xl font-semibold text-gray-900">Packages</h3>
             </div>
             <div class="order-last pb-5">
-              <button class="border-box border border-solid border-gray-200 rounded-lg text-sm px-2 py-1 items-center justify-center" type="button" data-dropdown-toggle="package-dropdown">  
+              <button class="border-box border border-solid border-gray-200 rounded-lg text-sm px-2 py-1 items-center justify-center" type="button" data-dropdown-toggle="package-dropdown">
                 <div class="flex space-x-2">
                   <div class="font-medium text-sm text-gray-400">Most Popular</div>
                   <div class="-rotate-180">
@@ -110,10 +110,10 @@
                     <%= icon(:remixicon, :"download-line", width: "14px", fill: "rgba(97, 117, 138, 1)")%>
                     <span class="text-sm font-medium text-gray-400">
                       <p class="hidden"><%= downloads = (get_in(@downloads, [package.id, "all"]) || 0)%></p>
-                      <%= if  ViewHelpers.digits(downloads) < 2 do %>
+                      <%= if ViewHelpers.digits(downloads) <= 3 do %>
                         <%= ViewHelpers.human_number_space(downloads) %>
                       <% else %>
-                        <%= ViewHelpers.human_number_space(downloads, ViewHelpers.digits(downloads)) %>+
+                        <%= ViewHelpers.human_number_space(downloads, 2) %>+
                       <% end%>
                     </span>
                   </span>
@@ -126,16 +126,12 @@
                   <span class="text-gray-600 text-xs font-semibold">
                     <%= ViewHelpers.human_relative_time_from_now(~U[2021-10-16 13:45:31.541200Z]) %>
                   </span>
-                </div>  
+                </div>
               </div>
             <% end %>
           </div>
         <% end %>
       </div>
-    </div> 
+    </div>
   </div>
 </div>
-
-
-
-
