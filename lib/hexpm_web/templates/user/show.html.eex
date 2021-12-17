@@ -75,10 +75,10 @@
             </div>
             <div class="order-last pb-5">
               <button class="border-box border border-solid border-gray-200 rounded-lg text-sm px-2 py-1 items-center justify-center" type="button" data-dropdown-toggle="package-dropdown">
-                <div class="flex space-x-2">
+                <div class="flex inline-flex items-center space-x-2">
                   <div class="font-medium text-sm text-gray-400">Most Popular</div>
-                  <div class="-rotate-180">
-                    <%= icon(:remixicon, :"arrow-up-s-line", width: "14px", height: "14px", fill: "rgba(97, 117, 138, 1)")%>
+                  <div>
+                    <%= icon(:remixicon, :"arrow-down-s-line", width: "14px", height: "14px", fill: "rgba(97, 117, 138, 1)")%>
                   </div>
                 </div>
               </button>
@@ -100,13 +100,13 @@
           </div>
           <div class="grid grid-cols-2 gap-4">
             <%= for package <- @packages do %>
-              <div class="bg-white border border-solid border-gray-200 box-border rounded-lg h-28">
-                <div class="pt-4 px-4">
+              <div class="bg-white border border-solid border-gray-200 box-border rounded-lg h-28 py-2">
+                <div class="px-4">
                   <span class="inline-flex items-baseline float-left space-x-2">
                     <span class="font-medium text-lg text-gray-900"><a href="<%= ViewHelpers.path_for_package(package) %>"><%= ViewHelpers.package_name(package) %></a></span>
                     <span class="text-xs font-normal text-gray-500"><%= package.latest_version %></span>
                   </span>
-                  <span class="inline-flex items-baseline float-right space-x-2 pt-1">
+                  <span class="inline-flex items-center float-right space-x-2 pt-1">
                     <%= icon(:remixicon, :"download-line", width: "14px", fill: "rgba(97, 117, 138, 1)")%>
                     <span class="text-sm font-medium text-gray-400">
                       <p class="hidden"><%= downloads = (get_in(@downloads, [package.id, "all"]) || 0)%></p>
@@ -121,7 +121,7 @@
                 <div class="font-medium text-sm text-gray-500 pt-8 px-4 text-justify">
                   <%= ViewHelpers.text_length(package.meta.description, 300) |> to_string() |> text_to_html([insert_brs: false,  attributes: [class: "truncate"]]) %>
                 </div>
-                <div class="inline-flex text-gray-400 text-xs font-medium px-4 py-4 space-x-2">
+                <div class="inline-flex text-gray-400 text-xs font-medium px-4 pt-4 space-x-2">
                   <p>Last Updated:</p>
                   <span class="text-gray-600 text-xs font-semibold">
                     <%= ViewHelpers.human_relative_time_from_now(~U[2021-10-16 13:45:31.541200Z]) %>
