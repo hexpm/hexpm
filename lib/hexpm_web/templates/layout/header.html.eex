@@ -107,7 +107,7 @@
                         <a href="<%= Routes.profile_path(Endpoint, :index) %>" class="px-2">Settings</a>
                       </li>
                       <li class="inline-flex px-6">
-                         <%= icon(:remixicon, :"logout-box-line", width: "16px", fill: "rgba(68, 86, 104, 1)")%>
+                        <%= icon(:remixicon, :"logout-box-line", width: "16px", fill: "rgba(68, 86, 104, 1)")%>
                         <%= form_tag(Routes.login_path(Endpoint, :delete)) do %>
                           <button type="submit" class="px-2  text-gray-500 font-medium text-sm">Log out</button>
                         <% end %>
