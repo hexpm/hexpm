@@ -383,8 +383,9 @@ defmodule HexpmWeb.ViewHelpers do
   end
 
   defp no_of_days(datetime) do
-    date = DateTime.to_date(datetime)
-    Date.days_in_month(date)
+    datetime
+    |> DateTime.to_date()
+    |> Date.days_in_month()
   end
 
   def pretty_datetime(datetime) do
