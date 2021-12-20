@@ -154,6 +154,14 @@ defmodule Hexpm.Repository.Package do
     |> search(search)
   end
 
+  defp put_first_owner(changeset, user, repository) do
+    if repository.public do
+      put_assoc(changeset, :package_owners, [%PackageOwner{user_id: user.id}])
+    else
+      changeset
+    end
+  end
+
   defp validate_metadata_name(changeset) do
     name = get_field(changeset, :name)
     meta_name = changeset.params["meta"]["name"]

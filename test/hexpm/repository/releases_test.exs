@@ -159,6 +159,38 @@ defmodule Hexpm.Repository.ReleasesTest do
 
       assert %{version: "is invalid SemVer"} = errors_on(changeset)
     end
+
+    test "can't publish with invalid licenses", %{user: user} do
+      name = Fake.sequence(:package)
+
+      meta = %{
+        "name" => name,
+        "description" => "description",
+        "licenses" => ["Invalid-Lic", "Apache-2.0"],
+        "version" => "0.1.0",
+        "requirements" => [],
+        "app" => name,
+        "build_tools" => ["mix"],
+        "files" => ["mix.exs"]
+      }
+
+      audit = audit_data(user)
+
+      assert {:error, :package, changeset, _} =
+               Releases.publish(
+                 Repository.hexpm(),
+                 nil,
+                 user,
+                 "BODY",
+                 meta,
+                 "123abc",
+                 "123abc",
+                 audit: audit,
+                 replace: false
+               )
+
+      assert %{meta: %{licenses: "invalid license \"Invalid-Lic\""}} = errors_on(changeset)
+    end
   end
 
   describe "revert/3" do
