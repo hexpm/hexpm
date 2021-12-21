@@ -14,7 +14,7 @@ defmodule HexpmWeb.WebAuthController do
       {:ok, _request} ->
         conn
         |> put_status(:found)
-        |> redirect(to: Routes.web_auth_path(conn, :success))
+        |> redirect(external: Routes.web_auth_url(conn, :success))
 
       {:error, msg} when msg == "invalid user code" ->
         conn

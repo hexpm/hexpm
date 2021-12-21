@@ -306,6 +306,7 @@ defmodule HexpmWeb.Router do
       pipe_through :api
 
       post "/repo", TestController, :repo
+      post "/web_auth/submit", WebAuthController, :submit
     end
   end
 
