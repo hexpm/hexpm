@@ -87,7 +87,7 @@
           <!-- Dropdown menu -->
           <div class="hidden bg-white text-base z-50 rounded-lg h-28 w-40 shadow-2xl" id="package-dropdown">
             <ul class="space-y-2 py-4" aria-labelledby="dropdown">
-              <li class="px-4 font-semibold text-sm text-gray-700">
+              <li class="px-4 font-medium text-sm text-gray-700">
                 <a href="#">Most Popular</a>
               </li>
               <li class="px-4 font-medium text-sm text-gray-400">
