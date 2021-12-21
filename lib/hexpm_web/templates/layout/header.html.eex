@@ -94,15 +94,15 @@
                   <!-- Dropdown menu -->
                   <div class="hidden bg-white text-base z-50 rounded-lg h-36 w-40 shadow-2xl" id="dropdown">
                     <ul class="py-6" aria-labelledby="dropdown">
-                      <li class=" inline-flex px-6 dropdown-menu">
+                      <li class="inline-flex px-6 dropdown-menu">
                         <%= icon(:remixicon, :"user-smile-line", width: "16px", fill: "rgba(68, 86, 104, 1)")%>
                         <a href="<%= Routes.user_path(Endpoint, :show, @current_user) %>" class="px-2">My Profile</a>
                       </li>
-                      <li class=" inline-flex px-6 dropdown-menu">
+                      <li class="inline-flex px-6 dropdown-menu">
                         <%= icon(:remixicon, :"building-4-line", width: "16px", fill: "rgba(68, 86, 104, 1)")%>
                         <a href="#" class="px-2">Organization</a>
                       </li>
-                      <li class=" inline-flex px-6 dropdown-menu">
+                      <li class="inline-flex px-6 dropdown-menu">
                         <%= icon(:remixicon, :"settings-3-line", width: "16px", fill: "rgba(68, 86, 104, 1)")%>
                         <a href="<%= Routes.profile_path(Endpoint, :index) %>" class="px-2">Settings</a>
                       </li>
