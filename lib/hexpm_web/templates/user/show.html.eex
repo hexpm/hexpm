@@ -75,7 +75,7 @@
             </div>
             <div class="order-last pb-5">
               <button class="border-box border border-solid border-gray-200 rounded-lg text-sm px-2 py-1 items-center justify-center" type="button" data-dropdown-toggle="package-dropdown">
-                <div class="flex inline-flex items-center space-x-2">
+                <div class="flex items-center space-x-2">
                   <div class="font-medium text-sm text-gray-400">Most Popular</div>
                   <div>
                     <%= icon(:remixicon, :"arrow-down-s-line", width: "14px", height: "14px", fill: "rgba(97, 117, 138, 1)")%>
@@ -87,13 +87,13 @@
           <!-- Dropdown menu -->
           <div class="hidden bg-white text-base z-50 rounded-lg h-28 w-40 shadow-2xl" id="package-dropdown">
             <ul class="space-y-2 py-4" aria-labelledby="dropdown">
-              <li class="px-4 font-medium text-sm text-gray-700">
+              <li class="px-4 dropdown-menu">
                 <a href="#">Most Popular</a>
               </li>
-              <li class="px-4 font-medium text-sm text-gray-400">
+              <li class="px-4 dropdown-menu">
                 <a href="#">Most Downloaded</a>
               </li>
-              <li class="px-4 font-medium text-sm text-gray-400">
+              <li class="px-4 dropdown-menu">
                 <a href="#">Newest First</a>
               </li>
             </ul>
