@@ -85,7 +85,7 @@ defmodule Hexpm.Repository.Package do
     cast(package, params, [])
     # A release publish should always update the package's updated_at
     |> force_change(:updated_at, DateTime.utc_now())
-    |> cast_embed(:meta, with: &PackageMetadata.changeset(&1, &2, package), required: true)
+    |> cast_embed(:meta, with: &PackageMetadata.update_changeset(&1, &2, package), required: true)
     |> validate_metadata_name()
   end
 

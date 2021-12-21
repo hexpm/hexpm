@@ -18,6 +18,12 @@ defmodule Hexpm.Repository.PackageMetadata do
     |> validate_licenses(package)
   end
 
+  def update_changeset(meta, params, package) do
+    cast(meta, params, ~w(description licenses links maintainers extra)a)
+    |> validate_required_meta(package)
+    |> validate_links()
+  end
+
   defp validate_required_meta(changeset, package) do
     if package.repository.id == 1 do
       validate_required(changeset, ~w(description licenses)a)
@@ -53,6 +59,6 @@ defmodule Hexpm.Repository.PackageMetadata do
   end
 
   defp valid_license?(license) do
-    :mix_hex_licenses.valid(license)
+    :hex_licenses.valid(license)
   end
 end
