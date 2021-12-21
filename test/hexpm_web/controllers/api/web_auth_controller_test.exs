@@ -23,7 +23,7 @@ defmodule HexpmWeb.API.WebAuthControllerTest do
         post(conn, Routes.web_auth_path(conn, :code, %{"foo" => "bar"}))
         |> json_response(:bad_request)
 
-      assert response == %{"error" => "invalid parameters"}
+      assert response["message"] == "invalid parameters"
     end
   end
 
@@ -50,7 +50,7 @@ defmodule HexpmWeb.API.WebAuthControllerTest do
         |> post(Routes.web_auth_path(c.conn, :access_key, request))
         |> json_response(:unprocessable_entity)
 
-      assert response == %{"error" => "invalid device code"}
+      assert response["message"] == "invalid device code"
     end
 
     test "returns an error on invalid parameters", c do
@@ -61,7 +61,7 @@ defmodule HexpmWeb.API.WebAuthControllerTest do
         |> post(Routes.web_auth_path(c.conn, :access_key, request))
         |> json_response(:bad_request)
 
-      assert response == %{"error" => "invalid parameters"}
+      assert response["message"] == "invalid parameters"
     end
   end
 

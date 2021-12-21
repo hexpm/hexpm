@@ -34,20 +34,14 @@ defmodule HexpmWeb.API.WebAuthController do
   def access_key(conn, _params), do: invalid_params(conn)
 
   defp invalid_params(conn) do
-    conn
-    |> put_status(:bad_request)
-    |> json(%{"error" => "invalid parameters"})
+    render_error(conn, :bad_request, message: "invalid parameters")
   end
 
   defp invalid_parameter(conn, msg) do
-    conn
-    |> put_status(:unprocessable_entity)
-    |> json(%{"error" => msg})
+    render_error(conn, :unprocessable_entity, message: msg)
   end
 
   defp internal_error(conn, msg) do
-    conn
-    |> put_status(:internal_server_error)
-    |> json(%{"error" => msg})
+    render_error(conn, :internal_server_error, message: msg)
   end
 end
