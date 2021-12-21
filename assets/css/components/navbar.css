@@ -4,7 +4,7 @@
   }
 
   .dropdown-menu{
-    @apply hover:text-gray-700 inline-flex px-6 font-medium text-sm text-gray-500;
+    @apply hover:text-gray-700 inline-flex px-6 font-medium text-sm text-gray-400;
   }
 }
 
