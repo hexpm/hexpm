@@ -74,7 +74,7 @@ defmodule Hexpm.Accounts.WebAuth do
   end
 
   @doc """
-  Returns the key of a verified request and deletes the request.
+  Returns the keys of a verified request and deletes the request.
 
   ## Params
 
@@ -94,10 +94,11 @@ defmodule Hexpm.Accounts.WebAuth do
 
         key_name = request.key_name
 
-        key_params = %{@key_params | name: key_name}
+        write_key_params = %{@key_params | name: key_name <> "-write-WebAuth"}
+        read_key_params = %{@key_params | name: key_name <> "-read-WebAuth"}
 
-        write_key = %{key_params | permissions: [%{@key_permission | resource: "write"}]}
-        read_key = %{key_params | permissions: [%{@key_permission | resource: "read"}]}
+        write_key = %{write_key_params | permissions: [%{@key_permission | resource: "write"}]}
+        read_key = %{read_key_params | permissions: [%{@key_permission | resource: "read"}]}
 
         result =
           Multi.new()
