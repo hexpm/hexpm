@@ -26,38 +26,34 @@ defmodule Hexpm.Accounts.WebAuthTest do
     setup [:get_code, :login]
 
     test "returns ok on valid params", c do
-      audit_data = audit_data(c.user)
-
-      {status, _changeset} = WebAuth.submit(c.user, c.request.user_code, audit_data)
+      {status, _changeset} = WebAuth.submit(c.user, c.request.user_code)
       assert status == :ok
     end
 
     test "returns error on invalid user code", c do
-      audit_data = audit_data(c.user)
-
-      assert WebAuth.submit(c.user, "bad_code", audit_data) == {:error, "invalid user code"}
+      assert WebAuth.submit(c.user, "bad_code") == {:error, "invalid user code"}
     end
   end
 
   describe "access_key/1" do
-    setup [:get_code, :login]
+    setup [:get_code, :login, :get_audit_user_agent]
 
     test "returns keys on valid device code", c do
       submit_code(c)
 
-      keys = WebAuth.access_key(c.request.device_code)
+      keys = WebAuth.access_key(c.request.device_code, c.audit_user_agent)
 
       assert %{write_key: %Hexpm.Accounts.Key{}, read_key: %Hexpm.Accounts.Key{}} = keys
     end
 
     test "returns an error on unverified request", c do
-      response = WebAuth.access_key(c.request.device_code)
+      response = WebAuth.access_key(c.request.device_code, c.audit_user_agent)
 
       assert response == {:error, "request to be verified"}
     end
 
-    test "returns an error on invalid device code" do
-      response = WebAuth.access_key("bad code")
+    test "returns an error on invalid device code", c do
+      response = WebAuth.access_key("bad code", c.audit_user_agent)
 
       assert response == {:error, "invalid device code"}
     end
@@ -65,8 +61,8 @@ defmodule Hexpm.Accounts.WebAuthTest do
     test "deletes request after user has accessed", c do
       submit_code(c)
 
-      WebAuth.access_key(c.request.device_code)
-      second_call = WebAuth.access_key(c.request.device_code)
+      WebAuth.access_key(c.request.device_code, c.audit_user_agent)
+      second_call = WebAuth.access_key(c.request.device_code, c.audit_user_agent)
 
       assert second_call == {:error, "invalid device code"}
     end
@@ -87,9 +83,15 @@ defmodule Hexpm.Accounts.WebAuthTest do
   end
 
   def submit_code(c) do
-    audit_data = audit_data(c.user)
-    WebAuth.submit(c.user, c.request.user_code, audit_data)
+    WebAuth.submit(c.user, c.request.user_code)
 
     c
+  end
+
+  def get_audit_user_agent(c) do
+    c.user
+    |> audit_data
+    |> elem(1)
+    |> then(&Map.put_new(c, :audit_user_agent, &1))
   end
 end

@@ -56,18 +56,17 @@ defmodule Hexpm.Accounts.WebAuth do
 
     - `user` - The user for whom the key should be generated.
     - `user_code` - The user code entered by that user.
-    - `audit` - Audit data for generating the key.
   """
-  def submit(user, user_code, audit) do
+  def submit(user, user_code) do
     request =
       WebAuthRequest
       |> Repo.get_by(user_code: user_code)
       |> Repo.preload(:user)
 
     if request do
-      {_user, audit_con} = audit
-
-      WebAuthRequest.verify(request, user, audit_con) |> Repo.update()
+      request
+      |> WebAuthRequest.verify(user)
+      |> Repo.update()
     else
       {:error, "invalid user code"}
     end
@@ -79,8 +78,9 @@ defmodule Hexpm.Accounts.WebAuth do
   ## Params
 
   - `device_code` - The device code assigned to the client
+  - `user_agent` - The user agent for the audit for generating the keys
   """
-  def access_key(device_code) do
+  def access_key(device_code, user_agent) do
     request =
       WebAuthRequest
       |> Repo.get_by(device_code: device_code)
@@ -90,7 +90,7 @@ defmodule Hexpm.Accounts.WebAuth do
       r when r.verified ->
         user = request.user
 
-        audit = {user, request.audit}
+        audit = {user, user_agent}
 
         key_name = request.key_name
 

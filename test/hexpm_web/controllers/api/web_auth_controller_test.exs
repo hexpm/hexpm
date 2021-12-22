@@ -88,9 +88,8 @@ defmodule HexpmWeb.API.WebAuthControllerTest do
   def submit(c) do
     user = c.user
     user_code = c.request.user_code
-    audit = audit_data(c.conn)
 
-    WebAuth.submit(user, user_code, audit)
+    WebAuth.submit(user, user_code)
 
     c
   end

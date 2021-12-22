@@ -7,10 +7,9 @@ defmodule HexpmWeb.WebAuthController do
   def submit(conn, params)
 
   def submit(conn, %{"user_code" => user_code}) do
-    audit = audit_data(conn)
     user = conn.assigns.current_user
 
-    case Hexpm.Accounts.WebAuth.submit(user, user_code, audit) do
+    case Hexpm.Accounts.WebAuth.submit(user, user_code) do
       {:ok, _request} ->
         conn
         |> put_status(:found)

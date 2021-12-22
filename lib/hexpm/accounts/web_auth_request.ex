@@ -11,7 +11,6 @@ defmodule Hexpm.Accounts.WebAuthRequest do
     field :key_name, :string
     field :verified, :boolean, default: false
     belongs_to :user, Hexpm.Accounts.User
-    field :audit, :string
   end
 
   def create(request, params \\ %{}) do
@@ -21,10 +20,9 @@ defmodule Hexpm.Accounts.WebAuthRequest do
     |> unique_constraint([:device_code, :user_code])
   end
 
-  def verify(request, user, audit) do
+  def verify(request, user) do
     request
     |> change()
-    |> put_change(:audit, audit)
     |> put_change(:verified, true)
     |> put_assoc(:user, user)
   end
