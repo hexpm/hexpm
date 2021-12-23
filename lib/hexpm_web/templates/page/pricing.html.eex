@@ -1,4 +1,64 @@
-<div class="pricing">
+<div class="relative top-10">
+  <div class="max-w-7xl mx-auto px-8">
+    <div class="flex place-content-center">
+      <div class="max-w-xl">
+        <h2 class="heading-h2">Our Plans & Pricing</h2>
+        <p class="mt-2 text-center font-normal text-base text-gray-600">Hex is free to use for public open source packages. You can publish unlimited private packages with organizations</p>
+        <div class="flex py-6 items-center justify-center">
+          <label for="toggle" class="inline-flex space-x-2 items-center cursor-pointer">
+              <span class="text-sm font-medium text-gray-700">Monthly</span>
+            <input type="checkbox" id="toggle" class="sr-only">
+            <div class="w-14 h-8 bg-gray-200 rounded-xl toggle-bg"></div>
+            <span class="text-sm font-medium text-gray-700">Yearly</span>
+          </label>
+        </div>
+      </div>
+    </div>
+    <div class="grid grid-cols-3 gap-4 px-8">
+      <div class="px-4 py-8 bg-white">
+        <div class="pb-8">
+          <span class="inline-block float-left rounded-full bg-blue-100 h-14 w-14 flex items-center justify-center">
+            <%= icon(:remixicon, :"open-source-line", width: "26.67px", height: "26.06px", fill: "rgba(15, 89, 216, 1)")%>
+          </span>
+          <div class="inline-block float-right">
+            <p class="inline-block text-5xl font-bold text-gray-800">$0</p>
+            <p class="inline-block font-medium text-gray-500 text-base">/mo</p>
+          </div>
+        </div>
+        <div class="pt-12">
+          <h3 class="font-semibold text-2xl text-gray-700">Open Source</h3>
+          <p class="font-normal text-base text-gray-600 ">For Public Open Source Packages</p>
+        </div>
+        <div class="pt-8">
+          <ul class="space-y-2">
+            <li class="inline-flex items-center ">
+              <%= icon(:remixicon, :"add-line", width: "18px", height: "18px", fill: "rgba(17, 117, 61, 1)")%>
+              <p class="ml-2 text-gray-800 text-base font-normal">Unlimited number of public packages</p>
+            </li>
+            <li class="inline-flex items-center ">
+              <%= icon(:remixicon, :"add-line", width: "18px", height: "18px", fill: "rgba(17, 117, 61, 1)")%>
+              <p class="ml-2 text-gray-800 text-base font-normal">Public Packages Documentation</p>
+            </li>
+            <li class="inline-flex items-center ">
+              <%= icon(:remixicon, :"add-line", width: "18px", height: "18px", fill: "rgba(17, 117, 61, 1)")%>
+              <p class="ml-2 text-gray-800 text-base font-normal">Multiple Package Owners</p>
+            </li>
+          </ul>
+        </div>
+        <div class="pt-8">
+          <button class="bg-blue-600 rounded-lg h-12 w-full font-medium text-white text-base">Get Started for FREE</button>
+        </div>
+      </div>
+      <div class="bg-white"></div>
+      <div class="bg-white"></div>
+    </div>
+    <div class="bg-primary-900">3</div>
+    
+  </div>
+  
+</div>
+
+<!-- <div class="pricing">
   <h3>Hex is free to use for public open source packages.</h3>
   <h3>Publish unlimited number of private packages with organizations.</h3>
 
@@ -77,4 +137,4 @@
       <small>* Local VAT may apply.</small>
     </p>
   </div>
-</div>
+</div> -->
