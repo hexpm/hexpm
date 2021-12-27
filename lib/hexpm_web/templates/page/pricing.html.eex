@@ -1,10 +1,10 @@
-<div class="relative top-10">
-  <div class="max-w-7xl mx-auto px-8">
+<div class="relative top-10  space-y-12">
+  <div class="max-w-7xl mx-auto space-y-12">
     <div class="flex place-content-center">
       <div class="max-w-xl">
         <h2 class="heading-h2">Our Plans & Pricing</h2>
         <p class="mt-2 text-center font-normal text-base text-gray-600">Hex is free to use for public open source packages. You can publish unlimited private packages with organizations</p>
-        <div class="flex py-6 items-center justify-center">
+        <div class="flex pt-8 items-center justify-center">
           <label for="toggle" class="inline-flex space-x-2 items-center cursor-pointer">
               <span class="text-sm font-medium text-gray-700">Monthly</span>
             <input type="checkbox" id="toggle" class="sr-only">
@@ -14,13 +14,13 @@
         </div>
       </div>
     </div>
-    <div class="grid grid-cols-3 gap-4 px-8">
+    <div class="grid grid-cols-3 gap-x-4 px-20">
       <div class="px-4 py-8 bg-white">
         <div class="pb-8">
-          <span class="inline-block float-left rounded-full bg-blue-100 h-14 w-14 flex items-center justify-center">
+          <span class="float-left rounded-full bg-blue-100 h-14 w-14 flex items-center justify-center">
             <%= icon(:remixicon, :"open-source-line", width: "26.67px", height: "26.06px", fill: "rgba(15, 89, 216, 1)")%>
           </span>
-          <div class="inline-block float-right">
+          <div class="float-right">
             <p class="inline-block text-5xl font-bold text-gray-800">$0</p>
             <p class="inline-block font-medium text-gray-500 text-base">/mo</p>
           </div>
@@ -29,7 +29,7 @@
           <h3 class="font-semibold text-2xl text-gray-700">Open Source</h3>
           <p class="font-normal text-base text-gray-600 ">For Public Open Source Packages</p>
         </div>
-        <div class="pt-8">
+        <div class="pt-8 flex flex-col space-y-20">
           <ul class="space-y-2">
             <li class="inline-flex items-center ">
               <%= icon(:remixicon, :"add-line", width: "18px", height: "18px", fill: "rgba(17, 117, 61, 1)")%>
@@ -44,18 +44,108 @@
               <p class="ml-2 text-gray-800 text-base font-normal">Multiple Package Owners</p>
             </li>
           </ul>
-        </div>
-        <div class="pt-8">
           <button class="bg-blue-600 rounded-lg h-12 w-full font-medium text-white text-base">Get Started for FREE</button>
         </div>
       </div>
-      <div class="bg-white"></div>
-      <div class="bg-white"></div>
-    </div>
-    <div class="bg-primary-900">3</div>
-    
+      <div class="px-4 py-8 bg-white">
+        <div class="pb-8">
+          <span class="float-left rounded-full bg-green-100 h-14 w-14 flex items-center justify-center">
+            <%= icon(:remixicon, :"lock-password-line", width: "26.67px", height: "26.06px", fill: "rgba(17, 117, 61, 1)")%>
+          </span>
+          <div class="float-right">
+            <p class="inline-block text-5xl font-bold text-gray-800">$7</p>
+            <p class="inline-block font-medium text-gray-500 text-base">/mo</p>
+          </div>
+        </div>
+        <div class="pt-12">
+          <h3 class="font-semibold text-2xl text-gray-700">Private Packages</h3>
+          <p class="font-normal text-base text-gray-600 ">For Private Projects with teams of users</p>
+        </div>
+        <div class="pt-8 flex flex-col space-y-20">
+          <ul class="space-y-2">
+            <li class="inline-flex items-center ">
+              <%= icon(:remixicon, :"add-line", width: "18px", height: "18px", fill: "rgba(17, 117, 61, 1)")%>
+              <p class="ml-2 text-gray-800 text-base font-normal">Unlimited Private Packages</p>
+            </li>
+            <li class="inline-flex items-center ">
+              <%= icon(:remixicon, :"add-line", width: "18px", height: "18px", fill: "rgba(17, 117, 61, 1)")%>
+              <p class="ml-2 text-gray-800 text-base font-normal">Private Packages Documentation</p>
+            </li>
+            <li class="inline-flex items-center ">
+              <%= icon(:remixicon, :"add-line", width: "18px", height: "18px", fill: "rgba(17, 117, 61, 1)")%>
+              <p class="ml-2 text-gray-800 text-base font-normal">Republish and Delete Packages</p>
+            </li>
+          </ul>
+          <button class="bg-blue-600 rounded-lg h-12 w-full font-medium text-white text-base">Try FREE for 30 days</button>
+        </div>
+      </div>
+      <div class="px-4 py-8 bg-white">
+        <div class="pb-8">
+          <span class="float-left rounded-full bg-primary-100 h-14 w-14 flex items-center justify-center">
+            <%= icon(:remixicon, :"building-line", width: "26.67px", height: "26.06px", fill: "rgba(105, 67, 141, 1)")%>
+          </span>
+          <p class="float-right text-5xl font-bold text-gray-800">TBA</p>
+        </div>
+        <div class="pt-12">
+          <h3 class="font-semibold text-2xl text-gray-700">Enterprise</h3>
+          <p class="font-normal text-base text-gray-600 ">Self-hosted hex for public & private packages</p>
+        </div>
+        <div class="pt-8 flex flex-col space-y-11">
+          <ul class="space-y-2">
+            <li class="inline-flex items-center ">
+              <%= icon(:remixicon, :"add-line", width: "18px", height: "18px", fill: "rgba(17, 117, 61, 1)")%>
+              <p class="ml-2 text-gray-800 text-base font-normal">Run your own infrastructure</p>
+            </li>
+            <li class="inline-flex items-center ">
+              <%= icon(:remixicon, :"add-line", width: "18px", height: "18px", fill: "rgba(17, 117, 61, 1)")%>
+              <p class="ml-2 text-gray-800 text-base font-normal">Mirroring of hex.pm packages</p>
+            </li>
+            <li class="inline-flex items-center ">
+              <%= icon(:remixicon, :"add-line", width: "18px", height: "18px", fill: "rgba(17, 117, 61, 1)")%>
+              <p class="ml-2 text-gray-800 text-base font-normal">Whitelist allowed & vetted packages</p>
+            </li>
+            <li class="inline-flex items-center ">
+              <%= icon(:remixicon, :"add-line", width: "18px", height: "18px", fill: "rgba(17, 117, 61, 1)")%>
+              <p class="ml-2 text-gray-800 text-base font-normal">Apply Security Packages</p>
+            </li>
+          </ul>
+          <button class="bg-blue-600 rounded-lg h-12 w-full font-medium text-white text-base">Contact Sales</button>
+        </div>
+      </div>
+    </div> 
   </div>
-  
+    <div class="grid grid-cols-3 gap-x-14 px-16 py-12 bg-white">
+      <div class="space-y-6">
+        <h1 class="font-bold text-4xl text-gray-700">Frequently Asked Questions</h1>
+        <p class="text-lg text-gray-700 font-normal">Everything you need to know right here at your fingertips. </p>
+      </div>
+      <div class="col-span-2 pr-4">
+        <ul class="divide-y space-y-4">
+          <li class="flex justify-between ">
+            <p class="text-xl font-medium text-gray-700">What is your refund policy?</p>
+            <p class="order-last">1</p>
+          </li>
+          <li>
+            <p class="text-xl font-medium text-gray-700">How are organizations billed?</p>
+          </li>
+          <li>
+            <p class="text-xl font-medium text-gray-700">How are organizations billed?</p>
+          </li>
+          <li>
+            <p class="text-xl font-medium text-gray-700">Do the listed prices include VAT?</p>
+          </li>
+          <li>
+            <p class="text-xl font-medium text-gray-700">Can I cancel at anytime?</p>
+          </li>
+          <li>
+            <p class="text-xl font-medium text-gray-700">What happens if I fail to pay?</p>
+          </li>
+          <li>
+            <p class="text-xl font-medium text-gray-700">Can I pay annually instead of yearly?</p>
+          </li>
+        </ul>
+      </div>
+    </div>
 </div>
 
 <!-- <div class="pricing">
