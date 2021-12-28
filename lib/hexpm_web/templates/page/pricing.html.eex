@@ -44,7 +44,7 @@
               <p class="ml-2 text-gray-800 text-base font-normal">Multiple Package Owners</p>
             </li>
           </ul>
-          <button class="bg-blue-600 rounded-lg h-12 w-full font-medium text-white text-base">Get Started for FREE</button>
+          <a class= "bg-blue-600 rounded-lg h-12 w-full font-medium text-white text-base flex items-center justify-center" href="<%= Routes.signup_path(Endpoint, :show) %>">Get Started for FREE</a>  
         </div>
       </div>
       <div class="px-4 py-8 bg-white">
@@ -52,10 +52,14 @@
           <span class="float-left rounded-full bg-green-100 h-14 w-14 flex items-center justify-center">
             <%= icon(:remixicon, :"lock-password-line", width: "26.67px", height: "26.06px", fill: "rgba(17, 117, 61, 1)")%>
           </span>
-          <div class="float-right">
-            <p class="inline-block text-5xl font-bold text-gray-800">$7</p>
+          <div class="float-right price price-monthly">
+            <p class="inline-block text-5xl font-bold text-gray-800 price-amount">$7</p>
             <p class="inline-block font-medium text-gray-500 text-base">/mo</p>
           </div>
+          <!--<div class="float-right price price-yearly">
+            <p class="inline-block text-5xl font-bold text-gray-800 price-amount">$70</p>
+            <p class="inline-block font-medium text-gray-500 text-base">/yr</p>
+          </div> -->
         </div>
         <div class="pt-12">
           <h3 class="font-semibold text-2xl text-gray-700">Private Packages</h3>
@@ -76,7 +80,7 @@
               <p class="ml-2 text-gray-800 text-base font-normal">Republish and Delete Packages</p>
             </li>
           </ul>
-          <button class="bg-blue-600 rounded-lg h-12 w-full font-medium text-white text-base">Try FREE for 30 days</button>
+          <a class= "bg-blue-600 rounded-lg h-12 w-full font-medium text-white text-base flex items-center justify-center" href="<%= Routes.organization_path(Endpoint, :new) %>">Try FREE for 30 days</a>  
         </div>
       </div>
       <div class="px-4 py-8 bg-white">
@@ -109,43 +113,58 @@
               <p class="ml-2 text-gray-800 text-base font-normal">Apply Security Packages</p>
             </li>
           </ul>
-          <button class="bg-blue-600 rounded-lg h-12 w-full font-medium text-white text-base">Contact Sales</button>
+          <a class= "bg-blue-600 rounded-lg h-12 w-full font-medium text-white text-base flex items-center justify-center" href="#">Contact Sales</a>  
         </div>
       </div>
     </div> 
   </div>
-    <div class="grid grid-cols-3 gap-x-14 px-16 py-12 bg-white">
-      <div class="space-y-6">
-        <h1 class="font-bold text-4xl text-gray-700">Frequently Asked Questions</h1>
-        <p class="text-lg text-gray-700 font-normal">Everything you need to know right here at your fingertips. </p>
-      </div>
-      <div class="col-span-2 pr-4">
-        <ul class="divide-y space-y-4">
-          <li class="flex justify-between ">
-            <p class="text-xl font-medium text-gray-700">What is your refund policy?</p>
-            <p class="order-last">1</p>
-          </li>
-          <li>
-            <p class="text-xl font-medium text-gray-700">How are organizations billed?</p>
-          </li>
-          <li>
-            <p class="text-xl font-medium text-gray-700">How are organizations billed?</p>
-          </li>
-          <li>
-            <p class="text-xl font-medium text-gray-700">Do the listed prices include VAT?</p>
-          </li>
-          <li>
-            <p class="text-xl font-medium text-gray-700">Can I cancel at anytime?</p>
-          </li>
-          <li>
-            <p class="text-xl font-medium text-gray-700">What happens if I fail to pay?</p>
-          </li>
-          <li>
-            <p class="text-xl font-medium text-gray-700">Can I pay annually instead of yearly?</p>
-          </li>
-        </ul>
-      </div>
+  <div class="grid grid-cols-3 gap-x-14 px-16 py-12 bg-white">
+    <div class="space-y-6 pt-4">
+      <h1 class="font-bold text-4xl text-gray-700">Frequently Asked Questions</h1>
+      <p class="text-lg text-gray-700 font-normal">Everything you need to know right here at your fingertips. </p>
     </div>
+    <div class="col-span-2 pr-12">
+      <ul class="divide-y">
+        <li class="faq-link">
+          <p class="faq-p">What is your refund policy?</p>
+          <a href="#" class="order-last">
+            <%= icon(:remixicon, :"add-line", width: "24px", height: "24px", fill: "rgba(3, 9, 19, 1)")%>
+          </a>
+        </li>
+        <li class="faq-link">
+          <p class="faq-p">How are organizations billed?</p>
+          <a href="#" class="order-last">
+            <%= icon(:remixicon, :"add-line", width: "24px", height: "24px", fill: "rgba(3, 9, 19, 1)")%>
+          </a>
+        </li>
+        <li class="faq-link">
+          <p class="faq-p">Do the listed prices include VAT?</p>
+          <a href="#" class="order-last">
+            <%= icon(:remixicon, :"add-line", width: "24px", height: "24px", fill: "rgba(3, 9, 19, 1)")%>
+          </a>
+        </li>
+        <li class="faq-link">
+          <p class="faq-p">Can I cancel at anytime?</p>
+          <a href="#" class="order-last">
+            <%= icon(:remixicon, :"add-line", width: "24px", height: "24px", fill: "rgba(3, 9, 19, 1)")%>
+          </a>
+        </li>
+        <li class="faq-link">
+          <p class="faq-p">What happens if I fail to pay?</p>
+          <a href="#" class="order-last">
+            <%= icon(:remixicon, :"add-line", width: "24px", height: "24px", fill: "rgba(3, 9, 19, 1)")%>
+          </a>
+        </li>
+        <li class="faq-link">
+          <p class="faq-p">Can I pay annually instead of yearly?</p>
+          <a href="#" class="order-last">
+            <%= icon(:remixicon, :"add-line", width: "24px", height: "24px", fill: "rgba(3, 9, 19, 1)")%>
+          </a>
+        </li>
+        <li></li>
+      </ul>
+    </div>
+  </div>
 </div>
 
 <!-- <div class="pricing">

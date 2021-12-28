@@ -23,4 +23,12 @@
    .form-input-error {
     @apply border-red-600;
   }
+
+  .faq-link {
+    @apply flex justify-between py-3;
+  }
+
+  .faq-p {
+    @apply text-xl font-medium text-gray-700;
+  }
 }
