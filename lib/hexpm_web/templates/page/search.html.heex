@@ -1,7 +1,7 @@
 <form phx-change="suggest" phx-submit="search"
       role="search"
       action={Routes.package_path(Endpoint, :index)}
-      method="get">
+      method="get" autocomplete="off">
   <div class="input-group">
     <input type="text"
            list="matches"
