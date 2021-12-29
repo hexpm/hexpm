@@ -1,47 +1,62 @@
-<h2>Sponsors</h2>
-
-<h3 class="sponsors-preamble"><small>The following companies provide resources and services that make running Hex possible.</small></h3>
-
-<div class="sponsors">
-  <div class="row dashbit">
-    <div class="col-md-5 image">
-      <a href="https://dashbit.co"><img src="<%= Routes.static_path(Endpoint, "/images/dashbit.png") %>" alt="Dashbit logo"></a>
+<div class="relative top-10">
+  <div class="max-w-7xl mx-auto space-y-12">
+    <div class="flex place-content-center">
+      <div class="max-w-xl">
+        <h2 class="heading-h2">Sponsors</h2>
+        <p class="mt-2 text-center font-normal text-base text-gray-600">The following companies provide us with resources and services that make running Hex.pm possible.</p>
+      </div>
     </div>
-    <div class="col-md-7">
-      <p>
-        Dashbit helps startups and enterprises adopt and run Elixir in production. In turn, these relationships gives them resources and feedback to invest back into the community. Their goal is to advance the Elixir ecosystem through continuous adoption and sustainable open source development.
-      </p>
-      <p>
-        Dashbit provides consultancy and development help for Hex.
-      </p>
-    </div>
-  </div>
-
-  <div class="row">
-    <div class="col-md-5 image">
-      <a href="https://www.fastly.com/"><img src="<%= Routes.static_path(Endpoint, "/images/fastly.png") %>" alt="Fastly logo"></a>
-    </div>
-    <div class="col-md-7">
-      <p>
-        Founded in 2011, Fastly is the only content delivery network that gives businesses complete control over how they serve content, unprecedented access to real-time performance analytics, and the ability to cache frequently changing content at the edge. Our secure, global network allows enterprises to increase revenue and improve customer experiences across their websites and mobile applications while maintaining fast, consistent, and reliable performance.
-      </p>
-      <p>
-        Fastly provides Hex with free CDN services.
-      </p>
-    </div>
-  </div>
-
-  <div class="row simplebet">
-    <div class="col-md-5 image">
-      <a href="https://simplebet.io/"><img src="<%= Routes.static_path(Endpoint, "/images/simplebet.png") %>" alt="SimpleBet logo"></a>
-    </div>
-    <div class="col-md-7">
-      <p>
-        SimpleBet is using modern technology to enable sports betting market creation and trading to become entirely automatic and algorithmic for the first time. This will allow for the creation of more betting opportunities, enable more efficient pricing for existing betting activity, and reduce operating expenses via automation.
-      </p>
-      <p>
-        SimpleBet provides development help for Hex.
-      </p>
-    </div>
+    <div class="grid grid-cols-3 gap-x-4 px-20">
+      <div class="p-8 bg-white">
+        <div class="flex items-center justify-between pb-8">
+          <div class="w-48 h-8">
+            <a href="https://dashbit.co"><img src="<%= Routes.static_path(Endpoint, "/images/dashbit.png") %>" alt="Dashbit logo"></a>
+          </div>
+          <div>
+            <%= icon(:remixicon, :"external-link-line", width: "24px", height: "24px", fill: "rgba(15, 89, 216, 1)")%>
+          </div>
+        </div>
+        <div class="space-y-4 font-normal text-base text-gray-600 text-left">
+          <p>
+            Dashbit helps startups and enterprises adopt and run Elixir in production. In turn, these relationships gives them resources and feedback to invest back into the community. Their goal is to advance the Elixir ecosystem through continuous adoption and sustainable open source development.
+          </p>
+          <p>Dashbit provides consultancy and development help for Hex.</p>
+        </div>
+      </div>
+      <div class="p-8 bg-white">
+        <div class="flex items-center justify-between pb-8">
+          <div class="w-20 h-8">
+            <a href="https://www.fastly.com/"><img src="<%= Routes.static_path(Endpoint, "/images/fastly.png") %>" alt="Fastly logo"></a>
+          </div>
+          <div>
+            <%= icon(:remixicon, :"external-link-line", width: "24px", height: "24px", fill: "rgba(15, 89, 216, 1)")%>
+          </div>
+        </div>
+        <div class="space-y-4 font-normal text-base text-gray-600 text-left">
+          <p>
+            Founded in 2011, Fastly is the only content delivery network that gives businesses complete control over how they serve content, unprecedented access to real-time performance analytics, and the ability to cache frequently changing content at the edge. Our secure, global network allows enterprises to increase revenue and improve customer experiences across their websites and mobile applications while maintaining fast, consistent, and reliable performance.
+          </p>
+          <p>Fastly provides Hex with free CDN services.</p>
+        </div>
+      </div>
+      <div class="p-8 bg-white">
+        <div class="flex items-center justify-between pb-8">
+          <div class="w-32 h-8">
+            <a href="https://simplebet.io/"><img src="<%= Routes.static_path(Endpoint, "/images/simplebet.png") %>" alt="SimpleBet logo"></a>
+          </div>
+          <div>
+            <%= icon(:remixicon, :"external-link-line", width: "24px", height: "24px", fill: "rgba(15, 89, 216, 1)")%>
+          </div>
+        </div>
+        <div class="space-y-4 font-normal text-base text-gray-600 text-left">
+          <p>
+            SimpleBet is using modern technology to enable sports betting market creation and trading to become entirely automatic and algorithmic for the first time. This will allow for the creation of more betting opportunities, enable more efficient pricing for existing betting activity, and reduce operating expenses via automation.
+          </p>
+          <p>SimpleBet provides development help for Hex.</p>
+        </div>
+      </div>
+    </div> 
   </div>
 </div>
+
+
