@@ -1,9 +1,9 @@
 <div class="relative top-10">
   <div class="max-w-7xl mx-auto space-y-12">
     <div class="flex place-content-center">
-      <div class="max-w-xl">
+      <div class="max-w-xl space-y-2">
         <h2 class="heading-h2">Sponsors</h2>
-        <p class="mt-2 text-center font-normal text-base text-gray-600">The following companies provide us with resources and services that make running Hex.pm possible.</p>
+        <p class="text-center font-normal text-base text-gray-600">The following companies provide us with resources and services that make running Hex.pm possible.</p>
       </div>
     </div>
     <div class="grid grid-cols-3 gap-x-4 px-20">
