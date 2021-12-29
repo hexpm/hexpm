@@ -192,8 +192,8 @@ defmodule HexpmWeb.ViewHelpers do
     ~E"""
     <%= if error? do %>
     <%= error_icon() %>
-    <% else %>       
-    <%= ViewIcons.icon(:remixicon, :"eye-close-line", width: "20px", fill: "rgba(97,117,138,1)")%>     
+    <% else %>
+    <%= ViewIcons.icon(:remixicon, :"eye-close-line", width: "20px", fill: "rgba(97,117,138,1)")%>
     <% end %>
     """
   end
@@ -315,6 +315,18 @@ defmodule HexpmWeb.ViewHelpers do
     |> :erlang.list_to_binary()
   end
 
+  def digits(0), do: 0
+
+  def digits(int) do
+    int
+    |> :math.log10()
+    |> trunc()
+  end
+
+  defp do_human_number(int, _max, _digits, {_unit, 1}) do
+    human_number_space(int)
+  end
+
   defp do_human_number(int, max, digits, _unit) when is_integer(int) and digits <= max do
     human_number_space(int)
   end
@@ -322,7 +334,7 @@ defmodule HexpmWeb.ViewHelpers do
   defp do_human_number(int, max, digits, {unit, mag}) when is_integer(int) and digits > max do
     shifted = int / :math.pow(10, mag)
     len = trunc(:math.log10(shifted)) + 2
-    float = Float.round(shifted, max - len)
+    float = Float.round(shifted, max(max - len, 0))
 
     case Float.ratio(float) do
       {_, 1} -> human_number_space(trunc(float)) <> unit
@@ -332,20 +344,49 @@ defmodule HexpmWeb.ViewHelpers do
 
   def human_relative_time_from_now(datetime) do
     ts = NaiveDateTime.to_erl(datetime) |> :calendar.datetime_to_gregorian_seconds()
+
     diff = :calendar.datetime_to_gregorian_seconds(:calendar.universal_time()) - ts
-    rel = rel_from_now(:calendar.seconds_to_daystime(diff))
+    rel = rel_from_now(:calendar.seconds_to_daystime(diff), datetime)
+
+    :calendar.seconds_to_daystime(diff)
 
     content_tag(:span, rel, title: pretty_date(datetime))
   end
 
-  defp rel_from_now({0, {0, 0, sec}}) when sec < 30, do: "about now"
-  defp rel_from_now({0, {0, min, _}}) when min < 2, do: "1 minute ago"
-  defp rel_from_now({0, {0, min, _}}), do: "#{min} minutes ago"
-  defp rel_from_now({0, {1, _, _}}), do: "1 hour ago"
-  defp rel_from_now({0, {hour, _, _}}) when hour < 24, do: "#{hour} hours ago"
-  defp rel_from_now({1, {_, _, _}}), do: "1 day ago"
-  defp rel_from_now({day, {_, _, _}}) when day < 0, do: "about now"
-  defp rel_from_now({day, {_, _, _}}), do: "#{day} days ago"
+  defp rel_from_now({0, {0, 0, sec}}, _dt) when sec < 30, do: "about now"
+  defp rel_from_now({0, {0, min, _}}, _dt) when min < 2, do: "1 minute ago"
+  defp rel_from_now({0, {0, min, _}}, _dt), do: "#{min} minutes ago"
+  defp rel_from_now({0, {1, _, _}}, _dt), do: "1 hour ago"
+  defp rel_from_now({0, {hour, _, _}}, _dt) when hour < 24, do: "#{hour} hours ago"
+  defp rel_from_now({1, {_, _, _}}, _dt), do: "1 day ago"
+  defp rel_from_now({day, {_, _, _}}, _dt) when day < 0, do: "about now"
+
+  defp rel_from_now({day, {_, _, _}}, datetime) do
+    no_of_days(datetime)
+
+    if day < no_of_days(datetime) do
+      "#{day} days ago"
+    else
+      rel_from_now(day)
+    end
+  end
+
+  defp rel_from_now(day) do
+    year = day / 365
+
+    if year < 1 do
+      month = round(year * 12)
+      if month == 1, do: "1 month ago", else: "#{month} months ago"
+    else
+      if round(year) == 1, do: "1 year ago", else: "#{round(year)} months ago"
+    end
+  end
+
+  defp no_of_days(datetime) do
+    datetime
+    |> DateTime.to_date()
+    |> Date.days_in_month()
+  end
 
   def pretty_datetime(datetime) do
     Calendar.strftime(datetime, "%b %d, %Y, %H:%M")

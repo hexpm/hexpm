@@ -2,5 +2,9 @@
   .nav-link {
     @apply font-sans text-sm font-medium;
   }
+
+  .dropdown-menu{
+    @apply hover:text-gray-700 font-medium text-sm text-gray-400;
+  }
 }
 

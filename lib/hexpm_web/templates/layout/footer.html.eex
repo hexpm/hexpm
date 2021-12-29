@@ -67,6 +67,7 @@
 
 
   <script src="<%= Routes.static_path(Endpoint, "/assets/app.js") %>"></script>
+  <script src="https://unpkg.com/@themesberg/flowbite@latest/dist/flowbite.bundle.js"></script>
 
   </body>
 </html>

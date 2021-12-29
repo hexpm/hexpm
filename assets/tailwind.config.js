@@ -1,5 +1,5 @@
 module.exports = {
-  mode: 'jit',
+  mode: "jit",
   purge: [
     "../lib/hexpm_web/**/*.html.eex",
     "../lib/hexpm_web/**/*.html.leex",
@@ -11,7 +11,8 @@ module.exports = {
   theme: {
     boxShadow: {
       DEFAULT: "0 4px 15px rgba(3, 9, 19, 0.15)",
-      inner: "inset 0 4px 4px rgba(105, 67, 141, 0.2)"
+      inner: "inset 0 4px 4px rgba(105, 67, 141, 0.2)",
+      "2xl": "0 25px 50px -12px rgb(0 0 0 / 0.25)"
     },
     colors: {
       primary: {
