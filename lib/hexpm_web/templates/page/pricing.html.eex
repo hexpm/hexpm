@@ -28,7 +28,7 @@
           <h3 class="font-semibold text-2xl text-gray-700">Open Source</h3>
           <p class="font-normal text-base text-gray-600 ">For Public Open Source Packages</p>
         </div>
-        <div class="pt-8 flex flex-col space-y-20">
+        <div class="pt-8 space-y-20">
           <ul class="space-y-2">
             <li class="inline-flex items-center space-x-2">
               <%= icon(:remixicon, :"add-line", width: "18px", height: "18px", fill: "rgba(17, 117, 61, 1)")%>
@@ -64,7 +64,7 @@
           <h3 class="font-semibold text-2xl text-gray-700">Private Packages</h3>
           <p class="font-normal text-base text-gray-600 ">For Private Projects with teams of users</p>
         </div>
-        <div class="pt-8 flex flex-col space-y-20">
+        <div class="pt-8 space-y-20">
           <ul class="space-y-2">
             <li class="inline-flex items-center space-x-2">
               <%= icon(:remixicon, :"add-line", width: "18px", height: "18px", fill: "rgba(17, 117, 61, 1)")%>
@@ -93,7 +93,7 @@
           <h3 class="font-semibold text-2xl text-gray-700">Enterprise</h3>
           <p class="font-normal text-base text-gray-600 ">Self-hosted hex for public & private packages</p>
         </div>
-        <div class="pt-8 flex flex-col space-y-11">
+        <div class="pt-8 space-y-11">
           <ul class="space-y-2">
             <li class="inline-flex items-center space-x-2">
               <%= icon(:remixicon, :"add-line", width: "18px", height: "18px", fill: "rgba(17, 117, 61, 1)")%>
