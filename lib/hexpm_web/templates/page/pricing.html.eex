@@ -31,17 +31,17 @@
         </div>
         <div class="pt-8 flex flex-col space-y-20">
           <ul class="space-y-2">
-            <li class="inline-flex items-center ">
+            <li class="inline-flex items-center space-x-2">
               <%= icon(:remixicon, :"add-line", width: "18px", height: "18px", fill: "rgba(17, 117, 61, 1)")%>
-              <p class="ml-2 text-gray-800 text-base font-normal">Unlimited number of public packages</p>
+              <p class="text-gray-800 text-base font-normal">Unlimited number of public packages</p>
             </li>
-            <li class="inline-flex items-center ">
+            <li class="inline-flex items-center space-x-2">
               <%= icon(:remixicon, :"add-line", width: "18px", height: "18px", fill: "rgba(17, 117, 61, 1)")%>
-              <p class="ml-2 text-gray-800 text-base font-normal">Public Packages Documentation</p>
+              <p class="text-gray-800 text-base font-normal">Public Packages Documentation</p>
             </li>
-            <li class="inline-flex items-center ">
+            <li class="inline-flex items-center space-x-2">
               <%= icon(:remixicon, :"add-line", width: "18px", height: "18px", fill: "rgba(17, 117, 61, 1)")%>
-              <p class="ml-2 text-gray-800 text-base font-normal">Multiple Package Owners</p>
+              <p class="text-gray-800 text-base font-normal">Multiple Package Owners</p>
             </li>
           </ul>
           <a class= "bg-blue-600 rounded-lg h-12 w-full font-medium text-white text-base flex items-center justify-center" href="<%= Routes.signup_path(Endpoint, :show) %>">Get Started for FREE</a>  
@@ -67,17 +67,17 @@
         </div>
         <div class="pt-8 flex flex-col space-y-20">
           <ul class="space-y-2">
-            <li class="inline-flex items-center ">
+            <li class="inline-flex items-center space-x-2">
               <%= icon(:remixicon, :"add-line", width: "18px", height: "18px", fill: "rgba(17, 117, 61, 1)")%>
-              <p class="ml-2 text-gray-800 text-base font-normal">Unlimited Private Packages</p>
+              <p class="text-gray-800 text-base font-normal">Unlimited Private Packages</p>
             </li>
-            <li class="inline-flex items-center ">
+            <li class="inline-flex items-center space-x-2">
               <%= icon(:remixicon, :"add-line", width: "18px", height: "18px", fill: "rgba(17, 117, 61, 1)")%>
-              <p class="ml-2 text-gray-800 text-base font-normal">Private Packages Documentation</p>
+              <p class="text-gray-800 text-base font-normal">Private Packages Documentation</p>
             </li>
-            <li class="inline-flex items-center ">
+            <li class="inline-flex items-center space-x-2">
               <%= icon(:remixicon, :"add-line", width: "18px", height: "18px", fill: "rgba(17, 117, 61, 1)")%>
-              <p class="ml-2 text-gray-800 text-base font-normal">Republish and Delete Packages</p>
+              <p class="text-gray-800 text-base font-normal">Republish and Delete Packages</p>
             </li>
           </ul>
           <a class= "bg-blue-600 rounded-lg h-12 w-full font-medium text-white text-base flex items-center justify-center" href="<%= Routes.organization_path(Endpoint, :new) %>">Try FREE for 30 days</a>  
@@ -96,21 +96,21 @@
         </div>
         <div class="pt-8 flex flex-col space-y-11">
           <ul class="space-y-2">
-            <li class="inline-flex items-center ">
+            <li class="inline-flex items-center space-x-2">
               <%= icon(:remixicon, :"add-line", width: "18px", height: "18px", fill: "rgba(17, 117, 61, 1)")%>
-              <p class="ml-2 text-gray-800 text-base font-normal">Run your own infrastructure</p>
+              <p class="text-gray-800 text-base font-normal">Run your own infrastructure</p>
             </li>
-            <li class="inline-flex items-center ">
+            <li class="inline-flex items-center space-x-2">
               <%= icon(:remixicon, :"add-line", width: "18px", height: "18px", fill: "rgba(17, 117, 61, 1)")%>
-              <p class="ml-2 text-gray-800 text-base font-normal">Mirroring of hex.pm packages</p>
+              <p class="text-gray-800 text-base font-normal">Mirroring of hex.pm packages</p>
             </li>
-            <li class="inline-flex items-center ">
+            <li class="inline-flex items-center space-x-2">
               <%= icon(:remixicon, :"add-line", width: "18px", height: "18px", fill: "rgba(17, 117, 61, 1)")%>
-              <p class="ml-2 text-gray-800 text-base font-normal">Whitelist allowed & vetted packages</p>
+              <p class="text-gray-800 text-base font-normal">Whitelist allowed & vetted packages</p>
             </li>
-            <li class="inline-flex items-center ">
+            <li class="inline-flex items-center space-x-2">
               <%= icon(:remixicon, :"add-line", width: "18px", height: "18px", fill: "rgba(17, 117, 61, 1)")%>
-              <p class="ml-2 text-gray-800 text-base font-normal">Apply Security Packages</p>
+              <p class="text-gray-800 text-base font-normal">Apply Security Packages</p>
             </li>
           </ul>
           <a class= "bg-blue-600 rounded-lg h-12 w-full font-medium text-white text-base flex items-center justify-center" href="#">Contact Sales</a>  
