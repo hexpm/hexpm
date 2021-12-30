@@ -127,37 +127,37 @@
       <ul class="divide-y">
         <li class="faq-link">
           <p class="faq-p">What is your refund policy?</p>
-          <a href="#" class="order-last">
+          <a href="#">
             <%= icon(:remixicon, :"add-line", width: "24px", height: "24px", fill: "rgba(3, 9, 19, 1)")%>
           </a>
         </li>
         <li class="faq-link">
           <p class="faq-p">How are organizations billed?</p>
-          <a href="#" class="order-last">
+          <a href="#">
             <%= icon(:remixicon, :"add-line", width: "24px", height: "24px", fill: "rgba(3, 9, 19, 1)")%>
           </a>
         </li>
         <li class="faq-link">
           <p class="faq-p">Do the listed prices include VAT?</p>
-          <a href="#" class="order-last">
+          <a href="#">
             <%= icon(:remixicon, :"add-line", width: "24px", height: "24px", fill: "rgba(3, 9, 19, 1)")%>
           </a>
         </li>
         <li class="faq-link">
           <p class="faq-p">Can I cancel at anytime?</p>
-          <a href="#" class="order-last">
+          <a href="#">
             <%= icon(:remixicon, :"add-line", width: "24px", height: "24px", fill: "rgba(3, 9, 19, 1)")%>
           </a>
         </li>
         <li class="faq-link">
           <p class="faq-p">What happens if I fail to pay?</p>
-          <a href="#" class="order-last">
+          <a href="#">
             <%= icon(:remixicon, :"add-line", width: "24px", height: "24px", fill: "rgba(3, 9, 19, 1)")%>
           </a>
         </li>
         <li class="faq-link">
           <p class="faq-p">Can I pay annually instead of yearly?</p>
-          <a href="#" class="order-last">
+          <a href="#">
             <%= icon(:remixicon, :"add-line", width: "24px", height: "24px", fill: "rgba(3, 9, 19, 1)")%>
           </a>
         </li>
