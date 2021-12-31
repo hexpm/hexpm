@@ -57,8 +57,15 @@ You can also add any of the following to the list of application attributes:
   <dd>A map where the key is a link name and the value is the link URL. Optional but highly recommended.</dd>
   <dt><code>files</code></dt>
   <dd>A list of files and directories to include in the package. Defaults to standard project directories, so you usually don't need to set this property.</dd>
+  <dt><code>include_paths</code></dt>
+  <dd>A list of paths containing files you wish to include in a release.</dd>
+  <dt><code>exclude_paths</code></dt>
+  <dd>A list of paths containing files you wish to exclude in a release.</dd>
+  <dt><code>exclude_patterns</code></dt>
+  <dd>A list of regular expressions used to exclude files that may have been accumulated via files and include_paths and standard project paths.</dd>
   <dt><code>build_tools</code></dt>
   <dd>List of build tools that can build the package. It's very rare that you need to set this.</dd>
+
 </dl>
 
 #### Dependencies
@@ -101,6 +108,29 @@ Only Hex packages may be used as dependencies of the package. It is not possible
 
 ```
 
+#### Documentation 
+
+rebar3_hex by default expects you to configure a documentation provider. We recommend using 
+[rebar3_ex_doc](https://hexdocs.pm/rebar3_ex_doc/) for publishing documentation along with your package for a consistent 
+format and style on [hex.pm](https://hex.pm/). 
+
+
+```erlang 
+ex_doc, [
+    {source_url, <<"https://github.com/namespace/your_app">>},
+    {extras, [<<"README.md">>, <<"LICENSE">>]},
+    {main, <<"readme">>}
+]}.
+
+{hex, [{doc, ex_doc}]}.
+```
+
+Alternatively, or on Erlang versions older than OTP-24, you can use the edoc provider that ships with rebar3 : 
+
+```erlang
+{hex, [{doc, edoc}]}.
+```
+
 ### Submitting the package
 
 After the package metadata and dependencies have been added to `src/<myapp>.app.src`, we are ready to publish the package with the `rebar3 hex publish` command:
@@ -130,7 +160,9 @@ Publishing relx 3.5.0
     LICENSE.md
 Proceed? ("Y") Y
 Published relx 3.5.0
-
+Running edoc for relx
+Running ex_doc for relx
+Published docs for relx 3.5.0
 ```
 
 Congratulations, you've published your package! It will appear on the [https://hex.pm](https://hex.pm/) site and will be available to add as a dependency in other rebar3 or mix projects.
@@ -139,4 +171,4 @@ Please test your package after publishing by adding it as dependency to a rebar3
 
 When running the command to publish a package, Hex will create a tar file of all the files and directories listed in the `files` property. When the tarball has been pushed to the Hex servers, it will be uploaded to a CDN for fast and reliable access for users. Hex will also recompile the registry file that all clients will update automatically when fetching dependencies.
 
-The [rebar3 hex plugin's documentation](https://rebar3.org/docs/package_management/hex_package_management/) contains more information about the hex plugin itself and publishing packages.
+The [rebar3 hex plugin's documentation](https://hexdocs.pm/rebar3_hex/) contains more information about the hex plugin itself and publishing packages.
