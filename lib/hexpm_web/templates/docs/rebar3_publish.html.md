@@ -65,7 +65,6 @@ You can also add any of the following to the list of application attributes:
   <dd>A list of regular expressions used to exclude files that may have been accumulated via files and include_paths and standard project paths.</dd>
   <dt><code>build_tools</code></dt>
   <dd>List of build tools that can build the package. It's very rare that you need to set this.</dd>
-
 </dl>
 
 #### Dependencies
