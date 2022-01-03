@@ -1,29 +1,33 @@
-<h2>About Hex</h2>
-
-<p>
-  Hex is a package manager for the BEAM ecosystem, any language that compiles to run on the BEAM VM, such as <a href="https://elixir-lang.org/">Elixir</a> and <a href="http://www.erlang.org/">Erlang</a>, can be used to build Hex packages.
-  Hex consists of the <a href="https://github.com/hexpm/specifications/blob/main/http_api.md">HTTP API</a>, <a href="/">this website</a>, the repository serving packages and indexes, <a href="https://hexdocs.pm">HexDocs</a>, the <a href="https://github.com/hexpm/hex">Mix build-tool integration</a>, and <a href="https://github.com/hexpm">other services</a>.
-  Many build tools support Hex packages including <a href="https://hexdocs.pm/mix">Mix</a> for Elixir projects, <a href="https://rebar3.org/">Rebar</a> and <a href="https://erlang.mk/">erlang.mk</a> for Erlang projects.
-</p>
-
-<p>
-  Hex's source code is licensed under the <a href="https://www.apache.org/licenses/LICENSE-2.0">Apache 2 License</a> and is maintained by the Hex core team.
-  The team consists of three members: Eric Meadows-Jönsson, Todd Resudek, and Wojtek Mach.
-  The core team maintains the code bases, infrastructure, and services required to run Hex.
-</p>
-
-<p>
-  To report an issue in Hex or its services open an issue on the appropriate repository in the <a href="https://github.com/hexpm">GitHub organization</a> or on the <a href="https://github.com/hexpm/hexpm/issues">hexpm repository</a>.
-  To get in direct contact with Hex core team email <a href="mailto:support@hex.pm">support@hex.pm</a>. Security vulnerabilities should be disclosed to <a href="mailto:security@hex.pm">security@hex.pm</a>.
-</p>
-
-<h3>About Six Colors AB</h3>
-
-<p>
-  Hex was started as an open-source project early 2014, it is still an open-source project but today it is operated by the Swedish limited company "Six Colors AB".
-  The company was founded in 2018 by the creator of Hex, Eric Meadows-Jönsson, Six Colors supports the development of Hex and operates all services required to run Hex.
-</p>
-
-<p>
-  By charging for private packages we can fund free open-source development and run reliable services for both paying customers and the open-source community.
-</p>
+<div class="relative top-10">
+  <div class="grid place-content-center space-y-8">
+    <h2 class="heading-h2">About Hex</h2>
+    <div class="bg-white max-w-4xl mx-auto p-14">
+      <div class="space-y-4 font-normal text-base text-gray-600 text-justify">
+        <p>
+          Hex is a package manager for the BEAM ecosystem, any language that compiles to run on the BEAM VM, such as <a href="https://elixir-lang.org/">Elixir</a> and <a href="http://www.erlang.org/">Erlang</a>, can be used to build Hex packages.
+          Hex consists of the <a href="https://github.com/hexpm/specifications/blob/main/http_api.md">HTTP API</a>, <a href="/">this website</a>, the repository serving packages and indexes, <a href="https://hexdocs.pm">HexDocs</a>, the <a href="https://github.com/hexpm/hex">Mix build-tool integration</a>, and <a href="https://github.com/hexpm">other services</a>.
+          Many build tools support Hex packages including <a href="https://hexdocs.pm/mix">Mix</a> for Elixir projects, <a href="https://rebar3.org/">Rebar</a> and <a href="https://erlang.mk/">erlang.mk</a> for Erlang projects.
+        </p>
+        <p>
+          Hex's source code is licensed under the <a href="https://www.apache.org/licenses/LICENSE-2.0">Apache 2 License</a> and is maintained by the Hex core team.
+          The team consists of three members: Eric Meadows-Jönsson, Todd Resudek, and Wojtek Mach.
+          The core team maintains the code bases, infrastructure, and services required to run Hex.
+        </p>
+        <p>
+          To report an issue in Hex or its services open an issue on the appropriate repository in the <a href="https://github.com/hexpm">GitHub organization</a> or on the <a href="https://github.com/hexpm/hexpm/issues">hexpm repository</a>.
+          To get in direct contact with Hex core team email <a href="mailto:support@hex.pm">support@hex.pm</a>. Security vulnerabilities should be disclosed to <a href="mailto:security@hex.pm">security@hex.pm</a>.
+        </p>
+        <div class="pt-8">
+          <img src="<%= Routes.static_path(Endpoint, "/images/hex.png") %>" srcset="<%= Routes.static_path(Endpoint, "/images/hex.png") %> 1x, <%= Routes.static_path(Endpoint, "/images/hex@2.png") %> 2x, <%= Routes.static_path(Endpoint, "/images/hex@3.png") %> 3x" alt="hex logo">
+        </div>
+        <p>
+          Hex was started as an open-source project early 2014, it is still an open-source project but today it is operated by the Swedish limited company "Six Colors AB".
+          The company was founded in 2018 by the creator of Hex, Eric Meadows-Jönsson, Six Colors supports the development of Hex and operates all services required to run Hex.
+        </p>
+        <p>
+          By charging for private packages we can fund free open-source development and run reliable services for both paying customers and the open-source community.
+        </p>
+      </div>
+    </div>
+  </div> 
+</div>
