@@ -1,8 +1,6 @@
-## Terms of Service
+###### By accessing or using the hex.pm or hexdocs.pm websites, HTTP API, repository or associated services (collectively, the "Services") you are agreeing to be bound by this Terms of Service ("Terms"). Six Colors AB ("Six Colors") operates each of these services. Any information, text, graphics or other material on Services (collectively, the "Content") is also covered by the Terms.
 
-By accessing or using the hex.pm or hexdocs.pm websites, HTTP API, repository or associated services (collectively, the "Services") you are agreeing to be bound by this Terms of Service ("Terms"). Six Colors AB ("Six Colors") operates each of these services. Any information, text, graphics or other material on Services (collectively, the "Content") is also covered by the Terms.
-
-### 1. Basic Terms
+### Basic Terms
 
 You are responsible for your use of the Services and any Content you post to the Services. Content you post publicly to the Services can be viewed by anyone using the Services or using third party services. All Content you post to the Services is subject to these terms.
 
@@ -10,7 +8,7 @@ You may use these Services only if you can form a binding contract with Six Colo
 
 You may not use the Services for any illegal or unauthorized purpose. You must not in the use of the Services violate any laws in your jurisdiction, including but not limited to copyright or trademark laws.
 
-### 2. Account Terms
+### Account Terms
 
 Your user account may only be used by one person — in other words, a single login may not be shared by multiple people.
 
@@ -18,11 +16,11 @@ Additionally, we permit machine accounts. A machine account is an account set up
 
 You are responsible for maintaining the security of your account and password. Six Colors cannot and will not be liable for any loss or damage from your failure to comply with this security obligation.
 
-### 3. Privacy
+### Privacy
 
 Any information that you or other users provide is subject to our [Privacy Policy](privacy), which governs our collection and use of your information. As part of providing the Services we may send you information, these communications are considered part of the Services and are subject to these Terms.
 
-### 4. API Terms
+### API Terms
 
 You may access Content via an API (Application Program Interface). Any use of the API, including use of the API through a third-party product that accesses the Services, is bound by these Terms.
 
@@ -30,7 +28,7 @@ Abuse or excessively frequent access to the Services through the API may result 
 
 Six Colors reserves the right at any time to modify or discontinue, temporarily or permanently, your access to the API (or any part thereof) with or without notice.
 
-### 5. Copyright and Content Ownership
+### Copyright and Content Ownership
 
 All Content, whether publicly posted or privately transmitted, is the sole responsibility of the person who originated such Content. Six Colors may not monitor or control the Content posted via the Services and, Six Colors cannot take responsibility for such Content. Any use or reliance on any Content or materials posted via the Services or obtained by you through the Services is at your own risk.
 
@@ -40,7 +38,7 @@ You retain your rights to any Content you submit, post or display on or through 
 
 You are responsible for your use of the Services, for any Content you provide, and for any consequences thereof, including the use of your Content by other users and third party services where such content has been published publicly via the Services. You understand that your Content (other than Private Content) may be syndicated, broadcast, distributed, or published by third party services and if you do not have the right to submit Content for such use, it may subject you to liability. Six Colors will not be responsible or liable for any use of your Content by Six Colors in accordance with these Terms. You represent and warrant that you have all the rights, power, and authority necessary to grant the rights granted herein to any Content that you submit.
 
-### 6. Restrictions on Content and Use of the Services
+### Restrictions on Content and Use of the Services
 
 We reserve the right at all times (but will not have an obligation) to remove or refuse to distribute any Content on the Services, to suspend or terminate users, and to reclaim usernames or package names without liability to you. Subject to Section 8 below, we also reserve the right to access, read, preserve, and disclose any information as we reasonably believe is necessary to satisfy any applicable law, regulation, legal process or governmental request, enforce the Terms, including investigation of potential violations hereof, detect, prevent, or otherwise address fraud, security or technical issues, respond to user support requests, or protect the rights, property or safety of Six Color, its users and the public.
 
@@ -48,13 +46,13 @@ You may not do any of the following while accessing or using the Services: acces
 
 Any Content that you submit, port or display on or through the Services is subject to our [Code of Conduct](codeofconduct), which governs your behavior and Content on the services.
 
-### 7. Copyright Policy
+###  Copyright Policy
 
 Six Colors respects the intellectual property rights of others and expects users of the Services to do the same. We will respond to notices of alleged copyright infringement that comply with applicable law and are properly provided to us. If you believe that your Content has been copied in a way that constitutes copyright infringement, please provide us with the following information: a physical or electronic signature of the copyright owner or a person authorized to act on their behalf; identification of the copyrighted work claimed to have been infringed; identification of the material that is claimed to be infringing or to be the subject of infringing activity and that is to be removed or access to which is to be disabled, and information reasonably sufficient to permit us to locate the material; your contact information; a statement by you that you have a good faith belief that use of the material in the manner complained of is not authorized by the copyright owner, its agent, or the law; and a statement that the information in the notification is accurate, and, under penalty of perjury, that you are authorized to act on behalf of the copyright owner.
 
 We reserve the right to remove Content alleged to be infringing without prior notice, at our sole discretion, and without liability to you. In appropriate circumstances, Six Colors will also terminate a user’s account if the user is determined to be a repeat infringer. Under the U.S. Digital Millennium Copyright Act, our designated copyright agent for notice of alleged copyright infringement appearing on the Services is: <copyright@hex.pm>.
 
-### 8. Private Content
+### Private Content
 
 Any Content you submit to the Services for a "private package", including but not limited package contents, associated documentation, or package metadata (such Content being "Private Content") shall constitute your confidential information. For the duration of these Terms, and on an on-going basis following termination or expiry hereof, Six Colors shall:
 
@@ -68,7 +66,7 @@ Six Colors may disclose Private Content solely if and to the extent:
 3. It is known to Six Colors prior to the commencement of these Terms and you use of the Services without any restriction upon its disclosure.
 4. Disclose to its legal advisers in confidence for the purpose of obtaining legal advice in connection with the Services.
 
-### 9. Payment
+### Payment
 
 Our pricing is available at [hex.pm/pricing](/pricing). Prices are fixed during the subscription billing period, however prices are subject to change at the end of the billing period. There is no charge for using "open source" services.
 
@@ -84,11 +82,11 @@ Upon payment failure or cancellation of the subscription you will lose access to
 
 By agreeing to these Terms you give us permission to charge your credit card on file. You agree to pay Six Colors any charges occurred due to the use of the Services, if you have any disputes contact <support@hexpm>. Free usage of the Services are not required to provide payment information.
 
-### 10. Ending These Terms
+### Ending These Terms
 
 The Terms will continue to apply indefinitely or until terminated by Six Colors. If you stop using the Services the Terms will continue to apply to any information or Content you have submitted or posted to the Services, excluding Content you have explicitly removed from the Services. Nothing in this section shall affect Six Colors' rights to change, limit or stop the provision of the Services without prior notice.
 
-### 11. Disclaimers and Limitations of Liability
+### Disclaimers and Limitations of Liability
 
 Except as expressly set out herein, your access to and use of the Services or any Content are at your own risk. You understand and agree that the Services are provided to you on an “AS IS” and “AS AVAILABLE” basis. Without limiting the foregoing, to the maximum extent permitted under applicable law, SIX COLORS DISCLAIM ALL WARRANTIES AND CONDITIONS, WHETHER EXPRESSED OR IMPLIED, OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, OR NON-INFRINGEMENT.
 
@@ -100,7 +98,7 @@ TO THE MAXIMUM EXTENT PERMITTED BY APPLICABLE LAW, Six Colors SHALL NOT BE LIABL
 
 The failure of Six Colors to enforce any right or provision of these Terms will not be deemed a waiver of such right or provision. In the event that any provision of these Terms is held to be invalid or unenforceable, then that provision will be limited or eliminated to the minimum extent necessary, and the remaining provisions of these Terms will remain in full force and effect.
 
-### 12. Changes
+### Changes
 
 If Six Colors makes changes to these Terms we will post a notice on the hex.pm website and notify you by email. New features, tools or resources added to the Services will be subject to the Terms. By continuing to use the Services you are agreeing to the Terms as it is subject to the changes.
 

@@ -1,5 +1,3 @@
-## Code of Conduct
-
 Hex exists to facilitate sharing code, by making it easy for Erlang ecosystem developers to publish and distribute packages.
 
 Hex is a piece of technology, but more importantly, it is a community.

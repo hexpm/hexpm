@@ -1,5 +1,3 @@
-## Naming Dispute Policy
-
 This document describes Hex's policy regarding disputes around package, user, and organization names.
 
 ### When does this policy apply?
