@@ -114,7 +114,6 @@ rebar3_hex by default expects you to configure a documentation provider. We reco
 [rebar3_ex_doc](https://hexdocs.pm/rebar3_ex_doc/) for publishing documentation along with your package for a consistent 
 format and style on [hex.pm](https://hex.pm/). 
 
-
 ```erlang 
 ex_doc, [
     {source_url, <<"https://github.com/namespace/your_app">>},
