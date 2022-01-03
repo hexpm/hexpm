@@ -210,15 +210,18 @@ defmodule HexpmWeb.PackageController do
   end
 
   defp exact_match(repositories, search) do
-    case String.split(search, "/", parts: 2) do
+    search
+    |> String.replace(" ", "_")
+    |> String.split("/", parts: 2)
+    |> case do
       [repository, package] ->
         if repository in Enum.map(repositories, & &1.name) do
           Packages.get(repository, package)
         end
 
-      _ ->
+      [term] ->
         try do
-          Packages.get(repositories, search)
+          Packages.get(repositories, term)
         rescue
           Ecto.MultipleResultsError ->
             nil
