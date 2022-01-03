@@ -123,7 +123,7 @@ format and style on [hex.pm](https://hex.pm/).
 {hex, [{doc, ex_doc}]}.
 ```
 
-Alternatively, or on Erlang versions older than OTP-24, you can use the edoc provider that ships with rebar3 : 
+Alternatively, or on Erlang versions older than OTP-24, you can use the edoc provider that ships with rebar3: 
 
 ```erlang
 {hex, [{doc, edoc}]}.
