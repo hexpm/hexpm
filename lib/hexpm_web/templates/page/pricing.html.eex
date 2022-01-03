@@ -6,6 +6,7 @@
         <p class="mt-2 text-center font-normal text-base text-gray-600">Hex is free to use for public open source packages. You can publish unlimited private packages with organizations</p>
         <div class="flex pt-8 items-center justify-center space-x-2">
           <span class="text-sm font-medium text-gray-700">Monthly</span>
+          <!-- The toggle switch is static, requires Javascript implementation -->
           <button type="button" class="bg-gray-200 inline-flex items-center h-8 w-14 border-2 border-transparent rounded-xl cursor-pointer transition-colors ease-in-out duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500" role="switch" aria-checked="false">
             <span aria-hidden="true" class="ml-1 translate-x-0 pointer-events-none h-5 w-5 rounded-md bg-blue-600 shadow transform ring-0 transition ease-in-out duration-200"></span>
           </button>
@@ -51,10 +52,13 @@
           <span class="float-left rounded-full bg-green-100 h-14 w-14 flex items-center justify-center">
             <%= icon(:remixicon, :"lock-password-line", width: "26.67px", height: "26.06px", fill: "rgba(17, 117, 61, 1)")%>
           </span>
+          <!-- Monthly private package -->
           <div class="float-right price price-monthly">
             <p class="inline-block text-5xl font-bold text-gray-800 price-amount">$7</p>
             <p class="inline-block font-medium text-gray-500 text-base">/mo</p>
           </div>
+          <!-- Yearly private package
+          NB: Can be uncommented after toggle switch JS implementation is done -->
           <!--<div class="float-right price price-yearly">
             <p class="inline-block text-5xl font-bold text-gray-800 price-amount">$70</p>
             <p class="inline-block font-medium text-gray-500 text-base">/yr</p>
@@ -165,13 +169,5 @@
     </div>
   </div>
 </div>
-
-
-<!--  <div class="btn-group-wrap">
-    <div class="btn-group btn-group-lg" role="group">
-      <button type="button" class="btn btn-default pricing-button btn-selected">Monthly</button>
-      <button type="button" class="btn btn-default pricing-button">Yearly</button>
-    </div>
-  </div> -->
 
  
