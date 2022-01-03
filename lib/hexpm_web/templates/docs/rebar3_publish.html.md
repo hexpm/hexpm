@@ -58,9 +58,9 @@ You can also add any of the following to the list of application attributes:
   <dt><code>files</code></dt>
   <dd>A list of files and directories to include in the package. Defaults to standard project directories, so you usually don't need to set this property.</dd>
   <dt><code>include_paths</code></dt>
-  <dd>A list of paths containing files you wish to include in a release.</dd>
+  <dd>A list of paths containing files you wish to include in the package.</dd>
   <dt><code>exclude_paths</code></dt>
-  <dd>A list of paths containing files you wish to exclude in a release.</dd>
+  <dd>A list of paths containing files you wish to exclude in the package.</dd>
   <dt><code>exclude_patterns</code></dt>
   <dd>A list of regular expressions used to exclude files that may have been accumulated via files and include_paths and standard project paths.</dd>
   <dt><code>build_tools</code></dt>
