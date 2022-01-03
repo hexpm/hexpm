@@ -114,7 +114,7 @@ rebar3_hex by default expects you to configure a documentation provider. We reco
 format and style on [hex.pm](https://hex.pm/). 
 
 ```erlang 
-ex_doc, [
+{ex_doc, [
     {source_url, <<"https://github.com/namespace/your_app">>},
     {extras, [<<"README.md">>, <<"LICENSE">>]},
     {main, <<"readme">>}
