@@ -1,4 +1,4 @@
-This document describes Hex's policy regarding disputes around package, user, and organization names.
+###### This document describes Hex's policy regarding disputes around package, user, and organization names.
 
 ### When does this policy apply?
 

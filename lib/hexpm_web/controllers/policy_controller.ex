@@ -41,7 +41,7 @@ defmodule HexpmWeb.PolicyController do
     render(
       conn,
       "dispute.html",
-      title: "Dispute policy",
+      title: "Naming Dispute Policy",
       container: "policy grid place-content-center space-y-8"
     )
   end

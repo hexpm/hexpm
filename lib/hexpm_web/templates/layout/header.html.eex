@@ -137,4 +137,4 @@
     <div class="relative top-10">
       <div class="<%= container_class(assigns) %>">
         <h2 class="text-center"><%= @title %></h2>
-        <div class="space-y-4 bg-white max-w-4xl mx-auto p-14">
+        <div class="space-y-4 bg-white max-w-4xl mx-auto p-12 border border-solid border-gray-200 rounded-lg">

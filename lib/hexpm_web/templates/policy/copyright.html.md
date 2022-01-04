@@ -1,10 +1,10 @@
-Hex takes copyright infringement seriously. If you notice copyright infringing material on hex.pm or related services controlled by Hex you can submit a Digital Millennium Copyright Act (DMCA) takedown notice to <copyright@hex.pm>. Similarly, if you have received a takedown notice for your content you can submit a counter notice to the same address. Instructions for how to do so are outlined below.
+###### Hex takes copyright infringement seriously. If you notice copyright infringing material on hex.pm or related services controlled by Hex you can submit a Digital Millennium Copyright Act (DMCA) takedown notice to <copyright@hex.pm>. Similarly, if you have received a takedown notice for your content you can submit a counter notice to the same address. Instructions for how to do so are outlined below.
 
-As with all legal matters you should consult with professionals about your specific situation. Note that actions you take can limit your rights so it's always strongly recommended to take legal counsel prior.
+###### As with all legal matters you should consult with professionals about your specific situation. Note that actions you take can limit your rights so it's always strongly recommended to take legal counsel prior.
 
-Please note that all submissions will be published to the [Lumen Database](https://lumendatabase.org/) with any personal information removed.
+###### Please note that all submissions will be published to the [Lumen Database](https://lumendatabase.org/) with any personal information removed.
 
-Submit your takedown or takedown counter notice to <copyright@hex.pm>. You may include attachments but please include a copy of your letter in plain-text in the body of the email.
+###### Submit your takedown or takedown counter notice to <copyright@hex.pm>. You may include attachments but please include a copy of your letter in plain-text in the body of the email.
 
 ### How to submit a DMCA takedown notice
 

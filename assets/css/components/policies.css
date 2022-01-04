@@ -7,15 +7,23 @@
     @apply text-gray-700 text-2xl font-semibold;
   }
 
+    .policy h4 {
+    @apply text-gray-700 text-xl font-medium;
+  }
+
    .policy h6 {
     @apply text-gray-600 text-lg font-light text-justify;
   }
 
-   .policy p, ol{
+   .policy p, ol, ul{
     @apply text-gray-600 text-base font-normal text-justify;
   }
 
   .policy ol{
-    @apply list-decimal;
+    @apply list-decimal pl-4;
+  }
+
+  .policy ul{
+    @apply list-disc;
   }
 }
