@@ -23,7 +23,7 @@ defmodule Hexpm.Repository.Package do
   @elixir_names ~w(eex elixir elixirc ex_unit iex logger mix)
   @tool_names ~w(erlang typer to_erl run_erl escript erlc erl epmd dialyzer ct_run rebar rebar3 hex hexpm mix_hex)
   @otp_names ~w(
-    appmon asn1 common_test compiler cosEvent cosEventDomain cosFileTransfer
+    otp appmon asn1 common_test compiler cosEvent cosEventDomain cosFileTransfer
     cosNotification cosProperty cosTime cosTransactions crypto debugger
     dialyzer diameter edoc eldap erl_docgen erl_interface erts et eunit gs hipe
     ic inets jinterface kernel Makefile megaco mnesia observer odbc orber
