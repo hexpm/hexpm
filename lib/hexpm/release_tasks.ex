@@ -9,7 +9,7 @@ defmodule Hexpm.ReleaseTasks do
     :ecto_sql
   ]
 
-  @repos Application.get_env(:hexpm, :ecto_repos, [])
+  @repos Application.compile_env(:hexpm, :ecto_repos, [])
 
   def script(args) do
     {:ok, _} = Application.ensure_all_started(:logger)

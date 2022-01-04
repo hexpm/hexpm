@@ -16,7 +16,7 @@ defmodule HexpmWeb.MarkdownEngineTest do
   Security vulnerabilities should be disclosed to [security@hex.pm](mailto:security@hex.pm).
   """
 
-  @path Application.get_env(:hexpm, :tmp_dir) <> "faq.md"
+  @path Application.compile_env(:hexpm, :tmp_dir) <> "faq.md"
 
   @icon HexpmWeb.ViewIcons.icon(:glyphicon, :link, class: "icon-link")
         |> Phoenix.HTML.safe_to_string()

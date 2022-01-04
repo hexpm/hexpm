@@ -1,5 +1,5 @@
 defmodule Hexpm.TestHelpers do
-  @tmp Application.get_env(:hexpm, :tmp_dir)
+  @tmp Application.compile_env(:hexpm, :tmp_dir)
 
   def create_tar(meta, files \\ [{"mix.exs", "mix.exs"}]) do
     meta =

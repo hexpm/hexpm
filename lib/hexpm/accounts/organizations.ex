@@ -105,8 +105,6 @@ defmodule Hexpm.Accounts.Organizations do
   end
 
   def remove_member(organization, user, audit: audit_data) do
-    # TODO: Remove package ownerships to packages in organization repository
-
     count = Repo.aggregate(assoc(organization, :organization_users), :count, :id)
 
     if count == 1 do
@@ -118,6 +116,7 @@ defmodule Hexpm.Accounts.Organizations do
         {:ok, _result} =
           Multi.new()
           |> Multi.delete(:organization_user, organization_user)
+          |> delete_package_owners(organization, user)
           |> audit(audit_data, "organization.member.remove", {organization, user})
           |> Repo.transaction()
       end
@@ -156,6 +155,18 @@ defmodule Hexpm.Accounts.Organizations do
 
   def user_count(organization) do
     Repo.aggregate(assoc(organization, :organization_users), :count, :id)
+  end
+
+  defp delete_package_owners(multi, organization, user) do
+    Multi.delete_all(multi, :package_owners, fn _changes ->
+      from(
+        po in PackageOwner,
+        join: p in assoc(po, :package),
+        join: r in assoc(p, :repository),
+        where: r.organization_id == ^organization.id,
+        where: po.user_id == ^user.id
+      )
+    end)
   end
 
   defp send_invite_email(organization, user) do

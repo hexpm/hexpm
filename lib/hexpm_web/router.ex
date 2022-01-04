@@ -122,7 +122,7 @@ defmodule HexpmWeb.Router do
 
     get "/l/:short_code", ShortURLController, :show
 
-    if Application.fetch_env!(:hexpm, :features)[:package_reports] do
+    if Application.compile_env!(:hexpm, [:features, :package_reports]) do
       get "/reports", PackageReportController, :index
       get "/reports/new", PackageReportController, :new
       post "/reports/create", PackageReportController, :create
