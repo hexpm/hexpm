@@ -7,7 +7,7 @@
       </div>
     </div>
     <div class="grid grid-cols-3 gap-x-4 px-20">
-      <div class="p-8 bg-white">
+      <div class="p-8 bg-white border border-solid border-gray-200 rounded-lg">
         <div class="flex items-center justify-between pb-8">
           <div class="w-48 h-8">
             <a href="https://dashbit.co"><img src="<%= Routes.static_path(Endpoint, "/images/dashbit.png") %>" alt="Dashbit logo"></a>
@@ -23,7 +23,7 @@
           <p>Dashbit provides consultancy and development help for Hex.</p>
         </div>
       </div>
-      <div class="p-8 bg-white">
+      <div class="p-8 bg-white border border-solid border-gray-200 rounded-lg">
         <div class="flex items-center justify-between pb-8">
           <div class="w-20 h-8">
             <a href="https://www.fastly.com/"><img src="<%= Routes.static_path(Endpoint, "/images/fastly.png") %>" alt="Fastly logo"></a>
@@ -39,7 +39,7 @@
           <p>Fastly provides Hex with free CDN services.</p>
         </div>
       </div>
-      <div class="p-8 bg-white">
+      <div class="p-8 bg-white border border-solid border-gray-200 rounded-lg">
         <div class="flex items-center justify-between pb-8">
           <div class="w-32 h-8">
             <a href="https://simplebet.io/"><img src="<%= Routes.static_path(Endpoint, "/images/simplebet.png") %>" alt="SimpleBet logo"></a>
