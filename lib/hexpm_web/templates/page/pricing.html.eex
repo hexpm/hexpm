@@ -1,4 +1,4 @@
-<div class="relative top-10  space-y-12">
+<div class="relative top-10">
   <div class="max-w-7xl mx-auto space-y-12">
     <div class="flex place-content-center">
       <div class="max-w-xl">
@@ -121,12 +121,12 @@
       </div>
     </div> 
   </div>
-  <div class="grid grid-cols-3 gap-x-14 px-16 py-12 bg-white">
-    <div class="space-y-6 pt-4">
+  <div class="grid grid-cols-3 gap-x-20 py-12 bg-white relative top-64">
+    <div class="space-y-6 pt-4 pl-12">
       <h1 class="font-bold text-4xl text-gray-700">Frequently Asked Questions</h1>
       <p class="text-lg text-gray-700 font-normal">Everything you need to know right here at your fingertips. </p>
     </div>
-    <div class="col-span-2 pr-12">
+    <div class="col-span-2 pr-24 pl-6">
       <ul class="divide-y">
         <li class="faq-link">
           <p class="faq-p">What is your refund policy?</p>
