@@ -15,7 +15,7 @@
       </div>
     </div>
     <div class="grid grid-cols-3 gap-x-4 px-20">
-      <div class="px-4 py-8 bg-white">
+      <div class="px-4 py-8 bg-white border border-solid border-gray-200 rounded-lg">
         <div class="pb-8">
           <span class="float-left rounded-full bg-blue-100 h-14 w-14 flex items-center justify-center">
             <%= icon(:remixicon, :"open-source-line", width: "26.67px", height: "26.06px", fill: "rgba(15, 89, 216, 1)")%>
@@ -47,7 +47,7 @@
           <a class= "bg-blue-600 rounded-lg h-12 w-full font-medium text-white text-base flex items-center justify-center" href="<%= Routes.signup_path(Endpoint, :show) %>">Get Started for FREE</a>  
         </div>
       </div>
-      <div class="px-4 py-8 bg-white">
+      <div class="px-4 py-8 bg-white border border-solid border-gray-200 rounded-lg">
         <div class="pb-8">
           <span class="float-left rounded-full bg-green-100 h-14 w-14 flex items-center justify-center">
             <%= icon(:remixicon, :"lock-password-line", width: "26.67px", height: "26.06px", fill: "rgba(17, 117, 61, 1)")%>
@@ -86,7 +86,7 @@
           <a class= "bg-blue-600 rounded-lg h-12 w-full font-medium text-white text-base flex items-center justify-center" href="<%= Routes.organization_path(Endpoint, :new) %>">Try FREE for 30 days</a>  
         </div>
       </div>
-      <div class="px-4 py-8 bg-white">
+      <div class="px-4 py-8 bg-white border border-solid border-gray-200 rounded-lg">
         <div class="pb-8">
           <span class="float-left rounded-full bg-primary-100 h-14 w-14 flex items-center justify-center">
             <%= icon(:remixicon, :"building-line", width: "26.67px", height: "26.06px", fill: "rgba(105, 67, 141, 1)")%>
