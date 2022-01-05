@@ -28,7 +28,7 @@ defmodule Hexpm.Changeset do
     end)
   end
 
-  def validate_requirement(changeset, field, opts) do
+  def validate_requirement(changeset, field) do
     validate_change(changeset, field, fn key, req ->
       cond do
         is_nil(req) ->
@@ -39,12 +39,6 @@ defmodule Hexpm.Changeset do
 
         String.contains?(req, "!=") ->
           [{key, "invalid requirement: #{inspect(req)}, != is not allowed in requirements"}]
-
-        String.contains?(req, "-") and not Keyword.fetch!(opts, :allow_pre) ->
-          [
-            {key,
-             "invalid requirement: #{inspect(req)}, unstable requirements are not allowed for stable releases"}
-          ]
 
         true ->
           []

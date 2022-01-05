@@ -16,6 +16,6 @@ defmodule Hexpm.Repository.ReleaseMetadata do
     |> validate_list_required(:build_tools)
     |> validate_list_required(:files, message: "package can't be empty")
     |> update_change(:build_tools, &Enum.uniq/1)
-    |> validate_requirement(:elixir, allow_pre: true)
+    |> validate_requirement(:elixir)
   end
 end
