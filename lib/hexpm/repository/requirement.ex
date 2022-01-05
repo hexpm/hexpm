@@ -17,9 +17,8 @@ defmodule Hexpm.Repository.Requirement do
     belongs_to :dependency, Package
   end
 
-  def changeset(requirement, params, dependencies, release_changeset, package) do
+  def changeset(requirement, params, dependencies, package) do
     repository = params["repository"] || "hexpm"
-    allow_pre = version_pre(release_changeset) != [] or package.repository.id != 1
 
     cast(requirement, params, ~w(repository name app requirement optional)a)
     |> put_assoc(:dependency, dependencies[{repository, params["name"]}])
@@ -28,7 +27,7 @@ defmodule Hexpm.Repository.Requirement do
       :dependency,
       message: "package does not exist in repository \"#{repository}\""
     )
-    |> validate_requirement(:requirement, allow_pre: allow_pre)
+    |> validate_requirement(:requirement)
     |> validate_repository(:repository, repository: package.repository)
   end
 
@@ -39,7 +38,7 @@ defmodule Hexpm.Repository.Requirement do
       cast_assoc(
         release_changeset,
         :requirements,
-        with: &changeset(&1, &2, dependencies, release_changeset, package)
+        with: &changeset(&1, &2, dependencies, package)
       )
 
     if release_changeset.valid? do
@@ -123,9 +122,4 @@ defmodule Hexpm.Repository.Requirement do
   end
 
   defp requirement_names(_requirements), do: []
-
-  defp version_pre(release_changeset) do
-    version = get_field(release_changeset, :version)
-    version && version.pre
-  end
 end
