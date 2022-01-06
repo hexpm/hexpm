@@ -9,106 +9,104 @@ defmodule Hexpm.ReleaseTasks do
     :ecto_sql
   ]
 
-  @repos Application.compile_env(:hexpm, :ecto_repos, [])
-
   def script(args) do
     {:ok, _} = Application.ensure_all_started(:logger)
-    Logger.info("[task] running script")
+    Logger.info("[task] Running script")
     start_app()
 
     run_script(args)
 
-    Logger.info("[task] finished script")
+    Logger.info("[task] Finished script")
     stop()
   end
 
   def check_names() do
     {:ok, _} = Application.ensure_all_started(:logger)
-    Logger.info("[job] running check_names")
+    Logger.info("[task] Running check_names")
     start_app()
 
     CheckNames.run()
 
-    Logger.info("[job] finished check_names")
+    Logger.info("[task] Finished check_names")
     stop()
   end
 
   def migrate(args \\ []) do
     {:ok, _} = Application.ensure_all_started(:logger)
-    Logger.info("[task] running migrate")
+    Logger.info("[task] Running migrate")
     start_repo()
 
     run_migrations(args)
 
-    Logger.info("[task] finished migrate")
+    Logger.info("[task] Finished migrate")
     stop()
   end
 
   def rollback(args \\ []) do
     {:ok, _} = Application.ensure_all_started(:logger)
-    Logger.info("[task] running rollback")
+    Logger.info("[task] Running rollback")
     start_repo()
 
     run_rollback(args)
 
-    Logger.info("[task] finished rollback")
+    Logger.info("[task] Finished rollback")
     stop()
   end
 
   def seed(args \\ []) do
     {:ok, _} = Application.ensure_all_started(:logger)
-    Logger.info("[task] running seed")
+    Logger.info("[task] Running seed")
     start_repo()
 
     run_migrations(args)
     run_seeds()
 
-    Logger.info("[task] finished seed")
+    Logger.info("[task] Finished seed")
     stop()
   end
 
   def stats() do
     {:ok, _} = Application.ensure_all_started(:logger)
-    Logger.info("[job] running stats")
+    Logger.info("[task] Running stats")
     start_app()
 
     Stats.run()
 
-    Logger.info("[job] finished stats")
+    Logger.info("[task] Finished stats")
     stop()
   end
 
   defp start_app() do
-    IO.puts("Starting app...")
+    Logger.info("[task] Starting app...")
     Application.put_env(:phoenix, :serve_endpoints, false, persistent: true)
     Application.put_env(:hexpm, :topologies, [], persistent: true)
     {:ok, _} = Application.ensure_all_started(:hexpm)
   end
 
   defp start_repo() do
-    IO.puts("Starting dependencies...")
+    Logger.info("[task] Starting dependencies...")
 
     Enum.each(@repo_apps, fn app ->
       {:ok, _} = Application.ensure_all_started(app)
     end)
 
-    IO.puts("Starting repos...")
+    Logger.info("[task] Starting repos...")
     :ok = Application.load(:hexpm)
 
-    Enum.each(@repos, fn repo ->
+    Enum.each(repos(), fn repo ->
       {:ok, _} = repo.start_link(pool_size: 2)
     end)
   end
 
   defp stop() do
-    IO.puts("Stopping...")
+    Logger.info("[task] Stopping...")
     :init.stop()
   end
 
   defp run_migrations(args) do
-    Enum.each(@repos, fn repo ->
+    Enum.each(repos(), fn repo ->
       app = Keyword.get(repo.config(), :otp_app)
-      IO.puts("Running migrations for #{app}")
+      Logger.info("[task] Running migrations for #{app}")
 
       case args do
         ["--step", n] -> migrate(repo, :up, step: String.to_integer(n))
@@ -121,9 +119,9 @@ defmodule Hexpm.ReleaseTasks do
   end
 
   defp run_rollback(args) do
-    Enum.each(@repos, fn repo ->
+    Enum.each(repos(), fn repo ->
       app = Keyword.get(repo.config(), :otp_app)
-      IO.puts("Running rollback for #{app}")
+      Logger.info("[task] Running rollback for #{app}")
 
       case args do
         ["--step", n] -> migrate(repo, :down, step: String.to_integer(n))
@@ -141,7 +139,7 @@ defmodule Hexpm.ReleaseTasks do
   end
 
   defp run_seeds() do
-    Enum.each(@repos, &run_seeds_for/1)
+    Enum.each(repos(), &run_seeds_for/1)
   end
 
   defp run_seeds_for(repo) do
@@ -149,7 +147,7 @@ defmodule Hexpm.ReleaseTasks do
     seed_script = priv_path_for(repo, "seeds.exs")
 
     if File.exists?(seed_script) do
-      IO.puts("Running seed script...")
+      Logger.info("[task] Running seed script...")
       Code.eval_file(seed_script)
     end
   end
@@ -161,6 +159,10 @@ defmodule Hexpm.ReleaseTasks do
     Path.join([priv_dir, "repo", filename])
   end
 
+  defp repos() do
+    Application.fetch_env!(:hexpm, :ecto_repos)
+  end
+
   # TODO: Move all scripts to release tasks
   defp run_script(args) do
     [script | args] = args
@@ -169,7 +171,7 @@ defmodule Hexpm.ReleaseTasks do
     script_dir = Path.join(priv_dir, "scripts")
     original_argv = System.argv()
 
-    Logger.info("[script] running #{script} #{inspect(args)}")
+    Logger.info("[task] Running #{script} #{inspect(args)}")
 
     try do
       System.argv(args)
@@ -178,6 +180,6 @@ defmodule Hexpm.ReleaseTasks do
       System.argv(original_argv)
     end
 
-    Logger.info("[script] finished #{script} #{inspect(args)}")
+    Logger.info("[task] Finished #{script} #{inspect(args)}")
   end
 end
