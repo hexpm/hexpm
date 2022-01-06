@@ -9,6 +9,8 @@ defmodule Hexpm.ReleaseTasks do
     :ecto_sql
   ]
 
+  @repos Application.compile_env!(:hexpm, :ecto_repos)
+
   def script(args) do
     {:ok, _} = Application.ensure_all_started(:logger)
     Logger.info("[task] Running script")
@@ -91,9 +93,8 @@ defmodule Hexpm.ReleaseTasks do
     end)
 
     Logger.info("[task] Starting repos...")
-    :ok = Application.load(:hexpm)
 
-    Enum.each(repos(), fn repo ->
+    Enum.each(@repos, fn repo ->
       {:ok, _} = repo.start_link(pool_size: 2)
     end)
   end
@@ -104,7 +105,7 @@ defmodule Hexpm.ReleaseTasks do
   end
 
   defp run_migrations(args) do
-    Enum.each(repos(), fn repo ->
+    Enum.each(@repos, fn repo ->
       app = Keyword.get(repo.config(), :otp_app)
       Logger.info("[task] Running migrations for #{app}")
 
@@ -119,7 +120,7 @@ defmodule Hexpm.ReleaseTasks do
   end
 
   defp run_rollback(args) do
-    Enum.each(repos(), fn repo ->
+    Enum.each(@repos, fn repo ->
       app = Keyword.get(repo.config(), :otp_app)
       Logger.info("[task] Running rollback for #{app}")
 
@@ -139,7 +140,7 @@ defmodule Hexpm.ReleaseTasks do
   end
 
   defp run_seeds() do
-    Enum.each(repos(), &run_seeds_for/1)
+    Enum.each(@repos, &run_seeds_for/1)
   end
 
   defp run_seeds_for(repo) do
@@ -157,10 +158,6 @@ defmodule Hexpm.ReleaseTasks do
     priv_dir = Application.app_dir(app, "priv")
 
     Path.join([priv_dir, "repo", filename])
-  end
-
-  defp repos() do
-    Application.fetch_env!(:hexpm, :ecto_repos)
   end
 
   # TODO: Move all scripts to release tasks
