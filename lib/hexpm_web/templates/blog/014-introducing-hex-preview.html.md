@@ -1,10 +1,10 @@
 ## Introducing Hex Preview
 
-<div class="subtitle"><time datetime="2021-01-25T00:00:00Z">25 January, 2021</time> · by Todd Resudek</div>
+<div class="subtitle"><time datetime="2021-01-25T00:00:00Z">25 Jan 2021</time> by Todd Resudek</div>
 
-After months of development, I am proud to announce the launch of [preview.hex.pm](https://preview.hex.pm)! 
+After months of development, I am proud to announce the launch of [preview.hex.pm](https://preview.hex.pm)! It is important to note that this was built on top of all the work that was put into [diff.hex.pm](https://diff.hex.pm). 
 
-It is important to note that this was built on top of all the work that was put into [diff.hex.pm](https://diff.hex.pm). Preview relies on much of the code contributed to that project (thanks, in no small part, to [Johanna Larsson](https://github.com/joladev).)
+Preview relies on much of the code contributed to that project (thanks, in no small part, to [Johanna Larsson](https://github.com/joladev).)
 
 ### What does it do?
 
