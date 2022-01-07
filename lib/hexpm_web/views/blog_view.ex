@@ -35,15 +35,15 @@ defmodule HexpmWeb.BlogView do
     unquote(all_templates)
   end
 
-  def introductory_date(post) do
-    Enum.at(introductory_subtitle(post), 0)
+  def post_date(post) do
+    Enum.at(post_subtitle(post), 0)
   end
 
-  def introductory_author(post) do
-    Enum.at(introductory_subtitle(post), 1)
+  def post_author(post) do
+    Enum.at(post_subtitle(post), 1)
   end
 
-  defp introductory_subtitle(post) do
+  defp post_subtitle(post) do
     String.split(post.subtitle, "by")
   end
 
