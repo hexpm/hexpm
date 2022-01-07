@@ -7,7 +7,7 @@
       </div>
       <div class="bg-gray-800 rounded-lg pb-10">
         <div class="pt-4 pl-4">
-        <p class="text-gray-900 text-xs font-semibold rounded-md bg-yellow-600 w-14 h-6 flex items-center justify-center">Latest</p>
+          <p class="text-gray-900 text-xs font-semibold rounded-md bg-yellow-600 w-14 h-6 flex items-center justify-center">Latest</p>
         </div>
         <div class="grid place-content-center ">
           <div class="flex gap-x-12 px-7 max-w-xs mx-auto pb-1">
@@ -38,12 +38,12 @@
           <div class="space-y-4">
             <h1 class="text-gray-900 text-2xl font-semibold"><a href="<%= Routes.blog_path(Endpoint, :show, post.slug) %>"><%= post.title %></a></h1>
             <div>
-            <p class="inline-block text-base text-gray-600 font-normal"><%= raw post.paragraph %></p>
-            <a class="inline-block text-blue-600" href="<%= Routes.blog_path(Endpoint, :show, post.slug) %>">Read More</a>
+              <p class="inline-block text-base text-gray-600 font-normal"><%= raw post.paragraph %></p>
+              <a class="inline-block text-blue-600" href="<%= Routes.blog_path(Endpoint, :show, post.slug) %>">Read More</a>
             </div>
           </div> 
         </div>
-     <% end %>
+      <% end %>
     </div>
   </div>
 </div>
