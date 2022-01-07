@@ -19,7 +19,7 @@
           </div>
           <div class="space-y-4">
             <h1 class="text-center text-gray-50 text-2xl font-semibold"><a href="<%= Routes.blog_path(Endpoint, :show,  @introductory_post.slug) %>"><%= @introductory_post.title %></a></h1>
-            <p class="text-center px-44 text-base text-gray-100 font-normal"><%= raw @introductory_post.paragraph %></p>
+            <p class="text-center px-52 text-base text-gray-100 font-normal"><%= raw @introductory_post.paragraph %></p>
           </div>
           <a class="bg-primary-600 w-32 h-10 rounded text-white text-sm flex items-center justify-center mt-4 font-semibold mx-auto" href="<%= Routes.blog_path(Endpoint, :show, @introductory_post.slug) %>">Read more</a>
         </div>
