@@ -1,6 +1,6 @@
 ## Announcing Two-factor Auth
 
-<div class="subtitle"><time datetime="2020-05-05T00:00:00Z">5 May, 2020</time> · by Todd Resudek</div>
+<div class="subtitle"><time datetime="2020-05-05T00:00:00Z">5 May 2020</time>by Todd Resudek</div>
 
 Today we launched the option for two-factor authentication on hex.pm. Starting today, you can activate 2FA via the hex.pm dashboard. Many thanks to community contributors [Bryan Paxton](https://twitter.com/starbelly9) and [Jeffrey Liao](https://github.com/jeffreyplusplus) for their work on this project.
 

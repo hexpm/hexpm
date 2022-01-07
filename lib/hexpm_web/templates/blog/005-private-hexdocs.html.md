@@ -1,6 +1,6 @@
 ## Private Hexdocs
 
-<div class="subtitle"><time datetime="2018-08-09T00:00:00Z">August 9, 2018</time> · by Eric Meadows-Jönsson</div>
+<div class="subtitle"><time datetime="2018-08-09T00:00:00Z">9 Aug 2018</time>by Eric Meadows-Jönsson</div>
 
 Today we are happy to announce the release of [Hexdocs](https://hexdocs.pm/) for private packages. All the private packages you have uploaded documentation for (the default when running `mix hex.publish`) are now available and browsable on Hexdocs.
 

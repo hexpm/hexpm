@@ -1,6 +1,6 @@
 ## Updates to Terms of Service and Code of Conduct
 
-<div class="subtitle"><time datetime="2020-05-25T00:00:00Z">25 May, 2020</time> · by Eric Meadows-Jönsson</div>
+<div class="subtitle"><time datetime="2020-05-25T00:00:00Z">25 May 2020</time>by Eric Meadows-Jönsson</div>
 
 Today we are publishing updates to our [Terms of Service](/policies/termsofservice) and [Code of Conduct](/policies/codeofconduct).
 

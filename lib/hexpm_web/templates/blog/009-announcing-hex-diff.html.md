@@ -1,6 +1,6 @@
 ## Announcing Hex Diff
 
-<div class="subtitle"><time datetime="2020-01-20T00:00:00Z">20 January, 2020</time> · by Johanna Larsson</div>
+<div class="subtitle"><time datetime="2020-01-20T00:00:00Z">20 Jan 2020</time>by Johanna Larsson</div>
 
 I'm incredibly excited to announce the new web-based Hex package differ: [diff.hex.pm](https://diff.hex.pm), maintained by the Hex team! This is the result of the issue on the [hex.pm Github repo](https://github.com/hexpm/hexpm/issues/848) and the discussion it started.
 
