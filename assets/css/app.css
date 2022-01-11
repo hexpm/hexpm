@@ -4,4 +4,5 @@
 @import "tailwindcss/utilities";
 @import "./components/navbar.css";
 @import "./components/general.css";
+@import "./components/blog.css";
 /* csslint ignore:end */

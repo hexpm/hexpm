@@ -1,0 +1,34 @@
+@layer components {
+  
+  .show-post h2{
+    @apply hidden;
+  }
+
+  .subtitle {
+    @apply hidden;
+  }
+
+  .show-post{
+    @apply space-y-4;
+  }
+
+  .blog a{
+    @apply text-blue-600;
+  }
+
+  .blog p{
+    @apply text-gray-600 text-base font-normal;
+  }
+
+  .blog h3{
+    @apply text-gray-700 text-2xl font-semibold;
+  }
+
+  .code-outdated{
+    @apply text-primary-600 text-4xl font-normal font-mono;
+  }
+
+  .pre-outdated{
+    @apply bg-red-900;
+  }
+}

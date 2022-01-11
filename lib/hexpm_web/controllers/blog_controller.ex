@@ -12,7 +12,7 @@ defmodule HexpmWeb.BlogController do
       conn,
       "index.html",
       title: "Blog",
-      container: "container page page-sm blog"
+      container: "blog"
     )
   end
 
@@ -26,7 +26,7 @@ defmodule HexpmWeb.BlogController do
         conn,
         "#{template}.html",
         title: title(slug),
-        container: "container page page-sm blog"
+        container: "blog space-y-8"
       )
     else
       not_found(conn)
