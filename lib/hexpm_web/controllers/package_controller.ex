@@ -233,6 +233,13 @@ defmodule HexpmWeb.PackageController do
             nil
         end
     end
+    |> case do
+      nil ->
+        nil
+
+      package ->
+        hd(Packages.attach_versions([package]))
+    end
   end
 
   defp fixup_params(%{"name" => name, "version" => version} = params) do
