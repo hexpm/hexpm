@@ -30,6 +30,10 @@ defmodule HexpmWeb.LayoutView do
     end
   end
 
+  def container_class(assigns) do
+    Map.get(assigns, :container, "container")
+  end
+
   def search(assigns) do
     Map.get(assigns, :search)
   end

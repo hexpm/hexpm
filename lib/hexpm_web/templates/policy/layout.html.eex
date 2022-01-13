@@ -1,0 +1,7 @@
+<div class="policy grid place-content-center pt-10">
+  <h2 class="text-center"><%= @title %></h2>
+
+  <div class="bg-white max-w-4xl mx-auto p-12 border border-solid border-gray-200 rounded-lg">
+    <%= render(@view) %>
+  </div>
+</div>
