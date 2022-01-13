@@ -1,5 +1,3 @@
-## Code of Conduct
-
 Hex exists to facilitate sharing code, by making it easy for Erlang ecosystem developers to publish and distribute packages.
 
 Hex is a piece of technology, but more importantly, it is a community.
@@ -12,7 +10,7 @@ Hex is the set of formats and APIs that makes up the specification of Hex. Hex.p
 
 The goal of the Code of Conduct is to specify a baseline standard of behavior so that people with different social values and communication styles can talk about Hex effectively, productively, and respectfully, even in face of disagreements. The Code of Conduct also provides a mechanism for resolving conflicts in the community when they arise.
 
-### tl;dr
+### TLDR
 
   * Be respectful.
   * We're here to help: <support@hex.pm>

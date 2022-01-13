@@ -1,6 +1,4 @@
-## Privacy Policy
-
-We store information about access to and users on the [hex.pm](https://hex.pm) and [hexdocs.pm](https://hexdocs.pm) website, the hex.pm API and repository. This data is stored in the US on Heroku and Amazon AWS servers.
+###### We store information about access to and users on the [hex.pm](https://hex.pm) and [hexdocs.pm](https://hexdocs.pm) website, the hex.pm API and repository. This data is stored in the US on Heroku and Amazon AWS servers.
 
 ### Websites
 
@@ -10,7 +8,7 @@ The logged data is only available to hex.pm's administrative team, but may be ma
 
 The websites uses Google Analytics to monitor and analyze user behavior. This service provides hex.pm with information on users' demographics, age, location, and interest categories, when such information is available. This information is not used to identify individual users, but can in some cases be very specific. You can learn more about the information gathered and retained by this service at the [Google Analytics privacy policy](https://support.google.com/analytics/answer/2700409?hl=en&utm_id=ad). You can opt out of Google Analytics entirely with the [Google Analytics opt-out browser addon](https://support.google.com/analytics/answer/181881?hl=en&ref_topic=2919631).
 
-#### Cookies
+### Cookies
 
 A cookie is a string of information that a website stores on a visitor’s computer, and that the visitor’s browser provides to the website each time the visitor returns.
 
