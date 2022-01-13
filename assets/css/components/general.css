@@ -19,7 +19,15 @@
     @apply italic font-medium text-sm text-red-600;
   }
 
-   .form-input-error {
+  .form-input-error {
     @apply border-red-600;
+  }
+
+  .faq-link {
+    @apply flex justify-between py-3;
+  }
+
+  .faq-p {
+    @apply text-xl font-medium text-gray-700;
   }
 }
