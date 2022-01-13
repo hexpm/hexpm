@@ -112,6 +112,12 @@ defmodule HexpmWeb.PackageControllerTest do
       refute response(conn, 200) =~ "no-results"
     end
 
+    test "search with exact match" do
+      conn = get(build_conn(), "/packages?search=with_underscore")
+      assert response(conn, 200) =~ "exact-match"
+      refute response(conn, 200) =~ "results-found"
+    end
+
     test "search without match" do
       conn = get(build_conn(), "/packages?search=nonexistent")
       assert response(conn, 200) =~ "no-results"
