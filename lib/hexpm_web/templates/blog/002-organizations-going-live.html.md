@@ -1,6 +1,6 @@
 ## Organizations going live
 
-<div class="subtitle"><time datetime="2018-03-05T00:00:00Z">March 5, 2018</time> · by Eric Meadows-Jönsson</div>
+<div class="subtitle"><time datetime="2018-03-05T00:00:00Z">5 Mar 2018</time>by Eric Meadows-Jönsson</div>
 
 A few months ago we introduced the beta of private packages and organizations. In the meantime we
 have been building the billing system and iterating on organizations. We'd like to thank beta

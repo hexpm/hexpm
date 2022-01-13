@@ -1,8 +1,51 @@
-<%= for post <- @posts do %>
-  <div class="index-post">
-    <h3><a href="<%= Routes.blog_path(Endpoint, :show, post.slug) %>"><%= post.title %></a></h3>
-    <div class="subtitle"><%= raw post.subtitle %></div>
-    <p class="content"><%= raw post.paragraph %></p>
-    <a href="<%= Routes.blog_path(Endpoint, :show, post.slug) %>">Read more...</a>
+<div class="relative top-10">
+  <div class="grid place-content-center max-w-5xl mx-auto space-y-4">
+    <div class="space-y-12">
+      <div class="space-y-2">
+        <h2 class="heading-h2">hex.pm Blog</h2>
+        <p class="text-base text-gray-600 font-normal text-center">Learn what’s new with hex.pm with our latest Blog Updates</p>
+      </div>
+      <div class="bg-gray-800 rounded-lg pb-10">
+        <div class="pt-4 pl-4">
+          <p class="text-gray-900 text-xs font-semibold rounded-md bg-yellow-600 w-14 h-6 flex items-center justify-center">Latest</p>
+        </div>
+        <div class="grid place-content-center ">
+          <div class="flex gap-x-12 px-7 max-w-xs mx-auto pb-1">
+            <p class="text-gray-200 text-sm font-normal"><%= raw post_date(@introductory_post) %></p>
+            <div class="text-sm gap-x-2">
+              <p class="inline-block text-gray-50">by</p>
+              <p class="inline-block text-blue-600"><%= raw post_author(@introductory_post) %></p>
+            </div>
+          </div>
+          <div class="space-y-4">
+            <h1 class="text-center text-gray-50 text-2xl font-semibold"><a href="<%= Routes.blog_path(Endpoint, :show,  @introductory_post.slug) %>"><%= @introductory_post.title %></a></h1>
+            <p class="text-center px-52 text-base text-gray-100 font-normal"><%= raw @introductory_post.paragraph %></p>
+          </div>
+          <a class="bg-primary-600 w-32 h-10 rounded text-white text-sm flex items-center justify-center mt-4 font-semibold mx-auto" href="<%= Routes.blog_path(Endpoint, :show, @introductory_post.slug) %>">Read more</a>
+        </div>
+      </div>
+    </div>
+    <div class="grid grid-cols-2 gap-4 ">
+      <%= for post <- @posts -- [@introductory_post] do %>
+        <div class="rounded-lg border-box border border-gray-200 bg-white p-6">
+          <div class="flex gap-x-12 pb-1">
+            <p class="text-gray-800 text-sm font-normal"><%= raw post_date(post) %></p>
+            <div class="text-sm gap-x-2">
+              <p class="inline-block text-gray-800">by</p>
+              <p class="inline-block text-blue-600"><%= raw post_author(post) %></p>
+            </div>
+          </div>
+          <div class="space-y-4">
+            <h1 class="text-gray-900 text-2xl font-semibold"><a href="<%= Routes.blog_path(Endpoint, :show, post.slug) %>"><%= post.title %></a></h1>
+            <div>
+              <p class="inline-block text-base text-gray-600 font-normal">
+                <%= raw post.paragraph %>
+                <a class="inline-block text-blue-600" href="<%= Routes.blog_path(Endpoint, :show, post.slug) %>">Read More</a>
+              </p>
+            </div>
+          </div>
+        </div>
+      <% end %>
+    </div>
   </div>
-<% end %>
+</div>

@@ -20,7 +20,7 @@ defmodule HexpmWeb.BlogView do
     |> Enum.sort_by(&elem(&1, 1), &>=/2)
 
   def render("index.html", _assigns) do
-    render_template("index.html", posts: posts())
+    render_template("index.html", posts: posts(), introductory_post: introductory_post())
   end
 
   def render("index.xml", _assigns) do
@@ -33,6 +33,22 @@ defmodule HexpmWeb.BlogView do
 
   def all_templates() do
     unquote(all_templates)
+  end
+
+  def post_date(post) do
+    Enum.at(post_subtitle(post), 0)
+  end
+
+  def post_author(post) do
+    Enum.at(post_subtitle(post), 1)
+  end
+
+  defp post_subtitle(post) do
+    String.split(post.subtitle, "by")
+  end
+
+  defp introductory_post do
+    Enum.find(posts(), fn post -> String.match?(post.title, ~r/Introducing Hex Preview/) end)
   end
 
   defp posts() do
