@@ -27,8 +27,8 @@ defmodule HexpmWeb.BlogView do
     render_template("index.xml", posts: posts())
   end
 
-  def render(other, _assigns) do
-    content_tag(:div, render_template(other, %{}), class: "show-post")
+  def render(other, assigns) do
+    content_tag(:div, render_template(other, assigns), class: "show-post")
   end
 
   def all_templates() do
@@ -49,6 +49,10 @@ defmodule HexpmWeb.BlogView do
 
   defp introductory_post do
     Enum.find(posts(), fn post -> String.match?(post.title, ~r/Introducing Hex Preview/) end)
+  end
+
+  defp blog_post(slug) do
+    Enum.find(posts(), fn post -> String.equivalent?(post.slug, slug) end)
   end
 
   defp posts() do

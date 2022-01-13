@@ -134,7 +134,4 @@
     <%= unless assigns[:error] || assigns[:custom_flash] do %>
       <%= render "_flash.html", conn: @conn %>
     <% end %>
-    <div class="relative top-10">
-      <div class="<%= container_class(assigns) %>">
-        <h2 class="text-center text-gray-900 font-bold text-4xl"><%= @title %></h2>
-        <div class="space-y-20 bg-white max-w-4xl mx-auto p-12 border border-solid border-gray-200 rounded-lg">
+   

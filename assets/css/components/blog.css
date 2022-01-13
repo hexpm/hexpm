@@ -16,19 +16,35 @@
     @apply text-blue-600;
   }
 
-  .blog p{
+  .blog p, .blog ul{
     @apply text-gray-600 text-base font-normal;
+  }
+
+  .blog ul{
+    @apply list-disc pl-4;
   }
 
   .blog h3{
     @apply text-gray-700 text-2xl font-semibold;
   }
 
-  .code-outdated{
-    @apply text-primary-600 text-4xl font-normal font-mono;
+  .blog time, .blog span {
+    @apply text-gray-600 text-sm font-medium;
   }
 
-  .pre-outdated{
-    @apply bg-red-900;
+   .blog h6 {
+    @apply text-gray-800 text-sm font-semibold;
+  }
+
+  .blog pre {
+    @apply rounded-lg bg-gray-50 py-4 pl-4 text-sm font-normal;
+  }
+
+ .blog code {
+  @apply text-gray-600 tracking-wide;
+ }
+
+  .blog .code-syntax{
+    @apply text-primary-600 font-mono;
   }
 }

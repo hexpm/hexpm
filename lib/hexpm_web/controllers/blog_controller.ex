@@ -22,15 +22,14 @@ defmodule HexpmWeb.BlogController do
 
   def show(conn, %{"slug" => slug}) do
     if template = slug_to_template(slug) do
-      render(
-        conn,
-        "#{template}.html",
-        title: title(slug),
-        container: "blog space-y-8"
-      )
+      render_layout(conn, "#{template}.html", slug)
     else
       not_found(conn)
     end
+  end
+
+  defp render_layout(conn, view, slug) do
+    render(conn, "layout.html", view: view, title: title(slug), slug: slug, container: nil)
   end
 
   defp title(slug) do
