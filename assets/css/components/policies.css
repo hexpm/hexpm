@@ -1,29 +1,29 @@
 @layer components {
   .policy h2 {
-    @apply text-gray-900 text-4xl font-bold;
+    @apply text-gray-900 text-4xl font-bold pt-5 pb-2;
   }
 
-   .policy h3 {
-    @apply text-gray-700 text-2xl font-semibold;
+  .policy h3 {
+    @apply text-gray-700 text-2xl font-semibold pt-5 pb-2;
   }
 
-    .policy h4 {
-    @apply text-gray-700 text-xl font-medium;
+  .policy h4 {
+    @apply text-gray-700 text-xl font-medium pt-5 pb-2;
   }
 
-   .policy h6 {
-    @apply text-gray-600 text-lg font-light text-justify;
+  .policy h6 {
+    @apply text-gray-600 text-lg font-light text-justify pt-5 pb-2;
   }
 
-   .policy p, ol, ul{
-    @apply text-gray-600 text-base font-normal text-justify;
+  .policy p, .policy ol, .policy ul {
+    @apply text-gray-600 text-base font-normal text-justify pb-4;
   }
 
-  .policy ol{
+  .policy ol {
     @apply list-decimal pl-4;
   }
 
-  .policy ul{
+  .policy ul {
     @apply list-disc;
   }
 }

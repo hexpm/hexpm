@@ -1,5 +1,4 @@
 @layer components {
-  
   .heading-h2 {
     @apply font-bold text-4xl text-center text-gray-900;
   }
