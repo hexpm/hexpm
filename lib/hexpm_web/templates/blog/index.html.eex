@@ -38,13 +38,14 @@
           <div class="space-y-4">
             <h1 class="text-gray-900 text-2xl font-semibold"><a href="<%= Routes.blog_path(Endpoint, :show, post.slug) %>"><%= post.title %></a></h1>
             <div>
-              <p class="inline-block text-base text-gray-600 font-normal"><%= raw post.paragraph %></p>
-              <a class="inline-block text-blue-600" href="<%= Routes.blog_path(Endpoint, :show, post.slug) %>">Read More</a>
+              <p class="inline-block text-base text-gray-600 font-normal">
+                <%= raw post.paragraph %>
+                <a class="inline-block text-blue-600" href="<%= Routes.blog_path(Endpoint, :show, post.slug) %>">Read More</a>
+              </p>
             </div>
-          </div> 
+          </div>
         </div>
       <% end %>
     </div>
   </div>
 </div>
-
