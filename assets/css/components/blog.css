@@ -32,7 +32,7 @@
     @apply text-gray-600 text-sm font-medium;
   }
 
-   .blog h6 {
+   .blog .author {
     @apply text-gray-800 text-sm font-semibold;
   }
 
@@ -47,4 +47,18 @@
   .blog .code-syntax{
     @apply text-primary-600 font-mono;
   }
+
+  .blog .blockquote-p{
+    @apply text-gray-600 text-lg font-light;
+  }
+
+  .blog .blockquote-span{
+    @apply py-10 text-gray-200 text-4xl;  
+  }
+
+   .blog .blockquote-div{
+    @apply flex gap-8 pl-12;  
+  }
+
+
 }
