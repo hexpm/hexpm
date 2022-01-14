@@ -9,10 +9,10 @@ module.exports = {
   ],
   darkMode: false, // or 'media' or 'class'
   theme: {
-     fontFamily: {
-       "mono": ["JetBrains Mono"],
-       "sans": ["Inter"]
-     },
+    fontFamily: {
+      "mono": ["JetBrains Mono"],
+      "sans": ["Inter"]
+    },
     boxShadow: {
       DEFAULT: "0 4px 15px rgba(3, 9, 19, 0.15)",
       inner: "inset 0 4px 4px rgba(105, 67, 141, 0.2)",
