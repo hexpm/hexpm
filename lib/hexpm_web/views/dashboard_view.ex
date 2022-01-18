@@ -1,5 +1,6 @@
 defmodule HexpmWeb.DashboardView do
   use HexpmWeb, :view
+  import HexpmWeb.ViewIcons
 
   defp account_settings() do
     [
@@ -10,6 +11,30 @@ defmodule HexpmWeb.DashboardView do
       keys: {"Keys", Routes.key_path(Endpoint, :index)},
       audit_logs: {"Recent activities", Routes.audit_log_path(Endpoint, :index)}
     ]
+  end
+
+  defp account_settings_icon(:profile) do
+    icon(:remixicon, :"user-smile-line", width: "20px", class: "mr-2 fill-current")
+  end
+
+  defp account_settings_icon(:security) do
+    icon(:remixicon, :"shield-keyhole-line", width: "20px", class: "mr-2 fill-current")
+  end
+
+  defp account_settings_icon(:keys) do
+    icon(:remixicon, :"key-2-line", width: "20px", class: "mr-2 fill-current")
+  end
+
+  defp account_settings_icon(:email) do
+    icon(:remixicon, :"mail-open-line", width: "20px", class: "mr-2 fill-current")
+  end
+
+  defp account_settings_icon(:audit_logs) do
+    icon(:remixicon, :"time-line", width: "20px", class: "mr-2 fill-current")
+  end
+
+  defp account_settings_icon(:password) do
+    icon(:remixicon, :"lock-line", width: "20px", class: "mr-2 fill-current")
   end
 
   defp selected_setting(conn, id) do

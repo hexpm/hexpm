@@ -1,9 +1,26 @@
-<%= ViewHelpers.changeset_error(@changeset) %>
-
-<div class="row">
-  <div class="col-sm-3">
-    <%= render DashboardView, "_sidebar.html", assigns %>
+<div class="relative top-5">
+  <div class="max-w-7xl mx-auto">
+  <div class="flex flex-row gap-x-24 px-8">
+    <div class="flex flex-col">
+      <a href="#" class="inline-flex text-gray-700 font-medium text-sm">
+        <%= icon(:remixicon, :"arrow-left-line", width: "14px", class: "mr-2 fill-current") %>
+         Back to profile
+      </a>
+      <h1 class="pt-3 text-gray-900 text-3xl font-semibold">Settings</h1>
+      <div class="pt-12">
+        <%= render DashboardView, "_sidebar.html", assigns %>
+      </div>
+    </div>
+   
+    <div class="bg-white rounded-lg">
+    </div>
+    
   </div>
+  
+</div>
+</div>
+
+<!-- <%= ViewHelpers.changeset_error(@changeset) %>
 
   <div class="col-sm-9">
     <div class="panel panel-default">
@@ -100,4 +117,4 @@
       </div>
     </div>
   </div>
-</div>
+</div> -->
