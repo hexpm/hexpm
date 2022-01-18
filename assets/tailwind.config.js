@@ -11,7 +11,7 @@ module.exports = {
   theme: {
     fontFamily: {
       "mono": ["JetBrains Mono"],
-      "sans": ["Inter"]
+      "sans": ["Inter var"]
     },
     boxShadow: {
       DEFAULT: "0 4px 15px rgba(3, 9, 19, 0.15)",
