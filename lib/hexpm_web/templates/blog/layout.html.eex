@@ -1,10 +1,10 @@
 <div class="blog grid place-content-center pt-10">
   <h1 class="heading-h2 text-center pb-2"><%= @title %></h1>
   <div class="flex gap-x-12 px-7 max-w-max mx-auto pb-8">
-    <%= raw post_date(blog_post(@slug)) %>
+    <%= raw post_date(@post) %>
     <div class="text-sm gap-x-2">
       <span class="inline-block">by</span>
-      <p class="inline-block author"><%= raw post_author(blog_post(@slug)) %></p>
+      <p class="inline-block author"><%= raw post_author(@post) %></p>
     </div>
   </div>
   <div class="bg-white max-w-4xl mx-auto p-12 border border-solid border-gray-200 rounded-lg">

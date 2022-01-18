@@ -1,5 +1,4 @@
 @layer components {
-  
   .show-post h2{
     @apply hidden;
   }
@@ -8,23 +7,23 @@
     @apply hidden;
   }
 
-  .show-post{
+  .show-post {
     @apply space-y-4;
   }
 
-  .blog a{
+  .blog a {
     @apply text-blue-600;
   }
 
-  .blog p, .blog ul{
+  .blog p, .blog ul {
     @apply text-gray-600 text-base font-normal;
   }
 
-  .blog ul{
+  .blog ul {
     @apply list-disc pl-4;
   }
 
-  .blog h3{
+  .blog h3 {
     @apply text-gray-700 text-2xl font-semibold;
   }
 
@@ -40,25 +39,23 @@
     @apply rounded-lg bg-gray-50 py-4 pl-4 text-sm font-normal;
   }
 
- .blog code {
-  @apply text-gray-600 tracking-wide;
- }
+  .blog code {
+    @apply text-gray-600 tracking-wide;
+  }
 
-  .blog .code-syntax{
+  .blog .code-syntax {
     @apply text-primary-600 font-mono;
   }
 
-  .blog .blockquote-p{
+  .blog .blockquote-p {
     @apply text-gray-600 text-lg font-light;
   }
 
-  .blog .blockquote-span{
-    @apply py-10 text-gray-200 text-4xl;  
+  .blog .blockquote-span {
+    @apply py-10 text-gray-200 text-4xl;
   }
 
-   .blog .blockquote-div{
-    @apply flex gap-8 pl-12;  
+  .blog .blockquote-div {
+    @apply flex gap-8 pl-12;
   }
-
-
 }
