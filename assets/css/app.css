@@ -2,7 +2,11 @@
 @import "tailwindcss/base";
 @import "tailwindcss/components";
 @import "tailwindcss/utilities";
-@import "./components/navbar.css";
 @import "./components/general.css";
+@import "./components/fonts/inter.css";
+@import "./components/fonts/jetbrains-mono.css";
+@import "./components/navbar.css";
+@import "./components/blog.css";
 @import "./components/policies.css";
+
 /* csslint ignore:end */

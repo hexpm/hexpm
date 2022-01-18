@@ -1,18 +1,12 @@
 defmodule HexpmWeb.BlogController do
   use HexpmWeb, :controller
 
-  Enum.each(HexpmWeb.BlogView.all_templates(), fn {slug, template} ->
-    defp slug_to_template(unquote(slug)), do: unquote(Path.rootname(template))
-  end)
-
-  defp slug_to_template(_other), do: nil
-
   def index(conn, _params) do
     render(
       conn,
       "index.html",
       title: "Blog",
-      container: "container page page-sm blog"
+      container: "blog"
     )
   end
 
@@ -21,12 +15,13 @@ defmodule HexpmWeb.BlogController do
   end
 
   def show(conn, %{"slug" => slug}) do
-    if template = slug_to_template(slug) do
-      render(
-        conn,
-        "#{template}.html",
+    if post = HexpmWeb.BlogView.post(slug) do
+      render(conn, "layout.html",
+        view: post.template,
         title: title(slug),
-        container: "container page page-sm blog"
+        slug: slug,
+        post: post,
+        container: nil
       )
     else
       not_found(conn)

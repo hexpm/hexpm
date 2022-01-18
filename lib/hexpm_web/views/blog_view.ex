@@ -20,15 +20,16 @@ defmodule HexpmWeb.BlogView do
     |> Enum.sort_by(&elem(&1, 1), &>=/2)
 
   def render("index.html", _assigns) do
-    render_template("index.html", posts: posts(), introductory_post: introductory_post())
+    [first_post | posts] = posts()
+    render_template("index.html", first_post: first_post, posts: posts)
   end
 
   def render("index.xml", _assigns) do
     render_template("index.xml", posts: posts())
   end
 
-  def render(other, _assigns) do
-    content_tag(:div, render_template(other, %{}), class: "show-post")
+  def render(other, assigns) do
+    content_tag(:div, render_template(other, assigns), class: "show-post")
   end
 
   def all_templates() do
@@ -47,23 +48,29 @@ defmodule HexpmWeb.BlogView do
     String.split(post.subtitle, "by")
   end
 
-  defp introductory_post do
-    Enum.find(posts(), fn post -> String.match?(post.title, ~r/Introducing Hex Preview/) end)
+  def post(slug) do
+    case List.keyfind(all_templates(), slug, 0) do
+      {_slug, template} -> post_meta(slug, template)
+      nil -> nil
+    end
   end
 
-  defp posts() do
-    Enum.map(all_templates(), fn {slug, template} ->
-      content = render(template, %{})
-      content = Phoenix.HTML.safe_to_string(content)
+  def posts() do
+    Enum.map(all_templates(), fn {slug, template} -> post_meta(slug, template) end)
+  end
 
-      %{
-        slug: slug,
-        title: title(content),
-        subtitle: subtitle(content),
-        paragraph: first_paragraph(content),
-        published: published(content)
-      }
-    end)
+  defp post_meta(slug, template) do
+    content = render(template, %{})
+    content = Phoenix.HTML.safe_to_string(content)
+
+    %{
+      slug: slug,
+      template: template,
+      title: title(content),
+      subtitle: subtitle(content),
+      paragraph: first_paragraph(content),
+      published: published(content)
+    }
   end
 
   defp first_paragraph(content) do
