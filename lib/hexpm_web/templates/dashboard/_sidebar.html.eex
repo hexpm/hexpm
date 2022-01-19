@@ -1,6 +1,6 @@
 <ul class="space-y-4">
   <%= for {id, {name, path}} <- account_settings() do %>
-    <li class="hover:text-blue-600 font-normal text-lg text-gray-500">
+    <li class="<%= selected_setting(@conn, id) %> font-normal text-lg hover:text-blue-600">
       <a href="<%= path %>" class="inline-flex">
         <%= account_settings_icon(id) %>
         <%= name %> 
@@ -8,27 +8,21 @@
     </li>
   <% end %>
 </ul>
-
-<!--<div class="panel panel-default sidebar">
-  <div class="panel-heading">Account settings</div>
-  <ul class="list-group">
-    <%= for {id, {name, path}} <- account_settings() do %>
-      <li class="list-group-item <%= selected_setting(@conn, id) %>">
-        <a href="<%= path %>"><%= name %></a>
-      </li>
-    <% end %>
-  </ul>
-  <div class="panel-heading">Organization settings</div>
-  <ul class="list-group">
+<div class="pt-12">
+  <p class="text-sm font-medium text-gray-800">ORGANIZATION</p>
+  <ul class="pt-4">
     <%= for organization <- Enum.sort_by(@current_user.organizations, & &1.name) do %>
-      <li class="list-group-item <%= selected_organization(@conn, organization.name) %>">
-        <a href="<%= Routes.organization_path(Endpoint, :show, organization) %>">
+      <li class="<%= selected_organization(@conn, organization.name) %> hover:text-blue-600 font-normal text-lg">
+        <a href="<%= Routes.organization_path(Endpoint, :show, organization) %>" class="inline-flex">
+          <%= icon(:remixicon, :"building-4-line", width: "14px", class: "mr-2 fill-current") %>
           <%= organization.name %>
         </a>
       </li>
     <% end %>
   </ul>
-  <div class="panel-body">
-    <small><a href="<%= Routes.organization_path(Endpoint, :new) %>">New organization</a></small>
-  </div>
-</div> -->
+</div>
+<a href="<%= Routes.organization_path(Endpoint, :new) %>" class="inline-flex text-gray-500 text-sm font-medium rounded border border-dashed border-gray-300 py-2 px-9">
+  <%= icon(:remixicon, :"add-fill", width: "14px", class: "mr-2 fill-current") %>
+   Create New
+</a>
+

@@ -39,13 +39,17 @@ defmodule HexpmWeb.DashboardView do
 
   defp selected_setting(conn, id) do
     if Enum.take(conn.path_info, -2) == ["dashboard", Atom.to_string(id)] do
-      "selected"
+      "text-blue-600 "
+    else
+      "text-gray-500"
     end
   end
 
   defp selected_organization(conn, name) do
     if Enum.take(conn.path_info, -2) == ["orgs", name] do
-      "selected"
+      "text-blue-600 "
+    else
+      "text-gray-500"
     end
   end
 

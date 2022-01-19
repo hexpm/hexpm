@@ -1,120 +1,119 @@
+<%= ViewHelpers.changeset_error(@changeset) %>
 <div class="relative top-5">
   <div class="max-w-7xl mx-auto">
-  <div class="flex flex-row gap-x-24 px-8">
-    <div class="flex flex-col">
-      <a href="#" class="inline-flex text-gray-700 font-medium text-sm">
-        <%= icon(:remixicon, :"arrow-left-line", width: "14px", class: "mr-2 fill-current") %>
-         Back to profile
-      </a>
-      <h1 class="pt-3 text-gray-900 text-3xl font-semibold">Settings</h1>
-      <div class="pt-12">
-        <%= render DashboardView, "_sidebar.html", assigns %>
-      </div>
-    </div>
-   
-    <div class="bg-white rounded-lg">
-    </div>
-    
-  </div>
-  
-</div>
-</div>
-
-<!-- <%= ViewHelpers.changeset_error(@changeset) %>
-
-  <div class="col-sm-9">
-    <div class="panel panel-default">
-      <div class="panel-heading">Public profile</div>
-      <div class="panel-body">
-        <div class="form-group">
-          <label>Profile picture</label>
-          <img src="<%= ViewHelpers.gravatar_url(User.email(@current_user, :gravatar), :large) %>">
-          <p>
-            <small>
-              <%= if User.email(@current_user, :gravatar) do %>
-                Gravatar is used to display your profile picture. You can choose your Gravatar email below or
-                go to <a href="https://en.gravatar.com/emails/">Gravatar</a> to change the image.
-              <% else %>
-                <a href="https://en.gravatar.com/">Gravatar</a> is used to display your profile picture.
-                Choose a Gravatar email address below to show your avatar on your profile.
-              <% end %>
-            </small>
-          </p>
+    <div class="flex flex-row gap-x-12 px-8">
+      <div class="flex flex-col w-3/12 ">
+        <a href="#" class="inline-flex text-gray-700 font-medium text-sm">
+          <%= icon(:remixicon, :"arrow-left-line", width: "14px", class: "mr-2 fill-current") %>
+           Back to profile
+        </a>
+        <h1 class="pt-3 text-gray-900 text-3xl font-semibold">Settings</h1>
+        <div class="pt-12">
+          <%= render DashboardView, "_sidebar.html", assigns %>
         </div>
-
-        <%= form_for @changeset, Routes.profile_path(Endpoint, :update), [method: :post], fn f -> %>
-          <div class="form-group">
-            <%= label f, :full_name %>
-            <%= ViewHelpers.text_input f, :full_name %>
-            <%= ViewHelpers.error_tag f, :full_name %>
+      </div>
+      <div class="bg-white rounded-lg border border-gray-200 p-10 w-full">
+        <div class="flex flex-row gap-x-20">
+          <div class="flex flex-col items-center justify-center h-48">
+            <h3 class="text-gray-900 text-xl font-medium pb-8">Profile Settings</h3>
+            <img src="<%= ViewHelpers.gravatar_url(User.email(@current_user, :gravatar), :large) %>" class="h-28 w-28 rounded-full">
+            <a href="#" class="text-sm font-medium text-blue-600 underline pt-2">Change Photo</a>
           </div>
-
-          <div class="form-group">
-            <%= label f, :public_email %>
-            <%= ViewHelpers.select f, :public_email, public_email_options(@changeset.data), value: public_email_value(@changeset.data) %>
-            <%= ViewHelpers.error_tag f, :public_email %>
-            <small>
-              You can add or remove email address on the <a href="<%= Routes.email_path(Endpoint, :index) %>">email settings page</a>.
-            </small>
+          <div class="pt-12">
+            <%= form_for @changeset, Routes.profile_path(Endpoint, :update), [method: :post], fn f -> %>
+              <div class="space-y-8">
+                <div>
+                  <%= label f, :full_name, "Full Name", class: "form-label" %>
+                  <div class="w-full h-10">
+                    <%= ViewHelpers.text_input f, :full_name, class: "w-full text-base text-gray-500 font-normal" %>
+                    <%= ViewHelpers.error_tag f, :full_name %>
+                  </div> 
+                </div>
+                <div>
+                  <%= label f, :public_email, "Public Email", class: "form-label" %>
+                  <div class="w-full h-10">
+                    <%= ViewHelpers.select f, :public_email, public_email_options(@changeset.data), value: public_email_value(@changeset.data), class: "w-full w-full text-base text-gray-500 font-normal" %>
+                    <%= ViewHelpers.error_tag f, :public_email %>
+                  </div> 
+                </div>
+                <div class="flex flex-col">
+                  <label class="form-label" for="username">Your Bio</label>
+                  <%= textarea f, :bio , class: "rounded box-border border border-solid border-gray-200 w-full h-20 focus:ring-primary-600 focus:shadow-inner focus:border-primary-600 focus:outline-none text-base text-gray-500 font-normal" %>
+                </div>
+                <div class="space-y-5">
+                  <p class="text-gray-800 text-sm font-medium">SOCIALS</p>
+                  <%= inputs_for f, :handles, fn f -> %>
+                    <div>
+                      <div class="inline-flex space-x-2">
+                        <div class="inline-flex items-center">
+                          <%= icon(:remixicon, :"twitter-fill", width: "16px", fill: "rgba(48, 66, 84, 1)") %>
+                          <p>/</p>
+                        </div>
+                        <div class="w-96 h-10">
+                          <%= ViewHelpers.text_input f, :twitter, class: "text-base text-gray-500 font-normal" %>
+                          <%= ViewHelpers.error_tag f, :twitter %>
+                        </div> 
+                      </div>
+                    </div>
+                    <div>
+                      <div class="inline-flex space-x-2">
+                        <div class="inline-flex items-center">
+                          <%= icon(:remixicon, :"github-fill", width: "16px", fill: "rgba(48, 66, 84, 1)") %>
+                          <p>/</p>
+                        </div>
+                        <div class="w-96 h-10">
+                          <%= ViewHelpers.text_input f, :github, class: "text-base text-gray-500 font-normal" %>
+                          <%= ViewHelpers.error_tag f, :github %>
+                        </div> 
+                      </div>
+                    </div>
+                    <div>
+                      <div class="inline-flex space-x-2">
+                        <div class="inline-flex items-center">
+                          <%= UserHandles.handle_svg_icon(:elixirforum) %>
+                          <p>/</p>
+                        </div>
+                        <div class="w-96 h-10">
+                          <%= ViewHelpers.text_input f, :elixirforum, class: "text-base text-gray-500 font-normal" %>
+                          <%= ViewHelpers.error_tag f, :elixirforum %>
+                        </div> 
+                      </div>
+                    </div>
+                    <div>
+                      <div class="inline-flex space-x-2">
+                        <div class="inline-flex items-center">
+                          <%= UserHandles.handle_svg_icon(:freenode) %>
+                          <p>/</p>
+                        </div>
+                        <div class="w-96 h-10">
+                          <%= ViewHelpers.text_input f, :freenode, class: "text-base text-gray-500 font-normal" %>
+                          <%= ViewHelpers.error_tag f, :freenode%>
+                        </div> 
+                      </div>
+                    </div>
+                    <div>
+                      <div class="inline-flex space-x-2">
+                        <div class="inline-flex items-center">
+                          <%= icon(:remixicon, :"slack-fill", width: "16px", fill: "rgba(48, 66, 84, 1)") %>
+                          <p>/</p>
+                        </div>
+                        <div class="w-96 h-10">
+                          <%= ViewHelpers.text_input f, :slack, class: "text-base text-gray-500 font-normal" %>
+                          <%= ViewHelpers.error_tag f, :slack %>
+                        </div> 
+                      </div>
+                    </div>
+                  <% end %>
+                </div>
+                <button type="submit" class="rounded bg-green-600 text-white text-sm font-medium flex items-center justify-center h-10 w-44">
+                  Save Changes
+                </button>
+              </div>
+            <% end %>
           </div>
-
-          <div class="form-group">
-            <%= label f, :gravatar_email %>
-            <%= ViewHelpers.select f, :gravatar_email, gravatar_email_options(@changeset.data), value: gravatar_email_value(@changeset.data) %>
-            <%= ViewHelpers.error_tag f, :gravatar_email %>
-          </div>
-
-          <%= inputs_for f, :handles, fn f -> %>
-            <div class="form-group">
-              <%= label f, :twitter %>
-              <div class="input-group">
-                <div class="input-group-addon">twitter.com/</div>
-                <%= ViewHelpers.text_input f, :twitter, placeholder: "your_twitter_id" %>
-              </div>
-
-              <%= ViewHelpers.error_tag f, :twitter %>
-            </div>
-
-            <div class="form-group">
-              <%= label f, :github, "GitHub" %>
-              <div class="input-group">
-                <div class="input-group-addon">github.com/</div>
-                <%= ViewHelpers.text_input f, :github, placeholder: "your_github_id" %>
-              </div>
-              <%= ViewHelpers.error_tag f, :github %>
-            </div>
-
-            <div class="form-group">
-              <%= label f, :elixirforum, "Elixir Forum" %>
-              <div class="input-group">
-                <div class="input-group-addon">elixirforum.com/u/</div>
-                <%= ViewHelpers.text_input f, :elixirforum, placeholder: "your_elixir_forum_id" %>
-              </div>
-              <%= ViewHelpers.error_tag f, :elixirforum %>
-            </div>
-
-            <div class="form-group">
-              <%= label f, :freenode, "Libera" %>
-              <%= ViewHelpers.text_input f, :freenode, placeholder: "Your nickname on Elixir IRC channel" %>
-              <span class="help-block">Elixir IRC channel:
-                <a href="irc://irc.libera.chat/elixir">irc://irc.libera.chat/elixir</a>
-              </span>
-              <%= ViewHelpers.error_tag f, :freenode %>
-            </div>
-
-            <div class="form-group">
-              <%= label f, :slack %>
-              <%= ViewHelpers.text_input f, :slack, placeholder: "Your nickname on Elixir Slack channel" %>
-              <span class="help-block">Elixir Slack channel:
-                <a href="https://elixir-slackin.herokuapp.com">elixir-slackin.herokuapp.com</a>
-              </span>
-              <%= ViewHelpers.error_tag f, :slack %>
-            </div>
-          <% end %>
-
-          <button type="submit" class="btn btn-primary">Save</button>
-        <% end %>
+        </div>
       </div>
     </div>
   </div>
-</div> -->
+</div>
+
