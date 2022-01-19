@@ -47,7 +47,7 @@
                       <div class="inline-flex space-x-2">
                         <div class="inline-flex items-center">
                           <%= icon(:remixicon, :"twitter-fill", width: "16px", fill: "rgba(48, 66, 84, 1)") %>
-                          <p>/</p>
+                          <p class="text-gray-500 text-base font-normal">/</p>
                         </div>
                         <div class="w-96 h-10">
                           <%= ViewHelpers.text_input f, :twitter, class: "text-base text-gray-500 font-normal" %>
@@ -59,7 +59,7 @@
                       <div class="inline-flex space-x-2">
                         <div class="inline-flex items-center">
                           <%= icon(:remixicon, :"github-fill", width: "16px", fill: "rgba(48, 66, 84, 1)") %>
-                          <p>/</p>
+                          <p class="text-gray-500 text-base font-normal">/</p>
                         </div>
                         <div class="w-96 h-10">
                           <%= ViewHelpers.text_input f, :github, class: "text-base text-gray-500 font-normal" %>
@@ -71,7 +71,7 @@
                       <div class="inline-flex space-x-2">
                         <div class="inline-flex items-center">
                           <%= UserHandles.handle_svg_icon(:elixirforum) %>
-                          <p>/</p>
+                          <p class="text-gray-500 text-base font-normal">/</p>
                         </div>
                         <div class="w-96 h-10">
                           <%= ViewHelpers.text_input f, :elixirforum, class: "text-base text-gray-500 font-normal" %>
@@ -83,7 +83,7 @@
                       <div class="inline-flex space-x-2">
                         <div class="inline-flex items-center">
                           <%= UserHandles.handle_svg_icon(:freenode) %>
-                          <p>/</p>
+                          <p class="text-gray-500 text-base font-normal">/</p>
                         </div>
                         <div class="w-96 h-10">
                           <%= ViewHelpers.text_input f, :freenode, class: "text-base text-gray-500 font-normal" %>
@@ -95,7 +95,7 @@
                       <div class="inline-flex space-x-2">
                         <div class="inline-flex items-center">
                           <%= icon(:remixicon, :"slack-fill", width: "16px", fill: "rgba(48, 66, 84, 1)") %>
-                          <p>/</p>
+                          <p class="text-gray-500 text-base font-normal">/</p>
                         </div>
                         <div class="w-96 h-10">
                           <%= ViewHelpers.text_input f, :slack, class: "text-base text-gray-500 font-normal" %>
