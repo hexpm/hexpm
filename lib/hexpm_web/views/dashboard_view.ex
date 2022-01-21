@@ -5,7 +5,6 @@ defmodule HexpmWeb.DashboardView do
   defp account_settings() do
     [
       profile: {"Profile", Routes.profile_path(Endpoint, :index)},
-      password: {"Password", Routes.dashboard_password_path(Endpoint, :index)},
       security: {"Security", Routes.dashboard_security_path(Endpoint, :index)},
       email: {"Emails", Routes.email_path(Endpoint, :index)},
       keys: {"Keys", Routes.key_path(Endpoint, :index)},
@@ -31,10 +30,6 @@ defmodule HexpmWeb.DashboardView do
 
   defp account_settings_icon(:audit_logs) do
     icon(:remixicon, :"time-line", width: "20px", class: "mr-2 fill-current")
-  end
-
-  defp account_settings_icon(:password) do
-    icon(:remixicon, :"lock-line", width: "20px", class: "mr-2 fill-current")
   end
 
   defp selected_setting(conn, id) do
