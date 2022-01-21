@@ -1,71 +1,101 @@
-<div class="row">
-  <div class="col-sm-3">
-    <%= render DashboardView, "_sidebar.html", assigns %>
-  </div>
-
-  <div class="col-sm-9 security">
-    <div class="panel panel-default">
-      <div class="panel-heading with-button">Two-factor security
-      <%= if Hexpm.Accounts.User.tfa_enabled?(@current_user) do %>
-        <%= form_tag(Routes.dashboard_security_path(Endpoint, :disable_tfa)) do %>
-          <button type="submit" class="btn btn-primary">Disable</button>
-        <% end %>
-      <% else %>
-        <%= form_tag(Routes.dashboard_security_path(Endpoint, :enable_tfa)) do %>
-          <button type="submit" class="btn btn-primary">Enable</button>
-        <% end %>
-      <% end %>
-      </div>
-    </div>
-    <%= if Hexpm.Accounts.User.tfa_enabled?(@current_user) do %>
-      <div class="panel panel-default">
-        <div class="panel-heading">Edit authenticator app</div>
-        <div class="panel-body">
-          <p>
-            This will invalidate your current two-factor device and recovery codes.
-          </p>
-        </div>
-        <div class="panel-body">
-          <%= form_tag(Routes.dashboard_security_path(Endpoint, :reset_auth_app)) do %>
-            <button type="submit" class="btn btn-primary">Setup new app</button>
-          <% end %>
-        </div>
-      </div>
-
-      <div class="panel panel-default recovery-codes-container">
-        <div class="panel-heading">Two-factor recovery codes</div>
-        <div class="panel-body">
-          <p>
-            Recovery codes can be used to access your account in the event you lose access to your device and cannot receive two-factor authentication codes.
-          </p>
-        </div>
-        <%= if show_recovery_codes?(@current_user) do %>
-          <div class="panel-body recovery-codes-panel">
-            <div class="recovery-codes" id="recovery-codes" data-value="<%= aggregate_recovery_codes(@current_user.tfa.recovery_codes) %>">
-              <%= for code <- @current_user.tfa.recovery_codes do %>
-                <div class="recovery-code">
-                  <span class="<%= class_for_code(code) %>"><%= code.code %></span>
-                  <%= if code.used_at do %>
-                    <span class="label label-info">Used</span>
-                  <% end %>
+<div class="relative top-5">
+  <div class="max-w-7xl mx-auto">
+    <div class="flex flex-row gap-x-12 px-8">
+      <%= render DashboardView, "_sidebar.html", assigns %>
+      <div class="bg-white rounded-lg border border-gray-200 p-10 w-full h-full">
+        <div class="grid space-y-8">
+          <h2 class="text-gray-900 text-xl font-medium">Security Settings</h2>
+          <div>
+            <%= form_for  :changeset, "#", fn f -> %>
+              <%= label f, :password, "Password", class: "form-label" %>
+              <div class="flex flex-row gap-x-4 items-center">
+                <div class="h-10">
+                  <%= ViewHelpers.password_input f, :password, class: "text-gray-400" %>
+                  <%= ViewHelpers.error_tag f, :password %>
                 </div>
-              <% end %>
-            </div>
-            <button type="button" class="btn btn-primary download-data-button" data-input-id="recovery-codes">Download</button>
-            <button type="button" class="btn btn-primary print-data-button" data-input-id="recovery-codes">Print</button>
-            <button type="button" class="btn btn-primary copy-data-button" data-input-id="recovery-codes">Copy</button>
-          </div>
-        <% end %>
-        <div class="panel-body">
-            <label>Generate new recovery codes</label>
-            <p>
-              When you generate new recovery codes, you must download or print the new codes. Your old codes won’t work anymore.
-            </p>
-            <%= form_tag(Routes.dashboard_security_path(Endpoint, :rotate_recovery_codes)) do %>
-              <button type="submit" class="btn btn-primary">Generate new recovery codes</button>
+                <a href="#" class="text-blue-600 text-sm font-medium">Change?</a>
+              </div>
             <% end %>
           </div>
+          <div class="flex flex-row rounded-2xl bg-gray-900 max-w-max">
+            <div class="flex items-center justify-center pl-10">
+              <!--placeholder icon, to be replaced -->
+              <img src="<%= ViewHelpers.gravatar_url(User.email(@current_user, :gravatar), :large) %>" class="h-20 w-20 rounded-full">
+            </div>
+            <div class="grid py-6 space-y-4 px-10">
+              <div class="w-40">
+                <p class="text-gray-100 text-base font-semibold">Enable Two-Factor Authentication</p>
+              </div>
+              <div class="w-64">
+                <p class="text-gray-200 text-sm font-normal">Adding Two-Factor Authentication add more security to your account.</p>
+              </div>
+              <div>
+                <%= if Hexpm.Accounts.User.tfa_enabled?(@current_user) do %>
+                  <%= form_tag(Routes.dashboard_security_path(Endpoint, :disable_tfa)) do %>
+                    <button type="submit">Disable</button>
+                  <% end %>
+                <% else %>
+                  <%= form_tag(Routes.dashboard_security_path(Endpoint, :enable_tfa)) do %>
+                    <button type="submit" class="rounded bg-gray-600 flex items-center justify-center text-gray-100 text-sm font-medium w-32 h-10">Enable Now</button>
+                  <% end %>
+                <% end %>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
-    <% end %>
+    </div>
   </div>
 </div>
+<div>
+  <%= if Hexpm.Accounts.User.tfa_enabled?(@current_user) do %>
+    <div class="panel panel-default">
+      <div class="panel-heading">Edit authenticator app</div>
+      <div class="panel-body">
+        <p>
+          This will invalidate your current two-factor device and recovery codes.
+        </p>
+      </div>
+      <div class="panel-body">
+        <%= form_tag(Routes.dashboard_security_path(Endpoint, :reset_auth_app)) do %>
+        <button type="submit" class="btn btn-primary">Setup new app</button>
+        <% end %>
+      </div>
+    </div>
+    <div class="panel panel-default recovery-codes-container">
+      <div class="panel-heading">Two-factor recovery codes</div>
+      <div class="panel-body">
+        <p>
+          Recovery codes can be used to access your account in the event you lose access to your device and cannot receive two-factor authentication codes.
+        </p>
+      </div>
+      <%= if show_recovery_codes?(@current_user) do %>
+        <div class="panel-body recovery-codes-panel">
+          <div class="recovery-codes" id="recovery-codes" data-value="<%= aggregate_recovery_codes(@current_user.tfa.recovery_codes) %>">
+            <%= for code <- @current_user.tfa.recovery_codes do %>
+              <div class="recovery-code">
+                <span class="<%= class_for_code(code) %>"><%= code.code %></span>
+                <%= if code.used_at do %>
+                  <span class="label label-info">Used</span>
+                <% end %>
+              </div>
+            <% end %>
+          </div>
+          <button type="button" class="btn btn-primary download-data-button" data-input-id="recovery-codes">Download</button>
+          <button type="button" class="btn btn-primary print-data-button" data-input-id="recovery-codes">Print</button>
+          <button type="button" class="btn btn-primary copy-data-button" data-input-id="recovery-codes">Copy</button>
+        </div>
+      <% end %>
+      <div class="panel-body">
+        <label>Generate new recovery codes</label>
+        <p>
+          When you generate new recovery codes, you must download or print the new codes. Your old codes won’t work anymore.
+        </p>
+        <%= form_tag(Routes.dashboard_security_path(Endpoint, :rotate_recovery_codes)) do %>
+          <button type="submit" class="btn btn-primary">Generate new recovery codes</button>
+        <% end %>
+      </div>
+    </div>
+  <% end %>
+</div>
+
