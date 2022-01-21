@@ -1,28 +1,36 @@
-<ul class="space-y-4">
-  <%= for {id, {name, path}} <- account_settings() do %>
-    <li class="<%= selected_setting(@conn, id) %> font-normal text-lg hover:text-blue-600">
-      <a href="<%= path %>" class="inline-flex">
-        <%= account_settings_icon(id) %>
-        <%= name %> 
-      </a>
-    </li>
-  <% end %>
-</ul>
-<div class="pt-12">
-  <p class="text-sm font-medium text-gray-800">ORGANIZATION</p>
-  <ul class="pt-4">
-    <%= for organization <- Enum.sort_by(@current_user.organizations, & &1.name) do %>
-      <li class="<%= selected_organization(@conn, organization.name) %> hover:text-blue-600 font-normal text-lg">
-        <a href="<%= Routes.organization_path(Endpoint, :show, organization) %>" class="inline-flex">
-          <%= icon(:remixicon, :"building-4-line", width: "14px", class: "mr-2 fill-current") %>
-          <%= organization.name %>
-        </a>
-      </li>
-    <% end %>
-  </ul>
+<div class="flex flex-col w-3/12 ">
+  <a href="<%= Routes.profile_path(Endpoint, :index) %>" class="inline-flex text-gray-700 font-medium text-sm">
+    <%= icon(:remixicon, :"arrow-left-line", width: "14px", class: "mr-2 fill-current") %>
+      Back to profile
+  </a>
+  <h1 class="pt-3 text-gray-900 text-3xl font-semibold">Settings</h1>
+  <div class="pt-12">   
+    <ul class="space-y-2">
+      <%= for {id, {name, path}} <- account_settings() do %>
+        <li class="<%= selected_setting(@conn, id) %> font-normal text-lg hover:text-blue-600">
+          <a href="<%= path %>" class="inline-flex">
+            <%= account_settings_icon(id) %>
+            <%= name %> 
+          </a>
+        </li>
+      <% end %>
+    </ul>
+    <div class="pt-12">
+      <p class="text-sm font-medium text-gray-800">ORGANIZATION</p>
+      <ul class="pt-2">
+        <%= for organization <- Enum.sort_by(@current_user.organizations, & &1.name) do %>
+          <li class="<%= selected_organization(@conn, organization.name) %> hover:text-blue-600 font-normal text-lg">
+            <a href="<%= Routes.organization_path(Endpoint, :show, organization) %>" class="inline-flex">
+              <%= icon(:remixicon, :"building-4-line", width: "14px", class: "mr-2 fill-current") %>
+              <%= organization.name %>
+            </a>
+          </li>
+        <% end %>
+      </ul>
+    </div>
+    <a href="<%= Routes.organization_path(Endpoint, :new) %>" class="inline-flex text-gray-500 text-sm font-medium rounded border border-dashed border-gray-300 py-2 px-9">
+      <%= icon(:remixicon, :"add-fill", width: "14px", class: "mr-2 fill-current") %>
+       Create New
+    </a>
+  </div>
 </div>
-<a href="<%= Routes.organization_path(Endpoint, :new) %>" class="inline-flex text-gray-500 text-sm font-medium rounded border border-dashed border-gray-300 py-2 px-9">
-  <%= icon(:remixicon, :"add-fill", width: "14px", class: "mr-2 fill-current") %>
-   Create New
-</a>
-

@@ -2,16 +2,7 @@
 <div class="relative top-5">
   <div class="max-w-7xl mx-auto">
     <div class="flex flex-row gap-x-12 px-8">
-      <div class="flex flex-col w-3/12 ">
-        <a href="#" class="inline-flex text-gray-700 font-medium text-sm">
-          <%= icon(:remixicon, :"arrow-left-line", width: "14px", class: "mr-2 fill-current") %>
-           Back to profile
-        </a>
-        <h1 class="pt-3 text-gray-900 text-3xl font-semibold">Settings</h1>
-        <div class="pt-12">
-          <%= render DashboardView, "_sidebar.html", assigns %>
-        </div>
-      </div>
+      <%= render DashboardView, "_sidebar.html", assigns %>
       <div class="bg-white rounded-lg border border-gray-200 p-10 w-full">
         <div class="flex flex-row gap-x-20">
           <div class="flex flex-col items-center justify-center h-48">
