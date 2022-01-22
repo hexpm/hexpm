@@ -114,7 +114,7 @@ defmodule HexpmWeb.EmailView do
       """
       cd #{package}; rebar3 hex publish --revert #{version}
       # or
-      rebar3 hex retire --pkg #{package} --vsn #{version} --reason security --message "Not published by owners"
+      rebar3 hex retire #{package} #{version} security --message "Not published by owners"
       """
     end
   end
