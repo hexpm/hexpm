@@ -12,10 +12,10 @@ defmodule Hexpm.Repository.Packages do
   def diff(packages, nil), do: packages
 
   def diff(packages, remove) when is_list(remove) do
-    names = remove |> Enum.map(& &1.name)
+    names = Enum.map(remove, & &1.name)
 
     packages
-    |> Enum.reject(&Enum.member?(names, &1.name))
+    |> Enum.reject(&(&1.name in names))
   end
 
   def diff(packages, remove), do: diff(packages, [remove])
