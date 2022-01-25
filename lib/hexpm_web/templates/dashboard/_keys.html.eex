@@ -1,4 +1,66 @@
-<div class="panel panel-default">
+<h2 class="text-gray-900 text-xl font-medium">Keys Settings</h2>
+<div class="pt-3 max-w-xl">
+  <p class="text-gray-500 text-base font-normal">Keys are used to authenticate and authorize clients to interact with the Hex API and repository.</p>
+</div>
+<%= if @keys != [] do %>
+  <br>
+    <table class="table table-condensed table-striped">
+      <tr>
+        <td>Name</td>
+        <td>Permissions</td>
+        <td>Last use</td>
+        <td></td>
+      </tr>
+      <%= for key <- @keys do %>
+        <tr>
+          <td>
+            <%= key.name %>
+          </td>
+          <td>
+            <%= for permission <- key.permissions do %>
+              <span class="label label-success"><%= permission_name(permission) %></span>
+            <% end %>
+          </td>
+          <td>
+            <small>
+              <%= if last_use = key.last_use do %>
+                <a tabindex="0" role="button" data-toggle="popover" data-trigger="focus" data-placement="bottom" title="Last use" data-content="<strong>Used at:</strong> <%= ViewHelpers.pretty_datetime(last_use.used_at) %><br><strong>IP:</strong> <%= last_use.ip %><br><strong>User agent:</strong> <%= last_use.user_agent %>">
+                  <%= ViewHelpers.pretty_date(last_use.used_at) %> ...
+                </a>
+              <% end %>
+            </small>
+          </td>
+          <td>
+            <%= form_tag(@delete_key_path, method: :delete, class: "action") do %>
+              <input type="hidden" name="name" value="<%= key.name %>">
+              <button type="submit" class="btn btn-danger btn-xs">Revoke</button>
+            <% end %>
+          </td>
+        </tr>
+    <% end %>
+  </table>
+<% else %>
+<div class="grid place-content-center pt-16">
+  <div class="grid items-center justify-center space-y-5 w-64">
+    <div class="mx-auto">
+      <img src="<%= Routes.static_path(Endpoint, "/images/key.svg") %>" class="h-12 w-12 mix-blend-luminosity">
+    </div>
+    <div class="text-center">
+      <h2 class="text-gray-900 font-semibold text-lg">No Keys</h2>
+      <p class="text-gray-500 text-sm font-normal">You haven’t created any key. Once you do, they’ll appear here.</p>
+    </div>
+    <button class="mx-auto flex text-white text-sm font-medium rounded border-gray-300 items-center justify-center bg-primary-600 w-48 h-10 px-4">
+      <%= icon(:remixicon, :"add-fill", width: "14px", fill: "rgba(255, 255, 255, 1)", class: "mr-2") %>
+       Generate a Key
+    </button>
+  </div>
+</div>
+<% end %>
+
+
+
+
+<!--<div class="panel panel-default">
   <div class="panel-heading">Keys</div>
   <div class="panel-body">
     <p>Keys are used to authenticate and authorize clients to interact with the Hex API and repository. </p>
@@ -74,4 +136,4 @@
       <button type="submit" class="btn btn-primary">Generate</button>
     <% end %>
   </div>
-</div>
+</div> -->

@@ -1,10 +1,22 @@
 <%= ViewHelpers.changeset_error(@key_changeset) %>
+<div class="relative top-5">
+  <div class="max-w-7xl mx-auto">
+    <div class="flex flex-row gap-x-12 px-8">
+      <%= render DashboardView, "_sidebar.html", assigns %>
+      <div class="bg-white rounded-lg border border-gray-200 p-10 w-full">
+       <%= render DashboardView, "_keys.html", assigns %>
+      </div>
+    </div>
+  </div>
+</div>
+<div>
 
-<div class="row">
+<!-- <div class="row">
   <div class="col-sm-3">
     <%= render DashboardView, "_sidebar.html", assigns %>
   </div>
   <div class="col-sm-9 keys">
     <%= render DashboardView, "_keys.html", assigns %>
   </div>
-</div>
+</div> -->
+
