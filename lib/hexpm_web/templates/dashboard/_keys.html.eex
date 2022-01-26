@@ -3,42 +3,53 @@
   <p class="text-gray-500 text-base font-normal">Keys are used to authenticate and authorize clients to interact with the Hex API and repository.</p>
 </div>
 <%= if @keys != [] do %>
-  <br>
-    <table class="table table-condensed table-striped">
-      <tr>
-        <td>Name</td>
-        <td>Permissions</td>
-        <td>Last use</td>
-        <td></td>
-      </tr>
-      <%= for key <- @keys do %>
-        <tr>
-          <td>
-            <%= key.name %>
-          </td>
-          <td>
+  <div class="table w-full pt-8">
+    <div class="table-header-group text-gray-500 text-sm font-medium">
+      <div class="table-cell">Name</div>
+      <div class="table-cell">Permissions</div>
+      <div class="table-cell float-right">Actions</div>
+    </div>
+    <%= for key <- @keys do %>
+      <div class="table-row-group">
+        <div class="table-row">
+          <div class="table-cell py-4 border-b border-gray-200 text-gray-800 text-base font-medium"><%= key.name %></div>
+          <div class="table-cell py-4 border-b border-gray-200 space-x-2 ">
             <%= for permission <- key.permissions do %>
-              <span class="label label-success"><%= permission_name(permission) %></span>
+              <span class="rounded bg-green-100 py-1 px-3 text-green-600 font-medium text-xs">
+                <%= permission_name(permission) %>
+              </span>
             <% end %>
-          </td>
-          <td>
-            <small>
-              <%= if last_use = key.last_use do %>
-                <a tabindex="0" role="button" data-toggle="popover" data-trigger="focus" data-placement="bottom" title="Last use" data-content="<strong>Used at:</strong> <%= ViewHelpers.pretty_datetime(last_use.used_at) %><br><strong>IP:</strong> <%= last_use.ip %><br><strong>User agent:</strong> <%= last_use.user_agent %>">
-                  <%= ViewHelpers.pretty_date(last_use.used_at) %> ...
-                </a>
+          </div>
+     <!-- <small>
+            <%#= if last_use = key.last_use do %>
+              <a tabindex="0" role="button" data-toggle="popover" data-trigger="focus" data-placement="bottom" title="Last use" data-content="<strong>Used at:</strong> <%#= ViewHelpers.pretty_datetime(last_use.used_at) %><br><strong>IP:</strong> <%#= last_use.ip %><br><strong>User agent:</strong> <%#= last_use.user_agent %>">
+                  <%#= ViewHelpers.pretty_date(last_use.used_at) %> ...
+              </a>
+            <%#= end %>
+          </small>-->
+          <div class="table-cell py-4 border-b border-gray-200">
+            <div class="flex flex-row-reverse">
+              <%= form_tag(@delete_key_path, method: :delete, class: "action") do %>
+                <input type="hidden" name="name" value="<%= key.name %>">
+                <button type="submit" class="rounded bg-red-100 text-red-600 font-medium text-xs py-2 px-4">Revoke</button>
               <% end %>
-            </small>
-          </td>
-          <td>
-            <%= form_tag(@delete_key_path, method: :delete, class: "action") do %>
-              <input type="hidden" name="name" value="<%= key.name %>">
-              <button type="submit" class="btn btn-danger btn-xs">Revoke</button>
-            <% end %>
-          </td>
-        </tr>
+            </div>
+          </div>
+        </div>
+      </div>
     <% end %>
-  </table>
+    <div class="pt-3">
+      <a href="#" class="inline-flex text-gray-700 text-sm font-medium rounded border border-dashed border-gray-300 flex items-center justify-center h-9 w-44">
+        <%= icon(:remixicon, :"add-fill", width: "14px", class: "mr-2 fill-current") %>
+        Generate New Key
+      </a>
+    </div>
+    <div class="pt-8">
+      <button type="submit" class="rounded bg-gray-100 text-gray-500 text-sm font-medium flex items-center justify-center h-10 w-44">
+        Save Changes
+      </button>
+    </div>
+  </div>
 <% else %>
 <div class="grid place-content-center pt-16">
   <div class="grid items-center justify-center space-y-5 w-64">
