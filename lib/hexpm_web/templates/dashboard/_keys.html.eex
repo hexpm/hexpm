@@ -20,6 +20,7 @@
               </span>
             <% end %>
           </div>
+          <!--Not included in the design, confirm if needed-->
      <!-- <small>
             <%#= if last_use = key.last_use do %>
               <a tabindex="0" role="button" data-toggle="popover" data-trigger="focus" data-placement="bottom" title="Last use" data-content="<strong>Used at:</strong> <%#= ViewHelpers.pretty_datetime(last_use.used_at) %><br><strong>IP:</strong> <%#= last_use.ip %><br><strong>User agent:</strong> <%#= last_use.user_agent %>">
@@ -28,7 +29,7 @@
             <%#= end %>
           </small>-->
           <div class="table-cell py-4 border-b border-gray-200">
-            <div class="flex flex-row-reverse">
+            <div class="flex justify-end">
               <%= form_tag(@delete_key_path, method: :delete, class: "action") do %>
                 <input type="hidden" name="name" value="<%= key.name %>">
                 <button type="submit" class="rounded bg-red-100 text-red-600 font-medium text-xs py-2 px-4">Revoke</button>
@@ -39,7 +40,7 @@
       </div>
     <% end %>
     <div class="pt-3">
-      <a href="#" class="inline-flex text-gray-700 text-sm font-medium rounded border border-dashed border-gray-300 flex items-center justify-center h-9 w-44">
+      <a href="#" class="inline-flex text-gray-700 text-sm font-medium rounded border border-dashed border-gray-300 flex items-center justify-center h-9 w-44" data-modal-toggle="generate-key-modal">
         <%= icon(:remixicon, :"add-fill", width: "14px", class: "mr-2 fill-current") %>
         Generate New Key
       </a>
@@ -60,91 +61,82 @@
       <h2 class="text-gray-900 font-semibold text-lg">No Keys</h2>
       <p class="text-gray-500 text-sm font-normal">You haven’t created any key. Once you do, they’ll appear here.</p>
     </div>
-    <button class="mx-auto flex text-white text-sm font-medium rounded border-gray-300 items-center justify-center bg-primary-600 w-48 h-10 px-4">
+    <button class="mx-auto flex text-white text-sm font-medium rounded border-gray-300 items-center justify-center bg-primary-600 w-48 h-10 px-4" data-modal-toggle="generate-key-modal">
       <%= icon(:remixicon, :"add-fill", width: "14px", fill: "rgba(255, 255, 255, 1)", class: "mr-2") %>
        Generate a Key
     </button>
   </div>
 </div>
 <% end %>
-
-
-
-
-<!--<div class="panel panel-default">
-  <div class="panel-heading">Keys</div>
-  <div class="panel-body">
-    <p>Keys are used to authenticate and authorize clients to interact with the Hex API and repository. </p>
-
-    <%= if @keys != [] do %>
-      <br>
-      <table class="table table-condensed table-striped">
-        <tr>
-          <td>Name</td>
-          <td>Permissions</td>
-          <td>Last use</td>
-          <td></td>
-        </tr>
-        <%= for key <- @keys do %>
-          <tr>
-            <td><%= key.name %></td>
-            <td>
-              <%= for permission <- key.permissions do %>
-                <span class="label label-success"><%= permission_name(permission) %></span>
-              <% end %>
-            </td>
-            <td>
-              <small>
-                <%= if last_use = key.last_use do %>
-                  <a
-                    tabindex="0"
-                    role="button"
-                    data-toggle="popover"
-                    data-trigger="focus"
-                    data-placement="bottom"
-                    title="Last use"
-                    data-content="<strong>Used at:</strong> <%= ViewHelpers.pretty_datetime(last_use.used_at) %><br><strong>IP:</strong> <%= last_use.ip %><br><strong>User agent:</strong> <%= last_use.user_agent %>">
-                      <%= ViewHelpers.pretty_date(last_use.used_at) %> ...
-                  </a>
+<div id="generate-key-modal" aria-hidden="true" class="hidden overflow-y-auto overflow-x-hidden fixed right-0 left-0 top-4 z-50 justify-center items-center h-modal md:h-full md:inset-0 ">
+  <div class="relative px-4 w-full max-w-lg h-full md:h-auto ">
+    <div class="relative bg-white rounded-2xl shadow-lg p-6">
+      <div class="flex">
+        <h3 class="text-lg font-medium text-gray-900">Generate New Key</h3>
+        <button type="button" class="text-gray-300 text-sm ml-auto" data-modal-toggle="generate-key-modal">
+          <%= icon(:remixicon, :"close-line", width: "20px", class: "fill-current") %>
+        </button>
+      </div>
+      <div class="pt-8">
+        <%= form_for @key_changeset, @create_key_path, [method: :post], fn f -> %>
+          <div class="space-y-6">
+            <div>
+              <%= label f, :name, "Key Name", class: "form-label" %>
+              <div class="w-full h-10">
+                <%= ViewHelpers.text_input f, :name, class: "w-full" %>
+                <%= ViewHelpers.error_tag f, :name %>
+              </div> 
+            </div>
+            <div>
+              <h3 class="text-gray-400 text-sm font-semibold">KEY PERMISSIONS</h3>
+              <div class="space-y-2">
+                <label class="inline-flex space-x-2 items-center">
+                  <input type="checkbox" class="form-checkbox rounded border-box border border-solid border-gray-200 w-5 h-5 text-primary-600" name="key[permissions][apis]" checked>
+                  <span class="font-medium text-gray-800 text-base">API</span>
+                </label>
+                <div class="grid space-y-2">
+                  <label class="inline-flex pl-6 space-x-2 items-center">
+                    <input type="checkbox" name="key[permissions][apis]" class="form-checkbox rounded border-box border border-solid border-gray-200 w-5 h-5 text-primary-600"  name="key[permissions][api][read]">
+                    <span class="font-medium text-gray-800 text-base">Read</span>
+                  </label>
+                  <label class="inline-flex pl-6 space-x-2 items-center">
+                    <input type="checkbox" name="key[permissions][apis]" class="form-checkbox rounded border-box border border-solid border-gray-200 w-5 h-5 text-primary-600"  name="key[permissions][api][write]">
+                    <span class="font-medium text-gray-800 text-base">Write</span>
+                  </label>
+                </div>
+                <%= if assigns[:organization] do %>
+                  <label class="inline-flex space-x-2 items-center">
+                    <input type="checkbox" class="form-checkbox rounded border-box border border-solid border-gray-200 w-5 h-5 text-primary-600" name="key[permissions][repository][<%= @organization.name %>]">
+                    <span class="font-medium text-gray-800 text-base">Organization repository</span>
+                  </label>
+                <% else %>
+                  <label class="inline-flex space-x-2 items-center">
+                    <input type="checkbox" class="form-checkbox rounded border-box border border-solid border-gray-200 w-5 h-5 text-primary-600" name="key[permissions][repositories]">
+                    <span class="font-medium text-gray-800 text-base">All Repositories</span>
+                  </label>
+                  <%= for organization <- @organizations do %>
+                    <div class="grid space-y-2">
+                      <label class="inline-flex pl-6 space-x-2 items-center">
+                        <input type="checkbox" class="form-checkbox rounded border-box border border-solid border-gray-200 w-5 h-5 text-primary-600"  name="key[permissions][repository][<%= organization.name %>]">
+                        <span class="font-medium text-gray-800 text-base">Repository: <%= organization.name %></span>
+                      </label>
+                    </div>
+                  <% end %>
                 <% end %>
-              </small>
-            </td>
-            <td>
-              <%= form_tag(@delete_key_path, method: :delete, class: "action") do %>
-                <input type="hidden" name="name" value="<%= key.name %>">
-                <button type="submit" class="btn btn-danger btn-xs">Revoke</button>
-              <% end %>
-            </td>
-          </tr>
-        <% end %>
-      </table>
-    <% end %>
-  </div>
-
-  <div class="panel-body-part">
-    <%= form_for @key_changeset, @create_key_path, [method: :post], fn f -> %>
-      <%= label f, :name, "Key name" %>
-      <div class="form-group">
-        <%= ViewHelpers.text_input f, :name, class: "form-control", placeholder: "Name" %>
-        <%= ViewHelpers.error_tag f, :name %>
-      </div>
-      <span class="form-label">Key permissions</span>
-      <div class="permission-group">
-        <div class="checkbox group-owner"><label><input type="checkbox" name="key[permissions][apis]">API</label></div>
-        <div class="checkbox group-child"><label><input type="checkbox" name="key[permissions][api][read]">Read</label></div>
-        <div class="checkbox group-child"><label><input type="checkbox" name="key[permissions][api][write]">Write</label></div>
-      </div>
-      <%= if assigns[:organization] do %>
-        <div class="checkbox"><label><input type="checkbox" name="key[permissions][repository][<%= @organization.name %>]">Organization repository</label></div>
-      <% else %>
-        <div class="permission-group">
-          <div class="checkbox group-owner"><label><input type="checkbox" name="key[permissions][repositories]">All Repositories</label></div>
-          <%= for organization <- @organizations do %>
-            <div class="checkbox group-child"><label><input type="checkbox" name="key[permissions][repository][<%= organization.name %>]">Repository: <%= organization.name %></label></div>
+              </div>
+            </div>
+            <div class="flex flex-row space-x-4">
+              <button class="bg-gray-100 rounded flex items-center justify-center h-10 w-24 text-gray-500 text-sm font-medium" data-modal-toggle="generate-key-modal">cancel</button>
+              <button type="submit" class="bg-primary-600 rounded flex items-center justify-center h-10 w-36 text-white text-sm font-medium">Generate Key</button>
+            </div>   
           <% end %>
         </div>
-      <% end %>
-      <button type="submit" class="btn btn-primary">Generate</button>
-    <% end %>
+      </div>
+    </div>
   </div>
-</div> -->
+</div>
+
+
+
+
+
