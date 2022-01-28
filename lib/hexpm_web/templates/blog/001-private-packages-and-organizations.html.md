@@ -20,7 +20,7 @@ packages will help us increase the quality of both public and private services.
 
 This feature is currently in beta and there are still missing features, most notably billing and documentation
 hosting on hexdocs.pm. If you want to try it or help beta test private packages, please fill out the
-[sign up form](/dashboard/repo-signup) to request access.
+[sign up form](/dashboard/orgs) to request access.
 
 Even though we are introducing paid features everything around Hex will stay open source, the only closed
 source part will be the billing service.
