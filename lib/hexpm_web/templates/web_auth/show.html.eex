@@ -1,6 +1,6 @@
 <h2>Device Activation</h2>
 
-<%= form_for @conn, Routes.web_auth_path(Endpoint, :submit), fn f -> %>
+<%= form_for @conn, Routes.web_auth_path(Endpoint, :submit), [autocomplete: "off"], fn f -> %>
   <div class="form-group">
     <%= label f, :user_code, "Enter the code displayed on your device" %>
     <%= ViewHelpers.text_input f, :user_code %>
