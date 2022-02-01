@@ -31,12 +31,15 @@
                 </div>
                 <div class="table-cell py-4 border-b border-gray-200">
                   <div class="flex flex-row-reverse gap-x-2 items-center">
-                    <%= form_tag(Routes.email_path(Endpoint, :delete), method: :delete, class: "action") do %>
-                      <input type="hidden" name="email" value="<%= email.email %>">
-                      <button type="submit" class="<%= if email.primary do %>opacity-50 cursor-not-allowed <% end %>">
+                     <button type="submit" class="<%= if email.primary do %>opacity-50 cursor-not-allowed <% end %>" data-modal-toggle="remove-email-modal" <%= if email.primary, do: "disabled" %>>
                         <%= icon(:remixicon, :"delete-bin-6-line", width: "16px", fill: "rgba(170, 44, 63, 1)")%>
                       </button>
-                    <% end %>
+                    <%#= form_tag(Routes.email_path(Endpoint, :delete), method: :delete, class: "action") do %>
+                     <!-- <input type="hidden" name="email" value="<%= email.email %>">
+                      <button type="submit" class="<%= if email.primary do %>opacity-50 cursor-not-allowed <% end %>" data-modal-toggle="popup-modal">
+                        <%= icon(:remixicon, :"delete-bin-6-line", width: "16px", fill: "rgba(170, 44, 63, 1)")%>
+                      </button> -->
+                    <%# end %>
                     <%= if email.verified and not email.primary do %>
                       <%= form_tag(Routes.email_path(Endpoint, :primary), class: "action") do %>
                         <input type="hidden" name="email" value="<%= email.email %>">
@@ -71,6 +74,38 @@
                 </div>
               </div>
             </div>
+            <div class="hidden overflow-y-auto overflow-x-hidden fixed right-0 left-0 top-4 z-50 justify-center items-center md:inset-0 h-modal sm:h-full" id="remove-email-modal" aria-hidden="true">
+              <div class="relative px-4 w-full max-w-lg h-full md:h-auto">
+                <div class="relative bg-white rounded-2xl shadow-lg p-6 space-y-4">
+                  <div class="flex">
+                    <h3 class="text-lg font-medium text-gray-900">Remove Email</h3>
+                    <button type="button" class="text-gray-300 text-sm ml-auto" data-modal-toggle="remove-email-modal">
+                      <%= icon(:remixicon, :"close-line", width: "20px", class: "fill-current") %>
+                    </button>
+                  </div>
+                  <div>
+                    <p class="text-gray-500 text-base font-normal">Are you sure you want to remove <b><%= email.email %></b> as your email address?</p>
+                  </div>
+                  <div>
+                    <%= form_for :changeset, "#", fn f -> %>
+                      <div class="space-y-8">
+                        <div>
+                          <%= label f, :password, "Your Password", class: "form-label" %>
+                          <div class="w-full h-10">
+                            <%= ViewHelpers.text_input f, :full_name, class: "w-full text-base text-gray-500 font-normal" %>
+                            <%= ViewHelpers.error_tag f, :full_name %>
+                          </div> 
+                        </div>
+                        <div class="flex space-x-4">
+                          <button data-modal-toggle="remove-email-modal" type="button" class="bg-gray-100 rounded flex items-center justify-center h-10 w-24 text-gray-500 text-sm font-medium">Cancel</button>
+                          <button type="button" class="rounded flex items-center justify-center text-sm font-medium text-white w-44 h-10 bg-red-600">Yes, Remove Email</button>
+                        </div>
+                      </div>
+                    <% end %>
+                  </div>
+                </div>
+              </div>
+            </div>
           <% end %>
           <div class="pt-3">
             <a href="#" class="inline-flex text-gray-700 text-sm font-medium rounded border border-dashed border-gray-300 flex items-center justify-center h-9 w-44">
@@ -88,3 +123,5 @@
     </div>
   </div>
 </div>
+
+
