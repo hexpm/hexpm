@@ -13,4 +13,8 @@ defmodule HexpmWeb.PageView do
 
     render("_package.html", data)
   end
+
+  def most_downloaded_package(package_top) do
+    Enum.at(package_top, 0)
+  end
 end

@@ -1,4 +1,37 @@
-<div class="featured-home">
+<div class="relative top-10">
+  <div class="max-w-7xl mx-auto px-14">
+    <div class="grid grid-cols-2 space-x-8">
+      <div class="space-y-10">
+        <h1 class="text-gray-800 text-5xl font-semibold">The package manager for the Erlang ecosystem</h1>
+        <div class="flex items-center gap-x-12">
+          <button class="inline-flex items-center justify-center text-lg font-medium text-primary-600 h-14 w-60 pr-2 rounded-xl border-2 border-primary-600">
+            Getting Started
+            <%= icon(:remixicon, :"arrow-right-line", width: "18px", height: "18px", fill: "rgba(105, 67, 141, 1)", class: "ml-2") %>
+          </button>
+          <p class="text-gray-500 text-lg font-medium">Publish Packages</p>
+        </div>
+      </div>
+      <div class="grid grid-cols-2 px-8">
+        <div class="relative top-10 w-80 h-52 z-60 p-5 bg-white rounded-md">
+          <div class="flex justify-between">
+            <p class="text-2xl">&#128525;</p>
+            <div class="inline-flex items-center">
+              <%= icon(:remixicon, :"download-line", width: "17.06px", height: "17.06px", fill: "rgba(97, 117, 138, 1)", class: "ml-2") %>
+              <div class="text-base text-gray-400 font-medium">
+                1
+             
+              </div>
+            </div>
+            
+          </div>
+        </div>
+        <div class="w-72 h-44 p-5 bg-white rounded-md"">4</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!--<div class="featured-home">
   <%= render HexpmWeb.LayoutView, "_flash.html", conn: @conn %>
 
   <h2>The package manager for the Erlang ecosystem</h2>
@@ -208,4 +241,4 @@
       </div>
     </div>
   </div>
-</div>
+</div>-->
