@@ -70,7 +70,7 @@ reserved and can never be reused by users.
 #### Can I transfer ownership of a package?
 
 Yes, if you would like to reassign ownership of a package to a different user or to another
-username, you can use the [`hex.owner`](https://hexdocs.pm/hex/Mix.Tasks.Hex.Owner.html) task.
+username, you can use the [`mix hex.owner`](https://hexdocs.pm/hex/Mix.Tasks.Hex.Owner.html) task.
 
 #### How should I name my packages?
 
@@ -108,7 +108,9 @@ Your selection: _
 ```
 
 You can also transfer ownership to an organization after the package has been published by
-running `mix hex.owner transfer PACKAGE ORGANIZATION`.
+running:
+
+[`mix hex.owner transfer PACKAGE ORGANIZATION`](https://hexdocs.pm/hex/Mix.Tasks.Hex.Owner.html)
 
 #### Are self-hosted or "enterprise" solutions available?
 
