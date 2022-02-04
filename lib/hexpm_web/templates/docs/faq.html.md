@@ -18,7 +18,7 @@ Security vulnerabilities should be disclosed to [security@hex.pm](mailto:securit
 For security reasons, your username cannot be changed. However, if you would like to adopt a new
 username we recommend [creating a new account](/signup).
 
-You can transfer ownership of your packages using the [`hex.owner`](https://hexdocs.pm/hex/Mix.Tasks.Hex.Owner.html) task.
+You can transfer ownership of your packages using the [`mix hex.owner`](https://hexdocs.pm/hex/Mix.Tasks.Hex.Owner.html) task.
 
 #### Password security
 
@@ -30,14 +30,14 @@ We only inspect the password at the time you type it, and never store your passw
 
 #### Why is my package documentation returning "page not found"?
 
-This could be for a number of reason. When you run `mix hex.publish [docs]` the documentation is
+This could be for a number of reason. When you run [`mix hex.publish [docs]`](https://hexdocs.pm/hex/Mix.Tasks.Hex.Publish.html) the documentation is
 generated on your machine and then uploaded to Hex. Issues with documentation usually stem from
 the documentation generation. First verify that your documentation works locally by running
-`mix docs` and then opening the generated files locally, typically `doc/index.html`, also verify
+[`mix docs`](https://hexdocs.pm/ex_doc/Mix.Tasks.Docs.html) and then opening the generated files locally, typically `doc/index.html`, also verify
 that there are no differences in letter casing since Hexdocs is case-sensitive but your machine
 may be case-insensitive.
 
-You can always republish old documentation with `mix hex.publish docs` to update it. Finally make
+You can always republish old documentation with [`mix hex.publish docs`](https://hexdocs.pm/hex/Mix.Tasks.Hex.Publish.html) to update it. Finally make
 sure you clear your browser cache to ensure you are viewing the latest version.
 
 #### Can packages be removed from the repository?
@@ -48,14 +48,14 @@ depended on packages can't suddenly disappear.
 
 There are exceptions to the immutability rule, a package can be changed or unpublished within 60
 minutes of the package version release or within 24 hours of initial release of the package.
-Packages are unpublished with `mix hex.publish --revert VERSION` and republished by running
+Packages are unpublished with [`mix hex.publish --revert VERSION`](https://hexdocs.pm/hex/Mix.Tasks.Hex.Publish.html#module-reverting-a-package) and republished by running
 `mix hex.publish` for the same version again. If you revert the last version, the package is deleted.
 Private packages can be modified and deleted at any time since those changes only affect the user's
 own repository.
 
 Instead of unpublishing we recommend to instead retire a package or release. This should be done
 if the maintainers no longer recommend its use, because it does not work, has security issues,
-been deprecated or any other reason. A package is retired with the `mix hex.retire` task. A
+been deprecated or any other reason. A package is retired with the [`mix hex.retire`](https://hexdocs.pm/hex/Mix.Tasks.Hex.Retire.html) task. A
 retired package will still be resolvable and fetchable but users of the package will get a warning
 message and the website will show the release as retired.
 
