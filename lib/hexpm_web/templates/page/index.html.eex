@@ -28,6 +28,44 @@
         <div class="w-72 h-44 p-5 bg-white rounded-md"">4</div>
       </div>
     </div>
+    <div class="relative top-40 grid grid-cols-2 gap-x-10 z-50">
+      <div class="rounded-xl bg-gray-900 p-8">
+        <div class="flex space-x-1">
+          <span class="w-3 h-3 rounded-full bg-red-500"></span>
+          <span class="w-3 h-3 rounded-full bg-yellow-500"></span>
+          <span class="w-3 h-3 rounded-full bg-green-500"></span>
+        </div>
+        <div class="flex space-x-4">
+          <img src="<%= Routes.static_path(Endpoint, "/images/elixir-lang-icon.svg") %>" alt="Elixir logo">
+          <div class="pt-4">
+            <h3 class="text-gray-100 font-semibold text-lg"><a href="<%= Routes.docs_path(Endpoint, :usage) %>">Using with Elixir</a></h3>
+            <p class="text-base font-normal text-gray-200">
+            Specify your Mix dependencies as two-item tuples like {:plug, "~> 1.1.0"}
+            in your dependency list, Elixir will ask if you want to install Hex if you haven't already.
+          </p>
+          </div>
+        </div>
+      </div>
+      <div class="rounded-xl bg-gray-900 p-8">
+        <div class="flex space-x-1">
+          <span class="w-3 h-3 rounded-full bg-red-500"></span>
+          <span class="w-3 h-3 rounded-full bg-yellow-500"></span>
+          <span class="w-3 h-3 rounded-full bg-green-500"></span>
+        </div>
+        <div class="flex space-x-4">
+          <img src="<%= Routes.static_path(Endpoint, "/images/erlang-icon.svg") %>" alt="Elixir logo">
+          <div class="pt-4">
+            <h3 class="text-gray-100 font-semibold text-lg"><a href="<%= Routes.docs_path(Endpoint, :rebar3_usage) %>">Using with Erlang</a></h3>
+            <p class="text-base font-normal text-gray-200">
+              Download <a href="https://s3.amazonaws.com/rebar3/rebar3">rebar3</a>, put it in your PATH and give it executable permissions.Now you can specify Hex dependencies in your rebar.config like {deps, [hackney]}.
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="relative top-14 bg-white">
+    1
   </div>
 </div>
 
