@@ -65,7 +65,55 @@
     </div>
   </div>
   <div class="relative top-14 bg-white">
-    1
+    <div class="pt-44 space-y-10">
+      <div class="max-w-7xl mx-auto px-14 bg-green-500">1</div>
+      <div class="max-w-7xl mx-auto px-10 grid grid-cols-3 gap-x-12">
+        <div>
+          <div class="bg-primary-600 rounded-xl flex items-center p-4 space-x-3">
+            <div>1</div>
+            <h3 class="text-gray-100 text-xl font-semibold">Most Downloaded</h3>
+          </div>
+          <div>
+            <ul class="divide-y divide-gray-200 space-y-4">
+              <%= for {package, inserted_at, meta, downloads} <- @package_top do %>
+                <%= render_package package: package, downloads: downloads, inserted_at: inserted_at, description: meta.description %>
+              <% end %>
+              <li></li>
+            </ul>
+          </div>
+        </div>
+        <div>
+           <div class="bg-green-600 rounded-xl flex items-center p-4 space-x-3">
+            <div>1</div>
+            <h3 class="text-gray-100 text-xl font-semibold">New Packages</h3>
+          </div>
+          <div>
+            <ul class="divide-y divide-gray-200 space-y-4">
+              <%= for {package, inserted_at, %PackageMetadata{} = meta} <- @package_new do %>
+                <%= render_package package: package, inserted_at: inserted_at, description: meta.description %>
+              <% end %>
+              <li></li>
+            </ul>
+          </div>
+        </div>
+        <div>
+           <div class="bg-blue-600 rounded-xl flex items-center p-4 space-x-3">
+            <div>1</div>
+            <h3 class="text-gray-100 text-xl font-semibold">Recently Updated</h3>
+          </div>
+          <div>
+            <ul class="divide-y divide-gray-200 space-y-4">
+              <%= for {package, version, inserted_at, %PackageMetadata{} = meta} <- @releases_new do %>
+                <%= render_package version: version, package: package, inserted_at: inserted_at, description: meta.description %>
+              <% end %>
+              <li></li>
+            </ul>
+          </div>
+        </div>
+      </div>
+      <div class="bg-red-500">3</div>
+      
+    </div>
   </div>
 </div>
 
