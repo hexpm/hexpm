@@ -23,16 +23,14 @@ defmodule Hexpm.Repository.Package do
   @elixir_names ~w(eex elixir elixirc ex_unit iex logger mix)
   @tool_names ~w(erlang typer to_erl run_erl escript erlc erl epmd dialyzer ct_run rebar rebar3 hex hexpm mix_hex)
   @otp_names ~w(
-    otp appmon asn1 common_test compiler cosEvent cosEventDomain cosFileTransfer
-    cosNotification cosProperty cosTime cosTransactions crypto debugger
-    dialyzer diameter edoc eldap erl_docgen erl_interface erts et eunit gs hipe
-    ic inets jinterface kernel Makefile megaco mnesia observer odbc orber
-    os_mon ose otp_mibs parsetools percept pman public_key reltool runtime_tools
-    sasl snmp ssh ssl stdlib syntax_tools test_server toolbar tools tv typer
-    webtool wx xmerl
+    otp asn1 common_test compiler crypto debugger dialyzer diameter
+    edoc eldap erl_docgen erl_interface erts et eunit ftp hipe
+    inets jinterface kernel megaco mnesia observer odbc os_mon
+    parsetools public_key reltool runtime_tools sasl snmp ssh
+    ssl stdlib syntax_tools toolbar tools typer wx xmerl
   )
-  @inets_names ~w(ftp tftp httpc httpd)
-  @app_names ~w(toucan exla axon torchx net http net_http mint_pool)
+  @inets_names ~w(tftp httpc httpd)
+  @app_names ~w(toucan exla torchx net http net_http)
   @windows_names ~w(
     nul con prn aux com1 com2 com3 com4 com5 com6 com7 com8 com9 lpt1 lpt2
     lpt3 lpt4 lpt5 lpt6 lpt7 lpt8 lpt9
