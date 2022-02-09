@@ -20,7 +20,8 @@ defmodule HexpmWeb.API.WebAuthControllerTest do
 
     test "returns an error on invalid parameters", %{conn: conn} do
       response =
-        post(conn, Routes.web_auth_path(conn, :code, %{"foo" => "bar"}))
+        conn
+        |> post(Routes.web_auth_path(conn, :code, %{"foo" => "bar"}))
         |> json_response(:bad_request)
 
       assert response["message"] == "invalid parameters"
