@@ -5,7 +5,7 @@ defmodule Hexpm.Accounts.WebAuthRequest do
 
   # See `lib/hexpm/accounts/web_auth.ex` for an explanation of the terminology used.
 
-  schema "requests" do
+  schema "web_auth_requests" do
     field :device_code, :string
     field :user_code, :string
     field :key_name, :string

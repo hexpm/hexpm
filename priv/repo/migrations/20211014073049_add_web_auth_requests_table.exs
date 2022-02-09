@@ -2,7 +2,7 @@ defmodule Hexpm.RepoBase.Migrations.AddWebAuthRequestsTable do
   use Ecto.Migration
 
   def change do
-    create table(:requests) do
+    create table(:web_auth_requests) do
       add(:device_code, :string, null: false)
       add(:user_code, :string, null: false)
       add(:key_name, :string, null: false)
@@ -10,7 +10,7 @@ defmodule Hexpm.RepoBase.Migrations.AddWebAuthRequestsTable do
       add(:user_id, references(:users))
     end
 
-    create(unique_index(:requests, [:user_code]))
-    create(unique_index(:requests, [:device_code]))
+    create(unique_index(:web_auth_requests, [:user_code]))
+    create(unique_index(:web_auth_requests, [:device_code]))
   end
 end
