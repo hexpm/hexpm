@@ -4,8 +4,6 @@ defmodule HexpmWeb.WebAuthController do
 
   plug :requires_login when action == :show
 
-  def submit(conn, params)
-
   def submit(conn, %{"user_code" => user_code}) do
     user = conn.assigns.current_user
 
@@ -29,7 +27,7 @@ defmodule HexpmWeb.WebAuthController do
 
   def show(conn, _), do: render_show(conn, nil)
 
-  def render_show(conn, error) do
+  defp render_show(conn, error) do
     render(
       conn,
       "show.html",
@@ -43,7 +41,7 @@ defmodule HexpmWeb.WebAuthController do
     render(
       conn,
       "success.html",
-      title: WebAuth,
+      title: "WebAuth",
       container: "container page page-xs"
     )
   end
