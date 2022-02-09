@@ -10,6 +10,7 @@ defmodule Hexpm.RepoBase.Migrations.AddWebAuthRequestsTable do
       add(:user_id, references(:users))
     end
 
-    create(unique_index(:requests, [:user_code, :device_code]))
+    create(unique_index(:requests, [:user_code]))
+    create(unique_index(:requests, [:device_code]))
   end
 end
