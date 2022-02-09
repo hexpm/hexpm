@@ -6,8 +6,6 @@ defmodule HexpmWeb.API.WebAuthController do
 
   # Controller for Web Auth, a means of authenticating the cli from the website
 
-  def code(conn, params)
-
   def code(conn, %{"key_name" => key_name}) do
     {:ok, response} = WebAuth.get_code(key_name)
     render(conn, :code, response)
@@ -15,13 +13,8 @@ defmodule HexpmWeb.API.WebAuthController do
 
   def code(conn, _params), do: invalid_params(conn)
 
-  def access_key(conn, params)
-
   def access_key(conn, %{"device_code" => device_code}) do
-    user_agent =
-      conn
-      |> audit_data()
-      |> elem(1)
+    {user_agent, _} = audit_data(conn)
 
     case WebAuth.access_key(device_code, user_agent) do
       {:error, msg} when msg == "key generation failed" ->
