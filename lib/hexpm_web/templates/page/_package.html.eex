@@ -1,21 +1,20 @@
-<li>
-  <div class="title-container">
-    <a href="<%= Routes.package_path(Endpoint, :show, @package) %>" class="title"><%= @package %></a>
+<li class="pt-3">
+  <div class="flex items-center space-x-2">
+    <a href="<%= Routes.package_path(Endpoint, :show, @package) %>" class="text-gray-900 font-medium text-lg"><%= @package %></a>
+    <a href="<%= Routes.package_path(Endpoint, :show, @package) %>" class="text-gray-500 text-xs font-normal"><%= @version %></a>
   </div>
-  <p>
-    <%= if @downloads do %>
-      <span class="info"><%= ViewHelpers.human_number_space @downloads %> downloads</span>
-    <% end %>
+  <div class="flex justify-between gap-x-4">
     <%= if @description do %>
-      <span class="description"><%= ViewHelpers.text_length(@description, 100) %></span>
+      <span class="text-gray-500 text-sm font-medium"><%= ViewHelpers.text_length(@description, 100) %></span>
     <% end %>
-    <%= if @inserted_at do %>
-      <span class="published-at">
-        <%= if @version do %>
-          <a href="<%= Routes.package_path(Endpoint, :show, @package) %>"><%= @version %></a>
-        <% end %>
-        published <%= ViewHelpers.human_relative_time_from_now(@inserted_at) %>
-      </span>
-    <% end %>
-  </p>
+    <span class="text-gray-600 text-lg font-normal">
+      <%= if @downloads do %>
+        <%= if ViewHelpers.digits(@downloads) <= 3 do %>
+          <%= ViewHelpers.human_number_space(@downloads) %>
+        <% else %>
+          <%= ViewHelpers.human_number_space(@downloads, 2) %>+
+        <% end%>
+      <% end %>
+    </span>
+  </div>
 </li>
