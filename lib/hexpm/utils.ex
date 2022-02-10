@@ -59,6 +59,15 @@ defmodule Hexpm.Utils do
     )
   end
 
+  def datetime_utc_yesterday() do
+    datetime_utc_days_ago(1)
+  end
+
+  def datetime_utc_days_ago(days) do
+    DateTime.utc_now()
+    |> DateTime.add(-days * 24 * 60 * 60)
+  end
+
   def utc_yesterday() do
     utc_days_ago(1)
   end

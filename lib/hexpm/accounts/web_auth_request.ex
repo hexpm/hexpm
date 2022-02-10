@@ -11,6 +11,8 @@ defmodule Hexpm.Accounts.WebAuthRequest do
     field :key_name, :string
     field :verified, :boolean, default: false
     belongs_to :user, Hexpm.Accounts.User
+
+    timestamps()
   end
 
   def create(request, params \\ %{}) do

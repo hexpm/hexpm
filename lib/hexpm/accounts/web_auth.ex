@@ -3,7 +3,10 @@ defmodule Hexpm.Accounts.WebAuth do
 
   @moduledoc false
 
+  import Ecto.Query
+
   alias Hexpm.Accounts.WebAuthRequest
+  alias Hexpm.Utils
 
   # `device_code` refers to the code assigned to a client to identify it
   # `user_code` refers to the code the user enters to authorize a client
@@ -60,7 +63,9 @@ defmodule Hexpm.Accounts.WebAuth do
   def submit(user, user_code) do
     request =
       WebAuthRequest
-      |> Repo.get_by(user_code: user_code)
+      |> where([r], r.inserted_at >= ^Utils.datetime_utc_yesterday())
+      |> where(user_code: ^user_code)
+      |> Repo.one()
       |> Repo.preload(:user)
 
     if request do
@@ -83,7 +88,9 @@ defmodule Hexpm.Accounts.WebAuth do
   def access_key(device_code, user_agent) do
     request =
       WebAuthRequest
-      |> Repo.get_by(device_code: device_code)
+      |> where([r], r.inserted_at >= ^Utils.datetime_utc_yesterday())
+      |> where(device_code: ^device_code)
+      |> Repo.one()
       |> Repo.preload(:user)
 
     case request do

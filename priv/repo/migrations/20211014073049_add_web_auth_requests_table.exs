@@ -8,6 +8,8 @@ defmodule Hexpm.RepoBase.Migrations.AddWebAuthRequestsTable do
       add(:key_name, :string, null: false)
       add(:verified, :boolean, null: false)
       add(:user_id, references(:users))
+
+      timestamps()
     end
 
     create(unique_index(:web_auth_requests, [:user_code]))

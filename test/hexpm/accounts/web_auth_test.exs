@@ -1,7 +1,10 @@
 defmodule Hexpm.Accounts.WebAuthTest do
   use Hexpm.DataCase, async: true
 
-  alias Hexpm.Accounts.WebAuth
+  alias Hexpm.Accounts.{WebAuth, WebAuthRequest}
+  alias Hexpm.Utils
+
+  alias Ecto.Changeset
 
   @key_name "test-key"
 
@@ -33,6 +36,12 @@ defmodule Hexpm.Accounts.WebAuthTest do
     test "returns error on invalid user code", c do
       assert WebAuth.submit(c.user, "bad_code") == {:error, "invalid user code"}
     end
+
+    test "returns error on stale request's user code", c do
+      make_request_stale(c)
+
+      assert WebAuth.submit(c.user, c.request.user_code) == {:error, "invalid user code"}
+    end
   end
 
   describe "access_key/1" do
@@ -54,6 +63,13 @@ defmodule Hexpm.Accounts.WebAuthTest do
 
     test "returns an error on invalid device code", c do
       response = WebAuth.access_key("bad code", c.audit_user_agent)
+
+      assert response == {:error, "invalid device code"}
+    end
+
+    test "returns an error on state request's device code", c do
+      make_request_stale(c)
+      response = WebAuth.access_key(c.request.device_code, c.audit_user_agent)
 
       assert response == {:error, "invalid device code"}
     end
@@ -93,5 +109,11 @@ defmodule Hexpm.Accounts.WebAuthTest do
     |> audit_data
     |> elem(1)
     |> then(&Map.put_new(c, :audit_user_agent, &1))
+  end
+
+  def make_request_stale(c) do
+    Repo.get_by(WebAuthRequest, user_code: c.request.user_code)
+    |> Changeset.change(inserted_at: Utils.datetime_utc_yesterday())
+    |> Repo.update()
   end
 end
