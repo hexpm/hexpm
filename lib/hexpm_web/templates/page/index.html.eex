@@ -69,9 +69,14 @@
       <div class="max-w-7xl mx-auto px-14 bg-green-500">1</div>
       <div class="max-w-7xl mx-auto px-10 grid grid-cols-3 gap-x-12">
         <div>
-          <div class="bg-primary-600 rounded-xl flex items-center p-4 space-x-3">
-            <div>1</div>
-            <h3 class="text-gray-100 text-xl font-semibold">Most Downloaded</h3>
+          <div class="bg-primary-600 rounded-xl flex items-center p-4 space-x-2">
+            <div class="w-14">
+              <svg  version="1.1" width="100%" viewbox="0 0 108 100" xmlns="http://www.w3.org/2000/svg">
+                <polygon points="50 3,100 28,100 75, 50 100,3 75,3 25" fill="rgba(82, 48, 121, 1)"/>
+                <text x="50" y="68" text-anchor="middle" font-size="40">&#128525;</text>
+              </svg>  
+            </div>
+            <div class="text-gray-100 text-xl font-semibold">Most Downloaded</div>
           </div>
           <div>
             <ul class="divide-y divide-gray-200 space-y-4">
@@ -84,7 +89,12 @@
         </div>
         <div>
            <div class="bg-green-600 rounded-xl flex items-center p-4 space-x-3">
-            <div>1</div>
+            <div class="w-14">
+              <svg  version="1.1" width="100%" viewbox="0 0 108 100" xmlns="http://www.w3.org/2000/svg">
+                <polygon points="50 3,100 28,100 75, 50 100,3 75,3 25" fill="rgba(12, 100, 60, 1)"/>
+                <text x="50" y="68" text-anchor="middle" font-size="40">&#128293;</text>
+              </svg>  
+            </div>
             <h3 class="text-gray-100 text-xl font-semibold">New Packages</h3>
           </div>
           <div>
@@ -98,7 +108,12 @@
         </div>
         <div>
            <div class="bg-blue-600 rounded-xl flex items-center p-4 space-x-3">
-            <div>1</div>
+            <div class="w-14">
+              <svg  version="1.1" width="100%" viewbox="0 0 108 100" xmlns="http://www.w3.org/2000/svg">
+                <polygon points="50 3,100 28,100 75, 50 100,3 75,3 25" fill="rgba(10, 68, 185, 1)"/>
+                <text x="50" y="68" text-anchor="middle" font-size="40">&#128064;</text>
+              </svg>  
+            </div>
             <h3 class="text-gray-100 text-xl font-semibold">Recently Updated</h3>
           </div>
           <div>
@@ -111,11 +126,13 @@
           </div>
         </div>
       </div>
-      <div class="bg-red-500">3</div>
-      
+      <div class="bg-primary-900">
+        1
+      </div>
     </div>
   </div>
 </div>
+
 
 <!--<div class="featured-home">
   <%= render HexpmWeb.LayoutView, "_flash.html", conn: @conn %>
