@@ -116,7 +116,7 @@ defmodule Hexpm.Accounts.WebAuth do
 
         case result do
           {:ok, %{write_key_gen: %{key: write_key}, read_key_gen: %{key: read_key}}} ->
-            %{write_key: write_key, read_key: read_key}
+            {:ok, %{write_key: write_key, read_key: read_key}}
 
           {:error, _, _, _} ->
             {:error, "key generation failed"}

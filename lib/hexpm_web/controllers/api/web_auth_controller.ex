@@ -23,7 +23,7 @@ defmodule HexpmWeb.API.WebAuthController do
       {:error, msg} ->
         invalid_parameter(conn, msg)
 
-      keys ->
+      {:ok, keys} ->
         render(conn, :access, keys)
     end
   end

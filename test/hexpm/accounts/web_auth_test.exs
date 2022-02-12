@@ -52,7 +52,7 @@ defmodule Hexpm.Accounts.WebAuthTest do
 
       keys = WebAuth.access_key(c.request.device_code, c.audit_user_agent)
 
-      assert %{write_key: %Hexpm.Accounts.Key{}, read_key: %Hexpm.Accounts.Key{}} = keys
+      assert {:ok, %{write_key: %Hexpm.Accounts.Key{}, read_key: %Hexpm.Accounts.Key{}}} = keys
     end
 
     test "returns an error on unverified request", c do
