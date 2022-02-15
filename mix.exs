@@ -50,7 +50,7 @@ defmodule Hexpm.MixProject do
       {:eqrcode, "~> 0.1.6"},
       {:goth, "~> 1.3-rc"},
       {:hackney, "~> 1.7"},
-      {:hex_core, "~> 0.2", hex_core_opts()},
+      {:hex_core, "~> 0.8", hex_core_opts()},
       {:jason, "~> 1.0"},
       {:libcluster, "~> 3.0"},
       {:logster, "~> 1.0"},

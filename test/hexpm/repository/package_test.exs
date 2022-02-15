@@ -48,6 +48,23 @@ defmodule Hexpm.Repository.PackageTest do
     assert package.meta.description == "updated"
   end
 
+  test "update package with invalid license", %{user: user, repository: repository} do
+    package =
+      Package.build(repository, user, pkg_meta(%{name: "ecto", description: "original"}))
+      |> Hexpm.Repo.insert!()
+
+    Package.update(package, %{
+      "meta" => %{
+        "description" => "updated",
+        "licenses" => ["Invalid-License"]
+      }
+    })
+    |> Hexpm.Repo.update!()
+
+    package = Hexpm.Repo.get_by(Package, name: "ecto")
+    assert package.meta.description == "updated"
+  end
+
   test "validate blank description for public package", %{
     user: user,
     public_repository: repository
