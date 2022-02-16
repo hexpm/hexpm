@@ -64,7 +64,7 @@
       </div>
     </div>
   </div>
-  <div class="relative top-14 bg-white">
+  <div class="relative top-14 bg-white space-y-24">
     <div class="pt-44 space-y-10">
       <div class="max-w-7xl mx-auto px-14 bg-green-500">1</div>
       <div class="max-w-7xl mx-auto px-10 grid grid-cols-3 gap-x-12">
@@ -125,9 +125,18 @@
             </ul>
           </div>
         </div>
-      </div>
-      <div class="bg-primary-900">
-        1
+      </div>  
+      <div class="grid grid-cols-3 bg-primary-900 pl-10">
+        <div class="w-60 pt-20 pb-10">
+          <%= icon(:remixicon, :"open-source-fill", width: "60px", height: "60px", fill: "rgba(105, 67, 141, 1)")%>
+          <h1 class="font-bold text-white text-4xl">hex.pm is open-source</h1>
+        </div>
+        <div class="grid grid-cols-2 pt-5">
+          <%= icon(:remixicon, :"open-source-fill", width: "162px", height: "162px", fill: "rgba(61, 33, 101, 1)", class: "-rotate-45")%>
+          <div class="rounded-xl w-max h-12 relative top-20 right-32 z-40">
+            <img src="<%= Routes.static_path(Endpoint, "/images/package_page.png") %>" width="500px" height="50px" alt="package logo"></a>
+          </div>
+        </div>
       </div>
     </div>
   </div>
