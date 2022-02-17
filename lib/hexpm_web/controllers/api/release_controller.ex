@@ -6,20 +6,24 @@ defmodule HexpmWeb.API.ReleaseController do
   plug :fetch_release when action in [:delete]
   plug :maybe_fetch_package when action in [:create, :publish]
 
-  plug :maybe_authorize,
-       [domain: "api", resource: "read", fun: &repository_access/2]
+  plug :authorize,
+       [domain: "api", resource: "read", fun: &organization_access/2]
        when action in [:show]
 
   plug :authorize,
        [
          domain: "api",
          resource: "write",
-         fun: [&maybe_package_owner/2, &organization_billing_active/2]
+         fun: [&package_owner/2, &organization_billing_active/2]
        ]
        when action in [:create, :publish]
 
   plug :authorize,
-       [domain: "api", resource: "write", fun: [&package_owner/2, &organization_billing_active/2]]
+       [
+         domain: "api",
+         resource: "write",
+         fun: [&package_owner/2, &organization_billing_active/2]
+       ]
        when action in [:delete]
 
   def publish(conn, %{"body" => body} = params) do

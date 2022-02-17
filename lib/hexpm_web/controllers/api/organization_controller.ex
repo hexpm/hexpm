@@ -13,7 +13,12 @@ defmodule HexpmWeb.API.OrganizationController do
        when action in [:show, :audit_logs]
 
   plug :authorize,
-       [domain: "api", resource: "write", fun: &organization_access_write/2]
+       [
+         domain: "api",
+         resource: "write",
+         fun: &organization_access/3,
+         opts: [organization_level: "write"]
+       ]
        when action == :update
 
   def index(conn, _params) do

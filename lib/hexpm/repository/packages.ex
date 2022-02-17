@@ -24,20 +24,13 @@ defmodule Hexpm.Repository.Packages do
     package && %{package | repository: repository}
   end
 
-  def owner_with_access?(package, user) do
+  def owner_with_access?(package, user, level \\ "maintainer") do
     repository = package.repository
+    role = PackageOwner.level_to_organization_role(level)
 
-    Repo.one!(Package.package_owner(package, user)) or
-      Repo.one!(Package.organization_owner(package, user)) or
-      (not repository.public and Organizations.access?(repository.organization, user, "write"))
-  end
-
-  def owner_with_full_access?(package, user) do
-    repository = package.repository
-
-    Repo.one!(Package.package_owner(package, user, "full")) or
-      Repo.one!(Package.organization_owner(package, user, "full")) or
-      (not repository.public and Organizations.access?(repository.organization, user, "admin"))
+    Repo.one!(Package.package_owner(package, user, level)) or
+      Repo.one!(Package.organization_owner(package, user, level)) or
+      (not repository.public and Organizations.access?(repository.organization, user, role))
   end
 
   def preload(package) do

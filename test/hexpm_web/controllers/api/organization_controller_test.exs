@@ -48,9 +48,18 @@ defmodule HexpmWeb.API.OrganizationControllerTest do
 
     test "get organization authorizes", %{user1: user1, organization: organization} do
       build_conn()
+      |> get("api/orgs/#{organization.name}")
+      |> response(404)
+
+      build_conn()
       |> put_req_header("authorization", key_for(user1))
       |> get("api/orgs/#{organization.name}")
-      |> response(403)
+      |> response(404)
+
+      build_conn()
+      |> put_req_header("authorization", key_for(user1))
+      |> get("api/orgs/unknown")
+      |> response(404)
     end
 
     test "get organization", %{user1: user1, organization: organization} do
@@ -71,7 +80,7 @@ defmodule HexpmWeb.API.OrganizationControllerTest do
       build_conn()
       |> put_req_header("authorization", key_for(user1))
       |> get("api/orgs/#{String.upcase(organization.name)}")
-      |> response(403)
+      |> response(404)
     end
   end
 
@@ -80,9 +89,13 @@ defmodule HexpmWeb.API.OrganizationControllerTest do
 
     test "update organization authorizes", %{user1: user1, organization: organization} do
       build_conn()
+      |> post("api/orgs/#{organization.name}", %{})
+      |> response(404)
+
+      build_conn()
       |> put_req_header("authorization", key_for(user1))
       |> post("api/orgs/#{organization.name}", %{})
-      |> response(403)
+      |> response(404)
     end
 
     test "update organization seats", %{user1: user1, organization: organization} do
@@ -114,11 +127,15 @@ defmodule HexpmWeb.API.OrganizationControllerTest do
   end
 
   describe "GET /api/orgs/:organization/audit_logs" do
-    test "returns 403 FORBIDDEN when unauthorized", %{user1: user1, organization: organization} do
+    test "returns 404 when unauthorized", %{user1: user1, organization: organization} do
+      build_conn()
+      |> get("api/orgs/#{organization.name}/audit_logs")
+      |> response(404)
+
       build_conn()
       |> put_req_header("authorization", key_for(user1))
       |> get("api/orgs/#{organization.name}/audit_logs")
-      |> response(403)
+      |> response(404)
     end
 
     test "returns the first page of audit_logs related to this organization when params page is not specified",

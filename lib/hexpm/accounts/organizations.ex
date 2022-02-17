@@ -24,6 +24,10 @@ defmodule Hexpm.Accounts.Organizations do
     false
   end
 
+  def access?(%Organization{id: id}, %Organization{id: id}, _role) do
+    true
+  end
+
   def access?(organization, user, role) do
     Repo.one!(Organization.access(organization, user, role))
   end

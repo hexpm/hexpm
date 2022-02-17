@@ -31,7 +31,6 @@ defmodule HexpmWeb.API.OwnerControllerTest do
     test "get all package owners", %{user1: user1, user2: user2, package: package} do
       conn =
         build_conn()
-        |> put_req_header("authorization", key_for(user1))
         |> get("api/packages/#{package.name}/owners")
 
       result = json_response(conn, 200)
@@ -41,7 +40,6 @@ defmodule HexpmWeb.API.OwnerControllerTest do
 
       conn =
         build_conn()
-        |> put_req_header("authorization", key_for(user1))
         |> get("api/packages/#{package.name}/owners")
 
       [first, second] = json_response(conn, 200)
@@ -57,9 +55,13 @@ defmodule HexpmWeb.API.OwnerControllerTest do
       repository_package: package
     } do
       build_conn()
+      |> get("api/repos/#{repository.name}/packages/#{package.name}/owners")
+      |> json_response(404)
+
+      build_conn()
       |> put_req_header("authorization", key_for(user1))
       |> get("api/repos/#{repository.name}/packages/#{package.name}/owners")
-      |> json_response(403)
+      |> json_response(404)
     end
 
     test "returns 403 for unknown repository", %{
@@ -68,14 +70,18 @@ defmodule HexpmWeb.API.OwnerControllerTest do
       repository_package: package
     } do
       build_conn()
+      |> get("api/repos/UNKNOWN_REPOSITORY/packages/#{package.name}/owners")
+      |> json_response(404)
+
+      build_conn()
       |> put_req_header("authorization", key_for(user1))
       |> get("api/repos/UNKNOWN_REPOSITORY/packages/#{package.name}/owners")
-      |> json_response(403)
+      |> json_response(404)
 
       build_conn()
       |> put_req_header("authorization", key_for(repository.organization))
       |> get("api/repos/UNKNOWN_REPOSITORY/packages/#{package.name}/owners")
-      |> json_response(403)
+      |> json_response(404)
     end
 
     test "returns 403 for missing package if you are not authorized", %{
@@ -83,16 +89,20 @@ defmodule HexpmWeb.API.OwnerControllerTest do
       repository: repository
     } do
       build_conn()
+      |> get("api/repos/#{repository.name}/packages/UNKNOWN_PACKAGE/owners")
+      |> json_response(404)
+
+      build_conn()
       |> put_req_header("authorization", key_for(user1))
       |> get("api/repos/#{repository.name}/packages/UNKNOWN_PACKAGE/owners")
-      |> json_response(403)
+      |> json_response(404)
 
       other_repository = insert(:repository)
 
       build_conn()
       |> put_req_header("authorization", key_for(other_repository.organization))
       |> get("api/repos/#{repository.name}/packages/UNKNOWN_PACKAGE/owners")
-      |> json_response(403)
+      |> json_response(404)
     end
 
     test "returns 404 for missing package if you are authorized", %{
@@ -148,24 +158,21 @@ defmodule HexpmWeb.API.OwnerControllerTest do
   describe "GET /api/packages/:name/owners/:email" do
     test "check if user is package owner", %{user1: user1, user2: user2, package: package} do
       build_conn()
-      |> put_req_header("authorization", key_for(user1))
       |> get("api/packages/#{package.name}/owners/#{hd(user1.emails).email}")
       |> response(200)
 
       build_conn()
-      |> put_req_header("authorization", key_for(user1))
       |> get("api/packages/#{package.name}/owners/#{hd(user2.emails).email}")
       |> response(404)
 
       build_conn()
-      |> put_req_header("authorization", key_for(user1))
       |> get("api/packages/#{package.name}/owners/UNKNOWN")
       |> response(404)
     end
   end
 
   describe "GET /api/repos/:repository/packages/:name/owners/:email" do
-    test "returns 403 if you are not authorized", %{
+    test "returns 404 if you are not authorized", %{
       user1: user1,
       repository: repository,
       repository_package: package
@@ -175,19 +182,19 @@ defmodule HexpmWeb.API.OwnerControllerTest do
       |> get(
         "api/repos/#{repository.name}/packages/#{package.name}/owners/#{hd(user1.emails).email}"
       )
-      |> response(403)
+      |> response(404)
     end
 
-    test "returns 403 for unknown repository", %{user1: user1, repository_package: package} do
+    test "returns 404 for unknown repository", %{user1: user1, repository_package: package} do
       build_conn()
       |> put_req_header("authorization", key_for(user1))
       |> get(
         "api/repos/UNKNOWN_REPOSITORY/packages/#{package.name}/owners/#{hd(user1.emails).email}"
       )
-      |> response(403)
+      |> response(404)
     end
 
-    test "returns 403 for missing package if you are not authorized", %{
+    test "returns 404 for missing package if you are not authorized", %{
       user1: user1,
       repository: repository
     } do
@@ -196,7 +203,7 @@ defmodule HexpmWeb.API.OwnerControllerTest do
       |> get(
         "api/repos/#{repository.name}/packages/UNKNOWN_PACKAGE/owners/#{hd(user1.emails).email}"
       )
-      |> response(403)
+      |> response(404)
     end
 
     test "returns 404 for missing package if you are authorized", %{
@@ -371,21 +378,25 @@ defmodule HexpmWeb.API.OwnerControllerTest do
   end
 
   describe "PUT /repos/:repository/packages/:name/owners/:email" do
-    test "returns 403 if you are not authorized", %{
+    test "returns 404 if you are not authorized", %{
       user1: user1,
       user2: user2,
       repository: repository,
       repository_package: package
     } do
       build_conn()
+      |> put("api/repos/#{repository.name}/packages/#{package.name}/owners/#{user2.username}")
+      |> response(404)
+
+      build_conn()
       |> put_req_header("authorization", key_for(user1))
       |> put("api/repos/#{repository.name}/packages/#{package.name}/owners/#{user2.username}")
-      |> response(403)
+      |> response(404)
 
       assert Hexpm.Repo.aggregate(assoc(package, :owners), :count, :id) == 1
     end
 
-    test "returns 403 for unknown repository", %{
+    test "returns 404 for unknown repository", %{
       user1: user1,
       user2: user2,
       repository_package: package
@@ -393,12 +404,17 @@ defmodule HexpmWeb.API.OwnerControllerTest do
       build_conn()
       |> put_req_header("authorization", key_for(user1))
       |> put("api/repos/UNKNOWN_REPOSITORY/packages/#{package.name}/owners/#{user2.username}")
-      |> response(403)
+      |> response(404)
+
+      build_conn()
+      |> put_req_header("authorization", key_for(user1))
+      |> put("api/repos/UNKNOWN_REPOSITORY/packages/#{package.name}/owners/#{user2.username}")
+      |> response(404)
 
       assert Hexpm.Repo.aggregate(assoc(package, :owners), :count, :id) == 1
     end
 
-    test "returns 403 for missing package if you are not authorized", %{
+    test "returns 404 for missing package if you are not authorized", %{
       user1: user1,
       user2: user2,
       repository: repository,
@@ -407,7 +423,12 @@ defmodule HexpmWeb.API.OwnerControllerTest do
       build_conn()
       |> put_req_header("authorization", key_for(user1))
       |> put("api/repos/#{repository.name}/packages/UNKNOWN_PACKAGE/owners/#{user2.username}")
-      |> response(403)
+      |> response(404)
+
+      build_conn()
+      |> put_req_header("authorization", key_for(user1))
+      |> put("api/repos/#{repository.name}/packages/UNKNOWN_PACKAGE/owners/#{user2.username}")
+      |> response(404)
 
       assert Hexpm.Repo.aggregate(assoc(package, :owners), :count, :id) == 1
     end
@@ -553,23 +574,27 @@ defmodule HexpmWeb.API.OwnerControllerTest do
   end
 
   describe "DELETE /repos/:repository/packages/:name/owners/:email" do
-    test "returns 403 if you are not authorized", %{
+    test "returns 404 if you are not authorized", %{
       user1: user1,
       user2: user2,
       repository: repository,
       repository_package: package
     } do
       insert(:package_owner, package: package, user: user2)
+
+      build_conn()
+      |> delete("api/repos/#{repository.name}/packages/#{package.name}/owners/#{user2.username}")
+      |> response(404)
 
       build_conn()
       |> put_req_header("authorization", key_for(user1))
       |> delete("api/repos/#{repository.name}/packages/#{package.name}/owners/#{user2.username}")
-      |> response(403)
+      |> response(404)
 
       assert Hexpm.Repo.aggregate(assoc(package, :owners), :count, :id) == 2
     end
 
-    test "returns 403 for unknown repository", %{
+    test "returns 404 for unknown repository", %{
       user1: user1,
       user2: user2,
       repository_package: package
@@ -577,14 +602,18 @@ defmodule HexpmWeb.API.OwnerControllerTest do
       insert(:package_owner, package: package, user: user2)
 
       build_conn()
+      |> delete("api/repos/UNKNOWN_REPOSITORY/packages/#{package.name}/owners/#{user2.username}")
+      |> response(404)
+
+      build_conn()
       |> put_req_header("authorization", key_for(user1))
       |> delete("api/repos/UNKNOWN_REPOSITORY/packages/#{package.name}/owners/#{user2.username}")
-      |> response(403)
+      |> response(404)
 
       assert Hexpm.Repo.aggregate(assoc(package, :owners), :count, :id) == 2
     end
 
-    test "returns 403 for missing package if you are not authorized", %{
+    test "returns 404 for missing package if you are not authorized", %{
       user1: user1,
       user2: user2,
       repository: repository,
@@ -593,9 +622,13 @@ defmodule HexpmWeb.API.OwnerControllerTest do
       insert(:package_owner, package: package, user: user2)
 
       build_conn()
+      |> delete("api/repos/#{repository.name}/packages/UNKNOWN_PACKAGE/owners/#{user2.username}")
+      |> response(404)
+
+      build_conn()
       |> put_req_header("authorization", key_for(user1))
       |> delete("api/repos/#{repository.name}/packages/UNKNOWN_PACKAGE/owners/#{user2.username}")
-      |> response(403)
+      |> response(404)
 
       assert Hexpm.Repo.aggregate(assoc(package, :owners), :count, :id) == 2
     end

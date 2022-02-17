@@ -37,12 +37,12 @@ defmodule HexpmWeb.API.DocsControllerTest do
 
       build_conn()
       |> get("api/repos/#{repository.name}/packages/#{package.name}/releases/0.0.1/docs")
-      |> response(403)
+      |> response(404)
 
       build_conn()
       |> put_req_header("authorization", key_for(user))
       |> get("api/repos/#{repository.name}/packages/#{package.name}/releases/0.0.1/docs")
-      |> response(403)
+      |> response(404)
     end
 
     test "redirects to tarball", %{user: user} do
@@ -93,7 +93,7 @@ defmodule HexpmWeb.API.DocsControllerTest do
       insert(:release, package: package, version: "0.0.1")
 
       publish_docs(user, repository, package, "0.0.1", [{'index.html', "package v0.0.1"}])
-      |> response(403)
+      |> response(404)
 
       refute Hexpm.Repo.get_by!(assoc(package, :releases), version: "0.0.1").has_docs
     end
@@ -118,7 +118,7 @@ defmodule HexpmWeb.API.DocsControllerTest do
         "0.0.1",
         [{'index.html', "package v0.0.1"}]
       )
-      |> response(403)
+      |> response(404)
 
       refute Hexpm.Repo.get_by!(assoc(package, :releases), version: "0.0.1").has_docs
 
@@ -218,7 +218,7 @@ defmodule HexpmWeb.API.DocsControllerTest do
       |> response(201)
 
       revert_docs(user2, repository, package, "0.0.1")
-      |> response(403)
+      |> response(404)
 
       assert Hexpm.Repo.get_by(assoc(package, :releases), version: "0.0.1").has_docs
 

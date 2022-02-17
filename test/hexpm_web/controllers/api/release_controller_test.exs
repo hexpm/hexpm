@@ -711,7 +711,7 @@ defmodule HexpmWeb.API.ReleaseControllerTest do
         "api/repos/#{repository.name}/packages/#{meta.name}/releases",
         create_tar(meta)
       )
-      |> json_response(403)
+      |> json_response(404)
     end
 
     test "existing package authorizes", %{user: user, repository: repository} do
@@ -731,7 +731,7 @@ defmodule HexpmWeb.API.ReleaseControllerTest do
         "api/repos/#{repository.name}/packages/#{meta.name}/releases",
         create_tar(meta)
       )
-      |> json_response(403)
+      |> json_response(404)
     end
   end
 
@@ -747,7 +747,7 @@ defmodule HexpmWeb.API.ReleaseControllerTest do
       |> put_req_header("content-type", "application/octet-stream")
       |> put_req_header("authorization", key_for(user))
       |> post("api/repos/#{repository.name}/publish", create_tar(meta))
-      |> json_response(403)
+      |> json_response(404)
     end
 
     test "existing package authorizes", %{user: user, repository: repository} do
@@ -764,7 +764,7 @@ defmodule HexpmWeb.API.ReleaseControllerTest do
       |> put_req_header("content-type", "application/octet-stream")
       |> put_req_header("authorization", key_for(user))
       |> post("api/repos/#{repository.name}/publish", create_tar(meta))
-      |> json_response(403)
+      |> json_response(404)
     end
 
     test "new package requires write permission", %{user: user, repository: repository} do
@@ -1064,7 +1064,7 @@ defmodule HexpmWeb.API.ReleaseControllerTest do
       build_conn()
       |> put_req_header("authorization", key_for(user))
       |> delete("api/repos/#{repository.name}/packages/#{package.name}/releases/0.0.1")
-      |> response(403)
+      |> response(404)
 
       assert Hexpm.Repo.get_by(Package, name: package.name)
       assert Hexpm.Repo.get_by(assoc(package, :releases), version: "0.0.1")
@@ -1198,17 +1198,17 @@ defmodule HexpmWeb.API.ReleaseControllerTest do
       build_conn()
       |> put_req_header("authorization", key_for(user))
       |> get("api/repos/#{repository.name}/packages/#{package.name}/releases/0.0.1")
-      |> json_response(403)
+      |> json_response(404)
     end
 
-    test "get release returns 403 for non-existent repository", %{user: user} do
+    test "get release returns 404 for non-existent repository", %{user: user} do
       package = insert(:package)
       insert(:release, package: package, version: "0.0.1")
 
       build_conn()
       |> put_req_header("authorization", key_for(user))
       |> get("api/repos/NONEXISTANT_REPOSITORY/packages/#{package.name}/releases/0.0.1")
-      |> json_response(403)
+      |> json_response(404)
     end
 
     test "get release", %{user: user, repository: repository} do
@@ -1238,7 +1238,6 @@ defmodule HexpmWeb.API.ReleaseControllerTest do
   describe "GET /api/packages/:name/releases/:version/downloads" do
     setup do
       user = insert(:user)
-      repository = insert(:repository)
       package = insert(:package, package_owners: [build(:package_owner, user: user)])
       relprev = insert(:release, package: package, version: "0.0.1")
       release = insert(:release, package: package, version: "0.0.2")
@@ -1253,7 +1252,6 @@ defmodule HexpmWeb.API.ReleaseControllerTest do
 
       %{
         user: user,
-        repository: repository,
         package: package,
         release: release
       }

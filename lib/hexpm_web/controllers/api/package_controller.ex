@@ -4,13 +4,7 @@ defmodule HexpmWeb.API.PackageController do
   plug :fetch_repository when action in [:index]
   plug :maybe_fetch_package when action in [:show, :audit_logs]
 
-  plug :maybe_authorize,
-       [domain: "api", resource: "read", fun: &maybe_repository_access/2]
-       when action in [:index]
-
-  plug :maybe_authorize,
-       [domain: "api", resource: "read", fun: &repository_access/2]
-       when action in [:show]
+  plug :authorize, domain: "api", resource: "read", fun: &organization_access/2
 
   @sort_params ~w(name recent_downloads total_downloads inserted_at updated_at)
 

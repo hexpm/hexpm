@@ -8,7 +8,12 @@ defmodule HexpmWeb.API.OrganizationUserController do
        when action in [:index, :show]
 
   plug :authorize,
-       [domain: "api", resource: "write", fun: &organization_access_admin/2]
+       [
+         domain: "api",
+         resource: "write",
+         fun: &organization_access/3,
+         opts: [organization_role: "admin"]
+       ]
        when action in [:create, :update, :delete]
 
   def index(conn, %{"organization" => name}) do

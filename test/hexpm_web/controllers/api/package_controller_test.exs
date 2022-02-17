@@ -138,13 +138,13 @@ defmodule HexpmWeb.API.PackageControllerTest do
     } do
       build_conn()
       |> get("api/repos/#{repository.name}/packages")
-      |> json_response(403)
+      |> json_response(404)
 
       build_conn()
       # TODO: change to web_login/api_login helper
       |> put_req_header("authorization", key_for(unauthorized_user))
       |> get("api/repos/#{repository.name}/packages")
-      |> json_response(403)
+      |> json_response(404)
     end
   end
 
@@ -185,21 +185,21 @@ defmodule HexpmWeb.API.PackageControllerTest do
     } do
       build_conn()
       |> get("api/repos/#{repository.name}/packages/#{package3.name}")
-      |> json_response(403)
+      |> json_response(404)
     end
 
-    test "get package returns 403 for unknown organization", %{package1: package1} do
+    test "get package returns 404 for unknown organization", %{package1: package1} do
       build_conn()
       |> get("api/repos/UNKNOWN_REPOSITORY/packages/#{package1.name}")
-      |> json_response(403)
+      |> json_response(404)
     end
 
-    test "get package returns 403 for unknown package if you are not authorized", %{
+    test "get package returns 404 for unknown package if you are not authorized", %{
       repository: repository
     } do
       build_conn()
       |> get("api/repos/#{repository.name}/packages/UNKNOWN_PACKAGE")
-      |> json_response(403)
+      |> json_response(404)
     end
 
     test "get package returns 404 for unknown package if you are authorized", %{

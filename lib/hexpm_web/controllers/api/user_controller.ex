@@ -1,8 +1,9 @@
 defmodule HexpmWeb.API.UserController do
   use HexpmWeb, :controller
 
-  plug :authorize, [domain: "api", resource: "read"] when action in [:test]
-  plug :authorize, [domain: "api", resource: "read"] when action in [:me, :audit_logs]
+  plug :authorize,
+       [authentication: :required, domain: "api", resource: "read"]
+       when action in [:test, :me, :audit_logs]
 
   def create(conn, params) do
     params = email_param(params)

@@ -4,14 +4,15 @@ defmodule HexpmWeb.API.OwnerController do
   plug :maybe_fetch_package
 
   plug :authorize,
-       [domain: "api", resource: "read", fun: &repository_access/2]
+       [domain: "api", resource: "read", fun: &organization_access/2]
        when action in [:index, :show]
 
   plug :authorize,
        [
          domain: "api",
          resource: "write",
-         fun: [&maybe_full_package_owner/2, &organization_billing_active/2]
+         fun: [&package_owner/3, &organization_billing_active/3],
+         opts: [owner_level: "full"]
        ]
        when action in [:create, :delete]
 

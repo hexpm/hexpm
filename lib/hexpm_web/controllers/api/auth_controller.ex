@@ -2,7 +2,7 @@ defmodule HexpmWeb.API.AuthController do
   use HexpmWeb, :controller
 
   plug :required_params, ["domain"]
-  plug :authorize
+  plug :authorize, authentication: :required
 
   def show(conn, %{"domain" => domain} = params) do
     key = conn.assigns.key

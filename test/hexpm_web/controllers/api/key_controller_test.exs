@@ -96,26 +96,26 @@ defmodule HexpmWeb.API.KeyControllerTest do
       other_key = Key.build(c.other, %{name: "computer"}) |> Repo.insert!()
 
       build_conn()
+      |> get("api/orgs/#{c.organization.name}/keys")
+      |> json_response(404)
+
+      build_conn()
       |> put_req_header("authorization", org_key.user_secret)
       |> get("api/orgs/#{c.unowned_organization.name}/keys")
-      |> json_response(403)
+      |> json_response(404)
 
       build_conn()
       |> put_req_header("authorization", eric_key.user_secret)
       |> get("api/orgs/#{c.unowned_organization.name}/keys")
-      |> json_response(403)
+      |> json_response(404)
 
       build_conn()
       |> put_req_header("authorization", other_key.user_secret)
       |> get("api/orgs/#{c.organization.name}/keys")
-      |> json_response(403)
+      |> json_response(404)
 
       build_conn()
       |> put_req_header("authorization", "wrong")
-      |> get("api/orgs/#{c.organization.name}/keys")
-      |> json_response(401)
-
-      build_conn()
       |> get("api/orgs/#{c.organization.name}/keys")
       |> json_response(401)
     end

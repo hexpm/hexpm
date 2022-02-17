@@ -226,7 +226,7 @@ defmodule HexpmWeb.ControllerHelpers do
         |> assign(:organization, repository.organization)
       else
         conn
-        |> HexpmWeb.AuthHelpers.forbidden("account not authorized for this action")
+        |> not_found()
         |> halt()
       end
     else
@@ -242,7 +242,7 @@ defmodule HexpmWeb.ControllerHelpers do
         assign(conn, :organization, organization)
       else
         conn
-        |> HexpmWeb.AuthHelpers.forbidden("account not authorized for this action")
+        |> not_found()
         |> halt()
       end
     else
@@ -312,14 +312,6 @@ defmodule HexpmWeb.ControllerHelpers do
       message = "missing required parameters: #{names}"
       render_error(conn, 400, message: message)
     end
-  end
-
-  def authorize(conn, opts) do
-    HexpmWeb.AuthHelpers.authorized(conn, opts)
-  end
-
-  def maybe_authorize(conn, opts) do
-    HexpmWeb.AuthHelpers.maybe_authorized(conn, opts)
   end
 
   def audit_data(conn) do
