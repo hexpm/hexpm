@@ -54,7 +54,7 @@ defmodule Hexpm.Repository.Package do
 
     package
     |> cast(params, ~w(name)a)
-    |> unique_constraint(:name, name: "packages_repository_id__lower_name_index")
+    |> unique_constraint(:name, name: :packages_repository_id_name_index)
     |> validate_required(:name)
     |> validate_length(:name, min: 2)
     |> validate_format(:name, ~r"^[a-z]\w*$")
@@ -83,6 +83,8 @@ defmodule Hexpm.Repository.Package do
 
   def update(package, params) do
     cast(package, params, [])
+    # A release publish should always update the package's updated_at
+    |> force_change(:updated_at, DateTime.utc_now())
     |> cast_embed(:meta, with: &PackageMetadata.changeset(&1, &2, package), required: true)
     |> validate_metadata_name()
   end

@@ -40,7 +40,6 @@
   sort_recent_downloads_params = ViewHelpers.params(search: @search, page: page, sort: "recent_downloads")
   sort_created_params = ViewHelpers.params(search: @search, page: page, sort: "inserted_at")
   sort_updated_params = ViewHelpers.params(search: @search, page: page, sort: "updated_at")
-  sort_recently_published_params = ViewHelpers.params(search: @search, page: page, sort: "recently_published")
   %>
 
 <nav>
@@ -69,9 +68,6 @@
           </li>
           <li role="presentation">
             <a role="menuitem" tabindex="-1" href="<%= Routes.package_path(Endpoint, :index, sort_updated_params) %>">Recently updated</a>
-          </li>
-          <li role="presentation">
-            <a role="menuitem" tabindex="-1" href="<%= Routes.package_path(Endpoint, :index, sort_recently_published_params) %>">Recently published</a>
           </li>
         </ul>
       </div>

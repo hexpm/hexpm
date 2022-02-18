@@ -28,7 +28,7 @@ defmodule Hexpm.Accounts.Organization do
     cast(struct, params, ~w(name)a)
     |> put_change(:trial_end, default_trial_end())
     |> validate_required(~w(name)a)
-    |> unique_constraint(:name, name: :organizations__lower_name_index)
+    |> unique_constraint(:name)
     |> update_change(:name, &String.downcase/1)
     |> validate_length(:name, min: 3)
     |> validate_format(:name, @name_regex)

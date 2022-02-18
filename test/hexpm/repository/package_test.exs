@@ -2,12 +2,12 @@ defmodule Hexpm.Repository.PackageTest do
   use Hexpm.DataCase
 
   alias Hexpm.Accounts.User
-  alias Hexpm.Repository.Package
+  alias Hexpm.Repository.{Package, Repository}
 
   setup do
     user = insert(:user)
     repository = insert(:repository)
-    public_repository = insert(:repository, public: true)
+    public_repository = Hexpm.Repo.get(Repository, 1)
     %{user: user, repository: repository, public_repository: public_repository}
   end
 
@@ -265,22 +265,6 @@ defmodule Hexpm.Repository.PackageTest do
 
     assert [decimal_id, ecto_id, phoenix_id] ==
              Package.all([repository], 1, 10, nil, :recent_downloads, nil)
-             |> Repo.all()
-             |> Enum.map(& &1.id)
-  end
-
-  test "sort packages by recent releases", %{repository: repository} do
-    %{id: ecto_id} = insert(:package, repository_id: repository.id)
-    %{id: phoenix_id} = insert(:package, repository_id: repository.id)
-    %{id: decimal_id} = insert(:package, repository_id: repository.id)
-
-    insert(:release, package_id: decimal_id, version: "0.0.1")
-    insert(:release, package_id: phoenix_id, version: "0.0.1")
-    insert(:release, package_id: ecto_id, version: "0.0.1")
-    insert(:release, package_id: decimal_id, version: "0.0.2")
-
-    assert [decimal_id, ecto_id, phoenix_id] ==
-             Package.all([repository], 1, 10, nil, :recently_published, nil)
              |> Repo.all()
              |> Enum.map(& &1.id)
   end
