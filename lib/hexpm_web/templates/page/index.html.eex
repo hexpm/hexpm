@@ -131,16 +131,54 @@
           <%= icon(:remixicon, :"open-source-fill", width: "60px", height: "60px", fill: "rgba(105, 67, 141, 1)")%>
           <h1 class="font-bold text-white text-4xl">hex.pm is open-source</h1>
         </div>
-        <div class="grid grid-cols-2 pt-5">
+        <div class="grid grid-cols-2 pt-5 pl-20">
           <%= icon(:remixicon, :"open-source-fill", width: "162px", height: "162px", fill: "rgba(61, 33, 101, 1)", class: "-rotate-45")%>
-          <div class="rounded-xl w-max h-12 relative top-20 right-32 z-40">
+          <div class="rounded-xl w-max h-12 relative top-20 right-24 z-40">
             <img src="<%= Routes.static_path(Endpoint, "/images/package_page.png") %>" width="500px" height="50px" alt="package logo"></a>
           </div>
+        </div>
+      </div>
+      <div class="grid">
+        <div class="grid grid-cols-2 justify-self-start gap-12  pl-10">
+          <div class="flex items-center space-x-2">
+            <img src="<%= Routes.static_path(Endpoint, "/images/delivery-box.svg") %>" class="h-12 w-12 mix-blend-luminosity">
+            <div>
+              <span class="text-gray-900 text-2xl font-bold"><%= ViewHelpers.human_number_space(@num_packages) %></span>
+              <p class="text-gray-600 text-base font-normal">packages available</p>
+            </div>
+          </div>
+          <div class="flex items-center space-x-2">
+            <!-- replace with supposed image -->
+            <img src="<%= Routes.static_path(Endpoint, "/images/delivery-box.svg") %>" class="h-12 w-12 mix-blend-luminosity">
+            <div>
+              <span class="text-gray-900 text-2xl font-bold"><%= ViewHelpers.human_number_space(@num_releases) %></span>
+              <p class="text-gray-600 text-base font-normal">package versions</p>
+            </div>
+          </div>
+          <div class="flex items-center space-x-2">
+            <!-- replace with supposed image -->
+            <img src="<%= Routes.static_path(Endpoint, "/images/delivery-box.svg") %>" class="h-12 w-12 mix-blend-luminosity">
+            <div>
+              <span class="text-gray-900 text-2xl font-bold"><%= ViewHelpers.human_number_space(@total["day"]) %></span>
+              <p class="text-gray-600 text-base font-normal">downloads yesterday</p>
+            </div>
+          </div>
+          <div class="flex items-center space-x-2">
+            <!-- replace with supposed image -->
+            <img src="<%= Routes.static_path(Endpoint, "/images/people.svg") %>" class="h-12 w-12 mix-blend-luminosity">
+            <div>
+              <span class="text-gray-900 text-2xl font-bold"><%= ViewHelpers.human_number_space(@num_packages) %></span>
+              <p class="text-gray-600 text-base font-normal">contributors</p>
+            </div>
+          </div>
+          <button class="rounded-lg bg-blue-600 flex items-center justify-center w-64 h-12 text-white text-base font-medium">Get Started for FREE</button>
+          <a href="#" class="text-blue-600 text-base font-medium flex items-center">Private Packages @ 7$ / month</a>
         </div>
       </div>
     </div>
   </div>
 </div>
+
 
 
 <!--<div class="featured-home">
