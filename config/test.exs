@@ -24,7 +24,7 @@ config :hexpm, Hexpm.RepoBase,
   database: "hexpm_test",
   hostname: "localhost",
   pool: Ecto.Adapters.SQL.Sandbox,
-  pool_size: 10,
+  pool_size: 20,
   ownership_timeout: 61_000
 
 config :logger, level: :error
