@@ -40,11 +40,11 @@ defmodule Hexpm.Repository.Assets do
     end
   end
 
-  defp tarball_cache_control(%Repository{public: true}), do: "public, max-age=604800"
-  defp tarball_cache_control(%Repository{public: false}), do: "private, max-age=86400"
+  defp tarball_cache_control(%Repository{id: 1}), do: "public, max-age=604800"
+  defp tarball_cache_control(%Repository{}), do: "private, max-age=86400"
 
-  defp docs_cache_control(%Repository{public: true}), do: "public, max-age=86400"
-  defp docs_cache_control(%Repository{public: false}), do: "private, max-age=86400"
+  defp docs_cache_control(%Repository{id: 1}), do: "public, max-age=86400"
+  defp docs_cache_control(%Repository{}), do: "private, max-age=86400"
 
   def tarball_cdn_key(release) do
     "tarballs/#{repository_cdn_key(release)}#{release.package.name}-#{release.version}"

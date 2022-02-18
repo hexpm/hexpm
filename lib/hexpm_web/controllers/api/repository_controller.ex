@@ -42,6 +42,6 @@ defmodule HexpmWeb.API.RepositoryController do
   defp all_by_organization(nil), do: []
   defp all_by_organization(organization), do: [organization.repository]
 
-  defp show_cachability(%Repository{public: true}), do: :public
-  defp show_cachability(%Repository{public: false}), do: :private
+  defp show_cachability(%Repository{id: 1}), do: :public
+  defp show_cachability(%Repository{}), do: :private
 end

@@ -69,7 +69,6 @@ defmodule Hexpm.Factory do
 
     %Hexpm.Repository.Repository{
       name: name,
-      public: false,
       organization: build(:organization, name: name, user: build(:user, username: name))
     }
   end

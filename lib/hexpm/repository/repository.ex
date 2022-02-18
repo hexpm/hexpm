@@ -6,7 +6,6 @@ defmodule Hexpm.Repository.Repository do
 
   schema "repositories" do
     field :name, :string
-    field :public, :boolean, default: false
     timestamps()
 
     belongs_to :organization, Organization
@@ -24,7 +23,6 @@ defmodule Hexpm.Repository.Repository do
     %__MODULE__{
       id: 1,
       name: "hexpm",
-      public: true,
       organization: organization,
       organization_id: 1
     }

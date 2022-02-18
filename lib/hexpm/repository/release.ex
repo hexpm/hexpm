@@ -156,7 +156,7 @@ defmodule Hexpm.Repository.Release do
     do: "can only delete a release up to one hour after publication"
 
   defp editable?(release) do
-    not release.package.repository.public or
+    release.package.repository.id != 1 or
       within_seconds?(release.inserted_at, @one_hour) or
       within_seconds?(release.package.inserted_at, @one_day)
   end

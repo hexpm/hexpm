@@ -24,7 +24,7 @@ defmodule Hexpm.Repository.Owners do
       owner_organization && Organizations.access?(owner_organization, user, "read")
 
     cond do
-      !repository.public && !repository_access ->
+      repository.id != 1 && !repository_access ->
         {:error, :not_member}
 
       # Outside collaborators are not allowed at this time
@@ -107,7 +107,7 @@ defmodule Hexpm.Repository.Owners do
       !owner ->
         {:error, :not_owner}
 
-      length(owners) == 1 and package.repository.public ->
+      length(owners) == 1 and package.repository.id == 1 ->
         {:error, :last_owner}
 
       true ->

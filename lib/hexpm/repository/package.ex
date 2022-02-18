@@ -74,7 +74,7 @@ defmodule Hexpm.Repository.Package do
   end
 
   defp put_first_owner(changeset, user, repository) do
-    if repository.public do
+    if repository.id == 1 do
       put_assoc(changeset, :package_owners, [%PackageOwner{user_id: user.id}])
     else
       changeset
@@ -96,7 +96,7 @@ defmodule Hexpm.Repository.Package do
       po in PackageOwner,
       left_join: ou in OrganizationUser,
       on: ou.organization_id == ^package.repository.organization_id,
-      where: ou.user_id == ^user.id or ^package.repository.public,
+      where: ou.user_id == ^user.id or ^(package.repository.id == 1),
       where: po.package_id == ^package.id,
       where: po.user_id == ^user.id,
       where: po.level in ^levels,
@@ -360,21 +360,11 @@ defmodule Hexpm.Repository.Package do
     from(p in query, order_by: [desc: p.updated_at])
   end
 
-  defp sort(query, :recently_published) do
-    from(
-      p in query,
-      join: r in Release,
-      on: p.id == r.package_id,
-      group_by: p.id,
-      order_by: [desc: max(r.inserted_at), desc: p.id]
-    )
-  end
-
   defp sort(query, :total_downloads) do
     from(
       p in query,
       left_join: d in PackageDownload,
-      on: p.id == d.package_id and (d.view == "all" or is_nil(d.view)),
+      on: p.id == d.package_id and d.view == "all",
       order_by: [fragment("? DESC NULLS LAST", d.downloads)]
     )
   end
@@ -383,7 +373,7 @@ defmodule Hexpm.Repository.Package do
     from(
       p in query,
       left_join: d in PackageDownload,
-      on: p.id == d.package_id and (d.view == "recent" or is_nil(d.view)),
+      on: p.id == d.package_id and d.view == "recent",
       order_by: [fragment("? DESC NULLS LAST", d.downloads)]
     )
   end

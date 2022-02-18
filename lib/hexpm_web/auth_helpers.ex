@@ -191,7 +191,7 @@ defmodule HexpmWeb.AuthHelpers do
       Packages.owner_with_access?(package, organization.user, opts[:owner_level] || "maintainer") ->
         :ok
 
-      repository.public ->
+      repository.id == 1 ->
         {:error, :auth}
 
       true ->
@@ -202,13 +202,13 @@ defmodule HexpmWeb.AuthHelpers do
   def package_owner(%Repository{} = repository, %Package{} = package, %User{} = user, opts) do
     cond do
       Packages.owner_with_access?(package, user, opts[:owner_level] || "maintainer") -> :ok
-      repository.public -> {:error, :auth}
+      repository.id == 1 -> {:error, :auth}
       true -> {:error, :not_found}
     end
   end
 
   def package_owner(%Repository{} = repository, %Package{}, nil, _opts) do
-    if repository.public do
+    if repository.id == 1 do
       {:error, :auth}
     else
       {:error, :not_found}
@@ -220,7 +220,7 @@ defmodule HexpmWeb.AuthHelpers do
     actual_role = Organizations.get_role(repository.organization, user)
 
     cond do
-      repository.public -> :ok
+      repository.id == 1 -> :ok
       actual_role && actual_role in Organization.role_or_higher(expected_role) -> :ok
       actual_role -> {:error, :auth}
       true -> {:error, :not_found}
@@ -228,7 +228,7 @@ defmodule HexpmWeb.AuthHelpers do
   end
 
   def package_owner(%Repository{} = repository, nil = _package, nil = _user, _opts) do
-    boolean_to_not_found(repository.public)
+    boolean_to_not_found(repository.id == 1)
   end
 
   def package_owner(nil = _repository, nil = _package, _user, _opts) do

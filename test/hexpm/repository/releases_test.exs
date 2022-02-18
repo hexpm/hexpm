@@ -5,7 +5,7 @@ defmodule Hexpm.Repository.ReleasesTest do
   alias Hexpm.Repository.{Packages, Releases}
 
   setup do
-    repository = insert(:repository, public: false)
+    repository = insert(:repository)
     package = %{insert(:package) | repository: Repository.hexpm()}
     release = insert(:release, package: package, version: "0.1.0")
     user = insert(:user)

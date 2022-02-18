@@ -30,7 +30,7 @@ defmodule Hexpm.Repository.Packages do
 
     Repo.one!(Package.package_owner(package, user, level)) or
       Repo.one!(Package.organization_owner(package, user, level)) or
-      (not repository.public and Organizations.access?(repository.organization, user, role))
+      (repository.id != 1 and Organizations.access?(repository.organization, user, role))
   end
 
   def preload(package) do

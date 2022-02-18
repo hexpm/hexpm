@@ -4,8 +4,8 @@ defmodule HexpmWeb.API.RepositoryControllerTest do
   setup do
     repo_user = insert(:user)
     user = insert(:user)
-    repository1 = insert(:repository, public: false)
-    repository2 = insert(:repository, public: false)
+    repository1 = insert(:repository)
+    repository2 = insert(:repository)
     insert(:organization_user, user: repo_user, organization: repository1.organization)
     %{repo_user: repo_user, user: user, repository1: repository1, repository2: repository2}
   end

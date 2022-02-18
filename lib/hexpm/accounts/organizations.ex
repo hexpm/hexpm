@@ -37,7 +37,7 @@ defmodule Hexpm.Accounts.Organizations do
       Multi.new()
       |> Multi.insert(:organization, Organization.changeset(%Organization{}, params))
       |> Multi.insert(:repository, fn %{organization: organization} ->
-        %Repository{name: organization.name, public: false, organization_id: organization.id}
+        %Repository{name: organization.name, organization_id: organization.id}
       end)
       |> Multi.insert(:user, &User.build_organization(&1.organization))
       |> Multi.insert(:organization_user, fn %{organization: organization} ->
@@ -63,7 +63,7 @@ defmodule Hexpm.Accounts.Organizations do
       Multi.new()
       |> Multi.insert(:organization, Organization.build_from_user(organization_user))
       |> Multi.insert(:repository, fn %{organization: organization} ->
-        %Repository{name: organization.name, public: false, organization_id: organization.id}
+        %Repository{name: organization.name, organization_id: organization.id}
       end)
       |> Multi.update(:user, &User.to_organization(organization_user, &1.organization))
       |> Multi.insert(:organization_user, fn %{organization: organization} ->

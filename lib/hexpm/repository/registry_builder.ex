@@ -359,8 +359,8 @@ defmodule Hexpm.Repository.RegistryBuilder do
     end)
   end
 
-  defp cache_control(%Repository{public: true}), do: "public, max-age=3600"
-  defp cache_control(%Repository{public: false}), do: "private, max-age=3600"
+  defp cache_control(%Repository{id: 1}), do: "public, max-age=3600"
+  defp cache_control(%Repository{}), do: "private, max-age=3600"
 
   defp package_tuples(packages, releases) do
     Enum.reduce(releases, %{}, fn map, acc ->
