@@ -265,69 +265,14 @@ defmodule Hexpm.Repository.Release do
     )
   end
 
-  defmacrop date_trunc(period, expr) do
-    quote do
-      fragment("date_trunc(?, ?)", unquote(period), unquote(expr))
-    end
-  end
-
-  defmacrop date_trunc_format(period, format, expr) do
-    quote do
-      fragment("to_char(date_trunc(?, ?), ?)", unquote(period), unquote(expr), unquote(format))
-    end
-  end
-
-  def downloads_for_last_n_days(release_id_or_ids, num_of_days) do
-    base_query = downloads_by_period(release_id_or_ids, "day")
+  def downloads_for_last_n_days(release_id, num_of_days) do
     date_start = Date.add(Date.utc_today(), -1 * num_of_days)
-    from(d in base_query, where: d.day >= ^date_start)
-  end
-
-  def downloads_by_period(release_ids, filter) when is_list(release_ids) do
-    from(d in Download, where: d.release_id in ^release_ids)
-    |> apply_filter(filter)
+    from(d in downloads_by_period(release_id, :day), where: d.day >= ^date_start)
   end
 
   def downloads_by_period(release_id, filter) do
     from(d in Download, where: d.release_id == ^release_id)
-    |> apply_filter(filter)
-  end
-
-  defp apply_filter(query, filter) do
-    case filter do
-      "day" ->
-        from(
-          d in query,
-          group_by: date_trunc("day", d.day),
-          order_by: date_trunc("day", d.day),
-          select: %Download{
-            day: date_trunc_format("day", "YYYY-MM-DD", d.day),
-            downloads: sum(d.downloads),
-            updated_at: max(d.day)
-          }
-        )
-
-      "month" ->
-        from(
-          d in query,
-          group_by: date_trunc("month", d.day),
-          order_by: date_trunc("month", d.day),
-          select: %Download{
-            day: date_trunc_format("month", "YYYY-MM", d.day),
-            downloads: sum(d.downloads),
-            updated_at: max(d.day)
-          }
-        )
-
-      "all" ->
-        from(
-          d in query,
-          select: %Download{
-            downloads: sum(d.downloads),
-            updated_at: max(d.day)
-          }
-        )
-    end
+    |> Download.query_filter(filter)
   end
 end
 

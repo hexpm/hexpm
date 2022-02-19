@@ -227,8 +227,16 @@ defmodule Hexpm.Repository.PackageTest do
   test "sort packages by total downloads", %{repository: repository} do
     %{id: ecto_id} = insert(:package, repository_id: repository.id)
     %{id: phoenix_id} = insert(:package, repository_id: repository.id)
-    insert(:release, package_id: phoenix_id, daily_downloads: [build(:download, downloads: 10)])
-    insert(:release, package_id: ecto_id, daily_downloads: [build(:download, downloads: 5)])
+
+    insert(:release,
+      package_id: phoenix_id,
+      daily_downloads: [build(:download, package_id: phoenix_id, downloads: 10)]
+    )
+
+    insert(:release,
+      package_id: ecto_id,
+      daily_downloads: [build(:download, package_id: ecto_id, downloads: 5)]
+    )
 
     :ok = Hexpm.Repo.refresh_view(Hexpm.Repository.PackageDownload)
 
@@ -246,19 +254,25 @@ defmodule Hexpm.Repository.PackageTest do
     insert(
       :release,
       package_id: phoenix_id,
-      daily_downloads: [build(:download, downloads: 10, day: Hexpm.Utils.utc_days_ago(91))]
+      daily_downloads: [
+        build(:download, package_id: phoenix_id, downloads: 10, day: Hexpm.Utils.utc_days_ago(91))
+      ]
     )
 
     insert(
       :release,
       package_id: decimal_id,
-      daily_downloads: [build(:download, downloads: 10, day: Hexpm.Utils.utc_days_ago(35))]
+      daily_downloads: [
+        build(:download, package_id: decimal_id, downloads: 10, day: Hexpm.Utils.utc_days_ago(35))
+      ]
     )
 
     insert(
       :release,
       package_id: ecto_id,
-      daily_downloads: [build(:download, downloads: 5, day: Hexpm.Utils.utc_days_ago(10))]
+      daily_downloads: [
+        build(:download, package_id: ecto_id, downloads: 5, day: Hexpm.Utils.utc_days_ago(10))
+      ]
     )
 
     :ok = Hexpm.Repo.refresh_view(Hexpm.Repository.PackageDownload)

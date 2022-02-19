@@ -117,17 +117,12 @@ defmodule Hexpm.Repository.Releases do
   end
 
   def downloads_by_period(package, filter) do
-    if filter in ["day", "month"] do
-      Release.downloads_by_period(package, filter)
-      |> Repo.all()
-    else
-      Release.downloads_by_period(package, "all")
-      |> Repo.one()
-    end
+    Release.downloads_by_period(package, filter || :all)
+    |> Repo.all()
   end
 
-  def downloads_for_last_n_days(release_id_or_ids, num_of_days) do
-    Release.downloads_for_last_n_days(release_id_or_ids, num_of_days)
+  def downloads_for_last_n_days(release_id, num_of_days) do
+    Release.downloads_for_last_n_days(release_id, num_of_days)
     |> Repo.all()
   end
 

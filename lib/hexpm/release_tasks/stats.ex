@@ -70,7 +70,7 @@ defmodule Hexpm.ReleaseTasks.Stats do
               package_id = packages[{repository_id, package}]
 
               if release_id = releases[{package_id, version}] do
-                [%{release_id: release_id, downloads: count, day: date}]
+                [%{package_id: package_id, release_id: release_id, downloads: count, day: date}]
               else
                 []
               end

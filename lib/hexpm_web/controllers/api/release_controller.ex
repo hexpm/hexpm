@@ -26,6 +26,8 @@ defmodule HexpmWeb.API.ReleaseController do
        ]
        when action in [:delete]
 
+  @download_period_params ~w(day month all)
+
   def publish(conn, %{"body" => body} = params) do
     replace? = Map.get(params, "replace", true)
     request_id = List.first(get_resp_header(conn, "x-request-id"))
@@ -64,7 +66,8 @@ defmodule HexpmWeb.API.ReleaseController do
 
   def show(conn, params) do
     if release = conn.assigns.release do
-      downloads = Releases.downloads_by_period(release.id, params["downloads"])
+      downloads_period = Hexpm.Utils.safe_to_atom(params["downloads"], @download_period_params)
+      downloads = Releases.downloads_by_period(release.id, downloads_period)
 
       release =
         release

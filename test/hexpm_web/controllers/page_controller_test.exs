@@ -27,11 +27,22 @@ defmodule HexpmWeb.PageControllerTest do
     insert(:release, package: p2, version: "0.0.2", inserted_at: %{base_date | second: 05})
     insert(:release, package: p3, version: "0.0.1", inserted_at: %{base_date | second: 06})
 
-    insert(:download, release: rel1, downloads: 7, day: NaiveDateTime.to_date(base_date))
-    insert(:download, release: rel2, downloads: 2, day: NaiveDateTime.to_date(base_date))
+    insert(:download,
+      package: p1,
+      release: rel1,
+      downloads: 7,
+      day: NaiveDateTime.to_date(base_date)
+    )
+
+    insert(:download,
+      package: p2,
+      release: rel2,
+      downloads: 2,
+      day: NaiveDateTime.to_date(base_date)
+    )
 
     old_date = today |> NaiveDateTime.add(-91 * seconds_in_a_day) |> NaiveDateTime.to_date()
-    insert(:download, release: rel2, downloads: 1, day: old_date)
+    insert(:download, package: p2, release: rel2, downloads: 1, day: old_date)
 
     Repo.refresh_view(PackageDownload)
     Repo.refresh_view(ReleaseDownload)

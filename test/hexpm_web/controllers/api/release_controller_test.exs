@@ -1242,11 +1242,11 @@ defmodule HexpmWeb.API.ReleaseControllerTest do
       relprev = insert(:release, package: package, version: "0.0.1")
       release = insert(:release, package: package, version: "0.0.2")
 
-      insert(:download, release: relprev, downloads: 8, day: ~D[2000-01-01])
-      insert(:download, release: release, downloads: 1, day: ~D[2000-01-01])
-      insert(:download, release: release, downloads: 3, day: ~D[2000-02-01])
-      insert(:download, release: release, downloads: 2, day: ~D[2000-02-07])
-      insert(:download, release: release, downloads: 4, day: ~D[2000-02-08])
+      insert(:download, package: package, release: relprev, downloads: 8, day: ~D[2000-01-01])
+      insert(:download, package: package, release: release, downloads: 1, day: ~D[2000-01-01])
+      insert(:download, package: package, release: release, downloads: 3, day: ~D[2000-02-01])
+      insert(:download, package: package, release: release, downloads: 2, day: ~D[2000-02-07])
+      insert(:download, package: package, release: release, downloads: 4, day: ~D[2000-02-08])
 
       Hexpm.Repo.refresh_view(Hexpm.Repository.ReleaseDownload)
 

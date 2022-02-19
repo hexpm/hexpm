@@ -123,4 +123,9 @@ defmodule Hexpm.Repository.Packages do
     |> Enum.filter(&(&1.repository_id in repository_ids))
     |> Enum.sort_by(&[sorter.(&1.repository), &1.name])
   end
+
+  def downloads_for_last_n_days(package_id, num_of_days) do
+    Package.downloads_for_last_n_days(package_id, num_of_days)
+    |> Repo.all()
+  end
 end

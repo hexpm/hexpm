@@ -145,8 +145,8 @@ defmodule HexpmWeb.PackageController do
 
     graph_downloads =
       case type do
-        :package -> Enum.map(releases, & &1.id) |> Releases.downloads_for_last_n_days(31)
-        :release -> release.id |> Releases.downloads_for_last_n_days(31)
+        :package -> Packages.downloads_for_last_n_days(package.id, 31)
+        :release -> Releases.downloads_for_last_n_days(release.id, 31)
       end
 
     daily_graph =
