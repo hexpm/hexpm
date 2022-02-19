@@ -14,10 +14,9 @@ defmodule Hexpm.Repository.PackageDownload do
     from(
       pd in PackageDownload,
       join: p in assoc(pd, :package),
-      where: not is_nil(pd.package_id),
       where: p.repository_id == ^repository.id,
       where: pd.view == ^view,
-      order_by: [desc: pd.downloads],
+      order_by: [fragment("? DESC NULLS LAST", pd.downloads)],
       limit: ^count,
       select: {p.name, p.inserted_at, p.meta, pd.downloads}
     )
