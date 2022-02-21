@@ -119,6 +119,7 @@ Hexpm.Repo.transaction(fn ->
 
   insert(
     :download,
+    package: decimal,
     release: decimal_release,
     downloads: 1_200_000,
     day: Hexpm.Utils.utc_days_ago(180)
@@ -126,6 +127,7 @@ Hexpm.Repo.transaction(fn ->
 
   insert(
     :download,
+    package: decimal,
     release: decimal_release,
     downloads: 200_000,
     day: Hexpm.Utils.utc_days_ago(90)
@@ -133,12 +135,18 @@ Hexpm.Repo.transaction(fn ->
 
   insert(
     :download,
+    package: decimal,
     release: decimal_release,
     downloads: 56_000,
     day: Hexpm.Utils.utc_days_ago(35)
   )
 
-  insert(:download, release: decimal_release, downloads: 1_000, day: Hexpm.Utils.utc_yesterday())
+  insert(:download,
+    package: decimal,
+    release: decimal_release,
+    downloads: 1_000,
+    day: Hexpm.Utils.utc_yesterday()
+  )
 
   postgrex =
     insert(
@@ -407,12 +415,31 @@ Hexpm.Repo.transaction(fn ->
       has_docs: true
     )
 
-  insert(:download, release: rel, downloads: 1_500_000, day: Hexpm.Utils.utc_days_ago(180))
-  insert(:download, release: rel, downloads: 200_000, day: Hexpm.Utils.utc_days_ago(90))
-  insert(:download, release: rel, downloads: 1, day: Hexpm.Utils.utc_days_ago(45))
-  insert(:download, release: rel, downloads: 56_000, day: Hexpm.Utils.utc_days_ago(35))
-  insert(:download, release: rel, downloads: 1, day: Hexpm.Utils.utc_days_ago(2))
-  insert(:download, release: rel, downloads: 42, day: Hexpm.Utils.utc_yesterday())
+  insert(:download,
+    package: ecto,
+    release: rel,
+    downloads: 1_500_000,
+    day: Hexpm.Utils.utc_days_ago(180)
+  )
+
+  insert(:download,
+    package: ecto,
+    release: rel,
+    downloads: 200_000,
+    day: Hexpm.Utils.utc_days_ago(90)
+  )
+
+  insert(:download, package: ecto, release: rel, downloads: 1, day: Hexpm.Utils.utc_days_ago(45))
+
+  insert(:download,
+    package: ecto,
+    release: rel,
+    downloads: 56_000,
+    day: Hexpm.Utils.utc_days_ago(35)
+  )
+
+  insert(:download, package: ecto, release: rel, downloads: 1, day: Hexpm.Utils.utc_days_ago(2))
+  insert(:download, package: ecto, release: rel, downloads: 42, day: Hexpm.Utils.utc_yesterday())
 
   myrepo =
     insert(
@@ -544,10 +571,33 @@ Hexpm.Repo.transaction(fn ->
           )
       )
 
-    insert(:download, release: rel1, downloads: div(index, 2), day: Hexpm.Utils.utc_days_ago(180))
-    insert(:download, release: rel1, downloads: div(index, 2), day: Hexpm.Utils.utc_days_ago(90))
-    insert(:download, release: rel1, downloads: div(index, 2), day: Hexpm.Utils.utc_days_ago(35))
-    insert(:download, release: rel2, downloads: div(index, 2), day: Hexpm.Utils.utc_yesterday())
+    insert(:download,
+      package: ups,
+      release: rel1,
+      downloads: div(index, 2),
+      day: Hexpm.Utils.utc_days_ago(180)
+    )
+
+    insert(:download,
+      package: ups,
+      release: rel1,
+      downloads: div(index, 2),
+      day: Hexpm.Utils.utc_days_ago(90)
+    )
+
+    insert(:download,
+      package: ups,
+      release: rel1,
+      downloads: div(index, 2),
+      day: Hexpm.Utils.utc_days_ago(35)
+    )
+
+    insert(:download,
+      package: ups,
+      release: rel2,
+      downloads: div(index, 2),
+      day: Hexpm.Utils.utc_yesterday()
+    )
   end)
 
   nerves =
@@ -579,7 +629,7 @@ Hexpm.Repo.transaction(fn ->
         )
     )
 
-  insert(:download, release: rel, downloads: 20, day: Hexpm.Utils.utc_yesterday())
+  insert(:download, package: ups, release: rel, downloads: 20, day: Hexpm.Utils.utc_yesterday())
 
   Enum.each(1..10, fn index ->
     nerves_pkg =
@@ -613,6 +663,7 @@ Hexpm.Repo.transaction(fn ->
 
     insert(
       :download,
+      package: ups,
       release: rel,
       downloads: div(index, 2) + rem(index, 2),
       day: Hexpm.Utils.utc_yesterday()
