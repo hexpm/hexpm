@@ -827,6 +827,27 @@ defmodule HexpmWeb.API.ReleaseControllerTest do
       assert package.repository_id == repository.id
     end
 
+    test "new package as organization", %{organization: organization, repository: repository} do
+      meta = %{
+        name: Fake.sequence(:package),
+        version: "1.0.0",
+        description: "Domain-specific language."
+      }
+
+      result =
+        build_conn()
+        |> put_req_header("content-type", "application/octet-stream")
+        |> put_req_header("authorization", key_for(organization))
+        |> post("api/repos/#{repository.name}/publish", create_tar(meta))
+        |> json_response(201)
+
+      assert result["url"] =~
+               "api/repos/#{repository.name}/packages/#{meta.name}/releases/1.0.0"
+
+      package = Hexpm.Repo.get_by!(Package, name: meta.name)
+      assert package.repository_id == repository.id
+    end
+
     test "existing package", %{user: user, repository: repository} do
       package =
         insert(
@@ -843,6 +864,25 @@ defmodule HexpmWeb.API.ReleaseControllerTest do
         build_conn()
         |> put_req_header("content-type", "application/octet-stream")
         |> put_req_header("authorization", key_for(user))
+        |> post("api/repos/#{repository.name}/publish", create_tar(meta))
+        |> json_response(201)
+
+      assert result["url"] =~
+               "api/repos/#{repository.name}/packages/#{meta.name}/releases/1.0.0"
+
+      package = Hexpm.Repo.get_by!(Package, name: meta.name)
+      assert package.repository_id == repository.id
+    end
+
+    test "existing package as organization", %{organization: organization, repository: repository} do
+      package = insert(:package, repository_id: repository.id)
+
+      meta = %{name: package.name, version: "1.0.0", description: "Domain-specific language."}
+
+      result =
+        build_conn()
+        |> put_req_header("content-type", "application/octet-stream")
+        |> put_req_header("authorization", key_for(organization))
         |> post("api/repos/#{repository.name}/publish", create_tar(meta))
         |> json_response(201)
 

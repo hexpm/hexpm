@@ -170,32 +170,19 @@ defmodule HexpmWeb.AuthHelpers do
     package_owner(conn.assigns.repository, conn.assigns.package, user_or_organization, opts)
   end
 
-  # def package_owner(%Package{} = package, user_or_organization, opts) do
-  #   package_owner(package.repository, package, user_or_organization, opts)
-  # end
-
-  # def package_owner(repository, nil, %Organization{id: id}, _opts) do
-  #   boolean_to_not_found(repository.organization_id == id)
-  # end
-
   def package_owner(
         %Repository{} = repository,
         %Package{} = package,
-        %Organization{id: id} = organization,
+        %Organization{} = organization,
         opts
       ) do
+    owner_level = opts[:owner_level] || "maintainer"
+
     cond do
-      repository.organization_id == id ->
-        :ok
-
-      Packages.owner_with_access?(package, organization.user, opts[:owner_level] || "maintainer") ->
-        :ok
-
-      repository.id == 1 ->
-        {:error, :auth}
-
-      true ->
-        {:error, :not_found}
+      repository.organization_id == organization.id -> :ok
+      Packages.owner_with_access?(package, organization.user, owner_level) -> :ok
+      repository.id == 1 -> {:error, :auth}
+      true -> {:error, :not_found}
     end
   end
 
@@ -212,6 +199,19 @@ defmodule HexpmWeb.AuthHelpers do
       {:error, :auth}
     else
       {:error, :not_found}
+    end
+  end
+
+  def package_owner(
+        %Repository{} = repository,
+        nil = _package,
+        %Organization{} = organization,
+        _opts
+      ) do
+    cond do
+      repository.id == 1 -> :ok
+      repository.organization_id == organization.id -> :ok
+      true -> {:error, :not_found}
     end
   end
 
