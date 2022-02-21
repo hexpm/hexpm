@@ -1011,6 +1011,20 @@ defmodule HexpmWeb.API.ReleaseControllerTest do
       assert result["errors"]["inserted_at"] ==
                "must include the --replace flag to update an existing release"
     end
+
+    test "non existant repository", %{user: user} do
+      meta = %{
+        name: Fake.sequence(:package),
+        version: "1.0.0",
+        description: "Domain-specific language."
+      }
+
+      build_conn()
+      |> put_req_header("content-type", "application/octet-stream")
+      |> put_req_header("authorization", key_for(user))
+      |> post("api/repos/DOES_NOT_EXIST/publish", create_tar(meta))
+      |> json_response(404)
+    end
   end
 
   describe "DELETE /api/packages/:name/releases/:version" do

@@ -231,8 +231,8 @@ defmodule HexpmWeb.AuthHelpers do
     boolean_to_not_found(repository.id == 1)
   end
 
-  def package_owner(nil = _repository, nil = _package, _user, _opts) do
-    :ok
+  def package_owner(nil = _repository, _package, _user, _opts) do
+    {:error, :not_found}
   end
 
   def organization_access(conn, user_or_organization, opts \\ [])
