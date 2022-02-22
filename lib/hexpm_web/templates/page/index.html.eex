@@ -65,8 +65,42 @@
     </div>
   </div>
   <div class="relative top-14 bg-white space-y-24">
-    <div class="pt-44 space-y-10">
-      <div class="max-w-7xl mx-auto px-14 bg-green-500">1</div>
+    <div class="pt-44 space-y-24">
+      <div class="max-w-7xl mx-auto px-14 space-y-10">
+        <div class="grid grid-cols-5 gap-x-20">
+          <div>
+            <img src="<%= Routes.static_path(Endpoint, "/images/fastly.png") %>" class="h-12 w-64 mix-blend-luminosity">
+          </div>
+          <div>
+            <img src="<%= Routes.static_path(Endpoint, "/images/fastly.png") %>" class="h-12 w-64 mix-blend-luminosity">
+          </div>
+          <div>
+            <img src="<%= Routes.static_path(Endpoint, "/images/fastly.png") %>" class="h-12 w-64 mix-blend-luminosity">
+          </div>
+          <div>
+            <img src="<%= Routes.static_path(Endpoint, "/images/fastly.png") %>" class="h-12 w-64 mix-blend-luminosity">
+          </div>
+          <div>
+            <img src="<%= Routes.static_path(Endpoint, "/images/fastly.png") %>" class="h-12 w-64 mix-blend-luminosity">
+          </div>
+        </div>
+        <div class="max-w-7xl mx-auto px-14">
+          <div class="grid grid-cols-4 gap-x-20">
+            <div>
+              <img src="<%= Routes.static_path(Endpoint, "/images/fastly.png") %>" class="h-12 w-64 mix-blend-luminosity">
+            </div>
+            <div>
+              <img src="<%= Routes.static_path(Endpoint, "/images/fastly.png") %>" class="h-12 w-64 mix-blend-luminosity">
+            </div>
+            <div>
+              <img src="<%= Routes.static_path(Endpoint, "/images/fastly.png") %>" class="h-12 w-64 mix-blend-luminosity">
+            </div>
+            <div>
+              <img src="<%= Routes.static_path(Endpoint, "/images/fastly.png") %>" class="h-12 w-64 mix-blend-luminosity">
+            </div>
+          </div>
+        </div>
+      </div>
       <div class="max-w-7xl mx-auto px-10 grid grid-cols-3 gap-x-12">
         <div>
           <div class="bg-primary-600 rounded-xl flex items-center p-4 space-x-2">
@@ -162,7 +196,6 @@
             </div>
           </div>
           <div class="flex items-center space-x-2">
-            <!-- replace with supposed image -->
             <img src="<%= Routes.static_path(Endpoint, "/images/man.svg") %>" class="h-12 w-12 mix-blend-luminosity">
             <div>
               <span class="text-gray-900 text-2xl font-bold"><%= ViewHelpers.human_number_space(@num_packages) %></span>
