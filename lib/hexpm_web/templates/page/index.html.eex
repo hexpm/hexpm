@@ -64,7 +64,7 @@
       </div>
     </div>
   </div>
-  <div class="relative top-14 bg-white space-y-24">
+  <div class="relative top-14 bg-white">
     <div class="pt-44 space-y-24">
       <div class="max-w-7xl mx-auto px-14 space-y-10">
         <div class="grid grid-cols-5 gap-x-20">
@@ -172,40 +172,40 @@
           </div>
         </div>
       </div>
-      <div class="grid">
-        <div class="grid grid-cols-2 justify-self-start gap-12  pl-10">
-          <div class="flex items-center space-x-2">
-            <img src="<%= Routes.static_path(Endpoint, "/images/delivery-box.svg") %>" class="h-12 w-12 mix-blend-luminosity">
-            <div>
-              <span class="text-gray-900 text-2xl font-bold"><%= ViewHelpers.human_number_space(@num_packages) %></span>
-              <p class="text-gray-600 text-base font-normal">packages available</p>
-            </div>
-          </div>
-          <div class="flex items-center space-x-2">
-            <img src="<%= Routes.static_path(Endpoint, "/images/package.svg") %>" class="h-12 w-12 mix-blend-luminosity">
-            <div>
-              <span class="text-gray-900 text-2xl font-bold"><%= ViewHelpers.human_number_space(@num_releases) %></span>
-              <p class="text-gray-600 text-base font-normal">package versions</p>
-            </div>
-          </div>
-          <div class="flex items-center space-x-2">
-            <img src="<%= Routes.static_path(Endpoint, "/images/download.svg") %>" class="h-12 w-12 mix-blend-luminosity">
-            <div>
-              <span class="text-gray-900 text-2xl font-bold"><%= ViewHelpers.human_number_space(@total["day"]) %></span>
-              <p class="text-gray-600 text-base font-normal">downloads yesterday</p>
-            </div>
-          </div>
-          <div class="flex items-center space-x-2">
-            <img src="<%= Routes.static_path(Endpoint, "/images/man.svg") %>" class="h-12 w-12 mix-blend-luminosity">
-            <div>
-              <span class="text-gray-900 text-2xl font-bold"><%= ViewHelpers.human_number_space(@num_packages) %></span>
-              <p class="text-gray-600 text-base font-normal">contributors</p>
-            </div>
-          </div>
-          <button class="rounded-lg bg-blue-600 flex items-center justify-center w-64 h-12 text-white text-base font-medium">Get Started for FREE</button>
-          <a href="#" class="text-blue-600 text-base font-medium flex items-center">Private Packages @ 7$ / month</a>
+    </div>
+  </div>
+  <div class="grid pt-24 bg-white h-max pb-32">
+    <div class="grid grid-cols-2 justify-self-start gap-12  pl-10">
+      <div class="flex items-center space-x-2">
+        <img src="<%= Routes.static_path(Endpoint, "/images/delivery-box.svg") %>" class="h-12 w-12 mix-blend-luminosity">
+        <div>
+          <span class="text-gray-900 text-2xl font-bold"><%= ViewHelpers.human_number_space(@num_packages) %></span>
+          <p class="text-gray-600 text-base font-normal">packages available</p>
         </div>
       </div>
+      <div class="flex items-center space-x-2">
+        <img src="<%= Routes.static_path(Endpoint, "/images/package.svg") %>" class="h-12 w-12 mix-blend-luminosity">
+        <div>
+          <span class="text-gray-900 text-2xl font-bold"><%= ViewHelpers.human_number_space(@num_releases) %></span>
+          <p class="text-gray-600 text-base font-normal">package versions</p>
+        </div>
+      </div>
+      <div class="flex items-center space-x-2">
+        <img src="<%= Routes.static_path(Endpoint, "/images/download.svg") %>" class="h-12 w-12 mix-blend-luminosity">
+        <div>
+          <span class="text-gray-900 text-2xl font-bold"><%= ViewHelpers.human_number_space(@total["day"]) %></span>
+          <p class="text-gray-600 text-base font-normal">downloads yesterday</p>
+        </div>
+      </div>
+      <div class="flex items-center space-x-2">
+        <img src="<%= Routes.static_path(Endpoint, "/images/man.svg") %>" class="h-12 w-12 mix-blend-luminosity">
+        <div>
+          <span class="text-gray-900 text-2xl font-bold"><%= ViewHelpers.human_number_space(@num_packages) %></span>
+          <p class="text-gray-600 text-base font-normal">contributors</p>
+        </div>
+      </div>
+      <button class="rounded-lg bg-blue-600 flex items-center justify-center w-64 h-12 text-white text-base font-medium">Get Started for FREE</button>
+      <a href="#" class="text-blue-600 text-base font-medium flex items-center">Private Packages @ 7$ / month</a>
     </div>
   </div>
 </div>
