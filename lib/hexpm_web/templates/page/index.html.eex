@@ -148,16 +148,14 @@
             </div>
           </div>
           <div class="flex items-center space-x-2">
-            <!-- replace with supposed image -->
-            <img src="<%= Routes.static_path(Endpoint, "/images/delivery-box.svg") %>" class="h-12 w-12 mix-blend-luminosity">
+            <img src="<%= Routes.static_path(Endpoint, "/images/package.svg") %>" class="h-12 w-12 mix-blend-luminosity">
             <div>
               <span class="text-gray-900 text-2xl font-bold"><%= ViewHelpers.human_number_space(@num_releases) %></span>
               <p class="text-gray-600 text-base font-normal">package versions</p>
             </div>
           </div>
           <div class="flex items-center space-x-2">
-            <!-- replace with supposed image -->
-            <img src="<%= Routes.static_path(Endpoint, "/images/delivery-box.svg") %>" class="h-12 w-12 mix-blend-luminosity">
+            <img src="<%= Routes.static_path(Endpoint, "/images/download.svg") %>" class="h-12 w-12 mix-blend-luminosity">
             <div>
               <span class="text-gray-900 text-2xl font-bold"><%= ViewHelpers.human_number_space(@total["day"]) %></span>
               <p class="text-gray-600 text-base font-normal">downloads yesterday</p>
@@ -165,7 +163,7 @@
           </div>
           <div class="flex items-center space-x-2">
             <!-- replace with supposed image -->
-            <img src="<%= Routes.static_path(Endpoint, "/images/people.svg") %>" class="h-12 w-12 mix-blend-luminosity">
+            <img src="<%= Routes.static_path(Endpoint, "/images/man.svg") %>" class="h-12 w-12 mix-blend-luminosity">
             <div>
               <span class="text-gray-900 text-2xl font-bold"><%= ViewHelpers.human_number_space(@num_packages) %></span>
               <p class="text-gray-600 text-base font-normal">contributors</p>
