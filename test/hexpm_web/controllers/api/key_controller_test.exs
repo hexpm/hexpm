@@ -97,7 +97,7 @@ defmodule HexpmWeb.API.KeyControllerTest do
 
       build_conn()
       |> get("api/orgs/#{c.organization.name}/keys")
-      |> json_response(404)
+      |> json_response(401)
 
       build_conn()
       |> put_req_header("authorization", org_key.user_secret)
@@ -273,6 +273,13 @@ defmodule HexpmWeb.API.KeyControllerTest do
       assert body["url"] =~ "/api/keys/macbook"
       assert body["permissions"] == [%{"domain" => "api", "resource" => nil}]
       refute body["authing_key"]
+    end
+
+    test "get key authorizes" do
+      conn =
+        build_conn()
+        |> get("api/keys/macbook")
+        |> json_response(401)
     end
   end
 
