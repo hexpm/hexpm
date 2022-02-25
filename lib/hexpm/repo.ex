@@ -1,7 +1,7 @@
 defmodule Hexpm.RepoHelpers do
   defmacro defwrite(fun) do
     # Please don't yell at me =(
-    {name, args, as, as_args} = Kernel.Utils.defdelegate(fun, to: RepoBase)
+    {name, args, as, as_args} = Kernel.Utils.defdelegate_each(fun, to: RepoBase)
 
     quote do
       def unquote(name)(unquote_splicing(args)) do

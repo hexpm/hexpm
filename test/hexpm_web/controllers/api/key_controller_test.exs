@@ -276,10 +276,9 @@ defmodule HexpmWeb.API.KeyControllerTest do
     end
 
     test "get key authorizes" do
-      conn =
-        build_conn()
-        |> get("api/keys/macbook")
-        |> json_response(401)
+      build_conn()
+      |> get("api/keys/macbook")
+      |> json_response(401)
     end
   end
 

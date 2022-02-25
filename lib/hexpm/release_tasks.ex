@@ -16,7 +16,7 @@ defmodule Hexpm.ReleaseTasks do
     Logger.info("[task] Running script")
     start_app()
 
-    run_script(args)
+    task(fn -> run_script(args) end)
 
     Logger.info("[task] Finished script")
     stop()
@@ -27,7 +27,7 @@ defmodule Hexpm.ReleaseTasks do
     Logger.info("[task] Running check_names")
     start_app()
 
-    CheckNames.run()
+    task(&CheckNames.run/0)
 
     Logger.info("[task] Finished check_names")
     stop()
@@ -38,7 +38,7 @@ defmodule Hexpm.ReleaseTasks do
     Logger.info("[task] Running migrate")
     start_repo()
 
-    run_migrations(args)
+    task(fn -> run_migrations(args) end)
 
     Logger.info("[task] Finished migrate")
     stop()
@@ -49,7 +49,7 @@ defmodule Hexpm.ReleaseTasks do
     Logger.info("[task] Running rollback")
     start_repo()
 
-    run_rollback(args)
+    task(fn -> run_rollback(args) end)
 
     Logger.info("[task] Finished rollback")
     stop()
@@ -58,10 +58,12 @@ defmodule Hexpm.ReleaseTasks do
   def seed(args \\ []) do
     {:ok, _} = Application.ensure_all_started(:logger)
     Logger.info("[task] Running seed")
-    start_repo()
 
-    run_migrations(args)
-    run_seeds()
+    task(fn ->
+      start_repo()
+      run_migrations(args)
+      run_seeds()
+    end)
 
     Logger.info("[task] Finished seed")
     stop()
@@ -72,10 +74,34 @@ defmodule Hexpm.ReleaseTasks do
     Logger.info("[task] Running stats")
     start_app()
 
-    Stats.run()
+    task(&Stats.run/0)
 
     Logger.info("[task] Finished stats")
     stop()
+  end
+
+  defp task(fun) do
+    Process.flag(:trap_exit, true)
+
+    %Task{ref: ref} =
+      Task.async(fn ->
+        try do
+          fun.()
+        catch
+          kind, error ->
+            Rollbax.report(kind, error, __STACKTRACE__)
+        end
+      end)
+
+    receive do
+      {^ref, _result} ->
+        :ok
+
+      {:EXIT, _pid, {error, stacktrace}} ->
+        Rollbax.report(:error, error, stacktrace)
+    end
+  after
+    Process.flag(:trap_exit, false)
   end
 
   defp start_app() do

@@ -34,16 +34,12 @@ defmodule Hexpm.ReleaseTasks.Stats do
   @ets __MODULE__
 
   def run(date \\ Utils.utc_yesterday(), dryrun? \\ false) do
-    # Trigger error_handler and rollbar reporting on 'hexpm eval ...'
-    Task.async(fn ->
-      {time, size} =
-        :timer.tc(fn ->
-          do_run(date, dryrun?)
-        end)
+    {time, size} =
+      :timer.tc(fn ->
+        do_run(date, dryrun?)
+      end)
 
-      Logger.info("[stats] completed #{size} downloads (#{div(time, 1000)}ms)")
-    end)
-    |> Task.await(:infinity)
+    Logger.info("[stats] completed #{size} downloads (#{div(time, 1000)}ms)")
   end
 
   def do_run(date, dryrun?) do
