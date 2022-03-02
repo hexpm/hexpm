@@ -8,6 +8,8 @@ defmodule Hexpm.Accounts.WebAuth do
   alias Hexpm.Accounts.WebAuthRequest
   alias Hexpm.Utils
 
+  # Adapted from RFC 8628 for hex
+
   # `device_code` refers to the code assigned to a client to identify it
   # `user_code` refers to the code the user enters to authorize a client
   # `name` refers to the name given to a key
