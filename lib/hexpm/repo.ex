@@ -1,14 +1,18 @@
 defmodule Hexpm.RepoHelpers do
-  defmacro defwrite(fun) do
-    # Please don't yell at me =(
-    {name, args, as, as_args} = Kernel.Utils.defdelegate_each(fun, to: RepoBase)
-
+  defmacro defwrite({name, _meta, params}) do
     quote do
-      def unquote(name)(unquote_splicing(args)) do
+      def unquote(name)(unquote_splicing(params)) do
         write_mode!()
-        Hexpm.RepoBase.unquote(as)(unquote_splicing(as_args))
+        Hexpm.RepoBase.unquote(name)(unquote_splicing(params_to_args(params)))
       end
     end
+  end
+
+  defp params_to_args(params) do
+    Enum.map(params, fn
+      {:\\, _meta, [arg, _default]} -> arg
+      arg -> arg
+    end)
   end
 end
 
