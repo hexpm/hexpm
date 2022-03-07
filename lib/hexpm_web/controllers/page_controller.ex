@@ -15,6 +15,7 @@ defmodule HexpmWeb.PageController do
       package_top: Packages.top_downloads(hexpm, "recent", 8),
       package_new: Packages.recent(hexpm, 10),
       releases_new: Releases.recent(hexpm, 10),
+      most_downloaded_package: Enum.take(Packages.top_downloads(hexpm, "recent", 8), 1),
       total: Packages.total_downloads()
     )
   end
