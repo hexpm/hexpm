@@ -12,7 +12,7 @@ defmodule HexpmWeb.Router do
     plug :fetch_flash
     plug :protect_from_forgery
     plug :put_secure_browser_headers
-    plug :web_user_agent
+    plug :user_agent, required: false
     plug :validate_url
     plug :login
     plug :disable_deactivated

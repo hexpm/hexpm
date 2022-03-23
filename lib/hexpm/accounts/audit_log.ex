@@ -3,6 +3,7 @@ defmodule Hexpm.Accounts.AuditLog do
 
   schema "audit_logs" do
     field :user_agent, :string
+    field :remote_ip, :string
     field :action, :string
     field :params, :map
 
@@ -12,7 +13,7 @@ defmodule Hexpm.Accounts.AuditLog do
     timestamps(updated_at: false)
   end
 
-  def build(nil, user_agent, action, params)
+  def build(nil, user_agent, remote_ip, action, params)
       when action in ~w(password.reset.init password.reset.finish) do
     params = extract_params(action, params)
 
@@ -20,67 +21,75 @@ defmodule Hexpm.Accounts.AuditLog do
       user_id: nil,
       organization_id: nil,
       user_agent: user_agent,
+      remote_ip: remote_ip,
       action: action,
       params: params
     }
   end
 
-  def build(%User{id: user_id}, user_agent, "organization.create", organization) do
+  def build(%User{id: user_id}, user_agent, remote_ip, "organization.create", organization) do
     params = extract_params("organization.create", organization)
 
     %AuditLog{
       user_id: user_id,
       organization_id: organization.id,
       user_agent: user_agent,
+      remote_ip: remote_ip,
       action: "organization.create",
       params: params
     }
   end
 
-  def build(%User{id: user_id}, user_agent, action, params) do
+  def build(%User{id: user_id}, user_agent, remote_ip, action, params) do
     params = extract_params(action, params)
 
     %AuditLog{
       user_id: user_id,
       organization_id: params[:organization][:id] || params[:package][:organization_id],
       user_agent: user_agent,
+      remote_ip: remote_ip,
       action: action,
       params: params
     }
   end
 
-  def build(%Organization{id: organization_id}, user_agent, action, params) do
+  def build(%Organization{id: organization_id}, user_agent, remote_ip, action, params) do
     params = extract_params(action, params)
 
     %AuditLog{
       user_id: nil,
       organization_id: organization_id,
       user_agent: user_agent,
+      remote_ip: remote_ip,
       action: action,
       params: params
     }
   end
 
-  def audit({user, user_agent}, action, params) do
-    build(user, user_agent, action, params)
+  def audit({user, user_agent, remote_ip}, action, params) do
+    build(user, user_agent, remote_ip, action, params)
   end
 
   def audit(multi, nil, _action, _fun) do
     multi
   end
 
-  def audit(multi, {user, user_agent}, action, fun) when is_function(fun, 1) do
+  def audit(multi, {user, user_agent, remote_ip}, action, fun) when is_function(fun, 1) do
     Multi.merge(multi, fn data ->
       Multi.insert(
         Multi.new(),
         multi_key(multi, action),
-        build(user, user_agent, action, fun.(data))
+        build(user, user_agent, remote_ip, action, fun.(data))
       )
     end)
   end
 
-  def audit(multi, {user, user_agent}, action, params) do
-    Multi.insert(multi, multi_key(multi, action), build(user, user_agent, action, params))
+  def audit(multi, {user, user_agent, remote_ip}, action, params) do
+    Multi.insert(
+      multi,
+      multi_key(multi, action),
+      build(user, user_agent, remote_ip, action, params)
+    )
   end
 
   def audit_many(multi, who, action, list, opts \\ [])
@@ -89,13 +98,13 @@ defmodule Hexpm.Accounts.AuditLog do
     multi
   end
 
-  def audit_many(multi, {user, user_agent}, action, list, opts) do
+  def audit_many(multi, {user, user_agent, remote_ip}, action, list, opts) do
     fields = AuditLog.__schema__(:fields) -- [:id]
     extra = %{inserted_at: DateTime.utc_now()}
 
     entries =
       Enum.map(list, fn entry ->
-        build(user, user_agent, action, entry)
+        build(user, user_agent, remote_ip, action, entry)
         |> Map.take(fields)
         |> Map.merge(extra)
       end)
@@ -107,9 +116,9 @@ defmodule Hexpm.Accounts.AuditLog do
     multi
   end
 
-  def audit_with_user(multi, {_user, user_agent}, action, fun) do
+  def audit_with_user(multi, {_user, user_agent, remote_ip}, action, fun) do
     Multi.insert(multi, multi_key(multi, action), fn %{user: user} = data ->
-      build(user, user_agent, action, fun.(data))
+      build(user, user_agent, remote_ip, action, fun.(data))
     end)
   end
 

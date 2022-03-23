@@ -316,8 +316,16 @@ defmodule HexpmWeb.ControllerHelpers do
 
   def audit_data(conn) do
     user_or_organization = conn.assigns.current_user || conn.assigns.current_organization
-    {user_or_organization, conn.assigns.user_agent}
+    {user_or_organization, conn.assigns.user_agent, ip_to_string(conn.remote_ip)}
   end
+
+  defp ip_to_string(nil), do: nil
+
+  defp ip_to_string(tuple) when is_tuple(tuple) and tuple_size(tuple) == 4,
+    do: tuple |> Tuple.to_list() |> Enum.join(".")
+
+  defp ip_to_string(tuple) when is_tuple(tuple) and tuple_size(tuple) == 8,
+    do: tuple |> Tuple.to_list() |> Enum.map(&String.to_integer(&1, 16)) |> Enum.join(":")
 
   def password_auth(username, password) do
     case Auth.password_auth(username, password) do

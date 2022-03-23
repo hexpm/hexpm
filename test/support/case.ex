@@ -16,7 +16,7 @@ defmodule Hexpm.Case do
   end
 
   def audit_data(user) do
-    {user, "TEST"}
+    {user, "TEST", "127.0.0.1"}
   end
 
   def default_meta(name, version) do

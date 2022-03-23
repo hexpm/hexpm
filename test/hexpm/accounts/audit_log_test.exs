@@ -12,30 +12,35 @@ defmodule Hexpm.Accounts.AuditLogTest do
 
   describe "build/4" do
     test "action password.reset.init" do
-      audit = AuditLog.build(nil, "user_agent", "password.reset.init", nil)
+      audit = AuditLog.build(nil, "user_agent", "127.0.0.1", "password.reset.init", nil)
       assert audit.organization_id == nil
       assert audit.action == "password.reset.init"
       assert audit.user_id == nil
       assert audit.user_agent == "user_agent"
+      assert audit.remote_ip == "127.0.0.1"
       assert audit.params == %{}
     end
 
     test "action password.reset.finish" do
-      audit = AuditLog.build(nil, "user_agent", "password.reset.finish", nil)
+      audit = AuditLog.build(nil, "user_agent", "127.0.0.1", "password.reset.finish", nil)
       assert audit.organization_id == nil
       assert audit.action == "password.reset.finish"
       assert audit.user_id == nil
       assert audit.user_agent == "user_agent"
+      assert audit.remote_ip == "127.0.0.1"
       assert audit.params == %{}
     end
 
     test "action owner.add", %{user: user, package: package} do
       user = %{user | handles: build(:user_handles, github: user.username)}
-      audit = AuditLog.build(user, "user_agent", "owner.add", {package, "full", user})
+
+      audit =
+        AuditLog.build(user, "user_agent", "127.0.0.1", "owner.add", {package, "full", user})
 
       assert audit.action == "owner.add"
       assert audit.user_id == user.id
       assert audit.user_agent == "user_agent"
+      assert audit.remote_ip == "127.0.0.1"
       assert audit.params.level == "full"
       assert audit.params.package.id == package.id
       assert audit.params.package.name == package.name
@@ -53,11 +58,12 @@ defmodule Hexpm.Accounts.AuditLogTest do
           name: "Test"
         )
 
-      audit = AuditLog.build(user, "user_agent", "organization.create", organization)
+      audit = AuditLog.build(user, "user_agent", "127.0.0.1", "organization.create", organization)
 
       assert audit.action == "organization.create"
       assert audit.user_id == user.id
       assert audit.user_agent == "user_agent"
+      assert audit.remote_ip == "127.0.0.1"
       assert audit.organization_id == 5
       assert audit.params == %{billing_active: false, name: "Test", id: 5}
     end
@@ -69,6 +75,7 @@ defmodule Hexpm.Accounts.AuditLogTest do
         AuditLog.build(
           user,
           "user_agent",
+          "127.0.0.1",
           "billing.checkout",
           {
             organization,
@@ -79,6 +86,7 @@ defmodule Hexpm.Accounts.AuditLogTest do
       assert audit.action == "billing.checkout"
       assert audit.user_id == user.id
       assert audit.user_agent == "user_agent"
+      assert audit.remote_ip == "127.0.0.1"
       assert audit.params.organization.name == "Organization Name"
       assert audit.params.payment_source == "a token"
     end
@@ -90,6 +98,7 @@ defmodule Hexpm.Accounts.AuditLogTest do
         AuditLog.build(
           user,
           "user_agent",
+          "127.0.0.1",
           "billing.cancel",
           {
             organization,
@@ -100,6 +109,7 @@ defmodule Hexpm.Accounts.AuditLogTest do
       assert audit.action == "billing.cancel"
       assert audit.user_id == user.id
       assert audit.user_agent == "user_agent"
+      assert audit.remote_ip == "127.0.0.1"
       assert audit.params.organization.name == "Organization Name"
     end
 
@@ -110,6 +120,7 @@ defmodule Hexpm.Accounts.AuditLogTest do
         AuditLog.build(
           user,
           "user_agent",
+          "127.0.0.1",
           "billing.create",
           {
             organization,
@@ -126,6 +137,7 @@ defmodule Hexpm.Accounts.AuditLogTest do
       assert audit.action == "billing.create"
       assert audit.user_id == user.id
       assert audit.user_agent == "user_agent"
+      assert audit.remote_ip == "127.0.0.1"
       assert audit.params.organization.name == "Organization Name"
       assert audit.params.email == "test@example.com"
       assert audit.params.person == "Test Person"
@@ -141,6 +153,7 @@ defmodule Hexpm.Accounts.AuditLogTest do
         AuditLog.build(
           user,
           "user_agent",
+          "127.0.0.1",
           "billing.change_plan",
           {
             organization,
@@ -151,6 +164,7 @@ defmodule Hexpm.Accounts.AuditLogTest do
       assert audit.action == "billing.change_plan"
       assert audit.user_id == user.id
       assert audit.user_agent == "user_agent"
+      assert audit.remote_ip == "127.0.0.1"
       assert audit.params.organization.name == "Organization Name"
       assert audit.params.plan_id == "test plan"
     end
@@ -162,6 +176,7 @@ defmodule Hexpm.Accounts.AuditLogTest do
         AuditLog.build(
           user,
           "user_agent",
+          "127.0.0.1",
           "billing.pay_invoice",
           {
             organization,
@@ -172,6 +187,7 @@ defmodule Hexpm.Accounts.AuditLogTest do
       assert audit.action == "billing.pay_invoice"
       assert audit.user_id == user.id
       assert audit.user_agent == "user_agent"
+      assert audit.remote_ip == "127.0.0.1"
       assert audit.params.organization.name == "Organization Name"
       assert audit.params.invoice_id == 897
     end
@@ -179,7 +195,8 @@ defmodule Hexpm.Accounts.AuditLogTest do
 
   describe "audit/3" do
     test "with params", %{user: user, package: package, release: release} do
-      audit_log = AuditLog.audit({user, "user_agent"}, "docs.revert", {package, release})
+      audit_log =
+        AuditLog.audit({user, "user_agent", "127.0.0.1"}, "docs.revert", {package, release})
 
       assert %AuditLog{action: "docs.revert"} = audit_log
     end
@@ -189,7 +206,7 @@ defmodule Hexpm.Accounts.AuditLogTest do
 
       audit =
         AuditLog.audit(
-          {user, "user_agent"},
+          {user, "user_agent", "127.0.0.1"},
           "billing.update",
           {
             organization,
@@ -206,6 +223,7 @@ defmodule Hexpm.Accounts.AuditLogTest do
       assert audit.action == "billing.update"
       assert audit.user_id == user.id
       assert audit.user_agent == "user_agent"
+      assert audit.remote_ip == "127.0.0.1"
       assert audit.params.organization.name == "Organization Name"
       assert audit.params.email == "test@example.com"
       assert audit.params.person == "Test Person"
@@ -218,7 +236,12 @@ defmodule Hexpm.Accounts.AuditLogTest do
   describe "audit/4" do
     test "with params", %{user: user, package: package, release: release} do
       multi =
-        AuditLog.audit(Ecto.Multi.new(), {user, "user_agent"}, "docs.publish", {package, release})
+        AuditLog.audit(
+          Ecto.Multi.new(),
+          {user, "user_agent", "127.0.0.1"},
+          "docs.publish",
+          {package, release}
+        )
 
       assert {:insert, changeset, []} = Ecto.Multi.to_list(multi)[:"log.docs.publish.0"]
       assert changeset.valid?
@@ -226,9 +249,14 @@ defmodule Hexpm.Accounts.AuditLogTest do
 
     test "with fun", %{user: user} do
       multi =
-        AuditLog.audit(Ecto.Multi.new(), {user, "user_agent"}, "key.generate", fn %{} ->
-          build(:key)
-        end)
+        AuditLog.audit(
+          Ecto.Multi.new(),
+          {user, "user_agent", "127.0.0.1"},
+          "key.generate",
+          fn %{} ->
+            build(:key)
+          end
+        )
 
       assert {:merge, merge} = Ecto.Multi.to_list(multi)[:merge]
       multi = merge.(multi)
@@ -240,7 +268,14 @@ defmodule Hexpm.Accounts.AuditLogTest do
   describe "audit_with_user/4" do
     test "action user.create", %{user: user} do
       fun = fn %{user: user} -> user end
-      multi = AuditLog.audit_with_user(Ecto.Multi.new(), {nil, "user_agent"}, "user.create", fun)
+
+      multi =
+        AuditLog.audit_with_user(
+          Ecto.Multi.new(),
+          {nil, "user_agent", "127.0.0.1"},
+          "user.create",
+          fun
+        )
 
       assert {_, fun} = Ecto.Multi.to_list(multi)[:"log.user.create.0"]
       assert {:ok, %AuditLog{action: "user.create"}} = fun.(Hexpm.Repo, %{user: user})
@@ -250,7 +285,14 @@ defmodule Hexpm.Accounts.AuditLogTest do
   describe "audit_many/5" do
     test "action key.remove", %{user: user} do
       keys = build_list(2, :key)
-      multi = AuditLog.audit_many(Ecto.Multi.new(), {user, "user_agent"}, "key.remove", keys)
+
+      multi =
+        AuditLog.audit_many(
+          Ecto.Multi.new(),
+          {user, "user_agent", "127.0.0.1"},
+          "key.remove",
+          keys
+        )
 
       assert {:insert_all, AuditLog, [params1, params2], []} =
                Ecto.Multi.to_list(multi)[:"log.key.remove.0"]
