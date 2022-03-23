@@ -24,7 +24,7 @@ defmodule HexpmWeb.Plugs.Attack do
   end
 
   rule "user throttle", conn do
-    user = conn.assigns.current_user
+    user = conn.assigns[:current_user]
 
     if api?(conn) && user do
       user_throttle(user.id)
@@ -32,7 +32,7 @@ defmodule HexpmWeb.Plugs.Attack do
   end
 
   rule "organization throttle", conn do
-    organization = conn.assigns.current_organization
+    organization = conn.assigns[:current_organization]
 
     if api?(conn) && organization do
       organization_throttle(organization.id)
