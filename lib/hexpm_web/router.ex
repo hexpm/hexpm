@@ -14,6 +14,7 @@ defmodule HexpmWeb.Router do
     plug :put_secure_browser_headers
     plug :user_agent, required: false
     plug :validate_url
+    plug HexpmWeb.Plugs.Attack
     plug :login
     plug :disable_deactivated
     plug :default_repository

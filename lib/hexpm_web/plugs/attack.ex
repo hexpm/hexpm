@@ -24,19 +24,25 @@ defmodule HexpmWeb.Plugs.Attack do
   end
 
   rule "user throttle", conn do
-    if user = conn.assigns.current_user do
+    user = conn.assigns.current_user
+
+    if api?(conn) && user do
       user_throttle(user.id)
     end
   end
 
   rule "organization throttle", conn do
-    if organization = conn.assigns.current_organization do
+    organization = conn.assigns.current_organization
+
+    if api?(conn) && organization do
       organization_throttle(organization.id)
     end
   end
 
   rule "ip throttle", conn do
-    ip_throttle(conn.remote_ip)
+    if api?(conn) do
+      ip_throttle(conn.remote_ip)
+    end
   end
 
   def allow_action(conn, {:throttle, data}, _opts) do
@@ -156,4 +162,7 @@ defmodule HexpmWeb.Plugs.Attack do
     full_key = {:throttle, key, div(now, period)}
     mod.increment(opts, full_key, 1, expires_at)
   end
+
+  defp api?(%Plug.Conn{request_path: "/api/" <> _}), do: true
+  defp api?(%Plug.Conn{}), do: false
 end
