@@ -1,5 +1,4 @@
 import Hexpm.Factory
-
 alias Hexpm.Accounts.Users
 alias Hexpm.Repository.{PackageDependant, PackageDownload, ReleaseDownload}
 
@@ -221,6 +220,7 @@ Hexpm.Repo.transaction(fn ->
 
   insert(
     :download,
+    package: postgrex,
     release: postgrex_release,
     downloads: 1_200_000,
     day: Hexpm.Utils.utc_days_ago(180)
@@ -228,6 +228,7 @@ Hexpm.Repo.transaction(fn ->
 
   insert(
     :download,
+    package: postgrex,
     release: postgrex_release,
     downloads: 200_000,
     day: Hexpm.Utils.utc_days_ago(90)
@@ -235,12 +236,18 @@ Hexpm.Repo.transaction(fn ->
 
   insert(
     :download,
+    package: postgrex,
     release: postgrex_release,
     downloads: 56_000,
     day: Hexpm.Utils.utc_days_ago(35)
   )
 
-  insert(:download, release: postgrex_release, downloads: 1_000, day: Hexpm.Utils.utc_yesterday())
+  insert(:download,
+    package: postgrex,
+    release: postgrex_release,
+    downloads: 1_000,
+    day: Hexpm.Utils.utc_yesterday()
+  )
 
   ecto =
     insert(
@@ -629,10 +636,10 @@ Hexpm.Repo.transaction(fn ->
         )
     )
 
-  insert(:download, package: ups, release: rel, downloads: 20, day: Hexpm.Utils.utc_yesterday())
+  insert(:download, package: nerves, release: rel, downloads: 20, day: Hexpm.Utils.utc_yesterday())
 
   Enum.each(1..10, fn index ->
-    nerves_pkg =
+    nerves =
       insert(
         :package,
         name: "nerves_pkg_#{index}",
@@ -650,7 +657,7 @@ Hexpm.Repo.transaction(fn ->
     rel =
       insert(
         :release,
-        package: nerves_pkg,
+        package: nerves,
         version: "0.0.1",
         publisher: justin,
         meta:
@@ -663,7 +670,7 @@ Hexpm.Repo.transaction(fn ->
 
     insert(
       :download,
-      package: ups,
+      package: nerves,
       release: rel,
       downloads: div(index, 2) + rem(index, 2),
       day: Hexpm.Utils.utc_yesterday()
