@@ -11,7 +11,7 @@ defmodule Hexpm.Accounts.UsersTest do
         Users.update_profile(
           organization.user,
           %{"full_name" => "New Full Name"},
-          audit: {build(:user), "UA"}
+          audit: audit_data(build(:user))
         )
 
       assert %{full_name: "New Full Name"} = updated_user
@@ -32,7 +32,7 @@ defmodule Hexpm.Accounts.UsersTest do
               "slack" => "slack"
             }
           },
-          audit: {build(:user), "UA"}
+          audit: audit_data(build(:user))
         )
 
       assert %{
@@ -54,7 +54,7 @@ defmodule Hexpm.Accounts.UsersTest do
         Users.update_profile(
           organization.user,
           %{},
-          audit: {current_user, "UA"}
+          audit: audit_data(current_user)
         )
 
       assert [%{action: "user.update", params: %{"username" => "organization.user"}}] =
@@ -69,7 +69,7 @@ defmodule Hexpm.Accounts.UsersTest do
         Users.update_profile(
           organization.user,
           %{"public_email" => "public@example.com"},
-          audit: {current_user, "UA"}
+          audit: audit_data(current_user)
         )
 
       email = Users.get_email("public@example.com")
@@ -106,7 +106,7 @@ defmodule Hexpm.Accounts.UsersTest do
         Users.update_profile(
           organization.user,
           %{"public_email" => "public@example.com"},
-          audit: {current_user, "UA"}
+          audit: audit_data(current_user)
         )
 
       email = Users.get_email("public@example.com")
@@ -134,7 +134,7 @@ defmodule Hexpm.Accounts.UsersTest do
         Users.update_profile(
           organization.user,
           %{"gravatar_email" => "gravatar@example.com"},
-          audit: {current_user, "UA"}
+          audit: audit_data(current_user)
         )
 
       email = Users.get_email("gravatar@example.com")
@@ -171,7 +171,7 @@ defmodule Hexpm.Accounts.UsersTest do
         Users.update_profile(
           organization.user,
           %{"gravatar_email" => "gravatar@example.com"},
-          audit: {current_user, "UA"}
+          audit: audit_data(current_user)
         )
 
       email = Users.get_email("gravatar@example.com")
@@ -198,7 +198,7 @@ defmodule Hexpm.Accounts.UsersTest do
                Users.update_profile(
                  organization.user,
                  %{"public_email" => "public"},
-                 audit: {build(:user), "UA"}
+                 audit: audit_data(build(:user))
                )
     end
 
@@ -209,7 +209,7 @@ defmodule Hexpm.Accounts.UsersTest do
                Users.update_profile(
                  organization.user,
                  %{"gravatar_email" => "gravatar"},
-                 audit: {build(:user), "UA"}
+                 audit: audit_data(build(:user))
                )
     end
 
@@ -225,7 +225,7 @@ defmodule Hexpm.Accounts.UsersTest do
         Users.update_profile(
           organization.user,
           %{"public_email" => ""},
-          audit: {current_user, "UA"}
+          audit: audit_data(current_user)
         )
 
       assert Users.get_email("old@example.com") == nil
@@ -250,7 +250,7 @@ defmodule Hexpm.Accounts.UsersTest do
                Users.update_profile(
                  organization.user,
                  %{"public_email" => ""},
-                 audit: {build(:user), "UA"}
+                 audit: audit_data(build(:user))
                )
     end
 
@@ -266,7 +266,7 @@ defmodule Hexpm.Accounts.UsersTest do
         Users.update_profile(
           organization.user,
           %{"gravatar_email" => ""},
-          audit: {current_user, "UA"}
+          audit: audit_data(current_user)
         )
 
       assert Users.get_email("old@example.com") == nil
@@ -291,7 +291,7 @@ defmodule Hexpm.Accounts.UsersTest do
                Users.update_profile(
                  organization.user,
                  %{"gravatar_email" => ""},
-                 audit: {build(:user), "UA"}
+                 audit: audit_data(build(:user))
                )
     end
 
@@ -305,7 +305,7 @@ defmodule Hexpm.Accounts.UsersTest do
                    "public_email" => "first@example.com",
                    "gravatar_email" => "second@example.com"
                  },
-                 audit: {build(:user), "UA"}
+                 audit: audit_data(build(:user))
                )
     end
   end

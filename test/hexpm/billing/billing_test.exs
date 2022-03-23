@@ -10,7 +10,7 @@ defmodule Hexpm.BillingTest do
       end)
 
       assert Hexpm.Billing.checkout("name", %{payment_source: :anything},
-               audit: %{audit_data: {insert(:user), "Test User Agent"}, organization: nil}
+               audit: %{audit_data: audit_data(insert(:user)), organization: nil}
              ) == {:ok, :whatever}
     end
 
@@ -20,7 +20,7 @@ defmodule Hexpm.BillingTest do
       user = insert(:user)
 
       Hexpm.Billing.checkout("name", %{},
-        audit: %{audit_data: {user, "Test User Agent"}, organization: nil}
+        audit: %{audit_data: audit_data(user), organization: nil}
       )
 
       assert [%AuditLog{action: "billing.checkout"}] = AuditLogs.all_by(user)
@@ -32,7 +32,7 @@ defmodule Hexpm.BillingTest do
       end)
 
       assert Hexpm.Billing.checkout("name", %{payment_source: :anything},
-               audit: %{audit_data: {insert(:user), "Test User Agent"}, organization: nil}
+               audit: %{audit_data: audit_data(insert(:user)), organization: nil}
              ) == {:error, :reason}
     end
 
@@ -42,7 +42,7 @@ defmodule Hexpm.BillingTest do
       user = insert(:user)
 
       Hexpm.Billing.checkout("name", %{payment_source: :anything},
-        audit: %{audit_data: {user, "Test User Agent"}, organization: nil}
+        audit: %{audit_data: audit_data(user), organization: nil}
       )
 
       assert [] == AuditLogs.all_by(user)
@@ -54,7 +54,7 @@ defmodule Hexpm.BillingTest do
       Mox.stub(Hexpm.Billing.Mock, :cancel, fn "organization token" -> :whatever end)
 
       assert Hexpm.Billing.cancel("organization token",
-               audit: %{audit_data: {insert(:user), "Test User Agent"}, organization: nil}
+               audit: %{audit_data: audit_data(insert(:user)), organization: nil}
              ) == :whatever
     end
 
@@ -64,7 +64,7 @@ defmodule Hexpm.BillingTest do
       user = insert(:user)
 
       Hexpm.Billing.cancel("organization token",
-        audit: %{audit_data: {user, "Test User Agent"}, organization: nil}
+        audit: %{audit_data: audit_data(user), organization: nil}
       )
 
       assert [%AuditLog{action: "billing.cancel"}] = AuditLogs.all_by(user)
@@ -76,7 +76,7 @@ defmodule Hexpm.BillingTest do
       Mox.stub(Hexpm.Billing.Mock, :create, fn _params -> {:ok, :whatever} end)
 
       assert Hexpm.Billing.create(%{},
-               audit: %{audit_data: {insert(:user), "Test User Agent"}, organization: nil}
+               audit: %{audit_data: audit_data(insert(:user)), organization: nil}
              ) ==
                {:ok, :whatever}
     end
@@ -87,7 +87,7 @@ defmodule Hexpm.BillingTest do
       user = insert(:user)
 
       Hexpm.Billing.create(%{},
-        audit: %{audit_data: {user, "Test User Agent"}, organization: nil}
+        audit: %{audit_data: audit_data(user), organization: nil}
       )
 
       assert [%AuditLog{action: "billing.create"}] = AuditLogs.all_by(user)
@@ -97,7 +97,7 @@ defmodule Hexpm.BillingTest do
       Mox.stub(Hexpm.Billing.Mock, :create, fn _params -> {:error, :reason} end)
 
       assert Hexpm.Billing.create(%{},
-               audit: %{audit_data: {insert(:user), "Test User Agent"}, organization: nil}
+               audit: %{audit_data: audit_data(insert(:user)), organization: nil}
              ) ==
                {:error, :reason}
     end
@@ -108,7 +108,7 @@ defmodule Hexpm.BillingTest do
       user = insert(:user)
 
       Hexpm.Billing.create(%{},
-        audit: %{audit_data: {user, "Test User Agent"}, organization: nil}
+        audit: %{audit_data: audit_data(user), organization: nil}
       )
 
       assert [] = AuditLogs.all_by(user)
@@ -122,7 +122,7 @@ defmodule Hexpm.BillingTest do
       end)
 
       assert Hexpm.Billing.update("organization token", %{},
-               audit: %{audit_data: {insert(:user), "Test User Agent"}, organization: nil}
+               audit: %{audit_data: audit_data(insert(:user)), organization: nil}
              ) ==
                {:ok, :whatever}
     end
@@ -133,7 +133,7 @@ defmodule Hexpm.BillingTest do
       user = insert(:user)
 
       Hexpm.Billing.update("organization token", %{},
-        audit: %{audit_data: {user, "Test User Agent"}, organization: nil}
+        audit: %{audit_data: audit_data(user), organization: nil}
       )
 
       assert [%AuditLog{action: "billing.update"}] = AuditLogs.all_by(user)
@@ -143,7 +143,7 @@ defmodule Hexpm.BillingTest do
       Mox.stub(Hexpm.Billing.Mock, :update, fn _, _params -> {:error, :reason} end)
 
       assert Hexpm.Billing.update("organization token", %{},
-               audit: %{audit_data: {insert(:user), "Test User Agent"}, organization: nil}
+               audit: %{audit_data: audit_data(insert(:user)), organization: nil}
              ) ==
                {:error, :reason}
     end
@@ -154,7 +154,7 @@ defmodule Hexpm.BillingTest do
       user = insert(:user)
 
       Hexpm.Billing.update("organization token", %{},
-        audit: %{audit_data: {user, "Test User Agent"}, organization: nil}
+        audit: %{audit_data: audit_data(user), organization: nil}
       )
 
       assert [] = AuditLogs.all_by(user)
@@ -169,7 +169,7 @@ defmodule Hexpm.BillingTest do
       end)
 
       assert Hexpm.Billing.change_plan("organization token", %{"plan_id" => "new_plan"},
-               audit: %{audit_data: {insert(:user), "Test User Agent"}, organization: nil}
+               audit: %{audit_data: audit_data(insert(:user)), organization: nil}
              ) == :ok
     end
 
@@ -179,7 +179,7 @@ defmodule Hexpm.BillingTest do
       user = insert(:user)
 
       Hexpm.Billing.change_plan("organization token", %{"plan_id" => "new_plan"},
-        audit: %{audit_data: {user, "Test User Agent"}, organization: nil}
+        audit: %{audit_data: audit_data(user), organization: nil}
       )
 
       assert [%AuditLog{action: "billing.change_plan"}] = AuditLogs.all_by(user)
@@ -191,7 +191,7 @@ defmodule Hexpm.BillingTest do
       Mox.stub(Hexpm.Billing.Mock, :pay_invoice, fn 238 -> :ok end)
 
       assert Hexpm.Billing.pay_invoice(238,
-               audit: %{audit_data: {insert(:user), "Test User Agent"}, organization: nil}
+               audit: %{audit_data: audit_data(insert(:user)), organization: nil}
              ) == :ok
     end
 
@@ -201,7 +201,7 @@ defmodule Hexpm.BillingTest do
       user = insert(:user)
 
       Hexpm.Billing.pay_invoice(1,
-        audit: %{audit_data: {user, "Test User Agent"}, organization: nil}
+        audit: %{audit_data: audit_data(user), organization: nil}
       )
 
       assert [%AuditLog{action: "billing.pay_invoice"}] = AuditLogs.all_by(user)
@@ -211,7 +211,7 @@ defmodule Hexpm.BillingTest do
       Mox.stub(Hexpm.Billing.Mock, :pay_invoice, fn _ -> {:error, %{}} end)
 
       assert Hexpm.Billing.pay_invoice(2,
-               audit: %{audit_data: {insert(:user), "Test User Agent"}, organization: nil}
+               audit: %{audit_data: audit_data(insert(:user)), organization: nil}
              ) == {:error, %{}}
     end
 
@@ -221,7 +221,7 @@ defmodule Hexpm.BillingTest do
       user = insert(:user)
 
       Hexpm.Billing.pay_invoice(3,
-        audit: %{audit_data: {user, "Test User Agent"}, organization: nil}
+        audit: %{audit_data: audit_data(user), organization: nil}
       )
 
       assert [] = AuditLogs.all_by(user)

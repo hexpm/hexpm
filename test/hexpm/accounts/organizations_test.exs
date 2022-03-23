@@ -10,7 +10,7 @@ defmodule Hexpm.Accounts.OrganizationsTest do
       organization = insert(:organization)
       insert(:organization_user, organization: organization, user: user)
 
-      assert Organizations.remove_member(organization, user, audit: {build(:user), "UA"}) ==
+      assert Organizations.remove_member(organization, user, audit: audit_data(build(:user))) ==
                {:error, :last_member}
 
       assert length(Repo.all(assoc(organization, :users))) == 1
@@ -22,7 +22,7 @@ defmodule Hexpm.Accounts.OrganizationsTest do
       insert(:organization_user, organization: organization, user: insert(:user))
       insert(:organization_user, organization: organization, user: user)
 
-      assert Organizations.remove_member(organization, user, audit: {build(:user), "UA"})
+      assert Organizations.remove_member(organization, user, audit: audit_data(build(:user)))
       assert length(Repo.all(assoc(organization, :users))) == 1
     end
 
@@ -35,7 +35,7 @@ defmodule Hexpm.Accounts.OrganizationsTest do
       insert(:organization_user, organization: organization, user: insert(:user))
       insert(:organization_user, organization: organization, user: user)
 
-      assert Organizations.remove_member(organization, user, audit: {build(:user), "UA"})
+      assert Organizations.remove_member(organization, user, audit: audit_data(build(:user)))
       refute Repo.get(PackageOwner, package_owner.id)
     end
   end

@@ -33,7 +33,9 @@ defmodule HexpmWeb.TestController do
 
   def repo(conn, params) do
     {:ok, organization} =
-      Organizations.create(conn.assigns.current_user, params, audit: {%User{}, "TEST"})
+      Organizations.create(conn.assigns.current_user, params,
+        audit: {%User{}, "TEST", "127.0.0.1"}
+      )
 
     organization
     |> Ecto.Changeset.change(%{billing_active: true})
