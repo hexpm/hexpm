@@ -56,13 +56,30 @@ defmodule HexpmWeb do
           select: 4
         ]
 
+      import Phoenix.LiveView.Helpers
+
       import HexpmWeb.ViewIcons
 
-      alias HexpmWeb.ViewHelpers
-      alias HexpmWeb.{Endpoint, Router}
+      alias HexpmWeb.{Endpoint, Router, ViewHelpers}
       alias HexpmWeb.Router.Helpers, as: Routes
 
       use Hexpm.Shared
+    end
+  end
+
+  def live_view do
+    quote do
+      use Phoenix.LiveView
+
+      unquote(view_helpers())
+    end
+  end
+
+  def live_component do
+    quote do
+      use Phoenix.LiveComponent
+
+      unquote(view_helpers())
     end
   end
 
@@ -70,8 +87,24 @@ defmodule HexpmWeb do
     quote do
       use Phoenix.Router
       import HexpmWeb.Plugs
+      import Phoenix.LiveView.Router
 
       alias HexpmWeb.{Endpoint, Router}
+      alias HexpmWeb.Router.Helpers, as: Routes
+    end
+  end
+
+  defp view_helpers do
+    quote do
+      # Use all HTML functionality (forms, tags, etc)
+      use Phoenix.HTML
+
+      # Import LiveView helpers (live_render, live_component, live_patch, etc)
+      import Phoenix.LiveView.Helpers
+
+      # Import basic rendering functionality (render, render_layout, etc)
+      import Phoenix.View
+
       alias HexpmWeb.Router.Helpers, as: Routes
     end
   end
