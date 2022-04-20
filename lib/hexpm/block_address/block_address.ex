@@ -21,6 +21,7 @@ defmodule Hexpm.BlockAddress do
       Hexpm.BlockAddress.Entry
       |> Hexpm.Repo.all()
       |> Enum.map(&Hexpm.Utils.parse_ip_mask(&1.ip))
+      |> Enum.reject(fn {ip, _mask} -> ip == nil end)
 
     :ets.insert(@ets, {:allowed, Hexpm.CDN.public_ips()})
     :ets.insert(@ets, {:disallowed, disallowed})
