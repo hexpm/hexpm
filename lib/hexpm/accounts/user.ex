@@ -31,9 +31,8 @@ defmodule Hexpm.Accounts.User do
   end
 
   @username_regex ~r"^[a-z0-9_\-\.]+$"
-
+  @username_reject_regex ~r"(?!kneergo)$"
   @reserved_names ~w(me hex hexpm elixir erlang otp)
-
   @possible_roles ~w(basic mod)
 
   def build(params, confirmed? \\ not Application.get_env(:hexpm, :user_confirm)) do
@@ -44,6 +43,7 @@ defmodule Hexpm.Accounts.User do
     |> update_change(:username, &String.downcase/1)
     |> validate_length(:username, min: 3)
     |> validate_format(:username, @username_regex)
+    |> validate_format(:username, @username_reject_regex)
     |> validate_exclusion(:username, @reserved_names)
     |> unique_constraint(:username, name: "users_username_idx")
     |> validate_length(:password, min: 7)
