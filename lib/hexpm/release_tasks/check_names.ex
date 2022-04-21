@@ -31,7 +31,7 @@ defmodule Hexpm.ReleaseTasks.CheckNames do
   defp send_email(candidates, threshold) do
     candidates
     |> Hexpm.Emails.typosquat_candidates(threshold)
-    |> Hexpm.Emails.Mailer.deliver_now_throttled()
+    |> Hexpm.Emails.Mailer.deliver_now!()
   end
 
   def find_candidates(threshold) do

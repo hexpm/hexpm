@@ -118,7 +118,7 @@ defmodule Hexpm.Repository.PackageReports do
       package_report.id,
       package_report.inserted_at
     )
-    |> Mailer.deliver_now_throttled()
+    |> Mailer.deliver_now!()
   end
 
   defp email_new_comment(comment, report, user) do
@@ -129,7 +129,7 @@ defmodule Hexpm.Repository.PackageReports do
       report.id,
       comment.inserted_at
     )
-    |> Mailer.deliver_now_throttled()
+    |> Mailer.deliver_now!()
   end
 
   defp email_state_change(package_report, user) do
@@ -140,6 +140,6 @@ defmodule Hexpm.Repository.PackageReports do
       package_report.state,
       package_report.updated_at
     )
-    |> Mailer.deliver_now_throttled()
+    |> Mailer.deliver_now!()
   end
 end

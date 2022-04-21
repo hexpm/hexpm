@@ -38,7 +38,7 @@ config :hexpm, Hexpm.RepoBase,
 
 config :sasl, sasl_error_logger: false
 
-config :hexpm, Hexpm.Emails.Mailer, adapter: Hexpm.Emails.Bamboo.SESAdapter
+config :hexpm, Hexpm.Emails.Mailer, adapter: Bamboo.SendGridAdapter
 
 config :phoenix, :template_engines, md: HexpmWeb.MarkdownEngine
 
