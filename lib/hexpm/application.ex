@@ -31,14 +31,6 @@ defmodule Hexpm.Application do
     :ok
   end
 
-  def ses_rate() do
-    if rate = Application.get_env(:hexpm, :ses_rate) do
-      String.to_integer(rate)
-    else
-      :infinity
-    end
-  end
-
   # Make sure we exit after hex client tests are finished running
   if Mix.env() == :hex do
     def shutdown_on_eof() do
