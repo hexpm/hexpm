@@ -68,7 +68,7 @@ defmodule Hexpm.Repository.Owners do
           |> Repo.preload(organization: [organization_users: [user: :emails]])
 
         Emails.owner_added(package, owners, user)
-        |> Mailer.deliver_now_throttled()
+        |> Mailer.deliver_now!()
 
         {:ok, %{owner | user: user}}
 
@@ -127,7 +127,7 @@ defmodule Hexpm.Repository.Owners do
           |> Repo.preload(organization: [users: :emails])
 
         Emails.owner_removed(package, owners, owner.user)
-        |> Mailer.deliver_now_throttled()
+        |> Mailer.deliver_now!()
 
         :ok
     end

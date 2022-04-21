@@ -13,7 +13,6 @@ defmodule Hexpm.Application do
       {Phoenix.PubSub, name: Hexpm.PubSub, adapter: Phoenix.PubSub.PG2},
       HexpmWeb.RateLimitPubSub,
       {PlugAttack.Storage.Ets, name: HexpmWeb.Plugs.Attack.Storage, clean_period: 60_000},
-      {Hexpm.Throttle, name: Hexpm.SESThrottle, rate: ses_rate(), unit: 1000},
       {Hexpm.Billing.Report, name: Hexpm.Billing.Report, interval: 60_000},
       goth_spec(),
       HexpmWeb.Telemetry,

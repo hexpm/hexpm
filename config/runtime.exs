@@ -25,6 +25,8 @@ if config_env() == :prod do
     dashboard_user: System.fetch_env!("HEXPM_DASHBOARD_USER"),
     dashboard_password: System.fetch_env!("HEXPM_DASHBOARD_PASSWORD")
 
+  config :hexpm, Hexpm.Emails.Mailer, api_key: System.fetch_env!("HEXPM_SENDGRID_API_KEY")
+
   config :ex_aws,
     access_key_id: System.fetch_env!("HEXPM_AWS_ACCESS_KEY_ID"),
     secret_access_key: System.fetch_env!("HEXPM_AWS_ACCESS_KEY_SECRET")
