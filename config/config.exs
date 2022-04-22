@@ -37,7 +37,11 @@ config :hexpm, Hexpm.RepoBase,
 
 config :sasl, sasl_error_logger: false
 
-config :hexpm, Hexpm.Emails.Mailer, adapter: Bamboo.SendGridAdapter
+config :hexpm, Hexpm.Emails.Mailer,
+  adapter: Bamboo.SendGridAdapter,
+  hackney_opts: [
+    recv_timeout: :timer.minutes(1)
+  ]
 
 config :phoenix, :template_engines, md: HexpmWeb.MarkdownEngine
 

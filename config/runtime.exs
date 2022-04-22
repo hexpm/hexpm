@@ -15,8 +15,6 @@ if config_env() == :prod do
     preview_url: System.fetch_env!("HEXPM_PREVIEW_URL"),
     cdn_url: System.fetch_env!("HEXPM_CDN_URL"),
     email_host: System.fetch_env!("HEXPM_EMAIL_HOST"),
-    ses_rate: System.fetch_env!("HEXPM_SES_RATE"),
-    ses_region: System.fetch_env!("HEXPM_SES_REGION"),
     fastly_key: System.fetch_env!("HEXPM_FASTLY_KEY"),
     fastly_hexrepo: System.fetch_env!("HEXPM_FASTLY_HEXREPO"),
     billing_key: System.fetch_env!("HEXPM_BILLING_KEY"),

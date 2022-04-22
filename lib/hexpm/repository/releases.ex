@@ -239,7 +239,7 @@ defmodule Hexpm.Repository.Releases do
     Hexpm.Repo.all(assoc(package, :owners))
     |> Hexpm.Repo.preload([:emails, organization: [users: :emails]])
     |> Emails.package_published(publisher, package.name, release.version)
-    |> Mailer.deliver_now!()
+    |> Mailer.deliver_later!()
   end
 
   if Mix.env() == :test do

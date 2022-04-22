@@ -175,6 +175,6 @@ defmodule Hexpm.Accounts.Organizations do
 
   defp send_invite_email(organization, user) do
     Emails.organization_invite(organization, user)
-    |> Mailer.deliver_now!()
+    |> Mailer.deliver_later!()
   end
 end

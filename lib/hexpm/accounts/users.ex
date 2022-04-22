@@ -58,7 +58,7 @@ defmodule Hexpm.Accounts.Users do
     case Repo.transaction(multi) do
       {:ok, %{user: %{emails: [email]} = user}} ->
         Emails.verification(user, email)
-        |> Mailer.deliver_now!()
+        |> Mailer.deliver_later!()
 
         {:ok, user}
 
@@ -77,7 +77,7 @@ defmodule Hexpm.Accounts.Users do
       |> Repo.update!()
 
     Emails.verification(user, email)
-    |> Mailer.deliver_now!()
+    |> Mailer.deliver_later!()
 
     email
   end
@@ -153,7 +153,7 @@ defmodule Hexpm.Accounts.Users do
       {:ok, %{user: user}} ->
         user
         |> Emails.password_changed()
-        |> Mailer.deliver_now!()
+        |> Mailer.deliver_later!()
 
         {:ok, user}
 
@@ -250,7 +250,7 @@ defmodule Hexpm.Accounts.Users do
         |> Repo.transaction()
 
       Emails.password_reset_request(user, reset)
-      |> Mailer.deliver_now!()
+      |> Mailer.deliver_later!()
 
       :ok
     else
@@ -307,7 +307,7 @@ defmodule Hexpm.Accounts.Users do
         user = Repo.preload(user, :emails, force: true)
 
         Emails.verification(user, email)
-        |> Mailer.deliver_now!()
+        |> Mailer.deliver_later!()
 
         {:ok, user}
 
@@ -506,7 +506,7 @@ defmodule Hexpm.Accounts.Users do
 
       true ->
         Emails.verification(user, email)
-        |> Mailer.deliver_now!()
+        |> Mailer.deliver_later!()
 
         :ok
     end
