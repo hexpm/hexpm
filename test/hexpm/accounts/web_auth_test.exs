@@ -50,26 +50,26 @@ defmodule Hexpm.Accounts.WebAuthTest do
     test "returns keys on valid device code", c do
       submit_code(c)
 
-      keys = WebAuth.access_key(c.request.device_code, c.audit_user_agent)
+      keys = WebAuth.access_key(c.request.device_code, c.audit_user_agent, c.audit_ip_addr)
 
       assert {:ok, %{write_key: %Hexpm.Accounts.Key{}, read_key: %Hexpm.Accounts.Key{}}} = keys
     end
 
     test "returns an error on unverified request", c do
-      response = WebAuth.access_key(c.request.device_code, c.audit_user_agent)
+      response = WebAuth.access_key(c.request.device_code, c.audit_user_agent, c.audit_ip_addr)
 
       assert response == {:error, "request to be verified"}
     end
 
     test "returns an error on invalid device code", c do
-      response = WebAuth.access_key("bad code", c.audit_user_agent)
+      response = WebAuth.access_key("bad code", c.audit_user_agent, c.audit_ip_addr)
 
       assert response == {:error, "invalid device code"}
     end
 
     test "returns an error on state request's device code", c do
       make_request_stale(c)
-      response = WebAuth.access_key(c.request.device_code, c.audit_user_agent)
+      response = WebAuth.access_key(c.request.device_code, c.audit_user_agent, c.audit_ip_addr)
 
       assert response == {:error, "invalid device code"}
     end
@@ -77,8 +77,8 @@ defmodule Hexpm.Accounts.WebAuthTest do
     test "deletes request after user has accessed", c do
       submit_code(c)
 
-      WebAuth.access_key(c.request.device_code, c.audit_user_agent)
-      second_call = WebAuth.access_key(c.request.device_code, c.audit_user_agent)
+      WebAuth.access_key(c.request.device_code, c.audit_user_agent, c.audit_ip_addr)
+      second_call = WebAuth.access_key(c.request.device_code, c.audit_user_agent, c.audit_ip_addr)
 
       assert second_call == {:error, "invalid device code"}
     end
@@ -105,10 +105,11 @@ defmodule Hexpm.Accounts.WebAuthTest do
   end
 
   def get_audit_user_agent(c) do
-    c.user
-    |> audit_data
-    |> elem(1)
-    |> then(&Map.put_new(c, :audit_user_agent, &1))
+    {_, user_agent, ip_addr} = audit_data(c.user)
+
+    c
+    |> Map.put_new(:audit_user_agent, user_agent)
+    |> Map.put_new(:audit_ip_addr, ip_addr)
   end
 
   def make_request_stale(c) do

@@ -14,9 +14,9 @@ defmodule HexpmWeb.API.WebAuthController do
   def code(conn, _params), do: invalid_params(conn)
 
   def access_key(conn, %{"device_code" => device_code}) do
-    {user_agent, _} = audit_data(conn)
+    {user_agent, _, ip_addr} = audit_data(conn)
 
-    case WebAuth.access_key(device_code, user_agent) do
+    case WebAuth.access_key(device_code, user_agent, ip_addr) do
       {:error, msg} when msg == "key generation failed" ->
         internal_error(conn, msg)
 

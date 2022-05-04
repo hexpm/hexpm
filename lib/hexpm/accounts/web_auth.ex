@@ -84,8 +84,9 @@ defmodule Hexpm.Accounts.WebAuth do
 
   - `device_code` - The device code assigned to the client
   - `user_agent` - The user agent for the audit for generating the keys
+  - `ip_addr` - The IP address of the request
   """
-  def access_key(device_code, user_agent) do
+  def access_key(device_code, user_agent, ip_addr) do
     request =
       WebAuthRequest
       |> where([r], r.inserted_at >= ^Utils.datetime_utc_yesterday())
@@ -97,7 +98,7 @@ defmodule Hexpm.Accounts.WebAuth do
       r when r.verified ->
         user = request.user
 
-        audit = {user, user_agent}
+        audit = {user, user_agent, ip_addr}
 
         key_name = request.key_name
 
