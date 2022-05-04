@@ -1,8 +1,6 @@
 defmodule Hexpm.Accounts.WebAuth do
   use Hexpm.Context
 
-  @moduledoc false
-
   import Ecto.Query
 
   alias Hexpm.Accounts.WebAuthRequest
