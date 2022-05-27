@@ -297,7 +297,7 @@ defmodule HexpmWeb.API.OwnerControllerTest do
       |> response(422)
     end
 
-    test "organization members can add owners" do
+    test "organization members can add other members as owners" do
       user1 = insert(:user)
       user2 = insert(:user)
       organization = insert(:organization)
@@ -309,9 +309,12 @@ defmodule HexpmWeb.API.OwnerControllerTest do
       |> put_req_header("authorization", key_for(user1))
       |> put("api/packages/#{package.name}/owners/#{user2.username}")
       |> response(204)
+
+      owners = assoc(package, :owners) |> Hexpm.Repo.all()
+      assert Enum.find(owners, &(&1.id == user2.id))
     end
 
-    test "organization members cannot add outside owners" do
+    test "organization members can add outside users as owners" do
       user1 = insert(:user)
       user2 = insert(:user)
       organization = insert(:organization)
@@ -321,7 +324,10 @@ defmodule HexpmWeb.API.OwnerControllerTest do
       build_conn()
       |> put_req_header("authorization", key_for(user1))
       |> put("api/packages/#{package.name}/owners/#{user2.username}")
-      |> response(422)
+      |> response(204)
+
+      owners = assoc(package, :owners) |> Hexpm.Repo.all()
+      assert Enum.find(owners, &(&1.id == user2.id))
     end
 
     test "only organization admins can add owners" do
@@ -365,6 +371,10 @@ defmodule HexpmWeb.API.OwnerControllerTest do
       |> put_req_header("authorization", key_for(user1))
       |> put("api/packages/#{package.name}/owners/#{hd(user2.emails).email}")
       |> response(204)
+
+      owners = assoc(package, :owners) |> Hexpm.Repo.all()
+      assert length(owners) == 2
+      assert Enum.find(owners, &(&1.id == user2.id))
     end
 
     test "add package owner authorizes", %{user2: user2, package: package} do

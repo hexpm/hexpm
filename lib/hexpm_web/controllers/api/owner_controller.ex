@@ -60,7 +60,8 @@ defmodule HexpmWeb.API.OwnerController do
 
           {:error, :not_member} ->
             validation_failed(conn, %{
-              "username" => "cannot add owner that is not a member of the organization"
+              "username" =>
+                "cannot add owner to private package when the user is not a member of the organization"
             })
 
           {:error, :not_organization_transfer} ->

@@ -268,6 +268,7 @@ defmodule HexpmWeb.Dashboard.EmailControllerTest do
   test "resend verify email", c do
     new_email = Fake.sequence(:email)
     user = add_email(c.user, new_email)
+    email = Enum.find(user.emails, &(&1.email == new_email))
 
     conn =
       build_conn()
@@ -277,7 +278,7 @@ defmodule HexpmWeb.Dashboard.EmailControllerTest do
     assert redirected_to(conn) == "/dashboard/email"
     assert get_flash(conn, :info) =~ "verification email has been sent"
 
-    assert_delivered_email(Hexpm.Emails.verification(user, List.last(user.emails)))
-    assert_delivered_email(Hexpm.Emails.verification(user, List.last(user.emails)))
+    assert_delivered_email(Hexpm.Emails.verification(user, email))
+    assert_delivered_email(Hexpm.Emails.verification(user, email))
   end
 end
