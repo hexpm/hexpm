@@ -99,7 +99,12 @@ defmodule Hexpm.Repository.Packages do
   end
 
   def top_downloads(repository, view, count) do
-    Repo.all(PackageDownload.top(repository, view, count))
+    top = Repo.all(PackageDownload.top(repository, view, count))
+    packages = top |> Enum.map(fn {package, _downloads} -> package end) |> attach_versions()
+
+    Enum.zip_with(packages, top, fn package, {_package, downloads} ->
+      {package, downloads}
+    end)
   end
 
   def total_downloads() do

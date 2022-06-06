@@ -50,11 +50,8 @@ defmodule HexpmWeb.PageControllerTest do
     %{package1: p1, package2: p2, package3: p3}
   end
 
-  test "index", %{package1: package1, package2: package2} do
+  test "index", %{package1: %{id: package1_id}, package2: %{id: package2_id}} do
     conn = get(build_conn(), "/")
-
-    package1_name = package1.name
-    package2_name = package2.name
 
     assert conn.status == 200
     assert conn.assigns.total["all"] == 10
@@ -65,8 +62,8 @@ defmodule HexpmWeb.PageControllerTest do
     assert Enum.count(conn.assigns.package_new) == 3
 
     assert [
-             {^package1_name, %DateTime{}, %Hexpm.Repository.PackageMetadata{}, 7},
-             {^package2_name, %DateTime{}, %Hexpm.Repository.PackageMetadata{}, 2}
+             {%Hexpm.Repository.Package{id: ^package1_id}, 7},
+             {%Hexpm.Repository.Package{id: ^package2_id}, 2}
            ] = conn.assigns.package_top
   end
 end
