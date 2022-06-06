@@ -1,8 +1,10 @@
 defmodule Hexpm.Billing.Hexpm do
   @behaviour Hexpm.Billing
 
+  @timeout 15_000
+
   def checkout(organization, data) do
-    case post("/api/customers/#{organization}/payment_source", data, recv_timeout: 15_000) do
+    case post("/api/customers/#{organization}/payment_source", data) do
       {:ok, 204, _headers, body} -> {:ok, body}
       {:ok, 422, _headers, body} -> {:error, body}
     end
@@ -10,7 +12,7 @@ defmodule Hexpm.Billing.Hexpm do
 
   def get(organization) do
     result =
-      fn -> get_json("/api/customers/#{organization}", recv_timeout: 10_000) end
+      fn -> get_json("/api/customers/#{organization}") end
       |> Hexpm.HTTP.retry("billing")
 
     case result do
@@ -20,19 +22,19 @@ defmodule Hexpm.Billing.Hexpm do
   end
 
   def cancel(organization) do
-    {:ok, 200, _headers, body} = post("/api/customers/#{organization}/cancel", %{}, [])
+    {:ok, 200, _headers, body} = post("/api/customers/#{organization}/cancel", %{})
     body
   end
 
   def create(params) do
-    case post("/api/customers", params, []) do
+    case post("/api/customers", params) do
       {:ok, 200, _headers, body} -> {:ok, body}
       {:ok, 422, _headers, body} -> {:error, body}
     end
   end
 
   def update(organization, params) do
-    case patch("/api/customers/#{organization}", params, []) do
+    case patch("/api/customers/#{organization}", params) do
       {:ok, 200, _headers, body} -> {:ok, body}
       {:ok, 404, _headers, _body} -> {:ok, nil}
       {:ok, 422, _headers, body} -> {:error, body}
@@ -40,13 +42,13 @@ defmodule Hexpm.Billing.Hexpm do
   end
 
   def change_plan(organization, params) do
-    {:ok, 204, _headers, _body} = post("/api/customers/#{organization}/plan", params, [])
+    {:ok, 204, _headers, _body} = post("/api/customers/#{organization}/plan", params)
     :ok
   end
 
   def invoice(id) do
     {:ok, 200, _headers, body} =
-      fn -> get_html("/api/invoices/#{id}/html", recv_timeout: 10_000) end
+      fn -> get_html("/api/invoices/#{id}/html") end
       |> Hexpm.HTTP.retry("billing")
 
     body
@@ -54,7 +56,7 @@ defmodule Hexpm.Billing.Hexpm do
 
   def pay_invoice(id) do
     result =
-      fn -> post("/api/invoices/#{id}/pay", %{}, recv_timeout: 15_000) end
+      fn -> post("/api/invoices/#{id}/pay", %{}) end
       |> Hexpm.HTTP.retry("billing")
 
     case result do
@@ -65,7 +67,7 @@ defmodule Hexpm.Billing.Hexpm do
 
   def report() do
     {:ok, 200, _headers, body} =
-      fn -> get_json("/api/reports/customers", []) end
+      fn -> get_json("/api/reports/customers") end
       |> Hexpm.HTTP.retry("billing")
 
     body
@@ -75,8 +77,9 @@ defmodule Hexpm.Billing.Hexpm do
     Application.get_env(:hexpm, :billing_key)
   end
 
-  defp post(url, body, opts) do
+  defp post(url, body) do
     url = Application.get_env(:hexpm, :billing_url) <> url
+    body = Jason.encode!(body)
 
     headers = [
       {"authorization", auth()},
@@ -84,14 +87,13 @@ defmodule Hexpm.Billing.Hexpm do
       {"content-type", "application/json"}
     ]
 
-    body = Jason.encode!(body)
-
-    :hackney.post(url, headers, body, opts)
+    :hackney.post(url, headers, body, recv_timeout: @timeout)
     |> read_request()
   end
 
-  defp patch(url, body, opts) do
+  defp patch(url, body) do
     url = Application.get_env(:hexpm, :billing_url) <> url
+    body = Jason.encode!(body)
 
     headers = [
       {"authorization", auth()},
@@ -99,13 +101,11 @@ defmodule Hexpm.Billing.Hexpm do
       {"content-type", "application/json"}
     ]
 
-    body = Jason.encode!(body)
-
-    :hackney.patch(url, headers, body, opts)
+    :hackney.patch(url, headers, body, recv_timeout: @timeout)
     |> read_request()
   end
 
-  defp get_json(url, opts) do
+  defp get_json(url) do
     url = Application.get_env(:hexpm, :billing_url) <> url
 
     headers = [
@@ -113,11 +113,11 @@ defmodule Hexpm.Billing.Hexpm do
       {"accept", "application/json"}
     ]
 
-    :hackney.get(url, headers, "", opts)
+    :hackney.get(url, headers, "", recv_timeout: @timeout)
     |> read_request()
   end
 
-  defp get_html(url, opts) do
+  defp get_html(url) do
     url = Application.get_env(:hexpm, :billing_url) <> url
 
     headers = [
@@ -125,7 +125,7 @@ defmodule Hexpm.Billing.Hexpm do
       {"accept", "text/html"}
     ]
 
-    :hackney.get(url, headers, "", opts)
+    :hackney.get(url, headers, "", recv_timeout: @timeout)
     |> read_request()
   end
 
