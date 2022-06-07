@@ -18,7 +18,7 @@ defmodule Hexpm.Repository.PackageDownload do
       where: pd.view == ^view,
       order_by: [fragment("? DESC NULLS LAST", pd.downloads)],
       limit: ^count,
-      select: {p.name, p.inserted_at, p.meta, pd.downloads}
+      select: {p, pd.downloads}
     )
   end
 
