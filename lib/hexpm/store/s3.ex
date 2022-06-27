@@ -1,5 +1,5 @@
 defmodule Hexpm.Store.S3 do
-  @behaviour Hexpm.Store
+  @behaviour Hexpm.Store.Behaviour
 
   alias ExAws.S3
 
