@@ -1,5 +1,5 @@
 defmodule Hexpm.Billing.Local do
-  @behaviour Hexpm.Billing
+  @behaviour Hexpm.Billing.Behaviour
 
   def checkout(_organization, _data) do
     {:ok, %{}}
