@@ -5,7 +5,7 @@ defmodule HexpmWeb.API.RepositoryController do
   plug :authorize, [domain: "api", resource: "read"] when action in [:index]
 
   plug :authorize,
-       [domain: "api", resource: "read", fun: &organization_access/2]
+       [domain: "api", resource: "read", fun: {AuthHelpers, :organization_access}]
        when action in [:show]
 
   def index(conn, _params) do

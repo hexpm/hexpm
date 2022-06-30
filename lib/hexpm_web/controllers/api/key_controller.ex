@@ -8,8 +8,7 @@ defmodule HexpmWeb.API.KeyController do
          domain: "api",
          resource: "write",
          allow_unconfirmed: true,
-         fun: &organization_access/3,
-         opts: [organization_role: "write"]
+         fun: {AuthHelpers, :organization_access, [organization_role: "write"]}
        ]
        when action == :create
 
@@ -17,14 +16,18 @@ defmodule HexpmWeb.API.KeyController do
        [
          domain: "api",
          resource: "write",
-         fun: &organization_access/3,
-         authentication: :required,
-         opts: [organization_role: "write"]
+         fun: {AuthHelpers, :organization_access, [organization_role: "write"]},
+         authentication: :required
        ]
        when action in [:delete, :delete_all]
 
   plug :authorize,
-       [domain: "api", resource: "read", authentication: :required, fun: &organization_access/2]
+       [
+         domain: "api",
+         resource: "read",
+         authentication: :required,
+         fun: {AuthHelpers, :organization_access}
+       ]
        when action in [:index, :show]
 
   plug :require_organization_path

@@ -34,7 +34,7 @@ defmodule HexpmWeb.AuthHelpers do
 
       funs ->
         Enum.find_value(List.wrap(funs), fn fun ->
-          case apply_authorization_fun(fun, conn, user_or_organization, opts[:opts]) do
+          case apply_authorization_fun(fun, conn, user_or_organization) do
             :ok -> nil
             other -> error(conn, other)
           end
@@ -45,12 +45,12 @@ defmodule HexpmWeb.AuthHelpers do
     end
   end
 
-  defp apply_authorization_fun(fun, conn, user_or_organization, _opts = nil) do
-    fun.(conn, user_or_organization)
+  defp apply_authorization_fun({module, fun_name}, conn, user_or_organization) do
+    apply(module, fun_name, [conn, user_or_organization])
   end
 
-  defp apply_authorization_fun(fun, conn, user_or_organization, opts) do
-    fun.(conn, user_or_organization, opts)
+  defp apply_authorization_fun({module, fun_name, opts}, conn, user_or_organization) do
+    apply(module, fun_name, [conn, user_or_organization, opts])
   end
 
   defp verified_user?(%User{}, email, opts) do

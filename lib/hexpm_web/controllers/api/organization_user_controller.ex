@@ -4,15 +4,14 @@ defmodule HexpmWeb.API.OrganizationUserController do
   plug :fetch_organization
 
   plug :authorize,
-       [domain: "api", resource: "read", fun: &organization_access/2]
+       [domain: "api", resource: "read", fun: {AuthHelpers, :organization_access}]
        when action in [:index, :show]
 
   plug :authorize,
        [
          domain: "api",
          resource: "write",
-         fun: &organization_access/3,
-         opts: [organization_role: "admin"]
+         fun: {AuthHelpers, :organization_access, [organization_role: "admin"]}
        ]
        when action in [:create, :update, :delete]
 

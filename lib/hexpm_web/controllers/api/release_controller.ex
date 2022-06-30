@@ -7,14 +7,14 @@ defmodule HexpmWeb.API.ReleaseController do
   plug :maybe_fetch_package when action in [:create, :publish]
 
   plug :authorize,
-       [domain: "api", resource: "read", fun: &organization_access/2]
+       [domain: "api", resource: "read", fun: {AuthHelpers, :organization_access}]
        when action in [:show]
 
   plug :authorize,
        [
          domain: "api",
          resource: "write",
-         fun: [&package_owner/2, &organization_billing_active/2]
+         fun: [{AuthHelpers, :package_owner}, {AuthHelpers, :organization_billing_active}]
        ]
        when action in [:create, :publish]
 
@@ -22,7 +22,7 @@ defmodule HexpmWeb.API.ReleaseController do
        [
          domain: "api",
          resource: "write",
-         fun: [&package_owner/2, &organization_billing_active/2]
+         fun: [{AuthHelpers, :package_owner}, {AuthHelpers, :organization_billing_active}]
        ]
        when action in [:delete]
 

@@ -7,7 +7,7 @@ defmodule HexpmWeb.API.DocsController do
        [
          domain: "api",
          resource: "read",
-         fun: [&organization_access/2, &organization_billing_active/2]
+         fun: [{AuthHelpers, :organization_access}, {AuthHelpers, :organization_billing_active}]
        ]
        when action in [:show]
 
@@ -15,7 +15,7 @@ defmodule HexpmWeb.API.DocsController do
        [
          domain: "api",
          resource: "write",
-         fun: [&package_owner/2, &organization_billing_active/2]
+         fun: [{AuthHelpers, :package_owner}, {AuthHelpers, :organization_billing_active}]
        ]
        when action in [:create, :delete]
 

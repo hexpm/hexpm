@@ -25,7 +25,7 @@ defmodule HexpmWeb do
 
       import HexpmWeb.{ControllerHelpers, AuthHelpers}
 
-      alias HexpmWeb.{Endpoint, Router}
+      alias HexpmWeb.{AuthHelpers, Endpoint, Router}
       alias HexpmWeb.Router.Helpers, as: Routes
 
       use Hexpm.Shared
