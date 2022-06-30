@@ -1,5 +1,5 @@
 defmodule Hexpm.Billing.Hexpm do
-  @behaviour Hexpm.Billing
+  @behaviour Hexpm.Billing.Behaviour
 
   @timeout 15_000
 

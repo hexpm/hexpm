@@ -1,18 +1,6 @@
 defmodule Hexpm.Billing do
   use Hexpm.Context
 
-  @type organization() :: String.t()
-
-  @callback checkout(organization(), data :: map()) :: {:ok, map()} | {:error, map()}
-  @callback get(organization()) :: map() | nil
-  @callback cancel(organization()) :: map()
-  @callback create(map()) :: {:ok, map()} | {:error, map()}
-  @callback update(organization(), map()) :: {:ok, map()} | {:error, map()}
-  @callback change_plan(organization(), map()) :: :ok
-  @callback invoice(id :: pos_integer()) :: binary()
-  @callback pay_invoice(id :: pos_integer()) :: :ok | {:error, map()}
-  @callback report() :: [map()]
-
   defp impl(), do: Application.get_env(:hexpm, :billing_impl)
 
   def checkout(organization, data), do: impl().checkout(organization, data)
