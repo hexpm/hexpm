@@ -2,7 +2,7 @@ defmodule Hexpm.Store.GCS do
   import SweetXml, only: [sigil_x: 2]
   require Logger
 
-  @behaviour Hexpm.Store
+  @behaviour Hexpm.Store.Behaviour
 
   @gs_xml_url "https://storage.googleapis.com"
 

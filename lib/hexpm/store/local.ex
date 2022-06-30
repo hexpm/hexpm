@@ -1,5 +1,5 @@
 defmodule Hexpm.Store.Local do
-  @behaviour Hexpm.Store
+  @behaviour Hexpm.Store.Behaviour
 
   # only used during development (not safe)
 
