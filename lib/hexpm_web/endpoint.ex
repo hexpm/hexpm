@@ -5,7 +5,7 @@ defmodule HexpmWeb.Endpoint do
 
   @session_options [
     signing_salt: "NOcCmerj",
-    store: HexpmWeb.Session,
+    store: Module.concat(HexpmWeb, Session),
     key: "_hexpm_key",
     max_age: 60 * 60 * 24 * 30
   ]
@@ -42,7 +42,7 @@ defmodule HexpmWeb.Endpoint do
   plug Logster.Plugs.Logger, excludes: [:params]
 
   plug Plug.Parsers,
-    parsers: [:urlencoded, :json, HexpmWeb.PlugParser],
+    parsers: [:urlencoded, :json, Module.concat(HexpmWeb, PlugParser)],
     pass: ["*/*"],
     json_decoder: Jason
 
