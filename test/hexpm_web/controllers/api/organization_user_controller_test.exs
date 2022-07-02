@@ -24,12 +24,12 @@ defmodule HexpmWeb.API.OrganizationUserControllerTest do
   describe "GET /api/orgs/:organization/members" do
     test "get all organization members authorizes", %{user1: user1, organization: organization} do
       build_conn()
-      |> get("api/orgs/#{organization.name}/members")
+      |> get("/api/orgs/#{organization.name}/members")
       |> response(404)
 
       build_conn()
       |> put_req_header("authorization", key_for(user1))
-      |> get("api/orgs/#{organization.name}/members")
+      |> get("/api/orgs/#{organization.name}/members")
       |> response(404)
     end
 
@@ -39,7 +39,7 @@ defmodule HexpmWeb.API.OrganizationUserControllerTest do
       conn =
         build_conn()
         |> put_req_header("authorization", key_for(user1))
-        |> get("api/orgs/#{organization.name}/members")
+        |> get("/api/orgs/#{organization.name}/members")
 
       assert [user] = json_response(conn, 200)
       assert user["username"] == user1.username
@@ -55,12 +55,12 @@ defmodule HexpmWeb.API.OrganizationUserControllerTest do
       params = %{"name" => user2.username, "role" => "read"}
 
       build_conn()
-      |> post("api/orgs/#{organization.name}/members", params)
+      |> post("/api/orgs/#{organization.name}/members", params)
       |> response(404)
 
       build_conn()
       |> put_req_header("authorization", key_for(user1))
-      |> post("api/orgs/#{organization.name}/members", params)
+      |> post("/api/orgs/#{organization.name}/members", params)
       |> response(404)
 
       refute Organizations.get_role(organization, user2)
@@ -69,7 +69,7 @@ defmodule HexpmWeb.API.OrganizationUserControllerTest do
 
       build_conn()
       |> put_req_header("authorization", key_for(user1))
-      |> post("api/orgs/#{organization.name}/members", params)
+      |> post("/api/orgs/#{organization.name}/members", params)
       |> response(404)
 
       refute Organizations.get_role(organization, user2)
@@ -86,7 +86,7 @@ defmodule HexpmWeb.API.OrganizationUserControllerTest do
       conn =
         build_conn()
         |> put_req_header("authorization", key_for(user1))
-        |> post("api/orgs/#{organization.name}/members", params)
+        |> post("/api/orgs/#{organization.name}/members", params)
 
       result = json_response(conn, 422)
       assert result["errors"] == "cannot add an organization as member to an organization"
@@ -106,7 +106,7 @@ defmodule HexpmWeb.API.OrganizationUserControllerTest do
       conn =
         build_conn()
         |> put_req_header("authorization", key_for(user1))
-        |> post("api/orgs/#{organization.name}/members", params)
+        |> post("/api/orgs/#{organization.name}/members", params)
 
       result = json_response(conn, 422)
       assert result["errors"] == "not enough seats to add member"
@@ -123,7 +123,7 @@ defmodule HexpmWeb.API.OrganizationUserControllerTest do
       conn =
         build_conn()
         |> put_req_header("authorization", key_for(user1))
-        |> post("api/orgs/#{organization.name}/members", params)
+        |> post("/api/orgs/#{organization.name}/members", params)
 
       result = json_response(conn, 422)
       assert result["errors"]["user_id"] == "is already member"
@@ -137,7 +137,7 @@ defmodule HexpmWeb.API.OrganizationUserControllerTest do
       user =
         build_conn()
         |> put_req_header("authorization", key_for(user1))
-        |> post("api/orgs/#{organization.name}/members", params)
+        |> post("/api/orgs/#{organization.name}/members", params)
         |> json_response(200)
 
       assert user["username"] == user2.username
@@ -152,12 +152,12 @@ defmodule HexpmWeb.API.OrganizationUserControllerTest do
       insert(:organization_user, organization: organization, user: user2)
 
       build_conn()
-      |> get("api/orgs/#{organization.name}/members/#{user2.username}")
+      |> get("/api/orgs/#{organization.name}/members/#{user2.username}")
       |> response(404)
 
       build_conn()
       |> put_req_header("authorization", key_for(user1))
-      |> get("api/orgs/#{organization.name}/members/#{user2.username}")
+      |> get("/api/orgs/#{organization.name}/members/#{user2.username}")
       |> response(404)
     end
 
@@ -167,7 +167,7 @@ defmodule HexpmWeb.API.OrganizationUserControllerTest do
       user =
         build_conn()
         |> put_req_header("authorization", key_for(user1))
-        |> get("api/orgs/#{organization.name}/members/#{user1.username}")
+        |> get("/api/orgs/#{organization.name}/members/#{user1.username}")
         |> json_response(200)
 
       assert user["username"] == user1.username
@@ -181,12 +181,12 @@ defmodule HexpmWeb.API.OrganizationUserControllerTest do
       insert(:organization_user, organization: organization, user: user2)
 
       build_conn()
-      |> post("api/orgs/#{organization.name}/members/#{user2.username}", %{role: "write"})
+      |> post("/api/orgs/#{organization.name}/members/#{user2.username}", %{role: "write"})
       |> response(404)
 
       build_conn()
       |> put_req_header("authorization", key_for(user1))
-      |> post("api/orgs/#{organization.name}/members/#{user2.username}", %{role: "write"})
+      |> post("/api/orgs/#{organization.name}/members/#{user2.username}", %{role: "write"})
       |> response(404)
 
       assert Organizations.get_role(organization, user2) == "read"
@@ -195,7 +195,7 @@ defmodule HexpmWeb.API.OrganizationUserControllerTest do
 
       build_conn()
       |> put_req_header("authorization", key_for(user1))
-      |> post("api/orgs/#{organization.name}/members/#{user2.username}", %{role: "write"})
+      |> post("/api/orgs/#{organization.name}/members/#{user2.username}", %{role: "write"})
       |> response(404)
 
       assert Organizations.get_role(organization, user2) == "read"
@@ -210,7 +210,7 @@ defmodule HexpmWeb.API.OrganizationUserControllerTest do
       conn =
         build_conn()
         |> put_req_header("authorization", key_for(user1))
-        |> post("api/orgs/#{organization.name}/members/#{user1.username}", %{role: "write"})
+        |> post("/api/orgs/#{organization.name}/members/#{user1.username}", %{role: "write"})
 
       result = json_response(conn, 422)
       assert result["errors"] == "cannot demote last admin member"
@@ -225,7 +225,7 @@ defmodule HexpmWeb.API.OrganizationUserControllerTest do
       user =
         build_conn()
         |> put_req_header("authorization", key_for(user1))
-        |> post("api/orgs/#{organization.name}/members/#{user2.username}", %{role: "write"})
+        |> post("/api/orgs/#{organization.name}/members/#{user2.username}", %{role: "write"})
         |> json_response(200)
 
       assert user["username"] == user2.username
@@ -240,12 +240,12 @@ defmodule HexpmWeb.API.OrganizationUserControllerTest do
       insert(:organization_user, organization: organization, user: user2)
 
       build_conn()
-      |> delete("api/orgs/#{organization.name}/members/#{user2.username}")
+      |> delete("/api/orgs/#{organization.name}/members/#{user2.username}")
       |> response(404)
 
       build_conn()
       |> put_req_header("authorization", key_for(user1))
-      |> delete("api/orgs/#{organization.name}/members/#{user2.username}")
+      |> delete("/api/orgs/#{organization.name}/members/#{user2.username}")
       |> response(404)
 
       assert Organizations.get_role(organization, user2) == "read"
@@ -254,7 +254,7 @@ defmodule HexpmWeb.API.OrganizationUserControllerTest do
 
       build_conn()
       |> put_req_header("authorization", key_for(user1))
-      |> delete("api/orgs/#{organization.name}/members/#{user2.username}")
+      |> delete("/api/orgs/#{organization.name}/members/#{user2.username}")
       |> response(404)
 
       assert Organizations.get_role(organization, user2) == "read"
@@ -269,7 +269,7 @@ defmodule HexpmWeb.API.OrganizationUserControllerTest do
       conn =
         build_conn()
         |> put_req_header("authorization", key_for(user1))
-        |> delete("api/orgs/#{organization.name}/members/#{user1.username}")
+        |> delete("/api/orgs/#{organization.name}/members/#{user1.username}")
 
       result = json_response(conn, 422)
       assert result["errors"] == "cannot remove last member"
@@ -283,7 +283,7 @@ defmodule HexpmWeb.API.OrganizationUserControllerTest do
 
       build_conn()
       |> put_req_header("authorization", key_for(user1))
-      |> delete("api/orgs/#{organization.name}/members/#{user2.username}")
+      |> delete("/api/orgs/#{organization.name}/members/#{user2.username}")
       |> response(204)
 
       refute Organizations.get_role(organization, user2)

@@ -38,7 +38,7 @@ defmodule HexpmWeb.UserControllerTest do
     conn =
       build_conn()
       |> test_login(c.user1)
-      |> get("users/#{c.user1.username}")
+      |> get("/users/#{c.user1.username}")
 
     assert response(conn, 200) =~ c.user1.username
   end
@@ -47,7 +47,7 @@ defmodule HexpmWeb.UserControllerTest do
     conn =
       build_conn()
       |> test_login(c.user1)
-      |> get("users/#{c.user1.username}")
+      |> get("/users/#{c.user1.username}")
 
     assert response(conn, 200) =~ c.package1.name
     assert response(conn, 200) =~ c.package2.name
@@ -57,7 +57,7 @@ defmodule HexpmWeb.UserControllerTest do
     conn =
       build_conn()
       |> test_login(c.user2)
-      |> get("users/#{c.user1.username}")
+      |> get("/users/#{c.user1.username}")
 
     assert response(conn, 200) =~ c.package1.name
     assert response(conn, 200) =~ c.package2.name
@@ -67,7 +67,7 @@ defmodule HexpmWeb.UserControllerTest do
     conn =
       build_conn()
       |> test_login(c.user3)
-      |> get("users/#{c.user1.username}")
+      |> get("/users/#{c.user1.username}")
 
     assert response(conn, 200) =~ c.package1.name
     refute response(conn, 200) =~ c.package2.name

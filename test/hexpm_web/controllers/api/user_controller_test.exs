@@ -11,7 +11,7 @@ defmodule HexpmWeb.API.UserControllerTest do
     build_conn()
     |> put_req_header("content-type", "application/octet-stream")
     |> put_req_header("authorization", key_for(user))
-    |> post("api/packages/ecto/releases", body)
+    |> post("/api/packages/ecto/releases", body)
   end
 
   describe "POST /api/users" do
@@ -22,7 +22,7 @@ defmodule HexpmWeb.API.UserControllerTest do
         password: "passpass"
       }
 
-      conn = json_post(build_conn(), "api/users", params)
+      conn = json_post(build_conn(), "/api/users", params)
       assert json_response(conn, 201)["url"] =~ "/api/users/#{params.username}"
 
       user = Hexpm.Repo.get_by!(User, username: params.username) |> Hexpm.Repo.preload(:emails)
@@ -36,7 +36,7 @@ defmodule HexpmWeb.API.UserControllerTest do
         password: "passpass"
       }
 
-      conn = json_post(build_conn(), "api/users", params)
+      conn = json_post(build_conn(), "/api/users", params)
 
       assert conn.status == 201
       user = Hexpm.Repo.get_by!(User, username: params.username) |> Hexpm.Repo.preload(:emails)
@@ -50,7 +50,7 @@ defmodule HexpmWeb.API.UserControllerTest do
       conn =
         get(
           build_conn(),
-          "email/verify",
+          "/email/verify",
           username: params.username,
           email: user_email.email,
           key: user_email.verification_key
@@ -65,7 +65,7 @@ defmodule HexpmWeb.API.UserControllerTest do
 
     test "create user validates" do
       params = %{username: Fake.sequence(:username), password: "passpass"}
-      conn = json_post(build_conn(), "api/users", params)
+      conn = json_post(build_conn(), "/api/users", params)
 
       result = json_response(conn, 422)
       assert result["message"] == "Validation error(s)"
@@ -92,7 +92,7 @@ defmodule HexpmWeb.API.UserControllerTest do
       body =
         build_conn()
         |> put_req_header("authorization", key_for(user))
-        |> get("api/users/me")
+        |> get("/api/users/me")
         |> json_response(200)
 
       assert body["username"] == user.username
@@ -120,7 +120,7 @@ defmodule HexpmWeb.API.UserControllerTest do
 
     test "return 401 if not authenticated" do
       build_conn()
-      |> get("api/users/me")
+      |> get("/api/users/me")
       |> json_response(401)
     end
 
@@ -129,7 +129,7 @@ defmodule HexpmWeb.API.UserControllerTest do
 
       build_conn()
       |> put_req_header("authorization", key_for(organization))
-      |> get("api/users/me")
+      |> get("/api/users/me")
       |> json_response(404)
     end
   end
@@ -157,7 +157,7 @@ defmodule HexpmWeb.API.UserControllerTest do
 
       build_conn()
       |> put_req_header("authorization", key_for(organization))
-      |> get("api/users/me/audit_logs")
+      |> get("/api/users/me/audit_logs")
       |> json_response(404)
     end
   end
@@ -196,7 +196,7 @@ defmodule HexpmWeb.API.UserControllerTest do
 
     test "get user" do
       user = insert(:user)
-      conn = get(build_conn(), "api/users/#{user.username}")
+      conn = get(build_conn(), "/api/users/#{user.username}")
 
       body = json_response(conn, 200)
       assert body["username"] == user.username
@@ -204,7 +204,7 @@ defmodule HexpmWeb.API.UserControllerTest do
       refute body["emails"]
       refute body["password"]
 
-      conn = get(build_conn(), "api/users/bad")
+      conn = get(build_conn(), "/api/users/bad")
       assert conn.status == 404
     end
 
@@ -212,7 +212,7 @@ defmodule HexpmWeb.API.UserControllerTest do
       conn =
         build_conn()
         |> put_req_header("authorization", key_for(data.user1))
-        |> get("api/users/#{data.user1.username}")
+        |> get("/api/users/#{data.user1.username}")
 
       assert response(conn, 200) =~ data.package1.name
       assert response(conn, 200) =~ data.package2.name
@@ -222,7 +222,7 @@ defmodule HexpmWeb.API.UserControllerTest do
       conn =
         build_conn()
         |> put_req_header("authorization", key_for(data.user2))
-        |> get("api/users/#{data.user1.username}")
+        |> get("/api/users/#{data.user1.username}")
 
       assert response(conn, 200) =~ data.package1.name
       assert response(conn, 200) =~ data.package2.name
@@ -232,7 +232,7 @@ defmodule HexpmWeb.API.UserControllerTest do
       conn =
         build_conn()
         |> put_req_header("authorization", key_for(data.user3))
-        |> get("api/users/#{data.user1.username}")
+        |> get("/api/users/#{data.user1.username}")
 
       assert response(conn, 200) =~ data.package1.name
       refute response(conn, 200) =~ data.package2.name
@@ -244,11 +244,11 @@ defmodule HexpmWeb.API.UserControllerTest do
       user = insert(:user)
 
       # initiate reset requests
-      conn = post(build_conn(), "api/users/#{user.username}/reset", %{})
+      conn = post(build_conn(), "/api/users/#{user.username}/reset", %{})
       assert conn.status == 204
 
       # initiate second reset request
-      conn = post(build_conn(), "api/users/#{user.username}/reset", %{})
+      conn = post(build_conn(), "/api/users/#{user.username}/reset", %{})
       assert conn.status == 204
 
       user =
@@ -274,7 +274,7 @@ defmodule HexpmWeb.API.UserControllerTest do
       conn =
         build_conn()
         |> put_req_header("authorization", key_for(user))
-        |> get("api/users/#{user.username}/test")
+        |> get("/api/users/#{user.username}/test")
 
       body = json_response(conn, 200)
       assert body["username"] == user.username
@@ -282,7 +282,7 @@ defmodule HexpmWeb.API.UserControllerTest do
       conn =
         build_conn()
         |> put_req_header("authorization", "badkey")
-        |> get("api/users/#{user.username}/test")
+        |> get("/api/users/#{user.username}/test")
 
       assert conn.status == 401
     end

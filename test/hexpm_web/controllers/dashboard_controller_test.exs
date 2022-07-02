@@ -12,13 +12,13 @@ defmodule HexpmWeb.DashboardControllerTest do
     conn =
       build_conn()
       |> test_login(context.user)
-      |> get("dashboard")
+      |> get("/dashboard")
 
     assert redirected_to(conn) == "/dashboard/profile"
   end
 
   test "requires login" do
-    conn = get(build_conn(), "dashboard")
-    assert redirected_to(conn) == "/login?return=dashboard"
+    conn = get(build_conn(), "/dashboard")
+    assert redirected_to(conn) == "/login?return=%2Fdashboard"
   end
 end

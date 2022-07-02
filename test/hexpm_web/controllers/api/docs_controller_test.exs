@@ -16,7 +16,7 @@ defmodule HexpmWeb.API.DocsControllerTest do
       insert(:release, package: package, version: "0.0.1", has_docs: false)
 
       build_conn()
-      |> get("api/packages/#{package.name}/releases/0.0.1/docs")
+      |> get("/api/packages/#{package.name}/releases/0.0.1/docs")
       |> response(404)
     end
 
@@ -24,7 +24,7 @@ defmodule HexpmWeb.API.DocsControllerTest do
       package = insert(:package)
       insert(:release, package: package, version: "0.0.1", has_docs: true)
 
-      conn = get(build_conn(), "api/packages/#{package.name}/releases/0.0.1/docs")
+      conn = get(build_conn(), "/api/packages/#{package.name}/releases/0.0.1/docs")
       assert redirected_to(conn) =~ "/docs/#{package.name}-0.0.1.tar.gz"
     end
   end
@@ -36,12 +36,12 @@ defmodule HexpmWeb.API.DocsControllerTest do
       insert(:release, package: package, version: "0.0.1", has_docs: true)
 
       build_conn()
-      |> get("api/repos/#{repository.name}/packages/#{package.name}/releases/0.0.1/docs")
+      |> get("/api/repos/#{repository.name}/packages/#{package.name}/releases/0.0.1/docs")
       |> response(404)
 
       build_conn()
       |> put_req_header("authorization", key_for(user))
-      |> get("api/repos/#{repository.name}/packages/#{package.name}/releases/0.0.1/docs")
+      |> get("/api/repos/#{repository.name}/packages/#{package.name}/releases/0.0.1/docs")
       |> response(404)
     end
 
@@ -54,7 +54,7 @@ defmodule HexpmWeb.API.DocsControllerTest do
       conn =
         build_conn()
         |> put_req_header("authorization", key_for(user))
-        |> get("api/repos/#{repository.name}/packages/#{package.name}/releases/0.0.1/docs")
+        |> get("/api/repos/#{repository.name}/packages/#{package.name}/releases/0.0.1/docs")
 
       assert redirected_to(conn) =~ "/repos/#{repository.name}/docs/#{package.name}-0.0.1.tar.gz"
     end
@@ -169,7 +169,7 @@ defmodule HexpmWeb.API.DocsControllerTest do
       refute Hexpm.Store.get(:repo_bucket, "docs/#{package.name}-0.0.1.tar.gz", [])
 
       # Check docs were deleted
-      assert get(build_conn(), "api/packages/#{package.name}/releases/0.0.1/docs").status in 400..499
+      assert get(build_conn(), "/api/packages/#{package.name}/releases/0.0.1/docs").status in 400..499
     end
 
     test "delete docs", %{user: user} do
@@ -258,13 +258,13 @@ defmodule HexpmWeb.API.DocsControllerTest do
     build_conn()
     |> put_req_header("content-type", "application/octet-stream")
     |> put_req_header("authorization", key_for(user))
-    |> post("api/packages/#{name}/releases/#{version}/docs", body)
+    |> post("/api/packages/#{name}/releases/#{version}/docs", body)
   end
 
   def revert_docs(user, %Package{name: package}, version) do
     build_conn()
     |> put_req_header("authorization", key_for(user))
-    |> delete("api/packages/#{package}/releases/#{version}/docs")
+    |> delete("/api/packages/#{package}/releases/#{version}/docs")
   end
 
   defp publish_docs(user, %Repository{name: repository}, %Package{name: package}, version, files) do
@@ -273,19 +273,19 @@ defmodule HexpmWeb.API.DocsControllerTest do
     build_conn()
     |> put_req_header("content-type", "application/octet-stream")
     |> put_req_header("authorization", key_for(user))
-    |> post("api/repos/#{repository}/packages/#{package}/releases/#{version}/docs", body)
+    |> post("/api/repos/#{repository}/packages/#{package}/releases/#{version}/docs", body)
   end
 
   def revert_docs(user, %Repository{name: repository}, %Package{name: package}, version) do
     build_conn()
     |> put_req_header("authorization", key_for(user))
-    |> delete("api/repos/#{repository}/packages/#{package}/releases/#{version}/docs")
+    |> delete("/api/repos/#{repository}/packages/#{package}/releases/#{version}/docs")
   end
 
   def revert_release(user, %Package{name: package}, version) do
     build_conn()
     |> put_req_header("authorization", key_for(user))
-    |> delete("api/packages/#{package}/releases/#{version}")
+    |> delete("/api/packages/#{package}/releases/#{version}")
   end
 
   defp create_tarball(files) do

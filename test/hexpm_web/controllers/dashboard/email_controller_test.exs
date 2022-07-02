@@ -23,14 +23,14 @@ defmodule HexpmWeb.Dashboard.EmailControllerTest do
     conn =
       build_conn()
       |> test_login(c.user)
-      |> get("dashboard/email")
+      |> get("/dashboard/email")
 
     assert response(conn, 200) =~ "Emails"
   end
 
   test "requires login" do
-    conn = get(build_conn(), "dashboard/email")
-    assert redirected_to(conn) == "/login?return=dashboard%2Femail"
+    conn = get(build_conn(), "/dashboard/email")
+    assert redirected_to(conn) == "/login?return=%2Fdashboard%2Femail"
   end
 
   test "add email", c do
@@ -39,7 +39,7 @@ defmodule HexpmWeb.Dashboard.EmailControllerTest do
     conn =
       build_conn()
       |> test_login(c.user)
-      |> post("dashboard/email", %{email: %{email: email}})
+      |> post("/dashboard/email", %{email: %{email: email}})
 
     assert redirected_to(conn) == "/dashboard/email"
     assert get_flash(conn, :info) =~ "A verification email has been sent"
@@ -56,7 +56,7 @@ defmodule HexpmWeb.Dashboard.EmailControllerTest do
     conn =
       build_conn()
       |> test_login(c.user)
-      |> post("dashboard/email", %{email: %{email: email}})
+      |> post("/dashboard/email", %{email: %{email: email}})
 
     response(conn, 400)
     assert conn.resp_body =~ "Add email"
@@ -70,7 +70,7 @@ defmodule HexpmWeb.Dashboard.EmailControllerTest do
     conn =
       build_conn()
       |> test_login(c.user)
-      |> post("dashboard/email", %{email: %{email: email}})
+      |> post("/dashboard/email", %{email: %{email: email}})
 
     assert redirected_to(conn) == "/dashboard/email"
     assert get_flash(conn, :info) =~ "A verification email has been sent"
@@ -83,7 +83,7 @@ defmodule HexpmWeb.Dashboard.EmailControllerTest do
 
     conn =
       build_conn()
-      |> get("email/verify", %{
+      |> get("/email/verify", %{
         username: c.user.username,
         email: dup_email.email,
         key: dup_email.verification_key
@@ -95,18 +95,18 @@ defmodule HexpmWeb.Dashboard.EmailControllerTest do
     conn =
       build_conn()
       |> test_login(c.user)
-      |> post("dashboard/email/primary", %{email: dup_email.email})
+      |> post("/dashboard/email/primary", %{email: dup_email.email})
 
     assert redirected_to(conn) == "/dashboard/email"
     assert get_flash(conn, :info) =~ "primary email was changed"
 
-    conn = post(build_conn(), "login", %{username: dup_email.email, password: "password"})
+    conn = post(build_conn(), "/login", %{username: dup_email.email, password: "password"})
     assert redirected_to(conn) == "/users/#{c.user.username}"
     assert get_session(conn, "user_id") == c.user.id
 
     conn =
       build_conn()
-      |> get("email/verify", %{
+      |> get("/email/verify", %{
         username: user2.username,
         email: dup_email.email,
         key: hd(user2.emails).verification_key
@@ -123,7 +123,7 @@ defmodule HexpmWeb.Dashboard.EmailControllerTest do
     conn =
       build_conn()
       |> test_login(c.user)
-      |> delete("dashboard/email", %{email: email})
+      |> delete("/dashboard/email", %{email: email})
 
     assert redirected_to(conn) == "/dashboard/email"
     assert get_flash(conn, :info) =~ "Removed email"
@@ -135,7 +135,7 @@ defmodule HexpmWeb.Dashboard.EmailControllerTest do
     conn =
       build_conn()
       |> test_login(c.user)
-      |> delete("dashboard/email", %{email: c.email})
+      |> delete("/dashboard/email", %{email: c.email})
 
     assert redirected_to(conn) == "/dashboard/email"
     assert get_flash(conn, :error) =~ "Cannot remove primary email"
@@ -152,7 +152,7 @@ defmodule HexpmWeb.Dashboard.EmailControllerTest do
     conn =
       build_conn()
       |> test_login(c.user)
-      |> post("dashboard/email/primary", %{email: new_email})
+      |> post("/dashboard/email/primary", %{email: new_email})
 
     assert redirected_to(conn) == "/dashboard/email"
     assert get_flash(conn, :info) =~ "primary email was changed"
@@ -169,7 +169,7 @@ defmodule HexpmWeb.Dashboard.EmailControllerTest do
     conn =
       build_conn()
       |> test_login(c.user)
-      |> post("dashboard/email/primary", %{email: email})
+      |> post("/dashboard/email/primary", %{email: email})
 
     assert redirected_to(conn) == "/dashboard/email"
     assert get_flash(conn, :error) =~ "not verified"
@@ -187,7 +187,7 @@ defmodule HexpmWeb.Dashboard.EmailControllerTest do
     conn =
       build_conn()
       |> test_login(c.user)
-      |> post("dashboard/email/public", %{email: new_email})
+      |> post("/dashboard/email/public", %{email: new_email})
 
     assert redirected_to(conn) == "/dashboard/email"
     assert get_flash(conn, :info) =~ "public email was changed"
@@ -203,7 +203,7 @@ defmodule HexpmWeb.Dashboard.EmailControllerTest do
     conn =
       build_conn()
       |> test_login(c.user)
-      |> post("dashboard/email/public", %{email: "none"})
+      |> post("/dashboard/email/public", %{email: "none"})
 
     assert redirected_to(conn) == "/dashboard/email"
     assert get_flash(conn, :info) =~ "Your public email was changed to none."
@@ -221,7 +221,7 @@ defmodule HexpmWeb.Dashboard.EmailControllerTest do
     conn =
       build_conn()
       |> test_login(c.user)
-      |> post("dashboard/email/gravatar", %{email: new_email})
+      |> post("/dashboard/email/gravatar", %{email: new_email})
 
     assert redirected_to(conn) == "/dashboard/email"
     assert get_flash(conn, :info) =~ "gravatar email was changed"
@@ -239,7 +239,7 @@ defmodule HexpmWeb.Dashboard.EmailControllerTest do
     conn =
       build_conn()
       |> test_login(c.user)
-      |> post("dashboard/email/gravatar", %{email: unknown_email})
+      |> post("/dashboard/email/gravatar", %{email: unknown_email})
 
     assert redirected_to(conn) == "/dashboard/email"
     assert get_flash(conn, :error) =~ "Unknown email"
@@ -256,7 +256,7 @@ defmodule HexpmWeb.Dashboard.EmailControllerTest do
     conn =
       build_conn()
       |> test_login(c.user)
-      |> post("dashboard/email/gravatar", %{email: unverified_email})
+      |> post("/dashboard/email/gravatar", %{email: unverified_email})
 
     assert redirected_to(conn) == "/dashboard/email"
     assert get_flash(conn, :error) =~ "not verified"
@@ -273,7 +273,7 @@ defmodule HexpmWeb.Dashboard.EmailControllerTest do
     conn =
       build_conn()
       |> test_login(user)
-      |> post("dashboard/email/resend", %{email: new_email})
+      |> post("/dashboard/email/resend", %{email: new_email})
 
     assert redirected_to(conn) == "/dashboard/email"
     assert get_flash(conn, :info) =~ "verification email has been sent"
