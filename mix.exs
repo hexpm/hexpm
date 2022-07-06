@@ -54,6 +54,7 @@ defmodule Hexpm.MixProject do
       {:libcluster, "~> 3.0"},
       {:logster, "~> 1.0"},
       {:mox, "~> 1.0", only: :test},
+      {:nimble_parsec, "~> 1.2"},
       {:phoenix_ecto, "~> 4.0"},
       {:phoenix_html, "~> 3.1"},
       {:phoenix_live_dashboard, "~> 0.6"},
