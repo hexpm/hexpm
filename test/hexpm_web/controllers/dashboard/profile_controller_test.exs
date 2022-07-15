@@ -19,21 +19,21 @@ defmodule HexpmWeb.Dashboard.ProfileControllerTest do
     conn =
       build_conn()
       |> test_login(c.user)
-      |> get("dashboard/profile")
+      |> get("/dashboard/profile")
 
     assert response(conn, 200) =~ "Public profile"
   end
 
   test "requires login" do
-    conn = get(build_conn(), "dashboard/profile")
-    assert redirected_to(conn) == "/login?return=dashboard%2Fprofile"
+    conn = get(build_conn(), "/dashboard/profile")
+    assert redirected_to(conn) == "/login?return=%2Fdashboard%2Fprofile"
   end
 
   test "update profile", c do
     conn =
       build_conn()
       |> test_login(c.user)
-      |> post("dashboard/profile", %{user: %{full_name: "New Name"}})
+      |> post("/dashboard/profile", %{user: %{full_name: "New Name"}})
 
     assert redirected_to(conn) == "/dashboard/profile"
     assert get_flash(conn, :info) =~ "Profile updated successfully"
@@ -49,7 +49,7 @@ defmodule HexpmWeb.Dashboard.ProfileControllerTest do
     conn =
       build_conn()
       |> test_login(c.user)
-      |> post("dashboard/profile", %{user: %{public_email: "new@mail.com"}})
+      |> post("/dashboard/profile", %{user: %{public_email: "new@mail.com"}})
 
     assert redirected_to(conn) == "/dashboard/profile"
     assert get_flash(conn, :info) =~ "Profile updated successfully"
@@ -68,7 +68,7 @@ defmodule HexpmWeb.Dashboard.ProfileControllerTest do
     conn =
       build_conn()
       |> test_login(c.user)
-      |> post("dashboard/profile", %{user: %{gravatar_email: "gravatar@mail.com"}})
+      |> post("/dashboard/profile", %{user: %{gravatar_email: "gravatar@mail.com"}})
 
     assert redirected_to(conn) == "/dashboard/profile"
     assert get_flash(conn, :info) =~ "Profile updated successfully"
@@ -82,7 +82,7 @@ defmodule HexpmWeb.Dashboard.ProfileControllerTest do
     conn =
       build_conn()
       |> test_login(c.user)
-      |> post("dashboard/profile", %{user: %{public_email: "none"}})
+      |> post("/dashboard/profile", %{user: %{public_email: "none"}})
 
     assert redirected_to(conn) == "/dashboard/profile"
     assert get_flash(conn, :info) =~ "Profile updated successfully"
@@ -95,7 +95,7 @@ defmodule HexpmWeb.Dashboard.ProfileControllerTest do
     conn =
       build_conn()
       |> test_login(c.user)
-      |> post("dashboard/profile", %{user: %{public_email: "none"}})
+      |> post("/dashboard/profile", %{user: %{public_email: "none"}})
 
     assert redirected_to(conn) == "/dashboard/profile"
     assert get_flash(conn, :info) =~ "Profile updated successfully"

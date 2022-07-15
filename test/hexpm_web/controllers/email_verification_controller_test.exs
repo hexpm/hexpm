@@ -21,7 +21,7 @@ defmodule HexpmWeb.EmailVerificationControllerTest do
       email = hd(c.user.emails)
 
       conn =
-        get(build_conn(), "email/verify", %{
+        get(build_conn(), "/email/verify", %{
           username: c.user.username,
           email: email.email,
           key: "invalid"
@@ -36,7 +36,11 @@ defmodule HexpmWeb.EmailVerificationControllerTest do
 
     test "verify email with invalid username" do
       conn =
-        get(build_conn(), "email/verify", %{username: "invalid", email: "invalid", key: "invalid"})
+        get(build_conn(), "/email/verify", %{
+          username: "invalid",
+          email: "invalid",
+          key: "invalid"
+        })
 
       assert redirected_to(conn) == "/"
       assert get_flash(conn, :error) =~ "failed to verify"
@@ -46,7 +50,7 @@ defmodule HexpmWeb.EmailVerificationControllerTest do
       email = hd(c.user.emails)
 
       conn =
-        get(build_conn(), "email/verify", %{
+        get(build_conn(), "/email/verify", %{
           username: c.user.username,
           email: email.email,
           key: email.verification_key
@@ -62,7 +66,7 @@ defmodule HexpmWeb.EmailVerificationControllerTest do
 
   describe "GET /email/verification" do
     test "show verification form" do
-      conn = get(build_conn(), "email/verification")
+      conn = get(build_conn(), "/email/verification")
       assert response(conn, 200) =~ "Verify email"
     end
   end
@@ -72,7 +76,7 @@ defmodule HexpmWeb.EmailVerificationControllerTest do
       user = insert(:user, emails: [build(:email, verified: false)])
       email = User.email(user, :primary)
 
-      conn = post(build_conn(), "email/verification", %{"email" => email})
+      conn = post(build_conn(), "/email/verification", %{"email" => email})
       assert redirected_to(conn) == "/"
       assert get_flash(conn, :info) =~ "A verification email has been sent"
 
@@ -85,7 +89,7 @@ defmodule HexpmWeb.EmailVerificationControllerTest do
       user = insert(:user, emails: [build(:email, verified: true)])
       email = User.email(user, :primary)
 
-      conn = post(build_conn(), "email/verification", %{"email" => email})
+      conn = post(build_conn(), "/email/verification", %{"email" => email})
       assert redirected_to(conn) == "/"
       assert get_flash(conn, :info) =~ "A verification email has been sent"
 
@@ -95,7 +99,7 @@ defmodule HexpmWeb.EmailVerificationControllerTest do
     end
 
     test "dont send verification email for non-existent email" do
-      conn = post(build_conn(), "email/verification", %{"email" => "foo@example.com"})
+      conn = post(build_conn(), "/email/verification", %{"email" => "foo@example.com"})
       assert redirected_to(conn) == "/"
       assert get_flash(conn, :info) =~ "A verification email has been sent"
     end

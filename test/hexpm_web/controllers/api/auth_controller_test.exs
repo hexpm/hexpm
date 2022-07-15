@@ -75,21 +75,21 @@ defmodule HexpmWeb.API.AuthControllerTest do
   describe "GET /api/auth" do
     test "without key" do
       build_conn()
-      |> get("api/auth", domain: "api")
+      |> get("/api/auth", domain: "api")
       |> response(401)
     end
 
     test "with invalid key" do
       build_conn()
       |> put_req_header("authorization", "ABC")
-      |> get("api/auth", domain: "api")
+      |> get("/api/auth", domain: "api")
       |> response(401)
     end
 
     test "without domain returns 400", %{user_full_key: key} do
       build_conn()
       |> put_req_header("authorization", key.user_secret)
-      |> get("api/auth")
+      |> get("/api/auth")
       |> response(400)
     end
 
@@ -104,7 +104,7 @@ defmodule HexpmWeb.API.AuthControllerTest do
 
       build_conn()
       |> put_req_header("authorization", key.user_secret)
-      |> get("api/auth", domain: "api")
+      |> get("/api/auth", domain: "api")
       |> response(401)
 
       key =
@@ -117,7 +117,7 @@ defmodule HexpmWeb.API.AuthControllerTest do
 
       build_conn()
       |> put_req_header("authorization", key.user_secret)
-      |> get("api/auth", domain: "api")
+      |> get("/api/auth", domain: "api")
       |> response(401)
 
       key =
@@ -130,7 +130,7 @@ defmodule HexpmWeb.API.AuthControllerTest do
 
       build_conn()
       |> put_req_header("authorization", key.user_secret)
-      |> get("api/auth", domain: "api")
+      |> get("/api/auth", domain: "api")
       |> response(204)
     end
 
@@ -141,27 +141,27 @@ defmodule HexpmWeb.API.AuthControllerTest do
     } do
       build_conn()
       |> put_req_header("authorization", key.user_secret)
-      |> get("api/auth", domain: "api")
+      |> get("/api/auth", domain: "api")
       |> response(204)
 
       build_conn()
       |> put_req_header("authorization", key.user_secret)
-      |> get("api/auth", domain: "repository", resource: owned_org.name)
+      |> get("/api/auth", domain: "repository", resource: owned_org.name)
       |> response(204)
 
       build_conn()
       |> put_req_header("authorization", key.user_secret)
-      |> get("api/auth", domain: "repository", resource: unowned_org.name)
+      |> get("/api/auth", domain: "repository", resource: unowned_org.name)
       |> response(401)
 
       build_conn()
       |> put_req_header("authorization", key.user_secret)
-      |> get("api/auth", domain: "repository", resource: "BADREPO")
+      |> get("/api/auth", domain: "repository", resource: "BADREPO")
       |> response(401)
 
       build_conn()
       |> put_req_header("authorization", key.user_secret)
-      |> get("api/auth", domain: "repository")
+      |> get("/api/auth", domain: "repository")
       |> response(401)
     end
 
@@ -172,71 +172,71 @@ defmodule HexpmWeb.API.AuthControllerTest do
     } do
       build_conn()
       |> put_req_header("authorization", key.user_secret)
-      |> get("api/auth", domain: "api")
+      |> get("/api/auth", domain: "api")
       |> response(204)
 
       build_conn()
       |> put_req_header("authorization", key.user_secret)
-      |> get("api/auth", domain: "repository", resource: owned_org.name)
+      |> get("/api/auth", domain: "repository", resource: owned_org.name)
       |> response(204)
 
       build_conn()
       |> put_req_header("authorization", key.user_secret)
-      |> get("api/auth", domain: "repository", resource: unowned_org.name)
+      |> get("/api/auth", domain: "repository", resource: unowned_org.name)
       |> response(401)
 
       build_conn()
       |> put_req_header("authorization", key.user_secret)
-      |> get("api/auth", domain: "repository", resource: "BADREPO")
+      |> get("/api/auth", domain: "repository", resource: "BADREPO")
       |> response(401)
 
       build_conn()
       |> put_req_header("authorization", key.user_secret)
-      |> get("api/auth", domain: "repository")
+      |> get("/api/auth", domain: "repository")
       |> response(401)
     end
 
     test "authenticate user api key", %{user_api_key: key} do
       build_conn()
       |> put_req_header("authorization", key.user_secret)
-      |> get("api/auth", domain: "api")
+      |> get("/api/auth", domain: "api")
       |> response(204)
 
       build_conn()
       |> put_req_header("authorization", key.user_secret)
-      |> get("api/auth", domain: "api", resource: "read")
+      |> get("/api/auth", domain: "api", resource: "read")
       |> response(204)
 
       build_conn()
       |> put_req_header("authorization", key.user_secret)
-      |> get("api/auth", domain: "api", resource: "write")
+      |> get("/api/auth", domain: "api", resource: "write")
       |> response(204)
 
       build_conn()
       |> put_req_header("authorization", key.user_secret)
-      |> get("api/auth", domain: "repository", resource: "myrepo")
+      |> get("/api/auth", domain: "repository", resource: "myrepo")
       |> response(401)
     end
 
     test "authenticate organization api key", %{organization_api_key: key} do
       build_conn()
       |> put_req_header("authorization", key.user_secret)
-      |> get("api/auth", domain: "api")
+      |> get("/api/auth", domain: "api")
       |> response(204)
 
       build_conn()
       |> put_req_header("authorization", key.user_secret)
-      |> get("api/auth", domain: "api", resource: "read")
+      |> get("/api/auth", domain: "api", resource: "read")
       |> response(204)
 
       build_conn()
       |> put_req_header("authorization", key.user_secret)
-      |> get("api/auth", domain: "api", resource: "write")
+      |> get("/api/auth", domain: "api", resource: "write")
       |> response(204)
 
       build_conn()
       |> put_req_header("authorization", key.user_secret)
-      |> get("api/auth", domain: "repository", resource: "myrepo")
+      |> get("/api/auth", domain: "repository", resource: "myrepo")
       |> response(401)
     end
 
@@ -246,12 +246,12 @@ defmodule HexpmWeb.API.AuthControllerTest do
 
       build_conn()
       |> put_req_header("authorization", key.user_secret)
-      |> get("api/auth", domain: "api", resource: "read")
+      |> get("/api/auth", domain: "api", resource: "read")
       |> response(204)
 
       build_conn()
       |> put_req_header("authorization", key.user_secret)
-      |> get("api/auth", domain: "api", resource: "write")
+      |> get("/api/auth", domain: "api", resource: "write")
       |> response(401)
     end
 
@@ -261,12 +261,12 @@ defmodule HexpmWeb.API.AuthControllerTest do
 
       build_conn()
       |> put_req_header("authorization", key.user_secret)
-      |> get("api/auth", domain: "api", resource: "write")
+      |> get("/api/auth", domain: "api", resource: "write")
       |> response(204)
 
       build_conn()
       |> put_req_header("authorization", key.user_secret)
-      |> get("api/auth", domain: "repository", resource: "foo")
+      |> get("/api/auth", domain: "repository", resource: "foo")
       |> response(401)
     end
 
@@ -276,12 +276,12 @@ defmodule HexpmWeb.API.AuthControllerTest do
 
       build_conn()
       |> put_req_header("authorization", key.user_secret)
-      |> get("api/auth", domain: "api", resource: "read")
+      |> get("/api/auth", domain: "api", resource: "read")
       |> response(204)
 
       build_conn()
       |> put_req_header("authorization", key.user_secret)
-      |> get("api/auth", domain: "api", resource: "write")
+      |> get("/api/auth", domain: "api", resource: "write")
       |> response(401)
     end
 
@@ -291,12 +291,12 @@ defmodule HexpmWeb.API.AuthControllerTest do
 
       build_conn()
       |> put_req_header("authorization", key.user_secret)
-      |> get("api/auth", domain: "api", resource: "write")
+      |> get("/api/auth", domain: "api", resource: "write")
       |> response(204)
 
       build_conn()
       |> put_req_header("authorization", key.user_secret)
-      |> get("api/auth", domain: "repository", resource: owned_org.name)
+      |> get("/api/auth", domain: "repository", resource: owned_org.name)
       |> response(401)
     end
 
@@ -307,27 +307,27 @@ defmodule HexpmWeb.API.AuthControllerTest do
     } do
       build_conn()
       |> put_req_header("authorization", key.user_secret)
-      |> get("api/auth", domain: "api")
+      |> get("/api/auth", domain: "api")
       |> response(401)
 
       build_conn()
       |> put_req_header("authorization", key.user_secret)
-      |> get("api/auth", domain: "repositories")
+      |> get("/api/auth", domain: "repositories")
       |> response(204)
 
       build_conn()
       |> put_req_header("authorization", key.user_secret)
-      |> get("api/auth", domain: "repository", resource: owned_org.name)
+      |> get("/api/auth", domain: "repository", resource: owned_org.name)
       |> response(204)
 
       build_conn()
       |> put_req_header("authorization", key.user_secret)
-      |> get("api/auth", domain: "repository", resource: unowned_org.name)
+      |> get("/api/auth", domain: "repository", resource: unowned_org.name)
       |> response(403)
 
       build_conn()
       |> put_req_header("authorization", key.user_secret)
-      |> get("api/auth", domain: "repository", resource: "BADREPO")
+      |> get("/api/auth", domain: "repository", resource: "BADREPO")
       |> response(403)
     end
 
@@ -337,12 +337,12 @@ defmodule HexpmWeb.API.AuthControllerTest do
 
       build_conn()
       |> put_req_header("authorization", key.user_secret)
-      |> get("api/auth", domain: "docs", resource: owned_org.name)
+      |> get("/api/auth", domain: "docs", resource: owned_org.name)
       |> response(204)
 
       build_conn()
       |> put_req_header("authorization", key.user_secret)
-      |> get("api/auth", domain: "docs", resource: "not_my_org")
+      |> get("/api/auth", domain: "docs", resource: "not_my_org")
       |> response(401)
     end
 
@@ -352,7 +352,7 @@ defmodule HexpmWeb.API.AuthControllerTest do
     } do
       build_conn()
       |> put_req_header("authorization", key.user_secret)
-      |> get("api/auth", domain: "repository", resource: unowned_org.name)
+      |> get("/api/auth", domain: "repository", resource: unowned_org.name)
       |> response(403)
     end
 
@@ -369,7 +369,7 @@ defmodule HexpmWeb.API.AuthControllerTest do
 
       build_conn()
       |> put_req_header("authorization", key.user_secret)
-      |> get("api/auth", domain: "repository", resource: organization.name)
+      |> get("/api/auth", domain: "repository", resource: organization.name)
       |> response(403)
     end
 
@@ -385,7 +385,7 @@ defmodule HexpmWeb.API.AuthControllerTest do
 
       build_conn()
       |> put_req_header("authorization", key.user_secret)
-      |> get("api/auth", domain: "repository", resource: organization.name)
+      |> get("/api/auth", domain: "repository", resource: organization.name)
       |> response(403)
     end
   end

@@ -12,7 +12,7 @@ defmodule HexpmWeb.API.RepositoryControllerTest do
 
   describe "GET /api/repos" do
     test "not authorized" do
-      conn = get(build_conn(), "api/repos")
+      conn = get(build_conn(), "/api/repos")
       result = json_response(conn, 200)
       assert length(result) == 1
     end
@@ -21,7 +21,7 @@ defmodule HexpmWeb.API.RepositoryControllerTest do
       result =
         build_conn()
         |> put_req_header("authorization", key_for(repo_user))
-        |> get("api/repos")
+        |> get("/api/repos")
         |> json_response(200)
 
       assert length(result) == 2
@@ -30,17 +30,17 @@ defmodule HexpmWeb.API.RepositoryControllerTest do
 
   describe "GET /api/repos/:repository" do
     test "not authorized", %{user: user, repository2: repository2} do
-      conn = get(build_conn(), "api/repos/hexpm")
+      conn = get(build_conn(), "/api/repos/hexpm")
       result = json_response(conn, 200)
       assert result["name"] == "hexpm"
 
       build_conn()
       |> put_req_header("authorization", key_for(user))
-      |> get("api/repos/#{repository2.name}")
+      |> get("/api/repos/#{repository2.name}")
       |> response(404)
 
       build_conn()
-      |> get("api/repos/#{repository2.name}")
+      |> get("/api/repos/#{repository2.name}")
       |> response(404)
     end
 
@@ -48,7 +48,7 @@ defmodule HexpmWeb.API.RepositoryControllerTest do
       result =
         build_conn()
         |> put_req_header("authorization", key_for(repo_user))
-        |> get("api/repos/#{repository1.name}")
+        |> get("/api/repos/#{repository1.name}")
         |> json_response(200)
 
       assert result["name"] == repository1.name

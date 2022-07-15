@@ -25,7 +25,7 @@ defmodule HexpmWeb.API.OrganizationControllerTest do
       conn =
         build_conn()
         |> put_req_header("authorization", key_for(user1))
-        |> get("api/orgs")
+        |> get("/api/orgs")
 
       assert json_response(conn, 200) == []
     end
@@ -36,7 +36,7 @@ defmodule HexpmWeb.API.OrganizationControllerTest do
       conn =
         build_conn()
         |> put_req_header("authorization", key_for(user1))
-        |> get("api/orgs")
+        |> get("/api/orgs")
 
       assert [org] = json_response(conn, 200)
       assert org["name"] == organization.name
@@ -48,17 +48,17 @@ defmodule HexpmWeb.API.OrganizationControllerTest do
 
     test "get organization authorizes", %{user1: user1, organization: organization} do
       build_conn()
-      |> get("api/orgs/#{organization.name}")
+      |> get("/api/orgs/#{organization.name}")
       |> response(404)
 
       build_conn()
       |> put_req_header("authorization", key_for(user1))
-      |> get("api/orgs/#{organization.name}")
+      |> get("/api/orgs/#{organization.name}")
       |> response(404)
 
       build_conn()
       |> put_req_header("authorization", key_for(user1))
-      |> get("api/orgs/unknown")
+      |> get("/api/orgs/unknown")
       |> response(404)
     end
 
@@ -68,7 +68,7 @@ defmodule HexpmWeb.API.OrganizationControllerTest do
       conn =
         build_conn()
         |> put_req_header("authorization", key_for(user1))
-        |> get("api/orgs/#{organization.name}")
+        |> get("/api/orgs/#{organization.name}")
 
       org = json_response(conn, 200)
       assert org["name"] == organization.name
@@ -79,7 +79,7 @@ defmodule HexpmWeb.API.OrganizationControllerTest do
 
       build_conn()
       |> put_req_header("authorization", key_for(user1))
-      |> get("api/orgs/#{String.upcase(organization.name)}")
+      |> get("/api/orgs/#{String.upcase(organization.name)}")
       |> response(404)
     end
   end
@@ -89,12 +89,12 @@ defmodule HexpmWeb.API.OrganizationControllerTest do
 
     test "update organization authorizes", %{user1: user1, organization: organization} do
       build_conn()
-      |> post("api/orgs/#{organization.name}", %{})
+      |> post("/api/orgs/#{organization.name}", %{})
       |> response(404)
 
       build_conn()
       |> put_req_header("authorization", key_for(user1))
-      |> post("api/orgs/#{organization.name}", %{})
+      |> post("/api/orgs/#{organization.name}", %{})
       |> response(404)
     end
 
@@ -109,7 +109,7 @@ defmodule HexpmWeb.API.OrganizationControllerTest do
 
       build_conn()
       |> put_req_header("authorization", key_for(user1))
-      |> post("api/orgs/#{organization.name}", %{seats: 5})
+      |> post("/api/orgs/#{organization.name}", %{seats: 5})
       |> response(200)
     end
 
@@ -119,7 +119,7 @@ defmodule HexpmWeb.API.OrganizationControllerTest do
       result =
         build_conn()
         |> put_req_header("authorization", key_for(user1))
-        |> post("api/orgs/#{organization.name}", %{seats: 0})
+        |> post("/api/orgs/#{organization.name}", %{seats: 0})
         |> json_response(422)
 
       assert result["errors"] == "number of seats cannot be less than number of members"
@@ -129,12 +129,12 @@ defmodule HexpmWeb.API.OrganizationControllerTest do
   describe "GET /api/orgs/:organization/audit_logs" do
     test "returns 404 when unauthorized", %{user1: user1, organization: organization} do
       build_conn()
-      |> get("api/orgs/#{organization.name}/audit_logs")
+      |> get("/api/orgs/#{organization.name}/audit_logs")
       |> response(404)
 
       build_conn()
       |> put_req_header("authorization", key_for(user1))
-      |> get("api/orgs/#{organization.name}/audit_logs")
+      |> get("/api/orgs/#{organization.name}/audit_logs")
       |> response(404)
     end
 
@@ -146,7 +146,7 @@ defmodule HexpmWeb.API.OrganizationControllerTest do
       conn =
         build_conn()
         |> put_req_header("authorization", key_for(user1))
-        |> get("api/orgs/#{organization.name}/audit_logs")
+        |> get("/api/orgs/#{organization.name}/audit_logs")
 
       assert [%{"action" => "organization.test"}] = json_response(conn, :ok)
     end

@@ -13,7 +13,7 @@ defmodule HexpmWeb.PlugParserTest do
 
       build_conn()
       |> put_req_header("content-type", "application/vnd.hex+erlang")
-      |> post("api/users", erlang_params)
+      |> post("/api/users", erlang_params)
       |> json_response(201)
 
       assert Hexpm.Repo.get_by!(Hexpm.Accounts.User, username: params.username)

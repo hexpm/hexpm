@@ -11,7 +11,7 @@ defmodule HexpmWeb.PasswordControllerTest do
 
   describe "GET /password/new" do
     test "show select new password redirect" do
-      conn = get(build_conn(), "password/new", %{"username" => "username", "key" => "RESET_KEY"})
+      conn = get(build_conn(), "/password/new", %{"username" => "username", "key" => "RESET_KEY"})
 
       assert redirected_to(conn) == "/password/new"
       assert get_session(conn, "reset_username") == "username"
@@ -25,7 +25,7 @@ defmodule HexpmWeb.PasswordControllerTest do
           "reset_username" => "username",
           "reset_key" => "RESET_KEY"
         })
-        |> get("password/new")
+        |> get("/password/new")
 
       assert conn.status == 200
       assert conn.resp_body =~ "Choose a new password"
@@ -47,7 +47,7 @@ defmodule HexpmWeb.PasswordControllerTest do
       conn =
         build_conn()
         |> test_login(user)
-        |> post("password/new", %{
+        |> post("/password/new", %{
           "user" => %{
             "username" => user.username,
             "key" => hd(user.password_resets).key,
@@ -74,7 +74,7 @@ defmodule HexpmWeb.PasswordControllerTest do
       conn =
         build_conn()
         |> test_login(user)
-        |> post("password/new", %{
+        |> post("/password/new", %{
           "user" => %{
             "username" => user.username,
             "key" => "WRONG",
@@ -97,7 +97,7 @@ defmodule HexpmWeb.PasswordControllerTest do
       conn =
         build_conn()
         |> test_login(user)
-        |> post("password/new", %{
+        |> post("/password/new", %{
           "user" => %{
             "username" => user.username,
             "key" => hd(user.password_resets).key,

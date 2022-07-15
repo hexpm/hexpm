@@ -4,13 +4,13 @@ defmodule HexpmWeb.SignupControllerTest do
   alias Hexpm.Accounts.Users
 
   test "show create user page" do
-    conn = get(build_conn(), "signup")
+    conn = get(build_conn(), "/signup")
     assert response(conn, 200) =~ "Sign up"
   end
 
   test "create user" do
     conn =
-      post(build_conn(), "signup", %{
+      post(build_conn(), "/signup", %{
         user: %{
           username: "jose",
           emails: [%{email: "jose@mail.com"}],
@@ -29,7 +29,7 @@ defmodule HexpmWeb.SignupControllerTest do
     user = insert(:user)
 
     conn =
-      post(build_conn(), "signup", %{
+      post(build_conn(), "/signup", %{
         user: %{
           username: user.username,
           emails: [%{email: "jose@mail.com"}],

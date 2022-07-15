@@ -38,7 +38,7 @@ defmodule HexpmWeb.API.ReleaseControllerTest do
         build_conn()
         |> put_req_header("content-type", "application/octet-stream")
         |> put_req_header("authorization", key_for(user))
-        |> post("api/packages/#{meta.name}/releases", create_tar(meta))
+        |> post("/api/packages/#{meta.name}/releases", create_tar(meta))
 
       result = json_response(conn, 201)
       assert result["url"] =~ "api/packages/#{meta.name}/releases/1.0.0"
@@ -66,7 +66,7 @@ defmodule HexpmWeb.API.ReleaseControllerTest do
         build_conn()
         |> put_req_header("content-type", "application/octet-stream")
         |> put_req_header("authorization", key_for(user))
-        |> post("api/packages/#{package.name}/releases", create_tar(meta))
+        |> post("/api/packages/#{package.name}/releases", create_tar(meta))
 
       assert conn.status == 201
       result = json_response(conn, 201)
@@ -85,7 +85,7 @@ defmodule HexpmWeb.API.ReleaseControllerTest do
         build_conn()
         |> put_req_header("content-type", "application/octet-stream")
         |> put_req_header("authorization", key_for(user))
-        |> post("api/packages/#{package.name}/releases", create_tar(meta))
+        |> post("/api/packages/#{package.name}/releases", create_tar(meta))
 
       assert conn.status == 422
       result = json_response(conn, 422)
@@ -100,7 +100,7 @@ defmodule HexpmWeb.API.ReleaseControllerTest do
         build_conn()
         |> put_req_header("content-type", "application/octet-stream")
         |> put_req_header("authorization", key_for(user))
-        |> post("api/packages/#{package.name}/releases", create_tar(meta))
+        |> post("/api/packages/#{package.name}/releases", create_tar(meta))
 
       result = json_response(conn, 422)
       assert result["errors"]["name"] == "metadata does not match package name"
@@ -111,7 +111,7 @@ defmodule HexpmWeb.API.ReleaseControllerTest do
         build_conn()
         |> put_req_header("content-type", "application/octet-stream")
         |> put_req_header("authorization", key_for(user))
-        |> post("api/packages/#{Fake.sequence(:package)}/releases", create_tar(meta))
+        |> post("/api/packages/#{Fake.sequence(:package)}/releases", create_tar(meta))
 
       # Bad error message but /api/publish solves it
       # https://github.com/hexpm/hexpm/issues/489
@@ -132,7 +132,7 @@ defmodule HexpmWeb.API.ReleaseControllerTest do
         build_conn()
         |> put_req_header("content-type", "application/octet-stream")
         |> put_req_header("authorization", key_for(user))
-        |> post("api/publish", create_tar(meta))
+        |> post("/api/publish", create_tar(meta))
 
       result = json_response(conn, 201)
       assert result["url"] =~ "api/packages/#{meta.name}/releases/1.0.0"
@@ -157,7 +157,7 @@ defmodule HexpmWeb.API.ReleaseControllerTest do
         build_conn()
         |> put_req_header("content-type", "application/octet-stream")
         |> put_req_header("authorization", key_for(user))
-        |> post("api/publish", create_tar(meta))
+        |> post("/api/publish", create_tar(meta))
 
       assert conn.status == 201
       result = json_response(conn, 201)
@@ -174,7 +174,7 @@ defmodule HexpmWeb.API.ReleaseControllerTest do
       build_conn()
       |> put_req_header("content-type", "application/octet-stream")
       |> put_req_header("authorization", key_for(other_user))
-      |> post("api/publish", create_tar(meta))
+      |> post("/api/publish", create_tar(meta))
       |> json_response(403)
     end
 
@@ -185,7 +185,7 @@ defmodule HexpmWeb.API.ReleaseControllerTest do
         build_conn()
         |> put_req_header("content-type", "application/octet-stream")
         |> put_req_header("authorization", "WRONG")
-        |> post("api/publish", create_tar(meta))
+        |> post("/api/publish", create_tar(meta))
 
       assert conn.status == 401
       assert get_resp_header(conn, "www-authenticate") == ["Basic realm=hex"]
@@ -198,7 +198,7 @@ defmodule HexpmWeb.API.ReleaseControllerTest do
         build_conn()
         |> put_req_header("content-type", "application/octet-stream")
         |> put_req_header("authorization", "WRONG")
-        |> post("api/publish", create_tar(meta))
+        |> post("/api/publish", create_tar(meta))
 
       assert conn.status == 401
       assert get_resp_header(conn, "www-authenticate") == ["Basic realm=hex"]
@@ -218,7 +218,7 @@ defmodule HexpmWeb.API.ReleaseControllerTest do
       build_conn()
       |> put_req_header("content-type", "application/octet-stream")
       |> put_req_header("authorization", key_for(user))
-      |> post("api/publish", create_tar(meta))
+      |> post("/api/publish", create_tar(meta))
       |> json_response(201)
     end
 
@@ -234,7 +234,7 @@ defmodule HexpmWeb.API.ReleaseControllerTest do
       build_conn()
       |> put_req_header("content-type", "application/octet-stream")
       |> put_req_header("authorization", key_for(user))
-      |> post("api/publish", create_tar(meta))
+      |> post("/api/publish", create_tar(meta))
       |> json_response(403)
     end
 
@@ -255,7 +255,7 @@ defmodule HexpmWeb.API.ReleaseControllerTest do
       build_conn()
       |> put_req_header("content-type", "application/octet-stream")
       |> put_req_header("authorization", key_for(user))
-      |> post("api/publish", create_tar(meta))
+      |> post("/api/publish", create_tar(meta))
       |> json_response(403)
     end
 
@@ -271,7 +271,7 @@ defmodule HexpmWeb.API.ReleaseControllerTest do
       build_conn()
       |> put_req_header("content-type", "application/octet-stream")
       |> put_req_header("authorization", key_for(organization))
-      |> post("api/publish", create_tar(meta))
+      |> post("/api/publish", create_tar(meta))
       |> json_response(201)
     end
 
@@ -282,7 +282,7 @@ defmodule HexpmWeb.API.ReleaseControllerTest do
         build_conn()
         |> put_req_header("content-type", "application/octet-stream")
         |> put_req_header("authorization", key_for(user))
-        |> post("api/publish", create_tar(meta))
+        |> post("/api/publish", create_tar(meta))
 
       result = json_response(conn, 422)
       assert result["errors"]["meta"]["links"] == "expected type map(string)"
@@ -301,7 +301,7 @@ defmodule HexpmWeb.API.ReleaseControllerTest do
         build_conn()
         |> put_req_header("content-type", "application/octet-stream")
         |> put_req_header("authorization", key_for(user))
-        |> post("api/publish", create_tar(meta))
+        |> post("/api/publish", create_tar(meta))
 
       json_response(conn, 201)
       package = Hexpm.Repo.get_by!(Package, name: package.name)
@@ -321,7 +321,7 @@ defmodule HexpmWeb.API.ReleaseControllerTest do
         build_conn()
         |> put_req_header("content-type", "application/octet-stream")
         |> put_req_header("authorization", key_for(user))
-        |> post("api/packages/#{meta.name}/releases", create_tar(meta))
+        |> post("/api/packages/#{meta.name}/releases", create_tar(meta))
 
       result = json_response(conn, 201)
       assert result["meta"]["app"] == "other"
@@ -333,7 +333,7 @@ defmodule HexpmWeb.API.ReleaseControllerTest do
       build_conn()
       |> put_req_header("content-type", "application/octet-stream")
       |> put_req_header("authorization", key_for(user))
-      |> post("api/publish", create_tar(meta))
+      |> post("/api/publish", create_tar(meta))
       |> json_response(201)
 
       package = Hexpm.Repo.get_by!(Package, name: meta.name)
@@ -353,7 +353,7 @@ defmodule HexpmWeb.API.ReleaseControllerTest do
       build_conn()
       |> put_req_header("content-type", "application/octet-stream")
       |> put_req_header("authorization", key_for(user))
-      |> post("api/publish", create_tar(meta))
+      |> post("/api/publish", create_tar(meta))
       |> json_response(201)
 
       Hexpm.Repo.get_by!(Package, name: meta.name)
@@ -365,13 +365,13 @@ defmodule HexpmWeb.API.ReleaseControllerTest do
       build_conn()
       |> put_req_header("content-type", "application/octet-stream")
       |> put_req_header("authorization", key_for(user))
-      |> post("api/packages/#{meta.name}/releases", create_tar(meta))
+      |> post("/api/packages/#{meta.name}/releases", create_tar(meta))
       |> json_response(201)
 
       build_conn()
       |> put_req_header("content-type", "application/octet-stream")
       |> put_req_header("authorization", key_for(user))
-      |> post("api/publish?replace=true", create_tar(meta))
+      |> post("/api/publish?replace=true", create_tar(meta))
       |> json_response(200)
 
       package = Hexpm.Repo.get_by!(Package, name: meta.name)
@@ -393,7 +393,7 @@ defmodule HexpmWeb.API.ReleaseControllerTest do
         build_conn()
         |> put_req_header("content-type", "application/octet-stream")
         |> put_req_header("authorization", key_for(user))
-        |> post("api/publish", create_tar(meta))
+        |> post("/api/publish", create_tar(meta))
 
       result = json_response(conn, 201)
 
@@ -410,7 +410,7 @@ defmodule HexpmWeb.API.ReleaseControllerTest do
       #   build_conn()
       #   |> put_req_header("content-type", "application/octet-stream")
       #   |> put_req_header("authorization", key_for(user))
-      #   |> post("api/packages/#{meta.name}/releases", create_tar(meta))
+      #   |> post("/api/packages/#{meta.name}/releases", create_tar(meta))
       #
       # result = json_response(conn, 422)
       # assert result["errors"]["requirements"] =~ ~s(Failed to use "#{package.name}")
@@ -425,7 +425,7 @@ defmodule HexpmWeb.API.ReleaseControllerTest do
       build_conn()
       |> put_req_header("content-type", "application/octet-stream")
       |> put_req_header("authorization", key_for(user))
-      |> post("api/publish", create_tar(meta))
+      |> post("/api/publish", create_tar(meta))
       |> json_response(200)
     end
 
@@ -450,7 +450,7 @@ defmodule HexpmWeb.API.ReleaseControllerTest do
       build_conn()
       |> put_req_header("content-type", "application/octet-stream")
       |> put_req_header("authorization", key_for(user))
-      |> post("api/publish?replace=true", create_tar(meta))
+      |> post("/api/publish?replace=true", create_tar(meta))
       |> json_response(200)
     end
 
@@ -471,7 +471,7 @@ defmodule HexpmWeb.API.ReleaseControllerTest do
       build_conn()
       |> put_req_header("content-type", "application/octet-stream")
       |> put_req_header("authorization", key_for(user))
-      |> post("api/publish?replace=true", create_tar(meta))
+      |> post("/api/publish?replace=true", create_tar(meta))
       |> json_response(200)
     end
 
@@ -492,7 +492,7 @@ defmodule HexpmWeb.API.ReleaseControllerTest do
         build_conn()
         |> put_req_header("content-type", "application/octet-stream")
         |> put_req_header("authorization", key_for(user))
-        |> post("api/publish?replace=true", create_tar(meta))
+        |> post("/api/publish?replace=true", create_tar(meta))
 
       result = json_response(conn, 422)
 
@@ -522,7 +522,7 @@ defmodule HexpmWeb.API.ReleaseControllerTest do
         build_conn()
         |> put_req_header("content-type", "application/octet-stream")
         |> put_req_header("authorization", key_for(user))
-        |> post("api/publish?replace=true", create_tar(meta))
+        |> post("/api/publish?replace=true", create_tar(meta))
 
       result = json_response(conn, 422)
 
@@ -540,7 +540,7 @@ defmodule HexpmWeb.API.ReleaseControllerTest do
         build_conn()
         |> put_req_header("content-type", "application/octet-stream")
         |> put_req_header("authorization", key_for(user))
-        |> post("api/publish?replace=false", create_tar(meta))
+        |> post("/api/publish?replace=false", create_tar(meta))
 
       result = json_response(conn, 422)
 
@@ -562,7 +562,7 @@ defmodule HexpmWeb.API.ReleaseControllerTest do
         build_conn()
         |> put_req_header("content-type", "application/octet-stream")
         |> put_req_header("authorization", key_for(user))
-        |> post("api/publish", create_tar(meta))
+        |> post("/api/publish", create_tar(meta))
 
       result = json_response(conn, 201)
 
@@ -596,7 +596,7 @@ defmodule HexpmWeb.API.ReleaseControllerTest do
         build_conn()
         |> put_req_header("content-type", "application/octet-stream")
         |> put_req_header("authorization", key_for(user))
-        |> post("api/publish", create_tar(meta))
+        |> post("/api/publish", create_tar(meta))
 
       result = json_response(conn, 422)
 
@@ -618,7 +618,7 @@ defmodule HexpmWeb.API.ReleaseControllerTest do
         build_conn()
         |> put_req_header("content-type", "application/octet-stream")
         |> put_req_header("authorization", key_for(user))
-        |> post("api/publish", create_tar(meta))
+        |> post("/api/publish", create_tar(meta))
 
       result = json_response(conn, 422)
 
@@ -642,7 +642,7 @@ defmodule HexpmWeb.API.ReleaseControllerTest do
         build_conn()
         |> put_req_header("content-type", "application/octet-stream")
         |> put_req_header("authorization", key_for(user))
-        |> post("api/publish", create_tar(meta))
+        |> post("/api/publish", create_tar(meta))
 
       result = json_response(conn, 422)
 
@@ -668,7 +668,7 @@ defmodule HexpmWeb.API.ReleaseControllerTest do
       build_conn()
       |> put_req_header("content-type", "application/octet-stream")
       |> put_req_header("authorization", key_for(user))
-      |> post("api/publish", create_tar(meta))
+      |> post("/api/publish", create_tar(meta))
       |> json_response(201)
 
       registry_after = Hexpm.Store.get(:repo_bucket, "registry.ets.gz", [])
@@ -689,7 +689,7 @@ defmodule HexpmWeb.API.ReleaseControllerTest do
       build_conn()
       |> put_req_header("content-type", "application/octet-stream")
       |> put_req_header("authorization", key_for(user))
-      |> post("api/publish", create_tar(meta))
+      |> post("/api/publish", create_tar(meta))
       |> json_response(201)
 
       assert Hexpm.Store.get(:repo_bucket, "packages/#{meta.name}", [])
@@ -708,7 +708,7 @@ defmodule HexpmWeb.API.ReleaseControllerTest do
       |> put_req_header("content-type", "application/octet-stream")
       |> put_req_header("authorization", key_for(user))
       |> post(
-        "api/repos/#{repository.name}/packages/#{meta.name}/releases",
+        "/api/repos/#{repository.name}/packages/#{meta.name}/releases",
         create_tar(meta)
       )
       |> json_response(404)
@@ -728,7 +728,7 @@ defmodule HexpmWeb.API.ReleaseControllerTest do
       |> put_req_header("content-type", "application/octet-stream")
       |> put_req_header("authorization", key_for(user))
       |> post(
-        "api/repos/#{repository.name}/packages/#{meta.name}/releases",
+        "/api/repos/#{repository.name}/packages/#{meta.name}/releases",
         create_tar(meta)
       )
       |> json_response(404)
@@ -746,7 +746,7 @@ defmodule HexpmWeb.API.ReleaseControllerTest do
       build_conn()
       |> put_req_header("content-type", "application/octet-stream")
       |> put_req_header("authorization", key_for(user))
-      |> post("api/repos/#{repository.name}/publish", create_tar(meta))
+      |> post("/api/repos/#{repository.name}/publish", create_tar(meta))
       |> json_response(404)
     end
 
@@ -763,7 +763,7 @@ defmodule HexpmWeb.API.ReleaseControllerTest do
       build_conn()
       |> put_req_header("content-type", "application/octet-stream")
       |> put_req_header("authorization", key_for(user))
-      |> post("api/repos/#{repository.name}/publish", create_tar(meta))
+      |> post("/api/repos/#{repository.name}/publish", create_tar(meta))
       |> json_response(404)
     end
 
@@ -779,7 +779,7 @@ defmodule HexpmWeb.API.ReleaseControllerTest do
       build_conn()
       |> put_req_header("content-type", "application/octet-stream")
       |> put_req_header("authorization", key_for(user))
-      |> post("api/repos/#{repository.name}/publish", create_tar(meta))
+      |> post("/api/repos/#{repository.name}/publish", create_tar(meta))
       |> json_response(403)
 
       refute Hexpm.Repo.get_by(Package, name: meta.name)
@@ -798,7 +798,7 @@ defmodule HexpmWeb.API.ReleaseControllerTest do
       build_conn()
       |> put_req_header("content-type", "application/octet-stream")
       |> put_req_header("authorization", key_for(user))
-      |> post("api/repos/#{repository.name}/publish", create_tar(meta))
+      |> post("/api/repos/#{repository.name}/publish", create_tar(meta))
       |> json_response(403)
 
       refute Hexpm.Repo.get_by(Package, name: meta.name)
@@ -817,7 +817,7 @@ defmodule HexpmWeb.API.ReleaseControllerTest do
         build_conn()
         |> put_req_header("content-type", "application/octet-stream")
         |> put_req_header("authorization", key_for(user))
-        |> post("api/repos/#{repository.name}/publish", create_tar(meta))
+        |> post("/api/repos/#{repository.name}/publish", create_tar(meta))
         |> json_response(201)
 
       assert result["url"] =~
@@ -838,7 +838,7 @@ defmodule HexpmWeb.API.ReleaseControllerTest do
         build_conn()
         |> put_req_header("content-type", "application/octet-stream")
         |> put_req_header("authorization", key_for(organization))
-        |> post("api/repos/#{repository.name}/publish", create_tar(meta))
+        |> post("/api/repos/#{repository.name}/publish", create_tar(meta))
         |> json_response(201)
 
       assert result["url"] =~
@@ -864,7 +864,7 @@ defmodule HexpmWeb.API.ReleaseControllerTest do
         build_conn()
         |> put_req_header("content-type", "application/octet-stream")
         |> put_req_header("authorization", key_for(user))
-        |> post("api/repos/#{repository.name}/publish", create_tar(meta))
+        |> post("/api/repos/#{repository.name}/publish", create_tar(meta))
         |> json_response(201)
 
       assert result["url"] =~
@@ -883,7 +883,7 @@ defmodule HexpmWeb.API.ReleaseControllerTest do
         build_conn()
         |> put_req_header("content-type", "application/octet-stream")
         |> put_req_header("authorization", key_for(organization))
-        |> post("api/repos/#{repository.name}/publish", create_tar(meta))
+        |> post("/api/repos/#{repository.name}/publish", create_tar(meta))
         |> json_response(201)
 
       assert result["url"] =~
@@ -918,7 +918,7 @@ defmodule HexpmWeb.API.ReleaseControllerTest do
       build_conn()
       |> put_req_header("content-type", "application/octet-stream")
       |> put_req_header("authorization", key_for(user))
-      |> post("api/repos/#{repository.name}/publish?replace=true", create_tar(meta))
+      |> post("/api/repos/#{repository.name}/publish?replace=true", create_tar(meta))
       |> json_response(200)
     end
 
@@ -939,7 +939,7 @@ defmodule HexpmWeb.API.ReleaseControllerTest do
         build_conn()
         |> put_req_header("content-type", "application/octet-stream")
         |> put_req_header("authorization", key_for(user))
-        |> post("api/publish?replace=true", create_tar(meta))
+        |> post("/api/publish?replace=true", create_tar(meta))
 
       result = json_response(conn, 422)
 
@@ -973,7 +973,7 @@ defmodule HexpmWeb.API.ReleaseControllerTest do
       build_conn()
       |> put_req_header("content-type", "application/octet-stream")
       |> put_req_header("authorization", key_for(user))
-      |> post("api/repos/#{repository.name}/publish", create_tar(meta))
+      |> post("/api/repos/#{repository.name}/publish", create_tar(meta))
       |> json_response(200)
     end
 
@@ -1004,7 +1004,7 @@ defmodule HexpmWeb.API.ReleaseControllerTest do
         build_conn()
         |> put_req_header("content-type", "application/octet-stream")
         |> put_req_header("authorization", key_for(user))
-        |> post("api/repos/#{repository.name}/publish?replace=false", create_tar(meta))
+        |> post("/api/repos/#{repository.name}/publish?replace=false", create_tar(meta))
 
       result = json_response(conn, 422)
 
@@ -1022,7 +1022,7 @@ defmodule HexpmWeb.API.ReleaseControllerTest do
       build_conn()
       |> put_req_header("content-type", "application/octet-stream")
       |> put_req_header("authorization", key_for(user))
-      |> post("api/repos/DOES_NOT_EXIST/publish", create_tar(meta))
+      |> post("/api/repos/DOES_NOT_EXIST/publish", create_tar(meta))
       |> json_response(404)
     end
   end
@@ -1038,7 +1038,7 @@ defmodule HexpmWeb.API.ReleaseControllerTest do
       conn =
         build_conn()
         |> put_req_header("authorization", key_for(user))
-        |> delete("api/packages/#{package.name}/releases/0.0.1")
+        |> delete("/api/packages/#{package.name}/releases/0.0.1")
 
       result = json_response(conn, 422)
 
@@ -1054,7 +1054,7 @@ defmodule HexpmWeb.API.ReleaseControllerTest do
       result =
         build_conn()
         |> put_req_header("authorization", key_for(user))
-        |> delete("api/packages/#{package.name}/releases/0.0.1")
+        |> delete("/api/packages/#{package.name}/releases/0.0.1")
         |> json_response(422)
 
       assert result["errors"]["name"] ==
@@ -1069,7 +1069,7 @@ defmodule HexpmWeb.API.ReleaseControllerTest do
 
       build_conn()
       |> put_req_header("authorization", key_for(user))
-      |> delete("api/packages/#{package.name}/releases/0.0.1")
+      |> delete("/api/packages/#{package.name}/releases/0.0.1")
       |> response(204)
 
       refute Hexpm.Repo.get_by(Package, name: package.name)
@@ -1094,7 +1094,7 @@ defmodule HexpmWeb.API.ReleaseControllerTest do
 
       build_conn()
       |> put_req_header("authorization", key_for(user))
-      |> delete("api/packages/#{package.name}/releases/0.0.1")
+      |> delete("/api/packages/#{package.name}/releases/0.0.1")
       |> response(204)
 
       assert Hexpm.Repo.get_by(Package, name: package.name)
@@ -1117,7 +1117,7 @@ defmodule HexpmWeb.API.ReleaseControllerTest do
 
       build_conn()
       |> put_req_header("authorization", key_for(user))
-      |> delete("api/repos/#{repository.name}/packages/#{package.name}/releases/0.0.1")
+      |> delete("/api/repos/#{repository.name}/packages/#{package.name}/releases/0.0.1")
       |> response(404)
 
       assert Hexpm.Repo.get_by(Package, name: package.name)
@@ -1139,7 +1139,7 @@ defmodule HexpmWeb.API.ReleaseControllerTest do
 
       build_conn()
       |> put_req_header("authorization", key_for(user))
-      |> delete("api/repos/#{repository.name}/packages/#{package.name}/releases/0.0.1")
+      |> delete("/api/repos/#{repository.name}/packages/#{package.name}/releases/0.0.1")
       |> response(403)
 
       assert Hexpm.Repo.get_by(Package, name: package.name)
@@ -1159,7 +1159,7 @@ defmodule HexpmWeb.API.ReleaseControllerTest do
 
       build_conn()
       |> put_req_header("authorization", key_for(user))
-      |> delete("api/repos/#{repository.name}/packages/#{package.name}/releases/0.0.1")
+      |> delete("/api/repos/#{repository.name}/packages/#{package.name}/releases/0.0.1")
       |> response(204)
 
       refute Hexpm.Repo.get_by(Package, name: package.name)
@@ -1188,7 +1188,7 @@ defmodule HexpmWeb.API.ReleaseControllerTest do
 
       build_conn()
       |> put_req_header("authorization", key_for(user))
-      |> delete("api/repos/#{repository.name}/packages/#{package.name}/releases/0.0.1")
+      |> delete("/api/repos/#{repository.name}/packages/#{package.name}/releases/0.0.1")
       |> response(204)
     end
   end
@@ -1197,7 +1197,7 @@ defmodule HexpmWeb.API.ReleaseControllerTest do
     test "get release", %{package: package, release: release} do
       result =
         build_conn()
-        |> get("api/packages/#{package.name}/releases/#{release.version}")
+        |> get("/api/packages/#{package.name}/releases/#{release.version}")
         |> json_response(200)
 
       assert result["configs"]["mix.exs"] == ~s({:#{package.name}, "~> 0.0.1"})
@@ -1215,15 +1215,15 @@ defmodule HexpmWeb.API.ReleaseControllerTest do
     end
 
     test "get unknown release", %{package: package} do
-      conn = get(build_conn(), "api/packages/#{package.name}/releases/1.2.3")
+      conn = get(build_conn(), "/api/packages/#{package.name}/releases/1.2.3")
       assert conn.status == 404
 
-      conn = get(build_conn(), "api/packages/unknown/releases/1.2.3")
+      conn = get(build_conn(), "/api/packages/unknown/releases/1.2.3")
       assert conn.status == 404
     end
 
     test "get release with invalid version", %{package: package} do
-      conn = get(build_conn(), "api/packages/#{package.name}/releases/v1.2.3")
+      conn = get(build_conn(), "/api/packages/#{package.name}/releases/v1.2.3")
       assert json_response(conn, 400)["message"] == "invalid version: v1.2.3"
     end
 
@@ -1234,7 +1234,7 @@ defmodule HexpmWeb.API.ReleaseControllerTest do
 
       result =
         build_conn()
-        |> get("api/packages/#{package.name}/releases/#{release.version}")
+        |> get("/api/packages/#{package.name}/releases/#{release.version}")
         |> json_response(200)
 
       assert result["url"] =~ "/api/packages/#{package.name}/releases/#{release.version}"
@@ -1251,7 +1251,7 @@ defmodule HexpmWeb.API.ReleaseControllerTest do
 
       build_conn()
       |> put_req_header("authorization", key_for(user))
-      |> get("api/repos/#{repository.name}/packages/#{package.name}/releases/0.0.1")
+      |> get("/api/repos/#{repository.name}/packages/#{package.name}/releases/0.0.1")
       |> json_response(404)
     end
 
@@ -1261,7 +1261,7 @@ defmodule HexpmWeb.API.ReleaseControllerTest do
 
       build_conn()
       |> put_req_header("authorization", key_for(user))
-      |> get("api/repos/NONEXISTANT_REPOSITORY/packages/#{package.name}/releases/0.0.1")
+      |> get("/api/repos/NONEXISTANT_REPOSITORY/packages/#{package.name}/releases/0.0.1")
       |> json_response(404)
     end
 
@@ -1273,7 +1273,7 @@ defmodule HexpmWeb.API.ReleaseControllerTest do
       result =
         build_conn()
         |> put_req_header("authorization", key_for(user))
-        |> get("api/repos/#{repository.name}/packages/#{package.name}/releases/0.0.1")
+        |> get("/api/repos/#{repository.name}/packages/#{package.name}/releases/0.0.1")
         |> json_response(200)
 
       assert result["url"] ==
@@ -1314,7 +1314,7 @@ defmodule HexpmWeb.API.ReleaseControllerTest do
     test "get release downloads (all by default)", %{package: package, release: release} do
       result =
         build_conn()
-        |> get("api/packages/#{package.name}/releases/#{release.version}")
+        |> get("/api/packages/#{package.name}/releases/#{release.version}")
         |> json_response(200)
 
       assert result["version"] == "#{release.version}"
@@ -1322,7 +1322,7 @@ defmodule HexpmWeb.API.ReleaseControllerTest do
 
       result =
         build_conn()
-        |> get("api/packages/#{package.name}/releases/#{release.version}?downloads=all")
+        |> get("/api/packages/#{package.name}/releases/#{release.version}?downloads=all")
         |> json_response(200)
 
       assert result["version"] == "#{release.version}"
@@ -1330,7 +1330,7 @@ defmodule HexpmWeb.API.ReleaseControllerTest do
 
       result =
         build_conn()
-        |> get("api/packages/#{package.name}/releases/#{release.version}?downloads=xxx")
+        |> get("/api/packages/#{package.name}/releases/#{release.version}?downloads=xxx")
         |> json_response(200)
 
       assert result["version"] == "#{release.version}"
@@ -1340,7 +1340,7 @@ defmodule HexpmWeb.API.ReleaseControllerTest do
     test "get release downloads by day", %{package: package, release: release} do
       result =
         build_conn()
-        |> get("api/packages/#{package.name}/releases/#{release.version}?downloads=day")
+        |> get("/api/packages/#{package.name}/releases/#{release.version}?downloads=day")
         |> json_response(200)
 
       assert result["version"] == "#{release.version}"
@@ -1356,7 +1356,7 @@ defmodule HexpmWeb.API.ReleaseControllerTest do
     test "get release downloads by month", %{package: package, release: release} do
       result =
         build_conn()
-        |> get("api/packages/#{package.name}/releases/#{release.version}?downloads=month")
+        |> get("/api/packages/#{package.name}/releases/#{release.version}?downloads=month")
         |> json_response(200)
 
       assert result["version"] == "#{release.version}"

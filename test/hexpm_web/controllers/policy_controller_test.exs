@@ -4,7 +4,7 @@ defmodule HexpmWeb.PolicyControllerTest do
   test "show policy code of conduct" do
     conn =
       build_conn()
-      |> get("policies/codeofconduct")
+      |> get("/policies/codeofconduct")
 
     assert response(conn, 200) =~ "Code of Conduct"
   end
@@ -12,7 +12,7 @@ defmodule HexpmWeb.PolicyControllerTest do
   test "show policy privacy" do
     conn =
       build_conn()
-      |> get("policies/privacy")
+      |> get("/policies/privacy")
 
     assert response(conn, 200) =~ "Privacy Policy"
   end
@@ -20,7 +20,7 @@ defmodule HexpmWeb.PolicyControllerTest do
   test "show policy terms of services" do
     conn =
       build_conn()
-      |> get("policies/termsofservice")
+      |> get("/policies/termsofservice")
 
     assert response(conn, 200) =~ "Terms of Service"
   end
@@ -28,7 +28,7 @@ defmodule HexpmWeb.PolicyControllerTest do
   test "show policy copyright" do
     conn =
       build_conn()
-      |> get("policies/copyright")
+      |> get("/policies/copyright")
 
     assert response(conn, 200) =~ "Copyright Policy"
   end

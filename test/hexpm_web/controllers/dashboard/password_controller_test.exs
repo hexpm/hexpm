@@ -16,21 +16,21 @@ defmodule HexpmWeb.Dashboard.PasswordControllerTest do
     conn =
       build_conn()
       |> test_login(c.user)
-      |> get("dashboard/password")
+      |> get("/dashboard/password")
 
     assert response(conn, 200) =~ "Change password"
   end
 
   test "requires login" do
-    conn = get(build_conn(), "dashboard/password")
-    assert redirected_to(conn) == "/login?return=dashboard%2Fpassword"
+    conn = get(build_conn(), "/dashboard/password")
+    assert redirected_to(conn) == "/login?return=%2Fdashboard%2Fpassword"
   end
 
   test "update password", c do
     conn =
       build_conn()
       |> test_login(c.user)
-      |> post("dashboard/password", %{
+      |> post("/dashboard/password", %{
         user: %{
           password_current: "password",
           password: "newpass",
@@ -50,7 +50,7 @@ defmodule HexpmWeb.Dashboard.PasswordControllerTest do
     conn =
       build_conn()
       |> test_login(c.user)
-      |> post("dashboard/password", %{
+      |> post("/dashboard/password", %{
         user: %{password_current: "WRONG", password: "newpass", password_confirmation: "newpass"}
       })
 
@@ -62,7 +62,7 @@ defmodule HexpmWeb.Dashboard.PasswordControllerTest do
     conn =
       build_conn()
       |> test_login(c.user)
-      |> post("dashboard/password", %{
+      |> post("/dashboard/password", %{
         user: %{password_current: "password", password: "newpass", password_confirmation: "WRONG"}
       })
 
@@ -75,7 +75,7 @@ defmodule HexpmWeb.Dashboard.PasswordControllerTest do
     conn =
       build_conn()
       |> test_login(c.user)
-      |> post("dashboard/password", %{
+      |> post("/dashboard/password", %{
         user: %{password: "newpass", password_confirmation: "newpass"}
       })
 

@@ -31,7 +31,7 @@ defmodule HexpmWeb.API.OwnerControllerTest do
     test "get all package owners", %{user1: user1, user2: user2, package: package} do
       conn =
         build_conn()
-        |> get("api/packages/#{package.name}/owners")
+        |> get("/api/packages/#{package.name}/owners")
 
       result = json_response(conn, 200)
       assert List.first(result)["username"] == user1.username
@@ -40,7 +40,7 @@ defmodule HexpmWeb.API.OwnerControllerTest do
 
       conn =
         build_conn()
-        |> get("api/packages/#{package.name}/owners")
+        |> get("/api/packages/#{package.name}/owners")
 
       [first, second] = json_response(conn, 200)
       assert first["username"] in [user1.username, user2.username]
@@ -55,12 +55,12 @@ defmodule HexpmWeb.API.OwnerControllerTest do
       repository_package: package
     } do
       build_conn()
-      |> get("api/repos/#{repository.name}/packages/#{package.name}/owners")
+      |> get("/api/repos/#{repository.name}/packages/#{package.name}/owners")
       |> json_response(404)
 
       build_conn()
       |> put_req_header("authorization", key_for(user1))
-      |> get("api/repos/#{repository.name}/packages/#{package.name}/owners")
+      |> get("/api/repos/#{repository.name}/packages/#{package.name}/owners")
       |> json_response(404)
     end
 
@@ -70,17 +70,17 @@ defmodule HexpmWeb.API.OwnerControllerTest do
       repository_package: package
     } do
       build_conn()
-      |> get("api/repos/UNKNOWN_REPOSITORY/packages/#{package.name}/owners")
+      |> get("/api/repos/UNKNOWN_REPOSITORY/packages/#{package.name}/owners")
       |> json_response(404)
 
       build_conn()
       |> put_req_header("authorization", key_for(user1))
-      |> get("api/repos/UNKNOWN_REPOSITORY/packages/#{package.name}/owners")
+      |> get("/api/repos/UNKNOWN_REPOSITORY/packages/#{package.name}/owners")
       |> json_response(404)
 
       build_conn()
       |> put_req_header("authorization", key_for(repository.organization))
-      |> get("api/repos/UNKNOWN_REPOSITORY/packages/#{package.name}/owners")
+      |> get("/api/repos/UNKNOWN_REPOSITORY/packages/#{package.name}/owners")
       |> json_response(404)
     end
 
@@ -89,19 +89,19 @@ defmodule HexpmWeb.API.OwnerControllerTest do
       repository: repository
     } do
       build_conn()
-      |> get("api/repos/#{repository.name}/packages/UNKNOWN_PACKAGE/owners")
+      |> get("/api/repos/#{repository.name}/packages/UNKNOWN_PACKAGE/owners")
       |> json_response(404)
 
       build_conn()
       |> put_req_header("authorization", key_for(user1))
-      |> get("api/repos/#{repository.name}/packages/UNKNOWN_PACKAGE/owners")
+      |> get("/api/repos/#{repository.name}/packages/UNKNOWN_PACKAGE/owners")
       |> json_response(404)
 
       other_repository = insert(:repository)
 
       build_conn()
       |> put_req_header("authorization", key_for(other_repository.organization))
-      |> get("api/repos/#{repository.name}/packages/UNKNOWN_PACKAGE/owners")
+      |> get("/api/repos/#{repository.name}/packages/UNKNOWN_PACKAGE/owners")
       |> json_response(404)
     end
 
@@ -113,12 +113,12 @@ defmodule HexpmWeb.API.OwnerControllerTest do
 
       build_conn()
       |> put_req_header("authorization", key_for(user1))
-      |> get("api/repos/#{repository.name}/packages/UNKNOWN_PACKAGE/owners")
+      |> get("/api/repos/#{repository.name}/packages/UNKNOWN_PACKAGE/owners")
       |> json_response(404)
 
       build_conn()
       |> put_req_header("authorization", key_for(repository.organization))
-      |> get("api/repos/#{repository.name}/packages/UNKNOWN_PACKAGE/owners")
+      |> get("/api/repos/#{repository.name}/packages/UNKNOWN_PACKAGE/owners")
       |> json_response(404)
     end
 
@@ -132,7 +132,7 @@ defmodule HexpmWeb.API.OwnerControllerTest do
       result =
         build_conn()
         |> put_req_header("authorization", key_for(user1))
-        |> get("api/repos/#{repository.name}/packages/#{package.name}/owners")
+        |> get("/api/repos/#{repository.name}/packages/#{package.name}/owners")
         |> json_response(200)
 
       assert List.first(result)["username"] == user1.username
@@ -148,7 +148,7 @@ defmodule HexpmWeb.API.OwnerControllerTest do
       result =
         build_conn()
         |> put_req_header("authorization", key_for(repository.organization))
-        |> get("api/repos/#{repository.name}/packages/#{package.name}/owners")
+        |> get("/api/repos/#{repository.name}/packages/#{package.name}/owners")
         |> json_response(200)
 
       assert List.first(result)["username"] == user1.username
@@ -158,15 +158,15 @@ defmodule HexpmWeb.API.OwnerControllerTest do
   describe "GET /api/packages/:name/owners/:email" do
     test "check if user is package owner", %{user1: user1, user2: user2, package: package} do
       build_conn()
-      |> get("api/packages/#{package.name}/owners/#{hd(user1.emails).email}")
+      |> get("/api/packages/#{package.name}/owners/#{hd(user1.emails).email}")
       |> response(200)
 
       build_conn()
-      |> get("api/packages/#{package.name}/owners/#{hd(user2.emails).email}")
+      |> get("/api/packages/#{package.name}/owners/#{hd(user2.emails).email}")
       |> response(404)
 
       build_conn()
-      |> get("api/packages/#{package.name}/owners/UNKNOWN")
+      |> get("/api/packages/#{package.name}/owners/UNKNOWN")
       |> response(404)
     end
   end
@@ -180,7 +180,7 @@ defmodule HexpmWeb.API.OwnerControllerTest do
       build_conn()
       |> put_req_header("authorization", key_for(user1))
       |> get(
-        "api/repos/#{repository.name}/packages/#{package.name}/owners/#{hd(user1.emails).email}"
+        "/api/repos/#{repository.name}/packages/#{package.name}/owners/#{hd(user1.emails).email}"
       )
       |> response(404)
     end
@@ -189,7 +189,7 @@ defmodule HexpmWeb.API.OwnerControllerTest do
       build_conn()
       |> put_req_header("authorization", key_for(user1))
       |> get(
-        "api/repos/UNKNOWN_REPOSITORY/packages/#{package.name}/owners/#{hd(user1.emails).email}"
+        "/api/repos/UNKNOWN_REPOSITORY/packages/#{package.name}/owners/#{hd(user1.emails).email}"
       )
       |> response(404)
     end
@@ -201,7 +201,7 @@ defmodule HexpmWeb.API.OwnerControllerTest do
       build_conn()
       |> put_req_header("authorization", key_for(user1))
       |> get(
-        "api/repos/#{repository.name}/packages/UNKNOWN_PACKAGE/owners/#{hd(user1.emails).email}"
+        "/api/repos/#{repository.name}/packages/UNKNOWN_PACKAGE/owners/#{hd(user1.emails).email}"
       )
       |> response(404)
     end
@@ -215,7 +215,7 @@ defmodule HexpmWeb.API.OwnerControllerTest do
       build_conn()
       |> put_req_header("authorization", key_for(user1))
       |> get(
-        "api/repos/#{repository.name}/packages/UNKNOWN_PACKAGE/owners/#{hd(user1.emails).email}"
+        "/api/repos/#{repository.name}/packages/UNKNOWN_PACKAGE/owners/#{hd(user1.emails).email}"
       )
       |> response(404)
     end
@@ -230,7 +230,7 @@ defmodule HexpmWeb.API.OwnerControllerTest do
 
       build_conn()
       |> put_req_header("authorization", key_for(user1))
-      |> get("api/repos/#{repository.name}/packages/#{package.name}/owners/#{email}")
+      |> get("/api/repos/#{repository.name}/packages/#{package.name}/owners/#{email}")
       |> response(200)
     end
   end
@@ -239,7 +239,7 @@ defmodule HexpmWeb.API.OwnerControllerTest do
     test "add full package owner", %{user1: user1, user2: user2, package: package} do
       build_conn()
       |> put_req_header("authorization", key_for(user1))
-      |> put("api/packages/#{package.name}/owners/#{user2.username}")
+      |> put("/api/packages/#{package.name}/owners/#{user2.username}")
       |> response(204)
 
       assert [first, second] = assoc(package, :owners) |> Hexpm.Repo.all()
@@ -260,7 +260,7 @@ defmodule HexpmWeb.API.OwnerControllerTest do
     test "add maintainer package owner", %{user1: user1, user2: user2, package: package} do
       build_conn()
       |> put_req_header("authorization", key_for(user1))
-      |> put("api/packages/#{package.name}/owners/#{user2.username}", %{level: "maintainer"})
+      |> put("/api/packages/#{package.name}/owners/#{user2.username}", %{level: "maintainer"})
       |> response(204)
 
       assert Owners.get(package, user2).level == "maintainer"
@@ -269,7 +269,7 @@ defmodule HexpmWeb.API.OwnerControllerTest do
     test "transfer ownership", %{user1: user1, user2: user2, package: package} do
       build_conn()
       |> put_req_header("authorization", key_for(user1))
-      |> put("api/packages/#{package.name}/owners/#{user2.username}", %{"transfer" => true})
+      |> put("/api/packages/#{package.name}/owners/#{user2.username}", %{"transfer" => true})
       |> response(204)
 
       assert [owner] = assoc(package, :owners) |> Hexpm.Repo.all()
@@ -281,7 +281,7 @@ defmodule HexpmWeb.API.OwnerControllerTest do
 
       build_conn()
       |> put_req_header("authorization", key_for(user1))
-      |> put("api/packages/#{package.name}/owners/#{organization.name}", %{"transfer" => true})
+      |> put("/api/packages/#{package.name}/owners/#{organization.name}", %{"transfer" => true})
       |> response(204)
 
       assert [owner] = assoc(package, :owners) |> Hexpm.Repo.all()
@@ -293,7 +293,7 @@ defmodule HexpmWeb.API.OwnerControllerTest do
 
       build_conn()
       |> put_req_header("authorization", key_for(user1))
-      |> put("api/packages/#{package.name}/owners/#{organization.name}")
+      |> put("/api/packages/#{package.name}/owners/#{organization.name}")
       |> response(422)
     end
 
@@ -307,7 +307,7 @@ defmodule HexpmWeb.API.OwnerControllerTest do
 
       build_conn()
       |> put_req_header("authorization", key_for(user1))
-      |> put("api/packages/#{package.name}/owners/#{user2.username}")
+      |> put("/api/packages/#{package.name}/owners/#{user2.username}")
       |> response(204)
 
       owners = assoc(package, :owners) |> Hexpm.Repo.all()
@@ -323,7 +323,7 @@ defmodule HexpmWeb.API.OwnerControllerTest do
 
       build_conn()
       |> put_req_header("authorization", key_for(user1))
-      |> put("api/packages/#{package.name}/owners/#{user2.username}")
+      |> put("/api/packages/#{package.name}/owners/#{user2.username}")
       |> response(204)
 
       owners = assoc(package, :owners) |> Hexpm.Repo.all()
@@ -340,7 +340,7 @@ defmodule HexpmWeb.API.OwnerControllerTest do
 
       build_conn()
       |> put_req_header("authorization", key_for(user1))
-      |> put("api/packages/#{package.name}/owners/#{user2.username}")
+      |> put("/api/packages/#{package.name}/owners/#{user2.username}")
       |> response(403)
     end
 
@@ -350,26 +350,26 @@ defmodule HexpmWeb.API.OwnerControllerTest do
 
       build_conn()
       |> put_req_header("authorization", key_for(user2))
-      |> put("api/packages/#{package.name}/owners/#{user3.username}")
+      |> put("/api/packages/#{package.name}/owners/#{user3.username}")
       |> response(403)
     end
 
     test "add unknown user package owner", %{user1: user, package: package} do
       build_conn()
       |> put_req_header("authorization", key_for(user))
-      |> put("api/packages/#{package.name}/owners/UNKNOWN")
+      |> put("/api/packages/#{package.name}/owners/UNKNOWN")
       |> response(404)
     end
 
     test "can add same owner twice", %{user1: user1, user2: user2, package: package} do
       build_conn()
       |> put_req_header("authorization", key_for(user1))
-      |> put("api/packages/#{package.name}/owners/#{hd(user2.emails).email}")
+      |> put("/api/packages/#{package.name}/owners/#{hd(user2.emails).email}")
       |> response(204)
 
       build_conn()
       |> put_req_header("authorization", key_for(user1))
-      |> put("api/packages/#{package.name}/owners/#{hd(user2.emails).email}")
+      |> put("/api/packages/#{package.name}/owners/#{hd(user2.emails).email}")
       |> response(204)
 
       owners = assoc(package, :owners) |> Hexpm.Repo.all()
@@ -382,7 +382,7 @@ defmodule HexpmWeb.API.OwnerControllerTest do
 
       build_conn()
       |> put_req_header("authorization", key_for(user3))
-      |> put("api/packages/#{package.name}/owners/#{hd(user2.emails).email}")
+      |> put("/api/packages/#{package.name}/owners/#{hd(user2.emails).email}")
       |> response(403)
     end
   end
@@ -395,12 +395,12 @@ defmodule HexpmWeb.API.OwnerControllerTest do
       repository_package: package
     } do
       build_conn()
-      |> put("api/repos/#{repository.name}/packages/#{package.name}/owners/#{user2.username}")
+      |> put("/api/repos/#{repository.name}/packages/#{package.name}/owners/#{user2.username}")
       |> response(404)
 
       build_conn()
       |> put_req_header("authorization", key_for(user1))
-      |> put("api/repos/#{repository.name}/packages/#{package.name}/owners/#{user2.username}")
+      |> put("/api/repos/#{repository.name}/packages/#{package.name}/owners/#{user2.username}")
       |> response(404)
 
       assert Hexpm.Repo.aggregate(assoc(package, :owners), :count, :id) == 1
@@ -413,12 +413,12 @@ defmodule HexpmWeb.API.OwnerControllerTest do
     } do
       build_conn()
       |> put_req_header("authorization", key_for(user1))
-      |> put("api/repos/UNKNOWN_REPOSITORY/packages/#{package.name}/owners/#{user2.username}")
+      |> put("/api/repos/UNKNOWN_REPOSITORY/packages/#{package.name}/owners/#{user2.username}")
       |> response(404)
 
       build_conn()
       |> put_req_header("authorization", key_for(user1))
-      |> put("api/repos/UNKNOWN_REPOSITORY/packages/#{package.name}/owners/#{user2.username}")
+      |> put("/api/repos/UNKNOWN_REPOSITORY/packages/#{package.name}/owners/#{user2.username}")
       |> response(404)
 
       assert Hexpm.Repo.aggregate(assoc(package, :owners), :count, :id) == 1
@@ -432,12 +432,12 @@ defmodule HexpmWeb.API.OwnerControllerTest do
     } do
       build_conn()
       |> put_req_header("authorization", key_for(user1))
-      |> put("api/repos/#{repository.name}/packages/UNKNOWN_PACKAGE/owners/#{user2.username}")
+      |> put("/api/repos/#{repository.name}/packages/UNKNOWN_PACKAGE/owners/#{user2.username}")
       |> response(404)
 
       build_conn()
       |> put_req_header("authorization", key_for(user1))
-      |> put("api/repos/#{repository.name}/packages/UNKNOWN_PACKAGE/owners/#{user2.username}")
+      |> put("/api/repos/#{repository.name}/packages/UNKNOWN_PACKAGE/owners/#{user2.username}")
       |> response(404)
 
       assert Hexpm.Repo.aggregate(assoc(package, :owners), :count, :id) == 1
@@ -457,7 +457,7 @@ defmodule HexpmWeb.API.OwnerControllerTest do
 
       build_conn()
       |> put_req_header("authorization", key_for(user1))
-      |> put("api/repos/#{repository.name}/packages/#{package.name}/owners/#{user2.username}")
+      |> put("/api/repos/#{repository.name}/packages/#{package.name}/owners/#{user2.username}")
       |> response(403)
 
       assert Hexpm.Repo.aggregate(assoc(package, :owners), :count, :id) == 1
@@ -475,7 +475,7 @@ defmodule HexpmWeb.API.OwnerControllerTest do
 
       build_conn()
       |> put_req_header("authorization", key_for(user1))
-      |> put("api/repos/#{repository.name}/packages/UNKNOWN_PACKAGE/owners/#{user2.username}")
+      |> put("/api/repos/#{repository.name}/packages/UNKNOWN_PACKAGE/owners/#{user2.username}")
       |> response(404)
 
       assert Hexpm.Repo.aggregate(assoc(package, :owners), :count, :id) == 1
@@ -491,7 +491,7 @@ defmodule HexpmWeb.API.OwnerControllerTest do
 
       build_conn()
       |> put_req_header("authorization", key_for(user1))
-      |> put("api/repos/#{repository.name}/packages/#{package.name}/owners/#{user3.username}")
+      |> put("/api/repos/#{repository.name}/packages/#{package.name}/owners/#{user3.username}")
       |> response(422)
 
       assert Hexpm.Repo.aggregate(assoc(package, :owners), :count, :id) == 1
@@ -508,7 +508,7 @@ defmodule HexpmWeb.API.OwnerControllerTest do
 
       build_conn()
       |> put_req_header("authorization", key_for(user1))
-      |> put("api/repos/#{repository.name}/packages/#{package.name}/owners/#{user2.username}")
+      |> put("/api/repos/#{repository.name}/packages/#{package.name}/owners/#{user2.username}")
       |> response(204)
 
       assert Hexpm.Repo.aggregate(assoc(package, :owners), :count, :id) == 2
@@ -527,7 +527,7 @@ defmodule HexpmWeb.API.OwnerControllerTest do
 
       build_conn()
       |> put_req_header("authorization", key_for(user2))
-      |> put("api/repos/#{repository.name}/packages/#{package.name}/owners/#{user3.username}")
+      |> put("/api/repos/#{repository.name}/packages/#{package.name}/owners/#{user3.username}")
       |> response(204)
 
       assert Hexpm.Repo.aggregate(assoc(package, :owners), :count, :id) == 2
@@ -540,7 +540,7 @@ defmodule HexpmWeb.API.OwnerControllerTest do
 
       build_conn()
       |> put_req_header("authorization", key_for(user1))
-      |> delete("api/packages/#{package.name}/owners/#{user2.username}")
+      |> delete("/api/packages/#{package.name}/owners/#{user2.username}")
       |> response(204)
 
       assert [user] = assoc(package, :owners) |> Hexpm.Repo.all()
@@ -559,7 +559,7 @@ defmodule HexpmWeb.API.OwnerControllerTest do
     test "delete package owner authorizes", %{user1: user1, user2: user2, package: package} do
       build_conn()
       |> put_req_header("authorization", key_for(user2))
-      |> delete("api/packages/#{package.name}/owners/#{user1.username}")
+      |> delete("/api/packages/#{package.name}/owners/#{user1.username}")
       |> response(403)
     end
 
@@ -568,14 +568,14 @@ defmodule HexpmWeb.API.OwnerControllerTest do
 
       build_conn()
       |> put_req_header("authorization", key_for(user1))
-      |> delete("api/packages/#{package.name}/owners/UNKNOWN")
+      |> delete("/api/packages/#{package.name}/owners/UNKNOWN")
       |> response(404)
     end
 
     test "not possible to remove last owner of package", %{user1: user1, package: package} do
       build_conn()
       |> put_req_header("authorization", key_for(user1))
-      |> delete("api/packages/#{package.name}/owners/#{user1.username}")
+      |> delete("/api/packages/#{package.name}/owners/#{user1.username}")
       |> json_response(422)
 
       assert [user] = assoc(package, :owners) |> Hexpm.Repo.all()
@@ -593,12 +593,12 @@ defmodule HexpmWeb.API.OwnerControllerTest do
       insert(:package_owner, package: package, user: user2)
 
       build_conn()
-      |> delete("api/repos/#{repository.name}/packages/#{package.name}/owners/#{user2.username}")
+      |> delete("/api/repos/#{repository.name}/packages/#{package.name}/owners/#{user2.username}")
       |> response(404)
 
       build_conn()
       |> put_req_header("authorization", key_for(user1))
-      |> delete("api/repos/#{repository.name}/packages/#{package.name}/owners/#{user2.username}")
+      |> delete("/api/repos/#{repository.name}/packages/#{package.name}/owners/#{user2.username}")
       |> response(404)
 
       assert Hexpm.Repo.aggregate(assoc(package, :owners), :count, :id) == 2
@@ -612,12 +612,12 @@ defmodule HexpmWeb.API.OwnerControllerTest do
       insert(:package_owner, package: package, user: user2)
 
       build_conn()
-      |> delete("api/repos/UNKNOWN_REPOSITORY/packages/#{package.name}/owners/#{user2.username}")
+      |> delete("/api/repos/UNKNOWN_REPOSITORY/packages/#{package.name}/owners/#{user2.username}")
       |> response(404)
 
       build_conn()
       |> put_req_header("authorization", key_for(user1))
-      |> delete("api/repos/UNKNOWN_REPOSITORY/packages/#{package.name}/owners/#{user2.username}")
+      |> delete("/api/repos/UNKNOWN_REPOSITORY/packages/#{package.name}/owners/#{user2.username}")
       |> response(404)
 
       assert Hexpm.Repo.aggregate(assoc(package, :owners), :count, :id) == 2
@@ -632,12 +632,12 @@ defmodule HexpmWeb.API.OwnerControllerTest do
       insert(:package_owner, package: package, user: user2)
 
       build_conn()
-      |> delete("api/repos/#{repository.name}/packages/UNKNOWN_PACKAGE/owners/#{user2.username}")
+      |> delete("/api/repos/#{repository.name}/packages/UNKNOWN_PACKAGE/owners/#{user2.username}")
       |> response(404)
 
       build_conn()
       |> put_req_header("authorization", key_for(user1))
-      |> delete("api/repos/#{repository.name}/packages/UNKNOWN_PACKAGE/owners/#{user2.username}")
+      |> delete("/api/repos/#{repository.name}/packages/UNKNOWN_PACKAGE/owners/#{user2.username}")
       |> response(404)
 
       assert Hexpm.Repo.aggregate(assoc(package, :owners), :count, :id) == 2
@@ -655,7 +655,7 @@ defmodule HexpmWeb.API.OwnerControllerTest do
 
       build_conn()
       |> put_req_header("authorization", key_for(user1))
-      |> delete("api/repos/#{repository.name}/packages/UNKNOWN_PACKAGE/owners/#{user2.username}")
+      |> delete("/api/repos/#{repository.name}/packages/UNKNOWN_PACKAGE/owners/#{user2.username}")
       |> response(404)
 
       assert Hexpm.Repo.aggregate(assoc(package, :owners), :count, :id) == 2
@@ -672,7 +672,7 @@ defmodule HexpmWeb.API.OwnerControllerTest do
 
       build_conn()
       |> put_req_header("authorization", key_for(user1))
-      |> delete("api/repos/#{repository.name}/packages/#{package.name}/owners/#{user2.username}")
+      |> delete("/api/repos/#{repository.name}/packages/#{package.name}/owners/#{user2.username}")
       |> response(204)
 
       assert Hexpm.Repo.aggregate(assoc(package, :owners), :count, :id) == 1
@@ -691,7 +691,7 @@ defmodule HexpmWeb.API.OwnerControllerTest do
 
       build_conn()
       |> put_req_header("authorization", key_for(user1))
-      |> delete("api/repos/#{repository.name}/packages/#{package.name}/owners/#{user2.username}")
+      |> delete("/api/repos/#{repository.name}/packages/#{package.name}/owners/#{user2.username}")
       |> response(204)
 
       assert Hexpm.Repo.aggregate(assoc(package, :owners), :count, :id) == 0

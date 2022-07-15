@@ -37,7 +37,7 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
     conn =
       build_conn()
       |> test_login(user)
-      |> get("dashboard/orgs/#{organization.name}")
+      |> get("/dashboard/orgs/#{organization.name}")
 
     assert response(conn, 200) =~ "Members"
   end
@@ -51,20 +51,20 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
     conn =
       build_conn()
       |> test_login(user)
-      |> get("dashboard/orgs/#{repository.organization.name}")
+      |> get("/dashboard/orgs/#{repository.organization.name}")
 
     assert response(conn, 200) =~ "Members"
   end
 
   test "requires login" do
-    conn = get(build_conn(), "dashboard/orgs")
-    assert redirected_to(conn) == "/login?return=dashboard%2Forgs"
+    conn = get(build_conn(), "/dashboard/orgs")
+    assert redirected_to(conn) == "/login?return=%2Fdashboard%2Forgs"
   end
 
   test "show organization authenticates", %{user: user, organization: organization} do
     build_conn()
     |> test_login(user)
-    |> get("dashboard/orgs/#{organization.name}")
+    |> get("/dashboard/orgs/#{organization.name}")
     |> response(404)
   end
 
@@ -87,7 +87,7 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
     conn =
       build_conn()
       |> test_login(user)
-      |> post("dashboard/orgs/#{organization.name}", %{
+      |> post("/dashboard/orgs/#{organization.name}", %{
         "action" => "add_member",
         "organization_user" => params
       })
@@ -129,7 +129,7 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
     conn =
       build_conn()
       |> test_login(user)
-      |> post("dashboard/orgs/#{organization.name}", %{
+      |> post("/dashboard/orgs/#{organization.name}", %{
         "action" => "add_member",
         "organization_user" => params
       })
@@ -147,7 +147,7 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
     conn =
       build_conn()
       |> test_login(user)
-      |> post("dashboard/orgs/#{organization.name}", %{
+      |> post("/dashboard/orgs/#{organization.name}", %{
         "action" => "remove_member",
         "organization_user" => params
       })
@@ -165,7 +165,7 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
     conn =
       build_conn()
       |> test_login(user)
-      |> post("dashboard/orgs/#{organization.name}", %{
+      |> post("/dashboard/orgs/#{organization.name}", %{
         "action" => "change_role",
         "organization_user" => params
       })
@@ -184,7 +184,7 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
     conn =
       build_conn()
       |> test_login(user)
-      |> post("dashboard/orgs/#{organization.name}/leave", params)
+      |> post("/dashboard/orgs/#{organization.name}/leave", params)
 
     assert redirected_to(conn) == "/dashboard/profile"
     refute Repo.get_by(assoc(organization, :organization_users), user_id: user.id)
@@ -206,7 +206,7 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
       conn =
         build_conn()
         |> test_login(user)
-        |> post("dashboard/orgs/#{organization.name}/billing-token", %{"token" => "Test Token"})
+        |> post("/dashboard/orgs/#{organization.name}/billing-token", %{"token" => "Test Token"})
 
       assert json_response(conn, :ok) == %{}
     end
@@ -221,7 +221,7 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
 
       build_conn()
       |> test_login(user)
-      |> post("dashboard/orgs/#{organization.name}/billing-token", %{"token" => "Test Token"})
+      |> post("/dashboard/orgs/#{organization.name}/billing-token", %{"token" => "Test Token"})
 
       assert [audit_log] = AuditLogs.all_by(user)
       assert audit_log.action == "billing.checkout"
@@ -239,7 +239,7 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
       conn =
         build_conn()
         |> test_login(user)
-        |> get("dashboard/orgs/#{organization.name}")
+        |> get("/dashboard/orgs/#{organization.name}")
 
       assert response(conn, 200) =~ "Billing"
       assert response(conn, 200) =~ "Billing information"
@@ -253,7 +253,7 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
       conn =
         build_conn()
         |> test_login(user)
-        |> get("dashboard/orgs/#{organization.name}")
+        |> get("/dashboard/orgs/#{organization.name}")
 
       refute response(conn, 200) =~ "Billing"
       refute response(conn, 200) =~ "Billing information"
@@ -278,7 +278,7 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
       conn =
         build_conn()
         |> test_login(user)
-        |> post("dashboard/orgs/#{organization.name}/cancel-billing")
+        |> post("/dashboard/orgs/#{organization.name}/cancel-billing")
 
       message =
         "Your subscription is cancelled, you will have access to the organization until " <>
@@ -300,7 +300,7 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
       conn =
         build_conn()
         |> test_login(user)
-        |> post("dashboard/orgs/#{organization.name}/cancel-billing")
+        |> post("/dashboard/orgs/#{organization.name}/cancel-billing")
 
       assert redirected_to(conn) == "/dashboard/orgs/#{organization.name}"
       assert get_flash(conn, :info) == "Your subscription is cancelled"
@@ -322,7 +322,7 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
 
       build_conn()
       |> test_login(user)
-      |> post("dashboard/orgs/#{organization.name}/cancel-billing")
+      |> post("/dashboard/orgs/#{organization.name}/cancel-billing")
 
       assert [audit_log] = AuditLogs.all_by(user)
       assert audit_log.action == "billing.cancel"
@@ -346,7 +346,7 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
     conn =
       build_conn()
       |> test_login(user)
-      |> get("dashboard/orgs/#{organization.name}/invoices/123")
+      |> get("/dashboard/orgs/#{organization.name}/invoices/123")
 
     assert response(conn, 200) == "Invoice"
   end
@@ -376,7 +376,7 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
       conn =
         build_conn()
         |> test_login(user)
-        |> post("dashboard/orgs/#{organization.name}/invoices/123/pay")
+        |> post("/dashboard/orgs/#{organization.name}/invoices/123/pay")
 
       assert redirected_to(conn) == "/dashboard/orgs/#{organization.name}"
       assert get_flash(conn, :info) == "Invoice paid."
@@ -406,7 +406,7 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
       conn =
         build_conn()
         |> test_login(user)
-        |> post("dashboard/orgs/#{organization.name}/invoices/123/pay")
+        |> post("/dashboard/orgs/#{organization.name}/invoices/123/pay")
 
       response(conn, 400)
       assert get_flash(conn, :error) == "Failed to pay invoice: Card failure."
@@ -423,7 +423,7 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
 
       build_conn()
       |> test_login(user)
-      |> post("dashboard/orgs/#{organization.name}/invoices/123/pay")
+      |> post("/dashboard/orgs/#{organization.name}/invoices/123/pay")
 
       assert [audit_log] = AuditLogs.all_by(user)
       assert audit_log.action == "billing.pay_invoice"
@@ -447,7 +447,7 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
       conn =
         build_conn()
         |> test_login(user)
-        |> post("dashboard/orgs/#{organization.name}/update-billing", %{
+        |> post("/dashboard/orgs/#{organization.name}/update-billing", %{
           "email" => "billing@example.com"
         })
 
@@ -463,7 +463,7 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
 
       build_conn()
       |> test_login(user)
-      |> post("dashboard/orgs/#{organization.name}/update-billing", %{
+      |> post("/dashboard/orgs/#{organization.name}/update-billing", %{
         "email" => "billing@example.com"
       })
 
@@ -496,7 +496,7 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
     conn =
       build_conn()
       |> test_login(user)
-      |> post("dashboard/orgs", params)
+      |> post("/dashboard/orgs", params)
 
     response(conn, 302)
     assert get_resp_header(conn, "location") == ["/dashboard/orgs/createrepo"]
@@ -520,7 +520,7 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
     conn =
       build_conn()
       |> test_login(user)
-      |> post("dashboard/orgs", params)
+      |> post("/dashboard/orgs", params)
 
     assert response(conn, 400) =~ "Oops, something went wrong"
     assert response(conn, 400) =~ "has already been taken"
@@ -551,7 +551,7 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
       conn =
         build_conn()
         |> test_login(user)
-        |> post("dashboard/orgs/#{organization.name}/create-billing", params)
+        |> post("/dashboard/orgs/#{organization.name}/create-billing", params)
 
       response(conn, 302)
       assert get_resp_header(conn, "location") == ["/dashboard/orgs/#{organization.name}"]
@@ -567,7 +567,7 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
 
       build_conn()
       |> test_login(user)
-      |> post("dashboard/orgs/#{organization.name}/create-billing", params)
+      |> post("/dashboard/orgs/#{organization.name}/create-billing", params)
 
       assert [%{action: "billing.create"} = audit_log] = AuditLogs.all_by(user)
       assert audit_log.params["organization"]["name"] == organization.name
@@ -587,7 +587,7 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
       conn =
         build_conn()
         |> test_login(user)
-        |> post("dashboard/orgs/#{organization.name}/add-seats", %{
+        |> post("/dashboard/orgs/#{organization.name}/add-seats", %{
           "current-seats" => "1",
           "add-seats" => "2"
         })
@@ -606,7 +606,7 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
       conn =
         build_conn()
         |> test_login(user)
-        |> post("dashboard/orgs/#{organization.name}/add-seats", %{
+        |> post("/dashboard/orgs/#{organization.name}/add-seats", %{
           "current-seats" => "1",
           "add-seats" => "1"
         })
@@ -624,7 +624,7 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
 
       build_conn()
       |> test_login(user)
-      |> post("dashboard/orgs/#{organization.name}/add-seats", %{
+      |> post("/dashboard/orgs/#{organization.name}/add-seats", %{
         "current-seats" => "1",
         "add-seats" => "1"
       })
@@ -649,7 +649,7 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
       conn =
         build_conn()
         |> test_login(user)
-        |> post("dashboard/orgs/#{organization.name}/remove-seats", %{
+        |> post("/dashboard/orgs/#{organization.name}/remove-seats", %{
           "seats" => "3"
         })
 
@@ -666,7 +666,7 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
       conn =
         build_conn()
         |> test_login(user)
-        |> post("dashboard/orgs/#{organization.name}/remove-seats", %{
+        |> post("/dashboard/orgs/#{organization.name}/remove-seats", %{
           "seats" => "1"
         })
 
@@ -683,7 +683,7 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
 
       build_conn()
       |> test_login(user)
-      |> post("dashboard/orgs/#{organization.name}/remove-seats", %{
+      |> post("/dashboard/orgs/#{organization.name}/remove-seats", %{
         "seats" => "4"
       })
 
@@ -707,7 +707,7 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
       conn =
         build_conn()
         |> test_login(user)
-        |> post("dashboard/orgs/#{organization.name}/change-plan", %{
+        |> post("/dashboard/orgs/#{organization.name}/change-plan", %{
           "plan_id" => "organization-annually"
         })
 
@@ -725,7 +725,7 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
 
       build_conn()
       |> test_login(user)
-      |> post("dashboard/orgs/#{organization.name}/change-plan", %{
+      |> post("/dashboard/orgs/#{organization.name}/change-plan", %{
         "plan_id" => "organization-annually"
       })
 

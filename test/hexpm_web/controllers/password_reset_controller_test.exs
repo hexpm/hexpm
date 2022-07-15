@@ -8,17 +8,17 @@ defmodule HexpmWeb.PasswordResetControllerTest do
   end
 
   test "show reset your password" do
-    conn = get(build_conn(), "password/reset", %{})
+    conn = get(build_conn(), "/password/reset", %{})
     assert response(conn, 200) =~ "Reset your password"
   end
 
   test "email is sent with reset_token when password is reset", c do
     # initiate reset request
-    conn = post(build_conn(), "password/reset", %{"username" => c.user.username})
+    conn = post(build_conn(), "/password/reset", %{"username" => c.user.username})
     assert response(conn, 200) =~ "Reset your password"
 
     # initiate second reset request
-    conn = post(build_conn(), "password/reset", %{"username" => c.user.username})
+    conn = post(build_conn(), "/password/reset", %{"username" => c.user.username})
     assert response(conn, 200) =~ "Reset your password"
 
     user =
