@@ -133,6 +133,14 @@ export default class App {
     var button = $(event.currentTarget)
     var succeeded = false
 
+    /**
+     * Allows to control the propagation of the event. When the copying button
+     * is inside a dropdown you may want to stop the dropdown from closing.
+     * */
+    if (event.currentTarget.hasAttribute("data-stop-propagation")) {
+      event.stopPropagation();
+    }
+
     try {
       var snippet = document.getElementById(button.attr("data-input-id"))
       snippet.select()

@@ -42,8 +42,8 @@ defmodule HexpmWeb.PackageView do
     end
   end
 
-  def dep_snippet(:mix, package, release) do
-    version = snippet_version(:mix, release.version)
+  def dep_snippet(:mix, package, release, version_range) do
+    version = snippet_version(:mix, release.version, version_range)
     app_name = (release.meta && release.meta.app) || package.name
     organization = snippet_organization(package.repository.name)
 
@@ -53,6 +53,8 @@ defmodule HexpmWeb.PackageView do
       "{#{app_name(:mix, app_name)}, \"#{version}\", hex: :#{package.name}#{organization}}"
     end
   end
+
+  def dep_snippet(:mix, package, release), do: dep_snippet(:mix, package, release, :relax)
 
   def dep_snippet(:rebar, package, release) do
     version = snippet_version(:rebar, release.version)
@@ -69,6 +71,12 @@ defmodule HexpmWeb.PackageView do
     version = snippet_version(:erlang_mk, release.version)
     "dep_#{package.name} = hex #{version}"
   end
+
+  def snippet_version(:mix, %Version{major: major, minor: minor, patch: patch, pre: []}, :exact) do
+    "#{major}.#{minor}.#{patch}"
+  end
+
+  def snippet_version(:mix, version, _version_range), do: snippet_version(:mix, version)
 
   def snippet_version(:mix, %Version{major: 0, minor: minor, patch: patch, pre: []}) do
     "~> 0.#{minor}.#{patch}"

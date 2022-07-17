@@ -213,6 +213,28 @@ tools = [
                 <%= icon(:glyphicon, :remove, style: "display: none") %>
                 <%= icon(:glyphicon, :ok, style: "display: none; color: green") %>
               </button>
+
+              <%= if tool == :mix do %>
+                <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                  <span class="caret"></span>
+                  <span class="sr-only">Toggle <%= tool %> Dependency Actions</span>
+                </button>
+                <ul class="dropdown-menu dropdown-menu-right">
+                  <li>
+                    <button class="btn btn-link btn-no-hover copy-button" data-stop-propagation type="button" data-input-id="<%= tool %>-exact-snippet">
+                      <%= icon(:glyphicon, :copy) %>
+                      <%= icon(:glyphicon, :remove, style: "display: none") %>
+                      <%= icon(:glyphicon, :ok, style: "display: none; color: green") %>
+                      <input
+                        type="text"
+                        class="snippet"
+                        value="<%= dep_snippet(tool, @package, @current_release, :exact) %>"
+                        readonly="readonly" id="<%= tool %>-exact-snippet"
+                      />
+                    </button>
+                  </li>
+                </ul>
+              <% end %>
             </span>
           </div>
         </div>

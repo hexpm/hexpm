@@ -100,6 +100,7 @@ defmodule HexpmWeb.PackageViewTest do
     assert PackageView.snippet_version(:mix, version1) == "~> 0.0.2"
     assert PackageView.snippet_version(:mix, version2) == "~> 0.2.99"
     assert PackageView.snippet_version(:mix, version3) == "~> 2.0"
+    assert PackageView.snippet_version(:mix, version1, :exact) == "0.0.2"
   end
 
   test "rebar and erlang.mk config version" do

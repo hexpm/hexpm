@@ -115,6 +115,12 @@
     border: 1px #c1bfbf solid;
     border-radius: 2px;
   }
+
+  .dropdown-menu input {
+    background: transparent;
+    border: none;
+    padding-left: 1rem;
+  }
 }
 
 .version-dependency-list {
