@@ -2,8 +2,8 @@ import Config
 
 config :hexpm,
   billing_report: false,
-  tmp_dir: Path.expand("tmp/dev"),
-  private_key: File.read!("test/fixtures/private.pem"),
+  tmp_dir: Path.expand("../tmp/dev", __DIR__),
+  private_key: Path.expand("../test/fixtures/private.pem", __DIR__) |> File.read!(),
   docs_url: "http://localhost:4002",
   diff_url: "http://localhost:4004",
   preview_url: "http://localhost:4005",
