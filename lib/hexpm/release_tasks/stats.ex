@@ -77,7 +77,7 @@ defmodule Hexpm.ReleaseTasks.Stats do
             Repo.refresh_view(PackageDownload)
             Repo.refresh_view(ReleaseDownload)
           end,
-          timeout: 120_000
+          timeout: 600_000
         )
       end
 
