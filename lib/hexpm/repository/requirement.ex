@@ -71,7 +71,7 @@ defmodule Hexpm.Repository.Requirement do
   #       end
   #     end)
   #
-  #   Logger.warn("DEPENDENCY_RESOLUTION_COMPLETED (#{div(time, 1000)}ms)")
+  #   Logger.warning("DEPENDENCY_RESOLUTION_COMPLETED (#{div(time, 1000)}ms)")
   #   release_changeset
   # end
   #

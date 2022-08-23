@@ -50,25 +50,25 @@ defmodule Hexpm.Repository.RegistryBuilder do
     defp run_with_lock(fun, time) do
       if Repo.try_advisory_lock?(:registry) do
         try do
-          Logger.warn("REGISTRY_BUILDER aquired_lock (#{time}ms)")
+          Logger.warning("REGISTRY_BUILDER aquired_lock (#{time}ms)")
           fun.()
           true
         after
           Repo.advisory_unlock(:registry)
         end
       else
-        Logger.warn("REGISTRY_BUILDER failed_aquire_lock (#{time}ms)")
+        Logger.warning("REGISTRY_BUILDER failed_aquire_lock (#{time}ms)")
         false
       end
     end
   else
     defp run_with_lock(fun, time) do
       if Repo.try_advisory_xact_lock?(:registry) do
-        Logger.warn("REGISTRY_BUILDER aquired_lock (#{time}ms)")
+        Logger.warning("REGISTRY_BUILDER aquired_lock (#{time}ms)")
         fun.()
         true
       else
-        Logger.warn("REGISTRY_BUILDER failed_aquire_lock (#{time}ms)")
+        Logger.warning("REGISTRY_BUILDER failed_aquire_lock (#{time}ms)")
         false
       end
     end
@@ -162,7 +162,7 @@ defmodule Hexpm.Repository.RegistryBuilder do
   defp log(type, fun) do
     try do
       {time, _} = :timer.tc(fun)
-      Logger.warn("REGISTRY_BUILDER completed #{type} (#{div(time, 1000)}ms)")
+      Logger.warning("REGISTRY_BUILDER completed #{type} (#{div(time, 1000)}ms)")
     catch
       exception ->
         Logger.error("REGISTRY_BUILDER failed #{type}")

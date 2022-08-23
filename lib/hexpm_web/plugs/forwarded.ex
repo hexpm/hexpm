@@ -21,7 +21,7 @@ defmodule HexpmWeb.Plugs.Forwarded do
           parsed_ip
 
         {:error, _} ->
-          Logger.warn("Invalid IP: #{inspect(ip)}")
+          Logger.warning("Invalid IP: #{inspect(ip)}")
           nil
       end
     end
