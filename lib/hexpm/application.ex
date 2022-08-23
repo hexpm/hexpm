@@ -35,7 +35,7 @@ defmodule Hexpm.Application do
   if Mix.env() == :hex do
     def shutdown_on_eof() do
       spawn_link(fn ->
-        IO.gets(:stdio, '') == :eof && System.halt(0)
+        IO.gets(:stdio, ~c"") == :eof && System.halt(0)
       end)
     end
   else

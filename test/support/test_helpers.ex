@@ -20,10 +20,10 @@ defmodule Hexpm.TestHelpers do
     checksum = :crypto.hash(:sha256, blob) |> Base.encode16()
 
     files = [
-      {'VERSION', "3"},
-      {'CHECKSUM', checksum},
-      {'metadata.config', meta_string},
-      {'contents.tar.gz', contents}
+      {~c"VERSION", "3"},
+      {~c"CHECKSUM", checksum},
+      {~c"metadata.config", meta_string},
+      {~c"contents.tar.gz", contents}
     ]
 
     path = Path.join(@tmp, "#{meta[:name]}-#{meta[:version]}.tar")

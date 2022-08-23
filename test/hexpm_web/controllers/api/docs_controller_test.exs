@@ -65,7 +65,7 @@ defmodule HexpmWeb.API.DocsControllerTest do
       package = insert(:package, package_owners: [build(:package_owner, user: user)])
       insert(:release, package: package, version: "0.0.1")
 
-      publish_docs(user, package, "0.0.1", [{'index.html', "package v0.0.1"}])
+      publish_docs(user, package, "0.0.1", [{~c"index.html", "package v0.0.1"}])
       |> response(201)
 
       assert Hexpm.Repo.get_by!(assoc(package, :releases), version: "0.0.1").has_docs
@@ -92,7 +92,7 @@ defmodule HexpmWeb.API.DocsControllerTest do
 
       insert(:release, package: package, version: "0.0.1")
 
-      publish_docs(user, repository, package, "0.0.1", [{'index.html', "package v0.0.1"}])
+      publish_docs(user, repository, package, "0.0.1", [{~c"index.html", "package v0.0.1"}])
       |> response(404)
 
       refute Hexpm.Repo.get_by!(assoc(package, :releases), version: "0.0.1").has_docs
@@ -116,13 +116,15 @@ defmodule HexpmWeb.API.DocsControllerTest do
         repository,
         package,
         "0.0.1",
-        [{'index.html', "package v0.0.1"}]
+        [{~c"index.html", "package v0.0.1"}]
       )
       |> response(404)
 
       refute Hexpm.Repo.get_by!(assoc(package, :releases), version: "0.0.1").has_docs
 
-      publish_docs(organization, repository, package, "0.0.1", [{'index.html', "package v0.0.1"}])
+      publish_docs(organization, repository, package, "0.0.1", [
+        {~c"index.html", "package v0.0.1"}
+      ])
       |> response(201)
 
       assert Hexpm.Repo.get_by!(assoc(package, :releases), version: "0.0.1").has_docs
@@ -141,7 +143,7 @@ defmodule HexpmWeb.API.DocsControllerTest do
       insert(:release, package: package, version: "0.0.1")
       insert(:organization_user, organization: repository.organization, user: user)
 
-      publish_docs(user, repository, package, "0.0.1", [{'index.html', "package v0.0.1"}])
+      publish_docs(user, repository, package, "0.0.1", [{~c"index.html", "package v0.0.1"}])
       |> response(201)
 
       assert Hexpm.Repo.get_by!(assoc(package, :releases), version: "0.0.1").has_docs
@@ -156,7 +158,7 @@ defmodule HexpmWeb.API.DocsControllerTest do
       package = insert(:package, package_owners: [build(:package_owner, user: user)])
       insert(:release, package: package, version: "0.0.1")
 
-      publish_docs(user, package, "0.0.1", [{'index.html', "package v0.0.1"}])
+      publish_docs(user, package, "0.0.1", [{~c"index.html", "package v0.0.1"}])
       |> response(201)
 
       assert Hexpm.Repo.get_by!(assoc(package, :releases), version: "0.0.1").has_docs
@@ -176,7 +178,7 @@ defmodule HexpmWeb.API.DocsControllerTest do
       package = insert(:package, package_owners: [build(:package_owner, user: user)])
       insert(:release, package: package, version: "0.0.1")
 
-      publish_docs(user, package, "0.0.1", [{'index.html', "package v0.0.1"}])
+      publish_docs(user, package, "0.0.1", [{~c"index.html", "package v0.0.1"}])
       |> response(201)
 
       # Revert docs
@@ -214,7 +216,7 @@ defmodule HexpmWeb.API.DocsControllerTest do
       insert(:release, package: package, version: "0.0.1")
       insert(:organization_user, organization: repository.organization, user: user1)
 
-      publish_docs(user1, repository, package, "0.0.1", [{'index.html', "package v0.0.1"}])
+      publish_docs(user1, repository, package, "0.0.1", [{~c"index.html", "package v0.0.1"}])
       |> response(201)
 
       revert_docs(user2, repository, package, "0.0.1")
@@ -239,7 +241,7 @@ defmodule HexpmWeb.API.DocsControllerTest do
       insert(:release, package: package, version: "0.0.1")
       insert(:organization_user, organization: repository.organization, user: user)
 
-      publish_docs(user, repository, package, "0.0.1", [{'index.html', "package v0.0.1"}])
+      publish_docs(user, repository, package, "0.0.1", [{~c"index.html", "package v0.0.1"}])
       |> response(201)
 
       revert_docs(user, repository, package, "0.0.1")

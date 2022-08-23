@@ -115,7 +115,7 @@ defmodule HexpmWeb.PackageView do
     if Regex.match?(@erlang_atom_chars, name) do
       name
     else
-      inspect(String.to_charlist(name))
+      "'#{name}'"
     end
   end
 
