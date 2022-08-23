@@ -90,6 +90,8 @@ defmodule Hexpm.ReleaseTasks do
         catch
           kind, error ->
             Rollbax.report(kind, error, __STACKTRACE__)
+            Logger.warning("Sleeping 5 seconds for Rollbax to report error")
+            Process.sleep(5000)
         end
       end)
 
@@ -99,6 +101,8 @@ defmodule Hexpm.ReleaseTasks do
 
       {:EXIT, _pid, {error, stacktrace}} ->
         Rollbax.report(:error, error, stacktrace)
+        Logger.warning("Sleeping 5 seconds for Rollbax to report error")
+        Process.sleep(5000)
     end
   after
     Process.flag(:trap_exit, false)
