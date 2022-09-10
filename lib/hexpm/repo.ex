@@ -42,7 +42,7 @@ defmodule Hexpm.Repo do
   defwrite(insert(struct_or_changeset, opts \\ []))
   defwrite(query!(sql, params \\ [], opts \\ []))
   defwrite(query(sql, params \\ [], opts \\ []))
-  defwrite(refresh_view(schema))
+  defwrite(refresh_view(schema, opts \\ []))
   defwrite(rollback(value))
   defwrite(transaction(fun_or_multi, opts \\ []))
   defwrite(update_all(queryable, opts \\ []))
@@ -108,11 +108,11 @@ defmodule Hexpm.RepoBase do
     {:RSAPrivateKey, key}
   end
 
-  def refresh_view(schema) do
+  def refresh_view(schema, opts \\ []) do
     source = schema.__schema__(:source)
     query = ~s(REFRESH MATERIALIZED VIEW CONCURRENTLY "#{source}")
 
-    {:ok, _} = Hexpm.Repo.query(query, [])
+    {:ok, _} = Hexpm.Repo.query(query, [], opts)
     :ok
   end
 

@@ -46,10 +46,14 @@ defmodule Hexpm.ReleaseTasks.Stats do
     :ets.new(@ets, [:named_table, :public])
 
     try do
-      process_buckets(date)
-      repositories = repositories()
-      packages = packages()
-      releases = releases()
+      {repositories, packages, releases} =
+        time_log("collects stats", fn ->
+          process_buckets(date)
+          repositories = repositories()
+          packages = packages()
+          releases = releases()
+          {repositories, packages, releases}
+        end)
 
       # May not be a perfect count since it counts downloads without a release
       # in the database. Should be uncommon
@@ -58,24 +62,33 @@ defmodule Hexpm.ReleaseTasks.Stats do
       unless dryrun? do
         Repo.transaction(
           fn ->
-            Repo.delete_all(from(d in Download, where: d.day == ^date))
-
-            ets_stream()
-            |> Stream.flat_map(fn {{repository, package, version}, count} ->
-              repository_id = repositories[repository]
-              package_id = packages[{repository_id, package}]
-
-              if release_id = releases[{package_id, version}] do
-                [%{package_id: package_id, release_id: release_id, downloads: count, day: date}]
-              else
-                []
-              end
+            time_log("delete downloads", fn ->
+              Repo.delete_all(from(d in Download, where: d.day == ^date))
             end)
-            |> Stream.chunk_every(1000, 1000, [])
-            |> Enum.each(&Repo.insert_all(Download, &1))
 
-            Repo.refresh_view(PackageDownload)
-            Repo.refresh_view(ReleaseDownload)
+            time_log("insert downloads", fn ->
+              ets_stream()
+              |> Stream.flat_map(fn {{repository, package, version}, count} ->
+                repository_id = repositories[repository]
+                package_id = packages[{repository_id, package}]
+
+                if release_id = releases[{package_id, version}] do
+                  [%{package_id: package_id, release_id: release_id, downloads: count, day: date}]
+                else
+                  []
+                end
+              end)
+              |> Stream.chunk_every(1000, 1000, [])
+              |> Enum.each(&Repo.insert_all(Download, &1))
+            end)
+
+            time_log("refresh PackageDownload view", fn ->
+              Repo.refresh_view(PackageDownload, timeout: 60_000)
+            end)
+
+            time_log("refresh ReleaseDownload view", fn ->
+              Repo.refresh_view(ReleaseDownload, timeout: 60_000)
+            end)
           end,
           timeout: 600_000
         )
@@ -180,4 +193,10 @@ defmodule Hexpm.ReleaseTasks.Stats do
 
   defp copy(nil), do: nil
   defp copy(binary), do: :binary.copy(binary)
+
+  defp time_log(action, fun) do
+    {time, result} = :timer.tc(fun)
+    Logger.info("[stats] completed \"#{action}\" in #{time / 1000}ms")
+    result
+  end
 end
