@@ -102,6 +102,8 @@ jobs:
 
     env:
       HEXPM_PATH: ..
+      otp: 23.1.1
+      elixir: 1.14.0
 
     steps:
       - uses: actions/checkout@v2
@@ -109,8 +111,16 @@ jobs:
       - name: Install OTP and Elixir
         uses: erlef/setup-beam@v1
         with:
-          otp-version: 23.1.1
-          elixir-version: 1.14.0
+          otp-version: ${{ env.otp }}
+          elixir-version: ${{ env.elixir }}
+
+      - name: Cache dependencies
+        uses: actions/cache@v3
+        with:
+          path: |
+            deps
+            _build
+          key: ${{ runner.os }}-elixir-${{ env.elixir }}-otp-${{ env.otp }}-${{ hashFiles('**/mix.lock') }}
 
       - name: Install hexpm dependencies
         run: |
