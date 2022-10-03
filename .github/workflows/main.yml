@@ -127,9 +127,20 @@ jobs:
           mix deps.get
           mix deps.compile
 
-      - name: Clone hex and install dependencies
+      - name: Clone hex
         run: |
           git clone https://github.com/hexpm/hex hex -b ${{ matrix.hex-version }} --depth 1
+
+      - name: Cache hex dependencies
+        uses: actions/cache@v3
+        with:
+          path: |
+            hex/deps
+            hex/_build
+          key: ${{ runner.os }}-elixir-${{ env.elixir }}-otp-${{ env.otp }}-hex-${{ matrix.hex-version }}-${{ hashFiles('hex/mix.lock') }}
+
+      - name: Install dependencies
+        run: |
           cd hex && mix deps.get && MIX_ENV=test mix deps.compile && cd ..
 
       - name: Run tests
