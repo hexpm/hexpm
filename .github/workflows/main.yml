@@ -54,8 +54,6 @@ jobs:
             deps
             _build
           key: ${{ runner.os }}-elixir-${{ env.elixir }}-otp-${{ env.otp }}-${{ hashFiles('**/mix.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-mix-${{ env.elixir }}-${{ env.otp }}-
 
       - name: Install dependencies
         run: mix do deps.get, deps.compile
