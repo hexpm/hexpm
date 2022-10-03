@@ -23,6 +23,9 @@ jobs:
   test-hexpm:
     name: Test Hexpm
     runs-on: ubuntu-latest
+    env:
+      otp: 25.1.0
+      elixir: 1.14.0
 
     services:
       postgres:
@@ -41,8 +44,8 @@ jobs:
       - name: Install OTP and Elixir
         uses: erlef/setup-beam@v1
         with:
-          otp-version: 25.1.0
-          elixir-version: 1.14.0
+          otp-version: ${{ env.otp }}
+          elixir-version: ${{ env.elixir }}
 
       - name: Cache dependencies
         uses: actions/cache@v2
@@ -50,7 +53,7 @@ jobs:
           path: |
             deps
             _build
-          key: ${{ runner.os }}-mix-${{ env.elixir }}-${{ env.otp }}-${{ hashFiles('**/mix.lock') }}
+          key: ${{ runner.os }}-elixir-${{ env.elixir }}-otp-${{ env.otp }}-${{ hashFiles('**/mix.lock') }}
           restore-keys: |
             ${{ runner.os }}-mix-${{ env.elixir }}-${{ env.otp }}-
 
