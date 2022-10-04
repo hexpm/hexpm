@@ -6,23 +6,39 @@ jobs:
   format:
     name: Format
     runs-on: ubuntu-latest
+    env:
+      otp: 25.1.0
+      elixir: 1.14.0
+
     steps:
       - uses: actions/checkout@v1
 
       - name: Install OTP and Elixir
         uses: erlef/setup-beam@v1
         with:
-          otp-version: 25.1.0
-          elixir-version: 1.14.0
+          otp-version: ${{ env.otp }}
+          elixir-version: ${{ env.elixir }}
 
-      - run: mix deps.get
-      - run: mix deps.compile
+      - name: Cache dependencies
+        uses: actions/cache@v3
+        with:
+          path: |
+            deps
+            _build
+          key: ${{ runner.os }}-elixir-${{ env.elixir }}-otp-${{ env.otp }}-${{ hashFiles('**/mix.lock') }}
+
+      - name: Install dependencies
+        run: mix do deps.get, deps.compile
+
       - run: mix compile --warnings-as-errors
       - run: mix format --check-formatted
 
   test-hexpm:
     name: Test Hexpm
     runs-on: ubuntu-latest
+    env:
+      otp: 25.1.0
+      elixir: 1.14.0
 
     services:
       postgres:
@@ -41,11 +57,19 @@ jobs:
       - name: Install OTP and Elixir
         uses: erlef/setup-beam@v1
         with:
-          otp-version: 25.1.0
-          elixir-version: 1.14.0
+          otp-version: ${{ env.otp }}
+          elixir-version: ${{ env.elixir }}
+
+      - name: Cache dependencies
+        uses: actions/cache@v3
+        with:
+          path: |
+            deps
+            _build
+          key: ${{ runner.os }}-elixir-${{ env.elixir }}-otp-${{ env.otp }}-${{ hashFiles('**/mix.lock') }}
 
       - name: Install dependencies
-        run: mix deps.get
+        run: mix do deps.get, deps.compile
 
       - name: Compile
         run: MIX_ENV=test mix compile
@@ -78,6 +102,8 @@ jobs:
 
     env:
       HEXPM_PATH: ..
+      otp: 23.1.1
+      elixir: 1.14.0
 
     steps:
       - uses: actions/checkout@v2
@@ -85,17 +111,36 @@ jobs:
       - name: Install OTP and Elixir
         uses: erlef/setup-beam@v1
         with:
-          otp-version: 23.1.1
-          elixir-version: 1.14.0
+          otp-version: ${{ env.otp }}
+          elixir-version: ${{ env.elixir }}
+
+      - name: Cache dependencies
+        uses: actions/cache@v3
+        with:
+          path: |
+            deps
+            _build
+          key: ${{ runner.os }}-elixir-${{ env.elixir }}-otp-${{ env.otp }}-${{ hashFiles('**/mix.lock') }}
 
       - name: Install hexpm dependencies
         run: |
           mix deps.get
           mix deps.compile
 
-      - name: Clone hex and install dependencies
+      - name: Clone hex
         run: |
           git clone https://github.com/hexpm/hex hex -b ${{ matrix.hex-version }} --depth 1
+
+      - name: Cache hex dependencies
+        uses: actions/cache@v3
+        with:
+          path: |
+            hex/deps
+            hex/_build
+          key: ${{ runner.os }}-elixir-${{ env.elixir }}-otp-${{ env.otp }}-hex-${{ matrix.hex-version }}-${{ hashFiles('hex/mix.lock') }}
+
+      - name: Install dependencies
+        run: |
           cd hex && mix deps.get && MIX_ENV=test mix deps.compile && cd ..
 
       - name: Run tests
