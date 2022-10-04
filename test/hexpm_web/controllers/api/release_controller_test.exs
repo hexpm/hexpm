@@ -1012,7 +1012,7 @@ defmodule HexpmWeb.API.ReleaseControllerTest do
                "must include the --replace flag to update an existing release"
     end
 
-    test "non existant repository", %{user: user} do
+    test "non existent repository", %{user: user} do
       meta = %{
         name: Fake.sequence(:package),
         version: "1.0.0",
