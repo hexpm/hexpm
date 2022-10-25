@@ -23,7 +23,7 @@ defmodule Hexpm.ShortURLsTest do
     test "with incorrect params, errors instead of creating a new short url" do
       url = "https://ATTACKDOMAINhex.pm/derp"
       params = %{"url" => url}
-      {:error, %{valid?: false}} = ShortURLs.add(params)
+      assert {:error, %{valid?: false}} = ShortURLs.add(params)
     end
   end
 
