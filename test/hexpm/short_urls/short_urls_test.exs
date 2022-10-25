@@ -4,12 +4,26 @@ defmodule Hexpm.ShortURLsTest do
   alias Hexpm.ShortURLs.ShortURL
 
   describe "add/1" do
-    test "with correct params, creates a new short url" do
+    test "with correct params, creates a new short url for *.hex.pm" do
       url = "https://diff.hex.pm?diff[]=ecto:3.0.1:3.0.4"
       params = %{"url" => url}
       {:ok, short_url} = ShortURLs.add(params)
       assert short_url.short_code
       assert short_url.url == url
+    end
+
+    test "with correct params, creates a new short url for hex.pm" do
+      url = "https://hex.pm?diff[]=ecto:3.0.1:3.0.4"
+      params = %{"url" => url}
+      {:ok, short_url} = ShortURLs.add(params)
+      assert short_url.short_code
+      assert short_url.url == url
+    end
+
+    test "with incorrect params, errors instead of creating a new short url" do
+      url = "https://ATTACKDOMAINhex.pm/derp"
+      params = %{"url" => url}
+      assert {:error, %{valid?: false}} = ShortURLs.add(params)
     end
   end
 
