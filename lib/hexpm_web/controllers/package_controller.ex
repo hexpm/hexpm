@@ -9,6 +9,10 @@ defmodule HexpmWeb.PackageController do
   def index(conn, params) do
     letter = Hexpm.Utils.parse_search(params["letter"])
     search = Hexpm.Utils.parse_search(params["search"])
+    sanitized_search = Hexpm.Search.Sanitizer.sanitize(params["search"])
+    IO.inspect(sanitized_search, label: "sanitized_search")
+    parsed_result = Hexpm.Search.Parser.parse_sanitized_user_input(sanitized_search)
+    IO.inspect(parsed_result, label: "parsed_result")
 
     filter =
       cond do
