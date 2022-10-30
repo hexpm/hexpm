@@ -16,7 +16,7 @@ Note that public packages managed by an organization does not change its namespa
 
 The new `mix hex.package diff` command shows the difference between two package versions directly in the command line. By calling `mix hex.package diff decimal 1.6.0..1.7.0` you will see a diff of the two versions. See the video below for examples on how you can combine it with `colordiff` and `less`.
 
-<script id="asciicast-249929" src="https://asciinema.org/a/249929.js" async data-rows=20></script>
+<script id="asciicast-249929" src="https://asciinema.org/a/249929.js" async data-rows="20"></script>
 
 Diff can be a great tool for debugging as well as code auditing, for more information and documentation run [`mix help hex.package`](https://hexdocs.pm/hex/Mix.Tasks.Hex.Package.html).
 
