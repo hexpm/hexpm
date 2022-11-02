@@ -11,7 +11,7 @@ jobs:
       elixir: 1.14.0
 
     steps:
-      - uses: actions/checkout@v1
+      - uses: actions/checkout@v2
 
       - name: Install OTP and Elixir
         uses: erlef/setup-beam@v1
