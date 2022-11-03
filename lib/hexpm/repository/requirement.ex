@@ -34,50 +34,12 @@ defmodule Hexpm.Repository.Requirement do
   def build_all(release_changeset, package) do
     dependencies = preload_dependencies(release_changeset.params["requirements"])
 
-    release_changeset =
-      cast_assoc(
-        release_changeset,
-        :requirements,
-        with: &changeset(&1, &2, dependencies, package)
-      )
-
-    if release_changeset.valid? do
-      requirements =
-        get_change(release_changeset, :requirements, [])
-        |> Enum.map(&apply_changes/1)
-
-      validate_resolver(release_changeset, requirements)
-    else
-      release_changeset
-    end
+    cast_assoc(
+      release_changeset,
+      :requirements,
+      with: &changeset(&1, &2, dependencies, package)
+    )
   end
-
-  defp validate_resolver(release_changeset, _requirements) do
-    release_changeset
-  end
-
-  # Disabled because of bug
-  # defp validate_resolver(%{valid?: true} = release_changeset, requirements) do
-  #   build_tools = get_field(release_changeset, :meta).build_tools
-  #
-  #   {time, release_changeset} =
-  #     :timer.tc(fn ->
-  #       case Resolver.run(requirements, build_tools) do
-  #         :ok ->
-  #           release_changeset
-  #
-  #         {:error, reason} ->
-  #           add_error(release_changeset, :requirements, reason)
-  #       end
-  #     end)
-  #
-  #   Logger.warning("DEPENDENCY_RESOLUTION_COMPLETED (#{div(time, 1000)}ms)")
-  #   release_changeset
-  # end
-  #
-  # defp validate_resolver(%{valid?: false} = release_changeset, _requirements) do
-  #   release_changeset
-  # end
 
   defp preload_dependencies(requirements) do
     names = requirement_names(requirements)

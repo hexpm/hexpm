@@ -436,19 +436,6 @@ defmodule Hexpm.Repository.ReleaseTest do
 
     assert %{meta: %{files: "package can't be empty"}} =
              Release.build(package3, publisher, %{"meta" => meta}, "", "") |> errors_on()
-
-    # Disabled because of resolver bug
-    # reqs = [%{name: package3.name, app: package3.name, requirement: "~> 1.0", optional: false}]
-
-    # assert %{requirements: "Failed to use" <> _} =
-    #          Release.build(
-    #            package2,
-    #            publisher,
-    #            rel_meta(%{version: "0.1.1", app: package2.name, requirements: reqs}),
-    #            "",
-    #            ""
-    #          )
-    #          |> errors_on()
   end
 
   test "ensure unique build tools", %{publisher: publisher, packages: [_, _, package3]} do

@@ -403,7 +403,7 @@ defmodule HexpmWeb.API.OwnerControllerTest do
       |> put("/api/repos/#{repository.name}/packages/#{package.name}/owners/#{user2.username}")
       |> response(404)
 
-      assert Hexpm.Repo.aggregate(assoc(package, :owners), :count, :id) == 1
+      assert Hexpm.Repo.aggregate(assoc(package, :owners), :count) == 1
     end
 
     test "returns 404 for unknown repository", %{
@@ -421,7 +421,7 @@ defmodule HexpmWeb.API.OwnerControllerTest do
       |> put("/api/repos/UNKNOWN_REPOSITORY/packages/#{package.name}/owners/#{user2.username}")
       |> response(404)
 
-      assert Hexpm.Repo.aggregate(assoc(package, :owners), :count, :id) == 1
+      assert Hexpm.Repo.aggregate(assoc(package, :owners), :count) == 1
     end
 
     test "returns 404 for missing package if you are not authorized", %{
@@ -440,7 +440,7 @@ defmodule HexpmWeb.API.OwnerControllerTest do
       |> put("/api/repos/#{repository.name}/packages/UNKNOWN_PACKAGE/owners/#{user2.username}")
       |> response(404)
 
-      assert Hexpm.Repo.aggregate(assoc(package, :owners), :count, :id) == 1
+      assert Hexpm.Repo.aggregate(assoc(package, :owners), :count) == 1
     end
 
     test "returns 403 if organization does not have active billing", %{user1: user1, user2: user2} do
@@ -460,7 +460,7 @@ defmodule HexpmWeb.API.OwnerControllerTest do
       |> put("/api/repos/#{repository.name}/packages/#{package.name}/owners/#{user2.username}")
       |> response(403)
 
-      assert Hexpm.Repo.aggregate(assoc(package, :owners), :count, :id) == 1
+      assert Hexpm.Repo.aggregate(assoc(package, :owners), :count) == 1
     end
 
     test "returns 404 for missing package if you are authorized", %{
@@ -478,7 +478,7 @@ defmodule HexpmWeb.API.OwnerControllerTest do
       |> put("/api/repos/#{repository.name}/packages/UNKNOWN_PACKAGE/owners/#{user2.username}")
       |> response(404)
 
-      assert Hexpm.Repo.aggregate(assoc(package, :owners), :count, :id) == 1
+      assert Hexpm.Repo.aggregate(assoc(package, :owners), :count) == 1
     end
 
     test "requires owner to be member of organization", %{
@@ -494,7 +494,7 @@ defmodule HexpmWeb.API.OwnerControllerTest do
       |> put("/api/repos/#{repository.name}/packages/#{package.name}/owners/#{user3.username}")
       |> response(422)
 
-      assert Hexpm.Repo.aggregate(assoc(package, :owners), :count, :id) == 1
+      assert Hexpm.Repo.aggregate(assoc(package, :owners), :count) == 1
     end
 
     test "add package owner", %{
@@ -511,7 +511,7 @@ defmodule HexpmWeb.API.OwnerControllerTest do
       |> put("/api/repos/#{repository.name}/packages/#{package.name}/owners/#{user2.username}")
       |> response(204)
 
-      assert Hexpm.Repo.aggregate(assoc(package, :owners), :count, :id) == 2
+      assert Hexpm.Repo.aggregate(assoc(package, :owners), :count) == 2
     end
 
     test "add package owner using admin permission and without package owner", %{
@@ -530,7 +530,7 @@ defmodule HexpmWeb.API.OwnerControllerTest do
       |> put("/api/repos/#{repository.name}/packages/#{package.name}/owners/#{user3.username}")
       |> response(204)
 
-      assert Hexpm.Repo.aggregate(assoc(package, :owners), :count, :id) == 2
+      assert Hexpm.Repo.aggregate(assoc(package, :owners), :count) == 2
     end
   end
 
@@ -601,7 +601,7 @@ defmodule HexpmWeb.API.OwnerControllerTest do
       |> delete("/api/repos/#{repository.name}/packages/#{package.name}/owners/#{user2.username}")
       |> response(404)
 
-      assert Hexpm.Repo.aggregate(assoc(package, :owners), :count, :id) == 2
+      assert Hexpm.Repo.aggregate(assoc(package, :owners), :count) == 2
     end
 
     test "returns 404 for unknown repository", %{
@@ -620,7 +620,7 @@ defmodule HexpmWeb.API.OwnerControllerTest do
       |> delete("/api/repos/UNKNOWN_REPOSITORY/packages/#{package.name}/owners/#{user2.username}")
       |> response(404)
 
-      assert Hexpm.Repo.aggregate(assoc(package, :owners), :count, :id) == 2
+      assert Hexpm.Repo.aggregate(assoc(package, :owners), :count) == 2
     end
 
     test "returns 404 for missing package if you are not authorized", %{
@@ -640,7 +640,7 @@ defmodule HexpmWeb.API.OwnerControllerTest do
       |> delete("/api/repos/#{repository.name}/packages/UNKNOWN_PACKAGE/owners/#{user2.username}")
       |> response(404)
 
-      assert Hexpm.Repo.aggregate(assoc(package, :owners), :count, :id) == 2
+      assert Hexpm.Repo.aggregate(assoc(package, :owners), :count) == 2
     end
 
     test "returns 404 for missing package if you are authorized", %{
@@ -658,7 +658,7 @@ defmodule HexpmWeb.API.OwnerControllerTest do
       |> delete("/api/repos/#{repository.name}/packages/UNKNOWN_PACKAGE/owners/#{user2.username}")
       |> response(404)
 
-      assert Hexpm.Repo.aggregate(assoc(package, :owners), :count, :id) == 2
+      assert Hexpm.Repo.aggregate(assoc(package, :owners), :count) == 2
     end
 
     test "delete package owner", %{
@@ -675,7 +675,7 @@ defmodule HexpmWeb.API.OwnerControllerTest do
       |> delete("/api/repos/#{repository.name}/packages/#{package.name}/owners/#{user2.username}")
       |> response(204)
 
-      assert Hexpm.Repo.aggregate(assoc(package, :owners), :count, :id) == 1
+      assert Hexpm.Repo.aggregate(assoc(package, :owners), :count) == 1
     end
 
     test "delete package owner using write permission and without package owner", %{
@@ -694,7 +694,7 @@ defmodule HexpmWeb.API.OwnerControllerTest do
       |> delete("/api/repos/#{repository.name}/packages/#{package.name}/owners/#{user2.username}")
       |> response(204)
 
-      assert Hexpm.Repo.aggregate(assoc(package, :owners), :count, :id) == 0
+      assert Hexpm.Repo.aggregate(assoc(package, :owners), :count) == 0
     end
   end
 end

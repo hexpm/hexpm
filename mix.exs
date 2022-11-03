@@ -7,7 +7,6 @@ defmodule Hexpm.MixProject do
       version: "0.0.1",
       elixir: "~> 1.11",
       elixirc_paths: elixirc_paths(Mix.env()),
-      xref: xref(),
       compilers: Mix.compilers(),
       build_embedded: Mix.env() == :prod,
       start_permanent: Mix.env() == :prod,
@@ -29,10 +28,6 @@ defmodule Hexpm.MixProject do
 
   defp elixirc_paths(:test), do: ["lib", "test/support"]
   defp elixirc_paths(_), do: ["lib"]
-
-  defp xref() do
-    [exclude: [Hex, Hex.Registry, Hex.Resolver]]
-  end
 
   defp deps() do
     [

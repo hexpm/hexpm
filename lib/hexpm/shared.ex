@@ -42,7 +42,6 @@ defmodule Hexpm.Shared do
         Repository.Repositories,
         Repository.Repository,
         Repository.Requirement,
-        Repository.Resolver,
         Repository.Sitemaps
       }
     end
