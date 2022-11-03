@@ -20,7 +20,8 @@ defmodule Hexpm.Repo do
   import Hexpm.RepoHelpers
   alias Hexpm.RepoBase
 
-  defdelegate aggregate(queryable, aggregate, field, opts \\ []), to: RepoBase
+  defdelegate aggregate(queryable, aggregate, opts \\ []), to: RepoBase
+  defdelegate aggregate(queryable, aggregate, field, opts), to: RepoBase
   defdelegate all(queryable, opts \\ []), to: RepoBase
   defdelegate get_by!(queryable, clauses, opts \\ []), to: RepoBase
   defdelegate get_by(queryable, clauses, opts \\ []), to: RepoBase
@@ -108,8 +109,14 @@ defmodule Hexpm.RepoBase do
     {:RSAPrivateKey, key}
   end
 
-  def refresh_view(schema, opts \\ []) do
+  def refresh_view(schema, opts \\ [])
+
+  def refresh_view(schema, opts) when is_atom(schema) do
     source = schema.__schema__(:source)
+    refresh_view(source, opts)
+  end
+
+  def refresh_view(source, opts) when is_binary(source) do
     query = ~s(REFRESH MATERIALIZED VIEW CONCURRENTLY "#{source}")
 
     {:ok, _} = Hexpm.Repo.query(query, [], opts)

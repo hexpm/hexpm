@@ -294,7 +294,7 @@ defmodule Hexpm.Accounts.AuditLog do
   end
 
   def count_by(schema) do
-    from(l in all_by(schema), select: count(l))
+    from(l in all_by(schema), select: count())
   end
 
   def all_by(%Hexpm.Repository.Package{} = package) do

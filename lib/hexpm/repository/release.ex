@@ -251,7 +251,7 @@ defmodule Hexpm.Repository.Release do
   end
 
   def count() do
-    from(r in Release, select: count(r.id))
+    from(Release, select: count())
   end
 
   def recent(repository, count) do

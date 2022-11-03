@@ -62,7 +62,7 @@ defmodule Hexpm.Accounts.Organization do
       where: ou.organization_id == ^organization.id,
       where: ou.user_id == ^user.id,
       where: ou.role in ^role_or_higher(role),
-      select: count(ou.id) >= 1
+      select: count() >= 1
     )
   end
 

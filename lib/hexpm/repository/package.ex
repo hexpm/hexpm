@@ -100,7 +100,7 @@ defmodule Hexpm.Repository.Package do
       where: po.package_id == ^package.id,
       where: po.user_id == ^user.id,
       where: po.level in ^levels,
-      select: count(po.id) >= 1
+      select: count() >= 1
     )
   end
 
@@ -116,7 +116,7 @@ defmodule Hexpm.Repository.Package do
       where: po.package_id == ^package.id,
       where: ou.user_id == ^user.id,
       where: ou.role in ^roles,
-      select: count(po.id) >= 1
+      select: count() >= 1
     )
   end
 
@@ -142,14 +142,14 @@ defmodule Hexpm.Repository.Package do
   end
 
   def count() do
-    from(p in Package, select: count(p.id))
+    from(Package, select: count())
   end
 
   def count(repositories, search) do
     from(
       p in assoc(repositories, :packages),
       join: r in assoc(p, :repository),
-      select: count(p.id)
+      select: count()
     )
     |> search(search)
   end

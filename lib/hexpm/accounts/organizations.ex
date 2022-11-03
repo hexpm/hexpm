@@ -109,7 +109,7 @@ defmodule Hexpm.Accounts.Organizations do
   end
 
   def remove_member(organization, user, audit: audit_data) do
-    count = Repo.aggregate(assoc(organization, :organization_users), :count, :id)
+    count = Repo.aggregate(assoc(organization, :organization_users), :count)
 
     if count == 1 do
       {:error, :last_member}
@@ -158,7 +158,7 @@ defmodule Hexpm.Accounts.Organizations do
   end
 
   def user_count(organization) do
-    Repo.aggregate(assoc(organization, :organization_users), :count, :id)
+    Repo.aggregate(assoc(organization, :organization_users), :count)
   end
 
   defp delete_package_owners(multi, organization, user) do

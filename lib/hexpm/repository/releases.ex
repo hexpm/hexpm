@@ -222,7 +222,7 @@ defmodule Hexpm.Repository.Releases do
   end
 
   defp release_count(repo, %{release: release}) do
-    {:ok, repo.aggregate(assoc(release.package, :releases), :count, :id)}
+    {:ok, repo.aggregate(assoc(release.package, :releases), :count)}
   end
 
   defp maybe_delete_package(repo, %{release_count: release_count, release: release}) do
