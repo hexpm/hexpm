@@ -1,7 +1,7 @@
 defmodule Hexpm.Repository.Release do
   use Hexpm.Schema
 
-  @derive {HexpmWeb.Stale, assocs: [:requirements, :downloads]}
+  @derive {HexpmWeb.Stale, assocs: [:requirements]}
   @one_hour 60 * 60
   @one_day @one_hour * 24
 
@@ -268,6 +268,17 @@ defmodule Hexpm.Repository.Release do
   def downloads_for_last_n_days(release_id, num_of_days) do
     date_start = Date.add(Date.utc_today(), -1 * num_of_days)
     from(d in downloads_by_period(release_id, :day), where: d.day >= ^date_start)
+  end
+
+  def downloads_by_period(release_id, :all) do
+    from(d in ReleaseDownload,
+      where: d.release_id == ^release_id,
+      select: %Download{
+        package_id: d.package_id,
+        release_id: d.release_id,
+        downloads: d.downloads
+      }
+    )
   end
 
   def downloads_by_period(release_id, filter) do

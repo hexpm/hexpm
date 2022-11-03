@@ -2,7 +2,7 @@ defmodule Hexpm.Repository.Package do
   use Hexpm.Schema
   import Ecto.Query, only: [from: 2]
 
-  @derive {HexpmWeb.Stale, assocs: [:releases, :owners, :downloads]}
+  @derive {HexpmWeb.Stale, assocs: [:releases, :owners]}
   @derive {Phoenix.Param, key: :name}
 
   schema "packages" do
@@ -54,7 +54,7 @@ defmodule Hexpm.Repository.Package do
 
     package
     |> cast(params, ~w(name)a)
-    |> unique_constraint(:name, name: :packages_repository_id_name_index)
+    |> unique_constraint(:name, name: :packages_repository_id_name_text_pattern_ops_index)
     |> validate_required(:name)
     |> validate_length(:name, min: 2)
     |> validate_format(:name, ~r"^[a-z]\w*$")
@@ -185,7 +185,7 @@ defmodule Hexpm.Repository.Package do
 
   defmacrop name_query(p, search) do
     quote do
-      ilike(fragment("?::text", unquote(p).name), ^unquote(search))
+      like(unquote(p).name, fragment("lower(?)", ^unquote(search)))
     end
   end
 

@@ -8,7 +8,6 @@ defmodule Hexpm.Repository.Download do
     belongs_to :release, Release
     field :downloads, :integer
     field :day, :date
-    field :updated_at, :utc_datetime_usec, virtual: true
   end
 
   defmacrop date_trunc(period, expr) do
@@ -32,8 +31,7 @@ defmodule Hexpm.Repository.Download do
           order_by: d.day,
           select: %Download{
             day: date_trunc_format("day", "YYYY-MM-DD", d.day),
-            downloads: sum(d.downloads),
-            updated_at: max(d.day)
+            downloads: sum(d.downloads)
           }
         )
 
@@ -44,17 +42,7 @@ defmodule Hexpm.Repository.Download do
           order_by: date_trunc("month", d.day),
           select: %Download{
             day: date_trunc_format("month", "YYYY-MM", d.day),
-            downloads: sum(d.downloads),
-            updated_at: max(d.day)
-          }
-        )
-
-      :all ->
-        from(
-          d in query,
-          select: %Download{
-            downloads: sum(d.downloads),
-            updated_at: max(d.day)
+            downloads: sum(d.downloads)
           }
         )
     end

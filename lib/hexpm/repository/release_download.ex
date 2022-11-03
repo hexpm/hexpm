@@ -5,6 +5,7 @@ defmodule Hexpm.Repository.ReleaseDownload do
   @primary_key false
 
   schema "release_downloads" do
+    belongs_to(:package, Package, references: :id)
     belongs_to(:release, Release, references: :id)
     field :downloads, :integer
   end
