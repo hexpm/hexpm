@@ -57,8 +57,10 @@ defmodule HexpmWeb.API.DocsController do
   end
 
   defp log_tarball(repository, package, version, request_id, body) do
-    filename = "#{repository}-#{package}-#{version}-#{request_id}.tar.gz"
-    key = Path.join(["debug", "docs", filename])
-    Hexpm.Store.put(:repo_bucket, key, body, [])
+    Task.Supervisor.start_child(Hexpm.Tasks, fn ->
+      filename = "#{repository}-#{package}-#{version}-#{request_id}.tar.gz"
+      key = Path.join(["debug", "docs", filename])
+      Hexpm.Store.put(:repo_bucket, key, body, [])
+    end)
   end
 end
