@@ -8,6 +8,14 @@ defmodule Hexpm.CDN.Fastly do
     service_id = Application.get_env(:hexpm, service)
 
     {:ok, 200, _, _} = post("service/#{service_id}/purge", body)
+
+    Task.Supervisor.start_child(Hexpm.Tasks, fn ->
+      Process.sleep(2000)
+      {:ok, 200, _, _} = post("service/#{service_id}/purge", body)
+      Process.sleep(2000)
+      {:ok, 200, _, _} = post("service/#{service_id}/purge", body)
+    end)
+
     :ok
   end
 
