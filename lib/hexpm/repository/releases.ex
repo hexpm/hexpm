@@ -48,8 +48,8 @@ defmodule Hexpm.Repository.Releases do
     |> create_package(repository, package, user, meta)
     |> create_release(package, user, inner_checksum, outer_checksum, meta, replace?)
     |> audit_publish(audit_data)
-    |> refresh_package_dependants()
     |> Repo.transaction(timeout: @publish_timeout)
+    |> refresh_package_dependants()
     |> publish_result(user, body)
   end
 
@@ -74,8 +74,8 @@ defmodule Hexpm.Repository.Releases do
     |> audit_revert(audit_data, package, release)
     |> Multi.run(:release_count, &release_count/2)
     |> Multi.run(:package, &maybe_delete_package/2)
-    |> refresh_package_dependants()
     |> Repo.transaction(timeout: @publish_timeout)
+    |> refresh_package_dependants()
     |> revert_result()
   end
 
@@ -214,11 +214,19 @@ defmodule Hexpm.Repository.Releases do
     end
   end
 
-  defp refresh_package_dependants(multi) do
-    Multi.run(multi, :refresh, fn repo, _ ->
-      :ok = repo.refresh_view(Hexpm.Repository.PackageDependant)
-      {:ok, :refresh}
-    end)
+  if Mix.env() == :test do
+    defp refresh_package_dependants(result) do
+      Hexpm.Repo.refresh_view(Hexpm.Repository.PackageDependant)
+      result
+    end
+  else
+    defp refresh_package_dependants(result) do
+      Task.Supervisor.start_child(Hexpm.Tasks, fn ->
+        Hexpm.Repo.refresh_view(Hexpm.Repository.PackageDependant)
+      end)
+
+      result
+    end
   end
 
   defp release_count(repo, %{release: release}) do
