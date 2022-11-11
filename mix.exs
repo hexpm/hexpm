@@ -36,6 +36,7 @@ defmodule Hexpm.MixProject do
       {:bcrypt_elixir, "~> 3.0"},
       {:corsica, "~> 1.0"},
       {:earmark, "~> 1.4"},
+      {:ecto_psql_extras, "~> 0.6"},
       {:ecto_sql, "~> 3.0"},
       {:ecto, "~> 3.0"},
       {:ex_aws_s3, "~> 2.0"},
