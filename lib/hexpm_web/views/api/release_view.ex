@@ -32,7 +32,8 @@ defmodule HexpmWeb.API.ReleaseView do
       meta: %{
         app: release.meta.app,
         build_tools: Enum.uniq(release.meta.build_tools),
-        elixir: release.meta.elixir
+        elixir: release.meta.elixir,
+        files: release.meta.files
       },
       downloads: downloads(release.downloads),
       publisher: render_one(release.publisher, UserView, "minimal.json")
