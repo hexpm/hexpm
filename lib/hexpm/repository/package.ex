@@ -120,10 +120,13 @@ defmodule Hexpm.Repository.Package do
     )
   end
 
-  def all(repositories, page, count, search, sort, fields) do
+  def all(repositories, page, count, search, sort, fields, updated_after \\ nil) do
+    updated_after = updated_after || DateTime.from_unix!(0)
+
     from(
       p in assoc(repositories, :packages),
       join: r in assoc(p, :repository),
+      where: p.updated_at >= ^updated_after,
       preload: :downloads
     )
     |> sort(sort)

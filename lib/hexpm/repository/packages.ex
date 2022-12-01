@@ -50,13 +50,13 @@ defmodule Hexpm.Repository.Packages do
   end
 
   def search(repositories, page, packages_per_page, query, sort, fields) do
-    Package.all(repositories, page, packages_per_page, query, sort, fields)
+    Package.all(repositories, page, packages_per_page, query, sort, fields, nil)
     |> Repo.all()
     |> attach_repositories(repositories)
   end
 
-  def search_with_versions(repositories, page, packages_per_page, query, sort) do
-    Package.all(repositories, page, packages_per_page, query, sort, nil)
+  def search_with_versions(repositories, page, packages_per_page, query, sort, updated_after) do
+    Package.all(repositories, page, packages_per_page, query, sort, nil, updated_after)
     |> Ecto.Query.preload(
       releases: ^from(r in Release, select: struct(r, [:id, :version, :updated_at, :has_docs]))
     )
