@@ -101,7 +101,7 @@ defmodule HexpmWeb.API.PackageControllerTest do
 
       # not a date
       conn = get(build_conn(), "/api/packages?page=1&search=updated_after:1970")
-      assert [] = json_response(conn, 200)
+      assert [_, _, _] = json_response(conn, 200)
     end
 
     test "show private packages", %{user: user, package3: package3} do
