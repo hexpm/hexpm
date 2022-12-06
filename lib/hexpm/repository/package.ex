@@ -248,7 +248,8 @@ defmodule Hexpm.Repository.Package do
   defp search_param("updated_after", search, query) do
     case DateTime.from_iso8601(search) do
       {:ok, updated_after, 0} -> from(p in query, where: p.updated_at >= ^updated_after)
-      _ -> from(p in query, where: false)  # invalid date, return nothing
+      # invalid date, return nothing
+      _ -> from(p in query, where: false)
     end
   end
 

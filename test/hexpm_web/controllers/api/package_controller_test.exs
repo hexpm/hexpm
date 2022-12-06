@@ -99,7 +99,8 @@ defmodule HexpmWeb.API.PackageControllerTest do
       conn = get(build_conn(), "/api/packages?page=1&search=updated_after:2031-01-01T00:00:00Z")
       assert [] = json_response(conn, 200)
 
-      conn = get(build_conn(), "/api/packages?page=1&search=updated_after:1970")  # not a date
+      # not a date
+      conn = get(build_conn(), "/api/packages?page=1&search=updated_after:1970")
       assert [] = json_response(conn, 200)
     end
 
