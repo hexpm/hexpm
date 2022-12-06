@@ -98,15 +98,6 @@ defmodule Hexpm.Utils do
     end
   end
 
-  def safe_date(nil), do: nil
-
-  def safe_date(string) do
-    case DateTime.from_iso8601(string) do
-      {:ok, dt} -> dt
-      _ -> nil
-    end
-  end
-
   def parse_search(nil), do: nil
   def parse_search(""), do: nil
   def parse_search(search), do: String.trim(search)

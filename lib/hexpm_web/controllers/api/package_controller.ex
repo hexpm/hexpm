@@ -12,9 +12,8 @@ defmodule HexpmWeb.API.PackageController do
     repositories = repositories(conn)
     page = Hexpm.Utils.safe_int(params["page"])
     search = Hexpm.Utils.parse_search(params["search"])
-    updated_after = Hexpm.Utils.parse_search(params["updated_after"])
     sort = sort(params["sort"])
-    packages = Packages.search_with_versions(repositories, page, 100, search, sort, updated_after)
+    packages = Packages.search_with_versions(repositories, page, 100, search, sort)
 
     when_stale(conn, packages, [modified: false], fn conn ->
       conn

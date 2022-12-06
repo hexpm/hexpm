@@ -88,15 +88,18 @@ defmodule HexpmWeb.API.PackageControllerTest do
     end
 
     test "filter by last_updated", %{package2: package2} do
-      conn = get(build_conn(), "/api/packages?page=1&updated_after=2029-01-01T00:00:00Z")
+      conn = get(build_conn(), "/api/packages?page=1&search=updated_after:2029-01-01T00:00:00Z")
       assert [result] = json_response(conn, 200)
       assert result["name"] == package2.name
 
-      conn = get(build_conn(), "/api/packages?page=1&updated_after=2030-01-01T00:00:00Z")
+      conn = get(build_conn(), "/api/packages?page=1&search=updated_after:2030-01-01T00:00:00Z")
       assert [result] = json_response(conn, 200)
       assert result["name"] == package2.name
 
-      conn = get(build_conn(), "/api/packages?page=1&updated_after=2031-01-01T00:00:00Z")
+      conn = get(build_conn(), "/api/packages?page=1&search=updated_after:2031-01-01T00:00:00Z")
+      assert [] = json_response(conn, 200)
+
+      conn = get(build_conn(), "/api/packages?page=1&search=updated_after:1970")  # not a date
       assert [] = json_response(conn, 200)
     end
 
