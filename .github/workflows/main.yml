@@ -5,7 +5,7 @@ on: [push, pull_request]
 jobs:
   format:
     name: Format
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     env:
       otp: 25.1.0
       elixir: 1.14.0
@@ -35,14 +35,14 @@ jobs:
 
   test-hexpm:
     name: Test Hexpm
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     env:
       otp: 25.1.0
       elixir: 1.14.0
 
     services:
       postgres:
-        image: postgres:9.6
+        image: postgres:14
         env:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: postgres
@@ -82,11 +82,11 @@ jobs:
 
   test-hex:
     name: Test Hex
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
 
     services:
       postgres:
-        image: postgres:9.6
+        image: postgres:14
         env:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: postgres
