@@ -56,10 +56,11 @@ defmodule HexpmWeb.API.PackageControllerTest do
       releases = List.first(result)["releases"]
 
       for release <- releases do
-        assert length(Map.keys(release)) == 4
-        assert Map.has_key?(release, "url")
-        assert Map.has_key?(release, "version")
-        assert Map.has_key?(release, "has_docs")
+        assert Map.keys(release) == ["has_docs", "inserted_at", "url", "version"]
+        assert is_boolean(release["has_docs"])
+        assert {:ok, _, 0} = DateTime.from_iso8601(release["inserted_at"])
+        assert URI.parse(release["url"]).scheme
+        assert {:ok, _} = Version.parse(release["version"])
       end
 
       conn = get(build_conn(), "/api/packages?search=#{package1.name}")
