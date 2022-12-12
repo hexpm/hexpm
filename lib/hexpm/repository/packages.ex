@@ -38,18 +38,7 @@ defmodule Hexpm.Repository.Packages do
     update_in(package.releases, &Release.sort/1)
   end
 
-  def attach_versions(packages) do
-    versions = Releases.package_versions(packages)
-
-    Enum.map(packages, fn package ->
-      version =
-        Release.latest_version(versions[package.id], only_stable: true, unstable_fallback: true)
-
-      %{package | latest_version: version}
-    end)
-  end
-
-  defp attach_latest_releases(packages) do
+  def attach_latest_releases(packages) do
     package_ids = Enum.map(packages, & &1.id)
 
     releases =

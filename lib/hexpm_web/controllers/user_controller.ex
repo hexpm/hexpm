@@ -30,7 +30,7 @@ defmodule HexpmWeb.UserController do
   defp show_user(conn, user) do
     packages =
       Packages.accessible_user_owned_packages(user, conn.assigns.current_user)
-      |> Packages.attach_versions()
+      |> Packages.attach_latest_releases()
 
     downloads = Packages.packages_downloads_with_all_views(packages)
 

@@ -8,7 +8,6 @@ defmodule Hexpm.Repository.Package do
   schema "packages" do
     field :name, :string
     field :docs_updated_at, :utc_datetime_usec
-    field :latest_version, Hexpm.Version, virtual: true
     field :latest_release, :map, virtual: true
     timestamps()
 

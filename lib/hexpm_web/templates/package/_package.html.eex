@@ -7,6 +7,6 @@
     </div>
   </div>
   <a href="<%= ViewHelpers.path_for_package(@package) %>"><%= ViewHelpers.package_name(@package) %></a>
-  <span class="version"><%= @package.latest_version %></span>
+  <span class="version"><%= @package.latest_release && @package.latest_release.version %></span>
   <p><%= ViewHelpers.text_length(@package.meta.description, 140) %></p>
 </li>

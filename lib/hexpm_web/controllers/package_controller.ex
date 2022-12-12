@@ -120,7 +120,11 @@ defmodule HexpmWeb.PackageController do
     release = Releases.preload(release, [:requirements, :downloads, :publisher])
 
     latest_release_with_docs =
-      Release.latest_version(releases, only_stable: true, unstable_fallback: true, with_docs: true)
+      Release.latest_version(releases,
+        only_stable: true,
+        unstable_fallback: true,
+        with_docs: true
+      )
 
     docs_assigns =
       cond do
@@ -201,8 +205,9 @@ defmodule HexpmWeb.PackageController do
   end
 
   defp fetch_packages(repositories, page, packages_per_page, search, sort) do
-    packages = Packages.search(repositories, page, packages_per_page, search, sort, nil)
-    Packages.attach_versions(packages)
+    repositories
+    |> Packages.search(page, packages_per_page, search, sort, nil)
+    |> Packages.attach_latest_releases()
   end
 
   defp exact_match(_organizations, nil) do
