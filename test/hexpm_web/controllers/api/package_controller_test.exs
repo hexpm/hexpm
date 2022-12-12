@@ -77,7 +77,7 @@ defmodule HexpmWeb.API.PackageControllerTest do
       assert [] = json_response(conn, 200)
     end
 
-    test "sort order", %{package1: package1, package2: package2} do
+    test "sort by field", %{package1: package1, package2: package2} do
       conn = get(build_conn(), "/api/packages?sort=updated_at")
       result = json_response(conn, 200)
       assert hd(result)["name"] == package2.name
@@ -85,6 +85,29 @@ defmodule HexpmWeb.API.PackageControllerTest do
       conn = get(build_conn(), "/api/packages?sort=inserted_at")
       result = json_response(conn, 200)
       assert hd(result)["name"] == package1.name
+    end
+    
+    test "sort by field with order", %{package1: package1, package2: package2} do
+      conn = get(build_conn(), "/api/packages?sort=updated_at&order=desc")
+      result = json_response(conn, 200)
+      assert hd(result)["name"] == package2.name
+
+      conn = get(build_conn(), "/api/packages?sort=inserted_at&order=desc")
+      result = json_response(conn, 200)
+      assert hd(result)["name"] == package1.name
+
+      conn = get(build_conn(), "/api/packages?sort=updated_at&order=asc")
+      result = json_response(conn, 200)
+      assert hd(result)["name"] == package1.name
+
+      conn = get(build_conn(), "/api/packages?sort=inserted_at&order=asc")
+      result = json_response(conn, 200)
+      assert hd(result)["name"] == package2.name
+
+      # Should fall back to desc
+      conn = get(build_conn(), "/api/packages?sort=updated_at&order=INVALID_ORDER")
+      result = json_response(conn, 200)
+      assert hd(result)["name"] == package2.name
     end
 
     test "show private packages", %{user: user, package3: package3} do

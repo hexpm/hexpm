@@ -13,7 +13,8 @@ defmodule HexpmWeb.API.PackageController do
     page = Hexpm.Utils.safe_int(params["page"])
     search = Hexpm.Utils.parse_search(params["search"])
     sort = sort(params["sort"])
-    packages = Packages.search_with_versions(repositories, page, 100, search, sort)
+    order = Hexpm.Utils.parse_order(params["order"]) # Defaults to :desc
+    packages = Packages.search_with_versions(repositories, page, 100, search, sort, order)
 
     when_stale(conn, packages, [modified: false], fn conn ->
       conn

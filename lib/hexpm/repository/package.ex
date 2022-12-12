@@ -121,12 +121,17 @@ defmodule Hexpm.Repository.Package do
   end
 
   def all(repositories, page, count, search, sort, fields) do
+    default_order = if sort == :name, do: :asc, else: :desc
+    all(repositories, page, count, search, sort, fields, default_order)
+  end
+
+  def all(repositories, page, count, search, sort, fields, order) do
     from(
       p in assoc(repositories, :packages),
       join: r in assoc(p, :repository),
       preload: :downloads
     )
-    |> sort(sort)
+    |> sort(sort, order)
     |> Hexpm.Utils.paginate(page, count)
     |> search(search)
     |> fields(fields)
@@ -348,37 +353,39 @@ defmodule Hexpm.Repository.Package do
     |> String.replace(~r/(^\*)|(\*$)/u, "%")
   end
 
-  defp sort(query, :name) do
-    from(p in query, order_by: p.name)
+  defp sort(query, :name, order) when order in [:asc, :desc] do
+    from(p in query, order_by: [{^order, p.name}])
   end
 
-  defp sort(query, :inserted_at) do
-    from(p in query, order_by: [desc: p.inserted_at])
+  defp sort(query, :inserted_at, order) when order in [:asc, :desc] do
+    from(p in query, order_by: [{^order, p.inserted_at}])
   end
 
-  defp sort(query, :updated_at) do
-    from(p in query, order_by: [desc: p.updated_at])
+  defp sort(query, :updated_at, order) when order in [:asc, :desc] do
+    from(p in query, order_by: [{^order, p.updated_at}])
   end
 
-  defp sort(query, :total_downloads) do
+  defp sort(query, :total_downloads, order) when order in [:asc, :desc] do
+    order = if order == :desc, do: :desc_nulls_last, else: :asc_nulls_last
     from(
       p in query,
       left_join: d in PackageDownload,
       on: p.id == d.package_id and d.view == "all",
-      order_by: [fragment("? DESC NULLS LAST", d.downloads)]
+      order_by: [{^order, d.downloads}]
     )
   end
 
-  defp sort(query, :recent_downloads) do
+  defp sort(query, :recent_downloads, order) when order in [:asc, :desc] do
+    order = if order == :desc, do: :desc_nulls_last, else: :asc_nulls_last
     from(
       p in query,
       left_join: d in PackageDownload,
       on: p.id == d.package_id and d.view == "recent",
-      order_by: [fragment("? DESC NULLS LAST", d.downloads)]
+      order_by: [{^order, d.downloads}]
     )
   end
 
-  defp sort(query, nil) do
+  defp sort(query, nil, _order) do
     query
   end
 

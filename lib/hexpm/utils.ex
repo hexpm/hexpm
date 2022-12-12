@@ -102,6 +102,10 @@ defmodule Hexpm.Utils do
   def parse_search(""), do: nil
   def parse_search(search), do: String.trim(search)
 
+  def parse_order("asc"), do: :asc
+  def parse_order("desc"), do: :desc
+  def parse_order(order), do: :desc # default
+
   defp diff(a, b) do
     {days, time} = :calendar.time_difference(a, b)
     :calendar.time_to_seconds(time) - days * 24 * 60 * 60
