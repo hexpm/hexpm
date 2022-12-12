@@ -246,8 +246,9 @@ defmodule Hexpm.Repository.Package do
   end
 
   defp search_param("updated_after", search, query) do
+    query = Ecto.Query.exclude(query, :order_by)
     case DateTime.from_iso8601(search) do
-      {:ok, updated_after, 0} -> from(p in query, where: p.updated_at >= ^updated_after)
+      {:ok, updated_after, 0} -> from(p in query, where: p.updated_at >= ^updated_after, order_by: [asc: p.updated_at])
       # invalid date, ignore the filter
       _ -> query
     end

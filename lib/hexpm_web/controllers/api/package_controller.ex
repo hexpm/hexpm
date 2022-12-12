@@ -12,6 +12,7 @@ defmodule HexpmWeb.API.PackageController do
     repositories = repositories(conn)
     page = Hexpm.Utils.safe_int(params["page"])
     search = Hexpm.Utils.parse_search(params["search"])
+
     sort = sort(params["sort"])
     packages = Packages.search_with_versions(repositories, page, 100, search, sort)
 
