@@ -169,7 +169,6 @@
             <%= for package <- @repository.packages do %>
               <li>
                 <a href="<%= ViewHelpers.path_for_package(@repository.name, package.name) %>"><%= package.name %></a>
-                <%= package.latest_version %>
               </li>
             <% end %>
           </ul>
