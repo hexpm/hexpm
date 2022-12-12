@@ -12,7 +12,7 @@
       <ul class="user-package-list">
         <%= for package <- @packages do %>
           <li class="with-divider clearfix">
-            <h1><a href="<%= ViewHelpers.path_for_package(package) %>"><%= ViewHelpers.package_name(package) %></a><em><%= package.latest_version %></em></h1>
+            <h1><a href="<%= ViewHelpers.path_for_package(package) %>"><%= ViewHelpers.package_name(package) %></a><em><%= package.latest_release.version %></em></h1>
             <h3><%= (get_in(@downloads, [package.id, "all"]) || 0) |> ViewHelpers.human_number_space() %> Downloads</h3>
             <%= ViewHelpers.text_length(package.meta.description, 300) |> to_string() |> text_to_html(insert_brs: false) %>
           </li>

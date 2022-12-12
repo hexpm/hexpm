@@ -181,7 +181,7 @@
         </h3>
         <ul>
           <%= for {package, downloads} <- @package_top do %>
-            <%= render_package package: package.name, downloads: downloads, inserted_at: package.inserted_at, description: package.meta.description, version: package.latest_version %>
+            <%= render_package package: package.name, downloads: downloads, inserted_at: package.latest_release.inserted_at, description: package.meta.description, version: package.latest_release.version %>
           <% end %>
         </ul>
       </div>

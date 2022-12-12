@@ -38,14 +38,31 @@ defmodule Hexpm.Repository.Packages do
     update_in(package.releases, &Release.sort/1)
   end
 
-  def attach_versions(packages) do
-    versions = Releases.package_versions(packages)
+  def attach_latest_releases(packages) do
+    package_ids = Enum.map(packages, & &1.id)
+
+    releases =
+      from(
+        r in Release,
+        where: r.package_id in ^package_ids,
+        group_by: r.package_id,
+        select:
+          {r.package_id,
+           {fragment("array_agg(?)", r.version), fragment("array_agg(?)", r.inserted_at)}}
+      )
+      |> Repo.all()
+      |> Map.new(fn {package_id, {versions, inserted_ats}} ->
+        {package_id,
+         Enum.zip_with(versions, inserted_ats, fn version, inserted_at ->
+           %Release{version: version, inserted_at: inserted_at}
+         end)}
+      end)
 
     Enum.map(packages, fn package ->
-      version =
-        Release.latest_version(versions[package.id], only_stable: true, unstable_fallback: true)
+      release =
+        Release.latest_version(releases[package.id], only_stable: true, unstable_fallback: true)
 
-      %{package | latest_version: version}
+      %{package | latest_release: release}
     end)
   end
 
@@ -103,7 +120,11 @@ defmodule Hexpm.Repository.Packages do
 
   def top_downloads(repository, view, count) do
     top = Repo.all(PackageDownload.top(repository, view, count))
-    packages = top |> Enum.map(fn {package, _downloads} -> package end) |> attach_versions()
+
+    packages =
+      top
+      |> Enum.map(fn {package, _downloads} -> package end)
+      |> attach_latest_releases()
 
     Enum.zip_with(packages, top, fn package, {_package, downloads} ->
       {package, downloads}

@@ -10,14 +10,17 @@ defmodule HexpmWeb.UserControllerTest do
     repository2 = insert(:repository)
 
     owners = [build(:package_owner, user: user1)]
-    package1 = insert(:package, name: "package1", package_owners: owners)
+
+    package1 =
+      insert(:package, name: "package1", package_owners: owners, releases: [build(:release)])
 
     package2 =
       insert(
         :package,
         name: "package2",
         package_owners: owners,
-        repository_id: repository1.id
+        repository_id: repository1.id,
+        releases: [build(:release)]
       )
 
     insert(:package, name: "package3", repository_id: repository2.id)
