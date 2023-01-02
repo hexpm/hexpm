@@ -45,9 +45,11 @@ export default class App {
     // Pricing selector
     $(".pricing-button").click(this.onPricing.bind(this))
 
-    // Focus username or search field
+    // Focus username, 2FA or search field
     if ($("#username").length > 0) {
       $("#username").focus()
+    } else if ($("#code").length > 0) {
+      $("#code").focus()
     } else {
       $("[name='search']").focus()
     }
