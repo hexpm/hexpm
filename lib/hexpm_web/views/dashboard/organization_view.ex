@@ -111,6 +111,10 @@ defmodule HexpmWeb.Dashboard.OrganizationView do
     "Not active"
   end
 
+  defp subscription_status(%{"status" => "incomplete_expired"}, _card) do
+    "Not active"
+  end
+
   @trial_ends_no_card_message """
   your subscription will end after the trial period because we have no payment method on file for you,
   please enter a payment method if you wish to continue using organizations after the trial period
