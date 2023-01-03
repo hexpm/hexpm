@@ -20,7 +20,7 @@ defmodule Hexpm.Accounts.AuditLog do
     %AuditLog{
       user_id: nil,
       organization_id: nil,
-      user_agent: user_agent,
+      user_agent: truncate_codepoints(user_agent, 255),
       remote_ip: remote_ip,
       action: action,
       params: params
@@ -33,7 +33,7 @@ defmodule Hexpm.Accounts.AuditLog do
     %AuditLog{
       user_id: user_id,
       organization_id: organization.id,
-      user_agent: user_agent,
+      user_agent: truncate_codepoints(user_agent, 255),
       remote_ip: remote_ip,
       action: "organization.create",
       params: params
@@ -46,7 +46,7 @@ defmodule Hexpm.Accounts.AuditLog do
     %AuditLog{
       user_id: user_id,
       organization_id: params[:organization][:id] || params[:package][:organization_id],
-      user_agent: user_agent,
+      user_agent: truncate_codepoints(user_agent, 255),
       remote_ip: remote_ip,
       action: action,
       params: params
@@ -59,7 +59,7 @@ defmodule Hexpm.Accounts.AuditLog do
     %AuditLog{
       user_id: nil,
       organization_id: organization_id,
-      user_agent: user_agent,
+      user_agent: truncate_codepoints(user_agent, 255),
       remote_ip: remote_ip,
       action: action,
       params: params
@@ -313,5 +313,12 @@ defmodule Hexpm.Accounts.AuditLog do
 
   def newest_first(query) do
     Ecto.Query.order_by(query, desc: :inserted_at)
+  end
+
+  defp truncate_codepoints(string, length) do
+    string
+    |> String.to_charlist()
+    |> Enum.take(length)
+    |> List.to_string()
   end
 end
