@@ -23,4 +23,8 @@ defmodule Hexpm.Accounts.AuditLogs do
     AuditLog.count_by(schema)
     |> Repo.one()
   end
+
+  def admin() do
+    {Hexpm.Accounts.Users.get("admin"), "ADMIN", nil}
+  end
 end
