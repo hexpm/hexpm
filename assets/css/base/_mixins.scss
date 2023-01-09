@@ -1,15 +1,15 @@
 @mixin font-size($size-value, $line-height: 14) {
   font: {
-    size: ($size-value / $base-font-size) + rem;
+    size: math.div($size-value, $base-font-size) + rem;
   };
 
   @if $line-height != 14 {
-    line-height: ($line-height / $base-line-height) + rem;
+    line-height: math.div($line-height, $base-line-height) + rem;
   }
 }
 
 @mixin line-height($size-value) {
-  line-height: ($size-value / $base-line-height) + rem;
+  line-height: math.div($size-value, $base-line-height) + rem;
 }
 
 @mixin font-face($font-family, $file-path, $weight: normal, $style: normal) {
