@@ -11,7 +11,7 @@ jobs:
       elixir: 1.14.0
 
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
 
       - name: Install OTP and Elixir
         uses: erlef/setup-beam@v1
@@ -52,7 +52,7 @@ jobs:
         options: --health-cmd pg_isready --health-interval 10s --health-timeout 5s --health-retries 5
 
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
 
       - name: Install OTP and Elixir
         uses: erlef/setup-beam@v1
@@ -106,7 +106,7 @@ jobs:
       elixir: 1.14.0
 
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
 
       - name: Install OTP and Elixir
         uses: erlef/setup-beam@v1
