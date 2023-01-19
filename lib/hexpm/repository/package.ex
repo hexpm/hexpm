@@ -1,6 +1,6 @@
 defmodule Hexpm.Repository.Package do
   use Hexpm.Schema
-  import Ecto.Query, only: [from: 2]
+  import Ecto.Query
 
   @derive {HexpmWeb.Stale, assocs: [:releases, :owners]}
   @derive {Phoenix.Param, key: :name}
@@ -246,11 +246,16 @@ defmodule Hexpm.Repository.Package do
   end
 
   defp search_param("updated_after", search, query) do
-    query = Ecto.Query.exclude(query, :order_by)
     case DateTime.from_iso8601(search) do
-      {:ok, updated_after, 0} -> from(p in query, where: p.updated_at >= ^updated_after, order_by: [asc: p.updated_at])
+      {:ok, updated_after, 0} ->
+        query
+        |> where([p], p.updated_at >= ^updated_after)
+        |> exclude(:order_by)
+        |> order_by([p], asc: p.updated_at)
+
       # invalid date, ignore the filter
-      _ -> query
+      _ ->
+        query
     end
   end
 
