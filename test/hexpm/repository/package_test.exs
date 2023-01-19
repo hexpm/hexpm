@@ -139,6 +139,47 @@ defmodule Hexpm.Repository.PackageTest do
              |> Enum.map(& &1.name)
   end
 
+  test "search updated_after", %{repository: repository} do
+    %Package{id: package1_id} =
+      insert(:package,
+        repository_id: repository.id,
+        inserted_at: ~U[2023-01-01T00:00:00Z],
+        updated_at: ~U[2023-01-03T00:00:00Z]
+      )
+
+    %Package{id: package2_id} =
+      insert(:package,
+        repository_id: repository.id,
+        inserted_at: ~U[2023-01-02T00:00:00Z],
+        updated_at: ~U[2023-01-01T00:00:00Z]
+      )
+
+    %Package{id: package3_id} =
+      insert(:package,
+        repository_id: repository.id,
+        inserted_at: ~U[2023-01-03T00:00:00Z],
+        updated_at: ~U[2023-01-02T00:00:00Z]
+      )
+
+    insert(:package,
+      repository_id: repository.id,
+      inserted_at: ~U[2023-01-04T00:00:00Z],
+      updated_at: ~U[2022-12-31T00:00:00Z]
+    )
+
+    assert [^package2_id, ^package3_id, ^package1_id] =
+             Package.all(
+               [repository],
+               1,
+               10,
+               "updated_after:2023-01-01T00:00:00Z",
+               :inserted_at,
+               nil
+             )
+             |> Repo.all()
+             |> Enum.map(& &1.id)
+  end
+
   test "search extra metadata", %{user: user, repository: repository} do
     meta = %{
       "licenses" => ["Apache-2.0", "BSD-3-Clause"],
