@@ -99,7 +99,7 @@ defmodule Hexpm.Repository.Releases do
 
     Multi.new()
     |> Multi.run(:repository, fn _, _ -> {:ok, package.repository} end)
-    |> Multi.run(:package, fn _, _ -> {:ok, package} end)
+    |> Multi.update(:package, Ecto.Changeset.change(package, []), force: true)
     |> Multi.update(:release, Release.retire(release, params))
     |> audit_retire(audit_data, package)
     |> Repo.transaction()
@@ -109,7 +109,7 @@ defmodule Hexpm.Repository.Releases do
   def unretire(package, release, audit: audit_data) do
     Multi.new()
     |> Multi.run(:repository, fn _, _ -> {:ok, package.repository} end)
-    |> Multi.run(:package, fn _, _ -> {:ok, package} end)
+    |> Multi.update(:package, Ecto.Changeset.change(package, []), force: true)
     |> Multi.update(:release, Release.unretire(release))
     |> audit_unretire(audit_data, package)
     |> Repo.transaction()
@@ -169,9 +169,14 @@ defmodule Hexpm.Repository.Releases do
         Package.build(repository, user, params)
       end
 
-    Multi.insert_or_update(multi, :package, fn %{reserved_packages: reserved_packages} ->
-      validate_reserved_package(changeset, reserved_packages)
-    end)
+    Multi.insert_or_update(
+      multi,
+      :package,
+      fn %{reserved_packages: reserved_packages} ->
+        validate_reserved_package(changeset, reserved_packages)
+      end,
+      force: true
+    )
   end
 
   defp create_release(multi, package, user, inner_checksum, outer_checksum, meta, replace?) do
@@ -239,7 +244,7 @@ defmodule Hexpm.Repository.Releases do
       |> Package.delete()
       |> repo.delete()
     else
-      {:ok, release.package}
+      repo.update(Ecto.Changeset.change(release.package, []), force: true)
     end
   end
 
