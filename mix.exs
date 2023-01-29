@@ -62,6 +62,8 @@ defmodule Hexpm.MixProject do
       {:postgrex, "~> 0.14"},
       {:pot, "~> 1.0"},
       {:rollbax, "~> 0.5"},
+      # Dependency is broken with mix due to missing dependency on :ssl application
+      {:ssl_verify_fun, "~> 1.1", manager: :rebar3, override: true},
       {:sweet_xml, "~> 0.5"},
       {:telemetry_poller, "~> 1.0"},
       {:telemetry_metrics, "~> 0.6"}
