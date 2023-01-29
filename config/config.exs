@@ -35,8 +35,6 @@ config :hexpm, Hexpm.RepoBase,
   priv: "priv/repo",
   migration_timestamps: [type: :utc_datetime_usec]
 
-config :sasl, sasl_error_logger: false
-
 config :hexpm, Hexpm.Emails.Mailer,
   adapter: Bamboo.SendGridAdapter,
   hackney_opts: [
