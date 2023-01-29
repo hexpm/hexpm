@@ -117,12 +117,14 @@ defmodule Hexpm.Repository.Releases do
   end
 
   def downloads_by_period(package, filter) do
-    Release.downloads_by_period(package, filter || :all)
+    ReleaseDownload.downloads_by_period(package, filter || :all)
     |> Repo.all()
   end
 
   def downloads_for_last_n_days(release_id, num_of_days) do
-    Release.downloads_for_last_n_days(release_id, num_of_days)
+    release_id
+    |> ReleaseDownload.downloads_by_period(:day)
+    |> Download.downloads_for_last_n_days(num_of_days)
     |> Repo.all()
   end
 
@@ -219,18 +221,21 @@ defmodule Hexpm.Repository.Releases do
     end
   end
 
-  if Mix.env() == :test do
-    defp refresh_package_dependants(result) do
+  defp refresh_package_dependants(result) do
+    Task.Supervisor.start_child(Hexpm.Tasks, fn ->
       Hexpm.Repo.refresh_view(Hexpm.Repository.PackageDependant)
-      result
-    end
-  else
-    defp refresh_package_dependants(result) do
-      Task.Supervisor.start_child(Hexpm.Tasks, fn ->
-        Hexpm.Repo.refresh_view(Hexpm.Repository.PackageDependant)
-      end)
+    end)
+    |> check_alive()
 
-      result
+    result
+  end
+
+  defp check_alive({:ok, pid}) do
+    if Process.alive?(pid) do
+      Process.sleep(1)
+      check_alive({:ok, pid})
+    else
+      {:ok, pid}
     end
   end
 

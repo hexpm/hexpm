@@ -154,7 +154,9 @@ defmodule Hexpm.Repository.Packages do
   end
 
   def downloads_for_last_n_days(package_id, num_of_days) do
-    Package.downloads_for_last_n_days(package_id, num_of_days)
+    package_id
+    |> Download.downloads_by_period(:day)
+    |> Download.downloads_for_last_n_days(num_of_days)
     |> Repo.all()
   end
 end

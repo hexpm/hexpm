@@ -433,14 +433,4 @@ defmodule Hexpm.Repository.Package do
         end
     end
   end
-
-  def downloads_for_last_n_days(package_id, num_of_days) do
-    date_start = Date.add(Date.utc_today(), -1 * num_of_days)
-    from(d in downloads_by_period(package_id, :day), where: d.day >= ^date_start)
-  end
-
-  def downloads_by_period(package_id, filter) do
-    from(d in Download, where: d.package_id == ^package_id)
-    |> Download.query_filter(filter)
-  end
 end
