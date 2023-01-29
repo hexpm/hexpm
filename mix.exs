@@ -82,7 +82,7 @@ defmodule Hexpm.MixProject do
     [
       setup: ["deps.get", "ecto.setup", "cmd yarn install --cwd assets"],
       "ecto.setup": ["ecto.reset", "run priv/repo/seeds.exs"],
-      "ecto.reset": ["ecto.drop", "ecto.create", "ecto.migrate"],
+      "ecto.reset": ["ecto.drop", "ecto.create", "ecto.load", "ecto.migrate"],
       test: ["ecto.create --quiet", "ecto.migrate", "test"]
     ]
   end

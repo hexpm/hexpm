@@ -117,7 +117,8 @@ defmodule Hexpm.RepoBase do
   end
 
   def refresh_view(source, opts) when is_binary(source) do
-    query = ~s(REFRESH MATERIALIZED VIEW CONCURRENTLY "#{source}")
+    concurrently = if Keyword.get(opts, :concurrently, true), do: "CONCURRENTLY"
+    query = ~s(REFRESH MATERIALIZED VIEW #{concurrently} "#{source}")
 
     {:ok, _} = Hexpm.Repo.query(query, [], opts)
     :ok
