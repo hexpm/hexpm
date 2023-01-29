@@ -10,6 +10,17 @@ jobs:
       otp: 25.1.0
       elixir: 1.14.0
 
+    services:
+      postgres:
+        image: postgres:14
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: --health-cmd pg_isready --health-interval 10s --health-timeout 5s --health-retries 5
+
     steps:
       - uses: actions/checkout@v3
 
@@ -30,8 +41,14 @@ jobs:
       - name: Install dependencies
         run: mix do deps.get, deps.compile
 
-      - run: mix compile --warnings-as-errors
-      - run: mix format --check-formatted
+      - name: Check compilation warnings
+        run: mix compile --warnings-as-errors
+
+      - name: Check formatting
+        run: mix format --check-formatted
+
+      - name: Verify seeds
+        run: mix ecto.setup
 
   test-hexpm:
     name: Test Hexpm
@@ -76,9 +93,6 @@ jobs:
 
       - name: Run tests
         run: mix test
-
-      - name: Verify seeds
-        run: MIX_ENV=test mix run priv/repo/seeds.exs
 
   test-hex:
     name: Test Hex
