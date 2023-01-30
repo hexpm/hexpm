@@ -469,7 +469,11 @@ defmodule HexpmWeb.API.OwnerControllerTest do
       repository: repository,
       repository_package: package
     } do
-      insert(:organization_user, organization: repository.organization, user: user1, role: "admin")
+      insert(:organization_user,
+        organization: repository.organization,
+        user: user1,
+        role: "admin"
+      )
 
       insert(:organization_user, organization: repository.organization, user: user2)
 
@@ -521,7 +525,11 @@ defmodule HexpmWeb.API.OwnerControllerTest do
     } do
       user3 = insert(:user)
 
-      insert(:organization_user, organization: repository.organization, user: user2, role: "admin")
+      insert(:organization_user,
+        organization: repository.organization,
+        user: user2,
+        role: "admin"
+      )
 
       insert(:organization_user, organization: repository.organization, user: user3)
 
@@ -649,7 +657,11 @@ defmodule HexpmWeb.API.OwnerControllerTest do
       repository: repository,
       repository_package: package
     } do
-      insert(:organization_user, organization: repository.organization, user: user1, role: "admin")
+      insert(:organization_user,
+        organization: repository.organization,
+        user: user1,
+        role: "admin"
+      )
 
       insert(:package_owner, package: package, user: user2)
 
@@ -684,7 +696,11 @@ defmodule HexpmWeb.API.OwnerControllerTest do
       repository: repository,
       repository_package: package
     } do
-      insert(:organization_user, organization: repository.organization, user: user1, role: "admin")
+      insert(:organization_user,
+        organization: repository.organization,
+        user: user1,
+        role: "admin"
+      )
 
       Repo.delete_all(from(po in PackageOwner, where: po.user_id == ^user1.id))
       insert(:package_owner, package: package, user: user2)

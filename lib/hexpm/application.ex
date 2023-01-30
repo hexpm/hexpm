@@ -15,6 +15,7 @@ defmodule Hexpm.Application do
       {PlugAttack.Storage.Ets, name: HexpmWeb.Plugs.Attack.Storage, clean_period: 60_000},
       {Hexpm.Billing.Report, name: Hexpm.Billing.Report, interval: 60_000},
       goth_spec(),
+      setup(),
       HexpmWeb.Telemetry,
       HexpmWeb.Endpoint
     ]
@@ -45,6 +46,20 @@ defmodule Hexpm.Application do
   defp read_only_mode() do
     mode = System.get_env("HEXPM_READ_ONLY_MODE") == "1"
     Application.put_env(:hexpm, :read_only_mode, mode)
+  end
+
+  defp setup() do
+    fun = fn ->
+      if System.get_env("HEXPM_SETUP") == "1" do
+        Hexpm.setup()
+      end
+    end
+
+    %{
+      id: :task_setup,
+      start: {Task, :start_link, [fun]},
+      restart: :temporary
+    }
   end
 
   defp cluster_topologies() do

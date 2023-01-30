@@ -4,9 +4,9 @@ defmodule Hexpm.Accounts.AuditLogTest do
   alias Hexpm.Accounts.AuditLog
 
   setup do
-    user = build(:user, id: 1)
-    package = build(:package, id: 2)
-    release = build(:release, id: 3)
+    user = build(:user)
+    package = build(:package)
+    release = build(:release)
     %{user: user, package: package, release: release}
   end
 

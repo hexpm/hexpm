@@ -3,21 +3,12 @@ alias Hexpm.Accounts.{Organization, User, Users}
 alias Hexpm.Repository.{PackageDependant, PackageDownload, ReleaseDownload, Repository}
 
 Hexpm.Fake.start()
+Hexpm.setup()
 
 lorem =
   "Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum."
 
 password = &Bcrypt.hash_pwd_salt/1
-
-hexpm =
-  %Organization{name: "hexpm", trial_end: DateTime.utc_now()}
-  |> Hexpm.Repo.insert!()
-
-%Repository{name: "hexpm", organization_id: hexpm.id}
-|> Hexpm.Repo.insert!()
-
-%User{username: "hexdocs", service: true}
-|> Hexpm.Repo.insert!()
 
 Hexpm.Repo.transaction(fn ->
   insert(
