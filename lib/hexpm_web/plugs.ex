@@ -4,11 +4,11 @@ defmodule HexpmWeb.Plugs do
   alias Hexpm.Accounts.Users
   alias HexpmWeb.ControllerHelpers
 
-  # Max filesize: ~10mb
+  # Max filesize: 20mib
   # Min upload speed: ~10kb/s
   # Read 100kb every 10s
   @read_body_opts [
-    length: 10_000_000,
+    length: 20 * 1024 * 1024,
     read_length: 100_000,
     read_timeout: 10_000
   ]
