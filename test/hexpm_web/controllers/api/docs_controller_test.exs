@@ -77,6 +77,20 @@ defmodule HexpmWeb.API.DocsControllerTest do
       assert log.params["package"]["name"] == package.name
       assert log.params["release"]["version"] == "0.0.1"
     end
+
+    test "validates size", %{user: user} do
+      package = insert(:package, package_owners: [build(:package_owner, user: user)])
+      insert(:release, package: package, version: "0.0.1")
+      body = <<0::unquote(8 * (16 * 1024 * 1024 + 1))>>
+
+      conn =
+        build_conn()
+        |> put_req_header("content-type", "application/octet-stream")
+        |> put_req_header("authorization", key_for(user))
+        |> post("/api/packages/#{package.name}/releases/0.0.1/docs", body)
+
+      assert json_response(conn, 422)["errors"] == %{"tar" => "too big"}
+    end
   end
 
   describe "POST /api/repos/:repository/packages/:name/releases/:version/docs" do

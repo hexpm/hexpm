@@ -1,6 +1,8 @@
 defmodule HexpmWeb.API.DocsController do
   use HexpmWeb, :controller
 
+  @tarball_max_size 16 * 1024 * 1024
+
   plug :fetch_release
 
   plug :authorize,
@@ -29,6 +31,10 @@ defmodule HexpmWeb.API.DocsController do
     else
       not_found(conn)
     end
+  end
+
+  def create(conn, %{"body" => body}) when byte_size(body) > @tarball_max_size do
+    validation_failed(conn, %{tar: "too big"})
   end
 
   def create(conn, %{"body" => body}) do
