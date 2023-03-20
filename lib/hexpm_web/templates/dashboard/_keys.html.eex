@@ -22,7 +22,8 @@
             </td>
             <td>
               <small>
-                <%= if last_use = key.last_use do %>
+                <% last_use = key.last_use %>
+                <%= if last_use && last_use.used_at do %>
                   <a
                     tabindex="0"
                     role="button"
