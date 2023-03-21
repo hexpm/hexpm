@@ -153,16 +153,17 @@ defmodule HexpmWeb.PackageController do
         :release -> Releases.downloads_for_last_n_days(release.id, 31)
       end
 
+    graph_downloads = Map.new(graph_downloads, &{Date.from_iso8601!(&1.day), &1})
+
     daily_graph =
-      Date.utc_today()
-      |> Date.add(-31)
+      Download.download_last_day()
       |> Date.range(Date.add(Date.utc_today(), -1))
-      |> Enum.map(fn date ->
-        Enum.find(graph_downloads, fn dl -> date == Date.from_iso8601!(dl.day) end)
-      end)
-      |> Enum.map(fn
-        nil -> 0
-        %{downloads: dl} -> dl
+      |> Enum.map(fn day ->
+        if download = graph_downloads[day] do
+          download.downloads
+        else
+          0
+        end
       end)
 
     owners = Owners.all(package, user: [:emails, :organization])
