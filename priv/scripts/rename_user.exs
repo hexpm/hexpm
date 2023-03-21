@@ -1,6 +1,6 @@
 [old_name, new_name] = System.argv()
 
-user = Hexpm.Accounts.Users.get(old_name)
+user = Hexpm.Accounts.Users.get(old_name, [:emails])
 
 unless user do
   IO.puts("No user: #{old_name}")
