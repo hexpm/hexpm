@@ -22,7 +22,7 @@ defmodule HexpmWeb.API.OrganizationController do
 
   def index(conn, _params) do
     organizations =
-      Organizations.all_by_user(conn.assigns.current_user) ++
+      all_organizations_by_user(conn.assigns.current_user) ++
         current_organization(conn.assigns.current_organization)
 
     conn
@@ -63,4 +63,7 @@ defmodule HexpmWeb.API.OrganizationController do
 
   defp current_organization(nil), do: []
   defp current_organization(organization), do: [organization]
+
+  defp all_organizations_by_user(%User{} = user), do: Organizations.all_by_user(user)
+  defp all_organizations_by_user(nil = _user), do: []
 end

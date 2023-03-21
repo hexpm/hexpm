@@ -27,7 +27,7 @@ defmodule HexpmWeb.API.ReleaseControllerTest do
   end
 
   describe "POST /api/packages/:name/releases" do
-    test "create release and new package", %{user: user} do
+    test "create release and new package as user", %{user: user} do
       meta = %{
         name: Fake.sequence(:package),
         version: "1.0.0",
@@ -54,6 +54,38 @@ defmodule HexpmWeb.API.ReleaseControllerTest do
       log = Hexpm.Repo.one!(AuditLog)
       assert log.user_id == user.id
       assert log.organization_id == nil
+      assert log.action == "release.publish"
+      assert log.params["package"]["name"] == meta.name
+      assert log.params["release"]["version"] == "1.0.0"
+    end
+
+    test "create release and new package as organization", %{organization: organization} do
+      meta = %{
+        name: Fake.sequence(:package),
+        version: "1.0.0",
+        description: "Domain-specific language."
+      }
+
+      conn =
+        build_conn()
+        |> put_req_header("content-type", "application/octet-stream")
+        |> put_req_header("authorization", key_for(organization))
+        |> post("/api/packages/#{meta.name}/releases", create_tar(meta))
+
+      result = json_response(conn, 201)
+      assert result["url"] =~ "api/packages/#{meta.name}/releases/1.0.0"
+      assert result["html_url"] =~ "packages/#{meta.name}/1.0.0"
+      assert result["publisher"]["username"] == organization.user.username
+
+      package = Hexpm.Repo.get_by!(Package, name: meta.name)
+      package_owner = Hexpm.Repo.one!(assoc(package, :owners))
+      assert package_owner.id == organization.user.id
+
+      assert Hexpm.Store.get(:repo_bucket, "packages/#{package.name}", [])
+
+      log = Hexpm.Repo.one!(AuditLog)
+      assert log.user_id == nil
+      assert log.organization_id == organization.id
       assert log.action == "release.publish"
       assert log.params["package"]["name"] == meta.name
       assert log.params["release"]["version"] == "1.0.0"
@@ -121,7 +153,7 @@ defmodule HexpmWeb.API.ReleaseControllerTest do
   end
 
   describe "POST /api/publish" do
-    test "create release and new package", %{user: user} do
+    test "create release and new package as user", %{user: user} do
       meta = %{
         name: Fake.sequence(:package),
         version: "1.0.0",
@@ -145,6 +177,35 @@ defmodule HexpmWeb.API.ReleaseControllerTest do
       log = Hexpm.Repo.one!(AuditLog)
       assert log.user_id == user.id
       assert log.organization_id == nil
+      assert log.action == "release.publish"
+      assert log.params["package"]["name"] == meta.name
+      assert log.params["release"]["version"] == "1.0.0"
+    end
+
+    test "create release and new package as organzation", %{organization: organization} do
+      meta = %{
+        name: Fake.sequence(:package),
+        version: "1.0.0",
+        description: "Domain-specific language."
+      }
+
+      conn =
+        build_conn()
+        |> put_req_header("content-type", "application/octet-stream")
+        |> put_req_header("authorization", key_for(organization))
+        |> post("/api/publish", create_tar(meta))
+
+      result = json_response(conn, 201)
+      assert result["url"] =~ "api/packages/#{meta.name}/releases/1.0.0"
+      assert result["html_url"] =~ "packages/#{meta.name}/1.0.0"
+
+      package = Hexpm.Repo.get_by!(Package, name: meta.name)
+      package_owner = Hexpm.Repo.one!(assoc(package, :owners))
+      assert package_owner.id == organization.user.id
+
+      log = Hexpm.Repo.one!(AuditLog)
+      assert log.user_id == nil
+      assert log.organization_id == organization.id
       assert log.action == "release.publish"
       assert log.params["package"]["name"] == meta.name
       assert log.params["release"]["version"] == "1.0.0"

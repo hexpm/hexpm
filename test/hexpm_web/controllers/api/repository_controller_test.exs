@@ -17,10 +17,20 @@ defmodule HexpmWeb.API.RepositoryControllerTest do
       assert length(result) == 1
     end
 
-    test "authorized", %{repo_user: repo_user} do
+    test "authorized user", %{repo_user: repo_user} do
       result =
         build_conn()
         |> put_req_header("authorization", key_for(repo_user))
+        |> get("/api/repos")
+        |> json_response(200)
+
+      assert length(result) == 2
+    end
+
+    test "authorized organization", %{repository1: repository1} do
+      result =
+        build_conn()
+        |> put_req_header("authorization", key_for(repository1.organization))
         |> get("/api/repos")
         |> json_response(200)
 

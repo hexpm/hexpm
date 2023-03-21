@@ -43,7 +43,7 @@ defmodule HexpmWeb.API.ReleaseController do
     Releases.publish(
       conn.assigns.repository,
       conn.assigns.package,
-      conn.assigns.current_user,
+      conn.assigns.current_user || conn.assigns.current_organization.user,
       body,
       conn.assigns.meta,
       conn.assigns.inner_checksum,
@@ -59,7 +59,7 @@ defmodule HexpmWeb.API.ReleaseController do
       conn,
       conn.assigns.repository,
       conn.assigns.package,
-      conn.assigns.current_user,
+      conn.assigns.current_user || conn.assigns.current_organization.user,
       body
     )
   end
