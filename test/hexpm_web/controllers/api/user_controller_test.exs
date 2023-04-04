@@ -57,7 +57,7 @@ defmodule HexpmWeb.API.UserControllerTest do
         )
 
       assert redirected_to(conn) == "/"
-      assert get_flash(conn, :info) =~ "verified"
+      assert Phoenix.Flash.get(conn.assigns.flash, :info) =~ "verified"
 
       conn = publish_package(user)
       assert conn.status == 201

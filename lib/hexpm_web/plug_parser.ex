@@ -1,8 +1,15 @@
 defmodule HexpmWeb.PlugParser do
   alias Plug.Conn
 
+  @behaviour Plug.Parsers
   @formats ~w(elixir erlang json)
 
+  @impl true
+  def init(opts) do
+    opts
+  end
+
+  @impl true
   def parse(%Conn{} = conn, "application", "vnd.hex+" <> format, _headers, opts)
       when format in @formats do
     decoder = get_decoder(format, opts)

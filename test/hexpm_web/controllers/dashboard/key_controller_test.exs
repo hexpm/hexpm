@@ -31,7 +31,7 @@ defmodule HexpmWeb.Dashboard.KeyControllerTest do
         |> post("/dashboard/keys", %{key: %{name: "computer"}})
 
       assert redirected_to(conn) == "/dashboard/keys"
-      assert get_flash(conn, :info) =~ "The key computer was successfully generated"
+      assert Phoenix.Flash.get(conn.assigns.flash, :info) =~ "The key computer was successfully generated"
     end
   end
 
@@ -45,7 +45,7 @@ defmodule HexpmWeb.Dashboard.KeyControllerTest do
         |> delete("/dashboard/keys", %{name: "computer"})
 
       assert redirected_to(conn) == "/dashboard/keys"
-      assert get_flash(conn, :info) =~ "The key computer was revoked successfully"
+      assert Phoenix.Flash.get(conn.assigns.flash, :info) =~ "The key computer was revoked successfully"
     end
 
     test "revoking an already revoked key throws an error", c do

@@ -42,7 +42,7 @@ defmodule HexpmWeb.Dashboard.EmailControllerTest do
       |> post("/dashboard/email", %{email: %{email: email}})
 
     assert redirected_to(conn) == "/dashboard/email"
-    assert get_flash(conn, :info) =~ "A verification email has been sent"
+    assert Phoenix.Flash.get(conn.assigns.flash, :info) =~ "A verification email has been sent"
     user = Hexpm.Repo.get!(Hexpm.Accounts.User, c.user.id) |> Hexpm.Repo.preload(:emails)
     email = Enum.find(user.emails, &(&1.email == email))
     refute email.verified
@@ -73,7 +73,7 @@ defmodule HexpmWeb.Dashboard.EmailControllerTest do
       |> post("/dashboard/email", %{email: %{email: email}})
 
     assert redirected_to(conn) == "/dashboard/email"
-    assert get_flash(conn, :info) =~ "A verification email has been sent"
+    assert Phoenix.Flash.get(conn.assigns.flash, :info) =~ "A verification email has been sent"
   end
 
   test "verified email logs appropriate user correctly", c do
@@ -90,7 +90,7 @@ defmodule HexpmWeb.Dashboard.EmailControllerTest do
       })
 
     assert redirected_to(conn) == "/"
-    assert get_flash(conn, :info) =~ "has been verified"
+    assert Phoenix.Flash.get(conn.assigns.flash, :info) =~ "has been verified"
 
     conn =
       build_conn()
@@ -98,7 +98,7 @@ defmodule HexpmWeb.Dashboard.EmailControllerTest do
       |> post("/dashboard/email/primary", %{email: dup_email.email})
 
     assert redirected_to(conn) == "/dashboard/email"
-    assert get_flash(conn, :info) =~ "primary email was changed"
+    assert Phoenix.Flash.get(conn.assigns.flash, :info) =~ "primary email was changed"
 
     conn = post(build_conn(), "/login", %{username: dup_email.email, password: "password"})
     assert redirected_to(conn) == "/users/#{c.user.username}"
@@ -113,7 +113,7 @@ defmodule HexpmWeb.Dashboard.EmailControllerTest do
       })
 
     assert redirected_to(conn) == "/"
-    assert get_flash(conn, :error) =~ "failed to verify."
+    assert Phoenix.Flash.get(conn.assigns.flash, :error) =~ "failed to verify."
   end
 
   test "remove email", c do
@@ -126,7 +126,7 @@ defmodule HexpmWeb.Dashboard.EmailControllerTest do
       |> delete("/dashboard/email", %{email: email})
 
     assert redirected_to(conn) == "/dashboard/email"
-    assert get_flash(conn, :info) =~ "Removed email"
+    assert Phoenix.Flash.get(conn.assigns.flash, :info) =~ "Removed email"
     user = Hexpm.Repo.get!(Hexpm.Accounts.User, c.user.id) |> Hexpm.Repo.preload(:emails)
     refute Enum.find(user.emails, &(&1.email == email))
   end
@@ -138,7 +138,7 @@ defmodule HexpmWeb.Dashboard.EmailControllerTest do
       |> delete("/dashboard/email", %{email: c.email})
 
     assert redirected_to(conn) == "/dashboard/email"
-    assert get_flash(conn, :error) =~ "Cannot remove primary email"
+    assert Phoenix.Flash.get(conn.assigns.flash, :error) =~ "Cannot remove primary email"
     user = Hexpm.Repo.get!(Hexpm.Accounts.User, c.user.id) |> Hexpm.Repo.preload(:emails)
     assert Enum.find(user.emails, &(&1.email == c.email))
   end
@@ -155,7 +155,7 @@ defmodule HexpmWeb.Dashboard.EmailControllerTest do
       |> post("/dashboard/email/primary", %{email: new_email})
 
     assert redirected_to(conn) == "/dashboard/email"
-    assert get_flash(conn, :info) =~ "primary email was changed"
+    assert Phoenix.Flash.get(conn.assigns.flash, :info) =~ "primary email was changed"
 
     user = Hexpm.Repo.get!(Hexpm.Accounts.User, c.user.id) |> Hexpm.Repo.preload(:emails)
     assert Enum.find(user.emails, &(&1.email == new_email)).primary
@@ -172,7 +172,7 @@ defmodule HexpmWeb.Dashboard.EmailControllerTest do
       |> post("/dashboard/email/primary", %{email: email})
 
     assert redirected_to(conn) == "/dashboard/email"
-    assert get_flash(conn, :error) =~ "not verified"
+    assert Phoenix.Flash.get(conn.assigns.flash, :error) =~ "not verified"
 
     user = Hexpm.Repo.get!(Hexpm.Accounts.User, c.user.id) |> Hexpm.Repo.preload(:emails)
     refute Enum.find(user.emails, &(&1.email == email)).primary
@@ -190,7 +190,7 @@ defmodule HexpmWeb.Dashboard.EmailControllerTest do
       |> post("/dashboard/email/public", %{email: new_email})
 
     assert redirected_to(conn) == "/dashboard/email"
-    assert get_flash(conn, :info) =~ "public email was changed"
+    assert Phoenix.Flash.get(conn.assigns.flash, :info) =~ "public email was changed"
 
     user = Hexpm.Repo.get!(Hexpm.Accounts.User, c.user.id) |> Hexpm.Repo.preload(:emails)
     assert Enum.find(user.emails, &(&1.email == new_email)).public
@@ -206,7 +206,7 @@ defmodule HexpmWeb.Dashboard.EmailControllerTest do
       |> post("/dashboard/email/public", %{email: "none"})
 
     assert redirected_to(conn) == "/dashboard/email"
-    assert get_flash(conn, :info) =~ "Your public email was changed to none."
+    assert Phoenix.Flash.get(conn.assigns.flash, :info) =~ "Your public email was changed to none."
 
     user = Hexpm.Repo.get!(Hexpm.Accounts.User, c.user.id) |> Hexpm.Repo.preload(:emails)
     refute Enum.find(user.emails, &(&1.email == user_email.email)).public
@@ -224,7 +224,7 @@ defmodule HexpmWeb.Dashboard.EmailControllerTest do
       |> post("/dashboard/email/gravatar", %{email: new_email})
 
     assert redirected_to(conn) == "/dashboard/email"
-    assert get_flash(conn, :info) =~ "gravatar email was changed"
+    assert Phoenix.Flash.get(conn.assigns.flash, :info) =~ "gravatar email was changed"
 
     user = Hexpm.Repo.get!(Hexpm.Accounts.User, c.user.id) |> Hexpm.Repo.preload(:emails)
     assert Enum.find(user.emails, &(&1.email == new_email)).gravatar
@@ -242,7 +242,7 @@ defmodule HexpmWeb.Dashboard.EmailControllerTest do
       |> post("/dashboard/email/gravatar", %{email: unknown_email})
 
     assert redirected_to(conn) == "/dashboard/email"
-    assert get_flash(conn, :error) =~ "Unknown email"
+    assert Phoenix.Flash.get(conn.assigns.flash, :error) =~ "Unknown email"
 
     user = Hexpm.Repo.get!(Hexpm.Accounts.User, c.user.id) |> Hexpm.Repo.preload(:emails)
     assert Enum.find(user.emails, &(&1.email == c.email)).gravatar
@@ -259,7 +259,7 @@ defmodule HexpmWeb.Dashboard.EmailControllerTest do
       |> post("/dashboard/email/gravatar", %{email: unverified_email})
 
     assert redirected_to(conn) == "/dashboard/email"
-    assert get_flash(conn, :error) =~ "not verified"
+    assert Phoenix.Flash.get(conn.assigns.flash, :error) =~ "not verified"
 
     user = Hexpm.Repo.get!(Hexpm.Accounts.User, c.user.id) |> Hexpm.Repo.preload(:emails)
     refute Enum.find(user.emails, &(&1.email == unverified_email)).gravatar
@@ -276,7 +276,7 @@ defmodule HexpmWeb.Dashboard.EmailControllerTest do
       |> post("/dashboard/email/resend", %{email: new_email})
 
     assert redirected_to(conn) == "/dashboard/email"
-    assert get_flash(conn, :info) =~ "verification email has been sent"
+    assert Phoenix.Flash.get(conn.assigns.flash, :info) =~ "verification email has been sent"
 
     assert_delivered_email(Hexpm.Emails.verification(user, email))
     assert_delivered_email(Hexpm.Emails.verification(user, email))

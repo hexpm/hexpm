@@ -17,7 +17,7 @@
     <link rel="stylesheet" href="<%= Routes.static_path(Endpoint, "/css/app.css") %>">
     <link rel="alternate" type="application/rss+xml" title="RSS - Blog" href="/feeds/blog.xml">
 
-    <%= if host = Application.get_env(:hexpm, :host) do %> 
+    <%= if host = Application.get_env(:hexpm, :host) do %>
     <script async defer data-domain="<%= host %>" src="https://stats.<%= host %>/js/plausible.js"></script>
     <% end %>
   </head>
@@ -90,7 +90,7 @@
     </nav>
 
     <%= unless assigns[:error] || assigns[:custom_flash] do %>
-      <%= render "_flash.html", conn: @conn %>
+      <%= render "_flash.html", flash: @flash %>
     <% end %>
 
     <div class="<%= container_class(assigns) %>">
