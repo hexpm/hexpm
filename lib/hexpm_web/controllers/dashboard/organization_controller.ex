@@ -6,7 +6,7 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
 
   def redirect_repo(conn, params) do
     glob = params["glob"] || []
-    path = Routes.organization_path(conn, :new) <> "/" <> Enum.join(glob, "/")
+    path = ~p"/dashboard/orgs" <> "/" <> Enum.join(glob, "/")
 
     conn
     |> put_status(301)
@@ -36,7 +36,7 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
             {:ok, _} ->
               conn
               |> put_flash(:info, "User #{username} has been added to the organization.")
-              |> redirect(to: Routes.organization_path(conn, :show, organization))
+              |> redirect(to: ~p"/dashboard/orgs/#{organization}")
 
             {:error, changeset} ->
               conn
@@ -73,7 +73,7 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
         :ok ->
           conn
           |> put_flash(:info, "User #{username} has been removed from the organization.")
-          |> redirect(to: Routes.organization_path(conn, :show, organization))
+          |> redirect(to: ~p"/dashboard/orgs/#{organization}")
 
         {:error, :last_member} ->
           conn
@@ -97,7 +97,7 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
           {:ok, _} ->
             conn
             |> put_flash(:info, "User #{username}'s role has been changed to #{params["role"]}.")
-            |> redirect(to: Routes.organization_path(conn, :show, organization))
+            |> redirect(to: ~p"/dashboard/orgs/#{organization}")
 
           {:error, :last_admin} ->
             conn
@@ -131,7 +131,7 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
           :ok ->
             conn
             |> put_flash(:info, "You just left the the organization #{organization.name}.")
-            |> redirect(to: Routes.profile_path(conn, :index))
+            |> redirect(to: ~p"/dashboard/profile")
 
           {:error, :last_member} ->
             conn
@@ -175,7 +175,7 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
 
       conn
       |> put_flash(:info, message)
-      |> redirect(to: Routes.organization_path(conn, :show, organization))
+      |> redirect(to: ~p"/dashboard/orgs/#{organization}")
     end)
   end
 
@@ -210,7 +210,7 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
           :ok ->
             conn
             |> put_flash(:info, "Invoice paid.")
-            |> redirect(to: Routes.organization_path(conn, :show, organization))
+            |> redirect(to: ~p"/dashboard/orgs/#{organization}")
 
           {:error, reason} ->
             conn
@@ -269,7 +269,7 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
 
         conn
         |> put_flash(:info, "The number of open seats have been increased.")
-        |> redirect(to: Routes.organization_path(conn, :show, organization))
+        |> redirect(to: ~p"/dashboard/orgs/#{organization}")
       else
         conn
         |> put_status(400)
@@ -292,7 +292,7 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
 
         conn
         |> put_flash(:info, "The number of open seats have been reduced.")
-        |> redirect(to: Routes.organization_path(conn, :show, organization))
+        |> redirect(to: ~p"/dashboard/orgs/#{organization}")
       else
         conn
         |> put_status(400)
@@ -312,7 +312,7 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
 
       conn
       |> put_flash(:info, "You have switched to the #{plan_name(params["plan_id"])} plan.")
-      |> redirect(to: Routes.organization_path(conn, :show, organization))
+      |> redirect(to: ~p"/dashboard/orgs/#{organization}")
     end)
   end
 
@@ -330,7 +330,7 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
       {:ok, organization} ->
         conn
         |> put_flash(:info, "Organization created with one month free trial period active.")
-        |> redirect(to: Routes.organization_path(conn, :show, organization))
+        |> redirect(to: ~p"/dashboard/orgs/#{organization}")
 
       {:error, changeset} ->
         conn
@@ -350,7 +350,7 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
       {:ok, _} ->
         conn
         |> put_flash(:info, "Updated your billing information.")
-        |> redirect(to: Routes.organization_path(conn, :show, organization))
+        |> redirect(to: ~p"/dashboard/orgs/#{organization}")
 
       {:error, reason} ->
         conn
@@ -372,7 +372,7 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
 
           conn
           |> put_flash(:info, flash)
-          |> redirect(to: Routes.organization_path(conn, :show, organization))
+          |> redirect(to: ~p"/dashboard/orgs/#{organization}")
 
         {:error, :key, changeset, _} ->
           conn
@@ -388,7 +388,7 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
         {:ok, _struct} ->
           conn
           |> put_flash(:info, "The key #{name} was revoked successfully.")
-          |> redirect(to: Routes.organization_path(conn, :show, organization))
+          |> redirect(to: ~p"/dashboard/orgs/#{organization}")
 
         {:error, _} ->
           conn
@@ -405,7 +405,7 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
         {:ok, _updated_user} ->
           conn
           |> put_flash(:info, "Profile updated successfully.")
-          |> redirect(to: Routes.organization_path(conn, :show, organization))
+          |> redirect(to: ~p"/dashboard/orgs/#{organization}")
 
         {:error, _} ->
           conn
@@ -437,8 +437,8 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
     gravatar_email = user && Enum.find(user.emails, & &1.gravatar)
     customer = Hexpm.Billing.get(organization.name)
     keys = Keys.all(organization)
-    delete_key_path = Routes.organization_path(Endpoint, :delete_key, organization)
-    create_key_path = Routes.organization_path(Endpoint, :create_key, organization)
+    delete_key_path = ~p"/dashboard/orgs/#{organization}/keys"
+    create_key_path = ~p"/dashboard/orgs/#{organization}/keys"
 
     assigns = [
       title: "Dashboard - Organization",
@@ -483,7 +483,7 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
   end
 
   defp customer_assigns(customer, organization) do
-    post_action = Routes.organization_path(Endpoint, :billing_token, organization)
+    post_action = ~p"/dashboard/orgs/#{organization}/billing-token"
 
     [
       billing_started?: true,

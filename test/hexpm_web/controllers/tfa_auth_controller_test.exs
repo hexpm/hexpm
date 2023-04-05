@@ -5,13 +5,13 @@ defmodule HexpmWeb.TFAAuthControllerTest do
     %{user: insert(:user_with_tfa)}
   end
 
-  describe "get /two_factor_auth" do
+  describe "get /tfa" do
     test "shows auth code form", c do
       conn =
         build_conn()
         |> test_login(c.user)
         |> put_session("tfa_user_id", c.user.id)
-        |> get("/two_factor_auth")
+        |> get("/tfa")
 
       result = response(conn, 200)
       assert result =~ "Two-factor authentication"
@@ -21,19 +21,19 @@ defmodule HexpmWeb.TFAAuthControllerTest do
       conn =
         build_conn()
         |> test_login(c.user)
-        |> get("/two_factor_auth")
+        |> get("/tfa")
 
       assert redirected_to(conn) == "/"
     end
   end
 
-  describe "post /two_factor_auth" do
+  describe "post /tfa" do
     test "with invalid token", c do
       conn =
         build_conn()
         |> test_login(c.user)
         |> put_session("tfa_user_id", %{"uid" => c.user.id, "return" => "/"})
-        |> post("/two_factor_auth", %{"code" => "000000"})
+        |> post("/tfa", %{"code" => "000000"})
 
       assert response(conn, 200) =~
                "The verification code you provided is incorrect. Please try again."
@@ -46,7 +46,7 @@ defmodule HexpmWeb.TFAAuthControllerTest do
         build_conn()
         |> test_login(c.user)
         |> put_session("tfa_user_id", %{"uid" => c.user.id, "return" => "/"})
-        |> post("/two_factor_auth", %{"code" => token})
+        |> post("/tfa", %{"code" => token})
 
       assert redirected_to(conn) == "/"
     end

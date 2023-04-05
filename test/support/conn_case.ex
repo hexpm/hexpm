@@ -30,6 +30,8 @@ defmodule HexpmWeb.ConnCase do
 
       # The default endpoint for testing
       @endpoint HexpmWeb.Endpoint
+
+      use HexpmWeb, :verified_routes
     end
   end
 

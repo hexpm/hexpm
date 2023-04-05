@@ -1,5 +1,5 @@
 <div class="new-comment-div">
-  <%= form_tag Routes.package_report_path(Endpoint, :new_comment, @report.id) %>
+  <%= form_tag ~p"/reports/#{@report}/comment" %>
     <textarea class="new-comment-box" name="text" placeholder="Leave comment here..."></textarea>
     <button class="new-comment-submit" type="submit" class="btn">
       Comment

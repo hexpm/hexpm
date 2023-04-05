@@ -11,13 +11,13 @@
   <ul class="list-group">
     <%= for organization <- Enum.sort_by(@current_user.organizations, & &1.name) do %>
       <li class="list-group-item <%= selected_organization(@conn, organization.name) %>">
-        <a href="<%= Routes.organization_path(Endpoint, :show, organization) %>">
+        <a href="<%= ~p"/dashboard/orgs/#{organization}" %>">
           <%= organization.name %>
         </a>
       </li>
     <% end %>
   </ul>
   <div class="panel-body">
-    <small><a href="<%= Routes.organization_path(Endpoint, :new) %>">New organization</a></small>
+    <small><a href="<%= ~p"/dashboard/orgs" %>">New organization</a></small>
   </div>
 </div>

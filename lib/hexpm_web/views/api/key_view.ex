@@ -23,7 +23,7 @@ defmodule HexpmWeb.API.KeyView do
       revoked_at: key.revoked_at,
       inserted_at: key.inserted_at,
       updated_at: key.updated_at,
-      url: Routes.api_key_url(Endpoint, :show, key)
+      url: url(~p"/api/keys/#{key}")
     }
     |> ViewHelpers.include_if_loaded(:last_use, key.last_use, &render_use/1)
   end

@@ -1,7 +1,7 @@
 <%= ViewHelpers.changeset_error(@changeset) %>
 <h2>Sign up</h2>
 
-<%= form_for @changeset, Routes.signup_path(Endpoint, :create), fn f -> %>
+<%= form_for @changeset, ~p"/signup", fn f -> %>
   <div class="form-group">
     <%= label f, :full_name %>
     <%= ViewHelpers.text_input f, :full_name %>
@@ -42,7 +42,7 @@
 
   <p>
     By clicking "Sign up" below, you agree to our
-    <a href="<%= Routes.policy_path(Endpoint, :tos) %>">Terms of Service</a>.
+    <a href="<%= ~p"/policies/termsofservice" %>">Terms of Service</a>.
   </p>
 
   <button type="submit" class="btn btn-primary">Sign up</button>
@@ -50,7 +50,7 @@
   <br><br>
 
   <p>
-    <a href="<%= Routes.login_path(Endpoint, :show) %>">Already have an account?</a> |
-    <a href="<%= Routes.email_verification_path(Endpoint, :show) %>">Resend verification email</a>
+    <a href="<%= ~p"/login" %>">Already have an account?</a> |
+    <a href="<%= ~p"/email/verification" %>">Resend verification email</a>
   </p>
 <% end %>

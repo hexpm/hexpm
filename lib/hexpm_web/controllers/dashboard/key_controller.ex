@@ -14,7 +14,7 @@ defmodule HexpmWeb.Dashboard.KeyController do
       {:ok, _struct} ->
         conn
         |> put_flash(:info, "The key #{name} was revoked successfully.")
-        |> redirect(to: Routes.key_path(conn, :index))
+        |> redirect(to: ~p"/dashboard/keys")
 
       {:error, _} ->
         conn
@@ -36,7 +36,7 @@ defmodule HexpmWeb.Dashboard.KeyController do
 
         conn
         |> put_flash(:info, flash)
-        |> redirect(to: Routes.key_path(conn, :index))
+        |> redirect(to: ~p"/dashboard/keys")
 
       {:error, :key, changeset, _} ->
         conn
@@ -57,8 +57,8 @@ defmodule HexpmWeb.Dashboard.KeyController do
       container: "container page dashboard",
       keys: keys,
       organizations: organizations,
-      delete_key_path: Routes.key_path(Endpoint, :delete),
-      create_key_path: Routes.key_path(Endpoint, :create),
+      delete_key_path: ~p"/dashboard/keys",
+      create_key_path: ~p"/dashboard/keys",
       key_changeset: changeset
     )
   end

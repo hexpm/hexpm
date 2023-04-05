@@ -5,7 +5,7 @@ defmodule HexpmWeb.PasswordController do
     conn
     |> put_session("reset_username", username)
     |> put_session("reset_key", key)
-    |> redirect(to: Routes.password_path(conn, :show))
+    |> redirect(to: ~p"/password/new")
   end
 
   def show(conn, _params) do
@@ -22,7 +22,7 @@ defmodule HexpmWeb.PasswordController do
     else
       conn
       |> put_flash(:error, "Invalid password reset key.")
-      |> redirect(to: Routes.page_path(HexpmWeb.Endpoint, :index))
+      |> redirect(to: ~p"/")
     end
   end
 
@@ -47,12 +47,12 @@ defmodule HexpmWeb.PasswordController do
         |> configure_session(renew: true)
         |> maybe_put_flash(breached?)
         |> put_flash(:info, "Your account password has been changed to your new password.")
-        |> redirect(to: Routes.page_path(HexpmWeb.Endpoint, :index))
+        |> redirect(to: ~p"/")
 
       :error ->
         conn
         |> put_flash(:error, "Failed to change your password.")
-        |> redirect(to: Routes.page_path(HexpmWeb.Endpoint, :index))
+        |> redirect(to: ~p"/")
 
       {:error, changeset} ->
         conn
@@ -76,6 +76,6 @@ defmodule HexpmWeb.PasswordController do
   defp maybe_put_flash(conn, false), do: conn
 
   defp maybe_put_flash(conn, true) do
-    put_flash(conn, :raw_error, password_breached_message(conn, []))
+    put_flash(conn, :raw_error, password_breached_message())
   end
 end

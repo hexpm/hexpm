@@ -1,10 +1,10 @@
 defmodule HexpmWeb.Dashboard.AuditLogControllerTest do
   use HexpmWeb.ConnCase, async: true
 
-  describe "GET /dashboard/audit_logs" do
+  describe "GET /dashboard/audit-logs" do
     test "requires login" do
-      conn = get(build_conn(), "/dashboard/audit_logs")
-      assert redirected_to(conn) == "/login?return=%2Fdashboard%2Faudit_logs"
+      conn = get(build_conn(), "/dashboard/audit-logs")
+      assert redirected_to(conn) == "/login?return=%2Fdashboard%2Faudit-logs"
     end
 
     test "shows page successfully after login" do
@@ -13,7 +13,7 @@ defmodule HexpmWeb.Dashboard.AuditLogControllerTest do
       conn =
         build_conn()
         |> test_login(user)
-        |> get("/dashboard/audit_logs")
+        |> get("/dashboard/audit-logs")
 
       assert html_response(conn, :ok) =~ "Recent activities"
     end
@@ -26,7 +26,7 @@ defmodule HexpmWeb.Dashboard.AuditLogControllerTest do
       response =
         build_conn()
         |> test_login(user)
-        |> get("/dashboard/audit_logs")
+        |> get("/dashboard/audit-logs")
         |> html_response(:ok)
 
       assert response =~ "Publish doc"
@@ -41,7 +41,7 @@ defmodule HexpmWeb.Dashboard.AuditLogControllerTest do
       response =
         build_conn()
         |> test_login(user)
-        |> get("/dashboard/audit_logs?page=2")
+        |> get("/dashboard/audit-logs?page=2")
         |> html_response(:ok)
 
       assert response =~ "Create user"

@@ -27,7 +27,7 @@
           <li>&nbsp;</li>
         </ul>
         <div class="action">
-          <a class="btn btn-primary" href="<%= Routes.signup_path(Endpoint, :show) %>" role="button">Sign up</a>
+          <a class="btn btn-primary" href="<%= ~p"/signup" %>" role="button">Sign up</a>
         </div>
       </div>
     </div>
@@ -53,7 +53,7 @@
           <li>&nbsp;</li>
         </ul>
         <div class="action">
-          <a class="btn btn-primary" href="<%= Routes.organization_path(Endpoint, :new) %>" role="button">Try for 30 days</a>
+          <a class="btn btn-primary" href="<%= ~p"/dashboard/orgs" %>" role="button">Try for 30 days</a>
         </div>
       </div>
     </div>
@@ -63,7 +63,7 @@
     <p>
       <strong>
         For more information about pricing and billing read the
-        <a href="<%= Routes.docs_path(Endpoint, :faq) %>">FAQ</a>.
+        <a href="<%= ~p"/docs/faq" %>">FAQ</a>.
       </strong>
     </p>
     <p>

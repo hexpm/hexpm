@@ -5,7 +5,7 @@
     xsi:schemaLocation="http://www.sitemaps.org/schemas/sitemap/0.9 http://www.sitemaps.org/schemas/sitemap/0.9/sitemap.xsd">
 <%= for {name, updated_at} <- @packages do %>
   <url>
-    <loc><%= Routes.package_url(Endpoint, :show, name) %></loc>
+    <loc><%= url(~p"/packages/#{name}") %></loc>
     <lastmod><%= Hexpm.Utils.binarify(updated_at) %></lastmod>
     <changefreq>daily</changefreq>
     <priority>0.8</priority>

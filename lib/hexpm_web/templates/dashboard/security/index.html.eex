@@ -7,11 +7,11 @@
     <div class="panel panel-default">
       <div class="panel-heading with-button">Two-factor security
       <%= if Hexpm.Accounts.User.tfa_enabled?(@current_user) do %>
-        <%= form_tag(Routes.dashboard_security_path(Endpoint, :disable_tfa)) do %>
+        <%= form_tag(~p"/dashboard/security/disable-tfa") do %>
           <button type="submit" class="btn btn-primary">Disable</button>
         <% end %>
       <% else %>
-        <%= form_tag(Routes.dashboard_security_path(Endpoint, :enable_tfa)) do %>
+        <%= form_tag(~p"/dashboard/security/enable-tfa") do %>
           <button type="submit" class="btn btn-primary">Enable</button>
         <% end %>
       <% end %>
@@ -26,7 +26,7 @@
           </p>
         </div>
         <div class="panel-body">
-          <%= form_tag(Routes.dashboard_security_path(Endpoint, :reset_auth_app)) do %>
+          <%= form_tag(~p"/dashboard/security/reset-auth-app") do %>
             <button type="submit" class="btn btn-primary">Setup new app</button>
           <% end %>
         </div>
@@ -61,7 +61,7 @@
             <p>
               When you generate new recovery codes, you must download or print the new codes. Your old codes won’t work anymore.
             </p>
-            <%= form_tag(Routes.dashboard_security_path(Endpoint, :rotate_recovery_codes)) do %>
+            <%= form_tag(~p"/dashboard/security/rotate-recovery-codes") do %>
               <button type="submit" class="btn btn-primary">Generate new recovery codes</button>
             <% end %>
           </div>

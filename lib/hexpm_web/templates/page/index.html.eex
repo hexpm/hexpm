@@ -7,7 +7,7 @@
     <div class="container">
       <div class="row">
         <div class="col-md-8 col-md-offset-2">
-          <%= form_tag(Routes.package_path(Endpoint, :index), method: "get", role: "search") do %>
+          <%= form_tag(~p"/packages", method: "get", role: "search") do %>
             <div class="input-group">
               <input type="search" class="form-control" placeholder="Find packages" name="search" id="search" value="<% # search(assigns) %>" tabindex="1">
               <input type="hidden" name="sort" value="recent_downloads">
@@ -33,7 +33,7 @@
           <div class="lang-symbol"></div>
         </div>
         <div class="instructions">
-          <h3><a href="<%= Routes.docs_path(Endpoint, :usage) %>">Using with Elixir</a></h3>
+          <h3><a href="<%= ~p"/docs/usage" %>">Using with Elixir</a></h3>
           <p>
             Specify your Mix dependencies as two-item tuples like <code>{:plug, "~> 1.1.0"}</code>
             in your dependency list, Elixir will ask if you want to install Hex if you haven't already.
@@ -49,7 +49,7 @@
           <div class="lang-symbol"></div>
         </div>
         <div class="instructions">
-          <h3><a href="<%= Routes.docs_path(Endpoint, :rebar3_usage) %>">Using with Erlang</a></h3>
+          <h3><a href="<%= ~p"/docs/rebar3-usage" %>">Using with Erlang</a></h3>
           <p>
             Download <a href="https://s3.amazonaws.com/rebar3/rebar3">rebar3</a>, put it in your <code>PATH</code> and give it executable permissions.
             Now you can specify Hex dependencies in your rebar.config like <code>{deps, [hackney]}</code>.
@@ -70,9 +70,9 @@
         </h3>
         <p>
           Fetch dependencies from Hex without creating an account.
-          Hex is usable out of the box in Elixir with <a href="<%= Routes.docs_path(@conn, :usage) %>">Mix</a>
-          and in Erlang with <a href="<%= Routes.docs_path(@conn, :rebar3_usage) %>">Rebar3</a>.
-          Check our <a href="<%= Routes.docs_path(@conn, :faq) %>">FAQ</a> for commonly asked questions.
+          Hex is usable out of the box in Elixir with <a href="<%= ~p"/docs/usage" %>">Mix</a>
+          and in Erlang with <a href="<%= ~p"/docs/rebar3-usage" %>">Rebar3</a>.
+          Check our <a href="<%= ~p"/docs/faq" %>">FAQ</a> for commonly asked questions.
         </p>
       </div>
 
@@ -82,8 +82,8 @@
           Publish packages
         </h3>
         <p>
-          <a href="<%= Routes.signup_path(@conn, :show) %>">Create an account</a> and follow the
-          <a href="<%= Routes.docs_path(@conn, :publish) %>">publishing guide</a>. Your package
+          <a href="<%= ~p"/signup" %>">Create an account</a> and follow the
+          <a href="<%= ~p"/docs/publish" %>">publishing guide</a>. Your package
           will be immediately available to all Elixir and Erlang users and the documentation will
           be available on <a href="https://hexdocs.pm">HexDocs</a>.
         </p>
@@ -95,11 +95,11 @@
           Private packages
         </h3>
         <p>
-          Publish private packages by <a href="<%= Routes.organization_path(@conn, :new) %>">creating an organization</a>.
+          Publish private packages by <a href="<%= ~p"/dashboard/orgs" %>">creating an organization</a>.
           Your private packages
           will get the same features as public packages such as fast dependency fetching, HexDocs,
           and run on the same reliable infrastructure that serves millions of packages
-          daily. See our <a href="<%= Routes.page_path(@conn, :pricing) %>">pricing page</a> for more details.
+          daily. See our <a href="<%= ~p"/pricing" %>">pricing page</a> for more details.
         </p>
       </div>
     </div>

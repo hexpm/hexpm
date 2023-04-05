@@ -4,6 +4,6 @@ defmodule HexpmWeb.DashboardController do
   plug :requires_login
 
   def index(conn, _params) do
-    redirect(conn, to: Routes.profile_path(conn, :index))
+    redirect(conn, to: ~p"/dashboard/profile")
   end
 end

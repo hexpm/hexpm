@@ -1,8 +1,8 @@
 <%= for post <- @posts do %>
   <div class="index-post">
-    <h3><a href="<%= Routes.blog_path(Endpoint, :show, post.slug) %>"><%= post.title %></a></h3>
+    <h3><a href="<%= ~p"/blog/#{post.slug}" %>"><%= post.title %></a></h3>
     <div class="subtitle"><%= raw post.subtitle %></div>
     <p class="content"><%= raw post.paragraph %></p>
-    <a href="<%= Routes.blog_path(Endpoint, :show, post.slug) %>">Read more...</a>
+    <a href="<%= ~p"/blog/#{post.slug}" %>">Read more...</a>
   </div>
 <% end %>

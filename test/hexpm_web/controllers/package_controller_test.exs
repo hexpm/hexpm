@@ -286,11 +286,11 @@ defmodule HexpmWeb.PackageControllerTest do
     end
   end
 
-  describe "GET /packages/:name/audit_logs" do
+  describe "GET /packages/:name/audit-logs" do
     test "sets title correctly" do
       _package = insert(:package, name: "Test")
 
-      conn = get(build_conn(), "/packages/Test/audit_logs")
+      conn = get(build_conn(), "/packages/Test/audit-logs")
 
       assert response(conn, :ok) =~ "Recent Activities for Test"
     end
@@ -299,18 +299,18 @@ defmodule HexpmWeb.PackageControllerTest do
       package = insert(:package, name: "Test")
       insert(:audit_log, action: "docs.publish", params: %{package: %{id: package.id}})
 
-      conn = get(build_conn(), "/packages/Test/audit_logs")
+      conn = get(build_conn(), "/packages/Test/audit-logs")
 
       assert response(conn, :ok) =~ "Publish documentation"
     end
   end
 
-  describe "GET /packages/:repository/:name/audit_logs" do
+  describe "GET /packages/:repository/:name/audit-logs" do
     test "requires access to this repository" do
       repository = insert(:repository, name: "Repo")
       _package = insert(:package, repository_id: repository.id, name: "Test")
 
-      conn = get(build_conn(), "/packages/Repo/Test/audit_logs")
+      conn = get(build_conn(), "/packages/Repo/Test/audit-logs")
 
       assert response(conn, :not_found)
     end

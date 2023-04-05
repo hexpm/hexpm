@@ -26,7 +26,7 @@ defmodule HexpmWeb.API.UserView do
       username: user.username,
       full_name: user.full_name,
       handles: handles(user),
-      url: Routes.api_user_url(Endpoint, :show, user),
+      url: url(~p"/api/users/#{user}"),
       inserted_at: user.inserted_at,
       updated_at: user.updated_at
     }
@@ -43,7 +43,7 @@ defmodule HexpmWeb.API.UserView do
   def render("minimal", %{user: user}) do
     %{
       username: user.username,
-      url: Routes.api_user_url(Endpoint, :show, user)
+      url: url(~p"/api/users/#{user}")
     }
     |> put_maybe(:email, User.email(user, :public))
   end

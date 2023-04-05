@@ -3,7 +3,7 @@ defmodule HexpmWeb.SignupController do
 
   def show(conn, _params) do
     if logged_in?(conn) do
-      path = Routes.user_path(conn, :show, conn.assigns.current_user)
+      path = ~p"/users/#{conn.assigns.current_user}"
       redirect(conn, to: path)
     else
       render_show(conn, User.build(%{}))
@@ -19,7 +19,7 @@ defmodule HexpmWeb.SignupController do
 
         conn
         |> put_flash(:info, flash)
-        |> redirect(to: Routes.page_path(HexpmWeb.Endpoint, :index))
+        |> redirect(to: ~p"/")
 
       {:error, changeset} ->
         conn

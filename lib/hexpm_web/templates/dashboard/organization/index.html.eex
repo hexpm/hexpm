@@ -21,7 +21,7 @@
             </p>
           </div>
 
-          <%= form_for @changeset, Routes.organization_path(Endpoint, :update_profile, @organization), [method: :post, as: :profile], fn f -> %>
+          <%= form_for @changeset, ~p"/dashboard/orgs/#{@organization}/profile", [method: :post, as: :profile], fn f -> %>
             <div class="form-group">
               <%= label f, :full_name %>
               <%= ViewHelpers.text_input f, :full_name %>
@@ -106,7 +106,7 @@
         <%= for organization_user <- @organization.organization_users do %>
           <li class="list-group-item clearfix">
             <img src="<%= ViewHelpers.gravatar_url(User.email(organization_user.user, :gravatar), :small) %>" class="member-avatar">
-            <a class="member-username" href="<%= Routes.user_path(Endpoint, :show, organization_user.user) %>"><%= organization_user.user.username %></a>
+            <a class="member-username" href="<%= ~p"/users/#{organization_user.user}" %>"><%= organization_user.user.username %></a>
             <div style="float: right">
               <div class="dropdown role-dropdown">
                 <button class="btn btn-default dropdown-toggle" type="button" data-toggle="dropdown">
@@ -116,7 +116,7 @@
                 <ul class="dropdown-menu dropdown-menu-right">
                   <%= for {name, id, title} <- organization_roles() do %>
                     <li>
-                      <%= form_tag Routes.organization_path(Endpoint, :update, @organization), class: "change-role" do %>
+                      <%= form_tag ~p"/dashboard/orgs/#{@organization}", class: "change-role" do %>
                         <input type="hidden" name="action" value="change_role">
                         <input type="hidden" name="organization_user[username]" value="<%= organization_user.user.username %>">
                         <input type="hidden" name="organization_user[role]" value="<%= id %>">
@@ -125,7 +125,7 @@
                     </li>
                   <% end %>
                 </ul>
-                  <%= form_tag Routes.organization_path(Endpoint, :update, @organization), class: "remove-role" do %>
+                  <%= form_tag ~p"/dashboard/orgs/#{@organization}", class: "remove-role" do %>
                     <input type="hidden" name="action" value="remove_member">
                     <input type="hidden" name="organization_user[username]" value="<%= organization_user.user.username %>">
                     <%= submit "Remove", class: "btn btn-danger", disabled: organization_user.user.id == @current_user.id %>
@@ -135,7 +135,7 @@
           </li>
         <% end %>
         <li class="list-group-item clearfix">
-          <%= form_for @add_member_changeset, Routes.organization_path(Endpoint, :update, @organization), [method: :post, class: "form-inline add-member"], fn f -> %>
+          <%= form_for @add_member_changeset, ~p"/dashboard/orgs/#{@organization}", [method: :post, class: "form-inline add-member"], fn f -> %>
             <%= content_tag :fieldset, disabled: @billing_active? and @quantity <= length(@organization.organization_users) do %>
               <input type="hidden" name="action" value="add_member">
               <div class="form-group">
@@ -163,7 +163,7 @@
       <div class="panel-body">
         <%= if @repository.packages == [] do %>
           No private packages in organization.
-          Check out the docs for <a href="<%= Routes.docs_path(Endpoint, :private) %>">publishing private packages</a>.
+          Check out the docs for <a href="<%= ~p"/docs/private" %>">publishing private packages</a>.
         <% else %>
           <ul class="organization-package-list">
             <%= for package <- @repository.packages do %>
@@ -233,7 +233,7 @@
         <% end %>
       </div>
       <div class="modal-footer">
-        <%= form_tag(Routes.organization_path(Endpoint, :change_plan, @organization)) do %>
+        <%= form_tag(~p"/dashboard/orgs/#{@organization}/change-plan") do %>
           <%= if @plan_id == "organization-monthly" do %>
             <input type="hidden" name="plan_id" value="organization-annually">
           <% else %>
@@ -254,7 +254,7 @@
         <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
         <h4 class="modal-title">Leave organization</h4>
       </div>
-      <%= form_tag Routes.organization_path(Endpoint, :leave, @organization) do %>
+      <%= form_tag ~p"/dashboard/orgs/#{@organization}/leave" do %>
         <div class="modal-body">
           <p>This action cannot be undone. You will permanently leave the organization <strong><%= @organization.name %>.</p>
           <p>Please type <strong><%= @organization.name %></strong> to confirm.</p>

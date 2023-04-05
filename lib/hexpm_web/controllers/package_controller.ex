@@ -189,7 +189,7 @@ defmodule HexpmWeb.PackageController do
         title: package.name,
         description: package.meta.description,
         container: "container package-view",
-        canonical_url: Routes.package_url(conn, :show, package),
+        canonical_url: ~p"/packages/#{package}",
         package: package,
         repository_name: repository.name,
         releases: releases,

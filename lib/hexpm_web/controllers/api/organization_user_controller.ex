@@ -48,7 +48,7 @@ defmodule HexpmWeb.API.OrganizationUserController do
 
         case Organizations.add_member(organization, user, params, audit: audit_data(conn)) do
           {:ok, organization_user} ->
-            location = Routes.api_organization_user_url(conn, :show, name, user.username)
+            location = ~p"/api/orgs/#{organization}/members/#{user}"
 
             conn
             |> api_cache(:private)

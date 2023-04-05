@@ -2,7 +2,7 @@
   Package Report for <%= @package_name %>
 </h2>
 
-<%= form_tag Routes.package_report_path(Endpoint, :create) do %>
+<%= form_tag ~p"/reports" do %>
   <p class = "report-info-section-title">Description </p>
   <p> Provide a description of the vulnerability you have detected.</p>
   <input type="hidden" name="package" value="<%= @package_name %>"/>

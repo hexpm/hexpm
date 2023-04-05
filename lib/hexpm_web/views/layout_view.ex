@@ -45,7 +45,7 @@ defmodule HexpmWeb.LayoutView do
       tag(
         :meta,
         property: "og:image",
-        content: Routes.static_url(HexpmWeb.Endpoint, "/images/favicon-160.png")
+        content: url(~p"/images/favicon-160.png")
       ),
       tag(:meta, property: "og:image:width", content: "160"),
       tag(:meta, property: "og:image:height", content: "160"),

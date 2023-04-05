@@ -15,7 +15,7 @@ defmodule HexpmWeb.Dashboard.ProfileController do
       {:ok, _user} ->
         conn
         |> put_flash(:info, "Profile updated successfully.")
-        |> redirect(to: Routes.profile_path(conn, :index))
+        |> redirect(to: ~p"/dashboard/profile")
 
       {:error, changeset} ->
         conn

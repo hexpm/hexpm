@@ -8,12 +8,12 @@ defmodule HexpmWeb.PackageReportController do
   @report_bad_update_msg "Package report can not be updated"
   @report_bad_version_msg "No release matches given requirement"
 
-  def new_comment(conn, params) do
+  def comment(conn, params) do
     report = PackageReports.get(params["id"])
     author = conn.assigns.current_user
     PackageReports.new_comment(report, author, params)
 
-    redirect(conn, to: Routes.package_report_path(HexpmWeb.Endpoint, :show, report.id))
+    redirect(conn, to: ~p"/reports/#{report}")
   end
 
   def index(conn, _params) do
@@ -73,7 +73,7 @@ defmodule HexpmWeb.PackageReportController do
 
       conn
       |> put_flash(:info, @new_report_msg)
-      |> redirect(to: Routes.package_report_path(HexpmWeb.Endpoint, :index))
+      |> redirect(to: ~p"/reports")
     end
   end
 
@@ -117,7 +117,7 @@ defmodule HexpmWeb.PackageReportController do
     end
   end
 
-  def accept_report(conn, params) do
+  def accept(conn, params) do
     report_id = params["id"]
 
     report = PackageReports.get(report_id)
@@ -131,7 +131,7 @@ defmodule HexpmWeb.PackageReportController do
     end
   end
 
-  def reject_report(conn, params) do
+  def reject(conn, params) do
     report_id = params["id"]
 
     report = PackageReports.get(report_id)
@@ -146,7 +146,7 @@ defmodule HexpmWeb.PackageReportController do
     end
   end
 
-  def solve_report(conn, params) do
+  def solve(conn, params) do
     report_id = params["id"]
 
     report = PackageReports.get(report_id)
@@ -161,7 +161,7 @@ defmodule HexpmWeb.PackageReportController do
     end
   end
 
-  def unresolve_report(conn, params) do
+  def unresolve(conn, params) do
     report_id = params["id"]
 
     report = PackageReports.get(report_id)
@@ -179,7 +179,7 @@ defmodule HexpmWeb.PackageReportController do
   defp notify_good_update(conn) do
     conn
     |> put_flash(:info, @report_updated_msg)
-    |> redirect(to: Routes.page_path(HexpmWeb.Endpoint, :index))
+    |> redirect(to: ~p"/")
   end
 
   defp notify_bad_update(conn, params) do

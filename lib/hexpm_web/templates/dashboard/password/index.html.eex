@@ -9,7 +9,7 @@
     <div class="panel panel-default">
       <div class="panel-heading">Change password</div>
       <div class="panel-body">
-        <%= form_for @changeset, Routes.dashboard_password_path(Endpoint, :update), [method: :post], fn f -> %>
+        <%= form_for @changeset, ~p"/dashboard/password", [method: :post], fn f -> %>
           <div class="form-group">
             <%= label f, :password_current, "Current password" %>
             <%= ViewHelpers.password_input f, :password_current %>

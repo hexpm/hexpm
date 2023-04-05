@@ -94,7 +94,7 @@ defmodule HexpmWeb.EmailVerificationControllerTest do
       assert Phoenix.Flash.get(conn.assigns.flash, :info) =~ "A verification email has been sent"
 
       user = Users.get(user.username, [:emails])
-      refute_delivered_email(Hexpm.Emails.verification(user, hd(user.emails)))
+      refute_delivered_email(Hexpm.Emails.verification(user, %{hd(user.emails) | verification_key: "key"}))
       refute hd(user.emails).verification_key
     end
 

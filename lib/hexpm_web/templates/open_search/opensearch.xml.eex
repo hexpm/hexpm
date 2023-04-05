@@ -7,14 +7,14 @@
   <Language>en-us</Language>
 
   <Image height="48" width="48" type="image/x-icon">
-    <%= Routes.static_url(Endpoint, "/favicon.ico") %>
+    <%= url(~p"/favicon.ico") %>
   </Image>
 
   <Image height="64" width="64" type="image/png">
-     <%= Routes.static_url(Endpoint, "/images/favicon-64.png") %>
+     <%= url(~p"/images/favicon-64.png") %>
   </Image>
 
   <InputEncoding>utf-8</InputEncoding>
   <OutputEncoding>utf-8</OutputEncoding>
-  <Url type="text/html" method="get" template="<%= Routes.package_url(Endpoint, :index) %>?search={searchTerms}&amp;sort=recent_downloads" />
+  <Url type="text/html" method="get" template="<%= url(~p"/packages") %>?search={searchTerms}&amp;sort=recent_downloads" />
 </OpenSearchDescription>

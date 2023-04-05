@@ -12,5 +12,5 @@ For rebar3:
 
 To learn more about private packages and organizations go to the documentation[1].
 
-[0] <%= Routes.organization_url(Endpoint, :show, @organization) %>
-[1] <%= Routes.docs_url(Endpoint, :private) %>
+[0] <%= ~p"/dashboard/orgs/#{@organization}" %>
+[1] <%= ~p"/docs/private" %>

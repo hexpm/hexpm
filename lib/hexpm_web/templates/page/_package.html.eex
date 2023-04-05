@@ -1,6 +1,6 @@
 <li>
   <div class="title-container">
-    <a href="<%= Routes.package_path(Endpoint, :show, @package) %>" class="title"><%= @package %></a>
+    <a href="<%= ~p"/packages/#{@package}" %>" class="title"><%= @package %></a>
   </div>
   <p>
     <%= if @downloads do %>
@@ -12,7 +12,7 @@
     <%= if @inserted_at do %>
       <span class="published-at">
         <%= if @version do %>
-          <a href="<%= Routes.package_path(Endpoint, :show, @package) %>"><%= @version %></a>
+          <a href="<%= ~p"/packages/#{@package}" %>"><%= @version %></a>
         <% end %>
         published <%= ViewHelpers.human_relative_time_from_now(@inserted_at) %>
       </span>
