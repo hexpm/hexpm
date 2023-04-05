@@ -135,7 +135,9 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
       })
 
     response(conn, 400)
-    assert Phoenix.Flash.get(conn.assigns.flash, :error) == "Not enough seats in organization to add member."
+
+    assert Phoenix.Flash.get(conn.assigns.flash, :error) ==
+             "Not enough seats in organization to add member."
   end
 
   test "remove member from organization", %{user: user, organization: organization} do
@@ -409,7 +411,9 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
         |> post("/dashboard/orgs/#{organization.name}/invoices/123/pay")
 
       response(conn, 400)
-      assert Phoenix.Flash.get(conn.assigns.flash, :error) == "Failed to pay invoice: Card failure."
+
+      assert Phoenix.Flash.get(conn.assigns.flash, :error) ==
+               "Failed to pay invoice: Card failure."
     end
 
     test "create audit_log with action billing.pay_invoice", %{
@@ -593,7 +597,9 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
         })
 
       assert redirected_to(conn) == "/dashboard/orgs/#{organization.name}"
-      assert Phoenix.Flash.get(conn.assigns.flash, :info) == "The number of open seats have been increased."
+
+      assert Phoenix.Flash.get(conn.assigns.flash, :info) ==
+               "The number of open seats have been increased."
     end
 
     test "seats cannot be less than number of members", %{organization: organization, user: user} do
@@ -654,7 +660,9 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
         })
 
       assert redirected_to(conn) == "/dashboard/orgs/#{organization.name}"
-      assert Phoenix.Flash.get(conn.assigns.flash, :info) == "The number of open seats have been reduced."
+
+      assert Phoenix.Flash.get(conn.assigns.flash, :info) ==
+               "The number of open seats have been reduced."
     end
 
     test "seats cannot be less than number of members", %{organization: organization, user: user} do
@@ -712,7 +720,9 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
         })
 
       assert redirected_to(conn) == "/dashboard/orgs/#{organization.name}"
-      assert Phoenix.Flash.get(conn.assigns.flash, :info) == "You have switched to the annual organization plan."
+
+      assert Phoenix.Flash.get(conn.assigns.flash, :info) ==
+               "You have switched to the annual organization plan."
     end
 
     test "create audit_log with action billing.change_plan", %{
@@ -746,7 +756,9 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
         |> post("/dashboard/orgs/#{c.organization.name}/keys", %{key: %{name: "computer"}})
 
       assert redirected_to(conn) == "/dashboard/orgs/#{c.organization.name}"
-      assert Phoenix.Flash.get(conn.assigns.flash, :info) =~ "The key computer was successfully generated"
+
+      assert Phoenix.Flash.get(conn.assigns.flash, :info) =~
+               "The key computer was successfully generated"
     end
   end
 
@@ -763,7 +775,9 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
         |> delete("/dashboard/orgs/#{c.organization.name}/keys", %{name: "computer"})
 
       assert redirected_to(conn) == "/dashboard/orgs/#{c.organization.name}"
-      assert Phoenix.Flash.get(conn.assigns.flash, :info) =~ "The key computer was revoked successfully"
+
+      assert Phoenix.Flash.get(conn.assigns.flash, :info) =~
+               "The key computer was revoked successfully"
     end
 
     test "revoking an already revoked key throws an error", c do

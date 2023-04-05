@@ -33,7 +33,7 @@ defmodule HexpmWeb.ViewHelpers do
 
   def path_for_package(repository, package) do
     ~p"/packages/#{repository}/#{package}"
-end
+  end
 
   def path_for_release(%Package{repository_id: 1} = package, release) do
     ~p"/packages/#{package}/#{release}"

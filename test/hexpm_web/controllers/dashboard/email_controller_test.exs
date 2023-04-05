@@ -206,7 +206,9 @@ defmodule HexpmWeb.Dashboard.EmailControllerTest do
       |> post("/dashboard/email/public", %{email: "none"})
 
     assert redirected_to(conn) == "/dashboard/email"
-    assert Phoenix.Flash.get(conn.assigns.flash, :info) =~ "Your public email was changed to none."
+
+    assert Phoenix.Flash.get(conn.assigns.flash, :info) =~
+             "Your public email was changed to none."
 
     user = Hexpm.Repo.get!(Hexpm.Accounts.User, c.user.id) |> Hexpm.Repo.preload(:emails)
     refute Enum.find(user.emails, &(&1.email == user_email.email)).public
