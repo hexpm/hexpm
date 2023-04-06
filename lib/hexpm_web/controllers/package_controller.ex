@@ -149,15 +149,15 @@ defmodule HexpmWeb.PackageController do
 
     graph_downloads =
       case type do
-        :package -> Packages.downloads_for_last_n_days(package.id, 31)
-        :release -> Releases.downloads_for_last_n_days(release.id, 31)
+        :package -> Packages.downloads_for_last_n_days(package.id, 30)
+        :release -> Releases.downloads_for_last_n_days(release.id, 30)
       end
 
     graph_downloads = Map.new(graph_downloads, &{Date.from_iso8601!(&1.day), &1})
 
     daily_graph =
       Download.download_last_day()
-      |> Date.range(Date.add(Date.utc_today(), -1))
+      |> Date.range(Date.add(Download.download_last_day(), -30))
       |> Enum.map(fn day ->
         if download = graph_downloads[day] do
           download.downloads

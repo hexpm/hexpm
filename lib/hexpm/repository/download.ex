@@ -56,9 +56,9 @@ defmodule Hexpm.Repository.Download do
   # Wait for downloads stats job to run until we switch to today
   def download_last_day() do
     if Time.utc_now().hour >= 2 do
-      Date.utc_today()
-    else
       Date.add(Date.utc_today(), -1)
+    else
+      Date.add(Date.utc_today(), -2)
     end
   end
 
