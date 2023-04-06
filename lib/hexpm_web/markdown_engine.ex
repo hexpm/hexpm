@@ -7,6 +7,7 @@ defmodule HexpmWeb.MarkdownEngine do
     |> Earmark.as_html!(%Earmark.Options{gfm: true})
     |> header_anchors("h3")
     |> header_anchors("h4")
+    |> Phoenix.HTML.raw()
   end
 
   defp header_anchors(html, tag) do
