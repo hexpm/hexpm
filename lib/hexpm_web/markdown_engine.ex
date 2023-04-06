@@ -2,14 +2,11 @@ defmodule HexpmWeb.MarkdownEngine do
   @behaviour Phoenix.Template.Engine
 
   def compile(path, _name) do
-    html =
-      path
-      |> File.read!()
-      |> Earmark.as_html!(%Earmark.Options{gfm: true})
-      |> header_anchors("h3")
-      |> header_anchors("h4")
-
-    {:safe, html}
+    path
+    |> File.read!()
+    |> Earmark.as_html!(%Earmark.Options{gfm: true})
+    |> header_anchors("h3")
+    |> header_anchors("h4")
   end
 
   defp header_anchors(html, tag) do

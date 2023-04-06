@@ -12,7 +12,7 @@ defmodule HexpmWeb.BlogView do
   end
 
   def render(other, _assigns) do
-    content_tag(:div, render_template(other, %{}), class: "show-post")
+    content_tag(:div, Phoenix.HTML.raw(render_template(other, %{})), class: "show-post")
   end
 
   defp posts() do

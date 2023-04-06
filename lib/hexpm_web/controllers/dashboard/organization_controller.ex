@@ -306,7 +306,9 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
     access_organization(conn, organization, "admin", fn organization ->
       audit = %{audit_data: audit_data(conn), organization: organization}
 
-      Hexpm.Billing.change_plan(organization.name, %{"plan_id" => params["plan_id"]}, audit: audit)
+      Hexpm.Billing.change_plan(organization.name, %{"plan_id" => params["plan_id"]},
+        audit: audit
+      )
 
       conn
       |> put_flash(:info, "You have switched to the #{plan_name(params["plan_id"])} plan.")

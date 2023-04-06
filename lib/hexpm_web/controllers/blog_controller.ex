@@ -20,6 +20,30 @@ defmodule HexpmWeb.BlogController do
     redirect(conn, to: ~p"/blog/organizations-going-live")
   end
 
+  def show(conn, %{"slug" => "hex-v0.18-released"}) do
+    redirect(conn, to: ~p"/blog/hex-v018-released")
+  end
+
+  def show(conn, %{"slug" => "hex-v0.19-released"}) do
+    redirect(conn, to: ~p"/blog/hex-v019-released")
+  end
+
+  def show(conn, %{"slug" => "hex-v0.20-released"}) do
+    redirect(conn, to: ~p"/blog/hex-v020-released")
+  end
+
+  def show(conn, %{"slug" => "hex-v0.21-released"}) do
+    redirect(conn, to: ~p"/blog/hex-v021-released")
+  end
+
+  def show(conn, %{"slug" => "hex-v1.0-released-and-the-future-of-hex"}) do
+    redirect(conn, to: ~p"/blog/hex-v10-released-and-the-future-of-hex")
+  end
+
+  def show(conn, %{"slug" => "hex-v2.0-released-with-new-version-solver"}) do
+    redirect(conn, to: ~p"/blog/hex-v20-released-with-new-version-solver")
+  end
+
   def show(conn, %{"slug" => slug}) do
     if template = slug_to_template(slug) do
       render(
