@@ -76,7 +76,7 @@ defmodule HexpmWeb.EmailVerificationControllerTest do
       user = insert(:user, emails: [build(:email, verified: false)])
       email = User.email(user, :primary)
 
-      conn = post(build_conn(), "/email/verification", %{"email" => email})
+      conn = post(build_conn(), "/email/verification", %{"username" => user.username, "email" => email})
       assert redirected_to(conn) == "/"
       assert Phoenix.Flash.get(conn.assigns.flash, :info) =~ "A verification email has been sent"
 
@@ -89,7 +89,7 @@ defmodule HexpmWeb.EmailVerificationControllerTest do
       user = insert(:user, emails: [build(:email, verified: true)])
       email = User.email(user, :primary)
 
-      conn = post(build_conn(), "/email/verification", %{"email" => email})
+      conn = post(build_conn(), "/email/verification", %{"username" => user.username, "email" => email})
       assert redirected_to(conn) == "/"
       assert Phoenix.Flash.get(conn.assigns.flash, :info) =~ "A verification email has been sent"
 
@@ -103,9 +103,36 @@ defmodule HexpmWeb.EmailVerificationControllerTest do
     end
 
     test "dont send verification email for non-existent email" do
-      conn = post(build_conn(), "/email/verification", %{"email" => "foo@example.com"})
+      user = insert(:user)
+
+      conn = post(build_conn(), "/email/verification", %{"username" => user.username, "email" => "foo@example.com"})
       assert redirected_to(conn) == "/"
       assert Phoenix.Flash.get(conn.assigns.flash, :info) =~ "A verification email has been sent"
+    end
+
+    test "dont send verification email for wrong user" do
+      user1 = insert(:user, emails: [build(:email, verified: false)])
+      user2 = insert(:user, emails: [build(:email, verified: false)])
+      email = User.email(user2, :primary)
+
+      conn = post(build_conn(), "/email/verification", %{"username" => user1.username, "email" => email})
+      assert redirected_to(conn) == "/"
+      assert Phoenix.Flash.get(conn.assigns.flash, :info) =~ "A verification email has been sent"
+
+      refute_delivered_email(
+        Hexpm.Emails.verification(user1, %{hd(user1.emails) | verification_key: "key"})
+      )
+
+      refute_delivered_email(
+        Hexpm.Emails.verification(user2, %{hd(user2.emails) | verification_key: "key"})
+      )
+
+      user1 = Users.get(user1.username, [:emails])
+      refute hd(user1.emails).verification_key
+
+      user2 = Users.get(user2.username, [:emails])
+
+      refute hd(user2.emails).verification_key
     end
   end
 end

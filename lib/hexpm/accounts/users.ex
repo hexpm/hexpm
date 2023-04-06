@@ -71,7 +71,11 @@ defmodule Hexpm.Accounts.Users do
     email
   end
 
-  def email_verification(user, email) do
+  def email_verification(%User{}, %Email{verified: true} = email) do
+    email
+  end
+
+  def email_verification(%User{} = user, %Email{} = email) do
     email =
       Email.verification(email)
       |> Repo.update!()

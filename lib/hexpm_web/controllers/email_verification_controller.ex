@@ -23,10 +23,10 @@ defmodule HexpmWeb.EmailVerificationController do
     )
   end
 
-  def create(conn, %{"email" => email_address}) do
-    if email = Users.get_email(email_address, [:user]) do
-      unless email.verified do
-        Users.email_verification(email.user, email)
+  def create(conn, %{"username" => username, "email" => email_address}) do
+    if user = Users.get_by_username(username, [:emails]) do
+      if email = Enum.find(user.emails, &(&1.email == email_address)) do
+        Users.email_verification(user, email)
       end
     end
 
