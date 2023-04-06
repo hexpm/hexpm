@@ -1,5 +1,5 @@
 <h2>Log in</h2>
-<%= form_tag(Routes.login_path(Endpoint, :create)) do %>
+<%= form_tag(~p"/login") do %>
   <div class="form-group">
     <label for="username">Username or Email</label>
     <input id="username" type="text" class="form-control" name="username">
@@ -7,7 +7,7 @@
 
   <div class="form-group">
     <label for="password">Password</label>
-    <span style="float: right;"><a href="<%= Routes.password_reset_path(Endpoint, :show) %>">Forgot your password?</a></span>
+    <span style="float: right;"><a href="<%= ~p"/password/reset" %>">Forgot your password?</a></span>
     <input id="password" type="password" class="form-control" name="password">
   </div>
 
@@ -21,7 +21,7 @@
   <br><br>
 
   <p>
-    <a href="<%= Routes.signup_path(Endpoint, :show) %>">Don't have an account?</a> |
-    <a href="<%= Routes.email_verification_path(Endpoint, :show) %>">Resend verification email</a>
+    <a href="<%= ~p"/signup" %>">Don't have an account?</a> |
+    <a href="<%= ~p"/email/verification" %>">Resend verification email</a>
   </p>
 <% end %>

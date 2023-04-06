@@ -1,5 +1,5 @@
 <tr>
-  <td><a href="<%= Routes.package_report_path(Endpoint, :show, @report) %>"><%= @report.id%></a></td>
+  <td><a href="<%= ~p"/reports/#{@report}" %>"><%= @report.id %></a></td>
   <td><%= @report.package.name %></td>
   <td >
   <span>

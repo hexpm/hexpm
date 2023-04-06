@@ -63,11 +63,11 @@ defmodule HexpmWeb.Router do
     post "/login", LoginController, :create
     post "/logout", LoginController, :delete
 
-    get "/two_factor_auth", TFAAuthController, :show
-    post "/two_factor_auth", TFAAuthController, :create
+    get "/tfa", TFAAuthController, :show
+    post "/tfa", TFAAuthController, :create
 
-    get "/two_factor_auth/recovery", TFARecoveryController, :show
-    post "/two_factor_auth/recovery", TFARecoveryController, :create
+    get "/tfa/recovery", TFARecoveryController, :show
+    post "/tfa/recovery", TFARecoveryController, :create
 
     get "/signup", SignupController, :show
     post "/signup", SignupController, :create
@@ -92,15 +92,15 @@ defmodule HexpmWeb.Router do
     get "/docs/usage", DocsController, :usage
     get "/docs/publish", DocsController, :publish
     get "/docs/tasks", DocsController, :tasks
-    get "/docs/rebar3_usage", DocsController, :rebar3_usage
-    get "/docs/rebar3_publish", DocsController, :rebar3_publish
-    get "/docs/rebar3_private", DocsController, :rebar3_private
-    get "/docs/rebar3_tasks", DocsController, :rebar3_tasks
+    get "/docs/rebar3-usage", DocsController, :rebar3_usage
+    get "/docs/rebar3-publish", DocsController, :rebar3_publish
+    get "/docs/rebar3-private", DocsController, :rebar3_private
+    get "/docs/rebar3-tasks", DocsController, :rebar3_tasks
     get "/docs/private", DocsController, :private
     get "/docs/faq", DocsController, :faq
     get "/docs/mirrors", DocsController, :mirrors
-    get "/docs/public_keys", DocsController, :public_keys
-    get "/docs/self_hosting", DocsController, :self_hosting
+    get "/docs/public-keys", DocsController, :public_keys
+    get "/docs/self-hosting", DocsController, :self_hosting
 
     get "/policies/codeofconduct", PolicyController, :coc
     get "/policies/privacy", PolicyController, :privacy
@@ -113,9 +113,9 @@ defmodule HexpmWeb.Router do
 
     get "/packages", PackageController, :index
     get "/packages/:name", PackageController, :show
-    get "/packages/:name/audit_logs", PackageController, :audit_logs
+    get "/packages/:name/audit-logs", PackageController, :audit_logs
     get "/packages/:name/:version", PackageController, :show
-    get "/packages/:repository/:name/audit_logs", PackageController, :audit_logs
+    get "/packages/:repository/:name/audit-logs", PackageController, :audit_logs
     get "/packages/:repository/:name/:version", PackageController, :show
 
     get "/blog", BlogController, :index
@@ -125,15 +125,15 @@ defmodule HexpmWeb.Router do
 
     if Application.compile_env!(:hexpm, [:features, :package_reports]) do
       get "/reports", PackageReportController, :index
+      post "/reports", PackageReportController, :create
       get "/reports/new", PackageReportController, :new
-      post "/reports/create", PackageReportController, :create
 
       get "/reports/:id", PackageReportController, :show
-      post "/reports/:id/accept", PackageReportController, :accept_report
-      post "/reports/:id/reject", PackageReportController, :reject_report
-      post "/reports/:id/solve", PackageReportController, :solve_report
-      post "/reports/:id/unresolve", PackageReportController, :unresolve_report
-      post "/reports/:id/comment", PackageReportController, :new_comment
+      post "/reports/:id/accept", PackageReportController, :accept
+      post "/reports/:id/reject", PackageReportController, :reject
+      post "/reports/:id/solve", PackageReportController, :solve
+      post "/reports/:id/unresolve", PackageReportController, :unresolve
+      post "/reports/:id/comment", PackageReportController, :comment
     end
   end
 
@@ -147,16 +147,16 @@ defmodule HexpmWeb.Router do
     post "/password", PasswordController, :update, as: :dashboard_password
 
     get "/security", SecurityController, :index, as: :dashboard_security
-    post "/security/enable_tfa", SecurityController, :enable_tfa, as: :dashboard_security
-    post "/security/disable_tfa", SecurityController, :disable_tfa, as: :dashboard_security
+    post "/security/enable-tfa", SecurityController, :enable_tfa, as: :dashboard_security
+    post "/security/disable-tfa", SecurityController, :disable_tfa, as: :dashboard_security
 
-    post "/security/rotate_recovery_codes", SecurityController, :rotate_recovery_codes,
+    post "/security/rotate-recovery-codes", SecurityController, :rotate_recovery_codes,
       as: :dashboard_security
 
-    post "/security/reset_auth_app", SecurityController, :reset_auth_app, as: :dashboard_security
+    post "/security/reset-auth-app", SecurityController, :reset_auth_app, as: :dashboard_security
 
-    get "/two_factor_auth/setup", TFAAuthSetupController, :index, as: :dashboard_tfa_setup
-    post "/two_factor_auth/setup", TFAAuthSetupController, :create, as: :dashboard_tfa_setup
+    get "/tfa/setup", TFAAuthSetupController, :index, as: :dashboard_tfa_setup
+    post "/tfa/setup", TFAAuthSetupController, :create, as: :dashboard_tfa_setup
 
     get "/email", EmailController, :index
     post "/email", EmailController, :create
@@ -168,6 +168,8 @@ defmodule HexpmWeb.Router do
 
     get "/repos", OrganizationController, :redirect_repo
     get "/repos/*glob", OrganizationController, :redirect_repo
+    get "/orgs", OrganizationController, :new
+    post "/orgs", OrganizationController, :create
     get "/orgs/:dashboard_org", OrganizationController, :show
     post "/orgs/:dashboard_org", OrganizationController, :update
     post "/orgs/:dashboard_org/leave", OrganizationController, :leave
@@ -183,14 +185,12 @@ defmodule HexpmWeb.Router do
     get "/orgs/:dashboard_org/invoices/:id", OrganizationController, :show_invoice
     post "/orgs/:dashboard_org/invoices/:id/pay", OrganizationController, :pay_invoice
     post "/orgs/:dashboard_org/profile", OrganizationController, :update_profile
-    get "/orgs", OrganizationController, :new
-    post "/orgs", OrganizationController, :create
 
     get "/keys", KeyController, :index
     delete "/keys", KeyController, :delete
     post "/keys", KeyController, :create
 
-    get "/audit_logs", AuditLogController, :index
+    get "/audit-logs", AuditLogController, :index
   end
 
   scope "/", HexpmWeb do
@@ -221,7 +221,7 @@ defmodule HexpmWeb.Router do
 
     post "/users", UserController, :create
     get "/users/me", UserController, :me
-    get "/users/me/audit_logs", UserController, :audit_logs
+    get "/users/me/audit-logs", UserController, :audit_logs
     get "/users/:name", UserController, :show
     # NOTE: Deprecated (2018-05-21)
     get "/users/:name/test", UserController, :test
@@ -230,7 +230,7 @@ defmodule HexpmWeb.Router do
     get "/orgs", OrganizationController, :index
     get "/orgs/:organization", OrganizationController, :show
     post "/orgs/:organization", OrganizationController, :update
-    get "/orgs/:organization/audit_logs", OrganizationController, :audit_logs
+    get "/orgs/:organization/audit-logs", OrganizationController, :audit_logs
 
     get "/orgs/:organization/members", OrganizationUserController, :index
     post "/orgs/:organization/members", OrganizationUserController, :create
@@ -245,7 +245,7 @@ defmodule HexpmWeb.Router do
       scope prefix do
         get "/packages", PackageController, :index
         get "/packages/:name", PackageController, :show
-        get "/packages/:name/audit_logs", PackageController, :audit_logs
+        get "/packages/:name/audit-logs", PackageController, :audit_logs
 
         get "/packages/:name/releases/:version", ReleaseController, :show
         delete "/packages/:name/releases/:version", ReleaseController, :delete
@@ -304,12 +304,11 @@ defmodule HexpmWeb.Router do
   end
 
   def user_path(%User{organization: nil} = user) do
-    Routes.user_path(Endpoint, :show, user)
+    ~p"/users/#{user}"
   end
 
   def user_path(%User{organization: %Organization{} = organization}) do
-    # Work around for path helpers with duplicate routes
-    "/orgs/#{organization.name}"
+    ~p"/orgs/#{organization}"
   end
 
   defp handle_errors(conn, %{kind: kind, reason: reason, stack: stacktrace}) do

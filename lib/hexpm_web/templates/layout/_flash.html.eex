@@ -1,26 +1,26 @@
 <div class="container flash">
-  <%= if flash = get_flash(@conn, :raw_error) do %>
+  <%= if flash = Phoenix.Flash.get(@flash, :raw_error) do %>
     <div class="alert alert-danger" role="alert"><%= raw flash %></div>
   <% end %>
-  <%= if flash = get_flash(@conn, :error) do %>
+  <%= if flash = Phoenix.Flash.get(@flash, :error) do %>
     <div class="alert alert-danger" role="alert"><%= flash %></div>
   <% end %>
-  <%= if flash = get_flash(@conn, :raw_warning) do %>
+  <%= if flash = Phoenix.Flash.get(@flash, :raw_warning) do %>
     <div class="alert alert-warning" role="alert"><%= raw flash %></div>
   <% end %>
-  <%= if flash = get_flash(@conn, :warning) do %>
+  <%= if flash = Phoenix.Flash.get(@flash, :warning) do %>
     <div class="alert alert-warning" role="alert"><%= flash %></div>
   <% end %>
-  <%= if flash = get_flash(@conn, :raw_info) do %>
+  <%= if flash = Phoenix.Flash.get(@flash, :raw_info) do %>
     <div class="alert alert-info" role="alert"><%= raw flash %></div>
   <% end %>
-  <%= if flash = get_flash(@conn, :info) do %>
+  <%= if flash = Phoenix.Flash.get(@flash, :info) do %>
     <div class="alert alert-info" role="alert"><%= flash %></div>
   <% end %>
-  <%= if flash = get_flash(@conn, :raw_success) do %>
+  <%= if flash = Phoenix.Flash.get(@flash, :raw_success) do %>
     <div class="alert alert-success" role="alert"><%= raw flash %></div>
   <% end %>
-  <%= if flash = get_flash(@conn, :success) do %>
+  <%= if flash = Phoenix.Flash.get(@flash, :success) do %>
     <div class="alert alert-success" role="alert"><%= flash %></div>
   <% end %>
 </div>

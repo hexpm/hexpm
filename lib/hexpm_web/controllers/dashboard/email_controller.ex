@@ -16,7 +16,7 @@ defmodule HexpmWeb.Dashboard.EmailController do
 
         conn
         |> put_flash(:info, "A verification email has been sent to #{email}.")
-        |> redirect(to: Routes.email_path(conn, :index))
+        |> redirect(to: ~p"/dashboard/email")
 
       {:error, changeset} ->
         conn
@@ -30,12 +30,12 @@ defmodule HexpmWeb.Dashboard.EmailController do
       :ok ->
         conn
         |> put_flash(:info, "Removed email #{email} from your account.")
-        |> redirect(to: Routes.email_path(conn, :index))
+        |> redirect(to: ~p"/dashboard/email")
 
       {:error, reason} ->
         conn
         |> put_flash(:error, email_error_message(reason, email))
-        |> redirect(to: Routes.email_path(conn, :index))
+        |> redirect(to: ~p"/dashboard/email")
     end
   end
 
@@ -44,12 +44,12 @@ defmodule HexpmWeb.Dashboard.EmailController do
       :ok ->
         conn
         |> put_flash(:info, "Your primary email was changed to #{email}.")
-        |> redirect(to: Routes.email_path(conn, :index))
+        |> redirect(to: ~p"/dashboard/email")
 
       {:error, reason} ->
         conn
         |> put_flash(:error, email_error_message(reason, email))
-        |> redirect(to: Routes.email_path(conn, :index))
+        |> redirect(to: ~p"/dashboard/email")
     end
   end
 
@@ -58,12 +58,12 @@ defmodule HexpmWeb.Dashboard.EmailController do
       :ok ->
         conn
         |> put_flash(:info, "Your public email was changed to #{email}.")
-        |> redirect(to: Routes.email_path(conn, :index))
+        |> redirect(to: ~p"/dashboard/email")
 
       {:error, reason} ->
         conn
         |> put_flash(:error, email_error_message(reason, email))
-        |> redirect(to: Routes.email_path(conn, :index))
+        |> redirect(to: ~p"/dashboard/email")
     end
   end
 
@@ -72,12 +72,12 @@ defmodule HexpmWeb.Dashboard.EmailController do
       :ok ->
         conn
         |> put_flash(:info, "Your gravatar email was changed to #{email}.")
-        |> redirect(to: Routes.email_path(conn, :index))
+        |> redirect(to: ~p"/dashboard/email")
 
       {:error, reason} ->
         conn
         |> put_flash(:error, email_error_message(reason, email))
-        |> redirect(to: Routes.email_path(conn, :index))
+        |> redirect(to: ~p"/dashboard/email")
     end
   end
 
@@ -86,12 +86,12 @@ defmodule HexpmWeb.Dashboard.EmailController do
       :ok ->
         conn
         |> put_flash(:info, "A verification email has been sent to #{email}.")
-        |> redirect(to: Routes.email_path(conn, :index))
+        |> redirect(to: ~p"/dashboard/email")
 
       {:error, reason} ->
         conn
         |> put_flash(:error, email_error_message(reason, email))
-        |> redirect(to: Routes.email_path(conn, :index))
+        |> redirect(to: ~p"/dashboard/email")
     end
   end
 

@@ -31,18 +31,18 @@ defmodule Hexpm.MixProject do
 
   defp deps() do
     [
-      {:bamboo, "~> 2.2"},
       {:bamboo_phoenix, "~> 1.0"},
+      {:bamboo, "~> 2.2"},
       {:bcrypt_elixir, "~> 3.0"},
       {:corsica, "~> 1.0"},
       {:earmark, "~> 1.4"},
       {:ecto_psql_extras, "~> 0.6"},
       {:ecto_sql, "~> 3.0"},
       {:ecto, "~> 3.0"},
+      {:eqrcode, "~> 0.1.6"},
       {:ex_aws_s3, "~> 2.0"},
       {:ex_aws, "~> 2.0"},
       {:ex_machina, "~> 2.0"},
-      {:eqrcode, "~> 0.1.6"},
       {:goth, "~> 1.3-rc"},
       {:hackney, "~> 1.7"},
       {:hex_core, "~> 0.2", hex_core_opts()},
@@ -55,6 +55,7 @@ defmodule Hexpm.MixProject do
       {:phoenix_live_dashboard, "~> 0.6"},
       {:phoenix_live_reload, "~> 1.0", only: :dev},
       {:phoenix_pubsub, "~> 2.0"},
+      {:phoenix_view, "~> 2.0"},
       {:phoenix, "~> 1.6"},
       {:plug_attack, "~> 0.3"},
       {:plug_cowboy, "~> 2.1"},
@@ -65,8 +66,8 @@ defmodule Hexpm.MixProject do
       # Dependency is broken with mix due to missing dependency on :ssl application
       {:ssl_verify_fun, "~> 1.1", manager: :rebar3, override: true},
       {:sweet_xml, "~> 0.5"},
-      {:telemetry_poller, "~> 1.0"},
-      {:telemetry_metrics, "~> 0.6"}
+      {:telemetry_metrics, "~> 0.6"},
+      {:telemetry_poller, "~> 1.0"}
     ]
   end
 

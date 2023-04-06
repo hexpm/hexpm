@@ -160,7 +160,7 @@ defmodule HexpmWeb.Dashboard.OrganizationView do
          organization,
          _card
        ) do
-    form_tag(Routes.organization_path(Endpoint, :pay_invoice, organization, invoice_id)) do
+    form_tag(~p"/dashboard/orgs/#{organization}/invoices/#{invoice_id}/pay") do
       submit("Pay now", class: "btn btn-primary")
     end
   end

@@ -19,12 +19,12 @@ defmodule HexpmWeb.Dashboard.TFAAuthSetupController do
       {:ok, _user} ->
         conn
         |> put_flash(:info, "Two-factor authentication has been enabled.")
-        |> redirect(to: Routes.dashboard_security_path(conn, :index))
+        |> redirect(to: ~p"/dashboard/security")
 
       :error ->
         conn
         |> put_flash(:error, "Your verification code was incorrect.")
-        |> redirect(to: Routes.dashboard_tfa_setup_path(conn, :index))
+        |> redirect(to: ~p"/dashboard/tfa/setup")
     end
   end
 end

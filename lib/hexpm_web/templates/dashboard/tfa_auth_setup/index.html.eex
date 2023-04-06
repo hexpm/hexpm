@@ -11,7 +11,7 @@
         <div style="text-align:center"><%= raw ViewHelpers.auth_qr_code_svg(@current_user) %></div>
       </div>
       <div class="panel-body">
-        <%= form_tag(Routes.dashboard_tfa_setup_path(Endpoint, :create)) do %>
+        <%= form_tag(~p"/dashboard/tfa/setup") do %>
           <div class="form-group">
             <label for="verification_code">Verification code</label>
             <input id="verification_code" type="text" class="form-control" name="verification_code">

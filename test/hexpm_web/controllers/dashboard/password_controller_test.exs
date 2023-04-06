@@ -39,7 +39,7 @@ defmodule HexpmWeb.Dashboard.PasswordControllerTest do
       })
 
     assert redirected_to(conn) == "/dashboard/password"
-    assert get_flash(conn, :info) =~ "Your password has been updated"
+    assert Phoenix.Flash.get(conn.assigns.flash, :info) =~ "Your password has been updated"
     assert {:ok, _} = Auth.password_auth(c.user.username, "newpass")
     assert :error = Auth.password_auth(c.user.username, "password")
 

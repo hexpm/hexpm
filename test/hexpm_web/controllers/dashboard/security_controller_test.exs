@@ -25,31 +25,31 @@ defmodule HexpmWeb.Dashboard.SecurityControllerTest do
         |> test_login(user)
         |> get("/dashboard/security")
 
-      assert redirected_to(conn) == "/dashboard/two_factor_auth/setup"
+      assert redirected_to(conn) == "/dashboard/tfa/setup"
     end
   end
 
-  describe "post /dashboard_security/enable_tfa" do
+  describe "post /dashboard_security/enable-tfa" do
     test "sets the users tfa to enabled" do
       user = insert(:user)
 
       conn =
         build_conn()
         |> test_login(user)
-        |> post("/dashboard/security/enable_tfa")
+        |> post("/dashboard/security/enable-tfa")
 
       user = Hexpm.Repo.get(Hexpm.Accounts.User, user.id)
       assert user.tfa.tfa_enabled == true
-      assert redirected_to(conn) == "/dashboard/two_factor_auth/setup"
+      assert redirected_to(conn) == "/dashboard/tfa/setup"
     end
   end
 
-  describe "post /dashboard_security/disable_tfa" do
+  describe "post /dashboard_security/disable-tfa" do
     test "sets the users tfa to disabled", c do
       conn =
         build_conn()
         |> test_login(c.user)
-        |> post("/dashboard/security/disable_tfa")
+        |> post("/dashboard/security/disable-tfa")
 
       user = Hexpm.Repo.get(Hexpm.Accounts.User, c.user.id)
       assert user.tfa.tfa_enabled == false
@@ -57,12 +57,12 @@ defmodule HexpmWeb.Dashboard.SecurityControllerTest do
     end
   end
 
-  describe "post /dashboard_security/rotate_recovery_codes" do
+  describe "post /dashboard_security/rotate-recovery-codes" do
     test "changes the recovery codes", c do
       conn =
         build_conn()
         |> test_login(c.user)
-        |> post("/dashboard/security/rotate_recovery_codes")
+        |> post("/dashboard/security/rotate-recovery-codes")
 
       updated_user = Hexpm.Repo.get(Hexpm.Accounts.User, c.user.id)
       assert updated_user.tfa.recovery_codes != c.user.tfa.recovery_codes
@@ -70,16 +70,16 @@ defmodule HexpmWeb.Dashboard.SecurityControllerTest do
     end
   end
 
-  describe "post /dashboard_security/reset_auth_app" do
+  describe "post /dashboard_security/reset-auth-app" do
     test "changes the recovery codes", c do
       conn =
         build_conn()
         |> test_login(c.user)
-        |> post("/dashboard/security/reset_auth_app")
+        |> post("/dashboard/security/reset-auth-app")
 
       updated_user = Hexpm.Repo.get(Hexpm.Accounts.User, c.user.id)
       assert updated_user.tfa.app_enabled == false
-      assert redirected_to(conn) == "/dashboard/two_factor_auth/setup"
+      assert redirected_to(conn) == "/dashboard/tfa/setup"
     end
   end
 end

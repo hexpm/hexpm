@@ -3,13 +3,12 @@ defmodule HexpmWeb.API.IndexView do
 
   def render("index." <> _format, _assigns) do
     %{
-      packages_url: Routes.api_package_url(Endpoint, :index),
-      package_url: Routes.api_package_url(Endpoint, :show, "{name}") |> fix_placeholder(),
-      package_release_url:
-        Routes.api_release_url(Endpoint, :show, "{name}", "{version}") |> fix_placeholder(),
-      package_owners_url: Routes.api_owner_url(Endpoint, :index, "{name}") |> fix_placeholder(),
-      keys_url: Routes.api_key_url(Endpoint, :index),
-      key_url: Routes.api_key_url(Endpoint, :show, "{name}") |> fix_placeholder(),
+      packages_url: url(~p"/api/packages"),
+      package_url: fix_placeholder(url(~p"/api/packages/{name}")),
+      package_release_url: fix_placeholder(url(~p"/api/packages/{name}/releases/{version}")),
+      package_owners_url: fix_placeholder(url(~p"/api/packages/{name}/owners")),
+      keys_url: url(~p"/api/keys"),
+      key_url: fix_placeholder(url(~p"/api/keys/{name}")),
       documentation_url: "http://docs.hexpm.apiary.io"
     }
   end

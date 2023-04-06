@@ -58,14 +58,14 @@
             </script>
             <%= raw(@checkout_html) %>
 
-            <%= form_tag(Routes.organization_path(Endpoint, :cancel_billing, @organization), class: "cancel-billing") do %>
+            <%= form_tag(~p"/dashboard/orgs/#{@organization}/cancel-billing", class: "cancel-billing") do %>
               <%= submit "Cancel subscription", class: "btn btn-danger", disabled: !@subscription || @subscription["cancel_at_period_end"] %>
             <% end %>
 
             <div class="modal fade" id="add-seats" tabindex="-1" role="dialog" >
               <div class="modal-dialog" role="document">
                 <div class="modal-content">
-                  <%= form_tag(Routes.organization_path(Endpoint, :add_seats, @organization)) do %>
+                  <%= form_tag(~p"/dashboard/orgs/#{@organization}/add-seats") do %>
                     <input type="hidden" name="current-seats" value="<%= @quantity %>">
 
                     <div class="modal-header">
@@ -94,7 +94,7 @@
             <div class="modal fade" id="remove-seats" tabindex="-1" role="dialog" >
               <div class="modal-dialog" role="document">
                 <div class="modal-content">
-                  <%= form_tag(Routes.organization_path(Endpoint, :remove_seats, @organization)) do %>
+                  <%= form_tag(~p"/dashboard/orgs/#{@organization}/remove-seats") do %>
                     <div class="modal-header">
                       <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
                       <h4 class="modal-title">Remove seats</h4>
@@ -154,13 +154,13 @@
 
             <div class="tab-content">
               <div role="tabpanel" class="tab-pane <%= if show_person?(@person, @errors) do %>active<% end %>" id="person">
-                <%= form_tag(Routes.organization_path(Endpoint, :update_billing, @organization)) do %>
+                <%= form_tag(~p"/dashboard/orgs/#{@organization}/update-billing") do %>
                   <%= render "_billing_person.html", assigns %>
                   <%= submit "Save", class: "btn btn-primary" %>
                 <% end %>
               </div>
               <div role="tabpanel" class="tab-pane <%= if show_company?(@company, @errors) do %>active<% end %>" id="company">
-                <%= form_tag(Routes.organization_path(Endpoint, :update_billing, @organization)) do %>
+                <%= form_tag(~p"/dashboard/orgs/#{@organization}/update-billing") do %>
                   <%= render "_billing_company.html", assigns %>
                   <%= submit "Save", class: "btn btn-primary" %>
                 <% end %>
@@ -185,7 +185,7 @@
                 <%= for invoice <- @invoices do %>
                   <tr>
                     <td>
-                      <a href="<%= Routes.organization_path(Endpoint, :show_invoice, @organization, invoice["id"]) %>" target="_blank">
+                      <a href="<%= ~p"/dashboard/orgs/#{@organization}/invoices/#{invoice["id"]}" %>" target="_blank">
                         <%= payment_date(invoice["date"] || invoice["created"]) %>
                       </a>
                       </td>
@@ -220,13 +220,13 @@
 
             <div class="tab-content">
               <div role="tabpanel" class="tab-pane active" id="person">
-                <%= form_tag(Routes.organization_path(Endpoint, :create_billing, @organization)) do %>
+                <%= form_tag(~p"/dashboard/orgs/#{@organization}/create-billing") do %>
                   <%= render "_billing_person.html", assigns %>
                   <%= submit "Save", class: "btn btn-primary" %>
                 <% end %>
               </div>
               <div role="tabpanel" class="tab-pane" id="company">
-                <%= form_tag(Routes.organization_path(Endpoint, :create_billing, @organization)) do %>
+                <%= form_tag(~p"/dashboard/orgs/#{@organization}/create-billing") do %>
                   <%= render "_billing_company.html", assigns %>
                   <%= submit "Save", class: "btn btn-primary" %>
                 <% end %>

@@ -4,6 +4,8 @@ defmodule Hexpm.ShortURLs.ShortURL do
   alias Hexpm.ShortURLs.ShortURL
   alias Hexpm.Repo
 
+  @derive {Phoenix.Param, key: :short_code}
+
   schema "short_urls" do
     field :url, :string
     field :short_code, :string

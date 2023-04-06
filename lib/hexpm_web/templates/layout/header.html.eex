@@ -14,10 +14,10 @@
     <%= csrf_meta_tag() %>
 
     <link rel="search" type="application/opensearchdescription+xml" title="Hex" href="/hexsearch.xml">
-    <link rel="stylesheet" href="<%= Routes.static_path(Endpoint, "/css/app.css") %>">
+    <link rel="stylesheet" href="<%= ~p"/css/app.css" %>">
     <link rel="alternate" type="application/rss+xml" title="RSS - Blog" href="/feeds/blog.xml">
 
-    <%= if host = Application.get_env(:hexpm, :host) do %> 
+    <%= if host = Application.get_env(:hexpm, :host) do %>
     <script async defer data-domain="<%= host %>" src="https://stats.<%= host %>/js/plausible.js"></script>
     <% end %>
   </head>
@@ -39,12 +39,12 @@
             <span class="icon-bar"></span>
           </button>
           <a class="navbar-brand" href="/">
-            <img src="<%= Routes.static_path(Endpoint, "/images/hex.png") %>" srcset="<%= Routes.static_path(Endpoint, "/images/hex.png") %> 1x, <%= Routes.static_path(Endpoint, "/images/hex@2.png") %> 2x, <%= Routes.static_path(Endpoint, "/images/hex@3.png") %> 3x" alt="hex logo">
+            <img src="<%= ~p"/images/hex.png" %>" srcset="<%= ~p"/images/hex.png" %> 1x, <%= ~p"/images/hex@2.png" %> 2x, <%= ~p"/images/hex@3.png" %> 3x" alt="hex logo">
           </a>
         </div>
         <div id="navbar" class="navbar-collapse collapse">
           <%= if show_search?(assigns) do %>
-          <form class="navbar-form pull-left-non-mobile" role="search" action="<%= Routes.package_path(Endpoint, :index) %>">
+          <form class="navbar-form pull-left-non-mobile" role="search" action="<%= ~p"/packages" %>">
              <div class="input-group">
                 <input placeholder="Find packages" name="search" type="text" class="form-control" value="<%= search(assigns) %>">
                 <input type="hidden" name="sort" value="recent_downloads">
@@ -58,9 +58,9 @@
           </form>
           <% end %>
           <ul class="nav navbar-nav navbar-right">
-            <li><a href="<%= Routes.package_path(Endpoint, :index) %>">Packages</a></li>
-            <li><a href="<%= Routes.page_path(Endpoint, :pricing) %>">Pricing</a></li>
-            <li><a href="<%= Routes.docs_path(Endpoint, :index) %>">Docs</a></li>
+            <li><a href="<%= ~p"/packages" %>">Packages</a></li>
+            <li><a href="<%= ~p"/pricing" %>">Pricing</a></li>
+            <li><a href="<%= ~p"/docs" %>">Docs</a></li>
 
             <%= if ViewHelpers.logged_in?(assigns) do %>
               <li class="dropdown">
@@ -70,18 +70,18 @@
                   <b class="caret"></b>
                 </a>
                 <ul class="dropdown-menu">
-                  <li><a href="<%= Routes.user_path(Endpoint, :show, @current_user) %>">Profile</a></li>
-                  <li><a href="<%= Routes.profile_path(Endpoint, :index) %>">Dashboard</a></li>
+                  <li><a href="<%= ~p"/users/#{@current_user}" %>">Profile</a></li>
+                  <li><a href="<%= ~p"/dashboard/profile" %>">Dashboard</a></li>
                   <li role="separator" class="divider"></li>
                   <li>
-                    <%= form_tag(Routes.login_path(Endpoint, :delete)) do %>
+                    <%= form_tag(~p"/logout") do %>
                       <button type="submit" class="btn btn-link">Log out</button>
                     <% end %>
                   </li>
                 </ul>
               </li>
             <% else %>
-              <li><a href="<%= Routes.login_path(Endpoint, :show) %>">Log in</a></li>
+              <li><a href="<%= ~p"/login" %>">Log in</a></li>
             <% end %>
 
           </ul>
@@ -90,7 +90,7 @@
     </nav>
 
     <%= unless assigns[:error] || assigns[:custom_flash] do %>
-      <%= render "_flash.html", conn: @conn %>
+      <%= render "_flash.html", flash: @flash %>
     <% end %>
 
     <div class="<%= container_class(assigns) %>">

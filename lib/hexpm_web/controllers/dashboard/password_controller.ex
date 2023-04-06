@@ -18,7 +18,7 @@ defmodule HexpmWeb.Dashboard.PasswordController do
         conn
         |> put_flash(:info, "Your password has been updated.")
         |> maybe_put_flash(breached?)
-        |> redirect(to: Routes.dashboard_password_path(conn, :index))
+        |> redirect(to: ~p"/dashboard/password")
 
       {:error, changeset} ->
         conn
@@ -40,6 +40,6 @@ defmodule HexpmWeb.Dashboard.PasswordController do
   defp maybe_put_flash(conn, false), do: conn
 
   defp maybe_put_flash(conn, true) do
-    put_flash(conn, :raw_error, password_breached_message(conn, []))
+    put_flash(conn, :raw_error, password_breached_message())
   end
 end

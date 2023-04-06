@@ -64,7 +64,7 @@ defmodule HexpmWeb.API.KeyController do
 
     case Keys.create(user_or_organization, params, audit: audit_data(conn)) do
       {:ok, %{key: key}} ->
-        location = Routes.api_key_url(conn, :show, params["name"])
+        location = ~p"/api/keys/#{key}"
 
         conn
         |> put_resp_header("location", location)

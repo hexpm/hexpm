@@ -31,7 +31,7 @@
                per_page: @per_page,
                unit: "activity",
                units: "activities",
-               path_fn: &Routes.audit_log_path(Endpoint, :index, page: &1)
+               path_fn: &~p"/dashboard/audit-logs?page=#{&1}"
         %>
       </div>
     </div>

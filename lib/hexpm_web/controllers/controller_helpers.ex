@@ -1,10 +1,11 @@
 defmodule HexpmWeb.ControllerHelpers do
+  use HexpmWeb, :verified_routes
+
   import Plug.Conn
   import Phoenix.Controller
 
   alias Hexpm.Accounts.{Auth, Organizations}
   alias Hexpm.Repository.{Packages, Releases, Repositories}
-  alias HexpmWeb.Router.Helpers, as: Routes
 
   @max_cache_age 60
 
@@ -344,11 +345,11 @@ defmodule HexpmWeb.ControllerHelpers do
   def auth_error_message(:unconfirmed),
     do: "Email has not been verified yet. You can resend the verification email below."
 
-  def password_breached_message(conn, _opts) do
+  def password_breached_message() do
     # docs_path + anchor #password-security
     "The password you provided has previously been breached. " <>
       "To increase your security, please change your password." <>
-      "<br /><a class=\"small\" href=\"#{Routes.docs_path(conn, :faq)}#password-security\">" <>
+      "<br /><a class=\"small\" href=\"#{~p"/docs/faq"}#password-security\">" <>
       "Learn more about our password security.</a>"
   end
 
@@ -356,7 +357,7 @@ defmodule HexpmWeb.ControllerHelpers do
     if logged_in?(conn) do
       conn
     else
-      redirect(conn, to: Routes.login_path(conn, :show, return: conn.request_path))
+      redirect(conn, to: ~p"/login?return=#{conn.request_path}")
       |> halt
     end
   end

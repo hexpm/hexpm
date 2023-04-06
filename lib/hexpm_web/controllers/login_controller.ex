@@ -28,7 +28,7 @@ defmodule HexpmWeb.LoginController do
   def delete(conn, _params) do
     conn
     |> delete_session("user_id")
-    |> redirect(to: Routes.page_path(HexpmWeb.Endpoint, :index))
+    |> redirect(to: ~p"/")
   end
 
   def start_session(conn, user, return) do
@@ -57,7 +57,7 @@ defmodule HexpmWeb.LoginController do
   end
 
   defp redirect_return(conn, user, return) do
-    path = return || Routes.user_path(conn, :show, user)
+    path = return || ~p"/users/#{user}"
     redirect(conn, to: path)
   end
 
@@ -83,7 +83,7 @@ defmodule HexpmWeb.LoginController do
     |> configure_session(renew: true)
     |> put_session("tfa_user_id", %{uid: user_id, return: conn.params["return"]})
     |> maybe_put_flash(breached?)
-    |> redirect(to: Routes.tfa_auth_path(conn, :show))
+    |> redirect(to: ~p"/tfa")
   end
 
   defp login(conn, user, password_breached: breached?) do
@@ -95,6 +95,6 @@ defmodule HexpmWeb.LoginController do
   defp maybe_put_flash(conn, false), do: conn
 
   defp maybe_put_flash(conn, true) do
-    put_flash(conn, :raw_error, password_breached_message(conn, []))
+    put_flash(conn, :raw_error, password_breached_message())
   end
 end

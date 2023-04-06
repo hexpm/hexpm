@@ -28,7 +28,7 @@ defmodule HexpmWeb.EmailVerificationControllerTest do
         })
 
       assert redirected_to(conn) == "/"
-      assert get_flash(conn, :error) =~ "failed to verify"
+      assert Phoenix.Flash.get(conn.assigns.flash, :error) =~ "failed to verify"
 
       user = Users.get(c.user.username, [:emails])
       refute hd(user.emails).verified
@@ -43,7 +43,7 @@ defmodule HexpmWeb.EmailVerificationControllerTest do
         })
 
       assert redirected_to(conn) == "/"
-      assert get_flash(conn, :error) =~ "failed to verify"
+      assert Phoenix.Flash.get(conn.assigns.flash, :error) =~ "failed to verify"
     end
 
     test "verify email with valid key", c do
@@ -57,7 +57,7 @@ defmodule HexpmWeb.EmailVerificationControllerTest do
         })
 
       assert redirected_to(conn) == "/"
-      assert get_flash(conn, :info) =~ "has been verified"
+      assert Phoenix.Flash.get(conn.assigns.flash, :info) =~ "has been verified"
 
       user = Users.get(c.user.username, [:emails])
       assert hd(user.emails).verified
@@ -78,7 +78,7 @@ defmodule HexpmWeb.EmailVerificationControllerTest do
 
       conn = post(build_conn(), "/email/verification", %{"email" => email})
       assert redirected_to(conn) == "/"
-      assert get_flash(conn, :info) =~ "A verification email has been sent"
+      assert Phoenix.Flash.get(conn.assigns.flash, :info) =~ "A verification email has been sent"
 
       user = Users.get(user.username, [:emails])
       assert_delivered_email(Hexpm.Emails.verification(user, hd(user.emails)))
@@ -91,17 +91,21 @@ defmodule HexpmWeb.EmailVerificationControllerTest do
 
       conn = post(build_conn(), "/email/verification", %{"email" => email})
       assert redirected_to(conn) == "/"
-      assert get_flash(conn, :info) =~ "A verification email has been sent"
+      assert Phoenix.Flash.get(conn.assigns.flash, :info) =~ "A verification email has been sent"
 
       user = Users.get(user.username, [:emails])
-      refute_delivered_email(Hexpm.Emails.verification(user, hd(user.emails)))
+
+      refute_delivered_email(
+        Hexpm.Emails.verification(user, %{hd(user.emails) | verification_key: "key"})
+      )
+
       refute hd(user.emails).verification_key
     end
 
     test "dont send verification email for non-existent email" do
       conn = post(build_conn(), "/email/verification", %{"email" => "foo@example.com"})
       assert redirected_to(conn) == "/"
-      assert get_flash(conn, :info) =~ "A verification email has been sent"
+      assert Phoenix.Flash.get(conn.assigns.flash, :info) =~ "A verification email has been sent"
     end
   end
 end

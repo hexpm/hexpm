@@ -5,7 +5,7 @@
   <channel>
 
     <title>Blog posts on hex.pm</title>
-    <link><%= Routes.blog_url(Endpoint, :index) %></link>
+    <link><%= ~p"/blog" %></link>
     <description>Blog posts on hex.pm</description>
     <language>en</language>
 
@@ -13,7 +13,7 @@
     <item>
       <title><%= post.title %></title>
       <description><![CDATA[<%= post.paragraph %>]]></description>
-      <link><%= Routes.blog_url(Endpoint, :show, post.slug) %></link>
+      <link><%= ~p"/blog/#{post.slug}" %></link>
       <pubDate><%= post.published %></pubDate>
     </item>
     <% end %>

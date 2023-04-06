@@ -29,7 +29,7 @@
               <span class="label label-success">Gravatar</span>
             <% end %>
 
-            <%= form_tag(Routes.email_path(Endpoint, :delete), method: :delete, class: "action") do %>
+            <%= form_tag(~p"/dashboard/email", class: "action") do %>
               <input type="hidden" name="email" value="<%= email.email %>">
               <button type="submit" class="btn btn-link btn-svg" <%= if email.primary do %>disabled<% end %>>
                 <%= HexpmWeb.ViewIcons.icon(:octicon, :trashcan) %>
@@ -37,35 +37,35 @@
             <% end %>
 
             <%= if email.verified and not email.primary do %>
-              <%= form_tag(Routes.email_path(Endpoint, :primary), class: "action") do %>
+              <%= form_tag(~p"/dashboard/email/primary", class: "action") do %>
                 <input type="hidden" name="email" value="<%= email.email %>">
                 <button type="submit" class="btn btn-primary btn-xs">Set as primary</button>
               <% end %>
             <% end %>
 
             <%= if email.verified and not email.public do %>
-              <%= form_tag(Routes.email_path(Endpoint, :public), class: "action") do %>
+              <%= form_tag(~p"/dashboard/email/public", class: "action") do %>
                 <input type="hidden" name="email" value="<%= email.email %>">
                 <button type="submit" class="btn btn-primary btn-xs">Set as public</button>
               <% end %>
             <% end %>
 
             <%= if email.verified and email.public do %>
-              <%= form_tag(Routes.email_path(Endpoint, :public), class: "action") do %>
+              <%= form_tag(~p"/dashboard/email/public", class: "action") do %>
                 <input type="hidden" name="email" value="none">
                 <button type="submit" class="btn btn-primary btn-xs">Set as private</button>
               <% end %>
             <% end %>
 
             <%= if email.verified and not email.gravatar do %>
-              <%= form_tag(Routes.email_path(Endpoint, :gravatar), class: "action") do %>
+              <%= form_tag(~p"/dashboard/email/gravatar", class: "action") do %>
                 <input type="hidden" name="email" value="<%= email.email %>">
                 <button type="submit" class="btn btn-primary btn-xs">Set as gravatar</button>
               <% end %>
             <% end %>
 
             <%= unless email.verified do %>
-              <%= form_tag(Routes.email_path(Endpoint, :resend_verify), class: "action") do %>
+              <%= form_tag(~p"/dashboard/email/resend", class: "action") do %>
                 <input type="hidden" name="email" value="<%= email.email %>">
                 <button type="submit" class="btn btn-link">Resend verification email</button>
               <% end %>
@@ -74,7 +74,7 @@
         <% end %>
 
         <li class="list-group-item">
-          <%= form_for @create_changeset, Routes.email_path(Endpoint, :create), [method: :post], fn f -> %>
+          <%= form_for @create_changeset, ~p"/dashboard/email", [method: :post], fn f -> %>
             <%= label f, :email, "Add email address" %>
             <div class="form-group">
               <%= ViewHelpers.email_input f, :email, class: "form-control" %>

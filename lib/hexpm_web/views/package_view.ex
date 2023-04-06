@@ -175,9 +175,9 @@ defmodule HexpmWeb.PackageView do
 
   def path_for_audit_logs(package, options) do
     if package.repository.id == 1 do
-      Routes.package_path(Endpoint, :audit_logs, package, options)
+      ~p"/packages/#{package}/audit-logs?#{options}"
     else
-      Routes.package_path(Endpoint, :audit_logs, package.repository, package, options)
+      ~p"/packages/#{package.repository}/#{package}/audit-logs?#{options}"
     end
   end
 

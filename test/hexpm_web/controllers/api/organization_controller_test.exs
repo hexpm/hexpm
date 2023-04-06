@@ -126,15 +126,15 @@ defmodule HexpmWeb.API.OrganizationControllerTest do
     end
   end
 
-  describe "GET /api/orgs/:organization/audit_logs" do
+  describe "GET /api/orgs/:organization/audit-logs" do
     test "returns 404 when unauthorized", %{user1: user1, organization: organization} do
       build_conn()
-      |> get("/api/orgs/#{organization.name}/audit_logs")
+      |> get("/api/orgs/#{organization.name}/audit-logs")
       |> response(404)
 
       build_conn()
       |> put_req_header("authorization", key_for(user1))
-      |> get("/api/orgs/#{organization.name}/audit_logs")
+      |> get("/api/orgs/#{organization.name}/audit-logs")
       |> response(404)
     end
 
@@ -146,7 +146,7 @@ defmodule HexpmWeb.API.OrganizationControllerTest do
       conn =
         build_conn()
         |> put_req_header("authorization", key_for(user1))
-        |> get("/api/orgs/#{organization.name}/audit_logs")
+        |> get("/api/orgs/#{organization.name}/audit-logs")
 
       assert [%{"action" => "organization.test"}] = json_response(conn, :ok)
     end

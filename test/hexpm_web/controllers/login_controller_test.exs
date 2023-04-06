@@ -27,7 +27,7 @@ defmodule HexpmWeb.LoginControllerTest do
   test "log in when tfa enabled" do
     user = insert(:user_with_tfa)
     conn = post(build_conn(), "/login", %{username: user.username, password: "password"})
-    assert redirected_to(conn) == "/two_factor_auth"
+    assert redirected_to(conn) == "/tfa"
 
     assert get_session(conn, "tfa_user_id") == %{return: nil, uid: user.id}
   end
@@ -43,7 +43,10 @@ defmodule HexpmWeb.LoginControllerTest do
   test "log in with wrong password", c do
     conn = post(build_conn(), "/login", %{username: c.user.username, password: "WRONG"})
     assert response(conn, 400) =~ "Log in"
-    assert get_flash(conn, "error") == "Invalid username, email or password."
+
+    assert Phoenix.Flash.get(conn.assigns.flash, "error") ==
+             "Invalid username, email or password."
+
     refute get_session(conn, "user_id")
     refute last_session().data["user_id"]
   end
@@ -53,7 +56,7 @@ defmodule HexpmWeb.LoginControllerTest do
 
     conn = post(build_conn(), "/login", %{username: c.user.username, password: "password"})
     assert response(conn, 400) =~ "Log in"
-    assert get_flash(conn, "error") =~ "Email has not been verified yet."
+    assert Phoenix.Flash.get(conn.assigns.flash, "error") =~ "Email has not been verified yet."
     refute get_session(conn, "user_id")
     refute last_session().data["user_id"]
   end

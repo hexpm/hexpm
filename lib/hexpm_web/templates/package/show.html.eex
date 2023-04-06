@@ -15,7 +15,7 @@ tools = [
 %>
 
 <h2 class="package-title">
-  <a href="<%= Routes.package_path(Endpoint, :show, @package) %>"><%= ViewHelpers.package_name(@package) %></a>
+  <a href="<%= ~p"/packages/#{@package}" %>"><%= ViewHelpers.package_name(@package) %></a>
   <%= if @current_release do %>
     <%= if @current_release.retirement do %>
       <span class="version retired"><%= @current_release.version %> (retired)</span>
@@ -191,7 +191,7 @@ tools = [
 
   <div class="col-md-3">
     <%= if Application.fetch_env!(:hexpm, :features)[:package_reports] do %>
-      <form action="<%= Routes.package_report_path(Endpoint, :new) %>">
+      <form action="<%= ~p"/reports/new" %>">
         <input type="hidden" name="package" value="<%= @package.name %>"/>
         <input type="hidden" name="repository" value="<%= @package.repository.name %>"/>
         <button type="submit" class="full-width"> Report <%= ViewHelpers.package_name(@package) %></button>
@@ -263,7 +263,7 @@ tools = [
     <%= ViewHelpers.safe_join(@dependants, ", ", fn package ->
       link(ViewHelpers.package_name(package), to: ViewHelpers.path_for_package(package))
     end) %><%= if @dependants_count != 0 do %>,
-    <a href="<%= Routes.package_path(Endpoint, :index, search: "depends:#{@repository_name}:#{@package.name}") %>">show all...</a>
+    <a href="<%= ~p"/packages?search=#{"depends:#{@repository_name}:#{@package.name}"}" %>">show all...</a>
     <% end %>
   </div>
 </div>

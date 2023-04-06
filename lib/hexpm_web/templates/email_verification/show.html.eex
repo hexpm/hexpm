@@ -1,6 +1,6 @@
 <h2>Verify email</h2>
 
-<%= form_tag Routes.email_verification_path(Endpoint, :create) do %>
+<%= form_tag ~p"/email/verification" do %>
   <div class="form-group">
     <label for="email">Email</label>
     <input type="email" class="form-control" name="email" required>

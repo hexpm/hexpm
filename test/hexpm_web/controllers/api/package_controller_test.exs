@@ -264,7 +264,7 @@ defmodule HexpmWeb.API.PackageControllerTest do
     end
   end
 
-  describe "GET /api/packages/:name/audit_logs" do
+  describe "GET /api/packages/:name/audit-logs" do
     test "returns the first page of audit_logs related to this package when params page is not specified",
          %{package1: package} do
       insert(:audit_log,
@@ -274,7 +274,7 @@ defmodule HexpmWeb.API.PackageControllerTest do
 
       conn =
         build_conn()
-        |> get("/api/packages/#{package.name}/audit_logs")
+        |> get("/api/packages/#{package.name}/audit-logs")
 
       assert [%{"action" => "test.package.audit_logs"}] = json_response(conn, :ok)
     end

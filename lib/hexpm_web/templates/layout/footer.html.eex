@@ -8,9 +8,9 @@
             <div class="col-md-3">
               <h4>About Hex</h4>
               <ul>
-                <li><a href="<%= Routes.page_path(Endpoint, :about) %>">About</a></li>
-                <li><a href="<%= Routes.blog_path(Endpoint, :index) %>">Blog</a></li>
-                <li><a href="<%= Routes.page_path(Endpoint, :sponsors) %>">Sponsors</a></li>
+                <li><a href="<%= ~p"/about" %>">About</a></li>
+                <li><a href="<%= ~p"/blog" %>">Blog</a></li>
+                <li><a href="<%= ~p"/sponsors" %>">Sponsors</a></li>
                 <li><a href="https://github.com/hexpm">GitHub</a></li>
                 <li><a href="https://twitter.com/hexpm">Twitter</a></li>
                 <li><a href="https://status.hex.pm">Status</a></li>
@@ -20,7 +20,7 @@
             <div class="col-md-3">
               <h4>Help</h4>
               <ul>
-                <li><a href="<%= Routes.docs_path(Endpoint, :index) %>">Documentation</a></li>
+                <li><a href="<%= ~p"/docs" %>">Documentation</a></li>
                 <li><a href="https://github.com/hexpm/specifications">Specifications</a></li>
                 <li><a href="https://github.com/hexpm/hex/issues">Report Client Issue</a></li>
                 <li><a href="https://github.com/hexpm/hexpm/issues">Report General Issue</a></li>
@@ -32,11 +32,11 @@
             <div class="col-md-3">
               <h4>Policies and Terms</h4>
               <ul>
-                <li><a href="<%= Routes.policy_path(Endpoint, :coc) %>">Code of Conduct</a></li>
-                <li><a href="<%= Routes.policy_path(Endpoint, :tos) %>">Terms of Service</a></li>
-                <li><a href="<%= Routes.policy_path(Endpoint, :privacy) %>">Privacy Policy</a></li>
-                <li><a href="<%= Routes.policy_path(Endpoint, :copyright) %>">Copyright Policy</a></li>
-                <li><a href="<%= Routes.policy_path(Endpoint, :dispute) %>">Dispute Policy</a></li>
+                <li><a href="<%= ~p"/policies/codeofconduct" %>">Code of Conduct</a></li>
+                <li><a href="<%= ~p"/policies/termsofservice" %>">Terms of Service</a></li>
+                <li><a href="<%= ~p"/policies/privacy" %>">Privacy Policy</a></li>
+                <li><a href="<%= ~p"/policies/copyright" %>">Copyright Policy</a></li>
+                <li><a href="<%= ~p"/policies/dispute" %>">Dispute Policy</a></li>
               </ul>
             </div>
 
@@ -49,7 +49,7 @@
       </div>
     </div>
 
-    <script src="<%= Routes.static_path(Endpoint, "/js/app.js") %>"></script>
+    <script src="<%= ~p"/js/app.js" %>"></script>
 
   </body>
 </html>

@@ -57,7 +57,7 @@ defmodule HexpmWeb.PasswordControllerTest do
         })
 
       assert redirected_to(conn) == "/"
-      assert get_flash(conn, :info) =~ "password has been changed"
+      assert Phoenix.Flash.get(conn.assigns.flash, :info) =~ "password has been changed"
       refute get_session(conn, "user_id")
 
       # check new password will work
@@ -84,7 +84,7 @@ defmodule HexpmWeb.PasswordControllerTest do
         })
 
       response(conn, 302)
-      assert get_flash(conn, :error) == "Failed to change your password."
+      assert Phoenix.Flash.get(conn.assigns.flash, :error) == "Failed to change your password."
     end
 
     test "do not allow changing password with changed primary email", c do
@@ -107,7 +107,7 @@ defmodule HexpmWeb.PasswordControllerTest do
         })
 
       response(conn, 302)
-      assert get_flash(conn, :error) == "Failed to change your password."
+      assert Phoenix.Flash.get(conn.assigns.flash, :error) == "Failed to change your password."
     end
   end
 end

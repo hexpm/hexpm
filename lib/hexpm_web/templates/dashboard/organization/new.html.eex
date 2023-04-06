@@ -13,18 +13,18 @@
           With organizations you can manage public packages with fine-grained access control to
           packages for your organization members. With a paid organization you can publish and
           host private packages, for more information see the
-          <a href="<%= Routes.docs_path(Endpoint, :private) %>">private package documentation</a>.
+          <a href="<%= ~p"/docs/private" %>">private package documentation</a>.
         </p>
         <p>
           For private packages the first month is free and you don't need to enter any payment
           information to try it out. After the first month the cost to use private packages with
           organizations is <strong>$7.00 per user / month</strong>. If you wish to continue with
           private packages after the trial period add your billing details on the
-          <a href="<%= Routes.organization_path(Endpoint, :new) %>">organization dashboard</a>.
+          <a href="<%= ~p"/dashboard/orgs" %>">organization dashboard</a>.
         </p>
         <br>
 
-        <%= form_for @changeset, Routes.organization_path(Endpoint, :create), fn f -> %>
+        <%= form_for @changeset, ~p"/dashboard/orgs", fn f -> %>
           <div class="form-group">
             <%= label f, :password_current, "Organization name" %>
             <%= ViewHelpers.text_input f, :name, [placeholder: "Only allows lowercase letters and underscore", required: true, pattern: "[a-z]\\w*", "aria-describedby": "name-helpblock"] %>

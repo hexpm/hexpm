@@ -10,7 +10,7 @@ defmodule HexpmWeb.API.UserController do
 
     case Users.add(params, audit: audit_data(conn)) do
       {:ok, user} ->
-        location = Routes.api_user_url(conn, :show, user.username)
+        location = ~p"/api/users/#{user}"
 
         conn
         |> put_resp_header("location", location)

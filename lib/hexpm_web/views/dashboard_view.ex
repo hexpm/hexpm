@@ -3,12 +3,12 @@ defmodule HexpmWeb.DashboardView do
 
   defp account_settings() do
     [
-      profile: {"Profile", Routes.profile_path(Endpoint, :index)},
-      password: {"Password", Routes.dashboard_password_path(Endpoint, :index)},
-      security: {"Security", Routes.dashboard_security_path(Endpoint, :index)},
-      email: {"Emails", Routes.email_path(Endpoint, :index)},
-      keys: {"Keys", Routes.key_path(Endpoint, :index)},
-      audit_logs: {"Recent activities", Routes.audit_log_path(Endpoint, :index)}
+      profile: {"Profile", ~p"/dashboard/profile"},
+      password: {"Password", ~p"/dashboard/password"},
+      security: {"Security", ~p"/dashboard/security"},
+      email: {"Emails", ~p"/dashboard/email"},
+      keys: {"Keys", ~p"/dashboard/keys"},
+      audit_logs: {"Recent activities", ~p"/dashboard/audit-logs"}
     ]
   end
 

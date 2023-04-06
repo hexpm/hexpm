@@ -11,7 +11,7 @@ defmodule HexpmWeb.EmailVerificationController do
         put_flash(conn, :error, "Your email #{email} failed to verify.")
       end
 
-    redirect(conn, to: Routes.page_path(HexpmWeb.Endpoint, :index))
+    redirect(conn, to: ~p"/")
   end
 
   def show(conn, _params) do
@@ -32,6 +32,6 @@ defmodule HexpmWeb.EmailVerificationController do
 
     conn
     |> put_flash(:info, "A verification email has been sent to #{email_address}.")
-    |> redirect(to: Routes.page_path(HexpmWeb.Endpoint, :index))
+    |> redirect(to: ~p"/")
   end
 end

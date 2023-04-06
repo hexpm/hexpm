@@ -1,11 +1,9 @@
 [
   inputs: [
-    "*.exs",
-    "config/*.exs",
-    "lib/**/*.ex",
-    "priv/**/*.exs",
-    "scripts/*.exs",
-    "test/**/*.{ex,exs}"
+    "*.{heex,ex,exs}",
+    "{config,lib,test}/**/*.{heex,ex,exs}",
+    "priv/*/seeds.exs"
   ],
-  import_deps: [:ecto, :phoenix, :plug]
+  plugins: [Phoenix.LiveView.HTMLFormatter],
+  import_deps: [:ecto, :ecto_sql, :phoenix, :plug]
 ]

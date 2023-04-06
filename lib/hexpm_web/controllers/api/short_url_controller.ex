@@ -7,7 +7,7 @@ defmodule HexpmWeb.API.ShortURLController do
       {:ok, short_url} ->
         conn
         |> put_status(201)
-        |> render(:show, url: Routes.short_url_url(conn, :show, short_url.short_code))
+        |> render(:show, url: url(~p"/l/#{short_url}"))
 
       {:error, changeset} ->
         validation_failed(conn, changeset)
