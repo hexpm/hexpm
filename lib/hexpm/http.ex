@@ -4,26 +4,42 @@ defmodule Hexpm.HTTP do
   @max_retry_times 3
   @base_sleep_time 100
 
-  def get(url, headers) do
-    :hackney.get(url, headers)
+  def get(url, headers, opts \\ []) do
+    Finch.build(:get, url, headers, nil, opts)
+    |> Finch.request(Hexpm.Finch)
     |> read_response()
   end
 
-  def put(url, headers, body) do
-    :hackney.put(url, headers, body)
+  def post(url, headers, body, opts \\ []) do
+    Finch.build(:get, url, headers, body, opts)
+    |> Finch.request(Hexpm.Finch)
     |> read_response()
   end
 
-  def delete(url, headers) do
-    :hackney.delete(url, headers)
+  def put(url, headers, body, opts \\ []) do
+    Finch.build(:put, url, headers, body, opts)
+    |> Finch.request(Hexpm.Finch)
     |> read_response()
   end
 
-  defp read_response(result) do
-    with {:ok, status, headers, ref} <- result,
-         {:ok, body} <- :hackney.body(ref) do
-      {:ok, status, headers, body}
-    end
+  def patch(url, headers, body, opts \\ []) do
+    Finch.build(:patch, url, headers, body, opts)
+    |> Finch.request(Hexpm.Finch)
+    |> read_response()
+  end
+
+  def delete(url, headers, opts \\ []) do
+    Finch.build(:delete, url, headers, nil, opts)
+    |> Finch.request(Hexpm.Finch)
+    |> read_response()
+  end
+
+  defp read_response({:ok, %Finch.Response{status: status, headers: headers, body: body}}) do
+    {:ok, status, headers, body}
+  end
+
+  defp read_response({:error, reason}) do
+    {:error, reason}
   end
 
   def retry(fun, name) do

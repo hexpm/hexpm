@@ -8,6 +8,7 @@ defmodule Hexpm.Application do
 
     children = [
       Hexpm.RepoBase,
+      {Finch, name: Hexpm.Finch},
       {Task.Supervisor, name: Hexpm.Tasks},
       {Cluster.Supervisor, [topologies, [name: Hexpm.ClusterSupervisor]]},
       {Phoenix.PubSub, name: Hexpm.PubSub, adapter: Phoenix.PubSub.PG2},

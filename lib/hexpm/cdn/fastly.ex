@@ -1,4 +1,6 @@
 defmodule Hexpm.CDN.Fastly do
+  alias Hexpm.HTTP
+
   @behaviour Hexpm.CDN
   @fastly_url "https://api.fastly.com/"
 
@@ -32,30 +34,28 @@ defmodule Hexpm.CDN.Fastly do
     url = @fastly_url <> url
 
     headers = [
-      "fastly-key": auth(),
-      accept: "application/json",
-      "content-type": "application/json"
+      {"fastly-key", auth()},
+      {"accept", "application/json"},
+      {"content-type", "application/json"}
     ]
 
     body = Jason.encode!(body)
 
-    fn -> :hackney.post(url, headers, body, []) end
-    |> Hexpm.HTTP.retry("fastly")
+    fn -> HTTP.post(url, headers, body) end
+    |> HTTP.retry("fastly")
     |> read_body()
   end
 
   defp get(url) do
     url = @fastly_url <> url
-    headers = ["fastly-key": auth(), accept: "application/json"]
+    headers = [{"fastly-key", auth()}, {"accept", "application/json"}]
 
-    fn -> :hackney.get(url, headers, []) end
-    |> Hexpm.HTTP.retry("fastly")
+    fn -> HTTP.get(url, headers) end
+    |> HTTP.retry("fastly")
     |> read_body()
   end
 
-  defp read_body({:ok, status, headers, client}) do
-    {:ok, body} = :hackney.body(client)
-
+  defp read_body({:ok, status, headers, body}) do
     body =
       case Jason.decode(body) do
         {:ok, map} -> map
