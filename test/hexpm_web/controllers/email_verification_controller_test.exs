@@ -76,7 +76,9 @@ defmodule HexpmWeb.EmailVerificationControllerTest do
       user = insert(:user, emails: [build(:email, verified: false)])
       email = User.email(user, :primary)
 
-      conn = post(build_conn(), "/email/verification", %{"username" => user.username, "email" => email})
+      conn =
+        post(build_conn(), "/email/verification", %{"username" => user.username, "email" => email})
+
       assert redirected_to(conn) == "/"
       assert Phoenix.Flash.get(conn.assigns.flash, :info) =~ "A verification email has been sent"
 
@@ -89,7 +91,9 @@ defmodule HexpmWeb.EmailVerificationControllerTest do
       user = insert(:user, emails: [build(:email, verified: true)])
       email = User.email(user, :primary)
 
-      conn = post(build_conn(), "/email/verification", %{"username" => user.username, "email" => email})
+      conn =
+        post(build_conn(), "/email/verification", %{"username" => user.username, "email" => email})
+
       assert redirected_to(conn) == "/"
       assert Phoenix.Flash.get(conn.assigns.flash, :info) =~ "A verification email has been sent"
 
@@ -105,7 +109,12 @@ defmodule HexpmWeb.EmailVerificationControllerTest do
     test "dont send verification email for non-existent email" do
       user = insert(:user)
 
-      conn = post(build_conn(), "/email/verification", %{"username" => user.username, "email" => "foo@example.com"})
+      conn =
+        post(build_conn(), "/email/verification", %{
+          "username" => user.username,
+          "email" => "foo@example.com"
+        })
+
       assert redirected_to(conn) == "/"
       assert Phoenix.Flash.get(conn.assigns.flash, :info) =~ "A verification email has been sent"
     end
@@ -115,7 +124,12 @@ defmodule HexpmWeb.EmailVerificationControllerTest do
       user2 = insert(:user, emails: [build(:email, verified: false)])
       email = User.email(user2, :primary)
 
-      conn = post(build_conn(), "/email/verification", %{"username" => user1.username, "email" => email})
+      conn =
+        post(build_conn(), "/email/verification", %{
+          "username" => user1.username,
+          "email" => email
+        })
+
       assert redirected_to(conn) == "/"
       assert Phoenix.Flash.get(conn.assigns.flash, :info) =~ "A verification email has been sent"
 

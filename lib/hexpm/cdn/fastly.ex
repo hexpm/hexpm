@@ -34,9 +34,9 @@ defmodule Hexpm.CDN.Fastly do
     url = @fastly_url <> url
 
     headers = [
-      "fastly-key": auth(),
-      accept: "application/json",
-      "content-type": "application/json"
+      {"fastly-key", auth()},
+      {"accept", "application/json"},
+      {"content-type", "application/json"}
     ]
 
     body = Jason.encode!(body)
@@ -48,7 +48,7 @@ defmodule Hexpm.CDN.Fastly do
 
   defp get(url) do
     url = @fastly_url <> url
-    headers = ["fastly-key": auth(), accept: "application/json"]
+    headers = [{"fastly-key", auth()}, {"accept", "application/json"}]
 
     fn -> HTTP.get(url, headers) end
     |> HTTP.retry("fastly")
