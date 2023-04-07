@@ -1,6 +1,6 @@
 <p>You have been added as a member to the <strong><%= @organization %></strong> organization.</p>
 
-<p>Go check out the <a href="<%= ~p"/dashboard/orgs/#{@organization}" %>">organization</a>, if you do not want to join the organization you can leave it from the dashboard. You need to be logged in as <strong><%= @username %></strong> to access it.</p>
+<p>Go check out the <a href="<%= url(~p"/dashboard/orgs/#{@organization}") %>">organization</a>, if you do not want to join the organization you can leave it from the dashboard. You need to be logged in as <strong><%= @username %></strong> to access it.</p>
 
 <p>
     <%= OrganizationInvite.access_organization() %>
@@ -12,5 +12,5 @@
     For rebar3:
     <pre><%= OrganizationInvite.rebar_code() %></pre>
 
-    To learn more about private packages and organizations go to the <a href="<%= ~p"/docs/private" %>">documentation</a>.
+    To learn more about private packages and organizations go to the <a href="<%= url(~p"/docs/private") %>">documentation</a>.
 </p>
