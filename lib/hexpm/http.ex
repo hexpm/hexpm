@@ -11,7 +11,7 @@ defmodule Hexpm.HTTP do
   end
 
   def post(url, headers, body, opts \\ []) do
-    Finch.build(:get, url, headers, body, opts)
+    Finch.build(:post, url, headers, body, opts)
     |> Finch.request(Hexpm.Finch)
     |> read_response()
   end

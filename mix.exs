@@ -34,6 +34,7 @@ defmodule Hexpm.MixProject do
       {:bamboo_phoenix, "~> 1.0"},
       {:bamboo, "~> 2.2"},
       {:bcrypt_elixir, "~> 3.0"},
+      {:bypass, "~> 2.1", only: :test},
       {:corsica, "~> 1.0"},
       {:earmark, "~> 1.4"},
       {:ecto_psql_extras, "~> 0.6"},
