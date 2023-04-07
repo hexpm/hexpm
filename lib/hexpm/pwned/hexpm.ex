@@ -1,4 +1,7 @@
 defmodule Hexpm.Pwned.HaveIBeenPwned do
+  alias Hexpm.HTTP
+  require Logger
+
   @behaviour Hexpm.Pwned
 
   @base_url "https://api.pwnedpasswords.com/"
@@ -21,17 +24,15 @@ defmodule Hexpm.Pwned.HaveIBeenPwned do
 
   defp range(searchable_range) do
     url = @base_url <> "range/#{searchable_range}"
-    headers = [{"User-Agent", "hexpm"}]
+    headers = [{"user-agent", "hexpm"}]
+    opts = [pool_timeout: @timeout, receive_timeout: @timeout]
 
-    case :hackney.get(url, headers, "",
-           connect_timeout: @timeout,
-           recv_timeout: @timeout,
-           with_body: true
-         ) do
+    case HTTP.retry(fn -> HTTP.get(url, headers, opts) end, "pwned") do
       {:ok, 200, _headers, body} ->
         String.split(body, "\r\n")
 
-      {:error, _} ->
+      {:error, reason} ->
+        Logger.error("pwned request failed: #{inspect(reason)}")
         []
     end
   end

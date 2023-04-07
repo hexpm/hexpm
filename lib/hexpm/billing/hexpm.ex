@@ -1,6 +1,7 @@
 defmodule Hexpm.Billing.Hexpm do
-  @behaviour Hexpm.Billing.Behaviour
+  alias Hexpm.HTTP
 
+  @behaviour Hexpm.Billing.Behaviour
   @timeout 15_000
 
   def checkout(organization, data) do
@@ -87,7 +88,7 @@ defmodule Hexpm.Billing.Hexpm do
       {"content-type", "application/json"}
     ]
 
-    :hackney.post(url, headers, body, recv_timeout: @timeout)
+    HTTP.post(url, headers, body, receive_timeout: @timeout)
     |> read_request()
   end
 
@@ -101,7 +102,7 @@ defmodule Hexpm.Billing.Hexpm do
       {"content-type", "application/json"}
     ]
 
-    :hackney.patch(url, headers, body, recv_timeout: @timeout)
+    HTTP.patch(url, headers, body, receive_timeout: @timeout)
     |> read_request()
   end
 
@@ -113,7 +114,7 @@ defmodule Hexpm.Billing.Hexpm do
       {"accept", "application/json"}
     ]
 
-    :hackney.get(url, headers, "", recv_timeout: @timeout)
+    HTTP.get(url, headers, receive_timeout: @timeout)
     |> read_request()
   end
 
@@ -125,14 +126,12 @@ defmodule Hexpm.Billing.Hexpm do
       {"accept", "text/html"}
     ]
 
-    :hackney.get(url, headers, "", recv_timeout: @timeout)
+    HTTP.get(url, headers, receive_timeout: @timeout)
     |> read_request()
   end
 
   defp read_request(result) do
-    with {:ok, status, headers, ref} <- result,
-         headers = normalize_headers(headers),
-         {:ok, body} <- :hackney.body(ref),
+    with {:ok, status, headers, body} <- result,
          {:ok, body} <- decode_body(body, headers) do
       {:ok, status, headers, body}
     end
@@ -150,11 +149,5 @@ defmodule Hexpm.Billing.Hexpm do
           {:ok, body}
         end
     end
-  end
-
-  defp normalize_headers(headers) do
-    Enum.map(headers, fn {key, value} ->
-      {String.downcase(key), value}
-    end)
   end
 end
