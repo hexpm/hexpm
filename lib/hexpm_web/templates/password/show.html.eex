@@ -1,7 +1,7 @@
 <%= ViewHelpers.changeset_error(@changeset) %>
 <h2>Choose a new password</h2>
 
-<%= form_for @changeset, ~p"/dashboard/password", [method: :post], fn f -> %>
+<%= form_for @changeset, ~p"/password/new", [method: :post], fn f -> %>
 
   <div class="form-group">
     <%= label f, :password %>
