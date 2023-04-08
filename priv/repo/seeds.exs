@@ -1,6 +1,6 @@
 import Hexpm.Factory
-alias Hexpm.Accounts.{Organization, User, Users}
-alias Hexpm.Repository.{PackageDependant, PackageDownload, ReleaseDownload, Repository}
+alias Hexpm.Accounts.Users
+alias Hexpm.Repository.{PackageDependant, PackageDownload, ReleaseDownload}
 
 Hexpm.Fake.start()
 Hexpm.setup()
