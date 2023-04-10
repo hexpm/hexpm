@@ -25,6 +25,10 @@ if config_env() == :prod do
 
   config :hexpm, Hexpm.Emails.Mailer, api_key: System.fetch_env!("HEXPM_SENDGRID_API_KEY")
 
+  config :hexpm, :hcaptcha,
+    sitekey: System.fetch_env!("HEXPM_HCAPTCHA_SITEKEY"),
+    secret: System.fetch_env!("HEXPM_HCAPTCHA_SECRET")
+
   config :ex_aws,
     access_key_id: System.fetch_env!("HEXPM_AWS_ACCESS_KEY_ID"),
     secret_access_key: System.fetch_env!("HEXPM_AWS_ACCESS_KEY_SECRET")
