@@ -25,7 +25,8 @@ defmodule HexpmWeb.ConnCase do
       import Ecto.Query, only: [from: 2]
       import Plug.Conn
       import Phoenix.ConnTest
-      import Hexpm.{Case, Factory, TestHelpers}
+      import Mox
+      import Hexpm.{Factory, TestHelpers}
       import unquote(__MODULE__)
 
       # The default endpoint for testing
@@ -56,5 +57,27 @@ defmodule HexpmWeb.ConnCase do
     conn
     |> Plug.Conn.put_req_header("content-type", "application/json")
     |> Phoenix.ConnTest.dispatch(HexpmWeb.Endpoint, :post, path, Jason.encode!(params))
+  end
+
+  def mock_captcha_success(_context \\ %{}) do
+    mock_captcha(true)
+    :ok
+  end
+
+  def mock_captcha_failure(_context \\ %{}) do
+    mock_captcha(false)
+    :ok
+  end
+
+  def mock_captcha(success) do
+    Mox.expect(
+      Hexpm.HTTP.Mock,
+      :post,
+      fn "https://hcaptcha.com/siteverify", headers, params ->
+        assert headers == [{"content-type", "application/x-www-form-urlencoded"}]
+        assert params == %{response: "captcha", secret: "secret"}
+        {:ok, 200, [{"content-type", "application/json"}], %{"success" => success}}
+      end
+    )
   end
 end

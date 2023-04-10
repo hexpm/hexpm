@@ -16,7 +16,7 @@ defmodule Hexpm.Billing.ReportTest do
     organization3 = insert(:organization, billing_active: false)
     organization4 = insert(:organization, billing_active: false)
 
-    Mox.stub(Billing.Mock, :report, fn ->
+    stub(Billing.Mock, :report, fn ->
       [organization1.name, organization3.name]
     end)
 
@@ -36,7 +36,7 @@ defmodule Hexpm.Billing.ReportTest do
     organization3 = insert(:organization, billing_active: false)
     organization4 = insert(:organization, billing_active: false)
 
-    Mox.stub(Billing.Mock, :report, fn -> [] end)
+    stub(Billing.Mock, :report, fn -> [] end)
 
     {:ok, pid} = Billing.Report.start_link(interval: 60_000)
     send(pid, :update)

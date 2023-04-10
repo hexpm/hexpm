@@ -6,5 +6,13 @@
     <input id="username" type="text" class="form-control" name="username">
   </div>
 
+  <%= if HexpmWeb.Captcha.enabled?() do %>
+    <div class="h-captcha" data-sitekey="<%= HexpmWeb.Captcha.sitekey() %>"></div>
+    <%= if assigns[:captcha_error] do %>
+      <span class="form-error"><%= @captcha_error %></span>
+    <% end %>
+    <script src="https://hcaptcha.com/1/api.js" async defer></script>
+  <% end %>
+
   <button type="submit" class="btn btn-primary">Submit</button>
 <% end %>

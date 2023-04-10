@@ -10,7 +10,8 @@ config :hexpm,
   diff_url: "http://localhost:5004",
   preview_url: "http://localhost:5005",
   billing_impl: Hexpm.Billing.Mock,
-  pwned_impl: Hexpm.Pwned.Mock
+  pwned_impl: Hexpm.Pwned.Mock,
+  http_impl: Hexpm.HTTP.Mock
 
 config :hexpm, HexpmWeb.Endpoint,
   http: [port: 5000],
@@ -28,3 +29,7 @@ config :hexpm, Hexpm.RepoBase,
   ownership_timeout: 61_000
 
 config :logger, level: :error
+
+config :hexpm, :hcaptcha,
+  sitekey: "sitekey",
+  secret: "secret"

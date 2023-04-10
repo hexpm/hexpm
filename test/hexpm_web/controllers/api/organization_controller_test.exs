@@ -2,7 +2,7 @@ defmodule HexpmWeb.API.OrganizationControllerTest do
   use HexpmWeb.ConnCase, async: true
 
   defp mock_customer(context) do
-    Mox.stub(Hexpm.Billing.Mock, :get, fn token ->
+    stub(Hexpm.Billing.Mock, :get, fn token ->
       assert context.organization.name == token
       %{"quantity" => 1}
     end)
@@ -86,6 +86,7 @@ defmodule HexpmWeb.API.OrganizationControllerTest do
 
   describe "POST /api/orgs/:name" do
     setup :mock_customer
+    setup :verify_on_exit!
 
     test "update organization authorizes", %{user1: user1, organization: organization} do
       build_conn()
@@ -101,7 +102,7 @@ defmodule HexpmWeb.API.OrganizationControllerTest do
     test "update organization seats", %{user1: user1, organization: organization} do
       insert(:organization_user, organization: organization, user: user1, role: "write")
 
-      Mox.expect(Hexpm.Billing.Mock, :update, fn token, params ->
+      expect(Hexpm.Billing.Mock, :update, fn token, params ->
         assert organization.name == token
         assert params == %{"quantity" => 5}
         {:ok, %{}}

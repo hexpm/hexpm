@@ -3,7 +3,7 @@ defmodule HexpmWeb.API.OrganizationUserControllerTest do
   alias Hexpm.Accounts.Organizations
 
   defp mock_customer(context) do
-    Mox.stub(Hexpm.Billing.Mock, :get, fn token ->
+    stub(Hexpm.Billing.Mock, :get, fn token ->
       assert context.organization.name == token
       %{"quantity" => 2}
     end)

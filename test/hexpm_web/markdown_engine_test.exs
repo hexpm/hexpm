@@ -1,5 +1,5 @@
 defmodule HexpmWeb.MarkdownEngineTest do
-  use ExUnit.Case
+  use ExUnit.Case, async: true
 
   @markdown """
   ## FAQ
