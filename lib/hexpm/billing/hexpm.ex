@@ -88,8 +88,7 @@ defmodule Hexpm.Billing.Hexpm do
       {"content-type", "application/json"}
     ]
 
-    HTTP.post(url, headers, body, receive_timeout: @timeout)
-    |> read_request()
+    HTTP.impl().post(url, headers, body, receive_timeout: @timeout)
   end
 
   defp patch(url, body) do
@@ -102,8 +101,7 @@ defmodule Hexpm.Billing.Hexpm do
       {"content-type", "application/json"}
     ]
 
-    HTTP.patch(url, headers, body, receive_timeout: @timeout)
-    |> read_request()
+    HTTP.impl().patch(url, headers, body, receive_timeout: @timeout)
   end
 
   defp get_json(url) do
@@ -114,8 +112,7 @@ defmodule Hexpm.Billing.Hexpm do
       {"accept", "application/json"}
     ]
 
-    HTTP.get(url, headers, receive_timeout: @timeout)
-    |> read_request()
+    HTTP.impl().get(url, headers, receive_timeout: @timeout)
   end
 
   defp get_html(url) do
@@ -126,28 +123,6 @@ defmodule Hexpm.Billing.Hexpm do
       {"accept", "text/html"}
     ]
 
-    HTTP.get(url, headers, receive_timeout: @timeout)
-    |> read_request()
-  end
-
-  defp read_request(result) do
-    with {:ok, status, headers, body} <- result,
-         {:ok, body} <- decode_body(body, headers) do
-      {:ok, status, headers, body}
-    end
-  end
-
-  defp decode_body(body, headers) do
-    case List.keyfind(headers, "content-type", 0) do
-      nil ->
-        {:ok, nil}
-
-      {_, content_type} ->
-        if String.contains?(content_type, "application/json") do
-          Jason.decode(body)
-        else
-          {:ok, body}
-        end
-    end
+    HTTP.impl().get(url, headers, receive_timeout: @timeout)
   end
 end
