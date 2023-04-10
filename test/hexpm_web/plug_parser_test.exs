@@ -1,5 +1,5 @@
 defmodule HexpmWeb.PlugParserTest do
-  use HexpmWeb.ConnCase
+  use HexpmWeb.ConnCase, async: true
 
   describe "erlang media request" do
     test "POST /api/users" do

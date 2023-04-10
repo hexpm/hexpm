@@ -72,12 +72,18 @@ defmodule HexpmWeb.EmailVerificationControllerTest do
   end
 
   describe "POST /email/verification" do
+    setup :mock_captcha_success
+
     test "send verification email" do
       user = insert(:user, emails: [build(:email, verified: false)])
       email = User.email(user, :primary)
 
       conn =
-        post(build_conn(), "/email/verification", %{"username" => user.username, "email" => email})
+        post(build_conn(), "/email/verification", %{
+          "username" => user.username,
+          "email" => email,
+          "h-captcha-response" => "captcha"
+        })
 
       assert redirected_to(conn) == "/"
       assert Phoenix.Flash.get(conn.assigns.flash, :info) =~ "A verification email has been sent"
@@ -92,7 +98,11 @@ defmodule HexpmWeb.EmailVerificationControllerTest do
       email = User.email(user, :primary)
 
       conn =
-        post(build_conn(), "/email/verification", %{"username" => user.username, "email" => email})
+        post(build_conn(), "/email/verification", %{
+          "username" => user.username,
+          "email" => email,
+          "h-captcha-response" => "captcha"
+        })
 
       assert redirected_to(conn) == "/"
       assert Phoenix.Flash.get(conn.assigns.flash, :info) =~ "A verification email has been sent"
@@ -112,7 +122,8 @@ defmodule HexpmWeb.EmailVerificationControllerTest do
       conn =
         post(build_conn(), "/email/verification", %{
           "username" => user.username,
-          "email" => "foo@example.com"
+          "email" => "foo@example.com",
+          "h-captcha-response" => "captcha"
         })
 
       assert redirected_to(conn) == "/"
@@ -127,7 +138,8 @@ defmodule HexpmWeb.EmailVerificationControllerTest do
       conn =
         post(build_conn(), "/email/verification", %{
           "username" => user1.username,
-          "email" => email
+          "email" => email,
+          "h-captcha-response" => "captcha"
         })
 
       assert redirected_to(conn) == "/"
@@ -148,5 +160,21 @@ defmodule HexpmWeb.EmailVerificationControllerTest do
 
       refute hd(user2.emails).verification_key
     end
+  end
+
+  test "POST /email/verification captha failed" do
+    mock_captcha_failure()
+
+    user = insert(:user, emails: [build(:email, verified: false)])
+    email = User.email(user, :primary)
+
+    conn =
+      post(build_conn(), "/email/verification", %{
+        "username" => user.username,
+        "email" => email,
+        "h-captcha-response" => "captcha"
+      })
+
+    assert response(conn, 400) =~ "Please complete the captcha to send verification email"
   end
 end

@@ -3,18 +3,20 @@ defmodule Hexpm.CDN.Fastly do
 
   @behaviour Hexpm.CDN
   @fastly_url "https://api.fastly.com/"
+  @fastly_purge_wait 4000
 
   def purge_key(service, keys) do
     keys = keys |> List.wrap() |> Enum.uniq()
     body = %{"surrogate_keys" => keys}
     service_id = Application.get_env(:hexpm, service)
+    sleep_time = div(Application.get_env(:hexpm, :fastly_purge_wait, @fastly_purge_wait), 2)
 
     {:ok, 200, _, _} = post("service/#{service_id}/purge", body)
 
     Task.Supervisor.start_child(Hexpm.Tasks, fn ->
-      Process.sleep(2000)
+      Process.sleep(sleep_time)
       {:ok, 200, _, _} = post("service/#{service_id}/purge", body)
-      Process.sleep(2000)
+      Process.sleep(sleep_time)
       {:ok, 200, _, _} = post("service/#{service_id}/purge", body)
     end)
 
@@ -39,29 +41,15 @@ defmodule Hexpm.CDN.Fastly do
       {"content-type", "application/json"}
     ]
 
-    body = Jason.encode!(body)
-
-    fn -> HTTP.post(url, headers, body) end
+    fn -> HTTP.impl().post(url, headers, body) end
     |> HTTP.retry("fastly")
-    |> read_body()
   end
 
   defp get(url) do
     url = @fastly_url <> url
     headers = [{"fastly-key", auth()}, {"accept", "application/json"}]
 
-    fn -> HTTP.get(url, headers) end
+    fn -> HTTP.impl().get(url, headers) end
     |> HTTP.retry("fastly")
-    |> read_body()
-  end
-
-  defp read_body({:ok, status, headers, body}) do
-    body =
-      case Jason.decode(body) do
-        {:ok, map} -> map
-        {:error, _} -> body
-      end
-
-    {:ok, status, headers, body}
   end
 end

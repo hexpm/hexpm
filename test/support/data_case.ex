@@ -18,7 +18,8 @@ defmodule Hexpm.DataCase do
     quote do
       import Ecto
       import Ecto.Query, only: [from: 2]
-      import Hexpm.{Case, DataCase, Factory, TestHelpers}
+      import Mox
+      import Hexpm.{DataCase, Factory, TestHelpers}
 
       alias Hexpm.{Fake, Repo}
     end

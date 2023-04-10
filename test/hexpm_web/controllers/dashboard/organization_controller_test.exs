@@ -10,7 +10,7 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
   end
 
   defp mock_customer(organization) do
-    Mox.stub(Hexpm.Billing.Mock, :get, fn token ->
+    stub(Hexpm.Billing.Mock, :get, fn token ->
       assert organization.name == token
 
       %{
@@ -69,7 +69,7 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
   end
 
   test "add member to organization", %{user: user, organization: organization} do
-    Mox.stub(Hexpm.Billing.Mock, :get, fn token ->
+    stub(Hexpm.Billing.Mock, :get, fn token ->
       assert organization.name == token
 
       %{
@@ -103,7 +103,7 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
     user: user,
     organization: organization
   } do
-    Mox.stub(Hexpm.Billing.Mock, :get, fn token ->
+    stub(Hexpm.Billing.Mock, :get, fn token ->
       assert organization.name == token
 
       %{
@@ -199,7 +199,7 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
     } do
       insert(:organization_user, organization: organization, user: user, role: "admin")
 
-      Mox.expect(Hexpm.Billing.Mock, :checkout, fn organization_name, params ->
+      expect(Hexpm.Billing.Mock, :checkout, fn organization_name, params ->
         assert organization_name == organization.name
         assert params == %{payment_source: "Test Token"}
         {:ok, :whatever}
@@ -219,7 +219,7 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
     } do
       insert(:organization_user, organization: organization, user: user, role: "admin")
 
-      Mox.expect(Hexpm.Billing.Mock, :checkout, fn _, _ -> {:ok, :whatever} end)
+      expect(Hexpm.Billing.Mock, :checkout, fn _, _ -> {:ok, :whatever} end)
 
       build_conn()
       |> test_login(user)
@@ -264,7 +264,7 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
 
   describe "cancel billing" do
     test "with subscription", %{user: user, organization: organization} do
-      Mox.stub(Hexpm.Billing.Mock, :cancel, fn token ->
+      stub(Hexpm.Billing.Mock, :cancel, fn token ->
         assert organization.name == token
 
         %{
@@ -292,7 +292,7 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
 
     # This can happen when the subscription is cancelled before the trial is over
     test "without subscription", %{user: user, organization: organization} do
-      Mox.stub(Hexpm.Billing.Mock, :cancel, fn token ->
+      stub(Hexpm.Billing.Mock, :cancel, fn token ->
         assert organization.name == token
         %{}
       end)
@@ -309,7 +309,7 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
     end
 
     test "create audit_log with action billing.cancel", %{user: user, organization: organization} do
-      Mox.stub(Hexpm.Billing.Mock, :cancel, fn token ->
+      stub(Hexpm.Billing.Mock, :cancel, fn token ->
         assert organization.name == token
 
         %{
@@ -333,12 +333,12 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
   end
 
   test "show invoice", %{user: user, organization: organization} do
-    Mox.stub(Hexpm.Billing.Mock, :get, fn token ->
+    stub(Hexpm.Billing.Mock, :get, fn token ->
       assert organization.name == token
       %{"invoices" => [%{"id" => 123}]}
     end)
 
-    Mox.stub(Hexpm.Billing.Mock, :invoice, fn id ->
+    stub(Hexpm.Billing.Mock, :invoice, fn id ->
       assert id == 123
       "Invoice"
     end)
@@ -355,7 +355,7 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
 
   describe "pay invoice" do
     test "pay invoice succeed", %{user: user, organization: organization} do
-      Mox.stub(Hexpm.Billing.Mock, :get, fn token ->
+      stub(Hexpm.Billing.Mock, :get, fn token ->
         assert organization.name == token
 
         invoice = %{
@@ -368,7 +368,7 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
         %{"invoices" => [invoice]}
       end)
 
-      Mox.stub(Hexpm.Billing.Mock, :pay_invoice, fn id ->
+      stub(Hexpm.Billing.Mock, :pay_invoice, fn id ->
         assert id == 123
         :ok
       end)
@@ -385,7 +385,7 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
     end
 
     test "pay invoice failed", %{user: user, organization: organization} do
-      Mox.stub(Hexpm.Billing.Mock, :get, fn token ->
+      stub(Hexpm.Billing.Mock, :get, fn token ->
         assert organization.name == token
 
         invoice = %{
@@ -398,7 +398,7 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
         %{"invoices" => [invoice], "checkout_html" => ""}
       end)
 
-      Mox.stub(Hexpm.Billing.Mock, :pay_invoice, fn id ->
+      stub(Hexpm.Billing.Mock, :pay_invoice, fn id ->
         assert id == 123
         {:error, %{"errors" => "Card failure"}}
       end)
@@ -420,8 +420,8 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
       user: user,
       organization: organization
     } do
-      Mox.stub(Hexpm.Billing.Mock, :get, fn _token -> %{"invoices" => [%{"id" => 123}]} end)
-      Mox.stub(Hexpm.Billing.Mock, :pay_invoice, fn _id -> :ok end)
+      stub(Hexpm.Billing.Mock, :get, fn _token -> %{"invoices" => [%{"id" => 123}]} end)
+      stub(Hexpm.Billing.Mock, :pay_invoice, fn _id -> :ok end)
 
       insert(:organization_user, organization: organization, user: user, role: "admin")
 
@@ -440,7 +440,7 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
     test "update billing email", %{user: user, organization: organization} do
       mock_customer(organization)
 
-      Mox.stub(Hexpm.Billing.Mock, :update, fn token, params ->
+      stub(Hexpm.Billing.Mock, :update, fn token, params ->
         assert organization.name == token
         assert %{"email" => "billing@example.com"} = params
         {:ok, %{}}
@@ -461,7 +461,7 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
 
     test "create audit_log with action billing.update", %{user: user, organization: organization} do
       mock_customer(organization)
-      Mox.stub(Hexpm.Billing.Mock, :update, fn _, _ -> {:ok, %{}} end)
+      stub(Hexpm.Billing.Mock, :update, fn _, _ -> {:ok, %{}} end)
 
       insert(:organization_user, organization: organization, user: user, role: "admin")
 
@@ -479,7 +479,7 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
   end
 
   test "create organization", %{user: user} do
-    Mox.stub(Hexpm.Billing.Mock, :create, fn params ->
+    stub(Hexpm.Billing.Mock, :create, fn params ->
       assert params == %{
                "person" => %{"country" => "SE"},
                "token" => "createrepo",
@@ -532,7 +532,7 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
 
   describe "POST /dashboard/orgs/:dashboard_org/create-billing" do
     test "create billing customer after organization", %{user: user, organization: organization} do
-      Mox.stub(Hexpm.Billing.Mock, :create, fn params ->
+      stub(Hexpm.Billing.Mock, :create, fn params ->
         assert params == %{
                  "person" => %{"country" => "SE"},
                  "token" => organization.name,
@@ -563,7 +563,7 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
     end
 
     test "create audit_log with action billing.create", %{user: user, organization: organization} do
-      Mox.stub(Hexpm.Billing.Mock, :create, fn _ -> {:ok, %{}} end)
+      stub(Hexpm.Billing.Mock, :create, fn _ -> {:ok, %{}} end)
 
       insert(:organization_user, organization: organization, user: user, role: "admin")
 
@@ -580,7 +580,7 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
 
   describe "POST /dashboard/orgs/:dashboard_org/add-seats" do
     test "increase number of seats", %{organization: organization, user: user} do
-      Mox.stub(Hexpm.Billing.Mock, :update, fn organization_name, map ->
+      stub(Hexpm.Billing.Mock, :update, fn organization_name, map ->
         assert organization_name == organization.name
         assert map == %{"quantity" => 3}
         {:ok, %{}}
@@ -624,7 +624,7 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
     end
 
     test "create audit_log with action billing.update", %{organization: organization, user: user} do
-      Mox.stub(Hexpm.Billing.Mock, :update, fn _organization_name, _map -> {:ok, %{}} end)
+      stub(Hexpm.Billing.Mock, :update, fn _organization_name, _map -> {:ok, %{}} end)
 
       insert(:organization_user, organization: organization, user: user, role: "admin")
 
@@ -644,7 +644,7 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
 
   describe "POST /dashboard/orgs/:dashboard_org/remove-seats" do
     test "increase number of seats", %{organization: organization, user: user} do
-      Mox.stub(Hexpm.Billing.Mock, :update, fn organization_name, map ->
+      stub(Hexpm.Billing.Mock, :update, fn organization_name, map ->
         assert organization_name == organization.name
         assert map == %{"quantity" => 3}
         {:ok, %{}}
@@ -685,7 +685,7 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
     end
 
     test "create audit_log with action billing.update", %{organization: organization, user: user} do
-      Mox.stub(Hexpm.Billing.Mock, :update, fn _organization_name, _map -> {:ok, %{}} end)
+      stub(Hexpm.Billing.Mock, :update, fn _organization_name, _map -> {:ok, %{}} end)
 
       insert(:organization_user, organization: organization, user: user, role: "admin")
 
@@ -704,7 +704,7 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
 
   describe "POST /dashboard/orgs/:dashboard_org/change-plan" do
     test "change plan", %{organization: organization, user: user} do
-      Mox.stub(Hexpm.Billing.Mock, :change_plan, fn organization_name, map ->
+      stub(Hexpm.Billing.Mock, :change_plan, fn organization_name, map ->
         assert organization_name == organization.name
         assert map == %{"plan_id" => "organization-annually"}
         {:ok, %{}}
@@ -729,7 +729,7 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
       organization: organization,
       user: user
     } do
-      Mox.stub(Hexpm.Billing.Mock, :change_plan, fn _organization_name, _map -> {:ok, %{}} end)
+      stub(Hexpm.Billing.Mock, :change_plan, fn _organization_name, _map -> {:ok, %{}} end)
 
       insert(:organization_user, organization: organization, user: user, role: "admin")
 

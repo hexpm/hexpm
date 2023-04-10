@@ -57,6 +57,44 @@ defmodule Hexpm.HTTPTest do
     assert {:ok, 200, _headers, "respbody"} = HTTP.delete(bypass_url(bypass, "/delete"), [])
   end
 
+  test "post/3 encode json", %{bypass: bypass} do
+    Bypass.expect_once(bypass, "POST", "/post", fn conn ->
+      {:ok, reqbody, conn} = Conn.read_body(conn)
+      assert Jason.decode(reqbody) == {:ok, %{"key" => "value"}}
+      Conn.resp(conn, 200, "respbody")
+    end)
+
+    headers = [{"content-type", "application/json"}]
+    params = %{"key" => "value"}
+
+    assert {:ok, 200, _headers, "respbody"} =
+             HTTP.post(bypass_url(bypass, "/post"), headers, params)
+  end
+
+  test "post/3 encode urlencoded", %{bypass: bypass} do
+    Bypass.expect_once(bypass, "POST", "/post", fn conn ->
+      {:ok, reqbody, conn} = Conn.read_body(conn)
+      assert URI.decode_query(reqbody) == %{"key" => "value"}
+      Conn.resp(conn, 200, "respbody")
+    end)
+
+    headers = [{"content-type", "application/x-www-form-urlencoded"}]
+    params = %{"key" => "value"}
+
+    assert {:ok, 200, _headers, "respbody"} =
+             HTTP.post(bypass_url(bypass, "/post"), headers, params)
+  end
+
+  test "get/2 decode json", %{bypass: bypass} do
+    Bypass.expect_once(bypass, "GET", "/get", fn conn ->
+      conn
+      |> Conn.put_resp_header("content-type", "application/json")
+      |> Conn.resp(200, Jason.encode!(%{"key" => "value"}))
+    end)
+
+    assert {:ok, 200, _headers, %{"key" => "value"}} = HTTP.get(bypass_url(bypass, "/get"), [])
+  end
+
   defp bypass_url(bypass, path) do
     "http://localhost:#{bypass.port}#{path}"
   end
