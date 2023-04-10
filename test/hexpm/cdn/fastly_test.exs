@@ -36,7 +36,11 @@ defmodule Hexpm.CDN.FastlyTest do
         {:ok, 200, [], %{"addresses" => ["1.2.3.4", "1.2.3.4/32", "1.2.3.4/16"]}}
       end)
 
-      assert Fastly.public_ips() == [{<<1, 2, 3, 4>>, 32}, {<<1, 2, 3, 4>>, 32}, {<<1, 2, 3, 4>>, 16}]
+      assert Fastly.public_ips() == [
+               {<<1, 2, 3, 4>>, 32},
+               {<<1, 2, 3, 4>>, 32},
+               {<<1, 2, 3, 4>>, 16}
+             ]
     end
   end
 end
