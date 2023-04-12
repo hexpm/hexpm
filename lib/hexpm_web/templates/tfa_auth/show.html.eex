@@ -1,5 +1,5 @@
   <h2>Two-factor authentication</h2>
-  <%= form_tag(~p"/dashboard/tfa/setup") do %>
+  <%= form_tag(~p"/tfa") do %>
     <div class="form-group">
       <label for="code">Authentication Code</label>
       <input id="code" name="code" type="text" pattern="\d{6}" title="Must be 6 digits" class="form-control otp-code"  value="" maxlength="6" inputmode="numeric" autocomplete="off"/>
