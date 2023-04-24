@@ -74,7 +74,7 @@ defmodule Hexpm.Accounts.UsersTest do
 
       email = Users.get_maybe_unverified_email("public@example.com")
       assert email.user_id == organization.user.id
-      assert email.public == true
+      assert email.public
 
       current_user_id = current_user.id
       organization_id = organization.id
@@ -111,8 +111,7 @@ defmodule Hexpm.Accounts.UsersTest do
 
       email = Users.get_email("public@example.com")
       assert email.user_id == organization.user.id
-      assert email.public == true
-
+      assert email.public
       current_user_id = current_user.id
       organization_id = organization.id
 
@@ -139,8 +138,7 @@ defmodule Hexpm.Accounts.UsersTest do
 
       email = Users.get_maybe_unverified_email("gravatar@example.com")
       assert email.user_id == organization.user.id
-      assert email.gravatar == true
-
+      assert email.gravatar
       current_user_id = current_user.id
       organization_id = organization.id
 
@@ -176,8 +174,7 @@ defmodule Hexpm.Accounts.UsersTest do
 
       email = Users.get_email("gravatar@example.com")
       assert email.user_id == organization.user.id
-      assert email.gravatar == true
-
+      assert email.gravatar
       current_user_id = current_user.id
       organization_id = organization.id
 

@@ -66,8 +66,7 @@ defmodule HexpmWeb.API.PackageControllerTest do
       conn = get(build_conn(), "/api/packages?search=#{package1.name}")
       [package] = json_response(conn, 200)
       [release] = package["releases"]
-      assert release["has_docs"] == true
-
+      assert release["has_docs"]
       conn = get(build_conn(), "/api/packages?search=name%3A#{package1.name}*")
       assert [_] = json_response(conn, 200)
 
