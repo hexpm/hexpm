@@ -317,7 +317,13 @@ defmodule HexpmWeb.ControllerHelpers do
 
   def audit_data(conn) do
     user_or_organization = conn.assigns.current_user || conn.assigns.current_organization
-    {user_or_organization, conn.assigns.user_agent, ip_to_string(conn.remote_ip)}
+
+    %{
+      user: user_or_organization,
+      key: Map.get(conn.assigns, :key),
+      user_agent: conn.assigns.user_agent,
+      remote_ip: ip_to_string(conn.remote_ip)
+    }
   end
 
   defp ip_to_string(nil), do: nil
