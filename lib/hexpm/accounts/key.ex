@@ -193,30 +193,43 @@ defmodule Hexpm.Accounts.Key do
     "#{name}-#{max + 1}"
   end
 
-  def verify_permissions?(key, "api", resource) do
+  def verify_permissions?(%Key{} = key, "api", resource)
+      when is_binary(resource) or is_nil(resource) do
     Enum.any?(key.permissions, fn permission ->
-      permission.domain == "api" and match_api_resource?(permission.resource, resource)
+      # permission "package" implies "api:read"
+      (permission.domain == "api" and match_api_resource?(permission.resource, resource)) or
+        (permission.domain == "package" and match_api_resource?("read", resource))
     end)
   end
 
-  def verify_permissions?(key, "repositories", _resource) do
+  def verify_permissions?(%Key{} = key, "package", %Package{} = resource) do
+    Enum.any?(key.permissions, fn permission ->
+      [organization, package] = String.split(permission.resource, "/")
+
+      permission.domain == "package" and
+        organization == resource.repository.name and
+        resource.name == package
+    end)
+  end
+
+  def verify_permissions?(%Key{} = key, "repositories", nil) do
     Enum.any?(key.permissions, &(&1.domain == "repositories"))
   end
 
-  def verify_permissions?(key, "repository", resource) do
+  def verify_permissions?(%Key{} = key, "repository", resource) when is_binary(resource) do
     Enum.any?(key.permissions, fn permission ->
       (permission.domain == "repository" and permission.resource == resource) or
         permission.domain == "repositories"
     end)
   end
 
-  def verify_permissions?(key, "docs", resource) do
+  def verify_permissions?(%Key{} = key, "docs", resource) when is_binary(resource) do
     Enum.any?(key.permissions, fn permission ->
       permission.domain == "docs" and permission.resource == resource
     end)
   end
 
-  def verify_permissions?(_key, nil, _resource) do
+  def verify_permissions?(%Key{} = _key, _domain, _resource) do
     false
   end
 

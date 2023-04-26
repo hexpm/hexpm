@@ -83,11 +83,11 @@ defmodule Hexpm.TestHelpers do
     end)
   end
 
-  def key_for(user_or_organization) do
+  def key_for(user_or_organization, permissions \\ [%{domain: "api"}]) do
     {:ok, %{key: key}} =
       Hexpm.Accounts.Keys.create(
         user_or_organization,
-        %{name: "any_key_name"},
+        %{name: "any_key_name", permissions: permissions},
         audit: nil
       )
 

@@ -2,10 +2,13 @@ defmodule HexpmWeb.API.RepositoryController do
   use HexpmWeb, :controller
 
   plug :fetch_repository when action in [:show]
-  plug :authorize, [domain: "api", resource: "read"] when action in [:index]
 
   plug :authorize,
-       [domain: "api", resource: "read", fun: {AuthHelpers, :organization_access}]
+       [domains: [{"api", "read"}]]
+       when action in [:index]
+
+  plug :authorize,
+       [domains: [{"api", "read"}], fun: {AuthHelpers, :organization_access}]
        when action in [:show]
 
   def index(conn, _params) do

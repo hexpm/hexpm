@@ -7,16 +7,14 @@ defmodule HexpmWeb.API.DocsController do
 
   plug :authorize,
        [
-         domain: "api",
-         resource: "read",
+         domains: [{"api", "read"}],
          fun: [{AuthHelpers, :organization_access}, {AuthHelpers, :organization_billing_active}]
        ]
        when action in [:show]
 
   plug :authorize,
        [
-         domain: "api",
-         resource: "write",
+         domains: [{"api", "write"}, "package"],
          fun: [{AuthHelpers, :package_owner}, {AuthHelpers, :organization_billing_active}]
        ]
        when action in [:create, :delete]

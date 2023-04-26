@@ -90,13 +90,20 @@ defmodule Hexpm.Accounts.Organization do
     {:ok, nil}
   end
 
+  def verify_permissions(%Organization{} = organization, "package", name) do
+    [organization_name, package] = String.split(name, "/", parts: 2)
+    package = Packages.get(organization_name, package)
+
+    if organization_name == organization.name && Packages.get(organization_name, package) do
+      {:ok, package}
+    else
+      :error
+    end
+  end
+
   def verify_permissions(%Organization{name: name} = organization, domain, name)
       when domain in ["repository", "docs"] do
     {:ok, organization}
-  end
-
-  def verify_permissions(%Organization{}, _domain, _resource) do
-    :error
   end
 
   def billing_active?(%Organization{billing_active: active} = organization) do
