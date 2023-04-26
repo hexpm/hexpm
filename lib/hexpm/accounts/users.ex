@@ -30,6 +30,11 @@ defmodule Hexpm.Accounts.Users do
   end
 
   def get_email(email, preload \\ []) do
+    Repo.get_by(Email, email: String.downcase(email), verified: true)
+    |> Repo.preload(preload)
+  end
+
+  def get_maybe_unverified_email(email, preload \\ []) do
     Repo.get_by(Email, email: String.downcase(email))
     |> Repo.preload(preload)
   end

@@ -72,7 +72,7 @@ defmodule Hexpm.Accounts.UsersTest do
           audit: audit_data(current_user)
         )
 
-      email = Users.get_email("public@example.com")
+      email = Users.get_maybe_unverified_email("public@example.com")
       assert email.user_id == organization.user.id
       assert email.public == true
 
@@ -137,7 +137,7 @@ defmodule Hexpm.Accounts.UsersTest do
           audit: audit_data(current_user)
         )
 
-      email = Users.get_email("gravatar@example.com")
+      email = Users.get_maybe_unverified_email("gravatar@example.com")
       assert email.user_id == organization.user.id
       assert email.gravatar == true
 
