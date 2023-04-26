@@ -76,7 +76,7 @@ defmodule Hexpm.Repository.RegistryBuilder do
 
   defp build_full(repository) do
     log(:all, fn ->
-      {packages, releases} = tuples(repository, nil)
+      {packages, releases} = tuples(repository, nil, requirements: true)
 
       new = build_all(repository, packages, releases)
       upload_files(repository, new)
@@ -102,7 +102,7 @@ defmodule Hexpm.Repository.RegistryBuilder do
 
   defp build_partial(repository) do
     log(:repository, fn ->
-      {packages, releases} = tuples(repository, nil)
+      {packages, releases} = tuples(repository, nil, requirements: false)
       release_map = Map.new(releases)
 
       names = build_names(repository, packages)
@@ -120,7 +120,7 @@ defmodule Hexpm.Repository.RegistryBuilder do
     log(:package_build, fn ->
       repository = package.repository
 
-      {packages, releases} = tuples(repository, package)
+      {packages, releases} = tuples(repository, package, requirements: true)
       release_map = Map.new(releases)
       packages = build_packages(repository, packages, release_map)
 
@@ -149,8 +149,12 @@ defmodule Hexpm.Repository.RegistryBuilder do
     end)
   end
 
-  defp tuples(repository, package) do
-    requirements = requirements(repository, package)
+  defp tuples(repository, package, opts) do
+    requirements =
+      if Keyword.fetch!(opts, :requirements) do
+        requirements(repository, package)
+      end
+
     releases = releases(repository, package)
     packages = packages(repository, package)
     package_tuples = package_tuples(packages, releases)
