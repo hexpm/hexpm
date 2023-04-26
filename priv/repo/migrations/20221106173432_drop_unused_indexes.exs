@@ -2,11 +2,11 @@ defmodule Hexpm.RepoBase.Migrations.DropUnusedIndexes do
   use Ecto.Migration
 
   def up do
-    drop(index(:sessions, ["((data->>'user_id')::integer)"]))
-    drop(index(:short_urls, [:url]))
+    drop_if_exists(index(:sessions, ["((data->>'user_id')::integer)"]))
+    drop_if_exists(index(:short_urls, [:url]))
 
-    execute("DROP INDEX package_dependants_name_idx")
-    execute("DROP INDEX package_dependants_name_repo_idx")
+    execute("DROP INDEX IF EXISTS package_dependants_name_idx")
+    execute("DROP INDEX IF EXISTS package_dependants_name_repo_idx")
   end
 
   def down do
