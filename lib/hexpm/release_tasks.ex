@@ -2,6 +2,11 @@ defmodule Hexpm.ReleaseTasks do
   alias Hexpm.ReleaseTasks.{CheckNames, Stats}
   require Logger
 
+  @start_apps [
+    :logger,
+    :rollbax
+  ]
+
   @repo_apps [
     :crypto,
     :ssl,
@@ -12,7 +17,7 @@ defmodule Hexpm.ReleaseTasks do
   @repos Application.compile_env!(:hexpm, :ecto_repos)
 
   def script(args) do
-    {:ok, _} = Application.ensure_all_started(:logger)
+    start_apps(@start_apps)
     Logger.info("[task] Running script")
     start_app()
 
@@ -23,7 +28,7 @@ defmodule Hexpm.ReleaseTasks do
   end
 
   def check_names() do
-    {:ok, _} = Application.ensure_all_started(:logger)
+    start_apps(@start_apps)
     Logger.info("[task] Running check_names")
     start_app()
 
@@ -34,7 +39,7 @@ defmodule Hexpm.ReleaseTasks do
   end
 
   def migrate(args \\ []) do
-    {:ok, _} = Application.ensure_all_started(:logger)
+    start_apps(@start_apps)
     Logger.info("[task] Running migrate")
     start_repo()
 
@@ -45,7 +50,7 @@ defmodule Hexpm.ReleaseTasks do
   end
 
   def rollback(args \\ []) do
-    {:ok, _} = Application.ensure_all_started(:logger)
+    start_apps(@start_apps)
     Logger.info("[task] Running rollback")
     start_repo()
 
@@ -56,7 +61,7 @@ defmodule Hexpm.ReleaseTasks do
   end
 
   def seed(args \\ []) do
-    {:ok, _} = Application.ensure_all_started(:logger)
+    start_apps(@start_apps)
     Logger.info("[task] Running seed")
 
     task(fn ->
@@ -70,7 +75,7 @@ defmodule Hexpm.ReleaseTasks do
   end
 
   def stats() do
-    {:ok, _} = Application.ensure_all_started(:logger)
+    start_apps(@start_apps)
     Logger.info("[task] Running stats")
     start_app()
 
@@ -117,11 +122,7 @@ defmodule Hexpm.ReleaseTasks do
 
   defp start_repo() do
     Logger.info("[task] Starting dependencies...")
-
-    Enum.each(@repo_apps, fn app ->
-      {:ok, _} = Application.ensure_all_started(app)
-    end)
-
+    start_apps(@repo_apps)
     Logger.info("[task] Starting repos...")
 
     Enum.each(@repos, fn repo ->
@@ -208,5 +209,11 @@ defmodule Hexpm.ReleaseTasks do
     end
 
     Logger.info("[task] Finished #{script} #{inspect(args)}")
+  end
+
+  defp start_apps(apps) do
+    Enum.each(apps, fn app ->
+      {:ok, _} = Application.ensure_all_started(app)
+    end)
   end
 end
