@@ -72,6 +72,14 @@
           <% end %>
         </div>
       <% end %>
+      <%= if assigns[:packages] do %>
+        <div class="permission-group">
+          <div class="checkbox group-owner"><label><input type="checkbox" disabled>Packages</label></div>
+          <%= for package <- @packages do %>
+            <div class="checkbox group-child"><label><input type="checkbox" name="key[permissions][package][<%= package.name %>]">Package: <%= package.name %></label></div>
+          <% end %>
+        </div>
+      <% end %>
       <button type="submit" class="btn btn-primary">Generate</button>
     <% end %>
   </div>

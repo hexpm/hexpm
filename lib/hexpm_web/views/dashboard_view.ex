@@ -33,6 +33,12 @@ defmodule HexpmWeb.DashboardView do
   defp permission_name(%KeyPermission{domain: "repository", resource: resource}),
     do: "REPO:#{resource}"
 
+  defp permission_name(%KeyPermission{domain: "package", resource: "hexpm/" <> resource}),
+    do: "PKG:#{resource}"
+
+  defp permission_name(%KeyPermission{domain: "package", resource: resource}),
+    do: "PKG:#{resource}"
+
   defp permission_name(%KeyPermission{domain: "repositories"}),
     do: "REPOS"
 end
