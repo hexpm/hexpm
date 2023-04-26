@@ -20,8 +20,7 @@ defmodule HexpmWeb.AuthHelpers do
   end
 
   defp authorized(conn, user_or_organization, funs, opts) do
-    domain = Keyword.get(opts, :domain)
-    resource = Keyword.get(opts, :resource)
+    domains = Keyword.get(opts, :domains, [])
     key = conn.assigns.key
     email = conn.assigns.email
 
@@ -29,7 +28,7 @@ defmodule HexpmWeb.AuthHelpers do
       not verified_user?(user_or_organization, email, opts) ->
         error(conn, {:error, :unconfirmed})
 
-      user_or_organization && !verify_permissions?(key, domain, resource) ->
+      user_or_organization && not verify_permissions?(conn, key, domains) ->
         error(conn, {:error, :domain})
 
       funs ->
@@ -66,15 +65,26 @@ defmodule HexpmWeb.AuthHelpers do
     true
   end
 
-  defp verify_permissions?(nil, _domain, _resource) do
+  defp verify_permissions?(_conn, _key = nil, _domains) do
     true
   end
 
-  defp verify_permissions?(_key, nil, _resource) do
+  defp verify_permissions?(_conn, _key, _domains = []) do
     true
   end
 
-  defp verify_permissions?(key, domain, resource) do
+  defp verify_permissions?(conn, key, domains) do
+    Enum.any?(domains, fn
+      {domain, resource} -> verify_permissions?(conn, key, domain, resource)
+      domain -> verify_permissions?(conn, key, domain, nil)
+    end)
+  end
+
+  defp verify_permissions?(conn, key, "package", nil) do
+    Key.verify_permissions?(key, "package", conn.assigns.package)
+  end
+
+  defp verify_permissions?(_conn, key, domain, resource) do
     Key.verify_permissions?(key, domain, resource)
   end
 

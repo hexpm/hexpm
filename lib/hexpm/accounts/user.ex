@@ -152,8 +152,15 @@ defmodule Hexpm.Accounts.User do
     {:ok, nil}
   end
 
-  def verify_permissions(%User{}, "repository", nil) do
-    :error
+  def verify_permissions(%User{} = user, "package", name) do
+    [organization, package] = String.split(name, "/", parts: 2)
+    package = Packages.get(organization, package)
+
+    if package && Packages.owner_with_access?(package, user) do
+      {:ok, package}
+    else
+      :error
+    end
   end
 
   def verify_permissions(%User{} = user, domain, name) when domain in ["repository", "docs"] do
@@ -164,10 +171,6 @@ defmodule Hexpm.Accounts.User do
     else
       :error
     end
-  end
-
-  def verify_permissions(%User{}, _domain, _resource) do
-    :error
   end
 
   def organization?(user), do: user.organization_id != nil

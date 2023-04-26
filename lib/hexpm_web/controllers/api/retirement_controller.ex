@@ -3,9 +3,7 @@ defmodule HexpmWeb.API.RetirementController do
 
   plug :maybe_fetch_release when action in [:create, :delete]
 
-  plug :authorize,
-       [domain: "api", resource: "write", fun: {AuthHelpers, :package_owner}]
-       when action in [:create, :delete]
+  plug :authorize, domains: [{"api", "write"}, "package"], fun: {AuthHelpers, :package_owner}
 
   def create(conn, params) do
     package = conn.assigns.package

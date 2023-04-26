@@ -2,7 +2,7 @@ defmodule HexpmWeb.API.UserController do
   use HexpmWeb, :controller
 
   plug :authorize,
-       [authentication: :required, domain: "api", resource: "read"]
+       [authentication: :required, domains: [{"api", "read"}]]
        when action in [:test, :me, :audit_logs]
 
   def create(conn, params) do

@@ -2,7 +2,7 @@ defmodule HexpmWeb.API.ReleaseControllerTest do
   use HexpmWeb.ConnCase, async: true
 
   alias Hexpm.Accounts.AuditLog
-  alias Hexpm.Repository.{Package, RegistryBuilder, Release, Repository}
+  alias Hexpm.Repository.{Owners, Package, RegistryBuilder, Release, Repository}
 
   setup do
     user = insert(:user)
@@ -229,6 +229,55 @@ defmodule HexpmWeb.API.ReleaseControllerTest do
       assert result["html_url"] =~ "packages/#{package.name}/1.0.0"
 
       assert Hexpm.Repo.get_by(Package, name: package.name).meta.description == "awesomeness"
+    end
+
+    test "create new package authorizes with package key permission", %{
+      user: user,
+      package: package,
+      release: release
+    } do
+      permissions = [%{domain: "package", resource: package.name}]
+      key = key_for(user, permissions)
+      meta = %{name: package.name, version: "0.1.0", description: "description"}
+      Hexpm.Repo.delete!(release)
+      Hexpm.Repo.delete!(package)
+
+      build_conn()
+      |> put_req_header("content-type", "application/octet-stream")
+      |> put_req_header("authorization", key)
+      |> post("/api/publish", create_tar(meta))
+      |> json_response(401)
+    end
+
+    test "create release authorizes with package key permission", %{
+      user: user,
+      package: package
+    } do
+      permissions = [%{domain: "package", resource: package.name}]
+      key = key_for(user, permissions)
+      meta = %{name: package.name, version: "0.1.0", description: "description"}
+
+      build_conn()
+      |> put_req_header("content-type", "application/octet-stream")
+      |> put_req_header("authorization", key)
+      |> post("/api/publish", create_tar(meta))
+      |> json_response(201)
+    end
+
+    test "create release authorizes with package key permission after ownership removal", %{
+      user: user,
+      package: package
+    } do
+      permissions = [%{domain: "package", resource: package.name}]
+      key = key_for(user, permissions)
+      meta = %{name: package.name, version: "0.1.0", description: "description"}
+      Hexpm.Repo.delete!(Owners.get(package, user))
+
+      build_conn()
+      |> put_req_header("content-type", "application/octet-stream")
+      |> put_req_header("authorization", key)
+      |> post("/api/publish", create_tar(meta))
+      |> json_response(403)
     end
 
     test "create release authorizes existing package", %{package: package} do

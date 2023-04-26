@@ -5,17 +5,16 @@ defmodule HexpmWeb.API.OrganizationController do
   plug :fetch_organization
 
   plug :authorize,
-       [domain: "api", resource: "read"]
+       [domains: [{"api", "read"}]]
        when action == :index
 
   plug :authorize,
-       [domain: "api", resource: "read", fun: {AuthHelpers, :organization_access}]
+       [domains: [{"api", "read"}], fun: {AuthHelpers, :organization_access}]
        when action in [:show, :audit_logs]
 
   plug :authorize,
        [
-         domain: "api",
-         resource: "write",
+         domains: [{"api", "write"}],
          fun: {AuthHelpers, :organization_access, [organization_level: "write"]}
        ]
        when action == :update

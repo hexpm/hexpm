@@ -7,24 +7,15 @@ defmodule HexpmWeb.API.ReleaseController do
   plug :maybe_fetch_package when action in [:create, :publish]
 
   plug :authorize,
-       [domain: "api", resource: "read", fun: {AuthHelpers, :organization_access}]
+       [domains: [{"api", "read"}], fun: {AuthHelpers, :organization_access}]
        when action in [:show]
 
   plug :authorize,
        [
-         domain: "api",
-         resource: "write",
+         domains: [{"api", "write"}, "package"],
          fun: [{AuthHelpers, :package_owner}, {AuthHelpers, :organization_billing_active}]
        ]
-       when action in [:create, :publish]
-
-  plug :authorize,
-       [
-         domain: "api",
-         resource: "write",
-         fun: [{AuthHelpers, :package_owner}, {AuthHelpers, :organization_billing_active}]
-       ]
-       when action in [:delete]
+       when action in [:create, :publish, :delete]
 
   @download_period_params ~w(day month all)
 

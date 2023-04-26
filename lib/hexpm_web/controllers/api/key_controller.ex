@@ -5,8 +5,7 @@ defmodule HexpmWeb.API.KeyController do
 
   plug :authorize,
        [
-         domain: "api",
-         resource: "write",
+         domains: [{"api", "write"}],
          allow_unconfirmed: true,
          fun: {AuthHelpers, :organization_access, [organization_role: "write"]}
        ]
@@ -14,8 +13,7 @@ defmodule HexpmWeb.API.KeyController do
 
   plug :authorize,
        [
-         domain: "api",
-         resource: "write",
+         domains: [{"api", "write"}],
          fun: {AuthHelpers, :organization_access, [organization_role: "write"]},
          authentication: :required
        ]
@@ -23,8 +21,7 @@ defmodule HexpmWeb.API.KeyController do
 
   plug :authorize,
        [
-         domain: "api",
-         resource: "read",
+         domains: [{"api", "read"}],
          authentication: :required,
          fun: {AuthHelpers, :organization_access}
        ]
