@@ -39,7 +39,7 @@ defmodule HexpmWeb.Dashboard.SecurityControllerTest do
         |> post("/dashboard/security/enable-tfa")
 
       user = Hexpm.Repo.get(Hexpm.Accounts.User, user.id)
-      assert user.tfa.tfa_enabled == true
+      assert user.tfa.tfa_enabled
       assert redirected_to(conn) == "/dashboard/tfa/setup"
     end
   end
@@ -52,7 +52,7 @@ defmodule HexpmWeb.Dashboard.SecurityControllerTest do
         |> post("/dashboard/security/disable-tfa")
 
       user = Hexpm.Repo.get(Hexpm.Accounts.User, c.user.id)
-      assert user.tfa.tfa_enabled == false
+      refute user.tfa.tfa_enabled
       assert redirected_to(conn) == "/dashboard/security"
     end
   end
@@ -78,7 +78,7 @@ defmodule HexpmWeb.Dashboard.SecurityControllerTest do
         |> post("/dashboard/security/reset-auth-app")
 
       updated_user = Hexpm.Repo.get(Hexpm.Accounts.User, c.user.id)
-      assert updated_user.tfa.app_enabled == false
+      refute updated_user.tfa.app_enabled
       assert redirected_to(conn) == "/dashboard/tfa/setup"
     end
   end

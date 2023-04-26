@@ -99,8 +99,13 @@ defmodule Hexpm.TestHelpers do
     |> File.read!()
   end
 
-  def audit_data(user) do
-    {user, "TEST", "127.0.0.1"}
+  def audit_data(user, opts \\ []) do
+    %{
+      user: user,
+      key: Keyword.get(opts, :key),
+      user_agent: Keyword.get(opts, :user_agent, "TEST"),
+      remote_ip: Keyword.get(opts, :remote_ip, "127.0.0.1")
+    }
   end
 
   def default_meta(name, version) do

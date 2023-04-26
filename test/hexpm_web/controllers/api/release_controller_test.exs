@@ -28,6 +28,8 @@ defmodule HexpmWeb.API.ReleaseControllerTest do
 
   describe "POST /api/packages/:name/releases" do
     test "create release and new package as user", %{user: user} do
+      key = insert(:key, user: user)
+
       meta = %{
         name: Fake.sequence(:package),
         version: "1.0.0",
@@ -37,7 +39,7 @@ defmodule HexpmWeb.API.ReleaseControllerTest do
       conn =
         build_conn()
         |> put_req_header("content-type", "application/octet-stream")
-        |> put_req_header("authorization", key_for(user))
+        |> put_req_header("authorization", key.user_secret)
         |> post("/api/packages/#{meta.name}/releases", create_tar(meta))
 
       result = json_response(conn, 201)
@@ -54,6 +56,7 @@ defmodule HexpmWeb.API.ReleaseControllerTest do
       log = Hexpm.Repo.one!(AuditLog)
       assert log.user_id == user.id
       assert log.organization_id == nil
+      assert log.key_id == key.id
       assert log.action == "release.publish"
       assert log.params["package"]["name"] == meta.name
       assert log.params["release"]["version"] == "1.0.0"

@@ -5,14 +5,16 @@ defmodule Hexpm.Accounts.AuditLogTest do
 
   setup do
     user = build(:user)
+    key = build(:key)
     package = build(:package)
     release = build(:release)
-    %{user: user, package: package, release: release}
+    %{user: user, key: key, package: package, release: release}
   end
 
   describe "build/4" do
     test "action password.reset.init" do
-      audit = AuditLog.build(nil, "user_agent", "127.0.0.1", "password.reset.init", nil)
+      audit_data = %{user: nil, key: nil, user_agent: "user_agent", remote_ip: "127.0.0.1"}
+      audit = AuditLog.build(audit_data, "password.reset.init", nil)
       assert audit.organization_id == nil
       assert audit.action == "password.reset.init"
       assert audit.user_id == nil
@@ -22,7 +24,8 @@ defmodule Hexpm.Accounts.AuditLogTest do
     end
 
     test "action password.reset.finish" do
-      audit = AuditLog.build(nil, "user_agent", "127.0.0.1", "password.reset.finish", nil)
+      audit_data = %{user: nil, key: nil, user_agent: "user_agent", remote_ip: "127.0.0.1"}
+      audit = AuditLog.build(audit_data, "password.reset.finish", nil)
       assert audit.organization_id == nil
       assert audit.action == "password.reset.finish"
       assert audit.user_id == nil
@@ -31,11 +34,11 @@ defmodule Hexpm.Accounts.AuditLogTest do
       assert audit.params == %{}
     end
 
-    test "action owner.add", %{user: user, package: package} do
+    test "action owner.add", %{user: user, key: key, package: package} do
       user = %{user | handles: build(:user_handles, github: user.username)}
+      audit_data = %{user: user, key: key, user_agent: "user_agent", remote_ip: "127.0.0.1"}
 
-      audit =
-        AuditLog.build(user, "user_agent", "127.0.0.1", "owner.add", {package, "full", user})
+      audit = AuditLog.build(audit_data, "owner.add", {package, "full", user})
 
       assert audit.action == "owner.add"
       assert audit.user_id == user.id
@@ -50,7 +53,7 @@ defmodule Hexpm.Accounts.AuditLogTest do
       assert audit.params.user.handles.github == user.handles.github
     end
 
-    test "action organization.create", %{user: user} do
+    test "action organization.create", %{user: user, key: key} do
       organization =
         build(:organization,
           id: 5,
@@ -58,7 +61,9 @@ defmodule Hexpm.Accounts.AuditLogTest do
           name: "Test"
         )
 
-      audit = AuditLog.build(user, "user_agent", "127.0.0.1", "organization.create", organization)
+      audit_data = %{user: user, key: key, user_agent: "user_agent", remote_ip: "127.0.0.1"}
+
+      audit = AuditLog.build(audit_data, "organization.create", organization)
 
       assert audit.action == "organization.create"
       assert audit.user_id == user.id
@@ -70,17 +75,13 @@ defmodule Hexpm.Accounts.AuditLogTest do
 
     test "action billing.checkout", %{user: user} do
       organization = build(:organization, name: "Organization Name")
+      audit_data = %{user: user, key: nil, user_agent: "user_agent", remote_ip: "127.0.0.1"}
 
       audit =
         AuditLog.build(
-          user,
-          "user_agent",
-          "127.0.0.1",
+          audit_data,
           "billing.checkout",
-          {
-            organization,
-            %{payment_source: "a token"}
-          }
+          {organization, %{payment_source: "a token"}}
         )
 
       assert audit.action == "billing.checkout"
@@ -93,19 +94,9 @@ defmodule Hexpm.Accounts.AuditLogTest do
 
     test "action billing.cancel", %{user: user} do
       organization = build(:organization, name: "Organization Name")
+      audit_data = %{user: user, key: nil, user_agent: "user_agent", remote_ip: "127.0.0.1"}
 
-      audit =
-        AuditLog.build(
-          user,
-          "user_agent",
-          "127.0.0.1",
-          "billing.cancel",
-          {
-            organization,
-            "Organization Name"
-          }
-        )
-
+      audit = AuditLog.build(audit_data, "billing.cancel", {organization, "Organization Name"})
       assert audit.action == "billing.cancel"
       assert audit.user_id == user.id
       assert audit.user_agent == "user_agent"
@@ -115,23 +106,20 @@ defmodule Hexpm.Accounts.AuditLogTest do
 
     test "action billing.create", %{user: user} do
       organization = build(:organization, name: "Organization Name")
+      audit_data = %{user: user, key: nil, user_agent: "user_agent", remote_ip: "127.0.0.1"}
 
       audit =
         AuditLog.build(
-          user,
-          "user_agent",
-          "127.0.0.1",
+          audit_data,
           "billing.create",
-          {
-            organization,
-            %{
-              "email" => "test@example.com",
-              "person" => "Test Person",
-              "company" => "Test Company",
-              "token" => "Test Token",
-              "quantity" => 11
-            }
-          }
+          {organization,
+           %{
+             "email" => "test@example.com",
+             "person" => "Test Person",
+             "company" => "Test Company",
+             "token" => "Test Token",
+             "quantity" => 11
+           }}
         )
 
       assert audit.action == "billing.create"
@@ -148,17 +136,13 @@ defmodule Hexpm.Accounts.AuditLogTest do
 
     test "action billing.change_plan", %{user: user} do
       organization = build(:organization, name: "Organization Name")
+      audit_data = %{user: user, key: nil, user_agent: "user_agent", remote_ip: "127.0.0.1"}
 
       audit =
         AuditLog.build(
-          user,
-          "user_agent",
-          "127.0.0.1",
+          audit_data,
           "billing.change_plan",
-          {
-            organization,
-            %{"plan_id" => "test plan"}
-          }
+          {organization, %{"plan_id" => "test plan"}}
         )
 
       assert audit.action == "billing.change_plan"
@@ -171,19 +155,9 @@ defmodule Hexpm.Accounts.AuditLogTest do
 
     test "action billing.pay_invoice", %{user: user} do
       organization = build(:organization, name: "Organization Name")
+      audit_data = %{user: user, key: nil, user_agent: "user_agent", remote_ip: "127.0.0.1"}
 
-      audit =
-        AuditLog.build(
-          user,
-          "user_agent",
-          "127.0.0.1",
-          "billing.pay_invoice",
-          {
-            organization,
-            897
-          }
-        )
-
+      audit = AuditLog.build(audit_data, "billing.pay_invoice", {organization, 897})
       assert audit.action == "billing.pay_invoice"
       assert audit.user_id == user.id
       assert audit.user_agent == "user_agent"
@@ -194,19 +168,20 @@ defmodule Hexpm.Accounts.AuditLogTest do
   end
 
   describe "audit/3" do
-    test "with params", %{user: user, package: package, release: release} do
-      audit_log =
-        AuditLog.audit({user, "user_agent", "127.0.0.1"}, "docs.revert", {package, release})
+    test "with params", %{user: user, key: key, package: package, release: release} do
+      audit_data = %{user: user, key: key, user_agent: "user_agent", remote_ip: "127.0.0.1"}
+      audit_log = AuditLog.audit(audit_data, "docs.revert", {package, release})
 
       assert %AuditLog{action: "docs.revert"} = audit_log
     end
 
     test "billing.update", %{user: user} do
       organization = build(:organization, name: "Organization Name")
+      audit_data = %{user: user, key: nil, user_agent: "user_agent", remote_ip: "127.0.0.1"}
 
       audit =
         AuditLog.audit(
-          {user, "user_agent", "127.0.0.1"},
+          audit_data,
           "billing.update",
           {
             organization,
@@ -234,11 +209,13 @@ defmodule Hexpm.Accounts.AuditLogTest do
   end
 
   describe "audit/4" do
-    test "with params", %{user: user, package: package, release: release} do
+    test "with params", %{user: user, key: key, package: package, release: release} do
+      audit_data = %{user: user, key: key, user_agent: "user_agent", remote_ip: "127.0.0.1"}
+
       multi =
         AuditLog.audit(
           Ecto.Multi.new(),
-          {user, "user_agent", "127.0.0.1"},
+          audit_data,
           "docs.publish",
           {package, release}
         )
@@ -247,16 +224,11 @@ defmodule Hexpm.Accounts.AuditLogTest do
       assert changeset.valid?
     end
 
-    test "with fun", %{user: user} do
+    test "with fun", %{user: user, key: key} do
+      audit_data = %{user: user, key: key, user_agent: "user_agent", remote_ip: "127.0.0.1"}
+
       multi =
-        AuditLog.audit(
-          Ecto.Multi.new(),
-          {user, "user_agent", "127.0.0.1"},
-          "key.generate",
-          fn %{} ->
-            build(:key)
-          end
-        )
+        AuditLog.audit(Ecto.Multi.new(), audit_data, "key.generate", fn %{} -> build(:key) end)
 
       assert {:merge, merge} = Ecto.Multi.to_list(multi)[:merge]
       multi = merge.(multi)
@@ -266,15 +238,15 @@ defmodule Hexpm.Accounts.AuditLogTest do
   end
 
   describe "audit_with_user/4" do
-    test "action user.create", %{user: user} do
-      fun = fn %{user: user} -> user end
+    test "action user.create", %{user: user, key: key} do
+      audit_data = %{user: nil, key: key, user_agent: "user_agent", remote_ip: "127.0.0.1"}
 
       multi =
         AuditLog.audit_with_user(
           Ecto.Multi.new(),
-          {nil, "user_agent", "127.0.0.1"},
+          audit_data,
           "user.create",
-          fun
+          fn %{user: user} -> user end
         )
 
       assert {_, fun} = Ecto.Multi.to_list(multi)[:"log.user.create.0"]
@@ -283,16 +255,10 @@ defmodule Hexpm.Accounts.AuditLogTest do
   end
 
   describe "audit_many/5" do
-    test "action key.remove", %{user: user} do
+    test "action key.remove", %{user: user, key: key} do
       keys = build_list(2, :key)
-
-      multi =
-        AuditLog.audit_many(
-          Ecto.Multi.new(),
-          {user, "user_agent", "127.0.0.1"},
-          "key.remove",
-          keys
-        )
+      audit_data = %{user: user, key: key, user_agent: "user_agent", remote_ip: "127.0.0.1"}
+      multi = AuditLog.audit_many(Ecto.Multi.new(), audit_data, "key.remove", keys)
 
       assert {:insert_all, AuditLog, [params1, params2], []} =
                Ecto.Multi.to_list(multi)[:"log.key.remove.0"]
