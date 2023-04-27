@@ -158,6 +158,7 @@ defmodule HexpmWeb.PackageController do
     daily_graph =
       Download.download_last_day()
       |> Date.range(Date.add(Download.download_last_day(), -30))
+      |> Enum.reverse()
       |> Enum.map(fn day ->
         if download = graph_downloads[day] do
           download.downloads
