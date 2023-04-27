@@ -108,8 +108,14 @@ defmodule HexpmWeb.PackageControllerTest do
     test "search with whitespace", %{package5: package5} do
       conn = get(build_conn(), "/packages?search=with underscore")
       assert response(conn, 200) =~ "exact-match"
-      assert response(conn, 200) =~ package5.name
+      assert response(conn, 200) =~ ~r/#{package5.name}.*0.0.1/s
       refute response(conn, 200) =~ "no-results"
+    end
+
+    test "search with exact match" do
+      conn = get(build_conn(), "/packages?search=with_underscore")
+      assert response(conn, 200) =~ "exact-match"
+      refute response(conn, 200) =~ "results-found"
     end
 
     test "search without match" do
