@@ -60,6 +60,13 @@ Hexpm.Repo.transaction(fn ->
       password: password.("justinjustin")
     )
 
+  insert(
+    :user,
+    username: "nopkg",
+    emails: [build(:email, email: "nopkg@example.com")],
+    password: password.("nopkgnopkg")
+  )
+
   decimal =
     insert(
       :package,

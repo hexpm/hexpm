@@ -72,7 +72,7 @@
           <% end %>
         </div>
       <% end %>
-      <%= if assigns[:packages] do %>
+      <%= if assigns[:packages] && assigns[:packages] != [] do %>
         <div class="permission-group">
           <div class="checkbox group-owner"><label><input type="checkbox" disabled>Packages</label></div>
           <%= for package <- @packages do %>
