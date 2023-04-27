@@ -58,7 +58,7 @@ defmodule HexpmWeb.API.ReleaseController do
   def show(conn, params) do
     if release = conn.assigns.release do
       downloads_period = Hexpm.Utils.safe_to_atom(params["downloads"], @download_period_params)
-      downloads = Releases.downloads_by_period(release.id, downloads_period)
+      downloads = Downloads.by_period(release, downloads_period)
 
       release =
         release
