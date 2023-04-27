@@ -99,7 +99,13 @@ defmodule Hexpm.TestHelpers do
     |> File.read!()
   end
 
-  def audit_data(user, opts \\ []) do
+  def audit_data(user, opts \\ [])
+
+  def audit_data(%Hexpm.Accounts.Organization{user: user}, opts) do
+    audit_data(user, opts)
+  end
+
+  def audit_data(%Hexpm.Accounts.User{} = user, opts) do
     %{
       user: user,
       key: Keyword.get(opts, :key),

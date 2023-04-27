@@ -94,7 +94,7 @@ defmodule Hexpm.Accounts.Organization do
     [organization_name, package] = String.split(name, "/", parts: 2)
     package = Packages.get(organization_name, package)
 
-    if organization_name == organization.name && Packages.get(organization_name, package) do
+    if package && Packages.owner_with_access?(package, organization.user) do
       {:ok, package}
     else
       :error
