@@ -5,9 +5,9 @@ defmodule Hexpm.Repository.PackageDownload do
   @primary_key false
 
   schema "package_downloads" do
-    belongs_to(:package, Package, references: :id)
-    field(:view, :string)
-    field(:downloads, :integer)
+    belongs_to :package, Package, references: :id
+    field :view, :string
+    field :downloads, :integer
   end
 
   def top(repository, view, count) do
