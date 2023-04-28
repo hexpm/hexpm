@@ -644,12 +644,16 @@ Hexpm.Repo.transaction(fn ->
         )
     )
 
-  insert(:download,
-    package: nerves,
-    release: rel,
-    downloads: 20,
-    day: Hexpm.Utils.utc_yesterday()
-  )
+  today = Date.utc_today()
+
+  Enum.each(1..31, fn day ->
+    insert(:download,
+      package: nerves,
+      release: rel,
+      downloads: Enum.random(1..100),
+      day: Date.add(today, -day)
+    )
+  end)
 
   Enum.each(1..10, fn index ->
     nerves =

@@ -32,7 +32,7 @@ defmodule HexpmWeb.UserController do
       Packages.accessible_user_owned_packages(user, conn.assigns.current_user)
       |> Packages.attach_latest_releases()
 
-    downloads = Packages.packages_downloads_with_all_views(packages)
+    downloads = Downloads.packages_all_views(packages)
 
     total_downloads =
       Enum.reduce(downloads, 0, fn {_id, d}, acc -> acc + Map.get(d, "all", 0) end)

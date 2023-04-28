@@ -29,7 +29,7 @@ defmodule HexpmWeb.PackageController do
     package_count = Packages.count(repositories, filter)
     page = Hexpm.Utils.safe_page(page_param, package_count, @packages_per_page)
     packages = fetch_packages(repositories, page, @packages_per_page, filter, sort)
-    downloads = Packages.packages_downloads_with_all_views(packages)
+    downloads = Downloads.packages_all_views(packages)
     exact_match = exact_match(repositories, search)
 
     render(
@@ -145,21 +145,20 @@ defmodule HexpmWeb.PackageController do
           [docs_html_url: nil, docs_tarball_url: nil]
       end
 
-    downloads = Packages.package_downloads(package)
+    last_download_day = Downloads.last_day() || Date.utc_today()
+    start_download_day = Date.add(last_download_day, -30)
+    downloads = Downloads.package(package)
 
     graph_downloads =
       case type do
-        :package -> Packages.downloads_for_last_n_days(package.id, 30)
-        :release -> Releases.downloads_for_last_n_days(release.id, 30)
+        :package -> Downloads.since_date(package, start_download_day)
+        :release -> Downloads.since_date(release, start_download_day)
       end
 
     graph_downloads = Map.new(graph_downloads, &{Date.from_iso8601!(&1.day), &1})
 
     daily_graph =
-      Download.download_last_day()
-      |> Date.range(Date.add(Download.download_last_day(), -30))
-      |> Enum.reverse()
-      |> Enum.map(fn day ->
+      Enum.map(Date.range(start_download_day, last_download_day), fn day ->
         if download = graph_downloads[day] do
           download.downloads
         else

@@ -98,45 +98,6 @@ defmodule Hexpm.Repository.Packages do
     Repo.all(Package.recent(repository, count))
   end
 
-  def package_downloads(package) do
-    PackageDownload.package(package)
-    |> Repo.all()
-    |> Enum.into(%{})
-  end
-
-  def packages_downloads_with_all_views(packages) do
-    PackageDownload.packages_and_all_download_views(packages)
-    |> Repo.all()
-    |> Enum.reduce(%{}, fn {id, view, dls}, acc ->
-      Map.update(acc, id, %{view => dls}, &Map.put(&1, view, dls))
-    end)
-  end
-
-  def packages_downloads(packages, view) do
-    PackageDownload.packages(packages, view)
-    |> Repo.all()
-    |> Enum.into(%{})
-  end
-
-  def top_downloads(repository, view, count) do
-    top = Repo.all(PackageDownload.top(repository, view, count))
-
-    packages =
-      top
-      |> Enum.map(fn {package, _downloads} -> package end)
-      |> attach_latest_releases()
-
-    Enum.zip_with(packages, top, fn package, {_package, downloads} ->
-      {package, downloads}
-    end)
-  end
-
-  def total_downloads() do
-    PackageDownload.total()
-    |> Repo.all()
-    |> Enum.into(%{})
-  end
-
   def accessible_user_owned_packages(nil, _) do
     []
   end
@@ -151,12 +112,5 @@ defmodule Hexpm.Repository.Packages do
     user.owned_packages
     |> Enum.filter(&(&1.repository_id in repository_ids))
     |> Enum.sort_by(&[sorter.(&1.repository), &1.name])
-  end
-
-  def downloads_for_last_n_days(package_id, num_of_days) do
-    package_id
-    |> Download.downloads_by_period(:day)
-    |> Download.downloads_for_last_n_days(num_of_days)
-    |> Repo.all()
   end
 end

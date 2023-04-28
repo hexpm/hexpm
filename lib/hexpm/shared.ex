@@ -21,6 +21,7 @@ defmodule Hexpm.Shared do
         Emails.Mailer,
         Repository.Assets,
         Repository.Download,
+        Repository.Downloads,
         Repository.Install,
         Repository.Installs,
         Repository.Owners,

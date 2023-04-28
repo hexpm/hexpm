@@ -116,18 +116,6 @@ defmodule Hexpm.Repository.Releases do
     |> retire_result()
   end
 
-  def downloads_by_period(package, filter) do
-    ReleaseDownload.downloads_by_period(package, filter || :all)
-    |> Repo.all()
-  end
-
-  def downloads_for_last_n_days(release_id, num_of_days) do
-    release_id
-    |> ReleaseDownload.downloads_by_period(:day)
-    |> Download.downloads_for_last_n_days(num_of_days)
-    |> Repo.all()
-  end
-
   defp publish_result({:ok, %{package: package, release: release} = result}, user, body) do
     release = %{release | package: package}
 

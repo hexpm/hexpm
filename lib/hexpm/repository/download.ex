@@ -10,15 +10,20 @@ defmodule Hexpm.Repository.Download do
     field :day, :date
   end
 
-  defmacrop date_trunc(period, expr) do
+  defmacrop date_trunc(period, expr) when is_binary(period) do
+    query = "date_trunc('#{period}', ?)"
+
     quote do
-      fragment("date_trunc(?, ?)", unquote(period), unquote(expr))
+      fragment(unquote(query), unquote(expr))
     end
   end
 
-  defmacrop date_trunc_format(period, format, expr) do
+  defmacrop date_trunc_format(period, format, expr)
+            when is_binary(period) and is_binary(format) do
+    query = "to_char(date_trunc('#{period}', ?), '#{format}')"
+
     quote do
-      fragment("to_char(date_trunc(?, ?), ?)", unquote(period), unquote(expr), unquote(format))
+      fragment(unquote(query), unquote(expr))
     end
   end
 
@@ -48,21 +53,15 @@ defmodule Hexpm.Repository.Download do
     end
   end
 
-  def downloads_for_last_n_days(query, num_of_days) do
-    date_start = Date.add(download_last_day(), -num_of_days)
-    from(d in query, where: d.day >= ^date_start)
+  def since_date(query, date) do
+    from(d in query, where: d.day >= ^date)
   end
 
-  # Wait for downloads stats job to run until we switch to today
-  def download_last_day() do
-    if Time.utc_now().hour >= 2 do
-      Date.add(Date.utc_today(), -1)
-    else
-      Date.add(Date.utc_today(), -2)
-    end
+  def last_day() do
+    from(d in Download, select: max(d.day))
   end
 
-  def downloads_by_period(package_id, filter) do
+  def by_period(package_id, filter) do
     from(d in Download, where: d.package_id == ^package_id)
     |> Download.query_filter(filter)
   end
