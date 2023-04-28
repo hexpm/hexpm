@@ -10,15 +10,20 @@ defmodule Hexpm.Repository.Download do
     field :day, :date
   end
 
-  defmacrop date_trunc(period, expr) do
+  defmacrop date_trunc(period, expr) when is_binary(period) do
+    query = "date_trunc('#{period}', ?)"
+
     quote do
-      fragment("date_trunc(?, ?)", unquote(period), unquote(expr))
+      fragment(unquote(query), unquote(expr))
     end
   end
 
-  defmacrop date_trunc_format(period, format, expr) do
+  defmacrop date_trunc_format(period, format, expr)
+            when is_binary(period) and is_binary(format) do
+    query = "to_char(date_trunc('#{period}', ?), '#{format}')"
+
     quote do
-      fragment("to_char(date_trunc(?, ?), ?)", unquote(period), unquote(expr), unquote(format))
+      fragment(unquote(query), unquote(expr))
     end
   end
 
