@@ -33,7 +33,6 @@ defmodule Hexpm.Billing.Report do
   defp report() do
     report_request()
     |> MapSet.new()
-    |> MapSet.put("hexpm")
   end
 
   defp report_request() do
