@@ -20,8 +20,10 @@ defmodule Hexpm.Billing.Report do
       report = report()
       organizations = organizations()
 
-      set_active(organizations, report)
-      set_inactive(organizations, report)
+      updates = to_update(organizations, report)
+      {set_active, set_inactive} = Enum.split_with(updates, fn {_name, active?} -> active? end)
+      do_update(set_active, true)
+      do_update(set_inactive, false)
     end
 
     Process.send_after(self(), :update, opts[:interval])
@@ -40,39 +42,35 @@ defmodule Hexpm.Billing.Report do
   end
 
   defp organizations() do
-    from(r in Organization, select: {r.name, r.billing_active})
+    from(r in Organization, select: {r.name, r.billing_active, r.billing_override})
     |> Repo.all()
   end
 
-  defp set_active(organizations, report) do
-    to_update =
-      Enum.flat_map(organizations, fn {name, active} ->
-        if not active and name in report do
-          [name]
+  defp to_update(organizations, report) do
+    Enum.flat_map(organizations, fn {name, already_active?, override} ->
+      should_be_active? =
+        if not is_nil(override) do
+          override
         else
-          []
+          name in report
         end
-      end)
 
-    if to_update != [] do
-      from(r in Organization, where: r.name in ^to_update)
-      |> Repo.update_all(set: [billing_active: true])
-    end
+      if should_be_active? == already_active? do
+        []
+      else
+        [{name, should_be_active?}]
+      end
+    end)
   end
 
-  defp set_inactive(organizations, report) do
-    to_update =
-      Enum.flat_map(organizations, fn {name, active} ->
-        if active and name not in report do
-          [name]
-        else
-          []
-        end
-      end)
+  defp do_update([], _boolean) do
+    :ok
+  end
 
-    if to_update != [] do
-      from(r in Organization, where: r.name in ^to_update)
-      |> Repo.update_all(set: [billing_active: false])
-    end
+  defp do_update(to_update, boolean) do
+    names = Enum.map(to_update, fn {name, _active?} -> name end)
+
+    from(r in Organization, where: r.name in ^names)
+    |> Repo.update_all(set: [billing_active: boolean])
   end
 end

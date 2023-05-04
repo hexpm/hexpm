@@ -8,6 +8,7 @@ defmodule Hexpm.Accounts.Organization do
   schema "organizations" do
     field :name, :string
     field :billing_active, :boolean, default: false
+    field :billing_override, :boolean
     field :trial_end, :utc_datetime_usec
     timestamps()
 
