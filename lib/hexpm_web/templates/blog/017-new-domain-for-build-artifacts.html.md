@@ -10,7 +10,7 @@ The transition period will be over 3 months with increasing "brownout" periods w
 
 If you have tooling that uses builds from Hex, you should update it to use the new builds.hex.pm domain. If your download tool can follow HTTP redirects you will be unaffected by the change to the new domain, you can test if redirects are handled correctly by using the https://repo.hex.pm/redirect/builds URL.
 
-[Elixir](https://github.com/elixir-lang/elixir/), [setup-beam](https://github.com/erlef/setup-beam), and [asdf-elixir](https://github.com/asdf-vm/asdf-elixir) have already been updated to use builds.hex.pm. Past versions of Elixir will continue to be able to install Hex since Elixir will follow redirects. Past versions of setup-beam did not follow redirects will not work but if you use the tag `v1` you will get automatic updates. Past versions of asdf-elixir also did not follow redirects and will stop working unless you update by running `asdf plugin-update elixir`.
+[Elixir](https://github.com/elixir-lang/elixir/), [setup-beam](https://github.com/erlef/setup-beam), and [asdf-elixir](https://github.com/asdf-vm/asdf-elixir) have already been updated to use builds.hex.pm. Past versions of Elixir will continue to be able to install Hex since Elixir will follow redirects. Past versions of setup-beam did not follow redirects and will not work but if you use the tag `v1` you will get automatic updates. Past versions of asdf-elixir also did not follow redirects and will stop working unless you update by running `asdf plugin-update elixir`.
 
 ### Brownout schedule
 
