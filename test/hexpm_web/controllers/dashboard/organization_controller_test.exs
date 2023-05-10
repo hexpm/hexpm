@@ -787,7 +787,7 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
         :key,
         organization: c.organization,
         name: "computer",
-        revoked_at: ~N"2017-01-01 00:00:00"
+        revoke_at: ~N"2017-01-01 00:00:00"
       )
 
       mock_customer(c.organization)

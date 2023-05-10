@@ -53,7 +53,7 @@ defmodule HexpmWeb.Dashboard.KeyControllerTest do
     end
 
     test "revoking an already revoked key throws an error", c do
-      insert(:key, user: c.user, name: "computer", revoked_at: ~N"2017-01-01 00:00:00")
+      insert(:key, user: c.user, name: "computer", revoke_at: ~N"2017-01-01 00:00:00")
 
       conn =
         build_conn()

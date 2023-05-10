@@ -10,7 +10,7 @@ defmodule Hexpm.RepoBase.Migrations.AddCommentsTable do
       timestamps()
     end
 
-    create(index("package_report_comments", [:package_report_id]))
+    create(index(:package_report_comments, [:package_report_id]))
   end
 
   def down() do

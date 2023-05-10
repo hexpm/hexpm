@@ -9,10 +9,10 @@ defmodule Hexpm.Repo.Migrations.AddInternalToKeys do
       add(:revoke_at, :timestamp)
     end
 
-    create(index("keys", [:name]))
-    create(index("keys", [:revoked_at]))
-    create(index("keys", [:revoke_at]))
-    create(index("keys", [:public]))
+    create(index(:keys, [:name]))
+    create(index(:keys, [:revoked_at]))
+    create(index(:keys, [:revoke_at]))
+    create(index(:keys, [:public]))
   end
 
   def down do
@@ -23,7 +23,7 @@ defmodule Hexpm.Repo.Migrations.AddInternalToKeys do
       remove(:revoke_at)
     end
 
-    drop(index("keys", [:name]))
-    drop(index("keys", [:revoked_at]))
+    drop(index(:keys, [:name]))
+    drop(index(:keys, [:revoked_at]))
   end
 end

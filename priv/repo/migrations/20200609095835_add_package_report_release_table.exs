@@ -9,8 +9,8 @@ defmodule Hexpm.RepoBase.Migrations.AddPackageReportReleaseTable do
       timestamps()
     end
 
-    create(index("package_report_releases", [:package_report_id]))
-    create(index("package_report_releases", [:release_id]))
+    create(index(:package_report_releases, [:package_report_id]))
+    create(index(:package_report_releases, [:release_id]))
   end
 
   def drop() do
