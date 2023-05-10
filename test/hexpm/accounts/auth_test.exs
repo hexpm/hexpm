@@ -58,7 +58,7 @@ defmodule Hexpm.Accounts.AuthTest do
     end
 
     test "does not authorize revoked key", %{user: user} do
-      key = insert(:key, user: user, revoked_at: ~N"2017-01-01 00:00:00")
+      key = insert(:key, user: user, revoke_at: ~N"2017-01-01 00:00:00")
       assert Auth.key_auth(key.user_secret, %{}) == :revoked
     end
   end

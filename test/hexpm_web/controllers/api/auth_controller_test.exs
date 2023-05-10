@@ -99,7 +99,7 @@ defmodule HexpmWeb.API.AuthControllerTest do
           :key,
           user: user,
           permissions: [build(:key_permission, domain: "api")],
-          revoked_at: ~N[2018-01-01 00:00:00]
+          revoke_at: ~N[2018-01-01 00:00:00]
         )
 
       build_conn()

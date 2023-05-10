@@ -219,7 +219,7 @@ defmodule HexpmWeb.API.KeyControllerTest do
       assert conn.status == 200
       body = Jason.decode!(conn.resp_body)
       assert body["name"] == key_a.name
-      assert body["revoked_at"]
+      assert body["revoke_at"]
       assert body["updated_at"]
       assert body["inserted_at"]
       refute body["secret"]
@@ -295,7 +295,7 @@ defmodule HexpmWeb.API.KeyControllerTest do
       assert conn.status == 200
       body = Jason.decode!(conn.resp_body)
       assert body["name"] == "computer"
-      assert body["revoked_at"]
+      assert body["revoke_at"]
       assert body["updated_at"]
       assert body["inserted_at"]
       refute body["secret"]
@@ -322,7 +322,7 @@ defmodule HexpmWeb.API.KeyControllerTest do
       assert conn.status == 200
       body = Jason.decode!(conn.resp_body)
       assert body["name"] == "current"
-      assert body["revoked_at"]
+      assert body["revoke_at"]
       assert body["updated_at"]
       assert body["inserted_at"]
       refute body["secret"]

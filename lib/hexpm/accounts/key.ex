@@ -12,7 +12,6 @@ defmodule Hexpm.Accounts.Key do
     field :secret_second, :string
     field :public, :boolean, default: true
     field :revoke_at, :utc_datetime_usec
-    field :revoked_at, :utc_datetime_usec
     timestamps()
 
     embeds_one :last_use, Use, on_replace: :delete do
@@ -35,7 +34,6 @@ defmodule Hexpm.Accounts.Key do
     |> validate_required(~w(name)a)
     |> add_keys()
     |> prepare_changes(&unique_name/1)
-    |> unique_constraint(:name, name: "_name_revoked_at_key", match: :suffix)
     |> cast_embed(:permissions, with: &KeyPermission.changeset(&1, user_or_organization, &2))
     |> put_default_embed(:permissions, [%KeyPermission{domain: "api"}])
   end
@@ -66,8 +64,7 @@ defmodule Hexpm.Accounts.Key do
 
   defmacrop query_revoked(key) do
     quote do
-      not is_nil(unquote(key).revoked_at) or
-        (not is_nil(unquote(key).revoke_at) and unquote(key).revoke_at < fragment("NOW()"))
+      not is_nil(unquote(key).revoke_at) and unquote(key).revoke_at < fragment("NOW()")
     end
   end
 
@@ -95,33 +92,36 @@ defmodule Hexpm.Accounts.Key do
     )
   end
 
-  def revoke(key, revoked_at \\ DateTime.utc_now()) do
+  def revoke(key, revoke_at \\ nil) do
+    revoke_at = revoke_at || DateTime.add(DateTime.utc_now(), -1, :second)
+
     key
     |> change()
-    |> put_change(:revoked_at, key.revoked_at || revoked_at)
-    |> validate_required(:revoked_at)
+    |> put_change(:revoke_at, revoke_at)
   end
 
-  def revoke_by_name(user_or_organization, key_name, revoked_at \\ DateTime.utc_now()) do
+  def revoke_by_name(user_or_organization, key_name, revoke_at \\ DateTime.utc_now()) do
     from(
       k in assoc(user_or_organization, :keys),
       where: k.name == ^key_name and not query_revoked(k),
       update: [
         set: [
-          revoked_at: ^revoked_at,
+          revoke_at: ^revoke_at,
           updated_at: ^DateTime.utc_now()
         ]
       ]
     )
   end
 
-  def revoke_all(user_or_organization, revoked_at \\ DateTime.utc_now()) do
+  def revoke_all(user_or_organization, revoke_at \\ nil) do
+    revoke_at = revoke_at || DateTime.add(DateTime.utc_now(), -1, :second)
+
     from(
       k in assoc(user_or_organization, :keys),
       where: not query_revoked(k),
       update: [
         set: [
-          revoked_at: ^revoked_at,
+          revoke_at: ^revoke_at,
           updated_at: ^DateTime.utc_now()
         ]
       ]
@@ -240,8 +240,7 @@ defmodule Hexpm.Accounts.Key do
   defp match_api_resource?(_key_resource, _resource), do: false
 
   def revoked?(%Key{} = key) do
-    not is_nil(key.revoked_at) or
-      (not is_nil(key.revoke_at) and DateTime.compare(key.revoke_at, DateTime.utc_now()) == :lt)
+    not is_nil(key.revoke_at) and DateTime.compare(key.revoke_at, DateTime.utc_now()) == :lt
   end
 
   def associate_owner(nil, _owner), do: nil

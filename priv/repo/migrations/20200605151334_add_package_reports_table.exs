@@ -11,7 +11,7 @@ defmodule Hexpm.RepoBase.Migrations.AddPackageReportsTable do
       timestamps()
     end
 
-    create(index("package_reports", [:package_id]))
+    create(index(:package_reports, [:package_id]))
   end
 
   def down() do
