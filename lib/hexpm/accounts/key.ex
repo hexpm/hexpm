@@ -204,11 +204,7 @@ defmodule Hexpm.Accounts.Key do
 
   def verify_permissions?(%Key{} = key, "package", %Package{} = resource) do
     Enum.any?(key.permissions, fn permission ->
-      [organization, package] = String.split(permission.resource, "/")
-
-      permission.domain == "package" and
-        organization == resource.repository.name and
-        resource.name == package
+      permission.domain == "package" and match_package_resource?(permission.resource, resource)
     end)
   end
 
@@ -238,6 +234,11 @@ defmodule Hexpm.Accounts.Key do
   defp match_api_resource?("write", "read"), do: true
   defp match_api_resource?("read", "read"), do: true
   defp match_api_resource?(_key_resource, _resource), do: false
+
+  defp match_package_resource?(permission, resource) do
+    [organization, package] = String.split(permission, "/")
+    resource.repository.name == organization and resource.name == package
+  end
 
   def revoked?(%Key{} = key) do
     not is_nil(key.revoke_at) and DateTime.compare(key.revoke_at, DateTime.utc_now()) == :lt

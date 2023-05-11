@@ -344,6 +344,17 @@ defmodule HexpmWeb.API.OwnerControllerTest do
       |> response(403)
     end
 
+    test "cannot package owner with api:read permissions", %{
+      user1: user1,
+      user2: user2,
+      package: package
+    } do
+      build_conn()
+      |> put_req_header("authorization", key_for(user1, [%{domain: "api", resource: "read"}]))
+      |> put("/api/packages/#{package.name}/owners/#{user2.username}")
+      |> response(401)
+    end
+
     test "cannot add package owner with maintainer level", %{user2: user2, package: package} do
       insert(:package_owner, package: package, user: user2, level: "maintainer")
       user3 = insert(:user)
