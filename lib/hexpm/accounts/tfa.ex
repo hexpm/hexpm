@@ -9,6 +9,10 @@ defmodule Hexpm.Accounts.TFA do
     embeds_many :recovery_codes, Hexpm.Accounts.RecoveryCode
   end
 
+  # As recommended by requirement R6 in Section 4 of RFC 4226
+  # https://www.rfc-editor.org/rfc/rfc4226.html#section-4
+  @secret_security_bits 160
+
   def changeset(tfa, params) do
     tfa
     |> cast(params, ~w(secret app_enabled tfa_enabled)a)
@@ -16,7 +20,8 @@ defmodule Hexpm.Accounts.TFA do
   end
 
   def generate_secret() do
-    10
+    @secret_security_bits
+    |> div(8)
     |> :crypto.strong_rand_bytes()
     |> Base.encode32()
   end
