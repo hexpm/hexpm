@@ -20,7 +20,11 @@
             <div class="col-md-3">
               <h4>Help</h4>
               <ul>
-                <li><a href="<%= ~p"/docs" %>">Documentation</a></li>
+                <li>
+                  <a href="<%= ~p"/docs" %>">Documentation</a>
+
+                  (<a href="<%= ~p"/docs/faq" %>">FAQ</a>)
+                </li>
                 <li><a href="https://github.com/hexpm/specifications">Specifications</a></li>
                 <li><a href="https://github.com/hexpm/hex/issues">Report Client Issue</a></li>
                 <li><a href="https://github.com/hexpm/hexpm/issues">Report General Issue</a></li>
