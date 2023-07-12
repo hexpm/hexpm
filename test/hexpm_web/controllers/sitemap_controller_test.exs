@@ -3,7 +3,7 @@ defmodule HexpmWeb.SitemapControllerTest do
 
   setup do
     time = ~N[2014-04-17 14:00:00.000]
-    package = insert(:package, updated_at: time, docs_updated_at: time)
+    package = insert(:package, name: "xyz", updated_at: time, docs_updated_at: time)
     insert(:release, package: package, version: "0.1.0", has_docs: true)
 
     %{package: package}

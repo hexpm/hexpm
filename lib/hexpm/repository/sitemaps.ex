@@ -12,17 +12,20 @@ defmodule Hexpm.Repository.Sitemaps do
   end
 
   def packages_with_docs() do
-    from(
-      p in Package,
-      join: r in assoc(p, :releases),
-      order_by: p.name,
-      where: p.repository_id == 1,
-      where: not is_nil(p.docs_updated_at),
-      where: r.has_docs,
-      select: {p.name, p.docs_updated_at},
-      distinct: true
-    )
-    |> Repo.all()
+    packages =
+      from(
+        p in Package,
+        join: r in assoc(p, :releases),
+        order_by: p.name,
+        where: p.repository_id == 1,
+        where: not is_nil(p.docs_updated_at),
+        where: r.has_docs,
+        select: {p.name, p.docs_updated_at},
+        distinct: true
+      )
+      |> Repo.all()
+
+    [{"elixir", nil}, {"hex", nil} | packages]
   end
 
   def packages_for_preview() do

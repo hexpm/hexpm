@@ -2,6 +2,14 @@
 <sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
 
   <sitemap>
+    <loc>http://localhost:5002/elixir/sitemap.xml</loc>
+  </sitemap>
+
+  <sitemap>
+    <loc>http://localhost:5002/hex/sitemap.xml</loc>
+  </sitemap>
+
+  <sitemap>
     <loc>http://localhost:5002/{package}/sitemap.xml</loc>
     <lastmod>2014-04-17T14:00:00Z</lastmod>
   </sitemap>
