@@ -98,7 +98,7 @@ defmodule HexpmWeb.ViewHelpers do
   end
 
   def gravatar_url(nil, size) do
-    "https://www.gravatar.com/avatar?s=#{gravatar_size(size)}&d=mm"
+    "https://www.gravatar.com/avatar/00000000000000000000000000000000?s=#{gravatar_size(size)}&d=mp"
   end
 
   def gravatar_url(email, size) do
