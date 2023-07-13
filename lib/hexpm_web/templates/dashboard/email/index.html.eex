@@ -29,7 +29,7 @@
               <span class="label label-success">Gravatar</span>
             <% end %>
 
-            <%= form_tag(~p"/dashboard/email", class: "action") do %>
+            <%= form_tag(~p"/dashboard/email", method: :delete, class: "action") do %>
               <input type="hidden" name="email" value="<%= email.email %>">
               <button type="submit" class="btn btn-link btn-svg" <%= if email.primary do %>disabled<% end %>>
                 <%= HexpmWeb.ViewIcons.icon(:octicon, :trashcan) %>
