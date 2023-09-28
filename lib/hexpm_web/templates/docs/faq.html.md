@@ -116,7 +116,7 @@ running:
 
 The easiest way to run your own Hex repository is to build it with
 [`mix hex.registry build`](https://hexdocs.pm/hex/Mix.Tasks.Hex.Registry.html),
-see ["Self-hosting"](/docs/self_hosting) guide for more information.
+see ["Self-hosting"](/docs/self-hosting) guide for more information.
 
 We are currently gauging interest in a solution more appropriate for enterprises, please contact
 [support@hex.pm](mailto:support@hex.pm) if you are interested.
