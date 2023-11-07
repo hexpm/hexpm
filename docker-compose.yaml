@@ -11,6 +11,15 @@ services:
       - pg-data:/var/lib/postgresql/data
     ports:
       - "5432:5432"
+  azurite:
+    image: mcr.microsoft.com/azure-storage/azurite
+    container_name: "azurite"
+    hostname: azurite
+    restart: always
+    ports:
+      - 10000:10000
+      - 10001:10001
+      - 10002:10002
 
 volumes:
   pg-data:

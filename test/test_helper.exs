@@ -8,3 +8,6 @@ Hexpm.setup()
 Hexpm.BlockAddress.reload()
 Ecto.Adapters.SQL.Sandbox.mode(Hexpm.RepoBase, :manual)
 Hexpm.Fake.start()
+ExUnit.configure(
+  exclude: [integration: true]
+)

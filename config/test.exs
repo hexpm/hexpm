@@ -36,3 +36,7 @@ config :logger, level: :error
 config :hexpm, :hcaptcha,
   sitekey: "sitekey",
   secret: "secret"
+
+config :azurex, Azurex.Blob.Config,
+  max_blobs_to_list: 2
+

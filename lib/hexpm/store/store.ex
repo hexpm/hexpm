@@ -12,6 +12,7 @@ defmodule Hexpm.Store do
       ["local", bucket] -> {Hexpm.Store.Local, bucket}
       ["s3", bucket] -> {Hexpm.Store.S3, bucket}
       ["gcs", bucket] -> {Hexpm.Store.GCS, bucket}
+      ["azure", bucket] -> {Hexpm.Store.Azure, bucket}
     end
   end
 

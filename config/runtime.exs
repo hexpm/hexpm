@@ -33,6 +33,11 @@ if config_env() == :prod do
     access_key_id: System.fetch_env!("HEXPM_AWS_ACCESS_KEY_ID"),
     secret_access_key: System.fetch_env!("HEXPM_AWS_ACCESS_KEY_SECRET")
 
+  config :azurex, Azurex.Blob.Config,
+    api_url: System.fetch_env!("AZURE_URL"),
+    storage_account_name: System.fetch_env!("AZURE_STORAGE_ACCOUNT_NAME"),
+    storage_account_key: System.fetch_env!("AZURE_STORAGE_ACCOUNT_KEY")
+
   config :rollbax,
     access_token: System.fetch_env!("HEXPM_ROLLBAR_ACCESS_TOKEN")
 

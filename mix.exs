@@ -31,6 +31,7 @@ defmodule Hexpm.MixProject do
 
   defp deps() do
     [
+      {:azurex, "~> 1.1.0"},
       {:bamboo_phoenix, "~> 1.0"},
       {:bamboo, "~> 2.2"},
       {:bcrypt_elixir, "~> 3.0"},

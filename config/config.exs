@@ -21,6 +21,12 @@ config :hexpm, ecto_repos: [Hexpm.RepoBase]
 config :ex_aws,
   json_codec: Jason
 
+config :azurex, Azurex.Blob.Config,
+  api_url: "http://127.0.0.1:10000/devstoreaccount1",
+  default_container: "container",
+  storage_account_name: "devstoreaccount1",
+  storage_account_key: "Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw=="
+
 config :bcrypt_elixir, log_rounds: 4
 
 config :hexpm, HexpmWeb.Endpoint,
