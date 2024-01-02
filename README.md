@@ -6,7 +6,7 @@
 
 To contribute to Hexpm you need to properly set up your development environment.
 
-Also see the client repository: [hex](https://github.com/hexpm/hex). The client uses `hexpm` for integration tests, so `hexpm` needs to support all versions the client supports. Travis tests ensures that tests are run on all supported versions.
+Also see the client repository: [hex](https://github.com/hexpm/hex). The client uses `hexpm` for integration tests, so `hexpm` needs to support all versions the client supports. CI ensures that tests are run on all supported versions.
 
 ### Setup
 
