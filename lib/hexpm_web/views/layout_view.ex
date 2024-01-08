@@ -2,7 +2,7 @@ defmodule HexpmWeb.LayoutView do
   use HexpmWeb, :view
 
   def show_search?(assigns) do
-    Map.get(assigns, :hide_search) != true
+    Map.get(assigns, :hide_search) !== true
   end
 
   def title(assigns) do
