@@ -119,58 +119,36 @@ defmodule HexpmWeb.PackageView do
     end
   end
 
-  @spec path_for_audit_logs(map(), keyword()) :: String.t()
-  def path_for_audit_logs(package, options)
+  @spec retirement_message(map()) :: [any()]
+  def retirement_message(retirement)
 
-  def path_for_audit_logs(%{repository: %{id: 1}} = package, options) do
-    ~p"/packages/#{package}/audit-logs?#{options}"
+  def retirement_message(%{reason: reason, message: message}) do
+    reason_text = ReleaseRetirement.reason_text(reason)
+    retirement_head(:message, reason) ++ retirement_body(:message, reason_text, message)
   end
 
-  def path_for_audit_logs(package, options) do
-      ~p"/packages/#{package.repository}/#{package}/audit-logs?#{options}"
+  @spec retirement_html(map) :: [any()]
+  def retirement_html(retirement)
+
+  def retirement_html(%{reason: reason, message: message}) do
+    reason_text = ReleaseRetirement.reason_text(reason)
+    retirement_head(:html, reason) ++ retirement_body(:html, reason_text, message)
   end
 
-  @doc """
-  This function turns an audit_log struct into a short description.
+  defp retirement_head(:message, "report"), do: ["Marked package"]
+  defp retirement_head(:message, _reason), do: ["Retired package"]
+  defp retirement_head(:html, "report"), do: [content_tag(:strong, "Marked package:")]
+  defp retirement_head(:html, _reason), do: [content_tag(:strong, "Retired package:")]
 
-  Please check Hexpm.Accounts.AuditLog.extract_params/2 to see all the
-  package related actions and their params structures.
-  """
-  @spec humanize_audit_log_info(map()) :: String.t()
-  def humanize_audit_log_info(audit_log)
+  defp retirement_body(:message, nil, nil), do: []
+  defp retirement_body(:message, reason_text, nil), do: [": ", reason_text]
+  defp retirement_body(:message, nil, message), do: [": ", message]
+  defp retirement_body(:message, reason, message), do: [": ", reason, " - ", message]
+  defp retirement_body(:html, nil, nil), do: []
+  defp retirement_body(:html, reason_text, nil), do: [" ", reason_text]
+  defp retirement_body(:html, nil, message), do: [" ", message]
+  defp retirement_body(:html, reason, message), do: [" ", reason, " - ", message]
 
-  def humanize_audit_log_info(%{action: action, params: params}) do
-    case action do
-      "docs.publish" ->
-        do_action(:docs, "Publish documentation", get_version(params))
-
-      "docs.revert" ->
-        do_action(:docs, "Revert documentation", get_version(params))
-
-      "owner.add" ->
-        do_action(:owner_add, nil, params)
-
-      "owner.transfer" ->
-        do_action(:owner_transfer, nil, params)
-
-      "owner.remove" ->
-        do_action(:owner_remove, nil, params)
-
-      "release.publish" ->
-        do_action(:release, "Publish release", get_version(params))
-
-      "release.revert" ->
-        do_action(:release, "Revert release", get_version(params))
-
-      "release.retire" ->
-        do_action(:release, "Retire release", get_version(params))
-
-      "release.unretire" ->
-        do_action(:release, "Unretire release", get_version(params))
-
-      _ ->
-        "Action not recognized"
-    end
   end
 
   defp do_action(:docs, base_message, nil), do: base_message
