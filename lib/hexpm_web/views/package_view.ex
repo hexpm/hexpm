@@ -187,81 +187,70 @@ defmodule HexpmWeb.PackageView do
   Please check Hexpm.Accounts.AuditLog.extract_params/2 to see all the
   package related actions and their params structures.
   """
-  def humanize_audit_log_info(%{action: "docs.publish"} = audit_log) do
-    if release_version = audit_log.params["release"]["version"] do
-      "Publish documentation for release #{release_version}"
-    else
-      "Publish documentation"
+  @spec humanize_audit_log_info(map()) :: String.t()
+  def humanize_audit_log_info(audit_log)
+
+  def humanize_audit_log_info(%{action: action, params: params}) do
+    case action do
+      "docs.publish" ->
+        do_action(:docs, "Publish documentation", get_version(params))
+
+      "docs.revert" ->
+        do_action(:docs, "Revert documentation", get_version(params))
+
+      "owner.add" ->
+        do_action(:owner_add, nil, params)
+
+      "owner.transfer" ->
+        do_action(:owner_transfer, nil, params)
+
+      "owner.remove" ->
+        do_action(:owner_remove, nil, params)
+
+      "release.publish" ->
+        do_action(:release, "Publish release", get_version(params))
+
+      "release.revert" ->
+        do_action(:release, "Revert release", get_version(params))
+
+      "release.retire" ->
+        do_action(:release, "Retire release", get_version(params))
+
+      "release.unretire" ->
+        do_action(:release, "Unretire release", get_version(params))
+
+      _ ->
+        "Action not recognized"
     end
   end
 
-  def humanize_audit_log_info(%{action: "docs.revert"} = audit_log) do
-    if release_version = audit_log.params["release"]["version"] do
-      "Revert documentation for release #{release_version}"
-    else
-      "Revert documentation"
-    end
-  end
+  defp do_action(:docs, base_message, nil), do: base_message
 
-  def humanize_audit_log_info(%{action: "owner.add"} = audit_log) do
-    username = audit_log.params["user"]["username"]
-    level = audit_log.params["level"]
+  defp do_action(:docs, base_message, release_version),
+    do: "#{base_message} for release #{release_version}"
 
-    if username && level do
-      "Add #{username} as a level #{level} owner"
-    else
-      "Add owner"
-    end
-  end
+  defp do_action(:owner_add, _, %{"user" => %{"username" => username}, "level" => level})
+       when not is_nil(username) and not is_nil(level),
+       do: "Add #{username} as a level #{level} owner"
 
-  def humanize_audit_log_info(%{action: "owner.transfer"} = audit_log) do
-    if username = audit_log.params["user"]["username"] do
-      "Transfer owner to #{username}"
-    else
-      "Transfer owner"
-    end
-  end
+  defp do_action(:owner_add, _, _), do: "Add owner"
 
-  def humanize_audit_log_info(%{action: "owner.remove"} = audit_log) do
-    username = audit_log.params["user"]["username"]
-    level = audit_log.params["level"]
+  defp do_action(:owner_transfer, _, %{"user" => %{"username" => username}})
+       when not is_nil(username),
+       do: "Transfer owner to #{username}"
 
-    if username && level do
-      "Remove level #{level} owner #{username}"
-    else
-      "Remove owner"
-    end
-  end
+  defp do_action(:owner_transfer, _, _), do: "Transfer owner"
 
-  def humanize_audit_log_info(%{action: "release.publish"} = audit_log) do
-    if version = audit_log.params["release"]["version"] do
-      "Publish release #{version}"
-    else
-      "Publish release"
-    end
-  end
+  defp do_action(:owner_remove, _, %{"user" => %{"username" => username}, "level" => level})
+       when not is_nil(username) and not is_nil(level),
+       do: "Remove level #{level} owner #{username}"
 
-  def humanize_audit_log_info(%{action: "release.revert"} = audit_log) do
-    if version = audit_log.params["release"]["version"] do
-      "Revert release #{version}"
-    else
-      "Revert release"
-    end
-  end
+  defp do_action(:owner_remove, _, _), do: "Remove owner"
 
-  def humanize_audit_log_info(%{action: "release.retire"} = audit_log) do
-    if version = audit_log.params["release"]["version"] do
-      "Retire release #{version}"
-    else
-      "Retire release"
-    end
-  end
+  defp do_action(:release, base_message, nil), do: base_message
 
-  def humanize_audit_log_info(%{action: "release.unretire"} = audit_log) do
-    if version = audit_log.params["release"]["version"] do
-      "Unretire release #{version}"
-    else
-      "Unretire release"
-    end
-  end
+  defp do_action(:release, base_message, release_version),
+    do: "#{base_message} #{release_version}"
+
+  defp get_version(params), do: get_in(params, ["release", "version"])
 end
