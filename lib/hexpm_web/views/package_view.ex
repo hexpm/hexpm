@@ -119,66 +119,15 @@ defmodule HexpmWeb.PackageView do
     end
   end
 
-  def retirement_message(retirement) do
-    reason = ReleaseRetirement.reason_text(retirement.reason)
+  @spec path_for_audit_logs(map(), keyword()) :: String.t()
+  def path_for_audit_logs(package, options)
 
-    head =
-      case retirement.reason do
-        "report" -> ["Marked package"]
-        _ -> ["Retired package"]
-      end
-
-    body =
-      cond do
-        reason && retirement.message ->
-          [": ", reason, " - ", retirement.message]
-
-        reason ->
-          [": ", reason]
-
-        retirement.message ->
-          [": ", retirement.message]
-
-        true ->
-          []
-      end
-
-    head ++ body
-  end
-
-  def retirement_html(retirement) do
-    reason = ReleaseRetirement.reason_text(retirement.reason)
-
-    msg_head =
-      case retirement.reason do
-        "report" -> [content_tag(:strong, "Marked package:")]
-        _ -> [content_tag(:strong, "Retired package:")]
-      end
-
-    msg_body =
-      cond do
-        reason && retirement.message ->
-          [" ", reason, " - ", retirement.message]
-
-        reason ->
-          [" ", reason]
-
-        retirement.message ->
-          [" ", retirement.message]
-
-        true ->
-          []
-      end
-
-    msg_head ++ msg_body
+  def path_for_audit_logs(%{repository: %{id: 1}} = package, options) do
+    ~p"/packages/#{package}/audit-logs?#{options}"
   end
 
   def path_for_audit_logs(package, options) do
-    if package.repository.id == 1 do
-      ~p"/packages/#{package}/audit-logs?#{options}"
-    else
       ~p"/packages/#{package.repository}/#{package}/audit-logs?#{options}"
-    end
   end
 
   @doc """
