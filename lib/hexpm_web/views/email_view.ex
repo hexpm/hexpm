@@ -2,60 +2,72 @@ defmodule HexpmWeb.EmailView do
   use HexpmWeb, :view
 
   defmodule OwnerAdd do
+    @spec message(String.t(), String.t()) :: String.t()
     def message(username, package) do
       "#{username} has been added as an owner to package #{package}."
     end
   end
 
   defmodule OwnerRemove do
+    @spec message(String.t(), String.t()) :: String.t()
     def message(username, package) do
       "#{username} has been removed from owners of package #{package}."
     end
   end
 
   defmodule Verification do
+    @spec intro() :: String.t()
     def intro() do
       "To begin using your email, we require you to verify your email address."
     end
   end
 
   defmodule PasswordResetRequest do
+    @spec title() :: String.t()
     def title() do
       "Reset your Hex.pm password"
     end
 
+    @spec message() :: String.t()
     def message() do
       "We heard you've lost your password to Hex.pm. Sorry about that!"
     end
 
+    @spec mix_code() :: String.t()
     def mix_code() do
       "mix hex.user auth"
     end
 
+    @spec rebar_code() :: String.t()
     def rebar_code() do
       "rebar3 hex user auth"
     end
 
+    @spec before_code() :: String.t()
     def before_code() do
       "Once this is complete, your existing keys may be invalidated, you will need to regenerate them by running:"
     end
 
+    @spec after_code() :: String.t()
     def after_code() do
       "and entering your username and password."
     end
   end
 
   defmodule PasswordChanged do
+    @spec greeting(String.t()) :: String.t()
     def greeting(username) do
       "Hello #{username}"
     end
 
+    @spec title() :: String.t()
     def title() do
       "Your password on Hex.pm has been changed."
     end
   end
 
   defmodule TyposquatCandidates do
+    @spec intro(String.t()) :: String.t()
     def intro(threshold) do
       """
       Using Levenshtein Distance with a threshold of #{threshold}
@@ -64,6 +76,7 @@ defmodule HexpmWeb.EmailView do
       """
     end
 
+    @spec table(list()) :: String.t()
     def table(candidates) do
       candidates
       |> Enum.map(fn [n, c, d] -> "#{n},#{c},#{d}" end)
@@ -72,20 +85,26 @@ defmodule HexpmWeb.EmailView do
   end
 
   defmodule OrganizationInvite do
+    @spec access_organization() :: String.t()
     def access_organization() do
       "You can access organization packages after authenticating in your shell:"
     end
 
+    @spec mix_code() :: String.t()
     def mix_code() do
       "mix hex.user auth"
     end
 
+    @spec rebar_code() :: String.t()
     def rebar_code() do
       "rebar3 hex user auth"
     end
   end
 
   defmodule PackagePublished do
+    @spec intro(nil | map(), String.t(), String.t()) :: String.t()
+    def intro(publisher, package, version)
+
     def intro(nil, package, version) do
       """
       Package #{package} v#{version} was recently published.
@@ -102,6 +121,7 @@ defmodule HexpmWeb.EmailView do
       """
     end
 
+    @spec mix_code(String.t(), String.t()) :: String.t()
     def mix_code(package, version) do
       """
       cd #{package}; mix hex.publish --revert #{version}
@@ -110,6 +130,7 @@ defmodule HexpmWeb.EmailView do
       """
     end
 
+    @spec rebar3_code(String.t(), String.t()) :: String.t()
     def rebar3_code(package, version) do
       """
       cd #{package}; rebar3 hex publish --revert #{version}
@@ -120,6 +141,9 @@ defmodule HexpmWeb.EmailView do
   end
 
   defmodule ReportState do
+    @spec state_explain(String.t()) :: String.t()
+    def state_explain(state)
+
     def state_explain("to_accept") do
       """
       The report has now state \"to_accept\".
