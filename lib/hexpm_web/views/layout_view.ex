@@ -1,42 +1,37 @@
 defmodule HexpmWeb.LayoutView do
   use HexpmWeb, :view
 
+  @spec show_search?(map()) :: boolean()
   def show_search?(assigns) do
     Map.get(assigns, :hide_search) != true
   end
 
-  def title(assigns) do
-    if title = Map.get(assigns, :title) do
-      "#{title} | Hex"
-    else
-      "Hex"
-    end
-  end
+  @spec title(map()) :: String.t()
+  def title(assigns)
+  def title(%{"title" => title}), do: "#{title} | Hex"
+  def title(_assigns), do: "Hex"
 
-  def description(assigns) do
-    if description = Map.get(assigns, :description) do
-      String.slice(description, 0, 160)
-    else
-      "A package manager for the Erlang ecosystem"
-    end
-  end
+  @spec description(map) :: String.t()
+  def description(assigns)
+  def description(%{"description" => description}), do: String.slice(description, 0, 160)
+  def description(_assigns), do: "A package manager for the Erlang ecosystem"
 
-  def canonical_url(assigns) do
-    if url = Map.get(assigns, :canonical_url) do
-      tag(:link, rel: "canonical", href: url)
-    else
-      nil
-    end
-  end
+  @spec canonical_url(map) :: Phoenix.HTML.safe() | nil
+  def canonical_url(assigns)
+  def canonical_url(%{canonical_url: url}), do: tag(:link, rel: "canonical", href: url)
+  def canonical_url(_assigns), do: nil
 
+  @spec search(map) :: any()
   def search(assigns) do
     Map.get(assigns, :search)
   end
 
+  @spec container_class(map) :: term()
   def container_class(assigns) do
     Map.get(assigns, :container, "container")
   end
 
+  @spec og_tags(map) :: [Phoenix.HTML.safe()]
   def og_tags(assigns) do
     [
       tag(:meta, property: "og:title", content: Map.get(assigns, :title)),
