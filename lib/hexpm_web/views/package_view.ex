@@ -1,6 +1,8 @@
 defmodule HexpmWeb.PackageView do
   use HexpmWeb, :view
 
+  @spec show_sort_info(atom() | nil) :: String.t() | nil
+  def show_sort_info(sort)
   def show_sort_info(nil), do: show_sort_info(:name)
   def show_sort_info(:name), do: "Sort: Name"
   def show_sort_info(:inserted_at), do: "Sort: Recently created"
@@ -13,34 +15,33 @@ defmodule HexpmWeb.PackageView do
     Map.get(downloads, package.id, %{"all" => 0, "recent" => 0})
   end
 
-  def display_downloads(package_downloads, view) do
-    case view do
-      :recent_downloads ->
-        Map.get(package_downloads, "recent")
+  @spec display_downloads(map(), atom()) :: term()
+  def display_downloads(package_downloads, view)
 
-      _ ->
-        Map.get(package_downloads, "all")
-    end
+  def display_downloads(package_downloads, :recent_downloads),
+    do: Map.get(package_downloads, "recent")
+
+  def display_downloads(package_downloads, _), do: Map.get(package_downloads, "all")
+  @spec display_downloads_for_opposite_views(map(), atom()) :: String.t()
+  def display_downloads_for_opposite_views(package_downloads, view)
+
+  def display_downloads_for_opposite_views(package_downloads, :recent_downloads) do
+    downloads = display_downloads(package_downloads, :all) || 0
+    "total downloads: #{ViewHelpers.human_number_space(downloads)}"
   end
 
-  def display_downloads_for_opposite_views(package_downloads, view) do
-    case view do
-      :recent_downloads ->
-        downloads = display_downloads(package_downloads, :all) || 0
-        "total downloads: #{ViewHelpers.human_number_space(downloads)}"
-
-      _ ->
-        downloads = display_downloads(package_downloads, :recent_downloads) || 0
-        "recent downloads: #{ViewHelpers.human_number_space(downloads)}"
-    end
+  def display_downloads_for_opposite_views(package_downloads, _) do
+    downloads = display_downloads(package_downloads, :recent_downloads) || 0
+    "recent downloads: #{ViewHelpers.human_number_space(downloads)}"
   end
 
-  def display_downloads_view_title(view) do
-    case view do
-      :recent_downloads -> "recent downloads"
-      _ -> "total downloads"
-    end
-  end
+  @spec display_downloads_view_title(atom) :: String.t()
+  def display_downloads_view_title(view)
+  def display_downloads_view_title(:recent_downloads), do: "recent downloads"
+  def display_downloads_view_title(_), do: "total downloads"
+
+  @spec dep_snippet(atom(), map(), map()) :: String.t()
+  def dep_snippet(tool, package, current_release)
 
   def dep_snippet(:mix, package, release) do
     version = snippet_version(:mix, release.version)
@@ -69,6 +70,9 @@ defmodule HexpmWeb.PackageView do
     version = snippet_version(:erlang_mk, release.version)
     "dep_#{package.name} = hex #{version}"
   end
+
+  @spec snippet_version(atom(), %Version{}) :: String.t()
+  def snippet_version(tool, version)
 
   def snippet_version(:mix, %Version{major: 0, minor: minor, patch: patch, pre: []}) do
     "~> 0.#{minor}.#{patch}"
@@ -149,6 +153,58 @@ defmodule HexpmWeb.PackageView do
   defp retirement_body(:html, nil, message), do: [" ", message]
   defp retirement_body(:html, reason, message), do: [" ", reason, " - ", message]
 
+  @spec path_for_audit_logs(map(), keyword()) :: String.t()
+  def path_for_audit_logs(package, options)
+
+  def path_for_audit_logs(%{repository: %{id: 1}} = package, options) do
+    ~p"/packages/#{package}/audit-logs?#{options}"
+  end
+
+  def path_for_audit_logs(package, options) do
+    ~p"/packages/#{package.repository}/#{package}/audit-logs?#{options}"
+  end
+
+  @doc """
+  This function turns an audit_log struct into a short description.
+
+  Please check Hexpm.Accounts.AuditLog.extract_params/2 to see all the
+  package related actions and their params structures.
+  """
+  @spec humanize_audit_log_info(map()) :: String.t()
+  def humanize_audit_log_info(audit_log)
+
+  def humanize_audit_log_info(%{action: action, params: params}) do
+    case action do
+      "docs.publish" ->
+        do_action(:docs, "Publish documentation", get_version(params))
+
+      "docs.revert" ->
+        do_action(:docs, "Revert documentation", get_version(params))
+
+      "owner.add" ->
+        do_action(:owner_add, nil, params)
+
+      "owner.transfer" ->
+        do_action(:owner_transfer, nil, params)
+
+      "owner.remove" ->
+        do_action(:owner_remove, nil, params)
+
+      "release.publish" ->
+        do_action(:release, "Publish release", get_version(params))
+
+      "release.revert" ->
+        do_action(:release, "Revert release", get_version(params))
+
+      "release.retire" ->
+        do_action(:release, "Retire release", get_version(params))
+
+      "release.unretire" ->
+        do_action(:release, "Unretire release", get_version(params))
+
+      _ ->
+        "Action not recognized"
+    end
   end
 
   defp do_action(:docs, base_message, nil), do: base_message
