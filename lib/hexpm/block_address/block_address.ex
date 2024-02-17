@@ -18,11 +18,12 @@ defmodule Hexpm.BlockAddress do
 
   def reload() do
     disallowed =
-      Hexpm.BlockAddress.Entry
-      |> Hexpm.Repo.all()
-      |> Stream.map(&Hexpm.Utils.parse_ip_mask(&1.ip))
-      |> Stream.reject(fn {ip, _mask} -> ip == nil end)
-      |> Enum.uniq()
+      for entry <- Hexpm.BlockAddress.Entry |> Hexpm.Repo.all(),
+          {ip, mask} = Hexpm.Utils.parse_ip_mask(entry.ip),
+          ip != nil,
+          uniq: true do
+        {ip, mask}
+      end
 
     :ets.insert(@ets, {:allowed, Hexpm.CDN.public_ips()})
     :ets.insert(@ets, {:disallowed, disallowed})
