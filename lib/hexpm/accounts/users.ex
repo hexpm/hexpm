@@ -93,43 +93,28 @@ defmodule Hexpm.Accounts.Users do
 
   def update_profile(%User{organization_id: id} = user, params, audit: audit_data)
       when not is_nil(id) do
-    multi =
-      Multi.new()
-      |> Multi.update(:user, User.update_profile(user, params))
-      |> audit(audit_data, "user.update", fn %{user: user} -> user end)
-      |> insert_or_update_or_delete_email_multi(user, :public, params["public_email"],
-        audit: audit_data
-      )
-      |> insert_or_update_or_delete_email_multi(user, :gravatar, params["gravatar_email"],
-        audit: audit_data
-      )
-
-    case Repo.transaction(multi) do
-      {:ok, %{user: user}} ->
-        {:ok, user}
-
-      {:error, :public_email, _, _} ->
-        {:error,
-         %Ecto.Changeset{data: user, errors: [public_email: {"unknown error", []}], valid?: false}}
-
-      {:error, :gravatar_email, _, _} ->
-        {:error,
-         %Ecto.Changeset{
-           data: user,
-           errors: [gravatar_email: {"unknown error", []}],
-           valid?: false
-         }}
-    end
+    Multi.new()
+    |> Multi.update(:user, User.update_profile(user, params))
+    |> audit(audit_data, "user.update", fn %{user: user} -> user end)
+    |> insert_or_update_or_delete_email_multi(user, :public, params["public_email"],
+      audit: audit_data
+    )
+    |> insert_or_update_or_delete_email_multi(user, :gravatar, params["gravatar_email"],
+      audit: audit_data
+    )
+    |> do_update_profile(user)
   end
 
   def update_profile(user, params, audit: audit_data) do
-    multi =
-      Multi.new()
-      |> Multi.update(:user, User.update_profile(user, params))
-      |> audit(audit_data, "user.update", fn %{user: user} -> user end)
-      |> public_email_multi(user, %{"email" => params["public_email"]}, audit: audit_data)
-      |> gravatar_email_multi(user, %{"email" => params["gravatar_email"]}, audit: audit_data)
+    Multi.new()
+    |> Multi.update(:user, User.update_profile(user, params))
+    |> audit(audit_data, "user.update", fn %{user: user} -> user end)
+    |> public_email_multi(user, %{"email" => params["public_email"]}, audit: audit_data)
+    |> gravatar_email_multi(user, %{"email" => params["gravatar_email"]}, audit: audit_data)
+    |> do_update_profile(user)
+  end
 
+  def do_update_profile(multi, user) do
     case Repo.transaction(multi) do
       {:ok, %{user: user}} ->
         {:ok, user}
