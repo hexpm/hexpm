@@ -65,9 +65,7 @@ defmodule HexpmWeb.EmailView do
     end
 
     def table(candidates) do
-      candidates
-      |> Enum.map(fn [n, c, d] -> "#{n},#{c},#{d}" end)
-      |> Enum.join("\n")
+      Enum.map_join(candidates, "\n", fn [n, c, d] -> "#{n},#{c},#{d}" end)
     end
   end
 

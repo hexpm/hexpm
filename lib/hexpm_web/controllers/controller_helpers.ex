@@ -332,7 +332,7 @@ defmodule HexpmWeb.ControllerHelpers do
     do: tuple |> Tuple.to_list() |> Enum.join(".")
 
   defp ip_to_string(tuple) when is_tuple(tuple) and tuple_size(tuple) == 8,
-    do: tuple |> Tuple.to_list() |> Enum.map(&String.to_integer(&1, 16)) |> Enum.join(":")
+    do: tuple |> Tuple.to_list() |> Enum.map_join(":", &String.to_integer(&1, 16))
 
   def password_auth(username, password) do
     case Auth.password_auth(username, password) do
