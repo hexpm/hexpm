@@ -18,7 +18,7 @@ defmodule Hexpm.BlockAddress do
 
   def reload() do
     disallowed =
-      for entry <- Hexpm.BlockAddress.Entry |> Hexpm.Repo.all(),
+      for entry <- Hexpm.Repo.all(Hexpm.BlockAddress.Entry),
           {ip, mask} = Hexpm.Utils.parse_ip_mask(entry.ip),
           ip != nil,
           uniq: true do
