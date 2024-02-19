@@ -237,5 +237,5 @@ defmodule HexpmWeb.PackageView do
   defp do_release_action(base_message, release_version),
     do: "#{base_message} #{release_version}"
 
-  defp version_from_params(params) when is_map(params), do: get_in(params, ["release", "version"])
+  defp version_from_params(params) when is_map(params), do: params["release"]["version"]
 end
