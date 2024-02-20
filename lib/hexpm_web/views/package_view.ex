@@ -24,19 +24,13 @@ defmodule HexpmWeb.PackageView do
   def display_downloads_for_opposite_views(package_downloads, view)
 
   def display_downloads_for_opposite_views(package_downloads, :recent_downloads) do
-    package_downloads
-    |> display_downloads(:all) ||
-      0
-      |> ViewHelpers.human_number_space()
-      |> (&"total downloads: #{&1}").()
+    downloads = display_downloads(package_downloads, :all) || 0
+    "total downloads: #{ViewHelpers.human_number_space(downloads)}"
   end
 
   def display_downloads_for_opposite_views(package_downloads, _view) do
-    package_downloads
-    |> display_downloads(:recent_downloads) ||
-      0
-      |> ViewHelpers.human_number_space()
-      |> (&"recent downloads: #{&1}").()
+    downloads = display_downloads(package_downloads, :recent_downloads) || 0
+    "recent downloads: #{ViewHelpers.human_number_space(downloads)}"
   end
 
   def display_downloads_view_title(view)
