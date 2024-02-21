@@ -1,7 +1,6 @@
 defmodule HexpmWeb.PackageView do
   use HexpmWeb, :view
 
-  def show_sort_info(sort)
   def show_sort_info(nil), do: show_sort_info(:name)
   def show_sort_info(:name), do: "Sort: Name"
   def show_sort_info(:inserted_at), do: "Sort: Recently created"
@@ -14,14 +13,12 @@ defmodule HexpmWeb.PackageView do
     Map.get(downloads, package.id, %{"all" => 0, "recent" => 0})
   end
 
-  def display_downloads(package_downloads, view)
 
   def display_downloads(package_downloads, :recent_downloads),
     do: Map.get(package_downloads, "recent")
 
   def display_downloads(package_downloads, _view), do: Map.get(package_downloads, "all")
 
-  def display_downloads_for_opposite_views(package_downloads, view)
 
   def display_downloads_for_opposite_views(package_downloads, :recent_downloads) do
     downloads = display_downloads(package_downloads, :all) || 0
@@ -33,11 +30,8 @@ defmodule HexpmWeb.PackageView do
     "recent downloads: #{ViewHelpers.human_number_space(downloads)}"
   end
 
-  def display_downloads_view_title(view)
   def display_downloads_view_title(:recent_downloads), do: "recent downloads"
   def display_downloads_view_title(_view), do: "total downloads"
-
-  def dep_snippet(tool, package, release)
 
   def dep_snippet(:mix, %{name: name, repository: repo}, release) do
     version = snippet_version(:mix, release.version)
@@ -72,8 +66,6 @@ defmodule HexpmWeb.PackageView do
   defp do_dep_snippet(:rebar, {name, app_name}, version, _organization) do
     "{#{app_name(:rebar, app_name)}, \"#{version}\", {pkg, #{name}}}"
   end
-
-  def snippet_version(tool, version)
 
   def snippet_version(:mix, %Version{major: 0, minor: minor, patch: patch, pre: []}) do
     "~> 0.#{minor}.#{patch}"
@@ -123,14 +115,12 @@ defmodule HexpmWeb.PackageView do
     end
   end
 
-  def retirement_message(retirement)
 
   def retirement_message(%{reason: reason, message: message}) do
     reason_text = ReleaseRetirement.reason_text(reason)
     retirement_head(:message, reason) ++ retirement_body(:message, reason_text, message)
   end
 
-  def retirement_html(retirement)
 
   def retirement_html(%{reason: reason, message: message}) do
     reason_text = ReleaseRetirement.reason_text(reason)
@@ -151,7 +141,6 @@ defmodule HexpmWeb.PackageView do
   defp retirement_body(:html, nil, message), do: [" ", message]
   defp retirement_body(:html, reason, message), do: [" ", reason, " - ", message]
 
-  def path_for_audit_logs(package, options)
 
   def path_for_audit_logs(%{repository: %{id: 1}} = package, options) do
     ~p"/packages/#{package}/audit-logs?#{options}"
@@ -167,7 +156,6 @@ defmodule HexpmWeb.PackageView do
   Please check Hexpm.Accounts.AuditLog.extract_params/2 to see all the
   package related actions and their params structures.
   """
-  def humanize_audit_log_info(audit_log)
 
   def humanize_audit_log_info(%{action: action, params: params}) do
     case action do
