@@ -13,61 +13,56 @@ defmodule HexpmWeb.PackageView do
     Map.get(downloads, package.id, %{"all" => 0, "recent" => 0})
   end
 
-  def display_downloads(package_downloads, view) do
-    case view do
-      :recent_downloads ->
-        Map.get(package_downloads, "recent")
+  def display_downloads(package_downloads, :recent_downloads),
+    do: Map.get(package_downloads, "recent")
 
-      _ ->
-        Map.get(package_downloads, "all")
-    end
+  def display_downloads(package_downloads, _view), do: Map.get(package_downloads, "all")
+
+  def display_downloads_for_opposite_views(package_downloads, :recent_downloads) do
+    downloads = display_downloads(package_downloads, :all) || 0
+    "total downloads: #{ViewHelpers.human_number_space(downloads)}"
   end
 
-  def display_downloads_for_opposite_views(package_downloads, view) do
-    case view do
-      :recent_downloads ->
-        downloads = display_downloads(package_downloads, :all) || 0
-        "total downloads: #{ViewHelpers.human_number_space(downloads)}"
-
-      _ ->
-        downloads = display_downloads(package_downloads, :recent_downloads) || 0
-        "recent downloads: #{ViewHelpers.human_number_space(downloads)}"
-    end
+  def display_downloads_for_opposite_views(package_downloads, _view) do
+    downloads = display_downloads(package_downloads, :recent_downloads) || 0
+    "recent downloads: #{ViewHelpers.human_number_space(downloads)}"
   end
 
-  def display_downloads_view_title(view) do
-    case view do
-      :recent_downloads -> "recent downloads"
-      _ -> "total downloads"
-    end
-  end
+  def display_downloads_view_title(:recent_downloads), do: "recent downloads"
+  def display_downloads_view_title(_view), do: "total downloads"
 
-  def dep_snippet(:mix, package, release) do
+  def dep_snippet(:mix, %{name: name, repository: repo}, release) do
     version = snippet_version(:mix, release.version)
-    app_name = (release.meta && release.meta.app) || package.name
-    organization = snippet_organization(package.repository.name)
-
-    if package.name == app_name do
-      "{:#{package.name}, \"#{version}\"#{organization}}"
-    else
-      "{#{app_name(:mix, app_name)}, \"#{version}\", hex: :#{package.name}#{organization}}"
-    end
+    app_name = (release.meta && release.meta.app) || name
+    organization = snippet_organization(repo.name)
+    do_dep_snippet(:mix, {name, app_name}, version, organization)
   end
 
-  def dep_snippet(:rebar, package, release) do
+  def dep_snippet(:rebar, %{name: name}, release) do
     version = snippet_version(:rebar, release.version)
-    app_name = (release.meta && release.meta.app) || package.name
-
-    if package.name == app_name do
-      "{#{package.name}, \"#{version}\"}"
-    else
-      "{#{app_name(:rebar, app_name)}, \"#{version}\", {pkg, #{package.name}}}"
-    end
+    app_name = (release.meta && release.meta.app) || name
+    do_dep_snippet(:rebar, {name, app_name}, version)
   end
 
   def dep_snippet(:erlang_mk, package, release) do
     version = snippet_version(:erlang_mk, release.version)
     "dep_#{package.name} = hex #{version}"
+  end
+
+  defp do_dep_snippet(tool, name, version, organization \\ nil)
+
+  defp do_dep_snippet(:mix, {name, app_name}, version, organization) when name == app_name,
+    do: "{:#{name}, \"#{version}\"#{organization}}"
+
+  defp do_dep_snippet(:mix, {name, app_name}, version, organization),
+    do: "{#{app_name(:mix, app_name)}, \"#{version}\", hex: :#{name}#{organization}}"
+
+  defp do_dep_snippet(:rebar, {name, app_name}, version, _organization) when name == app_name do
+    "{#{name}, \"#{version}\"}"
+  end
+
+  defp do_dep_snippet(:rebar, {name, app_name}, version, _organization) do
+    "{#{app_name(:rebar, app_name)}, \"#{version}\", {pkg, #{name}}}"
   end
 
   def snippet_version(:mix, %Version{major: 0, minor: minor, patch: patch, pre: []}) do
@@ -90,15 +85,14 @@ defmodule HexpmWeb.PackageView do
   defp snippet_organization("hexpm"), do: ""
   defp snippet_organization(repository), do: ", organization: #{inspect(repository)}"
 
+  defp pre_snippet(pre)
   defp pre_snippet([]), do: ""
 
-  defp pre_snippet(pre) do
-    "-" <>
-      Enum.map_join(pre, ".", fn
-        int when is_integer(int) -> Integer.to_string(int)
-        string when is_binary(string) -> string
-      end)
-  end
+  defp pre_snippet([int | _rest] = pre) when is_integer(int),
+    do: "-" <> Enum.map_join(pre, ".", &Integer.to_string/1)
+
+  defp pre_snippet([string | _rest] = pre) when is_binary(string),
+    do: "-" <> Enum.map_join(pre, ".", & &1)
 
   @elixir_atom_chars ~r"^[a-zA-Z_][a-zA-Z_0-9]*$"
   @erlang_atom_chars ~r"^[a-z][a-zA-Z_0-9]*$"
@@ -119,66 +113,36 @@ defmodule HexpmWeb.PackageView do
     end
   end
 
-  def retirement_message(retirement) do
-    reason = ReleaseRetirement.reason_text(retirement.reason)
-
-    head =
-      case retirement.reason do
-        "report" -> ["Marked package"]
-        _ -> ["Retired package"]
-      end
-
-    body =
-      cond do
-        reason && retirement.message ->
-          [": ", reason, " - ", retirement.message]
-
-        reason ->
-          [": ", reason]
-
-        retirement.message ->
-          [": ", retirement.message]
-
-        true ->
-          []
-      end
-
-    head ++ body
+  def retirement_message(%{reason: reason, message: message}) do
+    reason_text = ReleaseRetirement.reason_text(reason)
+    retirement_head(:message, reason) ++ retirement_body(:message, reason_text, message)
   end
 
-  def retirement_html(retirement) do
-    reason = ReleaseRetirement.reason_text(retirement.reason)
+  def retirement_html(%{reason: reason, message: message}) do
+    reason_text = ReleaseRetirement.reason_text(reason)
+    retirement_head(:html, reason) ++ retirement_body(:html, reason_text, message)
+  end
 
-    msg_head =
-      case retirement.reason do
-        "report" -> [content_tag(:strong, "Marked package:")]
-        _ -> [content_tag(:strong, "Retired package:")]
-      end
+  defp retirement_head(:message, "report"), do: ["Marked package"]
+  defp retirement_head(:message, _reason), do: ["Retired package"]
+  defp retirement_head(:html, "report"), do: [content_tag(:strong, "Marked package:")]
+  defp retirement_head(:html, _reason), do: [content_tag(:strong, "Retired package:")]
 
-    msg_body =
-      cond do
-        reason && retirement.message ->
-          [" ", reason, " - ", retirement.message]
+  defp retirement_body(:message, nil, nil), do: []
+  defp retirement_body(:message, reason_text, nil), do: [": ", reason_text]
+  defp retirement_body(:message, nil, message), do: [": ", message]
+  defp retirement_body(:message, reason, message), do: [": ", reason, " - ", message]
+  defp retirement_body(:html, nil, nil), do: []
+  defp retirement_body(:html, reason_text, nil), do: [" ", reason_text]
+  defp retirement_body(:html, nil, message), do: [" ", message]
+  defp retirement_body(:html, reason, message), do: [" ", reason, " - ", message]
 
-        reason ->
-          [" ", reason]
-
-        retirement.message ->
-          [" ", retirement.message]
-
-        true ->
-          []
-      end
-
-    msg_head ++ msg_body
+  def path_for_audit_logs(%{repository: %{id: 1}} = package, options) do
+    ~p"/packages/#{package}/audit-logs?#{options}"
   end
 
   def path_for_audit_logs(package, options) do
-    if package.repository.id == 1 do
-      ~p"/packages/#{package}/audit-logs?#{options}"
-    else
-      ~p"/packages/#{package.repository}/#{package}/audit-logs?#{options}"
-    end
+    ~p"/packages/#{package.repository}/#{package}/audit-logs?#{options}"
   end
 
   @doc """
@@ -187,81 +151,68 @@ defmodule HexpmWeb.PackageView do
   Please check Hexpm.Accounts.AuditLog.extract_params/2 to see all the
   package related actions and their params structures.
   """
-  def humanize_audit_log_info(%{action: "docs.publish"} = audit_log) do
-    if release_version = audit_log.params["release"]["version"] do
-      "Publish documentation for release #{release_version}"
-    else
-      "Publish documentation"
+
+  def humanize_audit_log_info(%{action: action, params: params}) do
+    case action do
+      "docs.publish" ->
+        do_docs_action("Publish documentation", version_from_params(params))
+
+      "docs.revert" ->
+        do_docs_action("Revert documentation", version_from_params(params))
+
+      "owner.add" ->
+        do_owner_action(:add, params)
+
+      "owner.transfer" ->
+        do_owner_action(:transfer, params)
+
+      "owner.remove" ->
+        do_owner_action(:remove, params)
+
+      "release.publish" ->
+        do_release_action("Publish release", version_from_params(params))
+
+      "release.revert" ->
+        do_release_action("Revert release", version_from_params(params))
+
+      "release.retire" ->
+        do_release_action("Retire release", version_from_params(params))
+
+      "release.unretire" ->
+        do_release_action("Unretire release", version_from_params(params))
+
+      _ ->
+        "Action not recognized"
     end
   end
 
-  def humanize_audit_log_info(%{action: "docs.revert"} = audit_log) do
-    if release_version = audit_log.params["release"]["version"] do
-      "Revert documentation for release #{release_version}"
-    else
-      "Revert documentation"
-    end
-  end
+  defp do_docs_action(base_message, nil), do: base_message
 
-  def humanize_audit_log_info(%{action: "owner.add"} = audit_log) do
-    username = audit_log.params["user"]["username"]
-    level = audit_log.params["level"]
+  defp do_docs_action(base_message, release_version),
+    do: "#{base_message} for release #{release_version}"
 
-    if username && level do
-      "Add #{username} as a level #{level} owner"
-    else
-      "Add owner"
-    end
-  end
+  defp do_owner_action(:add, %{"user" => %{"username" => username}, "level" => level})
+       when not is_nil(username) and not is_nil(level),
+       do: "Add #{username} as a level #{level} owner"
 
-  def humanize_audit_log_info(%{action: "owner.transfer"} = audit_log) do
-    if username = audit_log.params["user"]["username"] do
-      "Transfer owner to #{username}"
-    else
-      "Transfer owner"
-    end
-  end
+  defp do_owner_action(:add, _params), do: "Add owner"
 
-  def humanize_audit_log_info(%{action: "owner.remove"} = audit_log) do
-    username = audit_log.params["user"]["username"]
-    level = audit_log.params["level"]
+  defp do_owner_action(:transfer, %{"user" => %{"username" => username}})
+       when not is_nil(username),
+       do: "Transfer owner to #{username}"
 
-    if username && level do
-      "Remove level #{level} owner #{username}"
-    else
-      "Remove owner"
-    end
-  end
+  defp do_owner_action(:transfer, _params), do: "Transfer owner"
 
-  def humanize_audit_log_info(%{action: "release.publish"} = audit_log) do
-    if version = audit_log.params["release"]["version"] do
-      "Publish release #{version}"
-    else
-      "Publish release"
-    end
-  end
+  defp do_owner_action(:remove, %{"user" => %{"username" => username}, "level" => level})
+       when not is_nil(username) and not is_nil(level),
+       do: "Remove level #{level} owner #{username}"
 
-  def humanize_audit_log_info(%{action: "release.revert"} = audit_log) do
-    if version = audit_log.params["release"]["version"] do
-      "Revert release #{version}"
-    else
-      "Revert release"
-    end
-  end
+  defp do_owner_action(:remove, _params), do: "Remove owner"
 
-  def humanize_audit_log_info(%{action: "release.retire"} = audit_log) do
-    if version = audit_log.params["release"]["version"] do
-      "Retire release #{version}"
-    else
-      "Retire release"
-    end
-  end
+  defp do_release_action(base_message, nil), do: base_message
 
-  def humanize_audit_log_info(%{action: "release.unretire"} = audit_log) do
-    if version = audit_log.params["release"]["version"] do
-      "Unretire release #{version}"
-    else
-      "Unretire release"
-    end
-  end
+  defp do_release_action(base_message, release_version),
+    do: "#{base_message} #{release_version}"
+
+  defp version_from_params(params) when is_map(params), do: params["release"]["version"]
 end
