@@ -13,12 +13,10 @@ defmodule HexpmWeb.PackageView do
     Map.get(downloads, package.id, %{"all" => 0, "recent" => 0})
   end
 
-
   def display_downloads(package_downloads, :recent_downloads),
     do: Map.get(package_downloads, "recent")
 
   def display_downloads(package_downloads, _view), do: Map.get(package_downloads, "all")
-
 
   def display_downloads_for_opposite_views(package_downloads, :recent_downloads) do
     downloads = display_downloads(package_downloads, :all) || 0
@@ -115,12 +113,10 @@ defmodule HexpmWeb.PackageView do
     end
   end
 
-
   def retirement_message(%{reason: reason, message: message}) do
     reason_text = ReleaseRetirement.reason_text(reason)
     retirement_head(:message, reason) ++ retirement_body(:message, reason_text, message)
   end
-
 
   def retirement_html(%{reason: reason, message: message}) do
     reason_text = ReleaseRetirement.reason_text(reason)
@@ -140,7 +136,6 @@ defmodule HexpmWeb.PackageView do
   defp retirement_body(:html, reason_text, nil), do: [" ", reason_text]
   defp retirement_body(:html, nil, message), do: [" ", message]
   defp retirement_body(:html, reason, message), do: [" ", reason, " - ", message]
-
 
   def path_for_audit_logs(%{repository: %{id: 1}} = package, options) do
     ~p"/packages/#{package}/audit-logs?#{options}"
