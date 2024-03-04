@@ -9,6 +9,10 @@
       <div class="panel-body recovery-codes-panel">
         <h1>Scan this barcode with your app</h1>
         <div style="text-align:center"><%= raw ViewHelpers.auth_qr_code_svg(@current_user) %></div>
+        <div>
+          You can also use your setup key (<%= @current_user.tfa.secret %>) to
+          manually configure your authenticator app
+        </div>
       </div>
       <div class="panel-body">
         <%= form_tag(~p"/dashboard/tfa/setup") do %>
