@@ -2,7 +2,7 @@
 
 [![CI](https://github.com/hexpm/hexpm/workflows/CI/badge.svg)](https://github.com/hexpm/hexpm/actions?query=workflow%3ACI)
 
-API server and website for <hex.pm>.
+API server and website for <https://hex.pm>.
 
 ## Contributing
 
