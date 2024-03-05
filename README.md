@@ -2,6 +2,8 @@
 
 [![CI](https://github.com/hexpm/hexpm/workflows/CI/badge.svg)](https://github.com/hexpm/hexpm/actions?query=workflow%3ACI)
 
+API server and website for <hex.pm>.
+
 ## Contributing
 
 To contribute to Hexpm you need to properly set up your development environment.
