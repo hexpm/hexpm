@@ -10,8 +10,10 @@
         <h1>Scan this barcode with your app</h1>
         <div style="text-align:center"><%= raw ViewHelpers.auth_qr_code_svg(@current_user) %></div>
         <div>
-          You can also use your setup key (<%= @current_user.tfa.secret %>) to
-          manually configure your authenticator app
+          You can also use your setup key
+          (<code id="tfa-secret" data-value="<%= @current_user.tfa.secret %>"><%= @current_user.tfa.secret %></code>
+          <button type="button" class="copy-data-button" data-input-id="tfa-secret">📋</button>) to
+          manually configure your authenticator app.
         </div>
       </div>
       <div class="panel-body">
