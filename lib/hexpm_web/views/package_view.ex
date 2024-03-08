@@ -85,14 +85,17 @@ defmodule HexpmWeb.PackageView do
   defp snippet_organization("hexpm"), do: ""
   defp snippet_organization(repository), do: ", organization: #{inspect(repository)}"
 
-  defp pre_snippet(pre)
-  defp pre_snippet([]), do: ""
+  defp pre_snippet([]) do
+    ""
+  end
 
-  defp pre_snippet([int | _rest] = pre) when is_integer(int),
-    do: "-" <> Enum.map_join(pre, ".", &Integer.to_string/1)
-
-  defp pre_snippet([string | _rest] = pre) when is_binary(string),
-    do: "-" <> Enum.map_join(pre, ".", & &1)
+  defp pre_snippet(pre) do
+    "-" <>
+      Enum.map_join(pre, ".", fn
+        int when is_integer(int) -> Integer.to_string(int)
+        string when is_binary(string) -> string
+      end)
+  end
 
   @elixir_atom_chars ~r"^[a-zA-Z_][a-zA-Z_0-9]*$"
   @erlang_atom_chars ~r"^[a-z][a-zA-Z_0-9]*$"
