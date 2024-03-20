@@ -77,7 +77,7 @@ defmodule Hexpm.Repository.Packages do
     |> Ecto.Query.preload(
       releases:
         ^from(r in Release,
-          select: struct(r, [:id, :version, :inserted_at, :updated_at, :has_docs])
+          select: struct(r, [:id, :version, :inserted_at, :updated_at, :has_docs, :retirement])
         )
     )
     |> Repo.all()

@@ -49,7 +49,7 @@ defmodule HexpmWeb.API.PackageControllerTest do
   end
 
   describe "GET /api/packages" do
-    test "multiple packages", %{package1: package1} do
+    test "multiple packages", %{package1: package1, package4: package4} do
       conn = get(build_conn(), "/api/packages")
       result = json_response(conn, 200)
       assert length(result) == 3
@@ -75,6 +75,14 @@ defmodule HexpmWeb.API.PackageControllerTest do
 
       conn = get(build_conn(), "/api/packages?page=2")
       assert [] = json_response(conn, 200)
+
+      conn = get(build_conn(), "/api/packages?search=#{package4.name}")
+      [package] = json_response(conn, 200)
+
+      assert %{
+               "message" => "not backward compatible",
+               "reason" => "other"
+             } = package["retirements"]["0.0.1"]
     end
 
     test "sort order", %{package1: package1, package2: package2} do
