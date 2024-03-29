@@ -117,6 +117,15 @@ defmodule HexpmWeb.Plugs.AttackTest do
       assert conn.status == 200
       assert get_resp_header(conn, "x-ratelimit-remaining") == []
     end
+
+    test "doesn't limit requests from service accounts", %{user: user} do
+      Hexpm.BlockAddress.reload()
+      user = Hexpm.Repo.update!(Ecto.Changeset.change(user, service: true))
+
+      conn = request_user(user)
+      assert conn.status == 200
+      assert get_resp_header(conn, "x-ratelimit-remaining") == []
+    end
   end
 
   describe "block addresses" do

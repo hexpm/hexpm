@@ -27,7 +27,7 @@ defmodule HexpmWeb.Plugs.Attack do
     user = conn.assigns[:current_user]
 
     if api?(conn) && user do
-      user_throttle(user.id)
+      allow(user.service) || user_throttle(user.id)
     end
   end
 
