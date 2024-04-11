@@ -38,6 +38,6 @@ config :hexpm,
 
 config :phoenix, :serve_endpoints, true
 
-config :logger,
-  level: :info,
-  metadata: [:request_id]
+config :logger, level: :info
+
+config :logger, :default_formatter, metadata: [:request_id]
