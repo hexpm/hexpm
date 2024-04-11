@@ -1,4 +1,8 @@
-FROM hexpm/elixir:1.14.0-erlang-25.1-alpine-3.15.6 as build
+ARG ELIXIR_VERSION=1.16.2
+ARG ERLANG_VERSION=26.2.2
+ARG ALPINE_VERSION=3.19.1
+
+FROM hexpm/elixir:${ELIXIR_VERSION}-erlang-${ERLANG_VERSION}-alpine-${ALPINE_VERSION} as build
 
 # install build dependencies
 RUN apk add --no-cache --update git build-base nodejs yarn
@@ -35,7 +39,7 @@ COPY rel rel
 RUN mix release
 
 # prepare release image
-FROM alpine:3.15.6 AS app
+FROM alpine:${ALPINE_VERSION} AS app
 RUN apk add --no-cache --update bash openssl libstdc++
 
 RUN mkdir /app
