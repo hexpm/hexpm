@@ -7,8 +7,8 @@ jobs:
     name: Format
     runs-on: ubuntu-20.04
     env:
-      otp: 25.1.0
-      elixir: 1.14.0
+      otp: 26.2.3
+      elixir: 1.16.2
 
     services:
       postgres:
@@ -54,8 +54,8 @@ jobs:
     name: Test Hexpm
     runs-on: ubuntu-20.04
     env:
-      otp: 25.1.0
-      elixir: 1.14.0
+      otp: 26.2.3
+      elixir: 1.16.2
 
     services:
       postgres:

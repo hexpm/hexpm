@@ -64,7 +64,7 @@ export default class App {
 
     // Highlight syntax
     hljs.registerLanguage('elixir', elixir);
-    hljs.initHighlightingOnLoad()
+    hljs.highlightAll()
 
     // API permissions checkboxes
     $(".permission-group .group-owner input").change(function () {

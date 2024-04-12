@@ -23,7 +23,8 @@ config :hexpm, HexpmWeb.Endpoint,
       "node_modules/webpack/bin/webpack.js",
       "--mode",
       "development",
-      "--watch-stdin",
+      "--watch",
+      "--watch-options-stdin",
       cd: Path.expand("../assets", __DIR__)
     ]
   ]
@@ -37,7 +38,7 @@ config :hexpm, HexpmWeb.Endpoint,
     ]
   ]
 
-config :logger, :console, format: "[$level] $message\n"
+config :logger, :default_formatter, format: "[$level] $message\n"
 
 config :phoenix, :stacktrace_depth, 20
 

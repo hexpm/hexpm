@@ -77,13 +77,15 @@ defmodule Hexpm.RepoBase do
       ca_cert = System.get_env("HEXPM_DATABASE_CA_CERT")
       client_key = System.get_env("HEXPM_DATABASE_CLIENT_KEY")
       client_cert = System.get_env("HEXPM_DATABASE_CLIENT_CERT")
+      common_name = System.get_env("HEXPM_DATABASE_COMMON_NAME")
 
       ssl_opts =
         if ca_cert do
           [
             cacerts: [decode_cert(ca_cert)],
             key: decode_key(client_key),
-            cert: decode_cert(client_cert)
+            cert: decode_cert(client_cert),
+            server_name_indication: String.to_charlist(common_name)
           ]
         end
 

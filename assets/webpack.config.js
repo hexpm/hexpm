@@ -1,16 +1,16 @@
 const path = require('path');
-const glob = require('glob');
 const webpack = require('webpack');
 const MiniCssExtractPlugin = require('mini-css-extract-plugin');
-const UglifyJsPlugin = require('uglifyjs-webpack-plugin');
-const OptimizeCSSAssetsPlugin = require('optimize-css-assets-webpack-plugin');
+const CssMinimizerPlugin = require("css-minimizer-webpack-plugin");
+const TerserPlugin = require("terser-webpack-plugin");
 const CopyWebpackPlugin = require('copy-webpack-plugin');
 
 module.exports = (env, options) => ({
   optimization: {
+    // minimize: true,
     minimizer: [
-      new UglifyJsPlugin({ cache: true, parallel: true, sourceMap: false }),
-      new OptimizeCSSAssetsPlugin({})
+      new TerserPlugin(),
+      new CssMinimizerPlugin(),
     ]
   },
   entry: ['./js/app.js', 'bootstrap/dist/css/bootstrap.css', './css/app.scss'],
@@ -28,24 +28,17 @@ module.exports = (env, options) => ({
       {
         test: /\.scss$/,
         use: [
-          {
-            loader: "style-loader"
-          },
-          {
-            loader: MiniCssExtractPlugin.loader
-          },
+          MiniCssExtractPlugin.loader,
           {
             loader: "css-loader",
             options: {url: false}
           },
-          {
-            loader: "sass-loader"
-          }
+          "sass-loader"
         ]
       },
       {
           test: /\.css$/,
-          use:  [  MiniCssExtractPlugin.loader, 'css-loader']
+          use:  [MiniCssExtractPlugin.loader, 'css-loader']
       },
       {
         test: /\.(png|woff|woff2|eot|ttf|svg)$/,
@@ -54,13 +47,14 @@ module.exports = (env, options) => ({
       },
       {
         test: /bootstrap\/dist\/js\/umd\//,
-        loader: 'imports-loader?jQuery=jquery'
+        loader: 'imports-loader',
+        options: {jQuery: 'jquery'}
       }
     ]
   },
   plugins: [
     new MiniCssExtractPlugin({ filename: 'css/app.css' }),
-    new CopyWebpackPlugin([{ from: 'static/', to: '.' }]),
+    new CopyWebpackPlugin({patterns: [{ from: 'static/', to: '.' }]}),
     new webpack.ProvidePlugin({
       $: "jquery",
       jQuery: "jquery",
