@@ -4,6 +4,6 @@
   </div>
 
   <div class="col-sm-9">
-    <%= render DashboardView, "_audit_logs.html", Map.merge(%{path_fn: &~p"/dashboard/audit-logs?page=#{&1}"}, assigns) %>
+    <%= render DashboardView, "_audit_logs.html", Map.merge(%{path_fn: &~p"/dashboard/audit-logs?#{&1}"}, assigns) %>
   </div>
 </div>

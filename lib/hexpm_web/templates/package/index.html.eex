@@ -97,7 +97,7 @@ render HexpmWeb.SharedView,
        per_page: @per_page,
        unit: "package",
        units: "packages",
-       path_fn: &~p"/packages?#{ViewHelpers.params(search: @search, page: &1, sort: @sort, letter: @letter)}"
+       path_fn: &~p"/packages?#{ViewHelpers.params(&1, search: @search, sort: @sort, letter: @letter)}"
 %>
 
 <% end %>

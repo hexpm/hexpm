@@ -28,6 +28,6 @@
          per_page: @per_page,
          unit: "activity",
          units: "activities",
-         path_fn: &path_for_audit_logs(@package, page: &1)
+         path_fn: &path_for_audit_logs(@package, &1)
   %>
 </div>

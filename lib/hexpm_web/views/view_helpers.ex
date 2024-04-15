@@ -202,8 +202,16 @@ defmodule HexpmWeb.ViewHelpers do
     %{prev: page != 1, next: page != all_pages, page_links: page_links}
   end
 
-  def params(list) do
-    Enum.filter(list, fn {_, v} -> present?(v) end)
+  def params(enum1, enum2) do
+    map1 = Map.new(enum1)
+    map2 = Map.new(enum2)
+
+    Map.merge(map1, map2)
+    |> Enum.filter(fn {_, v} -> present?(v) end)
+  end
+
+  def params(enum) do
+    Enum.filter(enum, fn {_, v} -> present?(v) end)
   end
 
   def present?(""), do: false
