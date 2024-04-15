@@ -85,9 +85,9 @@ defmodule HexpmWeb.PackageController do
         container: "container package-view",
         package: package,
         audit_logs: audit_logs,
+        audit_logs_total_count: total_count,
         page: page,
-        per_page: per_page,
-        total_count: total_count
+        per_page: per_page
       )
     end)
   end

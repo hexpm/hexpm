@@ -1,0 +1,37 @@
+<div class="panel panel-default">
+  <div class="panel-heading">Recent activities</div>
+
+  <div class="panel-body">
+    <table class="table table-striped">
+      <tr>
+        <th class="col-sm-3" scope="col">Date</th>
+        <th scope="col">Activity</th>
+      </tr>
+
+      <%= for audit_log <- @audit_logs do %>
+        <tr>
+          <td class="col-sm-3" title="<%= ViewHelpers.pretty_datetime(audit_log.inserted_at) %>"><%= ViewHelpers.pretty_date(audit_log.inserted_at, :short) %></td>
+          <td><%= humanize_audit_log_info(audit_log) %></td>
+        </tr>
+      <% end %>
+    </table>
+
+    <%= if Map.get(assigns, :pagination, true) do %>
+    <%=
+      render HexpmWeb.SharedView,
+              "_pagination.html",
+              items: @audit_logs,
+              page: @page,
+              total_count: @audit_logs_total_count,
+              per_page: @per_page,
+              unit: "activity",
+              units: "activities",
+              path_fn: @path_fn
+    %>
+    <% else %>
+      <p>
+        <a href="<%= @path_fn.(%{}) %>">Show All Activities</a>
+      </p>
+    <% end %>
+  </div>
+</div>

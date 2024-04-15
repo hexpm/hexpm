@@ -16,9 +16,9 @@ defmodule HexpmWeb.Dashboard.AuditLogController do
       title: "Dashboard - Recent activities",
       container: "container page dashboard",
       audit_logs: audit_logs,
+      audit_logs_total_count: count,
       page: page,
-      per_page: @per_page,
-      total_count: count
+      per_page: @per_page
     )
   end
 end

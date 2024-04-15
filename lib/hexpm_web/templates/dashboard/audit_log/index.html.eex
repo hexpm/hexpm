@@ -4,36 +4,6 @@
   </div>
 
   <div class="col-sm-9">
-    <div class="panel panel-default">
-      <div class="panel-heading">Recent activities</div>
-
-      <div class="panel-body">
-        <table class="table table-striped">
-          <tr>
-            <th class="col-sm-3" scope="col">Date</th>
-            <th scope="col">Activity</th>
-          </tr>
-
-          <%= for audit_log <- @audit_logs do %>
-            <tr>
-              <td class="col-sm-3" title="<%= ViewHelpers.pretty_datetime(audit_log.inserted_at) %>"><%= ViewHelpers.pretty_date(audit_log.inserted_at, :short) %></td>
-              <td><%= humanize_audit_log_info(audit_log) %></td>
-            </tr>
-          <% end %>
-        </table>
-
-        <%=
-        render HexpmWeb.SharedView,
-               "_pagination.html",
-               items: @audit_logs,
-               page: @page,
-               total_count: @total_count,
-               per_page: @per_page,
-               unit: "activity",
-               units: "activities",
-               path_fn: &~p"/dashboard/audit-logs?page=#{&1}"
-        %>
-      </div>
-    </div>
+    <%= render DashboardView, "_audit_logs.html", Map.merge(%{path_fn: &~p"/dashboard/audit-logs?page=#{&1}"}, assigns) %>
   </div>
 </div>
