@@ -100,6 +100,21 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
     end
   end
 
+  describe "GET /dashboard/orgs/:dashboard_org/audit-logs" do
+    test "show audit log", %{user: user, organization: organization} do
+      insert(:organization_user, organization: organization, user: user)
+
+      mock_customer(organization)
+
+      conn =
+        build_conn()
+        |> test_login(user)
+        |> get("/dashboard/orgs/#{organization.name}/audit-logs")
+
+      assert response(conn, 200) =~ "Recent activities"
+    end
+  end
+
   describe "POST /dashboard/orgs/:dashboard_org" do
     test "add member to organization", %{user: user, organization: organization} do
       stub(Hexpm.Billing.Mock, :get, fn token ->
