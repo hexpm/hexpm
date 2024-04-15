@@ -24,7 +24,7 @@
          "_pagination.html",
          items: @audit_logs,
          page: @page,
-         total_count: @total_count,
+         total_count: @audit_logs_total_count,
          per_page: @per_page,
          unit: "activity",
          units: "activities",

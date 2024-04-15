@@ -29,170 +29,212 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
     }
   end
 
-  test "show organization", %{user: user, organization: organization} do
-    insert(:organization_user, organization: organization, user: user)
+  describe "GET /dashboard/orgs" do
+    test "requires login" do
+      conn = get(build_conn(), "/dashboard/orgs")
+      assert redirected_to(conn) == "/login?return=%2Fdashboard%2Forgs"
+    end
+  end
 
-    mock_customer(organization)
+  describe "GET /dashboard/orgs/:dashboard_org" do
+    test "show organization", %{user: user, organization: organization} do
+      insert(:organization_user, organization: organization, user: user)
 
-    conn =
+      mock_customer(organization)
+
+      conn =
+        build_conn()
+        |> test_login(user)
+        |> get("/dashboard/orgs/#{organization.name}")
+
+      assert response(conn, 200) =~ "Members"
+    end
+
+    test "show organization without associated user", %{user: user} do
+      repository = insert(:repository, organization: build(:organization, user: nil))
+      insert(:organization_user, organization: repository.organization, user: user)
+
+      mock_customer(repository.organization)
+
+      conn =
+        build_conn()
+        |> test_login(user)
+        |> get("/dashboard/orgs/#{repository.organization.name}")
+
+      assert response(conn, 200) =~ "Members"
+    end
+
+    test "show organization authenticates", %{user: user, organization: organization} do
       build_conn()
       |> test_login(user)
       |> get("/dashboard/orgs/#{organization.name}")
+      |> response(404)
+    end
 
-    assert response(conn, 200) =~ "Members"
+    test "show for admins", %{user: user, organization: organization} do
+      insert(:organization_user, organization: organization, user: user, role: "admin")
+
+      mock_customer(organization)
+
+      conn =
+        build_conn()
+        |> test_login(user)
+        |> get("/dashboard/orgs/#{organization.name}")
+
+      assert response(conn, 200) =~ "Billing"
+      assert response(conn, 200) =~ "Billing information"
+    end
+
+    test "hide for non-admins", %{user: user, organization: organization} do
+      insert(:organization_user, organization: organization, user: user, role: "read")
+
+      mock_customer(organization)
+
+      conn =
+        build_conn()
+        |> test_login(user)
+        |> get("/dashboard/orgs/#{organization.name}")
+
+      refute response(conn, 200) =~ "Billing"
+      refute response(conn, 200) =~ "Billing information"
+    end
   end
 
-  test "show organization without associated user", %{user: user} do
-    repository = insert(:repository, organization: build(:organization, user: nil))
-    insert(:organization_user, organization: repository.organization, user: user)
+  describe "POST /dashboard/orgs/:dashboard_org" do
+    test "add member to organization", %{user: user, organization: organization} do
+      stub(Hexpm.Billing.Mock, :get, fn token ->
+        assert organization.name == token
 
-    mock_customer(repository.organization)
+        %{
+          "checkout_html" => "",
+          "invoices" => [],
+          "quantity" => 2
+        }
+      end)
 
-    conn =
-      build_conn()
-      |> test_login(user)
-      |> get("/dashboard/orgs/#{repository.organization.name}")
+      insert(:organization_user, organization: organization, user: user, role: "admin")
+      new_user = insert(:user)
+      add_email(new_user, "new@mail.com")
+      params = %{"username" => new_user.username, role: "write"}
 
-    assert response(conn, 200) =~ "Members"
+      conn =
+        build_conn()
+        |> test_login(user)
+        |> post("/dashboard/orgs/#{organization.name}", %{
+          "action" => "add_member",
+          "organization_user" => params
+        })
+
+      assert redirected_to(conn) == "/dashboard/orgs/#{organization.name}"
+
+      assert repo_user =
+               Repo.get_by(assoc(organization, :organization_users), user_id: new_user.id)
+
+      assert repo_user.role == "write"
+
+      assert_delivered_email(Hexpm.Emails.organization_invite(organization, new_user))
+    end
+
+    test "add member to organization without enough seats", %{
+      user: user,
+      organization: organization
+    } do
+      stub(Hexpm.Billing.Mock, :get, fn token ->
+        assert organization.name == token
+
+        %{
+          "checkout_html" => "",
+          "invoices" => [],
+          "quantity" => 1,
+          "subscription" => %{
+            "current_period_end" => "2017-12-12T00:00:00Z",
+            "status" => "active",
+            "cancel_at_period_end" => false
+          },
+          "plan_id" => "organization-monthly",
+          "amount_with_tax" => 700,
+          "proration_amount" => 0
+        }
+      end)
+
+      insert(:organization_user, organization: organization, user: user, role: "admin")
+      new_user = insert(:user)
+      add_email(new_user, "new@mail.com")
+      params = %{"username" => new_user.username, role: "write"}
+
+      conn =
+        build_conn()
+        |> test_login(user)
+        |> post("/dashboard/orgs/#{organization.name}", %{
+          "action" => "add_member",
+          "organization_user" => params
+        })
+
+      response(conn, 400)
+
+      assert Phoenix.Flash.get(conn.assigns.flash, :error) ==
+               "Not enough seats in organization to add member."
+    end
+
+    test "remove member from organization", %{user: user, organization: organization} do
+      insert(:organization_user, organization: organization, user: user, role: "admin")
+      new_user = insert(:user)
+      insert(:organization_user, organization: organization, user: new_user)
+      params = %{"username" => new_user.username}
+
+      conn =
+        build_conn()
+        |> test_login(user)
+        |> post("/dashboard/orgs/#{organization.name}", %{
+          "action" => "remove_member",
+          "organization_user" => params
+        })
+
+      assert redirected_to(conn) == "/dashboard/orgs/#{organization.name}"
+      refute Repo.get_by(assoc(organization, :organization_users), user_id: new_user.id)
+    end
+
+    test "change role of member in organization", %{user: user, organization: organization} do
+      insert(:organization_user, organization: organization, user: user, role: "admin")
+      new_user = insert(:user)
+      insert(:organization_user, organization: organization, user: new_user, role: "write")
+      params = %{"username" => new_user.username, "role" => "read"}
+
+      conn =
+        build_conn()
+        |> test_login(user)
+        |> post("/dashboard/orgs/#{organization.name}", %{
+          "action" => "change_role",
+          "organization_user" => params
+        })
+
+      assert redirected_to(conn) == "/dashboard/orgs/#{organization.name}"
+
+      assert repo_user =
+               Repo.get_by(assoc(organization, :organization_users), user_id: new_user.id)
+
+      assert repo_user.role == "read"
+    end
   end
 
-  test "requires login" do
-    conn = get(build_conn(), "/dashboard/orgs")
-    assert redirected_to(conn) == "/login?return=%2Fdashboard%2Forgs"
+  describe "POST /dashboard/orgs/:dashboard_org/leave" do
+    test "leave organization", %{user: user, organization: organization} do
+      insert(:organization_user, organization: organization, user: user, role: "admin")
+      new_user = insert(:user)
+      insert(:organization_user, organization: organization, user: new_user, role: "admin")
+      params = %{"organization_name" => organization.name}
+
+      conn =
+        build_conn()
+        |> test_login(user)
+        |> post("/dashboard/orgs/#{organization.name}/leave", params)
+
+      assert redirected_to(conn) == "/dashboard/profile"
+      refute Repo.get_by(assoc(organization, :organization_users), user_id: user.id)
+    end
   end
 
-  test "show organization authenticates", %{user: user, organization: organization} do
-    build_conn()
-    |> test_login(user)
-    |> get("/dashboard/orgs/#{organization.name}")
-    |> response(404)
-  end
-
-  test "add member to organization", %{user: user, organization: organization} do
-    stub(Hexpm.Billing.Mock, :get, fn token ->
-      assert organization.name == token
-
-      %{
-        "checkout_html" => "",
-        "invoices" => [],
-        "quantity" => 2
-      }
-    end)
-
-    insert(:organization_user, organization: organization, user: user, role: "admin")
-    new_user = insert(:user)
-    add_email(new_user, "new@mail.com")
-    params = %{"username" => new_user.username, role: "write"}
-
-    conn =
-      build_conn()
-      |> test_login(user)
-      |> post("/dashboard/orgs/#{organization.name}", %{
-        "action" => "add_member",
-        "organization_user" => params
-      })
-
-    assert redirected_to(conn) == "/dashboard/orgs/#{organization.name}"
-    assert repo_user = Repo.get_by(assoc(organization, :organization_users), user_id: new_user.id)
-    assert repo_user.role == "write"
-
-    assert_delivered_email(Hexpm.Emails.organization_invite(organization, new_user))
-  end
-
-  test "add member to organization without enough seats", %{
-    user: user,
-    organization: organization
-  } do
-    stub(Hexpm.Billing.Mock, :get, fn token ->
-      assert organization.name == token
-
-      %{
-        "checkout_html" => "",
-        "invoices" => [],
-        "quantity" => 1,
-        "subscription" => %{
-          "current_period_end" => "2017-12-12T00:00:00Z",
-          "status" => "active",
-          "cancel_at_period_end" => false
-        },
-        "plan_id" => "organization-monthly",
-        "amount_with_tax" => 700,
-        "proration_amount" => 0
-      }
-    end)
-
-    insert(:organization_user, organization: organization, user: user, role: "admin")
-    new_user = insert(:user)
-    add_email(new_user, "new@mail.com")
-    params = %{"username" => new_user.username, role: "write"}
-
-    conn =
-      build_conn()
-      |> test_login(user)
-      |> post("/dashboard/orgs/#{organization.name}", %{
-        "action" => "add_member",
-        "organization_user" => params
-      })
-
-    response(conn, 400)
-
-    assert Phoenix.Flash.get(conn.assigns.flash, :error) ==
-             "Not enough seats in organization to add member."
-  end
-
-  test "remove member from organization", %{user: user, organization: organization} do
-    insert(:organization_user, organization: organization, user: user, role: "admin")
-    new_user = insert(:user)
-    insert(:organization_user, organization: organization, user: new_user)
-    params = %{"username" => new_user.username}
-
-    conn =
-      build_conn()
-      |> test_login(user)
-      |> post("/dashboard/orgs/#{organization.name}", %{
-        "action" => "remove_member",
-        "organization_user" => params
-      })
-
-    assert redirected_to(conn) == "/dashboard/orgs/#{organization.name}"
-    refute Repo.get_by(assoc(organization, :organization_users), user_id: new_user.id)
-  end
-
-  test "change role of member in organization", %{user: user, organization: organization} do
-    insert(:organization_user, organization: organization, user: user, role: "admin")
-    new_user = insert(:user)
-    insert(:organization_user, organization: organization, user: new_user, role: "write")
-    params = %{"username" => new_user.username, "role" => "read"}
-
-    conn =
-      build_conn()
-      |> test_login(user)
-      |> post("/dashboard/orgs/#{organization.name}", %{
-        "action" => "change_role",
-        "organization_user" => params
-      })
-
-    assert redirected_to(conn) == "/dashboard/orgs/#{organization.name}"
-    assert repo_user = Repo.get_by(assoc(organization, :organization_users), user_id: new_user.id)
-    assert repo_user.role == "read"
-  end
-
-  test "leave organization", %{user: user, organization: organization} do
-    insert(:organization_user, organization: organization, user: user, role: "admin")
-    new_user = insert(:user)
-    insert(:organization_user, organization: organization, user: new_user, role: "admin")
-    params = %{"organization_name" => organization.name}
-
-    conn =
-      build_conn()
-      |> test_login(user)
-      |> post("/dashboard/orgs/#{organization.name}/leave", params)
-
-    assert redirected_to(conn) == "/dashboard/profile"
-    refute Repo.get_by(assoc(organization, :organization_users), user_id: user.id)
-  end
-
-  describe "update payment method" do
+  describe "POST /dashboard/orgs/:dashboard_org/billing-token" do
     test "calls Hexpm.Billing.checkout/2 when user is admin", %{
       user: user,
       organization: organization
@@ -232,37 +274,7 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
     end
   end
 
-  describe "show billing section" do
-    test "show for admins", %{user: user, organization: organization} do
-      insert(:organization_user, organization: organization, user: user, role: "admin")
-
-      mock_customer(organization)
-
-      conn =
-        build_conn()
-        |> test_login(user)
-        |> get("/dashboard/orgs/#{organization.name}")
-
-      assert response(conn, 200) =~ "Billing"
-      assert response(conn, 200) =~ "Billing information"
-    end
-
-    test "hide for non-admins", %{user: user, organization: organization} do
-      insert(:organization_user, organization: organization, user: user, role: "read")
-
-      mock_customer(organization)
-
-      conn =
-        build_conn()
-        |> test_login(user)
-        |> get("/dashboard/orgs/#{organization.name}")
-
-      refute response(conn, 200) =~ "Billing"
-      refute response(conn, 200) =~ "Billing information"
-    end
-  end
-
-  describe "cancel billing" do
+  describe "POST /dashboard/orgs/:dashboard_org/cancel-billing" do
     test "with subscription", %{user: user, organization: organization} do
       stub(Hexpm.Billing.Mock, :cancel, fn token ->
         assert organization.name == token
@@ -332,28 +344,30 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
     end
   end
 
-  test "show invoice", %{user: user, organization: organization} do
-    stub(Hexpm.Billing.Mock, :get, fn token ->
-      assert organization.name == token
-      %{"invoices" => [%{"id" => 123}]}
-    end)
+  describe "GET /dashboard/orgs/:dashboard_org/invoices/:id" do
+    test "show invoice", %{user: user, organization: organization} do
+      stub(Hexpm.Billing.Mock, :get, fn token ->
+        assert organization.name == token
+        %{"invoices" => [%{"id" => 123}]}
+      end)
 
-    stub(Hexpm.Billing.Mock, :invoice, fn id ->
-      assert id == 123
-      "Invoice"
-    end)
+      stub(Hexpm.Billing.Mock, :invoice, fn id ->
+        assert id == 123
+        "Invoice"
+      end)
 
-    insert(:organization_user, organization: organization, user: user, role: "admin")
+      insert(:organization_user, organization: organization, user: user, role: "admin")
 
-    conn =
-      build_conn()
-      |> test_login(user)
-      |> get("/dashboard/orgs/#{organization.name}/invoices/123")
+      conn =
+        build_conn()
+        |> test_login(user)
+        |> get("/dashboard/orgs/#{organization.name}/invoices/123")
 
-    assert response(conn, 200) == "Invoice"
+      assert response(conn, 200) == "Invoice"
+    end
   end
 
-  describe "pay invoice" do
+  describe "POST /dashboard/orgs/:dashboard_org/invoices/:id/pay" do
     test "pay invoice succeed", %{user: user, organization: organization} do
       stub(Hexpm.Billing.Mock, :get, fn token ->
         assert organization.name == token
