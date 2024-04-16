@@ -96,12 +96,8 @@ defmodule Hexpm.Accounts.Users do
     Multi.new()
     |> Multi.update(:user, User.update_profile(user, params))
     |> audit(audit_data, "user.update", fn %{user: user} -> user end)
-    |> insert_or_update_or_delete_email_multi(user, :public, params["public_email"],
-      audit: audit_data
-    )
-    |> insert_or_update_or_delete_email_multi(user, :gravatar, params["gravatar_email"],
-      audit: audit_data
-    )
+    |> Multi.delete_all(:delete_emails, assoc(user, :emails))
+    |> insert_emails(user, params)
     |> do_update_profile(user)
   end
 
@@ -119,18 +115,44 @@ defmodule Hexpm.Accounts.Users do
       {:ok, %{user: user}} ->
         {:ok, user}
 
-      {:error, :public_email, _, _} ->
+      {:error, email, _, _} when email in [:public_email, :gravatar_email] ->
         {:error,
-         %Ecto.Changeset{data: user, errors: [public_email: {"unknown error", []}], valid?: false}}
+         %Ecto.Changeset{data: user, errors: [{email, {"unknown error", []}}], valid?: false}}
 
-      {:error, :gravatar_email, _, _} ->
-        {:error,
-         %Ecto.Changeset{
-           data: user,
-           errors: [gravatar_email: {"unknown error", []}],
-           valid?: false
-         }}
+      {:error, email, changeset, _} when email in [:"email.0", :"email.1"] ->
+        errors =
+          Enum.flat_map([:public, :gravatar], fn kind ->
+            if Map.get(changeset.changes, kind) do
+              [{:"#{kind}_email", {"unknown error", []}}]
+            else
+              []
+            end
+          end)
+
+        {:error, %Ecto.Changeset{data: user, errors: errors, valid?: false}}
     end
+  end
+
+  defp insert_emails(multi, user, params) do
+    ["public", "gravatar"]
+    |> Enum.reduce(%{}, fn kind, acc ->
+      email = params["#{kind}_email"]
+
+      if email not in [nil, ""] do
+        Map.update(acc, email, %{kind => true}, &Map.put(&1, kind, true))
+      else
+        acc
+      end
+    end)
+    |> Enum.map(fn {email, params} -> Map.put(params, "email", email) end)
+    |> Enum.with_index()
+    |> Enum.reduce(multi, fn {params, index}, multi ->
+      Multi.insert(
+        multi,
+        :"email.#{index}",
+        Email.changeset(build_assoc(user, :emails), :create_for_org, params, false)
+      )
+    end)
   end
 
   def update_password(%User{organization_id: id} = user, _params, _opts) when not is_nil(id) do
@@ -439,52 +461,6 @@ defmodule Hexpm.Accounts.Users do
         multi
         |> Multi.update(new_email_op_name, Email.toggle_flag(new_email, flag, true))
         |> audit(audit_data, "email.#{flag}", {old_email, new_email})
-    end
-  end
-
-  def insert_or_update_or_delete_email_multi(multi, _user, _flag, nil, _params) do
-    multi
-  end
-
-  def insert_or_update_or_delete_email_multi(multi, user, flag, "", audit: audit_data) do
-    user = Repo.preload(user, :organization)
-
-    if old_email = Enum.find(user.emails, &Map.get(&1, flag)) do
-      email_op = String.to_atom("#{flag}_email")
-
-      multi
-      |> Multi.delete(email_op, old_email)
-      |> audit(audit_data, "email.remove", {user.organization, old_email})
-    else
-      multi
-    end
-  end
-
-  def insert_or_update_or_delete_email_multi(multi, user, flag, email_address, audit: audit_data) do
-    email_op = String.to_atom("#{flag}_email")
-    user = Repo.preload(user, :organization)
-
-    if old_email = Enum.find(user.emails, &Map.get(&1, flag)) do
-      multi
-      |> Multi.update(email_op, Email.update_email(old_email, email_address))
-      |> audit(audit_data, "email.#{flag}", fn %{^email_op => new_email} ->
-        {user.organization, {old_email, new_email}}
-      end)
-    else
-      multi
-      |> Multi.insert(
-        email_op,
-        Email.changeset(
-          build_assoc(user, :emails),
-          :create_for_org,
-          %{:email => email_address, flag => true},
-          false
-        )
-      )
-      |> audit(audit_data, "email.add", fn %{^email_op => email} -> {user.organization, email} end)
-      |> audit(audit_data, "email.#{flag}", fn %{^email_op => email} ->
-        {user.organization, {nil, email}}
-      end)
     end
   end
 
