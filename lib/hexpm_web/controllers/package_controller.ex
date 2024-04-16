@@ -242,7 +242,8 @@ defmodule HexpmWeb.PackageController do
         nil
 
       package ->
-        hd(Packages.attach_versions([package]))
+        [package] = Packages.attach_latest_releases([package])
+        package
     end
   end
 
