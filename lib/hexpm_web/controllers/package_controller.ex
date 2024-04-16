@@ -28,9 +28,13 @@ defmodule HexpmWeb.PackageController do
     page_param = Hexpm.Utils.safe_int(params["page"]) || 1
     package_count = Packages.count(repositories, filter)
     page = Hexpm.Utils.safe_page(page_param, package_count, @packages_per_page)
-    packages = fetch_packages(repositories, page, @packages_per_page, filter, sort)
-    downloads = Downloads.packages_all_views(packages)
     exact_match = exact_match(repositories, search)
+
+    packages =
+      fetch_packages(repositories, page, @packages_per_page, filter, sort)
+      |> Packages.diff(exact_match)
+
+    downloads = Downloads.packages_all_views(packages)
 
     render(
       conn,
@@ -232,6 +236,14 @@ defmodule HexpmWeb.PackageController do
           Ecto.MultipleResultsError ->
             nil
         end
+    end
+    |> case do
+      nil ->
+        nil
+
+      package ->
+        [package] = Packages.attach_latest_releases([package])
+        package
     end
   end
 

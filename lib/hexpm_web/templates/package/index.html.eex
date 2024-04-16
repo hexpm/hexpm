@@ -25,13 +25,13 @@
   </div>
 <% end %>
 
-<%= if !@exact_match and @package_count == 0 do %>
+<%= if !@exact_match and @packages == [] do %>
   <div class="package-list no-results">
     <h4>No Results Found</h4>
   </div>
 <% end %>
 
-<%= if @package_count > 0 do %>
+<%= if @packages != [] do %>
   <%
   page = if @page == 1, do: nil, else: @page
 

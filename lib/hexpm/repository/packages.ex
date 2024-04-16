@@ -9,6 +9,15 @@ defmodule Hexpm.Repository.Packages do
     Repo.one!(Package.count(repositories, filter))
   end
 
+  def diff(packages, nil), do: packages
+
+  def diff(packages, remove) do
+    names = Enum.map(List.wrap(remove), & &1.name)
+
+    packages
+    |> Enum.reject(&(&1.name in names))
+  end
+
   def get(repository, name) when is_binary(repository) do
     repository = Repositories.get(repository)
     repository && get(repository, name)
