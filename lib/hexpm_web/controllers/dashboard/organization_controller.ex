@@ -119,6 +119,27 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
     end)
   end
 
+  def audit_logs(conn, %{"dashboard_org" => organization} = params) do
+    access_organization(conn, organization, "read", fn organization ->
+      per_page = 100
+      page = Hexpm.Utils.safe_int(params["page"]) || 1
+      audit_logs = Hexpm.Accounts.AuditLogs.all_by(organization, page, per_page)
+      count = Hexpm.Accounts.AuditLogs.count_by(organization)
+
+      render(
+        conn,
+        "audit_logs.html",
+        title: "Dashboard - Recent activities",
+        container: "container page dashboard",
+        organization: organization,
+        audit_logs: audit_logs,
+        audit_logs_total_count: count,
+        page: page,
+        per_page: per_page
+      )
+    end)
+  end
+
   def leave(conn, %{
         "dashboard_org" => organization,
         "organization_name" => organization_name
@@ -439,6 +460,8 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
     gravatar_email = user && Enum.find(user.emails, & &1.gravatar)
     customer = Hexpm.Billing.get(organization.name)
     keys = Keys.all(organization)
+    audit_logs = AuditLogs.all_by(organization, 1, 30)
+    audit_logs_total_count = AuditLogs.count_by(organization)
     delete_key_path = ~p"/dashboard/orgs/#{organization}/keys"
     create_key_path = ~p"/dashboard/orgs/#{organization}/keys"
 
@@ -451,6 +474,8 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
       organization: organization,
       repository: organization.repository,
       keys: keys,
+      audit_logs: audit_logs,
+      audit_logs_total_count: audit_logs_total_count,
       params: opts[:params],
       errors: opts[:errors],
       delete_key_path: delete_key_path,

@@ -140,6 +140,8 @@ defmodule HexpmWeb.PackageView do
   defp retirement_body(:html, nil, message), do: [" ", message]
   defp retirement_body(:html, reason, message), do: [" ", reason, " - ", message]
 
+  def path_for_audit_logs(package, options \\ %{})
+
   def path_for_audit_logs(%{repository: %{id: 1}} = package, options) do
     ~p"/packages/#{package}/audit-logs?#{options}"
   end

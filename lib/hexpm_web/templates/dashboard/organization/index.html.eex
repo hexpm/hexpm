@@ -181,6 +181,10 @@
     <%= render DashboardView, "_keys.html", assigns %>
   </div>
 
+  <div class="col-sm-9 organization">
+    <%= render DashboardView, "_audit_logs.html", Map.merge(%{pagination: false, path_fn: &~p"/dashboard/orgs/#{@organization}/audit-logs?#{&1}"}, assigns) %>
+  </div>
+
   <%= if organization_admin?(@current_user, @organization) do %>
     <%= render "_billing.html", assigns %>
   <% end %>

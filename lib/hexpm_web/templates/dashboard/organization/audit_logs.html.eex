@@ -1,0 +1,9 @@
+<div class="row">
+  <div class="col-sm-3">
+    <%= render DashboardView, "_sidebar.html", assigns %>
+  </div>
+
+  <div class="col-sm-9 organization">
+    <%= render DashboardView, "_audit_logs.html", Map.merge(%{path_fn: &~p"/dashboard/orgs/#{@organization}/audit-logs?#{&1}"}, assigns) %>
+  </div>
+</div>
