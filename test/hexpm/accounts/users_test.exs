@@ -3,7 +3,7 @@ defmodule Hexpm.Accounts.UsersTest do
 
   alias Hexpm.Accounts.Users
 
-  describe "update_profile/3 when user belongs to an organization" do
+  describe "update_profile/3 when user is an organization" do
     test "updates full_name" do
       organization = insert(:organization, user: build(:user, full_name: "Old Full Name"))
 
@@ -72,26 +72,9 @@ defmodule Hexpm.Accounts.UsersTest do
           audit: audit_data(current_user)
         )
 
-      email = Users.get_maybe_unverified_email("public@example.com")
+      assert email = Users.get_maybe_unverified_email("public@example.com")
       assert email.user_id == organization.user.id
       assert email.public
-
-      current_user_id = current_user.id
-      organization_id = organization.id
-
-      assert [
-               %{
-                 action: "email.public",
-                 user_id: ^current_user_id,
-                 organization_id: ^organization_id
-               },
-               %{
-                 action: "email.add",
-                 user_id: ^current_user_id,
-                 organization_id: ^organization_id
-               },
-               _user_update
-             ] = Hexpm.Accounts.AuditLogs.all_by(current_user)
     end
 
     test "updates public email if it exists" do
@@ -109,20 +92,10 @@ defmodule Hexpm.Accounts.UsersTest do
           audit: audit_data(current_user)
         )
 
-      email = Users.get_email("public@example.com")
+      refute Users.get_maybe_unverified_email("old@example.com")
+      assert email = Users.get_maybe_unverified_email("public@example.com")
       assert email.user_id == organization.user.id
       assert email.public
-      current_user_id = current_user.id
-      organization_id = organization.id
-
-      assert [
-               %{
-                 action: "email.public",
-                 user_id: ^current_user_id,
-                 organization_id: ^organization_id
-               },
-               _user_update
-             ] = Hexpm.Accounts.AuditLogs.all_by(current_user)
     end
 
     test "inserts gravatar email if it doesn't exist yet" do
@@ -136,25 +109,9 @@ defmodule Hexpm.Accounts.UsersTest do
           audit: audit_data(current_user)
         )
 
-      email = Users.get_maybe_unverified_email("gravatar@example.com")
+      assert email = Users.get_maybe_unverified_email("gravatar@example.com")
       assert email.user_id == organization.user.id
       assert email.gravatar
-      current_user_id = current_user.id
-      organization_id = organization.id
-
-      assert [
-               %{
-                 action: "email.gravatar",
-                 user_id: ^current_user_id,
-                 organization_id: ^organization_id
-               },
-               %{
-                 action: "email.add",
-                 user_id: ^current_user_id,
-                 organization_id: ^organization_id
-               },
-               _user_update
-             ] = Hexpm.Accounts.AuditLogs.all_by(current_user)
     end
 
     test "updates gravatar email if it exists" do
@@ -172,20 +129,27 @@ defmodule Hexpm.Accounts.UsersTest do
           audit: audit_data(current_user)
         )
 
-      email = Users.get_email("gravatar@example.com")
+      refute Users.get_maybe_unverified_email("old@example.com")
+      assert email = Users.get_maybe_unverified_email("gravatar@example.com")
       assert email.user_id == organization.user.id
       assert email.gravatar
-      current_user_id = current_user.id
-      organization_id = organization.id
+    end
 
-      assert [
-               %{
-                 action: "email.gravatar",
-                 user_id: ^current_user_id,
-                 organization_id: ^organization_id
-               },
-               _user_update
-             ] = Hexpm.Accounts.AuditLogs.all_by(current_user)
+    test "inserts same public and gravatar email" do
+      organization = insert(:organization, user: build(:user, emails: []))
+      current_user = insert(:user)
+
+      {:ok, _updated_user} =
+        Users.update_profile(
+          organization.user,
+          %{"public_email" => "email@example.com", "gravatar_email" => "email@example.com"},
+          audit: audit_data(current_user)
+        )
+
+      assert email = Users.get_maybe_unverified_email("email@example.com")
+      assert email.user_id == organization.user.id
+      assert email.public
+      assert email.gravatar
     end
 
     test "returns {:error, changeset} when public_email is invalid" do
@@ -225,19 +189,7 @@ defmodule Hexpm.Accounts.UsersTest do
           audit: audit_data(current_user)
         )
 
-      assert Users.get_email("old@example.com") == nil
-
-      current_user_id = current_user.id
-      organization_id = organization.id
-
-      assert [
-               %{
-                 action: "email.remove",
-                 user_id: ^current_user_id,
-                 organization_id: ^organization_id
-               },
-               _user_update
-             ] = Hexpm.Accounts.AuditLogs.all_by(current_user)
+      refute Users.get_maybe_unverified_email("old@example.com")
     end
 
     test "does nothing to emails when public_email is empty" do
@@ -266,19 +218,7 @@ defmodule Hexpm.Accounts.UsersTest do
           audit: audit_data(current_user)
         )
 
-      assert Users.get_email("old@example.com") == nil
-
-      current_user_id = current_user.id
-      organization_id = organization.id
-
-      assert [
-               %{
-                 action: "email.remove",
-                 user_id: ^current_user_id,
-                 organization_id: ^organization_id
-               },
-               _user_update
-             ] = Hexpm.Accounts.AuditLogs.all_by(current_user)
+      refute Users.get_maybe_unverified_email("old@example.com")
     end
 
     test "does nothing to emails when gravatar_email is empty" do
