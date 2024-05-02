@@ -57,7 +57,7 @@ defmodule Hexpm.Repository.Package do
     |> unique_constraint(:name, name: :packages_repository_id_name_text_pattern_ops_index)
     |> validate_required(:name)
     |> validate_length(:name, min: 2)
-    |> validate_format(:name, ~r"^[a-z]\w*$")
+    |> validate_format(:name, ~r"^[a-z][a-z0-9_]*$")
     |> validate_exclusion(:name, @reserved_names)
     |> cast_embed(:meta, with: &PackageMetadata.changeset(&1, &2, package), required: true)
     |> put_first_owner(user, repository)
