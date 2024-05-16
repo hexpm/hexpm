@@ -15,6 +15,7 @@ defmodule HexpmWeb.API.PackageController do
     search = Hexpm.Utils.parse_search(params["search"])
     sort = sort(params["sort"])
     per_page = Hexpm.Utils.safe_int(params["per_page"]) || @packages_per_page
+    per_page = Enum.min([per_page, @packages_per_page])
     packages = Packages.search_with_versions(repositories, page, per_page, search, sort)
 
     when_stale(conn, packages, [modified: false], fn conn ->
