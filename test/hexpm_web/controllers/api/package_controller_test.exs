@@ -95,6 +95,12 @@ defmodule HexpmWeb.API.PackageControllerTest do
       assert hd(result)["name"] == package1.name
     end
 
+    test "per page" do
+      conn = get(build_conn(), "/api/packages?per_page=1")
+      result = json_response(conn, 200)
+      assert length(result) == 1
+    end
+
     test "filter by last_updated", %{package2: package2} do
       conn = get(build_conn(), "/api/packages?page=1&search=updated_after:2029-01-01T00:00:00Z")
       assert [result] = json_response(conn, 200)

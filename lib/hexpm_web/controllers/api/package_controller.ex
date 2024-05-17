@@ -7,13 +7,16 @@ defmodule HexpmWeb.API.PackageController do
   plug :authorize, domains: [{"api", "read"}], fun: {AuthHelpers, :organization_access}
 
   @sort_params ~w(name recent_downloads total_downloads inserted_at updated_at)
+  @packages_per_page 100
 
   def index(conn, params) do
     repositories = repositories(conn)
     page = Hexpm.Utils.safe_int(params["page"])
     search = Hexpm.Utils.parse_search(params["search"])
     sort = sort(params["sort"])
-    packages = Packages.search_with_versions(repositories, page, 100, search, sort)
+    per_page = Hexpm.Utils.safe_int(params["per_page"]) || @packages_per_page
+    per_page = Enum.min([per_page, @packages_per_page])
+    packages = Packages.search_with_versions(repositories, page, per_page, search, sort)
 
     when_stale(conn, packages, [modified: false], fn conn ->
       conn
