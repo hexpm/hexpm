@@ -59,12 +59,13 @@ defmodule HexpmWeb.PackageControllerTest do
       meta: build(:release_metadata, app: package4.name)
     )
 
-    insert(
-      :release,
-      package: package5,
-      version: "0.0.1",
-      meta: build(:release_metadata, app: package5.name)
-    )
+    package5_release =
+      insert(
+        :release,
+        package: package5,
+        version: "0.0.1",
+        meta: build(:release_metadata, app: package5.name)
+      )
 
     insert(:organization_user, user: user1, organization: repository1.organization)
 
@@ -74,6 +75,7 @@ defmodule HexpmWeb.PackageControllerTest do
       package3: package3,
       package4: package4,
       package5: package5,
+      package5_release: package5_release,
       repository1: repository1,
       repository2: repository2,
       user1: user1,
@@ -112,9 +114,19 @@ defmodule HexpmWeb.PackageControllerTest do
       refute response(conn, 200) =~ "no-results"
     end
 
-    test "search with exact match" do
+    test "search with exact match", %{package5: package5, package5_release: package5_release} do
+      insert(:download,
+        package: package5,
+        release: package5_release,
+        downloads: 5_000,
+        day: Hexpm.Utils.utc_yesterday()
+      )
+
+      :ok = Hexpm.Repo.refresh_view(Hexpm.Repository.PackageDownload)
+
       conn = get(build_conn(), "/packages?search=with_underscore")
       assert response(conn, 200) =~ "exact-match"
+      assert response(conn, 200) =~ "total downloads: 5 000"
       refute response(conn, 200) =~ "results-found"
     end
 

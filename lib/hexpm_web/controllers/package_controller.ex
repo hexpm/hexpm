@@ -29,12 +29,9 @@ defmodule HexpmWeb.PackageController do
     package_count = Packages.count(repositories, filter)
     page = Hexpm.Utils.safe_page(page_param, package_count, @packages_per_page)
     exact_match = exact_match(repositories, search)
-
-    packages =
-      fetch_packages(repositories, page, @packages_per_page, filter, sort)
-      |> Packages.diff(exact_match)
-
-    downloads = Downloads.packages_all_views(packages)
+    all_matches = fetch_packages(repositories, page, @packages_per_page, filter, sort)
+    downloads = Downloads.packages_all_views(all_matches)
+    packages = Packages.diff(all_matches, exact_match)
 
     render(
       conn,
