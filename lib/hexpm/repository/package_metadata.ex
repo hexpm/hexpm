@@ -42,7 +42,7 @@ defmodule Hexpm.Repository.PackageMetadata do
   end
 
   defp validate_licenses(changeset, package) do
-    if package.repository.public do
+    if package.repository.id == 1 do
       validate_change(changeset, :licenses, fn _, licenses ->
         licenses
         |> Enum.reject(&valid_license?/1)
