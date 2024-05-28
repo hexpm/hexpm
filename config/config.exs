@@ -62,6 +62,10 @@ config :mime, :types, %{
   "application/vnd.hex+erlang" => ["erlang"]
 }
 
+config :mime, :extensions, %{
+  "json" => "application/json"
+}
+
 config :rollbax, enabled: false
 
 config :logger, :default_formatter, format: "[$level] $metadata$message\n"
