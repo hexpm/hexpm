@@ -73,14 +73,6 @@ defmodule Hexpm.Repository.Package do
     )
   end
 
-  defp put_first_owner(changeset, user, repository) do
-    if repository.id == 1 do
-      put_assoc(changeset, :package_owners, [%PackageOwner{user_id: user.id}])
-    else
-      changeset
-    end
-  end
-
   def update(package, params) do
     cast(package, params, [])
     # A release publish should always update the package's updated_at
@@ -155,7 +147,7 @@ defmodule Hexpm.Repository.Package do
   end
 
   defp put_first_owner(changeset, user, repository) do
-    if repository.public do
+    if repository.id == 1 do
       put_assoc(changeset, :package_owners, [%PackageOwner{user_id: user.id}])
     else
       changeset
