@@ -112,7 +112,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        hex-version: [main, v2.0, v1.0, v0.21, v0.20]
+        hex-version: [main, v2.0, v1.0]
 
     env:
       HEXPM_PATH: ..
