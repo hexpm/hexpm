@@ -3,8 +3,18 @@ name: CI
 on: [push, pull_request]
 
 jobs:
-  format:
-    name: Format
+  formatter:
+    name: Run mix format
+    runs-on: ubuntu-20.04
+    steps:
+      - uses: actions/mix-format@v1
+        with:
+          elixir_version: 1.16.2
+          otp_version: 26.2.3
+          mix_env: dev
+
+  lint:
+    name: Run linters
     runs-on: ubuntu-20.04
     env:
       otp: 26.2.3
