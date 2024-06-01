@@ -7,7 +7,7 @@ jobs:
     name: Run mix format
     runs-on: ubuntu-20.04
     steps:
-      - uses: actions/mix-format@v1
+      - uses: supersimple/mix-format@v1
         with:
           elixir_version: 1.16.2
           otp_version: 26.2.3
