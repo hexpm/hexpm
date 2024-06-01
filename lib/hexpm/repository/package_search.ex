@@ -9,8 +9,12 @@ defmodule Hexpm.Repository.PackageSearch do
 
   schema "package_search" do
     belongs_to :package, Package
+
     field :term, :string
     field :frequency, :integer, default: 0
+
+    timestamps()
   end
+
 
 end
