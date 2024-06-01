@@ -70,7 +70,18 @@ defmodule Hexpm.Repository.PackageTest do
     public_repository: repository
   } do
     repository = %{repository | id: 1}
-    changeset = Package.build(repository, user, pkg_meta(%{name: "badlicense", description: "A package with a bad license", licenses: ["Invalid-Lic", "Apache-2.0"]}))
+
+    changeset =
+      Package.build(
+        repository,
+        user,
+        pkg_meta(%{
+          name: "badlicense",
+          description: "A package with a bad license",
+          licenses: ["Invalid-Lic", "Apache-2.0"]
+        })
+      )
+
     assert changeset.errors == []
     assert [licenses: {"invalid license \"Invalid-Lic\"", []}] = changeset.changes.meta.errors
   end
