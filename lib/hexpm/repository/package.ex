@@ -73,19 +73,11 @@ defmodule Hexpm.Repository.Package do
     )
   end
 
-  defp put_first_owner(changeset, user, repository) do
-    if repository.id == 1 do
-      put_assoc(changeset, :package_owners, [%PackageOwner{user_id: user.id}])
-    else
-      changeset
-    end
-  end
-
   def update(package, params) do
     cast(package, params, [])
     # A release publish should always update the package's updated_at
     |> force_change(:updated_at, DateTime.utc_now())
-    |> cast_embed(:meta, with: &PackageMetadata.changeset(&1, &2, package), required: true)
+    |> cast_embed(:meta, with: &PackageMetadata.update_changeset(&1, &2, package), required: true)
     |> validate_metadata_name()
   end
 
@@ -152,6 +144,14 @@ defmodule Hexpm.Repository.Package do
       select: count()
     )
     |> search(search)
+  end
+
+  defp put_first_owner(changeset, user, repository) do
+    if repository.id == 1 do
+      put_assoc(changeset, :package_owners, [%PackageOwner{user_id: user.id}])
+    else
+      changeset
+    end
   end
 
   defp validate_metadata_name(changeset) do
