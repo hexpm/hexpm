@@ -47,6 +47,7 @@ defmodule Hexpm.MixProject do
       {:finch, "~> 0.15.0"},
       {:goth, "~> 1.3-rc"},
       {:hackney, "~> 1.7"},
+      {:heroicons, "~> 0.5.5"},
       {:hex_core, "~> 0.8", hex_core_opts()},
       {:jason, "~> 1.0"},
       {:libcluster, "~> 3.0"},
