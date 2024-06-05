@@ -264,7 +264,7 @@ defmodule HexpmWeb.PackageController do
   end
 
   defp maybe_log_search(search, 0) do
-    IO.puts(search)
+    Hexpm.Repository.PackageSearches.add_or_increment(%{"term" => search})
   end
 
   defp maybe_log_search(_search, _package_count), do: :noop
