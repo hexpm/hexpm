@@ -51,7 +51,7 @@
 
                 <div class="input-group-btn">
                   <button type="submit" class="btn btn-search" tabindex="1">
-                    <%= icon(:heroicon, "magnifying-glass", [width: 18, height: 18]) %>
+                    <%= icon(:heroicon, "magnifying-glass", [width: 17, height: 17]) %>
                   </button>
                 </div>
              </div>

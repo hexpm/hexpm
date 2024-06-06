@@ -61,10 +61,8 @@
     margin-bottom: 5px;
 
     svg {
-      height: 16px;
       margin-bottom: -2px;
       margin-left: 4px;
-      fill: #4f28a7;
     }
   }
 }
@@ -140,12 +138,6 @@
       height: 16px;
       margin-bottom: -2px;
       margin-left: 4px;
-      fill: #4f28a7;
-
-      &.octicon-diff {
-        height: 14px;
-        margin-bottom: 0;
-      }
 
     }
   }
@@ -184,4 +176,8 @@
 .version-retirement {
   font-weight: normal;
   color: $color-red;
+}
+
+.btn.copy-button {
+  padding: 6px 12px 4px;
 }
