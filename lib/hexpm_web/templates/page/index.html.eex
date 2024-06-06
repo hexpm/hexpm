@@ -14,7 +14,7 @@
               <label class="sr-only" for="search">Find packages</label>
               <span class="input-group-btn">
                 <button type="submit" class="btn btn-search" tabindex="1">
-                  <%= icon(:glyphicon, :search) %>
+                  <%= icon(:heroicon, "magnifying-glass") %>
                   <span class="sr-only">Search</span>
                 </button>
               </span>
@@ -65,7 +65,7 @@
     <div class="row">
       <div class="col-md-4">
         <h3 class="gs-head">
-          <Heroicons.cake />
+          <%= icon(:heroicon, "cloud-arrow-down") %>
           Getting started
         </h3>
         <p>
