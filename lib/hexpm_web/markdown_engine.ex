@@ -12,7 +12,7 @@ defmodule HexpmWeb.MarkdownEngine do
 
   defp header_anchors(html, tag) do
     icon =
-      HexpmWeb.ViewIcons.icon(:glyphicon, :link, class: "icon-link")
+      HexpmWeb.ViewIcons.icon(:heroicon, :link, class: "icon-link")
       |> Phoenix.HTML.safe_to_string()
 
     Regex.replace(~r"<#{tag}>\n?(.*)<\/#{tag}>", html, fn _, header ->

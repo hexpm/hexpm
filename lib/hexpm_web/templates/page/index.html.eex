@@ -14,7 +14,7 @@
               <label class="sr-only" for="search">Find packages</label>
               <span class="input-group-btn">
                 <button type="submit" class="btn btn-search" tabindex="1">
-                  <%= icon(:heroicon, "magnifying-glass") %>
+                  <%= icon(:heroicon, "magnifying-glass", width: 18, height: 18) %>
                   <span class="sr-only">Search</span>
                 </button>
               </span>
@@ -65,7 +65,7 @@
     <div class="row">
       <div class="col-md-4">
         <h3 class="gs-head">
-          <%= icon(:heroicon, "cloud-arrow-down") %>
+          <%= icon(:heroicon, "cloud-arrow-down", class: "header-icon") %>
           Getting started
         </h3>
         <p>
@@ -78,7 +78,7 @@
 
       <div class="col-md-4">
         <h3 class="gs-head">
-          <%= icon(:octicon, :"cloud-upload", class: "header-icon") %>
+          <%= icon(:heroicon, "cloud-arrow-up", class: "header-icon") %>
           Publish packages
         </h3>
         <p>
@@ -91,7 +91,7 @@
 
       <div class="col-md-4">
         <h3 class="gs-head">
-          <%= icon(:octicon, :lock, class: "header-icon") %>
+          <%= icon(:heroicon, "shield-check", class: "header-icon") %>
           Private packages
         </h3>
         <p>
@@ -109,7 +109,7 @@
 <div class="stats home-stats">
   <ul class="container">
     <li>
-      <%= icon(:octicon, :package, class: "stat-icon stat-icon-package") %>
+      <%= icon(:heroicon, "archive-box", class: "stat-icon stat-icon-package") %>
       <span class="stat-info">
         <span class="count-info wrap">
           <%= ViewHelpers.human_number_space(@num_packages, 5) %>
@@ -121,7 +121,7 @@
       </span>
     </li>
     <li>
-      <%= icon(:octicon, :versions, class: "stat-icon stat-icon-versions") %>
+      <%= icon(:heroicon, "rectangle-stack", class: "stat-icon stat-icon-versions") %>
       <span class="stat-info">
         <span class="count-info wrap">
           <%= ViewHelpers.human_number_space(@num_releases, 5) %>
@@ -133,7 +133,7 @@
       </span>
     </li>
     <li>
-      <%= icon(:octicon, :calendar, class: "stat-icon stat-icon-calendar") %>
+      <%= icon(:heroicon, "calendar-days", class: "stat-icon stat-icon-calendar") %>
       <span class="stat-info">
         <span class="count-info wrap">
           <%= ViewHelpers.human_number_space(@total["day"], 5) %>
@@ -145,7 +145,7 @@
       </span>
     </li>
     <li>
-      <%= icon(:octicon, :calendar, class: "stat-icon stat-icon-calendar") %>
+      <%= icon(:heroicon, "calendar-days", class: "stat-icon stat-icon-calendar") %>
       <span class="stat-info">
         <span class="count-info wrap">
           <%= ViewHelpers.human_number_space(@total["week"], 5) %>
@@ -157,7 +157,7 @@
       </span>
     </li>
     <li>
-      <%= icon(:octicon, :calendar, class: "stat-icon stat-icon-calendar") %>
+      <%= icon(:heroicon, "calendar-days", class: "stat-icon stat-icon-calendar") %>
       <span class="stat-info">
         <span class="count-info wrap">
           <%= ViewHelpers.human_number_space(@total["all"], 5) %>
@@ -176,7 +176,7 @@
     <div class="row">
       <div class="col-md-4">
         <h3 class="log-head">
-          <%= icon(:octicon, :package, class: "header-icon") %>
+          <%= icon(:heroicon, "archive-box", class: "header-icon") %>
           Most Downloaded
         </h3>
         <ul>
@@ -187,7 +187,7 @@
       </div>
       <div class="col-md-4">
         <h3 class="log-head">
-          <%= icon(:octicon, :package, class: "header-icon") %>
+          <%= icon(:heroicon, "archive-box", class: "header-icon") %>
           New Packages
         </h3>
         <ul>
@@ -198,7 +198,7 @@
       </div>
       <div class="col-md-4">
         <h3 class="log-head">
-          <%= icon(:octicon, :package, class: "header-icon") %>
+          <%= icon(:heroicon, "archive-box", class: "header-icon") %>
           Recently Updated
         </h3>
         <ul>

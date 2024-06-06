@@ -18,7 +18,7 @@ defmodule HexpmWeb.MarkdownEngineTest do
 
   @path Application.compile_env(:hexpm, :tmp_dir) <> "faq.md"
 
-  @icon HexpmWeb.ViewIcons.icon(:glyphicon, :link, class: "icon-link")
+  @icon HexpmWeb.ViewIcons.icon(:heroicon, :link, class: "icon-link")
         |> Phoenix.HTML.safe_to_string()
 
   setup do

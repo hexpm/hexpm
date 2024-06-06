@@ -45,7 +45,7 @@ tools = [
           <h3>Links</h3>
           <ul class="links">
             <%= if @docs_html_url && @docs_tarball_url do %>
-              <li><a href="<%= @docs_html_url %>">Online documentation</a> <a href="<%= @docs_tarball_url %>" title="Download"><%= icon(:octicon, :"cloud-download") %></a></li>
+              <li><a href="<%= @docs_html_url %>">Online documentation</a> <a href="<%= @docs_tarball_url %>" title="Download"><%= icon(:heroicon, "cloud-arrow-down") %></a></li>
             <% end %>
             <%= for {name, link} <- links do %>
               <li><a href="<%= link %>" rel="nofollow"><%= name %></a></li>
@@ -209,9 +209,9 @@ tools = [
               readonly="readonly" id="<%= tool %>-snippet" />
             <span class="input-group-btn">
               <button class="btn btn-default btn-no-hover copy-button" type="button" data-input-id="<%= tool %>-snippet">
-                <%= icon(:glyphicon, :copy) %>
-                <%= icon(:glyphicon, :remove, style: "display: none") %>
-                <%= icon(:glyphicon, :ok, style: "display: none; color: green") %>
+                <%= icon(:heroicon, "clipboard-document-list") %>
+                <%= icon(:heroicon, "x-circle", style: "display: none") %>
+                <%= icon(:heroicon, "check-circle", style: "display: none; color: green") %>
               </button>
             </span>
           </div>
@@ -228,9 +228,9 @@ tools = [
           readonly="readonly" id="checksum-snippet" />
         <span class="input-group-btn">
           <button class="btn btn-default btn-no-hover copy-button" type="button" data-input-id="checksum-snippet">
-            <%= icon(:glyphicon, :copy) %>
-            <%= icon(:glyphicon, :remove, style: "display: none") %>
-            <%= icon(:glyphicon, :ok, style: "display: none; color: green") %>
+            <%= icon(:heroicon, "clipboard-document-list") %>
+            <%= icon(:heroicon, "x-circle", style: "display: none") %>
+            <%= icon(:heroicon, "check-circle", style: "display: none; color: green") %>
           </button>
         </span>
       </div>
