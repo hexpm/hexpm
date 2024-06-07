@@ -109,7 +109,7 @@
 <div class="stats home-stats">
   <ul class="container">
     <li>
-      <%= icon(:heroicon, "archive-box", class: "stat-icon stat-icon-package") %>
+      <%= icon(:heroicon, "archive-box", class: "stat-icon stat-icon-package", width: 36, height: 36) %>
       <span class="stat-info">
         <span class="count-info wrap">
           <%= ViewHelpers.human_number_space(@num_packages, 5) %>
@@ -121,7 +121,7 @@
       </span>
     </li>
     <li>
-      <%= icon(:heroicon, "rectangle-stack", class: "stat-icon stat-icon-versions") %>
+      <%= icon(:heroicon, "rectangle-stack", class: "stat-icon stat-icon-versions", width: 36, height: 36) %>
       <span class="stat-info">
         <span class="count-info wrap">
           <%= ViewHelpers.human_number_space(@num_releases, 5) %>
@@ -133,7 +133,7 @@
       </span>
     </li>
     <li>
-      <%= icon(:heroicon, "calendar-days", class: "stat-icon stat-icon-calendar") %>
+      <%= icon(:heroicon, "calendar-days", class: "stat-icon stat-icon-calendar", width: 36, height: 36) %>
       <span class="stat-info">
         <span class="count-info wrap">
           <%= ViewHelpers.human_number_space(@total["day"], 5) %>
@@ -145,7 +145,7 @@
       </span>
     </li>
     <li>
-      <%= icon(:heroicon, "calendar-days", class: "stat-icon stat-icon-calendar") %>
+      <%= icon(:heroicon, "calendar-days", class: "stat-icon stat-icon-calendar", width: 36, height: 36) %>
       <span class="stat-info">
         <span class="count-info wrap">
           <%= ViewHelpers.human_number_space(@total["week"], 5) %>
@@ -157,7 +157,7 @@
       </span>
     </li>
     <li>
-      <%= icon(:heroicon, "calendar-days", class: "stat-icon stat-icon-calendar") %>
+      <%= icon(:heroicon, "calendar-days", class: "stat-icon stat-icon-calendar", width: 36, height: 36) %>
       <span class="stat-info">
         <span class="count-info wrap">
           <%= ViewHelpers.human_number_space(@total["all"], 5) %>
