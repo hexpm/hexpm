@@ -36,7 +36,7 @@ defmodule HexpmWeb.ViewIcons do
       |> Keyword.put_new(:title, title)
       |> Keyword.update(:class, class, &"#{class} #{&1}")
 
-    content_tag :svg, opts, do: raw(g_tag)
+    content_tag(:svg, opts, do: raw(g_tag))
   end
 
   def icon(_any, _name, _opts), do: nil
