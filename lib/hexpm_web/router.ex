@@ -304,6 +304,10 @@ defmodule HexpmWeb.Router do
     live_dashboard("/db", metrics: HexpmWeb.Telemetry)
   end
 
+  scope "/", HexpmWeb do
+    post "/github/secret_alert", SecretAlertController, :notify
+  end
+
   def user_path(%User{organization: nil} = user) do
     ~p"/users/#{user}"
   end

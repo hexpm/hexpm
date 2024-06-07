@@ -32,7 +32,10 @@ defmodule Hexpm.Accounts.KeysTest do
       assert {:ok, %{key: key}} = Keys.create(user, params, audit: audit_data(user))
       assert key.name == "keyname"
       assert key.user_id == user.id
-      assert {:ok, _} = Base.decode16(key.user_secret, case: :lower)
+
+      [prefix, user_secret] = String.split(key.user_secret, "_")
+
+      assert {"hexpm", {:ok, _}} = {prefix, Base.decode16(user_secret, case: :lower)}
     end
 
     test "organization api permissions", %{organization: organization} do
@@ -46,7 +49,10 @@ defmodule Hexpm.Accounts.KeysTest do
 
       assert key.name == "keyname"
       assert key.organization_id == organization.id
-      assert {:ok, _} = Base.decode16(key.user_secret, case: :lower)
+
+      [prefix, user_secret] = String.split(key.user_secret, "_")
+
+      assert {"hexpm", {:ok, _}} = {prefix, Base.decode16(user_secret, case: :lower)}
     end
 
     test "user package permissions", %{user: user, package: package} do

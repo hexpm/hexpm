@@ -62,4 +62,13 @@ defmodule Hexpm.Accounts.AuthTest do
       assert Auth.key_auth(key.user_secret, %{}) == :revoked
     end
   end
+
+  describe "gen_key/0" do
+    test "generates a key prefixed with hexpm_" do
+      assert key = Auth.gen_key()
+      assert is_binary(key)
+      assert String.length(key) == 38
+      assert String.starts_with?(key, "hexpm_")
+    end
+  end
 end
