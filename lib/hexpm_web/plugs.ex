@@ -72,24 +72,6 @@ defmodule HexpmWeb.Plugs do
           assign(conn, :user_agent, "missing")
         end
     end
-
-    @doc """
-    https://docs.github.com/en/code-security/secret-scanning/secret-scanning-partner-program#implement-signature-verification-in-your-secret-alert-service
-    """
-    def github_identifier(conn, opts) do
-      with [key_identifier, _] <- get_req_header(conn, "Github-Public-Key-Identifier"),
-           [payload_signature, _] <- get_req_header(conn, "Github-Public-Key-Signature") do
-            # need to verify the signature by using the info: https://api.github.com/meta/public_keys/secret_scanning
-            # and the algorithm: ECDSA-NIST-P256V1-SHA256
-        assign(conn, :user_agent, value)
-      else
-        _ ->
-          ControllerHelpers.render_error(conn, 400,
-            message:
-              "Github-Public-Key-Identifier and Github-Public-Key-Signature headers are required"
-          )
-      end
-    end
   end
 
   def default_repository(conn, _opts) do
@@ -148,4 +130,39 @@ defmodule HexpmWeb.Plugs do
         HexpmWeb.AuthHelpers.error(conn, error)
     end
   end
+
+  @doc """
+  https://docs.github.com/en/code-security/secret-scanning/secret-scanning-partner-program#implement-signature-verification-in-your-secret-alert-service
+  """
+  def github_identifier(conn, opts) do
+    with [key_identifier, _] <- get_req_header(conn, "Github-Public-Key-Identifier"),
+         [payload_signature, _] <- get_req_header(conn, "Github-Public-Key-Signature"),
+         :ok <- validate_payload(key_identifier, payload_signature) do
+      conn
+    else
+      _ ->
+        ControllerHelpers.render_error(conn, 400,
+          message:
+            "Error validating the payload signature."
+        )
+    end
+  end
+
+  defp validate_payload(key_identifier, payload_signature) do
+    with {:ok, 200, _hdrs, body} <- Hexpm.HTTP.get("https://api.github.com/meta/public_keys/secret_scanning", []),
+    {:ok, %{"public_keys" => keys}} <- Jason.decode(body, atoms: true),
+    :ok <- public_key_matches(keys, key_identifier, payload_signature) do
+      :ok
+    else
+      _ -> :error
+    end
+  end
+
+
+  defp public_key_matches(keys, key_identifier, payload_signature) do
+    # need to verify the signature by using the info: https://api.github.com/meta/public_keys/secret_scanning
+    # and the algorithm: ECDSA-NIST-P256V1-SHA256
+    Enum.find_value(keys, fn %{key: _gh_key, key_identifier: gh_key_id} when gh_key_id == key_identifier -> true; _ -> false end)
+  end
+
 end
