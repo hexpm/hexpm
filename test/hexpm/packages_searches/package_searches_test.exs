@@ -17,7 +17,8 @@ defmodule Hexpm.PackageSearchesTest do
       package_search = %PackageSearch{term: term}
       Repo.insert(package_search)
       params = %{"term" => term}
-      {:ok, updated_package_search} = PackageSearches.add_or_increment(params)
+      {:ok, _updated_package_search} = PackageSearches.add_or_increment(params)
+      updated_package_search = Repo.get_by(PackageSearch, term: term)
       assert updated_package_search.frequency == 2
     end
 
