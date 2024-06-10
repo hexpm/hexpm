@@ -5,7 +5,9 @@ defmodule Hexpm.PackageSearches.PackageSearchTest do
   describe "changeset/2" do
     test "with correct params, creates a package search" do
       params = %{"term" => "some_package_name"}
-      assert %{valid?: true, changes: _changes} = PackageSearch.changeset(%PackageSearch{}, params)
+
+      assert %{valid?: true, changes: _changes} =
+               PackageSearch.changeset(%PackageSearch{}, params)
     end
 
     test "with increment request on existing package_search" do
