@@ -3,10 +3,9 @@ defmodule Hexpm.Repository.PackageSearches do
   alias Hexpm.Repository.PackageSearches.PackageSearch
 
   def add_or_increment(params) do
-    case get(params["term"]) do
-      nil -> add(%PackageSearch{}, params)
-      %PackageSearch{} = package_search -> increment(package_search)
-    end
+    %PackageSearch{}
+    |> PackageSearch.changeset(params)
+    |> Repo.insert(on_conflict: [inc: [frequency: 1]], conflict_target: :term)
   end
 
   def get(term) do
@@ -24,18 +23,5 @@ defmodule Hexpm.Repository.PackageSearches do
       )
 
     Repo.all(query)
-  end
-
-  defp add(package_search, params) do
-    package_search
-    |> PackageSearch.changeset(params)
-    |> Repo.insert()
-  end
-
-  defp increment(package_search) do
-    package_search
-    |> PackageSearch.changeset(%{})
-    |> put_change(:frequency, package_search.frequency + 1)
-    |> Repo.update()
   end
 end
