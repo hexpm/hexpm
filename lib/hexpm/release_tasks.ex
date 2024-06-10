@@ -101,7 +101,11 @@ defmodule Hexpm.ReleaseTasks do
     Enum.each(@repos, fn repo ->
       app = Keyword.get(repo.config(), :otp_app)
       Logger.info("[task] Purging package searches for #{app}")
-      repo.delete_all(from ps in Hexpm.Repository.PackageSearches.PackageSearch, where: fragment("inserted_at < NOW() - INTERVAL '1 month'") and ps.frequency < 2)
+
+      repo.delete_all(
+        from ps in Hexpm.Repository.PackageSearches.PackageSearch,
+          where: fragment("inserted_at < NOW() - INTERVAL '1 month'") and ps.frequency < 2
+      )
     end)
   end
 
