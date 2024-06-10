@@ -1,4 +1,5 @@
 defmodule Hexpm.ReleaseTasks do
+  import Ecto.Query, only: [from: 2]
   alias Hexpm.ReleaseTasks.{CheckNames, Stats}
   require Logger
 
@@ -83,6 +84,29 @@ defmodule Hexpm.ReleaseTasks do
 
     Logger.info("[task] Finished stats")
     stop()
+  end
+
+  def purge_package_searches() do
+    start_apps(@start_apps)
+    Logger.info("[task] Running purge_package_searches")
+    start_repo()
+
+    task(fn -> run_purge_package_searches() end)
+
+    Logger.info("[task] Finished purge_package_searches")
+    stop()
+  end
+
+  defp run_purge_package_searches() do
+    Enum.each(@repos, fn repo ->
+      app = Keyword.get(repo.config(), :otp_app)
+      Logger.info("[task] Purging package searches for #{app}")
+
+      repo.delete_all(
+        from ps in Hexpm.Repository.PackageSearches.PackageSearch,
+          where: fragment("inserted_at < NOW() - INTERVAL '1 month'") and ps.frequency < 2
+      )
+    end)
   end
 
   defp task(fun) do
