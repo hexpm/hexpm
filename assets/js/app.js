@@ -147,25 +147,25 @@ export default class App {
   }
 
   copySucceeded(button) {
-    button.children(".glyphicon-copy").hide()
-    button.children(".glyphicon-ok").show()
+    button.children(".heroicon-clipboard-document-list").hide()
+    button.children(".heroicon-check-circle").show()
     button.tooltip({ title: "Copied!", container: "body", placement: "bottom", trigger: "manual" }).tooltip("show")
 
     setTimeout(() => {
-      button.children(".glyphicon-ok").hide()
-      button.children(".glyphicon-copy").show()
+      button.children(".heroicon-check-circle").hide()
+      button.children(".heroicon-clipboard-document-list").show()
       button.tooltip("hide")
     }, 1500)
   }
 
   copyFailed(button) {
-    button.children(".glyphicon-copy").hide()
-    button.children(".glyphicon-remove").show()
+    button.children(".heroicon-clipboard-document-list").hide()
+    button.children(".heroicon-x-circle").show()
     button.tooltip({ title: "Copy not supported in your browser", container: "body", placement: "bottom", trigger: "manual" }).tooltip("show")
 
     setTimeout(() => {
-      button.children(".glyphicon-remove").hide()
-      button.children(".glyphicon-copy").show()
+      button.children(".heroicon-x-circle").hide()
+      button.children(".heroicon-clipboard-document-list").show()
       button.tooltip("hide")
     }, 1500)
   }

@@ -14,14 +14,14 @@ version_map = Enum.map(@all_releases, & &1.version)
       <% end %>
     <% else %>
       <%= if release.has_docs do %>
-        <a href="<%= raw Hexpm.Utils.docs_html_url(@package.repository, @package, release) %>" title="Docs"><%= icon(:octicon, :book) %></a>
+        <a href="<%= raw Hexpm.Utils.docs_html_url(@package.repository, @package, release) %>" title="Docs"><%= icon(:heroicon, "book-open") %></a>
       <% end %>
       <%= if previous_version = Hexpm.Utils.previous_version(release.version, version_map) do %>
         <%= if @package.repository_id == 1 do %>
-          <a href="<%= raw Hexpm.Utils.diff_html_url(@package.name, release.version, previous_version) %>" title="Diff"><%= icon(:octicon, :diff) %></a>
+          <a href="<%= raw Hexpm.Utils.diff_html_url(@package.name, release.version, previous_version) %>" title="Diff"><%= icon(:heroicon, "arrows-right-left", width: 16, height: 16) %></a>
         <% end %>
       <% end %>
-        <a href="<%= raw Hexpm.Utils.preview_html_url(@package.name, release.version) %>" title="Preview"><%= icon(:octicon, :code) %></a>
+        <a href="<%= raw Hexpm.Utils.preview_html_url(@package.name, release.version) %>" title="Preview"><%= icon(:heroicon, "code-bracket") %></a>
     <% end %>
   </li>
 <% end %>

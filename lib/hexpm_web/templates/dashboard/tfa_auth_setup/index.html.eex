@@ -12,7 +12,7 @@
         <div>
           You can also use your setup key
           (<code id="tfa-secret" data-value="<%= @current_user.tfa.secret %>"><%= @current_user.tfa.secret %></code>
-          <button type="button" class="copy-data-button" data-input-id="tfa-secret">📋</button>) to
+          <button type="button" class="copy-data-button" data-input-id="tfa-secret"><%= icon(:heroicon, "clipboard", [width: 14, height: 14]) %></button>) to
           manually configure your authenticator app.
         </div>
       </div>
