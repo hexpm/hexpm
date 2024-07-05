@@ -15,7 +15,7 @@ tools = [
 %>
 
 <h2 class="package-title">
-  <a href="<%= ~p"/packages/#{@package}" %>"><%= ViewHelpers.package_name(@package) %></a>
+  <a href="<%= ViewHelpers.path_for_package(@package) %>"><%= ViewHelpers.package_name(@package) %></a>
   <%= if @current_release do %>
     <%= if @current_release.retirement do %>
       <span class="version retired"><%= @current_release.version %> (retired)</span>
