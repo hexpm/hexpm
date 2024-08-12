@@ -2,6 +2,86 @@
   Packages
 </h2>
 
+<div class="container">
+  <form role="search" action="<%= ~p"/packages" %>">
+      <div class="input-group">
+        <input placeholder="Find packages" name="search" type="text" class="form-control" value="<%= @search %>">
+        <input type="hidden" name="sort" value="recent_downloads">
+
+        <div class="input-group-btn">
+          <button type="submit" class="btn btn-search" tabindex="1">
+            <%= icon(:heroicon, "magnifying-glass", [width: 17, height: 17]) %>
+          </button>
+        </div>
+      </div>
+  </form>
+  <div class="container">
+    <button class="btn btn-info" data-toggle="collapse" data-target="#info">
+      Advanced options
+    </button>
+    <div id="info" class="collapse">
+      <h3>Usage</h3>
+      <p>
+        By default, a query like <code>ecto sql</code> will search for packages
+        with <code>ecto</code> or <code>sql</code> in their name or description.
+      </p>
+      <p>
+        A few filters can be used to create more complex searches. When using
+        filters, they act as an <code>and</code>. The most common filters are
+        <code>name:</code> and <code>description:</code>. The previous example
+        can be modified to only show packages with <code>ecto</code> <em>and</em>
+        <code>sql</code> in their description like so: <code>description:ecto
+        description:sql</code>.
+      </p>
+      <h3>Filters</h3>
+      <dl>
+        <dt><code>name:</code></dt>
+        <dd>
+          Only show packages that include query in the name. An asterisk (
+          <code>*</code>) can be used at the start or end of the name to find only
+          packages that start or end with the query, e.g., <code>name:ecto*</code>
+          to find packages that start with <code>ecto</code>, or
+          <code>name:*sql</code> to find packages that end with <code>sql</code>.
+        </dd>
+
+        <hr>
+
+        <dt><code>description:</code></dt>
+        <dd>
+          Only show packages that include the query in the description. Note
+          that <code>*</code> cannot be used here.
+        </dd>
+
+        <hr>
+
+        <dt><code>updated_after:</code></dt>
+        <dd>
+          Only show packages that have been updated after the ISO8601 query. For
+          example, <code>updated_after:2024-01-01T00:00:00</code> will find
+          packages that have been updated after 2024-01-01 at midnight.
+        </dd>
+
+        <hr>
+
+        <dt><code>extra:</code></dt>
+        <dd>
+          Only show packages with associated <code>extra</code> data.
+        </dd>
+
+        <hr>
+
+        <dt><code>depends:</code></dt>
+        <dd>
+          Only show packages which depend on the given package. For example,
+          <code>depends:ecto</code> only shows packages that depend on the ecto
+          package.
+        </dd>
+      </dl>
+    </div>
+  </div>
+
+</div>
+
 <%= unless @search do %>
   <div class="letter-sort">
     <ul class="list">
