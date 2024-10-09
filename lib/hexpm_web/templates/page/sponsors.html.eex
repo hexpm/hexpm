@@ -33,14 +33,13 @@
 
   <div class="row simplebet">
     <div class="col-md-5 image">
-      <a href="https://simplebet.io/"><img src="<%= ~p"/images/simplebet.png" %>" alt="SimpleBet logo"></a>
+      <a href="https://draftkings.com/"><img src="<%= ~p"/images/draftkings.svg" %>" alt="DraftKings logo"></a>
     </div>
     <div class="col-md-7">
       <p>
-        SimpleBet is using modern technology to enable sports betting market creation and trading to become entirely automatic and algorithmic for the first time. This will allow for the creation of more betting opportunities, enable more efficient pricing for existing betting activity, and reduce operating expenses via automation.
-      </p>
+        Defining what it means to build and deliver the most extraordinary sports & entertainment experiences. The Crown is Yours.      </p>
       <p>
-        SimpleBet provides development help for Hex.
+        DraftKings provides development help for Hex.
       </p>
     </div>
   </div>
