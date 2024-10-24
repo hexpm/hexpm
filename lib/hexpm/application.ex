@@ -8,25 +8,29 @@ defmodule Hexpm.Application do
     read_only_mode()
     Hexpm.BlockAddress.start()
 
-    children = [
-      Hexpm.RepoBase,
-      {Finch, name: Hexpm.Finch},
-      {Task.Supervisor, name: Hexpm.Tasks},
-      {Cluster.Supervisor, [topologies, [name: Hexpm.ClusterSupervisor]]},
-      {Phoenix.PubSub, name: Hexpm.PubSub, adapter: Phoenix.PubSub.PG2},
-      HexpmWeb.RateLimitPubSub,
-      {PlugAttack.Storage.Ets, name: HexpmWeb.Plugs.Attack.Storage, clean_period: 60_000},
-      {Hexpm.Billing.Report, name: Hexpm.Billing.Report, interval: 60_000},
-      {Hexpm.Cache,
-       name: Hexpm.Cache,
-       interval: 3_600_000,
-       enabled: Application.fetch_env!(:hexpm, :cache_enabled)},
-      goth_spec(),
-      setup(),
-      load_caches(),
-      HexpmWeb.Telemetry,
-      HexpmWeb.Endpoint
-    ]
+    children =
+      [
+        Hexpm.RepoBase,
+        {Finch, name: Hexpm.Finch},
+        {Task.Supervisor, name: Hexpm.Tasks},
+        {Cluster.Supervisor, [topologies, [name: Hexpm.ClusterSupervisor]]},
+        {Phoenix.PubSub, name: Hexpm.PubSub, adapter: Phoenix.PubSub.PG2},
+        HexpmWeb.RateLimitPubSub,
+        {PlugAttack.Storage.Ets, name: HexpmWeb.Plugs.Attack.Storage, clean_period: 60_000},
+        {Hexpm.Billing.Report, name: Hexpm.Billing.Report, interval: 60_000},
+        {Hexpm.Cache,
+         name: Hexpm.Cache,
+         interval: 3_600_000,
+         enabled: Application.fetch_env!(:hexpm, :cache_enabled)},
+        goth_spec(),
+        setup(),
+        load_caches(),
+        HexpmWeb.Telemetry,
+        HexpmWeb.Endpoint,
+        advisory_updater()
+      ]
+      # Remove disabled children
+      |> Enum.filter(& &1)
 
     File.mkdir_p(Application.get_env(:hexpm, :tmp_dir))
     shutdown_on_eof()
@@ -109,8 +113,12 @@ defmodule Hexpm.Application do
       {Goth, name: Hexpm.Goth, source: {:service_account, credentials, options}}
     end
   else
-    defp goth_spec() do
-      {Task, fn -> :ok end}
-    end
+    defp goth_spec, do: nil
+  end
+
+  if Mix.env() == :prod do
+    defp advisory_updater, do: Hexpm.Security.Updater
+  else
+    defp advisory_updater, do: nil
   end
 end

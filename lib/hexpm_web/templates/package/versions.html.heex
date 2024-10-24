@@ -175,7 +175,8 @@ version_rows =
           <%= for row <- version_rows do %>
             <tr class={[
               "hover:bg-grey-50 dark:hover:bg-grey-700/60 transition-colors",
-              row.retired? && "bg-grey-50 dark:bg-grey-900/40"
+              row.retired? && "bg-grey-50 dark:bg-grey-900/40",
+              row.release.vulnerable? && "bg-red-50/50 dark:bg-red-900/30"
             ]}>
               <td class="px-5 py-3.5 align-top">
                 <a
@@ -211,6 +212,13 @@ version_rows =
                         <span>{row.retirement_message}</span>
                       <% end %>
                     </div>
+                  <% row.release.vulnerable? -> %>
+                    <a
+                      href={ViewHelpers.path_for_package(@package) <> "/advisories"}
+                      class="text-red-600 underline hover:text-red-700"
+                    >
+                      Known security vulnerabilities
+                    </a>
                   <% true -> %>
                 <% end %>
               </td>

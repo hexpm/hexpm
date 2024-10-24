@@ -1329,6 +1329,8 @@ defmodule HexpmWeb.API.ReleaseControllerTest do
                "http://localhost:5002/#{package.name}/#{release.version}/"
 
       assert result["version"] == "#{release.version}"
+
+      assert result["security_advisories"] == []
     end
 
     test "get unknown release", %{package: package} do
@@ -1358,6 +1360,55 @@ defmodule HexpmWeb.API.ReleaseControllerTest do
       assert result["html_url"] =~ "/packages/#{package.name}/#{release.version}"
       assert result["version"] == "#{release.version}"
       assert result["requirements"][package2.name]["requirement"] == "~> 0.0.1"
+    end
+
+    test "get release with security advisories", %{package: package, release: release} do
+      result =
+        build_conn()
+        |> get("/api/packages/#{package.name}/releases/#{release.version}")
+        |> json_response(200)
+
+      assert result["version"] == "#{release.version}"
+      assert result["security_advisories"] == []
+
+      advisory_attrs = [
+        %{
+          id: "GHSA-test-1234-abcd",
+          package_id: package.id,
+          summary: "Test security vulnerability",
+          affected: [">= 0.0.1 and < 0.0.2"],
+          published_at: ~U[2024-04-03T16:46:30Z],
+          modified_at: ~U[2024-04-05T01:28:39Z],
+          details: %{
+            "id" => "GHSA-test-1234-abcd",
+            "summary" => "Test security vulnerability",
+            "affected" => [
+              %{
+                "package" => %{
+                  "name" => package.name,
+                  "ecosystem" => "Hex"
+                },
+                "versions" => ["0.0.1"]
+              }
+            ]
+          }
+        }
+      ]
+
+      Hexpm.Security.Advisories.upsert(advisory_attrs)
+      Hexpm.Security.Advisories.refresh_affected_releases()
+
+      result =
+        build_conn()
+        |> get("/api/packages/#{package.name}/releases/#{release.version}")
+        |> json_response(200)
+
+      assert result["url"] =~ "/api/packages/#{package.name}/releases/#{release.version}"
+      assert result["html_url"] =~ "/packages/#{package.name}/#{release.version}"
+      assert result["version"] == "#{release.version}"
+      assert length(result["security_advisories"]) == 1
+      assert hd(result["security_advisories"])["id"] == "GHSA-test-1234-abcd"
+      assert hd(result["security_advisories"])["summary"] == "Test security vulnerability"
     end
   end
 

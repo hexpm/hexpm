@@ -247,4 +247,33 @@ defmodule HexpmWeb.PackageView do
     do: "#{base_message} #{release_version}"
 
   defp version_from_params(params) when is_map(params), do: params["release"]["version"]
+
+  def cvss_severity(details) when is_map(details) do
+    case details["severity"] do
+      [%{"score" => vector} | _] when is_binary(vector) ->
+        score = :cvss.score(vector)
+        rating = :cvss.rating(vector)
+        %{score: score, rating: rating, vector: vector}
+
+      _ ->
+        nil
+    end
+  end
+
+  def cvss_severity(_), do: nil
+
+  def severity_badge_variant(:critical), do: "red"
+  def severity_badge_variant(:high), do: "red"
+  def severity_badge_variant(:medium), do: "yellow"
+  def severity_badge_variant(:low), do: "blue"
+  def severity_badge_variant(_), do: "default"
+
+  def cvss_calculator_url(vector) do
+    "https://www.first.org/cvss/calculator/#{cvss_version(vector)}##{vector}"
+  end
+
+  defp cvss_version(<<"CVSS:4.0/", _::binary>>), do: "4.0"
+  defp cvss_version(<<"CVSS:3.1/", _::binary>>), do: "3.1"
+  defp cvss_version(<<"CVSS:3.0/", _::binary>>), do: "3.0"
+  defp cvss_version(_), do: "3.1"
 end

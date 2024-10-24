@@ -37,6 +37,7 @@ defmodule Hexpm.MixProject do
       {:bcrypt_elixir, "~> 3.0"},
       {:bypass, "~> 2.1", only: :test},
       {:corsica, "~> 2.0"},
+      {:cvss, "~> 0.1.0"},
       {:earmark, "~> 1.4"},
       {:ecto_psql_extras, "~> 0.6"},
       {:esbuild, "~> 0.8", runtime: Mix.env() == :dev},
@@ -87,7 +88,8 @@ defmodule Hexpm.MixProject do
       {:telemetry_poller, "~> 1.0"},
       {:ueberauth, "~> 0.10"},
       {:ueberauth_github, "~> 0.8"},
-      {:wallaby, "~> 0.30", only: :test, runtime: false}
+      {:wallaby, "~> 0.30", only: :test, runtime: false},
+      {:req, "~> 0.5.6"}
     ]
   end
 

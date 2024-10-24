@@ -44,6 +44,16 @@ defmodule Hexpm.Repository.Releases do
         audit: audit_data,
         replace: replace?
       ) do
+    # TODO: Check if any vulnerability on this package contains an affected
+    # version range that includes the version being published.
+    #
+    # This publish is likely the path and the advisory should be updated to
+    # include the fixed version.
+    #
+    # In any case, take the more cautious approach and immediately mark the
+    # release as having security advisories so that clients are aware of
+    # potential issues.
+
     Multi.new()
     |> Multi.run(:repository, fn _, _ -> {:ok, repository} end)
     |> Multi.run(:reserved_packages, fn _, _ -> {:ok, reserved_packages(repository, meta)} end)
@@ -331,4 +341,5 @@ defmodule Hexpm.Repository.Releases do
   defp preload_field(release, :requirements), do: {:requirements, Release.requirements(release)}
   defp preload_field(release, :downloads), do: {:downloads, ReleaseDownload.release(release)}
   defp preload_field(_release, :publisher), do: {:publisher, [:emails, :organization]}
+  defp preload_field(_release, :security_advisories), do: :security_advisories
 end

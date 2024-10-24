@@ -10,6 +10,7 @@ defmodule Hexpm.Repository.Release do
     field :inner_checksum, :binary
     field :outer_checksum, :binary
     field :has_docs, :boolean, default: false
+    field :vulnerable?, :boolean, virtual: true
     timestamps()
 
     belongs_to :package, Package
@@ -19,6 +20,10 @@ defmodule Hexpm.Repository.Release do
     has_many :package_report_releases, PackageReportRelease
     has_many :package_reports, through: [:package_report_releases, :package_report]
     has_one :downloads, ReleaseDownload
+
+    many_to_many :security_advisories, Hexpm.Security.Advisory,
+      join_through: "security_advisory_affected_releases",
+      preload_order: [desc: :published_at]
 
     embeds_one :meta, ReleaseMetadata, on_replace: :delete
     embeds_one :retirement, ReleaseRetirement, on_replace: :delete
@@ -233,11 +238,28 @@ defmodule Hexpm.Repository.Release do
   defp to_version(version) when is_binary(version), do: Version.parse!(version)
 
   def all(package) do
-    assoc(package, :releases)
+    package
+    |> assoc(:releases)
+    |> with_vulnerable?()
   end
 
   def sort(releases) do
     Enum.sort(releases, &(Version.compare(&1.version, &2.version) == :gt))
+  end
+
+  def with_vulnerable?(query) do
+    from(release in query,
+      as: :release,
+      select_merge: %{
+        vulnerable?:
+          exists(
+            from(security_advisory_affected_release in "security_advisory_affected_releases",
+              where: security_advisory_affected_release.release_id == parent_as(:release).id,
+              select: 1
+            )
+          )
+      }
+    )
   end
 
   def requirements(release) do

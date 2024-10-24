@@ -1,6 +1,6 @@
 defmodule HexpmWeb.API.ReleaseView do
   use HexpmWeb, :view
-  alias HexpmWeb.API.{RetirementView, UserView}
+  alias HexpmWeb.API.{AdvisoryView, RetirementView, UserView}
   alias HexpmWeb.PackageView
 
   def render("show." <> _, %{release: release}) do
@@ -37,6 +37,12 @@ defmodule HexpmWeb.API.ReleaseView do
       downloads: downloads(release.downloads),
       publisher: render_one(release.publisher, UserView, "minimal.json")
     }
+    |> ViewHelpers.include_if_loaded(
+      :security_advisories,
+      release.security_advisories,
+      AdvisoryView,
+      "release.json"
+    )
   end
 
   def render("minimal", %{release: release, package: package}) do
