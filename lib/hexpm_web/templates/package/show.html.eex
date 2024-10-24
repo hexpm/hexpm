@@ -31,6 +31,24 @@ tools = [
   </div>
 <% end %>
 
+<%= case Enum.filter(@package.security_vulnerability_disclosures, &Disclosure.relevant?(&1, @current_release)) do %>
+  <% [] -> %>
+  <% disclosures -> %>
+    <div class="alert alert-danger" role="alert">
+      <strong>There are known security vulnerabilities for this package.</strong>
+      <ul>
+        <%= for %{id: id, summary: summary} <- disclosures do %>
+          <li>
+            <a href="<%= "https://osv.dev/vulnerability/#{URI.encode(id)}" %>">
+              <%= id %>
+            </a>
+            <%= summary %>
+          </li>
+        <% end %>
+      </ul>
+  </div>
+<% end %>
+
 <%= if description do %>
   <div class="description with-divider">
     <%= ViewHelpers.text_length(description, 300) |> text_to_html(insert_brs: false) %>

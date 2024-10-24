@@ -36,6 +36,14 @@ Hexpm.Repo.transaction(fn ->
       ]
     )
 
+  maennchen =
+    insert(
+      :user,
+      username: "maennchen",
+      emails: [build(:email, email: "jonatan@example.com")],
+      password: password.("maennchenmaennchen")
+    )
+
   jose =
     insert(
       :user,
@@ -153,6 +161,60 @@ Hexpm.Repo.transaction(fn ->
     release: decimal_release,
     downloads: 1_000,
     day: Hexpm.Utils.utc_yesterday()
+  )
+
+  oidcc =
+    insert(
+      :package,
+      name: "oidcc",
+      package_owners: [build(:package_owner, user: maennchen)],
+      meta:
+        build(
+          :package_metadata,
+          licenses: ["Apache-2.0"],
+          links: %{
+            "Github" => "https://github.com/erlef/oidcc",
+            "Documentation" => "https://hexdocs.pm/oidcc/"
+          },
+          description: "OpenID Connect client library for the BEAM."
+        )
+    )
+
+  insert(
+    :release,
+    package: oidcc,
+    version: "3.0.0",
+    publisher: maennchen,
+    meta:
+      build(
+        :release_metadata,
+        app: "oidcc",
+        build_tools: ["mix"]
+      )
+  )
+
+  insert(
+    :release,
+    package: oidcc,
+    version: "3.0.2",
+    publisher: maennchen,
+    meta:
+      build(
+        :release_metadata,
+        app: "oidcc",
+        build_tools: ["mix"]
+      )
+  )
+
+  insert(
+    :security_vulnerability_disclosures,
+    id: "GHSA-mj35-2rgf-cv8p",
+    package: oidcc,
+    summary:
+      "OpenID Connect client Atom Exhaustion in provider configuration worker ets table location",
+    affected: [">= 3.0.0 and < 3.0.2"],
+    published_at: "2024-04-03T16:46:30Z",
+    modified_at: "2024-04-05T01:28:39.837161Z"
   )
 
   postgrex =

@@ -71,7 +71,8 @@ defmodule Hexpm.MixProject do
       {:ssl_verify_fun, "~> 1.1", manager: :rebar3, override: true},
       {:sweet_xml, "~> 0.5"},
       {:telemetry_metrics, "~> 1.0"},
-      {:telemetry_poller, "~> 1.0"}
+      {:telemetry_poller, "~> 1.0"},
+      {:req, "~> 0.5.6"}
     ]
   end
 
