@@ -140,6 +140,17 @@ defmodule HexpmWeb.Dashboard.OrganizationView do
     "(\"#{name}\" discount for #{percent_off}% of price)"
   end
 
+  defp invoice_status(%{"refund" => %{}, "status" => "succeeded"}, _organization, _card),
+    do: "Refund Paid"
+
+  defp invoice_status(%{"refund" => %{}, "status" => status}, _organization, _card)
+       when status in ["failed", "canceled"],
+       do: "Refund Canceled"
+
+  defp invoice_status(%{"refund" => %{}, "status" => status}, _organization, _card)
+       when status in ["pending", "requires_action"],
+       do: "Refund Pending"
+
   defp invoice_status(%{"paid" => true}, _organization, _card), do: "Paid"
   defp invoice_status(%{"status" => "uncollectible"}, _organization, _card), do: "Forgiven"
 
@@ -173,6 +184,15 @@ defmodule HexpmWeb.Dashboard.OrganizationView do
     whole = div(integer, 100)
     float = rem(integer, 100) |> Integer.to_string() |> String.pad_leading(2, "0")
     "#{whole}.#{float}"
+  end
+
+  defp dollar_money(integer) do
+    "$#{money(integer)}"
+  end
+
+  defp dollar_money(negative?, integer) when is_boolean(negative?) do
+    negative = if negative?, do: "-", else: ""
+    "#{negative}#{dollar_money(integer)}"
   end
 
   defp default_billing_emails(user, billing_email) do

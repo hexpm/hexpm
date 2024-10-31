@@ -189,7 +189,7 @@
                         <%= payment_date(invoice["date"] || invoice["created"]) %>
                       </a>
                       </td>
-                    <td>$<%= money(invoice["amount_due"])%></td>
+                    <td><%= dollar_money(!!invoice["refund"], invoice["amount_due"])%></td>
                     <td><%= payment_card(invoice["card"]) %></td>
                     <td><%= invoice_status(invoice, @organization, @card) %></td>
                   </tr>
