@@ -140,14 +140,14 @@ defmodule HexpmWeb.Dashboard.OrganizationView do
     "(\"#{name}\" discount for #{percent_off}% of price)"
   end
 
-  defp invoice_status(%{"refund" => %{}, "status" => "succeeded"}, _organization, _card),
+  defp invoice_status(%{"refund" => true, "status" => "succeeded"}, _organization, _card),
     do: "Refund Paid"
 
-  defp invoice_status(%{"refund" => %{}, "status" => status}, _organization, _card)
+  defp invoice_status(%{"refund" => true, "status" => status}, _organization, _card)
        when status in ["failed", "canceled"],
        do: "Refund Canceled"
 
-  defp invoice_status(%{"refund" => %{}, "status" => status}, _organization, _card)
+  defp invoice_status(%{"refund" => true, "status" => status}, _organization, _card)
        when status in ["pending", "requires_action"],
        do: "Refund Pending"
 
