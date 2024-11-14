@@ -52,7 +52,7 @@
           <h3><a href="<%= ~p"/docs/rebar3-usage" %>">Using with Erlang</a></h3>
           <p>
             Download <a href="https://s3.amazonaws.com/rebar3/rebar3">rebar3</a>, put it in your <code>PATH</code> and give it executable permissions.
-            Now you can specify Hex dependencies in your rebar.config like <code>{deps, [hackney]}</code>.
+            Now you can specify Hex dependencies in your rebar.config like <code>{deps, [telemetry]}</code>.
           </p>
         </div>
       </div>
