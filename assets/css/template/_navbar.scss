@@ -80,12 +80,15 @@
     border-color: #fff;
     box-shadow: none;
     -webkit-box-shadow: none;
+
+    // Override bootstrap input fields height.
+    height: $form-input-height;
   }
 
   button.btn {
     color: #adb3b6;
     background: $color-white;
-    padding: 5px 12px;
+    padding: 6px 12px;
   }
 }
 

@@ -189,6 +189,10 @@
   margin-bottom: 40px;
   text-align: center;
 
+  .input {
+      height: $form-input-height;
+  }
+
   .input-group {
     border: 10px solid rgba(0, 0, 0, .1);
     border-radius: 8px;
@@ -199,7 +203,11 @@
     }
 
     .btn {
-      padding: 6px 12px 4px;
+      padding: 6px 12px;
+    }
+
+    .btn-search {
+        height: $form-input-height;
     }
   }
 }

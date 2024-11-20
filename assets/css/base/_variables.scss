@@ -21,3 +21,11 @@ $base-title-font-family:  'Lato', sans-serif;
 // Elements
 $base-border: 1px solid $color-grey;
 $base-box-shadow: x 1px 4px rgba(0, 0, 0 , .2);
+$base-box-shadow: x 1px 4px rgba(0, 0, 0, 0.2);
+
+// Matches Bootstrap's `$input-height-base`:
+//  @line-height-base:        1.428571429; // 20/14
+//  @line-height-computed:    floor((@font-size-base * @line-height-base)); // ~20px
+//  @padding-base-vertical:    6px;
+//  @input-height-base:       (@line-height-computed + (@padding-base-vertical * 2) + 2);
+$form-input-height: 34px;
