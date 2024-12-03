@@ -44,7 +44,7 @@ defmodule Hexpm.MixProject do
       {:ex_aws_s3, "~> 2.0"},
       {:ex_aws, "~> 2.0"},
       {:ex_machina, "~> 2.0"},
-      {:finch, "~> 0.15.0"},
+      {:finch, "~> 0.19.0"},
       {:goth, "~> 1.3-rc"},
       {:hackney, "~> 1.7"},
       {:hex_core, "~> 0.8", hex_core_opts()},
@@ -69,7 +69,8 @@ defmodule Hexpm.MixProject do
       {:ssl_verify_fun, "~> 1.1", manager: :rebar3, override: true},
       {:sweet_xml, "~> 0.5"},
       {:telemetry_metrics, "~> 0.6"},
-      {:telemetry_poller, "~> 1.0"}
+      {:telemetry_poller, "~> 1.0"},
+      {:req, "~> 0.5.6"}
     ]
   end
 

@@ -1,6 +1,11 @@
 defmodule Hexpm.Application do
   use Application
 
+  case Mix.env() do
+    :test -> @jobs []
+    _env -> @jobs [Hexpm.SecurityVulnerability.Updater]
+  end
+
   def start(_type, _args) do
     topologies = cluster_topologies()
     read_only_mode()
@@ -18,7 +23,7 @@ defmodule Hexpm.Application do
       goth_spec(),
       setup(),
       HexpmWeb.Telemetry,
-      HexpmWeb.Endpoint
+      HexpmWeb.Endpoint | @jobs
     ]
 
     File.mkdir_p(Application.get_env(:hexpm, :tmp_dir))
