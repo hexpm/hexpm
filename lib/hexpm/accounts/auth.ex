@@ -81,6 +81,7 @@ defmodule Hexpm.Accounts.Auth do
   def gen_key() do
     :crypto.strong_rand_bytes(16)
     |> Base.encode16(case: :lower)
+    |> String.replace_prefix("", "hexpm_")
   end
 
   defp find_email(nil, _email) do
