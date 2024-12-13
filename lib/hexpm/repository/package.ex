@@ -30,12 +30,12 @@ defmodule Hexpm.Repository.Package do
     ssl stdlib syntax_tools toolbar tools typer wx xmerl
   )
   @inets_names ~w(tftp httpc httpd)
-  @app_names ~w(toucan net http net_http)
+  @app_names ~w(net http net_http)
   @windows_names ~w(
     nul con prn aux com1 com2 com3 com4 com5 com6 com7 com8 com9 lpt1 lpt2
     lpt3 lpt4 lpt5 lpt6 lpt7 lpt8 lpt9
   )
-  @generic_names ~w(package organization www myapp lock locked)
+  @generic_names ~w(package organization www myapp lock locked all)
 
   @reserved_names Enum.concat([
                     @elixir_names,
