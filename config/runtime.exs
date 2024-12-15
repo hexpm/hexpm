@@ -33,8 +33,9 @@ if config_env() == :prod do
     access_key_id: System.fetch_env!("HEXPM_AWS_ACCESS_KEY_ID"),
     secret_access_key: System.fetch_env!("HEXPM_AWS_ACCESS_KEY_SECRET")
 
-  config :rollbax,
-    access_token: System.fetch_env!("HEXPM_ROLLBAR_ACCESS_TOKEN")
+  config :sentry,
+    dsn: System.fetch_env!("HEXPM_SENTRY_DSN"),
+    environment_name: System.fetch_env!("HEXPM_ENV")
 
   config :kernel,
     inet_dist_listen_min: String.to_integer(System.fetch_env!("BEAM_PORT")),

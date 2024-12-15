@@ -1,4 +1,5 @@
 defmodule HexpmWeb.Endpoint do
+  use Sentry.PlugCapture
   use Phoenix.Endpoint, otp_app: :hexpm
 
   plug HexpmWeb.Plugs.Forwarded
@@ -45,6 +46,7 @@ defmodule HexpmWeb.Endpoint do
     pass: ["*/*"],
     json_decoder: Jason
 
+  plug Sentry.PlugContext
   plug Plug.MethodOverride
   plug Plug.Head
   plug HexpmWeb.Plugs.Vary, ["accept-encoding"]

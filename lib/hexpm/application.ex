@@ -2,6 +2,8 @@ defmodule Hexpm.Application do
   use Application
 
   def start(_type, _args) do
+    :logger.add_handler(:sentry_handler, Sentry.LoggerHandler, %{})
+
     topologies = cluster_topologies()
     read_only_mode()
     Hexpm.BlockAddress.start()

@@ -1,6 +1,5 @@
 defmodule HexpmWeb.Router do
   use HexpmWeb, :router
-  use Plug.ErrorHandler
   import Phoenix.LiveDashboard.Router
   alias Hexpm.Accounts.{Organization, User}
 
@@ -312,71 +311,5 @@ defmodule HexpmWeb.Router do
 
   def user_path(%User{organization: %Organization{} = organization}) do
     ~p"/orgs/#{organization}"
-  end
-
-  defp handle_errors(conn, %{kind: kind, reason: reason, stack: stacktrace}) do
-    if report?(kind, reason) do
-      conn = maybe_fetch_params(conn)
-      url = "#{conn.scheme}://#{conn.host}:#{conn.port}#{conn.request_path}"
-      user_ip = conn.remote_ip |> :inet.ntoa() |> List.to_string()
-      headers = conn.req_headers |> Map.new() |> filter_headers()
-      params = filter_params(conn.params)
-      endpoint_url = HexpmWeb.Endpoint.config(:url)
-
-      conn_data = %{
-        "request" => %{
-          "url" => url,
-          "user_ip" => user_ip,
-          "headers" => headers,
-          "params" => params,
-          "method" => conn.method
-        },
-        "server" => %{
-          "host" => endpoint_url[:host],
-          "root" => endpoint_url[:path]
-        }
-      }
-
-      Rollbax.report(kind, reason, stacktrace, %{}, conn_data)
-    end
-  end
-
-  defp report?(:error, %Hexpm.WriteInReadOnlyMode{}), do: false
-  defp report?(:error, exception), do: Plug.Exception.status(exception) == 500
-  defp report?(_kind, _reason), do: true
-
-  defp maybe_fetch_params(conn) do
-    try do
-      Plug.Conn.fetch_query_params(conn)
-    rescue
-      _ ->
-        %{conn | params: "[UNFETCHED]"}
-    end
-  end
-
-  @filter_headers ~w(authorization)
-
-  defp filter_headers(headers) do
-    Map.drop(headers, @filter_headers)
-  end
-
-  @filter_params ~w(body password password_confirmation)
-
-  defp filter_params(params) when is_map(params) do
-    Map.new(params, fn {key, value} ->
-      if key in @filter_params do
-        {key, "[FILTERED]"}
-      else
-        {key, filter_params(value)}
-      end
-    end)
-  end
-
-  defp filter_params(params) when is_list(params) do
-    Enum.map(params, &filter_params/1)
-  end
-
-  defp filter_params(other) do
-    other
   end
 end
