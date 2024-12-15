@@ -64,7 +64,7 @@ defmodule Hexpm.MixProject do
       {:plug, "~> 1.7"},
       {:postgrex, "~> 0.14"},
       {:pot, "~> 1.0"},
-      {:rollbax, "~> 0.5"},
+      {:sentry, "~> 10.2"},
       # Dependency is broken with mix due to missing dependency on :ssl application
       {:ssl_verify_fun, "~> 1.1", manager: :rebar3, override: true},
       {:sweet_xml, "~> 0.5"},

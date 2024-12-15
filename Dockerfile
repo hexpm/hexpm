@@ -36,7 +36,7 @@ RUN mix compile
 
 # build release
 COPY rel rel
-RUN mix release
+RUN mix do sentry.package_source_code, release
 
 # prepare release image
 FROM alpine:${ALPINE_VERSION} AS app

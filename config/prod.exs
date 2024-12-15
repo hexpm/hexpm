@@ -18,10 +18,9 @@ config :hexpm, Hexpm.RepoBase, ssl: true
 
 config :bcrypt_elixir, log_rounds: 12
 
-config :rollbax,
-  environment: "prod",
-  enabled: true,
-  enable_crash_reports: true
+config :sentry,
+  enable_source_code_context: true,
+  root_source_code_paths: [File.cwd!()]
 
 config :hexpm,
   topologies: [

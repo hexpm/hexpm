@@ -5,7 +5,7 @@ defmodule Hexpm.ReleaseTasks do
 
   @start_apps [
     :logger,
-    :rollbax
+    :sentry
   ]
 
   @repo_apps [
@@ -116,10 +116,10 @@ defmodule Hexpm.ReleaseTasks do
       Task.async(fn ->
         try do
           fun.()
-        catch
-          kind, error ->
-            Rollbax.report(kind, error, __STACKTRACE__)
-            Logger.warning("Sleeping 5 seconds for Rollbax to report error")
+        rescue
+          exception ->
+            Sentry.capture_exception(exception, stacktrace: __STACKTRACE__)
+            Logger.warning("Sleeping 5 seconds for Sentry to report error")
             Process.sleep(5000)
         end
       end)
@@ -129,8 +129,9 @@ defmodule Hexpm.ReleaseTasks do
         :ok
 
       {:EXIT, _pid, {error, stacktrace}} ->
-        Rollbax.report(:error, error, stacktrace)
-        Logger.warning("Sleeping 5 seconds for Rollbax to report error")
+        exception = Exception.normalize(:error, error, stacktrace)
+        Sentry.capture_exception(exception, stacktrace: stacktrace)
+        Logger.warning("Sleeping 5 seconds for Sentry to report error")
         Process.sleep(5000)
     end
   after

@@ -62,8 +62,6 @@ config :mime, :types, %{
   "application/vnd.hex+erlang" => ["erlang"]
 }
 
-config :rollbax, enabled: false
-
 config :logger, :default_formatter, format: "[$level] $metadata$message\n"
 
 import_config "#{Mix.env()}.exs"
