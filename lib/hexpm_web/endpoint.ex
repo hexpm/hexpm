@@ -39,6 +39,7 @@ defmodule HexpmWeb.Endpoint do
     cookie_key: "request_logger"
 
   plug Plug.RequestId
+  plug Logster.Plugs.ChangeLogLevel, to: :info
   plug Logster.Plugs.Logger, excludes: [:params]
 
   plug Plug.Parsers,
@@ -58,30 +59,4 @@ defmodule HexpmWeb.Endpoint do
   end
 
   plug HexpmWeb.Router
-
-  def init(_key, config) do
-    if config[:load_from_system_env] do
-      port = Application.get_env(:hexpm, :port)
-
-      case Integer.parse(port) do
-        {_int, ""} ->
-          host = Application.get_env(:hexpm, :host)
-          secret_key_base = Application.get_env(:hexpm, :secret_key_base)
-          live_view_signing_salt = Application.get_env(:hexpm, :live_view_signing_salt)
-
-          config = put_in(config[:http][:port], port)
-          config = put_in(config[:url][:host], host)
-          config = put_in(config[:secret_key_base], secret_key_base)
-          config = put_in(config[:live_view][:signing_salt], live_view_signing_salt)
-          config = put_in(config[:check_origin], ["//#{host}"])
-
-          {:ok, config}
-
-        :error ->
-          {:ok, config}
-      end
-    else
-      {:ok, config}
-    end
-  end
 end

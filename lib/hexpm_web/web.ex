@@ -42,7 +42,9 @@ defmodule HexpmWeb do
         root: "lib/hexpm_web/templates",
         namespace: HexpmWeb
 
-      use Phoenix.HTML
+      import Phoenix.HTML
+      import Phoenix.HTML.Form
+      use PhoenixHTMLHelpers
 
       # Import convenience functions from controllers
       import Phoenix.Controller, only: [get_csrf_token: 0, get_flash: 2, view_module: 1]

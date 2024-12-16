@@ -11,7 +11,6 @@ config :hexpm, :features, package_reports: false
 config :hexpm, HexpmWeb.Endpoint,
   http: [compress: true],
   url: [scheme: "https", port: 443],
-  load_from_system_env: true,
   cache_static_manifest: "priv/static/cache_manifest.json"
 
 config :hexpm, Hexpm.RepoBase, ssl: true
@@ -20,7 +19,8 @@ config :bcrypt_elixir, log_rounds: 12
 
 config :sentry,
   enable_source_code_context: true,
-  root_source_code_paths: [File.cwd!()]
+  root_source_code_paths: [File.cwd!()],
+  before_send: {Hexpm.Application, :sentry_before_send}
 
 config :hexpm,
   topologies: [
