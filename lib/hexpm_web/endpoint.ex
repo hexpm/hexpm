@@ -39,6 +39,7 @@ defmodule HexpmWeb.Endpoint do
     cookie_key: "request_logger"
 
   plug Plug.RequestId
+  plug Logster.Plugs.ChangeLogLevel, to: :info
   plug Logster.Plugs.Logger, excludes: [:params]
 
   plug Plug.Parsers,
