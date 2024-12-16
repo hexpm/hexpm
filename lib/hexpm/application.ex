@@ -35,6 +35,14 @@ defmodule Hexpm.Application do
     :ok
   end
 
+  def sentry_before_send(%Sentry.Event{original_exception: exception} = event) do
+    cond do
+      Plug.Exception.status(exception) < 500 -> nil
+      Sentry.DefaultEventFilter.exclude_exception?(exception, event.source) -> nil
+      true -> event
+    end
+  end
+
   # Make sure we exit after hex client tests are finished running
   if Mix.env() == :hex do
     def shutdown_on_eof() do
