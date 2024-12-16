@@ -44,7 +44,7 @@ defmodule Hexpm.Repository.ReleasesTest do
 
       assert Hexpm.Store.get(:repo_bucket, "tarballs/#{name}-0.1.0.tar", [])
       assert registry = Hexpm.Store.get(:repo_bucket, "packages/#{name}", [])
-      assert Enum.any?(decode_registry_package(registry), &match?(%{version: "0.1.0"}, &1))
+      assert Enum.any?(decode_registry_package(registry).releases, &match?(%{version: "0.1.0"}, &1))
     end
 
     test "publish private package with public dependency", %{
@@ -217,8 +217,8 @@ defmodule Hexpm.Repository.ReleasesTest do
       refute Hexpm.Store.get(:repo_bucket, "tarballs/#{package.name}-0.2.0.tar", [])
       assert registry = Hexpm.Store.get(:repo_bucket, "packages/#{package.name}", [])
 
-      assert Enum.any?(decode_registry_package(registry), &match?(%{version: "0.1.0"}, &1))
-      refute Enum.any?(decode_registry_package(registry), &match?(%{version: "0.2.0"}, &1))
+      assert Enum.any?(decode_registry_package(registry).releases, &match?(%{version: "0.1.0"}, &1))
+      refute Enum.any?(decode_registry_package(registry).releases, &match?(%{version: "0.2.0"}, &1))
     end
   end
 

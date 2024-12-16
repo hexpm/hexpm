@@ -65,7 +65,7 @@ defmodule HexpmWeb.Plugs.AttackTest do
     end
 
     test "halts requests when ip limit is exceeded" do
-      Enum.each(99..0, fn i ->
+      Enum.each(99..0//-1, fn i ->
         conn = request_ip({1, 1, 1, 1})
         assert conn.status == 200
         assert get_resp_header(conn, "x-ratelimit-remaining") == ["#{i}"]
@@ -79,7 +79,7 @@ defmodule HexpmWeb.Plugs.AttackTest do
     end
 
     test "halts requests when user limit is exceeded", %{user: user} do
-      Enum.each(499..0, fn i ->
+      Enum.each(499..0//-1, fn i ->
         conn = request_user(user)
         assert conn.status == 200
         assert get_resp_header(conn, "x-ratelimit-remaining") == ["#{i}"]

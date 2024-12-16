@@ -1,6 +1,7 @@
 defmodule HexpmWeb.ViewHelpers do
-  use Phoenix.HTML
+  use PhoenixHTMLHelpers
   use HexpmWeb, :verified_routes
+  import Phoenix.HTML
   alias Hexpm.Repository.{Package, Release}
 
   def logged_in?(assigns) do
@@ -128,7 +129,7 @@ defmodule HexpmWeb.ViewHelpers do
       |> add_error_class(form, field)
       |> Keyword.put_new(:value, value)
 
-    Phoenix.HTML.Form.text_input(form, field, opts)
+    PhoenixHTMLHelpers.Form.text_input(form, field, opts)
   end
 
   def email_input(form, field, opts \\ []) do
@@ -139,17 +140,17 @@ defmodule HexpmWeb.ViewHelpers do
       |> add_error_class(form, field)
       |> Keyword.put_new(:value, value)
 
-    Phoenix.HTML.Form.email_input(form, field, opts)
+    PhoenixHTMLHelpers.Form.email_input(form, field, opts)
   end
 
   def password_input(form, field, opts \\ []) do
     opts = add_error_class(opts, form, field)
-    Phoenix.HTML.Form.password_input(form, field, opts)
+    PhoenixHTMLHelpers.Form.password_input(form, field, opts)
   end
 
   def select(form, field, options, opts \\ []) do
     opts = add_error_class(opts, form, field)
-    Phoenix.HTML.Form.select(form, field, options, opts)
+    PhoenixHTMLHelpers.Form.select(form, field, options, opts)
   end
 
   defp add_error_class(opts, form, field) do

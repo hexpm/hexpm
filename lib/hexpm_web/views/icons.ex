@@ -3,7 +3,8 @@ defmodule HexpmWeb.ViewIcons do
   This module provides a helper function to render SVG icons from the Heroicons SVG sprite.
   The SVG sprite can be generated using the script and instructions found here: https://github.com/supersimple/HeroiconsToLib
   """
-  use Phoenix.HTML
+  import Phoenix.HTML
+  use PhoenixHTMLHelpers
 
   @icons_dir Path.join(__DIR__, "../../../assets/vendor/icons")
   @heroicons_svg Path.join(@icons_dir, "heroicons.svg")

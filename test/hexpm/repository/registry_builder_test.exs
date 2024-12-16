@@ -47,13 +47,13 @@ defmodule Hexpm.Organization.RegistryBuilderTest do
       RegistryBuilder.full(Repository.hexpm())
       first = packages |> Enum.sort_by(& &1.name) |> List.first()
 
-      names = v2_map("names", ["hexpm"])
+      names = v2_map("names", ["hexpm"]).packages
       assert length(names) == 3
       name = first.name
       seconds = DateTime.to_unix(first.updated_at)
       assert %{name: ^name, updated_at: %{seconds: ^seconds}} = List.first(names)
 
-      versions = v2_map("versions", ["hexpm"])
+      versions = v2_map("versions", ["hexpm"]).packages
       assert length(versions) == 3
 
       assert Enum.find(versions, &(&1.name == p2.name)) == %{
@@ -62,7 +62,7 @@ defmodule Hexpm.Organization.RegistryBuilderTest do
                retired: []
              }
 
-      package2_releases = v2_map("packages/#{p2.name}", ["hexpm", p2.name])
+      package2_releases = v2_map("packages/#{p2.name}", ["hexpm", p2.name]).releases
       assert length(package2_releases) == 2
 
       assert List.first(package2_releases) == %{
@@ -72,7 +72,7 @@ defmodule Hexpm.Organization.RegistryBuilderTest do
                dependencies: []
              }
 
-      package3_releases = v2_map("packages/#{p3.name}", ["hexpm", p3.name])
+      package3_releases = v2_map("packages/#{p3.name}", ["hexpm", p3.name]).releases
       assert [%{version: "0.0.2", dependencies: deps}] = package3_releases
       assert length(deps) == 2
       assert %{package: p2.name, requirement: "~> 0.0.1"} in deps
@@ -86,7 +86,7 @@ defmodule Hexpm.Organization.RegistryBuilderTest do
       Hexpm.Repo.delete!(p3)
       RegistryBuilder.full(Repository.hexpm())
 
-      assert length(v2_map("names", ["hexpm"])) == 2
+      assert length(v2_map("names", ["hexpm"]).packages) == 2
       assert v2_map("packages/#{p1.name}", ["hexpm", p1.name])
       assert v2_map("packages/#{p2.name}", ["hexpm", p2.name])
       refute v2_map("packages/#{p3.name}", ["hexpm", p3.name])
@@ -98,17 +98,17 @@ defmodule Hexpm.Organization.RegistryBuilderTest do
       insert(:release, package: package, version: "0.0.1")
       RegistryBuilder.full(repository)
 
-      names = v2_map("repos/#{repository.name}/names", [repository.name])
+      names = v2_map("repos/#{repository.name}/names", [repository.name]).packages
       assert length(names) == 1
 
-      versions = v2_map("repos/#{repository.name}/versions", [repository.name])
+      versions = v2_map("repos/#{repository.name}/versions", [repository.name]).packages
       assert length(versions) == 1
 
       releases =
         v2_map("repos/#{repository.name}/packages/#{package.name}", [
           repository.name,
           package.name
-        ])
+        ]).releases
 
       assert length(releases) == 1
     end
@@ -119,13 +119,13 @@ defmodule Hexpm.Organization.RegistryBuilderTest do
       RegistryBuilder.repository(Repository.hexpm())
       first = packages |> Enum.sort_by(& &1.name) |> List.first()
 
-      names = v2_map("names", ["hexpm"])
+      names = v2_map("names", ["hexpm"]).packages
       assert length(names) == 3
       name = first.name
       seconds = DateTime.to_unix(first.updated_at)
       assert %{name: ^name, updated_at: %{seconds: ^seconds}} = List.first(names)
 
-      versions = v2_map("versions", ["hexpm"])
+      versions = v2_map("versions", ["hexpm"]).packages
       assert length(versions) == 3
 
       assert Enum.find(versions, &(&1.name == p2.name)) == %{
@@ -142,7 +142,7 @@ defmodule Hexpm.Organization.RegistryBuilderTest do
       Hexpm.Repo.delete!(p3)
       RegistryBuilder.repository(Repository.hexpm())
 
-      assert length(v2_map("names", ["hexpm"])) == 2
+      assert length(v2_map("names", ["hexpm"]).packages) == 2
     end
 
     test "registry builds for multiple repositories" do
@@ -151,10 +151,10 @@ defmodule Hexpm.Organization.RegistryBuilderTest do
       insert(:release, package: package, version: "0.0.1")
       RegistryBuilder.repository(repository)
 
-      names = v2_map("repos/#{repository.name}/names", [repository.name])
+      names = v2_map("repos/#{repository.name}/names", [repository.name]).packages
       assert length(names) == 1
 
-      versions = v2_map("repos/#{repository.name}/versions", [repository.name])
+      versions = v2_map("repos/#{repository.name}/versions", [repository.name]).packages
       assert length(versions) == 1
     end
   end
@@ -164,7 +164,7 @@ defmodule Hexpm.Organization.RegistryBuilderTest do
       RegistryBuilder.package(p2)
       RegistryBuilder.package(p3)
 
-      package2_releases = v2_map("packages/#{p2.name}", ["hexpm", p2.name])
+      package2_releases = v2_map("packages/#{p2.name}", ["hexpm", p2.name]).releases
       assert length(package2_releases) == 2
 
       assert List.first(package2_releases) == %{
@@ -174,7 +174,7 @@ defmodule Hexpm.Organization.RegistryBuilderTest do
                dependencies: []
              }
 
-      package3_releases = v2_map("packages/#{p3.name}", ["hexpm", p3.name])
+      package3_releases = v2_map("packages/#{p3.name}", ["hexpm", p3.name]).releases
       assert [%{version: "0.0.2", dependencies: deps}] = package3_releases
       assert length(deps) == 2
       assert %{package: p2.name, requirement: "~> 0.0.1"} in deps

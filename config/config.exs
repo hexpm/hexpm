@@ -56,10 +56,10 @@ config :phoenix, :format_encoders,
 
 config :phoenix, :json_library, Jason
 
-config :mime, :types, %{
-  "application/vnd.hex+json" => ["json"],
-  "application/vnd.hex+elixir" => ["elixir"],
-  "application/vnd.hex+erlang" => ["erlang"]
+config :mime, :extensions, %{
+  "application/vnd.hex+json" => "json",
+  "application/vnd.hex+elixir" => "elixir",
+  "application/vnd.hex+erlang" => "erlang"
 }
 
 config :logger, :default_formatter, format: "[$level] $metadata$message\n"

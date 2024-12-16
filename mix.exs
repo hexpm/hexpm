@@ -35,8 +35,9 @@ defmodule Hexpm.MixProject do
       {:bamboo, "~> 2.2"},
       {:bcrypt_elixir, "~> 3.0"},
       {:bypass, "~> 2.1", only: :test},
-      {:corsica, "~> 1.0"},
-      {:earmark, "~> 1.4"},
+      {:corsica, "~> 2.0"},
+      # Silence logger debug output
+      {:earmark, "1.4.46"},
       {:ecto_psql_extras, "~> 0.6"},
       {:ecto_sql, "~> 3.0"},
       {:ecto, "~> 3.0"},
@@ -44,8 +45,8 @@ defmodule Hexpm.MixProject do
       {:ex_aws_s3, "~> 2.0"},
       {:ex_aws, "~> 2.0"},
       {:ex_machina, "~> 2.0"},
-      {:finch, "~> 0.15.0"},
-      {:goth, "~> 1.3-rc"},
+      {:finch, "~> 0.19.0"},
+      {:goth, "~> 1.4"},
       {:hackney, "~> 1.7"},
       {:hex_core, "~> 0.8", hex_core_opts()},
       {:jason, "~> 1.0"},
@@ -53,7 +54,8 @@ defmodule Hexpm.MixProject do
       {:logster, "~> 1.0"},
       {:mox, "~> 1.0", only: :test},
       {:phoenix_ecto, "~> 4.0"},
-      {:phoenix_html, "~> 3.1"},
+      {:phoenix_html, "~> 4.0"},
+      {:phoenix_html_helpers, "~> 1.0"},
       {:phoenix_live_dashboard, "~> 0.6"},
       {:phoenix_live_reload, "~> 1.0", only: :dev},
       {:phoenix_pubsub, "~> 2.0"},
@@ -64,11 +66,11 @@ defmodule Hexpm.MixProject do
       {:plug, "~> 1.7"},
       {:postgrex, "~> 0.14"},
       {:pot, "~> 1.0"},
-      {:sentry, "~> 10.2"},
+      {:sentry, "~> 10.8"},
       # Dependency is broken with mix due to missing dependency on :ssl application
       {:ssl_verify_fun, "~> 1.1", manager: :rebar3, override: true},
       {:sweet_xml, "~> 0.5"},
-      {:telemetry_metrics, "~> 0.6"},
+      {:telemetry_metrics, "~> 1.0"},
       {:telemetry_poller, "~> 1.0"}
     ]
   end

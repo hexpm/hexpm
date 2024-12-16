@@ -90,7 +90,7 @@ defmodule Hexpm.Store.GCS do
   end
 
   defp headers() do
-    {:ok, token} = Goth.fetch(Hexpm.Goth)
+    token = Goth.fetch!(Hexpm.Goth)
     [{"authorization", "#{token.type} #{token.token}"}]
   end
 
