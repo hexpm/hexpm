@@ -1,11 +1,14 @@
-ARG ELIXIR_VERSION=1.16.2
-ARG ERLANG_VERSION=26.2.2
-ARG ALPINE_VERSION=3.19.1
+ARG ELIXIR_VERSION=1.17.3
+ARG ERLANG_VERSION=27.2
+ARG DEBIAN_VERSION=bookworm-20241202-slim
 
-FROM hexpm/elixir:${ELIXIR_VERSION}-erlang-${ERLANG_VERSION}-alpine-${ALPINE_VERSION} as build
+FROM hexpm/elixir:${ELIXIR_VERSION}-erlang-${ERLANG_VERSION}-debian-${DEBIAN_VERSION} AS build
 
 # install build dependencies
-RUN apk add --no-cache --update git build-base nodejs yarn
+RUN apt update && \
+    apt upgrade -y && \
+    apt install -y --no-install-recommends git build-essential nodejs yarnpkg && \
+    apt clean -y && rm -rf /var/lib/apt/lists/*
 
 # prepare build dir
 RUN mkdir /app
@@ -26,7 +29,7 @@ RUN mix deps.compile
 
 # build assets
 COPY assets assets
-RUN cd assets && yarn install && yarn run webpack --mode production
+RUN cd assets && yarnpkg install && yarnpkg run webpack --mode production
 RUN mix phx.digest
 
 # build project
@@ -39,8 +42,12 @@ COPY rel rel
 RUN mix do sentry.package_source_code, release
 
 # prepare release image
-FROM alpine:${ALPINE_VERSION} AS app
-RUN apk add --no-cache --update bash openssl libstdc++
+FROM debian:${DEBIAN_VERSION} AS app
+
+RUN apt update && \
+    apt upgrade -y && \
+    apt install --no-install-recommends -y bash openssl && \
+    apt clean -y && rm -rf /var/lib/apt/lists/*
 
 RUN mkdir /app
 WORKDIR /app
