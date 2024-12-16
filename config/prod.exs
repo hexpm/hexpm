@@ -11,7 +11,6 @@ config :hexpm, :features, package_reports: false
 config :hexpm, HexpmWeb.Endpoint,
   http: [compress: true],
   url: [scheme: "https", port: 443],
-  load_from_system_env: true,
   cache_static_manifest: "priv/static/cache_manifest.json"
 
 config :hexpm, Hexpm.RepoBase, ssl: true

@@ -3,9 +3,6 @@ import Config
 if config_env() == :prod do
   config :hexpm,
     host: System.fetch_env!("HEXPM_HOST"),
-    port: System.fetch_env!("HEXPM_PORT"),
-    secret_key_base: System.fetch_env!("HEXPM_SECRET_KEY_BASE"),
-    live_view_signing_salt: System.fetch_env!("HEXPM_LIVE_VIEW_SIGNING_SALT"),
     secret: System.fetch_env!("HEXPM_SECRET"),
     private_key: System.fetch_env!("HEXPM_SIGNING_KEY"),
     repo_bucket: System.fetch_env!("HEXPM_REPO_BUCKET"),
@@ -28,6 +25,13 @@ if config_env() == :prod do
   config :hexpm, :hcaptcha,
     sitekey: System.fetch_env!("HEXPM_HCAPTCHA_SITEKEY"),
     secret: System.fetch_env!("HEXPM_HCAPTCHA_SECRET")
+
+  config :hexpm, HexpmWeb.Endpoint,
+    http: [port: String.to_integer(System.get_env("HEXPM_PORT"))],
+    url: [host: System.fetch_env!("HEXPM_HOST")],
+    secret_key_base: System.fetch_env!("HEXPM_SECRET_KEY_BASE"),
+    live_view: [signing_salt: System.fetch_env!("HEXPM_LIVE_VIEW_SIGNING_SALT")],
+    check_origin: ["//#{System.fetch_env!("HEXPM_HOST")}"]
 
   config :ex_aws,
     access_key_id: System.fetch_env!("HEXPM_AWS_ACCESS_KEY_ID"),
