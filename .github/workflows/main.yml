@@ -116,8 +116,8 @@ jobs:
 
     env:
       HEXPM_PATH: ..
-      otp: 23.1.1
-      elixir: 1.14.0
+      otp: 27.2
+      elixir: 1.17.3
 
     steps:
       - uses: actions/checkout@v3
