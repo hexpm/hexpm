@@ -7,8 +7,8 @@ jobs:
     name: Format
     runs-on: ubuntu-20.04
     env:
-      otp: 26.2.3
-      elixir: 1.16.2
+      otp: 27.2
+      elixir: 1.17.3
 
     services:
       postgres:
@@ -54,8 +54,8 @@ jobs:
     name: Test Hexpm
     runs-on: ubuntu-20.04
     env:
-      otp: 26.2.3
-      elixir: 1.16.2
+      otp: 27.3
+      elixir: 1.17.3
 
     services:
       postgres:
@@ -112,7 +112,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        hex-version: [main, v2.0, v1.0]
+        hex-version: [main, v2.0]
 
     env:
       HEXPM_PATH: ..
