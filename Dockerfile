@@ -4,6 +4,8 @@ ARG DEBIAN_VERSION=bookworm-20241202-slim
 
 FROM hexpm/elixir:${ELIXIR_VERSION}-erlang-${ERLANG_VERSION}-debian-${DEBIAN_VERSION} AS build
 
+ENV LANG=C.UTF-8
+
 # install build dependencies
 RUN apt update && \
     apt upgrade -y && \
@@ -57,3 +59,4 @@ RUN chown -R nobody: /app
 USER nobody
 
 ENV HOME=/app
+ENV LANG=C.UTF-8
