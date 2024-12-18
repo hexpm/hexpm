@@ -1,11 +1,6 @@
 defmodule Hexpm.Application do
   use Application
 
-  case Mix.env() do
-    :test -> @jobs []
-    _env -> @jobs [Hexpm.SecurityVulnerability.Updater]
-  end
-
   def start(_type, _args) do
     :logger.add_handler(:sentry_handler, Sentry.LoggerHandler, %{})
 
@@ -13,20 +8,24 @@ defmodule Hexpm.Application do
     read_only_mode()
     Hexpm.BlockAddress.start()
 
-    children = [
-      Hexpm.RepoBase,
-      {Finch, name: Hexpm.Finch},
-      {Task.Supervisor, name: Hexpm.Tasks},
-      {Cluster.Supervisor, [topologies, [name: Hexpm.ClusterSupervisor]]},
-      {Phoenix.PubSub, name: Hexpm.PubSub, adapter: Phoenix.PubSub.PG2},
-      HexpmWeb.RateLimitPubSub,
-      {PlugAttack.Storage.Ets, name: HexpmWeb.Plugs.Attack.Storage, clean_period: 60_000},
-      {Hexpm.Billing.Report, name: Hexpm.Billing.Report, interval: 60_000},
-      goth_spec(),
-      setup(),
-      HexpmWeb.Telemetry,
-      HexpmWeb.Endpoint | @jobs
-    ]
+    children =
+      [
+        Hexpm.RepoBase,
+        {Finch, name: Hexpm.Finch},
+        {Task.Supervisor, name: Hexpm.Tasks},
+        {Cluster.Supervisor, [topologies, [name: Hexpm.ClusterSupervisor]]},
+        {Phoenix.PubSub, name: Hexpm.PubSub, adapter: Phoenix.PubSub.PG2},
+        HexpmWeb.RateLimitPubSub,
+        {PlugAttack.Storage.Ets, name: HexpmWeb.Plugs.Attack.Storage, clean_period: 60_000},
+        {Hexpm.Billing.Report, name: Hexpm.Billing.Report, interval: 60_000},
+        goth_spec(),
+        setup(),
+        HexpmWeb.Telemetry,
+        HexpmWeb.Endpoint,
+        vulnerability_updater()
+      ]
+      # Remove disabled children
+      |> Enum.filter(& &1)
 
     File.mkdir_p(Application.get_env(:hexpm, :tmp_dir))
     shutdown_on_eof()
@@ -97,8 +96,12 @@ defmodule Hexpm.Application do
       {Goth, name: Hexpm.Goth, source: {:service_account, credentials, options}}
     end
   else
-    defp goth_spec() do
-      {Task, fn -> :ok end}
-    end
+    defp goth_spec, do: nil
+  end
+
+  if Mix.env() == :prod do
+    defp vulnerability_updater, do: Hexpm.SecurityVulnerability.Updater
+  else
+    defp vulnerability_updater, do: nil
   end
 end
