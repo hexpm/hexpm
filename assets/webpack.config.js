@@ -3,7 +3,6 @@ const webpack = require('webpack');
 const MiniCssExtractPlugin = require('mini-css-extract-plugin');
 const CssMinimizerPlugin = require("css-minimizer-webpack-plugin");
 const TerserPlugin = require("terser-webpack-plugin");
-const CopyWebpackPlugin = require('copy-webpack-plugin');
 
 module.exports = (env, options) => ({
   optimization: {
@@ -15,8 +14,8 @@ module.exports = (env, options) => ({
   },
   entry: ['./js/app.js', 'bootstrap/dist/css/bootstrap.css', './css/app.scss'],
   output: {
-    filename: 'js/app.js',
-    path: path.resolve(__dirname, '../priv/static')
+    filename: 'app.js',
+    path: path.resolve(__dirname, '../priv/static/assets')
   },
   module: {
     rules: [
@@ -40,16 +39,10 @@ module.exports = (env, options) => ({
           test: /\.css$/,
           use:  [MiniCssExtractPlugin.loader, 'css-loader']
       },
-      {
-        test: /\.(png|woff|woff2|eot|ttf|svg)$/,
-        loader: "file-loader",
-        options: {outputPath: "css", publicPath: "/css"}
-      }
     ]
   },
   plugins: [
-    new MiniCssExtractPlugin({ filename: 'css/app.css' }),
-    new CopyWebpackPlugin({patterns: [{ from: 'static/', to: '.' }]}),
+    new MiniCssExtractPlugin({ filename: 'app.css' }),
     new webpack.ProvidePlugin({
       jQuery: "jquery",
     })
