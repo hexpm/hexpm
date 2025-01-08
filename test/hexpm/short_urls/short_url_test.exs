@@ -19,9 +19,13 @@ defmodule Hexpm.ShortURLs.ShortURLTest do
       assert %{valid?: true} = ShortURL.changeset(params)
     end
 
-    test "valid when redirecting to hexdocs.pm" do
-      params = %{"url" => "https://hexdocs.pm"}
-      assert %{valid?: true} = ShortURL.changeset(params)
+    test "validate redirecting to hexdocs.pm" do
+      assert %{valid?: true} = ShortURL.changeset(%{"url" => "https://hexdocs.pm"})
+      assert %{valid?: true} = ShortURL.changeset(%{"url" => "https://hexdocs.pm/"})
+      assert %{valid?: true} = ShortURL.changeset(%{"url" => "https://hexdocs.pm/?foo"})
+      assert %{valid?: true} = ShortURL.changeset(%{"url" => "https://hexdocs.pm/#foo"})
+
+      assert %{valid?: false} = ShortURL.changeset(%{"url" => "https://hexdocs.pm/foo"})
     end
 
     test "with incorrect params" do
