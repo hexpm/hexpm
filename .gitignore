@@ -10,7 +10,8 @@
 
 erl_crash.dump
 
-/priv/static
+/priv/static/assets/
+/priv/static/cache_manifest.json
 
 .tool-versions
 .elixir_ls
