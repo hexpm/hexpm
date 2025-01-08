@@ -113,12 +113,12 @@ CREATE TYPE public.repository_user_role AS ENUM (
 -- Name: json_object_delete_keys(json, text[]); Type: FUNCTION; Schema: public; Owner: -
 --
 
-CREATE FUNCTION public.json_object_delete_keys(json json, VARIADIC keys_to_delete text[]) RETURNS json
+CREATE FUNCTION public.json_object_delete_keys(data json, VARIADIC keys_to_delete text[]) RETURNS json
     LANGUAGE sql IMMUTABLE STRICT
     AS $$
 SELECT COALESCE(
   (SELECT ('{' || string_agg(to_json("key") || ':' || "value", ',') || '}')
-   FROM json_each("json")
+   FROM json_each("data")
    WHERE "key" <> ALL ("keys_to_delete")),
   '{}'
 )::json
@@ -129,12 +129,12 @@ $$;
 -- Name: json_object_set_key(json, text, anyelement); Type: FUNCTION; Schema: public; Owner: -
 --
 
-CREATE FUNCTION public.json_object_set_key(json json, key_to_set text, value_to_set anyelement) RETURNS json
+CREATE FUNCTION public.json_object_set_key(data json, key_to_set text, value_to_set anyelement) RETURNS json
     LANGUAGE sql IMMUTABLE STRICT
     AS $$
 SELECT concat('{', string_agg(to_json("key") || ':' || "value", ','), '}')::json
   FROM (SELECT *
-          FROM json_each("json")
+          FROM json_each("data")
          WHERE "key" <> "key_to_set"
          UNION ALL
         SELECT "key_to_set", to_json("value_to_set")) AS "fields"

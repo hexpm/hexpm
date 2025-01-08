@@ -4,7 +4,7 @@ defmodule Hexpm.Repo.Migrations.AddIdToMeta do
   def up() do
     execute("""
     CREATE OR REPLACE FUNCTION "json_object_set_key"(
-      "json"          json,
+      "data"          json,
       "key_to_set"    TEXT,
       "value_to_set"  anyelement
     )
@@ -15,7 +15,7 @@ defmodule Hexpm.Repo.Migrations.AddIdToMeta do
     AS $function$
     SELECT concat('{', string_agg(to_json("key") || ':' || "value", ','), '}')::json
       FROM (SELECT *
-              FROM json_each("json")
+              FROM json_each("data")
              WHERE "key" <> "key_to_set"
              UNION ALL
             SELECT "key_to_set", to_json("value_to_set")) AS "fields"
@@ -23,7 +23,7 @@ defmodule Hexpm.Repo.Migrations.AddIdToMeta do
     """)
 
     execute("""
-    CREATE OR REPLACE FUNCTION "json_object_delete_keys"("json" json, VARIADIC "keys_to_delete" TEXT[])
+    CREATE OR REPLACE FUNCTION "json_object_delete_keys"("data" json, VARIADIC "keys_to_delete" TEXT[])
       RETURNS json
       LANGUAGE sql
       IMMUTABLE
@@ -31,7 +31,7 @@ defmodule Hexpm.Repo.Migrations.AddIdToMeta do
     AS $function$
     SELECT COALESCE(
       (SELECT ('{' || string_agg(to_json("key") || ':' || "value", ',') || '}')
-       FROM json_each("json")
+       FROM json_each("data")
        WHERE "key" <> ALL ("keys_to_delete")),
       '{}'
     )::json
