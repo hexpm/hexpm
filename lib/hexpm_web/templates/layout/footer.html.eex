@@ -53,7 +53,7 @@
       </div>
     </div>
 
-    <script src="<%= ~p"/js/app.js" %>"></script>
+    <script src="<%= ~p"/assets/app.js" %>"></script>
 
   </body>
 </html>
