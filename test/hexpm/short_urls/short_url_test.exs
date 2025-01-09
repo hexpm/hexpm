@@ -37,7 +37,7 @@ defmodule Hexpm.ShortURLs.ShortURLTest do
       assert %{valid?: false, errors: errors} =
                ShortURL.changeset(%{url: "https://supersimple.org?spoof=hex.pm"})
 
-      assert errors == [url: {"domain must match hex.pm or *.hex.pm", []}]
+      assert errors == [url: {"domain must match hex.pm, *.hex.pm, or hexdocs.pm", []}]
     end
   end
 end
