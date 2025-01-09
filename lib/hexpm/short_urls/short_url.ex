@@ -45,18 +45,23 @@ defmodule Hexpm.ShortURLs.ShortURL do
   end
 
   defp ensure_url_domain(changeset) do
-    validate_change(changeset, :url, fn :url, url -> hexpm_url?(url) end)
+    validate_change(changeset, :url, fn :url, url -> hex_url?(url) end)
   end
 
-  defp hexpm_url?(nil), do: []
+  defp hex_url?(nil), do: []
 
-  defp hexpm_url?(url) do
-    host = URI.parse(url).host
+  defp hex_url?(url) do
+    url = URI.parse(url)
 
-    if host == "hex.pm" or String.ends_with?(host, ".hex.pm") do
-      []
-    else
-      [url: "domain must match hex.pm or *.hex.pm"]
+    cond do
+      url.host == "hex.pm" or String.ends_with?(url.host, [".hex.pm"]) ->
+        []
+
+      url.host in ["hexdocs.pm", "staging.hex.pm"] and url.path in [nil, "/"] ->
+        []
+
+      true ->
+        [url: "domain must match hex.pm, *.hex.pm, or hexdocs.pm"]
     end
   end
 end
