@@ -1,2 +1,5 @@
 **/node_modules
-priv/static
+
+# Static artifacts - These should be fetched and built inside the Docker image
+/priv/static/assets/
+/priv/static/cache_manifest.json

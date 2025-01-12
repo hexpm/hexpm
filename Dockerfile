@@ -30,12 +30,12 @@ RUN mix deps.get
 RUN mix deps.compile
 
 # build assets
+COPY priv priv
 COPY assets assets
 RUN cd assets && yarnpkg install && yarnpkg run webpack --mode production
 RUN mix phx.digest
 
 # build project
-COPY priv priv
 COPY lib lib
 RUN mix compile
 
