@@ -29,7 +29,7 @@
             <%= label f, :password_current, "Organization name" %>
             <%= ViewHelpers.text_input f, :name, [placeholder: "Only allows lowercase letters and underscore", required: true, pattern: "[a-z]\\w*", "aria-describedby": "name-helpblock"] %>
             <%= ViewHelpers.error_tag f, :name %>
-            <%# from User.username unique constraint %>
+            <% # from User.username unique constraint %>
             <%= ViewHelpers.error_tag f, :username %>
             <span id="name-helpbox" class="help-block">This name will be used when you declare your dependencies in <code>mix.exs</code>.</span>
           </div>
