@@ -22,6 +22,14 @@ defimpl HexpmWeb.Stale, for: Any do
         alias HexpmWeb.Stale
         alias HexpmWeb.Stale.Any
 
+        defmacrop fetch_last_modified(_schema, nil) do
+          quote(do: ~N[0000-01-01 00:00:00])
+        end
+
+        defmacrop fetch_last_modified(schema, key) do
+          quote(do: Map.fetch!(unquote(schema), unquote(key)))
+        end
+
         def etag(schema) do
           assocs = unquote(assocs)
           etag_keys = unquote(etag_keys)
@@ -30,13 +38,9 @@ defimpl HexpmWeb.Stale, for: Any do
 
         def last_modified(schema) do
           assocs = unquote(assocs)
-          last_modified_key = unquote(last_modified_key)
-          last_modified = fetch_last_modified(schema, last_modified_key)
+          last_modified = fetch_last_modified(schema, unquote(last_modified_key))
           [last_modified, Any.recurse_fields(schema, assocs, &Stale.last_modified/1)]
         end
-
-        defp fetch_last_modified(_schema, nil), do: ~N[0000-01-01 00:00:00]
-        defp fetch_last_modified(schema, key), do: Map.fetch!(schema, key)
       end
     end
   end

@@ -5,10 +5,10 @@ on: [push, pull_request]
 jobs:
   format:
     name: Format
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
     env:
       otp: 27.2
-      elixir: 1.17.3
+      elixir: 1.18.1
 
     services:
       postgres:
@@ -22,7 +22,7 @@ jobs:
         options: --health-cmd pg_isready --health-interval 10s --health-timeout 5s --health-retries 5
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Install OTP and Elixir
         uses: erlef/setup-beam@v1
@@ -52,10 +52,10 @@ jobs:
 
   test-hexpm:
     name: Test Hexpm
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
     env:
       otp: 27.2
-      elixir: 1.17.3
+      elixir: 1.18.1
 
     services:
       postgres:
@@ -69,7 +69,7 @@ jobs:
         options: --health-cmd pg_isready --health-interval 10s --health-timeout 5s --health-retries 5
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Install OTP and Elixir
         uses: erlef/setup-beam@v1
@@ -117,10 +117,10 @@ jobs:
     env:
       HEXPM_PATH: ..
       otp: 27.2
-      elixir: 1.17.3
+      elixir: 1.18.1
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Install OTP and Elixir
         uses: erlef/setup-beam@v1
@@ -159,3 +159,46 @@ jobs:
 
       - name: Run tests
         run: cd hex && mix test --include integration && cd ..
+
+  docker:
+    name: Docker
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: 'read'
+      id-token: 'write'
+    env:
+      IMAGE_NAME: 'hexpm'
+      PROJECT_ID: 'hexpm-prod'
+      SERVICE_ACCOUNT: ${{ secrets.GCLOUD_SERVICE_ACCOUNT }}
+      WORKLOAD_IDENTITY_PROVIDER: ${{ secrets.GCLOUD_WORKFLOW_IDENTITY_POOL_PROVIDER }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set short git commit SHA
+        id: vars
+        run: |
+          calculatedSha=$(git rev-parse --short ${{ github.sha }})
+          echo "COMMIT_SHORT_SHA=$calculatedSha" >> $GITHUB_ENV
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      - name: Google auth
+        id: auth
+        uses: 'google-github-actions/auth@v2'
+        with:
+          token_format: 'access_token'
+          project_id: ${{ env.PROJECT_ID }}
+          service_account: ${{ env.SERVICE_ACCOUNT }}
+          workload_identity_provider: ${{ env.WORKLOAD_IDENTITY_PROVIDER }}
+      - name: Docker Auth
+        id: docker-auth
+        uses: 'docker/login-action@v3'
+        with:
+          registry: gcr.io
+          username: 'oauth2accesstoken'
+          password: '${{ steps.auth.outputs.access_token }}'
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          tags: gcr.io/${{ env.PROJECT_ID }}/${{ env.IMAGE_NAME }}:${{ env.COMMIT_SHORT_SHA }}
+          push: ${{ github.event_name != 'pull_request' }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
