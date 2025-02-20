@@ -1416,5 +1416,16 @@ defmodule HexpmWeb.API.ReleaseControllerTest do
                ["2000-02", 9]
              ]
     end
+
+    test "get release without downloads", %{package: package, release: release} do
+      result =
+        build_conn()
+        |> get("/api/packages/#{package.name}/releases/#{release.version}?downloads=none")
+        |> json_response(200)
+
+      assert result["version"] == "#{release.version}"
+
+      assert result["downloads"] == nil
+    end
   end
 end

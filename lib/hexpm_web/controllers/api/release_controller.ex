@@ -17,7 +17,7 @@ defmodule HexpmWeb.API.ReleaseController do
        ]
        when action in [:create, :publish, :delete]
 
-  @download_period_params ~w(day month all)
+  @download_period_params ~w(day month all none)
 
   def publish(conn, %{"body" => body} = params) do
     replace? = Map.get(params, "replace", true)
@@ -57,13 +57,17 @@ defmodule HexpmWeb.API.ReleaseController do
 
   def show(conn, params) do
     if release = conn.assigns.release do
-      downloads_period = Hexpm.Utils.safe_to_atom(params["downloads"], @download_period_params)
-      downloads = Downloads.by_period(release, downloads_period)
+      release = Releases.preload(release, [:requirements, :publisher])
 
       release =
-        release
-        |> Releases.preload([:requirements, :publisher])
-        |> Map.put(:downloads, downloads)
+        case Hexpm.Utils.safe_to_atom(params["downloads"], @download_period_params) do
+          :none ->
+            release
+
+          downloads_period ->
+            downloads = Downloads.by_period(release, downloads_period)
+            Map.put(release, :downloads, downloads)
+        end
 
       when_stale(conn, release, fn conn ->
         conn
