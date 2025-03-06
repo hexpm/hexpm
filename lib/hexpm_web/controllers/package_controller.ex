@@ -30,7 +30,8 @@ defmodule HexpmWeb.PackageController do
     page = Hexpm.Utils.safe_page(page_param, package_count, @packages_per_page)
     exact_match = exact_match(repositories, search)
     all_matches = fetch_packages(repositories, page, @packages_per_page, filter, sort)
-    downloads = Downloads.packages_all_views(all_matches)
+    matches_for_downloads = if exact_match, do: [exact_match | all_matches], else: all_matches
+    downloads = Downloads.packages_all_views(matches_for_downloads)
     packages = Packages.diff(all_matches, exact_match)
 
     maybe_log_search(search, package_count)
