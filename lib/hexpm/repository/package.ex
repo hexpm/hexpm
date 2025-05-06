@@ -115,6 +115,7 @@ defmodule Hexpm.Repository.Package do
   def all(repositories, page, count, search, sort, fields) do
     from(
       p in assoc(repositories, :packages),
+      as: :package,
       join: r in assoc(p, :repository),
       preload: :downloads
     )
@@ -289,6 +290,19 @@ defmodule Hexpm.Repository.Package do
           where: pd.name == ^search
         )
     end
+  end
+
+  defp search_param("build_tool", search, query) do
+    # go with a sub-query because a join would add multiples and distinct mucks with sort order
+    from(p in query,
+      where:
+        exists(
+          from(r in Release,
+            where: r.package_id == parent_as(:package).id,
+            where: fragment("?->'build_tools' @> ?", r.meta, ^search)
+          )
+        )
+    )
   end
 
   defp search_param(_, _, query) do

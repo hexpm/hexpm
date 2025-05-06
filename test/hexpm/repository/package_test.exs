@@ -303,6 +303,92 @@ defmodule Hexpm.Repository.PackageTest do
              |> Enum.map(& &1.name)
   end
 
+  test "search build tools", %{repository: repository} do
+    ecto = insert(:package, name: "ecto", repository_id: repository.id)
+    insert(:release, package: ecto, meta: build(:release_metadata, build_tools: ["mix"]))
+    lustre = insert(:package, name: "lustre", repository_id: repository.id)
+    insert(:release, package: lustre, meta: build(:release_metadata, build_tools: ["gleam"]))
+    multi = insert(:package, name: "multi", repository_id: repository.id)
+
+    insert(:release,
+      package: multi,
+      meta: build(:release_metadata, build_tools: ["gleam", "rebar"])
+    )
+
+    # shouldn't show up in any of the searches
+    none = insert(:package, name: "none", repository_id: repository.id)
+    insert(:release, package: none, meta: build(:release_metadata, build_tools: []))
+
+    assert ["ecto"] =
+             Package.all([repository], 1, 10, "build_tool:mix", :name, nil)
+             |> Repo.all()
+             |> Enum.map(& &1.name)
+
+    assert ["lustre", "multi"] =
+             Package.all([repository], 1, 10, "build_tool:gleam", :name, nil)
+             |> Repo.all()
+             |> Enum.map(& &1.name)
+
+    assert ["multi"] =
+             Package.all([repository], 1, 10, "build_tool:rebar", :name, nil)
+             |> Repo.all()
+             |> Enum.map(& &1.name)
+
+    # sub strings or longer strings don't work we're looking for exact matches
+    assert [] =
+             Package.all([repository], 1, 10, "build_tool:mi", :name, nil)
+             |> Repo.all()
+             |> Enum.map(& &1.name)
+
+    assert [] =
+             Package.all([repository], 1, 10, "build_tool:mixx", :name, nil)
+             |> Repo.all()
+             |> Enum.map(& &1.name)
+  end
+
+  test "search build tools with multiple releases works fine", %{repository: repository} do
+    # ecto has multiple mix releases
+    ecto = insert(:package, name: "ecto", repository_id: repository.id)
+    insert(:release, package: ecto, meta: build(:release_metadata, build_tools: ["mix"]))
+
+    insert(:release,
+      package: ecto,
+      version: "1.1.0",
+      meta: build(:release_metadata, build_tools: ["mix"])
+    )
+
+    # benchee has one release for each tool
+    benchee = insert(:package, name: "benchee", repository_id: repository.id)
+    insert(:release, package: benchee, meta: build(:release_metadata, build_tools: ["gleam"]))
+
+    insert(:release,
+      package: benchee,
+      version: "1.1.0",
+      meta: build(:release_metadata, build_tools: ["mix"])
+    )
+
+    insert(:release,
+      package: benchee,
+      version: "2.7.0",
+      meta: build(:release_metadata, build_tools: ["rebar3"])
+    )
+
+    assert ["benchee", "ecto"] =
+             Package.all([repository], 1, 10, "build_tool:mix", :name, nil)
+             |> Repo.all()
+             |> Enum.map(& &1.name)
+
+    assert ["benchee"] =
+             Package.all([repository], 1, 10, "build_tool:gleam", :name, nil)
+             |> Repo.all()
+             |> Enum.map(& &1.name)
+
+    assert ["benchee"] =
+             Package.all([repository], 1, 10, "build_tool:rebar3", :name, nil)
+             |> Repo.all()
+             |> Enum.map(& &1.name)
+  end
+
   test "sort packages by total downloads", %{repository: repository} do
     %{id: ecto_id} = insert(:package, repository_id: repository.id)
     %{id: phoenix_id} = insert(:package, repository_id: repository.id)
