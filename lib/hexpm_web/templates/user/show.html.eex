@@ -10,7 +10,7 @@
         <h3>Total Downloads<br /><em><%= ViewHelpers.human_number_space(@total_downloads) %></em></h3>
       </div>
       <ul class="user-package-list">
-        <%= for package <- @packages do %>
+        <%= for package <- @packages, package.latest_release do %>
           <li class="with-divider clearfix">
             <h1><a href="<%= ViewHelpers.path_for_package(package) %>"><%= ViewHelpers.package_name(package) %></a><em><%= package.latest_release.version %></em></h1>
             <h3><%= (get_in(@downloads, [package.id, "all"]) || 0) |> ViewHelpers.human_number_space() %> Downloads</h3>
