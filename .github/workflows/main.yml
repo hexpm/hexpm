@@ -7,8 +7,8 @@ jobs:
     name: Format
     runs-on: ubuntu-24.04
     env:
-      otp: 27.2
-      elixir: 1.18.1
+      otp: 27.3
+      elixir: 1.18.4
 
     services:
       postgres:
@@ -54,8 +54,8 @@ jobs:
     name: Test Hexpm
     runs-on: ubuntu-24.04
     env:
-      otp: 27.2
-      elixir: 1.18.1
+      otp: 27.3
+      elixir: 1.18.4
 
     services:
       postgres:
@@ -116,8 +116,8 @@ jobs:
 
     env:
       HEXPM_PATH: ..
-      otp: 27.2
-      elixir: 1.18.1
+      otp: 27.3
+      elixir: 1.18.4
 
     steps:
       - uses: actions/checkout@v4
