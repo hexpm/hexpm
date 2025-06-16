@@ -196,7 +196,7 @@
           Most Downloaded
         </h3>
         <ul>
-          <%= for {package, downloads} <- @package_top, package.latest_release do %>
+          <%= for {package, downloads} <- @package_top do %>
             <%= render_package package: package.name, downloads: downloads, inserted_at: package.latest_release.inserted_at, description: package.meta.description, version: package.latest_release.version %>
           <% end %>
         </ul>
