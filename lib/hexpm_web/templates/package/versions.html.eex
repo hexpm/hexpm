@@ -6,21 +6,22 @@ version_map = Enum.map(@all_releases, & &1.version)
     <a href="<%= ViewHelpers.path_for_release(@package, release) %>"><strong><%= release.version %></strong></a>
     <span title="<%= ViewHelpers.pretty_datetime(release.inserted_at) %>"><%= ViewHelpers.pretty_date(release.inserted_at, :short) %></span>
 
-    <%= if release.retirement do %>
-      <%= if release.retirement.reason == "report" do %>
+    <%= cond do %>
+      <% release.retirement && release.retirement.reason -> %>
         (<span class="version-retirement">reported</span>)
-      <% else %>
+      <% release.retirement -> %>
         (<span class="version-retirement">retired</span>)
-      <% end %>
-    <% else %>
-      <%= if release.has_docs do %>
-        <a href="<%= raw Hexpm.Utils.docs_html_url(@package.repository, @package, release) %>" title="Docs"><%= icon(:heroicon, "book-open") %></a>
-      <% end %>
-      <%= if previous_version = Hexpm.Utils.previous_version(release.version, version_map) do %>
-        <%= if @package.repository_id == 1 do %>
-          <a href="<%= raw Hexpm.Utils.diff_html_url(@package.name, release.version, previous_version) %>" title="Diff"><%= icon(:heroicon, "arrows-right-left", width: 16, height: 16) %></a>
+      <% Enum.any?(@package.security_vulnerability_disclosures, &Disclosure.relevant?(&1, release)) -> %>
+        (<span class="version-vulnerable">vulnerable</span>)
+      <% true -> %>
+        <%= if release.has_docs do %>
+          <a href="<%= raw Hexpm.Utils.docs_html_url(@package.repository, @package, release) %>" title="Docs"><%= icon(:heroicon, "book-open") %></a>
         <% end %>
-      <% end %>
+        <%= if previous_version = Hexpm.Utils.previous_version(release.version, version_map) do %>
+          <%= if @package.repository_id == 1 do %>
+            <a href="<%= raw Hexpm.Utils.diff_html_url(@package.name, release.version, previous_version) %>" title="Diff"><%= icon(:heroicon, "arrows-right-left", width: 16, height: 16) %></a>
+          <% end %>
+        <% end %>
         <a href="<%= raw Hexpm.Utils.preview_html_url(@package.name, release.version) %>" title="Preview"><%= icon(:heroicon, "code-bracket") %></a>
     <% end %>
   </li>
