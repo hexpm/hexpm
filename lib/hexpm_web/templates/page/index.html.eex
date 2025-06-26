@@ -36,7 +36,7 @@
           <h3><a href="<%= ~p"/docs/usage" %>">Using with Elixir</a></h3>
           <p>
             Specify your Mix dependencies as two-item tuples like <code>{:plug, "~> 1.1.0"}</code>
-            in your dependency list, Elixir will ask if you want to install Hex if you haven't already.
+            in your dependency list. Elixir will ask if you want to install Hex if you haven't already.
           </p>
         </div>
       </div>
