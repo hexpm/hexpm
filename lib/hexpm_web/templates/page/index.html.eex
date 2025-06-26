@@ -57,6 +57,22 @@
         </div>
       </div>
     </div>
+
+    <div class="using-with-box gleam">
+      <div class="shadow"></div>
+      <div class="text-content clearfix">
+        <div class="side-box">
+          <div class="lang-symbol"></div>
+        </div>
+        <div class="instructions">
+          <h3><a href="<%= ~p"/docs/rebar3-usage" %>">Using with Gleam</a></h3>
+          <p>
+            Add the Hex dependency to your <code>gleam.toml</code> file using the <code>lustre = "~> 5.2"</code> format.
+            Or use the <code>gleam add lustre</code> command.
+          </p>
+        </div>
+      </div>
+    </div>
   </div>
 </div>
 

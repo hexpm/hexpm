@@ -36,7 +36,7 @@
   @media (min-width: 1040px) {
     display: flex;
     width: 1040px;
-    height: 240px;
+    height: 320px;
     justify-content: center;
   }
 
@@ -48,8 +48,9 @@
 
 .using-with-box {
   @media (min-width: 1040px) {
-    width: 45%;
-    margin: 0 20px;
+    height: 100%;
+    width: 30%;
+    margin: 0 1em;
   }
 
   @media (max-width: 1039px) {
@@ -68,8 +69,12 @@
     left: -1%;
     z-index: 200;
     width: 102%;
-    height: 170px;
+    height: 250px;
     background: #8f9198;
+
+    @media (max-width: 1039px) {
+      height: 120px;
+    }
 
     @include general-mobile {
       height: 92%;
@@ -84,8 +89,12 @@
     .side-box {
       position: relative;
       float: left;
-      width: 90px;
-      min-height: 190px;
+      width: 55px;
+      min-height: 270px;
+
+      @media (max-width: 1039px) {
+       min-height: 140px
+      }
 
       @include general-mobile {
         width: 0;
@@ -93,10 +102,10 @@
 
       .lang-symbol {
         position: absolute;
-        top: 40px;
-        left: 35px;
-        width: 110px;
-        height: 110px;
+        top: 25px;
+        left: 15px;
+        width: 80px;
+        height: 80px;
         border-radius: 50%;
 
         @include general-mobile {
@@ -110,7 +119,7 @@
 
     .instructions {
       padding-right: 15px;
-      padding-left: 165px;
+      padding-left: 120px;
 
       @include general-mobile {
         padding-left: 20px;
@@ -178,6 +187,19 @@
       background: $color-erl-red-light url("../static/images/erlang@3.png") center no-repeat;
       background-size: 60px;
     }
+
+    @include general-mobile {
+      background-size: 20px;
+    }
+  }
+}
+
+.gleam .side-box {
+  background: $color-gleam-pink;
+
+  .lang-symbol {
+    background: $color-gleam-pink-light url("../images/lucy.svg") center no-repeat;
+    background-size: 60px;
 
     @include general-mobile {
       background-size: 20px;
