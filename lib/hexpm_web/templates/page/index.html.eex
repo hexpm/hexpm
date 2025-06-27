@@ -68,7 +68,7 @@
           <h3><a href="<%= ~p"/docs/rebar3-usage" %>">Using with Gleam</a></h3>
           <p>
             Add the Hex dependency to your <code>gleam.toml</code> file using the <code>lustre = ">= 5.2.0 and < 6.0.0"</code> format.
-            Or use the <code>gleam add lustre</code> command.
+            Or use the <code>gleam add lustre@5</code> command.
           </p>
         </div>
       </div>
