@@ -41,7 +41,7 @@ defmodule Hexpm.MixProject do
       {:ecto_psql_extras, "~> 0.6"},
       {:ecto_sql, "~> 3.0"},
       {:ecto, "~> 3.0"},
-      {:eqrcode, "~> 0.1.6"},
+      {:eqrcode, "~> 0.2.1"},
       {:ex_aws_s3, "~> 2.0"},
       {:ex_aws, "~> 2.0"},
       {:ex_machina, "~> 2.0"},
