@@ -36,7 +36,7 @@
           <h3><a href="<%= ~p"/docs/usage" %>">Using with Elixir</a></h3>
           <p>
             Specify your Mix dependencies as two-item tuples like <code>{:plug, "~> 1.1.0"}</code>
-            in your dependency list, Elixir will ask if you want to install Hex if you haven't already.
+            in your dependency list. Elixir will ask if you want to install Hex if you haven't already.
           </p>
         </div>
       </div>
@@ -53,6 +53,22 @@
           <p>
             Download <a href="https://s3.amazonaws.com/rebar3/rebar3">rebar3</a>, put it in your <code>PATH</code> and give it executable permissions.
             Now you can specify Hex dependencies in your rebar.config like <code>{deps, [telemetry]}</code>.
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <div class="using-with-box gleam">
+      <div class="shadow"></div>
+      <div class="text-content clearfix">
+        <div class="side-box">
+          <div class="lang-symbol"></div>
+        </div>
+        <div class="instructions">
+          <h3><a href="<%= ~p"/docs/rebar3-usage" %>">Using with Gleam</a></h3>
+          <p>
+            Add the Hex dependency to your <code>gleam.toml</code> file using the <code>lustre = ">= 5.2.0 and < 6.0.0"</code> format.
+            Or use the <code>gleam add lustre@5</code> command.
           </p>
         </div>
       </div>
