@@ -34,27 +34,28 @@ defmodule Hexpm.Repository.Downloads do
     |> Map.new()
   end
 
-  def by_period(%Release{id: release_id}, filter) do
-    ReleaseDownload.by_period(release_id, filter || :all)
-    |> Repo.all()
+  def for_period(package_or_release, group_by, opts \\ []) do
+    base =
+      case package_or_release do
+        %Package{id: package_id} -> Download.by_period(package_id, group_by || :all)
+        %Release{id: release_id} -> ReleaseDownload.by_period(release_id, group_by || :all)
+      end
+
+    query =
+      opts
+      |> Keyword.take([:downloads_after, :downloads_before])
+      |> Enum.reduce(base, fn
+        {:downloads_after, %Date{} = date}, query -> Download.since_date(query, date)
+        {:downloads_after, nil}, query -> query
+        {:downloads_before, %Date{} = date}, query -> Download.before_date(query, date)
+        {:downloads_before, nil}, query -> query
+      end)
+
+    Repo.all(query)
   end
 
   def last_day() do
     Download.last_day()
     |> Repo.one()
-  end
-
-  def since_date(%Package{id: package_id}, date) do
-    package_id
-    |> Download.by_period(:day)
-    |> Download.since_date(date)
-    |> Repo.all()
-  end
-
-  def since_date(%Release{id: release_id}, date) do
-    release_id
-    |> ReleaseDownload.by_period(:day)
-    |> Download.since_date(date)
-    |> Repo.all()
   end
 end
