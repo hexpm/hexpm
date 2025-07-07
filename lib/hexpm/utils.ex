@@ -77,6 +77,15 @@ defmodule Hexpm.Utils do
     if binary in allowed, do: String.to_atom(binary)
   end
 
+  def safe_date(nil), do: nil
+
+  def safe_date(string) do
+    case Date.from_iso8601(string) do
+      {:ok, date} -> date
+      _ -> nil
+    end
+  end
+
   def safe_page(page, _count, _per_page) when page < 1 do
     1
   end

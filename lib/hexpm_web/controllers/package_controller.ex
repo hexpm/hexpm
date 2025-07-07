@@ -152,11 +152,14 @@ defmodule HexpmWeb.PackageController do
     start_download_day = Date.add(last_download_day, -30)
     downloads = Downloads.package(package)
 
-    graph_downloads =
+    graph_downloads_for =
       case type do
-        :package -> Downloads.since_date(package, start_download_day)
-        :release -> Downloads.since_date(release, start_download_day)
+        :package -> package
+        :release -> release
       end
+
+    graph_downloads =
+      Downloads.for_period(graph_downloads_for, :day, downloads_after: start_download_day)
 
     graph_downloads = Map.new(graph_downloads, &{Date.from_iso8601!(&1.day), &1})
 
