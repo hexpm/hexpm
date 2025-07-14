@@ -53,6 +53,10 @@ defmodule Hexpm.Repository.Download do
     end
   end
 
+  def before_date(query, date) do
+    from(d in query, where: d.day <= ^date)
+  end
+
   def since_date(query, date) do
     from(d in query, where: d.day >= ^date)
   end
