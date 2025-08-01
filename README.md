@@ -54,6 +54,12 @@ mix run priv/repo/seeds.exs
 
 ### Node Dependencies
 
+It's recommended to enable [Corepack](https://yarnpkg.com/corepack) for a better developer experience:
+
+```shell
+corepack enable
+```
+
 For assets compilation we need to install Node dependencies:
 
 ```shell
