@@ -1,6 +1,8 @@
 defmodule HexpmWeb.PackageView do
   use HexpmWeb, :view
 
+  alias Hexpm.SecurityVulnerability.Disclosure
+
   def show_sort_info(nil), do: show_sort_info(:name)
   def show_sort_info(:name), do: "Sort: Name"
   def show_sort_info(:inserted_at), do: "Sort: Recently created"
