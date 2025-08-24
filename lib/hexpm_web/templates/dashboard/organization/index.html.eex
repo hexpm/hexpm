@@ -52,6 +52,16 @@
               </div>
 
               <div class="form-group">
+                <%= label f, :bluesky %>
+                <div class="input-group">
+                  <div class="input-group-addon">bsky.app/profile/</div>
+                  <%= ViewHelpers.text_input f, :bluesky, placeholder: "organization_bluesky_id" %>
+                </div>
+
+                <%= ViewHelpers.error_tag f, :bluesky %>
+              </div>
+
+              <div class="form-group">
                 <%= label f, :github, "GitHub" %>
                 <div class="input-group">
                   <div class="input-group-addon">github.com/</div>
