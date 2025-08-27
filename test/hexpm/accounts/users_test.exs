@@ -26,6 +26,7 @@ defmodule Hexpm.Accounts.UsersTest do
           %{
             "handles" => %{
               "twitter" => "twitter",
+              "bluesky" => "bluesky",
               "github" => "github",
               "elixirforum" => "elixirforum",
               "freenode" => "freenode",
@@ -37,6 +38,7 @@ defmodule Hexpm.Accounts.UsersTest do
 
       assert %{
                twitter: "twitter",
+               bluesky: "bluesky",
                github: "github",
                elixirforum: "elixirforum",
                freenode: "freenode",

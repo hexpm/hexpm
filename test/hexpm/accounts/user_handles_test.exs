@@ -10,6 +10,7 @@ defmodule Hexpm.Accounts.UserHandlesTest do
           handles:
             build(:user_handles,
               twitter: "https://twitter.com/eric",
+              bluesky: "https://bsky.app/profile/eric.bsky.social",
               github: "https://github.com/eric",
               elixirforum: "https://elixirforum.com/u/eric",
               freenode: "freenode",
@@ -20,6 +21,7 @@ defmodule Hexpm.Accounts.UserHandlesTest do
       assert UserHandles.render(user) ==
                [
                  {"Twitter", "eric", "https://twitter.com/eric"},
+                 {"Bluesky", "eric.bsky.social", "https://bsky.app/profile/eric.bsky.social"},
                  {"GitHub", "eric", "https://github.com/eric"},
                  {"Elixir Forum", "eric", "https://elixirforum.com/u/eric"},
                  {"Libera", "freenode", "irc://irc.libera.chat/elixir"},
@@ -33,6 +35,7 @@ defmodule Hexpm.Accounts.UserHandlesTest do
           handles:
             build(:user_handles,
               twitter: "http://twitter.com/eric",
+              bluesky: "http://bsky.app/profile/eric.bsky.social",
               github: "http://github.com/eric",
               elixirforum: "http://elixirforum.com/u/eric",
               freenode: "freenode",
@@ -43,6 +46,7 @@ defmodule Hexpm.Accounts.UserHandlesTest do
       assert UserHandles.render(user) ==
                [
                  {"Twitter", "eric", "https://twitter.com/eric"},
+                 {"Bluesky", "eric.bsky.social", "https://bsky.app/profile/eric.bsky.social"},
                  {"GitHub", "eric", "https://github.com/eric"},
                  {"Elixir Forum", "eric", "https://elixirforum.com/u/eric"},
                  {"Libera", "freenode", "irc://irc.libera.chat/elixir"},
@@ -56,6 +60,7 @@ defmodule Hexpm.Accounts.UserHandlesTest do
           handles:
             build(:user_handles,
               twitter: "twitter.com/eric",
+              bluesky: "bsky.app/profile/eric.bsky.social",
               github: "github.com/eric",
               elixirforum: "elixirforum.com/u/eric",
               freenode: "freenode",
@@ -66,6 +71,7 @@ defmodule Hexpm.Accounts.UserHandlesTest do
       assert UserHandles.render(user) ==
                [
                  {"Twitter", "eric", "https://twitter.com/eric"},
+                 {"Bluesky", "eric.bsky.social", "https://bsky.app/profile/eric.bsky.social"},
                  {"GitHub", "eric", "https://github.com/eric"},
                  {"Elixir Forum", "eric", "https://elixirforum.com/u/eric"},
                  {"Libera", "freenode", "irc://irc.libera.chat/elixir"},

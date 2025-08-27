@@ -5,6 +5,7 @@ defmodule Hexpm.Accounts.UserHandles do
 
   embedded_schema do
     field :twitter, :string
+    field :bluesky, :string
     field :github, :string
     field :elixirforum, :string
     field :freenode, :string
@@ -12,12 +13,13 @@ defmodule Hexpm.Accounts.UserHandles do
   end
 
   def changeset(handles, params) do
-    cast(handles, params, ~w(twitter github elixirforum freenode slack)a)
+    cast(handles, params, ~w(twitter bluesky github elixirforum freenode slack)a)
   end
 
   def services() do
     [
       {:twitter, "Twitter", "https://twitter.com/{handle}"},
+      {:bluesky, "Bluesky", "https://bsky.app/profile/{handle}"},
       {:github, "GitHub", "https://github.com/{handle}"},
       {:elixirforum, "Elixir Forum", "https://elixirforum.com/u/{handle}"},
       {:freenode, "Libera", "irc://irc.libera.chat/elixir"},
@@ -43,6 +45,7 @@ defmodule Hexpm.Accounts.UserHandles do
   end
 
   def handle(:twitter, handle), do: unuri(handle, "twitter.com", "/")
+  def handle(:bluesky, handle), do: unuri(handle, "bsky.app", "/profile/")
   def handle(:github, handle), do: unuri(handle, "github.com", "/")
   def handle(:elixirforum, handle), do: unuri(handle, "elixirforum.com", "/u/")
   def handle(_service, handle), do: handle
