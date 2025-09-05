@@ -2416,7 +2416,6 @@ omise
 omtt_util
 one_signal
 onetime
-ono_amqp
 oop
 oops
 opbeat
