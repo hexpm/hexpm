@@ -1,5 +1,7 @@
 defmodule HexpmWeb.TFAAuthController do
   use HexpmWeb, :controller
+  require Logger
+  alias HexpmWeb.Plugs.Attack
 
   plug :authenticate
 
@@ -15,7 +17,31 @@ defmodule HexpmWeb.TFAAuthController do
       |> delete_session("tfa_user_id")
       |> HexpmWeb.LoginController.start_session(user, session["return"])
     else
-      render_show_error(conn)
+      Logger.warning("Failed 2FA attempt",
+        user_id: uid,
+        ip: conn.remote_ip |> :inet.ntoa() |> to_string(),
+        user_agent: get_req_header(conn, "user-agent") |> List.first()
+      )
+
+      ip_result = Attack.tfa_ip_throttle(conn.remote_ip)
+      session_result = Attack.tfa_session_throttle(session)
+
+      case {ip_result, session_result} do
+        {{:block, _}, _} ->
+          conn
+          |> delete_session("tfa_user_id")
+          |> put_flash(:error, "Too many 2FA attempts from your IP. Please try again later.")
+          |> redirect(to: ~p"/login")
+
+        {_, {:block, _}} ->
+          conn
+          |> delete_session("tfa_user_id")
+          |> put_flash(:error, "Too many incorrect codes. Please log in again.")
+          |> redirect(to: ~p"/login")
+
+        _ ->
+          render_show_error(conn)
+      end
     end
   end
 

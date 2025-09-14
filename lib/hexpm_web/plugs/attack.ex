@@ -163,6 +163,42 @@ defmodule HexpmWeb.Plugs.Attack do
     mod.increment(opts, full_key, 1, expires_at)
   end
 
+  def login_ip_throttle(ip, opts \\ []) do
+    time = opts[:time] || System.system_time(:millisecond)
+
+    timed_throttle(
+      {:login_ip, ip},
+      time: time,
+      storage: @storage,
+      limit: 10,
+      period: 15 * 60_000
+    )
+  end
+
+  def tfa_ip_throttle(ip, opts \\ []) do
+    time = opts[:time] || System.system_time(:millisecond)
+
+    timed_throttle(
+      {:tfa_ip, ip},
+      time: time,
+      storage: @storage,
+      limit: 20,
+      period: 15 * 60_000
+    )
+  end
+
+  def tfa_session_throttle(tfa_user_id, opts \\ []) do
+    time = opts[:time] || System.system_time(:millisecond)
+
+    timed_throttle(
+      {:tfa_session, tfa_user_id},
+      time: time,
+      storage: @storage,
+      limit: 5,
+      period: 10 * 60_000
+    )
+  end
+
   defp api?(%Plug.Conn{request_path: "/api/" <> _}), do: true
   defp api?(%Plug.Conn{}), do: false
 end
