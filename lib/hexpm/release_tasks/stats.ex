@@ -152,7 +152,7 @@ defmodule Hexpm.ReleaseTasks.Stats do
     end)
   end
 
-  defp parse_line(line) do
+  def parse_line(line) do
     case Regex.run(@fastly_regex, line) do
       [_, repository, package, version, status] when status in ~w(200 304) ->
         {copy(nillify(repository)) || "hexpm", copy(package), copy(version)}

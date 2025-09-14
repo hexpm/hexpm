@@ -27,6 +27,16 @@ defmodule Hexpm.ReleaseTasks.StatsTest do
     }
   end
 
+  test "parse_line/1" do
+    assert Stats.parse_line(
+             ~s{<134>2014-02-06T04:32:22Z cache-ams4138 S3Logging[216674]: 192.168.1.0 "Sat, 06 Feb 2014 04:32:22 GMT" "GET /tarballs/foo-0.0.1.tar" 200 "User-Agent"}
+           ) == {"hexpm", "foo", "0.0.1"}
+
+    assert Stats.parse_line(
+             ~s{<134>2025-09-09T21:05:03Z cache-bma-essb1270021 logging_gcs[226941]: 98.128.175.50 [09/Sep/2025:21:05:03 +0000] "GET /tarballs/bar-0.1.0.tar" 200 "curl/8.7.1" 0}
+           ) == {"hexpm", "bar", "0.1.0"}
+  end
+
   test "counts all downloads", %{
     repository1: repository1,
     package1: package1,
