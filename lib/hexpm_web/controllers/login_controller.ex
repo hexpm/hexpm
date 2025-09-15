@@ -1,5 +1,7 @@
 defmodule HexpmWeb.LoginController do
   use HexpmWeb, :controller
+  require Logger
+  alias HexpmWeb.Plugs.Attack
 
   plug :nillify_params, ["return"]
 
@@ -18,10 +20,25 @@ defmodule HexpmWeb.LoginController do
         login(conn, user, password_breached: breached?)
 
       {:error, reason} ->
-        conn
-        |> put_flash(:error, auth_error_message(reason))
-        |> put_status(400)
-        |> render_show()
+        Logger.warning("Failed login attempt",
+          username: username,
+          ip: conn.remote_ip |> :inet.ntoa() |> to_string(),
+          user_agent: get_req_header(conn, "user-agent") |> List.first()
+        )
+
+        case Attack.login_ip_throttle(conn.remote_ip) do
+          {:block, _data} ->
+            conn
+            |> put_flash(:error, "Too many login attempts from your IP. Please try again later.")
+            |> put_status(429)
+            |> render_show()
+
+          {:allow, _data} ->
+            conn
+            |> put_flash(:error, auth_error_message(reason))
+            |> put_status(400)
+            |> render_show()
+        end
     end
   end
 
