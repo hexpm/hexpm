@@ -81,6 +81,13 @@ defmodule HexpmWeb.Router do
     get "/email/verification", EmailVerificationController, :show
     post "/email/verification", EmailVerificationController, :create
 
+    get "/device", DeviceController, :show
+    post "/device", DeviceController, :create
+
+    # OAuth 2.0 authorization endpoints (web interface)
+    get "/oauth/authorize", OAuthController, :authorize
+    post "/oauth/authorize", OAuthController, :consent
+
     get "/dashboard", DashboardController, :index
 
     get "/users/:username", UserController, :show
@@ -278,6 +285,10 @@ defmodule HexpmWeb.Router do
 
     post "/short_url", ShortURLController, :create
     get "/auth", AuthController, :show
+
+    # OAuth 2.0 API endpoints
+    post "/oauth/token", OAuthController, :token
+    post "/oauth/device_authorization", OAuthController, :device_authorization
   end
 
   if Mix.env() in [:dev, :test, :hex] do

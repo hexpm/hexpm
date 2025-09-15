@@ -1,0 +1,69 @@
+<h2>Device Authorization</h2>
+
+<%= if @error_message do %>
+  <div class="alert alert-danger">
+    <%= @error_message %>
+  </div>
+<% end %>
+
+<%= if @device_code do %>
+  <div class="alert alert-info">
+    <p><strong>Client ID:</strong> <%= @device_code.client_id %></p>
+    <p><strong>Requested Scopes:</strong> <%= Enum.join(@device_code.scopes, ", ") %></p>
+  </div>
+
+  <p>A device is requesting authorization to access your Hex account with the permissions listed above.</p>
+
+  <%= form_tag(~p"/device", method: "post") do %>
+    <input type="hidden" name="user_code" value="<%= @device_code.user_code %>">
+
+    <div class="form-actions">
+      <button type="submit" name="action" value="authorize" class="btn btn-primary">
+        Authorize Device
+      </button>
+
+      <button type="submit" name="action" value="deny" class="btn btn-secondary" style="margin-left: 10px;">
+        Deny Access
+      </button>
+    </div>
+  <% end %>
+<% else %>
+  <p>Enter the verification code displayed on your device:</p>
+
+  <%= form_tag(~p"/device", method: "get") do %>
+    <div class="form-group">
+      <label for="user_code">Verification Code</label>
+      <input id="user_code"
+             type="text"
+             class="form-control"
+             name="user_code"
+             value="<%= @user_code %>"
+             placeholder="XXXX-XXXX"
+             pattern="[A-Z0-9]{4}-[A-Z0-9]{4}"
+             maxlength="9"
+             style="text-transform: uppercase; font-family: monospace; font-size: 18px; text-align: center;"
+             required>
+      <small class="form-text text-muted">
+        Enter the 8-character code shown on your device (format: XXXX-XXXX)
+      </small>
+    </div>
+
+    <button type="submit" class="btn btn-primary">Verify Code</button>
+  <% end %>
+
+  <br>
+
+  <div class="help-section">
+    <h4>What is this?</h4>
+    <p>
+      This page allows you to authorize devices (like command-line tools) to access your Hex account.
+      Your device should have displayed a verification code that you need to enter above.
+    </p>
+
+    <p>
+      <strong>Security Note:</strong> Only enter the code if you initiated this authorization request
+      from a trusted device or application.
+    </p>
+  </div>
+<% end %>
+

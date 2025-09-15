@@ -66,3 +66,5 @@ if answer =~ ~r/^(Y(es)?)?$/i do
 else
   IO.puts("Not renamed")
 end
+
+# TODO: rename repository

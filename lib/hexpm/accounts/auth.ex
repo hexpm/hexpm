@@ -2,6 +2,7 @@ defmodule Hexpm.Accounts.Auth do
   import Ecto.Query, only: [from: 2]
 
   alias Hexpm.Accounts.{Key, Keys, User, Users}
+  alias Hexpm.OAuth.Token
 
   def key_auth(user_secret, usage_info) do
     # Database index lookup on the first part of the key and then
@@ -77,6 +78,54 @@ defmodule Hexpm.Accounts.Auth do
 
   def gen_password(nil), do: nil
   def gen_password(password), do: Bcrypt.hash_pwd_salt(password)
+
+  def oauth_token_auth(user_token, _usage_info) do
+    # Database index lookup on the first part of the token and then
+    # secure compare on the second part to avoid timing attacks
+    app_secret = Application.get_env(:hexpm, :secret)
+
+    <<first::binary-size(32), second::binary-size(32)>> =
+      :crypto.mac(:hmac, :sha256, app_secret, user_token)
+      |> Base.encode16(case: :lower)
+
+    result =
+      from(
+        t in Token,
+        where: t.token_first == ^first,
+        left_join: u in User,
+        on: t.user_id == u.id,
+        preload: [user: {u, [:emails, owned_packages: :repository, organizations: :repository]}],
+        select: {t, u}
+      )
+      |> Hexpm.Repo.one()
+
+    case result do
+      nil ->
+        :error
+
+      {oauth_token, user} ->
+        valid_auth = user && !User.organization?(user)
+
+        if valid_auth && Hexpm.Utils.secure_check(oauth_token.token_second, second) do
+          if Token.valid?(oauth_token) do
+            # Update usage tracking would go here if needed
+            {:ok,
+             %{
+               key: nil,  # OAuth tokens don't have associated Key records
+               user: user,
+               organization: nil,
+               email: find_email(user, nil),
+               source: :oauth_token,
+               oauth_token: oauth_token
+             }}
+          else
+            :error
+          end
+        else
+          :error
+        end
+    end
+  end
 
   def gen_key() do
     :crypto.strong_rand_bytes(16)

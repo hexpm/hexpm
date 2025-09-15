@@ -1,0 +1,56 @@
+<div class="container">
+  <div class="row">
+    <div class="col-md-6 col-md-offset-3">
+      <div class="panel panel-default">
+        <div class="panel-heading">
+          <h3 class="panel-title">Authorize Application</h3>
+        </div>
+        <div class="panel-body">
+          <p>
+            The application <strong><%= @client.name %></strong> would like to access your Hex account.
+          </p>
+
+          <h4>Requested permissions:</h4>
+          <ul>
+            <%= for scope <- @scopes do %>
+              <li><%= scope_description(scope) %></li>
+            <% end %>
+          </ul>
+
+          <%= form_for @conn, Routes.oauth_path(@conn, :consent), [method: "post"], fn f -> %>
+            <%= hidden_input f, :client_id, value: @client.client_id %>
+            <%= hidden_input f, :redirect_uri, value: @redirect_uri %>
+            <%= hidden_input f, :scope, value: Enum.join(@scopes, " ") %>
+            <%= if @state do %>
+              <%= hidden_input f, :state, value: @state %>
+            <% end %>
+            <%= if @code_challenge do %>
+              <%= hidden_input f, :code_challenge, value: @code_challenge %>
+            <% end %>
+            <%= if @code_challenge_method do %>
+              <%= hidden_input f, :code_challenge_method, value: @code_challenge_method %>
+            <% end %>
+
+            <div class="btn-group btn-group-justified" role="group">
+              <div class="btn-group" role="group">
+                <%= submit "Authorize", name: "action", value: "approve", class: "btn btn-success" %>
+              </div>
+              <div class="btn-group" role="group">
+                <%= submit "Deny", name: "action", value: "deny", class: "btn btn-danger" %>
+              </div>
+            </div>
+          <% end %>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<%
+defp scope_description("api"), do: "Full access to your account"
+defp scope_description("api:read"), do: "Read access to your packages and account"
+defp scope_description("api:write"), do: "Write access to your packages"
+defp scope_description("repositories"), do: "Access to private repositories"
+defp scope_description("package"), do: "Package management"
+defp scope_description(scope), do: scope
+%>

@@ -5,11 +5,18 @@ defmodule HexpmWeb.API.AuthController do
   plug :authorize, authentication: :required
 
   def show(conn, %{"domain" => domain} = params) do
-    key = conn.assigns.key
+    auth_credential = conn.assigns.auth_credential
     user_or_organization = conn.assigns.current_user || conn.assigns.current_organization
     resource = params["resource"]
 
-    if Key.verify_permissions?(key, domain, resource) do
+    # Check permissions based on credential type
+    has_permission = case auth_credential do
+      %Key{} = key -> Key.verify_permissions?(key, domain, resource)
+      %Hexpm.OAuth.Token{} = token -> Hexpm.OAuth.Token.verify_permissions?(token, domain, resource)
+      nil -> false
+    end
+
+    if has_permission do
       case KeyPermission.verify_permissions(user_or_organization, domain, resource) do
         {:ok, nil} ->
           send_resp(conn, 204, "")

@@ -3,6 +3,7 @@ defmodule HexpmWeb.AuthHelpers do
   import HexpmWeb.ControllerHelpers, only: [render_error: 3]
 
   alias Hexpm.Accounts.{Auth, Key, Organization, Organizations, User}
+  alias Hexpm.OAuth.Token
   alias Hexpm.Repository.{Package, Packages, PackageOwner, Repository}
 
   def authorize(conn, opts) do
@@ -21,14 +22,14 @@ defmodule HexpmWeb.AuthHelpers do
 
   defp authorized(conn, user_or_organization, funs, opts) do
     domains = Keyword.get(opts, :domains, [])
-    key = conn.assigns.key
+    auth_credential = conn.assigns.auth_credential
     email = conn.assigns.email
 
     cond do
       not verified_user?(user_or_organization, email, opts) ->
         error(conn, {:error, :unconfirmed})
 
-      user_or_organization && not verify_permissions?(conn, key, domains) ->
+      user_or_organization && not verify_permissions?(conn, auth_credential, domains) ->
         error(conn, {:error, :domain})
 
       funs ->
@@ -65,27 +66,45 @@ defmodule HexpmWeb.AuthHelpers do
     true
   end
 
-  defp verify_permissions?(_conn, _key = nil, _domains) do
+  defp verify_permissions?(_conn, _auth_credential = nil, _domains) do
     true
   end
 
-  defp verify_permissions?(_conn, _key, _domains = []) do
+  defp verify_permissions?(_conn, _auth_credential, _domains = []) do
     true
   end
 
-  defp verify_permissions?(conn, key, domains) do
+  defp verify_permissions?(conn, auth_credential, domains) do
     Enum.any?(domains, fn
-      {domain, resource} -> verify_permissions?(conn, key, domain, resource)
-      domain -> verify_permissions?(conn, key, domain, nil)
+      {domain, resource} -> verify_permissions?(conn, auth_credential, domain, resource)
+      domain -> verify_permissions?(conn, auth_credential, domain, nil)
     end)
   end
 
-  defp verify_permissions?(conn, key, "package", nil) do
-    Key.verify_permissions?(key, "package", conn.assigns.package)
+  defp verify_permissions?(conn, auth_credential, "package", nil) do
+    verify_permissions_for_credential(conn, auth_credential, "package", conn.assigns.package)
   end
 
-  defp verify_permissions?(_conn, key, domain, resource) do
-    Key.verify_permissions?(key, domain, resource)
+  defp verify_permissions?(conn, auth_credential, domain, resource) do
+    verify_permissions_for_credential(conn, auth_credential, domain, resource)
+  end
+
+  defp verify_permissions_for_credential(_conn, auth_credential, domain, resource) do
+    case auth_credential do
+      %Key{} = key ->
+        Key.verify_permissions?(key, domain, resource)
+
+      %Token{} = token ->
+        Token.verify_permissions?(token, domain, resource)
+
+      nil ->
+        # No auth credential means no restrictions
+        true
+
+      _ ->
+        # Unknown auth credential type, deny by default
+        false
+    end
   end
 
   def error(conn, error) do
@@ -127,6 +146,9 @@ defmodule HexpmWeb.AuthHelpers do
       ["Basic " <> credentials] ->
         basic_auth(credentials)
 
+      ["Bearer " <> token] ->
+        oauth_token_auth(token, conn)
+
       [key] ->
         key_auth(key, conn)
 
@@ -145,6 +167,13 @@ defmodule HexpmWeb.AuthHelpers do
     else
       _ ->
         {:error, :invalid}
+    end
+  end
+
+  defp oauth_token_auth(token, conn) do
+    case Auth.oauth_token_auth(token, usage_info(conn)) do
+      {:ok, result} -> {:ok, result}
+      :error -> {:error, :key}
     end
   end
 
