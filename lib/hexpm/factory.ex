@@ -181,4 +181,76 @@ defmodule Hexpm.Factory do
       ]
     }
   end
+
+  def security_vulnerability_disclosures_factory do
+    %Hexpm.SecurityVulnerability.Disclosure{
+      id: "GHSA-mj35-2rgf-cv8p",
+      package: Fake.random(:package),
+      summary:
+        "OpenID Connect client Atom Exhaustion in provider configuration worker ets table location",
+      affected: [">= 3.0.0 and < 3.0.2"],
+      published_at: "2024-04-03T16:46:30Z",
+      modified_at: "2024-04-05T01:28:39.837161Z",
+      details:
+        Jason.decode!(~S"""
+        {
+          "id": "GHSA-mj35-2rgf-cv8p",
+          "summary": "OpenID Connect client Atom Exhaustion in provider configuration worker ets table location",
+          "details": "### Impact\n\nDOS by Atom exhaustion is possible by calling `oidcc_provider_configuration_worker:get_provider_configuration/1` ...",
+          "aliases": [
+            "CVE-2024-31209"
+          ],
+          "modified": "2024-04-05T01:28:39.837161Z",
+          "published": "2024-04-03T16:46:30Z",
+          "database_specific": {
+            "nvd_published_at": "2024-04-04T16:15:09Z",
+            "cwe_ids": [
+              "CWE-400"
+            ],
+            "severity": "MODERATE",
+            "github_reviewed": true,
+            "github_reviewed_at": "2024-04-03T16:46:30Z"
+          },
+          "references": [
+            {
+              "type": "WEB",
+              "url": "https://github.com/erlef/oidcc/security/advisories/GHSA-mj35-2rgf-cv8p"
+            }
+          ],
+          "affected": [
+            {
+              "package": {
+                "name": "oidcc",
+                "ecosystem": "Hex",
+                "purl": "pkg:hex/oidcc"
+              },
+              "ranges": [
+                {
+                  "type": "SEMVER",
+                  "events": [
+                    {
+                      "introduced": "3.0.0"
+                    },
+                    {
+                      "fixed": "3.0.2"
+                    }
+                  ]
+                }
+              ],
+              "database_specific": {
+                "source": "https://github.com/github/advisory-database/blob/main/advisories/github-reviewed/2024/04/GHSA-mj35-2rgf-cv8p/GHSA-mj35-2rgf-cv8p.json"
+              }
+            }
+          ],
+          "schema_version": "1.6.0",
+          "severity": [
+            {
+              "type": "CVSS_V3",
+              "score": "CVSS:3.1/AV:L/AC:H/PR:H/UI:N/S:C/C:N/I:N/A:H"
+            }
+          ]
+        }
+        """)
+    }
+  end
 end

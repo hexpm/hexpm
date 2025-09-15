@@ -17,6 +17,7 @@ defmodule Hexpm.Repository.Package do
     has_many :owners, through: [:package_owners, :user]
     has_many :downloads, PackageDownload
     has_many :package_reports, PackageReport
+    has_many :security_vulnerability_disclosures, Hexpm.SecurityVulnerability.Disclosure
     embeds_one :meta, PackageMetadata, on_replace: :delete
   end
 
