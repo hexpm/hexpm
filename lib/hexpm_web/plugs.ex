@@ -118,7 +118,8 @@ defmodule HexpmWeb.Plugs do
 
         conn
         |> assign(:auth_credential, auth_credential)
-        |> assign(:key, key)  # Keep for backward compatibility temporarily
+        # Keep for backward compatibility temporarily
+        |> assign(:key, key)
         |> assign(:current_user, user)
         |> assign(:current_organization, organization)
         |> assign(:email, email)
@@ -127,7 +128,8 @@ defmodule HexpmWeb.Plugs do
       {:error, :missing} ->
         conn
         |> assign(:auth_credential, nil)
-        |> assign(:key, nil)  # Keep for backward compatibility temporarily
+        # Keep for backward compatibility temporarily
+        |> assign(:key, nil)
         |> assign(:current_user, nil)
         |> assign(:current_organization, nil)
         |> assign(:email, nil)

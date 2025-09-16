@@ -8,60 +8,66 @@ defmodule Hexpm.OAuth.ClientTest do
       changeset = Client.changeset(%Client{}, %{})
 
       assert %{
-        client_id: "can't be blank",
-        name: "can't be blank",
-        client_type: "can't be blank"
-      } = errors_on(changeset)
+               client_id: "can't be blank",
+               name: "can't be blank",
+               client_type: "can't be blank"
+             } = errors_on(changeset)
     end
 
     test "validates client_type inclusion" do
-      changeset = Client.changeset(%Client{}, %{
-        client_id: "test_client",
-        name: "Test Client",
-        client_type: "invalid"
-      })
+      changeset =
+        Client.changeset(%Client{}, %{
+          client_id: "test_client",
+          name: "Test Client",
+          client_type: "invalid"
+        })
 
       assert %{client_type: "is invalid"} = errors_on(changeset)
     end
 
     test "validates grant types" do
-      changeset = Client.changeset(%Client{}, %{
-        client_id: "test_client",
-        name: "Test Client",
-        client_type: "public",
-        allowed_grant_types: ["invalid_grant", "authorization_code"]
-      })
+      changeset =
+        Client.changeset(%Client{}, %{
+          client_id: "test_client",
+          name: "Test Client",
+          client_type: "public",
+          allowed_grant_types: ["invalid_grant", "authorization_code"]
+        })
 
-      assert %{allowed_grant_types: "contains invalid grant types: invalid_grant"} = errors_on(changeset)
+      assert %{allowed_grant_types: "contains invalid grant types: invalid_grant"} =
+               errors_on(changeset)
     end
 
     test "validates scopes" do
-      changeset = Client.changeset(%Client{}, %{
-        client_id: "test_client",
-        name: "Test Client",
-        client_type: "public",
-        allowed_scopes: ["invalid_scope", "api"]
-      })
+      changeset =
+        Client.changeset(%Client{}, %{
+          client_id: "test_client",
+          name: "Test Client",
+          client_type: "public",
+          allowed_scopes: ["invalid_scope", "api"]
+        })
 
       assert %{allowed_scopes: "contains invalid scopes: invalid_scope"} = errors_on(changeset)
     end
 
     test "requires client_secret for confidential clients" do
-      changeset = Client.changeset(%Client{}, %{
-        client_id: "test_client",
-        name: "Test Client",
-        client_type: "confidential"
-      })
+      changeset =
+        Client.changeset(%Client{}, %{
+          client_id: "test_client",
+          name: "Test Client",
+          client_type: "confidential"
+        })
 
       assert %{client_secret: "is required for confidential clients"} = errors_on(changeset)
     end
 
     test "allows public clients without client_secret" do
-      changeset = Client.changeset(%Client{}, %{
-        client_id: "test_client",
-        name: "Test Client",
-        client_type: "public"
-      })
+      changeset =
+        Client.changeset(%Client{}, %{
+          client_id: "test_client",
+          name: "Test Client",
+          client_type: "public"
+        })
 
       refute changeset.errors[:client_secret]
     end
@@ -143,7 +149,9 @@ defmodule Hexpm.OAuth.ClientTest do
     end
 
     test "returns true for allowed redirect URIs" do
-      client = %Client{redirect_uris: ["https://example.com/callback", "https://app.example.com/auth"]}
+      client = %Client{
+        redirect_uris: ["https://example.com/callback", "https://app.example.com/auth"]
+      }
 
       assert Client.valid_redirect_uri?(client, "https://example.com/callback")
       assert Client.valid_redirect_uri?(client, "https://app.example.com/auth")

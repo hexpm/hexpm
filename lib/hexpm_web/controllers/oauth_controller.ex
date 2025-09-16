@@ -65,9 +65,7 @@ defmodule HexpmWeb.OAuthController do
     end
   end
 
-
   # Private functions
-
 
   defp handle_authorization_approval(conn, user, params) do
     with {:ok, client} <- validate_client(params["client_id"]),
@@ -131,7 +129,6 @@ defmodule HexpmWeb.OAuthController do
     end
   end
 
-
   defp validate_redirect_uri(client, redirect_uri) do
     if Client.valid_redirect_uri?(client, redirect_uri) do
       {:ok, redirect_uri}
@@ -152,7 +149,6 @@ defmodule HexpmWeb.OAuthController do
       {:error, "Invalid scope"}
     end
   end
-
 
   defp redirect_to_client(conn, redirect_uri, params) do
     uri = URI.parse(redirect_uri)

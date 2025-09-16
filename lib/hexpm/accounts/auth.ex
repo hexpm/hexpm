@@ -111,7 +111,8 @@ defmodule Hexpm.Accounts.Auth do
             # Update usage tracking would go here if needed
             {:ok,
              %{
-               key: nil,  # OAuth tokens don't have associated Key records
+               # OAuth tokens don't have associated Key records
+               key: nil,
                user: user,
                organization: nil,
                email: find_email(user, nil),

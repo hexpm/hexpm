@@ -10,26 +10,27 @@ defmodule Hexpm.OAuth.AuthorizationCodeTest do
       changeset = AuthorizationCode.changeset(%AuthorizationCode{}, %{})
 
       assert %{
-        code: "can't be blank",
-        redirect_uri: "can't be blank",
-        expires_at: "can't be blank",
-        user_id: "can't be blank",
-        client_id: "can't be blank"
-      } = errors_on(changeset)
+               code: "can't be blank",
+               redirect_uri: "can't be blank",
+               expires_at: "can't be blank",
+               user_id: "can't be blank",
+               client_id: "can't be blank"
+             } = errors_on(changeset)
     end
 
     test "validates scopes" do
       user = create_user()
       expires_at = DateTime.add(DateTime.utc_now(), 600, :second)
 
-      changeset = AuthorizationCode.changeset(%AuthorizationCode{}, %{
-        code: "test_code",
-        redirect_uri: "https://example.com/callback",
-        scopes: ["invalid_scope", "api"],
-        expires_at: expires_at,
-        user_id: user.id,
-        client_id: "test_client"
-      })
+      changeset =
+        AuthorizationCode.changeset(%AuthorizationCode{}, %{
+          code: "test_code",
+          redirect_uri: "https://example.com/callback",
+          scopes: ["invalid_scope", "api"],
+          expires_at: expires_at,
+          user_id: user.id,
+          client_id: "test_client"
+        })
 
       assert %{scopes: "contains invalid scopes: invalid_scope"} = errors_on(changeset)
     end
@@ -38,50 +39,55 @@ defmodule Hexpm.OAuth.AuthorizationCodeTest do
       user = create_user()
       expires_at = DateTime.add(DateTime.utc_now(), 600, :second)
 
-      changeset = AuthorizationCode.changeset(%AuthorizationCode{}, %{
-        code: "test_code",
-        redirect_uri: "https://example.com/callback",
-        scopes: ["api"],
-        expires_at: expires_at,
-        user_id: user.id,
-        client_id: "test_client",
-        code_challenge: "challenge123"
-      })
+      changeset =
+        AuthorizationCode.changeset(%AuthorizationCode{}, %{
+          code: "test_code",
+          redirect_uri: "https://example.com/callback",
+          scopes: ["api"],
+          expires_at: expires_at,
+          user_id: user.id,
+          client_id: "test_client",
+          code_challenge: "challenge123"
+        })
 
-      assert %{code_challenge_method: "is required when code_challenge is specified"} = errors_on(changeset)
+      assert %{code_challenge_method: "is required when code_challenge is specified"} =
+               errors_on(changeset)
     end
 
     test "validates code challenge method without challenge" do
       user = create_user()
       expires_at = DateTime.add(DateTime.utc_now(), 600, :second)
 
-      changeset = AuthorizationCode.changeset(%AuthorizationCode{}, %{
-        code: "test_code",
-        redirect_uri: "https://example.com/callback",
-        scopes: ["api"],
-        expires_at: expires_at,
-        user_id: user.id,
-        client_id: "test_client",
-        code_challenge_method: "S256"
-      })
+      changeset =
+        AuthorizationCode.changeset(%AuthorizationCode{}, %{
+          code: "test_code",
+          redirect_uri: "https://example.com/callback",
+          scopes: ["api"],
+          expires_at: expires_at,
+          user_id: user.id,
+          client_id: "test_client",
+          code_challenge_method: "S256"
+        })
 
-      assert %{code_challenge: "is required when code_challenge_method is specified"} = errors_on(changeset)
+      assert %{code_challenge: "is required when code_challenge_method is specified"} =
+               errors_on(changeset)
     end
 
     test "validates invalid code challenge method" do
       user = create_user()
       expires_at = DateTime.add(DateTime.utc_now(), 600, :second)
 
-      changeset = AuthorizationCode.changeset(%AuthorizationCode{}, %{
-        code: "test_code",
-        redirect_uri: "https://example.com/callback",
-        scopes: ["api"],
-        expires_at: expires_at,
-        user_id: user.id,
-        client_id: "test_client",
-        code_challenge: "challenge123",
-        code_challenge_method: "invalid"
-      })
+      changeset =
+        AuthorizationCode.changeset(%AuthorizationCode{}, %{
+          code: "test_code",
+          redirect_uri: "https://example.com/callback",
+          scopes: ["api"],
+          expires_at: expires_at,
+          user_id: user.id,
+          client_id: "test_client",
+          code_challenge: "challenge123",
+          code_challenge_method: "invalid"
+        })
 
       assert %{code_challenge_method: "must be one of: S256"} = errors_on(changeset)
     end
@@ -90,16 +96,17 @@ defmodule Hexpm.OAuth.AuthorizationCodeTest do
       user = create_user()
       expires_at = DateTime.add(DateTime.utc_now(), 600, :second)
 
-      changeset = AuthorizationCode.changeset(%AuthorizationCode{}, %{
-        code: "test_code",
-        redirect_uri: "https://example.com/callback",
-        scopes: ["api", "api:read"],
-        expires_at: expires_at,
-        user_id: user.id,
-        client_id: "test_client",
-        code_challenge: "E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM",
-        code_challenge_method: "S256"
-      })
+      changeset =
+        AuthorizationCode.changeset(%AuthorizationCode{}, %{
+          code: "test_code",
+          redirect_uri: "https://example.com/callback",
+          scopes: ["api", "api:read"],
+          expires_at: expires_at,
+          user_id: user.id,
+          client_id: "test_client",
+          code_challenge: "E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM",
+          code_challenge_method: "S256"
+        })
 
       assert changeset.valid?
     end
@@ -157,12 +164,13 @@ defmodule Hexpm.OAuth.AuthorizationCodeTest do
     end
 
     test "creates changeset with required fields", %{user: user} do
-      changeset = AuthorizationCode.create_for_user(
-        user,
-        "test_client",
-        "https://example.com/callback",
-        ["api"]
-      )
+      changeset =
+        AuthorizationCode.create_for_user(
+          user,
+          "test_client",
+          "https://example.com/callback",
+          ["api"]
+        )
 
       assert changeset.valid?
       assert get_field(changeset, :code)
@@ -174,13 +182,14 @@ defmodule Hexpm.OAuth.AuthorizationCodeTest do
     end
 
     test "sets custom expiration time", %{user: user} do
-      changeset = AuthorizationCode.create_for_user(
-        user,
-        "test_client",
-        "https://example.com/callback",
-        ["api"],
-        expires_in: 300
-      )
+      changeset =
+        AuthorizationCode.create_for_user(
+          user,
+          "test_client",
+          "https://example.com/callback",
+          ["api"],
+          expires_in: 300
+        )
 
       expires_at = get_field(changeset, :expires_at)
       expected_time = DateTime.add(DateTime.utc_now(), 300, :second)
@@ -190,29 +199,35 @@ defmodule Hexpm.OAuth.AuthorizationCodeTest do
     end
 
     test "adds PKCE challenge with default S256 method", %{user: user} do
-      changeset = AuthorizationCode.create_for_user(
-        user,
-        "test_client",
-        "https://example.com/callback",
-        ["api"],
-        code_challenge: "E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM"
-      )
+      changeset =
+        AuthorizationCode.create_for_user(
+          user,
+          "test_client",
+          "https://example.com/callback",
+          ["api"],
+          code_challenge: "E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM"
+        )
 
-      assert get_field(changeset, :code_challenge) == "E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM"
+      assert get_field(changeset, :code_challenge) ==
+               "E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM"
+
       assert get_field(changeset, :code_challenge_method) == "S256"
     end
 
     test "adds PKCE challenge with explicit S256 method", %{user: user} do
-      changeset = AuthorizationCode.create_for_user(
-        user,
-        "test_client",
-        "https://example.com/callback",
-        ["api"],
-        code_challenge: "E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM",
-        code_challenge_method: "S256"
-      )
+      changeset =
+        AuthorizationCode.create_for_user(
+          user,
+          "test_client",
+          "https://example.com/callback",
+          ["api"],
+          code_challenge: "E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM",
+          code_challenge_method: "S256"
+        )
 
-      assert get_field(changeset, :code_challenge) == "E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM"
+      assert get_field(changeset, :code_challenge) ==
+               "E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM"
+
       assert get_field(changeset, :code_challenge_method) == "S256"
     end
   end
@@ -303,8 +318,10 @@ defmodule Hexpm.OAuth.AuthorizationCodeTest do
     test "validates S256 challenge method" do
       # Create a proper S256 challenge
       code_verifier = "dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk"
-      code_challenge = :crypto.hash(:sha256, code_verifier)
-                      |> Base.url_encode64(padding: false)
+
+      code_challenge =
+        :crypto.hash(:sha256, code_verifier)
+        |> Base.url_encode64(padding: false)
 
       auth_code = %AuthorizationCode{
         code_challenge: code_challenge,

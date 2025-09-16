@@ -10,31 +10,32 @@ defmodule Hexpm.OAuth.TokenTest do
       changeset = Token.changeset(%Token{}, %{})
 
       assert %{
-        token_first: "can't be blank",
-        token_second: "can't be blank",
-        token_hash: "can't be blank",
-        expires_at: "can't be blank",
-        grant_type: "can't be blank",
-        user_id: "can't be blank",
-        client_id: "can't be blank"
-      } = errors_on(changeset)
+               token_first: "can't be blank",
+               token_second: "can't be blank",
+               token_hash: "can't be blank",
+               expires_at: "can't be blank",
+               grant_type: "can't be blank",
+               user_id: "can't be blank",
+               client_id: "can't be blank"
+             } = errors_on(changeset)
     end
 
     test "validates grant type inclusion" do
       user = create_user()
       expires_at = DateTime.add(DateTime.utc_now(), 3600, :second)
 
-      changeset = Token.changeset(%Token{}, %{
-        token_first: "first",
-        token_second: "second",
-        token_hash: "hash",
-        token_type: "bearer",
-        scopes: ["api"],
-        expires_at: expires_at,
-        grant_type: "invalid_grant",
-        user_id: user.id,
-        client_id: "test_client"
-      })
+      changeset =
+        Token.changeset(%Token{}, %{
+          token_first: "first",
+          token_second: "second",
+          token_hash: "hash",
+          token_type: "bearer",
+          scopes: ["api"],
+          expires_at: expires_at,
+          grant_type: "invalid_grant",
+          user_id: user.id,
+          client_id: "test_client"
+        })
 
       assert %{grant_type: "is invalid"} = errors_on(changeset)
     end
@@ -43,17 +44,18 @@ defmodule Hexpm.OAuth.TokenTest do
       user = create_user()
       expires_at = DateTime.add(DateTime.utc_now(), 3600, :second)
 
-      changeset = Token.changeset(%Token{}, %{
-        token_first: "first",
-        token_second: "second",
-        token_hash: "hash",
-        token_type: "bearer",
-        scopes: ["invalid_scope", "api"],
-        expires_at: expires_at,
-        grant_type: "authorization_code",
-        user_id: user.id,
-        client_id: "test_client"
-      })
+      changeset =
+        Token.changeset(%Token{}, %{
+          token_first: "first",
+          token_second: "second",
+          token_hash: "hash",
+          token_type: "bearer",
+          scopes: ["invalid_scope", "api"],
+          expires_at: expires_at,
+          grant_type: "authorization_code",
+          user_id: user.id,
+          client_id: "test_client"
+        })
 
       assert %{scopes: "contains invalid scopes: invalid_scope"} = errors_on(changeset)
     end
@@ -188,13 +190,14 @@ defmodule Hexpm.OAuth.TokenTest do
     end
 
     test "creates changeset with required fields", %{user: user} do
-      changeset = Token.create_for_user(
-        user,
-        "test_client",
-        ["api"],
-        "authorization_code",
-        "auth_code_123"
-      )
+      changeset =
+        Token.create_for_user(
+          user,
+          "test_client",
+          ["api"],
+          "authorization_code",
+          "auth_code_123"
+        )
 
       assert changeset.valid?
       assert get_field(changeset, :token_first)
@@ -210,14 +213,15 @@ defmodule Hexpm.OAuth.TokenTest do
     end
 
     test "sets custom expiration time", %{user: user} do
-      changeset = Token.create_for_user(
-        user,
-        "test_client",
-        ["api"],
-        "authorization_code",
-        nil,
-        expires_in: 7200
-      )
+      changeset =
+        Token.create_for_user(
+          user,
+          "test_client",
+          ["api"],
+          "authorization_code",
+          nil,
+          expires_in: 7200
+        )
 
       expires_at = get_field(changeset, :expires_at)
       expected_time = DateTime.add(DateTime.utc_now(), 7200, :second)
@@ -227,14 +231,15 @@ defmodule Hexpm.OAuth.TokenTest do
     end
 
     test "creates refresh token when requested", %{user: user} do
-      changeset = Token.create_for_user(
-        user,
-        "test_client",
-        ["api"],
-        "authorization_code",
-        nil,
-        with_refresh_token: true
-      )
+      changeset =
+        Token.create_for_user(
+          user,
+          "test_client",
+          ["api"],
+          "authorization_code",
+          nil,
+          with_refresh_token: true
+        )
 
       assert get_field(changeset, :refresh_token_first)
       assert get_field(changeset, :refresh_token_second)
@@ -242,12 +247,13 @@ defmodule Hexpm.OAuth.TokenTest do
     end
 
     test "defaults grant_reference to nil", %{user: user} do
-      changeset = Token.create_for_user(
-        user,
-        "test_client",
-        ["api"],
-        "authorization_code"
-      )
+      changeset =
+        Token.create_for_user(
+          user,
+          "test_client",
+          ["api"],
+          "authorization_code"
+        )
 
       assert get_field(changeset, :grant_reference) == nil
     end
@@ -340,6 +346,7 @@ defmodule Hexpm.OAuth.TokenTest do
   describe "to_response/1" do
     test "creates basic response without refresh token" do
       future_time = DateTime.add(DateTime.utc_now(), 3600, :second)
+
       token = %Token{
         token_hash: "access_token_123",
         token_type: "bearer",
@@ -359,6 +366,7 @@ defmodule Hexpm.OAuth.TokenTest do
 
     test "includes refresh token when present" do
       future_time = DateTime.add(DateTime.utc_now(), 3600, :second)
+
       token = %Token{
         token_hash: "access_token_123",
         token_type: "bearer",
@@ -375,6 +383,7 @@ defmodule Hexpm.OAuth.TokenTest do
 
     test "handles expired token gracefully" do
       past_time = DateTime.add(DateTime.utc_now(), -100, :second)
+
       token = %Token{
         token_hash: "access_token_123",
         token_type: "bearer",

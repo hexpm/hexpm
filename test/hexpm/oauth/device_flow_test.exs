@@ -113,11 +113,13 @@ defmodule Hexpm.OAuth.DeviceFlowTest do
       assert updated_device_code.user_id == user.id
 
       # Verify OAuth token was created
-      oauth_token = Repo.get_by(Token,
-        grant_type: "urn:ietf:params:oauth:grant-type:device_code",
-        grant_reference: device_code.device_code,
-        client_id: "test_client"
-      )
+      oauth_token =
+        Repo.get_by(Token,
+          grant_type: "urn:ietf:params:oauth:grant-type:device_code",
+          grant_reference: device_code.device_code,
+          client_id: "test_client"
+        )
+
       assert oauth_token
       assert oauth_token.user_id == user.id
     end

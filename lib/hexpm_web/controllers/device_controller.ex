@@ -55,7 +55,8 @@ defmodule HexpmWeb.DeviceController do
   POST /device
   """
   def create(conn, %{"user_code" => user_code} = params) do
-    action = params["action"] || "authorize"  # Default to "authorize" if no action specified
+    # Default to "authorize" if no action specified
+    action = params["action"] || "authorize"
 
     unless logged_in?(conn) do
       redirect(conn, to: build_login_redirect_path(user_code))

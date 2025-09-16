@@ -10,23 +10,24 @@ defmodule Hexpm.OAuth.DeviceCodeTest do
       changeset = DeviceCode.changeset(%DeviceCode{}, %{})
 
       assert %{
-        device_code: "can't be blank",
-        user_code: "can't be blank",
-        verification_uri: "can't be blank",
-        client_id: "can't be blank",
-        expires_at: "can't be blank"
-      } = errors_on(changeset)
+               device_code: "can't be blank",
+               user_code: "can't be blank",
+               verification_uri: "can't be blank",
+               client_id: "can't be blank",
+               expires_at: "can't be blank"
+             } = errors_on(changeset)
     end
 
     test "validates interval is positive" do
-      changeset = DeviceCode.changeset(%DeviceCode{}, %{
-        device_code: "device123",
-        user_code: "USER-CODE",
-        verification_uri: "https://example.com/device",
-        client_id: "test_client",
-        expires_at: DateTime.utc_now(),
-        interval: 0
-      })
+      changeset =
+        DeviceCode.changeset(%DeviceCode{}, %{
+          device_code: "device123",
+          user_code: "USER-CODE",
+          verification_uri: "https://example.com/device",
+          client_id: "test_client",
+          expires_at: DateTime.utc_now(),
+          interval: 0
+        })
 
       assert %{interval: "must be greater than 0"} = errors_on(changeset)
     end
@@ -234,11 +235,12 @@ defmodule Hexpm.OAuth.DeviceCodeTest do
       # Run multiple times to check character set
       user_codes = Enum.map(1..100, fn _ -> DeviceCode.generate_user_code() end)
 
-      all_chars = user_codes
-                  |> Enum.join("")
-                  |> String.replace("-", "")
-                  |> String.graphemes()
-                  |> Enum.uniq()
+      all_chars =
+        user_codes
+        |> Enum.join("")
+        |> String.replace("-", "")
+        |> String.graphemes()
+        |> Enum.uniq()
 
       # Should not contain ambiguous characters (0, 1, I, O) or vowels (A, E, U)
       forbidden_chars = ["0", "1", "I", "O", "A", "E", "U"]

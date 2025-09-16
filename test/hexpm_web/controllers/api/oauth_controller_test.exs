@@ -23,10 +23,11 @@ defmodule HexpmWeb.API.OAuthControllerTest do
 
   describe "POST /api/oauth/device_authorization" do
     test "initiates device authorization with valid client_id", %{client: client} do
-      conn = post(build_conn(), ~p"/api/oauth/device_authorization", %{
-        "client_id" => client.client_id,
-        "scope" => "api"
-      })
+      conn =
+        post(build_conn(), ~p"/api/oauth/device_authorization", %{
+          "client_id" => client.client_id,
+          "scope" => "api"
+        })
 
       assert json_response(conn, 200)
       response = json_response(conn, 200)
@@ -40,10 +41,11 @@ defmodule HexpmWeb.API.OAuthControllerTest do
     end
 
     test "handles multiple scopes", %{client: client} do
-      conn = post(build_conn(), ~p"/api/oauth/device_authorization", %{
-        "client_id" => client.client_id,
-        "scope" => "api:read api:write"
-      })
+      conn =
+        post(build_conn(), ~p"/api/oauth/device_authorization", %{
+          "client_id" => client.client_id,
+          "scope" => "api:read api:write"
+        })
 
       assert json_response(conn, 200)
       response = json_response(conn, 200)
@@ -54,9 +56,10 @@ defmodule HexpmWeb.API.OAuthControllerTest do
     end
 
     test "uses default scope when none provided", %{client: client} do
-      conn = post(build_conn(), ~p"/api/oauth/device_authorization", %{
-        "client_id" => client.client_id
-      })
+      conn =
+        post(build_conn(), ~p"/api/oauth/device_authorization", %{
+          "client_id" => client.client_id
+        })
 
       assert json_response(conn, 200)
       response = json_response(conn, 200)
@@ -74,9 +77,10 @@ defmodule HexpmWeb.API.OAuthControllerTest do
     end
 
     test "returns error for invalid client_id" do
-      conn = post(build_conn(), ~p"/api/oauth/device_authorization", %{
-        "client_id" => "nonexistent_client"
-      })
+      conn =
+        post(build_conn(), ~p"/api/oauth/device_authorization", %{
+          "client_id" => "nonexistent_client"
+        })
 
       assert json_response(conn, 401)
       response = json_response(conn, 401)
@@ -84,10 +88,11 @@ defmodule HexpmWeb.API.OAuthControllerTest do
     end
 
     test "returns error for unsupported scope", %{client: client} do
-      conn = post(build_conn(), ~p"/api/oauth/device_authorization", %{
-        "client_id" => client.client_id,
-        "scope" => "invalid_scope"
-      })
+      conn =
+        post(build_conn(), ~p"/api/oauth/device_authorization", %{
+          "client_id" => client.client_id,
+          "scope" => "invalid_scope"
+        })
 
       assert json_response(conn, 401)
       response = json_response(conn, 401)
@@ -102,28 +107,36 @@ defmodule HexpmWeb.API.OAuthControllerTest do
       %{device_code: device_code, response: response}
     end
 
-    test "returns authorization_pending for pending device code", %{client: client, response: response} do
-      conn = post(build_conn(), ~p"/api/oauth/token", %{
-        "grant_type" => "urn:ietf:params:oauth:grant-type:device_code",
-        "device_code" => response.device_code,
-        "client_id" => client.client_id
-      })
+    test "returns authorization_pending for pending device code", %{
+      client: client,
+      response: response
+    } do
+      conn =
+        post(build_conn(), ~p"/api/oauth/token", %{
+          "grant_type" => "urn:ietf:params:oauth:grant-type:device_code",
+          "device_code" => response.device_code,
+          "client_id" => client.client_id
+        })
 
       assert json_response(conn, 400)
       response_body = json_response(conn, 400)
       assert response_body["error"] == "authorization_pending"
     end
 
-    test "returns access token for authorized device code", %{client: client, device_code: device_code} do
+    test "returns access token for authorized device code", %{
+      client: client,
+      device_code: device_code
+    } do
       # Authorize the device first
       user = create_user()
       {:ok, _} = DeviceFlow.authorize_device(device_code.user_code, user)
 
-      conn = post(build_conn(), ~p"/api/oauth/token", %{
-        "grant_type" => "urn:ietf:params:oauth:grant-type:device_code",
-        "device_code" => device_code.device_code,
-        "client_id" => client.client_id
-      })
+      conn =
+        post(build_conn(), ~p"/api/oauth/token", %{
+          "grant_type" => "urn:ietf:params:oauth:grant-type:device_code",
+          "device_code" => device_code.device_code,
+          "client_id" => client.client_id
+        })
 
       assert json_response(conn, 200)
       response = json_response(conn, 200)
@@ -135,11 +148,12 @@ defmodule HexpmWeb.API.OAuthControllerTest do
     end
 
     test "returns error for invalid grant type", %{client: client, response: response} do
-      conn = post(build_conn(), ~p"/api/oauth/token", %{
-        "grant_type" => "invalid",
-        "device_code" => response.device_code,
-        "client_id" => client.client_id
-      })
+      conn =
+        post(build_conn(), ~p"/api/oauth/token", %{
+          "grant_type" => "invalid",
+          "device_code" => response.device_code,
+          "client_id" => client.client_id
+        })
 
       assert json_response(conn, 400)
       response_body = json_response(conn, 400)
@@ -147,10 +161,11 @@ defmodule HexpmWeb.API.OAuthControllerTest do
     end
 
     test "returns error for missing device_code", %{client: client} do
-      conn = post(build_conn(), ~p"/api/oauth/token", %{
-        "grant_type" => "urn:ietf:params:oauth:grant-type:device_code",
-        "client_id" => client.client_id
-      })
+      conn =
+        post(build_conn(), ~p"/api/oauth/token", %{
+          "grant_type" => "urn:ietf:params:oauth:grant-type:device_code",
+          "client_id" => client.client_id
+        })
 
       assert json_response(conn, 400)
       response_body = json_response(conn, 400)
@@ -158,11 +173,12 @@ defmodule HexpmWeb.API.OAuthControllerTest do
     end
 
     test "returns error for invalid device_code", %{client: client} do
-      conn = post(build_conn(), ~p"/api/oauth/token", %{
-        "grant_type" => "urn:ietf:params:oauth:grant-type:device_code",
-        "device_code" => "invalid_code",
-        "client_id" => client.client_id
-      })
+      conn =
+        post(build_conn(), ~p"/api/oauth/token", %{
+          "grant_type" => "urn:ietf:params:oauth:grant-type:device_code",
+          "device_code" => "invalid_code",
+          "client_id" => client.client_id
+        })
 
       assert json_response(conn, 400)
       response_body = json_response(conn, 400)
@@ -170,11 +186,12 @@ defmodule HexpmWeb.API.OAuthControllerTest do
     end
 
     test "returns error for mismatched client_id", %{response: response} do
-      conn = post(build_conn(), ~p"/api/oauth/token", %{
-        "grant_type" => "urn:ietf:params:oauth:grant-type:device_code",
-        "device_code" => response.device_code,
-        "client_id" => "wrong_client"
-      })
+      conn =
+        post(build_conn(), ~p"/api/oauth/token", %{
+          "grant_type" => "urn:ietf:params:oauth:grant-type:device_code",
+          "device_code" => response.device_code,
+          "client_id" => "wrong_client"
+        })
 
       assert json_response(conn, 401)
       response_body = json_response(conn, 401)
@@ -192,22 +209,32 @@ defmodule HexpmWeb.API.OAuthControllerTest do
       {:ok, _} = DeviceFlow.authorize_device(device_code.user_code, user)
 
       # Get the token
-      conn = post(build_conn(), ~p"/api/oauth/token", %{
-        "grant_type" => "urn:ietf:params:oauth:grant-type:device_code",
-        "device_code" => device_code.device_code,
-        "client_id" => client.client_id
-      })
+      conn =
+        post(build_conn(), ~p"/api/oauth/token", %{
+          "grant_type" => "urn:ietf:params:oauth:grant-type:device_code",
+          "device_code" => device_code.device_code,
+          "client_id" => client.client_id
+        })
 
       token_response = json_response(conn, 200)
-      %{user: user, access_token: token_response["access_token"], refresh_token: token_response["refresh_token"]}
+
+      %{
+        user: user,
+        access_token: token_response["access_token"],
+        refresh_token: token_response["refresh_token"]
+      }
     end
 
-    test "returns new access token for valid refresh token", %{client: client, refresh_token: refresh_token} do
-      conn = post(build_conn(), ~p"/api/oauth/token", %{
-        "grant_type" => "refresh_token",
-        "refresh_token" => refresh_token,
-        "client_id" => client.client_id
-      })
+    test "returns new access token for valid refresh token", %{
+      client: client,
+      refresh_token: refresh_token
+    } do
+      conn =
+        post(build_conn(), ~p"/api/oauth/token", %{
+          "grant_type" => "refresh_token",
+          "refresh_token" => refresh_token,
+          "client_id" => client.client_id
+        })
 
       assert json_response(conn, 200)
       response = json_response(conn, 200)
@@ -224,10 +251,11 @@ defmodule HexpmWeb.API.OAuthControllerTest do
     end
 
     test "returns error for missing refresh_token", %{client: client} do
-      conn = post(build_conn(), ~p"/api/oauth/token", %{
-        "grant_type" => "refresh_token",
-        "client_id" => client.client_id
-      })
+      conn =
+        post(build_conn(), ~p"/api/oauth/token", %{
+          "grant_type" => "refresh_token",
+          "client_id" => client.client_id
+        })
 
       assert json_response(conn, 400)
       response = json_response(conn, 400)
@@ -236,11 +264,12 @@ defmodule HexpmWeb.API.OAuthControllerTest do
     end
 
     test "returns error for invalid refresh_token", %{client: client} do
-      conn = post(build_conn(), ~p"/api/oauth/token", %{
-        "grant_type" => "refresh_token",
-        "refresh_token" => "invalid_token",
-        "client_id" => client.client_id
-      })
+      conn =
+        post(build_conn(), ~p"/api/oauth/token", %{
+          "grant_type" => "refresh_token",
+          "refresh_token" => "invalid_token",
+          "client_id" => client.client_id
+        })
 
       assert json_response(conn, 400)
       response = json_response(conn, 400)
@@ -249,33 +278,39 @@ defmodule HexpmWeb.API.OAuthControllerTest do
     end
 
     test "returns error for mismatched client_id", %{refresh_token: refresh_token} do
-      conn = post(build_conn(), ~p"/api/oauth/token", %{
-        "grant_type" => "refresh_token",
-        "refresh_token" => refresh_token,
-        "client_id" => "wrong_client"
-      })
+      conn =
+        post(build_conn(), ~p"/api/oauth/token", %{
+          "grant_type" => "refresh_token",
+          "refresh_token" => refresh_token,
+          "client_id" => "wrong_client"
+        })
 
       assert json_response(conn, 401)
       response = json_response(conn, 401)
       assert response["error"] == "invalid_client"
     end
 
-    test "old refresh token becomes invalid after use", %{client: client, refresh_token: refresh_token} do
+    test "old refresh token becomes invalid after use", %{
+      client: client,
+      refresh_token: refresh_token
+    } do
       # Use the refresh token
-      conn = post(build_conn(), ~p"/api/oauth/token", %{
-        "grant_type" => "refresh_token",
-        "refresh_token" => refresh_token,
-        "client_id" => client.client_id
-      })
+      conn =
+        post(build_conn(), ~p"/api/oauth/token", %{
+          "grant_type" => "refresh_token",
+          "refresh_token" => refresh_token,
+          "client_id" => client.client_id
+        })
 
       assert json_response(conn, 200)
 
       # Try to use the old refresh token again
-      conn = post(build_conn(), ~p"/api/oauth/token", %{
-        "grant_type" => "refresh_token",
-        "refresh_token" => refresh_token,
-        "client_id" => client.client_id
-      })
+      conn =
+        post(build_conn(), ~p"/api/oauth/token", %{
+          "grant_type" => "refresh_token",
+          "refresh_token" => refresh_token,
+          "client_id" => client.client_id
+        })
 
       assert json_response(conn, 400)
       response = json_response(conn, 400)

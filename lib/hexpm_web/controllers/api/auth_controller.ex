@@ -10,11 +10,17 @@ defmodule HexpmWeb.API.AuthController do
     resource = params["resource"]
 
     # Check permissions based on credential type
-    has_permission = case auth_credential do
-      %Key{} = key -> Key.verify_permissions?(key, domain, resource)
-      %Hexpm.OAuth.Token{} = token -> Hexpm.OAuth.Token.verify_permissions?(token, domain, resource)
-      nil -> false
-    end
+    has_permission =
+      case auth_credential do
+        %Key{} = key ->
+          Key.verify_permissions?(key, domain, resource)
+
+        %Hexpm.OAuth.Token{} = token ->
+          Hexpm.OAuth.Token.verify_permissions?(token, domain, resource)
+
+        nil ->
+          false
+      end
 
     if has_permission do
       case KeyPermission.verify_permissions(user_or_organization, domain, resource) do

@@ -57,10 +57,11 @@ defmodule HexpmWeb.DeviceControllerTest do
     end
 
     test "redirects to login when not authenticated", %{device_code: device_code} do
-      conn = post(build_conn(), ~p"/device", %{
-        "user_code" => device_code.user_code,
-        "action" => "authorize"
-      })
+      conn =
+        post(build_conn(), ~p"/device", %{
+          "user_code" => device_code.user_code,
+          "action" => "authorize"
+        })
 
       assert redirected_to(conn) =~ "/login"
     end
@@ -68,10 +69,11 @@ defmodule HexpmWeb.DeviceControllerTest do
     test "authorizes device successfully", %{user: user, device_code: device_code} do
       conn = login_user(build_conn(), user)
 
-      conn = post(conn, ~p"/device", %{
-        "user_code" => device_code.user_code,
-        "action" => "authorize"
-      })
+      conn =
+        post(conn, ~p"/device", %{
+          "user_code" => device_code.user_code,
+          "action" => "authorize"
+        })
 
       assert html_response(conn, 200) =~ "Device has been successfully authorized!"
 
@@ -84,10 +86,11 @@ defmodule HexpmWeb.DeviceControllerTest do
     test "denies device successfully", %{user: user, device_code: device_code} do
       conn = login_user(build_conn(), user)
 
-      conn = post(conn, ~p"/device", %{
-        "user_code" => device_code.user_code,
-        "action" => "deny"
-      })
+      conn =
+        post(conn, ~p"/device", %{
+          "user_code" => device_code.user_code,
+          "action" => "deny"
+        })
 
       assert html_response(conn, 200) =~ "Device authorization has been denied"
 
@@ -96,12 +99,16 @@ defmodule HexpmWeb.DeviceControllerTest do
       assert updated_device_code.status == "denied"
     end
 
-    test "defaults to authorize action when action not specified", %{user: user, device_code: device_code} do
+    test "defaults to authorize action when action not specified", %{
+      user: user,
+      device_code: device_code
+    } do
       conn = login_user(build_conn(), user)
 
-      conn = post(conn, ~p"/device", %{
-        "user_code" => device_code.user_code
-      })
+      conn =
+        post(conn, ~p"/device", %{
+          "user_code" => device_code.user_code
+        })
 
       assert html_response(conn, 200) =~ "Device has been successfully authorized!"
 
@@ -112,10 +119,11 @@ defmodule HexpmWeb.DeviceControllerTest do
     test "shows error for invalid user_code", %{user: user} do
       conn = login_user(build_conn(), user)
 
-      conn = post(conn, ~p"/device", %{
-        "user_code" => "INVALID",
-        "action" => "authorize"
-      })
+      conn =
+        post(conn, ~p"/device", %{
+          "user_code" => "INVALID",
+          "action" => "authorize"
+        })
 
       assert html_response(conn, 200) =~ "Invalid user code"
     end
@@ -127,10 +135,11 @@ defmodule HexpmWeb.DeviceControllerTest do
 
       conn = login_user(build_conn(), user)
 
-      conn = post(conn, ~p"/device", %{
-        "user_code" => device_code.user_code,
-        "action" => "authorize"
-      })
+      conn =
+        post(conn, ~p"/device", %{
+          "user_code" => device_code.user_code,
+          "action" => "authorize"
+        })
 
       assert html_response(conn, 200) =~ "Device code has expired"
     end
@@ -141,10 +150,11 @@ defmodule HexpmWeb.DeviceControllerTest do
 
       conn = login_user(build_conn(), user)
 
-      conn = post(conn, ~p"/device", %{
-        "user_code" => device_code.user_code,
-        "action" => "authorize"
-      })
+      conn =
+        post(conn, ~p"/device", %{
+          "user_code" => device_code.user_code,
+          "action" => "authorize"
+        })
 
       assert html_response(conn, 200) =~ "Device code is not pending authorization"
     end
@@ -152,10 +162,11 @@ defmodule HexpmWeb.DeviceControllerTest do
     test "shows error for invalid action", %{user: user, device_code: device_code} do
       conn = login_user(build_conn(), user)
 
-      conn = post(conn, ~p"/device", %{
-        "user_code" => device_code.user_code,
-        "action" => "invalid"
-      })
+      conn =
+        post(conn, ~p"/device", %{
+          "user_code" => device_code.user_code,
+          "action" => "invalid"
+        })
 
       assert html_response(conn, 200) =~ "Invalid action"
     end
@@ -187,7 +198,10 @@ defmodule HexpmWeb.DeviceControllerTest do
       %{user: user, user_code: response.user_code}
     end
 
-    test "GET /device rate limiting function exists and is called", %{user: user, user_code: user_code} do
+    test "GET /device rate limiting function exists and is called", %{
+      user: user,
+      user_code: user_code
+    } do
       conn =
         build_conn()
         |> login_user(user)
@@ -222,8 +236,9 @@ defmodule HexpmWeb.DeviceControllerTest do
 
     defp response_contains_rate_limit_message?(conn) do
       response_body = html_response(conn, 200)
+
       response_body =~ "Too many verification attempts" and
-      response_body =~ "wait 15 minutes"
+        response_body =~ "wait 15 minutes"
     end
   end
 end
