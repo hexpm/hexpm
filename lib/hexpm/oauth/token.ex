@@ -2,6 +2,7 @@ defmodule Hexpm.OAuth.Token do
   use Hexpm.Schema
 
   alias Hexpm.Accounts.User
+  alias Hexpm.Permissions
 
   @token_length 32
   @refresh_token_length 32
@@ -28,7 +29,6 @@ defmodule Hexpm.OAuth.Token do
   end
 
   @valid_grant_types ~w(authorization_code urn:ietf:params:oauth:grant-type:device_code refresh_token)
-  @valid_scopes ~w(api api:read api:write repositories package)
 
   def changeset(token, attrs) do
     token
@@ -198,40 +198,19 @@ defmodule Hexpm.OAuth.Token do
 
   @doc """
   Verifies if the token has permission for the given domain and resource.
-  Follows the same pattern as Key.verify_permissions?/3.
+  Delegates to the unified permission system in Hexpm.Permissions.
   """
-  def verify_permissions?(%__MODULE__{} = token, "api", resource)
-      when is_binary(resource) or is_nil(resource) do
-    Enum.any?(token.scopes, fn scope ->
-      case scope do
-        "api" -> true
-        "api:read" when resource in [nil, "read"] -> true
-        "api:write" when resource in [nil, "read", "write"] -> true
-        _ -> false
-      end
-    end)
-  end
-
-  def verify_permissions?(%__MODULE__{} = token, "package", _resource) do
-    # OAuth tokens with "api" scope have package access
-    Enum.any?(token.scopes, fn scope ->
-      scope in ["api", "api:write"]
-    end)
-  end
-
-  def verify_permissions?(%__MODULE__{} = _token, _domain, _resource) do
-    false
+  def verify_permissions?(%__MODULE__{} = token, domain, resource) do
+    Permissions.verify_access?(token, domain, resource)
   end
 
   # Private functions
 
   defp validate_scopes(changeset) do
     validate_change(changeset, :scopes, fn :scopes, scopes ->
-      invalid_scopes = Enum.reject(scopes, &(&1 in @valid_scopes))
-
-      case invalid_scopes do
-        [] -> []
-        _ -> [scopes: "contains invalid scopes: #{Enum.join(invalid_scopes, ", ")}"]
+      case Permissions.validate_scopes(scopes) do
+        :ok -> []
+        {:error, message} -> [scopes: message]
       end
     end)
   end

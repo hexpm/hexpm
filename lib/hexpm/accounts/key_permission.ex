@@ -1,8 +1,9 @@
 defmodule Hexpm.Accounts.KeyPermission do
   use Hexpm.Schema
 
+  alias Hexpm.Permissions
+
   @derive HexpmWeb.Stale
-  @domains ~w(api package repository repositories docs)
 
   embedded_schema do
     field :domain, :string
@@ -11,7 +12,7 @@ defmodule Hexpm.Accounts.KeyPermission do
 
   def changeset(struct, user_or_organization, params) do
     cast(struct, params, ~w(domain resource)a)
-    |> validate_inclusion(:domain, @domains)
+    |> validate_inclusion(:domain, Permissions.valid_domains())
     |> normalize_resource()
     |> validate_resource()
     |> validate_permission(user_or_organization)

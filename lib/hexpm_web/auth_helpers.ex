@@ -4,6 +4,7 @@ defmodule HexpmWeb.AuthHelpers do
 
   alias Hexpm.Accounts.{Auth, Key, Organization, Organizations, User}
   alias Hexpm.OAuth.Token
+  alias Hexpm.Permissions
   alias Hexpm.Repository.{Package, Packages, PackageOwner, Repository}
 
   def authorize(conn, opts) do
@@ -82,29 +83,11 @@ defmodule HexpmWeb.AuthHelpers do
   end
 
   defp verify_permissions?(conn, auth_credential, "package", nil) do
-    verify_permissions_for_credential(conn, auth_credential, "package", conn.assigns.package)
+    Permissions.verify_access?(auth_credential, "package", conn.assigns.package)
   end
 
-  defp verify_permissions?(conn, auth_credential, domain, resource) do
-    verify_permissions_for_credential(conn, auth_credential, domain, resource)
-  end
-
-  defp verify_permissions_for_credential(_conn, auth_credential, domain, resource) do
-    case auth_credential do
-      %Key{} = key ->
-        Key.verify_permissions?(key, domain, resource)
-
-      %Token{} = token ->
-        Token.verify_permissions?(token, domain, resource)
-
-      nil ->
-        # No auth credential means no restrictions
-        true
-
-      _ ->
-        # Unknown auth credential type, deny by default
-        false
-    end
+  defp verify_permissions?(_conn, auth_credential, domain, resource) do
+    Permissions.verify_access?(auth_credential, domain, resource)
   end
 
   def error(conn, error) do

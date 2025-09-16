@@ -2,6 +2,7 @@ defmodule Hexpm.OAuth.AuthorizationCode do
   use Hexpm.Schema
 
   alias Hexpm.Accounts.User
+  alias Hexpm.Permissions
 
   @code_length 32
   @default_expires_in 60 * 10
@@ -21,7 +22,6 @@ defmodule Hexpm.OAuth.AuthorizationCode do
     timestamps()
   end
 
-  @valid_scopes ~w(api api:read api:write repositories package)
   @valid_challenge_methods ~w(S256)
 
   def changeset(auth_code, attrs) do
@@ -135,11 +135,9 @@ defmodule Hexpm.OAuth.AuthorizationCode do
 
   defp validate_scopes(changeset) do
     validate_change(changeset, :scopes, fn :scopes, scopes ->
-      invalid_scopes = Enum.reject(scopes, &(&1 in @valid_scopes))
-
-      case invalid_scopes do
-        [] -> []
-        _ -> [scopes: "contains invalid scopes: #{Enum.join(invalid_scopes, ", ")}"]
+      case Permissions.validate_scopes(scopes) do
+        :ok -> []
+        {:error, message} -> [scopes: message]
       end
     end)
   end

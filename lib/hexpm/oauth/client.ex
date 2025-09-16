@@ -1,6 +1,8 @@
 defmodule Hexpm.OAuth.Client do
   use Hexpm.Schema
 
+  alias Hexpm.Permissions
+
   @derive {Phoenix.Param, key: :client_id}
 
   schema "oauth_clients" do
@@ -17,7 +19,6 @@ defmodule Hexpm.OAuth.Client do
 
   @valid_client_types ~w(public confidential)
   @valid_grant_types ~w(authorization_code urn:ietf:params:oauth:grant-type:device_code refresh_token)
-  @valid_scopes ~w(api api:read api:write repositories package)
 
   def changeset(client, attrs) do
     client
@@ -97,8 +98,6 @@ defmodule Hexpm.OAuth.Client do
     |> Base.encode16(case: :lower)
   end
 
-  # Private functions
-
   defp validate_grant_types(changeset) do
     validate_change(changeset, :allowed_grant_types, fn :allowed_grant_types, grant_types ->
       invalid_types = Enum.reject(grant_types, &(&1 in @valid_grant_types))
@@ -115,11 +114,9 @@ defmodule Hexpm.OAuth.Client do
 
   defp validate_scopes(changeset) do
     validate_change(changeset, :allowed_scopes, fn :allowed_scopes, scopes ->
-      invalid_scopes = Enum.reject(scopes, &(&1 in @valid_scopes))
-
-      case invalid_scopes do
-        [] -> []
-        _ -> [allowed_scopes: "contains invalid scopes: #{Enum.join(invalid_scopes, ", ")}"]
+      case Permissions.validate_scopes(scopes) do
+        :ok -> []
+        {:error, message} -> [allowed_scopes: message]
       end
     end)
   end
