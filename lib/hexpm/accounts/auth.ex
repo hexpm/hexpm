@@ -5,8 +5,6 @@ defmodule Hexpm.Accounts.Auth do
   alias Hexpm.OAuth.Token
 
   def key_auth(user_secret, usage_info) do
-    # Database index lookup on the first part of the key and then
-    # secure compare on the second part to avoid timing attacks
     app_secret = Application.get_env(:hexpm, :secret)
 
     <<first::binary-size(32), second::binary-size(32)>> =
@@ -39,11 +37,10 @@ defmodule Hexpm.Accounts.Auth do
 
             {:ok,
              %{
-               key: key,
+               auth_credential: key,
                user: key.user,
                organization: key.organization,
-               email: find_email(key.user, nil),
-               source: :key
+               email: find_email(key.user, nil)
              }}
           end
         else
@@ -65,11 +62,10 @@ defmodule Hexpm.Accounts.Auth do
     if valid_user && Bcrypt.verify_pass(password, user.password) do
       {:ok,
        %{
-         key: nil,
+         auth_credential: nil,
          user: user,
          organization: nil,
-         email: find_email(user, username_or_email),
-         source: :password
+         email: find_email(user, username_or_email)
        }}
     else
       :error
@@ -80,8 +76,6 @@ defmodule Hexpm.Accounts.Auth do
   def gen_password(password), do: Bcrypt.hash_pwd_salt(password)
 
   def oauth_token_auth(user_token, _usage_info) do
-    # Database index lookup on the first part of the token and then
-    # secure compare on the second part to avoid timing attacks
     app_secret = Application.get_env(:hexpm, :secret)
 
     <<first::binary-size(32), second::binary-size(32)>> =
@@ -108,16 +102,12 @@ defmodule Hexpm.Accounts.Auth do
 
         if valid_auth && Hexpm.Utils.secure_check(oauth_token.token_second, second) do
           if Token.valid?(oauth_token) do
-            # Update usage tracking would go here if needed
             {:ok,
              %{
-               # OAuth tokens don't have associated Key records
-               key: nil,
+               auth_credential: oauth_token,
                user: user,
                organization: nil,
-               email: find_email(user, nil),
-               source: :oauth_token,
-               oauth_token: oauth_token
+               email: find_email(user, nil)
              }}
           else
             :error

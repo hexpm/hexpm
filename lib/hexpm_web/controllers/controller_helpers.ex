@@ -320,7 +320,7 @@ defmodule HexpmWeb.ControllerHelpers do
 
     %{
       user: user_or_organization,
-      key: Map.get(conn.assigns, :key),
+      auth_credential: Map.get(conn.assigns, :auth_credential),
       user_agent: conn.assigns.user_agent,
       remote_ip: ip_to_string(conn.remote_ip)
     }

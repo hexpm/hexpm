@@ -111,29 +111,24 @@ defmodule HexpmWeb.Plugs do
   def authenticate(conn, _opts) do
     case HexpmWeb.AuthHelpers.authenticate(conn) do
       {:ok,
-       %{key: key, user: user, organization: organization, email: email, source: source} =
-           auth_result} ->
-        # Use whichever credential was provided (key or oauth_token)
-        auth_credential = key || Map.get(auth_result, :oauth_token)
-
+       %{
+         auth_credential: auth_credential,
+         user: user,
+         organization: organization,
+         email: email
+       }} ->
         conn
         |> assign(:auth_credential, auth_credential)
-        # Keep for backward compatibility temporarily
-        |> assign(:key, key)
         |> assign(:current_user, user)
         |> assign(:current_organization, organization)
         |> assign(:email, email)
-        |> assign(:auth_source, source)
 
       {:error, :missing} ->
         conn
         |> assign(:auth_credential, nil)
-        # Keep for backward compatibility temporarily
-        |> assign(:key, nil)
         |> assign(:current_user, nil)
         |> assign(:current_organization, nil)
         |> assign(:email, nil)
-        |> assign(:auth_source, nil)
 
       {:error, _} = error ->
         HexpmWeb.AuthHelpers.error(conn, error)
