@@ -37,9 +37,9 @@
              type="text"
              class="form-control"
              name="user_code"
-             value="<%= @user_code %>"
+             value="<%= format_user_code(@user_code) %>"
              placeholder="XXXX-XXXX"
-             pattern="[A-Z0-9]{4}-[A-Z0-9]{4}"
+             pattern="[A-Z0-9]{4}-?[A-Z0-9]{4}"
              maxlength="9"
              style="text-transform: uppercase; font-family: monospace; font-size: 18px; text-align: center;"
              required>

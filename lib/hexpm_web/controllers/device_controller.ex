@@ -3,6 +3,7 @@ defmodule HexpmWeb.DeviceController do
 
   alias Hexpm.OAuth.DeviceFlow
   alias HexpmWeb.Plugs.Attack
+  alias HexpmWeb.DeviceView
 
   plug :nillify_params, ["user_code"]
 
@@ -29,7 +30,8 @@ defmodule HexpmWeb.DeviceController do
               render_verification_form(conn, nil, message)
 
             :ok ->
-              case DeviceFlow.get_device_code_for_verification(code) do
+              normalized_code = DeviceView.normalize_user_code(code)
+              case DeviceFlow.get_device_code_for_verification(normalized_code) do
                 {:ok, device_code} ->
                   render_verification_form(conn, device_code, nil)
 
@@ -71,10 +73,12 @@ defmodule HexpmWeb.DeviceController do
         :ok ->
           case action do
             "authorize" ->
-              handle_authorization(conn, user_code, current_user)
+              normalized_code = DeviceView.normalize_user_code(user_code)
+              handle_authorization(conn, normalized_code, current_user)
 
             "deny" ->
-              handle_denial(conn, user_code)
+              normalized_code = DeviceView.normalize_user_code(user_code)
+              handle_denial(conn, normalized_code)
 
             _ ->
               render_verification_form(conn, nil, "Invalid action")
@@ -93,7 +97,9 @@ defmodule HexpmWeb.DeviceController do
     redirect_path =
       case user_code do
         nil -> ~p"/device"
-        code -> ~p"/device?user_code=#{code}"
+        code ->
+          normalized_code = DeviceView.normalize_user_code(code)
+          ~p"/device?user_code=#{normalized_code}"
       end
 
     ~p"/login?return=#{redirect_path}"

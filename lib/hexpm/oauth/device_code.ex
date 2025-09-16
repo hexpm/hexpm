@@ -128,19 +128,21 @@ defmodule Hexpm.OAuth.DeviceCode do
 
   Per RFC 8628, user codes should be short and easy for users to enter.
   Uses a character set without ambiguous characters (excludes 0, 1, I, O).
+  Returns 8 characters without formatting - UI formatting should be handled at presentation layer.
   """
   def generate_user_code do
     # Character set excludes ambiguous characters (0, 1, I, O) and vowels (A, E, U) to avoid forming words
     charset = "23456789BCDFGHJKLMNPQRSTVWXYZ"
+    charset_size = String.length(charset)
 
-    # Generate 8 random characters
-    code =
-      for _ <- 1..8, into: "" do
-        charset
-        |> String.at(:rand.uniform(String.length(charset)) - 1)
-      end
-
-    # Insert hyphen in the middle for readability (XXXX-XXXX)
-    String.slice(code, 0, 4) <> "-" <> String.slice(code, 4, 4)
+    # Generate 8 random characters using cryptographically secure randomness with uniform distribution
+    # Use 4 bytes of entropy per character to eliminate bias (2^32 >> 29)
+    1..8
+    |> Enum.map(fn _ ->
+      <<random_int::unsigned-32>> = :crypto.strong_rand_bytes(4)
+      index = rem(random_int, charset_size)
+      String.at(charset, index)
+    end)
+    |> Enum.join()
   end
 end

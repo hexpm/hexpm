@@ -222,13 +222,12 @@ defmodule Hexpm.OAuth.DeviceCodeTest do
     test "generates correctly formatted user code" do
       user_code = DeviceCode.generate_user_code()
 
-      # Should be in format XXXX-XXXX
-      assert String.length(user_code) == 9
-      assert String.contains?(user_code, "-")
+      # Should be 8 characters without formatting (formatting is UI concern)
+      assert String.length(user_code) == 8
+      refute String.contains?(user_code, "-")
 
-      [first_part, second_part] = String.split(user_code, "-")
-      assert String.length(first_part) == 4
-      assert String.length(second_part) == 4
+      # All characters should be from the allowed charset
+      assert String.match?(user_code, ~r/^[23456789BCDFGHJKLMNPQRSTVWXYZ]{8}$/)
     end
 
     test "generates codes without ambiguous characters" do
@@ -260,6 +259,27 @@ defmodule Hexpm.OAuth.DeviceCodeTest do
       Enum.each(String.graphemes(clean_code), fn char ->
         assert String.contains?(expected_charset, char),
                "User code contains unexpected character: #{char}"
+      end)
+    end
+
+    test "generates codes with uniform character distribution" do
+      # Generate many codes to check for obvious bias
+      codes = Enum.map(1..1000, fn _ -> DeviceCode.generate_user_code() end)
+
+      # Count frequency of each character
+      char_counts =
+        codes
+        |> Enum.join("")
+        |> String.graphemes()
+        |> Enum.frequencies()
+
+      # With 8000 characters (1000 codes * 8 chars) and 29 possible characters,
+      # each character should appear ~276 times on average
+      # We'll check that no character appears less than 200 times or more than 350 times
+      # This is a loose bound to catch obvious bias while avoiding flaky tests
+      Enum.each(char_counts, fn {char, count} ->
+        assert count >= 200 and count <= 350,
+               "Character '#{char}' appears #{count} times, expected roughly 276 ± 76"
       end)
     end
   end
