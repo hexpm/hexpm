@@ -193,14 +193,6 @@ defmodule Hexpm.Accounts.Key do
     "#{name}-#{max + 1}"
   end
 
-  @doc """
-  Verifies if the key has permission for the given domain and resource.
-  Delegates to the unified permission system in Hexpm.Permissions.
-  """
-  def verify_permissions?(%Key{} = key, domain, resource) do
-    Hexpm.Permissions.verify_access?(key, domain, resource)
-  end
-
   def revoked?(%Key{} = key) do
     not is_nil(key.revoke_at) and DateTime.compare(key.revoke_at, DateTime.utc_now()) == :lt
   end

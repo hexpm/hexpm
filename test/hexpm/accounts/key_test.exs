@@ -41,44 +41,46 @@ defmodule Hexpm.Accounts.KeyTest do
   end
 
   test "verify_permissions/3" do
+    alias Hexpm.Permissions
+
     key = build(:key, permissions: [build(:key_permission, domain: "repositories")])
-    refute Key.verify_permissions?(key, "api", "read")
-    refute Key.verify_permissions?(key, "api", "write")
-    assert Key.verify_permissions?(key, "repository", "foo")
-    assert Key.verify_permissions?(key, "repositories", nil)
+    refute Permissions.verify_access?(key, "api", "read")
+    refute Permissions.verify_access?(key, "api", "write")
+    assert Permissions.verify_access?(key, "repository", "foo")
+    assert Permissions.verify_access?(key, "repositories", nil)
 
     key =
       build(:key, permissions: [build(:key_permission, domain: "repository", resource: "foo")])
 
-    refute Key.verify_permissions?(key, "api", "read")
-    refute Key.verify_permissions?(key, "api", "write")
-    assert Key.verify_permissions?(key, "repository", "foo")
-    refute Key.verify_permissions?(key, "repository", "bar")
-    refute Key.verify_permissions?(key, "repositories", nil)
+    refute Permissions.verify_access?(key, "api", "read")
+    refute Permissions.verify_access?(key, "api", "write")
+    assert Permissions.verify_access?(key, "repository", "foo")
+    refute Permissions.verify_access?(key, "repository", "bar")
+    refute Permissions.verify_access?(key, "repositories", nil)
 
     key = build(:key, permissions: [build(:key_permission, domain: "docs", resource: "foo")])
-    refute Key.verify_permissions?(key, "api", "read")
-    refute Key.verify_permissions?(key, "api", "write")
-    assert Key.verify_permissions?(key, "docs", "foo")
-    refute Key.verify_permissions?(key, "docs", "bar")
-    refute Key.verify_permissions?(key, "repositories", nil)
+    refute Permissions.verify_access?(key, "api", "read")
+    refute Permissions.verify_access?(key, "api", "write")
+    assert Permissions.verify_access?(key, "docs", "foo")
+    refute Permissions.verify_access?(key, "docs", "bar")
+    refute Permissions.verify_access?(key, "repositories", nil)
 
     key = build(:key, permissions: [build(:key_permission, domain: "api")])
-    assert Key.verify_permissions?(key, "api", "read")
-    assert Key.verify_permissions?(key, "api", "write")
-    refute Key.verify_permissions?(key, "repository", "foo")
-    refute Key.verify_permissions?(key, "repositories", nil)
+    assert Permissions.verify_access?(key, "api", "read")
+    assert Permissions.verify_access?(key, "api", "write")
+    refute Permissions.verify_access?(key, "repository", "foo")
+    refute Permissions.verify_access?(key, "repositories", nil)
 
     key = build(:key, permissions: [build(:key_permission, domain: "api", resource: "read")])
-    assert Key.verify_permissions?(key, "api", "read")
-    refute Key.verify_permissions?(key, "api", "write")
-    refute Key.verify_permissions?(key, "repository", "foo")
-    refute Key.verify_permissions?(key, "repositories", nil)
+    assert Permissions.verify_access?(key, "api", "read")
+    refute Permissions.verify_access?(key, "api", "write")
+    refute Permissions.verify_access?(key, "repository", "foo")
+    refute Permissions.verify_access?(key, "repositories", nil)
 
     key = build(:key, permissions: [build(:key_permission, domain: "api", resource: "write")])
-    assert Key.verify_permissions?(key, "api", "read")
-    assert Key.verify_permissions?(key, "api", "write")
-    refute Key.verify_permissions?(key, "repository", "foo")
-    refute Key.verify_permissions?(key, "repositories", nil)
+    assert Permissions.verify_access?(key, "api", "read")
+    assert Permissions.verify_access?(key, "api", "write")
+    refute Permissions.verify_access?(key, "repository", "foo")
+    refute Permissions.verify_access?(key, "repositories", nil)
   end
 end

@@ -400,52 +400,60 @@ defmodule Hexpm.OAuth.TokenTest do
 
   describe "verify_permissions?/3" do
     test "validates api domain permissions" do
+      alias Hexpm.Permissions
+
       token_api = %Token{scopes: ["api"]}
       token_read = %Token{scopes: ["api:read"]}
       token_write = %Token{scopes: ["api:write"]}
 
       # "api" scope allows all api operations
-      assert Token.verify_permissions?(token_api, "api", nil)
-      assert Token.verify_permissions?(token_api, "api", "read")
-      assert Token.verify_permissions?(token_api, "api", "write")
+      assert Permissions.verify_access?(token_api, "api", nil)
+      assert Permissions.verify_access?(token_api, "api", "read")
+      assert Permissions.verify_access?(token_api, "api", "write")
 
       # "api:read" scope allows read operations
-      assert Token.verify_permissions?(token_read, "api", nil)
-      assert Token.verify_permissions?(token_read, "api", "read")
-      refute Token.verify_permissions?(token_read, "api", "write")
+      assert Permissions.verify_access?(token_read, "api", nil)
+      assert Permissions.verify_access?(token_read, "api", "read")
+      refute Permissions.verify_access?(token_read, "api", "write")
 
       # "api:write" scope allows read and write operations
-      assert Token.verify_permissions?(token_write, "api", nil)
-      assert Token.verify_permissions?(token_write, "api", "read")
-      assert Token.verify_permissions?(token_write, "api", "write")
+      assert Permissions.verify_access?(token_write, "api", nil)
+      assert Permissions.verify_access?(token_write, "api", "read")
+      assert Permissions.verify_access?(token_write, "api", "write")
     end
 
     test "validates package domain permissions" do
+      alias Hexpm.Permissions
+
       token_api = %Token{scopes: ["api"]}
       token_write = %Token{scopes: ["api:write"]}
       token_read = %Token{scopes: ["api:read"]}
 
       # "api" and "api:write" scopes allow package access
-      assert Token.verify_permissions?(token_api, "package", nil)
-      assert Token.verify_permissions?(token_write, "package", nil)
+      assert Permissions.verify_access?(token_api, "package", nil)
+      assert Permissions.verify_access?(token_write, "package", nil)
 
       # "api:read" does not allow package access
-      refute Token.verify_permissions?(token_read, "package", nil)
+      refute Permissions.verify_access?(token_read, "package", nil)
     end
 
     test "denies unknown domains" do
+      alias Hexpm.Permissions
+
       token = %Token{scopes: ["api"]}
 
-      refute Token.verify_permissions?(token, "unknown", nil)
-      refute Token.verify_permissions?(token, "repositories", "read")
+      refute Permissions.verify_access?(token, "unknown", nil)
+      refute Permissions.verify_access?(token, "repositories", "read")
     end
 
     test "requires matching scopes" do
+      alias Hexpm.Permissions
+
       token_empty = %Token{scopes: []}
       token_repo = %Token{scopes: ["repositories"]}
 
-      refute Token.verify_permissions?(token_empty, "api", nil)
-      refute Token.verify_permissions?(token_repo, "api", nil)
+      refute Permissions.verify_access?(token_empty, "api", nil)
+      refute Permissions.verify_access?(token_repo, "api", nil)
     end
   end
 

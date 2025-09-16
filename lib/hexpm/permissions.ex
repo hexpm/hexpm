@@ -7,7 +7,7 @@ defmodule Hexpm.Permissions do
   systems used by KeyPermission and OAuth tokens.
   """
 
-  alias Hexpm.Accounts.{Key, KeyPermission}
+  alias Hexpm.Accounts.{Key, KeyPermission, User, Organization}
   alias Hexpm.OAuth.Token
   alias Hexpm.Repository.Package
 
@@ -212,4 +212,19 @@ defmodule Hexpm.Permissions do
   end
 
   defp match_package_resource?(_permission_resource, _resource), do: false
+
+  @doc """
+  Verifies if a user or organization has access to a specific domain and resource.
+
+  This checks user-level permissions (e.g., package ownership, repository access)
+  rather than API key/token permissions. Used for validating that authenticated
+  users can actually access the resources they're trying to modify.
+  """
+  def verify_user_access(%User{} = user, domain, resource) do
+    User.verify_permissions(user, domain, resource)
+  end
+
+  def verify_user_access(%Organization{} = organization, domain, resource) do
+    Organization.verify_permissions(organization, domain, resource)
+  end
 end

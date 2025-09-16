@@ -244,21 +244,16 @@ defmodule Hexpm.OAuth.DeviceFlow do
   end
 
   defp build_verification_uri do
-    case Application.get_env(:hexpm, HexpmWeb.Endpoint)[:url] do
-      nil ->
-        "http://localhost:4000/device"
+    url_config = Application.get_env(:hexpm, HexpmWeb.Endpoint)[:url]
+    scheme = url_config[:scheme] || "https"
+    host = url_config[:host] || "hex.pm"
+    port = url_config[:port]
 
-      url_config ->
-        scheme = url_config[:scheme] || "https"
-        host = url_config[:host] || "hex.pm"
-        port = url_config[:port]
-
-        case port do
-          nil -> "#{scheme}://#{host}/device"
-          80 when scheme == "http" -> "#{scheme}://#{host}/device"
-          443 when scheme == "https" -> "#{scheme}://#{host}/device"
-          _ -> "#{scheme}://#{host}:#{port}/device"
-        end
+    case port do
+      nil -> "#{scheme}://#{host}/device"
+      80 when scheme == "http" -> "#{scheme}://#{host}/device"
+      443 when scheme == "https" -> "#{scheme}://#{host}/device"
+      _ -> "#{scheme}://#{host}:#{port}/device"
     end
   end
 

@@ -36,7 +36,7 @@ defmodule Hexpm.Accounts.KeyPermission do
     validate_change(changeset, :resource, fn _, resource ->
       domain = get_change(changeset, :domain)
 
-      case verify_permissions(user_or_organization, domain, resource) do
+      case Permissions.verify_user_access(user_or_organization, domain, resource) do
         {:ok, _} ->
           []
 
@@ -65,9 +65,4 @@ defmodule Hexpm.Accounts.KeyPermission do
     end)
   end
 
-  def verify_permissions(%User{} = user, domain, resource),
-    do: User.verify_permissions(user, domain, resource)
-
-  def verify_permissions(%Organization{} = organization, domain, resource),
-    do: Organization.verify_permissions(organization, domain, resource)
 end

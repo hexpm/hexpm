@@ -2,8 +2,7 @@ defmodule HexpmWeb.AuthHelpers do
   import Plug.Conn
   import HexpmWeb.ControllerHelpers, only: [render_error: 3]
 
-  alias Hexpm.Accounts.{Auth, Key, Organization, Organizations, User}
-  alias Hexpm.OAuth.Token
+  alias Hexpm.Accounts.{Auth, Organization, Organizations, User}
   alias Hexpm.Permissions
   alias Hexpm.Repository.{Package, Packages, PackageOwner, Repository}
 

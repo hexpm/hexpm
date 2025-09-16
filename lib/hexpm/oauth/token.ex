@@ -196,14 +196,6 @@ defmodule Hexpm.OAuth.Token do
     end
   end
 
-  @doc """
-  Verifies if the token has permission for the given domain and resource.
-  Delegates to the unified permission system in Hexpm.Permissions.
-  """
-  def verify_permissions?(%__MODULE__{} = token, domain, resource) do
-    Permissions.verify_access?(token, domain, resource)
-  end
-
   # Private functions
 
   defp validate_scopes(changeset) do
