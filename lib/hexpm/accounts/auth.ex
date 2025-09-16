@@ -27,7 +27,7 @@ defmodule Hexpm.Accounts.Auth do
         :error
 
       key ->
-        valid_auth = !key.user || !User.organization?(key.user)
+        valid_auth = !key.user || not User.organization?(key.user)
 
         if valid_auth && Hexpm.Utils.secure_check(key.secret_second, second) do
           if Key.revoked?(key) do
@@ -57,7 +57,7 @@ defmodule Hexpm.Accounts.Auth do
         organizations: :repository
       ])
 
-    valid_user = user && !User.organization?(user) && user.password
+    valid_user = user && not User.organization?(user) && user.password
 
     if valid_user && Bcrypt.verify_pass(password, user.password) do
       {:ok,
@@ -98,7 +98,7 @@ defmodule Hexpm.Accounts.Auth do
         :error
 
       {oauth_token, user} ->
-        valid_auth = user && !User.organization?(user)
+        valid_auth = user && not User.organization?(user)
 
         if valid_auth && Hexpm.Utils.secure_check(oauth_token.token_second, second) do
           if Token.valid?(oauth_token) do

@@ -11,7 +11,8 @@ defmodule HexpmWeb.OAuthController do
   def authorize(conn, params) do
     with {:ok, client} <- validate_client(params["client_id"]),
          {:ok, redirect_uri} <- validate_redirect_uri(client, params["redirect_uri"]),
-         {:ok, scopes} <- validate_scopes(client, params["scope"]) do
+         {:ok, scopes} <- validate_scopes(client, params["scope"]),
+         {:ok, _} <- validate_pkce_params(params) do
       if conn.assigns.current_user do
         # User is logged in, show authorization form
         render(conn, "authorize.html", %{
@@ -70,7 +71,8 @@ defmodule HexpmWeb.OAuthController do
   defp handle_authorization_approval(conn, user, params) do
     with {:ok, client} <- validate_client(params["client_id"]),
          {:ok, redirect_uri} <- validate_redirect_uri(client, params["redirect_uri"]),
-         {:ok, scopes} <- validate_scopes(client, params["scope"]) do
+         {:ok, scopes} <- validate_scopes(client, params["scope"]),
+         {:ok, _} <- validate_pkce_params(params) do
       auth_code_changeset =
         AuthorizationCode.create_for_user(
           user,
@@ -147,6 +149,25 @@ defmodule HexpmWeb.OAuthController do
       {:ok, scopes}
     else
       {:error, "Invalid scope"}
+    end
+  end
+
+  defp validate_pkce_params(params) do
+    code_challenge = params["code_challenge"]
+    code_challenge_method = params["code_challenge_method"]
+
+    cond do
+      is_nil(code_challenge) or code_challenge == "" ->
+        {:error, "Missing required parameter: code_challenge"}
+
+      is_nil(code_challenge_method) or code_challenge_method == "" ->
+        {:error, "Missing required parameter: code_challenge_method"}
+
+      code_challenge_method != "S256" ->
+        {:error, "Unsupported code_challenge_method. Only S256 is supported"}
+
+      true ->
+        {:ok, :valid}
     end
   end
 

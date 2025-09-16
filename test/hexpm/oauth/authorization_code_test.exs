@@ -14,7 +14,9 @@ defmodule Hexpm.OAuth.AuthorizationCodeTest do
                redirect_uri: "can't be blank",
                expires_at: "can't be blank",
                user_id: "can't be blank",
-               client_id: "can't be blank"
+               client_id: "can't be blank",
+               code_challenge: "can't be blank",
+               code_challenge_method: "can't be blank"
              } = errors_on(changeset)
     end
 
@@ -29,48 +31,12 @@ defmodule Hexpm.OAuth.AuthorizationCodeTest do
           scopes: ["invalid_scope", "api"],
           expires_at: expires_at,
           user_id: user.id,
-          client_id: "test_client"
-        })
-
-      assert %{scopes: "contains invalid scopes: invalid_scope"} = errors_on(changeset)
-    end
-
-    test "validates code challenge without method" do
-      user = create_user()
-      expires_at = DateTime.add(DateTime.utc_now(), 600, :second)
-
-      changeset =
-        AuthorizationCode.changeset(%AuthorizationCode{}, %{
-          code: "test_code",
-          redirect_uri: "https://example.com/callback",
-          scopes: ["api"],
-          expires_at: expires_at,
-          user_id: user.id,
           client_id: "test_client",
-          code_challenge: "challenge123"
-        })
-
-      assert %{code_challenge_method: "is required when code_challenge is specified"} =
-               errors_on(changeset)
-    end
-
-    test "validates code challenge method without challenge" do
-      user = create_user()
-      expires_at = DateTime.add(DateTime.utc_now(), 600, :second)
-
-      changeset =
-        AuthorizationCode.changeset(%AuthorizationCode{}, %{
-          code: "test_code",
-          redirect_uri: "https://example.com/callback",
-          scopes: ["api"],
-          expires_at: expires_at,
-          user_id: user.id,
-          client_id: "test_client",
+          code_challenge: "E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM",
           code_challenge_method: "S256"
         })
 
-      assert %{code_challenge: "is required when code_challenge_method is specified"} =
-               errors_on(changeset)
+      assert %{scopes: "contains invalid scopes: invalid_scope"} = errors_on(changeset)
     end
 
     test "validates invalid code challenge method" do
@@ -85,7 +51,7 @@ defmodule Hexpm.OAuth.AuthorizationCodeTest do
           expires_at: expires_at,
           user_id: user.id,
           client_id: "test_client",
-          code_challenge: "challenge123",
+          code_challenge: "E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM",
           code_challenge_method: "invalid"
         })
 
@@ -123,7 +89,9 @@ defmodule Hexpm.OAuth.AuthorizationCodeTest do
         scopes: ["api"],
         expires_at: expires_at,
         user_id: user.id,
-        client_id: "test_client"
+        client_id: "test_client",
+        code_challenge: "E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM",
+        code_challenge_method: "S256"
       }
 
       changeset = AuthorizationCode.build(attrs)
@@ -169,7 +137,8 @@ defmodule Hexpm.OAuth.AuthorizationCodeTest do
           user,
           "test_client",
           "https://example.com/callback",
-          ["api"]
+          ["api"],
+          code_challenge: "E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM"
         )
 
       assert changeset.valid?
@@ -188,6 +157,7 @@ defmodule Hexpm.OAuth.AuthorizationCodeTest do
           "test_client",
           "https://example.com/callback",
           ["api"],
+          code_challenge: "E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM",
           expires_in: 300
         )
 
@@ -309,12 +279,6 @@ defmodule Hexpm.OAuth.AuthorizationCodeTest do
   end
 
   describe "verify_code_challenge/2" do
-    test "returns true when no challenge is set" do
-      auth_code = %AuthorizationCode{code_challenge: nil}
-
-      assert AuthorizationCode.verify_code_challenge(auth_code, "any_verifier")
-    end
-
     test "validates S256 challenge method" do
       # Create a proper S256 challenge
       code_verifier = "dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk"

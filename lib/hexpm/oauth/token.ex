@@ -159,7 +159,7 @@ defmodule Hexpm.OAuth.Token do
   Checks if the token is valid (not expired and not revoked).
   """
   def valid?(%__MODULE__{} = token) do
-    !expired?(token) && !revoked?(token)
+    not expired?(token) and not revoked?(token)
   end
 
   @doc """

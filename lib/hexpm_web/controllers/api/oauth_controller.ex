@@ -211,10 +211,15 @@ defmodule HexpmWeb.API.OAuthController do
   end
 
   defp validate_pkce(auth_code, code_verifier) do
-    if Hexpm.OAuth.AuthorizationCode.verify_code_challenge(auth_code, code_verifier) do
-      :ok
-    else
-      {:error, :invalid_grant, "Invalid code verifier"}
+    cond do
+      is_nil(code_verifier) or code_verifier == "" ->
+        {:error, :invalid_grant, "Missing required parameter: code_verifier"}
+
+      not Hexpm.OAuth.AuthorizationCode.verify_code_challenge(auth_code, code_verifier) ->
+        {:error, :invalid_grant, "Invalid code verifier"}
+
+      true ->
+        :ok
     end
   end
 

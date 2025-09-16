@@ -37,7 +37,16 @@ defmodule Hexpm.OAuth.AuthorizationCode do
       :user_id,
       :client_id
     ])
-    |> validate_required([:code, :redirect_uri, :scopes, :expires_at, :user_id, :client_id])
+    |> validate_required([
+      :code,
+      :redirect_uri,
+      :scopes,
+      :expires_at,
+      :user_id,
+      :client_id,
+      :code_challenge,
+      :code_challenge_method
+    ])
     |> validate_scopes()
     |> validate_code_challenge()
     |> unique_constraint(:code)
@@ -72,20 +81,10 @@ defmodule Hexpm.OAuth.AuthorizationCode do
       scopes: scopes,
       expires_at: expires_at,
       user_id: user.id,
-      client_id: client_id
+      client_id: client_id,
+      code_challenge: Keyword.fetch!(opts, :code_challenge),
+      code_challenge_method: Keyword.get(opts, :code_challenge_method, "S256")
     }
-
-    # Add PKCE if provided
-    attrs =
-      case Keyword.get(opts, :code_challenge) do
-        nil ->
-          attrs
-
-        challenge ->
-          attrs
-          |> Map.put(:code_challenge, challenge)
-          |> Map.put(:code_challenge_method, Keyword.get(opts, :code_challenge_method, "S256"))
-      end
 
     build(attrs)
   end
@@ -107,7 +106,7 @@ defmodule Hexpm.OAuth.AuthorizationCode do
   Checks if the authorization code is valid (not expired and not used).
   """
   def valid?(%__MODULE__{} = auth_code) do
-    !expired?(auth_code) && !used?(auth_code)
+    not expired?(auth_code) and not used?(auth_code)
   end
 
   @doc """
@@ -121,8 +120,6 @@ defmodule Hexpm.OAuth.AuthorizationCode do
   Validates the PKCE code verifier against the stored code challenge.
   Only supports S256 method for enhanced security.
   """
-  def verify_code_challenge(%__MODULE__{code_challenge: nil}, _code_verifier), do: true
-
   def verify_code_challenge(
         %__MODULE__{code_challenge: challenge, code_challenge_method: "S256"},
         code_verifier
@@ -148,36 +145,16 @@ defmodule Hexpm.OAuth.AuthorizationCode do
   end
 
   defp validate_code_challenge(changeset) do
-    code_challenge = get_field(changeset, :code_challenge)
     code_challenge_method = get_field(changeset, :code_challenge_method)
 
-    cond do
-      is_nil(code_challenge) && is_nil(code_challenge_method) ->
-        changeset
-
-      is_nil(code_challenge) ->
-        add_error(
-          changeset,
-          :code_challenge,
-          "is required when code_challenge_method is specified"
-        )
-
-      is_nil(code_challenge_method) ->
-        add_error(
-          changeset,
-          :code_challenge_method,
-          "is required when code_challenge is specified"
-        )
-
-      code_challenge_method not in @valid_challenge_methods ->
-        add_error(
-          changeset,
-          :code_challenge_method,
-          "must be one of: #{Enum.join(@valid_challenge_methods, ", ")}"
-        )
-
-      true ->
-        changeset
+    if not is_nil(code_challenge_method) and code_challenge_method not in @valid_challenge_methods do
+      add_error(
+        changeset,
+        :code_challenge_method,
+        "must be one of: #{Enum.join(@valid_challenge_methods, ", ")}"
+      )
+    else
+      changeset
     end
   end
 end
