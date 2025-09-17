@@ -22,7 +22,7 @@ defmodule Hexpm.OAuth.AuthorizationCodeTest do
     end
 
     test "validates scopes" do
-      user = create_user()
+      user = insert(:user)
       expires_at = DateTime.add(DateTime.utc_now(), 600, :second)
 
       changeset =
@@ -41,7 +41,7 @@ defmodule Hexpm.OAuth.AuthorizationCodeTest do
     end
 
     test "validates invalid code challenge method" do
-      user = create_user()
+      user = insert(:user)
       expires_at = DateTime.add(DateTime.utc_now(), 600, :second)
 
       changeset =
@@ -60,7 +60,7 @@ defmodule Hexpm.OAuth.AuthorizationCodeTest do
     end
 
     test "creates valid changeset with all fields" do
-      user = create_user()
+      user = insert(:user)
       expires_at = DateTime.add(DateTime.utc_now(), 600, :second)
 
       changeset =
@@ -81,7 +81,7 @@ defmodule Hexpm.OAuth.AuthorizationCodeTest do
 
   describe "build/1" do
     test "builds authorization code with valid attributes" do
-      user = create_user()
+      user = insert(:user)
       expires_at = DateTime.add(DateTime.utc_now(), 600, :second)
 
       attrs = %{
@@ -152,8 +152,7 @@ defmodule Hexpm.OAuth.AuthorizationCodeTest do
 
   describe "create_for_user/4" do
     setup do
-      user = create_user()
-      %{user: user}
+      %{user: insert(:user)}
     end
 
     test "creates changeset with required fields", %{user: user} do
@@ -426,8 +425,4 @@ defmodule Hexpm.OAuth.AuthorizationCodeTest do
     end
   end
 
-  defp create_user do
-    import Hexpm.Factory
-    insert(:user)
-  end
 end

@@ -21,7 +21,7 @@ defmodule Hexpm.OAuth.TokenTest do
     end
 
     test "validates grant type inclusion" do
-      user = create_user()
+      user = insert(:user)
       expires_at = DateTime.add(DateTime.utc_now(), 3600, :second)
 
       changeset =
@@ -41,7 +41,7 @@ defmodule Hexpm.OAuth.TokenTest do
     end
 
     test "validates scopes" do
-      user = create_user()
+      user = insert(:user)
       expires_at = DateTime.add(DateTime.utc_now(), 3600, :second)
 
       changeset =
@@ -61,7 +61,7 @@ defmodule Hexpm.OAuth.TokenTest do
     end
 
     test "creates valid changeset with all fields" do
-      user = create_user()
+      user = insert(:user)
       expires_at = DateTime.add(DateTime.utc_now(), 3600, :second)
 
       attrs = %{
@@ -87,7 +87,7 @@ defmodule Hexpm.OAuth.TokenTest do
 
   describe "build/1" do
     test "builds token with valid attributes" do
-      user = create_user()
+      user = insert(:user)
       expires_at = DateTime.add(DateTime.utc_now(), 3600, :second)
 
       attrs = %{
@@ -185,7 +185,7 @@ defmodule Hexpm.OAuth.TokenTest do
 
   describe "create_for_user/6" do
     setup do
-      user = create_user()
+      user = insert(:user)
       %{user: user}
     end
 
@@ -457,8 +457,4 @@ defmodule Hexpm.OAuth.TokenTest do
     end
   end
 
-  defp create_user do
-    import Hexpm.Factory
-    insert(:user)
-  end
 end

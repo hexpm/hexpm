@@ -83,7 +83,7 @@ defmodule Hexpm.OAuth.DeviceFlowTest do
     end
 
     test "returns token for authorized device code", %{device_code: device_code} do
-      user = create_user()
+      user = insert(:user)
 
       # Authorize the device
       {:ok, _} = DeviceFlow.authorize_device(device_code.user_code, user)
@@ -102,7 +102,7 @@ defmodule Hexpm.OAuth.DeviceFlowTest do
     setup do
       {:ok, response} = DeviceFlow.initiate_device_authorization("test_client", ["api"])
       device_code = Repo.get_by(DeviceCode, device_code: response.device_code)
-      user = create_user()
+      user = insert(:user)
       %{device_code: device_code, user: user}
     end
 
@@ -194,7 +194,7 @@ defmodule Hexpm.OAuth.DeviceFlowTest do
 
     test "returns error for already processed device code", %{device_code: device_code} do
       # Mark as authorized
-      user = create_user()
+      user = insert(:user)
       DeviceFlow.authorize_device(device_code.user_code, user)
 
       assert {:error, :already_processed} =
@@ -223,8 +223,4 @@ defmodule Hexpm.OAuth.DeviceFlowTest do
     end
   end
 
-  defp create_user do
-    import Hexpm.Factory
-    insert(:user)
-  end
 end

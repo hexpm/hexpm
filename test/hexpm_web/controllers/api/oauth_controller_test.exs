@@ -115,7 +115,7 @@ defmodule HexpmWeb.API.OAuthControllerTest do
       device_code: device_code
     } do
       # Authorize the device first
-      user = create_user()
+      user = insert(:user)
       {:ok, _} = DeviceFlow.authorize_device(device_code.user_code, user)
 
       conn =
@@ -188,7 +188,7 @@ defmodule HexpmWeb.API.OAuthControllerTest do
 
   describe "POST /api/oauth/token with refresh_token grant" do
     setup %{client: client} do
-      user = create_user()
+      user = insert(:user)
       {:ok, response} = DeviceFlow.initiate_device_authorization(client.client_id, ["api"])
       device_code = Repo.get_by(Hexpm.OAuth.DeviceCode, device_code: response.device_code)
 
@@ -306,8 +306,4 @@ defmodule HexpmWeb.API.OAuthControllerTest do
     end
   end
 
-  defp create_user do
-    import Hexpm.Factory
-    insert(:user)
-  end
 end

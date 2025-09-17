@@ -10,7 +10,7 @@ defmodule HexpmWeb.DeviceControllerTest do
     end
 
     test "shows verification form when authenticated" do
-      user = create_user()
+      user = insert(:user)
       conn = login_user(build_conn(), user)
 
       conn = get(conn, ~p"/oauth/device")
@@ -19,7 +19,7 @@ defmodule HexpmWeb.DeviceControllerTest do
     end
 
     test "shows device info when valid user_code provided" do
-      user = create_user()
+      user = insert(:user)
       conn = login_user(build_conn(), user)
 
       {:ok, response} = DeviceFlow.initiate_device_authorization("test_client", ["api"])
@@ -31,7 +31,7 @@ defmodule HexpmWeb.DeviceControllerTest do
     end
 
     test "shows error for invalid user_code" do
-      user = create_user()
+      user = insert(:user)
       conn = login_user(build_conn(), user)
 
       conn = get(conn, ~p"/oauth/device?user_code=INVALID")
@@ -50,7 +50,7 @@ defmodule HexpmWeb.DeviceControllerTest do
 
   describe "POST /oauth/device" do
     setup do
-      user = create_user()
+      user = insert(:user)
       {:ok, response} = DeviceFlow.initiate_device_authorization("test_client", ["api"])
       device_code = Repo.get_by(DeviceCode, device_code: response.device_code)
       %{user: user, device_code: device_code}
@@ -181,10 +181,6 @@ defmodule HexpmWeb.DeviceControllerTest do
     end
   end
 
-  defp create_user do
-    import Hexpm.Factory
-    insert(:user)
-  end
 
   defp login_user(conn, user) do
     conn
@@ -194,7 +190,7 @@ defmodule HexpmWeb.DeviceControllerTest do
 
   describe "device verification rate limiting" do
     setup do
-      user = create_user()
+      user = insert(:user)
       {:ok, response} = DeviceFlow.initiate_device_authorization("test_client", ["api"])
       %{user: user, user_code: response.user_code}
     end
