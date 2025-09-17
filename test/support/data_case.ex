@@ -21,6 +21,9 @@ defmodule Hexpm.DataCase do
       import Mox
       import Hexpm.{DataCase, Factory, TestHelpers}
 
+      use ExUnitProperties
+      import StreamData
+
       alias Hexpm.{Fake, Repo}
     end
   end
