@@ -55,19 +55,6 @@ defmodule HexpmWeb.API.OAuthControllerTest do
       assert device_code.scopes == ["api:read", "api:write"]
     end
 
-    test "uses default scope when none provided", %{client: client} do
-      conn =
-        post(build_conn(), ~p"/api/oauth/device_authorization", %{
-          "client_id" => client.client_id
-        })
-
-      assert json_response(conn, 200)
-      response = json_response(conn, 200)
-
-      device_code = Repo.get_by(Hexpm.OAuth.DeviceCode, device_code: response["device_code"])
-      assert device_code.scopes == ["api"]
-    end
-
     test "returns error for missing client_id" do
       conn = post(build_conn(), ~p"/api/oauth/device_authorization", %{})
 

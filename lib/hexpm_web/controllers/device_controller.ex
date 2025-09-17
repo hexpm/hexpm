@@ -31,6 +31,7 @@ defmodule HexpmWeb.DeviceController do
 
             :ok ->
               normalized_code = DeviceView.normalize_user_code(code)
+
               case DeviceFlow.get_device_code_for_verification(normalized_code) do
                 {:ok, device_code} ->
                   render_verification_form(conn, device_code, nil)
@@ -91,12 +92,12 @@ defmodule HexpmWeb.DeviceController do
     render_verification_form(conn, nil, "Missing verification code")
   end
 
-  # Private functions
-
   defp build_login_redirect_path(user_code) do
     redirect_path =
       case user_code do
-        nil -> ~p"/device"
+        nil ->
+          ~p"/device"
+
         code ->
           normalized_code = DeviceView.normalize_user_code(code)
           ~p"/device?user_code=#{normalized_code}"

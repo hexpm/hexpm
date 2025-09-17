@@ -131,8 +131,6 @@ defmodule Hexpm.OAuth.AuthorizationCode do
     challenge == computed_challenge
   end
 
-  # Private functions
-
   defp validate_scopes(changeset) do
     validate_change(changeset, :scopes, fn :scopes, scopes ->
       case Permissions.validate_scopes(scopes) do

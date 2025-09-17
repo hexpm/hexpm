@@ -196,8 +196,6 @@ defmodule Hexpm.OAuth.Token do
     end
   end
 
-  # Private functions
-
   defp validate_scopes(changeset) do
     validate_change(changeset, :scopes, fn :scopes, scopes ->
       case Permissions.validate_scopes(scopes) do

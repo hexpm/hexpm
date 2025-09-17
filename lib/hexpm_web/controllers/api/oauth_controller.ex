@@ -59,8 +59,6 @@ defmodule HexpmWeb.API.OAuthController do
     end
   end
 
-  # Private functions
-
   defp get_grant_type(%{"grant_type" => grant_type}), do: grant_type
   defp get_grant_type(_), do: nil
 
@@ -169,11 +167,8 @@ defmodule HexpmWeb.API.OAuthController do
     end
   end
 
-  defp validate_scopes(_client, nil), do: {:ok, ["api"]}
-  defp validate_scopes(_client, ""), do: {:ok, ["api"]}
-
   defp validate_scopes(client, scope_string) do
-    scopes = String.split(scope_string, " ", trim: true)
+    scopes = String.split(scope_string || "", " ", trim: true)
 
     if Client.supports_scopes?(client, scopes) do
       {:ok, scopes}

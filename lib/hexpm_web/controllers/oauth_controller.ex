@@ -66,8 +66,6 @@ defmodule HexpmWeb.OAuthController do
     end
   end
 
-  # Private functions
-
   defp handle_authorization_approval(conn, user, params) do
     with {:ok, client} <- validate_client(params["client_id"]),
          {:ok, redirect_uri} <- validate_redirect_uri(client, params["redirect_uri"]),
@@ -139,11 +137,8 @@ defmodule HexpmWeb.OAuthController do
     end
   end
 
-  defp validate_scopes(_client, nil), do: {:ok, ["api"]}
-  defp validate_scopes(_client, ""), do: {:ok, ["api"]}
-
   defp validate_scopes(client, scope_string) do
-    scopes = String.split(scope_string, " ", trim: true)
+    scopes = String.split(scope_string || "", " ", trim: true)
 
     if Client.supports_scopes?(client, scopes) do
       {:ok, scopes}
