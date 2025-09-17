@@ -456,5 +456,4 @@ defmodule Hexpm.OAuth.TokenTest do
       refute Permissions.verify_access?(token_repo, "api", nil)
     end
   end
-
 end

@@ -424,5 +424,4 @@ defmodule Hexpm.OAuth.AuthorizationCodeTest do
       end
     end
   end
-
 end

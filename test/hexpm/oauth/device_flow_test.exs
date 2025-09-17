@@ -222,5 +222,4 @@ defmodule Hexpm.OAuth.DeviceFlowTest do
       assert updated_device_code.status == "expired"
     end
   end
-
 end

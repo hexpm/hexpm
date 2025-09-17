@@ -181,7 +181,6 @@ defmodule HexpmWeb.DeviceControllerTest do
     end
   end
 
-
   defp login_user(conn, user) do
     conn
     |> init_test_session(%{})
