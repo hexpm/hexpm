@@ -361,5 +361,4 @@ defmodule Hexpm.OAuth.DeviceCodeTest do
       assert get_field(expire_changeset, :status) == "expired"
     end
   end
-
 end

@@ -305,5 +305,4 @@ defmodule HexpmWeb.API.OAuthControllerTest do
       assert response["error_description"] == "Refresh token expired or revoked"
     end
   end
-
 end
