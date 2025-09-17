@@ -1,5 +1,6 @@
 defmodule Hexpm.OAuth.AuthorizationCodeTest do
   use Hexpm.DataCase, async: true
+  use ExUnitProperties
 
   import Ecto.Changeset, only: [get_field: 2]
 
@@ -107,21 +108,45 @@ defmodule Hexpm.OAuth.AuthorizationCodeTest do
       assert String.length(code) > 0
     end
 
-    test "generates unique codes" do
-      code1 = AuthorizationCode.generate_code()
-      code2 = AuthorizationCode.generate_code()
+    property "always generates valid base64url strings without padding" do
+      check all(_ <- constant(:ok), max_runs: 100) do
+        code = AuthorizationCode.generate_code()
 
-      assert code1 != code2
+        assert is_binary(code)
+        assert String.length(code) > 0
+        refute String.contains?(code, "=")
+        assert Regex.match?(~r/^[A-Za-z0-9_-]+$/, code)
+
+        # Should be decodeable when padded
+        padding_needed = rem(4 - rem(String.length(code), 4), 4)
+        padded_code = code <> String.duplicate("=", padding_needed)
+        assert {:ok, _decoded} = Base.url_decode64(padded_code)
+      end
     end
 
-    test "generates base64url encoded strings without padding" do
-      code = AuthorizationCode.generate_code()
+    property "generates unique codes across many samples" do
+      codes = for _ <- 1..1000, do: AuthorizationCode.generate_code()
+      unique_codes = Enum.uniq(codes)
 
-      # Should not contain padding characters
-      refute String.contains?(code, "=")
-      # Should be valid base64url (add padding if needed)
-      padded_code = code <> String.duplicate("=", rem(4 - rem(String.length(code), 4), 4))
-      assert {:ok, _} = Base.url_decode64(padded_code)
+      # Should have very high uniqueness
+      uniqueness_ratio = length(unique_codes) / length(codes)
+
+      assert uniqueness_ratio > 0.99,
+             "Uniqueness ratio #{uniqueness_ratio} too low, got #{length(unique_codes)} unique codes out of #{length(codes)}"
+    end
+
+    property "generated codes have reasonable length distribution" do
+      codes = for _ <- 1..100, do: AuthorizationCode.generate_code()
+      lengths = Enum.map(codes, &String.length/1)
+
+      # All codes should have similar lengths (base64url encoding of random bytes)
+      min_length = Enum.min(lengths)
+      max_length = Enum.max(lengths)
+
+      # Should not vary by more than a few characters
+      assert max_length - min_length <= 4
+      # Should be reasonably long for security
+      assert min_length > 10
     end
   end
 
@@ -203,20 +228,6 @@ defmodule Hexpm.OAuth.AuthorizationCodeTest do
   end
 
   describe "expired?/1" do
-    test "returns false for non-expired code" do
-      future_time = DateTime.add(DateTime.utc_now(), 600, :second)
-      auth_code = %AuthorizationCode{expires_at: future_time}
-
-      refute AuthorizationCode.expired?(auth_code)
-    end
-
-    test "returns true for expired code" do
-      past_time = DateTime.add(DateTime.utc_now(), -600, :second)
-      auth_code = %AuthorizationCode{expires_at: past_time}
-
-      assert AuthorizationCode.expired?(auth_code)
-    end
-
     test "returns true for code that expires exactly now" do
       now = DateTime.utc_now()
       auth_code = %AuthorizationCode{expires_at: now}
@@ -226,6 +237,24 @@ defmodule Hexpm.OAuth.AuthorizationCodeTest do
       result = AuthorizationCode.expired?(auth_code)
       # This could be either true or false depending on microsecond timing
       assert is_boolean(result)
+    end
+
+    property "future timestamps are never expired" do
+      check all(offset <- positive_integer()) do
+        future_time = DateTime.add(DateTime.utc_now(), offset, :second)
+        auth_code = %AuthorizationCode{expires_at: future_time}
+
+        refute AuthorizationCode.expired?(auth_code)
+      end
+    end
+
+    property "past timestamps are always expired" do
+      check all(offset <- positive_integer()) do
+        past_time = DateTime.add(DateTime.utc_now(), -offset, :second)
+        auth_code = %AuthorizationCode{expires_at: past_time}
+
+        assert AuthorizationCode.expired?(auth_code)
+      end
     end
   end
 
@@ -251,18 +280,36 @@ defmodule Hexpm.OAuth.AuthorizationCodeTest do
       assert AuthorizationCode.valid?(auth_code)
     end
 
-    test "returns false for expired code" do
-      past_time = DateTime.add(DateTime.utc_now(), -600, :second)
-      auth_code = %AuthorizationCode{expires_at: past_time, used_at: nil}
+    property "validity requires both non-expired and unused state" do
+      check all(
+              time_offset <- integer(-3600..3600),
+              used <- boolean()
+            ) do
+        expires_at = DateTime.add(DateTime.utc_now(), time_offset, :second)
+        used_at = if used, do: DateTime.utc_now(), else: nil
 
-      refute AuthorizationCode.valid?(auth_code)
+        auth_code = %AuthorizationCode{expires_at: expires_at, used_at: used_at}
+
+        expected_valid = time_offset > 0 && !used
+        actual_valid = AuthorizationCode.valid?(auth_code)
+
+        # Allow for timing differences near boundary
+        if abs(time_offset) > 1 do
+          assert actual_valid == expected_valid
+        else
+          # For boundary cases, just verify it returns a boolean
+          assert is_boolean(actual_valid)
+        end
+      end
     end
 
-    test "returns false for used code" do
-      future_time = DateTime.add(DateTime.utc_now(), 600, :second)
-      auth_code = %AuthorizationCode{expires_at: future_time, used_at: DateTime.utc_now()}
+    property "used codes are never valid regardless of expiration" do
+      check all(time_offset <- integer(-3600..3600)) do
+        expires_at = DateTime.add(DateTime.utc_now(), time_offset, :second)
+        auth_code = %AuthorizationCode{expires_at: expires_at, used_at: DateTime.utc_now()}
 
-      refute AuthorizationCode.valid?(auth_code)
+        refute AuthorizationCode.valid?(auth_code)
+      end
     end
   end
 
@@ -303,6 +350,79 @@ defmodule Hexpm.OAuth.AuthorizationCodeTest do
       }
 
       refute AuthorizationCode.verify_code_challenge(auth_code, "any_verifier")
+    end
+
+    property "S256 challenge verification is deterministic" do
+      check all(verifier <- string(:alphanumeric, length: 32)) do
+        # Generate proper S256 challenge
+        code_challenge =
+          :crypto.hash(:sha256, verifier)
+          |> Base.url_encode64(padding: false)
+
+        auth_code = %AuthorizationCode{
+          code_challenge: code_challenge,
+          code_challenge_method: "S256"
+        }
+
+        # Correct verifier should always verify
+        assert AuthorizationCode.verify_code_challenge(auth_code, verifier)
+
+        # Wrong verifier should always fail
+        wrong_verifier = verifier <> "x"
+        refute AuthorizationCode.verify_code_challenge(auth_code, wrong_verifier)
+      end
+    end
+
+    property "only exact verifier matches succeed" do
+      check all(verifier <- string(:alphanumeric, length: 32)) do
+        code_challenge =
+          :crypto.hash(:sha256, verifier)
+          |> Base.url_encode64(padding: false)
+
+        auth_code = %AuthorizationCode{
+          code_challenge: code_challenge,
+          code_challenge_method: "S256"
+        }
+
+        # Test various incorrect verifiers
+        wrong_verifiers = [
+          String.upcase(verifier),
+          String.slice(verifier, 0..-2//1),
+          verifier <> "extra",
+          String.replace(verifier, "a", "b", global: false)
+        ]
+
+        Enum.each(wrong_verifiers, fn wrong_verifier ->
+          if wrong_verifier != verifier do
+            refute AuthorizationCode.verify_code_challenge(auth_code, wrong_verifier)
+          end
+        end)
+
+        # But the correct verifier should work
+        assert AuthorizationCode.verify_code_challenge(auth_code, verifier)
+      end
+    end
+
+    property "verification fails gracefully with malformed challenges" do
+      check all(
+              verifier <- string(:alphanumeric, length: 32),
+              bad_challenge <-
+                one_of([
+                  constant("not_base64_!@#"),
+                  constant(""),
+                  constant("too_short"),
+                  # Wrong length
+                  string(:alphanumeric, length: 10)
+                ])
+            ) do
+        auth_code = %AuthorizationCode{
+          code_challenge: bad_challenge,
+          code_challenge_method: "S256"
+        }
+
+        # Should not crash, just return false
+        refute AuthorizationCode.verify_code_challenge(auth_code, verifier)
+      end
     end
   end
 

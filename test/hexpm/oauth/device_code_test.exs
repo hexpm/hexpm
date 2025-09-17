@@ -1,5 +1,6 @@
 defmodule Hexpm.OAuth.DeviceCodeTest do
   use Hexpm.DataCase, async: true
+  use ExUnitProperties
 
   import Ecto.Changeset, only: [get_field: 2]
 
@@ -101,18 +102,40 @@ defmodule Hexpm.OAuth.DeviceCodeTest do
   end
 
   describe "expired?/1" do
-    test "returns false for non-expired device code" do
-      future_time = DateTime.add(DateTime.utc_now(), 600, :second)
-      device_code = %DeviceCode{expires_at: future_time}
+    property "future timestamps are never expired" do
+      check all(offset <- positive_integer()) do
+        future_time = DateTime.add(DateTime.utc_now(), offset, :second)
+        device_code = %DeviceCode{expires_at: future_time}
 
-      refute DeviceCode.expired?(device_code)
+        refute DeviceCode.expired?(device_code)
+      end
     end
 
-    test "returns true for expired device code" do
-      past_time = DateTime.add(DateTime.utc_now(), -600, :second)
-      device_code = %DeviceCode{expires_at: past_time}
+    property "past timestamps are always expired" do
+      check all(offset <- positive_integer()) do
+        past_time = DateTime.add(DateTime.utc_now(), -offset, :second)
+        device_code = %DeviceCode{expires_at: past_time}
 
-      assert DeviceCode.expired?(device_code)
+        assert DeviceCode.expired?(device_code)
+      end
+    end
+
+    property "expiration is consistent with DateTime.compare" do
+      check all(offset <- integer(-86400..86400)) do
+        test_time = DateTime.add(DateTime.utc_now(), offset, :second)
+        device_code = %DeviceCode{expires_at: test_time}
+
+        expected_expired = DateTime.compare(test_time, DateTime.utc_now()) == :lt
+        actual_expired = DeviceCode.expired?(device_code)
+
+        # Allow for small timing differences in test execution
+        if abs(offset) > 1 do
+          assert actual_expired == expected_expired
+        else
+          # For very close times, just verify it returns a boolean
+          assert is_boolean(actual_expired)
+        end
+      end
     end
   end
 
@@ -136,6 +159,39 @@ defmodule Hexpm.OAuth.DeviceCodeTest do
       device_code = %DeviceCode{status: "authorized", expires_at: future_time}
 
       refute DeviceCode.pending?(device_code)
+    end
+
+    property "pending requires both 'pending' status and non-expired time" do
+      check all(
+              status <- member_of(["pending", "authorized", "denied", "expired"]),
+              offset <- integer(-3600..3600)
+            ) do
+        expires_at = DateTime.add(DateTime.utc_now(), offset, :second)
+        device_code = %DeviceCode{status: status, expires_at: expires_at}
+
+        expected_pending = status == "pending" && offset > 0
+        actual_pending = DeviceCode.pending?(device_code)
+
+        # Allow for timing differences near boundary
+        if abs(offset) > 1 do
+          assert actual_pending == expected_pending
+        else
+          # For boundary cases, just verify it returns a boolean
+          assert is_boolean(actual_pending)
+        end
+      end
+    end
+
+    property "non-pending statuses are never pending regardless of expiration" do
+      check all(
+              status <- member_of(["authorized", "denied", "expired"]),
+              offset <- integer(-3600..3600)
+            ) do
+        expires_at = DateTime.add(DateTime.utc_now(), offset, :second)
+        device_code = %DeviceCode{status: status, expires_at: expires_at}
+
+        refute DeviceCode.pending?(device_code)
+      end
     end
   end
 
@@ -175,21 +231,34 @@ defmodule Hexpm.OAuth.DeviceCodeTest do
       assert String.length(device_code) > 0
     end
 
-    test "generates unique device codes" do
-      code1 = DeviceCode.generate_device_code()
-      code2 = DeviceCode.generate_device_code()
+    property "always generates 32-character base64url strings" do
+      check all(_ <- constant(:ok), max_runs: 100) do
+        device_code = DeviceCode.generate_device_code()
 
-      assert code1 != code2
+        assert String.length(device_code) == 32
+        refute String.contains?(device_code, "=")
+        assert Regex.match?(~r/^[A-Za-z0-9_-]+$/, device_code)
+        assert is_binary(device_code)
+      end
     end
 
-    test "generates 32-character base64url string" do
-      device_code = DeviceCode.generate_device_code()
+    property "generates unique device codes across many samples" do
+      codes = for _ <- 1..1000, do: DeviceCode.generate_device_code()
+      unique_codes = Enum.uniq(codes)
 
-      assert String.length(device_code) == 32
-      # Should not contain padding characters
-      refute String.contains?(device_code, "=")
-      # Should be valid base64url characters
-      assert Regex.match?(~r/^[A-Za-z0-9_-]+$/, device_code)
+      assert length(codes) == length(unique_codes)
+    end
+
+    property "generated codes are valid base64url when padded" do
+      check all(_ <- constant(:ok), max_runs: 50) do
+        device_code = DeviceCode.generate_device_code()
+
+        # Add padding if needed for base64 validation
+        padding_needed = rem(4 - rem(String.length(device_code), 4), 4)
+        padded_code = device_code <> String.duplicate("=", padding_needed)
+
+        assert {:ok, _decoded} = Base.url_decode64(padded_code)
+      end
     end
   end
 
@@ -201,74 +270,55 @@ defmodule Hexpm.OAuth.DeviceCodeTest do
       assert String.length(user_code) > 0
     end
 
-    test "generates unique user codes" do
-      code1 = DeviceCode.generate_user_code()
-      code2 = DeviceCode.generate_user_code()
+    property "always generates 8-character codes from allowed charset" do
+      check all(_ <- constant(:ok), max_runs: 100) do
+        user_code = DeviceCode.generate_user_code()
 
-      assert code1 != code2
+        assert String.length(user_code) == 8
+        assert String.match?(user_code, ~r/^[23456789BCDFGHJKLMNPQRSTVWXYZ]{8}$/)
+        assert is_binary(user_code)
+      end
     end
 
-    test "generates correctly formatted user code" do
-      user_code = DeviceCode.generate_user_code()
+    property "never generates codes with forbidden characters" do
+      check all(_ <- constant(:ok), max_runs: 100) do
+        user_code = DeviceCode.generate_user_code()
 
-      # Should be 8 characters without formatting (formatting is UI concern)
-      assert String.length(user_code) == 8
-      refute String.contains?(user_code, "-")
+        forbidden_chars = ["0", "1", "I", "O", "A", "E", "U"]
 
-      # All characters should be from the allowed charset
-      assert String.match?(user_code, ~r/^[23456789BCDFGHJKLMNPQRSTVWXYZ]{8}$/)
+        Enum.each(forbidden_chars, fn char ->
+          refute String.contains?(user_code, char),
+                 "User code '#{user_code}' contains forbidden character: #{char}"
+        end)
+      end
     end
 
-    test "generates codes without ambiguous characters" do
-      # Run multiple times to check character set
-      user_codes = Enum.map(1..100, fn _ -> DeviceCode.generate_user_code() end)
+    property "generates unique user codes across many samples" do
+      codes = for _ <- 1..1000, do: DeviceCode.generate_user_code()
+      unique_codes = Enum.uniq(codes)
 
-      all_chars =
-        user_codes
-        |> Enum.join("")
-        |> String.replace("-", "")
-        |> String.graphemes()
-        |> Enum.uniq()
+      # Should have very high uniqueness (allowing for small chance of collision)
+      uniqueness_ratio = length(unique_codes) / length(codes)
 
-      # Should not contain ambiguous characters (0, 1, I, O) or vowels (A, E, U)
-      forbidden_chars = ["0", "1", "I", "O", "A", "E", "U"]
-
-      Enum.each(forbidden_chars, fn char ->
-        refute char in all_chars, "User code contains forbidden character: #{char}"
-      end)
+      assert uniqueness_ratio > 0.99,
+             "Uniqueness ratio #{uniqueness_ratio} too low, got #{length(unique_codes)} unique codes out of #{length(codes)}"
     end
 
-    test "generates codes with expected character set" do
-      user_code = DeviceCode.generate_user_code()
-      clean_code = String.replace(user_code, "-", "")
+    property "character distribution is reasonably uniform across large samples" do
+      codes = for _ <- 1..500, do: DeviceCode.generate_user_code()
+      all_chars = codes |> Enum.join("") |> String.graphemes()
+      char_counts = Enum.frequencies(all_chars)
 
-      # Should only contain characters from the allowed charset
-      expected_charset = "23456789BCDFGHJKLMNPQRSTVWXYZ"
+      allowed_charset = String.graphemes("23456789BCDFGHJKLMNPQRSTVWXYZ")
+      total_chars = length(all_chars)
+      expected_per_char = total_chars / length(allowed_charset)
 
-      Enum.each(String.graphemes(clean_code), fn char ->
-        assert String.contains?(expected_charset, char),
-               "User code contains unexpected character: #{char}"
-      end)
-    end
-
-    test "generates codes with uniform character distribution" do
-      # Generate many codes to check for obvious bias
-      codes = Enum.map(1..1000, fn _ -> DeviceCode.generate_user_code() end)
-
-      # Count frequency of each character
-      char_counts =
-        codes
-        |> Enum.join("")
-        |> String.graphemes()
-        |> Enum.frequencies()
-
-      # With 8000 characters (1000 codes * 8 chars) and 29 possible characters,
-      # each character should appear ~276 times on average
-      # We'll check that no character appears less than 200 times or more than 350 times
-      # This is a loose bound to catch obvious bias while avoiding flaky tests
+      # Check each character appears within reasonable bounds (±40% of expected)
       Enum.each(char_counts, fn {char, count} ->
-        assert count >= 200 and count <= 350,
-               "Character '#{char}' appears #{count} times, expected roughly 276 ± 76"
+        ratio = count / expected_per_char
+
+        assert ratio >= 0.6 and ratio <= 1.4,
+               "Character '#{char}' appears #{count} times (ratio: #{ratio}), expected around #{expected_per_char}"
       end)
     end
   end

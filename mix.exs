@@ -53,6 +53,7 @@ defmodule Hexpm.MixProject do
       {:libcluster, "~> 3.0"},
       {:logster, "~> 1.0"},
       {:mox, "~> 1.0", only: :test},
+      {:stream_data, "~> 1.0", only: :test},
       {:phoenix_ecto, "~> 4.0"},
       {:phoenix_html, "~> 4.0"},
       {:phoenix_html_helpers, "~> 1.0"},
