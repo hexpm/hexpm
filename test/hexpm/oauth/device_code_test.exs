@@ -71,7 +71,7 @@ defmodule Hexpm.OAuth.DeviceCodeTest do
 
   describe "authorize_changeset/2" do
     test "creates changeset to authorize device code" do
-      user = create_user()
+      user = insert(:user)
       device_code = %DeviceCode{status: "pending"}
 
       changeset = DeviceCode.authorize_changeset(device_code, user)
@@ -343,7 +343,7 @@ defmodule Hexpm.OAuth.DeviceCodeTest do
     end
 
     test "handles all valid status transitions" do
-      user = create_user()
+      user = insert(:user)
 
       # Start with pending
       device_code = %DeviceCode{status: "pending"}
@@ -362,8 +362,4 @@ defmodule Hexpm.OAuth.DeviceCodeTest do
     end
   end
 
-  defp create_user do
-    import Hexpm.Factory
-    insert(:user)
-  end
 end
