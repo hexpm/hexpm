@@ -13,8 +13,9 @@ defmodule Hexpm.Permissions do
 
   # Consolidated scope definitions - single source of truth
   @api_scopes ~w(api api:read api:write)
-  @resource_scopes ~w(repositories package repository docs)
-  @all_scopes @api_scopes ++ @resource_scopes
+  @simple_scopes ~w(repositories)
+  @resource_only_scopes ~w(package repository docs)
+  @all_scopes @api_scopes ++ @simple_scopes
 
   # Legacy domain list for KeyPermission compatibility
   @legacy_domains ~w(api package repository repositories docs)
@@ -31,13 +32,31 @@ defmodule Hexpm.Permissions do
 
   @doc """
   Validates a list of scopes against the allowed scope definitions.
+  Supports both simple scopes and resource-specific scopes (e.g., package:decimal).
   """
   def validate_scopes(scopes) when is_list(scopes) do
-    invalid_scopes = Enum.reject(scopes, &(&1 in @all_scopes))
+    invalid_scopes = Enum.reject(scopes, &valid_scope?/1)
 
     case invalid_scopes do
       [] -> :ok
       _ -> {:error, "contains invalid scopes: #{Enum.join(invalid_scopes, ", ")}"}
+    end
+  end
+
+  defp valid_scope?(scope) do
+    case String.split(scope, ":", parts: 2) do
+      [scope_name] ->
+        scope_name in @all_scopes
+
+      [scope_name, _resource] when scope_name in @resource_only_scopes ->
+        # Allow resource-specific scopes for package, repository, and docs
+        true
+
+      ["api", sub] when sub in ["read", "write"] ->
+        true
+
+      _ ->
+        false
     end
   end
 
@@ -58,13 +77,25 @@ defmodule Hexpm.Permissions do
   Examples:
   - %{domain: "api", resource: "read"} -> "api:read"
   - %{domain: "api", resource: nil} -> "api"
-  - %{domain: "package", resource: "hexpm/poison"} -> "package"
+  - %{domain: "package", resource: "hexpm/poison"} -> "package:hexpm/poison"
+  - %{domain: "repository", resource: "acme"} -> "repository:acme"
   """
   def permission_to_scope(%{domain: domain, resource: resource}) do
     case {domain, resource} do
-      {"api", nil} -> "api"
-      {"api", resource} when resource in ["read", "write"] -> "#{domain}:#{resource}"
-      {domain, _} -> domain
+      {"api", nil} ->
+        "api"
+
+      {"api", resource} when resource in ["read", "write"] ->
+        "#{domain}:#{resource}"
+
+      {domain, nil} ->
+        domain
+
+      {domain, resource} when domain in ["package", "repository"] and is_binary(resource) ->
+        "#{domain}:#{resource}"
+
+      {domain, _} ->
+        domain
     end
   end
 
@@ -75,6 +106,8 @@ defmodule Hexpm.Permissions do
   - "api:read" -> %{domain: "api", resource: "read"}
   - "api" -> %{domain: "api", resource: nil}
   - "package" -> %{domain: "package", resource: nil}
+  - "package:hexpm/poison" -> %{domain: "package", resource: "hexpm/poison"}
+  - "repository:acme" -> %{domain: "repository", resource: "acme"}
   """
   def scope_to_permission(scope) when is_binary(scope) do
     case String.split(scope, ":", parts: 2) do
@@ -114,15 +147,26 @@ defmodule Hexpm.Permissions do
   end
 
   defp normalize_permission(%KeyPermission{domain: domain, resource: resource}) do
-    %{domain: domain, resource: resource, scope: permission_to_scope(%{domain: domain, resource: resource}), is_oauth_scope: false}
+    %{
+      domain: domain,
+      resource: resource,
+      scope: permission_to_scope(%{domain: domain, resource: resource}),
+      is_oauth_scope: false
+    }
   end
 
   defp normalize_permission(%{domain: domain, resource: resource}) do
-    %{domain: domain, resource: resource, scope: permission_to_scope(%{domain: domain, resource: resource}), is_oauth_scope: false}
+    %{
+      domain: domain,
+      resource: resource,
+      scope: permission_to_scope(%{domain: domain, resource: resource}),
+      is_oauth_scope: false
+    }
   end
 
   defp normalize_permission(scope) when is_binary(scope) do
     permission = scope_to_permission(scope)
+
     Map.put(permission, :scope, scope)
     |> Map.put(:is_oauth_scope, true)
   end
@@ -132,20 +176,36 @@ defmodule Hexpm.Permissions do
     Enum.any?(permissions, fn perm ->
       case perm do
         # Direct API scope matches (OAuth scopes)
-        %{scope: "api", is_oauth_scope: true} -> true
-        %{scope: "api:read", is_oauth_scope: true} when resource in [nil, "read"] -> true
-        %{scope: "api:write", is_oauth_scope: true} when resource in [nil, "read", "write"] -> true
+        %{scope: "api", is_oauth_scope: true} ->
+          true
+
+        %{scope: "api:read", is_oauth_scope: true} when resource in [nil, "read"] ->
+          true
+
+        %{scope: "api:write", is_oauth_scope: true} when resource in [nil, "read", "write"] ->
+          true
 
         # Legacy domain/resource format (KeyPermissions)
-        %{domain: "api", resource: nil, is_oauth_scope: false} -> true
-        %{domain: "api", resource: "read", is_oauth_scope: false} when resource in [nil, "read"] -> true
-        %{domain: "api", resource: "write", is_oauth_scope: false} when resource in [nil, "read", "write"] -> true
+        %{domain: "api", resource: nil, is_oauth_scope: false} ->
+          true
+
+        %{domain: "api", resource: "read", is_oauth_scope: false}
+        when resource in [nil, "read"] ->
+          true
+
+        %{domain: "api", resource: "write", is_oauth_scope: false}
+        when resource in [nil, "read", "write"] ->
+          true
 
         # Package permission implies api:read (both OAuth and KeyPermission)
-        %{domain: "package", is_oauth_scope: false} when resource in [nil, "read"] -> true
-        %{scope: "package", is_oauth_scope: true} when resource in [nil, "read"] -> true
+        %{domain: "package", is_oauth_scope: false} when resource in [nil, "read"] ->
+          true
 
-        _ -> false
+        %{scope: "package", is_oauth_scope: true} when resource in [nil, "read"] ->
+          true
+
+        _ ->
+          false
       end
     end)
   end
@@ -154,21 +214,34 @@ defmodule Hexpm.Permissions do
     Enum.any?(permissions, fn perm ->
       case perm do
         # OAuth scope-based matching - these are true OAuth scopes
-        %{scope: "api", is_oauth_scope: true} -> true
-        %{scope: "api:write", is_oauth_scope: true} -> true
-        %{scope: "package", is_oauth_scope: true} -> true
+        %{scope: "api", is_oauth_scope: true} ->
+          true
 
-        # Legacy KeyPermission matching with specific package resource
-        # Only allow when we have an actual Package struct to verify against
-        %{domain: "package", resource: package_resource, is_oauth_scope: false} when is_binary(package_resource) ->
+        %{scope: "api:write", is_oauth_scope: true} ->
+          true
+
+        # OAuth package scope with resource restriction
+        %{scope: "package:" <> package_resource, is_oauth_scope: true}
+        when is_binary(package_resource) ->
           case resource do
             %Package{} = pkg -> match_package_resource?(package_resource, pkg)
             _ -> false
           end
 
-        %{domain: "package", resource: nil, is_oauth_scope: false} -> true
+        # Legacy KeyPermission matching with specific package resource
+        # Only allow when we have an actual Package struct to verify against
+        %{domain: "package", resource: package_resource, is_oauth_scope: false}
+        when is_binary(package_resource) ->
+          case resource do
+            %Package{} = pkg -> match_package_resource?(package_resource, pkg)
+            _ -> false
+          end
 
-        _ -> false
+        %{domain: "package", resource: nil, is_oauth_scope: false} ->
+          true
+
+        _ ->
+          false
       end
     end)
   end
@@ -186,10 +259,23 @@ defmodule Hexpm.Permissions do
   defp check_access?(permissions, "repository", resource) when is_binary(resource) do
     Enum.any?(permissions, fn perm ->
       case perm do
-        %{scope: "repositories"} -> true
-        %{domain: "repositories"} -> true
-        %{domain: "repository", resource: ^resource} -> true
-        _ -> false
+        # OAuth repository scope with resource restriction
+        %{scope: "repository:" <> repo_resource, is_oauth_scope: true} ->
+          repo_resource == resource
+
+        # OAuth repositories scope (grants access to all repositories)
+        %{scope: "repositories"} ->
+          true
+
+        # Legacy domain-based permissions
+        %{domain: "repositories"} ->
+          true
+
+        %{domain: "repository", resource: ^resource} ->
+          true
+
+        _ ->
+          false
       end
     end)
   end
@@ -226,5 +312,43 @@ defmodule Hexpm.Permissions do
 
   def verify_user_access(%Organization{} = organization, domain, resource) do
     Organization.verify_permissions(organization, domain, resource)
+  end
+
+  @doc """
+  Returns a human-readable description for OAuth scopes.
+
+  Supports all scope types including resource-specific scopes.
+  Raises an error for unknown scopes to ensure all scopes are properly documented.
+  """
+  def scope_description(scope) when is_binary(scope) do
+    case scope do
+      "api" ->
+        "Complete access to your Hex account and packages"
+
+      "api:read" ->
+        "Read-only access to your Hex account and packages"
+
+      "api:write" ->
+        "Read and write access to your Hex account and packages"
+
+      "repositories" ->
+        "Access to all private repositories you have permission to"
+
+      # Resource-specific scopes
+      scope ->
+        case String.split(scope, ":", parts: 2) do
+          ["package", resource] ->
+            "Manage the #{resource} package"
+
+          ["repository", resource] ->
+            "Access to the #{resource} private repository"
+
+          ["docs", resource] ->
+            "Fetch documentation for the #{resource} organization"
+
+          _ ->
+            raise ArgumentError, "Unknown scope: #{scope}. All scopes must have descriptions."
+        end
+    end
   end
 end

@@ -99,7 +99,7 @@ defmodule HexpmWeb.DeviceControllerTest do
       assert updated_device_code.status == "denied"
     end
 
-    test "defaults to authorize action when action not specified", %{
+    test "shows error when action not specified", %{
       user: user,
       device_code: device_code
     } do
@@ -110,10 +110,11 @@ defmodule HexpmWeb.DeviceControllerTest do
           "user_code" => device_code.user_code
         })
 
-      assert html_response(conn, 200) =~ "Device has been successfully authorized!"
+      assert html_response(conn, 200) =~ "Invalid action"
 
+      # Verify device was not processed
       updated_device_code = Repo.get(DeviceCode, device_code.id)
-      assert updated_device_code.status == "authorized"
+      assert updated_device_code.status == "pending"
     end
 
     test "shows error for invalid user_code", %{user: user} do
@@ -218,7 +219,10 @@ defmodule HexpmWeb.DeviceControllerTest do
       end
     end
 
-    test "POST /oauth/device rate limiting applies to requests", %{user: user, user_code: user_code} do
+    test "POST /oauth/device rate limiting applies to requests", %{
+      user: user,
+      user_code: user_code
+    } do
       conn =
         build_conn()
         |> login_user(user)

@@ -155,7 +155,7 @@ defmodule HexpmWeb.API.OAuthController do
   defp authenticate_client(params) do
     with {:ok, client} <- validate_client(params["client_id"]) do
       if Client.requires_authentication?(client) do
-        case Client.authenticate(client, params["client_secret"]) do
+        case Client.authenticate?(client, params["client_secret"]) do
           true -> {:ok, client}
           false -> {:error, :invalid_client, "Invalid client credentials"}
         end

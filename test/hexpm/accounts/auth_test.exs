@@ -10,7 +10,13 @@ defmodule Hexpm.Accounts.AuthTest do
 
   describe "password_auth/2" do
     test "authorizes correct password", %{user: user, password: password} do
-      assert {:ok, %{user: auth_user, email: email, auth_credential: auth_credential, organization: organization}} =
+      assert {:ok,
+              %{
+                user: auth_user,
+                email: email,
+                auth_credential: auth_credential,
+                organization: organization
+              }} =
                Auth.password_auth(user.username, password)
 
       assert auth_user.id == user.id
@@ -29,7 +35,13 @@ defmodule Hexpm.Accounts.AuthTest do
     test "authorizes correct key", %{user: user} do
       key = insert(:key, user: user)
 
-      assert {:ok, %{user: auth_user, auth_credential: auth_key, email: email, organization: organization}} =
+      assert {:ok,
+              %{
+                user: auth_user,
+                auth_credential: auth_key,
+                email: email,
+                organization: organization
+              }} =
                Auth.key_auth(key.user_secret, %{})
 
       assert auth_key.id == key.id

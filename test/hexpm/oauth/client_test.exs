@@ -179,29 +179,29 @@ defmodule Hexpm.OAuth.ClientTest do
     end
   end
 
-  describe "authenticate/2" do
+  describe "authenticate?/2" do
     test "validates correct credentials for confidential client" do
       hashed_secret = Bcrypt.hash_pwd_salt("secret123")
       client = %Client{client_secret: hashed_secret}
 
-      assert Client.authenticate(client, "secret123")
+      assert Client.authenticate?(client, "secret123")
     end
 
     test "rejects incorrect credentials for confidential client" do
       hashed_secret = Bcrypt.hash_pwd_salt("secret123")
       client = %Client{client_secret: hashed_secret}
 
-      refute Client.authenticate(client, "wrong_secret")
-      refute Client.authenticate(client, nil)
-      refute Client.authenticate(client, "")
+      refute Client.authenticate?(client, "wrong_secret")
+      refute Client.authenticate?(client, nil)
+      refute Client.authenticate?(client, "")
     end
 
     test "always succeeds for public client" do
       client = %Client{client_secret: nil}
 
-      assert Client.authenticate(client, "any_secret")
-      assert Client.authenticate(client, nil)
-      assert Client.authenticate(client, "")
+      assert Client.authenticate?(client, "any_secret")
+      assert Client.authenticate?(client, nil)
+      assert Client.authenticate?(client, "")
     end
   end
 
