@@ -21,14 +21,12 @@ defmodule Hexpm.OAuth.DeviceCode do
     timestamps()
   end
 
-  @doc """
-  Valid statuses for device authorization flow:
-  - "pending": Waiting for user authorization
-  - "authorized": User has authorized the device
-  - "expired": Device code has expired
-  - "denied": User has denied authorization
-  """
-  def valid_statuses, do: ~w(pending authorized expired denied)
+  # Valid statuses for device authorization flow:
+  # - "pending": Waiting for user authorization
+  # - "authorized": User has authorized the device
+  # - "expired": Device code has expired
+  # - "denied": User has denied authorization
+  @valid_statuses ~w(pending authorized expired denied)
 
   @doc """
   Creates a changeset for device code creation.
@@ -52,7 +50,7 @@ defmodule Hexpm.OAuth.DeviceCode do
       :client_id,
       :expires_at
     ])
-    |> validate_inclusion(:status, valid_statuses())
+    |> validate_inclusion(:status, @valid_statuses)
     |> validate_number(:interval, greater_than: 0)
     |> unique_constraint(:device_code)
     |> unique_constraint(:user_code)

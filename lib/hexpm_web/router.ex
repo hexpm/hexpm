@@ -81,12 +81,11 @@ defmodule HexpmWeb.Router do
     get "/email/verification", EmailVerificationController, :show
     post "/email/verification", EmailVerificationController, :create
 
-    get "/device", DeviceController, :show
-    post "/device", DeviceController, :create
-
     # OAuth 2.0 authorization endpoints (web interface)
     get "/oauth/authorize", OAuthController, :authorize
     post "/oauth/authorize", OAuthController, :consent
+    get "/oauth/device", DeviceController, :show
+    post "/oauth/device", DeviceController, :create
 
     get "/dashboard", DashboardController, :index
 

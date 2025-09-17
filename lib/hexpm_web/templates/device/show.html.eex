@@ -14,7 +14,7 @@
 
   <p>A device is requesting authorization to access your Hex account with the permissions listed above.</p>
 
-  <%= form_tag(~p"/device", method: "post") do %>
+  <%= form_tag(~p"/oauth/device", method: "post") do %>
     <input type="hidden" name="user_code" value="<%= @device_code.user_code %>">
 
     <div class="form-actions">
@@ -30,7 +30,7 @@
 <% else %>
   <p>Enter the verification code displayed on your device:</p>
 
-  <%= form_tag(~p"/device", method: "get") do %>
+  <%= form_tag(~p"/oauth/device", method: "get") do %>
     <div class="form-group">
       <label for="user_code">Verification Code</label>
       <input id="user_code"

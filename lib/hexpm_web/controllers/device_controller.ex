@@ -10,8 +10,8 @@ defmodule HexpmWeb.DeviceController do
   @doc """
   Shows the device verification page.
 
-  GET /device
-  GET /device?user_code=XXXX-XXXX
+  GET /oauth/device
+  GET /oauth/device?user_code=XXXX-XXXX
   """
   def show(conn, params) do
     user_code = params["user_code"]
@@ -55,7 +55,7 @@ defmodule HexpmWeb.DeviceController do
   @doc """
   Handles device authorization or denial.
 
-  POST /device
+  POST /oauth/device
   """
   def create(conn, %{"user_code" => user_code} = params) do
     # Default to "authorize" if no action specified
@@ -96,11 +96,11 @@ defmodule HexpmWeb.DeviceController do
     redirect_path =
       case user_code do
         nil ->
-          ~p"/device"
+          ~p"/oauth/device"
 
         code ->
           normalized_code = DeviceView.normalize_user_code(code)
-          ~p"/device?user_code=#{normalized_code}"
+          ~p"/oauth/device?user_code=#{normalized_code}"
       end
 
     ~p"/login?return=#{redirect_path}"

@@ -3,9 +3,9 @@ defmodule HexpmWeb.DeviceControllerTest do
 
   alias Hexpm.OAuth.{DeviceFlow, DeviceCode}
 
-  describe "GET /device" do
+  describe "GET /oauth/device" do
     test "redirects to login when not authenticated" do
-      conn = get(build_conn(), ~p"/device")
+      conn = get(build_conn(), ~p"/oauth/device")
       assert redirected_to(conn) =~ "/login"
     end
 
@@ -13,7 +13,7 @@ defmodule HexpmWeb.DeviceControllerTest do
       user = create_user()
       conn = login_user(build_conn(), user)
 
-      conn = get(conn, ~p"/device")
+      conn = get(conn, ~p"/oauth/device")
       assert html_response(conn, 200) =~ "Device Authorization"
       assert html_response(conn, 200) =~ "Enter the verification code"
     end
@@ -24,7 +24,7 @@ defmodule HexpmWeb.DeviceControllerTest do
 
       {:ok, response} = DeviceFlow.initiate_device_authorization("test_client", ["api"])
 
-      conn = get(conn, ~p"/device?user_code=#{response.user_code}")
+      conn = get(conn, ~p"/oauth/device?user_code=#{response.user_code}")
       assert html_response(conn, 200) =~ "Device Authorization"
       assert html_response(conn, 200) =~ "test_client"
       assert html_response(conn, 200) =~ "Authorize Device"
@@ -34,21 +34,21 @@ defmodule HexpmWeb.DeviceControllerTest do
       user = create_user()
       conn = login_user(build_conn(), user)
 
-      conn = get(conn, ~p"/device?user_code=INVALID")
+      conn = get(conn, ~p"/oauth/device?user_code=INVALID")
       assert html_response(conn, 200) =~ "Invalid verification code"
     end
 
     test "redirects to login with return path for user_code" do
       {:ok, response} = DeviceFlow.initiate_device_authorization("test_client", ["api"])
 
-      conn = get(build_conn(), ~p"/device?user_code=#{response.user_code}")
+      conn = get(build_conn(), ~p"/oauth/device?user_code=#{response.user_code}")
       assert redirected_to(conn) =~ "/login"
       assert redirected_to(conn) =~ "return="
       assert redirected_to(conn) =~ "%3Fuser_code%3D"
     end
   end
 
-  describe "POST /device" do
+  describe "POST /oauth/device" do
     setup do
       user = create_user()
       {:ok, response} = DeviceFlow.initiate_device_authorization("test_client", ["api"])
@@ -58,7 +58,7 @@ defmodule HexpmWeb.DeviceControllerTest do
 
     test "redirects to login when not authenticated", %{device_code: device_code} do
       conn =
-        post(build_conn(), ~p"/device", %{
+        post(build_conn(), ~p"/oauth/device", %{
           "user_code" => device_code.user_code,
           "action" => "authorize"
         })
@@ -70,7 +70,7 @@ defmodule HexpmWeb.DeviceControllerTest do
       conn = login_user(build_conn(), user)
 
       conn =
-        post(conn, ~p"/device", %{
+        post(conn, ~p"/oauth/device", %{
           "user_code" => device_code.user_code,
           "action" => "authorize"
         })
@@ -87,7 +87,7 @@ defmodule HexpmWeb.DeviceControllerTest do
       conn = login_user(build_conn(), user)
 
       conn =
-        post(conn, ~p"/device", %{
+        post(conn, ~p"/oauth/device", %{
           "user_code" => device_code.user_code,
           "action" => "deny"
         })
@@ -106,7 +106,7 @@ defmodule HexpmWeb.DeviceControllerTest do
       conn = login_user(build_conn(), user)
 
       conn =
-        post(conn, ~p"/device", %{
+        post(conn, ~p"/oauth/device", %{
           "user_code" => device_code.user_code
         })
 
@@ -120,7 +120,7 @@ defmodule HexpmWeb.DeviceControllerTest do
       conn = login_user(build_conn(), user)
 
       conn =
-        post(conn, ~p"/device", %{
+        post(conn, ~p"/oauth/device", %{
           "user_code" => "INVALID",
           "action" => "authorize"
         })
@@ -136,7 +136,7 @@ defmodule HexpmWeb.DeviceControllerTest do
       conn = login_user(build_conn(), user)
 
       conn =
-        post(conn, ~p"/device", %{
+        post(conn, ~p"/oauth/device", %{
           "user_code" => device_code.user_code,
           "action" => "authorize"
         })
@@ -151,7 +151,7 @@ defmodule HexpmWeb.DeviceControllerTest do
       conn = login_user(build_conn(), user)
 
       conn =
-        post(conn, ~p"/device", %{
+        post(conn, ~p"/oauth/device", %{
           "user_code" => device_code.user_code,
           "action" => "authorize"
         })
@@ -163,7 +163,7 @@ defmodule HexpmWeb.DeviceControllerTest do
       conn = login_user(build_conn(), user)
 
       conn =
-        post(conn, ~p"/device", %{
+        post(conn, ~p"/oauth/device", %{
           "user_code" => device_code.user_code,
           "action" => "invalid"
         })
@@ -174,7 +174,7 @@ defmodule HexpmWeb.DeviceControllerTest do
     test "shows error when user_code is missing", %{user: user} do
       conn = login_user(build_conn(), user)
 
-      conn = post(conn, ~p"/device", %{})
+      conn = post(conn, ~p"/oauth/device", %{})
 
       assert html_response(conn, 200) =~ "Missing verification code"
     end
@@ -198,14 +198,14 @@ defmodule HexpmWeb.DeviceControllerTest do
       %{user: user, user_code: response.user_code}
     end
 
-    test "GET /device rate limiting function exists and is called", %{
+    test "GET /oauth/device rate limiting function exists and is called", %{
       user: user,
       user_code: user_code
     } do
       conn =
         build_conn()
         |> login_user(user)
-        |> get(~p"/device?user_code=#{user_code}")
+        |> get(~p"/oauth/device?user_code=#{user_code}")
 
       # Should get a valid response
       assert html_response(conn, 200)
@@ -218,11 +218,11 @@ defmodule HexpmWeb.DeviceControllerTest do
       end
     end
 
-    test "POST /device rate limiting applies to requests", %{user: user, user_code: user_code} do
+    test "POST /oauth/device rate limiting applies to requests", %{user: user, user_code: user_code} do
       conn =
         build_conn()
         |> login_user(user)
-        |> post(~p"/device", %{"user_code" => user_code, "action" => "deny"})
+        |> post(~p"/oauth/device", %{"user_code" => user_code, "action" => "deny"})
 
       # Should get a valid response
       assert html_response(conn, 200)

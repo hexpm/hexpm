@@ -250,10 +250,10 @@ defmodule Hexpm.OAuth.DeviceFlow do
     port = url_config[:port]
 
     case port do
-      nil -> "#{scheme}://#{host}/device"
-      80 when scheme == "http" -> "#{scheme}://#{host}/device"
-      443 when scheme == "https" -> "#{scheme}://#{host}/device"
-      _ -> "#{scheme}://#{host}:#{port}/device"
+      nil -> "#{scheme}://#{host}/oauth/device"
+      80 when scheme == "http" -> "#{scheme}://#{host}/oauth/device"
+      443 when scheme == "https" -> "#{scheme}://#{host}/oauth/device"
+      _ -> "#{scheme}://#{host}:#{port}/oauth/device"
     end
   end
 

@@ -68,17 +68,6 @@ defmodule Hexpm.OAuth.DeviceCodeTest do
     end
   end
 
-  describe "valid_statuses/0" do
-    test "returns expected statuses" do
-      statuses = DeviceCode.valid_statuses()
-      assert "pending" in statuses
-      assert "authorized" in statuses
-      assert "expired" in statuses
-      assert "denied" in statuses
-      assert length(statuses) == 4
-    end
-  end
-
   describe "authorize_changeset/2" do
     test "creates changeset to authorize device code" do
       user = create_user()
