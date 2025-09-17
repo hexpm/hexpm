@@ -13,7 +13,7 @@
           <h4>Requested permissions:</h4>
           <ul>
             <%= for scope <- @scopes do %>
-              <li><%= scope_description(scope) %></li>
+              <li><%= Hexpm.Permissions.scope_description(scope) %></li>
             <% end %>
           </ul>
 
@@ -46,11 +46,3 @@
   </div>
 </div>
 
-<%
-defp scope_description("api"), do: "Full access to your account"
-defp scope_description("api:read"), do: "Read access to your packages and account"
-defp scope_description("api:write"), do: "Write access to your packages"
-defp scope_description("repositories"), do: "Access to private repositories"
-defp scope_description("package"), do: "Package management"
-defp scope_description(scope), do: scope
-%>

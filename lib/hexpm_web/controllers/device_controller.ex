@@ -58,12 +58,7 @@ defmodule HexpmWeb.DeviceController do
   POST /oauth/device
   """
   def create(conn, %{"user_code" => user_code} = params) do
-    # Default to "authorize" if no action specified
-    action = params["action"] || "authorize"
-
-    unless logged_in?(conn) do
-      redirect(conn, to: build_login_redirect_path(user_code))
-    else
+    if logged_in?(conn) do
       current_user = conn.assigns.current_user
 
       # Check rate limits before processing any device operations
@@ -72,7 +67,7 @@ defmodule HexpmWeb.DeviceController do
           render_verification_form(conn, nil, message)
 
         :ok ->
-          case action do
+          case params["action"] do
             "authorize" ->
               normalized_code = DeviceView.normalize_user_code(user_code)
               handle_authorization(conn, normalized_code, current_user)
@@ -85,6 +80,8 @@ defmodule HexpmWeb.DeviceController do
               render_verification_form(conn, nil, "Invalid action")
           end
       end
+    else
+      redirect(conn, to: build_login_redirect_path(user_code))
     end
   end
 

@@ -9,7 +9,7 @@ defmodule HexpmWeb.Router do
     plug :accepts, ["html"]
     plug :fetch_session
     plug :fetch_flash
-    # plug :protect_from_forgery
+    plug :protect_from_forgery
     plug :put_secure_browser_headers
     plug :user_agent, required: false
     plug :validate_url
@@ -81,7 +81,6 @@ defmodule HexpmWeb.Router do
     get "/email/verification", EmailVerificationController, :show
     post "/email/verification", EmailVerificationController, :create
 
-    # OAuth 2.0 authorization endpoints (web interface)
     get "/oauth/authorize", OAuthController, :authorize
     post "/oauth/authorize", OAuthController, :consent
     get "/oauth/device", DeviceController, :show
@@ -285,7 +284,6 @@ defmodule HexpmWeb.Router do
     post "/short_url", ShortURLController, :create
     get "/auth", AuthController, :show
 
-    # OAuth 2.0 API endpoints
     post "/oauth/token", OAuthController, :token
     post "/oauth/device_authorization", OAuthController, :device_authorization
   end

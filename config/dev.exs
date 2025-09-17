@@ -52,3 +52,7 @@ config :hexpm, Hexpm.RepoBase,
   pool_size: 5
 
 config :hexpm, Hexpm.Emails.Mailer, adapter: Bamboo.LocalAdapter
+
+config :hexpm, :hcaptcha,
+  sitekey: "06765239-73e4-4429-977e-ea623e011d42",
+  secret: "0xFfC4BFE83999df2631905c9A57CA08620d38A03f"

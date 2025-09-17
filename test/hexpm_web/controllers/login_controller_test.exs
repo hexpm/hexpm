@@ -92,7 +92,10 @@ defmodule HexpmWeb.LoginControllerTest do
     url_size = byte_size(url)
     assert <<^url::binary-size(url_size), key::binary>> = redirected_to(conn)
 
-    assert {:ok, %{auth_credential: auth_key, user: _user, organization: _organization, email: _email}} = Auth.key_auth(key, [])
+    assert {:ok,
+            %{auth_credential: auth_key, user: _user, organization: _organization, email: _email}} =
+             Auth.key_auth(key, [])
+
     assert auth_key.revoke_at
     refute auth_key.public
     assert hd(auth_key.permissions).domain == "docs"

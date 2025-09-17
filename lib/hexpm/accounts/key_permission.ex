@@ -64,5 +64,4 @@ defmodule Hexpm.Accounts.KeyPermission do
       end
     end)
   end
-
 end

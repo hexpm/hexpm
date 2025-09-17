@@ -13,8 +13,7 @@ defmodule HexpmWeb.OAuthController do
          {:ok, redirect_uri} <- validate_redirect_uri(client, params["redirect_uri"]),
          {:ok, scopes} <- validate_scopes(client, params["scope"]),
          {:ok, _} <- validate_pkce_params(params) do
-      if conn.assigns.current_user do
-        # User is logged in, show authorization form
+      if logged_in?(conn) do
         render(conn, "authorize.html", %{
           client: client,
           redirect_uri: redirect_uri,
@@ -24,7 +23,6 @@ defmodule HexpmWeb.OAuthController do
           code_challenge_method: params["code_challenge_method"]
         })
       else
-        # Redirect to login with return path
         return_path = request_url(conn) |> URI.encode_www_form()
         redirect(conn, to: ~p"/login?return=#{return_path}")
       end

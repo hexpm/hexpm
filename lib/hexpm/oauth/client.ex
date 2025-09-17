@@ -76,11 +76,12 @@ defmodule Hexpm.OAuth.Client do
   @doc """
   Validates client credentials.
   """
-  def authenticate(%__MODULE__{client_secret: secret}, provided_secret) when not is_nil(secret) do
+  def authenticate?(%__MODULE__{client_secret: secret}, provided_secret)
+      when not is_nil(secret) do
     Bcrypt.verify_pass(provided_secret || "", secret)
   end
 
-  def authenticate(%__MODULE__{client_secret: nil}, _), do: true
+  def authenticate?(%__MODULE__{client_secret: nil}, _), do: true
 
   @doc """
   Generates a client secret for confidential clients.
