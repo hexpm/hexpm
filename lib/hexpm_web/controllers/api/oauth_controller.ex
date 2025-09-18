@@ -3,11 +3,11 @@ defmodule HexpmWeb.API.OAuthController do
 
   alias Hexpm.Repo
   alias Hexpm.OAuth.DeviceFlow
-  alias Hexpm.OAuth.{Client, Token}
+  alias Hexpm.OAuth.{Client, Token, TokenExchange}
 
   @doc """
   Standard OAuth 2.0 token endpoint for API access.
-  Handles multiple grant types: authorization_code, device_code, refresh_token.
+  Handles multiple grant types: authorization_code, device_code, refresh_token, token-exchange.
   """
   def token(conn, params) do
     case get_grant_type(params) do
@@ -19,6 +19,9 @@ defmodule HexpmWeb.API.OAuthController do
 
       "refresh_token" ->
         handle_refresh_token_grant(conn, params)
+
+      "urn:ietf:params:oauth:grant-type:token-exchange" ->
+        handle_token_exchange_grant(conn, params)
 
       invalid_grant ->
         render_oauth_error(
@@ -56,6 +59,21 @@ defmodule HexpmWeb.API.OAuthController do
     else
       {:error, error} ->
         render_oauth_error(conn, :invalid_client, error)
+    end
+  end
+
+  @doc """
+  OAuth 2.0 token revocation endpoint (RFC 7009).
+  """
+  def revoke(conn, params) do
+    case revoke_token(params) do
+      :ok ->
+        # RFC 7009 specifies 200 OK for successful revocation
+        send_resp(conn, 200, "")
+
+      {:error, _reason} ->
+        # RFC 7009 specifies 200 OK even for invalid tokens (security)
+        send_resp(conn, 200, "")
     end
   end
 
@@ -142,6 +160,65 @@ defmodule HexpmWeb.API.OAuthController do
     end
   end
 
+  defp handle_token_exchange_grant(conn, params) do
+    case TokenExchange.exchange_token(
+           params["client_id"],
+           params["subject_token"],
+           params["subject_token_type"],
+           params["scope"]
+         ) do
+      {:ok, token} ->
+        json(conn, Token.to_response(token))
+
+      {:error, error, description} ->
+        render_oauth_error(conn, error, description)
+    end
+  end
+
+  defp revoke_token(%{"token" => token_value, "client_id" => client_id}) do
+    with {:ok, _client} <- validate_client(client_id),
+         {:ok, token} <- lookup_token_for_revocation(token_value, client_id) do
+      case Token.revoke_token(token) do
+        {:ok, _} -> :ok
+        {:error, _} -> {:error, :revocation_failed}
+      end
+    else
+      {:error, _} -> {:error, :invalid_token}
+    end
+  end
+
+  defp revoke_token(_params), do: {:error, :invalid_request}
+
+  defp lookup_token_for_revocation(token_value, client_id) do
+    # Try to find as access token first
+    case lookup_access_token_for_revocation(token_value, client_id) do
+      {:ok, token} -> {:ok, token}
+      {:error, _} -> lookup_refresh_token_for_revocation(token_value, client_id)
+    end
+  end
+
+  defp lookup_access_token_for_revocation(user_access_token, client_id) do
+    case Token.lookup(user_access_token, :access,
+           client_id: client_id,
+           validate: false,
+           preload: []
+         ) do
+      {:ok, token} -> {:ok, token}
+      {:error, _} -> {:error, :invalid_token}
+    end
+  end
+
+  defp lookup_refresh_token_for_revocation(user_refresh_token, client_id) do
+    case Token.lookup(user_refresh_token, :refresh,
+           client_id: client_id,
+           validate: false,
+           preload: []
+         ) do
+      {:ok, token} -> {:ok, token}
+      {:error, _} -> {:error, :invalid_token}
+    end
+  end
+
   defp validate_client(nil), do: {:error, "Missing client_id"}
   defp validate_client(""), do: {:error, "Missing client_id"}
 
@@ -222,23 +299,21 @@ defmodule HexpmWeb.API.OAuthController do
   defp validate_refresh_token("", _), do: {:error, :invalid_grant, "Missing refresh token"}
 
   defp validate_refresh_token(user_refresh_token, client_id) do
-    # Use secure comparison like oauth_token_auth
-    app_secret = Application.get_env(:hexpm, :secret)
+    case Token.lookup(user_refresh_token, :refresh, client_id: client_id) do
+      {:ok, token} ->
+        {:ok, token}
 
-    <<first::binary-size(32), second::binary-size(32)>> =
-      :crypto.mac(:hmac, :sha256, app_secret, user_refresh_token)
-      |> Base.encode16(case: :lower)
-
-    case Repo.get_by(Token, refresh_token_first: first, client_id: client_id) do
-      nil ->
+      {:error, :not_found} ->
         {:error, :invalid_grant, "Invalid refresh token"}
 
-      token ->
-        if Hexpm.Utils.secure_check(token.refresh_token_second, second) && Token.valid?(token) do
-          {:ok, Repo.preload(token, :user)}
-        else
-          {:error, :invalid_grant, "Refresh token expired or revoked"}
-        end
+      {:error, :invalid_token} ->
+        {:error, :invalid_grant, "Invalid refresh token"}
+
+      {:error, :token_invalid} ->
+        {:error, :invalid_grant, "Refresh token expired or revoked"}
+
+      {:error, _} ->
+        {:error, :invalid_grant, "Refresh token expired or revoked"}
     end
   end
 
@@ -264,5 +339,6 @@ defmodule HexpmWeb.API.OAuthController do
   defp error_status(:authorization_pending), do: 400
   defp error_status(:slow_down), do: 400
   defp error_status(:expired_token), do: 400
+  defp error_status(:invalid_target), do: 400
   defp error_status(_), do: 400
 end

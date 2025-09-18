@@ -286,6 +286,7 @@ defmodule HexpmWeb.Router do
 
     post "/oauth/token", OAuthController, :token
     post "/oauth/device_authorization", OAuthController, :device_authorization
+    post "/oauth/revoke", OAuthController, :revoke
   end
 
   if Mix.env() in [:dev, :test, :hex] do

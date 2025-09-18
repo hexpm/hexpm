@@ -315,6 +315,44 @@ defmodule Hexpm.Permissions do
   end
 
   @doc """
+  Validates that target scopes are a subset of source scopes.
+  Used for token exchange to ensure derived tokens have equal or reduced privileges.
+  """
+  def validate_scope_subset(source_scopes, target_scopes) do
+    case scope_subset?(source_scopes, target_scopes) do
+      true -> :ok
+      false -> {:error, "target scopes must be subset of source scopes"}
+    end
+  end
+
+  @doc """
+  Checks if target scopes are completely contained in source scopes.
+  """
+  def scope_subset?(source_scopes, target_scopes) do
+    Enum.all?(target_scopes, fn target_scope ->
+      Enum.any?(source_scopes, &scope_contains?(&1, target_scope))
+    end)
+  end
+
+  @doc """
+  Checks if a source scope grants access to a target scope.
+  Handles scope hierarchy: "api" contains "api:read"/"api:write", "api:write" contains "api:read".
+  """
+  def scope_contains?(source, target) do
+    case {source, target} do
+      # Same scope
+      {same, same} -> true
+      # api contains api:read and api:write
+      {"api", "api:" <> _} -> true
+      # api:write contains api:read
+      {"api:write", "api:read"} -> true
+      # repositories contains any repository:resource scope
+      {"repositories", "repository:" <> _} -> true
+      _ -> false
+    end
+  end
+
+  @doc """
   Returns a human-readable description for OAuth scopes.
 
   Supports all scope types including resource-specific scopes.

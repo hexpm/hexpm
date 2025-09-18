@@ -76,45 +76,27 @@ defmodule Hexpm.Accounts.Auth do
   def gen_password(password), do: Bcrypt.hash_pwd_salt(password)
 
   def oauth_token_auth(user_token, _usage_info) do
-    app_secret = Application.get_env(:hexpm, :secret)
+    preload = [user: [:emails, owned_packages: :repository, organizations: :repository]]
 
-    <<first::binary-size(32), second::binary-size(32)>> =
-      :crypto.mac(:hmac, :sha256, app_secret, user_token)
-      |> Base.encode16(case: :lower)
-
-    result =
-      from(
-        t in Token,
-        where: t.token_first == ^first,
-        left_join: u in User,
-        on: t.user_id == u.id,
-        preload: [user: {u, [:emails, owned_packages: :repository, organizations: :repository]}],
-        select: {t, u}
-      )
-      |> Hexpm.Repo.one()
-
-    case result do
-      nil ->
-        :error
-
-      {oauth_token, user} ->
+    case Token.lookup(user_token, :access, preload: preload) do
+      {:ok, oauth_token} ->
+        user = oauth_token.user
         valid_auth = user && not User.organization?(user)
 
-        if valid_auth && Hexpm.Utils.secure_check(oauth_token.token_second, second) do
-          if Token.valid?(oauth_token) do
-            {:ok,
-             %{
-               auth_credential: oauth_token,
-               user: user,
-               organization: nil,
-               email: find_email(user, nil)
-             }}
-          else
-            :error
-          end
+        if valid_auth do
+          {:ok,
+           %{
+             auth_credential: oauth_token,
+             user: user,
+             organization: nil,
+             email: find_email(user, nil)
+           }}
         else
           :error
         end
+
+      {:error, _} ->
+        :error
     end
   end
 

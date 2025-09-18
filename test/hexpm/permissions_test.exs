@@ -260,4 +260,176 @@ defmodule Hexpm.PermissionsTest do
       end
     end
   end
+
+  describe "scope validation functions" do
+    test "validate_scope_subset/2 validates subset relationships" do
+      # Valid subsets
+      assert :ok = Permissions.validate_scope_subset(["api:read", "api:write"], ["api:read"])
+
+      assert :ok =
+               Permissions.validate_scope_subset(["api", "repositories"], [
+                 "api:read",
+                 "repositories"
+               ])
+
+      assert :ok = Permissions.validate_scope_subset(["api:write"], ["api:read"])
+
+      assert :ok =
+               Permissions.validate_scope_subset(["package:hexpm/poison"], [
+                 "package:hexpm/poison"
+               ])
+
+      # Invalid subsets
+      assert {:error, "target scopes must be subset of source scopes"} =
+               Permissions.validate_scope_subset(["api:read"], ["api"])
+
+      assert {:error, "target scopes must be subset of source scopes"} =
+               Permissions.validate_scope_subset(["api:read"], ["api:write"])
+
+      assert {:error, "target scopes must be subset of source scopes"} =
+               Permissions.validate_scope_subset([], ["api:read"])
+    end
+
+    test "scope_subset?/2 checks subset relationships" do
+      # Same scopes
+      assert Permissions.scope_subset?(["api:read"], ["api:read"])
+      assert Permissions.scope_subset?(["api:read", "repositories"], ["api:read", "repositories"])
+
+      # Valid subsets
+      assert Permissions.scope_subset?(["api:read", "api:write"], ["api:read"])
+      assert Permissions.scope_subset?(["api"], ["api:read"])
+      assert Permissions.scope_subset?(["api"], ["api:write"])
+      assert Permissions.scope_subset?(["api:write"], ["api:read"])
+      assert Permissions.scope_subset?(["api", "repositories"], ["api:read", "repositories"])
+
+      # Invalid subsets
+      refute Permissions.scope_subset?(["api:read"], ["api"])
+      refute Permissions.scope_subset?(["api:read"], ["api:write"])
+      refute Permissions.scope_subset?([], ["api:read"])
+      refute Permissions.scope_subset?(["repositories"], ["api:read"])
+    end
+
+    test "scope_contains?/2 handles scope hierarchy" do
+      # Same scope
+      assert Permissions.scope_contains?("api:read", "api:read")
+      assert Permissions.scope_contains?("repositories", "repositories")
+
+      # API scope hierarchy
+      assert Permissions.scope_contains?("api", "api:read")
+      assert Permissions.scope_contains?("api", "api:write")
+      assert Permissions.scope_contains?("api:write", "api:read")
+
+      # API scope hierarchy - invalid
+      refute Permissions.scope_contains?("api:read", "api")
+      refute Permissions.scope_contains?("api:read", "api:write")
+
+      # repositories contains any repository:resource scope
+      assert Permissions.scope_contains?("repositories", "repository:acme")
+      assert Permissions.scope_contains?("repositories", "repository:other")
+      assert Permissions.scope_contains?("repositories", "repository:foo/bar")
+
+      # Resource scopes must match exactly
+      assert Permissions.scope_contains?("package:hexpm/poison", "package:hexpm/poison")
+      assert Permissions.scope_contains?("repository:acme", "repository:acme")
+      assert Permissions.scope_contains?("docs:hexpm", "docs:hexpm")
+
+      # Resource scopes - invalid
+      refute Permissions.scope_contains?("package:hexpm/poison", "package:hexpm/decimal")
+      refute Permissions.scope_contains?("repository:acme", "repository:other")
+      refute Permissions.scope_contains?("docs:hexpm", "docs:other")
+
+      # Cross-scope type - invalid
+      refute Permissions.scope_contains?("api:read", "repositories")
+      refute Permissions.scope_contains?("repositories", "api:read")
+      refute Permissions.scope_contains?("package:hexpm/poison", "api:read")
+    end
+
+    test "scope_subset?/2 with complex hierarchies" do
+      # Complex valid subsets
+      source_scopes = ["api:read", "api:write", "repositories", "package:hexpm/poison"]
+
+      # Valid combinations
+      assert Permissions.scope_subset?(source_scopes, ["api:read"])
+      assert Permissions.scope_subset?(source_scopes, ["api:write"])
+      assert Permissions.scope_subset?(source_scopes, ["api:read", "repositories"])
+      assert Permissions.scope_subset?(source_scopes, ["repositories", "package:hexpm/poison"])
+      assert Permissions.scope_subset?(source_scopes, ["api:read", "api:write"])
+
+      # Invalid combinations
+      # broader than source
+      refute Permissions.scope_subset?(source_scopes, ["api"])
+      # not in source
+      refute Permissions.scope_subset?(source_scopes, ["package:hexpm/decimal"])
+      # not in source
+      refute Permissions.scope_subset?(source_scopes, ["docs:hexpm"])
+    end
+
+    test "scope_subset?/2 with api scope hierarchies" do
+      # Source with broad "api" scope
+      source_with_api = ["api", "repositories"]
+
+      assert Permissions.scope_subset?(source_with_api, ["api:read"])
+      assert Permissions.scope_subset?(source_with_api, ["api:write"])
+      assert Permissions.scope_subset?(source_with_api, ["api:read", "api:write"])
+      assert Permissions.scope_subset?(source_with_api, ["api:read", "repositories"])
+
+      # Source with "api:write" should contain "api:read"
+      source_with_write = ["api:write", "repositories"]
+
+      assert Permissions.scope_subset?(source_with_write, ["api:read"])
+      assert Permissions.scope_subset?(source_with_write, ["api:write"])
+      assert Permissions.scope_subset?(source_with_write, ["api:read", "repositories"])
+
+      # But "api:read" source should not contain "api:write"
+      source_with_read = ["api:read", "repositories"]
+
+      assert Permissions.scope_subset?(source_with_read, ["api:read"])
+      refute Permissions.scope_subset?(source_with_read, ["api:write"])
+      refute Permissions.scope_subset?(source_with_read, ["api:read", "api:write"])
+    end
+
+    test "scope_subset?/2 handles empty lists" do
+      # Empty target is always a subset
+      assert Permissions.scope_subset?(["api:read"], [])
+      assert Permissions.scope_subset?([], [])
+
+      # Empty source cannot contain non-empty target
+      refute Permissions.scope_subset?([], ["api:read"])
+    end
+
+    test "real-world token splitting scenarios" do
+      # Original device flow token
+      original_scopes = ["api:read", "api:write", "repositories"]
+
+      # Valid splits
+      read_scopes = ["api:read", "repositories"]
+      write_scopes = ["api:write"]
+
+      assert Permissions.scope_subset?(original_scopes, read_scopes)
+      assert Permissions.scope_subset?(original_scopes, write_scopes)
+
+      # Invalid splits
+      # "api" is broader than original
+      broader_scopes = ["api", "repositories"]
+      # not in original
+      invalid_scopes = ["package:hexpm/poison"]
+
+      refute Permissions.scope_subset?(original_scopes, broader_scopes)
+      refute Permissions.scope_subset?(original_scopes, invalid_scopes)
+    end
+
+    test "repository scope hierarchy for token exchange" do
+      # Original token with broad repositories access
+      original_scopes = ["repositories", "api:read"]
+
+      # Should be able to exchange for specific repository scopes
+      assert Permissions.scope_subset?(original_scopes, ["repository:acme"])
+      assert Permissions.scope_subset?(original_scopes, ["repository:beta", "api:read"])
+      assert Permissions.scope_subset?(original_scopes, ["repository:foo/bar"])
+
+      # Specific repository scope cannot be exchanged for broader repositories
+      specific_scopes = ["repository:acme", "api:read"]
+      refute Permissions.scope_subset?(specific_scopes, ["repositories"])
+    end
+  end
 end

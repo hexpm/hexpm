@@ -3,7 +3,7 @@ defmodule Hexpm.OAuth.TokenTest do
 
   import Ecto.Changeset, only: [get_field: 2]
 
-  alias Hexpm.OAuth.Token
+  alias Hexpm.OAuth.{Token, Client}
 
   describe "changeset/2" do
     test "validates required fields" do
@@ -454,6 +454,241 @@ defmodule Hexpm.OAuth.TokenTest do
 
       refute Permissions.verify_access?(token_empty, "api", nil)
       refute Permissions.verify_access?(token_repo, "api", nil)
+    end
+  end
+
+  describe "token hierarchy and revocation" do
+    setup do
+      user = insert(:user)
+
+      client_params = %{
+        client_id: "test_client_id",
+        name: "Test OAuth Client",
+        client_type: "public",
+        allowed_grant_types: [
+          "authorization_code",
+          "urn:ietf:params:oauth:grant-type:token-exchange"
+        ],
+        allowed_scopes: ["api", "api:read", "api:write", "repositories"]
+      }
+
+      {:ok, client} = Client.build(client_params) |> Repo.insert()
+
+      # Create parent token
+      parent_token_changeset =
+        Token.create_for_user(
+          user,
+          client.client_id,
+          ["api:read", "api:write", "repositories"],
+          "authorization_code",
+          "test_code",
+          with_refresh_token: true
+        )
+
+      {:ok, parent_token} = Repo.insert(parent_token_changeset)
+      parent_token = Repo.preload(parent_token, :user)
+
+      %{
+        user: user,
+        client: client,
+        parent_token: parent_token
+      }
+    end
+
+    test "create_exchanged_token/4 creates child token with correct relationships", %{
+      parent_token: parent_token,
+      client: client
+    } do
+      target_scopes = ["api:read", "repositories"]
+
+      child_token_changeset =
+        Token.create_exchanged_token(
+          parent_token,
+          client.client_id,
+          target_scopes,
+          "exchange_grant_ref"
+        )
+
+      {:ok, child_token} = Repo.insert(child_token_changeset)
+
+      assert child_token.parent_token_id == parent_token.id
+      assert child_token.token_family_id == parent_token.token_family_id
+      assert child_token.scopes == target_scopes
+      assert child_token.grant_type == "urn:ietf:params:oauth:grant-type:token-exchange"
+      assert child_token.grant_reference == "exchange_grant_ref"
+      assert child_token.user_id == parent_token.user_id
+      assert child_token.client_id == parent_token.client_id
+      assert not is_nil(child_token.refresh_token_hash)
+    end
+
+    test "revoke/1 on parent token cascades to entire family", %{
+      parent_token: parent_token,
+      client: client
+    } do
+      # Create child tokens
+      child1_changeset =
+        Token.create_exchanged_token(parent_token, client.client_id, ["api:read"], "ref1")
+
+      child2_changeset =
+        Token.create_exchanged_token(parent_token, client.client_id, ["repositories"], "ref2")
+
+      {:ok, child1} = Repo.insert(child1_changeset)
+      {:ok, child2} = Repo.insert(child2_changeset)
+
+      # Revoke parent token (should cascade)
+      assert {:ok, _} = Token.revoke_token(parent_token)
+
+      # Check all tokens in family are revoked
+      updated_parent = Repo.get(Token, parent_token.id)
+      updated_child1 = Repo.get(Token, child1.id)
+      updated_child2 = Repo.get(Token, child2.id)
+
+      assert Token.revoked?(updated_parent)
+      assert Token.revoked?(updated_child1)
+      assert Token.revoked?(updated_child2)
+    end
+
+    test "revoke/1 on child token only revokes that child", %{
+      parent_token: parent_token,
+      client: client
+    } do
+      # Create child tokens
+      child1_changeset =
+        Token.create_exchanged_token(parent_token, client.client_id, ["api:read"], "ref1")
+
+      child2_changeset =
+        Token.create_exchanged_token(parent_token, client.client_id, ["repositories"], "ref2")
+
+      {:ok, child1} = Repo.insert(child1_changeset)
+      {:ok, child2} = Repo.insert(child2_changeset)
+
+      # Revoke only child1
+      assert {:ok, _} = Token.revoke_token(child1)
+
+      # Check only child1 is revoked
+      updated_parent = Repo.get(Token, parent_token.id)
+      updated_child1 = Repo.get(Token, child1.id)
+      updated_child2 = Repo.get(Token, child2.id)
+
+      refute Token.revoked?(updated_parent)
+      assert Token.revoked?(updated_child1)
+      refute Token.revoked?(updated_child2)
+    end
+
+    test "token exchange always creates children of root token", %{
+      parent_token: parent_token,
+      client: client
+    } do
+      # Create child token from parent
+      child1_changeset =
+        Token.create_exchanged_token(parent_token, client.client_id, ["api:read"], "ref1")
+
+      {:ok, child1} = Repo.insert(child1_changeset)
+
+      # Create another token from child1 (should still have parent as root)
+      child1_with_user = Repo.preload(child1, :user)
+
+      child2_changeset =
+        Token.create_exchanged_token(child1_with_user, client.client_id, ["api:read"], "ref2")
+
+      {:ok, child2} = Repo.insert(child2_changeset)
+
+      # Both children should have the root token as their parent
+      assert child1.parent_token_id == parent_token.id
+      assert child2.parent_token_id == parent_token.id
+      assert child1.token_family_id == parent_token.token_family_id
+      assert child2.token_family_id == parent_token.token_family_id
+    end
+
+    test "cascade_revoke/1 revokes all tokens in family", %{
+      parent_token: parent_token,
+      client: client
+    } do
+      # Create child tokens
+      child1_changeset =
+        Token.create_exchanged_token(parent_token, client.client_id, ["api:read"], "ref1")
+
+      child2_changeset =
+        Token.create_exchanged_token(parent_token, client.client_id, ["repositories"], "ref2")
+
+      {:ok, child1} = Repo.insert(child1_changeset)
+      {:ok, child2} = Repo.insert(child2_changeset)
+
+      # Manually call cascade_revoke
+      {revoked_count, _} = Token.cascade_revoke(parent_token)
+
+      # Should revoke all 3 tokens
+      assert revoked_count == 3
+
+      # Check all tokens are revoked
+      updated_parent = Repo.get(Token, parent_token.id)
+      updated_child1 = Repo.get(Token, child1.id)
+      updated_child2 = Repo.get(Token, child2.id)
+
+      assert Token.revoked?(updated_parent)
+      assert Token.revoked?(updated_child1)
+      assert Token.revoked?(updated_child2)
+    end
+
+    test "generate_family_id/0 creates unique IDs" do
+      id1 = Token.generate_family_id()
+      id2 = Token.generate_family_id()
+
+      assert is_binary(id1)
+      assert is_binary(id2)
+      assert id1 != id2
+      assert String.length(id1) > 0
+      assert String.length(id2) > 0
+    end
+
+    test "create_for_user with parent token uses same family_id", %{
+      parent_token: parent_token,
+      user: user,
+      client: client
+    } do
+      child_token_changeset =
+        Token.create_for_user(
+          user,
+          client.client_id,
+          ["api:read"],
+          "urn:ietf:params:oauth:grant-type:token-exchange",
+          "ref",
+          token_family_id: parent_token.token_family_id,
+          parent_token_id: parent_token.id
+        )
+
+      {:ok, child_token} = Repo.insert(child_token_changeset)
+
+      assert child_token.token_family_id == parent_token.token_family_id
+      assert child_token.parent_token_id == parent_token.id
+    end
+
+    test "create_for_user without parent creates new family_id", %{user: user, client: client} do
+      token1_changeset =
+        Token.create_for_user(
+          user,
+          client.client_id,
+          ["api:read"],
+          "authorization_code",
+          "ref1"
+        )
+
+      token2_changeset =
+        Token.create_for_user(
+          user,
+          client.client_id,
+          ["api:write"],
+          "authorization_code",
+          "ref2"
+        )
+
+      {:ok, token1} = Repo.insert(token1_changeset)
+      {:ok, token2} = Repo.insert(token2_changeset)
+
+      # Each token should have its own family_id
+      assert token1.token_family_id != token2.token_family_id
+      assert is_nil(token1.parent_token_id)
+      assert is_nil(token2.parent_token_id)
     end
   end
 end
