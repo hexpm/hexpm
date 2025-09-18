@@ -34,7 +34,12 @@ defmodule HexpmWeb.TestController do
   def repo(conn, params) do
     {:ok, organization} =
       Organizations.create(conn.assigns.current_user, params,
-        audit: %{user: %User{}, user_agent: "TEST", remote_ip: "127.0.0.1", key: nil}
+        audit: %{
+          user: %User{},
+          user_agent: "TEST",
+          remote_ip: "127.0.0.1",
+          auth_credential: conn.assigns.auth_credential
+        }
       )
 
     organization
