@@ -141,6 +141,7 @@ defmodule Hexpm.Repository.Package do
   def count(repositories, search) do
     from(
       p in assoc(repositories, :packages),
+      as: :package,
       join: r in assoc(p, :repository),
       select: count()
     )

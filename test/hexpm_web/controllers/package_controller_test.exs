@@ -130,6 +130,11 @@ defmodule HexpmWeb.PackageControllerTest do
       refute response(conn, 200) =~ "results-found"
     end
 
+    test "search with build_tool match" do
+      conn = get(build_conn(), "/packages?search=build_tool%3Amix")
+      assert response(conn, 200) =~ "results-found"
+    end
+
     test "search without match" do
       conn = get(build_conn(), "/packages?search=nonexistent")
       assert response(conn, 200) =~ "no-results"
