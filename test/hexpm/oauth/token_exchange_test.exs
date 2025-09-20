@@ -8,7 +8,7 @@ defmodule Hexpm.OAuth.TokenExchangeTest do
       user = insert(:user)
 
       client_params = %{
-        client_id: "test_client_id",
+        client_id: Hexpm.OAuth.Client.generate_client_id(),
         name: "Test OAuth Client",
         client_type: "public",
         allowed_grant_types: [
@@ -94,7 +94,7 @@ defmodule Hexpm.OAuth.TokenExchangeTest do
     test "fails with invalid client", %{parent_token: parent_token} do
       assert {:error, :invalid_client, "Invalid client"} =
                TokenExchange.exchange_token(
-                 "invalid_client",
+                 Ecto.UUID.generate(),
                  parent_token.token_hash,
                  "urn:ietf:params:oauth:token-type:access_token",
                  ["api:read"]

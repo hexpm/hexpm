@@ -32,7 +32,7 @@ defmodule Hexpm.OAuth.AuthorizationCodeTest do
           scopes: ["invalid_scope", "api"],
           expires_at: expires_at,
           user_id: user.id,
-          client_id: "test_client",
+          client_id: Hexpm.OAuth.Client.generate_client_id(),
           code_challenge: "E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM",
           code_challenge_method: "S256"
         })
@@ -51,7 +51,7 @@ defmodule Hexpm.OAuth.AuthorizationCodeTest do
           scopes: ["api"],
           expires_at: expires_at,
           user_id: user.id,
-          client_id: "test_client",
+          client_id: Hexpm.OAuth.Client.generate_client_id(),
           code_challenge: "E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM",
           code_challenge_method: "invalid"
         })
@@ -70,7 +70,7 @@ defmodule Hexpm.OAuth.AuthorizationCodeTest do
           scopes: ["api", "api:read"],
           expires_at: expires_at,
           user_id: user.id,
-          client_id: "test_client",
+          client_id: Hexpm.OAuth.Client.generate_client_id(),
           code_challenge: "E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM",
           code_challenge_method: "S256"
         })

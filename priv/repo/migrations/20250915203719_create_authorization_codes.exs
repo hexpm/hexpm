@@ -13,7 +13,10 @@ defmodule Hexpm.RepoBase.Migrations.CreateAuthorizationCodes do
       add :code_challenge_method, :string
 
       add :user_id, references(:users, on_delete: :delete_all), null: false
-      add :client_id, :string, null: false
+
+      add :client_id,
+          references(:oauth_clients, column: :client_id, type: :binary_id, on_delete: :delete_all),
+          null: false
 
       timestamps()
     end

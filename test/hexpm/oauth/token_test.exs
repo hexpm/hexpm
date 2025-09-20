@@ -34,7 +34,7 @@ defmodule Hexpm.OAuth.TokenTest do
           expires_at: expires_at,
           grant_type: "invalid_grant",
           user_id: user.id,
-          client_id: "test_client"
+          client_id: Hexpm.OAuth.Client.generate_client_id()
         })
 
       assert %{grant_type: "is invalid"} = errors_on(changeset)
@@ -54,7 +54,7 @@ defmodule Hexpm.OAuth.TokenTest do
           expires_at: expires_at,
           grant_type: "authorization_code",
           user_id: user.id,
-          client_id: "test_client"
+          client_id: Hexpm.OAuth.Client.generate_client_id()
         })
 
       assert %{scopes: "contains invalid scopes: invalid_scope"} = errors_on(changeset)
@@ -462,7 +462,7 @@ defmodule Hexpm.OAuth.TokenTest do
       user = insert(:user)
 
       client_params = %{
-        client_id: "test_client_id",
+        client_id: Hexpm.OAuth.Client.generate_client_id(),
         name: "Test OAuth Client",
         client_type: "public",
         allowed_grant_types: [

@@ -5,8 +5,9 @@ defmodule Hexpm.OAuth.Client do
 
   @derive {Phoenix.Param, key: :client_id}
 
+  @primary_key {:client_id, :binary_id, autogenerate: false}
+
   schema "oauth_clients" do
-    field :client_id, :string
     field :client_secret, :string
     field :name, :string
     field :client_type, :string
@@ -54,6 +55,10 @@ defmodule Hexpm.OAuth.Client do
   @doc """
   Validates that the client is allowed to use the specified scopes.
   """
+  def supports_scopes?(%__MODULE__{allowed_scopes: nil}, requested_scopes) do
+    Permissions.validate_scopes(requested_scopes) == :ok
+  end
+
   def supports_scopes?(%__MODULE__{allowed_scopes: allowed_scopes}, requested_scopes) do
     Enum.all?(requested_scopes, &(&1 in allowed_scopes))
   end
@@ -95,8 +100,7 @@ defmodule Hexpm.OAuth.Client do
   Generates a unique client ID.
   """
   def generate_client_id do
-    :crypto.strong_rand_bytes(16)
-    |> Base.encode16(case: :lower)
+    Ecto.UUID.generate()
   end
 
   defp validate_grant_types(changeset) do

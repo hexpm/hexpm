@@ -7,8 +7,7 @@ defmodule Hexpm.OAuth.DeviceFlow do
   """
 
   import Ecto.Query, only: [from: 2]
-  alias Hexpm.OAuth.DeviceCode
-  alias Hexpm.OAuth.Token
+  alias Hexpm.OAuth.{DeviceCode, Token}
   alias Hexpm.Repo
 
   @default_device_code_expiry_seconds 10 * 60
@@ -167,7 +166,7 @@ defmodule Hexpm.OAuth.DeviceFlow do
   defp get_device_code_by_user_code(user_code) do
     from(dc in DeviceCode,
       where: dc.user_code == ^user_code,
-      preload: [:user]
+      preload: [:user, :client]
     )
     |> Repo.one()
   end

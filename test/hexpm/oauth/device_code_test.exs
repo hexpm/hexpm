@@ -25,7 +25,7 @@ defmodule Hexpm.OAuth.DeviceCodeTest do
           device_code: "device123",
           user_code: "USER-CODE",
           verification_uri: "https://example.com/device",
-          client_id: "test_client",
+          client_id: Hexpm.OAuth.Client.generate_client_id(),
           expires_at: DateTime.utc_now(),
           interval: 0
         })

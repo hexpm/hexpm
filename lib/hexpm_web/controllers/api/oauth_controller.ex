@@ -40,14 +40,7 @@ defmodule HexpmWeb.API.OAuthController do
          {:ok, scopes} <- validate_scopes(client, params["scope"]) do
       case DeviceFlow.initiate_device_authorization(client.client_id, scopes) do
         {:ok, response} ->
-          json(conn, %{
-            device_code: response.device_code,
-            user_code: response.user_code,
-            verification_uri: response.verification_uri,
-            verification_uri_complete: response.verification_uri_complete,
-            expires_in: response.expires_in,
-            interval: response.interval
-          })
+          render(conn, :device_authorization, device_response: response)
 
         {:error, reason} ->
           render_oauth_error(
@@ -101,7 +94,7 @@ defmodule HexpmWeb.API.OAuthController do
 
       case Repo.insert(token_changeset) do
         {:ok, token} ->
-          json(conn, Token.to_response(token))
+          render(conn, :token, token_response: Token.to_response(token))
 
         {:error, changeset} ->
           render_oauth_error(
@@ -119,7 +112,7 @@ defmodule HexpmWeb.API.OAuthController do
   defp handle_device_code_grant(conn, params) do
     case DeviceFlow.poll_device_token(params["device_code"], params["client_id"]) do
       {:ok, token_response} ->
-        json(conn, token_response)
+        render(conn, :token, token_response: token_response)
 
       {:error, error, description} ->
         render_oauth_error(conn, error, description)
@@ -145,7 +138,7 @@ defmodule HexpmWeb.API.OAuthController do
 
       case Repo.insert(new_token_changeset) do
         {:ok, new_token} ->
-          json(conn, Token.to_response(new_token))
+          render(conn, :token, token_response: Token.to_response(new_token))
 
         {:error, changeset} ->
           render_oauth_error(
@@ -168,7 +161,7 @@ defmodule HexpmWeb.API.OAuthController do
            params["scope"]
          ) do
       {:ok, token} ->
-        json(conn, Token.to_response(token))
+        render(conn, :token, token_response: Token.to_response(token))
 
       {:error, error, description} ->
         render_oauth_error(conn, error, description)
@@ -322,10 +315,7 @@ defmodule HexpmWeb.API.OAuthController do
 
     conn
     |> put_status(status)
-    |> json(%{
-      error: to_string(error_type),
-      error_description: description
-    })
+    |> render(:error, error_type: error_type, description: description)
   end
 
   defp error_status(:invalid_request), do: 400

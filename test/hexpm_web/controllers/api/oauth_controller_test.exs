@@ -7,7 +7,7 @@ defmodule HexpmWeb.API.OAuthControllerTest do
   setup do
     # Create test OAuth client
     client_params = %{
-      client_id: "test_client_id",
+      client_id: Hexpm.OAuth.Client.generate_client_id(),
       name: "Test OAuth Client",
       client_type: "public",
       allowed_grant_types: ["urn:ietf:params:oauth:grant-type:device_code"],
@@ -66,7 +66,7 @@ defmodule HexpmWeb.API.OAuthControllerTest do
     test "returns error for invalid client_id" do
       conn =
         post(build_conn(), ~p"/api/oauth/device_authorization", %{
-          "client_id" => "nonexistent_client"
+          "client_id" => Ecto.UUID.generate()
         })
 
       assert json_response(conn, 401)
@@ -177,7 +177,7 @@ defmodule HexpmWeb.API.OAuthControllerTest do
         post(build_conn(), ~p"/api/oauth/token", %{
           "grant_type" => "urn:ietf:params:oauth:grant-type:device_code",
           "device_code" => response.device_code,
-          "client_id" => "wrong_client"
+          "client_id" => Ecto.UUID.generate()
         })
 
       assert json_response(conn, 401)
@@ -269,7 +269,7 @@ defmodule HexpmWeb.API.OAuthControllerTest do
         post(build_conn(), ~p"/api/oauth/token", %{
           "grant_type" => "refresh_token",
           "refresh_token" => refresh_token,
-          "client_id" => "wrong_client"
+          "client_id" => Ecto.UUID.generate()
         })
 
       assert json_response(conn, 401)
@@ -311,7 +311,7 @@ defmodule HexpmWeb.API.OAuthControllerTest do
       user = insert(:user)
 
       client_params = %{
-        client_id: "revoke_test_client_id",
+        client_id: Hexpm.OAuth.Client.generate_client_id(),
         name: "Test OAuth Client",
         client_type: "public",
         allowed_grant_types: [
@@ -451,7 +451,7 @@ defmodule HexpmWeb.API.OAuthControllerTest do
     } do
       params = %{
         token: parent_token.token_hash,
-        client_id: "invalid_client_id"
+        client_id: Ecto.UUID.generate()
       }
 
       # Should still return 200 OK to avoid leaking information
@@ -515,7 +515,7 @@ defmodule HexpmWeb.API.OAuthControllerTest do
 
     test "handles token from different client", %{revoke_parent_token: parent_token} do
       other_client_params = %{
-        client_id: "other_client_id",
+        client_id: Hexpm.OAuth.Client.generate_client_id(),
         name: "Other OAuth Client",
         client_type: "public",
         allowed_grant_types: ["authorization_code"],
@@ -564,7 +564,7 @@ defmodule HexpmWeb.API.OAuthControllerTest do
       user = insert(:user)
 
       client_params = %{
-        client_id: "exchange_test_client_id",
+        client_id: Hexpm.OAuth.Client.generate_client_id(),
         name: "Test OAuth Client",
         client_type: "public",
         allowed_grant_types: [
@@ -637,7 +637,7 @@ defmodule HexpmWeb.API.OAuthControllerTest do
     test "fails with invalid client_id", %{exchange_parent_token: parent_token} do
       params = %{
         grant_type: "urn:ietf:params:oauth:grant-type:token-exchange",
-        client_id: "invalid_client",
+        client_id: Ecto.UUID.generate(),
         subject_token: parent_token.token_hash,
         subject_token_type: "urn:ietf:params:oauth:token-type:access_token",
         scope: "api:read"

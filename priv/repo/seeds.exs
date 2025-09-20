@@ -11,6 +11,12 @@ lorem =
 password = &Bcrypt.hash_pwd_salt/1
 
 Hexpm.Repo.transaction(fn ->
+  insert(:oauth_client,
+    name: "Mix Hex",
+    client_id: "78ea6566-89fd-481e-a1d6-7d9d78eacca8",
+    client_type: "public"
+  )
+
   insert(
     :key,
     user_id: Users.get("hexdocs").id,

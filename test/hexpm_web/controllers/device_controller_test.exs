@@ -1,7 +1,22 @@
 defmodule HexpmWeb.DeviceControllerTest do
   use HexpmWeb.ConnCase, async: true
 
-  alias Hexpm.OAuth.{DeviceFlow, DeviceCode}
+  alias Hexpm.OAuth.{DeviceFlow, DeviceCode, Client}
+  import Hexpm.Factory
+
+  defp create_test_client(name \\ "Test Client") do
+    client_params = %{
+      client_id: Hexpm.OAuth.Client.generate_client_id(),
+      name: name,
+      client_type: "public",
+      allowed_grant_types: ["urn:ietf:params:oauth:grant-type:device_code"],
+      allowed_scopes: ["api", "api:read", "repositories"],
+      client_secret: nil
+    }
+
+    {:ok, client} = Client.build(client_params) |> Repo.insert()
+    client
+  end
 
   describe "GET /oauth/device" do
     test "redirects to login when not authenticated" do
@@ -21,12 +36,13 @@ defmodule HexpmWeb.DeviceControllerTest do
     test "shows device info when valid user_code provided" do
       user = insert(:user)
       conn = login_user(build_conn(), user)
+      client = create_test_client()
 
-      {:ok, response} = DeviceFlow.initiate_device_authorization("test_client", ["api"])
+      {:ok, response} = DeviceFlow.initiate_device_authorization(client.client_id, ["api"])
 
       conn = get(conn, ~p"/oauth/device?user_code=#{response.user_code}")
       assert html_response(conn, 200) =~ "Device Authorization"
-      assert html_response(conn, 200) =~ "test_client"
+      assert html_response(conn, 200) =~ client.name
       assert html_response(conn, 200) =~ "Authorize Device"
     end
 
@@ -39,7 +55,8 @@ defmodule HexpmWeb.DeviceControllerTest do
     end
 
     test "redirects to login with return path for user_code" do
-      {:ok, response} = DeviceFlow.initiate_device_authorization("test_client", ["api"])
+      client = create_test_client()
+      {:ok, response} = DeviceFlow.initiate_device_authorization(client.client_id, ["api"])
 
       conn = get(build_conn(), ~p"/oauth/device?user_code=#{response.user_code}")
       assert redirected_to(conn) =~ "/login"
@@ -51,9 +68,10 @@ defmodule HexpmWeb.DeviceControllerTest do
   describe "POST /oauth/device" do
     setup do
       user = insert(:user)
-      {:ok, response} = DeviceFlow.initiate_device_authorization("test_client", ["api"])
+      client = create_test_client()
+      {:ok, response} = DeviceFlow.initiate_device_authorization(client.client_id, ["api"])
       device_code = Repo.get_by(DeviceCode, device_code: response.device_code)
-      %{user: user, device_code: device_code}
+      %{user: user, device_code: device_code, client: client}
     end
 
     test "redirects to login when not authenticated", %{device_code: device_code} do
@@ -75,7 +93,10 @@ defmodule HexpmWeb.DeviceControllerTest do
           "action" => "authorize"
         })
 
-      assert html_response(conn, 200) =~ "Device has been successfully authorized!"
+      assert redirected_to(conn, 302) == "/"
+
+      assert Phoenix.Flash.get(conn.assigns.flash, :info) ==
+               "Device has been successfully authorized!"
 
       # Verify device was authorized in database
       updated_device_code = Repo.get(DeviceCode, device_code.id)
@@ -92,7 +113,10 @@ defmodule HexpmWeb.DeviceControllerTest do
           "action" => "deny"
         })
 
-      assert html_response(conn, 200) =~ "Device authorization has been denied"
+      assert redirected_to(conn, 302) == "/"
+
+      assert Phoenix.Flash.get(conn.assigns.flash, :info) ==
+               "Device authorization has been denied."
 
       # Verify device was denied in database
       updated_device_code = Repo.get(DeviceCode, device_code.id)
@@ -190,14 +214,18 @@ defmodule HexpmWeb.DeviceControllerTest do
   describe "device verification rate limiting" do
     setup do
       user = insert(:user)
-      {:ok, response} = DeviceFlow.initiate_device_authorization("test_client", ["api"])
-      %{user: user, user_code: response.user_code}
+      client = create_test_client()
+      {:ok, response} = DeviceFlow.initiate_device_authorization(client.client_id, ["api"])
+      device_code = Repo.get_by(DeviceCode, device_code: response.device_code)
+      %{user: user, device_code: device_code, client: client}
     end
 
     test "GET /oauth/device rate limiting function exists and is called", %{
       user: user,
-      user_code: user_code
+      device_code: device_code
     } do
+      user_code = device_code.user_code
+
       conn =
         build_conn()
         |> login_user(user)
@@ -216,21 +244,17 @@ defmodule HexpmWeb.DeviceControllerTest do
 
     test "POST /oauth/device rate limiting applies to requests", %{
       user: user,
-      user_code: user_code
+      device_code: device_code
     } do
+      user_code = device_code.user_code
+
       conn =
         build_conn()
         |> login_user(user)
         |> post(~p"/oauth/device", %{"user_code" => user_code, "action" => "deny"})
 
-      # Should get a valid response
-      assert html_response(conn, 200)
-
-      # If rate limited, should contain the message
-      if response_contains_rate_limit_message?(conn) do
-        response_body = html_response(conn, 200)
-        assert response_body =~ "Too many verification attempts"
-      end
+      # Should get a redirect response (successful deny) since this test doesn't actually trigger rate limiting
+      assert redirected_to(conn, 302) == "/"
     end
 
     defp response_contains_rate_limit_message?(conn) do

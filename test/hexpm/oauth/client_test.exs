@@ -17,7 +17,7 @@ defmodule Hexpm.OAuth.ClientTest do
     test "validates client_type inclusion" do
       changeset =
         Client.changeset(%Client{}, %{
-          client_id: "test_client",
+          client_id: Hexpm.OAuth.Client.generate_client_id(),
           name: "Test Client",
           client_type: "invalid"
         })
@@ -28,7 +28,7 @@ defmodule Hexpm.OAuth.ClientTest do
     test "validates grant types" do
       changeset =
         Client.changeset(%Client{}, %{
-          client_id: "test_client",
+          client_id: Hexpm.OAuth.Client.generate_client_id(),
           name: "Test Client",
           client_type: "public",
           allowed_grant_types: ["invalid_grant", "authorization_code"]
@@ -41,7 +41,7 @@ defmodule Hexpm.OAuth.ClientTest do
     test "validates scopes" do
       changeset =
         Client.changeset(%Client{}, %{
-          client_id: "test_client",
+          client_id: Hexpm.OAuth.Client.generate_client_id(),
           name: "Test Client",
           client_type: "public",
           allowed_scopes: ["invalid_scope", "api"]
@@ -53,7 +53,7 @@ defmodule Hexpm.OAuth.ClientTest do
     test "requires client_secret for confidential clients" do
       changeset =
         Client.changeset(%Client{}, %{
-          client_id: "test_client",
+          client_id: Hexpm.OAuth.Client.generate_client_id(),
           name: "Test Client",
           client_type: "confidential"
         })
@@ -64,7 +64,7 @@ defmodule Hexpm.OAuth.ClientTest do
     test "allows public clients without client_secret" do
       changeset =
         Client.changeset(%Client{}, %{
-          client_id: "test_client",
+          client_id: Hexpm.OAuth.Client.generate_client_id(),
           name: "Test Client",
           client_type: "public"
         })
@@ -246,13 +246,15 @@ defmodule Hexpm.OAuth.ClientTest do
       assert client_id1 != client_id2
     end
 
-    test "generates lowercase hex strings" do
+    test "generates valid UUIDs" do
       client_id = Client.generate_client_id()
+      assert is_binary(client_id)
+      assert String.length(client_id) == 36
 
-      # Should be 32 characters (16 bytes as hex)
-      assert String.length(client_id) == 32
-      # Should only contain lowercase hex characters
-      assert Regex.match?(~r/^[0-9a-f]+$/, client_id)
+      assert Regex.match?(
+               ~r/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/,
+               client_id
+             )
     end
   end
 end

@@ -15,11 +15,16 @@ defmodule Hexpm.RepoBase.Migrations.CreateOauthTokens do
       add :revoked_at, :utc_datetime
 
       add :user_id, references(:users, on_delete: :delete_all), null: false
-      add :client_id, :string, null: false
+
+      add :client_id,
+          references(:oauth_clients, column: :client_id, type: :binary_id, on_delete: :delete_all),
+          null: false
 
       add :grant_type, :string, null: false
-
       add :grant_reference, :string
+
+      add :parent_token_id, references(:oauth_tokens, on_delete: :nothing)
+      add :token_family_id, :string
 
       timestamps()
     end
@@ -31,7 +36,7 @@ defmodule Hexpm.RepoBase.Migrations.CreateOauthTokens do
     create index(:oauth_tokens, [:user_id])
     create index(:oauth_tokens, [:client_id])
     create index(:oauth_tokens, [:expires_at])
-    create index(:oauth_tokens, [:grant_type, :grant_reference])
+    create index(:oauth_tokens, [:token_family_id])
   end
 
   def down do

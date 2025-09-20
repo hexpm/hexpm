@@ -181,4 +181,18 @@ defmodule Hexpm.Factory do
       ]
     }
   end
+
+  def oauth_client_factory() do
+    %Hexpm.OAuth.Client{
+      client_id: Hexpm.OAuth.Client.generate_client_id(),
+      name: "Test OAuth Client",
+      client_type: "public",
+      allowed_grant_types: [
+        "authorization_code",
+        "urn:ietf:params:oauth:grant-type:device_code",
+        "refresh_token"
+      ],
+      redirect_uris: ["https://example.com/callback"]
+    }
+  end
 end

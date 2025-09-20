@@ -27,7 +27,7 @@ defmodule Hexpm.OAuth.Token do
 
     belongs_to :user, User
     belongs_to :parent_token, __MODULE__
-    field :client_id, :string
+    belongs_to :client, Hexpm.OAuth.Client, references: :client_id, type: :binary_id
 
     timestamps()
   end
@@ -366,6 +366,20 @@ defmodule Hexpm.OAuth.Token do
 
     from(t in __MODULE__, where: t.token_family_id == ^token_family_id and is_nil(t.revoked_at))
     |> Repo.update_all(set: [revoked_at: revoked_at])
+  end
+
+  @doc """
+  Cleans up expired OAuth tokens.
+
+  This should be called periodically to remove old records.
+  """
+  def cleanup_expired_tokens do
+    now = DateTime.utc_now()
+
+    from(t in __MODULE__,
+      where: t.expires_at < ^now and is_nil(t.revoked_at)
+    )
+    |> Repo.delete_all()
   end
 
   defp validate_scopes(changeset) do

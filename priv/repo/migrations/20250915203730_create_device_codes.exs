@@ -7,7 +7,11 @@ defmodule Hexpm.RepoBase.Migrations.CreateDeviceCodes do
       add :user_code, :string, null: false
       add :verification_uri, :string, null: false
       add :verification_uri_complete, :string
-      add :client_id, :string, null: false
+
+      add :client_id,
+          references(:oauth_clients, column: :client_id, type: :binary_id, on_delete: :delete_all),
+          null: false
+
       add :expires_at, :utc_datetime_usec, null: false
       add :interval, :integer, null: false
       add :status, :string, null: false

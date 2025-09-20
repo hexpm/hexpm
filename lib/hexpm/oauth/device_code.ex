@@ -10,13 +10,14 @@ defmodule Hexpm.OAuth.DeviceCode do
     field :user_code, :string
     field :verification_uri, :string
     field :verification_uri_complete, :string
-    field :client_id, :string
     field :expires_at, :utc_datetime_usec
     field :interval, :integer, default: 5
     field :status, :string, default: "pending"
     field :scopes, {:array, :string}, default: []
 
     belongs_to :user, User
+
+    belongs_to :client, Hexpm.OAuth.Client, references: :client_id, type: :binary_id
 
     timestamps()
   end

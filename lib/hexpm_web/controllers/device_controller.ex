@@ -126,7 +126,7 @@ defmodule HexpmWeb.DeviceController do
       {:ok, _device_code} ->
         conn
         |> put_flash(:info, "Device has been successfully authorized!")
-        |> render_verification_form(nil, nil)
+        |> redirect(to: ~p"/")
 
       {:error, :invalid_code, message} ->
         render_verification_form(conn, nil, message)
@@ -153,7 +153,7 @@ defmodule HexpmWeb.DeviceController do
       {:ok, _device_code} ->
         conn
         |> put_flash(:info, "Device authorization has been denied.")
-        |> render_verification_form(nil, nil)
+        |> redirect(to: ~p"/")
 
       {:error, :invalid_code, message} ->
         render_verification_form(conn, nil, message)

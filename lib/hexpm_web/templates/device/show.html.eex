@@ -8,7 +8,7 @@
 
 <%= if @device_code do %>
   <div class="alert alert-info">
-    <p><strong>Client ID:</strong> <%= @device_code.client_id %></p>
+    <p><strong>Application:</strong> <%= if @device_code.client, do: @device_code.client.name, else: @device_code.client_id %></p>
     <p><strong>Requested Scopes:</strong> <%= Enum.join(@device_code.scopes, ", ") %></p>
   </div>
 

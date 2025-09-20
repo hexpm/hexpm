@@ -17,7 +17,7 @@ defmodule Hexpm.OAuth.AuthorizationCode do
     field :code_challenge_method, :string
 
     belongs_to :user, User
-    field :client_id, :string
+    belongs_to :client, Hexpm.OAuth.Client, references: :client_id, type: :binary_id
 
     timestamps()
   end
