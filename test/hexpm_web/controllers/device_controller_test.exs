@@ -38,7 +38,14 @@ defmodule HexpmWeb.DeviceControllerTest do
       conn = login_user(build_conn(), user)
       client = create_test_client()
 
-      {:ok, response} = DeviceFlow.initiate_device_authorization(client.client_id, ["api"])
+      mock_conn =
+        build_conn()
+        |> Map.put(:scheme, :https)
+        |> Map.put(:host, "hex.pm")
+        |> Map.put(:port, 443)
+
+      {:ok, response} =
+        DeviceFlow.initiate_device_authorization(mock_conn, client.client_id, ["api"])
 
       conn = get(conn, ~p"/oauth/device?user_code=#{response.user_code}")
       assert html_response(conn, 200) =~ "Device Authorization"
@@ -56,7 +63,15 @@ defmodule HexpmWeb.DeviceControllerTest do
 
     test "redirects to login with return path for user_code" do
       client = create_test_client()
-      {:ok, response} = DeviceFlow.initiate_device_authorization(client.client_id, ["api"])
+
+      mock_conn =
+        build_conn()
+        |> Map.put(:scheme, :https)
+        |> Map.put(:host, "hex.pm")
+        |> Map.put(:port, 443)
+
+      {:ok, response} =
+        DeviceFlow.initiate_device_authorization(mock_conn, client.client_id, ["api"])
 
       conn = get(build_conn(), ~p"/oauth/device?user_code=#{response.user_code}")
       assert redirected_to(conn) =~ "/login"
@@ -69,7 +84,16 @@ defmodule HexpmWeb.DeviceControllerTest do
     setup do
       user = insert(:user)
       client = create_test_client()
-      {:ok, response} = DeviceFlow.initiate_device_authorization(client.client_id, ["api"])
+
+      mock_conn =
+        build_conn()
+        |> Map.put(:scheme, :https)
+        |> Map.put(:host, "hex.pm")
+        |> Map.put(:port, 443)
+
+      {:ok, response} =
+        DeviceFlow.initiate_device_authorization(mock_conn, client.client_id, ["api"])
+
       device_code = Repo.get_by(DeviceCode, device_code: response.device_code)
       %{user: user, device_code: device_code, client: client}
     end
@@ -215,7 +239,16 @@ defmodule HexpmWeb.DeviceControllerTest do
     setup do
       user = insert(:user)
       client = create_test_client()
-      {:ok, response} = DeviceFlow.initiate_device_authorization(client.client_id, ["api"])
+
+      mock_conn =
+        build_conn()
+        |> Map.put(:scheme, :https)
+        |> Map.put(:host, "hex.pm")
+        |> Map.put(:port, 443)
+
+      {:ok, response} =
+        DeviceFlow.initiate_device_authorization(mock_conn, client.client_id, ["api"])
+
       device_code = Repo.get_by(DeviceCode, device_code: response.device_code)
       %{user: user, device_code: device_code, client: client}
     end

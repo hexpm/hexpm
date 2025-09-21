@@ -20,13 +20,13 @@ defmodule Hexpm.OAuth.DeviceFlow do
   Creates a new device code entry and returns the necessary information
   for the client to display to the user.
   """
-  def initiate_device_authorization(client_id, scopes) do
+  def initiate_device_authorization(conn, client_id, scopes) do
     device_code = DeviceCode.generate_device_code()
     user_code = DeviceCode.generate_user_code()
     expires_at = DateTime.add(DateTime.utc_now(), @default_device_code_expiry_seconds, :second)
 
-    verification_uri = build_verification_uri()
-    verification_uri_complete = build_verification_uri_complete(user_code)
+    verification_uri = build_verification_uri(conn)
+    verification_uri_complete = build_verification_uri_complete(conn, user_code)
 
     changeset =
       DeviceCode.changeset(%DeviceCode{}, %{
@@ -242,11 +242,10 @@ defmodule Hexpm.OAuth.DeviceFlow do
     |> Repo.one()
   end
 
-  defp build_verification_uri do
-    url_config = Application.get_env(:hexpm, HexpmWeb.Endpoint)[:url]
-    scheme = url_config[:scheme] || "https"
-    host = url_config[:host] || "hex.pm"
-    port = url_config[:port]
+  defp build_verification_uri(conn) do
+    scheme = Atom.to_string(conn.scheme)
+    host = conn.host
+    port = conn.port
 
     case port do
       nil -> "#{scheme}://#{host}/oauth/device"
@@ -256,7 +255,7 @@ defmodule Hexpm.OAuth.DeviceFlow do
     end
   end
 
-  defp build_verification_uri_complete(user_code) do
-    "#{build_verification_uri()}?user_code=#{user_code}"
+  defp build_verification_uri_complete(conn, user_code) do
+    "#{build_verification_uri(conn)}?user_code=#{user_code}"
   end
 end

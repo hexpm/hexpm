@@ -1,7 +1,15 @@
 defmodule Hexpm.OAuth.DeviceFlowTest do
   use Hexpm.DataCase, async: true
+  import Phoenix.ConnTest
 
   alias Hexpm.OAuth.{DeviceFlow, DeviceCode, Token, Client}
+
+  defp create_mock_conn do
+    build_conn()
+    |> Map.put(:scheme, :https)
+    |> Map.put(:host, "hex.pm")
+    |> Map.put(:port, 443)
+  end
 
   defp create_test_client(name \\ "Test Client") do
     client_params = %{
@@ -20,7 +28,10 @@ defmodule Hexpm.OAuth.DeviceFlowTest do
   describe "initiate_device_authorization/2" do
     test "creates device code with default parameters" do
       client = create_test_client()
-      assert {:ok, response} = DeviceFlow.initiate_device_authorization(client.client_id, ["api"])
+      conn = create_mock_conn()
+
+      assert {:ok, response} =
+               DeviceFlow.initiate_device_authorization(conn, client.client_id, ["api"])
 
       assert response.device_code
       assert response.user_code
@@ -39,8 +50,11 @@ defmodule Hexpm.OAuth.DeviceFlowTest do
 
     test "creates device code with custom scopes" do
       client = create_test_client()
+      conn = create_mock_conn()
       scopes = ["api:read", "repositories"]
-      assert {:ok, response} = DeviceFlow.initiate_device_authorization(client.client_id, scopes)
+
+      assert {:ok, response} =
+               DeviceFlow.initiate_device_authorization(conn, client.client_id, scopes)
 
       device_code = Repo.get_by(DeviceCode, device_code: response.device_code)
       assert device_code.scopes == scopes
@@ -49,8 +63,13 @@ defmodule Hexpm.OAuth.DeviceFlowTest do
     test "generates unique codes" do
       client1 = create_test_client("Client 1")
       client2 = create_test_client("Client 2")
-      {:ok, response1} = DeviceFlow.initiate_device_authorization(client1.client_id, ["api"])
-      {:ok, response2} = DeviceFlow.initiate_device_authorization(client2.client_id, ["api"])
+      conn = create_mock_conn()
+
+      {:ok, response1} =
+        DeviceFlow.initiate_device_authorization(conn, client1.client_id, ["api"])
+
+      {:ok, response2} =
+        DeviceFlow.initiate_device_authorization(conn, client2.client_id, ["api"])
 
       assert response1.device_code != response2.device_code
       assert response1.user_code != response2.user_code
@@ -60,7 +79,8 @@ defmodule Hexpm.OAuth.DeviceFlowTest do
   describe "poll_device_token/2" do
     setup do
       client = create_test_client()
-      {:ok, response} = DeviceFlow.initiate_device_authorization(client.client_id, ["api"])
+      conn = create_mock_conn()
+      {:ok, response} = DeviceFlow.initiate_device_authorization(conn, client.client_id, ["api"])
       device_code = Repo.get_by(DeviceCode, device_code: response.device_code)
       %{device_code: device_code, response: response, client: client}
     end
@@ -129,7 +149,8 @@ defmodule Hexpm.OAuth.DeviceFlowTest do
   describe "authorize_device/2" do
     setup do
       client = create_test_client()
-      {:ok, response} = DeviceFlow.initiate_device_authorization(client.client_id, ["api"])
+      conn = create_mock_conn()
+      {:ok, response} = DeviceFlow.initiate_device_authorization(conn, client.client_id, ["api"])
       device_code = Repo.get_by(DeviceCode, device_code: response.device_code)
       user = insert(:user)
       %{device_code: device_code, user: user, client: client}
@@ -180,7 +201,8 @@ defmodule Hexpm.OAuth.DeviceFlowTest do
   describe "deny_device/1" do
     setup do
       client = create_test_client()
-      {:ok, response} = DeviceFlow.initiate_device_authorization(client.client_id, ["api"])
+      conn = create_mock_conn()
+      {:ok, response} = DeviceFlow.initiate_device_authorization(conn, client.client_id, ["api"])
       device_code = Repo.get_by(DeviceCode, device_code: response.device_code)
       %{device_code: device_code, client: client}
     end
@@ -198,7 +220,8 @@ defmodule Hexpm.OAuth.DeviceFlowTest do
   describe "get_device_code_for_verification/1" do
     setup do
       client = create_test_client()
-      {:ok, response} = DeviceFlow.initiate_device_authorization(client.client_id, ["api"])
+      conn = create_mock_conn()
+      {:ok, response} = DeviceFlow.initiate_device_authorization(conn, client.client_id, ["api"])
       device_code = Repo.get_by(DeviceCode, device_code: response.device_code)
       %{device_code: device_code, client: client}
     end
@@ -237,7 +260,8 @@ defmodule Hexpm.OAuth.DeviceFlowTest do
     test "marks expired pending device codes as expired" do
       # Create expired device code
       client = create_test_client()
-      {:ok, response} = DeviceFlow.initiate_device_authorization(client.client_id, ["api"])
+      conn = create_mock_conn()
+      {:ok, response} = DeviceFlow.initiate_device_authorization(conn, client.client_id, ["api"])
       device_code = Repo.get_by(DeviceCode, device_code: response.device_code)
 
       past_time = DateTime.add(DateTime.utc_now(), -3600, :second)
@@ -245,7 +269,9 @@ defmodule Hexpm.OAuth.DeviceFlowTest do
 
       # Create non-expired device code
       client2 = create_test_client("Client 2")
-      {:ok, _response2} = DeviceFlow.initiate_device_authorization(client2.client_id, ["api"])
+
+      {:ok, _response2} =
+        DeviceFlow.initiate_device_authorization(conn, client2.client_id, ["api"])
 
       # Run cleanup
       assert {1, nil} = DeviceFlow.cleanup_expired_device_codes()

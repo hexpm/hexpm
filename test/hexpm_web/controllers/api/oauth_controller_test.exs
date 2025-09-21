@@ -89,7 +89,13 @@ defmodule HexpmWeb.API.OAuthControllerTest do
 
   describe "POST /api/oauth/token with device_code grant" do
     setup %{client: client} do
-      {:ok, response} = DeviceFlow.initiate_device_authorization(client.client_id, ["api"])
+      conn =
+        build_conn()
+        |> Map.put(:scheme, :https)
+        |> Map.put(:host, "hex.pm")
+        |> Map.put(:port, 443)
+
+      {:ok, response} = DeviceFlow.initiate_device_authorization(conn, client.client_id, ["api"])
       device_code = Repo.get_by(Hexpm.OAuth.DeviceCode, device_code: response.device_code)
       %{device_code: device_code, response: response}
     end
@@ -189,7 +195,14 @@ defmodule HexpmWeb.API.OAuthControllerTest do
   describe "POST /api/oauth/token with refresh_token grant" do
     setup %{client: client} do
       user = insert(:user)
-      {:ok, response} = DeviceFlow.initiate_device_authorization(client.client_id, ["api"])
+
+      conn =
+        build_conn()
+        |> Map.put(:scheme, :https)
+        |> Map.put(:host, "hex.pm")
+        |> Map.put(:port, 443)
+
+      {:ok, response} = DeviceFlow.initiate_device_authorization(conn, client.client_id, ["api"])
       device_code = Repo.get_by(Hexpm.OAuth.DeviceCode, device_code: response.device_code)
 
       # Authorize the device to get a token with refresh token
