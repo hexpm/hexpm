@@ -514,7 +514,6 @@ defmodule HexpmWeb.API.OAuthControllerTest do
     end
 
     test "returns 200 OK for missing client_id parameter", %{
-      revoke_parent_token: parent_token,
       revoke_parent_tokens: parent_tokens
     } do
       params = %{
@@ -722,7 +721,6 @@ defmodule HexpmWeb.API.OAuthControllerTest do
 
     test "fails with unsupported subject_token_type", %{
       exchange_client: client,
-      exchange_parent_token: parent_token,
       exchange_parent_tokens: parent_tokens
     } do
       params = %{
@@ -746,7 +744,6 @@ defmodule HexpmWeb.API.OAuthControllerTest do
 
     test "fails when target scopes exceed parent scopes", %{
       exchange_client: client,
-      exchange_parent_token: parent_token,
       exchange_parent_tokens: parent_tokens
     } do
       params = %{
@@ -792,7 +789,6 @@ defmodule HexpmWeb.API.OAuthControllerTest do
 
     test "handles token exchange with single scope", %{
       exchange_client: client,
-      exchange_parent_token: parent_token,
       exchange_parent_tokens: parent_tokens
     } do
       params = %{

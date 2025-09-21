@@ -27,7 +27,6 @@ defmodule Hexpm.OAuth.TokenTest do
         Token.changeset(%Token{}, %{
           token_first: "first",
           token_second: "second",
-          token_hash: "hash",
           token_type: "bearer",
           scopes: ["api"],
           expires_at: expires_at,
@@ -47,7 +46,6 @@ defmodule Hexpm.OAuth.TokenTest do
         Token.changeset(%Token{}, %{
           token_first: "first",
           token_second: "second",
-          token_hash: "hash",
           token_type: "bearer",
           scopes: ["invalid_scope", "api"],
           expires_at: expires_at,
@@ -66,11 +64,9 @@ defmodule Hexpm.OAuth.TokenTest do
       attrs = %{
         token_first: "first",
         token_second: "second",
-        token_hash: "hash",
         token_type: "bearer",
         refresh_token_first: "rf_first",
         refresh_token_second: "rf_second",
-        refresh_token_hash: "rf_hash",
         scopes: ["api", "api:read"],
         expires_at: expires_at,
         grant_type: "authorization_code",
@@ -92,7 +88,6 @@ defmodule Hexpm.OAuth.TokenTest do
       attrs = %{
         token_first: "first",
         token_second: "second",
-        token_hash: "hash",
         token_type: "bearer",
         scopes: ["api"],
         expires_at: expires_at,

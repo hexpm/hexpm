@@ -49,7 +49,7 @@ defmodule Hexpm.OAuth.TokenExchangeTest do
       assert {:ok, new_token} =
                TokenExchange.exchange_token(
                  client.client_id,
-                 parent_token.token_hash,
+                 parent_token.access_token,
                  "urn:ietf:params:oauth:token-type:access_token",
                  target_scopes
                )
@@ -60,7 +60,7 @@ defmodule Hexpm.OAuth.TokenExchangeTest do
       assert new_token.token_family_id == parent_token.token_family_id
       assert new_token.user_id == parent_token.user_id
       assert new_token.client_id == parent_token.client_id
-      assert not is_nil(new_token.refresh_token_hash)
+      assert not is_nil(new_token.refresh_token)
     end
 
     test "exchanges token with single scope", %{client: client, parent_token: parent_token} do
@@ -69,7 +69,7 @@ defmodule Hexpm.OAuth.TokenExchangeTest do
       assert {:ok, new_token} =
                TokenExchange.exchange_token(
                  client.client_id,
-                 parent_token.token_hash,
+                 parent_token.access_token,
                  "urn:ietf:params:oauth:token-type:access_token",
                  target_scopes
                )
@@ -83,7 +83,7 @@ defmodule Hexpm.OAuth.TokenExchangeTest do
       assert {:ok, new_token} =
                TokenExchange.exchange_token(
                  client.client_id,
-                 parent_token.token_hash,
+                 parent_token.access_token,
                  "urn:ietf:params:oauth:token-type:access_token",
                  target_scopes
                )
@@ -95,7 +95,7 @@ defmodule Hexpm.OAuth.TokenExchangeTest do
       assert {:error, :invalid_client, "Invalid client"} =
                TokenExchange.exchange_token(
                  Ecto.UUID.generate(),
-                 parent_token.token_hash,
+                 parent_token.access_token,
                  "urn:ietf:params:oauth:token-type:access_token",
                  ["api:read"]
                )
@@ -118,7 +118,7 @@ defmodule Hexpm.OAuth.TokenExchangeTest do
       assert {:error, :invalid_request, "Unsupported subject_token_type: " <> _} =
                TokenExchange.exchange_token(
                  client.client_id,
-                 parent_token.token_hash,
+                 parent_token.access_token,
                  "unsupported_type",
                  ["api:read"]
                )
@@ -135,7 +135,7 @@ defmodule Hexpm.OAuth.TokenExchangeTest do
       assert {:error, :invalid_scope, "target scopes must be subset of source scopes"} =
                TokenExchange.exchange_token(
                  client.client_id,
-                 parent_token.token_hash,
+                 parent_token.access_token,
                  "urn:ietf:params:oauth:token-type:access_token",
                  target_scopes
                )
@@ -151,7 +151,7 @@ defmodule Hexpm.OAuth.TokenExchangeTest do
       assert {:error, :invalid_scope, "target scopes must be subset of source scopes"} =
                TokenExchange.exchange_token(
                  client.client_id,
-                 parent_token.token_hash,
+                 parent_token.access_token,
                  "urn:ietf:params:oauth:token-type:access_token",
                  target_scopes
                )
@@ -161,7 +161,7 @@ defmodule Hexpm.OAuth.TokenExchangeTest do
       assert {:error, :invalid_request, "Missing required parameter: scope"} =
                TokenExchange.exchange_token(
                  client.client_id,
-                 parent_token.token_hash,
+                 parent_token.access_token,
                  "urn:ietf:params:oauth:token-type:access_token",
                  nil
                )
@@ -185,7 +185,7 @@ defmodule Hexpm.OAuth.TokenExchangeTest do
       assert {:error, :invalid_grant, "Subject token expired or revoked"} =
                TokenExchange.exchange_token(
                  client.client_id,
-                 expired_token.token_hash,
+                 expired_token.access_token,
                  "urn:ietf:params:oauth:token-type:access_token",
                  ["api:read"]
                )
@@ -208,7 +208,7 @@ defmodule Hexpm.OAuth.TokenExchangeTest do
       assert {:error, :invalid_grant, "Subject token expired or revoked"} =
                TokenExchange.exchange_token(
                  client.client_id,
-                 token.token_hash,
+                 token.access_token,
                  "urn:ietf:params:oauth:token-type:access_token",
                  ["api:read"]
                )
@@ -223,7 +223,7 @@ defmodule Hexpm.OAuth.TokenExchangeTest do
       assert {:ok, new_token} =
                TokenExchange.exchange_token(
                  client.client_id,
-                 parent_token.refresh_token_hash,
+                 parent_token.refresh_token,
                  "urn:ietf:params:oauth:token-type:refresh_token",
                  target_scopes
                )
@@ -234,7 +234,7 @@ defmodule Hexpm.OAuth.TokenExchangeTest do
       assert new_token.token_family_id == parent_token.token_family_id
       assert new_token.user_id == parent_token.user_id
       assert new_token.client_id == parent_token.client_id
-      assert not is_nil(new_token.refresh_token_hash)
+      assert not is_nil(new_token.refresh_token)
     end
 
     test "fails with invalid refresh token", %{client: client} do
@@ -267,7 +267,7 @@ defmodule Hexpm.OAuth.TokenExchangeTest do
       assert {:error, :invalid_grant, "Subject token expired or revoked"} =
                TokenExchange.exchange_token(
                  client.client_id,
-                 expired_token.refresh_token_hash,
+                 expired_token.refresh_token,
                  "urn:ietf:params:oauth:token-type:refresh_token",
                  ["api:read"]
                )
@@ -277,7 +277,7 @@ defmodule Hexpm.OAuth.TokenExchangeTest do
       assert {:error, :invalid_request, "Unsupported subject_token_type: " <> _} =
                TokenExchange.exchange_token(
                  client.client_id,
-                 parent_token.token_hash,
+                 parent_token.access_token,
                  "urn:ietf:params:oauth:token-type:id_token",
                  ["api:read"]
                )
