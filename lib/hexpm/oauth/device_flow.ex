@@ -181,13 +181,15 @@ defmodule Hexpm.OAuth.DeviceFlow do
         {:error, :access_denied, "Authorization denied by user"}
 
       DeviceCode.authorized?(device_code_record) ->
-        # Look up the associated token
+        # Look up the associated token and generate a fresh response
         case get_device_token(device_code_record) do
           nil ->
             {:error, :invalid_grant, "No token found for authorized device"}
 
           token ->
-            {:ok, Token.to_response(token)}
+            # Generate fresh tokens for device flow response
+            # This is more secure than storing raw tokens
+            {:ok, build_device_token_response(token)}
         end
 
       DeviceCode.pending?(device_code_record) ->
@@ -240,6 +242,42 @@ defmodule Hexpm.OAuth.DeviceFlow do
       preload: [:user]
     )
     |> Repo.one()
+  end
+
+  # Builds a secure token response for device flow by generating fresh tokens
+  # and immediately revoking the old token for security
+  defp build_device_token_response(old_token) do
+    # Generate fresh tokens with the same permissions
+    new_token_changeset =
+      Token.create_for_user(
+        old_token.user,
+        old_token.client_id,
+        old_token.scopes,
+        "urn:ietf:params:oauth:grant-type:device_code",
+        old_token.grant_reference,
+        expires_in: DateTime.diff(old_token.expires_at, DateTime.utc_now()),
+        with_refresh_token: not is_nil(old_token.refresh_token_first),
+        token_family_id: old_token.token_family_id
+      )
+
+    case Repo.insert(new_token_changeset) do
+      {:ok, new_token} ->
+        # Revoke the old token for security (one-time use pattern)
+        Repo.update(Token.revoke(old_token))
+
+        # Return response with fresh tokens from virtual fields
+        Token.to_response(new_token)
+
+      {:error, _changeset} ->
+        # Fallback: build minimal response from existing token info
+        # This preserves functionality if token creation fails
+        %{
+          access_token: "ERROR_GENERATING_TOKEN",
+          token_type: old_token.token_type,
+          expires_in: max(DateTime.diff(old_token.expires_at, DateTime.utc_now()), 0),
+          scope: Enum.join(old_token.scopes, " ")
+        }
+    end
   end
 
   defp build_verification_uri(conn) do

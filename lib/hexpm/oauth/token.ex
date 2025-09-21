@@ -13,17 +13,19 @@ defmodule Hexpm.OAuth.Token do
   schema "oauth_tokens" do
     field :token_first, :string
     field :token_second, :string
-    field :token_hash, :string
     field :token_type, :string, default: "bearer"
     field :refresh_token_first, :string
     field :refresh_token_second, :string
-    field :refresh_token_hash, :string
     field :scopes, {:array, :string}, default: []
     field :expires_at, :utc_datetime
     field :revoked_at, :utc_datetime
     field :grant_type, :string
     field :grant_reference, :string
     field :token_family_id, :string
+
+    # Virtual fields for raw tokens (not persisted)
+    field :access_token, :string, virtual: true
+    field :refresh_token, :string, virtual: true
 
     belongs_to :user, User
     belongs_to :parent_token, __MODULE__
@@ -39,11 +41,9 @@ defmodule Hexpm.OAuth.Token do
     |> cast(attrs, [
       :token_first,
       :token_second,
-      :token_hash,
       :token_type,
       :refresh_token_first,
       :refresh_token_second,
-      :refresh_token_hash,
       :scopes,
       :expires_at,
       :revoked_at,
@@ -52,12 +52,13 @@ defmodule Hexpm.OAuth.Token do
       :parent_token_id,
       :token_family_id,
       :user_id,
-      :client_id
+      :client_id,
+      :access_token,
+      :refresh_token
     ])
     |> validate_required([
       :token_first,
       :token_second,
-      :token_hash,
       :token_type,
       :scopes,
       :expires_at,
@@ -113,6 +114,7 @@ defmodule Hexpm.OAuth.Token do
 
   @doc """
   Creates a token for a user with the given client and scopes.
+  Returns changeset with virtual fields set for raw token values.
   """
   def create_for_user(user, client_id, scopes, grant_type, grant_reference \\ nil, opts \\ []) do
     expires_in = Keyword.get(opts, :expires_in, @default_expires_in)
@@ -123,7 +125,7 @@ defmodule Hexpm.OAuth.Token do
     attrs = %{
       token_first: token_first,
       token_second: token_second,
-      token_hash: user_token,
+      access_token: user_token,
       scopes: scopes,
       expires_at: expires_at,
       grant_type: grant_type,
@@ -141,7 +143,7 @@ defmodule Hexpm.OAuth.Token do
         Map.merge(attrs, %{
           refresh_token_first: refresh_first,
           refresh_token_second: refresh_second,
-          refresh_token_hash: user_refresh_token
+          refresh_token: user_refresh_token
         })
       else
         attrs
@@ -206,20 +208,20 @@ defmodule Hexpm.OAuth.Token do
   end
 
   @doc """
-  Returns a token response suitable for OAuth responses.
+  Returns a token response suitable for OAuth responses using virtual fields.
   """
   def to_response(%__MODULE__{} = token) do
     expires_in = DateTime.diff(token.expires_at, DateTime.utc_now())
 
     response = %{
-      access_token: token.token_hash,
+      access_token: token.access_token,
       token_type: token.token_type,
       expires_in: max(expires_in, 0),
       scope: Enum.join(token.scopes, " ")
     }
 
-    if token.refresh_token_hash do
-      Map.put(response, :refresh_token, token.refresh_token_hash)
+    if token.refresh_token do
+      Map.put(response, :refresh_token, token.refresh_token)
     else
       response
     end
@@ -354,7 +356,7 @@ defmodule Hexpm.OAuth.Token do
       token_family_id: parent_token.token_family_id,
       parent_token_id: root_token_id,
       expires_in: DateTime.diff(parent_token.expires_at, DateTime.utc_now()),
-      with_refresh_token: not is_nil(parent_token.refresh_token_hash)
+      with_refresh_token: not is_nil(parent_token.refresh_token_first)
     )
   end
 

@@ -350,6 +350,12 @@ defmodule HexpmWeb.API.OAuthControllerTest do
       {:ok, parent_token} = Repo.insert(parent_token_changeset)
       parent_token = Repo.preload(parent_token, :user)
 
+      # Extract token values from the inserted token with virtual fields
+      parent_tokens = %{
+        access_token: parent_token.access_token,
+        refresh_token: parent_token.refresh_token
+      }
+
       # Create child tokens
       child1_changeset =
         Token.create_exchanged_token(parent_token, client.client_id, ["api:read"], "ref1")
@@ -360,23 +366,31 @@ defmodule HexpmWeb.API.OAuthControllerTest do
       {:ok, child1} = Repo.insert(child1_changeset)
       {:ok, child2} = Repo.insert(child2_changeset)
 
+      # Extract child token values from virtual fields
+      child1_tokens = %{access_token: child1.access_token, refresh_token: child1.refresh_token}
+      child2_tokens = %{access_token: child2.access_token, refresh_token: child2.refresh_token}
+
       %{
         revoke_user: user,
         revoke_client: client,
         revoke_parent_token: parent_token,
+        revoke_parent_tokens: parent_tokens,
         revoke_child1: child1,
-        revoke_child2: child2
+        revoke_child1_tokens: child1_tokens,
+        revoke_child2: child2,
+        revoke_child2_tokens: child2_tokens
       }
     end
 
     test "successfully revokes access token and cascades to family", %{
       revoke_client: client,
       revoke_parent_token: parent_token,
+      revoke_parent_tokens: parent_tokens,
       revoke_child1: child1,
       revoke_child2: child2
     } do
       params = %{
-        token: parent_token.token_hash,
+        token: parent_tokens.access_token,
         client_id: client.client_id
       }
 
@@ -398,11 +412,12 @@ defmodule HexpmWeb.API.OAuthControllerTest do
     test "successfully revokes refresh token and cascades to family", %{
       revoke_client: client,
       revoke_parent_token: parent_token,
+      revoke_parent_tokens: parent_tokens,
       revoke_child1: child1,
       revoke_child2: child2
     } do
       params = %{
-        token: parent_token.refresh_token_hash,
+        token: parent_tokens.refresh_token,
         client_id: client.client_id
       }
 
@@ -424,10 +439,11 @@ defmodule HexpmWeb.API.OAuthControllerTest do
       revoke_client: client,
       revoke_parent_token: parent_token,
       revoke_child1: child1,
+      revoke_child1_tokens: child1_tokens,
       revoke_child2: child2
     } do
       params = %{
-        token: child1.token_hash,
+        token: child1_tokens.access_token,
         client_id: client.client_id
       }
 
@@ -460,10 +476,11 @@ defmodule HexpmWeb.API.OAuthControllerTest do
     end
 
     test "returns 200 OK for invalid client_id (security per RFC 7009)", %{
-      revoke_parent_token: parent_token
+      revoke_parent_token: parent_token,
+      revoke_parent_tokens: parent_tokens
     } do
       params = %{
-        token: parent_token.token_hash,
+        token: parent_tokens.access_token,
         client_id: Ecto.UUID.generate()
       }
 
@@ -497,10 +514,11 @@ defmodule HexpmWeb.API.OAuthControllerTest do
     end
 
     test "returns 200 OK for missing client_id parameter", %{
-      revoke_parent_token: parent_token
+      revoke_parent_token: parent_token,
+      revoke_parent_tokens: parent_tokens
     } do
       params = %{
-        token: parent_token.token_hash
+        token: parent_tokens.access_token
       }
 
       build_conn()
@@ -510,14 +528,15 @@ defmodule HexpmWeb.API.OAuthControllerTest do
 
     test "handles revocation of already revoked token", %{
       revoke_client: client,
-      revoke_parent_token: parent_token
+      revoke_parent_token: parent_token,
+      revoke_parent_tokens: parent_tokens
     } do
       # First revoke the token
       {:ok, _} = Token.revoke_token(parent_token)
 
       # Try to revoke again
       params = %{
-        token: parent_token.token_hash,
+        token: parent_tokens.access_token,
         client_id: client.client_id
       }
 
@@ -526,7 +545,10 @@ defmodule HexpmWeb.API.OAuthControllerTest do
       |> response(200)
     end
 
-    test "handles token from different client", %{revoke_parent_token: parent_token} do
+    test "handles token from different client", %{
+      revoke_parent_token: parent_token,
+      revoke_parent_tokens: parent_tokens
+    } do
       other_client_params = %{
         client_id: Hexpm.OAuth.Client.generate_client_id(),
         name: "Other OAuth Client",
@@ -538,7 +560,7 @@ defmodule HexpmWeb.API.OAuthControllerTest do
       {:ok, other_client} = Client.build(other_client_params) |> Repo.insert()
 
       params = %{
-        token: parent_token.token_hash,
+        token: parent_tokens.access_token,
         client_id: other_client.client_id
       }
 
@@ -554,10 +576,11 @@ defmodule HexpmWeb.API.OAuthControllerTest do
 
     test "supports token_type_hint parameter (optional per RFC 7009)", %{
       revoke_client: client,
-      revoke_parent_token: parent_token
+      revoke_parent_token: parent_token,
+      revoke_parent_tokens: parent_tokens
     } do
       params = %{
-        token: parent_token.token_hash,
+        token: parent_tokens.access_token,
         client_id: client.client_id,
         token_type_hint: "access_token"
       }
@@ -603,21 +626,29 @@ defmodule HexpmWeb.API.OAuthControllerTest do
       {:ok, parent_token} = Repo.insert(parent_token_changeset)
       parent_token = Repo.preload(parent_token, :user)
 
+      # Extract token values from virtual fields
+      parent_tokens = %{
+        access_token: parent_token.access_token,
+        refresh_token: parent_token.refresh_token
+      }
+
       %{
         exchange_user: user,
         exchange_client: client,
-        exchange_parent_token: parent_token
+        exchange_parent_token: parent_token,
+        exchange_parent_tokens: parent_tokens
       }
     end
 
     test "successfully exchanges token with valid parameters", %{
       exchange_client: client,
-      exchange_parent_token: parent_token
+      exchange_parent_token: parent_token,
+      exchange_parent_tokens: parent_tokens
     } do
       params = %{
         grant_type: "urn:ietf:params:oauth:grant-type:token-exchange",
         client_id: client.client_id,
-        subject_token: parent_token.token_hash,
+        subject_token: parent_tokens.access_token,
         subject_token_type: "urn:ietf:params:oauth:token-type:access_token",
         scope: "api:read repositories"
       }
@@ -641,17 +672,19 @@ defmodule HexpmWeb.API.OAuthControllerTest do
       assert expires_in > 0
 
       # Verify token was created in database
-      created_token = Repo.get_by(Token, token_hash: access_token)
+      {:ok, created_token} =
+        Token.lookup(access_token, :access, client_id: client.client_id, preload: [])
+
       assert created_token.scopes == ["api:read", "repositories"]
       assert created_token.parent_token_id == parent_token.id
       assert created_token.token_family_id == parent_token.token_family_id
     end
 
-    test "fails with invalid client_id", %{exchange_parent_token: parent_token} do
+    test "fails with invalid client_id", %{exchange_parent_tokens: parent_tokens} do
       params = %{
         grant_type: "urn:ietf:params:oauth:grant-type:token-exchange",
         client_id: Ecto.UUID.generate(),
-        subject_token: parent_token.token_hash,
+        subject_token: parent_tokens.access_token,
         subject_token_type: "urn:ietf:params:oauth:token-type:access_token",
         scope: "api:read"
       }
@@ -689,12 +722,13 @@ defmodule HexpmWeb.API.OAuthControllerTest do
 
     test "fails with unsupported subject_token_type", %{
       exchange_client: client,
-      exchange_parent_token: parent_token
+      exchange_parent_token: parent_token,
+      exchange_parent_tokens: parent_tokens
     } do
       params = %{
         grant_type: "urn:ietf:params:oauth:grant-type:token-exchange",
         client_id: client.client_id,
-        subject_token: parent_token.token_hash,
+        subject_token: parent_tokens.access_token,
         subject_token_type: "unsupported_type",
         scope: "api:read"
       }
@@ -712,12 +746,13 @@ defmodule HexpmWeb.API.OAuthControllerTest do
 
     test "fails when target scopes exceed parent scopes", %{
       exchange_client: client,
-      exchange_parent_token: parent_token
+      exchange_parent_token: parent_token,
+      exchange_parent_tokens: parent_tokens
     } do
       params = %{
         grant_type: "urn:ietf:params:oauth:grant-type:token-exchange",
         client_id: client.client_id,
-        subject_token: parent_token.token_hash,
+        subject_token: parent_tokens.access_token,
         subject_token_type: "urn:ietf:params:oauth:token-type:access_token",
         scope: "api"
       }
@@ -735,12 +770,12 @@ defmodule HexpmWeb.API.OAuthControllerTest do
 
     test "fails with missing scope parameter", %{
       exchange_client: client,
-      exchange_parent_token: parent_token
+      exchange_parent_tokens: parent_tokens
     } do
       params = %{
         grant_type: "urn:ietf:params:oauth:grant-type:token-exchange",
         client_id: client.client_id,
-        subject_token: parent_token.token_hash,
+        subject_token: parent_tokens.access_token,
         subject_token_type: "urn:ietf:params:oauth:token-type:access_token"
       }
 
@@ -757,12 +792,13 @@ defmodule HexpmWeb.API.OAuthControllerTest do
 
     test "handles token exchange with single scope", %{
       exchange_client: client,
-      exchange_parent_token: parent_token
+      exchange_parent_token: parent_token,
+      exchange_parent_tokens: parent_tokens
     } do
       params = %{
         grant_type: "urn:ietf:params:oauth:grant-type:token-exchange",
         client_id: client.client_id,
-        subject_token: parent_token.token_hash,
+        subject_token: parent_tokens.access_token,
         subject_token_type: "urn:ietf:params:oauth:token-type:access_token",
         scope: "api:read"
       }
@@ -777,7 +813,9 @@ defmodule HexpmWeb.API.OAuthControllerTest do
              } = response
 
       # Verify token in database
-      created_token = Repo.get_by(Token, token_hash: response["access_token"])
+      {:ok, created_token} =
+        Token.lookup(response["access_token"], :access, client_id: client.client_id, preload: [])
+
       assert created_token.scopes == ["api:read"]
     end
   end

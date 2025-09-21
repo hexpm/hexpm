@@ -5,11 +5,9 @@ defmodule Hexpm.RepoBase.Migrations.CreateOauthTokens do
     create table(:oauth_tokens) do
       add :token_first, :string, null: false
       add :token_second, :string, null: false
-      add :token_hash, :string, null: false
       add :token_type, :string, null: false, default: "bearer"
       add :refresh_token_first, :string
       add :refresh_token_second, :string
-      add :refresh_token_hash, :string
       add :scopes, {:array, :string}, null: false, default: []
       add :expires_at, :utc_datetime, null: false
       add :revoked_at, :utc_datetime

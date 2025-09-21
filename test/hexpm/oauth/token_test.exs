@@ -12,7 +12,6 @@ defmodule Hexpm.OAuth.TokenTest do
       assert %{
                token_first: "can't be blank",
                token_second: "can't be blank",
-               token_hash: "can't be blank",
                expires_at: "can't be blank",
                grant_type: "can't be blank",
                user_id: "can't be blank",
@@ -202,7 +201,7 @@ defmodule Hexpm.OAuth.TokenTest do
       assert changeset.valid?
       assert get_field(changeset, :token_first)
       assert get_field(changeset, :token_second)
-      assert get_field(changeset, :token_hash)
+      assert get_field(changeset, :access_token)
       assert get_field(changeset, :scopes) == ["api"]
       assert get_field(changeset, :grant_type) == "authorization_code"
       assert get_field(changeset, :grant_reference) == "auth_code_123"
@@ -210,6 +209,7 @@ defmodule Hexpm.OAuth.TokenTest do
       assert get_field(changeset, :client_id) == "test_client"
       assert get_field(changeset, :expires_at)
       refute get_field(changeset, :refresh_token_first)
+      refute get_field(changeset, :refresh_token)
     end
 
     test "sets custom expiration time", %{user: user} do
@@ -243,7 +243,7 @@ defmodule Hexpm.OAuth.TokenTest do
 
       assert get_field(changeset, :refresh_token_first)
       assert get_field(changeset, :refresh_token_second)
-      assert get_field(changeset, :refresh_token_hash)
+      assert get_field(changeset, :refresh_token)
     end
 
     test "defaults grant_reference to nil", %{user: user} do
@@ -348,11 +348,10 @@ defmodule Hexpm.OAuth.TokenTest do
       future_time = DateTime.add(DateTime.utc_now(), 3600, :second)
 
       token = %Token{
-        token_hash: "access_token_123",
+        access_token: "access_token_123",
         token_type: "bearer",
         expires_at: future_time,
-        scopes: ["api", "api:read"],
-        refresh_token_hash: nil
+        scopes: ["api", "api:read"]
       }
 
       response = Token.to_response(token)
@@ -368,11 +367,11 @@ defmodule Hexpm.OAuth.TokenTest do
       future_time = DateTime.add(DateTime.utc_now(), 3600, :second)
 
       token = %Token{
-        token_hash: "access_token_123",
+        access_token: "access_token_123",
+        refresh_token: "refresh_token_456",
         token_type: "bearer",
         expires_at: future_time,
-        scopes: ["api"],
-        refresh_token_hash: "refresh_token_456"
+        scopes: ["api"]
       }
 
       response = Token.to_response(token)
@@ -385,11 +384,10 @@ defmodule Hexpm.OAuth.TokenTest do
       past_time = DateTime.add(DateTime.utc_now(), -100, :second)
 
       token = %Token{
-        token_hash: "access_token_123",
+        access_token: "access_token_123",
         token_type: "bearer",
         expires_at: past_time,
-        scopes: ["api"],
-        refresh_token_hash: nil
+        scopes: ["api"]
       }
 
       response = Token.to_response(token)
@@ -518,7 +516,7 @@ defmodule Hexpm.OAuth.TokenTest do
       assert child_token.grant_reference == "exchange_grant_ref"
       assert child_token.user_id == parent_token.user_id
       assert child_token.client_id == parent_token.client_id
-      assert not is_nil(child_token.refresh_token_hash)
+      assert not is_nil(child_token.refresh_token_first)
     end
 
     test "revoke/1 on parent token cascades to entire family", %{
