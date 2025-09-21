@@ -41,6 +41,8 @@ defmodule HexpmWeb.LoginControllerTest do
   end
 
   test "log in with wrong password", c do
+    PlugAttack.Storage.Ets.clean(HexpmWeb.Plugs.Attack.Storage)
+
     conn = post(build_conn(), "/login", %{username: c.user.username, password: "WRONG"})
     assert response(conn, 400) =~ "Log in"
 
@@ -52,6 +54,8 @@ defmodule HexpmWeb.LoginControllerTest do
   end
 
   test "log in with unconfirmed email", c do
+    PlugAttack.Storage.Ets.clean(HexpmWeb.Plugs.Attack.Storage)
+
     Ecto.Changeset.change(hd(c.user.emails), verified: false) |> Hexpm.Repo.update!()
 
     conn = post(build_conn(), "/login", %{username: c.user.username, password: "password"})
@@ -131,5 +135,25 @@ defmodule HexpmWeb.LoginControllerTest do
     assert redirected_to(conn) == "/users/#{c.user.username}"
     conn = get(conn, "/")
     assert response(conn, 400)
+  end
+
+  test "rate limits failed login attempts from same IP", c do
+    PlugAttack.Storage.Ets.clean(HexpmWeb.Plugs.Attack.Storage)
+
+    # Exhaust IP limit (10 attempts)
+    Enum.each(1..10, fn _ ->
+      conn = post(build_conn(), "/login", %{username: c.user.username, password: "WRONG"})
+      assert response(conn, 400)
+
+      assert Phoenix.Flash.get(conn.assigns.flash, "error") ==
+               "Invalid username, email or password."
+    end)
+
+    # 11th attempt should trigger IP rate limiting
+    conn = post(build_conn(), "/login", %{username: c.user.username, password: "WRONG"})
+    assert response(conn, 429)
+
+    assert Phoenix.Flash.get(conn.assigns.flash, "error") ==
+             "Too many login attempts from your IP. Please try again later."
   end
 end

@@ -31,6 +31,17 @@ defmodule HexpmWeb.DocsController do
     redirect(conn, external: "https://hexdocs.pm/hex")
   end
 
+  def gleam_usage(conn, _params) do
+    render(
+      conn,
+      "layout.html",
+      view: "gleam_usage.html",
+      view_name: :gleam_usage,
+      title: "Gleam usage",
+      container: "container page docs"
+    )
+  end
+
   def rebar3_usage(conn, _params) do
     render(
       conn,

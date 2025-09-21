@@ -107,9 +107,19 @@ defmodule HexpmWeb.PackageControllerTest do
       assert response(conn, 200) =~ ~r/#{package2.name}.*1.0.0/s
     end
 
-    test "search with whitespace", %{package5: package5} do
+    test "search with whitespace", %{package5: package5, package5_release: package5_release} do
+      insert(:download,
+        package: package5,
+        release: package5_release,
+        downloads: 1_234,
+        day: Hexpm.Utils.utc_yesterday()
+      )
+
+      :ok = Hexpm.Repo.refresh_view(Hexpm.Repository.PackageDownload)
+
       conn = get(build_conn(), "/packages?search=with underscore")
       assert response(conn, 200) =~ "exact-match"
+      assert response(conn, 200) =~ "total downloads: 1 234"
       assert response(conn, 200) =~ ~r/#{package5.name}.*0.0.1/s
       refute response(conn, 200) =~ "no-results"
     end

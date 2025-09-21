@@ -1416,5 +1416,22 @@ defmodule HexpmWeb.API.ReleaseControllerTest do
                ["2000-02", 9]
              ]
     end
+
+    test "get release downloads limited to range", %{package: package, release: release} do
+      result =
+        build_conn()
+        |> get(
+          "/api/packages/#{package.name}/releases/#{release.version}?" <>
+            "downloads=day&downloads_after=2000-01-02&downloads_before=2000-02-07"
+        )
+        |> json_response(200)
+
+      assert result["version"] == "#{release.version}"
+
+      assert result["downloads"] == [
+               ["2000-02-01", 3],
+               ["2000-02-07", 2]
+             ]
+    end
   end
 end

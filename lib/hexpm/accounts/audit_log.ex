@@ -292,7 +292,7 @@ defmodule Hexpm.Accounts.AuditLog do
   defp fields(%ReleaseRetirement{}), do: [:status, :message]
   defp fields(%Organization{}), do: [:id, :name, :public, :active, :billing_active]
   defp fields(%User{}), do: [:id, :username]
-  defp fields(%UserHandles{}), do: [:github, :twitter, :freenode]
+  defp fields(%UserHandles{}), do: [:twitter, :bluesky, :github, :elixirforum, :freenode, :slack]
 
   defp multi_key(multi, action) do
     :"log.#{action}.#{length(Multi.to_list(multi))}"
