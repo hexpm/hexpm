@@ -14,6 +14,7 @@ defmodule Hexpm.OAuth.DeviceCode do
     field :interval, :integer, default: 5
     field :status, :string, default: "pending"
     field :scopes, {:array, :string}, default: []
+    field :name, :string
 
     belongs_to :user, User
 
@@ -42,7 +43,8 @@ defmodule Hexpm.OAuth.DeviceCode do
       :client_id,
       :expires_at,
       :interval,
-      :scopes
+      :scopes,
+      :name
     ])
     |> validate_required([
       :device_code,

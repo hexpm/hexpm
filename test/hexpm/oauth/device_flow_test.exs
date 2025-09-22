@@ -74,6 +74,31 @@ defmodule Hexpm.OAuth.DeviceFlowTest do
       assert response1.device_code != response2.device_code
       assert response1.user_code != response2.user_code
     end
+
+    test "creates device code with name parameter" do
+      client = create_test_client()
+      conn = create_mock_conn()
+      name = "MyTestMachine"
+
+      assert {:ok, response} =
+               DeviceFlow.initiate_device_authorization(conn, client.client_id, ["api"],
+                 name: name
+               )
+
+      device_code = Repo.get_by(DeviceCode, device_code: response.device_code)
+      assert device_code.name == name
+    end
+
+    test "creates device code without name parameter" do
+      client = create_test_client()
+      conn = create_mock_conn()
+
+      assert {:ok, response} =
+               DeviceFlow.initiate_device_authorization(conn, client.client_id, ["api"])
+
+      device_code = Repo.get_by(DeviceCode, device_code: response.device_code)
+      assert device_code.name == nil
+    end
   end
 
   describe "poll_device_token/2" do
@@ -172,6 +197,29 @@ defmodule Hexpm.OAuth.DeviceFlowTest do
 
       assert oauth_token
       assert oauth_token.user_id == user.id
+    end
+
+    test "authorizes device with name preserved in token", %{user: user} do
+      client = create_test_client()
+      conn = create_mock_conn()
+      name = "TestMachine"
+
+      {:ok, response} =
+        DeviceFlow.initiate_device_authorization(conn, client.client_id, ["api"], name: name)
+
+      device_code = Repo.get_by(DeviceCode, device_code: response.device_code)
+
+      assert {:ok, _} = DeviceFlow.authorize_device(device_code.user_code, user)
+
+      # Verify OAuth token has the name
+      oauth_token =
+        Repo.get_by(Token,
+          grant_type: "urn:ietf:params:oauth:grant-type:device_code",
+          grant_reference: device_code.device_code,
+          client_id: client.client_id
+        )
+
+      assert oauth_token.name == name
     end
 
     test "returns error for invalid user code", %{user: user} do

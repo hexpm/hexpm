@@ -38,7 +38,9 @@ defmodule HexpmWeb.API.OAuthController do
   def device_authorization(conn, params) do
     with {:ok, client} <- validate_client(params["client_id"]),
          {:ok, scopes} <- validate_scopes(client, params["scope"]) do
-      case DeviceFlow.initiate_device_authorization(conn, client.client_id, scopes) do
+      case DeviceFlow.initiate_device_authorization(conn, client.client_id, scopes,
+             name: params["name"]
+           ) do
         {:ok, response} ->
           render(conn, :device_authorization, device_response: response)
 
@@ -125,7 +127,7 @@ defmodule HexpmWeb.API.OAuthController do
       # Revoke old token
       {:ok, _} = Repo.update(Token.revoke(token))
 
-      # Create new token
+      # Create new token preserving the name from the original token
       new_token_changeset =
         Token.create_for_user(
           token.user,
@@ -134,7 +136,8 @@ defmodule HexpmWeb.API.OAuthController do
           "refresh_token",
           params["refresh_token"],
           with_refresh_token: true,
-          token_family_id: token.token_family_id
+          token_family_id: token.token_family_id,
+          name: token.name
         )
 
       case Repo.insert(new_token_changeset) do

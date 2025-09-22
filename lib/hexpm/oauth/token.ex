@@ -25,6 +25,7 @@ defmodule Hexpm.OAuth.Token do
     field :grant_type, :string
     field :grant_reference, :string
     field :token_family_id, :string
+    field :name, :string
 
     # Virtual fields for raw tokens (not persisted)
     field :access_token, :string, virtual: true
@@ -58,7 +59,8 @@ defmodule Hexpm.OAuth.Token do
       :user_id,
       :client_id,
       :access_token,
-      :refresh_token
+      :refresh_token,
+      :name
     ])
     |> validate_required([
       :token_first,
@@ -137,7 +139,8 @@ defmodule Hexpm.OAuth.Token do
       user_id: user.id,
       client_id: client_id,
       token_family_id: Keyword.get(opts, :token_family_id, generate_family_id()),
-      parent_token_id: Keyword.get(opts, :parent_token_id)
+      parent_token_id: Keyword.get(opts, :parent_token_id),
+      name: Keyword.get(opts, :name)
     }
 
     attrs =
@@ -251,11 +254,14 @@ defmodule Hexpm.OAuth.Token do
       scope: Enum.join(token.scopes, " ")
     }
 
-    if token.refresh_token do
-      Map.put(response, :refresh_token, token.refresh_token)
-    else
-      response
-    end
+    response =
+      if token.refresh_token,
+        do: Map.put(response, :refresh_token, token.refresh_token),
+        else: response
+
+    response = if token.name, do: Map.put(response, :name, token.name), else: response
+
+    response
   end
 
   @doc """
@@ -382,7 +388,8 @@ defmodule Hexpm.OAuth.Token do
       token_family_id: parent_token.token_family_id,
       parent_token_id: root_token_id,
       expires_in: DateTime.diff(parent_token.expires_at, DateTime.utc_now()),
-      with_refresh_token: not is_nil(parent_token.refresh_token_first)
+      with_refresh_token: not is_nil(parent_token.refresh_token_first),
+      name: parent_token.name
     ]
 
     create_for_user(

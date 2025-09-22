@@ -85,6 +85,24 @@ defmodule HexpmWeb.API.OAuthControllerTest do
       response = json_response(conn, 401)
       assert response["error"] == "invalid_client"
     end
+
+    test "initiates device authorization with name parameter", %{client: client} do
+      name = "TestMachine"
+
+      conn =
+        post(build_conn(), ~p"/api/oauth/device_authorization", %{
+          "client_id" => client.client_id,
+          "scope" => "api",
+          "name" => name
+        })
+
+      assert json_response(conn, 200)
+      response = json_response(conn, 200)
+
+      # Verify device code was created with the name
+      device_code = Repo.get_by(Hexpm.OAuth.DeviceCode, device_code: response["device_code"])
+      assert device_code.name == name
+    end
   end
 
   describe "POST /api/oauth/token with device_code grant" do
@@ -351,7 +369,6 @@ defmodule HexpmWeb.API.OAuthControllerTest do
       assert response["error"] == "invalid_grant"
       assert response["error_description"] == "Refresh token has expired"
     end
-
   end
 
   describe "POST /api/oauth/revoke" do

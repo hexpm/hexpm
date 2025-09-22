@@ -19,7 +19,7 @@ defmodule Hexpm.OAuth.DeviceFlow do
   Creates a new device code entry and returns the necessary information
   for the client to display to the user.
   """
-  def initiate_device_authorization(conn, client_id, scopes) do
+  def initiate_device_authorization(conn, client_id, scopes, opts \\ []) do
     device_code = DeviceCode.generate_device_code()
     user_code = DeviceCode.generate_user_code()
     expires_at = DateTime.add(DateTime.utc_now(), @default_device_code_expiry_seconds, :second)
@@ -36,7 +36,8 @@ defmodule Hexpm.OAuth.DeviceFlow do
         client_id: client_id,
         expires_at: expires_at,
         interval: @default_polling_interval,
-        scopes: scopes
+        scopes: scopes,
+        name: Keyword.get(opts, :name)
       })
 
     case Repo.insert(changeset) do
@@ -208,7 +209,8 @@ defmodule Hexpm.OAuth.DeviceFlow do
         device_code_record.scopes,
         "urn:ietf:params:oauth:grant-type:device_code",
         device_code_record.device_code,
-        with_refresh_token: true
+        with_refresh_token: true,
+        name: device_code_record.name
       )
 
     case Repo.insert(token_changeset) do
@@ -255,7 +257,8 @@ defmodule Hexpm.OAuth.DeviceFlow do
         old_token.grant_reference,
         expires_in: DateTime.diff(old_token.expires_at, DateTime.utc_now()),
         with_refresh_token: not is_nil(old_token.refresh_token_first),
-        token_family_id: old_token.token_family_id
+        token_family_id: old_token.token_family_id,
+        name: old_token.name
       )
 
     case Repo.insert(new_token_changeset) do

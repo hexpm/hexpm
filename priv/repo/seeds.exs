@@ -12,7 +12,7 @@ password = &Bcrypt.hash_pwd_salt/1
 
 Hexpm.Repo.transaction(fn ->
   insert(:oauth_client,
-    name: "Mix Hex",
+    name: "Hex CLI",
     client_id: "78ea6566-89fd-481e-a1d6-7d9d78eacca8",
     client_type: "public"
   )
