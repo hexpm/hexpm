@@ -307,6 +307,10 @@ defmodule HexpmWeb.Router do
       pipe_through :api
 
       post "/repo", TestController, :repo
+      post "/oauth_client", TestController, :oauth_client
+      post "/oauth_token", TestController, :oauth_token
+      post "/oauth_device_authorize", TestController, :oauth_device_authorize
+      get "/oauth_device_pending", TestController, :oauth_device_pending
     end
   end
 
