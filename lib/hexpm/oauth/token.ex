@@ -8,7 +8,9 @@ defmodule Hexpm.OAuth.Token do
 
   @token_length 32
   @refresh_token_length 32
-  @default_expires_in 60 * 60
+  @default_expires_in 30 * 60
+  @default_refresh_token_expires_in 30 * 24 * 60 * 60
+  @restricted_refresh_token_expires_in 60 * 60
 
   schema "oauth_tokens" do
     field :token_first, :string
@@ -18,6 +20,7 @@ defmodule Hexpm.OAuth.Token do
     field :refresh_token_second, :string
     field :scopes, {:array, :string}, default: []
     field :expires_at, :utc_datetime
+    field :refresh_token_expires_at, :utc_datetime
     field :revoked_at, :utc_datetime
     field :grant_type, :string
     field :grant_reference, :string
@@ -46,6 +49,7 @@ defmodule Hexpm.OAuth.Token do
       :refresh_token_second,
       :scopes,
       :expires_at,
+      :refresh_token_expires_at,
       :revoked_at,
       :grant_type,
       :grant_reference,
@@ -140,10 +144,21 @@ defmodule Hexpm.OAuth.Token do
       if Keyword.get(opts, :with_refresh_token, false) do
         {user_refresh_token, refresh_first, refresh_second} = generate_refresh_token()
 
+        # Determine refresh token expiration based on scopes
+        refresh_expires_in =
+          if has_write_scope?(scopes) do
+            @restricted_refresh_token_expires_in
+          else
+            @default_refresh_token_expires_in
+          end
+
+        refresh_expires_at = DateTime.add(DateTime.utc_now(), refresh_expires_in, :second)
+
         Map.merge(attrs, %{
           refresh_token_first: refresh_first,
           refresh_token_second: refresh_second,
-          refresh_token: user_refresh_token
+          refresh_token: user_refresh_token,
+          refresh_token_expires_at: refresh_expires_at
         })
       else
         attrs
@@ -160,6 +175,15 @@ defmodule Hexpm.OAuth.Token do
   end
 
   @doc """
+  Checks if the refresh token is expired.
+  """
+  def refresh_token_expired?(%__MODULE__{refresh_token_expires_at: nil}), do: false
+
+  def refresh_token_expired?(%__MODULE__{refresh_token_expires_at: expires_at}) do
+    DateTime.compare(DateTime.utc_now(), expires_at) == :gt
+  end
+
+  @doc """
   Checks if the token is revoked.
   """
   def revoked?(%__MODULE__{revoked_at: nil}), do: false
@@ -170,6 +194,13 @@ defmodule Hexpm.OAuth.Token do
   """
   def valid?(%__MODULE__{} = token) do
     not expired?(token) and not revoked?(token)
+  end
+
+  @doc """
+  Checks if the refresh token is valid (not expired and not revoked).
+  """
+  def refresh_token_valid?(%__MODULE__{} = token) do
+    not refresh_token_expired?(token) and not revoked?(token)
   end
 
   @doc """
@@ -347,16 +378,20 @@ defmodule Hexpm.OAuth.Token do
         parent_token.id
       end
 
+    opts = [
+      token_family_id: parent_token.token_family_id,
+      parent_token_id: root_token_id,
+      expires_in: DateTime.diff(parent_token.expires_at, DateTime.utc_now()),
+      with_refresh_token: not is_nil(parent_token.refresh_token_first)
+    ]
+
     create_for_user(
       parent_token.user,
       client_id,
       target_scopes,
       "urn:ietf:params:oauth:grant-type:token-exchange",
       grant_reference,
-      token_family_id: parent_token.token_family_id,
-      parent_token_id: root_token_id,
-      expires_in: DateTime.diff(parent_token.expires_at, DateTime.utc_now()),
-      with_refresh_token: not is_nil(parent_token.refresh_token_first)
+      opts
     )
   end
 
@@ -391,5 +426,12 @@ defmodule Hexpm.OAuth.Token do
         {:error, message} -> [scopes: message]
       end
     end)
+  end
+
+  @doc """
+  Checks if the scopes include write permissions (api or api:write).
+  """
+  def has_write_scope?(scopes) do
+    "api" in scopes or "api:write" in scopes
   end
 end

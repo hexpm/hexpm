@@ -315,8 +315,43 @@ defmodule HexpmWeb.API.OAuthControllerTest do
       assert json_response(conn, 400)
       response = json_response(conn, 400)
       assert response["error"] == "invalid_grant"
-      assert response["error_description"] == "Refresh token expired or revoked"
+      assert response["error_description"] == "Refresh token has been revoked"
     end
+
+    test "returns error for expired refresh token", %{user: user, client: client} do
+      # Create a token with an expired refresh token
+      token_changeset =
+        Hexpm.OAuth.Token.create_for_user(
+          user,
+          client.client_id,
+          ["api:read"],
+          "authorization_code",
+          "test_code",
+          with_refresh_token: true
+        )
+
+      {:ok, token} = Hexpm.Repo.insert(token_changeset)
+
+      # Manually expire the refresh token
+      past_time = DateTime.add(DateTime.utc_now(), -3600, :second) |> DateTime.truncate(:second)
+
+      {:ok, _} =
+        token
+        |> Ecto.Changeset.change(refresh_token_expires_at: past_time)
+        |> Hexpm.Repo.update()
+
+      conn =
+        post(build_conn(), ~p"/api/oauth/token", %{
+          "grant_type" => "refresh_token",
+          "refresh_token" => token.refresh_token,
+          "client_id" => client.client_id
+        })
+
+      assert response = json_response(conn, 400)
+      assert response["error"] == "invalid_grant"
+      assert response["error_description"] == "Refresh token has expired"
+    end
+
   end
 
   describe "POST /api/oauth/revoke" do

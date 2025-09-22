@@ -293,9 +293,18 @@ defmodule HexpmWeb.API.OAuthController do
   defp validate_refresh_token("", _), do: {:error, :invalid_grant, "Missing refresh token"}
 
   defp validate_refresh_token(user_refresh_token, client_id) do
-    case Token.lookup(user_refresh_token, :refresh, client_id: client_id) do
+    case Token.lookup(user_refresh_token, :refresh, client_id: client_id, validate: false) do
       {:ok, token} ->
-        {:ok, token}
+        cond do
+          Token.revoked?(token) ->
+            {:error, :invalid_grant, "Refresh token has been revoked"}
+
+          Token.refresh_token_expired?(token) ->
+            {:error, :invalid_grant, "Refresh token has expired"}
+
+          true ->
+            {:ok, token}
+        end
 
       {:error, :not_found} ->
         {:error, :invalid_grant, "Invalid refresh token"}
@@ -303,11 +312,8 @@ defmodule HexpmWeb.API.OAuthController do
       {:error, :invalid_token} ->
         {:error, :invalid_grant, "Invalid refresh token"}
 
-      {:error, :token_invalid} ->
-        {:error, :invalid_grant, "Refresh token expired or revoked"}
-
       {:error, _} ->
-        {:error, :invalid_grant, "Refresh token expired or revoked"}
+        {:error, :invalid_grant, "Invalid refresh token"}
     end
   end
 

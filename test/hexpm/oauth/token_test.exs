@@ -252,6 +252,93 @@ defmodule Hexpm.OAuth.TokenTest do
 
       assert get_field(changeset, :grant_reference) == nil
     end
+
+    test "sets 30-day refresh token expiration for read-only scopes", %{user: user} do
+      changeset =
+        Token.create_for_user(
+          user,
+          "test_client",
+          ["api:read"],
+          "authorization_code",
+          nil,
+          with_refresh_token: true
+        )
+
+      refresh_expires_at = get_field(changeset, :refresh_token_expires_at)
+      expected_time = DateTime.add(DateTime.utc_now(), 30 * 24 * 60 * 60, :second)
+
+      # Allow 2 second tolerance for test execution time
+      assert DateTime.diff(refresh_expires_at, expected_time, :second) |> abs() <= 2
+    end
+
+    test "sets 60-minute refresh token expiration for api:write scope", %{user: user} do
+      changeset =
+        Token.create_for_user(
+          user,
+          "test_client",
+          ["api:write"],
+          "authorization_code",
+          nil,
+          with_refresh_token: true
+        )
+
+      refresh_expires_at = get_field(changeset, :refresh_token_expires_at)
+      expected_time = DateTime.add(DateTime.utc_now(), 60 * 60, :second)
+
+      # Allow 2 second tolerance for test execution time
+      assert DateTime.diff(refresh_expires_at, expected_time, :second) |> abs() <= 2
+    end
+
+    test "sets 60-minute refresh token expiration for api scope", %{user: user} do
+      changeset =
+        Token.create_for_user(
+          user,
+          "test_client",
+          ["api"],
+          "authorization_code",
+          nil,
+          with_refresh_token: true
+        )
+
+      refresh_expires_at = get_field(changeset, :refresh_token_expires_at)
+      expected_time = DateTime.add(DateTime.utc_now(), 60 * 60, :second)
+
+      # Allow 2 second tolerance for test execution time
+      assert DateTime.diff(refresh_expires_at, expected_time, :second) |> abs() <= 2
+    end
+
+    test "sets 60-minute refresh token expiration for mixed scopes with write", %{user: user} do
+      changeset =
+        Token.create_for_user(
+          user,
+          "test_client",
+          ["api:read", "api:write", "repositories"],
+          "authorization_code",
+          nil,
+          with_refresh_token: true
+        )
+
+      refresh_expires_at = get_field(changeset, :refresh_token_expires_at)
+      expected_time = DateTime.add(DateTime.utc_now(), 60 * 60, :second)
+
+      # Allow 2 second tolerance for test execution time
+      assert DateTime.diff(refresh_expires_at, expected_time, :second) |> abs() <= 2
+    end
+
+    test "does not set refresh token expiration when refresh token not requested", %{user: user} do
+      changeset =
+        Token.create_for_user(
+          user,
+          "test_client",
+          ["api"],
+          "authorization_code",
+          nil,
+          with_refresh_token: false
+        )
+
+      assert get_field(changeset, :refresh_token_expires_at) == nil
+      assert get_field(changeset, :refresh_token_first) == nil
+    end
   end
 
   describe "expired?/1" do
@@ -316,6 +403,84 @@ defmodule Hexpm.OAuth.TokenTest do
       assert revoked_at
       # Should be within last few seconds
       assert DateTime.diff(DateTime.utc_now(), revoked_at, :second) <= 1
+    end
+  end
+
+  describe "refresh_token_expired?/1" do
+    test "returns false for non-expired refresh token" do
+      future_time = DateTime.add(DateTime.utc_now(), 3600, :second)
+      token = %Token{refresh_token_expires_at: future_time}
+
+      refute Token.refresh_token_expired?(token)
+    end
+
+    test "returns true for expired refresh token" do
+      past_time = DateTime.add(DateTime.utc_now(), -3600, :second)
+      token = %Token{refresh_token_expires_at: past_time}
+
+      assert Token.refresh_token_expired?(token)
+    end
+
+    test "returns false when refresh_token_expires_at is nil" do
+      token = %Token{refresh_token_expires_at: nil}
+
+      refute Token.refresh_token_expired?(token)
+    end
+  end
+
+  describe "refresh_token_valid?/1" do
+    test "returns true for non-expired, non-revoked refresh token" do
+      future_time = DateTime.add(DateTime.utc_now(), 3600, :second)
+      token = %Token{refresh_token_expires_at: future_time, revoked_at: nil}
+
+      assert Token.refresh_token_valid?(token)
+    end
+
+    test "returns false for expired refresh token" do
+      past_time = DateTime.add(DateTime.utc_now(), -3600, :second)
+      token = %Token{refresh_token_expires_at: past_time, revoked_at: nil}
+
+      refute Token.refresh_token_valid?(token)
+    end
+
+    test "returns false for revoked refresh token" do
+      future_time = DateTime.add(DateTime.utc_now(), 3600, :second)
+      token = %Token{refresh_token_expires_at: future_time, revoked_at: DateTime.utc_now()}
+
+      refute Token.refresh_token_valid?(token)
+    end
+
+    test "returns true when refresh_token_expires_at is nil and not revoked" do
+      token = %Token{refresh_token_expires_at: nil, revoked_at: nil}
+
+      assert Token.refresh_token_valid?(token)
+    end
+  end
+
+  describe "has_write_scope?/1" do
+    test "returns true for 'api' scope" do
+      assert Token.has_write_scope?(["api"])
+    end
+
+    test "returns true for 'api:write' scope" do
+      assert Token.has_write_scope?(["api:write"])
+    end
+
+    test "returns true for mixed scopes including 'api'" do
+      assert Token.has_write_scope?(["api:read", "api", "repositories"])
+    end
+
+    test "returns true for mixed scopes including 'api:write'" do
+      assert Token.has_write_scope?(["api:read", "api:write", "repositories"])
+    end
+
+    test "returns false for read-only scopes" do
+      refute Token.has_write_scope?(["api:read"])
+      refute Token.has_write_scope?(["api:read", "repositories"])
+    end
+
+    test "returns false for empty scopes" do
+      refute Token.has_write_scope?([])
     end
   end
 

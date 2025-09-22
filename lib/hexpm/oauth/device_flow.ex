@@ -11,7 +11,6 @@ defmodule Hexpm.OAuth.DeviceFlow do
   alias Hexpm.Repo
 
   @default_device_code_expiry_seconds 10 * 60
-  @default_token_expiry_seconds 60 * 60
   @default_polling_interval 5
 
   @doc """
@@ -209,7 +208,6 @@ defmodule Hexpm.OAuth.DeviceFlow do
         device_code_record.scopes,
         "urn:ietf:params:oauth:grant-type:device_code",
         device_code_record.device_code,
-        expires_in: @default_token_expiry_seconds,
         with_refresh_token: true
       )
 
