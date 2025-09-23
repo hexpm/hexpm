@@ -3,7 +3,7 @@ defmodule HexpmWeb.API.OAuthController do
 
   alias Hexpm.Repo
   alias Hexpm.OAuth.DeviceFlow
-  alias Hexpm.OAuth.{Client, Token, TokenExchange}
+  alias Hexpm.OAuth.{Client, Session, Token, TokenExchange}
 
   @doc """
   Standard OAuth 2.0 token endpoint for API access.
@@ -83,22 +83,31 @@ defmodule HexpmWeb.API.OAuthController do
       # Mark code as used
       {:ok, used_auth_code} = Repo.update(Hexpm.OAuth.AuthorizationCode.mark_as_used(auth_code))
 
-      # Create token
-      token_changeset =
-        Token.create_for_user(
-          used_auth_code.user,
-          client.client_id,
-          used_auth_code.scopes,
-          "authorization_code",
-          used_auth_code.code,
-          with_refresh_token: true
+      # Create session and token
+      result =
+        Ecto.Multi.new()
+        |> Ecto.Multi.insert(
+          :session,
+          Session.create_for_user(used_auth_code.user, client.client_id, name: params["name"])
         )
+        |> Ecto.Multi.insert(:token, fn %{session: session} ->
+          Token.create_for_user(
+            used_auth_code.user,
+            client.client_id,
+            used_auth_code.scopes,
+            "authorization_code",
+            used_auth_code.code,
+            session_id: session.id,
+            with_refresh_token: true
+          )
+        end)
+        |> Repo.transaction()
 
-      case Repo.insert(token_changeset) do
-        {:ok, token} ->
+      case result do
+        {:ok, %{token: token}} ->
           render(conn, :token, token_response: Token.to_response(token))
 
-        {:error, changeset} ->
+        {:error, _failed_operation, changeset, _changes} ->
           render_oauth_error(
             conn,
             :server_error,
@@ -127,7 +136,7 @@ defmodule HexpmWeb.API.OAuthController do
       # Revoke old token
       {:ok, _} = Repo.update(Token.revoke(token))
 
-      # Create new token preserving the name from the original token
+      # Create new token in same session
       new_token_changeset =
         Token.create_for_user(
           token.user,
@@ -136,8 +145,7 @@ defmodule HexpmWeb.API.OAuthController do
           "refresh_token",
           params["refresh_token"],
           with_refresh_token: true,
-          token_family_id: token.token_family_id,
-          name: token.name
+          session_id: token.session_id
         )
 
       case Repo.insert(new_token_changeset) do

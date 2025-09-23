@@ -211,15 +211,16 @@ defmodule Hexpm.OAuth.DeviceFlowTest do
 
       assert {:ok, _} = DeviceFlow.authorize_device(device_code.user_code, user)
 
-      # Verify OAuth token has the name
+      # Verify OAuth token and session have the name
       oauth_token =
         Repo.get_by(Token,
           grant_type: "urn:ietf:params:oauth:grant-type:device_code",
           grant_reference: device_code.device_code,
           client_id: client.client_id
         )
+        |> Repo.preload(:session)
 
-      assert oauth_token.name == name
+      assert oauth_token.session.name == name
     end
 
     test "returns error for invalid user code", %{user: user} do

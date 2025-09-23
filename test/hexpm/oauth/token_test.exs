@@ -3,7 +3,7 @@ defmodule Hexpm.OAuth.TokenTest do
 
   import Ecto.Changeset, only: [get_field: 2]
 
-  alias Hexpm.OAuth.{Token, Client}
+  alias Hexpm.OAuth.{Token, Client, Session}
 
   describe "changeset/2" do
     test "validates required fields" do
@@ -59,6 +59,8 @@ defmodule Hexpm.OAuth.TokenTest do
 
     test "creates valid changeset with all fields" do
       user = insert(:user)
+      client = insert(:oauth_client)
+      {:ok, session} = Repo.insert(Session.create_for_user(user, client.client_id))
       expires_at = DateTime.add(DateTime.utc_now(), 3600, :second)
 
       attrs = %{
@@ -72,7 +74,8 @@ defmodule Hexpm.OAuth.TokenTest do
         grant_type: "authorization_code",
         grant_reference: "auth_code_123",
         user_id: user.id,
-        client_id: "test_client"
+        client_id: client.client_id,
+        session_id: session.id
       }
 
       changeset = Token.changeset(%Token{}, attrs)
@@ -83,6 +86,8 @@ defmodule Hexpm.OAuth.TokenTest do
   describe "build/1" do
     test "builds token with valid attributes" do
       user = insert(:user)
+      client = insert(:oauth_client)
+      {:ok, session} = Repo.insert(Session.create_for_user(user, client.client_id))
       expires_at = DateTime.add(DateTime.utc_now(), 3600, :second)
 
       attrs = %{
@@ -93,7 +98,8 @@ defmodule Hexpm.OAuth.TokenTest do
         expires_at: expires_at,
         grant_type: "authorization_code",
         user_id: user.id,
-        client_id: "test_client"
+        client_id: client.client_id,
+        session_id: session.id
       }
 
       changeset = Token.build(attrs)
@@ -632,6 +638,8 @@ defmodule Hexpm.OAuth.TokenTest do
 
       {:ok, client} = Client.build(client_params) |> Repo.insert()
 
+      {:ok, session} = Repo.insert(Session.create_for_user(user, client.client_id))
+
       # Create parent token
       parent_token_changeset =
         Token.create_for_user(
@@ -640,6 +648,7 @@ defmodule Hexpm.OAuth.TokenTest do
           ["api:read", "api:write", "repositories"],
           "authorization_code",
           "test_code",
+          session_id: session.id,
           with_refresh_token: true
         )
 
@@ -670,7 +679,7 @@ defmodule Hexpm.OAuth.TokenTest do
       {:ok, child_token} = Repo.insert(child_token_changeset)
 
       assert child_token.parent_token_id == parent_token.id
-      assert child_token.token_family_id == parent_token.token_family_id
+      assert child_token.session_id == parent_token.session_id
       assert child_token.scopes == target_scopes
       assert child_token.grant_type == "urn:ietf:params:oauth:grant-type:token-exchange"
       assert child_token.grant_reference == "exchange_grant_ref"
@@ -679,7 +688,7 @@ defmodule Hexpm.OAuth.TokenTest do
       assert not is_nil(child_token.refresh_token_first)
     end
 
-    test "revoke/1 on parent token cascades to entire family", %{
+    test "revoke_token/1 only revokes individual token", %{
       parent_token: parent_token,
       client: client
     } do
@@ -693,17 +702,17 @@ defmodule Hexpm.OAuth.TokenTest do
       {:ok, child1} = Repo.insert(child1_changeset)
       {:ok, child2} = Repo.insert(child2_changeset)
 
-      # Revoke parent token (should cascade)
+      # Revoke parent token only
       assert {:ok, _} = Token.revoke_token(parent_token)
 
-      # Check all tokens in family are revoked
+      # Only parent token should be revoked
       updated_parent = Repo.get(Token, parent_token.id)
       updated_child1 = Repo.get(Token, child1.id)
       updated_child2 = Repo.get(Token, child2.id)
 
       assert Token.revoked?(updated_parent)
-      assert Token.revoked?(updated_child1)
-      assert Token.revoked?(updated_child2)
+      refute Token.revoked?(updated_child1)
+      refute Token.revoked?(updated_child2)
     end
 
     test "revoke/1 on child token only revokes that child", %{
@@ -754,11 +763,11 @@ defmodule Hexpm.OAuth.TokenTest do
       # Both children should have the root token as their parent
       assert child1.parent_token_id == parent_token.id
       assert child2.parent_token_id == parent_token.id
-      assert child1.token_family_id == parent_token.token_family_id
-      assert child2.token_family_id == parent_token.token_family_id
+      assert child1.session_id == parent_token.session_id
+      assert child2.session_id == parent_token.session_id
     end
 
-    test "cascade_revoke/1 revokes all tokens in family", %{
+    test "session revoke cascades to all tokens", %{
       parent_token: parent_token,
       client: client
     } do
@@ -772,8 +781,11 @@ defmodule Hexpm.OAuth.TokenTest do
       {:ok, child1} = Repo.insert(child1_changeset)
       {:ok, child2} = Repo.insert(child2_changeset)
 
-      # Manually call cascade_revoke
-      {revoked_count, _} = Token.cascade_revoke(parent_token)
+      # Load the session and revoke it
+      parent_token = Repo.preload(parent_token, :session)
+
+      {:ok, %{session: _session, tokens: {revoked_count, _}}} =
+        Session.revoke(parent_token.session)
 
       # Should revoke all 3 tokens
       assert revoked_count == 3
@@ -788,18 +800,7 @@ defmodule Hexpm.OAuth.TokenTest do
       assert Token.revoked?(updated_child2)
     end
 
-    test "generate_family_id/0 creates unique IDs" do
-      id1 = Token.generate_family_id()
-      id2 = Token.generate_family_id()
-
-      assert is_binary(id1)
-      assert is_binary(id2)
-      assert id1 != id2
-      assert String.length(id1) > 0
-      assert String.length(id2) > 0
-    end
-
-    test "create_for_user with parent token uses same family_id", %{
+    test "create_for_user with parent token uses same session", %{
       parent_token: parent_token,
       user: user,
       client: client
@@ -811,24 +812,29 @@ defmodule Hexpm.OAuth.TokenTest do
           ["api:read"],
           "urn:ietf:params:oauth:grant-type:token-exchange",
           "ref",
-          token_family_id: parent_token.token_family_id,
+          session_id: parent_token.session_id,
           parent_token_id: parent_token.id
         )
 
       {:ok, child_token} = Repo.insert(child_token_changeset)
 
-      assert child_token.token_family_id == parent_token.token_family_id
+      assert child_token.session_id == parent_token.session_id
       assert child_token.parent_token_id == parent_token.id
     end
 
-    test "create_for_user without parent creates new family_id", %{user: user, client: client} do
+    test "tokens require sessions", %{user: user, client: client} do
+      # Create two separate sessions
+      {:ok, session1} = Repo.insert(Session.create_for_user(user, client.client_id))
+      {:ok, session2} = Repo.insert(Session.create_for_user(user, client.client_id))
+
       token1_changeset =
         Token.create_for_user(
           user,
           client.client_id,
           ["api:read"],
           "authorization_code",
-          "ref1"
+          "ref1",
+          session_id: session1.id
         )
 
       token2_changeset =
@@ -837,14 +843,15 @@ defmodule Hexpm.OAuth.TokenTest do
           client.client_id,
           ["api:write"],
           "authorization_code",
-          "ref2"
+          "ref2",
+          session_id: session2.id
         )
 
       {:ok, token1} = Repo.insert(token1_changeset)
       {:ok, token2} = Repo.insert(token2_changeset)
 
-      # Each token should have its own family_id
-      assert token1.token_family_id != token2.token_family_id
+      # Each token belongs to its own session
+      assert token1.session_id != token2.session_id
       assert is_nil(token1.parent_token_id)
       assert is_nil(token2.parent_token_id)
     end

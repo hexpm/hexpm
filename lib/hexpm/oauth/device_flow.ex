@@ -7,7 +7,7 @@ defmodule Hexpm.OAuth.DeviceFlow do
   """
 
   import Ecto.Query, only: [from: 2]
-  alias Hexpm.OAuth.{DeviceCode, Token}
+  alias Hexpm.OAuth.{DeviceCode, Session, Token}
   alias Hexpm.Repo
 
   @default_device_code_expiry_seconds 10 * 60
@@ -201,34 +201,32 @@ defmodule Hexpm.OAuth.DeviceFlow do
   end
 
   defp perform_authorization(device_code_record, user) do
-    # Create OAuth token for the device flow with refresh token
-    token_changeset =
-      Token.create_for_user(
-        user,
-        device_code_record.client_id,
-        device_code_record.scopes,
-        "urn:ietf:params:oauth:grant-type:device_code",
-        device_code_record.device_code,
-        with_refresh_token: true,
-        name: device_code_record.name
+    # Create session and token for the device flow
+    result =
+      Ecto.Multi.new()
+      |> Ecto.Multi.insert(
+        :session,
+        Session.create_for_user(user, device_code_record.client_id, name: device_code_record.name)
       )
+      |> Ecto.Multi.insert(:token, fn %{session: session} ->
+        Token.create_for_user(
+          user,
+          device_code_record.client_id,
+          device_code_record.scopes,
+          "urn:ietf:params:oauth:grant-type:device_code",
+          device_code_record.device_code,
+          session_id: session.id,
+          with_refresh_token: true
+        )
+      end)
+      |> Ecto.Multi.update(:device_code, DeviceCode.authorize_changeset(device_code_record, user))
+      |> Repo.transaction()
 
-    case Repo.insert(token_changeset) do
-      {:ok, token} ->
-        # Update device code to authorized status
-        changeset = DeviceCode.authorize_changeset(device_code_record, user)
+    case result do
+      {:ok, %{device_code: updated_device_code}} ->
+        {:ok, updated_device_code}
 
-        case Repo.update(changeset) do
-          {:ok, updated_device_code} ->
-            {:ok, updated_device_code}
-
-          {:error, changeset} ->
-            # Clean up the created token if device code update fails
-            Repo.update(Token.revoke(token))
-            {:error, changeset}
-        end
-
-      {:error, changeset} ->
+      {:error, _failed_operation, changeset, _changes} ->
         {:error, changeset}
     end
   end
@@ -257,8 +255,7 @@ defmodule Hexpm.OAuth.DeviceFlow do
         old_token.grant_reference,
         expires_in: DateTime.diff(old_token.expires_at, DateTime.utc_now()),
         with_refresh_token: not is_nil(old_token.refresh_token_first),
-        token_family_id: old_token.token_family_id,
-        name: old_token.name
+        session_id: old_token.session_id
       )
 
     case Repo.insert(new_token_changeset) do

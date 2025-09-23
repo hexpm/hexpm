@@ -1,7 +1,7 @@
 defmodule Hexpm.OAuth.TokenExchangeTest do
   use Hexpm.DataCase, async: true
 
-  alias Hexpm.OAuth.{Token, TokenExchange, Client}
+  alias Hexpm.OAuth.{Token, TokenExchange, Client, Session}
 
   describe "exchange_token/4" do
     setup do
@@ -21,6 +21,9 @@ defmodule Hexpm.OAuth.TokenExchangeTest do
       {:ok, client} = Client.build(client_params) |> Repo.insert()
 
       # Create parent token with multiple scopes
+
+      {:ok, session} = Repo.insert(Session.create_for_user(user, client.client_id))
+
       parent_token_changeset =
         Token.create_for_user(
           user,
@@ -28,6 +31,7 @@ defmodule Hexpm.OAuth.TokenExchangeTest do
           ["api:read", "api:write", "repositories"],
           "authorization_code",
           "test_code",
+          session_id: session.id,
           with_refresh_token: true
         )
 
@@ -57,7 +61,7 @@ defmodule Hexpm.OAuth.TokenExchangeTest do
       assert new_token.scopes == target_scopes
       assert new_token.grant_type == "urn:ietf:params:oauth:grant-type:token-exchange"
       assert new_token.parent_token_id == parent_token.id
-      assert new_token.token_family_id == parent_token.token_family_id
+      assert new_token.session_id == parent_token.session_id
       assert new_token.user_id == parent_token.user_id
       assert new_token.client_id == parent_token.client_id
       assert not is_nil(new_token.refresh_token)
@@ -168,6 +172,8 @@ defmodule Hexpm.OAuth.TokenExchangeTest do
     end
 
     test "fails with expired parent token", %{client: client, user: user} do
+      {:ok, session} = Repo.insert(Session.create_for_user(user, client.client_id))
+
       # Create expired token
       expired_token_changeset =
         Token.create_for_user(
@@ -176,6 +182,7 @@ defmodule Hexpm.OAuth.TokenExchangeTest do
           ["api:read"],
           "authorization_code",
           "test_code",
+          session_id: session.id,
           # expired 1 hour ago
           expires_in: -3600
         )
@@ -192,6 +199,8 @@ defmodule Hexpm.OAuth.TokenExchangeTest do
     end
 
     test "fails with revoked parent token", %{client: client, user: user} do
+      {:ok, session} = Repo.insert(Session.create_for_user(user, client.client_id))
+
       # Create and revoke token
       token_changeset =
         Token.create_for_user(
@@ -199,7 +208,8 @@ defmodule Hexpm.OAuth.TokenExchangeTest do
           client.client_id,
           ["api:read"],
           "authorization_code",
-          "test_code"
+          "test_code",
+          session_id: session.id
         )
 
       {:ok, token} = Repo.insert(token_changeset)
@@ -231,7 +241,7 @@ defmodule Hexpm.OAuth.TokenExchangeTest do
       assert new_token.scopes == target_scopes
       assert new_token.grant_type == "urn:ietf:params:oauth:grant-type:token-exchange"
       assert new_token.parent_token_id == parent_token.id
-      assert new_token.token_family_id == parent_token.token_family_id
+      assert new_token.session_id == parent_token.session_id
       assert new_token.user_id == parent_token.user_id
       assert new_token.client_id == parent_token.client_id
       assert not is_nil(new_token.refresh_token)
@@ -250,6 +260,8 @@ defmodule Hexpm.OAuth.TokenExchangeTest do
     end
 
     test "fails with expired token when using refresh token", %{client: client, user: user} do
+      {:ok, session} = Repo.insert(Session.create_for_user(user, client.client_id))
+
       # Create expired token with refresh token
       expired_token_changeset =
         Token.create_for_user(
@@ -258,6 +270,7 @@ defmodule Hexpm.OAuth.TokenExchangeTest do
           ["api:read"],
           "authorization_code",
           "test_code",
+          session_id: session.id,
           with_refresh_token: true,
           expires_in: -3600
         )

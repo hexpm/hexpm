@@ -2,7 +2,7 @@ defmodule HexpmWeb.API.OAuthControllerTest do
   use HexpmWeb.ConnCase, async: true
 
   alias Hexpm.{Repo}
-  alias Hexpm.OAuth.{DeviceFlow, Client, Token}
+  alias Hexpm.OAuth.{DeviceFlow, Client, Session, Token}
 
   setup do
     # Create test OAuth client
@@ -337,6 +337,8 @@ defmodule HexpmWeb.API.OAuthControllerTest do
     end
 
     test "returns error for expired refresh token", %{user: user, client: client} do
+      {:ok, session} = Repo.insert(Session.create_for_user(user, client.client_id))
+
       # Create a token with an expired refresh token
       token_changeset =
         Hexpm.OAuth.Token.create_for_user(
@@ -345,6 +347,7 @@ defmodule HexpmWeb.API.OAuthControllerTest do
           ["api:read"],
           "authorization_code",
           "test_code",
+          session_id: session.id,
           with_refresh_token: true
         )
 
@@ -388,6 +391,8 @@ defmodule HexpmWeb.API.OAuthControllerTest do
 
       {:ok, client} = Client.build(client_params) |> Repo.insert()
 
+      {:ok, session} = Repo.insert(Session.create_for_user(user, client.client_id))
+
       # Create parent token with refresh token
       parent_token_changeset =
         Token.create_for_user(
@@ -396,6 +401,7 @@ defmodule HexpmWeb.API.OAuthControllerTest do
           ["api:read", "api:write", "repositories"],
           "authorization_code",
           "test_code",
+          session_id: session.id,
           with_refresh_token: true
         )
 
@@ -434,7 +440,7 @@ defmodule HexpmWeb.API.OAuthControllerTest do
       }
     end
 
-    test "successfully revokes access token and cascades to family", %{
+    test "successfully revokes individual access token", %{
       revoke_client: client,
       revoke_parent_token: parent_token,
       revoke_parent_tokens: parent_tokens,
@@ -451,17 +457,17 @@ defmodule HexpmWeb.API.OAuthControllerTest do
       |> post(~p"/api/oauth/revoke", params)
       |> response(200)
 
-      # Check all tokens in family are revoked
+      # Only the parent token should be revoked
       updated_parent = Repo.get(Token, parent_token.id)
       updated_child1 = Repo.get(Token, child1.id)
       updated_child2 = Repo.get(Token, child2.id)
 
       assert Token.revoked?(updated_parent)
-      assert Token.revoked?(updated_child1)
-      assert Token.revoked?(updated_child2)
+      refute Token.revoked?(updated_child1)
+      refute Token.revoked?(updated_child2)
     end
 
-    test "successfully revokes refresh token and cascades to family", %{
+    test "successfully revokes individual refresh token", %{
       revoke_client: client,
       revoke_parent_token: parent_token,
       revoke_parent_tokens: parent_tokens,
@@ -477,14 +483,14 @@ defmodule HexpmWeb.API.OAuthControllerTest do
       |> post(~p"/api/oauth/revoke", params)
       |> response(200)
 
-      # Check all tokens in family are revoked
+      # Only the parent token should be revoked
       updated_parent = Repo.get(Token, parent_token.id)
       updated_child1 = Repo.get(Token, child1.id)
       updated_child2 = Repo.get(Token, child2.id)
 
       assert Token.revoked?(updated_parent)
-      assert Token.revoked?(updated_child1)
-      assert Token.revoked?(updated_child2)
+      refute Token.revoked?(updated_child1)
+      refute Token.revoked?(updated_child2)
     end
 
     test "revokes child token only affects that child", %{
@@ -663,6 +669,8 @@ defmodule HexpmWeb.API.OAuthControllerTest do
 
       {:ok, client} = Client.build(client_params) |> Repo.insert()
 
+      {:ok, session} = Repo.insert(Session.create_for_user(user, client.client_id))
+
       # Create parent token
       parent_token_changeset =
         Token.create_for_user(
@@ -671,6 +679,7 @@ defmodule HexpmWeb.API.OAuthControllerTest do
           ["api:read", "api:write", "repositories"],
           "authorization_code",
           "test_code",
+          session_id: session.id,
           with_refresh_token: true
         )
 
@@ -728,7 +737,7 @@ defmodule HexpmWeb.API.OAuthControllerTest do
 
       assert created_token.scopes == ["api:read", "repositories"]
       assert created_token.parent_token_id == parent_token.id
-      assert created_token.token_family_id == parent_token.token_family_id
+      assert created_token.session_id == parent_token.session_id
     end
 
     test "fails with invalid client_id", %{exchange_parent_tokens: parent_tokens} do

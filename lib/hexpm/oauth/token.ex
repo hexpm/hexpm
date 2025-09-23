@@ -5,6 +5,7 @@ defmodule Hexpm.OAuth.Token do
   alias Hexpm.Accounts.User
   alias Hexpm.Permissions
   alias Hexpm.Repo
+  alias Hexpm.OAuth.Session
 
   @token_length 32
   @refresh_token_length 32
@@ -24,8 +25,6 @@ defmodule Hexpm.OAuth.Token do
     field :revoked_at, :utc_datetime
     field :grant_type, :string
     field :grant_reference, :string
-    field :token_family_id, :string
-    field :name, :string
 
     # Virtual fields for raw tokens (not persisted)
     field :access_token, :string, virtual: true
@@ -34,6 +33,7 @@ defmodule Hexpm.OAuth.Token do
     belongs_to :user, User
     belongs_to :parent_token, __MODULE__
     belongs_to :client, Hexpm.OAuth.Client, references: :client_id, type: :binary_id
+    belongs_to :session, Session
 
     timestamps()
   end
@@ -55,12 +55,11 @@ defmodule Hexpm.OAuth.Token do
       :grant_type,
       :grant_reference,
       :parent_token_id,
-      :token_family_id,
+      :session_id,
       :user_id,
       :client_id,
       :access_token,
-      :refresh_token,
-      :name
+      :refresh_token
     ])
     |> validate_required([
       :token_first,
@@ -138,9 +137,8 @@ defmodule Hexpm.OAuth.Token do
       grant_reference: grant_reference,
       user_id: user.id,
       client_id: client_id,
-      token_family_id: Keyword.get(opts, :token_family_id, generate_family_id()),
-      parent_token_id: Keyword.get(opts, :parent_token_id),
-      name: Keyword.get(opts, :name)
+      session_id: Keyword.get(opts, :session_id),
+      parent_token_id: Keyword.get(opts, :parent_token_id)
     }
 
     attrs =
@@ -215,20 +213,10 @@ defmodule Hexpm.OAuth.Token do
   end
 
   @doc """
-  Revokes the token with cascade logic.
-  Root tokens (parent_token_id = nil) cascade revoke the entire family.
-  Child tokens are revoked individually.
+  Revokes the token. Individual tokens can be revoked without affecting the session.
+  To revoke all tokens in a session, use Session.revoke/1.
   """
-  def revoke_token(%__MODULE__{parent_token_id: nil} = token) do
-    # This is a root token - cascade revoke the entire family
-    case cascade_revoke(token) do
-      {count, _} when count > 0 -> {:ok, token}
-      _ -> {:error, :revocation_failed}
-    end
-  end
-
   def revoke_token(%__MODULE__{} = token) do
-    # This is a child token - revoke only this token
     token
     |> changeset(%{revoked_at: DateTime.utc_now()})
     |> Repo.update()
@@ -254,14 +242,9 @@ defmodule Hexpm.OAuth.Token do
       scope: Enum.join(token.scopes, " ")
     }
 
-    response =
-      if token.refresh_token,
-        do: Map.put(response, :refresh_token, token.refresh_token),
-        else: response
-
-    response = if token.name, do: Map.put(response, :name, token.name), else: response
-
-    response
+    if token.refresh_token,
+      do: Map.put(response, :refresh_token, token.refresh_token),
+      else: response
   end
 
   @doc """
@@ -363,13 +346,6 @@ defmodule Hexpm.OAuth.Token do
   defp maybe_preload(token, preload), do: Repo.preload(token, preload)
 
   @doc """
-  Generates a unique family ID for token groups.
-  """
-  def generate_family_id do
-    :crypto.strong_rand_bytes(16) |> Base.url_encode64(padding: false)
-  end
-
-  @doc """
   Creates an exchanged token from a parent token with subset scopes.
   Always creates children of the root token to maintain a flat hierarchy.
   """
@@ -385,11 +361,10 @@ defmodule Hexpm.OAuth.Token do
       end
 
     opts = [
-      token_family_id: parent_token.token_family_id,
+      session_id: parent_token.session_id,
       parent_token_id: root_token_id,
       expires_in: DateTime.diff(parent_token.expires_at, DateTime.utc_now()),
-      with_refresh_token: not is_nil(parent_token.refresh_token_first),
-      name: parent_token.name
+      with_refresh_token: not is_nil(parent_token.refresh_token_first)
     ]
 
     create_for_user(
@@ -400,16 +375,6 @@ defmodule Hexpm.OAuth.Token do
       grant_reference,
       opts
     )
-  end
-
-  @doc """
-  Revokes a token and cascades to all tokens in the same family.
-  """
-  def cascade_revoke(%__MODULE__{token_family_id: token_family_id}) do
-    revoked_at = DateTime.utc_now()
-
-    from(t in __MODULE__, where: t.token_family_id == ^token_family_id and is_nil(t.revoked_at))
-    |> Repo.update_all(set: [revoked_at: revoked_at])
   end
 
   @doc """
