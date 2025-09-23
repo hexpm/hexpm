@@ -45,64 +45,6 @@ defmodule Hexpm.OAuth.Client do
     |> changeset(attrs)
   end
 
-  @doc """
-  Validates that the client is allowed to use the specified grant type.
-  """
-  def supports_grant_type?(%__MODULE__{allowed_grant_types: grant_types}, grant_type) do
-    grant_type in grant_types
-  end
-
-  @doc """
-  Validates that the client is allowed to use the specified scopes.
-  """
-  def supports_scopes?(%__MODULE__{allowed_scopes: nil}, requested_scopes) do
-    Permissions.validate_scopes(requested_scopes) == :ok
-  end
-
-  def supports_scopes?(%__MODULE__{allowed_scopes: allowed_scopes}, requested_scopes) do
-    Enum.all?(requested_scopes, &(&1 in allowed_scopes))
-  end
-
-  @doc """
-  Validates that the redirect URI is allowed for this client.
-  """
-  def valid_redirect_uri?(%__MODULE__{redirect_uris: []}, _uri), do: false
-
-  def valid_redirect_uri?(%__MODULE__{redirect_uris: allowed_uris}, uri) do
-    uri in allowed_uris
-  end
-
-  @doc """
-  Checks if client authentication is required.
-  """
-  def requires_authentication?(%__MODULE__{client_type: "confidential"}), do: true
-  def requires_authentication?(%__MODULE__{client_type: "public"}), do: false
-
-  @doc """
-  Validates client credentials.
-  """
-  def authenticate?(%__MODULE__{client_secret: secret}, provided_secret)
-      when not is_nil(secret) do
-    Bcrypt.verify_pass(provided_secret || "", secret)
-  end
-
-  def authenticate?(%__MODULE__{client_secret: nil}, _), do: true
-
-  @doc """
-  Generates a client secret for confidential clients.
-  """
-  def generate_client_secret do
-    :crypto.strong_rand_bytes(32)
-    |> Base.url_encode64(padding: false)
-  end
-
-  @doc """
-  Generates a unique client ID.
-  """
-  def generate_client_id do
-    Ecto.UUID.generate()
-  end
-
   defp validate_grant_types(changeset) do
     validate_change(changeset, :allowed_grant_types, fn :allowed_grant_types, grant_types ->
       invalid_types = Enum.reject(grant_types, &(&1 in @valid_grant_types))

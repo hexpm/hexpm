@@ -1,27 +1,19 @@
-defmodule Hexpm.OAuth.DeviceFlow do
-  @moduledoc """
-  OAuth 2.0 Device Authorization Grant implementation (RFC 8628).
+defmodule Hexpm.OAuth.DeviceCodes do
+  use Hexpm.Context
 
-  This module handles the device flow authorization process, allowing
-  devices without browsers or input capabilities to obtain access tokens.
-  """
-
-  import Ecto.Query, only: [from: 2]
-  alias Hexpm.OAuth.{DeviceCode, Session, Token}
-  alias Hexpm.Repo
+  alias Hexpm.OAuth.{DeviceCode, Sessions, Token, Tokens}
 
   @default_device_code_expiry_seconds 10 * 60
   @default_polling_interval 5
 
   @doc """
   Initiates the device authorization flow.
-
   Creates a new device code entry and returns the necessary information
   for the client to display to the user.
   """
   def initiate_device_authorization(conn, client_id, scopes, opts \\ []) do
-    device_code = DeviceCode.generate_device_code()
-    user_code = DeviceCode.generate_user_code()
+    device_code = generate_device_code()
+    user_code = generate_user_code()
     expires_at = DateTime.add(DateTime.utc_now(), @default_device_code_expiry_seconds, :second)
 
     verification_uri = build_verification_uri(conn)
@@ -59,14 +51,13 @@ defmodule Hexpm.OAuth.DeviceFlow do
 
   @doc """
   Handles token polling from the device.
-
   Returns appropriate responses based on the current state of the device code.
   """
   def poll_device_token(device_code, client_id) do
     if is_nil(device_code) or device_code == "" do
       {:error, :invalid_grant, "Invalid device code"}
     else
-      case get_device_code_by_code(device_code) do
+      case get_by_code(device_code) do
         nil ->
           {:error, :invalid_grant, "Invalid device code"}
 
@@ -82,21 +73,20 @@ defmodule Hexpm.OAuth.DeviceFlow do
 
   @doc """
   Authorizes a device using the user code.
-
   This is called when a user enters the user code on the verification page.
   """
   def authorize_device(user_code, user) do
-    case get_device_code_by_user_code(user_code) do
+    case get_by_user_code(user_code) do
       nil ->
         {:error, :invalid_code, "Invalid user code"}
 
       device_code_record ->
         cond do
-          DeviceCode.expired?(device_code_record) ->
+          expired?(device_code_record) ->
             Repo.update(DeviceCode.expire_changeset(device_code_record))
             {:error, :expired_token, "Device code has expired"}
 
-          not DeviceCode.pending?(device_code_record) ->
+          not pending?(device_code_record) ->
             {:error, :invalid_grant, "Device code is not pending authorization"}
 
           true ->
@@ -109,7 +99,7 @@ defmodule Hexpm.OAuth.DeviceFlow do
   Denies authorization for a device using the user code.
   """
   def deny_device(user_code) do
-    case get_device_code_by_user_code(user_code) do
+    case get_by_user_code(user_code) do
       nil ->
         {:error, :invalid_code, "Invalid user code"}
 
@@ -121,18 +111,90 @@ defmodule Hexpm.OAuth.DeviceFlow do
   @doc """
   Gets a device code record by user code for verification page display.
   """
-  def get_device_code_for_verification(user_code) do
-    case get_device_code_by_user_code(user_code) do
+  def get_for_verification(user_code) do
+    case get_by_user_code(user_code) do
       nil ->
         {:error, :invalid_code}
 
       device_code_record ->
         cond do
-          DeviceCode.expired?(device_code_record) ->
+          expired?(device_code_record) ->
             Repo.update(DeviceCode.expire_changeset(device_code_record))
             {:error, :expired}
 
-          not DeviceCode.pending?(device_code_record) ->
+          not pending?(device_code_record) ->
+            {:error, :already_processed}
+
+          true ->
+            {:ok, device_code_record}
+        end
+    end
+  end
+
+  @doc """
+  Gets a device code by code.
+  """
+  def get_by_code(device_code) do
+    from(dc in DeviceCode,
+      where: dc.device_code == ^device_code,
+      preload: [:user]
+    )
+    |> Repo.one()
+  end
+
+  @doc """
+  Gets a device code by user code.
+  """
+  def get_by_user_code(user_code) do
+    from(dc in DeviceCode,
+      where: dc.user_code == ^user_code,
+      preload: [:user, :client]
+    )
+    |> Repo.one()
+  end
+
+  @doc """
+  Checks if a device code is expired.
+  """
+  def expired?(%DeviceCode{expires_at: expires_at}) do
+    DateTime.compare(DateTime.utc_now(), expires_at) == :gt
+  end
+
+  @doc """
+  Checks if a device code is still pending authorization.
+  """
+  def pending?(%DeviceCode{status: "pending"} = device_code) do
+    not expired?(device_code)
+  end
+
+  def pending?(_), do: false
+
+  @doc """
+  Checks if a device code has been authorized.
+  """
+  def authorized?(%DeviceCode{status: "authorized"}), do: true
+  def authorized?(_), do: false
+
+  @doc """
+  Checks if a device code has been denied.
+  """
+  def denied?(%DeviceCode{status: "denied"}), do: true
+  def denied?(_), do: false
+
+  @doc """
+  Gets a device code for verification page display.
+  """
+  def get_device_code_for_verification(user_code) do
+    case get_by_user_code(user_code) do
+      nil ->
+        {:error, :invalid_code}
+
+      device_code_record ->
+        cond do
+          expired?(device_code_record) ->
+            {:error, :expired}
+
+          not pending?(device_code_record) ->
             {:error, :already_processed}
 
           true ->
@@ -143,10 +205,9 @@ defmodule Hexpm.OAuth.DeviceFlow do
 
   @doc """
   Cleans up expired device codes.
-
   This should be called periodically to remove old records.
   """
-  def cleanup_expired_device_codes do
+  def cleanup_expired do
     now = DateTime.utc_now()
 
     from(dc in DeviceCode,
@@ -155,32 +216,51 @@ defmodule Hexpm.OAuth.DeviceFlow do
     |> Repo.update_all(set: [status: "expired", updated_at: now])
   end
 
-  defp get_device_code_by_code(device_code) do
-    from(dc in DeviceCode,
-      where: dc.device_code == ^device_code,
-      preload: [:user]
-    )
-    |> Repo.one()
+  # Alias for compatibility
+  def cleanup_expired_device_codes, do: cleanup_expired()
+
+  @doc """
+  Generates a cryptographically secure device code.
+  Returns a 32-character base64url encoded string.
+  """
+  def generate_device_code do
+    :crypto.strong_rand_bytes(32)
+    |> Base.url_encode64(padding: false)
+    |> String.slice(0, 32)
   end
 
-  defp get_device_code_by_user_code(user_code) do
-    from(dc in DeviceCode,
-      where: dc.user_code == ^user_code,
-      preload: [:user, :client]
-    )
-    |> Repo.one()
+  @doc """
+  Generates a user-friendly verification code.
+  Returns an 8-character string using a reduced character set that excludes
+  ambiguous characters (0, 1, I, O) and vowels (A, E, U) to avoid forming words.
+  """
+  def generate_user_code do
+    # Character set excludes ambiguous characters (0, 1, I, O) and vowels (A, E, U) to avoid forming words
+    charset = "23456789BCDFGHJKLMNPQRSTVWXYZ"
+    charset_size = String.length(charset)
+
+    # Generate 8 random characters using cryptographically secure randomness with uniform distribution
+    1..8
+    |> Enum.map(fn _ ->
+      <<random_int::unsigned-32>> = :crypto.strong_rand_bytes(4)
+      index = rem(random_int, charset_size)
+      String.at(charset, index)
+    end)
+    |> Enum.join()
   end
+
+  # Private functions
 
   defp handle_device_code_status(device_code_record) do
     cond do
-      DeviceCode.expired?(device_code_record) ->
+      expired?(device_code_record) ->
         Repo.update(DeviceCode.expire_changeset(device_code_record))
         {:error, :expired_token, "Device code has expired"}
 
-      DeviceCode.denied?(device_code_record) ->
+      denied?(device_code_record) ->
         {:error, :access_denied, "Authorization denied by user"}
 
-      DeviceCode.authorized?(device_code_record) ->
+      authorized?(device_code_record) ->
         # Look up the associated token and generate a fresh response
         case get_device_token(device_code_record) do
           nil ->
@@ -188,11 +268,10 @@ defmodule Hexpm.OAuth.DeviceFlow do
 
           token ->
             # Generate fresh tokens for device flow response
-            # This is more secure than storing raw tokens
             {:ok, build_device_token_response(token)}
         end
 
-      DeviceCode.pending?(device_code_record) ->
+      pending?(device_code_record) ->
         {:error, :authorization_pending, "Authorization pending"}
 
       true ->
@@ -204,12 +283,11 @@ defmodule Hexpm.OAuth.DeviceFlow do
     # Create session and token for the device flow
     result =
       Ecto.Multi.new()
-      |> Ecto.Multi.insert(
-        :session,
-        Session.create_for_user(user, device_code_record.client_id, name: device_code_record.name)
-      )
-      |> Ecto.Multi.insert(:token, fn %{session: session} ->
-        Token.create_for_user(
+      |> Ecto.Multi.run(:session, fn _repo, _changes ->
+        Sessions.create_for_user(user, device_code_record.client_id, name: device_code_record.name)
+      end)
+      |> Ecto.Multi.run(:token, fn _repo, %{session: session} ->
+        changeset = Tokens.create_for_user(
           user,
           device_code_record.client_id,
           device_code_record.scopes,
@@ -218,6 +296,7 @@ defmodule Hexpm.OAuth.DeviceFlow do
           session_id: session.id,
           with_refresh_token: true
         )
+        Repo.insert(changeset)
       end)
       |> Ecto.Multi.update(:device_code, DeviceCode.authorize_changeset(device_code_record, user))
       |> Repo.transaction()
@@ -247,7 +326,7 @@ defmodule Hexpm.OAuth.DeviceFlow do
   defp build_device_token_response(old_token) do
     # Generate fresh tokens with the same permissions
     new_token_changeset =
-      Token.create_for_user(
+      Tokens.create_for_user(
         old_token.user,
         old_token.client_id,
         old_token.scopes,
@@ -261,14 +340,13 @@ defmodule Hexpm.OAuth.DeviceFlow do
     case Repo.insert(new_token_changeset) do
       {:ok, new_token} ->
         # Revoke the old token for security (one-time use pattern)
-        Repo.update(Token.revoke(old_token))
+        Tokens.revoke(old_token)
 
         # Return response with fresh tokens from virtual fields
-        Token.to_response(new_token)
+        Tokens.to_response(new_token)
 
       {:error, _changeset} ->
         # Fallback: build minimal response from existing token info
-        # This preserves functionality if token creation fails
         %{
           access_token: "ERROR_GENERATING_TOKEN",
           token_type: old_token.token_type,

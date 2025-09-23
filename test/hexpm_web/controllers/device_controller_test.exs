@@ -1,12 +1,12 @@
 defmodule HexpmWeb.DeviceControllerTest do
   use HexpmWeb.ConnCase, async: true
 
-  alias Hexpm.OAuth.{DeviceFlow, DeviceCode, Client}
+  alias Hexpm.OAuth.{DeviceCodes, DeviceCode, Client, Clients}
   import Hexpm.Factory
 
   defp create_test_client(name \\ "Test Client") do
     client_params = %{
-      client_id: Hexpm.OAuth.Client.generate_client_id(),
+      client_id: Clients.generate_client_id(),
       name: name,
       client_type: "public",
       allowed_grant_types: ["urn:ietf:params:oauth:grant-type:device_code"],
@@ -45,7 +45,7 @@ defmodule HexpmWeb.DeviceControllerTest do
         |> Map.put(:port, 443)
 
       {:ok, response} =
-        DeviceFlow.initiate_device_authorization(mock_conn, client.client_id, ["api"])
+        DeviceCodes.initiate_device_authorization(mock_conn, client.client_id, ["api"])
 
       conn = get(conn, ~p"/oauth/device?user_code=#{response.user_code}")
       assert html_response(conn, 200) =~ "Device Authorization"
@@ -71,7 +71,7 @@ defmodule HexpmWeb.DeviceControllerTest do
         |> Map.put(:port, 443)
 
       {:ok, response} =
-        DeviceFlow.initiate_device_authorization(mock_conn, client.client_id, ["api"])
+        DeviceCodes.initiate_device_authorization(mock_conn, client.client_id, ["api"])
 
       conn = get(build_conn(), ~p"/oauth/device?user_code=#{response.user_code}")
       assert redirected_to(conn) =~ "/login"
@@ -92,7 +92,7 @@ defmodule HexpmWeb.DeviceControllerTest do
         |> Map.put(:port, 443)
 
       {:ok, response} =
-        DeviceFlow.initiate_device_authorization(mock_conn, client.client_id, ["api"])
+        DeviceCodes.initiate_device_authorization(mock_conn, client.client_id, ["api"])
 
       device_code = Repo.get_by(DeviceCode, device_code: response.device_code)
       %{user: user, device_code: device_code, client: client}
@@ -195,7 +195,7 @@ defmodule HexpmWeb.DeviceControllerTest do
 
     test "shows error for already processed device code", %{user: user, device_code: device_code} do
       # Authorize first
-      DeviceFlow.authorize_device(device_code.user_code, user)
+      DeviceCodes.authorize_device(device_code.user_code, user)
 
       conn = login_user(build_conn(), user)
 
@@ -247,7 +247,7 @@ defmodule HexpmWeb.DeviceControllerTest do
         |> Map.put(:port, 443)
 
       {:ok, response} =
-        DeviceFlow.initiate_device_authorization(mock_conn, client.client_id, ["api"])
+        DeviceCodes.initiate_device_authorization(mock_conn, client.client_id, ["api"])
 
       device_code = Repo.get_by(DeviceCode, device_code: response.device_code)
       %{user: user, device_code: device_code, client: client}

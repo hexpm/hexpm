@@ -4,7 +4,7 @@ defmodule Hexpm.OAuth.AuthorizationCodeTest do
 
   import Ecto.Changeset, only: [get_field: 2]
 
-  alias Hexpm.OAuth.AuthorizationCode
+  alias Hexpm.OAuth.{AuthorizationCode, AuthorizationCodes, Clients}
 
   describe "changeset/2" do
     test "validates required fields" do
@@ -32,7 +32,7 @@ defmodule Hexpm.OAuth.AuthorizationCodeTest do
           scopes: ["invalid_scope", "api"],
           expires_at: expires_at,
           user_id: user.id,
-          client_id: Hexpm.OAuth.Client.generate_client_id(),
+          client_id: Clients.generate_client_id(),
           code_challenge: "E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM",
           code_challenge_method: "S256"
         })
@@ -51,7 +51,7 @@ defmodule Hexpm.OAuth.AuthorizationCodeTest do
           scopes: ["api"],
           expires_at: expires_at,
           user_id: user.id,
-          client_id: Hexpm.OAuth.Client.generate_client_id(),
+          client_id: Clients.generate_client_id(),
           code_challenge: "E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM",
           code_challenge_method: "invalid"
         })
@@ -70,7 +70,7 @@ defmodule Hexpm.OAuth.AuthorizationCodeTest do
           scopes: ["api", "api:read"],
           expires_at: expires_at,
           user_id: user.id,
-          client_id: Hexpm.OAuth.Client.generate_client_id(),
+          client_id: Clients.generate_client_id(),
           code_challenge: "E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM",
           code_challenge_method: "S256"
         })
@@ -100,17 +100,34 @@ defmodule Hexpm.OAuth.AuthorizationCodeTest do
     end
   end
 
-  describe "generate_code/0" do
-    test "generates non-empty string" do
-      code = AuthorizationCode.generate_code()
+  # Code generation is tested through the public API
+  describe "code generation" do
+    test "generates non-empty string through create_for_user" do
+      user = insert(:user)
+      changeset = AuthorizationCodes.create_for_user(
+        user,
+        "test_client",
+        "https://example.com/callback",
+        ["api"],
+        code_challenge: "E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM"
+      )
+      code = get_field(changeset, :code)
 
       assert is_binary(code)
       assert String.length(code) > 0
     end
 
     property "always generates valid base64url strings without padding" do
+      user = insert(:user)
       check all(_ <- constant(:ok), max_runs: 100) do
-        code = AuthorizationCode.generate_code()
+        changeset = AuthorizationCodes.create_for_user(
+          user,
+          "test_client",
+          "https://example.com/callback",
+          ["api"],
+          code_challenge: "E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM"
+        )
+        code = get_field(changeset, :code)
 
         assert is_binary(code)
         assert String.length(code) > 0
@@ -125,7 +142,17 @@ defmodule Hexpm.OAuth.AuthorizationCodeTest do
     end
 
     property "generates unique codes across many samples" do
-      codes = for _ <- 1..1000, do: AuthorizationCode.generate_code()
+      user = insert(:user)
+      codes = for _ <- 1..1000 do
+        changeset = AuthorizationCodes.create_for_user(
+          user,
+          "test_client",
+          "https://example.com/callback",
+          ["api"],
+          code_challenge: "E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM"
+        )
+        get_field(changeset, :code)
+      end
       unique_codes = Enum.uniq(codes)
 
       # Should have very high uniqueness
@@ -136,7 +163,17 @@ defmodule Hexpm.OAuth.AuthorizationCodeTest do
     end
 
     property "generated codes have reasonable length distribution" do
-      codes = for _ <- 1..100, do: AuthorizationCode.generate_code()
+      user = insert(:user)
+      codes = for _ <- 1..100 do
+        changeset = AuthorizationCodes.create_for_user(
+          user,
+          "test_client",
+          "https://example.com/callback",
+          ["api"],
+          code_challenge: "E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM"
+        )
+        get_field(changeset, :code)
+      end
       lengths = Enum.map(codes, &String.length/1)
 
       # All codes should have similar lengths (base64url encoding of random bytes)
@@ -157,7 +194,7 @@ defmodule Hexpm.OAuth.AuthorizationCodeTest do
 
     test "creates changeset with required fields", %{user: user} do
       changeset =
-        AuthorizationCode.create_for_user(
+        AuthorizationCodes.create_for_user(
           user,
           "test_client",
           "https://example.com/callback",
@@ -176,7 +213,7 @@ defmodule Hexpm.OAuth.AuthorizationCodeTest do
 
     test "sets custom expiration time", %{user: user} do
       changeset =
-        AuthorizationCode.create_for_user(
+        AuthorizationCodes.create_for_user(
           user,
           "test_client",
           "https://example.com/callback",
@@ -194,7 +231,7 @@ defmodule Hexpm.OAuth.AuthorizationCodeTest do
 
     test "adds PKCE challenge with default S256 method", %{user: user} do
       changeset =
-        AuthorizationCode.create_for_user(
+        AuthorizationCodes.create_for_user(
           user,
           "test_client",
           "https://example.com/callback",
@@ -210,7 +247,7 @@ defmodule Hexpm.OAuth.AuthorizationCodeTest do
 
     test "adds PKCE challenge with explicit S256 method", %{user: user} do
       changeset =
-        AuthorizationCode.create_for_user(
+        AuthorizationCodes.create_for_user(
           user,
           "test_client",
           "https://example.com/callback",
@@ -233,7 +270,7 @@ defmodule Hexpm.OAuth.AuthorizationCodeTest do
 
       # Since we check if now > expires_at, equal times should not be expired
       # But due to timing, let's test the boundary case
-      result = AuthorizationCode.expired?(auth_code)
+      result = AuthorizationCodes.expired?(auth_code)
       # This could be either true or false depending on microsecond timing
       assert is_boolean(result)
     end
@@ -243,7 +280,7 @@ defmodule Hexpm.OAuth.AuthorizationCodeTest do
         future_time = DateTime.add(DateTime.utc_now(), offset, :second)
         auth_code = %AuthorizationCode{expires_at: future_time}
 
-        refute AuthorizationCode.expired?(auth_code)
+        refute AuthorizationCodes.expired?(auth_code)
       end
     end
 
@@ -252,7 +289,7 @@ defmodule Hexpm.OAuth.AuthorizationCodeTest do
         past_time = DateTime.add(DateTime.utc_now(), -offset, :second)
         auth_code = %AuthorizationCode{expires_at: past_time}
 
-        assert AuthorizationCode.expired?(auth_code)
+        assert AuthorizationCodes.expired?(auth_code)
       end
     end
   end
@@ -261,13 +298,13 @@ defmodule Hexpm.OAuth.AuthorizationCodeTest do
     test "returns false for unused code" do
       auth_code = %AuthorizationCode{used_at: nil}
 
-      refute AuthorizationCode.used?(auth_code)
+      refute AuthorizationCodes.used?(auth_code)
     end
 
     test "returns true for used code" do
       auth_code = %AuthorizationCode{used_at: DateTime.utc_now()}
 
-      assert AuthorizationCode.used?(auth_code)
+      assert AuthorizationCodes.used?(auth_code)
     end
   end
 
@@ -276,7 +313,7 @@ defmodule Hexpm.OAuth.AuthorizationCodeTest do
       future_time = DateTime.add(DateTime.utc_now(), 600, :second)
       auth_code = %AuthorizationCode{expires_at: future_time, used_at: nil}
 
-      assert AuthorizationCode.valid?(auth_code)
+      assert AuthorizationCodes.valid?(auth_code)
     end
 
     property "validity requires both non-expired and unused state" do
@@ -290,7 +327,7 @@ defmodule Hexpm.OAuth.AuthorizationCodeTest do
         auth_code = %AuthorizationCode{expires_at: expires_at, used_at: used_at}
 
         expected_valid = time_offset > 0 && !used
-        actual_valid = AuthorizationCode.valid?(auth_code)
+        actual_valid = AuthorizationCodes.valid?(auth_code)
 
         # Allow for timing differences near boundary
         if abs(time_offset) > 1 do
@@ -307,7 +344,7 @@ defmodule Hexpm.OAuth.AuthorizationCodeTest do
         expires_at = DateTime.add(DateTime.utc_now(), time_offset, :second)
         auth_code = %AuthorizationCode{expires_at: expires_at, used_at: DateTime.utc_now()}
 
-        refute AuthorizationCode.valid?(auth_code)
+        refute AuthorizationCodes.valid?(auth_code)
       end
     end
   end
@@ -338,8 +375,8 @@ defmodule Hexpm.OAuth.AuthorizationCodeTest do
         code_challenge_method: "S256"
       }
 
-      assert AuthorizationCode.verify_code_challenge(auth_code, code_verifier)
-      refute AuthorizationCode.verify_code_challenge(auth_code, "wrong_verifier")
+      assert AuthorizationCodes.verify_code_challenge(auth_code, code_verifier)
+      refute AuthorizationCodes.verify_code_challenge(auth_code, "wrong_verifier")
     end
 
     test "handles invalid S256 verifier gracefully" do
@@ -348,7 +385,7 @@ defmodule Hexpm.OAuth.AuthorizationCodeTest do
         code_challenge_method: "S256"
       }
 
-      refute AuthorizationCode.verify_code_challenge(auth_code, "any_verifier")
+      refute AuthorizationCodes.verify_code_challenge(auth_code, "any_verifier")
     end
 
     property "S256 challenge verification is deterministic" do
@@ -364,11 +401,11 @@ defmodule Hexpm.OAuth.AuthorizationCodeTest do
         }
 
         # Correct verifier should always verify
-        assert AuthorizationCode.verify_code_challenge(auth_code, verifier)
+        assert AuthorizationCodes.verify_code_challenge(auth_code, verifier)
 
         # Wrong verifier should always fail
         wrong_verifier = verifier <> "x"
-        refute AuthorizationCode.verify_code_challenge(auth_code, wrong_verifier)
+        refute AuthorizationCodes.verify_code_challenge(auth_code, wrong_verifier)
       end
     end
 
@@ -393,12 +430,12 @@ defmodule Hexpm.OAuth.AuthorizationCodeTest do
 
         Enum.each(wrong_verifiers, fn wrong_verifier ->
           if wrong_verifier != verifier do
-            refute AuthorizationCode.verify_code_challenge(auth_code, wrong_verifier)
+            refute AuthorizationCodes.verify_code_challenge(auth_code, wrong_verifier)
           end
         end)
 
         # But the correct verifier should work
-        assert AuthorizationCode.verify_code_challenge(auth_code, verifier)
+        assert AuthorizationCodes.verify_code_challenge(auth_code, verifier)
       end
     end
 
@@ -420,7 +457,7 @@ defmodule Hexpm.OAuth.AuthorizationCodeTest do
         }
 
         # Should not crash, just return false
-        refute AuthorizationCode.verify_code_challenge(auth_code, verifier)
+        refute AuthorizationCodes.verify_code_challenge(auth_code, verifier)
       end
     end
   end

@@ -1,8 +1,7 @@
 defmodule HexpmWeb.OAuthController do
   use HexpmWeb, :controller
 
-  alias Hexpm.Repo
-  alias Hexpm.OAuth.{Client, AuthorizationCode}
+  alias Hexpm.OAuth.{Clients, AuthorizationCodes}
 
   @doc """
   Standard OAuth 2.0 authorization endpoint.
@@ -69,17 +68,14 @@ defmodule HexpmWeb.OAuthController do
          {:ok, redirect_uri} <- validate_redirect_uri(client, params["redirect_uri"]),
          {:ok, scopes} <- validate_scopes(client, params["scope"]),
          {:ok, _} <- validate_pkce_params(params) do
-      auth_code_changeset =
-        AuthorizationCode.create_for_user(
-          user,
-          client.client_id,
-          redirect_uri,
-          scopes,
-          code_challenge: params["code_challenge"],
-          code_challenge_method: params["code_challenge_method"]
-        )
-
-      case Repo.insert(auth_code_changeset) do
+      case AuthorizationCodes.create_and_insert_for_user(
+             user,
+             client.client_id,
+             redirect_uri,
+             scopes,
+             code_challenge: params["code_challenge"],
+             code_challenge_method: params["code_challenge_method"]
+           ) do
         {:ok, auth_code} ->
           success_params = %{
             code: auth_code.code,
@@ -121,14 +117,14 @@ defmodule HexpmWeb.OAuthController do
   defp validate_client(""), do: {:error, "Missing client_id"}
 
   defp validate_client(client_id) do
-    case Repo.get_by(Client, client_id: client_id) do
+    case Clients.get(client_id) do
       nil -> {:error, "Invalid client"}
       client -> {:ok, client}
     end
   end
 
   defp validate_redirect_uri(client, redirect_uri) do
-    if Client.valid_redirect_uri?(client, redirect_uri) do
+    if Clients.valid_redirect_uri?(client, redirect_uri) do
       {:ok, redirect_uri}
     else
       {:error, "Invalid redirect_uri"}
@@ -138,7 +134,7 @@ defmodule HexpmWeb.OAuthController do
   defp validate_scopes(client, scope_string) do
     scopes = String.split(scope_string || "", " ", trim: true)
 
-    if Client.supports_scopes?(client, scopes) do
+    if Clients.supports_scopes?(client, scopes) do
       {:ok, scopes}
     else
       {:error, "Invalid scope"}

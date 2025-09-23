@@ -184,7 +184,7 @@ defmodule Hexpm.Factory do
 
   def oauth_client_factory() do
     %Hexpm.OAuth.Client{
-      client_id: Hexpm.OAuth.Client.generate_client_id(),
+      client_id: Hexpm.OAuth.Clients.generate_client_id(),
       name: "Test OAuth Client",
       client_type: "public",
       allowed_grant_types: [

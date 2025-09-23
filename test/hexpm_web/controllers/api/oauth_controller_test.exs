@@ -2,12 +2,12 @@ defmodule HexpmWeb.API.OAuthControllerTest do
   use HexpmWeb.ConnCase, async: true
 
   alias Hexpm.{Repo}
-  alias Hexpm.OAuth.{DeviceFlow, Client, Session, Token}
+  alias Hexpm.OAuth.{DeviceCodes, Client, Clients, Sessions, Token, Tokens}
 
   setup do
     # Create test OAuth client
     client_params = %{
-      client_id: Hexpm.OAuth.Client.generate_client_id(),
+      client_id: Clients.generate_client_id(),
       name: "Test OAuth Client",
       client_type: "public",
       allowed_grant_types: ["urn:ietf:params:oauth:grant-type:device_code"],
@@ -113,7 +113,7 @@ defmodule HexpmWeb.API.OAuthControllerTest do
         |> Map.put(:host, "hex.pm")
         |> Map.put(:port, 443)
 
-      {:ok, response} = DeviceFlow.initiate_device_authorization(conn, client.client_id, ["api"])
+      {:ok, response} = DeviceCodes.initiate_device_authorization(conn, client.client_id, ["api"])
       device_code = Repo.get_by(Hexpm.OAuth.DeviceCode, device_code: response.device_code)
       %{device_code: device_code, response: response}
     end
@@ -140,7 +140,7 @@ defmodule HexpmWeb.API.OAuthControllerTest do
     } do
       # Authorize the device first
       user = insert(:user)
-      {:ok, _} = DeviceFlow.authorize_device(device_code.user_code, user)
+      {:ok, _} = DeviceCodes.authorize_device(device_code.user_code, user)
 
       conn =
         post(build_conn(), ~p"/api/oauth/token", %{
@@ -220,11 +220,11 @@ defmodule HexpmWeb.API.OAuthControllerTest do
         |> Map.put(:host, "hex.pm")
         |> Map.put(:port, 443)
 
-      {:ok, response} = DeviceFlow.initiate_device_authorization(conn, client.client_id, ["api"])
+      {:ok, response} = DeviceCodes.initiate_device_authorization(conn, client.client_id, ["api"])
       device_code = Repo.get_by(Hexpm.OAuth.DeviceCode, device_code: response.device_code)
 
       # Authorize the device to get a token with refresh token
-      {:ok, _} = DeviceFlow.authorize_device(device_code.user_code, user)
+      {:ok, _} = DeviceCodes.authorize_device(device_code.user_code, user)
 
       # Get the token
       conn =
@@ -337,11 +337,11 @@ defmodule HexpmWeb.API.OAuthControllerTest do
     end
 
     test "returns error for expired refresh token", %{user: user, client: client} do
-      {:ok, session} = Repo.insert(Session.create_for_user(user, client.client_id))
+      {:ok, session} = Sessions.create_for_user(user, client.client_id)
 
       # Create a token with an expired refresh token
       token_changeset =
-        Hexpm.OAuth.Token.create_for_user(
+        Tokens.create_for_user(
           user,
           client.client_id,
           ["api:read"],
@@ -379,7 +379,7 @@ defmodule HexpmWeb.API.OAuthControllerTest do
       user = insert(:user)
 
       client_params = %{
-        client_id: Hexpm.OAuth.Client.generate_client_id(),
+        client_id: Clients.generate_client_id(),
         name: "Test OAuth Client",
         client_type: "public",
         allowed_grant_types: [
@@ -391,11 +391,11 @@ defmodule HexpmWeb.API.OAuthControllerTest do
 
       {:ok, client} = Client.build(client_params) |> Repo.insert()
 
-      {:ok, session} = Repo.insert(Session.create_for_user(user, client.client_id))
+      {:ok, session} = Sessions.create_for_user(user, client.client_id)
 
       # Create parent token with refresh token
       parent_token_changeset =
-        Token.create_for_user(
+        Tokens.create_for_user(
           user,
           client.client_id,
           ["api:read", "api:write", "repositories"],
@@ -416,10 +416,10 @@ defmodule HexpmWeb.API.OAuthControllerTest do
 
       # Create child tokens
       child1_changeset =
-        Token.create_exchanged_token(parent_token, client.client_id, ["api:read"], "ref1")
+        Tokens.create_exchanged_token(parent_token, client.client_id, ["api:read"], "ref1")
 
       child2_changeset =
-        Token.create_exchanged_token(parent_token, client.client_id, ["repositories"], "ref2")
+        Tokens.create_exchanged_token(parent_token, client.client_id, ["repositories"], "ref2")
 
       {:ok, child1} = Repo.insert(child1_changeset)
       {:ok, child2} = Repo.insert(child2_changeset)
@@ -462,9 +462,9 @@ defmodule HexpmWeb.API.OAuthControllerTest do
       updated_child1 = Repo.get(Token, child1.id)
       updated_child2 = Repo.get(Token, child2.id)
 
-      assert Token.revoked?(updated_parent)
-      refute Token.revoked?(updated_child1)
-      refute Token.revoked?(updated_child2)
+      assert Tokens.revoked?(updated_parent)
+      refute Tokens.revoked?(updated_child1)
+      refute Tokens.revoked?(updated_child2)
     end
 
     test "successfully revokes individual refresh token", %{
@@ -488,9 +488,9 @@ defmodule HexpmWeb.API.OAuthControllerTest do
       updated_child1 = Repo.get(Token, child1.id)
       updated_child2 = Repo.get(Token, child2.id)
 
-      assert Token.revoked?(updated_parent)
-      refute Token.revoked?(updated_child1)
-      refute Token.revoked?(updated_child2)
+      assert Tokens.revoked?(updated_parent)
+      refute Tokens.revoked?(updated_child1)
+      refute Tokens.revoked?(updated_child2)
     end
 
     test "revokes child token only affects that child", %{
@@ -514,9 +514,9 @@ defmodule HexpmWeb.API.OAuthControllerTest do
       updated_child1 = Repo.get(Token, child1.id)
       updated_child2 = Repo.get(Token, child2.id)
 
-      refute Token.revoked?(updated_parent)
-      assert Token.revoked?(updated_child1)
-      refute Token.revoked?(updated_child2)
+      refute Tokens.revoked?(updated_parent)
+      assert Tokens.revoked?(updated_child1)
+      refute Tokens.revoked?(updated_child2)
     end
 
     test "returns 200 OK for invalid token (security per RFC 7009)", %{
@@ -549,7 +549,7 @@ defmodule HexpmWeb.API.OAuthControllerTest do
 
       # Token should not be revoked
       updated_token = Repo.get(Token, parent_token.id)
-      refute Token.revoked?(updated_token)
+      refute Tokens.revoked?(updated_token)
     end
 
     test "returns 200 OK for missing parameters" do
@@ -589,7 +589,7 @@ defmodule HexpmWeb.API.OAuthControllerTest do
       revoke_parent_tokens: parent_tokens
     } do
       # First revoke the token
-      {:ok, _} = Token.revoke_token(parent_token)
+      {:ok, _} = Tokens.revoke(parent_token)
 
       # Try to revoke again
       params = %{
@@ -607,7 +607,7 @@ defmodule HexpmWeb.API.OAuthControllerTest do
       revoke_parent_tokens: parent_tokens
     } do
       other_client_params = %{
-        client_id: Hexpm.OAuth.Client.generate_client_id(),
+        client_id: Clients.generate_client_id(),
         name: "Other OAuth Client",
         client_type: "public",
         allowed_grant_types: ["authorization_code"],
@@ -628,7 +628,7 @@ defmodule HexpmWeb.API.OAuthControllerTest do
 
       # Token should not be revoked
       updated_token = Repo.get(Token, parent_token.id)
-      refute Token.revoked?(updated_token)
+      refute Tokens.revoked?(updated_token)
     end
 
     test "supports token_type_hint parameter (optional per RFC 7009)", %{
@@ -648,7 +648,7 @@ defmodule HexpmWeb.API.OAuthControllerTest do
 
       # Token should be revoked
       updated_token = Repo.get(Token, parent_token.id)
-      assert Token.revoked?(updated_token)
+      assert Tokens.revoked?(updated_token)
     end
   end
 
@@ -657,7 +657,7 @@ defmodule HexpmWeb.API.OAuthControllerTest do
       user = insert(:user)
 
       client_params = %{
-        client_id: Hexpm.OAuth.Client.generate_client_id(),
+        client_id: Clients.generate_client_id(),
         name: "Test OAuth Client",
         client_type: "public",
         allowed_grant_types: [
@@ -669,11 +669,11 @@ defmodule HexpmWeb.API.OAuthControllerTest do
 
       {:ok, client} = Client.build(client_params) |> Repo.insert()
 
-      {:ok, session} = Repo.insert(Session.create_for_user(user, client.client_id))
+      {:ok, session} = Sessions.create_for_user(user, client.client_id)
 
       # Create parent token
       parent_token_changeset =
-        Token.create_for_user(
+        Tokens.create_for_user(
           user,
           client.client_id,
           ["api:read", "api:write", "repositories"],
@@ -733,7 +733,7 @@ defmodule HexpmWeb.API.OAuthControllerTest do
 
       # Verify token was created in database
       {:ok, created_token} =
-        Token.lookup(access_token, :access, client_id: client.client_id, preload: [])
+        Tokens.lookup(access_token, :access, client_id: client.client_id, preload: [])
 
       assert created_token.scopes == ["api:read", "repositories"]
       assert created_token.parent_token_id == parent_token.id
@@ -871,7 +871,7 @@ defmodule HexpmWeb.API.OAuthControllerTest do
 
       # Verify token in database
       {:ok, created_token} =
-        Token.lookup(response["access_token"], :access, client_id: client.client_id, preload: [])
+        Tokens.lookup(response["access_token"], :access, client_id: client.client_id, preload: [])
 
       assert created_token.scopes == ["api:read"]
     end

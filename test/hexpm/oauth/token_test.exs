@@ -3,7 +3,7 @@ defmodule Hexpm.OAuth.TokenTest do
 
   import Ecto.Changeset, only: [get_field: 2]
 
-  alias Hexpm.OAuth.{Token, Client, Session}
+  alias Hexpm.OAuth.{Token, Client, Tokens, Clients, Sessions}
 
   describe "changeset/2" do
     test "validates required fields" do
@@ -32,7 +32,7 @@ defmodule Hexpm.OAuth.TokenTest do
           expires_at: expires_at,
           grant_type: "invalid_grant",
           user_id: user.id,
-          client_id: Hexpm.OAuth.Client.generate_client_id()
+          client_id: Clients.generate_client_id()
         })
 
       assert %{grant_type: "is invalid"} = errors_on(changeset)
@@ -51,7 +51,7 @@ defmodule Hexpm.OAuth.TokenTest do
           expires_at: expires_at,
           grant_type: "authorization_code",
           user_id: user.id,
-          client_id: Hexpm.OAuth.Client.generate_client_id()
+          client_id: Clients.generate_client_id()
         })
 
       assert %{scopes: "contains invalid scopes: invalid_scope"} = errors_on(changeset)
@@ -60,7 +60,7 @@ defmodule Hexpm.OAuth.TokenTest do
     test "creates valid changeset with all fields" do
       user = insert(:user)
       client = insert(:oauth_client)
-      {:ok, session} = Repo.insert(Session.create_for_user(user, client.client_id))
+      {:ok, session} = Sessions.create_for_user(user, client.client_id)
       expires_at = DateTime.add(DateTime.utc_now(), 3600, :second)
 
       attrs = %{
@@ -87,7 +87,7 @@ defmodule Hexpm.OAuth.TokenTest do
     test "builds token with valid attributes" do
       user = insert(:user)
       client = insert(:oauth_client)
-      {:ok, session} = Repo.insert(Session.create_for_user(user, client.client_id))
+      {:ok, session} = Sessions.create_for_user(user, client.client_id)
       expires_at = DateTime.add(DateTime.utc_now(), 3600, :second)
 
       attrs = %{
@@ -107,81 +107,7 @@ defmodule Hexpm.OAuth.TokenTest do
     end
   end
 
-  describe "generate_access_token/0" do
-    test "generates three-part token with correct format" do
-      {user_token, first, second} = Token.generate_access_token()
-
-      assert is_binary(user_token)
-      assert is_binary(first)
-      assert is_binary(second)
-
-      # User token should be base64url without padding
-      refute String.contains?(user_token, "=")
-      assert String.length(user_token) > 0
-
-      # First and second should be 32-character hex strings
-      assert String.length(first) == 32
-      assert String.length(second) == 32
-      assert Regex.match?(~r/^[0-9a-f]+$/, first)
-      assert Regex.match?(~r/^[0-9a-f]+$/, second)
-    end
-
-    test "generates unique tokens" do
-      {user_token1, first1, second1} = Token.generate_access_token()
-      {user_token2, first2, second2} = Token.generate_access_token()
-
-      assert user_token1 != user_token2
-      assert first1 != first2
-      assert second1 != second2
-    end
-
-    test "generates consistent splits for same input" do
-      # This tests the deterministic nature of HMAC
-      user_token = :crypto.strong_rand_bytes(32) |> Base.url_encode64(padding: false)
-      app_secret = Application.get_env(:hexpm, :secret)
-
-      # Generate split twice with same input
-      <<first1::binary-size(32), second1::binary-size(32)>> =
-        :crypto.mac(:hmac, :sha256, app_secret, user_token)
-        |> Base.encode16(case: :lower)
-
-      <<first2::binary-size(32), second2::binary-size(32)>> =
-        :crypto.mac(:hmac, :sha256, app_secret, user_token)
-        |> Base.encode16(case: :lower)
-
-      assert first1 == first2
-      assert second1 == second2
-    end
-  end
-
-  describe "generate_refresh_token/0" do
-    test "generates three-part refresh token with correct format" do
-      {user_token, first, second} = Token.generate_refresh_token()
-
-      assert is_binary(user_token)
-      assert is_binary(first)
-      assert is_binary(second)
-
-      # User token should be base64url without padding
-      refute String.contains?(user_token, "=")
-      assert String.length(user_token) > 0
-
-      # First and second should be 32-character hex strings
-      assert String.length(first) == 32
-      assert String.length(second) == 32
-      assert Regex.match?(~r/^[0-9a-f]+$/, first)
-      assert Regex.match?(~r/^[0-9a-f]+$/, second)
-    end
-
-    test "generates unique refresh tokens" do
-      {user_token1, first1, second1} = Token.generate_refresh_token()
-      {user_token2, first2, second2} = Token.generate_refresh_token()
-
-      assert user_token1 != user_token2
-      assert first1 != first2
-      assert second1 != second2
-    end
-  end
+  # Token generation is now tested through the public API
 
   describe "create_for_user/6" do
     setup do
@@ -191,7 +117,7 @@ defmodule Hexpm.OAuth.TokenTest do
 
     test "creates changeset with required fields", %{user: user} do
       changeset =
-        Token.create_for_user(
+        Tokens.create_for_user(
           user,
           "test_client",
           ["api"],
@@ -215,7 +141,7 @@ defmodule Hexpm.OAuth.TokenTest do
 
     test "sets custom expiration time", %{user: user} do
       changeset =
-        Token.create_for_user(
+        Tokens.create_for_user(
           user,
           "test_client",
           ["api"],
@@ -233,7 +159,7 @@ defmodule Hexpm.OAuth.TokenTest do
 
     test "creates refresh token when requested", %{user: user} do
       changeset =
-        Token.create_for_user(
+        Tokens.create_for_user(
           user,
           "test_client",
           ["api"],
@@ -249,7 +175,7 @@ defmodule Hexpm.OAuth.TokenTest do
 
     test "defaults grant_reference to nil", %{user: user} do
       changeset =
-        Token.create_for_user(
+        Tokens.create_for_user(
           user,
           "test_client",
           ["api"],
@@ -261,7 +187,7 @@ defmodule Hexpm.OAuth.TokenTest do
 
     test "sets 30-day refresh token expiration for read-only scopes", %{user: user} do
       changeset =
-        Token.create_for_user(
+        Tokens.create_for_user(
           user,
           "test_client",
           ["api:read"],
@@ -279,7 +205,7 @@ defmodule Hexpm.OAuth.TokenTest do
 
     test "sets 60-minute refresh token expiration for api:write scope", %{user: user} do
       changeset =
-        Token.create_for_user(
+        Tokens.create_for_user(
           user,
           "test_client",
           ["api:write"],
@@ -297,7 +223,7 @@ defmodule Hexpm.OAuth.TokenTest do
 
     test "sets 60-minute refresh token expiration for api scope", %{user: user} do
       changeset =
-        Token.create_for_user(
+        Tokens.create_for_user(
           user,
           "test_client",
           ["api"],
@@ -315,7 +241,7 @@ defmodule Hexpm.OAuth.TokenTest do
 
     test "sets 60-minute refresh token expiration for mixed scopes with write", %{user: user} do
       changeset =
-        Token.create_for_user(
+        Tokens.create_for_user(
           user,
           "test_client",
           ["api:read", "api:write", "repositories"],
@@ -333,7 +259,7 @@ defmodule Hexpm.OAuth.TokenTest do
 
     test "does not set refresh token expiration when refresh token not requested", %{user: user} do
       changeset =
-        Token.create_for_user(
+        Tokens.create_for_user(
           user,
           "test_client",
           ["api"],
@@ -352,14 +278,14 @@ defmodule Hexpm.OAuth.TokenTest do
       future_time = DateTime.add(DateTime.utc_now(), 3600, :second)
       token = %Token{expires_at: future_time}
 
-      refute Token.expired?(token)
+      refute Tokens.expired?(token)
     end
 
     test "returns true for expired token" do
       past_time = DateTime.add(DateTime.utc_now(), -3600, :second)
       token = %Token{expires_at: past_time}
 
-      assert Token.expired?(token)
+      assert Tokens.expired?(token)
     end
   end
 
@@ -367,13 +293,13 @@ defmodule Hexpm.OAuth.TokenTest do
     test "returns false for non-revoked token" do
       token = %Token{revoked_at: nil}
 
-      refute Token.revoked?(token)
+      refute Tokens.revoked?(token)
     end
 
     test "returns true for revoked token" do
       token = %Token{revoked_at: DateTime.utc_now()}
 
-      assert Token.revoked?(token)
+      assert Tokens.revoked?(token)
     end
   end
 
@@ -382,28 +308,28 @@ defmodule Hexpm.OAuth.TokenTest do
       future_time = DateTime.add(DateTime.utc_now(), 3600, :second)
       token = %Token{expires_at: future_time, revoked_at: nil}
 
-      assert Token.valid?(token)
+      assert Tokens.valid?(token)
     end
 
     test "returns false for expired token" do
       past_time = DateTime.add(DateTime.utc_now(), -3600, :second)
       token = %Token{expires_at: past_time, revoked_at: nil}
 
-      refute Token.valid?(token)
+      refute Tokens.valid?(token)
     end
 
     test "returns false for revoked token" do
       future_time = DateTime.add(DateTime.utc_now(), 3600, :second)
       token = %Token{expires_at: future_time, revoked_at: DateTime.utc_now()}
 
-      refute Token.valid?(token)
+      refute Tokens.valid?(token)
     end
   end
 
   describe "revoke/1" do
     test "creates changeset with revoked_at timestamp" do
       token = %Token{}
-      changeset = Token.revoke(token)
+      changeset = Tokens.revoke_changeset(token)
 
       revoked_at = get_field(changeset, :revoked_at)
       assert revoked_at
@@ -417,20 +343,20 @@ defmodule Hexpm.OAuth.TokenTest do
       future_time = DateTime.add(DateTime.utc_now(), 3600, :second)
       token = %Token{refresh_token_expires_at: future_time}
 
-      refute Token.refresh_token_expired?(token)
+      refute Tokens.refresh_token_expired?(token)
     end
 
     test "returns true for expired refresh token" do
       past_time = DateTime.add(DateTime.utc_now(), -3600, :second)
       token = %Token{refresh_token_expires_at: past_time}
 
-      assert Token.refresh_token_expired?(token)
+      assert Tokens.refresh_token_expired?(token)
     end
 
     test "returns false when refresh_token_expires_at is nil" do
       token = %Token{refresh_token_expires_at: nil}
 
-      refute Token.refresh_token_expired?(token)
+      refute Tokens.refresh_token_expired?(token)
     end
   end
 
@@ -439,54 +365,54 @@ defmodule Hexpm.OAuth.TokenTest do
       future_time = DateTime.add(DateTime.utc_now(), 3600, :second)
       token = %Token{refresh_token_expires_at: future_time, revoked_at: nil}
 
-      assert Token.refresh_token_valid?(token)
+      assert Tokens.refresh_token_valid?(token)
     end
 
     test "returns false for expired refresh token" do
       past_time = DateTime.add(DateTime.utc_now(), -3600, :second)
       token = %Token{refresh_token_expires_at: past_time, revoked_at: nil}
 
-      refute Token.refresh_token_valid?(token)
+      refute Tokens.refresh_token_valid?(token)
     end
 
     test "returns false for revoked refresh token" do
       future_time = DateTime.add(DateTime.utc_now(), 3600, :second)
       token = %Token{refresh_token_expires_at: future_time, revoked_at: DateTime.utc_now()}
 
-      refute Token.refresh_token_valid?(token)
+      refute Tokens.refresh_token_valid?(token)
     end
 
     test "returns true when refresh_token_expires_at is nil and not revoked" do
       token = %Token{refresh_token_expires_at: nil, revoked_at: nil}
 
-      assert Token.refresh_token_valid?(token)
+      assert Tokens.refresh_token_valid?(token)
     end
   end
 
   describe "has_write_scope?/1" do
     test "returns true for 'api' scope" do
-      assert Token.has_write_scope?(["api"])
+      assert Tokens.has_write_scope?(["api"])
     end
 
     test "returns true for 'api:write' scope" do
-      assert Token.has_write_scope?(["api:write"])
+      assert Tokens.has_write_scope?(["api:write"])
     end
 
     test "returns true for mixed scopes including 'api'" do
-      assert Token.has_write_scope?(["api:read", "api", "repositories"])
+      assert Tokens.has_write_scope?(["api:read", "api", "repositories"])
     end
 
     test "returns true for mixed scopes including 'api:write'" do
-      assert Token.has_write_scope?(["api:read", "api:write", "repositories"])
+      assert Tokens.has_write_scope?(["api:read", "api:write", "repositories"])
     end
 
     test "returns false for read-only scopes" do
-      refute Token.has_write_scope?(["api:read"])
-      refute Token.has_write_scope?(["api:read", "repositories"])
+      refute Tokens.has_write_scope?(["api:read"])
+      refute Tokens.has_write_scope?(["api:read", "repositories"])
     end
 
     test "returns false for empty scopes" do
-      refute Token.has_write_scope?([])
+      refute Tokens.has_write_scope?([])
     end
   end
 
@@ -494,18 +420,18 @@ defmodule Hexpm.OAuth.TokenTest do
     test "returns true when token has all required scopes" do
       token = %Token{scopes: ["api", "api:read", "api:write"]}
 
-      assert Token.has_scopes?(token, ["api"])
-      assert Token.has_scopes?(token, ["api", "api:read"])
-      assert Token.has_scopes?(token, ["api:read", "api:write"])
-      assert Token.has_scopes?(token, [])
+      assert Tokens.has_scopes?(token, ["api"])
+      assert Tokens.has_scopes?(token, ["api", "api:read"])
+      assert Tokens.has_scopes?(token, ["api:read", "api:write"])
+      assert Tokens.has_scopes?(token, [])
     end
 
     test "returns false when token missing required scopes" do
       token = %Token{scopes: ["api", "api:read"]}
 
-      refute Token.has_scopes?(token, ["api:write"])
-      refute Token.has_scopes?(token, ["api", "repositories"])
-      refute Token.has_scopes?(token, ["invalid_scope"])
+      refute Tokens.has_scopes?(token, ["api:write"])
+      refute Tokens.has_scopes?(token, ["api", "repositories"])
+      refute Tokens.has_scopes?(token, ["invalid_scope"])
     end
   end
 
@@ -520,7 +446,7 @@ defmodule Hexpm.OAuth.TokenTest do
         scopes: ["api", "api:read"]
       }
 
-      response = Token.to_response(token)
+      response = Tokens.to_response(token)
 
       assert response.access_token == "access_token_123"
       assert response.token_type == "bearer"
@@ -540,7 +466,7 @@ defmodule Hexpm.OAuth.TokenTest do
         scopes: ["api"]
       }
 
-      response = Token.to_response(token)
+      response = Tokens.to_response(token)
 
       assert response.access_token == "access_token_123"
       assert response.refresh_token == "refresh_token_456"
@@ -556,7 +482,7 @@ defmodule Hexpm.OAuth.TokenTest do
         scopes: ["api"]
       }
 
-      response = Token.to_response(token)
+      response = Tokens.to_response(token)
 
       assert response.expires_in == 0
     end
@@ -626,7 +552,7 @@ defmodule Hexpm.OAuth.TokenTest do
       user = insert(:user)
 
       client_params = %{
-        client_id: Hexpm.OAuth.Client.generate_client_id(),
+        client_id: Clients.generate_client_id(),
         name: "Test OAuth Client",
         client_type: "public",
         allowed_grant_types: [
@@ -638,11 +564,11 @@ defmodule Hexpm.OAuth.TokenTest do
 
       {:ok, client} = Client.build(client_params) |> Repo.insert()
 
-      {:ok, session} = Repo.insert(Session.create_for_user(user, client.client_id))
+      {:ok, session} = Sessions.create_for_user(user, client.client_id)
 
       # Create parent token
       parent_token_changeset =
-        Token.create_for_user(
+        Tokens.create_for_user(
           user,
           client.client_id,
           ["api:read", "api:write", "repositories"],
@@ -669,7 +595,7 @@ defmodule Hexpm.OAuth.TokenTest do
       target_scopes = ["api:read", "repositories"]
 
       child_token_changeset =
-        Token.create_exchanged_token(
+        Tokens.create_exchanged_token(
           parent_token,
           client.client_id,
           target_scopes,
@@ -694,25 +620,25 @@ defmodule Hexpm.OAuth.TokenTest do
     } do
       # Create child tokens
       child1_changeset =
-        Token.create_exchanged_token(parent_token, client.client_id, ["api:read"], "ref1")
+        Tokens.create_exchanged_token(parent_token, client.client_id, ["api:read"], "ref1")
 
       child2_changeset =
-        Token.create_exchanged_token(parent_token, client.client_id, ["repositories"], "ref2")
+        Tokens.create_exchanged_token(parent_token, client.client_id, ["repositories"], "ref2")
 
       {:ok, child1} = Repo.insert(child1_changeset)
       {:ok, child2} = Repo.insert(child2_changeset)
 
       # Revoke parent token only
-      assert {:ok, _} = Token.revoke_token(parent_token)
+      assert {:ok, _} = Tokens.revoke(parent_token)
 
       # Only parent token should be revoked
       updated_parent = Repo.get(Token, parent_token.id)
       updated_child1 = Repo.get(Token, child1.id)
       updated_child2 = Repo.get(Token, child2.id)
 
-      assert Token.revoked?(updated_parent)
-      refute Token.revoked?(updated_child1)
-      refute Token.revoked?(updated_child2)
+      assert Tokens.revoked?(updated_parent)
+      refute Tokens.revoked?(updated_child1)
+      refute Tokens.revoked?(updated_child2)
     end
 
     test "revoke/1 on child token only revokes that child", %{
@@ -721,25 +647,25 @@ defmodule Hexpm.OAuth.TokenTest do
     } do
       # Create child tokens
       child1_changeset =
-        Token.create_exchanged_token(parent_token, client.client_id, ["api:read"], "ref1")
+        Tokens.create_exchanged_token(parent_token, client.client_id, ["api:read"], "ref1")
 
       child2_changeset =
-        Token.create_exchanged_token(parent_token, client.client_id, ["repositories"], "ref2")
+        Tokens.create_exchanged_token(parent_token, client.client_id, ["repositories"], "ref2")
 
       {:ok, child1} = Repo.insert(child1_changeset)
       {:ok, child2} = Repo.insert(child2_changeset)
 
       # Revoke only child1
-      assert {:ok, _} = Token.revoke_token(child1)
+      assert {:ok, _} = Tokens.revoke(child1)
 
       # Check only child1 is revoked
       updated_parent = Repo.get(Token, parent_token.id)
       updated_child1 = Repo.get(Token, child1.id)
       updated_child2 = Repo.get(Token, child2.id)
 
-      refute Token.revoked?(updated_parent)
-      assert Token.revoked?(updated_child1)
-      refute Token.revoked?(updated_child2)
+      refute Tokens.revoked?(updated_parent)
+      assert Tokens.revoked?(updated_child1)
+      refute Tokens.revoked?(updated_child2)
     end
 
     test "token exchange always creates children of root token", %{
@@ -748,7 +674,7 @@ defmodule Hexpm.OAuth.TokenTest do
     } do
       # Create child token from parent
       child1_changeset =
-        Token.create_exchanged_token(parent_token, client.client_id, ["api:read"], "ref1")
+        Tokens.create_exchanged_token(parent_token, client.client_id, ["api:read"], "ref1")
 
       {:ok, child1} = Repo.insert(child1_changeset)
 
@@ -756,7 +682,7 @@ defmodule Hexpm.OAuth.TokenTest do
       child1_with_user = Repo.preload(child1, :user)
 
       child2_changeset =
-        Token.create_exchanged_token(child1_with_user, client.client_id, ["api:read"], "ref2")
+        Tokens.create_exchanged_token(child1_with_user, client.client_id, ["api:read"], "ref2")
 
       {:ok, child2} = Repo.insert(child2_changeset)
 
@@ -773,10 +699,10 @@ defmodule Hexpm.OAuth.TokenTest do
     } do
       # Create child tokens
       child1_changeset =
-        Token.create_exchanged_token(parent_token, client.client_id, ["api:read"], "ref1")
+        Tokens.create_exchanged_token(parent_token, client.client_id, ["api:read"], "ref1")
 
       child2_changeset =
-        Token.create_exchanged_token(parent_token, client.client_id, ["repositories"], "ref2")
+        Tokens.create_exchanged_token(parent_token, client.client_id, ["repositories"], "ref2")
 
       {:ok, child1} = Repo.insert(child1_changeset)
       {:ok, child2} = Repo.insert(child2_changeset)
@@ -785,7 +711,7 @@ defmodule Hexpm.OAuth.TokenTest do
       parent_token = Repo.preload(parent_token, :session)
 
       {:ok, %{session: _session, tokens: {revoked_count, _}}} =
-        Session.revoke(parent_token.session)
+        Sessions.revoke(parent_token.session)
 
       # Should revoke all 3 tokens
       assert revoked_count == 3
@@ -795,9 +721,9 @@ defmodule Hexpm.OAuth.TokenTest do
       updated_child1 = Repo.get(Token, child1.id)
       updated_child2 = Repo.get(Token, child2.id)
 
-      assert Token.revoked?(updated_parent)
-      assert Token.revoked?(updated_child1)
-      assert Token.revoked?(updated_child2)
+      assert Tokens.revoked?(updated_parent)
+      assert Tokens.revoked?(updated_child1)
+      assert Tokens.revoked?(updated_child2)
     end
 
     test "create_for_user with parent token uses same session", %{
@@ -806,7 +732,7 @@ defmodule Hexpm.OAuth.TokenTest do
       client: client
     } do
       child_token_changeset =
-        Token.create_for_user(
+        Tokens.create_for_user(
           user,
           client.client_id,
           ["api:read"],
@@ -824,11 +750,11 @@ defmodule Hexpm.OAuth.TokenTest do
 
     test "tokens require sessions", %{user: user, client: client} do
       # Create two separate sessions
-      {:ok, session1} = Repo.insert(Session.create_for_user(user, client.client_id))
-      {:ok, session2} = Repo.insert(Session.create_for_user(user, client.client_id))
+      {:ok, session1} = Sessions.create_for_user(user, client.client_id)
+      {:ok, session2} = Sessions.create_for_user(user, client.client_id)
 
       token1_changeset =
-        Token.create_for_user(
+        Tokens.create_for_user(
           user,
           client.client_id,
           ["api:read"],
@@ -838,7 +764,7 @@ defmodule Hexpm.OAuth.TokenTest do
         )
 
       token2_changeset =
-        Token.create_for_user(
+        Tokens.create_for_user(
           user,
           client.client_id,
           ["api:write"],

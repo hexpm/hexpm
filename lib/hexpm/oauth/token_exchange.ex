@@ -6,7 +6,7 @@ defmodule Hexpm.OAuth.TokenExchange do
   for a new token with a subset of the original token's scopes.
   """
 
-  alias Hexpm.OAuth.{Client, Token}
+  alias Hexpm.OAuth.{Clients, Tokens}
   alias Hexpm.Permissions
   alias Hexpm.Repo
 
@@ -44,7 +44,7 @@ defmodule Hexpm.OAuth.TokenExchange do
   end
 
   defp validate_client(client_id) do
-    case Repo.get_by(Client, client_id: client_id) do
+    case Clients.get(client_id) do
       nil -> {:error, :invalid_client, "Invalid client"}
       client -> {:ok, client}
     end
@@ -64,7 +64,7 @@ defmodule Hexpm.OAuth.TokenExchange do
   end
 
   defp lookup_access_token(user_access_token, client_id) do
-    case Token.lookup(user_access_token, :access, client_id: client_id) do
+    case Tokens.lookup(user_access_token, :access, client_id: client_id) do
       {:ok, token} ->
         {:ok, token}
 
@@ -83,7 +83,7 @@ defmodule Hexpm.OAuth.TokenExchange do
   end
 
   defp lookup_refresh_token(user_refresh_token, client_id) do
-    case Token.lookup(user_refresh_token, :refresh, client_id: client_id) do
+    case Tokens.lookup(user_refresh_token, :refresh, client_id: client_id) do
       {:ok, token} ->
         {:ok, token}
 
@@ -119,7 +119,7 @@ defmodule Hexpm.OAuth.TokenExchange do
 
   defp create_exchange_token(parent_token, client_id, target_scopes, grant_reference) do
     token_changeset =
-      Token.create_exchanged_token(parent_token, client_id, target_scopes, grant_reference)
+      Tokens.create_exchanged_token(parent_token, client_id, target_scopes, grant_reference)
 
     {:ok, token_changeset}
   end

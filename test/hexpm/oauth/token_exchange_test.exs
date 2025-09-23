@@ -1,14 +1,15 @@
 defmodule Hexpm.OAuth.TokenExchangeTest do
   use Hexpm.DataCase, async: true
+  import Ecto.Query
 
-  alias Hexpm.OAuth.{Token, TokenExchange, Client, Session}
+  alias Hexpm.OAuth.{Token, Tokens, TokenExchange, Client, Clients, Sessions}
 
   describe "exchange_token/4" do
     setup do
       user = insert(:user)
 
       client_params = %{
-        client_id: Hexpm.OAuth.Client.generate_client_id(),
+        client_id: Clients.generate_client_id(),
         name: "Test OAuth Client",
         client_type: "public",
         allowed_grant_types: [
@@ -22,10 +23,10 @@ defmodule Hexpm.OAuth.TokenExchangeTest do
 
       # Create parent token with multiple scopes
 
-      {:ok, session} = Repo.insert(Session.create_for_user(user, client.client_id))
+      {:ok, session} = Sessions.create_for_user(user, client.client_id)
 
       parent_token_changeset =
-        Token.create_for_user(
+        Tokens.create_for_user(
           user,
           client.client_id,
           ["api:read", "api:write", "repositories"],
@@ -172,11 +173,11 @@ defmodule Hexpm.OAuth.TokenExchangeTest do
     end
 
     test "fails with expired parent token", %{client: client, user: user} do
-      {:ok, session} = Repo.insert(Session.create_for_user(user, client.client_id))
+      {:ok, session} = Sessions.create_for_user(user, client.client_id)
 
       # Create expired token
       expired_token_changeset =
-        Token.create_for_user(
+        Tokens.create_for_user(
           user,
           client.client_id,
           ["api:read"],
@@ -199,11 +200,11 @@ defmodule Hexpm.OAuth.TokenExchangeTest do
     end
 
     test "fails with revoked parent token", %{client: client, user: user} do
-      {:ok, session} = Repo.insert(Session.create_for_user(user, client.client_id))
+      {:ok, session} = Sessions.create_for_user(user, client.client_id)
 
       # Create and revoke token
       token_changeset =
-        Token.create_for_user(
+        Tokens.create_for_user(
           user,
           client.client_id,
           ["api:read"],
@@ -213,7 +214,7 @@ defmodule Hexpm.OAuth.TokenExchangeTest do
         )
 
       {:ok, token} = Repo.insert(token_changeset)
-      {:ok, _revoked_token} = Repo.update(Token.revoke(token))
+      {:ok, _revoked_token} = Tokens.revoke(token)
 
       assert {:error, :invalid_grant, "Subject token expired or revoked"} =
                TokenExchange.exchange_token(
@@ -260,27 +261,37 @@ defmodule Hexpm.OAuth.TokenExchangeTest do
     end
 
     test "fails with expired token when using refresh token", %{client: client, user: user} do
-      {:ok, session} = Repo.insert(Session.create_for_user(user, client.client_id))
+      {:ok, session} = Sessions.create_for_user(user, client.client_id)
 
-      # Create expired token with refresh token
-      expired_token_changeset =
-        Token.create_for_user(
+      # Create token with refresh token
+      token_changeset =
+        Tokens.create_for_user(
           user,
           client.client_id,
           ["api:read"],
           "authorization_code",
           "test_code",
           session_id: session.id,
-          with_refresh_token: true,
-          expires_in: -3600
+          with_refresh_token: true
         )
 
-      {:ok, expired_token} = Repo.insert(expired_token_changeset)
+      {:ok, token} = Repo.insert(token_changeset)
+
+      # Store the refresh token before we lose it
+      refresh_token = token.refresh_token
+
+      # Manually expire both the access token and refresh token
+      past_time = DateTime.add(DateTime.utc_now(), -3600, :second)
+
+      # Use Repo.update_all to directly update the fields
+      {1, _} =
+        from(t in Token, where: t.id == ^token.id)
+        |> Repo.update_all(set: [expires_at: past_time, refresh_token_expires_at: past_time])
 
       assert {:error, :invalid_grant, "Subject token expired or revoked"} =
                TokenExchange.exchange_token(
                  client.client_id,
-                 expired_token.refresh_token,
+                 refresh_token,
                  "urn:ietf:params:oauth:token-type:refresh_token",
                  ["api:read"]
                )

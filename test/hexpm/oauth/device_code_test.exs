@@ -4,7 +4,7 @@ defmodule Hexpm.OAuth.DeviceCodeTest do
 
   import Ecto.Changeset, only: [get_field: 2]
 
-  alias Hexpm.OAuth.DeviceCode
+  alias Hexpm.OAuth.{DeviceCode, DeviceCodes, Clients}
 
   describe "changeset/2" do
     test "validates required fields" do
@@ -25,7 +25,7 @@ defmodule Hexpm.OAuth.DeviceCodeTest do
           device_code: "device123",
           user_code: "USER-CODE",
           verification_uri: "https://example.com/device",
-          client_id: Hexpm.OAuth.Client.generate_client_id(),
+          client_id: Clients.generate_client_id(),
           expires_at: DateTime.utc_now(),
           interval: 0
         })
@@ -107,7 +107,7 @@ defmodule Hexpm.OAuth.DeviceCodeTest do
         future_time = DateTime.add(DateTime.utc_now(), offset, :second)
         device_code = %DeviceCode{expires_at: future_time}
 
-        refute DeviceCode.expired?(device_code)
+        refute DeviceCodes.expired?(device_code)
       end
     end
 
@@ -116,7 +116,7 @@ defmodule Hexpm.OAuth.DeviceCodeTest do
         past_time = DateTime.add(DateTime.utc_now(), -offset, :second)
         device_code = %DeviceCode{expires_at: past_time}
 
-        assert DeviceCode.expired?(device_code)
+        assert DeviceCodes.expired?(device_code)
       end
     end
 
@@ -126,7 +126,7 @@ defmodule Hexpm.OAuth.DeviceCodeTest do
         device_code = %DeviceCode{expires_at: test_time}
 
         expected_expired = DateTime.compare(test_time, DateTime.utc_now()) == :lt
-        actual_expired = DeviceCode.expired?(device_code)
+        actual_expired = DeviceCodes.expired?(device_code)
 
         # Allow for small timing differences in test execution
         if abs(offset) > 1 do
@@ -144,21 +144,21 @@ defmodule Hexpm.OAuth.DeviceCodeTest do
       future_time = DateTime.add(DateTime.utc_now(), 600, :second)
       device_code = %DeviceCode{status: "pending", expires_at: future_time}
 
-      assert DeviceCode.pending?(device_code)
+      assert DeviceCodes.pending?(device_code)
     end
 
     test "returns false for pending but expired device code" do
       past_time = DateTime.add(DateTime.utc_now(), -600, :second)
       device_code = %DeviceCode{status: "pending", expires_at: past_time}
 
-      refute DeviceCode.pending?(device_code)
+      refute DeviceCodes.pending?(device_code)
     end
 
     test "returns false for non-pending device code" do
       future_time = DateTime.add(DateTime.utc_now(), 600, :second)
       device_code = %DeviceCode{status: "authorized", expires_at: future_time}
 
-      refute DeviceCode.pending?(device_code)
+      refute DeviceCodes.pending?(device_code)
     end
 
     property "pending requires both 'pending' status and non-expired time" do
@@ -170,7 +170,7 @@ defmodule Hexpm.OAuth.DeviceCodeTest do
         device_code = %DeviceCode{status: status, expires_at: expires_at}
 
         expected_pending = status == "pending" && offset > 0
-        actual_pending = DeviceCode.pending?(device_code)
+        actual_pending = DeviceCodes.pending?(device_code)
 
         # Allow for timing differences near boundary
         if abs(offset) > 1 do
@@ -190,7 +190,7 @@ defmodule Hexpm.OAuth.DeviceCodeTest do
         expires_at = DateTime.add(DateTime.utc_now(), offset, :second)
         device_code = %DeviceCode{status: status, expires_at: expires_at}
 
-        refute DeviceCode.pending?(device_code)
+        refute DeviceCodes.pending?(device_code)
       end
     end
   end
@@ -199,13 +199,13 @@ defmodule Hexpm.OAuth.DeviceCodeTest do
     test "returns true for authorized device code" do
       device_code = %DeviceCode{status: "authorized"}
 
-      assert DeviceCode.authorized?(device_code)
+      assert DeviceCodes.authorized?(device_code)
     end
 
     test "returns false for non-authorized device code" do
       device_code = %DeviceCode{status: "pending"}
 
-      refute DeviceCode.authorized?(device_code)
+      refute DeviceCodes.authorized?(device_code)
     end
   end
 
@@ -213,19 +213,19 @@ defmodule Hexpm.OAuth.DeviceCodeTest do
     test "returns true for denied device code" do
       device_code = %DeviceCode{status: "denied"}
 
-      assert DeviceCode.denied?(device_code)
+      assert DeviceCodes.denied?(device_code)
     end
 
     test "returns false for non-denied device code" do
       device_code = %DeviceCode{status: "pending"}
 
-      refute DeviceCode.denied?(device_code)
+      refute DeviceCodes.denied?(device_code)
     end
   end
 
   describe "generate_device_code/0" do
     test "generates non-empty string" do
-      device_code = DeviceCode.generate_device_code()
+      device_code = DeviceCodes.generate_device_code()
 
       assert is_binary(device_code)
       assert String.length(device_code) > 0
@@ -233,7 +233,7 @@ defmodule Hexpm.OAuth.DeviceCodeTest do
 
     property "always generates 32-character base64url strings" do
       check all(_ <- constant(:ok), max_runs: 100) do
-        device_code = DeviceCode.generate_device_code()
+        device_code = DeviceCodes.generate_device_code()
 
         assert String.length(device_code) == 32
         refute String.contains?(device_code, "=")
@@ -243,7 +243,7 @@ defmodule Hexpm.OAuth.DeviceCodeTest do
     end
 
     property "generates unique device codes across many samples" do
-      codes = for _ <- 1..1000, do: DeviceCode.generate_device_code()
+      codes = for _ <- 1..1000, do: DeviceCodes.generate_device_code()
       unique_codes = Enum.uniq(codes)
 
       assert length(codes) == length(unique_codes)
@@ -251,7 +251,7 @@ defmodule Hexpm.OAuth.DeviceCodeTest do
 
     property "generated codes are valid base64url when padded" do
       check all(_ <- constant(:ok), max_runs: 50) do
-        device_code = DeviceCode.generate_device_code()
+        device_code = DeviceCodes.generate_device_code()
 
         # Add padding if needed for base64 validation
         padding_needed = rem(4 - rem(String.length(device_code), 4), 4)
@@ -264,7 +264,7 @@ defmodule Hexpm.OAuth.DeviceCodeTest do
 
   describe "generate_user_code/0" do
     test "generates non-empty string" do
-      user_code = DeviceCode.generate_user_code()
+      user_code = DeviceCodes.generate_user_code()
 
       assert is_binary(user_code)
       assert String.length(user_code) > 0
@@ -272,7 +272,7 @@ defmodule Hexpm.OAuth.DeviceCodeTest do
 
     property "always generates 8-character codes from allowed charset" do
       check all(_ <- constant(:ok), max_runs: 100) do
-        user_code = DeviceCode.generate_user_code()
+        user_code = DeviceCodes.generate_user_code()
 
         assert String.length(user_code) == 8
         assert String.match?(user_code, ~r/^[23456789BCDFGHJKLMNPQRSTVWXYZ]{8}$/)
@@ -282,7 +282,7 @@ defmodule Hexpm.OAuth.DeviceCodeTest do
 
     property "never generates codes with forbidden characters" do
       check all(_ <- constant(:ok), max_runs: 100) do
-        user_code = DeviceCode.generate_user_code()
+        user_code = DeviceCodes.generate_user_code()
 
         forbidden_chars = ["0", "1", "I", "O", "A", "E", "U"]
 
@@ -294,7 +294,7 @@ defmodule Hexpm.OAuth.DeviceCodeTest do
     end
 
     property "generates unique user codes across many samples" do
-      codes = for _ <- 1..1000, do: DeviceCode.generate_user_code()
+      codes = for _ <- 1..1000, do: DeviceCodes.generate_user_code()
       unique_codes = Enum.uniq(codes)
 
       # Should have very high uniqueness (allowing for small chance of collision)
@@ -305,7 +305,7 @@ defmodule Hexpm.OAuth.DeviceCodeTest do
     end
 
     property "character distribution is reasonably uniform across large samples" do
-      codes = for _ <- 1..500, do: DeviceCode.generate_user_code()
+      codes = for _ <- 1..500, do: DeviceCodes.generate_user_code()
       all_chars = codes |> Enum.join("") |> String.graphemes()
       char_counts = Enum.frequencies(all_chars)
 
@@ -329,7 +329,7 @@ defmodule Hexpm.OAuth.DeviceCodeTest do
       almost_now = DateTime.add(DateTime.utc_now(), -1, :microsecond)
       device_code = %DeviceCode{expires_at: almost_now}
 
-      result = DeviceCode.expired?(device_code)
+      result = DeviceCodes.expired?(device_code)
       assert is_boolean(result)
     end
 
@@ -338,7 +338,7 @@ defmodule Hexpm.OAuth.DeviceCodeTest do
       device_code = %DeviceCode{expires_at: now}
 
       # Due to microsecond precision, this could go either way
-      result = DeviceCode.expired?(device_code)
+      result = DeviceCodes.expired?(device_code)
       assert is_boolean(result)
     end
 

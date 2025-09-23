@@ -1,7 +1,7 @@
 defmodule Hexpm.OAuth.ClientTest do
   use Hexpm.DataCase, async: true
 
-  alias Hexpm.OAuth.Client
+  alias Hexpm.OAuth.{Client, Clients}
 
   describe "changeset/2" do
     test "validates required fields" do
@@ -17,7 +17,7 @@ defmodule Hexpm.OAuth.ClientTest do
     test "validates client_type inclusion" do
       changeset =
         Client.changeset(%Client{}, %{
-          client_id: Hexpm.OAuth.Client.generate_client_id(),
+          client_id: Clients.generate_client_id(),
           name: "Test Client",
           client_type: "invalid"
         })
@@ -28,7 +28,7 @@ defmodule Hexpm.OAuth.ClientTest do
     test "validates grant types" do
       changeset =
         Client.changeset(%Client{}, %{
-          client_id: Hexpm.OAuth.Client.generate_client_id(),
+          client_id: Clients.generate_client_id(),
           name: "Test Client",
           client_type: "public",
           allowed_grant_types: ["invalid_grant", "authorization_code"]
@@ -41,7 +41,7 @@ defmodule Hexpm.OAuth.ClientTest do
     test "validates scopes" do
       changeset =
         Client.changeset(%Client{}, %{
-          client_id: Hexpm.OAuth.Client.generate_client_id(),
+          client_id: Clients.generate_client_id(),
           name: "Test Client",
           client_type: "public",
           allowed_scopes: ["invalid_scope", "api"]
@@ -53,7 +53,7 @@ defmodule Hexpm.OAuth.ClientTest do
     test "requires client_secret for confidential clients" do
       changeset =
         Client.changeset(%Client{}, %{
-          client_id: Hexpm.OAuth.Client.generate_client_id(),
+          client_id: Clients.generate_client_id(),
           name: "Test Client",
           client_type: "confidential"
         })
@@ -64,7 +64,7 @@ defmodule Hexpm.OAuth.ClientTest do
     test "allows public clients without client_secret" do
       changeset =
         Client.changeset(%Client{}, %{
-          client_id: Hexpm.OAuth.Client.generate_client_id(),
+          client_id: Clients.generate_client_id(),
           name: "Test Client",
           client_type: "public"
         })
@@ -105,15 +105,15 @@ defmodule Hexpm.OAuth.ClientTest do
     test "returns true for allowed grant types" do
       client = %Client{allowed_grant_types: ["authorization_code", "refresh_token"]}
 
-      assert Client.supports_grant_type?(client, "authorization_code")
-      assert Client.supports_grant_type?(client, "refresh_token")
+      assert Clients.supports_grant_type?(client, "authorization_code")
+      assert Clients.supports_grant_type?(client, "refresh_token")
     end
 
     test "returns false for disallowed grant types" do
       client = %Client{allowed_grant_types: ["authorization_code"]}
 
-      refute Client.supports_grant_type?(client, "refresh_token")
-      refute Client.supports_grant_type?(client, "urn:ietf:params:oauth:grant-type:device_code")
+      refute Clients.supports_grant_type?(client, "refresh_token")
+      refute Clients.supports_grant_type?(client, "urn:ietf:params:oauth:grant-type:device_code")
     end
   end
 
@@ -121,23 +121,23 @@ defmodule Hexpm.OAuth.ClientTest do
     test "returns true when all requested scopes are allowed" do
       client = %Client{allowed_scopes: ["api", "api:read", "api:write"]}
 
-      assert Client.supports_scopes?(client, ["api"])
-      assert Client.supports_scopes?(client, ["api", "api:read"])
-      assert Client.supports_scopes?(client, ["api:read", "api:write"])
+      assert Clients.supports_scopes?(client, ["api"])
+      assert Clients.supports_scopes?(client, ["api", "api:read"])
+      assert Clients.supports_scopes?(client, ["api:read", "api:write"])
     end
 
     test "returns false when any requested scope is not allowed" do
       client = %Client{allowed_scopes: ["api", "api:read"]}
 
-      refute Client.supports_scopes?(client, ["api:write"])
-      refute Client.supports_scopes?(client, ["api", "repositories"])
-      refute Client.supports_scopes?(client, ["invalid_scope"])
+      refute Clients.supports_scopes?(client, ["api:write"])
+      refute Clients.supports_scopes?(client, ["api", "repositories"])
+      refute Clients.supports_scopes?(client, ["invalid_scope"])
     end
 
     test "returns true for empty scope list" do
       client = %Client{allowed_scopes: ["api"]}
 
-      assert Client.supports_scopes?(client, [])
+      assert Clients.supports_scopes?(client, [])
     end
   end
 
@@ -145,7 +145,7 @@ defmodule Hexpm.OAuth.ClientTest do
     test "returns false when no redirect URIs are configured" do
       client = %Client{redirect_uris: []}
 
-      refute Client.valid_redirect_uri?(client, "https://example.com/callback")
+      refute Clients.valid_redirect_uri?(client, "https://example.com/callback")
     end
 
     test "returns true for allowed redirect URIs" do
@@ -153,15 +153,15 @@ defmodule Hexpm.OAuth.ClientTest do
         redirect_uris: ["https://example.com/callback", "https://app.example.com/auth"]
       }
 
-      assert Client.valid_redirect_uri?(client, "https://example.com/callback")
-      assert Client.valid_redirect_uri?(client, "https://app.example.com/auth")
+      assert Clients.valid_redirect_uri?(client, "https://example.com/callback")
+      assert Clients.valid_redirect_uri?(client, "https://app.example.com/auth")
     end
 
     test "returns false for disallowed redirect URIs" do
       client = %Client{redirect_uris: ["https://example.com/callback"]}
 
-      refute Client.valid_redirect_uri?(client, "https://malicious.com/callback")
-      refute Client.valid_redirect_uri?(client, "https://example.com/different")
+      refute Clients.valid_redirect_uri?(client, "https://malicious.com/callback")
+      refute Clients.valid_redirect_uri?(client, "https://example.com/different")
     end
   end
 
@@ -169,13 +169,13 @@ defmodule Hexpm.OAuth.ClientTest do
     test "returns true for confidential clients" do
       client = %Client{client_type: "confidential"}
 
-      assert Client.requires_authentication?(client)
+      assert Clients.requires_authentication?(client)
     end
 
     test "returns false for public clients" do
       client = %Client{client_type: "public"}
 
-      refute Client.requires_authentication?(client)
+      refute Clients.requires_authentication?(client)
     end
   end
 
@@ -184,44 +184,44 @@ defmodule Hexpm.OAuth.ClientTest do
       hashed_secret = Bcrypt.hash_pwd_salt("secret123")
       client = %Client{client_secret: hashed_secret}
 
-      assert Client.authenticate?(client, "secret123")
+      assert Clients.authenticate?(client, "secret123")
     end
 
     test "rejects incorrect credentials for confidential client" do
       hashed_secret = Bcrypt.hash_pwd_salt("secret123")
       client = %Client{client_secret: hashed_secret}
 
-      refute Client.authenticate?(client, "wrong_secret")
-      refute Client.authenticate?(client, nil)
-      refute Client.authenticate?(client, "")
+      refute Clients.authenticate?(client, "wrong_secret")
+      refute Clients.authenticate?(client, nil)
+      refute Clients.authenticate?(client, "")
     end
 
     test "always succeeds for public client" do
       client = %Client{client_secret: nil}
 
-      assert Client.authenticate?(client, "any_secret")
-      assert Client.authenticate?(client, nil)
-      assert Client.authenticate?(client, "")
+      assert Clients.authenticate?(client, "any_secret")
+      assert Clients.authenticate?(client, nil)
+      assert Clients.authenticate?(client, "")
     end
   end
 
   describe "generate_client_secret/0" do
     test "generates non-empty string" do
-      secret = Client.generate_client_secret()
+      secret = Clients.generate_client_secret()
 
       assert is_binary(secret)
       assert String.length(secret) > 0
     end
 
     test "generates unique secrets" do
-      secret1 = Client.generate_client_secret()
-      secret2 = Client.generate_client_secret()
+      secret1 = Clients.generate_client_secret()
+      secret2 = Clients.generate_client_secret()
 
       assert secret1 != secret2
     end
 
     test "generates base64url encoded strings" do
-      secret = Client.generate_client_secret()
+      secret = Clients.generate_client_secret()
 
       # Should not contain padding characters
       refute String.contains?(secret, "=")
@@ -233,21 +233,21 @@ defmodule Hexpm.OAuth.ClientTest do
 
   describe "generate_client_id/0" do
     test "generates non-empty string" do
-      client_id = Client.generate_client_id()
+      client_id = Clients.generate_client_id()
 
       assert is_binary(client_id)
       assert String.length(client_id) > 0
     end
 
     test "generates unique client IDs" do
-      client_id1 = Client.generate_client_id()
-      client_id2 = Client.generate_client_id()
+      client_id1 = Clients.generate_client_id()
+      client_id2 = Clients.generate_client_id()
 
       assert client_id1 != client_id2
     end
 
     test "generates valid UUIDs" do
-      client_id = Client.generate_client_id()
+      client_id = Clients.generate_client_id()
       assert is_binary(client_id)
       assert String.length(client_id) == 36
 

@@ -2,7 +2,7 @@ defmodule Hexpm.Accounts.Auth do
   import Ecto.Query, only: [from: 2]
 
   alias Hexpm.Accounts.{Key, Keys, User, Users}
-  alias Hexpm.OAuth.Token
+  alias Hexpm.OAuth.Tokens
 
   def key_auth(user_secret, usage_info) do
     app_secret = Application.get_env(:hexpm, :secret)
@@ -78,7 +78,7 @@ defmodule Hexpm.Accounts.Auth do
   def oauth_token_auth(user_token, _usage_info) do
     preload = [user: [:emails, owned_packages: :repository, organizations: :repository]]
 
-    case Token.lookup(user_token, :access, preload: preload) do
+    case Tokens.lookup(user_token, :access, preload: preload) do
       {:ok, oauth_token} ->
         user = oauth_token.user
         valid_auth = user && not User.organization?(user)

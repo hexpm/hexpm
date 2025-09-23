@@ -2,7 +2,7 @@ defmodule HexpmWeb.TestController do
   use HexpmWeb, :controller
 
   alias Hexpm.Accounts.Users
-  alias Hexpm.OAuth.{Client, DeviceCode, DeviceFlow, Token}
+  alias Hexpm.OAuth.{Client, DeviceCode, DeviceCodes, Tokens}
   alias Hexpm.Repo
   import Ecto.Query
 
@@ -93,19 +93,16 @@ defmodule HexpmWeb.TestController do
       client_id = params["client_id"] || "78ea6566-89fd-481e-a1d6-7d9d78eacca8"
       scopes = String.split(params["scope"] || "api repositories", " ")
 
-      token_changeset =
-        Token.create_for_user(
-          user,
-          client_id,
-          scopes,
-          "authorization_code",
-          "test_grant",
-          with_refresh_token: true
-        )
-
-      case Repo.insert(token_changeset) do
+      case Tokens.create_and_insert_for_user(
+             user,
+             client_id,
+             scopes,
+             "authorization_code",
+             "test_grant",
+             with_refresh_token: true
+           ) do
         {:ok, token} ->
-          response = Token.to_response(token)
+          response = Tokens.to_response(token)
           render(conn, :oauth_token, token_response: response)
 
         {:error, changeset} ->
@@ -134,7 +131,7 @@ defmodule HexpmWeb.TestController do
         |> put_status(400)
         |> render(:error, error: %{error: "User not found"})
       else
-        case DeviceFlow.authorize_device(user_code, user) do
+        case DeviceCodes.authorize_device(user_code, user) do
           {:ok, _device_code} ->
             render(conn, :oauth_device_authorize, response: %{status: "authorized"})
 

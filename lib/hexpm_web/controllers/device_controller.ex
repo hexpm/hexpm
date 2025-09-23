@@ -1,7 +1,7 @@
 defmodule HexpmWeb.DeviceController do
   use HexpmWeb, :controller
 
-  alias Hexpm.OAuth.DeviceFlow
+  alias Hexpm.OAuth.DeviceCodes
   alias HexpmWeb.Plugs.Attack
   alias HexpmWeb.DeviceView
 
@@ -32,7 +32,7 @@ defmodule HexpmWeb.DeviceController do
             :ok ->
               normalized_code = DeviceView.normalize_user_code(code)
 
-              case DeviceFlow.get_device_code_for_verification(normalized_code) do
+              case DeviceCodes.get_for_verification(normalized_code) do
                 {:ok, device_code} ->
                   render_verification_form(conn, device_code, nil)
 
@@ -122,7 +122,7 @@ defmodule HexpmWeb.DeviceController do
   end
 
   defp handle_authorization(conn, user_code, user) do
-    case DeviceFlow.authorize_device(user_code, user) do
+    case DeviceCodes.authorize_device(user_code, user) do
       {:ok, _device_code} ->
         conn
         |> put_flash(:info, "Device has been successfully authorized!")
@@ -149,7 +149,7 @@ defmodule HexpmWeb.DeviceController do
   end
 
   defp handle_denial(conn, user_code) do
-    case DeviceFlow.deny_device(user_code) do
+    case DeviceCodes.deny_device(user_code) do
       {:ok, _device_code} ->
         conn
         |> put_flash(:info, "Device authorization has been denied.")
