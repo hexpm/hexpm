@@ -20,7 +20,7 @@ defmodule HexpmWeb do
 
   def controller() do
     quote do
-      use Phoenix.Controller, namespace: HexpmWeb
+      use Phoenix.Controller, formats: [html: "View", json: "View", xml: "View"]
 
       import Ecto
       import Ecto.Query, only: [from: 1, from: 2]
