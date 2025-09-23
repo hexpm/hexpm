@@ -18,14 +18,5 @@ defmodule Hexpm.RepoBase.Migrations.CreateOauthSessions do
     create index(:oauth_sessions, [:user_id])
     create index(:oauth_sessions, [:client_id])
     create index(:oauth_sessions, [:revoked_at])
-
-    alter table(:oauth_tokens) do
-      remove :token_family_id
-      remove :name
-      add :session_id, references(:oauth_sessions, on_delete: :delete_all), null: false
-    end
-
-    drop_if_exists index(:oauth_tokens, [:token_family_id])
-    create index(:oauth_tokens, [:session_id])
   end
 end

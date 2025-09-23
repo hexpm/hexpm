@@ -8,6 +8,7 @@ defmodule Hexpm.RepoBase.Migrations.CreateOauthTokens do
       add :token_type, :string, null: false, default: "bearer"
       add :refresh_token_first, :string
       add :refresh_token_second, :string
+      add :refresh_token_expires_at, :utc_datetime
       add :scopes, {:array, :string}, null: false, default: []
       add :expires_at, :utc_datetime, null: false
       add :revoked_at, :utc_datetime
@@ -22,7 +23,7 @@ defmodule Hexpm.RepoBase.Migrations.CreateOauthTokens do
       add :grant_reference, :string
 
       add :parent_token_id, references(:oauth_tokens, on_delete: :nothing)
-      add :token_family_id, :string
+      add :session_id, references(:oauth_sessions, on_delete: :delete_all), null: false
 
       timestamps()
     end
@@ -34,7 +35,8 @@ defmodule Hexpm.RepoBase.Migrations.CreateOauthTokens do
     create index(:oauth_tokens, [:user_id])
     create index(:oauth_tokens, [:client_id])
     create index(:oauth_tokens, [:expires_at])
-    create index(:oauth_tokens, [:token_family_id])
+    create index(:oauth_tokens, [:refresh_token_expires_at])
+    create index(:oauth_tokens, [:session_id])
   end
 
   def down do
