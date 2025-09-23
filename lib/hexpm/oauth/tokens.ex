@@ -196,24 +196,6 @@ defmodule Hexpm.OAuth.Tokens do
   end
 
   @doc """
-  Returns a token response suitable for OAuth responses.
-  """
-  def to_response(%Token{} = token) do
-    expires_in = DateTime.diff(token.expires_at, DateTime.utc_now())
-
-    response = %{
-      access_token: token.access_token,
-      token_type: token.token_type,
-      expires_in: max(expires_in, 0),
-      scope: Enum.join(token.scopes, " ")
-    }
-
-    if token.refresh_token,
-      do: Map.put(response, :refresh_token, token.refresh_token),
-      else: response
-  end
-
-  @doc """
   Checks if the scopes include write permissions (api or api:write).
   """
   def has_write_scope?(scopes) do

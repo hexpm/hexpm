@@ -12,8 +12,19 @@ defmodule HexpmWeb.API.OAuthView do
     }
   end
 
-  def render("token." <> _, %{token_response: response}) do
-    response
+  def render("token." <> _, %{token: token}) do
+    expires_in = DateTime.diff(token.expires_at, DateTime.utc_now())
+
+    response = %{
+      access_token: token.access_token,
+      token_type: token.token_type,
+      expires_in: max(expires_in, 0),
+      scope: Enum.join(token.scopes, " ")
+    }
+
+    if token.refresh_token,
+      do: Map.put(response, :refresh_token, token.refresh_token),
+      else: response
   end
 
   def render("error." <> _, %{error_type: error_type, description: description}) do

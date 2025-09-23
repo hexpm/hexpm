@@ -162,12 +162,12 @@ defmodule Hexpm.OAuth.DeviceFlowTest do
       {:ok, _} = DeviceCodes.authorize_device(device_code.user_code, user)
 
       # Poll for token
-      assert {:ok, token_response} =
+      assert {:ok, token} =
                DeviceCodes.poll_device_token(device_code.device_code, client.client_id)
 
-      assert token_response.access_token
-      assert token_response.token_type == "bearer"
-      assert token_response.expires_in > 0
+      assert token.access_token
+      assert token.token_type == "bearer"
+      assert DateTime.compare(token.expires_at, DateTime.utc_now()) == :gt
     end
   end
 

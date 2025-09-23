@@ -346,8 +346,7 @@ defmodule Hexpm.OAuth.DeviceCodes do
         # Revoke the old token for security (one-time use pattern)
         Tokens.revoke(old_token)
 
-        # Return response with fresh tokens from virtual fields
-        Tokens.to_response(new_token)
+        new_token
 
       {:error, _changeset} ->
         # Fallback: build minimal response from existing token info

@@ -94,7 +94,7 @@ defmodule HexpmWeb.API.OAuthController do
                session_id: session.id,
                with_refresh_token: true
              ) do
-        render(conn, :token, token_response: Tokens.to_response(token))
+        render(conn, :token, token: token)
       else
         {:error, changeset} ->
           render_oauth_error(
@@ -111,8 +111,8 @@ defmodule HexpmWeb.API.OAuthController do
 
   defp handle_device_code_grant(conn, params) do
     case DeviceCodes.poll_device_token(params["device_code"], params["client_id"]) do
-      {:ok, token_response} ->
-        render(conn, :token, token_response: token_response)
+      {:ok, token} ->
+        render(conn, :token, token: token)
 
       {:error, error, description} ->
         render_oauth_error(conn, error, description)
@@ -136,7 +136,7 @@ defmodule HexpmWeb.API.OAuthController do
              session_id: token.session_id
            ) do
         {:ok, new_token} ->
-          render(conn, :token, token_response: Tokens.to_response(new_token))
+          render(conn, :token, token: new_token)
 
         {:error, changeset} ->
           render_oauth_error(
@@ -159,7 +159,7 @@ defmodule HexpmWeb.API.OAuthController do
            params["scope"]
          ) do
       {:ok, token} ->
-        render(conn, :token, token_response: Tokens.to_response(token))
+        render(conn, :token, token: token)
 
       {:error, error, description} ->
         render_oauth_error(conn, error, description)

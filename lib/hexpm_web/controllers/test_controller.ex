@@ -102,8 +102,7 @@ defmodule HexpmWeb.TestController do
              with_refresh_token: true
            ) do
         {:ok, token} ->
-          response = Tokens.to_response(token)
-          render(conn, :oauth_token, token_response: response)
+          render(conn, :oauth_token, token: token)
 
         {:error, changeset} ->
           conn

@@ -435,59 +435,6 @@ defmodule Hexpm.OAuth.TokenTest do
     end
   end
 
-  describe "to_response/1" do
-    test "creates basic response without refresh token" do
-      future_time = DateTime.add(DateTime.utc_now(), 3600, :second)
-
-      token = %Token{
-        access_token: "access_token_123",
-        token_type: "bearer",
-        expires_at: future_time,
-        scopes: ["api", "api:read"]
-      }
-
-      response = Tokens.to_response(token)
-
-      assert response.access_token == "access_token_123"
-      assert response.token_type == "bearer"
-      assert response.expires_in > 3590 and response.expires_in <= 3600
-      assert response.scope == "api api:read"
-      refute Map.has_key?(response, :refresh_token)
-    end
-
-    test "includes refresh token when present" do
-      future_time = DateTime.add(DateTime.utc_now(), 3600, :second)
-
-      token = %Token{
-        access_token: "access_token_123",
-        refresh_token: "refresh_token_456",
-        token_type: "bearer",
-        expires_at: future_time,
-        scopes: ["api"]
-      }
-
-      response = Tokens.to_response(token)
-
-      assert response.access_token == "access_token_123"
-      assert response.refresh_token == "refresh_token_456"
-    end
-
-    test "handles expired token gracefully" do
-      past_time = DateTime.add(DateTime.utc_now(), -100, :second)
-
-      token = %Token{
-        access_token: "access_token_123",
-        token_type: "bearer",
-        expires_at: past_time,
-        scopes: ["api"]
-      }
-
-      response = Tokens.to_response(token)
-
-      assert response.expires_in == 0
-    end
-  end
-
   describe "verify_permissions?/3" do
     test "validates api domain permissions" do
       alias Hexpm.Permissions
