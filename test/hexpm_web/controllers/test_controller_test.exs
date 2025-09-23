@@ -1,5 +1,5 @@
 defmodule HexpmWeb.TestControllerTest do
-  use HexpmWeb.ConnCase, async: true
+  use HexpmWeb.ConnCase
 
   test "GET /repo/names returns stored object" do
     Hexpm.Store.put(:repo_bucket, "names", "DATA", [])
