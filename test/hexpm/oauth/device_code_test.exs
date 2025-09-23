@@ -243,10 +243,12 @@ defmodule Hexpm.OAuth.DeviceCodeTest do
     end
 
     property "generates unique device codes across many samples" do
-      codes = for _ <- 1..1000, do: DeviceCodes.generate_device_code()
-      unique_codes = Enum.uniq(codes)
+      check all(_ <- constant(:ok)) do
+        codes = for _ <- 1..1000, do: DeviceCodes.generate_device_code()
+        unique_codes = Enum.uniq(codes)
 
-      assert length(codes) == length(unique_codes)
+        assert length(codes) == length(unique_codes)
+      end
     end
 
     property "generated codes are valid base64url when padded" do
@@ -294,32 +296,36 @@ defmodule Hexpm.OAuth.DeviceCodeTest do
     end
 
     property "generates unique user codes across many samples" do
-      codes = for _ <- 1..1000, do: DeviceCodes.generate_user_code()
-      unique_codes = Enum.uniq(codes)
+      check all(_ <- constant(:ok)) do
+        codes = for _ <- 1..1000, do: DeviceCodes.generate_user_code()
+        unique_codes = Enum.uniq(codes)
 
-      # Should have very high uniqueness (allowing for small chance of collision)
-      uniqueness_ratio = length(unique_codes) / length(codes)
+        # Should have very high uniqueness (allowing for small chance of collision)
+        uniqueness_ratio = length(unique_codes) / length(codes)
 
-      assert uniqueness_ratio > 0.99,
-             "Uniqueness ratio #{uniqueness_ratio} too low, got #{length(unique_codes)} unique codes out of #{length(codes)}"
+        assert uniqueness_ratio > 0.99,
+               "Uniqueness ratio #{uniqueness_ratio} too low, got #{length(unique_codes)} unique codes out of #{length(codes)}"
+      end
     end
 
     property "character distribution is reasonably uniform across large samples" do
-      codes = for _ <- 1..500, do: DeviceCodes.generate_user_code()
-      all_chars = codes |> Enum.join("") |> String.graphemes()
-      char_counts = Enum.frequencies(all_chars)
+      check all(_ <- constant(:ok)) do
+        codes = for _ <- 1..500, do: DeviceCodes.generate_user_code()
+        all_chars = codes |> Enum.join("") |> String.graphemes()
+        char_counts = Enum.frequencies(all_chars)
 
-      allowed_charset = String.graphemes("23456789BCDFGHJKLMNPQRSTVWXYZ")
-      total_chars = length(all_chars)
-      expected_per_char = total_chars / length(allowed_charset)
+        allowed_charset = String.graphemes("23456789BCDFGHJKLMNPQRSTVWXYZ")
+        total_chars = length(all_chars)
+        expected_per_char = total_chars / length(allowed_charset)
 
-      # Check each character appears within reasonable bounds (±40% of expected)
-      Enum.each(char_counts, fn {char, count} ->
-        ratio = count / expected_per_char
+        # Check each character appears within reasonable bounds (±40% of expected)
+        Enum.each(char_counts, fn {char, count} ->
+          ratio = count / expected_per_char
 
-        assert ratio >= 0.6 and ratio <= 1.4,
-               "Character '#{char}' appears #{count} times (ratio: #{ratio}), expected around #{expected_per_char}"
-      end)
+          assert ratio >= 0.6 and ratio <= 1.4,
+                 "Character '#{char}' appears #{count} times (ratio: #{ratio}), expected around #{expected_per_char}"
+        end)
+      end
     end
   end
 

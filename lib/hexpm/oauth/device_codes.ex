@@ -284,18 +284,22 @@ defmodule Hexpm.OAuth.DeviceCodes do
     result =
       Ecto.Multi.new()
       |> Ecto.Multi.run(:session, fn _repo, _changes ->
-        Sessions.create_for_user(user, device_code_record.client_id, name: device_code_record.name)
+        Sessions.create_for_user(user, device_code_record.client_id,
+          name: device_code_record.name
+        )
       end)
       |> Ecto.Multi.run(:token, fn _repo, %{session: session} ->
-        changeset = Tokens.create_for_user(
-          user,
-          device_code_record.client_id,
-          device_code_record.scopes,
-          "urn:ietf:params:oauth:grant-type:device_code",
-          device_code_record.device_code,
-          session_id: session.id,
-          with_refresh_token: true
-        )
+        changeset =
+          Tokens.create_for_user(
+            user,
+            device_code_record.client_id,
+            device_code_record.scopes,
+            "urn:ietf:params:oauth:grant-type:device_code",
+            device_code_record.device_code,
+            session_id: session.id,
+            with_refresh_token: true
+          )
+
         Repo.insert(changeset)
       end)
       |> Ecto.Multi.update(:device_code, DeviceCode.authorize_changeset(device_code_record, user))

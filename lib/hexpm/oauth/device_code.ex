@@ -86,5 +86,4 @@ defmodule Hexpm.OAuth.DeviceCode do
     |> change()
     |> put_change(:status, "expired")
   end
-
 end

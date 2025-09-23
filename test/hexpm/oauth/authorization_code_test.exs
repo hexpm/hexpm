@@ -104,13 +104,16 @@ defmodule Hexpm.OAuth.AuthorizationCodeTest do
   describe "code generation" do
     test "generates non-empty string through create_for_user" do
       user = insert(:user)
-      changeset = AuthorizationCodes.create_for_user(
-        user,
-        "test_client",
-        "https://example.com/callback",
-        ["api"],
-        code_challenge: "E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM"
-      )
+
+      changeset =
+        AuthorizationCodes.create_for_user(
+          user,
+          "test_client",
+          "https://example.com/callback",
+          ["api"],
+          code_challenge: "E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM"
+        )
+
       code = get_field(changeset, :code)
 
       assert is_binary(code)
@@ -118,15 +121,18 @@ defmodule Hexpm.OAuth.AuthorizationCodeTest do
     end
 
     property "always generates valid base64url strings without padding" do
-      user = insert(:user)
       check all(_ <- constant(:ok), max_runs: 100) do
-        changeset = AuthorizationCodes.create_for_user(
-          user,
-          "test_client",
-          "https://example.com/callback",
-          ["api"],
-          code_challenge: "E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM"
-        )
+        user = insert(:user)
+
+        changeset =
+          AuthorizationCodes.create_for_user(
+            user,
+            "test_client",
+            "https://example.com/callback",
+            ["api"],
+            code_challenge: "E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM"
+          )
+
         code = get_field(changeset, :code)
 
         assert is_binary(code)
@@ -142,48 +148,62 @@ defmodule Hexpm.OAuth.AuthorizationCodeTest do
     end
 
     property "generates unique codes across many samples" do
-      user = insert(:user)
-      codes = for _ <- 1..1000 do
-        changeset = AuthorizationCodes.create_for_user(
-          user,
-          "test_client",
-          "https://example.com/callback",
-          ["api"],
-          code_challenge: "E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM"
-        )
-        get_field(changeset, :code)
+      check all(_ <- constant(:ok)) do
+        user = insert(:user)
+
+        codes =
+          for _ <- 1..1000 do
+            changeset =
+              AuthorizationCodes.create_for_user(
+                user,
+                "test_client",
+                "https://example.com/callback",
+                ["api"],
+                code_challenge: "E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM"
+              )
+
+            get_field(changeset, :code)
+          end
+
+        unique_codes = Enum.uniq(codes)
+
+        # Should have very high uniqueness
+        uniqueness_ratio = length(unique_codes) / length(codes)
+
+        assert uniqueness_ratio > 0.99,
+               "Uniqueness ratio #{uniqueness_ratio} too low, got #{length(unique_codes)} unique codes out of #{length(codes)}"
       end
-      unique_codes = Enum.uniq(codes)
-
-      # Should have very high uniqueness
-      uniqueness_ratio = length(unique_codes) / length(codes)
-
-      assert uniqueness_ratio > 0.99,
-             "Uniqueness ratio #{uniqueness_ratio} too low, got #{length(unique_codes)} unique codes out of #{length(codes)}"
     end
 
     property "generated codes have reasonable length distribution" do
-      user = insert(:user)
-      codes = for _ <- 1..100 do
-        changeset = AuthorizationCodes.create_for_user(
-          user,
-          "test_client",
-          "https://example.com/callback",
-          ["api"],
-          code_challenge: "E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM"
-        )
-        get_field(changeset, :code)
+      check all(_ <- constant(:ok)) do
+        user = insert(:user)
+
+        codes =
+          for _ <- 1..100 do
+            changeset =
+              AuthorizationCodes.create_for_user(
+                user,
+                "test_client",
+                "https://example.com/callback",
+                ["api"],
+                code_challenge: "E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM"
+              )
+
+            get_field(changeset, :code)
+          end
+
+        lengths = Enum.map(codes, &String.length/1)
+
+        # All codes should have similar lengths (base64url encoding of random bytes)
+        min_length = Enum.min(lengths)
+        max_length = Enum.max(lengths)
+
+        # Should not vary by more than a few characters
+        assert max_length - min_length <= 4
+        # Should be reasonably long for security
+        assert min_length > 10
       end
-      lengths = Enum.map(codes, &String.length/1)
-
-      # All codes should have similar lengths (base64url encoding of random bytes)
-      min_length = Enum.min(lengths)
-      max_length = Enum.max(lengths)
-
-      # Should not vary by more than a few characters
-      assert max_length - min_length <= 4
-      # Should be reasonably long for security
-      assert min_length > 10
     end
   end
 

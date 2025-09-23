@@ -40,14 +40,16 @@ defmodule Hexpm.Accounts.RecoveryCodeTest do
     end
 
     property "generates unique codes across many samples" do
-      codes = for _ <- 1..1000, do: RecoveryCode.generate()
-      unique_codes = Enum.uniq(codes)
+      check all(_ <- constant(:ok)) do
+        codes = for _ <- 1..1000, do: RecoveryCode.generate()
+        unique_codes = Enum.uniq(codes)
 
-      # Should have very high uniqueness
-      uniqueness_ratio = length(unique_codes) / length(codes)
+        # Should have very high uniqueness
+        uniqueness_ratio = length(unique_codes) / length(codes)
 
-      assert uniqueness_ratio > 0.99,
-             "Uniqueness ratio #{uniqueness_ratio} too low, got #{length(unique_codes)} unique codes out of #{length(codes)}"
+        assert uniqueness_ratio > 0.99,
+               "Uniqueness ratio #{uniqueness_ratio} too low, got #{length(unique_codes)} unique codes out of #{length(codes)}"
+      end
     end
 
     property "generated codes use only lowercase base32 characters" do
@@ -63,31 +65,33 @@ defmodule Hexpm.Accounts.RecoveryCodeTest do
     end
 
     property "character distribution shows reasonable randomness" do
-      codes = for _ <- 1..100, do: RecoveryCode.generate()
+      check all(_ <- constant(:ok)) do
+        codes = for _ <- 1..100, do: RecoveryCode.generate()
 
-      all_base32_chars =
-        codes
-        |> Enum.map(&String.replace(&1, "-", ""))
-        |> Enum.join("")
-        |> String.graphemes()
+        all_base32_chars =
+          codes
+          |> Enum.map(&String.replace(&1, "-", ""))
+          |> Enum.join("")
+          |> String.graphemes()
 
-      char_counts = Enum.frequencies(all_base32_chars)
+        char_counts = Enum.frequencies(all_base32_chars)
 
-      # Just check that we have a reasonable variety of characters
-      # and no single character dominates
-      unique_chars = Map.keys(char_counts)
-      total_chars = length(all_base32_chars)
+        # Just check that we have a reasonable variety of characters
+        # and no single character dominates
+        unique_chars = Map.keys(char_counts)
+        total_chars = length(all_base32_chars)
 
-      # Should have at least 10 different characters
-      assert length(unique_chars) >= 10
+        # Should have at least 10 different characters
+        assert length(unique_chars) >= 10
 
-      # No single character should appear more than 30% of the time
-      Enum.each(char_counts, fn {_char, count} ->
-        ratio = count / total_chars
+        # No single character should appear more than 30% of the time
+        Enum.each(char_counts, fn {_char, count} ->
+          ratio = count / total_chars
 
-        assert ratio <= 0.3,
-               "Character appears #{count}/#{total_chars} times (#{ratio}), which is too frequent"
-      end)
+          assert ratio <= 0.3,
+                 "Character appears #{count}/#{total_chars} times (#{ratio}), which is too frequent"
+        end)
+      end
     end
   end
 

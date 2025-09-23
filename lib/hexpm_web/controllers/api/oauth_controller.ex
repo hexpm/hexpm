@@ -82,16 +82,18 @@ defmodule HexpmWeb.API.OAuthController do
       {:ok, used_auth_code} = AuthorizationCodes.mark_as_used(auth_code)
 
       # Create session and token
-      with {:ok, session} <- Sessions.create_for_user(used_auth_code.user, client.client_id, name: params["name"]),
-           {:ok, token} <- Tokens.create_and_insert_for_user(
-             used_auth_code.user,
-             client.client_id,
-             used_auth_code.scopes,
-             "authorization_code",
-             used_auth_code.code,
-             session_id: session.id,
-             with_refresh_token: true
-           ) do
+      with {:ok, session} <-
+             Sessions.create_for_user(used_auth_code.user, client.client_id, name: params["name"]),
+           {:ok, token} <-
+             Tokens.create_and_insert_for_user(
+               used_auth_code.user,
+               client.client_id,
+               used_auth_code.scopes,
+               "authorization_code",
+               used_auth_code.code,
+               session_id: session.id,
+               with_refresh_token: true
+             ) do
         render(conn, :token, token_response: Tokens.to_response(token))
       else
         {:error, changeset} ->

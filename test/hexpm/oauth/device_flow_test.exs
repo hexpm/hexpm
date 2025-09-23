@@ -182,7 +182,8 @@ defmodule Hexpm.OAuth.DeviceFlowTest do
     end
 
     test "successfully authorizes device", %{device_code: device_code, user: user, client: client} do
-      assert {:ok, updated_device_code} = DeviceCodes.authorize_device(device_code.user_code, user)
+      assert {:ok, updated_device_code} =
+               DeviceCodes.authorize_device(device_code.user_code, user)
 
       assert updated_device_code.status == "authorized"
       assert updated_device_code.user_id == user.id

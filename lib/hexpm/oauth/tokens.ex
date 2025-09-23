@@ -88,7 +88,14 @@ defmodule Hexpm.OAuth.Tokens do
   @doc """
   Creates and inserts a token for a user.
   """
-  def create_and_insert_for_user(user, client_id, scopes, grant_type, grant_reference \\ nil, opts \\ []) do
+  def create_and_insert_for_user(
+        user,
+        client_id,
+        scopes,
+        grant_type,
+        grant_reference \\ nil,
+        opts \\ []
+      ) do
     changeset = create_for_user(user, client_id, scopes, grant_type, grant_reference, opts)
     Repo.insert(changeset)
   end
@@ -242,7 +249,10 @@ defmodule Hexpm.OAuth.Tokens do
 
   defp generate_refresh_token do
     refresh_token_length = 32
-    user_token = :crypto.strong_rand_bytes(refresh_token_length) |> Base.url_encode64(padding: false)
+
+    user_token =
+      :crypto.strong_rand_bytes(refresh_token_length) |> Base.url_encode64(padding: false)
+
     app_secret = Application.get_env(:hexpm, :secret)
 
     <<first::binary-size(32), second::binary-size(32)>> =
