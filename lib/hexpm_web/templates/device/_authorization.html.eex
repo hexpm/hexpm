@@ -1,0 +1,28 @@
+<div class="panel panel-default">
+  <div class="panel-heading">
+    <h3 class="panel-title">Authorize Device</h3>
+  </div>
+  <div class="panel-body">
+    <p>
+      The device <strong><%= @client_name %></strong> would like to access your Hex account.
+    </p>
+
+    <h4>Requested permissions:</h4>
+    <%= @render_scopes.(@scopes) %>
+
+    <div class="alert alert-info" style="margin-top: 15px;">
+      <strong>Access Summary:</strong> <%= @format_summary.(@scopes) %>
+    </div>
+
+    <%= form_tag @form_action, method: "post" do %>
+      <%= for {key, value} <- @hidden_fields do %>
+        <input type="hidden" name="<%= key %>" value="<%= value %>">
+      <% end %>
+
+      <div class="text-center" style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #e0e0e0;">
+        <%= submit "Authorize", name: "action", value: @approve_value, class: "btn btn-success btn-lg", style: "margin-right: 15px;" %>
+        <%= submit "Deny", name: "action", value: @deny_value, class: "btn btn-danger btn-lg" %>
+      </div>
+    <% end %>
+  </div>
+</div>

@@ -103,6 +103,26 @@ defmodule HexpmWeb.API.OAuthControllerTest do
       device_code = Repo.get_by(Hexpm.OAuth.DeviceCode, device_code: response["device_code"])
       assert device_code.name == name
     end
+
+    test "handles erlang format requests", %{client: client} do
+      conn =
+        build_conn()
+        |> put_req_header("accept", "application/vnd.hex+erlang")
+        |> post(~p"/api/oauth/device_authorization", %{
+          "client_id" => client.client_id,
+          "scope" => "api"
+        })
+
+      assert response = response(conn, 200)
+      erlang_term = :erlang.binary_to_term(response, [:safe])
+
+      assert is_map(erlang_term)
+      assert Map.has_key?(erlang_term, "device_code")
+      assert Map.has_key?(erlang_term, "user_code")
+      assert Map.has_key?(erlang_term, "verification_uri")
+      assert Map.has_key?(erlang_term, "expires_in")
+      assert Map.has_key?(erlang_term, "interval")
+    end
   end
 
   describe "POST /api/oauth/token with device_code grant" do

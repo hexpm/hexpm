@@ -36,29 +36,31 @@ defmodule HexpmWeb.DeviceView do
     Permissions.format_summary(scopes)
   end
 
-
   @doc """
   Returns HTML-formatted grouped scopes.
   """
   def render_grouped_scopes(scopes) when is_list(scopes) do
-    grouped_html = Permissions.group_scopes(scopes)
-    |> Enum.map(fn {category, category_scopes} ->
-      category_name = format_category_name(category)
-      items = category_scopes
-      |> Enum.map(fn scope ->
-        description = Permissions.scope_description(scope)
-        ~s(<li><code>#{scope}</code> - #{description}</li>)
+    grouped_html =
+      Permissions.group_scopes(scopes)
+      |> Enum.map(fn {category, category_scopes} ->
+        category_name = format_category_name(category)
+
+        items =
+          category_scopes
+          |> Enum.map(fn scope ->
+            description = Permissions.scope_description(scope)
+            ~s(<li><code>#{scope}</code> - #{description}</li>)
+          end)
+          |> Enum.join("\n")
+
+        """
+        <div class="scope-group">
+          <h5>#{category_name}</h5>
+          <ul>#{items}</ul>
+        </div>
+        """
       end)
       |> Enum.join("\n")
-
-      """
-      <div class="scope-group">
-        <h5>#{category_name}</h5>
-        <ul>#{items}</ul>
-      </div>
-      """
-    end)
-    |> Enum.join("\n")
 
     raw(grouped_html)
   end
@@ -71,5 +73,28 @@ defmodule HexpmWeb.DeviceView do
       :docs -> "Documentation Access"
       _ -> to_string(category) |> String.capitalize()
     end
+  end
+
+  @doc """
+  Prepares authorization data for the shared partial.
+  """
+  def authorization_assigns(_conn, device_code) do
+    client_name =
+      if device_code.client do
+        device_code.client.name
+      else
+        device_code.client_id
+      end
+
+    %{
+      client_name: client_name,
+      scopes: device_code.scopes,
+      render_scopes: &render_grouped_scopes/1,
+      format_summary: &format_scopes(&1, :summary),
+      form_action: ~p"/oauth/device",
+      hidden_fields: [{"user_code", device_code.user_code}],
+      approve_value: "authorize",
+      deny_value: "deny"
+    }
   end
 end

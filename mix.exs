@@ -10,6 +10,7 @@ defmodule Hexpm.MixProject do
       compilers: Mix.compilers(),
       build_embedded: Mix.env() == :prod,
       start_permanent: Mix.env() == :prod,
+      listeners: [Phoenix.CodeReloader],
       aliases: aliases(),
       releases: releases(),
       deps: deps()

@@ -1,47 +1,7 @@
 <div class="container">
   <div class="row">
     <div class="col-md-6 col-md-offset-3">
-      <div class="panel panel-default">
-        <div class="panel-heading">
-          <h3 class="panel-title">Authorize Application</h3>
-        </div>
-        <div class="panel-body">
-          <p>
-            The application <strong><%= @client.name %></strong> would like to access your Hex account.
-          </p>
-
-          <h4>Requested permissions:</h4>
-          <%= render_grouped_scopes(@scopes) %>
-
-          <div class="alert alert-info" style="margin-top: 15px;">
-            <strong>Access Summary:</strong> <%= format_scopes(@scopes, :summary) %>
-          </div>
-
-          <%= form_for @conn, Routes.oauth_path(@conn, :consent), [method: "post"], fn f -> %>
-            <%= hidden_input f, :client_id, value: @client.client_id %>
-            <%= hidden_input f, :redirect_uri, value: @redirect_uri %>
-            <%= hidden_input f, :scope, value: Enum.join(@scopes, " ") %>
-            <%= if @state do %>
-              <%= hidden_input f, :state, value: @state %>
-            <% end %>
-            <%= if @code_challenge do %>
-              <%= hidden_input f, :code_challenge, value: @code_challenge %>
-            <% end %>
-            <%= if @code_challenge_method do %>
-              <%= hidden_input f, :code_challenge_method, value: @code_challenge_method %>
-            <% end %>
-
-            <div class="btn-group btn-group-justified" role="group">
-              <div class="btn-group" role="group">
-                <%= submit "Authorize", name: "action", value: "approve", class: "btn btn-success" %>
-              </div>
-              <div class="btn-group" role="group">
-                <%= submit "Deny", name: "action", value: "deny", class: "btn btn-danger" %>
-              </div>
-            </div>
-          <% end %>
-        </div>
-      </div>
+      <%= render HexpmWeb.SharedView, "_authorization.html", Map.merge(assigns, authorization_assigns(@conn, @client, @redirect_uri, @scopes, assigns[:state], assigns[:code_challenge], assigns[:code_challenge_method])) %>
     </div>
   </div>
 </div>

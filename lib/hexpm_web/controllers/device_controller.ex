@@ -17,34 +17,26 @@ defmodule HexpmWeb.DeviceController do
     user_code = params["user_code"]
 
     if logged_in?(conn) do
-      current_user = conn.assigns.current_user
-
-      # Check rate limits before processing any user codes
+      # Don't check rate limits for just viewing the form (GET request)
       case user_code do
         nil ->
           render_verification_form(conn, nil, nil)
 
         code ->
-          case check_rate_limits(conn, current_user) do
-            {:rate_limited, message} ->
-              render_verification_form(conn, nil, message)
+          normalized_code = DeviceView.normalize_user_code(code)
 
-            :ok ->
-              normalized_code = DeviceView.normalize_user_code(code)
+          case DeviceCodes.get_for_verification(normalized_code) do
+            {:ok, device_code} ->
+              render_verification_form(conn, device_code, nil)
 
-              case DeviceCodes.get_for_verification(normalized_code) do
-                {:ok, device_code} ->
-                  render_verification_form(conn, device_code, nil)
+            {:error, :invalid_code} ->
+              render_verification_form(conn, nil, "Invalid verification code")
 
-                {:error, :invalid_code} ->
-                  render_verification_form(conn, nil, "Invalid verification code")
+            {:error, :expired} ->
+              render_verification_form(conn, nil, "Verification code has expired")
 
-                {:error, :expired} ->
-                  render_verification_form(conn, nil, "Verification code has expired")
-
-                {:error, :already_processed} ->
-                  render_verification_form(conn, nil, "This device has already been processed")
-              end
+            {:error, :already_processed} ->
+              render_verification_form(conn, nil, "This application has already been processed")
           end
       end
     else

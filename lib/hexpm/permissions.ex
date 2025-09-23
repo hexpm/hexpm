@@ -382,28 +382,31 @@ defmodule Hexpm.Permissions do
 
     parts = []
 
-    parts = case summary.api_level do
-      :full -> ["Full API access" | parts]
-      :write -> ["Read/write API access" | parts]
-      :read -> ["Read-only API access" | parts]
-      _ -> parts
-    end
+    parts =
+      case summary.api_level do
+        :full -> ["Full API access" | parts]
+        :write -> ["Read/write API access" | parts]
+        :read -> ["Read-only API access" | parts]
+        _ -> parts
+      end
 
-    parts = if summary.all_repositories do
-      ["Access to all repositories" | parts]
-    else
-      if summary.specific_repositories > 0 do
-        ["Access to #{summary.specific_repositories} specific repository(ies)" | parts]
+    parts =
+      if summary.all_repositories do
+        ["Access to all repositories" | parts]
+      else
+        if summary.specific_repositories > 0 do
+          ["Access to #{summary.specific_repositories} specific repository(ies)" | parts]
+        else
+          parts
+        end
+      end
+
+    parts =
+      if summary.specific_packages > 0 do
+        ["Manage #{summary.specific_packages} specific package(s)" | parts]
       else
         parts
       end
-    end
-
-    parts = if summary.specific_packages > 0 do
-      ["Manage #{summary.specific_packages} specific package(s)" | parts]
-    else
-      parts
-    end
 
     case parts do
       [] -> "No permissions granted"
@@ -422,12 +425,13 @@ defmodule Hexpm.Permissions do
     has_all_repos = "repositories" in scopes
 
     %{
-      api_level: cond do
-        has_full_api -> :full
-        has_write -> :write
-        has_read -> :read
-        true -> :none
-      end,
+      api_level:
+        cond do
+          has_full_api -> :full
+          has_write -> :write
+          has_read -> :read
+          true -> :none
+        end,
       specific_packages: length(package_scopes),
       specific_repositories: length(repo_scopes),
       all_repositories: has_all_repos,
