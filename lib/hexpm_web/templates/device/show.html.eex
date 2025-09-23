@@ -7,12 +7,24 @@
 <% end %>
 
 <%= if @device_code do %>
-  <div class="alert alert-info">
-    <p><strong>Application:</strong> <%= if @device_code.client, do: @device_code.client.name, else: @device_code.client_id %></p>
-    <p><strong>Requested Scopes:</strong> <%= Enum.join(@device_code.scopes, ", ") %></p>
+  <div class="panel panel-default">
+    <div class="panel-heading">
+      <h4 class="panel-title">
+        <strong>Application:</strong> <%= if @device_code.client, do: @device_code.client.name, else: @device_code.client_id %>
+      </h4>
+    </div>
+    <div class="panel-body">
+      <p class="lead">This device is requesting the following permissions:</p>
+
+      <%= render_grouped_scopes(@device_code.scopes) %>
+
+      <div class="alert alert-info" style="margin-top: 15px;">
+        <strong>Summary:</strong> <%= format_scopes(@device_code.scopes, :summary) %>
+      </div>
+    </div>
   </div>
 
-  <p>A device is requesting authorization to access your Hex account with the permissions listed above.</p>
+  <p>By authorizing this device, you are granting it access to your Hex account with the permissions listed above.</p>
 
   <%= form_tag(~p"/oauth/device", method: "post") do %>
     <input type="hidden" name="user_code" value="<%= @device_code.user_code %>">

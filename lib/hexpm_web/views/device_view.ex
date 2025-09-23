@@ -1,6 +1,8 @@
 defmodule HexpmWeb.DeviceView do
   use HexpmWeb, :view
 
+  alias Hexpm.Permissions
+
   @doc """
   Formats a user code for display by inserting a hyphen in the middle.
   Converts "ABCD1234" to "ABCD-1234" for better readability.
@@ -25,5 +27,49 @@ defmodule HexpmWeb.DeviceView do
     user_code
     |> String.replace("-", "")
     |> String.upcase()
+  end
+
+  @doc """
+  Formats scopes for display on the device authorization page.
+  """
+  def format_scopes(scopes, :summary) when is_list(scopes) do
+    Permissions.format_summary(scopes)
+  end
+
+
+  @doc """
+  Returns HTML-formatted grouped scopes.
+  """
+  def render_grouped_scopes(scopes) when is_list(scopes) do
+    grouped_html = Permissions.group_scopes(scopes)
+    |> Enum.map(fn {category, category_scopes} ->
+      category_name = format_category_name(category)
+      items = category_scopes
+      |> Enum.map(fn scope ->
+        description = Permissions.scope_description(scope)
+        ~s(<li><code>#{scope}</code> - #{description}</li>)
+      end)
+      |> Enum.join("\n")
+
+      """
+      <div class="scope-group">
+        <h5>#{category_name}</h5>
+        <ul>#{items}</ul>
+      </div>
+      """
+    end)
+    |> Enum.join("\n")
+
+    raw(grouped_html)
+  end
+
+  defp format_category_name(category) do
+    case category do
+      :api -> "API Access"
+      :repository -> "Repository Access"
+      :package -> "Package Management"
+      :docs -> "Documentation Access"
+      _ -> to_string(category) |> String.capitalize()
+    end
   end
 end

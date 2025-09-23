@@ -353,6 +353,89 @@ defmodule Hexpm.Permissions do
   end
 
   @doc """
+  Groups scopes by their category for organized display.
+  Returns a map with categories as keys and lists of scopes as values.
+  """
+  def group_scopes(scopes) when is_list(scopes) do
+    Enum.group_by(scopes, &scope_category/1)
+  end
+
+  @doc """
+  Returns the category of a scope for grouping purposes.
+  """
+  def scope_category(scope) when is_binary(scope) do
+    case String.split(scope, ":", parts: 2) do
+      ["api" | _] -> :api
+      ["package" | _] -> :package
+      ["repository" | _] -> :repository
+      ["repositories"] -> :repository
+      ["docs" | _] -> :docs
+      _ -> :other
+    end
+  end
+
+  @doc """
+  Formats a permission summary as human-readable text.
+  """
+  def format_summary(scopes) when is_list(scopes) do
+    summary = summarize_permissions(scopes)
+
+    parts = []
+
+    parts = case summary.api_level do
+      :full -> ["Full API access" | parts]
+      :write -> ["Read/write API access" | parts]
+      :read -> ["Read-only API access" | parts]
+      _ -> parts
+    end
+
+    parts = if summary.all_repositories do
+      ["Access to all repositories" | parts]
+    else
+      if summary.specific_repositories > 0 do
+        ["Access to #{summary.specific_repositories} specific repository(ies)" | parts]
+      else
+        parts
+      end
+    end
+
+    parts = if summary.specific_packages > 0 do
+      ["Manage #{summary.specific_packages} specific package(s)" | parts]
+    else
+      parts
+    end
+
+    case parts do
+      [] -> "No permissions granted"
+      [single] -> single
+      _ -> Enum.join(parts, ", ")
+    end
+  end
+
+  defp summarize_permissions(scopes) do
+    has_full_api = "api" in scopes
+    has_write = "api:write" in scopes or has_full_api
+    has_read = "api:read" in scopes or has_write
+
+    package_scopes = Enum.filter(scopes, &String.starts_with?(&1, "package:"))
+    repo_scopes = Enum.filter(scopes, &String.starts_with?(&1, "repository:"))
+    has_all_repos = "repositories" in scopes
+
+    %{
+      api_level: cond do
+        has_full_api -> :full
+        has_write -> :write
+        has_read -> :read
+        true -> :none
+      end,
+      specific_packages: length(package_scopes),
+      specific_repositories: length(repo_scopes),
+      all_repositories: has_all_repos,
+      total_scopes: length(scopes)
+    }
+  end
+
+  @doc """
   Returns a human-readable description for OAuth scopes.
 
   Supports all scope types including resource-specific scopes.

@@ -11,11 +11,11 @@
           </p>
 
           <h4>Requested permissions:</h4>
-          <ul>
-            <%= for scope <- @scopes do %>
-              <li><%= Hexpm.Permissions.scope_description(scope) %></li>
-            <% end %>
-          </ul>
+          <%= render_grouped_scopes(@scopes) %>
+
+          <div class="alert alert-info" style="margin-top: 15px;">
+            <strong>Access Summary:</strong> <%= format_scopes(@scopes, :summary) %>
+          </div>
 
           <%= form_for @conn, Routes.oauth_path(@conn, :consent), [method: "post"], fn f -> %>
             <%= hidden_input f, :client_id, value: @client.client_id %>
