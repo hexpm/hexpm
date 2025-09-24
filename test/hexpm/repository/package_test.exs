@@ -149,32 +149,10 @@ defmodule Hexpm.Repository.PackageTest do
     package1 = insert(:package, repository_id: repository.id)
     package2 = insert(:package)
 
-    assert [package1.name] ==
-             Package.all([repository], 1, 10, "#{repository.name}/#{package1.name}", nil, nil)
-             |> Repo.all()
-             |> Enum.map(& &1.name)
-
-    assert [package2.name] !=
-             Package.all([repository], 1, 10, "#{repository.name}/#{package2.name}", nil, nil)
-             |> Repo.all()
-             |> Enum.map(& &1.name)
-
-    assert [] ==
-             Package.all(
-               [other_repository],
-               1,
-               10,
-               "#{repository.name}/#{package1.name}",
-               nil,
-               nil
-             )
-             |> Repo.all()
-             |> Enum.map(& &1.name)
-
-    assert [] ==
-             Package.all([other_repository], 1, 10, "#{package1.name}", nil, nil)
-             |> Repo.all()
-             |> Enum.map(& &1.name)
+    assert [package1.name] == search_for(repository, "#{repository.name}/#{package1.name}")
+    assert [package2.name] != search_for(repository, "#{repository.name}/#{package2.name}")
+    assert [] == search_for(other_repository, "#{repository.name}/#{package1.name}")
+    assert [] == search_for(other_repository, "#{package1.name}")
   end
 
   test "search updated_after", %{repository: repository} do
@@ -264,22 +242,13 @@ defmodule Hexpm.Repository.PackageTest do
 
     Hexpm.Repo.refresh_view(Hexpm.Repository.PackageDependant)
 
-    assert ["ecto", "phoenix"] =
-             Package.all([repository], 1, 10, "depends:#{repository.name}:poison", :name, nil)
-             |> Repo.all()
-             |> Enum.map(& &1.name)
+    assert ["ecto", "phoenix"] = search_for(repository, "depends:#{repository.name}:poison")
 
     assert ["phoenix"] =
-             Package.all(
-               [repository],
-               1,
-               10,
-               "depends:#{repository.name}:poison depends:#{repository.name}:ecto",
-               nil,
-               nil
+             search_for(
+               repository,
+               "depends:#{repository.name}:poison depends:#{repository.name}:ecto"
              )
-             |> Repo.all()
-             |> Enum.map(& &1.name)
   end
 
   test "search dependants is scoped to current repo", %{repository: repository} do
@@ -297,10 +266,68 @@ defmodule Hexpm.Repository.PackageTest do
 
     Hexpm.Repo.refresh_view(Hexpm.Repository.PackageDependant)
 
-    assert ["phoenix"] =
-             Package.all([repository], 1, 10, "depends:#{repository.name}:poison", :name, nil)
+    assert ["phoenix"] = search_for(repository, "depends:#{repository.name}:poison")
+  end
+
+  test "search build tools", %{repository: repository} do
+    ecto = insert(:package, name: "ecto", repository_id: repository.id)
+    insert(:release, package: ecto, meta: build(:release_metadata, build_tools: ["mix"]))
+    lustre = insert(:package, name: "lustre", repository_id: repository.id)
+    insert(:release, package: lustre, meta: build(:release_metadata, build_tools: ["gleam"]))
+    multi = insert(:package, name: "multi", repository_id: repository.id)
+
+    insert(:release,
+      package: multi,
+      meta: build(:release_metadata, build_tools: ["gleam", "rebar"])
+    )
+
+    # shouldn't show up in any of the searches
+    none = insert(:package, name: "none", repository_id: repository.id)
+    insert(:release, package: none, meta: build(:release_metadata, build_tools: []))
+
+    assert ["ecto"] =
+             Package.all([repository], 1, 10, "build_tool:mix", :name, nil)
              |> Repo.all()
              |> Enum.map(& &1.name)
+
+    assert ["ecto"] = search_for(repository, "build_tool:mix")
+    assert ["lustre", "multi"] = search_for(repository, "build_tool:gleam")
+    assert ["multi"] = search_for(repository, "build_tool:rebar")
+    assert [] = search_for(repository, "build_tool:mi")
+    assert [] = search_for(repository, "build_tool:mixx")
+  end
+
+  test "search build tools with multiple releases works fine", %{repository: repository} do
+    # ecto has multiple mix releases
+    ecto = insert(:package, name: "ecto", repository_id: repository.id)
+    insert(:release, package: ecto, meta: build(:release_metadata, build_tools: ["mix"]))
+
+    insert(:release,
+      package: ecto,
+      version: "1.1.0",
+      meta: build(:release_metadata, build_tools: ["mix"])
+    )
+
+    # benchee has one release for each tool
+    benchee = insert(:package, name: "benchee", repository_id: repository.id)
+    insert(:release, package: benchee, meta: build(:release_metadata, build_tools: ["gleam"]))
+
+    insert(:release,
+      package: benchee,
+      version: "1.1.0",
+      meta: build(:release_metadata, build_tools: ["mix"])
+    )
+
+    insert(:release,
+      package: benchee,
+      version: "2.7.0",
+      meta: build(:release_metadata, build_tools: ["rebar3"])
+    )
+
+    assert ["benchee", "ecto"] = search_for(repository, "build_tool:mix")
+    assert ["benchee"] = search_for(repository, "build_tool:gleam")
+
+    assert ["benchee"] = search_for(repository, "build_tool:rebar3")
   end
 
   test "sort packages by total downloads", %{repository: repository} do
@@ -360,5 +387,11 @@ defmodule Hexpm.Repository.PackageTest do
              Package.all([repository], 1, 10, nil, :recent_downloads, nil)
              |> Repo.all()
              |> Enum.map(& &1.id)
+  end
+
+  defp search_for(repository, search_term) do
+    Package.all([repository], 1, 10, search_term, :name, nil)
+    |> Repo.all()
+    |> Enum.map(& &1.name)
   end
 end
