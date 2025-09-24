@@ -33,7 +33,7 @@ defmodule HexpmWeb.DeviceControllerTest do
       assert html_response(conn, 200) =~ "Enter the verification code"
     end
 
-    test "shows device info when valid user_code provided" do
+    test "shows pre-filled verification form when valid user_code provided" do
       user = insert(:user)
       conn = login_user(build_conn(), user)
       client = create_test_client()
@@ -47,8 +47,26 @@ defmodule HexpmWeb.DeviceControllerTest do
       {:ok, response} =
         DeviceCodes.initiate_device_authorization(mock_conn, client.client_id, ["api"])
 
+      # First visit with user_code should show verification form
       conn = get(conn, ~p"/oauth/device?user_code=#{response.user_code}")
-      assert html_response(conn, 200) =~ "Device Authorization"
+      html = html_response(conn, 200)
+
+      assert html =~ "Device Authorization"
+      assert html =~ "Security Check"
+      assert html =~ "Verify and Continue"
+      # Check for formatted code (XXXX-XXXX)
+      formatted_code =
+        String.slice(response.user_code, 0, 4) <> "-" <> String.slice(response.user_code, 4, 4)
+
+      assert html =~ formatted_code
+
+      # Visit with verified=true should show authorization form
+      conn =
+        get(
+          login_user(build_conn(), user),
+          ~p"/oauth/device?user_code=#{response.user_code}&verified=true"
+        )
+
       assert html_response(conn, 200) =~ client.name
       assert html_response(conn, 200) =~ "Authorize Device"
     end
@@ -77,6 +95,49 @@ defmodule HexpmWeb.DeviceControllerTest do
       assert redirected_to(conn) =~ "/login"
       assert redirected_to(conn) =~ "return="
       assert redirected_to(conn) =~ "%3Fuser_code%3D"
+    end
+
+    test "verification flow from pre-filled form to authorization" do
+      user = insert(:user)
+      client = create_test_client("Test App")
+
+      mock_conn =
+        build_conn()
+        |> Map.put(:scheme, :https)
+        |> Map.put(:host, "hex.pm")
+        |> Map.put(:port, 443)
+
+      {:ok, response} =
+        DeviceCodes.initiate_device_authorization(mock_conn, client.client_id, [
+          "api",
+          "repositories"
+        ])
+
+      # Step 1: Visit with user_code (simulating clicking from terminal link)
+      conn = login_user(build_conn(), user)
+      conn = get(conn, ~p"/oauth/device?user_code=#{response.user_code}")
+
+      html = html_response(conn, 200)
+      assert html =~ "Security Check"
+      assert html =~ "verify that this code matches"
+      assert html =~ "Verify and Continue"
+      # Code should be pre-filled and readonly (in formatted form)
+      formatted_code =
+        String.slice(response.user_code, 0, 4) <> "-" <> String.slice(response.user_code, 4, 4)
+
+      assert html =~ ~r/value="#{formatted_code}"/
+      assert html =~ "readonly"
+
+      # Step 2: Submit verification form (user confirms code matches)
+      conn = login_user(build_conn(), user)
+      conn = get(conn, ~p"/oauth/device?user_code=#{response.user_code}&verified=true")
+
+      html = html_response(conn, 200)
+      assert html =~ "Authorize Device"
+      assert html =~ client.name
+      assert html =~ "api"
+      assert html =~ "repositories"
+      refute html =~ "Security Check"
     end
   end
 

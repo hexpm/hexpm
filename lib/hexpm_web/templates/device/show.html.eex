@@ -12,7 +12,14 @@
       <h3 class="panel-title">Device Authorization</h3>
     </div>
     <div class="panel-body">
-      <p>Enter the verification code displayed on your device:</p>
+      <%= if @pre_filled do %>
+        <div class="alert alert-warning">
+          <strong>Security Check:</strong> Please verify that this code matches the one displayed on your device or terminal before continuing.
+        </div>
+        <p><strong>Verify the code below matches your device:</strong></p>
+      <% else %>
+        <p>Enter the verification code displayed on your device:</p>
+      <% end %>
 
       <%= form_tag(~p"/oauth/device", method: "get") do %>
         <div class="form-group">
@@ -25,14 +32,24 @@
                  placeholder="XXXX-XXXX"
                  pattern="[A-Z0-9]{4}-?[A-Z0-9]{4}"
                  maxlength="9"
-                 style="text-transform: uppercase; font-family: monospace; font-size: 18px; text-align: center;"
+                 style="text-transform: uppercase; font-family: monospace; font-size: 18px; text-align: center;<%= if @pre_filled, do: " background-color: #fffbf0; border: 2px solid #f0ad4e;" %>"
+                 <%= if @pre_filled, do: "readonly" %>
                  required>
           <small class="form-text text-muted">
-            Enter the 8-character code shown on your device (format: XXXX-XXXX)
+            <%= if @pre_filled do %>
+              This code was provided in your authorization link. Confirm it matches your device.
+            <% else %>
+              Enter the 8-character code shown on your device (format: XXXX-XXXX)
+            <% end %>
           </small>
         </div>
 
-        <button type="submit" class="btn btn-primary">Verify Code</button>
+        <%= if @pre_filled do %>
+          <input type="hidden" name="verified" value="true">
+          <button type="submit" class="btn btn-primary btn-lg">Verify and Continue</button>
+        <% else %>
+          <button type="submit" class="btn btn-primary">Verify Code</button>
+        <% end %>
       <% end %>
 
       <hr style="margin: 30px 0;">
