@@ -21,7 +21,7 @@ defmodule Hexpm.Accounts.AuditLog do
     %AuditLog{
       user_id: nil,
       organization_id: nil,
-      key: audit_data.key,
+      key: audit_data.auth_credential,
       user_agent: truncate_codepoints(audit_data.user_agent, 255),
       remote_ip: audit_data.remote_ip,
       action: action,
@@ -35,7 +35,7 @@ defmodule Hexpm.Accounts.AuditLog do
     %AuditLog{
       user_id: user_id,
       organization_id: organization.id,
-      key: audit_data.key,
+      key: audit_data.auth_credential,
       user_agent: truncate_codepoints(audit_data.user_agent, 255),
       remote_ip: audit_data.remote_ip,
       action: "organization.create",
@@ -49,7 +49,7 @@ defmodule Hexpm.Accounts.AuditLog do
     %AuditLog{
       user_id: user_id,
       organization_id: params[:organization][:id] || params[:package][:organization_id],
-      key: audit_data.key,
+      key: audit_data.auth_credential,
       user_agent: truncate_codepoints(audit_data.user_agent, 255),
       remote_ip: audit_data.remote_ip,
       action: action,
@@ -63,7 +63,7 @@ defmodule Hexpm.Accounts.AuditLog do
     %AuditLog{
       user_id: nil,
       organization_id: organization_id,
-      key: audit_data.key,
+      key: audit_data.auth_credential,
       user_agent: truncate_codepoints(audit_data.user_agent, 255),
       remote_ip: audit_data.remote_ip,
       action: action,

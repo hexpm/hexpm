@@ -80,6 +80,18 @@ export default class App {
         })
       }
     })
+
+    // Auto-format device verification code input
+    const userCodeInput = document.getElementById('user_code')
+    if (userCodeInput) {
+      userCodeInput.addEventListener('input', function(e) {
+        let value = e.target.value.replace(/[^A-Z0-9]/g, '').toUpperCase()
+        if (value.length > 4) {
+          value = value.slice(0, 4) + '-' + value.slice(4, 8)
+        }
+        e.target.value = value
+      })
+    }
   }
 
   onDataCopy(event) {

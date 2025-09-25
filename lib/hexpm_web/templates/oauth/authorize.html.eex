@@ -1,0 +1,8 @@
+<div class="container">
+  <div class="row">
+    <div class="col-md-6 col-md-offset-3">
+      <%= render HexpmWeb.SharedView, "_authorization.html", Map.merge(assigns, authorization_assigns(@conn, @client, @redirect_uri, @scopes, assigns[:state], assigns[:code_challenge], assigns[:code_challenge_method])) %>
+    </div>
+  </div>
+</div>
+

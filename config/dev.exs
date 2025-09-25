@@ -38,6 +38,10 @@ config :hexpm, HexpmWeb.Endpoint,
     ]
   ]
 
+config :phoenix_live_view,
+  debug_heex_annotations: true,
+  debug_attributes: true
+
 config :logger, :default_formatter, format: "[$level] $message\n"
 
 config :phoenix, :stacktrace_depth, 20

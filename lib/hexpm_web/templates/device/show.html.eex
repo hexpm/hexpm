@@ -1,0 +1,71 @@
+<%= if @error_message do %>
+  <div class="alert alert-danger" style="margin-bottom: 20px;">
+    <%= @error_message %>
+  </div>
+<% end %>
+
+<%= if @device_code do %>
+  <%= render HexpmWeb.SharedView, "_authorization.html", Map.merge(assigns, authorization_assigns(@conn, @device_code)) %>
+<% else %>
+  <div class="panel panel-default">
+    <div class="panel-heading">
+      <h3 class="panel-title">Device Authorization</h3>
+    </div>
+    <div class="panel-body">
+      <%= if @pre_filled do %>
+        <div class="alert alert-warning" style="margin-top: 10px; margin-bottom: 20px;">
+          <strong>Security Check:</strong> Please verify that this code matches the one displayed on your device or terminal before continuing.
+        </div>
+      <% else %>
+        <p>Enter the verification code displayed on your device:</p>
+      <% end %>
+
+      <%= form_tag(~p"/oauth/device", method: "get") do %>
+        <div class="form-group">
+          <label for="user_code">Verification Code</label>
+          <input id="user_code"
+                 type="text"
+                 class="form-control"
+                 name="user_code"
+                 value="<%= format_user_code(@user_code) %>"
+                 placeholder="XXXX-XXXX"
+                 pattern="[A-Z0-9]{4}-?[A-Z0-9]{4}"
+                 maxlength="9"
+                 style="text-transform: uppercase; font-family: monospace; font-size: 18px; text-align: center;<%= if @pre_filled, do: " background-color: #fffbf0; border: 2px solid #f0ad4e;" %>"
+                 <%= if @pre_filled, do: "readonly" %>
+                 required>
+          <small class="form-text text-muted">
+            <%= if @pre_filled do %>
+              This code was provided in your authorization link. Confirm it matches your device.
+            <% else %>
+              Enter the 8-character code shown on your device (format: XXXX-XXXX)
+            <% end %>
+          </small>
+        </div>
+
+        <%= if @pre_filled do %>
+          <input type="hidden" name="verified" value="true">
+          <button type="submit" class="btn btn-primary btn-lg">Verify and Continue</button>
+        <% else %>
+          <button type="submit" class="btn btn-primary">Verify Code</button>
+        <% end %>
+      <% end %>
+
+      <hr style="margin: 30px 0;">
+
+      <div class="help-section">
+        <h5>What is this?</h5>
+        <p>
+          This page allows you to authorize applications (like command-line tools) to access your Hex account.
+          Your application should have displayed a verification code that you need to enter above.
+        </p>
+
+        <p>
+          <strong>Security Note:</strong> Only enter the code if you initiated this authorization request
+          from a trusted application.
+        </p>
+      </div>
+    </div>
+  </div>
+<% end %>
+

@@ -108,7 +108,7 @@ defmodule Hexpm.TestHelpers do
   def audit_data(%Hexpm.Accounts.User{} = user, opts) do
     %{
       user: user,
-      key: Keyword.get(opts, :key),
+      auth_credential: Keyword.get(opts, :auth_credential, Keyword.get(opts, :key)),
       user_agent: Keyword.get(opts, :user_agent, "TEST"),
       remote_ip: Keyword.get(opts, :remote_ip, "127.0.0.1")
     }

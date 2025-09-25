@@ -110,21 +110,25 @@ defmodule HexpmWeb.Plugs do
 
   def authenticate(conn, _opts) do
     case HexpmWeb.AuthHelpers.authenticate(conn) do
-      {:ok, %{key: key, user: user, organization: organization, email: email, source: source}} ->
+      {:ok,
+       %{
+         auth_credential: auth_credential,
+         user: user,
+         organization: organization,
+         email: email
+       }} ->
         conn
-        |> assign(:key, key)
+        |> assign(:auth_credential, auth_credential)
         |> assign(:current_user, user)
         |> assign(:current_organization, organization)
         |> assign(:email, email)
-        |> assign(:auth_source, source)
 
       {:error, :missing} ->
         conn
-        |> assign(:key, nil)
+        |> assign(:auth_credential, nil)
         |> assign(:current_user, nil)
         |> assign(:current_organization, nil)
         |> assign(:email, nil)
-        |> assign(:auth_source, nil)
 
       {:error, _} = error ->
         HexpmWeb.AuthHelpers.error(conn, error)

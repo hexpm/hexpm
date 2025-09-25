@@ -2,10 +2,9 @@ defmodule Hexpm.Accounts.Auth do
   import Ecto.Query, only: [from: 2]
 
   alias Hexpm.Accounts.{Key, Keys, User, Users}
+  alias Hexpm.OAuth.Tokens
 
   def key_auth(user_secret, usage_info) do
-    # Database index lookup on the first part of the key and then
-    # secure compare on the second part to avoid timing attacks
     app_secret = Application.get_env(:hexpm, :secret)
 
     <<first::binary-size(32), second::binary-size(32)>> =
@@ -28,7 +27,7 @@ defmodule Hexpm.Accounts.Auth do
         :error
 
       key ->
-        valid_auth = !key.user || !User.organization?(key.user)
+        valid_auth = !key.user || not User.organization?(key.user)
 
         if valid_auth && Hexpm.Utils.secure_check(key.secret_second, second) do
           if Key.revoked?(key) do
@@ -38,11 +37,10 @@ defmodule Hexpm.Accounts.Auth do
 
             {:ok,
              %{
-               key: key,
+               auth_credential: key,
                user: key.user,
                organization: key.organization,
-               email: find_email(key.user, nil),
-               source: :key
+               email: find_email(key.user, nil)
              }}
           end
         else
@@ -59,16 +57,15 @@ defmodule Hexpm.Accounts.Auth do
         organizations: :repository
       ])
 
-    valid_user = user && !User.organization?(user) && user.password
+    valid_user = user && not User.organization?(user) && user.password
 
     if valid_user && Bcrypt.verify_pass(password, user.password) do
       {:ok,
        %{
-         key: nil,
+         auth_credential: nil,
          user: user,
          organization: nil,
-         email: find_email(user, username_or_email),
-         source: :password
+         email: find_email(user, username_or_email)
        }}
     else
       :error
@@ -77,6 +74,31 @@ defmodule Hexpm.Accounts.Auth do
 
   def gen_password(nil), do: nil
   def gen_password(password), do: Bcrypt.hash_pwd_salt(password)
+
+  def oauth_token_auth(user_token, _usage_info) do
+    preload = [user: [:emails, owned_packages: :repository, organizations: :repository]]
+
+    case Tokens.lookup(user_token, :access, preload: preload) do
+      {:ok, oauth_token} ->
+        user = oauth_token.user
+        valid_auth = user && not User.organization?(user)
+
+        if valid_auth do
+          {:ok,
+           %{
+             auth_credential: oauth_token,
+             user: user,
+             organization: nil,
+             email: find_email(user, nil)
+           }}
+        else
+          :error
+        end
+
+      {:error, _} ->
+        :error
+    end
+  end
 
   def gen_key() do
     :crypto.strong_rand_bytes(16)
