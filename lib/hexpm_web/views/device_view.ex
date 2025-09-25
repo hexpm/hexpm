@@ -1,7 +1,7 @@
 defmodule HexpmWeb.DeviceView do
   use HexpmWeb, :view
 
-  alias Hexpm.Permissions
+  alias HexpmWeb.SharedAuthorizationView
 
   @doc """
   Formats a user code for display by inserting a hyphen in the middle.
@@ -30,49 +30,15 @@ defmodule HexpmWeb.DeviceView do
   end
 
   @doc """
-  Formats scopes for display on the device authorization page.
+  Delegates to SharedAuthorizationView for formatting scopes.
   """
-  def format_scopes(scopes, :summary) when is_list(scopes) do
-    Permissions.format_summary(scopes)
-  end
+  defdelegate format_scopes(scopes, format), to: SharedAuthorizationView
 
   @doc """
-  Returns HTML-formatted grouped scopes.
+  Renders grouped scopes using SharedAuthorizationView.
   """
-  def render_grouped_scopes(scopes) when is_list(scopes) do
-    grouped_html =
-      Permissions.group_scopes(scopes)
-      |> Enum.map(fn {category, category_scopes} ->
-        category_name = format_category_name(category)
-
-        items =
-          category_scopes
-          |> Enum.map(fn scope ->
-            description = Permissions.scope_description(scope)
-            ~s(<li><code>#{scope}</code> - #{description}</li>)
-          end)
-          |> Enum.join("\n")
-
-        """
-        <div class="scope-group">
-          <h5>#{category_name}</h5>
-          <ul>#{items}</ul>
-        </div>
-        """
-      end)
-      |> Enum.join("\n")
-
-    raw(grouped_html)
-  end
-
-  defp format_category_name(category) do
-    case category do
-      :api -> "API Access"
-      :repository -> "Repository Access"
-      :package -> "Package Management"
-      :docs -> "Documentation Access"
-      _ -> to_string(category) |> String.capitalize()
-    end
+  def render_grouped_scopes(scopes, _with_checkboxes \\ true) when is_list(scopes) do
+    SharedAuthorizationView.render_grouped_scopes(scopes, :device)
   end
 
   @doc """
@@ -89,12 +55,15 @@ defmodule HexpmWeb.DeviceView do
     %{
       client_name: client_name,
       scopes: device_code.scopes,
-      render_scopes: &render_grouped_scopes/1,
+      render_scopes: &render_grouped_scopes(&1, true),
       format_summary: &format_scopes(&1, :summary),
       form_action: ~p"/oauth/device",
       hidden_fields: [{"user_code", device_code.user_code}],
       approve_value: "authorize",
-      deny_value: "deny"
+      deny_value: "deny",
+      with_checkboxes: true,
+      auth_title: "Authorize Device",
+      auth_description: "The device"
     }
   end
 end

@@ -160,7 +160,7 @@ defmodule HexpmWeb.API.OAuthControllerTest do
     } do
       # Authorize the device first
       user = insert(:user)
-      {:ok, _} = DeviceCodes.authorize_device(device_code.user_code, user)
+      {:ok, _} = DeviceCodes.authorize_device(device_code.user_code, user, device_code.scopes)
 
       conn =
         post(build_conn(), ~p"/api/oauth/token", %{
@@ -244,7 +244,7 @@ defmodule HexpmWeb.API.OAuthControllerTest do
       device_code = Repo.get_by(Hexpm.OAuth.DeviceCode, device_code: response.device_code)
 
       # Authorize the device to get a token with refresh token
-      {:ok, _} = DeviceCodes.authorize_device(device_code.user_code, user)
+      {:ok, _} = DeviceCodes.authorize_device(device_code.user_code, user, device_code.scopes)
 
       # Get the token
       conn =

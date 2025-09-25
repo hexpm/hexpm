@@ -95,7 +95,7 @@ defmodule HexpmWeb.DeviceController do
           case params["action"] do
             "authorize" ->
               normalized_code = DeviceView.normalize_user_code(user_code)
-              handle_authorization(conn, normalized_code, current_user)
+              handle_authorization(conn, normalized_code, current_user, params)
 
             "deny" ->
               normalized_code = DeviceView.normalize_user_code(user_code)
@@ -146,30 +146,39 @@ defmodule HexpmWeb.DeviceController do
     end
   end
 
-  defp handle_authorization(conn, user_code, user) do
-    case DeviceCodes.authorize_device(user_code, user) do
-      {:ok, _device_code} ->
-        conn
-        |> put_flash(:info, "Device has been successfully authorized!")
-        |> redirect(to: ~p"/")
+  defp handle_authorization(conn, user_code, user, params) do
+    selected_scopes = params["selected_scopes"] || []
 
-      {:error, :invalid_code, message} ->
-        render_verification_form(conn, nil, message, user_code)
+    if selected_scopes == [] do
+      render_verification_form(conn, nil, "At least one permission must be selected", user_code)
+    else
+      case DeviceCodes.authorize_device(user_code, user, selected_scopes) do
+        {:ok, _device_code} ->
+          conn
+          |> put_flash(:info, "Device has been successfully authorized!")
+          |> redirect(to: ~p"/")
 
-      {:error, :expired_token, message} ->
-        render_verification_form(conn, nil, message, user_code)
+        {:error, :invalid_code, message} ->
+          render_verification_form(conn, nil, message, user_code)
 
-      {:error, :invalid_grant, message} ->
-        render_verification_form(conn, nil, message, user_code)
+        {:error, :expired_token, message} ->
+          render_verification_form(conn, nil, message, user_code)
 
-      {:error, changeset} ->
-        error_message =
-          case changeset do
-            %Ecto.Changeset{} -> "Authorization failed due to validation errors"
-            _ -> "Authorization failed"
-          end
+        {:error, :invalid_grant, message} ->
+          render_verification_form(conn, nil, message, user_code)
 
-        render_verification_form(conn, nil, error_message, user_code)
+        {:error, :invalid_scopes, message} ->
+          render_verification_form(conn, nil, message, user_code)
+
+        {:error, changeset} ->
+          error_message =
+            case changeset do
+              %Ecto.Changeset{} -> "Authorization failed due to validation errors"
+              _ -> "Authorization failed"
+            end
+
+          render_verification_form(conn, nil, error_message, user_code)
+      end
     end
   end
 

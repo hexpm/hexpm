@@ -2,7 +2,7 @@ defmodule HexpmWeb.TestController do
   use HexpmWeb, :controller
 
   alias Hexpm.Accounts.Users
-  alias Hexpm.OAuth.{Client, DeviceCode, DeviceCodes, Tokens}
+  alias Hexpm.OAuth.{Client, DeviceCode, DeviceCodes, Sessions, Tokens}
   alias Hexpm.Repo
   import Ecto.Query
 
@@ -93,13 +93,17 @@ defmodule HexpmWeb.TestController do
       client_id = params["client_id"] || "78ea6566-89fd-481e-a1d6-7d9d78eacca8"
       scopes = String.split(params["scope"] || "api repositories", " ")
 
+      # Create a session for the OAuth token
+      {:ok, session} = Sessions.create_for_user(user, client_id)
+
       case Tokens.create_and_insert_for_user(
              user,
              client_id,
              scopes,
              "authorization_code",
              "test_grant",
-             with_refresh_token: true
+             with_refresh_token: true,
+             session_id: session.id
            ) do
         {:ok, token} ->
           render(conn, :oauth_token, token: token)
@@ -130,14 +134,22 @@ defmodule HexpmWeb.TestController do
         |> put_status(400)
         |> render(:error, error: %{error: "User not found"})
       else
-        case DeviceCodes.authorize_device(user_code, user) do
-          {:ok, _device_code} ->
-            render(conn, :oauth_device_authorize, response: %{status: "authorized"})
+        device_code = DeviceCodes.get_by_user_code(user_code)
 
-          {:error, reason, description} ->
-            conn
-            |> put_status(400)
-            |> render(:error, error: %{error: Atom.to_string(reason), description: description})
+        if is_nil(device_code) do
+          conn
+          |> put_status(400)
+          |> render(:error, error: %{error: "Device code not found"})
+        else
+          case DeviceCodes.authorize_device(user_code, user, device_code.scopes) do
+            {:ok, _device_code} ->
+              render(conn, :oauth_device_authorize, response: %{status: "authorized"})
+
+            {:error, reason, description} ->
+              conn
+              |> put_status(400)
+              |> render(:error, error: %{error: Atom.to_string(reason), description: description})
+          end
         end
       end
     end

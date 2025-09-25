@@ -5,7 +5,7 @@
 <% end %>
 
 <%= if @device_code do %>
-  <%= render HexpmWeb.DeviceView, "_authorization.html", Map.merge(assigns, authorization_assigns(@conn, @device_code)) %>
+  <%= render HexpmWeb.SharedView, "_authorization.html", Map.merge(assigns, authorization_assigns(@conn, @device_code)) %>
 <% else %>
   <div class="panel panel-default">
     <div class="panel-heading">
@@ -13,10 +13,9 @@
     </div>
     <div class="panel-body">
       <%= if @pre_filled do %>
-        <div class="alert alert-warning">
+        <div class="alert alert-warning" style="margin-top: 10px; margin-bottom: 20px;">
           <strong>Security Check:</strong> Please verify that this code matches the one displayed on your device or terminal before continuing.
         </div>
-        <p><strong>Verify the code below matches your device:</strong></p>
       <% else %>
         <p>Enter the verification code displayed on your device:</p>
       <% end %>

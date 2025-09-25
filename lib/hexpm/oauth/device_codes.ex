@@ -72,10 +72,10 @@ defmodule Hexpm.OAuth.DeviceCodes do
   end
 
   @doc """
-  Authorizes a device using the user code.
-  This is called when a user enters the user code on the verification page.
+  Authorizes a device using the user code with selected scopes.
+  Requires explicit scope selection - at least one scope must be provided.
   """
-  def authorize_device(user_code, user) do
+  def authorize_device(user_code, user, selected_scopes) do
     case get_by_user_code(user_code) do
       nil ->
         {:error, :invalid_code, "Invalid user code"}
@@ -90,7 +90,7 @@ defmodule Hexpm.OAuth.DeviceCodes do
             {:error, :invalid_grant, "Device code is not pending authorization"}
 
           true ->
-            perform_authorization(device_code_record, user)
+            perform_authorization(device_code_record, user, selected_scopes)
         end
     end
   end
@@ -279,38 +279,60 @@ defmodule Hexpm.OAuth.DeviceCodes do
     end
   end
 
-  defp perform_authorization(device_code_record, user) do
-    # Create session and token for the device flow
-    result =
-      Ecto.Multi.new()
-      |> Ecto.Multi.run(:session, fn _repo, _changes ->
-        Sessions.create_for_user(user, device_code_record.client_id,
-          name: device_code_record.name
-        )
-      end)
-      |> Ecto.Multi.run(:token, fn _repo, %{session: session} ->
-        changeset =
-          Tokens.create_for_user(
-            user,
-            device_code_record.client_id,
-            device_code_record.scopes,
-            "urn:ietf:params:oauth:grant-type:device_code",
-            device_code_record.device_code,
-            session_id: session.id,
-            with_refresh_token: true
+  defp perform_authorization(device_code_record, user, selected_scopes) do
+    with {:ok, final_scopes} <- validate_and_get_scopes(device_code_record, selected_scopes) do
+      # Create session and token for the device flow
+      result =
+        Ecto.Multi.new()
+        |> Ecto.Multi.run(:session, fn _repo, _changes ->
+          Sessions.create_for_user(user, device_code_record.client_id,
+            name: device_code_record.name
           )
+        end)
+        |> Ecto.Multi.run(:token, fn _repo, %{session: session} ->
+          changeset =
+            Tokens.create_for_user(
+              user,
+              device_code_record.client_id,
+              final_scopes,
+              "urn:ietf:params:oauth:grant-type:device_code",
+              device_code_record.device_code,
+              session_id: session.id,
+              with_refresh_token: true
+            )
 
-        Repo.insert(changeset)
-      end)
-      |> Ecto.Multi.update(:device_code, DeviceCode.authorize_changeset(device_code_record, user))
-      |> Repo.transaction()
+          Repo.insert(changeset)
+        end)
+        |> Ecto.Multi.update(
+          :device_code,
+          DeviceCode.authorize_changeset(device_code_record, user)
+        )
+        |> Repo.transaction()
 
-    case result do
-      {:ok, %{device_code: updated_device_code}} ->
-        {:ok, updated_device_code}
+      case result do
+        {:ok, %{device_code: updated_device_code}} ->
+          {:ok, updated_device_code}
 
-      {:error, _failed_operation, changeset, _changes} ->
-        {:error, changeset}
+        {:error, _failed_operation, changeset, _changes} ->
+          {:error, changeset}
+      end
+    else
+      error -> error
+    end
+  end
+
+  defp validate_and_get_scopes(device_code_record, selected_scopes) do
+    if selected_scopes == [] do
+      {:error, :invalid_scopes, "At least one permission must be selected"}
+    else
+      requested_scopes = device_code_record.scopes || []
+      invalid_scopes = Enum.reject(selected_scopes, &(&1 in requested_scopes))
+
+      if invalid_scopes != [] do
+        {:error, :invalid_scopes, "Selected scopes not in original request"}
+      else
+        {:ok, selected_scopes}
+      end
     end
   end
 

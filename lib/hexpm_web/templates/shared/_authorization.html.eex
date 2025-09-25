@@ -1,21 +1,22 @@
 <div class="panel panel-default">
   <div class="panel-heading">
-    <h3 class="panel-title">Authorize Application</h3>
+    <h3 class="panel-title"><%= assigns[:auth_title] || "Authorize Application" %></h3>
   </div>
   <div class="panel-body">
     <p>
-      The application <strong><%= @client_name %></strong> would like to access your Hex account.
+      <%= assigns[:auth_description] || "The application" %> <strong><%= @client_name %></strong> would like to access your Hex account.
     </p>
 
     <h4>Requested permissions:</h4>
-    <%= @render_scopes.(@scopes) %>
 
-    <div class="alert alert-info" style="margin-top: 15px;">
-      <strong>Access Summary:</strong> <%= @format_summary.(@scopes) %>
-    </div>
+    <%= form_tag @form_action, method: "post", id: "authorization-form" do %>
+      <%= @render_scopes.(@scopes) %>
 
-    <%= form_tag @form_action, method: "post" do %>
-      <%= for {key, value} <- @hidden_fields do %>
+      <div class="alert alert-info" style="margin-top: 15px;">
+        <strong>Access Summary:</strong> <span id="access-summary"><%= @format_summary.(@scopes) %></span>
+      </div>
+
+      <%= for {key, value} <- @hidden_fields, key != "scope" do %>
         <input type="hidden" name="<%= key %>" value="<%= value %>">
       <% end %>
 
@@ -26,3 +27,28 @@
     <% end %>
   </div>
 </div>
+
+<%= if assigns[:with_checkboxes] do %>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  var checkboxes = document.querySelectorAll('.scope-checkbox');
+  var form = document.getElementById('authorization-form');
+
+  // Validate at least one permission is selected on form submit
+  if (form) {
+    form.addEventListener('submit', function(e) {
+      if (e.submitter && e.submitter.value === '<%= @approve_value %>') {
+        var anyChecked = Array.from(checkboxes).some(function(checkbox) {
+          return checkbox.checked;
+        });
+
+        if (!anyChecked) {
+          e.preventDefault();
+          alert('Please select at least one permission to authorize.');
+        }
+      }
+    });
+  }
+});
+</script>
+<% end %>

@@ -159,7 +159,7 @@ defmodule Hexpm.OAuth.DeviceFlowTest do
       user = insert(:user)
 
       # Authorize the device
-      {:ok, _} = DeviceCodes.authorize_device(device_code.user_code, user)
+      {:ok, _} = DeviceCodes.authorize_device(device_code.user_code, user, device_code.scopes)
 
       # Poll for token
       assert {:ok, token} =
@@ -183,7 +183,7 @@ defmodule Hexpm.OAuth.DeviceFlowTest do
 
     test "successfully authorizes device", %{device_code: device_code, user: user, client: client} do
       assert {:ok, updated_device_code} =
-               DeviceCodes.authorize_device(device_code.user_code, user)
+               DeviceCodes.authorize_device(device_code.user_code, user, device_code.scopes)
 
       assert updated_device_code.status == "authorized"
       assert updated_device_code.user_id == user.id
@@ -210,7 +210,8 @@ defmodule Hexpm.OAuth.DeviceFlowTest do
 
       device_code = Repo.get_by(DeviceCode, device_code: response.device_code)
 
-      assert {:ok, _} = DeviceCodes.authorize_device(device_code.user_code, user)
+      assert {:ok, _} =
+               DeviceCodes.authorize_device(device_code.user_code, user, device_code.scopes)
 
       # Verify OAuth token and session have the name
       oauth_token =
@@ -226,7 +227,7 @@ defmodule Hexpm.OAuth.DeviceFlowTest do
 
     test "returns error for invalid user code", %{user: user} do
       assert {:error, :invalid_code, "Invalid user code"} =
-               DeviceCodes.authorize_device("INVALID", user)
+               DeviceCodes.authorize_device("INVALID", user, ["api"])
     end
 
     test "returns error for expired device code", %{device_code: device_code, user: user} do
@@ -235,16 +236,16 @@ defmodule Hexpm.OAuth.DeviceFlowTest do
       Repo.update!(DeviceCode.changeset(device_code, %{expires_at: past_time}))
 
       assert {:error, :expired_token, "Device code has expired"} =
-               DeviceCodes.authorize_device(device_code.user_code, user)
+               DeviceCodes.authorize_device(device_code.user_code, user, device_code.scopes)
     end
 
     test "returns error when device already processed", %{device_code: device_code, user: user} do
       # First authorization
-      {:ok, _} = DeviceCodes.authorize_device(device_code.user_code, user)
+      {:ok, _} = DeviceCodes.authorize_device(device_code.user_code, user, device_code.scopes)
 
       # Second authorization attempt
       assert {:error, :invalid_grant, "Device code is not pending authorization"} =
-               DeviceCodes.authorize_device(device_code.user_code, user)
+               DeviceCodes.authorize_device(device_code.user_code, user, device_code.scopes)
     end
   end
 
@@ -299,7 +300,7 @@ defmodule Hexpm.OAuth.DeviceFlowTest do
     test "returns error for already processed device code", %{device_code: device_code} do
       # Mark as authorized
       user = insert(:user)
-      DeviceCodes.authorize_device(device_code.user_code, user)
+      DeviceCodes.authorize_device(device_code.user_code, user, device_code.scopes)
 
       assert {:error, :already_processed} =
                DeviceCodes.get_device_code_for_verification(device_code.user_code)

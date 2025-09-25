@@ -66,13 +66,14 @@ defmodule HexpmWeb.OAuthController do
   defp handle_authorization_approval(conn, user, params) do
     with {:ok, client} <- validate_client(params["client_id"]),
          {:ok, redirect_uri} <- validate_redirect_uri(client, params["redirect_uri"]),
-         {:ok, scopes} <- validate_scopes(client, params["scope"]),
+         {:ok, requested_scopes} <- validate_scopes(client, params["scope"]),
+         {:ok, selected_scopes} <- get_selected_scopes(params, requested_scopes, client),
          {:ok, _} <- validate_pkce_params(params) do
       case AuthorizationCodes.create_and_insert_for_user(
              user,
              client.client_id,
              redirect_uri,
-             scopes,
+             selected_scopes,
              code_challenge: params["code_challenge"],
              code_challenge_method: params["code_challenge_method"]
            ) do
@@ -157,6 +158,28 @@ defmodule HexpmWeb.OAuthController do
 
       true ->
         {:ok, :valid}
+    end
+  end
+
+  defp get_selected_scopes(params, requested_scopes, client) do
+    selected_scopes = params["selected_scopes"] || []
+
+    cond do
+      selected_scopes == [] ->
+        {:error, "At least one permission must be selected"}
+
+      true ->
+        invalid_scopes = Enum.reject(selected_scopes, &(&1 in requested_scopes))
+
+        if invalid_scopes == [] do
+          if Clients.supports_scopes?(client, selected_scopes) do
+            {:ok, selected_scopes}
+          else
+            {:error, "Selected scopes not supported by client"}
+          end
+        else
+          {:error, "Invalid scopes selected"}
+        end
     end
   end
 

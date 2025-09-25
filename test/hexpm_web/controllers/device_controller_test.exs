@@ -169,13 +169,34 @@ defmodule HexpmWeb.DeviceControllerTest do
       assert redirected_to(conn) =~ "/login"
     end
 
-    test "authorizes device successfully", %{user: user, device_code: device_code} do
+    test "shows error when authorizing without selecting scopes", %{
+      user: user,
+      device_code: device_code
+    } do
       conn = login_user(build_conn(), user)
 
       conn =
         post(conn, ~p"/oauth/device", %{
           "user_code" => device_code.user_code,
           "action" => "authorize"
+        })
+
+      assert html_response(conn, 200) =~ "At least one permission must be selected"
+
+      # Verify device was not authorized
+      updated_device_code = Repo.get(DeviceCode, device_code.id)
+      assert updated_device_code.status == "pending"
+    end
+
+    test "authorizes device successfully with all scopes", %{user: user, device_code: device_code} do
+      conn = login_user(build_conn(), user)
+
+      conn =
+        post(conn, ~p"/oauth/device", %{
+          "user_code" => device_code.user_code,
+          "action" => "authorize",
+          # Select all requested scopes
+          "selected_scopes" => ["api"]
         })
 
       assert redirected_to(conn, 302) == "/"
@@ -208,6 +229,90 @@ defmodule HexpmWeb.DeviceControllerTest do
       assert updated_device_code.status == "denied"
     end
 
+    test "authorizes device with selected scopes", %{user: user, client: client} do
+      conn = login_user(build_conn(), user)
+
+      mock_conn =
+        build_conn()
+        |> Map.put(:scheme, :https)
+        |> Map.put(:host, "hex.pm")
+        |> Map.put(:port, 443)
+
+      {:ok, response} =
+        DeviceCodes.initiate_device_authorization(mock_conn, client.client_id, [
+          "api:read",
+          "repositories"
+        ])
+
+      conn =
+        post(conn, ~p"/oauth/device", %{
+          "user_code" => response.user_code,
+          "action" => "authorize",
+          "selected_scopes" => ["api:read"]
+        })
+
+      assert redirected_to(conn, 302) == "/"
+
+      assert Phoenix.Flash.get(conn.assigns.flash, :info) ==
+               "Device has been successfully authorized!"
+
+      # Verify the token was created with only the selected scope
+      device_code = Repo.get_by(DeviceCode, user_code: response.user_code)
+      assert device_code.status == "authorized"
+
+      token =
+        Repo.get_by(Hexpm.OAuth.Token,
+          grant_type: "urn:ietf:params:oauth:grant-type:device_code",
+          grant_reference: device_code.device_code
+        )
+
+      assert token.scopes == ["api:read"]
+    end
+
+    test "shows error when no scopes are selected", %{user: user, device_code: device_code} do
+      conn = login_user(build_conn(), user)
+
+      conn =
+        post(conn, ~p"/oauth/device", %{
+          "user_code" => device_code.user_code,
+          "action" => "authorize",
+          "selected_scopes" => []
+        })
+
+      assert html_response(conn, 200) =~ "At least one permission must be selected"
+
+      # Verify device was not authorized
+      updated_device_code = Repo.get(DeviceCode, device_code.id)
+      assert updated_device_code.status == "pending"
+    end
+
+    test "shows error when invalid scopes are selected", %{user: user, client: client} do
+      conn = login_user(build_conn(), user)
+
+      mock_conn =
+        build_conn()
+        |> Map.put(:scheme, :https)
+        |> Map.put(:host, "hex.pm")
+        |> Map.put(:port, 443)
+
+      {:ok, response} =
+        DeviceCodes.initiate_device_authorization(mock_conn, client.client_id, ["api:read"])
+
+      conn =
+        post(conn, ~p"/oauth/device", %{
+          "user_code" => response.user_code,
+          "action" => "authorize",
+          # Not in the original request
+          "selected_scopes" => ["api:write"]
+        })
+
+      assert html_response(conn, 200) =~ "Selected scopes not in original request"
+
+      # Verify device was not authorized
+      device_code = Repo.get_by(DeviceCode, user_code: response.user_code)
+      assert device_code.status == "pending"
+    end
+
     test "shows error when action not specified", %{
       user: user,
       device_code: device_code
@@ -216,7 +321,8 @@ defmodule HexpmWeb.DeviceControllerTest do
 
       conn =
         post(conn, ~p"/oauth/device", %{
-          "user_code" => device_code.user_code
+          "user_code" => device_code.user_code,
+          "selected_scopes" => ["api"]
         })
 
       assert html_response(conn, 200) =~ "Invalid action"
@@ -232,7 +338,8 @@ defmodule HexpmWeb.DeviceControllerTest do
       conn =
         post(conn, ~p"/oauth/device", %{
           "user_code" => "INVALID",
-          "action" => "authorize"
+          "action" => "authorize",
+          "selected_scopes" => ["api"]
         })
 
       assert html_response(conn, 200) =~ "Invalid user code"
@@ -248,22 +355,24 @@ defmodule HexpmWeb.DeviceControllerTest do
       conn =
         post(conn, ~p"/oauth/device", %{
           "user_code" => device_code.user_code,
-          "action" => "authorize"
+          "action" => "authorize",
+          "selected_scopes" => ["api"]
         })
 
       assert html_response(conn, 200) =~ "Device code has expired"
     end
 
     test "shows error for already processed device code", %{user: user, device_code: device_code} do
-      # Authorize first
-      DeviceCodes.authorize_device(device_code.user_code, user)
+      # Authorize first with selected scopes
+      DeviceCodes.authorize_device(device_code.user_code, user, ["api"])
 
       conn = login_user(build_conn(), user)
 
       conn =
         post(conn, ~p"/oauth/device", %{
           "user_code" => device_code.user_code,
-          "action" => "authorize"
+          "action" => "authorize",
+          "selected_scopes" => ["api"]
         })
 
       assert html_response(conn, 200) =~ "Device code is not pending authorization"
