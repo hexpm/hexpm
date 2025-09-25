@@ -37,14 +37,14 @@ defmodule HexpmWeb.DeviceView do
   @doc """
   Renders grouped scopes using SharedAuthorizationView.
   """
-  def render_grouped_scopes(scopes, _with_checkboxes \\ true) when is_list(scopes) do
-    SharedAuthorizationView.render_grouped_scopes(scopes, :device)
+  def render_grouped_scopes(scopes, current_user) when is_list(scopes) do
+    SharedAuthorizationView.render_grouped_scopes(scopes, :device, current_user)
   end
 
   @doc """
   Prepares authorization data for the shared partial.
   """
-  def authorization_assigns(_conn, device_code) do
+  def authorization_assigns(conn, device_code) do
     client_name =
       if device_code.client do
         device_code.client.name
@@ -52,10 +52,12 @@ defmodule HexpmWeb.DeviceView do
         device_code.client_id
       end
 
+    current_user = conn.assigns[:current_user]
+
     %{
       client_name: client_name,
       scopes: device_code.scopes,
-      render_scopes: &render_grouped_scopes(&1, true),
+      render_scopes: &render_grouped_scopes(&1, current_user),
       format_summary: &format_scopes(&1, :summary),
       form_action: ~p"/oauth/device",
       hidden_fields: [{"user_code", device_code.user_code}],
@@ -63,7 +65,8 @@ defmodule HexpmWeb.DeviceView do
       deny_value: "deny",
       with_checkboxes: true,
       auth_title: "Authorize Device",
-      auth_description: "The device"
+      auth_description: "The device",
+      current_user: current_user
     }
   end
 end

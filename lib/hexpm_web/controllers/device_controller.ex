@@ -2,6 +2,8 @@ defmodule HexpmWeb.DeviceController do
   use HexpmWeb, :controller
 
   alias Hexpm.OAuth.DeviceCodes
+  alias Hexpm.Accounts.User
+  alias Hexpm.Permissions
   alias HexpmWeb.Plugs.Attack
   alias HexpmWeb.DeviceView
 
@@ -152,32 +154,71 @@ defmodule HexpmWeb.DeviceController do
     if selected_scopes == [] do
       render_verification_form(conn, nil, "At least one permission must be selected", user_code)
     else
-      case DeviceCodes.authorize_device(user_code, user, selected_scopes) do
-        {:ok, _device_code} ->
-          conn
-          |> put_flash(:info, "Device has been successfully authorized!")
-          |> redirect(to: ~p"/")
+      # First validate the scopes are valid for this device code
+      case DeviceCodes.get_for_verification(user_code) do
+        {:ok, device_code} ->
+          requested_scopes = device_code.scopes || []
+          invalid_scopes = Enum.reject(selected_scopes, &(&1 in requested_scopes))
 
-        {:error, :invalid_code, message} ->
-          render_verification_form(conn, nil, message, user_code)
+          cond do
+            invalid_scopes != [] ->
+              render_verification_form(
+                conn,
+                nil,
+                "Selected scopes not in original request",
+                user_code
+              )
 
-        {:error, :expired_token, message} ->
-          render_verification_form(conn, nil, message, user_code)
+            Permissions.requires_write_access?(selected_scopes) and not User.tfa_enabled?(user) ->
+              error_message =
+                "Two-factor authentication is required for api:write permissions. " <>
+                  "Please <a href='/dashboard/security'>enable 2FA in your security settings</a> and try again."
 
-        {:error, :invalid_grant, message} ->
-          render_verification_form(conn, nil, message, user_code)
+              render_verification_form(conn, nil, {:safe, error_message}, user_code)
 
-        {:error, :invalid_scopes, message} ->
-          render_verification_form(conn, nil, message, user_code)
+            true ->
+              case DeviceCodes.authorize_device(user_code, user, selected_scopes) do
+                {:ok, _device_code} ->
+                  conn
+                  |> put_flash(:info, "Device has been successfully authorized!")
+                  |> redirect(to: ~p"/")
 
-        {:error, changeset} ->
-          error_message =
-            case changeset do
-              %Ecto.Changeset{} -> "Authorization failed due to validation errors"
-              _ -> "Authorization failed"
-            end
+                {:error, :invalid_code, message} ->
+                  render_verification_form(conn, nil, message, user_code)
 
-          render_verification_form(conn, nil, error_message, user_code)
+                {:error, :expired_token, message} ->
+                  render_verification_form(conn, nil, message, user_code)
+
+                {:error, :invalid_grant, message} ->
+                  render_verification_form(conn, nil, message, user_code)
+
+                {:error, :invalid_scopes, message} ->
+                  render_verification_form(conn, nil, message, user_code)
+
+                {:error, changeset} ->
+                  error_message =
+                    case changeset do
+                      %Ecto.Changeset{} -> "Authorization failed due to validation errors"
+                      _ -> "Authorization failed"
+                    end
+
+                  render_verification_form(conn, nil, error_message, user_code)
+              end
+          end
+
+        {:error, :invalid_code} ->
+          render_verification_form(conn, nil, "Invalid user code", user_code)
+
+        {:error, :expired} ->
+          render_verification_form(conn, nil, "Device code has expired", user_code)
+
+        {:error, :already_processed} ->
+          render_verification_form(
+            conn,
+            nil,
+            "Device code is not pending authorization",
+            user_code
+          )
       end
     end
   end
@@ -212,7 +253,8 @@ defmodule HexpmWeb.DeviceController do
       device_code: device_code,
       error_message: error_message,
       user_code: pre_filled_code || conn.params["user_code"],
-      pre_filled: not is_nil(pre_filled_code) and is_nil(device_code)
+      pre_filled: not is_nil(pre_filled_code) and is_nil(device_code),
+      current_user: conn.assigns[:current_user]
     )
   end
 end

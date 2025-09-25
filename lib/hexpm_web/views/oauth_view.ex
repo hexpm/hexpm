@@ -11,15 +11,15 @@ defmodule HexpmWeb.OAuthView do
   @doc """
   Renders grouped scopes using SharedAuthorizationView with OAuth-specific styling.
   """
-  def render_grouped_scopes(scopes, _with_checkboxes \\ true) when is_list(scopes) do
-    SharedAuthorizationView.render_grouped_scopes(scopes, :oauth)
+  def render_grouped_scopes(scopes, current_user) when is_list(scopes) do
+    SharedAuthorizationView.render_grouped_scopes(scopes, :oauth, current_user)
   end
 
   @doc """
   Prepares authorization data for the shared partial.
   """
   def authorization_assigns(
-        _conn,
+        conn,
         client,
         redirect_uri,
         scopes,
@@ -54,16 +54,19 @@ defmodule HexpmWeb.OAuthView do
         hidden_fields
       end
 
+    current_user = conn.assigns[:current_user]
+
     %{
       client_name: client.name,
       scopes: scopes,
-      render_scopes: &render_grouped_scopes(&1, true),
+      render_scopes: &render_grouped_scopes(&1, current_user),
       format_summary: &format_scopes(&1, :summary),
       form_action: ~p"/oauth/authorize",
       hidden_fields: hidden_fields,
       approve_value: "approve",
       deny_value: "deny",
-      with_checkboxes: true
+      with_checkboxes: true,
+      current_user: current_user
     }
   end
 end

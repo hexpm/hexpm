@@ -2,6 +2,8 @@ defmodule HexpmWeb.OAuthController do
   use HexpmWeb, :controller
 
   alias Hexpm.OAuth.{Clients, AuthorizationCodes}
+  alias Hexpm.Accounts.User
+  alias Hexpm.Permissions
 
   @doc """
   Standard OAuth 2.0 authorization endpoint.
@@ -68,7 +70,8 @@ defmodule HexpmWeb.OAuthController do
          {:ok, redirect_uri} <- validate_redirect_uri(client, params["redirect_uri"]),
          {:ok, requested_scopes} <- validate_scopes(client, params["scope"]),
          {:ok, selected_scopes} <- get_selected_scopes(params, requested_scopes, client),
-         {:ok, _} <- validate_pkce_params(params) do
+         {:ok, _} <- validate_pkce_params(params),
+         {:ok, _} <- validate_2fa_for_scopes(user, selected_scopes) do
       case AuthorizationCodes.create_and_insert_for_user(
              user,
              client.client_id,
@@ -93,6 +96,28 @@ defmodule HexpmWeb.OAuthController do
           )
       end
     else
+      {:error, :tfa_required} ->
+        # Re-render the authorization page with error message
+        with {:ok, client} <- validate_client(params["client_id"]),
+             {:ok, scopes} <- validate_scopes(client, params["scope"]) do
+          conn
+          |> put_flash(
+            :error,
+            "Two-factor authentication is required for api:write permissions. Please enable 2FA in your security settings and try again."
+          )
+          |> render("authorize.html", %{
+            client: client,
+            redirect_uri: params["redirect_uri"],
+            scopes: scopes,
+            state: params["state"],
+            code_challenge: params["code_challenge"],
+            code_challenge_method: params["code_challenge_method"]
+          })
+        else
+          {:error, error} ->
+            render_oauth_error(conn, :invalid_request, "Invalid request: #{error}")
+        end
+
       {:error, error} ->
         error_params = %{
           error: "invalid_request",
@@ -180,6 +205,14 @@ defmodule HexpmWeb.OAuthController do
         else
           {:error, "Invalid scopes selected"}
         end
+    end
+  end
+
+  defp validate_2fa_for_scopes(user, scopes) do
+    if Permissions.requires_write_access?(scopes) and not User.tfa_enabled?(user) do
+      {:error, :tfa_required}
+    else
+      {:ok, :valid}
     end
   end
 

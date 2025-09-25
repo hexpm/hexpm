@@ -17,7 +17,7 @@ defmodule HexpmWeb.SharedAuthorizationView do
     - :oauth - Full styling with category headers and ordering
     - :device - Simple styling without category headers
   """
-  def render_grouped_scopes(scopes, style \\ :device) when is_list(scopes) do
+  def render_grouped_scopes(scopes, style \\ :device, current_user \\ nil) when is_list(scopes) do
     grouped = Permissions.group_scopes(scopes)
 
     # Get categories in the specified order or all categories
@@ -37,7 +37,7 @@ defmodule HexpmWeb.SharedAuthorizationView do
         items =
           category_scopes
           |> Enum.map(fn scope ->
-            render_scope_item(scope, style)
+            render_scope_item(scope, style, current_user)
           end)
           |> Enum.join("\n")
 
@@ -63,24 +63,39 @@ defmodule HexpmWeb.SharedAuthorizationView do
     raw(grouped_html)
   end
 
-  defp render_scope_item(scope, style) do
+  defp render_scope_item(scope, style, current_user) do
     description = Permissions.scope_description(scope)
+    requires_2fa = scope in ["api", "api:write"]
+
+    checked =
+      if requires_2fa and not User.tfa_enabled?(current_user) do
+        ""
+      else
+        ~s(checked="checked")
+      end
+
+    tfa_badge =
+      if requires_2fa do
+        ~s( <span class="label label-warning" style="margin-left: 5px;">Requires 2FA</span>)
+      else
+        ""
+      end
 
     if style == :oauth do
       ~s(<li class="scope-item" style="list-style: none; margin-bottom: 10px;">
         <label style="display: flex; align-items: flex-start; cursor: pointer;">
-          <input type="checkbox" name="selected_scopes[]" value="#{scope}" checked="checked" style="margin-right: 10px; margin-top: 3px;" class="scope-checkbox">
+          <input type="checkbox" name="selected_scopes[]" value="#{scope}" #{checked} style="margin-right: 10px; margin-top: 3px;" class="scope-checkbox">
           <div>
-            <code class="scope-name">#{scope}</code> - <span class="scope-description">#{description}</span>
+            <code class="scope-name">#{scope}</code> - <span class="scope-description">#{description}</span>#{tfa_badge}
           </div>
         </label>
       </li>)
     else
       ~s(<li style="list-style: none; margin-bottom: 10px;">
         <label style="display: flex; align-items: flex-start; cursor: pointer;">
-          <input type="checkbox" name="selected_scopes[]" value="#{scope}" checked="checked" style="margin-right: 10px; margin-top: 3px;" class="scope-checkbox">
+          <input type="checkbox" name="selected_scopes[]" value="#{scope}" #{checked} style="margin-right: 10px; margin-top: 3px;" class="scope-checkbox">
           <div>
-            <code>#{scope}</code> - #{description}
+            <code>#{scope}</code> - #{description}#{tfa_badge}
           </div>
         </label>
       </li>)

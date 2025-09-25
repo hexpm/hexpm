@@ -188,7 +188,22 @@ defmodule HexpmWeb.DeviceControllerTest do
       assert updated_device_code.status == "pending"
     end
 
-    test "authorizes device successfully with all scopes", %{user: user, device_code: device_code} do
+    test "authorizes device successfully with all scopes when 2FA enabled" do
+      # Create user with 2FA enabled since api scope requires it
+      user = insert(:user_with_tfa)
+      client = create_test_client()
+
+      mock_conn =
+        build_conn()
+        |> Map.put(:scheme, :https)
+        |> Map.put(:host, "hex.pm")
+        |> Map.put(:port, 443)
+
+      {:ok, response} =
+        DeviceCodes.initiate_device_authorization(mock_conn, client.client_id, ["api"])
+
+      device_code = Repo.get_by(DeviceCode, user_code: response.user_code)
+
       conn = login_user(build_conn(), user)
 
       conn =
@@ -208,6 +223,24 @@ defmodule HexpmWeb.DeviceControllerTest do
       updated_device_code = Repo.get(DeviceCode, device_code.id)
       assert updated_device_code.status == "authorized"
       assert updated_device_code.user_id == user.id
+    end
+
+    test "blocks authorization for api:write without 2FA", %{user: user, device_code: device_code} do
+      # User doesn't have 2FA enabled
+      conn = login_user(build_conn(), user)
+
+      conn =
+        post(conn, ~p"/oauth/device", %{
+          "user_code" => device_code.user_code,
+          "action" => "authorize",
+          "selected_scopes" => ["api"]
+        })
+
+      assert html_response(conn, 200) =~ "Two-factor authentication is required"
+
+      # Verify device was not authorized
+      updated_device_code = Repo.get(DeviceCode, device_code.id)
+      assert updated_device_code.status == "pending"
     end
 
     test "denies device successfully", %{user: user, device_code: device_code} do
@@ -315,14 +348,26 @@ defmodule HexpmWeb.DeviceControllerTest do
 
     test "shows error when action not specified", %{
       user: user,
-      device_code: device_code
+      client: client
     } do
+      # Create a device code with api:read scope
+      mock_conn =
+        build_conn()
+        |> Map.put(:scheme, :https)
+        |> Map.put(:host, "hex.pm")
+        |> Map.put(:port, 443)
+
+      {:ok, response} =
+        DeviceCodes.initiate_device_authorization(mock_conn, client.client_id, ["api:read"])
+
+      device_code = Repo.get_by(DeviceCode, user_code: response.user_code)
+
       conn = login_user(build_conn(), user)
 
       conn =
         post(conn, ~p"/oauth/device", %{
           "user_code" => device_code.user_code,
-          "selected_scopes" => ["api"]
+          "selected_scopes" => ["api:read"]
         })
 
       assert html_response(conn, 200) =~ "Invalid action"
@@ -339,13 +384,25 @@ defmodule HexpmWeb.DeviceControllerTest do
         post(conn, ~p"/oauth/device", %{
           "user_code" => "INVALID",
           "action" => "authorize",
-          "selected_scopes" => ["api"]
+          "selected_scopes" => ["api:read"]
         })
 
       assert html_response(conn, 200) =~ "Invalid user code"
     end
 
-    test "shows error for expired device code", %{user: user, device_code: device_code} do
+    test "shows error for expired device code", %{user: user, client: client} do
+      # Create a new device code with api:read scope
+      mock_conn =
+        build_conn()
+        |> Map.put(:scheme, :https)
+        |> Map.put(:host, "hex.pm")
+        |> Map.put(:port, 443)
+
+      {:ok, response} =
+        DeviceCodes.initiate_device_authorization(mock_conn, client.client_id, ["api:read"])
+
+      device_code = Repo.get_by(DeviceCode, user_code: response.user_code)
+
       # Expire the device code
       past_time = DateTime.add(DateTime.utc_now(), -3600, :second)
       Repo.update!(DeviceCode.changeset(device_code, %{expires_at: past_time}))
@@ -356,15 +413,27 @@ defmodule HexpmWeb.DeviceControllerTest do
         post(conn, ~p"/oauth/device", %{
           "user_code" => device_code.user_code,
           "action" => "authorize",
-          "selected_scopes" => ["api"]
+          "selected_scopes" => ["api:read"]
         })
 
       assert html_response(conn, 200) =~ "Device code has expired"
     end
 
-    test "shows error for already processed device code", %{user: user, device_code: device_code} do
+    test "shows error for already processed device code", %{user: user, client: client} do
+      # Create a device code with api:read scope
+      mock_conn =
+        build_conn()
+        |> Map.put(:scheme, :https)
+        |> Map.put(:host, "hex.pm")
+        |> Map.put(:port, 443)
+
+      {:ok, response} =
+        DeviceCodes.initiate_device_authorization(mock_conn, client.client_id, ["api:read"])
+
+      device_code = Repo.get_by(DeviceCode, user_code: response.user_code)
+
       # Authorize first with selected scopes
-      DeviceCodes.authorize_device(device_code.user_code, user, ["api"])
+      DeviceCodes.authorize_device(device_code.user_code, user, ["api:read"])
 
       conn = login_user(build_conn(), user)
 
@@ -372,7 +441,7 @@ defmodule HexpmWeb.DeviceControllerTest do
         post(conn, ~p"/oauth/device", %{
           "user_code" => device_code.user_code,
           "action" => "authorize",
-          "selected_scopes" => ["api"]
+          "selected_scopes" => ["api:read"]
         })
 
       assert html_response(conn, 200) =~ "Device code is not pending authorization"

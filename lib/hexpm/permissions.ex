@@ -440,6 +440,18 @@ defmodule Hexpm.Permissions do
   end
 
   @doc """
+  Checks if the given scopes require write access (api or api:write).
+  Used to determine if 2FA should be required for OAuth authorization.
+  """
+  def requires_write_access?(scopes) when is_list(scopes) do
+    Enum.any?(scopes, fn scope ->
+      scope == "api" || scope == "api:write"
+    end)
+  end
+
+  def requires_write_access?(_), do: false
+
+  @doc """
   Returns a human-readable description for OAuth scopes.
 
   Supports all scope types including resource-specific scopes.
