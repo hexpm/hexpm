@@ -51,6 +51,7 @@ defmodule Hexpm.MixProject do
       {:hackney, "~> 1.7"},
       {:hex_core, "~> 0.8", hex_core_opts()},
       {:jason, "~> 1.0"},
+      {:joken, "~> 2.6"},
       {:libcluster, "~> 3.0"},
       {:logster, "~> 1.0"},
       {:mox, "~> 1.0", only: :test},

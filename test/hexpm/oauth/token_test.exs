@@ -10,8 +10,7 @@ defmodule Hexpm.OAuth.TokenTest do
       changeset = Token.changeset(%Token{}, %{})
 
       assert %{
-               token_first: "can't be blank",
-               token_second: "can't be blank",
+               jti: "can't be blank",
                expires_at: "can't be blank",
                grant_type: "can't be blank",
                user_id: "can't be blank",
@@ -25,8 +24,7 @@ defmodule Hexpm.OAuth.TokenTest do
 
       changeset =
         Token.changeset(%Token{}, %{
-          token_first: "first",
-          token_second: "second",
+          jti: "test-jti-123",
           token_type: "bearer",
           scopes: ["api"],
           expires_at: expires_at,
@@ -44,8 +42,7 @@ defmodule Hexpm.OAuth.TokenTest do
 
       changeset =
         Token.changeset(%Token{}, %{
-          token_first: "first",
-          token_second: "second",
+          jti: "test-jti-456",
           token_type: "bearer",
           scopes: ["invalid_scope", "api"],
           expires_at: expires_at,
@@ -64,11 +61,9 @@ defmodule Hexpm.OAuth.TokenTest do
       expires_at = DateTime.add(DateTime.utc_now(), 3600, :second)
 
       attrs = %{
-        token_first: "first",
-        token_second: "second",
+        jti: "test-jti-789",
         token_type: "bearer",
-        refresh_token_first: "rf_first",
-        refresh_token_second: "rf_second",
+        refresh_jti: "refresh-jti-123",
         scopes: ["api", "api:read"],
         expires_at: expires_at,
         grant_type: "authorization_code",
@@ -91,8 +86,7 @@ defmodule Hexpm.OAuth.TokenTest do
       expires_at = DateTime.add(DateTime.utc_now(), 3600, :second)
 
       attrs = %{
-        token_first: "first",
-        token_second: "second",
+        jti: "test-jti-build",
         token_type: "bearer",
         scopes: ["api"],
         expires_at: expires_at,
@@ -126,16 +120,17 @@ defmodule Hexpm.OAuth.TokenTest do
         )
 
       assert changeset.valid?
-      assert get_field(changeset, :token_first)
-      assert get_field(changeset, :token_second)
+      assert get_field(changeset, :jti)
       assert get_field(changeset, :access_token)
+      # Access token should be a JWT
+      assert String.starts_with?(get_field(changeset, :access_token), "eyJ")
       assert get_field(changeset, :scopes) == ["api"]
       assert get_field(changeset, :grant_type) == "authorization_code"
       assert get_field(changeset, :grant_reference) == "auth_code_123"
       assert get_field(changeset, :user_id) == user.id
       assert get_field(changeset, :client_id) == "test_client"
       assert get_field(changeset, :expires_at)
-      refute get_field(changeset, :refresh_token_first)
+      refute get_field(changeset, :refresh_jti)
       refute get_field(changeset, :refresh_token)
     end
 
@@ -168,9 +163,10 @@ defmodule Hexpm.OAuth.TokenTest do
           with_refresh_token: true
         )
 
-      assert get_field(changeset, :refresh_token_first)
-      assert get_field(changeset, :refresh_token_second)
+      assert get_field(changeset, :refresh_jti)
       assert get_field(changeset, :refresh_token)
+      # Refresh token should be a JWT
+      assert String.starts_with?(get_field(changeset, :refresh_token), "eyJ")
     end
 
     test "defaults grant_reference to nil", %{user: user} do
@@ -269,7 +265,7 @@ defmodule Hexpm.OAuth.TokenTest do
         )
 
       assert get_field(changeset, :refresh_token_expires_at) == nil
-      assert get_field(changeset, :refresh_token_first) == nil
+      assert get_field(changeset, :refresh_jti) == nil
     end
   end
 
@@ -558,7 +554,7 @@ defmodule Hexpm.OAuth.TokenTest do
       assert child_token.grant_reference == "exchange_grant_ref"
       assert child_token.user_id == parent_token.user_id
       assert child_token.client_id == parent_token.client_id
-      assert not is_nil(child_token.refresh_token_first)
+      assert not is_nil(child_token.refresh_jti)
     end
 
     test "revoke_token/1 only revokes individual token", %{
@@ -727,6 +723,81 @@ defmodule Hexpm.OAuth.TokenTest do
       assert token1.session_id != token2.session_id
       assert is_nil(token1.parent_token_id)
       assert is_nil(token2.parent_token_id)
+    end
+  end
+
+  describe "lookup/3 with JWT validation" do
+    setup do
+      user = insert(:user)
+      client = insert(:oauth_client)
+      {:ok, session} = Sessions.create_for_user(user, client.client_id)
+
+      {:ok, user: user, client: client, session: session}
+    end
+
+    test "accepts token with valid nbf claim", %{user: user, client: client, session: session} do
+      {:ok, token} =
+        Tokens.create_and_insert_for_user(
+          user,
+          client.client_id,
+          ["api:read"],
+          "authorization_code",
+          "test_code",
+          session_id: session.id
+        )
+
+      assert {:ok, _found_token} = Tokens.lookup(token.access_token, :access)
+    end
+
+    test "accepts token with nbf exactly at current time", %{
+      user: user,
+      client: client,
+      session: session
+    } do
+      {:ok, token} =
+        Tokens.create_and_insert_for_user(
+          user,
+          client.client_id,
+          ["api:read"],
+          "authorization_code",
+          "test_code",
+          session_id: session.id
+        )
+
+      assert {:ok, _found_token} = Tokens.lookup(token.access_token, :access)
+    end
+
+    test "handles clock skew within tolerance", %{user: user, client: client, session: session} do
+      {:ok, token} =
+        Tokens.create_and_insert_for_user(
+          user,
+          client.client_id,
+          ["api:read"],
+          "authorization_code",
+          "test_code",
+          session_id: session.id
+        )
+
+      assert {:ok, _found_token} = Tokens.lookup(token.access_token, :access)
+    end
+
+    test "validates refresh tokens with nbf claim", %{
+      user: user,
+      client: client,
+      session: session
+    } do
+      {:ok, token} =
+        Tokens.create_and_insert_for_user(
+          user,
+          client.client_id,
+          ["api:read"],
+          "authorization_code",
+          "test_code",
+          session_id: session.id,
+          with_refresh_token: true
+        )
+
+      assert {:ok, _found_token} = Tokens.lookup(token.refresh_token, :refresh)
     end
   end
 end

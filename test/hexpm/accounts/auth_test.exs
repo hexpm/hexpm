@@ -77,4 +77,66 @@ defmodule Hexpm.Accounts.AuthTest do
       assert Auth.key_auth(key.user_secret, %{}) == :revoked
     end
   end
+
+  describe "oauth_token_auth/2" do
+    test "authenticates with valid JWT token" do
+      user = insert(:user, username: "oauth_test_user")
+
+      # Create OAuth client and session
+      client = insert(:oauth_client)
+      oauth_session = insert(:oauth_session, user: user, client_id: client.client_id)
+
+      # Create OAuth token using the Tokens module (which now generates correct JWT format)
+      {:ok, oauth_token} =
+        Hexpm.OAuth.Tokens.create_and_insert_for_user(
+          user,
+          client.client_id,
+          ["api", "api:read"],
+          "authorization_code",
+          "test_grant_ref",
+          session_id: oauth_session.id
+        )
+
+      auth_result = Auth.oauth_token_auth(oauth_token.access_token, %{})
+
+      case auth_result do
+        {:ok, auth_context} ->
+          assert auth_context.user.id == user.id
+          assert auth_context.user.username == "oauth_test_user"
+          assert auth_context.auth_credential.id == oauth_token.id
+          assert auth_context.organization == nil
+          assert is_nil(auth_context.email) or auth_context.email.user_id == user.id
+
+        other ->
+          flunk("OAuth token authentication failed with result: #{inspect(other)}")
+      end
+    end
+
+    test "fails with invalid JWT token" do
+      auth_result = Auth.oauth_token_auth("invalid.jwt.token", %{})
+      assert auth_result == :error
+    end
+
+    test "fails with malformed JWT token" do
+      auth_result = Auth.oauth_token_auth("not-a-jwt", %{})
+      assert auth_result == :error
+    end
+
+    test "regression test: documents correct JWT sub format for authentication" do
+      user = insert(:user, username: "regression_user")
+
+      # Generate JWT using our fixed implementation
+      {:ok, access_token, _jti} =
+        Hexpm.OAuth.JWT.generate_access_token(user.username, "user", ["api"])
+
+      # Verify the sub claim has the CORRECT format
+      {:ok, claims} = Hexpm.OAuth.JWT.verify_and_decode(access_token)
+      assert claims["sub"] == "user:regression_user"
+
+      # Verify this format can be parsed correctly (indirectly tests parse_subject)
+      [subject_type, subject_id] = String.split(claims["sub"], ":", parts: 2)
+      assert subject_type == "user"
+      assert subject_id == "regression_user"
+    end
+  end
 end

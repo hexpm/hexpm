@@ -3,11 +3,9 @@ defmodule Hexpm.RepoBase.Migrations.CreateOauthTokens do
 
   def up do
     create table(:oauth_tokens) do
-      add :token_first, :string, null: false
-      add :token_second, :string, null: false
+      add :jti, :text, null: false
+      add :refresh_jti, :text
       add :token_type, :string, null: false, default: "bearer"
-      add :refresh_token_first, :string
-      add :refresh_token_second, :string
       add :refresh_token_expires_at, :utc_datetime
       add :scopes, {:array, :string}, null: false, default: []
       add :expires_at, :utc_datetime, null: false
@@ -20,7 +18,7 @@ defmodule Hexpm.RepoBase.Migrations.CreateOauthTokens do
           null: false
 
       add :grant_type, :string, null: false
-      add :grant_reference, :string
+      add :grant_reference, :text
 
       add :parent_token_id, references(:oauth_tokens, on_delete: :nothing)
       add :session_id, references(:oauth_sessions, on_delete: :delete_all), null: false
@@ -28,10 +26,8 @@ defmodule Hexpm.RepoBase.Migrations.CreateOauthTokens do
       timestamps()
     end
 
-    create unique_index(:oauth_tokens, [:token_first, :token_second])
-    create unique_index(:oauth_tokens, [:refresh_token_first, :refresh_token_second])
-    create index(:oauth_tokens, [:token_first])
-    create index(:oauth_tokens, [:refresh_token_first])
+    create unique_index(:oauth_tokens, [:jti])
+    create unique_index(:oauth_tokens, [:refresh_jti])
     create index(:oauth_tokens, [:user_id])
     create index(:oauth_tokens, [:client_id])
     create index(:oauth_tokens, [:expires_at])

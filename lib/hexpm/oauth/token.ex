@@ -6,11 +6,9 @@ defmodule Hexpm.OAuth.Token do
   alias Hexpm.OAuth.Session
 
   schema "oauth_tokens" do
-    field :token_first, :string
-    field :token_second, :string
+    field :jti, :string
+    field :refresh_jti, :string
     field :token_type, :string, default: "bearer"
-    field :refresh_token_first, :string
-    field :refresh_token_second, :string
     field :scopes, {:array, :string}, default: []
     field :expires_at, :utc_datetime
     field :refresh_token_expires_at, :utc_datetime
@@ -18,7 +16,7 @@ defmodule Hexpm.OAuth.Token do
     field :grant_type, :string
     field :grant_reference, :string
 
-    # Virtual fields for raw tokens (not persisted)
+    # Virtual fields for JWT tokens (not persisted)
     field :access_token, :string, virtual: true
     field :refresh_token, :string, virtual: true
 
@@ -35,11 +33,9 @@ defmodule Hexpm.OAuth.Token do
   def changeset(token, attrs) do
     token
     |> cast(attrs, [
-      :token_first,
-      :token_second,
+      :jti,
+      :refresh_jti,
       :token_type,
-      :refresh_token_first,
-      :refresh_token_second,
       :scopes,
       :expires_at,
       :refresh_token_expires_at,
@@ -54,8 +50,7 @@ defmodule Hexpm.OAuth.Token do
       :refresh_token
     ])
     |> validate_required([
-      :token_first,
-      :token_second,
+      :jti,
       :token_type,
       :scopes,
       :expires_at,
@@ -65,8 +60,8 @@ defmodule Hexpm.OAuth.Token do
     ])
     |> validate_inclusion(:grant_type, @valid_grant_types)
     |> validate_scopes()
-    |> unique_constraint([:token_first, :token_second])
-    |> unique_constraint([:refresh_token_first, :refresh_token_second])
+    |> unique_constraint(:jti)
+    |> unique_constraint(:refresh_jti)
   end
 
   def build(attrs) do

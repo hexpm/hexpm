@@ -1,7 +1,7 @@
 defmodule Hexpm.OAuth.Tokens do
   use Hexpm.Context
 
-  alias Hexpm.OAuth.{Token, Clients}
+  alias Hexpm.OAuth.{Token, Clients, JWT}
   alias Hexpm.Permissions
 
   @default_expires_in 30 * 60
@@ -20,18 +20,21 @@ defmodule Hexpm.OAuth.Tokens do
     * `{:ok, token}` - Token found and valid
     * `{:error, reason}` - Token not found, invalid, or validation failed
   """
-  def lookup(user_token, type, opts \\ []) when type in [:access, :refresh] do
+  def lookup(jwt_token, type, opts \\ []) when type in [:access, :refresh] do
     client_id = Keyword.get(opts, :client_id)
     validate = Keyword.get(opts, :validate, true)
     preload = Keyword.get(opts, :preload, [:user])
 
-    {first, second} = split_user_token(user_token)
-
-    with {:ok, token} <- find_token_by_type(first, type, client_id),
-         :ok <- secure_compare(token, second, type),
+    with {:ok, claims} <- JWT.verify_and_decode(jwt_token),
+         {:ok, jti} <- extract_jti_for_type(claims, type),
+         {:ok, token} <- find_token_by_jti(jti, type, client_id),
          :ok <- maybe_validate(token, validate, type),
          token <- maybe_preload(token, preload) do
       {:ok, token}
+    else
+      {:error, :signature_error} -> {:error, :invalid_token}
+      {:error, [message: "Invalid token", claim: "exp", claim_val: _]} -> {:error, :token_invalid}
+      other -> other
     end
   end
 
@@ -42,12 +45,17 @@ defmodule Hexpm.OAuth.Tokens do
     expires_in = Keyword.get(opts, :expires_in, @default_expires_in)
     expires_at = DateTime.add(DateTime.utc_now(), expires_in, :second)
 
-    {user_token, token_first, token_second} = generate_access_token()
+    jwt_opts = [
+      session_id: Keyword.get(opts, :session_id),
+      parent_jti: get_parent_jti(opts),
+      expires_in: expires_in
+    ]
+
+    {:ok, access_token, jti} = JWT.generate_access_token(user.username, "user", scopes, jwt_opts)
 
     attrs = %{
-      token_first: token_first,
-      token_second: token_second,
-      access_token: user_token,
+      jti: jti,
+      access_token: access_token,
       scopes: scopes,
       expires_at: expires_at,
       grant_type: grant_type,
@@ -60,8 +68,6 @@ defmodule Hexpm.OAuth.Tokens do
 
     attrs =
       if Keyword.get(opts, :with_refresh_token, false) do
-        {user_refresh_token, refresh_first, refresh_second} = generate_refresh_token()
-
         # Determine refresh token expiration based on scopes
         refresh_expires_in =
           if has_write_scope?(scopes) do
@@ -72,10 +78,17 @@ defmodule Hexpm.OAuth.Tokens do
 
         refresh_expires_at = DateTime.add(DateTime.utc_now(), refresh_expires_in, :second)
 
+        refresh_opts = [
+          session_id: Keyword.get(opts, :session_id),
+          expires_in: refresh_expires_in
+        ]
+
+        {:ok, refresh_token, refresh_jti} =
+          JWT.generate_refresh_token(user.username, "user", scopes, refresh_opts)
+
         Map.merge(attrs, %{
-          refresh_token_first: refresh_first,
-          refresh_token_second: refresh_second,
-          refresh_token: user_refresh_token,
+          refresh_jti: refresh_jti,
+          refresh_token: refresh_token,
           refresh_token_expires_at: refresh_expires_at
         })
       else
@@ -122,7 +135,7 @@ defmodule Hexpm.OAuth.Tokens do
       session_id: parent_token.session_id,
       parent_token_id: root_token_id,
       expires_in: DateTime.diff(parent_token.expires_at, DateTime.utc_now()),
-      with_refresh_token: not is_nil(parent_token.refresh_token_first)
+      with_refresh_token: not is_nil(parent_token.refresh_jti)
     ]
 
     create_for_user(
@@ -217,49 +230,39 @@ defmodule Hexpm.OAuth.Tokens do
 
   # Private functions
 
-  defp generate_access_token do
-    token_length = 32
-    user_token = :crypto.strong_rand_bytes(token_length) |> Base.url_encode64(padding: false)
-    app_secret = Application.get_env(:hexpm, :secret)
+  defp get_parent_jti(opts) do
+    case Keyword.get(opts, :parent_token_id) do
+      nil ->
+        nil
 
-    <<first::binary-size(32), second::binary-size(32)>> =
-      :crypto.mac(:hmac, :sha256, app_secret, user_token)
-      |> Base.encode16(case: :lower)
-
-    {user_token, first, second}
+      parent_id ->
+        case Repo.get(Token, parent_id) do
+          %Token{jti: jti} -> jti
+          _ -> nil
+        end
+    end
   end
 
-  defp generate_refresh_token do
-    refresh_token_length = 32
-
-    user_token =
-      :crypto.strong_rand_bytes(refresh_token_length) |> Base.url_encode64(padding: false)
-
-    app_secret = Application.get_env(:hexpm, :secret)
-
-    <<first::binary-size(32), second::binary-size(32)>> =
-      :crypto.mac(:hmac, :sha256, app_secret, user_token)
-      |> Base.encode16(case: :lower)
-
-    {user_token, first, second}
+  defp extract_jti_for_type(claims, :access) do
+    case claims do
+      %{"jti" => jti} -> {:ok, jti}
+      _ -> {:error, :invalid_token}
+    end
   end
 
-  defp split_user_token(user_token) do
-    app_secret = Application.get_env(:hexpm, :secret)
-
-    <<first::binary-size(32), second::binary-size(32)>> =
-      :crypto.mac(:hmac, :sha256, app_secret, user_token)
-      |> Base.encode16(case: :lower)
-
-    {first, second}
+  defp extract_jti_for_type(claims, :refresh) do
+    case claims do
+      %{"jti" => jti} -> {:ok, jti}
+      _ -> {:error, :invalid_token}
+    end
   end
 
-  defp find_token_by_type(first, :access, client_id) do
+  defp find_token_by_jti(jti, :access, client_id) do
     query =
       if client_id do
-        Repo.get_by(Token, token_first: first, client_id: client_id)
+        Repo.get_by(Token, jti: jti, client_id: client_id)
       else
-        Repo.get_by(Token, token_first: first)
+        Repo.get_by(Token, jti: jti)
       end
 
     case query do
@@ -268,33 +271,17 @@ defmodule Hexpm.OAuth.Tokens do
     end
   end
 
-  defp find_token_by_type(first, :refresh, client_id) do
+  defp find_token_by_jti(jti, :refresh, client_id) do
     query =
       if client_id do
-        Repo.get_by(Token, refresh_token_first: first, client_id: client_id)
+        Repo.get_by(Token, refresh_jti: jti, client_id: client_id)
       else
-        Repo.get_by(Token, refresh_token_first: first)
+        Repo.get_by(Token, refresh_jti: jti)
       end
 
     case query do
       nil -> {:error, :not_found}
       token -> {:ok, token}
-    end
-  end
-
-  defp secure_compare(token, second, :access) do
-    if Hexpm.Utils.secure_check(token.token_second, second) do
-      :ok
-    else
-      {:error, :invalid_token}
-    end
-  end
-
-  defp secure_compare(token, second, :refresh) do
-    if Hexpm.Utils.secure_check(token.refresh_token_second, second) do
-      :ok
-    else
-      {:error, :invalid_token}
     end
   end
 
@@ -389,7 +376,8 @@ defmodule Hexpm.OAuth.Tokens do
         {:error, :invalid_grant, "Subject token expired or revoked"}
 
       {:error, _} ->
-        {:error, :invalid_grant, "Subject token expired or revoked"}
+        # JWT verification errors should be treated as invalid token
+        {:error, :invalid_grant, "Invalid subject token"}
     end
   end
 
@@ -408,7 +396,8 @@ defmodule Hexpm.OAuth.Tokens do
         {:error, :invalid_grant, "Subject token expired or revoked"}
 
       {:error, _} ->
-        {:error, :invalid_grant, "Subject token expired or revoked"}
+        # JWT verification errors should be treated as invalid token
+        {:error, :invalid_grant, "Invalid subject token"}
     end
   end
 
