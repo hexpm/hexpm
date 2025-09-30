@@ -21,11 +21,6 @@ defmodule Hexpm.Permissions do
   @legacy_domains ~w(api package repository repositories docs)
 
   @doc """
-  Returns all valid scopes for OAuth tokens.
-  """
-  def valid_scopes, do: @all_scopes
-
-  @doc """
   Returns all valid domains for KeyPermissions (legacy format).
   """
   def valid_domains, do: @legacy_domains
@@ -49,7 +44,6 @@ defmodule Hexpm.Permissions do
         scope_name in @all_scopes
 
       [scope_name, _resource] when scope_name in @resource_only_scopes ->
-        # Allow resource-specific scopes for package, repository, and docs
         true
 
       ["api", sub] when sub in ["read", "write"] ->
@@ -57,17 +51,6 @@ defmodule Hexpm.Permissions do
 
       _ ->
         false
-    end
-  end
-
-  @doc """
-  Validates a domain against the allowed domain definitions.
-  """
-  def validate_domain(domain) when is_binary(domain) do
-    if domain in @legacy_domains do
-      :ok
-    else
-      {:error, "invalid domain"}
     end
   end
 
@@ -340,13 +323,9 @@ defmodule Hexpm.Permissions do
   """
   def scope_contains?(source, target) do
     case {source, target} do
-      # Same scope
       {same, same} -> true
-      # api contains api:read and api:write
       {"api", "api:" <> _} -> true
-      # api:write contains api:read
       {"api:write", "api:read"} -> true
-      # repositories contains any repository:resource scope
       {"repositories", "repository:" <> _} -> true
       _ -> false
     end

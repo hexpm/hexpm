@@ -95,20 +95,6 @@ defmodule Hexpm.OAuth.JWT do
   end
 
   @doc """
-  Checks if the token is expired based on the exp claim.
-  """
-  def expired?(token) when is_binary(token) do
-    case peek_claims(token) do
-      {:ok, %{"exp" => exp}} ->
-        unix_now() > exp
-
-      _ ->
-        # Consider invalid tokens as expired
-        true
-    end
-  end
-
-  @doc """
   Extracts claims without signature verification.
   Use only when you need to check claims before database lookup.
   """
