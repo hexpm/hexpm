@@ -72,6 +72,8 @@ defmodule HexpmWeb.API.OAuthViewTest do
 
   describe "render/2 device_authorization" do
     test "formats device authorization response" do
+      expires_at = DateTime.add(DateTime.utc_now(), 600, :second)
+
       response =
         OAuthView.render("device_authorization.json", %{
           device_response: %{
@@ -79,7 +81,7 @@ defmodule HexpmWeb.API.OAuthViewTest do
             user_code: "USER-CODE",
             verification_uri: "https://hex.pm/device",
             verification_uri_complete: "https://hex.pm/device?user_code=USER-CODE",
-            expires_in: 600,
+            expires_at: expires_at,
             interval: 5
           }
         })
@@ -88,7 +90,7 @@ defmodule HexpmWeb.API.OAuthViewTest do
       assert response.user_code == "USER-CODE"
       assert response.verification_uri == "https://hex.pm/device"
       assert response.verification_uri_complete == "https://hex.pm/device?user_code=USER-CODE"
-      assert response.expires_in == 600
+      assert response.expires_in >= 595 && response.expires_in <= 600
       assert response.interval == 5
     end
   end

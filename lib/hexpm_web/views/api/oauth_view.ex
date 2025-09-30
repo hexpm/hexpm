@@ -2,12 +2,14 @@ defmodule HexpmWeb.API.OAuthView do
   use HexpmWeb, :view
 
   def render("device_authorization." <> _, %{device_response: response}) do
+    expires_in = DateTime.diff(response.expires_at, DateTime.utc_now())
+
     %{
       device_code: response.device_code,
       user_code: response.user_code,
       verification_uri: response.verification_uri,
       verification_uri_complete: response.verification_uri_complete,
-      expires_in: response.expires_in,
+      expires_in: max(expires_in, 0),
       interval: response.interval
     }
   end

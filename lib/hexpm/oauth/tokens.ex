@@ -228,8 +228,6 @@ defmodule Hexpm.OAuth.Tokens do
     |> Repo.delete_all()
   end
 
-  # Private functions
-
   defp get_parent_jti(opts) do
     case Keyword.get(opts, :parent_token_id) do
       nil ->

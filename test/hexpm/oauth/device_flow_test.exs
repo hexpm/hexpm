@@ -37,15 +37,14 @@ defmodule Hexpm.OAuth.DeviceFlowTest do
       assert response.user_code
       assert response.verification_uri
       assert response.verification_uri_complete
-      assert response.expires_in == 600
+
+      expires_in = DateTime.diff(response.expires_at, DateTime.utc_now())
+      assert expires_in >= 595 && expires_in <= 600
       assert response.interval == 5
 
-      # Verify database record was created
-      device_code = Repo.get_by(DeviceCode, device_code: response.device_code)
-      assert device_code
-      assert device_code.client_id == client.client_id
-      assert device_code.status == "pending"
-      assert device_code.scopes == ["api"]
+      assert response.client_id == client.client_id
+      assert response.status == "pending"
+      assert response.scopes == ["api"]
     end
 
     test "creates device code with custom scopes" do

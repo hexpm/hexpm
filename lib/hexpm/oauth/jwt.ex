@@ -119,8 +119,6 @@ defmodule Hexpm.OAuth.JWT do
     end
   end
 
-  # Private functions
-
   defp generate_jti do
     :crypto.strong_rand_bytes(16)
     |> Base.url_encode64(padding: false)

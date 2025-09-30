@@ -83,10 +83,8 @@ defmodule Hexpm.OAuth.AuthorizationCodes do
       :crypto.hash(:sha256, code_verifier)
       |> Base.url_encode64(padding: false)
 
-    challenge == computed_challenge
+    Plug.Crypto.secure_compare(challenge, computed_challenge)
   end
-
-  # Private functions
 
   defp generate_code do
     :crypto.strong_rand_bytes(@code_length)

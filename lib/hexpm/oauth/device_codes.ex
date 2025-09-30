@@ -33,16 +33,8 @@ defmodule Hexpm.OAuth.DeviceCodes do
       })
 
     case Repo.insert(changeset) do
-      {:ok, device_code_record} ->
-        {:ok,
-         %{
-           device_code: device_code_record.device_code,
-           user_code: device_code_record.user_code,
-           verification_uri: device_code_record.verification_uri,
-           verification_uri_complete: device_code_record.verification_uri_complete,
-           expires_in: @default_device_code_expiry_seconds,
-           interval: device_code_record.interval
-         }}
+      {:ok, device_code} ->
+        {:ok, device_code}
 
       {:error, changeset} ->
         {:error, changeset}
@@ -248,8 +240,6 @@ defmodule Hexpm.OAuth.DeviceCodes do
     end)
     |> Enum.join()
   end
-
-  # Private functions
 
   defp handle_device_code_status(device_code_record) do
     cond do

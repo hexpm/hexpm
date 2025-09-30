@@ -74,7 +74,7 @@ defmodule Hexpm.OAuth.Clients do
   """
   def authenticate?(%Client{client_secret: secret}, provided_secret)
       when not is_nil(secret) do
-    Bcrypt.verify_pass(provided_secret || "", secret)
+    Plug.Crypto.secure_compare(secret, provided_secret || "")
   end
 
   def authenticate?(%Client{client_secret: nil}, _), do: true
