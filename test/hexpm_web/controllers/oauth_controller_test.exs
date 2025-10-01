@@ -37,6 +37,7 @@ defmodule HexpmWeb.OAuthControllerTest do
           "client_id" => client.client_id,
           "redirect_uri" => "https://example.com/callback",
           "scope" => "api:read",
+          "state" => "test_state",
           "code_challenge" => "challenge123",
           "code_challenge_method" => "S256"
         })
@@ -54,6 +55,7 @@ defmodule HexpmWeb.OAuthControllerTest do
           "client_id" => client.client_id,
           "redirect_uri" => "https://example.com/callback",
           "scope" => "api:read repositories",
+          "state" => "test_state",
           "code_challenge" => "challenge123",
           "code_challenge_method" => "S256"
         })
@@ -83,6 +85,7 @@ defmodule HexpmWeb.OAuthControllerTest do
           "client_id" => client.client_id,
           "redirect_uri" => "https://example.com/callback",
           "scope" => "api:read repositories",
+          "state" => "test_state",
           "code_challenge" => "challenge123",
           "code_challenge_method" => "S256",
           "action" => "approve"
@@ -107,6 +110,7 @@ defmodule HexpmWeb.OAuthControllerTest do
           "client_id" => client.client_id,
           "redirect_uri" => "https://example.com/callback",
           "scope" => "api:read api:write repositories",
+          "state" => "test_state",
           "code_challenge" => "challenge123",
           "code_challenge_method" => "S256",
           "action" => "approve",
@@ -130,6 +134,7 @@ defmodule HexpmWeb.OAuthControllerTest do
           "client_id" => client.client_id,
           "redirect_uri" => "https://example.com/callback",
           "scope" => "api:read",
+          "state" => "test_state",
           "code_challenge" => "challenge123",
           "code_challenge_method" => "S256",
           "action" => "deny"
@@ -153,6 +158,7 @@ defmodule HexpmWeb.OAuthControllerTest do
           "client_id" => client.client_id,
           "redirect_uri" => "https://example.com/callback",
           "scope" => "api:read repositories",
+          "state" => "test_state",
           "code_challenge" => "challenge123",
           "code_challenge_method" => "S256",
           "action" => "approve",
@@ -178,6 +184,7 @@ defmodule HexpmWeb.OAuthControllerTest do
           "client_id" => client.client_id,
           "redirect_uri" => "https://example.com/callback",
           "scope" => "api:read",
+          "state" => "test_state",
           "code_challenge" => "challenge123",
           "code_challenge_method" => "S256",
           "action" => "approve",
@@ -204,6 +211,7 @@ defmodule HexpmWeb.OAuthControllerTest do
           "client_id" => client.client_id,
           "redirect_uri" => "https://example.com/callback",
           "scope" => "api:read",
+          "state" => "test_state",
           "action" => "approve",
           "selected_scopes" => ["api:read"]
         })

@@ -30,29 +30,11 @@ defmodule HexpmWeb.OAuthView do
     hidden_fields = [
       {"client_id", client.client_id},
       {"redirect_uri", redirect_uri},
-      {"scope", Enum.join(scopes, " ")}
+      {"scope", Enum.join(scopes, " ")},
+      {"state", state},
+      {"code_challenge", code_challenge},
+      {"code_challenge_method", code_challenge_method}
     ]
-
-    hidden_fields =
-      if state do
-        [{"state", state} | hidden_fields]
-      else
-        hidden_fields
-      end
-
-    hidden_fields =
-      if code_challenge do
-        [{"code_challenge", code_challenge} | hidden_fields]
-      else
-        hidden_fields
-      end
-
-    hidden_fields =
-      if code_challenge_method do
-        [{"code_challenge_method", code_challenge_method} | hidden_fields]
-      else
-        hidden_fields
-      end
 
     current_user = conn.assigns[:current_user]
 

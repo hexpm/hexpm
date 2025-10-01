@@ -13,6 +13,7 @@ defmodule HexpmWeb.OAuthController do
     with {:ok, client} <- validate_client(params["client_id"]),
          {:ok, redirect_uri} <- validate_redirect_uri(client, params["redirect_uri"]),
          {:ok, scopes} <- validate_scopes(client, params["scope"]),
+         {:ok, _} <- validate_state(params),
          {:ok, _} <- validate_pkce_params(params) do
       if logged_in?(conn) do
         render(conn, "authorize.html", %{
@@ -70,6 +71,7 @@ defmodule HexpmWeb.OAuthController do
          {:ok, redirect_uri} <- validate_redirect_uri(client, params["redirect_uri"]),
          {:ok, requested_scopes} <- validate_scopes(client, params["scope"]),
          {:ok, selected_scopes} <- get_selected_scopes(params, requested_scopes, client),
+         {:ok, _} <- validate_state(params),
          {:ok, _} <- validate_pkce_params(params),
          {:ok, _} <- validate_2fa_for_scopes(user, selected_scopes) do
       case AuthorizationCodes.create_and_insert_for_user(
@@ -167,6 +169,16 @@ defmodule HexpmWeb.OAuthController do
     end
   end
 
+  defp validate_state(params) do
+    state = params["state"]
+
+    if is_nil(state) or state == "" do
+      {:error, "Missing required parameter: state"}
+    else
+      {:ok, :valid}
+    end
+  end
+
   defp validate_pkce_params(params) do
     code_challenge = params["code_challenge"]
     code_challenge_method = params["code_challenge_method"]
@@ -249,7 +261,6 @@ defmodule HexpmWeb.OAuthController do
   defp error_status(:access_denied), do: 403
   defp error_status(:server_error), do: 500
   defp error_status(:authorization_pending), do: 400
-  defp error_status(:slow_down), do: 400
   defp error_status(:expired_token), do: 400
   defp error_status(_), do: 400
 end

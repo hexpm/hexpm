@@ -1,7 +1,7 @@
 defmodule HexpmWeb.API.OAuthController do
   use HexpmWeb, :controller
 
-  alias Hexpm.OAuth.{Clients, Sessions, Tokens, AuthorizationCodes, DeviceCodes}
+  alias Hexpm.OAuth.{Clients, Tokens, AuthorizationCodes, DeviceCodes}
 
   @doc """
   Standard OAuth 2.0 token endpoint for API access.
@@ -78,24 +78,20 @@ defmodule HexpmWeb.API.OAuthController do
          {:ok, auth_code} <- validate_authorization_code(params["code"], client.client_id),
          :ok <- validate_redirect_uri_match(auth_code, params["redirect_uri"]),
          :ok <- validate_pkce(auth_code, params["code_verifier"]) do
-      # Mark code as used
       {:ok, used_auth_code} = AuthorizationCodes.mark_as_used(auth_code)
 
-      # Create session and token
-      with {:ok, session} <-
-             Sessions.create_for_user(used_auth_code.user, client.client_id, name: params["name"]),
-           {:ok, token} <-
-             Tokens.create_and_insert_for_user(
-               used_auth_code.user,
-               client.client_id,
-               used_auth_code.scopes,
-               "authorization_code",
-               used_auth_code.code,
-               session_id: session.id,
-               with_refresh_token: true
-             ) do
-        render(conn, :token, token: token)
-      else
+      case Tokens.create_session_and_token_for_user(
+             used_auth_code.user,
+             client.client_id,
+             used_auth_code.scopes,
+             "authorization_code",
+             used_auth_code.code,
+             name: params["name"],
+             with_refresh_token: true
+           ) do
+        {:ok, token} ->
+          render(conn, :token, token: token)
+
         {:error, changeset} ->
           render_oauth_error(
             conn,
@@ -122,12 +118,8 @@ defmodule HexpmWeb.API.OAuthController do
   defp handle_refresh_token_grant(conn, params) do
     with {:ok, client} <- authenticate_client(params),
          {:ok, token} <- validate_refresh_token(params["refresh_token"], client.client_id) do
-      # Revoke old token
-      {:ok, _} = Tokens.revoke(token)
-
-      # Create new token in same session
-      case Tokens.create_and_insert_for_user(
-             token.user,
+      case Tokens.revoke_and_create_token(
+             token,
              client.client_id,
              token.scopes,
              "refresh_token",
@@ -331,8 +323,6 @@ defmodule HexpmWeb.API.OAuthController do
   defp error_status(:access_denied), do: 403
   defp error_status(:server_error), do: 500
   defp error_status(:authorization_pending), do: 400
-  defp error_status(:slow_down), do: 400
   defp error_status(:expired_token), do: 400
-  defp error_status(:invalid_target), do: 400
   defp error_status(_), do: 400
 end

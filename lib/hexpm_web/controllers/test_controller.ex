@@ -2,7 +2,7 @@ defmodule HexpmWeb.TestController do
   use HexpmWeb, :controller
 
   alias Hexpm.Accounts.Users
-  alias Hexpm.OAuth.{Client, DeviceCode, DeviceCodes, Sessions, Tokens}
+  alias Hexpm.OAuth.{Client, DeviceCode, DeviceCodes, Tokens}
   alias Hexpm.Repo
   import Ecto.Query
 
@@ -93,17 +93,13 @@ defmodule HexpmWeb.TestController do
       client_id = params["client_id"] || "78ea6566-89fd-481e-a1d6-7d9d78eacca8"
       scopes = String.split(params["scope"] || "api repositories", " ")
 
-      # Create a session for the OAuth token
-      {:ok, session} = Sessions.create_for_user(user, client_id)
-
-      case Tokens.create_and_insert_for_user(
+      case Tokens.create_session_and_token_for_user(
              user,
              client_id,
              scopes,
              "authorization_code",
              "test_grant",
-             with_refresh_token: true,
-             session_id: session.id
+             with_refresh_token: true
            ) do
         {:ok, token} ->
           render(conn, :oauth_token, token: token)

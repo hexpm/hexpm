@@ -23,7 +23,7 @@ defmodule HexpmWeb.SharedAuthorizationView do
     # Get categories in the specified order or all categories
     categories =
       if style == :oauth do
-        [:api, :repository, :package, :docs, :other]
+        [:api, :repository, :package, :docs]
         |> Enum.filter(&Map.has_key?(grouped, &1))
       else
         Map.keys(grouped)

@@ -114,6 +114,65 @@ defmodule Hexpm.OAuth.Tokens do
   end
 
   @doc """
+  Creates a session and token for a user atomically within a transaction.
+  """
+  def create_session_and_token_for_user(
+        user,
+        client_id,
+        scopes,
+        grant_type,
+        grant_reference \\ nil,
+        opts \\ []
+      ) do
+    alias Hexpm.OAuth.Sessions
+
+    Ecto.Multi.new()
+    |> Ecto.Multi.run(:session, fn _repo, _changes ->
+      Sessions.create_for_user(user, client_id, name: Keyword.get(opts, :name))
+    end)
+    |> Ecto.Multi.run(:token, fn _repo, %{session: session} ->
+      token_opts = Keyword.put(opts, :session_id, session.id)
+
+      changeset =
+        create_for_user(user, client_id, scopes, grant_type, grant_reference, token_opts)
+
+      Repo.insert(changeset)
+    end)
+    |> Repo.transaction()
+    |> case do
+      {:ok, %{token: token}} -> {:ok, token}
+      {:error, _failed_operation, changeset, _changes} -> {:error, changeset}
+    end
+  end
+
+  @doc """
+  Revokes an old token and creates a new one atomically within a transaction.
+  Used for refresh token grant to ensure the old token is only revoked if the new one is created successfully.
+  """
+  def revoke_and_create_token(
+        old_token,
+        client_id,
+        scopes,
+        grant_type,
+        grant_reference \\ nil,
+        opts \\ []
+      ) do
+    Ecto.Multi.new()
+    |> Ecto.Multi.update(:revoked_token, revoke_changeset(old_token))
+    |> Ecto.Multi.run(:new_token, fn _repo, _changes ->
+      changeset =
+        create_for_user(old_token.user, client_id, scopes, grant_type, grant_reference, opts)
+
+      Repo.insert(changeset)
+    end)
+    |> Repo.transaction()
+    |> case do
+      {:ok, %{new_token: token}} -> {:ok, token}
+      {:error, _failed_operation, changeset, _changes} -> {:error, changeset}
+    end
+  end
+
+  @doc """
   Creates an exchanged token from a parent token with subset scopes.
   Always creates children of the root token to maintain a flat hierarchy.
   """
