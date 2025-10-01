@@ -1,0 +1,158 @@
+defmodule Hexpm.OAuth.ClientsTest do
+  use Hexpm.DataCase, async: true
+
+  alias Hexpm.OAuth.{Client, Clients}
+
+  describe "supports_grant_type?/2" do
+    test "returns true for allowed grant types" do
+      client = %Client{allowed_grant_types: ["authorization_code", "refresh_token"]}
+
+      assert Clients.supports_grant_type?(client, "authorization_code")
+      assert Clients.supports_grant_type?(client, "refresh_token")
+    end
+
+    test "returns false for disallowed grant types" do
+      client = %Client{allowed_grant_types: ["authorization_code"]}
+
+      refute Clients.supports_grant_type?(client, "refresh_token")
+      refute Clients.supports_grant_type?(client, "urn:ietf:params:oauth:grant-type:device_code")
+    end
+  end
+
+  describe "supports_scopes?/2" do
+    test "returns true when all requested scopes are allowed" do
+      client = %Client{allowed_scopes: ["api", "api:read", "api:write"]}
+
+      assert Clients.supports_scopes?(client, ["api"])
+      assert Clients.supports_scopes?(client, ["api", "api:read"])
+      assert Clients.supports_scopes?(client, ["api:read", "api:write"])
+    end
+
+    test "returns false when any requested scope is not allowed" do
+      client = %Client{allowed_scopes: ["api", "api:read"]}
+
+      refute Clients.supports_scopes?(client, ["api:write"])
+      refute Clients.supports_scopes?(client, ["api", "repositories"])
+      refute Clients.supports_scopes?(client, ["invalid_scope"])
+    end
+
+    test "returns true for empty scope list" do
+      client = %Client{allowed_scopes: ["api"]}
+
+      assert Clients.supports_scopes?(client, [])
+    end
+  end
+
+  describe "valid_redirect_uri?/2" do
+    test "returns false when no redirect URIs are configured" do
+      client = %Client{redirect_uris: []}
+
+      refute Clients.valid_redirect_uri?(client, "https://example.com/callback")
+    end
+
+    test "returns true for allowed redirect URIs" do
+      client = %Client{
+        redirect_uris: ["https://example.com/callback", "https://app.example.com/auth"]
+      }
+
+      assert Clients.valid_redirect_uri?(client, "https://example.com/callback")
+      assert Clients.valid_redirect_uri?(client, "https://app.example.com/auth")
+    end
+
+    test "returns false for disallowed redirect URIs" do
+      client = %Client{redirect_uris: ["https://example.com/callback"]}
+
+      refute Clients.valid_redirect_uri?(client, "https://malicious.com/callback")
+      refute Clients.valid_redirect_uri?(client, "https://example.com/different")
+    end
+  end
+
+  describe "requires_authentication?/1" do
+    test "returns true for confidential clients" do
+      client = %Client{client_type: "confidential"}
+
+      assert Clients.requires_authentication?(client)
+    end
+
+    test "returns false for public clients" do
+      client = %Client{client_type: "public"}
+
+      refute Clients.requires_authentication?(client)
+    end
+  end
+
+  describe "authenticate?/2" do
+    test "validates correct credentials for confidential client" do
+      client = %Client{client_secret: "secret123"}
+
+      assert Clients.authenticate?(client, "secret123")
+    end
+
+    test "rejects incorrect credentials for confidential client" do
+      client = %Client{client_secret: "secret123"}
+
+      refute Clients.authenticate?(client, "wrong_secret")
+      refute Clients.authenticate?(client, nil)
+      refute Clients.authenticate?(client, "")
+    end
+
+    test "always succeeds for public client" do
+      client = %Client{client_secret: nil}
+
+      assert Clients.authenticate?(client, "any_secret")
+      assert Clients.authenticate?(client, nil)
+      assert Clients.authenticate?(client, "")
+    end
+  end
+
+  describe "generate_client_secret/0" do
+    test "generates non-empty string" do
+      secret = Clients.generate_client_secret()
+
+      assert is_binary(secret)
+      assert String.length(secret) > 0
+    end
+
+    test "generates unique secrets" do
+      secret1 = Clients.generate_client_secret()
+      secret2 = Clients.generate_client_secret()
+
+      assert secret1 != secret2
+    end
+
+    test "generates base64url encoded strings" do
+      secret = Clients.generate_client_secret()
+
+      refute String.contains?(secret, "=")
+      padded_secret = secret <> String.duplicate("=", rem(4 - rem(String.length(secret), 4), 4))
+      assert {:ok, _} = Base.url_decode64(padded_secret)
+    end
+  end
+
+  describe "generate_client_id/0" do
+    test "generates non-empty string" do
+      client_id = Clients.generate_client_id()
+
+      assert is_binary(client_id)
+      assert String.length(client_id) > 0
+    end
+
+    test "generates unique client IDs" do
+      client_id1 = Clients.generate_client_id()
+      client_id2 = Clients.generate_client_id()
+
+      assert client_id1 != client_id2
+    end
+
+    test "generates valid UUIDs" do
+      client_id = Clients.generate_client_id()
+      assert is_binary(client_id)
+      assert String.length(client_id) == 36
+
+      assert Regex.match?(
+               ~r/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/,
+               client_id
+             )
+    end
+  end
+end
