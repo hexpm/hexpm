@@ -18,7 +18,8 @@ if config_env() == :prod do
     billing_url: System.fetch_env!("HEXPM_BILLING_URL"),
     levenshtein_threshold: System.fetch_env!("HEXPM_LEVENSHTEIN_THRESHOLD"),
     dashboard_user: System.fetch_env!("HEXPM_DASHBOARD_USER"),
-    dashboard_password: System.fetch_env!("HEXPM_DASHBOARD_PASSWORD")
+    dashboard_password: System.fetch_env!("HEXPM_DASHBOARD_PASSWORD"),
+    jwt_signing_key: System.fetch_env!("HEXPM_JWT_SIGNING_KEY")
 
   config :hexpm, Hexpm.Emails.Mailer, api_key: System.fetch_env!("HEXPM_SENDGRID_API_KEY")
 

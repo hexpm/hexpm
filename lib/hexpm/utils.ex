@@ -49,16 +49,6 @@ defmodule Hexpm.Utils do
     Enum.map(tasks, &Task.await(&1, @timeout))
   end
 
-  def maybe(nil, _fun), do: nil
-  def maybe(item, fun), do: fun.(item)
-
-  def log_error(kind, error, stacktrace) do
-    Logger.error(
-      Exception.format_banner(kind, error, stacktrace) <>
-        "\n" <> Exception.format_stacktrace(stacktrace)
-    )
-  end
-
   def utc_yesterday() do
     utc_days_ago(1)
   end
@@ -125,33 +115,6 @@ defmodule Hexpm.Utils do
     diff = diff(NaiveDateTime.to_erl(a), :calendar.universal_time())
 
     diff < 24 * 60 * 60
-  end
-
-  def etag(nil), do: nil
-  def etag([]), do: nil
-
-  def etag(models) do
-    list =
-      Enum.map(List.wrap(models), fn model ->
-        [model.__struct__, model.id, model.updated_at]
-      end)
-
-    binary = :erlang.term_to_binary(list)
-
-    :crypto.hash(:md5, binary)
-    |> Base.encode16(case: :lower)
-  end
-
-  def last_modified(nil), do: nil
-  def last_modified([]), do: nil
-
-  def last_modified(models) do
-    list =
-      Enum.map(List.wrap(models), fn model ->
-        NaiveDateTime.to_erl(model.updated_at)
-      end)
-
-    Enum.max(list)
   end
 
   def binarify(term, opts \\ [])

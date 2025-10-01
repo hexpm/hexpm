@@ -193,53 +193,6 @@ defmodule Hexpm.Accounts.Key do
     "#{name}-#{max + 1}"
   end
 
-  def verify_permissions?(%Key{} = key, "api", resource)
-      when is_binary(resource) or is_nil(resource) do
-    Enum.any?(key.permissions, fn permission ->
-      # permission "package" implies "api:read"
-      (permission.domain == "api" and match_api_resource?(permission.resource, resource)) or
-        (permission.domain == "package" and match_api_resource?("read", resource))
-    end)
-  end
-
-  def verify_permissions?(%Key{} = key, "package", %Package{} = resource) do
-    Enum.any?(key.permissions, fn permission ->
-      permission.domain == "package" and match_package_resource?(permission.resource, resource)
-    end)
-  end
-
-  def verify_permissions?(%Key{} = key, "repositories", nil) do
-    Enum.any?(key.permissions, &(&1.domain == "repositories"))
-  end
-
-  def verify_permissions?(%Key{} = key, "repository", resource) when is_binary(resource) do
-    Enum.any?(key.permissions, fn permission ->
-      (permission.domain == "repository" and permission.resource == resource) or
-        permission.domain == "repositories"
-    end)
-  end
-
-  def verify_permissions?(%Key{} = key, "docs", resource) when is_binary(resource) do
-    Enum.any?(key.permissions, fn permission ->
-      permission.domain == "docs" and permission.resource == resource
-    end)
-  end
-
-  def verify_permissions?(%Key{} = _key, _domain, _resource) do
-    false
-  end
-
-  defp match_api_resource?(nil, _resource), do: true
-  defp match_api_resource?("write", "write"), do: true
-  defp match_api_resource?("write", "read"), do: true
-  defp match_api_resource?("read", "read"), do: true
-  defp match_api_resource?(_key_resource, _resource), do: false
-
-  defp match_package_resource?(permission, resource) do
-    [organization, package] = String.split(permission, "/")
-    resource.repository.name == organization and resource.name == package
-  end
-
   def revoked?(%Key{} = key) do
     not is_nil(key.revoke_at) and DateTime.compare(key.revoke_at, DateTime.utc_now()) == :lt
   end

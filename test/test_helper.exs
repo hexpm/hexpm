@@ -6,5 +6,6 @@ File.mkdir_p(tmp_dir)
 
 Hexpm.setup()
 Hexpm.BlockAddress.reload()
+Hexpm.Repository.RegistryBuilder.full(Hexpm.Repository.Repository.hexpm())
 Ecto.Adapters.SQL.Sandbox.mode(Hexpm.RepoBase, :manual)
 Hexpm.Fake.start()

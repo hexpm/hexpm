@@ -1,0 +1,54 @@
+<div class="panel panel-default">
+  <div class="panel-heading">
+    <h3 class="panel-title"><%= assigns[:auth_title] || "Authorize Application" %></h3>
+  </div>
+  <div class="panel-body">
+    <p>
+      <%= assigns[:auth_description] || "The application" %> <strong><%= @client_name %></strong> would like to access your Hex account.
+    </p>
+
+    <h4>Requested permissions:</h4>
+
+    <%= form_tag @form_action, method: "post", id: "authorization-form" do %>
+      <%= @render_scopes.(@scopes) %>
+
+      <div class="alert alert-info" style="margin-top: 15px;">
+        <strong>Access Summary:</strong> <span id="access-summary"><%= @format_summary.(@scopes) %></span>
+      </div>
+
+      <%= for {key, value} <- @hidden_fields, key != "scope" do %>
+        <input type="hidden" name="<%= key %>" value="<%= value %>">
+      <% end %>
+
+      <div class="text-center" style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #e0e0e0;">
+        <%= submit "Authorize", name: "action", value: @approve_value, class: "btn btn-success btn-lg", style: "margin-right: 15px;" %>
+        <%= submit "Deny", name: "action", value: @deny_value, class: "btn btn-danger btn-lg" %>
+      </div>
+    <% end %>
+  </div>
+</div>
+
+<%= if assigns[:with_checkboxes] do %>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  var checkboxes = document.querySelectorAll('.scope-checkbox');
+  var form = document.getElementById('authorization-form');
+
+  // Validate at least one permission is selected on form submit
+  if (form) {
+    form.addEventListener('submit', function(e) {
+      if (e.submitter && e.submitter.value === '<%= @approve_value %>') {
+        var anyChecked = Array.from(checkboxes).some(function(checkbox) {
+          return checkbox.checked;
+        });
+
+        if (!anyChecked) {
+          e.preventDefault();
+          alert('Please select at least one permission to authorize.');
+        }
+      }
+    });
+  }
+});
+</script>
+<% end %>

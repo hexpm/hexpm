@@ -1,0 +1,41 @@
+defmodule Hexpm.RepoBase.Migrations.CreateOauthTokens do
+  use Ecto.Migration
+
+  def up do
+    create table(:oauth_tokens) do
+      add :jti, :text, null: false
+      add :refresh_jti, :text
+      add :token_type, :string, null: false, default: "bearer"
+      add :refresh_token_expires_at, :utc_datetime
+      add :scopes, {:array, :string}, null: false, default: []
+      add :expires_at, :utc_datetime, null: false
+      add :revoked_at, :utc_datetime
+
+      add :user_id, references(:users, on_delete: :delete_all), null: false
+
+      add :client_id,
+          references(:oauth_clients, column: :client_id, type: :binary_id, on_delete: :delete_all),
+          null: false
+
+      add :grant_type, :string, null: false
+      add :grant_reference, :text
+
+      add :parent_token_id, references(:oauth_tokens, on_delete: :nothing)
+      add :session_id, references(:oauth_sessions, on_delete: :delete_all), null: false
+
+      timestamps()
+    end
+
+    create unique_index(:oauth_tokens, [:jti])
+    create unique_index(:oauth_tokens, [:refresh_jti])
+    create index(:oauth_tokens, [:user_id])
+    create index(:oauth_tokens, [:client_id])
+    create index(:oauth_tokens, [:expires_at])
+    create index(:oauth_tokens, [:refresh_token_expires_at])
+    create index(:oauth_tokens, [:session_id])
+  end
+
+  def down do
+    drop_if_exists table(:oauth_tokens)
+  end
+end

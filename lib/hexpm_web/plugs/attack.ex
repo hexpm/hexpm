@@ -199,6 +199,30 @@ defmodule HexpmWeb.Plugs.Attack do
     )
   end
 
+  def device_verification_user_throttle(user_id, opts \\ []) do
+    time = opts[:time] || System.system_time(:millisecond)
+
+    timed_throttle(
+      {:device_verification_user, user_id},
+      time: time,
+      storage: @storage,
+      limit: 10,
+      period: 15 * 60_000
+    )
+  end
+
+  def device_verification_ip_throttle(ip, opts \\ []) do
+    time = opts[:time] || System.system_time(:millisecond)
+
+    timed_throttle(
+      {:device_verification_ip, ip},
+      time: time,
+      storage: @storage,
+      limit: 30,
+      period: 15 * 60_000
+    )
+  end
+
   defp api?(%Plug.Conn{request_path: "/api/" <> _}), do: true
   defp api?(%Plug.Conn{}), do: false
 end

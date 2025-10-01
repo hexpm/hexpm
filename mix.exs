@@ -10,6 +10,7 @@ defmodule Hexpm.MixProject do
       compilers: Mix.compilers(),
       build_embedded: Mix.env() == :prod,
       start_permanent: Mix.env() == :prod,
+      listeners: [Phoenix.CodeReloader],
       aliases: aliases(),
       releases: releases(),
       deps: deps()
@@ -50,9 +51,11 @@ defmodule Hexpm.MixProject do
       {:hackney, "~> 1.7"},
       {:hex_core, "~> 0.8", hex_core_opts()},
       {:jason, "~> 1.0"},
+      {:joken, "~> 2.6"},
       {:libcluster, "~> 3.0"},
       {:logster, "~> 1.0"},
       {:mox, "~> 1.0", only: :test},
+      {:stream_data, "~> 1.0", only: :test},
       {:phoenix_ecto, "~> 4.0"},
       {:phoenix_html, "~> 4.0"},
       {:phoenix_html_helpers, "~> 1.0"},
@@ -67,6 +70,7 @@ defmodule Hexpm.MixProject do
       {:postgrex, "~> 0.14"},
       {:pot, "~> 1.0"},
       {:sentry, "~> 10.8"},
+      {:tidewave, "~> 0.5", only: :dev},
       # Dependency is broken with mix due to missing dependency on :ssl application
       {:ssl_verify_fun, "~> 1.1", manager: :rebar3, override: true},
       {:sweet_xml, "~> 0.5"},

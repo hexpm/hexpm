@@ -215,9 +215,9 @@ defmodule HexpmWeb.ViewHelpers do
     Enum.filter(enum, fn {_, v} -> present?(v) end)
   end
 
-  def present?(""), do: false
-  def present?(nil), do: false
-  def present?(_), do: true
+  defp present?(""), do: false
+  defp present?(nil), do: false
+  defp present?(_), do: true
 
   def text_length(text, length) when byte_size(text) > length do
     :binary.part(text, 0, length - 3) <> "..."

@@ -31,7 +31,7 @@ defmodule HexpmWeb.API.KeyController do
 
   def index(conn, _params) do
     user_or_organization = conn.assigns.organization || conn.assigns.current_user
-    authing_key = conn.assigns.key
+    authing_key = conn.assigns.auth_credential
     keys = Keys.all(user_or_organization)
 
     conn
@@ -41,7 +41,7 @@ defmodule HexpmWeb.API.KeyController do
 
   def show(conn, %{"name" => name}) do
     user_or_organization = conn.assigns.organization || conn.assigns.current_user
-    authing_key = conn.assigns.key
+    authing_key = conn.assigns.auth_credential
     key = Keys.get(user_or_organization, name)
 
     if key do
@@ -57,7 +57,7 @@ defmodule HexpmWeb.API.KeyController do
 
   def create(conn, params) do
     user_or_organization = conn.assigns.organization || conn.assigns.current_user
-    authing_key = conn.assigns.key
+    authing_key = conn.assigns.auth_credential
 
     case Keys.create(user_or_organization, params, audit: audit_data(conn)) do
       {:ok, %{key: key}} ->
@@ -76,7 +76,7 @@ defmodule HexpmWeb.API.KeyController do
 
   def delete(conn, %{"name" => name}) do
     user_or_organization = conn.assigns.organization || conn.assigns.current_user
-    authing_key = conn.assigns.key
+    authing_key = conn.assigns.auth_credential
 
     case Keys.revoke(user_or_organization, name, audit: audit_data(conn)) do
       {:ok, %{key: key}} ->
@@ -92,12 +92,12 @@ defmodule HexpmWeb.API.KeyController do
 
   def delete_all(conn, _params) do
     user_or_organization = conn.assigns.organization || conn.assigns.current_user
-    key = conn.assigns.key
+    authing_key = conn.assigns.auth_credential
     {:ok, _} = Keys.revoke_all(user_or_organization, audit: audit_data(conn))
 
     conn
     |> put_status(200)
-    |> render(:delete, key: Keys.get(key.id), authing_key: key)
+    |> render(:delete, key: Keys.get(authing_key.id), authing_key: authing_key)
   end
 
   defp require_organization_path(conn, _opts) do

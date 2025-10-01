@@ -9,7 +9,8 @@ defmodule HexpmWeb.Router do
     plug :accepts, ["html"]
     plug :fetch_session
     plug :fetch_flash
-    # plug :protect_from_forgery
+    plug :put_root_layout, {HexpmWeb.LayoutView, :root}
+    plug :protect_from_forgery
     plug :put_secure_browser_headers
     plug :user_agent, required: false
     plug :validate_url
@@ -80,6 +81,11 @@ defmodule HexpmWeb.Router do
     get "/email/verify", EmailVerificationController, :verify
     get "/email/verification", EmailVerificationController, :show
     post "/email/verification", EmailVerificationController, :create
+
+    get "/oauth/authorize", OAuthController, :authorize
+    post "/oauth/authorize", OAuthController, :consent
+    get "/oauth/device", DeviceController, :show
+    post "/oauth/device", DeviceController, :create
 
     get "/dashboard", DashboardController, :index
 
@@ -278,6 +284,10 @@ defmodule HexpmWeb.Router do
 
     post "/short_url", ShortURLController, :create
     get "/auth", AuthController, :show
+
+    post "/oauth/token", OAuthController, :token
+    post "/oauth/device_authorization", OAuthController, :device_authorization
+    post "/oauth/revoke", OAuthController, :revoke
   end
 
   if Mix.env() in [:dev, :test, :hex] do
@@ -298,6 +308,10 @@ defmodule HexpmWeb.Router do
       pipe_through :api
 
       post "/repo", TestController, :repo
+      post "/oauth_client", TestController, :oauth_client
+      post "/oauth_token", TestController, :oauth_token
+      post "/oauth_device_authorize", TestController, :oauth_device_authorize
+      get "/oauth_device_pending", TestController, :oauth_device_pending
     end
   end
 

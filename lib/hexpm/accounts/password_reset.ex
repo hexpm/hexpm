@@ -16,11 +16,7 @@ defmodule Hexpm.Accounts.PasswordReset do
     })
   end
 
-  def can_reset?(reset, primary_email, key) do
-    valid_email? = primary_email == reset.primary_email
-    valid_key? = !!(reset.key && Hexpm.Utils.secure_check(reset.key, key))
-    within_time? = Hexpm.Utils.within_last_day?(reset.inserted_at)
-
-    valid_email? and valid_key? and within_time?
+  def can_reset?(%__MODULE__{} = reset, primary_email, key) do
+    reset.key == key && reset.primary_email == primary_email
   end
 end
