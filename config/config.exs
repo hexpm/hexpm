@@ -4,22 +4,12 @@ config :hexpm,
   user_confirm: true,
   user_agent_req: true,
   billing_report: true,
-  secret: "796f75666f756e64746865686578",
-  jwt_signing_key: """
-  -----BEGIN EC PRIVATE KEY-----
-  MHcCAQEEIHUgIrJNc1hyxptBqaIXJhiJLC+sNx1e9PtWtybMMDjKoAoGCCqGSM49
-  AwEHoUQDQgAENEaVGMojo1bTG/IR6W+grIx/hY97Mxp4OalFU3x/KxXX4ud/mtJL
-  oCBc51fzxeYF1CYg2Ch+d3BgrKLFHHEJfw==
-  -----END EC PRIVATE KEY-----
-  """,
   support_email: "support@hex.pm",
   repo_bucket: {Hexpm.Store.Local, "repo_bucket"},
   logs_bucket: {Hexpm.Store.Local, "logs_bucket"},
   cdn_impl: Hexpm.CDN.Local,
   billing_impl: Hexpm.Billing.Local,
-  pwned_impl: Hexpm.Pwned.Local,
-  dashboard_user: "hex_user",
-  dashboard_password: "hex_password"
+  pwned_impl: Hexpm.Pwned.Local
 
 config :hexpm, :features, package_reports: true
 
@@ -34,8 +24,6 @@ config :hexpm, HexpmWeb.Endpoint,
   url: [host: "localhost"],
   root: Path.dirname(__DIR__),
   render_errors: [view: HexpmWeb.ErrorView, accepts: ~w(html json elixir erlang)],
-  secret_key_base: "38K8orQfRHMC6ZWXIdgItQEiumeY+L2Ls0fvYfTMt4AoG5+DSFsLG6vMajNcd5Td",
-  live_view: [signing_salt: "2UTSB72sZsF9KTlxefkIrFFPXTO7d+Ep"],
   pubsub_server: Hexpm.PubSub
 
 config :hexpm, Hexpm.RepoBase,
