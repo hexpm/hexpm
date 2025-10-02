@@ -112,7 +112,7 @@ defmodule Hexpm.OAuth.JWT do
 
   defp get_signer do
     key = Application.get_env(:hexpm, :jwt_signing_key)
-    Joken.Signer.create("RS256", %{"pem" => key})
+    Joken.Signer.create("ES256", %{"pem" => key})
   end
 
   defp unix_now do

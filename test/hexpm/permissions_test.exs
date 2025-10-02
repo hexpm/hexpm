@@ -11,7 +11,6 @@ defmodule Hexpm.PermissionsTest do
       assert :ok = Permissions.validate_scopes(["api:read"])
       assert :ok = Permissions.validate_scopes(["api:write"])
       assert :ok = Permissions.validate_scopes(["repositories"])
-      # package, repository, and docs are only valid with resources now
     end
 
     test "accepts valid resource-specific scopes" do
@@ -25,6 +24,7 @@ defmodule Hexpm.PermissionsTest do
       assert {:error, _} = Permissions.validate_scopes(["invalid"])
       assert {:error, _} = Permissions.validate_scopes(["api:invalid"])
       assert {:error, _} = Permissions.validate_scopes(["unknown:resource"])
+
       # package, repository, and docs require resources
       assert {:error, _} = Permissions.validate_scopes(["package"])
       assert {:error, _} = Permissions.validate_scopes(["repository"])
@@ -67,8 +67,6 @@ defmodule Hexpm.PermissionsTest do
       refute Permissions.verify_access?(token, "api", "read")
       refute Permissions.verify_access?(token, "api", "write")
     end
-
-    # Removed test for unrestricted package scope since it's no longer supported
 
     test "multiple package scopes grant access to multiple packages", %{package: package} do
       token = %Token{scopes: ["package:hexpm/decimal", "package:hexpm/poison"]}
