@@ -10,6 +10,7 @@ defmodule Hexpm.Accounts.AuditLog do
     belongs_to :user, User
     belongs_to :organization, Organization
     belongs_to :key, Key
+    belongs_to :oauth_token, Hexpm.OAuth.Token
 
     timestamps(updated_at: false)
   end
@@ -18,10 +19,13 @@ defmodule Hexpm.Accounts.AuditLog do
       when action in ~w(password.reset.init password.reset.finish) do
     params = extract_params(action, params)
 
+    {key, oauth_token} = extract_auth_credential(audit_data.auth_credential)
+
     %AuditLog{
       user_id: nil,
       organization_id: nil,
-      key: audit_data.auth_credential,
+      key: key,
+      oauth_token: oauth_token,
       user_agent: truncate_codepoints(audit_data.user_agent, 255),
       remote_ip: audit_data.remote_ip,
       action: action,
@@ -32,10 +36,13 @@ defmodule Hexpm.Accounts.AuditLog do
   def build(%{user: %User{id: user_id}} = audit_data, "organization.create", organization) do
     params = extract_params("organization.create", organization)
 
+    {key, oauth_token} = extract_auth_credential(audit_data.auth_credential)
+
     %AuditLog{
       user_id: user_id,
       organization_id: organization.id,
-      key: audit_data.auth_credential,
+      key: key,
+      oauth_token: oauth_token,
       user_agent: truncate_codepoints(audit_data.user_agent, 255),
       remote_ip: audit_data.remote_ip,
       action: "organization.create",
@@ -46,10 +53,13 @@ defmodule Hexpm.Accounts.AuditLog do
   def build(%{user: %User{id: user_id}} = audit_data, action, params) do
     params = extract_params(action, params)
 
+    {key, oauth_token} = extract_auth_credential(audit_data.auth_credential)
+
     %AuditLog{
       user_id: user_id,
       organization_id: params[:organization][:id] || params[:package][:organization_id],
-      key: audit_data.auth_credential,
+      key: key,
+      oauth_token: oauth_token,
       user_agent: truncate_codepoints(audit_data.user_agent, 255),
       remote_ip: audit_data.remote_ip,
       action: action,
@@ -60,10 +70,13 @@ defmodule Hexpm.Accounts.AuditLog do
   def build(%{user: %Organization{id: organization_id}} = audit_data, action, params) do
     params = extract_params(action, params)
 
+    {key, oauth_token} = extract_auth_credential(audit_data.auth_credential)
+
     %AuditLog{
       user_id: nil,
       organization_id: organization_id,
-      key: audit_data.auth_credential,
+      key: key,
+      oauth_token: oauth_token,
       user_agent: truncate_codepoints(audit_data.user_agent, 255),
       remote_ip: audit_data.remote_ip,
       action: action,
@@ -318,6 +331,18 @@ defmodule Hexpm.Accounts.AuditLog do
 
   def newest_first(query) do
     Ecto.Query.order_by(query, desc: :inserted_at)
+  end
+
+  defp extract_auth_credential(%Hexpm.Accounts.Key{} = key) do
+    {key, nil}
+  end
+
+  defp extract_auth_credential(%Hexpm.OAuth.Token{} = token) do
+    {nil, token}
+  end
+
+  defp extract_auth_credential(_) do
+    {nil, nil}
   end
 
   defp truncate_codepoints(string, length) do
