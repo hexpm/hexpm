@@ -31,8 +31,8 @@ defmodule Hexpm.Accounts.TFA do
     :pot.totp(secret, addwindow: 1)
   end
 
-  # Check a token 30 seconds ahead and within a margin of error of 1 second
+  # Check a token 30 seconds ahead and within a margin of error of 2 time windows (60 seconds)
   def token_valid?(secret, token) do
-    :pot.valid_totp(token, secret, window: 1, addwindow: 1)
+    :pot.valid_totp(token, secret, window: 2, addwindow: 1)
   end
 end
