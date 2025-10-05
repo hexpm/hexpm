@@ -5,6 +5,77 @@
 
   <div class="col-sm-9 security">
     <div class="panel panel-default">
+      <div class="panel-heading">Connected accounts</div>
+      <div class="panel-body">
+        <h4>GitHub</h4>
+        <%= if Hexpm.Accounts.UserProviders.has_provider?(@current_user, "github") do %>
+          <p>Your GitHub account is connected.</p>
+          <%= form_tag(~p"/dashboard/security/disconnect-github", [style: "margin-top: 15px;"]) do %>
+            <button type="submit" class="btn btn-danger">Disconnect GitHub</button>
+          <% end %>
+        <% else %>
+          <p>Connect your GitHub account to enable GitHub login.</p>
+          <a href="<%= ~p"/auth/github" %>" class="btn btn-primary" style="margin-top: 15px; display: inline-block;">Connect GitHub</a>
+        <% end %>
+      </div>
+    </div>
+
+    <div class="panel panel-default">
+      <div class="panel-heading">Password authentication</div>
+      <div class="panel-body">
+        <%= if Hexpm.Accounts.User.has_password?(@current_user) do %>
+          <%= ViewHelpers.changeset_error(@password_changeset) %>
+          <%= form_for @password_changeset, ~p"/dashboard/security/change-password", [method: :post], fn f -> %>
+            <div class="form-group">
+              <%= label f, :password_current, "Current password" %>
+              <%= ViewHelpers.password_input f, :password_current %>
+              <%= ViewHelpers.error_tag f, :password_current %>
+            </div>
+
+            <div class="form-group">
+              <%= label f, :password, "New password" %>
+              <%= ViewHelpers.password_input f, :password %>
+              <%= ViewHelpers.error_tag f, :password %>
+            </div>
+
+            <div class="form-group">
+              <%= label f, :password_confirmation %>
+              <%= ViewHelpers.password_input f, :password_confirmation %>
+              <%= ViewHelpers.error_tag f, :password_confirmation %>
+            </div>
+
+            <div style="display: flex; gap: 10px;">
+              <button type="submit" class="btn btn-primary">Change password</button>
+              <%= if Hexpm.Accounts.User.can_remove_password?(@current_user) do %>
+                <button type="button" class="btn btn-danger" onclick="document.getElementById('remove-password-form').submit()">Remove password</button>
+              <% end %>
+            </div>
+          <% end %>
+
+          <%= if Hexpm.Accounts.User.can_remove_password?(@current_user) do %>
+            <form id="remove-password-form" action="<%= ~p"/dashboard/security/remove-password" %>" method="post" style="display: none;">
+              <input type="hidden" name="_csrf_token" value="<%= Plug.CSRFProtection.get_csrf_token() %>">
+            </form>
+          <% else %>
+            <p class="text-muted" style="margin-top: 15px;">You must connect a GitHub account before you can remove your password.</p>
+          <% end %>
+        <% else %>
+          <%= form_tag(~p"/dashboard/security/add-password", [method: :post]) do %>
+            <div class="form-group">
+              <label for="password">New password</label>
+              <input id="password" type="password" class="form-control" name="user[password]" required>
+            </div>
+            <div class="form-group">
+              <label for="password_confirmation">Confirm password</label>
+              <input id="password_confirmation" type="password" class="form-control" name="user[password_confirmation]" required>
+            </div>
+            <button type="submit" class="btn btn-primary">Add password</button>
+          <% end %>
+        <% end %>
+      </div>
+    </div>
+
+    <div class="panel panel-default">
       <div class="panel-heading with-button">Two-factor security
       <%= if Hexpm.Accounts.User.tfa_enabled?(@current_user) do %>
         <%= form_tag(~p"/dashboard/security/disable-tfa") do %>

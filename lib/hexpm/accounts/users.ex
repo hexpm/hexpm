@@ -1,7 +1,7 @@
 defmodule Hexpm.Accounts.Users do
   use Hexpm.Context
 
-  alias Hexpm.Accounts.{RecoveryCode, TFA}
+  alias Hexpm.Accounts.{RecoveryCode, TFA, UserProvider}
 
   def get(username_or_email, preload \\ []) do
     User.get(String.downcase(username_or_email), preload)
@@ -508,5 +508,85 @@ defmodule Hexpm.Accounts.Users do
        errors: [organization: {message, []}],
        valid?: false
      }}
+  end
+
+  def add_from_oauth_with_provider(username, full_name, email, provider, provider_uid, opts) do
+    audit_data = Keyword.fetch!(opts, :audit)
+    confirmed? = Keyword.get(opts, :confirmed?, true)
+
+    multi =
+      Multi.new()
+      |> Multi.insert(:user, User.build_from_oauth(username, full_name, email, confirmed?))
+      |> Multi.run(:user_provider, fn _repo, %{user: user} ->
+        user_provider = UserProvider.build(user, provider, provider_uid, email, %{})
+        changeset = UserProvider.changeset(user_provider, %{})
+        Repo.insert(changeset)
+      end)
+      |> audit_with_user(audit_data, "user.create", fn %{user: user} -> user end)
+      |> audit_with_user(audit_data, "email.add", fn %{user: %{emails: [email]}} -> email end)
+      |> audit_with_user(audit_data, "email.primary", fn %{user: %{emails: [email]}} ->
+        {nil, email}
+      end)
+      |> audit_with_user(audit_data, "email.public", fn %{user: %{emails: [email]}} ->
+        {nil, email}
+      end)
+      |> audit_with_user(audit_data, "user_provider.create", fn %{user_provider: up} -> up end)
+
+    case Repo.transaction(multi) do
+      {:ok, %{user: user}} ->
+        if not confirmed? do
+          Emails.verification(user, List.first(user.emails))
+          |> Mailer.deliver_later!()
+        end
+
+        {:ok, user}
+
+      {:error, :user, changeset, _} ->
+        {:error, changeset}
+
+      {:error, :user_provider, changeset, _} ->
+        {:error, changeset}
+
+      {:error, _step, _value, _changes} ->
+        {:error,
+         %Ecto.Changeset{
+           data: %User{},
+           errors: [base: {"failed to create account", []}],
+           valid?: false
+         }}
+    end
+  end
+
+  def add_password_to_user(user, params, audit: audit_data) do
+    multi =
+      Multi.new()
+      |> Multi.update(:user, User.add_password(user, params))
+      |> audit(audit_data, "password.add", nil)
+
+    case Repo.transaction(multi) do
+      {:ok, %{user: user}} -> {:ok, user}
+      {:error, :user, changeset, _} -> {:error, changeset}
+    end
+  end
+
+  def remove_password_from_user(user, audit: audit_data) do
+    if User.can_remove_password?(user) do
+      multi =
+        Multi.new()
+        |> Multi.update(:user, User.remove_password(user))
+        |> audit(audit_data, "password.remove", nil)
+
+      case Repo.transaction(multi) do
+        {:ok, %{user: user}} -> {:ok, user}
+        {:error, :user, changeset, _} -> {:error, changeset}
+      end
+    else
+      {:error,
+       %Ecto.Changeset{
+         data: user,
+         errors: [password: {"cannot remove last authentication method", []}],
+         valid?: false
+       }}
+    end
   end
 end

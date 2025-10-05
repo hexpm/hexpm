@@ -4,7 +4,6 @@ defmodule HexpmWeb.DashboardView do
   defp account_settings() do
     [
       profile: {"Profile", ~p"/dashboard/profile"},
-      password: {"Password", ~p"/dashboard/password"},
       security: {"Security", ~p"/dashboard/security"},
       email: {"Emails", ~p"/dashboard/email"},
       keys: {"Keys", ~p"/dashboard/keys"},
@@ -13,7 +12,9 @@ defmodule HexpmWeb.DashboardView do
   end
 
   defp selected_setting(conn, id) do
-    if Enum.take(conn.path_info, -2) == ["dashboard", Atom.to_string(id)] do
+    path_segment = id |> Atom.to_string() |> String.replace("_", "-")
+
+    if Enum.take(conn.path_info, -2) == ["dashboard", path_segment] do
       "selected"
     end
   end
@@ -156,6 +157,14 @@ defmodule HexpmWeb.DashboardView do
 
   def humanize_audit_log_info(%AuditLog{action: "password.update"}) do
     "Update password"
+  end
+
+  def humanize_audit_log_info(%AuditLog{action: "password.add"}) do
+    "Add password"
+  end
+
+  def humanize_audit_log_info(%AuditLog{action: "password.remove"}) do
+    "Remove password"
   end
 
   def humanize_audit_log_info(%AuditLog{action: "billing.checkout", params: params}) do

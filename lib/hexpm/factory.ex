@@ -24,6 +24,24 @@ defmodule Hexpm.Factory do
     }
   end
 
+  def user_provider_factory() do
+    %Hexpm.Accounts.UserProvider{
+      provider: "github",
+      provider_uid: "#{:rand.uniform(1_000_000)}",
+      provider_email: Fake.sequence(:email),
+      provider_data: %{
+        "login" => Fake.random(:username),
+        "name" => Fake.random(:full_name)
+      }
+    }
+  end
+
+  def user_with_github_factory() do
+    user = build(:user, password: nil)
+    user_provider = build(:user_provider, user: user)
+    %{user | user_providers: [user_provider]}
+  end
+
   def key_factory() do
     {user_secret, first, second} = Hexpm.Accounts.Key.gen_key()
 

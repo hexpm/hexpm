@@ -45,4 +45,8 @@ if config_env() == :prod do
   config :kernel,
     inet_dist_listen_min: String.to_integer(System.fetch_env!("BEAM_PORT")),
     inet_dist_listen_max: String.to_integer(System.fetch_env!("BEAM_PORT"))
+
+  config :ueberauth, Ueberauth.Strategy.Github.OAuth,
+    client_id: System.fetch_env!("HEXPM_GITHUB_CLIENT_ID"),
+    client_secret: System.fetch_env!("HEXPM_GITHUB_CLIENT_SECRET")
 end

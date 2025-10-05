@@ -16,7 +16,7 @@ defmodule Hexpm.Accounts.AuditLog do
   end
 
   def build(%{user: nil} = audit_data, action, params)
-      when action in ~w(password.reset.init password.reset.finish) do
+      when action in ~w(password.reset.init password.reset.finish user_provider.create) do
     params = extract_params(action, params)
 
     {key, oauth_token} = extract_auth_credential(audit_data.auth_credential)
@@ -207,6 +207,10 @@ defmodule Hexpm.Accounts.AuditLog do
   defp extract_params("user.update", user), do: serialize(user)
   defp extract_params("security.update", user), do: serialize(user)
   defp extract_params("security.rotate_recovery_codes", user), do: serialize(user)
+  defp extract_params("user_provider.create", user_provider), do: serialize(user_provider)
+  defp extract_params("user_provider.delete", user_provider), do: serialize(user_provider)
+  defp extract_params("password.add", _), do: %{}
+  defp extract_params("password.remove", _), do: %{}
   defp extract_params("organization.create", organization), do: serialize(organization)
 
   defp extract_params("organization.member.add", {organization, user}),
@@ -306,6 +310,9 @@ defmodule Hexpm.Accounts.AuditLog do
   defp fields(%Organization{}), do: [:id, :name, :public, :active, :billing_active]
   defp fields(%User{}), do: [:id, :username]
   defp fields(%UserHandles{}), do: [:twitter, :bluesky, :github, :elixirforum, :freenode, :slack]
+
+  defp fields(%Hexpm.Accounts.UserProvider{}),
+    do: [:id, :provider, :provider_uid, :provider_email]
 
   defp multi_key(multi, action) do
     :"log.#{action}.#{length(Multi.to_list(multi))}"

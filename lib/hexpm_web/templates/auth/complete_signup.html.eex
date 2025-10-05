@@ -1,0 +1,26 @@
+<%= if @changeset do %>
+  <%= ViewHelpers.changeset_error(@changeset) %>
+<% end %>
+
+<h2>Complete your signup</h2>
+
+<p>Choose a username for your Hex account.</p>
+
+<% changeset = @changeset || Ecto.Changeset.cast(%Hexpm.Accounts.User{}, %{username: @suggested_username}, [:username]) %>
+<%= form_for changeset, ~p"/auth/complete-signup", [as: :user], fn f -> %>
+  <div class="form-group">
+    <%= label f, :username %>
+    <%= ViewHelpers.text_input f, :username %>
+    <%= if @changeset do %>
+      <%= ViewHelpers.error_tag @changeset, :username %>
+    <% end %>
+    <p class="help-block">
+      Username must be at least 3 characters and can only contain letters, numbers, underscores, hyphens, and periods.
+    </p>
+  </div>
+
+  <div style="display: flex; gap: 10px;">
+    <button type="submit" class="btn btn-primary">Complete signup</button>
+    <a href="<%= ~p"/signup" %>" class="btn btn-danger">Cancel signup</a>
+  </div>
+<% end %>

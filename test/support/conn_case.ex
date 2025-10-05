@@ -80,4 +80,49 @@ defmodule HexpmWeb.ConnCase do
       end
     )
   end
+
+  def mock_github_auth_success(conn, uid, email, opts \\ []) do
+    name = Keyword.get(opts, :name, "Test User")
+    nickname = Keyword.get(opts, :nickname, "testuser")
+
+    auth = %Ueberauth.Auth{
+      provider: :github,
+      uid: uid,
+      info: %Ueberauth.Auth.Info{
+        email: email,
+        name: name,
+        nickname: nickname
+      },
+      credentials: %Ueberauth.Auth.Credentials{},
+      extra: %Ueberauth.Auth.Extra{}
+    }
+
+    conn
+    |> Plug.Test.init_test_session(%{})
+    |> Phoenix.Controller.fetch_flash()
+    |> Plug.Conn.fetch_query_params()
+    |> Plug.Conn.assign(:ueberauth_auth, auth)
+    |> Plug.Conn.assign(:current_user, nil)
+    |> Plug.Conn.assign(:current_organization, nil)
+    |> Plug.Conn.assign(:user_agent, "TEST")
+  end
+
+  def mock_github_auth_failure(conn) do
+    failure = %Ueberauth.Failure{
+      errors: [
+        %Ueberauth.Failure.Error{
+          message: "Authentication failed",
+          message_key: "auth_failed"
+        }
+      ],
+      provider: :github,
+      strategy: Ueberauth.Strategy.Github
+    }
+
+    conn
+    |> Plug.Test.init_test_session(%{})
+    |> Phoenix.Controller.fetch_flash()
+    |> Plug.Conn.fetch_query_params()
+    |> Plug.Conn.assign(:ueberauth_failure, failure)
+  end
 end

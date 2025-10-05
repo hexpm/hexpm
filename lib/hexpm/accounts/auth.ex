@@ -1,7 +1,7 @@
 defmodule Hexpm.Accounts.Auth do
   import Ecto.Query, only: [from: 2]
 
-  alias Hexpm.Accounts.{Key, Keys, Organization, Organizations, User, Users}
+  alias Hexpm.Accounts.{Key, Keys, Organization, Organizations, User, Users, UserProviders}
   alias Hexpm.OAuth.{Tokens, JWT}
 
   def key_auth(user_secret, usage_info) do
@@ -175,4 +175,23 @@ defmodule Hexpm.Accounts.Auth do
   defp parse_user_agent(nil), do: nil
   defp parse_user_agent([]), do: nil
   defp parse_user_agent([value | _]), do: value
+
+  def provider_auth(provider, provider_uid) do
+    user_provider =
+      UserProviders.get_by_provider(provider, provider_uid,
+        user: [:emails, owned_packages: :repository, organizations: :repository]
+      )
+
+    if user_provider && user_provider.user && not User.organization?(user_provider.user) do
+      {:ok,
+       %{
+         auth_credential: nil,
+         user: user_provider.user,
+         organization: nil,
+         email: find_email(user_provider.user, user_provider.provider_email)
+       }}
+    else
+      :error
+    end
+  end
 end
