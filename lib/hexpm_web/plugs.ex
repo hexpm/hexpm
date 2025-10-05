@@ -24,8 +24,16 @@ defmodule HexpmWeb.Plugs do
   end
 
   def fetch_body(conn, _opts) do
-    {conn, body} = read_body(conn)
-    put_in(conn.params["body"], body)
+    # Skip body reading if client sent Expect: 100-continue
+    # Body will be read after validation in handle_100_continue
+    case get_req_header(conn, "expect") do
+      ["100-continue"] ->
+        conn
+
+      _ ->
+        {conn, body} = read_body(conn)
+        put_in(conn.params["body"], body)
+    end
   end
 
   def read_body_finally(conn, _opts) do
@@ -44,7 +52,7 @@ defmodule HexpmWeb.Plugs do
     end)
   end
 
-  defp read_body(conn) do
+  def read_body(conn) do
     case read_body(conn, @read_body_opts) do
       {:ok, body, conn} ->
         {conn, body}

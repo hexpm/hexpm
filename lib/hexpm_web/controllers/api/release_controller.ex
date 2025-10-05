@@ -1,6 +1,8 @@
 defmodule HexpmWeb.API.ReleaseController do
   use HexpmWeb, :controller
 
+  @tarball_max_size 16 * 1024 * 1024
+
   plug :parse_tarball when action in [:publish]
   plug :maybe_fetch_release when action in [:show]
   plug :fetch_release when action in [:delete]
@@ -16,6 +18,8 @@ defmodule HexpmWeb.API.ReleaseController do
          fun: [{AuthHelpers, :package_owner}, {AuthHelpers, :organization_billing_active}]
        ]
        when action in [:create, :publish, :delete]
+
+  plug :handle_100_continue, [max_size: @tarball_max_size] when action in [:create, :publish]
 
   @download_period_params ~w(day month all)
 
