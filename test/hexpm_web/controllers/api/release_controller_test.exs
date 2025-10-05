@@ -1434,4 +1434,206 @@ defmodule HexpmWeb.API.ReleaseControllerTest do
              ]
     end
   end
+
+  describe "TOTP validation for write operations with OAuth tokens" do
+    setup %{user: user, package: package} do
+      # Create OAuth client and session
+      client = insert(:oauth_client)
+      oauth_session = insert(:oauth_session, user: user, client_id: client.client_id)
+
+      # Create OAuth token with write scope
+      {:ok, oauth_token} =
+        Hexpm.OAuth.Tokens.create_and_insert_for_user(
+          user,
+          client.client_id,
+          ["api:write"],
+          "authorization_code",
+          "test_grant_ref",
+          session_id: oauth_session.id
+        )
+
+      # Enable 2FA for user
+      user_with_tfa =
+        user
+        |> Ecto.Changeset.change()
+        |> Ecto.Changeset.put_embed(:tfa, %Hexpm.Accounts.TFA{
+          secret: Hexpm.Accounts.TFA.generate_secret(),
+          tfa_enabled: true,
+          app_enabled: true
+        })
+        |> Hexpm.Repo.update!()
+
+      meta = %{
+        name: package.name,
+        version: "2.0.0",
+        description: "New version with TOTP"
+      }
+
+      %{
+        oauth_token: oauth_token,
+        user_with_tfa: user_with_tfa,
+        meta: meta,
+        client: client,
+        oauth_session: oauth_session
+      }
+    end
+
+    test "write operation succeeds with valid TOTP code", %{
+      oauth_token: oauth_token,
+      user_with_tfa: user,
+      meta: meta
+    } do
+      totp_code = Hexpm.Accounts.TFA.time_based_token(user.tfa.secret)
+
+      conn =
+        build_conn()
+        |> put_req_header("content-type", "application/octet-stream")
+        |> put_req_header("authorization", "Bearer #{oauth_token.access_token}")
+        |> put_req_header("x-hex-otp", totp_code)
+        |> post("/api/packages/#{meta.name}/releases", create_tar(meta))
+
+      result = json_response(conn, 201)
+      assert result["version"] == "2.0.0"
+    end
+
+    test "write operation fails without TOTP header", %{
+      oauth_token: oauth_token,
+      meta: meta
+    } do
+      conn =
+        build_conn()
+        |> put_req_header("content-type", "application/octet-stream")
+        |> put_req_header("authorization", "Bearer #{oauth_token.access_token}")
+        |> post("/api/packages/#{meta.name}/releases", create_tar(meta))
+
+      result = json_response(conn, 401)
+      assert result["message"] == "Two-factor authentication required. Include X-Hex-OTP header with your TOTP code."
+      assert get_resp_header(conn, "www-authenticate") == [~s(Bearer realm="hex", error="totp_required")]
+    end
+
+    test "write operation fails with invalid TOTP code", %{
+      oauth_token: oauth_token,
+      meta: meta
+    } do
+      conn =
+        build_conn()
+        |> put_req_header("content-type", "application/octet-stream")
+        |> put_req_header("authorization", "Bearer #{oauth_token.access_token}")
+        |> put_req_header("x-hex-otp", "000000")
+        |> post("/api/packages/#{meta.name}/releases", create_tar(meta))
+
+      result = json_response(conn, 401)
+      assert result["message"] == "Invalid two-factor authentication code"
+      assert get_resp_header(conn, "www-authenticate") == [~s(Bearer realm="hex", error="invalid_totp")]
+    end
+
+    test "read operation works without TOTP even with write-scoped token", %{
+      oauth_token: oauth_token,
+      package: package,
+      release: release
+    } do
+      # Read operations should not require TOTP
+      conn =
+        build_conn()
+        |> put_req_header("authorization", "Bearer #{oauth_token.access_token}")
+        |> get("/api/packages/#{package.name}/releases/#{release.version}")
+
+      result = json_response(conn, 200)
+      assert result["version"] == "#{release.version}"
+    end
+
+    test "write operation with read-only token doesn't require TOTP", %{
+      user: user,
+      package: package,
+      client: client,
+      oauth_session: oauth_session
+    } do
+      # Create token with only read scope
+      {:ok, read_token} =
+        Hexpm.OAuth.Tokens.create_and_insert_for_user(
+          user,
+          client.client_id,
+          ["api:read"],
+          "authorization_code",
+          "test_grant_ref",
+          session_id: oauth_session.id
+        )
+
+      meta = %{name: package.name, version: "3.0.0", description: "Test"}
+
+      # Should fail due to insufficient permissions, not TOTP
+      conn =
+        build_conn()
+        |> put_req_header("content-type", "application/octet-stream")
+        |> put_req_header("authorization", "Bearer #{read_token.access_token}")
+        |> post("/api/packages/#{meta.name}/releases", create_tar(meta))
+
+      result = json_response(conn, 401)
+      # Should fail with domain error, not TOTP error
+      assert result["message"] == "key not authorized for this action"
+    end
+
+    test "write operation with API key (not OAuth) doesn't require TOTP", %{
+      user: user,
+      package: package
+    } do
+      # Enable 2FA on user
+      user_with_tfa =
+        user
+        |> Ecto.Changeset.change()
+        |> Ecto.Changeset.put_embed(:tfa, %Hexpm.Accounts.TFA{
+          secret: Hexpm.Accounts.TFA.generate_secret(),
+          tfa_enabled: true,
+          app_enabled: true
+        })
+        |> Hexpm.Repo.update!()
+
+      # Create API key
+      key = insert(:key, user: user_with_tfa)
+      meta = %{name: package.name, version: "4.0.0", description: "Test"}
+
+      # API keys don't require TOTP (only OAuth tokens do)
+      conn =
+        build_conn()
+        |> put_req_header("content-type", "application/octet-stream")
+        |> put_req_header("authorization", key.user_secret)
+        |> post("/api/packages/#{meta.name}/releases", create_tar(meta))
+
+      result = json_response(conn, 201)
+      assert result["version"] == "4.0.0"
+    end
+
+    test "user without 2FA enabled is blocked from write operations", %{
+      package: package,
+      client: client
+    } do
+      # Create a new user without 2FA
+      user_no_tfa = insert(:user)
+      insert(:package_owner, package: package, user: user_no_tfa)
+
+      # Create session and token for this user
+      oauth_session_no_tfa = insert(:oauth_session, user: user_no_tfa, client_id: client.client_id)
+
+      {:ok, token_no_tfa} =
+        Hexpm.OAuth.Tokens.create_and_insert_for_user(
+          user_no_tfa,
+          client.client_id,
+          ["api:write"],
+          "authorization_code",
+          "test_grant_ref",
+          session_id: oauth_session_no_tfa.id
+        )
+
+      meta = %{name: package.name, version: "5.0.0", description: "Test"}
+
+      conn =
+        build_conn()
+        |> put_req_header("content-type", "application/octet-stream")
+        |> put_req_header("authorization", "Bearer #{token_no_tfa.access_token}")
+        |> post("/api/packages/#{meta.name}/releases", create_tar(meta))
+
+      result = json_response(conn, 403)
+      assert result["message"] == "Two-factor authentication must be enabled for API write access"
+    end
+  end
 end
