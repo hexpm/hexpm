@@ -148,10 +148,27 @@ defmodule HexpmWeb.API.ReleaseControllerTest do
         |> put_req_header("authorization", key_for(user))
         |> post("/api/packages/#{Fake.sequence(:package)}/releases", create_tar(meta))
 
-      # Bad error message but /api/publish solves it
-      # https://github.com/hexpm/hexpm/issues/489
       result = json_response(conn, 422)
-      assert result["errors"]["name"] == "has already been taken"
+      assert result["errors"]["name"] == "metadata does not match package name"
+    end
+
+    test "create NEW package validates tarball name matches URL parameter", %{user: user} do
+      url_name = Fake.sequence(:package)
+      tarball_name = Fake.sequence(:package)
+      meta = %{name: tarball_name, version: "1.0.0", description: "description"}
+
+      conn =
+        build_conn()
+        |> put_req_header("content-type", "application/octet-stream")
+        |> put_req_header("authorization", key_for(user))
+        |> post("/api/packages/#{url_name}/releases", create_tar(meta))
+
+      result = json_response(conn, 422)
+      assert result["errors"]["name"] == "metadata does not match package name"
+
+      # Package should NOT be created with either name
+      refute Hexpm.Repo.get_by(Package, name: url_name)
+      refute Hexpm.Repo.get_by(Package, name: tarball_name)
     end
   end
 
@@ -743,6 +760,32 @@ defmodule HexpmWeb.API.ReleaseControllerTest do
       |> json_response(201)
 
       assert Hexpm.Store.get(:repo_bucket, "packages/#{meta.name}", [])
+    end
+
+    test "create release with 100 Continue header", %{user: user} do
+      meta = %{
+        name: Fake.sequence(:package),
+        version: "1.0.0",
+        description: "Domain-specific language."
+      }
+
+      tarball = create_tar(meta)
+
+      conn =
+        build_conn()
+        |> put_req_header("content-type", "application/octet-stream")
+        |> put_req_header("authorization", key_for(user))
+        |> put_req_header("expect", "100-continue")
+        |> put_req_header("content-length", to_string(byte_size(tarball)))
+        |> post("/api/publish", tarball)
+
+      result = json_response(conn, 201)
+      assert result["url"] =~ "api/packages/#{meta.name}/releases/1.0.0"
+      assert result["html_url"] =~ "packages/#{meta.name}/1.0.0"
+
+      package = Hexpm.Repo.get_by!(Package, name: meta.name)
+      package_owner = Hexpm.Repo.one!(assoc(package, :owners))
+      assert package_owner.id == user.id
     end
   end
 
@@ -1507,8 +1550,13 @@ defmodule HexpmWeb.API.ReleaseControllerTest do
         |> post("/api/packages/#{meta.name}/releases", create_tar(meta))
 
       result = json_response(conn, 401)
-      assert result["message"] == "Two-factor authentication required. Include X-Hex-OTP header with your TOTP code."
-      assert get_resp_header(conn, "www-authenticate") == [~s(Bearer realm="hex", error="totp_required")]
+
+      assert result["message"] ==
+               "Two-factor authentication required. Include X-Hex-OTP header with your TOTP code."
+
+      assert get_resp_header(conn, "www-authenticate") == [
+               ~s(Bearer realm="hex", error="totp_required")
+             ]
     end
 
     test "write operation fails with invalid TOTP code", %{
@@ -1524,7 +1572,10 @@ defmodule HexpmWeb.API.ReleaseControllerTest do
 
       result = json_response(conn, 401)
       assert result["message"] == "Invalid two-factor authentication code"
-      assert get_resp_header(conn, "www-authenticate") == [~s(Bearer realm="hex", error="invalid_totp")]
+
+      assert get_resp_header(conn, "www-authenticate") == [
+               ~s(Bearer realm="hex", error="invalid_totp")
+             ]
     end
 
     test "read operation works without TOTP even with write-scoped token", %{
@@ -1612,7 +1663,8 @@ defmodule HexpmWeb.API.ReleaseControllerTest do
       insert(:package_owner, package: package, user: user_no_tfa)
 
       # Create session and token for this user
-      oauth_session_no_tfa = insert(:oauth_session, user: user_no_tfa, client_id: client.client_id)
+      oauth_session_no_tfa =
+        insert(:oauth_session, user: user_no_tfa, client_id: client.client_id)
 
       {:ok, token_no_tfa} =
         Hexpm.OAuth.Tokens.create_and_insert_for_user(

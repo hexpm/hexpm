@@ -253,7 +253,7 @@ defmodule HexpmWeb.ControllerHelpers do
 
   def maybe_fetch_package(conn, _opts) do
     repository = Repositories.get(conn.params["repository"], [:organization])
-    package = repository && Packages.get(repository, conn.params["name"])
+    package = repository && conn.params["name"] && Packages.get(repository, conn.params["name"])
 
     conn
     |> assign(:repository, repository)

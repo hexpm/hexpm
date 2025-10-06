@@ -35,7 +35,8 @@ defmodule HexpmWeb.AuthHelpers do
         error(conn, {:error, :domain})
 
       # TOTP validation for write operations with OAuth tokens
-      totp_error = validate_totp_for_write_access(conn, user_or_organization, auth_credential, domains) ->
+      totp_error =
+          validate_totp_for_write_access(conn, user_or_organization, auth_credential, domains) ->
         error(conn, totp_error)
 
       funs ->
@@ -174,7 +175,10 @@ defmodule HexpmWeb.AuthHelpers do
       {:error, :totp_required} ->
         conn
         |> put_resp_header("www-authenticate", ~s(Bearer realm="hex", error="totp_required"))
-        |> render_error(401, message: "Two-factor authentication required. Include X-Hex-OTP header with your TOTP code.")
+        |> render_error(401,
+          message:
+            "Two-factor authentication required. Include X-Hex-OTP header with your TOTP code."
+        )
 
       {:error, :invalid_totp} ->
         conn
@@ -182,7 +186,9 @@ defmodule HexpmWeb.AuthHelpers do
         |> render_error(401, message: "Invalid two-factor authentication code")
 
       {:error, :totp_rate_limited} ->
-        render_error(conn, 429, message: "Too many failed two-factor authentication attempts. Please try again later.")
+        render_error(conn, 429,
+          message: "Too many failed two-factor authentication attempts. Please try again later."
+        )
 
       {:error, :tfa_not_enabled} ->
         forbidden(conn, "Two-factor authentication must be enabled for API write access")

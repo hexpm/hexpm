@@ -3,10 +3,9 @@ defmodule HexpmWeb.API.ReleaseController do
 
   @tarball_max_size 16 * 1024 * 1024
 
-  plug :parse_tarball when action in [:publish]
   plug :maybe_fetch_release when action in [:show]
   plug :fetch_release when action in [:delete]
-  plug :maybe_fetch_package when action in [:create, :publish]
+  plug :maybe_fetch_package when action in [:create]
 
   plug :authorize,
        [domains: [{"api", "read"}], fun: {AuthHelpers, :organization_access}]
@@ -17,9 +16,18 @@ defmodule HexpmWeb.API.ReleaseController do
          domains: [{"api", "write"}, "package"],
          fun: [{AuthHelpers, :package_owner}, {AuthHelpers, :organization_billing_active}]
        ]
-       when action in [:create, :publish, :delete]
+       when action in [:create, :delete]
 
   plug :handle_100_continue, [max_size: @tarball_max_size] when action in [:create, :publish]
+  plug :parse_tarball when action in [:publish]
+  plug :maybe_fetch_package when action in [:publish]
+
+  plug :authorize,
+       [
+         domains: [{"api", "write"}, "package"],
+         fun: [{AuthHelpers, :package_owner}, {AuthHelpers, :organization_billing_active}]
+       ]
+       when action in [:publish]
 
   @download_period_params ~w(day month all)
 
@@ -119,21 +127,28 @@ defmodule HexpmWeb.API.ReleaseController do
   defp handle_tarball(conn, repository, package, user, body) do
     case release_metadata(body) do
       {:ok, meta, inner_checksum, outer_checksum} ->
-        replace? = Map.get(conn.params, "replace", true)
-        request_id = List.first(get_resp_header(conn, "x-request-id"))
-        log_tarball(repository.name, meta["name"], meta["version"], request_id, body)
+        # Validate that tarball name matches URL parameter name
+        cond do
+          conn.params["name"] && meta["name"] != conn.params["name"] ->
+            {:error, %{name: "metadata does not match package name"}}
 
-        Releases.publish(
-          repository,
-          package,
-          user,
-          body,
-          meta,
-          inner_checksum,
-          outer_checksum,
-          audit: audit_data(conn),
-          replace: replace?
-        )
+          true ->
+            replace? = Map.get(conn.params, "replace", true)
+            request_id = List.first(get_resp_header(conn, "x-request-id"))
+            log_tarball(repository.name, meta["name"], meta["version"], request_id, body)
+
+            Releases.publish(
+              repository,
+              package,
+              user,
+              body,
+              meta,
+              inner_checksum,
+              outer_checksum,
+              audit: audit_data(conn),
+              replace: replace?
+            )
+        end
 
       {:error, errors} ->
         {:error, %{tar: errors}}
