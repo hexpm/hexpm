@@ -36,22 +36,6 @@ defmodule HexpmWeb.Plugs do
     end
   end
 
-  def read_body_finally(conn, _opts) do
-    register_before_send(conn, fn conn ->
-      if conn.status in 200..399 do
-        conn
-      else
-        # If we respond with an unsuccessful error code assume we did not read
-        # body. Read the full body to avoid closing the connection too early,
-        # works around getting H13/H18 errors on Heroku.
-        case read_body(conn, @read_body_opts) do
-          {:ok, _body, conn} -> conn
-          _ -> conn
-        end
-      end
-    end)
-  end
-
   def read_body(conn) do
     case read_body(conn, @read_body_opts) do
       {:ok, body, conn} ->
