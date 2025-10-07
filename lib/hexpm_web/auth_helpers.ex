@@ -2,9 +2,11 @@ defmodule HexpmWeb.AuthHelpers do
   import Plug.Conn
   import HexpmWeb.ControllerHelpers, only: [render_error: 3]
 
-  alias Hexpm.Accounts.{Auth, Organization, Organizations, User}
+  alias Hexpm.Accounts.{Auth, Organization, Organizations, User, TFA}
   alias Hexpm.Permissions
   alias Hexpm.Repository.{Package, Packages, PackageOwner, Repository}
+  alias Hexpm.OAuth.Token
+  alias HexpmWeb.Plugs.Attack
 
   def authorize(conn, opts) do
     user_or_organization = conn.assigns.current_user || conn.assigns.current_organization
@@ -31,6 +33,11 @@ defmodule HexpmWeb.AuthHelpers do
 
       user_or_organization && not verify_permissions?(conn, auth_credential, domains) ->
         error(conn, {:error, :domain})
+
+      # TOTP validation for write operations with OAuth tokens
+      totp_error =
+          validate_totp_for_write_access(conn, user_or_organization, auth_credential, domains) ->
+        error(conn, totp_error)
 
       funs ->
         Enum.find_value(List.wrap(funs), fn fun ->
@@ -89,6 +96,62 @@ defmodule HexpmWeb.AuthHelpers do
     Permissions.verify_access?(auth_credential, domain, resource)
   end
 
+  # TOTP validation for write operations
+  defp validate_totp_for_write_access(conn, %User{} = user, %Token{} = _token, domains) do
+    if requires_write_access?(domains) do
+      if not User.tfa_enabled?(user) do
+        {:error, :tfa_not_enabled}
+      else
+        validate_totp(conn, user)
+      end
+    else
+      nil
+    end
+  end
+
+  defp validate_totp_for_write_access(_conn, _user_or_org, _auth_credential, _domains) do
+    # Not an OAuth token, skip validation
+    nil
+  end
+
+  defp requires_write_access?(domains) do
+    Enum.any?(domains, fn
+      {"api", "write"} -> true
+      _ -> false
+    end)
+  end
+
+  defp validate_totp(conn, user) do
+    otp_code = get_req_header(conn, "x-hex-otp") |> List.first()
+
+    cond do
+      is_nil(otp_code) ->
+        {:error, :totp_required}
+
+      not TFA.token_valid?(user.tfa.secret, otp_code) ->
+        # Check rate limits
+        case check_totp_rate_limits(conn, user) do
+          :ok -> {:error, :invalid_totp}
+          {:rate_limited, _} -> {:error, :totp_rate_limited}
+        end
+
+      true ->
+        # Valid TOTP
+        nil
+    end
+  end
+
+  defp check_totp_rate_limits(conn, user) do
+    ip_result = Attack.tfa_ip_throttle(conn.remote_ip)
+    user_result = Attack.tfa_session_throttle(%{"uid" => user.id})
+
+    case {ip_result, user_result} do
+      {{:block, _}, _} -> {:rate_limited, :ip}
+      {_, {:block, _}} -> {:rate_limited, :user}
+      _ -> :ok
+    end
+  end
+
   def error(conn, error) do
     case error do
       {:error, :missing} ->
@@ -108,6 +171,27 @@ defmodule HexpmWeb.AuthHelpers do
 
       {:error, :domain} ->
         unauthorized(conn, "key not authorized for this action")
+
+      {:error, :totp_required} ->
+        conn
+        |> put_resp_header("www-authenticate", ~s(Bearer realm="hex", error="totp_required"))
+        |> render_error(401,
+          message:
+            "Two-factor authentication required. Include X-Hex-OTP header with your TOTP code."
+        )
+
+      {:error, :invalid_totp} ->
+        conn
+        |> put_resp_header("www-authenticate", ~s(Bearer realm="hex", error="invalid_totp"))
+        |> render_error(401, message: "Invalid two-factor authentication code")
+
+      {:error, :totp_rate_limited} ->
+        render_error(conn, 429,
+          message: "Too many failed two-factor authentication attempts. Please try again later."
+        )
+
+      {:error, :tfa_not_enabled} ->
+        forbidden(conn, "Two-factor authentication must be enabled for API write access")
 
       {:error, :unconfirmed} ->
         forbidden(conn, "email not verified")

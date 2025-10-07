@@ -253,7 +253,7 @@ defmodule HexpmWeb.ControllerHelpers do
 
   def maybe_fetch_package(conn, _opts) do
     repository = Repositories.get(conn.params["repository"], [:organization])
-    package = repository && Packages.get(repository, conn.params["name"])
+    package = repository && conn.params["name"] && Packages.get(repository, conn.params["name"])
 
     conn
     |> assign(:repository, repository)
@@ -405,4 +405,51 @@ defmodule HexpmWeb.ControllerHelpers do
   defp scrub?(" " <> rest), do: scrub?(rest)
   defp scrub?(""), do: true
   defp scrub?(_), do: false
+
+  # HTTP 100 Continue handling for large uploads
+  def handle_100_continue(conn, opts) do
+    # If authorization failed (conn halted), don't process 100 Continue
+    if conn.halted do
+      conn
+    else
+      case get_req_header(conn, "expect") do
+        ["100-continue"] ->
+          # Validate Content-Length header is present
+          case get_req_header(conn, "content-length") do
+            [] ->
+              conn
+              |> put_status(411)
+              |> put_view(HexpmWeb.ErrorView)
+              |> render(:"411")
+              |> halt()
+
+            [content_length] ->
+              # Check size limit if max_size option provided
+              case check_max_size(content_length, Keyword.get(opts, :max_size)) do
+                :ok ->
+                  # Authorization already passed, send 100 Continue and read body
+                  conn = inform(conn, :continue, [])
+                  {conn, body} = HexpmWeb.Plugs.read_body(conn)
+                  put_in(conn.params["body"], body)
+
+                {:error, :too_large} ->
+                  validation_failed(conn, %{tar: "too big"})
+              end
+          end
+
+        _ ->
+          # No Expect header, continue normally
+          conn
+      end
+    end
+  end
+
+  defp check_max_size(_content_length, nil), do: :ok
+
+  defp check_max_size(content_length, max_size) do
+    case Integer.parse(content_length) do
+      {size, _} when size > max_size -> {:error, :too_large}
+      _ -> :ok
+    end
+  end
 end

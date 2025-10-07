@@ -19,6 +19,8 @@ defmodule HexpmWeb.API.DocsController do
        ]
        when action in [:create, :delete]
 
+  plug :handle_100_continue, [max_size: @tarball_max_size] when action in [:create]
+
   def show(conn, _params) do
     repository = conn.assigns.repository
     package = conn.assigns.package
