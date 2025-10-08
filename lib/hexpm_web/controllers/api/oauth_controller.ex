@@ -5,7 +5,7 @@ defmodule HexpmWeb.API.OAuthController do
 
   @doc """
   Standard OAuth 2.0 token endpoint for API access.
-  Handles multiple grant types: authorization_code, device_code, refresh_token, token-exchange.
+  Handles multiple grant types: authorization_code, device_code, refresh_token.
   """
   def token(conn, params) do
     case get_grant_type(params) do
@@ -17,9 +17,6 @@ defmodule HexpmWeb.API.OAuthController do
 
       "refresh_token" ->
         handle_refresh_token_grant(conn, params)
-
-      "urn:ietf:params:oauth:grant-type:token-exchange" ->
-        handle_token_exchange_grant(conn, params)
 
       invalid_grant ->
         render_oauth_error(
@@ -138,21 +135,6 @@ defmodule HexpmWeb.API.OAuthController do
           )
       end
     else
-      {:error, error, description} ->
-        render_oauth_error(conn, error, description)
-    end
-  end
-
-  defp handle_token_exchange_grant(conn, params) do
-    case Tokens.exchange_token(
-           params["client_id"],
-           params["subject_token"],
-           params["subject_token_type"],
-           params["scope"]
-         ) do
-      {:ok, token} ->
-        render(conn, :token, token: token)
-
       {:error, error, description} ->
         render_oauth_error(conn, error, description)
     end

@@ -21,14 +21,13 @@ defmodule Hexpm.OAuth.Token do
     field :refresh_token, :string, virtual: true
 
     belongs_to :user, User
-    belongs_to :parent_token, __MODULE__
     belongs_to :client, Hexpm.OAuth.Client, references: :client_id, type: :binary_id
     belongs_to :session, Session
 
     timestamps()
   end
 
-  @valid_grant_types ~w(authorization_code urn:ietf:params:oauth:grant-type:device_code refresh_token urn:ietf:params:oauth:grant-type:token-exchange)
+  @valid_grant_types ~w(authorization_code urn:ietf:params:oauth:grant-type:device_code refresh_token)
 
   def changeset(token, attrs) do
     token
@@ -42,7 +41,6 @@ defmodule Hexpm.OAuth.Token do
       :revoked_at,
       :grant_type,
       :grant_reference,
-      :parent_token_id,
       :session_id,
       :user_id,
       :client_id,
