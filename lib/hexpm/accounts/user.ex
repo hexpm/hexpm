@@ -4,7 +4,7 @@ defmodule Hexpm.Accounts.User do
   @derive {HexpmWeb.Stale, assocs: [:emails, :owned_packages, :organizations, :keys]}
   @derive {Phoenix.Param, key: :username}
 
-  alias Hexpm.Accounts.{RecoveryCode, TFA}
+  alias Hexpm.Accounts.{RecoveryCode, TFA, UserProvider}
 
   schema "users" do
     field :username, :string
@@ -28,6 +28,7 @@ defmodule Hexpm.Accounts.User do
     has_many :audit_logs, AuditLog
     has_many :password_resets, PasswordReset
     has_many :package_reports, Hexpm.Repository.PackageReport, foreign_key: :author_id
+    has_many :user_providers, UserProvider
   end
 
   @username_regex ~r"^[a-z0-9_\-\.]+$"
@@ -37,7 +38,7 @@ defmodule Hexpm.Accounts.User do
 
   def build(params, confirmed? \\ not Application.get_env(:hexpm, :user_confirm)) do
     cast(%User{}, params, ~w(username full_name password)a)
-    |> validate_required(~w(username password)a)
+    |> validate_required(~w(username)a)
     |> cast_assoc(:emails, required: true, with: &Email.changeset(&1, :first, &2, confirmed?))
     |> cast_embed(:tfa)
     |> update_change(:username, &String.downcase/1)
@@ -46,9 +47,35 @@ defmodule Hexpm.Accounts.User do
     |> validate_format(:username, @username_reject_regex)
     |> validate_exclusion(:username, @reserved_names)
     |> unique_constraint(:username, name: "users_username_idx")
-    |> validate_length(:password, min: 7)
-    |> validate_confirmation(:password, message: "does not match password")
-    |> update_change(:password, &Auth.gen_password/1)
+    |> validate_password()
+  end
+
+  defp validate_password(changeset) do
+    password = get_change(changeset, :password)
+
+    if password do
+      changeset
+      |> validate_length(:password, min: 7)
+      |> validate_confirmation(:password, message: "does not match password")
+      |> update_change(:password, &Auth.gen_password/1)
+    else
+      changeset
+    end
+  end
+
+  def build_from_oauth(
+        username,
+        full_name,
+        email,
+        confirmed? \\ not Application.get_env(:hexpm, :user_confirm)
+      ) do
+    params = %{
+      "username" => username,
+      "full_name" => full_name,
+      "emails" => [%{"email" => email}]
+    }
+
+    build(params, confirmed?)
   end
 
   def build_organization(organization) do
@@ -202,5 +229,27 @@ defmodule Hexpm.Accounts.User do
 
   def has_role?(user, role) do
     user != nil and user.role == role
+  end
+
+  def has_password?(user), do: user.password != nil
+
+  def can_remove_password?(user) do
+    user.user_providers != [] || Hexpm.Accounts.UserProviders.has_provider?(user, "github")
+  end
+
+  def can_remove_provider?(user, _provider) do
+    has_password?(user)
+  end
+
+  def add_password(user, params) do
+    cast(user, params, ~w(password)a)
+    |> validate_required(~w(password)a)
+    |> validate_length(:password, min: 7)
+    |> validate_confirmation(:password, message: "does not match password")
+    |> update_change(:password, &Auth.gen_password/1)
+  end
+
+  def remove_password(user) do
+    change(user, %{password: nil})
   end
 end

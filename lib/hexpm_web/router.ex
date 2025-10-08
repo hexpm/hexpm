@@ -81,6 +81,11 @@ defmodule HexpmWeb.Router do
     get "/email/verification", EmailVerificationController, :show
     post "/email/verification", EmailVerificationController, :create
 
+    get "/auth/complete-signup", AuthController, :show_username_form
+    post "/auth/complete-signup", AuthController, :complete_signup
+    get "/auth/:provider", AuthController, :request
+    get "/auth/:provider/callback", AuthController, :callback
+
     get "/oauth/authorize", OAuthController, :authorize
     post "/oauth/authorize", OAuthController, :consent
     get "/oauth/device", DeviceController, :show
@@ -150,10 +155,19 @@ defmodule HexpmWeb.Router do
     get "/profile", ProfileController, :index
     post "/profile", ProfileController, :update
 
-    get "/password", PasswordController, :index, as: :dashboard_password
-    post "/password", PasswordController, :update, as: :dashboard_password
-
     get "/security", SecurityController, :index, as: :dashboard_security
+
+    post "/security/change-password", SecurityController, :change_password,
+      as: :dashboard_security
+
+    post "/security/add-password", SecurityController, :add_password, as: :dashboard_security
+
+    post "/security/remove-password", SecurityController, :remove_password,
+      as: :dashboard_security
+
+    post "/security/disconnect-github", SecurityController, :disconnect_github,
+      as: :dashboard_security
+
     post "/security/enable-tfa", SecurityController, :enable_tfa, as: :dashboard_security
     post "/security/disable-tfa", SecurityController, :disable_tfa, as: :dashboard_security
 
