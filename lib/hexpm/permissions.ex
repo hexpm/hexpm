@@ -7,7 +7,7 @@ defmodule Hexpm.Permissions do
   systems used by KeyPermission and OAuth tokens.
   """
 
-  alias Hexpm.Accounts.{Key, KeyPermission, User, Organization}
+  alias Hexpm.Accounts.{Key, KeyPermission, User, Users, Organization}
   alias Hexpm.OAuth.Token
   alias Hexpm.Repository.Package
 
@@ -295,6 +295,43 @@ defmodule Hexpm.Permissions do
 
   def verify_user_access(%Organization{} = organization, domain, resource) do
     Organization.verify_permissions(organization, domain, resource)
+  end
+
+  @doc """
+  Expands the "repositories" scope into individual "repository:{org}" scopes.
+
+  This is used for access tokens to create a capability-based token that explicitly
+  lists which repositories can be accessed at the edge without database lookups.
+
+  Refresh tokens keep the "repositories" scope as-is.
+
+  ## Examples
+
+      iex> user = %User{organizations: [%{name: "acme"}, %{name: "widgets"}]}
+      iex> expand_repositories_scope(user, ["api:read", "repositories"])
+      ["api:read", "repository:acme", "repository:widgets"]
+
+      iex> expand_repositories_scope(user, ["api:read"])
+      ["api:read"]
+  """
+  def expand_repositories_scope(%User{} = user, scopes) do
+    if "repositories" in scopes do
+      # Ensure organizations are preloaded
+      user = Hexpm.Repo.preload(user, :organizations)
+
+      # Get all organizations the user has access to
+      organizations = Users.all_organizations(user)
+
+      # Create individual repository scopes
+      repo_scopes = Enum.map(organizations, fn org -> "repository:#{org.name}" end)
+
+      # Replace "repositories" with individual scopes
+      scopes
+      |> Enum.reject(&(&1 == "repositories"))
+      |> Kernel.++(repo_scopes)
+    else
+      scopes
+    end
   end
 
   @doc """

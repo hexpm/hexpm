@@ -2,6 +2,7 @@ defmodule Hexpm.OAuth.Tokens do
   use Hexpm.Context
 
   alias Hexpm.OAuth.{Token, JWT}
+  alias Hexpm.Permissions
 
   @default_expires_in 30 * 60
   @default_refresh_token_expires_in 30 * 24 * 60 * 60
@@ -43,17 +44,22 @@ defmodule Hexpm.OAuth.Tokens do
     expires_in = Keyword.get(opts, :expires_in, @default_expires_in)
     expires_at = DateTime.add(DateTime.utc_now(), expires_in, :second)
 
+    # Expand "repositories" scope to individual "repository:{org}" scopes for access tokens
+    # This allows edge verification without database lookups
+    expanded_scopes = Permissions.expand_repositories_scope(user, scopes)
+
     jwt_opts = [
       session_id: Keyword.get(opts, :session_id),
       expires_in: expires_in
     ]
 
-    {:ok, access_token, jti} = JWT.generate_access_token(user.username, "user", scopes, jwt_opts)
+    {:ok, access_token, jti} =
+      JWT.generate_access_token(user.username, "user", expanded_scopes, jwt_opts)
 
     attrs = %{
       jti: jti,
       access_token: access_token,
-      scopes: scopes,
+      scopes: expanded_scopes,
       expires_at: expires_at,
       grant_type: grant_type,
       grant_reference: grant_reference,

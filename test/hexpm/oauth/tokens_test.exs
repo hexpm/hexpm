@@ -80,12 +80,12 @@ defmodule Hexpm.OAuth.TokensTest do
       assert get_field(changeset, :grant_reference) == nil
     end
 
-    test "sets 30-day refresh token expiration for read-only scopes", %{user: user} do
+    test "sets 30-day refresh token expiration for all scopes", %{user: user} do
       changeset =
         Tokens.create_for_user(
           user,
           "test_client",
-          ["api:read"],
+          ["api"],
           "authorization_code",
           nil,
           with_refresh_token: true

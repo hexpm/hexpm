@@ -197,13 +197,15 @@ defmodule Hexpm.Factory do
   end
 
   def oauth_token_factory() do
-    expires_at = DateTime.add(DateTime.utc_now(), 3600, :second)
+    expires_at = DateTime.add(DateTime.utc_now(), 30 * 24 * 3600, :second)
+    refresh_token_expires_at = DateTime.add(DateTime.utc_now(), 30 * 24 * 3600, :second)
 
     %Hexpm.OAuth.Token{
       jti: "test-jti-#{:erlang.unique_integer()}",
       token_type: "bearer",
       scopes: ["api"],
       expires_at: expires_at,
+      refresh_token_expires_at: refresh_token_expires_at,
       grant_type: "authorization_code",
       client_id: Hexpm.OAuth.Clients.generate_client_id()
     }
