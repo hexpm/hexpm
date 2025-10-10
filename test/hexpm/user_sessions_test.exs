@@ -196,7 +196,7 @@ defmodule Hexpm.UserSessionsTest do
       # We'll create them directly without enforcement to simulate a race condition
       sessions =
         for i <- 1..7 do
-          session_token = :crypto.strong_rand_bytes(96)
+          session_token = :crypto.strong_rand_bytes(32)
           expires_at = DateTime.add(DateTime.utc_now(), 30 * 24 * 60 * 60, :second)
 
           attrs = %{

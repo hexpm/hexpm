@@ -1,4 +1,25 @@
 defmodule Hexpm.UserSessions do
+  @moduledoc """
+  Manages user sessions for both browser authentication and OAuth applications.
+
+  ## Session Limits
+
+  Users are limited to 5 active sessions (combined browser and OAuth) to balance
+  security and usability. When this limit is reached, the least recently used
+  session is automatically revoked. This prevents session buildup while allowing
+  users to be logged in on multiple devices and use several OAuth applications.
+
+  ## Session Expiration
+
+  All sessions expire after 30 days of creation (non-sliding window). Sessions
+  are automatically cleaned up by calling `cleanup_expired_sessions/0` periodically
+  via a scheduled job (e.g., cron, Oban, Quantum).
+
+  ## Last Use Tracking
+
+  Browser sessions track last use via the login plug (throttled to once per 5 minutes).
+  OAuth sessions track last use when tokens are issued or refreshed.
+  """
   use Hexpm.Context
 
   alias Hexpm.UserSession
@@ -14,7 +35,7 @@ defmodule Hexpm.UserSessions do
   def create_browser_session(user, opts \\ []) do
     enforce_session_limit(user)
 
-    session_token = :crypto.strong_rand_bytes(96)
+    session_token = :crypto.strong_rand_bytes(32)
     name = Keyword.get(opts, :name, "Browser Session")
     expires_at = DateTime.add(DateTime.utc_now(), @default_session_expires_in, :second)
 
@@ -226,8 +247,12 @@ defmodule Hexpm.UserSessions do
   end
 
   @doc """
-  Cleans up expired sessions.
-  This should be called periodically to remove old records.
+  Cleans up expired sessions by deleting them from the database.
+
+  This function should be called periodically (e.g., daily) via a scheduled job
+  such as cron, Oban, or Quantum to prevent accumulation of expired records.
+
+  Returns `{count, nil}` where count is the number of deleted sessions.
   """
   def cleanup_expired_sessions do
     now = DateTime.utc_now()

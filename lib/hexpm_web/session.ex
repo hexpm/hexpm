@@ -1,23 +1,12 @@
 defmodule HexpmWeb.Session do
   alias Hexpm.Repo
+  alias Hexpm.PlugSession
   import Ecto.Query
 
   @behaviour Plug.Session.Store
 
   # Simple session schema for Plug session storage (CSRF, flash, etc)
   # This is separate from user authentication which uses user_sessions table
-  defmodule PlugSession do
-    use Ecto.Schema
-
-    @timestamps_opts [type: :naive_datetime]
-
-    schema "sessions" do
-      field :token, :binary
-      field :data, :map
-
-      timestamps()
-    end
-  end
 
   def init(_opts) do
     :ok
@@ -36,7 +25,7 @@ defmodule HexpmWeb.Session do
   end
 
   def put(_conn, nil, data, _opts) do
-    token = :crypto.strong_rand_bytes(96)
+    token = :crypto.strong_rand_bytes(32)
 
     session =
       if Repo.write_mode?() do

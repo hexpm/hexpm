@@ -217,7 +217,7 @@ defmodule Hexpm.Factory do
     %Hexpm.UserSession{
       type: "browser",
       name: "Test Browser Session",
-      session_token: :crypto.strong_rand_bytes(96),
+      session_token: :crypto.strong_rand_bytes(32),
       user_id: user.id
     }
   end

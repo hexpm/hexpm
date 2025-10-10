@@ -3,6 +3,7 @@ defmodule HexpmWeb.Plugs do
   import HexpmWeb.RequestHelpers, only: [build_usage_info: 1]
 
   alias Hexpm.Accounts.Users
+  alias Hexpm.UserSessions
   alias HexpmWeb.ControllerHelpers
 
   # Max filesize: 20mib
@@ -80,8 +81,6 @@ defmodule HexpmWeb.Plugs do
   end
 
   def login(conn, _opts) do
-    alias Hexpm.UserSessions
-
     conn = assign(conn, :current_organization, nil)
 
     session_token = get_session(conn, "session_token")
@@ -95,10 +94,21 @@ defmodule HexpmWeb.Plugs do
                 nil
 
               session ->
-                # Update last_use for browser sessions
-                usage_info = build_usage_info(conn)
+                # Update last_use for browser sessions (throttled to once per 5 minutes)
+                should_update =
+                  case session.last_use do
+                    nil ->
+                      true
 
-                UserSessions.update_last_use(session, usage_info)
+                    %{used_at: last_used} ->
+                      DateTime.diff(DateTime.utc_now(), last_used, :minute) >= 5
+                  end
+
+                if should_update do
+                  usage_info = build_usage_info(conn)
+                  UserSessions.update_last_use(session, usage_info)
+                end
+
                 Users.get_by_id(session.user_id, [:emails, organizations: :repository])
             end
 

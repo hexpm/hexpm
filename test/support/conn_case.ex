@@ -55,7 +55,7 @@ defmodule HexpmWeb.ConnCase do
   def last_session() do
     import Ecto.Query
 
-    from(s in HexpmWeb.Session.PlugSession, order_by: [desc: s.id], limit: 1)
+    from(s in Hexpm.PlugSession, order_by: [desc: s.id], limit: 1)
     |> Hexpm.Repo.one()
   end
 
