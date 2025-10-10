@@ -107,5 +107,141 @@ defmodule HexpmWeb.PasswordControllerTest do
       response(conn, 302)
       assert Phoenix.Flash.get(conn.assigns.flash, :error) == "Failed to change your password."
     end
+
+    test "revokes all access (keys, sessions, tokens) when checkbox checked", c do
+      alias Hexpm.{UserSessions, OAuth}
+
+      username = c.user.username
+
+      # Create API key
+      {:ok, %{key: key}} =
+        Hexpm.Accounts.Keys.create(c.user, %{"name" => "test_key", "permissions" => []},
+          audit: audit_data(c.user)
+        )
+
+      # Create browser session
+      {:ok, browser_session, _token} =
+        UserSessions.create_browser_session(c.user, name: "Test Browser")
+
+      # Create OAuth session and token
+      client = insert(:oauth_client)
+
+      {:ok, oauth_token} =
+        OAuth.Tokens.create_session_and_token_for_user(
+          c.user,
+          client.client_id,
+          ["api"],
+          "authorization_code",
+          "test_code",
+          with_refresh_token: true,
+          name: "Test OAuth"
+        )
+
+      oauth_session = Repo.get(Hexpm.UserSession, oauth_token.user_session_id)
+
+      # Initiate password reset
+      Users.password_reset_init(username, audit: audit_data(c.user))
+      user = Repo.preload(c.user, :password_resets)
+
+      # Reset password with checkbox checked (default)
+      conn =
+        build_conn()
+        |> test_login(user)
+        |> post("/password/new", %{
+          "user" => %{
+            "username" => user.username,
+            "key" => hd(user.password_resets).key,
+            "password" => "new_password123",
+            "password_confirmation" => "new_password123",
+            "revoke_all_access" => "yes"
+          }
+        })
+
+      assert redirected_to(conn) == "/"
+
+      # Verify API key was revoked
+      reloaded_key = Repo.get(Hexpm.Accounts.Key, key.id)
+      assert reloaded_key.revoke_at != nil
+
+      # Verify browser session was revoked
+      reloaded_browser = Repo.get(Hexpm.UserSession, browser_session.id)
+      assert reloaded_browser.revoked_at != nil
+
+      # Verify OAuth session was revoked
+      reloaded_oauth_session = Repo.get(Hexpm.UserSession, oauth_session.id)
+      assert reloaded_oauth_session.revoked_at != nil
+
+      # Verify OAuth token was revoked
+      reloaded_token = Repo.get(OAuth.Token, oauth_token.id)
+      assert reloaded_token.revoked_at != nil
+    end
+
+    test "revokes only sessions and tokens when checkbox unchecked", c do
+      alias Hexpm.{UserSessions, OAuth}
+
+      username = c.user.username
+
+      # Create API key
+      {:ok, %{key: key}} =
+        Hexpm.Accounts.Keys.create(c.user, %{"name" => "test_key", "permissions" => []},
+          audit: audit_data(c.user)
+        )
+
+      # Create browser session
+      {:ok, browser_session, _token} =
+        UserSessions.create_browser_session(c.user, name: "Test Browser")
+
+      # Create OAuth session and token
+      client = insert(:oauth_client)
+
+      {:ok, oauth_token} =
+        OAuth.Tokens.create_session_and_token_for_user(
+          c.user,
+          client.client_id,
+          ["api"],
+          "authorization_code",
+          "test_code",
+          with_refresh_token: true,
+          name: "Test OAuth"
+        )
+
+      oauth_session = Repo.get(Hexpm.UserSession, oauth_token.user_session_id)
+
+      # Initiate password reset
+      Users.password_reset_init(username, audit: audit_data(c.user))
+      user = Repo.preload(c.user, :password_resets)
+
+      # Reset password with checkbox unchecked
+      conn =
+        build_conn()
+        |> test_login(user)
+        |> post("/password/new", %{
+          "user" => %{
+            "username" => user.username,
+            "key" => hd(user.password_resets).key,
+            "password" => "new_password123",
+            "password_confirmation" => "new_password123",
+            "revoke_all_access" => "no"
+          }
+        })
+
+      assert redirected_to(conn) == "/"
+
+      # Verify API key was NOT revoked
+      reloaded_key = Repo.get(Hexpm.Accounts.Key, key.id)
+      assert reloaded_key.revoke_at == nil
+
+      # Verify browser session was revoked
+      reloaded_browser = Repo.get(Hexpm.UserSession, browser_session.id)
+      assert reloaded_browser.revoked_at != nil
+
+      # Verify OAuth session was revoked
+      reloaded_oauth_session = Repo.get(Hexpm.UserSession, oauth_session.id)
+      assert reloaded_oauth_session.revoked_at != nil
+
+      # Verify OAuth token was revoked
+      reloaded_token = Repo.get(OAuth.Token, oauth_token.id)
+      assert reloaded_token.revoked_at != nil
+    end
   end
 end

@@ -1,6 +1,7 @@
 defmodule Hexpm.OAuth.Tokens do
   use Hexpm.Context
 
+  alias Hexpm.UserSessions
   alias Hexpm.OAuth.{Token, JWT}
   alias Hexpm.Permissions
 
@@ -124,8 +125,6 @@ defmodule Hexpm.OAuth.Tokens do
         grant_reference \\ nil,
         opts \\ []
       ) do
-    alias Hexpm.UserSessions
-
     Ecto.Multi.new()
     |> Ecto.Multi.run(:session, fn _repo, _changes ->
       UserSessions.create_oauth_session(user, client_id, name: Keyword.get(opts, :name))

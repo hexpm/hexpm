@@ -17,10 +17,10 @@
 
   <div class="form-group">
     <div class="checkbox">
-      <input type="hidden" name="user[revoke_all_keys]" value="no">
+      <input type="hidden" name="user[revoke_all_access]" value="no">
       <label>
-        <input type="checkbox" name="user[revoke_all_keys]" value="yes" checked>
-        Revoke all API keys
+        <input type="checkbox" name="user[revoke_all_access]" value="yes" checked>
+        Revoke all access (API keys, sessions, and OAuth tokens)
       </label>
     </div>
   </div>

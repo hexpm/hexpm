@@ -68,7 +68,7 @@ defmodule Hexpm.OAuth.DeviceCodes do
   Authorizes a device using the user code with selected scopes.
   Requires explicit scope selection - at least one scope must be provided.
   """
-  def authorize_device(user_code, user, selected_scopes, _opts \\ []) do
+  def authorize_device(user_code, user, selected_scopes) do
     case get_by_user_code(user_code) do
       nil ->
         {:error, :invalid_code, "Invalid user code"}
@@ -258,7 +258,7 @@ defmodule Hexpm.OAuth.DeviceCodes do
             {:error, :invalid_grant, "No token found for authorized device"}
 
           token ->
-            # Update session's last_use with CLI's usage info when polling
+            # Update session's last_use with device's usage info when polling
             if token.user_session_id && usage_info do
               case Repo.get(Hexpm.UserSession, token.user_session_id) do
                 nil -> :ok

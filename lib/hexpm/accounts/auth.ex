@@ -1,5 +1,6 @@
 defmodule Hexpm.Accounts.Auth do
   import Ecto.Query, only: [from: 2]
+  import HexpmWeb.RequestHelpers, only: [parse_ip: 1, parse_user_agent: 1]
 
   alias Hexpm.Accounts.{Key, Keys, Organization, Organizations, User, Users}
   alias Hexpm.OAuth.{Tokens, JWT}
@@ -163,16 +164,4 @@ defmodule Hexpm.Accounts.Auth do
       user_agent: parse_user_agent(info[:user_agent])
     }
   end
-
-  defp parse_ip(nil), do: nil
-
-  defp parse_ip(ip_tuple) do
-    ip_tuple
-    |> Tuple.to_list()
-    |> Enum.join(".")
-  end
-
-  defp parse_user_agent(nil), do: nil
-  defp parse_user_agent([]), do: nil
-  defp parse_user_agent([value | _]), do: value
 end

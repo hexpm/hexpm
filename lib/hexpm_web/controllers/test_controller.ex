@@ -1,6 +1,8 @@
 defmodule HexpmWeb.TestController do
   use HexpmWeb, :controller
 
+  import HexpmWeb.RequestHelpers, only: [build_usage_info: 1]
+
   alias Hexpm.Accounts.Users
   alias Hexpm.OAuth.{Client, DeviceCode, DeviceCodes, Tokens}
   alias Hexpm.Repo
@@ -176,26 +178,6 @@ defmodule HexpmWeb.TestController do
       |> render(:error, error: %{error: "No pending device codes"})
     end
   end
-
-  defp build_usage_info(conn) do
-    %{
-      ip: parse_ip(conn.remote_ip),
-      used_at: DateTime.utc_now(),
-      user_agent: parse_user_agent(get_req_header(conn, "user-agent"))
-    }
-  end
-
-  defp parse_ip(nil), do: nil
-
-  defp parse_ip(ip_tuple) do
-    ip_tuple
-    |> Tuple.to_list()
-    |> Enum.join(".")
-  end
-
-  defp parse_user_agent([]), do: nil
-  defp parse_user_agent([value | _]), do: value
-  defp parse_user_agent(nil), do: nil
 
   defp send_object(nil, conn), do: send_resp(conn, 404, "")
   defp send_object(obj, conn), do: send_resp(conn, 200, obj)

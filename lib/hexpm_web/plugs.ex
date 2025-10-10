@@ -1,5 +1,6 @@
 defmodule HexpmWeb.Plugs do
   import Plug.Conn, except: [read_body: 1]
+  import HexpmWeb.RequestHelpers, only: [build_usage_info: 1]
 
   alias Hexpm.Accounts.Users
   alias HexpmWeb.ControllerHelpers
@@ -95,11 +96,7 @@ defmodule HexpmWeb.Plugs do
 
               session ->
                 # Update last_use for browser sessions
-                usage_info = %{
-                  ip: parse_ip(conn.remote_ip),
-                  used_at: DateTime.utc_now(),
-                  user_agent: parse_user_agent(get_req_header(conn, "user-agent"))
-                }
+                usage_info = build_usage_info(conn)
 
                 UserSessions.update_last_use(session, usage_info)
                 Users.get_by_id(session.user_id, [:emails, organizations: :repository])
@@ -114,18 +111,6 @@ defmodule HexpmWeb.Plugs do
 
     assign(conn, :current_user, user)
   end
-
-  defp parse_ip(nil), do: nil
-
-  defp parse_ip(ip_tuple) do
-    ip_tuple
-    |> Tuple.to_list()
-    |> Enum.join(".")
-  end
-
-  defp parse_user_agent([]), do: nil
-  defp parse_user_agent([value | _]), do: value
-  defp parse_user_agent(nil), do: nil
 
   def disable_deactivated(conn, _opts) do
     if conn.assigns.current_user && conn.assigns.current_user.deactivated_at do

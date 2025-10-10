@@ -274,12 +274,12 @@ defmodule Hexpm.Accounts.Users do
     end
   end
 
-  def password_reset_finish(username, key, params, revoke_all_keys?, audit: audit_data) do
+  def password_reset_finish(username, key, params, revoke_all_access?, audit: audit_data) do
     user = get(username, [:emails, :password_resets])
 
     if user && not User.organization?(user) && User.can_reset_password?(user, key) do
       multi =
-        password_reset(user, params, revoke_all_keys?)
+        password_reset(user, params, revoke_all_access?)
         |> audit(audit_data, "password.reset.finish", nil)
 
       case Repo.transaction(multi) do
@@ -294,20 +294,19 @@ defmodule Hexpm.Accounts.Users do
     end
   end
 
-  defp password_reset(user, params, revoke_all_keys) do
-    alias Hexpm.UserSession
+  defp password_reset(user, params, revoke_all_access) do
+    alias Hexpm.UserSessions
+
+    {sessions_query, tokens_query} = UserSessions.revoke_all(user)
 
     multi =
       Multi.new()
       |> Multi.update(:password, User.update_password_no_check(user, params))
       |> Multi.delete_all(:reset, assoc(user, :password_resets))
-      |> Multi.update_all(
-        :reset_sessions,
-        from(s in UserSession, where: s.user_id == ^user.id and s.type == "browser"),
-        set: [revoked_at: DateTime.utc_now(), updated_at: DateTime.utc_now()]
-      )
+      |> Multi.update_all(:revoke_sessions, sessions_query, [])
+      |> Multi.update_all(:revoke_tokens, tokens_query, [])
 
-    if revoke_all_keys,
+    if revoke_all_access,
       do: Multi.update_all(multi, :keys, Key.revoke_all(user), []),
       else: multi
   end

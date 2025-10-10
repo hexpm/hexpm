@@ -1,6 +1,8 @@
 defmodule HexpmWeb.API.OAuthController do
   use HexpmWeb, :controller
 
+  import HexpmWeb.RequestHelpers, only: [build_usage_info: 1]
+
   alias Hexpm.OAuth.{Clients, Tokens, AuthorizationCodes, DeviceCodes}
 
   @doc """
@@ -314,24 +316,4 @@ defmodule HexpmWeb.API.OAuthController do
   defp error_status(:authorization_pending), do: 400
   defp error_status(:expired_token), do: 400
   defp error_status(_), do: 400
-
-  defp build_usage_info(conn) do
-    %{
-      ip: parse_ip(conn.remote_ip),
-      used_at: DateTime.utc_now(),
-      user_agent: parse_user_agent(get_req_header(conn, "user-agent"))
-    }
-  end
-
-  defp parse_ip(nil), do: nil
-
-  defp parse_ip(ip_tuple) do
-    ip_tuple
-    |> Tuple.to_list()
-    |> Enum.join(".")
-  end
-
-  defp parse_user_agent([]), do: nil
-  defp parse_user_agent([value | _]), do: value
-  defp parse_user_agent(nil), do: nil
 end

@@ -136,6 +136,26 @@ defmodule Hexpm.UserSessions do
   end
 
   @doc """
+  Revokes all sessions for a user (both browser and OAuth).
+  Returns a query suitable for use in Multi.update_all.
+  For OAuth sessions, associated tokens will also be revoked.
+  """
+  def revoke_all(user, revoke_at \\ nil) do
+    revoke_at = revoke_at || DateTime.utc_now()
+
+    # First, we need to revoke all OAuth tokens associated with this user's sessions
+    # This is handled by updating the sessions table and separately updating tokens
+    {from(s in UserSession,
+       where: s.user_id == ^user.id and is_nil(s.revoked_at),
+       update: [set: [revoked_at: ^revoke_at, updated_at: ^DateTime.utc_now()]]
+     ),
+     from(t in Token,
+       where: t.user_id == ^user.id and is_nil(t.revoked_at),
+       update: [set: [revoked_at: ^revoke_at, updated_at: ^DateTime.utc_now()]]
+     )}
+  end
+
+  @doc """
   Updates the last use information for a session.
   """
   def update_last_use(%UserSession{} = session, usage_info) do
@@ -162,6 +182,7 @@ defmodule Hexpm.UserSessions do
   @doc """
   Enforces the session limit by revoking least recently used sessions if needed.
   Called before creating a new session to ensure the user stays within the limit.
+  Uses update_all for efficiency instead of fetching and iterating.
   """
   def enforce_session_limit(user) do
     count = count_for_user(user)
@@ -170,7 +191,8 @@ defmodule Hexpm.UserSessions do
       now = DateTime.utc_now()
       revoke_count = count - @max_sessions + 1
 
-      sessions_to_revoke =
+      # Find the IDs of sessions to revoke using a subquery
+      session_ids_to_revoke =
         from(s in UserSession,
           where:
             s.user_id == ^user.id and is_nil(s.revoked_at) and
@@ -179,16 +201,25 @@ defmodule Hexpm.UserSessions do
             asc: fragment("(last_use->>'used_at')::timestamptz NULLS FIRST"),
             asc: s.inserted_at
           ],
-          limit: ^revoke_count
+          limit: ^revoke_count,
+          select: s.id
         )
-        |> Repo.all()
 
-      Enum.each(sessions_to_revoke, fn session ->
-        case revoke(session) do
-          {:ok, _} -> :ok
-          _ -> :ok
-        end
-      end)
+      # Use a transaction to revoke sessions and their tokens atomically
+      Ecto.Multi.new()
+      |> Ecto.Multi.update_all(
+        :revoke_sessions,
+        from(s in UserSession, where: s.id in subquery(session_ids_to_revoke)),
+        set: [revoked_at: now, updated_at: now]
+      )
+      |> Ecto.Multi.update_all(
+        :revoke_tokens,
+        from(t in Token,
+          where: t.user_session_id in subquery(session_ids_to_revoke) and is_nil(t.revoked_at)
+        ),
+        set: [revoked_at: now, updated_at: now]
+      )
+      |> Repo.transaction()
     end
 
     :ok
