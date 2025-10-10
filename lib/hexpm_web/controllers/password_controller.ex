@@ -30,13 +30,13 @@ defmodule HexpmWeb.PasswordController do
     params = params["user"]
     username = params["username"]
     key = params["key"]
-    revoke_all_keys? = (params["revoke_all_keys"] || "yes") == "yes"
+    revoke_all_access? = (params["revoke_all_access"] || "yes") == "yes"
 
     case Users.password_reset_finish(
            username,
            key,
            params,
-           revoke_all_keys?,
+           revoke_all_access?,
            audit: audit_data(conn)
          ) do
       :ok ->

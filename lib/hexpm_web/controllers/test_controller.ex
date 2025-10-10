@@ -1,6 +1,8 @@
 defmodule HexpmWeb.TestController do
   use HexpmWeb, :controller
 
+  import HexpmWeb.RequestHelpers, only: [build_usage_info: 1]
+
   alias Hexpm.Accounts.Users
   alias Hexpm.OAuth.{Client, DeviceCode, DeviceCodes, Tokens}
   alias Hexpm.Repo
@@ -92,6 +94,7 @@ defmodule HexpmWeb.TestController do
     else
       client_id = params["client_id"] || "78ea6566-89fd-481e-a1d6-7d9d78eacca8"
       scopes = String.split(params["scope"] || "api repositories", " ")
+      usage_info = build_usage_info(conn)
 
       case Tokens.create_session_and_token_for_user(
              user,
@@ -99,7 +102,8 @@ defmodule HexpmWeb.TestController do
              scopes,
              "authorization_code",
              "test_grant",
-             with_refresh_token: true
+             with_refresh_token: true,
+             usage_info: usage_info
            ) do
         {:ok, token} ->
           render(conn, :oauth_token, token: token)

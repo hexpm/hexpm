@@ -5,9 +5,14 @@ defmodule HexpmWeb.OAuthControllerTest do
   import Hexpm.Factory
 
   defp login_user(conn, user) do
+    alias Hexpm.UserSessions
+
+    {:ok, _session, session_token} =
+      UserSessions.create_browser_session(user, name: "Test Browser Session")
+
     conn
     |> init_test_session(%{})
-    |> put_session("user_id", user.id)
+    |> put_session("session_token", Base.encode64(session_token))
   end
 
   defp create_test_client(name \\ "Test OAuth App") do

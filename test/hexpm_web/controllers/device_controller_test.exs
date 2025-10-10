@@ -469,9 +469,14 @@ defmodule HexpmWeb.DeviceControllerTest do
   end
 
   defp login_user(conn, user) do
+    alias Hexpm.UserSessions
+
+    {:ok, _session, session_token} =
+      UserSessions.create_browser_session(user, name: "Test Browser Session")
+
     conn
     |> init_test_session(%{})
-    |> put_session("user_id", user.id)
+    |> put_session("session_token", Base.encode64(session_token))
   end
 
   describe "device verification rate limiting" do

@@ -1,6 +1,8 @@
 defmodule HexpmWeb.API.OAuthController do
   use HexpmWeb, :controller
 
+  import HexpmWeb.RequestHelpers, only: [build_usage_info: 1]
+
   alias Hexpm.OAuth.{Clients, Tokens, AuthorizationCodes, DeviceCodes}
 
   @doc """
@@ -76,6 +78,7 @@ defmodule HexpmWeb.API.OAuthController do
          :ok <- validate_redirect_uri_match(auth_code, params["redirect_uri"]),
          :ok <- validate_pkce(auth_code, params["code_verifier"]) do
       {:ok, used_auth_code} = AuthorizationCodes.mark_as_used(auth_code)
+      usage_info = build_usage_info(conn)
 
       case Tokens.create_session_and_token_for_user(
              used_auth_code.user,
@@ -84,7 +87,8 @@ defmodule HexpmWeb.API.OAuthController do
              "authorization_code",
              used_auth_code.code,
              name: params["name"],
-             with_refresh_token: true
+             with_refresh_token: true,
+             usage_info: usage_info
            ) do
         {:ok, token} ->
           render(conn, :token, token: token)
@@ -103,7 +107,9 @@ defmodule HexpmWeb.API.OAuthController do
   end
 
   defp handle_device_code_grant(conn, params) do
-    case DeviceCodes.poll_device_token(params["device_code"], params["client_id"]) do
+    usage_info = build_usage_info(conn)
+
+    case DeviceCodes.poll_device_token(params["device_code"], params["client_id"], usage_info) do
       {:ok, token} ->
         render(conn, :token, token: token)
 
@@ -115,6 +121,8 @@ defmodule HexpmWeb.API.OAuthController do
   defp handle_refresh_token_grant(conn, params) do
     with {:ok, client} <- authenticate_client(params),
          {:ok, token} <- validate_refresh_token(params["refresh_token"], client.client_id) do
+      usage_info = build_usage_info(conn)
+
       case Tokens.revoke_and_create_token(
              token,
              client.client_id,
@@ -122,7 +130,8 @@ defmodule HexpmWeb.API.OAuthController do
              "refresh_token",
              params["refresh_token"],
              with_refresh_token: true,
-             session_id: token.session_id
+             user_session_id: token.user_session_id,
+             usage_info: usage_info
            ) do
         {:ok, new_token} ->
           render(conn, :token, token: new_token)

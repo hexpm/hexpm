@@ -2,7 +2,7 @@ defmodule HexpmWeb.API.OAuthControllerTest do
   use HexpmWeb.ConnCase, async: true
 
   alias Hexpm.{Repo}
-  alias Hexpm.OAuth.{DeviceCodes, Client, Clients, Sessions, Token, Tokens}
+  alias Hexpm.OAuth.{DeviceCodes, Client, Clients, Token, Tokens}
 
   setup do
     # Create test OAuth client
@@ -337,7 +337,7 @@ defmodule HexpmWeb.API.OAuthControllerTest do
     end
 
     test "returns error for expired refresh token", %{user: user, client: client} do
-      {:ok, session} = Sessions.create_for_user(user, client.client_id)
+      {:ok, session} = Hexpm.UserSessions.create_oauth_session(user, client.client_id)
 
       # Create a token with an expired refresh token
       token_changeset =
@@ -347,7 +347,7 @@ defmodule HexpmWeb.API.OAuthControllerTest do
           ["api:read"],
           "authorization_code",
           "test_code",
-          session_id: session.id,
+          user_session_id: session.id,
           with_refresh_token: true
         )
 
@@ -387,7 +387,7 @@ defmodule HexpmWeb.API.OAuthControllerTest do
       }
 
       {:ok, client} = Client.build(client_params) |> Repo.insert()
-      {:ok, session} = Sessions.create_for_user(user, client.client_id)
+      {:ok, session} = Hexpm.UserSessions.create_oauth_session(user, client.client_id)
 
       # Create token with refresh token
       token_changeset =
@@ -397,7 +397,7 @@ defmodule HexpmWeb.API.OAuthControllerTest do
           ["api:read", "api:write", "repositories"],
           "authorization_code",
           "test_code",
-          session_id: session.id,
+          user_session_id: session.id,
           with_refresh_token: true
         )
 

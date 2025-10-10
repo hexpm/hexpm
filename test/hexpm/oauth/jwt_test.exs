@@ -34,7 +34,7 @@ defmodule Hexpm.OAuth.JWTTest do
           ["api"],
           "authorization_code",
           nil,
-          session_id: oauth_session.id
+          user_session_id: oauth_session.id
         )
 
       auth_result = Auth.oauth_token_auth(oauth_token.access_token, %{})

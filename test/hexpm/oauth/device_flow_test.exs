@@ -219,9 +219,9 @@ defmodule Hexpm.OAuth.DeviceFlowTest do
           grant_reference: device_code.device_code,
           client_id: client.client_id
         )
-        |> Repo.preload(:session)
+        |> Repo.preload(:user_session)
 
-      assert oauth_token.session.name == name
+      assert oauth_token.user_session.name == name
     end
 
     test "returns error for invalid user code", %{user: user} do

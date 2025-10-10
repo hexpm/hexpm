@@ -1,7 +1,8 @@
 defmodule Hexpm.OAuth.TokenTest do
   use Hexpm.DataCase, async: true
 
-  alias Hexpm.OAuth.{Token, Clients, Sessions}
+  alias Hexpm.OAuth.{Token, Clients}
+  alias Hexpm.UserSessions
 
   describe "changeset/2" do
     test "validates required fields" do
@@ -55,7 +56,7 @@ defmodule Hexpm.OAuth.TokenTest do
     test "creates valid changeset with all fields" do
       user = insert(:user)
       client = insert(:oauth_client)
-      {:ok, session} = Sessions.create_for_user(user, client.client_id)
+      {:ok, session} = UserSessions.create_oauth_session(user, client.client_id)
       expires_at = DateTime.add(DateTime.utc_now(), 3600, :second)
 
       attrs = %{
@@ -68,7 +69,7 @@ defmodule Hexpm.OAuth.TokenTest do
         grant_reference: "auth_code_123",
         user_id: user.id,
         client_id: client.client_id,
-        session_id: session.id
+        user_session_id: session.id
       }
 
       changeset = Token.changeset(%Token{}, attrs)
@@ -80,7 +81,7 @@ defmodule Hexpm.OAuth.TokenTest do
     test "builds token with valid attributes" do
       user = insert(:user)
       client = insert(:oauth_client)
-      {:ok, session} = Sessions.create_for_user(user, client.client_id)
+      {:ok, session} = UserSessions.create_oauth_session(user, client.client_id)
       expires_at = DateTime.add(DateTime.utc_now(), 3600, :second)
 
       attrs = %{
@@ -91,7 +92,7 @@ defmodule Hexpm.OAuth.TokenTest do
         grant_type: "authorization_code",
         user_id: user.id,
         client_id: client.client_id,
-        session_id: session.id
+        user_session_id: session.id
       }
 
       changeset = Token.build(attrs)
