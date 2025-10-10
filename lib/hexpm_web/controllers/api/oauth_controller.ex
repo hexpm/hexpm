@@ -105,7 +105,9 @@ defmodule HexpmWeb.API.OAuthController do
   end
 
   defp handle_device_code_grant(conn, params) do
-    case DeviceCodes.poll_device_token(params["device_code"], params["client_id"]) do
+    usage_info = build_usage_info(conn)
+
+    case DeviceCodes.poll_device_token(params["device_code"], params["client_id"], usage_info) do
       {:ok, token} ->
         render(conn, :token, token: token)
 

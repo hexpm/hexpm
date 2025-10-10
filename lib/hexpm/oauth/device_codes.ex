@@ -45,7 +45,7 @@ defmodule Hexpm.OAuth.DeviceCodes do
   Handles token polling from the device.
   Returns appropriate responses based on the current state of the device code.
   """
-  def poll_device_token(device_code, client_id) do
+  def poll_device_token(device_code, client_id, usage_info \\ nil) do
     if is_nil(device_code) or device_code == "" do
       {:error, :invalid_grant, "Invalid device code"}
     else
@@ -57,7 +57,7 @@ defmodule Hexpm.OAuth.DeviceCodes do
           if device_code_record.client_id != client_id do
             {:error, :invalid_client, "Invalid client"}
           else
-            handle_device_code_status(device_code_record)
+            handle_device_code_status(device_code_record, usage_info)
           end
       end
     end
@@ -67,7 +67,7 @@ defmodule Hexpm.OAuth.DeviceCodes do
   Authorizes a device using the user code with selected scopes.
   Requires explicit scope selection - at least one scope must be provided.
   """
-  def authorize_device(user_code, user, selected_scopes, opts \\ []) do
+  def authorize_device(user_code, user, selected_scopes, _opts \\ []) do
     case get_by_user_code(user_code) do
       nil ->
         {:error, :invalid_code, "Invalid user code"}
@@ -82,7 +82,7 @@ defmodule Hexpm.OAuth.DeviceCodes do
             {:error, :invalid_grant, "Device code is not pending authorization"}
 
           true ->
-            perform_authorization(device_code_record, user, selected_scopes, opts)
+            perform_authorization(device_code_record, user, selected_scopes)
         end
     end
   end
@@ -241,7 +241,7 @@ defmodule Hexpm.OAuth.DeviceCodes do
     |> Enum.join()
   end
 
-  defp handle_device_code_status(device_code_record) do
+  defp handle_device_code_status(device_code_record, usage_info) do
     cond do
       expired?(device_code_record) ->
         Repo.update(DeviceCode.expire_changeset(device_code_record))
@@ -257,6 +257,14 @@ defmodule Hexpm.OAuth.DeviceCodes do
             {:error, :invalid_grant, "No token found for authorized device"}
 
           token ->
+            # Update session's last_use with CLI's usage info when polling
+            if token.session_id && usage_info do
+              case Repo.get(Hexpm.OAuth.Session, token.session_id) do
+                nil -> :ok
+                session -> Sessions.update_last_use(session, usage_info)
+              end
+            end
+
             # Generate fresh tokens for device flow response
             {:ok, build_device_token_response(token)}
         end
@@ -269,7 +277,7 @@ defmodule Hexpm.OAuth.DeviceCodes do
     end
   end
 
-  defp perform_authorization(device_code_record, user, selected_scopes, opts \\ []) do
+  defp perform_authorization(device_code_record, user, selected_scopes) do
     with {:ok, final_scopes} <- validate_and_get_scopes(device_code_record, selected_scopes) do
       result =
         Ecto.Multi.new()
@@ -278,14 +286,7 @@ defmodule Hexpm.OAuth.DeviceCodes do
             name: device_code_record.name
           )
         end)
-        |> Ecto.Multi.run(:update_session_last_use, fn _repo, %{session: session} ->
-          if Keyword.has_key?(opts, :usage_info) do
-            Sessions.update_last_use(session, Keyword.get(opts, :usage_info))
-          else
-            {:ok, session}
-          end
-        end)
-        |> Ecto.Multi.run(:token, fn _repo, %{update_session_last_use: session} ->
+        |> Ecto.Multi.run(:token, fn _repo, %{session: session} ->
           changeset =
             Tokens.create_for_user(
               user,
