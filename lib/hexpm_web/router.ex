@@ -198,6 +198,9 @@ defmodule HexpmWeb.Router do
     delete "/keys", KeyController, :delete
     post "/keys", KeyController, :create
 
+    get "/sessions", SessionController, :index
+    delete "/sessions", SessionController, :delete
+
     get "/audit-logs", AuditLogController, :index
   end
 

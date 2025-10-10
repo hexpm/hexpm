@@ -76,6 +76,7 @@ defmodule HexpmWeb.API.OAuthController do
          :ok <- validate_redirect_uri_match(auth_code, params["redirect_uri"]),
          :ok <- validate_pkce(auth_code, params["code_verifier"]) do
       {:ok, used_auth_code} = AuthorizationCodes.mark_as_used(auth_code)
+      usage_info = build_usage_info(conn)
 
       case Tokens.create_session_and_token_for_user(
              used_auth_code.user,
@@ -84,7 +85,8 @@ defmodule HexpmWeb.API.OAuthController do
              "authorization_code",
              used_auth_code.code,
              name: params["name"],
-             with_refresh_token: true
+             with_refresh_token: true,
+             usage_info: usage_info
            ) do
         {:ok, token} ->
           render(conn, :token, token: token)
@@ -115,6 +117,8 @@ defmodule HexpmWeb.API.OAuthController do
   defp handle_refresh_token_grant(conn, params) do
     with {:ok, client} <- authenticate_client(params),
          {:ok, token} <- validate_refresh_token(params["refresh_token"], client.client_id) do
+      usage_info = build_usage_info(conn)
+
       case Tokens.revoke_and_create_token(
              token,
              client.client_id,
@@ -122,7 +126,8 @@ defmodule HexpmWeb.API.OAuthController do
              "refresh_token",
              params["refresh_token"],
              with_refresh_token: true,
-             session_id: token.session_id
+             session_id: token.session_id,
+             usage_info: usage_info
            ) do
         {:ok, new_token} ->
           render(conn, :token, token: new_token)
@@ -307,4 +312,24 @@ defmodule HexpmWeb.API.OAuthController do
   defp error_status(:authorization_pending), do: 400
   defp error_status(:expired_token), do: 400
   defp error_status(_), do: 400
+
+  defp build_usage_info(conn) do
+    %{
+      ip: parse_ip(conn.remote_ip),
+      used_at: DateTime.utc_now(),
+      user_agent: parse_user_agent(get_req_header(conn, "user-agent"))
+    }
+  end
+
+  defp parse_ip(nil), do: nil
+
+  defp parse_ip(ip_tuple) do
+    ip_tuple
+    |> Tuple.to_list()
+    |> Enum.join(".")
+  end
+
+  defp parse_user_agent([]), do: nil
+  defp parse_user_agent([value | _]), do: value
+  defp parse_user_agent(nil), do: nil
 end

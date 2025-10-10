@@ -125,7 +125,14 @@ defmodule Hexpm.OAuth.Tokens do
     |> Ecto.Multi.run(:session, fn _repo, _changes ->
       Sessions.create_for_user(user, client_id, name: Keyword.get(opts, :name))
     end)
-    |> Ecto.Multi.run(:token, fn _repo, %{session: session} ->
+    |> Ecto.Multi.run(:update_session_last_use, fn _repo, %{session: session} ->
+      if Keyword.has_key?(opts, :usage_info) do
+        Sessions.update_last_use(session, Keyword.get(opts, :usage_info))
+      else
+        {:ok, session}
+      end
+    end)
+    |> Ecto.Multi.run(:token, fn _repo, %{update_session_last_use: session} ->
       token_opts = Keyword.put(opts, :session_id, session.id)
 
       changeset =
@@ -152,6 +159,8 @@ defmodule Hexpm.OAuth.Tokens do
         grant_reference \\ nil,
         opts \\ []
       ) do
+    alias Hexpm.OAuth.Sessions
+
     Ecto.Multi.new()
     |> Ecto.Multi.update(:revoked_token, revoke_changeset(old_token))
     |> Ecto.Multi.run(:new_token, fn _repo, _changes ->
@@ -159,6 +168,20 @@ defmodule Hexpm.OAuth.Tokens do
         create_for_user(old_token.user, client_id, scopes, grant_type, grant_reference, opts)
 
       Repo.insert(changeset)
+    end)
+    |> Ecto.Multi.run(:update_session_last_use, fn _repo, %{new_token: new_token} ->
+      # Update session's last_use when token is refreshed
+      if new_token.session_id && Keyword.has_key?(opts, :usage_info) do
+        case Repo.get(Hexpm.OAuth.Session, new_token.session_id) do
+          nil ->
+            {:ok, nil}
+
+          session ->
+            Sessions.update_last_use(session, Keyword.get(opts, :usage_info))
+        end
+      else
+        {:ok, nil}
+      end
     end)
     |> Repo.transaction()
     |> case do

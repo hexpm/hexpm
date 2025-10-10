@@ -33,4 +33,25 @@ defmodule Hexpm.OAuth.Sessions do
     )
     |> Repo.transaction()
   end
+
+  @doc """
+  Gets all active OAuth sessions for a user.
+  """
+  def all_for_user(user) do
+    from(s in Session,
+      where: s.user_id == ^user.id and is_nil(s.revoked_at),
+      order_by: [desc: s.inserted_at],
+      preload: [:client]
+    )
+    |> Repo.all()
+  end
+
+  @doc """
+  Updates the last use information for a session.
+  """
+  def update_last_use(%Session{} = session, usage_info) do
+    session
+    |> Session.update_last_use(usage_info)
+    |> Repo.update()
+  end
 end

@@ -177,7 +177,9 @@ defmodule HexpmWeb.DeviceController do
               render_verification_form(conn, nil, {:safe, error_message}, user_code)
 
             true ->
-              case DeviceCodes.authorize_device(user_code, user, selected_scopes) do
+              usage_info = build_usage_info(conn)
+
+              case DeviceCodes.authorize_device(user_code, user, selected_scopes, usage_info: usage_info) do
                 {:ok, _device_code} ->
                   conn
                   |> put_flash(:info, "Device has been successfully authorized!")
@@ -257,4 +259,24 @@ defmodule HexpmWeb.DeviceController do
       current_user: conn.assigns[:current_user]
     )
   end
+
+  defp build_usage_info(conn) do
+    %{
+      ip: parse_ip(conn.remote_ip),
+      used_at: DateTime.utc_now(),
+      user_agent: parse_user_agent(get_req_header(conn, "user-agent"))
+    }
+  end
+
+  defp parse_ip(nil), do: nil
+
+  defp parse_ip(ip_tuple) do
+    ip_tuple
+    |> Tuple.to_list()
+    |> Enum.join(".")
+  end
+
+  defp parse_user_agent([]), do: nil
+  defp parse_user_agent([value | _]), do: value
+  defp parse_user_agent(nil), do: nil
 end

@@ -8,12 +8,18 @@ defmodule HexpmWeb.DashboardView do
       security: {"Security", ~p"/dashboard/security"},
       email: {"Emails", ~p"/dashboard/email"},
       keys: {"Keys", ~p"/dashboard/keys"},
+      sessions: {"Sessions", ~p"/dashboard/sessions"},
       audit_logs: {"Recent activities", ~p"/dashboard/audit-logs"}
     ]
   end
 
   defp selected_setting(conn, id) do
-    if Enum.take(conn.path_info, -2) == ["dashboard", Atom.to_string(id)] do
+    url_id =
+      id
+      |> Atom.to_string()
+      |> String.replace("_", "-")
+
+    if Enum.take(conn.path_info, -2) == ["dashboard", url_id] do
       "selected"
     end
   end

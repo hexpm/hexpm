@@ -92,6 +92,7 @@ defmodule HexpmWeb.TestController do
     else
       client_id = params["client_id"] || "78ea6566-89fd-481e-a1d6-7d9d78eacca8"
       scopes = String.split(params["scope"] || "api repositories", " ")
+      usage_info = build_usage_info(conn)
 
       case Tokens.create_session_and_token_for_user(
              user,
@@ -99,7 +100,8 @@ defmodule HexpmWeb.TestController do
              scopes,
              "authorization_code",
              "test_grant",
-             with_refresh_token: true
+             with_refresh_token: true,
+             usage_info: usage_info
            ) do
         {:ok, token} ->
           render(conn, :oauth_token, token: token)
@@ -174,6 +176,26 @@ defmodule HexpmWeb.TestController do
       |> render(:error, error: %{error: "No pending device codes"})
     end
   end
+
+  defp build_usage_info(conn) do
+    %{
+      ip: parse_ip(conn.remote_ip),
+      used_at: DateTime.utc_now(),
+      user_agent: parse_user_agent(get_req_header(conn, "user-agent"))
+    }
+  end
+
+  defp parse_ip(nil), do: nil
+
+  defp parse_ip(ip_tuple) do
+    ip_tuple
+    |> Tuple.to_list()
+    |> Enum.join(".")
+  end
+
+  defp parse_user_agent([]), do: nil
+  defp parse_user_agent([value | _]), do: value
+  defp parse_user_agent(nil), do: nil
 
   defp send_object(nil, conn), do: send_resp(conn, 404, "")
   defp send_object(obj, conn), do: send_resp(conn, 200, obj)

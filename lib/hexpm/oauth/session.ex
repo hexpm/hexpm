@@ -25,11 +25,16 @@ defmodule Hexpm.OAuth.Session do
     session
     |> cast(attrs, [:name, :revoked_at, :user_id, :client_id])
     |> validate_required([:user_id, :client_id])
-    |> cast_embed(:last_use)
   end
 
   def build(attrs) do
     %__MODULE__{}
     |> changeset(attrs)
+  end
+
+  def update_last_use(session, params) do
+    session
+    |> change()
+    |> put_embed(:last_use, struct(__MODULE__.Use, params))
   end
 end
