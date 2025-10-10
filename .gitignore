@@ -1,5 +1,6 @@
 /tmp
 /logs
+/.local
 
 /_build
 /db

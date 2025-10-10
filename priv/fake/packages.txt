@@ -467,7 +467,7 @@ commanded
 commander
 commerce_billing
 compass
-compassIO
+compassio
 compiler_cache
 compiletime
 complex
@@ -503,7 +503,7 @@ consul
 consul_client
 contentful
 context
-contextEX
+contextex
 contracts
 control
 convertat
@@ -2195,7 +2195,7 @@ mixpanel_data_client
 mixstar
 mixunit
 mldht
-mmExchangeRate
+mmexchangerate
 mmath
 mnemonex
 mnemonic_slugs
@@ -2464,7 +2464,7 @@ pandex
 pane
 pangu
 paper_trail
-parabaikElixirConverter
+parabaikelixirconverter
 paracusia
 parallel
 parallel_stream
@@ -2808,7 +2808,7 @@ quinn
 quintana
 quixir
 ra
-rabbitElixir
+rabbitelixir
 rabbit_common
 rabbitmq_fabric
 rackla
