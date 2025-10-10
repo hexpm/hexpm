@@ -4,10 +4,15 @@ defmodule Hexpm.UserSessions do
   alias Hexpm.UserSession
   alias Hexpm.OAuth.Token
 
+  @max_sessions 5
+
   @doc """
   Creates a browser session for a user.
+  Enforces the session limit before creating.
   """
   def create_browser_session(user, opts \\ []) do
+    enforce_session_limit(user)
+
     session_token = :crypto.strong_rand_bytes(96)
     name = Keyword.get(opts, :name, "Browser Session")
 
@@ -28,8 +33,11 @@ defmodule Hexpm.UserSessions do
 
   @doc """
   Creates an OAuth session for a user and client.
+  Enforces the session limit before creating.
   """
   def create_oauth_session(user, client_id, opts \\ []) do
+    enforce_session_limit(user)
+
     attrs = %{
       user_id: user.id,
       type: "oauth",
@@ -131,5 +139,36 @@ defmodule Hexpm.UserSessions do
       select: count(s.id)
     )
     |> Repo.one()
+  end
+
+  @doc """
+  Enforces the session limit by revoking least recently used sessions if needed.
+  Called before creating a new session to ensure the user stays within the limit.
+  """
+  def enforce_session_limit(user) do
+    count = count_for_user(user)
+
+    if count >= @max_sessions do
+      revoke_count = count - @max_sessions + 1
+
+      sessions_to_revoke =
+        from(s in UserSession,
+          where: s.user_id == ^user.id and is_nil(s.revoked_at),
+          order_by: [
+            asc: fragment("COALESCE((last_use->>'used_at')::timestamptz, ?)", s.inserted_at)
+          ],
+          limit: ^revoke_count
+        )
+        |> Repo.all()
+
+      Enum.each(sessions_to_revoke, fn session ->
+        case revoke(session) do
+          {:ok, _} -> :ok
+          _ -> :ok
+        end
+      end)
+    end
+
+    :ok
   end
 end
