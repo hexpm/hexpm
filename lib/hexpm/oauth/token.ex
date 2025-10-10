@@ -3,7 +3,7 @@ defmodule Hexpm.OAuth.Token do
 
   alias Hexpm.Accounts.User
   alias Hexpm.Permissions
-  alias Hexpm.OAuth.Session
+  alias Hexpm.UserSession
 
   schema "oauth_tokens" do
     field :jti, :string
@@ -22,7 +22,7 @@ defmodule Hexpm.OAuth.Token do
 
     belongs_to :user, User
     belongs_to :client, Hexpm.OAuth.Client, references: :client_id, type: :binary_id
-    belongs_to :session, Session
+    belongs_to :user_session, UserSession
 
     timestamps()
   end
@@ -41,7 +41,7 @@ defmodule Hexpm.OAuth.Token do
       :revoked_at,
       :grant_type,
       :grant_reference,
-      :session_id,
+      :user_session_id,
       :user_id,
       :client_id,
       :access_token,

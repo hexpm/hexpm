@@ -1,7 +1,7 @@
 defmodule HexpmWeb.Dashboard.SessionController do
   use HexpmWeb, :controller
 
-  alias Hexpm.OAuth.Sessions
+  alias Hexpm.UserSessions
 
   plug :requires_login
 
@@ -11,7 +11,7 @@ defmodule HexpmWeb.Dashboard.SessionController do
 
   def delete(conn, %{"id" => id}) do
     user = conn.assigns.current_user
-    sessions = Sessions.all_for_user(user)
+    sessions = UserSessions.all_for_user(user)
 
     case Enum.find(sessions, &(&1.id == String.to_integer(id))) do
       nil ->
@@ -21,24 +21,42 @@ defmodule HexpmWeb.Dashboard.SessionController do
         |> render_index()
 
       session ->
-        case Sessions.revoke(session) do
-          {:ok, _} ->
-            conn
-            |> put_flash(:info, "The session was revoked successfully.")
-            |> redirect(to: ~p"/dashboard/sessions")
+        # Prevent deleting current browser session
+        current_session_token = get_session(conn, "session_token")
 
-          {:error, _} ->
-            conn
-            |> put_status(400)
-            |> put_flash(:error, "Failed to revoke the session.")
-            |> render_index()
+        is_current_session =
+          session.type == "browser" && current_session_token &&
+            case Base.decode64(current_session_token) do
+              {:ok, token} -> token == session.session_token
+              _ -> false
+            end
+
+        if is_current_session do
+          conn
+          |> put_flash(:error, "Cannot revoke your current session. Please log out instead.")
+          |> redirect(to: ~p"/dashboard/sessions")
+        else
+          case UserSessions.revoke(session) do
+            {:ok, _} ->
+              session_type = if session.type == "browser", do: "browser", else: "OAuth"
+
+              conn
+              |> put_flash(:info, "The #{session_type} session was revoked successfully.")
+              |> redirect(to: ~p"/dashboard/sessions")
+
+            {:error, _} ->
+              conn
+              |> put_status(400)
+              |> put_flash(:error, "Failed to revoke the session.")
+              |> render_index()
+          end
         end
     end
   end
 
   defp render_index(conn) do
     user = conn.assigns.current_user
-    sessions = Sessions.all_for_user(user)
+    sessions = UserSessions.all_for_user(user)
 
     render(
       conn,

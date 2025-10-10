@@ -3,7 +3,7 @@ defmodule Hexpm.OAuth.TokensTest do
 
   import Ecto.Changeset, only: [get_field: 2]
 
-  alias Hexpm.OAuth.{Token, Tokens, Sessions}
+  alias Hexpm.OAuth.{Token, Tokens}
 
   describe "create_for_user/6" do
     setup do
@@ -305,7 +305,7 @@ defmodule Hexpm.OAuth.TokensTest do
     setup do
       user = insert(:user)
       client = insert(:oauth_client)
-      {:ok, session} = Sessions.create_for_user(user, client.client_id)
+      {:ok, session} = Hexpm.UserSessions.create_oauth_session(user, client.client_id)
 
       {:ok, user: user, client: client, session: session}
     end
@@ -318,7 +318,7 @@ defmodule Hexpm.OAuth.TokensTest do
           ["api:read"],
           "authorization_code",
           "test_code",
-          session_id: session.id
+          user_session_id: session.id
         )
 
       assert {:ok, _found_token} = Tokens.lookup(token.access_token, :access)
@@ -336,7 +336,7 @@ defmodule Hexpm.OAuth.TokensTest do
           ["api:read"],
           "authorization_code",
           "test_code",
-          session_id: session.id
+          user_session_id: session.id
         )
 
       assert {:ok, _found_token} = Tokens.lookup(token.access_token, :access)
@@ -350,7 +350,7 @@ defmodule Hexpm.OAuth.TokensTest do
           ["api:read"],
           "authorization_code",
           "test_code",
-          session_id: session.id
+          user_session_id: session.id
         )
 
       assert {:ok, _found_token} = Tokens.lookup(token.access_token, :access)
@@ -368,7 +368,7 @@ defmodule Hexpm.OAuth.TokensTest do
           ["api:read"],
           "authorization_code",
           "test_code",
-          session_id: session.id,
+          user_session_id: session.id,
           with_refresh_token: true
         )
 

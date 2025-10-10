@@ -8,14 +8,24 @@ defmodule HexpmWeb.TFAAuthController do
   def show(conn, _params), do: render_show(conn)
 
   def create(conn, %{"code" => code}) do
-    %{"uid" => uid} = session = get_session(conn, "tfa_user_id")
-    user = Hexpm.Accounts.Users.get_by_id(uid)
+    %{"uid" => uid} = session_data = get_session(conn, "tfa_user_id")
+    user = Hexpm.Accounts.Users.get_by_id(uid, [:emails, organizations: :repository])
     secret = user.tfa.secret
 
     if Hexpm.Accounts.TFA.token_valid?(secret, code) do
+      # Use pre-created session token if available, otherwise create new one
+      conn =
+        if session_token = session_data["session_token"] do
+          conn
+          |> configure_session(renew: true)
+          |> put_session("session_token", session_token)
+        else
+          HexpmWeb.LoginController.start_session_internal(conn, user)
+        end
+
       conn
       |> delete_session("tfa_user_id")
-      |> HexpmWeb.LoginController.start_session(user, session["return"])
+      |> redirect(to: session_data["return"] || ~p"/users/#{user}")
     else
       Logger.warning("Failed 2FA attempt",
         user_id: uid,
@@ -24,7 +34,7 @@ defmodule HexpmWeb.TFAAuthController do
       )
 
       ip_result = Attack.tfa_ip_throttle(conn.remote_ip)
-      session_result = Attack.tfa_session_throttle(session)
+      session_result = Attack.tfa_session_throttle(session_data)
 
       case {ip_result, session_result} do
         {{:block, _}, _} ->

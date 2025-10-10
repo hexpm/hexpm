@@ -212,16 +212,24 @@ defmodule Hexpm.Factory do
   end
 
   def session_factory() do
-    %Hexpm.Accounts.Session{
-      token: :crypto.strong_rand_bytes(96),
-      data: %{"user_id" => 1}
+    user = build(:user)
+
+    %Hexpm.UserSession{
+      type: "browser",
+      name: "Test Browser Session",
+      session_token: :crypto.strong_rand_bytes(96),
+      user_id: user.id
     }
   end
 
   def oauth_session_factory() do
-    %Hexpm.OAuth.Session{
+    user = build(:user)
+
+    %Hexpm.UserSession{
+      type: "oauth",
       name: "Test OAuth Session",
-      client_id: Hexpm.OAuth.Clients.generate_client_id()
+      client_id: Hexpm.OAuth.Clients.generate_client_id(),
+      user_id: user.id
     }
   end
 end

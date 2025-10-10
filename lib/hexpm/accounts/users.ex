@@ -295,11 +295,17 @@ defmodule Hexpm.Accounts.Users do
   end
 
   defp password_reset(user, params, revoke_all_keys) do
+    alias Hexpm.UserSession
+
     multi =
       Multi.new()
       |> Multi.update(:password, User.update_password_no_check(user, params))
       |> Multi.delete_all(:reset, assoc(user, :password_resets))
-      |> Multi.delete_all(:reset_sessions, Session.by_user(user))
+      |> Multi.update_all(
+        :reset_sessions,
+        from(s in UserSession, where: s.user_id == ^user.id and s.type == "browser"),
+        set: [revoked_at: DateTime.utc_now(), updated_at: DateTime.utc_now()]
+      )
 
     if revoke_all_keys,
       do: Multi.update_all(multi, :keys, Key.revoke_all(user), []),

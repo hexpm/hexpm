@@ -1,7 +1,8 @@
 defmodule Hexpm.OAuth.DeviceCodes do
   use Hexpm.Context
 
-  alias Hexpm.OAuth.{DeviceCode, Sessions, Token, Tokens}
+  alias Hexpm.OAuth.{DeviceCode, Token, Tokens}
+  alias Hexpm.UserSessions
 
   @default_device_code_expiry_seconds 10 * 60
   @default_polling_interval 5
@@ -258,10 +259,10 @@ defmodule Hexpm.OAuth.DeviceCodes do
 
           token ->
             # Update session's last_use with CLI's usage info when polling
-            if token.session_id && usage_info do
-              case Repo.get(Hexpm.OAuth.Session, token.session_id) do
+            if token.user_session_id && usage_info do
+              case Repo.get(Hexpm.UserSession, token.user_session_id) do
                 nil -> :ok
-                session -> Sessions.update_last_use(session, usage_info)
+                session -> UserSessions.update_last_use(session, usage_info)
               end
             end
 
@@ -282,7 +283,7 @@ defmodule Hexpm.OAuth.DeviceCodes do
       result =
         Ecto.Multi.new()
         |> Ecto.Multi.run(:session, fn _repo, _changes ->
-          Sessions.create_for_user(user, device_code_record.client_id,
+          UserSessions.create_oauth_session(user, device_code_record.client_id,
             name: device_code_record.name
           )
         end)
@@ -294,7 +295,7 @@ defmodule Hexpm.OAuth.DeviceCodes do
               final_scopes,
               "urn:ietf:params:oauth:grant-type:device_code",
               device_code_record.device_code,
-              session_id: session.id,
+              user_session_id: session.id,
               with_refresh_token: true
             )
 
@@ -357,7 +358,7 @@ defmodule Hexpm.OAuth.DeviceCodes do
         old_token.grant_reference,
         expires_in: DateTime.diff(old_token.expires_at, DateTime.utc_now()),
         with_refresh_token: not is_nil(old_token.refresh_jti),
-        session_id: old_token.session_id
+        user_session_id: old_token.user_session_id
       )
 
     case Repo.insert(new_token_changeset) do

@@ -6,21 +6,35 @@
     <div class="panel panel-default">
       <div class="panel-heading">Sessions</div>
       <div class="panel-body">
-        <p>Sessions represent authorized applications that have access to your account.</p>
+        <p>Active sessions for your account. This includes both browser sessions and authorized OAuth applications.</p>
 
         <%= if @sessions != [] do %>
           <br>
           <table class="table table-condensed table-striped">
             <tr>
+              <td>Type</td>
               <td>Name</td>
               <td>Application</td>
-              <td>Last use</td>
+              <td>Last activity</td>
               <td></td>
             </tr>
             <%= for session <- @sessions do %>
               <tr>
+                <td>
+                  <%= if session.type == "browser" do %>
+                    <span class="label label-info">Browser</span>
+                  <% else %>
+                    <span class="label label-success">OAuth</span>
+                  <% end %>
+                </td>
                 <td><%= session.name || "Unnamed session" %></td>
-                <td><%= session.client.name %></td>
+                <td>
+                  <%= if session.type == "oauth" do %>
+                    <%= session.client.name %>
+                  <% else %>
+                    -
+                  <% end %>
+                </td>
                 <td>
                   <small>
                     <% last_use = session.last_use %>
@@ -31,12 +45,12 @@
                         data-toggle="popover"
                         data-trigger="focus"
                         data-placement="bottom"
-                        title="Last use"
-                        data-content="<strong>Used at:</strong> <%= ViewHelpers.pretty_datetime(last_use.used_at) %><br><strong>IP:</strong> <%= last_use.ip %><br><strong>User agent:</strong> <%= last_use.user_agent %>">
+                        title="Last activity"
+                        data-content="<strong>Time:</strong> <%= ViewHelpers.pretty_datetime(last_use.used_at) %><br><strong>IP:</strong> <%= last_use.ip %><br><strong>User agent:</strong> <%= last_use.user_agent %>">
                           <%= ViewHelpers.pretty_date(last_use.used_at) %> ...
                       </a>
                     <% else %>
-                      Never used
+                      <%= ViewHelpers.pretty_date(session.inserted_at) %>
                     <% end %>
                   </small>
                 </td>
@@ -51,7 +65,7 @@
           </table>
         <% else %>
           <br>
-          <p>No sessions found. Sessions are created when you authorize applications to access your Hex account.</p>
+          <p>No active sessions found.</p>
         <% end %>
       </div>
     </div>

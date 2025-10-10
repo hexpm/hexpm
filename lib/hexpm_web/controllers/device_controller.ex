@@ -179,7 +179,9 @@ defmodule HexpmWeb.DeviceController do
             true ->
               usage_info = build_usage_info(conn)
 
-              case DeviceCodes.authorize_device(user_code, user, selected_scopes, usage_info: usage_info) do
+              case DeviceCodes.authorize_device(user_code, user, selected_scopes,
+                     usage_info: usage_info
+                   ) do
                 {:ok, _device_code} ->
                   conn
                   |> put_flash(:info, "Device has been successfully authorized!")

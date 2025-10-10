@@ -49,7 +49,7 @@ defmodule Hexpm.OAuth.Tokens do
     expanded_scopes = Permissions.expand_repositories_scope(user, scopes)
 
     jwt_opts = [
-      session_id: Keyword.get(opts, :session_id),
+      session_id: Keyword.get(opts, :user_session_id),
       expires_in: expires_in
     ]
 
@@ -65,7 +65,7 @@ defmodule Hexpm.OAuth.Tokens do
       grant_reference: grant_reference,
       user_id: user.id,
       client_id: client_id,
-      session_id: Keyword.get(opts, :session_id)
+      user_session_id: Keyword.get(opts, :user_session_id)
     }
 
     attrs =
@@ -74,7 +74,7 @@ defmodule Hexpm.OAuth.Tokens do
           DateTime.add(DateTime.utc_now(), @default_refresh_token_expires_in, :second)
 
         refresh_opts = [
-          session_id: Keyword.get(opts, :session_id),
+          session_id: Keyword.get(opts, :user_session_id),
           expires_in: @default_refresh_token_expires_in
         ]
 
@@ -119,21 +119,21 @@ defmodule Hexpm.OAuth.Tokens do
         grant_reference \\ nil,
         opts \\ []
       ) do
-    alias Hexpm.OAuth.Sessions
+    alias Hexpm.UserSessions
 
     Ecto.Multi.new()
     |> Ecto.Multi.run(:session, fn _repo, _changes ->
-      Sessions.create_for_user(user, client_id, name: Keyword.get(opts, :name))
+      UserSessions.create_oauth_session(user, client_id, name: Keyword.get(opts, :name))
     end)
     |> Ecto.Multi.run(:update_session_last_use, fn _repo, %{session: session} ->
       if Keyword.has_key?(opts, :usage_info) do
-        Sessions.update_last_use(session, Keyword.get(opts, :usage_info))
+        UserSessions.update_last_use(session, Keyword.get(opts, :usage_info))
       else
         {:ok, session}
       end
     end)
     |> Ecto.Multi.run(:token, fn _repo, %{update_session_last_use: session} ->
-      token_opts = Keyword.put(opts, :session_id, session.id)
+      token_opts = Keyword.put(opts, :user_session_id, session.id)
 
       changeset =
         create_for_user(user, client_id, scopes, grant_type, grant_reference, token_opts)
@@ -159,7 +159,7 @@ defmodule Hexpm.OAuth.Tokens do
         grant_reference \\ nil,
         opts \\ []
       ) do
-    alias Hexpm.OAuth.Sessions
+    alias Hexpm.UserSessions
 
     Ecto.Multi.new()
     |> Ecto.Multi.update(:revoked_token, revoke_changeset(old_token))
@@ -171,13 +171,13 @@ defmodule Hexpm.OAuth.Tokens do
     end)
     |> Ecto.Multi.run(:update_session_last_use, fn _repo, %{new_token: new_token} ->
       # Update session's last_use when token is refreshed
-      if new_token.session_id && Keyword.has_key?(opts, :usage_info) do
-        case Repo.get(Hexpm.OAuth.Session, new_token.session_id) do
+      if new_token.user_session_id && Keyword.has_key?(opts, :usage_info) do
+        case Repo.get(Hexpm.UserSession, new_token.user_session_id) do
           nil ->
             {:ok, nil}
 
           session ->
-            Sessions.update_last_use(session, Keyword.get(opts, :usage_info))
+            UserSessions.update_last_use(session, Keyword.get(opts, :usage_info))
         end
       else
         {:ok, nil}

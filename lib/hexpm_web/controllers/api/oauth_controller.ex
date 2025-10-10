@@ -128,7 +128,7 @@ defmodule HexpmWeb.API.OAuthController do
              "refresh_token",
              params["refresh_token"],
              with_refresh_token: true,
-             session_id: token.session_id,
+             user_session_id: token.user_session_id,
              usage_info: usage_info
            ) do
         {:ok, new_token} ->

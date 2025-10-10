@@ -58,12 +58,10 @@ defmodule HexpmWeb.PasswordControllerTest do
 
       assert redirected_to(conn) == "/"
       assert Phoenix.Flash.get(conn.assigns.flash, :info) =~ "password has been changed"
-      refute get_session(conn, "user_id")
+      refute get_session(conn, "session_token")
 
       # check new password will work
       assert {:ok, %{user: %User{username: ^username}}} = Auth.password_auth(username, "abcd1234")
-
-      refute last_session().data["user_id"]
     end
 
     test "do not allow changing password with wrong key", c do
