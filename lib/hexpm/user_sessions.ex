@@ -155,7 +155,8 @@ defmodule Hexpm.UserSessions do
         from(s in UserSession,
           where: s.user_id == ^user.id and is_nil(s.revoked_at),
           order_by: [
-            asc: fragment("COALESCE((last_use->>'used_at')::timestamptz, ?)", s.inserted_at)
+            asc: fragment("(last_use->>'used_at')::timestamptz NULLS FIRST"),
+            asc: s.inserted_at
           ],
           limit: ^revoke_count
         )
