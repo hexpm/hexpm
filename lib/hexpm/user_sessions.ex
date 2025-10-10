@@ -5,6 +5,7 @@ defmodule Hexpm.UserSessions do
   alias Hexpm.OAuth.Token
 
   @max_sessions 5
+  @default_session_expires_in 30 * 24 * 60 * 60
 
   @doc """
   Creates a browser session for a user.
@@ -15,12 +16,14 @@ defmodule Hexpm.UserSessions do
 
     session_token = :crypto.strong_rand_bytes(96)
     name = Keyword.get(opts, :name, "Browser Session")
+    expires_at = DateTime.add(DateTime.utc_now(), @default_session_expires_in, :second)
 
     attrs = %{
       user_id: user.id,
       type: "browser",
       name: name,
-      session_token: session_token
+      session_token: session_token,
+      expires_at: expires_at
     }
 
     changeset = UserSession.changeset(%UserSession{}, attrs)
@@ -38,11 +41,14 @@ defmodule Hexpm.UserSessions do
   def create_oauth_session(user, client_id, opts \\ []) do
     enforce_session_limit(user)
 
+    expires_at = DateTime.add(DateTime.utc_now(), @default_session_expires_in, :second)
+
     attrs = %{
       user_id: user.id,
       type: "oauth",
       client_id: client_id,
-      name: Keyword.get(opts, :name)
+      name: Keyword.get(opts, :name),
+      expires_at: expires_at
     }
 
     %UserSession{}
@@ -54,8 +60,12 @@ defmodule Hexpm.UserSessions do
   Gets a browser session by token.
   """
   def get_browser_session_by_token(token) do
+    now = DateTime.utc_now()
+
     from(s in UserSession,
-      where: s.type == "browser" and s.session_token == ^token and is_nil(s.revoked_at)
+      where:
+        s.type == "browser" and s.session_token == ^token and is_nil(s.revoked_at) and
+          (is_nil(s.expires_at) or s.expires_at > ^now)
     )
     |> Repo.one()
   end
@@ -64,8 +74,12 @@ defmodule Hexpm.UserSessions do
   Gets all active sessions for a user (both browser and OAuth).
   """
   def all_for_user(user) do
+    now = DateTime.utc_now()
+
     from(s in UserSession,
-      where: s.user_id == ^user.id and is_nil(s.revoked_at),
+      where:
+        s.user_id == ^user.id and is_nil(s.revoked_at) and
+          (is_nil(s.expires_at) or s.expires_at > ^now),
       order_by: [desc: s.inserted_at],
       preload: [:client]
     )
@@ -134,8 +148,12 @@ defmodule Hexpm.UserSessions do
   Counts total active sessions for a user.
   """
   def count_for_user(user) do
+    now = DateTime.utc_now()
+
     from(s in UserSession,
-      where: s.user_id == ^user.id and is_nil(s.revoked_at),
+      where:
+        s.user_id == ^user.id and is_nil(s.revoked_at) and
+          (is_nil(s.expires_at) or s.expires_at > ^now),
       select: count(s.id)
     )
     |> Repo.one()
@@ -149,11 +167,14 @@ defmodule Hexpm.UserSessions do
     count = count_for_user(user)
 
     if count >= @max_sessions do
+      now = DateTime.utc_now()
       revoke_count = count - @max_sessions + 1
 
       sessions_to_revoke =
         from(s in UserSession,
-          where: s.user_id == ^user.id and is_nil(s.revoked_at),
+          where:
+            s.user_id == ^user.id and is_nil(s.revoked_at) and
+              (is_nil(s.expires_at) or s.expires_at > ^now),
           order_by: [
             asc: fragment("(last_use->>'used_at')::timestamptz NULLS FIRST"),
             asc: s.inserted_at
@@ -171,5 +192,18 @@ defmodule Hexpm.UserSessions do
     end
 
     :ok
+  end
+
+  @doc """
+  Cleans up expired sessions.
+  This should be called periodically to remove old records.
+  """
+  def cleanup_expired_sessions do
+    now = DateTime.utc_now()
+
+    from(s in UserSession,
+      where: s.expires_at < ^now
+    )
+    |> Repo.delete_all()
   end
 end

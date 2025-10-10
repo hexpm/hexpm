@@ -10,6 +10,7 @@ defmodule Hexpm.UserSession do
     field :type, :string
     field :name, :string
     field :revoked_at, :utc_datetime_usec
+    field :expires_at, :utc_datetime_usec
 
     embeds_one :last_use, Use, on_replace: :delete do
       field :used_at, :utc_datetime_usec
@@ -31,7 +32,7 @@ defmodule Hexpm.UserSession do
 
   def changeset(session, attrs) do
     session
-    |> cast(attrs, [:type, :name, :revoked_at, :user_id, :client_id, :session_token])
+    |> cast(attrs, [:type, :name, :revoked_at, :expires_at, :user_id, :client_id, :session_token])
     |> validate_required([:type, :user_id])
     |> validate_inclusion(:type, @types)
     |> validate_type_specific_fields()
@@ -78,4 +79,14 @@ defmodule Hexpm.UserSession do
   def browser?(session), do: session.type == "browser"
   def oauth?(session), do: session.type == "oauth"
   def revoked?(session), do: session.revoked_at != nil
+
+  def expired?(%__MODULE__{expires_at: nil}), do: false
+
+  def expired?(%__MODULE__{expires_at: expires_at}) do
+    DateTime.compare(DateTime.utc_now(), expires_at) == :gt
+  end
+
+  def active?(session) do
+    not revoked?(session) and not expired?(session)
+  end
 end

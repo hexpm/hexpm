@@ -70,8 +70,13 @@ defmodule Hexpm.OAuth.Tokens do
 
     attrs =
       if Keyword.get(opts, :with_refresh_token, false) do
+        # Use provided refresh_token_expires_at (e.g., from session) or calculate fresh
         refresh_expires_at =
-          DateTime.add(DateTime.utc_now(), @default_refresh_token_expires_in, :second)
+          Keyword.get(
+            opts,
+            :refresh_token_expires_at,
+            DateTime.add(DateTime.utc_now(), @default_refresh_token_expires_in, :second)
+          )
 
         refresh_opts = [
           session_id: Keyword.get(opts, :user_session_id),
@@ -133,7 +138,10 @@ defmodule Hexpm.OAuth.Tokens do
       end
     end)
     |> Ecto.Multi.run(:token, fn _repo, %{update_session_last_use: session} ->
-      token_opts = Keyword.put(opts, :user_session_id, session.id)
+      token_opts =
+        opts
+        |> Keyword.put(:user_session_id, session.id)
+        |> Keyword.put(:refresh_token_expires_at, session.expires_at)
 
       changeset =
         create_for_user(user, client_id, scopes, grant_type, grant_reference, token_opts)
@@ -164,8 +172,19 @@ defmodule Hexpm.OAuth.Tokens do
     Ecto.Multi.new()
     |> Ecto.Multi.update(:revoked_token, revoke_changeset(old_token))
     |> Ecto.Multi.run(:new_token, fn _repo, _changes ->
+      # Preserve the absolute expiration from the old token
+      token_opts =
+        Keyword.put(opts, :refresh_token_expires_at, old_token.refresh_token_expires_at)
+
       changeset =
-        create_for_user(old_token.user, client_id, scopes, grant_type, grant_reference, opts)
+        create_for_user(
+          old_token.user,
+          client_id,
+          scopes,
+          grant_type,
+          grant_reference,
+          token_opts
+        )
 
       Repo.insert(changeset)
     end)
