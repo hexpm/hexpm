@@ -68,7 +68,7 @@ defmodule Hexpm.OAuth.DeviceCodes do
   Authorizes a device using the user code with selected scopes.
   Requires explicit scope selection - at least one scope must be provided.
   """
-  def authorize_device(user_code, user, selected_scopes) do
+  def authorize_device(user_code, user, selected_scopes, opts \\ []) do
     case get_by_user_code(user_code) do
       nil ->
         {:error, :invalid_code, "Invalid user code"}
@@ -83,7 +83,7 @@ defmodule Hexpm.OAuth.DeviceCodes do
             {:error, :invalid_grant, "Device code is not pending authorization"}
 
           true ->
-            perform_authorization(device_code_record, user, selected_scopes)
+            perform_authorization(device_code_record, user, selected_scopes, opts)
         end
     end
   end
@@ -278,13 +278,16 @@ defmodule Hexpm.OAuth.DeviceCodes do
     end
   end
 
-  defp perform_authorization(device_code_record, user, selected_scopes) do
+  defp perform_authorization(device_code_record, user, selected_scopes, opts) do
     with {:ok, final_scopes} <- validate_and_get_scopes(device_code_record, selected_scopes) do
+      audit_data = Keyword.get(opts, :audit)
+
       result =
         Ecto.Multi.new()
         |> Ecto.Multi.run(:session, fn _repo, _changes ->
           UserSessions.create_oauth_session(user, device_code_record.client_id,
-            name: device_code_record.name
+            name: device_code_record.name,
+            audit: audit_data
           )
         end)
         |> Ecto.Multi.run(:token, fn _repo, %{session: session} ->

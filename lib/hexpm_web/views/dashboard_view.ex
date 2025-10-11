@@ -189,6 +189,48 @@ defmodule HexpmWeb.DashboardView do
     "Manually pay invoice for organization #{params["organization"]["name"]}"
   end
 
+  def humanize_audit_log_info(%AuditLog{
+        action: "session.create",
+        params: %{"type" => "browser", "name" => name}
+      }) do
+    "Login from #{name}"
+  end
+
+  def humanize_audit_log_info(%AuditLog{
+        action: "session.create",
+        params: %{"type" => "oauth"} = params
+      }) do
+    client_name = params["client"]["name"]
+    session_name = params["name"]
+
+    if session_name do
+      "Authorize OAuth application: #{client_name} (#{session_name})"
+    else
+      "Authorize OAuth application: #{client_name}"
+    end
+  end
+
+  def humanize_audit_log_info(%AuditLog{
+        action: "session.revoke",
+        params: %{"type" => "browser", "name" => name}
+      }) do
+    "Logout from #{name}"
+  end
+
+  def humanize_audit_log_info(%AuditLog{
+        action: "session.revoke",
+        params: %{"type" => "oauth"} = params
+      }) do
+    client_name = params["client"]["name"]
+    session_name = params["name"]
+
+    if session_name do
+      "Revoke OAuth application: #{client_name} (#{session_name})"
+    else
+      "Revoke OAuth application: #{client_name}"
+    end
+  end
+
   defp plan_id("organization-monthly"), do: "monthly"
   defp plan_id("organization-annually"), do: "annually"
 end

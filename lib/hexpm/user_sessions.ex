@@ -22,6 +22,8 @@ defmodule Hexpm.UserSessions do
   """
   use Hexpm.Context
 
+  import Hexpm.Accounts.AuditLog, only: [audit: 4]
+
   alias Hexpm.UserSession
   alias Hexpm.OAuth.Token
 
@@ -49,9 +51,21 @@ defmodule Hexpm.UserSessions do
 
     changeset = UserSession.changeset(%UserSession{}, attrs)
 
-    case Repo.insert(changeset) do
-      {:ok, session} -> {:ok, session, session_token}
-      error -> error
+    multi =
+      Ecto.Multi.new()
+      |> Ecto.Multi.insert(:session, changeset)
+
+    # Add audit if provided
+    multi =
+      if audit_data = Keyword.get(opts, :audit) do
+        audit(multi, audit_data, "session.create", fn %{session: session} -> session end)
+      else
+        multi
+      end
+
+    case Repo.transaction(multi) do
+      {:ok, %{session: session}} -> {:ok, session, session_token}
+      {:error, :session, changeset, _} -> {:error, changeset}
     end
   end
 
@@ -72,9 +86,28 @@ defmodule Hexpm.UserSessions do
       expires_at: expires_at
     }
 
-    %UserSession{}
-    |> UserSession.changeset(attrs)
-    |> Repo.insert()
+    changeset = UserSession.changeset(%UserSession{}, attrs)
+
+    multi =
+      Ecto.Multi.new()
+      |> Ecto.Multi.insert(:session, changeset)
+
+    # Add audit if provided
+    multi =
+      if audit_data = Keyword.get(opts, :audit) do
+        multi
+        |> Ecto.Multi.run(:preload, fn _repo, %{session: session} ->
+          {:ok, Repo.preload(session, :client)}
+        end)
+        |> audit(audit_data, "session.create", fn %{preload: session} -> session end)
+      else
+        multi
+      end
+
+    case Repo.transaction(multi) do
+      {:ok, %{session: session}} -> {:ok, session}
+      {:error, :session, changeset, _} -> {:error, changeset}
+    end
   end
 
   @doc """
@@ -133,27 +166,56 @@ defmodule Hexpm.UserSessions do
   @doc """
   Revokes a session and all associated tokens (for OAuth sessions).
   """
-  def revoke(session, revoke_at \\ nil)
+  def revoke(session, revoke_at \\ nil, opts \\ [])
 
-  def revoke(%UserSession{type: "oauth"} = session, revoke_at) do
+  def revoke(%UserSession{type: "oauth"} = session, revoke_at, opts) do
     revoke_at = revoke_at || DateTime.utc_now()
 
-    Ecto.Multi.new()
-    |> Ecto.Multi.update(:session, UserSession.changeset(session, %{revoked_at: revoke_at}))
-    |> Ecto.Multi.update_all(
-      :tokens,
-      from(t in Token, where: t.user_session_id == ^session.id and is_nil(t.revoked_at)),
-      set: [revoked_at: revoke_at, updated_at: DateTime.utc_now()]
-    )
-    |> Repo.transaction()
+    multi =
+      Ecto.Multi.new()
+      |> Ecto.Multi.update(:session, UserSession.changeset(session, %{revoked_at: revoke_at}))
+      |> Ecto.Multi.update_all(
+        :tokens,
+        from(t in Token, where: t.user_session_id == ^session.id and is_nil(t.revoked_at)),
+        set: [revoked_at: revoke_at, updated_at: DateTime.utc_now()]
+      )
+
+    # Add audit if provided
+    multi =
+      if audit_data = Keyword.get(opts, :audit) do
+        multi
+        |> Ecto.Multi.run(:preload, fn _repo, %{session: revoked} ->
+          {:ok, Repo.preload(revoked, :client)}
+        end)
+        |> audit(audit_data, "session.revoke", fn %{preload: s} -> s end)
+      else
+        multi
+      end
+
+    Repo.transaction(multi)
   end
 
-  def revoke(%UserSession{type: "browser"} = session, revoke_at) do
+  def revoke(%UserSession{type: "browser"} = session, revoke_at, opts) do
     revoke_at = revoke_at || DateTime.utc_now()
 
-    session
-    |> UserSession.changeset(%{revoked_at: revoke_at})
-    |> Repo.update()
+    changeset = UserSession.changeset(session, %{revoked_at: revoke_at})
+
+    multi =
+      Ecto.Multi.new()
+      |> Ecto.Multi.update(:session, changeset)
+
+    # Add audit if provided
+    multi =
+      if audit_data = Keyword.get(opts, :audit) do
+        audit(multi, audit_data, "session.revoke", fn %{session: s} -> s end)
+      else
+        multi
+      end
+
+    case Repo.transaction(multi) do
+      {:ok, %{session: session}} -> {:ok, session}
+      {:error, :session, changeset, _} -> {:error, changeset}
+    end
   end
 
   @doc """

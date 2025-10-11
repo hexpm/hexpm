@@ -51,7 +51,7 @@ defmodule HexpmWeb.LoginController do
         {:ok, decoded_token} ->
           case UserSessions.get_browser_session_by_token(decoded_token) do
             nil -> :ok
-            session -> UserSessions.revoke(session)
+            session -> UserSessions.revoke(session, nil, audit: audit_data(conn))
           end
 
         _ ->
@@ -75,7 +75,10 @@ defmodule HexpmWeb.LoginController do
 
     # Create browser session
     {:ok, _user_session, session_token} =
-      UserSessions.create_browser_session(user, name: detect_browser(conn))
+      UserSessions.create_browser_session(user,
+        name: detect_browser(conn),
+        audit: %{audit_data(conn) | user: user}
+      )
 
     conn
     |> configure_session(renew: true)
@@ -140,7 +143,10 @@ defmodule HexpmWeb.LoginController do
 
     # Pre-create browser session for after TFA
     {:ok, _user_session, session_token} =
-      UserSessions.create_browser_session(user, name: detect_browser(conn))
+      UserSessions.create_browser_session(user,
+        name: detect_browser(conn),
+        audit: %{audit_data(conn) | user: user}
+      )
 
     conn
     |> configure_session(renew: true)

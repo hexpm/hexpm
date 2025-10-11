@@ -2,6 +2,7 @@ defmodule Hexpm.UserSessionsTest do
   use Hexpm.DataCase, async: true
 
   alias Hexpm.UserSessions
+  alias Hexpm.Accounts.{AuditLog, AuditLogs}
 
   describe "session limit enforcement" do
     test "limits browser sessions to 5 per user" do
@@ -667,6 +668,135 @@ defmodule Hexpm.UserSessionsTest do
       {:ok, updated_session} = UserSessions.update_last_use(session, usage_info)
 
       assert DateTime.diff(updated_session.last_use.used_at, used_at, :second) == 0
+    end
+  end
+
+  describe "audit logging" do
+    test "create_browser_session logs session.create audit event" do
+      user = insert(:user)
+
+      {:ok, session, _token} =
+        UserSessions.create_browser_session(user,
+          name: "Test Browser",
+          audit: audit_data(user)
+        )
+
+      assert [%AuditLog{action: "session.create"}] = AuditLogs.all_by(user)
+
+      # Verify audit log params contain session info
+      [log] = AuditLogs.all_by(user)
+      assert log.params["id"] == session.id
+      assert log.params["type"] == "browser"
+      assert log.params["name"] == "Test Browser"
+      assert log.user_id == user.id
+    end
+
+    test "create_oauth_session logs session.create audit event" do
+      user = insert(:user)
+      client = insert(:oauth_client)
+
+      {:ok, session} =
+        UserSessions.create_oauth_session(user, client.client_id,
+          name: "CLI",
+          audit: audit_data(user)
+        )
+
+      assert [%AuditLog{action: "session.create"}] = AuditLogs.all_by(user)
+
+      # Verify audit log params contain session and client info
+      [log] = AuditLogs.all_by(user)
+      assert log.params["id"] == session.id
+      assert log.params["type"] == "oauth"
+      assert log.params["name"] == "CLI"
+      assert log.params["client_id"] == client.client_id
+      assert log.params["client"]["name"] == client.name
+    end
+
+    test "revoke/1 for browser session logs session.revoke audit event" do
+      user = insert(:user)
+
+      {:ok, session, _token} =
+        UserSessions.create_browser_session(user,
+          name: "Test",
+          audit: audit_data(user)
+        )
+
+      {:ok, _} = UserSessions.revoke(session, nil, audit: audit_data(user))
+
+      # Should have 2 audit logs: create + revoke
+      assert [
+               %AuditLog{action: "session.revoke"},
+               %AuditLog{action: "session.create"}
+             ] = AuditLogs.all_by(user)
+
+      [revoke_log | _] = AuditLogs.all_by(user)
+      assert revoke_log.params["id"] == session.id
+      assert revoke_log.params["type"] == "browser"
+    end
+
+    test "revoke/1 for OAuth session logs session.revoke audit event" do
+      user = insert(:user)
+      client = insert(:oauth_client)
+
+      {:ok, session} =
+        UserSessions.create_oauth_session(user, client.client_id,
+          name: "CLI",
+          audit: audit_data(user)
+        )
+
+      {:ok, _} = UserSessions.revoke(session, nil, audit: audit_data(user))
+
+      # Should have 2 audit logs: create + revoke
+      assert [
+               %AuditLog{action: "session.revoke"},
+               %AuditLog{action: "session.create"}
+             ] = AuditLogs.all_by(user)
+
+      [revoke_log | _] = AuditLogs.all_by(user)
+      assert revoke_log.params["id"] == session.id
+      assert revoke_log.params["type"] == "oauth"
+      assert revoke_log.params["client"]["name"] == client.name
+    end
+
+    test "create_browser_session without audit option does not create audit log" do
+      user = insert(:user)
+
+      {:ok, _session, _token} = UserSessions.create_browser_session(user, name: "Test")
+
+      assert [] = AuditLogs.all_by(user)
+    end
+
+    test "create_oauth_session without audit option does not create audit log" do
+      user = insert(:user)
+      client = insert(:oauth_client)
+
+      {:ok, _session} = UserSessions.create_oauth_session(user, client.client_id, name: "Test")
+
+      assert [] = AuditLogs.all_by(user)
+    end
+
+    test "revoke/1 without audit option does not create audit log" do
+      user = insert(:user)
+      {:ok, session, _token} = UserSessions.create_browser_session(user, name: "Test")
+
+      {:ok, _} = UserSessions.revoke(session)
+
+      assert [] = AuditLogs.all_by(user)
+    end
+
+    test "audit log contains user information" do
+      user = insert(:user)
+
+      {:ok, _session, _token} =
+        UserSessions.create_browser_session(user,
+          name: "Test",
+          audit: audit_data(user)
+        )
+
+      [log] = AuditLogs.all_by(user)
+      assert log.user_id == user.id
+      assert log.user_agent == "TEST"
+      assert log.remote_ip == "127.0.0.1"
     end
   end
 end

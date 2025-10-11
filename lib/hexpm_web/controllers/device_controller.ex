@@ -177,7 +177,9 @@ defmodule HexpmWeb.DeviceController do
               render_verification_form(conn, nil, {:safe, error_message}, user_code)
 
             true ->
-              case DeviceCodes.authorize_device(user_code, user, selected_scopes) do
+              case DeviceCodes.authorize_device(user_code, user, selected_scopes,
+                     audit: audit_data(conn)
+                   ) do
                 {:ok, _device_code} ->
                   conn
                   |> put_flash(:info, "Device has been successfully authorized!")
