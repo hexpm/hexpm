@@ -88,7 +88,8 @@ defmodule HexpmWeb.API.OAuthController do
              used_auth_code.code,
              name: params["name"],
              with_refresh_token: true,
-             usage_info: usage_info
+             usage_info: usage_info,
+             audit: audit_data(conn)
            ) do
         {:ok, token} ->
           render(conn, :token, token: token)
