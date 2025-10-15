@@ -36,7 +36,7 @@ defmodule HexpmWeb.Dashboard.SessionController do
           |> put_flash(:error, "Cannot revoke your current session. Please log out instead.")
           |> redirect(to: ~p"/dashboard/sessions")
         else
-          case UserSessions.revoke(session) do
+          case UserSessions.revoke(session, nil, audit: audit_data(conn)) do
             {:ok, _} ->
               session_type = if session.type == "browser", do: "browser", else: "OAuth"
 

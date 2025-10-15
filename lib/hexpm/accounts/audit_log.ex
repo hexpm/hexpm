@@ -222,6 +222,9 @@ defmodule Hexpm.Accounts.AuditLog do
   defp extract_params("password.reset.finish", nil), do: %{}
   defp extract_params("password.update", nil), do: %{}
 
+  defp extract_params("session.create", session), do: serialize(session)
+  defp extract_params("session.revoke", session), do: serialize(session)
+
   defp extract_params("billing.checkout", {organization, data}),
     do: %{
       organization: serialize(organization),
@@ -290,8 +293,21 @@ defmodule Hexpm.Accounts.AuditLog do
     |> Map.put(:handles, serialize(user.handles))
   end
 
+  defp serialize(%Hexpm.UserSession{} = session) do
+    session
+    |> do_serialize()
+    |> Map.put(:client, serialize_if_loaded(session.client))
+  end
+
+  defp serialize(%Hexpm.OAuth.Client{} = client) do
+    do_serialize(client)
+  end
+
   defp serialize(nil), do: nil
   defp serialize(schema), do: do_serialize(schema)
+
+  defp serialize_if_loaded(%Ecto.Association.NotLoaded{}), do: nil
+  defp serialize_if_loaded(assoc), do: serialize(assoc)
 
   defp do_serialize(schema), do: Map.take(schema, fields(schema))
 
@@ -306,6 +322,8 @@ defmodule Hexpm.Accounts.AuditLog do
   defp fields(%Organization{}), do: [:id, :name, :public, :active, :billing_active]
   defp fields(%User{}), do: [:id, :username]
   defp fields(%UserHandles{}), do: [:twitter, :bluesky, :github, :elixirforum, :freenode, :slack]
+  defp fields(%Hexpm.UserSession{}), do: [:id, :type, :name, :client_id]
+  defp fields(%Hexpm.OAuth.Client{}), do: [:id, :name]
 
   defp multi_key(multi, action) do
     :"log.#{action}.#{length(Multi.to_list(multi))}"
