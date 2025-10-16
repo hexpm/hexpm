@@ -190,7 +190,8 @@ defmodule Hexpm.Factory do
       allowed_grant_types: [
         "authorization_code",
         "urn:ietf:params:oauth:grant-type:device_code",
-        "refresh_token"
+        "refresh_token",
+        "client_credentials"
       ],
       redirect_uris: ["https://example.com/callback"]
     }

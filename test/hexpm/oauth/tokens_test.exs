@@ -305,7 +305,7 @@ defmodule Hexpm.OAuth.TokensTest do
     setup do
       user = insert(:user)
       client = insert(:oauth_client)
-      {:ok, session} = Hexpm.UserSessions.create_oauth_session(user, client.client_id)
+      {:ok, session} = Hexpm.UserSessions.create_oauth_session(user, client.client_id, audit: audit_data(user))
 
       {:ok, user: user, client: client, session: session}
     end

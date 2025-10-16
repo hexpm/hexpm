@@ -303,6 +303,9 @@ defmodule Hexpm.Permissions do
   This is used for access tokens to create a capability-based token that explicitly
   lists which repositories can be accessed at the edge without database lookups.
 
+  If `api_key` is provided, the expansion is constrained by the API key's permissions.
+  This ensures that the expanded scopes don't exceed what the API key is allowed to access.
+
   Refresh tokens keep the "repositories" scope as-is.
 
   ## Examples
@@ -314,7 +317,9 @@ defmodule Hexpm.Permissions do
       iex> expand_repositories_scope(user, ["api:read"])
       ["api:read"]
   """
-  def expand_repositories_scope(%User{} = user, scopes) do
+  def expand_repositories_scope(user, scopes, api_key \\ nil)
+
+  def expand_repositories_scope(%User{} = user, scopes, nil) do
     if "repositories" in scopes do
       # Ensure organizations are preloaded
       user = Hexpm.Repo.preload(user, :organizations)
@@ -332,6 +337,47 @@ defmodule Hexpm.Permissions do
     else
       scopes
     end
+  end
+
+  def expand_repositories_scope(%User{} = user, scopes, api_key) do
+    if "repositories" in scopes do
+      # Ensure organizations are preloaded
+      user = Hexpm.Repo.preload(user, :organizations)
+
+      # Get all organizations the user has access to
+      organizations = Users.all_organizations(user)
+
+      # Filter organizations based on API key permissions
+      allowed_repos = get_allowed_repositories_from_key(api_key.permissions)
+
+      repo_scopes =
+        organizations
+        |> Enum.map(fn org -> org.name end)
+        |> Enum.filter(fn org_name ->
+          # Allow if key has "repositories" permission or specific "repository:org_name" permission
+          :all in allowed_repos or org_name in allowed_repos
+        end)
+        |> Enum.map(fn org_name -> "repository:#{org_name}" end)
+
+      # Replace "repositories" with individual scopes
+      scopes
+      |> Enum.reject(&(&1 == "repositories"))
+      |> Kernel.++(repo_scopes)
+    else
+      scopes
+    end
+  end
+
+  defp get_allowed_repositories_from_key(permissions) do
+    permissions
+    |> Enum.flat_map(fn permission ->
+      case permission.domain do
+        "repositories" -> [:all]
+        "repository" -> [permission.resource]
+        _ -> []
+      end
+    end)
+    |> MapSet.new()
   end
 
   @doc """

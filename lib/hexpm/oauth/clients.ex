@@ -39,6 +39,8 @@ defmodule Hexpm.OAuth.Clients do
   @doc """
   Validates that the client is allowed to use the specified grant type.
   """
+  def supports_grant_type?(%Client{allowed_grant_types: nil}, _grant_type), do: true
+
   def supports_grant_type?(%Client{allowed_grant_types: grant_types}, grant_type) do
     grant_type in grant_types
   end

@@ -12,7 +12,7 @@ defmodule Hexpm.UserSessionsTest do
       sessions =
         for i <- 1..5 do
           {:ok, session, _token} =
-            UserSessions.create_browser_session(user, name: "Session #{i}")
+            UserSessions.create_browser_session(user, name: "Session #{i}", audit: audit_data(user))
 
           session
         end
@@ -22,7 +22,7 @@ defmodule Hexpm.UserSessionsTest do
 
       # Create a 6th session
       {:ok, _new_session, _token} =
-        UserSessions.create_browser_session(user, name: "Session 6")
+        UserSessions.create_browser_session(user, name: "Session 6", audit: audit_data(user))
 
       # Verify we still only have 5 sessions
       assert UserSessions.count_for_user(user) == 5
@@ -40,7 +40,7 @@ defmodule Hexpm.UserSessionsTest do
       sessions =
         for i <- 1..5 do
           {:ok, session} =
-            UserSessions.create_oauth_session(user, client.client_id, name: "OAuth #{i}")
+            UserSessions.create_oauth_session(user, client.client_id, name: "OAuth #{i}", audit: audit_data(user))
 
           session
         end
@@ -50,7 +50,7 @@ defmodule Hexpm.UserSessionsTest do
 
       # Create a 6th session
       {:ok, _new_session} =
-        UserSessions.create_oauth_session(user, client.client_id, name: "OAuth 6")
+        UserSessions.create_oauth_session(user, client.client_id, name: "OAuth 6", audit: audit_data(user))
 
       # Verify we still only have 5 sessions
       assert UserSessions.count_for_user(user) == 5
@@ -68,7 +68,7 @@ defmodule Hexpm.UserSessionsTest do
       browser_sessions =
         for i <- 1..3 do
           {:ok, session, _token} =
-            UserSessions.create_browser_session(user, name: "Browser #{i}")
+            UserSessions.create_browser_session(user, name: "Browser #{i}", audit: audit_data(user))
 
           session
         end
@@ -77,7 +77,7 @@ defmodule Hexpm.UserSessionsTest do
       oauth_sessions =
         for i <- 1..2 do
           {:ok, session} =
-            UserSessions.create_oauth_session(user, client.client_id, name: "OAuth #{i}")
+            UserSessions.create_oauth_session(user, client.client_id, name: "OAuth #{i}", audit: audit_data(user))
 
           session
         end
@@ -87,7 +87,7 @@ defmodule Hexpm.UserSessionsTest do
 
       # Create another browser session (6th total)
       {:ok, _new_session, _token} =
-        UserSessions.create_browser_session(user, name: "Browser 4")
+        UserSessions.create_browser_session(user, name: "Browser 4", audit: audit_data(user))
 
       # Verify we still only have 5 sessions
       assert UserSessions.count_for_user(user) == 5
@@ -110,7 +110,7 @@ defmodule Hexpm.UserSessionsTest do
       sessions =
         for i <- 1..5 do
           {:ok, session, _token} =
-            UserSessions.create_browser_session(user, name: "Session #{i}")
+            UserSessions.create_browser_session(user, name: "Session #{i}", audit: audit_data(user))
 
           session
         end
@@ -132,7 +132,7 @@ defmodule Hexpm.UserSessionsTest do
 
       # Create a 6th session
       {:ok, _new_session, _token} =
-        UserSessions.create_browser_session(user, name: "Session 6")
+        UserSessions.create_browser_session(user, name: "Session 6", audit: audit_data(user))
 
       # Verify we still only have 5 sessions
       assert UserSessions.count_for_user(user) == 5
@@ -149,7 +149,7 @@ defmodule Hexpm.UserSessionsTest do
       sessions =
         for i <- 1..5 do
           {:ok, session, _token} =
-            UserSessions.create_browser_session(user, name: "Session #{i}")
+            UserSessions.create_browser_session(user, name: "Session #{i}", audit: audit_data(user))
 
           session
         end
@@ -172,7 +172,7 @@ defmodule Hexpm.UserSessionsTest do
 
       # Create a 6th session
       {:ok, _new_session, _token} =
-        UserSessions.create_browser_session(user, name: "Session 6")
+        UserSessions.create_browser_session(user, name: "Session 6", audit: audit_data(user))
 
       # Verify we still only have 5 sessions
       assert UserSessions.count_for_user(user) == 5
@@ -218,7 +218,7 @@ defmodule Hexpm.UserSessionsTest do
 
       # Now try to create another session with enforcement
       {:ok, _new_session, _token} =
-        UserSessions.create_browser_session(user, name: "Session 8")
+        UserSessions.create_browser_session(user, name: "Session 8", audit: audit_data(user))
 
       # Verify we now have only 5 sessions (should have revoked 3 oldest: 7 - 4 = 3)
       assert UserSessions.count_for_user(user) == 5
@@ -236,7 +236,7 @@ defmodule Hexpm.UserSessionsTest do
     test "browser sessions are created with 30-day expiration" do
       user = insert(:user)
 
-      {:ok, session, _token} = UserSessions.create_browser_session(user, name: "Test Session")
+      {:ok, session, _token} = UserSessions.create_browser_session(user, name: "Test Session", audit: audit_data(user))
 
       expected_expires_at = DateTime.add(DateTime.utc_now(), 30 * 24 * 60 * 60, :second)
       assert DateTime.diff(session.expires_at, expected_expires_at, :second) |> abs() <= 2
@@ -246,7 +246,7 @@ defmodule Hexpm.UserSessionsTest do
       user = insert(:user)
       client = insert(:oauth_client)
 
-      {:ok, session} = UserSessions.create_oauth_session(user, client.client_id, name: "Test")
+      {:ok, session} = UserSessions.create_oauth_session(user, client.client_id, name: "Test", audit: audit_data(user))
 
       expected_expires_at = DateTime.add(DateTime.utc_now(), 30 * 24 * 60 * 60, :second)
       assert DateTime.diff(session.expires_at, expected_expires_at, :second) |> abs() <= 2
@@ -254,7 +254,7 @@ defmodule Hexpm.UserSessionsTest do
 
     test "get_browser_session_by_token returns nil for expired session" do
       user = insert(:user)
-      {:ok, session, token} = UserSessions.create_browser_session(user, name: "Test")
+      {:ok, session, token} = UserSessions.create_browser_session(user, name: "Test", audit: audit_data(user))
 
       # Manually expire the session
       past_time = DateTime.add(DateTime.utc_now(), -3600, :second)
@@ -269,12 +269,12 @@ defmodule Hexpm.UserSessionsTest do
 
       # Create 3 active sessions
       for i <- 1..3 do
-        UserSessions.create_browser_session(user, name: "Active #{i}")
+        UserSessions.create_browser_session(user, name: "Active #{i}", audit: audit_data(user))
       end
 
       # Create 2 expired sessions
       for i <- 1..2 do
-        {:ok, session, _token} = UserSessions.create_browser_session(user, name: "Expired #{i}")
+        {:ok, session, _token} = UserSessions.create_browser_session(user, name: "Expired #{i}", audit: audit_data(user))
         past_time = DateTime.add(DateTime.utc_now(), -3600, :second)
         Repo.update!(Hexpm.UserSession.changeset(session, %{expires_at: past_time}))
       end
@@ -289,12 +289,12 @@ defmodule Hexpm.UserSessionsTest do
 
       # Create 3 active sessions
       for i <- 1..3 do
-        UserSessions.create_browser_session(user, name: "Active #{i}")
+        UserSessions.create_browser_session(user, name: "Active #{i}", audit: audit_data(user))
       end
 
       # Create 2 expired sessions
       for i <- 1..2 do
-        {:ok, session, _token} = UserSessions.create_browser_session(user, name: "Expired #{i}")
+        {:ok, session, _token} = UserSessions.create_browser_session(user, name: "Expired #{i}", audit: audit_data(user))
         past_time = DateTime.add(DateTime.utc_now(), -3600, :second)
         Repo.update!(Hexpm.UserSession.changeset(session, %{expires_at: past_time}))
       end
@@ -309,7 +309,7 @@ defmodule Hexpm.UserSessionsTest do
       # Create 5 active sessions
       sessions =
         for i <- 1..5 do
-          {:ok, session, _token} = UserSessions.create_browser_session(user, name: "Session #{i}")
+          {:ok, session, _token} = UserSessions.create_browser_session(user, name: "Session #{i}", audit: audit_data(user))
           session
         end
 
@@ -321,9 +321,9 @@ defmodule Hexpm.UserSessionsTest do
       end)
 
       # Should be able to create 3 more (only 3 active, limit is 5)
-      {:ok, _s1, _} = UserSessions.create_browser_session(user, name: "New 1")
-      {:ok, _s2, _} = UserSessions.create_browser_session(user, name: "New 2")
-      {:ok, _s3, _} = UserSessions.create_browser_session(user, name: "New 3")
+      {:ok, _s1, _} = UserSessions.create_browser_session(user, name: "New 1", audit: audit_data(user))
+      {:ok, _s2, _} = UserSessions.create_browser_session(user, name: "New 2", audit: audit_data(user))
+      {:ok, _s3, _} = UserSessions.create_browser_session(user, name: "New 3", audit: audit_data(user))
 
       # Should have 5 active sessions now (expired ones don't count)
       assert UserSessions.count_for_user(user) == 5
@@ -331,14 +331,14 @@ defmodule Hexpm.UserSessionsTest do
 
     test "expired?/1 returns false for non-expired session" do
       user = insert(:user)
-      {:ok, session, _token} = UserSessions.create_browser_session(user, name: "Test")
+      {:ok, session, _token} = UserSessions.create_browser_session(user, name: "Test", audit: audit_data(user))
 
       refute Hexpm.UserSession.expired?(session)
     end
 
     test "expired?/1 returns true for expired session" do
       user = insert(:user)
-      {:ok, session, _token} = UserSessions.create_browser_session(user, name: "Test")
+      {:ok, session, _token} = UserSessions.create_browser_session(user, name: "Test", audit: audit_data(user))
 
       # Manually expire the session
       past_time = DateTime.add(DateTime.utc_now(), -3600, :second)
@@ -356,14 +356,14 @@ defmodule Hexpm.UserSessionsTest do
 
     test "active?/1 returns true for non-expired, non-revoked session" do
       user = insert(:user)
-      {:ok, session, _token} = UserSessions.create_browser_session(user, name: "Test")
+      {:ok, session, _token} = UserSessions.create_browser_session(user, name: "Test", audit: audit_data(user))
 
       assert Hexpm.UserSession.active?(session)
     end
 
     test "active?/1 returns false for expired session" do
       user = insert(:user)
-      {:ok, session, _token} = UserSessions.create_browser_session(user, name: "Test")
+      {:ok, session, _token} = UserSessions.create_browser_session(user, name: "Test", audit: audit_data(user))
 
       past_time = DateTime.add(DateTime.utc_now(), -3600, :second)
 
@@ -375,7 +375,7 @@ defmodule Hexpm.UserSessionsTest do
 
     test "active?/1 returns false for revoked session" do
       user = insert(:user)
-      {:ok, session, _token} = UserSessions.create_browser_session(user, name: "Test")
+      {:ok, session, _token} = UserSessions.create_browser_session(user, name: "Test", audit: audit_data(user))
 
       {:ok, revoked_session} = UserSessions.revoke(session)
 
@@ -387,13 +387,13 @@ defmodule Hexpm.UserSessionsTest do
 
       # Create 3 active sessions
       for i <- 1..3 do
-        UserSessions.create_browser_session(user, name: "Active #{i}")
+        UserSessions.create_browser_session(user, name: "Active #{i}", audit: audit_data(user))
       end
 
       # Create 2 expired sessions
       expired_ids =
         for i <- 1..2 do
-          {:ok, session, _token} = UserSessions.create_browser_session(user, name: "Expired #{i}")
+          {:ok, session, _token} = UserSessions.create_browser_session(user, name: "Expired #{i}", audit: audit_data(user))
           past_time = DateTime.add(DateTime.utc_now(), -3600, :second)
           Repo.update!(Hexpm.UserSession.changeset(session, %{expires_at: past_time}))
           session.id
@@ -425,7 +425,8 @@ defmodule Hexpm.UserSessionsTest do
           ["api"],
           "authorization_code",
           "test_code",
-          with_refresh_token: true
+          with_refresh_token: true,
+          audit: audit_data(user)
         )
 
       token = Repo.preload(token, :user_session)
@@ -448,7 +449,8 @@ defmodule Hexpm.UserSessionsTest do
           ["api"],
           "authorization_code",
           "test_code",
-          with_refresh_token: true
+          with_refresh_token: true,
+          audit: audit_data(user)
         )
 
       original_expires_at = token.refresh_token_expires_at
@@ -486,7 +488,8 @@ defmodule Hexpm.UserSessionsTest do
           ["api"],
           "authorization_code",
           "test_code",
-          with_refresh_token: true
+          with_refresh_token: true,
+          audit: audit_data(user)
         )
 
       session = Repo.get(Hexpm.UserSession, token.user_session_id)
@@ -519,7 +522,7 @@ defmodule Hexpm.UserSessionsTest do
   describe "session revocation" do
     test "revoke/1 for browser session sets revoked_at" do
       user = insert(:user)
-      {:ok, session, _token} = UserSessions.create_browser_session(user, name: "Test")
+      {:ok, session, _token} = UserSessions.create_browser_session(user, name: "Test", audit: audit_data(user))
 
       {:ok, revoked_session} = UserSessions.revoke(session)
 
@@ -530,7 +533,7 @@ defmodule Hexpm.UserSessionsTest do
     test "revoke/1 for OAuth session sets revoked_at" do
       user = insert(:user)
       client = insert(:oauth_client)
-      {:ok, session} = UserSessions.create_oauth_session(user, client.client_id, name: "Test")
+      {:ok, session} = UserSessions.create_oauth_session(user, client.client_id, name: "Test", audit: audit_data(user))
 
       {:ok, %{session: revoked_session, tokens: _}} = UserSessions.revoke(session)
 
@@ -549,7 +552,8 @@ defmodule Hexpm.UserSessionsTest do
           ["api"],
           "authorization_code",
           "test_code",
-          with_refresh_token: true
+          with_refresh_token: true,
+          audit: audit_data(user)
         )
 
       session = Repo.get(Hexpm.UserSession, token.user_session_id)
@@ -569,11 +573,11 @@ defmodule Hexpm.UserSessionsTest do
       user = insert(:user)
 
       # Create 2 active sessions
-      UserSessions.create_browser_session(user, name: "Active 1")
-      UserSessions.create_browser_session(user, name: "Active 2")
+      UserSessions.create_browser_session(user, name: "Active 1", audit: audit_data(user))
+      UserSessions.create_browser_session(user, name: "Active 2", audit: audit_data(user))
 
       # Create and revoke 1 session
-      {:ok, session, _token} = UserSessions.create_browser_session(user, name: "Revoked")
+      {:ok, session, _token} = UserSessions.create_browser_session(user, name: "Revoked", audit: audit_data(user))
       UserSessions.revoke(session)
 
       # Should only return active sessions
@@ -585,11 +589,11 @@ defmodule Hexpm.UserSessionsTest do
       user = insert(:user)
 
       # Create 2 active sessions
-      UserSessions.create_browser_session(user, name: "Active 1")
-      UserSessions.create_browser_session(user, name: "Active 2")
+      UserSessions.create_browser_session(user, name: "Active 1", audit: audit_data(user))
+      UserSessions.create_browser_session(user, name: "Active 2", audit: audit_data(user))
 
       # Create and revoke 1 session
-      {:ok, session, _token} = UserSessions.create_browser_session(user, name: "Revoked")
+      {:ok, session, _token} = UserSessions.create_browser_session(user, name: "Revoked", audit: audit_data(user))
       UserSessions.revoke(session)
 
       # Should only count active sessions
@@ -598,7 +602,7 @@ defmodule Hexpm.UserSessionsTest do
 
     test "get_browser_session_by_token returns nil for revoked session" do
       user = insert(:user)
-      {:ok, session, token} = UserSessions.create_browser_session(user, name: "Test")
+      {:ok, session, token} = UserSessions.create_browser_session(user, name: "Test", audit: audit_data(user))
 
       UserSessions.revoke(session)
 
@@ -610,7 +614,7 @@ defmodule Hexpm.UserSessionsTest do
   describe "last use tracking" do
     test "update_last_use/2 updates last_use embedded field" do
       user = insert(:user)
-      {:ok, session, _token} = UserSessions.create_browser_session(user, name: "Test")
+      {:ok, session, _token} = UserSessions.create_browser_session(user, name: "Test", audit: audit_data(user))
 
       usage_info = %{
         used_at: DateTime.utc_now(),
@@ -625,7 +629,7 @@ defmodule Hexpm.UserSessionsTest do
 
     test "update_last_use/2 stores IP address" do
       user = insert(:user)
-      {:ok, session, _token} = UserSessions.create_browser_session(user, name: "Test")
+      {:ok, session, _token} = UserSessions.create_browser_session(user, name: "Test", audit: audit_data(user))
 
       usage_info = %{
         used_at: DateTime.utc_now(),
@@ -640,7 +644,7 @@ defmodule Hexpm.UserSessionsTest do
 
     test "update_last_use/2 stores user agent" do
       user = insert(:user)
-      {:ok, session, _token} = UserSessions.create_browser_session(user, name: "Test")
+      {:ok, session, _token} = UserSessions.create_browser_session(user, name: "Test", audit: audit_data(user))
 
       usage_info = %{
         used_at: DateTime.utc_now(),
@@ -655,7 +659,7 @@ defmodule Hexpm.UserSessionsTest do
 
     test "update_last_use/2 stores used_at timestamp" do
       user = insert(:user)
-      {:ok, session, _token} = UserSessions.create_browser_session(user, name: "Test")
+      {:ok, session, _token} = UserSessions.create_browser_session(user, name: "Test", audit: audit_data(user))
 
       used_at = DateTime.utc_now()
 
@@ -756,32 +760,6 @@ defmodule Hexpm.UserSessionsTest do
       assert revoke_log.params["id"] == session.id
       assert revoke_log.params["type"] == "oauth"
       assert revoke_log.params["client"]["name"] == client.name
-    end
-
-    test "create_browser_session without audit option does not create audit log" do
-      user = insert(:user)
-
-      {:ok, _session, _token} = UserSessions.create_browser_session(user, name: "Test")
-
-      assert [] = AuditLogs.all_by(user)
-    end
-
-    test "create_oauth_session without audit option does not create audit log" do
-      user = insert(:user)
-      client = insert(:oauth_client)
-
-      {:ok, _session} = UserSessions.create_oauth_session(user, client.client_id, name: "Test")
-
-      assert [] = AuditLogs.all_by(user)
-    end
-
-    test "revoke/1 without audit option does not create audit log" do
-      user = insert(:user)
-      {:ok, session, _token} = UserSessions.create_browser_session(user, name: "Test")
-
-      {:ok, _} = UserSessions.revoke(session)
-
-      assert [] = AuditLogs.all_by(user)
     end
 
     test "audit log contains user information" do

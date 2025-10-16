@@ -121,7 +121,10 @@ defmodule HexpmWeb.PasswordControllerTest do
 
       # Create browser session
       {:ok, browser_session, _token} =
-        UserSessions.create_browser_session(c.user, name: "Test Browser")
+        UserSessions.create_browser_session(c.user,
+          name: "Test Browser",
+          audit: test_audit_data(c.user)
+        )
 
       # Create OAuth session and token
       client = insert(:oauth_client)
@@ -134,7 +137,8 @@ defmodule HexpmWeb.PasswordControllerTest do
           "authorization_code",
           "test_code",
           with_refresh_token: true,
-          name: "Test OAuth"
+          name: "Test OAuth",
+          audit: test_audit_data(c.user)
         )
 
       oauth_session = Repo.get(Hexpm.UserSession, oauth_token.user_session_id)
@@ -189,7 +193,10 @@ defmodule HexpmWeb.PasswordControllerTest do
 
       # Create browser session
       {:ok, browser_session, _token} =
-        UserSessions.create_browser_session(c.user, name: "Test Browser")
+        UserSessions.create_browser_session(c.user,
+          name: "Test Browser",
+          audit: test_audit_data(c.user)
+        )
 
       # Create OAuth session and token
       client = insert(:oauth_client)
@@ -202,7 +209,8 @@ defmodule HexpmWeb.PasswordControllerTest do
           "authorization_code",
           "test_code",
           with_refresh_token: true,
-          name: "Test OAuth"
+          name: "Test OAuth",
+          audit: test_audit_data(c.user)
         )
 
       oauth_session = Repo.get(Hexpm.UserSession, oauth_token.user_session_id)

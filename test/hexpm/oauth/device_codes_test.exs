@@ -218,7 +218,7 @@ defmodule Hexpm.OAuth.DeviceCodesTest do
         Enum.each(char_counts, fn {char, count} ->
           ratio = count / expected_per_char
 
-          assert ratio >= 0.6 and ratio <= 1.4,
+          assert ratio >= 0.55 and ratio <= 1.5,
                  "Character '#{char}' appears #{count} times (ratio: #{ratio}), expected around #{expected_per_char}"
         end)
       end

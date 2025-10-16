@@ -8,7 +8,10 @@ defmodule HexpmWeb.OAuthControllerTest do
     alias Hexpm.UserSessions
 
     {:ok, _session, session_token} =
-      UserSessions.create_browser_session(user, name: "Test Browser Session")
+      UserSessions.create_browser_session(user,
+        name: "Test Browser Session",
+        audit: test_audit_data(user)
+      )
 
     conn
     |> init_test_session(%{})
