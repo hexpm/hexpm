@@ -56,7 +56,10 @@ defmodule Hexpm.OAuth.TokenTest do
     test "creates valid changeset with all fields" do
       user = insert(:user)
       client = insert(:oauth_client)
-      {:ok, session} = UserSessions.create_oauth_session(user, client.client_id, audit: audit_data(user))
+
+      {:ok, session} =
+        UserSessions.create_oauth_session(user, client.client_id, audit: audit_data(user))
+
       expires_at = DateTime.add(DateTime.utc_now(), 3600, :second)
 
       attrs = %{
@@ -81,7 +84,10 @@ defmodule Hexpm.OAuth.TokenTest do
     test "builds token with valid attributes" do
       user = insert(:user)
       client = insert(:oauth_client)
-      {:ok, session} = UserSessions.create_oauth_session(user, client.client_id, audit: audit_data(user))
+
+      {:ok, session} =
+        UserSessions.create_oauth_session(user, client.client_id, audit: audit_data(user))
+
       expires_at = DateTime.add(DateTime.utc_now(), 3600, :second)
 
       attrs = %{
