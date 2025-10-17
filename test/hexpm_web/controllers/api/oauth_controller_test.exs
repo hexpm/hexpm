@@ -10,7 +10,7 @@ defmodule HexpmWeb.API.OAuthControllerTest do
       client_id: Clients.generate_client_id(),
       name: "Test OAuth Client",
       client_type: "public",
-      allowed_grant_types: ["urn:ietf:params:oauth:grant-type:device_code"],
+      allowed_grant_types: ["urn:ietf:params:oauth:grant-type:device_code", "refresh_token"],
       allowed_scopes: ["api", "api:read", "api:write"]
     }
 
@@ -337,7 +337,8 @@ defmodule HexpmWeb.API.OAuthControllerTest do
     end
 
     test "returns error for expired refresh token", %{user: user, client: client} do
-      {:ok, session} = Hexpm.UserSessions.create_oauth_session(user, client.client_id)
+      {:ok, session} =
+        Hexpm.UserSessions.create_oauth_session(user, client.client_id, audit: audit_data(user))
 
       # Create a token with an expired refresh token
       token_changeset =
@@ -348,7 +349,8 @@ defmodule HexpmWeb.API.OAuthControllerTest do
           "authorization_code",
           "test_code",
           user_session_id: session.id,
-          with_refresh_token: true
+          with_refresh_token: true,
+          audit: audit_data(user)
         )
 
       {:ok, token} = Hexpm.Repo.insert(token_changeset)
@@ -387,7 +389,9 @@ defmodule HexpmWeb.API.OAuthControllerTest do
       }
 
       {:ok, client} = Client.build(client_params) |> Repo.insert()
-      {:ok, session} = Hexpm.UserSessions.create_oauth_session(user, client.client_id)
+
+      {:ok, session} =
+        Hexpm.UserSessions.create_oauth_session(user, client.client_id, audit: audit_data(user))
 
       # Create token with refresh token
       token_changeset =
@@ -398,7 +402,8 @@ defmodule HexpmWeb.API.OAuthControllerTest do
           "authorization_code",
           "test_code",
           user_session_id: session.id,
-          with_refresh_token: true
+          with_refresh_token: true,
+          audit: audit_data(user)
         )
 
       {:ok, token} = Repo.insert(token_changeset)
@@ -566,6 +571,398 @@ defmodule HexpmWeb.API.OAuthControllerTest do
 
       updated_token = Repo.get(Token, token.id)
       assert Tokens.revoked?(updated_token)
+    end
+  end
+
+  describe "POST /api/oauth/token with client_credentials grant" do
+    setup do
+      user = insert(:user)
+
+      # Create API key for the user
+      {:ok, %{key: key}} =
+        Hexpm.Accounts.Keys.create(user, %{name: "test-key"}, audit: audit_data(user))
+
+      client_params = %{
+        client_id: Clients.generate_client_id(),
+        name: "Test OAuth Client",
+        client_type: "public",
+        allowed_grant_types: ["client_credentials"],
+        allowed_scopes: ["api", "repositories"]
+      }
+
+      {:ok, client} = Client.build(client_params) |> Repo.insert()
+
+      %{
+        user: user,
+        api_key: key.user_secret,
+        client: client
+      }
+    end
+
+    test "returns access token for valid API key", %{
+      client: client,
+      api_key: api_key
+    } do
+      conn =
+        post(build_conn(), ~p"/api/oauth/token", %{
+          "grant_type" => "client_credentials",
+          "client_id" => client.client_id,
+          "client_secret" => api_key,
+          "scope" => "api"
+        })
+
+      assert json_response(conn, 200)
+      response = json_response(conn, 200)
+
+      assert response["access_token"]
+      assert response["token_type"] == "bearer"
+      assert response["expires_in"] > 0
+      assert response["scope"] == "api"
+      # No refresh token for client_credentials
+      refute response["refresh_token"]
+    end
+
+    test "creates session with access token expiration", %{
+      client: client,
+      api_key: api_key,
+      user: user
+    } do
+      conn =
+        post(build_conn(), ~p"/api/oauth/token", %{
+          "grant_type" => "client_credentials",
+          "client_id" => client.client_id,
+          "client_secret" => api_key,
+          "scope" => "api"
+        })
+
+      assert json_response(conn, 200)
+
+      # Verify session was created with short expiration
+      sessions = Hexpm.UserSessions.all_for_user(user)
+      assert length(sessions) == 1
+      [session] = sessions
+
+      # Session should expire within ~30 minutes (allow some margin)
+      now = DateTime.utc_now()
+      expires_in_seconds = DateTime.diff(session.expires_at, now, :second)
+      # At least 25 minutes
+      assert expires_in_seconds > 25 * 60
+      # At most 30 minutes
+      assert expires_in_seconds <= 30 * 60
+    end
+
+    test "returns error for missing client_secret", %{client: client} do
+      conn =
+        post(build_conn(), ~p"/api/oauth/token", %{
+          "grant_type" => "client_credentials",
+          "client_id" => client.client_id,
+          "scope" => "api"
+        })
+
+      assert json_response(conn, 400)
+      response = json_response(conn, 400)
+      assert response["error"] == "invalid_request"
+    end
+
+    test "returns error for invalid API key", %{client: client} do
+      conn =
+        post(build_conn(), ~p"/api/oauth/token", %{
+          "grant_type" => "client_credentials",
+          "client_id" => client.client_id,
+          "client_secret" => "invalid_key",
+          "scope" => "api"
+        })
+
+      assert json_response(conn, 401)
+      response = json_response(conn, 401)
+      assert response["error"] == "invalid_client"
+    end
+
+    test "returns error for unauthorized grant type", %{api_key: api_key} do
+      # Create client that doesn't support client_credentials
+      client_params = %{
+        client_id: Clients.generate_client_id(),
+        name: "Limited OAuth Client",
+        client_type: "public",
+        allowed_grant_types: ["authorization_code"],
+        allowed_scopes: ["api"]
+      }
+
+      {:ok, client} = Client.build(client_params) |> Repo.insert()
+
+      conn =
+        post(build_conn(), ~p"/api/oauth/token", %{
+          "grant_type" => "client_credentials",
+          "client_id" => client.client_id,
+          "client_secret" => api_key,
+          "scope" => "api"
+        })
+
+      assert json_response(conn, 400)
+      response = json_response(conn, 400)
+      assert response["error"] == "unauthorized_client"
+    end
+
+    test "returns error for invalid scope", %{client: client, api_key: api_key} do
+      conn =
+        post(build_conn(), ~p"/api/oauth/token", %{
+          "grant_type" => "client_credentials",
+          "client_id" => client.client_id,
+          "client_secret" => api_key,
+          "scope" => "invalid_scope"
+        })
+
+      assert json_response(conn, 400)
+      response = json_response(conn, 400)
+      assert response["error"] == "invalid_scope"
+    end
+
+    test "supports custom name parameter", %{
+      client: client,
+      api_key: api_key,
+      user: user
+    } do
+      name = "Custom Client Name"
+
+      conn =
+        post(build_conn(), ~p"/api/oauth/token", %{
+          "grant_type" => "client_credentials",
+          "client_id" => client.client_id,
+          "client_secret" => api_key,
+          "scope" => "api",
+          "name" => name
+        })
+
+      assert json_response(conn, 200)
+
+      # Verify session was created with the custom name
+      sessions = Hexpm.UserSessions.all_for_user(user)
+      [session] = sessions
+      assert session.name == name
+    end
+
+    test "enforces session limit of 5 per user", %{
+      client: client,
+      api_key: api_key,
+      user: user
+    } do
+      # Create 5 sessions via client credentials
+      for i <- 1..5 do
+        post(build_conn(), ~p"/api/oauth/token", %{
+          "grant_type" => "client_credentials",
+          "client_id" => client.client_id,
+          "client_secret" => api_key,
+          "scope" => "api",
+          "name" => "Session #{i}"
+        })
+      end
+
+      # Verify we have 5 sessions
+      assert Hexpm.UserSessions.count_for_user(user) == 5
+
+      # Create a 6th session
+      conn =
+        post(build_conn(), ~p"/api/oauth/token", %{
+          "grant_type" => "client_credentials",
+          "client_id" => client.client_id,
+          "client_secret" => api_key,
+          "scope" => "api",
+          "name" => "Session 6"
+        })
+
+      assert json_response(conn, 200)
+
+      # Verify we still only have 5 sessions (oldest was revoked)
+      assert Hexpm.UserSessions.count_for_user(user) == 5
+    end
+
+    test "expands 'repositories' scope for API key with generic repositories permission", %{
+      client: client,
+      user: user
+    } do
+      org = insert(:organization)
+      insert(:organization_user, organization: org, user: user)
+
+      {:ok, %{key: key}} =
+        Hexpm.Accounts.Keys.create(
+          user,
+          %{name: "repo_key", permissions: [%{domain: "repositories"}]},
+          audit: audit_data(user)
+        )
+
+      api_key = key.user_secret
+
+      conn =
+        post(build_conn(), ~p"/api/oauth/token", %{
+          "grant_type" => "client_credentials",
+          "client_id" => client.client_id,
+          "client_secret" => api_key,
+          "scope" => "repositories"
+        })
+
+      assert json_response(conn, 200)
+      response = json_response(conn, 200)
+      assert response["access_token"]
+      # Should include all repositories the user has access to
+      scopes = String.split(response["scope"], " ")
+      assert "repository:#{org.name}" in scopes
+    end
+
+    test "expands 'repositories' scope for API key with specific repository permission", %{
+      client: client,
+      user: user
+    } do
+      org = insert(:organization)
+      insert(:organization_user, organization: org, user: user)
+
+      {:ok, %{key: key}} =
+        Hexpm.Accounts.Keys.create(
+          user,
+          %{
+            name: "specific_repo_key",
+            permissions: [%{domain: "repository", resource: org.name}]
+          },
+          audit: audit_data(user)
+        )
+
+      api_key = key.user_secret
+
+      conn =
+        post(build_conn(), ~p"/api/oauth/token", %{
+          "grant_type" => "client_credentials",
+          "client_id" => client.client_id,
+          "client_secret" => api_key,
+          "scope" => "repositories"
+        })
+
+      assert json_response(conn, 200)
+      response = json_response(conn, 200)
+      assert response["access_token"]
+      assert response["scope"] == "repository:#{org.name}"
+    end
+
+    test "constrains 'repositories' expansion to API key's specific repository permissions", %{
+      client: client,
+      user: user
+    } do
+      org1 = insert(:organization)
+      org2 = insert(:organization)
+      insert(:organization_user, organization: org1, user: user)
+      insert(:organization_user, organization: org2, user: user)
+
+      # API key only has access to org1, not org2
+      {:ok, %{key: key}} =
+        Hexpm.Accounts.Keys.create(
+          user,
+          %{
+            name: "limited_repo_key",
+            permissions: [%{domain: "repository", resource: org1.name}]
+          },
+          audit: audit_data(user)
+        )
+
+      api_key = key.user_secret
+
+      # Request "repositories" scope - should only expand to org1, not org2
+      conn =
+        post(build_conn(), ~p"/api/oauth/token", %{
+          "grant_type" => "client_credentials",
+          "client_id" => client.client_id,
+          "client_secret" => api_key,
+          "scope" => "repositories"
+        })
+
+      assert json_response(conn, 200)
+      response = json_response(conn, 200)
+      assert response["access_token"]
+      # Should only expand to org1, not org2
+      assert response["scope"] == "repository:#{org1.name}"
+    end
+
+    test "constrains to multiple specific repositories when key has multiple permissions", %{
+      client: client,
+      user: user
+    } do
+      org1 = insert(:organization)
+      org2 = insert(:organization)
+      org3 = insert(:organization)
+      insert(:organization_user, organization: org1, user: user)
+      insert(:organization_user, organization: org2, user: user)
+      insert(:organization_user, organization: org3, user: user)
+
+      # API key has access to org1 and org2, but not org3
+      {:ok, %{key: key}} =
+        Hexpm.Accounts.Keys.create(
+          user,
+          %{
+            name: "multi_repo_key",
+            permissions: [
+              %{domain: "repository", resource: org1.name},
+              %{domain: "repository", resource: org2.name}
+            ]
+          },
+          audit: audit_data(user)
+        )
+
+      api_key = key.user_secret
+
+      # Request "repositories" scope - should expand to org1 and org2, not org3
+      conn =
+        post(build_conn(), ~p"/api/oauth/token", %{
+          "grant_type" => "client_credentials",
+          "client_id" => client.client_id,
+          "client_secret" => api_key,
+          "scope" => "repositories"
+        })
+
+      assert json_response(conn, 200)
+      response = json_response(conn, 200)
+      assert response["access_token"]
+      # Should expand to both org1 and org2
+      scopes = String.split(response["scope"], " ")
+      assert "repository:#{org1.name}" in scopes
+      assert "repository:#{org2.name}" in scopes
+      refute "repository:#{org3.name}" in scopes
+      assert length(scopes) == 2
+    end
+
+    test "supports mixed scopes with repositories", %{
+      client: client,
+      user: user
+    } do
+      org = insert(:organization)
+      insert(:organization_user, organization: org, user: user)
+
+      {:ok, %{key: key}} =
+        Hexpm.Accounts.Keys.create(
+          user,
+          %{
+            name: "mixed_key",
+            permissions: [
+              %{domain: "api"},
+              %{domain: "repositories"}
+            ]
+          },
+          audit: audit_data(user)
+        )
+
+      api_key = key.user_secret
+
+      conn =
+        post(build_conn(), ~p"/api/oauth/token", %{
+          "grant_type" => "client_credentials",
+          "client_id" => client.client_id,
+          "client_secret" => api_key,
+          "scope" => "api repositories"
+        })
+
+      assert json_response(conn, 200)
+      response = json_response(conn, 200)
+      assert response["access_token"]
+      # Should include api scope and all repository scopes
+      scopes = String.split(response["scope"], " ")
+      assert "api" in scopes
+      assert "repository:#{org.name}" in scopes
     end
   end
 end

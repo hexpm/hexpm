@@ -33,8 +33,9 @@ defmodule Hexpm.UserSessions do
   @doc """
   Creates a browser session for a user.
   Enforces the session limit before creating.
+  Requires audit data for security logging.
   """
-  def create_browser_session(user, opts \\ []) do
+  def create_browser_session(user, opts) do
     enforce_session_limit(user)
 
     session_token = :crypto.strong_rand_bytes(32)
@@ -54,14 +55,9 @@ defmodule Hexpm.UserSessions do
     multi =
       Ecto.Multi.new()
       |> Ecto.Multi.insert(:session, changeset)
-
-    # Add audit if provided
-    multi =
-      if audit_data = Keyword.get(opts, :audit) do
-        audit(multi, audit_data, "session.create", fn %{session: session} -> session end)
-      else
-        multi
-      end
+      |> audit(Keyword.fetch!(opts, :audit), "session.create", fn %{session: session} ->
+        session
+      end)
 
     case Repo.transaction(multi) do
       {:ok, %{session: session}} -> {:ok, session, session_token}
@@ -72,8 +68,9 @@ defmodule Hexpm.UserSessions do
   @doc """
   Creates an OAuth session for a user and client.
   Enforces the session limit before creating.
+  Requires audit data for security logging.
   """
-  def create_oauth_session(user, client_id, opts \\ []) do
+  def create_oauth_session(user, client_id, opts) do
     enforce_session_limit(user)
 
     expires_at = DateTime.add(DateTime.utc_now(), @default_session_expires_in, :second)
@@ -91,18 +88,54 @@ defmodule Hexpm.UserSessions do
     multi =
       Ecto.Multi.new()
       |> Ecto.Multi.insert(:session, changeset)
+      |> Ecto.Multi.run(:preload, fn _repo, %{session: session} ->
+        {:ok, Repo.preload(session, :client)}
+      end)
+      |> audit(Keyword.fetch!(opts, :audit), "session.create", fn %{preload: session} ->
+        session
+      end)
 
-    # Add audit if provided
+    case Repo.transaction(multi) do
+      {:ok, %{session: session}} -> {:ok, session}
+      {:error, :session, changeset, _} -> {:error, changeset}
+    end
+  end
+
+  @doc """
+  Creates an OAuth session for an API key (client credentials grant).
+
+  Unlike regular OAuth sessions, API key sessions:
+  - Expire with the access token (short-lived, typically 30 minutes)
+  - Can be for users or organizations
+  Requires audit data for security logging.
+  """
+  def create_api_key_session(user, organization, client_id, expires_at, opts) do
+    # Determine which user to use for session limit enforcement
+    session_user = user || organization.user
+    enforce_session_limit(session_user)
+
+    # Determine which user ID to use (user or org's user)
+    user_id = if user, do: user.id, else: organization.user.id
+
+    attrs = %{
+      user_id: user_id,
+      type: "oauth",
+      client_id: client_id,
+      name: Keyword.get(opts, :name),
+      expires_at: expires_at
+    }
+
+    changeset = UserSession.changeset(%UserSession{}, attrs)
+
     multi =
-      if audit_data = Keyword.get(opts, :audit) do
-        multi
-        |> Ecto.Multi.run(:preload, fn _repo, %{session: session} ->
-          {:ok, Repo.preload(session, :client)}
-        end)
-        |> audit(audit_data, "session.create", fn %{preload: session} -> session end)
-      else
-        multi
-      end
+      Ecto.Multi.new()
+      |> Ecto.Multi.insert(:session, changeset)
+      |> Ecto.Multi.run(:preload, fn _repo, %{session: session} ->
+        {:ok, Repo.preload(session, :client)}
+      end)
+      |> audit(Keyword.fetch!(opts, :audit), "session.create", fn %{preload: session} ->
+        session
+      end)
 
     case Repo.transaction(multi) do
       {:ok, %{session: session}} -> {:ok, session}

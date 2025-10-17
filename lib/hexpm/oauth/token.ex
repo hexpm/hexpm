@@ -27,7 +27,7 @@ defmodule Hexpm.OAuth.Token do
     timestamps()
   end
 
-  @valid_grant_types ~w(authorization_code urn:ietf:params:oauth:grant-type:device_code refresh_token)
+  @valid_grant_types ~w(authorization_code urn:ietf:params:oauth:grant-type:device_code refresh_token client_credentials)
 
   def changeset(token, attrs) do
     token

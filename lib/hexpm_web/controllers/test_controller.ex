@@ -66,7 +66,8 @@ defmodule HexpmWeb.TestController do
       client_id: params["client_id"],
       client_type: params["client_type"] || "public",
       client_secret: params["client_secret"],
-      redirect_uris: params["redirect_uris"] || []
+      redirect_uris: params["redirect_uris"] || [],
+      allowed_grant_types: params["allowed_grant_types"]
     }
 
     changeset = Client.changeset(%Client{}, attrs)
@@ -96,6 +97,13 @@ defmodule HexpmWeb.TestController do
       scopes = String.split(params["scope"] || "api repositories", " ")
       usage_info = build_usage_info(conn)
 
+      audit_data = %{
+        user: user,
+        auth_credential: nil,
+        user_agent: conn.assigns[:user_agent],
+        remote_ip: HexpmWeb.RequestHelpers.parse_ip(conn.remote_ip)
+      }
+
       case Tokens.create_session_and_token_for_user(
              user,
              client_id,
@@ -103,7 +111,8 @@ defmodule HexpmWeb.TestController do
              "authorization_code",
              "test_grant",
              with_refresh_token: true,
-             usage_info: usage_info
+             usage_info: usage_info,
+             audit: audit_data
            ) do
         {:ok, token} ->
           render(conn, :oauth_token, token: token)

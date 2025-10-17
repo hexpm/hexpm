@@ -12,10 +12,13 @@ defmodule HexpmWeb.Dashboard.SessionControllerTest do
   describe "GET /dashboard/sessions" do
     test "shows all active sessions", %{conn: conn, user: user} do
       # Create additional sessions
-      UserSessions.create_browser_session(user, name: "Firefox")
+      UserSessions.create_browser_session(user, name: "Firefox", audit: test_audit_data(user))
 
       {:ok, _} =
-        UserSessions.create_oauth_session(user, insert(:oauth_client).client_id, name: "CLI")
+        UserSessions.create_oauth_session(user, insert(:oauth_client).client_id,
+          name: "CLI",
+          audit: test_audit_data(user)
+        )
 
       conn = get(conn, ~p"/dashboard/sessions")
 
@@ -27,7 +30,12 @@ defmodule HexpmWeb.Dashboard.SessionControllerTest do
 
     test "excludes expired sessions", %{conn: conn, user: user} do
       # Create an expired session
-      {:ok, session, _token} = UserSessions.create_browser_session(user, name: "Expired Session")
+      {:ok, session, _token} =
+        UserSessions.create_browser_session(user,
+          name: "Expired Session",
+          audit: test_audit_data(user)
+        )
+
       past_time = DateTime.add(DateTime.utc_now(), -3600, :second)
       Repo.update!(Hexpm.UserSession.changeset(session, %{expires_at: past_time}))
 
@@ -38,10 +46,13 @@ defmodule HexpmWeb.Dashboard.SessionControllerTest do
     end
 
     test "shows both browser and OAuth sessions", %{conn: conn, user: user} do
-      UserSessions.create_browser_session(user, name: "Chrome")
+      UserSessions.create_browser_session(user, name: "Chrome", audit: test_audit_data(user))
 
       {:ok, _} =
-        UserSessions.create_oauth_session(user, insert(:oauth_client).client_id, name: "Hex CLI")
+        UserSessions.create_oauth_session(user, insert(:oauth_client).client_id,
+          name: "Hex CLI",
+          audit: test_audit_data(user)
+        )
 
       conn = get(conn, ~p"/dashboard/sessions")
 
@@ -53,7 +64,8 @@ defmodule HexpmWeb.Dashboard.SessionControllerTest do
 
   describe "DELETE /dashboard/sessions/:id" do
     test "successfully revokes browser session", %{conn: conn, user: user} do
-      {:ok, session, _token} = UserSessions.create_browser_session(user, name: "To Delete")
+      {:ok, session, _token} =
+        UserSessions.create_browser_session(user, name: "To Delete", audit: test_audit_data(user))
 
       conn = delete(conn, ~p"/dashboard/sessions?id=#{session.id}")
 
@@ -69,7 +81,10 @@ defmodule HexpmWeb.Dashboard.SessionControllerTest do
       client = insert(:oauth_client)
 
       {:ok, session} =
-        UserSessions.create_oauth_session(user, client.client_id, name: "OAuth To Delete")
+        UserSessions.create_oauth_session(user, client.client_id,
+          name: "OAuth To Delete",
+          audit: test_audit_data(user)
+        )
 
       conn = delete(conn, ~p"/dashboard/sessions?id=#{session.id}")
 
@@ -91,7 +106,8 @@ defmodule HexpmWeb.Dashboard.SessionControllerTest do
           ["api"],
           "authorization_code",
           "test_code",
-          with_refresh_token: true
+          with_refresh_token: true,
+          audit: test_audit_data(user)
         )
 
       session = Repo.get(Hexpm.UserSession, token.user_session_id)
@@ -130,7 +146,9 @@ defmodule HexpmWeb.Dashboard.SessionControllerTest do
 
     test "returns 404 for expired session", %{conn: conn, user: user} do
       # Create an expired session
-      {:ok, session, _token} = UserSessions.create_browser_session(user, name: "Expired")
+      {:ok, session, _token} =
+        UserSessions.create_browser_session(user, name: "Expired", audit: test_audit_data(user))
+
       past_time = DateTime.add(DateTime.utc_now(), -3600, :second)
       Repo.update!(Hexpm.UserSession.changeset(session, %{expires_at: past_time}))
 
@@ -141,7 +159,12 @@ defmodule HexpmWeb.Dashboard.SessionControllerTest do
     end
 
     test "handles already revoked session", %{conn: conn, user: user} do
-      {:ok, session, _token} = UserSessions.create_browser_session(user, name: "Already Revoked")
+      {:ok, session, _token} =
+        UserSessions.create_browser_session(user,
+          name: "Already Revoked",
+          audit: test_audit_data(user)
+        )
+
       {:ok, _} = UserSessions.revoke(session)
 
       conn = delete(conn, ~p"/dashboard/sessions?id=#{session.id}")

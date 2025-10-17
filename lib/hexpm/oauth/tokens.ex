@@ -115,6 +115,78 @@ defmodule Hexpm.OAuth.Tokens do
   end
 
   @doc """
+  Creates a session and token for an API key.
+
+  Unlike user tokens, API key tokens:
+  - Have session lifetime matching access token lifetime (no long-lived session)
+  - Do not include refresh tokens (client can exchange API key again)
+  - Use the API key's user/organization for authentication
+  """
+  def create_session_and_token_for_api_key(
+        user_or_org,
+        client_id,
+        scopes,
+        grant_type,
+        grant_reference \\ nil,
+        opts \\ []
+      ) do
+    # For API key tokens, session expires with the access token (30 minutes)
+    expires_in = Keyword.get(opts, :expires_in, @default_expires_in)
+    session_expires_at = DateTime.add(DateTime.utc_now(), expires_in, :second)
+
+    Ecto.Multi.new()
+    |> Ecto.Multi.run(:session, fn _repo, _changes ->
+      # Determine if this is a user or organization
+      {user, organization} =
+        case user_or_org do
+          %Hexpm.Accounts.User{} = u -> {u, nil}
+          %Hexpm.Accounts.Organization{} = o -> {nil, o}
+        end
+
+      UserSessions.create_api_key_session(
+        user,
+        organization,
+        client_id,
+        session_expires_at,
+        name: Keyword.get(opts, :name),
+        audit: Keyword.fetch!(opts, :audit)
+      )
+    end)
+    |> Ecto.Multi.run(:update_session_last_use, fn _repo, %{session: session} ->
+      if Keyword.has_key?(opts, :usage_info) do
+        UserSessions.update_last_use(session, Keyword.get(opts, :usage_info))
+      else
+        {:ok, session}
+      end
+    end)
+    |> Ecto.Multi.run(:token, fn _repo, %{update_session_last_use: session} ->
+      # Get the user from session (could be user or org's user)
+      user =
+        case user_or_org do
+          %Hexpm.Accounts.User{} = u -> u
+          %Hexpm.Accounts.Organization{user: u} -> u
+        end
+
+      token_opts =
+        opts
+        |> Keyword.put(:user_session_id, session.id)
+        |> Keyword.put(:expires_in, expires_in)
+        # No refresh token for API keys
+        |> Keyword.put(:with_refresh_token, false)
+
+      changeset =
+        create_for_user(user, client_id, scopes, grant_type, grant_reference, token_opts)
+
+      Repo.insert(changeset)
+    end)
+    |> Repo.transaction()
+    |> case do
+      {:ok, %{token: token}} -> {:ok, token}
+      {:error, _failed_operation, changeset, _changes} -> {:error, changeset}
+    end
+  end
+
+  @doc """
   Creates a session and token for a user atomically within a transaction.
   """
   def create_session_and_token_for_user(
@@ -127,7 +199,12 @@ defmodule Hexpm.OAuth.Tokens do
       ) do
     Ecto.Multi.new()
     |> Ecto.Multi.run(:session, fn _repo, _changes ->
-      UserSessions.create_oauth_session(user, client_id, name: Keyword.get(opts, :name))
+      UserSessions.create_oauth_session(
+        user,
+        client_id,
+        name: Keyword.get(opts, :name),
+        audit: Keyword.fetch!(opts, :audit)
+      )
     end)
     |> Ecto.Multi.run(:update_session_last_use, fn _repo, %{session: session} ->
       if Keyword.has_key?(opts, :usage_info) do

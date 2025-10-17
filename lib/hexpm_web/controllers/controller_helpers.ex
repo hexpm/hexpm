@@ -322,17 +322,9 @@ defmodule HexpmWeb.ControllerHelpers do
       user: user_or_organization,
       auth_credential: Map.get(conn.assigns, :auth_credential),
       user_agent: conn.assigns.user_agent,
-      remote_ip: ip_to_string(conn.remote_ip)
+      remote_ip: HexpmWeb.RequestHelpers.parse_ip(conn.remote_ip)
     }
   end
-
-  defp ip_to_string(nil), do: nil
-
-  defp ip_to_string(tuple) when is_tuple(tuple) and tuple_size(tuple) == 4,
-    do: tuple |> Tuple.to_list() |> Enum.join(".")
-
-  defp ip_to_string(tuple) when is_tuple(tuple) and tuple_size(tuple) == 8,
-    do: tuple |> Tuple.to_list() |> Enum.map_join(":", &String.to_integer(&1, 16))
 
   def password_auth(username, password) do
     case Auth.password_auth(username, password) do

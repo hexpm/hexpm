@@ -7,7 +7,7 @@ defmodule HexpmWeb.API.OAuthController do
 
   @doc """
   Standard OAuth 2.0 token endpoint for API access.
-  Handles multiple grant types: authorization_code, device_code, refresh_token.
+  Handles multiple grant types: authorization_code, device_code, refresh_token, client_credentials.
   """
   def token(conn, params) do
     case get_grant_type(params) do
@@ -19,6 +19,9 @@ defmodule HexpmWeb.API.OAuthController do
 
       "refresh_token" ->
         handle_refresh_token_grant(conn, params)
+
+      "client_credentials" ->
+        handle_client_credentials_grant(conn, params)
 
       invalid_grant ->
         render_oauth_error(
@@ -34,6 +37,8 @@ defmodule HexpmWeb.API.OAuthController do
   """
   def device_authorization(conn, params) do
     with {:ok, client} <- validate_client(params["client_id"]),
+         :ok <-
+           validate_client_supports_grant(client, "urn:ietf:params:oauth:grant-type:device_code"),
          {:ok, scopes} <- validate_scopes(client, params["scope"]) do
       case DeviceCodes.initiate_device_authorization(conn, client.client_id, scopes,
              name: params["name"]
@@ -49,6 +54,9 @@ defmodule HexpmWeb.API.OAuthController do
           )
       end
     else
+      {:error, error, description} ->
+        render_oauth_error(conn, error, description)
+
       {:error, error} ->
         render_oauth_error(conn, :invalid_client, error)
     end
@@ -74,6 +82,7 @@ defmodule HexpmWeb.API.OAuthController do
 
   defp handle_authorization_code_grant(conn, params) do
     with {:ok, client} <- authenticate_client(params),
+         :ok <- validate_client_supports_grant(client, "authorization_code"),
          {:ok, auth_code} <- validate_authorization_code(params["code"], client.client_id),
          :ok <- validate_redirect_uri_match(auth_code, params["redirect_uri"]),
          :ok <- validate_pkce(auth_code, params["code_verifier"]) do
@@ -108,19 +117,30 @@ defmodule HexpmWeb.API.OAuthController do
   end
 
   defp handle_device_code_grant(conn, params) do
-    usage_info = build_usage_info(conn)
+    with {:ok, client} <- validate_client(params["client_id"]),
+         :ok <-
+           validate_client_supports_grant(client, "urn:ietf:params:oauth:grant-type:device_code") do
+      usage_info = build_usage_info(conn)
 
-    case DeviceCodes.poll_device_token(params["device_code"], params["client_id"], usage_info) do
-      {:ok, token} ->
-        render(conn, :token, token: token)
+      case DeviceCodes.poll_device_token(params["device_code"], params["client_id"], usage_info) do
+        {:ok, token} ->
+          render(conn, :token, token: token)
 
+        {:error, error, description} ->
+          render_oauth_error(conn, error, description)
+      end
+    else
       {:error, error, description} ->
         render_oauth_error(conn, error, description)
+
+      {:error, error} ->
+        render_oauth_error(conn, :invalid_client, error)
     end
   end
 
   defp handle_refresh_token_grant(conn, params) do
     with {:ok, client} <- authenticate_client(params),
+         :ok <- validate_client_supports_grant(client, "refresh_token"),
          {:ok, token} <- validate_refresh_token(params["refresh_token"], client.client_id) do
       usage_info = build_usage_info(conn)
 
@@ -149,6 +169,120 @@ defmodule HexpmWeb.API.OAuthController do
         render_oauth_error(conn, error, description)
     end
   end
+
+  defp handle_client_credentials_grant(conn, params) do
+    with {:ok, client} <- validate_client(params["client_id"]),
+         :ok <- validate_client_supports_grant(client, "client_credentials"),
+         {:ok, api_key_secret} <- validate_api_key_secret(params["client_secret"]),
+         {:ok, auth_info} <- authenticate_api_key(api_key_secret, conn),
+         {:ok, scopes} <- expand_and_validate_scopes(params["scope"], auth_info) do
+      usage_info = build_usage_info(conn)
+
+      # Determine user or organization from the API key
+      user_or_org = auth_info.user || auth_info.organization
+
+      # Build audit data with the authenticated user/org
+      audit_data = %{
+        user: user_or_org,
+        auth_credential: auth_info.auth_credential,
+        user_agent: conn.assigns.user_agent,
+        remote_ip: HexpmWeb.RequestHelpers.parse_ip(conn.remote_ip)
+      }
+
+      case Tokens.create_session_and_token_for_api_key(
+             user_or_org,
+             client.client_id,
+             scopes,
+             "client_credentials",
+             api_key_secret,
+             name: params["name"],
+             usage_info: usage_info,
+             audit: audit_data
+           ) do
+        {:ok, token} ->
+          render(conn, :token, token: token)
+
+        {:error, changeset} ->
+          render_oauth_error(
+            conn,
+            :server_error,
+            "Failed to create token: #{inspect(changeset.errors)}"
+          )
+      end
+    else
+      {:error, error} when is_atom(error) ->
+        render_oauth_error(conn, error, error_description(error))
+
+      {:error, error, description} ->
+        render_oauth_error(conn, error, description)
+    end
+  end
+
+  defp validate_client_supports_grant(client, grant_type) do
+    if Clients.supports_grant_type?(client, grant_type) do
+      :ok
+    else
+      {:error, :unauthorized_client, "Client not authorized for this grant type"}
+    end
+  end
+
+  defp validate_api_key_secret(nil), do: {:error, :invalid_request}
+  defp validate_api_key_secret(""), do: {:error, :invalid_request}
+  defp validate_api_key_secret(secret) when is_binary(secret), do: {:ok, secret}
+
+  defp authenticate_api_key(api_key_secret, conn) do
+    usage_info = build_usage_info(conn)
+
+    case Hexpm.Accounts.Auth.key_auth(api_key_secret, usage_info) do
+      {:ok, auth_info} -> {:ok, auth_info}
+      :error -> {:error, :invalid_client}
+      :revoked -> {:error, :invalid_client}
+    end
+  end
+
+  defp expand_and_validate_scopes(scope_string, auth_info) do
+    requested_scopes = String.split(scope_string || "", " ", trim: true)
+
+    user = auth_info.user || (auth_info.organization && auth_info.organization.user)
+    api_key = auth_info.auth_credential
+
+    # Expand scopes, constraining by API key permissions
+    # The expansion itself ensures scopes don't exceed key permissions
+    expanded_scopes = Hexpm.Permissions.expand_repositories_scope(user, requested_scopes, api_key)
+
+    # Final validation: check that all requested scopes are allowed
+    # This validates non-repository scopes (like "api")
+    if validate_scopes_against_key(expanded_scopes, api_key.permissions) do
+      {:ok, expanded_scopes}
+    else
+      {:error, :invalid_scope, "Requested scopes exceed API key permissions"}
+    end
+  end
+
+  defp validate_scopes_against_key(scopes, permissions) do
+    # Build set of allowed scopes from key permissions
+    allowed_scopes =
+      Enum.flat_map(permissions, fn permission ->
+        case permission.domain do
+          "api" -> ["api"]
+          "repository" -> ["repository:#{permission.resource}"]
+          "repositories" -> [:all_repositories]
+          _ -> []
+        end
+      end)
+      |> MapSet.new()
+
+    # Check if all scopes are allowed
+    Enum.all?(scopes, fn scope ->
+      scope in allowed_scopes or
+        (:all_repositories in allowed_scopes and String.starts_with?(scope, "repository:"))
+    end)
+  end
+
+  defp error_description(:unauthorized_client), do: "Client not authorized for this grant type"
+  defp error_description(:invalid_request), do: "Missing or invalid client_secret"
+  defp error_description(:invalid_client), do: "Invalid API key"
+  defp error_description(_), do: "An error occurred"
 
   defp revoke_token(%{"token" => token_value, "client_id" => client_id}) do
     with {:ok, _client} <- validate_client(client_id),
