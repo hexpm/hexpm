@@ -55,6 +55,16 @@ defmodule HexpmWeb.EmailView do
     end
   end
 
+  defmodule TFAEnabled do
+    def greeting(username) do
+      "Hello #{username}"
+    end
+
+    def title() do
+      "TFA has been enabled on your account."
+    end
+  end
+
   defmodule TyposquatCandidates do
     def intro(threshold) do
       """

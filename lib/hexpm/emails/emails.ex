@@ -48,6 +48,38 @@ defmodule Hexpm.Emails do
     |> render(:password_changed)
   end
 
+  def tfa_enabled(user) do
+    email()
+    |> email_to(user)
+    |> subject("Hex.pm - TFA has been enabled on your account")
+    |> assign(:username, user.username)
+    |> render(:tfa_enabled)
+  end
+
+  def tfa_disabled(user) do
+    email()
+    |> email_to(user)
+    |> subject("Hex.pm - TFA has been disabled on your account")
+    |> assign(:username, user.username)
+    |> render(:password_changed) # TODO: fix to another template
+  end
+
+  def tfa_enabled_app(user) do
+    email()
+    |> email_to(user)
+    |> subject("Hex.pm - A new TFA app has been enabled on your account")
+    |> assign(:username, user.username)
+    |> render(:password_changed) # TODO: fix to another template
+  end
+
+  def tfa_rotate_recovery_codes(user) do
+    email()
+    |> email_to(user)
+    |> subject("Hex.pm - Your TFA recovery codes have been rotated")
+    |> assign(:username, user.username)
+    |> render(:password_changed) # TODO: fix to another template
+  end
+
   def typosquat_candidates(candidates, threshold) do
     email()
     |> email_to(Application.get_env(:hexpm, :support_email))

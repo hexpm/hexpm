@@ -1,0 +1,7 @@
+<%= TFAEnabled.greeting(@username) %>
+
+<%= TFAEnabled.title() %>
+
+If you did not perform this change, you can ???
+
+If you have any problems don't hesitate to contact support at support@hex.pm.
