@@ -9,6 +9,7 @@ defmodule Hexpm.Accounts.Organization do
     field :name, :string
     field :billing_active, :boolean, default: false
     field :billing_override, :boolean
+    field :billing_seats, :integer
     field :trial_end, :utc_datetime_usec
     timestamps()
 

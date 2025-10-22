@@ -9,6 +9,11 @@ defmodule Hexpm.UserSessions do
   session is automatically revoked. This prevents session buildup while allowing
   users to be logged in on multiple devices and use several OAuth applications.
 
+  Organizations have a dynamic session limit of max(5, seat_count). For example,
+  an organization with 4 seats gets 5 sessions (minimum), while an organization
+  with 10 seats gets 10 sessions. This limit applies to API key sessions only,
+  as organizations do not create browser or OAuth sessions.
+
   ## Session Expiration
 
   All sessions expire after 30 days of creation (non-sliding window). Sessions
@@ -29,6 +34,20 @@ defmodule Hexpm.UserSessions do
 
   @max_sessions 5
   @default_session_expires_in 30 * 24 * 60 * 60
+
+  @doc """
+  Calculates the session limit for an organization based on seat count.
+  Returns max(5, seat_count), using cached billing_seats field.
+  Returns minimum of 5 if not yet cached (will be updated by billing report).
+  """
+  def get_organization_session_limit(organization) do
+    if is_integer(organization.billing_seats) and organization.billing_seats > 0 do
+      max(@max_sessions, organization.billing_seats)
+    else
+      # Default to minimum if not cached yet (will be updated by billing report)
+      @max_sessions
+    end
+  end
 
   @doc """
   Creates a browser session for a user.
@@ -107,12 +126,22 @@ defmodule Hexpm.UserSessions do
   Unlike regular OAuth sessions, API key sessions:
   - Expire with the access token (short-lived, typically 30 minutes)
   - Can be for users or organizations
+  - Organizations have dynamic limits based on seat count: max(5, seat_count)
   Requires audit data for security logging.
   """
   def create_api_key_session(user, organization, client_id, expires_at, opts) do
     # Determine which user to use for session limit enforcement
     session_user = user || organization.user
-    enforce_session_limit(session_user)
+
+    # Calculate session limit: use dynamic limit for orgs, default for users
+    max_sessions =
+      if organization do
+        get_organization_session_limit(organization)
+      else
+        @max_sessions
+      end
+
+    enforce_session_limit(session_user, max_sessions)
 
     # Determine which user ID to use (user or org's user)
     user_id = if user, do: user.id, else: organization.user.id
@@ -299,19 +328,72 @@ defmodule Hexpm.UserSessions do
   Enforces the session limit by revoking least recently used sessions if needed.
   Called before creating a new session to ensure the user stays within the limit.
   Uses update_all for efficiency instead of fetching and iterating.
+
+  The max_sessions parameter allows overriding the default limit (e.g., for organizations).
   """
-  def enforce_session_limit(user) do
+  def enforce_session_limit(user, max_sessions \\ @max_sessions) do
     count = count_for_user(user)
 
-    if count >= @max_sessions do
+    if count >= max_sessions do
       now = DateTime.utc_now()
-      revoke_count = count - @max_sessions + 1
+      revoke_count = count - max_sessions + 1
 
       # Find the IDs of sessions to revoke using a subquery
       session_ids_to_revoke =
         from(s in UserSession,
           where:
             s.user_id == ^user.id and is_nil(s.revoked_at) and
+              (is_nil(s.expires_at) or s.expires_at > ^now),
+          order_by: [
+            asc: fragment("(last_use->>'used_at')::timestamptz NULLS FIRST"),
+            asc: s.inserted_at
+          ],
+          limit: ^revoke_count,
+          select: s.id
+        )
+
+      # Use a transaction to revoke sessions and their tokens atomically
+      Ecto.Multi.new()
+      |> Ecto.Multi.update_all(
+        :revoke_sessions,
+        from(s in UserSession, where: s.id in subquery(session_ids_to_revoke)),
+        set: [revoked_at: now, updated_at: now]
+      )
+      |> Ecto.Multi.update_all(
+        :revoke_tokens,
+        from(t in Token,
+          where: t.user_session_id in subquery(session_ids_to_revoke) and is_nil(t.revoked_at)
+        ),
+        set: [revoked_at: now, updated_at: now]
+      )
+      |> Repo.transaction()
+    end
+
+    :ok
+  end
+
+  @doc """
+  Revokes excess sessions for an organization when seat count is reduced.
+  Called after reducing seats to ensure active sessions don't exceed the new limit.
+  Uses the same LRU logic as enforce_session_limit.
+  """
+  def revoke_excess_sessions_for_organization(organization, new_seat_limit) do
+    # Preload the organization user if not already loaded
+    organization = Repo.preload(organization, :user)
+    max_sessions = max(@max_sessions, new_seat_limit)
+
+    count = count_for_user(organization.user)
+
+    # Only revoke if we exceed the limit (no +1 since we're not creating a new session)
+    if count > max_sessions do
+      now = DateTime.utc_now()
+      revoke_count = count - max_sessions
+
+      # Find the IDs of sessions to revoke using a subquery
+      session_ids_to_revoke =
+        from(s in UserSession,
+          where:
+            s.user_id == ^organization.user.id and is_nil(s.revoked_at) and
               (is_nil(s.expires_at) or s.expires_at > ^now),
           order_by: [
             asc: fragment("(last_use->>'used_at')::timestamptz NULLS FIRST"),

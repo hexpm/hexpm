@@ -251,6 +251,226 @@ defmodule Hexpm.UserSessionsTest do
         assert reloaded.revoked_at != nil
       end)
     end
+
+    test "organization with 4 seats gets minimum 5 sessions" do
+      organization = insert(:organization, billing_seats: 4)
+      client = insert(:oauth_client)
+
+      # Calculate session limit
+      limit = UserSessions.get_organization_session_limit(organization)
+      assert limit == 5
+
+      # Create 5 API key sessions
+      expires_at = DateTime.add(DateTime.utc_now(), 30 * 60, :second)
+
+      for i <- 1..5 do
+        {:ok, _session} =
+          UserSessions.create_api_key_session(
+            nil,
+            organization,
+            client.client_id,
+            expires_at,
+            name: "Session #{i}",
+            audit: audit_data(organization.user)
+          )
+      end
+
+      # Verify we have 5 sessions
+      assert UserSessions.count_for_user(organization.user) == 5
+
+      # Try to create a 6th session
+      {:ok, _session} =
+        UserSessions.create_api_key_session(
+          nil,
+          organization,
+          client.client_id,
+          expires_at,
+          name: "Session 6",
+          audit: audit_data(organization.user)
+        )
+
+      # Verify we still only have 5 sessions (oldest was revoked)
+      assert UserSessions.count_for_user(organization.user) == 5
+    end
+
+    test "organization with 10 seats gets 10 sessions" do
+      organization = insert(:organization, billing_seats: 10)
+      client = insert(:oauth_client)
+
+      # Calculate session limit
+      limit = UserSessions.get_organization_session_limit(organization)
+      assert limit == 10
+
+      # Create 10 API key sessions
+      expires_at = DateTime.add(DateTime.utc_now(), 30 * 60, :second)
+
+      for i <- 1..10 do
+        {:ok, _session} =
+          UserSessions.create_api_key_session(
+            nil,
+            organization,
+            client.client_id,
+            expires_at,
+            name: "Session #{i}",
+            audit: audit_data(organization.user)
+          )
+      end
+
+      # Verify we have 10 sessions
+      assert UserSessions.count_for_user(organization.user) == 10
+
+      # Try to create an 11th session
+      {:ok, _session} =
+        UserSessions.create_api_key_session(
+          nil,
+          organization,
+          client.client_id,
+          expires_at,
+          name: "Session 11",
+          audit: audit_data(organization.user)
+        )
+
+      # Verify we still only have 10 sessions (oldest was revoked)
+      assert UserSessions.count_for_user(organization.user) == 10
+    end
+
+    test "organization with unavailable billing gets fallback limit of 5" do
+      organization = insert(:organization)
+
+      # Mock billing to return nil/unavailable
+      Mox.stub(Hexpm.Billing.Mock, :get, fn _name -> nil end)
+
+      # Calculate session limit
+      limit = UserSessions.get_organization_session_limit(organization)
+      assert limit == 5
+    end
+
+    test "organization with invalid billing data gets fallback limit of 5" do
+      organization = insert(:organization)
+
+      # Mock billing to return invalid data
+      Mox.stub(Hexpm.Billing.Mock, :get, fn _name ->
+        %{"quantity" => "invalid"}
+      end)
+
+      # Calculate session limit
+      limit = UserSessions.get_organization_session_limit(organization)
+      assert limit == 5
+    end
+  end
+
+  describe "seat reduction session revocation" do
+    test "revokes excess sessions when reducing from 10 seats to 5" do
+      organization = insert(:organization, billing_seats: 10)
+      client = insert(:oauth_client)
+      expires_at = DateTime.add(DateTime.utc_now(), 30 * 60, :second)
+
+      # Create 10 sessions
+      sessions =
+        for i <- 1..10 do
+          {:ok, session} =
+            UserSessions.create_api_key_session(
+              nil,
+              organization,
+              client.client_id,
+              expires_at,
+              name: "Session #{i}",
+              audit: audit_data(organization.user)
+            )
+
+          session
+        end
+
+      # Verify we have 10 sessions
+      assert UserSessions.count_for_user(organization.user) == 10
+
+      # Reduce seats to 5
+      UserSessions.revoke_excess_sessions_for_organization(organization, 5)
+
+      # Verify we now have only 5 sessions
+      assert UserSessions.count_for_user(organization.user) == 5
+
+      # Verify the 5 oldest sessions were revoked
+      Enum.take(sessions, 5)
+      |> Enum.each(fn session ->
+        reloaded = Repo.get(Hexpm.UserSession, session.id)
+        assert reloaded.revoked_at != nil
+      end)
+
+      # Verify the newest 5 sessions are still active
+      Enum.drop(sessions, 5)
+      |> Enum.each(fn session ->
+        reloaded = Repo.get(Hexpm.UserSession, session.id)
+        assert reloaded.revoked_at == nil
+      end)
+    end
+
+    test "revokes excess sessions when reducing from 10 seats to 4 (minimum 5 applied)" do
+      organization = insert(:organization)
+      client = insert(:oauth_client)
+      expires_at = DateTime.add(DateTime.utc_now(), 30 * 60, :second)
+
+      # Create 10 sessions
+      sessions =
+        for i <- 1..10 do
+          attrs = %{
+            user_id: organization.user.id,
+            type: "oauth",
+            client_id: client.client_id,
+            name: "Session #{i}",
+            expires_at: expires_at
+          }
+
+          changeset = Hexpm.UserSession.changeset(%Hexpm.UserSession{}, attrs)
+          {:ok, session} = Repo.insert(changeset)
+          session
+        end
+
+      # Verify we have 10 sessions
+      assert UserSessions.count_for_user(organization.user) == 10
+
+      # Reduce seats to 4 (but minimum 5 should apply)
+      UserSessions.revoke_excess_sessions_for_organization(organization, 4)
+
+      # Verify we now have only 5 sessions (minimum enforced)
+      assert UserSessions.count_for_user(organization.user) == 5
+
+      # Verify the 5 oldest sessions were revoked
+      Enum.take(sessions, 5)
+      |> Enum.each(fn session ->
+        reloaded = Repo.get(Hexpm.UserSession, session.id)
+        assert reloaded.revoked_at != nil
+      end)
+    end
+
+    test "does not revoke sessions when reducing from 10 to 7 seats" do
+      organization = insert(:organization)
+      client = insert(:oauth_client)
+      expires_at = DateTime.add(DateTime.utc_now(), 30 * 60, :second)
+
+      # Create 5 sessions (less than new limit)
+      for i <- 1..5 do
+        attrs = %{
+          user_id: organization.user.id,
+          type: "oauth",
+          client_id: client.client_id,
+          name: "Session #{i}",
+          expires_at: expires_at
+        }
+
+        changeset = Hexpm.UserSession.changeset(%Hexpm.UserSession{}, attrs)
+        Repo.insert(changeset)
+      end
+
+      # Verify we have 5 sessions
+      assert UserSessions.count_for_user(organization.user) == 5
+
+      # Reduce seats from 10 to 7 (but we only have 5 sessions, so no revocation needed)
+      UserSessions.revoke_excess_sessions_for_organization(organization, 7)
+
+      # Verify we still have 5 sessions (none revoked)
+      assert UserSessions.count_for_user(organization.user) == 5
+    end
   end
 
   describe "session expiration" do
