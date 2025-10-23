@@ -12,4 +12,31 @@ defmodule Hexpm.UtilsTest do
                "Sun, 23 Feb 2020 19:47:26 GMT"
     end
   end
+
+  describe "safe_int/1" do
+    test "handles various input types" do
+      assert Utils.safe_int("707") == 707
+      assert Utils.safe_int("abc") == nil
+      assert Utils.safe_int(nil) == nil
+      assert Utils.safe_int(%{"page" => "707"}) == nil
+      assert Utils.safe_int(707) == nil
+    end
+  end
+
+  describe "safe_date/1" do
+    test "handles various input types" do
+      assert Utils.safe_date("2024-01-15") == ~D[2024-01-15]
+      assert Utils.safe_date("invalid") == nil
+      assert Utils.safe_date(nil) == nil
+      assert Utils.safe_date(%{"date" => "2024-01-15"}) == nil
+    end
+  end
+
+  describe "safe_to_atom/2" do
+    test "handles various input types" do
+      assert Utils.safe_to_atom("foo", ~w(foo bar)) == :foo
+      assert Utils.safe_to_atom("baz", ~w(foo bar)) == nil
+      assert Utils.safe_to_atom(%{"key" => "foo"}, ~w(foo bar)) == nil
+    end
+  end
 end
