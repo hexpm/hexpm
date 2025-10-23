@@ -266,6 +266,48 @@ defmodule HexpmWeb.API.OwnerControllerTest do
       assert Owners.get(package, user2).level == "maintainer"
     end
 
+    test "add owner with duplicate email (organization admin)", %{user1: user1} do
+      # Create organization and make user2 an admin
+      organization = insert(:organization)
+      user2 = insert(:user)
+      insert(:organization_user, organization: organization, user: user2, role: "admin")
+
+      # Create package owned by the organization (and user1)
+      package =
+        insert(
+          :package,
+          package_owners: [
+            build(:package_owner, user: user1),
+            build(:package_owner, user: organization.user)
+          ]
+        )
+
+      # Add user2 as an individual owner (they're already an admin of organization owner)
+      build_conn()
+      |> put_req_header("authorization", key_for(user1))
+      |> put("/api/packages/#{package.name}/owners/#{user2.username}")
+      |> response(204)
+
+      # Verify that the email was sent
+      # user2 would appear twice without deduplication:
+      # 1. As the newly added individual owner
+      # 2. As an admin of the organization owner
+      # The email_to function should deduplicate them
+      assert_received {:delivered_email, email}
+
+      # Check that there are no duplicate recipients
+      recipient_emails =
+        email.to
+        |> Enum.map(fn
+          %{address: address} -> address
+          {_name, address} -> address
+          address when is_binary(address) -> address
+        end)
+
+      assert length(recipient_emails) == length(Enum.uniq(recipient_emails)),
+             "Expected unique emails, but found duplicates: #{inspect(recipient_emails)}"
+    end
+
     test "transfer ownership", %{user1: user1, user2: user2, package: package} do
       build_conn()
       |> put_req_header("authorization", key_for(user1))
