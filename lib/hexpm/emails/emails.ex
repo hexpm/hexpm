@@ -112,10 +112,15 @@ defmodule Hexpm.Emails do
       to
       |> List.wrap()
       |> Enum.flat_map(&expand_organization/1)
-      |> Enum.sort()
+      |> Enum.sort_by(&recipient_email/1)
+      |> Enum.uniq_by(&recipient_email/1)
 
     to(email, to)
   end
+
+  defp recipient_email(email) when is_binary(email), do: email
+  defp recipient_email(%Email{email: email}), do: email
+  defp recipient_email(%User{} = user), do: User.email(user, :primary)
 
   defp expand_organization(email) when is_binary(email), do: [email]
   defp expand_organization(%Email{} = email), do: [email]
