@@ -63,18 +63,22 @@ defmodule Hexpm.Utils do
     |> Date.from_erl!()
   end
 
-  def safe_to_atom(binary, allowed) do
+  def safe_to_atom(binary, allowed) when is_binary(binary) do
     if binary in allowed, do: String.to_atom(binary)
   end
 
+  def safe_to_atom(_, _), do: nil
+
   def safe_date(nil), do: nil
 
-  def safe_date(string) do
+  def safe_date(string) when is_binary(string) do
     case Date.from_iso8601(string) do
       {:ok, date} -> date
       _ -> nil
     end
   end
+
+  def safe_date(_), do: nil
 
   def safe_page(page, _count, _per_page) when page < 1 do
     1
@@ -90,12 +94,14 @@ defmodule Hexpm.Utils do
 
   def safe_int(nil), do: nil
 
-  def safe_int(string) do
+  def safe_int(string) when is_binary(string) do
     case Integer.parse(string) do
       {int, ""} -> int
       _ -> nil
     end
   end
+
+  def safe_int(_), do: nil
 
   def parse_search(nil), do: nil
   def parse_search(""), do: nil
