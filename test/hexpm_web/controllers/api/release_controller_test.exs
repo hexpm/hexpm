@@ -33,7 +33,12 @@ defmodule HexpmWeb.API.ReleaseControllerTest do
       meta = %{
         name: Fake.sequence(:package),
         version: "1.0.0",
-        description: "Domain-specific language."
+        description: "Domain-specific language.",
+        extra: %{
+          keywords: %{
+            foo: "bar"
+          }
+        }
       }
 
       conn =
