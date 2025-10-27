@@ -1,0 +1,9 @@
+<p><%= TFARecoveryCodesRotated.greeting(@username) %></p>
+
+<p>
+    <%= TFARecoveryCodesRotated.title() %>
+</p>
+
+<p>
+  If you did not perform this change, please contact support immediately at <a href="mailto:support@hex.pm">support@hex.pm</a>.
+</p>

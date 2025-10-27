@@ -7,7 +7,7 @@
 /deps
 /*.ez
 
-/assets/node_modules
+**/node_modules
 
 erl_crash.dump
 
@@ -16,3 +16,5 @@ erl_crash.dump
 
 .tool-versions
 .elixir_ls
+
+.tags
