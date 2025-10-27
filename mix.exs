@@ -49,7 +49,7 @@ defmodule Hexpm.MixProject do
       {:finch, "~> 0.19.0"},
       {:goth, "~> 1.4"},
       {:hackney, "~> 1.7"},
-      {:hex_core, "~> 0.8", hex_core_opts()},
+      {:hex_core, "~> 0.12", hex_core_opts()},
       {:jason, "~> 1.0"},
       {:joken, "~> 2.6"},
       {:libcluster, "~> 3.0"},

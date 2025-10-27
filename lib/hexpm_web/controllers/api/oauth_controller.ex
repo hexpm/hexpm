@@ -196,6 +196,7 @@ defmodule HexpmWeb.API.OAuthController do
              "client_credentials",
              api_key_secret,
              name: params["name"],
+             key_id: auth_info.auth_credential.id,
              usage_info: usage_info,
              audit: audit_data
            ) do

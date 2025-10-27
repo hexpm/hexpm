@@ -1,7 +1,7 @@
 defmodule Hexpm.UserSession do
   use Hexpm.Schema
 
-  alias Hexpm.Accounts.User
+  alias Hexpm.Accounts.{Key, User}
   alias Hexpm.OAuth.{Client, Token}
 
   @types ~w(browser oauth)
@@ -23,6 +23,7 @@ defmodule Hexpm.UserSession do
 
     # OAuth-specific fields
     belongs_to :client, Client, references: :client_id, type: :binary_id
+    belongs_to :key, Key
 
     belongs_to :user, User
     has_many :tokens, Token, foreign_key: :user_session_id
@@ -32,7 +33,7 @@ defmodule Hexpm.UserSession do
 
   def changeset(session, attrs) do
     session
-    |> cast(attrs, [:type, :name, :revoked_at, :expires_at, :user_id, :client_id, :session_token])
+    |> cast(attrs, [:type, :name, :revoked_at, :expires_at, :user_id, :client_id, :session_token, :key_id])
     |> validate_required([:type, :user_id])
     |> validate_inclusion(:type, @types)
     |> validate_type_specific_fields()

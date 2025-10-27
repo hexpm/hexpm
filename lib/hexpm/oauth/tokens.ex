@@ -149,6 +149,7 @@ defmodule Hexpm.OAuth.Tokens do
         client_id,
         session_expires_at,
         name: Keyword.get(opts, :name),
+        key_id: Keyword.get(opts, :key_id),
         audit: Keyword.fetch!(opts, :audit)
       )
     end)

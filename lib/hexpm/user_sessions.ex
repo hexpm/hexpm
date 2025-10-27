@@ -141,7 +141,11 @@ defmodule Hexpm.UserSessions do
         @max_sessions
       end
 
-    enforce_session_limit(session_user, max_sessions)
+    # Pass max_sessions and key_id to enforce_session_limit
+    enforce_session_limit(session_user,
+      max_sessions: max_sessions,
+      key_id: Keyword.get(opts, :key_id)
+    )
 
     # Determine which user ID to use (user or org's user)
     user_id = if user, do: user.id, else: organization.user.id
@@ -151,7 +155,8 @@ defmodule Hexpm.UserSessions do
       type: "oauth",
       client_id: client_id,
       name: Keyword.get(opts, :name),
-      expires_at: expires_at
+      expires_at: expires_at,
+      key_id: Keyword.get(opts, :key_id)
     }
 
     changeset = UserSession.changeset(%UserSession{}, attrs)
@@ -329,44 +334,24 @@ defmodule Hexpm.UserSessions do
   Called before creating a new session to ensure the user stays within the limit.
   Uses update_all for efficiency instead of fetching and iterating.
 
-  The max_sessions parameter allows overriding the default limit (e.g., for organizations).
+  ## Options
+    * `:max_sessions` - Override the default limit (e.g., for organizations), defaults to 5
+    * `:key_id` - When provided, preferentially revokes sessions from this API key first
   """
-  def enforce_session_limit(user, max_sessions \\ @max_sessions) do
+  def enforce_session_limit(user, opts \\ []) do
+    max_sessions = Keyword.get(opts, :max_sessions, @max_sessions)
     count = count_for_user(user)
 
     if count >= max_sessions do
       now = DateTime.utc_now()
       revoke_count = count - max_sessions + 1
+      key_id = Keyword.get(opts, :key_id)
 
-      # Find the IDs of sessions to revoke using a subquery
-      session_ids_to_revoke =
-        from(s in UserSession,
-          where:
-            s.user_id == ^user.id and is_nil(s.revoked_at) and
-              (is_nil(s.expires_at) or s.expires_at > ^now),
-          order_by: [
-            asc: fragment("(last_use->>'used_at')::timestamptz NULLS FIRST"),
-            asc: s.inserted_at
-          ],
-          limit: ^revoke_count,
-          select: s.id
-        )
+      # Find the IDs of sessions to revoke
+      session_ids_to_revoke = find_sessions_to_revoke(user, revoke_count, now, key_id)
 
       # Use a transaction to revoke sessions and their tokens atomically
-      Ecto.Multi.new()
-      |> Ecto.Multi.update_all(
-        :revoke_sessions,
-        from(s in UserSession, where: s.id in subquery(session_ids_to_revoke)),
-        set: [revoked_at: now, updated_at: now]
-      )
-      |> Ecto.Multi.update_all(
-        :revoke_tokens,
-        from(t in Token,
-          where: t.user_session_id in subquery(session_ids_to_revoke) and is_nil(t.revoked_at)
-        ),
-        set: [revoked_at: now, updated_at: now]
-      )
-      |> Repo.transaction()
+      revoke_sessions_and_tokens(session_ids_to_revoke, now)
     end
 
     :ok
@@ -389,35 +374,9 @@ defmodule Hexpm.UserSessions do
       now = DateTime.utc_now()
       revoke_count = count - max_sessions
 
-      # Find the IDs of sessions to revoke using a subquery
-      session_ids_to_revoke =
-        from(s in UserSession,
-          where:
-            s.user_id == ^organization.user.id and is_nil(s.revoked_at) and
-              (is_nil(s.expires_at) or s.expires_at > ^now),
-          order_by: [
-            asc: fragment("(last_use->>'used_at')::timestamptz NULLS FIRST"),
-            asc: s.inserted_at
-          ],
-          limit: ^revoke_count,
-          select: s.id
-        )
-
-      # Use a transaction to revoke sessions and their tokens atomically
-      Ecto.Multi.new()
-      |> Ecto.Multi.update_all(
-        :revoke_sessions,
-        from(s in UserSession, where: s.id in subquery(session_ids_to_revoke)),
-        set: [revoked_at: now, updated_at: now]
-      )
-      |> Ecto.Multi.update_all(
-        :revoke_tokens,
-        from(t in Token,
-          where: t.user_session_id in subquery(session_ids_to_revoke) and is_nil(t.revoked_at)
-        ),
-        set: [revoked_at: now, updated_at: now]
-      )
-      |> Repo.transaction()
+      # Find the IDs of sessions to revoke and revoke them
+      session_ids_to_revoke = find_lru_sessions(organization.user, revoke_count, now)
+      revoke_sessions_and_tokens(session_ids_to_revoke, now)
     end
 
     :ok
@@ -438,5 +397,71 @@ defmodule Hexpm.UserSessions do
       where: s.expires_at < ^now
     )
     |> Repo.delete_all()
+  end
+
+  defp find_sessions_to_revoke(user, revoke_count, now, key_id) do
+    if key_id do
+      # Try to revoke sessions from the same API key first
+      key_session_ids = find_lru_sessions_for_key(user, revoke_count, now, key_id)
+
+      # If we found enough sessions from this key, use only those
+      # Otherwise, fall back to the general LRU approach
+      if length(key_session_ids) >= revoke_count do
+        key_session_ids
+      else
+        find_lru_sessions(user, revoke_count, now)
+      end
+    else
+      # No key_id provided, use general LRU approach
+      find_lru_sessions(user, revoke_count, now)
+    end
+  end
+
+  defp find_lru_sessions(user, limit, now) do
+    from(s in UserSession,
+      where:
+        s.user_id == ^user.id and is_nil(s.revoked_at) and
+          (is_nil(s.expires_at) or s.expires_at > ^now),
+      order_by: [
+        asc: fragment("(last_use->>'used_at')::timestamptz NULLS FIRST"),
+        asc: s.inserted_at
+      ],
+      limit: ^limit,
+      select: s.id
+    )
+    |> Repo.all()
+  end
+
+  defp find_lru_sessions_for_key(user, limit, now, key_id) do
+    from(s in UserSession,
+      where:
+        s.user_id == ^user.id and is_nil(s.revoked_at) and
+          (is_nil(s.expires_at) or s.expires_at > ^now) and
+          s.key_id == ^key_id,
+      order_by: [
+        asc: fragment("(last_use->>'used_at')::timestamptz NULLS FIRST"),
+        asc: s.inserted_at
+      ],
+      limit: ^limit,
+      select: s.id
+    )
+    |> Repo.all()
+  end
+
+  defp revoke_sessions_and_tokens(session_ids, now) do
+    Ecto.Multi.new()
+    |> Ecto.Multi.update_all(
+      :revoke_sessions,
+      from(s in UserSession, where: s.id in ^session_ids),
+      set: [revoked_at: now, updated_at: now]
+    )
+    |> Ecto.Multi.update_all(
+      :revoke_tokens,
+      from(t in Token,
+        where: t.user_session_id in ^session_ids and is_nil(t.revoked_at)
+      ),
+      set: [revoked_at: now, updated_at: now]
+    )
+    |> Repo.transaction()
   end
 end

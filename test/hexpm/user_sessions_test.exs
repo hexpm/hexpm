@@ -357,6 +357,76 @@ defmodule Hexpm.UserSessionsTest do
       limit = UserSessions.get_organization_session_limit(organization)
       assert limit == 5
     end
+
+    test "API key sessions prefer revoking sessions from same key" do
+      user = insert(:user)
+      client = insert(:oauth_client)
+      key1 = insert(:key, user: user)
+      key2 = insert(:key, user: user)
+      expires_at = DateTime.add(DateTime.utc_now(), 30 * 60, :second)
+
+      # Create 3 sessions from key1
+      key1_sessions =
+        for i <- 1..3 do
+          {:ok, session} =
+            UserSessions.create_api_key_session(
+              user,
+              nil,
+              client.client_id,
+              expires_at,
+              name: "Key1 Session #{i}",
+              key_id: key1.id,
+              audit: audit_data(user)
+            )
+
+          session
+        end
+
+      # Create 2 sessions from key2
+      key2_sessions =
+        for i <- 1..2 do
+          {:ok, session} =
+            UserSessions.create_api_key_session(
+              user,
+              nil,
+              client.client_id,
+              expires_at,
+              name: "Key2 Session #{i}",
+              key_id: key2.id,
+              audit: audit_data(user)
+            )
+
+          session
+        end
+
+      # Now we have 5 sessions total (3 from key1, 2 from key2)
+      assert UserSessions.count_for_user(user) == 5
+
+      # Create a 6th session from key1 - should revoke oldest key1 session
+      {:ok, _new_session} =
+        UserSessions.create_api_key_session(
+          user,
+          nil,
+          client.client_id,
+          expires_at,
+          name: "Key1 Session 4",
+          key_id: key1.id,
+          audit: audit_data(user)
+        )
+
+      # Still have 5 sessions total
+      assert UserSessions.count_for_user(user) == 5
+
+      # The oldest key1 session should be revoked, but key2 sessions should be intact
+      first_key1_session = Repo.get(Hexpm.UserSession, List.first(key1_sessions).id)
+      assert first_key1_session.revoked_at != nil
+
+      # All key2 sessions should still be active
+      for session <- key2_sessions do
+        active_session = Repo.get(Hexpm.UserSession, session.id)
+        assert active_session.revoked_at == nil
+      end
+    end
   end
 
   describe "seat reduction session revocation" do
