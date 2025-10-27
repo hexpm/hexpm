@@ -1,9 +1,9 @@
-<p><%= TFAAppEnabled.greeting(@username) %></p>
+<p><%= Common.greeting(@username) %></p>
 
 <p>
     <%= TFAAppEnabled.title() %>
 </p>
 
 <p>
-  If you did not perform this change, please contact support immediately at <a href="mailto:support@hex.pm">support@hex.pm</a>.
+  <%= Common.unauthorized_change_notice(:html) %>
 </p>

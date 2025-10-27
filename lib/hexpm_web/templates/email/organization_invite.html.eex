@@ -1,16 +1,16 @@
 <p>You have been added as a member to the <strong><%= @organization %></strong> organization.</p>
 
-<p>Go check out the <a href="<%= url(~p"/dashboard/orgs/#{@organization}") %>">organization</a>, if you do not want to join the organization you can leave it from the dashboard. You need to be logged in as <strong><%= @username %></strong> to access it.</p>
+<p><%= OrganizationInvite.check_out_org(url(~p"/dashboard/orgs/#{@organization}"), @username, :html) %></p>
 
 <p>
     <%= OrganizationInvite.access_organization() %>
 
-    For mix:
+    <%= Common.for_mix_label() %>
 
     <pre><%= OrganizationInvite.mix_code() %></pre>
 
-    For rebar3:
+    <%= Common.for_rebar3_label() %>
     <pre><%= OrganizationInvite.rebar_code() %></pre>
 
-    To learn more about private packages and organizations go to the <a href="<%= url(~p"/docs/private") %>">documentation</a>.
+    <%= OrganizationInvite.docs_link(url(~p"/docs/private"), :html) %>
 </p>

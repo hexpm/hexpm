@@ -1,12 +1,9 @@
 <%= PackagePublished.intro(@publisher, @package, @version) %>
 
-For mix:
+<%= Common.for_mix_label() %>
 
 <%= PackagePublished.mix_code(@package, @version) %>
 
-For rebar3:
+<%= Common.for_rebar3_label() %>
 
 <%= PackagePublished.rebar3_code(@package, @version) %>
-
---
-Hex.pm
