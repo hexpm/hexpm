@@ -1,16 +1,13 @@
 You have been added as a member to the <%= @organization %> organization.
 
-Go check out the organization[0], if you do not want to join the organization you can leave it from the dashboard. You need to be logged in as <%= @username %> to access it.
+<%= OrganizationInvite.check_out_org(url(~p"/dashboard/orgs/#{@organization}"), @username, :text) %>
 
 <%= OrganizationInvite.access_organization() %>
 
-For mix:
+<%= Common.for_mix_label() %>
 <%= OrganizationInvite.mix_code() %>
 
-For rebar3:
+<%= Common.for_rebar3_label() %>
 <%= OrganizationInvite.rebar_code() %>
 
-To learn more about private packages and organizations go to the documentation[1].
-
-[0] <%= url(~p"/dashboard/orgs/#{@organization}") %>
-[1] <%= url(~p"/docs/private") %>
+<%= OrganizationInvite.docs_link(url(~p"/docs/private"), :text) %>
