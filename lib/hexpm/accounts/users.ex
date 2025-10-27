@@ -254,8 +254,17 @@ defmodule Hexpm.Accounts.Users do
       |> Multi.update(:user, User.update_tfa(user, %{app_enabled: false, secret: secret}))
       |> audit(audit_data, "security.update", fn %{user: user} -> user end)
 
-    {:ok, %{user: user}} = Repo.transaction(multi)
-    user
+    case Repo.transaction(multi) do
+      {:ok, %{user: user}} ->
+        user
+        |> Emails.tfa_disabled_app()
+        |> Mailer.deliver_later!()
+
+        user
+
+      {:error, :user, changeset, _} ->
+        {:error, changeset}
+    end
   end
 
   def tfa_rotate_recovery_codes(user, audit: audit_data) do
