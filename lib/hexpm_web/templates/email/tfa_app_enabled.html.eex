@@ -1,7 +1,7 @@
-<p><%= TFAEnabled.greeting(@username) %></p>
+<p><%= TFAAppEnabled.greeting(@username) %></p>
 
 <p>
-    <%= TFAEnabled.title() %>
+    <%= TFAAppEnabled.title() %>
 </p>
 
 <p>

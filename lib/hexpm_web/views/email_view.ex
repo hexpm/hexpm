@@ -65,6 +65,46 @@ defmodule HexpmWeb.EmailView do
     end
   end
 
+  defmodule TFAAppEnabled do
+    def greeting(username) do
+      "Hello #{username}"
+    end
+
+    def title() do
+      "A TFA app has been enabled on your account."
+    end
+  end
+
+  defmodule TFADisabled do
+    def greeting(username) do
+      "Hello #{username}"
+    end
+
+    def title() do
+      "TFA has been disabled on your account."
+    end
+  end
+
+  defmodule TFAAppDisabled do
+    def greeting(username) do
+      "Hello #{username}"
+    end
+
+    def title() do
+      "A TFA app has been disabled on your account."
+    end
+  end
+
+  defmodule TFARecoveryCodesRotated do
+    def greeting(username) do
+      "Hello #{username}"
+    end
+
+    def title() do
+      "TFA recovery codes for your account have been rotated."
+    end
+  end
+
   defmodule TyposquatCandidates do
     def intro(threshold) do
       """

@@ -1,5 +1,5 @@
-<%= TFAEnabled.greeting(@username) %>
+<%= TFAAppEnabled.greeting(@username) %>
 
-<%= TFAEnabled.title() %>
+<%= TFAAppEnabled.title() %>
 
 If you did not perform this change, please contact support immediately at <a href="mailto:support@hex.pm">support@hex.pm</a>.
