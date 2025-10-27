@@ -33,7 +33,16 @@ defmodule Hexpm.UserSession do
 
   def changeset(session, attrs) do
     session
-    |> cast(attrs, [:type, :name, :revoked_at, :expires_at, :user_id, :client_id, :session_token, :key_id])
+    |> cast(attrs, [
+      :type,
+      :name,
+      :revoked_at,
+      :expires_at,
+      :user_id,
+      :client_id,
+      :session_token,
+      :key_id
+    ])
     |> validate_required([:type, :user_id])
     |> validate_inclusion(:type, @types)
     |> validate_type_specific_fields()
