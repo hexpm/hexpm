@@ -1,5 +1,6 @@
 defmodule HexpmWeb.Dashboard.TFAAuthSetupControllerTest do
   use HexpmWeb.ConnCase, async: true
+  use Bamboo.Test
 
   setup do
     %{user: insert(:user_with_tfa)}
@@ -47,6 +48,13 @@ defmodule HexpmWeb.Dashboard.TFAAuthSetupControllerTest do
         |> post("/dashboard/tfa/setup", %{"verification_code" => token})
 
       assert redirected_to(conn) == "/dashboard/security"
+
+      updated_user =
+        Hexpm.Accounts.User
+        |> Hexpm.Repo.get(c.user.id)
+        |> Hexpm.Repo.preload(:emails)
+
+      assert_delivered_email(Hexpm.Emails.tfa_enabled_app(updated_user))
     end
   end
 end
