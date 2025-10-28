@@ -112,7 +112,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        hex-version: [main, v2.1, v2.0]
+        hex-version: [main, v2.3, v2.2, v2.1, v2.0]
 
     env:
       HEXPM_PATH: ..
@@ -164,11 +164,11 @@ jobs:
     name: Docker
     runs-on: ubuntu-24.04
     permissions:
-      contents: 'read'
-      id-token: 'write'
+      contents: "read"
+      id-token: "write"
     env:
-      IMAGE_NAME: 'hexpm'
-      PROJECT_ID: 'hexpm-prod'
+      IMAGE_NAME: "hexpm"
+      PROJECT_ID: "hexpm-prod"
       SERVICE_ACCOUNT: ${{ secrets.GCLOUD_SERVICE_ACCOUNT }}
       WORKLOAD_IDENTITY_PROVIDER: ${{ secrets.GCLOUD_WORKFLOW_IDENTITY_POOL_PROVIDER }}
     steps:
@@ -182,21 +182,21 @@ jobs:
         uses: docker/setup-buildx-action@v3
       - name: Google auth
         id: auth
-        uses: 'google-github-actions/auth@v2'
+        uses: "google-github-actions/auth@v2"
         if: ${{ github.event_name != 'pull_request' }}
         with:
-          token_format: 'access_token'
+          token_format: "access_token"
           project_id: ${{ env.PROJECT_ID }}
           service_account: ${{ env.SERVICE_ACCOUNT }}
           workload_identity_provider: ${{ env.WORKLOAD_IDENTITY_PROVIDER }}
       - name: Docker Auth
         id: docker-auth
-        uses: 'docker/login-action@v3'
+        uses: "docker/login-action@v3"
         if: ${{ github.event_name != 'pull_request' }}
         with:
           registry: gcr.io
-          username: 'oauth2accesstoken'
-          password: '${{ steps.auth.outputs.access_token }}'
+          username: "oauth2accesstoken"
+          password: "${{ steps.auth.outputs.access_token }}"
       - name: Build and push
         uses: docker/build-push-action@v6
         with:
