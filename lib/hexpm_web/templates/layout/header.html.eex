@@ -18,7 +18,8 @@
     <link rel="alternate" type="application/rss+xml" title="RSS - Blog" href="/feeds/blog.xml">
 
     <%= if host = Application.get_env(:hexpm, :host) do %>
-    <script async defer data-domain="<%= host %>" src="https://stats.<%= host %>/js/plausible.js"></script>
+    <script async defer src="https://s.<%= host %>/js/script.js"></script>
+    <script>window.plausible=window.plausible||function(){(plausible.q=plausible.q||[]).push(arguments)},plausible.init=plausible.init||function(i){plausible.o=i||{}};plausible.init({endpoint:"https://s.<%= host %>/api/event",captureOnLocalhost:true})</script>
     <% end %>
   </head>
   <body>
