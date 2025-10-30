@@ -1,0 +1,9 @@
+<p><%= Common.greeting(@username) %></p>
+
+<p>
+    <%= TFARecoveryCodesRotated.title() %>
+</p>
+
+<p>
+  <%= Common.unauthorized_change_notice(:html) %>
+</p>

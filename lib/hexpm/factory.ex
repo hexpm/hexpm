@@ -208,36 +208,47 @@ defmodule Hexpm.Factory do
       allowed_grant_types: [
         "authorization_code",
         "urn:ietf:params:oauth:grant-type:device_code",
-        "refresh_token"
+        "refresh_token",
+        "client_credentials"
       ],
       redirect_uris: ["https://example.com/callback"]
     }
   end
 
   def oauth_token_factory() do
-    expires_at = DateTime.add(DateTime.utc_now(), 3600, :second)
+    expires_at = DateTime.add(DateTime.utc_now(), 30 * 24 * 3600, :second)
+    refresh_token_expires_at = DateTime.add(DateTime.utc_now(), 30 * 24 * 3600, :second)
 
     %Hexpm.OAuth.Token{
       jti: "test-jti-#{:erlang.unique_integer()}",
       token_type: "bearer",
       scopes: ["api"],
       expires_at: expires_at,
+      refresh_token_expires_at: refresh_token_expires_at,
       grant_type: "authorization_code",
       client_id: Hexpm.OAuth.Clients.generate_client_id()
     }
   end
 
   def session_factory() do
-    %Hexpm.Accounts.Session{
-      token: :crypto.strong_rand_bytes(96),
-      data: %{"user_id" => 1}
+    user = build(:user)
+
+    %Hexpm.UserSession{
+      type: "browser",
+      name: "Test Browser Session",
+      session_token: :crypto.strong_rand_bytes(32),
+      user_id: user.id
     }
   end
 
   def oauth_session_factory() do
-    %Hexpm.OAuth.Session{
+    user = build(:user)
+
+    %Hexpm.UserSession{
+      type: "oauth",
       name: "Test OAuth Session",
-      client_id: Hexpm.OAuth.Clients.generate_client_id()
+      client_id: Hexpm.OAuth.Clients.generate_client_id(),
+      user_id: user.id
     }
   end
 end

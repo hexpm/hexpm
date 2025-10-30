@@ -26,8 +26,7 @@ defmodule Hexpm.OAuth.JWT do
       "jti" => jti,
       "iat" => now,
       "nbf" => now - 30,
-      "scope" => Enum.join(scopes, " "),
-      "parent_jti" => Keyword.get(opts, :parent_jti)
+      "scope" => Enum.join(scopes, " ")
     }
 
     expires_in = Keyword.get(opts, :expires_in, 30 * 60)

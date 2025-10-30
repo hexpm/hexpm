@@ -1,6 +1,45 @@
 defmodule HexpmWeb.EmailView do
   use HexpmWeb, :view
 
+  defmodule Common do
+    def greeting(username), do: "Hello #{username}"
+
+    def support_email(), do: "support@hex.pm"
+
+    # Smart link wrapping - add <a> only for HTML format
+    def link(url, text, :html), do: ~s(<a href="#{url}">#{text}</a>)
+    def link(url, _text, :text), do: url
+
+    def support_link(:html), do: link("mailto:#{support_email()}", support_email(), :html)
+    def support_link(:text), do: support_email()
+
+    def unauthorized_change_notice(format) do
+      "If you did not perform this change, please contact support immediately at #{support_link(format)}."
+    end
+
+    def contact_support(format) do
+      "If you have any problems don't hesitate to contact support at #{support_link(format)}."
+    end
+
+    # Common labels for build tools
+    def for_mix_label(), do: "For mix:"
+    def for_rebar3_label(), do: "For rebar3:"
+
+    # URL follow pattern for verification/reset emails
+    def follow_link_instruction(url, :html) do
+      ~s(You can do so by following #{link(url, "this link", :html)} or by pasting this link in your web browser: #{url})
+    end
+
+    def follow_link_instruction(url, :text) do
+      "You can do so by following this link:\n\n#{url}"
+    end
+  end
+
+  defmodule BuildTools do
+    def mix_hex_user_auth(), do: "mix hex.user auth"
+    def rebar3_hex_user_auth(), do: "rebar3 hex user auth"
+  end
+
   defmodule OwnerAdd do
     def message(username, package) do
       "#{username} has been added as an owner to package #{package}."
@@ -28,13 +67,16 @@ defmodule HexpmWeb.EmailView do
       "We heard you've lost your password to Hex.pm. Sorry about that!"
     end
 
-    def mix_code() do
-      "mix hex.user auth"
+    def new_password_instruction(url, :html) do
+      ~s(You can chose a new password by following #{Common.link(url, "this link", :html)} or by pasting the link below in your web browser.)
     end
 
-    def rebar_code() do
-      "rebar3 hex user auth"
+    def new_password_instruction(_url, :text) do
+      "You can chose a new password by following this link"
     end
+
+    defdelegate mix_code(), to: BuildTools, as: :mix_hex_user_auth
+    defdelegate rebar_code(), to: BuildTools, as: :rebar3_hex_user_auth
 
     def before_code() do
       "Once this is complete, your existing keys may be invalidated, you will need to regenerate them by running:"
@@ -46,12 +88,58 @@ defmodule HexpmWeb.EmailView do
   end
 
   defmodule PasswordChanged do
-    def greeting(username) do
-      "Hello #{username}"
-    end
+    defdelegate greeting(username), to: Common
 
     def title() do
       "Your password on Hex.pm has been changed."
+    end
+
+    def password_reset_notice(url, :html) do
+      ~s(If you did not perform this change, you can reset your password by entering your email at #{Common.link(url, url, :html)}.)
+    end
+
+    def password_reset_notice(url, :text) do
+      "If you did not perform this change, you can reset your password by entering your email at #{url}."
+    end
+  end
+
+  defmodule TFAEnabled do
+    defdelegate greeting(username), to: Common
+
+    def title() do
+      "TFA has been enabled on your account."
+    end
+  end
+
+  defmodule TFAAppEnabled do
+    defdelegate greeting(username), to: Common
+
+    def title() do
+      "A TFA app has been enabled on your account."
+    end
+  end
+
+  defmodule TFADisabled do
+    defdelegate greeting(username), to: Common
+
+    def title() do
+      "TFA has been disabled on your account."
+    end
+  end
+
+  defmodule TFAAppDisabled do
+    defdelegate greeting(username), to: Common
+
+    def title() do
+      "A TFA app has been disabled on your account."
+    end
+  end
+
+  defmodule TFARecoveryCodesRotated do
+    defdelegate greeting(username), to: Common
+
+    def title() do
+      "TFA recovery codes for your account have been rotated."
     end
   end
 
@@ -74,13 +162,24 @@ defmodule HexpmWeb.EmailView do
       "You can access organization packages after authenticating in your shell:"
     end
 
-    def mix_code() do
-      "mix hex.user auth"
+    def check_out_org(org_url, username, :html) do
+      ~s(Go check out the #{Common.link(org_url, "organization", :html)}, if you do not want to join the organization you can leave it from the dashboard. You need to be logged in as <strong>#{username}</strong> to access it.)
     end
 
-    def rebar_code() do
-      "rebar3 hex user auth"
+    def check_out_org(org_url, username, :text) do
+      "Go check out the organization[0], if you do not want to join the organization you can leave it from the dashboard. You need to be logged in as #{username} to access it.\n\n[0] #{org_url}"
     end
+
+    def docs_link(docs_url, :html) do
+      ~s(To learn more about private packages and organizations go to the #{Common.link(docs_url, "documentation", :html)}.)
+    end
+
+    def docs_link(docs_url, :text) do
+      "To learn more about private packages and organizations go to the documentation[1].\n\n[1] #{docs_url}"
+    end
+
+    defdelegate mix_code(), to: BuildTools, as: :mix_hex_user_auth
+    defdelegate rebar_code(), to: BuildTools, as: :rebar3_hex_user_auth
   end
 
   defmodule PackagePublished do

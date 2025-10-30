@@ -42,9 +42,15 @@ defmodule HexpmWeb.Dashboard.SecurityControllerTest do
         |> test_login(user)
         |> post("/dashboard/security/enable-tfa")
 
-      user = Hexpm.Repo.get(Hexpm.Accounts.User, user.id)
-      assert user.tfa.tfa_enabled
+      updated_user =
+        Hexpm.Accounts.User
+        |> Hexpm.Repo.get(user.id)
+        |> Hexpm.Repo.preload(:emails)
+
+      assert updated_user.tfa.tfa_enabled
       assert redirected_to(conn) == "/dashboard/tfa/setup"
+
+      assert_delivered_email(Hexpm.Emails.tfa_enabled(updated_user))
     end
   end
 
@@ -55,9 +61,15 @@ defmodule HexpmWeb.Dashboard.SecurityControllerTest do
         |> test_login(c.user)
         |> post("/dashboard/security/disable-tfa")
 
-      user = Hexpm.Repo.get(Hexpm.Accounts.User, c.user.id)
-      refute user.tfa.tfa_enabled
+      updated_user =
+        Hexpm.Accounts.User
+        |> Hexpm.Repo.get(c.user.id)
+        |> Hexpm.Repo.preload(:emails)
+
+      refute updated_user.tfa.tfa_enabled
       assert redirected_to(conn) == "/dashboard/security"
+
+      assert_delivered_email(Hexpm.Emails.tfa_disabled(updated_user))
     end
   end
 
@@ -68,9 +80,15 @@ defmodule HexpmWeb.Dashboard.SecurityControllerTest do
         |> test_login(c.user)
         |> post("/dashboard/security/rotate-recovery-codes")
 
-      updated_user = Hexpm.Repo.get(Hexpm.Accounts.User, c.user.id)
+      updated_user =
+        Hexpm.Accounts.User
+        |> Hexpm.Repo.get(c.user.id)
+        |> Hexpm.Repo.preload(:emails)
+
       assert updated_user.tfa.recovery_codes != c.user.tfa.recovery_codes
       assert redirected_to(conn) == "/dashboard/security"
+
+      assert_delivered_email(Hexpm.Emails.tfa_rotate_recovery_codes(updated_user))
     end
   end
 
@@ -81,9 +99,15 @@ defmodule HexpmWeb.Dashboard.SecurityControllerTest do
         |> test_login(c.user)
         |> post("/dashboard/security/reset-auth-app")
 
-      updated_user = Hexpm.Repo.get(Hexpm.Accounts.User, c.user.id)
+      updated_user =
+        Hexpm.Accounts.User
+        |> Hexpm.Repo.get(c.user.id)
+        |> Hexpm.Repo.preload(:emails)
+
       refute updated_user.tfa.app_enabled
       assert redirected_to(conn) == "/dashboard/tfa/setup"
+
+      assert_delivered_email(Hexpm.Emails.tfa_disabled_app(updated_user))
     end
   end
 

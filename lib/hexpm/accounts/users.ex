@@ -190,7 +190,15 @@ defmodule Hexpm.Accounts.Users do
       )
       |> audit(audit_data, "security.update", fn %{user: user} -> user end)
 
-    {:ok, _} = Repo.transaction(multi)
+    case Repo.transaction(multi) do
+      {:ok, %{user: user}} ->
+        user
+        |> Emails.tfa_enabled()
+        |> Mailer.deliver_later!()
+
+      {:error, :user, changeset, _} ->
+        {:error, changeset}
+    end
   end
 
   def tfa_disable(user, audit: audit_data) do
@@ -202,8 +210,17 @@ defmodule Hexpm.Accounts.Users do
       )
       |> audit(audit_data, "security.update", fn %{user: user} -> user end)
 
-    {:ok, %{user: user}} = Repo.transaction(multi)
-    user
+    case Repo.transaction(multi) do
+      {:ok, %{user: user}} ->
+        user
+        |> Emails.tfa_disabled()
+        |> Mailer.deliver_later!()
+
+        user
+
+      {:error, :user, changeset, _} ->
+        {:error, changeset}
+    end
   end
 
   def tfa_enable_app(user, verification_code, audit: audit_data) do
@@ -213,8 +230,17 @@ defmodule Hexpm.Accounts.Users do
         |> Multi.update(:user, User.update_tfa(user, %{app_enabled: true}))
         |> audit(audit_data, "security.update", fn %{user: user} -> user end)
 
-      {:ok, %{user: user}} = Repo.transaction(multi)
-      {:ok, user}
+      case Repo.transaction(multi) do
+        {:ok, %{user: user}} ->
+          user
+          |> Emails.tfa_enabled_app()
+          |> Mailer.deliver_later!()
+
+          {:ok, user}
+
+        {:error, :user, changeset, _} ->
+          {:error, changeset}
+      end
     else
       :error
     end
@@ -228,8 +254,17 @@ defmodule Hexpm.Accounts.Users do
       |> Multi.update(:user, User.update_tfa(user, %{app_enabled: false, secret: secret}))
       |> audit(audit_data, "security.update", fn %{user: user} -> user end)
 
-    {:ok, %{user: user}} = Repo.transaction(multi)
-    user
+    case Repo.transaction(multi) do
+      {:ok, %{user: user}} ->
+        user
+        |> Emails.tfa_disabled_app()
+        |> Mailer.deliver_later!()
+
+        user
+
+      {:error, :user, changeset, _} ->
+        {:error, changeset}
+    end
   end
 
   def tfa_rotate_recovery_codes(user, audit: audit_data) do
@@ -238,8 +273,17 @@ defmodule Hexpm.Accounts.Users do
       |> Multi.update(:user, User.rotate_recovery_codes(user))
       |> audit(audit_data, "security.rotate_recovery_codes", fn %{user: user} -> user end)
 
-    {:ok, %{user: user}} = Repo.transaction(multi)
-    user
+    case Repo.transaction(multi) do
+      {:ok, %{user: user}} ->
+        user
+        |> Emails.tfa_rotate_recovery_codes()
+        |> Mailer.deliver_later!()
+
+        user
+
+      {:error, :user, changeset, _} ->
+        {:error, changeset}
+    end
   end
 
   def verify_email(username, email, key) do
@@ -274,12 +318,12 @@ defmodule Hexpm.Accounts.Users do
     end
   end
 
-  def password_reset_finish(username, key, params, revoke_all_keys?, audit: audit_data) do
+  def password_reset_finish(username, key, params, revoke_all_access?, audit: audit_data) do
     user = get(username, [:emails, :password_resets])
 
     if user && not User.organization?(user) && User.can_reset_password?(user, key) do
       multi =
-        password_reset(user, params, revoke_all_keys?)
+        password_reset(user, params, revoke_all_access?)
         |> audit(audit_data, "password.reset.finish", nil)
 
       case Repo.transaction(multi) do
@@ -294,14 +338,19 @@ defmodule Hexpm.Accounts.Users do
     end
   end
 
-  defp password_reset(user, params, revoke_all_keys) do
+  defp password_reset(user, params, revoke_all_access) do
+    alias Hexpm.UserSessions
+
+    {sessions_query, tokens_query} = UserSessions.revoke_all(user)
+
     multi =
       Multi.new()
       |> Multi.update(:password, User.update_password_no_check(user, params))
       |> Multi.delete_all(:reset, assoc(user, :password_resets))
-      |> Multi.delete_all(:reset_sessions, Session.by_user(user))
+      |> Multi.update_all(:revoke_sessions, sessions_query, [])
+      |> Multi.update_all(:revoke_tokens, tokens_query, [])
 
-    if revoke_all_keys,
+    if revoke_all_access,
       do: Multi.update_all(multi, :keys, Key.revoke_all(user), []),
       else: multi
   end

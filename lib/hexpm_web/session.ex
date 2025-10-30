@@ -1,8 +1,12 @@
 defmodule HexpmWeb.Session do
-  alias Hexpm.Accounts.Session
   alias Hexpm.Repo
+  alias Hexpm.PlugSession
+  import Ecto.Query
 
   @behaviour Plug.Session.Store
+
+  # Simple session schema for Plug session storage (CSRF, flash, etc)
+  # This is separate from user authentication which uses user_sessions table
 
   def init(_opts) do
     :ok
@@ -11,7 +15,7 @@ defmodule HexpmWeb.Session do
   def get(_conn, cookie, _opts) do
     with {id, "++" <> token} <- Integer.parse(cookie),
          {:ok, token} <- Base.url_decode64(token),
-         session = Repo.get(Session, id),
+         session = Repo.get(PlugSession, id),
          true <- session && Plug.Crypto.secure_compare(token, session.token) do
       {{id, token}, session.data}
     else
@@ -21,13 +25,13 @@ defmodule HexpmWeb.Session do
   end
 
   def put(_conn, nil, data, _opts) do
-    session = Session.build(data)
+    token = :crypto.strong_rand_bytes(32)
 
     session =
       if Repo.write_mode?() do
-        Repo.insert!(session)
+        Repo.insert!(%PlugSession{token: token, data: data})
       else
-        Ecto.Changeset.apply_changes(session)
+        %PlugSession{id: 0, token: token, data: data}
       end
 
     build_cookie(session)
@@ -36,7 +40,7 @@ defmodule HexpmWeb.Session do
   def put(_conn, {id, token}, data, _opts) do
     if Repo.write_mode?() do
       Repo.update_all(
-        Session.by_id(id),
+        from(s in PlugSession, where: s.id == ^id),
         set: [
           data: data,
           updated_at: DateTime.utc_now()
@@ -49,7 +53,7 @@ defmodule HexpmWeb.Session do
 
   def delete(_conn, {id, _token}, _opts) do
     if Repo.write_mode?() do
-      Repo.delete_all(Session.by_id(id))
+      Repo.delete_all(from(s in PlugSession, where: s.id == ^id))
     end
 
     :ok

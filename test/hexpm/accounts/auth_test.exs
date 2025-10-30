@@ -94,7 +94,7 @@ defmodule Hexpm.Accounts.AuthTest do
           ["api", "api:read"],
           "authorization_code",
           "test_grant_ref",
-          session_id: oauth_session.id
+          user_session_id: oauth_session.id
         )
 
       auth_result = Auth.oauth_token_auth(oauth_token.access_token, %{})

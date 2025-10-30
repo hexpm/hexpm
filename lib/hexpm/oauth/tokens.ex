@@ -1,12 +1,12 @@
 defmodule Hexpm.OAuth.Tokens do
   use Hexpm.Context
 
-  alias Hexpm.OAuth.{Token, Clients, JWT}
+  alias Hexpm.UserSessions
+  alias Hexpm.OAuth.{Token, JWT}
   alias Hexpm.Permissions
 
   @default_expires_in 30 * 60
   @default_refresh_token_expires_in 30 * 24 * 60 * 60
-  @restricted_refresh_token_expires_in 60 * 60
 
   @doc """
   Looks up a token by its value and type.
@@ -45,42 +45,43 @@ defmodule Hexpm.OAuth.Tokens do
     expires_in = Keyword.get(opts, :expires_in, @default_expires_in)
     expires_at = DateTime.add(DateTime.utc_now(), expires_in, :second)
 
+    # Expand "repositories" scope to individual "repository:{org}" scopes for access tokens
+    # This allows edge verification without database lookups
+    expanded_scopes = Permissions.expand_repositories_scope(user, scopes)
+
     jwt_opts = [
-      session_id: Keyword.get(opts, :session_id),
-      parent_jti: get_parent_jti(opts),
+      session_id: Keyword.get(opts, :user_session_id),
       expires_in: expires_in
     ]
 
-    {:ok, access_token, jti} = JWT.generate_access_token(user.username, "user", scopes, jwt_opts)
+    {:ok, access_token, jti} =
+      JWT.generate_access_token(user.username, "user", expanded_scopes, jwt_opts)
 
     attrs = %{
       jti: jti,
       access_token: access_token,
-      scopes: scopes,
+      scopes: expanded_scopes,
       expires_at: expires_at,
       grant_type: grant_type,
       grant_reference: grant_reference,
       user_id: user.id,
       client_id: client_id,
-      session_id: Keyword.get(opts, :session_id),
-      parent_token_id: Keyword.get(opts, :parent_token_id)
+      user_session_id: Keyword.get(opts, :user_session_id)
     }
 
     attrs =
       if Keyword.get(opts, :with_refresh_token, false) do
-        # Determine refresh token expiration based on scopes
-        refresh_expires_in =
-          if has_write_scope?(scopes) do
-            @restricted_refresh_token_expires_in
-          else
-            @default_refresh_token_expires_in
-          end
-
-        refresh_expires_at = DateTime.add(DateTime.utc_now(), refresh_expires_in, :second)
+        # Use provided refresh_token_expires_at (e.g., from session) or calculate fresh
+        refresh_expires_at =
+          Keyword.get(
+            opts,
+            :refresh_token_expires_at,
+            DateTime.add(DateTime.utc_now(), @default_refresh_token_expires_in, :second)
+          )
 
         refresh_opts = [
-          session_id: Keyword.get(opts, :session_id),
-          expires_in: refresh_expires_in
+          session_id: Keyword.get(opts, :user_session_id),
+          expires_in: @default_refresh_token_expires_in
         ]
 
         {:ok, refresh_token, refresh_jti} =
@@ -114,6 +115,78 @@ defmodule Hexpm.OAuth.Tokens do
   end
 
   @doc """
+  Creates a session and token for an API key.
+
+  Unlike user tokens, API key tokens:
+  - Have session lifetime matching access token lifetime (no long-lived session)
+  - Do not include refresh tokens (client can exchange API key again)
+  - Use the API key's user/organization for authentication
+  """
+  def create_session_and_token_for_api_key(
+        user_or_org,
+        client_id,
+        scopes,
+        grant_type,
+        grant_reference \\ nil,
+        opts \\ []
+      ) do
+    # For API key tokens, session expires with the access token (30 minutes)
+    expires_in = Keyword.get(opts, :expires_in, @default_expires_in)
+    session_expires_at = DateTime.add(DateTime.utc_now(), expires_in, :second)
+
+    Ecto.Multi.new()
+    |> Ecto.Multi.run(:session, fn _repo, _changes ->
+      # Determine if this is a user or organization
+      {user, organization} =
+        case user_or_org do
+          %Hexpm.Accounts.User{} = u -> {u, nil}
+          %Hexpm.Accounts.Organization{} = o -> {nil, o}
+        end
+
+      UserSessions.create_api_key_session(
+        user,
+        organization,
+        client_id,
+        session_expires_at,
+        name: Keyword.get(opts, :name),
+        audit: Keyword.fetch!(opts, :audit)
+      )
+    end)
+    |> Ecto.Multi.run(:update_session_last_use, fn _repo, %{session: session} ->
+      if Keyword.has_key?(opts, :usage_info) do
+        UserSessions.update_last_use(session, Keyword.get(opts, :usage_info))
+      else
+        {:ok, session}
+      end
+    end)
+    |> Ecto.Multi.run(:token, fn _repo, %{update_session_last_use: session} ->
+      # Get the user from session (could be user or org's user)
+      user =
+        case user_or_org do
+          %Hexpm.Accounts.User{} = u -> u
+          %Hexpm.Accounts.Organization{user: u} -> u
+        end
+
+      token_opts =
+        opts
+        |> Keyword.put(:user_session_id, session.id)
+        |> Keyword.put(:expires_in, expires_in)
+        # No refresh token for API keys
+        |> Keyword.put(:with_refresh_token, false)
+
+      changeset =
+        create_for_user(user, client_id, scopes, grant_type, grant_reference, token_opts)
+
+      Repo.insert(changeset)
+    end)
+    |> Repo.transaction()
+    |> case do
+      {:ok, %{token: token}} -> {:ok, token}
+      {:error, _failed_operation, changeset, _changes} -> {:error, changeset}
+    end
+  end
+
+  @doc """
   Creates a session and token for a user atomically within a transaction.
   """
   def create_session_and_token_for_user(
@@ -124,14 +197,27 @@ defmodule Hexpm.OAuth.Tokens do
         grant_reference \\ nil,
         opts \\ []
       ) do
-    alias Hexpm.OAuth.Sessions
-
     Ecto.Multi.new()
     |> Ecto.Multi.run(:session, fn _repo, _changes ->
-      Sessions.create_for_user(user, client_id, name: Keyword.get(opts, :name))
+      UserSessions.create_oauth_session(
+        user,
+        client_id,
+        name: Keyword.get(opts, :name),
+        audit: Keyword.fetch!(opts, :audit)
+      )
     end)
-    |> Ecto.Multi.run(:token, fn _repo, %{session: session} ->
-      token_opts = Keyword.put(opts, :session_id, session.id)
+    |> Ecto.Multi.run(:update_session_last_use, fn _repo, %{session: session} ->
+      if Keyword.has_key?(opts, :usage_info) do
+        UserSessions.update_last_use(session, Keyword.get(opts, :usage_info))
+      else
+        {:ok, session}
+      end
+    end)
+    |> Ecto.Multi.run(:token, fn _repo, %{update_session_last_use: session} ->
+      token_opts =
+        opts
+        |> Keyword.put(:user_session_id, session.id)
+        |> Keyword.put(:refresh_token_expires_at, session.expires_at)
 
       changeset =
         create_for_user(user, client_id, scopes, grant_type, grant_reference, token_opts)
@@ -157,54 +243,46 @@ defmodule Hexpm.OAuth.Tokens do
         grant_reference \\ nil,
         opts \\ []
       ) do
+    alias Hexpm.UserSessions
+
     Ecto.Multi.new()
     |> Ecto.Multi.update(:revoked_token, revoke_changeset(old_token))
     |> Ecto.Multi.run(:new_token, fn _repo, _changes ->
+      # Preserve the absolute expiration from the old token
+      token_opts =
+        Keyword.put(opts, :refresh_token_expires_at, old_token.refresh_token_expires_at)
+
       changeset =
-        create_for_user(old_token.user, client_id, scopes, grant_type, grant_reference, opts)
+        create_for_user(
+          old_token.user,
+          client_id,
+          scopes,
+          grant_type,
+          grant_reference,
+          token_opts
+        )
 
       Repo.insert(changeset)
+    end)
+    |> Ecto.Multi.run(:update_session_last_use, fn _repo, %{new_token: new_token} ->
+      # Update session's last_use when token is refreshed
+      if new_token.user_session_id && Keyword.has_key?(opts, :usage_info) do
+        case Repo.get(Hexpm.UserSession, new_token.user_session_id) do
+          nil ->
+            {:ok, nil}
+
+          session ->
+            UserSessions.update_last_use(session, Keyword.get(opts, :usage_info))
+        end
+      else
+        {:ok, nil}
+      end
     end)
     |> Repo.transaction()
     |> case do
       {:ok, %{new_token: token}} -> {:ok, token}
       {:error, _failed_operation, changeset, _changes} -> {:error, changeset}
     end
-  end
-
-  @doc """
-  Creates an exchanged token from a parent token with subset scopes.
-  Always creates children of the root token to maintain a flat hierarchy.
-  """
-  def create_exchanged_token(parent_token, client_id, target_scopes, grant_reference) do
-    # Preload user if not already loaded
-    parent_token = Repo.preload(parent_token, :user)
-
-    # Find the root token (the one without a parent_token_id)
-    root_token_id =
-      if parent_token.parent_token_id do
-        # If parent has a parent, use parent's parent (which should be the root)
-        parent_token.parent_token_id
-      else
-        # Parent is already the root
-        parent_token.id
-      end
-
-    opts = [
-      session_id: parent_token.session_id,
-      parent_token_id: root_token_id,
-      expires_in: DateTime.diff(parent_token.expires_at, DateTime.utc_now()),
-      with_refresh_token: not is_nil(parent_token.refresh_jti)
-    ]
-
-    create_for_user(
-      parent_token.user,
-      client_id,
-      target_scopes,
-      "urn:ietf:params:oauth:grant-type:token-exchange",
-      grant_reference,
-      opts
-    )
   end
 
   @doc """
@@ -268,13 +346,6 @@ defmodule Hexpm.OAuth.Tokens do
   end
 
   @doc """
-  Checks if the scopes include write permissions (api or api:write).
-  """
-  def has_write_scope?(scopes) do
-    "api" in scopes or "api:write" in scopes
-  end
-
-  @doc """
   Cleans up expired OAuth tokens.
   This should be called periodically to remove old records.
   """
@@ -285,19 +356,6 @@ defmodule Hexpm.OAuth.Tokens do
       where: t.expires_at < ^now and is_nil(t.revoked_at)
     )
     |> Repo.delete_all()
-  end
-
-  defp get_parent_jti(opts) do
-    case Keyword.get(opts, :parent_token_id) do
-      nil ->
-        nil
-
-      parent_id ->
-        case Repo.get(Token, parent_id) do
-          %Token{jti: jti} -> jti
-          _ -> nil
-        end
-    end
   end
 
   defp extract_jti_for_type(claims, :access) do
@@ -362,122 +420,4 @@ defmodule Hexpm.OAuth.Tokens do
 
   defp maybe_preload(token, []), do: token
   defp maybe_preload(token, preload), do: Repo.preload(token, preload)
-
-  # Token Exchange (RFC 8693) functionality
-
-  @doc """
-  Exchanges a subject token for a new token with target scopes.
-
-  Parameters:
-  - client_id: The OAuth client requesting the exchange
-  - subject_token: The token being exchanged (access token or refresh token)
-  - subject_token_type: Type of the subject token:
-    - "urn:ietf:params:oauth:token-type:access_token" for access tokens
-    - "urn:ietf:params:oauth:token-type:refresh_token" for refresh tokens
-  - target_scopes: List of scopes for the new token (must be subset of subject token scopes)
-
-  Returns:
-  - {:ok, new_token} on success
-  - {:error, error_type, description} on failure
-  """
-  def exchange_token(client_id, subject_token, subject_token_type, target_scopes) do
-    with {:ok, _client} <- validate_exchange_client(client_id),
-         {:ok, parent_token} <-
-           validate_subject_token(subject_token, subject_token_type, client_id),
-         {:ok, validated_scopes} <- validate_target_scopes(parent_token.scopes, target_scopes),
-         {:ok, token_changeset} <-
-           create_exchange_token(parent_token, client_id, validated_scopes, subject_token) do
-      case Repo.insert(token_changeset) do
-        {:ok, new_token} ->
-          {:ok, new_token}
-
-        {:error, changeset} ->
-          {:error, :server_error,
-           "Failed to create exchanged token: #{inspect(changeset.errors)}"}
-      end
-    end
-  end
-
-  defp validate_exchange_client(client_id) do
-    case Clients.get(client_id) do
-      nil -> {:error, :invalid_client, "Invalid client"}
-      client -> {:ok, client}
-    end
-  end
-
-  defp validate_subject_token(subject_token, subject_token_type, client_id) do
-    case subject_token_type do
-      "urn:ietf:params:oauth:token-type:access_token" ->
-        lookup_access_token(subject_token, client_id)
-
-      "urn:ietf:params:oauth:token-type:refresh_token" ->
-        lookup_refresh_token(subject_token, client_id)
-
-      unsupported_type ->
-        {:error, :invalid_request, "Unsupported subject_token_type: #{unsupported_type}"}
-    end
-  end
-
-  defp lookup_access_token(user_access_token, client_id) do
-    case lookup(user_access_token, :access, client_id: client_id) do
-      {:ok, token} ->
-        {:ok, token}
-
-      {:error, :not_found} ->
-        {:error, :invalid_grant, "Invalid subject token"}
-
-      {:error, :invalid_token} ->
-        {:error, :invalid_grant, "Invalid subject token"}
-
-      {:error, :token_invalid} ->
-        {:error, :invalid_grant, "Subject token expired or revoked"}
-
-      {:error, _} ->
-        # JWT verification errors should be treated as invalid token
-        {:error, :invalid_grant, "Invalid subject token"}
-    end
-  end
-
-  defp lookup_refresh_token(user_refresh_token, client_id) do
-    case lookup(user_refresh_token, :refresh, client_id: client_id) do
-      {:ok, token} ->
-        {:ok, token}
-
-      {:error, :not_found} ->
-        {:error, :invalid_grant, "Invalid subject token"}
-
-      {:error, :invalid_token} ->
-        {:error, :invalid_grant, "Invalid subject token"}
-
-      {:error, :token_invalid} ->
-        {:error, :invalid_grant, "Subject token expired or revoked"}
-
-      {:error, _} ->
-        # JWT verification errors should be treated as invalid token
-        {:error, :invalid_grant, "Invalid subject token"}
-    end
-  end
-
-  defp validate_target_scopes(source_scopes, target_scopes) when is_list(target_scopes) do
-    case Permissions.validate_scope_subset(source_scopes, target_scopes) do
-      :ok -> {:ok, target_scopes}
-      {:error, message} -> {:error, :invalid_scope, message}
-    end
-  end
-
-  defp validate_target_scopes(source_scopes, target_scopes) when is_binary(target_scopes) do
-    target_scope_list = String.split(target_scopes, " ", trim: true)
-    validate_target_scopes(source_scopes, target_scope_list)
-  end
-
-  defp validate_target_scopes(_source_scopes, nil) do
-    {:error, :invalid_request, "Missing required parameter: scope"}
-  end
-
-  defp create_exchange_token(parent_token, client_id, target_scopes, grant_reference) do
-    token_changeset =
-      create_exchanged_token(parent_token, client_id, target_scopes, grant_reference)
-
-    {:ok, token_changeset}
-  end
 end

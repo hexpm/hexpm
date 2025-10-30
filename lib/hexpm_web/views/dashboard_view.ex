@@ -7,14 +7,18 @@ defmodule HexpmWeb.DashboardView do
       security: {"Security", ~p"/dashboard/security"},
       email: {"Emails", ~p"/dashboard/email"},
       keys: {"Keys", ~p"/dashboard/keys"},
+      sessions: {"Sessions", ~p"/dashboard/sessions"},
       audit_logs: {"Recent activities", ~p"/dashboard/audit-logs"}
     ]
   end
 
   defp selected_setting(conn, id) do
-    path_segment = id |> Atom.to_string() |> String.replace("_", "-")
+    url_id =
+      id
+      |> Atom.to_string()
+      |> String.replace("_", "-")
 
-    if Enum.take(conn.path_info, -2) == ["dashboard", path_segment] do
+    if Enum.take(conn.path_info, -2) == ["dashboard", url_id] do
       "selected"
     end
   end
@@ -190,6 +194,48 @@ defmodule HexpmWeb.DashboardView do
 
   def humanize_audit_log_info(%AuditLog{action: "billing.pay_invoice", params: params}) do
     "Manually pay invoice for organization #{params["organization"]["name"]}"
+  end
+
+  def humanize_audit_log_info(%AuditLog{
+        action: "session.create",
+        params: %{"type" => "browser", "name" => name}
+      }) do
+    "Login from #{name}"
+  end
+
+  def humanize_audit_log_info(%AuditLog{
+        action: "session.create",
+        params: %{"type" => "oauth"} = params
+      }) do
+    client_name = params["client"]["name"]
+    session_name = params["name"]
+
+    if session_name do
+      "Authorize OAuth application: #{client_name} (#{session_name})"
+    else
+      "Authorize OAuth application: #{client_name}"
+    end
+  end
+
+  def humanize_audit_log_info(%AuditLog{
+        action: "session.revoke",
+        params: %{"type" => "browser", "name" => name}
+      }) do
+    "Logout from #{name}"
+  end
+
+  def humanize_audit_log_info(%AuditLog{
+        action: "session.revoke",
+        params: %{"type" => "oauth"} = params
+      }) do
+    client_name = params["client"]["name"]
+    session_name = params["name"]
+
+    if session_name do
+      "Revoke OAuth application: #{client_name} (#{session_name})"
+    else
+      "Revoke OAuth application: #{client_name}"
+    end
   end
 
   defp plan_id("organization-monthly"), do: "monthly"

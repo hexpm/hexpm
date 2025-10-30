@@ -27,7 +27,7 @@ defmodule Hexpm.Accounts.AuditLogs do
   def admin() do
     %{
       user: Hexpm.Accounts.Users.get("admin"),
-      key: nil,
+      auth_credential: nil,
       user_agent: "ADMIN",
       remote_ip: nil
     }

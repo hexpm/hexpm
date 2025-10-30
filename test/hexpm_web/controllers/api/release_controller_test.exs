@@ -33,7 +33,12 @@ defmodule HexpmWeb.API.ReleaseControllerTest do
       meta = %{
         name: Fake.sequence(:package),
         version: "1.0.0",
-        description: "Domain-specific language."
+        description: "Domain-specific language.",
+        extra: %{
+          keywords: %{
+            foo: "bar"
+          }
+        }
       }
 
       conn =
@@ -1492,7 +1497,7 @@ defmodule HexpmWeb.API.ReleaseControllerTest do
           ["api:write"],
           "authorization_code",
           "test_grant_ref",
-          session_id: oauth_session.id
+          user_session_id: oauth_session.id
         )
 
       # Enable 2FA for user
@@ -1607,7 +1612,7 @@ defmodule HexpmWeb.API.ReleaseControllerTest do
           ["api:read"],
           "authorization_code",
           "test_grant_ref",
-          session_id: oauth_session.id
+          user_session_id: oauth_session.id
         )
 
       meta = %{name: package.name, version: "3.0.0", description: "Test"}
@@ -1673,7 +1678,7 @@ defmodule HexpmWeb.API.ReleaseControllerTest do
           ["api:write"],
           "authorization_code",
           "test_grant_ref",
-          session_id: oauth_session_no_tfa.id
+          user_session_id: oauth_session_no_tfa.id
         )
 
       meta = %{name: package.name, version: "5.0.0", description: "Test"}

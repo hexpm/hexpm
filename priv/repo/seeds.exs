@@ -706,3 +706,4 @@ Hexpm.Repo.transaction(fn ->
 end)
 
 Hexpm.Repository.RegistryBuilder.full(Hexpm.Repository.Repositories.get("hexpm"))
+Hexpm.Repository.RegistryBuilder.full(Hexpm.Repository.Repositories.get("myrepo"))

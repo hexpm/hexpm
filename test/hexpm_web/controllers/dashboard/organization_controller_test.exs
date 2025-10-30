@@ -282,7 +282,8 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
       |> test_login(user)
       |> post("/dashboard/orgs/#{organization.name}/billing-token", %{"token" => "Test Token"})
 
-      assert [audit_log] = AuditLogs.all_by(user)
+      audit_logs = AuditLogs.all_by(user)
+      assert audit_log = Enum.find(audit_logs, &(&1.action == "billing.checkout"))
       assert audit_log.action == "billing.checkout"
       assert audit_log.params["organization"]["name"] == organization.name
       assert audit_log.params["payment_source"] == "Test Token"
@@ -353,7 +354,8 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
       |> test_login(user)
       |> post("/dashboard/orgs/#{organization.name}/cancel-billing")
 
-      assert [audit_log] = AuditLogs.all_by(user)
+      audit_logs = AuditLogs.all_by(user)
+      assert audit_log = Enum.find(audit_logs, &(&1.action == "billing.cancel"))
       assert audit_log.action == "billing.cancel"
       assert audit_log.params["organization"]["name"] == organization.name
     end
@@ -458,7 +460,8 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
       |> test_login(user)
       |> post("/dashboard/orgs/#{organization.name}/invoices/123/pay")
 
-      assert [audit_log] = AuditLogs.all_by(user)
+      audit_logs = AuditLogs.all_by(user)
+      assert audit_log = Enum.find(audit_logs, &(&1.action == "billing.pay_invoice"))
       assert audit_log.action == "billing.pay_invoice"
       assert audit_log.params["invoice_id"] == 123
       assert audit_log.params["organization"]["name"] == organization.name
@@ -500,7 +503,8 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
         "email" => "billing@example.com"
       })
 
-      assert [audit_log] = AuditLogs.all_by(user)
+      audit_logs = AuditLogs.all_by(user)
+      assert audit_log = Enum.find(audit_logs, &(&1.action == "billing.update"))
       assert audit_log.action == "billing.update"
       assert audit_log.params["email"] == "billing@example.com"
       assert audit_log.params["organization"]["name"] == organization.name
@@ -602,7 +606,8 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
       |> test_login(user)
       |> post("/dashboard/orgs/#{organization.name}/create-billing", params)
 
-      assert [%{action: "billing.create"} = audit_log] = AuditLogs.all_by(user)
+      audit_logs = AuditLogs.all_by(user)
+      assert audit_log = Enum.find(audit_logs, &(&1.action == "billing.create"))
       assert audit_log.params["organization"]["name"] == organization.name
     end
   end
@@ -664,7 +669,8 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
         "add-seats" => "1"
       })
 
-      assert [audit_log] = AuditLogs.all_by(user)
+      audit_logs = AuditLogs.all_by(user)
+      assert audit_log = Enum.find(audit_logs, &(&1.action == "billing.update"))
       assert audit_log.action == "billing.update"
       assert audit_log.params["quantity"] == 2
       assert audit_log.params["organization"]["name"] == organization.name
@@ -724,7 +730,8 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
         "seats" => "4"
       })
 
-      assert [audit_log] = AuditLogs.all_by(user)
+      audit_logs = AuditLogs.all_by(user)
+      assert audit_log = Enum.find(audit_logs, &(&1.action == "billing.update"))
       assert audit_log.action == "billing.update"
       assert audit_log.params["quantity"] == 4
       assert audit_log.params["organization"]["name"] == organization.name
@@ -768,7 +775,8 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
         "plan_id" => "organization-annually"
       })
 
-      assert [audit_log] = AuditLogs.all_by(user)
+      audit_logs = AuditLogs.all_by(user)
+      assert audit_log = Enum.find(audit_logs, &(&1.action == "billing.change_plan"))
       assert audit_log.action == "billing.change_plan"
       assert audit_log.params["organization"]["name"] == organization.name
       assert audit_log.params["plan_id"] == "organization-annually"

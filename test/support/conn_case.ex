@@ -43,13 +43,29 @@ defmodule HexpmWeb.ConnCase do
   end
 
   def test_login(conn, user) do
-    Plug.Test.init_test_session(conn, %{"user_id" => user.id})
+    alias Hexpm.UserSessions
+
+    audit_data = test_audit_data(user)
+
+    {:ok, _session, session_token} =
+      UserSessions.create_browser_session(user, name: "Test Browser Session", audit: audit_data)
+
+    Plug.Test.init_test_session(conn, %{"session_token" => Base.encode64(session_token)})
+  end
+
+  def test_audit_data(user) do
+    %{
+      user: user,
+      auth_credential: nil,
+      user_agent: "TEST",
+      remote_ip: "127.0.0.1"
+    }
   end
 
   def last_session() do
     import Ecto.Query
 
-    from(s in Hexpm.Accounts.Session, order_by: [desc: s.id], limit: 1)
+    from(s in Hexpm.PlugSession, order_by: [desc: s.id], limit: 1)
     |> Hexpm.Repo.one()
   end
 

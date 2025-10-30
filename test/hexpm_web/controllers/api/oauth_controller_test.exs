@@ -2,7 +2,7 @@ defmodule HexpmWeb.API.OAuthControllerTest do
   use HexpmWeb.ConnCase, async: true
 
   alias Hexpm.{Repo}
-  alias Hexpm.OAuth.{DeviceCodes, Client, Clients, Sessions, Token, Tokens}
+  alias Hexpm.OAuth.{DeviceCodes, Client, Clients, Token, Tokens}
 
   setup do
     # Create test OAuth client
@@ -10,7 +10,7 @@ defmodule HexpmWeb.API.OAuthControllerTest do
       client_id: Clients.generate_client_id(),
       name: "Test OAuth Client",
       client_type: "public",
-      allowed_grant_types: ["urn:ietf:params:oauth:grant-type:device_code"],
+      allowed_grant_types: ["urn:ietf:params:oauth:grant-type:device_code", "refresh_token"],
       allowed_scopes: ["api", "api:read", "api:write"]
     }
 
@@ -337,7 +337,8 @@ defmodule HexpmWeb.API.OAuthControllerTest do
     end
 
     test "returns error for expired refresh token", %{user: user, client: client} do
-      {:ok, session} = Sessions.create_for_user(user, client.client_id)
+      {:ok, session} =
+        Hexpm.UserSessions.create_oauth_session(user, client.client_id, audit: audit_data(user))
 
       # Create a token with an expired refresh token
       token_changeset =
@@ -347,8 +348,9 @@ defmodule HexpmWeb.API.OAuthControllerTest do
           ["api:read"],
           "authorization_code",
           "test_code",
-          session_id: session.id,
-          with_refresh_token: true
+          user_session_id: session.id,
+          with_refresh_token: true,
+          audit: audit_data(user)
         )
 
       {:ok, token} = Hexpm.Repo.insert(token_changeset)
@@ -382,100 +384,47 @@ defmodule HexpmWeb.API.OAuthControllerTest do
         client_id: Clients.generate_client_id(),
         name: "Test OAuth Client",
         client_type: "public",
-        allowed_grant_types: [
-          "authorization_code",
-          "urn:ietf:params:oauth:grant-type:token-exchange"
-        ],
+        allowed_grant_types: ["authorization_code"],
         allowed_scopes: ["api", "api:read", "api:write", "repositories"]
       }
 
       {:ok, client} = Client.build(client_params) |> Repo.insert()
 
-      {:ok, session} = Sessions.create_for_user(user, client.client_id)
+      {:ok, session} =
+        Hexpm.UserSessions.create_oauth_session(user, client.client_id, audit: audit_data(user))
 
-      # Create parent token with refresh token
-      parent_token_changeset =
+      # Create token with refresh token
+      token_changeset =
         Tokens.create_for_user(
           user,
           client.client_id,
           ["api:read", "api:write", "repositories"],
           "authorization_code",
           "test_code",
-          session_id: session.id,
-          with_refresh_token: true
+          user_session_id: session.id,
+          with_refresh_token: true,
+          audit: audit_data(user)
         )
 
-      {:ok, parent_token} = Repo.insert(parent_token_changeset)
-      parent_token = Repo.preload(parent_token, :user)
-
-      # Extract token values from the inserted token with virtual fields
-      parent_tokens = %{
-        access_token: parent_token.access_token,
-        refresh_token: parent_token.refresh_token
-      }
-
-      # Create child tokens
-      child1_changeset =
-        Tokens.create_exchanged_token(parent_token, client.client_id, ["api:read"], "ref1")
-
-      child2_changeset =
-        Tokens.create_exchanged_token(parent_token, client.client_id, ["repositories"], "ref2")
-
-      {:ok, child1} = Repo.insert(child1_changeset)
-      {:ok, child2} = Repo.insert(child2_changeset)
-
-      # Extract child token values from virtual fields
-      child1_tokens = %{access_token: child1.access_token, refresh_token: child1.refresh_token}
-      child2_tokens = %{access_token: child2.access_token, refresh_token: child2.refresh_token}
+      {:ok, token} = Repo.insert(token_changeset)
+      token = Repo.preload(token, :user)
 
       %{
         revoke_user: user,
         revoke_client: client,
-        revoke_parent_token: parent_token,
-        revoke_parent_tokens: parent_tokens,
-        revoke_child1: child1,
-        revoke_child1_tokens: child1_tokens,
-        revoke_child2: child2,
-        revoke_child2_tokens: child2_tokens
+        revoke_token: token,
+        revoke_access_token: token.access_token,
+        revoke_refresh_token: token.refresh_token
       }
     end
 
-    test "successfully revokes individual access token", %{
+    test "successfully revokes access token", %{
       revoke_client: client,
-      revoke_parent_token: parent_token,
-      revoke_parent_tokens: parent_tokens,
-      revoke_child1: child1,
-      revoke_child2: child2
+      revoke_token: token,
+      revoke_access_token: access_token
     } do
       params = %{
-        token: parent_tokens.access_token,
-        client_id: client.client_id
-      }
-
-      # Should return 200 OK per RFC 7009
-      build_conn()
-      |> post(~p"/api/oauth/revoke", params)
-      |> response(200)
-
-      # Only the parent token should be revoked
-      updated_parent = Repo.get(Token, parent_token.id)
-      updated_child1 = Repo.get(Token, child1.id)
-      updated_child2 = Repo.get(Token, child2.id)
-
-      assert Tokens.revoked?(updated_parent)
-      refute Tokens.revoked?(updated_child1)
-      refute Tokens.revoked?(updated_child2)
-    end
-
-    test "successfully revokes individual refresh token", %{
-      revoke_client: client,
-      revoke_parent_token: parent_token,
-      revoke_parent_tokens: parent_tokens,
-      revoke_child1: child1,
-      revoke_child2: child2
-    } do
-      params = %{
-        token: parent_tokens.refresh_token,
+        token: access_token,
         client_id: client.client_id
       }
 
@@ -483,25 +432,17 @@ defmodule HexpmWeb.API.OAuthControllerTest do
       |> post(~p"/api/oauth/revoke", params)
       |> response(200)
 
-      # Only the parent token should be revoked
-      updated_parent = Repo.get(Token, parent_token.id)
-      updated_child1 = Repo.get(Token, child1.id)
-      updated_child2 = Repo.get(Token, child2.id)
-
-      assert Tokens.revoked?(updated_parent)
-      refute Tokens.revoked?(updated_child1)
-      refute Tokens.revoked?(updated_child2)
+      updated_token = Repo.get(Token, token.id)
+      assert Tokens.revoked?(updated_token)
     end
 
-    test "revokes child token only affects that child", %{
+    test "successfully revokes refresh token", %{
       revoke_client: client,
-      revoke_parent_token: parent_token,
-      revoke_child1: child1,
-      revoke_child1_tokens: child1_tokens,
-      revoke_child2: child2
+      revoke_token: token,
+      revoke_refresh_token: refresh_token
     } do
       params = %{
-        token: child1_tokens.access_token,
+        token: refresh_token,
         client_id: client.client_id
       }
 
@@ -509,14 +450,8 @@ defmodule HexpmWeb.API.OAuthControllerTest do
       |> post(~p"/api/oauth/revoke", params)
       |> response(200)
 
-      # Check only child1 is revoked
-      updated_parent = Repo.get(Token, parent_token.id)
-      updated_child1 = Repo.get(Token, child1.id)
-      updated_child2 = Repo.get(Token, child2.id)
-
-      refute Tokens.revoked?(updated_parent)
-      assert Tokens.revoked?(updated_child1)
-      refute Tokens.revoked?(updated_child2)
+      updated_token = Repo.get(Token, token.id)
+      assert Tokens.revoked?(updated_token)
     end
 
     test "returns 200 OK for invalid token (security per RFC 7009)", %{
@@ -527,33 +462,29 @@ defmodule HexpmWeb.API.OAuthControllerTest do
         client_id: client.client_id
       }
 
-      # Should still return 200 OK to avoid leaking information
       build_conn()
       |> post(~p"/api/oauth/revoke", params)
       |> response(200)
     end
 
     test "returns 200 OK for invalid client_id (security per RFC 7009)", %{
-      revoke_parent_token: parent_token,
-      revoke_parent_tokens: parent_tokens
+      revoke_token: token,
+      revoke_access_token: access_token
     } do
       params = %{
-        token: parent_tokens.access_token,
+        token: access_token,
         client_id: Ecto.UUID.generate()
       }
 
-      # Should still return 200 OK to avoid leaking information
       build_conn()
       |> post(~p"/api/oauth/revoke", params)
       |> response(200)
 
-      # Token should not be revoked
-      updated_token = Repo.get(Token, parent_token.id)
+      updated_token = Repo.get(Token, token.id)
       refute Tokens.revoked?(updated_token)
     end
 
     test "returns 200 OK for missing parameters" do
-      # Missing both token and client_id
       params = %{}
 
       build_conn()
@@ -562,9 +493,7 @@ defmodule HexpmWeb.API.OAuthControllerTest do
     end
 
     test "returns 200 OK for missing token parameter", %{revoke_client: client} do
-      params = %{
-        client_id: client.client_id
-      }
+      params = %{client_id: client.client_id}
 
       build_conn()
       |> post(~p"/api/oauth/revoke", params)
@@ -572,11 +501,9 @@ defmodule HexpmWeb.API.OAuthControllerTest do
     end
 
     test "returns 200 OK for missing client_id parameter", %{
-      revoke_parent_tokens: parent_tokens
+      revoke_access_token: access_token
     } do
-      params = %{
-        token: parent_tokens.access_token
-      }
+      params = %{token: access_token}
 
       build_conn()
       |> post(~p"/api/oauth/revoke", params)
@@ -585,15 +512,13 @@ defmodule HexpmWeb.API.OAuthControllerTest do
 
     test "handles revocation of already revoked token", %{
       revoke_client: client,
-      revoke_parent_token: parent_token,
-      revoke_parent_tokens: parent_tokens
+      revoke_token: token,
+      revoke_access_token: access_token
     } do
-      # First revoke the token
-      {:ok, _} = Tokens.revoke(parent_token)
+      {:ok, _} = Tokens.revoke(token)
 
-      # Try to revoke again
       params = %{
-        token: parent_tokens.access_token,
+        token: access_token,
         client_id: client.client_id
       }
 
@@ -603,8 +528,8 @@ defmodule HexpmWeb.API.OAuthControllerTest do
     end
 
     test "handles token from different client", %{
-      revoke_parent_token: parent_token,
-      revoke_parent_tokens: parent_tokens
+      revoke_token: token,
+      revoke_access_token: access_token
     } do
       other_client_params = %{
         client_id: Clients.generate_client_id(),
@@ -617,27 +542,25 @@ defmodule HexpmWeb.API.OAuthControllerTest do
       {:ok, other_client} = Client.build(other_client_params) |> Repo.insert()
 
       params = %{
-        token: parent_tokens.access_token,
+        token: access_token,
         client_id: other_client.client_id
       }
 
-      # Should return 200 OK but not revoke the token
       build_conn()
       |> post(~p"/api/oauth/revoke", params)
       |> response(200)
 
-      # Token should not be revoked
-      updated_token = Repo.get(Token, parent_token.id)
+      updated_token = Repo.get(Token, token.id)
       refute Tokens.revoked?(updated_token)
     end
 
     test "supports token_type_hint parameter (optional per RFC 7009)", %{
       revoke_client: client,
-      revoke_parent_token: parent_token,
-      revoke_parent_tokens: parent_tokens
+      revoke_token: token,
+      revoke_access_token: access_token
     } do
       params = %{
-        token: parent_tokens.access_token,
+        token: access_token,
         client_id: client.client_id,
         token_type_hint: "access_token"
       }
@@ -646,234 +569,400 @@ defmodule HexpmWeb.API.OAuthControllerTest do
       |> post(~p"/api/oauth/revoke", params)
       |> response(200)
 
-      # Token should be revoked
-      updated_token = Repo.get(Token, parent_token.id)
+      updated_token = Repo.get(Token, token.id)
       assert Tokens.revoked?(updated_token)
     end
   end
 
-  describe "POST /api/oauth/token with token-exchange grant" do
+  describe "POST /api/oauth/token with client_credentials grant" do
     setup do
       user = insert(:user)
+
+      # Create API key for the user
+      {:ok, %{key: key}} =
+        Hexpm.Accounts.Keys.create(user, %{name: "test-key"}, audit: audit_data(user))
 
       client_params = %{
         client_id: Clients.generate_client_id(),
         name: "Test OAuth Client",
         client_type: "public",
-        allowed_grant_types: [
-          "authorization_code",
-          "urn:ietf:params:oauth:grant-type:token-exchange"
-        ],
-        allowed_scopes: ["api", "api:read", "api:write", "repositories"]
+        allowed_grant_types: ["client_credentials"],
+        allowed_scopes: ["api", "repositories"]
       }
 
       {:ok, client} = Client.build(client_params) |> Repo.insert()
 
-      {:ok, session} = Sessions.create_for_user(user, client.client_id)
+      %{
+        user: user,
+        api_key: key.user_secret,
+        client: client
+      }
+    end
 
-      # Create parent token
-      parent_token_changeset =
-        Tokens.create_for_user(
+    test "returns access token for valid API key", %{
+      client: client,
+      api_key: api_key
+    } do
+      conn =
+        post(build_conn(), ~p"/api/oauth/token", %{
+          "grant_type" => "client_credentials",
+          "client_id" => client.client_id,
+          "client_secret" => api_key,
+          "scope" => "api"
+        })
+
+      assert json_response(conn, 200)
+      response = json_response(conn, 200)
+
+      assert response["access_token"]
+      assert response["token_type"] == "bearer"
+      assert response["expires_in"] > 0
+      assert response["scope"] == "api"
+      # No refresh token for client_credentials
+      refute response["refresh_token"]
+    end
+
+    test "creates session with access token expiration", %{
+      client: client,
+      api_key: api_key,
+      user: user
+    } do
+      conn =
+        post(build_conn(), ~p"/api/oauth/token", %{
+          "grant_type" => "client_credentials",
+          "client_id" => client.client_id,
+          "client_secret" => api_key,
+          "scope" => "api"
+        })
+
+      assert json_response(conn, 200)
+
+      # Verify session was created with short expiration
+      sessions = Hexpm.UserSessions.all_for_user(user)
+      assert length(sessions) == 1
+      [session] = sessions
+
+      # Session should expire within ~30 minutes (allow some margin)
+      now = DateTime.utc_now()
+      expires_in_seconds = DateTime.diff(session.expires_at, now, :second)
+      # At least 25 minutes
+      assert expires_in_seconds > 25 * 60
+      # At most 30 minutes
+      assert expires_in_seconds <= 30 * 60
+    end
+
+    test "returns error for missing client_secret", %{client: client} do
+      conn =
+        post(build_conn(), ~p"/api/oauth/token", %{
+          "grant_type" => "client_credentials",
+          "client_id" => client.client_id,
+          "scope" => "api"
+        })
+
+      assert json_response(conn, 400)
+      response = json_response(conn, 400)
+      assert response["error"] == "invalid_request"
+    end
+
+    test "returns error for invalid API key", %{client: client} do
+      conn =
+        post(build_conn(), ~p"/api/oauth/token", %{
+          "grant_type" => "client_credentials",
+          "client_id" => client.client_id,
+          "client_secret" => "invalid_key",
+          "scope" => "api"
+        })
+
+      assert json_response(conn, 401)
+      response = json_response(conn, 401)
+      assert response["error"] == "invalid_client"
+    end
+
+    test "returns error for unauthorized grant type", %{api_key: api_key} do
+      # Create client that doesn't support client_credentials
+      client_params = %{
+        client_id: Clients.generate_client_id(),
+        name: "Limited OAuth Client",
+        client_type: "public",
+        allowed_grant_types: ["authorization_code"],
+        allowed_scopes: ["api"]
+      }
+
+      {:ok, client} = Client.build(client_params) |> Repo.insert()
+
+      conn =
+        post(build_conn(), ~p"/api/oauth/token", %{
+          "grant_type" => "client_credentials",
+          "client_id" => client.client_id,
+          "client_secret" => api_key,
+          "scope" => "api"
+        })
+
+      assert json_response(conn, 400)
+      response = json_response(conn, 400)
+      assert response["error"] == "unauthorized_client"
+    end
+
+    test "returns error for invalid scope", %{client: client, api_key: api_key} do
+      conn =
+        post(build_conn(), ~p"/api/oauth/token", %{
+          "grant_type" => "client_credentials",
+          "client_id" => client.client_id,
+          "client_secret" => api_key,
+          "scope" => "invalid_scope"
+        })
+
+      assert json_response(conn, 400)
+      response = json_response(conn, 400)
+      assert response["error"] == "invalid_scope"
+    end
+
+    test "supports custom name parameter", %{
+      client: client,
+      api_key: api_key,
+      user: user
+    } do
+      name = "Custom Client Name"
+
+      conn =
+        post(build_conn(), ~p"/api/oauth/token", %{
+          "grant_type" => "client_credentials",
+          "client_id" => client.client_id,
+          "client_secret" => api_key,
+          "scope" => "api",
+          "name" => name
+        })
+
+      assert json_response(conn, 200)
+
+      # Verify session was created with the custom name
+      sessions = Hexpm.UserSessions.all_for_user(user)
+      [session] = sessions
+      assert session.name == name
+    end
+
+    test "enforces session limit of 5 per user", %{
+      client: client,
+      api_key: api_key,
+      user: user
+    } do
+      # Create 5 sessions via client credentials
+      for i <- 1..5 do
+        post(build_conn(), ~p"/api/oauth/token", %{
+          "grant_type" => "client_credentials",
+          "client_id" => client.client_id,
+          "client_secret" => api_key,
+          "scope" => "api",
+          "name" => "Session #{i}"
+        })
+      end
+
+      # Verify we have 5 sessions
+      assert Hexpm.UserSessions.count_for_user(user) == 5
+
+      # Create a 6th session
+      conn =
+        post(build_conn(), ~p"/api/oauth/token", %{
+          "grant_type" => "client_credentials",
+          "client_id" => client.client_id,
+          "client_secret" => api_key,
+          "scope" => "api",
+          "name" => "Session 6"
+        })
+
+      assert json_response(conn, 200)
+
+      # Verify we still only have 5 sessions (oldest was revoked)
+      assert Hexpm.UserSessions.count_for_user(user) == 5
+    end
+
+    test "expands 'repositories' scope for API key with generic repositories permission", %{
+      client: client,
+      user: user
+    } do
+      org = insert(:organization)
+      insert(:organization_user, organization: org, user: user)
+
+      {:ok, %{key: key}} =
+        Hexpm.Accounts.Keys.create(
           user,
-          client.client_id,
-          ["api:read", "api:write", "repositories"],
-          "authorization_code",
-          "test_code",
-          session_id: session.id,
-          with_refresh_token: true
+          %{name: "repo_key", permissions: [%{domain: "repositories"}]},
+          audit: audit_data(user)
         )
 
-      {:ok, parent_token} = Repo.insert(parent_token_changeset)
-      parent_token = Repo.preload(parent_token, :user)
+      api_key = key.user_secret
 
-      # Extract token values from virtual fields
-      parent_tokens = %{
-        access_token: parent_token.access_token,
-        refresh_token: parent_token.refresh_token
-      }
+      conn =
+        post(build_conn(), ~p"/api/oauth/token", %{
+          "grant_type" => "client_credentials",
+          "client_id" => client.client_id,
+          "client_secret" => api_key,
+          "scope" => "repositories"
+        })
 
-      %{
-        exchange_user: user,
-        exchange_client: client,
-        exchange_parent_token: parent_token,
-        exchange_parent_tokens: parent_tokens
-      }
+      assert json_response(conn, 200)
+      response = json_response(conn, 200)
+      assert response["access_token"]
+      # Should include all repositories the user has access to
+      scopes = String.split(response["scope"], " ")
+      assert "repository:#{org.name}" in scopes
     end
 
-    test "successfully exchanges token with valid parameters", %{
-      exchange_client: client,
-      exchange_parent_token: parent_token,
-      exchange_parent_tokens: parent_tokens
+    test "expands 'repositories' scope for API key with specific repository permission", %{
+      client: client,
+      user: user
     } do
-      params = %{
-        grant_type: "urn:ietf:params:oauth:grant-type:token-exchange",
-        client_id: client.client_id,
-        subject_token: parent_tokens.access_token,
-        subject_token_type: "urn:ietf:params:oauth:token-type:access_token",
-        scope: "api:read repositories"
-      }
+      org = insert(:organization)
+      insert(:organization_user, organization: org, user: user)
 
-      response =
-        build_conn()
-        |> post(~p"/api/oauth/token", params)
-        |> json_response(200)
+      {:ok, %{key: key}} =
+        Hexpm.Accounts.Keys.create(
+          user,
+          %{
+            name: "specific_repo_key",
+            permissions: [%{domain: "repository", resource: org.name}]
+          },
+          audit: audit_data(user)
+        )
 
-      assert %{
-               "access_token" => access_token,
-               "token_type" => "bearer",
-               "expires_in" => expires_in,
-               "scope" => "api:read repositories",
-               "refresh_token" => refresh_token
-             } = response
+      api_key = key.user_secret
 
-      assert is_binary(access_token)
-      assert is_binary(refresh_token)
-      assert is_integer(expires_in)
-      assert expires_in > 0
+      conn =
+        post(build_conn(), ~p"/api/oauth/token", %{
+          "grant_type" => "client_credentials",
+          "client_id" => client.client_id,
+          "client_secret" => api_key,
+          "scope" => "repositories"
+        })
 
-      # Verify token was created in database
-      {:ok, created_token} =
-        Tokens.lookup(access_token, :access, client_id: client.client_id, preload: [])
-
-      assert created_token.scopes == ["api:read", "repositories"]
-      assert created_token.parent_token_id == parent_token.id
-      assert created_token.session_id == parent_token.session_id
+      assert json_response(conn, 200)
+      response = json_response(conn, 200)
+      assert response["access_token"]
+      assert response["scope"] == "repository:#{org.name}"
     end
 
-    test "fails with invalid client_id", %{exchange_parent_tokens: parent_tokens} do
-      params = %{
-        grant_type: "urn:ietf:params:oauth:grant-type:token-exchange",
-        client_id: Ecto.UUID.generate(),
-        subject_token: parent_tokens.access_token,
-        subject_token_type: "urn:ietf:params:oauth:token-type:access_token",
-        scope: "api:read"
-      }
-
-      response =
-        build_conn()
-        |> post(~p"/api/oauth/token", params)
-        |> json_response(401)
-
-      assert %{
-               "error" => "invalid_client",
-               "error_description" => "Invalid client"
-             } = response
-    end
-
-    test "fails with invalid subject_token", %{exchange_client: client} do
-      params = %{
-        grant_type: "urn:ietf:params:oauth:grant-type:token-exchange",
-        client_id: client.client_id,
-        subject_token: "invalid_token",
-        subject_token_type: "urn:ietf:params:oauth:token-type:access_token",
-        scope: "api:read"
-      }
-
-      response =
-        build_conn()
-        |> post(~p"/api/oauth/token", params)
-        |> json_response(400)
-
-      assert %{
-               "error" => "invalid_grant",
-               "error_description" => "Invalid subject token"
-             } = response
-    end
-
-    test "fails with unsupported subject_token_type", %{
-      exchange_client: client,
-      exchange_parent_tokens: parent_tokens
+    test "constrains 'repositories' expansion to API key's specific repository permissions", %{
+      client: client,
+      user: user
     } do
-      params = %{
-        grant_type: "urn:ietf:params:oauth:grant-type:token-exchange",
-        client_id: client.client_id,
-        subject_token: parent_tokens.access_token,
-        subject_token_type: "unsupported_type",
-        scope: "api:read"
-      }
+      org1 = insert(:organization)
+      org2 = insert(:organization)
+      insert(:organization_user, organization: org1, user: user)
+      insert(:organization_user, organization: org2, user: user)
 
-      response =
-        build_conn()
-        |> post(~p"/api/oauth/token", params)
-        |> json_response(400)
+      # API key only has access to org1, not org2
+      {:ok, %{key: key}} =
+        Hexpm.Accounts.Keys.create(
+          user,
+          %{
+            name: "limited_repo_key",
+            permissions: [%{domain: "repository", resource: org1.name}]
+          },
+          audit: audit_data(user)
+        )
 
-      assert %{
-               "error" => "invalid_request",
-               "error_description" => "Unsupported subject_token_type: unsupported_type"
-             } = response
+      api_key = key.user_secret
+
+      # Request "repositories" scope - should only expand to org1, not org2
+      conn =
+        post(build_conn(), ~p"/api/oauth/token", %{
+          "grant_type" => "client_credentials",
+          "client_id" => client.client_id,
+          "client_secret" => api_key,
+          "scope" => "repositories"
+        })
+
+      assert json_response(conn, 200)
+      response = json_response(conn, 200)
+      assert response["access_token"]
+      # Should only expand to org1, not org2
+      assert response["scope"] == "repository:#{org1.name}"
     end
 
-    test "fails when target scopes exceed parent scopes", %{
-      exchange_client: client,
-      exchange_parent_tokens: parent_tokens
+    test "constrains to multiple specific repositories when key has multiple permissions", %{
+      client: client,
+      user: user
     } do
-      params = %{
-        grant_type: "urn:ietf:params:oauth:grant-type:token-exchange",
-        client_id: client.client_id,
-        subject_token: parent_tokens.access_token,
-        subject_token_type: "urn:ietf:params:oauth:token-type:access_token",
-        scope: "api"
-      }
+      org1 = insert(:organization)
+      org2 = insert(:organization)
+      org3 = insert(:organization)
+      insert(:organization_user, organization: org1, user: user)
+      insert(:organization_user, organization: org2, user: user)
+      insert(:organization_user, organization: org3, user: user)
 
-      response =
-        build_conn()
-        |> post(~p"/api/oauth/token", params)
-        |> json_response(400)
+      # API key has access to org1 and org2, but not org3
+      {:ok, %{key: key}} =
+        Hexpm.Accounts.Keys.create(
+          user,
+          %{
+            name: "multi_repo_key",
+            permissions: [
+              %{domain: "repository", resource: org1.name},
+              %{domain: "repository", resource: org2.name}
+            ]
+          },
+          audit: audit_data(user)
+        )
 
-      assert %{
-               "error" => "invalid_scope",
-               "error_description" => "target scopes must be subset of source scopes"
-             } = response
+      api_key = key.user_secret
+
+      # Request "repositories" scope - should expand to org1 and org2, not org3
+      conn =
+        post(build_conn(), ~p"/api/oauth/token", %{
+          "grant_type" => "client_credentials",
+          "client_id" => client.client_id,
+          "client_secret" => api_key,
+          "scope" => "repositories"
+        })
+
+      assert json_response(conn, 200)
+      response = json_response(conn, 200)
+      assert response["access_token"]
+      # Should expand to both org1 and org2
+      scopes = String.split(response["scope"], " ")
+      assert "repository:#{org1.name}" in scopes
+      assert "repository:#{org2.name}" in scopes
+      refute "repository:#{org3.name}" in scopes
+      assert length(scopes) == 2
     end
 
-    test "fails with missing scope parameter", %{
-      exchange_client: client,
-      exchange_parent_tokens: parent_tokens
+    test "supports mixed scopes with repositories", %{
+      client: client,
+      user: user
     } do
-      params = %{
-        grant_type: "urn:ietf:params:oauth:grant-type:token-exchange",
-        client_id: client.client_id,
-        subject_token: parent_tokens.access_token,
-        subject_token_type: "urn:ietf:params:oauth:token-type:access_token"
-      }
+      org = insert(:organization)
+      insert(:organization_user, organization: org, user: user)
 
-      response =
-        build_conn()
-        |> post(~p"/api/oauth/token", params)
-        |> json_response(400)
+      {:ok, %{key: key}} =
+        Hexpm.Accounts.Keys.create(
+          user,
+          %{
+            name: "mixed_key",
+            permissions: [
+              %{domain: "api"},
+              %{domain: "repositories"}
+            ]
+          },
+          audit: audit_data(user)
+        )
 
-      assert %{
-               "error" => "invalid_request",
-               "error_description" => "Missing required parameter: scope"
-             } = response
-    end
+      api_key = key.user_secret
 
-    test "handles token exchange with single scope", %{
-      exchange_client: client,
-      exchange_parent_tokens: parent_tokens
-    } do
-      params = %{
-        grant_type: "urn:ietf:params:oauth:grant-type:token-exchange",
-        client_id: client.client_id,
-        subject_token: parent_tokens.access_token,
-        subject_token_type: "urn:ietf:params:oauth:token-type:access_token",
-        scope: "api:read"
-      }
+      conn =
+        post(build_conn(), ~p"/api/oauth/token", %{
+          "grant_type" => "client_credentials",
+          "client_id" => client.client_id,
+          "client_secret" => api_key,
+          "scope" => "api repositories"
+        })
 
-      response =
-        build_conn()
-        |> post(~p"/api/oauth/token", params)
-        |> json_response(200)
-
-      assert %{
-               "scope" => "api:read"
-             } = response
-
-      # Verify token in database
-      {:ok, created_token} =
-        Tokens.lookup(response["access_token"], :access, client_id: client.client_id, preload: [])
-
-      assert created_token.scopes == ["api:read"]
+      assert json_response(conn, 200)
+      response = json_response(conn, 200)
+      assert response["access_token"]
+      # Should include api scope and all repository scopes
+      scopes = String.split(response["scope"], " ")
+      assert "api" in scopes
+      assert "repository:#{org.name}" in scopes
     end
   end
 end

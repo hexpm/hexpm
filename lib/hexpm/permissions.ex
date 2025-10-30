@@ -7,7 +7,7 @@ defmodule Hexpm.Permissions do
   systems used by KeyPermission and OAuth tokens.
   """
 
-  alias Hexpm.Accounts.{Key, KeyPermission, User, Organization}
+  alias Hexpm.Accounts.{Key, KeyPermission, User, Users, Organization}
   alias Hexpm.OAuth.Token
   alias Hexpm.Repository.Package
 
@@ -298,37 +298,86 @@ defmodule Hexpm.Permissions do
   end
 
   @doc """
-  Validates that target scopes are a subset of source scopes.
-  Used for token exchange to ensure derived tokens have equal or reduced privileges.
+  Expands the "repositories" scope into individual "repository:{org}" scopes.
+
+  This is used for access tokens to create a capability-based token that explicitly
+  lists which repositories can be accessed at the edge without database lookups.
+
+  If `api_key` is provided, the expansion is constrained by the API key's permissions.
+  This ensures that the expanded scopes don't exceed what the API key is allowed to access.
+
+  Refresh tokens keep the "repositories" scope as-is.
+
+  ## Examples
+
+      iex> user = %User{organizations: [%{name: "acme"}, %{name: "widgets"}]}
+      iex> expand_repositories_scope(user, ["api:read", "repositories"])
+      ["api:read", "repository:acme", "repository:widgets"]
+
+      iex> expand_repositories_scope(user, ["api:read"])
+      ["api:read"]
   """
-  def validate_scope_subset(source_scopes, target_scopes) do
-    case scope_subset?(source_scopes, target_scopes) do
-      true -> :ok
-      false -> {:error, "target scopes must be subset of source scopes"}
+  def expand_repositories_scope(user, scopes, api_key \\ nil)
+
+  def expand_repositories_scope(%User{} = user, scopes, nil) do
+    if "repositories" in scopes do
+      # Ensure organizations are preloaded
+      user = Hexpm.Repo.preload(user, :organizations)
+
+      # Get all organizations the user has access to
+      organizations = Users.all_organizations(user)
+
+      # Create individual repository scopes
+      repo_scopes = Enum.map(organizations, fn org -> "repository:#{org.name}" end)
+
+      # Replace "repositories" with individual scopes
+      scopes
+      |> Enum.reject(&(&1 == "repositories"))
+      |> Kernel.++(repo_scopes)
+    else
+      scopes
     end
   end
 
-  @doc """
-  Checks if target scopes are completely contained in source scopes.
-  """
-  def scope_subset?(source_scopes, target_scopes) do
-    Enum.all?(target_scopes, fn target_scope ->
-      Enum.any?(source_scopes, &scope_contains?(&1, target_scope))
+  def expand_repositories_scope(%User{} = user, scopes, api_key) do
+    if "repositories" in scopes do
+      # Ensure organizations are preloaded
+      user = Hexpm.Repo.preload(user, :organizations)
+
+      # Get all organizations the user has access to
+      organizations = Users.all_organizations(user)
+
+      # Filter organizations based on API key permissions
+      allowed_repos = get_allowed_repositories_from_key(api_key.permissions)
+
+      repo_scopes =
+        organizations
+        |> Enum.map(fn org -> org.name end)
+        |> Enum.filter(fn org_name ->
+          # Allow if key has "repositories" permission or specific "repository:org_name" permission
+          :all in allowed_repos or org_name in allowed_repos
+        end)
+        |> Enum.map(fn org_name -> "repository:#{org_name}" end)
+
+      # Replace "repositories" with individual scopes
+      scopes
+      |> Enum.reject(&(&1 == "repositories"))
+      |> Kernel.++(repo_scopes)
+    else
+      scopes
+    end
+  end
+
+  defp get_allowed_repositories_from_key(permissions) do
+    permissions
+    |> Enum.flat_map(fn permission ->
+      case permission.domain do
+        "repositories" -> [:all]
+        "repository" -> [permission.resource]
+        _ -> []
+      end
     end)
-  end
-
-  @doc """
-  Checks if a source scope grants access to a target scope.
-  Handles scope hierarchy: "api" contains "api:read"/"api:write", "api:write" contains "api:read".
-  """
-  def scope_contains?(source, target) do
-    case {source, target} do
-      {same, same} -> true
-      {"api", "api:" <> _} -> true
-      {"api:write", "api:read"} -> true
-      {"repositories", "repository:" <> _} -> true
-      _ -> false
-    end
+    |> MapSet.new()
   end
 
   @doc """

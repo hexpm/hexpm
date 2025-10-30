@@ -1,7 +1,9 @@
 defmodule HexpmWeb.Plugs do
   import Plug.Conn, except: [read_body: 1]
+  import HexpmWeb.RequestHelpers, only: [build_usage_info: 1]
 
   alias Hexpm.Accounts.Users
+  alias Hexpm.UserSessions
   alias HexpmWeb.ControllerHelpers
 
   # Max filesize: 20mib
@@ -79,15 +81,45 @@ defmodule HexpmWeb.Plugs do
   end
 
   def login(conn, _opts) do
-    user_id = get_session(conn, "user_id")
-    user = user_id && Users.get_by_id(user_id, [:emails, organizations: :repository])
     conn = assign(conn, :current_organization, nil)
 
-    if user do
-      assign(conn, :current_user, user)
-    else
-      assign(conn, :current_user, nil)
-    end
+    session_token = get_session(conn, "session_token")
+
+    user =
+      if session_token do
+        case Base.decode64(session_token) do
+          {:ok, decoded_token} ->
+            case UserSessions.get_browser_session_by_token(decoded_token) do
+              nil ->
+                nil
+
+              session ->
+                # Update last_use for browser sessions (throttled to once per 5 minutes)
+                should_update =
+                  case session.last_use do
+                    nil ->
+                      true
+
+                    %{used_at: last_used} ->
+                      DateTime.diff(DateTime.utc_now(), last_used, :minute) >= 5
+                  end
+
+                if should_update do
+                  usage_info = build_usage_info(conn)
+                  UserSessions.update_last_use(session, usage_info)
+                end
+
+                Users.get_by_id(session.user_id, [:emails, organizations: :repository])
+            end
+
+          _ ->
+            nil
+        end
+      else
+        nil
+      end
+
+    assign(conn, :current_user, user)
   end
 
   def disable_deactivated(conn, _opts) do
