@@ -488,16 +488,16 @@ defmodule Hexpm.Permissions do
   def scope_description(scope) when is_binary(scope) do
     case scope do
       "api" ->
-        "Complete access to your Hex account and packages"
+        "Complete access to your Hex account and packages. Includes: publish, unpublish, retire, and unretire packages; manage package owners; manage API keys."
 
       "api:read" ->
-        "Read-only access to your Hex account and packages"
+        "Read-only access to your Hex account and packages. Allows viewing packages, account information, organizations, and audit logs. Cannot modify any data."
 
       "api:write" ->
-        "Read and write access to your Hex account and packages"
+        "Read and write access to your Hex account and packages. Includes: publish, unpublish, retire, and unretire packages; manage package owners; manage API keys."
 
       "repositories" ->
-        "Access to all private repositories you have permission to"
+        "Access to fetch packages from all private repositories you belong to. Does not grant ability to publish packages or modify repository settings."
 
       # Resource-specific scopes
       scope ->

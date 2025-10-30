@@ -76,26 +76,32 @@ defmodule HexpmWeb.SharedAuthorizationView do
 
     tfa_badge =
       if requires_2fa do
-        ~s( <span class="label label-warning" style="margin-left: 5px;">Requires 2FA</span>)
+        ~s(<span class="label label-warning" style="display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; border-radius: 5px; font-size: 12px; font-weight: 600; background-color: #fff3cd; color: #856404; border: 1px solid #ffeaa7; margin-left: 8px;"><i class="fa fa-shield"></i> Requires 2FA</span>)
       else
         ""
       end
 
     if style == :oauth do
-      ~s(<li class="scope-item" style="list-style: none; margin-bottom: 10px;">
-        <label style="display: flex; align-items: flex-start; cursor: pointer;">
-          <input type="checkbox" name="selected_scopes[]" value="#{scope}" #{checked} style="margin-right: 10px; margin-top: 3px;" class="scope-checkbox">
-          <div>
-            <code class="scope-name">#{scope}</code> - <span class="scope-description">#{description}</span>#{tfa_badge}
+      ~s(<li class="scope-item" style="list-style: none; margin-bottom: 12px;">
+        <label style="display: flex; align-items: flex-start; cursor: pointer; padding: 12px; border-radius: 8px; border: 2px solid #e9ecef; background-color: #f8f9fa; transition: all 0.2s ease;" onmouseover="this.style.borderColor='#0d6efd'; this.style.backgroundColor='#f0f7ff';" onmouseout="this.style.borderColor='#e9ecef'; this.style.backgroundColor='#f8f9fa';">
+          <input type="checkbox" name="selected_scopes[]" value="#{scope}" #{checked} style="margin-right: 12px; margin-top: 4px; width: 18px; height: 18px; cursor: pointer;" class="scope-checkbox">
+          <div style="flex: 1;">
+            <div style="margin-bottom: 8px; display: flex; align-items: center; flex-wrap: wrap; gap: 8px;">
+              <code class="scope-name" style="background-color: #e7f3ff; color: #0366d6; padding: 4px 10px; border-radius: 5px; font-size: 14px; font-weight: 600;">#{scope}</code>#{tfa_badge}
+            </div>
+            <span class="scope-description" style="color: #6c757d; font-size: 14px; line-height: 1.5;">#{description}</span>
           </div>
         </label>
       </li>)
     else
-      ~s(<li style="list-style: none; margin-bottom: 10px;">
-        <label style="display: flex; align-items: flex-start; cursor: pointer;">
-          <input type="checkbox" name="selected_scopes[]" value="#{scope}" #{checked} style="margin-right: 10px; margin-top: 3px;" class="scope-checkbox">
-          <div>
-            <code>#{scope}</code> - #{description}#{tfa_badge}
+      ~s(<li style="list-style: none; margin-bottom: 12px;">
+        <label style="display: flex; align-items: flex-start; cursor: pointer; padding: 14px; border-radius: 8px; border: 2px solid #e9ecef; background-color: #ffffff; transition: all 0.2s ease;" onmouseover="this.style.borderColor='#0d6efd'; this.style.backgroundColor='#f8f9fa';" onmouseout="this.style.borderColor='#e9ecef'; this.style.backgroundColor='#ffffff';">
+          <input type="checkbox" name="selected_scopes[]" value="#{scope}" #{checked} style="margin-right: 12px; margin-top: 4px; width: 18px; height: 18px; cursor: pointer;" class="scope-checkbox">
+          <div style="flex: 1;">
+            <div style="margin-bottom: 8px; display: flex; align-items: center; flex-wrap: wrap; gap: 8px;">
+              <code style="background-color: #e7f3ff; color: #0366d6; padding: 4px 10px; border-radius: 5px; font-size: 14px; font-weight: 600;">#{scope}</code>#{tfa_badge}
+            </div>
+            <span style="color: #6c757d; font-size: 14px; line-height: 1.6;">#{description}</span>
           </div>
         </label>
       </li>)
