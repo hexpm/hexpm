@@ -234,7 +234,7 @@ defmodule Hexpm.Accounts.User do
   def has_password?(user), do: user.password != nil
 
   def can_remove_password?(user) do
-    user.user_providers != [] || Hexpm.Accounts.UserProviders.has_provider?(user, "github")
+    Hexpm.Accounts.UserProviders.has_provider?(user, "github")
   end
 
   def can_remove_provider?(user, _provider) do

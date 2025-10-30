@@ -31,6 +31,35 @@ defmodule HexpmWeb.Dashboard.SecurityControllerTest do
 
       assert redirected_to(conn) == "/dashboard/tfa/setup"
     end
+
+    test "does NOT show remove password button when user has no providers" do
+      user = insert(:user)
+
+      conn =
+        build_conn()
+        |> test_login(user)
+        |> get("/dashboard/security")
+
+      result = response(conn, 200)
+
+      refute result =~ "Remove password"
+      assert result =~ "You must connect a GitHub account before you can remove your password"
+    end
+
+    test "shows remove password button when user has GitHub connected" do
+      user = insert(:user)
+      insert(:user_provider, user: user, provider: "github")
+
+      conn =
+        build_conn()
+        |> test_login(user)
+        |> get("/dashboard/security")
+
+      result = response(conn, 200)
+
+      assert result =~ "Remove password"
+      refute result =~ "You must connect a GitHub account before you can remove your password"
+    end
   end
 
   describe "post /dashboard_security/enable-tfa" do
