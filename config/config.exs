@@ -63,4 +63,9 @@ config :mime,
 
 config :logger, :default_formatter, format: "[$level] $metadata$message\n"
 
+config :ueberauth, Ueberauth,
+  providers: [
+    github: {Ueberauth.Strategy.Github, [default_scope: "user:email"]}
+  ]
+
 import_config "#{Mix.env()}.exs"
