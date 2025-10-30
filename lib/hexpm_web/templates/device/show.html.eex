@@ -13,16 +13,20 @@
     </div>
     <div class="panel-body">
       <%= if @pre_filled do %>
-        <div class="alert alert-warning" style="margin-top: 10px; margin-bottom: 20px;">
-          <strong>Security Check:</strong> Please verify that this code matches the one displayed on your device or terminal before continuing.
+        <div class="alert alert-warning" style="margin-bottom: 24px; padding: 16px 20px; border-radius: 8px; background-color: #fff3cd; border: 2px solid #ffc107; color: #856404; display: flex; align-items: flex-start; gap: 12px;">
+          <i class="fa fa-exclamation-triangle" style="font-size: 20px; margin-top: 2px;"></i>
+          <div>
+            <strong style="font-weight: 600; display: block; margin-bottom: 4px;">Security Check:</strong>
+            <span>Please verify that this code matches the one displayed on your device or terminal before continuing.</span>
+          </div>
         </div>
       <% else %>
-        <p>Enter the verification code displayed on your device:</p>
+        <p style="color: #495057; font-size: 15px; line-height: 1.6;">Enter the verification code displayed on your device:</p>
       <% end %>
 
       <%= form_tag(~p"/oauth/device", method: "get") do %>
-        <div class="form-group">
-          <label for="user_code">Verification Code</label>
+        <div class="form-group" style="margin-bottom: 24px;">
+          <label for="user_code" style="font-weight: 600; color: #212529; margin-bottom: 10px; display: block; font-size: 15px;">Verification Code</label>
           <input id="user_code"
                  type="text"
                  class="form-control"
@@ -31,10 +35,10 @@
                  placeholder="XXXX-XXXX"
                  pattern="[A-Z0-9]{4}-?[A-Z0-9]{4}"
                  maxlength="9"
-                 style="text-transform: uppercase; font-family: monospace; font-size: 18px; text-align: center;<%= if @pre_filled, do: " background-color: #fffbf0; border: 2px solid #f0ad4e;" %>"
+                 style="text-transform: uppercase; font-family: monospace; font-size: 18px; text-align: center; padding: 14px; border-radius: 8px;<%= if @pre_filled, do: " background-color: #fffbf0; border: 2px solid #ffc107;", else: " border: 2px solid #ced4da;" %>"
                  <%= if @pre_filled, do: "readonly" %>
                  required>
-          <small class="form-text text-muted">
+          <small class="form-text text-muted" style="margin-top: 8px; color: #6c757d; font-size: 13px; line-height: 1.5;">
             <%= if @pre_filled do %>
               This code was provided in your authorization link. Confirm it matches your device.
             <% else %>
@@ -45,23 +49,28 @@
 
         <%= if @pre_filled do %>
           <input type="hidden" name="verified" value="true">
-          <button type="submit" class="btn btn-primary btn-lg">Verify and Continue</button>
+          <div style="display: flex; gap: 12px; flex-wrap: wrap; margin-top: 24px;">
+            <button type="submit" class="btn btn-primary btn-lg" style="flex: 1; min-width: 200px; padding: 14px 24px; font-weight: 600; border-radius: 8px; font-size: 16px;">Verify and Continue</button>
+            <a href="<%= ~p"/" %>" class="btn btn-danger btn-lg" style="flex: 1; min-width: 200px; display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 14px 24px; font-weight: 600; border-radius: 8px; font-size: 16px;">
+              <i class="fa fa-times-circle"></i> Code does not match
+            </a>
+          </div>
         <% else %>
-          <button type="submit" class="btn btn-primary">Verify Code</button>
+          <button type="submit" class="btn btn-primary" style="margin-top: 20px; padding: 12px 32px; font-weight: 600; border-radius: 8px;">Verify Code</button>
         <% end %>
       <% end %>
 
-      <hr style="margin: 30px 0;">
+      <hr style="margin: 36px 0; border: 0; border-top: 1px solid #dee2e6;">
 
       <div class="help-section">
-        <h5>What is this?</h5>
-        <p>
+        <h5 style="color: #212529; font-weight: 600; margin-bottom: 12px; font-size: 16px;">What is this?</h5>
+        <p style="color: #6c757d; font-size: 14px; line-height: 1.6; margin-bottom: 12px;">
           This page allows you to authorize applications (like command-line tools) to access your Hex account.
           Your application should have displayed a verification code that you need to enter above.
         </p>
 
-        <p>
-          <strong>Security Note:</strong> Only enter the code if you initiated this authorization request
+        <p style="color: #6c757d; font-size: 14px; line-height: 1.6; margin-bottom: 0;">
+          <strong style="color: #212529; font-weight: 600;">Security Note:</strong> Only enter the code if you initiated this authorization request
           from a trusted application.
         </p>
       </div>

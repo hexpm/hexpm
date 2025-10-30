@@ -7,22 +7,20 @@
       <%= assigns[:auth_description] || "The application" %> <strong><%= @client_name %></strong> would like to access your Hex account.
     </p>
 
-    <h4>Requested permissions:</h4>
+    <h4 style="color: #212529; font-weight: 600; margin-top: 25px; margin-bottom: 16px; font-size: 18px;">Requested permissions:</h4>
 
     <%= form_tag @form_action, method: "post", id: "authorization-form" do %>
       <%= @render_scopes.(@scopes) %>
-
-      <div class="alert alert-info" style="margin-top: 15px;">
-        <strong>Access Summary:</strong> <span id="access-summary"><%= @format_summary.(@scopes) %></span>
-      </div>
 
       <%= for {key, value} <- @hidden_fields, key != "scope" do %>
         <input type="hidden" name="<%= key %>" value="<%= value %>">
       <% end %>
 
-      <div class="text-center" style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #e0e0e0;">
-        <%= submit "Authorize", name: "action", value: @approve_value, class: "btn btn-success btn-lg", style: "margin-right: 15px;" %>
-        <%= submit "Deny", name: "action", value: @deny_value, class: "btn btn-danger btn-lg" %>
+      <div class="text-center" style="margin-top: 32px; padding-top: 24px; border-top: 1px solid #dee2e6;">
+        <div style="display: flex; gap: 12px; flex-wrap: wrap; justify-content: center;">
+          <%= submit "Authorize", name: "action", value: @approve_value, class: "btn btn-primary btn-lg", style: "flex: 1; min-width: 200px; max-width: 250px; padding: 14px 24px; font-weight: 600; border-radius: 8px; font-size: 16px;" %>
+          <%= submit "Deny", name: "action", value: @deny_value, class: "btn btn-danger btn-lg", style: "flex: 1; min-width: 200px; max-width: 250px; padding: 14px 24px; font-weight: 600; border-radius: 8px; font-size: 16px;" %>
+        </div>
       </div>
     <% end %>
   </div>
