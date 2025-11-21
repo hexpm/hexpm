@@ -23,7 +23,7 @@ defmodule Hexpm.Accounts.UserHandles do
       {:github, "GitHub", "https://github.com/{handle}"},
       {:elixirforum, "Elixir Forum", "https://elixirforum.com/u/{handle}"},
       {:freenode, "Libera", "irc://irc.libera.chat/elixir"},
-      {:slack, "Slack", "https://elixir-slackin.herokuapp.com/"}
+      {:slack, "Slack", "https://elixir-slack.community"}
     ]
   end
 
