@@ -23,6 +23,7 @@ defmodule Hexpm.Repo do
   defdelegate aggregate(queryable, aggregate, opts \\ []), to: RepoBase
   defdelegate aggregate(queryable, aggregate, field, opts), to: RepoBase
   defdelegate all(queryable, opts \\ []), to: RepoBase
+  defdelegate exists?(queryable, opts \\ []), to: RepoBase
   defdelegate get_by!(queryable, clauses, opts \\ []), to: RepoBase
   defdelegate get_by(queryable, clauses, opts \\ []), to: RepoBase
   defdelegate get!(queryable, id, opts \\ []), to: RepoBase

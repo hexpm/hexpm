@@ -68,3 +68,7 @@ config :hexpm, Hexpm.RepoBase,
   pool_size: 5
 
 config :hexpm, Hexpm.Emails.Mailer, adapter: Bamboo.LocalAdapter
+
+config :ueberauth, Ueberauth.Strategy.Github.OAuth,
+  client_id: System.get_env("HEXPM_GITHUB_CLIENT_ID"),
+  client_secret: System.get_env("HEXPM_GITHUB_CLIENT_SECRET")
