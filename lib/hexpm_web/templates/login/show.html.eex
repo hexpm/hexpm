@@ -1,4 +1,11 @@
 <h2>Log in</h2>
+
+<a href="<%= ~p"/auth/github" %>" class="btn btn-default btn-block" style="margin-bottom: 20px;">
+  Log in with GitHub
+</a>
+
+<div style="text-align: center; margin: 20px 0; color: #999;">or</div>
+
 <%= form_tag(~p"/login") do %>
   <div class="form-group">
     <label for="username">Username or Email</label>

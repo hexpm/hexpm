@@ -73,4 +73,9 @@ config :tailwind,
     cd: Path.expand("..", __DIR__)
   ]
 
+config :ueberauth, Ueberauth,
+  providers: [
+    github: {Ueberauth.Strategy.Github, [default_scope: "user:email"]}
+  ]
+
 import_config "#{Mix.env()}.exs"
