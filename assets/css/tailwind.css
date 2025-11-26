@@ -1,0 +1,10 @@
+/* Tailwind CSS v4 with prefix to avoid conflicts with existing SCSS */
+@import 'tailwindcss' prefix(tw);
+
+/* 
+ * Custom Tailwind styles can be added below.
+ * Use tw: prefix for all Tailwind utility classes, e.g.:
+ *   <div class="tw:flex tw:items-center tw:gap-4">
+ *   <button class="tw:bg-blue-500 tw:text-white tw:px-4 tw:py-2 tw:rounded">
+ */
+

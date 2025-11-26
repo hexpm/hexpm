@@ -32,6 +32,7 @@ defmodule Hexpm.MixProject do
 
   defp deps() do
     [
+      {:tailwind, "~> 0.4", runtime: Mix.env() == :dev},
       {:bamboo_phoenix, "~> 1.0"},
       {:bamboo, "~> 2.2"},
       {:bcrypt_elixir, "~> 3.0"},
@@ -88,10 +89,16 @@ defmodule Hexpm.MixProject do
 
   defp aliases() do
     [
-      setup: ["deps.get", "ecto.setup", "cmd yarn install --cwd assets"],
+      setup: ["deps.get", "ecto.setup", "cmd yarn install --cwd assets", "tailwind.install"],
       "ecto.setup": ["ecto.reset", "run priv/repo/seeds.exs"],
       "ecto.reset": ["ecto.drop", "ecto.create", "ecto.load", "ecto.migrate"],
-      test: ["ecto.create --quiet", "ecto.load --skip-if-loaded", "ecto.migrate", "test"]
+      test: ["ecto.create --quiet", "ecto.load --skip-if-loaded", "ecto.migrate", "test"],
+      "assets.deploy": [
+        "cmd --cd assets yarn install",
+        "cmd --cd assets node node_modules/webpack/bin/webpack.js --mode production",
+        "tailwind default --minify",
+        "phx.digest"
+      ]
     ]
   end
 
