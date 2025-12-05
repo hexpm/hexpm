@@ -1,28 +1,26 @@
-const path = require('path');
-const webpack = require('webpack');
-const MiniCssExtractPlugin = require('mini-css-extract-plugin');
+const path = require("path");
+const webpack = require("webpack");
+const MiniCssExtractPlugin = require("mini-css-extract-plugin");
 const CssMinimizerPlugin = require("css-minimizer-webpack-plugin");
 const TerserPlugin = require("terser-webpack-plugin");
 
 module.exports = (env, options) => ({
   optimization: {
     // minimize: true,
-    minimizer: [
-      new TerserPlugin(),
-      new CssMinimizerPlugin(),
-    ]
+    minimizer: [new TerserPlugin(), new CssMinimizerPlugin()],
   },
-  entry: ['./js/app.js', 'bootstrap/dist/css/bootstrap.css', './css/app.scss'],
+  entry: ["./js/app.js", "./css/app.scss"],
+  // Bootstrap CSS removed - migrating to Tailwind. Bootstrap JS still available via node_modules if needed.
   output: {
-    filename: 'app.js',
-    path: path.resolve(__dirname, '../priv/static/assets')
+    filename: "app.js",
+    path: path.resolve(__dirname, "../priv/static/assets"),
   },
   module: {
     rules: [
       {
         test: /\.js$/,
         exclude: /node_modules/,
-        use: ['babel-loader']
+        use: ["babel-loader"],
       },
       {
         test: /\.scss$/,
@@ -30,21 +28,21 @@ module.exports = (env, options) => ({
           MiniCssExtractPlugin.loader,
           {
             loader: "css-loader",
-            options: {url: false}
+            options: { url: false },
           },
-          "sass-loader"
-        ]
+          "sass-loader",
+        ],
       },
       {
-          test: /\.css$/,
-          use:  [MiniCssExtractPlugin.loader, 'css-loader']
+        test: /\.css$/,
+        use: [MiniCssExtractPlugin.loader, "css-loader"],
       },
-    ]
+    ],
   },
   plugins: [
-    new MiniCssExtractPlugin({ filename: 'app.css' }),
+    new MiniCssExtractPlugin({ filename: "app.css" }),
     new webpack.ProvidePlugin({
       jQuery: "jquery",
-    })
-  ]
+    }),
+  ],
 });

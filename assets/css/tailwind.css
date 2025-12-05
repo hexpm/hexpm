@@ -1,6 +1,18 @@
 /* Tailwind CSS v4 with prefix to avoid conflicts with existing SCSS */
 @import "tailwindcss" prefix(tw);
 
+/* Tell Tailwind where to scan for classes */
+@source "../lib";
+
+/* Reset Bootstrap's 14px body font-size to proper 16px base for rem calculations */
+html {
+  font-size: 16px !important;
+}
+
+body {
+  font-size: 16px !important;
+}
+
 /* Google Fonts: Inter + JetBrains Mono */
 @import url("https://fonts.googleapis.com/css2?family=Inter:wght@100;200;300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap");
 
@@ -116,4 +128,250 @@
   --color-grey-200: #cad5e0;
   --color-grey-100: #e1e8f0;
   --color-grey-50: #f0f5f9;
+}
+
+/* ===== GLOBAL BASE STYLES ===== */
+@layer base {
+  /* Remove browser default focus outline (orange/blue) */
+  input:focus,
+  textarea:focus,
+  select:focus,
+  button:focus {
+    outline: none !important;
+  }
+
+  /* Base document styles */
+  html {
+    scroll-behavior: smooth;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  body {
+    font-family: var(--font-sans);
+    color: var(--color-grey-700);
+    background-color: white;
+    line-height: 1.5;
+  }
+
+  /* Headings */
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    font-weight: 600;
+    line-height: 1.25;
+    color: var(--color-grey-900);
+  }
+
+  h1 {
+    font-size: var(--text-h1);
+  }
+  h2 {
+    font-size: var(--text-h2);
+  }
+  h3 {
+    font-size: var(--text-h3);
+  }
+  h4 {
+    font-size: var(--text-h4);
+  }
+  h5 {
+    font-size: var(--text-h5);
+  }
+  h6 {
+    font-size: var(--text-h6);
+  }
+
+  /* Links (global - navbar overrides with tw: classes) */
+  a {
+    color: var(--color-primary-700);
+    text-decoration: none;
+    transition: color 0.2s ease;
+  }
+
+  a:hover {
+    color: var(--color-primary-500);
+  }
+
+  /* Code blocks */
+  code,
+  pre {
+    font-family: var(--font-mono);
+  }
+
+  code {
+    font-size: 0.875em;
+    background-color: var(--color-grey-100);
+    padding: 0.125rem 0.25rem;
+    border-radius: 0.25rem;
+  }
+
+  pre {
+    background-color: var(--color-grey-900);
+    color: var(--color-grey-100);
+    padding: 1rem;
+    border-radius: 0.5rem;
+    overflow-x: auto;
+  }
+
+  pre code {
+    background: none;
+    padding: 0;
+  }
+}
+
+/* ===== COMPONENT STYLES ===== */
+@layer components {
+  /* Container - centered with max-width and responsive padding */
+  .container {
+    width: 100%;
+    max-width: 64rem; /* 1024px = max-w-5xl */
+    margin-left: auto;
+    margin-right: auto;
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+
+  @media (min-width: 768px) {
+    .container {
+      padding-left: 0;
+      padding-right: 0;
+    }
+  }
+
+  /* Content wrapper for full-height layouts */
+  .content-wrapper {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+  }
+
+  /* Button base styles */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.5rem 1rem;
+    font-weight: 500;
+    border-radius: 0.5rem;
+    transition: all 0.2s ease;
+    cursor: pointer;
+    text-decoration: none;
+  }
+
+  .btn-primary {
+    background-color: var(--color-primary-700);
+    color: white;
+  }
+
+  .btn-primary:hover {
+    background-color: var(--color-primary-600);
+    color: white;
+  }
+
+  .btn-secondary {
+    background-color: var(--color-grey-600);
+    color: white;
+  }
+
+  .btn-secondary:hover {
+    background-color: var(--color-grey-500);
+    color: white;
+  }
+
+  .btn-outline {
+    background-color: transparent;
+    border: 1px solid var(--color-grey-300);
+    color: var(--color-grey-700);
+  }
+
+  .btn-outline:hover {
+    background-color: var(--color-grey-50);
+    color: var(--color-grey-900);
+  }
+
+  /* Form inputs */
+  .form-input {
+    width: 100%;
+    padding: 0.5rem 0.75rem;
+    border: 1px solid var(--color-grey-300);
+    border-radius: 0.5rem;
+    font-size: 1rem;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  }
+
+  .form-input:focus {
+    outline: none;
+    border-color: var(--color-primary-500);
+    box-shadow: 0 0 0 3px rgba(82, 48, 121, 0.1);
+  }
+
+  /* Alert/Flash messages */
+  .alert {
+    padding: 1rem;
+    border-radius: 0.5rem;
+    margin-bottom: 1rem;
+  }
+
+  .alert-success {
+    background-color: var(--color-green-100);
+    color: var(--color-green-800);
+    border: 1px solid var(--color-green-300);
+  }
+
+  .alert-error,
+  .alert-danger {
+    background-color: var(--color-red-100);
+    color: var(--color-red-800);
+    border: 1px solid var(--color-red-300);
+  }
+
+  .alert-warning {
+    background-color: var(--color-yellow-100);
+    color: var(--color-yellow-900);
+    border: 1px solid var(--color-yellow-300);
+  }
+
+  .alert-info {
+    background-color: var(--color-blue-100);
+    color: var(--color-blue-800);
+    border: 1px solid var(--color-blue-300);
+  }
+
+  /* Cards */
+  .card {
+    background-color: white;
+    border: 1px solid var(--color-grey-100);
+    border-radius: 0.75rem;
+    padding: 1.5rem;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  }
+
+  /* Tables */
+  .table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+
+  .table th,
+  .table td {
+    padding: 0.75rem 1rem;
+    text-align: left;
+    border-bottom: 1px solid var(--color-grey-100);
+  }
+
+  .table th {
+    font-weight: 600;
+    color: var(--color-grey-600);
+    font-size: 0.875rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .table tbody tr:hover {
+    background-color: var(--color-grey-50);
+  }
 }

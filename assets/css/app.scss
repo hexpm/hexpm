@@ -1,4 +1,4 @@
-@use 'sass:math';
+@use "sass:math";
 
 @import "../vendor/css/github";
 
@@ -11,7 +11,7 @@
 
 @import "template/error";
 @import "template/footer";
-@import "template/navbar";
+// @import "template/navbar"; // Migrated to Tailwind CSS in header.html.eex
 
 @import "template/page";
 @import "template/blog";
