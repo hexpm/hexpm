@@ -20,18 +20,20 @@ h2 {
 }
 
 .browserupgrade {
-  padding: .2em 0;
-  margin: .2em 0;
+  padding: 0.2em 0;
+  margin: 0.2em 0;
   color: #000;
   background: #ccc;
 }
 
+/* Commented out to avoid conflicts with Tailwind navbar styles
 a,
 a:hover,
 a:focus {
   font-weight: normal;
   color: $color-link;
 }
+*/
 
 pre {
   background-color: #f8f8f8;
@@ -57,7 +59,7 @@ code {
 }
 
 .collapsing {
-  transition-duration: .5s !important;
+  transition-duration: 0.5s !important;
 }
 
 .alert {
@@ -114,10 +116,12 @@ input[type="checkbox"] {
     background-color: #f5f5f5;
   }
 
+  /* Commented out to avoid conflicts with Tailwind
   li > a,
   li .btn-link {
     font-size: 16px;
   }
+  */
 }
 
 .panel-body-part {
@@ -141,7 +145,7 @@ input[type="checkbox"] {
     color: #555;
     border: 0;
     opacity: 0;
-    transition: opacity .3s ease-in-out;
+    transition: opacity 0.3s ease-in-out;
   }
 }
 
