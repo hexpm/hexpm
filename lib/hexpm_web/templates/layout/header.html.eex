@@ -29,7 +29,8 @@
       <p class="browserupgrade">You are using an <strong>outdated</strong> browser. Please <a href="http://browsehappy.com/">upgrade your browser</a> to improve your experience.</p>
     <![endif]-->
 
-    <section class="tw:flex tw:flex-col">
+    <div class="tw:min-h-dvh tw:flex tw:flex-col">
+    <section class="tw:flex tw:flex-1 tw:flex-col">
     <%= render "_read_only_mode.html" %>
 
     <nav id="main-navbar" class="tw:bg-grey-900 tw:w-full tw:font-sans">
