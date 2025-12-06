@@ -154,37 +154,6 @@ body {
     line-height: 1.5;
   }
 
-  /* Headings */
-  h1,
-  h2,
-  h3,
-  h4,
-  h5,
-  h6 {
-    font-weight: 600;
-    line-height: 1.25;
-    color: var(--color-grey-900);
-  }
-
-  h1 {
-    font-size: var(--text-h1);
-  }
-  h2 {
-    font-size: var(--text-h2);
-  }
-  h3 {
-    font-size: var(--text-h3);
-  }
-  h4 {
-    font-size: var(--text-h4);
-  }
-  h5 {
-    font-size: var(--text-h5);
-  }
-  h6 {
-    font-size: var(--text-h6);
-  }
-
   /* Links (global - navbar overrides with tw: classes) */
   a {
     color: var(--color-primary-700);

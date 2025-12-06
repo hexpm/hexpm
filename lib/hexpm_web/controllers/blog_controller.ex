@@ -12,7 +12,7 @@ defmodule HexpmWeb.BlogController do
       conn,
       "index.html",
       title: "Blog",
-      container: "container page page-sm blog"
+      container: ""
     )
   end
 

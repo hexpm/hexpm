@@ -1,8 +1,65 @@
-<%= for post <- @posts do %>
-  <div class="index-post">
-    <h3><a href="<%= ~p"/blog/#{post.slug}" %>"><%= post.title %></a></h3>
-    <div class="subtitle"><%= raw post.subtitle %></div>
-    <p class="content"><%= raw post.paragraph %></p>
-    <a href="<%= ~p"/blog/#{post.slug}" %>">Read more...</a>
+<%
+  latest = List.first(@posts)
+  rest = Enum.drop(@posts, 1)
+%>
+
+<div class="tw:bg-grey-50 tw:py-12 tw:px-4 tw:lg:py-16">
+  <div class="tw:max-w-6xl tw:mx-auto tw:flex tw:flex-col tw:gap-10">
+    <div class="tw:text-center tw:flex tw:flex-col tw:gap-3 tw:font-sans">
+      <h1 class="tw:text-3xl tw:lg:text-4xl tw:font-bold tw:text-grey-900">hex.pm Blog</h1>
+      <p class="tw:text-base tw:text-grey-600">Learn what’s new with hex.pm with our latest Blog Updates</p>
+    </div>
+
+    <%= if latest do %>
+      <% latest_author = latest.author || "Hex.pm" %>
+      <article class="tw:relative tw:mx-auto tw:w-full tw:max-w-6xl tw:overflow-hidden tw:rounded-lg tw:border tw:border-grey-800 tw:bg-grey-900 tw:p-6 tw:text-grey-100 tw:shadow-[0_4px_20px_rgba(3,9,19,0.25)] tw:flex tw:flex-col tw:items-center tw:gap-5 tw:text-center tw:lg:p-10">
+        <span class="tw:absolute tw:left-6 tw:top-6 tw:rounded tw:bg-yellow-500 tw:px-3 tw:py-1 tw:text-sm tw:font-semibold tw:text-grey-900">Latest</span>
+
+        <div class="tw:flex tw:flex-wrap tw:items-center tw:justify-center tw:gap-1 tw:text-sm">
+          <span class="tw:text-grey-200"><%= latest.published_date %></span>
+          <span class="tw:text-grey-300">by</span>
+          <span class="tw:text-blue-300 tw:font-medium"><%= latest_author %></span>
+        </div>
+
+        <h2 class="tw:text-2xl tw:font-semibold tw:text-white">
+          <a href="<%= ~p"/blog/#{latest.slug}" %>" class="tw:hover:text-blue-200 tw:transition-colors"><%= latest.title %></a>
+        </h2>
+
+        <p class="tw:max-w-3xl tw:text-base tw:leading-6 tw:text-grey-100">
+          <%= raw latest.paragraph %>
+        </p>
+
+        <a
+          href="<%= ~p"/blog/#{latest.slug}" %>"
+          class="tw:rounded tw:bg-primary-600 tw:px-5 tw:py-2.5 tw:text-sm tw:font-semibold tw:text-white tw:transition-colors tw:hover:bg-primary-500">
+          Read More
+        </a>
+      </article>
+    <% end %>
+
+    <div class="tw:grid tw:grid-cols-1 tw:gap-4 tw:md:grid-cols-2">
+      <%= for post <- rest do %>
+        <% author = post.author || "Hex.pm" %>
+        <article class="tw:bg-white tw:border tw:border-grey-200 tw:rounded-lg tw:p-4 tw:shadow-[0_1px_2px_rgba(3,9,19,0.05)] tw:flex tw:flex-col tw:gap-3">
+          <div class="tw:flex tw:flex-wrap tw:items-center tw:gap-1 tw:text-sm tw:text-grey-700">
+            <span><%= post.published_date %></span>
+            <span class="tw:text-grey-500">by</span>
+            <span class="tw:text-blue-600 tw:font-medium"><%= author %></span>
+          </div>
+
+          <h3 class="tw:text-lg tw:font-semibold tw:text-grey-900">
+            <a href="<%= ~p"/blog/#{post.slug}" %>" class="tw:hover:text-blue-600 tw:transition-colors"><%= post.title %></a>
+          </h3>
+
+          <p class="tw:text-sm tw:leading-6 tw:text-grey-600">
+            <%= raw post.paragraph %>  <a href="<%= ~p"/blog/#{post.slug}" %>" class="tw:text-blue-600 tw:text-sm tw:font-medium tw:hover:underline tw:mt-auto tw:self-start">
+            Read More
+          </a>
+          </p>
+
+
+        </article>
+      <% end %>
+    </div>
   </div>
-<% end %>
+</div>
