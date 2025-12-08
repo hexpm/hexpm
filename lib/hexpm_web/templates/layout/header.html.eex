@@ -77,7 +77,7 @@
                 username: @current_user.username
               }) %>
             <% else %>
-              <a href="<%= ~p"/login" %>" class="tw:inline-flex tw:items-center tw:justify-center tw:bg-grey-600 tw:px-6 tw:py-[11px] tw:rounded-lg tw:text-white tw:text-md tw:hover:bg-grey-500 tw:hover:scale-105 tw:transition-all tw:duration-200">Log In</a>
+              <a href="<%= ~p"/login" %>" class="tw:inline-flex tw:items-center tw:justify-center tw:bg-grey-400 tw:px-6 tw:py-1 tw:rounded-lg tw:text-white tw:text-md tw:hover:bg-grey-500 tw:hover:scale-105 tw:transition-all tw:duration-200">Log In</a>
             <% end %>
           </div>
 
