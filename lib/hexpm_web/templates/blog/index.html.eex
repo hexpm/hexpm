@@ -3,7 +3,7 @@
   rest = Enum.drop(@posts, 1)
 %>
 
-<div class="tw:bg-grey-50 tw:py-12 tw:px-4 tw:lg:py-16">
+<div class="tw:bg-grey-50 tw:py-12 tw:px-4 tw:lg:py-16 tw:flex-1">
   <div class="tw:max-w-6xl tw:mx-auto tw:flex tw:flex-col tw:gap-10">
     <div class="tw:text-center tw:flex tw:flex-col tw:gap-3 tw:font-sans">
       <h1 class="tw:text-3xl tw:lg:text-4xl tw:font-bold tw:text-grey-900">hex.pm Blog</h1>
@@ -52,12 +52,10 @@
           </h3>
 
           <p class="tw:text-sm tw:leading-6 tw:text-grey-600">
-            <%= raw post.paragraph %>  <a href="<%= ~p"/blog/#{post.slug}" %>" class="tw:text-blue-600 tw:text-sm tw:font-medium tw:hover:underline tw:mt-auto tw:self-start">
+            <%= raw post.paragraph %>  <a href="<%= ~p"/blog/#{post.slug}" %>" class="tw:text-blue-600 tw:text-sm tw:font-medium tw:hover:underline">
             Read More
           </a>
           </p>
-
-
         </article>
       <% end %>
     </div>

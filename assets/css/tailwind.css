@@ -343,4 +343,115 @@ body {
   .table tbody tr:hover {
     background-color: var(--color-grey-50);
   }
+
+  /* Blog post content styling */
+  .blog-post {
+    font-size: 1rem;
+    line-height: 1.5;
+    color: var(--color-grey-600);
+  }
+
+  /* Hide the original h2 title and subtitle since we render them in the header */
+  .blog-post > h2:first-child {
+    display: none;
+  }
+
+  .blog-post > h2:first-child + .subtitle {
+    display: none;
+  }
+
+  .blog-post h2 {
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: var(--color-grey-700);
+    margin-top: 2rem;
+    margin-bottom: 0.75rem;
+    line-height: 1.33;
+  }
+
+  .blog-post h3 {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: var(--color-grey-700);
+    margin-top: 1.5rem;
+    margin-bottom: 0.5rem;
+    line-height: 1.4;
+  }
+
+  .blog-post h4 {
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: var(--color-grey-700);
+    margin-top: 1.25rem;
+    margin-bottom: 0.5rem;
+  }
+
+  .blog-post p {
+    margin-bottom: 1rem;
+  }
+
+  .blog-post a {
+    color: var(--color-blue-600);
+  }
+
+  .blog-post a:hover {
+    color: var(--color-blue-500);
+    text-decoration: underline;
+  }
+
+  .blog-post ul,
+  .blog-post ol {
+    margin-bottom: 1rem;
+    padding-left: 1.5rem;
+  }
+
+  .blog-post li {
+    margin-bottom: 0.25rem;
+  }
+
+  .blog-post img {
+    max-width: 100%;
+    height: auto;
+    border-radius: 0.5rem;
+    margin: 1.5rem 0;
+  }
+
+  .blog-post blockquote {
+    border-left: 4px solid var(--color-grey-200);
+    padding-left: 1rem;
+    margin: 1.5rem 0;
+    font-style: italic;
+    color: var(--color-grey-600);
+  }
+
+  .blog-post pre {
+    background-color: var(--color-grey-50);
+    border-radius: 0.5rem;
+    padding: 1rem;
+    margin: 1rem 0;
+    overflow-x: auto;
+    font-size: 0.875rem;
+    line-height: 1.43;
+    color: var(--color-grey-600);
+  }
+
+  .blog-post pre code {
+    background: none;
+    padding: 0;
+    font-size: inherit;
+    color: inherit;
+  }
+
+  .blog-post code {
+    font-family: var(--font-mono);
+    font-size: 0.875em;
+    background-color: var(--color-grey-50);
+    padding: 0.125rem 0.375rem;
+    border-radius: 0.25rem;
+    color: var(--color-grey-700);
+  }
+
+  .blog-post .subtitle {
+    display: none;
+  }
 }
