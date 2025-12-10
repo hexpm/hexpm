@@ -65,6 +65,13 @@ defmodule HexpmWeb do
 
       import HexpmWeb.ViewIcons
 
+      # Import Phoenix Components functionality
+      import Phoenix.Component
+
+      # Import custom components
+      import HexpmWeb.Components.Buttons
+      import HexpmWeb.Components.Input
+
       alias HexpmWeb.ViewHelpers
       alias HexpmWeb.{Endpoint, Router}
       alias HexpmWeb.Router.Helpers, as: Routes
