@@ -145,4 +145,4 @@
       <%= render "_flash.html", flash: @flash %>
     <% end %>
 
-    <div class="tw:flex tw:flex-1 tw:flex-col">
+    <div class="tw:flex tw:flex-1 tw:flex-col tw:bg-slate-100">

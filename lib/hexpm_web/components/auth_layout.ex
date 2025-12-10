@@ -45,8 +45,21 @@ defmodule HexpmWeb.Components.AuthLayout do
   slot :footer_links
 
   def auth_layout(assigns) do
+    # Validate OAuth configuration in development
+    if assigns.show_oauth && assigns.oauth_button == [] && !assigns.oauth_href do
+      require Logger
+
+      Logger.warning("""
+      AuthLayout: show_oauth is true but neither oauth_button slot nor oauth_href was provided.
+      Either provide an oauth_href or use the oauth_button slot.
+      """)
+    end
+
     ~H"""
-    <div class={["tw:flex tw:items-center tw:justify-center tw:my-auto tw:py-16", @class]}>
+    <div class={[
+      "tw:flex tw:items-center tw:justify-center tw:my-auto tw:py-16",
+      @class
+    ]}>
       <div class="tw:bg-white tw:border tw:border-grey-200 tw:rounded-lg tw:w-full tw:max-w-lg tw:px-10 tw:py-10">
         <%!-- Header --%>
         <h1 class="tw:font-bold tw:text-[40px] tw:leading-[40px] tw:text-grey-900 tw:text-center tw:mb-3">
@@ -84,7 +97,10 @@ defmodule HexpmWeb.Components.AuthLayout do
         </a>
 
         <%!-- Divider --%>
-        <div :if={@show_oauth} class="tw:flex tw:items-center tw:gap-4 tw:mb-8">
+        <div
+          :if={@show_oauth && (@oauth_button != [] || @oauth_href)}
+          class="tw:flex tw:items-center tw:gap-4 tw:mb-8"
+        >
           <div class="tw:flex-1 tw:h-px tw:bg-grey-200"></div>
           <span class="tw:text-small tw:text-grey-400">{@divider_text}</span>
           <div class="tw:flex-1 tw:h-px tw:bg-grey-200"></div>

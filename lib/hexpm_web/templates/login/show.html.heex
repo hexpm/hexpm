@@ -13,12 +13,9 @@
     <%!-- Password Field --%>
     <.password_input id="password" name="password" label="Password">
       <:hint>
-        <a
-          href={~p"/password/reset"}
-          class="tw:text-small tw:font-medium tw:text-blue-600 tw:hover:text-blue-500 tw:transition-colors"
-        >
+        <.text_link href={~p"/password/reset"} variant="primary" class="tw:text-small">
           Forgot Password?
-        </a>
+        </.text_link>
       </:hint>
     </.password_input>
 
@@ -36,19 +33,13 @@
   <:footer_links>
     <p class="tw:text-small tw:text-center tw:mt-8">
       <span class="tw:text-grey-800">Don't have an account?</span>
-      <a
-        href={~p"/signup"}
-        class="tw:font-semibold tw:text-blue-600 tw:hover:text-blue-500 tw:transition-colors tw:ml-1"
-      >
+      <.text_link href={~p"/signup"} variant="primary" class="tw:font-semibold tw:ml-1">
         Register Now
-      </a>
+      </.text_link>
       |
-      <a
-        href={~p"/email/verification"}
-        class="tw:text-grey-600 tw:hover:text-grey-800 tw:transition-colors tw:font-medium"
-      >
+      <.text_link href={~p"/email/verification"} variant="secondary">
         Resend verification email
-      </a>
+      </.text_link>
     </p>
   </:footer_links>
 </.auth_layout>

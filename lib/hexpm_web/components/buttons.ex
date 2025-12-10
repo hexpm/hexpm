@@ -48,6 +48,7 @@ defmodule HexpmWeb.Components.Buttons do
           button_variant(@variant),
           # States
           (@disabled || @loading) && "tw:opacity-50 tw:cursor-not-allowed",
+          !(@disabled || @loading) && "tw:cursor-pointer",
           @full_width && "tw:w-full",
           @class
         ]
@@ -95,6 +96,7 @@ defmodule HexpmWeb.Components.Buttons do
           # Base styles
           "tw:inline-flex tw:items-center tw:justify-center tw:gap-2 tw:font-semibold tw:rounded",
           "tw:transition-colors tw:focus:outline-none tw:focus:ring-2 tw:focus:ring-offset-2",
+          "tw:cursor-pointer",
           # Size variants
           button_size(@size),
           # Color variants
@@ -154,5 +156,54 @@ defmodule HexpmWeb.Components.Buttons do
       "hover:tw:bg-grey-100",
       "tw:focus:ring-grey-400"
     ]
+  end
+
+  @doc """
+  Renders a text link with consistent styling.
+
+  ## Examples
+
+      <.text_link navigate={~p"/login"}>Back to login</.text_link>
+      <.text_link href="/signup" variant="primary">Sign up</.text_link>
+      <.text_link navigate={~p"/help"} variant="secondary">Learn more</.text_link>
+  """
+  attr :href, :string, default: nil
+  attr :navigate, :string, default: nil
+  attr :patch, :string, default: nil
+
+  attr :variant, :string,
+    default: "primary",
+    values: ["primary", "secondary"]
+
+  attr :class, :string, default: ""
+  attr :rest, :global
+  slot :inner_block, required: true
+
+  def text_link(assigns) do
+    ~H"""
+    <.link
+      href={@href}
+      navigate={@navigate}
+      patch={@patch}
+      class={[
+        "tw:transition-colors tw:font-medium tw:cursor-pointer",
+        "tw:focus:outline-none tw:focus:ring-2 tw:focus:ring-offset-2",
+        text_link_variant(@variant),
+        @class
+      ]}
+      {@rest}
+    >
+      {render_slot(@inner_block)}
+    </.link>
+    """
+  end
+
+  # Text link variants
+  defp text_link_variant("primary") do
+    "tw:text-blue-600 hover:tw:text-blue-500 tw:focus:ring-blue-500"
+  end
+
+  defp text_link_variant("secondary") do
+    "tw:text-grey-600 hover:tw:text-grey-900 tw:focus:ring-grey-400"
   end
 end

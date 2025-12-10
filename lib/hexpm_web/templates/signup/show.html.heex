@@ -64,19 +64,13 @@
   <:footer_links>
     <p class="tw:text-small tw:text-center tw:mt-8">
       <span class="tw:text-grey-800">Already have an account?</span>
-      <a
-        href={~p"/login"}
-        class="tw:font-semibold tw:text-blue-600 tw:hover:text-blue-500 tw:transition-colors tw:ml-1"
-      >
+      <.text_link href={~p"/login"} variant="primary" class="tw:font-semibold tw:ml-1">
         Log In
-      </a>
+      </.text_link>
       |
-      <a
-        href={~p"/email/verification"}
-        class="tw:text-grey-600 tw:hover:text-grey-800 tw:transition-colors tw:font-medium"
-      >
+      <.text_link href={~p"/email/verification"} variant="secondary">
         Resend verification email
-      </a>
+      </.text_link>
     </p>
   </:footer_links>
 </.auth_layout>

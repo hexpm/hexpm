@@ -28,7 +28,7 @@ defmodule HexpmWeb.Components.Form do
   def simple_form(assigns) do
     ~H"""
     <%= form_for @for, @action, [id: @id, method: @method, class: @class] ++ Map.to_list(@rest), fn f -> %>
-      <%= render_slot(@inner_block, f) %>
+      {render_slot(@inner_block, f)}
     <% end %>
     """
   end
