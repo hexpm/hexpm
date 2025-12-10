@@ -130,7 +130,6 @@ defmodule HexpmWeb.LoginController do
       conn,
       "show.html",
       title: "Log in",
-      container: "container page page-xs login",
       return: conn.params["return"],
       hexdocs: conn.params["hexdocs"]
     )
