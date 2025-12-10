@@ -69,7 +69,9 @@ defmodule HexpmWeb do
       import Phoenix.Component
 
       # Import custom components
+      import HexpmWeb.Components.AuthLayout
       import HexpmWeb.Components.Buttons
+      import HexpmWeb.Components.Form
       import HexpmWeb.Components.Input
 
       alias HexpmWeb.ViewHelpers

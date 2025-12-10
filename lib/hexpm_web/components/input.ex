@@ -14,17 +14,43 @@ defmodule HexpmWeb.Components.Input do
       <.text_input id="username" name="username" />
       <.text_input id="email" name="email" type="email" label="Email Address" />
       <.text_input id="username" name="username" label="Username" required errors={["can't be blank"]} />
+      <.text_input field={@form[:email]} label="Email" />
   """
-  attr :id, :string, required: true
-  attr :name, :string, required: true
-  attr :type, :string, default: "text"
   attr :class, :string, default: ""
+  attr :errors, :list, default: []
+  attr :field, Phoenix.HTML.FormField, default: nil
+  attr :id, :string, default: nil
   attr :label, :string, default: nil
   attr :label_class, :string, default: ""
+  attr :name, :string, default: nil
   attr :placeholder, :string, default: ""
-  attr :value, :string, default: nil
   attr :required, :boolean, default: false
-  attr :errors, :list, default: []
+
+  attr :show_errors, :boolean,
+    default: nil,
+    doc:
+      "Controls error display: nil (default - show all), true (always show), false (never show)"
+
+  attr :type, :string, default: "text"
+  attr :value, :string, default: nil
+
+  def text_input(%{field: %Phoenix.HTML.FormField{} = field} = assigns) do
+    # For controller views, always show errors after submission
+    # For LiveView, you can control with show_errors attribute
+    errors =
+      case assigns[:show_errors] do
+        false -> []
+        _ -> field.errors
+      end
+
+    assigns
+    |> assign(:field, nil)
+    |> assign(:errors, Enum.map(errors, &translate_error/1))
+    |> assign(:id, field.id)
+    |> assign(:name, field.name)
+    |> assign(:value, field.value)
+    |> text_input()
+  end
 
   def text_input(assigns) do
     ~H"""
@@ -65,17 +91,40 @@ defmodule HexpmWeb.Components.Input do
         </:hint>
       </.password_input>
   """
-  attr :id, :string, required: true
-  attr :name, :string, required: true
   attr :class, :string, default: ""
+  attr :errors, :list, default: []
+  attr :field, Phoenix.HTML.FormField, default: nil
+  attr :id, :string, default: nil
   attr :label, :string, default: nil
   attr :label_class, :string, default: ""
+  attr :name, :string, default: nil
   attr :placeholder, :string, default: ""
   attr :required, :boolean, default: false
-  attr :errors, :list, default: []
+
+  attr :show_errors, :boolean,
+    default: nil,
+    doc:
+      "Controls error display: nil (default - show all), true (always show), false (never show)"
 
   slot :hint,
     doc: "Additional content displayed next to the label (e.g., 'Forgot Password?' link)"
+
+  def password_input(%{field: %Phoenix.HTML.FormField{} = field} = assigns) do
+    # For controller views, always show errors after submission
+    # For LiveView, you can control with show_errors attribute
+    errors =
+      case assigns[:show_errors] do
+        false -> []
+        _ -> field.errors
+      end
+
+    assigns
+    |> assign(:field, nil)
+    |> assign(:errors, Enum.map(errors, &translate_error/1))
+    |> assign(:id, field.id)
+    |> assign(:name, field.name)
+    |> password_input()
+  end
 
   def password_input(assigns) do
     ~H"""
@@ -112,6 +161,7 @@ defmodule HexpmWeb.Components.Input do
         />
         <button
           type="button"
+          tabindex="-1"
           class="tw:absolute tw:right-3 tw:top-1/2 tw:-translate-y-1/2 tw:text-grey-400 tw:hover:text-grey-600 tw:transition-colors"
           phx-click={toggle_password_visibility(@id)}
           aria-label="Toggle password visibility"
@@ -132,11 +182,11 @@ defmodule HexpmWeb.Components.Input do
   @doc """
   Renders a label for an input field.
   """
+  attr :class, :string, default: ""
   attr :for, :string, required: true
   attr :label, :string, required: true
-  attr :required, :boolean, default: false
-  attr :class, :string, default: ""
   attr :no_margin, :boolean, default: false, doc: "Remove bottom margin (useful in flex layouts)"
+  attr :required, :boolean, default: false
 
   def label(assigns) do
     ~H"""
@@ -175,4 +225,12 @@ defmodule HexpmWeb.Components.Input do
     |> JS.toggle_class("tw:hidden", to: "##{input_id}-eye-icon")
     |> JS.toggle_class("tw:hidden", to: "##{input_id}-eye-slash-icon")
   end
+
+  defp translate_error({msg, opts}) do
+    Enum.reduce(opts, msg, fn {key, value}, acc ->
+      String.replace(acc, "%{#{key}}", to_string(value))
+    end)
+  end
+
+  defp translate_error(msg) when is_binary(msg), do: msg
 end

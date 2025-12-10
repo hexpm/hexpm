@@ -1,0 +1,82 @@
+<.auth_layout
+  title="Create Account"
+  subtitle="Join Hex to publish and manage your packages"
+  show_oauth={true}
+  oauth_provider="GitHub"
+  oauth_href={~p"/auth/github"}
+>
+  <%!-- Signup Form --%>
+  <.simple_form
+    :let={f}
+    for={@changeset}
+    action={~p"/signup"}
+    id="signup-form"
+    class="tw:space-y-6"
+  >
+    <%!-- Full Name Field --%>
+    <.text_input field={f[:full_name]} label="Full name" />
+
+    <%!-- Username Field --%>
+    <.text_input field={f[:username]} label="Username" />
+
+    <%!-- Email Fields (nested) --%>
+    <%= inputs_for f, :emails, fn fe -> %>
+      <.text_input field={fe[:email]} type="email" label="Email" />
+      <.text_input field={fe[:email_confirmation]} type="email" label="Confirm email" />
+    <% end %>
+
+    <%!-- Password Field --%>
+    <.password_input field={f[:password]} label="Password" />
+
+    <%!-- Password Confirmation Field --%>
+    <.password_input field={f[:password_confirmation]} label="Confirm password" />
+
+    <%!-- Terms of Service --%>
+    <p class="tw:text-small tw:text-grey-600">
+      By clicking "Sign up" below, you agree to our <a
+        href={~p"/policies/termsofservice"}
+        class="tw:text-blue-600 tw:hover:text-blue-500 tw:transition-colors"
+      >
+        Terms of Service
+      </a>.
+    </p>
+
+    <%!-- Captcha --%>
+    <div :if={HexpmWeb.Captcha.enabled?()}>
+      <div class="h-captcha" data-sitekey={HexpmWeb.Captcha.sitekey()}></div>
+      <div :if={assigns[:captcha_error]} class="tw:mt-1">
+        <p class="tw:flex tw:items-center tw:gap-1 tw:text-small tw:text-red-600">
+          {icon(:heroicon, "exclamation-circle", width: 16, height: 16)}
+          <span>{@captcha_error}</span>
+        </p>
+      </div>
+      <script src="https://hcaptcha.com/1/api.js" async defer>
+      </script>
+    </div>
+
+    <%!-- Submit Button --%>
+    <.button type="submit" full_width class="tw:mt-8">
+      Sign Up
+    </.button>
+  </.simple_form>
+
+  <%!-- Footer Links --%>
+  <:footer_links>
+    <p class="tw:text-small tw:text-center tw:mt-8">
+      <span class="tw:text-grey-800">Already have an account?</span>
+      <a
+        href={~p"/login"}
+        class="tw:font-semibold tw:text-blue-600 tw:hover:text-blue-500 tw:transition-colors tw:ml-1"
+      >
+        Log In
+      </a>
+      |
+      <a
+        href={~p"/email/verification"}
+        class="tw:text-grey-600 tw:hover:text-grey-800 tw:transition-colors tw:font-medium"
+      >
+        Resend verification email
+      </a>
+    </p>
+  </:footer_links>
+</.auth_layout>
