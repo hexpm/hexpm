@@ -103,9 +103,25 @@ defmodule HexpmWeb.Components.Home do
   """
   def companies_section(assigns) do
     ~H"""
-    <div class="tw:bg-white tw:pt-4 tw:pb-16">
+    <div class="tw:bg-white tw:pt-4 tw:pb-8 tw:lg:pb-16">
       <div class="tw:max-w-7xl tw:mx-auto tw:px-4">
-        <div class="tw:space-y-12">
+        <%!-- Mobile: 3x3 grid with alternating pattern --%>
+        <div class="tw:grid tw:grid-cols-3 tw:gap-6 tw:md:hidden">
+          <%!-- Row 1: x x x --%>
+          <.company_logo src="sketch.svg" alt="Sketch" />
+          <.company_logo src="discord.svg" alt="Discord" />
+          <.company_logo src="square_enix.svg" alt="Square Enix" />
+          <%!-- Row 2: offset x x x --%>
+          <.company_logo src="riot_games.svg" alt="Riot Games" />
+          <.company_logo src="we_chat.svg" alt="WeChat" />
+          <.company_logo src="lonely_planet.svg" alt="Lonely Planet" />
+          <%!-- Row 3: x x x --%>
+          <.company_logo src="whatsapp.svg" alt="WhatsApp" />
+          <.company_logo src="pepsico.svg" alt="PepsiCo" />
+          <.company_logo src="bet365.svg" alt="Bet365" />
+        </div>
+        <%!-- Desktop: 2 rows (5 + 4) --%>
+        <div class="tw:hidden tw:md:block tw:space-y-12">
           <%!-- First row: 5 logos --%>
           <div class="tw:flex tw:items-center tw:justify-center tw:gap-8 tw:md:gap-12 tw:flex-wrap">
             <.company_logo src="sketch.svg" alt="Sketch" />

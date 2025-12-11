@@ -2,7 +2,7 @@
 <div class="tw:bg-white">
   <div class="tw:bg-grey-50 tw:pb-10">
     <div class="tw:max-w-6xl tw:mx-auto tw:px-4 tw:pt-12 tw:pb-16 tw:md:pt-20 tw:md:pb-24">
-      <div class="tw:flex tw:flex-col tw:lg:flex-row tw:items-center tw:gap-6">
+      <div class="tw:lg:flex tw:items-center tw:gap-6">
         <%!-- Left side - headline and CTAs --%>
         <div class="tw:flex tw:flex-col tw:gap-8 tw:flex-1 tw:mb-24">
           <h1 class="tw:text-grey-800 tw:text-4xl tw:font-semibold tw:leading-tight tw:md:text-5xl tw:md:leading-[60px]">
@@ -18,7 +18,7 @@
             </a>
             <a
               href={~p"/docs/publish"}
-              class="tw:text-grey-500 tw:font-medium tw:text-lg tw:hover:text-grey-800 tw:transition-colors"
+              class="tw:text-grey-600 tw:font-medium tw:text-lg tw:hover:text-grey-800 tw:transition-colors"
             >
               Publish Packages
             </a>
@@ -27,14 +27,14 @@
         <img
           src={~p"/images/home/packages.png"}
           alt="Packages"
-          class="tw:w-full tw:lg:w-1/2 tw:max-w-xl"
+          class="tw:hidden tw:lg:block tw:w-full tw:lg:w-1/2 tw:max-w-xl"
         />
       </div>
     </div>
   </div>
 
   <%!-- Using with Elixir/Erlang/Gleam cards --%>
-  <div class="tw:max-w-7xl tw:mx-auto tw:px-4 tw:pb-16 tw:-mt-30">
+  <div class="tw:max-w-7xl tw:mx-auto tw:px-4 tw:pb-8 tw:lg:pb-16 tw:-mt-30">
     <div class="tw:grid tw:grid-cols-1 tw:md:grid-cols-2 tw:lg:grid-cols-3 tw:gap-6">
       <.language_card language="Elixir" image_src={~p"/images/elixir.svg"} href={~p"/docs/usage"}>
         Specify your Mix dependencies as two-item tuples like
@@ -106,7 +106,7 @@
 
   <%!-- Package columns section --%>
   <div class="tw:bg-white">
-    <div class="tw:max-w-7xl tw:mx-auto tw:px-4 tw:py-12 tw:md:py-16">
+    <div class="tw:max-w-7xl tw:mx-auto tw:px-4 tw:py-8 tw:lg:py-16">
       <div class="tw:grid tw:grid-cols-1 tw:md:grid-cols-3 tw:gap-6 tw:lg:gap-8">
         <%!-- Most Downloaded --%>
         <div>
@@ -157,7 +157,28 @@
   </div>
 
   <%!-- Open source section with stats --%>
-  <div class="tw:bg-primary-900 tw:pb-32 tw:md:pb-48">
+  <%!-- Mobile: Purple section with overflowing image --%>
+  <div class="tw:bg-primary-900 tw:pt-12 tw:pb-64 tw:lg:hidden">
+    <div class="tw:max-w-7xl tw:mx-auto tw:px-4">
+      <div class="tw:flex tw:flex-col tw:gap-6">
+        <img src={~p"/images/home/open-source.svg"} alt="Open Source" class="tw:size-[60px]" />
+        <h2 class="tw:text-white tw:text-4xl tw:font-bold tw:leading-tight">
+          hex.pm is<br />open-source
+        </h2>
+      </div>
+      <%!-- Image positioned to overflow into white section --%>
+      <div class="tw:absolute tw:left-1/2 tw:-translate-x-1/2 tw:mt-8 tw:z-20 tw:w-full tw:px-4">
+        <img
+          src={~p"/images/home/webview.svg"}
+          alt="Hex.pm interface"
+          class="tw:w-full tw:rounded-lg tw:shadow-2xl"
+        />
+      </div>
+    </div>
+  </div>
+
+  <%!-- Desktop: Purple section with image overflow --%>
+  <div class="tw:hidden tw:lg:block tw:bg-primary-900 tw:pb-32 tw:md:pb-48">
     <div class="tw:max-w-7xl tw:mx-auto tw:px-4 tw:pt-12 tw:md:pt-16">
       <div class="tw:flex tw:flex-col tw:lg:flex-row tw:items-start">
         <%!-- Left side - open source message --%>
@@ -174,7 +195,7 @@
         </div>
 
         <%!-- Right side - screenshot with geometric decoration (overflows into white section) --%>
-        <div class="tw:flex-1 tw:hidden tw:lg:block tw:relative">
+        <div class="tw:flex-1 tw:relative">
           <div class="tw:absolute tw:pt-12">
             <%!-- Geometric figure positioned behind image --%>
             <div class="tw:absolute tw:-top-3 tw:-left-14 tw:w-32 tw:h-32 tw:bg-[#69438d] tw:rounded-full tw:flex tw:items-center tw:justify-center">
@@ -196,7 +217,33 @@
   </div>
 
   <%!-- Stats section --%>
-  <div class="tw:bg-white tw:-mt-20 tw:md:-mt-32 tw:pb-24 tw:relative tw:z-10">
+  <%!-- Mobile: White section with single column stats --%>
+  <div class="tw:bg-white tw:mt-24 tw:xs:mt-42 tw:sm:mt-64 tw:md:mt-[480px] tw:lg:mt-24 tw:py-12 tw:relative tw:z-10 tw:lg:hidden">
+    <div class="tw:max-w-7xl tw:mx-auto tw:px-4">
+      <div class="tw:flex tw:flex-col tw:gap-6">
+        <div class="tw:grid tw:grid-cols-2 tw:gap-6">
+          <.stat_item icon="archive-box" number={@num_packages} label="packages available" />
+          <.stat_item icon="rectangle-stack" number={@num_releases} label="package versions" />
+          <.stat_item icon="arrow-down-tray" number={@total["day"]} label="downloads yesterday" />
+          <.stat_item icon="users" number={@total["all"]} label="downloads all time" />
+        </div>
+        <%!-- CTAs below stats --%>
+        <div class="tw:flex tw:flex-col tw:gap-4 tw:mt-4">
+          <.button_link href={~p"/signup"} size="lg" variant="blue" class="tw:w-full">
+            Get Started for FREE
+          </.button_link>
+          <div class="tw:text-center">
+            <.text_link href={~p"/pricing"} variant="primary">
+              Private Packages @ $7/month
+            </.text_link>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <%!-- Desktop: White section with 2x2 grid and image overflow space --%>
+  <div class="tw:hidden tw:lg:block tw:bg-white tw:-mt-20 tw:md:-mt-32 tw:pb-24 tw:relative tw:z-10">
     <div class="tw:max-w-7xl tw:mx-auto tw:px-4 tw:pt-16 tw:md:pb-16">
       <div class="tw:flex tw:flex-col tw:lg:flex-row tw:gap-12">
         <%!-- Left side: Stats (2x2 grid) --%>
@@ -220,7 +267,7 @@
         </div>
 
         <%!-- Right side: Empty (image overflows here from purple section) --%>
-        <div class="tw:hidden tw:lg:block tw:flex-1">
+        <div class="tw:flex-1">
           <%!-- Intentionally empty - screenshot image overflows into this space --%>
         </div>
       </div>

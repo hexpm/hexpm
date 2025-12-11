@@ -25,6 +25,9 @@ body {
  */
 
 @theme {
+  /* ===== BREAKPOINTS ===== */
+  --breakpoint-xs: 480px;
+
   /* ===== TYPOGRAPHY ===== */
 
   /* Font Families */
