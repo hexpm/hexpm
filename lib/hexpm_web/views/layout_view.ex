@@ -1,5 +1,6 @@
 defmodule HexpmWeb.LayoutView do
   use HexpmWeb, :view
+  import HexpmWeb.Components.Footer
   import HexpmWeb.Components.Navbar
 
   def show_search?(assigns) do
