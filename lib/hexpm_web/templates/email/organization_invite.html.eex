@@ -1,16 +1,38 @@
-<p>You have been added as a member to the <strong><%= @organization %></strong> organization.</p>
+<%
+org_url = url(~p"/dashboard/orgs/#{@organization}")
+docs_url = url(~p"/docs/private")
+%>
 
-<p><%= OrganizationInvite.check_out_org(url(~p"/dashboard/orgs/#{@organization}"), @username, :html) %></p>
+<h1 style="color: #030913; font-size: 24px; line-height: 32px; font-weight: 600; margin: 0 0 24px 0; text-align: center;">
+  Organization Invitation
+</h1>
 
-<p>
+<p style="color: #304254; font-size: 16px; line-height: 24px; margin: 0 0 16px 0;">
+  You have been added as a member to the <strong><%= @organization %></strong> organization.
+</p>
+
+<p style="color: #304254; font-size: 16px; line-height: 24px; margin: 0 0 16px 0;">
+  <%= raw(OrganizationInvite.check_out_org(org_url, @username, :html)) %>
+</p>
+
+<p style="color: #304254; font-size: 16px; line-height: 24px; margin: 0 0 16px 0;">
     <%= OrganizationInvite.access_organization() %>
+</p>
 
+<div style="background-color: #1c2a3a; padding: 20px; margin: 16px 0; border-radius: 4px;">
+  <p style="color: #f0f5f9; font-size: 20px; line-height: 28px; font-weight: 500; margin: 0 0 8px 0;">
     <%= Common.for_mix_label() %>
+  </p>
+  <pre style="color: #f0f5f9; font-family: 'JetBrains Mono', 'Courier New', monospace; font-size: 14px; line-height: 20px; margin: 0; white-space: pre-wrap;"><%= OrganizationInvite.mix_code() %></pre>
+</div>
 
-    <pre><%= OrganizationInvite.mix_code() %></pre>
-
+<div style="background-color: #1c2a3a; padding: 20px; margin: 16px 0; border-radius: 4px;">
+  <p style="color: #f0f5f9; font-size: 20px; line-height: 28px; font-weight: 500; margin: 0 0 8px 0;">
     <%= Common.for_rebar3_label() %>
-    <pre><%= OrganizationInvite.rebar_code() %></pre>
+  </p>
+  <pre style="color: #f0f5f9; font-family: 'JetBrains Mono', 'Courier New', monospace; font-size: 14px; line-height: 20px; margin: 0; white-space: pre-wrap;"><%= OrganizationInvite.rebar_code() %></pre>
+</div>
 
-    <%= OrganizationInvite.docs_link(url(~p"/docs/private"), :html) %>
+<p style="color: #304254; font-size: 16px; line-height: 24px; margin: 0 0 16px 0;">
+  <%= raw(OrganizationInvite.docs_link(docs_url, :html)) %>
 </p>
