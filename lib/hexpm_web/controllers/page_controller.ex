@@ -4,18 +4,41 @@ defmodule HexpmWeb.PageController do
   def index(conn, _params) do
     hexpm = Repository.hexpm()
 
+    package_new =
+      hexpm
+      |> Packages.recent(6)
+      |> process_new_packages()
+
     render(
       conn,
       "index.html",
       container: "",
-      hide_search: true,
       num_packages: Packages.count(),
       num_releases: Releases.count(),
-      package_top: Downloads.top_packages(hexpm, "recent", 8),
-      package_new: Packages.recent(hexpm, 10),
-      releases_new: Releases.recent(hexpm, 10),
+      package_top: Downloads.top_packages(hexpm, "recent", 6),
+      package_new: package_new,
+      releases_new: Releases.recent(hexpm, 6),
       total: Downloads.total()
     )
+  end
+
+  defp process_new_packages(results) do
+    packages =
+      results
+      |> Enum.map(fn {name, inserted_at, meta, downloads} ->
+        %Hexpm.Repository.Package{
+          name: name,
+          inserted_at: inserted_at,
+          meta: meta,
+          downloads: downloads
+        }
+      end)
+      |> Packages.attach_latest_releases()
+
+    Enum.zip_with(packages, results, fn package, {_name, inserted_at, meta, downloads} ->
+      version = if package.latest_release, do: package.latest_release.version, else: nil
+      {package.name, inserted_at, meta, version, downloads}
+    end)
   end
 
   def about(conn, _params) do

@@ -16,11 +16,11 @@ defmodule HexpmWeb.Components.Form do
         <.button type="submit">Submit</.button>
       </.simple_form>
   """
-  attr :for, :any, required: true, doc: "The form source (changeset or params)"
   attr :action, :string, required: true
+  attr :class, :string, default: ""
+  attr :for, :any, required: true, doc: "The form source (changeset or params)"
   attr :id, :string, required: true
   attr :method, :string, default: "post"
-  attr :class, :string, default: ""
   attr :rest, :global
 
   slot :inner_block, required: true
