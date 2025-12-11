@@ -1,0 +1,225 @@
+<%!-- Hero Section --%>
+<div class="tw:bg-white">
+  <div class="tw:bg-grey-50 tw:pb-10">
+    <div class="tw:max-w-6xl tw:mx-auto tw:px-4 tw:pt-12 tw:pb-16 tw:md:pt-20 tw:md:pb-24">
+      <div class="tw:flex tw:flex-col tw:lg:flex-row tw:items-center tw:gap-6">
+        <%!-- Left side - headline and CTAs --%>
+        <div class="tw:flex tw:flex-col tw:gap-8 tw:flex-1 tw:mb-24">
+          <h1 class="tw:text-grey-800 tw:text-4xl tw:font-semibold tw:leading-tight tw:md:text-5xl tw:md:leading-[60px]">
+            The package manager<br />for the Erlang ecosystem
+          </h1>
+
+          <div class="tw:flex tw:flex-wrap tw:items-center tw:gap-4 tw:md:gap-14">
+            <a
+              href={~p"/docs/usage"}
+              class="tw:inline-flex tw:items-center tw:gap-3 tw:px-10 tw:py-5 tw:border-[1.5px] tw:border-primary-600 tw:bg-transparent tw:text-primary-600 tw:font-medium tw:text-lg tw:rounded-xl tw:hover:bg-primary-600 tw:hover:text-white tw:hover:border-primary-600 tw:transition-all tw:duration-200"
+            >
+              Getting Started {icon(:heroicon, "arrow-right", class: "tw:size-[18px]")}
+            </a>
+            <a
+              href={~p"/docs/publish"}
+              class="tw:text-grey-500 tw:font-medium tw:text-lg tw:hover:text-grey-800 tw:transition-colors"
+            >
+              Publish Packages
+            </a>
+          </div>
+        </div>
+        <img
+          src={~p"/images/home/packages.png"}
+          alt="Packages"
+          class="tw:w-full tw:lg:w-1/2 tw:max-w-xl"
+        />
+      </div>
+    </div>
+  </div>
+
+  <%!-- Using with Elixir/Erlang/Gleam cards --%>
+  <div class="tw:max-w-7xl tw:mx-auto tw:px-4 tw:pb-16 tw:-mt-30">
+    <div class="tw:grid tw:grid-cols-1 tw:md:grid-cols-2 tw:lg:grid-cols-3 tw:gap-6">
+      <.language_card language="Elixir" image_src={~p"/images/elixir.svg"} href={~p"/docs/usage"}>
+        Specify your Mix dependencies as two-item tuples like
+        <.code_inline>{"{:plug, \"~> 1.1.0\"}"}</.code_inline>
+        in your dependency list, Elixir will ask if you want to install Hex if you haven't already.
+      </.language_card>
+
+      <.language_card
+        language="Erlang"
+        image_src={~p"/images/erlang.svg"}
+        href={~p"/docs/rebar3-usage"}
+      >
+        Download rebar3, put it in your PATH and give it executable permissions. Now you can specify Hex dependencies in your rebar.config like <.code_inline>{"{deps, [hackney]}"}</.code_inline>.
+      </.language_card>
+
+      <.language_card
+        language="Gleam"
+        image_src={~p"/images/lucy.svg"}
+        href={~p"/docs/gleam-usage"}
+      >
+        Add the Hex dependency to your
+        <.code_inline>gleam.toml</.code_inline>
+        file using the
+        <.code_inline>{"lustre = \">= 5.2.0 and < 6.0.0\""}</.code_inline>
+        format. Or use the
+        <.code_inline>{"gleam add lustre@5"}</.code_inline>
+        command.
+      </.language_card>
+    </div>
+  </div>
+
+  <%!-- Companies --%>
+  <.companies_section />
+
+  <%!-- Package columns section --%>
+  <div class="tw:bg-white">
+    <div class="tw:max-w-7xl tw:mx-auto tw:px-4 tw:py-12 tw:md:py-16">
+      <div class="tw:grid tw:grid-cols-1 tw:md:grid-cols-3 tw:gap-6 tw:lg:gap-8">
+        <%!-- Most Downloaded --%>
+        <div>
+          <.package_column_header color="primary" emoji="😍" title="Most Downloaded" />
+          <ul class="tw:flex tw:flex-col">
+            <%= for {package, downloads} <- @package_top do %>
+              <.package_item
+                description={package.meta.description}
+                downloads={downloads}
+                package={package.name}
+                version={package.latest_release.version}
+              />
+            <% end %>
+          </ul>
+        </div>
+
+        <%!-- New Packages --%>
+        <div>
+          <.package_column_header color="green" emoji="🔥" title="New Packages" />
+          <ul class="tw:flex tw:flex-col">
+            <%= for {package, _inserted_at, %PackageMetadata{} = meta, version, downloads} <- @package_new do %>
+              <.package_item
+                description={meta.description}
+                package={package}
+                version={version && to_string(version)}
+                downloads={downloads}
+              />
+            <% end %>
+          </ul>
+        </div>
+
+        <%!-- Recently Updated --%>
+        <div>
+          <.package_column_header color="blue" emoji="👀" title="Recently Updated" />
+          <ul class="tw:flex tw:flex-col">
+            <%= for {package, version, _inserted_at, %PackageMetadata{} = meta, downloads} <- @releases_new do %>
+              <.package_item
+                description={meta.description}
+                package={package}
+                version={to_string(version)}
+                downloads={downloads}
+              />
+            <% end %>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <%!-- Open source section with stats --%>
+  <div class="tw:bg-primary-900">
+    <div class="tw:max-w-7xl tw:mx-auto tw:px-4 tw:py-12 tw:md:py-16">
+      <div class="tw:flex tw:flex-col tw:lg:flex-row tw:gap-12">
+        <%!-- Left side - open source message --%>
+        <div class="tw:flex tw:flex-col tw:gap-6">
+          <div class="tw:size-[60px]">
+            <%!-- Placeholder: open-source icon --%>
+            <div class="tw:size-full tw:bg-white/20 tw:rounded-lg tw:flex tw:items-center tw:justify-center">
+              <img href={~p"/images/home/open-source.svg"} />
+            </div>
+          </div>
+
+          <h2 class="tw:text-white tw:text-4xl tw:font-bold tw:leading-tight tw:md:text-5xl tw:md:leading-[60px]">
+            hex.pm is<br />open-source
+          </h2>
+        </div>
+
+        <%!-- Right side - placeholder for screenshot image --%>
+        <div class="w-40 h-40 origin-top-left rotate-90 bg-violet-950 rounded-full"></div>
+        <div class="tw:flex-1 tw:hidden tw:lg:block">
+          <%!-- Placeholder: Add hex.pm screenshot image here --%>
+          <img href={~p"/images/home/webview.svg"} class="tw:w-full" />
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <%!-- Stats section --%>
+  <div class="tw:bg-white">
+    <div class="tw:max-w-7xl tw:mx-auto tw:px-4 tw:py-12 tw:md:py-16">
+      <div class="tw:grid tw:grid-cols-2 tw:md:grid-cols-4 tw:gap-8 tw:lg:gap-12">
+        <div class="tw:flex tw:items-center tw:gap-3">
+          <%!-- Placeholder: packages icon --%>
+          <div class="tw:size-12 tw:bg-grey-100 tw:rounded-lg tw:flex tw:items-center tw:justify-center">
+            {icon(:heroicon, "archive-box", class: "tw:size-6 tw:text-grey-400")}
+          </div>
+          <div class="tw:flex tw:flex-col tw:gap-1">
+            <span class="tw:text-grey-900 tw:text-2xl tw:font-bold tw:leading-6">
+              {ViewHelpers.human_number_space(@num_packages)}
+            </span>
+            <span class="tw:text-grey-600">packages available</span>
+          </div>
+        </div>
+
+        <div class="tw:flex tw:items-center tw:gap-3">
+          <%!-- Placeholder: versions icon --%>
+          <div class="tw:size-12 tw:bg-grey-100 tw:rounded-lg tw:flex tw:items-center tw:justify-center">
+            {icon(:heroicon, "rectangle-stack", class: "tw:size-6 tw:text-grey-400")}
+          </div>
+          <div class="tw:flex tw:flex-col tw:gap-1">
+            <span class="tw:text-grey-900 tw:text-2xl tw:font-bold tw:leading-6">
+              {ViewHelpers.human_number_space(@num_releases)}
+            </span>
+            <span class="tw:text-grey-600">package versions</span>
+          </div>
+        </div>
+
+        <div class="tw:flex tw:items-center tw:gap-3">
+          <%!-- Placeholder: downloads icon --%>
+          <div class="tw:size-12 tw:bg-grey-100 tw:rounded-lg tw:flex tw:items-center tw:justify-center">
+            {icon(:heroicon, "arrow-down-tray", class: "tw:size-6 tw:text-grey-400")}
+          </div>
+          <div class="tw:flex tw:flex-col tw:gap-1">
+            <span class="tw:text-grey-900 tw:text-2xl tw:font-bold tw:leading-6">
+              {ViewHelpers.human_number_space(@total["day"])}
+            </span>
+            <span class="tw:text-grey-600">downloads yesterday</span>
+          </div>
+        </div>
+
+        <div class="tw:flex tw:items-center tw:gap-3">
+          <%!-- Placeholder: contributors icon --%>
+          <div class="tw:size-12 tw:bg-grey-100 tw:rounded-lg tw:flex tw:items-center tw:justify-center">
+            {icon(:heroicon, "users", class: "tw:size-6 tw:text-grey-400")}
+          </div>
+          <div class="tw:flex tw:flex-col tw:gap-1">
+            <span class="tw:text-grey-900 tw:text-2xl tw:font-bold tw:leading-6">
+              {ViewHelpers.human_number_space(@total["all"])}
+            </span>
+            <span class="tw:text-grey-600">downloads all time</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="tw:flex tw:flex-wrap tw:items-center tw:gap-6 tw:mt-10">
+        <a
+          href={~p"/signup"}
+          class="tw:inline-flex tw:items-center tw:justify-center tw:px-8 tw:py-3 tw:bg-blue-default tw:text-white tw:font-medium tw:rounded-lg tw:hover:bg-blue-700 tw:transition-colors"
+        >
+          Get Started for FREE
+        </a>
+        <a
+          href={~p"/pricing"}
+          class="tw:text-blue-default tw:font-medium tw:hover:underline"
+        >
+          Private Packages @ 7$ / month
+        </a>
+      </div>
+    </div>
+  </div>
+</div>
