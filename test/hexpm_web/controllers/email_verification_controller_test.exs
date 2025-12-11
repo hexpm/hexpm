@@ -86,7 +86,9 @@ defmodule HexpmWeb.EmailVerificationControllerTest do
         })
 
       assert redirected_to(conn) == "/"
-      assert Phoenix.Flash.get(conn.assigns.flash, :info) =~ "A verification email has been sent"
+
+      assert Phoenix.Flash.get(conn.assigns.flash, :info) =~
+               "If this email exists in our database and is not already verified"
 
       user = Users.get(user.username, [:emails])
       assert_delivered_email(Hexpm.Emails.verification(user, hd(user.emails)))
@@ -105,7 +107,9 @@ defmodule HexpmWeb.EmailVerificationControllerTest do
         })
 
       assert redirected_to(conn) == "/"
-      assert Phoenix.Flash.get(conn.assigns.flash, :info) =~ "A verification email has been sent"
+
+      assert Phoenix.Flash.get(conn.assigns.flash, :info) =~
+               "If this email exists in our database and is not already verified"
 
       user = Users.get(user.username, [:emails])
 
@@ -127,7 +131,9 @@ defmodule HexpmWeb.EmailVerificationControllerTest do
         })
 
       assert redirected_to(conn) == "/"
-      assert Phoenix.Flash.get(conn.assigns.flash, :info) =~ "A verification email has been sent"
+
+      assert Phoenix.Flash.get(conn.assigns.flash, :info) =~
+               "If this email exists in our database and is not already verified"
     end
 
     test "dont send verification email for wrong user" do
@@ -143,7 +149,9 @@ defmodule HexpmWeb.EmailVerificationControllerTest do
         })
 
       assert redirected_to(conn) == "/"
-      assert Phoenix.Flash.get(conn.assigns.flash, :info) =~ "A verification email has been sent"
+
+      assert Phoenix.Flash.get(conn.assigns.flash, :info) =~
+               "If this email exists in our database and is not already verified"
 
       refute_delivered_email(
         Hexpm.Emails.verification(user1, %{hd(user1.emails) | verification_key: "key"})
