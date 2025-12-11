@@ -1,0 +1,45 @@
+<.auth_layout
+  title="Reset your password"
+  subtitle="Enter your username or email address and we'll send you a link to reset your password"
+  show_oauth={false}
+>
+  <%= form_tag(~p"/password/reset", id: "password-reset-form", method: :post) do %>
+    <.text_input
+      id="username"
+      name="username"
+      type="text"
+      label="Username or Email"
+      required
+    />
+
+    <div :if={HexpmWeb.Captcha.enabled?()}>
+      <div class="h-captcha" data-sitekey={HexpmWeb.Captcha.sitekey()}></div>
+      <div :if={assigns[:captcha_error]} class="tw:mt-1">
+        <p class="tw:flex tw:items-center tw:gap-1 tw:text-small tw:text-red-600">
+          {icon(:heroicon, "exclamation-circle", width: 16, height: 16)}
+          <span>{@captcha_error}</span>
+        </p>
+      </div>
+      <script src="https://hcaptcha.com/1/api.js" async defer>
+      </script>
+    </div>
+
+    <.button type="submit" variant="primary" full_width class="tw:mt-4">
+      Send Reset Link
+    </.button>
+  <% end %>
+
+  <:footer_links>
+    <div class="tw:flex tw:flex-col tw:items-center tw:gap-3 tw:text-small tw:mt-6">
+      <.text_link navigate={~p"/login"} variant="secondary">
+        Back to login
+      </.text_link>
+      <div class="tw:flex tw:items-center tw:gap-2">
+        <span class="tw:text-grey-500">Don't have an account?</span>
+        <.text_link navigate={~p"/signup"} variant="primary">
+          Sign up
+        </.text_link>
+      </div>
+    </div>
+  </:footer_links>
+</.auth_layout>

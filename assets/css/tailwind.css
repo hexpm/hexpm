@@ -130,6 +130,22 @@ body {
   --color-grey-50: #f0f5f9;
 }
 
+/* ===== ANIMATIONS ===== */
+@keyframes flash-autodismiss {
+  0% {
+    opacity: 1;
+    transform: translateX(0);
+  }
+  85% {
+    opacity: 1;
+    transform: translateX(0);
+  }
+  100% {
+    opacity: 0;
+    transform: translateX(100%);
+  }
+}
+
 /* ===== GLOBAL BASE STYLES ===== */
 @layer base {
   /* Remove browser default focus outline (orange/blue) */
