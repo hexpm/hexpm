@@ -183,8 +183,6 @@ defmodule Hexpm.Factory do
   def tfa_factory() do
     %Hexpm.Accounts.TFA{
       secret: "OZIH4PZP53MCYZ6Z",
-      app_enabled: true,
-      tfa_enabled: true,
       recovery_codes: [
         %{
           id: Ecto.UUID.generate(),

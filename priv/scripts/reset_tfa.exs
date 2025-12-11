@@ -1,6 +1,6 @@
 destructure [username_or_email], System.argv()
 
-alias Hexpm.Accounts.{AuditLogs, Users}
+alias Hexpm.Accounts.{AuditLogs, User, Users}
 
 if !username_or_email do
   IO.puts("Usage: mix run priv/scripts/reset_tfa.exs <username_or_email>")
@@ -14,7 +14,7 @@ cond do
     IO.puts("No user found with username or email: #{username_or_email}")
     System.halt(1)
 
-  !user.tfa || !user.tfa.tfa_enabled ->
+  !User.tfa_enabled?(user) ->
     IO.puts("User #{user.username} does not have 2FA enabled")
     System.halt(0)
 

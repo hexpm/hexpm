@@ -1505,9 +1505,7 @@ defmodule HexpmWeb.API.ReleaseControllerTest do
         user
         |> Ecto.Changeset.change()
         |> Ecto.Changeset.put_embed(:tfa, %Hexpm.Accounts.TFA{
-          secret: Hexpm.Accounts.TFA.generate_secret(),
-          tfa_enabled: true,
-          app_enabled: true
+          secret: Hexpm.Accounts.TFA.generate_secret()
         })
         |> Hexpm.Repo.update!()
 
@@ -1638,9 +1636,7 @@ defmodule HexpmWeb.API.ReleaseControllerTest do
         user
         |> Ecto.Changeset.change()
         |> Ecto.Changeset.put_embed(:tfa, %Hexpm.Accounts.TFA{
-          secret: Hexpm.Accounts.TFA.generate_secret(),
-          tfa_enabled: true,
-          app_enabled: true
+          secret: Hexpm.Accounts.TFA.generate_secret()
         })
         |> Hexpm.Repo.update!()
 
