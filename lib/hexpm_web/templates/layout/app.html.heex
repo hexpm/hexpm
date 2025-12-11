@@ -1,0 +1,91 @@
+<div class="tw:min-h-dvh tw:flex tw:flex-col">
+  <section class="tw:flex tw:flex-1 tw:flex-col">
+    <div
+      :if={Application.get_env(:hexpm, :read_only_mode, false)}
+      class="read-only-mode"
+      role="alert"
+    >
+      <div class="container">
+        Hex.pm is currently in read only mode due to maintenance,
+        parts of the website may not work as expected
+        but we will be back to normal operation in a few minutes.
+      </div>
+    </div>
+
+    <.header
+      current_user={assigns[:current_user]}
+      search={search(assigns)}
+      show_search={show_search?(assigns)}
+    />
+
+    <%= unless assigns[:error] || assigns[:custom_flash] do %>
+      <div
+        id="flash-container"
+        class="tw:fixed tw:top-22 tw:right-4 tw:z-50 tw:flex tw:flex-col tw:gap-3 tw:max-w-md tw:w-full tw:px-4"
+      >
+        <%= if flash = Phoenix.Flash.get(@flash, :raw_error) do %>
+          {HexpmWeb.Components.Flash.flash_message(%{
+            id: "flash-error-raw",
+            type: :error,
+            message: raw(flash)
+          })}
+        <% end %>
+        <%= if flash = Phoenix.Flash.get(@flash, :error) do %>
+          {HexpmWeb.Components.Flash.flash_message(%{
+            id: "flash-error",
+            type: :error,
+            message: flash
+          })}
+        <% end %>
+        <%= if flash = Phoenix.Flash.get(@flash, :raw_warning) do %>
+          {HexpmWeb.Components.Flash.flash_message(%{
+            id: "flash-warning-raw",
+            type: :warning,
+            message: raw(flash)
+          })}
+        <% end %>
+        <%= if flash = Phoenix.Flash.get(@flash, :warning) do %>
+          {HexpmWeb.Components.Flash.flash_message(%{
+            id: "flash-warning",
+            type: :warning,
+            message: flash
+          })}
+        <% end %>
+        <%= if flash = Phoenix.Flash.get(@flash, :raw_info) do %>
+          {HexpmWeb.Components.Flash.flash_message(%{
+            id: "flash-info-raw",
+            type: :info,
+            message: raw(flash)
+          })}
+        <% end %>
+        <%= if flash = Phoenix.Flash.get(@flash, :info) do %>
+          {HexpmWeb.Components.Flash.flash_message(%{
+            id: "flash-info",
+            type: :info,
+            message: flash
+          })}
+        <% end %>
+        <%= if flash = Phoenix.Flash.get(@flash, :raw_success) do %>
+          {HexpmWeb.Components.Flash.flash_message(%{
+            id: "flash-success-raw",
+            type: :success,
+            message: raw(flash)
+          })}
+        <% end %>
+        <%= if flash = Phoenix.Flash.get(@flash, :success) do %>
+          {HexpmWeb.Components.Flash.flash_message(%{
+            id: "flash-success",
+            type: :success,
+            message: flash
+          })}
+        <% end %>
+      </div>
+    <% end %>
+
+    <div class="tw:flex tw:flex-1 tw:flex-col tw:bg-slate-100">
+      {@inner_content}
+    </div>
+  </section>
+
+  <.footer />
+</div>

@@ -1,6 +1,4 @@
 <div class="featured-home">
-  <%= render HexpmWeb.LayoutView, "_flash.html", flash: @flash %>
-
   <h2>The package manager for the Erlang ecosystem</h2>
 
   <div class="search-form">

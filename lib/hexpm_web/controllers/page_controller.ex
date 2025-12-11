@@ -8,7 +8,6 @@ defmodule HexpmWeb.PageController do
       conn,
       "index.html",
       container: "",
-      custom_flash: true,
       hide_search: true,
       num_packages: Packages.count(),
       num_releases: Releases.count(),

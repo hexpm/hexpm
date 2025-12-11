@@ -1,3 +1,0 @@
-<%= render "header.html", assigns %>
-<%= @inner_content %>
-<%= render "footer.html", assigns %>
