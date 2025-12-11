@@ -30,21 +30,21 @@ defmodule HexpmWeb.Components.AuthLayout do
         </:footer_links>
       </.auth_layout>
   """
-  attr :title, :string, required: true
-  attr :subtitle, :string, default: nil
-  attr :show_oauth, :boolean, default: false
-  attr :oauth_provider, :string, default: "GitHub"
+  attr :class, :string, default: ""
+  attr :divider_text, :string, default: "or"
 
   attr :oauth_href, :string,
     default: nil,
     doc: "Required when show_oauth is true and no custom oauth_button slot is provided"
 
-  attr :divider_text, :string, default: "or"
-  attr :class, :string, default: ""
+  attr :oauth_provider, :string, default: "GitHub"
+  attr :show_oauth, :boolean, default: false
+  attr :subtitle, :string, default: nil
+  attr :title, :string, required: true
 
+  slot :footer_links
   slot :inner_block, required: true
   slot :oauth_button
-  slot :footer_links
 
   def auth_layout(assigns) do
     # Validate OAuth configuration in development

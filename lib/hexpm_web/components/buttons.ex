@@ -18,18 +18,18 @@ defmodule HexpmWeb.Components.Buttons do
       <.button disabled>Disabled</.button>
       <.button loading>Processing...</.button>
   """
+  attr :class, :string, default: ""
+  attr :disabled, :boolean, default: false
+  attr :full_width, :boolean, default: false
+  attr :loading, :boolean, default: false
+  attr :rest, :global, include: ~w(phx-click phx-target phx-value-id form)
+  attr :size, :string, default: "md", values: ["sm", "md", "lg"]
   attr :type, :string, default: "button", values: ["button", "submit", "reset"]
 
   attr :variant, :string,
     default: "primary",
     values: ["primary", "secondary", "danger", "outline", "ghost"]
 
-  attr :size, :string, default: "md", values: ["sm", "md", "lg"]
-  attr :class, :string, default: ""
-  attr :disabled, :boolean, default: false
-  attr :loading, :boolean, default: false
-  attr :full_width, :boolean, default: false
-  attr :rest, :global, include: ~w(phx-click phx-target phx-value-id form)
   slot :inner_block, required: true
 
   def button(assigns) do
@@ -71,18 +71,18 @@ defmodule HexpmWeb.Components.Buttons do
       <.button_link href="/signup">Sign Up</.button_link>
       <.button_link navigate={~p"/users"} variant="secondary">View Users</.button_link>
   """
+  attr :class, :string, default: ""
+  attr :full_width, :boolean, default: false
   attr :href, :string, default: nil
   attr :navigate, :string, default: nil
   attr :patch, :string, default: nil
+  attr :rest, :global
+  attr :size, :string, default: "md", values: ["sm", "md", "lg"]
 
   attr :variant, :string,
     default: "primary",
     values: ["primary", "secondary", "danger", "outline", "ghost"]
 
-  attr :size, :string, default: "md", values: ["sm", "md", "lg"]
-  attr :class, :string, default: ""
-  attr :full_width, :boolean, default: false
-  attr :rest, :global
   slot :inner_block, required: true
 
   def button_link(assigns) do
