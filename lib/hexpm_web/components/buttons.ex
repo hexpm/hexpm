@@ -28,7 +28,7 @@ defmodule HexpmWeb.Components.Buttons do
 
   attr :variant, :string,
     default: "primary",
-    values: ["primary", "secondary", "danger", "outline", "ghost"]
+    values: ["primary", "secondary", "danger", "outline", "ghost", "blue"]
 
   slot :inner_block, required: true
 
@@ -81,7 +81,7 @@ defmodule HexpmWeb.Components.Buttons do
 
   attr :variant, :string,
     default: "primary",
-    values: ["primary", "secondary", "danger", "outline", "ghost"]
+    values: ["primary", "secondary", "danger", "outline", "ghost", "blue"]
 
   slot :inner_block, required: true
 
@@ -158,6 +158,14 @@ defmodule HexpmWeb.Components.Buttons do
     ]
   end
 
+  defp button_variant("blue") do
+    [
+      "tw:bg-blue-700 tw:text-white",
+      "hover:tw:bg-blue-800",
+      "tw:focus:ring-blue-500"
+    ]
+  end
+
   @doc """
   Renders a text link with consistent styling.
 
@@ -166,17 +174,18 @@ defmodule HexpmWeb.Components.Buttons do
       <.text_link navigate={~p"/login"}>Back to login</.text_link>
       <.text_link href="/signup" variant="primary">Sign up</.text_link>
       <.text_link navigate={~p"/help"} variant="secondary">Learn more</.text_link>
+      <.text_link href={~p"/docs/usage"} variant="purple">Mix</.text_link>
   """
+  attr :class, :string, default: ""
   attr :href, :string, default: nil
   attr :navigate, :string, default: nil
   attr :patch, :string, default: nil
+  attr :rest, :global
 
   attr :variant, :string,
     default: "primary",
-    values: ["primary", "secondary"]
+    values: ["primary", "secondary", "purple"]
 
-  attr :class, :string, default: ""
-  attr :rest, :global
   slot :inner_block, required: true
 
   def text_link(assigns) do
@@ -186,7 +195,7 @@ defmodule HexpmWeb.Components.Buttons do
       navigate={@navigate}
       patch={@patch}
       class={[
-        "tw:transition-colors tw:font-medium tw:cursor-pointer",
+        "tw:transition-colors tw:cursor-pointer",
         "tw:focus:outline-none tw:focus:ring-2 tw:focus:ring-offset-2",
         text_link_variant(@variant),
         @class
@@ -200,10 +209,14 @@ defmodule HexpmWeb.Components.Buttons do
 
   # Text link variants
   defp text_link_variant("primary") do
-    "tw:text-blue-600 hover:tw:text-blue-500 tw:focus:ring-blue-500"
+    "tw:text-blue-600 hover:tw:text-blue-500 tw:focus:ring-blue-500 tw:font-medium"
   end
 
   defp text_link_variant("secondary") do
-    "tw:text-grey-600 hover:tw:text-grey-900 tw:focus:ring-grey-400"
+    "tw:text-grey-600 hover:tw:text-grey-900 tw:focus:ring-grey-400 tw:font-medium"
+  end
+
+  defp text_link_variant("purple") do
+    "tw:text-primary-700 hover:tw:text-primary-800 hover:tw:underline tw:focus:ring-primary-500 tw:font-semibold"
   end
 end

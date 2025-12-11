@@ -3,6 +3,7 @@ defmodule HexpmWeb.Components.Home do
   Components for the homepage.
   """
   use Phoenix.Component
+  import HexpmWeb.ViewIcons, only: [icon: 3]
 
   use Phoenix.VerifiedRoutes,
     endpoint: HexpmWeb.Endpoint,
@@ -214,6 +215,63 @@ defmodule HexpmWeb.Components.Home do
         </span>
       </div>
     </li>
+    """
+  end
+
+  @doc """
+  Renders a stat item with icon, number, and label.
+
+  ## Examples
+
+      <.stat_item icon="archive-box" number={1234} label="packages available" />
+  """
+  attr :icon, :string, required: true
+  attr :label, :string, required: true
+  attr :number, :any, required: true
+
+  def stat_item(assigns) do
+    ~H"""
+    <div class="tw:flex tw:items-center tw:gap-3">
+      <div class="tw:size-12 tw:bg-grey-100 tw:rounded-lg tw:flex tw:items-center tw:justify-center">
+        {icon(:heroicon, @icon, class: "tw:size-6 tw:text-grey-400")}
+      </div>
+      <div class="tw:flex tw:flex-col tw:gap-1">
+        <span class="tw:text-grey-900 tw:text-2xl tw:font-bold tw:leading-6">
+          {HexpmWeb.ViewHelpers.human_number_space(@number)}
+        </span>
+        <span class="tw:text-grey-600">{@label}</span>
+      </div>
+    </div>
+    """
+  end
+
+  @doc """
+  Renders a feature card for the "Getting Started" section.
+
+  ## Examples
+
+      <.feature_card icon="arrow-right" title="Getting started" href={~p"/docs/usage"}>
+        Fetch dependencies from Hex without creating an account.
+      </.feature_card>
+  """
+  attr :href, :string, required: true
+  attr :icon, :string, required: true
+  attr :title, :string, required: true
+  slot :inner_block, required: true
+
+  def feature_card(assigns) do
+    ~H"""
+    <div class="tw:bg-grey-50 tw:rounded-xl tw:p-6 tw:hover:bg-grey-100 tw:transition-colors">
+      <div class="tw:flex tw:items-center tw:gap-2 tw:mb-3">
+        {icon(:heroicon, @icon, class: "tw:size-5 tw:text-primary-600")}
+        <h3 class="tw:text-grey-900 tw:text-lg tw:font-semibold">
+          {@title}
+        </h3>
+      </div>
+      <p class="tw:text-grey-700 tw:text-sm tw:leading-6">
+        {render_slot(@inner_block)}
+      </p>
+    </div>
     """
   end
 end
