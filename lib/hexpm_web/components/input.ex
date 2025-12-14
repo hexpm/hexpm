@@ -77,6 +77,96 @@ defmodule HexpmWeb.Components.Input do
   end
 
   @doc """
+  Renders a select dropdown with optional label and errors.
+
+  ## Examples
+
+      <.select_input id="sort" name="sort" options={[{"Name", "name"}, {"Date", "date"}]} />
+      <.select_input id="status" name="status" label="Status" options={@status_options} />
+      <.select_input field={@form[:category]} label="Category" options={@categories} />
+      <.select_input
+        id="country"
+        name="country"
+        label="Country"
+        options={[{"United States", "us"}, {"Canada", "ca"}]}
+        required
+        errors={["can't be blank"]}
+      />
+  """
+  attr :class, :string, default: ""
+  attr :errors, :list, default: []
+  attr :field, Phoenix.HTML.FormField, default: nil
+  attr :id, :string, default: nil
+  attr :label, :string, default: nil
+  attr :label_class, :string, default: ""
+  attr :name, :string, default: nil
+  attr :options, :list, required: true, doc: "List of {label, value} tuples for select options"
+  attr :prompt, :string, default: nil, doc: "Optional prompt text for the first option"
+  attr :required, :boolean, default: false
+  attr :rest, :global, include: ~w(disabled multiple)
+
+  attr :show_errors, :boolean,
+    default: nil,
+    doc:
+      "Controls error display: nil (default - show all), true (always show), false (never show)"
+
+  attr :value, :any, default: nil
+
+  def select_input(%{field: %Phoenix.HTML.FormField{} = field} = assigns) do
+    errors =
+      case assigns[:show_errors] do
+        false -> []
+        _ -> field.errors
+      end
+
+    assigns
+    |> assign(:field, nil)
+    |> assign(:errors, Enum.map(errors, &translate_error/1))
+    |> assign(:id, field.id)
+    |> assign(:name, field.name)
+    |> assign(:value, field.value)
+    |> select_input()
+  end
+
+  def select_input(assigns) do
+    ~H"""
+    <div>
+      <.label :if={@label} for={@id} label={@label} required={@required} class={@label_class} />
+      <div class="tw:relative">
+        <select
+          id={@id}
+          name={@name}
+          class={[
+            "tw:w-full tw:h-12 tw:pl-4 tw:pr-10 tw:bg-white tw:border tw:rounded-lg",
+            "tw:text-grey-900 tw:font-medium tw:cursor-pointer",
+            "tw:focus:outline-none tw:focus:ring-2",
+            "tw:appearance-none",
+            @errors != [] &&
+              "tw:border-red-300 tw:focus:border-red-600 tw:focus:ring-red-600 tw:focus:ring-opacity-20",
+            @errors == [] &&
+              "tw:border-grey-300 tw:focus:border-primary-600 tw:focus:ring-primary-600 tw:focus:ring-opacity-20",
+            @class
+          ]}
+          {@rest}
+        >
+          <option :if={@prompt} value="">{@prompt}</option>
+          <%= for {label, value} <- @options do %>
+            <option value={value} selected={to_string(@value) == to_string(value)}>
+              {label}
+            </option>
+          <% end %>
+        </select>
+        <%!-- Chevron down icon --%>
+        <div class="tw:absolute tw:right-3 tw:top-1/2 tw:-translate-y-1/2 tw:pointer-events-none tw:text-grey-400">
+          {icon(:heroicon, "chevron-down", width: 15, height: 15)}
+        </div>
+      </div>
+      <.errors errors={@errors} />
+    </div>
+    """
+  end
+
+  @doc """
   Renders a password input with visibility toggle, optional label and errors.
 
   ## Examples

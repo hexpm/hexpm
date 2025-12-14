@@ -1,0 +1,51 @@
+<li class="tw:p-6 hover:tw:bg-grey-50 tw:transition-colors">
+  <div class="tw:flex tw:items-start tw:justify-between tw:gap-6">
+    <%!-- Package Info --%>
+    <div class="tw:flex-1 tw:min-w-0">
+      <div class="tw:flex tw:items-center tw:gap-3 tw:mb-2">
+        <a
+          href={~p"/packages/#{@package}"}
+          class="tw:text-grey-900 tw:font-semibold tw:text-xl hover:tw:text-primary-600 tw:transition-colors"
+        >
+          {ViewHelpers.package_name(@package)}
+        </a>
+        <%= if @package.latest_release do %>
+          <a
+            href={~p"/packages/#{@package}"}
+            class="tw:inline-flex tw:items-center tw:px-2.5 tw:py-0.5 tw:rounded-md tw:text-xs tw:font-medium tw:bg-grey-100 tw:text-grey-700 hover:tw:bg-primary-100 hover:tw:text-primary-700 tw:transition-colors"
+          >
+            v{@package.latest_release.version}
+          </a>
+        <% end %>
+      </div>
+
+      <%= if @package.meta.description do %>
+        <p class="tw:text-grey-600 tw:text-sm tw:leading-6 tw:line-clamp-2">
+          {ViewHelpers.text_length(@package.meta.description, 200)}
+        </p>
+      <% end %>
+
+      <%= if @package.inserted_at do %>
+        <p class="tw:text-grey-500 tw:text-xs tw:mt-2">
+          Published {ViewHelpers.human_relative_time_from_now(@package.inserted_at)}
+        </p>
+      <% end %>
+    </div>
+
+    <%!-- Download Stats --%>
+    <div class="tw:flex tw:flex-col tw:items-end tw:gap-1 tw:shrink-0 tw:min-w-[120px]">
+      <div class="tw:text-grey-900 tw:text-2xl tw:font-bold tw:text-right">
+        {ViewHelpers.human_number_space(display_downloads(@package_downloads, @view) || 0)}
+      </div>
+      <div class="tw:text-grey-500 tw:text-xs tw:text-right">
+        {display_downloads_view_title(@view)}
+      </div>
+      <div
+        class="tw:text-grey-400 tw:text-xs tw:text-right tw:cursor-help"
+        title={display_downloads_for_opposite_views(@package_downloads, @view)}
+      >
+        {display_downloads_for_opposite_views(@package_downloads, @view)}
+      </div>
+    </div>
+  </div>
+</li>
