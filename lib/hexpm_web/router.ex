@@ -10,6 +10,7 @@ defmodule HexpmWeb.Router do
     plug :fetch_session
     plug :fetch_flash
     plug :put_root_layout, {HexpmWeb.LayoutView, :root}
+    plug :put_layout, {HexpmWeb.LayoutView, :app}
     plug :protect_from_forgery
     plug :put_secure_browser_headers
     plug :user_agent, required: false

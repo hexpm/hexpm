@@ -118,10 +118,10 @@ defmodule HexpmWeb.PackageControllerTest do
       :ok = Hexpm.Repo.refresh_view(Hexpm.Repository.PackageDownload)
 
       conn = get(build_conn(), "/packages?search=with underscore")
-      assert response(conn, 200) =~ "exact-match"
+      assert response(conn, 200) =~ "Exact Match"
       assert response(conn, 200) =~ "total downloads: 1 234"
       assert response(conn, 200) =~ ~r/#{package5.name}.*0.0.1/s
-      refute response(conn, 200) =~ "no-results"
+      refute response(conn, 200) =~ "No Results Found"
     end
 
     test "search with exact match", %{package5: package5, package5_release: package5_release} do
@@ -135,20 +135,20 @@ defmodule HexpmWeb.PackageControllerTest do
       :ok = Hexpm.Repo.refresh_view(Hexpm.Repository.PackageDownload)
 
       conn = get(build_conn(), "/packages?search=with_underscore")
-      assert response(conn, 200) =~ "exact-match"
+      assert response(conn, 200) =~ "Exact Match"
       assert response(conn, 200) =~ "total downloads: 5 000"
-      refute response(conn, 200) =~ "results-found"
+      refute response(conn, 200) =~ "Search Results"
     end
 
     test "search with build_tool match" do
       conn = get(build_conn(), "/packages?search=build_tool%3Amix")
-      assert response(conn, 200) =~ "results-found"
+      assert response(conn, 200) =~ "packages found"
     end
 
     test "search without match" do
       conn = get(build_conn(), "/packages?search=nonexistent")
-      assert response(conn, 200) =~ "no-results"
-      refute response(conn, 200) =~ "exact-match"
+      assert response(conn, 200) =~ "No Results Found"
+      refute response(conn, 200) =~ "Exact Match"
     end
 
     test "list private packages", %{

@@ -1,6 +1,7 @@
 <%
 verify_url = url(~p"/email/verify?username=#{@username}&email=#{@email}&key=#{@key}")
 %>
+Email Verification
 
 <%= Verification.intro() %>
 

@@ -260,7 +260,8 @@ defmodule HexpmWeb.ViewHelpers do
   defp do_human_number(int, max, digits, {unit, mag}) when is_integer(int) and digits > max do
     shifted = int / :math.pow(10, mag)
     len = trunc(:math.log10(shifted)) + 2
-    float = Float.round(shifted, max - len)
+    precision = max(0, max - len)
+    float = Float.round(shifted, precision)
 
     case Float.ratio(float) do
       {_, 1} -> human_number_space(trunc(float)) <> unit
