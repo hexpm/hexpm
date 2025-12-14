@@ -73,6 +73,7 @@ defmodule HexpmWeb do
       import HexpmWeb.Components.Buttons
       import HexpmWeb.Components.Form
       import HexpmWeb.Components.Input
+      import HexpmWeb.Components.Package
 
       alias HexpmWeb.ViewHelpers
       alias HexpmWeb.{Endpoint, Router}
