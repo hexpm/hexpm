@@ -193,6 +193,10 @@ defmodule Hexpm.Accounts.AuditLog do
   defp extract_params("email.public", {old_email, new_email}),
     do: %{old_email: serialize(old_email), new_email: serialize(new_email)}
 
+  defp extract_params("email.options", optional_emails) when is_map(optional_emails) do
+    %{optional_emails: optional_emails}
+  end
+
   defp extract_params("email.gravatar", {organization, {old_email, new_email}}),
     do: %{
       organization: serialize(organization),

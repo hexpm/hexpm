@@ -186,6 +186,7 @@ defmodule HexpmWeb.Router do
     post "/email/public", EmailController, :public
     post "/email/resend", EmailController, :resend_verify
     post "/email/gravatar", EmailController, :gravatar
+    post "/email/options", EmailController, :update_options
 
     get "/repos", OrganizationController, :redirect_repo
     get "/repos/*glob", OrganizationController, :redirect_repo

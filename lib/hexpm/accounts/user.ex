@@ -4,7 +4,7 @@ defmodule Hexpm.Accounts.User do
   @derive {HexpmWeb.Stale, assocs: [:emails, :owned_packages, :organizations, :keys]}
   @derive {Phoenix.Param, key: :username}
 
-  alias Hexpm.Accounts.{RecoveryCode, TFA, UserProvider}
+  alias Hexpm.Accounts.{OptionalEmails, RecoveryCode, TFA, UserProvider}
 
   schema "users" do
     field :username, :string
@@ -13,6 +13,7 @@ defmodule Hexpm.Accounts.User do
     field :service, :boolean, default: false
     field :deactivated_at, :utc_datetime_usec
     field :role, :string, default: "basic"
+    field :optional_emails, :map
     timestamps()
 
     embeds_one :handles, UserHandles, on_replace: :delete
@@ -47,6 +48,7 @@ defmodule Hexpm.Accounts.User do
     |> validate_format(:username, @username_reject_regex)
     |> validate_exclusion(:username, @reserved_names)
     |> unique_constraint(:username, name: "users_username_idx")
+    |> ensure_optional_email_preferences()
     |> validate_password()
   end
 
@@ -85,6 +87,7 @@ defmodule Hexpm.Accounts.User do
     |> validate_format(:username, @username_regex)
     |> validate_exclusion(:username, @reserved_names)
     |> unique_constraint(:username, name: "users_username_idx")
+    |> ensure_optional_email_preferences()
   end
 
   def to_organization(user, organization) do
@@ -251,5 +254,30 @@ defmodule Hexpm.Accounts.User do
 
   def remove_password(user) do
     change(user, %{password: nil})
+  end
+
+  defp ensure_optional_email_preferences(changeset) do
+    preferences = get_field(changeset, :optional_emails) || OptionalEmails.default_preferences()
+
+    changeset
+    |> put_change(:optional_emails, preferences)
+    |> validate_optional_email_preferences()
+  end
+
+  def optional_emails_changeset(user, optional_emails) do
+    change(user, %{optional_emails: optional_emails})
+    |> validate_optional_email_preferences()
+  end
+
+  defp validate_optional_email_preferences(changeset) do
+    preferences = get_field(changeset, :optional_emails)
+
+    case OptionalEmails.validate_preferences_map(preferences) do
+      {:ok, normalized} ->
+        put_change(changeset, :optional_emails, normalized)
+
+      :error ->
+        add_error(changeset, :optional_emails, "contains invalid preferences")
+    end
   end
 end
