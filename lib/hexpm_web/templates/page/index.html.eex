@@ -7,19 +7,7 @@
     <div class="container">
       <div class="row">
         <div class="col-md-8 col-md-offset-2">
-          <%= form_tag(~p"/packages", method: "get", role: "search") do %>
-            <div class="input-group">
-              <input type="search" class="form-control" placeholder="Find packages" name="search" id="search" value="<% # search(assigns) %>" tabindex="1">
-              <input type="hidden" name="sort" value="recent_downloads">
-              <label class="sr-only" for="search">Find packages</label>
-              <span class="input-group-btn">
-                <button type="submit" class="btn btn-search" tabindex="1">
-                  <%= icon(:heroicon, "magnifying-glass", width: 18, height: 18) %>
-                  <span class="sr-only">Search</span>
-                </button>
-              </span>
-            </div>
-          <% end %>
+          <%= Phoenix.Component.live_render(@conn, HexpmWeb.SearchSuggestionsLive, id: "home-search", session: %{"variant" => "home", "limit" => 8}, container: {:div, [style: "display: contents;"]}) %>
         </div>
       </div>
     </div>
