@@ -1,6 +1,6 @@
 defmodule HexpmWeb.AuthController do
   use HexpmWeb, :controller
-  plug Ueberauth
+  plug(Ueberauth)
 
   alias Hexpm.Accounts.{Auth, Users, UserProviders}
 
@@ -134,7 +134,7 @@ defmodule HexpmWeb.AuthController do
 
       oauth_data ->
         suggested_username =
-          generate_username(oauth_data[:provider_nickname], oauth_data[:provider_email])
+          generate_username(oauth_data["provider_nickname"], oauth_data["provider_email"])
 
         render(conn, "complete_signup.html",
           suggested_username: suggested_username,
@@ -157,10 +157,10 @@ defmodule HexpmWeb.AuthController do
   end
 
   defp create_user_from_oauth(conn, oauth_data, username) do
-    provider = oauth_data[:provider]
-    provider_uid = oauth_data[:provider_uid]
-    provider_email = oauth_data[:provider_email]
-    provider_name = oauth_data[:provider_name]
+    provider = oauth_data["provider"]
+    provider_uid = oauth_data["provider_uid"]
+    provider_email = oauth_data["provider_email"]
+    provider_name = oauth_data["provider_name"]
 
     case Users.add_from_oauth_with_provider(
            username,
@@ -181,7 +181,7 @@ defmodule HexpmWeb.AuthController do
 
       {:error, changeset} ->
         suggested_username =
-          generate_username(oauth_data[:provider_nickname], oauth_data[:provider_email])
+          generate_username(oauth_data["provider_nickname"], oauth_data["provider_email"])
 
         render(conn, "complete_signup.html",
           suggested_username: suggested_username,
