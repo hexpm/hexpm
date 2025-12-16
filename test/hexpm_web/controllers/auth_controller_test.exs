@@ -172,15 +172,16 @@ defmodule HexpmWeb.AuthControllerTest do
       username = Hexpm.Fake.sequence(:username)
       name = Hexpm.Fake.sequence(:full_name)
 
+      # Session data uses string keys after JSON round-trip through DB
       conn =
         build_conn()
         |> Plug.Test.init_test_session(%{
           "pending_oauth" => %{
-            provider: "github",
-            provider_uid: "12345",
-            provider_email: email,
-            provider_name: name,
-            provider_nickname: username
+            "provider" => "github",
+            "provider_uid" => "12345",
+            "provider_email" => email,
+            "provider_name" => name,
+            "provider_nickname" => username
           }
         })
         |> get("/auth/complete-signup")
@@ -211,11 +212,11 @@ defmodule HexpmWeb.AuthControllerTest do
         build_conn()
         |> Plug.Test.init_test_session(%{
           "pending_oauth" => %{
-            provider: "github",
-            provider_uid: "12345",
-            provider_email: email,
-            provider_name: name,
-            provider_nickname: username
+            "provider" => "github",
+            "provider_uid" => "12345",
+            "provider_email" => email,
+            "provider_name" => name,
+            "provider_nickname" => username
           }
         })
         |> post("/auth/complete-signup", %{"user" => %{"username" => chosen_username}})
@@ -256,11 +257,11 @@ defmodule HexpmWeb.AuthControllerTest do
         build_conn()
         |> Plug.Test.init_test_session(%{
           "pending_oauth" => %{
-            provider: "github",
-            provider_uid: "12345",
-            provider_email: email,
-            provider_name: name,
-            provider_nickname: username
+            "provider" => "github",
+            "provider_uid" => "12345",
+            "provider_email" => email,
+            "provider_name" => name,
+            "provider_nickname" => username
           }
         })
         |> post("/auth/complete-signup", %{"user" => %{"username" => existing_username}})
@@ -288,11 +289,11 @@ defmodule HexpmWeb.AuthControllerTest do
         build_conn()
         |> Plug.Test.init_test_session(%{
           "pending_oauth" => %{
-            provider: "github",
-            provider_uid: "12345",
-            provider_email: email,
-            provider_name: name,
-            provider_nickname: username
+            "provider" => "github",
+            "provider_uid" => "12345",
+            "provider_email" => email,
+            "provider_name" => name,
+            "provider_nickname" => username
           }
         })
         |> post("/auth/complete-signup", %{"user" => %{"username" => "ab"}})
@@ -314,11 +315,11 @@ defmodule HexpmWeb.AuthControllerTest do
         build_conn()
         |> Plug.Test.init_test_session(%{
           "pending_oauth" => %{
-            provider: "github",
-            provider_uid: "12345",
-            provider_email: email,
-            provider_name: name,
-            provider_nickname: username
+            "provider" => "github",
+            "provider_uid" => "12345",
+            "provider_email" => email,
+            "provider_name" => name,
+            "provider_nickname" => username
           }
         })
         |> post("/auth/complete-signup", %{"user" => %{"username" => "invalid user!"}})

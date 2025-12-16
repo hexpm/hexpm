@@ -126,6 +126,14 @@ defmodule HexpmWeb.DashboardView do
     "Update user profile"
   end
 
+  def humanize_audit_log_info(%AuditLog{action: "user_provider.create", params: params}) do
+    "Link #{params["provider"]} account"
+  end
+
+  def humanize_audit_log_info(%AuditLog{action: "user_provider.delete", params: params}) do
+    "Unlink #{params["provider"]} account"
+  end
+
   def humanize_audit_log_info(%AuditLog{action: "security.update"}) do
     "Update TFA settings"
   end
