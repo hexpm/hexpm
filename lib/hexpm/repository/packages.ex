@@ -132,78 +132,108 @@ defmodule Hexpm.Repository.Packages do
   - Prefer name exact > prefix > substring; include description matches
   - Weight by recent downloads and text relevance
   - Only searches within the given repository
-  """
-  def suggest(repository, term, limit \\ 8) when is_binary(term) do
-    term = String.trim(term)
 
-    if term == "" do
-      []
-    else
-      {_repo_part, pkg_part} = split_repo_term(term)
-      pkg_part = String.downcase(pkg_part)
+  ## Examples
 
-      escaped = escape_like(pkg_part)
-      prefix = escaped <> "%"
-      substr = "%" <> escaped <> "%"
-      tsquery = build_tsquery(term)
-
-      q =
-        Package
-        |> where([p], p.repository_id == ^repository.id)
-        |> add_suggest_joins()
-        |> add_suggest_search_where(substr, tsquery)
-        |> add_suggest_order_by(pkg_part, prefix, substr, tsquery)
-        |> add_suggest_select(tsquery)
-        |> limit(^limit)
-
-      results = Repo.all(q)
-
-      ids = Enum.map(results, fn {id, _name, _repo_id, _repo_name, _desc, _recent} -> id end)
-
-      versions_map =
-        from(r in Hexpm.Repository.Release,
-          where: r.package_id in ^ids,
-          group_by: r.package_id,
-          select: {r.package_id, fragment("array_agg(?)", r.version)}
-        )
-        |> Repo.all()
-        |> Map.new()
-
-      results
-      |> Enum.map(fn {id, name, repo_id, repo_name, description_html, recent_downloads} ->
-        href = package_href(repo_id, repo_name, name)
-        name_html = highlight_name(name, pkg_part)
-
-        latest_version =
-          case Map.get(versions_map, id) do
-            nil ->
-              nil
-
-            versions ->
-              versions
-              |> Enum.map(&%Hexpm.Repository.Release{version: &1})
-              |> Hexpm.Repository.Release.latest_version(
-                only_stable: true,
-                unstable_fallback: true
-              )
-              |> case do
-                nil -> nil
-                %Hexpm.Repository.Release{version: v} -> to_string(v)
-              end
-          end
-
+      iex> repository = Hexpm.Repository.Repository.hexpm()
+      iex> Packages.suggest(repository, "ecto")
+      [
         %{
-          id: id,
-          name: name,
-          repository_id: repo_id,
-          repository_name: repo_name,
-          href: href,
-          name_html: name_html,
-          description_html: empty_to_nil(description_html),
-          recent_downloads: recent_downloads,
-          latest_version: latest_version
-        }
-      end)
+          id: _,
+          name: "ecto",
+          repository_id: _,
+          repository_name: "hexpm",
+          href: "/packages/ecto",
+          name_html: "ecto",
+          description_html: _,
+          recent_downloads: _,
+          latest_version: _
+        },
+        ...
+      ]
+
+      iex> Packages.suggest(repository, "")
+      []
+  """
+  def suggest(repository, term, limit \\ 8)
+
+  def suggest(_repository, "", _limit), do: []
+
+  def suggest(repository, term, limit) when is_binary(term) do
+    term = String.trim(term)
+    do_suggest(repository, term, limit)
+  end
+
+  defp do_suggest(_repository, "", _limit), do: []
+
+  defp do_suggest(repository, term, limit) do
+    {_repo_part, pkg_part} = split_repo_term(term)
+    pkg_part = String.downcase(pkg_part)
+
+    escaped = escape_like(pkg_part)
+    prefix = escaped <> "%"
+    substr = "%" <> escaped <> "%"
+    tsquery = build_tsquery(term)
+
+    package_results =
+      Package
+      |> where([p], p.repository_id == ^repository.id)
+      |> add_suggest_joins()
+      |> add_suggest_search_where(substr, tsquery)
+      |> add_suggest_order_by(pkg_part, prefix, substr, tsquery)
+      |> add_suggest_select(tsquery)
+      |> limit(^limit)
+      |> Repo.all()
+
+    package_ids =
+      Enum.map(package_results, fn {id, _name, _repo_id, _repo_name, _desc, _recent} -> id end)
+
+    versions_map =
+      from(r in Hexpm.Repository.Release,
+        where: r.package_id in ^package_ids,
+        group_by: r.package_id,
+        select: {r.package_id, fragment("array_agg(?)", r.version)}
+      )
+      |> Repo.all()
+      |> Map.new()
+
+    package_results
+    |> Enum.map(fn {id, name, repo_id, repo_name, description_html, recent_downloads} ->
+      href = package_href(repo_name, name)
+      name_html = highlight_name(name, pkg_part)
+
+      latest_version = get_latest_version_string(versions_map, id)
+
+      %{
+        id: id,
+        name: name,
+        repository_id: repo_id,
+        repository_name: repo_name,
+        href: href,
+        name_html: name_html,
+        description_html: empty_to_nil(description_html),
+        recent_downloads: recent_downloads,
+        latest_version: latest_version
+      }
+    end)
+  end
+
+  defp get_latest_version_string(versions_map, id) do
+    case Map.get(versions_map, id) do
+      nil ->
+        nil
+
+      versions ->
+        versions
+        |> Enum.map(&%Hexpm.Repository.Release{version: &1})
+        |> Hexpm.Repository.Release.latest_version(
+          only_stable: true,
+          unstable_fallback: true
+        )
+        |> case do
+          nil -> nil
+          %Hexpm.Repository.Release{version: v} -> to_string(v)
+        end
     end
   end
 
@@ -219,6 +249,8 @@ defmodule Hexpm.Repository.Packages do
   end
 
   defp add_suggest_search_where(query, substr, tsquery) do
+    # The GIN index packages_description_text will be used automatically by PostgreSQL
+    # when the expression matches exactly: to_tsvector('english', regexp_replace((meta->'description')::text, '/', ' '))
     where(
       query,
       [p],
@@ -232,12 +264,28 @@ defmodule Hexpm.Repository.Packages do
   end
 
   defp add_suggest_order_by(query, pkg_part, prefix, substr, tsquery) do
+    # Note: The tsvector is recomputed here for ranking, but PostgreSQL's query planner
+    # will optimize this. The WHERE clause uses the GIN index, and ORDER BY only runs
+    # on the filtered result set. For further optimization, consider using a CTE
+    # to compute the tsvector once (see add_suggest_order_by_with_cte/5 for example).
     order_by(
       query,
       [p, r, d],
       desc:
         fragment(
-          "(CASE WHEN lower(?) = ? THEN 3.0 ELSE 0 END) + (CASE WHEN lower(?) LIKE ? THEN 2.0 ELSE 0 END) + (CASE WHEN lower(?) LIKE ? THEN 1.0 ELSE 0 END) + (LEAST(5.0, ln(1 + COALESCE(?,0))) * 0.2) + (COALESCE(ts_rank_cd(to_tsvector('english', regexp_replace((?->'description')::text, '/', ' ')), to_tsquery('english', ?)), 0.0) * 0.4)",
+          """
+          (CASE WHEN lower(?) = ? THEN 3.0 ELSE 0 END) +
+          (CASE WHEN lower(?) LIKE ? THEN 2.0 ELSE 0 END) +
+          (CASE WHEN lower(?) LIKE ? THEN 1.0 ELSE 0 END) +
+          (LEAST(5.0, ln(1 + COALESCE(?, 0))) * 0.2) +
+          (COALESCE(
+            ts_rank_cd(
+              to_tsvector('english', regexp_replace((?->'description')::text, '/', ' ')),
+              to_tsquery('english', ?)
+            ),
+            0.0
+          ) * 0.4)
+          """,
           p.name,
           ^pkg_part,
           p.name,
@@ -252,6 +300,13 @@ defmodule Hexpm.Repository.Packages do
     )
   end
 
+  # Use PostgreSQL's ts_headline to extract and highlight matching text from the description.
+  # The fragment below does the following:
+  # - Extracts the description from the JSONB meta field
+  # - Replaces '/' with spaces (to improve word boundary detection)
+  # - Searches for matches using the tsquery (built from the search term)
+  # - Returns a highlighted excerpt with matching words wrapped in <strong> tags
+  # - Limits to 1 fragment, 5-15 words for a concise preview
   defp add_suggest_select(query, tsquery) do
     select(query, [p, r, d], {
       p.id,
@@ -263,7 +318,7 @@ defmodule Hexpm.Repository.Packages do
         ts_headline('english',
           regexp_replace((?->'description')::text, '/', ' '),
           to_tsquery('english', ?),
-          'StartSel=<strong>,StopSel=</strong>,MaxFragments=1,MinWords=5,MaxWords=15'
+          'StartSel=<strong>, StopSel=</strong>, MaxFragments=1, MinWords=5, MaxWords=15'
         )
         """,
         p.meta,
@@ -297,8 +352,8 @@ defmodule Hexpm.Repository.Packages do
     |> Enum.join(" & ")
   end
 
-  defp package_href(repo_id, repo_name, name) do
-    if repo_id == 1 or repo_name == "hexpm" do
+  defp package_href(repo_name, name) do
+    if repo_name == "hexpm" do
       "/packages/#{name}"
     else
       "/packages/#{repo_name}/#{name}"
