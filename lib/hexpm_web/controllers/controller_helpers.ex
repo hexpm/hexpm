@@ -49,6 +49,7 @@ defmodule HexpmWeb.ControllerHelpers do
     conn
     |> put_status(status)
     |> put_layout(false)
+    |> put_root_layout(false)
     |> put_view(HexpmWeb.ErrorView)
     |> render(:"#{status}", assigns)
     |> halt()
