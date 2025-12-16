@@ -136,9 +136,10 @@ defmodule HexpmWeb.LoginController do
     )
   end
 
-  defp login(conn, %User{id: user_id, tfa: %{tfa_enabled: true, app_enabled: true}} = user,
+  defp login(conn, %User{id: user_id, tfa: %{secret: secret}} = user,
          password_breached: breached?
-       ) do
+       )
+       when is_binary(secret) do
     alias Hexpm.UserSessions
 
     # Pre-create browser session for after TFA

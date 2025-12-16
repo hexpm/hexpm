@@ -178,62 +178,22 @@ defmodule Hexpm.Accounts.Users do
     end
   end
 
-  def tfa_enable(user, audit: audit_data) do
-    secret = Hexpm.Accounts.TFA.generate_secret()
-    codes = Hexpm.Accounts.RecoveryCode.generate_set()
+  def tfa_enable(user, secret, verification_code, audit: audit_data) do
+    if TFA.token_valid?(secret, verification_code) do
+      codes = Hexpm.Accounts.RecoveryCode.generate_set()
 
-    multi =
-      Multi.new()
-      |> Multi.update(
-        :user,
-        User.update_tfa(user, %{tfa_enabled: true, secret: secret, recovery_codes: codes})
-      )
-      |> audit(audit_data, "security.update", fn %{user: user} -> user end)
-
-    case Repo.transaction(multi) do
-      {:ok, %{user: user}} ->
-        user
-        |> Emails.tfa_enabled()
-        |> Mailer.deliver_later!()
-
-      {:error, :user, changeset, _} ->
-        {:error, changeset}
-    end
-  end
-
-  def tfa_disable(user, audit: audit_data) do
-    multi =
-      Multi.new()
-      |> Multi.update(
-        :user,
-        User.update_tfa(user, %{tfa_enabled: false, secret: nil, recovery_codes: []})
-      )
-      |> audit(audit_data, "security.update", fn %{user: user} -> user end)
-
-    case Repo.transaction(multi) do
-      {:ok, %{user: user}} ->
-        user
-        |> Emails.tfa_disabled()
-        |> Mailer.deliver_later!()
-
-        user
-
-      {:error, :user, changeset, _} ->
-        {:error, changeset}
-    end
-  end
-
-  def tfa_enable_app(user, verification_code, audit: audit_data) do
-    if TFA.token_valid?(user.tfa.secret, verification_code) do
       multi =
         Multi.new()
-        |> Multi.update(:user, User.update_tfa(user, %{app_enabled: true}))
+        |> Multi.update(
+          :user,
+          User.update_tfa(user, %{secret: secret, recovery_codes: codes})
+        )
         |> audit(audit_data, "security.update", fn %{user: user} -> user end)
 
       case Repo.transaction(multi) do
         {:ok, %{user: user}} ->
           user
-          |> Emails.tfa_enabled_app()
+          |> Emails.tfa_enabled()
           |> Mailer.deliver_later!()
 
           {:ok, user}
@@ -246,18 +206,16 @@ defmodule Hexpm.Accounts.Users do
     end
   end
 
-  def tfa_disable_app(user, audit: audit_data) do
-    secret = Hexpm.Accounts.TFA.generate_secret()
-
+  def tfa_disable(user, audit: audit_data) do
     multi =
       Multi.new()
-      |> Multi.update(:user, User.update_tfa(user, %{app_enabled: false, secret: secret}))
+      |> Multi.update(:user, User.clear_tfa(user))
       |> audit(audit_data, "security.update", fn %{user: user} -> user end)
 
     case Repo.transaction(multi) do
       {:ok, %{user: user}} ->
         user
-        |> Emails.tfa_disabled_app()
+        |> Emails.tfa_disabled()
         |> Mailer.deliver_later!()
 
         user

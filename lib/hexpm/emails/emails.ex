@@ -64,22 +64,6 @@ defmodule Hexpm.Emails do
     |> render(:tfa_disabled)
   end
 
-  def tfa_enabled_app(user) do
-    email()
-    |> email_to(user)
-    |> subject("Hex.pm - A new TFA app has been enabled on your account")
-    |> assign(:username, user.username)
-    |> render(:tfa_app_enabled)
-  end
-
-  def tfa_disabled_app(user) do
-    email()
-    |> email_to(user)
-    |> subject("Hex.pm - A TFA app has been disabled on your account")
-    |> assign(:username, user.username)
-    |> render(:tfa_app_disabled)
-  end
-
   def tfa_rotate_recovery_codes(user) do
     email()
     |> email_to(user)
