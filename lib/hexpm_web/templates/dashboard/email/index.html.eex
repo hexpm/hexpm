@@ -91,7 +91,7 @@
       <div class="panel-body">
         <p>
           Hex.pm always sends account-critical emails such as verification, password resets, and security alerts.
-          Below are the optional emails that you can turn off.
+          Below are the optional emails that you can turn off. If an email is checked, you will be notified when the event occurs.
         </p>
       </div>
 
@@ -108,11 +108,7 @@
                 </label>
               </div>
               <p>
-                <%= if Map.get(@optional_email_preferences, to_string(type.id), true) do %>
-                  <%= type.description_enabled %>
-                <% else %>
-                  <%= type.description_disabled %>
-                <% end %>
+                <%= type.description %>
               </p>
             </li>
           <% end %>

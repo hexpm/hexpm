@@ -2,7 +2,7 @@ defmodule Hexpm.Accounts.OptionalEmails do
   @moduledoc """
   Defines optional emails that users can opt out of.
   Example:
-   if OptionalEmails.allowed?(user, :org_invite) do
+   if OptionalEmails.allowed?(user, :organization_invite) do
       Emails.organization_invite(organization, user)
       |> Mailer.deliver_later!()
     end
@@ -10,11 +10,27 @@ defmodule Hexpm.Accounts.OptionalEmails do
 
   @types [
     %{
-      id: :org_invite,
+      id: :organization_invite,
       title: "Organization invites",
-      description_enabled: "You’ll be notified whenever an organization you belong to adds you.",
-      description_disabled:
-        "You will not be notified when an organization you belong to adds you.",
+      description: "You’ll be notified whenever an organization you belong to adds you.",
+      optional: true
+    },
+    %{
+      id: :owner_added_to_package,
+      title: "Owner added to package",
+      description: "You’ll be notified whenever you are added as an owner to a package.",
+      optional: true
+    },
+    %{
+      id: :owner_removed_from_package,
+      title: "Owner removed from package",
+      description: "You’ll be notified whenever you are removed as an owner from a package.",
+      optional: true
+    },
+    %{
+      id: :package_published,
+      title: "Package published",
+      description: "You’ll be notified whenever a package you own is published.",
       optional: true
     }
   ]
@@ -79,7 +95,9 @@ defmodule Hexpm.Accounts.OptionalEmails do
     |> Map.get(to_string(id), true)
   end
 
-  defp to_bool(value) do
+  defp to_bool(nil), do: false
+
+  defp to_bool(value) when is_binary(value) do
     value
     |> String.downcase()
     |> case do
@@ -88,4 +106,7 @@ defmodule Hexpm.Accounts.OptionalEmails do
       _ -> false
     end
   end
+
+  defp to_bool(value) when is_boolean(value), do: value
+  defp to_bool(_), do: false
 end

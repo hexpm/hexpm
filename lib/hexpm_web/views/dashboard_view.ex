@@ -114,6 +114,10 @@ defmodule HexpmWeb.DashboardView do
     "Set email #{params["email"]} as public email"
   end
 
+  def humanize_audit_log_info(%AuditLog{action: "email.options", params: params}) do
+    "Updated email options to #{params["optional_emails"]}"
+  end
+
   def humanize_audit_log_info(%AuditLog{action: "email.gravatar", params: params}) do
     "Set email #{params["email"]} as gravatar email"
   end

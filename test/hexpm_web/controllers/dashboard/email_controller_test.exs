@@ -34,13 +34,15 @@ defmodule HexpmWeb.Dashboard.EmailControllerTest do
     conn =
       build_conn()
       |> test_login(c.user)
-      |> post("/dashboard/email/options", %{"optional_emails" => %{"org_invite" => "false"}})
+      |> post("/dashboard/email/options", %{
+        "optional_emails" => %{"organization_invite" => "false"}
+      })
 
     assert redirected_to(conn) == "/dashboard/email"
     assert Phoenix.Flash.get(conn.assigns.flash, :info) =~ "Email preferences updated."
 
     user = Hexpm.Repo.get!(Hexpm.Accounts.User, c.user.id)
-    assert user.optional_emails["org_invite"] == false
+    assert user.optional_emails["organization_invite"] == false
   end
 
   test "requires login" do

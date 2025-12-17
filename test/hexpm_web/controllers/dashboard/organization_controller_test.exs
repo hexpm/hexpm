@@ -160,7 +160,12 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
       {:ok, new_user} =
         Users.update_optional_emails(
           new_user,
-          %{"org_invite" => "false"},
+          %{
+            "organization_invite" => "false",
+            "owner_added_to_package" => "true",
+            "owner_removed_from_package" => "true",
+            "package_published" => "true"
+          },
           audit: audit_data(new_user)
         )
 

@@ -159,7 +159,7 @@ defmodule Hexpm.Accounts.UsersTest do
     user = insert(:user)
 
     changeset =
-      User.optional_emails_changeset(user, %{"org_invite" => "yes"})
+      User.optional_emails_changeset(user, %{"organization_invite" => "yes"})
 
     assert %{optional_emails: _} = errors_on(changeset)
   end
