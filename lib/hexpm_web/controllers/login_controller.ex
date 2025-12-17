@@ -69,6 +69,10 @@ defmodule HexpmWeb.LoginController do
     |> redirect_return(user, return)
   end
 
+  # TODO(hexdocs-oauth-migration): Remove legacy hexdocs redirect handling after hexdocs migrates to OAuth.
+  # This code path handles the old ?hexdocs= parameter flow where hexpm generates an API key
+  # and redirects back to hexdocs with the key in the URL. The new OAuth flow uses standard
+  # Authorization Code with PKCE instead.
   defp redirect_return(%{params: %{"hexdocs" => organization}} = conn, user, return)
        when is_binary(organization) do
     case generate_hexdocs_key(user, organization) do
