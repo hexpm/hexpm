@@ -105,7 +105,8 @@ defmodule Hexpm.Utils do
 
   def parse_search(nil), do: nil
   def parse_search(""), do: nil
-  def parse_search(search), do: String.trim(search)
+  def parse_search(search) when is_binary(search), do: String.trim(search)
+  def parse_search(_), do: nil
 
   defp diff(a, b) do
     {days, time} = :calendar.time_difference(a, b)

@@ -27,9 +27,9 @@ defmodule HexpmWeb.PasswordController do
   end
 
   def update(conn, params) do
-    params = params["user"]
-    username = params["username"]
-    key = params["key"]
+    params = params["user"] || %{}
+    username = safe_string(params["username"])
+    key = safe_string(params["key"])
     revoke_all_access? = (params["revoke_all_access"] || "yes") == "yes"
 
     case Users.password_reset_finish(
