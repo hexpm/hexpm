@@ -3,41 +3,65 @@ defmodule Hexpm.Accounts.Users do
 
   alias Hexpm.Accounts.{RecoveryCode, TFA, UserProvider}
 
-  def get(username_or_email, preload \\ []) do
+  def get(username_or_email, preload \\ [])
+
+  def get(username_or_email, preload) when is_binary(username_or_email) do
     User.get(String.downcase(username_or_email), preload)
     |> Repo.one()
   end
 
-  def public_get(username_or_email, preload \\ []) do
+  def get(_, _), do: nil
+
+  def public_get(username_or_email, preload \\ [])
+
+  def public_get(username_or_email, preload) when is_binary(username_or_email) do
     User.public_get(String.downcase(username_or_email), preload)
     |> Repo.one()
   end
+
+  def public_get(_, _), do: nil
 
   def get_by_id(id, preload \\ []) do
     Repo.get(User, id)
     |> Repo.preload(preload)
   end
 
-  def get_by_username(username, preload \\ []) do
+  def get_by_username(username, preload \\ [])
+
+  def get_by_username(username, preload) when is_binary(username) do
     Repo.get_by(User, username: String.downcase(username))
     |> Repo.preload(preload)
   end
 
-  def get_by_role(role, preload \\ []) do
+  def get_by_username(_, _), do: nil
+
+  def get_by_role(role, preload \\ [])
+
+  def get_by_role(role, preload) when is_binary(role) do
     User.get_by_role(String.downcase(role))
     |> Repo.all()
     |> Repo.preload(preload)
   end
 
-  def get_email(email, preload \\ []) do
+  def get_by_role(_, _), do: []
+
+  def get_email(email, preload \\ [])
+
+  def get_email(email, preload) when is_binary(email) do
     Repo.get_by(Email, email: String.downcase(email), verified: true)
     |> Repo.preload(preload)
   end
 
-  def get_maybe_unverified_email(email, preload \\ []) do
+  def get_email(_, _), do: nil
+
+  def get_maybe_unverified_email(email, preload \\ [])
+
+  def get_maybe_unverified_email(email, preload) when is_binary(email) do
     Repo.get_by(Email, email: String.downcase(email))
     |> Repo.preload(preload)
   end
+
+  def get_maybe_unverified_email(_, _), do: nil
 
   def all_organizations(%User{organizations: organizations}) when is_list(organizations) do
     [Organization.hexpm() | organizations]
