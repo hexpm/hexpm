@@ -36,6 +36,7 @@ defmodule Hexpm.OAuth.Client do
     |> validate_inclusion(:client_type, @valid_client_types)
     |> validate_grant_types()
     |> validate_scopes()
+    |> validate_redirect_uris()
     |> validate_client_secret_required()
     |> unique_constraint(:client_id)
   end
@@ -61,9 +62,11 @@ defmodule Hexpm.OAuth.Client do
 
   defp validate_scopes(changeset) do
     validate_change(changeset, :allowed_scopes, fn :allowed_scopes, scopes ->
-      case Permissions.validate_scopes(scopes) do
-        :ok -> []
-        {:error, message} -> [allowed_scopes: message]
+      invalid_scopes = Enum.reject(scopes, &Permissions.valid_client_allowed_scope?/1)
+
+      case invalid_scopes do
+        [] -> []
+        _ -> [allowed_scopes: "contains invalid scopes: #{Enum.join(invalid_scopes, ", ")}"]
       end
     end)
   end
@@ -76,6 +79,68 @@ defmodule Hexpm.OAuth.Client do
       add_error(changeset, :client_secret, "is required for confidential clients")
     else
       changeset
+    end
+  end
+
+  defp validate_redirect_uris(changeset) do
+    validate_change(changeset, :redirect_uris, fn :redirect_uris, uris ->
+      Enum.flat_map(uris, &validate_redirect_uri/1)
+    end)
+  end
+
+  defp validate_redirect_uri(uri) do
+    cond do
+      not valid_uri?(uri) ->
+        [redirect_uris: "#{uri} is not a valid URI"]
+
+      String.contains?(uri, "*") and count_wildcards(uri) > 1 ->
+        [redirect_uris: "#{uri} contains multiple wildcards"]
+
+      String.contains?(uri, "*") and not wildcard_in_host?(uri) ->
+        [redirect_uris: "#{uri} has wildcard outside of host"]
+
+      String.contains?(uri, "*") and not String.starts_with?(uri, "https://") ->
+        [redirect_uris: "#{uri} wildcard redirect URIs must use HTTPS"]
+
+      String.contains?(uri, "*") and not sufficient_domain_segments?(uri) ->
+        [redirect_uris: "#{uri} wildcard must have at least domain.tld after *"]
+
+      true ->
+        []
+    end
+  end
+
+  defp valid_uri?(uri) do
+    case URI.parse(uri) do
+      %URI{scheme: scheme, host: host} when not is_nil(scheme) and not is_nil(host) -> true
+      _ -> false
+    end
+  end
+
+  defp count_wildcards(string) do
+    string |> String.graphemes() |> Enum.count(&(&1 == "*"))
+  end
+
+  defp wildcard_in_host?(uri) do
+    case URI.parse(uri) do
+      %URI{host: host} when not is_nil(host) -> String.contains?(host, "*")
+      _ -> false
+    end
+  end
+
+  defp sufficient_domain_segments?(uri) do
+    case URI.parse(uri) do
+      %URI{host: host} when not is_nil(host) ->
+        # After removing *, need at least 2 segments (domain.tld)
+        # e.g., *.example.com → .example.com → ["", "example", "com"] → 2+ non-empty
+        host
+        |> String.replace("*", "")
+        |> String.split(".")
+        |> Enum.reject(&(&1 == ""))
+        |> length() >= 2
+
+      _ ->
+        false
     end
   end
 end
