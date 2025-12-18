@@ -115,7 +115,7 @@ defmodule HexpmWeb.DashboardView do
   end
 
   def humanize_audit_log_info(%AuditLog{action: "email.options", params: params}) do
-    "Updated email options to #{params["optional_emails"]}"
+    "Updated email options to #{inspect(params["optional_emails"])}"
   end
 
   def humanize_audit_log_info(%AuditLog{action: "email.gravatar", params: params}) do
