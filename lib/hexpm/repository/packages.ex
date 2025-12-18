@@ -1,7 +1,8 @@
 defmodule Hexpm.Repository.Packages do
   use Hexpm.Context
   import Ecto.Query
-
+  import HexpmWeb.ViewHelpers, only: [path_for_package: 2]
+  @max_word_length 50
   def count() do
     Repo.one!(Package.count())
   end
@@ -72,7 +73,7 @@ defmodule Hexpm.Repository.Packages do
       release =
         Release.latest_version(releases[package.id], only_stable: true, unstable_fallback: true)
 
-      %{package | latest_release: release}
+      Map.put(package, :latest_release, release)
     end)
   end
 
@@ -175,66 +176,43 @@ defmodule Hexpm.Repository.Packages do
     substr = "%" <> escaped <> "%"
     tsquery = build_tsquery(term)
 
-    package_results =
-      Package
-      |> where([p], p.repository_id == ^repository.id)
-      |> add_suggest_joins()
-      |> add_suggest_search_where(substr, tsquery)
-      |> add_suggest_order_by(pkg_part, prefix, substr, tsquery)
-      |> add_suggest_select(tsquery)
-      |> limit(^limit)
-      |> Repo.all()
+    Package
+    |> where([p], p.repository_id == ^repository.id)
+    |> add_suggest_joins()
+    |> add_suggest_search_where(substr, tsquery)
+    |> add_suggest_order_by(pkg_part, prefix, substr, tsquery)
+    |> add_suggest_select(tsquery)
+    |> limit(^limit)
+    |> Repo.all()
+    |> then(fn packages ->
+      packages_with_releases =
+        packages
+        |> IO.inspect(label: "packages")
+        |> Enum.map(fn {id, _, _, _, _, _} -> %{id: id} end)
+        |> attach_latest_releases()
 
-    package_ids =
-      Enum.map(package_results, fn {id, _name, _repo_id, _repo_name, _desc, _recent} -> id end)
+      packages
+      |> Enum.zip(packages_with_releases)
+      |> Enum.map(fn {{id, name, repo_id, repo_name, description_html, recent_downloads},
+                      package_with_release} ->
+        href = path_for_package(repo_name, name)
+        name_html = highlight_name(name, pkg_part)
+        latest_release = Map.get(package_with_release, :latest_release)
+        latest_version = if latest_release, do: latest_release.version, else: nil
 
-    versions_map =
-      from(r in Hexpm.Repository.Release,
-        where: r.package_id in ^package_ids,
-        group_by: r.package_id,
-        select: {r.package_id, fragment("array_agg(?)", r.version)}
-      )
-      |> Repo.all()
-      |> Map.new()
-
-    package_results
-    |> Enum.map(fn {id, name, repo_id, repo_name, description_html, recent_downloads} ->
-      href = package_href(repo_name, name)
-      name_html = highlight_name(name, pkg_part)
-
-      latest_version = get_latest_version_string(versions_map, id)
-
-      %{
-        id: id,
-        name: name,
-        repository_id: repo_id,
-        repository_name: repo_name,
-        href: href,
-        name_html: name_html,
-        description_html: empty_to_nil(description_html),
-        recent_downloads: recent_downloads,
-        latest_version: latest_version
-      }
+        %{
+          id: id,
+          name: name,
+          repository_id: repo_id,
+          repository_name: repo_name,
+          href: href,
+          name_html: name_html,
+          description_html: safe_description_html(description_html),
+          recent_downloads: recent_downloads,
+          latest_version: latest_version
+        }
+      end)
     end)
-  end
-
-  defp get_latest_version_string(versions_map, id) do
-    case Map.get(versions_map, id) do
-      nil ->
-        nil
-
-      versions ->
-        versions
-        |> Enum.map(&%Hexpm.Repository.Release{version: &1})
-        |> Hexpm.Repository.Release.latest_version(
-          only_stable: true,
-          unstable_fallback: true
-        )
-        |> case do
-          nil -> nil
-          %Hexpm.Repository.Release{version: v} -> to_string(v)
-        end
-    end
   end
 
   defp add_suggest_joins(query) do
@@ -344,45 +322,32 @@ defmodule Hexpm.Repository.Packages do
   defp build_tsquery(search) do
     search
     |> String.downcase()
+    # strip special characters
     |> String.replace(~r/[^\w\s]/u, " ")
+    # split into words and trim whitespace
     |> String.split(~r/\s+/, trim: true)
-    |> Enum.map(&String.slice(&1, 0, 50))
-    |> Enum.reject(&(&1 == ""))
+    # limit each word to max_word_length characters
+    |> Enum.map(&String.slice(&1, 0, @max_word_length))
+    # append :* to each word to match any suffix in tsquery
     |> Enum.map(&(&1 <> ":*"))
+    # join with & to match all words in tsquery
     |> Enum.join(" & ")
   end
 
-  defp package_href(repo_name, name) do
-    if repo_name == "hexpm" do
-      "/packages/#{name}"
-    else
-      "/packages/#{repo_name}/#{name}"
-    end
-  end
-
-  defp empty_to_nil(nil), do: nil
-  defp empty_to_nil(str) when is_binary(str), do: if(String.trim(str) == "", do: nil, else: str)
-  defp empty_to_nil(other), do: other
-
   defp highlight_name(name, term) when is_binary(term) and term != "" do
-    dn = String.downcase(name)
-    dt = String.downcase(term)
-
-    case :binary.match(dn, dt) do
-      {pos, len} ->
-        {pre, rest} = String.split_at(name, pos)
-        {mid, post} = String.split_at(rest, len)
-        pre_e = pre |> Phoenix.HTML.html_escape() |> Phoenix.HTML.safe_to_string()
-        mid_e = mid |> Phoenix.HTML.html_escape() |> Phoenix.HTML.safe_to_string()
-        post_e = post |> Phoenix.HTML.html_escape() |> Phoenix.HTML.safe_to_string()
-        pre_e <> "<strong>" <> mid_e <> "</strong>" <> post_e
-
-      :nomatch ->
-        name |> Phoenix.HTML.html_escape() |> Phoenix.HTML.safe_to_string()
-    end
+    escaped_name = Phoenix.HTML.html_escape(name) |> Phoenix.HTML.safe_to_string()
+    escaped_term = Phoenix.HTML.html_escape(term) |> Phoenix.HTML.safe_to_string()
+    highlighted = String.replace(escaped_name, escaped_term, "<strong>#{escaped_term}</strong>")
+    Phoenix.HTML.raw(highlighted)
   end
 
   defp highlight_name(name, _term) do
-    name |> Phoenix.HTML.html_escape() |> Phoenix.HTML.safe_to_string()
+    Phoenix.HTML.html_escape(name)
+  end
+
+  defp safe_description_html(nil), do: nil
+
+  defp safe_description_html(description) when is_binary(description) do
+    Phoenix.HTML.raw(description)
   end
 end

@@ -1,8 +1,6 @@
 defmodule HexpmWeb.SearchSuggestionsComponent do
   use Phoenix.Component
 
-  import Phoenix.HTML
-
   alias HexpmWeb.ViewHelpers
 
   @doc """
@@ -56,7 +54,7 @@ defmodule HexpmWeb.SearchSuggestionsComponent do
             class={if @active == idx, do: "active", else: nil}
             style={if @active == idx, do: "background-color: #e9ddff;", else: nil}
           >
-            {raw(item.name_html)}
+            {item.name_html}
             <%= if item.latest_version do %>
               <span class="text-muted" style="font-size: 12px; margin-left: 6px;">
                 v{item.latest_version}
@@ -64,7 +62,7 @@ defmodule HexpmWeb.SearchSuggestionsComponent do
             <% end %>
             <%= if item.description_html do %>
               <div class="text-muted" style="font-size: 12px;">
-                {raw(item.description_html)}
+                {item.description_html}
               </div>
             <% end %>
             <%= if is_integer(item.recent_downloads) do %>

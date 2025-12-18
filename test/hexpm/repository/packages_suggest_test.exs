@@ -74,8 +74,8 @@ defmodule Hexpm.Repository.PackagesSuggestTest do
 
       assert "database" in names(results)
       # ensure snippet has highlighting tags
-      assert Enum.find(results, &(&1.name == "database")).description_html =~
-               ~r/<strong>ecto<\/strong>/i
+      {:safe, description_string} = Enum.find(results, &(&1.name == "database")).description_html
+      assert description_string =~ ~r/<strong>ecto<\/strong>/i
     end
 
     test "is case insensitive", %{repository: repository} do
