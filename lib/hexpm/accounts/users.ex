@@ -156,12 +156,14 @@ defmodule Hexpm.Accounts.Users do
   end
 
   def update_optional_emails(user, params, audit: audit_data) do
-    preferences = OptionalEmails.normalize_preferences(params)
+    old_preferences = OptionalEmails.preferences(user)
+    new_preferences = OptionalEmails.normalize_preferences(params)
+    changeset = User.optional_emails_changeset(user, new_preferences)
 
     multi =
       Multi.new()
-      |> Multi.update(:user, User.optional_emails_changeset(user, preferences))
-      |> audit(audit_data, "email.options", preferences)
+      |> Multi.update(:user, changeset)
+      |> audit(audit_data, "email.options", {old_preferences, new_preferences})
 
     case Repo.transaction(multi) do
       {:ok, %{user: user}} ->

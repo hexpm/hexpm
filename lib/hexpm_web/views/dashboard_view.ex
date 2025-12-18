@@ -1,5 +1,6 @@
 defmodule HexpmWeb.DashboardView do
   use HexpmWeb, :view
+  alias Hexpm.Accounts.OptionalEmails
 
   defp account_settings() do
     [
@@ -115,7 +116,9 @@ defmodule HexpmWeb.DashboardView do
   end
 
   def humanize_audit_log_info(%AuditLog{action: "email.options", params: params}) do
-    "Updated email options to #{inspect(params["optional_emails"])}"
+    changes = params["changes"] || params[:changes] || %{}
+    changes_list = format_email_preference_changes(changes)
+    "Updated email preferences: #{changes_list}"
   end
 
   def humanize_audit_log_info(%AuditLog{action: "email.gravatar", params: params}) do
@@ -244,4 +247,13 @@ defmodule HexpmWeb.DashboardView do
 
   defp plan_id("organization-monthly"), do: "monthly"
   defp plan_id("organization-annually"), do: "annually"
+
+  defp format_email_preference_changes(changes) do
+    changes
+    |> Enum.map_join(", ", fn {key, value} ->
+      %{title: title} = Enum.find(OptionalEmails.list(), &(to_string(&1.id) == key))
+      status = if value, do: "enabled", else: "disabled"
+      "#{title}: #{status}"
+    end)
+  end
 end
