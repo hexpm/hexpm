@@ -175,6 +175,25 @@ defmodule HexpmWeb.API.ReleaseControllerTest do
       refute Hexpm.Repo.get_by(Package, name: url_name)
       refute Hexpm.Repo.get_by(Package, name: tarball_name)
     end
+
+    test "create release as deactivated user", %{user: user} do
+      Ecto.Changeset.change(user, deactivated_at: DateTime.utc_now()) |> Repo.update!()
+      key = insert(:key, user: user)
+
+      meta = %{
+        name: Fake.sequence(:package),
+        version: "1.0.0",
+        description: "Domain-specific language."
+      }
+
+      conn =
+        build_conn()
+        |> put_req_header("content-type", "application/octet-stream")
+        |> put_req_header("authorization", key.user_secret)
+        |> post("/api/packages/#{meta.name}/releases", create_tar(meta))
+
+      assert json_response(conn, 400)
+    end
   end
 
   describe "POST /api/publish" do
