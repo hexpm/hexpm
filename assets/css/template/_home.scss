@@ -234,6 +234,29 @@
   }
 }
 
+// Suggestions dropdown animation
+.search-form .search-suggestions {
+  transform-origin: top center;
+  animation: hexpm-suggest-in 140ms ease-out both;
+}
+
+@keyframes hexpm-suggest-in {
+  from {
+    opacity: 0;
+    transform: translateY(-2px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .search-form .search-suggestions {
+    animation: none;
+  }
+}
+
 .log-head,
 .gs-head {
   padding-bottom: 10px;
