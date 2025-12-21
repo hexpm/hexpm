@@ -27,6 +27,9 @@ defmodule Hexpm.Accounts.Keys do
     end)
   end
 
+  # TODO(hexdocs-oauth-migration): Remove create_for_docs/2 after hexdocs migrates to OAuth.
+  # This function creates legacy API keys for hexdocs authentication. The new OAuth flow
+  # uses standard OAuth tokens instead of API keys.
   def create_for_docs(user, organization) do
     Key.build_for_docs(user, organization)
     |> Repo.insert()
