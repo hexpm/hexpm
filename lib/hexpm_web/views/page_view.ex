@@ -3,6 +3,7 @@ defmodule HexpmWeb.PageView do
 
   import HexpmWeb.Components.Buttons
   import HexpmWeb.Components.Home
+  import HexpmWeb.Components.Pricing
 
   def render_package(data) do
     data =
