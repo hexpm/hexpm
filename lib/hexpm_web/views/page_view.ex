@@ -1,6 +1,10 @@
 defmodule HexpmWeb.PageView do
   use HexpmWeb, :view
 
+  import HexpmWeb.Components.Buttons
+  import HexpmWeb.Components.Home
+  import HexpmWeb.Components.Pricing
+
   def render_package(data) do
     data =
       [

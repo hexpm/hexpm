@@ -1,0 +1,131 @@
+<%!-- Package Index Page --%>
+<div class="tw:bg-white tw:min-h-dvh">
+  <div class="tw:max-w-7xl tw:mx-auto tw:px-4 tw:py-8 tw:lg:py-12">
+    <%!-- Header --%>
+    <div class="tw:mb-8">
+      <h1 class="tw:text-grey-900 tw:text-4xl tw:font-bold tw:mb-2">
+        Packages
+      </h1>
+      <p class="tw:text-grey-600 tw:text-lg">
+        Browse and discover packages for the Erlang ecosystem
+      </p>
+    </div>
+
+    <%!-- Letter Navigation (only show when not searching) --%>
+    <%= unless @search do %>
+      <.letter_browser letters={@letters} current_letter={@letter} />
+    <% end %>
+
+    <%!-- Exact Match Section --%>
+    <%= if @exact_match do %>
+      <div class="tw:mb-6 tw:bg-green-50 tw:border tw:border-green-200 tw:rounded-xl tw:p-6">
+        <div class="tw:flex tw:items-center tw:gap-2 tw:mb-4">
+          <svg
+            class="tw:size-5 tw:text-green-600"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+            />
+          </svg>
+          <h3 class="tw:text-green-900 tw:font-semibold tw:text-lg">Exact Match</h3>
+        </div>
+        <ul class="tw:bg-white tw:rounded-lg tw:overflow-hidden">
+          {render("_package.html",
+            package: @exact_match,
+            package_downloads: downloads_for_package(@exact_match, @downloads),
+            view: @sort
+          )}
+        </ul>
+      </div>
+    <% end %>
+
+    <%!-- No Results --%>
+    <%= if !@exact_match and @packages == [] do %>
+      <div class="tw:bg-grey-50 tw:rounded-xl tw:p-12 tw:text-center">
+        <svg
+          class="tw:mx-auto tw:size-16 tw:text-grey-300 tw:mb-4"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+          />
+        </svg>
+        <h3 class="tw:text-grey-900 tw:text-2xl tw:font-semibold tw:mb-2">No Results Found</h3>
+        <p class="tw:text-grey-600">
+          Try adjusting your search or browse by letter above
+        </p>
+      </div>
+    <% end %>
+
+    <%!-- Package List --%>
+    <%= if @packages != [] do %>
+      <% page = if @page == 1, do: nil, else: @page %>
+
+      <%!-- Results Header with Sort Selector --%>
+      <div class="tw:flex tw:flex-col tw:sm:flex-row tw:items-start tw:sm:items-center tw:justify-between tw:gap-4 tw:mb-6">
+        <div>
+          <h2 class="tw:text-grey-900 tw:text-2xl tw:font-semibold">
+            {if @exact_match, do: "Search Results", else: "All Packages"}
+          </h2>
+          <div class="tw:flex tw:items-center tw:gap-3 tw:mt-1">
+            <p class="tw:text-grey-600">
+              {@package_count} {if @package_count == 1, do: "package", else: "packages"} found
+            </p>
+            <% total_pages = ceil(@package_count / @per_page) %>
+            <%= if total_pages > 1 do %>
+              <span class="tw:text-grey-400">•</span>
+              <p class="tw:text-grey-600 tw:font-medium">
+                Page {@page} of {total_pages}
+              </p>
+            <% end %>
+          </div>
+        </div>
+
+        <%!-- Sort Selector (hide when browsing by letter) --%>
+        <%= unless @letter do %>
+          <.sort_selector sort={@sort} search={@search} page={page} />
+        <% end %>
+      </div>
+
+      <%!-- Package List --%>
+      <div class="tw:bg-white tw:border tw:border-grey-200 tw:rounded-xl tw:overflow-hidden">
+        <ul class="tw:divide-y tw:divide-grey-200">
+          <%= for package <- @packages do %>
+            {render("_package.html",
+              package: package,
+              package_downloads: downloads_for_package(package, @downloads),
+              view: @sort
+            )}
+          <% end %>
+        </ul>
+      </div>
+
+      <%!-- Pagination --%>
+      <div class="tw:mt-8">
+        {render(
+          HexpmWeb.SharedView,
+          "_pagination.html",
+          items: @packages,
+          page: @page,
+          total_count: @package_count,
+          per_page: @per_page,
+          unit: "package",
+          units: "packages",
+          path_fn:
+            &~p"/packages?#{ViewHelpers.params(&1, search: @search, sort: @sort, letter: @letter)}"
+        )}
+      </div>
+    <% end %>
+  </div>
+</div>

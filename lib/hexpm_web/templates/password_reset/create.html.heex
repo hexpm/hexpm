@@ -1,0 +1,34 @@
+<.auth_layout
+  title="Check your email"
+  subtitle="If this account has been registered in Hex, you should receive an email shortly with a link to reset your password"
+  show_oauth={false}
+>
+  <div class="tw:flex tw:flex-col tw:gap-6">
+    <div class="tw:flex tw:justify-center tw:mb-2">
+      <div class="tw:w-16 tw:h-16 tw:rounded-full tw:bg-purple-100 tw:flex tw:items-center tw:justify-center">
+        {icon(:heroicon, "envelope", width: 32, height: 32, class: "tw:text-purple-600")}
+      </div>
+    </div>
+
+    <p class="tw:text-center tw:text-grey-600 tw:text-base/6">
+      Please check your inbox and follow the instructions in the email to reset your password.
+    </p>
+
+    <.button_link navigate={~p"/login"} variant="primary" full_width>
+      Back to login
+    </.button_link>
+
+    <p class="tw:text-center tw:text-small tw:text-grey-500">
+      If you don't receive an email within a few minutes, check your spam folder.
+    </p>
+  </div>
+
+  <:footer_links>
+    <div class="tw:flex tw:justify-center tw:items-center tw:gap-2 tw:text-small tw:mt-6">
+      <span class="tw:text-grey-500">Didn't receive the email?</span>
+      <.text_link navigate={~p"/password/reset"} variant="primary">
+        Try again
+      </.text_link>
+    </div>
+  </:footer_links>
+</.auth_layout>

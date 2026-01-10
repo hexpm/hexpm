@@ -27,7 +27,7 @@ defmodule HexpmWeb.EmailView do
 
     # URL follow pattern for verification/reset emails
     def follow_link_instruction(url, :html) do
-      ~s(You can do so by following #{link(url, "this link", :html)} or by pasting this link in your web browser: #{url})
+      ~s(You can do so by following #{link(url, "this link", :html)} or by pasting this link in your web browser.)
     end
 
     def follow_link_instruction(url, :text) do
@@ -167,7 +167,10 @@ defmodule HexpmWeb.EmailView do
     end
 
     def check_out_org(org_url, username, :text) do
-      "Go check out the organization[0], if you do not want to join the organization you can leave it from the dashboard. You need to be logged in as #{username} to access it.\n\n[0] #{org_url}"
+      "Go check out the organization[0].\n\n" <>
+        "If you do not want to join the organization you can leave it from the dashboard.\n\n" <>
+        "You need to be logged in as #{username} to access it.\n\n" <>
+        "[0] #{org_url}"
     end
 
     def docs_link(docs_url, :html) do
