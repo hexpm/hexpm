@@ -1,0 +1,336 @@
+<div class="tw:bg-grey-50 tw:py-10 tw:px-4 tw:flex-1 tw:flex tw:flex-col">
+  <div class="tw:max-w-7xl tw:mx-auto tw:w-full tw:flex tw:gap-8 tw:flex-col tw:lg:flex-row">
+    <%!-- Sidebar --%>
+    <aside class="tw:w-full tw:lg:w-64 tw:shrink-0">
+      <nav class="tw:bg-white tw:border tw:border-grey-200 tw:rounded-lg tw:p-4 tw:shadow-xs tw:sticky tw:top-4">
+        <div class="tw:space-y-6">
+          <div>
+            <h3 class="tw:text-sm tw:font-semibold tw:text-grey-900 tw:mb-2">Mix</h3>
+            <ul class="tw:space-y-1">
+              <li>
+                <a
+                  href={~p"/docs/usage"}
+                  class={[
+                    "tw:block tw:px-3 tw:py-1.5 tw:text-sm tw:rounded tw:transition-colors",
+                    if(@view_name == :usage,
+                      do: "tw:bg-blue-50 tw:text-blue-600 tw:font-medium",
+                      else: "tw:text-grey-700 hover:tw:bg-grey-50"
+                    )
+                  ]}
+                >
+                  Usage
+                </a>
+              </li>
+              <li>
+                <a
+                  href={~p"/docs/publish"}
+                  class={[
+                    "tw:block tw:px-3 tw:py-1.5 tw:text-sm tw:rounded tw:transition-colors",
+                    if(@view_name == :publish,
+                      do: "tw:bg-blue-50 tw:text-blue-600 tw:font-medium",
+                      else: "tw:text-grey-700 hover:tw:bg-grey-50"
+                    )
+                  ]}
+                >
+                  Publishing packages
+                </a>
+              </li>
+              <li>
+                <a
+                  href={~p"/docs/private"}
+                  class={[
+                    "tw:block tw:px-3 tw:py-1.5 tw:text-sm tw:rounded tw:transition-colors",
+                    if(@view_name == :private,
+                      do: "tw:bg-blue-50 tw:text-blue-600 tw:font-medium",
+                      else: "tw:text-grey-700 hover:tw:bg-grey-50"
+                    )
+                  ]}
+                >
+                  Private packages
+                </a>
+              </li>
+              <li>
+                <a
+                  target="_blank"
+                  rel="noopener"
+                  href="https://hexdocs.pm/hex"
+                  class="tw:block tw:px-3 tw:py-1.5 tw:text-sm tw:rounded tw:text-grey-700 hover:tw:bg-grey-50 tw:flex tw:items-center tw:gap-1"
+                >
+                  Tasks {icon(:heroicon, "window", class: "tw:w-3 tw:h-3")}
+                </a>
+              </li>
+            </ul>
+          </div>
+
+          <div>
+            <h3 class="tw:text-sm tw:font-semibold tw:text-grey-900 tw:mb-2">Rebar</h3>
+            <ul class="tw:space-y-1">
+              <li>
+                <a
+                  href={~p"/docs/rebar3-usage"}
+                  class={[
+                    "tw:block tw:px-3 tw:py-1.5 tw:text-sm tw:rounded tw:transition-colors",
+                    if(@view_name == :rebar3_usage,
+                      do: "tw:bg-blue-50 tw:text-blue-600 tw:font-medium",
+                      else: "tw:text-grey-700 hover:tw:bg-grey-50"
+                    )
+                  ]}
+                >
+                  Usage
+                </a>
+              </li>
+              <li>
+                <a
+                  href={~p"/docs/rebar3-publish"}
+                  class={[
+                    "tw:block tw:px-3 tw:py-1.5 tw:text-sm tw:rounded tw:transition-colors",
+                    if(@view_name == :rebar3_publish,
+                      do: "tw:bg-blue-50 tw:text-blue-600 tw:font-medium",
+                      else: "tw:text-grey-700 hover:tw:bg-grey-50"
+                    )
+                  ]}
+                >
+                  Publishing packages
+                </a>
+              </li>
+              <li>
+                <a
+                  href={~p"/docs/rebar3-private"}
+                  class={[
+                    "tw:block tw:px-3 tw:py-1.5 tw:text-sm tw:rounded tw:transition-colors",
+                    if(@view_name == :rebar3_private,
+                      do: "tw:bg-blue-50 tw:text-blue-600 tw:font-medium",
+                      else: "tw:text-grey-700 hover:tw:bg-grey-50"
+                    )
+                  ]}
+                >
+                  Private packages
+                </a>
+              </li>
+              <li>
+                <a
+                  target="_blank"
+                  rel="noopener"
+                  href="https://rebar3.org/docs/package_management/hex_package_management/"
+                  class="tw:block tw:px-3 tw:py-1.5 tw:text-sm tw:rounded tw:text-grey-700 hover:tw:bg-grey-50 tw:flex tw:items-center tw:gap-1"
+                >
+                  Tasks {icon(:heroicon, "window", class: "tw:w-3 tw:h-3")}
+                </a>
+              </li>
+            </ul>
+          </div>
+
+          <div>
+            <h3 class="tw:text-sm tw:font-semibold tw:text-grey-900 tw:mb-2">Gleam</h3>
+            <ul class="tw:space-y-1">
+              <li>
+                <a
+                  href={~p"/docs/gleam-usage"}
+                  class={[
+                    "tw:block tw:px-3 tw:py-1.5 tw:text-sm tw:rounded tw:transition-colors",
+                    if(@view_name == :gleam_usage,
+                      do: "tw:bg-blue-50 tw:text-blue-600 tw:font-medium",
+                      else: "tw:text-grey-700 hover:tw:bg-grey-50"
+                    )
+                  ]}
+                >
+                  Usage
+                </a>
+              </li>
+              <li>
+                <a
+                  target="_blank"
+                  rel="noopener"
+                  href="https://gleam.run/command-line-reference/"
+                  class="tw:block tw:px-3 tw:py-1.5 tw:text-sm tw:rounded tw:text-grey-700 hover:tw:bg-grey-50 tw:flex tw:items-center tw:gap-1"
+                >
+                  Tasks {icon(:heroicon, "window", class: "tw:w-3 tw:h-3")}
+                </a>
+              </li>
+            </ul>
+          </div>
+
+          <div>
+            <h3 class="tw:text-sm tw:font-semibold tw:text-grey-900 tw:mb-2">Hex</h3>
+            <ul class="tw:space-y-1">
+              <li>
+                <a
+                  href={~p"/docs/faq"}
+                  class={[
+                    "tw:block tw:px-3 tw:py-1.5 tw:text-sm tw:rounded tw:transition-colors",
+                    if(@view_name == :faq,
+                      do: "tw:bg-blue-50 tw:text-blue-600 tw:font-medium",
+                      else: "tw:text-grey-700 hover:tw:bg-grey-50"
+                    )
+                  ]}
+                >
+                  FAQ
+                </a>
+              </li>
+              <li>
+                <a
+                  href={~p"/docs/self-hosting"}
+                  class={[
+                    "tw:block tw:px-3 tw:py-1.5 tw:text-sm tw:rounded tw:transition-colors",
+                    if(@view_name == :self_hosting,
+                      do: "tw:bg-blue-50 tw:text-blue-600 tw:font-medium",
+                      else: "tw:text-grey-700 hover:tw:bg-grey-50"
+                    )
+                  ]}
+                >
+                  Self-hosting
+                </a>
+              </li>
+              <li>
+                <a
+                  href={~p"/docs/mirrors"}
+                  class={[
+                    "tw:block tw:px-3 tw:py-1.5 tw:text-sm tw:rounded tw:transition-colors",
+                    if(@view_name == :mirrors,
+                      do: "tw:bg-blue-50 tw:text-blue-600 tw:font-medium",
+                      else: "tw:text-grey-700 hover:tw:bg-grey-50"
+                    )
+                  ]}
+                >
+                  Mirrors
+                </a>
+              </li>
+              <li>
+                <a
+                  href={~p"/docs/public-keys"}
+                  class={[
+                    "tw:block tw:px-3 tw:py-1.5 tw:text-sm tw:rounded tw:transition-colors",
+                    if(@view_name == :public_keys,
+                      do: "tw:bg-blue-50 tw:text-blue-600 tw:font-medium",
+                      else: "tw:text-grey-700 hover:tw:bg-grey-50"
+                    )
+                  ]}
+                >
+                  Public keys
+                </a>
+              </li>
+            </ul>
+          </div>
+        </div>
+      </nav>
+    </aside>
+
+    <%!-- Content --%>
+    <main class="tw:flex-1">
+      <article class="tw:bg-white tw:border tw:border-grey-200 tw:rounded-lg tw:p-6 tw:lg:p-10 tw:shadow-xs docs-content">
+        <style>
+          .docs-content h2 {
+            font-size: 1.875rem;
+            font-weight: 700;
+            color: #111827;
+            margin-bottom: 1.5rem;
+          }
+          .docs-content h3 {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #111827;
+            margin-top: 2rem;
+            margin-bottom: 1rem;
+          }
+          .docs-content h4 {
+            font-size: 1.125rem;
+            font-weight: 600;
+            color: #111827;
+            margin-top: 1.5rem;
+            margin-bottom: 0.75rem;
+          }
+          .docs-content h2 > a,
+          .docs-content h3 > a,
+          .docs-content h4 > a {
+            display: none;
+            margin-left: 0.5rem;
+          }
+          .docs-content h2:hover > a,
+          .docs-content h3:hover > a,
+          .docs-content h4:hover > a {
+            display: inline-block;
+          }
+          .docs-content h2 > a svg,
+          .docs-content h3 > a svg,
+          .docs-content h4 > a svg {
+            width: 0.875rem;
+            height: 0.875rem;
+            color: #9ca3af;
+          }
+          .docs-content h2 > a:hover svg,
+          .docs-content h3 > a:hover svg,
+          .docs-content h4 > a:hover svg {
+            color: #2563eb;
+          }
+          .docs-content p {
+            font-size: 1rem;
+            line-height: 1.75;
+            color: #374151;
+            margin-bottom: 1rem;
+          }
+          .docs-content a {
+            color: #2563eb;
+            text-decoration: underline;
+            font-weight: 500;
+          }
+          .docs-content a:hover {
+            color: #1d4ed8;
+          }
+          .docs-content strong {
+            font-weight: 600;
+            color: #111827;
+          }
+          .docs-content code {
+            background-color: #f3f4f6;
+            padding: 0.125rem 0.375rem;
+            border-radius: 0.25rem;
+            font-size: 0.875rem;
+            font-family: ui-monospace, monospace;
+            color: #1f2937;
+          }
+          .docs-content pre {
+            background-color: #111827;
+            padding: 1rem;
+            border-radius: 0.5rem;
+            overflow-x: auto;
+            margin-bottom: 1rem;
+          }
+          .docs-content pre code {
+            background-color: transparent;
+            padding: 0;
+            font-size: 0.875rem;
+            color: #e5e7eb;
+          }
+          /* Override highlight.js background to use our dark background */
+          .docs-content pre .hljs {
+            background: transparent;
+            color: #e5e7eb;
+          }
+          .docs-content ul, .docs-content ol {
+            padding-left: 1.5rem;
+            margin-bottom: 1rem;
+            line-height: 1.75;
+          }
+          .docs-content ul {
+            list-style-type: disc;
+          }
+          .docs-content ol {
+            list-style-type: decimal;
+          }
+          .docs-content li {
+            color: #374151;
+            margin-bottom: 0.5rem;
+          }
+          .docs-content blockquote {
+            border-left: 4px solid #2563eb;
+            padding-left: 1rem;
+            font-style: italic;
+            color: #4b5563;
+            margin-bottom: 1rem;
+          }
+        </style>
+        {render(DocsView, @view, assigns)}
+      </article>
+    </main>
+  </div>
+</div>

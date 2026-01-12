@@ -4,6 +4,9 @@
 /* Tell Tailwind where to scan for classes */
 @source "../lib";
 
+/* Syntax highlighting for code blocks */
+@import "../vendor/css/github-dark.css";
+
 /* Reset Bootstrap's 14px body font-size to proper 16px base for rem calculations */
 html {
   font-size: 16px !important;
