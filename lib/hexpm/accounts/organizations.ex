@@ -1,6 +1,8 @@
 defmodule Hexpm.Accounts.Organizations do
   use Hexpm.Context
 
+  alias Hexpm.Accounts.OptionalEmails
+
   def all_by_user(user, preload \\ []) do
     Repo.all(assoc(user, :organizations))
     |> Repo.preload(preload)
@@ -174,7 +176,9 @@ defmodule Hexpm.Accounts.Organizations do
   end
 
   defp send_invite_email(organization, user) do
-    Emails.organization_invite(organization, user)
-    |> Mailer.deliver_later!()
+    if OptionalEmails.allowed?(user, :organization_invite) do
+      Emails.organization_invite(organization, user)
+      |> Mailer.deliver_later!()
+    end
   end
 end
