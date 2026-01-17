@@ -1,0 +1,62 @@
+<% form = Phoenix.Component.to_form(@changeset) %>
+<.auth_layout
+  title="Choose a new password"
+  subtitle="Enter your new password below. Make sure it's strong and unique"
+  show_oauth={false}
+>
+  <.simple_form
+    for={@changeset}
+    id="new-password-form"
+    action={~p"/password/new"}
+    method="post"
+    class="tw:space-y-6"
+  >
+    <.password_input
+      field={form[:password]}
+      label="New Password"
+      required
+      show_strength
+    />
+
+    <.password_input
+      field={form[:password_confirmation]}
+      label="Confirm New Password"
+      required
+      match_password_id={form[:password].id}
+    />
+
+    <div class="tw:bg-grey-50 tw:border tw:border-grey-200 tw:rounded tw:p-4 tw:mb-4">
+      <label class="tw:flex tw:items-start tw:gap-3 tw:cursor-pointer">
+        <input type="hidden" name="user[revoke_all_access]" value="no" />
+        <input
+          type="checkbox"
+          name="user[revoke_all_access]"
+          value="yes"
+          checked
+          class="tw:mt-0.5 tw:w-4 tw:h-4 tw:text-purple-600 tw:border-grey-300 tw:rounded tw:focus:ring-2 tw:focus:ring-purple-500"
+        />
+        <span class="tw:text-small tw:text-grey-700">
+          Revoke all access (API keys, sessions, and OAuth tokens)
+        </span>
+      </label>
+      <p class="tw:mt-2 tw:ml-7 tw:text-xs tw:text-grey-500">
+        For security, we recommend revoking all existing access when changing your password
+      </p>
+    </div>
+
+    <input type="hidden" name="user[username]" value={@username} />
+    <input type="hidden" name="user[key]" value={@key} />
+
+    <.button type="submit" variant="primary" full_width>
+      Reset Password
+    </.button>
+  </.simple_form>
+
+  <:footer_links>
+    <div class="tw:flex tw:justify-center tw:mt-6">
+      <.text_link navigate={~p"/login"} variant="primary" class="tw:text-small">
+        Back to login
+      </.text_link>
+    </div>
+  </:footer_links>
+</.auth_layout>

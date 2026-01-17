@@ -1,0 +1,345 @@
+<% description = @package.meta.description
+licenses = @package.meta.licenses || []
+links = Enum.to_list(@package.meta.links || [])
+build_tools = (@current_release && @current_release.meta.build_tools) || []
+downloads = if @current_release.downloads, do: @current_release.downloads.downloads, else: 0
+{_graph_labels, points, _points_fill} = ViewHelpers.time_series_graph(@daily_graph)
+
+tools = [
+  mix: "mix.exs",
+  rebar: "rebar.config",
+  erlang_mk: "erlang.mk"
+]
+
+# Find GitHub link if available
+github_link =
+  Enum.find(links, fn {name, _url} ->
+    String.downcase(to_string(name)) =~ "github"
+  end) %>
+
+<div class="tw:bg-grey-50 tw:min-h-screen">
+  <%!-- Header Section --%>
+  <div class="tw:max-w-7xl tw:mx-auto  tw:pt-8 tw:pb-6">
+    <div class="tw:flex tw:items-end tw:justify-between tw:gap-12">
+      <%!-- Left: Package Name, Version, Description --%>
+      <div class="tw:flex tw:flex-col tw:gap-2">
+        <div class="tw:flex tw:items-end tw:gap-4">
+          <h1 class="tw:text-grey-900 tw:text-2xl tw:font-semibold">
+            {ViewHelpers.package_name(@package)}
+          </h1>
+
+          <%= if @current_release do %>
+            <div class="tw:bg-grey-200 tw:flex tw:items-center tw:justify-center tw:px-3 tw:py-1 tw:rounded-xl">
+              <div class="tw:flex tw:items-center tw:gap-1">
+                <p class="tw:text-grey-700 tw:text-sm tw:font-medium">
+                  v {@current_release.version}
+                </p>
+                <div class="tw:flex tw:items-center tw:justify-center">
+                  <div class="tw:rotate-180">
+                    {HexpmWeb.ViewIcons.icon(:heroicon, "chevron-down", class: "tw:size-3.5")}
+                  </div>
+                </div>
+              </div>
+            </div>
+          <% end %>
+        </div>
+
+        <%= if description do %>
+          <p class="tw:text-grey-600 tw:max-w-[600px]">
+            {ViewHelpers.text_length(description, 300)}
+          </p>
+        <% end %>
+      </div>
+
+      <%!-- Right: Action Buttons --%>
+      <div class="tw:flex tw:items-start tw:gap-3">
+        <%= if @docs_html_url && @docs_tarball_url do %>
+          <a
+            href={@docs_html_url}
+            class="tw:bg-grey-100 tw:flex tw:flex-col tw:items-center tw:justify-center tw:px-6 tw:py-3 tw:rounded-lg tw:text-grey-800 tw:font-medium tw:hover:bg-grey-200 tw:transition-colors"
+          >
+            <div class="tw:flex tw:items-start tw:gap-1">
+              {HexpmWeb.ViewIcons.icon(:heroicon, "archive-box", class: "tw:size-4")}
+              <span>Online Documentation</span>
+            </div>
+          </a>
+        <% end %>
+
+        <%= if github_link do %>
+          <% {_name, url} = github_link %>
+          <a
+            href={url}
+            rel="nofollow"
+            class="tw:bg-grey-900 tw:flex tw:flex-col tw:items-center tw:justify-center tw:p-3 tw:rounded-lg tw:hover:bg-grey-800 tw:transition-colors"
+          >
+            <.github_icon class="tw:size-4 tw:text-white" />
+          </a>
+        <% end %>
+      </div>
+    </div>
+  </div>
+
+  <%!-- Main Container with Sidebar --%>
+  <div class="tw:max-w-7xl tw:mx-auto tw:pt-10">
+    <div class="tw:flex tw:gap-5">
+      <%!-- Left: Content Area (75%) --%>
+      <div class="tw:flex-1 tw:w-3/4">
+        <%!-- Tab Navigation --%>
+        <div class="tw:flex tw:items-center tw:border-b tw:border-grey-200">
+          <a
+            href={~p"/packages/#{@package}"}
+            class="tw:flex tw:items-center tw:gap-1 tw:px-[18px] tw:py-3 tw:text-primary-default tw:font-medium tw:border-b-2 tw:border-primary-default tw:-mb-px"
+          >
+            {HexpmWeb.ViewIcons.icon(:heroicon, "document-text", class: "tw:size-4.5")}
+            <span>Readme</span>
+          </a>
+
+          <a
+            href="#dependencies"
+            class="tw:flex tw:items-center tw:gap-1 tw:px-[18px] tw:py-3 tw:text-grey-500 tw:font-medium tw:hover:text-grey-700 tw:transition-colors"
+          >
+            {HexpmWeb.ViewIcons.icon(:heroicon, "document", class: "tw:size-4.5")}
+            <span>{Enum.count(@current_release.requirements || [])} Dependencies</span>
+          </a>
+
+          <a
+            href={~p"/packages?search=#{"depends:#{@repository_name}:#{@package.name}"}"}
+            class="tw:flex tw:items-center tw:gap-1 tw:px-[18px] tw:py-3 tw:text-grey-500 tw:font-medium tw:hover:text-grey-700 tw:transition-colors"
+          >
+            {HexpmWeb.ViewIcons.icon(:heroicon, "document", class: "tw:size-4.5")}
+            <span>{@dependants_count} Dependents</span>
+          </a>
+
+          <a
+            href={path_for_audit_logs(@package)}
+            class="tw:flex tw:items-center tw:gap-1 tw:px-[18px] tw:py-3 tw:text-grey-500 tw:font-medium tw:hover:text-grey-700 tw:transition-colors"
+          >
+            {HexpmWeb.ViewIcons.icon(:heroicon, "clock", class: "tw:size-4.5")}
+            <span>Activity</span>
+          </a>
+
+          <a
+            href={ViewHelpers.path_for_releases(@package)}
+            class="tw:flex tw:items-center tw:gap-1 tw:px-[18px] tw:py-3 tw:text-grey-500 tw:font-medium tw:hover:text-grey-700 tw:transition-colors"
+          >
+            {HexpmWeb.ViewIcons.icon(:heroicon, "arrow-down-tray", class: "tw:size-4.5")}
+            <span>Versions</span>
+          </a>
+        </div>
+
+        <%!-- Tab Content --%>
+        <div class="tw:py-6">
+          <div class="tw:bg-white tw:border tw:border-grey-200 tw:rounded-lg tw:p-6">
+            <h2 class="tw:text-grey-900 tw:text-[32px] tw:font-semibold tw:mb-11">
+              {ViewHelpers.package_name(@package)}
+            </h2>
+
+            <%= if description do %>
+              <div class="tw:text-grey-600 tw:mb-8 tw:leading-relaxed">
+                {ViewHelpers.text_length(description, 300) |> text_to_html(insert_brs: false)}
+              </div>
+            <% end %>
+
+            <%!-- Installation Section --%>
+            <%= if @current_release do %>
+              <section class="tw:mb-8">
+                <h3 class="tw:text-grey-900 tw:text-2xl tw:font-semibold tw:mb-4">
+                  Installation
+                </h3>
+                <p class="tw:text-grey-600 tw:mb-3">
+                  The package can be installed by adding
+                  <code class="tw:bg-grey-50 tw:px-2 tw:py-0.5 tw:rounded tw:text-grey-500 tw:text-sm tw:font-mono">
+                    {@package.name}
+                  </code>
+                  to your list of dependencies in mix.exs:
+                </p>
+                <div class="tw:bg-grey-50 tw:rounded-lg tw:p-4 tw:font-mono tw:text-sm tw:text-grey-600">
+                  <pre phx-no-curly-interpolation>def deps do
+                    [{:<%= @package.name %>, "~> <%= @current_release.version %>"}]
+               end</pre>
+                </div>
+              </section>
+            <% end %>
+
+            <%!-- Links Section --%>
+            <%= if links != [] do %>
+              <section class="tw:mb-8">
+                <h3 class="tw:text-grey-900 tw:text-2xl tw:font-semibold tw:mb-4">Links</h3>
+                <ul class="tw:space-y-2">
+                  <%= for {name, link} <- links do %>
+                    <li>
+                      <a
+                        href={link}
+                        rel="nofollow"
+                        class="tw:text-blue-600 tw:hover:text-blue-700 tw:hover:underline"
+                      >
+                        {name}
+                      </a>
+                    </li>
+                  <% end %>
+                </ul>
+              </section>
+            <% end %>
+
+            <%!-- Licenses Section --%>
+            <%= if licenses != [] do %>
+              <section class="tw:mb-8">
+                <h3 class="tw:text-grey-900 tw:text-2xl tw:font-semibold tw:mb-4">Licenses</h3>
+                <p class="tw:text-grey-600">
+                  {Enum.join(licenses, ", ")}
+                </p>
+              </section>
+            <% end %>
+          </div>
+        </div>
+      </div>
+
+      <%!-- Right: Sidebar (25%) --%>
+      <div class="tw:w-1/4 tw:min-w-[420px] tw:flex tw:flex-col tw:gap-6">
+        <%!-- Checksum Card --%>
+        <div class="tw:bg-white tw:border tw:border-grey-200 tw:rounded-lg tw:p-5">
+          <h3 class="tw:text-grey-700 tw:text-lg tw:font-semibold tw:mb-4">Checksum</h3>
+          <div class="tw:flex tw:border tw:border-grey-200 tw:rounded">
+            <input
+              type="text"
+              class="tw:flex-1 tw:px-4 tw:py-3 tw:text-grey-400 tw:text-sm tw:font-mono tw:bg-white tw:border-none tw:outline-none"
+              value={Base.encode16(@current_release.outer_checksum, case: :lower)}
+              readonly
+              onfocus="this.select();"
+              id="checksum-snippet"
+            />
+            <button
+              type="button"
+              class="tw:bg-grey-50 tw:border-l tw:border-grey-200 tw:size-10 tw:flex tw:items-center tw:justify-center tw:hover:bg-grey-100 tw:transition-colors copy-button"
+              data-input-id="checksum-snippet"
+            >
+              {HexpmWeb.ViewIcons.icon(:heroicon, "square-2-stack", class: "tw:size-4.5")}
+            </button>
+          </div>
+        </div>
+
+        <%!-- Dependency Config Card --%>
+        <div class="tw:bg-white tw:border tw:border-grey-200 tw:rounded-lg tw:p-5">
+          <h3 class="tw:text-grey-700 tw:text-lg tw:font-semibold tw:mb-6">Dependency Config</h3>
+
+          <%= for {tool, file} <- tools do %>
+            <div class="tw:mb-5 tw:last:mb-0">
+              <p class="tw:text-grey-400 tw:text-sm tw:font-medium tw:mb-2">{file}</p>
+              <div class="tw:flex tw:border tw:border-grey-200 tw:rounded">
+                <input
+                  type="text"
+                  class="tw:flex-1 tw:px-4 tw:py-3 tw:text-grey-400 tw:text-sm tw:font-mono tw:bg-white tw:border-none tw:outline-none"
+                  value={dep_snippet(tool, @package, @current_release)}
+                  readonly
+                  onfocus="this.select();"
+                  id={"#{tool}-snippet"}
+                />
+                <button
+                  type="button"
+                  class="tw:bg-grey-50 tw:border-l tw:border-grey-200 tw:size-10 tw:flex tw:items-center tw:justify-center tw:hover:bg-grey-100 tw:transition-colors copy-button"
+                  data-input-id={"#{tool}-snippet"}
+                >
+                  {HexpmWeb.ViewIcons.icon(:heroicon, "square-2-stack", class: "tw:size-4.5")}
+                </button>
+              </div>
+            </div>
+          <% end %>
+        </div>
+
+        <%!-- Package Details Card --%>
+        <div class="tw:bg-white tw:border tw:border-grey-200 tw:rounded-lg tw:p-5">
+          <h3 class="tw:text-grey-700 tw:text-lg tw:font-semibold tw:mb-4">Package Details</h3>
+
+          <%!-- Downloads Chart --%>
+          <div class="tw:mb-6">
+            <svg viewBox="0 0 380 86" class="tw:w-full tw:h-auto">
+              <defs>
+                <linearGradient
+                  id="grad1"
+                  gradientUnits="userSpaceOnUse"
+                  x1="0"
+                  y1="0"
+                  x2="380"
+                  y2="86"
+                >
+                  <stop offset="0%" style="stop-color:#4f28a7;" />
+                  <stop offset="33%" style="stop-color:#7209b7;" />
+                  <stop offset="66%" style="stop-color:#b5179e;" />
+                  <stop offset="100%" style="stop-color:#f72585;" />
+                </linearGradient>
+              </defs>
+              <polyline
+                fill="none"
+                stroke="url(#grad1)"
+                stroke-width="2"
+                stroke-linecap="round"
+                points={points}
+              />
+            </svg>
+          </div>
+
+          <%!-- Download Stats --%>
+          <div class="tw:grid tw:grid-cols-3 tw:gap-4 tw:pb-6 tw:border-b tw:border-grey-200">
+            <div class="tw:flex tw:flex-col tw:gap-1">
+              <p class="tw:text-grey-400 tw:text-xs tw:font-medium">this version</p>
+              <p class="tw:text-grey-700 tw:text-lg tw:font-bold">
+                {ViewHelpers.human_number_space(downloads)}
+              </p>
+            </div>
+            <div class="tw:flex tw:flex-col tw:gap-1">
+              <p class="tw:text-grey-400 tw:text-xs tw:font-medium">last 7 days</p>
+              <p class="tw:text-grey-700 tw:text-lg tw:font-bold">
+                {ViewHelpers.human_number_space(@downloads["week"] || 0)}
+              </p>
+            </div>
+            <div class="tw:flex tw:flex-col tw:gap-1">
+              <p class="tw:text-grey-400 tw:text-xs tw:font-medium">all time</p>
+              <p class="tw:text-grey-700 tw:text-lg tw:font-bold">
+                {ViewHelpers.human_number_space(@downloads["all"] || 0)}
+              </p>
+            </div>
+          </div>
+
+          <%!-- Additional Details --%>
+          <div class="tw:grid tw:grid-cols-2 tw:gap-x-4 tw:gap-y-6 tw:pt-6">
+            <div class="tw:flex tw:flex-col tw:gap-1">
+              <p class="tw:text-grey-400 tw:text-xs tw:font-medium">Last Updated</p>
+              <p class="tw:text-grey-700 tw:text-lg tw:font-bold">
+                {ViewHelpers.pretty_date(@current_release.inserted_at, :short)}
+              </p>
+            </div>
+
+            <%= if licenses != [] do %>
+              <div class="tw:flex tw:flex-col tw:gap-1">
+                <p class="tw:text-grey-400 tw:text-xs tw:font-medium">License</p>
+                <p class="tw:text-grey-700 tw:text-lg tw:font-bold">
+                  {List.first(licenses)}
+                </p>
+              </div>
+            <% end %>
+
+            <%= if build_tools != [] do %>
+              <div class="tw:flex tw:flex-col tw:gap-1">
+                <p class="tw:text-grey-400 tw:text-xs tw:font-medium">Build Tools</p>
+                <div class="tw:flex tw:flex-wrap tw:gap-2">
+                  <%= for tool <- Enum.uniq(build_tools) do %>
+                    <span class="tw:bg-primary-default tw:text-white tw:px-3 tw:py-1 tw:rounded tw:text-xs tw:font-semibold">
+                      {tool}
+                    </span>
+                  <% end %>
+                </div>
+              </div>
+            <% end %>
+
+            <%= if @current_release.publisher do %>
+              <div class="tw:flex tw:flex-col tw:gap-1">
+                <p class="tw:text-grey-400 tw:text-xs tw:font-medium">Publisher</p>
+                {render("_user.html", user: @current_release.publisher)}
+              </div>
+            <% end %>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
