@@ -25,7 +25,7 @@ defmodule HexpmWeb.Components.Navbar do
   def header(assigns) do
     ~H"""
     <nav id="main-navbar" class="tw:bg-grey-900 tw:w-full tw:font-sans">
-      <div class="tw:max-w-7xl tw:mx-auto tw:px-4">
+      <div class="tw:max-w-7xl tw:mx-auto tw:px-4 tw:lg:px-0">
         <div class="tw:flex tw:items-center tw:justify-between tw:h-[72px] tw:gap-8 tw:lg:gap-20">
           <.logo />
           <.desktop_nav current_user={@current_user} search={@search} show_search={@show_search} />

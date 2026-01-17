@@ -1,18 +1,18 @@
-<li class="tw:p-6 hover:tw:bg-grey-50 tw:transition-colors">
+<li class="tw:p-6 tw:hover:bg-grey-50 tw:transition-colors">
   <div class="tw:flex tw:items-start tw:justify-between tw:gap-6">
     <%!-- Package Info --%>
     <div class="tw:flex-1 tw:min-w-0">
       <div class="tw:flex tw:items-center tw:gap-3 tw:mb-2">
         <a
           href={~p"/packages/#{@package}"}
-          class="tw:text-grey-900 tw:font-semibold tw:text-xl hover:tw:text-primary-600 tw:transition-colors"
+          class="tw:text-grey-900 tw:font-semibold tw:text-xl tw:hover:text-primary-600 tw:transition-colors"
         >
           {ViewHelpers.package_name(@package)}
         </a>
         <%= if @package.latest_release do %>
           <a
             href={~p"/packages/#{@package}"}
-            class="tw:inline-flex tw:items-center tw:px-2.5 tw:py-0.5 tw:rounded-md tw:text-xs tw:font-medium tw:bg-grey-100 tw:text-grey-700 hover:tw:bg-primary-100 hover:tw:text-primary-700 tw:transition-colors"
+            class="tw:inline-flex tw:items-center tw:px-2.5 tw:py-0.5 tw:rounded-md tw:text-xs tw:font-medium tw:bg-grey-100 tw:text-grey-700 tw:hover:bg-primary-100 tw:hover:text-primary-700 tw:transition-colors"
           >
             v{@package.latest_release.version}
           </a>

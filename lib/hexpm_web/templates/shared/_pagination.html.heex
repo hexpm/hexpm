@@ -24,7 +24,7 @@ range_end = range_start + shown_items - 1 %>
       <%= if paginate[:prev] do %>
         <a
           href={@path_fn.(%{page: @page - 1})}
-          class="tw:inline-flex tw:items-center tw:justify-center tw:size-10 tw:bg-white tw:border tw:border-grey-300 tw:rounded-lg tw:text-grey-700 hover:tw:bg-grey-50 hover:tw:border-grey-400 tw:transition-colors"
+          class="tw:inline-flex tw:items-center tw:justify-center tw:size-10 tw:bg-white tw:border tw:border-grey-300 tw:rounded-lg tw:text-grey-700 tw:hover:bg-grey-50 tw:hover:border-grey-400 tw:transition-colors"
           aria-label="Previous page"
         >
           <svg class="tw:size-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -62,7 +62,7 @@ range_end = range_start + shown_items - 1 %>
           <% else %>
             <a
               href={@path_fn.(%{page: page})}
-              class="tw:inline-flex tw:items-center tw:justify-center tw:min-w-10 tw:h-10 tw:px-3 tw:bg-white tw:border tw:border-grey-300 tw:rounded-lg tw:text-grey-700 tw:font-medium hover:tw:bg-grey-50 hover:tw:border-grey-400 tw:transition-colors"
+              class="tw:inline-flex tw:items-center tw:justify-center tw:min-w-10 tw:h-10 tw:px-3 tw:bg-white tw:border tw:border-grey-300 tw:rounded-lg tw:text-grey-700 tw:font-medium tw:hover:bg-grey-50 tw:hover:border-grey-400 tw:transition-colors"
             >
               {page}
             </a>
@@ -74,7 +74,7 @@ range_end = range_start + shown_items - 1 %>
       <%= if paginate[:next] do %>
         <a
           href={@path_fn.(%{page: @page + 1})}
-          class="tw:inline-flex tw:items-center tw:justify-center tw:size-10 tw:bg-white tw:border tw:border-grey-300 tw:rounded-lg tw:text-grey-700 hover:tw:bg-grey-50 hover:tw:border-grey-400 tw:transition-colors"
+          class="tw:inline-flex tw:items-center tw:justify-center tw:size-10 tw:bg-white tw:border tw:border-grey-300 tw:rounded-lg tw:text-grey-700 tw:hover:bg-grey-50 tw:hover:border-grey-400 tw:transition-colors"
           aria-label="Next page"
         >
           <svg class="tw:size-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">

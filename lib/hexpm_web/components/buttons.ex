@@ -121,7 +121,7 @@ defmodule HexpmWeb.Components.Buttons do
   defp button_variant("primary") do
     [
       "tw:bg-primary-600 tw:text-white",
-      "hover:tw:bg-primary-700",
+      "tw:hover:bg-primary-700",
       "tw:focus:ring-primary-500"
     ]
   end
@@ -129,7 +129,7 @@ defmodule HexpmWeb.Components.Buttons do
   defp button_variant("secondary") do
     [
       "tw:bg-grey-200 tw:text-grey-900",
-      "hover:tw:bg-grey-300",
+      "tw:hover:bg-grey-300",
       "tw:focus:ring-grey-400"
     ]
   end
@@ -137,7 +137,7 @@ defmodule HexpmWeb.Components.Buttons do
   defp button_variant("danger") do
     [
       "tw:bg-red-600 tw:text-white",
-      "hover:tw:bg-red-700",
+      "tw:hover:bg-red-700",
       "tw:focus:ring-red-500"
     ]
   end
@@ -145,7 +145,7 @@ defmodule HexpmWeb.Components.Buttons do
   defp button_variant("outline") do
     [
       "tw:bg-transparent tw:border tw:border-grey-300 tw:text-grey-900",
-      "hover:tw:bg-grey-50",
+      "tw:hover:bg-grey-50",
       "tw:focus:ring-grey-400"
     ]
   end
@@ -153,7 +153,7 @@ defmodule HexpmWeb.Components.Buttons do
   defp button_variant("ghost") do
     [
       "tw:bg-transparent tw:text-grey-700",
-      "hover:tw:bg-grey-100",
+      "tw:hover:bg-grey-100",
       "tw:focus:ring-grey-400"
     ]
   end
@@ -161,7 +161,7 @@ defmodule HexpmWeb.Components.Buttons do
   defp button_variant("blue") do
     [
       "tw:bg-blue-700 tw:text-white",
-      "hover:tw:bg-blue-800",
+      "tw:hover:bg-blue-800",
       "tw:focus:ring-blue-500"
     ]
   end
@@ -209,14 +209,14 @@ defmodule HexpmWeb.Components.Buttons do
 
   # Text link variants
   defp text_link_variant("primary") do
-    "tw:text-blue-600 hover:tw:text-blue-500 tw:focus:ring-blue-500 tw:font-medium"
+    "tw:text-blue-600 tw:hover:text-blue-500 tw:focus:ring-blue-500 tw:font-medium"
   end
 
   defp text_link_variant("secondary") do
-    "tw:text-grey-600 hover:tw:text-grey-900 tw:focus:ring-grey-400 tw:font-medium"
+    "tw:text-grey-600 tw:hover:text-grey-900 tw:focus:ring-grey-400 tw:font-medium"
   end
 
   defp text_link_variant("purple") do
-    "tw:text-primary-700 hover:tw:text-primary-800 hover:tw:underline tw:focus:ring-primary-500 tw:font-semibold"
+    "tw:text-primary-700 tw:hover:text-primary-800 tw:hover:underline tw:focus:ring-primary-500 tw:font-semibold"
   end
 end

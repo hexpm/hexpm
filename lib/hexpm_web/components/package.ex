@@ -42,7 +42,7 @@ defmodule HexpmWeb.Components.Package do
           <a
             :if={@current_letter}
             href={~p"/packages"}
-            class="tw:inline-flex tw:items-center tw:justify-center tw:px-3 tw:h-10 tw:bg-grey-200 tw:text-grey-700 tw:text-sm tw:font-medium tw:rounded-lg tw:border tw:border-grey-300 hover:tw:bg-grey-300 tw:transition-all"
+            class="tw:inline-flex tw:items-center tw:justify-center tw:px-3 tw:h-10 tw:bg-grey-200 tw:text-grey-700 tw:text-sm tw:font-medium tw:rounded-lg tw:border tw:border-grey-300 tw:hover:bg-grey-300 tw:transition-all"
           >
             Clear
           </a>
@@ -67,7 +67,7 @@ defmodule HexpmWeb.Components.Package do
               |> JS.toggle(to: "#letter-toggle-show")
               |> JS.toggle(to: "#letter-toggle-hide")
             }
-            class="tw:text-primary-600 tw:text-sm tw:font-medium hover:tw:text-primary-700 tw:transition-colors"
+            class="tw:text-primary-600 tw:text-sm tw:font-medium tw:hover:text-primary-700 tw:transition-colors"
           >
             <span id="letter-toggle-show">Show All</span>
             <span id="letter-toggle-hide" class="tw:hidden">Hide</span>
@@ -89,7 +89,7 @@ defmodule HexpmWeb.Components.Package do
             href={~p"/packages"}
             data-mobile-letter-extra
             style="display: none;"
-            class="tw:col-span-2 tw:inline-flex tw:items-center tw:justify-center tw:h-10 tw:bg-grey-200 tw:text-grey-700 tw:text-sm tw:font-medium tw:rounded-lg tw:border tw:border-grey-300 hover:tw:bg-grey-300 tw:transition-all"
+            class="tw:col-span-2 tw:inline-flex tw:items-center tw:justify-center tw:h-10 tw:bg-grey-200 tw:text-grey-700 tw:text-sm tw:font-medium tw:rounded-lg tw:border tw:border-grey-300 tw:hover:bg-grey-300 tw:transition-all"
           >
             Clear
           </a>
@@ -184,7 +184,7 @@ defmodule HexpmWeb.Components.Package do
       if(current_letter == letter,
         do: "tw:bg-primary-600 tw:text-white tw:border-primary-600 tw:shadow-sm",
         else:
-          "tw:bg-white tw:text-grey-700 tw:border-grey-200 hover:tw:bg-primary-50 hover:tw:text-primary-700 hover:tw:border-primary-300"
+          "tw:bg-white tw:text-grey-700 tw:border-grey-200 tw:hover:bg-primary-50 tw:hover:text-primary-700 tw:hover:border-primary-300"
       )
     ]
   end
@@ -194,7 +194,7 @@ defmodule HexpmWeb.Components.Package do
       "tw:inline-flex tw:items-center tw:px-3 tw:py-1.5 tw:rounded-md tw:text-sm tw:font-medium tw:transition-colors",
       if(current_sort == value,
         do: "tw:bg-primary-600 tw:text-white tw:shadow-sm",
-        else: "tw:bg-white tw:text-grey-700 hover:tw:bg-grey-100"
+        else: "tw:bg-white tw:text-grey-700 tw:hover:bg-grey-100"
       )
     ]
   end

@@ -166,7 +166,7 @@ defmodule HexpmWeb.Components.Pricing do
           {render_slot(@question)}
         </span>
         <svg
-          class="tw:size-6 tw:text-grey-900 tw:transition-transform group-open:tw:rotate-45"
+          class="tw:size-6 tw:text-grey-900 tw:transition-transform tw:group-open:rotate-45"
           fill="none"
           viewBox="0 0 24 24"
           stroke="currentColor"

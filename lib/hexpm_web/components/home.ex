@@ -104,7 +104,7 @@ defmodule HexpmWeb.Components.Home do
   def companies_section(assigns) do
     ~H"""
     <div class="tw:bg-white tw:pt-4 tw:pb-8 tw:lg:pb-16">
-      <div class="tw:max-w-7xl tw:mx-auto tw:px-4">
+      <div class="tw:max-w-7xl tw:mx-auto tw:px-4 tw:lg:px-0">
         <%!-- Mobile: 3x3 grid with alternating pattern --%>
         <div class="tw:grid tw:grid-cols-3 tw:gap-6 tw:md:hidden">
           <%!-- Row 1: x x x --%>
