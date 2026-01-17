@@ -1,0 +1,91 @@
+<div class="tw:bg-grey-50 tw:min-h-screen tw:py-8">
+  <div class="tw:max-w-7xl tw:mx-auto tw:px-4 tw:md:px-8">
+    <div class="tw:flex tw:flex-col tw:gap-6 tw:lg:flex-row">
+      <%!-- Left Sidebar - Profile --%>
+      <div class="tw:w-full tw:lg:w-[30%] tw:flex-shrink-0">
+        <.user_sidebar
+          user={@user}
+          gravatar_email={@gravatar_email}
+          public_email={@public_email}
+          total_packages={length(@user.owned_packages)}
+          total_downloads={@total_downloads}
+        />
+      </div>
+
+      <%!-- Right Content - Packages --%>
+      <div class="tw:w-full tw:lg:w-[70%]">
+        <%!-- Header with Sort --%>
+        <div class="tw:flex tw:items-center tw:justify-between tw:mb-6">
+          <h1 class="tw:text-grey-900 tw:text-xl tw:font-semibold">
+            Packages
+          </h1>
+
+          <%!-- Sort Dropdown --%>
+          <div class="tw:relative" id="sort-dropdown">
+            <button
+              type="button"
+              class="tw:border tw:border-grey-200 tw:rounded-lg tw:px-3 tw:py-2 tw:text-grey-400 tw:text-sm tw:font-medium tw:flex tw:items-center tw:gap-1 tw:hover:border-grey-300 tw:transition-colors tw:bg-white"
+              phx-click={Phoenix.LiveView.JS.toggle(to: "#sort-dropdown-menu")}
+            >
+              <%= case @sort_by do %>
+                <% "downloads" -> %>
+                  Most Downloaded
+                <% "newest" -> %>
+                  Newest First
+                <% _ -> %>
+                  Most Popular
+              <% end %>
+              {HexpmWeb.ViewIcons.icon(:heroicon, "chevron-down", class: "tw:w-3.5 tw:h-3.5")}
+            </button>
+
+            <div
+              id="sort-dropdown-menu"
+              class="tw:hidden tw:absolute tw:right-0 tw:mt-2 tw:w-48 tw:bg-white tw:border tw:border-grey-200 tw:rounded-lg tw:shadow-lg tw:py-2 tw:z-10"
+            >
+              <a
+                href="?sort=popular"
+                class="tw:block tw:px-4 tw:py-2 tw:text-sm tw:hover:bg-grey-50 tw:text-grey-700 tw:hover:text-grey-900"
+              >
+                Most Popular
+              </a>
+              <a
+                href="?sort=downloads"
+                class="tw:block tw:px-4 tw:py-2 tw:text-sm tw:hover:bg-grey-50 tw:text-grey-700 tw:hover:text-grey-900"
+              >
+                Most Downloaded
+              </a>
+              <a
+                href="?sort=newest"
+                class="tw:block tw:px-4 tw:py-2 tw:text-sm tw:hover:bg-grey-50 tw:text-grey-700 tw:hover:text-grey-900"
+              >
+                Newest First
+              </a>
+            </div>
+          </div>
+        </div>
+
+        <%!-- Packages Grid --%>
+        <%= if @user.owned_packages == [] do %>
+          <div class="tw:bg-white tw:border tw:border-grey-200 tw:rounded-lg tw:p-12 tw:text-center">
+            <h3 class="tw:text-grey-900 tw:text-lg tw:font-semibold tw:mb-2">
+              No owned packages
+            </h3>
+            <p class="tw:text-grey-500 tw:text-sm">
+              This user hasn't published any packages yet.
+            </p>
+          </div>
+        <% else %>
+          <div class="tw:grid tw:grid-cols-1 tw:lg:grid-cols-2 tw:gap-4">
+            <%= for package <- @packages do %>
+              <.package_card
+                package={package}
+                downloads={get_in(@downloads, [package.id, "all"]) || 0}
+                updated_at={package.updated_at}
+              />
+            <% end %>
+          </div>
+        <% end %>
+      </div>
+    </div>
+  </div>
+</div>

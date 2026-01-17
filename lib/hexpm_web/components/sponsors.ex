@@ -26,7 +26,7 @@ defmodule HexpmWeb.Components.Sponsors do
           href={@url}
           target="_blank"
           rel="noopener noreferrer"
-          class="tw:text-grey-400 hover:tw:text-blue-500 tw:transition-colors tw:ml-4"
+          class="tw:text-grey-400 tw:hover:text-blue-500 tw:transition-colors tw:ml-4"
           aria-label={"Visit #{@name} website"}
         >
           <svg
