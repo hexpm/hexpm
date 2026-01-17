@@ -46,7 +46,7 @@ defmodule HexpmWeb.PageController do
       conn,
       "about.html",
       title: "About Hex",
-      container: "tw:max-w-7xl tw:mx-auto tw:px-4 tw:py-8"
+      container: "tw:max-w-7xl tw:mx-auto tw:px-4 tw:lg:px-0 tw:py-8"
     )
   end
 
@@ -64,7 +64,7 @@ defmodule HexpmWeb.PageController do
       conn,
       "sponsors.html",
       title: "Sponsors",
-      container: "tw:max-w-7xl tw:mx-auto tw:px-4 tw:py-8"
+      container: "tw:max-w-7xl tw:mx-auto tw:px-4 tw:lg:px-0 tw:py-8"
     )
   end
 end

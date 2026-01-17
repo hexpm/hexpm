@@ -4,6 +4,7 @@ defmodule HexpmWeb.Components.UserProfile do
   """
   use Phoenix.Component
   import HexpmWeb.ViewHelpers
+  import HexpmWeb.Components.Icons
 
   @doc """
   Renders the user profile sidebar with avatar, name, bio, and stats.
@@ -16,7 +17,7 @@ defmodule HexpmWeb.Components.UserProfile do
 
   def user_sidebar(assigns) do
     ~H"""
-    <div class="tw:rounded-lg tw:p-6">
+    <div>
       <%!-- Avatar --%>
       <div class="tw:flex tw:justify-center tw:mb-4">
         <img
@@ -57,35 +58,48 @@ defmodule HexpmWeb.Components.UserProfile do
       <%!-- Contact Info --%>
       <%= if @public_email || @user.handles do %>
         <div class="tw:border-t tw:border-grey-200 tw:pt-6">
-          <ul class="tw:space-y-2 tw:text-sm">
+          <div class="tw:flex tw:gap-2.5 tw:justify-center">
+            <%!-- Public Email Icon --%>
             <%= if @public_email do %>
-              <li>
-                <a
-                  href={"mailto:#{@public_email}"}
-                  class="tw:text-blue-500 tw:hover:text-blue-600 tw:underline"
-                >
+              <a
+                href={"mailto:#{@public_email}"}
+                class="tw:group tw:relative tw:p-2 tw:rounded-lg tw:bg-grey-100 tw:hover:bg-grey-200 tw:transition-colors"
+                title={@public_email}
+              >
+                {HexpmWeb.ViewIcons.icon(:heroicon, "envelope", class: "tw:w-5 tw:h-5 tw:text-grey-700")}
+                <span class="tw:absolute tw:bottom-full tw:left-1/2 tw:-translate-x-1/2 tw:mb-2 tw:px-3 tw:py-1 tw:bg-grey-900 tw:text-white tw:text-xs tw:rounded tw:whitespace-nowrap tw:opacity-0 tw:group-hover:opacity-100 tw:transition-opacity tw:pointer-events-none">
                   {@public_email}
-                </a>
-              </li>
+                </span>
+              </a>
             <% end %>
 
+            <%!-- Social Media Icons --%>
             <%= for {service, handle, url} <- Hexpm.Accounts.UserHandles.render(@user) do %>
-              <li>
-                <a
-                  href={url}
-                  class="tw:text-blue-500 tw:hover:text-blue-600 tw:underline"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
+              <a
+                href={url}
+                class="tw:group tw:relative tw:p-2 tw:rounded-lg tw:bg-grey-100 tw:hover:bg-grey-200 tw:transition-colors"
+                target="_blank"
+                rel="noopener noreferrer"
+                title={"#{service}: #{handle}"}
+              >
+                <.social_icon icon={service_to_icon(service)} class="tw:w-5 tw:h-5 tw:text-grey-700" />
+                <span class="tw:absolute tw:bottom-full tw:left-1/2 tw:-translate-x-1/2 tw:mb-2 tw:px-3 tw:py-1 tw:bg-grey-900 tw:text-white tw:text-xs tw:rounded tw:whitespace-nowrap tw:opacity-0 tw:group-hover:opacity-100 tw:transition-opacity tw:pointer-events-none tw:z-10">
                   {handle}
-                </a>
-                <span class="tw:text-grey-500"> on {service}</span>
-              </li>
+                </span>
+              </a>
             <% end %>
-          </ul>
+          </div>
         </div>
       <% end %>
     </div>
     """
   end
+
+  defp service_to_icon("Twitter"), do: :twitter
+  defp service_to_icon("GitHub"), do: :github
+  defp service_to_icon("Bluesky"), do: :bluesky
+  defp service_to_icon("Elixir Forum"), do: :elixirforum
+  defp service_to_icon("Slack"), do: :slack
+  defp service_to_icon("Libera"), do: :freenode
+  defp service_to_icon(_), do: :github
 end
