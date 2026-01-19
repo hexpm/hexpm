@@ -544,4 +544,44 @@ defmodule HexpmWeb.DeviceControllerTest do
         response_body =~ "wait 15 minutes"
     end
   end
+
+  describe "XSS protection" do
+    test "escapes malicious scope names in authorization page" do
+      user = insert(:user)
+
+      # Create client with a malicious scope containing XSS payload
+      malicious_scope = "package:<script>alert('xss')</script>"
+
+      client_params = %{
+        client_id: Clients.generate_client_id(),
+        name: "Test Client",
+        client_type: "public",
+        allowed_grant_types: ["urn:ietf:params:oauth:grant-type:device_code"],
+        allowed_scopes: [malicious_scope],
+        client_secret: nil
+      }
+
+      {:ok, client} = Client.build(client_params) |> Repo.insert()
+
+      mock_conn =
+        build_conn()
+        |> Map.put(:scheme, :https)
+        |> Map.put(:host, "hex.pm")
+        |> Map.put(:port, 443)
+
+      {:ok, response} =
+        DeviceCodes.initiate_device_authorization(mock_conn, client.client_id, [malicious_scope])
+
+      conn = login_user(build_conn(), user)
+      conn = get(conn, ~p"/oauth/device?user_code=#{response.user_code}&verified=true")
+
+      html = html_response(conn, 200)
+
+      # The raw script tag should NOT appear in the HTML
+      refute html =~ "<script>alert('xss')</script>"
+
+      # The escaped version SHOULD appear
+      assert html =~ "&lt;script&gt;" or html =~ "&#60;script&#62;"
+    end
+  end
 end

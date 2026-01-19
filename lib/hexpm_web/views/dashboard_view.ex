@@ -248,4 +248,11 @@ defmodule HexpmWeb.DashboardView do
 
   defp plan_id("organization-monthly"), do: "monthly"
   defp plan_id("organization-annually"), do: "annually"
+
+  def double_html_escape(string) do
+    string
+    |> Phoenix.HTML.html_escape()
+    |> Phoenix.HTML.safe_to_string()
+    |> Phoenix.HTML.html_escape()
+  end
 end

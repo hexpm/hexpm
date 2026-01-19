@@ -2,12 +2,14 @@ defmodule HexpmWeb.EmailView do
   use HexpmWeb, :view
 
   defmodule Common do
+    import Phoenix.HTML, only: [safe_to_string: 1]
+
     def greeting(username), do: "Hello #{username}"
 
     def support_email(), do: "support@hex.pm"
 
     # Smart link wrapping - add <a> only for HTML format
-    def link(url, text, :html), do: ~s(<a href="#{url}">#{text}</a>)
+    def link(url, text, :html), do: safe_to_string(PhoenixHTMLHelpers.Link.link(text, to: url))
     def link(url, _text, :text), do: url
 
     def support_link(:html), do: link("mailto:#{support_email()}", support_email(), :html)
@@ -27,7 +29,7 @@ defmodule HexpmWeb.EmailView do
 
     # URL follow pattern for verification/reset emails
     def follow_link_instruction(url, :html) do
-      ~s(You can do so by following #{link(url, "this link", :html)} or by pasting this link in your web browser: #{url})
+      "You can do so by following #{link(url, "this link", :html)} or by pasting this link in your web browser: #{url}"
     end
 
     def follow_link_instruction(url, :text) do

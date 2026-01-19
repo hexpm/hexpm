@@ -1,5 +1,7 @@
 defmodule HexpmWeb.Dashboard.OrganizationView do
   use HexpmWeb, :view
+  use Phoenix.Component
+
   alias HexpmWeb.DashboardView
 
   defp organization_roles_selector() do
@@ -30,39 +32,47 @@ defmodule HexpmWeb.Dashboard.OrganizationView do
   defp plan_price("organization-annually"), do: "$70.00"
 
   defp proration_description("organization-monthly", price, days, quantity, quantity) do
+    assigns = %{days: days, price: money(price)}
+
+    ~H"""
+    Each new seat will be prorated on the next invoice for <strong>{@days}</strong>
+    day(s) @ <strong>$<%= @price %></strong>.
     """
-    Each new seat will be prorated on the next invoice for
-    <strong>#{days}</strong> day(s) @ <strong>$#{money(price)}</strong>.
-    """
-    |> raw()
   end
 
   defp proration_description("organization-annually", price, days, quantity, quantity) do
+    assigns = %{days: days, price: money(price)}
+
+    ~H"""
+    Each new seat will be charged a proration for <strong>{@days}</strong>
+    day(s) @ <strong>$<%= @price %></strong>.
     """
-    Each new seat will be charged a proration for
-    <strong>#{days}</strong> day(s) @ <strong>$#{money(price)}</strong>.
-    """
-    |> raw()
   end
 
   defp proration_description("organization-monthly", price, days, quantity, max_period_quantity)
        when quantity < max_period_quantity do
-    """
-    You have already used <strong>#{max_period_quantity}</strong> seats in your current billing period.
+    assigns = %{days: days, price: money(price), max_period_quantity: max_period_quantity}
+
+    ~H"""
+    You have already used <strong>{@max_period_quantity}</strong>
+    seats in your current billing period.
     If adding seats over this amount, each new seat will be prorated on the next invoice for
-    <strong>#{days}</strong> day(s) @ <strong>$#{money(price)}</strong>.
+    <strong>{@days}</strong>
+    day(s) @ <strong>$<%= @price %></strong>.
     """
-    |> raw()
   end
 
   defp proration_description("organization-annually", price, days, quantity, max_period_quantity)
        when quantity < max_period_quantity do
-    """
-    You have already used <strong>#{max_period_quantity}</strong> seats in your current billing period.
+    assigns = %{days: days, price: money(price), max_period_quantity: max_period_quantity}
+
+    ~H"""
+    You have already used <strong>{@max_period_quantity}</strong>
+    seats in your current billing period.
     If adding seats over this amount, each new seat will be charged a proration for
-    <strong>#{days}</strong> day(s) @ <strong>$#{money(price)}</strong>.
+    <strong>{@days}</strong>
+    day(s) @ <strong>$<%= @price %></strong>.
     """
-    |> raw()
   end
 
   @no_card_message "No payment method on file"
@@ -93,8 +103,12 @@ defmodule HexpmWeb.Dashboard.OrganizationView do
          %{"status" => "trialing", "trial_end" => trial_end},
          card
        ) do
-    trial_end = trial_end |> NaiveDateTime.from_iso8601!() |> ViewHelpers.pretty_date()
-    raw("Trial ends on #{trial_end}, #{trial_status_message(card)}")
+    assigns = %{
+      trial_end: trial_end |> NaiveDateTime.from_iso8601!() |> ViewHelpers.pretty_date(),
+      trial_status_message: trial_status_message(card)
+    }
+
+    ~H"Trial ends on {@trial_end}, {@trial_status_message}"
   end
 
   defp subscription_status(%{"status" => "past_due"}, _card) do
