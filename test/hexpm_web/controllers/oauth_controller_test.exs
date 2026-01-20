@@ -33,6 +33,21 @@ defmodule HexpmWeb.OAuthControllerTest do
     client
   end
 
+  defp create_hexdocs_client do
+    client_params = %{
+      client_id: Clients.generate_client_id(),
+      name: "Hexdocs",
+      client_type: "confidential",
+      allowed_grant_types: ["authorization_code", "refresh_token"],
+      allowed_scopes: ["docs"],
+      redirect_uris: ["https://*.hexdocs.pm/oauth/callback"],
+      client_secret: Clients.generate_client_secret()
+    }
+
+    {:ok, client} = Client.build(client_params) |> Repo.insert()
+    client
+  end
+
   describe "GET /oauth/authorize" do
     setup do
       client = create_test_client()
@@ -229,6 +244,120 @@ defmodule HexpmWeb.OAuthControllerTest do
       assert redirect_url =~ "https://example.com/callback"
       assert redirect_url =~ "error=invalid_request"
       assert redirect_url =~ "code_challenge"
+    end
+  end
+
+  describe "hexdocs OAuth flow (docs scope with wildcard redirect)" do
+    setup do
+      client = create_hexdocs_client()
+      user = insert(:user)
+      organization = insert(:organization)
+      insert(:organization_user, organization: organization, user: user)
+      %{client: client, user: user, organization: organization}
+    end
+
+    test "accepts docs:{org} scope with wildcard redirect URI", %{
+      client: client,
+      user: user,
+      organization: organization
+    } do
+      conn = login_user(build_conn(), user)
+
+      # Hexdocs would redirect to this URL with the organization subdomain
+      redirect_uri = "https://#{organization.name}.hexdocs.pm/oauth/callback"
+
+      conn =
+        post(conn, ~p"/oauth/authorize", %{
+          "client_id" => client.client_id,
+          "redirect_uri" => redirect_uri,
+          "scope" => "docs:#{organization.name}",
+          "state" => "test_state",
+          "code_challenge" => "challenge123",
+          "code_challenge_method" => "S256",
+          "action" => "approve",
+          "selected_scopes" => ["docs:#{organization.name}"]
+        })
+
+      # Should redirect with authorization code
+      redirect_url = redirected_to(conn)
+      assert redirect_url =~ redirect_uri
+      assert redirect_url =~ "code="
+
+      # Verify authorization code was created with docs scope
+      auth_code = Repo.get_by(Hexpm.OAuth.AuthorizationCode, client_id: client.client_id)
+      assert auth_code
+      assert auth_code.scopes == ["docs:#{organization.name}"]
+    end
+
+    test "rejects redirect URI that doesn't match wildcard pattern", %{
+      client: client,
+      user: user,
+      organization: organization
+    } do
+      conn = login_user(build_conn(), user)
+
+      # Try to use a redirect URI that doesn't match the wildcard
+      conn =
+        get(conn, ~p"/oauth/authorize", %{
+          "client_id" => client.client_id,
+          "redirect_uri" => "https://evil.com/oauth/callback",
+          "scope" => "docs:#{organization.name}",
+          "state" => "test_state",
+          "code_challenge" => "challenge123",
+          "code_challenge_method" => "S256"
+        })
+
+      # Should show error (not redirect to evil.com)
+      response = json_response(conn, 400)
+      assert response["error"] == "invalid_request"
+      assert response["error_description"] =~ "Invalid redirect_uri"
+    end
+
+    test "rejects multi-level subdomain that doesn't match wildcard", %{
+      client: client,
+      user: user,
+      organization: organization
+    } do
+      conn = login_user(build_conn(), user)
+
+      # Wildcard should only match single subdomain segment
+      conn =
+        get(conn, ~p"/oauth/authorize", %{
+          "client_id" => client.client_id,
+          "redirect_uri" => "https://evil.#{organization.name}.hexdocs.pm/oauth/callback",
+          "scope" => "docs:#{organization.name}",
+          "state" => "test_state",
+          "code_challenge" => "challenge123",
+          "code_challenge_method" => "S256"
+        })
+
+      response = json_response(conn, 400)
+      assert response["error"] == "invalid_request"
+      assert response["error_description"] =~ "Invalid redirect_uri"
+    end
+
+    test "rejects docs scope for organization user doesn't have access to", %{
+      client: client,
+      user: user
+    } do
+      other_org = insert(:organization)
+      conn = login_user(build_conn(), user)
+
+      conn =
+        post(conn, ~p"/oauth/authorize", %{
+          "client_id" => client.client_id,
+          "redirect_uri" => "https://#{other_org.name}.hexdocs.pm/oauth/callback",
+          "scope" => "docs:#{other_org.name}",
+          "state" => "test_state",
+          "code_challenge" => "challenge123",
+          "code_challenge_method" => "S256",
+          "action" => "approve",
+          "selected_scopes" => ["docs:#{other_org.name}"]
+        })
+
+      # Should redirect with error - user doesn't have access to this org
+      redirect_url = redirected_to(conn)
+      assert redirect_url =~ "error="
     end
   end
 end

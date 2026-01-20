@@ -86,6 +86,111 @@ defmodule Hexpm.OAuth.ClientTest do
       changeset = Client.changeset(%Client{}, attrs)
       assert changeset.valid?
     end
+
+    test "validates redirect URIs - accepts valid URIs" do
+      attrs = %{
+        client_id: "test_client",
+        name: "Test Client",
+        client_type: "public",
+        redirect_uris: [
+          "https://example.com/callback",
+          "http://localhost:3000/callback",
+          "https://*.hexdocs.pm/oauth/callback"
+        ]
+      }
+
+      changeset = Client.changeset(%Client{}, attrs)
+      assert changeset.valid?
+    end
+
+    test "validates redirect URIs - rejects invalid URI format" do
+      attrs = %{
+        client_id: "test_client",
+        name: "Test Client",
+        client_type: "public",
+        redirect_uris: ["not-a-valid-uri"]
+      }
+
+      changeset = Client.changeset(%Client{}, attrs)
+      assert %{redirect_uris: error} = errors_on(changeset)
+      assert error =~ "is not a valid URI"
+    end
+
+    test "validates redirect URIs - rejects multiple wildcards" do
+      attrs = %{
+        client_id: "test_client",
+        name: "Test Client",
+        client_type: "public",
+        redirect_uris: ["https://*.*.hexdocs.pm/callback"]
+      }
+
+      changeset = Client.changeset(%Client{}, attrs)
+      assert %{redirect_uris: error} = errors_on(changeset)
+      assert error =~ "contains multiple wildcards"
+    end
+
+    test "validates redirect URIs - rejects wildcard in path" do
+      attrs = %{
+        client_id: "test_client",
+        name: "Test Client",
+        client_type: "public",
+        redirect_uris: ["https://example.com/*/callback"]
+      }
+
+      changeset = Client.changeset(%Client{}, attrs)
+      assert %{redirect_uris: error} = errors_on(changeset)
+      assert error =~ "has wildcard outside of host"
+    end
+
+    test "validates redirect URIs - rejects HTTP with wildcard" do
+      attrs = %{
+        client_id: "test_client",
+        name: "Test Client",
+        client_type: "public",
+        redirect_uris: ["http://*.example.com/callback"]
+      }
+
+      changeset = Client.changeset(%Client{}, attrs)
+      assert %{redirect_uris: error} = errors_on(changeset)
+      assert error =~ "wildcard redirect URIs must use HTTPS"
+    end
+
+    test "validates redirect URIs - rejects wildcard with insufficient domain segments" do
+      attrs = %{
+        client_id: "test_client",
+        name: "Test Client",
+        client_type: "public",
+        redirect_uris: ["https://*.com/callback"]
+      }
+
+      changeset = Client.changeset(%Client{}, attrs)
+      assert %{redirect_uris: error} = errors_on(changeset)
+      assert error =~ "wildcard must have at least domain.tld after"
+    end
+
+    test "validates redirect URIs - accepts wildcard with two domain segments" do
+      attrs = %{
+        client_id: "test_client",
+        name: "Test Client",
+        client_type: "public",
+        redirect_uris: ["https://*.example.com/callback"]
+      }
+
+      changeset = Client.changeset(%Client{}, attrs)
+      assert changeset.valid?
+    end
+
+    test "validates redirect URIs - accepts wildcard in middle of host" do
+      attrs = %{
+        client_id: "test_client",
+        name: "Test Client",
+        client_type: "public",
+        redirect_uris: ["https://staging-*.example.com/callback"]
+      }
+
+      changeset = Client.changeset(%Client{}, attrs)
+      assert changeset.valid?
+    end
   end
 
   describe "build/1" do
