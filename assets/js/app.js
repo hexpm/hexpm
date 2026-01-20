@@ -92,6 +92,26 @@ export default class App {
         e.target.value = value
       })
     }
+
+    // Global shortcut: Cmd+K / Ctrl+K focuses the search bar
+    window.addEventListener('keydown', (e) => {
+      const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0
+      const meta = isMac ? e.metaKey : e.ctrlKey
+      if (meta && (e.key === 'k' || e.key === 'K')) {
+        // Avoid interfering with textareas or inputs where user is typing
+        const tag = (document.activeElement && document.activeElement.tagName) || ''
+        if (tag === 'INPUT' || tag === 'TEXTAREA') return
+        e.preventDefault()
+
+        const homeSearch = document.getElementById('search')
+        const navbarSearch = document.querySelector('form.navbar-form input[name="search"]')
+        const target = homeSearch || navbarSearch
+        if (target) {
+          target.focus()
+          try { target.select() } catch (_) {}
+        }
+      }
+    })
   }
 
   onDataCopy(event) {

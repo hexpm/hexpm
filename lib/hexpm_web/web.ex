@@ -45,6 +45,7 @@ defmodule HexpmWeb do
 
       import Phoenix.HTML
       import Phoenix.HTML.Form
+      import Phoenix.LiveView.Helpers
       use PhoenixHTMLHelpers
 
       # Import convenience functions from controllers
@@ -82,6 +83,26 @@ defmodule HexpmWeb do
 
       alias HexpmWeb.{Endpoint, Router}
       alias HexpmWeb.Router.Helpers, as: Routes
+
+      unquote(verified_routes())
+    end
+  end
+
+  def live_view() do
+    quote do
+      use Phoenix.LiveView
+
+      import Phoenix.HTML
+      import Phoenix.HTML.Form
+      use PhoenixHTMLHelpers
+
+      import HexpmWeb.ViewIcons
+
+      alias HexpmWeb.ViewHelpers
+      alias HexpmWeb.{Endpoint, Router}
+      alias HexpmWeb.Router.Helpers, as: Routes
+
+      use Hexpm.Shared
 
       unquote(verified_routes())
     end
