@@ -1,6 +1,8 @@
 defmodule Hexpm.AdminTasksTest do
   use Hexpm.DataCase, async: true
 
+  import ExUnit.CaptureIO
+
   alias Hexpm.AdminTasks
   alias Hexpm.Accounts.{Organization, User}
   alias Hexpm.Repository.{Package, Release}
@@ -308,11 +310,13 @@ defmodule Hexpm.AdminTasksTest do
     test "dry_run does not make changes" do
       organization = insert(:organization, name: "old_org")
 
-      assert :ok =
-               AdminTasks.rename_organization("old_org", "new_org",
-                 skip_confirmation: true,
-                 dry_run: true
-               )
+      capture_io(fn ->
+        assert :ok =
+                 AdminTasks.rename_organization("old_org", "new_org",
+                   skip_confirmation: true,
+                   dry_run: true
+                 )
+      end)
 
       unchanged_org = Repo.get!(Organization, organization.id)
       assert unchanged_org.name == "old_org"
@@ -323,7 +327,9 @@ defmodule Hexpm.AdminTasksTest do
     test "adds new install record" do
       initial_count = Repo.aggregate(Hexpm.Repository.Install, :count)
 
-      assert :ok = AdminTasks.add_install("2.0.0", ["1.14.0", "1.15.0"])
+      capture_io(fn ->
+        assert :ok = AdminTasks.add_install("2.0.0", ["1.14.0", "1.15.0"])
+      end)
 
       new_count = Repo.aggregate(Hexpm.Repository.Install, :count)
       assert new_count == initial_count + 1
@@ -334,7 +340,9 @@ defmodule Hexpm.AdminTasksTest do
     end
 
     test "works with nil hex_version (just uploads)" do
-      assert :ok = AdminTasks.add_install(nil, [])
+      capture_io(fn ->
+        assert :ok = AdminTasks.add_install(nil, [])
+      end)
     end
   end
 
