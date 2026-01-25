@@ -131,9 +131,7 @@ defmodule Hexpm.AdminTasksTest do
       release = insert(:release, package: package, version: "1.0.0", inserted_at: old_time)
 
       assert :ok =
-               AdminTasks.allow_republish(package.name, "1.0.0",
-                 organization: repository.name
-               )
+               AdminTasks.allow_republish(package.name, "1.0.0", organization: repository.name)
 
       updated_release = Repo.get!(Release, release.id)
       assert DateTime.compare(updated_release.inserted_at, old_time) == :gt
