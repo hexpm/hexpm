@@ -580,6 +580,83 @@ defmodule Hexpm.AdminTasks do
   end
 
   # ============================================================================
+  # Security Operations
+  # ============================================================================
+
+  @doc """
+  Initiates a security password reset for a user by sending a password reset email.
+
+  This is used when an admin needs to force a user to reset their password for security reasons.
+  The user will receive an email explaining their password was reset for security reasons.
+
+  ## Options
+
+  - `:disable_password` - Set to `true` to disable the user's current password,
+    preventing login until the password reset is completed (default: `false`)
+  - `:revoke_all_access` - Set to `true` to immediately revoke all API keys and
+    sessions (default: `false`)
+
+  ## Examples
+
+      # Just send reset email
+      iex> AdminTasks.security_password_reset("bob")
+      :ok
+
+      # Disable password and revoke all access
+      iex> AdminTasks.security_password_reset("bob", disable_password: true, revoke_all_access: true)
+      :ok
+
+      iex> AdminTasks.security_password_reset("nonexistent")
+      {:error, :user_not_found}
+
+      iex> AdminTasks.security_password_reset("org_username")
+      {:error, :organization_user}
+  """
+  @spec security_password_reset(String.t(), keyword()) :: :ok | {:error, atom()}
+  def security_password_reset(username_or_email, opts \\ []) do
+    with {:ok, user} <- find_user(username_or_email),
+         :ok <- check_not_organization(user) do
+      disable_password = Keyword.get(opts, :disable_password, false)
+      revoke_all_access = Keyword.get(opts, :revoke_all_access, false)
+
+      Repo.transaction(fn ->
+        # Disable password if requested
+        if disable_password do
+          user
+          |> Ecto.Changeset.change(password: nil)
+          |> Repo.update!()
+        end
+
+        # Revoke all keys and sessions if requested
+        if revoke_all_access do
+          {session_query, token_query} = Hexpm.UserSessions.revoke_all(user)
+          Repo.update_all(session_query, [])
+          Repo.update_all(token_query, [])
+          Repo.update_all(Key.revoke_all(user), [])
+        end
+
+        # Create password reset record
+        changeset = PasswordReset.changeset(Ecto.build_assoc(user, :password_resets), user)
+        reset = Repo.insert!(changeset)
+
+        # Send security password reset email
+        Emails.security_password_reset(user, reset)
+        |> Mailer.deliver_later!()
+      end)
+
+      :ok
+    end
+  end
+
+  defp check_not_organization(user) do
+    if User.organization?(user) do
+      {:error, :organization_user}
+    else
+      :ok
+    end
+  end
+
+  # ============================================================================
   # Install Management
   # ============================================================================
 

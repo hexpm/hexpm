@@ -337,4 +337,80 @@ defmodule Hexpm.AdminTasksTest do
       assert :ok = AdminTasks.add_install(nil, [])
     end
   end
+
+  describe "security_password_reset/2" do
+    test "sends password reset email" do
+      user = insert(:user)
+
+      assert :ok = AdminTasks.security_password_reset(user.username)
+
+      # Verify password reset record was created
+      user = Repo.preload(user, :password_resets, force: true)
+      assert length(user.password_resets) == 1
+    end
+
+    test "finds user by email" do
+      email = Fake.sequence(:email)
+      user = insert(:user, emails: [build(:email, email: email)])
+
+      assert :ok = AdminTasks.security_password_reset(email)
+
+      user = Repo.preload(user, :password_resets, force: true)
+      assert length(user.password_resets) == 1
+    end
+
+    test "returns error for nonexistent user" do
+      assert {:error, :user_not_found} = AdminTasks.security_password_reset("nonexistent")
+    end
+
+    test "returns error for organization user" do
+      organization = insert(:organization)
+
+      assert {:error, :organization_user} =
+               AdminTasks.security_password_reset(organization.user.username)
+    end
+
+    test "disable_password option sets password to nil" do
+      user = insert(:user)
+      assert user.password != nil
+
+      assert :ok = AdminTasks.security_password_reset(user.username, disable_password: true)
+
+      updated_user = Repo.get!(User, user.id)
+      assert updated_user.password == nil
+    end
+
+    test "revoke_all_access option revokes keys and sessions" do
+      user = insert(:user)
+      key = insert(:key, user: user)
+      session = insert(:session, user_id: user.id)
+
+      assert :ok = AdminTasks.security_password_reset(user.username, revoke_all_access: true)
+
+      # Verify key was revoked
+      updated_key = Repo.get!(Hexpm.Accounts.Key, key.id)
+      assert updated_key.revoke_at != nil
+
+      # Verify session was revoked
+      updated_session = Repo.get!(Hexpm.UserSession, session.id)
+      assert updated_session.revoked_at != nil
+    end
+
+    test "combines both options" do
+      user = insert(:user)
+      key = insert(:key, user: user)
+
+      assert :ok =
+               AdminTasks.security_password_reset(user.username,
+                 disable_password: true,
+                 revoke_all_access: true
+               )
+
+      updated_user = Repo.get!(User, user.id)
+      assert updated_user.password == nil
+
+      updated_key = Repo.get!(Hexpm.Accounts.Key, key.id)
+      assert updated_key.revoke_at != nil
+    end
+  end
 end
