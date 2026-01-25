@@ -1,8 +1,6 @@
 defmodule Hexpm.AdminTasksTest do
   use Hexpm.DataCase, async: true
 
-  import ExUnit.CaptureIO
-
   alias Hexpm.AdminTasks
   alias Hexpm.Accounts.{Organization, User}
   alias Hexpm.Repository.{Package, Release}
@@ -80,35 +78,33 @@ defmodule Hexpm.AdminTasksTest do
     end
   end
 
-  describe "remove_user/2" do
-    test "removes user with skip_confirmation" do
+  describe "remove_user/1" do
+    test "removes user" do
       user = insert(:user)
       user_id = user.id
 
-      assert :ok = AdminTasks.remove_user(user.username, skip_confirmation: true)
+      assert :ok = AdminTasks.remove_user(user.username)
 
       refute Repo.get(User, user_id)
     end
 
     test "returns error for nonexistent user" do
-      assert {:error, :user_not_found} =
-               AdminTasks.remove_user("nonexistent", skip_confirmation: true)
+      assert {:error, :user_not_found} = AdminTasks.remove_user("nonexistent")
     end
   end
 
-  describe "rename_user/3" do
-    test "renames user with skip_confirmation" do
+  describe "rename_user/2" do
+    test "renames user" do
       user = insert(:user, username: "oldname")
 
-      assert :ok = AdminTasks.rename_user("oldname", "newname", skip_confirmation: true)
+      assert :ok = AdminTasks.rename_user("oldname", "newname")
 
       updated_user = Repo.get!(User, user.id)
       assert updated_user.username == "newname"
     end
 
     test "returns error for nonexistent user" do
-      assert {:error, :user_not_found} =
-               AdminTasks.rename_user("nonexistent", "newname", skip_confirmation: true)
+      assert {:error, :user_not_found} = AdminTasks.rename_user("nonexistent", "newname")
     end
   end
 
@@ -150,14 +146,14 @@ defmodule Hexpm.AdminTasksTest do
     end
   end
 
-  describe "remove_package/3" do
-    test "removes package with skip_confirmation" do
+  describe "remove_package/2" do
+    test "removes package" do
       package = insert(:package)
       release = insert(:release, package: package)
       package_id = package.id
       release_id = release.id
 
-      assert :ok = AdminTasks.remove_package("hexpm", package.name, skip_confirmation: true)
+      assert :ok = AdminTasks.remove_package("hexpm", package.name)
 
       refute Repo.get(Package, package_id)
       refute Repo.get(Release, release_id)
@@ -165,46 +161,41 @@ defmodule Hexpm.AdminTasksTest do
 
     test "returns error for nonexistent repository" do
       assert {:error, :repository_not_found} =
-               AdminTasks.remove_package("nonexistent_repo", "pkg", skip_confirmation: true)
+               AdminTasks.remove_package("nonexistent_repo", "pkg")
     end
 
     test "returns error for nonexistent package" do
       assert {:error, :package_not_found} =
-               AdminTasks.remove_package("hexpm", "nonexistent", skip_confirmation: true)
+               AdminTasks.remove_package("hexpm", "nonexistent")
     end
   end
 
-  describe "remove_release/4" do
-    test "removes release with skip_confirmation" do
+  describe "remove_release/3" do
+    test "removes release" do
       package = insert(:package)
       release = insert(:release, package: package, version: "1.0.0")
       release_id = release.id
 
-      assert :ok =
-               AdminTasks.remove_release("hexpm", package.name, "1.0.0", skip_confirmation: true)
+      assert :ok = AdminTasks.remove_release("hexpm", package.name, "1.0.0")
 
       refute Repo.get(Release, release_id)
     end
 
     test "returns error for nonexistent repository" do
       assert {:error, :repository_not_found} =
-               AdminTasks.remove_release("nonexistent_repo", "pkg", "1.0.0",
-                 skip_confirmation: true
-               )
+               AdminTasks.remove_release("nonexistent_repo", "pkg", "1.0.0")
     end
 
     test "returns error for nonexistent package" do
       assert {:error, :package_not_found} =
-               AdminTasks.remove_release("hexpm", "nonexistent", "1.0.0", skip_confirmation: true)
+               AdminTasks.remove_release("hexpm", "nonexistent", "1.0.0")
     end
 
     test "returns error for nonexistent release" do
       package = insert(:package)
 
       assert {:error, :release_not_found} =
-               AdminTasks.remove_release("hexpm", package.name, "99.99.99",
-                 skip_confirmation: true
-               )
+               AdminTasks.remove_release("hexpm", package.name, "99.99.99")
     end
   end
 
@@ -279,12 +270,11 @@ defmodule Hexpm.AdminTasksTest do
     end
   end
 
-  describe "rename_organization/3" do
-    test "renames organization with skip_confirmation" do
+  describe "rename_organization/2" do
+    test "renames organization" do
       organization = insert(:organization, name: "old_org")
 
-      assert :ok =
-               AdminTasks.rename_organization("old_org", "new_org", skip_confirmation: true)
+      assert :ok = AdminTasks.rename_organization("old_org", "new_org")
 
       updated_org = Repo.get!(Organization, organization.id)
       assert updated_org.name == "new_org"
@@ -293,8 +283,7 @@ defmodule Hexpm.AdminTasksTest do
     test "updates organization user's username" do
       organization = insert(:organization, name: "old_org")
 
-      assert :ok =
-               AdminTasks.rename_organization("old_org", "new_org", skip_confirmation: true)
+      assert :ok = AdminTasks.rename_organization("old_org", "new_org")
 
       updated_org = Repo.get!(Organization, organization.id) |> Repo.preload(:user)
       assert updated_org.user.username == "new_org"
@@ -302,22 +291,7 @@ defmodule Hexpm.AdminTasksTest do
 
     test "returns error for nonexistent organization" do
       assert {:error, :organization_not_found} =
-               AdminTasks.rename_organization("nonexistent", "new_name", skip_confirmation: true)
-    end
-
-    test "dry_run does not make changes" do
-      organization = insert(:organization, name: "old_org")
-
-      capture_io(fn ->
-        assert :ok =
-                 AdminTasks.rename_organization("old_org", "new_org",
-                   skip_confirmation: true,
-                   dry_run: true
-                 )
-      end)
-
-      unchanged_org = Repo.get!(Organization, organization.id)
-      assert unchanged_org.name == "old_org"
+               AdminTasks.rename_organization("nonexistent", "new_name")
     end
   end
 
@@ -325,9 +299,7 @@ defmodule Hexpm.AdminTasksTest do
     test "adds new install record" do
       initial_count = Repo.aggregate(Hexpm.Repository.Install, :count)
 
-      capture_io(fn ->
-        assert :ok = AdminTasks.add_install("2.0.0", ["1.14.0", "1.15.0"])
-      end)
+      assert :ok = AdminTasks.add_install("2.0.0", ["1.14.0", "1.15.0"])
 
       new_count = Repo.aggregate(Hexpm.Repository.Install, :count)
       assert new_count == initial_count + 1
@@ -338,9 +310,7 @@ defmodule Hexpm.AdminTasksTest do
     end
 
     test "works with nil hex_version (just uploads)" do
-      capture_io(fn ->
-        assert :ok = AdminTasks.add_install(nil, [])
-      end)
+      assert :ok = AdminTasks.add_install(nil, [])
     end
   end
 

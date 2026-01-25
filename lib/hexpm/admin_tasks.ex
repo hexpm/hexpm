@@ -4,19 +4,11 @@ defmodule Hexpm.AdminTasks do
 
   These functions are intended to be called from iex or CLI for administrative operations.
 
-  ## Confirmation Handling
-
-  Functions that perform destructive operations require confirmation by default.
-  Pass `skip_confirmation: true` to bypass the confirmation prompt:
-
-      AdminTasks.remove_user("spammer")                          # prompts
-      AdminTasks.remove_user("spammer", skip_confirmation: true) # no prompt
-
   ## Return Values
 
   All functions return tagged tuples:
   - `:ok` or `{:ok, result}` for success
-  - `{:error, reason}` for errors (`:user_not_found`, `:confirmation_rejected`, etc.)
+  - `{:error, reason}` for errors (`:user_not_found`, etc.)
 
   ## Examples
 
@@ -28,46 +20,20 @@ defmodule Hexpm.AdminTasks do
       iex> AdminTasks.reset_tfa("bob@example.com")
       :ok
 
-      # Remove a user (with confirmation)
+      # Remove a user
       iex> AdminTasks.remove_user("spammer")
-      %User{username: "spammer", ...}
-      Remove? [Yn] y
       :ok
 
       # Add an owner to a package
       iex> AdminTasks.add_owner("phoenix", "jose", level: "full")
       {:ok, %PackageOwner{}}
 
-      # Remove a package (with confirmation)
-      iex> AdminTasks.remove_package("hexpm", "malicious_pkg", skip_confirmation: true)
+      # Remove a package
+      iex> AdminTasks.remove_package("hexpm", "malicious_pkg")
       :ok
   """
 
   use Hexpm.Context
-
-  # ============================================================================
-  # Helper Functions
-  # ============================================================================
-
-  defp maybe_confirm(prompt, opts) do
-    if Keyword.get(opts, :skip_confirmation, false) do
-      :ok
-    else
-      answer = IO.gets(prompt)
-
-      if answer =~ ~r/^(Y(es)?)?$/i do
-        :ok
-      else
-        {:error, :confirmation_rejected}
-      end
-    end
-  end
-
-  defp maybe_display(item, opts) do
-    unless Keyword.get(opts, :skip_confirmation, false) do
-      IO.inspect(item)
-    end
-  end
 
   defp find_user(username_or_email) do
     case Users.get(username_or_email, [:emails]) do
@@ -104,10 +70,6 @@ defmodule Hexpm.AdminTasks do
       release -> {:ok, Repo.preload(release, package: :repository)}
     end
   end
-
-  # ============================================================================
-  # User Management
-  # ============================================================================
 
   @doc """
   Changes a user's password without requiring the old password.
@@ -197,28 +159,17 @@ defmodule Hexpm.AdminTasks do
   ## Arguments
 
   - `username` - The username of the user to remove
-  - `opts` - Options:
-    - `:skip_confirmation` - Skip the confirmation prompt (default: `false`)
 
   ## Examples
 
       iex> AdminTasks.remove_user("spammer")
-      %User{username: "spammer", ...}
-      Remove? [Yn] y
-      :ok
-
-      iex> AdminTasks.remove_user("spammer", skip_confirmation: true)
       :ok
   """
-  @spec remove_user(String.t(), keyword()) :: :ok | {:error, atom()}
-  def remove_user(username, opts \\ []) do
+  @spec remove_user(String.t()) :: :ok | {:error, atom()}
+  def remove_user(username) do
     with {:ok, user} <- find_user(username) do
-      maybe_display(user, opts)
-
-      with :ok <- maybe_confirm("Remove? [Yn] ", opts) do
-        Repo.delete!(user)
-        :ok
-      end
+      Repo.delete!(user)
+      :ok
     end
   end
 
@@ -229,37 +180,22 @@ defmodule Hexpm.AdminTasks do
 
   - `old_name` - The current username
   - `new_name` - The new username
-  - `opts` - Options:
-    - `:skip_confirmation` - Skip the confirmation prompt (default: `false`)
 
   ## Examples
 
       iex> AdminTasks.rename_user("oldname", "newname")
-      %User{username: "oldname", ...}
-      Rename? [Yn] y
-      :ok
-
-      iex> AdminTasks.rename_user("oldname", "newname", skip_confirmation: true)
       :ok
   """
-  @spec rename_user(String.t(), String.t(), keyword()) :: :ok | {:error, atom()}
-  def rename_user(old_name, new_name, opts \\ []) do
+  @spec rename_user(String.t(), String.t()) :: :ok | {:error, atom()}
+  def rename_user(old_name, new_name) do
     with {:ok, user} <- find_user(old_name) do
-      maybe_display(user, opts)
+      user
+      |> Ecto.Changeset.change(username: new_name)
+      |> Repo.update!()
 
-      with :ok <- maybe_confirm("Rename? [Yn] ", opts) do
-        user
-        |> Ecto.Changeset.change(username: new_name)
-        |> Repo.update!()
-
-        :ok
-      end
+      :ok
     end
   end
-
-  # ============================================================================
-  # Package Management
-  # ============================================================================
 
   @doc """
   Allows republishing a release by resetting its inserted_at timestamp.
@@ -326,28 +262,15 @@ defmodule Hexpm.AdminTasks do
 
   - `repo` - The repository name (e.g., "hexpm")
   - `package_name` - The name of the package to remove
-  - `opts` - Options:
-    - `:skip_confirmation` - Skip the confirmation prompt (default: `false`)
 
   ## Examples
 
       iex> AdminTasks.remove_package("hexpm", "malicious_pkg")
-      Owners:
-      owner1 owner1@example.com
-      Releases:
-      1.0.0
-      2.0.0
-      Remove? [Yn] y
       :ok
   """
-  @spec remove_package(String.t(), String.t(), keyword()) :: :ok | {:error, atom()}
-  def remove_package(repo, package_name, opts \\ []) do
+  @spec remove_package(String.t(), String.t()) :: :ok | {:error, atom()}
+  def remove_package(repo, package_name) do
     with {:ok, package} <- find_package(repo, package_name) do
-      owners =
-        Ecto.assoc(package, :owners)
-        |> Repo.all()
-        |> Repo.preload(:emails)
-
       package_owners =
         Ecto.assoc(package, :package_owners)
         |> Repo.all()
@@ -357,32 +280,17 @@ defmodule Hexpm.AdminTasks do
         |> Repo.all()
         |> Repo.preload(package: :repository)
 
-      unless Keyword.get(opts, :skip_confirmation, false) do
-        IO.puts("")
-        IO.puts("Owners:")
+      Enum.each(package_owners, &Repo.delete!/1)
 
-        Enum.each(owners, fn owner ->
-          IO.puts("#{owner.username} #{User.email(owner, :primary)}")
-        end)
+      Enum.each(releases, fn release ->
+        Release.delete(release, force: true) |> Repo.delete!()
+      end)
 
-        IO.puts("")
-        IO.puts("Releases:")
-        Enum.each(releases, &IO.puts(&1.version))
-      end
-
-      with :ok <- maybe_confirm("Remove? [Yn] ", opts) do
-        Enum.each(package_owners, &Repo.delete!/1)
-
-        Enum.each(releases, fn release ->
-          Release.delete(release, force: true) |> Repo.delete!()
-        end)
-
-        Repo.delete!(package)
-        Enum.each(releases, &Assets.revert_release/1)
-        RegistryBuilder.package_delete(package)
-        RegistryBuilder.repository(package.repository)
-        :ok
-      end
+      Repo.delete!(package)
+      Enum.each(releases, &Assets.revert_release/1)
+      RegistryBuilder.package_delete(package)
+      RegistryBuilder.repository(package.repository)
+      :ok
     end
   end
 
@@ -394,34 +302,25 @@ defmodule Hexpm.AdminTasks do
   - `repo` - The repository name (e.g., "hexpm")
   - `package_name` - The name of the package
   - `version` - The version to remove
-  - `opts` - Options:
-    - `:skip_confirmation` - Skip the confirmation prompt (default: `false`)
 
   ## Examples
 
       iex> AdminTasks.remove_release("hexpm", "my_pkg", "1.0.0")
-      Remove? [Yn] y
       :ok
   """
-  @spec remove_release(String.t(), String.t(), String.t(), keyword()) :: :ok | {:error, atom()}
-  def remove_release(repo, package_name, version, opts \\ []) do
+  @spec remove_release(String.t(), String.t(), String.t()) :: :ok | {:error, atom()}
+  def remove_release(repo, package_name, version) do
     with {:ok, package} <- find_package(repo, package_name),
          {:ok, release} <- find_release(package, version) do
-      with :ok <- maybe_confirm("Remove? [Yn] ", opts) do
-        Release.delete(release, force: true)
-        |> Repo.delete!()
+      Release.delete(release, force: true)
+      |> Repo.delete!()
 
-        Assets.revert_release(release)
-        RegistryBuilder.package(package)
-        RegistryBuilder.repository(package.repository)
-        :ok
-      end
+      Assets.revert_release(release)
+      RegistryBuilder.package(package)
+      RegistryBuilder.repository(package.repository)
+      :ok
     end
   end
-
-  # ============================================================================
-  # Owner Management
-  # ============================================================================
 
   @doc """
   Adds an owner to a package.
@@ -489,10 +388,6 @@ defmodule Hexpm.AdminTasks do
     Owners.remove(package, user, audit: AuditLogs.admin())
   end
 
-  # ============================================================================
-  # Organization Management
-  # ============================================================================
-
   @doc """
   Renames an organization.
 
@@ -503,85 +398,56 @@ defmodule Hexpm.AdminTasks do
 
   - `old_name` - The current organization name
   - `new_name` - The new organization name
-  - `opts` - Options:
-    - `:skip_confirmation` - Skip the confirmation prompt (default: `false`)
-    - `:dry_run` - Show what would be changed without making changes (default: `false`)
 
   ## Examples
 
       iex> AdminTasks.rename_organization("old_org", "new_org")
-      %Organization{name: "old_org", ...}
-      Rename? [Yn] y
-      :ok
-
-      iex> AdminTasks.rename_organization("old_org", "new_org", dry_run: true)
-      # Shows changesets without applying them
       :ok
   """
-  @spec rename_organization(String.t(), String.t(), keyword()) :: :ok | {:error, atom()}
-  def rename_organization(old_name, new_name, opts \\ []) do
-    dry_run? = Keyword.get(opts, :dry_run, false)
-
+  @spec rename_organization(String.t(), String.t()) :: :ok | {:error, atom()}
+  def rename_organization(old_name, new_name) do
     with {:ok, organization} <- find_organization(old_name) do
-      maybe_display(organization, opts)
+      user_changeset = Ecto.Changeset.change(organization.user, username: new_name)
 
-      with :ok <- maybe_confirm("Rename? [Yn] ", opts) do
-        user_changeset = Ecto.Changeset.change(organization.user, username: new_name)
+      changeset =
+        organization
+        |> Ecto.Changeset.change(name: new_name)
+        |> Ecto.Changeset.put_assoc(:user, user_changeset)
 
-        changeset =
-          organization
-          |> Ecto.Changeset.change(name: new_name)
-          |> Ecto.Changeset.put_assoc(:user, user_changeset)
+      Repo.transaction(fn ->
+        Repo.update!(changeset)
 
-        Repo.transaction(fn ->
-          if dry_run? do
-            IO.inspect(changeset)
-          else
-            Repo.update!(changeset)
-          end
+        keys = Repo.all(Key)
 
-          keys = Repo.all(Key)
+        Enum.each(keys, fn key ->
+          needs_update? =
+            Enum.any?(key.permissions, fn permission ->
+              permission.domain == "repository" and permission.resource == old_name
+            end)
 
-          Enum.each(keys, fn key ->
-            needs_update? =
-              Enum.any?(key.permissions, fn permission ->
-                permission.domain == "repository" and permission.resource == old_name
+          if needs_update? do
+            permissions =
+              Enum.map(key.permissions, fn permission ->
+                if permission.domain == "repository" do
+                  Ecto.Changeset.change(permission, resource: new_name)
+                else
+                  permission
+                end
               end)
 
-            if needs_update? do
-              permissions =
-                Enum.map(key.permissions, fn permission ->
-                  if permission.domain == "repository" do
-                    Ecto.Changeset.change(permission, resource: new_name)
-                  else
-                    permission
-                  end
-                end)
+            key_changeset =
+              key
+              |> Ecto.Changeset.change()
+              |> Ecto.Changeset.put_embed(:permissions, permissions)
 
-              key_changeset =
-                key
-                |> Ecto.Changeset.change()
-                |> Ecto.Changeset.put_embed(:permissions, permissions)
-
-              if dry_run? do
-                IO.inspect(key_changeset)
-              else
-                Repo.update!(key_changeset)
-              end
-
-              IO.puts("#{key.name} - #{key.id}")
-            end
-          end)
+            Repo.update!(key_changeset)
+          end
         end)
+      end)
 
-        :ok
-      end
+      :ok
     end
   end
-
-  # ============================================================================
-  # Security Operations
-  # ============================================================================
 
   @doc """
   Initiates a security password reset for a user by sending a password reset email.
@@ -656,10 +522,6 @@ defmodule Hexpm.AdminTasks do
     end
   end
 
-  # ============================================================================
-  # Install Management
-  # ============================================================================
-
   @doc """
   Adds a new Hex install version and uploads the install list to S3/CDN.
 
@@ -681,9 +543,6 @@ defmodule Hexpm.AdminTasks do
     if hex_version do
       Install.build(hex_version, elixir_versions)
       |> Repo.insert!()
-
-      IO.puts("Hex:     " <> hex_version)
-      IO.puts("Elixirs: " <> Enum.join(elixir_versions, ", "))
     end
 
     all = Install.all() |> Repo.all()
@@ -703,7 +562,6 @@ defmodule Hexpm.AdminTasks do
     Hexpm.Store.put(:repo_bucket, "installs/list.csv", csv, store_opts)
     Hexpm.CDN.purge_key(:fastly_hexrepo, "installs")
 
-    IO.puts("Uploaded installs/list.csv")
     :ok
   end
 end
