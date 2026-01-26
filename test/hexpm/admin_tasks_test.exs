@@ -5,16 +5,6 @@ defmodule Hexpm.AdminTasksTest do
   alias Hexpm.Accounts.{Organization, User}
   alias Hexpm.Repository.{Package, Release}
 
-  # Create admin user for AuditLogs.admin() to work
-  setup do
-    # Ensure admin user exists for audit logging
-    unless Repo.get_by(User, username: "admin") do
-      insert(:user, username: "admin")
-    end
-
-    :ok
-  end
-
   describe "change_password/3" do
     test "changes password by username" do
       user = insert(:user, username: "testuser")
