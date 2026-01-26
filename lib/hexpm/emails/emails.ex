@@ -40,6 +40,15 @@ defmodule Hexpm.Emails do
     |> render(:password_reset_request)
   end
 
+  def security_password_reset(user, reset) do
+    email()
+    |> email_to(user)
+    |> subject("Hex.pm - Your password has been reset for security reasons")
+    |> assign(:username, user.username)
+    |> assign(:key, reset.key)
+    |> render(:security_password_reset)
+  end
+
   def password_changed(user) do
     email()
     |> email_to(user)

@@ -105,6 +105,48 @@ defmodule HexpmWeb.EmailView do
     end
   end
 
+  defmodule SecurityPasswordReset do
+    def title() do
+      "Your Hex.pm password has been reset"
+    end
+
+    def message() do
+      "Your password has been reset by Hex.pm administrators for security reasons. " <>
+        "This may be due to a security incident, suspicious activity, or a routine security measure."
+    end
+
+    def action_instruction(url, :html) do
+      ~s(Please set a new password by following #{Common.link(url, "this link", :html)} or by pasting the link below in your web browser.)
+    end
+
+    def action_instruction(_url, :text) do
+      "Please set a new password by following this link"
+    end
+
+    def expired_instruction(reset_url, :html) do
+      ~s(If the link above has expired, you can request a new password reset at #{Common.link(reset_url, reset_url, :html)}.)
+    end
+
+    def expired_instruction(reset_url, :text) do
+      "If the link above has expired, you can request a new password reset at #{reset_url}."
+    end
+
+    def questions_notice(format) do
+      "If you have any questions about why this action was taken, please contact support at #{Common.support_link(format)}."
+    end
+
+    defdelegate mix_code(), to: BuildTools, as: :mix_hex_user_auth
+    defdelegate rebar_code(), to: BuildTools, as: :rebar3_hex_user_auth
+
+    def before_code() do
+      "After resetting your password, you will need to regenerate your API keys by running:"
+    end
+
+    def after_code() do
+      "and entering your username and new password."
+    end
+  end
+
   defmodule TFAEnabled do
     defdelegate greeting(username), to: Common
 
