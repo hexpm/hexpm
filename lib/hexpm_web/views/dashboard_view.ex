@@ -133,6 +133,14 @@ defmodule HexpmWeb.DashboardView do
     "Update user profile"
   end
 
+  def humanize_audit_log_info(%AuditLog{action: "user_provider.create", params: params}) do
+    "Link #{params["provider"]} account"
+  end
+
+  def humanize_audit_log_info(%AuditLog{action: "user_provider.delete", params: params}) do
+    "Unlink #{params["provider"]} account"
+  end
+
   def humanize_audit_log_info(%AuditLog{action: "security.update"}) do
     "Update TFA settings"
   end
@@ -243,6 +251,13 @@ defmodule HexpmWeb.DashboardView do
     else
       "Revoke OAuth application: #{client_name}"
     end
+  end
+
+  def double_html_escape(string) do
+    string
+    |> Phoenix.HTML.html_escape()
+    |> Phoenix.HTML.safe_to_string()
+    |> Phoenix.HTML.html_escape()
   end
 
   defp plan_id("organization-monthly"), do: "monthly"

@@ -328,8 +328,8 @@ defmodule HexpmWeb.ViewHelpers do
     Map.put(output, key, Phoenix.View.render_one(struct, view, name, assigns))
   end
 
-  def auth_qr_code_svg(user) do
-    "otpauth://totp/hex.pm:#{user.username}?issuer=hex.pm&secret=#{user.tfa.secret}"
+  def auth_qr_code_svg(user, secret) do
+    "otpauth://totp/hex.pm:#{user.username}?issuer=hex.pm&secret=#{secret}"
     |> EQRCode.encode()
     |> EQRCode.svg(width: 250)
   end

@@ -6,23 +6,7 @@ defmodule HexpmWeb.Dashboard.SecurityController do
 
   def index(conn, _params) do
     user = conn.assigns.current_user
-
-    if User.tfa_enabled?(user) and not user.tfa.app_enabled do
-      conn
-      |> put_flash(:error, "Please complete your two-factor authentication setup")
-      |> redirect(to: ~p"/dashboard/tfa/setup")
-    else
-      render_index(conn, User.update_password(user, %{}))
-    end
-  end
-
-  def enable_tfa(conn, _params) do
-    user = conn.assigns.current_user
-    Users.tfa_enable(user, audit: audit_data(conn))
-
-    conn
-    |> put_flash(:info, "Two factor authentication has been enabled.")
-    |> redirect(to: ~p"/dashboard/tfa/setup")
+    render_index(conn, User.update_password(user, %{}))
   end
 
   def disable_tfa(conn, _params) do
@@ -41,15 +25,6 @@ defmodule HexpmWeb.Dashboard.SecurityController do
     conn
     |> put_flash(:info, "New two-factor recovery codes successfully generated.")
     |> redirect(to: ~p"/dashboard/security")
-  end
-
-  def reset_auth_app(conn, _params) do
-    user = conn.assigns.current_user
-    Users.tfa_disable_app(user, audit: audit_data(conn))
-
-    conn
-    |> put_flash(:info, "Please complete your two-factor authentication setup")
-    |> redirect(to: ~p"/dashboard/tfa/setup")
   end
 
   def change_password(conn, params) do

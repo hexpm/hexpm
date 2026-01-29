@@ -49,6 +49,7 @@ defmodule HexpmWeb.ControllerHelpers do
     conn
     |> put_status(status)
     |> put_layout(false)
+    |> put_root_layout(false)
     |> put_view(HexpmWeb.ErrorView)
     |> render(:"#{status}", assigns)
     |> halt()
@@ -444,4 +445,27 @@ defmodule HexpmWeb.ControllerHelpers do
       _ -> :ok
     end
   end
+
+  @doc """
+  Sanitizes form params to prevent crashes when rendering forms with malformed input.
+
+  This function ensures all values are either strings, nil, or lists of sanitized maps
+  (for nested associations).
+  """
+  def sanitize_params(params) when is_map(params) do
+    Map.new(params, fn
+      {key, value} when is_binary(value) -> {key, value}
+      {key, value} when is_list(value) -> {key, Enum.map(value, &sanitize_params/1)}
+      {key, _value} -> {key, nil}
+    end)
+  end
+
+  def sanitize_params(_), do: %{}
+
+  @doc """
+  Returns the value if it's a binary string, otherwise returns nil.
+  Use this to safely handle params that could be maps or lists from malformed input.
+  """
+  def safe_string(value) when is_binary(value), do: value
+  def safe_string(_), do: nil
 end

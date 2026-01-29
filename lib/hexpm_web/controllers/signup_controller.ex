@@ -28,7 +28,7 @@ defmodule HexpmWeb.SignupController do
           |> render_show(changeset)
       end
     else
-      changeset = %{User.build(params["user"]) | action: :insert}
+      changeset = %{User.build(sanitize_params(params["user"])) | action: :insert}
 
       conn
       |> put_status(400)

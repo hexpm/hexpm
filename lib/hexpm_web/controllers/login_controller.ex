@@ -7,7 +7,7 @@ defmodule HexpmWeb.LoginController do
 
   def show(conn, _params) do
     if logged_in?(conn) do
-      redirect_return(conn, conn.assigns.current_user, conn.params["return"])
+      redirect_return(conn, conn.assigns.current_user, safe_string(conn.params["return"]))
     else
       render_show(conn)
     end
@@ -98,14 +98,15 @@ defmodule HexpmWeb.LoginController do
     end
   end
 
-  defp redirect_return(%{params: %{"hexdocs" => organization}} = conn, user, return) do
+  defp redirect_return(%{params: %{"hexdocs" => organization}} = conn, user, return)
+       when is_binary(organization) do
     case generate_hexdocs_key(user, organization) do
       {:ok, key} ->
         docs_url =
           Application.get_env(:hexpm, :docs_url)
           |> String.replace("://", "://#{organization}.")
 
-        url = "#{docs_url}#{return}?key=#{key.user_secret}"
+        url = "#{docs_url}#{safe_path(return)}?key=#{key.user_secret}"
         redirect(conn, external: url)
 
       {:error, _changeset} ->
@@ -116,9 +117,12 @@ defmodule HexpmWeb.LoginController do
     end
   end
 
-  defp redirect_return(conn, user, return) do
-    path = return || ~p"/users/#{user}"
-    redirect(conn, to: path)
+  defp redirect_return(conn, _user, "/" <> _ = return) do
+    redirect(conn, to: return)
+  end
+
+  defp redirect_return(conn, user, _return) do
+    redirect(conn, to: ~p"/users/#{user}")
   end
 
   defp generate_hexdocs_key(user, organization) do
@@ -131,14 +135,15 @@ defmodule HexpmWeb.LoginController do
       "show.html",
       title: "Log in",
       container: "container page page-xs login",
-      return: conn.params["return"],
-      hexdocs: conn.params["hexdocs"]
+      return: safe_string(conn.params["return"]),
+      hexdocs: safe_string(conn.params["hexdocs"])
     )
   end
 
-  defp login(conn, %User{id: user_id, tfa: %{tfa_enabled: true, app_enabled: true}} = user,
+  defp login(conn, %User{id: user_id, tfa: %{secret: secret}} = user,
          password_breached: breached?
-       ) do
+       )
+       when is_binary(secret) do
     alias Hexpm.UserSessions
 
     # Pre-create browser session for after TFA
@@ -152,7 +157,7 @@ defmodule HexpmWeb.LoginController do
     |> configure_session(renew: true)
     |> put_session("tfa_user_id", %{
       "uid" => user_id,
-      "return" => conn.params["return"],
+      "return" => safe_string(conn.params["return"]),
       "session_token" => Base.encode64(session_token)
     })
     |> maybe_put_flash(breached?)
@@ -162,8 +167,11 @@ defmodule HexpmWeb.LoginController do
   defp login(conn, user, password_breached: breached?) do
     conn
     |> maybe_put_flash(breached?)
-    |> start_session(user, conn.params["return"])
+    |> start_session(user, safe_string(conn.params["return"]))
   end
+
+  defp safe_path("/" <> _ = path), do: path
+  defp safe_path(_), do: "/"
 
   defp maybe_put_flash(conn, false), do: conn
 

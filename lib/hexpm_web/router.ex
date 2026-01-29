@@ -168,13 +168,10 @@ defmodule HexpmWeb.Router do
     post "/security/disconnect-github", SecurityController, :disconnect_github,
       as: :dashboard_security
 
-    post "/security/enable-tfa", SecurityController, :enable_tfa, as: :dashboard_security
     post "/security/disable-tfa", SecurityController, :disable_tfa, as: :dashboard_security
 
     post "/security/rotate-recovery-codes", SecurityController, :rotate_recovery_codes,
       as: :dashboard_security
-
-    post "/security/reset-auth-app", SecurityController, :reset_auth_app, as: :dashboard_security
 
     get "/tfa/setup", TFAAuthSetupController, :index, as: :dashboard_tfa_setup
     post "/tfa/setup", TFAAuthSetupController, :create, as: :dashboard_tfa_setup

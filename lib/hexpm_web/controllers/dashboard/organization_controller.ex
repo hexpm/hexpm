@@ -285,12 +285,18 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
       if seats >= user_count do
         audit = %{audit_data: audit_data(conn), organization: organization}
 
-        {:ok, _customer} =
-          Hexpm.Billing.update(organization.name, %{"quantity" => seats}, audit: audit)
+        case Hexpm.Billing.update(organization.name, %{"quantity" => seats}, audit: audit) do
+          {:ok, _customer} ->
+            conn
+            |> put_flash(:info, "The number of open seats have been increased.")
+            |> redirect(to: ~p"/dashboard/orgs/#{organization}")
 
-        conn
-        |> put_flash(:info, "The number of open seats have been increased.")
-        |> redirect(to: ~p"/dashboard/orgs/#{organization}")
+          {:error, reason} ->
+            conn
+            |> put_status(400)
+            |> put_flash(:error, reason["errors"] || "Failed to update billing information.")
+            |> render_index(organization)
+        end
       else
         conn
         |> put_status(400)
@@ -308,12 +314,18 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
       if seats >= user_count do
         audit = %{audit_data: audit_data(conn), organization: organization}
 
-        {:ok, _customer} =
-          Hexpm.Billing.update(organization.name, %{"quantity" => seats}, audit: audit)
+        case Hexpm.Billing.update(organization.name, %{"quantity" => seats}, audit: audit) do
+          {:ok, _customer} ->
+            conn
+            |> put_flash(:info, "The number of open seats have been reduced.")
+            |> redirect(to: ~p"/dashboard/orgs/#{organization}")
 
-        conn
-        |> put_flash(:info, "The number of open seats have been reduced.")
-        |> redirect(to: ~p"/dashboard/orgs/#{organization}")
+          {:error, reason} ->
+            conn
+            |> put_status(400)
+            |> put_flash(:error, reason["errors"] || "Failed to update billing information.")
+            |> render_index(organization)
+        end
       else
         conn
         |> put_status(400)
