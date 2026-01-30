@@ -110,6 +110,11 @@ defmodule HexpmWeb.Components.Input do
     doc:
       "Controls error display: nil (default - show all), true (always show), false (never show)"
 
+  attr :variant, :string,
+    default: "default",
+    values: ["default", "light"],
+    doc: "Style variant: 'default' uses grey-300 border, 'light' uses grey-200 border"
+
   attr :value, :any, default: nil
 
   def select_input(%{field: %Phoenix.HTML.FormField{} = field} = assigns) do
@@ -119,16 +124,22 @@ defmodule HexpmWeb.Components.Input do
         _ -> field.errors
       end
 
+    # Use field value if present, otherwise fall back to explicit value attribute
+    value = field.value || assigns[:value]
+
     assigns
     |> assign(:field, nil)
     |> assign(:errors, Enum.map(errors, &translate_error/1))
     |> assign(:id, field.id)
     |> assign(:name, field.name)
-    |> assign(:value, field.value)
+    |> assign(:value, value)
+    |> assign_new(:variant, fn -> "default" end)
     |> select_input()
   end
 
   def select_input(assigns) do
+    assigns = assign_new(assigns, :variant, fn -> "default" end)
+
     ~H"""
     <div>
       <.label :if={@label} for={@id} label={@label} required={@required} class={@label_class} />
@@ -141,10 +152,7 @@ defmodule HexpmWeb.Components.Input do
             "tw:text-grey-900 tw:font-medium tw:cursor-pointer",
             "tw:focus:outline-none tw:focus:ring-2",
             "tw:appearance-none",
-            @errors != [] &&
-              "tw:border-red-300 tw:focus:border-red-600 tw:focus:ring-red-600 tw:focus:ring-opacity-20",
-            @errors == [] &&
-              "tw:border-grey-300 tw:focus:border-primary-600 tw:focus:ring-primary-600 tw:focus:ring-opacity-20",
+            select_border_classes(@variant, @errors),
             @class
           ]}
           {@rest}
@@ -450,4 +458,21 @@ defmodule HexpmWeb.Components.Input do
   end
 
   defp translate_error(msg) when is_binary(msg), do: msg
+
+  # Helper function to determine border classes based on variant and error state
+  defp select_border_classes("light", errors) when errors != [] do
+    "tw:border-red-300 tw:focus:border-red-600 tw:focus:ring-red-600 tw:focus:ring-opacity-20"
+  end
+
+  defp select_border_classes("light", _errors) do
+    "tw:border-grey-200 tw:focus:border-purple-600 tw:focus:ring-purple-600 tw:focus:ring-opacity-20"
+  end
+
+  defp select_border_classes("default", errors) when errors != [] do
+    "tw:border-red-300 tw:focus:border-red-600 tw:focus:ring-red-600 tw:focus:ring-opacity-20"
+  end
+
+  defp select_border_classes("default", _errors) do
+    "tw:border-grey-300 tw:focus:border-primary-600 tw:focus:ring-primary-600 tw:focus:ring-opacity-20"
+  end
 end
