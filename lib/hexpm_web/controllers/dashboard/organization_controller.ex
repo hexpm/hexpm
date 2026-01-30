@@ -202,45 +202,55 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
 
   def show_invoice(conn, %{"dashboard_org" => organization, "id" => id}) do
     access_organization(conn, organization, "admin", fn organization ->
-      id = String.to_integer(id)
-      customer = Hexpm.Billing.get(organization.name)
-      invoice_ids = Enum.map(customer["invoices"], & &1["id"])
+      case safe_to_integer(id) do
+        nil ->
+          not_found(conn)
 
-      if id in invoice_ids do
-        invoice = Hexpm.Billing.invoice(id)
+        id ->
+          customer = Hexpm.Billing.get(organization.name)
+          invoice_ids = Enum.map(customer["invoices"], & &1["id"])
 
-        conn
-        |> put_resp_header("content-type", "text/html")
-        |> send_resp(200, invoice)
-      else
-        not_found(conn)
+          if id in invoice_ids do
+            invoice = Hexpm.Billing.invoice(id)
+
+            conn
+            |> put_resp_header("content-type", "text/html")
+            |> send_resp(200, invoice)
+          else
+            not_found(conn)
+          end
       end
     end)
   end
 
   def pay_invoice(conn, %{"dashboard_org" => organization, "id" => id}) do
     access_organization(conn, organization, "admin", fn organization ->
-      id = String.to_integer(id)
-      customer = Hexpm.Billing.get(organization.name)
-      invoice_ids = Enum.map(customer["invoices"], & &1["id"])
+      case safe_to_integer(id) do
+        nil ->
+          not_found(conn)
 
-      audit = %{audit_data: audit_data(conn), organization: organization}
+        id ->
+          customer = Hexpm.Billing.get(organization.name)
+          invoice_ids = Enum.map(customer["invoices"], & &1["id"])
 
-      if id in invoice_ids do
-        case Hexpm.Billing.pay_invoice(id, audit: audit) do
-          :ok ->
-            conn
-            |> put_flash(:info, "Invoice paid.")
-            |> redirect(to: ~p"/dashboard/orgs/#{organization}")
+          audit = %{audit_data: audit_data(conn), organization: organization}
 
-          {:error, reason} ->
-            conn
-            |> put_status(400)
-            |> put_flash(:error, "Failed to pay invoice: #{reason["errors"]}.")
-            |> render_index(organization)
-        end
-      else
-        not_found(conn)
+          if id in invoice_ids do
+            case Hexpm.Billing.pay_invoice(id, audit: audit) do
+              :ok ->
+                conn
+                |> put_flash(:info, "Invoice paid.")
+                |> redirect(to: ~p"/dashboard/orgs/#{organization}")
+
+              {:error, reason} ->
+                conn
+                |> put_status(400)
+                |> put_flash(:error, "Failed to pay invoice: #{reason["errors"]}.")
+                |> render_index(organization)
+            end
+          else
+            not_found(conn)
+          end
       end
     end)
   end
@@ -277,60 +287,76 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
 
   def add_seats(conn, %{"dashboard_org" => organization} = params) do
     access_organization(conn, organization, "admin", fn organization ->
-      user_count = Organizations.user_count(organization)
-      current_seats = String.to_integer(params["current-seats"])
-      add_seats = String.to_integer(params["add-seats"])
-      seats = current_seats + add_seats
+      current_seats = safe_to_integer(params["current-seats"])
+      add_seats_val = safe_to_integer(params["add-seats"])
 
-      if seats >= user_count do
-        audit = %{audit_data: audit_data(conn), organization: organization}
-
-        case Hexpm.Billing.update(organization.name, %{"quantity" => seats}, audit: audit) do
-          {:ok, _customer} ->
-            conn
-            |> put_flash(:info, "The number of open seats have been increased.")
-            |> redirect(to: ~p"/dashboard/orgs/#{organization}")
-
-          {:error, reason} ->
-            conn
-            |> put_status(400)
-            |> put_flash(:error, reason["errors"] || "Failed to update billing information.")
-            |> render_index(organization)
-        end
-      else
+      if is_nil(current_seats) or is_nil(add_seats_val) do
         conn
         |> put_status(400)
-        |> put_flash(:error, @not_enough_seats)
+        |> put_flash(:error, "Invalid seat numbers.")
         |> render_index(organization)
+      else
+        user_count = Organizations.user_count(organization)
+        seats = current_seats + add_seats_val
+
+        if seats >= user_count do
+          audit = %{audit_data: audit_data(conn), organization: organization}
+
+          case Hexpm.Billing.update(organization.name, %{"quantity" => seats}, audit: audit) do
+            {:ok, _customer} ->
+              conn
+              |> put_flash(:info, "The number of open seats have been increased.")
+              |> redirect(to: ~p"/dashboard/orgs/#{organization}")
+
+            {:error, reason} ->
+              conn
+              |> put_status(400)
+              |> put_flash(:error, reason["errors"] || "Failed to update billing information.")
+              |> render_index(organization)
+          end
+        else
+          conn
+          |> put_status(400)
+          |> put_flash(:error, @not_enough_seats)
+          |> render_index(organization)
+        end
       end
     end)
   end
 
   def remove_seats(conn, %{"dashboard_org" => organization} = params) do
     access_organization(conn, organization, "admin", fn organization ->
-      user_count = Organizations.user_count(organization)
-      seats = String.to_integer(params["seats"])
+      seats = safe_to_integer(params["seats"])
 
-      if seats >= user_count do
-        audit = %{audit_data: audit_data(conn), organization: organization}
-
-        case Hexpm.Billing.update(organization.name, %{"quantity" => seats}, audit: audit) do
-          {:ok, _customer} ->
-            conn
-            |> put_flash(:info, "The number of open seats have been reduced.")
-            |> redirect(to: ~p"/dashboard/orgs/#{organization}")
-
-          {:error, reason} ->
-            conn
-            |> put_status(400)
-            |> put_flash(:error, reason["errors"] || "Failed to update billing information.")
-            |> render_index(organization)
-        end
-      else
+      if is_nil(seats) do
         conn
         |> put_status(400)
-        |> put_flash(:error, @not_enough_seats)
+        |> put_flash(:error, "Invalid seat number.")
         |> render_index(organization)
+      else
+        user_count = Organizations.user_count(organization)
+
+        if seats >= user_count do
+          audit = %{audit_data: audit_data(conn), organization: organization}
+
+          case Hexpm.Billing.update(organization.name, %{"quantity" => seats}, audit: audit) do
+            {:ok, _customer} ->
+              conn
+              |> put_flash(:info, "The number of open seats have been reduced.")
+              |> redirect(to: ~p"/dashboard/orgs/#{organization}")
+
+            {:error, reason} ->
+              conn
+              |> put_status(400)
+              |> put_flash(:error, reason["errors"] || "Failed to update billing information.")
+              |> render_index(organization)
+          end
+        else
+          conn
+          |> put_status(400)
+          |> put_flash(:error, @not_enough_seats)
+          |> render_index(organization)
+        end
       end
     end)
   end

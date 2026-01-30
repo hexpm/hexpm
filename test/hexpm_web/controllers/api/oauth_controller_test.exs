@@ -81,9 +81,9 @@ defmodule HexpmWeb.API.OAuthControllerTest do
           "scope" => "invalid_scope"
         })
 
-      assert json_response(conn, 401)
-      response = json_response(conn, 401)
-      assert response["error"] == "invalid_client"
+      assert json_response(conn, 400)
+      response = json_response(conn, 400)
+      assert response["error"] == "invalid_scope"
     end
 
     test "initiates device authorization with name parameter", %{client: client} do
@@ -102,6 +102,46 @@ defmodule HexpmWeb.API.OAuthControllerTest do
       # Verify device code was created with the name
       device_code = Repo.get_by(Hexpm.OAuth.DeviceCode, device_code: response["device_code"])
       assert device_code.name == name
+    end
+
+    test "returns error for scope as array (malformed JSON)", %{client: client} do
+      conn =
+        post(build_conn(), ~p"/api/oauth/device_authorization", %{
+          "client_id" => client.client_id,
+          "scope" => ["api:write"]
+        })
+
+      assert json_response(conn, 400)
+      response = json_response(conn, 400)
+      assert response["error"] == "invalid_scope"
+    end
+
+    test "returns error for client_id as array (malformed JSON)" do
+      conn =
+        post(build_conn(), ~p"/api/oauth/device_authorization", %{
+          "client_id" => ["invalid"],
+          "scope" => "api"
+        })
+
+      assert json_response(conn, 401)
+      response = json_response(conn, 401)
+      assert response["error"] == "invalid_client"
+    end
+
+    test "handles name as non-string gracefully", %{client: client} do
+      conn =
+        post(build_conn(), ~p"/api/oauth/device_authorization", %{
+          "client_id" => client.client_id,
+          "scope" => "api",
+          "name" => ["invalid", "name"]
+        })
+
+      # Should succeed but ignore the malformed name
+      assert json_response(conn, 200)
+      response = json_response(conn, 200)
+
+      device_code = Repo.get_by(Hexpm.OAuth.DeviceCode, device_code: response["device_code"])
+      assert device_code.name == nil
     end
   end
 
